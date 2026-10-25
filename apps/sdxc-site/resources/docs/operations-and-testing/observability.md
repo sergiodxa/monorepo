@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write one wide log event per invocation with `@sdxc/logger`"
     - "How to carry a W3C trace from a request into its jobs and outbound requests"
@@ -121,8 +121,8 @@ export const create = createAction(routes.postings.create, async (ctx) => {
 `Posting`, `PostingSchema` and `renderForm` are your app's own model, form schema and form
 view, and `ctx.db` comes from the middleware that publishes your database. `ctx.jobs` is
 `jobEnqueuer` from `@sdxc/jobs/router`, covered in
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron). `{ posting: { id } }` is stored as `posting.id`, one flat key you can filter on. Keep a
-namespace meaning the same thing everywhere (`user`, `team`, `db`, `cache`, `job`) and never
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron). `{ posting: { id } }`
+is stored as `posting.id`, one flat key you can filter on. Keep a namespace meaning the same thing everywhere (`user`, `team`, `db`, `cache`, `job`) and never
 build a key out of a value: `set({ team: { id } })` is one field, while a key per id grows the
 index forever. `warn` marks the record `degraded` without making it an alarm; `fail(error)`
 marks it `error` and records `error.type`, `error.message` and the stack. Use `fail` for the
@@ -194,8 +194,8 @@ export const dispatcher = createJobDispatcher({
 ```
 
 The trace comes along for free. Because `trace()` runs before `jobEnqueuer`, every job
-enqueued through `ctx.jobs` carries the request's trace in its envelope, and the run continues it with a span of its own, so the request that accepted a
-submission and the job that mailed the confirmation share a `trace_id`. One query on that id
+enqueued through `ctx.jobs` carries the request's trace in its envelope, and the run continues
+it with a span of its own, so the request that accepted a submission and the job that mailed the confirmation share a `trace_id`. One query on that id
 shows both records. A cron tick has no caller, so it starts a root trace that every job it
 enqueues inherits.
 
@@ -232,8 +232,8 @@ log as `trace.rejected`.
 ## Report timings to the browser
 
 The log is for you; `Server-Timing` is for whoever is looking at the network panel. A small
-middleware gives each request a `TimingCollector` and writes the header once the handler has
-answered.
+middleware gives each request a `TimingCollector`, publishes it as `ctx.timing`, and writes the
+header once the handler has answered.
 
 ```typescript {% title="app/http/middleware/server-timing.ts" %}
 import type { Middleware } from "remix/router";
@@ -243,24 +243,26 @@ import { createContextKey } from "remix/router";
 
 export const Timing = createContextKey<TimingCollector>();
 
-export default function serverTiming(): Middleware {
+export default function serverTiming(): Middleware<{
+	key: typeof Timing;
+	value: TimingCollector;
+	property: "timing";
+}> {
 	return async (ctx, next) => {
 		let timing = new TimingCollector();
-		ctx.set(Timing, timing);
-		let response = await next();
+		ctx.set(Timing, timing, { property: "timing" });
+		let response = await timing.measure("app", "", () => next());
 		let headers = timing.toHeaders(new Headers(response.headers));
 		return new Response(response.body, { status: response.status, headers });
 	};
 }
 ```
 
-The collector reaches handlers under the `Timing` key, imported from this module, the way any
-service does (see
-[Wire the router](/docs/building-remix-apps/wire-the-router)). Copying into a new `Response`
-keeps this working for responses whose headers are immutable, such as a redirect or an
-upstream `fetch`. In a handler, wrap the work you want to see:
-`await ctx.get(Timing).measure("db", "listPostings", () => Posting.listOpen(ctx.db))`. The name is
-the group you scan for and the description says which call it was.
+Add `serverTiming()` to the router's middleware after `trace()`. The whole request is measured
+as `app`, and copying into a new `Response` keeps the header on responses whose headers are
+immutable, such as a redirect or an upstream `fetch`. In a handler, wrap the work you want to
+see: `await ctx.timing.measure("db", "listPostings", () => Posting.listOpen(ctx.db))`. The name
+is the group you scan for and the description says which call it was.
 
 <note>
 Workers advance the clock only across I/O, so time I/O calls; pure computation reads as zero.
