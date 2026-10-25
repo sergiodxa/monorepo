@@ -1,13 +1,13 @@
 /**
  * `sdxc make secret`, `make binding` and `make do`: edit `cloudflare.config.ts`, append
- * `.env.example` for secrets, re-export a Durable Object from `bootstrap/worker.ts`, and print
- * `sdxc run typegen` so agents stop hand-editing three places.
+ * `.env.example` for secrets, re-export a Durable Object from `bootstrap/worker.ts`, and note
+ * `sdxc run typegen`, answering what changed for the project's `format` like every other kind.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import type { AnyCommandContext } from "@sdxc/cli";
@@ -20,6 +20,8 @@ import { unifiedDiff } from "../diff.js";
 import { CONFIG_FILE, ENV_EXAMPLE_FILE, declaredBindings, exampleKeys } from "../doctor/env.js";
 
 import { parseName } from "./names.js";
+
+import type { Made } from "./index.js";
 
 /** Binding kinds `make binding` accepts; `secret` also appends `.env.example`. */
 export const BINDING_KINDS = [
@@ -42,12 +44,24 @@ export type DoRole = "model" | "service";
 /** Context these makers need to print. */
 export type BindingContext = Pick<AnyCommandContext, "stdout">;
 
-/** Plans and optionally writes a `bindings.<kind>()` entry for `NAME`. */
+/** The entry point a Durable Object class is re-exported from, where Cloudflare finds it. */
+const WORKER_FILE = "bootstrap/worker.ts";
+
+/** The note every maker here ends with, since `env` is typed from the config it edited. */
+const TYPEGEN_NOTE = "Next: sdxc run typegen\n";
+
+/** What a dry run answers: nothing changed and nothing left to note. */
+const NOTHING_MADE: Made = { changed: [], notes: [] };
+
+/**
+ * Plans and optionally writes a `bindings.<kind>()` entry for `NAME`; `--force` replaces an
+ * existing declaration of `NAME` where it stands.
+ */
 export async function makeBinding(
 	ctx: BindingContext,
 	root: string,
 	input: { kind: BindingKind; name: string; dryRun: boolean; force: boolean },
-): Promise<Result<void, Error>> {
+): Promise<Result<Made, Error>> {
 	let key = bindingKey(input.name);
 	if (isFailure(key)) return key;
 	let config = await wrap(() => readFile(join(root, CONFIG_FILE), "utf8"));
@@ -58,7 +72,7 @@ export async function makeBinding(
 			new Error(`${key.data} is already declared in ${CONFIG_FILE}; pass --force to replace it`),
 		);
 	}
-	let bindingLine = bindingCall(input.kind, key.data);
+	let bindingLine = bindingCall(input.kind, key.data, config.data);
 	let afterConfig = insertEnvBinding(config.data, key.data, bindingLine);
 	if (isFailure(afterConfig)) return afterConfig;
 	let exampleEdit: { before: string; after: string } | null = null;
@@ -84,16 +98,17 @@ export async function makeBinding(
 				),
 			);
 		}
-		return success(undefined);
+		return success(NOTHING_MADE);
 	}
 	await writeFile(join(root, CONFIG_FILE), afterConfig.data);
-	ctx.stdout(`edited ${CONFIG_FILE}\n`);
+	ctx.stdout(`Edited ${CONFIG_FILE}\n`);
+	let changed = [CONFIG_FILE];
 	if (exampleEdit !== null) {
 		await writeFile(join(root, ENV_EXAMPLE_FILE), exampleEdit.after);
-		ctx.stdout(`edited ${ENV_EXAMPLE_FILE}\n`);
+		ctx.stdout(`Edited ${ENV_EXAMPLE_FILE}\n`);
+		changed.push(ENV_EXAMPLE_FILE);
 	}
-	ctx.stdout("Next: sdxc run typegen\n");
-	return success(undefined);
+	return success({ changed, notes: [TYPEGEN_NOTE] });
 }
 
 /** `make secret NAME` — shorthand for `make binding secret NAME`. */
@@ -101,18 +116,18 @@ export async function makeSecret(
 	ctx: BindingContext,
 	root: string,
 	input: { name: string; dryRun: boolean; force: boolean },
-): Promise<Result<void, Error>> {
+): Promise<Result<Made, Error>> {
 	return makeBinding(ctx, root, { ...input, kind: "secret" });
 }
 
 /**
  * Writes a Durable Object class stub, re-exports it from `bootstrap/worker.ts`, and declares
- * the binding plus `exports.durableObject` in `cloudflare.config.ts`.
+ * the binding plus `exports.durableObject` in `cloudflare.config.ts`. A name ending in `do`,
+ * in any case, gets the `DO` suffix once: `feed-do` and `FeedDO` both write `FeedDO`.
  */
 export async function makeDo(
 	ctx: BindingContext,
 	root: string,
-	packageRoot: string,
 	input: {
 		name: string;
 		role: DoRole;
@@ -120,16 +135,14 @@ export async function makeDo(
 		dryRun: boolean;
 		force: boolean;
 	},
-): Promise<Result<void, Error>> {
+): Promise<Result<Made, Error>> {
 	let parsed = parseName(input.name);
 	if (isFailure(parsed)) return parsed;
-	let className = parsed.data.pascal.endsWith("DO")
-		? parsed.data.pascal
-		: `${parsed.data.pascal}DO`;
+	let stem = parseName(parsed.data.base.replace(/(.)-do$/, "$1"));
+	if (isFailure(stem)) return stem;
+	let className = `${stem.data.pascal}DO`;
 	let binding =
-		input.binding !== undefined
-			? bindingKey(input.binding)
-			: success(snakeUpper(parsed.data.base.replace(/-?do$/, "") || parsed.data.base));
+		input.binding !== undefined ? bindingKey(input.binding) : success(snakeUpper(stem.data.base));
 	if (isFailure(binding)) return binding;
 	let folder = input.role === "model" ? "app/models" : "app/services";
 	let file = `${folder}/${parsed.data.segments.join("/")}.ts`;
@@ -139,7 +152,7 @@ export async function makeDo(
 	);
 	let config = await wrap(() => readFile(join(root, CONFIG_FILE), "utf8"));
 	if (isFailure(config)) return failure(new Error(`No ${CONFIG_FILE} in the project`));
-	let worker = await wrap(() => readFile(join(root, "bootstrap/worker.ts"), "utf8"));
+	let worker = await wrap(() => readFile(join(root, WORKER_FILE), "utf8"));
 	if (isFailure(worker)) return failure(new Error("No bootstrap/worker.ts in the project"));
 	let existing = declaredBindings(config.data);
 	if (existing.has(binding.data) && !input.force) {
@@ -156,9 +169,10 @@ export async function makeDo(
 	if (input.dryRun) {
 		ctx.stdout(unifiedDiff(file, null, stub));
 		ctx.stdout(unifiedDiff(CONFIG_FILE, config.data, afterConfig.data));
-		ctx.stdout(unifiedDiff("bootstrap/worker.ts", worker.data, afterWorker));
-		return success(undefined);
+		ctx.stdout(unifiedDiff(WORKER_FILE, worker.data, afterWorker));
+		return success(NOTHING_MADE);
 	}
+	let replaced = input.force && (await exists(join(root, file)));
 	await mkdir(dirname(join(root, file)), { recursive: true });
 	let written = await wrap(() =>
 		writeFile(join(root, file), stub, { flag: input.force ? "w" : "wx" }),
@@ -169,14 +183,21 @@ export async function makeDo(
 		}
 		return written;
 	}
-	ctx.stdout(`wrote ${file}\n`);
+	ctx.stdout(`${replaced ? "Replaced" : "Wrote"} ${file}\n`);
 	await writeFile(join(root, CONFIG_FILE), afterConfig.data);
-	ctx.stdout(`edited ${CONFIG_FILE}\n`);
-	await writeFile(join(root, "bootstrap/worker.ts"), afterWorker);
-	ctx.stdout("edited bootstrap/worker.ts\n");
-	ctx.stdout("Next: sdxc run typegen\n");
-	void packageRoot;
-	return success(undefined);
+	ctx.stdout(`Edited ${CONFIG_FILE}\n`);
+	let changed = [file, CONFIG_FILE];
+	if (afterWorker !== worker.data) {
+		await writeFile(join(root, WORKER_FILE), afterWorker);
+		ctx.stdout(`Edited ${WORKER_FILE}\n`);
+		changed.push(WORKER_FILE);
+	}
+	return success({ changed, notes: [TYPEGEN_NOTE] });
+}
+
+/** Whether `path` exists. */
+async function exists(path: string): Promise<boolean> {
+	return !isFailure(await wrap(() => stat(path)));
 }
 
 /** `NAME` as an env binding key: already `SCREAMING_SNAKE` or derived from kebab/camel. */
@@ -193,41 +214,65 @@ function snakeUpper(kebab: string): string {
 	return kebab.replaceAll("-", "_").toUpperCase();
 }
 
-function bindingCall(kind: BindingKind, key: string): string {
-	if (kind === "secret") return `${key}: bindings.secret()`;
-	if (kind === "sendEmail") return `${key}: bindings.sendEmail()`;
-	if (kind === "rateLimit") {
-		return `${key}: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } })`;
+/**
+ * The declaration `make binding` writes for `kind`. Named resources take the key in kebab case,
+ * after the Worker for a database or a queue, so a new binding never shares the template's; a
+ * rate limit takes the next namespace number `config` leaves free.
+ */
+function bindingCall(kind: BindingKind, key: string, config: string): string {
+	let kebab = key.toLowerCase().replaceAll("_", "-");
+	switch (kind) {
+		case "secret":
+		case "sendEmail":
+			return `${key}: bindings.${kind}()`;
+		case "rateLimit":
+			return `${key}: bindings.rateLimit({ namespace: "${freeNamespace(config)}", simple: { limit: 100, period: 60 } })`;
+		case "kv":
+			return `${key}: bindings.kv({ id: "00000000000000000000000000000000" })`;
+		case "d1":
+			return `${key}: bindings.d1({ name: \`\${manifest.name}-${kebab}\`, id: "00000000-0000-4000-8000-000000000000" })`;
+		case "r2":
+			return `${key}: bindings.r2({ name: "${kebab}" })`;
+		case "queue":
+			return `${key}: bindings.queue({ name: \`\${manifest.name}-${kebab}\` })`;
+		default:
+			return `${key}: bindings.durableObject({ worker: manifest.name, exportName: "${pascalOf(kebab)}DO" })`;
 	}
-	if (kind === "kv") {
-		return `${key}: bindings.kv({ id: "00000000000000000000000000000000" })`;
-	}
-	if (kind === "d1") {
-		return `${key}: bindings.d1({ name: manifest.name, id: "00000000-0000-4000-8000-000000000000" })`;
-	}
-	if (kind === "r2") return `${key}: bindings.r2({ name: "${key.toLowerCase()}" })`;
-	if (kind === "queue") return `${key}: bindings.queue({ name: manifest.name })`;
-	return `${key}: bindings.durableObject({ worker: /* self */, exportName: "TODO" })`;
 }
 
-/** Inserts a binding property into the Worker's `env: { … }` object. */
+/** One above the highest rate-limit namespace `config` declares, and `1001` when it declares none. */
+function freeNamespace(config: string): number {
+	let taken = [...config.matchAll(/namespace\s*:\s*"(\d+)"/g)].map((match) => Number(match[1]));
+	return Math.max(1000, ...taken) + 1;
+}
+
+/** `user-uploads` as `UserUploads`. */
+function pascalOf(kebab: string): string {
+	return kebab
+		.split("-")
+		.map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+		.join("");
+}
+
+/**
+ * Puts `line` into the Worker's `env: { … }` object: in place of an existing declaration of
+ * `key`, keeping its comment and position, or as the object's first entry.
+ */
 function insertEnvBinding(source: string, key: string, line: string): Result<string, Error> {
+	let declared = new RegExp(`^([ \\t]*)${key}\\s*:\\s*bindings\\.\\w+\\s*\\([^)]*\\)\\s*,?`, "m");
+	let existing = declared.exec(source);
+	if (existing !== null) {
+		let indent = existing[1] ?? "";
+		return success(
+			`${source.slice(0, existing.index)}${indent}${line},${source.slice(existing.index + existing[0].length)}`,
+		);
+	}
 	let env = /env\s*:\s*\{/.exec(source);
-	if (env === null || env.index === undefined) {
+	if (env === null) {
 		return failure(new Error(`${CONFIG_FILE} has no env: { … } block to edit`));
 	}
 	let start = env.index + env[0].length;
-	let stripped = source.replace(
-		new RegExp(`(?:^|\\n)(\\s*)${key}\\s*:\\s*bindings\\.\\w+\\s*\\([^)]*\\)\\s*,?`, "m"),
-		"\n",
-	);
-	let envAgain = /env\s*:\s*\{/.exec(stripped);
-	if (envAgain === null || envAgain.index === undefined) {
-		return failure(new Error(`${CONFIG_FILE} env block could not be re-found after cleanup`));
-	}
-	start = envAgain.index + envAgain[0].length;
-	let indent = "\t\t\t";
-	return success(`${stripped.slice(0, start)}\n${indent}${line},${stripped.slice(start)}`);
+	return success(`${source.slice(0, start)}\n\t\t\t${line},${source.slice(start)}`);
 }
 
 /** Declares the DO export and env binding in `cloudflare.config.ts`. */
@@ -272,20 +317,16 @@ function insertDurableObject(
 /** Minimal Durable Object class stub; `@author` / `@copyright` are added by {@link makeDo}. */
 function durableObjectStub(className: string): string {
 	return `/**
- * The ${className} Durable Object: fill in its storage and request handlers.
+ * The ${className} Durable Object: one instance per name, with storage of its own.
  */
 
 import { DurableObject } from "cloudflare:workers";
 
 /** Durable Object class re-exported from bootstrap/worker.ts for its binding. */
 export class ${className} extends DurableObject<Cloudflare.Env> {
-	/**
-	 * Handles a fetch against this object.
-	 *
-	 * @param request - The inbound request.
-	 */
-	async fetch(request: Request): Promise<Response> {
-		return new Response("${className}", { status: 200 });
+	/** Answers every request a stub forwards with the class name, until the object serves its own. */
+	override fetch(): Response {
+		return new Response("${className}");
 	}
 }
 `;

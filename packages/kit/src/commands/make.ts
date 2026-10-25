@@ -17,7 +17,7 @@ import type { MakeInput } from "../make/index.js";
 import { METHODS, SDXC_COMMANDS } from "../contract.js";
 import { makeActions } from "../make/actions.js";
 import { makeBinding, makeDo, makeSecret } from "../make/binding.js";
-import { make } from "../make/index.js";
+import { finish, make } from "../make/index.js";
 import { copyStubs } from "../make/stubs.js";
 import { makeTest } from "../make/test.js";
 import { packageRoot, project } from "../middleware.js";
@@ -268,9 +268,10 @@ export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {
 	},
 });
 
-/** `sdxc make secret`. */
+/** `sdxc make secret`, which declares the secret and lists it in `.env.example`. */
 export const secret = createCommand(SDXC_COMMANDS.make.secret, {
 	middleware: MAKE_MIDDLEWARE,
+	/** Formats what it edited, as every kind does, then notes `sdxc run typegen`. */
 	async handler(ctx) {
 		let made = await makeSecret(ctx, ctx.project.root, {
 			name: ctx.arguments.name,
@@ -278,13 +279,14 @@ export const secret = createCommand(SDXC_COMMANDS.make.secret, {
 			force: ctx.flags.force,
 		});
 		if (isFailure(made)) return made;
-		return success();
+		return finish(ctx, ctx.project, made.data);
 	},
 });
 
-/** `sdxc make binding`. */
+/** `sdxc make binding`, which declares one `bindings.<kind>()` entry in the Worker's `env`. */
 export const binding = createCommand(SDXC_COMMANDS.make.binding, {
 	middleware: MAKE_MIDDLEWARE,
+	/** Formats what it edited, as every kind does, then notes `sdxc run typegen`. */
 	async handler(ctx) {
 		let made = await makeBinding(ctx, ctx.project.root, {
 			kind: ctx.arguments.kind,
@@ -293,15 +295,16 @@ export const binding = createCommand(SDXC_COMMANDS.make.binding, {
 			force: ctx.flags.force,
 		});
 		if (isFailure(made)) return made;
-		return success();
+		return finish(ctx, ctx.project, made.data);
 	},
 });
 
-/** `sdxc make do`. */
+/** `sdxc make do`, which writes a Durable Object class with its export and binding. */
 export const durableObject = createCommand(SDXC_COMMANDS.make.do, {
 	middleware: MAKE_MIDDLEWARE,
+	/** Formats what it wrote and edited, as every kind does, then notes `sdxc run typegen`. */
 	async handler(ctx) {
-		let made = await makeDo(ctx, ctx.project.root, ctx.packageRoot, {
+		let made = await makeDo(ctx, ctx.project.root, {
 			name: ctx.arguments.name,
 			role: ctx.flags.role,
 			binding: ctx.flags.binding,
@@ -309,7 +312,7 @@ export const durableObject = createCommand(SDXC_COMMANDS.make.do, {
 			force: ctx.flags.force,
 		});
 		if (isFailure(made)) return made;
-		return success();
+		return finish(ctx, ctx.project, made.data);
 	},
 });
 
