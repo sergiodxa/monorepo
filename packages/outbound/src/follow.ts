@@ -46,6 +46,12 @@ export interface FollowOptions extends CheckOptions {
 	resolve?: boolean;
 	/** The caller's own abort, combined with `timeout`. */
 	signal?: AbortSignal;
+	/**
+	 * Signs each hop's request before it is sent, such as with a Web Bot Auth signature, so
+	 * every origin in the chain receives a signature over its own authority. A failure
+	 * stops the walk as `signing-failed`.
+	 */
+	sign?: (request: Request) => Promise<Result<Request, Error>>;
 }
 
 /** The last response of a chain, where it came from, and how many hops it took. */
@@ -85,15 +91,28 @@ export async function follow(
 			if (isFailure(resolved)) return resolved;
 		}
 
+		let request = new Request(url, {
+			method: options.method ?? "GET",
+			headers,
+			signal,
+			redirect: "manual",
+			credentials: "omit",
+		});
+		if (options.sign) {
+			let signed = await options.sign(request);
+			if (isFailure(signed)) {
+				return failure(
+					new OutboundError("signing-failed", url.href, `Could not sign ${url.href}`, {
+						cause: signed.error,
+					}),
+				);
+			}
+			request = signed.data;
+		}
+
 		let response: Response;
 		try {
-			response = await fetch(url, {
-				method: options.method ?? "GET",
-				headers,
-				signal,
-				redirect: "manual",
-				credentials: "omit",
-			});
+			response = await fetch(request);
 		} catch (error) {
 			return failure(failedWith(url.href, error));
 		}

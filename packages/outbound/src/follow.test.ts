@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -136,6 +136,51 @@ describe("follow", () => {
 		await follow("https://example.com/a", { headers: { "user-agent": "Example/1.0" } });
 
 		expect(seen).toEqual(["Example/1.0", "Example/1.0"]);
+	});
+
+	test("signs every hop's request for its own URL", async () => {
+		let seen: (string | null)[] = [];
+		server.use(
+			http.get("https://example.com/a", ({ request }) => {
+				seen.push(request.headers.get("x-signed-for"));
+				return HttpResponse.redirect("https://example.org/b", 302);
+			}),
+			http.get("https://example.org/b", ({ request }) => {
+				seen.push(request.headers.get("x-signed-for"));
+				return HttpResponse.text("ok");
+			}),
+		);
+
+		let result = await follow("https://example.com/a", {
+			headers: { "user-agent": "Example/1.0" },
+			async sign(request) {
+				let headers = new Headers(request.headers);
+				headers.set("x-signed-for", `${request.method} ${request.url}`);
+				return success(new Request(request, { headers }));
+			},
+		});
+
+		expect(isSuccess(result) && result.data.response.status).toBe(200);
+		expect(seen).toEqual(["GET https://example.com/a", "GET https://example.org/b"]);
+	});
+
+	test("stops before sending when signing fails", async () => {
+		let reached = false;
+		server.use(
+			http.get("https://example.com/signed", () => {
+				reached = true;
+				return HttpResponse.text("ok");
+			}),
+		);
+
+		let result = await follow("https://example.com/signed", {
+			sign: async () => failure(new Error("no key")),
+		});
+
+		expect(reached).toBe(false);
+		expect(isFailure(result) && result.error.code).toBe("signing-failed");
+		expect(isFailure(result) && result.error.retryable).toBe(false);
+		expect(isFailure(result) && (result.error.cause as Error).message).toBe("no key");
 	});
 
 	test("reports a rejected fetch as a retryable network failure", async () => {

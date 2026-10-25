@@ -8,9 +8,9 @@
  */
 
 /**
- * Why an outbound request was refused or failed. Each `refused-*` code is decided
- * before a request leaves; `timeout` and `network` are the only outcomes a retry can
- * change.
+ * Why an outbound request was refused or failed. Each `refused-*` code, and
+ * `signing-failed`, is decided before a request leaves; `timeout` and `network` are the
+ * only outcomes a retry can change.
  */
 export type OutboundErrorCode =
 	| "invalid-url"
@@ -20,6 +20,7 @@ export type OutboundErrorCode =
 	| "refused-host"
 	| "refused-address"
 	| "too-many-redirects"
+	| "signing-failed"
 	| "too-large"
 	| "timeout"
 	| "network";

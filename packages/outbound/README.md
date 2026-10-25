@@ -102,6 +102,9 @@ Answers the final response whatever its status. Beside every `checkUrl` option:
 - `maxRedirects`: default `5`.
 - `resolve`: when `true`, resolves every hop's name with `resolveHost` and refuses it unless every
   address is public. Default `false`; skipped with `hosts: "any"`.
+- `sign`: `(request) => Promise<Result<Request, Error>>`, run on each hop's request before it is
+  sent, such as `webBotAuthSigner` from `@sdxc/http-signatures/web-bot-auth`. A failure stops the
+  walk as `signing-failed`.
 
 ### `resolveHost(url: URL, options?: { signal?: AbortSignal }): Promise<Result<string[], OutboundError>>`
 
@@ -145,6 +148,7 @@ for `invalid-url`, or `""` for a body with no URL), and `retryable`.
 | `refused-host`        | No          | A reserved name, a single label, or no address    |
 | `refused-address`     | No          | A non-public literal, or a non-public DNS answer  |
 | `too-many-redirects`  | No          | The chain ran past `maxRedirects`                 |
+| `signing-failed`      | No          | The `sign` option answered a failure              |
 | `too-large`           | No          | The body passed `maxBytes`                        |
 | `timeout`             | Yes         | The deadline passed                               |
 | `network`             | Yes         | `fetch` rejected, a body broke off, or DNS failed |
