@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to link accounts to customers and open a hosted checkout with `@sdxc/billing`"
     - "How to sync subscriptions and receive the platform's webhooks"
@@ -29,8 +29,8 @@ npm add @sdxc/authz @sdxc/billing @sdxc/http @sdxc/jobs @sdxc/result remix
 
 ## Configure the provider
 
-A provider is a class built once at module scope. Its constructor reaches nothing, so importing
-it costs no startup work, and a route and a job share the same instance:
+A provider is a class built once at module scope. Its constructor makes no request, so
+importing it costs no startup work, and a route and a job share the same instance:
 
 ```typescript {% title="app/initializers/billing.ts" %}
 import type { Billing } from "@sdxc/billing";
@@ -119,8 +119,8 @@ export async function linkCustomer(
 }
 ```
 
-Nothing in the package throws: every call answers a `Result<T, BillingError>`, and a lookup that
-matches nothing is a `not_found` failure rather than `null`. The error's `code` is what you
+Every call answers a `Result<T, BillingError>`, and a lookup that matches nothing is a
+`not_found` failure. The error's `code` is what you
 branch on. `rate_limited` is the one marked `retryable`, and `unknown` means a timeout or a 5xx
 where the call may or may not have taken effect.
 
@@ -159,8 +159,8 @@ the attempt. A customer who already subscribes goes to `ctx.billing.portal.creat
 instead, behind a `supports()` check, where they change plans and payment methods on the
 platform's page.
 
-No call creates a subscription. One exists once the checkout completes, and your app learns of
-it from an event.
+A subscription comes into being when the checkout completes, and your app learns of it from an
+event.
 
 ## Sync what the customer holds
 
@@ -228,40 +228,42 @@ sequenceDiagram
 
 `BillingWebhook` is the whole receiver. The provider verifies the signature, a store records the
 delivery, and a handler per event type does the work. Every handler here does the same thing,
-on purpose:
+on purpose, and the controller hands each delivery to the endpoint's `handler`:
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import type { RequestContext } from "remix/router";
 
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
+import { createAction } from "remix/router";
 
 import { billing } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
 import { WebhookDeliveries } from "~/app/models/webhook-deliveries";
 import { syncEntitlements } from "~/app/services/entitlements";
+import routes from "~/routes/web";
 
-async function resync(ctx: RequestContext, customerId: string | null): Promise<void> {
+async function resync(customerId: string | null): Promise<void> {
 	if (customerId === null) return;
-	let synced = await syncEntitlements(ctx.db, billing, { id: customerId });
+	let synced = await syncEntitlements(openDatabase(), billing, { id: customerId });
 	if (isFailure(synced)) throw synced.error;
 }
 
-export default new BillingWebhook(
+const ENDPOINT = new BillingWebhook(
 	billing,
 	{
-		"subscription.activated": (event, ctx) =>
-			resync(ctx, event.subscription.customerId),
-		"subscription.updated": (event, ctx) =>
-			resync(ctx, event.subscription.customerId),
-		"subscription.canceled": (event, ctx) =>
-			resync(ctx, event.subscription.customerId),
-		"subscription.revoked": (event, ctx) =>
-			resync(ctx, event.subscription.customerId),
-		"order.paid": (event, ctx) => resync(ctx, event.order.customerId),
+		"subscription.activated": (event) => resync(event.subscription.customerId),
+		"subscription.updated": (event) => resync(event.subscription.customerId),
+		"subscription.canceled": (event) => resync(event.subscription.customerId),
+		"subscription.revoked": (event) => resync(event.subscription.customerId),
+		"order.paid": (event) => resync(event.order.customerId),
 	},
 	{ store: new WebhookDeliveries(openDatabase) },
 );
+
+export default createAction(routes.webhooks.billing, {
+	handler: (ctx) => ENDPOINT.handler(ctx as RequestContext),
+});
 ```
 
 A delivery says that something changed, and only a fresh snapshot says what is true now, so a
@@ -271,10 +273,10 @@ event union: a misspelled key is a compile error, and a `"order.paid"` handler r
 
 Each status code is chosen for the platform, which disables an endpoint that keeps failing. An
 unproven delivery is the only `401`. An event type with no handler, or one the platform added
-after your release, is logged and acknowledged. A handler that throws answers `503` when the
-error is retryable, so the platform delivers again, and `200` when a retry would fail the same
-way; `options.retry` changes that decision. Mount the endpoint with
-`router.map(routes.webhooks.billing, billingWebhook)`.
+after your release, is logged and acknowledged. A handler reports a failure by throwing it: the
+endpoint answers `503` when the error is retryable, so the platform delivers again, and `200`
+when a retry would fail the same way; the `retry` option changes that decision. Map the
+controller through `lazy()` like any other.
 
 <warning>
 A platform sends its webhooks with no session and no `Origin` header. If your app runs
@@ -517,9 +519,5 @@ handler once; [`@sdxc/billing`](/api/billing) shows that flow.
   replay stores and fail-closed receivers in general.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — declaring the
   nightly job and its trigger.
-- [Feature flags](/docs/data-and-background-work/feature-flags) — gating behavior that is not
-  sold.
-- [Decide who can do what](/docs/identity-and-security/authorization) — the plan as one fact
-  among roles, ownership and flags.
 - [`@sdxc/billing`](/api/billing) — every resource group, the error codes, and the conformance
   suite for writing a provider of your own.
