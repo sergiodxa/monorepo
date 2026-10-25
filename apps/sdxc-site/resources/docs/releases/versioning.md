@@ -55,7 +55,7 @@ version was never making; the date you pin is the one you trust.
 ## Read what changed
 
 Each day's release is published as one set of notes, grouped by package, and the
-Changelog page beside this one shows every release. An entry is one change, headed by a
+[Changelog](/docs/releases/changelog) shows every release. An entry is one change, headed by a
 sentence that says what changed for you, such as "Add ES512 signing keys", and followed by its
 release note: a new feature says how to use it with a short example, a fix states the behavior
 before and after and whether you need to act, and a breaking change lists every migration step
