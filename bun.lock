@@ -1991,6 +1991,7 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/catch-response-middleware": "workspace:*",
+        "@sdxc/cbor": "workspace:*",
         "@sdxc/cli": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
         "@sdxc/codemod": "workspace:*",
