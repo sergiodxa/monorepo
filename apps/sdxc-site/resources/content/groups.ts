@@ -161,6 +161,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"hostname",
 			"doh",
 			"zone-file",
+			"email-auth",
 			"rdap",
 			"mcp",
 			"cli",
