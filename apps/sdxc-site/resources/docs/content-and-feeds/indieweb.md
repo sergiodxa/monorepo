@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to mark posts up with microformats using `@sdxc/microformats`"
     - "How to receive, verify and send Webmentions from background jobs"
@@ -263,23 +263,24 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 A timeout, a broken connection, a `5xx` or a `429` is `retryable`; a refused host, a redirect
 chain past the limit or an oversized body is not, and retrying would get the same answer. A
 retry waits two minutes after the first failure and doubles from there up to an hour, so a
-source that was briefly down is read again quickly and one that stays down is left alone;
-the jitter spreads out retries that failed together. `gone` (the source answered `410`) and `unlinked` both mean
-the mention no longer stands, so both delete it. `USER_AGENT` is a string naming your site, such
-as `Example Webmention (+https://example.com)`, so a publisher can see who is fetching.
+source that was briefly down is read again quickly and one that stays down is left alone; the
+jitter spreads out retries that failed together. `gone` (the source answered `410`) and
+`unlinked` both mean the mention no longer stands, so both delete it. `USER_AGENT` is a string
+naming your site, such as `Example Webmention (+https://example.com)`, so a publisher can see
+who is fetching.
 
 A `linked` mention carries its `kind` (`reply`, `like`, `repost`, `bookmark` or `mention`), its
 author and its content. `content.html` is already sanitized with the source as its base, so an
-approved reply renders as it stands (in `remix/component`, through `unsafeHTML`); mark each one up as
-an `mf("h-cite")` so the replies under your post are themselves readable microformats.
+approved reply renders as it stands (in `remix/component`, through `unsafeHTML`); mark each one
+up as an `mf("h-cite")` so the replies under your post are themselves readable microformats.
 
 <warning>
 Store mentions as pending and show them once you approve them. The endpoint is anonymous, and
 moderation is the one policy the protocol leaves entirely to you.
 </warning>
 
-Responses that arrive over
-ActivityPub can go through `saveMention` too, since their summary carries the same fields.
+Responses that arrive over ActivityPub can go through `saveMention` too, since their summary
+carries the same fields.
 
 ## Send Webmentions
 
@@ -376,11 +377,12 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 
 `send` discovers the target's endpoint (the `Link` header first, then the first `<link>` or
 `<a>` in the page) and POSTs the pair. The header parse is the same `parse` from
-`@sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It answers `{ status: "no-endpoint" }` for a page that
-takes no mentions, which is an ordinary outcome, not a failure. A failure is either a
-`WebmentionFetchError`, which says itself whether it is `retryable`, or a
-`WebmentionSendError` carrying the status the endpoint answered. A receiver is someone else's
-server, so delivery backs off longer than verification: five minutes, doubling to six hours.
+`@sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It
+answers `{ status: "no-endpoint" }` for a page that takes no mentions, which is an ordinary
+outcome, not a failure. A failure is either a `WebmentionFetchError`, which says itself whether
+it is `retryable`, or a `WebmentionSendError` carrying the status the endpoint answered. A
+receiver is someone else's server, so delivery backs off longer than verification: five minutes,
+doubling to six hours.
 [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
 schedule's options.
 
@@ -471,10 +473,10 @@ export function draftFrom(operation: Micropub.Create) {
 ```
 
 Your `createPost` can store what `draftFrom` reads and return the new post's URL, which
-`created` puts in `Location`. `postType` runs Post Type Discovery, so a create with `in-reply-to` is a `reply` and one with a
-name that is not a prefix of its content is an `article`. A reply you store this way is also
-a post whose `send` job notifies the page it replies to, which is the loop that makes a
-conversation across two sites.
+`created` puts in `Location`. `postType` runs Post Type Discovery, so a create with
+`in-reply-to` is a `reply` and one with a name that is not a prefix of its content is an
+`article`. A reply you store this way is also a post whose `send` job notifies the page it
+replies to, which is the loop that makes a conversation across two sites.
 
 The `GET` side answers queries. `parseQuery` reads `q`, and each answer has its own builder:
 

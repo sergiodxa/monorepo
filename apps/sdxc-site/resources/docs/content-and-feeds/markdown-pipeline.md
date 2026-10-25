@@ -114,10 +114,10 @@ Starter costs $9 a month. {/* TODO: confirm the annual discount */}
 ## Transform the tree in one walk
 
 `Markdown.walk` is the only transform. A visitor is a plain object with one handler per node
-type, and `Markdown.compose` merges several so a whole preparation runs as a single pass. `highlight`
-from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding one `code`
-handler that attaches the painted tokens to each fence, and the plugins that ship with
-`@sdxc/markdown` are built the same way.
+type, and `Markdown.compose` merges several so a whole preparation runs as a single pass.
+`highlight` from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding
+one `code` handler that attaches the painted tokens to each fence, and the plugins that ship
+with `@sdxc/markdown` are built the same way.
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";

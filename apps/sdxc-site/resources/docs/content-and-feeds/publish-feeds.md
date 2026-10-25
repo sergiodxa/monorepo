@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to serve one list of posts as RSS 2.0, Atom and JSON Feed"
     - "How to let readers find the feeds and publish an OPML list"
@@ -271,8 +271,9 @@ export function FeedLinks() {
 }
 ```
 
-Place `<FeedLinks />` in your document layout's `<head>`. This is the markup `Feed.discover` from [`@sdxc/feed`](/api/feed) follows, so someone can paste
-your homepage into a reader built on it instead of hunting for `/feed.xml`.
+Place `<FeedLinks />` in your document layout's `<head>`. This is the markup `Feed.discover`
+from [`@sdxc/feed`](/api/feed) follows, so someone can paste your homepage into a reader built
+on it instead of hunting for `/feed.xml`.
 
 ## Push updates with WebSub
 
