@@ -29,7 +29,7 @@ export interface HubAdvertisement {
  *
  * @param self The feed's absolute URL, which subscribers key their subscription by.
  * @param type The feed's media type, declared on the `rel="self"` link.
- * @example let hub = advertiseHub(self); new RSS({ ...channel, atomLink: hub.atomLink });
+ * @example let hub = advertiseHub(self); RSS.stringify({ channel: { ...channel, atomLink: hub.atomLink }, items });
  */
 export function advertiseHub(self: string, type = "application/rss+xml"): HubAdvertisement {
 	let hub = env.WEBSUB_HUB;

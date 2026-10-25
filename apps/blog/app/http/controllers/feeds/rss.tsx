@@ -7,7 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { xml } from "@sdxc/http/response";
+import { text, xml } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { createController } from "remix/router";
 
@@ -23,7 +25,8 @@ import routes from "~/routes/web";
 
 /**
  * Serializes a feed as RSS, dating each item by its publish time. Every feed lists all its
- * posts, so it is marked `fh:complete` for readers to drop removed ones.
+ * posts, so it is marked `fh:complete` for readers to drop removed ones. Data the RSS writer
+ * refuses is logged and answered with a 500.
  *
  * @param self The feed's absolute URL, which is its WebSub topic.
  * @param channel The feed's own metadata.
@@ -36,25 +39,29 @@ export function rssResponse(
 ): Response {
 	let hub = advertiseHub(self);
 
-	let rss = new RSS({
-		title: channel.title,
-		description: channel.description,
-		link: channel.home,
-		atomLink: hub.atomLink,
-		fhComplete: true,
-	});
-
-	for (let entry of entries) {
-		rss.addItem({
+	let rss = RSS.stringify({
+		channel: {
+			title: channel.title,
+			description: channel.description,
+			link: channel.home,
+			atomLink: hub.atomLink,
+			fhComplete: true,
+		},
+		items: entries.map((entry) => ({
 			guid: entry.id,
 			title: entry.title,
 			description: entry.summary,
 			link: entry.url,
 			pubDate: new Date(entry.published).toUTCString(),
-		});
+		})),
+	});
+
+	if (isFailure(rss)) {
+		currentLog()?.fail(rss.error, { feed: self });
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return xml(rss.toString(), { headers: hub.headers });
+	return xml(rss.data, { headers: hub.headers });
 }
 
 /** Serves the public RSS feeds, each omitting preview-only posts. */

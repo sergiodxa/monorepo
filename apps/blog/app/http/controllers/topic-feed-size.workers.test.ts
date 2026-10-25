@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
@@ -56,6 +56,6 @@ test("a kind's feed lists every post when there are more than one statement can 
 		new Request(new URL("/notes.rss", ORIGIN)),
 	);
 	expect(response.status).toBe(200);
-	let feed = RSS.parse(await response.text());
+	let feed = unwrap(RSS.parse(await response.text()));
 	expect(feed.items.filter((item) => item.link?.includes(`bulk-${RUN}-`))).toHaveLength(NOTES);
 });

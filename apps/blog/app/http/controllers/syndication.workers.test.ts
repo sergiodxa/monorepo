@@ -153,7 +153,7 @@ describe("a bookmark item", () => {
 	async function items(url: string) {
 		let json = ok(JSONFeed.parse(await (await fetchPath("/bookmarks.json")).text()));
 		let atom = ok(Atom.parse(await (await fetchPath("/bookmarks.atom")).text()));
-		let rss = RSS.parse(await (await fetchPath("/bookmarks.rss")).text());
+		let rss = ok(RSS.parse(await (await fetchPath("/bookmarks.rss")).text()));
 
 		return {
 			json: json.items.find((item) => item.url === url),

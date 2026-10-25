@@ -7,7 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { text } from "@sdxc/http/response";
 import { JSONFeed } from "@sdxc/json-feed";
+import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { createController } from "remix/router";
 
 import type { Syndication } from "~/app/http/view-models/syndication";
@@ -23,7 +26,8 @@ import routes from "~/routes/web";
 
 /**
  * Serializes a feed as JSON Feed. Each item carries its summary as `content_text`, since
- * JSON Feed expects every item to hold a body.
+ * JSON Feed expects every item to hold a body. Data the JSON Feed writer refuses is logged
+ * and answered with a 500.
  *
  * @param self The feed's absolute URL, which is its `feed_url` and WebSub topic.
  * @param channel The feed's own metadata.
@@ -38,28 +42,32 @@ export function jsonFeedResponse(
 ): Response {
 	let hub = advertiseHub(self, JSONFeed.mediaType);
 
-	let document = new JSONFeed({
-		title: channel.title,
-		homePageUrl: channel.home,
-		feedUrl: self,
-		description: channel.description,
-		authors: [{ name: PROFILE.name, url: origin }],
-		language: "en",
-		hubs: [{ type: "WebSub", url: hub.hubUrl }],
-	});
-
-	for (let entry of entries) {
-		document.addItem({
+	let json = JSONFeed.stringify({
+		feed: {
+			title: channel.title,
+			homePageUrl: channel.home,
+			feedUrl: self,
+			description: channel.description,
+			authors: [{ name: PROFILE.name, url: origin }],
+			language: "en",
+			hubs: [{ type: "WebSub", url: hub.hubUrl }],
+		},
+		items: entries.map((entry) => ({
 			id: entry.id,
 			url: entry.url,
 			title: entry.title,
 			contentText: entry.summary,
 			datePublished: entry.published,
 			dateModified: entry.updated,
-		});
+		})),
+	});
+
+	if (isFailure(json)) {
+		currentLog()?.fail(json.error, { feed: self });
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return new Response(document.toString(), {
+	return new Response(json.data, {
 		headers: { "content-type": `${JSONFeed.mediaType}; charset=utf-8`, ...hub.headers },
 	});
 }

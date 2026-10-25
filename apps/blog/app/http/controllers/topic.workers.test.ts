@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
 
 import { JSONFeed } from "@sdxc/json-feed";
-import { isFailure, succeeded } from "@sdxc/result";
+import { isFailure, succeeded, unwrap } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
@@ -181,7 +181,7 @@ describe("a kind's topic", () => {
 	});
 
 	test("its feed lives beside its page, and a name no kind has answers 404", async () => {
-		let feed = RSS.parse(await (await request("/glossary.rss")).text());
+		let feed = unwrap(RSS.parse(await (await request("/glossary.rss")).text()));
 		expect(feed.items.map((item) => item.link)).toContain(`${ORIGIN}/glossary#zebra-${RUN}`);
 		expect((await request("/nothing.rss")).status).toBe(404);
 		expect((await request(`/${TOPIC_SLUG}.json`)).status).toBe(404);

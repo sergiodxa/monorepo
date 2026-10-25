@@ -51,5 +51,5 @@ test("the RSS feed is marked complete", async () => {
 	let body = await response.text();
 
 	expect(body).toContain("<fh:complete/>");
-	expect(RSS.parse(body).channel.fhComplete).toBe(true);
+	expect(unwrap(RSS.parse(body)).channel.fhComplete).toBe(true);
 });
