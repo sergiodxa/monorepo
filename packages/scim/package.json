@@ -19,7 +19,6 @@
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/uuid": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {

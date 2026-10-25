@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { JWK, JWT } from "@sdxc/jwt";
+import { JWK, JWT, SecurityEventToken } from "@sdxc/jwt";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -160,6 +160,22 @@ describe("ScimEventToken", () => {
 			keys,
 		);
 		await expect(ScimEventToken.verify(plain, keys)).rejects.toThrow();
+	});
+
+	test("verifies as a SecurityEventToken, refusing a SET that carries exp", async () => {
+		let keys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
+		let token = createScimEvent({
+			issuer: "https://scim.example.com",
+			audience: "https://receiver.example.com",
+			subject: { uri: "/Users/1" },
+			events: [scimEvents.delete()],
+		});
+		token.expirationTime = Math.floor(Date.now() / 1000) + 3600;
+
+		expect(token).toBeInstanceOf(SecurityEventToken);
+		await expect(
+			ScimEventToken.verify(await token.sign(JWK.Algorithm.ES256, keys), keys),
+		).rejects.toMatchObject({ claim: "exp" });
 	});
 
 	test("reads no subject from a sub_id in another format", () => {

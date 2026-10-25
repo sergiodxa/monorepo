@@ -155,8 +155,8 @@ if (query.data.cursor !== null) {
 
 ### Publish an event
 
-`createScimEvent` builds an RFC 9967 Security Event Token typed `secevent+jwt`; delivering it is
-yours (RFC 8935 push, RFC 8936 poll).
+`createScimEvent` builds an RFC 9967 Security Event Token typed `secevent+jwt`. Deliver it by
+RFC 8935 push or RFC 8936 poll with `@sdxc/webhooks/security-events`.
 
 ```typescript
 import { JWK } from "@sdxc/jwt";
@@ -369,8 +369,8 @@ One builder per RFC 9967 event: `feedAdd`, `feedRemove`, `create`, `patch`, `put
 
 #### `ScimEventToken`
 
-A `JWT` typed `secevent+jwt`, with `subjectId`, `transaction` and `events` accessors;
-`ScimEventToken.verify` refuses a token of any other type.
+A `SecurityEventToken` from `@sdxc/jwt` whose `subjectId` reads the `scim` `sub_id` format;
+`ScimEventToken.verify` refuses a token of any other type and holds it to RFC 8417's claims.
 
 #### `prefersAsync(request: Request): boolean`, `acceptedResponse(options): Response`
 
