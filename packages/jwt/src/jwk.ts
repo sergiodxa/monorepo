@@ -16,6 +16,7 @@ import * as jose from "jose";
 import type { KeyStorage } from "./key-storage.js";
 
 import * as SignatureAlgorithm from "./algorithm.js";
+import { thumbprint as jwkThumbprint } from "./thumbprint.js";
 
 /**
  * The polymorphic name RFC 9864 deprecates in favour of `Ed25519`. Keys and tokens
@@ -64,6 +65,14 @@ export namespace JWK {
 
 	/** One of the supported signature algorithms. */
 	export type Algorithm = (typeof SignatureAlgorithm)[keyof typeof SignatureAlgorithm];
+
+	/**
+	 * A key's RFC 7638 SHA-256 thumbprint, base64url: the `keyid` Web Bot Auth signs under
+	 * and the `kid` its key directory publishes. A key pair's halves share one thumbprint.
+	 *
+	 * @example let keyid = await JWK.thumbprint(keyPair.jwk);
+	 */
+	export const thumbprint = jwkThumbprint;
 
 	/** A key pair imported into a usable form, with the public half in JWK format. */
 	export interface KeyPair {

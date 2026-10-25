@@ -209,6 +209,11 @@ The JWKS document for `/.well-known/jwks.json`: each entry carries `kty`, `kid`,
 public parameters (`crv`/`x`/`y` for `EC`, `crv`/`x` for `OKP`, `e`/`n` for `RSA`). Throws on any
 other key type.
 
+#### `JWK.thumbprint(jwk: jose.JWK): Promise<Result<string, Error>>`
+
+The key's RFC 7638 SHA-256 thumbprint, base64url, which Web Bot Auth uses as `keyid`. A private
+JWK and its public half share one thumbprint; a key missing a required member is a failure.
+
 #### Types
 
 ```typescript

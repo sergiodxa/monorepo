@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/result": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
 		"jose": "^6.2.13"
 	}
