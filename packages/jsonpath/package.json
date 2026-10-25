@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/jsonpath",
+	"version": "0.0.1",
+	"description": "RFC 9535 JSONPath queries over JSON values, with normalized paths and every function extension",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

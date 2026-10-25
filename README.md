@@ -285,6 +285,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/json-schema](packages/json-schema)       | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12           |
 | [@sdxc/jsonc](packages/jsonc)                   | JSON with comments and trailing commas, parsed with errors that point at the line and column                  |
 | [@sdxc/jsonl](packages/jsonl)                   | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure              |
+| [@sdxc/jsonpath](packages/jsonpath)             | RFC 9535 JSONPath queries over JSON values, with normalized paths and every function extension                |
 | [@sdxc/messageformat](packages/messageformat)   | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                   |
 | [@sdxc/png](packages/png)                       | PNG encoder and decoder over Web Streams, with no WebAssembly                                                 |
 | [@sdxc/qr](packages/qr)                         | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer               |

@@ -1423,6 +1423,13 @@
         "@standard-schema/spec": "^1.1.0",
       },
     },
+    "packages/jsonpath": {
+      "name": "@sdxc/jsonpath",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/jwt": {
       "name": "@sdxc/jwt",
       "version": "0.0.1",
@@ -3248,6 +3255,8 @@
     "@sdxc/jsonc": ["@sdxc/jsonc@workspace:packages/jsonc"],
 
     "@sdxc/jsonl": ["@sdxc/jsonl@workspace:packages/jsonl"],
+
+    "@sdxc/jsonpath": ["@sdxc/jsonpath@workspace:packages/jsonpath"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 
