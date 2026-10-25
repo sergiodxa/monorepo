@@ -155,7 +155,9 @@ bun run test                       # every test, under Vitest
 ### Testing
 
 - Write tests with Vitest, in a `*.test.ts` file beside the module.
-- Back database tests with the in-memory D1 from `@sdxc/cloudflare-mocks/sqlite`.
+- Back database tests with the in-memory D1 from `@sdxc/cloudflare-mocks/sqlite`: `migrate()` and
+  `factories()` from `app/test/database.ts` apply the migrations and seed rows through the models.
+- Call MCP tools in tests with `callTool()` from `app/test/mcp.ts`, through the app's router.
 - Mock outbound HTTP with MSW (`setupServer` from `msw/node`).
 - Add a regression test with every bug fix, one that fails without the fix.
 

@@ -86,7 +86,11 @@ export async function callTool(
 			}),
 		}),
 	);
-	let body = (await response.json()) as CallResponse;
+	return readCall((await response.json()) as CallResponse);
+}
+
+/** What a `tools/call` response says, with a protocol error read as the call's failure. */
+function readCall(body: CallResponse): ToolCall {
 	if (body.error !== undefined) return { text: body.error.message ?? "", isError: true };
 	return { text: body.result?.content?.[0]?.text ?? "", isError: body.result?.isError === true };
 }
