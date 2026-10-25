@@ -14,6 +14,7 @@ import { currentLog } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { fetchRobots } from "@sdxc/robots/fetch";
 
+import { requestSigner } from "~/app/initializers/web-bot-auth";
 import {
 	ARTICLE_TTL,
 	articleCache,
@@ -143,7 +144,11 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 
 	let startedAt = Date.now();
 	let spentFrom = performance.now();
-	let distilled = await distill(post.url, { userAgent: EXTRACTION_USER_AGENT, robots });
+	let distilled = await distill(post.url, {
+		userAgent: EXTRACTION_USER_AGENT,
+		robots,
+		sign: await requestSigner(),
+	});
 	let cpuMs = Math.round(performance.now() - spentFrom);
 	let durationMs = Date.now() - startedAt;
 

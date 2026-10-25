@@ -59,6 +59,7 @@ import type {
 import { features, flagsFor } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
+import { requestSigner } from "~/app/initializers/web-bot-auth";
 import { KEYS_PER_BULK_READ, readHeads } from "~/app/models/feed-head";
 import { feedStore } from "~/app/models/feed-store";
 import { registerFeed } from "~/app/models/registry";
@@ -1541,7 +1542,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * decides what two people are following: it reports the address the response finally
 		 * came from, so a person who pastes a site and a person who pastes its feed converge
 		 */
-		let discovered = await Feed.discover(target);
+		let discovered = await Feed.discover(target, { sign: await requestSigner() });
 		if (isFailure(discovered)) return { ok: false, reason: "unreachable", feedId: null };
 
 		let [advertised] = discovered.data;

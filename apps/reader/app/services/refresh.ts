@@ -19,6 +19,7 @@ import { and, getTableColumns, getTableName, gt, lt, lte } from "remix/data-tabl
 
 import type { InsertItem, SelectFeed } from "~/database/feed-schema";
 
+import { requestSigner } from "~/app/initializers/web-bot-auth";
 import { feed as feedTable, hubTopicFor, items } from "~/database/feed-schema";
 
 /** The feed row's id, pinned by a `CHECK`, since an object holds exactly one feed. */
@@ -165,6 +166,7 @@ export async function pollFeed(
 			etag: feed.etag,
 			lastModified: feed.last_modified,
 			signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+			sign: await requestSigner(),
 		});
 
 		if (isFailure(result)) {

@@ -352,6 +352,7 @@
         "@sdxc/health": "workspace:*",
         "@sdxc/html": "workspace:*",
         "@sdxc/http": "workspace:*",
+        "@sdxc/http-signatures": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/iife": "workspace:*",

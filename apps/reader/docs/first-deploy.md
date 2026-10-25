@@ -92,6 +92,17 @@ bunx wrangler secret put CLIENT_ID
 | `EMAIL_FROM`               | An address on the domain verified for sending                              |
 | `MEDIA_PROXY_SECRET`       | `openssl rand -base64 32`                                                  |
 | `AGENT_TOKEN_SECRET`       | `openssl rand -base64 32`; never the placeholder `.env.example` ships with |
+| `WEB_BOT_AUTH_KEY`         | An Ed25519 private JWK, generated and set with the command below           |
+
+`WEB_BOT_AUTH_KEY` signs every feed, discovery and article request with Web Bot Auth, and
+`/.well-known/http-message-signatures-directory` publishes its public half. Generate it and set
+it in one step, so the private key is never printed:
+
+```bash
+bun -e 'let { privateKey } = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]); console.log(JSON.stringify(await crypto.subtle.exportKey("jwk", privateKey)))' | bunx wrangler secret put WEB_BOT_AUTH_KEY
+```
+
+Left unset, requests go out unsigned and the directory answers 404.
 
 `PUBLIC_URL` is a plain variable already set in `wrangler.jsonc`.
 

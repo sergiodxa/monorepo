@@ -38,6 +38,7 @@ import { flags } from "~/app/initializers/flags";
 import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger, logRenderFailure } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
+import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import requireAgent, { agentAccess } from "~/app/mcp/agent";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -136,10 +137,13 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			securityHeaders(SECURITY_POLICY),
 			/**
-			 * Inside the security headers, so `/.well-known/security.txt` is served under the same
-			 * policy as every other response.
+			 * Inside the security headers, so `/.well-known/security.txt` and the Web Bot Auth key
+			 * directory are served under the same policy as every other response.
 			 */
-			wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
+			wellKnown({
+				"security.txt": serve(securityTxt, () => SECURITY_TXT),
+				"http-message-signatures-directory": signaturesDirectory,
+			}),
 			/**
 			 * After the security headers, whose nonce it publishes on `ctx.assets` for the
 			 * document's inline import map, and before the renderer, so every page reads one lookup.
