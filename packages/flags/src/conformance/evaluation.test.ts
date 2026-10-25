@@ -351,8 +351,10 @@ describe("Variant field population", () => {
 	});
 });
 
-// `CACHED` is a reason a provider with a cache reports, and the in-memory provider
-// the suites evaluate against resolves from memory (ADR-059 decision 18).
+/**
+ * `CACHED` is a reason a provider with a cache reports, and the in-memory
+ * provider the suites evaluate against resolves every flag from memory.
+ */
 describe.skip("CACHED reason", () => {
 	test.each([
 		{ key: "boolean-flag", flagType: "Boolean", fallback: false },

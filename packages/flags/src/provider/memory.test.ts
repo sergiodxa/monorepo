@@ -278,15 +278,15 @@ test("Requirement 2.5.3 — shutting down twice does nothing the second time", a
 	expect(flags.resolveBoolean("boolean-flag", false)).toMatchObject({ value: true });
 });
 
-describe("the specification's own flag set", () => {
-	/** The context the vendored suites target with, matching every targeting rule in the file. */
-	const BALLMER: EvaluationContext = {
-		targetingKey: "user1",
-		email: "ballmer@macrosoft.com",
-		customer: false,
-		age: 25,
-	};
+/** The context the vendored suites target with, matching every targeting rule in the file. */
+const BALLMER: EvaluationContext = {
+	targetingKey: "user1",
+	email: "ballmer@macrosoft.com",
+	customer: false,
+	age: 25,
+};
 
+describe("the specification's own flag set", () => {
 	test("resolves every standard flag to its default variant", async () => {
 		let flags = await provider(testFlags());
 
