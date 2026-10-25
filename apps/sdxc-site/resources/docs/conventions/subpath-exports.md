@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 3
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Why a package splits its concerns into subpath entry points"
     - "What recurring subpath shapes to expect, like `@sdxc/http/cache`"
@@ -70,30 +70,6 @@ The import you write decides what you deploy against: a Worker that imports only
 `@sdxc/cache/worker-kv` carries no in-memory adapter. The same shape holds for `/memory` in
 [`@sdxc/jobs`](/api/jobs), [`@sdxc/mail`](/api/mail) and [`@sdxc/messaging`](/api/messaging),
 and for vendor names such as `@sdxc/messaging/slack` and `@sdxc/billing/providers/stripe`.
-
-The package's source tree reads as the entry points it publishes:
-
-<files title="packages/cache/src">
-<folder name="adapters">
-<file name="memory.ts" />
-<file name="worker-kv.ts" />
-</folder>
-<folder name="lib">
-<file name="attempt.ts" />
-<file name="json.ts" />
-<file name="ttl.ts" />
-</folder>
-<folder name="testing">
-<file name="conformance.ts" />
-</folder>
-<file name="errors.ts" />
-<file name="index.ts" />
-</files>
-
-`index.ts` is the contract at the root, `adapters/` hold the two implementations of it, and
-`testing/conformance.ts` is the suite each of them passes. `lib/` is the package's own
-workings, published under no subpath, so the four entries the manifest names are the files you
-can import.
 
 ## Hold your own adapter to the conformance suite
 
@@ -162,8 +138,8 @@ them lands as one version that you take at once, while you still pay only for wh
 
 ## Where to go next
 
-- [Install and pin](/docs/getting-started/install-and-pin) — why every package, and so every
-  subpath, moves on one release date.
+- [Install and pin](/docs/getting-started/install-and-pin) — how to pin every package, and so
+  every subpath, at one release.
 - [Cache on Workers](/docs/data-and-background-work/cache-on-workers) — the contract and its
   adapters at work in an app.
 - [Naming](/docs/conventions/naming) — the conventions that make the exports behind each subpath
