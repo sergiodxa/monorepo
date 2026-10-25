@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read through a Workers KV cache and keep a stale copy for outages"
     - "How to store whole responses at the edge with `@sdxc/workers-cache` and purge them by tag"
@@ -221,6 +221,29 @@ carrying `Set-Cookie`, or a `public` policy on a request that carried a session,
 `private, no-store` and logged as a warning (and throws in development), so a signed-in page
 cannot end up in a shared cache. A route that never calls `ctx.cache()` gets `private, no-store`,
 unless it set its own `Cache-Control` or `Expires`.
+
+To keep a page at the edge far longer than browsers keep it, declare an edge-only lifetime with
+the object form. `cdn` is written as `CDN-Cache-Control`, which the edge obeys over
+`Cache-Control`, so browsers revalidate on every visit while the edge serves its copy for a day,
+or until a purge drops it:
+
+```typescript {% title="app/http/controllers/releases.tsx" %}
+import { policy, targetedPolicy } from "@sdxc/http/cache";
+
+ctx.cache({
+	policy: policy({
+		visibility: "public",
+		maxAge: 0,
+		mustRevalidate: true,
+	}).toString(),
+	cdn: targetedPolicy({ maxAge: "1 day" }),
+	tags: [TAGS.releaseList()],
+});
+```
+
+`cloudflare` writes `Cloudflare-CDN-Cache-Control`, which only Cloudflare's edge reads and which
+wins over `cdn`. On a request with a session, a targeted field without `private` or `no-store`
+downgrades the page to `private, no-store`, as a `public` policy does.
 
 <warning>
 Workers Cache stores a `200` with no freshness headers for two hours under a key that ignores
