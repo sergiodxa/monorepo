@@ -28,6 +28,9 @@ const NAMED_SCORE = 10;
 /** Score for a word the README merely uses, which every long README uses many of. */
 const MENTIONED_SCORE = 1;
 
+/** Score for a word that is a package's whole name, so `result` finds `@sdxc/result` first. */
+const EXACT_NAME_SCORE = 100;
+
 /** What a package search answers with: enough to decide, and the page to read next. */
 export interface PackageMatch {
 	name: string;
@@ -197,10 +200,12 @@ export async function searchPackages(query: string, limit: number): Promise<Pack
 
 	for (let [order, entry] of entries.entries()) {
 		let label = `${entry.name} ${entry.description}`.toLowerCase();
+		let bareName = entry.name.replace(/^@[^/]+\//, "").toLowerCase();
 		let total = 0;
 
 		for (let token of tokens) {
-			if (includesWord(label, token)) total += NAMED_SCORE;
+			if (token === bareName) total += EXACT_NAME_SCORE;
+			else if (includesWord(label, token)) total += NAMED_SCORE;
 			else if (includesWord(entry.haystack, token)) total += MENTIONED_SCORE;
 			else {
 				total = 0;
