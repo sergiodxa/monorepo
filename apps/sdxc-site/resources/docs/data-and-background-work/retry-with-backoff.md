@@ -27,7 +27,7 @@ exact. [`@sdxc/outbound`](/api/outbound) does the fetching in the examples, and 
 which failures are worth another attempt.
 
 ```bash
-npm add @sdxc/backoff @sdxc/jobs @sdxc/outbound @sdxc/random @sdxc/result
+npm add @sdxc/backoff @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/random @sdxc/result
 ```
 
 ## Build the schedule once
@@ -67,24 +67,15 @@ schedule still applies on top of it, so a server that says "1 second" on every a
 the growing delay anyway:
 
 ```typescript {% title="app/services/previews/retry-after.ts" %}
+import { parseRetryAfter } from "@sdxc/http/retry-after";
+
 import { previewBackoff } from "~/app/services/previews/retry";
 
 const QUEUE_HOLD_LIMIT_MS = 12 * 3_600_000;
 
-export function retryAfterMs(response: Response, now: number): number {
-	let header = response.headers.get("retry-after");
-	if (header === null) return 0;
-
-	let seconds = Number(header);
-	if (Number.isFinite(seconds)) return Math.max(seconds * 1000, 0);
-
-	let date = Date.parse(header);
-	return Number.isNaN(date) ? 0 : Math.max(date - now, 0);
-}
-
 export function waitAfter(response: Response, attempt: number): number {
 	let wait = Math.max(
-		retryAfterMs(response, Date.now()),
+		parseRetryAfter(response.headers.get("retry-after")) ?? 0,
 		previewBackoff.delay(attempt),
 	);
 	return Math.min(wait, QUEUE_HOLD_LIMIT_MS);
@@ -92,7 +83,9 @@ export function waitAfter(response: Response, attempt: number): number {
 ```
 
 `Retry-After` is either a number of seconds or an HTTP date, and both forms show up in the
-wild.
+wild. `parseRetryAfter` from [`@sdxc/http`](/api/http) reads either as milliseconds, measuring a
+date from now (or from the `Date` passed as its second argument), and answers `null` for a
+missing or unreadable header, which leaves the schedule to decide.
 
 <warning>
 The header is the remote server's to write, so `waitAfter` clamps it to the queue's hold limit:
