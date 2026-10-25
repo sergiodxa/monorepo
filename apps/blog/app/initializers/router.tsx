@@ -29,7 +29,6 @@ import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { NODEINFO_2_1, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
-import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -66,7 +65,7 @@ import { jobQueue } from "~/app/initializers/queue";
 import registry from "~/app/models";
 import { PROFILE } from "~/config/profile";
 import { SECURITY_POLICY } from "~/config/security-policy";
-import { SECURITY_TXT } from "~/config/security-txt";
+import { securityTxtEntry } from "~/config/security-txt";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -222,7 +221,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			noWWW(),
 			trailingSlash(),
 			wellKnown({
-				"security.txt": serve(securityTxt, () => SECURITY_TXT),
+				"security.txt": securityTxtEntry,
 				nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
 			}),
 			asyncContext(),

@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { SECURITY_TXT } from "./security-txt";
+import { encryptionKeys, SECURITY_TXT, signSecurityTxt } from "./security-txt";
 
 /** How far ahead of `Expires` the file must be renewed. */
 const RENEWAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -27,5 +27,22 @@ describe("SECURITY_TXT", () => {
 		expect(SECURITY_TXT.canonical.map(String)).toEqual([
 			"https://sergiodxa.com/.well-known/security.txt",
 		]);
+	});
+});
+
+describe("signSecurityTxt", () => {
+	test("serves the file unsigned when the configured key cannot sign", async () => {
+		let body = "Contact: mailto:hello+security@sergiodxa.com\n";
+		expect(await signSecurityTxt(body)).toBe(body);
+	});
+});
+
+describe("encryptionKeys", () => {
+	test("names the configured https key URL and nothing otherwise", () => {
+		let url = "https://keys.openpgp.org/vks/v1/by-fingerprint/ABCD";
+		expect(encryptionKeys(url).map(String)).toEqual([url]);
+		expect(encryptionKeys("http://example.com/key.asc")).toEqual([]);
+		expect(encryptionKeys("")).toEqual([]);
+		expect(encryptionKeys(undefined)).toEqual([]);
 	});
 });
