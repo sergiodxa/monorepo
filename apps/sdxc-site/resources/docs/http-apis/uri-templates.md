@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 10
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to expand RFC 6570 templates with `@sdxc/uri-template`, every operator included"
     - "How to follow the templates an API publishes instead of hard-coding its paths"
@@ -26,7 +26,7 @@ client checks the document it fetches with [`@sdxc/validate`](/api/validate), an
 server answers with [`@sdxc/http`](/api/http).
 
 ```bash
-npm add @sdxc/uri-template @sdxc/result @sdxc/validate @sdxc/http remix
+npm add @sdxc/uri-template @sdxc/result @sdxc/types @sdxc/validate @sdxc/http remix
 ```
 
 ## Expand a template
@@ -112,6 +112,8 @@ literal a URI cannot hold, and `variableNames` tells you whether the template ta
 values you are about to pass.
 
 ```typescript {% title="app/services/books/discovery.ts" %}
+import type { JSONValue } from "@sdxc/types";
+
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 import { UriTemplate } from "@sdxc/uri-template";
 import { validate } from "@sdxc/validate";
@@ -129,7 +131,7 @@ export async function discover(origin: URL) {
 	if (!response.ok)
 		return failure(new Error(`The root answered ${response.status}`));
 
-	let json = await wrap(() => response.json() as Promise<unknown>);
+	let json = await wrap(() => response.json() as Promise<JSONValue>);
 	if (isFailure(json)) return json;
 	let root = await validate(json.data, ROOT);
 	if (isFailure(root)) return root;
