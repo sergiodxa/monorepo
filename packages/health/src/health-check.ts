@@ -235,11 +235,11 @@ async function judge(value: unknown, exposeErrors: boolean): Promise<Verdict> {
 /**
  * A response passes on 2xx. A health report in it is read too, so a dependency answering
  * `200` while reporting `fail` fails, and one reporting `warn` warns. Any other body is
- * cancelled unread, so no connection stays open.
+ * cancelled unread, so no connection stays open; the verdict is the status code alone.
  */
 async function judgeResponse(response: Response, exposeErrors: boolean): Promise<Verdict> {
 	if (!isHealthResponse(response)) {
-		await response.body?.cancel();
+		release(response.body);
 		return response.ok ? { status: "pass" } : { status: "fail", output: `HTTP ${response.status}` };
 	}
 
@@ -269,12 +269,20 @@ async function readCapped(response: Response, limit: number): Promise<string | n
 	for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
 		size += chunk.value.byteLength;
 		if (size > limit) {
-			await reader.cancel();
+			release(reader);
 			return null;
 		}
 		text += decoder.decode(chunk.value, { stream: true });
 	}
 	return text + decoder.decode();
+}
+
+/**
+ * Cancels a body without waiting for the cancellation to settle, which some stream sources
+ * never do; a verdict that needs nothing more from the body is returned at once.
+ */
+function release(body: ReadableStream | ReadableStreamDefaultReader | null | undefined): void {
+	body?.cancel().catch(() => undefined);
 }
 
 /** Whether `value` is an `@sdxc/result` failure. */
