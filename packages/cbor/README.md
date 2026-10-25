@@ -1,6 +1,6 @@
 # @sdxc/cbor
 
-CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input.
+CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input, with COSE keys and COSE_Sign1.
 
 ## Installation
 
@@ -60,6 +60,25 @@ let result = CBOR.decode(signedPayload, { deterministic: true });
 
 The [core deterministic encoding requirements](https://www.rfc-editor.org/rfc/rfc8949#section-4.2.1): shortest arguments, definite lengths, the shortest float that holds a value, map keys in bytewise order of their encodings, and bignums only beyond 64 bits. Anything else fails `not-deterministic`. `encode` always writes this form.
 
+### Sign and verify COSE_Sign1
+
+```typescript
+import * as COSE from "@sdxc/cbor/cose";
+import { unwrap } from "@sdxc/result";
+
+let message = unwrap(
+	await COSE.sign1({
+		protected: new Map([[COSE.HeaderParameter.ALG, COSE.Algorithm.ES256]]),
+		payload: new TextEncoder().encode("statement"),
+		key: keyPair.privateKey,
+	}),
+);
+
+let verified = await COSE.verifySign1(message, keyPair.publicKey); // success({ protected, payload, … })
+```
+
+The `@sdxc/cbor/cose` entry signs and verifies [COSE_Sign1](https://www.rfc-editor.org/rfc/rfc9052#section-4.2) messages with WebCrypto keys, under ES256, ES384, ES512, Ed25519 (and the older EdDSA identifier), PS256, PS384 and PS512. Verification takes the algorithm from the protected header and refuses a key imported for any other, so a message cannot pick a weaker algorithm than its key. Pass `detached: true` to `sign1` to leave the payload out of the message, and `{ payload }` to `verifySign1` to check it.
+
 ## API
 
 ### `decode(bytes: Uint8Array, options?: DecodeOptions): Result<CBORValue, CBORError>`
@@ -97,6 +116,17 @@ The failure every function reports.
 
 - `code`: `"truncated"`, `"malformed"`, `"trailing-bytes"`, `"duplicate-key"`, `"limit-exceeded"`, `"not-deterministic"` or `"unencodable"`.
 - `offset`: the byte where the failing item starts, for a decoding failure; `undefined` for an encoding one.
+
+### `@sdxc/cbor/cose`
+
+- `sign1({ protected, unprotected?, payload, detached?, externalAad?, key })`: a tagged COSE_Sign1 message. The protected header must name the algorithm.
+- `verifySign1(message, key, { payload?, externalAad?, algorithms?, understood? })`: the decoded message once its signature verifies. `understood` lists the `crit` labels the caller processes.
+- `decodeSign1(bytes)` / `fromValue(value)` / `encodeSign1(message)`: read and write a message without checking it; `encodeSign1` keeps the signed protected header bytes, so a new unprotected header (an attached receipt) leaves the signature valid.
+- `importKey(key, algorithm?)`: a COSE key as a `CryptoKey` for one algorithm, for signing when the key holds `d`.
+- `toJWK(key)` / `fromJWK(jwk)`: convert between COSE keys and JWKs.
+- `thumbprint(key)`: the [RFC 9679](https://www.rfc-editor.org/rfc/rfc9679) SHA-256 COSE Key Thumbprint.
+- `Algorithm`, `HeaderParameter`: the registered numbers, such as `Algorithm.ES256` (-7) and `HeaderParameter.KID` (4).
+- `COSEError`: every failure, with `code` `"malformed"`, `"unsupported-algorithm"`, `"unsupported-key"`, `"unknown-critical"` or `"invalid-signature"`.
 
 ### Types
 

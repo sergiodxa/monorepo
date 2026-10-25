@@ -1,16 +1,18 @@
 {
 	"name": "@sdxc/cbor",
 	"version": "0.0.1",
-	"description": "CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input",
+	"description": "CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input, with COSE keys and COSE_Sign1",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./cose": "./src/cose.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
 }

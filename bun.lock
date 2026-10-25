@@ -738,6 +738,7 @@
       "name": "@sdxc/cbor",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
     },
