@@ -78,19 +78,26 @@ describe(build, () => {
 				x: PUBLIC_KEY.x,
 				d: "n4Ni-HpISpVObnQMW0wOhCKROaIKqKtW_2ZYb2p9KcU",
 				key_ops: ["sign"],
+				ext: true,
 			},
 		]);
 
 		expect(unwrap(directory)).toEqual({ keys: [PUBLIC_KEY] });
 	});
 
-	test("refuses a symmetric key and a key without kid, each at its index", () => {
+	test("refuses a symmetric key, a key without kid and a JOSE alg, each at its index", () => {
 		let { kid: _, ...unlabelled } = PUBLIC_KEY;
-		let directory = build([PUBLIC_KEY, { kty: "oct", k: "c2VjcmV0" }, unlabelled]);
+		let directory = build([
+			PUBLIC_KEY,
+			{ kty: "oct", k: "c2VjcmV0" },
+			unlabelled,
+			{ ...PUBLIC_KEY, alg: "EdDSA" },
+		]);
 
 		expect(isFailure(directory) && directory.error.issues).toEqual([
 			{ at: "/keys/1", message: "Key 1 is symmetric." },
 			{ at: "/keys/2/kid", message: "Key 2 has no kid." },
+			{ at: "/keys/3/alg", message: 'Key 3\'s alg "EdDSA" is no HTTP signature algorithm.' },
 		]);
 	});
 });

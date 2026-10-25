@@ -65,7 +65,7 @@ function isDirectoryKey(key: Jwk): key is DirectoryKey {
 }
 
 /**
- * A key without its private members and `key_ops`, which a published key never needs, or
+ * A key without its private members, `key_ops` and `ext`, which a published key never needs, or
  * `null` for a symmetric key, which has no public half.
  *
  * @param key - A key, public or private.
@@ -75,6 +75,7 @@ function publicHalf(key: DirectoryKey): DirectoryKey | null {
 	let half: DirectoryKey = { ...key };
 	for (let member of PRIVATE_MEMBERS) delete half[member];
 	delete half.key_ops;
+	delete half.ext;
 	return half;
 }
 
@@ -102,7 +103,8 @@ export function parse(text: string): Result<ParsedSignaturesDirectory, WellKnown
  * `keyid` against `kid`, so set it to the key's RFC 7638 thumbprint (`JWK.thumbprint`).
  *
  * @param keys - The signing keys; a private JWK publishes only its public half.
- * @returns The directory, or an issue at every symmetric key and every key without `kid`.
+ * @returns The directory, or an issue at every symmetric key, every key without `kid`, and
+ *   every `alg` outside the HTTP Signature Algorithms registry, such as JOSE's `EdDSA`.
  * @example build([{ ...publicJwk, kid: await thumbprintOf(publicJwk) }])
  */
 export function build(keys: DirectoryKey[]): Result<SignaturesDirectory, WellKnownParseError> {
@@ -115,6 +117,11 @@ export function build(keys: DirectoryKey[]): Result<SignaturesDirectory, WellKno
 			issues.push({ at: pointer("keys", index), message: `Key ${index} is symmetric.` });
 		} else if (half.kid === undefined) {
 			issues.push({ at: pointer("keys", index, "kid"), message: `Key ${index} has no kid.` });
+		} else if (half.alg !== undefined && !SIGNATURE_ALGORITHMS.has(half.alg)) {
+			issues.push({
+				at: pointer("keys", index, "alg"),
+				message: `Key ${index}'s alg "${half.alg}" is no HTTP signature algorithm.`,
+			});
 		} else {
 			published.push({ ...half, use: "sig" });
 		}
