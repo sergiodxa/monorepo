@@ -12,6 +12,7 @@
 		"./openid-configuration": "./src/openid-configuration.ts",
 		"./oauth-protected-resource": "./src/oauth-protected-resource.ts",
 		"./jwks": "./src/jwks.ts",
+		"./http-message-signatures-directory": "./src/http-message-signatures-directory.ts",
 		"./change-password": "./src/change-password.ts",
 		"./passkey-endpoints": "./src/passkey-endpoints.ts",
 		"./nodeinfo": "./src/nodeinfo.ts",

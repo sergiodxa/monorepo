@@ -184,6 +184,18 @@ requires `authorizationEndpoint`, `jwksUri`, `subjectTypesSupported` and
 - `jwks` is the descriptor. Serving through it publishes each key's public half and leaves
   symmetric keys out, so private keys can go in directly.
 
+### `@sdxc/well-known/http-message-signatures-directory` (Web Bot Auth)
+
+The key directory a signing bot publishes, served as `MEDIA_TYPE`
+(`application/http-message-signatures-directory+json`) with CORS.
+
+- `parse(text)` keeps public, asymmetric keys with a registered HTTP signature `alg` (or none) and
+  numeric `nbf`/`exp`, counting the rest in `skipped`.
+- `build(keys)` publishes each key's public half with `use: "sig"`, failing for a symmetric key or
+  one without `kid`; set `kid` to the key's RFC 7638 thumbprint (`JWK.thumbprint` in `@sdxc/jwt`).
+- `httpMessageSignaturesDirectory` is the descriptor. `@sdxc/http-signatures/web-bot-auth` signs
+  the response through `respond`'s `sign` option.
+
 ### `@sdxc/well-known/change-password` (W3C)
 
 `redirect(target: URL | string): Response` is a 302 to the page where a signed-in person changes
@@ -213,13 +225,15 @@ object is a valid document. `passkeyEndpoints` is the descriptor.
 The document with its media type, a `Cache-Control` (`options.cache`, default public for one hour),
 an `ETag` over the body and CORS for a CORS format. With `options.request` it answers 304 when
 `If-None-Match` still matches and an empty body for `HEAD`. `options.headers` apply last.
+`options.sign(response, request)` runs over the full 200 response first, for a signature over the
+body.
 
 ### `@sdxc/well-known/middleware`
 
 #### `serve(format, produce: (ctx) => Document | null, options?): WellKnownEntry`
 
 Answers with `produce(ctx)`'s document through `respond`, built per request; `null` falls through
-to the next middleware. `produce` may be async, and `options` takes `cache` and `headers`.
+to the next middleware. `produce` may be async, and `options` takes `cache`, `headers` and `sign`.
 
 #### `wellKnown(entries: Record<string, WellKnownEntry>): Middleware`
 

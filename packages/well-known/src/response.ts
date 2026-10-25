@@ -23,12 +23,17 @@ export interface RespondOptions {
 	cache?: PolicyOptions;
 	/** Extra headers, applied last so they override the defaults. */
 	headers?: HeadersInit;
+	/**
+	 * Runs over the full 200 response before a 304 or `HEAD` drops its body, so a message
+	 * signature can cover the body's digest, as a signed key directory does.
+	 */
+	sign?: (response: Response, request: Request | undefined) => Promise<Response>;
 }
 
 /**
  * The document as a `Response`: its media type, a `Cache-Control` from `policy()`, an
  * `ETag` from `etag()` over the serialized body, CORS where the format requires it, and a
- * 304 through `conditional()` when `request` is given.
+ * 304 through `conditional()` when `request` is given, after any `sign` step.
  *
  * @param format - The document's format.
  * @param document - The document to serve.
@@ -55,8 +60,9 @@ export async function respond<Document>(
 	for (let [name, value] of new Headers(options.headers)) headers.set(name, value);
 
 	let request = options.request;
-	let isHead = request?.method.toUpperCase() === "HEAD";
-	let response = new Response(isHead ? null : body, { status: 200, headers });
+	let response = new Response(body, { status: 200, headers });
+	if (options.sign) response = await options.sign(response, request);
+	if (request?.method.toUpperCase() === "HEAD") response = new Response(null, response);
 	if (request === undefined) return response;
 	return await conditional(request, response);
 }
