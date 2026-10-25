@@ -1,7 +1,7 @@
 /**
- * SSL certificate status calculation. Workers cannot read TLS certificate details from
- * `fetch()`, so this works from a manually entered expiry date to classify the
- * certificate as valid, expiring, or expired against the monitor's warning threshold.
+ * SSL certificate status calculation: classifies a certificate as valid, expiring, or
+ * expired against the monitor's warning threshold, from the expiry date Certificate
+ * Transparency logs supplied or the one the user typed as an override.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

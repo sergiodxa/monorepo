@@ -212,13 +212,17 @@ namespace SslSettingsSection {
 	}
 }
 
-/** Renders the SSL monitoring toggle plus manually-entered expiry date/issuer/warning-threshold fields, pre-filled from `monitor`. */
+/**
+ * Renders the SSL monitoring toggle, the expiry date and issuer override, and the warning
+ * threshold. The date and issuer are pre-filled only when typed, so saving a monitor that
+ * reads its certificate from the logs keeps reading it from there.
+ */
 function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 	return () => {
 		let { team, monitor, intl } = handle.props;
-		let expiresAtValue = monitor.ssl_expires_at
-			? toDayKey(new Date(monitor.ssl_expires_at), "UTC")
-			: "";
+		let typed = monitor.ssl_expiry_source === "manual";
+		let expiresAtValue =
+			typed && monitor.ssl_expires_at ? toDayKey(new Date(monitor.ssl_expires_at), "UTC") : "";
 
 		return (
 			<SettingsSection
@@ -271,7 +275,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 								<input
 									type="text"
 									name="ssl_issuer"
-									defaultValue={monitor.ssl_issuer ?? ""}
+									defaultValue={typed ? (monitor.ssl_issuer ?? "") : ""}
 									mix={[
 										p("8px", "12px"),
 										rounded("6px"),

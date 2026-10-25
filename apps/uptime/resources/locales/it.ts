@@ -2439,13 +2439,13 @@ export default {
 							label: "Data Scadenza Certificato",
 							placeholder: "Seleziona data scadenza",
 							description:
-								"Inserisca la data di scadenza del suo certificato SSL. Può trovarla nella dashboard del suo provider di hosting o controllando i dettagli del certificato nel suo browser.",
+								"Lasci vuoto per leggerla dai log di Certificate Transparency: ogni giorno Uptime trova il certificato valido più recente emesso per l'host di questo monitor. Inserisca una data per sostituire i log, ad esempio per un certificato di una CA privata.",
 						},
 						issuer: {
 							label: "Emittente Certificato",
 							placeholder: "Let's Encrypt, DigiCert, ecc.",
 							description:
-								"L'Autorità di Certificazione che ha emesso il suo certificato SSL (opzionale).",
+								"Usato con una data di scadenza inserita a mano; altrimenti i log forniscono l'emittente (opzionale).",
 						},
 						warningDays: {
 							label: "Avviso Prima della Scadenza",
@@ -2546,6 +2546,15 @@ export default {
 				issuer: "Emittente",
 				lastChecked: "Ultimo Controllo",
 				notConfigured: "Il monitoraggio SSL non è abilitato per questo monitor.",
+				certificate: {
+					manual: "Data di scadenza inserita a mano.",
+					found: "Letta dai log di Certificate Transparency.",
+					pending: "Ricerca di questo host nei log di Certificate Transparency.",
+					"not-found":
+						"I log di Certificate Transparency non contengono un certificato valido per questo host. Inserisca la data di scadenza a mano se proviene da una CA privata.",
+					unavailable:
+						"I log di Certificate Transparency non erano raggiungibili all'ultimo controllo; lo stato usa l'ultimo certificato trovato.",
+				},
 				configure: "Configura Monitoraggio SSL",
 			},
 			run: {

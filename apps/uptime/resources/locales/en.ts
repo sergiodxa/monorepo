@@ -2474,12 +2474,13 @@ export default {
 							label: "Certificate Expiry Date",
 							placeholder: "Select expiry date",
 							description:
-								"Enter the expiry date of your SSL certificate. You can find this in your hosting provider's dashboard or by checking the certificate details in your browser.",
+								"Leave empty to read it from Certificate Transparency logs: each day Uptime finds the newest valid certificate issued for this monitor's host. Enter a date to override the logs, for example for a certificate from a private CA.",
 						},
 						issuer: {
 							label: "Certificate Issuer",
 							placeholder: "Let's Encrypt, DigiCert, etc.",
-							description: "The Certificate Authority that issued your SSL certificate (optional).",
+							description:
+								"Used with a typed expiry date; the logs supply the issuer otherwise (optional).",
 						},
 						warningDays: {
 							label: "Alert Before Expiry",
@@ -2578,6 +2579,15 @@ export default {
 				issuer: "Issuer",
 				lastChecked: "Last Checked",
 				notConfigured: "SSL monitoring is not enabled for this monitor.",
+				certificate: {
+					manual: "Expiry date entered by hand.",
+					found: "Read from Certificate Transparency logs.",
+					pending: "Looking this host up in Certificate Transparency logs.",
+					"not-found":
+						"Certificate Transparency logs hold no valid certificate for this host. Enter the expiry date by hand if it comes from a private CA.",
+					unavailable:
+						"Certificate Transparency logs could not be reached at the last check; the badge uses the last certificate found.",
+				},
 				configure: "Configure SSL Monitoring",
 			},
 			run: {

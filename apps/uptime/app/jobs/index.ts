@@ -167,4 +167,9 @@ export default jobs({
 	deliverAlert: job({ input: DeliverAlertSchema }),
 	/** Delivers what `ctx.email.queue()` handed the queue, for every declared email. */
 	email: job({ input: EMAIL_DELIVERY }),
+	/**
+	 * Reads one monitor's certificate expiry from Certificate Transparency logs, queued when
+	 * its SSL settings switch to the logs, so the badge fills in before the next daily check.
+	 */
+	checkCertificate: job({ input: s.object({ monitorId: s.string() }) }),
 });

@@ -120,6 +120,7 @@ dispatcher.map(jobs.sendTeamWeeklyDigests, () => import("~/app/jobs/send-team-we
 dispatcher.map(jobs.notify, () => import("~/app/jobs/notify"));
 dispatcher.map(jobs.deliverAlert, () => import("~/app/jobs/deliver-alert"));
 dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
+dispatcher.map(jobs.checkCertificate, () => import("~/app/jobs/check-certificate"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {

@@ -74,6 +74,7 @@ export const Monitors = createModel(monitors, {
 		"location_hint",
 		"ssl_monitoring_enabled",
 		"ssl_expiry_warning_days",
+		"ssl_expiry_source",
 	],
 
 	scopes: {

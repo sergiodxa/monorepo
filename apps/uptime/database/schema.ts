@@ -267,6 +267,15 @@ export const monitors = table({
 			.nullable()
 			.default("unknown"),
 		/**
+		 * Where `ssl_expires_at` comes from: `manual` is a date the user typed, which
+		 * overrides the logs; `transparency` is the newest valid certificate Certificate
+		 * Transparency logs hold for the monitor's host, refreshed by the daily check.
+		 */
+		ssl_expiry_source: c.enum(["manual", "transparency"]).default("transparency"),
+		/** The last log lookup's outcome; `null` until the first one runs. */
+		ssl_transparency_status: c.enum(["found", "not-found", "unavailable"]).nullable(),
+		ssl_transparency_checked_at: c.integer().nullable(),
+		/**
 		 * What the last completed check classified this monitor as, when, and how long it
 		 * took. Cached only so transition detection and the list row cost no query; on
 		 * disagreement, the Analytics Engine result stream is what to believe.

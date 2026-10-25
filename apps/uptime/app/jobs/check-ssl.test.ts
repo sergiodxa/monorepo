@@ -2,8 +2,8 @@
  * Unit tests for the `checkSsl` job: persisting `calculateSslStatus`'s
  * result onto the monitor row, passing each monitor's own expiry settings,
  * enqueuing a `notify` message only when a warning threshold is crossed, and
- * surviving one monitor's failure without stopping the rest of the sweep.
- * `calculateSslStatus` is mocked so each test controls the exact outcome.
+ * surviving one monitor's failure, and reading expiries from Certificate Transparency.
+ * `calculateSslStatus` is mocked; Cert Spotter is intercepted with MSW.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,14 +11,16 @@
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { createEnv, createKVNamespace, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { SslStatus } from "~/app/services/ssl-info";
@@ -59,7 +61,26 @@ let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "noti
 /** A sweep that enqueued nothing is a call that never happened, which `sent` cannot show. */
 let sendBatch = vi.spyOn(queue, "sendBatch");
 
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+/** Holds cached log answers; replaced per test so one test's answer never reaches another. */
+let kv = createKVNamespace();
+
+vi.doMock("cloudflare:workers", () => ({
+	env: createEnv<Env>({
+		QUEUE: queue,
+		get KV() {
+			return kv;
+		},
+	}),
+}));
+
+const SEARCH_URL = "https://api.certspotter.com/v1/issuances";
+
+/** Cert Spotter; a test that reaches it without installing an answer fails. */
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 let realSslInfoModule = await import("~/app/services/ssl-info");
 
@@ -111,6 +132,7 @@ async function seedMonitor(db: Database, overrides: Partial<InsertMonitor> = {})
 			ssl_monitoring_enabled: true,
 			ssl_expiry_warning_days: 30,
 			ssl_expires_at: Date.now() + 10 * 24 * 60 * 60 * 1000,
+			ssl_expiry_source: "manual",
 			...overrides,
 		}),
 	);
@@ -123,6 +145,7 @@ beforeEach(() => {
 		return { status: "valid", daysUntilExpiry: 100 };
 	});
 	calculateCalls = [];
+	kv = createKVNamespace();
 	queue.reset();
 	sendBatch.mockClear();
 });
@@ -238,5 +261,73 @@ describe("checkSsl", () => {
 		expect(failedRow?.ssl_last_checked_at).toBeNull();
 
 		expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
+	});
+
+	test("fills the expiry and issuer from the newest certificate the logs hold", async () => {
+		let { db } = createTestDatabase();
+		let notAfter = Date.parse("2027-01-20T10:00:00Z");
+		server.use(
+			http.get(SEARCH_URL, () =>
+				HttpResponse.json([
+					{
+						id: "7",
+						cert_sha256: "abc",
+						dns_names: ["*.acme-shop.com", "acme-shop.com"],
+						issuer: { friendly_name: "Let's Encrypt", name: "CN=R11" },
+						not_before: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+						not_after: new Date(notAfter).toISOString(),
+						revoked: false,
+					},
+				]),
+			),
+		);
+		let monitor = await seedMonitor(db, {
+			url: "https://www.acme-shop.com/health",
+			ssl_expiry_source: "transparency",
+			ssl_expires_at: null,
+		});
+
+		let record = await runJob(db);
+
+		let updated = await bindModels(db).monitors.inTeam("team-1").find(monitor.id);
+		expect(updated?.ssl_expires_at).toBe(notAfter);
+		expect(updated?.ssl_issuer).toBe("Let's Encrypt");
+		expect(updated?.ssl_transparency_status).toBe("found");
+		expect(updated?.ssl_transparency_checked_at).not.toBeNull();
+		expect(calculateCalls).toEqual([{ expiresAt: notAfter, warningDays: 30 }]);
+		expect(record).toMatchObject({ "transparency.found": 1 });
+	});
+
+	test("keeps the last known certificate and reports the logs unavailable", async () => {
+		let { db } = createTestDatabase();
+		server.use(http.get(SEARCH_URL, () => new HttpResponse(null, { status: 503 })));
+		let previous = Date.now() + 40 * 24 * 60 * 60 * 1000;
+		let monitor = await seedMonitor(db, {
+			url: "https://www.acme-shop.com",
+			ssl_expiry_source: "transparency",
+			ssl_expires_at: previous,
+			ssl_issuer: "Let's Encrypt",
+		});
+
+		let record = await runJob(db);
+
+		let updated = await bindModels(db).monitors.inTeam("team-1").find(monitor.id);
+		expect(updated?.ssl_expires_at).toBe(previous);
+		expect(updated?.ssl_issuer).toBe("Let's Encrypt");
+		expect(updated?.ssl_transparency_status).toBe("unavailable");
+		expect(record).toMatchObject({ "transparency.unavailable": 1 });
+		expect(noteOf(record, "checks.transparency_unavailable")?.["monitor.id"]).toBe(monitor.id);
+	});
+
+	test("leaves a typed expiry date to override the logs", async () => {
+		let { db } = createTestDatabase();
+		let typed = Date.now() + 3 * 24 * 60 * 60 * 1000;
+		let monitor = await seedMonitor(db, { ssl_expires_at: typed });
+
+		await runJob(db);
+
+		let updated = await bindModels(db).monitors.inTeam("team-1").find(monitor.id);
+		expect(updated?.ssl_expires_at).toBe(typed);
+		expect(updated?.ssl_transparency_status).toBeNull();
 	});
 });

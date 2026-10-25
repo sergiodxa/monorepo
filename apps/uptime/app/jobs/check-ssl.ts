@@ -1,39 +1,51 @@
 /**
  * Daily background job that re-evaluates SSL certificate status for every HTTP monitor with SSL
- * monitoring enabled. Workers can't read certificate details from `fetch()`, so it re-runs
- * `calculateSslStatus` against the manually entered expiry date, keeping status transitions and
+ * monitoring enabled, refreshing each expiry read from Certificate Transparency logs first, so
+ * a renewed certificate moves the badge and alerts without anyone typing a new date.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createJobHandler } from "@sdxc/jobs";
-import { unwrap } from "@sdxc/result";
 
-import type { UptimeModels } from "~/app/models";
-import type { Monitor } from "~/app/models/monitors";
 import type { NotifyMessage } from "~/app/services/notify-queue";
 
 import jobs from "~/app/jobs";
+import { certificateTransparency } from "~/app/services/certificate-transparency";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { enqueueNotifications } from "~/app/services/notify-queue";
-import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";
+import { checkSslMonitor } from "~/app/services/ssl-check";
 
 export default createJobHandler(jobs.checkSsl, async (ctx) => {
 	let monitors = await ctx.models.monitors.sslMonitored().all();
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
+	let transparency = certificateTransparency();
 	let notifications: NotifyMessage[] = [];
+	let lookups = { found: 0, notFound: 0, unavailable: 0 };
 	let successCount = 0;
 	let errorCount = 0;
 
-	let settled = await mapWithConcurrency(monitors, (monitor) => check(ctx.models, monitor));
+	let settled = await mapWithConcurrency(monitors, (monitor) =>
+		checkSslMonitor(ctx.models, transparency, monitor),
+	);
 
 	for (let outcome of settled) {
 		if (outcome.ok) {
 			successCount++;
-			if (outcome.value !== null) notifications.push(outcome.value);
+			let { lookup, notification } = outcome.value;
+			if (notification !== null) notifications.push(notification);
+			if (lookup?.status === "found") lookups.found++;
+			if (lookup?.status === "not-found") lookups.notFound++;
+			if (lookup?.status === "unavailable") {
+				lookups.unavailable++;
+				ctx.log.warn("checks.transparency_unavailable", {
+					"monitor.id": outcome.item.id,
+					reason: lookup.reason,
+				});
+			}
 			continue;
 		}
 
@@ -53,34 +65,6 @@ export default createJobHandler(jobs.checkSsl, async (ctx) => {
 			failed: errorCount,
 			notified: notifications.length,
 		},
+		transparency: lookups,
 	});
 });
-
-/**
- * Re-evaluates one monitor's certificate status and persists it, returning
- * the notification the new status warrants, or `null` when none applies.
- * `shouldAlertOnSslStatus` fires every day a warning threshold covers; a per-alert cooldown bounds the repetition.
- */
-async function check(models: UptimeModels, monitor: Monitor): Promise<NotifyMessage | null> {
-	let previousStatus = monitor.ssl_status;
-	let { status, daysUntilExpiry } = calculateSslStatus(
-		monitor.ssl_expires_at,
-		monitor.ssl_expiry_warning_days,
-	);
-
-	unwrap(
-		await models.monitors.update(monitor.id, {
-			ssl_status: status,
-			ssl_last_checked_at: Date.now(),
-		}),
-	);
-
-	if (!shouldAlertOnSslStatus(status, daysUntilExpiry)) return null;
-
-	return {
-		monitorType: "ssl",
-		monitorId: monitor.id,
-		previousStatus,
-		newStatus: status,
-	};
-}

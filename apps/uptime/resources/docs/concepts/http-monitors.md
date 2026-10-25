@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 2
-lastUpdated: 2026-02-14
+lastUpdated: 2026-10-24
 ---
 
 When an HTTP monitor runs, it:
@@ -105,6 +105,22 @@ Every HTTP check to an HTTPS URL also verifies:
 - The certificate is valid and trusted
 - The certificate hasn't expired
 - The certificate matches the requested domain
+
+### Where the Expiry Date Comes From
+
+Uptime reads your certificate's expiry date from [Certificate Transparency](https://certificate.transparency.dev/) logs, the public record every publicly trusted certificate authority writes each certificate to. Once a day it searches the logs for the monitor's host and picks the certificate that:
+
+- Names the host, either exactly or through a wildcard such as `*.example.com`
+- Is valid today and has not been revoked
+- Was issued most recently
+
+Its expiry date and issuer fill the SSL card, so a renewed certificate moves the date forward on its own. When you turn SSL monitoring on, or save its settings without a date, the lookup runs right away.
+
+The SSL card says where the date came from. When the logs hold no valid certificate for the host, the card says so and the status stays as it was. The same happens when the logs cannot be reached: Uptime keeps the last certificate it found and tries again the next day.
+
+To override the logs, enter the expiry date (and optionally the issuer) yourself in the monitor's SSL settings. A typed date is used as it is until you clear it. Use it for certificates that never appear in the logs, such as ones from a private or internal certificate authority.
+
+The logs record the certificates a CA issued, which is usually, but not always, the one your server presents: a certificate issued and never installed still counts as the newest. If your server keeps serving an older certificate, enter its date by hand.
 
 ### Expiry Warning Threshold
 

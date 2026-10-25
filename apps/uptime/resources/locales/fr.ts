@@ -2450,13 +2450,13 @@ export default {
 							label: "Date d'expiration du certificat",
 							placeholder: "Sélectionner la date d'expiration",
 							description:
-								"Entrez la date d'expiration de votre certificat SSL. Vous pouvez la trouver dans le tableau de bord de votre hébergeur ou en vérifiant les détails du certificat dans votre navigateur.",
+								"Laissez vide pour la lire dans les journaux Certificate Transparency : chaque jour, Uptime trouve le certificat valide le plus récent émis pour l'hôte de ce moniteur. Saisissez une date pour remplacer les journaux, par exemple pour un certificat d'une AC privée.",
 						},
 						issuer: {
 							label: "Émetteur du certificat",
 							placeholder: "Let's Encrypt, DigiCert, etc.",
 							description:
-								"L'autorité de certification qui a émis votre certificat SSL (optionnel).",
+								"Utilisé avec une date d'expiration saisie ; sinon les journaux fournissent l'émetteur (optionnel).",
 						},
 						warningDays: {
 							label: "Alerte avant expiration",
@@ -2557,6 +2557,15 @@ export default {
 				issuer: "Émetteur",
 				lastChecked: "Dernière vérification",
 				notConfigured: "La surveillance SSL n'est pas activée pour ce moniteur.",
+				certificate: {
+					manual: "Date d'expiration saisie à la main.",
+					found: "Lue dans les journaux Certificate Transparency.",
+					pending: "Recherche de cet hôte dans les journaux Certificate Transparency.",
+					"not-found":
+						"Les journaux Certificate Transparency ne contiennent aucun certificat valide pour cet hôte. Saisissez la date d'expiration à la main s'il provient d'une AC privée.",
+					unavailable:
+						"Les journaux Certificate Transparency étaient injoignables lors de la dernière vérification ; le statut utilise le dernier certificat trouvé.",
+				},
 				configure: "Configurer la surveillance SSL",
 			},
 			run: {

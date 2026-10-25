@@ -2449,13 +2449,13 @@ export default {
 							label: "Zertifikats-Ablaufdatum",
 							placeholder: "Ablaufdatum auswählen",
 							description:
-								"Geben Sie das Ablaufdatum Ihres SSL-Zertifikats ein. Sie finden dies im Dashboard Ihres Hosting-Anbieters oder indem Sie die Zertifikatsdetails in Ihrem Browser überprüfen.",
+								"Leer lassen, um es aus den Certificate-Transparency-Logs zu lesen: Uptime sucht täglich das neueste gültige Zertifikat, das für den Host dieses Monitors ausgestellt wurde. Geben Sie ein Datum ein, um die Logs zu überschreiben, etwa für ein Zertifikat einer privaten CA.",
 						},
 						issuer: {
 							label: "Zertifikatsaussteller",
 							placeholder: "Let's Encrypt, DigiCert, etc.",
 							description:
-								"Die Zertifizierungsstelle, die Ihr SSL-Zertifikat ausgestellt hat (optional).",
+								"Gilt zusammen mit einem eingegebenen Ablaufdatum; sonst liefern die Logs den Aussteller (optional).",
 						},
 						warningDays: {
 							label: "Warnung vor Ablauf",
@@ -2557,6 +2557,15 @@ export default {
 				issuer: "Aussteller",
 				lastChecked: "Zuletzt geprüft",
 				notConfigured: "SSL-Überwachung ist für diesen Monitor nicht aktiviert.",
+				certificate: {
+					manual: "Ablaufdatum von Hand eingegeben.",
+					found: "Aus den Certificate-Transparency-Logs gelesen.",
+					pending: "Dieser Host wird in den Certificate-Transparency-Logs gesucht.",
+					"not-found":
+						"Die Certificate-Transparency-Logs enthalten kein gültiges Zertifikat für diesen Host. Geben Sie das Ablaufdatum von Hand ein, wenn es von einer privaten CA stammt.",
+					unavailable:
+						"Die Certificate-Transparency-Logs waren bei der letzten Prüfung nicht erreichbar; der Status nutzt das zuletzt gefundene Zertifikat.",
+				},
 				configure: "SSL-Überwachung konfigurieren",
 			},
 			run: {

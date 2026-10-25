@@ -7,16 +7,16 @@ SSL monitoring warns users before a certificate expires and surfaces certificate
 ## What Users Configure
 
 - Whether SSL monitoring is enabled
-- Certificate expiry date
-- Certificate issuer
+- Certificate expiry date and issuer, optional: left empty, both come from Certificate Transparency logs; typed, they override the logs (`ssl_expiry_source` is `manual`)
 - Warning threshold in days
 
 ## How It Works
 
 1. SSL monitoring is enabled for an endpoint.
-2. The system evaluates the certificate against the configured expiry information.
-3. The certificate is classified into a status.
-4. The feature can generate alerts when the certificate is expiring soon or already expired.
+2. For a monitor reading the logs, the daily check searches Cert Spotter's issuances API (`api.certspotter.com/v1/issuances`, `match_wildcards=true`) for the URL's host through `@sdxc/outbound`. Of the unrevoked certificates whose names cover the host (exact or one-label wildcard) and that are valid now, it takes the latest `notBefore`, and writes its `notAfter` and issuer. Answers are cached in KV per host for six hours, and a `429` stops further lookups for the rest of the run. Saving SSL settings without a date queues `checkCertificate` for that monitor.
+3. The system evaluates the certificate against the expiry information.
+4. The certificate is classified into a status.
+5. The feature can generate alerts when the certificate is expiring soon or already expired.
 
 ## Status Model
 
@@ -47,6 +47,13 @@ SSL monitoring warns users before a certificate expires and surfaces certificate
 - SSL monitoring is off by default.
 - The default warning threshold is `30` days.
 - Warning thresholds are intended to support at least `1` through `365` days.
+
+## Certificate Transparency Source
+
+- crt.sh was evaluated and rejected: its JSON search took 20 to 112 seconds or answered 502 in testing. Cert Spotter answered in under a second and returns only unexpired certificates with precertificates merged.
+- Cert Spotter allows 100 unauthenticated requests per hour (`x-ratelimit-limit`), and a host typically costs two (one page plus the empty page after it). More SSL-monitored hosts than that per day needs a Cert Spotter API key.
+- `ssl_transparency_status` records the last lookup: `found`, `not-found` (the logs answered with no valid certificate for the host, or the host is an IP address) or `unavailable` (the search failed, was rate limited, or ran past five pages). Only `found` changes the expiry; the others keep the last known certificate.
+- CT shows issuance, so a certificate issued and not yet deployed counts as the newest.
 
 ## Important Behavior Notes
 

@@ -2395,12 +2395,13 @@ export default {
 							label: "証明書の有効期限",
 							placeholder: "有効期限を選択",
 							description:
-								"SSL証明書の有効期限を入力してください。ホスティングプロバイダーのダッシュボードまたはブラウザで証明書の詳細を確認できます。",
+								"空欄のままにすると、Certificate Transparencyログから読み取ります。Uptimeは毎日、このモニターのホスト向けに発行された最新の有効な証明書を探します。プライベートCAの証明書などでログを上書きする場合は日付を入力してください。",
 						},
 						issuer: {
 							label: "証明書発行者",
 							placeholder: "Let's Encrypt、DigiCertなど",
-							description: "SSL証明書を発行した認証局（任意）。",
+							description:
+								"手入力した有効期限と併用します。それ以外はログから発行者を取得します（任意）。",
 						},
 						warningDays: {
 							label: "期限前アラート",
@@ -2497,6 +2498,15 @@ export default {
 				issuer: "発行者",
 				lastChecked: "最終チェック",
 				notConfigured: "このモニターではSSL監視が有効になっていません。",
+				certificate: {
+					manual: "有効期限は手入力です。",
+					found: "Certificate Transparencyログから読み取りました。",
+					pending: "Certificate Transparencyログでこのホストを検索しています。",
+					"not-found":
+						"Certificate Transparencyログにこのホストの有効な証明書がありません。プライベートCAの証明書の場合は有効期限を手入力してください。",
+					unavailable:
+						"前回のチェックでCertificate Transparencyログに接続できませんでした。ステータスは最後に見つかった証明書を使用しています。",
+				},
 				configure: "SSL監視を設定",
 			},
 			run: {

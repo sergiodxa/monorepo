@@ -188,6 +188,15 @@ namespace SslCard {
 	}
 }
 
+/**
+ * Where the card's certificate comes from: a typed date, or the last Certificate
+ * Transparency lookup, `pending` until the first one answers.
+ */
+function certificateSource(monitor: SelectMonitor) {
+	if (monitor.ssl_expiry_source === "manual") return "manual";
+	return monitor.ssl_transparency_status ?? "pending";
+}
+
 /** Renders the SSL certificate card: a "not configured" prompt, or the certificate's expiry/issuer details, matching {@link calculateSslStatus}'s classification. */
 function SslCard(handle: Handle<SslCard.Props>) {
 	return () => {
@@ -291,6 +300,9 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						</LinkButton>
 					</div>
 				</div>
+				<p mix={[m("0"), mbs("16px"), fontSize("0.8125rem"), fg("neutral.muted")]}>
+					{intl.t(`page.monitor.ssl.certificate.${certificateSource(monitor)}`)}
+				</p>
 			</div>
 		);
 	};
