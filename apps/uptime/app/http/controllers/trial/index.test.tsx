@@ -65,7 +65,7 @@ let probes: Array<{ url: string; headers: Headers }> = [];
 /** What the stub answers with; a test swaps it to shape the outcome. */
 let doFetch = vi.fn(async (url: string, init?: RequestInit) => {
 	probes.push({ url, headers: new Headers(init?.headers) });
-	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
+	return new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } });
 });
 
 /** The dataset a billed check reports to; a trial probe leaves it untouched. */
@@ -298,7 +298,7 @@ beforeEach(() => {
 	doFetch.mockReset();
 	doFetch.mockImplementation(async (url: string, init?: RequestInit) => {
 		probes.push({ url, headers: new Headers(init?.headers) });
-		return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
+		return new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } });
 	});
 	guardResult = success({
 		url: new URL("https://example.com/"),
@@ -485,7 +485,7 @@ describe("POST /try", () => {
 			probes.push({ url, headers: new Headers(init?.headers) });
 			return new Response(null, {
 				status: 301,
-				headers: { location: "https://example.com/", "X-Response-Time": "4" },
+				headers: { location: "https://example.com/", "Server-Timing": "probe;dur=4" },
 			});
 		});
 
@@ -499,7 +499,7 @@ describe("POST /try", () => {
 	test("withholds the email form for a redirect, so no week of false outages is started", async () => {
 		doFetch.mockImplementation(async (url: string, init?: RequestInit) => {
 			probes.push({ url, headers: new Headers(init?.headers) });
-			return new Response(null, { status: 302, headers: { "X-Response-Time": "4" } });
+			return new Response(null, { status: 302, headers: { "Server-Timing": "probe;dur=4" } });
 		});
 
 		let { body } = await runTry({ url: "example.com" });
@@ -512,7 +512,7 @@ describe("POST /try", () => {
 			probes.push({ url, headers: new Headers(init?.headers) });
 			return new Response(null, {
 				status: 302,
-				headers: { location: "http://169.254.169.254/", "X-Response-Time": "4" },
+				headers: { location: "http://169.254.169.254/", "Server-Timing": "probe;dur=4" },
 			});
 		});
 
@@ -526,7 +526,10 @@ describe("POST /try", () => {
 	test("renders a result for a target that never answered rather than an error", async () => {
 		doFetch.mockImplementation(async (url: string, init?: RequestInit) => {
 			probes.push({ url, headers: new Headers(init?.headers) });
-			return new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } });
+			return new Response(null, {
+				status: 204,
+				headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+			});
 		});
 
 		let { response, body, probe } = await runTry({ url: "example.com" });
@@ -541,7 +544,7 @@ describe("POST /try", () => {
 	test("keeps grading a 4xx and a 5xx rather than calling them redirects", async () => {
 		doFetch.mockImplementation(async (url: string, init?: RequestInit) => {
 			probes.push({ url, headers: new Headers(init?.headers) });
-			return new Response(null, { status: 500, headers: { "X-Response-Time": "9" } });
+			return new Response(null, { status: 500, headers: { "Server-Timing": "probe;dur=9" } });
 		});
 
 		let { body } = await runTry({ url: "example.com" });
@@ -865,7 +868,7 @@ describe("POST /try honeypot", () => {
 			probes.push({ url, headers: new Headers(init?.headers) });
 			return new Response(null, {
 				status: 301,
-				headers: { location: "https://www.example.com/", "X-Response-Time": "4" },
+				headers: { location: "https://www.example.com/", "Server-Timing": "probe;dur=4" },
 			});
 		});
 

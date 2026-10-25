@@ -124,7 +124,8 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 	/**
 	 * `responseTimeMs` and `doWallTimeMs` are logged separately: the first is
 	 * what the monitored site's users experience, the second is what the
-	 * Durable Object bills for — a lower bound on it, see {@link DO_WALL_TIME_HEADER}.
+	 * Durable Object bills for — a lower bound on it. `error` is the RFC 9209 reason a
+	 * failed probe gave, so a `down` result names what broke.
 	 */
 	ctx.log.set({
 		check: {
@@ -132,6 +133,8 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 			response_status: outcome.responseStatus,
 			response_time_ms: outcome.responseTimeMs,
 			do_wall_time_ms: outcome.doWallTimeMs,
+			error: outcome.error?.type ?? null,
+			error_details: outcome.error?.details ?? null,
 		},
 	});
 }

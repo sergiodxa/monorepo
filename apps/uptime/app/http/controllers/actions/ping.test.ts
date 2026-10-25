@@ -45,7 +45,7 @@ import routes from "~/routes/web";
 /** The `GeoFetchDO` stub the quick check probes through. */
 let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
-		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 );
 
 /**
@@ -213,7 +213,7 @@ async function dispatch(db: Db, team: SelectTeam, url: string, headers?: Record<
 beforeEach(() => {
 	doFetchMock.mockReset();
 	doFetchMock.mockImplementation(
-		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 	);
 	geoFetch.reset();
 	pingResults.reset();
@@ -290,7 +290,8 @@ describe("POST /actions/:team/run-ping", () => {
 	test("treats anything but a 200 as down, which is the only status it expects", async () => {
 		let { db, team } = await createFixture();
 		doFetchMock.mockImplementation(
-			async () => new Response("Created", { status: 201, headers: { "X-Response-Time": "8" } }),
+			async () =>
+				new Response("Created", { status: 201, headers: { "Server-Timing": "probe;dur=8" } }),
 		);
 
 		let { flashed } = await dispatch(db, team, "https://example.com/health");
@@ -302,7 +303,8 @@ describe("POST /actions/:team/run-ping", () => {
 	test("flashes a down result, and still bills it, for a bad answer", async () => {
 		let { db, team } = await createFixture();
 		doFetchMock.mockImplementation(
-			async () => new Response("Error", { status: 500, headers: { "X-Response-Time": "31" } }),
+			async () =>
+				new Response("Error", { status: 500, headers: { "Server-Timing": "probe;dur=31" } }),
 		);
 
 		let { flashed } = await dispatch(db, team, "https://example.com/health");
@@ -326,7 +328,10 @@ describe("POST /actions/:team/run-ping", () => {
 		/** How `GeoFetchDO` reports a request it couldn't complete. */
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		let { flashed } = await dispatch(db, team, "https://nothing.invalid");

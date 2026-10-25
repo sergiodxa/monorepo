@@ -54,7 +54,7 @@ import {
 /** The `GeoFetchDO` stub the job calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = vi.fn(
 	async (_url?: string, _init?: { method?: string }) =>
-		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 );
 
 /**
@@ -260,7 +260,7 @@ afterAll(() => server.close());
 beforeEach(() => {
 	doFetchMock.mockReset();
 	doFetchMock.mockImplementation(
-		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 	);
 	pingResults.reset();
 	geoFetch.reset();
@@ -286,7 +286,8 @@ describe("checkHttp classification", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { expected_status: 200 });
 		doFetchMock.mockImplementation(
-			async () => new Response("Error", { status: 500, headers: { "X-Response-Time": "5" } }),
+			async () =>
+				new Response("Error", { status: 500, headers: { "Server-Timing": "probe;dur=5" } }),
 		);
 
 		await runJob(db, monitor.id);
@@ -300,7 +301,8 @@ describe("checkHttp classification", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, { degraded_after_ms: 100 });
 		doFetchMock.mockImplementation(
-			async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "150" } }),
+			async () =>
+				new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=150" } }),
 		);
 
 		await runJob(db, monitor.id);
@@ -313,7 +315,10 @@ describe("checkHttp classification", () => {
 		let monitor = await seedMonitor(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		await runJob(db, monitor.id);
@@ -329,14 +334,17 @@ describe("checkHttp classification", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 		/**
-		 * `GeoFetchDO` overwrites the header on every response it proxies, so a target
-		 * echoing it back arrives tagged `responded` and is classified on its status.
+		 * An error another intermediary reported belongs to the target's own chain; the
+		 * probe object's member says the target responded, so it is classified on its status.
 		 */
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response("OK", {
 					status: 200,
-					headers: { "X-Response-Time": "12", "X-Probe-Outcome": "responded" },
+					headers: {
+						"Server-Timing": "probe;dur=12",
+						"Proxy-Status": "origin-cache; error=dns_error, uptime-probe; received-status=200",
+					},
 				}),
 		);
 
@@ -365,7 +373,7 @@ describe("checkHttp content checks", () => {
 		await seedContentCheck(db, monitor.id, "expected-token");
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response("nothing here", { status: 200, headers: { "X-Response-Time": "10" } }),
+				new Response("nothing here", { status: 200, headers: { "Server-Timing": "probe;dur=10" } }),
 		);
 
 		await runJob(db, monitor.id);
@@ -381,7 +389,7 @@ describe("checkHttp content checks", () => {
 			async () =>
 				new Response("has expected-token inside", {
 					status: 200,
-					headers: { "X-Response-Time": "10" },
+					headers: { "Server-Timing": "probe;dur=10" },
 				}),
 		);
 
@@ -552,7 +560,10 @@ describe("checkHttp error handling", () => {
 		let monitor = await seedMonitor(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		await expect(runJob(db, monitor.id)).resolves.toBeDefined();
@@ -708,7 +719,7 @@ describe("checkHttp Durable Object wall time", () => {
 			async () =>
 				new Response("OK", {
 					status: 200,
-					headers: { "X-Response-Time": "12", "X-DO-Wall-Time": "37.5" },
+					headers: { "Server-Timing": "probe;dur=12, wall;dur=37.5" },
 				}),
 		);
 
@@ -727,7 +738,10 @@ describe("checkHttp Durable Object wall time", () => {
 			async () =>
 				new Response(null, {
 					status: 204,
-					headers: { "X-Probe-Outcome": "unreachable", "X-DO-Wall-Time": "10000" },
+					headers: {
+						"Proxy-Status": "uptime-probe; error=connection_refused",
+						"Server-Timing": "wall;dur=10000",
+					},
 				}),
 		);
 
@@ -741,7 +755,7 @@ describe("checkHttp Durable Object wall time", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
 		doFetchMock.mockImplementation(
-			async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+			async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 		);
 
 		let record = await runJob(db, monitor.id);
@@ -951,7 +965,8 @@ describe("checkHttp metering", () => {
 		await seedTeam(db);
 		let monitor = await seedMonitor(db, { expected_status: 200 });
 		doFetchMock.mockImplementation(
-			async () => new Response("Error", { status: 500, headers: { "X-Response-Time": "5" } }),
+			async () =>
+				new Response("Error", { status: 500, headers: { "Server-Timing": "probe;dur=5" } }),
 		);
 
 		await runJob(db, monitor.id);

@@ -47,7 +47,7 @@ import routes from "~/routes/web";
 
 /** The `GeoFetchDO` stub every probe goes through: one healthy answer, in 12 ms. */
 async function probe() {
-	return new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } });
+	return new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } });
 }
 
 /** The `GEO_FETCH` binding, routing every object it hands out to {@link probe}. */

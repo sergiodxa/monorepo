@@ -30,7 +30,7 @@ import { createTestDatabase } from "~/app/test/db";
 /** The `GeoFetchDO` stub `probe` calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
-		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 );
 
 /**
@@ -95,6 +95,7 @@ function outcome(overrides: Partial<HttpProbeOutcome> = {}): HttpProbeOutcome {
 		location: null,
 		body: "OK",
 		failed: false,
+		error: null,
 		...overrides,
 	};
 }
@@ -141,7 +142,7 @@ async function seedMonitor(db: Db, overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
 	doFetchMock.mockReset();
 	doFetchMock.mockImplementation(
-		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 	);
 	geoFetch.reset();
 	costs.reset();
@@ -241,7 +242,7 @@ describe("HttpCheck probe request", () => {
 	test("reads the response body only when a content check needs one", async () => {
 		let response = new Response("has token inside", {
 			status: 200,
-			headers: { "X-Response-Time": "12" },
+			headers: { "Server-Timing": "probe;dur=12" },
 		});
 		doFetchMock.mockImplementation(async () => response);
 
@@ -277,7 +278,7 @@ describe("HttpCheck probe request", () => {
 			async () =>
 				new Response("OK", {
 					status: 201,
-					headers: { "X-Response-Time": "42", "X-DO-Wall-Time": "37.5" },
+					headers: { "Server-Timing": "probe;dur=42, wall;dur=37.5" },
 				}),
 		);
 
@@ -290,6 +291,7 @@ describe("HttpCheck probe request", () => {
 			location: null,
 			body: "",
 			failed: false,
+			error: null,
 		});
 	});
 
@@ -306,7 +308,10 @@ describe("HttpCheck probe failures", () => {
 			async () =>
 				new Response(null, {
 					status: 204,
-					headers: { "X-Probe-Outcome": "unreachable", "X-DO-Wall-Time": "10000" },
+					headers: {
+						"Proxy-Status": "uptime-probe; error=connection_refused",
+						"Server-Timing": "wall;dur=10000",
+					},
 				}),
 		);
 
@@ -319,19 +324,51 @@ describe("HttpCheck probe failures", () => {
 			location: null,
 			body: "",
 			failed: true,
+			error: { type: "connection_refused", details: null },
 		});
 	});
 
-	test("ignores an 'unreachable' outcome the target set on itself", async () => {
+	test("names the reason and message the probe object reported for a failed probe", async () => {
+		doFetchMock.mockImplementation(
+			async () =>
+				new Response(null, {
+					status: 204,
+					headers: {
+						"Proxy-Status": 'uptime-probe; error=dns_error; details="DNS lookup failed"',
+					},
+				}),
+		);
+
+		let result = await new HttpCheck(options()).probe();
+
+		expect(result.failed).toBe(true);
+		expect(result.error).toEqual({ type: "dns_error", details: "DNS lookup failed" });
+	});
+
+	test("reads a probe metric written without a duration as zero, and a missing one as unmeasured", async () => {
+		doFetchMock.mockImplementation(
+			async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe" } }),
+		);
+
+		let result = await new HttpCheck(options()).probe();
+
+		expect(result.responseTimeMs).toBe(0);
+		expect(result.doWallTimeMs).toBeNull();
+	});
+
+	test("reads only the probe object's own Proxy-Status member", async () => {
 		/**
-		 * `GeoFetchDO` overwrites this header on every response it proxies, so a target
-		 * echoing it back arrives tagged `responded` and is judged on its status.
+		 * An error another intermediary reported belongs to the target's own chain; the
+		 * probe object's member says the target responded, so it is judged on its status.
 		 */
 		doFetchMock.mockImplementation(
 			async () =>
 				new Response("OK", {
 					status: 200,
-					headers: { "X-Response-Time": "12", "X-Probe-Outcome": "responded" },
+					headers: {
+						"Server-Timing": "probe;dur=12",
+						"Proxy-Status": "origin-cache; error=dns_error, uptime-probe; received-status=200",
+					},
 				}),
 		);
 
@@ -374,7 +411,7 @@ describe("HttpCheck probe cost", () => {
 			async () =>
 				new Response("OK", {
 					status: 200,
-					headers: { "X-Response-Time": "12", "X-DO-Wall-Time": "37.5" },
+					headers: { "Server-Timing": "probe;dur=12, wall;dur=37.5" },
 				}),
 		);
 
@@ -483,7 +520,10 @@ describe("HttpCheck run", () => {
 	test("agrees with probing, evaluating and classifying by hand", async () => {
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response("has token inside", { status: 200, headers: { "X-Response-Time": "10" } }),
+				new Response("has token inside", {
+					status: 200,
+					headers: { "Server-Timing": "probe;dur=10" },
+				}),
 		);
 		let check = new HttpCheck({ ...options(), contentChecks: [rule({ value: "token" })] });
 
@@ -499,7 +539,7 @@ describe("HttpCheck run", () => {
 	test("classifies a body that fails its content checks as down", async () => {
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response("nothing here", { status: 200, headers: { "X-Response-Time": "10" } }),
+				new Response("nothing here", { status: 200, headers: { "Server-Timing": "probe;dur=10" } }),
 		);
 		let check = new HttpCheck({ ...options(), contentChecks: [rule({ value: "token" })] });
 
@@ -512,7 +552,10 @@ describe("HttpCheck run", () => {
 	test("classifies an unreachable target as down without reading a body", async () => {
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		let result = await new HttpCheck({

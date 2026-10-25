@@ -484,10 +484,12 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/seo": "workspace:*",
+        "@sdxc/server-timing": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/spec": "workspace:*",
         "@sdxc/strings": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
         "@sdxc/trace-context": "workspace:*",
         "@sdxc/typeid": "workspace:*",
         "@sdxc/u": "workspace:*",
@@ -1615,7 +1617,6 @@
       "name": "@sdxc/openapi",
       "version": "0.0.1",
       "dependencies": {
-        "@sdxc/http": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
@@ -1760,7 +1761,6 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/logger": "workspace:*",
-        "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/uuid": "workspace:*",

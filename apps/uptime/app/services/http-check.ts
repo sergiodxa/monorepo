@@ -10,14 +10,17 @@
 import { env } from "cloudflare:workers";
 
 import type { ContentCheckRule } from "~/app/models/content-checks";
+import type { ProbeError } from "~/app/services/geo-fetch";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
 import { evaluateContentChecks } from "~/app/models/content-checks";
 import { recordCost } from "~/app/services/cost";
 import {
-	DO_WALL_TIME_HEADER,
 	NO_REDIRECT_HEADER,
-	PROBE_OUTCOME_HEADER,
+	PROBE_METRIC,
+	readProbeError,
+	readTiming,
+	WALL_METRIC,
 } from "~/app/services/geo-fetch";
 
 const MS_PER_SECOND = 1000;
@@ -38,7 +41,8 @@ const SHARDS_PER_REGION = 8;
 
 /**
  * What one region-hinted fetch observed. `failed` covers everything that stopped the
- * request from producing a response at all — timeout, DNS failure, refused connection.
+ * request from producing a response at all — timeout, DNS failure, refused connection —
+ * and `error` names which, when the probe object reported it.
  */
 export interface HttpProbeOutcome {
 	responseStatus: number | null;
@@ -46,7 +50,7 @@ export interface HttpProbeOutcome {
 	/**
 	 * How long the Durable Object's handler ran — the billing metric, against
 	 * `responseTimeMs`'s product metric (ADR-019 §2) — as a LOWER BOUND on the billed window
-	 * (see {@link DO_WALL_TIME_HEADER}). `null` when this side's timeout aborted the call.
+	 * (see {@link WALL_METRIC}). `null` when this side's timeout aborted the call.
 	 */
 	doWallTimeMs: number | null;
 	/**
@@ -57,6 +61,11 @@ export interface HttpProbeOutcome {
 	location: string | null;
 	body: string;
 	failed: boolean;
+	/**
+	 * The RFC 9209 error type and message the probe object reported for a failed probe;
+	 * `null` when the target responded, or when this side's timeout aborted the call first.
+	 */
+	error: ProbeError | null;
 }
 
 /** The outcome for a target that never answered: no status, no timing, classified down. */
@@ -67,6 +76,7 @@ const UNREACHABLE: HttpProbeOutcome = {
 	location: null,
 	body: "",
 	failed: true,
+	error: null,
 };
 
 /** Everything one HTTP check needs to know about its target and how to judge it. */
@@ -179,19 +189,25 @@ export class HttpCheck {
 			 * time is kept anyway — a probe that failed still occupied the object, and that
 			 * is the expensive case worth watching.
 			 */
-			if (response.headers.get(PROBE_OUTCOME_HEADER) === "unreachable") {
-				return this.recordWallTime({ ...UNREACHABLE, doWallTimeMs: readWallTime(response) });
+			let error = readProbeError(response.headers);
+			if (error !== null) {
+				return this.recordWallTime({
+					...UNREACHABLE,
+					doWallTimeMs: readTiming(response.headers, WALL_METRIC),
+					error,
+				});
 			}
 
 			let body = needsBody ? await response.text().catch(() => "") : "";
 
 			return this.recordWallTime({
 				responseStatus: response.status,
-				responseTimeMs: Number(response.headers.get("X-Response-Time") ?? 0),
-				doWallTimeMs: readWallTime(response),
+				responseTimeMs: readTiming(response.headers, PROBE_METRIC) ?? 0,
+				doWallTimeMs: readTiming(response.headers, WALL_METRIC),
 				location: absoluteLocation(response, this.options.url),
 				body,
 				failed: false,
+				error: null,
 			});
 		} catch (error) {
 			if (signal.aborted) return this.recordWallTime(UNREACHABLE);
@@ -232,7 +248,7 @@ export class HttpCheck {
 
 	/**
 	 * Charges the probe's Durable Object wall time and passes the outcome through. The
-	 * header is a documented LOWER BOUND on the billed window (see {@link DO_WALL_TIME_HEADER}),
+	 * metric is a documented LOWER BOUND on the billed window (see {@link WALL_METRIC}),
 	 * so this always reports a real measurement; `null` means nothing was measured to charge for.
 	 */
 	private recordWallTime(outcome: HttpProbeOutcome): HttpProbeOutcome {
@@ -271,17 +287,4 @@ function absoluteLocation(response: Response, probedUrl: string): string | null 
 	} catch {
 		return null;
 	}
-}
-
-/**
- * Reads the Durable Object's reported handler duration off a probe response. Returns
- * `null`, not 0, when the header is missing or unparseable — a measurement that never
- * happened and a handler that took no time are different facts; conflating them understates billing.
- */
-function readWallTime(response: Response): number | null {
-	let header = response.headers.get(DO_WALL_TIME_HEADER);
-	if (header === null) return null;
-
-	let value = Number(header);
-	return Number.isFinite(value) ? value : null;
 }
