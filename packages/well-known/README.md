@@ -153,7 +153,11 @@ Each exports `NAME`, `MEDIA_TYPE`, `parse(text)`, `stringify(document)` and a de
   specification land in `extensions` under their serialized names, validated by
   `options.extensions`, any synchronous [Standard Schema](https://standardschema.dev/).
 - `define(document)` takes `issuer` and `responseTypesSupported` and defaults lists to `[]`, URLs
-  to `null` and flags to `false`.
+  to `null` and flags to `false`, except `requestUriParameterSupported`, which is `true` as the
+  registry defines it. The PAR (RFC 9126) and request object (RFC 9101) members are typed fields:
+  `pushedAuthorizationRequestEndpoint`, `requirePushedAuthorizationRequests`,
+  `requestParameterSupported`, `requestUriParameterSupported`,
+  `requestObjectSigningAlgValuesSupported` and `requireSignedRequestObject`.
 - `stringify(document): string` writes extensions beside the standard members, which win a name
   clash.
 - `authorizationServerMetadata` is the descriptor.
@@ -162,7 +166,7 @@ Each exports `NAME`, `MEDIA_TYPE`, `parse(text)`, `stringify(document)` and a de
 
 `OpenIdProviderMetadata` adds the Discovery members to the RFC 8414 document. `define` also
 requires `authorizationEndpoint`, `jwksUri`, `subjectTypesSupported` and
-`idTokenSigningAlgValuesSupported`, and defaults `requestUriParameterSupported` to `true`. `parse`,
+`idTokenSigningAlgValuesSupported`. `parse`,
 `stringify` and `ParseOptions` work as above; `openIdConfiguration` is the descriptor, with
 `placement: "append"`.
 

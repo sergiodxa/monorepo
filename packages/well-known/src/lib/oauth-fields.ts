@@ -12,7 +12,11 @@ import type { FieldTable } from "./metadata.js";
 
 import { sameIdentifier } from "./identifier.js";
 
-/** Every RFC 8414 member, by camelCase field. */
+/**
+ * Every RFC 8414 registry member, by camelCase field. `request_uri_parameter_supported`
+ * reads an absent member as `true`, the OpenID Connect Discovery definition the
+ * registry points to, so a server without by-reference requests must publish `false`.
+ */
 export const AUTHORIZATION_SERVER_FIELDS = {
 	issuer: { wire: "issuer", kind: "text", required: true },
 	authorizationEndpoint: { wire: "authorization_endpoint", kind: "url" },
@@ -26,6 +30,21 @@ export const AUTHORIZATION_SERVER_FIELDS = {
 		wire: "pushed_authorization_request_endpoint",
 		kind: "url",
 	},
+	requirePushedAuthorizationRequests: {
+		wire: "require_pushed_authorization_requests",
+		kind: "boolean",
+	},
+	requestParameterSupported: { wire: "request_parameter_supported", kind: "boolean" },
+	requestUriParameterSupported: {
+		wire: "request_uri_parameter_supported",
+		kind: "boolean",
+		default: true,
+	},
+	requestObjectSigningAlgValuesSupported: {
+		wire: "request_object_signing_alg_values_supported",
+		kind: "strings",
+	},
+	requireSignedRequestObject: { wire: "require_signed_request_object", kind: "boolean" },
 	scopesSupported: { wire: "scopes_supported", kind: "strings" },
 	responseTypesSupported: { wire: "response_types_supported", kind: "strings", required: true },
 	responseModesSupported: { wire: "response_modes_supported", kind: "strings" },
@@ -78,8 +97,7 @@ export function issuerCheck(expected: URL | string | undefined) {
 
 /**
  * OpenID Connect Discovery §3 members over the RFC 8414 ones. `authorization_endpoint`
- * and `jwks_uri` become required, and `request_uri_parameter_supported` defaults to
- * `true`, as §3 states for an absent member.
+ * and `jwks_uri` become required.
  */
 export const OPENID_PROVIDER_FIELDS = {
 	...AUTHORIZATION_SERVER_FIELDS,
@@ -97,12 +115,6 @@ export const OPENID_PROVIDER_FIELDS = {
 	claimsSupported: { wire: "claims_supported", kind: "strings" },
 	promptValuesSupported: { wire: "prompt_values_supported", kind: "strings" },
 	acrValuesSupported: { wire: "acr_values_supported", kind: "strings" },
-	requestParameterSupported: { wire: "request_parameter_supported", kind: "boolean" },
-	requestUriParameterSupported: {
-		wire: "request_uri_parameter_supported",
-		kind: "boolean",
-		default: true,
-	},
 	frontchannelLogoutSupported: { wire: "frontchannel_logout_supported", kind: "boolean" },
 	frontchannelLogoutSessionSupported: {
 		wire: "frontchannel_logout_session_supported",

@@ -36,6 +36,16 @@ export interface AuthorizationServerMetadata<Extensions extends object = {}> {
 	deviceAuthorizationEndpoint: URL | null;
 	/** RFC 9126. */
 	pushedAuthorizationRequestEndpoint: URL | null;
+	/** RFC 9126 §5: authorization request data is accepted only through the PAR endpoint. */
+	requirePushedAuthorizationRequests: boolean;
+	/** Whether the `request` parameter (RFC 9101) is accepted. */
+	requestParameterSupported: boolean;
+	/** Whether a `request_uri` the client hosts is fetched; absent in the document means `true`. */
+	requestUriParameterSupported: boolean;
+	/** The JWS algorithms a request object (RFC 9101) may be signed with. */
+	requestObjectSigningAlgValuesSupported: string[];
+	/** RFC 9101 §10.5: every authorization request must arrive as a signed request object. */
+	requireSignedRequestObject: boolean;
 	scopesSupported: string[];
 	responseTypesSupported: string[];
 	responseModesSupported: string[];

@@ -104,6 +104,39 @@ describe(parse, () => {
 		]);
 	});
 
+	test("reads the PAR (RFC 9126) and request object (RFC 9101) members", () => {
+		let metadata = unwrap(
+			parse(
+				JSON.stringify({
+					issuer: "https://as.example.com",
+					response_types_supported: ["code"],
+					pushed_authorization_request_endpoint: "https://as.example.com/as/par",
+					require_pushed_authorization_requests: true,
+					request_parameter_supported: true,
+					request_uri_parameter_supported: false,
+					request_object_signing_alg_values_supported: ["RS256", "ES256"],
+					require_signed_request_object: true,
+				}),
+			),
+		);
+		expect(metadata.pushedAuthorizationRequestEndpoint).toEqual(
+			new URL("https://as.example.com/as/par"),
+		);
+		expect(metadata.requirePushedAuthorizationRequests).toBe(true);
+		expect(metadata.requestParameterSupported).toBe(true);
+		expect(metadata.requestUriParameterSupported).toBe(false);
+		expect(metadata.requestObjectSigningAlgValuesSupported).toEqual(["RS256", "ES256"]);
+		expect(metadata.requireSignedRequestObject).toBe(true);
+		expect(metadata.extensions).toEqual({});
+	});
+
+	test("reads an absent request_uri_parameter_supported as true and the other flags as false", () => {
+		let metadata = unwrap(parse(RFC_EXAMPLE));
+		expect(metadata.requestUriParameterSupported).toBe(true);
+		expect(metadata.requestParameterSupported).toBe(false);
+		expect(metadata.requirePushedAuthorizationRequests).toBe(false);
+	});
+
 	test("fails on text that is not a JSON object", () => {
 		expect(isFailure(parse("[]"))).toBe(true);
 		expect(isFailure(parse("{"))).toBe(true);
@@ -136,6 +169,26 @@ describe(stringify, () => {
 			authorization_response_iss_parameter_supported: true,
 			protected_resources: ["https://as.example/userinfo"],
 		});
+	});
+
+	test("writes a false request_uri_parameter_supported, since absent means true", () => {
+		let metadata = define({
+			issuer: "https://as.example",
+			responseTypesSupported: ["code"],
+			pushedAuthorizationRequestEndpoint: new URL("https://as.example/oauth/par"),
+			requestParameterSupported: true,
+			requestUriParameterSupported: false,
+			requestObjectSigningAlgValuesSupported: ["ES256"],
+		});
+		expect(JSON.parse(stringify(metadata))).toEqual({
+			issuer: "https://as.example",
+			response_types_supported: ["code"],
+			pushed_authorization_request_endpoint: "https://as.example/oauth/par",
+			request_parameter_supported: true,
+			request_uri_parameter_supported: false,
+			request_object_signing_alg_values_supported: ["ES256"],
+		});
+		expect(unwrap(parse(stringify(metadata)))).toEqual(metadata);
 	});
 
 	test("writes extensions without letting one replace a standard member", () => {

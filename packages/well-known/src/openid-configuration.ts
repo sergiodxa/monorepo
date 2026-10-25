@@ -40,9 +40,6 @@ export interface OpenIdProviderMetadata<
 	claimsSupported: string[];
 	promptValuesSupported: string[];
 	acrValuesSupported: string[];
-	requestParameterSupported: boolean;
-	/** Absent in the document means `true` (§3). */
-	requestUriParameterSupported: boolean;
 	frontchannelLogoutSupported: boolean;
 	frontchannelLogoutSessionSupported: boolean;
 	backchannelLogoutSupported: boolean;
