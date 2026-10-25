@@ -7,13 +7,15 @@
  */
 
 import type { BillingWebhookHandlers } from "@sdxc/billing";
-import type { RequestContext } from "remix/router";
+import type { Result } from "@sdxc/result";
 
 import { BillingError, BillingWebhook } from "@sdxc/billing";
 import { parseEmailAddress } from "@sdxc/email-address";
 import { NewsletterError } from "@sdxc/newsletter";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { polar } from "~/app/initializers/billing";
 import { Product } from "~/config/products";
@@ -27,21 +29,23 @@ const TIERS: Record<string, string> = {
 
 /**
  * Reads the buyer's address, which the order names only by customer. A read
- * that fails is thrown so the delivery is retried rather than acknowledged as
- * a purchase nobody was tagged for.
+ * that fails comes back as the failure, so the delivery is retried rather than
+ * acknowledged as a purchase nobody was tagged for.
  *
  * @param context - The request context, for the platform the delivery came from.
  * @param customerId - The customer the order was paid by, when it named one.
- * @returns The buyer's address, or `null` when the platform holds none.
- * @throws {BillingError} When the customer could not be read.
+ * @returns The buyer's address, `null` when the platform holds none, or the failed read.
  */
-async function buyerEmail(context: RequestContext, customerId: string | null) {
-	if (customerId === null) return null;
+async function buyerEmail(
+	context: AppContext,
+	customerId: string | null,
+): Promise<Result<string | null, BillingError>> {
+	if (customerId === null) return success(null);
 
 	let customer = await context.billing.customers.find({ id: customerId });
-	if (isFailure(customer)) throw customer.error;
+	if (isFailure(customer)) return customer;
 
-	return customer.data.email;
+	return success(customer.data.email);
 }
 
 /**
@@ -49,7 +53,7 @@ async function buyerEmail(context: RequestContext, customerId: string | null) {
  * buyer the newsletter already holds, so every tagged address opted in itself; any
  * other buyer's purchase is recorded in the log alone.
  */
-export const handlers: BillingWebhookHandlers = {
+export const handlers: BillingWebhookHandlers<AppContext> = {
 	/**
 	 * @param event - The paid order, with the package named by our own slug.
 	 * @param context - The request context, for its log and the platform.
@@ -65,7 +69,10 @@ export const handlers: BillingWebhookHandlers = {
 			return;
 		}
 
-		let email = await buyerEmail(context, event.order.customerId);
+		let read = await buyerEmail(context, event.order.customerId);
+		if (isFailure(read)) return read;
+
+		let email = read.data;
 
 		if (email === null) {
 			log.note("order.untagged", { reason: "no_customer" });
@@ -84,7 +91,7 @@ export const handlers: BillingWebhookHandlers = {
 			{ metadata: { purchase: tier } },
 		);
 
-		if (isFailure(tagged) && tagged.error.code !== "not_found") throw tagged.error;
+		if (isFailure(tagged) && tagged.error.code !== "not_found") return tagged;
 
 		log.set({ order: { tagged: isSuccess(tagged) } });
 		log.note("order.paid", { email });
@@ -96,7 +103,7 @@ export const handlers: BillingWebhookHandlers = {
  * billing one: a paid order whose tag never landed would otherwise be acknowledged
  * and the purchase lost from segmentation.
  *
- * @param error - What the handler threw.
+ * @param error - The error the handler failed with.
  * @returns Whether the endpoint answers `503`.
  */
 export function retryDelivery(error: unknown): boolean {
@@ -105,11 +112,10 @@ export function retryDelivery(error: unknown): boolean {
 }
 
 /** Verifies each delivery's signature and dispatches it to {@link handlers}. */
-const WEBHOOK = new BillingWebhook(polar, handlers, { retry: retryDelivery });
+const WEBHOOK = new BillingWebhook<AppContext>(polar, handlers, { retry: retryDelivery });
 
 /**
- * POST /webhooks/polar — records a paid order against the buyer's newsletter profile. The
- * endpoint reads the request and the services published on every context, so it receives the
- * router's context as the base `RequestContext` its handlers are typed against.
+ * POST /webhooks/polar — records a paid order against the buyer's newsletter profile, through
+ * the billing platform and newsletter the router publishes on its context.
  */
-export default createAction(routes.webhooks.polar, (ctx) => WEBHOOK.handler(ctx as RequestContext));
+export default createAction(routes.webhooks.polar, (ctx) => WEBHOOK.handler(ctx));

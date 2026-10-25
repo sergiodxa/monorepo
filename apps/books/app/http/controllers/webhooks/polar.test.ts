@@ -18,6 +18,8 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "~/app/initializers/router";
+
 import { handlers, retryDelivery } from "~/app/http/controllers/webhooks/polar";
 import { memoryBilling, purchase } from "~/app/test/billing";
 import { fetchApp } from "~/app/test/router";
@@ -33,7 +35,8 @@ const BUYER = "buyer@example.com";
 const FOREIGN_SECRET = "YW5vdGhlci1zaWduaW5nLXNlY3JldA";
 
 /**
- * Answers one delivery through the app's own handlers.
+ * Answers one delivery through the app's own handlers, on a context carrying the log,
+ * billing platform and newsletter the router's middleware would have published.
  *
  * @param billing - The platform the delivery came from and is verified against.
  * @param newsletter - The newsletter the handler tags through.
@@ -47,13 +50,13 @@ async function deliver(
 	delivery: MemoryDelivery,
 	store?: MemoryWebhookStore,
 ): Promise<Response> {
-	let endpoint = new BillingWebhook(billing, handlers, { store, retry: retryDelivery });
+	let endpoint = new BillingWebhook<AppContext>(billing, handlers, { store, retry: retryDelivery });
 	let context = new RequestContext(delivery.request);
 	context.billing = billing;
 	context.newsletter = newsletter;
 	context.log = new Log({ kind: "request", sink() {} });
 
-	return await endpoint.handler(context);
+	return await endpoint.handler(context as AppContext);
 }
 
 /** A list already holding the buyer, which is the only reader a paid order tags. */
