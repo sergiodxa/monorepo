@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 3
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "What a package name tells you before you open its README"
     - "How symmetric pairs and meaningful prefixes make exports guessable"
@@ -39,8 +39,8 @@ The scope carries the attribution, and the name carries the job.
 ## Expect parse and stringify together
 
 Where a package reads a format it also writes it, and the two are `parse` and `stringify` —
-`@sdxc/markdown`, `@sdxc/yaml`, `@sdxc/xml` and `@sdxc/opml` all expose that pair. A round trip
-through one of them reads like a round trip through any of them:
+`@sdxc/yaml` and `@sdxc/opml` export that pair, and `Markdown` and `XML` carry it as static
+methods. A round trip through one of them reads like a round trip through any of them:
 
 ```typescript {% title="app/services/feeds/subscriptions.ts" %}
 import type { OPML } from "@sdxc/opml";
@@ -56,8 +56,10 @@ export function exportSubscriptions(outlines: OPML.Outline[]) {
 }
 ```
 
-`parse` reads text, which can be wrong, so it answers with a `Result`. `stringify` writes a
-structure the types already checked, so it answers with the string.
+`parse` reads text, which can be wrong, so it answers with a `Result`. `stringify` answers with
+a `Result` too wherever its input can hold something the format cannot write, such as a YAML
+value with a cycle; OPML's outlines are fully checked by their types, so it answers with the
+string.
 
 ## Read the prefix
 
@@ -93,8 +95,8 @@ export const REFRESH_RETRY: retry.Options<Error> = {
 
 The same holds for constants a function takes: `redirect.Status.SeeOther` from
 `@sdxc/response` is the 303 a form submission redirects with. A component and its props follow
-it too: `Command.Props`, `Command.ItemProps` and `Command.Variant` come from the same import as
-`Command` itself in `@sdxc/ui`.
+it too: `Button.Props`, `Button.Variant` and `Button.Size` come from the same import as `Button`
+itself in `@sdxc/ui`.
 
 ## Name options at the call site
 
