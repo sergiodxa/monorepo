@@ -14,7 +14,7 @@ import { Feed } from "../index.js";
 import { fromLinkHeader } from "./links.js";
 
 /** The address every document in this file is served from. */
-const URL_ = "https://example.com/feed.xml";
+const FEED_URL = "https://example.com/feed.xml";
 
 /** The hub every document in this file advertises. */
 const HUB = "https://hub.example.com/";
@@ -25,7 +25,7 @@ const ATOM = `<?xml version="1.0" encoding="utf-8"?>
 	<title>Example</title>
 	<id>https://example.com/</id>
 				<updated>2026-09-16T00:00:00Z</updated>
-	<link rel="self" href="${URL_}"/>
+	<link rel="self" href="${FEED_URL}"/>
 	<link rel="hub" href="${HUB}"/>
 </feed>`;
 
@@ -35,7 +35,7 @@ const RSS = `<?xml version="1.0" encoding="utf-8"?>
 	<title>Example</title>
 	<link>https://example.com</link>
 	<description>An example feed</description>
-	<atom:link rel="self" href="${URL_}"/>
+	<atom:link rel="self" href="${FEED_URL}"/>
 	<atom:link rel="hub" href="${HUB}"/>
 </channel></rss>`;
 
@@ -43,14 +43,14 @@ const RSS = `<?xml version="1.0" encoding="utf-8"?>
 const JSON_FEED = JSON.stringify({
 	version: "https://jsonfeed.org/version/1.1",
 	title: "Example",
-	feed_url: URL_,
+	feed_url: FEED_URL,
 	hubs: [{ type: "WebSub", url: HUB }],
 	items: [],
 });
 
 /** The parsed document, refused loudly so each test below reads what it asserts on. */
 function parsed(source: string): Feed {
-	let feed = Feed.parse(source, { url: URL_ });
+	let feed = Feed.parse(source, { url: FEED_URL });
 	if (isFailure(feed)) throw feed.error;
 	return feed.data;
 }
@@ -68,9 +68,9 @@ describe("link relations", () => {
 	});
 
 	test("keeps rel=self beside it, so the topic a hub keys by is readable", () => {
-		expect(parsed(ATOM).links.find((link) => link.rel === "self")?.href).toBe(URL_);
-		expect(parsed(RSS).links.find((link) => link.rel === "self")?.href).toBe(URL_);
-		expect(parsed(JSON_FEED).links.find((link) => link.rel === "self")?.href).toBe(URL_);
+		expect(parsed(ATOM).links.find((link) => link.rel === "self")?.href).toBe(FEED_URL);
+		expect(parsed(RSS).links.find((link) => link.rel === "self")?.href).toBe(FEED_URL);
+		expect(parsed(JSON_FEED).links.find((link) => link.rel === "self")?.href).toBe(FEED_URL);
 	});
 
 	test("lower-cases the relation and resolves the target", () => {
@@ -90,7 +90,7 @@ describe("choosing a hub", () => {
 	test("takes the header's hub over the document's", () => {
 		let header = fromLinkHeader(
 			new Response(null, { headers: { link: `<https://header.example.com/>; rel="hub"` } }),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(Feed.selectHub(header, parsed(ATOM).links)).toEqual({
@@ -106,7 +106,7 @@ describe("choosing a hub", () => {
 					link: `</a,b.xml>; rel="alternate"; type="application/rss+xml"`,
 				},
 			}),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(links).toEqual([
@@ -117,13 +117,13 @@ describe("choosing a hub", () => {
 	test("reads several relations off one header, in the order they were written", () => {
 		let links = fromLinkHeader(
 			new Response(null, {
-				headers: { link: `<${URL_}>; rel="self", <${HUB}>; rel="hub"` },
+				headers: { link: `<${FEED_URL}>; rel="self", <${HUB}>; rel="hub"` },
 			}),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(links).toEqual([
-			{ rel: "self", href: URL_ },
+			{ rel: "self", href: FEED_URL },
 			{ rel: "hub", href: HUB },
 		]);
 	});
@@ -169,7 +169,7 @@ describe("pairing a hub with its topic", () => {
 					link: `<https://header.example.com/>; rel="hub", <https://example.com/pushed.xml>; rel="self"`,
 				},
 			}),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(Feed.selectSubscription(header, parsed(ATOM).links)).toEqual({
@@ -182,12 +182,12 @@ describe("pairing a hub with its topic", () => {
 	test("falls back to the document's topic when the header named a hub alone", () => {
 		let header = fromLinkHeader(
 			new Response(null, { headers: { link: `<https://header.example.com/>; rel="hub"` } }),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(Feed.selectSubscription(header, parsed(ATOM).links)).toEqual({
 			hub: "https://header.example.com/",
-			topic: URL_,
+			topic: FEED_URL,
 			source: "header",
 		});
 	});
@@ -197,12 +197,12 @@ describe("pairing a hub with its topic", () => {
 			new Response(null, {
 				headers: { link: `<https://example.com/other.xml>; rel="self"` },
 			}),
-			URL_,
+			FEED_URL,
 		);
 
 		expect(Feed.selectSubscription(header, parsed(RSS).links)).toEqual({
 			hub: HUB,
-			topic: URL_,
+			topic: FEED_URL,
 			source: "document",
 		});
 	});
