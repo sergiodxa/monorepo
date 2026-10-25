@@ -29,11 +29,11 @@ Windows are fixed one-minute windows aligned to the clock, so a budget refills a
 
 Responses from a rate-limited endpoint carry the quota headers, on success and on failure alike:
 
-| Header             | Example              | Description                                                                                                                                                     |
-| ------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RateLimit`        | `limit=60, reset=42` | `limit` is the requests allowed per window and `reset` the seconds until the window restarts. `remaining` joins them when the count left in the window is known |
-| `RateLimit-Policy` | `60;w=60`            | The quota and its window length in seconds                                                                                                                      |
-| `Retry-After`      | `42`                 | Seconds to wait before retrying, sent on a `429` response                                                                                                       |
+| Header             | Example               | Description                                                                                                                                          |
+| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RateLimit`        | `"default";r=0;t=42`  | `r` is the requests left in the window and `t` the seconds until it restarts. The header appears when the count left is known, and always on a `429` |
+| `RateLimit-Policy` | `"default";q=60;w=60` | `q` is the requests allowed per window and `w` the window length in seconds                                                                          |
+| `Retry-After`      | `42`                  | Seconds to wait before retrying, sent on a `429` response                                                                                            |
 
 ## Exceeding the Limit
 

@@ -195,11 +195,12 @@ const CRON_JOB_PING = defineOperation("cronJobPing", routes.api.cronJobPing, {
 			headers: {
 				RateLimit: {
 					schema: s.string(),
-					description: "The caller budget's quota: `limit`, `remaining` and `reset`",
+					description:
+						'The caller budget\'s service limit, as `"default";r=<remaining>;t=<seconds to reset>`',
 				},
 				"RateLimit-Policy": {
 					schema: s.string(),
-					description: "The caller budget's policy, as `<limit>;w=<window seconds>`",
+					description: 'The caller budget\'s policy, as `"default";q=<limit>;w=<window seconds>`',
 				},
 			},
 		},

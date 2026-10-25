@@ -139,11 +139,12 @@ const PING_CREATE = defineOperation("pingCreate", routes.api.v1.ping, {
 			headers: {
 				RateLimit: {
 					schema: s.string(),
-					description: "The key's quota for the current window: `limit`, `remaining`, `reset`",
+					description:
+						'The key\'s service limit, as `"default";r=<remaining>;t=<seconds to reset>`',
 				},
 				"RateLimit-Policy": {
 					schema: s.string(),
-					description: "The quota policy, as `<limit>;w=<window seconds>`",
+					description: 'The quota policy, as `"default";q=<limit>;w=<window seconds>`',
 				},
 			},
 		},

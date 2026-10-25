@@ -425,7 +425,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		let refused = await dispatch(db, ping(monitor.id, { key, address }));
 		expect(refused.status).toBe(429);
-		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
+		expect(refused.headers.get("RateLimit-Policy")).toBe(`"default";q=${CALLER_LIMIT};w=60`);
 
 		expect(refused.headers.get("Retry-After")).not.toBeNull();
 		await expectProblem(refused, "rateLimited");
@@ -445,7 +445,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		let refused = await dispatch(db, ping(monitor.id, { key, address: "2001:db8:a:1:ffff::1" }));
 		expect(refused.status).toBe(429);
-		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
+		expect(refused.headers.get("RateLimit-Policy")).toBe(`"default";q=${CALLER_LIMIT};w=60`);
 	});
 
 	test("records the connecting address in canonical form", async () => {

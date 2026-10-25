@@ -5449,13 +5449,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "The caller budget's quota: `limit`, `remaining` and `reset`"
+                "description": "The caller budget's service limit, as `\"default\";r=<remaining>;t=<seconds to reset>`"
               },
               "RateLimit-Policy": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "The caller budget's policy, as `<limit>;w=<window seconds>`"
+                "description": "The caller budget's policy, as `\"default\";q=<limit>;w=<window seconds>`"
               }
             },
             "content": {
@@ -10412,13 +10412,13 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "The key's quota for the current window: `limit`, `remaining`, `reset`"
+                "description": "The key's service limit, as `\"default\";r=<remaining>;t=<seconds to reset>`"
               },
               "RateLimit-Policy": {
                 "schema": {
                   "type": "string"
                 },
-                "description": "The quota policy, as `<limit>;w=<window seconds>`"
+                "description": "The quota policy, as `\"default\";q=<limit>;w=<window seconds>`"
               }
             },
             "content": {
