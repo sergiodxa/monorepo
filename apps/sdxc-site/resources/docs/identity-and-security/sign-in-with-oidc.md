@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to run an authorization-code login with `@sdxc/auth` against any OpenID Connect provider"
     - "How to keep the login in a KV session and verify the ID token in the callback"
@@ -133,10 +133,9 @@ export function relyingParty(url: URL): RelyingParty {
 
 `algorithms` pins what an ID token may be signed with: naming the one algorithm your provider
 uses means a token signed any other way is refused even if a matching key turns up.
-`fallbackReturnTo` is where a login lands when it
-names no destination, or names one on another origin. The default mapped profile carries
-`name`, `email`, `emailVerified`, `username` and `picture`; pass `mapProfile` to shape it into
-your own account fields.
+`fallbackReturnTo` is where a login lands when it names no destination, or names one on
+another origin. The default mapped profile carries `name`, `email`, `emailVerified`,
+`username` and `picture`; pass `mapProfile` to shape it into your own account fields.
 
 ## Start the login
 
@@ -238,11 +237,10 @@ provider, so someone who takes over an address there would sign in to the accoun
 name; the subject is the one claim OpenID Connect promises stays with the person.
 </warning>
 
-The session needs nothing more
-from you: `callback` already wrote the token set, and `sessionScheme` resolves the account from
-it at the end of this guide. `grant.returnTo` was already
-held to your origin when the login stored it, and passing it through `Location.safe` again at
-the redirect keeps that guarantee in the one line that writes the `Location` header.
+The session needs nothing more from you: `callback` already wrote the token set, and
+`sessionScheme` resolves the account from it at the end of this guide. `grant.returnTo` was
+already held to your origin when the login stored it, and passing it through `Location.safe`
+again at the redirect keeps that guarantee in the one line that writes the `Location` header.
 
 `AuthError.code` separates the causes — `missing_transaction` for a callback nobody started
 from this browser, `state_mismatch`, `nonce_mismatch`, `authorization_failed` when the provider
