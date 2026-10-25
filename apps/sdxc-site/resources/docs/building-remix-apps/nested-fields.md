@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read bracket keys like `filter[status][]` into typed objects and arrays"
     - "How to filter a list from the query string and link between pages of the same view"
@@ -156,6 +156,7 @@ export function TasksPage(handle: Handle<Props>) {
 					<Label id="status-label">Status</Label>
 					{STATUSES.map((status) => (
 						<Checkbox
+							key={status}
 							name="filter[status][]"
 							value={status}
 							defaultChecked={query.filter.status.includes(status)}
@@ -290,7 +291,7 @@ export function NewInvoicePage(handle: Handle<Props>) {
 					let quantity = fieldName(["items", index, "quantity"]);
 
 					return (
-						<fieldset>
+						<fieldset key={index}>
 							<legend>Line {index + 1}</legend>
 							<TextField
 								label="Description"
