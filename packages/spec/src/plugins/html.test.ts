@@ -70,7 +70,7 @@ const PAGE = `
 /**
  * What only a live session knows: where it is, what it carried back, and what
  * a layout put on screen. A string of markup answers none of them, so these are
- * the observables ADR-018 §6 leaves to `browser` alone.
+ * the observables only `browser` carries.
  */
 const SESSION_OBSERVABLES = new Set([
 	"url",
@@ -133,9 +133,11 @@ describe("the namespace itself", () => {
 	});
 
 	test("every document observable `browser` carries is carried here too", () => {
-		// ADR-018 §6: a document is addressed one way, and the namespace only
-		// says whether a live browser is needed. A shorthand added to one side
-		// and not the other would silently change what a moved assertion means.
+		/**
+		 * A document is addressed one way, and the namespace only says whether a
+		 * live browser is needed, so a shorthand on one side alone would silently
+		 * change what a moved assertion means.
+		 */
 		let ours = new Set(PLUGIN.describe().map((descriptor) => descriptor.name));
 		let missing = createBrowserPlugin()
 			.describe()

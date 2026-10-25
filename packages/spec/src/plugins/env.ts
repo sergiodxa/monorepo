@@ -1,7 +1,7 @@
 /**
  * The built-in `env` capability: read one named environment variable the
- * caller granted. It is how a spec names a secret without containing one
- * (ADR-007 §6) — the suite says which variable holds the session cookie or the
+ * caller granted. It is how a spec names a secret without containing one:
+ * the suite says which variable holds the session cookie or the
  * API token, and the environment says what it is. Every read is gated on the
  * `env` permission for that exact name, so a spec can never widen its own
  * reach by asking for a different variable.

@@ -1,6 +1,6 @@
 /**
  * Tests for the addressing vocabulary `html` and `browser` share. They are the
- * contract both namespaces bind to, so every rule of ADR-018 §9 is checked here
+ * contract both namespaces bind to, so every addressing rule is checked here
  * once rather than twice, where the two could drift apart.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

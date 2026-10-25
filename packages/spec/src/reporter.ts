@@ -225,7 +225,7 @@ function failureLocation(result: TestResult, sources: Map<string, SourceFile>): 
 }
 
 /**
- * The unindented lines of a failure's detail block: the ADR-007-shaped
+ * The unindented lines of a failure's detail block: the structured
  * denial block for permission failures, otherwise the diagnostic code and
  * message followed by `expected:`/`observed:` and the remedy when carried.
  */

@@ -581,7 +581,7 @@ describe(executeEventually, () => {
 	});
 });
 
-/** ADR-018 §3: `contains` is substring for strings and membership for arrays. */
+/** `contains` is substring for strings and membership for arrays. */
 describe("expect A contains B", () => {
 	test("a substring of a string holds", async () => {
 		let { host } = makeHost({ bindings: { page: "<meta name=og:title>" } });
@@ -658,7 +658,7 @@ describe("expect A contains B", () => {
 	});
 });
 
-/** ADR-018 §3: `not` is expect's alone and inverts whichever form follows. */
+/** `not` is expect's alone and inverts whichever form follows. */
 describe("expect not", () => {
 	test("it inverts truthiness", async () => {
 		let { host } = makeHost({ bindings: { empty: "" } });

@@ -35,7 +35,7 @@ const METHOD_HEADER = "Mcp-Method";
 const NAME_HEADER = "Mcp-Name";
 
 /** Reserved `_meta` keys for this revision. */
-const MetaKey = {
+const META_KEY = {
 	ProtocolVersion: "io.modelcontextprotocol/protocolVersion",
 	ClientInfo: "io.modelcontextprotocol/clientInfo",
 	ClientCapabilities: "io.modelcontextprotocol/clientCapabilities",
@@ -199,9 +199,9 @@ async function invoke(
 	let method = methodOf(tool);
 	let params: ValueObject = {
 		_meta: {
-			[MetaKey.ProtocolVersion]: PROTOCOL_VERSION,
-			[MetaKey.ClientInfo]: CLIENT_INFO,
-			[MetaKey.ClientCapabilities]: {},
+			[META_KEY.ProtocolVersion]: PROTOCOL_VERSION,
+			[META_KEY.ClientInfo]: CLIENT_INFO,
+			[META_KEY.ClientCapabilities]: {},
 		},
 	};
 	if (tool === "call") {

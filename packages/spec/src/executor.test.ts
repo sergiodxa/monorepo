@@ -835,7 +835,7 @@ describe(executeTest, () => {
 	});
 });
 /**
- * ADR-018 §5: the rule that admits `browser.url` on a right-hand side holds
+ * The rule that admits `browser.url` on a right-hand side holds
  * wherever an expression may appear, so a composed value —
  * `format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }` —
  * reads the tool inline instead of binding it on a line of its own first.
@@ -991,7 +991,7 @@ describe("a zero-argument call nested in an expression", () => {
 });
 
 /**
- * ADR-018 §2: a bare identifier handed to a tool means whatever the tool's
+ * A bare identifier handed to a tool means whatever the tool's
  * descriptor says it means, so a binding reaches a tool without the wrapper
  * object the language previously demanded.
  */

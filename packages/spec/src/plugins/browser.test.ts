@@ -375,7 +375,7 @@ describe(createBrowserPlugin.name, () => {
 		]);
 	});
 
-	/** An undeclared vocabulary word reaches a tool as an unknown name (ADR §2). */
+	/** An undeclared vocabulary word reaches a tool as an unknown name. */
 	test("the element tools declare every word the vocabulary spells", () => {
 		let tools = new Map(plugin.describe().map((tool) => [tool.name, tool]));
 		let declared = (name: string) =>
@@ -1040,7 +1040,7 @@ describe("a session seeded from the environment", () => {
 
 	/**
 	 * The token reaches `browser.set_cookie` through a boxed reference: a bare
-	 * binding in tool-argument position is a symbolic word (ADR-002), so it
+	 * binding in tool-argument position is a symbolic word, so it
 	 * is wrapped in an object first — the same pattern `browser.url` uses.
 	 */
 	test.skipIf(!AVAILABLE)("the seeded cookie keeps the browser on /app", async () => {
@@ -1168,7 +1168,7 @@ function asObject(data: Value): ValueObject {
 }
 
 /**
- * The navigation and session surface of ADR-018 §8 against a real browser: a
+ * The navigation and session surface against a real browser: a
  * base-relative `open`, `reload`, the response observables over the session's
  * own responses, `fetch.*` inside the session, `viewport`, and `scroll`.
  */
@@ -1422,7 +1422,7 @@ const VOCABULARY_PAGE = `<!doctype html>
 </body></html>`;
 
 /**
- * ADR-018 §9 against a real browser. The vocabulary is the kind of thing a
+ * The addressing rules against a real browser. The vocabulary is the kind of thing a
  * stub happily lies about, so every rule here is held against a live page:
  * exact names, ambiguity as an error, field addressing, the predicates, and
  * the roles and structural reads the accessibility snapshot alone cannot see.
@@ -1706,11 +1706,9 @@ describe("the addressing vocabulary against a real browser", () => {
 	});
 
 	/**
-	 * ADR-018 §9 names this the browser milestone's definition of done: the
-	 * platform's `input` and `change` events must both fire, or every
-	 * assertion downstream of a slider reads a value the page never saw. The
-	 * CLI's own `fill` reports success and moves nothing, so the value goes in
-	 * through the prototype setter and both events are dispatched.
+	 * The platform's `input` and `change` events must both fire, or every
+	 * assertion downstream of a slider reads a value the page never saw; the
+	 * CLI's own `fill` moves nothing, so this goes through the prototype setter.
 	 */
 	test.skipIf(!AVAILABLE)("fill moves a range input and fires input and change", async () => {
 		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
@@ -1744,7 +1742,7 @@ describe("the addressing vocabulary against a real browser", () => {
 });
 
 /**
- * ADR-018 §11's URL observables, so `eventually` waits on a navigation
+ * The URL observables, so `eventually` waits on a navigation
  * without a `let`, and its failure diagnostics, which are part of the browser
  * milestone rather than a follow-up.
  */
@@ -1827,11 +1825,11 @@ describe("URL observables and failure diagnostics against a real browser", () =>
 });
 
 /**
- * ADR-018 §8 spells the request verbs `browser.fetch.post`, and after
+ * The request verbs are spelled `browser.fetch.post`, and after
  * `use browser` the bare form is `fetch.post`. Both go through the real
  * resolution path, which is the only thing that proves the spelling resolves.
  */
-describe("the fetch verbs resolve under the ADR's spelling", () => {
+describe("the fetch verbs resolve under the documented spelling", () => {
 	let plugin: Plugin;
 	let server: PageServer | undefined;
 	let origin = "";
@@ -1948,8 +1946,8 @@ const FORM_PAGE = `<!doctype html>
 </body></html>`;
 
 /**
- * ADR-018 §9's last Open Question, held against a real browser: choosing in a
- * dropdown, and addressing a modal by the `dialog` role. Both are the kind of
+ * Choosing in a dropdown and addressing a modal by the `dialog` role, held
+ * against a real browser. Both are the kind of
  * claim a stub grants for free, so every case here drives the live page.
  */
 describe("dropdowns and modals against a real browser", () => {

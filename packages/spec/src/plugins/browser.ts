@@ -2,7 +2,7 @@
  * The built-in `browser` capability: drive a real browser through the
  * accessibility tree, not DOM internals, via the globally-installed
  * `agent-browser` CLI. Reaching web content is privileged, so the whole
- * family requires `net`; the trusted binary needs no `run` grant (ADR-007 §4).
+ * family requires `net`; the trusted binary needs no `run` grant.
  *
  * Elements are addressed with the vocabulary of `addressing.ts`, so a document
  * reads the same here as it does over a string of markup and the namespace says
@@ -1350,7 +1350,7 @@ async function press(args: ToolArg[], session: string): Promise<Result<Value, Sp
 	return success(null);
 }
 
-/** `browser.click_selector selector` — the CSS escape hatch (ADR-005 §3). */
+/** `browser.click_selector selector` — the CSS escape hatch, a marked pocket of implementation coupling. */
 async function clickSelector(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let selector = stringArg(args, 0, "click_selector", "selector");
 	if (isFailure(selector)) return selector;
@@ -2039,7 +2039,7 @@ interface BrowserEnvelope {
 
 /**
  * Run one `agent-browser` command for a session and return its `data`
- * payload. A missing binary fails with an install hint (ADR-007 §4); success
+ * payload. A missing binary fails with an install hint; success
  * is read from the envelope's `success` field, since the CLI exits 0 regardless.
  */
 async function runBrowser(
@@ -2158,7 +2158,7 @@ function parseEnvelope(stdout: string): BrowserEnvelope | null {
 /**
  * The `agent-browser` session name for a test: the basename of its isolated
  * workspace directory, unique per test and stable across its phases — so
- * session lifetime follows the workspace (ADR-005's browser-isolation answer).
+ * session lifetime follows the workspace and tests never share browser state.
  */
 function sessionFor(workspace: Workspace): string {
 	return basename(workspace.root);
