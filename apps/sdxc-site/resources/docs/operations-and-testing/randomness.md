@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to accept a `Random` in your own functions and seed it in tests"
     - "How to store the seed behind a draw so anyone can replay it"
@@ -200,10 +200,10 @@ log line naming it points straight at the stream.
 A seed replays a stream from the start. When a stream lives across requests, such as a bingo
 hall calling one number per request, save where it is instead. `state()` is plain JSON, and
 `restoreRandom(state)` continues from the next draw the original would have taken. A Durable
-Object keeps it in its own storage, with the class exported from `bootstrap/worker.ts` so the
-runtime can instantiate it:
+Object keeps it in its own storage. It owns stored state, so the class lives in `app/models/`,
+and `bootstrap/worker.ts` re-exports it so the runtime can instantiate it:
 
-```typescript {% title="bootstrap/do/bingo-hall.ts" %}
+```typescript {% title="app/models/bingo-hall.ts" %}
 import type { SeededRandom } from "@sdxc/random";
 
 import { createRandom, restoreRandom, systemSeed } from "@sdxc/random";
