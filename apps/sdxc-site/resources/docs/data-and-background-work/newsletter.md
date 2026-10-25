@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to subscribe readers to Buttondown or Kit through one `@sdxc/newsletter` contract"
     - "How to credit the campaign and follow confirmations and unsubscribes from webhooks"
@@ -32,7 +32,7 @@ npm add @sdxc/attribution @sdxc/email-address @sdxc/get-client-ip @sdxc/http \
 ## Pick a provider
 
 A provider is one subscriber list on one platform. Build it once at module scope: construction
-reaches no network, so a missing API key fails the call that needed it and the Worker still
+makes no request, so a missing API key fails the call that needed it and the Worker still
 boots.
 
 ```typescript {% title="app/initializers/newsletter.ts" %}
@@ -118,7 +118,6 @@ export function createWebRouter(list: Newsletter = buttondown) {
 			attribution({ store: attributionCookie() }),
 			formData(),
 			newsletter({ provider: list }),
-			// …then cop() and a renderer
 		],
 	});
 
@@ -137,8 +136,9 @@ export function createWebRouter(list: Newsletter = buttondown) {
 }
 ```
 
-`getClientIP()` publishes `ctx.ip`, which platforms use to screen sign-ups, and `attribution()`
-publishes `ctx.attribution`, set up in
+Your app's `cop()` and renderer follow these in the same chain. `getClientIP()` publishes
+`ctx.ip`, which platforms use to screen sign-ups, and `attribution()` publishes
+`ctx.attribution`, set up in
 [Know where visitors come from](/docs/data-and-background-work/attribution).
 An app whose list varies by tenant passes `provider` a function of the request context instead,
 and the middleware calls it once per request.
@@ -315,20 +315,29 @@ import { NewsletterWebhook } from "@sdxc/newsletter";
 import { KVReplayStore } from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 
+import { openDatabase } from "~/app/initializers/database";
 import { setReaderStatus } from "~/app/models/readers";
 
 export function createNewsletterWebhook(provider: Newsletter): NewsletterWebhook {
 	return new NewsletterWebhook(
 		provider,
 		{
-			async "subscriber.confirmed"(event, ctx) {
-				await setReaderStatus(ctx.db, event.subscriberId, "active");
+			async "subscriber.confirmed"(event) {
+				await setReaderStatus(openDatabase(), event.subscriberId, "active");
 			},
-			async "subscriber.unsubscribed"(event, ctx) {
-				await setReaderStatus(ctx.db, event.subscriberId, "unsubscribed");
+			async "subscriber.unsubscribed"(event) {
+				await setReaderStatus(
+					openDatabase(),
+					event.subscriberId,
+					"unsubscribed",
+				);
 			},
-			async "subscriber.suppressed"(event, ctx) {
-				await setReaderStatus(ctx.db, event.subscriberId, "suppressed");
+			async "subscriber.suppressed"(event) {
+				await setReaderStatus(
+					openDatabase(),
+					event.subscriberId,
+					"suppressed",
+				);
 			},
 		},
 		{ store: new KVReplayStore(env.WEBHOOKS, { prefix: "newsletter:" }) },
@@ -336,9 +345,11 @@ export function createNewsletterWebhook(provider: Newsletter): NewsletterWebhook
 }
 ```
 
-`setReaderStatus` is your own model function over the table where you mirror readers, with
-`ctx.db` from [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
-The endpoint is the value `router.map` takes, as the router above shows.
+`setReaderStatus` is your own model function over the table where you mirror readers, and
+`openDatabase` the function from
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases). A handler receives
+the base request context, so it opens the database itself. The endpoint is the value
+`router.map` takes, as the router above shows.
 
 The endpoint answers `401` to a delivery the secret does not prove, and a provider with no secret
 configured proves none, so the route fails closed. An authentic delivery it cannot parse is
@@ -490,7 +501,5 @@ first, and `missingId` an id well-formed for the platform that names no reader.
   `toCampaign` reads.
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) — the layers
   to put in front of a public sign-up form.
-- [Send email](/docs/data-and-background-work/send-email) — the transactional mail your app sends
-  itself.
 - [Receive and send webhooks](/docs/identity-and-security/webhooks) — signatures, replay stores
   and the `cop()` exemption.
