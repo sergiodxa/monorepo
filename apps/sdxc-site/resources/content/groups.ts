@@ -86,6 +86,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"jsonl",
 			"jsonc",
 			"json-canonical",
+			"jsonpath",
 			"cbor",
 			"icalendar",
 			"jscalendar",
