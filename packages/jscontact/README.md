@@ -93,7 +93,8 @@ The Id alphabet, and the single valid spelling of a UTCDateTime.
 - `readJCard(json)` and `writeJCard(card)` read and write RFC 7095 jCard. A malformed jCard
   property is skipped rather than failing the card.
 - `fromVCard(card)` and `toVCard(card)` convert between that card and a JSContact Card.
-- `VCARD_MEDIA_TYPE` and `JCARD_MEDIA_TYPE` are `text/vcard` and `application/vcard+json`.
+- `VCARD_MEDIA_TYPE` and `JCARD_MEDIA_TYPE` are `text/vcard;charset=utf-8` and
+  `application/vcard+json`, ready for a `Content-Type` header.
 
 ### Types
 
