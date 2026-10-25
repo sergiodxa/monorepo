@@ -1,7 +1,8 @@
 /**
  * Validates the part of an RFC 9083 domain response the model reads and builds the
  * camelCase `RDAP.Domain` from it: the three dates, EPP statuses, the registrar from
- * its jCard and public ids, nameservers, DNSSEC and the registrar's `related` link.
+ * its jCard and public ids, nameservers, DNSSEC, the registrar's `related` link and the
+ * RFC 9537 redactions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +16,7 @@ import * as s from "remix/data-schema";
 import type { RDAP } from "./rdap.js";
 
 import { RDAPError } from "./error.js";
+import { redactions } from "./redacted.js";
 import { eppStatus } from "./status.js";
 
 /** The `type` of the public id that carries a registrar's IANA number. */
@@ -56,6 +58,7 @@ const DOMAIN_SCHEMA = s.object({
 			s.object({ rel: s.optional(s.string()), href: s.string(), type: s.optional(s.string()) }),
 		),
 	),
+	redacted: s.optional(s.any()),
 });
 
 /** A validated domain response. */
@@ -104,6 +107,7 @@ export function toDomain(
 		),
 		dnssec: document.secureDNS?.delegationSigned ?? null,
 		relatedUrl: relatedUrl(document),
+		redacted: redactions(document.redacted),
 		server: url,
 		document: json,
 	});

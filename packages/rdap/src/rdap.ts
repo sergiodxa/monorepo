@@ -235,6 +235,11 @@ export namespace RDAP {
 		dnssec: boolean | null;
 		/** The `related` RDAP link, the registrar's own record on a thin registry. */
 		relatedUrl: string | null;
+		/**
+		 * The fields the registry withheld (RFC 9537), which `isRedacted` asks about. A
+		 * registry that publishes no `redacted` member answers an empty list.
+		 */
+		redacted: Redaction[];
 		/** The URL that answered, after redirects. */
 		server: string;
 		/** The response as the registry sent it, for fields this model omits. */
@@ -250,6 +255,72 @@ export namespace RDAP {
 		/** The email of the registrar's `abuse` entity, from its jCard. */
 		abuseEmail: string | null;
 	}
+
+	/** One RFC 9537 `redacted` entry, with the model field it resolves onto. */
+	export interface Redaction {
+		/** The `name`'s registered `type`, or its free-text `description` when it has no type. */
+		name: string;
+		/** Whether `name` came from the RDAP JSON Values registry rather than server free text. */
+		registered: boolean;
+		/**
+		 * The field the entry hides, resolved from its path and then its name; `null` for a
+		 * field the model has no name for, which a caller can still match on `name`.
+		 */
+		field: Field | null;
+		/** How the value was hidden; `removal` when the entry names no method or an unknown one. */
+		method: RedactionMethod;
+		/** JSONPath of a removed or replaced field, valid against the unredacted response. */
+		prePath: string | null;
+		/** JSONPath of an emptied, partial or replaced field still in the response. */
+		postPath: string | null;
+		/** JSONPath of the field that replaced the redacted one, such as a `contact-uri` web form. */
+		replacementPath: string | null;
+		/**
+		 * The path language.
+		 *
+		 * @default "jsonpath"
+		 */
+		pathLang: string;
+		/** The reason's registered `type` or its `description`, for display only. */
+		reason: string | null;
+	}
+
+	/** The four RFC 9537 redaction methods. */
+	export type RedactionMethod = "removal" | "emptyValue" | "partialValue" | "replacementValue";
+
+	/**
+	 * A field a redaction can hide: the domain's `handle`, or a contact's field keyed by its
+	 * lowercased role (`registrant.email`, `technical.phone`, `abuse.email`), where
+	 * `<role>.contact` is the whole entity.
+	 */
+	export type Field = "handle" | `${ContactRole}.${ContactField}`;
+
+	/** An RFC 9083 entity role, or another a registry uses, lowercased. */
+	export type ContactRole =
+		| "registrant"
+		| "technical"
+		| "administrative"
+		| "abuse"
+		| "billing"
+		| "registrar"
+		| "reseller"
+		| "sponsor"
+		| "proxy"
+		| "notifications"
+		| "noc"
+		| (string & {});
+
+	/** The parts of a contact a redaction resolves onto. */
+	export type ContactField =
+		| "contact"
+		| "handle"
+		| "name"
+		| "organization"
+		| "email"
+		| "phone"
+		| "fax"
+		| "address"
+		| "contactUri";
 
 	/** A status code in its EPP spelling. */
 	export type EppStatus = (typeof EPP_STATUSES)[number];

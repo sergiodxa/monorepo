@@ -103,6 +103,10 @@ The error inside every `Failure`, with a `code`, a `retryable` getter, and the f
 | `network`               | Yes         | The connection failed or the body broke off                                   | `url`               |
 | `bootstrap-unavailable` | Yes         | The bootstrap file could not be fetched and no copy is cached                 | `url`, `cause`      |
 
+### `isRedacted(domain: RDAP.Domain, field: RDAP.Field): boolean`
+
+Whether the registry withheld a field under RFC 9537, so a view can say "hidden by the registry" rather than "not published". `field` is `handle` or a role and contact field such as `registrant.email`; a contact the registry removed whole redacts each of its fields.
+
 ### `EPP_STATUSES`
 
 Every status the model names, in EPP spelling: the RFC 8056 codes such as `clientTransferProhibited`, `redemptionPeriod` and `pendingDelete`, plus RDAP's own `active`, `inactive`, `locked`, `associated`, `removed` and `obscured`.
@@ -122,6 +126,7 @@ Every status the model names, in EPP spelling: the RFC 8056 codes such as `clien
 | `nameservers`                            | Lowercased, no trailing dot, in the order published                                    |
 | `dnssec`                                 | `secureDNS.delegationSigned`, or `null` when the registry does not say                 |
 | `relatedUrl`                             | The `related` RDAP link, the registrar's record on a thin registry                     |
+| `redacted`                               | `RDAP.Redaction[]`: the RFC 9537 entries, each with the `field` it resolves onto       |
 | `server`                                 | The URL that answered, after redirects                                                 |
 | `document`                               | The response as sent, for fields the model omits                                       |
 

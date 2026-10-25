@@ -92,6 +92,7 @@ describe("RDAP.domain", () => {
 			nameservers: ["ns1.exampledns.com", "ns2.exampledns.com"],
 			dnssec: false,
 			relatedUrl: "https://rdap.exampleregistrar.com/domain/ACME-WIDGETS.COM",
+			redacted: [],
 			server: `${VERISIGN}/acme-widgets.com`,
 			document: THIN_COM,
 		});
