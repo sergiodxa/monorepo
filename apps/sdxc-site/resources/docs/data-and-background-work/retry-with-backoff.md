@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to build one backoff schedule with `@sdxc/backoff` and honor `Retry-After`"
     - "How to retry a queue job, a request or a polled row on a growing delay"
@@ -194,9 +194,9 @@ spend at most three seconds waiting.
 </note>
 
 `jitter: "full"` draws anywhere from zero to the delay, the widest spread, which suits many
-requests retrying the same API after the same blip. When the attempts run out, or `when` declines an error, the
-failure holds a `RetryError`; [Result everywhere](/docs/conventions/result-everywhere) covers
-narrowing it.
+requests retrying the same API after the same blip. When the attempts run out, or `when`
+declines an error, the failure holds a `RetryError`;
+[Result everywhere](/docs/conventions/result-everywhere) covers narrowing it.
 
 ## Store the next attempt for a polled resource
 
@@ -363,8 +363,5 @@ covers seeds and streams beyond jitter.
   `ctx.exit`, and the consumer's `max_retries`.
 - [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) — the
   `retryable` flag on every `OutboundError`.
-- [Join the IndieWeb](/docs/content-and-feeds/indieweb) — Webmention jobs that retry
-  transient failures from a sending or receiving site.
 - [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
   delivery job that retries on the delay the platform asked for.
-- [`@sdxc/backoff`](/api/backoff) — every option, including `growth` and `factor`.
