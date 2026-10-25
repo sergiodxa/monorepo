@@ -1310,6 +1310,14 @@
         "typescript": "^7.0.2",
       },
     },
+    "packages/json-canonical": {
+      "name": "@sdxc/json-canonical",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/json-feed": {
       "name": "@sdxc/json-feed",
       "version": "0.0.1",
@@ -1976,7 +1984,10 @@
         "@sdxc/idempotency": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/ip": "workspace:*",
+        "@sdxc/jmap": "workspace:*",
         "@sdxc/jobs": "workspace:*",
+        "@sdxc/jscalendar": "workspace:*",
+        "@sdxc/json-canonical": "workspace:*",
         "@sdxc/json-feed": "workspace:*",
         "@sdxc/json-patch": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
@@ -3145,7 +3156,11 @@
 
     "@sdxc/jscalendar": ["@sdxc/jscalendar@workspace:packages/jscalendar"],
 
+    "@sdxc/jscontact": ["@sdxc/jscontact@workspace:packages/jscontact"],
+
     "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
+
+    "@sdxc/json-canonical": ["@sdxc/json-canonical@workspace:packages/json-canonical"],
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
 
