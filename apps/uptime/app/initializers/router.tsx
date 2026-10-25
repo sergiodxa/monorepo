@@ -333,8 +333,16 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/status-page-calendar")),
 	);
 	router.map(
+		routes.statusPageCalendarJson,
+		lazy(() => import("~/app/http/controllers/status-page-calendar-json")),
+	);
+	router.map(
 		routes.statusPageMaintenanceEvent,
 		lazy(() => import("~/app/http/controllers/status-page-maintenance-event")),
+	);
+	router.map(
+		routes.statusPageMaintenanceEventJson,
+		lazy(() => import("~/app/http/controllers/status-page-maintenance-event-json")),
 	);
 	router.map(
 		routes.invite,

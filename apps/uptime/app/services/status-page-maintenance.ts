@@ -1,16 +1,22 @@
 /**
- * The maintenance a public status page publishes, as a list for the page and as an
- * iCalendar feed or single-window download. Page, feed and download read the same windows
- * and the same events, so a subscriber's calendar and the page never disagree.
+ * The maintenance a public status page publishes, as a list for the page and as a feed or
+ * single-window download in iCalendar or JSCalendar. Every representation reads the same
+ * windows and the same events, so a subscriber's calendar and the page never disagree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { I18n } from "@sdxc/i18n";
 import type { ICalendar } from "@sdxc/icalendar";
 
 import { DAY_MS } from "@sdxc/dates/zone";
+import { accepts } from "@sdxc/http/negotiate";
+import { calendarResponse, MEDIA_TYPE as ICALENDAR_MEDIA_TYPE } from "@sdxc/icalendar";
 import { occurrences } from "@sdxc/icalendar/rrule";
+import { jscalendarResponse, MEDIA_TYPE as JSCALENDAR_MEDIA_TYPE } from "@sdxc/jscalendar";
+import { fromICalendar } from "@sdxc/jscalendar/icalendar";
+import { serializeLink } from "@sdxc/link-header";
 import { isSuccess } from "@sdxc/result";
 
 import type { UptimeModels } from "~/app/models";
@@ -18,7 +24,9 @@ import type { StatusPageService } from "~/app/models/maintenance-windows";
 import type { SelectMaintenanceWindow, SelectStatusPage } from "~/database/schema";
 
 import { oneOffEvent, recurringEvent } from "~/app/models/maintenance-windows";
+import { apportionCostByTeam } from "~/app/services/cost";
 import { monitorScopeMatches, storedMonitorScope } from "~/app/services/monitor-scope";
+import routes from "~/routes/web";
 
 /** The `PRODID` of every calendar the status pages publish. */
 const PRODUCT_ID = "-//sergiodxa//uptime//EN";
@@ -177,4 +185,106 @@ export function maintenanceCalendar(
 		components: [],
 		properties: [],
 	};
+}
+
+/** The formats a maintenance calendar is published in. */
+export type CalendarFormat = "icalendar" | "jscalendar";
+
+/** A page's published maintenance calendar, and the URLs it is served at in each format. */
+export interface PublishedCalendar {
+	calendar: ICalendar.Calendar;
+	locations: Record<CalendarFormat, string>;
+}
+
+/** What `loadMaintenanceCalendar` reads from the request context. */
+export interface CalendarContext {
+	models: UptimeModels;
+	intl: I18n;
+	url: URL;
+}
+
+/**
+ * The maintenance calendar of a public page, built once for every format: the whole feed,
+ * or one window when `windowId` is set. A private or unknown page, and a window the page
+ * does not publish, give `null`, which callers answer as a 404.
+ */
+export async function loadMaintenanceCalendar(
+	ctx: CalendarContext,
+	slug: string,
+	windowId?: string,
+): Promise<PublishedCalendar | null> {
+	let page = await ctx.models.statusPages.findPublic(slug);
+	if (!page) return null;
+
+	apportionCostByTeam([page.team_id]);
+
+	let services = await listPageServices(ctx.models, page);
+	let entries = await listPublishedMaintenance(ctx.models, page, services, Date.now());
+	if (windowId !== undefined) {
+		entries = entries.filter((entry) => entry.window.id === windowId);
+		if (entries.length === 0) return null;
+	}
+
+	let pageUrl = new URL(routes.statusPage.href({ slug }), ctx.url).toString();
+	let calendar = maintenanceCalendar(
+		entries,
+		{
+			name: ctx.intl.t("statusPage.maintenance.calendarName", { title: page.title }),
+			describe: (affected) =>
+				affected.length > 0
+					? ctx.intl.t("statusPage.maintenance.affects", { services: affected.join(", ") })
+					: undefined,
+		},
+		pageUrl,
+	);
+
+	let absolute = (path: string) => new URL(path, ctx.url).toString();
+	let locations =
+		windowId === undefined
+			? {
+					icalendar: absolute(routes.statusPageCalendar.href({ slug })),
+					jscalendar: absolute(routes.statusPageCalendarJson.href({ slug })),
+				}
+			: {
+					icalendar: absolute(routes.statusPageMaintenanceEvent.href({ slug, windowId })),
+					jscalendar: absolute(routes.statusPageMaintenanceEventJson.href({ slug, windowId })),
+				};
+	return { calendar, locations };
+}
+
+/**
+ * The format a request to an `.ics` URL gets: JSCalendar only when `Accept` ranks it above
+ * `text/calendar`, so calendar clients and browsers accepting anything keep getting iCalendar.
+ */
+export function negotiateCalendarFormat(request: Request): CalendarFormat {
+	let preferred = accepts(request).preferred(ICALENDAR_MEDIA_TYPE, JSCALENDAR_MEDIA_TYPE);
+	return preferred === JSCALENDAR_MEDIA_TYPE ? "jscalendar" : "icalendar";
+}
+
+/**
+ * A published calendar in one format, with a `Link: rel="alternate"` header naming the
+ * other format's URL and media type. `download` names an attachment, its extension
+ * following the format.
+ */
+export function calendarRepresentation(
+	published: PublishedCalendar,
+	format: CalendarFormat,
+	init: { headers?: Headers; download?: string } = {},
+): Response {
+	let headers = new Headers(init.headers);
+	let other: CalendarFormat = format === "icalendar" ? "jscalendar" : "icalendar";
+	let otherType = other === "icalendar" ? ICALENDAR_MEDIA_TYPE : JSCALENDAR_MEDIA_TYPE;
+	headers.append(
+		"Link",
+		serializeLink(published.locations[other], "alternate", { type: otherType }),
+	);
+
+	if (format === "icalendar") {
+		let filename = init.download === undefined ? undefined : `${init.download}.ics`;
+		return calendarResponse(published.calendar, { headers, ...(filename ? { filename } : {}) });
+	}
+	if (init.download !== undefined) {
+		headers.set("Content-Disposition", `attachment; filename="${init.download}.json"`);
+	}
+	return jscalendarResponse(fromICalendar(published.calendar), { headers });
 }

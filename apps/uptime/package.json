@@ -47,6 +47,7 @@
 		"@sdxc/idempotency": "workspace:*",
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
+		"@sdxc/jscalendar": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",

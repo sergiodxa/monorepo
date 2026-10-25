@@ -22,8 +22,12 @@ export default route({
 	statusPage: get("/status/:slug"),
 	/** A status page's maintenance as an iCalendar feed that calendar clients subscribe to. */
 	statusPageCalendar: get("/status/:slug/maintenance.ics"),
+	/** The same maintenance feed as JSCalendar (RFC 8984), the events and `uid`s the `.ics` has. */
+	statusPageCalendarJson: get("/status/:slug/maintenance.json"),
 	/** One published maintenance window as an `.ics` download, sharing the feed's `UID`s. */
 	statusPageMaintenanceEvent: get("/status/:slug/maintenance/:windowId.ics"),
+	/** One published maintenance window as JSCalendar, sharing the feed's `uid`s. */
+	statusPageMaintenanceEventJson: get("/status/:slug/maintenance/:windowId.json"),
 	/** Where browsers report Content Security Policy violations, named by `Reporting-Endpoints`. */
 	cspReports: post("/reports/csp"),
 

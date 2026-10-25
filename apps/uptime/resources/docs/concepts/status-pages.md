@@ -102,6 +102,8 @@ The page lists each window that is in progress or upcoming, with its name, its t
 
 Every status page also publishes a maintenance calendar at `/status/<slug>/maintenance.ics`. Readers can subscribe from the page with their calendar app or Google Calendar, and their calendar follows along when you move a window, end it early or delete it.
 
+The same calendar is published as [JSCalendar](https://www.rfc-editor.org/rfc/rfc8984) JSON at `/status/<slug>/maintenance.json`, for tools that read JSON rather than iCalendar. Each format's response links to the other with a `Link: <…>; rel="alternate"` header.
+
 This helps users distinguish between "something is broken" and "something is intentionally being worked on."
 
 ## Best Practices
