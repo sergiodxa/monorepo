@@ -28,7 +28,7 @@ import type { DeliveryInput } from "./delivery-post.js";
 import { isUnavailable, recordFailure, UNAVAILABLE_AFTER } from "./availability.js";
 import { PUBLIC } from "./constants.js";
 import { fanOut, MAX_ACTIVITY_BYTES } from "./delivery-fan-out.js";
-import { DELIVERY_BACKOFF, DeliveryError, deliver, parseRetryAfter } from "./delivery-post.js";
+import { DELIVERY_BACKOFF, DeliveryError, deliver, retryAfterWait } from "./delivery-post.js";
 import { MESSAGE } from "./messages.js";
 
 const ACTOR_ID = "https://letters.blog/activitypub/actor";
@@ -453,7 +453,7 @@ describe("deliver", () => {
 	});
 });
 
-describe("parseRetryAfter", () => {
+describe("retryAfterWait", () => {
 	let now = new Date("2026-10-07T12:00:00Z");
 
 	test.each([
@@ -462,11 +462,11 @@ describe("parseRetryAfter", () => {
 		["Wed, 07 Oct 2026 11:00:00 GMT", 0],
 		["soon", null],
 		[null, null],
-		["-30", 0],
+		["-30", null],
 		["31536000", 12 * 60 * 60 * 1000],
 		["Fri, 07 Oct 2116 12:00:00 GMT", 12 * 60 * 60 * 1000],
 	])("reads %s as %s", (value, expected) => {
-		expect(parseRetryAfter(value, now)).toBe(expected);
+		expect(retryAfterWait(value, now)).toBe(expected);
 	});
 });
 

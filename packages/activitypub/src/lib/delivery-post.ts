@@ -14,6 +14,7 @@ import type { Result } from "@sdxc/result";
 import { createBackoff } from "@sdxc/backoff";
 import { toMs } from "@sdxc/duration";
 import { parseAcceptSignature, sign } from "@sdxc/http-signatures";
+import { parseRetryAfter } from "@sdxc/http/retry-after";
 import { checkUrl, release, resolveHost } from "@sdxc/outbound";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
@@ -450,13 +451,13 @@ function errorFor(inbox: string, response: Response, now: Date): DeliveryError {
 	if (status === 429) {
 		return new DeliveryError("rate-limited", inbox, `${inbox} is rate limiting`, {
 			status,
-			retryAfter: parseRetryAfter(response.headers.get("retry-after"), now),
+			retryAfter: retryAfterWait(response.headers.get("retry-after"), now),
 		});
 	}
 	if (status >= 500) {
 		return new DeliveryError("server", inbox, `${inbox} answered ${status}`, {
 			status,
-			retryAfter: parseRetryAfter(response.headers.get("retry-after"), now),
+			retryAfter: retryAfterWait(response.headers.get("retry-after"), now),
 		});
 	}
 	return new DeliveryError(
@@ -468,17 +469,14 @@ function errorFor(inbox: string, response: Response, now: Date): DeliveryError {
 }
 
 /**
- * Reads `Retry-After` as milliseconds from `now`: delay-seconds or an HTTP date, clamped to
- * `0` through `MAX_RETRY_AFTER_MS`, so an inbox can postpone a retry no longer than the
- * longest backoff step. Anything else reads as `null`.
+ * Reads `Retry-After` as milliseconds from `now`, capped at `MAX_RETRY_AFTER_MS` so an inbox
+ * can postpone a retry no longer than the longest backoff step. A header naming no usable
+ * delay reads as `null`, leaving the wait to the backoff.
  *
  * @param value - The header value.
  * @param now - The time the answer arrived.
  */
-export function parseRetryAfter(value: string | null, now: Date): number | null {
-	if (value === null) return null;
-	let text = value.trim();
-	let delay = /^-?\d+$/u.test(text) ? Number(text) * 1000 : Date.parse(text) - now.getTime();
-	if (Number.isNaN(delay)) return null;
-	return Math.min(MAX_RETRY_AFTER_MS, Math.max(0, delay));
+export function retryAfterWait(value: string | null, now: Date): number | null {
+	let wait = parseRetryAfter(value, now);
+	return wait === null ? null : Math.min(MAX_RETRY_AFTER_MS, wait);
 }
