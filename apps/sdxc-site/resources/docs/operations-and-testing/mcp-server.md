@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare MCP tools and resources for your app"
     - "How to answer them with your app's own context and cache the expensive ones"
@@ -261,7 +261,7 @@ whatever middleware you want in front of it. An app from `sdxc create` has it al
 route is `mcp: post("/mcp")` in `routes/api.ts`, and its controller runs the API chain, which
 answers CORS and binds every caller as a guest, before handing the request to the server:
 
-```typescript {% title="app/http/controllers/mcp.tsx" %}
+```typescript {% title="app/http/controllers/mcp.ts" %}
 import { createAction } from "remix/router";
 
 import api from "~/app/http/middleware/api";
@@ -279,6 +279,13 @@ Give it to the route as `lazy()`'s second argument in the router, so an over-bud
 refused before the controller's module loads:
 
 ```typescript {% title="app/initializers/router.tsx" %}
+import { lazy } from "@sdxc/lazy-route";
+import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { env } from "cloudflare:workers";
+
+import apiRoutes from "~/routes/api";
+
 router.map(
 	apiRoutes.mcp,
 	lazy(
