@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 33
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to turn a pasted YouTube URL into a lazy-loaded player with `@sdxc/markdown`"
     - "How to keep a video's start time and allow the player in your Content Security Policy"
@@ -63,11 +63,9 @@ pasted YouTube URL with a `youtube` tag and leaves every other paragraph as it w
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { embeds, youtube } from "@sdxc/markdown/plugin/embeds";
-import { unwrap } from "@sdxc/result";
 
-export function preparePost(source: string) {
-	let { document } = unwrap(Markdown.parse(source));
-	return unwrap(Markdown.walk(document, embeds([youtube()])));
+export function preparePost(document: Markdown.Document) {
+	return Markdown.walk(document, embeds([youtube()]));
 }
 ```
 
@@ -89,7 +87,8 @@ The share link with the annotation above becomes this node, shown without its `p
 
 `id` is the video, `start` is in seconds whichever form the link wrote it in (`43`, `43s`,
 `1m30s`), and `url` is the link as the author wrote it. Matching reads the URL alone, so the
-walk makes no request and works the same in a build script and inside a request.
+walk makes no request and works the same in a build script and inside a request. The walk
+answers with a `Result`, as every walk does.
 
 When a post already runs other visitors, `Markdown.compose` runs them in one walk:
 `Markdown.compose(embeds([youtube()]), highlight)`.
@@ -222,13 +221,20 @@ sees instead, so one test covers both: a pasted URL comes out as a plain link th
 start time, and a labelled link stays the link its author wrote:
 
 ```typescript {% title="app/services/content/render-feed.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { preparePost } from "~/app/services/content/prepare";
 import { renderFeedItem } from "~/app/services/content/render-feed";
 
+function feedItem(source: string): string {
+	let { document } = unwrap(Markdown.parse(source));
+	return renderFeedItem(unwrap(preparePost(document)));
+}
+
 test("writes a pasted video back as a link with its start time", () => {
-	let html = renderFeedItem(preparePost("https://youtu.be/dQw4w9WgXcQ?t=43\n"));
+	let html = feedItem("https://youtu.be/dQw4w9WgXcQ?t=43\n");
 
 	expect(html).toContain(
 		'href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&amp;t=43s"',
@@ -236,9 +242,7 @@ test("writes a pasted video back as a link with its start time", () => {
 });
 
 test("keeps a labelled link as a link", () => {
-	let html = renderFeedItem(
-		preparePost("Listen to [the song](https://youtu.be/dQw4w9WgXcQ).\n"),
-	);
+	let html = feedItem("Listen to [the song](https://youtu.be/dQw4w9WgXcQ).\n");
 
 	expect(html).toContain('<a href="https://youtu.be/dQw4w9WgXcQ">the song</a>');
 });
