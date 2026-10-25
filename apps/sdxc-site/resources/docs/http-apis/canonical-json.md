@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 11
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "Why `JSON.stringify` is the wrong input for a hash or a signature"
     - "How to hash, deduplicate and tag JSON with `@sdxc/json-canonical`"
@@ -44,8 +44,8 @@ canonicalize(JSON.parse('{"n": 1E30, "x": 0.000001, "z": -0}'));
 // success('{"n":1e+30,"x":0.000001,"z":0}')
 ```
 
-The output is a string. Encode it with `TextEncoder` before hashing or signing: JCS is
-defined over UTF-8, and the functions below accept the string and encode it that way.
+The output is a string. JCS is defined over its UTF-8 bytes, and `sha256`, `hmac` and
+`etag` below accept the string and hash exactly those bytes.
 
 ## Hash a document to deduplicate it
 
