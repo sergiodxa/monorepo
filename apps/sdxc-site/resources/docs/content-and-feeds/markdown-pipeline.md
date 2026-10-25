@@ -269,7 +269,6 @@ const CALLOUT_COLORS = {
 } as const;
 
 interface CalloutProps {
-	[key: string]: unknown;
 	type: keyof typeof CALLOUT_COLORS;
 	children: RemixNode;
 }
@@ -282,9 +281,6 @@ export function Callout(handle: Handle<CalloutProps>) {
 	);
 }
 ```
-
-The index signature is what lets `Callout` sit in the `components` map, which hands every
-component the node's whole bag of attributes; the named fields are the ones it reads.
 
 The controller is mapped to a `posts.show` route declared as `get("/posts/:slug")` in your
 `routes/web.ts`. It reads the slug, handles both kinds of failure the same way, and wraps the
