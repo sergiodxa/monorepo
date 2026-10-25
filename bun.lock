@@ -1314,6 +1314,14 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/json-patch": {
+      "name": "@sdxc/json-patch",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/json-pointer": {
       "name": "@sdxc/json-pointer",
       "version": "0.0.1",
@@ -3103,11 +3111,17 @@
 
     "@sdxc/ip": ["@sdxc/ip@workspace:packages/ip"],
 
+    "@sdxc/jmap": ["@sdxc/jmap@workspace:packages/jmap"],
+
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
+
+    "@sdxc/jscalendar": ["@sdxc/jscalendar@workspace:packages/jscalendar"],
 
     "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
+
+    "@sdxc/json-patch": ["@sdxc/json-patch@workspace:packages/json-patch"],
 
     "@sdxc/json-pointer": ["@sdxc/json-pointer@workspace:packages/json-pointer"],
 
