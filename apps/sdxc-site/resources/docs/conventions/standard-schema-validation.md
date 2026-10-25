@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 3
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Why packages accept any Standard Schema instead of shipping a validation library"
     - "How to pass your own schema and get the result type inferred"
@@ -67,8 +67,8 @@ export default emails({
 
 <note>
 A job's `input` is parsed when the message is consumed, and a message that no longer matches the
-schema is refused with `invalid-input` before the handler runs. Change a job's schema in a way the messages already on the
-queue still satisfy, or drain the queue first.
+schema is refused with `invalid-input` before the handler runs. Change a job's schema in a way
+the messages already on the queue still satisfy, or drain the queue first.
 </note>
 
 `remix/data-schema` is the schema library this collection's own code uses, and any library
@@ -88,23 +88,25 @@ export const NEW_TEAM_SCHEMA = s.object({
 });
 ```
 
-```typescript {% title="app/http/controllers/api/teams-create.ts" %}
+```typescript {% title="app/http/controllers/api/teams/create.ts" %}
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Team from "~/app/models/team";
 import { NEW_TEAM_SCHEMA } from "~/app/http/validators/team";
 import routes from "~/routes/api";
 
 export default createAction(routes.teams.create, async (ctx) => {
-	let result = await validate(ctx.request, NEW_TEAM_SCHEMA);
-	if (isFailure(result)) {
-		return Response.json({ errors: result.error.issues }, { status: 400 });
+	let input = await validate(ctx.request, NEW_TEAM_SCHEMA);
+	if (isFailure(input)) {
+		return Response.json({ errors: input.error.issues }, { status: 400 });
 	}
 
-	let team = await Team.create(ctx.db, result.data);
-	return Response.json({ id: team.id }, { status: 201 });
+	let team = await ctx.models.team.create(input.data);
+	if (isFailure(team)) {
+		return Response.json({ errors: team.error.issues }, { status: 422 });
+	}
+	return Response.json({ id: team.data.id }, { status: 201 });
 });
 ```
 
