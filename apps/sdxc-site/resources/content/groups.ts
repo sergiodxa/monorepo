@@ -63,6 +63,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"saml",
 			"scim",
 			"crypto",
+			"openpgp",
 			"scitt",
 			"security-headers",
 			"webhooks",
