@@ -375,13 +375,13 @@ describe("bearerScheme", () => {
 	});
 });
 
+/** The protected API the fixture resource server answers for. */
+const RESOURCE = `${APP_ORIGIN}/api`;
+
+/** Where RFC 9728 serves the metadata for {@link RESOURCE}. */
+const METADATA = `${APP_ORIGIN}/.well-known/oauth-protected-resource/api`;
+
 describe("a resource server bound to a resource", () => {
-	/** The protected API the fixture resource server answers for. */
-	const RESOURCE = `${APP_ORIGIN}/api`;
-
-	/** Where RFC 9728 serves the metadata for {@link RESOURCE}. */
-	const METADATA = `${APP_ORIGIN}/.well-known/oauth-protected-resource/api`;
-
 	/** A resource server bound to {@link RESOURCE}, still accepting the fixture client. */
 	function createBoundServer(): ResourceServer {
 		return new ResourceServer(createIssuer(), { resource: RESOURCE, audience: CLIENT_ID });

@@ -336,6 +336,316 @@ describe("ManagementClient#fetchSubjectById", () => {
 	});
 });
 
+/** Where the tenant-scoped surface is served, apart from the OIDC issuer above. */
+const MANAGEMENT_BASE_URL = "https://api.test";
+
+/** The tenant every call in this suite is scoped to. */
+const TENANT_ID = "ten_1";
+
+const SUBJECT_PAYLOAD = {
+	id: "sub_1",
+	status: "active",
+	name: "Ada Lovelace",
+	givenName: "Ada",
+	familyName: "Lovelace",
+	nickname: null,
+	preferredUsername: null,
+	picture: null,
+	locale: null,
+	zoneinfo: null,
+	identifiers: [
+		{
+			kind: "email",
+			value: "ada@example.com",
+			verified: true,
+			verifiedAt: 1_750_000_000_000,
+			isPrimary: true,
+		},
+	],
+	attributes: { department: "engineering" },
+	totpFactor: { label: "iPhone", lastUsedAt: 1_750_000_000_000 },
+	recoveryCodesRemaining: 8,
+	trustedDevices: [],
+};
+
+const CLIENT_RECORD = {
+	id: "client_1",
+	name: "Acme Dashboard",
+	kind: "confidential",
+	redirectUris: ["https://acme.test/callback"],
+	postLogoutRedirectUris: [],
+	grantTypes: ["authorization_code"],
+	responseTypes: ["code"],
+	scopes: ["openid"],
+	tokenEndpointAuthMethod: "client_secret_basic",
+	requireConsent: true,
+	createdAt: 1,
+	updatedAt: 1,
+	disabledAt: null,
+};
+
+const AUDIT_EVENT = {
+	id: "000000000001",
+	at: 1_750_000_000_000,
+	action: "subject.created",
+	actorType: "platform",
+	actorId: "system",
+	targetType: "subject",
+	targetId: "sub_1",
+	outcome: "succeeded",
+	context: {},
+	detail: {},
+};
+
+const TENANT_RECORD = {
+	id: TENANT_ID,
+	name: "Acme",
+	slug: "acme-4f9a",
+	issuer: "https://acme.example.com",
+	region: "wnam",
+	status: "active",
+	planSlug: "pro",
+	subscriptionStatus: "active",
+	currentPeriodEnd: 1_750_000_000_000,
+	cancelAtPeriodEnd: false,
+	graceUntil: null,
+	lapsedAt: null,
+	createdAt: 1,
+	updatedAt: 1,
+};
+
+/**
+ * Every tenant-scoped method beside the method and path pattern the management
+ * API's route table serves it at, copied verbatim so a client calling a route
+ * the server never mapped fails here instead of in production.
+ */
+const ROUTES: {
+	name: string;
+	method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+	path: string;
+	call: (client: ManagementClient) => Promise<unknown>;
+}[] = [
+	{
+		name: "fetchTenantSubjectById",
+		method: "GET",
+		path: "/tenants/:tenantId/subjects/:subjectId",
+		call: (client) => client.fetchTenantSubjectById(TENANT_ID, "sub_1"),
+	},
+	{
+		name: "createTenantSubject",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects",
+		call: (client) => client.createTenantSubject(TENANT_ID, { identifiers: [] }),
+	},
+	{
+		name: "updateTenantSubject",
+		method: "PATCH",
+		path: "/tenants/:tenantId/subjects/:subjectId",
+		call: (client) => client.updateTenantSubject(TENANT_ID, "sub_1", { attributes: {} }),
+	},
+	{
+		name: "blockTenantSubject",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/block",
+		call: (client) => client.blockTenantSubject(TENANT_ID, "sub_1", { reason: "abuse" }),
+	},
+	{
+		name: "unblockTenantSubject",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/unblock",
+		call: (client) => client.unblockTenantSubject(TENANT_ID, "sub_1"),
+	},
+	{
+		name: "deleteTenantSubject",
+		method: "DELETE",
+		path: "/tenants/:tenantId/subjects/:subjectId",
+		call: (client) => client.deleteTenantSubject(TENANT_ID, "sub_1"),
+	},
+	{
+		name: "addTenantSubjectIdentifier",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
+		call: (client) =>
+			client.addTenantSubjectIdentifier(TENANT_ID, "sub_1", { kind: "username", value: "ada" }),
+	},
+	{
+		name: "verifyTenantSubjectIdentifier",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/identifiers/verify",
+		call: (client) => client.verifyTenantSubjectIdentifier(TENANT_ID, { ticket: "t" }),
+	},
+	{
+		name: "removeTenantSubjectIdentifier",
+		method: "DELETE",
+		path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
+		call: (client) => client.removeTenantSubjectIdentifier(TENANT_ID, "sub_1", { value: "ada" }),
+	},
+	{
+		name: "listTenantSubjectSessions",
+		method: "GET",
+		path: "/tenants/:tenantId/subjects/:subjectId/sessions",
+		call: (client) => client.listTenantSubjectSessions(TENANT_ID, "sub_1"),
+	},
+	{
+		name: "revokeTenantSubjectSession",
+		method: "DELETE",
+		path: "/tenants/:tenantId/subjects/:subjectId/sessions/:sessionId",
+		call: (client) =>
+			client.revokeTenantSubjectSession(TENANT_ID, "sub_1", "sess_1", { reason: "lost" }),
+	},
+	{
+		name: "revokeAllTenantSubjectSessions",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/sessions/revoke-all",
+		call: (client) => client.revokeAllTenantSubjectSessions(TENANT_ID, "sub_1", { reason: "lost" }),
+	},
+	{
+		name: "revokeTenantSubjectPasskey",
+		method: "DELETE",
+		path: "/tenants/:tenantId/subjects/:subjectId/passkeys/:credentialId",
+		call: (client) => client.revokeTenantSubjectPasskey(TENANT_ID, "sub_1", "cred_1"),
+	},
+	{
+		name: "forceTenantSubjectPasswordReset",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/password/force-reset",
+		call: (client) =>
+			client.forceTenantSubjectPasswordReset(TENANT_ID, "sub_1", { reason: "leak" }),
+	},
+	{
+		name: "resetTenantSubjectSecondFactor",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/second-factor/reset",
+		call: (client) => client.resetTenantSubjectSecondFactor(TENANT_ID, "sub_1", { reason: "lost" }),
+	},
+	{
+		name: "listTenantClients",
+		method: "GET",
+		path: "/tenants/:tenantId/clients",
+		call: (client) => client.listTenantClients(TENANT_ID),
+	},
+	{
+		name: "registerTenantClient",
+		method: "POST",
+		path: "/tenants/:tenantId/clients",
+		call: (client) =>
+			client.registerTenantClient(TENANT_ID, {
+				name: "Acme Dashboard",
+				kind: "confidential",
+				redirectUris: ["https://acme.test/callback"],
+				postLogoutRedirectUris: [],
+				grantTypes: ["authorization_code"],
+				responseTypes: ["code"],
+				scopes: ["openid"],
+				tokenEndpointAuthMethod: "client_secret_basic",
+				requireConsent: true,
+			}),
+	},
+	{
+		name: "updateTenantClient",
+		method: "PATCH",
+		path: "/tenants/:tenantId/clients/:clientId",
+		call: (client) => client.updateTenantClient(TENANT_ID, "client_1", { redirectUris: [] }),
+	},
+	{
+		name: "rotateTenantClientSecret",
+		method: "POST",
+		path: "/tenants/:tenantId/clients/:clientId/rotate-secret",
+		call: (client) => client.rotateTenantClientSecret(TENANT_ID, "client_1"),
+	},
+	{
+		name: "revokeTenantClientSecret",
+		method: "POST",
+		path: "/tenants/:tenantId/clients/:clientId/secrets/:secretId/revoke",
+		call: (client) => client.revokeTenantClientSecret(TENANT_ID, "client_1", "secret_1"),
+	},
+	{
+		name: "disableTenantClient",
+		method: "POST",
+		path: "/tenants/:tenantId/clients/:clientId/disable",
+		call: (client) => client.disableTenantClient(TENANT_ID, "client_1"),
+	},
+	{
+		name: "deleteTenantClient",
+		method: "DELETE",
+		path: "/tenants/:tenantId/clients/:clientId",
+		call: (client) => client.deleteTenantClient(TENANT_ID, "client_1"),
+	},
+	{
+		name: "listTenantGrants",
+		method: "GET",
+		path: "/tenants/:tenantId/subjects/:subjectId/grants",
+		call: (client) => client.listTenantGrants(TENANT_ID, "sub_1"),
+	},
+	{
+		name: "revokeTenantGrant",
+		method: "POST",
+		path: "/tenants/:tenantId/subjects/:subjectId/grants/:clientId/revoke",
+		call: (client) => client.revokeTenantGrant(TENANT_ID, "sub_1", "client_1"),
+	},
+	{
+		name: "readTenantAuditPage",
+		method: "GET",
+		path: "/tenants/:tenantId/audit-events",
+		call: (client) => client.readTenantAuditPage(TENANT_ID, { from: 0, to: 1 }),
+	},
+	{
+		name: "fetchTenant",
+		method: "GET",
+		path: "/tenants/:tenantId",
+		call: (client) => client.fetchTenant(TENANT_ID),
+	},
+	{
+		name: "listTenantMembers",
+		method: "GET",
+		path: "/tenants/:tenantId/members",
+		call: (client) => client.listTenantMembers(TENANT_ID),
+	},
+	{
+		name: "inviteTenantMember",
+		method: "POST",
+		path: "/tenants/:tenantId/members",
+		call: (client) => client.inviteTenantMember(TENANT_ID, { subjectId: "sub_1", role: "admin" }),
+	},
+	{
+		name: "updateTenantMemberRole",
+		method: "PUT",
+		path: "/tenants/:tenantId/members/:membershipId",
+		call: (client) => client.updateTenantMemberRole(TENANT_ID, "mem_1", { role: "member" }),
+	},
+	{
+		name: "removeTenantMember",
+		method: "DELETE",
+		path: "/tenants/:tenantId/members/:membershipId",
+		call: (client) => client.removeTenantMember(TENANT_ID, "mem_1"),
+	},
+	{
+		name: "listTenantDomains",
+		method: "GET",
+		path: "/tenants/:tenantId/domains",
+		call: (client) => client.listTenantDomains(TENANT_ID),
+	},
+	{
+		name: "attachTenantDomain",
+		method: "POST",
+		path: "/tenants/:tenantId/domains",
+		call: (client) =>
+			client.attachTenantDomain(TENANT_ID, { hostname: "auth.acme.test", kind: "custom" }),
+	},
+	{
+		name: "fetchTenantDomainVerification",
+		method: "GET",
+		path: "/tenants/:tenantId/domains/:domainId/verification",
+		call: (client) => client.fetchTenantDomainVerification(TENANT_ID, "dom_1"),
+	},
+	{
+		name: "updateTenantMfaPolicy",
+		method: "POST",
+		path: "/tenants/:tenantId/mfa-policy",
+		call: (client) => client.updateTenantMfaPolicy(TENANT_ID, { policy: "required" }),
+	},
+];
+
 /**
  * Covers the tenant-scoped management surface: a request built under
  * `{baseUrl}/tenants/{tenantId}/…`, a bearer token and an `X-API-Version` on every
@@ -346,12 +656,6 @@ describe("ManagementClient#fetchSubjectById", () => {
  * header round trip is exercised on a single list method rather than on every one.
  */
 describe("ManagementClient tenant-scoped surface", () => {
-	/** Where the tenant-scoped surface is served, apart from the OIDC issuer above. */
-	const MANAGEMENT_BASE_URL = "https://api.test";
-
-	/** The tenant every call in this suite is scoped to. */
-	const TENANT_ID = "ten_1";
-
 	/** Builds the absolute URL one of this tenant's resources is served at. */
 	function tenantUrl(...segments: string[]): string {
 		return [MANAGEMENT_BASE_URL, "tenants", TENANT_ID, ...segments].join("/");
@@ -378,32 +682,6 @@ describe("ManagementClient tenant-scoped surface", () => {
 	}
 
 	describe("subjects and identifiers", () => {
-		const SUBJECT_PAYLOAD = {
-			id: "sub_1",
-			status: "active",
-			name: "Ada Lovelace",
-			givenName: "Ada",
-			familyName: "Lovelace",
-			nickname: null,
-			preferredUsername: null,
-			picture: null,
-			locale: null,
-			zoneinfo: null,
-			identifiers: [
-				{
-					kind: "email",
-					value: "ada@example.com",
-					verified: true,
-					verifiedAt: 1_750_000_000_000,
-					isPrimary: true,
-				},
-			],
-			attributes: { department: "engineering" },
-			totpFactor: { label: "iPhone", lastUsedAt: 1_750_000_000_000 },
-			recoveryCodesRemaining: 8,
-			trustedDevices: [],
-		};
-
 		test("reads a tenant's subject with its identifiers and second-factor state", async () => {
 			server.use(
 				http.get(tenantUrl("subjects", "sub_1"), () => HttpResponse.json(SUBJECT_PAYLOAD)),
@@ -627,22 +905,6 @@ describe("ManagementClient tenant-scoped surface", () => {
 	});
 
 	describe("clients and secrets", () => {
-		const CLIENT_RECORD = {
-			id: "client_1",
-			name: "Acme Dashboard",
-			kind: "confidential",
-			redirectUris: ["https://acme.test/callback"],
-			postLogoutRedirectUris: [],
-			grantTypes: ["authorization_code"],
-			responseTypes: ["code"],
-			scopes: ["openid"],
-			tokenEndpointAuthMethod: "client_secret_basic",
-			requireConsent: true,
-			createdAt: 1,
-			updatedAt: 1,
-			disabledAt: null,
-		};
-
 		test("registers a confidential client and returns its one-time secret", async () => {
 			server.use(
 				http.post(tenantUrl("clients"), () =>
@@ -825,19 +1087,6 @@ describe("ManagementClient tenant-scoped surface", () => {
 	});
 
 	describe("audit events", () => {
-		const AUDIT_EVENT = {
-			id: "000000000001",
-			at: 1_750_000_000_000,
-			action: "subject.created",
-			actorType: "platform",
-			actorId: "system",
-			targetType: "subject",
-			targetId: "sub_1",
-			outcome: "succeeded",
-			context: {},
-			detail: {},
-		};
-
 		test("reads a page of the tenant's audit log over a window", async () => {
 			server.use(http.get(tenantUrl("audit-events"), () => HttpResponse.json([AUDIT_EVENT])));
 
@@ -882,23 +1131,6 @@ describe("ManagementClient tenant-scoped surface", () => {
 	});
 
 	describe("tenants, members and domains", () => {
-		const TENANT_RECORD = {
-			id: TENANT_ID,
-			name: "Acme",
-			slug: "acme-4f9a",
-			issuer: "https://acme.example.com",
-			region: "wnam",
-			status: "active",
-			planSlug: "pro",
-			subscriptionStatus: "active",
-			currentPeriodEnd: 1_750_000_000_000,
-			cancelAtPeriodEnd: false,
-			graceUntil: null,
-			lapsedAt: null,
-			createdAt: 1,
-			updatedAt: 1,
-		};
-
 		test("reads a tenant's own public record, leaving out its billing linkage", async () => {
 			server.use(http.get(tenantUrl(), () => HttpResponse.json(TENANT_RECORD)));
 
@@ -1003,242 +1235,6 @@ describe("ManagementClient tenant-scoped surface", () => {
 	});
 
 	describe("routes", () => {
-		/**
-		 * Every tenant-scoped method beside the method and path pattern the management
-		 * API's route table serves it at, copied verbatim so a client calling a route
-		 * the server never mapped fails here instead of in production.
-		 */
-		const ROUTES: {
-			name: string;
-			method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
-			path: string;
-			call: (client: ManagementClient) => Promise<unknown>;
-		}[] = [
-			{
-				name: "fetchTenantSubjectById",
-				method: "GET",
-				path: "/tenants/:tenantId/subjects/:subjectId",
-				call: (client) => client.fetchTenantSubjectById(TENANT_ID, "sub_1"),
-			},
-			{
-				name: "createTenantSubject",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects",
-				call: (client) => client.createTenantSubject(TENANT_ID, { identifiers: [] }),
-			},
-			{
-				name: "updateTenantSubject",
-				method: "PATCH",
-				path: "/tenants/:tenantId/subjects/:subjectId",
-				call: (client) => client.updateTenantSubject(TENANT_ID, "sub_1", { attributes: {} }),
-			},
-			{
-				name: "blockTenantSubject",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/block",
-				call: (client) => client.blockTenantSubject(TENANT_ID, "sub_1", { reason: "abuse" }),
-			},
-			{
-				name: "unblockTenantSubject",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/unblock",
-				call: (client) => client.unblockTenantSubject(TENANT_ID, "sub_1"),
-			},
-			{
-				name: "deleteTenantSubject",
-				method: "DELETE",
-				path: "/tenants/:tenantId/subjects/:subjectId",
-				call: (client) => client.deleteTenantSubject(TENANT_ID, "sub_1"),
-			},
-			{
-				name: "addTenantSubjectIdentifier",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
-				call: (client) =>
-					client.addTenantSubjectIdentifier(TENANT_ID, "sub_1", { kind: "username", value: "ada" }),
-			},
-			{
-				name: "verifyTenantSubjectIdentifier",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/identifiers/verify",
-				call: (client) => client.verifyTenantSubjectIdentifier(TENANT_ID, { ticket: "t" }),
-			},
-			{
-				name: "removeTenantSubjectIdentifier",
-				method: "DELETE",
-				path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
-				call: (client) =>
-					client.removeTenantSubjectIdentifier(TENANT_ID, "sub_1", { value: "ada" }),
-			},
-			{
-				name: "listTenantSubjectSessions",
-				method: "GET",
-				path: "/tenants/:tenantId/subjects/:subjectId/sessions",
-				call: (client) => client.listTenantSubjectSessions(TENANT_ID, "sub_1"),
-			},
-			{
-				name: "revokeTenantSubjectSession",
-				method: "DELETE",
-				path: "/tenants/:tenantId/subjects/:subjectId/sessions/:sessionId",
-				call: (client) =>
-					client.revokeTenantSubjectSession(TENANT_ID, "sub_1", "sess_1", { reason: "lost" }),
-			},
-			{
-				name: "revokeAllTenantSubjectSessions",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/sessions/revoke-all",
-				call: (client) =>
-					client.revokeAllTenantSubjectSessions(TENANT_ID, "sub_1", { reason: "lost" }),
-			},
-			{
-				name: "revokeTenantSubjectPasskey",
-				method: "DELETE",
-				path: "/tenants/:tenantId/subjects/:subjectId/passkeys/:credentialId",
-				call: (client) => client.revokeTenantSubjectPasskey(TENANT_ID, "sub_1", "cred_1"),
-			},
-			{
-				name: "forceTenantSubjectPasswordReset",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/password/force-reset",
-				call: (client) =>
-					client.forceTenantSubjectPasswordReset(TENANT_ID, "sub_1", { reason: "leak" }),
-			},
-			{
-				name: "resetTenantSubjectSecondFactor",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/second-factor/reset",
-				call: (client) =>
-					client.resetTenantSubjectSecondFactor(TENANT_ID, "sub_1", { reason: "lost" }),
-			},
-			{
-				name: "listTenantClients",
-				method: "GET",
-				path: "/tenants/:tenantId/clients",
-				call: (client) => client.listTenantClients(TENANT_ID),
-			},
-			{
-				name: "registerTenantClient",
-				method: "POST",
-				path: "/tenants/:tenantId/clients",
-				call: (client) =>
-					client.registerTenantClient(TENANT_ID, {
-						name: "Acme Dashboard",
-						kind: "confidential",
-						redirectUris: ["https://acme.test/callback"],
-						postLogoutRedirectUris: [],
-						grantTypes: ["authorization_code"],
-						responseTypes: ["code"],
-						scopes: ["openid"],
-						tokenEndpointAuthMethod: "client_secret_basic",
-						requireConsent: true,
-					}),
-			},
-			{
-				name: "updateTenantClient",
-				method: "PATCH",
-				path: "/tenants/:tenantId/clients/:clientId",
-				call: (client) => client.updateTenantClient(TENANT_ID, "client_1", { redirectUris: [] }),
-			},
-			{
-				name: "rotateTenantClientSecret",
-				method: "POST",
-				path: "/tenants/:tenantId/clients/:clientId/rotate-secret",
-				call: (client) => client.rotateTenantClientSecret(TENANT_ID, "client_1"),
-			},
-			{
-				name: "revokeTenantClientSecret",
-				method: "POST",
-				path: "/tenants/:tenantId/clients/:clientId/secrets/:secretId/revoke",
-				call: (client) => client.revokeTenantClientSecret(TENANT_ID, "client_1", "secret_1"),
-			},
-			{
-				name: "disableTenantClient",
-				method: "POST",
-				path: "/tenants/:tenantId/clients/:clientId/disable",
-				call: (client) => client.disableTenantClient(TENANT_ID, "client_1"),
-			},
-			{
-				name: "deleteTenantClient",
-				method: "DELETE",
-				path: "/tenants/:tenantId/clients/:clientId",
-				call: (client) => client.deleteTenantClient(TENANT_ID, "client_1"),
-			},
-			{
-				name: "listTenantGrants",
-				method: "GET",
-				path: "/tenants/:tenantId/subjects/:subjectId/grants",
-				call: (client) => client.listTenantGrants(TENANT_ID, "sub_1"),
-			},
-			{
-				name: "revokeTenantGrant",
-				method: "POST",
-				path: "/tenants/:tenantId/subjects/:subjectId/grants/:clientId/revoke",
-				call: (client) => client.revokeTenantGrant(TENANT_ID, "sub_1", "client_1"),
-			},
-			{
-				name: "readTenantAuditPage",
-				method: "GET",
-				path: "/tenants/:tenantId/audit-events",
-				call: (client) => client.readTenantAuditPage(TENANT_ID, { from: 0, to: 1 }),
-			},
-			{
-				name: "fetchTenant",
-				method: "GET",
-				path: "/tenants/:tenantId",
-				call: (client) => client.fetchTenant(TENANT_ID),
-			},
-			{
-				name: "listTenantMembers",
-				method: "GET",
-				path: "/tenants/:tenantId/members",
-				call: (client) => client.listTenantMembers(TENANT_ID),
-			},
-			{
-				name: "inviteTenantMember",
-				method: "POST",
-				path: "/tenants/:tenantId/members",
-				call: (client) =>
-					client.inviteTenantMember(TENANT_ID, { subjectId: "sub_1", role: "admin" }),
-			},
-			{
-				name: "updateTenantMemberRole",
-				method: "PUT",
-				path: "/tenants/:tenantId/members/:membershipId",
-				call: (client) => client.updateTenantMemberRole(TENANT_ID, "mem_1", { role: "member" }),
-			},
-			{
-				name: "removeTenantMember",
-				method: "DELETE",
-				path: "/tenants/:tenantId/members/:membershipId",
-				call: (client) => client.removeTenantMember(TENANT_ID, "mem_1"),
-			},
-			{
-				name: "listTenantDomains",
-				method: "GET",
-				path: "/tenants/:tenantId/domains",
-				call: (client) => client.listTenantDomains(TENANT_ID),
-			},
-			{
-				name: "attachTenantDomain",
-				method: "POST",
-				path: "/tenants/:tenantId/domains",
-				call: (client) =>
-					client.attachTenantDomain(TENANT_ID, { hostname: "auth.acme.test", kind: "custom" }),
-			},
-			{
-				name: "fetchTenantDomainVerification",
-				method: "GET",
-				path: "/tenants/:tenantId/domains/:domainId/verification",
-				call: (client) => client.fetchTenantDomainVerification(TENANT_ID, "dom_1"),
-			},
-			{
-				name: "updateTenantMfaPolicy",
-				method: "POST",
-				path: "/tenants/:tenantId/mfa-policy",
-				call: (client) => client.updateTenantMfaPolicy(TENANT_ID, { policy: "required" }),
-			},
-		];
-
 		test.each(ROUTES)("$name calls $method $path", async ({ method, path, call }) => {
 			let matched = false;
 
@@ -1326,9 +1322,9 @@ describe("ManagementClient tenant-scoped surface", () => {
 	});
 });
 
-describe("ManagementClient.discover", () => {
-	const API = "https://api.discover.test";
+const API = "https://api.discover.test";
 
+describe("ManagementClient.discover", () => {
 	test("finds the token endpoint from the API URL alone and calls the API with its token", async () => {
 		let granted: string | null = null;
 		let authorization: string | null = null;

@@ -643,13 +643,13 @@ describe("infrastructure failures", () => {
 	});
 });
 
+/** The resource a protected API names, carrying a path. */
+const API = "https://api.test/v1";
+
+/** Where RFC 9728 §3.1 serves metadata for {@link API}. */
+const API_METADATA = "https://api.test/.well-known/oauth-protected-resource/v1";
+
 describe("resource identifier", () => {
-	/** The resource a protected API names, carrying a path. */
-	const API = "https://api.test/v1";
-
-	/** Where RFC 9728 §3.1 serves metadata for {@link API}. */
-	const API_METADATA = "https://api.test/.well-known/oauth-protected-resource/v1";
-
 	test("answers null for every metadata member on a server named by audience alone", () => {
 		let api = resourceServer();
 
