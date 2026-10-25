@@ -39,7 +39,7 @@ const ISLAND_ENTRIES = Object.fromEntries(
 		.map((file) => [file, `/assets/${file.replace(/\.tsx$/, ".js")}`]),
 );
 
-const manifest: BuildAssetsManifest = {
+const MANIFEST: BuildAssetsManifest = {
 	mode: "build",
 	entries: { "bootstrap/browser.ts": CLIENT_ENTRY_HREF, ...ISLAND_ENTRIES },
 	assets: {},
@@ -59,4 +59,4 @@ const manifest: BuildAssetsManifest = {
 	},
 };
 
-export default manifest;
+export default MANIFEST;

@@ -17,7 +17,7 @@ import type { PostEpubInput } from "./post-epub";
 import { postEpub } from "./post-epub";
 
 /** The permalink every fixture tutorial lives at. */
-const URL_ = "https://sergiodxa.com/tutorials/route-middleware";
+const PERMALINK = "https://sergiodxa.com/tutorials/route-middleware";
 
 /** A tutorial body exercising every adaptation the EPUB makes. */
 const SOURCE = `Middleware runs before your loaders. See [the docs](/articles/middleware) or [jump down](#later).
@@ -57,7 +57,7 @@ function input(overrides: Partial<PostEpubInput> = {}): PostEpubInput {
 		excerpt: "Learn how middleware runs.",
 		tags: ["react-router@7.9.0", "remix"],
 		document: document(),
-		url: URL_,
+		url: PERMALINK,
 		published: new Date("2026-07-01T00:00:00Z"),
 		publishedLabel: "July 1, 2026",
 		modified: new Date("2026-07-02T10:00:00Z"),
@@ -79,14 +79,14 @@ describe("postEpub", () => {
 
 		expect(chapter).toContain("<h1>Add Route Middleware &lt;Safely&gt;</h1>");
 		expect(chapter).toContain('<p class="used">Used: react-router@7.9.0 · remix</p>');
-		expect(chapter).toContain(`· July 1, 2026 · <a href="${URL_}">Read it online</a>`);
+		expect(chapter).toContain(`· July 1, 2026 · <a href="${PERMALINK}">Read it online</a>`);
 	});
 
 	test("points site-relative links and fragments back at the blog", () => {
 		let chapter = file(postEpub(input()), "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain('<a href="https://sergiodxa.com/articles/middleware">the docs</a>');
-		expect(chapter).toContain(`<a href="${URL_}#later">jump down</a>`);
+		expect(chapter).toContain(`<a href="${PERMALINK}#later">jump down</a>`);
 	});
 
 	test("turns an image into a link to it, and a linked image into the link's text", () => {
@@ -123,7 +123,7 @@ describe("postEpub", () => {
 	test("uses the permalink as the identifier and the last edit as modified", () => {
 		let opf = file(postEpub(input()), "EPUB/package.opf");
 
-		expect(opf).toContain(`<dc:identifier id="pub-id">${URL_}</dc:identifier>`);
+		expect(opf).toContain(`<dc:identifier id="pub-id">${PERMALINK}</dc:identifier>`);
 		expect(opf).toContain('<meta property="dcterms:modified">2026-07-02T10:00:00Z</meta>');
 		expect(opf).toContain("<dc:date>2026-07-01</dc:date>");
 		expect(opf).toContain("<dc:subject>remix</dc:subject>");
