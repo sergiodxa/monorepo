@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to verify Standard Webhooks deliveries and reject replays"
     - "How to answer fast by handing each delivery to a background job"
@@ -304,12 +304,14 @@ each delivery before anything trusts it, and a handler per event type does the w
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import { BillingWebhook } from "@sdxc/billing";
+import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
 import { polar } from "~/app/initializers/billing";
 import { deliveries } from "~/app/models/webhook-deliveries";
+import routes from "~/routes/web";
 
-export default new BillingWebhook(
+const BILLING_WEBHOOK = new BillingWebhook(
 	polar,
 	{
 		async "order.paid"(event, ctx) {
@@ -318,13 +320,16 @@ export default new BillingWebhook(
 	},
 	{ store: deliveries },
 );
+
+export default createAction(routes.webhooks.billing, (ctx) =>
+	BILLING_WEBHOOK.handler(ctx),
+);
 ```
 
-Mount it with `router.map(routes.webhooks.billing, billingWebhook)`: its bound `handler`
-satisfies the router's action form. Each handler is called with the event and the request's
-own context, so it reaches the same `ctx.jobs` the orders endpoint enqueues through. `polar` is
-your `PolarBilling` provider from
-`@sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
+The receiver is built once, at module scope, so a misconfigured store fails as the module
+loads. Each handler is called with the event and the request's own context, so it reaches the
+same `ctx.jobs` the orders endpoint enqueues through. `polar` is your `PolarBilling` provider
+from `@sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
 processed answers `200` at once, an event type with no handler is logged and acknowledged, and a
 handler that throws a retryable error answers `503` so the platform delivers again. The provider
 reads its secret through a function such as `webhookSecret: () => env.POLAR_WEBHOOK_SECRET`, and
