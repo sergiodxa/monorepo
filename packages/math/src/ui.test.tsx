@@ -9,11 +9,13 @@
 
 /* @jsxImportSource remix/component */
 
+import type { MarkdownComponent } from "@sdxc/markdown/remix";
+
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { math } from "./markdown.js";
 import { MathFormula, MathTag } from "./ui.js";
@@ -49,5 +51,10 @@ describe("MathFormula and MathTag", () => {
 		let html = await renderToString(toRemix(walked.data, { components: { math: MathTag } }));
 
 		expect(html).toContain("<mfrac><mn>1</mn><mn>2</mn></mfrac>");
+	});
+
+	test("registers MathTag in toRemix's components map, where MathFormula does not fit", () => {
+		expectTypeOf(MathTag).toExtend<MarkdownComponent>();
+		expectTypeOf(MathFormula).not.toExtend<MarkdownComponent>();
 	});
 });

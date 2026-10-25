@@ -137,6 +137,9 @@ renders the TeX in a `<code>` when it does not convert.
 `MathFormula` shaped for `toRemix`'s `components` option, which passes a walked `math` tag's
 attributes plus `children`.
 
+Register `MathTag` there, since `MathFormula` takes no `children` and fails to type-check in
+that map.
+
 ### Types
 
 #### `MathOptions`
