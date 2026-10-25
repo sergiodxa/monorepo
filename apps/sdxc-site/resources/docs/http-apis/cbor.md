@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 12
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read an `application/cbor` request body within limits and answer in CBOR"
     - "Why deterministic encoding gives a value one byte form you can hash, store and sign"
@@ -57,6 +57,8 @@ unwrap(CBOR.decode(bytes)); // Map { "values" => [21.5, 22] }
 ```
 
 ## Declare the endpoint
+
+The route contract names the URL the controller below is mapped to.
 
 ```typescript {% title="routes/api.ts" %}
 import { post, route } from "remix/routes";
@@ -146,7 +148,7 @@ export default createAction(routes.api.readings.create, async (ctx) => {
 	if (isFailure(decoded)) {
 		let { code, offset } = decoded.error;
 		return cbor(
-			new Map([
+			new Map<string, CBOR.CBORValue>([
 				["error", code],
 				["offset", offset ?? null],
 			]),
@@ -191,7 +193,7 @@ makes a resent reading land on the record it already wrote.
 import type { Reading } from "~/app/http/validators/readings";
 
 import * as CBOR from "@sdxc/cbor";
-import { Hex } from "@sdxc/crypto";
+import { Hex, sha256 } from "@sdxc/crypto";
 import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
@@ -205,8 +207,9 @@ export async function storeReading(reading: Reading) {
 	);
 	if (isFailure(bytes)) return bytes;
 
-	let digest = await crypto.subtle.digest("SHA-256", bytes.data);
-	let id = Hex.encode(new Uint8Array(digest));
+	let digest = await sha256(bytes.data);
+	if (isFailure(digest)) return digest;
+	let id = Hex.encode(digest.data);
 	await env.READINGS.put(`reading:${id}`, bytes.data);
 	return success(id);
 }
@@ -300,12 +303,12 @@ before anything is stored, so they need no KV namespace:
 
 ```typescript {% title="app/http/controllers/api/readings/create.test.ts" %}
 import * as CBOR from "@sdxc/cbor";
-import { isFailure } from "@sdxc/result";
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
 
-function post(body: Uint8Array) {
+function post(body: Uint8Array<ArrayBuffer>) {
 	return createWebRouter().fetch(
 		new Request("https://sensors.example.com/api/readings", {
 			method: "POST",
@@ -319,9 +322,8 @@ test("a truncated body answers 400 with the CBOR error and its offset", async ()
 	let response = await post(Uint8Array.of(0xa1, 0x66));
 
 	expect(response.status).toBe(400);
-	let body = CBOR.decode(new Uint8Array(await response.arrayBuffer()));
-	if (isFailure(body)) throw body.error;
-	expect(body.data).toEqual(
+	let body = unwrap(CBOR.decode(new Uint8Array(await response.arrayBuffer())));
+	expect(body).toEqual(
 		new Map<CBOR.CBORValue, CBOR.CBORValue>([
 			["error", "truncated"],
 			["offset", 0],
@@ -330,10 +332,9 @@ test("a truncated body answers 400 with the CBOR error and its offset", async ()
 });
 
 test("a reading missing its fields answers 422", async () => {
-	let bytes = CBOR.encode(new Map([["device", "greenhouse-1"]]));
-	if (isFailure(bytes)) throw bytes.error;
+	let bytes = unwrap(CBOR.encode(new Map([["device", "greenhouse-1"]])));
 
-	let response = await post(bytes.data);
+	let response = await post(bytes);
 
 	expect(response.status).toBe(422);
 });
