@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 13
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to open a search dialog from every page's header and show live results in a frame"
     - "How to cache what the dialog asks for with `@sdxc/workers-cache`"
@@ -177,7 +177,7 @@ Every page's dialog asks for the same blank `/frames/search`, and readers type t
 queries, so `ctx.cache` stores each answer at the edge under the tag every article listing
 carries. The action that saves an article purges that tag, and the next request for any query
 is answered fresh. `PUBLIC_PAGE` and `TAGS` are the policy and tags
-[Cache data and pages on Workers](/docs/data-and-background-work/cache-on-workers) declares.
+[Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) declares.
 
 <note>
 A later call to `ctx.cache` replaces the earlier policy, which is how a failed search answers
@@ -348,7 +348,11 @@ function markBusy(event: LiveFrameEvent) {
 	else results?.setAttribute("aria-busy", "true");
 }
 
-type SearchBoxProps = { id: string; query: string; frameSrc: string };
+interface SearchBoxProps {
+	id: string;
+	query: string;
+	frameSrc: string;
+}
 
 export const SearchBox = clientEntry(
 	"/resources/components/search-box.tsx#SearchBox",
