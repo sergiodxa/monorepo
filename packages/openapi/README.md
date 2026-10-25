@@ -124,7 +124,11 @@ document declares for the operation.
 
 Binds a spec to one route; `name` becomes the `operationId`. `spec` takes:
 
-- `summary` (required), `description`, `tags`, `deprecated`: copied to the operation.
+- `summary` (required), `description`, `tags`: copied to the operation.
+- `deprecated`: `true`, or a `DeprecationNotice` from `@sdxc/http/deprecation`
+  (`{ deprecation?, sunset?, deprecationLink?, sunsetLink? }`) that also marks the operation
+  deprecated and that `deprecationHeaders` writes onto its responses. A sunset earlier than
+  the deprecation fails the build.
 - `params`: an object schema whose keys equal the pattern's variables. Without one, each
   variable documents as a string and `parse` yields the router's params.
 - `query`: an object schema; each key becomes a query parameter, required unless `optional`.
@@ -212,6 +216,27 @@ reused, so the handler is safe to create at module scope. Responses carry a stro
 `Vary: Accept` and `Cache-Control` (`options.cacheControl`, `public, max-age=300` by default),
 and a matching `If-None-Match` answers `304`. A build failure answers `500` with a problem
 document.
+
+#### `deprecationHeaders(operation): Middleware`
+
+Writes the `Deprecation` and `Sunset` fields and their `deprecation` and `sunset` links from
+the operation's `deprecated` notice onto every response its route answers.
+
+```typescript
+let LEGACY_SHOW = defineOperation("legacyShow", routes.api.legacy.show, {
+	summary: "Show a legacy record",
+	responses: { 200: { description: "The record" } },
+	deprecated: {
+		deprecation: new Date("2027-01-01T00:00:00Z"),
+		sunset: new Date("2027-07-01T00:00:00Z"),
+	},
+});
+
+router.map(routes.api.legacy.show, {
+	middleware: [deprecationHeaders(LEGACY_SHOW)],
+	handler: showLegacy,
+});
+```
 
 ### `@sdxc/openapi/testing`
 

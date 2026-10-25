@@ -11,6 +11,7 @@ import type { CatalogEntry, CatalogMethods, ProblemCatalog, ProblemEntries } fro
 import type { Result } from "@sdxc/result";
 import type { StandardJSONSchemaV1 } from "@standard-schema/spec";
 
+import { setDeprecation } from "@sdxc/http/deprecation";
 import { stringify } from "@sdxc/json-pointer";
 import { toJSONSchema } from "@sdxc/json-schema";
 import { PROBLEM_MEDIA_TYPE } from "@sdxc/problem";
@@ -297,7 +298,13 @@ function addOperation(
 		if (checked.status === "failure") return checked;
 		described.security = toRequirements(spec.security);
 	}
-	if (spec.deprecated === true) described.deprecated = true;
+	if (typeof spec.deprecated === "object") {
+		let checked = setDeprecation(new Headers(), spec.deprecated);
+		if (checked.status === "failure") {
+			return buildFailure(checked.error.message, operationId, `${pointer}/deprecated`);
+		}
+	}
+	if (spec.deprecated !== undefined && spec.deprecated !== false) described.deprecated = true;
 
 	item[method] = described;
 	paths[template.data.path] = item;

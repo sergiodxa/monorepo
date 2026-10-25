@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { DeprecationNotice } from "@sdxc/http/deprecation";
 import type { DescribedSchema, InferOutput } from "@sdxc/json-schema";
 import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
@@ -77,7 +78,11 @@ export interface OperationSpec<
 	problems?: readonly Problems[];
 	/** Scheme name to scopes; `[]` marks an unauthenticated operation. */
 	security?: readonly Record<string, readonly string[]>[];
-	deprecated?: boolean;
+	/**
+	 * A notice also marks the operation deprecated, and its dates and links are what
+	 * `deprecationHeaders` from `@sdxc/openapi/router` writes onto every response.
+	 */
+	deprecated?: boolean | DeprecationNotice;
 }
 
 /** What `parse` yields for a part the operation declares no schema for. */
@@ -94,7 +99,7 @@ export interface OperationDeclaration {
 	responses: Record<number, ResponseSpec>;
 	problems?: readonly string[];
 	security?: readonly Record<string, readonly string[]>[];
-	deprecated?: boolean;
+	deprecated?: boolean | DeprecationNotice;
 }
 
 /**

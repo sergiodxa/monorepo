@@ -1,19 +1,21 @@
-import type { Result } from "@sdxc/result";
-import type { RequestContext, RequestHandler } from "remix/router";
-
 /**
- * A fetch-router handler that serves a document as JSON or YAML. The document is built on
- * the first request and reused, which keeps assembly out of a Worker's global scope, and
- * each representation carries a strong `ETag` so a client revalidates with a `304`.
+ * Fetch-router pieces: a handler that serves a document as JSON or YAML, built on the
+ * first request and revalidated through a strong `ETag`, and middleware announcing a
+ * deprecated operation's retirement on every response its route answers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Result } from "@sdxc/result";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
+
+import { setDeprecation } from "@sdxc/http/deprecation";
 import { iife } from "@sdxc/iife";
 import { problem } from "@sdxc/problem";
 import { Accept, IfNoneMatch } from "remix/headers";
 
 import type { OpenAPIBuildError } from "./errors.js";
+import type { Operation } from "./operation.js";
 import type { OpenAPI } from "./types.js";
 
 import { MEDIA_TYPE_JSON, MEDIA_TYPE_YAML, stringify } from "./serialize.js";
@@ -73,6 +75,32 @@ export function openapiHandler(
 
 		headers.set("Content-Type", format === "yaml" ? MEDIA_TYPE_YAML : MEDIA_TYPE_JSON);
 		return new Response(representation.body, { headers });
+	};
+}
+
+/**
+ * Writes the RFC 9745 `Deprecation` and RFC 8594 `Sunset` fields, and their links, from
+ * the notice an operation declares as `deprecated`, onto whatever its route answers. An
+ * operation declaring no notice passes responses through; building the document rejects
+ * a notice the fields cannot carry, so a drift test catches it before it ships.
+ *
+ * @param operation - The operation the route serves.
+ * @returns Middleware for the route's own chain.
+ * @example createAction(routes.api.monitors.show, { middleware: [deprecationHeaders(MONITOR_SHOW)], handler });
+ */
+export function deprecationHeaders(operation: Operation): Middleware {
+	let notice = operation.spec.deprecated;
+	return async (_ctx, next) => {
+		let response = await next();
+		if (typeof notice !== "object") return response;
+
+		let headers = new Headers(response.headers);
+		if (setDeprecation(headers, notice).status === "failure") return response;
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
 	};
 }
 

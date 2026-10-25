@@ -345,6 +345,33 @@ describe("security", () => {
 		expect(paths?.["/api/v1/monitors/{monitorId}"]?.get).not.toHaveProperty("security");
 	});
 
+	test("a deprecation notice marks the operation deprecated", () => {
+		let operation = defineOperation("create", ROUTES.monitors.create, {
+			summary: "Create",
+			responses: { 201: { description: "Created" } },
+			deprecated: { deprecation: new Date("2027-01-01T00:00:00Z") },
+		});
+		let document = unwrap(bareDocument().add(operation).build());
+
+		expect(document.paths?.["/api/v1/monitors"]?.post?.deprecated).toBe(true);
+	});
+
+	test("a sunset earlier than the deprecation fails the build", () => {
+		let operation = defineOperation("create", ROUTES.monitors.create, {
+			summary: "Create",
+			responses: { 201: { description: "Created" } },
+			deprecated: {
+				deprecation: new Date("2027-07-01T00:00:00Z"),
+				sunset: new Date("2027-01-01T00:00:00Z"),
+			},
+		});
+		let result = bareDocument().add(operation).build();
+
+		expect(isFailure(result) && result.error.pointer).toBe(
+			"/paths/~1api~1v1~1monitors/post/deprecated",
+		);
+	});
+
 	test("an undeclared scheme fails", () => {
 		let operation = defineOperation("create", ROUTES.monitors.create, {
 			summary: "Create",

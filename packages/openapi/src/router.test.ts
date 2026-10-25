@@ -1,7 +1,7 @@
 /**
  * Tests for serving a document: negotiation between JSON and YAML, strong ETags with
- * `304` revalidation, a build that runs once on the first request, and a failed build
- * answered as a problem.
+ * `304` revalidation, a build that runs once on the first request, a failed build
+ * answered as a problem, and a deprecated operation's notice on its route's responses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +14,8 @@ import { get } from "remix/routes";
 import { describe, expect, test, vi } from "vitest";
 
 import { OpenAPIBuildError } from "./errors.js";
-import { openapiHandler } from "./router.js";
+import { defineOperation } from "./operation.js";
+import { deprecationHeaders, openapiHandler } from "./router.js";
 import { parse } from "./serialize.js";
 import { createFixtureDocument } from "./test/fixtures.js";
 
@@ -111,5 +112,47 @@ describe("openapiHandler", () => {
 		let response = await router.fetch(URL_BASE);
 
 		expect(response.status).toBe(200);
+	});
+});
+
+describe("deprecationHeaders", () => {
+	/** A router serving one operation through the middleware. */
+	function serve(deprecated: Parameters<typeof defineOperation>[2]["deprecated"]) {
+		let route = get("/api/v1/legacy");
+		let operation = defineOperation("legacy", route, {
+			summary: "Legacy",
+			responses: { 200: { description: "OK" } },
+			deprecated,
+		});
+		let router = createRouter();
+		router.map(route, {
+			middleware: [deprecationHeaders(operation)],
+			handler: () =>
+				new Response("ok", { headers: { Link: '<https://api.example.com/next>; rel="next"' } }),
+		});
+		return router.fetch("https://api.example.com/api/v1/legacy");
+	}
+
+	test("writes the operation's notice onto the response, keeping its links", async () => {
+		let response = await serve({
+			deprecation: new Date("2027-01-01T00:00:00Z"),
+			sunset: new Date("2027-07-01T00:00:00Z"),
+			deprecationLink: "https://docs.example.com/changelog",
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Deprecation")).toBe("@1798761600");
+		expect(response.headers.get("Sunset")).toBe("Thu, 01 Jul 2027 00:00:00 GMT");
+		expect(response.headers.get("Link")).toBe(
+			'<https://api.example.com/next>; rel="next", <https://docs.example.com/changelog>; rel="deprecation"',
+		);
+		expect(await response.text()).toBe("ok");
+	});
+
+	test("passes the response through for an operation without a notice", async () => {
+		for (let deprecated of [undefined, true]) {
+			let response = await serve(deprecated);
+			expect(response.headers.get("Deprecation")).toBeNull();
+		}
 	});
 });
