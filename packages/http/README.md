@@ -174,7 +174,8 @@ Writes `application/pdf`.
 
 #### `file(body: Blob | ArrayBuffer | ReadableStream, filename: string, init?: ResponseInit): Response`
 
-A download of opaque bytes: `application/octet-stream` plus `attachment(filename)`.
+A download with `Content-Disposition: attachment(filename)`, typed by the `Content-Type` in
+`init` or `application/octet-stream` when it names none.
 
 #### `attachment(filename: string): string`
 

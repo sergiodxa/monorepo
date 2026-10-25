@@ -302,6 +302,13 @@ describe(file, () => {
 		expect(res.headers.get("Content-Type")).toBe(ContentType.OctetStream);
 	});
 
+	test("keeps the Content-Type the caller names", () => {
+		let res = file(new Blob(["zip"]), "archive.zip", {
+			headers: { "Content-Type": ContentType.ZIP },
+		});
+		expect(res.headers.get("Content-Type")).toBe(ContentType.ZIP);
+	});
+
 	test("returns file body", async () => {
 		let content = "file content";
 		let fileBlob = new Blob([content]);

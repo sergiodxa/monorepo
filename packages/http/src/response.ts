@@ -203,7 +203,8 @@ export function attachment(filename: string): string {
 
 /**
  * Creates a Response for a file download, with the name written by `attachment` so a quote
- * or a non-ASCII character in it reaches the client intact.
+ * or a non-ASCII character in it reaches the client intact. A `Content-Type` in `init` names
+ * the file's type; without one the download is `application/octet-stream`.
  * @param body - The file content as Blob, ArrayBuffer, or ReadableStream
  * @param filename - The filename to suggest for the download
  * @param init - Optional response options (status, headers, etc.)
@@ -211,7 +212,7 @@ export function attachment(filename: string): string {
  * @example
  * return file(zipBuffer, "archive.zip");
  * @example
- * return file(imageBlob, "photo.png", { headers: { "Cache-Control": "no-store" } });
+ * return file(zipBuffer, "archive.zip", { headers: { "Content-Type": ContentType.ZIP } });
  */
 export function file(
 	body: Blob | ArrayBuffer | ReadableStream,
@@ -219,7 +220,7 @@ export function file(
 	init?: ResponseInit,
 ): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.OctetStream);
+	if (!headers.has("Content-Type")) headers.set("Content-Type", ContentType.OctetStream);
 	headers.set("Content-Disposition", attachment(filename));
 	return new Response(body, { ...init, headers });
 }
