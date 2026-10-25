@@ -140,8 +140,32 @@ export async function readPost(slug: string) {
 }
 ```
 
-An index page that needs only titles and dates reads each file with `Markdown.frontmatter`,
-which takes the same options and stops after the block.
+An index page, a feed or a sitemap needs only titles and dates, so `listPosts` reads each file
+with `Markdown.frontmatter`, which takes the same options and stops after the block, and answers
+the published posts newest first:
+
+```typescript {% title="app/services/content/list-posts.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
+
+import type { Frontmatter } from "~/app/services/content/schema";
+
+import { POSTS } from "~/app/services/content/posts";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
+
+export async function listPosts() {
+	let posts: Array<Frontmatter & { slug: string }> = [];
+
+	for (let [path, load] of Object.entries(POSTS)) {
+		let read = Markdown.frontmatter(await load(), MARKDOWN_OPTIONS);
+		if (isFailure(read) || read.data.frontmatter.draft) continue;
+		let slug = path.slice(path.lastIndexOf("/") + 1, -".md".length);
+		posts.push({ ...read.data.frontmatter, slug });
+	}
+
+	return posts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+}
+```
 
 ## Read the tree without changing it
 
