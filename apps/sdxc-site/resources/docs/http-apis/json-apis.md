@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare a problem catalog and answer failures as RFC 9457 problems"
     - "How to validate a body, create a resource and page the list"
@@ -14,7 +14,7 @@ outcomes:
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
 back. Every failure answers as an RFC 9457 problem document, lists page by cursor with `Link`
-headers, and every response states how much of the caller's rate limit is left.
+headers, and every response names the rate limit policy the caller is counted against.
 
 Six packages do the work. [`@sdxc/validate`](/api/validate) checks the body against a
 `remix/data-schema` schema, [`@sdxc/http`](/api/http) names the success statuses,
@@ -92,8 +92,9 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 ```
 
 Each `type` should resolve to a page describing the error: `problems.entries()` lists every
-entry with its resolved `type`, which is what an error reference page renders from. The `extensions` schema types the builder's argument, so
-`validationFailed` will not compile without its `errors`.
+entry with its resolved `type`, which is what an error reference page renders from. The
+`extensions` schema types the builder's argument, so `validationFailed` compiles only with its
+`errors`.
 
 <note>
 End the base URL with `/`. Each `type` is the base followed by the slug, so a base without the
@@ -262,15 +263,15 @@ same `paginate` call then writes `first`, `last` and an `X-Total-Count` header.
 
 ## Rate limit the API
 
-`rateLimit` counts each request before the handler runs and writes the `RateLimit` and
-`RateLimit-Policy` headers onto whatever comes back. `onLimit` replaces the default `429` body
-with an entry from your catalog, and the quota headers, `Retry-After` included, are applied to
-it either way.
+`rateLimit` counts each request before the handler runs and writes the `RateLimit-Policy`
+header, the quota and window, onto whatever comes back. A refused request also gets `RateLimit`
+with nothing remaining and `Retry-After`. `onLimit` replaces the default `429` body with an
+entry from your catalog, and those headers are applied to it either way.
 
 ```typescript {% title="app/http/middleware/api-rate-limit.ts" %}
 import { env } from "cloudflare:workers";
 import { getClientIP } from "@sdxc/get-client-ip";
-import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 import problems from "~/config/problems";
@@ -280,29 +281,28 @@ export function apiRateLimit() {
 	return rateLimit({
 		adapter: new CloudflareAdapter(env.API_RATE_LIMITER, limit),
 		prefix: "api",
-		key: (ctx) =>
-			getClientIP(ctx.request)?.network({ v4: 32, v6: 64 }).toString() ??
-			"unknown",
+		key: (ctx) => addressKey(getClientIP(ctx.request)),
 		onLimit: () =>
 			problems.rateLimited({ detail: "Wait for the time in Retry-After." }),
 	});
 }
 ```
 
-`API_RATE_LIMITER` is a Workers rate limiting binding.
+`API_RATE_LIMITER` is a Workers rate limiting binding. It counts without reporting what is
+left, so an allowed response carries the policy alone; a `KVAdapter` or `DataTableAdapter`
+counts in your own storage and adds `RateLimit` with the remaining budget to every response.
 
 <warning>
 Give the adapter the same `limit` and `window` as the binding's own configuration. The binding
-does the counting and the adapter only uses the numbers to compute the reset, so a mismatch
-writes `RateLimit` and `Retry-After` headers that tell callers the wrong budget.
+does the counting and the adapter only uses the numbers to describe it, so a mismatch writes
+`RateLimit-Policy` and `Retry-After` headers that tell callers the wrong budget.
 </warning>
 
-`getClientIP` parses the `CF-Connecting-IP` header into an address, and the key is the
-network it sits in: the address itself for IPv4, its `/64` for IPv6, since an IPv6 client holds
-the whole block and could rotate through it. A request without a parseable header shares the
-`"unknown"` budget. Once your API authenticates
-callers, key on the caller's identity instead of the address, so one client cannot spend
-another's budget.
+`getClientIP` parses the `CF-Connecting-IP` header into an address, and `addressKey` keys the
+budget on the network it sits in: the address itself for IPv4, its `/64` for IPv6, since an
+IPv6 client holds the whole block and could rotate through it. A request without a parseable
+header shares the `"unknown"` budget. Once your API authenticates callers, key on the caller's
+identity instead of the address, so one client cannot spend another's budget.
 
 Each controller default-exports its action, and the router maps each one through `lazy()`, so a
 request imports only the controller it reaches. The limiter goes in `lazy()`'s second argument,
@@ -378,13 +378,13 @@ test("a refused body answers 422 with a pointer to the field", async () => {
 	});
 });
 
-test("a malformed id answers 404 and states the remaining budget", async () => {
+test("a malformed id answers 404 and states the rate limit policy", async () => {
 	let response = await createWebRouter().fetch(
 		"https://books.example.com/api/books/not-an-id",
 	);
 
 	expect(response.status).toBe(404);
-	expect(response.headers.get("RateLimit")).not.toBeNull();
+	expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=100;w=60');
 });
 ```
 
