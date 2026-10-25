@@ -6,12 +6,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { generateKey, readPublicKey, verifyCleartext } from "@sdxc/openpgp";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SecurityTxt } from "./security-txt.js";
 
-import { isExpired, parse, securityTxt, stringify } from "./security-txt.js";
+import { respond } from "./response.js";
+import { cleartextSigner, isExpired, parse, securityTxt, stringify } from "./security-txt.js";
 
 /** An unsigned file using every §2.5 field, with CRLF endings. */
 const UNSIGNED = [
@@ -193,5 +195,37 @@ describe("securityTxt", () => {
 			name: "security.txt",
 			mediaType: "text/plain; charset=utf-8",
 		});
+	});
+});
+
+describe(cleartextSigner, () => {
+	test("signs the file once per body and serves it with a stable ETag", async () => {
+		let key = unwrap(await generateKey({ userId: "Security <security@example.com>", version: 4 }));
+		let armored = key.armor();
+		let transform = cleartextSigner({ key: () => armored });
+		let document = unwrap(parse(UNSIGNED));
+
+		let first = await respond(securityTxt, document, { transform });
+		let second = await respond(securityTxt, document, { transform });
+		let text = await first.text();
+		expect(text).toMatch(/^-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n/);
+		expect(await second.text()).toBe(text);
+		expect(second.headers.get("ETag")).toBe(first.headers.get("ETag"));
+
+		let parsed = unwrap(parse(text));
+		expect(parsed.signed).toBe(true);
+		expect(parsed.contact).toEqual(document.contact);
+		let certificate = unwrap(await readPublicKey(key.publicKey.armor()));
+		expect(unwrap(await verifyCleartext(text, certificate)).text).toBe(stringify(document));
+	});
+
+	test("serves the text unsigned without a key, and reports a key it cannot read", async () => {
+		let body = stringify(unwrap(parse(UNSIGNED)));
+		expect(await cleartextSigner({ key: () => undefined })(body)).toBe(body);
+		expect(await cleartextSigner({ key: () => "" })(body)).toBe(body);
+
+		let onError = vi.fn();
+		expect(await cleartextSigner({ key: () => "not a key", onError })(body)).toBe(body);
+		expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "malformed" }));
 	});
 });

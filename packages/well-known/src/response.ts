@@ -24,6 +24,11 @@ export interface RespondOptions {
 	/** Extra headers, applied last so they override the defaults. */
 	headers?: HeadersInit;
 	/**
+	 * Rewrites the serialized body before its `ETag` is computed, so a body wrapped in a
+	 * signature (a cleartext-signed security.txt) is what the tag and a 304 describe.
+	 */
+	transform?: (body: string) => string | Promise<string>;
+	/**
 	 * Runs over the full 200 response before a 304 or `HEAD` drops its body, so a message
 	 * signature can cover the body's digest, as a signed key directory does.
 	 */
@@ -48,6 +53,7 @@ export async function respond<Document>(
 	options: RespondOptions = {},
 ): Promise<Response> {
 	let body = format.stringify(document);
+	if (options.transform) body = await options.transform(body);
 	let headers = new Headers({
 		"Content-Type": format.mediaType,
 		"Cache-Control": policy(options.cache ?? DEFAULT_CACHE).toString(),

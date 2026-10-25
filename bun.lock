@@ -2432,6 +2432,7 @@
         "@remix-run/data-schema": "^1.0.0",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/link-header": "workspace:*",
+        "@sdxc/openpgp": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },

@@ -1,7 +1,7 @@
 /**
  * Holds the document subpaths to their dependency budget: `@sdxc/result`,
- * `@sdxc/json-pointer`, `@sdxc/link-header`, `@remix-run/data-schema` and
- * `@standard-schema/spec` only, so a consumer without the `remix` umbrella or
+ * `@sdxc/json-pointer`, `@sdxc/link-header`, `@sdxc/openpgp`, `@remix-run/data-schema`
+ * and `@standard-schema/spec` only, so a consumer without the `remix` umbrella or
  * `@sdxc/http` can parse through them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,6 +19,7 @@ const ALLOWED = new Set([
 	"@sdxc/result",
 	"@sdxc/json-pointer",
 	"@sdxc/link-header",
+	"@sdxc/openpgp",
 	"@remix-run/data-schema",
 	"@standard-schema/spec",
 ]);

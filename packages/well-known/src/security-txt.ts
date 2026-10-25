@@ -1,14 +1,16 @@
 /**
  * security.txt (RFC 9116): a line-based reader enforcing the §2.5 cardinalities and
- * `https` rules, reading a cleartext-signed file from its signed body, and a writer,
- * so every app publishes where a researcher reports a vulnerability.
+ * `https` rules, a writer, and an OpenPGP cleartext signer, so every app publishes where
+ * a researcher reports a vulnerability in a file they can authenticate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { OpenPgpError, PrivateKey } from "@sdxc/openpgp";
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import { readPrivateKey, signCleartext } from "@sdxc/openpgp";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { WellKnownFormat } from "./format.js";
 
@@ -301,3 +303,59 @@ export const securityTxt: WellKnownFormat<SecurityTxt> = {
 	stringify: (document) => stringify(document),
 	parse,
 };
+
+/** Where a cleartext signer reads its key and reports a key it cannot use. */
+export interface CleartextSignerOptions {
+	/**
+	 * The armored OpenPGP private key, read on each call so it can come from a Worker
+	 * secret; `undefined` or an empty string serves the file unsigned.
+	 */
+	key: () => string | undefined;
+	/** The key's passphrase, when it is protected. */
+	passphrase?: () => string | undefined;
+	/** Called when the key cannot be read, unlocked or used; the file is then served unsigned. */
+	onError?: (error: OpenPgpError) => void;
+}
+
+/** How many distinct bodies a signer keeps signed copies of. */
+const SIGNED_CACHE_SIZE = 16;
+
+/**
+ * A body transform that wraps security.txt text in an OpenPGP cleartext signature, as RFC
+ * 9116 §2.3 recommends. The key is read once per distinct armored value and each body is
+ * signed once, so repeated answers share one `ETag`. Without a usable key the text is
+ * served unsigned, after `onError` reports why.
+ *
+ * @param options - Where the key comes from and where failures go.
+ * @example
+ * serve(securityTxt, () => SECURITY_TXT, {
+ * 	transform: cleartextSigner({ key: () => env.SECURITY_TXT_SIGNING_KEY }),
+ * });
+ */
+export function cleartextSigner(
+	options: CleartextSignerOptions,
+): (body: string) => Promise<string> {
+	let loaded: { armored: string; key: Promise<Result<PrivateKey, OpenPgpError>> } | undefined;
+	let signed = new Map<string, string>();
+
+	return async (body) => {
+		let armored = options.key()?.trim() ?? "";
+		if (armored === "") return body;
+		if (loaded?.armored !== armored) {
+			loaded = { armored, key: readPrivateKey(armored, { passphrase: options.passphrase?.() }) };
+			signed.clear();
+		}
+
+		let cached = signed.get(body);
+		if (cached !== undefined) return cached;
+		let key = await loaded.key;
+		let result = isFailure(key) ? key : await signCleartext(body, key.data);
+		if (isFailure(result)) {
+			options.onError?.(result.error);
+			return body;
+		}
+		if (signed.size >= SIGNED_CACHE_SIZE) signed.clear();
+		signed.set(body, result.data);
+		return result.data;
+	};
+}

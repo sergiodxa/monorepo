@@ -136,6 +136,11 @@ Each exports `NAME`, `MEDIA_TYPE`, `parse(text)`, `stringify(document)` and a de
 - `stringify(document, options?: StringifyOptions): string` writes unsigned text with LF endings,
   with `options.comments` at the top.
 - `isExpired(document, now?: Date): boolean` answers whether `expires` has passed.
+- `cleartextSigner({ key, passphrase?, onError? })` is a `transform` for `serve`/`respond` that
+  wraps the file in an OpenPGP cleartext signature through
+  [`@sdxc/openpgp`](https://www.npmjs.com/package/@sdxc/openpgp). `key` reads an armored private
+  key per call; with none, or one that fails (reported to `onError`), the file is served unsigned.
+  Each body is signed once, so the `ETag` stays stable.
 - `securityTxt` is the descriptor.
 
 ### `@sdxc/well-known/webfinger` (RFC 7033)
@@ -261,15 +266,16 @@ object is a valid document. `passkeyEndpoints` is the descriptor.
 The document with its media type, a `Cache-Control` (`options.cache`, default public for one hour),
 an `ETag` over the body and CORS for a CORS format. With `options.request` it answers 304 when
 `If-None-Match` still matches and an empty body for `HEAD`. `options.headers` apply last.
-`options.sign(response, request)` runs over the full 200 response first, for a signature over the
-body.
+`options.transform(body)` rewrites the serialized body before the `ETag` is computed, such as
+`cleartextSigner`. `options.sign(response, request)` runs over the full 200 response first, for a
+signature over the body.
 
 ### `@sdxc/well-known/middleware`
 
 #### `serve(format, produce: (ctx) => Document | null, options?): WellKnownEntry`
 
 Answers with `produce(ctx)`'s document through `respond`, built per request; `null` falls through
-to the next middleware. `produce` may be async, and `options` takes `cache`, `headers` and `sign`.
+to the next middleware. `produce` may be async, and `options` takes `cache`, `headers`, `transform` and `sign`.
 
 #### `wellKnown(entries: Record<string, WellKnownEntry>): Middleware`
 
@@ -293,7 +299,8 @@ the rest).
 import { isFailure } from "@sdxc/result";
 import { redirect } from "@sdxc/well-known/change-password";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { isExpired, securityTxt } from "@sdxc/well-known/security-txt";
+import { cleartextSigner, isExpired, securityTxt } from "@sdxc/well-known/security-txt";
+import { env } from "cloudflare:workers";
 import type { SecurityTxt } from "@sdxc/well-known/security-txt";
 import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
 import type { Jrd } from "@sdxc/well-known/webfinger";
@@ -316,7 +323,9 @@ declare function findProfile(resource: string): Promise<Jrd | null>;
 let router = createRouter({
 	middleware: [
 		wellKnown({
-			"security.txt": serve(securityTxt, () => SECURITY_TXT),
+			"security.txt": serve(securityTxt, () => SECURITY_TXT, {
+				transform: cleartextSigner({ key: () => env.SECURITY_TXT_SIGNING_KEY }),
+			}),
 			webfinger: async (ctx) => {
 				let query = readQuery(ctx.url);
 				if (isFailure(query)) return new Response(query.error.message, { status: 400 });
