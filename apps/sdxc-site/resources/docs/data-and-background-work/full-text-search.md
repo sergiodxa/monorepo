@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 18
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to keep an FTS5 index beside your tables with `@sdxc/search`"
     - "How to parse what a reader typed, rank title matches first, highlight and page results"
@@ -152,9 +152,8 @@ List `columns` in the order the FTS5 table declares them, because the weights ar
 `bm25()` by position: a different order weighs each column by another column's weight.
 </warning>
 
-With these weights a word in the title counts ten times a word in the
-body, so an article titled "Reset your password" outranks one that mentions passwords in passing,
-while a body that is about nothing else can still beat a passing title. `field: "title"` lets a
+With these weights a word in the title counts ten times a word in the body, so an article
+titled "Reset your password" outranks one that mentions passwords in passing, while a body that is about nothing else can still beat a passing title. `field: "title"` lets a
 reader write `title:invoice` to search the title alone.
 
 The key defaults to the table's primary key, `id`, which is the integer the index's `rowid`
@@ -278,8 +277,8 @@ it. What the parse answers is one of three things:
 
 The error carries one issue, at the path `q`, with a message written for the reader, such as "A
 search holds at most 8 terms." Show it beside the box, with the text kept in it to edit, so the
-reader learns what to change. The limits are options: `maxLength` and
-`maxTerms` raise or lower them, and `prefix: "last"` makes only the final word a prefix, the
+reader learns what to change. The limits are options: `maxLength` and `maxTerms` raise or lower
+them, and `prefix: "last"` makes only the final word a prefix, the
 reading for a box that searches as the reader types.
 
 ## Search, filter and page
@@ -469,8 +468,8 @@ up to 6 columns.
 ## Test the ranking
 
 The search runs on the in-memory SQLite your tests already migrate, which carries FTS5, so a
-test writes two articles through `indexArticle` and checks the order a reader sees. `ArticleFactory`
-is the factory for your `articles` table:
+test writes two articles through `indexArticle` and checks the order a reader sees.
+`ArticleFactory` is the factory for your `articles` table:
 
 ```typescript {% title="app/models/search/articles.test.ts" %}
 import { unwrap } from "@sdxc/result";
@@ -532,12 +531,8 @@ shows.
 
 ## Where to go next
 
-- [Build a search dialog](/docs/building-remix-apps/search-dialog): the search box in every
+- [Build a search dialog](/docs/building-remix-apps/search-dialog) — the search box in every
   page's header, its live results, and the results page.
-- [Paginate lists](/docs/http-apis/paginate-lists): offset and keyset paging, the page
+- [Paginate lists](/docs/http-apis/paginate-lists) — offset and keyset paging, the page
   parameters, and the numbered pager.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron): the dispatcher
-  the rebuild runs on.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): the
-  adapters a search runs on.
-- [`@sdxc/search`](/api/search): the full query syntax, every option and error.
+- [`@sdxc/search`](/api/search) — the full query syntax, every option and error.
