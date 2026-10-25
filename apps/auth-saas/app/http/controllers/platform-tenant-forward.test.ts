@@ -187,7 +187,7 @@ describe("the platform router's fallback", () => {
 			platformRequest("/u/sign-in?return_to=%2F", { method: "POST", body }),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("https://auth.sergiodxa.com/");
 		expect(response.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
