@@ -2080,6 +2080,7 @@
         "@sdxc/saml": "workspace:*",
         "@sdxc/sample": "workspace:*",
         "@sdxc/scim": "workspace:*",
+        "@sdxc/scitt": "workspace:*",
         "@sdxc/search": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/semver": "workspace:*",
