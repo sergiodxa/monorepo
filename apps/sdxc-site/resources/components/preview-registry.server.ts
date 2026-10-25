@@ -53,12 +53,12 @@ const exampleModules = import.meta.glob<ExampleModule>("./previews/*/*.tsx", {
 });
 
 /** Every component's examples, keyed by the component's slug and sorted by file name. */
-const examples = new Map<string, PreviewExample[]>();
+const EXAMPLES = new Map<string, PreviewExample[]>();
 
 for (let [path, example] of Object.entries(exampleModules).sort(([a], [b]) => a.localeCompare(b))) {
 	let [, component, slug] = /\/previews\/([^/]+)\/([^/]+)\.tsx$/.exec(path) ?? [];
 	if (!component || !slug) continue;
-	let list = examples.get(component) ?? [];
+	let list = EXAMPLES.get(component) ?? [];
 	list.push({
 		slug,
 		title: example.title,
@@ -66,10 +66,10 @@ for (let [path, example] of Object.entries(exampleModules).sort(([a], [b]) => a.
 		render: example.render,
 		flush: example.flush,
 	});
-	examples.set(component, list);
+	EXAMPLES.set(component, list);
 }
 
-const owned = new Map<string, ComponentPreview>(
+const OWNED = new Map<string, ComponentPreview>(
 	Object.entries(modules).map(([path, preview]) => [
 		slugOf(path),
 		{ code: preview.code, render: preview.render, flush: preview.flush },
@@ -82,12 +82,12 @@ const owned = new Map<string, ComponentPreview>(
  * inventing a fixture would show the fixture rather than the component.
  */
 export function findPreview(slug: string): ComponentPreview | null {
-	return owned.get(slug) ?? COMPONENT_PREVIEWS[slug] ?? null;
+	return OWNED.get(slug) ?? COMPONENT_PREVIEWS[slug] ?? null;
 }
 
 /** Every slug that has a preview, from either source. */
 export function previewSlugs(): string[] {
-	return [...new Set([...owned.keys(), ...Object.keys(COMPONENT_PREVIEWS)])].sort();
+	return [...new Set([...OWNED.keys(), ...Object.keys(COMPONENT_PREVIEWS)])].sort();
 }
 
 /**
@@ -95,7 +95,7 @@ export function previewSlugs(): string[] {
  * page shows the component's documented examples as source instead.
  */
 export function listExamples(component: string): PreviewExample[] {
-	return examples.get(component) ?? [];
+	return EXAMPLES.get(component) ?? [];
 }
 
 /** One live example, or `null` when the component has no example by that slug. */
@@ -105,5 +105,5 @@ export function findExample(component: string, slug: string): PreviewExample | n
 
 /** Every component that has live examples, which is what the coverage test walks. */
 export function exampleComponents(): string[] {
-	return [...examples.keys()].sort();
+	return [...EXAMPLES.keys()].sort();
 }
