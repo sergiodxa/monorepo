@@ -239,6 +239,10 @@ export function createWebRouter() {
 		routes.schemas.health,
 		lazy(() => import("~/app/http/controllers/schemas/health")),
 	);
+	router.map(
+		routes.robots,
+		lazy(() => import("~/app/http/controllers/robots")),
+	);
 
 	return router;
 }

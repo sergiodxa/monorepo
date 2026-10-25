@@ -237,6 +237,8 @@ too.
 </warning>
 
 `contentSignals` writes a `Content-Signal` line, which states what the content may be used for beyond crawling.
+`contentUsage` writes the IETF AI Preferences `Content-Usage` rule instead, such as
+`{ preferences: { search: true, "train-ai": false } }`, optionally scoped to a path with `pattern`.
 
 ## Serve security.txt
 

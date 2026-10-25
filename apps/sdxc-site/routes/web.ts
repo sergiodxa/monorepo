@@ -130,4 +130,6 @@ export default route({
 		/** The `application/health+json` report format `/health` answers in. */
 		health: get("/schemas/health.json"),
 	},
+	/** The crawl rules and AI usage preferences, served as robots.txt. */
+	robots: get("/robots.txt"),
 });
