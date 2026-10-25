@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to turn form posts, query strings and route params into typed values with `@sdxc/validate`"
     - "How to render a schema's issues back next to the fields that failed"
@@ -132,7 +132,7 @@ field takes focus, with no client JavaScript.
 ```tsx {% title="resources/views/new-team.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Button, Form, TextField } from "@sdxc/ui";
+import { Button, Form, Select, TextField } from "@sdxc/ui";
 
 interface Props {
 	issues?: ReadonlyArray<Form.Issue>;
@@ -158,6 +158,23 @@ export function NewTeamPage(handle: Handle<Props>) {
 					defaultValue={value("billingEmail")}
 					required
 				/>
+				<TextField
+					label="Seats"
+					name="seats"
+					type="number"
+					min={1}
+					max={50}
+					defaultValue={value("seats") || "1"}
+					required
+				/>
+				<Select name="plan" aria-label="Plan">
+					<Select.Option value="free" selected={value("plan") !== "team"}>
+						Free
+					</Select.Option>
+					<Select.Option value="team" selected={value("plan") === "team"}>
+						Team
+					</Select.Option>
+				</Select>
 				<Button type="submit">Create team</Button>
 			</Form>
 		);
@@ -165,8 +182,8 @@ export function NewTeamPage(handle: Handle<Props>) {
 }
 ```
 
-The native `required` and `type="email"` attributes stop most mistakes before the request is
-sent.
+The native `required`, `type`, `min` and `max` attributes stop most mistakes before the
+request is sent.
 
 <warning>
 Anything can post to your action, with or without the form's attributes, so the schema in
