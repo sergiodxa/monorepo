@@ -15,7 +15,7 @@ npm add @sdxc/jwt
 
 Signing and verification run on [`jose`](https://www.npmjs.com/package/jose), and duration strings
 for the time claims come from [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration);
-both install with the package. Three entry points: `@sdxc/jwt` (`JWT`, `JWK`, `KeyStorage`),
+both install with the package. Three entry points: `@sdxc/jwt` (`JWT`, `SecurityEventToken`, `JWK`, `KeyStorage`),
 `@sdxc/jwt/algorithm` (the algorithm names alone) and `@sdxc/jwt/r2` (key storage over a
 Cloudflare R2 bucket).
 
@@ -95,6 +95,29 @@ idToken.subject; // "user-123"
 idToken.email; // "ada@example.com"
 ```
 
+### Issue a Security Event Token
+
+`SecurityEventToken` is an RFC 8417 SET: typed `secevent+jwt`, with `iss`, `iat`, `jti`, `aud`
+and a map of event URI to payload. `create` fills `jti` and `iat`; `verify` refuses a SET with no
+events or with an `exp`.
+
+```typescript
+import { JWK, SecurityEventToken } from "@sdxc/jwt";
+
+let set = await SecurityEventToken.create({
+	issuer: "https://idp.example.com/",
+	audience: "https://rp.example.com/",
+	subjectId: { format: "email", email: "user@example.com" },
+	events: {
+		"https://schemas.openid.net/secevent/risc/event-type/account-disabled": { reason: "hijacking" },
+	},
+}).sign(JWK.Algorithm.ES256, keys);
+
+let event = await SecurityEventToken.verify(set, issuerKeys, { issuer, audience });
+event.events; // { "https://schemas.openid.net/…/account-disabled": { reason: "hijacking" } }
+event.subjectId; // { format: "email", email: "user@example.com" }
+```
+
 ## API
 
 ### `JWT`
@@ -162,6 +185,17 @@ A subclass that sets `static override type = "at+jwt"` signs with that `typ` hea
 
 Reads the claims without verifying them, as an instance of the calling class. Use it to decide how
 to verify (reading `iss` to pick a key set), then `verify`.
+
+### `SecurityEventToken`
+
+A `JWT` subclass for RFC 8417 Security Event Tokens; subclass it for a SET profile.
+
+- `SecurityEventToken.create(input)`: `issuer`, `audience` and `events`, plus optional `id`
+  (`jti`), `issuedAt`, `subject`, `subjectId`, `transaction` (`txn`) and `timeOfEvent` (`toe`)
+- `SecurityEventToken.verify(...)`: `JWT.verify` plus RFC 8417's claim rules; a failure throws
+  jose's `JWTClaimValidationFailed` naming the claim
+- `events`, `transaction`, `timeOfEvent` and `subjectId` accessors; `subjectId` types RFC 9493's
+  `email`, `iss_sub` and `opaque` formats and reads any other format as given
 
 ### `JWK`
 
