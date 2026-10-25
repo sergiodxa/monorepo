@@ -1910,6 +1910,7 @@
       "dependencies": {
         "@sdxc/cache": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/http": "workspace:*",
         "@sdxc/jscontact": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",

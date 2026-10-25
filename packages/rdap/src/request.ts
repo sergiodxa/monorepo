@@ -10,6 +10,7 @@
 import type { OutboundError } from "@sdxc/outbound";
 import type { Result } from "@sdxc/result";
 
+import { parseRetryAfter } from "@sdxc/http/retry-after";
 import { follow, readText, release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -90,11 +91,11 @@ function fromStatus(response: Response, url: string): RDAPError {
 	}
 
 	if (status === 429) {
-		let retryAfter = retryAfterMs(response.headers.get("retry-after"));
+		let retryAfter = parseRetryAfter(response.headers.get("retry-after"));
 		return new RDAPError("rate-limited", `${url} answered 429: rate limited`, {
 			url,
 			status,
-			...(retryAfter === undefined ? {} : { retryAfter }),
+			...(retryAfter === null ? {} : { retryAfter }),
 		});
 	}
 
@@ -122,22 +123,4 @@ function fromOutbound(error: OutboundError, fallbackUrl?: string): RDAPError {
 		default:
 			return new RDAPError("refused", error.message, details, { cause: error });
 	}
-}
-
-/**
- * Reads `Retry-After` as milliseconds from now: delay-seconds or an HTTP date, a date
- * already past counting as zero. A header in neither form is ignored.
- *
- * @param header - The header's value, or `null` when the response carried none.
- * @returns Milliseconds to wait, or `undefined` when the server did not say.
- */
-export function retryAfterMs(header: string | null): number | undefined {
-	if (header === null) return undefined;
-
-	let value = header.trim();
-	if (/^\d+$/.test(value)) return Number(value) * 1000;
-
-	let date = /[a-z]/i.test(value) ? Date.parse(value) : Number.NaN;
-	if (Number.isNaN(date)) return undefined;
-	return Math.max(0, date - Date.now());
 }
