@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to compose a page from `@sdxc/ui` components and lay it out with `@sdxc/u` mixins"
     - "How to build a dialog with no script using native platform features"
@@ -209,7 +209,7 @@ export function ProjectGrid(handle: Handle<{ projects: Project[] }>) {
 }
 ```
 
-`at()` is a container query, not a media query. `container("projects")` on the section makes
+`at()` is a container query. `container("projects")` on the section makes
 it the thing the grid measures, so the same list shows two columns in a wide main area and
 one inside a narrow sidebar, whatever the viewport. Narrow is the unwrapped case, and each
 `at()` layers on above its breakpoint.
@@ -304,7 +304,10 @@ import { CheckIcon, CopyIcon } from "@sdxc/icons";
 import { Button } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
-export type CopyLinkProps = { href: string; label: string };
+export interface CopyLinkProps {
+	href: string;
+	label: string;
+}
 
 export const CopyLink = clientEntry(
 	"/resources/components/copy-link.tsx#CopyLink",
@@ -357,8 +360,8 @@ test("opens itself when the action returned issues", async () => {
 	);
 	let fresh = await renderToString(<NewProjectDialog />);
 
-	expect(refused).toContain("<dialog open");
-	expect(fresh).not.toContain("<dialog open");
+	expect(refused).toMatch(/<dialog[^>]*\sopen\b/);
+	expect(fresh).not.toMatch(/<dialog[^>]*\sopen\b/);
 });
 ```
 
