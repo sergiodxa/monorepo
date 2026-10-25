@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read an uploaded CSV into validated rows with errors that name the line"
     - "How to stream an export with `@sdxc/csv` that spreadsheets open safely"
@@ -364,10 +364,7 @@ shows, and pass the response text back to `parse`.
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — rendering the
   `issues` the upload refusal carries.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the single
-  statement that makes the import atomic.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — moving a large
   import off the request.
 - [Stream JSON Lines](/docs/data-and-background-work/json-lines) — the same import and export
   for records with nested data.
-- [`@sdxc/csv`](/api/csv) — every option and error field of the reader and writers.
