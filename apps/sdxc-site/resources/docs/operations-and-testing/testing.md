@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How the template runs Vitest through Vite+"
     - "When to use the real bindings in the Workers pool and when the in-memory mocks"
@@ -32,7 +32,7 @@ reach for them:
 npm add -D msw @cloudflare/vitest-pool-workers @sdxc/spec
 ```
 
-## How the template runs tests
+## Run the template's tests
 
 The project's `test` script is `vp test run`, and `vite.config.ts` gives Vitest one project on
 Node:
@@ -194,8 +194,8 @@ test("serves a stored value on the second read", async () => {
 });
 ```
 
-Storage persists between tests in the pool, so start each one from a clean slate. Recent
-versions of the pool also expose the same `env` through `cloudflare:workers`. One limit to
+Storage persists between tests in the pool, so start each one from a clean slate. The pool
+also exposes the same `env` through `cloudflare:workers`. One limit to
 know: `node:sqlite` does not exist in workerd, so a test whose database comes from an
 in-memory SQLite engine stays in the unit project.
 
@@ -312,47 +312,9 @@ records every message a `Mailer` would have delivered. To assert on what a handl
 `log: new Log({ kind: "job", sink: (record) => records.push(record) })` and run the handler
 inside `log.run(...)`.
 
-MCP tools are routes too, so the same router drives them. A call carries the protocol version,
-the method and the tool name in headers as well as in its body:
-
-```typescript {% title="app/mcp/tools/search-jobs.test.ts" %}
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
-import { beforeAll, expect, test } from "vitest";
-
-import { createWebRouter } from "~/app/initializers/router";
-import { migrate } from "~/app/test/database";
-
-beforeAll(migrate);
-
-test("search_jobs answers a tools/call", async () => {
-	let response = await createWebRouter().fetch(
-		new Request("https://example.com/mcp", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
-				"Mcp-Method": "tools/call",
-				"Mcp-Name": "search_jobs",
-			},
-			body: JSON.stringify({
-				jsonrpc: "2.0",
-				id: 1,
-				method: "tools/call",
-				params: {
-					name: "search_jobs",
-					arguments: { query: "Remix" },
-					_meta: {
-						[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
-						[MetaKey.ClientCapabilities]: {},
-					},
-				},
-			}),
-		}),
-	);
-
-	expect(response.status).toBe(200);
-});
-```
+MCP tools are routes too, so the same router drives them: a tool call is a JSON-RPC `POST` to
+`/mcp`, and [Expose your app over MCP](/docs/operations-and-testing/mcp-server#test-a-tool-call)
+writes one.
 
 ## Specify behavior with `.spec` files
 
