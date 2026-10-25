@@ -145,6 +145,7 @@
 		"./http/response/json": "./src/http/response/json.ts",
 		"./http/response/html": "./src/http/response/html.ts",
 		"./http/negotiate": "./src/http/negotiate.ts",
+		"./http/deprecation": "./src/http/deprecation.ts",
 		"./http/cache": "./src/http/cache.ts",
 		"./http/middleware/head-requests": "./src/http/middleware/head-requests.ts",
 		"./http-signatures": "./src/http-signatures.ts",
