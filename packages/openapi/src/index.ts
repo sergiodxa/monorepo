@@ -20,4 +20,11 @@ export {
 	OperationInputError,
 } from "./errors.js";
 export { defineOperation } from "./operation.js";
-export { MEDIA_TYPE_JSON, MEDIA_TYPE_YAML, parse, stringify } from "./serialize.js";
+export {
+	MEDIA_TYPE_JSON,
+	MEDIA_TYPE_OPENAPI_JSON,
+	MEDIA_TYPE_OPENAPI_YAML,
+	MEDIA_TYPE_YAML,
+	parse,
+	stringify,
+} from "./serialize.js";

@@ -91,8 +91,11 @@ router.get(
 );
 ```
 
-`/api/v1/openapi.json` answers JSON, and YAML for `?format=yaml` or an `Accept` preferring
-`application/yaml`.
+`/api/v1/openapi.json` answers `application/openapi+json; version=3.1.1`, or
+`application/openapi+yaml` for `?format=yaml`, the media types of
+[draft-ietf-httpapi-rest-api-mediatypes-09](https://datatracker.ietf.org/doc/draft-ietf-httpapi-rest-api-mediatypes/)
+(a draft, so they may change). A client whose `Accept` prefers `application/json` or
+`application/yaml` gets that type instead.
 
 ### Parse a request through the operation
 
@@ -196,6 +199,8 @@ What `parse` and `stringify` fail with.
 #### Constants
 
 `MEDIA_TYPE_JSON` (`application/json`), `MEDIA_TYPE_YAML` (`application/yaml`),
+`MEDIA_TYPE_OPENAPI_JSON` (`application/openapi+json`), `MEDIA_TYPE_OPENAPI_YAML`
+(`application/openapi+yaml`),
 `OPENAPI_VERSION` (`3.1.1`) and `JSON_SCHEMA_DIALECT`
 (`https://spec.openapis.org/oas/3.1/dialect/base`), the last two declared by every built
 document.

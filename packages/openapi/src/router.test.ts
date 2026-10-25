@@ -28,16 +28,38 @@ function call(handler: ReturnType<typeof openapiHandler>, url: string, headers: 
 const URL_BASE = "https://api.example.com/openapi.json";
 
 describe("openapiHandler", () => {
-	test("serves JSON by default, with a strong ETag and the cache policy", async () => {
+	test("serves application/openapi+json by default, with a strong ETag and the cache policy", async () => {
 		let handler = openapiHandler(() => createFixtureDocument().build());
 		let response = await call(handler, URL_BASE);
 
 		expect(response.status).toBe(200);
-		expect(response.headers.get("Content-Type")).toBe("application/json");
+		expect(response.headers.get("Content-Type")).toBe("application/openapi+json; version=3.1.1");
 		expect(response.headers.get("Cache-Control")).toBe("public, max-age=300");
 		expect(response.headers.get("Vary")).toBe("Accept");
 		expect(response.headers.get("ETag")).toMatch(/^"[0-9a-f]{64}"$/);
 		expect(unwrap(parse(await response.text())).info.title).toBe("Monitors API");
+	});
+
+	test("answers each registered and generic media type the Accept header prefers", async () => {
+		let handler = openapiHandler(() => createFixtureDocument().build());
+		let contentType = async (accept: string, url = URL_BASE) =>
+			(await call(handler, url, { Accept: accept })).headers.get("Content-Type");
+
+		expect(await contentType("*/*")).toBe("application/openapi+json; version=3.1.1");
+		expect(await contentType("application/json")).toBe("application/json");
+		expect(await contentType("application/openapi+yaml;version=3.1")).toBe(
+			"application/openapi+yaml; version=3.1.1",
+		);
+		expect(await contentType("application/json, application/openapi+json;q=0.5")).toBe(
+			"application/json",
+		);
+		expect(await contentType("text/html")).toBe("application/openapi+json; version=3.1.1");
+		expect(await contentType("application/json", `${URL_BASE}?format=yaml`)).toBe(
+			"application/openapi+yaml; version=3.1.1",
+		);
+		expect(await contentType("application/yaml", `${URL_BASE}?format=yaml`)).toBe(
+			"application/yaml",
+		);
 	});
 
 	test("serves YAML for ?format=yaml or an Accept preferring application/yaml", async () => {
@@ -49,7 +71,7 @@ describe("openapiHandler", () => {
 			Accept: "application/yaml, application/json;q=0.5",
 		});
 
-		expect(byQuery.headers.get("Content-Type")).toBe("application/yaml");
+		expect(byQuery.headers.get("Content-Type")).toBe("application/openapi+yaml; version=3.1.1");
 		expect(byAccept.headers.get("Content-Type")).toBe("application/yaml");
 		expect(byQuery.headers.get("Cache-Control")).toBe("no-cache");
 		expect((await byQuery.text()).startsWith("openapi: 3.1.1\n")).toBe(true);

@@ -21,6 +21,18 @@ export const MEDIA_TYPE_JSON = "application/json";
 /** The media type of a YAML document, registered by RFC 9512. */
 export const MEDIA_TYPE_YAML = "application/yaml";
 
+/**
+ * The media type of an OpenAPI document in JSON, from draft-ietf-httpapi-rest-api-mediatypes-09;
+ * the draft is in Last Call, so the name may still change before it becomes an RFC.
+ */
+export const MEDIA_TYPE_OPENAPI_JSON = "application/openapi+json";
+
+/**
+ * The media type of an OpenAPI document in YAML, from draft-ietf-httpapi-rest-api-mediatypes-09;
+ * the draft is in Last Call, so the name may still change before it becomes an RFC.
+ */
+export const MEDIA_TYPE_OPENAPI_YAML = "application/openapi+yaml";
+
 /** How `stringify` writes a document. */
 export interface StringifyOptions {
 	/** @default "json" */

@@ -18,7 +18,13 @@ import type { OpenAPIBuildError } from "./errors.js";
 import type { Operation } from "./operation.js";
 import type { OpenAPI } from "./types.js";
 
-import { MEDIA_TYPE_JSON, MEDIA_TYPE_YAML, stringify } from "./serialize.js";
+import {
+	MEDIA_TYPE_JSON,
+	MEDIA_TYPE_OPENAPI_JSON,
+	MEDIA_TYPE_OPENAPI_YAML,
+	MEDIA_TYPE_YAML,
+	stringify,
+} from "./serialize.js";
 
 /** How the handler answers. */
 export interface ServeOptions {
@@ -32,15 +38,32 @@ interface Representation {
 	etag: string;
 }
 
-/** What the first request produced: both representations, or the problem to answer with. */
+/**
+ * The media types a document is served as, in the order a wildcard `Accept` picks them, so a
+ * wildcard and a missing header both get the registered OpenAPI JSON type.
+ */
+const CANDIDATES = [
+	{ mediaType: MEDIA_TYPE_OPENAPI_JSON, format: "json", registered: true },
+	{ mediaType: MEDIA_TYPE_OPENAPI_YAML, format: "yaml", registered: true },
+	{ mediaType: MEDIA_TYPE_JSON, format: "json", registered: false },
+	{ mediaType: MEDIA_TYPE_YAML, format: "yaml", registered: false },
+] as const;
+
+/** One media type the handler answers with. */
+type Candidate = (typeof CANDIDATES)[number];
+
+/**
+ * What the first request produced: both representations and the document's OpenAPI version,
+ * or the problem to answer with.
+ */
 type Served =
-	| { ok: true; json: Representation; yaml: Representation }
+	| { ok: true; version: string; json: Representation; yaml: Representation }
 	| { ok: false; title: string; detail: string };
 
 /**
- * Serves the document: JSON by default, YAML for `?format=yaml` or an `Accept` preferring
- * `application/yaml`, on any route whatever its middleware publishes. A build failure
- * answers `500` with a problem document, and the outcome is reused for every later request.
+ * Serves the document as `application/openapi+json` or `+yaml` with a `version` parameter,
+ * or as `application/json` or `application/yaml` to a client asking for those by `Accept`;
+ * `?format=` fixes the syntax. A build failure answers `500` with a problem document.
  *
  * @param build - Assembles the document; called once, on the first request.
  * @param options - The `Cache-Control` both representations carry.
@@ -60,8 +83,8 @@ export function openapiHandler(
 			return problem({ status: 500, title: outcome.title, detail: outcome.detail });
 		}
 
-		let format = negotiate(request);
-		let representation = outcome[format];
+		let candidate = negotiate(request);
+		let representation = outcome[candidate.format];
 		let headers = new Headers({
 			"Cache-Control": cacheControl,
 			ETag: representation.etag,
@@ -73,7 +96,12 @@ export function openapiHandler(
 			return new Response(null, { status: 304, headers });
 		}
 
-		headers.set("Content-Type", format === "yaml" ? MEDIA_TYPE_YAML : MEDIA_TYPE_JSON);
+		headers.set(
+			"Content-Type",
+			candidate.registered
+				? `${candidate.mediaType}; version=${outcome.version}`
+				: candidate.mediaType,
+		);
 		return new Response(representation.body, { headers });
 	};
 }
@@ -104,15 +132,24 @@ export function deprecationHeaders(operation: Operation): Middleware {
 	};
 }
 
-/** Picks the representation: the `format` query parameter wins, then `Accept`, then JSON. */
-function negotiate(request: Request): "json" | "yaml" {
+/**
+ * Picks the media type: `?format=json|yaml` narrows the candidates to that syntax, then
+ * `Accept` chooses among them. An absent header, or one naming none of them, gets the first
+ * remaining candidate, so a document always answers and never `406`.
+ */
+function negotiate(request: Request): Candidate {
 	let format = new URL(request.url).searchParams.get("format");
-	if (format === "yaml" || format === "json") return format;
-	let preferred = Accept.from(request.headers.get("Accept")).getPreferred([
-		MEDIA_TYPE_JSON,
-		MEDIA_TYPE_YAML,
-	]);
-	return preferred === MEDIA_TYPE_YAML ? "yaml" : "json";
+	let candidates = CANDIDATES.filter(
+		(candidate) => (format !== "json" && format !== "yaml") || candidate.format === format,
+	);
+	let preferred = Accept.from(request.headers.get("Accept")).getPreferred(
+		candidates.map((candidate) => candidate.mediaType),
+	);
+	return (
+		candidates.find((candidate) => candidate.mediaType === preferred) ??
+		candidates[0] ??
+		CANDIDATES[0]
+	);
 }
 
 /** Builds the document once and serializes both representations. */
@@ -142,6 +179,7 @@ async function serve(build: () => Result<OpenAPI.Document, OpenAPIBuildError>): 
 	}
 	return {
 		ok: true,
+		version: built.data.openapi,
 		json: { body: json.data, etag: await etagOf(json.data) },
 		yaml: { body: yaml.data, etag: await etagOf(yaml.data) },
 	};
