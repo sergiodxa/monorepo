@@ -2019,6 +2019,7 @@
         "@sdxc/iife": "workspace:*",
         "@sdxc/ip": "workspace:*",
         "@sdxc/jmap": "workspace:*",
+        "@sdxc/jmap": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/jscalendar": "workspace:*",
         "@sdxc/json-canonical": "workspace:*",
