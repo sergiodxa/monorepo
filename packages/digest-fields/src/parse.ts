@@ -25,8 +25,8 @@ const MAX_PREFERENCE = 10;
 /**
  * Parses a field value into its model.
  *
- * `Content-Digest` and `Repr-Digest` answer digest bytes keyed by algorithm, and the
- * `Want-*` fields answer preference weights. `Digest` reads algorithm names in any case
+ * `Content-Digest`, `Repr-Digest` and `Unencoded-Digest` answer digest bytes keyed by
+ * algorithm, and the `Want-*` fields answer preference weights. `Digest` reads algorithm names in any case
  * and keys them lowercase; an entry for an algorithm outside `sha-256`/`sha-512` whose
  * value is not base64 (RFC 3230's `UNIXsum`, say) is left out.
  *
@@ -45,7 +45,7 @@ export function parse(
 	field: DigestField,
 ): Result<Digests | Preferences, DigestError> {
 	if (field === "digest") return parseLegacy(value);
-	if (field === "content-digest" || field === "repr-digest") return parseDigests(value, field);
+	if (isDigestsField(field)) return parseDigests(value, field);
 	return parsePreferences(value, field);
 }
 
@@ -139,6 +139,15 @@ function parseLegacy(value: string): Result<Digests, DigestError> {
 	}
 
 	return success(Object.fromEntries(entries));
+}
+
+/**
+ * Whether a field is one of the Structured Field Dictionaries whose members are digests.
+ *
+ * @param field - The field name, lowercase.
+ */
+export function isDigestsField(field: DigestField): boolean {
+	return field === "content-digest" || field === "repr-digest" || field === "unencoded-digest";
 }
 
 /**

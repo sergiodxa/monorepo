@@ -2,7 +2,7 @@
 
 RFC 9530 `Content-Digest` and `Repr-Digest`, plus the RFC 3230 `Digest` header.
 
-Compute, write, read and verify the HTTP digest fields, including the `Want-Content-Digest` and `Want-Repr-Digest` preferences and the legacy `Digest` header that draft-cavage HTTP signatures cover.
+Compute, write, read and verify the HTTP digest fields, including the `Want-Content-Digest` and `Want-Repr-Digest` preferences, `Unencoded-Digest` and `Want-Unencoded-Digest` from [HTTP Unencoded Digest](https://datatracker.ietf.org/doc/draft-ietf-httpbis-unencoded-digest/), and the legacy `Digest` header that draft-cavage HTTP signatures cover.
 
 ## Installation
 
@@ -59,6 +59,12 @@ let checked = await verify(request.headers, await request.bytes(), { field: "con
 if (isFailure(checked)) return new Response(checked.error.message, { status: 400 });
 ```
 
+`Unencoded-Digest` covers the representation before content coding. Pass `decode: true` when the body is still coded as `Content-Encoding` says (`gzip`, `x-gzip`, `deflate`, `identity`), and leave it off for a body `fetch` already decoded:
+
+```typescript
+await verify(request.headers, await request.bytes(), { field: "unencoded-digest", decode: true });
+```
+
 ## API
 
 ### `digest(bytes: BinaryLike, algorithm: DigestAlgorithm): Promise<Result<Uint8Array, DigestError>>`
@@ -81,7 +87,7 @@ Writes a field. `Digest` uppercases algorithm names (`SHA-256=…`), the form dr
 
 ### `verify(headers: Headers, body: BinaryLike, options: VerifyOptions): Promise<Result<void, DigestError>>`
 
-Checks a body against `options.field`: `content-digest`, `repr-digest` or `digest`. Every `sha-256` and `sha-512` entry must match, so a forged entry next to a valid one still fails; entries for other algorithms are skipped.
+Checks a body against `options.field`: `content-digest`, `repr-digest`, `unencoded-digest` or `digest`. `options.decode` removes the `Content-Encoding` codings before checking `unencoded-digest`; `decodeContent(body, contentEncoding)` does the same on its own. Every `sha-256` and `sha-512` entry must match, so a forged entry next to a valid one still fails; entries for other algorithms are skipped.
 
 ### `DIGEST_ALGORITHMS`
 
@@ -98,6 +104,7 @@ The failure every function answers with; `code` says which check failed:
 | `invalid`               | `stringify` got a name the field cannot carry or a bad weight  |
 | `unsupported-algorithm` | No `sha-256`/`sha-512` entry to check, or `digest` got another |
 | `mismatch`              | The body differs from a digest                                 |
+| `coding`                | `decode` met an unknown content coding or a corrupt body       |
 | `crypto`                | The runtime refused the hash                                   |
 
 ### Types
@@ -108,7 +115,7 @@ The failure every function answers with; `code` says which check failed:
 
 #### `DigestField` and `DigestValueField`
 
-`"content-digest" | "repr-digest" | "want-content-digest" | "want-repr-digest" | "digest"`. `DigestValueField` is the three that carry digests.
+`"content-digest" | "repr-digest" | "unencoded-digest" | "want-content-digest" | "want-repr-digest" | "want-unencoded-digest" | "digest"`. `DigestValueField` is the four that carry digests.
 
 #### `Digests`, `Preferences` and `FieldValues`
 
@@ -120,7 +127,7 @@ The union of `DigestError` codes in the table above.
 
 #### `VerifyOptions`
 
-`{ field: DigestValueField }`.
+`{ field: DigestValueField; decode?: boolean }`.
 
 ## Pattern: Signing-Ready Outbound Request
 

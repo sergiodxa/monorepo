@@ -17,6 +17,7 @@ export type DigestErrorCode =
 	| "invalid"
 	| "unsupported-algorithm"
 	| "mismatch"
+	| "coding"
 	| "crypto";
 
 /** Returned inside a `Failure` by every function in this package, never thrown. */

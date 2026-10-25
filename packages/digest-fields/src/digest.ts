@@ -32,7 +32,8 @@ export function isDigestAlgorithm(name: string): name is DigestAlgorithm {
  * Digests a body. Text is read as UTF-8, so pass the exact bytes sent on the wire when a
  * body is not UTF-8 text.
  *
- * @param bytes - The content (for `Content-Digest`) or representation (for `Repr-Digest`).
+ * @param bytes - The content (for `Content-Digest`), the representation (for `Repr-Digest`)
+ *   or the representation before content coding (for `Unencoded-Digest`).
  * @param algorithm - `sha-256` or `sha-512`.
  * @returns The digest bytes, `unsupported-algorithm` for any other name, or `crypto` when
  *   the runtime refuses the hash.

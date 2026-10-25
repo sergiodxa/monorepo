@@ -16,7 +16,7 @@ import { stringify as stringifyStructured } from "@sdxc/structured-fields";
 import type { DigestField, Digests, FieldValues, Preferences } from "./types.js";
 
 import { DigestError } from "./errors.js";
-import { isPreference } from "./parse.js";
+import { isDigestsField, isPreference } from "./parse.js";
 
 /** An RFC 3230 algorithm name: a token, which keeps `=` and `,` out of it. */
 const LEGACY_ALGORITHM_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
@@ -41,9 +41,7 @@ export function stringify(
 	field: DigestField,
 ): Result<string, DigestError> {
 	if (field === "digest") return stringifyLegacy(value as Digests);
-	if (field === "content-digest" || field === "repr-digest") {
-		return stringifyDictionary(value, field);
-	}
+	if (isDigestsField(field)) return stringifyDictionary(value, field);
 
 	for (let [algorithm, weight] of Object.entries(value)) {
 		if (!isPreference(weight)) {
