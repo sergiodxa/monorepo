@@ -239,8 +239,9 @@ required to reuse a token).
   `resource` parameter
 - `exchange({ subjectToken, actorToken?, audience?, resources?, scope? })`: RFC 8693 token
   exchange, answering `{ accessToken, issuedTokenType, tokenType, expiresIn, scopes }`
-- `introspect(token, { tokenType? })`: RFC 7662; an unknown, expired, or revoked token answers
-  `active: false`
+- `introspect(token, { tokenType?, signed? })`: RFC 7662; an unknown, expired, or revoked token
+  answers `active: false`. `signed: true` asks for the RFC 9701 JWT answer and verifies it
+  against the issuer's keys, with this client as its audience
 - `revoke(token, { tokenType? })`: RFC 7009; runs through `waitUntil` when configured
 - `clientId`, `issuer`
 

@@ -13,6 +13,7 @@ import type { Adapter } from "@sdxc/rate-limit";
 import * as s from "@remix-run/data-schema";
 import { Base64 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
+import { JWT } from "@sdxc/jwt";
 import { isFailure, wrap } from "@sdxc/result";
 
 import type { DPoP } from "./dpop.js";
@@ -70,6 +71,14 @@ const GRANT_SCHEMA = s.object({
 	expires_in: s.optional(s.number()),
 	scope: s.optional(s.string()),
 });
+
+/** The media type RFC 9701 §4 registers for a signed introspection response. */
+const INTROSPECTION_JWT_MEDIA_TYPE = "application/token-introspection+jwt";
+
+/** A signed introspection response, typed so no other JWT verifies as one (RFC 9701 §5). */
+class IntrospectionResponse extends JWT {
+	static override type = "token-introspection+jwt";
+}
 
 /** The grant type RFC 8693 §2.1 registers for a token exchange. */
 const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -326,7 +335,9 @@ export class ServiceClient {
 		let body = new URLSearchParams({ token });
 		if (options.tokenType) body.set("token_type_hint", options.tokenType);
 
-		let document = await this.#read(endpoint, body, AuthErrorCode.IntrospectionFailed);
+		let document = options.signed
+			? await this.#readSigned(endpoint, body)
+			: await this.#read(endpoint, body, AuthErrorCode.IntrospectionFailed);
 		let result = s.parseSafe(INTROSPECTION_SCHEMA, document);
 
 		if (!result.success) {
@@ -353,6 +364,48 @@ export class ServiceClient {
 			authTime: toDate(description.auth_time),
 			jkt: description.cnf?.jkt ?? null,
 		};
+	}
+
+	/**
+	 * Asks for an RFC 9701 signed introspection response and verifies it: signed by a key
+	 * the issuer publishes, typed `token-introspection+jwt`, naming the issuer as `iss` and
+	 * this client as `aud`.
+	 *
+	 * @param endpoint - The introspection endpoint.
+	 * @param body - The introspection request.
+	 * @returns The `token_introspection` member, the description the issuer signed.
+	 * @throws `IntrospectionFailed` when the answer is refused, unsigned, or fails a check.
+	 */
+	async #readSigned(endpoint: URL, body: URLSearchParams): Promise<unknown> {
+		let code = AuthErrorCode.IntrospectionFailed;
+		let response = await this.#post(endpoint, body, code, null, INTROSPECTION_JWT_MEDIA_TYPE);
+		if (!response.ok) throw await this.#refusal(response, endpoint, code);
+
+		let mediaType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+		if (mediaType !== INTROSPECTION_JWT_MEDIA_TYPE) {
+			throw new AuthError(`${endpoint.href} answered without a signed introspection response.`, {
+				code,
+			});
+		}
+
+		let [keys, issuer] = await Promise.all([this.#issuer.keys(), this.#issuer.identifier()]);
+		let verified = await wrap(async () =>
+			IntrospectionResponse.verify(await response.text(), keys, {
+				issuer,
+				audience: this.#clientId,
+			}),
+		);
+		if (isFailure(verified)) {
+			throw new AuthError(
+				`${endpoint.href} signed an introspection response that did not verify.`,
+				{
+					code,
+					cause: verified.error,
+				},
+			);
+		}
+
+		return verified.data.payload.token_introspection;
 	}
 
 	/**
@@ -560,6 +613,7 @@ export class ServiceClient {
 	 * @param body - The fields, already carrying anything repeated.
 	 * @param code - Names the endpoint the call went to in whatever it throws.
 	 * @param dpop - The key whose proof travels with the call, retried once for a nonce.
+	 * @param accept - The media type the answer is asked for in.
 	 * @throws `code` when the request does not complete.
 	 */
 	async #post(
@@ -567,8 +621,9 @@ export class ServiceClient {
 		body: URLSearchParams,
 		code: AuthErrorCode,
 		dpop: DPoP | null = null,
+		accept = "application/json",
 	): Promise<Response> {
-		let headers = new Headers({ accept: "application/json" });
+		let headers = new Headers({ accept });
 
 		body.set("client_id", this.#clientId);
 
@@ -777,6 +832,13 @@ export namespace ServiceClient {
 	export interface IntrospectOptions {
 		/** The kind of token being presented, which lets the issuer look it up first. */
 		tokenType?: TokenTypeHint;
+		/**
+		 * Asks for the RFC 9701 signed response and verifies it against the issuer's keys,
+		 * for a resource server that relies on the answer beyond the TLS connection.
+		 *
+		 * @default false
+		 */
+		signed?: boolean;
 	}
 
 	/** What one revocation call is about. */

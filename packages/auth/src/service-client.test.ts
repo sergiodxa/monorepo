@@ -11,6 +11,7 @@ import type { DurationInput } from "@sdxc/duration";
 import type { Adapter, RateLimitDecision } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
+import { JWK, JWT } from "@sdxc/jwt";
 import { MemoryAdapter, RateLimitError } from "@sdxc/rate-limit";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
@@ -942,6 +943,73 @@ describe("introspect", () => {
 		await expect(clientFor({}, issuer).introspect("opaque-token")).rejects.toMatchObject({
 			code: AuthErrorCode.EndpointUnsupported,
 		});
+	});
+});
+
+describe("signed introspection", () => {
+	/** A signed introspection response, typed as RFC 9701 requires. */
+	class SignedAnswer extends JWT {
+		static override type = "token-introspection+jwt";
+	}
+
+	/**
+	 * Serves the issuer's key set and a signed answer carrying `description`.
+	 *
+	 * @param claims - Claims over the defaults, `aud` and `iss` included.
+	 */
+	async function serveSigned(
+		claims: Record<string, unknown> = {},
+	): Promise<{ accept: string | null }> {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256));
+		let seen = { accept: null as string | null };
+		let jwt = await new SignedAnswer({
+			iss: ISSUER_URL,
+			aud: "client-1",
+			iat: "0s",
+			token_introspection: { active: true, sub: "user-1", scope: "reports:read" },
+			...claims,
+		}).sign(JWK.Algorithm.ES256, [pair]);
+
+		server.use(
+			http.get(`${ISSUER_URL}/.well-known/jwks.json`, () => HttpResponse.json(JWK.toJSON([pair]))),
+			http.post(INTROSPECTION_ENDPOINT, ({ request }) => {
+				seen.accept = request.headers.get("accept");
+				return new HttpResponse(jwt, {
+					headers: { "content-type": "application/token-introspection+jwt" },
+				});
+			}),
+		);
+		return seen;
+	}
+
+	test("asks for and verifies an RFC 9701 signed answer", async () => {
+		let seen = await serveSigned();
+
+		let introspection = await clientFor().introspect("opaque-token", { signed: true });
+
+		expect(seen.accept).toBe("application/token-introspection+jwt");
+		expect(introspection.active).toBe(true);
+		expect(introspection.subject).toBe("user-1");
+	});
+
+	test("refuses a signed answer addressed to another client", async () => {
+		await serveSigned({ aud: "client-2" });
+
+		let error = await clientFor()
+			.introspect("opaque-token", { signed: true })
+			.catch((cause: unknown) => cause);
+
+		expect(AuthError.is(error, AuthErrorCode.IntrospectionFailed)).toBe(true);
+	});
+
+	test("refuses an unsigned answer when a signed one was asked for", async () => {
+		server.use(http.post(INTROSPECTION_ENDPOINT, () => HttpResponse.json({ active: true })));
+
+		let error = await clientFor()
+			.introspect("opaque-token", { signed: true })
+			.catch((cause: unknown) => cause);
+
+		expect(AuthError.is(error, AuthErrorCode.IntrospectionFailed)).toBe(true);
 	});
 });
 
