@@ -38,7 +38,7 @@ const TEST_FILE = /\.(?:workers\.)?test\.tsx?$/;
 /** The root TypeScript config every package extends, so changing it changes every build. */
 const ROOT_TSCONFIG = "tsconfig.json";
 
-/** The trailer naming the commit whose published note this commit's body replaces (ADR-140). */
+/** The trailer naming the commit whose published note this commit's body replaces. */
 const CORRECTION_TRAILER = /^Release-Note-For:\s*(?<sha>[0-9a-f]{7,40})\s*$/im;
 
 /** The body `git revert` writes, which names no effect on a consumer. */
@@ -190,7 +190,7 @@ export function messageBody(message: string): string {
 
 /**
  * Whether a trailer-free body leaves the release note missing: empty, or exactly the line
- * `git revert` writes, since neither tells a consumer what changed for them (ADR-140).
+ * `git revert` writes, since neither tells a consumer what changed for them.
  */
 export function isMissingBody(body: string): boolean {
 	let trimmed = body.trim();
