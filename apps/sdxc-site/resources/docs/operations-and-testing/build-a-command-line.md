@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare commands as a contract and answer them with typed handlers"
     - "How to ask for what a flag left out, show progress and share services through middleware"
@@ -277,7 +277,7 @@ does; [Your app's command line](/docs/operations-and-testing/your-apps-command-l
 together. A real configuration file with comments is
 [Read configuration files](/docs/operations-and-testing/configuration-files).
 
-## One file per command
+## Keep each handler in its own file
 
 A larger program declares its commands in one module and keeps each handler in its own.
 `createCommand` types a handler from its command away from the `map` call, and `lazy` imports it
@@ -364,7 +364,7 @@ import { cli } from "../src/cli.js";
 
 let description = cli.describe(["posts", "create"]);
 let checked = await cli.check(["posts", "create", "--titel", "Hello"]);
-if (isFailure(checked)) console.error(checked.error.message);
+if (isFailure(checked)) process.stderr.write(`${checked.error.message}\n`);
 ```
 
 `describe(path)` answers the command `path` names, or the whole program without one, with its

@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to find the modules a project imports"
     - "How to rename a package or move names to another module across every file"
@@ -208,7 +208,7 @@ too. `removeStatements` removes every statement holding a string literal equal t
 `specifier`, with the rest of its lines:
 
 ```typescript {% title="scripts/remove-job.ts" %}
-import { findStatements, removeProperty, removeStatements } from "@sdxc/codemod";
+import { removeProperty, removeStatements } from "@sdxc/codemod";
 
 let undeclared = removeProperty("app/jobs/index.ts", jobsSource, {
 	call: "jobs",

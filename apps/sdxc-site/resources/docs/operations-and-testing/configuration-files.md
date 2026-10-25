@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 10
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to parse JSONC with comments and trailing commas"
     - "How to point a mistake at its line and column and validate the shape"
@@ -25,7 +25,7 @@ and column, in a `Result`.
 npm add @sdxc/cli @sdxc/jsonc @sdxc/result remix
 ```
 
-## The file
+## Write the file
 
 ```jsonc {% title="deploy.jsonc" %}
 {
