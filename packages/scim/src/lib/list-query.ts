@@ -1,7 +1,7 @@
 /**
  * Reads list requests: the query string of `GET /Users` and the `POST /.search` body
- * (RFC 7644 §3.4.2 and §3.4.3), with the RFC's defaults and clamping, and the request body
- * reader that accepts `application/scim+json` and `application/json`.
+ * (RFC 7644 §3.4.2 and §3.4.3, with RFC 9865's `cursor`), with the RFCs' defaults and
+ * clamping, and the request body reader that accepts `application/scim+json` and JSON.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,12 +32,25 @@ export interface ListQueryOptions {
 	maxCount?: number;
 	/** When given, the filter and every path must resolve against these definitions. */
 	attributes?: Discovery.Definitions;
+	/**
+	 * Reads RFC 9865's `cursor` parameter; advertise it as `pagination.cursor`. Off, every
+	 * query pages by index and `cursor` reads as an unknown parameter.
+	 * @default false
+	 */
+	cursor?: boolean;
+	/**
+	 * How a request naming neither `startIndex` nor `cursor` pages, once `cursor` is read;
+	 * advertise it as `pagination.defaultPaginationMethod`.
+	 * @default "index"
+	 */
+	defaultPagination?: "index" | "cursor";
 }
 
 /** A list request's parameters before validation, from either the query string or a search body. */
 interface RawQuery {
 	filter: unknown;
 	startIndex: unknown;
+	cursor: unknown;
 	count: unknown;
 	sortBy: unknown;
 	sortOrder: unknown;
@@ -76,6 +89,31 @@ function readNames(value: unknown, name: string): string[] | ScimError {
 		return badRequest("invalidValue", `${name} must be a list of attribute names.`);
 	}
 	return items.map((item) => item.trim()).filter((item) => item !== "");
+}
+
+/** RFC 3986 §2.3's unreserved characters, the only ones RFC 9865 allows in a cursor. */
+const CURSOR_PATTERN = /^[A-Za-z0-9._~-]*$/;
+
+/**
+ * Reads RFC 9865's `cursor`. An absent cursor pages by index unless `startIndex` is
+ * absent too and cursor paging is the default; a cursor beside a `startIndex` is refused,
+ * since the two name different positions.
+ *
+ * @param raw - The raw parameters
+ * @param options - Whether cursors are read, and the default method
+ * @returns The cursor, `null` to page by index, or `invalidCursor` / `invalidValue`
+ */
+function readCursor(raw: RawQuery, options: ListQueryOptions): string | null | ScimError {
+	if (!options.cursor) return null;
+	let indexed = raw.startIndex !== undefined && raw.startIndex !== null && raw.startIndex !== "";
+	if (raw.cursor === undefined || raw.cursor === null) {
+		return !indexed && options.defaultPagination === "cursor" ? "" : null;
+	}
+	if (indexed) return badRequest("invalidValue", "Send startIndex or cursor, not both.");
+	if (typeof raw.cursor !== "string" || !CURSOR_PATTERN.test(raw.cursor)) {
+		return badRequest("invalidCursor", "The cursor is not one this server issued.");
+	}
+	return raw.cursor;
 }
 
 /**
@@ -130,6 +168,8 @@ function readQuery(raw: RawQuery, options: ListQueryOptions): Result<Scim.ListQu
 	if (startIndex instanceof ScimError) return failure(startIndex);
 	let count = readInteger(raw.count, "count");
 	if (count instanceof ScimError) return failure(count);
+	let cursor = readCursor(raw, options);
+	if (cursor instanceof ScimError) return failure(cursor);
 
 	let sortBy: Filter.AttributePath | null = null;
 	if (raw.sortBy !== undefined && raw.sortBy !== null && raw.sortBy !== "") {
@@ -165,6 +205,7 @@ function readQuery(raw: RawQuery, options: ListQueryOptions): Result<Scim.ListQu
 	return success({
 		filter,
 		startIndex: Math.max(startIndex ?? 1, 1),
+		cursor,
 		count: Math.min(
 			Math.max(count ?? Math.min(options.defaultCount ?? DEFAULT_COUNT, maxCount), 0),
 			maxCount,
@@ -178,12 +219,14 @@ function readQuery(raw: RawQuery, options: ListQueryOptions): Result<Scim.ListQu
 
 /**
  * Parses a list request's query string: `filter`, `startIndex`, `count`, `sortBy`,
- * `sortOrder`, `attributes` and `excludedAttributes`, parameter names matched exactly.
+ * `sortOrder`, `attributes` and `excludedAttributes`, parameter names matched exactly, and
+ * `cursor` when enabled, where a bare `?cursor` asks for the first cursor page.
  *
  * @param url - The request URL
  * @param options - Page sizes, and definitions to validate paths against
- * @returns The query, or `400` with `invalidFilter`, `invalidPath` or `invalidValue`
+ * @returns The query, or `400` with `invalidFilter`, `invalidPath`, `invalidValue` or `invalidCursor`
  * @example parseListQuery(new URL(request.url), { maxCount: 200 })
+ * @example parseListQuery(new URL(request.url), { maxCount: 200, cursor: true })
  */
 export function parseListQuery(
 	url: URL,
@@ -194,6 +237,7 @@ export function parseListQuery(
 		{
 			filter: get("filter"),
 			startIndex: get("startIndex"),
+			cursor: get("cursor"),
 			count: get("count"),
 			sortBy: get("sortBy"),
 			sortOrder: get("sortOrder"),
@@ -231,6 +275,7 @@ export function parseSearchRequest(
 		{
 			filter: readKey(body, "filter"),
 			startIndex: readKey(body, "startIndex"),
+			cursor: readKey(body, "cursor"),
 			count: readKey(body, "count"),
 			sortBy: readKey(body, "sortBy"),
 			sortOrder: readKey(body, "sortOrder"),

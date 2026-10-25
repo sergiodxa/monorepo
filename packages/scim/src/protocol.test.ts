@@ -55,6 +55,7 @@ describe("parseListQuery", () => {
 		expect(query("")).toEqual({
 			filter: null,
 			startIndex: 1,
+			cursor: null,
 			count: 100,
 			sortBy: null,
 			sortOrder: "ascending",

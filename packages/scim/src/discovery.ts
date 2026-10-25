@@ -63,6 +63,26 @@ export namespace Discovery {
 		primary?: boolean;
 	}
 
+	/** RFC 9865 §4's `pagination` capability. */
+	export interface Pagination {
+		cursor: boolean;
+		index: boolean;
+		/** How a request naming neither `startIndex` nor `cursor` pages. */
+		defaultPaginationMethod?: "cursor" | "index";
+		defaultPageSize?: number;
+		maxPageSize?: number;
+		/** The minimum seconds a cursor stays valid between page requests. */
+		cursorTimeout?: number;
+	}
+
+	/** RFC 9967 §4's `securityEvents` capability. */
+	export interface SecurityEvents {
+		/** `none`, `long` when the server goes asynchronous at its discretion, `request` on `Prefer: respond-async`. */
+		asyncRequest: "none" | "long" | "request";
+		/** The event URIs the server can deliver over a SET stream; informational. */
+		eventUris: string[];
+	}
+
 	/** What `serviceProviderConfig` advertises. */
 	export interface ServiceProviderConfigOptions {
 		patch: boolean;
@@ -75,6 +95,10 @@ export namespace Discovery {
 		bulk?: { maxOperations: number; maxPayloadSize: number };
 		authenticationSchemes: AuthenticationScheme[];
 		documentationUri?: string;
+		/** Present only when given; `maxPageSize` should match `filter.maxResults`. */
+		pagination?: Pagination;
+		/** Present only when given; its absence tells clients events are unsupported. */
+		securityEvents?: SecurityEvents;
 	}
 
 	/** One resource endpoint `resourceTypes` lists. */

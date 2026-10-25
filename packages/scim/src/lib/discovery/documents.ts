@@ -55,9 +55,9 @@ export function pickAttributes(
 }
 
 /**
- * The `/ServiceProviderConfig` document (RFC 7643 §5). Bulk is advertised as supported only
- * when its limits are given, and `changePassword` only when enabled, so the document
- * advertises exactly the features the app opted into.
+ * The `/ServiceProviderConfig` document (RFC 7643 §5, with RFC 9865's `pagination` and
+ * RFC 9967's `securityEvents`). Bulk is advertised as supported only when its limits are
+ * given, so the document advertises exactly the features the app opted into.
  *
  * @param options - What the service provider supports
  * @returns The document
@@ -78,6 +78,15 @@ export function serviceProviderConfig(
 		changePassword: { supported: options.changePassword ?? false },
 		sort: { supported: options.sort },
 		etag: { supported: options.etag },
+		...(options.pagination ? { pagination: { ...options.pagination } } : {}),
+		...(options.securityEvents
+			? {
+					securityEvents: {
+						asyncRequest: options.securityEvents.asyncRequest,
+						eventUris: [...options.securityEvents.eventUris],
+					},
+				}
+			: {}),
 		authenticationSchemes: options.authenticationSchemes.map((scheme) => ({ ...scheme })),
 	};
 }
@@ -104,7 +113,7 @@ export function resourceTypes(types: Discovery.ResourceType[]): Record<string, u
 				}
 			: {}),
 	}));
-	return listEnvelope(resources, resources.length, 1);
+	return listEnvelope(resources, { totalResults: resources.length, startIndex: 1 });
 }
 
 /**
@@ -116,5 +125,5 @@ export function resourceTypes(types: Discovery.ResourceType[]): Record<string, u
  */
 export function schemas(definitions: Discovery.SchemaDefinition[]): Record<string, unknown> {
 	let resources = definitions.map((definition) => ({ schemas: [SCHEMA_SCHEMA], ...definition }));
-	return listEnvelope(resources, resources.length, 1);
+	return listEnvelope(resources, { totalResults: resources.length, startIndex: 1 });
 }

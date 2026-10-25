@@ -1,13 +1,15 @@
 # @sdxc/scim
 
-SCIM 2.0 resources, filters, PATCH operations and discovery documents.
+SCIM 2.0 resources, filters, PATCH operations, cursor pagination, discovery documents and events.
 
 SCIM 2.0 is how an enterprise directory (Okta, Microsoft Entra ID, Google Workspace) pushes
 people and groups into a service; [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643) defines the
-resources and [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644) the protocol. This package is the
+resources and [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644) the protocol, which
+[RFC 9865](https://www.rfc-editor.org/rfc/rfc9865) extends with cursors and
+[RFC 9967](https://www.rfc-editor.org/rfc/rfc9967) with events. This package is the
 standard's half of a SCIM endpoint: typed Users and Groups, the filter grammar, PATCH, list
-queries, attribute projection, errors and discovery. Routing, authentication and storage stay
-yours.
+queries, attribute projection, errors, discovery and signed events. Routing, authentication,
+storage and event delivery stay yours.
 
 ## Installation
 
@@ -16,8 +18,9 @@ npm add @sdxc/scim
 ```
 
 Fallible calls return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
-and `@sdxc/scim/data-table` builds predicates for `remix/data-table` from
-[`remix`](https://www.npmjs.com/package/remix).
+`@sdxc/scim/data-table` builds predicates for `remix/data-table` from
+[`remix`](https://www.npmjs.com/package/remix), and `@sdxc/scim/events` signs tokens with
+[`@sdxc/jwt`](https://www.npmjs.com/package/@sdxc/jwt).
 
 ## Usage
 
@@ -133,6 +136,40 @@ if (isFailure(next)) return errorResponse(next.error);
 return scimResponse(userResource(await replaceUser(id, next.data)));
 ```
 
+### Page with cursors
+
+With `cursor: true`, `parseListQuery` reads RFC 9865's `cursor`: `null` pages by `startIndex`,
+`""` asks for the first cursor page. A cursor page answers `nextCursor` until its last page.
+
+```typescript
+let query = parseListQuery(url, { maxCount: 200, cursor: true });
+if (isFailure(query)) return errorResponse(query.error);
+
+if (query.data.cursor !== null) {
+	let page = await store.after(query.data.cursor, query.data.count);
+	if (!page)
+		return errorResponse(new ScimError(400, "Unknown cursor.", { scimType: "invalidCursor" }));
+	return listResponse({ resources: page.users, totalResults, nextCursor: page.next }, toWire);
+}
+```
+
+### Publish an event
+
+`createScimEvent` builds an RFC 9967 Security Event Token typed `secevent+jwt`; delivering it is
+yours (RFC 8935 push, RFC 8936 poll).
+
+```typescript
+import { JWK } from "@sdxc/jwt";
+import { createScimEvent, scimEvents } from "@sdxc/scim/events";
+
+let signed = await createScimEvent({
+	issuer: "https://scim.example.com",
+	audience: "https://receiver.example.com/events",
+	subject: { uri: `/Users/${user.id}`, externalId: user.externalId },
+	events: [scimEvents.patch({ attributes: ["active"] }), scimEvents.deactivate()],
+}).sign(JWK.Algorithm.ES256, keys);
+```
+
 ### Serve discovery
 
 ```typescript
@@ -217,7 +254,9 @@ another type fails `415`, and invalid JSON `400 invalidSyntax`.
 Reads `filter`, `startIndex`, `count`, `sortBy`, `sortOrder`, `attributes` and
 `excludedAttributes` from the query string. `count` defaults to `options.defaultCount` (100) and
 is capped at `options.maxCount`; with `options.attributes`, every path must resolve against those
-definitions.
+definitions. `options.cursor` reads `cursor` too, and `options.defaultPagination: "cursor"` pages
+a request naming neither by cursor; a cursor outside RFC 3986's unreserved set fails
+`invalidCursor`.
 
 #### `parseSearchRequest(body: unknown, options?: ListQueryOptions): Result<Scim.ListQuery, ScimError>`
 
@@ -234,7 +273,8 @@ The RFC 7644 error document, answered with the error's status.
 #### `listResponse(page: Scim.Page, toResource: (resource) => object, init?: ResponseInit): Response`
 
 A `ListResponse` of the page's resources mapped through `toResource`, with `itemsPerPage` set to
-the page length.
+the page length. An index page writes `startIndex`; a cursor page writes `nextCursor` and
+`previousCursor` when set.
 
 #### `project(resource: object, query: Scim.ListQuery, definitions: Discovery.Definitions): object`
 
@@ -312,7 +352,29 @@ The definition narrowed to the named attributes and sub-attributes (`emails.valu
 #### `serviceProviderConfig(options: Discovery.ServiceProviderConfigOptions)`, `resourceTypes(types: Discovery.ResourceType[])`, `schemas(definitions: Discovery.SchemaDefinition[])`
 
 The `/ServiceProviderConfig`, `/ResourceTypes` and `/Schemas` documents, ready for
-`scimResponse`.
+`scimResponse`. `pagination` (RFC 9865) and `securityEvents` (RFC 9967) appear when given.
+
+### `@sdxc/scim/events`
+
+#### `createScimEvent(input: Events.TokenInput): ScimEventToken`
+
+An unsigned token with a fresh `jti`, `iat` now, the subject as a `scim` `sub_id`, the events,
+and `txn` when given.
+
+#### `scimEvents`
+
+One builder per RFC 9967 event: `feedAdd`, `feedRemove`, `create`, `patch`, `put` (`full` with
+`data`, `notice` with `attributes`), `delete`, `activate`, `deactivate` and `asyncResponse`.
+`EVENT_URIS` names each URI.
+
+#### `ScimEventToken`
+
+A `JWT` typed `secevent+jwt`, with `subjectId`, `transaction` and `events` accessors;
+`ScimEventToken.verify` refuses a token of any other type.
+
+#### `prefersAsync(request: Request): boolean`, `acceptedResponse(options): Response`
+
+Reads `Prefer: respond-async`, and answers the empty `202` with `Set-Txn` (`SET_TXN_HEADER`).
 
 ### Types
 
@@ -320,7 +382,7 @@ The `/ServiceProviderConfig`, `/ResourceTypes` and `/Schemas` documents, ready f
 
 The resource model: `Scim.User<Extensions>`, `Scim.Group`, `Scim.Member`, `Scim.Name`,
 `Scim.Address`, `Scim.EnterpriseUser`, `Scim.GroupMembership`, `Scim.MultiValued`, `Scim.Meta`,
-plus `Scim.ListQuery`, `Scim.Page` and `Scim.ErrorType`.
+plus `Scim.ListQuery`, `Scim.Page` (`Scim.IndexPage` or `Scim.CursorPage`) and `Scim.ErrorType`.
 
 #### `Filter`
 
@@ -335,8 +397,13 @@ The tree `parseFilter` returns: `Filter.Expression` is a `Compare`, `Present`, `
 #### `Discovery`
 
 `Discovery.Definitions`, `Discovery.SchemaDefinition`, `Discovery.Attribute`,
-`Discovery.ServiceProviderConfigOptions`, `Discovery.AuthenticationScheme` and
-`Discovery.ResourceType`.
+`Discovery.ServiceProviderConfigOptions`, `Discovery.AuthenticationScheme`,
+`Discovery.Pagination`, `Discovery.SecurityEvents` and `Discovery.ResourceType`.
+
+#### `Events`
+
+`Events.TokenInput`, `Events.Subject`, `Events.SubjectId`, `Events.Event`, `Events.Change` and
+`Events.Completion`.
 
 #### Options and extensions
 

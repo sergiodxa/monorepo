@@ -36,19 +36,30 @@ export function scimResponse(body: object, init: ResponseInit = {}): Response {
  * @example errorResponse(new ScimError(409, "userName is taken.", { scimType: "uniqueness" }))
  */
 export function errorResponse(error: ScimError, init: ResponseInit = {}): Response {
-	let body = {
+	return scimResponse(errorDocument(error), { ...init, status: error.status });
+}
+
+/**
+ * The RFC 7644 §3.12 error document itself, with `status` as a string, for embedding in
+ * another document, such as an asynchronous response event.
+ *
+ * @param error - The refusal
+ * @returns The document
+ */
+export function errorDocument(error: ScimError): Record<string, unknown> {
+	return {
 		schemas: [ERROR_SCHEMA],
 		status: String(error.status),
 		...(error.scimType ? { scimType: error.scimType } : {}),
 		detail: error.message,
 	};
-	return scimResponse(body, { ...init, status: error.status });
 }
 
 /**
- * A `ListResponse` over one page, mapping each resource to its wire object.
+ * A `ListResponse` over one page, mapping each resource to its wire object. An index page
+ * writes `startIndex`; a cursor page writes `nextCursor` and `previousCursor` instead.
  *
- * @param page - The page's resources, the total across pages, and the page's start index
+ * @param page - The page's resources, the total across pages, and its index or cursors
  * @param toResource - Maps one resource to its wire object, where projection also belongs
  * @param init - Status and extra headers
  * @returns The response
@@ -59,5 +70,5 @@ export function listResponse<Resource>(
 	init: ResponseInit = {},
 ): Response {
 	let resources = page.resources.map(toResource);
-	return scimResponse(listEnvelope(resources, page.totalResults, page.startIndex), init);
+	return scimResponse(listEnvelope(resources, page), init);
 }

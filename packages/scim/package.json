@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/scim",
 	"version": "0.0.1",
-	"description": "SCIM 2.0 resources, filters, PATCH operations and discovery documents",
+	"description": "SCIM 2.0 resources, filters, PATCH operations, cursor pagination, discovery documents and events",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -9,14 +9,17 @@
 		"./filter": "./src/filter.ts",
 		"./data-table": "./src/data-table.ts",
 		"./patch": "./src/patch.ts",
-		"./discovery": "./src/discovery.ts"
+		"./discovery": "./src/discovery.ts",
+		"./events": "./src/events.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sdxc/iife": "workspace:*",
+		"@sdxc/jwt": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {

@@ -124,8 +124,13 @@ export namespace Scim {
 	/** A list request's parameters, RFC 7644 §3.4.2, with the RFC's defaults and clamping applied. */
 	export interface ListQuery {
 		filter: Filter.Expression | null;
-		/** One-based, at least 1. */
+		/** One-based, at least 1; the page's position when `cursor` is `null`. */
 		startIndex: number;
+		/**
+		 * The RFC 9865 cursor: `null` pages by `startIndex`, `""` asks for the first cursor
+		 * page, and any other value is a `nextCursor` or `previousCursor` the server minted.
+		 */
+		cursor: string | null;
 		/** From 0 through the configured `maxCount`. */
 		count: number;
 		sortBy: Filter.AttributePath | null;
@@ -134,15 +139,29 @@ export namespace Scim {
 		excludedAttributes: Filter.AttributePath[];
 	}
 
-	/** One page of results for `listResponse`. */
-	export interface Page<Resource> {
+	/** One page of results for `listResponse`, positioned by index or by cursor. */
+	export type Page<Resource> = IndexPage<Resource> | CursorPage<Resource>;
+
+	/** A page positioned by `startIndex`, RFC 7644 §3.4.2.4. */
+	export interface IndexPage<Resource> {
 		resources: Resource[];
 		/** Matches across every page, not the length of this one. */
 		totalResults: number;
 		startIndex: number;
 	}
 
-	/** RFC 7644 §3.12 Table 9's `scimType` values. */
+	/** A page positioned by cursor, RFC 9865 §2; the response carries no `startIndex`. */
+	export interface CursorPage<Resource> {
+		resources: Resource[];
+		/** Matches across every page; RFC 9865 lets a server that cannot count leave it out. */
+		totalResults?: number;
+		/** The cursor of the following page; `null` or absent marks this page as the last. */
+		nextCursor?: string | null;
+		/** The cursor of the preceding page; RFC 9865 forbids one on the first page. */
+		previousCursor?: string | null;
+	}
+
+	/** RFC 7644 §3.12 Table 9's `scimType` values, with RFC 9865 §2.1's pagination errors. */
 	export type ErrorType =
 		| "invalidFilter"
 		| "tooMany"
@@ -153,7 +172,10 @@ export namespace Scim {
 		| "noTarget"
 		| "invalidValue"
 		| "invalidVers"
-		| "sensitive";
+		| "sensitive"
+		| "invalidCursor"
+		| "expiredCursor"
+		| "invalidCount";
 }
 
 export type { ScimErrorOptions } from "./lib/error.js";

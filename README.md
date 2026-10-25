@@ -169,7 +169,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/passkey](packages/passkey)                 | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it                             |
 | [@sdxc/password-policy](packages/password-policy) | Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse        |
 | [@sdxc/saml](packages/saml)                       | SAML 2.0 service provider: verify a signed assertion and the metadata around it                                |
-| [@sdxc/scim](packages/scim)                       | SCIM 2.0 resources, filters, PATCH operations and discovery documents                                          |
+| [@sdxc/scim](packages/scim)                       | SCIM 2.0 resources, filters, PATCH operations, cursor pagination, discovery documents and events               |
 | [@sdxc/well-known](packages/well-known)           | Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more |
 
 ### Security and Abuse Prevention
