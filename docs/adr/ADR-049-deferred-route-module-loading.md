@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented** - 2026-09-06
+**Implemented** - 2026-09-06; amended 2026-10-25 to accept guards that publish a context value
 
 ## Background
 
@@ -89,10 +89,13 @@ checks its params and its request context exactly as a static import did.
 A second argument takes middleware to run ahead of whatever the module declares. It
 exists because a stand-in is an object rather than a function, so it cannot be the
 `handler` of an outer action object, and a composition root that owns a group's guards
-would otherwise have to push them into each module. It is typed as middleware with no
-context transform, so a middleware that publishes a context value is rejected there:
-the loaded handler's type is the module's own and cannot grow to know a value declared
-at the map call.
+would otherwise have to push them into each module. It accepts any middleware,
+including one that publishes a context value such as `captcha()`. The loaded handler's
+type is the module's own and cannot grow to know a value declared at the map call, so it
+reads that value typed through the publishing package's declaration on `RequestContext`,
+which the packages that publish one already make. An earlier version rejected publishing
+middleware here, which blocked guarding a lazy route with `captcha()` without making any
+value safer to read.
 
 ## Consequences
 

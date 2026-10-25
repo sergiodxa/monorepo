@@ -18,12 +18,12 @@ export interface LoadedMiddleware {
 }
 
 /**
- * Middleware declared at the map call rather than inside the module. Typed as a
- * `Middleware` with no context transform, so a middleware that publishes a context
- * value is rejected here: the loaded handler's type is the module's own and cannot
- * grow to know about a value declared at the map call.
+ * Middleware declared at the map call rather than inside the module, publishing context
+ * values or not. A value it publishes reaches the loaded handler at runtime; the handler's
+ * type is the module's own, so it reads that value typed when the publishing package
+ * declares it on `RequestContext`, as `captcha()` does for `ctx.captcha`.
  */
-export type FrontMiddleware = Middleware;
+export type FrontMiddleware = Middleware<any>;
 
 /** A loaded controller, whose actions are keyed by the names of a route map. */
 export interface LoadedController {

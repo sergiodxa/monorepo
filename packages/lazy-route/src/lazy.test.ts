@@ -448,7 +448,7 @@ describe("lazy", () => {
 		expect(loads).toBe(1);
 	});
 
-	test("rejects middleware that publishes a context value", () => {
+	test("accepts middleware that publishes a context value, and the module reads it", async () => {
 		let Value = createContextKey<string>();
 
 		let provider = createMiddleware<[Middleware<{ key: typeof Value; value: string }>]>(
@@ -458,11 +458,19 @@ describe("lazy", () => {
 			},
 		)[0];
 
-		lazy(
-			async () => ({ default: () => new Response("home") }),
-			// @ts-expect-error -- the loaded handler's type is the module's own, so it cannot
-			// grow to know a value declared here; publish it from the router or the module.
-			[provider],
+		let router = createRouter();
+		router.map(
+			ROUTES.home,
+			lazy(
+				async () => ({
+					default: (context: RequestContext) => new Response(context.get(Value)),
+				}),
+				[provider],
+			),
 		);
+
+		let response = await router.fetch(get("/"));
+
+		expect(await response.text()).toBe("set");
 	});
 });

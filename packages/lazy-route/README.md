@@ -101,7 +101,7 @@ function lazy<module>(
 
 Returns a stand-in typed as the module's default export (or as the resolved value when it has no `default`), to pass wherever `router.map()` takes an action or a controller. `load` runs on the first matching request and its result serves every request after it, including a rejected import.
 
-`middleware` runs before the module's own chain. It takes middleware with no context transform: publish context values from the router's chain or from inside the module.
+`middleware` runs before the module's own chain. A context value it publishes reaches the loaded handler, typed there when its package declares it on `RequestContext`, as `captcha()` does for `ctx.captcha`.
 
 Because the stand-in keeps the module's type, mapping a controller to a single route, an action to a route map, or a controller missing a declared action is a type error at `router.map()`. The router's own runtime checks for those mistakes run on the first request instead, and throw a `TypeError` naming the problem.
 
