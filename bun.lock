@@ -1300,6 +1300,22 @@
         "vitest",
       ],
     },
+    "packages/jscalendar": {
+      "name": "@sdxc/jscalendar",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/dates": "workspace:*",
+        "@sdxc/icalendar": "workspace:*",
+        "@sdxc/json-pointer": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
+      },
+    },
     "packages/jsdoc": {
       "name": "@sdxc/jsdoc",
       "version": "0.0.1",
