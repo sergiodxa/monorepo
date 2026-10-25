@@ -247,6 +247,12 @@ instead of Turnstile's. Every failure carries a `code` that separates what the v
 (`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that answers
 `null` for `unavailable` keeps sign-ups open through a provider outage.
 
+`PrivacyPassCaptcha` from `@sdxc/captcha/privacy-pass` is a provider with no widget at all: it
+redeems the Privacy Pass token a client sends in `Authorization` and answers a missing one with a
+`401` challenge the client retries. [Accept Privacy Pass tokens instead of a
+CAPTCHA](/docs/identity-and-security/privacy-pass) gates a route on tokens and keeps the widget
+for clients that hold none.
+
 <warning>
 An `onFailure` that lets `unavailable` through opens the form to every bot for as long as the
 provider is down. Choose it only while the honeypot, the budget and the spam score stay in

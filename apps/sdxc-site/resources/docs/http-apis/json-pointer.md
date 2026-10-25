@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to parse and stringify RFC 6901 pointers with `@sdxc/json-pointer`"
     - "How to read and write a value at a pointer"
@@ -20,6 +20,8 @@ points at that member. The empty string is the whole document.
 [`@sdxc/result`](/api/result), so a missing path is a branch rather than `undefined`.
 [`@sdxc/problem`](/api/problem) writes the same pointers onto validation issues, and
 [`@sdxc/merge-patch`](/api/merge-patch) names the member a patch cannot express.
+[`@sdxc/json-patch`](/api/json-patch) aims every operation at a pointer, and each node
+[`@sdxc/jsonpath`](/api/jsonpath) selects carries a location that `stringify` turns into one.
 
 ```bash
 npm add @sdxc/json-pointer @sdxc/result

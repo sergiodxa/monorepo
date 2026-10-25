@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"
     - "How to describe a weekly series in a time zone and offer a single event as a download"
@@ -326,6 +326,11 @@ instant; this import skips them, and yours could store the date alone. A recurri
 file expands with `occurrences(event, { from, to, calendar })`, passing the parsed `calendar`
 so its time zones are the ones the file defined. Store `event.uid` and upsert on it, so a second
 import of the same file updates rows instead of duplicating them.
+
+To keep each imported event whole, with its rules, overrides, alerts and participants, store it
+as JSON: `fromICalendar` from `@sdxc/jscalendar/icalendar` turns the parsed calendar into
+JSCalendar objects, and `toICalendar` writes them back for this feed, as
+[Model events and tasks as JSCalendar](/docs/content-and-feeds/jscalendar) shows.
 
 ## Invite people by email
 

@@ -128,7 +128,8 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 
 [Paginate lists](/docs/http-apis/paginate-lists) is the server side of those headers.
 [Write a typed API client](/docs/http-apis/api-clients) does the same walk behind a schema
-on each page.
+on each page. When an API hands out a template such as `/books{?page}` rather than a finished
+link, [Expand URI templates](/docs/http-apis/uri-templates) fills it in.
 
 ## Test the merge
 

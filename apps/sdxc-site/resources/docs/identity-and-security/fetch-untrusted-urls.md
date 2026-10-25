@@ -411,6 +411,14 @@ hop checks, deadline and caps apply without your code calling it:
   document only when its `id` has the origin the chain ended at. Deliveries go to an inbox that
   passed the same checks, with `redirect: "manual"`;
   [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) builds on both.
+- [`@sdxc/privacy-pass`](/api/privacy-pass) reads an issuer's key directory on the default
+  port within ten seconds, and
+  [Accept Privacy Pass tokens instead of a CAPTCHA](/docs/identity-and-security/privacy-pass)
+  builds on it.
+- [`@sdxc/email-auth`](/api/email-auth) fetches a domain's MTA-STS policy as a sending server
+  does, with `maxRedirects: 0` and a 64 KiB cap;
+  [Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
+  serves and checks one.
 
 Each keeps its own error type and maps from `OutboundError` at its boundary, the way
 `downloadCalendar` does.

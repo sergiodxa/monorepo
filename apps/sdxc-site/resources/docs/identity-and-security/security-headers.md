@@ -279,6 +279,12 @@ document is the same for every visitor. Keep `expires` a literal date, and add a
 30 days before it with `isExpired(SECURITY_TXT, thirtyDaysFromNow)`: a date computed from the
 clock keeps the file looking fresh while the inbox behind it goes stale.
 
+RFC 9116 also recommends signing the file, so a researcher can trust the contact even when the
+page around it was tampered with. Pass `transform: cleartextSigner({ key: () => env.OPENPGP_SIGNING_KEY })`
+to `serve` and the file goes out as an OpenPGP cleartext signed message;
+[Sign files and security.txt with OpenPGP](/docs/identity-and-security/openpgp-signatures)
+makes the key and tests the signature.
+
 ## Test the headers
 
 Request a page your app maps, `/` here, through the router and read the headers back, then post

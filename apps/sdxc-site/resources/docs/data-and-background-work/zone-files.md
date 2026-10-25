@@ -221,6 +221,12 @@ The comparison sends one query per name and type, which adds up on a large zone,
 background job and keep the request to the import.
 </note>
 
+Matching text tells you a TXT record is live, and a DMARC, SPF or DKIM record also has to read
+the way a mail receiver reads it. `parseDmarcRecord`, `parseSpfRecord` and `parseDkimRecord`
+from [`@sdxc/email-auth`](/api/email-auth) check an imported record's text;
+[Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
+evaluates the live ones.
+
 ## Export the zone
 
 `stringify` writes records back as a zone file. With `relative: true`, names under the origin are

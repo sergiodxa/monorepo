@@ -138,6 +138,10 @@ credential is `syncable` and `backedUp`. Authentication later needs `id`, `publi
 `counter` back. Keep them in a table of your own, beside the account id and a `suspended` flag;
 the controllers below reach it through a small `Passkeys` model of yours.
 
+`publicKey` is the authenticator's COSE key in base64url: a CBOR map with integer labels.
+Store it as it arrives; [Encode and decode CBOR](/docs/http-apis/cbor) reads it with
+`@sdxc/cbor` when a settings page wants each passkey's thumbprint or a JWK.
+
 ## Enroll a passkey
 
 Enrollment runs for somebody already signed in, because a passkey belongs to an account. That

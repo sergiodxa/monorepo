@@ -290,6 +290,11 @@ contact behind it goes stale, whereas a literal one, plus a test that fails 30 d
 passes, makes a person review the contact once a year.
 </note>
 
+To serve the file signed, as RFC 9116 recommends, give `serve` the `cleartextSigner` transform
+from `@sdxc/well-known/security-txt`;
+[Sign files and security.txt with OpenPGP](/docs/identity-and-security/openpgp-signatures)
+shows the key and the wiring.
+
 ## Test the crawl files
 
 The robots file decides by host, so a test asks the router for it on a preview host and on

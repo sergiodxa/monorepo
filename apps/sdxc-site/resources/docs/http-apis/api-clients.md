@@ -203,6 +203,9 @@ receives only your trace id, or `"none"`, so it receives no trace headers.
 `books()` follows the server's `Link` header rather than building cursors itself. The `next`
 target is an absolute URL, and resolving an absolute URL against the base URL leaves it as it
 is, so a caller walks the whole list by handing each `next` back until it is `null`.
+An API that publishes URI templates instead, such as `https://books.example.com/api/books/{id}`
+in a root document, is followed the same way: expand what it publishes, as
+[Expand URI templates](/docs/http-apis/uri-templates) shows.
 
 `createBook` takes the idempotency key from its caller, who mints it once with
 `generateIdempotencyKey()` and passes the same one on every retry, as

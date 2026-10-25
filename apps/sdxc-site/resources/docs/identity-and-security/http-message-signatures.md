@@ -395,7 +395,9 @@ for a proxy that inspects signatures or a test that builds one by hand:
 ## Attach digests on their own
 
 A digest alone proves the body arrived as it was sent; a signature over the digest proves who
-sent it. The digest by itself still earns its place on a large download, an upload resumed in
+sent it. For a file people keep after the response is gone, a detached
+[OpenPGP signature](/docs/identity-and-security/openpgp-signatures) beside it proves who
+published it to anyone with `gpg`. The digest by itself still earns its place on a large download, an upload resumed in
 parts, or a cached response, where corruption is the risk rather than forgery.
 
 The fields name two different things. `Content-Digest` is the hash of the content of this
@@ -446,7 +448,9 @@ export default createAction(routes.exports.download, async (ctx) => {
 `digest` hashes with `sha-256` or `sha-512`; text is read as UTF-8, so pass the exact bytes sent
 when they are not UTF-8 text. `stringify` writes `sha-256=:…:` for the RFC 9530 fields, and an
 empty value answers `""`, which means "send no field". `"repr-digest"` writes `Repr-Digest`
-with the same call.
+with the same call. A `Repr-Digest` should change only when the representation does, so
+serialize a JSON body built per request in [canonical form](/docs/http-apis/canonical-json)
+and equal exports always carry the same digest.
 
 <note>
 Both fields describe the bytes as encoded, so compute them where the body is final: a layer

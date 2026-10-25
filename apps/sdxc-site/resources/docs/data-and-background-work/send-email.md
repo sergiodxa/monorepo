@@ -26,6 +26,8 @@ Each message here goes to one person because of something they did. Mail to a li
 belongs on a newsletter platform, which keeps their consent, their unsubscribe links and the
 sending reputation; [Run a newsletter list](/docs/data-and-background-work/newsletter) puts
 readers on one.
+Mail sent from a person's own mailbox, as them, goes through their provider instead;
+[Read and send mail over JMAP](/docs/data-and-background-work/jmap) does that with Fastmail.
 
 ```bash
 npm add @sdxc/database-middleware @sdxc/http @sdxc/i18n @sdxc/jobs @sdxc/logger @sdxc/mail \
@@ -191,6 +193,8 @@ export async function queue(delivery: QueuedEmail): Promise<void> {
 <note>
 `CloudflareTransport` delivers through the Workers email sending binding, so the Worker needs a
 `send_email` binding named `EMAIL` and a verified sending domain.
+[Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
+reads the DMARC, SPF and DKIM records receivers judge that domain by.
 </note>
 
 Each transport ships from its

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to make a create safe to retry with an `Idempotency-Key`"
     - "How to accept partial updates as JSON Merge Patch"
@@ -210,9 +210,10 @@ Every attempt sends the same `init`, key and body included, so the book is creat
 however many attempts it takes.
 
 <note>
-Every retry sends the same bytes: the middleware fingerprints the method, path, content type
-and body, and answers `422` when a reused key arrives with a different one. Serialize the body
-once and keep it.
+Every retry sends the same payload: the middleware fingerprints the method, path, content type
+and body, and answers `422` when a reused key arrives with a different one. A JSON body counts
+in its [canonical form](/docs/http-apis/canonical-json), so reordered keys and whitespace still
+match; any other body counts byte for byte. Serialize the body once and keep it.
 </note>
 
 For work retried by a queue, `await deriveIdempotencyKey(message.id, "create-book")` gives
@@ -379,7 +380,9 @@ A caller passes only what changes, `patchBook(id, { year: 1979, summary: null })
 
 `If-Match` carries the `ETag` from the `GET` the edit started from. A client holding the edited copy
 instead of a patch computes one with `diff(original, edited)`, which fails before sending when
-the edit sets a member to a literal `null`, something a merge patch cannot express.
+the edit sets a member to a literal `null`, something a merge patch cannot express. An API
+that needs an explicit `null`, an edit to one array element, or a per-member precondition
+accepts [JSON Patch](/docs/http-apis/json-patch) beside merge patch.
 
 To publish the update in your [OpenAPI document](/docs/http-apis/openapi), give the operation a
 `body` record naming both media types, `{ "application/merge-patch+json": BOOK_PATCH,

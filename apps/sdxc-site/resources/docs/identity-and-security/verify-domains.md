@@ -439,3 +439,5 @@ so `QUEUE` in `app/test/cloudflare-workers.ts` receives that message.
   generator and the rest of `@sdxc/crypto`.
 - [`@sdxc/doh`](/api/doh) — `resolve` for any record type, and the error classes that tell a
   missing name from a failing resolver.
+- [Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
+  — the DMARC, SPF and DKIM records to check once you send mail from a proven domain.

@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to encode a link at the error correction level its surface needs with `@sdxc/qr`"
     - "How to render a QR code inline with `remix/component` and keep it inside its layout"
@@ -52,6 +52,11 @@ a phone screen does well with `L` or `M`; a printed ticket that gets folded and 
 `boostLevel`, on by default, raises the level as far as the chosen symbol still holds the data,
 since that extra correction costs nothing. The symbol reports what it got: `version` (1 to 40),
 `level` after the boost, `mask`, and `size`, the modules a side.
+
+A code holds any text a scanner understands. Encode vCard text, written by `stringifyVCard` from
+`@sdxc/jscontact/vcard`, and a phone camera offers to save the contact; a badge then carries
+the person instead of a link to them, as
+[Offer and import contact cards](/docs/content-and-feeds/contact-cards) builds.
 
 ## Keep a code inside its layout
 

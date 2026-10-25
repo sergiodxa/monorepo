@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 12
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to lay out a month grid and place events on it in the viewer's zone with `@sdxc/dates`"
     - "How to read a report's day range from the query string"
@@ -205,6 +205,11 @@ locale's own month name and order.
 
 For a date picker rather than an events calendar, `Calendar` and `DatePicker` in
 [`@sdxc/ui`](/api/ui) draw the grid and own the keyboard.
+
+A recurring event lands on the grid once per occurrence. Stored as JSCalendar, it expands with
+`occurrences(event, { from, to, timeZone })` from `@sdxc/jscalendar/recurrence` over
+`month.interval`, overrides applied, as
+[Model events and tasks as JSCalendar](/docs/content-and-feeds/jscalendar) shows.
 
 ## Read a report's day range
 

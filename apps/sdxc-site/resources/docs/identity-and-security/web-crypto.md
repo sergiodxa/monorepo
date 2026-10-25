@@ -222,14 +222,18 @@ A missing secret fails closed on both sides: no link is minted and none is accep
 `hmac.verify` recomputes the signature and compares in constant time, so response timing does
 not reveal how much of a forged signature was right, and a `sig` that is not valid hex is a
 plain mismatch. Signing the JSON array of the values keeps the payload unambiguous, so
-`("a:b", "c")` and `("a", "b:c")` cannot produce the same signature.
+`("a:b", "c")` and `("a", "b:c")` cannot produce the same signature. To sign an object, sign
+its [canonical JSON](/docs/http-apis/canonical-json): `JSON.stringify` writes members in
+insertion order, so an equal object built in another order would not verify.
 
 This link never expires, which suits an unsubscribe. For one that should, put the expiry in
 the signed payload, or issue a [JWT](/docs/identity-and-security/json-web-tokens) when a
 different service has to verify it without your secret. Webhooks are the same idea with a
 standard around it: [Receive and send webhooks](/docs/identity-and-security/webhooks) uses
 [`@sdxc/webhooks`](/api/webhooks), which handles the timestamps, replay checks and secret
-rotation.
+rotation. When anyone outside your services must check a signature, such as a file people
+download, sign it with a private key they verify with your public one:
+[Sign files and security.txt with OpenPGP](/docs/identity-and-security/openpgp-signatures).
 
 ## Seal secrets at rest
 
