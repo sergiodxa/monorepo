@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare emails in a `@sdxc/mail` registry and write their templates"
     - "How to send, defer or queue an email by name from requests, jobs and commands"
@@ -58,16 +58,14 @@ export default emails({
 });
 ```
 
-Each declaration is named by its path, `postings.published`.
+Each declaration is named by its path, `postings.published`. Importing the map costs the
+schemas alone, so a controller sends an email without loading the module that renders it, and
+the schema parses the props on every send.
 
 <warning>
 The declaration's name travels with every queued delivery, so rename it only when no delivery
 under the old name is waiting: the job exits on a name nothing maps.
 </warning>
-
-Importing
-the map costs the schemas alone, so a controller sends an email without loading the module that
-renders it, and the props are parsed by the schema on every send.
 
 ## Write the template
 
@@ -197,9 +195,9 @@ export async function queue(delivery: QueuedEmail): Promise<void> {
 reads the DMARC, SPF and DKIM records receivers judge that domain by.
 </note>
 
-Each transport ships from its
-own subpath, so importing this one never pulls another provider into your bundle. The
-dispatcher loads when the first email is queued, since its own middleware imports this module.
+Each transport ships from its own subpath, so importing this one keeps every other provider
+out of your bundle. `queue` imports the dispatcher when the first email is queued, because the
+dispatcher's own middleware imports this module.
 
 `@sdxc/mail/middleware` publishes a request-scoped mailer as `ctx.email`:
 
@@ -332,8 +330,8 @@ A mailer sends a declared email three ways:
 Await `send()` when the response depends on whether the email went out, such as a password
 reset. `queue()` validates the props before the delivery enters the queue, so a refused prop
 fails here, where the caller can fix it, and the queue carries only plain JSON. Every delivery
-also accepts `from`, `cc`, `bcc`, `replyTo` and `headers`. None of them throws: a render
-failure, an invalid address and a provider refusal all arrive as a `MailError` failure.
+also accepts `from`, `cc`, `bcc`, `replyTo` and `headers`. A render failure, an invalid
+address and a provider refusal all arrive as a `MailError` failure value.
 
 ## Deliver queued email
 
@@ -401,21 +399,10 @@ sdxc run emails preview postings.published --locale es
 `sdxc doctor` fails on an email `app/emails/index.ts` declares and nothing maps, and warns on a
 template without a test or without `preview`.
 
-`mail.preview()` renders an email with its template's `preview` props, in the language you
-name, and `mail.mapped` lists every declaration the registry maps, for code of your own that
-shows them. `emails` is the map from `app/emails/index.ts`:
-
-```typescript
-import { mail } from "~/app/initializers/mail";
-
-let rendered = await mail.preview(emails.postings.published, "es");
-let names = mail.mapped.map((email) => email.name);
-```
-
-`mail.preview("postings.published")` takes the name as well. `mail.render(email, { locale,
-props })` renders any props you pass. Both answer a `Result` holding the `subject`, `html` and
-`text`, and a template with no `preview` answers a failure from `preview()`. `mail.hasPreview(email)`
-reports whether an email's template has `preview`, loading it without rendering anything.
+For a preview screen of your own, `mail.mapped` lists every declaration the registry maps,
+`mail.preview(email, locale)` renders one with its template's `preview` props, and
+`mail.hasPreview(email)` reports whether its template has them. `preview()` answers a `Result`
+holding the `subject`, `html` and `text`, and a failure for a template with no `preview`.
 
 ## Test with the memory transport
 
@@ -512,8 +499,3 @@ from a laptop without reaching a real inbox.
   delivery job runs in.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — the request side of the
   same message bundles.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
-  component model the email body uses.
-- [Run a newsletter list](/docs/data-and-background-work/newsletter) — mail to subscribers,
-  sent by the platform that holds the list.
-- [Test Workers apps](/docs/operations-and-testing/testing) — more on driving the app in a test.
