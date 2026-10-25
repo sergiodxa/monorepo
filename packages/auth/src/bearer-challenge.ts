@@ -1,7 +1,8 @@
 /**
  * The `WWW-Authenticate` challenge a bearer-token API answers a refusal with: RFC 6750 §3
  * parameters, RFC 9470's step-up `acr_values` and `max_age`, and RFC 9728's
- * `resource_metadata`, written with RFC 9110 quoting and read from a multi-scheme header.
+ * `resource_metadata`, written with RFC 9110 quoting and read from a multi-scheme header;
+ * RFC 9449's `DPoP` scheme shares the parameters and adds `algs`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,9 @@ export type BearerError =
 	| "invalid_token"
 	| "insufficient_scope"
 	| "insufficient_user_authentication";
+
+/** The error codes a `DPoP` challenge carries: the bearer ones plus RFC 9449 §7.1's and §9's. */
+export type DPoPError = BearerError | "invalid_dpop_proof" | "use_dpop_nonce";
 
 /** One `Bearer` challenge, with its registered parameters typed and the rest kept by name. */
 export interface BearerChallenge {
@@ -43,6 +47,13 @@ export interface BearerChallenge {
 	extensions: Record<string, string>;
 }
 
+/** One `DPoP` challenge (RFC 9449 §7.1): the bearer parameters plus the accepted `algs`. */
+export interface DPoPChallenge extends Omit<BearerChallenge, "error"> {
+	error: DPoPError | null;
+	/** The JWS algorithms the server accepts a proof signed with. */
+	algs: string[];
+}
+
 /** Why a `WWW-Authenticate` value could not be read, with the offset where it broke. */
 export class ChallengeParseError extends Error {
 	override name = "ChallengeParseError";
@@ -59,8 +70,12 @@ export class ChallengeParseError extends Error {
 	}
 }
 
-/** The scheme name RFC 6750 §3 registers, compared case-insensitively. */
-const BEARER = "bearer";
+/** How one scheme's challenge is read: its name and the `error` codes it registers. */
+interface SchemeRules {
+	/** The scheme as written, compared case-insensitively. */
+	name: string;
+	errors: readonly string[];
+}
 
 /** The registered codes, which a parsed `error` is held to. */
 const BEARER_ERRORS: readonly string[] = [
@@ -69,6 +84,15 @@ const BEARER_ERRORS: readonly string[] = [
 	"insufficient_scope",
 	"insufficient_user_authentication",
 ];
+
+/** The `Bearer` scheme of RFC 6750 §3. */
+const BEARER: SchemeRules = { name: "Bearer", errors: BEARER_ERRORS };
+
+/** The `DPoP` scheme of RFC 9449 §7.1. */
+const DPOP: SchemeRules = {
+	name: "DPoP",
+	errors: [...BEARER_ERRORS, "invalid_dpop_proof", "use_dpop_nonce"],
+};
 
 /** A `max_age` RFC 9470 §3 can mean: a non-negative whole number of seconds. */
 const SECONDS = /^\d+$/;
@@ -277,21 +301,29 @@ function readChallenges(header: string): Result<RawChallenge[], ChallengeParseEr
 }
 
 /**
- * Gives a raw `Bearer` challenge its RFC 6750 meaning.
+ * Gives a raw challenge its registered meaning under one scheme's rules.
  *
- * @param raw - A challenge whose scheme is `Bearer`.
+ * @param raw - A challenge whose scheme is the one `rules` names.
  * @param offset - Where the header ended, which a failure names.
- * @returns The typed challenge; a token68 or a repeated parameter fails, since RFC 6750
- *   §3 allows neither.
+ * @param rules - The scheme's name and registered error codes.
+ * @returns The typed challenge; a token68 or a repeated parameter fails, since neither
+ *   RFC 6750 §3 nor RFC 9449 §7.1 allows one.
  */
-function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, ChallengeParseError> {
+function toChallenge(
+	raw: RawChallenge,
+	offset: number,
+	rules: SchemeRules,
+): Result<DPoPChallenge, ChallengeParseError> {
 	if (raw.token68 !== null) {
 		return failure(
-			new ChallengeParseError("A Bearer challenge carries parameters, not a token68", offset),
+			new ChallengeParseError(
+				`A ${rules.name} challenge carries parameters, not a token68`,
+				offset,
+			),
 		);
 	}
 
-	let challenge: BearerChallenge = {
+	let challenge: DPoPChallenge = {
 		realm: null,
 		scope: [],
 		error: null,
@@ -300,13 +332,16 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 		acrValues: [],
 		maxAge: null,
 		resourceMetadata: null,
+		algs: [],
 		extensions: {},
 	};
 	let seen = new Set<string>();
 
 	for (let [name, value] of raw.params) {
 		if (seen.has(name)) {
-			return failure(new ChallengeParseError(`The Bearer challenge repeats "${name}"`, offset));
+			return failure(
+				new ChallengeParseError(`The ${rules.name} challenge repeats "${name}"`, offset),
+			);
 		}
 		seen.add(name);
 
@@ -314,9 +349,10 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 		else if (name === "scope") challenge.scope = value.split(" ").filter(Boolean);
 		else if (name === "acr_values") challenge.acrValues = value.split(" ").filter(Boolean);
 		else if (name === "max_age" && SECONDS.test(value)) challenge.maxAge = Number(value);
+		else if (name === "algs" && rules === DPOP) challenge.algs = value.split(" ").filter(Boolean);
 		else if (name === "error_description") challenge.errorDescription = value;
-		else if (name === "error" && BEARER_ERRORS.includes(value)) {
-			challenge.error = value as BearerError;
+		else if (name === "error" && rules.errors.includes(value)) {
+			challenge.error = value as DPoPError;
 		} else if (name === "error_uri" && URL.canParse(value)) challenge.errorUri = new URL(value);
 		else if (name === "resource_metadata" && URL.canParse(value)) {
 			challenge.resourceMetadata = new URL(value);
@@ -324,6 +360,31 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 	}
 
 	return success(challenge);
+}
+
+/**
+ * Reads every challenge of one scheme out of a header.
+ *
+ * @param header - The header value.
+ * @param rules - The scheme to read.
+ */
+function parseScheme(
+	header: string,
+	rules: SchemeRules,
+): Result<DPoPChallenge[], ChallengeParseError> {
+	let raw = readChallenges(header);
+	if (isFailure(raw)) return raw;
+
+	let challenges: DPoPChallenge[] = [];
+
+	for (let challenge of raw.data) {
+		if (challenge.scheme.toLowerCase() !== rules.name.toLowerCase()) continue;
+		let typed = toChallenge(challenge, header.length, rules);
+		if (isFailure(typed)) return typed;
+		challenges.push(typed.data);
+	}
+
+	return success(challenges);
 }
 
 /**
@@ -335,6 +396,33 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 function quote(value: string): string {
 	let safe = value.replace(CONTROL_CHARACTERS, " ").replace(/["\\]/g, "\\$&");
 	return `"${safe}"`;
+}
+
+/**
+ * Writes one challenge under a scheme, every value quoted, absent ones left out.
+ *
+ * @param scheme - The scheme name.
+ * @param challenge - The parameters to send.
+ */
+function write(scheme: string, challenge: Partial<DPoPChallenge>): string {
+	let params: [string, string | null | undefined][] = [
+		["realm", challenge.realm],
+		["scope", challenge.scope?.length ? challenge.scope.join(" ") : null],
+		["error", challenge.error],
+		["error_description", challenge.errorDescription],
+		["error_uri", challenge.errorUri?.href],
+		["acr_values", challenge.acrValues?.length ? challenge.acrValues.join(" ") : null],
+		["max_age", challenge.maxAge == null ? null : String(challenge.maxAge)],
+		["algs", challenge.algs?.length ? challenge.algs.join(" ") : null],
+		["resource_metadata", challenge.resourceMetadata?.href],
+		...Object.entries(challenge.extensions ?? {}),
+	];
+
+	let written = params.flatMap(([name, value]) =>
+		value === null || value === undefined ? [] : [`${name}=${quote(value)}`],
+	);
+
+	return written.length === 0 ? scheme : `${scheme} ${written.join(", ")}`;
 }
 
 /**
@@ -351,23 +439,19 @@ function quote(value: string): string {
  * stringify({ error: "insufficient_user_authentication", acrValues: ["mfa"], maxAge: 300 });
  */
 export function stringify(challenge: Partial<BearerChallenge>): string {
-	let params: [string, string | null | undefined][] = [
-		["realm", challenge.realm],
-		["scope", challenge.scope?.length ? challenge.scope.join(" ") : null],
-		["error", challenge.error],
-		["error_description", challenge.errorDescription],
-		["error_uri", challenge.errorUri?.href],
-		["acr_values", challenge.acrValues?.length ? challenge.acrValues.join(" ") : null],
-		["max_age", challenge.maxAge == null ? null : String(challenge.maxAge)],
-		["resource_metadata", challenge.resourceMetadata?.href],
-		...Object.entries(challenge.extensions ?? {}),
-	];
+	return write(BEARER.name, challenge);
+}
 
-	let written = params.flatMap(([name, value]) =>
-		value === null || value === undefined ? [] : [`${name}=${quote(value)}`],
-	);
-
-	return written.length === 0 ? "Bearer" : `Bearer ${written.join(", ")}`;
+/**
+ * Writes one `DPoP` challenge, in the same order as {@link stringify} with `algs` before
+ * `resource_metadata`.
+ *
+ * @param challenge - The parameters to send; absent, `null` and empty ones are left out.
+ * @example
+ * stringifyDPoP({ algs: ["ES256"], error: "use_dpop_nonce" });
+ */
+export function stringifyDPoP(challenge: Partial<DPoPChallenge>): string {
+	return write(DPOP.name, challenge);
 }
 
 /**
@@ -381,17 +465,22 @@ export function stringify(challenge: Partial<BearerChallenge>): string {
  * let challenges = parse(response.headers.get("www-authenticate") ?? "");
  */
 export function parse(header: string): Result<BearerChallenge[], ChallengeParseError> {
-	let raw = readChallenges(header);
-	if (isFailure(raw)) return raw;
+	let challenges = parseScheme(header, BEARER);
+	if (isFailure(challenges)) return challenges;
+	return success(
+		challenges.data.map(({ algs: _algs, ...challenge }) => challenge as BearerChallenge),
+	);
+}
 
-	let challenges: BearerChallenge[] = [];
-
-	for (let challenge of raw.data) {
-		if (challenge.scheme.toLowerCase() !== BEARER) continue;
-		let bearer = toBearer(challenge, header.length);
-		if (isFailure(bearer)) return bearer;
-		challenges.push(bearer.data);
-	}
-
-	return success(challenges);
+/**
+ * Reads the `DPoP` challenges in a `WWW-Authenticate` value, which may list other schemes
+ * beside them, so a client finds the `use_dpop_nonce` refusal it retries.
+ *
+ * @param header - The header value, as `headers.get("www-authenticate")` joins it.
+ * @returns The challenges in header order, or where the header broke the grammar.
+ * @example
+ * let [dpop] = unwrap(parseDPoP(response.headers.get("www-authenticate") ?? ""));
+ */
+export function parseDPoP(header: string): Result<DPoPChallenge[], ChallengeParseError> {
+	return parseScheme(header, DPOP);
 }

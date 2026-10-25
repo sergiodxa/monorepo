@@ -10,20 +10,27 @@
 import type { ProtectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
 import { toSeconds } from "@sdxc/duration";
+import { isFailure } from "@sdxc/result";
 import { define, metadataUrl } from "@sdxc/well-known/oauth-protected-resource";
 
 import type { BearerChallenge } from "./bearer-challenge.js";
+import type { DPoPChallenge } from "./bearer-challenge.js";
+import type { DPoP } from "./dpop.js";
 import type { Issuer } from "./issuer.js";
 
 import { AccessToken } from "./access-token.js";
 import { AuthError, AuthErrorCode } from "./auth-error.js";
-import { stringify } from "./bearer-challenge.js";
+import { stringify, stringifyDPoP } from "./bearer-challenge.js";
+import { DPOP_ALGORITHMS, verifyProof } from "./dpop.js";
 
 /** Milliseconds in a second, for the epoch claim an introspected token is given. */
 const MS_PER_SECOND = 1000;
 
 /** The authentication scheme name RFC 6750 §2.1 gives bearer credentials. */
 const BEARER = "bearer";
+
+/** The authentication scheme name RFC 9449 §7.1 gives DPoP-bound credentials. */
+const DPOP = "dpop";
 
 /** Splits an `Authorization` header into its scheme and the credential after it. */
 const AUTHORIZATION_HEADER = /^(\S+)[ \t]+(\S.*)$/;
@@ -60,13 +67,13 @@ function shares(audiences: string[], accepted: string | string[]): boolean {
 }
 
 /**
- * Reads the credential out of an `Authorization` header, per RFC 6750 §2.1.
+ * Reads the scheme and credential out of an `Authorization` header (RFC 6750 §2.1, RFC
+ * 9449 §7.1).
  *
  * @param header - The header value, absent as `null`.
- * @returns The credential, or `null` when the header carries one for a different
- *   authentication scheme, which is another scheme's to answer.
+ * @returns The lowercased scheme and the credential, or `null` for an unreadable header.
  */
-function readBearerCredential(header: string | null): string | null {
+function readCredential(header: string | null): { scheme: string; credential: string } | null {
 	if (header === null) return null;
 
 	let match = AUTHORIZATION_HEADER.exec(header);
@@ -74,9 +81,17 @@ function readBearerCredential(header: string | null): string | null {
 
 	let [, scheme, credential] = match;
 	if (scheme === undefined || credential === undefined) return null;
-	if (scheme.toLowerCase() !== BEARER) return null;
 
-	return credential.trim();
+	return { scheme: scheme.toLowerCase(), credential: credential.trim() };
+}
+
+/**
+ * The `invalid_token` refusal every declined credential throws.
+ *
+ * @param message - Why, for an operator reading a log.
+ */
+function invalidToken(message = "The access token was not accepted."): AuthError {
+	return new AuthError(message, { code: AuthErrorCode.InvalidToken });
 }
 
 /**
@@ -100,6 +115,7 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 	#realm: string | null;
 	#introspection: ResourceServer.Introspector | null;
 	#acceptUnscopedIntrospection: boolean;
+	#dpop: ResourceServer.DPoPOptions | null;
 
 	/**
 	 * Points a resource server at the issuer whose tokens it accepts. One of `audience`
@@ -119,6 +135,7 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 		this.#realm = options.realm ?? null;
 		this.#introspection = options.introspection ?? null;
 		this.#acceptUnscopedIntrospection = options.acceptUnscopedIntrospection ?? false;
+		this.#dpop = options.dpop ?? null;
 	}
 
 	/**
@@ -196,6 +213,29 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 	}
 
 	/**
+	 * The `WWW-Authenticate` value of RFC 9449 §7.1 for a refusal, naming the algorithms
+	 * a proof may be signed with. A server accepting DPoP answers a refused DPoP request
+	 * with it, and lists it beside {@link challenge} for a request that sent no token.
+	 *
+	 * @param refusal - Why the request was refused; `use_dpop_nonce` sends a client back
+	 *   for the nonce in `DPoP-Nonce`.
+	 * @example
+	 * headers.set("WWW-Authenticate", api.dpopChallenge({ error: "invalid_dpop_proof" }));
+	 */
+	dpopChallenge(
+		refusal: Pick<Partial<DPoPChallenge>, "error" | "errorDescription" | "scope"> = {},
+	): string {
+		return stringifyDPoP({
+			realm: this.#realm,
+			scope: refusal.scope,
+			error: refusal.error,
+			errorDescription: refusal.errorDescription,
+			algs: [...(this.#dpop?.algorithms ?? DPOP_ALGORITHMS)],
+			resourceMetadata: this.#resource === null ? null : metadataUrl(this.#resource),
+		});
+	}
+
+	/**
 	 * The RFC 9470 §3 step-up challenge for a token whose user authentication falls short
 	 * of a route's requirement, naming the classes and age a fresh login must reach, so
 	 * the client re-authorizes with them as `acr_values` and `max_age`.
@@ -225,23 +265,62 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 	}
 
 	/**
-	 * Resolves the bearer credential a request carries, per RFC 6750 §2.1, into the token
-	 * behind it. A request carrying no bearer credential is another authentication
-	 * method's to answer, so it is told apart from a credential this server declines.
+	 * Resolves the credential a request carries into the token behind it: a bearer token
+	 * (RFC 6750 §2.1) or, on a server configured with `dpop`, a DPoP-bound token with the
+	 * proof beside it (RFC 9449 §7). A token bound to a key is refused as a bearer token,
+	 * so stealing one gains nothing without the key.
 	 *
 	 * @param request - The request being authenticated.
 	 * @returns The token this server accepted, or `null` for a request carrying no
-	 *   bearer credential.
-	 * @throws {AuthError} `invalid_token` when this server declines the credential, and
+	 *   credential under a scheme this server reads.
+	 * @throws {AuthError} `invalid_token` when this server declines the credential,
+	 *   `invalid_dpop_proof` or `use_dpop_nonce` when the proof fails, and
 	 *   `discovery_failed` or `jwks_failed` when the issuer's documents are unreadable.
 	 * @example
 	 * let token = await api.verifyRequest(request);
 	 * if (token === null) return next();
 	 */
 	async verifyRequest(request: Request): Promise<AccessToken | null> {
-		let credential = readBearerCredential(request.headers.get("authorization"));
-		if (credential === null) return null;
-		return await this.verifyAccessToken(credential);
+		let presented = readCredential(request.headers.get("authorization"));
+		if (presented === null) return null;
+
+		if (presented.scheme === DPOP && this.#dpop !== null) {
+			return await this.#verifyBound(request, presented.credential, this.#dpop);
+		}
+
+		if (presented.scheme !== BEARER) return null;
+
+		if (this.#dpop?.required) throw invalidToken("This resource accepts DPoP-bound tokens only.");
+
+		let token = await this.verifyAccessToken(presented.credential);
+		if (token.jkt !== null)
+			throw invalidToken("A DPoP-bound token was presented as a bearer token.");
+		return token;
+	}
+
+	/**
+	 * Verifies a DPoP-bound token and the proof beside it, holding the proof's key to the
+	 * token's `cnf.jkt`.
+	 *
+	 * @param request - The request, read for its proof.
+	 * @param credential - The access token as presented.
+	 * @param dpop - How proofs are checked.
+	 */
+	async #verifyBound(
+		request: Request,
+		credential: string,
+		dpop: ResourceServer.DPoPOptions,
+	): Promise<AccessToken> {
+		let token = await this.verifyAccessToken(credential);
+
+		let verified = await verifyProof(request, { ...dpop, accessToken: credential });
+		if (isFailure(verified)) throw verified.error;
+
+		if (token.jkt === null || token.jkt !== verified.data.jkt) {
+			throw invalidToken("The access token is not bound to the key that signed the proof.");
+		}
+
+		return token;
 	}
 
 	/**
@@ -259,11 +338,7 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 	async verifyAccessToken(credential: string): Promise<AccessToken> {
 		let token = await this.#resolve(credential);
 
-		if (token === null) {
-			throw new AuthError("The access token was not accepted.", {
-				code: AuthErrorCode.InvalidToken,
-			});
-		}
+		if (token === null) throw invalidToken();
 
 		return token;
 	}
@@ -337,6 +412,7 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 					? undefined
 					: Math.floor(description.expiresAt.getTime() / MS_PER_SECOND),
 			acr: description.acr ?? undefined,
+			cnf: description.jkt == null ? undefined : { jkt: description.jkt },
 			auth_time:
 				description.authTime == null
 					? undefined
@@ -428,6 +504,23 @@ export namespace ResourceServer {
 		 * @default false
 		 */
 		acceptUnscopedIntrospection?: boolean;
+
+		/**
+		 * Accepts DPoP-bound tokens (RFC 9449) under the `DPoP` scheme, each beside a proof
+		 * checked against the replay store; supplying it turns the scheme on.
+		 */
+		dpop?: DPoPOptions;
+	}
+
+	/** How a server accepting DPoP checks the proofs it is sent. */
+	export interface DPoPOptions extends Omit<DPoP.VerifyOptions, "accessToken" | "now"> {
+		/**
+		 * Whether a plain bearer token is refused, for a resource that accepts bound tokens
+		 * only.
+		 *
+		 * @default false
+		 */
+		required?: boolean;
 	}
 
 	/**
@@ -454,6 +547,8 @@ export namespace ResourceServer {
 		acr?: string | null;
 		/** When the user last actively authenticated, for a step-up check. */
 		authTime?: Date | null;
+		/** The thumbprint of the key the token is bound to, from `cnf.jkt`. */
+		jkt?: string | null;
 	}
 
 	/** The RFC 7662 call a credential carrying no claims is resolved through. */

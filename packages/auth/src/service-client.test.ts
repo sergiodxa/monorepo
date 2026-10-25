@@ -18,6 +18,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
+import { DPoP } from "./dpop.js";
 import { Issuer } from "./issuer.js";
 import { ServiceClient } from "./service-client.js";
 
@@ -360,6 +361,55 @@ describe("token", () => {
 		await expect(clientFor().token()).rejects.toMatchObject({
 			code: AuthErrorCode.TokenRequestFailed,
 		});
+	});
+});
+
+describe("dpop", () => {
+	test("sends a proof for the token endpoint with every grant", async () => {
+		let proofs: (string | null)[] = [];
+		server.use(
+			http.post(TOKEN_ENDPOINT, ({ request }) => {
+				proofs.push(request.headers.get("dpop"));
+				return HttpResponse.json({ access_token: "bound-1", token_type: "DPoP" });
+			}),
+		);
+
+		await expect(clientFor({ dpop: await DPoP.generate() }).token()).resolves.toBe("bound-1");
+
+		expect(proofs).toHaveLength(1);
+		let claims = JSON.parse(atob((proofs[0] ?? "").split(".")[1] ?? "")) as Record<string, unknown>;
+		expect(claims.htm).toBe("POST");
+		expect(claims.htu).toBe(TOKEN_ENDPOINT);
+	});
+
+	test("retries the grant once with the nonce a use_dpop_nonce refusal hands out", async () => {
+		let calls = 0;
+		server.use(
+			http.post(TOKEN_ENDPOINT, () => {
+				calls += 1;
+				if (calls === 1) {
+					return HttpResponse.json(
+						{ error: "use_dpop_nonce" },
+						{ status: 400, headers: { "dpop-nonce": "n-1" } },
+					);
+				}
+				return HttpResponse.json({ access_token: "bound-2", token_type: "DPoP" });
+			}),
+		);
+
+		await expect(clientFor({ dpop: await DPoP.generate() }).token()).resolves.toBe("bound-2");
+		expect(calls).toBe(2);
+	});
+
+	test("keeps a bound token apart from a bearer one in the cache", async () => {
+		serveToken();
+		let bearer = clientFor();
+		let bound = clientFor({ dpop: await DPoP.generate() });
+
+		await bearer.token();
+		await bound.token();
+
+		expect(grants).toHaveLength(2);
 	});
 });
 
@@ -715,6 +765,7 @@ describe("introspect", () => {
 			username: "reporter",
 			acr: null,
 			authTime: null,
+			jkt: null,
 		});
 		expect(new URLSearchParams(introspections[0]!.body).get("token")).toBe("opaque-token");
 	});
@@ -742,6 +793,7 @@ describe("introspect", () => {
 			username: null,
 			acr: null,
 			authTime: null,
+			jkt: null,
 		});
 	});
 
@@ -756,6 +808,16 @@ describe("introspect", () => {
 
 		expect(introspection.acr).toBe("mfa");
 		expect(introspection.authTime).toEqual(new Date(1_700_000_000_000));
+	});
+
+	test("reads the key a bound token names in cnf.jkt", async () => {
+		server.use(
+			http.post(INTROSPECTION_ENDPOINT, () =>
+				HttpResponse.json({ active: true, cnf: { jkt: "thumb-1" } }),
+			),
+		);
+
+		expect((await clientFor().introspect("opaque-token")).jkt).toBe("thumb-1");
 	});
 
 	test("reads a single-valued `aud` as a one-element list", async () => {

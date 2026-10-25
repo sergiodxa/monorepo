@@ -25,6 +25,7 @@ The core entry points need only `fetch`. The `@sdxc/auth/remix/*` entry points n
 | `@sdxc/auth/resource-server`     | `ResourceServer`: bearer token verification and RFC 9728 metadata     |
 | `@sdxc/auth/protected-resource`  | `ProtectedResource`: finding an API's authorization server            |
 | `@sdxc/auth/bearer-challenge`    | `parse` and `stringify` for `WWW-Authenticate: Bearer`                |
+| `@sdxc/auth/dpop`                | `DPoP` client keys and proofs, `verifyProof` for servers (RFC 9449)   |
 | `@sdxc/auth/management-client`   | `ManagementClient`: the provider's subject and tenant records         |
 | `@sdxc/auth/id-token`            | `IdToken` and `AUTHENTICATION_METHODS`                                |
 | `@sdxc/auth/access-token`        | `AccessToken`                                                         |
@@ -273,6 +274,18 @@ when there is none.
 #### `ProtectedResource.requiredScopes(response): string[]`
 
 The scopes a refusal's Bearer challenges ask for.
+
+### `@sdxc/auth/dpop`
+
+`DPoP.generate()` or `DPoP.import(serialized)` gives a key that signs one proof per request
+(`dpop.proof(method, url, { accessToken? })`) and remembers each server's `DPoP-Nonce`.
+`dpop.fetch(url, { accessToken, ...init })` sends the proof, presents the token as
+`Authorization: DPoP`, and retries once on `use_dpop_nonce`. Pass it as `dpop` to
+`ServiceClient` to bind its tokens. On the server, `verifyProof(request, { replay,
+accessToken? })` checks `htm`, `htu`, `iat`, `ath` and a single use of `jti` through your
+`ReplayStore`, and answers the proof's key thumbprint; `ResourceServer`'s `dpop` option does
+this for `DPoP`-scheme requests and holds the token's `cnf.jkt` to it, and
+`api.dpopChallenge()` writes the `DPoP` challenge.
 
 #### `ProtectedResource.requiredAuthentication(response)`
 

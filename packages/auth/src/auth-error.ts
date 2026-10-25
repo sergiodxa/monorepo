@@ -57,6 +57,10 @@ export const AuthErrorCode = {
 	RateLimited: "rate_limited",
 	/** A reserved authorization or token parameter was supplied by a caller. */
 	ReservedParameter: "reserved_parameter",
+	/** A DPoP proof was missing or failed a check (RFC 9449 §7.1). */
+	InvalidDPoPProof: "invalid_dpop_proof",
+	/** A DPoP proof lacked the nonce the server requires (RFC 9449 §8, §9). */
+	UseDPoPNonce: "use_dpop_nonce",
 } as const;
 
 /** The reason an {@link AuthError} carries, exhaustive so a `switch` over it closes. */

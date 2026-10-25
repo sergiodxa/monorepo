@@ -607,6 +607,7 @@
         "@sdxc/problem": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/well-known": "workspace:*",
       },
       "devDependencies": {
@@ -1240,7 +1241,6 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
-        "@sdxc/json-canonical": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",

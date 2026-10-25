@@ -10,7 +10,13 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { ChallengeParseError, parse, stringify } from "./bearer-challenge.js";
+import {
+	ChallengeParseError,
+	parse,
+	parseDPoP,
+	stringify,
+	stringifyDPoP,
+} from "./bearer-challenge.js";
 
 /** A parsed challenge with every member at its empty value, for `toEqual` comparisons. */
 const EMPTY = {
@@ -236,5 +242,35 @@ describe("parse", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error).toBeInstanceOf(ChallengeParseError);
+	});
+});
+
+describe("DPoP", () => {
+	test("writes RFC 9449 §7.1's challenge", () => {
+		expect(
+			stringifyDPoP({
+				error: "invalid_token",
+				errorDescription: "Invalid DPoP key binding",
+				algs: ["ES256"],
+			}),
+		).toBe(
+			`DPoP error="invalid_token", error_description="Invalid DPoP key binding", algs="ES256"`,
+		);
+	});
+
+	test("reads the DPoP challenge out of a header listing Bearer too", () => {
+		let [challenge] = unwrap(
+			parseDPoP(`Bearer realm="api", DPoP error="use_dpop_nonce", algs="ES256 Ed25519"`),
+		);
+
+		expect(challenge?.error).toBe("use_dpop_nonce");
+		expect(challenge?.algs).toEqual(["ES256", "Ed25519"]);
+	});
+
+	test("keeps algs out of a Bearer challenge's typed fields", () => {
+		let [challenge] = unwrap(parse(`Bearer algs="ES256"`));
+
+		expect(challenge?.extensions).toEqual({ algs: "ES256" });
+		expect(challenge).not.toHaveProperty("algs");
 	});
 });

@@ -9,6 +9,7 @@
 		"./auth-error": "./src/auth-error.ts",
 		"./auth-session": "./src/auth-session.ts",
 		"./bearer-challenge": "./src/bearer-challenge.ts",
+		"./dpop": "./src/dpop.ts",
 		"./id-token": "./src/id-token.ts",
 		"./issuer": "./src/issuer.ts",
 		"./management-client": "./src/management-client.ts",
@@ -36,6 +37,7 @@
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"@sdxc/well-known": "workspace:*"
 	},
 	"devDependencies": {

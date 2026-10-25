@@ -15,6 +15,7 @@ import { Base64 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
 import { isFailure, wrap } from "@sdxc/result";
 
+import type { DPoP } from "./dpop.js";
 import type { Issuer } from "./issuer.js";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
@@ -90,6 +91,7 @@ const INTROSPECTION_SCHEMA = s.object({
 	iss: s.optional(s.string()),
 	acr: s.optional(s.string()),
 	auth_time: s.optional(s.number()),
+	cnf: s.optional(s.object({ jkt: s.optional(s.string()) })),
 });
 
 /**
@@ -157,6 +159,7 @@ export class ServiceClient {
 	#cache: Issuer.CacheStore | null;
 	#rateLimit: Adapter | null;
 	#waitUntil: ServiceClient.WaitUntil | null;
+	#dpop: DPoP | null;
 	/** The reserve in seconds, so it compares directly against a token's `exp`. */
 	#margin: number;
 	#grants = new Map<string, Promise<Grant>>();
@@ -178,6 +181,7 @@ export class ServiceClient {
 		this.#cache = options.cache ?? null;
 		this.#rateLimit = options.rateLimit ?? null;
 		this.#waitUntil = options.waitUntil ?? null;
+		this.#dpop = options.dpop ?? null;
 		this.#margin = toSeconds(options.expirationMargin ?? DEFAULT_EXPIRATION_MARGIN);
 
 		for (let name of Object.keys(this.#tokenParams)) {
@@ -203,8 +207,8 @@ export class ServiceClient {
 
 	/**
 	 * The access token for a resource set, ready for an `Authorization: Bearer`
-	 * header. Each resource travels as its own `resource` field, which is how
-	 * RFC 8707 §2 scopes a token to several services at once.
+	 * header, or bound to the `dpop` key and presented through `dpop.fetch`. Each resource
+	 * travels as its own `resource` field, which RFC 8707 §2 scopes a token to.
 	 *
 	 * @param options - The resources and scopes this token is for.
 	 * @returns The bearer token, from the isolate, the shared cache, or a new grant.
@@ -279,6 +283,7 @@ export class ServiceClient {
 			expiresAt: toDate(description.exp),
 			acr: description.acr ?? null,
 			authTime: toDate(description.auth_time),
+			jkt: description.cnf?.jkt ?? null,
 		};
 	}
 
@@ -353,7 +358,7 @@ export class ServiceClient {
 
 		for (let resource of options.resources ?? []) body.append("resource", resource);
 
-		let document = await this.#read(endpoint, body, AuthErrorCode.TokenRequestFailed);
+		let document = await this.#read(endpoint, body, AuthErrorCode.TokenRequestFailed, this.#dpop);
 		let result = s.parseSafe(GRANT_SCHEMA, document);
 
 		if (!result.success) {
@@ -448,11 +453,17 @@ export class ServiceClient {
 	 * @param endpoint - Where the form is posted.
 	 * @param body - The fields, already carrying anything repeated.
 	 * @param code - Names the endpoint the call went to in whatever it throws.
+	 * @param dpop - The key whose proof travels with the call, for the token endpoint.
 	 * @throws `code` when the issuer refuses the call or answers with something
 	 *   other than JSON, naming the media type an answer declared.
 	 */
-	async #read(endpoint: URL, body: URLSearchParams, code: AuthErrorCode): Promise<unknown> {
-		let response = await this.#post(endpoint, body, code);
+	async #read(
+		endpoint: URL,
+		body: URLSearchParams,
+		code: AuthErrorCode,
+		dpop: DPoP | null = null,
+	): Promise<unknown> {
+		let response = await this.#post(endpoint, body, code, dpop);
 
 		if (!response.ok) throw await this.#refusal(response, endpoint, code);
 
@@ -480,9 +491,15 @@ export class ServiceClient {
 	 * @param endpoint - Where the form is posted.
 	 * @param body - The fields, already carrying anything repeated.
 	 * @param code - Names the endpoint the call went to in whatever it throws.
+	 * @param dpop - The key whose proof travels with the call, retried once for a nonce.
 	 * @throws `code` when the request does not complete.
 	 */
-	async #post(endpoint: URL, body: URLSearchParams, code: AuthErrorCode): Promise<Response> {
+	async #post(
+		endpoint: URL,
+		body: URLSearchParams,
+		code: AuthErrorCode,
+		dpop: DPoP | null = null,
+	): Promise<Response> {
 		let headers = new Headers({ accept: "application/json" });
 
 		body.set("client_id", this.#clientId);
@@ -495,6 +512,7 @@ export class ServiceClient {
 		}
 
 		try {
+			if (dpop !== null) return await dpop.fetch(endpoint, { method: "POST", headers, body });
 			return await fetch(endpoint, { method: "POST", headers, body });
 		} catch (cause) {
 			throw new AuthError(`The request to ${endpoint.href} did not complete.`, {
@@ -542,16 +560,17 @@ export class ServiceClient {
 	}
 
 	/**
-	 * Where a resource set's grant is cached. The client id and both requested sets are
-	 * part of the key, so a token scoped to one set serves only callers asking for that
-	 * same set, and each set is sorted so a caller's ordering carries no meaning.
+	 * Where a resource set's grant is cached. The client id, the DPoP key's id and
+	 * both requested sets are part of the key, so a token serves only callers asking for
+	 * that same set, and each set is sorted so a caller's ordering carries no meaning.
 	 *
 	 * @param options - The resources and scopes the token is for.
 	 */
 	#key(options: ServiceClient.TokenOptions): string {
 		let resources = [...(options.resources ?? [])].sort().join(" ");
 		let scope = [...(options.scope ?? this.#scope)].sort().join(" ");
-		return `${CACHE_PREFIX}:${this.#clientId}:${resources}:${scope}`;
+		let binding = this.#dpop === null ? "bearer" : `dpop-${this.#dpop.serialized.id}`;
+		return `${CACHE_PREFIX}:${this.#clientId}:${binding}:${resources}:${scope}`;
 	}
 
 	/**
@@ -611,6 +630,12 @@ export namespace ServiceClient {
 		 * instance.
 		 */
 		cache?: Issuer.CacheStore;
+
+		/**
+		 * The key tokens are bound to (RFC 9449): every grant carries a proof it signs, and
+		 * the token is presented through `dpop.fetch`.
+		 */
+		dpop?: DPoP;
 
 		/** The budget the token grant is counted against, keyed by the client id. */
 		rateLimit?: Adapter;
@@ -692,5 +717,8 @@ export namespace ServiceClient {
 
 		/** When the user last actively authenticated, from `auth_time` (RFC 9470 §6.2). */
 		authTime: Date | null;
+
+		/** The thumbprint of the key the token is bound to, from `cnf.jkt` (RFC 9449 §6.2). */
+		jkt: string | null;
 	}
 }

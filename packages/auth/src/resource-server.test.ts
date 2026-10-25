@@ -26,6 +26,7 @@ import {
 
 import { AccessToken } from "./access-token.js";
 import { AuthError } from "./auth-error.js";
+import { DPoP } from "./dpop.js";
 import { Issuer } from "./issuer.js";
 import { ResourceServer } from "./resource-server.js";
 
@@ -802,6 +803,101 @@ describe("authenticationChallenge", () => {
 			api.authenticationChallenge(token, { acrValues: ["mfa"], maxAge: "5 minutes" }, now),
 		).toBe(
 			`Bearer error="insufficient_user_authentication", error_description="A different authentication level is required.", acr_values="mfa", max_age="300"`,
+		);
+	});
+});
+
+describe("dpop", () => {
+	/** A replay store kept in memory. */
+	function memoryReplay(): DPoP.ReplayStore {
+		let seen = new Set<string>();
+		return {
+			async claim(key) {
+				if (seen.has(key)) return false;
+				seen.add(key);
+				return true;
+			},
+		};
+	}
+
+	/**
+	 * A DPoP request: the bound token under the `DPoP` scheme beside a proof.
+	 *
+	 * @param key - The client's key.
+	 * @param token - The access token.
+	 */
+	async function boundRequest(key: DPoP, token: string): Promise<Request> {
+		let url = `${RESOURCE}/monitors`;
+		return new Request(url, {
+			headers: {
+				authorization: `DPoP ${token}`,
+				dpop: await key.proof("GET", url, { accessToken: token }),
+			},
+		});
+	}
+
+	test("accepts a bound token beside a proof signed with its key", async () => {
+		let key = await DPoP.generate();
+		let token = await sign({ cnf: { jkt: await key.thumbprint() } });
+		let api = resourceServer({ dpop: { replay: memoryReplay() } });
+
+		let verified = await api.verifyRequest(await boundRequest(key, token));
+
+		expect(verified?.jkt).toBe(await key.thumbprint());
+	});
+
+	test("refuses a bound token beside a proof signed with another key", async () => {
+		let token = await sign({ cnf: { jkt: await (await DPoP.generate()).thumbprint() } });
+		let api = resourceServer({ dpop: { replay: memoryReplay() } });
+
+		await expect(
+			api.verifyRequest(await boundRequest(await DPoP.generate(), token)),
+		).rejects.toMatchObject(INVALID_TOKEN);
+	});
+
+	test("refuses a replayed proof", async () => {
+		let key = await DPoP.generate();
+		let token = await sign({ cnf: { jkt: await key.thumbprint() } });
+		let api = resourceServer({ dpop: { replay: memoryReplay() } });
+		let first = await boundRequest(key, token);
+		let replayed = new Request(first.url, { headers: first.headers });
+
+		await api.verifyRequest(first);
+
+		await expect(api.verifyRequest(replayed)).rejects.toMatchObject({
+			code: "invalid_dpop_proof",
+		});
+	});
+
+	test("refuses a bound token presented as a bearer token", async () => {
+		let key = await DPoP.generate();
+		let token = await sign({ cnf: { jkt: await key.thumbprint() } });
+
+		await expect(resourceServer().verifyRequest(request(`Bearer ${token}`))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
+	});
+
+	test("refuses a bearer token where DPoP is required", async () => {
+		let api = resourceServer({ dpop: { replay: memoryReplay(), required: true } });
+
+		await expect(api.verifyRequest(request(`Bearer ${await sign()}`))).rejects.toMatchObject(
+			INVALID_TOKEN,
+		);
+	});
+
+	test("leaves the DPoP scheme to another method when DPoP is off", async () => {
+		expect(await resourceServer().verifyRequest(request(`DPoP ${await sign()}`))).toBeNull();
+	});
+
+	test("writes the DPoP challenge with the accepted algorithms", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), {
+			resource: RESOURCE,
+			dpop: { replay: memoryReplay(), algorithms: ["ES256"] },
+		});
+
+		expect(api.dpopChallenge({ error: "invalid_dpop_proof" })).toBe(
+			`DPoP error="invalid_dpop_proof", algs="ES256", resource_metadata="https://api.test/.well-known/oauth-protected-resource"`,
 		);
 	});
 });

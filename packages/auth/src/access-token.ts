@@ -95,6 +95,17 @@ export class AccessToken extends JWT {
 		return this.scopes.includes(scope);
 	}
 
+	/**
+	 * The thumbprint of the key the token is bound to, from `cnf.jkt` (RFC 9449 §6.1); a
+	 * bound token is honored only beside a proof signed with that key.
+	 */
+	get jkt(): string | null {
+		let confirmation = this.parser.has("cnf") ? this.parser.get("cnf") : null;
+		if (typeof confirmation !== "object" || confirmation === null) return null;
+		let jkt = (confirmation as Record<string, unknown>).jkt;
+		return typeof jkt === "string" ? jkt : null;
+	}
+
 	/** The authentication context class the user was signed in at (RFC 9068 §2.2.1). */
 	get acr(): string | null {
 		if (this.parser.has("acr")) return this.parser.string("acr");
