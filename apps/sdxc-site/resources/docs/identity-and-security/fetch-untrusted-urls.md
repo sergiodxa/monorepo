@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to refuse private hosts at the endpoint before a URL is stored"
     - "How to fetch under one deadline and a byte cap on every redirect"
@@ -374,6 +374,23 @@ slow origin cannot hold the connection either.
 Sign the URLs your pages write with `hmac.sign`, and check the signature here. An unsigned
 proxy relays anything for anyone, under your domain.
 </warning>
+
+## Sign what you send
+
+`sign` runs on each hop's request just before it is sent and answers the signed copy, so an origin
+can tell which service is asking. A failure stops the walk as `signing-failed`. With
+`webBotAuthSigner` from `@sdxc/http-signatures/web-bot-auth`, every request carries a
+[Web Bot Auth](/docs/identity-and-security/http-message-signatures#identify-your-bot-with-web-bot-auth)
+signature over its own authority:
+
+```typescript
+let followed = await follow(url, {
+	timeout: "10 seconds",
+	sign: webBotAuthSigner({ key, agent }),
+});
+```
+
+`Feed.fetch` and `distill` take the same `sign` option and pass it through.
 
 ## Use the packages that already fetch through it
 

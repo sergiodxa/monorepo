@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 14
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-24
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"
     - "How to verify signatures with a freshness window and replay checks"
@@ -33,8 +33,8 @@ legacy `Digest`. [`@sdxc/crypto`](/api/crypto) reads PEM keys, and every call an
 `Result` from [`@sdxc/result`](/api/result).
 
 ```bash
-npm add @sdxc/crypto @sdxc/digest-fields @sdxc/http @sdxc/http-signatures @sdxc/logger \
-	@sdxc/result @sdxc/uuid @sdxc/validate remix
+npm add @sdxc/cache @sdxc/crypto @sdxc/digest-fields @sdxc/http @sdxc/http-signatures \
+	@sdxc/logger @sdxc/outbound @sdxc/result @sdxc/uuid @sdxc/validate @sdxc/well-known remix
 ```
 
 ## Make a key pair
@@ -489,6 +489,120 @@ functions with `"digest"`: `stringify` writes `SHA-256=…` with the uppercase n
 verifier expects, and `parse` accepts any case and skips entries such as `UNIXsum=30637` whose
 value is not base64.
 
+## Identify your bot with Web Bot Auth
+
+A crawler, a feed reader or an uptime probe calls origins it has no relationship with, so there
+is no key to exchange ahead of time.
+[Web Bot Auth](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/) solves
+that with an RFC 9421 profile: the bot signs every request under `tag="web-bot-auth"`, names its
+own origin in a `Signature-Agent` header, and publishes its public keys at
+`/.well-known/http-message-signatures-directory` there. Any origin can then fetch the directory
+and verify the request, and attribute it to the URL it fetched rather than to a User-Agent string
+anyone can copy.
+
+`@sdxc/http-signatures/web-bot-auth` covers both sides. Keep the bot's key as a private JWK in a
+Worker secret, imported once per isolate:
+
+```typescript {% title="app/initializers/web-bot-auth.ts" %}
+import type { WebBotAuthKey } from "@sdxc/http-signatures/web-bot-auth";
+
+import {
+	importWebBotAuthKey,
+	webBotAuthSigner,
+} from "@sdxc/http-signatures/web-bot-auth";
+import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
+
+const IMPORTED = new Map<string, Promise<WebBotAuthKey | null>>();
+
+export function webBotAuthKey(): Promise<WebBotAuthKey | null> {
+	let imported =
+		IMPORTED.get(env.WEB_BOT_AUTH_KEY) ??
+		importWebBotAuthKey(JSON.parse(env.WEB_BOT_AUTH_KEY)).then((key) =>
+			isFailure(key) ? null : key.data,
+		);
+	IMPORTED.set(env.WEB_BOT_AUTH_KEY, imported);
+	return imported;
+}
+
+export async function requestSigner() {
+	let key = await webBotAuthKey();
+	return key
+		? webBotAuthSigner({ key, agent: "https://bot.example.com" })
+		: undefined;
+}
+```
+
+`importWebBotAuthKey` names the key by its RFC 7638 thumbprint, which goes out as `keyid`. The
+signer covers `@authority`, `@method`, `@path` and its own `Signature-Agent` member, valid for five
+minutes. Hand it to `follow` from [`@sdxc/outbound`](/api/outbound), or to `Feed.fetch` and
+`distill`, which pass it on, and every hop of a redirect chain is signed for its own authority:
+
+```typescript
+let followed = await follow(url, {
+	timeout: "10 seconds",
+	sign: await requestSigner(),
+});
+```
+
+Publish the directory with [`@sdxc/well-known`](/api/well-known). `signDirectoryResponse` adds the
+possession proof the draft recommends: a signature by each key over the request's authority and
+the body's `Content-Digest`, so the key set cannot be re-served under another origin.
+
+```typescript {% title="app/initializers/router.tsx" %}
+import { signDirectoryResponse } from "@sdxc/http-signatures/web-bot-auth";
+import { isFailure } from "@sdxc/result";
+import {
+	build,
+	httpMessageSignaturesDirectory,
+} from "@sdxc/well-known/http-message-signatures-directory";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+
+let directory = serve(
+	httpMessageSignaturesDirectory,
+	async () => {
+		let key = await webBotAuthKey();
+		let built = key ? build([key.publicKey]) : null;
+		return built && !isFailure(built) ? built.data : null;
+	},
+	{
+		async sign(response, request) {
+			let key = await webBotAuthKey();
+			if (!key || !request) return response;
+			let signed = await signDirectoryResponse(response, request, {
+				keys: [key],
+			});
+			return isFailure(signed) ? response : signed.data;
+		},
+	},
+);
+
+wellKnown({ "http-message-signatures-directory": directory });
+```
+
+On the receiving side, `verifyWebBotAuth` checks the profile, fetches the directory the covered
+`Signature-Agent` member names through `follow` with no redirects and a size cap, and caches it
+for its `max-age`:
+
+```typescript
+import { verifyWebBotAuth } from "@sdxc/http-signatures/web-bot-auth";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { isSuccess } from "@sdxc/result";
+
+let verified = await verifyWebBotAuth(request, {
+	cache: new WorkerKVCache(env.CACHE),
+	components: ["@method", "@path"],
+});
+if (isSuccess(verified)) {
+	verified.data.agent; // "https://bot.example.com/.well-known/http-message-signatures-directory"
+}
+```
+
+`agent` is the identifier to allowlist or rate limit. A failure keeps the codes above:
+`unsigned` for a request with no `web-bot-auth` signature, `stale-signature` past `expires` or
+past `maxLifetime` (24 hours), and `key-unavailable` when the directory does not answer a 200 or
+publishes no key with that thumbprint.
+
 ## Test both ends
 
 A signature is checked end to end by signing a request with a key made in the test and
@@ -559,4 +673,6 @@ test("an unsigned order is told what to sign", async () => {
   and a verified inbox, built on both packages.
 - [Receive and send webhooks](/docs/identity-and-security/webhooks) — Standard Webhooks, the
   shared-secret signature most webhook senders use.
+- [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) — the
+  checked walk Web Bot Auth signs and fetches directories through.
 - [`@sdxc/http-signatures`](/api/http-signatures) — every type, option and error code.
