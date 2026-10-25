@@ -2365,6 +2365,13 @@
         "remix": "3.1.0",
       },
     },
+    "packages/uri-template": {
+      "name": "@sdxc/uri-template",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/user-agent": {
       "name": "@sdxc/user-agent",
       "version": "0.0.1",
@@ -3375,6 +3382,8 @@
     "@sdxc/u": ["@sdxc/u@workspace:packages/u"],
 
     "@sdxc/ui": ["@sdxc/ui@workspace:packages/ui"],
+
+    "@sdxc/uri-template": ["@sdxc/uri-template@workspace:packages/uri-template"],
 
     "@sdxc/user-agent": ["@sdxc/user-agent@workspace:packages/user-agent"],
 

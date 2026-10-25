@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/uri-template",
+	"version": "0.0.1",
+	"description": "Expand, parse and match RFC 6570 URI Templates at all four levels",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

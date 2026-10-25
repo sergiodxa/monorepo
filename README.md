@@ -219,6 +219,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                                                          |
 | [@sdxc/trace-context](packages/trace-context)                         | W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests                                  |
 | [@sdxc/trailing-slash-middleware](packages/trailing-slash-middleware) | Router middleware that redirects every path to one canonical trailing-slash form                                                                   |
+| [@sdxc/uri-template](packages/uri-template)                           | Expand, parse and match RFC 6570 URI Templates at all four levels                                                                                  |
 | [@sdxc/user-agent](packages/user-agent)                               | Read a User-Agent string into its browser, engine, operating system and device                                                                     |
 | [@sdxc/webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards, plus Security Event Token push and poll delivery                                        |
 
