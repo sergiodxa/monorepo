@@ -8,6 +8,10 @@ lands on, `null` removes a member, and arrays and scalars replace what was there
 point works on plain JSON values, so clients and servers share it; `@sdxc/merge-patch/request`
 reads a patch off a standard `Request`.
 
+When an update needs what a partial document cannot say (inserting or removing one array
+element, setting a member to `null`, or applying only while a value is unchanged), send
+[`@sdxc/json-patch`](https://www.npmjs.com/package/@sdxc/json-patch) operations instead.
+
 ## Installation
 
 ```sh
