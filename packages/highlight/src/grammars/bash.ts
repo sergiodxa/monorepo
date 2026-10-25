@@ -29,7 +29,7 @@ const COMMANDS =
  * command line, and the body of a double-quoted string, where the shell keeps
  * expanding and so a reader expects `$name` to keep standing out.
  */
-const expansion: Rule[] = [
+const EXPANSION: Rule[] = [
 	{ type: "variable", match: /\$\([^)]*\)?/y },
 	{ type: "variable", match: /\$\{[^}]*\}?/y },
 	{ type: "variable", match: /\$[A-Za-z_]\w*/y },
@@ -50,7 +50,7 @@ export const bash: Grammar = {
 		{ type: "string", match: /'[^']*'?/y },
 		{ type: "string", match: /"/y, push: "string" },
 
-		...expansion,
+		...EXPANSION,
 
 		/** A number stands alone, so the digits inside `cron_abc123` or `127.0.0.1:5432/db` stay part of the word. */
 		{ type: "number", match: /(?<![\w./-])\d+(?:\.\d+)?(?![\w./-])/y },
@@ -75,7 +75,7 @@ export const bash: Grammar = {
 	 */
 	string: [
 		{ type: "string", match: /"/y, pop: true },
-		...expansion,
+		...EXPANSION,
 		{ type: "string", match: /(?:\\[\s\S]|[^"$\\])+/y },
 		{ type: "string", match: /\$/y },
 	],

@@ -19,7 +19,7 @@ const KEYWORDS =
  * The rules that read the same in a document body and inside an argument list.
  * A block string comes before the quote that would end a short one.
  */
-const values: Rule[] = [
+const VALUES: Rule[] = [
 	{ type: "comment", match: /#[^\n]*/y },
 
 	{ type: "string", match: /"""[\s\S]*?(?:"""|$)/y },
@@ -39,7 +39,7 @@ const values: Rule[] = [
  * marks. `!` and the brackets around a list are type modifiers rather than
  * structure, which is why they read as operators.
  */
-const names: Rule[] = [
+const NAMES: Rule[] = [
 	{ type: "keyword", match: KEYWORDS },
 	{ type: "class-name", match: /\b[A-Z]\w*/y },
 	{ type: "operator", match: /\.{3}|[!&|=[\]]/y },
@@ -54,12 +54,12 @@ const names: Rule[] = [
  */
 export const graphql: Grammar = {
 	main: [
-		...values,
+		...VALUES,
 
 		/** A name before a colon is a field, whether it declares one or aliases one. */
 		{ type: "property", match: /\b[a-z_]\w*(?=\s*:)/y },
 
-		...names,
+		...NAMES,
 		{ type: "punctuation", match: /\(/y, push: "arguments" },
 
 		/** Everything else lowercase in a document body is a field being selected. */
@@ -73,10 +73,10 @@ export const graphql: Grammar = {
 	arguments: [
 		{ type: "punctuation", match: /\)/y, pop: true },
 
-		...values,
+		...VALUES,
 		{ type: "attr-name", match: /\b[a-z_]\w*(?=\s*:)/y },
 
-		...names,
+		...NAMES,
 		{ type: "punctuation", match: /\(/y, push: "arguments" },
 	],
 };

@@ -24,7 +24,7 @@ const { main: expression, ...expressionModes } = javascript;
 /**
  * Tags, text, and the two element bodies that hold another language.
  */
-const markup: Grammar = {
+const MARKUP: Grammar = {
 	main: [
 		{ type: "comment", match: /<!--(?:[^-]|-(?!->))*(?:-->)?/y },
 		/** A CDATA section, whose content a parser hands over as text. */
@@ -73,4 +73,4 @@ const markup: Grammar = {
  *
  * @example scan("<p class='a'>hi</p>", html)
  */
-export const html: Grammar = compose(markup, stylesheetModes, expressionModes);
+export const html: Grammar = compose(MARKUP, stylesheetModes, expressionModes);

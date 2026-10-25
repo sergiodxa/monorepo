@@ -34,7 +34,7 @@ const BUILTINS =
  * An f-string's `{…}` reuses this list, so an expression nested in one is
  * painted the same as one at the top level.
  */
-const expression: Rule[] = [
+const EXPRESSION: Rule[] = [
 	{ type: "comment", match: /#[^\n]*/y },
 
 	/** A prefix belongs to the string only when it is not the tail of a name. */
@@ -77,7 +77,7 @@ const expression: Rule[] = [
  * @example scan('print(f"{name}")', python)
  */
 export const python: Grammar = {
-	main: expression,
+	main: EXPRESSION,
 
 	/**
 	 * Inside `f"…"`. A doubled brace stands for a literal one, so it stays part of
@@ -104,6 +104,6 @@ export const python: Grammar = {
 	interpolation: [
 		{ type: "punctuation", match: /\}/y, pop: true },
 		{ type: "punctuation", match: /\{/y, push: "interpolation" },
-		...expression,
+		...EXPRESSION,
 	],
 };

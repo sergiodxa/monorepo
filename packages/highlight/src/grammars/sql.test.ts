@@ -160,8 +160,8 @@ describe("sql", () => {
 	});
 
 	/**
-	 * Lifted from `docs/adr/uptime/ADR-003-schedule-http-checks-from-next-due-at.md`,
-	 * which is the statement the scheduler claims a batch of monitors with.
+	 * Real scheduler queries: the statements that claim a batch of monitors due
+	 * for a check, with comments and placeholders together.
 	 */
 	test("scans a real migration document", () => {
 		let code = [

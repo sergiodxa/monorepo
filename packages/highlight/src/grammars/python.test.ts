@@ -149,7 +149,7 @@ describe("python", () => {
 		]);
 	});
 
-	/** Lifted from `apps/uptime/resources/docs/concepts/cron-jobs.md`. */
+	/** A real snippet from a cron job guide that pings a monitor from Python. */
 	test("scans a real snippet", () => {
 		let code = [
 			"# Python example",

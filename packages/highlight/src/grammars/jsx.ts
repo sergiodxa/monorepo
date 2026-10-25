@@ -35,7 +35,7 @@ const CONTAINER: Rule = { type: "punctuation", match: /\{/y, push: "interpolatio
  * How an element starts where code is being read, which is both at the top
  * level and inside an expression container.
  */
-const openers: Rule[] = [
+const OPENERS: Rule[] = [
 	{ type: "punctuation", match: /<>/y, push: "children" },
 	{ type: "punctuation", match: OPEN, push: "attributes" },
 ];
@@ -46,8 +46,8 @@ const openers: Rule[] = [
  * ending the opening tag pushes `children`, and a closing `</name>` pops both.
  */
 export const elements: Grammar = {
-	main: openers,
-	interpolation: openers,
+	main: OPENERS,
+	interpolation: OPENERS,
 
 	/**
 	 * Inside an opening tag, or inside the closing one a child popped back into.

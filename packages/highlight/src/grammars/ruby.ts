@@ -23,7 +23,7 @@ const KEYWORDS =
  * A `#{…}` reuses this list, so an expression nested in a string is painted the
  * same as one at the top level.
  */
-const expression: Rule[] = [
+const EXPRESSION: Rule[] = [
 	{ type: "comment", match: /#[^\n]*/y },
 
 	{ type: "string", match: /"/y, push: "string" },
@@ -70,7 +70,7 @@ const expression: Rule[] = [
  * @example scan('puts "hi #{name}"', ruby)
  */
 export const ruby: Grammar = {
-	main: expression,
+	main: EXPRESSION,
 
 	/**
 	 * Inside `"…"`, where the only things that end a run of string are the closing
@@ -89,6 +89,6 @@ export const ruby: Grammar = {
 	interpolation: [
 		{ type: "punctuation", match: /\}/y, pop: true },
 		{ type: "punctuation", match: /\{/y, push: "interpolation" },
-		...expression,
+		...EXPRESSION,
 	],
 };

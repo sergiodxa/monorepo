@@ -34,7 +34,7 @@ const BUILTINS =
  * JavaScript ones: `void` is a type here, and the `<` of a type argument list
  * would otherwise read as the comparison it looks like.
  */
-const types: Rule[] = [
+const TYPES: Rule[] = [
 	/** A decorator is applied like a call, so it paints as the function it names. */
 	{ type: "function", match: /@[A-Za-z_$][\w$]*/y },
 
@@ -56,16 +56,16 @@ const types: Rule[] = [
  * The modes TypeScript contributes, which {@link typescript} merges over the
  * JavaScript ones.
  */
-const declarations: Grammar = {
-	main: types,
-	interpolation: types,
+const DECLARATIONS: Grammar = {
+	main: TYPES,
+	interpolation: TYPES,
 
 	/**
 	 * Inside `<…>`, where the `>` that closes the list returns to the code that
 	 * opened it and everything between is an ordinary expression: a type is
 	 * written with the same identifiers, literals and operators.
 	 */
-	generic: [{ type: "punctuation", match: />/y, pop: true }, ...types, ...expression],
+	generic: [{ type: "punctuation", match: />/y, pop: true }, ...TYPES, ...expression],
 };
 
 /**
@@ -74,4 +74,4 @@ const declarations: Grammar = {
  *
  * @example scan("let total: number = sum(prices)", typescript)
  */
-export const typescript: Grammar = compose(declarations, javascript);
+export const typescript: Grammar = compose(DECLARATIONS, javascript);

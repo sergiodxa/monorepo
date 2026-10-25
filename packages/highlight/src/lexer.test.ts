@@ -15,7 +15,7 @@ import { compose, scan } from "./lexer.js";
 
 import { languages } from "./index.js";
 
-const quoted: Grammar = {
+const QUOTED: Grammar = {
 	main: [
 		{ type: "string", match: /"/y, push: "string" },
 		{ type: "keyword", match: /\blet\b/y },
@@ -30,19 +30,19 @@ const quoted: Grammar = {
 describe("scan", () => {
 	test("covers the input exactly once", () => {
 		let code = 'let greeting = "hello";\n';
-		let tokens = scan(code, quoted);
+		let tokens = scan(code, QUOTED);
 
 		expect(tokens.map((token) => token.value).join("")).toBe(code);
 	});
 
 	test("merges adjacent runs of the same type", () => {
-		let tokens = scan('"ab"', quoted);
+		let tokens = scan('"ab"', QUOTED);
 
 		expect(tokens).toEqual([{ type: "string", value: '"ab"' }]);
 	});
 
 	test("collects what no rule claims into a plain run", () => {
-		let tokens = scan("let x", quoted);
+		let tokens = scan("let x", QUOTED);
 
 		expect(tokens).toEqual([
 			{ type: "keyword", value: "let" },
@@ -51,13 +51,13 @@ describe("scan", () => {
 	});
 
 	test("matches at the cursor rather than searching ahead", () => {
-		let tokens = scan("x = let", quoted);
+		let tokens = scan("x = let", QUOTED);
 
 		expect(tokens[0]).toEqual({ type: "plain", value: "x " });
 	});
 
 	test("stays in a pushed mode until a rule pops it", () => {
-		let tokens = scan('"let" let', quoted);
+		let tokens = scan('"let" let', QUOTED);
 
 		expect(tokens).toEqual([
 			{ type: "string", value: '"let"' },
@@ -67,7 +67,7 @@ describe("scan", () => {
 	});
 
 	test("returns nothing for empty source", () => {
-		expect(scan("", quoted)).toEqual([]);
+		expect(scan("", QUOTED)).toEqual([]);
 	});
 });
 
@@ -80,7 +80,7 @@ describe("compose", () => {
 	});
 
 	test("keeps every mode either grammar defines", () => {
-		let merged = compose(quoted, { extra: [{ type: "plain", match: /x/y }] });
+		let merged = compose(QUOTED, { extra: [{ type: "plain", match: /x/y }] });
 
 		expect(Object.keys(merged).sort()).toEqual(["extra", "main", "string"]);
 	});

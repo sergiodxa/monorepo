@@ -109,8 +109,8 @@ describe("bash", () => {
 	});
 
 	/**
-	 * From `apps/auth-saas/DEPLOYMENT.md`, which is every construct a shell fence
-	 * here uses at once: a loop, a line continuation, and a quoted expansion.
+	 * A shell snippet from a deployment guide, holding every construct a shell
+	 * fence uses at once: a loop, a line continuation, and a quoted expansion.
 	 */
 	test("scans a real multi-line script, covering it exactly", () => {
 		let code = [
@@ -146,8 +146,8 @@ describe("bash", () => {
 	});
 
 	/**
-	 * From `apps/uptime/resources/docs/api/resources/cron-jobs.md`, the shape
-	 * every API example takes: flags, continuations, and a JSON payload.
+	 * A request from an API reference page, the shape every API example
+	 * takes: flags, continuations, and a JSON payload.
 	 */
 	test("scans a multi-line curl, covering it exactly", () => {
 		let code = [
