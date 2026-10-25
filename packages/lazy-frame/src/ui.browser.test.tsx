@@ -239,12 +239,18 @@ class InterceptableNavigateEvent extends Event {
 }
 
 describe("prefetch", () => {
-	/** The headers of each request for the frame's source, in the order they arrived. */
-	let fetched: Headers[] = [];
+	/**
+	 * Every request for a frame source, in the order it arrived. Each test mounts its own
+	 * source, so a request one test started that lands during the next is told apart.
+	 */
+	let fetched: Array<{ path: string; headers: Headers }> = [];
+
+	/** How many openers this suite has mounted, which numbers each one's source. */
+	let mounts = 0;
 
 	let worker = setupWorker(
-		http.get("*/jobs/1", ({ request }) => {
-			fetched.push(request.headers);
+		http.get("*/jobs/:id", ({ request }) => {
+			fetched.push({ path: new URL(request.url).pathname, headers: request.headers });
 			return HttpResponse.html("<p>Job</p>");
 		}),
 	);
@@ -262,19 +268,30 @@ describe("prefetch", () => {
 
 	afterAll(() => worker.stop());
 
-	/** Mounts a dialog that `#job-1` opens, fetching its frame ahead as `prefetch` says. */
-	function mountOpener(prefetch: boolean): HTMLElement {
+	/**
+	 * Mounts a dialog its opener opens, fetching its frame ahead as `prefetch` says, under a
+	 * source no other test uses.
+	 */
+	function mountOpener(prefetch: boolean): { opener: HTMLElement; src: string } {
+		mounts += 1;
+		let id = `job-${mounts}`;
+		let src = `/jobs/${mounts}`;
 		let result = mount(
 			<div>
-				<a id="job-1" href="/jobs/1">
+				<a id={id} href={src}>
 					Open
 				</a>
 				<dialog>
-					<LazyFrame src="/jobs/1" loadOn="open" opener="job-1" prefetch={prefetch} />
+					<LazyFrame src={src} loadOn="open" opener={id} prefetch={prefetch} />
 				</dialog>
 			</div>,
 		);
-		return result.$("#job-1") as HTMLElement;
+		return { opener: result.$(`#${id}`) as HTMLElement, src };
+	}
+
+	/** The headers of each request for `src` so far, with every other source's requests left out. */
+	function requestsFor(src: string): Headers[] {
+		return fetched.filter((request) => request.path === src).map((request) => request.headers);
 	}
 
 	/** Lets `ms` pass on the real clock the intent delay runs on. */
@@ -288,45 +305,45 @@ describe("prefetch", () => {
 	}
 
 	test("fetches the frame ahead once a mouse rests on the opener", async () => {
-		let opener = mountOpener(true);
+		let { opener, src } = mountOpener(true);
 
 		point(opener, "pointerover");
-		expect(fetched).toHaveLength(0);
+		expect(requestsFor(src)).toHaveLength(0);
 
-		await vi.waitFor(() => expect(fetched).toHaveLength(1));
-		expect(fetched[0]?.get("accept")).toBe("text/html");
-		expect(fetched[0]?.get("x-remix-frame")).toBe("true");
+		await vi.waitFor(() => expect(requestsFor(src)).toHaveLength(1));
+		expect(requestsFor(src)[0]?.get("accept")).toBe("text/html");
+		expect(requestsFor(src)[0]?.get("x-remix-frame")).toBe("true");
 	});
 
 	test("skips a mouse that leaves before the delay", async () => {
-		let opener = mountOpener(true);
+		let { opener, src } = mountOpener(true);
 
 		point(opener, "pointerover");
 		point(opener, "pointerout");
 		await pause(150);
 
-		expect(fetched).toHaveLength(0);
+		expect(requestsFor(src)).toHaveLength(0);
 	});
 
 	test("fetches ahead once focus rests on the opener", async () => {
-		let opener = mountOpener(true);
+		let { opener, src } = mountOpener(true);
 
 		opener.focus();
 
-		await vi.waitFor(() => expect(fetched).toHaveLength(1));
+		await vi.waitFor(() => expect(requestsFor(src)).toHaveLength(1));
 	});
 
 	test("fetches at once on a press, and once per opener", async () => {
-		let opener = mountOpener(true);
+		let { opener, src } = mountOpener(true);
 
 		opener.dispatchEvent(
 			new PointerEvent("pointerdown", { bubbles: true, button: 0, isPrimary: true }),
 		);
-		await vi.waitFor(() => expect(fetched).toHaveLength(1));
+		await vi.waitFor(() => expect(requestsFor(src)).toHaveLength(1));
 
 		opener.focus();
 		await pause(150);
-		expect(fetched).toHaveLength(1);
+		expect(requestsFor(src)).toHaveLength(1);
 	});
 
 	test("leaves a visitor saving data alone", async () => {
@@ -334,21 +351,21 @@ describe("prefetch", () => {
 			configurable: true,
 			value: { saveData: true },
 		});
-		let opener = mountOpener(true);
+		let { opener, src } = mountOpener(true);
 
 		opener.focus();
 		await pause(150);
 
-		expect(fetched).toHaveLength(0);
+		expect(requestsFor(src)).toHaveLength(0);
 	});
 
 	test("fetches nothing ahead unless asked", async () => {
-		let opener = mountOpener(false);
+		let { opener, src } = mountOpener(false);
 
 		opener.focus();
 		point(opener, "pointerover");
 		await pause(150);
 
-		expect(fetched).toHaveLength(0);
+		expect(requestsFor(src)).toHaveLength(0);
 	});
 });
