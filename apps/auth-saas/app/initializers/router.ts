@@ -35,6 +35,7 @@ import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
 import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
+import { apiCatalogEntry } from "~/config/api-catalog";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/web";
 
@@ -60,7 +61,7 @@ export const webRouter = createRouter({
 			stylesheets: () => assetResolver.getStylesheets("resources/views/hosted/document.tsx"),
 		}),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
-		wellKnown({ "security.txt": securityTxtEntry }),
+		wellKnown({ "security.txt": securityTxtEntry, "api-catalog": apiCatalogEntry }),
 		database(openDatabase()),
 		models(),
 		mailer({ transport, from: MAIL_FROM, mail, queue }),
