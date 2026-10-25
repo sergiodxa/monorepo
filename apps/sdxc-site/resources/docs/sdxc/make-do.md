@@ -23,9 +23,9 @@ sdxc make do page-views --role model
 ```
 
 ```text
-wrote app/models/page-views.ts
-edited cloudflare.config.ts
-edited bootstrap/worker.ts
+Wrote app/models/page-views.ts
+Edited cloudflare.config.ts
+Edited bootstrap/worker.ts
 Next: sdxc run typegen
 ```
 
@@ -68,16 +68,19 @@ SCREAMING_SNAKE_CASE:
 | `page-views`      | `PageViewsDO` | `PAGE_VIEWS` | `app/services/page-views.ts`      |
 | `Feed`            | `FeedDO`      | `FEED`       | `app/services/feed.ts`            |
 | `rooms/chat-room` | `ChatRoomDO`  | `CHAT_ROOM`  | `app/services/rooms/chat-room.ts` |
+| `feed-do`         | `FeedDO`      | `FEED`       | `app/services/feed-do.ts`         |
 
-Leave `DO` out of the name, since `make do` adds it to the class. A folder in the name is a
+A name that already ends in `do`, in any case, gets `DO` once: `feed-do` and `FeedDO` both
+write `FeedDO`. A folder in the name is a
 folder in the layer, as with every kind. `--binding` takes SCREAMING_SNAKE_CASE as it is, and
 turns kebab-case or camelCase into it: `--binding chat-rooms` declares `CHAT_ROOMS`.
 
 ## What it writes
 
-The class extends `DurableObject` from `cloudflare:workers` and answers `fetch` with its own name,
-so the binding answers the first time something reaches it. Its module comment and `fetch` are
-where your code goes.
+The class extends `DurableObject` from `cloudflare:workers` and overrides `fetch` to answer with
+its own name, so the binding answers the first time something reaches it. Its module comment and
+`fetch` are where your code goes. Every file it writes and edits then goes through the project's
+`format` command, as with every `make` kind.
 
 ## What it edits
 
@@ -107,9 +110,9 @@ among the entry point's exports:
 +export { PageViewsDO } from "~/app/models/page-views";
 ```
 
-A second Durable Object joins the same `exports` block, and the binding is added at the top of
-`env`. `bootstrap/worker.ts` stays the entry point and nothing else: the class lives in the layer
-its role names.
+A second Durable Object joins the same `exports` block, and a new binding is added at the top
+of `env`. `bootstrap/worker.ts` stays the entry point and nothing else: the class lives in the
+layer its role names.
 
 <warning>
 Cloudflare keeps an object's storage under its class name, so pick the name before the first
@@ -125,9 +128,8 @@ name already in `env`, stops the run with the project as it was:
 app/models/page-views.ts already exists; pass --force to replace it
 ```
 
-`--force` writes the class again from the stub and declares its binding again at the top of
-`env`, in place of the old declaration; the export and the re-export, already there, are kept as
-they are.
+`--force` writes the class again from the stub and declares its binding again where the old
+declaration stands; the export and the re-export, already there, are kept as they are.
 
 `make do` edits `cloudflare.config.ts`, so a Worker configured in `wrangler.jsonc` stops with
 `No cloudflare.config.ts in the project`; declare the class there by hand.
@@ -173,25 +175,10 @@ the same object.
 ## Test it
 
 Vitest imports the app's modules in Node, where `cloudflare:workers` is the stand-in in
-`app/test/cloudflare-workers.ts`. Give that stand-in the base class once, so a module that
-extends it loads:
-
-```typescript {% title="app/test/cloudflare-workers.ts" %}
-/** The base class a Durable Object extends, so a test constructs one with a mock state. */
-export class DurableObject<Env = Cloudflare.Env> {
-	ctx: DurableObjectState;
-	env: Env;
-
-	constructor(ctx: DurableObjectState, env: Env) {
-		this.ctx = ctx;
-		this.env = env;
-	}
-}
-```
-
-Then construct the object with `createDurableObjectState()` from `@sdxc/cloudflare-mocks`, which
-the template already installs. Its storage works like the object's own, so the test calls the
-methods a stub would:
+`app/test/cloudflare-workers.ts`, and that stand-in exports the `DurableObject` base class, so
+a module that extends it loads. Construct the object with `createDurableObjectState()` from
+`@sdxc/cloudflare-mocks`, which the template already installs. Its storage works like the
+object's own, so the test calls the methods a stub would:
 
 ```typescript {% title="app/models/page-views.test.ts" %}
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";

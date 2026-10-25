@@ -22,8 +22,8 @@ sdxc make secret STRIPE_API_KEY
 ```
 
 ```text
-edited cloudflare.config.ts
-edited .env.example
+Edited cloudflare.config.ts
+Edited .env.example
 Next: sdxc run typegen
 ```
 
@@ -54,8 +54,8 @@ A key `env` already declares stops the run with both files as they were:
 STRIPE_API_KEY is already declared in cloudflare.config.ts; pass --force to replace it
 ```
 
-`--force` replaces that declaration with `bindings.secret()`, added at the top of `env`, and
-leaves `.env.example` as it is when it already lists the key.
+`--force` replaces that declaration with `bindings.secret()` where it stands, keeping its
+comment, and leaves `.env.example` as it is when it already lists the key.
 
 The key is SCREAMING_SNAKE_CASE: one in that form is kept, and kebab-case or camelCase is
 converted, so `stripe-api-key` and `stripeApiKey` both declare `STRIPE_API_KEY`. A Worker

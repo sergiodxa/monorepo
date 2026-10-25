@@ -23,7 +23,7 @@ sdxc make binding kv CACHE
 ```
 
 ```text
-edited cloudflare.config.ts
+Edited cloudflare.config.ts
 Next: sdxc run typegen
 ```
 
@@ -46,26 +46,22 @@ The first argument is the `bindings` helper, spelled as `cf/config` spells it. E
 declaration with placeholder values, and the last column is what to change before the first
 deploy.
 
-| Helper          | Writes                                                                          | Before deploying                                                                                  |
-| --------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `kv`            | `bindings.kv({ id: "000…" })`                                                   | put the id `cf kv namespaces create --title <name>` prints                                        |
-| `d1`            | `bindings.d1({ name: manifest.name, id: "00000000-…" })`                        | give it a name of its own, and put the id `cf d1 create --name <name>` prints                     |
-| `r2`            | `bindings.r2({ name: "<key in lower case>" })`                                  | create the bucket with `cf r2 buckets create --name <name>`                                       |
-| `queue`         | `bindings.queue({ name: manifest.name })`                                       | give it a queue of its own, created with `cf queues create --queue-name <name>`                   |
-| `rateLimit`     | `bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } })` | pick a namespace of its own and the limit it allows                                               |
-| `sendEmail`     | `bindings.sendEmail()`                                                          | nothing                                                                                           |
-| `durableObject` | `bindings.durableObject({ worker, exportName })`, with placeholders             | fill in the Worker that defines the class and the class's exported name                           |
-| `secret`        | `bindings.secret()`, and `NAME=` in `.env.example`                              | set its value with `cf workers secrets update`, as [Make a secret](/docs/sdxc/make-secret) covers |
+| Helper          | Writes                                                                                 | Before deploying                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `kv`            | `bindings.kv({ id: "000…" })`                                                          | put the id `cf kv namespaces create --title <name>` prints                                        |
+| `d1`            | `bindings.d1({ name: <worker>-<key>, id: "00000000-…" })`                              | put the id `cf d1 create --name <name>` prints                                                    |
+| `r2`            | `bindings.r2({ name: "<key in kebab case>" })`                                         | create the bucket with `cf r2 buckets create --name <name>`                                       |
+| `queue`         | `bindings.queue({ name: <worker>-<key> })`                                             | create the queue with `cf queues create --queue-name <name>`                                      |
+| `rateLimit`     | `bindings.rateLimit({ namespace: "<next free>", simple: { limit: 100, period: 60 } })` | pick the limit it allows                                                                          |
+| `sendEmail`     | `bindings.sendEmail()`                                                                 | nothing                                                                                           |
+| `durableObject` | `bindings.durableObject({ worker: manifest.name, exportName: "<Key>DO" })`             | name the Worker that defines the class, when another Worker does, and the class it exports        |
+| `secret`        | `bindings.secret()`, and `NAME=` in `.env.example`                                     | set its value with `cf workers secrets update`, as [Make a secret](/docs/sdxc/make-secret) covers |
 
-<warning>
-The `d1`, `queue` and `rateLimit` helpers start from the values the template's own `DB`, `QUEUE`
-and `RATE_LIMITER` use. Deployed as written, the new binding shares that database, that queue or
-that rate-limit counter, so give it its own name or namespace first. A queue has exactly one
-consumer, and this Worker already consumes the template's for its jobs.
-</warning>
-
-An R2 bucket name holds lowercase letters, digits and hyphens, so a key with an underscore, such
-as `USER_UPLOADS`, needs its bucket renamed from `user_uploads` to `user-uploads`.
+Each named resource gets a name of its own, so a new binding never shares the template's
+database, queue or counter. `d1` and `queue` name theirs after the Worker and the key, as a
+template literal over `manifest.name`. `r2` names its bucket after the key in kebab case, as
+R2 requires, so `USER_UPLOADS` declares the bucket `user-uploads`. `rateLimit` takes the next
+namespace number the file leaves free.
 
 For a Durable Object class this Worker defines, [`sdxc make do`](/docs/sdxc/make-do) writes the
 class, its export and a binding with every name filled in; reach for the `durableObject` helper
@@ -81,7 +77,8 @@ that holds anything else is refused:
 "api.key" is not a binding name
 ```
 
-The binding is added as the first entry of `env`, so the newest one is on top.
+A new binding is added as the first entry of `env`, so the newest one is on top. Every file
+it edits then goes through the project's `format` command, as with every `make` kind.
 
 ## Flags
 
@@ -96,9 +93,10 @@ A key `env` already declares stops the run with the file as it was:
 CACHE is already declared in cloudflare.config.ts; pass --force to replace it
 ```
 
-Pass `--force` to swap the binding for a different helper: the old declaration is removed and
-the new one is added at the top of `env`. `make binding` edits `cloudflare.config.ts` only, so a
-Worker configured in `wrangler.jsonc` stops with `No cloudflare.config.ts in the project`.
+Pass `--force` to swap the binding for a different helper: the new declaration takes the old
+one's place in `env`, and the comment above it stays. `make binding` edits
+`cloudflare.config.ts` only, so a Worker configured in `wrangler.jsonc` stops with
+`No cloudflare.config.ts in the project`.
 
 ## Read it from env
 
