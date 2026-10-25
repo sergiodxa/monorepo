@@ -47,11 +47,11 @@ writes and how to fill it in.
 Three more kinds write to the Worker's configuration rather than a layer folder, so they take no
 test:
 
-| Kind                      | Writes                                                                                                                                            |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `secret <NAME>`           | `NAME: bindings.secret()` in `cloudflare.config.ts`, and `NAME=` in `.env.example`                                                                |
-| `binding <helper> <NAME>` | a `bindings.kv()`, `d1()`, `r2()`, `queue()`, `rateLimit()`, `sendEmail()`, `durableObject()` or `secret()` entry in `cloudflare.config.ts`       |
-| `do <name>`               | a Durable Object class in `app/services/`, or `app/models/` with `--role model`, re-exported from `bootstrap/worker.ts` with its binding declared |
+| Kind                                                 | Writes                                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`secret <NAME>`](/docs/sdxc/make-secret)            | `NAME: bindings.secret()` in `cloudflare.config.ts`, and `NAME=` in `.env.example`                                                                |
+| [`binding <helper> <NAME>`](/docs/sdxc/make-binding) | a `bindings.kv()`, `d1()`, `r2()`, `queue()`, `rateLimit()`, `sendEmail()`, `durableObject()` or `secret()` entry in `cloudflare.config.ts`       |
+| [`do <name>`](/docs/sdxc/make-do)                    | a Durable Object class in `app/services/`, or `app/models/` with `--role model`, re-exported from `bootstrap/worker.ts` with its binding declared |
 
 A KV namespace or D1 database binding is written with a placeholder id; replace it with the id
 Cloudflare prints when you create the namespace or database before you deploy.
