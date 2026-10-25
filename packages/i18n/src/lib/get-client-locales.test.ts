@@ -1,6 +1,6 @@
 /**
  * Covers client-locale resolution from the Accept-Language header: quality
- * ordering, wildcard and invalid-tag filtering, the missing-header case, and
+ * ordering, wildcard, q=0 and invalid-tag filtering, the missing-header case, and
  * accepting either a Request or a Headers object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -31,6 +31,15 @@ describe(getClientLocales, () => {
 
 	test("ignores wildcard ranges", () => {
 		expect(getClientLocales(makeRequest("*,fr;q=0.9"))).toBe("fr");
+	});
+
+	test("ignores ranges marked not acceptable with q=0", () => {
+		expect(getClientLocales(makeRequest("fr;q=0"))).toBeUndefined();
+		expect(getClientLocales(makeRequest("fr;q=0,de;q=0.5"))).toBe("de");
+	});
+
+	test("skips a range whose qvalue is out of range", () => {
+		expect(getClientLocales(makeRequest("fr;q=1.5,de;q=0.9"))).toBe("de");
 	});
 
 	test("accepts a Headers object", () => {

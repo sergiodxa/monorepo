@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatLanguageString, parse, pick } from "./parser.js";
+import { parse, pick } from "./parser.js";
 
 /**
  * Gets the client's preferred locale from the Accept-Language header,
- * ignoring wildcard ranges and unrepresentable tags. Returns `undefined` when
+ * ignoring wildcard, `q=0` and unrepresentable ranges. Returns `undefined` when
  * nothing remains, so callers can fall back to the runtime default locale.
  *
  * @param requestOrHeaders - The incoming Request, or its Headers.
@@ -28,7 +28,7 @@ export function getClientLocales(requestOrHeaders: Request | Headers): string | 
 
 	let parsedLocales = parse(acceptLanguage)
 		.filter((language) => language.code !== "*")
-		.map(formatLanguageString);
+		.map((language) => language.tag);
 
 	let validLocales: string[] = [];
 

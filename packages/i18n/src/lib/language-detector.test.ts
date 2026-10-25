@@ -137,6 +137,39 @@ describe(LanguageDetector, () => {
 		await expect(detector.detect(request)).resolves.toBe("es");
 	});
 
+	test("header detection truncates a range before trying the next one", async () => {
+		let detector = new LanguageDetector({
+			supportedLanguages: ["en", "es"],
+			fallbackLanguage: "en",
+		});
+
+		let request = makeRequest("/", { "Accept-Language": "es-UY,en;q=0.9" });
+
+		await expect(detector.detect(request)).resolves.toBe("es");
+	});
+
+	test("header detection never picks a range marked q=0", async () => {
+		let detector = new LanguageDetector({
+			supportedLanguages: ["en", "es"],
+			fallbackLanguage: "en",
+		});
+
+		let request = makeRequest("/", { "Accept-Language": "es;q=0" });
+
+		await expect(detector.detect(request)).resolves.toBe("en");
+	});
+
+	test("header detection falls back to a loose match once Lookup finds nothing", async () => {
+		let detector = new LanguageDetector({
+			supportedLanguages: ["en-GB", "es"],
+			fallbackLanguage: "es",
+		});
+
+		let request = makeRequest("/", { "Accept-Language": "en-US,fr;q=0.5" });
+
+		await expect(detector.detect(request)).resolves.toBe("en-GB");
+	});
+
 	test("falls back to a loose match on the primary language code", async () => {
 		let detector = new LanguageDetector({
 			supportedLanguages: ["es-ES"],
