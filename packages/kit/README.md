@@ -45,7 +45,7 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 - `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog.
 - `sdxc doctor` reports packages pinned behind the project's release and a `remix` pin other than the release's peer; `sdxc upgrade <release>` fixes both.
 
-`sdxc doctor` also checks secrets, migrations, the app layout and JSDoc comment shape, and runs a project's own checks written with `defineCheck` from `@sdxc/kit/doctor`. The [doctor guide](https://sdxc.dev/docs/sdxc/check-a-project) lists every check.
+`sdxc doctor` also checks secrets, migrations, the app layout, JSDoc comment shape and source conventions (local `let`, constant names, the stack's imports, `env`, `fetch` and logging), and runs a project's own checks written with `defineCheck` from `@sdxc/kit/doctor`. The [doctor guide](https://sdxc.dev/docs/sdxc/check-a-project) lists every check.
 
 ## API
 

@@ -35,6 +35,11 @@ export async function listFiles(root: string, folder: string): Promise<string[]>
 		.sort();
 }
 
+/** Whether `path` is a module, tests included and declaration files left out. */
+export function isModule(path: string): boolean {
+	return SOURCE.test(path) && !/\.d\.[cm]?ts$/.test(path);
+}
+
 /** Whether `path` is a module the app runs, its tests and declaration files left out. */
 export function isAppSource(path: string): boolean {
 	return SOURCE.test(path) && !NOT_APP_CODE.test(path);

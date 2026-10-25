@@ -174,6 +174,12 @@ describe("sdxc doctor", () => {
 				"skip  feature-scatter  Fewer than two layers use feature folders",
 				"skip  duplication      No app source to scan for duplication",
 				"skip  result-throws    No app source to scan for throw",
+				"skip  local-const      No app source to read",
+				"skip  constant-names   No app source to read",
+				"skip  stack-imports    No app source to read",
+				"skip  process-env      No app source to read",
+				"skip  fetch-param      No app source to read",
+				"skip  logger           No app source to read",
 				"skip  test-ratio       No app code to compare with tests",
 				"skip  crap             No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
 				"skip  mutation         No mutation report at reports/mutation/mutation.json; run mutation tests then re-run doctor",
@@ -210,6 +216,12 @@ describe("sdxc doctor", () => {
 				"skip  feature-scatter  Fewer than two layers use feature folders",
 				"skip  duplication      No app source to scan for duplication",
 				"skip  result-throws    No app source to scan for throw",
+				"skip  local-const      No app source to read",
+				"skip  constant-names   No app source to read",
+				"skip  stack-imports    No app source to read",
+				"skip  process-env      No app source to read",
+				"skip  fetch-param      No app source to read",
+				"skip  logger           No app source to read",
 				"skip  test-ratio       No app code to compare with tests",
 				"skip  crap             No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
 				"skip  mutation         No mutation report at reports/mutation/mutation.json; run mutation tests then re-run doctor",
@@ -269,6 +281,12 @@ describe("sdxc doctor", () => {
 			["feature-scatter", "skip"],
 			["duplication", "skip"],
 			["result-throws", "skip"],
+			["local-const", "skip"],
+			["constant-names", "skip"],
+			["stack-imports", "skip"],
+			["process-env", "skip"],
+			["fetch-param", "skip"],
+			["logger", "skip"],
 			["test-ratio", "skip"],
 			["crap", "skip"],
 			["mutation", "skip"],
@@ -315,6 +333,12 @@ describe("sdxc doctor", () => {
 			["feature-scatter", "skip"],
 			["duplication", "skip"],
 			["result-throws", "skip"],
+			["local-const", "skip"],
+			["constant-names", "skip"],
+			["stack-imports", "skip"],
+			["process-env", "skip"],
+			["fetch-param", "skip"],
+			["logger", "skip"],
 			["test-ratio", "skip"],
 			["crap", "skip"],
 			["mutation", "skip"],
@@ -391,6 +415,12 @@ describe("sdxc doctor with project checks", () => {
 				"skip  feature-scatter  Fewer than two layers use feature folders",
 				"skip  duplication      No app source to scan for duplication",
 				"skip  result-throws    No app source to scan for throw",
+				"skip  local-const      No app source to read",
+				"skip  constant-names   No app source to read",
+				"skip  stack-imports    No app source to read",
+				"skip  process-env      No app source to read",
+				"skip  fetch-param      No app source to read",
+				"skip  logger           No app source to read",
 				"skip  test-ratio       No app code to compare with tests",
 				"skip  crap             No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
 				"skip  mutation         No mutation report at reports/mutation/mutation.json; run mutation tests then re-run doctor",
@@ -459,7 +489,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,test-ratio,crap,mutation,ui",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,local-const,constant-names,stack-imports,process-env,fetch-param,logger,test-ratio,crap,mutation,ui",
 		]);
 
 		expect(result.code).toBe(1);
@@ -519,7 +549,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, test-ratio, crap, mutation, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, local-const, constant-names, stack-imports, process-env, fetch-param, logger, test-ratio, crap, mutation, ui, readme",
 		);
 	});
 });
