@@ -36,8 +36,8 @@ import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { sessionCookie } from "~/app/initializers/session-cookie";
-import { MANAGEMENT_SECURITY_POLICY } from "~/config/security-policy";
 import { apiCatalogEntry } from "~/config/api-catalog";
+import { MANAGEMENT_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/management";
 

@@ -34,8 +34,8 @@ import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
-import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
 import { apiCatalogEntry } from "~/config/api-catalog";
+import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/web";
 
