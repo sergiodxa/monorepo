@@ -249,11 +249,18 @@ private key, so only an issuer redeems those.
 
 ## Test the gate
 
-Build the router with `testCaptcha()` and answer the issuer directory with MSW. With the
-directory down, no challenge can be written, which drives both fallbacks without an issuer's
-private key:
+Build the router with `testCaptcha()` and answer the issuer directory with MSW.
+`@sdxc/privacy-pass/testing` stands in for the issuer: `createTestIssuer()` makes a key,
+`issuerDirectoryResponse` serves it, and `answerChallenge` writes the `Authorization` a client
+holding tokens retries with. With the directory down, no challenge can be written, which drives
+both fallbacks:
 
 ```typescript {% title="app/http/controllers/search.test.ts" %}
+import {
+	answerChallenge,
+	createTestIssuer,
+	issuerDirectoryResponse,
+} from "@sdxc/privacy-pass/testing";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
@@ -271,9 +278,10 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-function visit(path: string) {
+function visit(path: string, authorization?: string) {
+	let headers = authorization ? { Authorization: authorization } : undefined;
 	return createWebRouter(testCaptcha()).fetch(
-		new Request(new URL(path, "https://search.example.com")),
+		new Request(new URL(path, "https://search.example.com"), { headers }),
 	);
 }
 
@@ -293,7 +301,27 @@ test("the API refuses a request without a token", async () => {
 
 	expect(response.status).toBe(403);
 });
+
+test("a client holding a token reaches the results", async () => {
+	let issuer = await createTestIssuer();
+	server.use(http.get(DIRECTORY, () => issuerDirectoryResponse(issuer)));
+
+	let challenged = await visit(routes.search.index.href());
+	let header = challenged.headers.get("WWW-Authenticate") ?? "";
+	let response = await visit(
+		routes.search.index.href(),
+		await answerChallenge(issuer, header),
+	);
+
+	expect(challenged.status).toBe(401);
+	expect(response.status).toBe(200);
+});
 ```
+
+<note>
+`privacyPass` reads the directory once and keeps the keys for its `max-age`, so the test that
+serves a working issuer runs last, after the ones that need it down.
+</note>
 
 The directory is fetched through [`@sdxc/outbound`](/api/outbound), so the issuer must be a
 public name; `example.com` names pass, and the reserved `.example` and `.test` suffixes are

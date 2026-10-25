@@ -191,7 +191,7 @@ its creation id, `#draft`. `onSuccessUpdateEmail` moves it from Drafts to Sent o
 submission is accepted.
 
 ```typescript {% title="app/services/mail/send.ts" %}
-import type { EmailBodyPart, JMAP } from "@sdxc/jmap";
+import type { JMAP } from "@sdxc/jmap";
 
 import { Batch, CAPABILITIES } from "@sdxc/jmap";
 import { failure, isFailure, success } from "@sdxc/result";
@@ -226,7 +226,6 @@ export async function sendMessage(jmap: JMAP, message: Message) {
 	if (sender === undefined)
 		return failure(new MailError("The account has no identity."));
 
-	let text = { partId: "body", type: "text/plain" } as EmailBodyPart;
 	let batch = new Batch();
 	let draft = batch.call("Email/set", {
 		accountId: accountId.data,
@@ -238,7 +237,7 @@ export async function sendMessage(jmap: JMAP, message: Message) {
 				to: [{ name: null, email: message.to }],
 				subject: message.subject,
 				bodyValues: { body: { value: message.text } },
-				textBody: [text],
+				textBody: [{ partId: "body", type: "text/plain" }],
 			},
 		},
 	});
@@ -272,8 +271,8 @@ export async function sendMessage(jmap: JMAP, message: Message) {
 ```
 
 A body part being created names only its `partId`, which `bodyValues` is keyed by, and its
-`type`; the server fills in the size, charset and headers, which is why the part is cast to
-the `EmailBodyPart` it reads back. The `Email/set` the submission's `onSuccessUpdateEmail`
+`type`; the server fills in the size, charset and headers. `Email/set` takes an `EmailCreate`,
+whose body parts are typed that way, so the draft needs no cast. The `Email/set` the submission's `onSuccessUpdateEmail`
 triggers comes back as a second response to the same call, and
 `response.get(submission, "Email/set")` reads it.
 
