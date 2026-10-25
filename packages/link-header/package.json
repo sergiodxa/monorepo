@@ -1,13 +1,18 @@
 {
 	"name": "@sdxc/link-header",
 	"version": "0.0.1",
-	"description": "Parse and stringify RFC 8288 Link headers",
+	"description": "Parse and stringify RFC 8288 Link headers and RFC 9264 link sets",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./linkset": "./src/linkset.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/json-pointer": "workspace:*",
+		"@sdxc/result": "workspace:*"
 	}
 }

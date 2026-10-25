@@ -1,6 +1,6 @@
 # @sdxc/link-header
 
-Parse and stringify RFC 8288 `Link` headers.
+Parse and stringify RFC 8288 `Link` headers and RFC 9264 link sets.
 
 A [`Link`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Link) value is a
 list of URI-References with relation types and parameters. Splitting on commas is wrong: a
@@ -63,6 +63,28 @@ else headers.set("Link", value);
 
 `raw` is the exact source text, so parameters this caller did not read still round-trip.
 
+### Read and write a link set
+
+`@sdxc/link-header/linkset` reads and writes [RFC 9264](https://www.rfc-editor.org/rfc/rfc9264)
+link sets in both forms, `application/linkset` (the `Link` grammar, one link per line) and
+`application/linkset+json`, through one flat list of links, so a header converts to either.
+
+```typescript
+import { parse, parseJson, stringifyJson, toHeader } from "@sdxc/link-header/linkset";
+
+let links = parse(response.headers.get("Link"), { context: response.url });
+let json = stringifyJson(links); // {"linkset":[{"anchor":"https://example.org/","next":[…]}]}
+
+let result = parseJson(await linksetResponse.text());
+if (result.status === "success") headers.set("Link", toHeader(result.data) ?? "");
+```
+
+`context` fills a missing `anchor` and resolves relative references, which RFC 9264 recommends
+so a set keeps its meaning outside the response. `title*` and every other RFC 8187 attribute
+decode into `internationalized`, and other attributes land in `extensions` as arrays.
+`parseJson` answers a `LinksetParseError` listing every member that breaks the RFC, each at a
+JSON Pointer.
+
 ## API
 
 ### `parse(header: string | null): Link[]`
@@ -80,6 +102,12 @@ answers `null`.
 
 Renders one link-value with a quoted `rel` and any extra parameters after it. Values are quoted
 so a comma inside one cannot split the header.
+
+### `@sdxc/link-header/linkset`
+
+`parse(text, options?)` reads the text form or a `Link` header, `stringify(links)` writes the
+text form, `toHeader(links)` writes one header line (`null` when empty), `parseJson(text)` and
+`stringifyJson(links)` read and write the JSON form. `MEDIA_TYPE` and `JSON_MEDIA_TYPE` name both.
 
 ### Types
 

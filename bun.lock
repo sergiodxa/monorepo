@@ -1415,6 +1415,10 @@
     "packages/link-header": {
       "name": "@sdxc/link-header",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
     },
     "packages/location": {
       "name": "@sdxc/location",
