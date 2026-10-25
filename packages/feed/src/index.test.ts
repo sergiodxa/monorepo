@@ -251,6 +251,19 @@ describe("Feed.parse", () => {
 		expect(result.data.items[0]?.author).toEqual({ name: "Feed Author" });
 	});
 
+	test("reads an Atom feed whose title is empty, as RFC 4287 permits", () => {
+		let result = Feed.parse(
+			`<feed xmlns="http://www.w3.org/2005/Atom">
+				<id>urn:1</id><title/><updated>2026-04-14T00:00:00Z</updated>
+				<entry><id>urn:2</id><title></title><updated>2026-04-14T00:00:00Z</updated></entry>
+			</feed>`,
+		);
+
+		if (!isSuccess(result)) throw new Error("expected a feed");
+		expect(result.data.title).toBe("");
+		expect(result.data.items).toHaveLength(1);
+	});
+
 	test("drops a later item repeating an earlier guid", () => {
 		let result = Feed.parse(
 			`<rss version="2.0"><channel><title>T</title><link>https://e.test</link>
