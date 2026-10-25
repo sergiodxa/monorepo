@@ -1,11 +1,7 @@
 /**
- * Drives the agent credential against the object that enforces it: a real SQLite behind a
- * real Durable Object state, so what is asserted is the row rather than a stub of it.
- *
- * What this file owns is the half of ADR-006 the object decides — that a token is checked
- * against its row on every call with nothing cached in between, that the tier is read live
- * rather than taken from the credential, and that the day's budget is stored rather than
- * held in an isolate that a deploy would reset.
+ * Drives the agent credential against a real Durable Object's SQLite: a token is checked
+ * against its row on every call, the tier is read live, and the day's budget is stored in the
+ * object, so a deploy keeps it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

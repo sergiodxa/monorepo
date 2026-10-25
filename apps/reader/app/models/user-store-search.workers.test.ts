@@ -1,11 +1,7 @@
 /**
- * Checks, inside workerd and against a real Durable Object's SQLite, that the inverted
- * index ADR-016 declined is one this runtime would actually allow — so the option is known
- * to work before anybody needs it, rather than argued about again.
- *
- * It also pins the entitlement and flag paths a search reads through: the window a tier
- * grants, and the step a flag sizes, both taken inside the object where there is no request
- * to carry either.
+ * Checks inside workerd that a Durable Object's SQLite allows an FTS5 index, so that search
+ * option is proven ready, and pins the window a tier grants and the step a flag sizes, both
+ * read inside the object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,10 +22,8 @@ function subject(): string {
 
 describe("FTS5 inside a reader's object", () => {
 	/**
-	 * The alternative ADR-016 records rather than builds. The authorizer a Durable Object's
-	 * SQLite runs statements through carries an allowlist of virtual-table modules, so what
-	 * matters is whether a `CREATE VIRTUAL TABLE` is permitted at all — not how well it
-	 * ranks, which is a question for whoever builds it.
+	 * A Durable Object's SQLite authorizer allowlists virtual-table modules, so this proves
+	 * a `CREATE VIRTUAL TABLE` using FTS5 is permitted and answers a match.
 	 */
 	test("creates a virtual table, indexes text into it and matches on it", async () => {
 		let stub = env.USER.getByName(subject());

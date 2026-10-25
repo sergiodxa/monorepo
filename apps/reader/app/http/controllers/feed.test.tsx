@@ -800,13 +800,13 @@ describe("how long this feed's posts stay", () => {
 	});
 });
 
-describe("which folder this feed reads in", () => {
-	/** The folders this reader has, which the filing control offers one submit each for. */
-	const FOLDERS = [
-		{ id: "01J0FOLDER00000000000000A1", title: "Tech" },
-		{ id: "01J0FOLDER00000000000000A2", title: "News" },
-	];
+/** The folders this reader has, which the filing control offers one submit each for. */
+const FOLDERS = [
+	{ id: "01J0FOLDER00000000000000A1", title: "Tech" },
+	{ id: "01J0FOLDER00000000000000A2", title: "News" },
+];
 
+describe("which folder this feed reads in", () => {
 	test("offers every folder the reader has, each as a submit of its own", async () => {
 		store.getFeed.mockResolvedValue(FEED);
 		store.listFolders.mockResolvedValue(FOLDERS);

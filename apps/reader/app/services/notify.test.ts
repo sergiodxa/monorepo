@@ -178,10 +178,10 @@ describe("the minimum gap", () => {
 	});
 });
 
-describe("quiet hours", () => {
-	/** Midnight UTC, which every hour below is an offset from. */
-	const MIDNIGHT = Date.UTC(2026, 0, 15, 0, 0, 0);
+/** Midnight UTC, which every hour below is an offset from. */
+const MIDNIGHT = Date.UTC(2026, 0, 15, 0, 0, 0);
 
+describe("quiet hours", () => {
 	/** That moment, moved on by whole hours. */
 	function at(hour: number): number {
 		return MIDNIGHT + hour * 60 * 60 * 1000;

@@ -1,12 +1,7 @@
 /**
- * Drives entitlement against the object that enforces it: a real SQLite, a real feed
- * object behind the `FEED` binding, a real KV holding the heads and a real catalog behind
- * `PLATFORM_DB`.
- *
- * What is asserted here is the half of ADR-012 this object owns — that a limit is a local
- * comparison reaching neither the catalog nor a platform, that the tier has exactly one
- * writer and refuses a stale snapshot, and that a tier change deletes nothing and is undone
- * by one column write.
+ * Drives entitlement against real bindings: a limit is a local comparison inside the object,
+ * the tier has one writer that refuses a stale snapshot, and a tier change keeps every row
+ * and is undone by one column write.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
