@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "When to page by offset and when by keyset with `@sdxc/pagination`"
     - "How to validate page parameters and advertise pages in `Link` headers"
@@ -160,7 +160,7 @@ export async function* walkPages(start: URL, init?: RequestInit) {
 	let next: string | null = start.toString();
 
 	while (next !== null) {
-		let response = await fetch(next, init);
+		let response: Response = await fetch(next, init);
 		yield response;
 		if (!response.ok) return;
 
@@ -173,8 +173,9 @@ export async function* walkPages(start: URL, init?: RequestInit) {
 
 Each response is yielded for the caller to check and parse, and the walk ends at a failed
 response or at a page that carries no `next`. A relative target is resolved against the
-response it came from, so the walk follows any API's links, absolute or not. A missing header parses to `[]` and a malformed
-entry is dropped rather than throwing, so one bad link ends the walk instead of failing it.
+response it came from, so the walk follows any API's links, absolute or not. A missing header
+parses to `[]` and a malformed entry is dropped, so one bad link ends the walk instead of
+failing it.
 For a typed client with schemas on each response, see
 [Write a typed API client](/docs/http-apis/api-clients).
 
@@ -243,7 +244,9 @@ it the component's active style, and `aria-disabled="true"` renders the gap as i
 landmark. `href` keeps every other query parameter, as `paginate` does for the API.
 
 The page's handler parses the same way the API's does, but a visitor cannot act on a
-validation error, so a bad parameter redirects to the first page instead:
+validation error, so a bad parameter redirects to the first page instead. It declares the
+app's `page` middleware, which publishes `ctx.render` and the `ctx.assets` its document
+links:
 
 ```tsx {% title="app/http/controllers/invoices/index.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -252,36 +255,45 @@ import { Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import page from "~/app/http/middleware/page";
 import { paging } from "~/app/http/validators/paging";
 import { invoices } from "~/database/schema";
-import Layout from "~/resources/layouts/app";
+import DocumentLayout from "~/resources/layouts/document";
 import { InvoiceTable } from "~/resources/views/invoice-table";
 import { Pager } from "~/resources/views/pager";
 import routes from "~/routes/web";
 
-export default createAction(routes.invoices.index, async (ctx) => {
-	let params = paging.parse(ctx.url.searchParams);
-	if (isFailure(params)) return redirect(routes.invoices.index.href());
+export default createAction(routes.invoices.index, {
+	middleware: page,
+	async handler(ctx) {
+		let params = paging.parse(ctx.url.searchParams);
+		if (isFailure(params)) return redirect(routes.invoices.index.href());
 
-	let query = ctx.db
-		.query(invoices)
-		.orderBy("created_at", "desc")
-		.orderBy("id", "desc");
-	let page = await Pagination.byOffset(query, params.data);
-	if (isFailure(page)) {
-		ctx.log.fail(page.error);
-		return internalServerError("Invoices are unavailable right now.");
-	}
+		let query = ctx.db
+			.query(invoices)
+			.orderBy("created_at", "desc")
+			.orderBy("id", "desc");
+		let result = await Pagination.byOffset(query, params.data);
+		if (isFailure(result)) {
+			ctx.log.fail(result.error);
+			return internalServerError("Invoices are unavailable right now.");
+		}
 
-	let { items, pagination } = page.data;
-	let range = `${pagination.from}–${pagination.to} of ${pagination.total}`;
-	return ctx.render(
-		<Layout title={`Invoices, page ${pagination.page} of ${pagination.pages}`}>
-			<p>{`Showing ${range}`}</p>
-			<InvoiceTable invoices={items} />
-			<Pager label="Invoice pages" url={ctx.url} pagination={pagination} />
-		</Layout>,
-	);
+		let { items, pagination } = result.data;
+		let range = `${pagination.from}–${pagination.to} of ${pagination.total}`;
+		return ctx.render(
+			<DocumentLayout
+				assets={ctx.assets}
+				intl={ctx.intl}
+				url={ctx.url}
+				title={`Invoices, page ${pagination.page} of ${pagination.pages}`}
+			>
+				<p>{`Showing ${range}`}</p>
+				<InvoiceTable invoices={items} />
+				<Pager label="Invoice pages" url={ctx.url} pagination={pagination} />
+			</DocumentLayout>,
+		);
+	},
 });
 ```
 
@@ -305,55 +317,65 @@ import { isFailure } from "@sdxc/result";
 import { Pagination } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
+import page from "~/app/http/middleware/page";
 import { paging } from "~/app/http/validators/paging";
 import { events } from "~/database/schema";
-import Layout from "~/resources/layouts/app";
+import DocumentLayout from "~/resources/layouts/document";
 import { EventList } from "~/resources/views/event-list";
 import routes from "~/routes/web";
 
-export default createAction(routes.activity.index, async (ctx) => {
-	let params = paging.parse(ctx.url.searchParams);
-	let cursor = isFailure(params) ? null : params.data.cursor;
+export default createAction(routes.activity.index, {
+	middleware: page,
+	async handler(ctx) {
+		let params = paging.parse(ctx.url.searchParams);
+		let cursor = isFailure(params) ? null : params.data.cursor;
 
-	let page = await Paging.byKeyset(ctx.db.query(events), {
-		orderBy: [["id", "desc"]],
-		unique: true,
-		cursor,
-		limit: 50,
-	});
-	if (isFailure(page)) {
-		if (page.error instanceof InvalidCursorError) {
-			return redirect(routes.activity.index.href());
+		let result = await Paging.byKeyset(ctx.db.query(events), {
+			orderBy: [["id", "desc"]],
+			unique: true,
+			cursor,
+			limit: 50,
+		});
+		if (isFailure(result)) {
+			if (result.error instanceof InvalidCursorError) {
+				return redirect(routes.activity.index.href());
+			}
+			ctx.log.fail(result.error);
+			return internalServerError("Activity is unavailable right now.");
 		}
-		ctx.log.fail(page.error);
-		return internalServerError("Activity is unavailable right now.");
-	}
 
-	let { items, cursors } = page.data;
-	let href = (value: string) => `${routes.activity.index.href()}?cursor=${value}`;
-	return ctx.render(
-		<Layout title="Activity">
-			<EventList events={items} />
-			<Pagination aria-label="Activity pages">
-				<Pagination.List>
-					{cursors.prev !== null && (
-						<Pagination.Item>
-							<Pagination.Link href={href(cursors.prev)} rel="prev">
-								Newer
-							</Pagination.Link>
-						</Pagination.Item>
-					)}
-					{cursors.next !== null && (
-						<Pagination.Item>
-							<Pagination.Link href={href(cursors.next)} rel="next">
-								Older
-							</Pagination.Link>
-						</Pagination.Item>
-					)}
-				</Pagination.List>
-			</Pagination>
-		</Layout>,
-	);
+		let { items, cursors } = result.data;
+		let href = (value: string) =>
+			`${routes.activity.index.href()}?cursor=${value}`;
+		return ctx.render(
+			<DocumentLayout
+				assets={ctx.assets}
+				intl={ctx.intl}
+				url={ctx.url}
+				title="Activity"
+			>
+				<EventList events={items} />
+				<Pagination aria-label="Activity pages">
+					<Pagination.List>
+						{cursors.prev !== null && (
+							<Pagination.Item>
+								<Pagination.Link href={href(cursors.prev)} rel="prev">
+									Newer
+								</Pagination.Link>
+							</Pagination.Item>
+						)}
+						{cursors.next !== null && (
+							<Pagination.Item>
+								<Pagination.Link href={href(cursors.next)} rel="next">
+									Older
+								</Pagination.Link>
+							</Pagination.Item>
+						)}
+					</Pagination.List>
+				</Pagination>
+			</DocumentLayout>,
+		);
+	},
 });
 ```
 
@@ -373,8 +395,8 @@ issued fails with `InvalidCursorError`, which this page turns into a redirect to
 page and an API turns into a `400`, so a client mid-walk starts over.
 </warning>
 
-`byKeyset` reads one row past `limit` to learn whether another page exists,
-which is how `cursors.next` comes back `null` on the last page without a count.
+`byKeyset` reads one row past `limit` to learn whether another page exists, which is how
+`cursors.next` comes back `null` on the last page without a count.
 
 ## Test the parameters and the headers
 
