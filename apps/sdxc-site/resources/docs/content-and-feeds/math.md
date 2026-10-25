@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 30
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to convert TeX formulas into MathML with `@sdxc/math`"
     - "How to find the math in markdown and draw it in a route"
@@ -181,17 +181,18 @@ block or inline code its author wrote, and the walk succeeds.
 
 ## Draw the tags in a route
 
-`MathFormula` from `@sdxc/math/ui` is a `remix/component` component whose props are exactly
-the attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
+`MathTag` from `@sdxc/math/ui` is a `remix/component` component that takes the attributes the
+visitor writes, plus the `children` `toRemix` passes every tag, so it goes straight into the
+`components` map:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { toRemix } from "@sdxc/markdown/remix";
-import { MathFormula } from "@sdxc/math/ui";
+import { MathTag } from "@sdxc/math/ui";
 
 export function renderPost(document: Markdown.Document) {
-	return toRemix(document, { components: { math: MathFormula } });
+	return toRemix(document, { components: { math: MathTag } });
 }
 ```
 
@@ -200,7 +201,7 @@ them in the MathML namespace when the page arrives. A tag whose TeX does not con
 walk with `invalid: "keep"` never produces but a hand-built tag can, renders as the TeX in a
 `<code>`, so a reader still sees what the author wrote.
 
-The same component draws a formula outside markdown, in any view:
+`MathFormula` draws a formula outside markdown, in any view, from the same `tex` and `display`:
 
 ```tsx {% title="resources/components/pricing-note.tsx" %}
 import type { Handle } from "remix/component";
