@@ -2303,11 +2303,15 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
         "remix": "3.1.0",
       },
     },
