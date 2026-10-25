@@ -15,7 +15,8 @@ export type EmailAuthProtocol =
 	| "mta-sts"
 	| "mta-sts-policy"
 	| "tls-rpt"
-	| "dkim";
+	| "dkim"
+	| "bimi";
 
 /**
  * Text that a receiver would discard: a record without its version tag, a broken term, a

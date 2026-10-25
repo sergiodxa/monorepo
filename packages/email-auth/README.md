@@ -1,7 +1,7 @@
 # @sdxc/email-auth
 
-Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT
-and DKIM.
+Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT,
+BIMI and DKIM.
 
 Every parser is pure and returns a `Result`; every lookup goes through DNS over HTTPS, so the
 same checks run in a Cloudflare Worker, a server or a test. DMARC follows RFC 9989, with the
@@ -67,6 +67,19 @@ let reporting = await discoverTlsRpt("example.com"); // { status: "found", recor
 The policy file is fetched like a sending MTA does: HTTPS, no redirects, a 200 `text/plain`
 body under 64 KiB, through [`@sdxc/outbound`](https://www.npmjs.com/package/@sdxc/outbound).
 
+### Check whether a domain qualifies for BIMI
+
+```typescript
+import { bimiDmarcShortfalls, discoverBimi, discoverDmarc } from "@sdxc/email-auth";
+
+let bimi = await discoverBimi("example.com"); // { status: "found", record: { location, evidence } }
+let dmarc = await discoverDmarc("example.com");
+// bimiDmarcShortfalls(dmarc.data): [] when DMARC enforces, else ["policy-none"], ["testing"], …
+```
+
+BIMI follows draft-brand-indicators-for-message-identification-14. The logo URL is validated as
+HTTPS and SVG, and never fetched.
+
 ### Parse records and reports you already have
 
 ```typescript
@@ -109,12 +122,21 @@ parseDmarcReport(xml); // an RFC 9990 aggregate report, already decompressed
 - `analyzeSpf(domain, options?)`: the record, its lookup count across includes and redirects,
   and its problems.
 
+### BIMI
+
+- `parseBimiRecord(text)`, `isBimiRecord(text)`: the logo (`l=`), evidence (`a=`), local-part
+  selectors (`lps=`) and avatar preference (`avp=`); `declined` for an explicit `l=; a=;`.
+- `discoverBimi(domain, options?)`: the record at `<selector>._bimi.<domain>`, then at the
+  Organizational Domain; pass `organizationalDomain` to skip the Tree Walk.
+- `bimiDmarcShortfalls(discovery)`: why a DMARC discovery falls short of BIMI's requirements.
+
 ### MTA-STS, TLS-RPT and DKIM
 
 - `parseMtaStsRecord(text)`, `parseMtaStsPolicy(text)`, `discoverMtaSts(domain, options?)`,
   `fetchMtaStsPolicy(domain, options?)`, `mtaStsPolicyUrl(domain)`, `matchesMxPattern(host, patterns)`.
 - `parseTlsRptRecord(text)`, `discoverTlsRpt(domain, options?)`.
-- `parseDkimRecord(text)`, `lookupDkimKey(domain, selector, options?)`.
+- `parseDkimRecord(text)`, `lookupDkimKey(domain, selector, options?)`: DKIM1 key records
+  (RFC 6376). DKIM2 (draft-ietf-dkim-dkim2-spec) is being tracked and not parsed yet.
 - `RecordParseError`: every parser's failure, with the `protocol` it was read as.
   `PolicyFetchError`: a policy file fetch that failed, with the step in `reason`.
 

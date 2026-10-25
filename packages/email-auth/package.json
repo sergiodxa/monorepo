@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/email-auth",
 	"version": "0.0.1",
-	"description": "Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT and DKIM",
+	"description": "Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

@@ -178,7 +178,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | [@sdxc/captcha](packages/captcha)                   | CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider |
 | [@sdxc/email-address](packages/email-address)       | Email address parsing and normalization, disposable-domain detection and mail-server checks                     |
-| [@sdxc/email-auth](packages/email-auth)             | Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT and DKIM          |
+| [@sdxc/email-auth](packages/email-auth)             | Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM    |
 | [@sdxc/honeypot](packages/honeypot)                 | Honeypot form fields with a signed render timestamp, router middleware and a `remix/component` component        |
 | [@sdxc/outbound](packages/outbound)                 | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies      |
 | [@sdxc/rate-limit](packages/rate-limit)             | Adapter-based rate limiting with standard response headers                                                      |

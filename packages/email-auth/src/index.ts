@@ -1,12 +1,13 @@
 /**
  * Parses and evaluates the DNS policies that authenticate a domain's email: DMARC with its
- * Tree Walk and aggregate reports, SPF's `check_host()`, MTA-STS, TLS-RPT and DKIM key
- * records. Lookups go through DNS-over-HTTPS, so every check runs in a Worker.
+ * Tree Walk and aggregate reports, SPF's `check_host()`, MTA-STS, TLS-RPT, BIMI and DKIM
+ * key records. Lookups go through DNS-over-HTTPS, so every check runs in a Worker.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+export type { BIMI } from "./bimi.js";
 export type { DKIM } from "./dkim.js";
 export type { DMARC } from "./dmarc.js";
 export type { DMARCReport } from "./dmarc-report.js";
@@ -18,6 +19,7 @@ export type { CheckHostInput, CheckHostOptions, SpfEvaluation } from "./spf/chec
 export type { SPF } from "./spf/record.js";
 export type { TLSRPT } from "./tls-rpt.js";
 
+export { bimiDmarcShortfalls, discoverBimi, isBimiRecord, parseBimiRecord } from "./bimi.js";
 export { lookupDkimKey, parseDkimRecord } from "./dkim.js";
 export {
 	appliedDmarcPolicy,
