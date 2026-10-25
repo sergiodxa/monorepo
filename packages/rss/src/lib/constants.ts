@@ -29,3 +29,9 @@ export const DUBLIN_CORE_NAMESPACE = "http://purl.org/dc/elements/1.1/";
  * Stores the Slash namespace URI used for `slash:*` extensions.
  */
 export const SLASH_NAMESPACE = "http://purl.org/rss/1.0/modules/slash/";
+
+/**
+ * Stores the Feed History namespace URI RFC 5005 declares `fh:complete` and
+ * `fh:archive` in.
+ */
+export const FEED_HISTORY_NAMESPACE = "http://purl.org/syndication/history/1.0";

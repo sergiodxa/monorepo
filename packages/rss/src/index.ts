@@ -172,6 +172,16 @@ export namespace RSS {
 		skipDays?: string[];
 		atomLink?: AtomLinkInput;
 		dcCreator?: string | string[];
+		/**
+		 * The channel lists every item of the feed (`fh:complete`, RFC 5005 §2), so an item
+		 * missing from it has left the feed.
+		 */
+		fhComplete?: boolean;
+		/**
+		 * The channel is an archive (`fh:archive`, RFC 5005 §4): a fixed page of older items
+		 * reached through an `atom:link` with `rel="prev-archive"`.
+		 */
+		fhArchive?: boolean;
 		namespaces?: Record<string, string>;
 		attributes?: Record<string, string>;
 		extensions?: Element[];

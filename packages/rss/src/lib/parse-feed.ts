@@ -13,7 +13,7 @@ import { XML } from "@sdxc/xml";
 import type { RSS } from "../index.js";
 
 import { cloneAttributes } from "./clone.js";
-import { RSS_VERSION } from "./constants.js";
+import { FEED_HISTORY_NAMESPACE, RSS_VERSION } from "./constants.js";
 import { toExtensionElement } from "./extensions.js";
 import {
 	collapseArray,
@@ -73,8 +73,24 @@ function parseChannel(
 		attributes: cloneAttributes(element.attributes),
 		namespaces: parseNamespaces(rootAttributes),
 	};
+	let inScope = {
+		...parseNamespaces(rootAttributes),
+		...parseNamespaces(element.attributes ?? {}),
+	};
 
 	for (let child of getChildElements(element)) {
+		let marker = readHistoryMarker(child, inScope);
+
+		if (marker === "complete") {
+			channel.fhComplete = true;
+			continue;
+		}
+
+		if (marker === "archive") {
+			channel.fhArchive = true;
+			continue;
+		}
+
 		switch (child.name) {
 			case "title": {
 				channel.title = getElementText(child);
@@ -524,6 +540,31 @@ function parseAtomLink(element: XML.Element): RSS.AtomLink {
 	if (!isEmptyRecord(attributes)) atomLink.attributes = attributes;
 	if (extensions.length > 0) atomLink.extensions = extensions;
 	return atomLink;
+}
+
+/**
+ * Names the RFC 5005 marker a channel child is, judged by the namespace its prefix is
+ * bound to, so a document that binds the Feed History namespace to another prefix still
+ * declares itself complete or archived.
+ *
+ * @param element - A child of the channel
+ * @param namespaces - The declarations in scope on the channel
+ * @returns `complete`, `archive`, or `undefined` for any other element
+ */
+function readHistoryMarker(
+	element: XML.Element,
+	namespaces: Record<string, string>,
+): "complete" | "archive" | undefined {
+	let separator = element.name.indexOf(":");
+	if (separator === -1) return undefined;
+
+	let prefix = element.name.slice(0, separator);
+	let uri = parseNamespaces(element.attributes ?? {})?.[prefix] ?? namespaces[prefix];
+	if (uri !== FEED_HISTORY_NAMESPACE) return undefined;
+
+	let name = element.name.slice(separator + 1);
+	if (name === "complete" || name === "archive") return name;
+	return undefined;
 }
 
 /**

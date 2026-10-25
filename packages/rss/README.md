@@ -129,7 +129,9 @@ All types live on the `RSS` namespace. Every structured type also accepts `attri
 `title`, `description` and `link`, plus the optional RSS 2.0 fields `language`, `copyright`,
 `managingEditor`, `webMaster`, `pubDate`, `lastBuildDate`, `category`, `generator`, `docs`,
 `cloud`, `ttl`, `image`, `rating`, `textInput`, `skipHours` and `skipDays`; the extensions
-`atomLink` and `dcCreator`; and `namespaces`, a prefix-to-URI map declared on the root.
+`atomLink` and `dcCreator`; RFC 5005's `fhComplete` and `fhArchive` markers (`fh:complete`,
+`fh:archive`), whose paging and archive relations travel as `atomLink` entries; and
+`namespaces`, a prefix-to-URI map declared on the root.
 
 #### `RSS.Item`
 

@@ -14,6 +14,7 @@ import {
 	ATOM_NAMESPACE,
 	CONTENT_NAMESPACE,
 	DUBLIN_CORE_NAMESPACE,
+	FEED_HISTORY_NAMESPACE,
 	RSS_VERSION,
 	SLASH_NAMESPACE,
 } from "./constants.js";
@@ -83,6 +84,14 @@ export function buildDocument(channel: RSS.Channel, items: RSS.Item[]): XML.Docu
 
 	for (let creator of normalizeStringArray(channel.dcCreator)) {
 		channelChildren.push(createTextElement("dc:creator", creator));
+	}
+
+	let history = historyPrefix(namespaces);
+	if (channel.fhComplete) {
+		channelChildren.push({ name: `${history}:complete`, attributes: {}, children: [] });
+	}
+	if (channel.fhArchive) {
+		channelChildren.push({ name: `${history}:archive`, attributes: {}, children: [] });
 	}
 
 	for (let extension of channel.extensions ?? []) {
@@ -372,5 +381,26 @@ function collectNamespaces(channel: RSS.Channel, items: RSS.Item[]): Record<stri
 		namespaces.slash ??= SLASH_NAMESPACE;
 	}
 
+	if (
+		(channel.fhComplete || channel.fhArchive) &&
+		!Object.values(namespaces).includes(FEED_HISTORY_NAMESPACE)
+	) {
+		namespaces.fh ??= FEED_HISTORY_NAMESPACE;
+	}
+
 	return namespaces;
+}
+
+/**
+ * The prefix the Feed History namespace is declared under, so a parsed document writes
+ * its markers back under its own spelling and a built one under `fh`.
+ *
+ * @param namespaces - The declarations the root element carries
+ * @returns The prefix to write `complete` and `archive` under
+ */
+function historyPrefix(namespaces: Record<string, string>): string {
+	for (let [prefix, uri] of Object.entries(namespaces)) {
+		if (prefix !== "" && uri === FEED_HISTORY_NAMESPACE) return prefix;
+	}
+	return "fh";
 }
