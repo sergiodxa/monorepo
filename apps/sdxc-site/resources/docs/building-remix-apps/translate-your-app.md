@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to detect each request's language and translate MessageFormat 2 messages in handlers and views"
     - "How to reach the translator from any component, island or job"
@@ -282,9 +282,11 @@ returns, not the one you asked for.
 Store the request's `ctx.locale` in the job's input when you enqueue
 it, and the email arrives in the language the visitor was reading.
 
-A hydrated island is the same case in the browser. Call `setIntl(intl)` from
-`@sdxc/i18n/ui` once in the client bootstrap, with a translator built by `createTranslator`
-for `document.documentElement.lang`, and `intl(handle)` inside the island falls back to it.
+A hydrated island is the same case in the browser. Call
+`setIntl(translate(document.documentElement.lang).intl)`, with `setIntl` from
+`@sdxc/i18n/ui`, once in `bootstrap/browser.ts` before `run()`, and `intl(handle)` and `Trans`
+inside every island fall back to it. The browser bundle then carries every language's
+messages, so keep the islands' copy small.
 
 ## Catch broken messages in a test
 
