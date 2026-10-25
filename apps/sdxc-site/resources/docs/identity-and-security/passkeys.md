@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to enroll a passkey for a signed-in account"
     - "How to sign in with a passkey by verifying both WebAuthn ceremonies"
@@ -175,10 +175,9 @@ export default createAction(routes.passkeys.register.challenge, async (ctx) => {
 on the device, so use your opaque primary key rather than an email.
 </warning>
 
-`exclude` lists the
-credentials the account already has, so the browser refuses to enroll the same device twice.
-`currentAccount` is your own helper that answers the signed-in account's `id` and `email`, and
-`Passkeys.listIds` answers the credential ids the account holds.
+`exclude` lists the credentials the account already has, so the browser refuses to enroll the
+same device twice. `currentAccount` is your own helper that answers the signed-in account's
+`id` and `email`, and `Passkeys.listIds` answers the credential ids the account holds.
 
 The verify endpoint hands the request straight to the relying party, which reads and validates
 the JSON body itself:
@@ -339,7 +338,7 @@ import { signInWithPasskey } from "./passkey-ceremony";
 type PasskeySignInProps = { challengeUrl: string; verifyUrl: string; label: string };
 
 export const PasskeySignIn = clientEntry(
-	"/resources/components/passkey-sign-in.tsx#PasskeySignIn",
+	import.meta.url,
 	function PasskeySignIn(handle: Handle<PasskeySignInProps>) {
 		let message: string | null = null;
 
