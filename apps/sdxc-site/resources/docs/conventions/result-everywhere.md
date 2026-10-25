@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 3
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Why every fallible entry point returns a `Result` instead of throwing"
     - "How to branch on a `Result` and carry it across a boundary"
@@ -45,34 +45,44 @@ whole point.
 `isSuccess` and `isFailure` narrow a `Result`, and an early return on the failure is the
 ordinary shape. [`@sdxc/validate`](/api/validate) answers a submitted form this way:
 
-```tsx {% title="app/http/controllers/teams-new.tsx" %}
+```tsx {% title="app/http/controllers/teams/new.tsx" %}
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Team from "~/app/models/team";
+import page from "~/app/http/middleware/page";
 import { NewTeamSchema } from "~/app/http/validators/team";
-import { NewTeamPage } from "~/resources/views/new-team";
+import { NewTeamPage } from "~/resources/views/teams/new";
 import routes from "~/routes/web";
 
 export default createController(routes.teams.new, {
+	middleware: page,
 	actions: {
-		index: (ctx) => ctx.render(<NewTeamPage />),
+		index: (ctx) => ctx.render(<NewTeamPage assets={ctx.assets} />),
 
 		action: async (ctx) => {
-			let result = await validate(ctx.formData, NewTeamSchema);
-			if (isFailure(result)) {
-				let page = <NewTeamPage issues={result.error.issues} />;
-				return ctx.render(page, { status: 400 });
+			let input = await validate(ctx.formData, NewTeamSchema);
+			let team = isFailure(input)
+				? input
+				: await ctx.models.team.create(input.data);
+			if (isFailure(team)) {
+				let form = (
+					<NewTeamPage assets={ctx.assets} issues={team.error.issues} />
+				);
+				return ctx.render(form, { status: 422 });
 			}
 
-			let team = await Team.create(ctx.db, result.data);
-			return redirect(routes.teams.show.href({ id: team.id }));
+			let location = routes.teams.show.href({ id: team.data.id });
+			return redirect(location, { status: redirect.Status.SeeOther });
 		},
 	},
 });
 ```
+
+A model's `create` answers with a `Result` too, so a refused submission and a refused row share
+one branch. `redirect.Status.SeeOther` turns the form's `POST` into a `GET` of the team's page;
+`redirect` defaults to `307`, which repeats the `POST` there.
 
 `match` handles both branches in one expression when there is no early exit to take:
 
