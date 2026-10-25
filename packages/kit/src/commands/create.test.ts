@@ -1,7 +1,7 @@
 /**
  * `sdxc create` end to end against a built-in template: what it writes, the questions it asks
  * on a terminal and the defaults it takes without one, when it runs git, the next steps it
- * prints, and the type check every built-in template must pass once materialized.
+ * prints, and the type check and `sdxc doctor` a materialized built-in template must pass.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -230,15 +230,28 @@ describe("create", () => {
 	});
 });
 
-describe("built-in templates type check as a consumer's project", () => {
+/**
+ * `installed` and `remix` are left out of the doctor run: the dependencies are links to this
+ * workspace at its placeholder versions, and the registry answers with a fixture `remix` peer.
+ */
+describe("built-in templates type check as a consumer's project and pass sdxc doctor", () => {
 	test.each(TEMPLATES)("%s", { timeout: 120_000 }, async (template) => {
 		let project = unwrap(await materialize(template));
 		DIRECTORIES.push(dirname(project));
 
 		let result = await typecheck(project);
+		let doctor = await invoke(createSDXC(), ["doctor", "--json", "--skip", "installed,remix"], {
+			cwd: project,
+			interactive: false,
+		});
 
 		expect(result.output).toContain("Found no type errors");
 		expect(result.code).toBe(0);
+		let report = JSON.parse(doctor.stdout) as { checks: Array<{ name: string; status: string }> };
+		expect(
+			report.checks.filter((check) => check.status === "warn" || check.status === "fail"),
+		).toEqual([]);
+		expect(doctor.code).toBe(0);
 	});
 });
 
@@ -260,7 +273,7 @@ describe("the app template's command line", () => {
 		);
 		expect(unknown.code).toBe(2);
 		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');
-		expect(tested.output).toContain("Tests  55 passed (55)");
+		expect(tested.output).toContain("Tests  59 passed (59)");
 		expect(tested.code).toBe(0);
 	});
 });

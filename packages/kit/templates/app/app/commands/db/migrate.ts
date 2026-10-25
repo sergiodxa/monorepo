@@ -4,7 +4,7 @@
  * against the production database. Safe to run twice: an applied migration is skipped.
  */
 
-import type { AnyCommandContext } from "@sdxc/cli";
+import type { AnyCommandContext, CommandResult } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
 import { createCommand, success } from "@sdxc/cli";
@@ -28,6 +28,14 @@ const REMOTE_PENDING = s.array(s.object({ Name: s.string() }));
 // oxlint-disable-next-line no-control-regex -- matching the ESC that starts a color sequence
 const ANSI = /\u001B\[[0-9;]*m/g;
 
+/** The migration names `cf d1 migrations list` printed as JSON, or `null` for any other output. */
+function listedNames(printed: string): string[] | null {
+	let json = wrap(() => JSON.parse(printed.replace(ANSI, "")) as unknown);
+	if (isFailure(json)) return null;
+	let parsed = s.parseSafe(REMOTE_PENDING, json.data);
+	return parsed.success ? parsed.value.map((row) => row.Name) : null;
+}
+
 /** The migrations the production database lacks, as `cf d1 migrations list` reports them. */
 async function remotePending(ctx: AnyCommandContext): Promise<Result<string[], Error>> {
 	let listed = await ctx.exec(
@@ -35,43 +43,35 @@ async function remotePending(ctx: AnyCommandContext): Promise<Result<string[], E
 		{ cwd: PROJECT_ROOT, stdio: "collect" },
 	);
 	if (isFailure(listed)) return listed;
-	let printed = listed.data.stdout;
-	let json = wrap(() => JSON.parse(printed.replace(ANSI, "")) as unknown);
-	let parsed = isFailure(json) ? undefined : s.parseSafe(REMOTE_PENDING, json.data);
-	if (parsed === undefined || !parsed.success) {
-		return failure(new Error(`cf d1 migrations list printed ${printed.trim()}`));
-	}
-	return success(parsed.value.map((row) => row.Name));
+	let names = listedNames(listed.data.stdout);
+	return names === null
+		? failure(new Error(`cf d1 migrations list printed ${listed.data.stdout.trim()}`))
+		: success(names);
 }
 
-/**
- * With `--pending`, prints one migration name per line and applies nothing; an up-to-date
- * database prints nothing. `sdxc deploy` reads that list to show what production will run.
- */
-export default createCommand(commandset.db.migrate, async (ctx) => {
-	if (ctx.flags.remote) {
-		if (ctx.flags.pending) {
-			let pending = await remotePending(ctx);
-			if (isFailure(pending)) return pending;
-			ctx.stdout(pending.data.map((name) => `${name}\n`).join(""));
-			return success();
-		}
-		let applied = await ctx.exec(
-			["cf", "d1", "migrations", "apply", DATABASE_ID, "--dir", MIGRATIONS_DIRECTORY],
-			{ cwd: PROJECT_ROOT },
-		);
-		return isFailure(applied) ? applied : success();
+/** Applies, or with `pending` lists, the migrations the production database lacks, through `cf`. */
+async function migrateRemote(ctx: AnyCommandContext, pending: boolean): Promise<CommandResult> {
+	if (pending) {
+		let names = await remotePending(ctx);
+		if (isFailure(names)) return names;
+		ctx.stdout(names.data.map((name) => `${name}\n`).join(""));
+		return success();
 	}
+	let applied = await ctx.exec(
+		["cf", "d1", "migrations", "apply", DATABASE_ID, "--dir", MIGRATIONS_DIRECTORY],
+		{ cwd: PROJECT_ROOT },
+	);
+	return isFailure(applied) ? applied : success();
+}
 
+/** Applies, or with `pending` lists, the migrations the local SQLite file lacks. */
+async function migrateLocal(ctx: AnyCommandContext, pending: boolean): Promise<CommandResult> {
 	let database = openDatabase(LOCAL_DATABASE_FILE);
 	try {
 		let migrations = await readMigrations(PROJECT_ROOT);
-		if (ctx.flags.pending) {
-			ctx.stdout(
-				pendingMigrations(database, migrations)
-					.map((migration) => `${migration.name}\n`)
-					.join(""),
-			);
+		if (pending) {
+			let names = pendingMigrations(database, migrations).map((migration) => migration.name);
+			ctx.stdout(names.map((name) => `${name}\n`).join(""));
 			return success();
 		}
 		let applied = applyMigrations(database, migrations);
@@ -85,4 +85,14 @@ export default createCommand(commandset.db.migrate, async (ctx) => {
 	} finally {
 		database.close();
 	}
-});
+}
+
+/**
+ * With `--pending`, prints one migration name per line and applies nothing; an up-to-date
+ * database prints nothing. `sdxc deploy` reads that list to show what production will run.
+ */
+export default createCommand(commandset.db.migrate, (ctx) =>
+	ctx.flags.remote
+		? migrateRemote(ctx, ctx.flags.pending === true)
+		: migrateLocal(ctx, ctx.flags.pending === true),
+);

@@ -1,8 +1,7 @@
 /**
  * The HTML document every page renders inside: the head tags, the page's title, description,
- * canonical link and link-preview tags, and the
- * stylesheets imported below in cascade order. The client entry is linked only by a page
- * that carries an island.
+ * canonical link and link-preview tags, and the stylesheets imported below in cascade order.
+ * The client entry is linked only by a page that carries an island.
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";

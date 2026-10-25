@@ -4,6 +4,10 @@
  * on the empty tables.
  */
 
+import type { AnyCommandContext, CommandResult } from "@sdxc/cli";
+
+import type { MigrationDatabase } from "~/app/services/migrations";
+
 import { createCommand, failure, success } from "@sdxc/cli";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { isFailure } from "@sdxc/result";
@@ -13,6 +17,20 @@ import { LOCAL_DATABASE_FILE, PROJECT_ROOT } from "~/app/initializers/local-data
 import { runCommand } from "~/app/services/commands";
 import { applyMigrations, dropTables, readMigrations } from "~/app/services/migrations";
 
+/** Empties `database` and applies the chain to it, printing each table dropped and migration applied. */
+async function rebuild(
+	ctx: AnyCommandContext,
+	database: MigrationDatabase,
+): Promise<CommandResult> {
+	let dropped = dropTables(database);
+	if (isFailure(dropped)) return dropped;
+	ctx.stdout(`Dropped ${dropped.data.length} ${dropped.data.length === 1 ? "table" : "tables"}\n`);
+	let applied = applyMigrations(database, await readMigrations(PROJECT_ROOT));
+	if (isFailure(applied)) return applied;
+	ctx.stdout(applied.data.map((name) => `Applied ${name}\n`).join(""));
+	return success();
+}
+
 /** Refuses `--remote`: emptying production has no undo. */
 export default createCommand(commandset.db.fresh, async (ctx) => {
 	if (ctx.flags.remote) {
@@ -20,18 +38,7 @@ export default createCommand(commandset.db.fresh, async (ctx) => {
 	}
 
 	let database = openDatabase(LOCAL_DATABASE_FILE);
-	try {
-		let dropped = dropTables(database);
-		if (isFailure(dropped)) return dropped;
-		ctx.stdout(
-			`Dropped ${dropped.data.length} ${dropped.data.length === 1 ? "table" : "tables"}\n`,
-		);
-		let applied = applyMigrations(database, await readMigrations(PROJECT_ROOT));
-		if (isFailure(applied)) return applied;
-		ctx.stdout(applied.data.map((name) => `Applied ${name}\n`).join(""));
-	} finally {
-		database.close();
-	}
-
+	let rebuilt = await rebuild(ctx, database).finally(() => database.close());
+	if (isFailure(rebuilt)) return rebuilt;
 	return ctx.flags.seed ? runCommand(ctx, ["db", "seed"]) : success();
 });

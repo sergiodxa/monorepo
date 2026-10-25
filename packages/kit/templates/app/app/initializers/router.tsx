@@ -49,10 +49,9 @@ declare module "remix/router" {
 }
 
 /**
- * Builds the router the Worker forwards each request to. Its middleware is what pages and
- * endpoints both need, written inline so {@link AppContext} reads what each one publishes; a
- * controller adds its contract's chain, `app/http/middleware/page.ts` or `api.ts`, itself.
- * While developing, `/_emails` previews every mapped email in every supported language.
+ * Builds the router the Worker forwards each request to, with the middleware pages and
+ * endpoints share written inline so {@link AppContext} reads what each publishes; a controller
+ * adds `page.ts` or `api.ts` itself. While developing, `/_emails` previews every mapped email.
  */
 export function createWebRouter() {
 	let router = createRouter({

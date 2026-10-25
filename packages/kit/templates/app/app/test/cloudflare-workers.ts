@@ -1,8 +1,7 @@
 /**
- * The `cloudflare:workers` module under Vitest, which imports the app's modules in Node, outside
- * the Worker runtime. It carries the development secrets `.env.example` lists, so a module that
- * reads `env` at import loads the same way it does under `bun dev`. Its bindings are in-memory
- * stand-ins that behave like Cloudflare's, so a test reads and writes real SQL through `DB`.
+ * The `cloudflare:workers` module under Vitest, which runs the app's modules in Node: the
+ * development secrets `.env.example` lists, so a module reading `env` at import loads as under
+ * `bun dev`, and in-memory bindings that behave like Cloudflare's, so `DB` runs real SQL.
  */
 
 import {

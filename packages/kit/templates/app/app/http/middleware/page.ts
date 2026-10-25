@@ -1,8 +1,7 @@
 /**
- * The middleware every page declares: the parsed form body, the cross-origin check a
- * cookie-backed form relies on, the visitor's session, access and language, the honeypot every
- * form submission must pass, the security headers, and the document's assets and renderer. A
- * page controller passes it as its `middleware`, so only requests that render a document pay.
+ * The chain every page controller passes as its `middleware`: form body, cross-origin check,
+ * session, access, language, honeypot, security headers, and the document's assets and
+ * renderer, so only requests that render a document pay for them.
  */
 
 import { assets } from "@sdxc/assets-middleware";
