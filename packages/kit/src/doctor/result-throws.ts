@@ -1,6 +1,7 @@
 /**
- * The `result-throws` check: app source does not `throw`. Errors travel as `@sdxc/result`
- * failures so handlers stay typed; a bare throw is a convention the project strays from.
+ * The `result-throws` check: app source returns `@sdxc/result` failures so handlers stay typed.
+ * Entry points in `bootstrap/` answer the runtime that calls them, whose callbacks report a
+ * failure by throwing, so they are left out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,15 +21,15 @@ import { passed, skipped } from "./check.js";
 import { isAppSource, listFiles } from "./files.js";
 
 /**
- * Warns on each `throw` statement in app source. Tests and declaration files are left out by
- * {@link isAppSource}.
+ * Warns on each `throw` statement in app source outside `bootstrap/`. Tests and declaration
+ * files are left out by {@link isAppSource}.
  */
 export const resultThrowsCheck: Check = {
 	name: "result-throws",
 	async run(context): Promise<CheckResult> {
 		let findings: string[] = [];
 		let files = 0;
-		for (let folder of PROJECT_FOLDERS) {
+		for (let folder of PROJECT_FOLDERS.filter((name) => name !== "bootstrap")) {
 			for (let file of (await listFiles(context.root, folder)).filter(isAppSource)) {
 				files += 1;
 				let source = await wrap(() => readFile(join(context.root, file), "utf8"));

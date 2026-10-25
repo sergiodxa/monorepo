@@ -1,7 +1,7 @@
 /**
- * The `dependencies` check: import cycles and Clean Architecture breaches against the app-layout
- * layers — models stay inward of services and http, resources stay outward of delivery code.
- * Oxlint has no project-wide dependency-rule or cycle check for this layout.
+ * The `dependencies` check: static import cycles and Clean Architecture breaches against the
+ * app-layout layers, so models stay inward of services and http. A `lazy()` mapping or another
+ * deferred `import()` loads after startup, so it closes no cycle and breaches no layer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

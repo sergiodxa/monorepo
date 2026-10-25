@@ -21,6 +21,20 @@ describe("fanOutCheck", () => {
 		expect((await fanOutCheck.run(context)).status).toBe("pass");
 	});
 
+	test("leaves lazy() mappings out of the count", async () => {
+		let context = await fixture(
+			{
+				"app/models/a.ts": "export const a = 1;\n",
+				"app/http/controllers/b.ts": "export default 1;\n",
+				"app/http/controllers/c.ts": "export default 1;\n",
+				"app/initializers/router.ts":
+					'import { a } from "~/app/models/a";\nexport let map = [a, () => import("~/app/http/controllers/b"), () => import("~/app/http/controllers/c")];\n',
+			},
+			{ config: { doctor: { fanOut: { max: 1 } } } },
+		);
+		expect((await fanOutCheck.run(context)).status).toBe("pass");
+	});
+
 	test("warns when imports exceed doctor.fanOut.max", async () => {
 		let context = await fixture(
 			{

@@ -1,6 +1,7 @@
 /**
- * The `fan-out` check: no module imports more distinct project modules than
+ * The `fan-out` check: no module statically imports more distinct project modules than
  * `doctor.fanOut.max` (default 15), so one file cannot become a hub that couples half the app.
+ * A `lazy()` mapping is a deferred import, so a router grows with its routes freely.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +14,7 @@ import type { Check, CheckResult } from "./check.js";
 import { passed, skipped } from "./check.js";
 
 /**
- * Warns on each module whose distinct import targets exceed the configured maximum.
+ * Warns on each module whose distinct static import targets exceed the configured maximum.
  */
 export const fanOutCheck: Check = {
 	name: "fan-out",
@@ -22,7 +23,7 @@ export const fanOutCheck: Check = {
 		let graph = await projectGraph(context.root);
 		if (graph.modules.length === 0) return skipped("No app source to measure fan-out");
 		let counts = new Map<string, Set<string>>();
-		for (let edge of graph.edges) {
+		for (let edge of graph.edges.filter((candidate) => !candidate.deferred)) {
 			let set = counts.get(edge.from) ?? new Set();
 			set.add(edge.to);
 			counts.set(edge.from, set);

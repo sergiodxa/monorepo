@@ -21,6 +21,15 @@ describe("resultThrowsCheck", () => {
 		expect((await resultThrowsCheck.run(context)).status).toBe("pass");
 	});
 
+	test("leaves out bootstrap/, whose runtime callbacks report a failure by throwing", async () => {
+		let context = await fixture({
+			"bootstrap/browser.ts":
+				'run({ loadModule() { throw new Error("Unknown client entry module"); } });\n',
+			"app/services/run.ts": "export function run() {\n\treturn 1;\n}\n",
+		});
+		expect((await resultThrowsCheck.run(context)).status).toBe("pass");
+	});
+
 	test("warns on throw", async () => {
 		let context = await fixture({
 			"app/services/run.ts": 'export function run() { throw new Error("x"); }\n',

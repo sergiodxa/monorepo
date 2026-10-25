@@ -17,6 +17,7 @@ describe("toMermaid", () => {
 		let graph: ProjectGraph = {
 			modules: ["app/http/a.ts", "app/models/b.ts"],
 			edges: [],
+			testEdges: [],
 			layers: [
 				{ from: "http", to: "models", count: 2, allowed: true },
 				{ from: "models", to: "http", count: 1, allowed: false },

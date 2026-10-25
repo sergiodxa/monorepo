@@ -27,6 +27,11 @@ export interface ImportEdge {
 	to: string;
 	/** The specifier as written in the source. */
 	specifier: string;
+	/**
+	 * Whether the import is a dynamic `import()`, which loads the target on first use: a
+	 * `lazy()` mapping in a router, dispatcher or command line, or a load that breaks a cycle.
+	 */
+	deferred: boolean;
 }
 
 /** An edge between two layers, with how many module edges it aggregates. */
@@ -44,11 +49,16 @@ export interface ProjectGraph {
 	modules: string[];
 	/** Relative and `~/` imports that resolve inside the project. */
 	edges: ImportEdge[];
+	/** Imports from the project's test files into its modules, which keep a test helper in use. */
+	testEdges: ImportEdge[];
 	/** Module edges rolled up by layer, for the architecture diagram. */
 	layers: LayerEdge[];
-	/** Strongly connected components with more than one module, or a self-cycle. */
+	/**
+	 * Strongly connected components with more than one module, or a self-cycle, over static
+	 * imports: a deferred import resolves after every module has loaded.
+	 */
 	cycles: string[][];
-	/** Module edges that point from an inner layer to an outer one. */
+	/** Static module edges that point from an inner layer to an outer one. */
 	violations: ImportEdge[];
 }
 
@@ -58,39 +68,59 @@ export interface ProjectGraph {
  */
 export async function projectGraph(root: string): Promise<ProjectGraph> {
 	let modules: string[] = [];
-	let edges: ImportEdge[] = [];
+	let tests: string[] = [];
 	let known = new Set<string>();
 	for (let folder of PROJECT_FOLDERS) {
-		for (let file of (await listFiles(root, folder)).filter(isAppSource)) {
-			modules.push(file);
-			known.add(file);
-			known.add(withoutExtension(file));
+		for (let file of await listFiles(root, folder)) {
+			if (isAppSource(file)) {
+				modules.push(file);
+				known.add(file);
+				known.add(withoutExtension(file));
+			} else if (TEST_FILE.test(file)) {
+				tests.push(file);
+			}
 		}
 	}
-	for (let file of modules) {
+	let edges = await importEdges(root, modules, known);
+	let testEdges = await importEdges(root, tests, known);
+	let loaded = edges.filter((edge) => !edge.deferred);
+	return {
+		modules,
+		edges,
+		testEdges,
+		layers: aggregateLayers(edges),
+		cycles: findCycles(modules, loaded),
+		violations: loaded.filter((edge) => !allowsDependency(edge.from, edge.to)),
+	};
+}
+
+/** Every import in `files` that resolves to a `known` module. */
+async function importEdges(
+	root: string,
+	files: readonly string[],
+	known: ReadonlySet<string>,
+): Promise<ImportEdge[]> {
+	let edges: ImportEdge[] = [];
+	for (let file of files) {
 		let source = await wrap(() => readFile(join(root, file), "utf8"));
 		if (isFailure(source)) continue;
 		let references = findModuleReferences(file, source.data);
 		if (isFailure(references)) continue;
-		for (let { specifier } of references.data) {
+		for (let { specifier, kind } of references.data) {
 			let target = resolveSpecifier(specifier, file);
 			if (target === null) continue;
 			let resolved = resolveKnown(target, known);
 			if (resolved === null) continue;
-			edges.push({ from: file, to: resolved, specifier });
+			edges.push({ from: file, to: resolved, specifier, deferred: kind === "dynamic" });
 		}
 	}
-	let violations = edges.filter((edge) => !allowsDependency(edge.from, edge.to));
-	return {
-		modules,
-		edges,
-		layers: aggregateLayers(edges),
-		cycles: findCycles(modules, edges),
-		violations,
-	};
+	return edges;
 }
 
-/** Rolls module edges into layer-to-layer counts. */
+/**
+ * Rolls module edges into layer-to-layer counts. A deferred edge counts toward its pair and
+ * leaves it allowed, since a `lazy()` mapping is how an initializer reaches what it maps.
+ */
 export function aggregateLayers(edges: readonly ImportEdge[]): LayerEdge[] {
 	let counts = new Map<string, LayerEdge>();
 	for (let edge of edges) {
@@ -101,14 +131,14 @@ export function aggregateLayers(edges: readonly ImportEdge[]): LayerEdge[] {
 		let existing = counts.get(key);
 		if (existing) {
 			existing.count += 1;
-			if (!allowsDependency(edge.from, edge.to)) existing.allowed = false;
+			if (!edge.deferred && !allowsDependency(edge.from, edge.to)) existing.allowed = false;
 			continue;
 		}
 		counts.set(key, {
 			from,
 			to,
 			count: 1,
-			allowed: allowsDependency(edge.from, edge.to),
+			allowed: edge.deferred || allowsDependency(edge.from, edge.to),
 		});
 	}
 	return [...counts.values()].sort((a, b) =>
@@ -125,6 +155,9 @@ export function resolveSpecifier(specifier: string, file: string): string | null
 	if (!specifier.startsWith(".")) return null;
 	return posix.normalize(posix.join(dirname(file).split("\\").join("/"), specifier));
 }
+
+/** A test file, whose imports keep a module in use without being part of the app's graph. */
+const TEST_FILE = /\.test\.[cm]?[jt]sx?$/;
 
 /** Matches a resolved specifier against known modules, trying common extensions. */
 function resolveKnown(target: string, known: ReadonlySet<string>): string | null {

@@ -21,6 +21,25 @@ describe("dependenciesCheck", () => {
 		expect((await dependenciesCheck.run(context)).status).toBe("pass");
 	});
 
+	test("passes the layout a router needs: lazy controllers, contracts, views and middleware", async () => {
+		let context = await fixture({
+			"routes/web.ts": "export default { home: '/' };\n",
+			"resources/layouts/document.tsx": "export function Document() {}\n",
+			"app/http/middleware/timing.ts": "export default function timing() {}\n",
+			"app/initializers/health.ts":
+				'import type { AppContext } from "~/app/initializers/router";\nexport let health: AppContext | null = null;\n',
+			"app/http/controllers/home.tsx":
+				'import { Document } from "~/resources/layouts/document";\nimport { health } from "~/app/initializers/health";\nimport routes from "~/routes/web";\nexport default [Document, health, routes];\n',
+			"app/initializers/router.tsx":
+				'import timing from "~/app/http/middleware/timing";\nimport routes from "~/routes/web";\nexport type AppContext = typeof routes;\nexport let router = [timing, () => import("~/app/http/controllers/home")];\n',
+		});
+
+		let result = await dependenciesCheck.run(context);
+
+		expect(result.findings).toEqual([]);
+		expect(result.status).toBe("pass");
+	});
+
 	test("warns on an outward import and a cycle", async () => {
 		let context = await fixture({
 			"app/http/controllers/show.ts": `import { load } from "../../models/post.js";\nexport const show = load;\n`,

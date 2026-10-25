@@ -22,6 +22,25 @@ describe("orphansCheck", () => {
 		expect((await orphansCheck.run(context)).status).toBe("pass");
 	});
 
+	test("counts a test's imports, a root config's paths and the declaration modules", async () => {
+		let context = await fixture({
+			"vite.config.ts":
+				'export default { test: { alias: { "cloudflare:workers": "app/test/cloudflare-workers.ts" } } };\n',
+			"app/test/cloudflare-workers.ts": "export const env = {};\n",
+			"app/test/database.ts": "export function migrate() {}\n",
+			"app/initializers/database.test.ts":
+				'import { migrate } from "~/app/test/database";\nmigrate();\n',
+			"app/emails/index.ts": "export default {};\n",
+			"app/mcp/tools/index.ts": "export default {};\n",
+			"app/mcp/resources/index.ts": "export default {};\n",
+		});
+
+		let result = await orphansCheck.run(context);
+
+		expect(result.findings).toEqual([]);
+		expect(result.status).toBe("pass");
+	});
+
 	test("warns on an unreferenced service module", async () => {
 		let context = await fixture({
 			"app/services/unused.ts": "export const unused = 1;\n",

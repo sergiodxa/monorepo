@@ -51,6 +51,40 @@ describe("projectGraph", () => {
 		expect(graph.violations.map((edge) => edge.from)).toEqual(["app/models/post.ts"]);
 		expect(graph.cycles.length).toBeGreaterThanOrEqual(1);
 	});
+
+	test("marks a dynamic import deferred and leaves it out of cycles and breaches", async () => {
+		let root = await project({
+			"app/initializers/router.ts":
+				'import { health } from "./health.js";\nexport let routes = [health, () => import("~/app/http/controllers/health")];\n',
+			"app/initializers/health.ts":
+				'import type { routes } from "./router.js";\nexport let health: typeof routes | null = null;\n',
+			"app/http/controllers/health.ts":
+				'import { health } from "~/app/initializers/health";\nexport default health;\n',
+		});
+
+		let graph = await projectGraph(root);
+
+		expect(graph.edges.filter((edge) => edge.deferred).map((edge) => edge.to)).toEqual([
+			"app/http/controllers/health.ts",
+		]);
+		expect(graph.violations).toEqual([]);
+		expect(graph.cycles).toEqual([["app/initializers/health.ts", "app/initializers/router.ts"]]);
+	});
+
+	test("keeps a test file's imports apart from the app's edges", async () => {
+		let root = await project({
+			"app/test/database.ts": "export function migrate() {}\n",
+			"app/models/post.test.ts": 'import { migrate } from "~/app/test/database";\nmigrate();\n',
+		});
+
+		let graph = await projectGraph(root);
+
+		expect(graph.modules).toEqual(["app/test/database.ts"]);
+		expect(graph.edges).toEqual([]);
+		expect(graph.testEdges.map((edge) => [edge.from, edge.to])).toEqual([
+			["app/models/post.test.ts", "app/test/database.ts"],
+		]);
+	});
 });
 
 describe("findCycles", () => {
@@ -59,8 +93,8 @@ describe("findCycles", () => {
 			findCycles(
 				["a.ts", "b.ts"],
 				[
-					{ from: "a.ts", to: "b.ts", specifier: "./b.js" },
-					{ from: "b.ts", to: "a.ts", specifier: "./a.js" },
+					{ from: "a.ts", to: "b.ts", specifier: "./b.js", deferred: false },
+					{ from: "b.ts", to: "a.ts", specifier: "./a.js", deferred: false },
 				],
 			),
 		).toEqual([["a.ts", "b.ts"]]);
