@@ -120,7 +120,7 @@ The failure every reader returns, with `format` (the registered name) and `issue
 #### `WellKnownFormat<Document>`
 
 The descriptor each document subpath exports: `name`, `mediaType`, `placement`, `cors`,
-`stringify` and `parse`. `respond` and `serve` take one; its `parse` reads structure only, so a
+optional fixed `headers`, `stringify` and `parse`. `respond` and `serve` take one; its `parse` reads structure only, so a
 client checking a fetched document's issuer or resource calls the subpath's own `parse`.
 
 ### Every document subpath
@@ -206,6 +206,32 @@ The key directory a signing bot publishes, served as `MEDIA_TYPE`
 - `httpMessageSignaturesDirectory` is the descriptor. `@sdxc/http-signatures/web-bot-auth` signs
   the response through `respond`'s `sign` option.
 
+### `@sdxc/well-known/api-catalog` (RFC 9727)
+
+The link set listing the APIs a host publishes, served as `MEDIA_TYPE`
+(`application/linkset+json` with the RFC 9727 `profile`) with CORS, and with
+`Link: </.well-known/api-catalog>; rel="api-catalog"` on every answer, `HEAD` included.
+
+- `build({ url, apis, catalogs? })` writes an `item` link from the catalog to each API, then each
+  API's `serviceDesc`, `serviceDoc`, `serviceMeta` and `status` targets anchored at its endpoint,
+  every path resolved against `url`. `catalogs` nests other catalogs.
+- `parse(text)` reads any RFC 9264 JSON link set with at least one link, as `{ links }` in the
+  shape `@sdxc/link-header/linkset` reads.
+- `apiCatalog` is the descriptor:
+
+```typescript
+wellKnown({
+	"api-catalog": serve(apiCatalog, (ctx) =>
+		build({
+			url: new URL("/.well-known/api-catalog", ctx.url),
+			apis: [
+				{ url: "/v1", serviceDesc: [{ href: "/v1/openapi.json" }], status: [{ href: "/health" }] },
+			],
+		}),
+	),
+});
+```
+
 ### `@sdxc/well-known/change-password` (W3C)
 
 `redirect(target: URL | string): Response` is a 302 to the page where a signed-in person changes
@@ -256,7 +282,7 @@ answers `OPTIONS`; any other method gets a 405 with `Allow`. Every other path go
 `WellKnownPlacement` is `"insert" | "append"`. `WellKnownEntry` is any
 `(ctx) => Response | null`, sync or async. Each document subpath exports its document type
 (`SecurityTxt`, `Jrd`, `AuthorizationServerMetadata<Extensions>`, `OpenIdProviderMetadata<Extensions>`,
-`ProtectedResourceMetadata<Extensions>`, `JwkSet`, `PasskeyEndpoints`, `NodeInfo`,
+`ProtectedResourceMetadata<Extensions>`, `JwkSet`, `ApiCatalog`, `PasskeyEndpoints`, `NodeInfo`,
 `NodeInfoLinks`) and the types of its members (`ParsedSecurityTxt`, `JrdLink`, `WebFingerQuery`,
 `LocalizedString`, `BearerMethod`, `Jwk`, `ParsedJwkSet`, `NodeInfoSoftware`, `NodeInfoUsage` and
 the rest).

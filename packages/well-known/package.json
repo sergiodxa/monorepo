@@ -16,6 +16,7 @@
 		"./http-message-signatures-directory": "./src/http-message-signatures-directory.ts",
 		"./change-password": "./src/change-password.ts",
 		"./passkey-endpoints": "./src/passkey-endpoints.ts",
+		"./api-catalog": "./src/api-catalog.ts",
 		"./nodeinfo": "./src/nodeinfo.ts",
 		"./response": "./src/response.ts",
 		"./middleware": "./src/middleware.ts"
@@ -26,6 +27,7 @@
 	"dependencies": {
 		"@remix-run/data-schema": "^1.0.0",
 		"@sdxc/json-pointer": "workspace:*",
+		"@sdxc/link-header": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},

@@ -1,6 +1,6 @@
 /**
  * The description every well-known document shares: its registered name, media type,
- * URL placement and CORS rule beside its reader and writer, which is what lets one
+ * URL placement, CORS rule and fixed headers beside its reader and writer, which is what lets one
  * response helper and one middleware serve any of them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -30,6 +30,8 @@ export interface WellKnownFormat<Document> {
 	readonly placement: WellKnownPlacement;
 	/** Whether every answer carries `Access-Control-Allow-Origin: *`. */
 	readonly cors: boolean;
+	/** Headers every answer carries, `HEAD` included, such as the `Link` an API catalog requires. */
+	readonly headers?: Readonly<Record<string, string>>;
 	/** The document as the text served under the name. */
 	stringify(document: Document): string;
 	/** Reads served text back, reporting every place it breaks the specification. */

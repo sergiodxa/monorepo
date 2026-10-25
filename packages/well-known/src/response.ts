@@ -32,7 +32,7 @@ export interface RespondOptions {
 
 /**
  * The document as a `Response`: its media type, a `Cache-Control` from `policy()`, an
- * `ETag` from `etag()` over the serialized body, CORS where the format requires it, and a
+ * `ETag` from `etag()` over the serialized body, CORS and the format's own headers, and a
  * 304 through `conditional()` when `request` is given, after any `sign` step.
  *
  * @param format - The document's format.
@@ -56,6 +56,7 @@ export async function respond<Document>(
 	let tag = await etag(body);
 	if (tag.status === "success") headers.set("ETag", tag.data);
 	if (format.cors) headers.set("Access-Control-Allow-Origin", "*");
+	for (let [name, value] of Object.entries(format.headers ?? {})) headers.set(name, value);
 
 	for (let [name, value] of new Headers(options.headers)) headers.set(name, value);
 

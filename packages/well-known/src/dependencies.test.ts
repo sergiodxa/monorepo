@@ -1,7 +1,8 @@
 /**
  * Holds the document subpaths to their dependency budget: `@sdxc/result`,
- * `@sdxc/json-pointer`, `@remix-run/data-schema` and `@standard-schema/spec` only, so a
- * consumer without the `remix` umbrella or `@sdxc/http` can parse through them.
+ * `@sdxc/json-pointer`, `@sdxc/link-header`, `@remix-run/data-schema` and
+ * `@standard-schema/spec` only, so a consumer without the `remix` umbrella or
+ * `@sdxc/http` can parse through them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,7 @@ import { describe, expect, test } from "vitest";
 const ALLOWED = new Set([
 	"@sdxc/result",
 	"@sdxc/json-pointer",
+	"@sdxc/link-header",
 	"@remix-run/data-schema",
 	"@standard-schema/spec",
 ]);
