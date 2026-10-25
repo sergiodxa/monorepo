@@ -25,11 +25,11 @@ export { FrameTag } from "./frame.js";
 /** A component a caller supplies for a tag name, or for one of the nodes it may take over. */
 export type MarkdownComponent = {
 	/**
-	 * Written as a method so a component that names the props it reads —
-	 * `Handle<{ type: string; children: RemixNode }>` — is accepted here, which is
-	 * how a caller writes one.
+	 * Written as a method so a component typed with the props it reads, as an
+	 * inline type or a named interface, is accepted when it declares `children`
+	 * as a `RemixNode` (optional or required) or takes no props at all.
 	 */
-	component(handle: Handle<{ children: RemixNode; [key: string]: unknown }>): () => RemixNode;
+	component(handle: Handle<{ children?: RemixNode }>): () => RemixNode;
 }["component"];
 
 /** Options for {@link toRemix}. */

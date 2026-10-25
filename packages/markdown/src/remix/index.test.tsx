@@ -12,9 +12,11 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { Markdown } from "../index.js";
+
+import type { MarkdownComponent } from "./index.js";
 
 import { toRemix } from "./index.js";
 
@@ -469,5 +471,34 @@ describe("toRemix", () => {
 		});
 
 		expect(html).toContain("{% $team %}");
+	});
+});
+
+describe("MarkdownComponent", () => {
+	test("accepts a component whose props are a named interface", () => {
+		/** Props written as an interface, which carries no implicit index signature. */
+		interface CalloutProps {
+			type: string;
+			children: RemixNode;
+		}
+
+		function Callout({ props }: Handle<CalloutProps>) {
+			return () => <aside data-type={props.type}>{props.children}</aside>;
+		}
+
+		expectTypeOf(Callout).toExtend<MarkdownComponent>();
+	});
+
+	test("accepts a component with optional children or no props", () => {
+		function Badge({ props }: Handle<{ label: string; children?: RemixNode }>) {
+			return () => <span>{props.label}</span>;
+		}
+
+		function Divider(_handle: Handle) {
+			return () => <hr />;
+		}
+
+		expectTypeOf(Badge).toExtend<MarkdownComponent>();
+		expectTypeOf(Divider).toExtend<MarkdownComponent>();
 	});
 });
