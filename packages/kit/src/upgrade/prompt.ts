@@ -1,7 +1,8 @@
 /**
  * The prompt `sdxc upgrade` hands an AI agent: the release notes of the packages the project
- * imports, for every release it moved across, breaking changes first, with the components to
- * refresh, the commands that verify the edit, and where each package is documented.
+ * imports, for every release it moved across, breaking changes first, then the corrections those
+ * releases made to notes it already had, the components to refresh, the commands that verify the
+ * edit, and where each package is documented.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,6 +93,7 @@ export function renderPrompt(input: PromptInput): string {
 	let breaking = relevant.filter((entry) => entry.breaking);
 	let features = relevant.filter((entry) => !entry.breaking && entry.type === "feat");
 	let fixes = relevant.filter((entry) => !entry.breaking && FIX_TYPES.has(entry.type));
+	let corrected = correctedEntries(input);
 	let sections = [
 		[
 			from === input.to
@@ -115,6 +117,7 @@ export function renderPrompt(input: PromptInput): string {
 	if (breaking.length > 0) sections.push(entrySection("Breaking changes", breaking));
 	if (features.length > 0) sections.push(entrySection("Features", features));
 	if (fixes.length > 0) sections.push(entrySection("Fixes", fixes));
+	if (corrected.length > 0) sections.push(correctedSection(corrected));
 	let older = olderReleases(input);
 	if (older !== null) sections.push(older);
 	if (input.components.length > 0) {
@@ -319,6 +322,46 @@ function earliestStart(input: PromptInput): string {
 		if (compare(pinned, earliest) < 0) earliest = pinned;
 	}
 	return earliest;
+}
+
+/**
+ * The imported packages' notes from releases the project already had whose correction shipped
+ * in a release it moves across, so a changed migration step reaches a project past the original.
+ * Notes the prompt leaves to the GitHub Releases stay left out once corrected.
+ */
+function correctedEntries(input: PromptInput): ChangelogEntry[] {
+	let imported = new Set(input.packages);
+	let since = input.since ?? new Map<string, string>();
+	return input.entries
+		.filter((entry) => {
+			let start = since.get(entry.package) ?? input.from;
+			return (
+				entry.correctedIn !== undefined &&
+				imported.has(entry.package) &&
+				(entry.breaking || entry.type === "feat" || FIX_TYPES.has(entry.type)) &&
+				compare(entry.release, start) <= 0 &&
+				compare(entry.correctedIn, start) > 0 &&
+				compare(entry.correctedIn, input.to) <= 0
+			);
+		})
+		.sort((a, b) => compare(a.release, b.release) || compareText(a.package, b.package));
+}
+
+/** The corrected notes, each naming the release it shipped in and the one that corrected it. */
+function correctedSection(entries: ChangelogEntry[]): string {
+	let blocks = entries.map((entry) => {
+		let lines = [
+			`### ${entry.package}: ${entry.title}`,
+			`Released in ${entry.release}, corrected in ${entry.correctedIn}.`,
+		];
+		if (entry.body.trim() !== "") lines.push(entry.body.trim());
+		return lines.join("\n\n");
+	});
+	return [
+		"## Corrected notes",
+		"These notes shipped in releases this project already had, and a later release replaced them. Check the code against each corrected note, and apply any migration step the original note left out or got wrong.",
+		...blocks,
+	].join("\n\n");
 }
 
 /** A heading and each entry under its own sub-heading with its full body. */

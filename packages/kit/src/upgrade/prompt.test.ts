@@ -183,6 +183,36 @@ describe("sdxc upgrade --prompt", () => {
 		expect(result.stdout).not.toContain("trim the issuer");
 	});
 
+	test("lists a note corrected after the project moved past its release", async () => {
+		let packageRoot = await targetRelease([
+			{
+				...entry("2026.9.5", "@sdxc/auth", "refactor", "rename the issuer", true),
+				body: "Rename `issuer` to `createIssuer`, then pass `audience`.",
+				correctedIn: "2026.10.14",
+			},
+			{ ...entry("2026.9.5", "@sdxc/jwt", "feat", "sign with ES512"), correctedIn: "2026.9.20" },
+			{
+				...entry("2026.9.5", "@sdxc/jwt", "docs", "reword the README"),
+				correctedIn: "2026.10.14",
+			},
+		]);
+		let root = await fixtureProject();
+		let result = await invoke(["--prompt", "--from", "2026.10.1"], root, packageRoot);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain(
+			[
+				"## Corrected notes",
+				"These notes shipped in releases this project already had, and a later release replaced them. Check the code against each corrected note, and apply any migration step the original note left out or got wrong.",
+				"### @sdxc/auth: rename the issuer",
+				"Released in 2026.9.5, corrected in 2026.10.14.",
+				"Rename `issuer` to `createIssuer`, then pass `audience`.",
+				"## Vendored components",
+			].join("\n\n"),
+		);
+		expect(result.stdout).not.toContain("sign with ES512");
+		expect(result.stdout).not.toContain("reword the README");
+	});
+
 	test("rejects a --since that names no package and release", async () => {
 		let packageRoot = await targetRelease([]);
 		let root = await fixtureProject();

@@ -45,6 +45,8 @@ export interface ChangelogEntry {
 	title: string;
 	/** The release note, already replaced by its latest `Release-Note-For` correction. */
 	body: string;
+	/** The release that shipped that correction, present only on a corrected note. */
+	correctedIn?: string;
 }
 
 /** The commits one release shipped, each already attributed to its public packages. */
@@ -55,37 +57,43 @@ export interface ReleaseCommits {
 
 /**
  * The changelog for the release `built`: every entry from releases in the twelve months before
- * it, and only the breaking entries from older ones. A correction contributes no line of its
- * own when the commit it names is in `releases`; that commit's lines carry its body instead.
+ * it, and only the breaking entries from older ones unless a correction shipped inside the window.
+ * A correction contributes no line of its own when the commit it names is in `releases`; that
+ * commit's lines carry its body and the release that shipped it instead.
  */
 export function buildChangelog(releases: ReleaseCommits[], built: string): ChangelogEntry[] {
-	let shas = releases.flatMap((release) =>
+	let sorted = [...releases].sort((a, b) => compareReleases(a.version, b.version));
+	let shas = sorted.flatMap((release) =>
 		[...release.commitsByPackage.values()].flat().map((commit) => commit.sha),
 	);
-	let corrections = new Map<string, string>();
-	for (let release of releases) {
+	let corrections = new Map<string, { body: string; release: string }>();
+	for (let release of sorted) {
 		for (let commit of [...release.commitsByPackage.values()].flat()) {
 			if (commit.corrects === null) continue;
 			let target = shas.find((sha) => sha.startsWith(commit.corrects ?? ""));
-			if (target !== undefined) corrections.set(target, commit.body);
+			if (target !== undefined) {
+				corrections.set(target, { body: commit.body, release: release.version });
+			}
 		}
 	}
 	let cutoff = oneYearBefore(built);
 	let entries: ChangelogEntry[] = [];
-	for (let release of [...releases].sort((a, b) => compareReleases(a.version, b.version))) {
-		let recent = releaseDate(release.version) >= cutoff;
+	for (let release of sorted) {
 		for (let name of [...release.commitsByPackage.keys()].sort()) {
 			for (let commit of release.commitsByPackage.get(name) ?? []) {
 				let target = commit.corrects;
 				if (target !== null && shas.some((sha) => sha.startsWith(target))) continue;
-				if (!recent && !commit.breaking) continue;
+				let correction = corrections.get(commit.sha);
+				let latest = correction?.release ?? release.version;
+				if (releaseDate(latest) < cutoff && !commit.breaking) continue;
 				entries.push({
 					release: release.version,
 					package: name,
 					type: commit.type,
 					breaking: commit.breaking,
 					title: releaseSummary(commit.title),
-					body: corrections.get(commit.sha) ?? commit.body,
+					body: correction?.body ?? commit.body,
+					...(correction === undefined ? {} : { correctedIn: correction.release }),
 				});
 			}
 		}

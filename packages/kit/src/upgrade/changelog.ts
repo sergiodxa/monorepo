@@ -28,6 +28,8 @@ const ENTRY_SCHEMA = s.object({
 	breaking: s.boolean(),
 	title: s.string(),
 	body: s.string(),
+	/** The release whose `Release-Note-For` correction replaced `body`; absent on an uncorrected note. */
+	correctedIn: s.optional(s.string()),
 });
 
 /** One commit's note as it applies to one package in one release. */

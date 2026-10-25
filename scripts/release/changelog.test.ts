@@ -90,7 +90,50 @@ describe("buildChangelog", () => {
 				release: "2026.10.1",
 				title: "Title 1234567890abcdef",
 				body: "the corrected note",
+				correctedIn: "2026.10.2",
 			}),
+		]);
+	});
+
+	test("records the latest correction's release, whatever order the releases come in", () => {
+		let original = commit("1234567890abcdef");
+		let entries = buildChangelog(
+			[
+				release("2026.10.3", {
+					"@sdxc/jwt": [commit("bbbbbbb", { body: "second fix", corrects: "1234567" })],
+				}),
+				release("2026.10.1", { "@sdxc/jwt": [original] }),
+				release("2026.10.2", {
+					"@sdxc/jwt": [commit("aaaaaaa", { body: "first fix", corrects: "1234567" })],
+				}),
+			],
+			"2026.10.3",
+		);
+		expect(entries).toEqual([
+			expect.objectContaining({ body: "second fix", correctedIn: "2026.10.3" }),
+		]);
+	});
+
+	test("writes no correctedIn on a note nothing corrected", () => {
+		let entries = buildChangelog(
+			[release("2026.10.1", { "@sdxc/jwt": [commit("aaa1111")] })],
+			"2026.10.1",
+		);
+		expect(Object.keys(entries[0] ?? {})).not.toContain("correctedIn");
+	});
+
+	test("keeps an older entry whose correction shipped inside the twelve months", () => {
+		let entries = buildChangelog(
+			[
+				release("2025.9.1", { "@sdxc/jwt": [commit("1234567890abcdef")] }),
+				release("2026.10.1", {
+					"@sdxc/jwt": [commit("fedcba0", { body: "late fix", corrects: "1234567" })],
+				}),
+			],
+			"2026.10.14",
+		);
+		expect(entries).toEqual([
+			expect.objectContaining({ release: "2025.9.1", body: "late fix", correctedIn: "2026.10.1" }),
 		]);
 	});
 

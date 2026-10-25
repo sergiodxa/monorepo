@@ -50,7 +50,10 @@ the same commit parsing as the GitHub Release notes, so `upgrade` reads it offli
 
 - **Corrections replace the original.** A commit with a `Release-Note-For: <sha>` trailer
   (ADR-140) is written as the corrected body of the commit it names, in that commit's line, so
-  the prompt carries only the corrected note.
+  the prompt carries only the corrected note. The line also records `correctedIn`, the release
+  that shipped the correction, and the prompt lists under `## Corrected notes` every corrected
+  note from a release the project already had whose correction ships in a release it moves
+  across. An entry whose correction falls inside the twelve-month window stays in the file.
 - **Bounded size.** The file holds every entry from releases in the twelve months before the
   release that builds it, and only the breaking entries from older releases. An upgrade from a
   version older than that window says which releases it summarizes by breaking changes only and
