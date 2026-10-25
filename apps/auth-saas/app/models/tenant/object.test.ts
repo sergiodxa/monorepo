@@ -70,6 +70,8 @@ describe("provision", () => {
 				"0036-client-id-token-alg",
 				"0037-idempotency-keys",
 				"0038-pushed-authorization-requests",
+				"0039-dpop",
+				"0040-token-exchange",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: {
