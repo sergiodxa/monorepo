@@ -1,5 +1,5 @@
 /**
- * `GET /authorize` — the endpoint ADR-011 deliberately left unbuilt: resolves the
+ * `GET /authorize` — the browser entry to an authorization request: resolves the
  * request's session cookie, if any, to a candidate session id, hands the whole
  * request to `beginAuthorization`, and turns its outcome into a response.
  *

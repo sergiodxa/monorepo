@@ -260,15 +260,15 @@ describe("idTokenSignedResponseAlg", () => {
 	});
 });
 
-describe("jwks, jwksUri and requirePushedAuthorizationRequests", () => {
-	/** A public EC key, the shape a client registers to sign request objects with. */
-	const PUBLIC_KEY = {
-		kty: "EC",
-		crv: "P-256",
-		x: "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
-		y: "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
-	};
+/** A public EC key, the shape a client registers to sign request objects with. */
+const PUBLIC_KEY = {
+	kty: "EC",
+	crv: "P-256",
+	x: "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+	y: "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+};
 
+describe("jwks, jwksUri and requirePushedAuthorizationRequests", () => {
 	test("registers a client with neither, holding no keys and not requiring PAR", async () => {
 		let { client } = await createTestClient();
 

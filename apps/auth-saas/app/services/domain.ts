@@ -1,5 +1,5 @@
 /**
- * Domain lifecycle operations for tenant custom domains (ADR-005): attaching one
+ * Domain lifecycle operations for tenant custom domains: attaching one
  * through Cloudflare for SaaS, refreshing its verification/certificate status, and
  * removing it.
  *

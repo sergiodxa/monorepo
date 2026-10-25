@@ -1,6 +1,6 @@
 /**
  * `POST /billing/tenants/:tenantId/checkout` — opens a hosted checkout for one of
- * this tenant's plans or add-ons (ADR-018), for the tenant's owner alone, since a
+ * this tenant's plans or add-ons, for the tenant's owner alone, since a
  * checkout bills the owning customer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

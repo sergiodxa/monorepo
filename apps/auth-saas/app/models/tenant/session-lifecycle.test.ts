@@ -1,12 +1,7 @@
 /**
- * Proves the wiring ADR-009 added on top of ADR-007/008's credential checks: signing in
- * with a password or a passkey actually opens a session resolvable afterwards, and a
- * password change, a password reset, and blocking a subject each end every session the
- * way ADR-009's table of authentication effects describes.
- *
- * Drives everything through the `Tenant` object, since the composition being tested —
- * one RPC call verifying a credential and opening a session, another revoking sessions
- * as a side effect of a password or block operation — only exists at that level.
+ * Proves sessions follow credentials: a password or passkey sign-in opens a resolvable session,
+ * and a password change, a reset or a block ends every session. Drives the `Tenant` object,
+ * the one level where a credential check and the session it opens or revokes meet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

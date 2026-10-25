@@ -1,5 +1,5 @@
 /**
- * Unit tests for `provisionTenant` (ADR-003/004/005): the tenant row and its platform
+ * Unit tests for `provisionTenant`: the tenant row and its platform
  * domain row land in D1, the issuer is the same value in both places, and the tenant
  * Durable Object is provisioned with that issuer. `cloudflare:workers` is mocked with
  * `PLATFORM_DOMAIN` and a `TENANT` namespace routing to a recording stub, since the

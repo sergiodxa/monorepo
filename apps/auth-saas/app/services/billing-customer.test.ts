@@ -1,5 +1,5 @@
 /**
- * Exercises `ensureProviderCustomer`'s three paths (ADR-018): a fresh join, a
+ * Exercises `ensureProviderCustomer`'s three paths: a fresh join, a
  * conflict resolved by re-reading the provider's own record, and an adoption
  * of a provider customer the platform already held under this email. Drives
  * `MemoryBilling` directly rather than mocking, per the package's own testing

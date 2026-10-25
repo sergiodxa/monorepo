@@ -1,6 +1,6 @@
 /**
  * `POST /billing/tenants/:tenantId/portal` — opens Polar's hosted billing portal
- * for the customer that owns this tenant (ADR-018), for the tenant's owner alone:
+ * for the customer that owns this tenant, for the tenant's owner alone:
  * the portal holds the customer's payment method and the invoices of every tenant
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

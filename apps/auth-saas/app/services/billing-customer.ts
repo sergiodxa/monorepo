@@ -1,6 +1,6 @@
 /**
  * The join between a control-plane customer and the provider's own customer
- * record (ADR-018): one control-plane customer is one provider customer, matched
+ * record: one control-plane customer is one provider customer, matched
  * on `externalId`, created at the first checkout that needs one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

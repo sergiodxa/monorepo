@@ -1,5 +1,5 @@
 /**
- * The daily sweep ADR-005 calls for: walks every domain still pending verification or
+ * The daily domain sweep: walks every domain still pending verification or
  * certificate issuance and refreshes its status against Cloudflare, promoting one that
  * has gone active and failing one that has sat pending past its seven-day window.
  *

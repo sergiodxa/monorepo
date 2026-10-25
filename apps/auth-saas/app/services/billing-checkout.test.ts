@@ -1,6 +1,5 @@
 /**
- * Exercises `openCheckout` and `finishCheckout` against `MemoryBilling`
- * (ADR-018): the intent is durable before anything leaves the process, and
+ * Exercises `openCheckout` and `finishCheckout` against `MemoryBilling`: the intent is durable before anything leaves the process, and
  * settling a return is safe to run more than once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

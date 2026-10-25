@@ -1,5 +1,5 @@
 /**
- * What the tenant object enforces about its own plan (ADR-018): the DAU cap and
+ * What the tenant object enforces about its own plan: the DAU cap and
  * audit retention window that live inside the object rather than in the control
  * plane, written by `applyEntitlements` as one whole operation.
  *
@@ -41,9 +41,8 @@ export interface ApplyEntitlementsInput {
 export interface ApplyEntitlementsResult {
 	plan: string;
 	/**
-	 * Rows pruned from the audit log outside the new retention window. Always
-	 * `0` for now — ADR-023 is what builds that table — and becomes a real
-	 * count once it exists.
+	 * Rows pruned from the audit log outside the new retention window. Reads `0`
+	 * until the audit log table exists, then the real count.
 	 */
 	prunedRows: number;
 }

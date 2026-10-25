@@ -1,6 +1,6 @@
 /**
  * Folding correctness for the two identifier kinds: representative cases rather than an
- * exhaustive Unicode suite, chosen to pin the rules ADR-006 states in prose — case
+ * exhaustive Unicode suite, chosen to pin the folding rules — case
  * folding, IDNA-encoding a domain, and the username character restriction.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

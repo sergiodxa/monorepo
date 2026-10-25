@@ -1,6 +1,6 @@
 /**
  * `GET /billing/checkout/return` — where Polar sends a buyer back once a hosted
- * checkout is done (ADR-018).
+ * checkout is done.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

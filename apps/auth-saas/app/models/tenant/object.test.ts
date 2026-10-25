@@ -696,9 +696,10 @@ describe("the outbound_webhooks entitlement gate", () => {
 	});
 });
 
-describe("the device_grant entitlement gate", () => {
-	const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+/** The grant type a client registers to sign in on an input-constrained device. */
+const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
+describe("the device_grant entitlement gate", () => {
 	test("refuses registerClient and updateClient carrying the device grant without the entitlement", async () => {
 		await tenant.provision({ tenantId: "tenant_1", issuer: "https://tenant-1.example.com" });
 

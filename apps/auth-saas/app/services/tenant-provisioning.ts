@@ -1,5 +1,5 @@
 /**
- * Ties tenant creation to ADR-003/004/005 in one operation: writes the `tenants` row,
+ * Creates a tenant in one operation: writes the `tenants` row,
  * writes the `kind: "platform"` domain row its issuer names, and provisions the
  * tenant's Durable Object under that issuer — the platform subdomain a tenant answers
  *

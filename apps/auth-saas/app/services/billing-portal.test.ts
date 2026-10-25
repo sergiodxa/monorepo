@@ -1,5 +1,5 @@
 /**
- * Exercises `openPortal` against `MemoryBilling` (ADR-018): a tenant with a
+ * Exercises `openPortal` against `MemoryBilling`: a tenant with a
  * joined provider customer opens the hosted portal; one without either answers
  * why not, rather than reaching the platform.
  *

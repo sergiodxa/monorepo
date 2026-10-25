@@ -22,7 +22,7 @@ export default route({
 	cspReports: post("/reports/csp"),
 
 	/**
-	 * Per-tenant subscriptions (ADR-018). `checkout` and `portal` answer the
+	 * Per-tenant subscriptions. `checkout` and `portal` answer the
 	 * tenant owner's dashboard session alone; a UI posts to them and is
 	 * redirected through `checkoutReturn`.
 	 */

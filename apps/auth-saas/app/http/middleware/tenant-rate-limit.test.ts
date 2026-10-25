@@ -1,10 +1,7 @@
 /**
- * Drives each ADR-035 rate limit class through a small test router: an
- * allowed request passes through untouched, a denied one answers with the
- * class's own response shape and the rate limit headers, a closed class
- * refuses when its backend cannot answer while an open class lets the
- * request through, and a shared surface spends from one combined budget
- * across every route mounted with it.
+ * Drives each rate limit class through a small test router: allowed requests pass, denied ones
+ * answer with the class's response shape and headers, a closed class fails closed when its
+ * backend is down, and a shared surface spends from one budget across its routes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

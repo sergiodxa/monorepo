@@ -1,5 +1,5 @@
 /**
- * Keeping a tenant's entitlement projection in step with the provider (ADR-018):
+ * Keeping a tenant's entitlement projection in step with the provider:
  * the webhook handlers `POST /webhooks/billing` dispatches to, the reprojection
  * they and a checkout return share, and the reconciliation sweep that catches a
  *
@@ -359,9 +359,8 @@ export function createBillingWebhookHandlers(
 			await reprojectTenant(models, billing, tenant.id);
 
 			/**
-			 * The day-45 and day-59 deletion notices ADR-018 calls for once a tenant
-			 * has lapsed are deferred here — a separate, sizeable chunk of
-			 * transactional email work, not sent from this handler yet.
+			 * A lapsed tenant's day-45 and day-59 deletion notices belong to a
+			 * separate transactional email job; this handler stops at reprojecting.
 			 */
 		},
 
@@ -392,7 +391,7 @@ export function createBillingWebhookHandlers(
 
 		async "customer.updated"(event: BillingEventOf<"customer.updated">) {
 			/**
-			 * `customers` keeps no email column of its own — ADR-018 only adds the provider
+			 * `customers` keeps no email column of its own — only the provider
 			 * join columns — so there is nothing local to overwrite here; re-running the
 			 * projection is what keeps a plan or feature change that coincided with this
 			 */

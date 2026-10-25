@@ -19,7 +19,7 @@ const MAX_BODY_BYTES = 5 * 1024;
  * instance serves: a URL's public content identifies the same client whichever tenant
  * asks. A refusal stays out, so the next request fetches the document again.
  */
-const cache = new Map<string, { resolution: CimdResolution; cachedAt: number }>();
+const CACHE = new Map<string, { resolution: CimdResolution; cachedAt: number }>();
 
 /**
  * A CIMD client's whole record, in the same shape a registered client's record carries
@@ -116,10 +116,10 @@ async function fetchCimdDocument(clientId: string): Promise<CimdResolution> {
  * @returns The resolved client record, or why the document was refused.
  */
 export async function resolveCimdClient(clientId: string, now: number): Promise<CimdResolution> {
-	let cached = cache.get(clientId);
+	let cached = CACHE.get(clientId);
 	if (cached && now - cached.cachedAt < CACHE_TTL_MS) return cached.resolution;
 
 	let resolution = await fetchCimdDocument(clientId);
-	if (resolution.ok) cache.set(clientId, { resolution, cachedAt: now });
+	if (resolution.ok) CACHE.set(clientId, { resolution, cachedAt: now });
 	return resolution;
 }

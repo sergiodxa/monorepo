@@ -1,5 +1,5 @@
 /**
- * Opening a hosted checkout for a tenant and settling its return (ADR-018): the
+ * Opening a hosted checkout for a tenant and settling its return: the
  * intent is durable — a `billing_checkouts` row — before anything leaves the
  * process, so a retried open reuses the same `attempt_id` and a completed checkout
  *

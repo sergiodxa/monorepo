@@ -1,12 +1,7 @@
 /**
- * Unit tests for the domain lifecycle service (ADR-005): attaching a custom domain,
- * writing the row `pending` with its TXT verification fields, promoting a domain to `active` once Cloudflare reports it and its
- * certificate active, failing a domain still pending past seven days, and removing a
- * domain while treating an already-gone Cloudflare hostname as success. The
- * Cloudflare API is stubbed with MSW against a real `HostnameClient`, and
- * `cloudflare:workers` is mocked with an in-memory `HOSTNAMES_KV` namespace before the
- * modules under test are imported, since `invalidateHostnameCache` reads `env` at
- * load time.
+ * Unit tests for the domain lifecycle service: attaching a custom domain `pending`, promoting
+ * it once Cloudflare reports it active, failing one pending past seven days, and removing one
+ * whose hostname is already gone. Cloudflare's API is stubbed with MSW.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

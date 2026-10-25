@@ -1,5 +1,5 @@
 /**
- * Opening the hosted billing portal for a tenant's owning customer (ADR-018): one
+ * Opening the hosted billing portal for a tenant's owning customer: one
  * customer holds one portal session however many tenants they own, since the
  * payment method and invoices live on the customer rather than any one tenant.
  *
