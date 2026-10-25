@@ -78,19 +78,23 @@ const context = Object.freeze({
 		}
 	},
 	async files(folder) {
-		const base = inside(folder);
-		let entries;
-		try {
-			entries = await readdir(base, { recursive: true, withFileTypes: true });
-		} catch {
-			return [];
-		}
-		return entries
-			.filter((entry) => entry.isFile())
-			.map((entry) => join(entry.parentPath, entry.name))
-			.filter((full) => !relative(base, full).split(sep).some((part) => part === "node_modules" || part.startsWith(".")))
-			.map((full) => relative(root, full).split(sep).join("/"))
-			.sort();
+		const found = [];
+		const visit = async (dir) => {
+			let entries;
+			try {
+				entries = await readdir(dir, { withFileTypes: true });
+			} catch {
+				return;
+			}
+			for (const entry of entries) {
+				if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+				const full = join(dir, entry.name);
+				if (entry.isDirectory()) await visit(full);
+				else if (entry.isFile()) found.push(relative(root, full).split(sep).join("/"));
+			}
+		};
+		await visit(inside(folder));
+		return found.sort();
 	},
 });
 const NAME = new RegExp(input.namePattern);

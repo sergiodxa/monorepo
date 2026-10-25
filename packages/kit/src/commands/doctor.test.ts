@@ -493,6 +493,25 @@ export default defineCheck({
 		expect(result.code).toBe(0);
 	});
 
+	test("lists a folder's files past a node_modules symlink loop", async () => {
+		let root = await projectWithChecks({
+			"count.ts": `export default {
+	name: "count",
+	run: async (ctx) => ({ status: "pass", message: (await ctx.files("apps")).join(",") }),
+};
+`,
+		});
+		await mkdir(join(root, "apps/web/node_modules/@sdxc"), { recursive: true });
+		await mkdir(join(root, "apps/web/.cache"), { recursive: true });
+		await writeFile(join(root, "apps/web/.cache/hidden.ts"), "");
+		await writeFile(join(root, "apps/web/index.ts"), "");
+		await symlink(join(root, "apps/web"), join(root, "apps/web/node_modules/@sdxc/web"), "dir");
+
+		let result = await doctorWithChecks(root, ["--only", "count"]);
+
+		expect(result.stdout).toBe("pass  count  apps/web/index.ts\n");
+	});
+
 	test("stops on a name in --only that no check has, listing the names there are", async () => {
 		let root = await projectWithChecks({ "readme.ts": README_CHECK });
 
