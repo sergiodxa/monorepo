@@ -118,7 +118,7 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 
 /**
  * GET /status/:slug — the public view of a status page. Viewing it apportions
- * cost to the team that owns the page (ADR-007 §5); its title and description
+ * cost to the team that owns the page; its title and description
  * render as the team wrote them, carrying no translation.
  */
 export default createAction(routes.statusPage, async (ctx) => {

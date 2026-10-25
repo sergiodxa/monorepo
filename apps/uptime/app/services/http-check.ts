@@ -27,13 +27,13 @@ const MS_PER_SECOND = 1000;
 
 /**
  * Location hints pinned to Cloudflare's EU jurisdiction — a hard constraint that overrides
- * a monitor's own location hint (ADR-013). `enam` was wrongly included here once, silently
+ * a monitor's own location hint. `enam` was wrongly included here once, silently
  * probing North America monitors from Europe; keep this to exactly the two European hints.
  */
 const EU_LOCATION_HINTS = new Set(["eeur", "weur"]);
 
 /**
- * How many `GeoFetchDO` instances share one location hint's probing (ADR-009), keeping
+ * How many `GeoFetchDO` instances share one location hint's probing, keeping
  * one hung target from queueing the rest of its region behind a single actor. A fixed
  * constant — changing it re-hashes monitors onto new objects, an unexplained latency step.
  */
@@ -49,7 +49,7 @@ export interface HttpProbeOutcome {
 	responseTimeMs: number | null;
 	/**
 	 * How long the Durable Object's handler ran — the billing metric, against
-	 * `responseTimeMs`'s product metric (ADR-019 §2) — as a LOWER BOUND on the billed window
+	 * `responseTimeMs`'s product metric — as a LOWER BOUND on the billed window
 	 * (see {@link WALL_METRIC}). `null` when this side's timeout aborted the call.
 	 */
 	doWallTimeMs: number | null;

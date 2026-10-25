@@ -15,7 +15,7 @@ import * as f from "remix/data-schema/form-data";
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
 /** Field shape shared by the create and update status-page forms. */
-const statusPageFields = {
+const STATUS_PAGE_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	slug: f.field(
 		s
@@ -39,14 +39,14 @@ const statusPageFields = {
 };
 
 /** Validates the `create-status-page` action form body. */
-export const CreateStatusPageSchema = f.object(statusPageFields);
+export const CreateStatusPageSchema = f.object(STATUS_PAGE_FIELDS);
 
 export type CreateStatusPageValues = s.InferOutput<typeof CreateStatusPageSchema>;
 
 /** Validates the `update-status-page` action form body. */
 export const UpdateStatusPageSchema = f.object({
 	status_page_id: f.field(s.string()),
-	...statusPageFields,
+	...STATUS_PAGE_FIELDS,
 });
 
 export type UpdateStatusPageValues = s.InferOutput<typeof UpdateStatusPageSchema>;

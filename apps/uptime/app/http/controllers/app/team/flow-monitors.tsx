@@ -33,7 +33,7 @@ import routes from "~/routes/web";
 /**
  * `error` is neutral and not `down`: it means this app could not find out — an unparseable spec,
  * a host no verified domain covers — and colouring it as an outage would put our own
- * misconfiguration in a customer's incident history (ADR-027 §8).
+ * misconfiguration in a customer's incident history.
  */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",

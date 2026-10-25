@@ -1,6 +1,6 @@
 /**
  * Billing webhook endpoint: `POST /webhooks/polar`. The single write point for the local projection of
- * subscription state (ADR-005), and the reason the every-minute scheduler asks the platform nothing at
+ * subscription state, and the reason the every-minute scheduler asks the platform nothing at
  * all: a delivery lands here once and the owner's monitors are moved immediately.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

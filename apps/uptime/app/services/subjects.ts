@@ -16,7 +16,7 @@ import { mapWithConcurrency } from "~/app/services/concurrency";
 
 /**
  * Resolves every listed subject id to its profile at the identity provider, in
- * bounded-concurrency batches that stay under the Workers subrequest ceiling (ADR-008).
+ * bounded-concurrency batches that stay under the Workers subrequest ceiling.
  * An id the provider holds no record under is absent from the result.
  *
  * @param admin - Management client to read through.

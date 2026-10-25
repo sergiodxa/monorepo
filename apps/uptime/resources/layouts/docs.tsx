@@ -45,7 +45,7 @@ import AuthCta from "~/resources/components/marketing/auth-cta";
  * The hamburger button that opens the sidebar on mobile via the native Command
  * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px.
  */
-const sidebarToggle = [
+const SIDEBAR_TOGGLE = [
 	inlineFlex(),
 	items("center"),
 	justify("center"),
@@ -63,10 +63,10 @@ const sidebarToggle = [
 ];
 
 /** The sidebar's title, e.g. "Documentation". */
-const sidebarTitleCss = [weight(600), fontSize("lg"), m(0), fg("neutral.emphasis")];
+const SIDEBAR_TITLE_CSS = [weight(600), fontSize("lg"), m(0), fg("neutral.emphasis")];
 
 /** The sidebar's subtitle, e.g. "Guides and reference". */
-const sidebarDescriptionCss = [
+const SIDEBAR_DESCRIPTION_CSS = [
 	fontSize("0.8125rem"),
 	/**
 	 * Physical 3-value margin shorthand (top / left+right / bottom) —
@@ -78,7 +78,7 @@ const sidebarDescriptionCss = [
 ];
 
 /** The topbar row: nav toggle + breadcrumb on the left, the dashboard CTA on the right. */
-const topbar = [
+const TOPBAR = [
 	flex(),
 	items("center"),
 	justify("between"),
@@ -89,7 +89,7 @@ const topbar = [
 	media("(prefers-color-scheme: dark)", bg("oklch(0.24 0.008 250 / 0.5)")),
 ];
 
-const topbarLeft = [flex(), items("center"), gap("12px"), minIs(0)];
+const TOPBAR_LEFT = [flex(), items("center"), gap("12px"), minIs(0)];
 
 namespace DocsLayout {
 	export interface Props {
@@ -185,8 +185,8 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						]}
 					>
 						<Sidebar.Header mix={[flexCol(), items("start"), bs("auto"), pb("1.25rem")]}>
-							<p mix={[sidebarTitleCss]}>{sidebarTitle}</p>
-							<p mix={[sidebarDescriptionCss]}>{sidebarDescription}</p>
+							<p mix={[SIDEBAR_TITLE_CSS]}>{sidebarTitle}</p>
+							<p mix={[SIDEBAR_DESCRIPTION_CSS]}>{sidebarDescription}</p>
 						</Sidebar.Header>
 
 						<Sidebar.Content>
@@ -199,14 +199,14 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					</aside>
 
 					<div mix={[flex(), flexCol(), grow(), shrink(), basis("0%"), minIs(0), minBs(0)]}>
-						<div mix={[topbar]}>
-							<div mix={[topbarLeft]}>
+						<div mix={[TOPBAR]}>
+							<div mix={[TOPBAR_LEFT]}>
 								<button
 									type="button"
 									commandfor="docs-sidebar"
 									command="toggle-popover"
 									aria-label={toggleNavLabel}
-									mix={[sidebarToggle]}
+									mix={[SIDEBAR_TOGGLE]}
 								>
 									<MenuIcon size={18} strokeWidth={1.5} />
 								</button>

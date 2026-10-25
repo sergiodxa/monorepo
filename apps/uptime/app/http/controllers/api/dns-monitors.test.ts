@@ -299,7 +299,7 @@ describe("POST /api/v1/dns-monitors", () => {
 	});
 
 	/**
-	 * ADR-026 §13: an API create has no reviewer, so everything discovered is imported already
+	 * An API create has no reviewer, so everything discovered is imported already
 	 * watched — the ten queries below cover every supported record type for the one name. The
 	 * review-gated default lives only in the review screen.
 	 */

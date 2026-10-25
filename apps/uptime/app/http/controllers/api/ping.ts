@@ -160,7 +160,7 @@ export default createAction(routes.api.v1.ping, {
 
 		/**
 		 * Everything this request costs belongs to the calling team — the probe's Durable
-		 * Object time, the data point, the statements above (ADR-007 §5).
+		 * Object time, the data point, the statements above.
 		 */
 		apportionCostByTeam([ctx.apiTeam.id]);
 

@@ -1,5 +1,5 @@
 /**
- * Enqueues the `notify` queue messages the monitor sweeps produce (ADR-008). A status
+ * Enqueues the `notify` queue messages the monitor sweeps produce. A status
  * transition detected by a sweep hands the notification off to the queue instead of
  * dispatching it inline, which keeps an HTTPS round trip to the email provider and the
  *

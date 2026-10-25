@@ -1,6 +1,6 @@
 /**
  * Claims the flow monitors whose interval has come round via an indexed range and
- * runs each through `runFlowCheck` (ADR-006).
+ * runs each through `runFlowCheck`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +40,8 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	let monitors = await ctx.models.flowMonitors.claimDue(Date.now());
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — split
-	 * across the teams whose monitors it took, in proportion to how many it took from each
-	 * (ADR-007 §5). A delivery that claimed nothing is platform cost.
+	 * across the teams whose monitors it took, in proportion to how many it took from each.
+	 * A delivery that claimed nothing is platform cost.
 	 */
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 

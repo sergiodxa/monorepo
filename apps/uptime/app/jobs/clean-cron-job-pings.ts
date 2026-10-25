@@ -1,5 +1,5 @@
 /**
- * Daily retention job for cron-job ping history (ADR-020). Ping rows are kept for
+ * Daily retention job for cron-job ping history. Ping rows are kept for
  * `PING_RETENTION_DAYS` since the docs and monitor detail page depend on a year of
  * history, while `source_ip` and `user_agent` are redacted sooner because they only
  *

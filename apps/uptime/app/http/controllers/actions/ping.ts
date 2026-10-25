@@ -133,7 +133,7 @@ export const runPing = createAction(routes.actions.runPing, {
 			return back;
 		}
 
-		/** Everything this request costs belongs to the team that asked for it (ADR-007 §5). */
+		/** Everything this request costs belongs to the team that asked for it. */
 		apportionCostByTeam([ctx.team.id]);
 
 		let check = new HttpCheck({

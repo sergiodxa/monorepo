@@ -59,7 +59,7 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 	/**
 	 * Everything this delivery costs belongs to this monitor's team, including
 	 * the two lookups above that ran before the team was known, so attribution
-	 * is declared once here and settled at flush (ADR-007 §5).
+	 * is declared once here and settled at flush.
 	 */
 	apportionCostByTeam([monitor.team_id]);
 

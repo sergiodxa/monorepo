@@ -165,7 +165,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	}
 
 	/**
-	 * Split by emails delivered per team (ADR-007 §5): the number of members who wanted the
+	 * Split by emails delivered per team: the number of members who wanted the
 	 * digest is exactly the share of this run's cost each team caused. Declared after the fact,
 	 * since that is when the number is known — the ledger prices it at flush time either way.
 	 */
@@ -211,7 +211,7 @@ async function digestTeam(
 	/**
 	 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
 	 * reportable again tomorrow. Covers both a lapsed subscription, which unschedules every
-	 * monitor (ADR-005), and a monitor disabled mid-run, which `listDigestRecipients`'s `EXISTS` misses.
+	 * monitor, and a monitor disabled mid-run, which `listDigestRecipients`'s `EXISTS` misses.
 	 */
 	if (monitors.every((monitor) => monitor.days.length === 0)) {
 		ctx.log.note("digests.nothing_to_report", {

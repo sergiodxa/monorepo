@@ -3,7 +3,7 @@
  * transitions it hands to the `notify` queue.
  *
  * An `error` result is this app failing to find out rather than the customer's flow
- * breaking, so the sweep records and bills it while telling nobody (ADR-027 §1).
+ * breaking, so the sweep records and bills it while telling nobody.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

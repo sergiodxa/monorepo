@@ -176,7 +176,7 @@ export async function sweepNames(names: readonly string[]): Promise<DnsSweep> {
 /**
  * Discovers a monitor's records: what `names` resolves to is stored watched, and what the
  * zone file declared without a matching answer is stored as an unwatched finding —
- * high-signal once at import (ADR-026 §8), ordinary on a proxied zone forever after.
+ * high-signal once at import, ordinary on a proxied zone forever after.
  *
  * @see DnsMonitorRecords.importMany for why a record the user already declined stays declined
  * on a re-import.

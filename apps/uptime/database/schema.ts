@@ -324,7 +324,7 @@ export const monitorContentChecks = table({
 export type SelectMonitorContentCheck = TableRow<typeof monitorContentChecks>;
 export type InsertMonitorContentCheck = InsertRow<typeof monitorContentChecks>;
 
-/** What a DNS monitor's registration lookup can conclude (ADR-035). */
+/** What a DNS monitor's registration lookup can conclude. */
 export const registrationStatuses = [
 	"unknown",
 	"valid",
@@ -362,14 +362,14 @@ export const dnsMonitors = table({
 		/**
 		 * When this monitor's next check is due, or `null` when it isn't scheduled at all.
 		 * The sweep advances this from its own previous value by whole intervals, so
-		 * `interval_seconds` alone sets the cadence (ADR-006), same as on every monitor table.
+		 * `interval_seconds` alone sets the cadence, same as on every monitor table.
 		 */
 		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
 		last_status: c.enum(["ok", "changed", "error"]).nullable(),
 		/**
-		 * The registration's state from the last RDAP lookup (ADR-035). `unavailable` means
+		 * The registration's state from the last RDAP lookup. `unavailable` means
 		 * the registry has no record or no RDAP service; `error` means no lookup has succeeded
 		 * within the warning window.
 		 */
@@ -697,7 +697,7 @@ export type AlertEventSnapshot =
 	  }
 	/**
 	 * A flow's counters plus the one assertion that broke it, which is the whole incident
-	 * artifact (ADR-027 §8): a run reports the first failure and stops, so a reader gets the
+	 * artifact: a run reports the first failure and stops, so a reader gets the
 	 * test that failed and why instead of a status code to go and interpret.
 	 */
 	| {
@@ -719,7 +719,7 @@ export type AlertEventSnapshot =
 			daysUntilExpiry: number | null;
 			hostname: string;
 	  }
-	/** A domain's registration as the registry last published it (ADR-035). */
+	/** A domain's registration as the registry last published it. */
 	| {
 			type: "registration";
 			status: string;
@@ -919,7 +919,7 @@ export type InsertStatusPageSslMonitor = InsertRow<typeof statusPageSslMonitors>
 /**
  * Which flow monitors a status page publishes. `display_name` is how a team names the
  * journey for its own users, and the only text this table holds: a flow's `source` is
- * credentialed and never reaches a public page (ADR-027 §8).
+ * credentialed and never reaches a public page.
  */
 export const statusPageFlowMonitors = table({
 	name: "status_page_flow_monitors",
@@ -963,7 +963,7 @@ export type SelectMonitorDailyStats = TableRow<typeof monitorDailyStats>;
 export type InsertMonitorDailyStats = InsertRow<typeof monitorDailyStats>;
 
 /**
- * A **projection** of the billing platform's subscription state (ADR-005): the platform stays
+ * A **projection** of the billing platform's subscription state: the platform stays
  * authoritative, and only the webhook and the daily reconciliation sweep write here, keeping
  * authorisation to one indexed read per request.
  */
@@ -1280,7 +1280,7 @@ export type FlowStatus = (typeof flowStatuses)[number];
 
 /**
  * A flow monitor: several requests and the assertions that make them a flow, written as an
- * executable spec (ADR-027) — a sequence question no single HTTP check can ask. Limited to
+ * executable spec — a sequence question no single HTTP check can ask. Limited to
  * permission-gated tool calls, running one needs no sandbox beyond the grants derived here.
  */
 export const flowMonitors = table({
@@ -1299,12 +1299,12 @@ export const flowMonitors = table({
 		 */
 		source: c.text(),
 		/**
-		 * One of `FLOW_INTERVALS_SECONDS`, defaulting to an hour (ADR-027 §7a) — a fixed
+		 * One of `FLOW_INTERVALS_SECONDS`, defaulting to an hour — a fixed
 		 * list, since a flow run costs orders of magnitude more than a single ping, making
 		 * the interval a commercial term with a price printed beside every selectable value.
 		 */
 		interval_seconds: c.integer().default(3_600),
-		/** Same column, same meaning, as on every other monitor table (ADR-006). */
+		/** Same column, same meaning, as on every other monitor table. */
 		next_due_at: c.integer().nullable(),
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),

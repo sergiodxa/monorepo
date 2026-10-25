@@ -22,7 +22,7 @@ import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initial
  * carries the answer across `next()` since the cookie can only be written
  * once the response exists, with entries dying with their request.
  */
-const resolvedFromDatabase = new WeakMap<Request, string>();
+const RESOLVED_FROM_DATABASE = new WeakMap<Request, string>();
 
 /**
  * The signed-in viewer's stored language preference, or `null` when there is
@@ -42,7 +42,7 @@ async function findLocale(request: Request): Promise<string | null> {
 	if (!stored) return null;
 	if (!SUPPORTED_LANGUAGES.includes(stored)) return null;
 
-	resolvedFromDatabase.set(request, stored);
+	RESOLVED_FROM_DATABASE.set(request, stored);
 
 	return stored;
 }
@@ -71,10 +71,10 @@ const detect = i18nMiddleware({
 export const i18n: Middleware = async (context, next) => {
 	let response = await detect(context, next);
 
-	let locale = resolvedFromDatabase.get(context.request);
+	let locale = RESOLVED_FROM_DATABASE.get(context.request);
 	if (!locale) return response;
 
-	resolvedFromDatabase.delete(context.request);
+	RESOLVED_FROM_DATABASE.delete(context.request);
 	response.headers.append("Set-Cookie", await languageCookie.serialize(locale));
 
 	return response;

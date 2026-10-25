@@ -29,7 +29,7 @@ import "@sdxc/highlight/styles.css";
  * gets it. Uses a plain `<style>` tag: the `css()` mixin scopes rules to a
  * generated class name, which can't express an unscoped `@font-face`.
  */
-const fontFaceCss = `
+const FONT_FACE_CSS = `
 	@font-face {
 		font-family: "Mona Sans";
 		font-display: swap;
@@ -122,7 +122,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					{stylesheets.map((href) => (
 						<link key={href} rel="stylesheet" href={href} />
 					))}
-					<style>{fontFaceCss}</style>
+					<style>{FONT_FACE_CSS}</style>
 				</head>
 				<body mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("mono")]}>
 					{children}

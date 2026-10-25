@@ -23,7 +23,7 @@ import routes from "~/routes/web";
 /**
  * POST /actions/:team/create-invite. The cost is recorded before the send so a rejected send is
  * still billed. The invite carries no admin locale, so the notification is written in the app's
- * fallback language, treating the requester's own locale as the last resort (ADR-030 §4).
+ * fallback language, treating the requester's own locale as the last resort.
  */
 export const createInvite = createAction(routes.teamAdminActions.invite.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateInviteSchema);

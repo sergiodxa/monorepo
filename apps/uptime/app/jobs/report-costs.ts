@@ -1,6 +1,6 @@
 /**
  * Daily background job that turns yesterday's recorded infrastructure cost into one usage
- * event per team, carrying the cost the platform's own margin reporting reads (ADR-007 §6).
+ * event per team, carrying the cost the platform's own margin reporting reads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

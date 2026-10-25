@@ -25,7 +25,7 @@ export const RATE_CARD_VERSION = "2026-10-20";
 /**
  * Cents per Browser Run wall-clock second at Workers Paid overage ($0.09/hour ÷ 3600).
  * Appended rather than imported from `@sdxc/cloudflare-pricing` because that package has no
- * Browser Run meter yet; the figure is ADR-027 §7's published rate.
+ * Browser Run meter yet; the figure is Cloudflare's published rate.
  */
 const BROWSER_SECOND_CENTS = 2.5e-3;
 
@@ -57,7 +57,7 @@ export const COST_RATE_CARD = defineRateCard({
 	doRowWritten: centsPerUnit(DurableObjects.SQLITE_ROWS_WRITTEN),
 	/** Workers Logs events: the worker enables `observability`, and every invocation writes one. */
 	workerLogEvent: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
-	/** Browser Run session time a browser flow opened (ADR-027 §7). */
+	/** Browser Run session time a browser flow opened. */
 	browserSecond: BROWSER_SECOND_CENTS,
 	/**
 	 * R2 Standard Class A — Put/List for flow Performance traces. Appended past
@@ -115,7 +115,7 @@ export type WorkerHandler = "fetch" | "queue" | "scheduled";
 /**
  * Milliseconds of Worker CPU charged per unit of work, by handler class. Modelled, not
  * measured, since the runtime exposes no API for a request's own CPU time: the bands are
- * ADR-002 §9's expected column, calibrated monthly against the real `cpuTime` Cloudflare reports.
+ * the hand-derived expected cost per handler, calibrated monthly against the real `cpuTime` Cloudflare reports.
  */
 export const MODELLED_CPU_MS: Record<WorkerHandler, number> = {
 	fetch: 8,

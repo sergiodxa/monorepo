@@ -484,7 +484,7 @@ describe("monitors.findDue", () => {
 	});
 
 	/**
-	 * The claim exists for its query plan (ADR-003): the query it replaced read every row
+	 * The claim exists for its query plan: the query it replaced read every row
 	 * of `monitor_results` to answer a question about a handful of monitors, 97% of the
 	 * app's D1 rows read. Only the plan shows that, so the plan is what this asserts.
 	 */

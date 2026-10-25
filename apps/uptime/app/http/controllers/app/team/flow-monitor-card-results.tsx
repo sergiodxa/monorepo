@@ -31,7 +31,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
-/** `error` is `neutral` because this app could not find out (ADR-027 §8). */
+/** `error` is `neutral` because this app could not find out. */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",
 	down: "down",

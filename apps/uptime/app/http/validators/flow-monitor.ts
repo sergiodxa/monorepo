@@ -1,7 +1,7 @@
 /**
  * Form validation schemas for flow monitor create/update/delete actions. `interval_seconds`
  * accepts one of the seven `FLOW_INTERVALS_SECONDS` values instead of a bounded number,
- * since the control is a select and each option carries its own price (ADR-027 §7a).
+ * since the control is a select and each option carries its own price.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,7 +30,7 @@ const INTERVAL_VALUES = FLOW_INTERVALS_SECONDS.map(String) as [string, ...string
 export const MAX_SOURCE_LENGTH = 20_000;
 
 /** Field shape shared by the create and update forms, minus `is_enabled`. */
-const flowMonitorFields = {
+const FLOW_MONITOR_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	source: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(MAX_SOURCE_LENGTH))),
 	interval_seconds: f.field(
@@ -40,7 +40,7 @@ const flowMonitorFields = {
 
 /** Validates the `create-flow-monitor` action form body. */
 export const CreateFlowMonitorSchema = f.object({
-	...flowMonitorFields,
+	...FLOW_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), true)),
 });
 
@@ -49,7 +49,7 @@ export type CreateFlowMonitorValues = s.InferOutput<typeof CreateFlowMonitorSche
 /** Validates the `update-flow-monitor` action form body. */
 export const UpdateFlowMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),
-	...flowMonitorFields,
+	...FLOW_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), false)),
 });
 

@@ -691,19 +691,19 @@ describe("GET /auth trial conversion", () => {
 	});
 });
 
+/** Headers a browser sends when it loads a page, which is what records a touch. */
+const NAVIGATION = {
+	Accept: "text/html",
+	"Sec-Fetch-Dest": "document",
+	"User-Agent":
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+};
+
 /**
  * Pins what the sign-in copies onto the conversion row: the first touch the anonymous session
  * recorded, reduced to its landing path, source and campaign.
  */
 describe("GET /auth signup attribution", () => {
-	/** Headers a browser sends when it loads a page, which is what records a touch. */
-	const NAVIGATION = {
-		Accept: "text/html",
-		"Sec-Fetch-Dest": "document",
-		"User-Agent":
-			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
-	};
-
 	/** A lead for the signing-in address, which is what gives the sign-in a conversion row. */
 	async function seedLead(db: ReturnType<typeof createTestDatabase>["db"]) {
 		unwrap(

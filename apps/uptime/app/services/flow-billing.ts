@@ -1,6 +1,6 @@
 /**
  * Decides how a completed flow check is billed: HTTP-only runs as one ping per request,
- * browser runs as one flow-run event plus browser-second cost (ADR-027 §7 / §7b). Shared by
+ * browser runs as one flow-run event plus browser-second cost. Shared by
  * the sweep and the manual check action so the two paths can never disagree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

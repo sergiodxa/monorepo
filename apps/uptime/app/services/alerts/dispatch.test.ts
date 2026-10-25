@@ -1915,7 +1915,7 @@ describe("notifyFlowResult", () => {
 
 	/**
 	 * An `error` is this app failing to find out, not the customer's flow breaking, so it
-	 * reaches nobody — the whole reason the two statuses are kept apart (ADR-027 §1).
+	 * reaches nobody — the whole reason the two statuses are kept apart.
 	 */
 	test("never dispatches an 'error' result, whatever it follows", async () => {
 		let { db } = createTestDatabase();

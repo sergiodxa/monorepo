@@ -21,7 +21,7 @@ const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "af
 export const MONITOR_URL_PREFILL = "url";
 
 /** Field shape shared by the create and update monitor web forms. */
-const monitorFields = {
+const MONITOR_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	url: f.field(s.string().pipe(checks.url())),
 	expected_status: f.field(
@@ -34,14 +34,14 @@ const monitorFields = {
 };
 
 /** Validates the `create-monitor` action form body. */
-export const CreateMonitorSchema = f.object(monitorFields);
+export const CreateMonitorSchema = f.object(MONITOR_FIELDS);
 
 export type CreateMonitorValues = s.InferOutput<typeof CreateMonitorSchema>;
 
 /** Validates the `update-monitor` action form body. */
 export const UpdateMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),
-	...monitorFields,
+	...MONITOR_FIELDS,
 });
 
 export type UpdateMonitorValues = s.InferOutput<typeof UpdateMonitorSchema>;

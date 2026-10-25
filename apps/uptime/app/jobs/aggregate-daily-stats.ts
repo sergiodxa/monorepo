@@ -54,7 +54,7 @@ export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 	ctx.log.set({ stats: { date } });
 
 	/**
-	 * The roll-up's cost is split by monitors per team (ADR-007 §5): it writes one row
+	 * The roll-up's cost is split by monitors per team: it writes one row
 	 * per monitor, and the aggregate queries it writes them from cannot be attributed
 	 * any other way.
 	 */
@@ -81,13 +81,13 @@ export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 		healthyStatus: "up",
 		/**
 		 * A flow's latency series is the run's wall clock, the same number its detail page
-		 * averages, so the digest and the page quote one figure (ADR-027).
+		 * averages, so the digest and the page quote one figure.
 		 */
 		responseTimeColumn: "duration_ms",
 		/**
 		 * An `error` run is this app failing to find out, not the flow being broken, so it
 		 * counts in neither half of the day's rate — the split the detail page's pass rate
-		 * already draws (ADR-027 §8).
+		 * already draws.
 		 */
 		inconclusiveStatus: "error",
 	});

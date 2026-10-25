@@ -1,6 +1,6 @@
 /**
  * The billable side of a browser flow run: one Polar event per run on the flow-run
- * meter (ADR-027 §7). HTTP-only flows stay on {@link ingestPings}; this path is only
+ * meter. HTTP-only flows stay on {@link ingestPings}; this path is only
  * for specs that opened a Browser Run session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

@@ -1,5 +1,5 @@
 /**
- * Runs a customer's executable spec and reports what it concluded (ADR-027).
+ * Runs a customer's executable spec and reports what it concluded.
  * Decides which capabilities exist (`http`, `url`, `jwt`, `sample`, `html`, `str`,
  * `spec`, and `browser` when Browser Run is bound), which hosts a verified domain
  *
@@ -75,7 +75,7 @@ export interface FlowCheckResult {
 	testsFailed: number;
 	/**
 	 * Budgeted tool calls the run performed. For HTTP-only flows this is the ping count;
-	 * for browser flows the Polar bill is one flow-run event instead (ADR-027 §7).
+	 * for browser flows the Polar bill is one flow-run event instead.
 	 */
 	requestsMade: number;
 	/**

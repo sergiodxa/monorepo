@@ -40,7 +40,7 @@ function isRoutingKey(value: string | undefined): boolean {
 }
 
 /** Field shape shared by the create and update alert forms. */
-const alertFields = {
+const ALERT_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	/**
@@ -82,7 +82,7 @@ interface AlertFieldValues {
 
 /** Validates the `create-alert` action form body. */
 export const CreateAlertSchema = f
-	.object(alertFields)
+	.object(ALERT_FIELDS)
 	.refine(
 		(value: AlertFieldValues) =>
 			value.strategy !== "email" || (!!value.email_to && isEmailAddress(value.email_to)),
@@ -115,7 +115,7 @@ export type CreateAlertValues = s.InferOutput<typeof CreateAlertSchema>;
 
 /** Validates the `update-alert` action form body. */
 export const UpdateAlertSchema = f
-	.object({ alert_id: f.field(s.string()), ...alertFields })
+	.object({ alert_id: f.field(s.string()), ...ALERT_FIELDS })
 	.refine(
 		(value: AlertFieldValues) =>
 			value.strategy !== "email" || (!!value.email_to && isEmailAddress(value.email_to)),

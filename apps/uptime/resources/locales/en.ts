@@ -3418,7 +3418,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
+				/** Shown on the setup screen as well as in the docs, since it bounds what the monitor can watch. */
 				apexOnlyNotice:
 					"DNS does not let anyone list a zone's records. Without a zone file we can only watch your domain's apex — never a subdomain.",
 
@@ -3532,7 +3532,7 @@ export default {
 				zoneFileNeverImported: "Never — apex only",
 			},
 
-			/** The domain's registration as its registry publishes it (ADR-035). */
+			/** The domain's registration as its registry publishes it. */
 			registration: {
 				title: "Registration",
 				description:

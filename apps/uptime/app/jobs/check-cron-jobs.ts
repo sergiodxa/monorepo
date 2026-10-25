@@ -26,8 +26,7 @@ export default createJobHandler(jobs.checkCronJobs, async (ctx) => {
 	let monitors = await ctx.models.cronJobMonitors.actionable().all();
 	/**
 	 * The evaluation sweep produces no billable ping, so its cost has nowhere else to
-	 * land: it is split across the teams whose cron monitors were actionable this minute
-	 * (ADR-007 §5).
+	 * land: it is split across the teams whose cron monitors were actionable this minute.
 	 */
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 

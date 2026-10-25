@@ -205,7 +205,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	/**
 	 * HTTP-only flows bill one ping per request; browser flows bill one flow-run event and
-	 * record browser-seconds on the cost ledger (ADR-027 §7). Deferred past the response
+	 * record browser-seconds on the cost ledger. Deferred past the response
 	 * because the visitor already has the result, and ingestion is best-effort.
 	 */
 	let billingPlan = planFlowBilling(checkResult, {

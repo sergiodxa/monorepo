@@ -1,7 +1,7 @@
 /**
  * Background job that claims the TCP monitors whose `interval_seconds` has come round,
  * checks each via a raw TCP connection, and enqueues a `notify` message on a down/timeout
- * result or a recovery back to up (ADR-006).
+ * result or a recovery back to up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,7 +46,7 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — is
 	 * split across the teams whose monitors it took, in proportion to how many it took
-	 * from each (ADR-007 §5). A delivery that claimed nothing is platform cost.
+	 * from each. A delivery that claimed nothing is platform cost.
 	 */
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 

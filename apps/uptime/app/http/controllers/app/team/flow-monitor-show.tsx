@@ -33,7 +33,7 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** `error` is neutral, not `down`: it means this app could not find out (ADR-027 §8). */
+/** `error` is neutral, not `down`: it means this app could not find out. */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	up: "up",
 	down: "down",

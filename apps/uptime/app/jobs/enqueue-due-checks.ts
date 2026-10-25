@@ -22,9 +22,9 @@ export default createJobHandler(jobs.enqueueDueChecks, async (ctx) => {
 	let due = await ctx.models.monitors.findDue(now);
 
 	/**
-	 * The claim, this delivery, and the messages below are split by due monitors per team
-	 * (ADR-007 §5): a customer with one 1-minute monitor absorbing nearly the whole scan is
-	 * the signal ADR-003 exists to surface.
+	 * The claim, this delivery, and the messages below are split by due monitors per team:
+	 * a customer with one 1-minute monitor absorbing nearly the whole scan is the
+	 * cost signal this split exists to surface.
 	 */
 	apportionCostByTeam(due.map((monitor) => monitor.team_id));
 

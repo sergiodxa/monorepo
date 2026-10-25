@@ -1,6 +1,6 @@
 /**
  * Bounded-concurrency helpers for the jobs that sweep every monitor of a type in one
- * invocation (ADR-008).
+ * invocation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,7 +8,7 @@
 
 /**
  * How many monitors a sweep works on at once. Ten is a placeholder pending
- * measurement (ADR-008), sized to leave room under the Workers subrequest ceiling
+ * measurement, sized to leave room under the Workers subrequest ceiling
  * for each check's D1 statements; change it here and every sweep picks it up.
  */
 export const SWEEP_CONCURRENCY = 10;

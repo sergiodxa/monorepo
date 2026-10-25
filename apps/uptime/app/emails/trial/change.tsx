@@ -1,7 +1,7 @@
 /**
  * The email an hourly re-check produces when it disagrees with the one before it: what the
  * URL is doing now, what it was doing until now, and the minute it changed. It carries just
- * that answer, so the reader reaches it immediately (ADR-030).
+ * that answer, so the reader reaches it immediately.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

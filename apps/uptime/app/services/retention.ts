@@ -1,5 +1,5 @@
 /**
- * Bounded retention sweeps (ADR-020). An unbounded `DELETE` on a first run, or on a
+ * Bounded retention sweeps. An unbounded `DELETE` on a first run, or on a
  * table that never had a retention job, can match millions of rows in one blocking
  * statement — the largest write bill and the longest statement the app issues.
  *

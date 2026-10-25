@@ -70,7 +70,7 @@ function BillingNotice(handle: Handle<BillingNotice.Props>) {
 
 /**
  * GET /app/:team/checkout — redirects the owner to platform-hosted billing. Subscription
- * status comes from the D1 projection (ADR-005); defaulting to checkout on an unknown answer
+ * status comes from the D1 projection; defaulting to checkout on an unknown answer
  * keeps the mistake recoverable.
  */
 export default createAction(routes.app.team.checkout, {

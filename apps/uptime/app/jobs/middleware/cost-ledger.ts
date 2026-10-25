@@ -1,5 +1,5 @@
 /**
- * Job middleware that gives every job its own cost ledger (ADR-007, ADR-019): the D1
+ * Job middleware that gives every job its own cost ledger: the D1
  * statements, KV operations and queue writes it makes are counted against it and priced
  * for the teams it declares, and flushed once the job ends however it ended.
  *

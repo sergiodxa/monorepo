@@ -34,7 +34,7 @@ export async function checkTcpConnection(
 	/**
 	 * Kept so the losing side of the race can be cancelled. Left running, the
 	 * timer holds the invocation open for the full `timeoutMs` even after a
-	 * fast connect, inflating a sequential sweep's cost (ADR-008).
+	 * fast connect, inflating a sequential sweep's cost.
 	 */
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 

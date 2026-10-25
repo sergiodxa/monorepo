@@ -28,7 +28,7 @@ declare module "remix/router" {
 /**
  * Resolves `:team` to a team the current viewer is a member of, looking up the
  * viewer's teams concurrently since that lookup is independent of it, and
- * apportioning the cost of all three lookups to the resolved team (ADR-007 §5).
+ * apportioning the cost of all three lookups to the resolved team.
  *
  * @returns The downstream response, or a 404 when the team is missing or the viewer is not a member.
  * @example

@@ -52,7 +52,7 @@ import routes from "~/routes/web";
 
 /**
  * Floor on the cooldown a *repeat* notification is spaced by, in minutes. It replaces
- * a former per-incident send cap (ADR-004) that silenced long outages by capping
+ * a former per-incident send cap that silenced long outages by capping
  * their total; the total is now unbounded, and only the rate is floored.
  */
 /**
@@ -106,7 +106,7 @@ export interface DispatchAlertsParams {
 
 /**
  * Runs the full alert pipeline for one monitor status transition. The one place every
- * alerting path passes through, so team cost is recorded here (ADR-007 §5) before the
+ * alerting path passes through, so team cost is recorded here before the
  * maintenance-window check can return early — the lookups before it cost too.
  */
 export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void> {
@@ -290,7 +290,7 @@ function recovered<Status extends string>(previousStatus: Status | null, healthy
 /**
  * Whether a TCP result warrants an alert: every non-`up` result does, and `up` only
  * on a genuine recovery. Exported so a sweep can reuse this exact policy to decide
- * whether a transition is worth enqueuing (ADR-008), and re-checking it in the consumer keeps a redelivered message harmless.
+ * whether a transition is worth enqueuing, and re-checking it in the consumer keeps a redelivered message harmless.
  */
 export function shouldNotifyTcpResult(
 	previousStatus: TcpCheckStatus | null,
@@ -308,9 +308,9 @@ export function shouldNotifyDnsResult(
 }
 
 /**
- * See {@link shouldNotifyTcpResult}. A flow splits a broken flow from an unrunnable one
- * (ADR-027 §1): `down` is a failed assertion and always notifies, while `error` is this
- * app failing to find out — an unparsable spec, a host outside the team's verified do
+ * See {@link shouldNotifyTcpResult}. A `down` flow is a failed assertion and always notifies;
+ * an `error` is this app failing to find out — an unparsable spec, a host outside the
+ * team's verified domains — so it notifies nobody, and `up` notifies only after a `down`.
  */
 export function shouldNotifyFlowResult(
 	previousStatus: FlowStatus | null,
@@ -597,7 +597,7 @@ export async function notifyCronJobResult(
 
 /**
  * What a flow run concluded, as the alert pipeline needs it: the counters and the first
- * failing assertion, which is what the notification quotes verbatim (ADR-027 §8).
+ * failing assertion, which is what the notification quotes verbatim.
  */
 export interface FlowAlertResult {
 	status: FlowStatus;
@@ -728,7 +728,7 @@ export async function notifySslResult(
 }
 
 /**
- * Sends the alert a registration lookup warrants (ADR-035), re-deciding it from the stored
+ * Sends the alert a registration lookup warrants, re-deciding it from the stored
  * row so a redelivered message answers the same. The EPP statuses count only while the last
  * lookup succeeded, matching the sweep, which has none to read from a failed one.
  */

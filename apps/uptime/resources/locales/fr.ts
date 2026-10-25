@@ -3403,7 +3403,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
+				/** Shown on the setup screen as well as in the docs, since it bounds what the monitor can watch. */
 				apexOnlyNotice:
 					"Le DNS ne permet à personne de lister les enregistrements d'une zone. Sans fichier de zone, nous ne pouvons surveiller que l'apex de votre domaine — jamais un sous-domaine.",
 
@@ -3519,7 +3519,7 @@ export default {
 				zoneFileNeverImported: "Jamais — apex uniquement",
 			},
 
-			/** The domain's registration as its registry publishes it (ADR-035). */
+			/** The domain's registration as its registry publishes it. */
 			registration: {
 				title: "Enregistrement du domaine",
 				description:

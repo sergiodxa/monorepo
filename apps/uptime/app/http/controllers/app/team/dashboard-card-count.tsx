@@ -177,7 +177,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 				down: flowMonitors.filter((monitor) => monitor.last_status === "down").length,
 				/**
 				 * Tracked as its own degraded-toned pill, since a flow that could not run
-				 * signals this app's own visibility gap (ADR-027 §8); keeping it separate
+				 * signals this app's own visibility gap; keeping it separate
 				 * keeps the outage count faithful to the customer's actual flow failures.
 				 */
 				error: flowMonitors.filter((monitor) => monitor.last_status === "error").length,

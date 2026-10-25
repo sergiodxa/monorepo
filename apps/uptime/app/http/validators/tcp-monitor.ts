@@ -13,7 +13,7 @@ import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
 /** Field shape shared by the create and update TCP monitor forms, minus `is_enabled` (see the module docstring for why its default differs between the two). */
-const tcpMonitorFields = {
+const TCP_MONITOR_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	host: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	port: f.field(coerce.number().pipe(checks.min(1), checks.max(65_535))),
@@ -21,7 +21,7 @@ const tcpMonitorFields = {
 	/**
 	 * Floored at 60 seconds, matching the HTTP monitor form: checks are delivered by an
 	 * every-minute cron, so an interval finer than a minute is not schedulable and would
-	 * be billed for checks that could never run (ADR-006).
+	 * be billed for checks that could never run.
 	 */
 	interval_seconds: f.field(
 		s.defaulted(coerce.number().pipe(checks.min(60), checks.max(86_400)), 300),
@@ -30,7 +30,7 @@ const tcpMonitorFields = {
 
 /** Validates the `create-tcp-monitor` action form body. */
 export const CreateTcpMonitorSchema = f.object({
-	...tcpMonitorFields,
+	...TCP_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), true)),
 });
 
@@ -39,7 +39,7 @@ export type CreateTcpMonitorValues = s.InferOutput<typeof CreateTcpMonitorSchema
 /** Validates the `update-tcp-monitor` action form body. */
 export const UpdateTcpMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),
-	...tcpMonitorFields,
+	...TCP_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), false)),
 });
 

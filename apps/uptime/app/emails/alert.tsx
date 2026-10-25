@@ -315,7 +315,7 @@ function snapshotFields({ t, locale, snapshot }: Alert): AlertField[] {
 			];
 
 			/**
-			 * The assertion that broke, quoted as the run reported it (ADR-027 §8) — the
+			 * The assertion that broke, quoted as the run reported it — the
 			 * incident itself, not a code to go and interpret. A recovery carries none.
 			 */
 			if (snapshot.failedTest !== null) {

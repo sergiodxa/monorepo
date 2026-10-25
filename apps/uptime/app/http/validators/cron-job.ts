@@ -15,7 +15,7 @@ import * as f from "remix/data-schema/form-data";
 import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/config/timezones";
 
 /** Field shape shared by the create and update cron-job monitor forms. */
-const cronJobFields = {
+const CRON_JOB_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	description: f.field(s.optional(s.string())),
 	cron_expression: f.field(s.string().pipe(checks.minLength(1))),
@@ -35,14 +35,14 @@ const cronJobFields = {
 };
 
 /** Validates the `create-cron-job` action form body. */
-export const CreateCronJobSchema = f.object(cronJobFields);
+export const CreateCronJobSchema = f.object(CRON_JOB_FIELDS);
 
 export type CreateCronJobValues = s.InferOutput<typeof CreateCronJobSchema>;
 
 /** Validates the `update-cron-job` action form body. */
 export const UpdateCronJobSchema = f.object({
 	monitor_id: f.field(s.string()),
-	...cronJobFields,
+	...CRON_JOB_FIELDS,
 });
 
 export type UpdateCronJobValues = s.InferOutput<typeof UpdateCronJobSchema>;

@@ -23,7 +23,7 @@ export const PING_METER = "ping";
 /**
  * Our own name for the meter one browser flow run is counted against, and the event name
  * the meter matches on. HTTP-only flows stay on {@link PING_METER}; browser flows use this
- * one instead (ADR-027 §7 / §7b).
+ * one instead.
  */
 export const FLOW_RUN_METER = "flow_run";
 

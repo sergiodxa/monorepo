@@ -1,6 +1,6 @@
 /**
  * Background job that dispatches the alerts for one monitor status transition, off the
- * sweep that detected it (ADR-008), reloading the monitor and rebuilding the alert
+ * sweep that detected it, reloading the monitor and rebuilding the alert
  * snapshot from what the sweep persisted before handing it to the same `notify*` policy
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

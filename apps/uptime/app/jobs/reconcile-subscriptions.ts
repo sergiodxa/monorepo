@@ -1,5 +1,5 @@
 /**
- * Background job that repairs the local projection of billing state (ADR-005 §5). Deliveries
+ * Background job that repairs the local projection of billing state. Deliveries
  * get missed — a deploy mid-delivery, a 500, a rotated signing secret — and a missed one is
  * invisible: the projection just keeps answering with what it last heard.
  *

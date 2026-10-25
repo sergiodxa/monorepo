@@ -1,7 +1,7 @@
 /**
  * Background job that claims the DNS monitors whose `interval_seconds` has come round,
- * sweeps each through the shared pipeline in `app/services/dns/discovery.ts` (ADR-006), and
- * bounds its query budget against the platform's per-invocation ceiling (ADR-026 §9a),
+ * sweeps each through the shared pipeline in `app/services/dns/discovery.ts`, and
+ * bounds its query budget against the platform's per-invocation ceiling,
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -84,7 +84,7 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — is
 	 * split across the teams whose monitors it took, in proportion to how many it took
-	 * from each (ADR-007 §5). A delivery that claimed nothing is platform cost.
+	 * from each. A delivery that claimed nothing is platform cost.
 	 */
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
@@ -136,7 +136,7 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 			}
 
 			/**
-			 * One ping per check, per monitor, keyed on the result row (ADR-026 §9): the
+			 * One ping per check, per monitor, keyed on the result row: the
 			 * public resolver's queries are free, so what a domain monitor sells is one
 			 * monitored domain, priced per check.
 			 */

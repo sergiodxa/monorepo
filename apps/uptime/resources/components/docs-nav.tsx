@@ -32,14 +32,14 @@ type DocsNavProps = {
 	searchPlaceholder: string;
 };
 
-const navList = [listStyle(), m(0), p(0)];
+const NAV_LIST = [listStyle(), m(0), p(0)];
 
 /**
  * `tracking("wide")` (0.025em) reads identically to the literal 0.03em this
  * heading used, so the value promotes to the named scale step. The margin uses
  * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
  */
-const sectionTitle = [
+const SECTION_TITLE = [
 	fontSize("xs"),
 	weight(700),
 	textTransform("uppercase"),
@@ -53,7 +53,7 @@ const sectionTitle = [
  * its own rows (row padding, radius, hover/current tint), with `hasBackground`
  * so the row renders as a solid tinted block.
  */
-const navLink = [
+const NAV_LINK = [
 	block(),
 	p("6px", "20px"),
 	m(0, "8px"),
@@ -103,7 +103,7 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 
 				<nav>
 					{results ? (
-						<ul mix={[navList]}>
+						<ul mix={[NAV_LIST]}>
 							{results.map((doc) => (
 								<li key={doc.path}>
 									<NavLink
@@ -111,7 +111,7 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 										prefetch="intent"
 										hasBackground
 										aria-current={doc.path === activePath ? "page" : undefined}
-										mix={[navLink]}
+										mix={[NAV_LINK]}
 									>
 										{doc.title}
 										<span mix={[block(), fontSize("xs"), fg("neutral.muted")]}>{doc.section}</span>
@@ -122,8 +122,8 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 					) : (
 						sections.map((section) => (
 							<div key={section.title}>
-								<p mix={[sectionTitle]}>{section.title}</p>
-								<ul mix={[navList]}>
+								<p mix={[SECTION_TITLE]}>{section.title}</p>
+								<ul mix={[NAV_LIST]}>
 									{section.docs.map((doc) => (
 										<li key={doc.path}>
 											<NavLink
@@ -131,7 +131,7 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 												prefetch="intent"
 												hasBackground
 												aria-current={doc.path === activePath ? "page" : undefined}
-												mix={[navLink]}
+												mix={[NAV_LINK]}
 											>
 												{doc.title}
 											</NavLink>

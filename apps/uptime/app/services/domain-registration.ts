@@ -1,5 +1,5 @@
 /**
- * Domain registration expiry for DNS monitors (ADR-035): the RDAP client the sweep looks
+ * Domain registration expiry for DNS monitors: the RDAP client the sweep looks
  * domains up with, the rules that turn a lookup into the monitor's stored state and next
  * lookup time, and the policy for which states alert.
  *

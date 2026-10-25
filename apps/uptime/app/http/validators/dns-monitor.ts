@@ -12,7 +12,7 @@ import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
 /**
- * Shortest interval a domain monitor may be configured with (ADR-026 §2), set well above
+ * Shortest interval a domain monitor may be configured with, set well above
  * other monitor types' 60-second floor: a DNS monitor sweeps ten record types per tracked
  * name, and this floor also reconciles the form's old 300s with the API's 60s.
  */
@@ -25,7 +25,7 @@ export const MAX_DNS_INTERVAL_SECONDS = 86_400;
 export const DEFAULT_DNS_INTERVAL_SECONDS = 86_400;
 
 /** Field shape shared by the create and update DNS monitor forms, minus `is_enabled`. */
-const dnsMonitorFields = {
+const DNS_MONITOR_FIELDS = {
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	domain: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	interval_seconds: f.field(
@@ -51,7 +51,7 @@ const zoneFileField = f.field(s.optional(s.string()));
  * records to watch — a monitor at that point is plainly meant to run.
  */
 export const CreateDnsMonitorSchema = f.object({
-	...dnsMonitorFields,
+	...DNS_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), true)),
 	zone_file: zoneFileField,
 });
@@ -65,10 +65,10 @@ export type CreateDnsMonitorValues = s.InferOutput<typeof CreateDnsMonitorSchema
  */
 export const UpdateDnsMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),
-	...dnsMonitorFields,
+	...DNS_MONITOR_FIELDS,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), false)),
 	/**
-	 * Days before the registration lapses that it counts as expiring (ADR-035). Optional, so
+	 * Days before the registration lapses that it counts as expiring. Optional, so
 	 * a body that leaves it out keeps the stored window rather than resetting it.
 	 */
 	registration_warning_days: f.field(

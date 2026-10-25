@@ -137,7 +137,7 @@ export default jobs({
 	}),
 	sendTrialDigests: job({ cron: "0 6 * * *" }),
 	/**
-	 * Hourly: looks up the registrations of the DNS monitors that are due (ADR-035). Each
+	 * Hourly: looks up the registrations of the DNS monitors that are due. Each
 	 * monitor is looked up daily; the hourly delivery lets a failed lookup retry within the
 	 * hour instead of waiting a whole day.
 	 */

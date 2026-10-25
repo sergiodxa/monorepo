@@ -1,7 +1,7 @@
 /**
  * Unit tests for the rate card: the `double` positions stay append-only, pricing is in
  * cents, each rate the card corrected prices as Cloudflare bills it, and one expected HTTP
- * check still reproduces ADR-002 §9's independently derived figure, adjusted for those corrections.
+ * check still reproduces its independently hand-derived figure, adjusted for those corrections.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -88,12 +88,12 @@ describe("priceCostQuantities", () => {
 	});
 
 	/**
-	 * ADR-002 §9's expected column for one successful HTTP check totals `0.0034767` cents,
+	 * The hand-derived expected cost of one successful HTTP check totals `0.0034767` cents,
 	 * hand-derived from `EXPLAIN QUERY PLAN` and the billing docs under the previous card.
 	 * This card prices the same check at that figure less Analytics Engine's unbilled share,
-	 * plus duration repriced at 0.128 GB, to five decimals, ADR-002's own precision.
+	 * plus duration repriced at 0.128 GB, to five decimals, the precision of that derivation.
 	 */
-	test("reproduces ADR-002's expected cost for one successful HTTP check", () => {
+	test("reproduces the hand-derived expected cost for one successful HTTP check", () => {
 		let quantities = createCostQuantities();
 		quantities.workerRequest = 0.9;
 		quantities.workerCpuMs = 6;

@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `checkHttp` job: classification, degraded thresholds and
  * content checks, at-least-once idempotency, Durable Object sharding and EU
- * jurisdiction pinning (ADR-013), the D1 cost model (ADR-019), and usage metering.
+ * jurisdiction pinning, the D1 cost model, and usage metering.
  * The database is a real in-memory SQLite instance, MSW serves the webhook and Analytics
  * Engine endpoints, and billing runs against a real in-memory platform.
  *
@@ -60,7 +60,7 @@ let doFetchMock = vi.fn(
 /**
  * The `GEO_FETCH` binding, routing every object it hands out to {@link doFetchMock}.
  * Its `resolutions` record each probe's object name, region, and jurisdiction, in
- * order, since a jurisdiction is a property of the id that minted it (ADR-013).
+ * order, since a jurisdiction is a property of the id that minted it.
  */
 let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchMock }));
 
@@ -419,7 +419,7 @@ describe("checkHttp content checks", () => {
 });
 
 /**
- * Which `GeoFetchDO` instance a check probes through (ADR-009): the region comes from
+ * Which `GeoFetchDO` instance a check probes through: the region comes from
  * the location hint, sharded eight ways to spread probing across objects, and pinned
  * per monitor so a shard move can't fake a response-time change.
  */
@@ -457,15 +457,15 @@ describe("checkHttp Durable Object sharding", () => {
 	});
 });
 
+/** Every value `monitors.location_hint` accepts. */
+const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
+
 /**
  * Which regions get an EU-pinned Durable Object, and that its id was minted by the
  * subnamespace handed to `get`, since a jurisdiction lives on the id and a mismatch is
- * what the real binding rejects (ADR-013) — the bug that once retried every EU check.
+ * what the real binding rejects — the bug that once retried every EU check.
  */
 describe("checkHttp EU jurisdiction", () => {
-	/** Every value `monitors.location_hint` accepts. */
-	const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"];
-
 	test("pins Europe's two hints to the EU jurisdiction and no others", async () => {
 		let { db } = createTestDatabase();
 		let pinned: string[] = [];
@@ -764,17 +764,18 @@ describe("checkHttp Durable Object wall time", () => {
 	});
 });
 
+/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
+const MAX_STATEMENTS = 6;
+
+/** Row budget for one healthy HTTP check: at most one row per statement. */
+const MAX_ROWS = 6;
+
 /**
- * The cost model of one HTTP check: 6 D1 statements, 6 rows, no table scan (ADR-019 §4).
- * ADR-002 traced the platform's worst cost regression to a table-scanning query, so
+ * The cost model of one HTTP check: 6 D1 statements, 6 rows, no table scan.
+ * The platform's worst cost regression was a table-scanning query, so
  * catching one here turns it into a CI failure long before it becomes a bill.
  */
 describe("checkHttp cost model", () => {
-	/** Statement budget for one healthy HTTP check. Raising this raises the bill. */
-	const MAX_STATEMENTS = 6;
-	/** Row budget for one healthy HTTP check: at most one row per statement. */
-	const MAX_ROWS = 6;
-
 	test("a healthy check costs no more than 6 statements and 6 rows", async () => {
 		let { db, statements } = createObservedDatabase();
 		await seedTeam(db);

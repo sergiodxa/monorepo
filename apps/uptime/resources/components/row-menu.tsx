@@ -35,7 +35,7 @@ namespace RowMenu {
  * a coarse pointer, since a touch laptop needs the larger target even at
  * desktop widths. A full-weight stroke and the emphasis foreground keep the three-dot glyph visible against a dark background.
  */
-const trigger = [
+const TRIGGER = [
 	inlineFlex(),
 	items("center"),
 	justify("center"),
@@ -52,7 +52,7 @@ const trigger = [
 ];
 
 /** Fixed panel width, right-aligned to the trigger via `placement="bottom-end"` so it never overflows the table. */
-const panel = [
+const PANEL = [
 	is("200px"),
 	raw({ background: "#ffffff" }),
 	media("(prefers-color-scheme: dark)", bg("neutral.bg-tint")),
@@ -104,12 +104,12 @@ export default function RowMenu(handle: Handle<RowMenu.Props>) {
 					commandfor={id}
 					command="toggle-popover"
 					aria-label={label}
-					mix={[trigger]}
+					mix={[TRIGGER]}
 				>
 					<EllipsisVerticalIcon size={20} strokeWidth={2} />
 				</button>
 
-				<Menu id={id} placement="bottom-end" aria-label={label} mix={[menuKeys(), panel]}>
+				<Menu id={id} placement="bottom-end" aria-label={label} mix={[menuKeys(), PANEL]}>
 					{children}
 				</Menu>
 			</>

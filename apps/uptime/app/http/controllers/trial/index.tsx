@@ -1071,7 +1071,7 @@ export default createController(routes.trial.check, {
 			let billedTeam = account?.billedTeam ?? null;
 
 			if (billedTeam !== null) {
-				/** Everything this request costs belongs to the team being billed (ADR-007 §5). */
+				/** Everything this request costs belongs to the team being billed. */
 				apportionCostByTeam([billedTeam.id]);
 			}
 

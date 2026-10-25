@@ -32,7 +32,7 @@ export const PRICE_PER_BLOCK_USD = 1;
 
 /**
  * Browser flow runs included in the subscription before metered usage starts. Zero on
- * purpose (ADR-027 §7): the $5 base already funds 100,000 pings, and folding even a
+ * purpose: the $5 base already funds 100,000 pings, and folding even a
  * small browser-run allowance into it would spend that margin on a feature most
  */
 export const INCLUDED_FLOW_RUNS = 0;
@@ -40,7 +40,7 @@ export const INCLUDED_FLOW_RUNS = 0;
 /**
  * What one browser flow run costs the customer, in USD. A quarter of a cent —
  * $2.50 per 1,000 — so every interval on the discrete list is exact on an invoice
- * rather than rounded up by a block size (ADR-027 §7).
+ * rather than rounded up by a block size.
  */
 export const PRICE_PER_FLOW_RUN_USD = 0.0025;
 
@@ -55,7 +55,7 @@ export const DAYS_PER_BILLING_MONTH = 28;
 const MINUTES_PER_BILLING_MONTH = DAYS_PER_BILLING_MONTH * 24 * 60;
 
 /**
- * Intervals a flow monitor may run on: 15 minutes to a day (ADR-027 §7a). A
+ * Intervals a flow monitor may run on: 15 minutes to a day. A
  * fixed list because each step down roughly doubles the run cost, so a free
  * integer would let someone type `600` and find out on an invoice.
  */

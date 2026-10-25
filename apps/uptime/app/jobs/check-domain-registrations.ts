@@ -1,6 +1,6 @@
 /**
- * Hourly sweep that looks up the registration of every DNS monitor whose lookup is due
- * (ADR-035): one RDAP query per domain, paced per registry, persisted with its next lookup
+ * Hourly sweep that looks up the registration of every DNS monitor whose lookup is due:
+ * one RDAP query per domain, paced per registry, persisted with its next lookup
  * time, and handed to `notify` when the outcome warrants an alert. Lookups are not metered.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

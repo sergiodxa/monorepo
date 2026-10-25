@@ -4,7 +4,7 @@
  *
  * The platform is a real in-memory one, so the hosted pages under assertion are the URLs it
  * actually handed back rather than strings this file made up. Subscription status is seeded
- * into the `subscriptions` projection (ADR-005), the store the controller reads at request
+ * into the `subscriptions` projection, the store the controller reads at request
  * time. The `bunfig.toml` preload supplies `cloudflare:workers` for `env` on this path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

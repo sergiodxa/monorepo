@@ -28,7 +28,7 @@ const DNS_RESULT_RETENTION_DAYS = 90;
 const TCP_RESULT_RETENTION_DAYS = 90;
 /**
  * Longer than the HTTP window and the same as the other two, which the volume permits: the
- * finest flow interval is fifteen minutes (ADR-027 §7a), so a flow monitor writes at most
+ * finest flow interval is fifteen minutes, so a flow monitor writes at most
  * 2,688 rows a month against an HTTP monitor's 40,320.
  */
 const FLOW_RESULT_RETENTION_DAYS = 90;
@@ -86,7 +86,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	let now = Date.now();
 
 	/**
-	 * Charged when the delete happens, split by monitors per team (ADR-007 §5): a bulk
+	 * Charged when the delete happens, split by monitors per team: a bulk
 	 * `DELETE` cannot say whose rows it removed, so monitor count is the closest proxy
 	 * for the volume each team contributed.
 	 */

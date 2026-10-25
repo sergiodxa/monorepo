@@ -1,6 +1,6 @@
 /**
  * Opens the app's D1 connection and connects its per-statement row counts to the cost
- * ledger (ADR-019, ADR-007), which makes D1 cost priceable per job type.
+ * ledger, which makes D1 cost priceable per job type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +17,7 @@ let database: Database | undefined;
 
 /**
  * Opens a connection to the app's D1 database, counting every statement it runs against
- * the cost ledger of whatever unit of work is running (ADR-019, ADR-007).
+ * the cost ledger of whatever unit of work is running.
  *
  * @returns A database bound to the `DB` binding, shared by every request this isolate serves.
  * @example

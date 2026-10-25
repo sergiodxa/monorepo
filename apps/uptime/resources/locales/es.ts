@@ -3384,7 +3384,7 @@ export default {
 					},
 				},
 
-				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
+				/** Shown on the setup screen as well as in the docs, since it bounds what the monitor can watch. */
 				apexOnlyNotice:
 					"DNS no permite a nadie listar los registros de una zona. Sin un archivo de zona solo podemos vigilar el ápex de su dominio, nunca un subdominio.",
 
@@ -3502,7 +3502,7 @@ export default {
 				zoneFileNeverImported: "Nunca — solo el ápex",
 			},
 
-			/** The domain's registration as its registry publishes it (ADR-035). */
+			/** The domain's registration as its registry publishes it. */
 			registration: {
 				title: "Registro del dominio",
 				description:

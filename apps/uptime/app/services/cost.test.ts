@@ -1,5 +1,5 @@
 /**
- * Unit tests for the cost ledger (ADR-007 §3–§6): a unit of work's D1 statements
+ * Unit tests for the cost ledger: a unit of work's D1 statements
  * accumulate independently of concurrent units; apportioned quantities split by team
  * weight; the ledger's own write, modelled CPU, and request share land in what it
  * reports; the flushed totals reach the invocation's log as `cost.*` fields; and the
