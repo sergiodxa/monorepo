@@ -1163,11 +1163,15 @@
       "name": "@sdxc/http-signatures",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/digest-fields": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
+        "@sdxc/well-known": "workspace:*",
       },
     },
     "packages/i18n": {

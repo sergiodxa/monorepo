@@ -52,7 +52,7 @@ export async function sign(
 	}
 
 	let created = options.created ?? new Date();
-	let headers = new Headers(request.headers);
+	let headers = new Headers([...request.headers]);
 	if (!headers.has("date")) headers.set("date", created.toUTCString());
 
 	let body = options.body === undefined ? null : toBytes(options.body);
@@ -235,7 +235,7 @@ function defaultCavage(headers: Headers, hasBody: boolean): string[] {
  * @param label - The member key.
  * @param value - The member, already serialized.
  */
-function addMember(
+export function addMember(
 	headers: Headers,
 	field: string,
 	label: string,

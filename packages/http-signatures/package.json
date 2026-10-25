@@ -5,16 +5,21 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./web-bot-auth": "./src/web-bot-auth.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/digest-fields": "workspace:*",
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/jwt": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/structured-fields": "workspace:*"
+		"@sdxc/structured-fields": "workspace:*",
+		"@sdxc/well-known": "workspace:*"
 	}
 }

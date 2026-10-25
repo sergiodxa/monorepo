@@ -149,6 +149,44 @@ The failure every function answers with; `code` names the check:
 - `Verified`: `{ scheme, keyId, label, created, components }`; `label` is `null` for cavage and `components` lists covered identifiers in order, parameters appended (`@query-param;name="id"`).
 - `HttpSignatureErrorCode`: the codes in the table above.
 
+## Web Bot Auth
+
+`@sdxc/http-signatures/web-bot-auth` implements draft-ietf-webbotauth-httpsig-protocol: a bot signs
+each request under `tag="web-bot-auth"` with its key's RFC 7638 thumbprint as `keyid`, and names in
+`Signature-Agent` the origin whose `/.well-known/http-message-signatures-directory` publishes the key.
+
+```typescript
+import { follow } from "@sdxc/outbound";
+import { isSuccess, unwrap } from "@sdxc/result";
+import {
+	importWebBotAuthKey,
+	signDirectoryResponse,
+	verifyWebBotAuth,
+	webBotAuthSigner,
+} from "@sdxc/http-signatures/web-bot-auth";
+
+let key = unwrap(await importWebBotAuthKey(JSON.parse(env.WEB_BOT_AUTH_KEY))); // a private JWK
+await follow(url, { sign: webBotAuthSigner({ key, agent: "https://bot.example.com" }) });
+
+let verified = await verifyWebBotAuth(request, { cache }); // the origin's side
+if (isSuccess(verified)) verified.data.agent; // "https://bot.example.com/.well-known/http-message-signatures-directory"
+```
+
+- `importWebBotAuthKey(jwk)` imports an Ed25519, ECDSA P-256 or RSA private JWK, answering `keyid`,
+  the non-extractable `privateKey` and the `publicKey` to publish.
+- `signWebBotAuth(request, options)` covers `@authority @method @path` by default plus the
+  `signature-agent;key=<label>` member it writes, with `created` and an `expires` 5 minutes later
+  (`expiresIn`). `webBotAuthSigner(options)` is the same, shaped for `follow`'s `sign` option.
+- `verifyWebBotAuth(request, options?)` checks the tag, `keyid`/`created`/`expires`, coverage of
+  `@authority` or `@target-uri` and the `Signature-Agent` member (plus `components`), a lifetime
+  within `maxLifetime` (24 hours), then fetches the `directory` or `jwks_uri` through `follow` with no
+  redirects, a 200 only, `maxBytes` and `maxKeys`, caches it in `cache` under
+  `web-bot-auth:<directory URL>` for its `max-age` (one minute to one day), and selects the key whose
+  thumbprint is `keyid`. The legacy bare String `Signature-Agent` is accepted unless `legacy: false`.
+- `signDirectoryResponse(response, request, { keys })` signs a directory response with every key it
+  publishes, over `"@authority";req` and `content-digest`, for `@sdxc/well-known`'s `sign` option.
+- `parseSignatureAgent(text)` / `stringifySignatureAgent(agents)` read and write the field.
+
 ## Pattern: Falling back from RFC 9421 to draft-cavage
 
 Servers that predate RFC 9421 reject it. Sign with RFC 9421 first and retry once with cavage.

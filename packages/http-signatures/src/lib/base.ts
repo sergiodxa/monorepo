@@ -18,11 +18,16 @@ import type { Component } from "../types.js";
 import { HttpSignatureError } from "../errors.js";
 import { serializeIdentifier } from "../fields.js";
 
-/** The parts of a request a signature can cover. */
+/**
+ * The parts of a message a signature can cover. A response carries `status` and the
+ * `request` it answers, which `;req` components read from.
+ */
 export interface Message {
 	method: string;
 	url: URL;
 	headers: Headers;
+	status?: number;
+	request?: Message;
 }
 
 /** Characters the form-urlencoded serializer leaves as they are (WHATWG URL §5.2). */
@@ -76,7 +81,7 @@ export function signatureBase(
 }
 
 /**
- * The value of one covered component of a request.
+ * The value of one covered component, read from the answered request under `;req`.
  *
  * @param message - The request.
  * @param component - The component.
@@ -85,10 +90,12 @@ function componentValue(
 	message: Message,
 	component: Component,
 ): Result<string, HttpSignatureError> {
-	let params = component.params ?? {};
-	if (params.req || params.tr || params.bs) {
-		return failure(unsupported(`${component.name} with req, tr or bs`));
+	let { req, ...params } = component.params ?? {};
+	if (req) {
+		if (message.request === undefined) return failure(unsupported(`${component.name} with req`));
+		return componentValue(message.request, { name: component.name, params });
 	}
+	if (params.tr || params.bs) return failure(unsupported(`${component.name} with tr or bs`));
 	if (component.name.startsWith("@")) return derivedValue(message, component);
 
 	let field = fieldValue(message.headers, component.name);
@@ -101,12 +108,18 @@ function componentValue(
 }
 
 /**
- * The value of a derived component (RFC 9421 §2.2) of a request.
+ * The value of a derived component (RFC 9421 §2.2): `@status` alone for a response, whose
+ * request components are reached through `;req`.
  *
  * @param message - The request.
  * @param component - A component whose name starts with `@`.
  */
 function derivedValue(message: Message, component: Component): Result<string, HttpSignatureError> {
+	if (message.status !== undefined) {
+		if (component.name === "@status") return success(String(message.status));
+		return failure(unsupported(`${component.name} without req`));
+	}
+
 	let { url } = message;
 	switch (component.name) {
 		case "@method":
@@ -305,7 +318,7 @@ function missing(name: string): HttpSignatureError {
 function unsupported(name: string): HttpSignatureError {
 	return new HttpSignatureError(
 		"unsupported-component",
-		`${name} cannot be derived from a request`,
+		`${name} cannot be derived from this message`,
 	);
 }
 
@@ -328,4 +341,21 @@ export function messageOf(request: Request, headers: Headers = request.headers):
 	let url = new URL(request.url);
 	url.hash = "";
 	return { method: request.method, url, headers };
+}
+
+/**
+ * The covered parts of a response, which reaches the request it answers through `;req`
+ * components only.
+ *
+ * @param response - The response.
+ * @param request - The request it answers.
+ * @param headers - The headers to read, when they differ from the response's own.
+ */
+export function responseMessageOf(
+	response: Response,
+	request: Request,
+	headers: Headers = response.headers,
+): Message {
+	let answered = messageOf(request);
+	return { ...answered, headers, status: response.status, request: answered };
 }
