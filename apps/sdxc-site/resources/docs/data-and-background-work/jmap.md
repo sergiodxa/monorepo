@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 21
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read the latest emails in an inbox with one batched JMAP request"
     - "How to send a message as the account's own identity and file it under Sent"
@@ -270,11 +270,10 @@ export async function sendMessage(jmap: JMAP, message: Message) {
 }
 ```
 
-A body part being created names only its `partId`, which `bodyValues` is keyed by, and its
-`type`; the server fills in the size, charset and headers. `Email/set` takes an `EmailCreate`,
-whose body parts are typed that way, so the draft needs no cast. The `Email/set` the submission's `onSuccessUpdateEmail`
-triggers comes back as a second response to the same call, and
-`response.get(submission, "Email/set")` reads it.
+`Email/set` creates from an `EmailCreate`, whose body parts name only their `type` and the
+`partId` that `bodyValues` is keyed by; the server fills in the size, charset and headers. The
+`Email/set` that `onSuccessUpdateEmail` triggers comes back as a second response to the
+submission call, and `response.get(submission, "Email/set")` reads it.
 
 <note>
 The identity decides the `From` address the recipient sees, and the server refuses a
