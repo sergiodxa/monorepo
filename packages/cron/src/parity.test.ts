@@ -163,24 +163,24 @@ describe("parity for what the product has stored", () => {
 	}, 30_000);
 });
 
+/** Anchored two hours before each transition so the first occurrences straddle it. */
+const SPRING_FORWARD = [
+	{ timeZone: "America/New_York", from: "2026-03-08T05:00:00Z" },
+	{ timeZone: "Europe/Madrid", from: "2026-03-29T00:00:00Z" },
+	{ timeZone: "Europe/London", from: "2026-03-29T00:00:00Z" },
+	{ timeZone: "Australia/Sydney", from: "2026-10-03T14:00:00Z" },
+	{ timeZone: "Pacific/Auckland", from: "2026-09-26T12:00:00Z" },
+] as const;
+
+const FALL_BACK = [
+	{ timeZone: "America/New_York", from: "2026-11-01T04:00:00Z" },
+	{ timeZone: "Europe/Madrid", from: "2026-10-25T00:00:00Z" },
+	{ timeZone: "Europe/London", from: "2026-10-25T00:00:00Z" },
+	{ timeZone: "Australia/Sydney", from: "2026-04-04T14:00:00Z" },
+	{ timeZone: "Pacific/Auckland", from: "2026-04-04T12:00:00Z" },
+] as const;
+
 describe("parity through a daylight saving transition", () => {
-	/** Anchored two hours before each transition so the first occurrences straddle it. */
-	const SPRING_FORWARD = [
-		{ timeZone: "America/New_York", from: "2026-03-08T05:00:00Z" },
-		{ timeZone: "Europe/Madrid", from: "2026-03-29T00:00:00Z" },
-		{ timeZone: "Europe/London", from: "2026-03-29T00:00:00Z" },
-		{ timeZone: "Australia/Sydney", from: "2026-10-03T14:00:00Z" },
-		{ timeZone: "Pacific/Auckland", from: "2026-09-26T12:00:00Z" },
-	] as const;
-
-	const FALL_BACK = [
-		{ timeZone: "America/New_York", from: "2026-11-01T04:00:00Z" },
-		{ timeZone: "Europe/Madrid", from: "2026-10-25T00:00:00Z" },
-		{ timeZone: "Europe/London", from: "2026-10-25T00:00:00Z" },
-		{ timeZone: "Australia/Sydney", from: "2026-04-04T14:00:00Z" },
-		{ timeZone: "Pacific/Auckland", from: "2026-04-04T12:00:00Z" },
-	] as const;
-
 	test("agrees on every stored expression across a spring-forward transition", () => {
 		for (let { timeZone, from } of SPRING_FORWARD) {
 			for (let expression of STORED_IN_PRODUCTION) {

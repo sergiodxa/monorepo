@@ -150,33 +150,33 @@ describe("describeFields", () => {
 	});
 });
 
-describe("descriptor coverage", () => {
-	/**
-	 * Every distinction a hand-written schedule description draws, paired with the
-	 * descriptor that carries it. A row falling to `kind: "expression"` here costs
-	 * the user the sentence they would otherwise see.
-	 */
-	const CASES = [
-		{ sentence: "every year on January 1st at midnight", expression: "@yearly" },
-		{ sentence: "every year on January 1st at midnight", expression: "@annually" },
-		{ sentence: "every month on the 1st at midnight", expression: "@monthly" },
-		{ sentence: "every Sunday at midnight", expression: "@weekly" },
-		{ sentence: "every day at midnight", expression: "@daily" },
-		{ sentence: "every day at midnight", expression: "@midnight" },
-		{ sentence: "every hour", expression: "@hourly" },
-		{ sentence: "every minute", expression: "* * * * *" },
-		{ sentence: "every hour", expression: "0 * * * *" },
-		{ sentence: "every 15 minutes", expression: "*/15 * * * *" },
-		{ sentence: "every 5 minutes", expression: "*/5 * * * *" },
-		{ sentence: "every hour at minute 5", expression: "5 * * * *" },
-		{ sentence: "every day at midnight", expression: "0 0 * * *" },
-		{ sentence: "every day at 09:00", expression: "0 9 * * *" },
-		{ sentence: "every day at 09:30", expression: "30 9 * * *" },
-		{ sentence: "every Monday at midnight", expression: "0 0 * * 1" },
-		{ sentence: "every Monday at 09:00", expression: "0 9 * * 1" },
-		{ sentence: "monthly on day 15 at midnight", expression: "0 0 15 * *" },
-	] as const;
+/**
+ * Every distinction a hand-written schedule description draws, paired with the
+ * descriptor that carries it. A row falling to `kind: "expression"` here costs
+ * the user the sentence they would otherwise see.
+ */
+const CASES = [
+	{ sentence: "every year on January 1st at midnight", expression: "@yearly" },
+	{ sentence: "every year on January 1st at midnight", expression: "@annually" },
+	{ sentence: "every month on the 1st at midnight", expression: "@monthly" },
+	{ sentence: "every Sunday at midnight", expression: "@weekly" },
+	{ sentence: "every day at midnight", expression: "@daily" },
+	{ sentence: "every day at midnight", expression: "@midnight" },
+	{ sentence: "every hour", expression: "@hourly" },
+	{ sentence: "every minute", expression: "* * * * *" },
+	{ sentence: "every hour", expression: "0 * * * *" },
+	{ sentence: "every 15 minutes", expression: "*/15 * * * *" },
+	{ sentence: "every 5 minutes", expression: "*/5 * * * *" },
+	{ sentence: "every hour at minute 5", expression: "5 * * * *" },
+	{ sentence: "every day at midnight", expression: "0 0 * * *" },
+	{ sentence: "every day at 09:00", expression: "0 9 * * *" },
+	{ sentence: "every day at 09:30", expression: "30 9 * * *" },
+	{ sentence: "every Monday at midnight", expression: "0 0 * * 1" },
+	{ sentence: "every Monday at 09:00", expression: "0 9 * * 1" },
+	{ sentence: "monthly on day 15 at midnight", expression: "0 0 15 * *" },
+] as const;
 
+describe("descriptor coverage", () => {
 	test("has a structured shape for every sentence such a function produces", () => {
 		for (let { expression, sentence } of CASES) {
 			expect({ expression, sentence, kind: descriptorOf(expression).kind }).not.toEqual({
