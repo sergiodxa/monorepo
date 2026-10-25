@@ -1490,8 +1490,8 @@ describe("rateLimit", () => {
 		let thrown = (await agent.attempt("/login", (ctx) => rp.authorize(ctx))) as Response;
 
 		expect(Number(thrown.headers.get("Retry-After"))).toBeGreaterThan(0);
-		expect(thrown.headers.get("RateLimit")).toMatch(/limit=1/);
-		expect(thrown.headers.get("RateLimit-Policy")).toBe("1;w=60");
+		expect(thrown.headers.get("RateLimit")).toMatch(/^"default";r=0;t=\d+$/);
+		expect(thrown.headers.get("RateLimit-Policy")).toBe('"default";q=1;w=60');
 		expect(await thrown.text()).not.toBe("");
 	});
 

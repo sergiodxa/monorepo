@@ -728,7 +728,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		if (isFailure(result)) return;
 		if (result.data.allowed) return;
 
-		throw tooManyRequests(result.data, adapter.window, RATE_LIMITED_BODY, {
+		throw tooManyRequests(result.data, adapter, RATE_LIMITED_BODY, {
 			headers: { "content-type": "text/plain; charset=utf-8" },
 		});
 	}
