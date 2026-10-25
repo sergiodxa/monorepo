@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CBORValue } from "@sdxc/cbor";
 import type { Bytes } from "@sdxc/crypto";
 import type { Result } from "@sdxc/result";
 
@@ -17,7 +18,6 @@ import { failure, success } from "@sdxc/result";
 
 import { AttestationError } from "../errors.js";
 
-import type { CborValue } from "./cbor.js";
 import type { CredentialKey } from "./cose.js";
 
 /** Formats whose statement carries no certificate chain, so it verifies on its own. */
@@ -39,8 +39,8 @@ const ANCHORLESS_FORMATS = new Set(["none", "packed"]);
  * @returns The verified format's name, or why the statement was refused.
  */
 export async function verifyAttestation(
-	format: CborValue,
-	statement: CborValue,
+	format: CBORValue,
+	statement: CBORValue,
 	authenticatorData: Bytes,
 	clientDataHash: Bytes,
 	key: CredentialKey,

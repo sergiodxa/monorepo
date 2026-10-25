@@ -12,12 +12,11 @@
 import type { Bytes } from "@sdxc/crypto";
 import type { Result } from "@sdxc/result";
 
+import * as CBOR from "@sdxc/cbor";
 import { Hex } from "@sdxc/crypto";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { MalformedResponseError } from "../errors.js";
-
-import { read } from "./cbor.js";
 
 /** Bytes of the SHA-256 hash of the relying party id that opens the structure. */
 const RP_ID_HASH_BYTES = 32;
@@ -131,13 +130,14 @@ export function parse(bytes: Bytes): Result<AuthenticatorData, MalformedResponse
 		return failure(new MalformedResponseError("credential id is truncated"));
 	}
 
-	let key = read(bytes.subarray(keyOffset));
-	if (isFailure(key)) return key;
+	let key = CBOR.decodeFirst(bytes.subarray(keyOffset));
+	if (isFailure(key))
+		return failure(new MalformedResponseError("unreadable credential public key"));
 
 	data.credential = {
 		aaguid: toUuid(bytes.subarray(CREDENTIAL_OFFSET, idLengthOffset)),
 		id: bytes.subarray(idOffset, keyOffset),
-		publicKey: bytes.subarray(keyOffset, keyOffset + key.data[1]),
+		publicKey: bytes.subarray(keyOffset, keyOffset + key.data.length),
 	};
 
 	return success(data);

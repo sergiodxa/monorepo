@@ -11,6 +11,7 @@
 
 import type { Bytes } from "@sdxc/crypto";
 
+import * as CBOR from "@sdxc/cbor";
 import { Base64Url, concatBytes, randomBytes, sha256 } from "@sdxc/crypto";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
@@ -29,38 +30,9 @@ import {
 
 import { RelyingParty } from "./relying-party.js";
 
-/** Writes the CBOR header naming a major type and its argument. */
-function header(major: number, argument: number): Bytes {
-	if (argument < 24) return Uint8Array.of((major << 5) | argument);
-	if (argument < 0x100) return Uint8Array.of((major << 5) | 24, argument);
-	if (argument < 0x10000) {
-		return Uint8Array.of((major << 5) | 25, argument >> 8, argument & 0xff);
-	}
-	let bytes = new Uint8Array(5);
-	bytes[0] = (major << 5) | 26;
-	new DataView(bytes.buffer).setUint32(1, argument);
-	return bytes;
-}
-
-/** Encodes the CBOR subset the WebAuthn structures in these tests need. */
-function cbor(value: unknown): Bytes {
-	if (typeof value === "number") {
-		return value < 0 ? header(1, -1 - value) : header(0, value);
-	}
-	if (typeof value === "string") {
-		let text = new TextEncoder().encode(value);
-		return concatBytes(header(3, text.length), text);
-	}
-	if (value instanceof Uint8Array) return concatBytes(header(2, value.length), value);
-	if (Array.isArray(value)) {
-		return concatBytes(header(4, value.length), ...value.map((item) => cbor(item)));
-	}
-	if (value instanceof Map) {
-		let parts = [header(5, value.size)];
-		for (let [key, item] of value) parts.push(cbor(key), cbor(item));
-		return concatBytes(...parts);
-	}
-	throw new TypeError("unsupported CBOR value");
+/** Encodes a WebAuthn structure as the CBOR an authenticator emits. */
+function cbor(value: CBOR.CBORValue): Bytes {
+	return unwrap(CBOR.encode(value));
 }
 
 /** Rewrites a raw `r || s` signature as the DER form authenticators emit. */
@@ -102,7 +74,7 @@ class Authenticator {
 		]);
 		let jwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 		let cose = cbor(
-			new Map<number, unknown>([
+			new Map<CBOR.CBORValue, CBOR.CBORValue>([
 				[1, 2],
 				[3, -7],
 				[-1, 1],
@@ -149,15 +121,16 @@ class Authenticator {
 		attestation: "none" | "packed" | "packedChain" | "noneWithStatement",
 		authData: Bytes,
 		clientDataJSON: Bytes,
-	): Promise<Map<string, unknown>> {
+	): Promise<Map<CBOR.CBORValue, CBOR.CBORValue>> {
 		if (attestation === "none") return new Map();
-		if (attestation === "noneWithStatement") return new Map<string, unknown>([["alg", -7]]);
+		if (attestation === "noneWithStatement")
+			return new Map<CBOR.CBORValue, CBOR.CBORValue>([["alg", -7]]);
 
 		let signed = concatBytes(authData, unwrap(await sha256(clientDataJSON)));
 		let raw = new Uint8Array(
 			await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, this.keys.privateKey, signed),
 		);
-		let entries: [string, unknown][] = [
+		let entries: [string, CBOR.CBORValue][] = [
 			["alg", -7],
 			["sig", toDer(raw)],
 		];
@@ -180,7 +153,7 @@ class Authenticator {
 		let clientDataJSON = this.clientData("webauthn.create", options.challenge, origin, crossOrigin);
 		let authData = await this.authenticatorData(options.rp.id as string, true);
 		let attestationObject = cbor(
-			new Map<string, unknown>([
+			new Map<CBOR.CBORValue, CBOR.CBORValue>([
 				["fmt", attestation.startsWith("packed") ? "packed" : "none"],
 				["attStmt", await this.statement(attestation, authData, clientDataJSON)],
 				["authData", authData],

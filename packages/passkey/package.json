@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cbor": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*"

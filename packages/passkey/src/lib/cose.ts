@@ -13,14 +13,12 @@
 import type { Bytes } from "@sdxc/crypto";
 import type { Result } from "@sdxc/result";
 
+import * as CBOR from "@sdxc/cbor";
 import { Base64Url } from "@sdxc/crypto";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { MalformedResponseError, UnsupportedAlgorithmError } from "../errors.js";
 
-import type { CborValue } from "./cbor.js";
-
-import { decode } from "./cbor.js";
 import { toRawSignature } from "./der.js";
 
 /** COSE algorithm identifier for ECDSA over P-256 with SHA-256. */
@@ -54,7 +52,7 @@ const ED25519_CURVE = 6;
  * @param label Label whose value to read.
  * @returns The bytes, base64url encoded for a JWK field.
  */
-function coordinate(key: Map<CborValue, CborValue>, label: number): string {
+function coordinate(key: Map<CBOR.CBORValue, CBOR.CBORValue>, label: number): string {
 	let value = key.get(label);
 	if (!(value instanceof Uint8Array)) throw new RangeError("missing COSE coordinate");
 	return Base64Url.encode(value);
@@ -68,7 +66,7 @@ function coordinate(key: Map<CborValue, CborValue>, label: number): string {
  * @returns The JWK and the algorithm WebCrypto imports it under.
  */
 function toJsonWebKey(
-	key: Map<CborValue, CborValue>,
+	key: Map<CBOR.CBORValue, CBOR.CBORValue>,
 	algorithm: number,
 ): [JsonWebKey, AlgorithmIdentifier | EcKeyImportParams | RsaHashedImportParams] {
 	let type = key.get(LABEL.kty);
@@ -123,8 +121,8 @@ export class CredentialKey {
 	static async import(
 		bytes: Bytes,
 	): Promise<Result<CredentialKey, MalformedResponseError | UnsupportedAlgorithmError>> {
-		let decoded = decode(bytes);
-		if (isFailure(decoded)) return decoded;
+		let decoded = CBOR.decode(bytes);
+		if (isFailure(decoded)) return failure(new MalformedResponseError("unreadable COSE key"));
 
 		let key = decoded.data;
 		if (!(key instanceof Map)) return failure(new MalformedResponseError("COSE key is not a map"));

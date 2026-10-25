@@ -12,6 +12,7 @@
 import type { Bytes } from "@sdxc/crypto";
 import type { Result } from "@sdxc/result";
 
+import * as CBOR from "@sdxc/cbor";
 import { Base64Url, sha256 } from "@sdxc/crypto";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -19,7 +20,6 @@ import type { PasskeyError } from "../errors.js";
 
 import { MalformedResponseError, UnsupportedAlgorithmError } from "../errors.js";
 import { verifyAttestation } from "../lib/attestation.js";
-import { decode } from "../lib/cbor.js";
 import { CredentialKey } from "../lib/cose.js";
 
 import type { Expectations } from "./verify.js";
@@ -76,8 +76,10 @@ export async function verifyRegistration(
 	let attestationObject = decodeField(response.response.attestationObject, "attestationObject");
 	if (isFailure(attestationObject)) return attestationObject;
 
-	let attestation = decode(attestationObject.data);
-	if (isFailure(attestation)) return attestation;
+	let attestation = CBOR.decode(attestationObject.data);
+	if (isFailure(attestation)) {
+		return failure(new MalformedResponseError("unreadable attestation object"));
+	}
 	if (!(attestation.data instanceof Map)) {
 		return failure(new MalformedResponseError("attestation object is not a map"));
 	}
