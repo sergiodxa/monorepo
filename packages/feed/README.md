@@ -104,6 +104,8 @@ Retrieves and parses a feed. Options:
 - `hosts`: `"public"` (default) lets the URL and every redirect reach only public `http:` and
   `https:` hosts without credentials, refusing private addresses and reserved names such as
   `localhost`; `"any"` allows your own network.
+- `sign`: signs each hop's request before it is sent, such as `webBotAuthSigner` from
+  `@sdxc/http-signatures/web-bot-auth`; a failure is a `FeedFetchError`.
 
 The request carries no cache directive, so the origin is free to answer 304. Any content type
 is accepted.

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -374,6 +374,32 @@ describe("Feed.parse, on a JSON Feed", () => {
 });
 
 describe("Feed.fetch", () => {
+	test("signs the request with the sign option", async () => {
+		let signature: string | null = null;
+		server.use(
+			http.get(FEED_URL, ({ request }) => {
+				signature = request.headers.get("signature");
+				return HttpResponse.text(RSS_XML, { headers: { "content-type": "application/rss+xml" } });
+			}),
+		);
+
+		let result = await Feed.fetch(FEED_URL, {
+			async sign(request) {
+				let headers = new Headers([...request.headers, ["signature", "sig1=:AA==:"]]);
+				return success(new Request(request, { headers }));
+			},
+		});
+
+		expect(isSuccess(result)).toBe(true);
+		expect(signature).toBe("sig1=:AA==:");
+	});
+
+	test("reports a signer's failure as a fetch error", async () => {
+		let result = await Feed.fetch(FEED_URL, { sign: async () => failure(new Error("no key")) });
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(FeedFetchError);
+	});
+
 	test("returns the feed and the validators to store", async () => {
 		server.use(
 			http.get(FEED_URL, () =>

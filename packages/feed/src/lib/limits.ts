@@ -63,6 +63,7 @@ export async function retrieve(
 		hosts: options.hosts ?? "public",
 		maxRedirects: options.maxRedirects ?? MAX_REDIRECTS,
 		signal: options.signal,
+		...(options.sign && { sign: options.sign }),
 	});
 	if (isFailure(followed)) return failure(toFeedError(followed.error));
 

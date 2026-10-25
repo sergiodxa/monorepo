@@ -155,6 +155,11 @@ export namespace Feed {
 		 * @default "public"
 		 */
 		hosts?: "public" | "any";
+		/**
+		 * Signs each hop's request before it is sent, such as `webBotAuthSigner` from
+		 * `@sdxc/http-signatures/web-bot-auth`; a failure is a {@link FeedFetchError}.
+		 */
+		sign?: (request: Request) => Promise<Result<Request, Error>>;
 	}
 
 	/** What every retrieval reports regardless of whether the feed changed. */
