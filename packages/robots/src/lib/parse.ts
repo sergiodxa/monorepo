@@ -9,6 +9,7 @@
 import type { Robots } from "../index.js";
 
 import { truncateAtLine } from "./truncate.js";
+import { readPreferences } from "./usage.js";
 
 /** RFC 9309 §2.5 has a crawler parse at least 500 KiB. */
 export const DEFAULT_MAX_BYTES = 512_000;
@@ -76,6 +77,12 @@ export function parse(source: string, options: Robots.ParseOptions = {}): Robots
 			continue;
 		}
 
+		if (group !== null && name === "content-usage") {
+			group.contentUsage = [...(group.contentUsage ?? []), readContentUsage(value)];
+			collectingAgents = false;
+			continue;
+		}
+
 		document.records.push({ name, value });
 	}
 
@@ -116,6 +123,23 @@ export function readContentSignals(value: string): Robots.ContentSignals {
 	}
 
 	return signals;
+}
+
+/**
+ * Reads a `Content-Usage` value: a value starting with `/` opens with a path pattern that ends
+ * at the first space or tab, and the rest is the statement of preference.
+ *
+ * @param value - The record's value, comment already removed.
+ */
+function readContentUsage(value: string): Robots.ContentUsageRule {
+	if (!value.startsWith("/")) return { preferences: readPreferences(value) };
+
+	let end = value.search(/[ \t]/);
+	if (end === -1) return { pattern: value, preferences: {} };
+	return {
+		pattern: value.slice(0, end),
+		preferences: readPreferences(trimSpace(value.slice(end))),
+	};
 }
 
 /**

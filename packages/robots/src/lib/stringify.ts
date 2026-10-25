@@ -8,13 +8,15 @@
  */
 import type { Robots } from "../index.js";
 
+import { writePreferences } from "./usage.js";
+
 /** Records a parser attaches to the open group, which must be written before any group opens. */
-const GROUP_SCOPED = new Set(["crawl-delay", "content-signal"]);
+const GROUP_SCOPED = new Set(["crawl-delay", "content-signal", "content-usage"]);
 
 /**
- * Writes a document: groups in order, then sitemaps, then other records. A `crawl-delay` or
- * `content-signal` record, which only exists outside a group when it preceded them all, is
- * written first so it stays outside on the way back in.
+ * Writes a document: groups in order, then sitemaps, then other records. A group-scoped record
+ * (`crawl-delay`, `content-signal`, `content-usage`), which only exists outside a group when it
+ * preceded them all, is written first so it stays outside on the way back in.
  *
  * @param document - The document to write.
  * @returns The file's text, ending in a line end; an empty document writes `""`.
@@ -34,7 +36,7 @@ export function stringify(document: Robots.Document): string {
 	return sections.length === 0 ? "" : `${sections.join("\n\n")}\n`;
 }
 
-/** One group: its user-agent lines, its rules, then its delay and signals. */
+/** One group: its user-agent lines, its rules, then its delay, signals and usage preferences. */
 function writeGroup(group: Robots.Group): string {
 	let lines = group.userAgents.map((agent) => `User-agent: ${agent}`);
 	for (let rule of group.rules) lines.push(`${rule.allow ? "Allow" : "Disallow"}: ${rule.pattern}`);
@@ -46,6 +48,11 @@ function writeGroup(group: Robots.Group): string {
 	if (signals.length > 0) {
 		let value = signals.map(([key, setting]) => `${key}=${setting ? "yes" : "no"}`).join(", ");
 		lines.push(`Content-Signal: ${value}`);
+	}
+
+	for (let rule of group.contentUsage ?? []) {
+		let value = [rule.pattern, writePreferences(rule.preferences)].filter(Boolean).join(" ");
+		lines.push(`Content-Usage: ${value}`);
 	}
 
 	return lines.join("\n");

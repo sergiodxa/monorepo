@@ -7,9 +7,20 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./directives": "./src/directives.ts",
-		"./fetch": "./src/fetch.ts"
+		"./fetch": "./src/fetch.ts",
+		"./content-usage": "./src/content-usage.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@sdxc/structured-fields": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
 	}
 }

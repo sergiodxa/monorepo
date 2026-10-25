@@ -9,6 +9,7 @@
 import type { Robots } from "../index.js";
 
 import { compilePattern, matches, pathToMatch } from "./match.js";
+import { combinePreferences } from "./usage.js";
 
 /** The leading run of characters RFC 9309 allows in a product token. */
 const PRODUCT_TOKEN = /^[A-Za-z_-]+/;
@@ -59,6 +60,47 @@ export function isAllowed(robots: Robots.Document, userAgent: string, url: strin
 	}
 
 	return decision === null || decision.allow;
+}
+
+/**
+ * The AI usage preferences a file states for a URL and agent. Among the agent's `Content-Usage`
+ * rules the longest matching pattern decides, a rule without a pattern counting as `/`; rules
+ * tied at that length combine with the most restrictive preference winning.
+ *
+ * @param robots - The parsed file.
+ * @param userAgent - The crawler's identification string; only its product token is compared.
+ * @param url - An absolute URL, or a path starting with `/`.
+ * @returns The preferences, `{}` when no rule matches, or `null` when the agent may not crawl the
+ *   URL, since a disallowed path carries no preferences.
+ * @example contentUsage(document, "ExampleBot/1.0", "/ai-ok/post")?.["train-ai"] // true
+ */
+export function contentUsage(
+	robots: Robots.Document,
+	userAgent: string,
+	url: string | URL,
+): Robots.UsagePreferences | null {
+	if (!isAllowed(robots, userAgent, url)) return null;
+	let path = pathToMatch(url);
+	if (path === null) return null;
+
+	let longest = -1;
+	let statements: Robots.UsagePreferences[] = [];
+
+	for (let group of applicableGroups(robots, userAgent)) {
+		for (let rule of group.contentUsage ?? []) {
+			let pattern = compilePattern(rule.pattern ?? "/");
+			if (pattern.body === "" || !matches(pattern, path)) continue;
+
+			let length = pattern.body.length + (pattern.anchored ? 1 : 0);
+			if (length > longest) {
+				longest = length;
+				statements = [];
+			}
+			if (length === longest) statements.push(rule.preferences);
+		}
+	}
+
+	return combinePreferences(...statements);
 }
 
 /**

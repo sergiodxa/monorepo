@@ -78,6 +78,30 @@ let body = stringify({
 
 What `stringify` writes parses back to the same document.
 
+### State and read AI usage preferences
+
+```typescript
+import { contentUsage, parse } from "@sdxc/robots";
+import { combinePreferences, getContentUsage, setContentUsage } from "@sdxc/robots/content-usage";
+
+let document = parse(`
+User-agent: *
+Content-Usage: train-ai=n, search=y
+Content-Usage: /open/ train-ai=y
+`);
+
+contentUsage(document, "ExampleBot/1.0", "/open/post"); // { "train-ai": true }
+let stated = combinePreferences(
+	contentUsage(document, "ExampleBot", "/post") ?? {},
+	getContentUsage(response),
+);
+
+setContentUsage(headers, { search: true, "train-ai": false }); // Content-Usage: search=y, train-ai=n
+```
+
+`true` allows a category and `false` disallows it; a missing label is unknown. A use that
+qualifies as `search` follows `search` alone.
+
 ### Read and write per-page directives
 
 ```typescript
@@ -97,7 +121,7 @@ stringifyDirectives({ botName: "examplebot", nosnippet: true }); // "examplebot:
 #### `parse(source: string, options?: Robots.ParseOptions): Robots.Document`
 
 Reads any text as robots.txt, up to the last whole line within `maxBytes` (default `512_000`).
-`Crawl-delay` and `Content-Signal` lines are read into the group they follow, `Sitemap` lines
+`Crawl-delay`, `Content-Signal` and `Content-Usage` lines are read into the group they follow, `Sitemap` lines
 are collected from anywhere, rules before the first group are dropped, and every other record is
 kept in `records`.
 
@@ -112,6 +136,12 @@ Whether an agent may fetch an absolute URL or a `/`-rooted path. Every group nam
 product token applies, merged; with none, the `*` groups apply. The longest matching pattern
 decides, `Allow` wins a tie, an unmatched path and `/robots.txt` are allowed, and percent-encoding
 is normalized in both pattern and path before matching.
+
+#### `contentUsage(robots: Robots.Document, userAgent: string, url: string | URL): Robots.UsagePreferences | null`
+
+The agent's preferences for a URL: the longest matching `Content-Usage` pattern decides (no
+pattern counts as `/`), and rules tied at that length combine most-restrictive-first. `{}` when no
+rule matches, `null` when the URL is disallowed.
 
 #### `crawlDelay(robots: Robots.Document, userAgent: string): number | undefined`
 
@@ -165,6 +195,27 @@ the smaller limit, smaller image preview and earlier `unavailableAfter` apply.
 Writes a set, prefixed with `botName:` when it has one. Missing fields are off, and defaults are
 omitted unless `explicit: true` spells out `index` and `follow`.
 
+### `@sdxc/robots/content-usage`
+
+#### `parseContentUsage(value: string): Robots.UsagePreferences`
+
+Reads a statement such as `train-ai=n, search=y`; an invalid Dictionary (an uppercase label
+included) is all unknown.
+
+#### `stringifyContentUsage(preferences: Robots.UsagePreferences): string`
+
+Writes a canonical Dictionary of `y`/`n` Tokens, `""` when nothing is set.
+
+#### `getContentUsage(message: Response | Request | Headers): Robots.UsagePreferences`
+
+#### `setContentUsage(headers: Headers, preferences: Robots.UsagePreferences): void`
+
+Reads or replaces the `Content-Usage` field; setting no preference deletes it.
+
+#### `combinePreferences(...statements: Robots.UsagePreferences[]): Robots.UsagePreferences`
+
+Any `false` wins, then any `true`.
+
 ### Types
 
 #### `Robots.Document`
@@ -175,8 +226,14 @@ omitted unless `explicit: true` spells out `index` and `follow`.
 #### `Robots.Group`
 
 `userAgents` as written (`*` for the wildcard), `rules` as `Robots.Rule` (`{ allow, pattern }`;
-an empty pattern matches nothing), an optional `crawlDelay` in seconds, and optional
-`contentSignals`.
+an empty pattern matches nothing), an optional `crawlDelay` in seconds, optional
+`contentSignals`, and optional `contentUsage` as `Robots.ContentUsageRule` (`{ pattern?,
+preferences }`).
+
+#### `Robots.UsagePreferences`
+
+AI Preferences labels mapped to `true` (`y`) or `false` (`n`); `train-ai`, `ai-use` and `search`
+are typed, and any other label is kept.
 
 #### `Robots.ContentSignals`
 

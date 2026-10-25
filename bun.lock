@@ -1803,6 +1803,16 @@
     "packages/robots": {
       "name": "@sdxc/robots",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
+      },
     },
     "packages/rss": {
       "name": "@sdxc/rss",
