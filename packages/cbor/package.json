@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/cbor",
+	"version": "0.0.1",
+	"description": "CBOR (RFC 8949) decoding and deterministic encoding, bounded for untrusted input",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

@@ -729,6 +729,13 @@
         "remix": "3.1.0",
       },
     },
+    "packages/cbor": {
+      "name": "@sdxc/cbor",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/cli": {
       "name": "@sdxc/cli",
       "version": "0.0.1",
@@ -2970,6 +2977,8 @@
     "@sdxc/captcha": ["@sdxc/captcha@workspace:packages/captcha"],
 
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
+
+    "@sdxc/cbor": ["@sdxc/cbor@workspace:packages/cbor"],
 
     "@sdxc/cli": ["@sdxc/cli@workspace:packages/cli"],
 
