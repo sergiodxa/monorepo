@@ -6,30 +6,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { failure, success } from "@sdxc/result";
+
 import type { Atom } from "../index.js";
 
 import { AtomParseError } from "../index.js";
 
 /**
- * Reads the string behind either text construct form, so a caller testing for
- * presence does not branch on which form the value took.
- *
- * @param text - The construct to read
- * @returns The text, or an empty string when there is none
- */
-export function readTextValue(text?: Atom.TextInput): string {
-	if (text === undefined) return "";
-	return typeof text === "string" ? text : text.value;
-}
-
-/**
- * Checks that an entry carries an id, a title and an updated timestamp.
+ * Checks that an entry carries an id, a title and an updated timestamp. The title
+ * may be empty, as RFC 4287 requires the element but not any text inside it.
  *
  * @param entry - The entry to check
- * @throws AtomParseError Naming the first required element that is missing
+ * @returns The entry, or an error naming the first required element that is missing
  */
-export function validateEntry(entry: Atom.Entry): void {
-	if (!entry.id) throw new AtomParseError("Entry must include an id.");
-	if (!readTextValue(entry.title)) throw new AtomParseError("Entry must include a title.");
-	if (!entry.updated) throw new AtomParseError("Entry must include an updated timestamp.");
+export function validateEntry(entry: Atom.Entry): Result<Atom.Entry, AtomParseError> {
+	if (!entry.id) return failure(new AtomParseError("Entry must include an id."));
+	if (entry.title === undefined) return failure(new AtomParseError("Entry must include a title."));
+	if (!entry.updated) {
+		return failure(new AtomParseError("Entry must include an updated timestamp."));
+	}
+	return success(entry);
 }

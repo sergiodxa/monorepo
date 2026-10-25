@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { Atom } from "./index.js";
+import { Atom, AtomParseError, AtomStringifyError } from "./index.js";
 
 let FEED_URL = "https://example.com/feed.xml";
 
@@ -264,6 +264,19 @@ describe("Atom.parse required elements", () => {
 		if (isFailure(result)) expect(result.error.message).toBe("Feed must include an id.");
 	});
 
+	test("reads an empty title, which RFC 4287 permits, as a feed rather than throwing", () => {
+		let result = Atom.parse(
+			`<feed xmlns="http://www.w3.org/2005/Atom">
+				<id>urn:1</id><title/><updated>2026-04-14T00:00:00Z</updated>
+				<entry><id>urn:2</id><title></title><updated>2026-04-14T00:00:00Z</updated></entry>
+			</feed>`,
+		);
+
+		let atom = unwrap(result);
+		expect(atom.feed.title).toBe("");
+		expect(atom.entries[0]?.title).toBe("");
+	});
+
 	test("refuses an entry with no updated timestamp", () => {
 		let result = Atom.parse(
 			`<feed xmlns="http://www.w3.org/2005/Atom">
@@ -292,7 +305,7 @@ describe("Atom instance", () => {
 	};
 
 	test("hands out clones rather than its own state", () => {
-		let atom = new Atom({ ...feed, author: { name: "Ada" } });
+		let atom = unwrap(Atom.fromJSON({ feed: { ...feed, author: { name: "Ada" } }, entries: [] }));
 		let read = atom.feed;
 		if (!Array.isArray(read.author) && read.author) read.author.name = "Someone else";
 
@@ -300,9 +313,9 @@ describe("Atom instance", () => {
 	});
 
 	test("removes an entry by id and ignores an id it does not hold", () => {
-		let atom = new Atom(feed);
-		atom.addEntry({ id: "urn:a", title: "A", updated: "2026-04-14T00:00:00Z" });
-		atom.addEntry({ id: "urn:b", title: "B", updated: "2026-04-14T00:00:00Z" });
+		let atom = unwrap(Atom.fromJSON({ feed, entries: [] }));
+		unwrap(atom.addEntry({ id: "urn:a", title: "A", updated: "2026-04-14T00:00:00Z" }));
+		unwrap(atom.addEntry({ id: "urn:b", title: "B", updated: "2026-04-14T00:00:00Z" }));
 
 		atom.removeEntry("urn:a");
 		atom.removeEntry("urn:missing");
@@ -310,10 +323,35 @@ describe("Atom instance", () => {
 		expect(atom.entries.map((entry) => entry.id)).toEqual(["urn:b"]);
 	});
 
-	test("refuses an entry missing a required element", () => {
-		let atom = new Atom(feed);
-		expect(() => atom.addEntry({ id: "", title: "A", updated: "x" })).toThrow(
-			"Entry must include an id.",
+	test("refuses an entry missing a required element and keeps the entries it had", () => {
+		let atom = unwrap(Atom.fromJSON({ feed, entries: [] }));
+		let result = atom.addEntry({ id: "", title: "A", updated: "x" });
+
+		expect(isFailure(result) && result.error).toEqual(
+			new AtomParseError("Entry must include an id."),
+		);
+		expect(atom.entries).toEqual([]);
+	});
+
+	test("replaces the feed metadata and refuses metadata missing a required element", () => {
+		let atom = unwrap(Atom.fromJSON({ feed, entries: [] }));
+		unwrap(atom.setFeed({ ...feed, updated: "2026-05-01T00:00:00Z" }));
+		let refused = atom.setFeed({ ...feed, id: "" });
+
+		expect(isFailure(refused) && refused.error.message).toBe("Feed must include an id.");
+		expect(atom.feed.updated).toBe("2026-05-01T00:00:00Z");
+	});
+
+	test("refuses plain data whose feed or entry lacks a required element", () => {
+		let noFeedId = Atom.fromJSON({ feed: { ...feed, id: "" }, entries: [] });
+		let noEntryUpdated = Atom.fromJSON({
+			feed,
+			entries: [{ id: "urn:a", title: "A", updated: "" }],
+		});
+
+		expect(isFailure(noFeedId) && noFeedId.error.message).toBe("Feed must include an id.");
+		expect(isFailure(noEntryUpdated) && noEntryUpdated.error.message).toBe(
+			"Entry must include an updated timestamp.",
 		);
 	});
 
@@ -321,7 +359,7 @@ describe("Atom instance", () => {
 		let parsed = Atom.parse(FULL_SPEC_XML);
 		if (!isSuccess(parsed)) throw new Error("expected a feed");
 
-		let reparsed = Atom.parse(parsed.data.toString());
+		let reparsed = Atom.parse(unwrap(Atom.stringify(parsed.data)));
 		if (!isSuccess(reparsed)) throw new Error("expected the serialized feed to parse");
 
 		expect(reparsed.data.feed.id).toBe(parsed.data.feed.id);
@@ -334,8 +372,24 @@ describe("Atom instance", () => {
 	});
 
 	test("declares the Atom namespace on the root it writes", () => {
-		let atom = new Atom(feed);
-		expect(atom.toString()).toContain(`xmlns="http://www.w3.org/2005/Atom"`);
+		let xml = unwrap(Atom.stringify({ feed, entries: [] }));
+		expect(xml).toContain(`xmlns="http://www.w3.org/2005/Atom"`);
+	});
+
+	test("writes plain data in one call, refusing data that lacks a required element", () => {
+		let entry = { id: "urn:a", title: "A", updated: "2026-04-14T00:00:00Z" };
+		let written = Atom.stringify({ feed, entries: [entry] });
+		let untitled = { id: "urn:b", updated: "2026-04-14T00:00:00Z" } as Atom.Entry;
+		let refused = Atom.stringify({ feed, entries: [entry, untitled] });
+
+		expect(unwrap(Atom.parse(unwrap(written))).entries).toEqual([entry]);
+		expect(isFailure(refused) && refused.error).toBeInstanceOf(AtomParseError);
+	});
+
+	test("reports a name XML cannot hold as a stringify failure", () => {
+		let result = Atom.stringify({ feed: { ...feed, extensions: [{ name: "1bad" }] }, entries: [] });
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(AtomStringifyError);
 	});
 });
 

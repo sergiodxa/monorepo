@@ -196,37 +196,22 @@ export namespace Atom {
 /**
  * An Atom 1.0 feed, holding feed-level metadata and an ordered list of entries.
  *
- * Reading accessors hand back clones, so a caller cannot reach into the instance
- * by mutating what it returned.
+ * Every way in validates what RFC 4287 requires, so an instance always holds a
+ * feed that serializes; reading accessors hand back clones the caller may mutate.
  */
 export class Atom {
 	#feed: Atom.Feed;
-	#entries: Atom.Entry[] = [];
+	#entries: Atom.Entry[];
 
-	/**
-	 * Builds a feed from its metadata, starting with no entries.
-	 *
-	 * @param feed - The feed-level metadata
-	 * @throws AtomParseError When `id`, `title` or `updated` is missing
-	 */
-	constructor(feed: Atom.Feed) {
-		validateFeed(feed);
-		this.#feed = cloneFeed(feed);
+	/** Takes ownership of already-validated data, so callers pass clones. */
+	private constructor(feed: Atom.Feed, entries: Atom.Entry[]) {
+		this.#feed = feed;
+		this.#entries = entries;
 	}
 
 	/** The feed-level metadata. */
 	get feed(): Atom.Feed {
 		return cloneFeed(this.#feed);
-	}
-
-	/**
-	 * Replaces the feed-level metadata, leaving the entries in place.
-	 *
-	 * @throws AtomParseError When `id`, `title` or `updated` is missing
-	 */
-	set feed(feed: Atom.Feed) {
-		validateFeed(feed);
-		this.#feed = cloneFeed(feed);
 	}
 
 	/** The entries, in the order they were added. */
@@ -235,14 +220,30 @@ export class Atom {
 	}
 
 	/**
-	 * Appends one entry.
+	 * Replaces the feed-level metadata, leaving the entries in place. A refused
+	 * feed leaves the instance unchanged.
+	 *
+	 * @param feed - The new feed-level metadata
+	 * @returns An error naming the first of `id`, `title` or `updated` that is missing
+	 */
+	setFeed(feed: Atom.Feed): Result<void, AtomParseError> {
+		let valid = validateFeed(feed);
+		if (isFailure(valid)) return valid;
+		this.#feed = cloneFeed(feed);
+		return success(undefined);
+	}
+
+	/**
+	 * Appends one entry. A refused entry leaves the instance unchanged.
 	 *
 	 * @param entry - The entry to append
-	 * @throws AtomParseError When `id`, `title` or `updated` is missing
+	 * @returns An error naming the first of `id`, `title` or `updated` that is missing
 	 */
-	addEntry(entry: Atom.Entry): void {
-		validateEntry(entry);
+	addEntry(entry: Atom.Entry): Result<void, AtomParseError> {
+		let valid = validateEntry(entry);
+		if (isFailure(valid)) return valid;
 		this.#entries.push(cloneEntry(entry));
+		return success(undefined);
 	}
 
 	/**
@@ -263,14 +264,43 @@ export class Atom {
 	}
 
 	/**
-	 * Serializes the feed into Atom 1.0 XML.
+	 * Builds a feed from plain data, the shape `toJSON` returns.
 	 *
-	 * @throws AtomStringifyError When the data cannot form a valid document
+	 * @param document - The feed-level metadata and its entries, in order
+	 * @returns The feed, or an error naming the first required element missing from
+	 * the feed or an entry
+	 * @example Atom.fromJSON({ feed: { id, title, updated }, entries: [] })
 	 */
-	toString(): string {
-		let result = XML.stringify(new XML(buildDocument(this.#feed, this.#entries)));
-		if (isFailure(result)) throw new AtomStringifyError(result.error.message);
-		return result.data;
+	static fromJSON(document: Atom.Document): Result<Atom, AtomParseError> {
+		let feed = validateFeed(document.feed);
+		if (isFailure(feed)) return feed;
+
+		for (let entry of document.entries) {
+			let valid = validateEntry(entry);
+			if (isFailure(valid)) return valid;
+		}
+
+		return success(new Atom(cloneFeed(document.feed), document.entries.map(cloneEntry)));
+	}
+
+	/**
+	 * Serializes a feed into Atom 1.0 XML with the Atom namespace as the default.
+	 * Plain data is validated first, so one call builds and writes a feed.
+	 *
+	 * @param input - A feed instance, or the plain data `Atom.fromJSON` accepts
+	 * @returns The XML text, an `AtomParseError` when plain data lacks a required
+	 * element, or an `AtomStringifyError` when a name or value cannot be written as XML
+	 * @example Atom.stringify({ feed: { id, title, updated }, entries })
+	 */
+	static stringify(
+		input: Atom | Atom.Document,
+	): Result<string, AtomParseError | AtomStringifyError> {
+		let atom = input instanceof Atom ? success(input) : Atom.fromJSON(input);
+		if (isFailure(atom)) return atom;
+
+		let result = XML.stringify(new XML(buildDocument(atom.data.#feed, atom.data.#entries)));
+		if (isFailure(result)) return failure(new AtomStringifyError(result.error.message));
+		return result;
 	}
 
 	/**
@@ -284,10 +314,7 @@ export class Atom {
 	static fromXML(xml: XML, base?: string): Result<Atom, AtomParseError> {
 		let document = parseDocument(xml, base);
 		if (isFailure(document)) return document;
-
-		let atom = new Atom(document.data.feed);
-		for (let entry of document.data.entries) atom.addEntry(entry);
-		return success(atom);
+		return success(new Atom(document.data.feed, document.data.entries));
 	}
 
 	/**

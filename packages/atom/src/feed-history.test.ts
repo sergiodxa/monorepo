@@ -122,11 +122,11 @@ describe("RFC 5005 markers", () => {
 		let complete = unwrap(Atom.parse(COMPLETE_FEED));
 		let archive = unwrap(Atom.parse(ARCHIVE_DOCUMENT));
 
-		expect(complete.toString()).toContain("<fh:complete/>");
-		expect(archive.toString()).toContain("<fh:archive/>");
-		expect(unwrap(Atom.parse(complete.toString())).feed.complete).toBe(true);
+		expect(unwrap(Atom.stringify(complete))).toContain("<fh:complete/>");
+		expect(unwrap(Atom.stringify(archive))).toContain("<fh:archive/>");
+		expect(unwrap(Atom.parse(unwrap(Atom.stringify(complete)))).feed.complete).toBe(true);
 
-		let reread = unwrap(Atom.parse(archive.toString())).feed;
+		let reread = unwrap(Atom.parse(unwrap(Atom.stringify(archive)))).feed;
 		expect(reread.archive).toBe(true);
 		expect(reread.link).toContainEqual({
 			rel: "prev-archive",
@@ -135,28 +135,36 @@ describe("RFC 5005 markers", () => {
 	});
 
 	test("declares the namespace a built feed's marker needs", () => {
-		let atom = new Atom({
-			id: "urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6",
-			title: "NetMovies Queue",
-			updated: "2003-12-13T18:30:02Z",
-			complete: true,
-		});
+		let xml = unwrap(
+			Atom.stringify({
+				entries: [],
+				feed: {
+					id: "urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6",
+					title: "NetMovies Queue",
+					updated: "2003-12-13T18:30:02Z",
+					complete: true,
+				},
+			}),
+		);
 
-		let xml = atom.toString();
 		expect(xml).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"');
 		expect(xml).toContain("<fh:complete/>");
 	});
 
 	test("writes the marker under the prefix the feed already binds", () => {
-		let atom = new Atom({
-			id: "urn:example",
-			title: "Example",
-			updated: "2003-12-13T18:30:02Z",
-			archive: true,
-			namespaces: { history: "http://purl.org/syndication/history/1.0" },
-		});
+		let xml = unwrap(
+			Atom.stringify({
+				entries: [],
+				feed: {
+					id: "urn:example",
+					title: "Example",
+					updated: "2003-12-13T18:30:02Z",
+					archive: true,
+					namespaces: { history: "http://purl.org/syndication/history/1.0" },
+				},
+			}),
+		);
 
-		let xml = atom.toString();
 		expect(xml).toContain("<history:archive/>");
 		expect(xml).not.toContain("xmlns:fh=");
 	});
@@ -179,14 +187,19 @@ describe("RFC 5005 link relations", () => {
 			"next-archive",
 			"current",
 		];
-		let atom = new Atom({
-			id: "urn:example",
-			title: "Example",
-			updated: "2003-12-13T18:30:02Z",
-			link: relations.map((rel) => ({ rel, href: `http://example.org/${rel}.atom` })),
-		});
+		let xml = unwrap(
+			Atom.stringify({
+				entries: [],
+				feed: {
+					id: "urn:example",
+					title: "Example",
+					updated: "2003-12-13T18:30:02Z",
+					link: relations.map((rel) => ({ rel, href: `http://example.org/${rel}.atom` })),
+				},
+			}),
+		);
 
-		let link = unwrap(Atom.parse(atom.toString())).feed.link;
+		let link = unwrap(Atom.parse(xml)).feed.link;
 		expect(link).toEqual(relations.map((rel) => ({ rel, href: `http://example.org/${rel}.atom` })));
 	});
 });

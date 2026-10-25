@@ -6,20 +6,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { failure, success } from "@sdxc/result";
+
 import type { Atom } from "../index.js";
 
 import { AtomParseError } from "../index.js";
 
-import { readTextValue } from "./validate-entry.js";
-
 /**
- * Checks that a feed carries an id, a title and an updated timestamp.
+ * Checks that a feed carries an id, a title and an updated timestamp. The title
+ * may be empty, as RFC 4287 requires the element but not any text inside it.
  *
  * @param feed - The feed to check
- * @throws AtomParseError Naming the first required element that is missing
+ * @returns The feed, or an error naming the first required element that is missing
  */
-export function validateFeed(feed: Atom.Feed): void {
-	if (!feed.id) throw new AtomParseError("Feed must include an id.");
-	if (!readTextValue(feed.title)) throw new AtomParseError("Feed must include a title.");
-	if (!feed.updated) throw new AtomParseError("Feed must include an updated timestamp.");
+export function validateFeed(feed: Atom.Feed): Result<Atom.Feed, AtomParseError> {
+	if (!feed.id) return failure(new AtomParseError("Feed must include an id."));
+	if (feed.title === undefined) return failure(new AtomParseError("Feed must include a title."));
+	if (!feed.updated) return failure(new AtomParseError("Feed must include an updated timestamp."));
+	return success(feed);
 }
