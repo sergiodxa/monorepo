@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"
     - "How to publish a JWKS and verify tokens by issuer and audience"
@@ -69,11 +69,8 @@ export function keyStorage() {
 }
 ```
 
-Each key is written with its file name and type, so a read hands back the `File` that was
-stored, and a listing carries R2's cursor only while more pages remain, which is how
-`signingKeys` knows the walk is over. The bucket is typed by the three methods the storage
-calls, so any `R2Bucket` binding fits. A `FileStorage` from `remix/file-storage` satisfies the
-same contract, so a test can pass `createMemoryFileStorage()` instead of a bucket.
+Any `R2Bucket` binding fits. A `FileStorage` from `remix/file-storage` satisfies the same
+contract, so a test can pass `createMemoryFileStorage()` instead of a bucket.
 
 Reading the keys is a listing, a read per key and two imports per key, so hold the result for a
 few minutes rather than repeating that on every request:
