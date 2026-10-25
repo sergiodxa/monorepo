@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to parse posts with typed frontmatter and custom tags using `@sdxc/markdown`"
     - "How to transform the tree in one walk and read it without changing it"
@@ -20,7 +20,7 @@ It combines [`@sdxc/markdown`](/api/markdown), [`@sdxc/highlight`](/api/highligh
 [`@sdxc/ui`](/api/ui), with `remix/data-schema` for the schema.
 
 Every step answers with a `Result`, so a post with a typo in its frontmatter becomes a 404 and
-a log line naming the line to fix, not an exception halfway through a render.
+a log line naming the line to fix.
 
 ```bash
 npm add @sdxc/highlight @sdxc/http @sdxc/markdown @sdxc/result @sdxc/ui remix
@@ -289,18 +289,17 @@ The index signature is what lets `Callout` sit in the `components` map, which ha
 component the node's whole bag of attributes; the named fields are the ones it reads.
 
 The controller is mapped to a `posts.show` route declared as `get("/posts/:slug")` in your
-`routes/web.ts`. It reads the slug, handles both kinds of failure the same way, and wraps the output
-in `Typeset`, which supplies the sizes, spacing and colours for markup it did not write:
+`routes/web.ts`. It reads the slug, handles both kinds of failure the same way, and wraps the
+output in `Typeset`, which supplies the sizes, spacing and colours for markup it did not write:
 
 ```tsx {% title="app/http/controllers/posts/show.tsx" %}
 import { notFound } from "@sdxc/http/response/html";
+import { tableOfContents } from "@sdxc/markdown/plugin/headings";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-
-import { tableOfContents } from "@sdxc/markdown/plugin/headings";
 
 import { Callout } from "~/resources/components/callout";
 import { TocList } from "~/resources/components/toc";
@@ -379,10 +378,9 @@ Interpolating `attributes.type` is safe only because its schema allows three fix
 an attribute that takes free text before it goes into markup.
 </warning>
 
-Raw HTML an author
-typed renders as escaped text in both renderers, and an element the `html` allowlist let
-through renders as itself, so neither one writes markup you did not vet. Comments render in
-neither.
+Raw HTML an author typed renders as escaped text in both renderers, and an element the `html`
+allowlist let through renders as itself, so both write only markup you vetted. Comments render
+in neither.
 
 A consumer that parses the output as XML, such as an EPUB content document built with
 [`@sdxc/epub`](/api/epub), takes `syntax: "xhtml"`. Every void element is then self-closed
