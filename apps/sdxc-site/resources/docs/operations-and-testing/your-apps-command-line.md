@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to add commands for work that belongs to no request"
     - "How to publish the log, database, models, jobs and mailer to commands through middleware"
@@ -34,7 +34,7 @@ This guide builds the command line and its commands. To run the commands an app 
 such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
 </note>
 
-## Where it lives
+## Find where it lives
 
 An app created with `sdxc create` already has one, in four places:
 
@@ -191,15 +191,16 @@ declare module "@sdxc/cli" {
 The `CLITypes` augmentation at the end types every handler's `ctx` with what this chain
 publishes, so `ctx.models` type checks in `users/grant.ts` with nothing to add. `sdxc make
 command` adds each mapping after the last `cli.map`, and a test runs the same `cli` against a
-temporary project, as [Test a command](#test-a-command) shows. Each entry is explained
-in the sections that follow.
+temporary project, as [Test a command](#test-a-command) shows. The sections that follow take
+each entry in turn.
 
 ### The log
 
-`log(logger)` from `@sdxc/logger/middleware/cli` opens a `command` log for each run and writes it
-once the handler settles, carrying `command.path` (`users grant`), `command.duration_ms`, and
-`command.exit_code` when the run fails; `trace()` gives the run a trace id. Handlers log through `ctx.log`, and code they call
-reaches the same log through `currentLog()`, exactly as in a route or a job. The logger above
+`log(logger)` from `@sdxc/logger/middleware/cli` opens a `command` log for each run and writes
+it once the handler settles, carrying `command.path` (`users grant`), `command.duration_ms`,
+and `command.exit_code` when the run fails; `trace()` gives the run a trace id. Handlers log
+through `ctx.log`, and code they call reaches the same log through `currentLog()`, exactly as
+in a route or a job. The logger above
 is the app's own with its records sent to stderr as JSON lines, so stdout carries only what a
 command prints and can be piped.
 
@@ -261,12 +262,7 @@ export const cli = createCLI({
 		jobEnqueuer(QUEUE, {
 			dispatcher: createDispatcher({ queue: QUEUE, openDb: openLocalDatabase }),
 		}),
-		mailer({
-			transport: (ctx) =>
-				new PrintTransport({ write: (text) => ctx.stderr(text) }),
-			from: MAIL_FROM,
-			mail,
-		}),
+		// mailer() and i18n() as above
 	],
 });
 ```
@@ -278,7 +274,7 @@ import commandset from "~/app/commands";
 import jobs from "~/app/jobs";
 
 export default createCommand(commandset.postings.reconfirm, async (ctx) => {
-	let postings = await ctx.models.postings.unconfirmed();
+	let postings = await ctx.models.posting.unconfirmed();
 	await ctx.jobs.enqueueMany(
 		jobs.sendConfirmation,
 		postings.map((posting) => ({
@@ -292,10 +288,9 @@ export default createCommand(commandset.postings.reconfirm, async (ctx) => {
 ```
 
 `reconfirm` is declared in `app/commands/index.ts` like `grant`, with a `--locale` flag, and
-`unconfirmed` is a method on your `postings` model. Given a memory queue and a dispatcher built
-over it, the jobs run in the command's own
-process once the handler returns, through the dispatcher's middleware, timeout and retries, and
-the jobs those jobs enqueue run too. Each job's record lands under the command's log, so its
+`unconfirmed` is a method on your `posting` model. Given a memory queue and a dispatcher built
+over it, the jobs run in the command's own process once the handler returns, through the
+dispatcher's middleware, timeout and retries, and the jobs those jobs enqueue run too. Each job's record lands under the command's log, so its
 output and failures show in the terminal you ran it from, against the same local database. A
 run you cancel with Ctrl+C runs none of them. Passed the production queue instead, with no
 dispatcher, `jobEnqueuer(queue)` writes to it and the deployed consumer does the work.
@@ -329,7 +324,7 @@ import emails from "~/app/emails";
 import { SITE_URL } from "~/config/constants";
 
 export default createCommand(commandset.postings.resend, async (ctx) => {
-	let posting = await ctx.models.postings.find(ctx.arguments.id);
+	let posting = await ctx.models.posting.find(ctx.arguments.id);
 	if (posting === null) return failure(new Error(`No posting ${ctx.arguments.id}`));
 
 	ctx.email.later(emails.postings.published, {
