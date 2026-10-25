@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write one generator per fixture with `@sdxc/sample`"
     - "How to seed test databases and component previews with data identical on every run"
@@ -14,8 +14,8 @@ outcomes:
 
 Tests written against `"Test User"` and `test@test.com` pass while the real thing breaks: the
 name with an accent, the company name too long for its column, the invoice list with forty
-rows instead of one. Random data finds those cases, and then fails once on a value nobody can get back.
-[`@sdxc/sample`](/api/sample) gives you the first without the second. Every generator opens on
+rows instead of one. Random data finds those cases, and then fails once on a value nobody can
+get back. [`@sdxc/sample`](/api/sample) gives you the first without the second. Every generator opens on
 a seed, and the same seed with the same calls produces the same people, companies, amounts and
 dates on any machine, on any day.
 
@@ -33,7 +33,7 @@ so the app needs it installed. An app from `sdxc create` already depends on it, 
 `sdxc make model`, `sdxc make factory` and `sdxc scaffold` add it to `package.json` when the
 code they write imports those entries.
 
-## One generator per fixture
+## Create one generator per fixture
 
 A generator takes a seed and, optionally, the instant its `date` module measures from. Pin
 both, in one module the previews, snapshots and property tests share:
@@ -91,7 +91,7 @@ Every write goes through the model, so its callbacks and constraints run. A call
 what it is about, and names traits before its overrides:
 
 ```typescript
-await factories.create(InvoiceFactory, "void", { notes: null });
+await factories().create(InvoiceFactory, "void", { notes: null });
 ```
 
 ## Seed your local database
@@ -251,7 +251,8 @@ export default createAction(routes.previews.invoiceCard, (ctx) => {
 
 Changing `?seed=` flips through variations: a long company name, a void invoice, notes that
 wrap. A seed doesn't choose a variation, it replays one, so when a card looks wrong the URL is
-the bug report: the same seed renders the same card for whoever opens it. Map the route only in development, so the previews never ship.
+the bug report: the same seed renders the same card for whoever opens it. Map the route only in
+development, so the previews never ship.
 
 ## Keep snapshots stable
 
@@ -320,8 +321,8 @@ describe(`invoice totals (SAMPLE_SEED=${SEED})`, () => {
 });
 ```
 
-`totals` is your own function. `systemSeed()` from `@sdxc/random` draws a 32-bit seed from Web Crypto.
-Because the seed is in the suite's name, a failure prints it, and
+`totals` is your own function. `systemSeed()` from `@sdxc/random` draws a 32-bit seed from Web
+Crypto. Because the seed is in the suite's name, a failure prints it, and
 `SAMPLE_SEED=<seed> vp test run app/services` replays that exact run down to the last field.
 
 ## Where to go next
