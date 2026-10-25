@@ -50,6 +50,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"pagination",
 			"idempotency",
 			"merge-patch",
+			"json-patch",
 		],
 	},
 	{
@@ -68,7 +69,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Forms & abuse",
-		packages: ["captcha", "honeypot", "spam", "password-policy", "email-address"],
+		packages: ["captcha", "privacy-pass", "honeypot", "spam", "password-policy", "email-address"],
 	},
 	{
 		title: "Content & formats",
