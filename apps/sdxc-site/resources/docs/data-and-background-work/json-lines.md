@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 19
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to export records as a streaming JSON Lines download with `@sdxc/jsonl`"
     - "How to import an upload row by row with errors that name the line"
@@ -212,6 +212,15 @@ import { parse, stringify } from "@sdxc/jsonl";
 let events = parse('{"type":"invited"}\n\n{"type":"signed_in"}\n');
 let text = stringify([{ type: "exported" }]);
 ```
+
+## Stream JSON text sequences
+
+A JSON text sequence ([RFC 7464](https://www.rfc-editor.org/rfc/rfc7464), served as
+`application/json-seq`) opens every record with an RS byte (`0x1E`) instead of ending it with a
+newline, so a single value may span several lines. Use it when a peer speaks that media type.
+`encodeSequence`, `readSequence`, `records`, `parseSequence` and `stringifySequence` work like
+the functions above, taking `maxRecordBytes` in place of `maxLineBytes` and failing with a
+`JSONSeqError` whose `record` is the count `skip` takes.
 
 ## Test the import
 
