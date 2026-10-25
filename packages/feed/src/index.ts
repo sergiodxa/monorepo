@@ -18,7 +18,7 @@ import { fromAtom } from "./lib/from-atom.js";
 import { fromJSONFeed } from "./lib/from-json-feed.js";
 import { fromRSS } from "./lib/from-rss.js";
 import { readWithin, retrieve } from "./lib/limits.js";
-import { fromLinkHeader, selectHub, selectSubscription } from "./lib/links.js";
+import { fromLinkHeader, selectHub, selectPaging, selectSubscription } from "./lib/links.js";
 import { looksLikeJSON, sniff } from "./lib/sniff.js";
 import { describe } from "./lib/utils.js";
 
@@ -84,6 +84,22 @@ export namespace Feed {
 		source: "header" | "document";
 	}
 
+	/**
+	 * Where a feed's other documents are, by the RFC 5005 relation that names each: the
+	 * pages of a paged feed (`first`, `last`, `next`, `previous`) and the archives of an
+	 * archived one (`prevArchive`, `nextArchive`, and `current` back to the subscription
+	 * document). Every address is resolved, and a relation the feed omits is absent.
+	 */
+	export interface Paging {
+		first?: string;
+		last?: string;
+		next?: string;
+		previous?: string;
+		prevArchive?: string;
+		nextArchive?: string;
+		current?: string;
+	}
+
 	/** A file published alongside a post, such as a podcast episode. */
 	export interface Enclosure {
 		url: string;
@@ -126,6 +142,16 @@ export namespace Feed {
 		 * reads that instead of filtering this.
 		 */
 		links?: Link[];
+		/**
+		 * The document lists every item the feed has (RFC 5005 `fh:complete`), so an item
+		 * missing from it has left the feed. Atom and RSS only.
+		 */
+		complete?: boolean;
+		/**
+		 * The document is an archive page (RFC 5005 `fh:archive`), fixed once published and
+		 * never the one to subscribe to. Atom and RSS only.
+		 */
+		archive?: boolean;
 		items: Item[];
 	}
 
@@ -275,6 +301,31 @@ export class Feed {
 	 */
 	get links(): Feed.Link[] {
 		return this.#data.links ?? [];
+	}
+
+	/**
+	 * Whether the document lists every item the feed has, so a subscriber treats it as the
+	 * whole set and lets go of an item that disappears from it (RFC 5005 §2).
+	 */
+	get complete(): boolean {
+		return this.#data.complete ?? false;
+	}
+
+	/**
+	 * Whether the document is an archive page rather than the feed itself, which a reader
+	 * walks to for history and never subscribes to (RFC 5005 §4).
+	 */
+	get archive(): boolean {
+		return this.#data.archive ?? false;
+	}
+
+	/**
+	 * The feed's other documents by their RFC 5005 relation: `next` to page a paged feed,
+	 * `prevArchive` to walk an archived one back through its history. A JSON Feed's
+	 * `next_url` answers as `next`.
+	 */
+	get paging(): Feed.Paging {
+		return selectPaging(this.links);
 	}
 
 	/**

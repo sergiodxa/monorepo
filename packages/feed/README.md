@@ -137,8 +137,22 @@ Wraps normalized data, such as a stored `toJSON()` result.
 ### `feed` accessors
 
 `format`, `title`, `description`, `siteUrl`, `feedUrl`, `language`, `imageUrl`, `updatedAt`,
-`items` and `links`; `toJSON()` answers the whole feed as `Feed.Data`. `links` holds every
-relation the document declared, `rel` lower-cased and `href` resolved, whatever the format.
+`items`, `links`, `complete`, `archive` and `paging`; `toJSON()` answers the whole feed as
+`Feed.Data`. `links` holds every relation the document declared, `rel` lower-cased and `href`
+resolved, whatever the format.
+
+`complete`, `archive` and `paging` are RFC 5005 Feed Paging and Archiving. `complete` says the
+document lists every item, so one missing from it has left the feed; `archive` says the
+document is an archive page. `paging` answers the resolved `first`, `last`, `next`, `previous`,
+`prevArchive`, `nextArchive` and `current` addresses:
+
+```typescript
+let { prevArchive, next } = feed.paging;
+if (prevArchive) await backfill(prevArchive); // walk an archived feed's history
+```
+
+JSON Feed 1.1 has `next_url`, which answers as `paging.next`, and no equivalent of the
+complete or archive markers, so a JSON feed is never `complete` or `archive`.
 
 ### Normalized fields
 
@@ -151,7 +165,9 @@ relation the document declared, `rel` lower-cased and `href` resolved, whatever 
 | `language`         | `channel.language`                                      | `xml:lang` on the feed                                         | `language`                        |
 | `imageUrl`         | `channel.image.url`                                     | `feed.logo`, else `feed.icon`                                  | `icon`, else `favicon`            |
 | `updatedAt`        | `lastBuildDate`, else `pubDate`                         | `feed.updated`                                                 | the newest item date              |
-| `links`            | `atom:link` elements                                    | `link` elements                                                | `feed_url` and `hubs`             |
+| `links`            | `atom:link` elements                                    | `link` elements                                                | `feed_url`, `next_url` and `hubs` |
+| `complete`         | `fh:complete`                                           | `fh:complete`                                                  | —                                 |
+| `archive`          | `fh:archive`                                            | `fh:archive`                                                   | —                                 |
 | `item.guid`        | `guid`, else `link`, else the title                     | `entry.id`, else the alternate link                            | `id`                              |
 | `item.title`       | `title`                                                 | `entry.title`                                                  | `title`                           |
 | `item.url`         | `link`, else a permalink `guid`                         | alternate link                                                 | `url`, else `id` when it is a URL |

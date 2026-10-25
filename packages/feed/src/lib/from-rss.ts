@@ -58,6 +58,8 @@ export function fromRSS(xml: XML, url?: string): Result<Feed.Data, FeedParseErro
 	if (links.length > 0) data.links = links;
 
 	if (channel.language) data.language = channel.language;
+	if (channel.fhComplete) data.complete = true;
+	if (channel.fhArchive) data.archive = true;
 
 	let imageUrl = resolveUrl(channel.image?.url, url);
 	if (imageUrl) data.imageUrl = imageUrl;

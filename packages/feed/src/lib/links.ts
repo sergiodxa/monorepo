@@ -27,6 +27,22 @@ const HUB_REL = "hub";
 /** The relation a document declares its own address under, which WebSub keys a topic by. */
 const SELF_REL = "self";
 
+/**
+ * The RFC 5005 relations a feed names its other documents by, keyed by the field each
+ * fills. `prev` is the HTML spelling of `previous`, which the IANA registry lists as a
+ * synonym.
+ */
+const PAGING_RELS: Record<string, keyof Feed.Paging> = {
+	first: "first",
+	last: "last",
+	next: "next",
+	previous: "previous",
+	prev: "previous",
+	"prev-archive": "prevArchive",
+	"next-archive": "nextArchive",
+	current: "current",
+};
+
 /** The only scheme a hub may be reached over, since a subscription carries a secret. */
 const SECURE_PROTOCOL = "https:";
 
@@ -55,8 +71,8 @@ export function fromRSSLinks(atomLink: RSS.AtomLinkInput | undefined, url?: stri
 
 /**
  * Reads a JSON Feed's relations, which the format spells as fields rather than as
- * links: `feed_url` is the address the document claims for itself, and each entry
- * of `hubs` is an endpoint that pushes when the feed changes.
+ * links: `feed_url` is the address the document claims for itself, `next_url` the
+ * page after it, and each entry of `hubs` is an endpoint that pushes when the feed changes.
  *
  * @param feed - The parsed JSON Feed document
  * @param url - The document's own URL, which relative addresses resolve against
@@ -65,6 +81,7 @@ export function fromJSONFeedLinks(feed: JSONFeed.Feed, url?: string): Feed.Link[
 	let declared: { rel: string; href?: string; type?: string }[] = [];
 
 	if (feed.feedUrl) declared.push({ rel: "self", href: feed.feedUrl });
+	if (feed.nextUrl) declared.push({ rel: "next", href: feed.nextUrl });
 	for (let hub of feed.hubs ?? []) declared.push({ rel: HUB_REL, href: hub.url, type: hub.type });
 
 	return normalize(declared, url);
@@ -147,6 +164,23 @@ export function selectSubscription(
 	let topic = hub.source === "header" ? (firstSelf(header) ?? fromDocument) : fromDocument;
 
 	return { hub: hub.url, topic: topic ?? null, source: hub.source };
+}
+
+/**
+ * The feed's paging and archive addresses, the first declaration of each relation winning
+ * as it does for every other relation read here.
+ *
+ * @param links - The relations the document declared, already normalized
+ */
+export function selectPaging(links: readonly Feed.Link[]): Feed.Paging {
+	let paging: Feed.Paging = {};
+
+	for (let link of links) {
+		let field = PAGING_RELS[link.rel];
+		if (field !== undefined) paging[field] ??= link.href;
+	}
+
+	return paging;
 }
 
 /** The first `rel=self` of one list, which is the address its publisher claims for the feed. */

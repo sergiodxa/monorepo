@@ -64,6 +64,8 @@ export function fromAtom(xml: XML, url?: string): Result<Feed.Data, FeedParseErr
 	if (links.length > 0) data.links = links;
 
 	if (feed.lang) data.language = feed.lang;
+	if (feed.complete) data.complete = true;
+	if (feed.archive) data.archive = true;
 
 	let imageUrl = resolveUrl(firstText(feed.logo, feed.icon), url);
 	if (imageUrl) data.imageUrl = imageUrl;
