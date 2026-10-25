@@ -173,6 +173,27 @@ export interface Email {
 	[header: HeaderProperty]: unknown;
 }
 
+/**
+ * A body part as `Email/set` creates it: `partId` names an entry in the Email's `bodyValues`,
+ * or `blobId` an uploaded blob, and the server derives `size` and every property left out.
+ */
+export interface EmailBodyPartCreate extends Partial<Omit<EmailBodyPart, "subParts">> {
+	subParts?: EmailBodyPartCreate[] | null;
+}
+
+/**
+ * An Email as `Email/set` creates it. Every property is optional, the body parts take their
+ * creation shape, and the server sets `id`, `blobId`, `threadId`, `size` and `preview`.
+ */
+export interface EmailCreate extends Partial<
+	Omit<Email, "bodyStructure" | "textBody" | "htmlBody" | "attachments">
+> {
+	bodyStructure?: EmailBodyPartCreate;
+	textBody?: EmailBodyPartCreate[];
+	htmlBody?: EmailBodyPartCreate[];
+	attachments?: EmailBodyPartCreate[];
+}
+
 /** A property `Email/get` can return: a named one or a `header:` form. */
 export type EmailProperty = Exclude<keyof Email, HeaderProperty> | HeaderProperty;
 

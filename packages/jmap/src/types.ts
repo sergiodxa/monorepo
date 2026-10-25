@@ -142,11 +142,14 @@ export interface ChangesResponse {
 /**
  * Arguments of a `/set`. A `create` key is a client-chosen creation id, which later calls in
  * the same request reference as `"#" + id`; `ifInState` rejects the whole call when stale.
+ *
+ * @template T The record the method stores.
+ * @template Create What a client sends to create one, when the type's creation shape differs.
  */
-export interface SetArguments<T> {
+export interface SetArguments<T, Create = Partial<T>> {
 	accountId: Id;
 	ifInState?: string | null;
-	create?: Record<Id, Partial<T>> | null;
+	create?: Record<Id, Create> | null;
 	update?: Record<Id, PatchObject> | null;
 	destroy?: Id[] | null;
 }

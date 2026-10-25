@@ -18,6 +18,21 @@ import { EMAIL_GET_CALLS, MAILBOX_CHANGES_CALLS, SUBMISSION_CALLS } from "./fixt
 import { INITIAL_CALLS, SET_DEFAULT_CALLS } from "./fixtures/rfc9610.js";
 
 describe("Batch", () => {
+	test("creates an Email from body parts that name only a partId and a type", () => {
+		let draft = {
+			mailboxIds: { drafts: true },
+			subject: "Hello",
+			bodyStructure: { partId: "body", type: "text/plain" },
+			bodyValues: { body: { value: "Hi there" } },
+		};
+		let batch = new Batch();
+		batch.call("Email/set", { accountId: "A1", create: { draft } }, { id: "s0" });
+
+		expect(batch.toJSON().methodCalls).toEqual([
+			["Email/set", { accountId: "A1", create: { draft } }, "s0"],
+		]);
+	});
+
 	test("chains the inbox threads example through result references", () => {
 		let batch = new Batch();
 		let query = batch.call(

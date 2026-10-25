@@ -16,6 +16,7 @@ import type {
 } from "./contacts.js";
 import type {
 	Email,
+	EmailCreate,
 	EmailGetArguments,
 	EmailImportArguments,
 	EmailImportResponse,
@@ -115,7 +116,7 @@ export interface Methods {
 	"Email/changes": Method<ChangesArguments, ChangesResponse>;
 	"Email/query": Method<EmailQueryArguments, QueryResponse>;
 	"Email/queryChanges": Method<EmailQueryChangesArguments, QueryChangesResponse>;
-	"Email/set": Method<SetArguments<Email>, SetResponse<Email>>;
+	"Email/set": Method<SetArguments<Email, EmailCreate>, SetResponse<Email>>;
 	"Email/copy": Method<CopyArguments<Email>, CopyResponse<Email>>;
 	"Email/import": Method<EmailImportArguments, EmailImportResponse>;
 	"Email/parse": Method<EmailParseArguments, EmailParseResponse>;
