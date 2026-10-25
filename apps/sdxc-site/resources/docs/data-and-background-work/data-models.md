@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to wrap `remix/data-table` tables in models with `@sdxc/data-model` and publish them as `ctx.models`"
     - "How to dispatch jobs only after a write commits"
@@ -21,12 +21,13 @@ member runs there.
 
 This guide defines a model, publishes the app's models as `ctx.models`, dispatches side effects
 only after a write lands, keeps several record types in one table, stores open-ended attributes
-in a key/value table, builds test data with factories, and seeds a new database. Your tables stay as you declared
-them; the database setup is the one from
+in a key/value table, builds test data with factories, and seeds a new database. Your tables
+stay as you declared them; the database setup is the one from
 [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
 
 ```bash
-npm add @sdxc/data-model @sdxc/database-middleware @sdxc/jobs @sdxc/pagination @sdxc/result @sdxc/uuid remix
+npm add @sdxc/data-model @sdxc/database-middleware @sdxc/jobs @sdxc/pagination \
+	@sdxc/result @sdxc/sample @sdxc/uuid remix
 ```
 
 ## Define a model
@@ -68,9 +69,9 @@ export const Users = createModel(users, {
 as optional and every callback already sees the new key; a key the caller passes is kept.
 `optional` lists the other columns `create` may leave out because a callback or the database
 fills them, a `.default()` column included; nullable columns and `created_at`/`updated_at` are
-optional already, and every other column is required by the type of `create`. A scope receives a query
-it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row type, and
-answers it. `with()` and `select()` change the row, so they belong in a method.
+optional already, and every other column is required by the type of `create`. A scope receives
+a query it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row
+type, and answers it. `with()` and `select()` change the row, so they belong in a method.
 
 The default scope keeps soft-deleted users out of every read without each call site
 remembering a filter: queries, scopes and `find` leave them out, and an update or delete of one
@@ -222,17 +223,19 @@ declare module "@sdxc/data-model" {
 }
 ```
 
-The block names `@sdxc/data-model`, the module that declares `ModelContext`.
-
 `models` is always there at runtime: the rest of the registry, bound to the same request and
 unit of work. The declaration types it from an interface of the entries, which resolves each
 model only when it is read, so a method that calls a sibling keeps every other model typed.
-Typing it from the registry itself would make the registry's type depend on that method. Two
-models whose methods call each other need a return type written on one of them.
+Two models whose methods call each other need a return type written on one of them.
 
 A method reaches a sibling the same way:
 
 ```typescript {% title="app/models/users.ts" %}
+import { createModel } from "@sdxc/data-model";
+import { isFailure } from "@sdxc/result";
+
+import { users } from "~/database/schema";
+
 export const Users = createModel(users, {
 	methods: {
 		async signUp(email: string, name: string) {
@@ -466,15 +469,6 @@ once for every model, and its optional shape narrows it to models whose rows hav
 ```typescript {% title="app/models/helpers.ts" %}
 import type { AnyModel, BoundModel, ModelRow } from "@sdxc/data-model";
 
-export async function findOr404<M extends AnyModel>(
-	model: BoundModel<M>,
-	id: string,
-): Promise<ModelRow<M>> {
-	let row = await model.find(id);
-	if (row === null) throw new Response(null, { status: 404 });
-	return row;
-}
-
 export async function forPost<M extends AnyModel<{ post_id: string }>>(
 	model: BoundModel<M>,
 	postId: string,
@@ -483,7 +477,7 @@ export async function forPost<M extends AnyModel<{ post_id: string }>>(
 }
 ```
 
-`findOr404(ctx.models.articles, id)` answers an article row with its decoded meta, and
+`forPost(ctx.models.comments, id)` answers comment rows, decoded meta included, and
 `forPost(ctx.models.users, id)` fails to type-check, because a user row has no `post_id`.
 
 ## Build test data with factories
@@ -494,6 +488,9 @@ run in a fixture exactly as in production:
 
 ```typescript {% title="database/factories/index.ts" %}
 import { defineFactory } from "@sdxc/data-model/testing";
+
+import { Articles } from "~/app/models/articles";
+import { Users } from "~/app/models/users";
 
 export const UserFactory = defineFactory(Users, {
 	name: ({ sample }) => sample.person.fullName(),
@@ -510,9 +507,17 @@ export const ArticleFactory = defineFactory(Articles, {
 ```
 
 ```typescript {% title="app/models/articles.test.ts" %}
+import { createModels } from "@sdxc/data-model";
 import { createFactories } from "@sdxc/data-model/testing";
+import { expect, test } from "vitest";
+
+import { Articles } from "~/app/models/articles";
+import { Users } from "~/app/models/users";
+import { createTestDatabase } from "~/app/test/database";
+import { ArticleFactory, UserFactory } from "~/database/factories";
 
 test("keeps drafts out of the published list", async () => {
+	let db = await createTestDatabase();
 	let models = createModels({ users: Users, articles: Articles }).bind({ db });
 	let factories = createFactories(models, { seed: 42 });
 
@@ -526,7 +531,7 @@ test("keeps drafts out of the published list", async () => {
 });
 ```
 
-An attribute's function runs only when the call does not override it, so the articles above
+An attribute's function runs only for a value the call leaves out, so the articles above
 create no extra users. Each factory draws from a stream derived from the seed by its name, so
 adding a factory leaves every other factory's values where they were, and a failing run
 reproduces from its seed. A write that fails throws, with the `ValidationError` as its cause.
