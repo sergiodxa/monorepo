@@ -30,10 +30,9 @@ declare module "remix/router" {
 /** What a handler reads and changes about the headers its response will be sent with. */
 export interface SecurityHeadersContext {
 	/**
-	 * This response's nonce, generated on first read. A response that never reads it gets a
-	 * policy with every `"nonce"` source removed, so an unused nonce is never advertised. Read it
-	 * before the handler returns: the headers are written once the chain resolves, ahead of a
-	 * streamed body.
+	 * This response's nonce, generated on first read; a response that never reads it has every
+	 * `"nonce"` source removed. Read it while the response is built, in the handler or a component
+	 * rendering synchronously: a read after the headers are written leaves them without the nonce.
 	 */
 	readonly nonce: string;
 	/** The policy this response will be sent with, including every patch applied so far. */

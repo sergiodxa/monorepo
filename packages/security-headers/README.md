@@ -59,6 +59,25 @@ x-content-type-options: nosniff
 
 A header the response already set is kept as it is.
 
+### Hand the nonce to the document
+
+With `@sdxc/assets-middleware`, `assets()` reads the nonce through its `nonce` option, and the
+document's import map gets it from `ctx.assets.nonce`:
+
+```typescript
+createRouter({
+	middleware: [
+		securityHeaders(SECURITY_POLICY),
+		assets(assetResolver, {
+			stylesheets: "resources/layouts/document.tsx",
+			script: "bootstrap/browser.ts",
+			nonce: (ctx) => ctx.securityHeaders.nonce,
+		}),
+		render({ assets: assetResolver }),
+	],
+});
+```
+
 ### Read the nonce in a handler
 
 ```tsx
@@ -82,8 +101,9 @@ export default createAction(routes.checkout, {
 ```
 
 The nonce is generated on first read, and a response that never reads it has every `"nonce"`
-source removed. Read it in the handler: the headers are written when the chain resolves, before
-a streamed body renders.
+source removed. Read it while the response is built, in the handler or a component that renders
+synchronously: the headers are written when the chain resolves, so a read after an `await` in a
+streamed body leaves them without the nonce.
 
 ### Write headers without the middleware
 
