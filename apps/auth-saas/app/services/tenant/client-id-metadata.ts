@@ -5,6 +5,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { isFailure } from "@sdxc/result";
+import { isClientIdentifierUrl, parse } from "@sdxc/well-known/client-id-metadata-document";
 
 /** How long a fetched document stands before a fresh fetch is owed, bounding one authorize/consent round trip to a single fetch without holding a stale document indefinitely. */
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -13,9 +15,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_BODY_BYTES = 5 * 1024;
 
 /**
- * Every fetched document, keyed by its own URL and shared across every tenant this
- * instance serves: the content a URL answers with is public and identifies the same
- * client regardless of which tenant is asking, so nothing about caching it this wa
+ * Every valid fetched document, keyed by its own URL and shared across every tenant this
+ * instance serves: a URL's public content identifies the same client whichever tenant
+ * asks. A refusal stays out, so the next request fetches the document again.
  */
 const cache = new Map<string, { resolution: CimdResolution; cachedAt: number }>();
 
@@ -40,31 +42,16 @@ export type CimdResolution =
 	| { ok: true; client: CimdClientRecord }
 	| { ok: false; reason: "not-found" | "invalid-metadata" };
 
-/** Parses a URL, answering `null` rather than throwing for one that is not absolute. */
-function tryParseUrl(value: string): URL | null {
-	try {
-		return new URL(value);
-	} catch {
-		return null;
-	}
-}
-
 /**
  * Whether a `client_id` names a Client ID Metadata Document rather than an opaque id
- * this tenant issued itself: an absolute `https:` URL, carrying no userinfo or fragment
- * component and at least one path segment beyond the root, the shape the specification
+ * this tenant issued itself: a Client Identifier URL whose path goes beyond the root,
+ * since a document at `/` would collide with the client's own home page.
  *
  * @param clientId - The `client_id` an authorize or token request presented.
  * @returns Whether this `client_id` should be resolved by fetching it rather than by a registry lookup.
  */
 export function isClientIdUrl(clientId: string): boolean {
-	let parsed = tryParseUrl(clientId);
-	if (!parsed) return false;
-	if (parsed.protocol !== "https:") return false;
-	if (parsed.username !== "" || parsed.password !== "") return false;
-	if (parsed.hash !== "") return false;
-	if (parsed.pathname === "" || parsed.pathname === "/") return false;
-	return true;
+	return isClientIdentifierUrl(clientId) && new URL(clientId).pathname !== "/";
 }
 
 /** Reads at most {@link MAX_BODY_BYTES} of a response's body, refusing a document that runs past it. */
@@ -73,17 +60,10 @@ async function readBoundedText(response: Response): Promise<string | null> {
 	return text.length > MAX_BODY_BYTES ? null : text;
 }
 
-/** Every string in a JSON value's array, dropping any entry that is not one. */
-function stringArray(value: unknown): string[] {
-	return Array.isArray(value)
-		? value.filter((entry): entry is string => typeof entry === "string")
-		: [];
-}
-
 /**
  * Fetches and validates the document at a candidate CIMD URL: a plain `GET`, no
- * redirect followed, a `200` response read no further than the specification's own
- * size recommendation, and the document's own `client_id` checked against the exact
+ * redirect followed, a `200` JSON response read no further than the specification's own
+ * size recommendation. Only a public client resolves, since PKCE is its whole proof here.
  */
 async function fetchCimdDocument(clientId: string): Promise<CimdResolution> {
 	let response: Response;
@@ -105,42 +85,31 @@ async function fetchCimdDocument(clientId: string): Promise<CimdResolution> {
 	let text = await readBoundedText(response);
 	if (text === null) return { ok: false, reason: "invalid-metadata" };
 
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(text);
-	} catch {
-		return { ok: false, reason: "invalid-metadata" };
-	}
+	let parsed = parse(text, { clientId });
+	if (isFailure(parsed)) return { ok: false, reason: "invalid-metadata" };
+	let document = parsed.data;
 
-	if (typeof parsed !== "object" || parsed === null)
-		return { ok: false, reason: "invalid-metadata" };
-	let document = parsed as Record<string, unknown>;
-
-	if (document.client_id !== clientId) return { ok: false, reason: "invalid-metadata" };
-
-	let redirectUris = stringArray(document.redirect_uris);
-	if (redirectUris.length === 0) return { ok: false, reason: "invalid-metadata" };
-
-	let responseTypes = stringArray(document.response_types);
+	if (document.redirectUris.length === 0) return { ok: false, reason: "invalid-metadata" };
+	if (document.tokenEndpointAuthMethod !== "none") return { ok: false, reason: "invalid-metadata" };
 
 	return {
 		ok: true,
 		client: {
 			id: clientId,
-			name: typeof document.client_name === "string" ? document.client_name : clientId,
-			redirectUris,
-			responseTypes: responseTypes.length > 0 ? responseTypes : ["code"],
-			scopes: typeof document.scope === "string" ? document.scope.split(/\s+/).filter(Boolean) : [],
-			logoUri: typeof document.logo_uri === "string" ? document.logo_uri : null,
-			policyUri: typeof document.policy_uri === "string" ? document.policy_uri : null,
-			tosUri: typeof document.tos_uri === "string" ? document.tos_uri : null,
+			name: document.clientName?.value ?? clientId,
+			redirectUris: document.redirectUris,
+			responseTypes: document.responseTypes.length > 0 ? document.responseTypes : ["code"],
+			scopes: document.scope,
+			logoUri: document.logoUri?.href ?? null,
+			policyUri: document.policyUri?.href ?? null,
+			tosUri: document.tosUri?.href ?? null,
 		},
 	};
 }
 
 /**
- * Resolves a CIMD `client_id`, reusing a still-fresh cached document rather than
- * fetching again within the same authorize/consent round trip.
+ * Resolves a CIMD `client_id`, reusing a still-fresh cached document within the same
+ * authorize/consent round trip; a refused document is fetched again on the next call.
  *
  * @param clientId - The `https://` URL presented as `client_id`; call {@link isClientIdUrl} first to know a lookup belongs here rather than in the tenant's own client table.
  * @param now - The clock a cached entry's freshness is measured against.
@@ -151,6 +120,6 @@ export async function resolveCimdClient(clientId: string, now: number): Promise<
 	if (cached && now - cached.cachedAt < CACHE_TTL_MS) return cached.resolution;
 
 	let resolution = await fetchCimdDocument(clientId);
-	cache.set(clientId, { resolution, cachedAt: now });
+	if (resolution.ok) cache.set(clientId, { resolution, cachedAt: now });
 	return resolution;
 }

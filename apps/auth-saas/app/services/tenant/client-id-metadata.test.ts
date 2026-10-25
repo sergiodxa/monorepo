@@ -40,6 +40,10 @@ describe("isClientIdUrl", () => {
 		expect(isClientIdUrl("https://user:pass@client.example.com/metadata.json")).toBe(false);
 		expect(isClientIdUrl("https://client.example.com/metadata.json#section")).toBe(false);
 	});
+
+	test("refuses a URL with dot segments", () => {
+		expect(isClientIdUrl("https://client.example.com/a/../metadata.json")).toBe(false);
+	});
 });
 
 describe("resolveCimdClient", () => {
@@ -110,6 +114,76 @@ describe("resolveCimdClient", () => {
 
 		let resolved = await resolveCimdClient(url, Date.now());
 		expect(resolved).toEqual({ ok: false, reason: "invalid-metadata" });
+	});
+
+	test("refuses the draft's private_key_jwt client, which this server cannot authenticate", async () => {
+		let url = "https://client.example.com/metadata-private-key-jwt.json";
+		server.use(
+			http.get(url, () =>
+				HttpResponse.json({
+					client_id: url,
+					redirect_uris: ["https://client.example.com/callback"],
+					token_endpoint_auth_method: "private_key_jwt",
+					jwks_uri: "https://client.example.com/jwks.json",
+				}),
+			),
+		);
+
+		let resolved = await resolveCimdClient(url, Date.now());
+		expect(resolved).toEqual({ ok: false, reason: "invalid-metadata" });
+	});
+
+	test("refuses a document declaring a shared-secret authentication method", async () => {
+		let url = "https://client.example.com/metadata-secret.json";
+		server.use(
+			http.get(url, () =>
+				HttpResponse.json({
+					client_id: url,
+					redirect_uris: ["https://client.example.com/callback"],
+					token_endpoint_auth_method: "client_secret_basic",
+				}),
+			),
+		);
+
+		let resolved = await resolveCimdClient(url, Date.now());
+		expect(resolved).toEqual({ ok: false, reason: "invalid-metadata" });
+	});
+
+	test("reads a localized client_name and keeps its untagged value", async () => {
+		let url = "https://client.example.com/metadata-localized.json";
+		server.use(
+			http.get(url, () =>
+				HttpResponse.json({
+					client_id: url,
+					client_name: "Example Client",
+					"client_name#es": "Cliente de ejemplo",
+					redirect_uris: ["https://client.example.com/callback"],
+					logo_uri: "https://client.example.com/logo.png",
+				}),
+			),
+		);
+
+		let resolved = await resolveCimdClient(url, Date.now());
+		expect(resolved).toMatchObject({
+			ok: true,
+			client: { name: "Example Client", logoUri: "https://client.example.com/logo.png" },
+		});
+	});
+
+	test("fetches a refused document again rather than caching the refusal", async () => {
+		let url = "https://client.example.com/metadata-refused.json";
+		let hits = 0;
+		server.use(
+			http.get(url, () => {
+				hits += 1;
+				return HttpResponse.json({ client_id: url, redirect_uris: [] });
+			}),
+		);
+
+		let now = Date.now();
+		await resolveCimdClient(url, now);
+		await resolveCimdClient(url, now + 1000);
+		expect(hits).toBe(2);
 	});
 
 	test("refuses a non-200 response", async () => {
