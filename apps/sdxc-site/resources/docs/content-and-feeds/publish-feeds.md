@@ -141,13 +141,15 @@ subscription by.
 
 ## Atom 1.0
 
-Atom requires an `id`, a `title` and an `updated` on the feed and on every entry, and the
-constructor and `addEntry` throw when one is missing, so the fields you always supply are the
-ones you can't forget. Dates are RFC 3339, which is `toISOString()`.
+Atom requires an `id`, a `title` and an `updated` on the feed and on every entry.
+`Atom.stringify` takes the feed and its entries as plain data, checks those fields and writes
+the XML in one call, answering a `Result` that names the first one missing. Dates are RFC 3339,
+which is `toISOString()`.
 
 ```typescript {% title="app/http/controllers/feeds/atom.ts" %}
 import { Atom } from "@sdxc/atom";
-import { xml } from "@sdxc/http/response";
+import { text, xml } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { feedEntries } from "~/app/services/feeds/entries";
@@ -157,19 +159,18 @@ export default createAction(routes.feeds.atom, async (ctx) => {
 	let self = new URL(routes.feeds.atom.href(), ctx.url).href;
 	let entries = await feedEntries(ctx.url.origin);
 
-	let atom = new Atom({
-		id: self,
-		title: "Example",
-		updated: (entries[0]?.publishedAt ?? new Date()).toISOString(),
-		author: { name: "Ada Lovelace", uri: ctx.url.origin },
-		link: [
-			{ href: ctx.url.origin, rel: "alternate", type: "text/html" },
-			{ href: self, rel: "self", type: "application/atom+xml" },
-		],
-	});
-
-	for (let entry of entries) {
-		atom.addEntry({
+	let atom = Atom.stringify({
+		feed: {
+			id: self,
+			title: "Example",
+			updated: (entries[0]?.publishedAt ?? new Date()).toISOString(),
+			author: { name: "Ada Lovelace", uri: ctx.url.origin },
+			link: [
+				{ href: ctx.url.origin, rel: "alternate", type: "text/html" },
+				{ href: self, rel: "self", type: "application/atom+xml" },
+			],
+		},
+		entries: entries.map((entry) => ({
 			id: entry.url,
 			title: entry.title,
 			updated: entry.publishedAt.toISOString(),
@@ -178,14 +179,21 @@ export default createAction(routes.feeds.atom, async (ctx) => {
 			content: { type: "html", value: entry.html },
 			link: { href: entry.url, rel: "alternate" },
 			category: entry.tags,
-		});
+		})),
+	});
+
+	if (isFailure(atom)) {
+		ctx.log.fail(atom.error);
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return xml(atom.toString());
+	return xml(atom.data);
 });
 ```
 
-The imports match the RSS action, with `Atom` from `@sdxc/atom` in place of `RSS`.
+A failure means the data you built lacks a field Atom requires, so the action logs it and
+answers with a 500. When you need the feed as an object first, to edit it before writing,
+`Atom.fromJSON({ feed, entries })` builds one and `Atom.stringify(atom)` writes it.
 
 <warning>
 Keep an entry's `id` fixed for its whole life. Use the permalink only if permalinks never
