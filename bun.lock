@@ -463,6 +463,7 @@
         "@sdxc/http-signatures": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icalendar": "workspace:*",
+        "@sdxc/jscalendar": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/idempotency": "workspace:*",
         "@sdxc/iife": "workspace:*",
