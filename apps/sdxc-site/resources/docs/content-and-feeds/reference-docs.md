@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read the JSDoc in your TypeScript source at build time with `@sdxc/jsdoc`"
     - "How to write the records as JSON and serve a page per public symbol"
@@ -205,7 +205,7 @@ main();
 
 function main(): void {
 	let { modules, errors } = readSources("src");
-	for (let error of errors) console.error(error.message);
+	for (let error of errors) process.stderr.write(`${error.message}\n`);
 	if (errors.length > 0) process.exit(1);
 
 	let project: DocProject = {
