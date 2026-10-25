@@ -1,7 +1,7 @@
 /**
- * Normalizes an RSS 2.0 document into the shared feed shape, absorbing the
- * parser's exceptions into a `Result` and applying the identity fallback an item
- * without a guid needs.
+ * Normalizes an RSS 2.0 document into the shared feed shape, reporting a document
+ * the RSS parser refuses as a `FeedParseError` and applying the identity fallback
+ * an item without a guid needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +10,7 @@
 import type { Result } from "@sdxc/result";
 import type { XML } from "@sdxc/xml";
 
-import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
 import type { Feed } from "../index.js";
@@ -30,8 +30,7 @@ import { dedupeBy, firstText, resolveUrl } from "./utils.js";
  * @returns The normalized feed, or the reason the document could not be read
  */
 export function fromRSS(xml: XML, url?: string): Result<Feed.Data, FeedParseError> {
-	/** The RSS parser signals a malformed document by throwing, so it is wrapped here. */
-	let parsed = wrap(() => RSS.fromXML(xml));
+	let parsed = RSS.fromXML(xml);
 	if (isFailure(parsed)) return failure(new FeedParseError(parsed.error.message));
 
 	let rss = parsed.data;
