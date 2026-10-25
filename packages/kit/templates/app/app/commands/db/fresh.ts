@@ -6,11 +6,11 @@
 
 import type { AnyCommandContext, CommandResult } from "@sdxc/cli";
 
-import type { MigrationDatabase } from "~/app/services/migrations";
-
 import { createCommand, failure, success } from "@sdxc/cli";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { isFailure } from "@sdxc/result";
+
+import type { MigrationDatabase } from "~/app/services/migrations";
 
 import commandset from "~/app/commands";
 import { LOCAL_DATABASE_FILE, PROJECT_ROOT } from "~/app/initializers/local-database";
