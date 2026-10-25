@@ -22,7 +22,8 @@ import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * Serializes a feed as RSS, dating each item by its publish time.
+ * Serializes a feed as RSS, dating each item by its publish time. Every feed lists all its
+ * posts, so it is marked `fh:complete` for readers to drop removed ones.
  *
  * @param self The feed's absolute URL, which is its WebSub topic.
  * @param channel The feed's own metadata.
@@ -40,6 +41,7 @@ export function rssResponse(
 		description: channel.description,
 		link: channel.home,
 		atomLink: hub.atomLink,
+		fhComplete: true,
 	});
 
 	for (let entry of entries) {

@@ -23,7 +23,8 @@ import routes from "~/routes/web";
 
 /**
  * Serializes a feed as Atom. Entry ids are `urn:uuid:` IRIs over the post id, as RFC 4287
- * requires an IRI, and the feed's `updated` is its newest edit, or now when empty.
+ * requires an IRI, and the feed's `updated` is its newest edit, or now when empty. Every
+ * feed lists all its posts, so it is marked `fh:complete` for readers to drop removed ones.
  *
  * @param self The feed's absolute URL, which is its id and WebSub topic.
  * @param channel The feed's own metadata.
@@ -51,6 +52,7 @@ export function atomResponse(
 		author: { name: PROFILE.name, uri: origin },
 		link: [{ rel: "alternate", href: channel.home, type: "text/html" }, ...hub.atomLink],
 		lang: "en",
+		complete: true,
 	});
 
 	for (let entry of entries) {
