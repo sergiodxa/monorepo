@@ -1,6 +1,6 @@
 /**
  * `createI18n`, the translator every entry point builds on: it resolves a dotted key through
- * the locale, its primary subtag, the fallback and the fallback's subtag, and formats the hit
+ * every RFC 4647 Lookup truncation of the locale, then of the fallback, and formats the hit
  * as a MessageFormat 2 message compiled once per language and key.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -10,6 +10,8 @@
 import type { MessagePart } from "@sdxc/messageformat";
 
 import { MessageFormat } from "@sdxc/messageformat";
+
+import { lookupFallbacks } from "./parser.js";
 
 /** A bundle of MessageFormat 2 messages for one language, nested by dotted key segment. */
 export interface Messages {
@@ -144,17 +146,18 @@ export function createI18n<
 }
 
 /**
- * The languages a key resolves through, in order: the locale, its primary subtag, the
- * fallback and the fallback's primary subtag, deduplicated and limited to those with a bundle.
+ * The bundles a key resolves through, in order: each Lookup truncation of the locale
+ * (`zh-Hant-TW`, `zh-Hant`, `zh`), then of the fallback, matched to bundle names
+ * case-insensitively, deduplicated and limited to those with a bundle.
  */
 function lookupChain(locale: string, fallback: string, resources: object): string[] {
-	let candidates = new Set([locale, primary(locale), fallback, primary(fallback)]);
-	return [...candidates].filter((language) => Object.hasOwn(resources, language));
-}
-
-/** The primary language subtag, `en` for `en-US`. */
-function primary(locale: string) {
-	return locale.split("-")[0] ?? locale;
+	let bundles = new Map(Object.keys(resources).map((name) => [name.toLowerCase(), name]));
+	let chain = new Set<string>();
+	for (let candidate of [...lookupFallbacks(locale), ...lookupFallbacks(fallback)]) {
+		let bundle = bundles.get(candidate.toLowerCase());
+		if (bundle !== undefined) chain.add(bundle);
+	}
+	return [...chain];
 }
 
 /**

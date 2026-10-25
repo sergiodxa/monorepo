@@ -1,8 +1,7 @@
 /**
- * Covers the request-less translator factory: fallback defaults, resolving a language absent
- * from the caller's resources, the reported locale matching where copy was produced,
- * per-language caching (the unsupported language sharing the fallback's), cache ownership per
- * translator, and error reporting.
+ * Covers the request-less translator factory: fallback defaults, Lookup of a regional or
+ * differently cased language, the fallback for an unsupported one, the reported locale,
+ * per-language caching, cache ownership per translator, and error reporting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,6 +50,24 @@ describe("createTranslator", () => {
 
 		expect(locale).toBe("en");
 		expect(t("hello")).toBe("Hello");
+	});
+
+	test("resolves a regional language to its supported primary language", () => {
+		let { locale, t } = makeTranslator()("es-UY");
+
+		expect(locale).toBe("es");
+		expect(t("hello")).toBe("Hola");
+	});
+
+	test("matches a supported language case-insensitively and reports its configured casing", () => {
+		let translate = createTranslator({
+			resources: { en: { hello: "Hello" }, "pt-BR": { hello: "Olá" } },
+			supportedLanguages: ["en", "pt-BR"],
+			fallbackLanguage: "en",
+		});
+
+		expect(translate("PT-br").locale).toBe("pt-BR");
+		expect(translate("pt-br-x-test").t("hello")).toBe("Olá");
 	});
 
 	test("falls back per key for a language missing one", () => {

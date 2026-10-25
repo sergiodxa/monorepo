@@ -74,6 +74,19 @@ describe("lookup chain", () => {
 		expect(i18n.t("onlyEnglish")).toBe("English only");
 	});
 
+	test("walks through a script subtag before the primary subtag", () => {
+		let i18n = createI18n({
+			locale: "zh-Hant-TW",
+			fallbackLanguage: "en",
+			resources: { en: { hello: "Hello" }, "zh-Hant": { hello: "你好" }, zh: { hello: "你好!" } },
+		});
+		expect(i18n.t("hello")).toBe("你好");
+	});
+
+	test("matches bundle names case-insensitively", () => {
+		expect(make("EN-gb").t("color")).toBe("colour");
+	});
+
 	test("reports the requested locale", () => {
 		expect(make("es-MX").locale).toBe("es-MX");
 	});

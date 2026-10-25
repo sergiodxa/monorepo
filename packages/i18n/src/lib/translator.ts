@@ -10,14 +10,15 @@
 import type { I18n, I18nErrorHandler, Messages, Translate } from "./i18n.js";
 
 import { createI18n } from "./i18n.js";
+import { pick } from "./parser.js";
 
 /** Options that configure a {@link Translator}. */
 export interface TranslatorOptions {
 	/** MessageFormat 2 bundles keyed by language. */
 	resources: Readonly<Record<string, Messages>>;
 	/**
-	 * The languages the caller ships. A language outside this list resolves to
-	 * {@link fallbackLanguage}, so a translator is always bound to a language with bundles.
+	 * The languages the caller ships. A requested language resolves to the first of these its
+	 * RFC 4647 Lookup reaches (`es-UY` to `es`, case-insensitively), else to {@link fallbackLanguage}.
 	 */
 	supportedLanguages: readonly string[];
 	/**
@@ -33,8 +34,8 @@ export interface TranslatorOptions {
 export interface Translation {
 	/**
 	 * The language the translator is bound to, always a supported one. Report or record this
-	 * rather than the requested language: they differ whenever an unsupported one resolved to
-	 * the fallback.
+	 * rather than the requested language: they differ whenever Lookup truncated the request or
+	 * an unsupported one resolved to the fallback.
 	 */
 	locale: string;
 	t: Translate;
@@ -65,9 +66,7 @@ export function createTranslator(options: TranslatorOptions): Translator {
 	let translations = new Map<string, Translation>();
 
 	return function translate(language = options.fallbackLanguage) {
-		let locale = options.supportedLanguages.includes(language)
-			? language
-			: options.fallbackLanguage;
+		let locale = pick(options.supportedLanguages, language) ?? options.fallbackLanguage;
 
 		let translation = translations.get(locale);
 

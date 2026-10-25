@@ -51,7 +51,7 @@ intl.t("inbox.unread", { count: 3 }); // from en when es lacks the key
 intl.t("inbox.missing"); // "inbox.missing"
 ```
 
-A key resolves through the locale, its primary subtag, the fallback language and its primary subtag, so `es-MX` reads `es-MX`, then `es`, then `en`. A key found nowhere returns itself.
+A key resolves through each truncation of the locale, then of the fallback language, so `es-MX` reads `es-MX`, then `es`, then `en`, and `zh-Hant-TW` reads `zh-Hant` before `zh`. A key found nowhere returns itself.
 
 ### Translate per request
 
@@ -138,14 +138,14 @@ A placeholder that fails to format renders its fallback, such as `{$name}`, and 
 
 ### `createTranslator(options: TranslatorOptions): Translator`
 
-From `@sdxc/i18n`. A factory for code with no request behind it. Calling it with a language returns a cached `Translation` (`{ locale, t, intl }`); an unsupported or missing language binds to `fallbackLanguage`, so record `translation.locale`.
+From `@sdxc/i18n`. A factory for code with no request behind it. Calling it with a language returns a cached `Translation` (`{ locale, t, intl }`); a regional language binds to its supported truncation (`es-UY` to `es`), and an unsupported or missing one to `fallbackLanguage`, so record `translation.locale`.
 
 - `options.resources`, `options.fallbackLanguage`, `options.onError`: As in `createI18n`
 - `options.supportedLanguages`: The languages a translation may bind to
 
 ### `LanguageDetector`
 
-From `@sdxc/i18n`. `new LanguageDetector(options: LanguageDetectorOptions)` creates a detector; `detector.detect(request: Request, session?: Session): Promise<string>` runs each method in order and returns the first supported match, or the fallback language. A candidate matches a supported language exactly first, then by primary subtag, so `es-AR` matches `es`. A method missing its option, such as `cookie`, is skipped, and a live `Session` passed to `detect` is read directly.
+From `@sdxc/i18n`. `new LanguageDetector(options: LanguageDetectorOptions)` creates a detector; `detector.detect(request: Request, session?: Session): Promise<string>` runs each method in order and returns the first supported match, or the fallback language. A candidate is matched with RFC 4647 Lookup, each `Accept-Language` range in priority order trying its truncations (`es-AR`, then `es`) before the next; `q=0` ranges never match. When no range matches, a candidate matches by primary subtag, so `en-US` finds `en-GB`. A method missing its option, such as `cookie`, is skipped, and a live `Session` passed to `detect` is read directly.
 
 ### `getClientLocales(requestOrHeaders: Request | Headers): string | undefined`
 
