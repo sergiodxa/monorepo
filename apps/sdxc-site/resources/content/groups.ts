@@ -89,6 +89,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"cbor",
 			"icalendar",
 			"jscalendar",
+			"jscontact",
 			"epub",
 			"zip",
 			"png",
