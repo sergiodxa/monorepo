@@ -23,6 +23,7 @@ import type { SubjectRow } from "~/app/models/tenant/subjects";
 import { clients } from "~/app/models/tenant/clients";
 import { scopes } from "~/app/models/tenant/consent";
 import { DEVICE_CODE_GRANT_TYPE } from "~/app/models/tenant/device-authorization";
+import { INTROSPECTION_SIGNING_ALGORITHMS } from "~/app/models/tenant/introspection";
 import { REQUEST_OBJECT_SIGNING_ALGORITHMS } from "~/app/models/tenant/request-objects";
 import { resolveRoleAndPermissionClaims } from "~/app/models/tenant/roles";
 import { sessions } from "~/app/models/tenant/sessions";
@@ -151,6 +152,9 @@ function sharedMembers(published: PublishMetadataResult) {
 		scopesSupported: published.scopesSupported,
 		authorizationResponseIssParameterSupported: true,
 		dpopSigningAlgValuesSupported: [...DPOP_ALGORITHMS],
+		introspectionEndpoint: endpoint("/oauth/introspect"),
+		introspectionEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post"],
+		introspectionSigningAlgValuesSupported: [...INTROSPECTION_SIGNING_ALGORITHMS],
 	};
 }
 

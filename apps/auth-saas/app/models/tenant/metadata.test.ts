@@ -103,6 +103,10 @@ describe("publishMetadata", () => {
 			"RS256",
 		]);
 		expect(openIdConfigurationFor(published).acrValuesSupported).toEqual(["mfa"]);
+
+		let oauth = authorizationServerMetadataFor(published);
+		expect(oauth.introspectionEndpoint?.href).toBe(`${ISSUER}/oauth/introspect`);
+		expect(oauth.introspectionSigningAlgValuesSupported).toEqual(["ES256"]);
 	});
 
 	test("scopes_supported and claims_supported reflect the tenant's scope catalog, including a tenant-defined scope", async () => {

@@ -170,6 +170,13 @@ tenantRouter.map(
 	),
 );
 tenantRouter.map(
+	routes.tokenIntrospection,
+	lazy(
+		() => import("~/app/http/controllers/oauth/token-introspection"),
+		[tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
+	),
+);
+tenantRouter.map(
 	routes.apiKeysIntrospect,
 	lazy(() => import("~/app/http/controllers/oauth/introspect")),
 );

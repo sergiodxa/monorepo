@@ -384,6 +384,7 @@ import { hasAnotherCredential } from "~/app/models/tenant/credentials";
 import * as DeviceAuthorization from "~/app/models/tenant/device-authorization";
 import * as DPoPProofs from "~/app/models/tenant/dpop-proofs";
 import { applyEntitlements, entitlementEnforcement } from "~/app/models/tenant/entitlements";
+import * as Introspection from "~/app/models/tenant/introspection";
 import * as MagicLink from "~/app/models/tenant/magic-link";
 import { mailSendEnvelopes } from "~/app/models/tenant/mail-rate-limit";
 import * as Metadata from "~/app/models/tenant/metadata";
@@ -3823,6 +3824,24 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 		return this.#withCost(async () => {
 			let issuer = await this.#issuer();
 			return TokenExchange.exchangeToken(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Describes a token this tenant issued to an authenticated confidential client (RFC
+	 * 7662), as JSON or as a response signed with the tenant's key (RFC 9701).
+	 *
+	 * @param input - The token, its type hint, the caller's credentials and the answer's form.
+	 * @returns The description, or the caller's own authentication failure.
+	 */
+	async introspectToken(
+		input: Omit<Introspection.IntrospectTokenInput, "issuer">,
+	): Promise<WithCost<Introspection.IntrospectTokenResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Introspection.introspectToken(this.#db, { ...input, issuer });
 		});
 	}
 
