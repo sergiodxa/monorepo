@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to install the `sdxc` command"
     - "Which command does what, and which guide covers it"
@@ -36,25 +36,25 @@ and never waits on one.
 
 ## Command map
 
-| Command             | What it does                                                         | Guide                                                  |
-| ------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| `sdxc create`       | write a new project from the built-in template or a GitHub repo      | [Start a project](/docs/sdxc/start-a-project)          |
-| `sdxc init`         | write `.config/sdxc.jsonc` with every default spelled out            | [Start a project](/docs/sdxc/start-a-project)          |
-| `sdxc make`         | write a controller, job, model or other file, declared and mapped    | [Generate files](/docs/sdxc/generate-files)            |
-| `sdxc scaffold`     | write a resource's model, migration, pages and tests                 | [Scaffold a resource](/docs/sdxc/scaffold-a-resource)  |
-| `sdxc destroy`      | remove what `sdxc make` wrote, its mapping and its declaration       | [Undo a make](/docs/sdxc/undo-generated-files)         |
-| `sdxc routes`       | print every route with its controller and middleware                 | [List routes](/docs/sdxc/list-routes)                  |
-| `sdxc models`       | print each model's table and whether its migrations match            | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc schedule`     | list scheduled jobs, their next runs and the triggers that fire them | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc middleware`   | print every middleware chain in run order                            | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc initializers` | list the initializers and what builds each one                       | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc notes`        | list the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the code | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc stats`        | count lines of code per kind, and the code to test ratio             | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc run`          | run your app's own command line: migrations, the SQL console, yours  | [Run your app's commands](/docs/sdxc/run-app-commands) |
-| `sdxc doctor`       | find release drift, missing secrets and wiring mistakes              | [Check a project](/docs/sdxc/check-a-project)          |
-| `sdxc ui`           | copy an `@sdxc/ui` component into the project to edit it             | [Copy UI components](/docs/sdxc/copy-ui-components)    |
-| `sdxc upgrade`      | move to a newer release and print a prompt for your agent            | [Upgrade](/docs/sdxc/upgrade)                          |
-| `sdxc deploy`       | build, migrate production and deploy, in that order                  | [Deploy](/docs/sdxc/deploy)                            |
+| Command             | What it does                                                            | Guide                                                  |
+| ------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| `sdxc create`       | write a new project from the built-in template or a GitHub repo         | [Start a project](/docs/sdxc/start-a-project)          |
+| `sdxc init`         | write `.config/sdxc.jsonc` with every default spelled out               | [Start a project](/docs/sdxc/start-a-project)          |
+| `sdxc make`         | write a controller, job, model or other file, declared and mapped       | [Generate files](/docs/sdxc/generate-files)            |
+| `sdxc scaffold`     | write a resource's model, migration, pages or JSON endpoints, and tests | [Scaffold a resource](/docs/sdxc/scaffold-a-resource)  |
+| `sdxc destroy`      | remove what `sdxc make` wrote, its mapping and its declaration          | [Undo a make](/docs/sdxc/undo-generated-files)         |
+| `sdxc routes`       | print every route with its controller and middleware                    | [List routes](/docs/sdxc/list-routes)                  |
+| `sdxc models`       | print each model's table and whether its migrations match               | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc schedule`     | list scheduled jobs, their next runs and the triggers that fire them    | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc middleware`   | print every middleware chain in run order                               | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc initializers` | list the initializers and what builds each one                          | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc notes`        | list the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the code    | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc stats`        | count lines of code per kind, and the code to test ratio                | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc run`          | run your app's own command line: migrations, the SQL console, yours     | [Run your app's commands](/docs/sdxc/run-app-commands) |
+| `sdxc doctor`       | find release drift, missing secrets and wiring mistakes                 | [Check a project](/docs/sdxc/check-a-project)          |
+| `sdxc ui`           | copy an `@sdxc/ui` component into the project to edit it                | [Copy UI components](/docs/sdxc/copy-ui-components)    |
+| `sdxc upgrade`      | move to a newer release and print a prompt for your agent               | [Upgrade](/docs/sdxc/upgrade)                          |
+| `sdxc deploy`       | build, migrate production and deploy, in that order                     | [Deploy](/docs/sdxc/deploy)                            |
 
 ## Where to go next
 
