@@ -18,10 +18,62 @@ import * as jose from "jose";
 
 import type { JWK } from "./jwk.js";
 
+import * as SignatureAlgorithm from "./algorithm.js";
+import { LEGACY_EDDSA } from "./jwk.js";
 import { ObjectParser } from "./lib/parser.js";
 
 /** Milliseconds in a second, for converting between epoch claims and `Date`. */
 const MS_PER_SECOND = 1000;
+
+/** The `typ` header a token carries when its class names no media type of its own. */
+const DEFAULT_TYPE = "JWT";
+
+/**
+ * Algorithms `verify` accepts when the caller pins none: every supported one plus
+ * the deprecated `EdDSA` name, so a token presenting `none`, an HMAC or any other
+ * algorithm is refused before its key is looked up.
+ */
+const DEFAULT_ALGORITHMS: string[] = [...Object.values(SignatureAlgorithm), LEGACY_EDDSA];
+
+/**
+ * The two names an Ed25519 signature goes by, each mapped to the other. RFC 9864
+ * deprecates `EdDSA` for `Ed25519`; tokens and key sets written under either name
+ * verify against keys published under the other.
+ */
+const EDWARDS_ALIASES: Record<string, string | undefined> = {
+	[SignatureAlgorithm.Ed25519]: LEGACY_EDDSA,
+	[LEGACY_EDDSA]: SignatureAlgorithm.Ed25519,
+};
+
+/**
+ * The accepted algorithms with each Ed25519 name joined by its alias, so pinning
+ * `Ed25519` keeps accepting tokens signed before the rename.
+ *
+ * @param algorithms - What the caller pinned, if anything.
+ */
+function acceptedAlgorithms(algorithms: string[] = DEFAULT_ALGORITHMS): string[] {
+	let aliases = algorithms.flatMap((alg) => EDWARDS_ALIASES[alg] ?? []);
+	return [...new Set([...algorithms, ...aliases])];
+}
+
+/**
+ * Retries a key lookup under a token's other Ed25519 name when the first finds no
+ * key, since a key set matches `alg` exactly and one published before or after the
+ * rename names the key differently than the token does.
+ *
+ * @param resolver - The key set the token is verified against.
+ */
+function withEdwardsAliases(resolver: JWK.KeyResolver): JWK.KeyResolver {
+	return async (header, token) => {
+		try {
+			return await resolver(header, token);
+		} catch (error) {
+			let alias = header.alg === undefined ? undefined : EDWARDS_ALIASES[header.alg];
+			if (!alias || !(error instanceof jose.errors.JWKSNoMatchingKey)) throw error;
+			return await resolver({ ...header, alg: alias }, token);
+		}
+	};
+}
 
 /** Claims that may be written as a length of time from now. */
 const RELATIVE_CLAIMS = ["exp", "iat", "nbf"] as const;
@@ -64,6 +116,15 @@ function resolveRelativeClaims(payload: JWT.PayloadInput): JWT.Payload {
  * }
  */
 export class JWT implements jose.JWTPayload {
+	/**
+	 * The `typ` header this class signs with. A subclass naming its own media type
+	 * (`static override type = "at+jwt"`) is explicitly typed per RFC 8725: `verify`
+	 * on it refuses a token of any other type, so one kind never passes as another.
+	 *
+	 * @default "JWT"
+	 */
+	static type: string = DEFAULT_TYPE;
+
 	/** The raw claim set, readable whole for callers that want the payload itself. */
 	readonly payload: JWT.Payload;
 
@@ -291,7 +352,8 @@ export class JWT implements jose.JWTPayload {
 	 * Signs a token with the first key matching the algorithm.
 	 *
 	 * The keys arrive newest first, so the newest signs while older ones stay
-	 * published to verify what they already signed, keyed by the `kid` header.
+	 * published to verify what they already signed, keyed by the `kid` header. The
+	 * `typ` header is the token class's {@link JWT.type}.
 	 *
 	 * @param jwt - The token to sign.
 	 * @param algorithm - Algorithm to sign with; also selects the key.
@@ -304,15 +366,20 @@ export class JWT implements jose.JWTPayload {
 		if (!key) throw new Error(`No key available to sign JWT with algorithm ${algorithm}`);
 
 		return new jose.SignJWT(jwt.payload)
-			.setProtectedHeader({ alg: algorithm, typ: "JWT", kid: key.id })
+			.setProtectedHeader({
+				alg: algorithm,
+				typ: (jwt.constructor as typeof JWT).type,
+				kid: key.id,
+			})
 			.sign(key.private);
 	}
 
 	/**
 	 * Verifies a token and returns it as an instance of the class this was called on.
 	 *
-	 * The key is picked by the token's `kid`, letting a retired key keep verifying
-	 * what it already signed through a rotation; `algorithms` pins accepted ones.
+	 * The key is picked by the token's `kid`, so a retired key keeps verifying what it
+	 * signed. `algorithms` defaults to every supported one; `Ed25519` also accepts the
+	 * deprecated `EdDSA`. An explicitly typed class requires its `typ` by default.
 	 *
 	 * @param token - The compact-serialized token.
 	 * @param jwks - The keys themselves, or a resolver from `JWK.importLocal` /
@@ -329,7 +396,7 @@ export class JWT implements jose.JWTPayload {
 	 * });
 	 */
 	static async verify<M extends JWT>(
-		this: new (payload: JWT.Payload) => M,
+		this: (new (payload: JWT.Payload) => M) & Pick<typeof JWT, "type">,
 		token: string,
 		jwks: JWK.VerificationKeys,
 		options?: JWT.VerifyOptions,
@@ -342,7 +409,11 @@ export class JWT implements jose.JWTPayload {
 			? jose.createLocalJWKSet({ keys: jwks.map((candidate) => candidate.jwk) })
 			: jwks;
 
-		let result = await jose.jwtVerify(token, key, options);
+		let result = await jose.jwtVerify(token, withEdwardsAliases(key), {
+			...options,
+			algorithms: acceptedAlgorithms(options?.algorithms),
+			typ: options?.typ ?? (this.type === DEFAULT_TYPE ? undefined : this.type),
+		});
 
 		return new this(result.payload);
 	}

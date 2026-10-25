@@ -1,6 +1,6 @@
 # @sdxc/jwt
 
-JWT payload classes and the ES256, RS256 and EdDSA keys that sign them.
+JWT payload classes and the ES256, RS256 and Ed25519 keys that sign them.
 
 Each kind of token is a class: the registered claims arrive as typed accessors, a subclass adds
 its own, and signing, verifying and decoding all hand back an instance of that class. The `JWK`
@@ -151,7 +151,12 @@ The getters declared on the instance's own class, as a plain object.
 
 Checks the signature, `exp`, `nbf` and any `issuer`/`audience` given, and answers an instance of
 the calling class; any failure throws. The key is picked per token by its `kid`, key type and
-algorithm, so a set can hold several keys. Pass `algorithms` to accept only the ones you expect.
+algorithm, so a set can hold several keys. Pass `algorithms` to accept only the ones you expect;
+left out, it is every `JWK.Algorithm`, so `none`, HMAC and anything else is refused. `Ed25519`
+also accepts tokens and key sets that use the deprecated `EdDSA` name (RFC 9864).
+
+A subclass that sets `static override type = "at+jwt"` signs with that `typ` header, and its
+`verify` refuses a token of any other type (explicit typing, RFC 8725).
 
 #### `JWT.decode(token: string): JWT`
 
@@ -163,13 +168,13 @@ to verify (reading `iss` to pick a key set), then `verify`.
 #### `JWK.Algorithm`
 
 The supported algorithms: `JWK.Algorithm.ES256` (`EC`, what `signingKeys` mints), `.RS256`
-(`RSA`, common among upstream identity providers) and `.EdDSA` (`OKP`, deterministic nonces). The
+(`RSA`, common among upstream identity providers) and `.Ed25519` (`OKP`, deterministic nonces). The
 names also ship alone from `@sdxc/jwt/algorithm`:
 
 ```typescript
 import * as Algorithm from "@sdxc/jwt/algorithm";
 
-Object.values(Algorithm); // ["ES256", "RS256", "EdDSA"]
+Object.values(Algorithm); // ["ES256", "RS256", "Ed25519"]
 ```
 
 #### `JWK.generateKeyPair(alg: JWK.Algorithm): Promise<JWK.SerializedKeyPair>`

@@ -22,7 +22,8 @@ export const ES256 = "ES256";
 export const RS256 = "RS256";
 
 /**
- * Derives its nonce from the key and message, keeping the ECDSA nonce-reuse
- * leak that exposes a private key out of reach.
+ * EdDSA over the Ed25519 curve, under the fully-specified name RFC 9864 registers;
+ * its nonce derives from the key and message, keeping the ECDSA nonce-reuse leak
+ * that exposes a private key out of reach.
  */
-export const EdDSA = "EdDSA";
+export const Ed25519 = "Ed25519";

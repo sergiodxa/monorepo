@@ -28,7 +28,7 @@ const VERIFY = { algorithms: [JWK.Algorithm.ES256] };
 const ALGORITHMS = [
 	{ alg: JWK.Algorithm.ES256, kty: "EC", parameters: ["crv", "x", "y"] },
 	{ alg: JWK.Algorithm.RS256, kty: "RSA", parameters: ["e", "n"] },
-	{ alg: JWK.Algorithm.EdDSA, kty: "OKP", parameters: ["crv", "x"] },
+	{ alg: JWK.Algorithm.Ed25519, kty: "OKP", parameters: ["crv", "x"] },
 ] as const;
 
 /** Parameters that belong to a private key alone, across every key type here. */
@@ -247,6 +247,20 @@ for (let { alg, kty, parameters } of ALGORITHMS) {
 		});
 	});
 }
+
+describe("a pair stored under the deprecated EdDSA name", () => {
+	test("imports, signs and publishes as Ed25519", async () => {
+		let serialized = await JWK.generateKeyPair(JWK.Algorithm.Ed25519);
+		let pair = await JWK.importKeyPair({ ...serialized, alg: "EdDSA" });
+
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.Ed25519, [pair]);
+		let header = jose.decodeProtectedHeader(signed);
+
+		expect(pair.alg).toBe("Ed25519");
+		expect(header.alg).toBe("Ed25519");
+		expect(JWK.toJSON([pair]).keys[0]?.alg).toBe("Ed25519");
+	});
+});
 
 describe("toJSON", () => {
 	test("publishes only the public EC parameters", async () => {

@@ -18,6 +18,12 @@ import type { KeyStorage } from "./key-storage.js";
 import * as SignatureAlgorithm from "./algorithm.js";
 
 /**
+ * The polymorphic name RFC 9864 deprecates in favour of `Ed25519`. Keys and tokens
+ * written under it before the rename still import and verify as Ed25519.
+ */
+export const LEGACY_EDDSA = "EdDSA";
+
+/**
  * Prefix every stored signing key is written under.
  *
  * Listing by prefix is the only index this package has over the bucket, so the
@@ -51,7 +57,7 @@ const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undef
 export namespace JWK {
 	/**
 	 * ES256 is issued here; RS256 verifies tokens from upstream identity
-	 * providers; EdDSA derives its nonce from the key and message, keeping the
+	 * providers; Ed25519 derives its nonce from the key and message, keeping the
 	 * ECDSA nonce-reuse leak that exposes a private key out of reach.
 	 */
 	export const Algorithm = SignatureAlgorithm;
@@ -86,8 +92,11 @@ export namespace JWK {
 	export interface SerializedKeyPair {
 		/** Identifier that becomes the `kid`. */
 		id: `${string}-${string}-${string}-${string}-${string}`;
-		/** Algorithm the pair was generated for. */
-		alg: Algorithm;
+		/**
+		 * Algorithm the pair was generated for. A pair stored as `EdDSA`, the name RFC
+		 * 9864 deprecates, imports as `Ed25519`, so stored Edwards keys keep working.
+		 */
+		alg: Algorithm | typeof LEGACY_EDDSA;
 		/** Public key in SPKI PEM form. */
 		publicKey: string;
 		/** Private key in PKCS#8 PEM form. */
@@ -173,8 +182,9 @@ export namespace JWK {
 	 * let keyPair = await JWK.importKeyPair({ id, alg, publicKey, privateKey, created });
 	 */
 	export async function importKeyPair(value: SerializedKeyPair): Promise<KeyPair> {
-		let publicKey = await jose.importSPKI(value.publicKey, value.alg, { extractable: true });
-		let privateKey = await jose.importPKCS8(value.privateKey, value.alg);
+		let alg: Algorithm = value.alg === LEGACY_EDDSA ? Algorithm.Ed25519 : value.alg;
+		let publicKey = await jose.importSPKI(value.publicKey, alg, { extractable: true });
+		let privateKey = await jose.importPKCS8(value.privateKey, alg);
 
 		let jwk = await jose.exportJWK(publicKey);
 		jwk.kid = value.id;
@@ -182,7 +192,7 @@ export namespace JWK {
 
 		return {
 			id: value.id,
-			alg: value.alg,
+			alg,
 			created: new Date(value.created),
 			expired: value.expired,
 			public: publicKey,

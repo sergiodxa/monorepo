@@ -139,7 +139,7 @@ describe("choosing a key out of a set", () => {
 	test("signs with the first key in the set generated for the algorithm asked for", async () => {
 		let current = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.RS256));
 		let retired = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.RS256));
-		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA));
+		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519));
 		let mixed = [edwards, current, ...keys, retired];
 
 		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.RS256, mixed);
@@ -198,6 +198,131 @@ describe("verification failures", () => {
 
 		await expect(JWT.verify(signed, keys, { audience: "client-2" })).rejects.toThrow();
 		await expect(JWT.verify(signed, keys, { audience: "client-1" })).resolves.toBeDefined();
+	});
+});
+
+/**
+ * Signs with an Ed25519 key under the deprecated `EdDSA` header, the way tokens
+ * were issued before RFC 9864 renamed the algorithm.
+ */
+function signLegacyEdwards(pair: JWK.KeyPair): Promise<string> {
+	return new jose.SignJWT({ sub: "user-123" })
+		.setProtectedHeader({ alg: "EdDSA", typ: "JWT", kid: pair.id })
+		.sign(pair.private);
+}
+
+/** Encodes a JSON value as one base64url segment of a compact token. */
+function segment(value: unknown): string {
+	return btoa(JSON.stringify(value)).replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
+}
+
+describe("Ed25519 under its RFC 9864 name", () => {
+	let edwards: JWK.KeyPair;
+
+	beforeAll(async () => {
+		edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519));
+	});
+
+	test("signs new tokens with the fully-specified Ed25519 name", async () => {
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.Ed25519, [edwards]);
+
+		expect(jose.decodeProtectedHeader(signed).alg).toBe("Ed25519");
+		expect(JWK.toJSON([edwards]).keys[0]?.alg).toBe("Ed25519");
+	});
+
+	test("verifies a token signed under EdDSA against a key set published as Ed25519", async () => {
+		let signed = await signLegacyEdwards(edwards);
+		let published = await JWK.importLocal(JWK.toJSON([edwards]));
+
+		let verified = await JWT.verify(signed, published, {
+			algorithms: [JWK.Algorithm.Ed25519],
+		});
+
+		expect(verified.subject).toBe("user-123");
+	});
+
+	test("verifies an Ed25519 token against a key set still published as EdDSA", async () => {
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.Ed25519, [edwards]);
+		let legacy = { keys: JWK.toJSON([edwards]).keys.map((key) => ({ ...key, alg: "EdDSA" })) };
+
+		let verified = await JWT.verify(signed, await JWK.importLocal(legacy));
+
+		expect(verified.subject).toBe("user-123");
+	});
+
+	test("keeps the EdDSA name off any key but an Ed25519 one", async () => {
+		let [ec] = keys;
+		if (!ec) throw new Error("no signing key");
+		let forged = `${segment({ alg: "EdDSA", kid: ec.id })}.${segment({ sub: "admin" })}.c2ln`;
+
+		await expect(JWT.verify(forged, keys)).rejects.toBeInstanceOf(jose.errors.JWKSNoMatchingKey);
+	});
+
+	test("refuses an EdDSA token when only other algorithms are pinned", async () => {
+		let signed = await signLegacyEdwards(edwards);
+
+		await expect(JWT.verify(signed, [edwards], VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JOSEAlgNotAllowed,
+		);
+	});
+});
+
+describe("verification defaults", () => {
+	test("refuses an unsecured token whose `alg` is none", async () => {
+		let unsecured = `${segment({ alg: "none", typ: "JWT" })}.${segment({ sub: "admin" })}.`;
+
+		await expect(JWT.verify(unsecured, keys)).rejects.toBeInstanceOf(jose.errors.JOSEAlgNotAllowed);
+	});
+
+	test("refuses an algorithm outside the supported set when none is pinned", async () => {
+		let secret = new TextEncoder().encode("a-shared-secret-of-at-least-32-bytes");
+		let signed = await new jose.SignJWT({ sub: "admin" })
+			.setProtectedHeader({ alg: "HS256" })
+			.sign(secret);
+
+		await expect(JWT.verify(signed, async () => secret)).rejects.toBeInstanceOf(
+			jose.errors.JOSEAlgNotAllowed,
+		);
+	});
+
+	test("refuses a token whose header names an algorithm its key was not made for", async () => {
+		let rsa = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.RS256));
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.RS256, [rsa]);
+		let [, payload, signature] = signed.split(".");
+		let relabelled = `${segment({ alg: "ES256", kid: rsa.id })}.${payload}.${signature}`;
+
+		await expect(JWT.verify(relabelled, [rsa])).rejects.toBeInstanceOf(
+			jose.errors.JWKSNoMatchingKey,
+		);
+	});
+});
+
+describe("explicit typing", () => {
+	/** An access token, typed `at+jwt` as RFC 9068 requires. */
+	class AccessToken extends JWT {
+		static override type = "at+jwt";
+	}
+
+	test("signs a typed class with its own `typ`, and an untyped one with JWT", async () => {
+		let typed = await new AccessToken({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+		let untyped = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		expect(jose.decodeProtectedHeader(typed).typ).toBe("at+jwt");
+		expect(jose.decodeProtectedHeader(untyped).typ).toBe("JWT");
+	});
+
+	test("verifies a typed token as its own class", async () => {
+		let signed = await new AccessToken({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		await expect(AccessToken.verify(signed, keys, VERIFY)).resolves.toBeInstanceOf(AccessToken);
+	});
+
+	test("refuses a token of another type through a typed class", async () => {
+		let signed = await new JWT({ sub: "user-123" }).sign(JWK.Algorithm.ES256, keys);
+
+		await expect(AccessToken.verify(signed, keys, VERIFY)).rejects.toBeInstanceOf(
+			jose.errors.JWTClaimValidationFailed,
+		);
 	});
 });
 
