@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How `sdxc run` finds and runs your app's command line"
     - "Which commands a new app ships with"
@@ -30,7 +30,8 @@ exit code is `sdxc run`'s, so a script or CI step can rely on it.
 ## How it runs
 
 `sdxc run` finds the project root, the nearest folder with a `package.json`, and runs
-`bootstrap/cli.ts` there:
+`bootstrap/cli.ts` there, or the module `run.entry` names in
+[the configuration](/docs/sdxc/configuration#run):
 
 - with Bun for a project on Bun, as its `packageManager` or lock file says, and with Node
   otherwise;
@@ -38,7 +39,7 @@ exit code is `sdxc run`'s, so a script or CI step can rely on it.
   command that runs `cf` or `vp` gets the project's own version;
 - with its output straight on your terminal, and only the app's own messages when it fails.
 
-A project without `bootstrap/cli.ts` stops with a message naming where the command line goes.
+A project without that module stops with a message naming where the command line goes.
 
 ## The commands a new app has
 
