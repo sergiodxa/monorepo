@@ -431,17 +431,17 @@ describe("Follow", () => {
 	});
 });
 
-describe("publish and delivery", () => {
-	/** A Create of the local article, addressed publicly and to followers. */
-	const CREATE = {
-		id: `${LOCAL_ARTICLE}#create`,
-		type: "Create",
-		actor: LOCAL_ACTOR,
-		to: [PUBLIC],
-		cc: [FOLLOWERS],
-		object: { id: LOCAL_ARTICLE, type: "Article", name: "Remix v3" },
-	} satisfies ActivityPub.Draft<ActivityPub.Activity>;
+/** A Create of the local article, addressed publicly and to followers. */
+const CREATE = {
+	id: `${LOCAL_ARTICLE}#create`,
+	type: "Create",
+	actor: LOCAL_ACTOR,
+	to: [PUBLIC],
+	cc: [FOLLOWERS],
+	object: { id: LOCAL_ARTICLE, type: "Article", name: "Remix v3" },
+} satisfies ActivityPub.Draft<ActivityPub.Activity>;
 
+describe("publish and delivery", () => {
 	test("fans out to each distinct inbox and signs every POST", async () => {
 		await followers.put(follower(ALICE, `${ALICE}/inbox`, "https://mastodon.social/inbox"));
 		await followers.put(
