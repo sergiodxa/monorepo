@@ -17,8 +17,9 @@ npm add @sdxc/workers-cache
 
 Purges answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), the
 `./middleware` entry point runs on `remix/router` from [`remix`](https://www.npmjs.com/package/remix)
-and logs through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and `cacheHops`
-parses with [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields).
+and logs through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) and reads targeted
+fields with [`@sdxc/http`](https://www.npmjs.com/package/@sdxc/http), and `cacheHops` parses
+with [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields).
 
 ## Usage
 
@@ -136,8 +137,11 @@ as declined, and `reset()` clears both and the record; the options arm the same 
 Default export of `@sdxc/workers-cache/middleware`. `options.cache` is a `CacheInterface` or a
 `(context) => CacheInterface` resolver. It publishes `context.cache`:
 
-- `context.cache(policy, ...tags)` or `context.cache({ policy, tags })`: declares the response's
-  caching. Tags accumulate across calls in one request; the last policy wins.
+- `context.cache(policy, ...tags)` or `context.cache({ policy, cdn, cloudflare, tags })`:
+  declares the response's caching. `cdn` and `cloudflare` write
+  [RFC 9213](https://www.rfc-editor.org/rfc/rfc9213) `CDN-Cache-Control` and
+  `Cloudflare-CDN-Cache-Control`, which the edge obeys over `policy`, for an edge-only lifetime.
+  Tags accumulate across calls in one request; the last declaration wins.
 - `context.cache.purge(...tags)`: purges now and answers the `Result`, so a redirect after it
   reads fresh content.
 - `context.cache.purgeLater(...tags)`: purges after the response is produced; a failure is
@@ -146,16 +150,18 @@ Default export of `@sdxc/workers-cache/middleware`. `options.cache` is a `CacheI
 After the handler returns, a declaration is written only for a `GET` or `HEAD` with a status in
 `CACHEABLE_STATUS_CODES`. Such a response with no declaration, and no `Cache-Control` or
 `Expires` of its own, gets `NON_CACHEABLE_POLICY`. When the response carries `Set-Cookie`, or
-the policy is `public` and the request has a session (or, with no session middleware, any
-cookie), the response is downgraded to `NON_CACHEABLE_POLICY` with no tags and a
+the request has a session (or, with no session middleware, any cookie) and either the policy is
+`public` or a valid targeted field lacks `private` and `no-store`, the response is downgraded
+to `NON_CACHEABLE_POLICY` with no tags or targeted fields and a
 `cache.downgraded` warning. In
 development (`NODE_ENV`, or a request to a local host) it throws `UnsafeCachePolicyError`
 instead.
 
 ### Constants
 
-`CACHE_TAG_HEADER`, `CACHE_CONTROL_HEADER` and `CACHE_STATUS_HEADER` (`cf-cache-status`) name
-the headers. `MAX_TAG_LENGTH` is 1024 and `MAX_CACHE_TAG_HEADER_LENGTH` is 16384.
+`CACHE_TAG_HEADER`, `CACHE_CONTROL_HEADER`, `CDN_CACHE_CONTROL_HEADER`,
+`CLOUDFLARE_CDN_CACHE_CONTROL_HEADER` and `CACHE_STATUS_HEADER` (`cf-cache-status`) name the
+headers; `EDGE_TARGETED_HEADERS` is the edge's target list, most specific first. `MAX_TAG_LENGTH` is 1024 and `MAX_CACHE_TAG_HEADER_LENGTH` is 16384.
 `NON_CACHEABLE_POLICY` is `private, no-store`. `CACHEABLE_METHODS` and `CACHEABLE_STATUS_CODES`
 are the sets the middleware checks.
 
@@ -165,7 +171,8 @@ are the sets the middleware checks.
 - `PurgeError`: a purge that did not take effect; `selector` names what stayed cached and
   `cause` holds the platform's error or issues.
 - `UnsafeCachePolicyError` (from `./middleware`): a refused declaration in development, with
-  `reason` (`CacheRefusalReason`: `"set-cookie" | "session-with-public-policy"`) and `policy`.
+  `reason` (`CacheRefusalReason`: `"set-cookie" | "session-with-public-policy" |
+"session-with-shared-targeted-policy"`) and `policy`.
 
 ### Types
 
@@ -214,7 +221,7 @@ The middleware takes no default policy, so keep shared lifetimes as named string
 works; this one is from [`@sdxc/http`](https://www.npmjs.com/package/@sdxc/http):
 
 ```typescript
-import { policy } from "@sdxc/http/cache";
+import { policy, targetedPolicy } from "@sdxc/http/cache";
 
 export let PUBLIC_PAGE = policy({
 	visibility: "public",
@@ -223,6 +230,12 @@ export let PUBLIC_PAGE = policy({
 }).toString();
 
 export let SHORT_LIVED = policy({ visibility: "public", maxAge: "5 minutes" }).toString();
+
+/** Browsers revalidate every time; the edge keeps it a day, until a purge. */
+export let EDGE_DAY = {
+	policy: policy({ visibility: "public", maxAge: 0, mustRevalidate: true }).toString(),
+	cdn: targetedPolicy({ maxAge: "1 day" }),
+};
 ```
 
 ```typescript

@@ -9,12 +9,17 @@
  */
 
 /** Why a declaration was refused and downgraded to a non-cacheable policy. */
-export type CacheRefusalReason = "set-cookie" | "session-with-public-policy";
+export type CacheRefusalReason =
+	| "set-cookie"
+	| "session-with-public-policy"
+	| "session-with-shared-targeted-policy";
 
 /** How each refusal reason reads in an error message and a log payload. */
 const REASON_DESCRIPTIONS: Record<CacheRefusalReason, string> = {
 	"set-cookie": "the response carries a Set-Cookie header",
 	"session-with-public-policy": "the request carried a session and the declared policy is public",
+	"session-with-shared-targeted-policy":
+		"the request carried a session and a CDN-Cache-Control or Cloudflare-CDN-Cache-Control policy lets a CDN store the response",
 };
 
 /**
@@ -25,7 +30,7 @@ export class UnsafeCachePolicyError extends Error {
 	/** Why the declaration was refused. */
 	readonly reason: CacheRefusalReason;
 
-	/** The policy the route declared, kept verbatim for the message and logs. */
+	/** The refused policy a shared cache would have obeyed, kept verbatim for the message and logs. */
 	readonly policy: string;
 
 	/**
@@ -33,7 +38,7 @@ export class UnsafeCachePolicyError extends Error {
 	 * the fix is obvious from the message alone.
 	 *
 	 * @param reason - Which refusal rule matched.
-	 * @param policy - The declared `Cache-Control` value.
+	 * @param policy - The refused value a shared cache would have obeyed.
 	 * @param path - Pathname of the request whose response was refused.
 	 */
 	constructor(reason: CacheRefusalReason, policy: string, path: string) {

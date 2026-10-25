@@ -1,8 +1,8 @@
 /**
- * Covers the cache middleware: declaration recording and tag accumulation, the
- * headers written onto the finished response, every row of the refusal table
- * including the development throw and the undeclared default, what each path
- * records on the log, and the awaited and deferred purges through a recording double.
+ * Covers the cache middleware: declaration recording and tag accumulation, the headers
+ * written onto the finished response, every row of the refusal table including the
+ * development throw, the undeclared default and the targeted fields each CDN obeys, what
+ * each path records on the log, and the awaited and deferred purges through a recording double.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +18,13 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { createTags } from "./create-tags.js";
 import cacheMiddleware from "./middleware.js";
-import { CACHE_CONTROL_HEADER, CACHE_TAG_HEADER, NON_CACHEABLE_POLICY } from "./platform.js";
+import {
+	CACHE_CONTROL_HEADER,
+	CACHE_TAG_HEADER,
+	CDN_CACHE_CONTROL_HEADER,
+	CLOUDFLARE_CDN_CACHE_CONTROL_HEADER,
+	NON_CACHEABLE_POLICY,
+} from "./platform.js";
 import { PurgeError } from "./purge-error.js";
 import { createRecordingCache } from "./recording-cache.js";
 import { UnsafeCachePolicyError } from "./unsafe-cache-policy-error.js";
@@ -645,5 +651,223 @@ describe("cache middleware purging", () => {
 
 		await expect(run).rejects.toThrow("handler failed");
 		expect(recording.purgedTags).toEqual(["posts"]);
+	});
+});
+
+describe("cache middleware targeted fields", () => {
+	/** Opens a context whose session identifies a visitor. */
+	function makeSignedInContext(): RequestContext {
+		let context = makeContext();
+		let session = createSession();
+		session.set("userId", "user_1");
+		context.set(Session, session, { property: "session" });
+		return context;
+	}
+
+	test("writes CDN-Cache-Control and Cloudflare-CDN-Cache-Control beside Cache-Control", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({
+				policy: "public, max-age=60",
+				cdn: "max-age=3600",
+				cloudflare: "max-age=86400",
+				tags: [TAGS.postList()],
+			});
+			return new Response("ok");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe("public, max-age=60");
+		expect(response.headers.get(CDN_CACHE_CONTROL_HEADER)).toBe("max-age=3600");
+		expect(response.headers.get(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe("max-age=86400");
+		expect(response.headers.get(CACHE_TAG_HEADER)).toBe("posts");
+	});
+
+	test("records which field the edge follows on the invocation's log", async () => {
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		await log.run(() =>
+			middleware(context, async () => {
+				context.cache({
+					policy: "public, max-age=60",
+					cdn: "max-age=3600",
+					cloudflare: "max-age=,",
+				});
+				return new Response("ok");
+			}),
+		);
+
+		expect(record()["cache.edge_field"]).toBe(CDN_CACHE_CONTROL_HEADER);
+	});
+
+	test("records Cache-Control as the edge field when no targeted field is declared", async () => {
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		await log.run(() =>
+			middleware(context, async () => {
+				context.cache(PUBLIC_PAGE);
+				return new Response("ok");
+			}),
+		);
+
+		expect(record()["cache.edge_field"]).toBe(CACHE_CONTROL_HEADER);
+	});
+
+	test("replaces earlier targeted fields with a later declaration's", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({ policy: PUBLIC_PAGE, cdn: "max-age=3600", cloudflare: "max-age=86400" });
+			context.cache(PRIVATE_PAGE);
+			return new Response("ok");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(PRIVATE_PAGE);
+		expect(response.headers.has(CDN_CACHE_CONTROL_HEADER)).toBe(false);
+		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
+	});
+
+	test("refuses a CDN-only lifetime on a session-bearing request, even with private Cache-Control", async () => {
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let response = await log.run(() =>
+			middleware(context, async () => {
+				context.cache({ policy: PRIVATE_PAGE, cdn: "max-age=600", tags: [TAGS.postList()] });
+				return new Response("ok");
+			}),
+		);
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CDN_CACHE_CONTROL_HEADER)).toBe(false);
+		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
+		expect(record()["cache.refusal"]).toBe("session-with-shared-targeted-policy");
+		expect(record().notes).toEqual([
+			expect.objectContaining({ name: "cache.downgraded", policy: "max-age=600" }),
+		]);
+	});
+
+	test("refuses a shared CDN-Cache-Control the edge skips for a private Cloudflare field", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({ policy: PRIVATE_PAGE, cdn: "max-age=600", cloudflare: "private" });
+			return new Response("ok");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CDN_CACHE_CONTROL_HEADER)).toBe(false);
+		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
+	});
+
+	test("refuses a public Cache-Control on a session-bearing request despite a private targeted field", async () => {
+		let { log, record } = openLog();
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		await log.run(() =>
+			middleware(context, async () => {
+				context.cache({ policy: PUBLIC_PAGE, cdn: "private" });
+				return new Response("ok");
+			}),
+		);
+
+		expect(record()["cache.refusal"]).toBe("session-with-public-policy");
+	});
+
+	test("keeps targeted fields that withhold the response from CDNs on a session-bearing request", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({ policy: PRIVATE_PAGE, cdn: "private, max-age=60", cloudflare: "no-store" });
+			return new Response("ok");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(PRIVATE_PAGE);
+		expect(response.headers.get(CDN_CACHE_CONTROL_HEADER)).toBe("private, max-age=60");
+		expect(response.headers.get(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe("no-store");
+	});
+
+	test("judges an invalid targeted field as absent, since every cache ignores it", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({ policy: PRIVATE_PAGE, cdn: "max-age=600," });
+			return new Response("ok");
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(PRIVATE_PAGE);
+	});
+
+	test("refuses a shared targeted field the handler set on the response itself", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let response = await middleware(context, async () => {
+			context.cache(PRIVATE_PAGE);
+			return new Response("ok", {
+				headers: { [CLOUDFLARE_CDN_CACHE_CONTROL_HEADER]: "max-age=600" },
+			});
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
+	});
+
+	test("strips targeted fields when a Set-Cookie forces a downgrade", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(context, async () => {
+			context.cache({ policy: PUBLIC_PAGE, cdn: "max-age=600" });
+			return makeImmutable(
+				new Response("ok", {
+					headers: { "Set-Cookie": "flash=1", [CLOUDFLARE_CDN_CACHE_CONTROL_HEADER]: "max-age=60" },
+				}),
+			);
+		});
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CDN_CACHE_CONTROL_HEADER)).toBe(false);
+		expect(response.headers.has(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER)).toBe(false);
+	});
+
+	test("throws in development naming the refused targeted policy", async () => {
+		process.env.NODE_ENV = "development";
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeSignedInContext();
+
+		let run = middleware(context, async () => {
+			context.cache({ policy: PRIVATE_PAGE, cloudflare: "max-age=600" });
+			return new Response("ok");
+		});
+
+		await expect(run).rejects.toMatchObject({
+			reason: "session-with-shared-targeted-policy",
+			policy: "max-age=600",
+		});
+	});
+
+	test("keeps an undeclared response's own targeted field and closes browsers off", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(
+			context,
+			async () => new Response("ok", { headers: { [CDN_CACHE_CONTROL_HEADER]: "max-age=60" } }),
+		);
+
+		expect(response.headers.get(CDN_CACHE_CONTROL_HEADER)).toBe("max-age=60");
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
 	});
 });

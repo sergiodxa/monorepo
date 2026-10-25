@@ -11,6 +11,7 @@
 import type { Result } from "@sdxc/result";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { parseTargetedPolicy } from "@sdxc/http/cache";
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { Session } from "remix/session";
@@ -25,6 +26,9 @@ import {
 	CACHE_TAG_HEADER,
 	CACHEABLE_METHODS,
 	CACHEABLE_STATUS_CODES,
+	CDN_CACHE_CONTROL_HEADER,
+	CLOUDFLARE_CDN_CACHE_CONTROL_HEADER,
+	EDGE_TARGETED_HEADERS,
 	NON_CACHEABLE_POLICY,
 } from "./platform.js";
 import { purge as purgeCache } from "./purge.js";
@@ -88,10 +92,20 @@ const DEVELOPMENT_HOSTNAMES: ReadonlySet<string> = new Set([
  */
 const PUBLIC_DIRECTIVE_PATTERN = /(?:^|[\s,;])public(?:$|[\s,;=])/i;
 
-/** The object form of a declaration, for passing tags as a list. */
+/** The object form of a declaration, for passing tags as a list or edge-only lifetimes. */
 export interface CacheDeclarationOptions {
 	/** The `Cache-Control` value to write when the declaration is not refused. */
 	policy: CachePolicy;
+	/**
+	 * The `CDN-Cache-Control` value, which the edge and any CDN in front of it obey over
+	 * `policy`, so browsers keep `policy`'s lifetime while CDNs keep this one.
+	 */
+	cdn?: CachePolicy;
+	/**
+	 * The `Cloudflare-CDN-Cache-Control` value, which only the edge reads, above `cdn`
+	 * and `policy`; the edge strips it, so no cache past the edge sees it.
+	 */
+	cloudflare?: CachePolicy;
 	/** Tags to add to this request's set; repeats across calls collapse. */
 	tags?: readonly CacheTag[];
 }
@@ -179,6 +193,32 @@ function isPublicPolicy(policy: CachePolicy): boolean {
 	return PUBLIC_DIRECTIVE_PATTERN.test(policy);
 }
 
+/** A targeted field some CDN will obey, and the value it holds. */
+interface TargetedField {
+	name: string;
+	value: string;
+	/** Whether the field lets a CDN store the response for every visitor of its URL. */
+	shared: boolean;
+}
+
+/**
+ * The targeted fields a CDN will obey, in the edge's target-list order, so the first is the
+ * one the edge follows. An absent, empty or invalid field is left out, as caches ignore it;
+ * a targeted field addresses a shared cache, so it stores unless it says `private` or `no-store`.
+ *
+ * @param values - Each targeted field's value, by name, or `null` when absent.
+ */
+function obeyedTargetedFields(values: ReadonlyMap<string, string | null>): TargetedField[] {
+	let fields: TargetedField[] = [];
+	for (let name of EDGE_TARGETED_HEADERS) {
+		let value = values.get(name) ?? null;
+		let parsed = parseTargetedPolicy(value);
+		if (parsed === null || value === null) continue;
+		fields.push({ name, value, shared: !parsed.private && !parsed.noStore });
+	}
+	return fields;
+}
+
 /**
  * Whether a refusal should throw instead of only being logged. `NODE_ENV`
  * decides when it says which mode this is; otherwise a request to a local host
@@ -209,19 +249,19 @@ function statesFreshness(response: Response): boolean {
  * response's headers reject mutation, as platform-produced responses do.
  *
  * @param response - The response the handler produced.
- * @param entries - Header name and value pairs to write.
+ * @param entries - Header name and value pairs to write; a `null` value removes the header.
  * @returns The same response, or an equivalent one carrying the headers.
  */
 function withHeaders(
 	response: Response,
-	entries: readonly (readonly [string, string])[],
+	entries: readonly (readonly [string, string | null])[],
 ): Response {
 	try {
-		for (let [name, value] of entries) response.headers.set(name, value);
+		writeHeaders(response.headers, entries);
 		return response;
 	} catch {
 		let headers = new Headers(response.headers);
-		for (let [name, value] of entries) headers.set(name, value);
+		writeHeaders(headers, entries);
 		return new Response(response.body, {
 			status: response.status,
 			statusText: response.statusText,
@@ -229,6 +269,32 @@ function withHeaders(
 		});
 	}
 }
+
+/**
+ * Applies header writes in order, removing the headers whose value is `null`.
+ *
+ * @param headers - The headers to change.
+ * @param entries - Header name and value pairs; a `null` value removes the header.
+ */
+function writeHeaders(
+	headers: Headers,
+	entries: readonly (readonly [string, string | null])[],
+): void {
+	for (let [name, value] of entries) {
+		if (value === null) headers.delete(name);
+		else headers.set(name, value);
+	}
+}
+
+/**
+ * The writes that downgrade a response: `Cache-Control` stops every cache, and the targeted
+ * fields go, since the edge would otherwise obey them over `Cache-Control` and store it.
+ */
+const DOWNGRADE_HEADERS: readonly (readonly [string, string | null])[] = [
+	[CACHE_CONTROL_HEADER, NON_CACHEABLE_POLICY],
+	[CLOUDFLARE_CDN_CACHE_CONTROL_HEADER, null],
+	[CDN_CACHE_CONTROL_HEADER, null],
+];
 
 /**
  * Creates a middleware publishing `context.cache`; a route that never declares is
@@ -247,18 +313,21 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 	return async (context, next) => {
 		let cacheInterface = resolveCache(context);
 		let policy: CachePolicy | undefined;
+		let targeted = new Map<string, CachePolicy>();
 		let tags = new Set<CacheTag>();
 		let deferred = new Set<CacheTag>();
 
 		/**
 		 * Records a declaration. Tags accumulate across every call in the request so
 		 * a controller-scoped middleware and its handler contribute to one header,
-		 * while the policy is replaced, since only one lifetime can be written.
+		 * while the policy and its targeted fields are replaced together as one lifetime.
 		 */
 		function declare(
 			policyOrDeclaration: CachePolicy | CacheDeclarationOptions,
 			...rest: CacheTag[]
 		): void {
+			targeted.clear();
+
 			if (typeof policyOrDeclaration === "string") {
 				policy = policyOrDeclaration;
 				for (let tag of rest) tags.add(tag);
@@ -266,6 +335,12 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 			}
 
 			policy = policyOrDeclaration.policy;
+			if (policyOrDeclaration.cloudflare !== undefined) {
+				targeted.set(CLOUDFLARE_CDN_CACHE_CONTROL_HEADER, policyOrDeclaration.cloudflare);
+			}
+			if (policyOrDeclaration.cdn !== undefined) {
+				targeted.set(CDN_CACHE_CONTROL_HEADER, policyOrDeclaration.cdn);
+			}
 			for (let tag of policyOrDeclaration.tags ?? []) tags.add(tag);
 		}
 
@@ -289,9 +364,11 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 		 * it can be filtered for, and development additionally throws because the
 		 * route asked for something unsafe.
 		 */
-		function refuse(response: Response, reason: CacheRefusalReason): Response {
-			let declaredPolicy = policy ?? "";
-
+		function refuse(
+			response: Response,
+			reason: CacheRefusalReason,
+			declaredPolicy: string,
+		): Response {
 			currentLog()
 				?.set({ cache: { downgraded: true, refusal: reason } })
 				.warn(DOWNGRADE_EVENT, { reason, policy: declaredPolicy });
@@ -300,13 +377,13 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 				throw new UnsafeCachePolicyError(reason, declaredPolicy, context.url.pathname);
 			}
 
-			return withHeaders(response, [[CACHE_CONTROL_HEADER, NON_CACHEABLE_POLICY]]);
+			return withHeaders(response, DOWNGRADE_HEADERS);
 		}
 
 		/**
-		 * Applies the declaration to the finished response. An undeclared response that states
-		 * no freshness of its own is marked non-cacheable, because Workers Cache stores a
-		 * header-less `200` for two hours under a key that ignores the visitor's cookies.
+		 * Applies the declaration, judging safety by every field some shared cache obeys:
+		 * `Cache-Control` and each valid targeted field. An undeclared response stating no freshness
+		 * is marked non-cacheable, since Workers Cache stores a header-less `200` for two hours.
 		 */
 		function apply(response: Response): Response {
 			if (!CACHEABLE_METHODS.has(context.method.toUpperCase())) return response;
@@ -317,14 +394,33 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 				return withHeaders(response, [[CACHE_CONTROL_HEADER, NON_CACHEABLE_POLICY]]);
 			}
 
-			if (response.headers.has("Set-Cookie")) return refuse(response, "set-cookie");
+			if (response.headers.has("Set-Cookie")) return refuse(response, "set-cookie", policy);
+
+			let fields = obeyedTargetedFields(
+				new Map(
+					EDGE_TARGETED_HEADERS.map((name) => [
+						name,
+						targeted.get(name) ?? response.headers.get(name),
+					]),
+				),
+			);
+			let shared = fields.find((field) => field.shared);
 			if (isPublicPolicy(policy) && hasSession(context)) {
-				return refuse(response, "session-with-public-policy");
+				return refuse(response, "session-with-public-policy", policy);
+			}
+			if (shared && hasSession(context)) {
+				return refuse(response, "session-with-shared-targeted-policy", shared.value);
 			}
 
-			currentLog()?.set({ cache: { policy, tag_count: tags.size } });
+			currentLog()?.set({
+				cache: {
+					policy,
+					edge_field: fields[0]?.name ?? CACHE_CONTROL_HEADER,
+					tag_count: tags.size,
+				},
+			});
 
-			let headers: [string, string][] = [[CACHE_CONTROL_HEADER, policy]];
+			let headers: [string, string][] = [[CACHE_CONTROL_HEADER, policy], ...targeted];
 			if (tags.size > 0) headers.push([CACHE_TAG_HEADER, cacheTag([...tags])]);
 			return withHeaders(response, headers);
 		}

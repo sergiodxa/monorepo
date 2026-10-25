@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/http": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*"

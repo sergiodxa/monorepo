@@ -14,6 +14,27 @@ export const CACHE_TAG_HEADER = "Cache-Tag";
 /** Response header carrying the freshness policy a declaration asked for. */
 export const CACHE_CONTROL_HEADER = "Cache-Control";
 
+/**
+ * RFC 9213 field addressing every CDN on the path. The platform obeys it over
+ * `Cache-Control` and forwards it, so a CDN in front of this one honors it too.
+ */
+export const CDN_CACHE_CONTROL_HEADER = "CDN-Cache-Control";
+
+/**
+ * Field addressing only this platform's edge, which obeys it over every other
+ * cache field and strips it before the response leaves, so no other cache sees it.
+ */
+export const CLOUDFLARE_CDN_CACHE_CONTROL_HEADER = "Cloudflare-CDN-Cache-Control";
+
+/**
+ * The edge's RFC 9213 target list, most specific first: it follows the first field
+ * here that holds a valid, non-empty Dictionary, and `Cache-Control` only when none does.
+ */
+export const EDGE_TARGETED_HEADERS: readonly string[] = [
+	CLOUDFLARE_CDN_CACHE_CONTROL_HEADER,
+	CDN_CACHE_CONTROL_HEADER,
+];
+
 /** Response header the platform reports its cache decision in. */
 export const CACHE_STATUS_HEADER = "cf-cache-status";
 

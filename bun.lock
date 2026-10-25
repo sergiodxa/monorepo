@@ -2383,6 +2383,7 @@
       "name": "@sdxc/workers-cache",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/http": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
