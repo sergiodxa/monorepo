@@ -5,14 +5,38 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { DoH } from "./types.js";
 
 /** Every failure `resolve` returns; `instanceof` on it narrows to a lookup failure. */
 export class DoHError extends Error {
 	override name = "DoHError";
 }
 
+/** A failure the resolver answered with a DNS message, so it may say why with RFC 8914 extended errors. */
+export class AnsweredError extends DoHError {
+	override name = "AnsweredError";
+
+	/** The resolver's RFC 8914 extended errors; a `json` resolver's are always empty. */
+	readonly extendedErrors: DoH.ExtendedError[];
+
+	/**
+	 * @param message - What went wrong, the first extended error appended when there is one.
+	 * @param extendedErrors - The extended errors the answer carried.
+	 */
+	constructor(message: string, extendedErrors: DoH.ExtendedError[]) {
+		let [first] = extendedErrors;
+		super(first ? `${message}; extended error ${describe(first)}` : message);
+		this.extendedErrors = extendedErrors;
+	}
+}
+
+/** An extended error as one phrase: its code, and the resolver's text when it sent some. */
+function describe(error: DoH.ExtendedError): string {
+	return error.text ? `${error.code}: ${error.text}` : String(error.code);
+}
+
 /** RCODE 3 (NXDOMAIN): the name does not exist. */
-export class NameNotFoundError extends DoHError {
+export class NameNotFoundError extends AnsweredError {
 	override name = "NameNotFoundError";
 
 	/**
@@ -28,36 +52,46 @@ export class NameNotFoundError extends DoHError {
 	 * @param queried - The name that was looked up.
 	 * @param ttl - The negative-caching TTL, when known.
 	 * @param authenticated - Whether the answer carried the AD flag.
+	 * @param extendedErrors - The answer's RFC 8914 extended errors.
 	 */
-	constructor(queried: string, ttl: number | null, authenticated = false) {
-		super(`${queried} does not exist (NXDOMAIN)`);
+	constructor(
+		queried: string,
+		ttl: number | null,
+		authenticated = false,
+		extendedErrors: DoH.ExtendedError[] = [],
+	) {
+		super(`${queried} does not exist (NXDOMAIN)`, extendedErrors);
 		this.ttl = ttl;
 		this.authenticated = authenticated;
 	}
 }
 
 /** RCODE 2 (SERVFAIL): the resolver could not answer, a DNSSEC validation failure included. */
-export class ServerFailureError extends DoHError {
+export class ServerFailureError extends AnsweredError {
 	override name = "ServerFailureError";
 
-	/** @param queried - The name that was looked up. */
-	constructor(queried: string) {
-		super(`The resolver failed to answer for ${queried} (SERVFAIL)`);
+	/**
+	 * @param queried - The name that was looked up.
+	 * @param extendedErrors - The answer's RFC 8914 extended errors, such as `6` for DNSSEC Bogus.
+	 */
+	constructor(queried: string, extendedErrors: DoH.ExtendedError[] = []) {
+		super(`The resolver failed to answer for ${queried} (SERVFAIL)`, extendedErrors);
 	}
 }
 
 /** Any other non-zero RCODE: FORMERR, NOTIMP, REFUSED and the rest. */
-export class ResponseCodeError extends DoHError {
+export class ResponseCodeError extends AnsweredError {
 	override name = "ResponseCodeError";
 
 	readonly rcode: number;
 
 	/**
 	 * @param queried - The name that was looked up.
-	 * @param rcode - The DNS response code the resolver returned.
+	 * @param rcode - The DNS response code the resolver returned, extended RCODEs included.
+	 * @param extendedErrors - The answer's RFC 8914 extended errors.
 	 */
-	constructor(queried: string, rcode: number) {
-		super(`The resolver answered ${queried} with response code ${rcode}`);
+	constructor(queried: string, rcode: number, extendedErrors: DoH.ExtendedError[] = []) {
+		super(`The resolver answered ${queried} with response code ${rcode}`, extendedErrors);
 		this.rcode = rcode;
 	}
 }

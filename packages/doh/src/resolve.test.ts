@@ -241,16 +241,110 @@ describe("resolve", () => {
 
 	test("returns an unknown type's records with raw data", async () => {
 		answerWith(
-			envelope("example.com", 65, {
-				Answer: [{ name: "example.com.", type: 65, TTL: 300, data: '1 . alpn="h3,h2"' }],
+			envelope("example.com", 44, {
+				Answer: [{ name: "example.com.", type: 44, TTL: 300, data: "4 2 ABCDEF" }],
 			}),
 		);
 
-		let answer = unwrap(await resolve("example.com", "HTTPS"));
+		let answer = unwrap(await resolve("example.com", "SSHFP"));
 
 		expect(answer.records).toEqual([
-			{ name: "example.com", ttl: 300, type: "HTTPS", data: '1 . alpn="h3,h2"' },
+			{ name: "example.com", ttl: 300, type: "SSHFP", data: "4 2 ABCDEF" },
 		]);
+	});
+
+	test("returns typed HTTPS, SVCB, TLSA, DS and DNSKEY records", async () => {
+		answerWith(
+			envelope("example.com", 65, {
+				Answer: [
+					{
+						name: "example.com.",
+						type: 65,
+						TTL: 300,
+						data: '1 . alpn="h3,h2" ipv4hint=192.0.2.1',
+					},
+				],
+			}),
+		);
+		let https = unwrap(await resolve("example.com", "HTTPS"));
+		expectTypeOf(https.records).toEqualTypeOf<DoH.HTTPSRecord[]>();
+		expect(https.records).toEqual([
+			{
+				name: "example.com",
+				ttl: 300,
+				type: "HTTPS",
+				priority: 1,
+				target: ".",
+				params: { alpn: ["h3", "h2"], ipv4Hint: ["192.0.2.1"] },
+			},
+		]);
+
+		answerWith(
+			envelope("_dns.example.com", 64, {
+				Answer: [
+					{
+						name: "_dns.example.com.",
+						type: 64,
+						TTL: 300,
+						data: "\\# 25 0010 03666f6f076578616d706c6503636f6d00 0003 0002 0035",
+					},
+				],
+			}),
+		);
+		expect(unwrap(await resolve("_dns.example.com", "SVCB")).records).toMatchObject([
+			{ type: "SVCB", priority: 16, target: "foo.example.com", params: { port: 53 } },
+		]);
+
+		answerWith(
+			envelope("_443._tcp.www.example.com", 52, {
+				Answer: [
+					{
+						name: "_443._tcp.www.example.com.",
+						type: 52,
+						TTL: 3600,
+						data: "0 0 1 d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb106618e971",
+					},
+				],
+			}),
+		);
+		let tlsa = unwrap(await resolve("_443._tcp.www.example.com", "TLSA"));
+		expectTypeOf(tlsa.records).toEqualTypeOf<DoH.TLSARecord[]>();
+		expect(tlsa.records).toMatchObject([{ usage: 0, selector: 0, matchingType: 1 }]);
+
+		answerWith(
+			envelope("dskey.example.com", 43, {
+				AD: true,
+				Answer: [
+					{
+						name: "dskey.example.com.",
+						type: 43,
+						TTL: 86400,
+						data: "60485 5 1 2BB183AF5F22588179A53B0A98631FAD1A292118",
+					},
+				],
+			}),
+		);
+		let ds = unwrap(await resolve("dskey.example.com", "DS"));
+		expectTypeOf(ds.records).toEqualTypeOf<DoH.DSRecord[]>();
+		expect(ds.authenticated).toBe(true);
+		expect(ds.records).toMatchObject([
+			{
+				keyTag: 60485,
+				algorithm: 5,
+				digestType: 1,
+				digest: "2bb183af5f22588179a53b0a98631fad1a292118",
+			},
+		]);
+
+		answerWith(
+			envelope("example.com", 48, {
+				Answer: [{ name: "example.com.", type: 48, TTL: 3600, data: "257 3 13 q80=" }],
+			}),
+		);
+		let keys = unwrap(await resolve("example.com", "DNSKEY"));
+		expectTypeOf(keys.records).toEqualTypeOf<DoH.DNSKEYRecord[]>();
+		expect(keys.records).toMatchObject([{ secureEntryPoint: true, keyTag: 45019 }]);
+		expect(keys.extendedErrors).toEqual([]);
 	});
 
 	test("reports the TC flag", async () => {

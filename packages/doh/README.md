@@ -82,22 +82,28 @@ if (!verdict.allowed) verdict.reason; // "not-authorized", "forbidden", "lookup-
 Looks up `name`'s records of `type` with one `fetch` and no state. Send an internationalized name
 in its ASCII (punycode) form. Options:
 
-- `resolver`: `CLOUDFLARE` (default), `GOOGLE`, or any `{ url, format: "json" }`
-- `dnssec`: sets `do=1`
-- `checkingDisabled`: sets `cd=1`
+- `resolver`: `CLOUDFLARE` (default), `GOOGLE`, their RFC 8484 wire-format endpoints
+  `CLOUDFLARE_WIRE` and `GOOGLE_WIRE`, or any `{ url, format: "json" | "wire" }`
+- `dnssec`: sets the DO bit
+- `checkingDisabled`: sets the CD bit
 - `signal`: aborts the request
 - `timeoutMs`: abandons the request as a `TransportError`, default `5000`
 
 The answer holds `records`, `unparsed` (records of the type whose data did not parse, with their
 raw `data`), `chain` (the CNAMEs followed to reach `records`), `ttl` (smallest across `records`
 and `unparsed`, `null` when both are empty), `authenticated` (the AD flag), `truncated` (the TC
-flag), `name`, `type` and `durationMs`. Names come back lowercased without the trailing dot, and
+flag), `extendedErrors` (RFC 8914 `{ code, text }` from a `"wire"` resolver), `name`, `type` and
+`durationMs`. Names come back lowercased without the trailing dot, and
 AAAA addresses in RFC 5952 form.
 
 Typed record fields: `A` and `AAAA` (`address`), `CNAME`, `PTR` and `DNAME` (`target`), `NS`
 (`host`), `MX` (`preference`, `exchange`), `TXT` (`text`, `strings`), `CAA` (`flags`, `critical`,
 `tag`, `value`), `SRV` (`priority`, `weight`, `port`, `target`), `SOA` (`primary`, `mailbox`,
-`serial`, `refresh`, `retry`, `expire`, `minimum`). Any other type gives a raw `data` string.
+`serial`, `refresh`, `retry`, `expire`, `minimum`), `SVCB` and `HTTPS` (`priority`, `target`,
+`params`), `TLSA` (`usage`, `selector`, `matchingType`, `certificateAssociation`), `DS` and `CDS`
+(`keyTag`, `algorithm`, `digestType`, `digest`), `DNSKEY` and `CDNSKEY` (`flags`, `zoneKey`,
+`secureEntryPoint`, `protocol`, `algorithm`, `publicKey`, `keyTag`). Any other type gives a raw
+`data` string.
 
 ### `verifyTxtRecord(name, expected, options?): Promise<Result<boolean, DoHError>>`
 
@@ -110,19 +116,21 @@ Whether `name` aliases `target`, directly or through up to eight CNAME hops, com
 case-insensitively without the trailing dot. It holds even when the target resolves to nothing.
 NXDOMAIN is `success(false)`.
 
-### `CLOUDFLARE` / `GOOGLE`
+### `CLOUDFLARE` / `GOOGLE` / `CLOUDFLARE_WIRE` / `GOOGLE_WIRE`
 
-The resolvers `https://cloudflare-dns.com/dns-query` and `https://dns.google/resolve`, ready to
-pass as `resolver`.
+The resolvers `https://cloudflare-dns.com/dns-query` and `https://dns.google/resolve` in the JSON
+API, and `https://cloudflare-dns.com/dns-query` and `https://dns.google/dns-query` in RFC 8484
+wire format, which also reports RFC 8914 extended errors.
 
 ### Errors
 
 | Class                | When                                                                       | Extra fields                                                     |
 | -------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `DoHError`           | Base of every failure                                                      |                                                                  |
+| `AnsweredError`      | Base of the three below                                                    | `extendedErrors`: RFC 8914 `{ code, text }`, from `"wire"` only  |
 | `NameNotFoundError`  | NXDOMAIN (RCODE 3)                                                         | `ttl`: the SOA's negative-caching TTL or `null`; `authenticated` |
 | `ServerFailureError` | SERVFAIL (RCODE 2), DNSSEC validation failures included                    |                                                                  |
-| `ResponseCodeError`  | Any other non-zero RCODE                                                   | `rcode`                                                          |
+| `ResponseCodeError`  | Any other non-zero RCODE, extended RCODEs included                         | `rcode`                                                          |
 | `TransportError`     | Network error, timeout, abort, non-2xx, or a body that is not a DNS answer | `status`: the HTTP status, `null` when no response arrived       |
 
 ### `parseCaaProperty(record): CAA.Property` from `./caa`
@@ -177,7 +185,8 @@ does: `unreadable` when the set holds a record that does not parse, and `lookup-
 ### Types
 
 - `DoH`: `RecordType`, `Resolver`, `ResolveOptions`, `Answer<Type>`, `RecordFor<Type>`,
-  `RecordBase`, `UnknownRecord`, and one alias per typed record (`ARecord` through `SOARecord`).
+  `RecordBase`, `UnknownRecord`, `ExtendedError`, and one alias per typed record (`ARecord`
+  through `CDNSKEYRecord`).
 - `CAA` (from `./caa`): `Record`, `Parameter`, `Property` and its three variants, `RelevantSet`,
   `Request`, `Decision`, `Verdict`, and one interface per reason. Every one but `LookupFailed` is
   plain data, ready to log or store.

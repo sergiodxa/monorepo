@@ -10,6 +10,7 @@
 export type { DoH } from "./types.js";
 
 export {
+	AnsweredError,
 	DoHError,
 	NameNotFoundError,
 	ResponseCodeError,
@@ -17,5 +18,5 @@ export {
 	TransportError,
 } from "./errors.js";
 export { resolve } from "./resolve.js";
-export { CLOUDFLARE, GOOGLE } from "./resolvers.js";
+export { CLOUDFLARE, CLOUDFLARE_WIRE, GOOGLE, GOOGLE_WIRE } from "./resolvers.js";
 export { checkCname, verifyTxtRecord } from "./verify.js";
