@@ -2058,6 +2058,7 @@
         "@sdxc/jmap": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/jscalendar": "workspace:*",
+        "@sdxc/jscontact": "workspace:*",
         "@sdxc/json-canonical": "workspace:*",
         "@sdxc/json-feed": "workspace:*",
         "@sdxc/json-patch": "workspace:*",
