@@ -1919,6 +1919,7 @@
         "@sdxc/doh": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/email-address": "workspace:*",
+        "@sdxc/email-auth": "workspace:*",
         "@sdxc/epub": "workspace:*",
         "@sdxc/expression": "workspace:*",
         "@sdxc/feed": "workspace:*",
