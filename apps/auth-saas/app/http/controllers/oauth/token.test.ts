@@ -231,6 +231,32 @@ describe("authorization_code grant", () => {
 		);
 	}
 
+	test("exchanges a code without redirect_uri, as an OAuth 2.1 client sends it", async () => {
+		let { client, secret } = await createTestClient();
+		let { subjectId, sessionId } = await createTestSubjectAndSession();
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId,
+		});
+
+		let response = await buildRouter().fetch(
+			tokenRequest(
+				{ grant_type: "authorization_code", code, code_verifier: codeVerifier },
+				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
+			),
+		);
+
+		expect(response.status).toBe(200);
+	});
+
+	test("refuses a redirect_uri that differs from the code's", async () => {
+		let response = await exchangeWithBasic(() => ({ redirect_uri: "https://example.com/other" }));
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as Record<string, unknown>).error).toBe("invalid_grant");
+	});
+
 	test("accepts a body client_id naming the client Basic authenticated", async () => {
 		let response = await exchangeWithBasic((clientId) => ({ client_id: clientId }));
 

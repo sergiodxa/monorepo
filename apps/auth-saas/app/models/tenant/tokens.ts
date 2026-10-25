@@ -616,7 +616,11 @@ async function sessionFor(db: Database, sessionId: string): Promise<SessionAmrAn
 export interface ExchangeCodeInput {
 	code: string;
 	codeVerifier: string;
-	redirectUri: string;
+	/**
+	 * The redirect URI the client sent, checked against the code's when present. An OAuth
+	 * 2.1 client omits it (draft-ietf-oauth-v2-1 §4.1.3), PKCE binding the code instead.
+	 */
+	redirectUri: string | null;
 	clientId: string;
 	clientSecret: string | null;
 	authScheme: AuthScheme;
@@ -630,7 +634,7 @@ export interface ExchangeCodeInput {
 let ExchangeCodeSchema = s.object({
 	code: s.string(),
 	codeVerifier: s.string(),
-	redirectUri: s.string(),
+	redirectUri: s.nullable(s.string()),
 	clientId: s.string(),
 	clientSecret: s.nullable(s.string()),
 	authScheme: AuthSchemeSchema,
@@ -695,7 +699,9 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		};
 	}
 
-	if (redeemedRow.client_id !== client.id || redeemedRow.redirect_uri !== parsed.redirectUri) {
+	let redirectMismatch =
+		parsed.redirectUri !== null && redeemedRow.redirect_uri !== parsed.redirectUri;
+	if (redeemedRow.client_id !== client.id || redirectMismatch) {
 		return {
 			kind: "error",
 			status: 400,

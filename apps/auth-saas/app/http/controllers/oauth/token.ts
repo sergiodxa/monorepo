@@ -212,24 +212,15 @@ export default createAction(routes.token, async (ctx) => {
 	if (grantType === "authorization_code") {
 		let code = form.get("code");
 		let codeVerifier = form.get("code_verifier");
-		let redirectUri = form.get("redirect_uri");
 
-		if (
-			typeof code !== "string" ||
-			typeof codeVerifier !== "string" ||
-			typeof redirectUri !== "string"
-		) {
-			return tokenError(
-				400,
-				"invalid_request",
-				"code, code_verifier, and redirect_uri are required.",
-			);
+		if (typeof code !== "string" || typeof codeVerifier !== "string") {
+			return tokenError(400, "invalid_request", "code and code_verifier are required.");
 		}
 
 		outcome = await ctx.tenantStub.exchangeCode({
 			code,
 			codeVerifier,
-			redirectUri,
+			redirectUri: stringField(form, "redirect_uri"),
 			clientId: clientAuth.auth.clientId,
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme: clientAuth.auth.authScheme,
