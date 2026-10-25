@@ -3461,6 +3461,8 @@ export default {
 				eppStatuses: "レジストリのステータス",
 				never: "なし",
 				notPublished: "公開されていません",
+				hiddenByRegistry: "レジストリにより非公開",
+				registrant: "登録者",
 
 				statuses: {
 					unknown: "未取得",

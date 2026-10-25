@@ -3530,6 +3530,8 @@ export default {
 				eppStatuses: "Registry-Status",
 				never: "Nie",
 				notPublished: "Nicht veröffentlicht",
+				hiddenByRegistry: "Von der Registry verborgen",
+				registrant: "Inhaber",
 
 				statuses: {
 					unknown: "Noch nicht abgefragt",

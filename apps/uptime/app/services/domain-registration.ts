@@ -76,6 +76,8 @@ export interface RegistrationPatch {
 	registration_expires_at?: number | null;
 	registration_epp_statuses?: string[];
 	registrar?: string | null;
+	registrant?: string | null;
+	registration_redacted?: string[];
 	registration_checked_at?: number;
 	registration_error: string | null;
 	registration_failures: number;
@@ -103,6 +105,8 @@ export function registrationOutcome(
 			registration_expires_at: lookup.data.expiresAt,
 			registration_epp_statuses: lookup.data.status,
 			registrar: lookup.data.registrar?.name ?? null,
+			registrant: registrantOf(lookup.data),
+			registration_redacted: redactedFields(lookup.data),
 			registration_checked_at: now,
 			registration_error: null,
 			registration_failures: 0,
@@ -129,6 +133,36 @@ export function registrationOutcome(
 		registration_failures: failures,
 		registration_next_check_at: retryAt,
 	};
+}
+
+/** The registrant contact's organization, or its name when it has none. */
+function registrantOf(domain: RDAP.Domain): string | null {
+	let registrant = domain.contacts.find((contact) => contact.roles.includes("registrant"));
+	return registrant?.organization ?? registrant?.name ?? null;
+}
+
+/** The distinct fields the registry redacted, in the order its response lists them. */
+function redactedFields(domain: RDAP.Domain): string[] {
+	return [...new Set(domain.redacted.flatMap((redaction) => redaction.field ?? []))];
+}
+
+/**
+ * Whether the registry withheld a field at the last lookup, so a page says "hidden by the
+ * registry" rather than "not published". A contact redacted whole hides each of its fields.
+ *
+ * @param redacted - The stored `registration_redacted`
+ * @param fields - The fields that make up the value shown, such as a contact's name and organization
+ * @returns `true` when any of them was redacted
+ */
+export function hiddenByRegistry(
+	redacted: readonly string[] | null,
+	fields: readonly RDAP.Field[],
+): boolean {
+	if (redacted === null) return false;
+	return fields.some((field) => {
+		let role = field.split(".")[0];
+		return redacted.includes(field) || redacted.includes(`${role}.contact`);
+	});
 }
 
 /**

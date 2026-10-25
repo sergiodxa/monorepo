@@ -17,6 +17,7 @@ import { describe, expect, test } from "vitest";
 import type { RegistrationState } from "./domain-registration";
 
 import {
+	hiddenByRegistry,
 	registrationIsDown,
 	registrationOutcome,
 	shouldAlertOnRegistration,
@@ -48,9 +49,11 @@ function domain(days: number | null, status: string[] = ["clientTransferProhibit
 		updatedAt: null,
 		status,
 		registrar: { name: "Example Registrar, LLC", ianaId: "9999", abuseEmail: null },
+		contacts: [],
 		nameservers: [],
 		dnssec: null,
 		relatedUrl: null,
+		redacted: [],
 		server: "https://rdap.verisign.com/com/v1/domain/acme-widgets.com",
 		document: {},
 	};
@@ -65,11 +68,55 @@ describe("registrationOutcome", () => {
 			registration_expires_at: NOW + 200 * DAY_MS,
 			registration_epp_statuses: ["clientTransferProhibited"],
 			registrar: "Example Registrar, LLC",
+			registrant: null,
+			registration_redacted: [],
 			registration_checked_at: NOW,
 			registration_error: null,
 			registration_failures: 0,
 			registration_next_check_at: NOW + DAY_MS,
 		});
+	});
+
+	test("a success stores the registrant and the fields the registry redacted", () => {
+		let redaction = (field: RDAP.Field | null): RDAP.Redaction => ({
+			name: "Redacted",
+			registered: false,
+			field,
+			method: "removal",
+			prePath: null,
+			postPath: null,
+			replacementPath: null,
+			pathLang: "jsonpath",
+			reason: null,
+		});
+		let registrant = {
+			roles: ["registrant"],
+			handle: null,
+			kind: null,
+			name: null,
+			organization: "Acme Widgets",
+			emails: [],
+			phones: [],
+			faxes: [],
+			address: null,
+			contactUri: null,
+			url: null,
+			card: null,
+		};
+		let lookup = {
+			...domain(200),
+			contacts: [registrant],
+			redacted: [
+				redaction("registrant.name"),
+				redaction("registrant.name"),
+				redaction(null),
+				redaction("technical.contact"),
+			],
+		};
+		let patch = registrationOutcome(state(), success(lookup), NOW);
+
+		expect(patch.registrant).toBe("Acme Widgets");
+		expect(patch.registration_redacted).toEqual(["registrant.name", "technical.contact"]);
 	});
 
 	test("classifies against the monitor's own warning window", () => {
@@ -202,5 +249,16 @@ describe("registrationIsDown", () => {
 		expect(registrationIsDown("expired", [])).toBe(true);
 		expect(registrationIsDown("valid", ["clientHold"])).toBe(true);
 		expect(registrationIsDown("expiring", ["clientTransferProhibited"])).toBe(false);
+	});
+});
+
+describe("hiddenByRegistry", () => {
+	test("answers for a redacted field, or one of a contact redacted whole", () => {
+		expect(
+			hiddenByRegistry(["registrant.name"], ["registrant.name", "registrant.organization"]),
+		).toBe(true);
+		expect(hiddenByRegistry(["registrant.contact"], ["registrant.organization"])).toBe(true);
+		expect(hiddenByRegistry(["technical.name"], ["registrant.name"])).toBe(false);
+		expect(hiddenByRegistry(null, ["registrant.name"])).toBe(false);
 	});
 });

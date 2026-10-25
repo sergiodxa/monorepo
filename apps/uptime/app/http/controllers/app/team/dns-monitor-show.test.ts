@@ -364,6 +364,30 @@ describe("dnsMonitorShow", () => {
 		expect(body).toContain("2026");
 	});
 
+	test("says the registry hid the registrant rather than calling it unpublished", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Production DNS",
+				domain: "example.com",
+				registration_status: "valid",
+				registrar: "Example Registrar, LLC",
+				registration_redacted: ["registrant.name", "registrant.organization"],
+				registration_checked_at: Date.UTC(2026, 9, 8),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Registrant");
+		expect(body).toContain("Hidden by the registry");
+		expect(body).toContain("Example Registrar, LLC");
+	});
+
 	test("explains a registration the registry cannot publish", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(

@@ -24,6 +24,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { hiddenByRegistry } from "~/app/services/domain-registration";
 import { badgeVariant } from "~/resources/components/badge";
 import RegistrationBadge from "~/resources/components/registration-badge";
 import StatCard from "~/resources/components/stat-card";
@@ -200,7 +201,28 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 									label={ctx.intl.t("page.dnsMonitorDetail.registration.registrar")}
 									value={
 										monitor.registrar ??
-										ctx.intl.t("page.dnsMonitorDetail.registration.notPublished")
+										ctx.intl.t(
+											hiddenByRegistry(monitor.registration_redacted, [
+												"registrar.name",
+												"registrar.organization",
+											])
+												? "page.dnsMonitorDetail.registration.hiddenByRegistry"
+												: "page.dnsMonitorDetail.registration.notPublished",
+										)
+									}
+								/>
+								<StatCard
+									label={ctx.intl.t("page.dnsMonitorDetail.registration.registrant")}
+									value={
+										monitor.registrant ??
+										ctx.intl.t(
+											hiddenByRegistry(monitor.registration_redacted, [
+												"registrant.name",
+												"registrant.organization",
+											])
+												? "page.dnsMonitorDetail.registration.hiddenByRegistry"
+												: "page.dnsMonitorDetail.registration.notPublished",
+										)
 									}
 								/>
 								<StatCard

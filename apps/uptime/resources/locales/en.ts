@@ -3544,6 +3544,8 @@ export default {
 				eppStatuses: "Registry statuses",
 				never: "Never",
 				notPublished: "Not published",
+				hiddenByRegistry: "Hidden by the registry",
+				registrant: "Registrant",
 
 				statuses: {
 					unknown: "Not looked up yet",

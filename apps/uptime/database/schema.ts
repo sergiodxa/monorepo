@@ -379,6 +379,10 @@ export const dnsMonitors = table({
 		/** EPP statuses from the last successful lookup, such as `clientTransferProhibited`. */
 		registration_epp_statuses: (c.json() as ColumnBuilder<Array<string>>).nullable(),
 		registrar: c.text().nullable(),
+		/** The registrant's organization, or its name when it has none. */
+		registrant: c.text().nullable(),
+		/** RFC 9537 fields the registry withheld, such as `registrant.name`; `null` before the first lookup. */
+		registration_redacted: (c.json() as ColumnBuilder<Array<string>>).nullable(),
 		registration_warning_days: c.integer().default(30),
 		/** When a lookup last succeeded; a failure leaves it, so its age measures the outage. */
 		registration_checked_at: c.integer().nullable(),

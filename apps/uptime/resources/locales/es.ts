@@ -3514,6 +3514,8 @@ export default {
 				eppStatuses: "Estados del registro",
 				never: "Nunca",
 				notPublished: "No publicado",
+				hiddenByRegistry: "Oculto por el registro",
+				registrant: "Titular",
 
 				statuses: {
 					unknown: "Aún sin consultar",
