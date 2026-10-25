@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to open a `remix/data-table` database over D1 and publish it as `ctx.db`"
     - "How to write what D1 can commit and move models into a Durable Object"
@@ -153,8 +153,8 @@ The adapter's `executeScript` takes a whole migration file and runs it one state
 `createD1Database()` from `@sdxc/cloudflare-mocks` is a D1 binding over an in-memory SQLite
 database. It executes real SQL and autocommits each statement the way D1 does, so a malformed
 query or an unbound value fails in the test instead of after a deploy. Apply the migration you
-ship and hand the database to the router the middleware publishes it from, such as
-`createWebRouter(await createTestDatabase())`:
+ship, which the mock's `exec` runs as one `;`-separated script, and hand the database to the
+router the middleware publishes it from, such as `createWebRouter(await createTestDatabase())`:
 
 ```typescript {% title="app/test/database.ts" %}
 import { readFileSync } from "node:fs";
@@ -170,15 +170,10 @@ const MIGRATION = readFileSync(
 
 export async function createTestDatabase(): Promise<Database> {
 	let binding = createD1Database();
-	await binding.exec(MIGRATION.replaceAll("\n", " "));
+	await binding.exec(MIGRATION);
 	return new Database(createD1DatabaseAdapter(binding));
 }
 ```
-
-<note>
-D1's own `exec` reads each line as a statement, so flattening the file keeps one migration valid
-for both.
-</note>
 
 The test then runs the model function against that database. Calling it twice proves the
 claim is exclusive, since the second call finds nothing due:
@@ -207,17 +202,9 @@ whichever built-in SQLite module the runtime has.
 
 ## Where to go next
 
-- [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
-  — how `ctx.db` sits among the rest of the middleware.
 - [Model your tables](/docs/data-and-background-work/data-models) — wrap these tables in
   models with scopes, callbacks and `ctx.models`.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — run a nightly sweep
-  against the same database.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — keep a hot
-  query out of D1 entirely.
 - [Test Workers apps](/docs/operations-and-testing/testing) — drive the whole router against the
   test database.
 - [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — the same
   `ctx.db` in commands, and a SQL prompt over it.
-- [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) — declaring tables, queries, upserts and
-  migrations.
