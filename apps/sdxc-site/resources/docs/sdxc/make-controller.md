@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.01
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to add a page, a form or a JSON endpoint with its route declared and mapped"
     - "How a controller is guarded by a resource's abilities"
@@ -23,6 +23,7 @@ sdxc make controller sponsors
 ```text
 Wrote app/http/controllers/sponsors.tsx
 Wrote app/http/controllers/sponsors.test.tsx
+Wrote spec/sponsors.spec
 Edited routes/web.ts
 Edited app/initializers/router.tsx
 Edited app/http/controllers/sitemap.ts
@@ -40,8 +41,9 @@ Reach for it whenever a feature needs a new URL: a page, a form with its action,
 | `--resource <name>`   |               | check the resource's ability the method implies; see below                   |
 | `--actions <list>`    |               | one controller per action of a resource, or `all`; see below                 |
 | `--test`, `--no-test` | `make.tests`  | write the test beside it, or skip it                                         |
+| `--spec`, `--no-spec` | `make.specs`  | write the pairing `.spec` under `spec/`, or skip it                          |
 | `--dry-run`           |               | print the files and the diffs, and change nothing                            |
-| `--force`             |               | replace the file and its test when they exist, keeping their declaration     |
+| `--force`             |               | replace the file, its test and its spec, keeping their declaration           |
 
 On a terminal `--method` is asked for, with `get` selected; without one, it is `get`.
 
@@ -274,6 +276,29 @@ fills the trap, and one without a CAPTCHA token. Run it with:
 ```bash
 bun run test app/http/controllers/signup.test.tsx
 ```
+
+## The pairing spec
+
+The test checks the controller from the inside; the pairing spec checks the running app from the
+outside, the way a visitor reaches the route. A page's spec opens it in a browser and expects its
+heading, and an endpoint's spec requests it and expects a `200`:
+
+```text {% title="spec/sponsors.spec" %}
+use browser
+
+test "Sponsors page loads" {
+	when {
+		browser.open "/sponsors"
+	}
+	then {
+		expect browser.heading "Sponsors"
+	}
+}
+```
+
+Grow it into the behavior the page promises as you fill the controller in.
+[Write executable specs](/docs/operations-and-testing/executable-specs) covers the language and
+how to run a suite against your dev server.
 
 ## Fill it in
 

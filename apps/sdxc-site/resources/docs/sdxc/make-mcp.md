@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.12
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to add an MCP tool, or a resource with `--resource`"
     - "Where the declaration and the handler go, and how they are mapped"
@@ -25,18 +25,20 @@ sdxc make mcp article --resource
 ```text
 Wrote app/mcp/tools/search-posts.ts
 Wrote app/mcp/tools/search-posts.test.ts
+Wrote spec/mcp/search-posts.spec
 Edited app/mcp/tools/index.ts
 Edited app/initializers/mcp.ts
 ```
 
 ## Flags
 
-| Flag                  | Default      | What it does                                               |
-| --------------------- | ------------ | ---------------------------------------------------------- |
-| `--resource`          |              | write a resource in `app/mcp/resources/` instead of a tool |
-| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                       |
-| `--dry-run`           |              | print the files and the diffs, and change nothing          |
-| `--force`             |              | replace the handler and its test, keeping the declaration  |
+| Flag                  | Default      | What it does                                                        |
+| --------------------- | ------------ | ------------------------------------------------------------------- |
+| `--resource`          |              | write a resource in `app/mcp/resources/` instead of a tool          |
+| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                                |
+| `--spec`, `--no-spec` | `make.specs` | write a tool's pairing `.spec` under `spec/mcp/`, or skip it        |
+| `--dry-run`           |              | print the files and the diffs, and change nothing                   |
+| `--force`             |              | replace the handler, its test and its spec, keeping the declaration |
 
 ## A tool
 
@@ -134,6 +136,24 @@ describe("search-posts", () => {
 
 ```bash
 bun run test app/mcp/tools/search-posts.test.ts
+```
+
+A tool also gets a pairing spec, which calls it over `/mcp` the way a client does and expects an
+answer that is no error. Extend it with the arguments and the result the description promises;
+[Write executable specs](/docs/operations-and-testing/executable-specs) covers running it:
+
+```text {% title="spec/mcp/search-posts.spec" %}
+use mcp
+
+test "search_posts answers over /mcp" {
+	when {
+		let result = mcp.call "/mcp" "search_posts" {} on "web"
+	}
+	then {
+		expect result.ok true
+		expect result.is_error false
+	}
+}
 ```
 
 ## Fill it in

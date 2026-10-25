@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Every file `sdxc scaffold` writes for one resource"
     - "How the scaffold's pages, tools and commands check who may do what"
@@ -43,6 +43,7 @@ For `sdxc scaffold post`:
 | `resources/views/posts/form.tsx`               | the form the new and edit pages share                            |
 | `app/http/controllers/posts/*.tsx`             | `index`, `new`, `show`, `edit` and `destroy`                     |
 | `app/test/database.ts`                         | the in-memory database the tests use, when the project lacks one |
+| `spec/posts.spec`                              | the pairing spec, one case per way in the scaffold wrote         |
 
 Every table also gets `id`, `created_at` and `updated_at`, so a field may not use those names:
 
@@ -224,7 +225,13 @@ drive the pages through the router, the tools through `/mcp` and the commands th
 command line. Each write is tested as a member, signed in with `signIn()` from
 `app/test/session.ts`, and refused to a guest; `app/policies/post.test.ts` decides every ability
 for both. `--no-test` skips them for one run, and `make.tests: false` skips them
-everywhere.
+everywhere. With `--mcp`, the tool tests call `/mcp` through `app/test/mcp.ts`, which the
+scaffold writes when the project lacks it.
+
+`spec/posts.spec` checks the running app from the outside: the index page loads in a browser,
+and with `--mcp` and `--command`, `list_posts` answers over `/mcp` and `posts list` exits `0`.
+[Write executable specs](/docs/operations-and-testing/executable-specs) covers running it, and
+`--no-spec` or `make.specs: false` leaves it out.
 
 ## Taken names and dry runs
 

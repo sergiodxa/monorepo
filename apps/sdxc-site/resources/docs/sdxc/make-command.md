@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.13
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How the name you pass becomes the words you type after `sdxc run`"
     - "What `make command` writes and where it maps the handler"
@@ -25,17 +25,19 @@ sdxc run users grant
 ```text
 Wrote app/commands/users/grant.ts
 Wrote app/commands/users/grant.test.ts
+Wrote spec/commands/users/grant.spec
 Edited app/commands/index.ts
 Edited app/initializers/cli.ts
 ```
 
 ## Flags
 
-| Flag                  | Default      | What it does                                          |
-| --------------------- | ------------ | ----------------------------------------------------- |
-| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                  |
-| `--dry-run`           |              | print the files and the diffs, and change nothing     |
-| `--force`             |              | replace the handler and its test, keeping the command |
+| Flag                  | Default      | What it does                                                    |
+| --------------------- | ------------ | --------------------------------------------------------------- |
+| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                            |
+| `--spec`, `--no-spec` | `make.specs` | write the pairing `.spec` under `spec/commands/`, or skip it    |
+| `--dry-run`           |              | print the files and the diffs, and change nothing               |
+| `--force`             |              | replace the handler, its test and its spec, keeping the command |
 
 ## Names are the words you type
 
@@ -107,6 +109,23 @@ describe("users grant", () => {
 
 ```bash
 bun run test app/commands/users/grant.test.ts
+```
+
+The pairing spec runs the command as a separate process and expects it to exit `0`, checking it
+the way a script calling it would; [Write executable specs](/docs/operations-and-testing/executable-specs)
+covers running it:
+
+```text {% title="spec/commands/users/grant.spec" %}
+use cli
+
+test "users grant runs" {
+	when {
+		let result = cli.run "bun" "run" "cli" "users" "grant" in "."
+	}
+	then {
+		expect result.exit_code 0
+	}
+}
 ```
 
 ## Fill it in
