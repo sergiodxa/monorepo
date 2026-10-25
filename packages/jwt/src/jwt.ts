@@ -19,7 +19,7 @@ import * as jose from "jose";
 import type { JWK } from "./jwk.js";
 
 import * as SignatureAlgorithm from "./algorithm.js";
-import { LEGACY_EDDSA } from "./jwk.js";
+import { LEGACY_EDDSA, publicJwk } from "./jwk.js";
 import { ObjectParser } from "./lib/parser.js";
 
 /** Milliseconds in a second, for converting between epoch claims and `Date`. */
@@ -329,6 +329,20 @@ export class JWT implements jose.JWTPayload {
 	}
 
 	/**
+	 * Signs with a key pair's own algorithm, carrying the pair's public half in the `jwk`
+	 * header (RFC 7515 §4.1.3) in place of a `kid`, for a token whose verifier learns the
+	 * key from the token itself, as with an RFC 9449 DPoP proof.
+	 *
+	 * @param keyPair - The pair to sign with; only its public members reach the header.
+	 * @returns The compact-serialized token.
+	 * @example
+	 * let proof = await new DPoPProof({ htm: "POST", htu, iat: 0, jti }).signEmbedded(keyPair);
+	 */
+	signEmbedded(keyPair: JWT.EmbeddableKey): Promise<string> {
+		return JWT.signEmbedded(this, keyPair);
+	}
+
+	/**
 	 * The claims a subclass exposes, as a plain object.
 	 *
 	 * Reads the getters declared directly on the instance's own prototype, so what
@@ -372,6 +386,50 @@ export class JWT implements jose.JWTPayload {
 				kid: key.id,
 			})
 			.sign(key.private);
+	}
+
+	/**
+	 * Signs a token with the key pair's own algorithm and its public JWK in the header.
+	 *
+	 * @param jwt - The token to sign.
+	 * @param keyPair - The pair to sign with.
+	 * @returns The compact-serialized token.
+	 */
+	static signEmbedded(jwt: JWT, keyPair: JWT.EmbeddableKey): Promise<string> {
+		return new jose.SignJWT(jwt.payload)
+			.setProtectedHeader({
+				alg: keyPair.alg,
+				typ: (jwt.constructor as typeof JWT).type,
+				jwk: publicJwk(keyPair.jwk),
+			})
+			.sign(keyPair.private);
+	}
+
+	/**
+	 * Verifies a token against the public key its own `jwk` header carries, answering the
+	 * key beside the token so the caller can hold it to a binding, such as the `cnf.jkt`
+	 * thumbprint a DPoP-bound access token names. A header carrying a private key fails.
+	 *
+	 * @param token - The compact-serialized token.
+	 * @param options - Expected algorithms, clock tolerance, `typ`, and so on.
+	 * @returns The verified token and the public JWK it was signed under.
+	 * @throws When the header has no usable public key, or a check on the token fails.
+	 * @example
+	 * let { token: proof, jwk } = await DPoPProof.verifyEmbedded(header, { algorithms });
+	 */
+	static async verifyEmbedded<M extends JWT>(
+		this: (new (payload: JWT.Payload) => M) & Pick<typeof JWT, "type">,
+		token: string,
+		options?: JWT.VerifyOptions,
+	): Promise<JWT.Embedded<M>> {
+		let result = await jose.jwtVerify(token, jose.EmbeddedJWK, {
+			...options,
+			algorithms: acceptedAlgorithms(options?.algorithms),
+			typ: options?.typ ?? (this.type === DEFAULT_TYPE ? undefined : this.type),
+		});
+
+		let jwk = publicJwk(result.protectedHeader.jwk ?? {});
+		return { token: new this(result.payload), jwk };
 	}
 
 	/**
@@ -450,4 +508,25 @@ export namespace JWT {
 
 	/** The checks `JWT.verify` can be asked to run beyond the signature. */
 	export type VerifyOptions = jose.JWTVerifyOptions;
+
+	/** A key pair that signs with its public half embedded: `JWK.KeyPair` satisfies it. */
+	export interface EmbeddableKey {
+		/** Algorithm the pair was generated for, written as the header's `alg`. */
+		alg: string;
+		/** The private half. */
+		private: jose.CryptoKey;
+		/** The public half, whose public members become the header's `jwk`. */
+		jwk: jose.JWK;
+	}
+
+	/**
+	 * A token verified against the key its header carried.
+	 *
+	 * @template M - The token class it was verified as.
+	 */
+	export interface Embedded<M extends JWT> {
+		token: M;
+		/** The public members of the key the token was signed under. */
+		jwk: jose.JWK;
+	}
 }

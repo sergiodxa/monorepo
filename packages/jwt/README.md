@@ -166,6 +166,12 @@ expiry.
 Signs with the first key generated for `algorithm`, writes its id as the header `kid`, and answers
 the compact token. Throws when no key matches. `JWT.sign(jwt, algorithm, jwks)` is the static form.
 
+#### `jwt.signEmbedded(keyPair: JWT.EmbeddableKey): Promise<string>`
+
+Signs with the pair's own algorithm and carries its public JWK in the header instead of a `kid`,
+as an RFC 9449 DPoP proof does. `JWT.verifyEmbedded(token, options?)` verifies such a token
+against that header key and answers `{ token, jwk }`; a header carrying a private key fails.
+
 #### `jwt.toJSON(): Record<string, unknown>`
 
 The getters declared on the instance's own class, as a plain object.

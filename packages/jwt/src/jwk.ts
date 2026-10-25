@@ -50,6 +50,21 @@ const PUBLISHED_JWK_FIELDS: Record<string, ((jwk: jose.JWK) => jose.JWK) | undef
 };
 
 /**
+ * A key's public half as a header or a key set carries it: `kty` and the members its type
+ * publishes, so `kid`, `use` and every private member stay out.
+ *
+ * @param jwk - A public or private JWK.
+ * @returns The public members.
+ * @throws When the key type has no published shape on record.
+ */
+export function publicJwk(jwk: jose.JWK): jose.JWK {
+	let kty = jwk.kty;
+	let publish = kty ? PUBLISHED_JWK_FIELDS[kty] : undefined;
+	if (!kty || !publish) throw new Error(`Cannot publish a key of type ${String(kty)}`);
+	return { kty, ...publish(jwk) };
+}
+
+/**
  * Everything about the keys a token is signed with or verified against.
  *
  * Modeled as a namespace rather than loose exports because the names only make
@@ -287,12 +302,8 @@ export namespace JWK {
 	export function toJSON(keys: KeyPair[]): PublishedKeySet {
 		return {
 			keys: keys.map(({ alg, id, jwk }) => {
-				let kty = jwk.kty;
-				let publish = kty ? PUBLISHED_JWK_FIELDS[kty] : undefined;
-
-				if (!kty || !publish) throw new Error(`Cannot publish a key of type ${String(kty)}`);
-
-				return { ...publish(jwk), kty, kid: id, alg };
+				let { kty, ...members } = publicJwk(jwk);
+				return { ...members, kty: kty as string, kid: id, alg };
 			}),
 		};
 	}

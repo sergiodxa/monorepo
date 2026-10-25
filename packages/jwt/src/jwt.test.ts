@@ -618,3 +618,65 @@ describe("toJSON", () => {
 		});
 	});
 });
+
+describe("embedded keys", () => {
+	/** A proof typed the way RFC 9449 types one. */
+	class ProofToken extends JWT {
+		static override type = "dpop+jwt";
+	}
+
+	test("carries only the public half in the header, with no kid", async () => {
+		let signed = await new ProofToken({ jti: "1" }).signEmbedded(keys[0]!);
+		let header = jose.decodeProtectedHeader(signed);
+
+		expect(header.typ).toBe("dpop+jwt");
+		expect(header.alg).toBe("ES256");
+		expect(header.kid).toBeUndefined();
+		expect(Object.keys(header.jwk ?? {}).sort()).toEqual(["crv", "kty", "x", "y"]);
+	});
+
+	test("verifies against the header's key and answers that key", async () => {
+		let signed = await new ProofToken({ jti: "1" }).signEmbedded(keys[0]!);
+
+		let { token, jwk } = await ProofToken.verifyEmbedded(signed);
+
+		expect(token).toBeInstanceOf(ProofToken);
+		expect(token.id).toBe("1");
+		expect(await JWK.thumbprint(jwk)).toEqual(await JWK.thumbprint(keys[0]!.jwk));
+	});
+
+	test("refuses a header key that did not sign the token", async () => {
+		let signed = await new ProofToken({ jti: "1" }).signEmbedded(keys[0]!);
+		let [, payload, signature] = signed.split(".");
+		let forged = jose.base64url.encode(
+			JSON.stringify({ alg: "ES256", typ: "dpop+jwt", jwk: otherKeys[0]!.jwk }),
+		);
+
+		await expect(ProofToken.verifyEmbedded(`${forged}.${payload}.${signature}`)).rejects.toThrow();
+	});
+
+	test("refuses a header carrying a private key", async () => {
+		let { privateKey } = await jose.generateKeyPair("ES256", { extractable: true });
+		let privateJwk = await jose.exportJWK(privateKey);
+		let signed = await new jose.SignJWT({ jti: "1" })
+			.setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: privateJwk })
+			.sign(privateKey);
+
+		await expect(ProofToken.verifyEmbedded(signed)).rejects.toThrow();
+	});
+
+	test("refuses a token of another type through a typed class", async () => {
+		let signed = await new JWT({ jti: "1" }).signEmbedded(keys[0]!);
+
+		await expect(ProofToken.verifyEmbedded(signed)).rejects.toThrow();
+	});
+
+	test("signs and verifies an Ed25519 key", async () => {
+		let pair = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519));
+		let signed = await new ProofToken({ jti: "1" }).signEmbedded(pair);
+
+		let { jwk } = await ProofToken.verifyEmbedded(signed);
+
+		expect(jwk.crv).toBe("Ed25519");
+	});
+});
