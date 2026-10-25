@@ -58,7 +58,7 @@ let CALLER_LIMIT = 60;
 /** The `GeoFetchDO` stub the HTTP check probes through. */
 let doFetchMock = vi.fn(
 	async (_url: string, _init?: RequestInit) =>
-		new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 );
 
 /** The `GEO_FETCH` binding, answering every probe with {@link doFetchMock}. */
@@ -266,7 +266,7 @@ function resolveDnsWith(values: string[]) {
 beforeEach(() => {
 	doFetchMock.mockReset();
 	doFetchMock.mockImplementation(
-		async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "12" } }),
+		async () => new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=12" } }),
 	);
 	openSocket = async () => {};
 	geoFetch.reset();
@@ -454,7 +454,10 @@ describe("POST /api/v1/ping http", () => {
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response("has token inside", { status: 200, headers: { "X-Response-Time": "42" } }),
+				new Response("has token inside", {
+					status: 200,
+					headers: { "Server-Timing": "probe;dur=42" },
+				}),
 		);
 
 		let response = await dispatch(db, {
@@ -486,7 +489,7 @@ describe("POST /api/v1/ping http", () => {
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response("nothing here", { status: 200, headers: { "X-Response-Time": "9" } }),
+				new Response("nothing here", { status: 200, headers: { "Server-Timing": "probe;dur=9" } }),
 		);
 
 		let response = await dispatch(db, {
@@ -505,15 +508,18 @@ describe("POST /api/v1/ping http", () => {
 	});
 
 	/**
-	 * `GeoFetchDO` reports a target it couldn't reach as a 204 response with an
-	 * `X-Probe-Outcome: unreachable` header.
+	 * `GeoFetchDO` reports a target it couldn't reach as a 204 response whose
+	 * `Proxy-Status` member carries an `error`.
 	 */
 	test("still answers 200 when the target is unreachable", async () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
@@ -540,7 +546,8 @@ describe("POST /api/v1/ping http", () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
-			async () => new Response("OK", { status: 200, headers: { "X-Response-Time": "5000" } }),
+			async () =>
+				new Response("OK", { status: 200, headers: { "Server-Timing": "probe;dur=5000" } }),
 		);
 
 		let response = await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
@@ -556,7 +563,7 @@ describe("POST /api/v1/ping http", () => {
 		let { db } = createTestDatabase();
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
-			async () => new Response(null, { status: 204, headers: { "X-Response-Time": "8" } }),
+			async () => new Response(null, { status: 204, headers: { "Server-Timing": "probe;dur=8" } }),
 		);
 
 		let response = await dispatch(db, {
@@ -745,7 +752,10 @@ describe("POST /api/v1/ping side effects", () => {
 		let { key } = await createCaller(db);
 		doFetchMock.mockImplementation(
 			async () =>
-				new Response(null, { status: 204, headers: { "X-Probe-Outcome": "unreachable" } }),
+				new Response(null, {
+					status: 204,
+					headers: { "Proxy-Status": "uptime-probe; error=destination_unavailable" },
+				}),
 		);
 
 		await dispatch(db, { key, body: { type: "http", url: "https://example.com" } });
