@@ -11,6 +11,7 @@ import type { CheckOptions } from "@sdxc/outbound";
 import type { Result } from "@sdxc/result";
 
 import { toMs } from "@sdxc/duration";
+import { parseRetryAfter } from "@sdxc/http/retry-after";
 import { currentLog } from "@sdxc/logger";
 import { checkUrl, readText, resolveHost } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
@@ -26,7 +27,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 /** The most of an answer a send reads: enough for an id or an error, bounded against a hostile endpoint. */
 const MAX_ANSWER_BYTES = 64 * 1024;
 
-/** Milliseconds in a second, for `Retry-After` and `retry_after`. */
+/** Milliseconds in a second, for a body's `retry_after`. */
 const SECOND_MS = 1000;
 
 /** What a platform answered, read once so every classifier sees the same body. */
@@ -211,13 +212,8 @@ export function answerError(
  * @returns Milliseconds to wait, or `null` when the platform named no delay.
  */
 export function retryAfter(answer: Answer): number | null {
-	let header = answer.headers.get("retry-after");
-	if (header !== null) {
-		let seconds = Number(header);
-		if (header.trim() !== "" && Number.isFinite(seconds)) return Math.max(0, seconds * SECOND_MS);
-		let date = Date.parse(header);
-		if (Number.isFinite(date)) return Math.max(0, date - Date.now());
-	}
+	let header = parseRetryAfter(answer.headers.get("retry-after"));
+	if (header !== null) return header;
 
 	let body = record(answer.json);
 	let seconds = body["retry_after"] ?? record(body["parameters"])["retry_after"];

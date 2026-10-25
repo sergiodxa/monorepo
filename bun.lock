@@ -1630,6 +1630,7 @@
       "dependencies": {
         "@sdxc/api-client": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/http": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",
