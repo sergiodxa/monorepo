@@ -1,13 +1,18 @@
 /**
  * `X-API-Version` resolution: a request names a published date or none, and every
- * response echoes back the one that actually served it — the mechanism a later pass
- * registers a second published date against, once a route's shape actually changes.
+ * response echoes back the one that served it, with the RFC 9745 `Deprecation` and
+ * RFC 8594 `Sunset` fields once that date is retired.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DeprecationNotice } from "@sdxc/http/deprecation";
 import type { Middleware } from "remix/router";
+
+import { setDeprecation } from "@sdxc/http/deprecation";
+import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 
 import { managementProblem } from "~/app/http/problem";
 
@@ -22,6 +27,21 @@ export const API_VERSION_HEADER = "X-API-Version";
 export const PUBLISHED_API_VERSIONS = ["2026-09-21"] as const;
 
 export type PublishedApiVersion = (typeof PUBLISHED_API_VERSIONS)[number];
+
+/**
+ * The retirement of each deprecated version: every response it serves carries the
+ * notice, so an integration still pinned to it learns when to move and when it stops
+ * answering. A version absent here is current.
+ *
+ * @example { "2026-09-21": { deprecation: new Date("2027-01-01T00:00:00Z"), sunset: new Date("2027-07-01T00:00:00Z"), deprecationLink: "https://docs.example.com/changelog/2027-01-01" } }
+ */
+export const API_VERSION_DEPRECATIONS: Partial<Record<PublishedApiVersion, DeprecationNotice>> = {};
+
+/** What {@link apiVersioning} announces beside the version it echoes. */
+export interface ApiVersioningOptions {
+	/** @default API_VERSION_DEPRECATIONS */
+	deprecations?: Partial<Record<PublishedApiVersion, DeprecationNotice>>;
+}
 
 export type ResolveApiVersionResult =
 	| { ok: true; version: PublishedApiVersion }
@@ -49,39 +69,55 @@ export function resolveApiVersion(request: Request): ResolveApiVersionResult {
 }
 
 /**
- * Echoes the version that served a response.
+ * Echoes the version that served a response, with its deprecation notice when it has
+ * one. A notice the fields cannot carry, such as a sunset before its deprecation, is
+ * logged and left off, so a misconfigured retirement never fails the request itself.
  *
  * @param response - The response about to be sent.
  * @param version - The version {@link resolveApiVersion} resolved for this request.
- * @returns The same response, carrying `X-API-Version`.
+ * @param notice - The version's entry in {@link API_VERSION_DEPRECATIONS}, if any.
+ * @returns A response carrying `X-API-Version`, plus `Deprecation`, `Sunset` and their links for a deprecated version.
  * @example
- * return applyApiVersionHeader(await next(), resolved.version);
+ * return applyApiVersionHeader(await next(), resolved.version, API_VERSION_DEPRECATIONS[resolved.version]);
  */
-export function applyApiVersionHeader(response: Response, version: PublishedApiVersion): Response {
-	try {
-		response.headers.set(API_VERSION_HEADER, version);
-		return response;
-	} catch {
-		let headers = new Headers(response.headers);
-		headers.set(API_VERSION_HEADER, version);
-		return new Response(response.body, {
-			status: response.status,
-			statusText: response.statusText,
-			headers,
-		});
+export function applyApiVersionHeader(
+	response: Response,
+	version: PublishedApiVersion,
+	notice?: DeprecationNotice,
+): Response {
+	let headers = new Headers(response.headers);
+	headers.set(API_VERSION_HEADER, version);
+
+	if (notice !== undefined) {
+		let written = setDeprecation(headers, notice);
+		if (isFailure(written)) {
+			currentLog()?.warn("api_version.deprecation_invalid", {
+				version,
+				error: written.error.message,
+			});
+		}
 	}
+
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
 }
 
 /**
  * The router middleware wrapping resolution and echoing into one step: refuses an
  * unpublished version with a `problem+json` body naming every version this API does
- * publish, and otherwise echoes the resolved version onto whatever the route answers.
+ * publish, and otherwise echoes the resolved version, and its deprecation notice, onto
+ * whatever the route answers.
  *
+ * @param options - The deprecations to announce; a test passes its own.
  * @returns The middleware, for the management router's global chain.
  * @example
  * createRouter({ middleware: [apiVersioning()] });
  */
-export function apiVersioning(): Middleware {
+export function apiVersioning(options: ApiVersioningOptions = {}): Middleware {
+	let deprecations = options.deprecations ?? API_VERSION_DEPRECATIONS;
 	return async (ctx, next) => {
 		let resolved = resolveApiVersion(ctx.request);
 
@@ -92,6 +128,6 @@ export function apiVersioning(): Middleware {
 		}
 
 		let response = await next();
-		return applyApiVersionHeader(response, resolved.version);
+		return applyApiVersionHeader(response, resolved.version, deprecations[resolved.version]);
 	};
 }
