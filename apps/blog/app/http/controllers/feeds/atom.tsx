@@ -8,6 +8,9 @@
  */
 
 import { Atom } from "@sdxc/atom";
+import { text } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
 import { createController } from "remix/router";
 
 import type { Syndication } from "~/app/http/view-models/syndication";
@@ -25,6 +28,7 @@ import routes from "~/routes/web";
  * Serializes a feed as Atom. Entry ids are `urn:uuid:` IRIs over the post id, as RFC 4287
  * requires an IRI, and the feed's `updated` is its newest edit, or now when empty. Every
  * feed lists all its posts, so it is marked `fh:complete` for readers to drop removed ones.
+ * Data the Atom writer refuses is logged and answered with a 500.
  *
  * @param self The feed's absolute URL, which is its id and WebSub topic.
  * @param channel The feed's own metadata.
@@ -44,29 +48,33 @@ export function atomResponse(
 		entries[0]?.updated ?? new Date().toISOString(),
 	);
 
-	let atom = new Atom({
-		id: self,
-		title: channel.title,
-		subtitle: channel.description,
-		updated,
-		author: { name: PROFILE.name, uri: origin },
-		link: [{ rel: "alternate", href: channel.home, type: "text/html" }, ...hub.atomLink],
-		lang: "en",
-		complete: true,
-	});
-
-	for (let entry of entries) {
-		atom.addEntry({
+	let xml = Atom.stringify({
+		feed: {
+			id: self,
+			title: channel.title,
+			subtitle: channel.description,
+			updated,
+			author: { name: PROFILE.name, uri: origin },
+			link: [{ rel: "alternate", href: channel.home, type: "text/html" }, ...hub.atomLink],
+			lang: "en",
+			complete: true,
+		},
+		entries: entries.map((entry) => ({
 			id: `urn:uuid:${entry.id}`,
 			title: entry.title,
 			updated: entry.updated,
 			published: entry.published,
 			summary: entry.summary,
 			link: { rel: "alternate", href: entry.url },
-		});
+		})),
+	});
+
+	if (isFailure(xml)) {
+		currentLog()?.fail(xml.error, { feed: self });
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return new Response(atom.toString(), {
+	return new Response(xml.data, {
 		headers: { "content-type": "application/atom+xml; charset=utf-8", ...hub.headers },
 	});
 }
