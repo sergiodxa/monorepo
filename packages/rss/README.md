@@ -12,53 +12,59 @@ namespaced element round-trips through `extensions`, so a feed survives a read a
 npm add @sdxc/rss
 ```
 
-`RSS.fromXML` takes a document from [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml), which
-installs alongside this package.
+Every operation that can fail answers a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and `RSS.fromXML` takes a document
+from [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml). Both install alongside this package.
 
 ## Usage
 
 ### Build a feed
 
 ```typescript
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
-let feed = new RSS({
-	title: "My Blog",
-	description: "Articles about web development",
-	link: "https://example.com",
-	language: "en-us",
-	atomLink: { href: "https://example.com/feed.xml", rel: "self", type: "application/rss+xml" },
+let xml = RSS.stringify({
+	channel: {
+		title: "My Blog",
+		description: "Articles about web development",
+		link: "https://example.com",
+		language: "en-us",
+		atomLink: { href: "https://example.com/feed.xml", rel: "self", type: "application/rss+xml" },
+	},
+	items: [
+		{
+			guid: { value: "tag:example.com,2026:post-1", isPermaLink: false },
+			title: "Hello World",
+			description: "A short summary",
+			link: "https://example.com/posts/hello-world",
+			pubDate: new Date().toUTCString(),
+			contentEncoded: "<p>Full post content</p>",
+		},
+	],
 });
-
-feed.addItem({
-	guid: { value: "tag:example.com,2026:post-1", isPermaLink: false },
-	title: "Hello World",
-	description: "A short summary",
-	link: "https://example.com/posts/hello-world",
-	pubDate: new Date().toUTCString(),
-	contentEncoded: "<p>Full post content</p>",
-});
-
-let xml = feed.toString();
+if (isFailure(xml)) throw xml.error;
 ```
 
-`toString()` declares the namespaces the extension fields use, so this feed carries `xmlns:atom`
+`RSS.stringify` declares the namespaces the extension fields use, so this feed carries `xmlns:atom`
 and `xmlns:content` on its root. Dates are the strings the document holds; write them in RFC 822
 form, which is what `Date.prototype.toUTCString()` produces.
 
 ### Read a feed
 
 ```typescript
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
 let feed = RSS.parse(xml);
+if (isFailure(feed)) throw feed.error;
 
-console.log(feed.channel.title);
-for (let item of feed.items) console.log(item.title, item.link);
+console.log(feed.data.channel.title);
+for (let item of feed.data.items) console.log(item.title, item.link);
 ```
 
-`RSS.parse` throws when the text is not XML or not an RSS 2.0 document, or when the channel or an
-item lacks its required fields.
+`RSS.parse` fails with an `RSSParseError` when the text is not XML or not an RSS 2.0 document, or
+when the channel or an item lacks its required fields.
 
 ### Fetch a feed
 
@@ -68,31 +74,43 @@ import { RSS } from "@sdxc/rss";
 let feed = await RSS.fetch(new URL("https://example.com/feed.xml"));
 ```
 
-`RSS.fetch` requests a fresh copy and throws unless the response is `ok` and has an XML content
-type.
+`RSS.fetch` requests a fresh copy and fails with an `RSSFetchError` when the request fails, the
+response is not `ok`, or its content type is not XML.
 
 ## API
 
-### `new RSS(channel: RSS.Channel)`
+### `RSS.fromJSON(feed: RSS.Feed): Result<RSS, RSSParseError>`
 
-A feed with the given channel and no items. Throws when `title`, `description` or `link` is
-missing.
+Builds an instance from `{ channel, items }`, the shape `toJSON` returns. Fails when the channel
+lacks `title`, `description` or `link`, or an item has neither a `title` nor a `description`.
+
+### `RSS.stringify(input: RSS | RSS.Feed): Result<string, RSSParseError | RSSStringifyError>`
+
+Serializes an instance, or validates and serializes plain data, to RSS 2.0 XML with a UTF-8
+declaration. `description` and `contentEncoded` are written as text, so embedded HTML is escaped on
+the way out and unescaped when parsed back. `RSSStringifyError` reports a name or value XML cannot
+hold.
 
 ### `rss.channel`
 
-The channel, as a clone. Assigning a new `RSS.Channel` validates and replaces it, keeping the items.
+The channel, as a clone.
+
+### `rss.setChannel(channel: RSS.Channel): Result<void, RSSParseError>`
+
+Validates and replaces the channel, keeping the items. A refused channel leaves the feed unchanged.
 
 ```typescript
-feed.channel = { ...feed.channel, lastBuildDate: new Date().toUTCString() };
+let replaced = feed.setChannel({ ...feed.channel, lastBuildDate: new Date().toUTCString() });
 ```
 
 ### `rss.items`
 
 The items, as clones, in the order they were added.
 
-### `rss.addItem(item: RSS.Item): void`
+### `rss.addItem(item: RSS.Item): Result<void, RSSParseError>`
 
-Appends an item. Throws when it has neither a `title` nor a `description`.
+Appends an item. Fails when it has neither a `title` nor a `description`, leaving the feed
+unchanged.
 
 ### `rss.removeItem(guid: string): void`
 
@@ -102,20 +120,16 @@ Removes the first item whose guid value matches.
 
 The feed as plain serializable data, `{ channel, items }`.
 
-### `rss.toString(): string`
+### `RSS.parse(source: string): Result<RSS, RSSParseError>`
 
-The feed as RSS 2.0 XML with a UTF-8 declaration. `description` and `contentEncoded` are written as
-text, so embedded HTML is escaped on the way out and unescaped when parsed back.
+Parses RSS 2.0 XML, failing on anything else.
 
-### `RSS.parse(source: string): RSS`
+### `RSS.fromXML(xml: XML): Result<RSS, RSSParseError>`
 
-Parses RSS 2.0 XML, throwing on anything else.
+Reads a feed from a document already parsed with `@sdxc/xml`, failing as `RSS.parse` does when it
+is not RSS 2.0.
 
-### `RSS.fromXML(xml: XML): RSS`
-
-Reads a feed from a document already parsed with `@sdxc/xml`, throwing as `RSS.parse` does when it is not RSS 2.0.
-
-### `RSS.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<RSS>`
+### `RSS.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<Result<RSS, RSSFetchError | RSSParseError>>`
 
 Fetches with `cache-control: no-cache, no-store` added to `init.headers`, then parses the body.
 
@@ -141,7 +155,8 @@ At least one of `title` or `description`, plus `link`, `author`, `category`, `co
 
 #### `RSS.Feed`
 
-`{ channel: RSS.Channel; items: RSS.Item[] }`, the shape `toJSON()` returns.
+`{ channel: RSS.Channel; items: RSS.Item[] }`, the shape `toJSON()` returns and `RSS.fromJSON`
+and `RSS.stringify` accept.
 
 #### `RSS.Element` and `RSS.Node`
 
@@ -161,6 +176,7 @@ array.
 Build the feed from your records on each request and answer it with the RSS media type.
 
 ```typescript
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
 interface Post {
@@ -174,29 +190,31 @@ interface Post {
 }
 
 export function feedResponse(posts: Post[]): Response {
-	let feed = new RSS({
-		title: "Example Blog",
-		description: "Notes on building for the web",
-		link: "https://example.com",
-		lastBuildDate: new Date().toUTCString(),
-		atomLink: { href: "https://example.com/feed.xml", rel: "self", type: "application/rss+xml" },
+	let xml = RSS.stringify({
+		channel: {
+			title: "Example Blog",
+			description: "Notes on building for the web",
+			link: "https://example.com",
+			lastBuildDate: new Date().toUTCString(),
+			atomLink: { href: "https://example.com/feed.xml", rel: "self", type: "application/rss+xml" },
+		},
+		items: posts.map((post) => {
+			let url = `https://example.com/posts/${post.slug}`;
+			return {
+				guid: url,
+				title: post.title,
+				link: url,
+				description: post.excerpt,
+				contentEncoded: post.html,
+				dcCreator: post.author,
+				category: post.tags,
+				pubDate: post.publishedAt.toUTCString(),
+			};
+		}),
 	});
+	if (isFailure(xml)) return new Response(xml.error.message, { status: 500 });
 
-	for (let post of posts) {
-		let url = `https://example.com/posts/${post.slug}`;
-		feed.addItem({
-			guid: url,
-			title: post.title,
-			link: url,
-			description: post.excerpt,
-			contentEncoded: post.html,
-			dcCreator: post.author,
-			category: post.tags,
-			pubDate: post.publishedAt.toUTCString(),
-		});
-	}
-
-	return new Response(feed.toString(), {
+	return new Response(xml.data, {
 		headers: { "content-type": "application/rss+xml; charset=utf-8" },
 	});
 }
@@ -211,32 +229,33 @@ in scope to serialize.
 ```typescript
 import { RSS } from "@sdxc/rss";
 
-let podcast = new RSS({
-	title: "Example Podcast",
-	description: "Conversations about software",
-	link: "https://example.com/podcast",
-	image: {
-		url: "https://example.com/cover.png",
+let xml = RSS.stringify({
+	channel: {
 		title: "Example Podcast",
+		description: "Conversations about software",
 		link: "https://example.com/podcast",
+		image: {
+			url: "https://example.com/cover.png",
+			title: "Example Podcast",
+			link: "https://example.com/podcast",
+		},
+		namespaces: { itunes: "http://www.itunes.com/dtds/podcast-1.0.dtd" },
+		extensions: [
+			{ name: "itunes:author", children: ["Example Studio"] },
+			{ name: "itunes:category", attributes: { text: "Technology" } },
+		],
 	},
-	namespaces: { itunes: "http://www.itunes.com/dtds/podcast-1.0.dtd" },
-	extensions: [
-		{ name: "itunes:author", children: ["Example Studio"] },
-		{ name: "itunes:category", attributes: { text: "Technology" } },
+	items: [
+		{
+			guid: { value: "episode-1", isPermaLink: false },
+			title: "Episode 1",
+			description: "Where it all starts",
+			pubDate: "Tue, 14 Apr 2026 09:00:00 GMT",
+			enclosure: { url: "https://example.com/ep1.mp3", length: 24_986_239, type: "audio/mpeg" },
+			extensions: [{ name: "itunes:duration", children: ["00:42:10"] }],
+		},
 	],
 });
-
-podcast.addItem({
-	guid: { value: "episode-1", isPermaLink: false },
-	title: "Episode 1",
-	description: "Where it all starts",
-	pubDate: "Tue, 14 Apr 2026 09:00:00 GMT",
-	enclosure: { url: "https://example.com/ep1.mp3", length: 24_986_239, type: "audio/mpeg" },
-	extensions: [{ name: "itunes:duration", children: ["00:42:10"] }],
-});
-
-let xml = podcast.toString();
 ```
 
 ## Pattern: Edit a published feed
@@ -245,14 +264,18 @@ Parse an existing document, change it, and write it back; unknown elements and t
 declarations come through untouched.
 
 ```typescript
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
-let feed = RSS.parse(existingXml);
+let parsed = RSS.parse(existingXml);
+if (isFailure(parsed)) throw parsed.error;
+let feed = parsed.data;
 
 feed.removeItem("episode-1");
-feed.channel = { ...feed.channel, lastBuildDate: new Date().toUTCString() };
+let replaced = feed.setChannel({ ...feed.channel, lastBuildDate: new Date().toUTCString() });
+if (isFailure(replaced)) throw replaced.error;
 
-let updated = feed.toString();
+let updated = RSS.stringify(feed);
 ```
 
 ## Pattern: Aggregate several feeds
@@ -260,18 +283,19 @@ let updated = feed.toString();
 Fetch in parallel, keep the feeds that parse, and merge their items newest first.
 
 ```typescript
+import { isSuccess } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 
 let sources = ["https://example.com/feed.xml", "https://example.org/rss"];
 
-let results = await Promise.allSettled(sources.map((source) => RSS.fetch(new URL(source))));
+let results = await Promise.all(sources.map((source) => RSS.fetch(new URL(source))));
 
 let items = results
-	.filter((result) => result.status === "fulfilled")
-	.flatMap((result) => result.value.items)
+	.filter(isSuccess)
+	.flatMap((result) => result.data.items)
 	.sort((a, b) => Date.parse(b.pubDate ?? "") - Date.parse(a.pubDate ?? ""));
 
-let failed = results.filter((result) => result.status === "rejected").length;
+let failed = results.length - results.filter(isSuccess).length;
 ```
 
 Markup in `description` and `contentEncoded` is exactly what each publisher wrote; sanitize it
@@ -291,11 +315,11 @@ export function readFeed(text: string): RSS | null {
 	let parsed = XML.parse(text);
 	if (isFailure(parsed)) return null;
 	if (parsed.data.root.name !== "rss") return null;
-	return RSS.fromXML(parsed.data);
+
+	let feed = RSS.fromXML(parsed.data);
+	return isFailure(feed) ? null : feed.data;
 }
 ```
-
-`XML.parse` answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 
 ## Versioning
 

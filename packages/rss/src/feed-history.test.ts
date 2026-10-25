@@ -7,9 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { RSS } from "./index.js";
+
+/** Builds a feed holding `channel` and no items. */
+function create(channel: RSS.Channel): RSS {
+	return unwrap(RSS.fromJSON({ channel, items: [] }));
+}
 
 /** RFC 5005 Appendix B, "RSS 2.0-formatted Complete Feed". */
 let COMPLETE_FEED = `<?xml version="1.0"?>
@@ -81,7 +87,7 @@ let ARCHIVE_DOCUMENT = `<?xml version="1.0"?>
 
 describe("RFC 5005 markers", () => {
 	test("reads fh:complete as a flag rather than an extension", () => {
-		let channel = RSS.parse(COMPLETE_FEED).channel;
+		let channel = unwrap(RSS.parse(COMPLETE_FEED)).channel;
 
 		expect(channel.fhComplete).toBe(true);
 		expect(channel.fhArchive).toBeUndefined();
@@ -89,7 +95,7 @@ describe("RFC 5005 markers", () => {
 	});
 
 	test("reads fh:archive with the current and prev-archive relations", () => {
-		let channel = RSS.parse(ARCHIVE_DOCUMENT).channel;
+		let channel = unwrap(RSS.parse(ARCHIVE_DOCUMENT)).channel;
 
 		expect(channel.fhArchive).toBe(true);
 		expect(channel.atomLink).toEqual([
@@ -104,36 +110,36 @@ describe("RFC 5005 markers", () => {
 			"<h:complete/>",
 		);
 
-		expect(RSS.parse(source).channel.fhComplete).toBe(true);
+		expect(unwrap(RSS.parse(source)).channel.fhComplete).toBe(true);
 	});
 
 	test("keeps an fh-prefixed element of another namespace as an extension", () => {
 		let source = COMPLETE_FEED.replace("http://purl.org/syndication/history/1.0", "urn:other");
-		let channel = RSS.parse(source).channel;
+		let channel = unwrap(RSS.parse(source)).channel;
 
 		expect(channel.fhComplete).toBeUndefined();
 		expect(channel.extensions?.map((element) => element.name)).toEqual(["fh:complete"]);
 	});
 
 	test("writes both markers back and round-trips them", () => {
-		let complete = RSS.parse(COMPLETE_FEED).toString();
-		let archive = RSS.parse(ARCHIVE_DOCUMENT).toString();
+		let complete = unwrap(RSS.stringify(unwrap(RSS.parse(COMPLETE_FEED))));
+		let archive = unwrap(RSS.stringify(unwrap(RSS.parse(ARCHIVE_DOCUMENT))));
 
 		expect(complete).toContain("<fh:complete/>");
 		expect(archive).toContain("<fh:archive/>");
-		expect(RSS.parse(complete).channel.fhComplete).toBe(true);
-		expect(RSS.parse(archive).channel.fhArchive).toBe(true);
+		expect(unwrap(RSS.parse(complete)).channel.fhComplete).toBe(true);
+		expect(unwrap(RSS.parse(archive)).channel.fhArchive).toBe(true);
 	});
 
 	test("declares the namespace a built channel's marker needs", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "NetMovies Queue",
 			link: "http://netmovies.example.org/",
 			description: "The DVDs you'll receive next.",
 			fhComplete: true,
 		});
 
-		let xml = rss.toString();
+		let xml = unwrap(RSS.stringify(rss));
 		expect(xml).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"');
 		expect(xml).toContain("<fh:complete/>");
 	});
@@ -141,7 +147,7 @@ describe("RFC 5005 markers", () => {
 
 describe("RFC 5005 link relations", () => {
 	test("keeps the paged feed's next relation", () => {
-		expect(RSS.parse(PAGED_FEED).channel.atomLink).toEqual({
+		expect(unwrap(RSS.parse(PAGED_FEED)).channel.atomLink).toEqual({
 			rel: "next",
 			href: "http://liftof.example.net/index.rss?page=2",
 		});
@@ -157,14 +163,14 @@ describe("RFC 5005 link relations", () => {
 			"next-archive",
 			"current",
 		];
-		let rss = new RSS({
+		let rss = create({
 			title: "Liftoff News",
 			link: "http://liftoff.example.net/",
 			description: "Liftoff to Space Exploration.",
 			atomLink: relations.map((rel) => ({ rel, href: `http://liftoff.example.net/${rel}.rss` })),
 		});
 
-		expect(RSS.parse(rss.toString()).channel.atomLink).toEqual(
+		expect(unwrap(RSS.parse(unwrap(RSS.stringify(rss)))).channel.atomLink).toEqual(
 			relations.map((rel) => ({ rel, href: `http://liftoff.example.net/${rel}.rss` })),
 		);
 	});

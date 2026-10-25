@@ -5,7 +5,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, success } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
 import { buildDocument } from "./lib/build-document.js";
@@ -14,6 +16,21 @@ import { parseFeed } from "./lib/parse-feed.js";
 import { getGuidValue } from "./lib/utils.js";
 import { validateChannel } from "./lib/validate-channel.js";
 import { validateItem } from "./lib/validate-item.js";
+
+/** Raised when a document or in-memory data is not a usable RSS 2.0 feed. */
+export class RSSParseError extends Error {
+	override name = "RSSParseError";
+}
+
+/** Raised when a feed cannot be retrieved or does not arrive as XML. */
+export class RSSFetchError extends Error {
+	override name = "RSSFetchError";
+}
+
+/** Raised when in-memory feed data cannot be serialized to XML. */
+export class RSSStringifyError extends Error {
+	override name = "RSSStringifyError";
+}
 
 /**
  * Groups the public RSS types under a single import surface.
@@ -214,9 +231,7 @@ export namespace RSS {
 	 */
 	export type Item = ItemBase & ({ title: string } | { description: string });
 
-	/**
-	 * Represents the plain serializable shape returned by `toJSON()`.
-	 */
+	/** A whole feed as plain data: the shape `toJSON()` returns and `RSS.fromJSON` accepts. */
 	export interface Feed {
 		channel: Channel;
 		items: Item[];
@@ -224,55 +239,56 @@ export namespace RSS {
 }
 
 /**
- * Builds, parses, and serializes RSS 2.0 feeds with XML-backed round-tripping.
+ * An RSS 2.0 feed, holding channel metadata and an ordered list of items.
+ *
+ * Every way in validates what RSS 2.0 requires, so an instance always holds a
+ * feed that serializes; reading accessors hand back clones the caller may mutate.
  */
 export class RSS {
 	#channel: RSS.Channel;
 	#items: RSS.Item[];
 
-	/**
-	 * Stores one RSS channel definition and starts with an empty item list.
-	 *
-	 * @param channel - The channel metadata for the feed
-	 */
-	constructor(channel: RSS.Channel) {
-		validateChannel(channel);
-		this.#channel = cloneChannel(channel);
-		this.#items = [];
+	/** Takes ownership of already-validated data, so callers pass clones. */
+	private constructor(channel: RSS.Channel, items: RSS.Item[]) {
+		this.#channel = channel;
+		this.#items = items;
 	}
 
-	/**
-	 * Exposes the channel data as a clone so callers cannot mutate internals.
-	 */
+	/** The channel metadata. */
 	get channel(): RSS.Channel {
 		return cloneChannel(this.#channel);
 	}
 
-	/**
-	 * Replaces the current channel definition after validating required fields.
-	 *
-	 * @param channel - The next channel value
-	 */
-	set channel(channel: RSS.Channel) {
-		validateChannel(channel);
-		this.#channel = cloneChannel(channel);
-	}
-
-	/**
-	 * Exposes the item list as clones so callers cannot mutate internals.
-	 */
+	/** The items, in the order they were added. */
 	get items(): RSS.Item[] {
 		return this.#items.map(cloneItem);
 	}
 
 	/**
-	 * Appends one item to the feed.
+	 * Replaces the channel metadata, leaving the items in place. A refused channel
+	 * leaves the instance unchanged.
+	 *
+	 * @param channel - The new channel metadata
+	 * @returns An error when the title, description or link is missing
+	 */
+	setChannel(channel: RSS.Channel): Result<void, RSSParseError> {
+		let valid = validateChannel(channel);
+		if (isFailure(valid)) return valid;
+		this.#channel = cloneChannel(channel);
+		return success(undefined);
+	}
+
+	/**
+	 * Appends one item. A refused item leaves the instance unchanged.
 	 *
 	 * @param item - The item to append
+	 * @returns An error when the item has neither a title nor a description
 	 */
-	addItem(item: RSS.Item): void {
-		validateItem(item);
+	addItem(item: RSS.Item): Result<void, RSSParseError> {
+		let valid = validateItem(item);
+		if (isFailure(valid)) return valid;
 		this.#items.push(cloneItem(item));
+		return success(undefined);
 	}
 
 	/**
@@ -285,9 +301,7 @@ export class RSS {
 		if (index >= 0) this.#items.splice(index, 1);
 	}
 
-	/**
-	 * Returns the feed as plain serializable data.
-	 */
+	/** The channel and its items as plain, serializable data. */
 	toJSON(): RSS.Feed {
 		return {
 			channel: cloneChannel(this.#channel),
@@ -296,59 +310,108 @@ export class RSS {
 	}
 
 	/**
-	 * Serializes the current feed into RSS 2.0 XML.
+	 * Builds a feed from plain data, the shape `toJSON` returns.
+	 *
+	 * @param feed - The channel metadata and its items, in order
+	 * @returns The feed, or an error naming the first requirement the channel or an
+	 * item misses
+	 * @example RSS.fromJSON({ channel: { title, description, link }, items: [] })
 	 */
-	toString(): string {
-		let result = XML.stringify(new XML(buildDocument(this.#channel, this.#items)));
-		if (isFailure(result)) throw result.error;
-		return result.data;
+	static fromJSON(feed: RSS.Feed): Result<RSS, RSSParseError> {
+		let channel = validateChannel(feed.channel);
+		if (isFailure(channel)) return channel;
+
+		for (let item of feed.items) {
+			let valid = validateItem(item);
+			if (isFailure(valid)) return valid;
+		}
+
+		return success(new RSS(cloneChannel(feed.channel), feed.items.map(cloneItem)));
 	}
 
 	/**
-	 * Extracts one RSS feed from a parsed XML instance.
+	 * Serializes a feed into RSS 2.0 XML. Plain data is validated first, so one call
+	 * builds and writes a feed.
+	 *
+	 * @param input - A feed instance, or the plain data `RSS.fromJSON` accepts
+	 * @returns The XML text, an `RSSParseError` when plain data misses a requirement,
+	 * or an `RSSStringifyError` when a name or value cannot be written as XML
+	 * @example RSS.stringify({ channel: { title, description, link }, items })
+	 */
+	static stringify(input: RSS | RSS.Feed): Result<string, RSSParseError | RSSStringifyError> {
+		let rss = input instanceof RSS ? success(input) : RSS.fromJSON(input);
+		if (isFailure(rss)) return rss;
+
+		let result = XML.stringify(new XML(buildDocument(rss.data.#channel, rss.data.#items)));
+		if (isFailure(result)) return failure(new RSSStringifyError(result.error.message));
+		return result;
+	}
+
+	/**
+	 * Reads a feed out of an already-parsed XML document, which is the entry point
+	 * for a caller that parsed the text for some other purpose first.
 	 *
 	 * @param xml - The parsed XML document
-	 * @returns The extracted feed
+	 * @returns The feed, or the reason the document is not one
 	 */
-	static fromXML(xml: XML): RSS {
+	static fromXML(xml: XML): Result<RSS, RSSParseError> {
 		let feed = parseFeed(xml);
-		if (isFailure(feed)) throw feed.error;
-
-		let rss = new RSS(feed.data.channel);
-		for (let item of feed.data.items) rss.addItem(item);
-		return rss;
+		if (isFailure(feed)) return failure(new RSSParseError(feed.error.message));
+		return success(new RSS(feed.data.channel, feed.data.items));
 	}
 
 	/**
-	 * Parses raw RSS XML into an `RSS` instance.
+	 * Parses RSS XML text.
 	 *
-	 * @param source - Raw RSS XML text
-	 * @returns The parsed feed
+	 * @param source - The raw XML text
+	 * @returns The feed, or the reason the text is not one
 	 */
-	static parse(source: string): RSS {
+	static parse(source: string): Result<RSS, RSSParseError> {
 		let parsed = XML.parse(source);
-		if (isFailure(parsed)) throw parsed.error;
+		if (isFailure(parsed)) return failure(new RSSParseError(parsed.error.message));
 		return RSS.fromXML(parsed.data);
 	}
 
 	/**
-	 * Fetches RSS XML and parses it into an `RSS` instance.
+	 * Retrieves a feed, bypassing caches, and parses it.
 	 *
-	 * @param input - The URL or request info to fetch
-	 * @param init - Additional fetch options
-	 * @returns The parsed feed
+	 * @param input - The URL or request to retrieve
+	 * @param init - Additional request options
+	 * @returns The feed, or the reason it could not be read: an `RSSFetchError` when
+	 * the request fails or the response is not XML
 	 */
-	static async fetch(input: URL | RequestInfo, init?: RequestInit): Promise<RSS> {
+	static async fetch(
+		input: URL | RequestInfo,
+		init?: RequestInit,
+	): Promise<Result<RSS, RSSFetchError | RSSParseError>> {
 		let headers = new Headers(init?.headers);
 		headers.set("cache-control", "no-cache, no-store");
 
-		let response = await fetch(input, { ...init, headers });
-		if (!response.ok) throw new Error("Failed to fetch RSS feed");
+		let response: Response;
+		try {
+			response = await fetch(input, { ...init, headers });
+		} catch (error) {
+			return failure(new RSSFetchError(`Failed to fetch RSS feed: ${message(error)}`));
+		}
+
+		if (!response.ok) {
+			return failure(new RSSFetchError(`Failed to fetch RSS feed: ${response.status}`));
+		}
 
 		let contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-		if (!contentType.includes("xml")) throw new Error("Invalid Content-Type");
+		if (!contentType.includes("xml")) {
+			return failure(new RSSFetchError(`Expected an XML response, received "${contentType}".`));
+		}
 
 		let text = await response.text();
 		return RSS.parse(text);
 	}
+}
+
+/**
+ * Reads a thrown value's message, so a rejected request reports what went wrong
+ * whether or not it rejected with an `Error`.
+ */
+function message(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }

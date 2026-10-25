@@ -6,15 +6,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { RSS } from "./index.js";
+import { RSS, RSSFetchError, RSSParseError, RSSStringifyError } from "./index.js";
 
 let FEED_URL = "https://example.com/feed.xml";
+
+/** Builds a feed holding `channel` and no items. */
+function create(channel: RSS.Channel): RSS {
+	return unwrap(RSS.fromJSON({ channel, items: [] }));
+}
 
 let server = setupServer();
 
@@ -89,7 +94,7 @@ let FULL_SPEC_XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 describe("RSS", () => {
 	test("creates RSS with channel", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
@@ -102,18 +107,20 @@ describe("RSS", () => {
 		});
 	});
 
-	test("channel setter replaces and clones channel metadata", () => {
-		let rss = new RSS({
+	test("setChannel replaces and clones channel metadata", () => {
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
 		});
 
-		rss.addItem({
-			guid: "1",
-			title: "First Post",
-			description: "This is the first post",
-		});
+		unwrap(
+			rss.addItem({
+				guid: "1",
+				title: "First Post",
+				description: "This is the first post",
+			}),
+		);
 
 		let channel: RSS.Channel = {
 			...rss.channel,
@@ -121,7 +128,7 @@ describe("RSS", () => {
 			language: "en-us",
 		};
 
-		rss.channel = channel;
+		unwrap(rss.setChannel(channel));
 		channel.description = "Mutated";
 
 		expect(rss.channel).toEqual({
@@ -134,23 +141,23 @@ describe("RSS", () => {
 		expect(rss.items[0]?.title).toBe("First Post");
 	});
 
-	test("channel setter validates required fields", () => {
-		let rss = new RSS({
+	test("setChannel refuses a channel missing a required field and keeps the one it had", () => {
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
 		});
 
-		expect(() => {
-			rss.channel = {
-				...rss.channel,
-				description: "",
-			};
-		}).toThrow("Channel must include title, description, and link.");
+		let result = rss.setChannel({ ...rss.channel, description: "" });
+
+		expect(isFailure(result) && result.error).toEqual(
+			new RSSParseError("Channel must include title, description, and link."),
+		);
+		expect(rss.channel.description).toBe("A test feed");
 	});
 
 	test("addItem adds and clones items", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
@@ -164,7 +171,7 @@ describe("RSS", () => {
 			pubDate: "Tue, 14 Apr 2026 09:00:00 GMT",
 		};
 
-		rss.addItem(item);
+		unwrap(rss.addItem(item));
 		item.title = "Mutated";
 
 		expect(rss.items).toHaveLength(1);
@@ -178,35 +185,42 @@ describe("RSS", () => {
 	});
 
 	test("addItem validates that items have a title or description", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
 		});
 
-		expect(() => {
-			rss.addItem({ guid: "1" } as RSS.Item);
-		}).toThrow("Item must include at least a title or description.");
+		let result = rss.addItem({ guid: "1" } as RSS.Item);
+
+		expect(isFailure(result) && result.error).toEqual(
+			new RSSParseError("Item must include at least a title or description."),
+		);
+		expect(rss.items).toEqual([]);
 	});
 
 	test("removeItem removes item by guid value", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
 		});
 
-		rss.addItem({
-			guid: { value: "1", isPermaLink: false },
-			title: "First Post",
-			description: "This is the first post",
-		});
+		unwrap(
+			rss.addItem({
+				guid: { value: "1", isPermaLink: false },
+				title: "First Post",
+				description: "This is the first post",
+			}),
+		);
 
-		rss.addItem({
-			guid: "2",
-			title: "Second Post",
-			description: "This is the second post",
-		});
+		unwrap(
+			rss.addItem({
+				guid: "2",
+				title: "Second Post",
+				description: "This is the second post",
+			}),
+		);
 
 		rss.removeItem("1");
 
@@ -215,7 +229,7 @@ describe("RSS", () => {
 	});
 
 	test("toJSON returns the full feed payload", () => {
-		let rss = new RSS({
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
@@ -223,13 +237,15 @@ describe("RSS", () => {
 			atomLink: { href: "https://example.com/feed.xml", rel: "self", type: "application/rss+xml" },
 		});
 
-		rss.addItem({
-			guid: { value: "1", isPermaLink: false },
-			title: "First Post",
-			description: "This is the first post",
-			category: "Updates",
-			contentEncoded: "<p>Full content</p>",
-		});
+		unwrap(
+			rss.addItem({
+				guid: { value: "1", isPermaLink: false },
+				title: "First Post",
+				description: "This is the first post",
+				category: "Updates",
+				contentEncoded: "<p>Full content</p>",
+			}),
+		);
 
 		expect(rss.toJSON()).toEqual({
 			channel: {
@@ -265,8 +281,8 @@ describe("RSS", () => {
 		});
 	});
 
-	test("toString outputs RSS XML with optional channel and item elements", () => {
-		let rss = new RSS({
+	test("stringify outputs RSS XML with optional channel and item elements", () => {
+		let rss = create({
 			title: "Test Feed",
 			description: "A test feed",
 			link: "https://example.com",
@@ -316,39 +332,41 @@ describe("RSS", () => {
 			],
 		});
 
-		rss.addItem({
-			guid: { value: "tag:example.com,2026:1", isPermaLink: false },
-			title: "First Post",
-			description: "Summary <strong>HTML</strong>",
-			link: "https://example.com/posts/1",
-			author: "author@example.com (Author)",
-			category: ["Updates", { value: "Technology/AI", domain: "topics" }],
-			comments: "https://example.com/posts/1#comments",
-			enclosure: { url: "https://example.com/audio.mp3", length: 12345, type: "audio/mpeg" },
-			pubDate: "Tue, 14 Apr 2026 09:00:00 GMT",
-			source: { value: "Source Feed", url: "https://source.example.com/feed.xml" },
-			contentEncoded: "<p>Full content</p>",
-			atomLink: {
-				href: "https://example.com/posts/1.json",
-				rel: "alternate",
-				type: "application/json",
-			},
-			dcCreator: "Jane Doe",
-			slashComments: 7,
-			extensions: [
-				{
-					name: "media:thumbnail",
-					attributes: {
-						url: "https://example.com/thumb.jpg",
-						width: "320",
-						height: "180",
-					},
-					children: [],
+		unwrap(
+			rss.addItem({
+				guid: { value: "tag:example.com,2026:1", isPermaLink: false },
+				title: "First Post",
+				description: "Summary <strong>HTML</strong>",
+				link: "https://example.com/posts/1",
+				author: "author@example.com (Author)",
+				category: ["Updates", { value: "Technology/AI", domain: "topics" }],
+				comments: "https://example.com/posts/1#comments",
+				enclosure: { url: "https://example.com/audio.mp3", length: 12345, type: "audio/mpeg" },
+				pubDate: "Tue, 14 Apr 2026 09:00:00 GMT",
+				source: { value: "Source Feed", url: "https://source.example.com/feed.xml" },
+				contentEncoded: "<p>Full content</p>",
+				atomLink: {
+					href: "https://example.com/posts/1.json",
+					rel: "alternate",
+					type: "application/json",
 				},
-			],
-		});
+				dcCreator: "Jane Doe",
+				slashComments: 7,
+				extensions: [
+					{
+						name: "media:thumbnail",
+						attributes: {
+							url: "https://example.com/thumb.jpg",
+							width: "320",
+							height: "180",
+						},
+						children: [],
+					},
+				],
+			}),
+		);
 
-		let output = rss.toString();
+		let output = unwrap(RSS.stringify(rss));
 
 		expect(output).toContain('<?xml version="1.0" encoding="UTF-8"?>');
 		expect(output).toContain('<rss version="2.0"');
@@ -383,7 +401,7 @@ describe("RSS", () => {
 	});
 
 	test("parse reads the full RSS 2.0 model plus common namespace extensions", () => {
-		let rss = RSS.parse(FULL_SPEC_XML);
+		let rss = unwrap(RSS.parse(FULL_SPEC_XML));
 
 		expect(rss.channel).toEqual({
 			title: "Example Feed",
@@ -491,23 +509,65 @@ describe("RSS", () => {
 		let parsed = XML.parse(FULL_SPEC_XML);
 		if (isFailure(parsed)) throw parsed.error;
 
-		let rss = RSS.fromXML(parsed.data);
+		let rss = unwrap(RSS.fromXML(parsed.data));
 
 		expect(rss.channel.title).toBe("Example Feed");
 		expect(rss.items[0]?.title).toBe("First Post");
 		expect(rss.items[0]?.contentEncoded).toBe("<p>Full content</p>");
 	});
 
-	test("parse rejects invalid RSS documents", () => {
-		expect(() => RSS.parse("<feed />")).toThrow('Expected the root element to be "rss".');
-		expect(() => RSS.parse('<rss version="2.0"><channel><title>x</title></channel></rss>')).toThrow(
-			"Channel must include title, description, and link.",
-		);
-		expect(() =>
+	test("parse answers an invalid RSS document with a parse failure", () => {
+		let results = [
+			RSS.parse("<feed />"),
+			RSS.parse('<rss version="2.0"><channel><title>x</title></channel></rss>'),
 			RSS.parse(
 				'<rss version="2.0"><channel><title>x</title><description>y</description><link>z</link><item><link>z</link></item></channel></rss>',
 			),
-		).toThrow("Item must include at least a title or description.");
+			RSS.parse("<rss"),
+		];
+
+		expect(results.map((result) => isFailure(result) && result.error)).toEqual([
+			new RSSParseError('Expected the root element to be "rss".'),
+			new RSSParseError("Channel must include title, description, and link."),
+			new RSSParseError("Item must include at least a title or description."),
+			expect.any(RSSParseError),
+		]);
+	});
+
+	test("fromJSON refuses plain data whose channel or item misses a requirement", () => {
+		let channel = { title: "Feed", description: "Description", link: "https://example.com" };
+		let noLink = RSS.fromJSON({ channel: { ...channel, link: "" }, items: [] });
+		let emptyItem = RSS.fromJSON({ channel, items: [{ title: "A" }, {} as RSS.Item] });
+
+		expect(isFailure(noLink) && noLink.error.message).toBe(
+			"Channel must include title, description, and link.",
+		);
+		expect(isFailure(emptyItem) && emptyItem.error.message).toBe(
+			"Item must include at least a title or description.",
+		);
+	});
+
+	test("stringify writes plain data in one call, refusing data that misses a requirement", () => {
+		let channel = { title: "Feed", description: "Description", link: "https://example.com" };
+		let written = RSS.stringify({ channel, items: [{ title: "A" }] });
+		let refused = RSS.stringify({ channel, items: [{ title: "A" }, {} as RSS.Item] });
+
+		expect(unwrap(RSS.parse(unwrap(written))).items).toEqual([{ title: "A" }]);
+		expect(isFailure(refused) && refused.error).toBeInstanceOf(RSSParseError);
+	});
+
+	test("stringify reports a name XML cannot hold as a stringify failure", () => {
+		let result = RSS.stringify({
+			channel: {
+				title: "Feed",
+				description: "Description",
+				link: "https://example.com",
+				extensions: [{ name: "1bad" }],
+			},
+			items: [],
+		});
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(RSSStringifyError);
 	});
 
 	test("fetch accepts XML content types and parses the response body", async () => {
@@ -522,9 +582,26 @@ describe("RSS", () => {
 			}),
 		);
 
-		let rss = await RSS.fetch(FEED_URL);
+		let rss = unwrap(await RSS.fetch(FEED_URL));
 
 		expect(rss.channel.title).toBe("Example Feed");
 		expect(requests).toBe(1);
+	});
+
+	test("fetch answers an error status or a response that is not XML with a fetch failure", async () => {
+		server.use(
+			http.get(FEED_URL, () => new HttpResponse(null, { status: 503 })),
+			http.get("https://example.com/page.html", () => HttpResponse.html("<html />")),
+		);
+
+		let failed = await RSS.fetch(FEED_URL);
+		let html = await RSS.fetch("https://example.com/page.html");
+
+		expect(isFailure(failed) && failed.error).toEqual(
+			new RSSFetchError("Failed to fetch RSS feed: 503"),
+		);
+		expect(isFailure(html) && html.error).toEqual(
+			new RSSFetchError('Expected an XML response, received "text/html".'),
+		);
 	});
 });
