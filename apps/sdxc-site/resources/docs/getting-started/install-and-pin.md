@@ -1,20 +1,20 @@
 ---
 title: Install and pin
-description: How each package installs by its own name, why every package in a project shares one release date, and where the record of a release is kept.
+description: How each package installs by its own name, how to pin every package in a project at one release, and where the record of a release is kept.
 section:
     title: Packages à la carte
     order: 1.5
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to install a package by its own name beside `remix`"
-    - "Why every `@sdxc` package in a project shares one release date"
+    - "How to pin every `@sdxc` package in a project at one release"
     - "Where to read what changed before a pin moves"
 ---
 
 Each `@sdxc` package installs on its own, so you add only the ones your code imports and pin
-them to one release date. This page covers the install line, why every package in a project
-shares one date, and where to read what changed before you move it.
+each at one release. This page covers the install line, how to pin packages that carry
+different dates, and where to read what changed before you move a pin.
 
 Install the packages your code imports, each by the name its [API page](/api) shows, beside the
 `remix` your app already uses:
@@ -31,34 +31,39 @@ The version you get looks like a date, because it is one: a release is named for
 published. Write that date into your manifest exactly rather than as a range —
 [Versioning](/docs/releases/versioning) covers the scheme and what an exact pin buys you.
 
-## Keep every package on one date
+## Keep every package at one release
 
-When a package installs a sibling from this collection, that dependency is pinned exactly too,
-at the version it was built and tested with. This is also why a release day tends to publish
-more than the packages that changed: a dependent republishes so its pin can move.
-
-So pin every `@sdxc` package in a project to the same date and move them together:
+A release republishes only the packages that changed that day, together with every package that
+depends on one of them, so the packages in a project carry different dates. A package's version
+_at a release_ is its newest version published on or before that release's date, and that is
+the version to pin. On the `2026.10.24` release, `@sdxc/markdown` changed and `@sdxc/result` had
+not changed since `2026.10.13`:
 
 ```json {% title="package.json" %}
 {
 	"dependencies": {
-		"@sdxc/markdown": "2026.9.21",
-		"@sdxc/result": "2026.9.21",
-		"remix": "3.0.0"
+		"@sdxc/markdown": "2026.10.24",
+		"@sdxc/result": "2026.10.13",
+		"remix": "3.1.0"
 	}
 }
 ```
 
+When a package installs a sibling from this collection, it pins that dependency exactly, at the
+sibling's version at the same release. Pinning every package at one release therefore gives you
+one copy of each, and `remix` at the version those packages name as their peer.
+
 <warning>
-Mixed dates duplicate a shared dependency: `@sdxc/spec@2026.9.4` beside `@sdxc/jwt@2026.9.1`
-yields two copies of `@sdxc/duration` when their pins differ, and context keys and `instanceof`
-checks stop matching between the copies. Moving both to the same day collapses them. In a
-project made with `sdxc create`, `sdxc doctor` reports packages that sit on more than one date.
+Pins from different releases duplicate a shared dependency: an `@sdxc/spec` and an `@sdxc/jwt`
+built against different versions of `@sdxc/duration` install two copies of it, and context keys
+and `instanceof` checks stop matching between the copies. `sdxc upgrade <release>` moves every
+pin to its version at one release, and in a project made with `sdxc create`, `sdxc doctor`
+reports a package pinned behind the others.
 </warning>
 
 Three packages run at build or test time: [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks),
 [`@sdxc/jsdoc`](/api/jsdoc) and [`@sdxc/spec`](/api/spec). Install them as dev dependencies,
-on the same date as the rest.
+at the same release as the rest.
 
 The `sdxc` command, installed globally from `@sdxc/kit`, starts a project from a template and
 writes controllers, jobs and models where the app layout puts them.
@@ -76,4 +81,4 @@ previous release. That is the whole record, and it is the thing to read before a
   the wrong tool for it.
 - [Your first handler](/docs/getting-started/your-first-handler) — put the packages you just
   installed to work.
-- [Upgrade](/docs/sdxc/upgrade) — move every pin to a newer date in one step.
+- [Upgrade](/docs/sdxc/upgrade) — move every pin to a newer release in one step.
