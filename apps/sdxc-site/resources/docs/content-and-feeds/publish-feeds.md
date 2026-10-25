@@ -91,12 +91,14 @@ export default route({
 
 ## RSS 2.0
 
-`new RSS(channel)` takes the channel, `addItem` appends, and `toString` writes the XML with the
-namespaces its extensions need already declared. `xml` from `@sdxc/http/response` sets the
-content type.
+RSS requires a `title`, a `description` and a `link` on the channel, and a `title` or a
+`description` on every item. `RSS.stringify` takes the channel and its items as plain data,
+checks those fields and writes the XML, with the namespaces its extensions need already
+declared, answering a `Result`. `xml` from `@sdxc/http/response` sets the content type.
 
 ```typescript {% title="app/http/controllers/feeds/rss.ts" %}
-import { xml } from "@sdxc/http/response";
+import { text, xml } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
@@ -107,17 +109,16 @@ export default createAction(routes.feeds.rss, async (ctx) => {
 	let self = new URL(routes.feeds.rss.href(), ctx.url).href;
 	let entries = await feedEntries(ctx.url.origin);
 
-	let rss = new RSS({
-		title: "Example",
-		description: "Notes on building for the web.",
-		link: ctx.url.origin,
-		language: "en",
-		lastBuildDate: entries[0]?.publishedAt.toUTCString(),
-		atomLink: { rel: "self", href: self, type: "application/rss+xml" },
-	});
-
-	for (let entry of entries) {
-		rss.addItem({
+	let rss = RSS.stringify({
+		channel: {
+			title: "Example",
+			description: "Notes on building for the web.",
+			link: ctx.url.origin,
+			language: "en",
+			lastBuildDate: entries[0]?.publishedAt.toUTCString(),
+			atomLink: { rel: "self", href: self, type: "application/rss+xml" },
+		},
+		items: entries.map((entry) => ({
 			guid: { value: entry.url, isPermaLink: true },
 			title: entry.title,
 			description: entry.summary,
@@ -125,12 +126,21 @@ export default createAction(routes.feeds.rss, async (ctx) => {
 			category: entry.tags,
 			pubDate: entry.publishedAt.toUTCString(),
 			contentEncoded: entry.html,
-		});
+		})),
+	});
+
+	if (isFailure(rss)) {
+		ctx.log.fail(rss.error);
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return xml(rss.toString());
+	return xml(rss.data);
 });
 ```
+
+A failure means the data you built lacks a field RSS requires, so the action logs it and
+answers with a 500. When you need the feed as an object first, `RSS.fromJSON({ channel, items })`
+builds one and `RSS.stringify(rss)` writes it.
 
 RSS dates are RFC 822 strings, which is what `toUTCString()` writes. The `guid` is the
 permalink, marked as one, so a reader that already showed an item never shows it twice after
@@ -204,27 +214,31 @@ they might.
 ## JSON Feed 1.1
 
 Fields are camelCase here and written under the format's own names, so `homePageUrl` becomes
-`home_page_url` in the document. Serve it under `JSONFeed.mediaType`, which is
-`application/feed+json`:
+`home_page_url` in the document. `JSONFeed.stringify` checks that the feed has a `title` and
+every item an `id`, and answers a `Result` like the other two. Serve the text under
+`JSONFeed.mediaType`, which is `application/feed+json`:
 
 ```typescript {% title="app/http/controllers/feeds/json.ts" %}
+import { text } from "@sdxc/http/response";
 import { JSONFeed } from "@sdxc/json-feed";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { feedEntries } from "~/app/services/feeds/entries";
 import routes from "~/routes/web";
 
 export default createAction(routes.feeds.json, async (ctx) => {
-	let feed = new JSONFeed({
-		title: "Example",
-		homePageUrl: ctx.url.origin,
-		feedUrl: new URL(routes.feeds.json.href(), ctx.url).href,
-		language: "en",
-		authors: [{ name: "Ada Lovelace", url: ctx.url.origin }],
-	});
+	let entries = await feedEntries(ctx.url.origin);
 
-	for (let entry of await feedEntries(ctx.url.origin)) {
-		feed.addItem({
+	let json = JSONFeed.stringify({
+		feed: {
+			title: "Example",
+			homePageUrl: ctx.url.origin,
+			feedUrl: new URL(routes.feeds.json.href(), ctx.url).href,
+			language: "en",
+			authors: [{ name: "Ada Lovelace", url: ctx.url.origin }],
+		},
+		items: entries.map((entry) => ({
 			id: entry.url,
 			url: entry.url,
 			title: entry.title,
@@ -232,10 +246,15 @@ export default createAction(routes.feeds.json, async (ctx) => {
 			contentHtml: entry.html,
 			datePublished: entry.publishedAt.toISOString(),
 			tags: entry.tags,
-		});
+		})),
+	});
+
+	if (isFailure(json)) {
+		ctx.log.fail(json.error);
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return new Response(feed.toString(), {
+	return new Response(json.data, {
 		headers: { "content-type": JSONFeed.mediaType },
 	});
 });
@@ -343,7 +362,7 @@ export function advertiseHub(self: string, type: string) {
 
 In the RSS action, write `let hub = advertiseHub(self, "application/rss+xml")`, pass
 `hub.links` as the channel's `atomLink` in place of the lone `self` link, and answer with
-`xml(rss.toString(), { headers: hub.headers })`. The Atom action spreads the same `links`
+`xml(rss.data, { headers: hub.headers })`. The Atom action spreads the same `links`
 after its `alternate` link, and JSON Feed takes `hubs: [{ type: "WebSub", url: env.WEBSUB_HUB }]`
 on the feed plus the same headers on its `Response`.
 

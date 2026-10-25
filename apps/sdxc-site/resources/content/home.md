@@ -202,35 +202,37 @@ export default createAction(routes.webhook, async (ctx) => {
 <code-tab label="Feeds">
 
 ```typescript {% title="app/controllers/rss.ts" %}
-import { xml } from "@sdxc/http/response";
+import { text, xml } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { links } from "@sdxc/websub/publisher";
 import { createAction } from "remix/router";
 
 export default createAction(routes.rss, async (ctx) => {
 	let self = new URL("/rss.xml", ctx.url).href;
-	let rss = new RSS({
-		title: "Articles",
-		description: "Everything published here.",
-		link: new URL("/articles", ctx.url).href,
-		atomLink: [
-			{ rel: "self", href: self },
-			{ rel: "hub", href: HUB },
-		],
-	});
-
-	for (let article of await Article.published(ctx.db)) {
-		rss.addItem({
+	let articles = await Article.published(ctx.db);
+	let rss = RSS.stringify({
+		channel: {
+			title: "Articles",
+			description: "Everything published here.",
+			link: new URL("/articles", ctx.url).href,
+			atomLink: [
+				{ rel: "self", href: self },
+				{ rel: "hub", href: HUB },
+			],
+		},
+		items: articles.map((article) => ({
 			guid: article.id,
 			title: article.title,
 			description: article.excerpt,
 			link: article.url,
 			pubDate: article.publishedAt.toUTCString(),
-		});
-	}
+		})),
+	});
+	if (isFailure(rss)) return text("Internal Server Error", { status: 500 });
 
 	let headers = { link: links({ hubs: [HUB], self }) };
-	return xml(rss.toString(), { headers });
+	return xml(rss.data, { headers });
 });
 ```
 
