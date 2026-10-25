@@ -8,12 +8,12 @@
  */
 
 import type { DurationString } from "@sdxc/duration";
-import type { JWK, JWT } from "@sdxc/jwt";
 import type { Adapter } from "@sdxc/rate-limit";
 
 import * as s from "@remix-run/data-schema";
 import { Base64, Base64Url, randomToken, sha256, sha384, sha512 } from "@sdxc/crypto";
 import { toSeconds } from "@sdxc/duration";
+import { JWK, JWT } from "@sdxc/jwt";
 import { Location } from "@sdxc/location";
 import { tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure, wrap } from "@sdxc/result";
@@ -289,6 +289,20 @@ function defaultProfile(claims: JWT.Payload): RelyingParty.Profile {
 	};
 }
 
+/** The lifetime a request object carries when the client names none. */
+const DEFAULT_REQUEST_OBJECT_LIFETIME = "5m";
+
+/** The answer a PAR endpoint gives a pushed request (RFC 9126 §2.2). */
+const PUSHED_AUTHORIZATION_RESPONSE_SCHEMA = s.object({
+	request_uri: s.string(),
+	expires_in: s.number(),
+});
+
+/** A request object, explicitly typed (RFC 9101 §4) so no other JWT verifies as one. */
+class RequestObject extends JWT {
+	static override type = "oauth-authz-req+jwt";
+}
+
 /**
  * A confidential OpenID Connect client for a person's browser login. Its three route
  * methods share one transaction, held in the session, so a callback is measured against
@@ -316,6 +330,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	#clockTolerance: number;
 	#fallbackReturnTo: string;
 	#rateLimit: RelyingParty.RateLimit | null;
+	#pushAuthorizationRequests: boolean;
+	#requestObject: RelyingParty.RequestObjectOptions | null;
 
 	/**
 	 * Binds a client's credentials to one issuer.
@@ -346,6 +362,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		this.#clockTolerance = options.clockTolerance ?? DEFAULT_CLOCK_TOLERANCE_SECONDS;
 		this.#fallbackReturnTo = options.fallbackReturnTo ?? DEFAULT_RETURN_TO;
 		this.#rateLimit = options.rateLimit ?? null;
+		this.#pushAuthorizationRequests = options.pushAuthorizationRequests ?? false;
+		this.#requestObject = options.requestObject ?? null;
 	}
 
 	/**
@@ -367,8 +385,9 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 * @throws {Response} `429` with `Retry-After` when the calling browser's login
 	 *   budget is spent, for the caller to answer the request with.
 	 * @throws {AuthError} `endpoint_unsupported` when the issuer publishes no
-	 *   authorization endpoint, `reserved_parameter` for an extra parameter the flow
-	 *   writes itself.
+	 *   authorization endpoint, or no PAR endpoint for a client that pushes,
+	 *   `authorization_failed` when the PAR endpoint refuses the request, and
+	 *   `reserved_parameter` for an extra parameter the flow writes itself.
 	 * @example
 	 * let response = await rp.authorize({ request, session }, { returnTo });
 	 */
@@ -402,26 +421,39 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 		ctx.session.set(TRANSACTION_SESSION_KEY, transaction);
 
-		let url = new URL(endpoint);
-		url.searchParams.set("response_type", "code");
-		url.searchParams.set("client_id", this.#clientId);
-		url.searchParams.set("redirect_uri", this.#redirectUri);
-		url.searchParams.set("scope", (options.scopes ?? this.#scopes).join(" "));
-		url.searchParams.set("state", state);
-		url.searchParams.set("nonce", nonce);
-		url.searchParams.set("code_challenge", await deriveChallenge(codeVerifier));
-		url.searchParams.set("code_challenge_method", "S256");
+		let params = new URLSearchParams();
+		params.set("response_type", "code");
+		params.set("client_id", this.#clientId);
+		params.set("redirect_uri", this.#redirectUri);
+		params.set("scope", (options.scopes ?? this.#scopes).join(" "));
+		params.set("state", state);
+		params.set("nonce", nonce);
+		params.set("code_challenge", await deriveChallenge(codeVerifier));
+		params.set("code_challenge_method", "S256");
 
-		if (acrValues && acrValues.length > 0) url.searchParams.set("acr_values", acrValues.join(" "));
-		if (maxAge !== null) url.searchParams.set("max_age", String(maxAge));
-		if (options.prompt) url.searchParams.set("prompt", options.prompt);
+		if (acrValues && acrValues.length > 0) params.set("acr_values", acrValues.join(" "));
+		if (maxAge !== null) params.set("max_age", String(maxAge));
+		if (options.prompt) params.set("prompt", options.prompt);
 
 		for (let [name, value] of Object.entries({
 			...this.#authorizationParams,
 			...options.authorizationParams,
 		})) {
-			url.searchParams.set(name, value);
+			params.set(name, value);
 		}
+
+		if (this.#requestObject) {
+			let request = await this.#signRequestObject(params, this.#requestObject);
+			params = new URLSearchParams({ client_id: this.#clientId, request });
+		}
+
+		if (this.#pushAuthorizationRequests) {
+			let requestUri = await this.#push(params);
+			params = new URLSearchParams({ client_id: this.#clientId, request_uri: requestUri });
+		}
+
+		let url = new URL(endpoint);
+		for (let [name, value] of params) url.searchParams.set(name, value);
 
 		return seeOther(url);
 	}
@@ -657,13 +689,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 			accept: "application/json",
 		});
 
-		if (this.#clientAuth === "client_secret_basic") {
-			let credentials = `${encodeURIComponent(this.#clientId)}:${encodeURIComponent(this.#clientSecret ?? "")}`;
-			headers.set("authorization", `Basic ${Base64.encode(credentials)}`);
-		} else {
-			body.set("client_id", this.#clientId);
-			if (this.#clientSecret) body.set("client_secret", this.#clientSecret);
-		}
+		this.#authenticate(headers, body);
 
 		let response = await fetch(endpoint, { method: "POST", headers, body });
 
@@ -802,6 +828,91 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	}
 
 	/**
+	 * Adds the client's credentials to a direct request, the same way at the token,
+	 * revocation and PAR endpoints (RFC 9126 §2).
+	 *
+	 * @param headers - The request's headers, which carry `Basic` credentials.
+	 * @param body - The request's form, which carries `client_secret_post` credentials.
+	 */
+	#authenticate(headers: Headers, body: URLSearchParams): void {
+		if (this.#clientAuth === "client_secret_basic") {
+			let credentials = `${encodeURIComponent(this.#clientId)}:${encodeURIComponent(this.#clientSecret ?? "")}`;
+			headers.set("authorization", `Basic ${Base64.encode(credentials)}`);
+		} else {
+			body.set("client_id", this.#clientId);
+			if (this.#clientSecret) body.set("client_secret", this.#clientSecret);
+		}
+	}
+
+	/**
+	 * Signs a login's authorization parameters into a request object (RFC 9101) the
+	 * issuer verifies with the client's registered keys; `iss` is the client and `aud`
+	 * the issuer's identifier.
+	 *
+	 * @param params - Every authorization parameter the login carries.
+	 * @param options - The algorithm, keys, and lifetime to sign with.
+	 * @returns The compact JWS to send as `request`.
+	 */
+	async #signRequestObject(
+		params: URLSearchParams,
+		options: RelyingParty.RequestObjectOptions,
+	): Promise<string> {
+		let token = new RequestObject({
+			...Object.fromEntries(params),
+			iss: this.#clientId,
+			aud: await this.#issuer.identifier(),
+			iat: "0s",
+			exp: options.lifetime ?? DEFAULT_REQUEST_OBJECT_LIFETIME,
+			jti: correlationToken(),
+		});
+		return token.sign(options.algorithm, options.keys);
+	}
+
+	/**
+	 * Pushes the authorization request to the issuer's PAR endpoint (RFC 9126) with the
+	 * client's credentials, so the browser carries only `client_id` and the reference.
+	 * `client_id` stays in the form beside `Basic` credentials, as §2.1 requires it.
+	 *
+	 * @param params - The authorization parameters, or `client_id` and a `request` object.
+	 * @returns The one-time `request_uri` to redirect with.
+	 * @throws {AuthError} `endpoint_unsupported` when the issuer advertises no PAR
+	 *   endpoint, `authorization_failed` when it refuses the request or answers unusably.
+	 */
+	async #push(params: URLSearchParams): Promise<string> {
+		let endpoint = await this.#issuer.pushedAuthorizationRequestEndpoint();
+
+		let body = new URLSearchParams(params);
+		let headers = new Headers({
+			"content-type": "application/x-www-form-urlencoded",
+			accept: "application/json",
+		});
+		this.#authenticate(headers, body);
+
+		let response = await fetch(endpoint, { method: "POST", headers, body });
+		let answer = await wrap(() => response.json() as Promise<unknown>);
+
+		if (!response.ok) {
+			let refusal = isFailure(answer) ? null : s.parseSafe(TOKEN_ERROR_SCHEMA, answer.data);
+			throw new AuthError(`The PAR endpoint refused the request with ${response.status}`, {
+				code: AuthErrorCode.AuthorizationFailed,
+				providerError: refusal?.success ? refusal.value.error : undefined,
+				providerErrorDescription: refusal?.success ? refusal.value.error_description : undefined,
+			});
+		}
+
+		let parsed = isFailure(answer)
+			? null
+			: s.parseSafe(PUSHED_AUTHORIZATION_RESPONSE_SCHEMA, answer.data);
+		if (!parsed?.success) {
+			throw new AuthError("The PAR endpoint answered without a request_uri", {
+				code: AuthErrorCode.AuthorizationFailed,
+			});
+		}
+
+		return parsed.value.request_uri;
+	}
+
+	/**
 	 * Presents the client's credentials at the token endpoint and reads the answer.
 	 *
 	 * @param body - The grant-specific parameters.
@@ -820,13 +931,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 			accept: "application/json",
 		});
 
-		if (this.#clientAuth === "client_secret_basic") {
-			let credentials = `${encodeURIComponent(this.#clientId)}:${encodeURIComponent(this.#clientSecret ?? "")}`;
-			headers.set("authorization", `Basic ${Base64.encode(credentials)}`);
-		} else {
-			body.set("client_id", this.#clientId);
-			if (this.#clientSecret) body.set("client_secret", this.#clientSecret);
-		}
+		this.#authenticate(headers, body);
 
 		let response = await fetch(endpoint, { method: "POST", headers, body });
 
@@ -1185,6 +1290,34 @@ export namespace RelyingParty {
 		 * a `429` response.
 		 */
 		rateLimit?: RateLimit;
+		/**
+		 * Pushes every login's authorization request to the issuer's PAR endpoint
+		 * (RFC 9126), read from its metadata, and redirects the browser with only
+		 * `client_id` and the one-time `request_uri` it answers.
+		 *
+		 * @default false
+		 */
+		pushAuthorizationRequests?: boolean;
+		/**
+		 * Signs every login's authorization parameters into a request object (RFC 9101),
+		 * sent as `request` beside `client_id`, or pushed when `pushAuthorizationRequests`
+		 * is on. The issuer verifies it with the public keys the client registered.
+		 */
+		requestObject?: RequestObjectOptions;
+	}
+
+	/** How a client signs its request objects. */
+	export interface RequestObjectOptions {
+		/** The JWS algorithm to sign with; the first of `keys` generated for it signs. */
+		algorithm: JWK.Algorithm;
+		/** The client's private keys, whose public halves the issuer holds. */
+		keys: JWK.SigningKey[];
+		/**
+		 * How long a signed object stays valid, as its `exp`.
+		 *
+		 * @default "5m"
+		 */
+		lifetime?: DurationString;
 	}
 
 	/** What one login asks the issuer for, beyond the client's standing options. */

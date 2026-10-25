@@ -74,6 +74,8 @@ const METADATA_SCHEMA = s.object({
 	end_session_endpoint: s.optional(URL_SCHEMA),
 	revocation_endpoint: s.optional(URL_SCHEMA),
 	introspection_endpoint: s.optional(URL_SCHEMA),
+	pushed_authorization_request_endpoint: s.optional(URL_SCHEMA),
+	require_pushed_authorization_requests: s.optional(s.boolean()),
 	scopes_supported: VALUES_SCHEMA,
 	response_types_supported: VALUES_SCHEMA,
 	token_endpoint_auth_methods_supported: VALUES_SCHEMA,
@@ -389,6 +391,16 @@ export class Issuer {
 	 */
 	revocationEndpoint(): Promise<URL> {
 		return this.#endpoint("revocation_endpoint");
+	}
+
+	/**
+	 * Where a client pushes an authorization request for a one-time `request_uri`
+	 * (RFC 9126).
+	 *
+	 * @throws `EndpointUnsupported` when the provider advertises none.
+	 */
+	pushedAuthorizationRequestEndpoint(): Promise<URL> {
+		return this.#endpoint("pushed_authorization_request_endpoint");
 	}
 
 	/**
@@ -709,6 +721,10 @@ export namespace Issuer {
 		end_session_endpoint?: string;
 		revocation_endpoint?: string;
 		introspection_endpoint?: string;
+		/** Where an authorization request is pushed ahead of the browser redirect (RFC 9126). */
+		pushed_authorization_request_endpoint?: string;
+		/** Whether the issuer accepts authorization requests only through that endpoint (RFC 9126 §5). */
+		require_pushed_authorization_requests?: boolean;
 		scopes_supported?: string[];
 		response_types_supported?: string[];
 		token_endpoint_auth_methods_supported?: string[];

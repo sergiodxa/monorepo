@@ -178,6 +178,11 @@ throw `reserved_parameter`.
 [`@sdxc/rate-limit`](https://www.npmjs.com/package/@sdxc/rate-limit) adapter; `authorize`
 spends one unit per login and throws a `429` `Response` when the budget is spent.
 
+`pushAuthorizationRequests: true` pushes each login to the issuer's
+`pushed_authorization_request_endpoint` (RFC 9126) with the client's credentials and redirects
+with only `client_id` and the `request_uri` it answers. `requestObject: { algorithm, keys,
+lifetime? }` signs the parameters into a request object (RFC 9101), sent as `request` or pushed.
+
 #### `rp.authorize(ctx, options?): Promise<Response>`
 
 The `303` to the authorization endpoint. Options: `returnTo` (kept to the request's origin,
