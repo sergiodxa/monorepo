@@ -25,8 +25,8 @@ Results are [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values,
 import { setField, stringify } from "@sdxc/structured-fields";
 
 let headers = new Headers();
-setField(headers, "RateLimit", { limit: 10, remaining: 0, reset: 7 }, "dictionary");
-// RateLimit: limit=10, remaining=0, reset=7
+setField(headers, "RateLimit", [{ value: "default", params: { r: 0, t: 7 } }], "list");
+// RateLimit: "default";r=0;t=7
 
 stringify({ value: 10, params: { w: 60 } }, "item"); // success: "10;w=60"
 ```
@@ -259,11 +259,11 @@ and write it unconditionally.
 ```typescript
 import { setField } from "@sdxc/structured-fields";
 
-let quota: Record<string, number> = {};
-if (limit !== null) quota.limit = limit;
-if (remaining !== null) quota.remaining = remaining;
+let priority: Record<string, number | boolean> = {};
+if (urgency !== null) priority.u = urgency;
+if (incremental) priority.i = true;
 
-setField(headers, "RateLimit", quota, "dictionary");
+setField(headers, "Priority", priority, "dictionary");
 ```
 
 ## Pattern: Branch On Why A Field Failed
