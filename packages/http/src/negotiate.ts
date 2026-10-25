@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-const shortToMime = new Map<string, string[]>([
+const SHORT_TO_MIME = new Map<string, string[]>([
 	["json", ["application/json"]],
 	["html", ["text/html"]],
 	["xml", ["application/xml", "text/xml"]],
@@ -18,7 +18,7 @@ const shortToMime = new Map<string, string[]>([
 	["pdf", ["application/pdf"]],
 ]);
 
-const mimeToShort = new Map<string, string>([
+const MIME_TO_SHORT = new Map<string, string>([
 	["application/json", "json"],
 	["text/html", "html"],
 	["application/xml", "xml"],
@@ -92,7 +92,7 @@ export class AcceptList {
 	 * @returns The shorthand type or null if not recognized
 	 */
 	toShortType(mimeType: string): string | null {
-		return mimeToShort.get(mimeType) ?? null;
+		return MIME_TO_SHORT.get(mimeType) ?? null;
 	}
 
 	private parseAcceptHeader(header: string): string[] {
@@ -112,7 +112,7 @@ export class AcceptList {
 	}
 
 	private resolveType(type: string): string[] {
-		return shortToMime.get(type) ?? [type];
+		return SHORT_TO_MIME.get(type) ?? [type];
 	}
 }
 
