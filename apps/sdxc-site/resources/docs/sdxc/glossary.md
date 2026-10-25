@@ -102,6 +102,12 @@ reaches. Every route the template and `sdxc make` map is one, and `sdxc doctor` 
 as each [copy](#copy) and the hashes of its files. You commit it.
 [Configuration](/docs/sdxc/configuration#lock)
 
+## Pairing spec
+
+The `.spec` file `sdxc make` writes under `spec/` beside a controller, an MCP tool or a command,
+which checks the running app from the outside the way a visitor or a client reaches it.
+[Write executable specs](/docs/operations-and-testing/executable-specs)
+
 ## Pin
 
 An exact `@sdxc` version in `package.json`, such as `"2026.10.17"`, rather than a range. Every
@@ -127,8 +133,8 @@ command runs there, so it works from any folder inside the project.
 ## Release
 
 One day's publish of the `@sdxc` packages that changed and the packages that depend on them, each
-versioned by its date, such as `2026.10.17`. A project's
-release is the newest date among its [pins](#pin). [Versioning](/docs/releases/versioning)
+versioned by its date, such as `2026.10.17`. A project's release is the newest date among its
+[pins](#pin). [Versioning](/docs/releases/versioning)
 
 ## Seed
 
