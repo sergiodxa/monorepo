@@ -13,6 +13,7 @@ import { describe, expect, test } from "vitest";
 import { listGuides, readGuide } from "~/app/services/docs";
 import { listPackages } from "~/app/services/packages";
 import { fetchApp } from "~/app/test/router";
+import routes from "~/routes/web";
 
 /**
  * Every guide's slug, read once so each guide becomes its own test: one test per guide keeps
@@ -21,6 +22,9 @@ import { fetchApp } from "~/app/test/router";
 const GUIDE_SLUGS = (await listGuides()).flatMap((section) =>
 	section.guides.map((guide) => guide.slug),
 );
+
+/** Pages under `/docs` served by their own route, which a guide may link to like a guide. */
+const ROUTED_DOCS_PAGES = [routes.docs.changelog.href()];
 
 /** Rendered guides by slug, so the link checks render each target page once across tests. */
 const RENDERED = new Map<string, Promise<{ status: number; body: string }>>();
@@ -71,6 +75,7 @@ describe("GET /docs", () => {
 				/href="\/docs\/([^"#?]+)(?:#([^"]+))?"/g,
 			)) {
 				if (target.endsWith(".md")) continue;
+				if (ROUTED_DOCS_PAGES.includes(`/docs/${target}`)) continue;
 				if (!GUIDE_SLUGS.includes(target)) broken.push(`/docs/${target}`);
 				else if (fragment && !(await renderGuide(target)).body.includes(`id="${fragment}"`)) {
 					broken.push(`/docs/${target}#${fragment}`);
