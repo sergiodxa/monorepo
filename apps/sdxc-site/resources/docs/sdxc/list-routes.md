@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read the table `sdxc routes` prints"
     - "How to narrow the listing to one controller, method or contract"
@@ -40,7 +40,7 @@ routes/web.ts
 
 routes/api.ts
   METHOD  PATTERN            NAME          CONTROLLER                              MIDDLEWARE
-  GET     /api/health        api.health    app/http/controllers/api/health.tsx     api
+  GET     /health            health        app/http/controllers/health.ts          api
   GET     /api/openapi.json  api.openapi   app/http/controllers/api/openapi.tsx    api
   ANY     /api/*path         api.notFound  app/http/controllers/api/not-found.tsx  api
   POST    /mcp               mcp           app/http/controllers/mcp.tsx            api
