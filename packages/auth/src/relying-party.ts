@@ -102,8 +102,8 @@ const PROFILE_CLAIMS = ["name", "email", "preferred_username", "picture"];
 
 /**
  * The digest each signature algorithm's `at_hash` is taken with, per OpenID
- * Connect Core §3.1.3.6. An algorithm absent from this table leaves an `at_hash`
- * uncheckable, and an unverifiable binding is refused.
+ * Connect Core §3.1.3.6; Ed25519 takes SHA-512 under either of its RFC 9864 names.
+ * An algorithm absent from this table leaves an `at_hash` uncheckable, and is refused.
  */
 const AT_HASH_DIGESTS: Record<string, typeof sha256> = {
 	HS256: sha256,
@@ -118,6 +118,7 @@ const AT_HASH_DIGESTS: Record<string, typeof sha256> = {
 	RS512: sha512,
 	ES512: sha512,
 	PS512: sha512,
+	Ed25519: sha512,
 	EdDSA: sha512,
 };
 

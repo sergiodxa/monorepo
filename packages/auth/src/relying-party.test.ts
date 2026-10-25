@@ -86,7 +86,7 @@ let edwardsKeys: JWK.KeyPair[];
 beforeAll(async () => {
 	keys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 	otherKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
-	edwardsKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA))];
+	edwardsKeys = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519))];
 	server.listen({ onUnhandledRequest: "error" });
 });
 
@@ -121,7 +121,7 @@ async function atHashOf(accessToken: string, digest = "SHA-256"): Promise<string
 }
 
 /**
- * Signs an ID token with the Edwards key set, whose `EdDSA` header selects the
+ * Signs an ID token with the Edwards key set, whose `Ed25519` header selects the
  * SHA-512 `at_hash` digest.
  *
  * @param claims - Claims layered over the fixture issuer, audience, and subject.
@@ -134,7 +134,7 @@ function signEdwardsIdToken(claims: Record<string, unknown> = {}): Promise<strin
 		exp: "1h",
 		iat: Math.floor(Date.now() / 1000),
 		...claims,
-	}).sign(JWK.Algorithm.EdDSA, edwardsKeys);
+	}).sign(JWK.Algorithm.Ed25519, edwardsKeys);
 }
 
 /** Signs an ID token for the fixture issuer and client. */

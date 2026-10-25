@@ -1069,12 +1069,12 @@ describe("verifyIdToken", () => {
 	});
 
 	test("refuses a token presenting an algorithm outside the ones stated", async () => {
-		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA));
+		let edwards = await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519));
 		let { origin } = freshProvider(edwards);
 
 		await expect(
 			Issuer.for(origin).verifyIdToken(
-				await signIdToken(origin, edwards, {}, JWK.Algorithm.EdDSA),
+				await signIdToken(origin, edwards, {}, JWK.Algorithm.Ed25519),
 				{ audience: AUDIENCE, algorithms: [JWK.Algorithm.ES256] },
 			),
 		).rejects.toSatisfy((error: unknown) => AuthError.is(error, AuthErrorCode.InvalidToken));
