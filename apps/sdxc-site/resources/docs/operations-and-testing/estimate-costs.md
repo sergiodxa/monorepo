@@ -5,10 +5,10 @@ section:
     title: Operations & testing
     order: 9
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to turn requests, CPU time, KV reads and D1 rows into cents"
-    - "How to price one unit of work and see which binding dominates"
+    - "How to price one unit of work with a rate card and see which binding dominates"
     - "How to warn before a month runs over budget"
 ---
 
@@ -19,8 +19,8 @@ an estimated bill, prices a single request so you can see which binding dominate
 rows as they are read, and runs a daily job that warns when the month is heading past a budget.
 
 [`@sdxc/cloudflare-pricing`](/api/cloudflare-pricing) holds the Developer Platform list prices,
-one module per service, with the arithmetic that turns them into cents. It has no dependencies
-and does no work at import time, so it is safe anywhere in a Worker.
+one module per service, with the arithmetic and the rate cards that turn them into cents. It
+has no dependencies and does no work at import time, so it is safe anywhere in a Worker.
 [`@sdxc/data-table-d1`](/api/data-table-d1) reports what each D1 statement read and wrote, and
 [`@sdxc/jobs`](/api/jobs) runs the forecast on a schedule.
 
@@ -115,31 +115,39 @@ GB-seconds, so a small overage costs more than the exact rate predicts.
 
 The monthly estimate says what the account costs. What a single request or a single customer
 costs is a different question, and there the allowance does not apply: it belongs to the
-account, never to one customer's share of it. Price the quantities one unit of work consumed
-at the list rate:
+account, never to one customer's share of it. `defineRateCard` fixes cents per unit for each
+resource you meter, and its `price` sums whatever quantities one unit of work consumed at the
+list rate:
 
 ```typescript {% title="app/services/unit-cost.ts" %}
-import type { Usage } from "~/app/services/estimate";
-
-import { centsPerUnit } from "@sdxc/cloudflare-pricing";
+import {
+	centsPerGbDay,
+	centsPerUnit,
+	defineRateCard,
+} from "@sdxc/cloudflare-pricing";
 
 import { METERS } from "~/app/services/estimate";
 
-export function costOfWork(work: Partial<Usage>): number {
-	let cents = 0;
-	for (let [key, units] of Object.entries(work) as [keyof Usage, number][]) {
-		cents += units * centsPerUnit(METERS[key]);
-	}
-	return cents;
-}
+export const UNIT_COSTS = defineRateCard({
+	requests: centsPerUnit(METERS.requests),
+	cpuMs: centsPerUnit(METERS.cpuMs),
+	kvReads: centsPerUnit(METERS.kvReads),
+	kvWrites: centsPerUnit(METERS.kvWrites),
+	d1RowsRead: centsPerUnit(METERS.d1RowsRead),
+	d1RowsWritten: centsPerUnit(METERS.d1RowsWritten),
+	d1StorageGbDays: centsPerGbDay(METERS.d1StorageGb),
+	queueOperations: centsPerUnit(METERS.queueOperations),
+});
 
-costOfWork({ requests: 1, cpuMs: 8, kvReads: 2, d1RowsRead: 40 }); // 0.00015
+UNIT_COSTS.price({ requests: 1, cpuMs: 8, kvReads: 2, d1RowsRead: 40 }); // 0.00015
 ```
 
 A page view like that one costs $1.50 per million, and two thirds of it is the two KV reads.
 The forty D1 rows are 3% of it. That is the kind of answer that tells you which cache to fix
 before you have a bill to worry about. Storage is priced per GB-day for the same purpose:
-`centsPerGbDay(D1.STORAGE)` spreads the monthly price over `DAYS_PER_BILLING_MONTH`, 30 days.
+`centsPerGbDay` spreads the monthly price over `DAYS_PER_BILLING_MONTH`, 30 days. To total a
+whole request, start from `UNIT_COSTS.zero()`, add to it as the request runs, and price it once
+at the end.
 
 ## Count what you can measure
 
