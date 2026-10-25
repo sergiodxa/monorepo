@@ -55,7 +55,12 @@ function stubManagementCaller(callerTenantId: string): Middleware {
 	return (ctx, next) => {
 		ctx.set(
 			ManagementCallerContext,
-			{ tenantId: callerTenantId, scopes: [], actor: { type: "client", id: "mgmt_client_1" } },
+			{
+				tenantId: callerTenantId,
+				scopes: [],
+				actor: { type: "client", id: "mgmt_client_1" },
+				token: null,
+			},
 			{ property: "managementCaller" },
 		);
 		return next();
