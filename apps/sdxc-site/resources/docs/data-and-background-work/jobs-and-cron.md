@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare jobs once and write handlers with `@sdxc/jobs`"
     - "How to enqueue from a request and run on Cloudflare Queues and cron triggers"
@@ -43,17 +43,15 @@ export default jobs({
 });
 ```
 
+`input` is parsed before the handler runs, so the handler receives only messages that match
+it. A `cron` makes the job schedulable as well as enqueuable. The expression is parsed at
+declaration: its type requires five fields, and an out-of-range value throws
+`InvalidCronExpression` as the module loads, long before the trigger would fire.
+
 <warning>
 The key is the job's name on the wire. A message enqueued by one deploy is consumed by the next,
 so renaming a key is a breaking change for whatever is still on the queue.
 </warning>
-
-`input` is parsed
-before the handler runs, so a message that does not match never reaches your code.
-
-A `cron` makes the job schedulable as well as enqueuable. The expression is parsed at
-declaration: its type requires five fields, and an out-of-range value throws
-`InvalidCronExpression` when the module loads rather than when the trigger fires.
 
 ## Write a handler
 
@@ -73,9 +71,9 @@ export default createJobHandler(jobs.expirePostings, async (ctx) => {
 });
 ```
 
-`expireBefore` is your own model function, closing the rows older than a cutoff and answering how
-many it closed. `ctx.log` is the run's record, emitted once when the run ends: `set()` a field you will query by,
-`note()` a breadcrumb, `time()` anything with a duration. Every run gets its own record, carrying
+`expireBefore` is your own model function, closing the rows older than a cutoff and answering
+how many it closed. `ctx.log` is the run's record, emitted once when the run ends: `set()` a
+field you will query by, `note()` a breadcrumb, `time()` anything with a duration. Every run gets its own record, carrying
 the job name, attempt count and how it ended, and a job enqueued during a request shares that
 request's trace id.
 
@@ -191,9 +189,7 @@ declare module "@sdxc/jobs" {
 }
 ```
 
-The block names `@sdxc/jobs`, the module that declares `JobTypes`, and keeping it beside the
-dispatcher means importing the dispatcher is what registers it.
-
+Keeping the block beside the dispatcher means importing the dispatcher is what registers it.
 The factory's options exist for tests: the defaults are what production runs.
 
 ## Enqueue from a request
@@ -277,7 +273,7 @@ A cron delivery runs no job. It enqueues every job declaring the expression that
 returns, so the nightly sweep gets the same retries, timeout and dead-letter handling as any other
 message. Every job, however it started, reaches its handler through the one queue:
 
-```mermaid {% alt="Route handlers and cron triggers both enqueue onto the app-jobs queue; the dispatcher runs each job, acking it when it returns or exits, and on a retry or throw sending it back to the queue until max_retries, after which it goes to dead-letter handling" %}
+```mermaid {% alt="Route handlers and cron triggers both enqueue onto the app-jobs queue; the dispatcher runs each job, acking it when it returns or exits, and on a retry or throw sending it back to the queue until maxRetries, after which it goes to dead-letter handling" %}
 flowchart LR
     Handler["Route handler: ctx.jobs.enqueue"] --> Queue[("app-jobs queue")]
     Cron[Cron trigger] -->|enqueues only| Queue
@@ -286,25 +282,32 @@ flowchart LR
     Dispatcher -->|ctx.exit| Refused(["acked, ends as refuse"])
     Dispatcher -->|ctx.retry or throw| Left{attempts left?}
     Left -->|yes| Queue
-    Left -->|"no, after max_retries"| Dead([dead-letter handling])
+    Left -->|"no, after maxRetries"| Dead([dead-letter handling])
 ```
 
-The Worker's configuration declares the trigger with the same spelling, and the queue it
-both produces to and consumes:
+The Worker's configuration declares the cron trigger with the same spelling, the queue the
+Worker consumes, and the `QUEUE` binding it produces to:
 
-```json {% title="wrangler.jsonc" %}
-{
-	"triggers": { "crons": ["0 3 * * *"] },
-	"queues": {
-		"producers": [{ "binding": "QUEUE", "queue": "app-jobs" }],
-		"consumers": [{ "queue": "app-jobs", "max_retries": 3 }]
-	}
-}
+```typescript {% title="cloudflare.config.ts" %}
+import { bindings, defineConfig, triggers } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "jobs-board",
+		entrypoint: "./bootstrap/worker.ts",
+		triggers: [
+			triggers.scheduled({ schedule: "0 3 * * *" }),
+			triggers.queue({ name: "app-jobs", maxRetries: 3 }),
+		],
+		env: {
+			QUEUE: bindings.queue({ name: "app-jobs" }),
+		},
+	},
+});
 ```
 
-In `cloudflare.config.ts`, the same schedule is a `triggers.scheduled({ schedule: "0 3 * * *" })`
-entry in `worker.triggers`. `sdxc make job` declares, maps and tests a scheduled job and adds that
-trigger in one step, and `sdxc schedule` pairs every scheduled job with the trigger that fires it:
+`sdxc make job` declares, maps and tests a scheduled job and adds its trigger in one step, and
+`sdxc schedule` pairs every scheduled job with the trigger that fires it:
 
 ```bash
 sdxc make job expire-postings --cron "0 3 * * *"
@@ -316,6 +319,7 @@ A scheduled job whose trigger is missing from the Worker's configuration never r
 production. `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test
 comparing it against your configuration catches a job whose trigger was never added.
 </warning>
+
 [Make a job](/docs/sdxc/make-job) covers the generated files, and
 [Inspect a project](/docs/sdxc/inspect-a-project) reads the schedule.
 
@@ -358,7 +362,7 @@ export async function alertOps(ctx: AnyJobContext, status: JobStatus) {
 ```
 
 Pass it as `onEnd: alertOps` beside `timeout` in `createJobDispatcher`. `refuse` is a
-`ctx.exit`, and `LAST_ATTEMPT` is the first delivery plus the consumer's `max_retries` of 3.
+`ctx.exit`, and `LAST_ATTEMPT` is the first delivery plus the consumer's `maxRetries` of 3.
 The hook's failure is never the job's: anything it throws is recorded as `job.hook_failed`.
 
 <note>
@@ -366,7 +370,8 @@ The dispatcher waits five seconds for the hook at most, which is why the send's 
 shorter.
 </note>
 
-An alert that has to survive a Slack outage belongs in a delivery job of its own, with retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
+An alert that has to survive a Slack outage belongs in a delivery job of its own, with
+retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
 builds.
 
 ## Run jobs in a test
@@ -443,11 +448,5 @@ calls to find the user schedules that are due.
   that delivers every queued email.
 - [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
   delivery job that retries Slack, Discord and PagerDuty sends.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the database the
-  job middleware publishes.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — reading the record
   every run emits.
-- [Feature flags](/docs/data-and-background-work/feature-flags) — gate a job's behavior per
-  subject.
-- [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — enqueue jobs
-  from a command and watch them run in your terminal.
