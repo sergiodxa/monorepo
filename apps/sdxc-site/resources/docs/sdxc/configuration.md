@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 10
-lastUpdated: 2026-10-22
+lastUpdated: 2026-10-25
 outcomes:
     - "Where `sdxc` reads its configuration from, and how a mistake in it is reported"
     - "What every key changes, and its default"
@@ -56,6 +56,7 @@ type, or a path outside the project stops the command with one line per problem:
 		"routes": "web",
 		"migrations": { "default": "database/migrations" },
 		"tests": true,
+		"specs": true,
 		"stubs": ".config/sdxc/stubs",
 	},
 	"doctor": {
@@ -69,6 +70,7 @@ type, or a path outside the project stops the command with one line per problem:
 		"duplication": { "minLines": 8 },
 		"mutation": { "report": "reports/mutation/mutation.json", "maxSurvived": 0 },
 	},
+	"run": { "entry": "bootstrap/cli.ts" },
 	"format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
 	"lock": ".config/sdxc.lock.jsonl",
 }
@@ -100,6 +102,7 @@ write and where.
 | `make.routes`     | `"web"`                                | the contract in `routes/` a controller is declared in without `--routes` |
 | `make.migrations` | `{ "default": "database/migrations" }` | the migration chains, by name, that `--chain` picks from                 |
 | `make.tests`      | `true`                                 | whether a file gets a test beside it without `--test` or `--no-test`     |
+| `make.specs`      | `true`                                 | whether a file gets a pairing `.spec` without `--spec` or `--no-spec`    |
 | `make.stubs`      | `".config/sdxc/stubs"`                 | the folder whose stubs replace the built-in ones                         |
 
 - **`make.routes`** names a module in `routes/`. An app that is mostly an API sets it to
@@ -110,6 +113,8 @@ write and where.
   the flag. [Make a migration](/docs/sdxc/make-migration#chains) covers chains.
 - **`make.tests`** set to `false` skips the test for every kind; `--test` writes one for a single
   run. Migrations and factories never get a test.
+- **`make.specs`** set to `false` skips the pairing `.spec` that controllers, MCP tools,
+  commands and scaffolds write under `spec/`; `--spec` writes one for a single run.
 - **`make.stubs`** is where `sdxc make stubs` copies the built-in stubs to, and where every kind
   looks for yours first. [Generate files](/docs/sdxc/generate-files#make-the-generated-files-your-own)
   lists the stubs and their placeholders.
@@ -163,6 +168,16 @@ applied long ago that an empty database can no longer replay:
 
 [Check a project](/docs/sdxc/check-a-project#add-your-own-checks) shows how to write a check
 for `doctor.checks`.
+
+## run
+
+| Key         | Default              |
+| ----------- | -------------------- |
+| `run.entry` | `"bootstrap/cli.ts"` |
+
+The module [`sdxc run`](/docs/sdxc/run-app-commands) starts, with the words you typed passed
+on. An app from `sdxc create` keeps the default; a project whose command line starts elsewhere
+names that module here.
 
 ## lock
 
