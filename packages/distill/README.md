@@ -88,6 +88,8 @@ Fetches a page under the bounds below and reads the article out of it. A respons
   an unreachable one (5xx, 429, network failure) refuses everything.
 - `options.maxBytes`, `options.maxRedirects`, `options.timeoutMs`: move the default bounds.
 - `options.signal`: aborts the retrieval alongside its deadline.
+- `options.sign`: signs each hop's request before it is sent, such as `webBotAuthSigner` from
+  `@sdxc/http-signatures/web-bot-auth`, so the publisher can verify who is asking.
 
 Bounds every request runs under:
 

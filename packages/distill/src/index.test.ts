@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 import { fetchRobots } from "@sdxc/robots/fetch";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -277,6 +277,27 @@ describe("distill", () => {
 		expect(headers.get("authorization")).toBeNull();
 		expect(headers.get("referer")).toBeNull();
 		expect(headers.get("user-agent")).toBe(AGENT);
+	});
+
+	test("signs the request with the sign option", async () => {
+		let signature: string | null = null;
+		server.use(
+			http.get("https://example.com/post", ({ request }) => {
+				signature = request.headers.get("signature");
+				return HttpResponse.html(page(ARTICLE));
+			}),
+		);
+
+		let article = await distill("https://example.com/post", {
+			userAgent: AGENT,
+			async sign(request) {
+				let headers = new Headers([...request.headers, ["signature", "sig1=:AA==:"]]);
+				return success(new Request(request, { headers }));
+			},
+		});
+
+		expect(isSuccess(article)).toBe(true);
+		expect(signature).toBe("sig1=:AA==:");
 	});
 
 	test("reports what a response other than a page carried as nothing to read", async () => {

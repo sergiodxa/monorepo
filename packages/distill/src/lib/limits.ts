@@ -68,6 +68,7 @@ export interface RetrieveOptions {
 	/** Runs alongside `signal`, so a caller's own abort never lifts the deadline. */
 	timeoutMs?: number | undefined;
 	signal?: AbortSignal | undefined;
+	sign?: ((request: Request) => Promise<Result<Request, Error>>) | undefined;
 }
 
 /**
@@ -90,6 +91,7 @@ export async function retrieve(
 		maxRedirects: options.maxRedirects ?? MAX_REDIRECTS,
 		literals: "refuse",
 		...(options.signal ? { signal: options.signal } : {}),
+		...(options.sign ? { sign: options.sign } : {}),
 	});
 	if (isFailure(followed)) return failure(toDistillError(followed.error));
 

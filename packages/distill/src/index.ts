@@ -121,6 +121,11 @@ export namespace Distill {
 		maxRedirects?: number | undefined;
 		timeoutMs?: number | undefined;
 		signal?: AbortSignal | undefined;
+		/**
+		 * Signs each hop's request before it is sent, such as `webBotAuthSigner` from
+		 * `@sdxc/http-signatures/web-bot-auth`, so a publisher can verify who is asking.
+		 */
+		sign?: ((request: Request) => Promise<Result<Request, Error>>) | undefined;
 	}
 }
 
