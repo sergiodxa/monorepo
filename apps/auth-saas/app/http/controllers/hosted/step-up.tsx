@@ -155,12 +155,12 @@ export const stepUpEnrolSubmit = createAction(routes.hostedStepUpEnrolSubmit, as
 	retryUrl.searchParams.set("interaction", interactionId);
 
 	if (typeof enrolmentId !== "string" || !enrolmentId || typeof code !== "string" || !code) {
-		return new Response(null, { status: 302, headers: { Location: retryUrl.toString() } });
+		return new Response(null, { status: 303, headers: { Location: retryUrl.toString() } });
 	}
 
 	let activated = await ctx.tenantStub.activateTotpFactor({ enrolmentId, code });
 	if (!activated.ok) {
-		return new Response(null, { status: 302, headers: { Location: retryUrl.toString() } });
+		return new Response(null, { status: 303, headers: { Location: retryUrl.toString() } });
 	}
 
 	return ctx.render(

@@ -140,7 +140,7 @@ describe("a Client ID Metadata Document client at /authorize", () => {
 
 		let approve = await postForm(harness, consentPath, { decision: "approve" }, cookie);
 
-		expect(approve.status).toBe(302);
+		expect(approve.status).toBe(303);
 		let location = new URL(approve.headers.get("Location") ?? "");
 		expect(location.origin + location.pathname).toBe(CIMD_REDIRECT_URI);
 		let code = location.searchParams.get("code");

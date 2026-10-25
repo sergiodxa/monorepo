@@ -149,7 +149,7 @@ describe("magic-link", () => {
 			}),
 		);
 
-		expect(completed.status).toBe(302);
+		expect(completed.status).toBe(303);
 		expect(completed.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
 
@@ -180,7 +180,7 @@ describe("magic-link", () => {
 			}),
 		);
 
-		expect(completed.status).toBe(302);
+		expect(completed.status).toBe(303);
 		expect(completed.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
 
@@ -339,7 +339,7 @@ describe("magic-link", () => {
 			}),
 		);
 
-		expect(completed.status).toBe(302);
+		expect(completed.status).toBe(303);
 		let location = completed.headers.get("Location") ?? "";
 		expect(location).toContain("/u/second-factor");
 		expect(location).toContain(`interaction=${interactionId}`);

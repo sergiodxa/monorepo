@@ -204,7 +204,7 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, {
 			let uiLocales = ctx.url.searchParams.get("ui_locales");
 			if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 
-			let response = new Response(null, { status: 302, headers: { Location: url.toString() } });
+			let response = new Response(null, { status: 303, headers: { Location: url.toString() } });
 			response.headers.append("Set-Cookie", sessionCookieHeader);
 			return response;
 		}

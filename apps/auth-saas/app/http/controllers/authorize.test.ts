@@ -42,7 +42,7 @@ describe("GET /authorize", () => {
 			harness.request(`/authorize?${authorizeQuery(client.id)}`),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location") ?? "");
 		expect(location.pathname).toBe("/u/sign-in");
 		expect(location.searchParams.get("interaction")).toBeTruthy();

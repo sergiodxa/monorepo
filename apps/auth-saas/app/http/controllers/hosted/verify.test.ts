@@ -90,7 +90,7 @@ describe("verify", () => {
 	test("a request naming neither a ticket nor a subject lands on /u/error", async () => {
 		let response = await harness.router.fetch(harness.request("/u/verify"));
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location") ?? "");
 		expect(location.pathname).toBe("/u/error");
 	});

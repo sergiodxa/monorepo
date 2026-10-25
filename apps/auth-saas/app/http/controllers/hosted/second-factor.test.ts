@@ -84,7 +84,7 @@ async function signInToSecondFactor(
 		}),
 	);
 
-	expect(signInResponse.status).toBe(302);
+	expect(signInResponse.status).toBe(303);
 	let sessionCookie = signInResponse.headers.get("Set-Cookie");
 	if (!sessionCookie) throw new Error("expected a session cookie");
 
@@ -130,7 +130,7 @@ describe("second-factor", () => {
 			}),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location") ?? "");
 		expect(location.origin + location.pathname).toBe(REDIRECT_URI);
 		expect(location.searchParams.get("code")).toEqual(expect.any(String));

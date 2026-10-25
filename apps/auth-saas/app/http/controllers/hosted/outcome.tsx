@@ -1,7 +1,7 @@
 /**
  * Turns an `AuthorizationOutcome` into a `Response`, the one mapping `/authorize`,
- * `/u/sign-in` and `/u/consent` all share: `redirect` is a real `302` onto its
- * target; `authenticate` is a `302` to `/u/sign-in`; `consent` either renders the
+ * `/u/sign-in` and `/u/consent` all share: `redirect` is a real `303` onto its
+ * target; `authenticate` is a `303` to `/u/sign-in`; `consent` either renders the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,12 +57,12 @@ function tenantUrl(ctx: RequestContext, path: string): URL {
 }
 
 /**
- * A real `302` to `location`, with mutable headers — unlike `Response.redirect()`,
- * whose headers the platform guards as immutable, a caller here still needs to
- * append the `__Host-session` `Set-Cookie` a sign-in or a passkey verification
+ * A `303` to `location`, which a browser follows with a GET and never by re-posting the
+ * form that led here (RFC 9700 §4.12), with headers a caller can still append the
+ * `__Host-session` `Set-Cookie` to.
  */
 function redirectTo(location: string): Response {
-	return new Response(null, { status: 302, headers: { Location: location } });
+	return new Response(null, { status: 303, headers: { Location: location } });
 }
 
 /**
@@ -81,7 +81,7 @@ export function safeReturnTo(ctx: RequestContext): string | null {
 }
 
 /**
- * A real `302` back to a `return_to` path already validated by {@link safeReturnTo}.
+ * A real `303` back to a `return_to` path already validated by {@link safeReturnTo}.
  *
  * @param ctx - The request context (provides `request`).
  * @param returnTo - The same-origin relative path to redirect to.
@@ -113,7 +113,7 @@ export async function renderErrorPage(ctx: RequestContext, description: string):
 }
 
 /**
- * A real `302` to `/u/error`, carrying the failure's description as a query
+ * A real `303` to `/u/error`, carrying the failure's description as a query
  * parameter for `/u/error`'s own GET to render.
  *
  * @param ctx - The request context (provides `request`).

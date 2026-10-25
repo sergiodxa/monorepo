@@ -100,7 +100,7 @@ describe("hostedDeviceShow", () => {
 		let show = await harness.router.fetch(
 			harness.request(`/device?user_code=${encodeURIComponent(begun.userCode)}`),
 		);
-		expect(show.status).toBe(302);
+		expect(show.status).toBe(303);
 		let signInLocation = new URL(show.headers.get("Location") ?? "", ISSUER);
 		expect(signInLocation.pathname).toBe("/u/sign-in");
 		let returnTo = signInLocation.searchParams.get("return_to");
@@ -112,7 +112,7 @@ describe("hostedDeviceShow", () => {
 				body: form({ identifier: EMAIL, password: PASSWORD, remember: "true" }),
 			}),
 		);
-		expect(signedIn.status).toBe(302);
+		expect(signedIn.status).toBe(303);
 		let backLocation = new URL(signedIn.headers.get("Location") ?? "", ISSUER);
 		expect(backLocation.pathname + backLocation.search).toBe(returnTo);
 

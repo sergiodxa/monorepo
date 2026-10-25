@@ -22,11 +22,11 @@ function ownReturnTo(ctx: { request: Request }, userCode: string | null): string
 	return url.pathname + url.search;
 }
 
-/** A real `302` to `/u/sign-in`, carrying this request's own `return_to` path. */
+/** A real `303` to `/u/sign-in`, carrying this request's own `return_to` path. */
 function redirectToSignIn(ctx: { request: Request }, userCode: string | null): Response {
 	let url = new URL(routes.hostedSignInShow.href(), ctx.request.url);
 	url.searchParams.set("return_to", ownReturnTo(ctx, userCode));
-	return new Response(null, { status: 302, headers: { Location: url.toString() } });
+	return new Response(null, { status: 303, headers: { Location: url.toString() } });
 }
 
 /**

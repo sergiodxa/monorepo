@@ -249,12 +249,12 @@ export const secondFactorEnrolSubmit = createAction(
 		retryUrl.searchParams.set("mode", "enrol");
 
 		if (typeof enrolmentId !== "string" || !enrolmentId || typeof code !== "string" || !code) {
-			return new Response(null, { status: 302, headers: { Location: retryUrl.toString() } });
+			return new Response(null, { status: 303, headers: { Location: retryUrl.toString() } });
 		}
 
 		let activated = await ctx.tenantStub.activateTotpFactor({ enrolmentId, code });
 		if (!activated.ok) {
-			return new Response(null, { status: 302, headers: { Location: retryUrl.toString() } });
+			return new Response(null, { status: 303, headers: { Location: retryUrl.toString() } });
 		}
 
 		await ctx.tenantStub.completeSecondFactorViaEnrolment({

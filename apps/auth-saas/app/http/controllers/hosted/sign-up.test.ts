@@ -94,7 +94,7 @@ describe("sign-up", () => {
 			name: "Jane",
 		});
 
-		expect(signUpResponse.status).toBe(302);
+		expect(signUpResponse.status).toBe(303);
 		let verifyLocation = new URL(signUpResponse.headers.get("Location") ?? "");
 		expect(verifyLocation.pathname).toBe("/u/verify");
 		let subjectId = verifyLocation.searchParams.get("subject");
@@ -119,7 +119,7 @@ describe("sign-up", () => {
 			remember: "true",
 		});
 
-		expect(signInResponse.status).toBe(302);
+		expect(signInResponse.status).toBe(303);
 		expect(signInResponse.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
 
@@ -175,7 +175,7 @@ describe("sign-up", () => {
 			name: "",
 		});
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let row = await harness.db.findOne(subjectIdentifiers, { where: { kind: "email" } });
 		expect(row).toMatchObject({ value: "Jane@example.com", folded: "jane@example.com" });
 	});
@@ -213,7 +213,7 @@ describe("sign-up", () => {
 			name: "Jane",
 		});
 
-		expect(signUpResponse.status).toBe(302);
+		expect(signUpResponse.status).toBe(303);
 		let location = new URL(signUpResponse.headers.get("Location") ?? "");
 		expect(location.searchParams.get("sendFailed")).toBe("1");
 

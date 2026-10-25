@@ -151,7 +151,7 @@ describe("GET /authorize with a pushed request_uri", () => {
 
 		let response = await harness.router.fetch(authorizeWith(client.id, requestUri));
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(new URL(response.headers.get("Location") ?? "").pathname).toBe("/u/sign-in");
 	});
 
@@ -188,7 +188,7 @@ describe("GET /authorize with a pushed request_uri", () => {
 		let rightful = await harness.router.fetch(authorizeWith(client.id, requestUri));
 
 		expect(mismatched.status).toBe(400);
-		expect(rightful.status).toBe(302);
+		expect(rightful.status).toBe(303);
 	});
 
 	test("refuses a direct request from a client that requires PAR, and accepts its pushed one", async () => {
@@ -203,7 +203,7 @@ describe("GET /authorize with a pushed request_uri", () => {
 
 		expect(direct.status).toBe(400);
 		expect(await direct.text()).toContain("PAR endpoint");
-		expect(pushed.status).toBe(302);
+		expect(pushed.status).toBe(303);
 	});
 
 	test("refuses every direct request once the tenant requires PAR", async () => {
@@ -218,7 +218,7 @@ describe("GET /authorize with a pushed request_uri", () => {
 		);
 
 		expect(direct.status).toBe(400);
-		expect(pushed.status).toBe(302);
+		expect(pushed.status).toBe(303);
 	});
 });
 
@@ -253,7 +253,7 @@ describe("request objects (RFC 9101)", () => {
 
 		let response = await harness.router.fetch(harness.request(`/authorize?${query}`));
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(new URL(response.headers.get("Location") ?? "").pathname).toBe("/u/sign-in");
 	});
 
@@ -293,7 +293,7 @@ describe("request objects (RFC 9101)", () => {
 		let response = await harness.router.fetch(authorizeWith(client.id, body.request_uri));
 
 		expect(pushed.status).toBe(201);
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 	});
 
 	test("the PAR endpoint answers invalid_request_object for an object it cannot verify", async () => {

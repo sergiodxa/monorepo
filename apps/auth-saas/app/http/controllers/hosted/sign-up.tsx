@@ -208,6 +208,6 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, {
 		let uiLocales = ctx.url.searchParams.get("ui_locales");
 		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 
-		return new Response(null, { status: 302, headers: { Location: url.toString() } });
+		return new Response(null, { status: 303, headers: { Location: url.toString() } });
 	},
 });

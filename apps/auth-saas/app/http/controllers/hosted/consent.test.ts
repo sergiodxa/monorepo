@@ -87,7 +87,7 @@ describe("consent", () => {
 			harness.request(consentPath, { method: "POST", cookie, body: form({ decision: "approve" }) }),
 		);
 
-		expect(approve.status).toBe(302);
+		expect(approve.status).toBe(303);
 		let location = new URL(approve.headers.get("Location") ?? "");
 		expect(location.origin + location.pathname).toBe(REDIRECT_URI);
 		expect(location.searchParams.get("code")).toBeTruthy();
@@ -106,7 +106,7 @@ describe("consent", () => {
 			harness.request(consentPath, { method: "POST", cookie, body: form({ decision: "deny" }) }),
 		);
 
-		expect(deny.status).toBe(302);
+		expect(deny.status).toBe(303);
 		let location = new URL(deny.headers.get("Location") ?? "");
 		expect(location.origin + location.pathname).toBe(REDIRECT_URI);
 		expect(location.searchParams.get("error")).toBe("access_denied");
@@ -115,7 +115,7 @@ describe("consent", () => {
 	test("a missing interaction id lands on /u/error", async () => {
 		let response = await harness.router.fetch(harness.request("/u/consent"));
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location") ?? "");
 		expect(location.pathname).toBe("/u/error");
 	});

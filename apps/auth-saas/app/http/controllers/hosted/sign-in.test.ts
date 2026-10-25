@@ -83,7 +83,7 @@ describe("sign-in", () => {
 			}),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(response.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 
 		let location = new URL(response.headers.get("Location") ?? "");
@@ -111,7 +111,7 @@ describe("sign-in", () => {
 			}),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		expect(response.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 
 		let location = new URL(response.headers.get("Location") ?? "");
@@ -171,7 +171,7 @@ describe("sign-in", () => {
 				}),
 			}),
 		);
-		expect(countedResponse.status).toBe(302);
+		expect(countedResponse.status).toBe(303);
 
 		let refused = await beginAndReachSignIn(harness, client.id);
 		let refusedResponse = await harness.router.fetch(
@@ -207,7 +207,7 @@ describe("sign-in", () => {
 			}),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let location = new URL(response.headers.get("Location") ?? "");
 		expect(location.pathname).toBe("/u/error");
 

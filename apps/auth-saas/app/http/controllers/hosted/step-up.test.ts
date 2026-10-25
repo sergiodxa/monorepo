@@ -97,7 +97,7 @@ describe("step-up", () => {
 			}),
 		);
 
-		expect(authorize.status).toBe(302);
+		expect(authorize.status).toBe(303);
 		let location = new URL(authorize.headers.get("Location") ?? "", REDIRECT_URI);
 		expect(location.pathname).toBe("/u/step-up");
 
@@ -114,7 +114,7 @@ describe("step-up", () => {
 			}),
 		);
 
-		expect(response.status).toBe(302);
+		expect(response.status).toBe(303);
 		let finalLocation = new URL(response.headers.get("Location") ?? "");
 		expect(finalLocation.origin + finalLocation.pathname).toBe(REDIRECT_URI);
 		expect(finalLocation.searchParams.get("code")).toEqual(expect.any(String));

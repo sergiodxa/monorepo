@@ -260,7 +260,7 @@ export const magicLinkCompleteShow = createAction(
 		let token = ctx.url.searchParams.get("token");
 		if (!token) {
 			return new Response(null, {
-				status: 302,
+				status: 303,
 				headers: { Location: freshRequestHref(ctx) },
 			});
 		}
@@ -373,7 +373,7 @@ export const magicLinkCompleteSubmit = createAction(
 			let uiLocales = ctx.url.searchParams.get("ui_locales");
 			if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 
-			let response = new Response(null, { status: 302, headers: { Location: url.toString() } });
+			let response = new Response(null, { status: 303, headers: { Location: url.toString() } });
 			response.headers.append("Set-Cookie", sessionCookieHeader);
 			return response;
 		}

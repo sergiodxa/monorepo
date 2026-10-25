@@ -142,7 +142,7 @@ describe("reset", () => {
 			}),
 		);
 
-		expect(signInResponse.status).toBe(302);
+		expect(signInResponse.status).toBe(303);
 		expect(signInResponse.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 
 		let oldPasswordResponse = await harness.router.fetch(
