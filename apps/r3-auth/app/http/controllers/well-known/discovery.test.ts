@@ -33,6 +33,7 @@ interface DiscoveryDocument {
 	code_challenge_methods_supported: string[];
 	backchannel_logout_supported: boolean;
 	frontchannel_logout_supported: boolean;
+	authorization_response_iss_parameter_supported: boolean;
 }
 
 /** A published JSON Web Key, as relying parties read it. */
@@ -95,6 +96,12 @@ describe("GET /.well-known/openid-configuration", () => {
 		expect(body.code_challenge_methods_supported).toEqual(["S256", "plain"]);
 		expect(body.backchannel_logout_supported).toBe(true);
 		expect(body.frontchannel_logout_supported).toBe(true);
+	});
+
+	test("advertises the iss authorization response parameter (RFC 9207)", async () => {
+		let { body } = await fetchJson<DiscoveryDocument>(routes.wellKnown.openidConfiguration.href());
+
+		expect(body.authorization_response_iss_parameter_supported).toBe(true);
 	});
 });
 

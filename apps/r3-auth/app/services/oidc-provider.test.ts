@@ -344,6 +344,28 @@ describe("OAuth2Provider", () => {
 		});
 
 		/**
+		 * A verifier on a code issued without a challenge means the authorization request
+		 * lost its challenge on the way, which is the PKCE downgrade RFC 9700 §2.1.1 refuses.
+		 */
+		test("rejects a code_verifier for a code issued without a challenge", async () => {
+			testAuthzCode.pkce = null;
+
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			await expect(
+				provider.token({
+					type: "authorization_code",
+					code: "valid-code",
+					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
+					codeVerifier: "test-code-verifier-that-is-long-enough",
+				}),
+			).rejects.toThrow(OIDC.InvalidGrantError);
+		});
+
+		/**
 		 * A digest the runtime refuses is this server failing, so reporting a mismatch would
 		 * accuse the client of forging a verifier it in fact presented correctly.
 		 */

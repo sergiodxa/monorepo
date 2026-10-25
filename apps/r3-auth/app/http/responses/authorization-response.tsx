@@ -15,6 +15,7 @@ import { redirect } from "@sdxc/http/response";
 
 import type { ResponseMode } from "~/app/http/middleware/session";
 
+import { ISSUER } from "~/config/oidc";
 import FormPostView from "~/resources/views/form-post";
 
 /**
@@ -31,14 +32,15 @@ export interface AuthorizationResponseContext {
 }
 
 /**
- * Sends the authorization response parameters back to a relying party.
- *
+ * Sends the authorization response parameters back to a relying party, always with `iss`
+ * set to the discovery `issuer` (RFC 9207), on success and error alike, so a client can
+ * detect a response that a different authorization server produced (mix-up attack).
  * In `fragment` mode the parameters are merged into whatever hash the registered redirect
  * URI already carries, since the client may route its callback on that hash.
  *
  * @param ctx - Request context, used to render the form-post page.
  * @param redirectUri - The client's registered redirect URI, already validated.
- * @param params - The response parameters, such as `code` and `state`, or an `error`.
+ * @param params - The response parameters, such as `code` and `state`, or an `error`; `iss` is added here.
  * @param responseMode - How the client asked to receive them; defaults to `query`.
  * @returns A redirect for `query` and `fragment`, or the form-post page.
  */
@@ -48,11 +50,13 @@ export async function authorizationResponse(
 	params: Record<string, string>,
 	responseMode: ResponseMode = "query",
 ): Promise<Response> {
+	let fields = { ...params, iss: ISSUER };
+
 	if (responseMode === "form_post") {
 		return await ctx.render(
 			<FormPostView
 				action={redirectUri}
-				params={params}
+				params={fields}
 				title={ctx.intl.t("authorize.formPost.title")}
 				submitLabel={ctx.intl.t("authorize.formPost.submit")}
 				noscriptMessage={ctx.intl.t("authorize.formPost.noscript")}
@@ -66,10 +70,10 @@ export async function authorizationResponse(
 
 	if (responseMode === "fragment") {
 		let fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
-		for (let [key, value] of Object.entries(params)) fragment.set(key, value);
+		for (let [key, value] of Object.entries(fields)) fragment.set(key, value);
 		url.hash = fragment.toString();
 	} else {
-		for (let [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+		for (let [key, value] of Object.entries(fields)) url.searchParams.set(key, value);
 	}
 
 	/**

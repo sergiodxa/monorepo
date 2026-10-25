@@ -37,7 +37,7 @@ import { OIDC } from "~/app/services/oidc-provider";
 import { passwordRefusalMessage } from "~/app/services/password-policy";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
-import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config/oidc";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
 import routes from "~/routes/web";
@@ -120,7 +120,7 @@ async function errorRedirect(
 	return await authorizationResponse(
 		ctx,
 		query.redirect_uri,
-		{ state: query.state, iss: ISSUER, error, error_description: description },
+		{ state: query.state, error, error_description: description },
 		query.response_mode,
 	);
 }

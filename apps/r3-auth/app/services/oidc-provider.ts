@@ -865,11 +865,7 @@ export class OIDC {
 				authTime,
 			});
 
-			let params: Record<string, string> = {
-				code,
-				state: input.state,
-				iss: `https://${this.issuer}`,
-			};
+			let params: Record<string, string> = { code, state: input.state };
 
 			if (input.opBrowserState) {
 				params.session_state = await this.generateSessionState(
@@ -1281,6 +1277,8 @@ export class OIDC {
 			} else {
 				throw new InvalidRequestError("Unsupported PKCE method");
 			}
+		} else if (args.codeVerifier) {
+			throw new InvalidGrantError("Code was issued without a code_challenge");
 		}
 
 		let subject = await this.repository.findSubjectById(subjectId);

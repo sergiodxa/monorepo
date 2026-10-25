@@ -30,7 +30,7 @@ import {
 	signIn,
 	submitSignIn,
 } from "~/app/test/seed";
-import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
+import { AUTH_SERVER_CLIENT_ID, WELL_KNOWN } from "~/config/oidc";
 import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
@@ -110,7 +110,7 @@ describe("GET /authorize", () => {
 		let location = new URL(response.headers.get("location")!);
 		expect(`${location.origin}${location.pathname}`).toBe(REDIRECT_URI);
 		expect(location.searchParams.get("state")).toBe("state-123");
-		expect(location.searchParams.get("iss")).toBe("https://auth.sergiodxa.com");
+		expect(location.searchParams.get("iss")).toBe(WELL_KNOWN.issuer);
 		expect(location.searchParams.get("code")).toBeTruthy();
 	});
 
@@ -201,6 +201,7 @@ describe("GET /authorize", () => {
 		expect(location.searchParams.get("error")).toBe("login_required");
 		expect(location.searchParams.get("error_description")).toBe("User is not authenticated");
 		expect(location.searchParams.get("state")).toBe("state-123");
+		expect(location.searchParams.get("iss")).toBe(WELL_KNOWN.issuer);
 		expect(location.searchParams.get("code")).toBeNull();
 	});
 
@@ -276,6 +277,7 @@ describe("GET /authorize", () => {
 		let body = await response.text();
 		expect(body).toContain(`action="${REDIRECT_URI}"`);
 		expect(body).toContain('name="code"');
+		expect(body).toMatch(new RegExp(`name="iss"[^>]*value="${WELL_KNOWN.issuer}"`));
 		expect(body).toContain("document.forms[0].submit()");
 	});
 
@@ -303,6 +305,7 @@ describe("GET /authorize", () => {
 		let location = new URL(response.headers.get("location")!);
 		expect(location.search).toBe("");
 		expect(new URLSearchParams(location.hash.slice(1)).get("code")).toBeTruthy();
+		expect(new URLSearchParams(location.hash.slice(1)).get("iss")).toBe(WELL_KNOWN.issuer);
 	});
 
 	test("an unsupported code_challenge_method is an error redirect, not a silent downgrade", async () => {

@@ -22,7 +22,7 @@ import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
-import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config/oidc";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /**
@@ -60,7 +60,6 @@ async function errorResponse(
 		authz.redirectUri,
 		{
 			state: authz.state,
-			iss: ISSUER,
 			error: error.code,
 			error_description: error.description,
 		},
