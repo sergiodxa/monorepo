@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 6
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to parse and stringify RFC 6901 pointers with `@sdxc/json-pointer`"
     - "How to read and write a value at a pointer"
@@ -24,7 +24,7 @@ points at that member. The empty string is the whole document.
 [`@sdxc/jsonpath`](/api/jsonpath) selects carries a location that `stringify` turns into one.
 
 ```bash
-npm add @sdxc/json-pointer @sdxc/result
+npm add @sdxc/json-pointer @sdxc/problem @sdxc/result
 ```
 
 ## Parse and stringify
@@ -52,17 +52,12 @@ walk through a scalar fails, so a `null` at that path and an absent path stay di
 
 ```typescript {% title="app/services/read-field.ts" %}
 import { get } from "@sdxc/json-pointer";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
 let document = { foo: ["bar", "baz"], "a/b": 1 };
 
-let first = get(document, "/foo/0");
-if (isFailure(first)) throw first.error;
-// "bar"
-
-let slash = get(document, "/a~1b");
-if (isFailure(slash)) throw slash.error;
-// 1
+unwrap(get(document, "/foo/0")); // "bar"
+unwrap(get(document, "/a~1b")); // 1
 
 let missing = get(document, "/foo/9");
 isFailure(missing); // true
@@ -84,15 +79,10 @@ may not exist yet.
 
 ```typescript {% title="app/services/write-field.ts" %}
 import { set } from "@sdxc/json-pointer";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-let next = set({ a: { b: 1 } }, "/a/b", 2);
-if (isFailure(next)) throw next.error;
-// { a: { b: 2 } }
-
-let added = set({ a: 1 }, "/b", 2);
-if (isFailure(added)) throw added.error;
-// { a: 1, b: 2 }
+unwrap(set({ a: { b: 1 } }, "/a/b", 2)); // { a: { b: 2 } }
+unwrap(set({ a: 1 }, "/b", 2)); // { a: 1, b: 2 }
 
 let missing = set({}, "/a/b", 1);
 isFailure(missing); // true
@@ -102,24 +92,31 @@ A key named `__proto__` is stored as data. The original document is left unchang
 
 ## Name a validation issue
 
-Flatten a schema path to keys, then `stringify`, so a member named `a/b` still points at
-itself in a problem's `errors` list.
-[`issuesFrom`](/docs/http-apis/json-apis) in `@sdxc/problem` does this for Standard Schema
-issues. Reach for `stringify` when the path is yours:
+A problem's `errors` entries point at the member each issue is about. `issuesFrom` in
+[`@sdxc/problem`](/docs/http-apis/json-apis) writes those pointers for the issues a schema
+reports, and `toPointer` from the same package does it for an issue you raise yourself, such
+as a check that needs the database. Both escape every segment, so a member named `a/b` still
+points at itself.
 
-```typescript {% title="app/services/to-pointer.ts" %}
-import { stringify } from "@sdxc/json-pointer";
+Here a book's `labels` object is keyed by names the user chose, so a label may hold a `/`:
 
-export function toPointer(
-	path: readonly (string | number | { key: string | number })[],
-): string {
-	return stringify(
-		path.map((segment) => (typeof segment === "object" ? segment.key : segment)),
-	);
+```typescript {% title="app/services/books/label-issues.ts" %}
+import type { ProblemIssue } from "@sdxc/problem";
+
+import { toPointer } from "@sdxc/problem";
+
+export function unknownLabelIssue(label: string): ProblemIssue {
+	return {
+		pointer: toPointer(["labels", label]),
+		code: "unknown-label",
+		message: `No shelf is named ${label}.`,
+	};
 }
-
-toPointer([{ key: "users" }, { key: 0 }, "a/b"]); // "/users/0/a~1b"
 ```
+
+`toPointer` takes a Standard Schema issue path, so segments may be keys or `{ key }`
+objects. When the path is plain strings and numbers, `stringify` from `@sdxc/json-pointer`
+gives the same pointer.
 
 A merge-patch `diff` that would set a member to a literal `null` fails with that member's
 pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors and
@@ -127,21 +124,22 @@ pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors a
 
 ## Test the pointer
 
-`toPointer` is a pure function, so its test calls it directly. The case worth pinning is the
-member whose name holds the separator:
+The case worth pinning is the label whose name holds the separator: the pointer the issue
+carries must resolve to that label in the body the client sent.
 
-```typescript {% title="app/services/to-pointer.test.ts" %}
+```typescript {% title="app/services/books/label-issues.test.ts" %}
 import { get } from "@sdxc/json-pointer";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { toPointer } from "~/app/services/to-pointer";
+import { unknownLabelIssue } from "~/app/services/books/label-issues";
 
-test("a member named a/b still points at itself", () => {
-	let pointer = toPointer([{ key: "users" }, { key: 0 }, "a/b"]);
+test("a label named sci-fi/classic still points at itself", () => {
+	let body = { title: "Kindred", labels: { "sci-fi/classic": true } };
+	let issue = unknownLabelIssue("sci-fi/classic");
 
-	expect(pointer).toBe("/users/0/a~1b");
-	expect(unwrap(get({ users: [{ "a/b": "found" }] }, pointer))).toBe("found");
+	expect(issue.pointer).toBe("/labels/sci-fi~1classic");
+	expect(unwrap(get(body, issue.pointer))).toBe(true);
 });
 ```
 
