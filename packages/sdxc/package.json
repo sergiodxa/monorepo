@@ -281,6 +281,7 @@
 		"./robots": "./src/robots.ts",
 		"./robots/directives": "./src/robots/directives.ts",
 		"./robots/fetch": "./src/robots/fetch.ts",
+		"./robots/content-usage": "./src/robots/content-usage.ts",
 		"./rss": "./src/rss.ts",
 		"./saml": "./src/saml.ts",
 		"./sample": "./src/sample.ts",
