@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 12
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read the caller's address once per request and decide what `null` means"
     - "How to key a rate limit on the client's network and admit only your own networks"
@@ -25,8 +25,8 @@ holds: an `IP` that knows its canonical spelling, the network it sits in and wha
 registries say it is for, plus `IP.Range` for networks.
 
 ```bash
-npm add @sdxc/get-client-ip @sdxc/http @sdxc/ip @sdxc/logger @sdxc/rate-limit \
-	@sdxc/result @sdxc/validate remix
+npm add @sdxc/get-client-ip @sdxc/http @sdxc/ip @sdxc/logger @sdxc/outbound \
+	@sdxc/rate-limit @sdxc/result @sdxc/validate remix
 ```
 
 ## Publish the address once
@@ -229,13 +229,14 @@ office's IPv6 prefix too when it has one.
 ## Refuse an internal address someone typed
 
 A webhook target, an uptime probe or an avatar URL is a host chosen by someone else, and your
-Worker will connect to it. When that host is an address literal, `@sdxc/ip` classifies it before
-anything is stored:
+Worker will connect to it. `checkUrl` from [`@sdxc/outbound`](/api/outbound) judges it before
+anything is stored: it parses the URL, classifies an address literal with `@sdxc/ip`, and
+refuses anything that is not on the public internet.
 
 ```typescript {% title="app/http/controllers/webhooks/create.ts" %}
 import { created, unprocessableEntity } from "@sdxc/http/response/json";
-import { IP } from "@sdxc/ip";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { checkUrl } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -249,27 +250,27 @@ export default createAction(routes.webhooks.create, async (ctx) => {
 	let body = await validate(ctx.request, WEBHOOK);
 	if (isFailure(body)) return unprocessableEntity({ issues: body.error.issues });
 
-	let url = URL.parse(body.data.url);
-	if (url === null) return unprocessableEntity({ error: "That is not a URL." });
-
-	let literal = IP.parse(url.hostname);
-	if (isSuccess(literal) && !literal.data.isPublic) {
+	let url = checkUrl(body.data.url);
+	if (isFailure(url)) {
 		return unprocessableEntity({
-			error: "That address is not on the public internet.",
-			classification: literal.data.classification,
+			error: url.error.message,
+			code: url.error.code,
 		});
 	}
 
-	let webhook = await Webhooks.save(ctx.db, { url: url.href });
+	let webhook = await Webhooks.save(ctx.db, { url: url.data.href });
 	return created({ id: webhook.id });
 });
 ```
 
-Parse the URL first and classify its `hostname`. `URL` rewrites the octal, hex and bare-integer
-spellings of IPv4 (`http://0x7f.1/`, `http://2130706433/`) into dotted decimal, which is the
-only IPv4 form `IP.parse` accepts, and keeps the brackets on IPv6, which `IP.parse` reads.
-`classification` names why an address was refused (`loopback`, `private`, `link-local`,
-`documentation` and the rest), so the response can say which.
+The checks run on the parsed URL. `URL` rewrites the octal, hex and bare-integer spellings of
+IPv4 (`http://0x7f.1/`, `http://2130706433/`) into dotted decimal, so every spelling of
+`127.0.0.1` is judged as that address. A literal that is not public fails with
+`refused-address`, and the message names its classification (`10.0.0.1 is private`):
+`loopback`, `private`, `link-local`, `documentation` and the rest. Names such as `localhost` or
+`db.internal` fail with `refused-host`, and a scheme other than HTTP(S) or a URL carrying
+credentials fails too. When you need the classification as a value, `IP.parse(url.hostname)`
+answers the same `IP` the check judged.
 
 IPv6 can carry an IPv4 address inside it: IPv4-mapped (`::ffff:10.0.0.1`), NAT64
 (`64:ff9b::a00:1`) and 6to4 addresses. `classification` and `isPublic` judge those by the IPv4
@@ -277,7 +278,7 @@ inside, so all three spellings of `10.0.0.1` are `private`, and `embeddedIPv4` a
 address when you want to log or show it.
 
 <warning>
-This check covers address literals only. `hooks.example.com` passes it and can still resolve to
+`checkUrl` reads the URL alone. `hooks.example.com` passes it and can still resolve to
 `127.0.0.1`, and a redirect can lead anywhere. Check every address a name resolves to, on every
 hop, in the fetch itself:
 [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) covers that.
