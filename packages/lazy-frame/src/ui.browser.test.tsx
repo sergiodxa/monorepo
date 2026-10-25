@@ -270,7 +270,8 @@ describe("prefetch", () => {
 
 	/**
 	 * Mounts a dialog its opener opens, fetching its frame ahead as `prefetch` says, under a
-	 * source no other test uses.
+	 * source no other test uses. The opener takes no hits from the real cursor, so only the
+	 * pointer events a test dispatches reach it, wherever the browser's mouse rests.
 	 */
 	function mountOpener(prefetch: boolean): { opener: HTMLElement; src: string } {
 		mounts += 1;
@@ -278,7 +279,7 @@ describe("prefetch", () => {
 		let src = `/jobs/${mounts}`;
 		let result = mount(
 			<div>
-				<a id={id} href={src}>
+				<a id={id} href={src} style={{ pointerEvents: "none" }}>
 					Open
 				</a>
 				<dialog>
