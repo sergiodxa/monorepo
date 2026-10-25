@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to build the global middleware chain once as the composition root"
     - "How to publish a service onto the request context and read it in a handler"
@@ -34,7 +34,7 @@ deploy this chain.
 
 ## Create one logger per Worker
 
-A logger is configuration, not a per-request object. Create it once in its own module, so the
+A logger is configuration that every request shares. Create it once in its own module, so the
 router and anything else that opens a log (a job dispatcher, a cron handler) write records
 under the same `service` name and a query can group them.
 
@@ -131,7 +131,8 @@ export function openDatabase(): Database {
 
 `database(db)` from `@sdxc/database-middleware` publishes it as `ctx.db`, typed on every
 request context. A service of your own follows the same pattern: a context key, a `db`-style
-property declared on `RequestContext`, and middleware that sets the value per request:
+property declared on `RequestContext`, and middleware that sets the value per request, typed
+with what it publishes so the router's context type picks it up:
 
 ```typescript {% title="app/http/middleware/billing.ts" %}
 import type { Middleware } from "remix/router";
@@ -148,7 +149,9 @@ declare module "remix/router" {
 	}
 }
 
-export function billing(client: BillingClient): Middleware {
+export function billing(
+	client: BillingClient,
+): Middleware<{ key: typeof Billing; value: BillingClient; property: "billing" }> {
 	return (ctx, next) => {
 		ctx.set(Billing, client, { property: "billing" });
 		return next();
