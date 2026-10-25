@@ -1617,6 +1617,7 @@
       "name": "@sdxc/openapi",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/http": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
@@ -1761,6 +1762,7 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/uuid": "workspace:*",
