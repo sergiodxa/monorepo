@@ -231,8 +231,6 @@ delivery, and a handler per event type does the work. Every handler here does th
 on purpose, and the controller hands each delivery to the endpoint's `handler`:
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
-import type { RequestContext } from "remix/router";
-
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -261,9 +259,7 @@ const ENDPOINT = new BillingWebhook(
 	{ store: new WebhookDeliveries(openDatabase) },
 );
 
-export default createAction(routes.webhooks.billing, {
-	handler: (ctx) => ENDPOINT.handler(ctx as RequestContext),
-});
+export default createAction(routes.webhooks.billing, (ctx) => ENDPOINT.handler(ctx));
 ```
 
 A delivery says that something changed, and only a fresh snapshot says what is true now, so a
