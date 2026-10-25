@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to swap your schema import so `@sdxc/openapi` can read the same schemas"
     - "How to declare operations and build and serve an OpenAPI 3.1 document"
@@ -71,7 +71,7 @@ Make the same change in the problem catalog, `config/problems.ts`: import `s` fr
 be described.
 
 <note>
-The document describes every problem type in the catalog, so a catalog still built with
+The document describes every problem type in the catalog, so a catalog built with
 `remix/data-schema` fails the build: its extension schemas have no JSON Schema form.
 </note>
 
@@ -141,7 +141,10 @@ export const SHOW_BOOK = defineOperation("showBook", routes.api.books.show, {
 `problems` names come from your catalog, and adding an operation that lists a name the
 catalog lacks fails to compile. `params` must name exactly the pattern's variables, so a
 schema for `/api/books/:bookId` without `bookId` is a type error. `tags` and `description`
-group and explain an operation in the rendered reference.
+group and explain an operation in the rendered reference. `deprecated` marks an operation
+for retirement: given a notice with `deprecation` and `sunset` dates, the document carries
+it, and `deprecationHeaders(operation)` from `@sdxc/openapi/router`, in the route's
+middleware, writes the matching `Deprecation` and `Sunset` fields on every response.
 
 Keep this module free of handlers. It holds only routes and schemas, so building the document
 never loads a controller, and a controller imports its operation from the contract it already
@@ -244,9 +247,10 @@ assembly runs during the Worker's startup, whose time Cloudflare limits, so a sl
 fail the deploy.
 </warning>
 
-It answers JSON by default and YAML for `?format=yaml` or an `Accept`
-preferring `application/yaml`, each with a strong `ETag` and `Cache-Control: public,
-max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
+It answers `application/openapi+json; version=3.1.1` by default and
+`application/openapi+yaml` for `?format=yaml` or an `Accept` preferring it, and plain
+`application/json` or `application/yaml` to a client that asks for those. Each carries a
+strong `ETag` and `Cache-Control: public, max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
 problem document. An app from `sdxc create` serves `/api/openapi.json` this way already, from a
 `createApiDocument(origin)` that names the origin the request reached as the server.
 
