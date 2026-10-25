@@ -653,7 +653,7 @@ describe("defineSearch with a trigram index", () => {
 		columns: { id: c.integer().primaryKey(), body: c.text() },
 	});
 
-	const NOTE_SEARCH = defineSearch({
+	let noteSearch = defineSearch({
 		table: notes,
 		columns: [{ name: "body", weight: 1 }],
 		fts: { table: "notes_fts", tokenizer: "trigram" },
@@ -673,11 +673,11 @@ describe("defineSearch with a trigram index", () => {
 	});
 
 	test("matches a substring of three characters or more through the index", async () => {
-		expect(ids(await NOTE_SEARCH.query(db, q("gres")).all())).toEqual([1]);
+		expect(ids(await noteSearch.query(db, q("gres")).all())).toEqual([1]);
 	});
 
 	test("answers a shorter term with LIKE, which the index cannot", async () => {
-		expect(ids(await NOTE_SEARCH.query(db, q("go")).all())).toEqual([2]);
+		expect(ids(await noteSearch.query(db, q("go")).all())).toEqual([2]);
 	});
 });
 
@@ -692,7 +692,7 @@ describe("defineSearch with JSON and boolean columns", () => {
 		},
 	});
 
-	const ITEM_SEARCH = defineSearch({ table: items, columns: [{ name: "title", weight: 1 }] });
+	let itemSearch = defineSearch({ table: items, columns: [{ name: "title", weight: 1 }] });
 
 	test("decodes rows as the table declares them, and binds booleans as integers", async () => {
 		let db = new Database(createD1DatabaseAdapter(createD1Database()));
@@ -702,7 +702,7 @@ describe("defineSearch with JSON and boolean columns", () => {
 		await db.create(items, { id: "a", title: "Remix", meta: { tags: ["x"] }, starred: true });
 		await db.create(items, { id: "b", title: "Remix too", meta: null, starred: false });
 
-		let rows = await ITEM_SEARCH.query(db, q("remix")).where({ starred: true }).all();
+		let rows = await itemSearch.query(db, q("remix")).where({ starred: true }).all();
 		expect(rows).toEqual([
 			{ id: "a", title: "Remix", meta: { tags: ["x"] }, starred: true, rank: -1 },
 		]);
