@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 17
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to challenge a client for a Privacy Pass token and redeem the one it sends back"
     - "Where to keep issued challenges and spent tokens so a token is spent once"
@@ -146,8 +146,7 @@ export function createWebRouter(widget = productionCaptcha()) {
 	router.map(
 		routes.api.search,
 		lazy(
-			() =>
-				import("~/app/http/controllers/api/search").then((it) => it.default),
+			() => import("~/app/http/controllers/api/search"),
 			[captcha(tokenCaptcha)],
 		),
 	);
