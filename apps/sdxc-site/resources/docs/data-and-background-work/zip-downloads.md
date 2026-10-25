@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 17
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to bundle text, CSV streams and stored files into one ZIP with `@sdxc/zip`"
     - "How to serve a download that starts at once and holds one entry in memory"
@@ -103,6 +103,7 @@ account's contacts, such as the keyset-paged one in
 `modified` is the date an unarchiver shows beside each file. Without it, every entry is dated
 1 January 1980, which makes the same entries produce byte-for-byte the same archive: the
 choice for a file you hash or cache, and the reason a real export passes the time it was made.
+
 <note>
 The date is recorded in UTC with two-second precision and has to fall between 1980 and 2107.
 </note>
@@ -154,6 +155,9 @@ holds comfortably as a link in a text entry, and keep the archive for the files 
 </warning>
 
 ## Serve the download
+
+The action returns the archive's stream as the response body, so the first entry goes out while
+the rest are still unread. Assembling fails only on a refused entry, before anything is sent:
 
 ```typescript {% title="app/http/controllers/account/export.ts" %}
 import { attachment } from "@sdxc/http/response";
@@ -251,9 +255,6 @@ export async function storeExport(db: Database, account: Account) {
 The whole archive is in memory at once here, so this suits exports of a size a Worker holds
 comfortably. A stream source is read once, so an archive holding one is written by a single
 call to `stream()` or `bytes()`.
-
-`crc32` is exported too, for checking a file against the checksum a ZIP, PNG or gzip header
-records. Pass the previous value as the second argument to continue across chunks.
 
 ## Test the archive
 
