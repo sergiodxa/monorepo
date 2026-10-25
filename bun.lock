@@ -1959,6 +1959,16 @@
         "remix": "3.1.0",
       },
     },
+    "packages/scitt": {
+      "name": "@sdxc/scitt",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/backoff": "workspace:*",
+        "@sdxc/cbor": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/sdxc": {
       "name": "sdxc",
       "version": "0.0.1",
@@ -3285,6 +3295,8 @@
     "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
 
     "@sdxc/scim": ["@sdxc/scim@workspace:packages/scim"],
+
+    "@sdxc/scitt": ["@sdxc/scitt@workspace:packages/scitt"],
 
     "@sdxc/search": ["@sdxc/search@workspace:packages/search"],
 

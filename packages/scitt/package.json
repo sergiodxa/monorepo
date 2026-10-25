@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/scitt",
+	"version": "0.0.1",
+	"description": "SCITT Signed Statements, Receipts and a SCRAPI client for registering with a Transparency Service",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/backoff": "workspace:*",
+		"@sdxc/cbor": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

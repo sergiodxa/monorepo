@@ -166,10 +166,12 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/authz](packages/authz)                     | Authorization from a typed catalog of abilities, additive roles and guards, answered from loaded facts         |
 | [@sdxc/crypto](packages/crypto)                   | Web Crypto primitives — hashing, HMAC, tokens, TOTP, AES-GCM — plus scrypt passwords                           |
 | [@sdxc/jwt](packages/jwt)                         | JWT payload classes and the keys that sign them                                                                |
+| [@sdxc/openpgp](packages/openpgp)                 | OpenPGP (RFC 9580) signing and verification on Web Crypto: armor, keys, cleartext and detached signatures      |
 | [@sdxc/passkey](packages/passkey)                 | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it                             |
 | [@sdxc/password-policy](packages/password-policy) | Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse        |
 | [@sdxc/saml](packages/saml)                       | SAML 2.0 service provider: verify a signed assertion and the metadata around it                                |
 | [@sdxc/scim](packages/scim)                       | SCIM 2.0 resources, filters, PATCH operations, cursor pagination, discovery documents and events               |
+| [@sdxc/scitt](packages/scitt)                     | SCITT Signed Statements, Receipts and a SCRAPI client for registering with a Transparency Service              |
 | [@sdxc/well-known](packages/well-known)           | Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more |
 
 ### Security and Abuse Prevention
