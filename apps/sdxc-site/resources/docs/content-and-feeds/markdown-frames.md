@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 32
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write a frame tag that holds a region a route renders per request"
     - "How to register the tag and render it with `@sdxc/markdown`"
@@ -18,7 +18,7 @@ and caches, and the live part is a region a route renders per request. This guid
 region as a `frame` tag in markdown and draws it with [`@sdxc/markdown`](/api/markdown).
 
 ```bash
-npm add @sdxc/markdown @sdxc/result remix
+npm add @sdxc/http @sdxc/markdown @sdxc/result remix
 ```
 
 This one is live. It is the [ColorPicker](/api/ui/color-picker) reference page's own preview,
@@ -43,8 +43,8 @@ With a fallback, the page streams its first chunk straight away, and the client 
 the region in for the fallback when it arrives. A self-closing
 `<frame src="/frames/latest-release" />` has no fallback, so the page waits for the region and
 sends it inline, which is the form to pick when the region has to read before any script
-loads. Add `name="…"` when a
-client entry elsewhere on the page reloads the region through `handle.frames.get(name)`.
+loads. Add `name="…"` when a client entry elsewhere on the page reloads the region through
+`handle.frames.get(name)`.
 
 ## Register the tag
 
@@ -75,17 +75,18 @@ no `src` fails the same way.
 to `toRemix` under the tag's name:
 
 ```tsx {% title="app/http/controllers/guide.tsx" %}
+import { internalServerError } from "@sdxc/http/response/html";
 import { FrameTag, toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { readGuide } from "~/app/services/content/guide";
 import COLORS_GUIDE from "~/resources/content/colors.md?raw";
-import routes from "~/routes";
+import routes from "~/routes/web";
 
 export default createAction(routes.guide, (ctx) => {
 	let result = readGuide(COLORS_GUIDE);
-	if (isFailure(result)) throw result.error;
+	if (isFailure(result)) return internalServerError(result.error.message);
 
 	return ctx.render(
 		<article>
@@ -110,7 +111,7 @@ it would on a page of its own:
 import { createAction } from "remix/router";
 
 import { ColorPickerPreview } from "~/resources/components/color-picker-preview";
-import routes from "~/routes";
+import routes from "~/routes/web";
 
 export default createAction(routes.frames.preview, (ctx) => {
 	return ctx.render(<ColorPickerPreview />);
