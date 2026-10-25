@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
     - "How to use nonces or hashes for the scripts you render"
@@ -62,8 +62,7 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 ```
 
 A few choices here are load-bearing. `styleSrc` keeps `"unsafe-inline"`, for the reason in the
-warning below. `formAction`
-names your identity provider, because a login form that posts to it — the one in
+warning below. `formAction` names your identity provider, because a login form that posts to it — the one in
 [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — is a form action
 too. The Turnstile origin appears in `scriptSrc` and `frameSrc` because the challenge from
 [Protect forms](/docs/identity-and-security/protect-forms) loads a script that renders a frame.
@@ -90,7 +89,8 @@ allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecu
 
 `securityHeaders(policy)` publishes `ctx.securityHeaders` and writes the headers onto whatever
 response the chain returns, keeping any header the response set itself. Place it right before
-the renderer, so it decorates the rendered page and the renderer can read the nonce.
+`assets()` and the renderer, so it decorates the rendered page and its nonce exists before the
+document asks for it.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { assets } from "@sdxc/assets-middleware";
@@ -109,6 +109,7 @@ export function createWebRouter() {
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
+				nonce: (ctx) => ctx.securityHeaders.nonce,
 			}),
 			render({ assets: assetResolver }),
 		],
@@ -120,50 +121,59 @@ export function createWebRouter() {
 
 The comment stands for whatever your app already runs ahead of it, from
 [Wire the router](/docs/building-remix-apps/wire-the-router), and `assets()` from
-`@sdxc/assets-middleware` publishes the stylesheets and entry script each page passes to its
-document as `ctx.assets`. The order among the rest does not matter to the headers.
+`@sdxc/assets-middleware` publishes the stylesheets, entry script and nonce each page passes to
+its document as `ctx.assets`. Its `nonce` option runs only when a page reads `ctx.assets.nonce`,
+so a redirect or a JSON response never advertises one. The order among the rest does not matter
+to the headers.
 
 ## Put nonces on the scripts you render
 
-A handler that renders an inline script reads `ctx.securityHeaders.nonce` and puts it on the
-tag. The nonce is generated on first read, and a response that never reads it gets every
-`"nonce"` source removed, so an unused nonce is never advertised.
+The nonce is generated on first read, and a response that never reads it gets every `"nonce"`
+source removed, so an unused nonce is never advertised. The document puts `ctx.assets.nonce` on
+its import map:
 
 ```tsx {% title="resources/layouts/document.tsx" %}
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { ImportMap } from "remix/component/server";
 
 import { BOOT_SCRIPT } from "~/config/security-policy";
 
-type DocumentProps = { nonce: string; children?: RemixNode };
+type DocumentProps = { assets: DocumentAssets; children?: RemixNode };
 
 export function Document(handle: Handle<DocumentProps>) {
-	return () => (
-		<html lang="en">
-			<head>
-				<ImportMap value={{ imports: {} }} nonce={handle.props.nonce} />
-				<script>{BOOT_SCRIPT}</script>
-			</head>
-			<body>{handle.props.children}</body>
-		</html>
-	);
+	return () => {
+		let { nonce, script } = handle.props.assets;
+		return (
+			<html lang="en">
+				<head>
+					<ImportMap value={script.importMap} nonce={nonce} />
+					<script>{BOOT_SCRIPT}</script>
+				</head>
+				<body>
+					{handle.props.children}
+					<script type="module" async src={script.href}></script>
+				</body>
+			</html>
+		);
+	};
 }
 ```
 
-The handler reads the nonce and passes it in, as
-`ctx.render(<Document nonce={ctx.securityHeaders.nonce}>…</Document>)`. The boot script needs
-no nonce, because its hash is in the policy.
+A page renders it as `ctx.render(<Document assets={ctx.assets}>…</Document>)`. The boot script
+needs no nonce, because its hash is in the policy.
 
-A page with client entries — the passkey button from [Add passkeys](/docs/identity-and-security/passkeys),
-say — needs this. `remix/component` keeps the attributes of `<ImportMap>` on the import map it writes
-and copies its nonce onto every import map it appends later; without it, a nonce-based
-`script-src` blocks the client entries. `TurnstileWidget` and the other CAPTCHA widgets take a
-`nonce` prop for their loader script the same way.
+A page with client entries — the passkey button from
+[Add passkeys](/docs/identity-and-security/passkeys), say — needs the nonce on its import map.
+`remix/component` copies it onto every import map it appends later; without it, a nonce-based
+`script-src` blocks the client entries. Any other inline script a handler renders takes
+`ctx.securityHeaders.nonce` the same way, and `TurnstileWidget` and the other CAPTCHA widgets
+take a `nonce` prop for their loader script.
 
 <note>
-Read the nonce in the handler, while the chain is still running: the headers are written when
-it resolves, ahead of a streamed body.
+Read the nonce while the chain is still running, in the handler or in the document
+`ctx.render` builds: the headers are written when the chain resolves, ahead of a streamed body.
 </note>
 
 ## Hash a fixed inline script instead
@@ -223,8 +233,8 @@ export default createAction(routes.cspReports, async (ctx) => {
 });
 ```
 
-Declare the route as `cspReports: post("/reports/csp")` in `routes/web.ts`. The slice caps how much one crafted batch can write
-to your logs. When the only violations left are browser extensions, rename
+Declare the route as `cspReports: post("/reports/csp")` in `routes/web.ts`. The slice caps
+how much one crafted batch can write to your logs. When the only violations left are browser extensions, rename
 `contentSecurityPolicyReportOnly` to `contentSecurityPolicy` and the policy is enforced.
 
 ## Loosen one route, not the policy
