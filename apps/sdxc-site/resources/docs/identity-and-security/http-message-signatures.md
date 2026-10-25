@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 14
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"
     - "How to verify signatures with a freshness window and replay checks"
@@ -454,7 +454,9 @@ and equal exports always carry the same digest.
 
 <note>
 Both fields describe the bytes as encoded, so compute them where the body is final: a layer
-that compresses or rewrites the response afterwards changes what the digest describes.
+that compresses or rewrites the response afterwards changes what the digest describes. When a
+proxy or CDN compresses for you, send `"unencoded-digest"` instead, the hash of the
+representation before any `Content-Encoding`, which holds whatever coding is applied on the way.
 </note>
 
 Checking a body someone sent is one call. `verify` takes the headers, the bytes and the field:
@@ -485,8 +487,10 @@ Every `sha-256` and `sha-512` entry the field carries must match, so a forged en
 valid one still fails, and entries for algorithms the package does not compute are skipped. A
 `DigestError` carries one `code`: `missing` (no such field), `malformed` (the text breaks the
 grammar), `unsupported-algorithm` (no `sha-256` or `sha-512` entry to check), `mismatch` (the
-body changed), `invalid` (`stringify` was given a name or weight the field cannot carry) or
-`crypto` (the runtime refused the hash). Only `mismatch` says the content changed.
+body changed), `coding` (an `Unencoded-Digest` body that does not decode), `invalid`
+(`stringify` was given a name or weight the field cannot carry) or `crypto` (the runtime
+refused the hash). Only `mismatch` says the content changed. To check an `Unencoded-Digest` on
+a body still compressed as `Content-Encoding` says, pass `decode: true` to `verify`.
 
 The legacy RFC 3230 `Digest` header, which draft-cavage signatures cover, goes through the same
 functions with `"digest"`: `stringify` writes `SHA-256=…` with the uppercase names every cavage
@@ -553,7 +557,7 @@ Publish the directory with [`@sdxc/well-known`](/api/well-known). `signDirectory
 possession proof the draft recommends: a signature by each key over the request's authority and
 the body's `Content-Digest`, so the key set cannot be re-served under another origin.
 
-```typescript {% title="app/initializers/router.tsx" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { signDirectoryResponse } from "@sdxc/http-signatures/web-bot-auth";
 import { isFailure } from "@sdxc/result";
 import {
@@ -561,8 +565,11 @@ import {
 	httpMessageSignaturesDirectory,
 } from "@sdxc/well-known/http-message-signatures-directory";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { createRouter } from "remix/router";
 
-let directory = serve(
+import { webBotAuthKey } from "~/app/initializers/web-bot-auth";
+
+const KEY_DIRECTORY = serve(
 	httpMessageSignaturesDirectory,
 	async () => {
 		let key = await webBotAuthKey();
@@ -581,7 +588,13 @@ let directory = serve(
 	},
 );
 
-wellKnown({ "http-message-signatures-directory": directory });
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			wellKnown({ "http-message-signatures-directory": KEY_DIRECTORY }),
+		],
+	});
+}
 ```
 
 On the receiving side, `verifyWebBotAuth` checks the profile, fetches the directory the covered
@@ -589,9 +602,10 @@ On the receiving side, `verifyWebBotAuth` checks the profile, fetches the direct
 for its `max-age`:
 
 ```typescript
-import { verifyWebBotAuth } from "@sdxc/http-signatures/web-bot-auth";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { verifyWebBotAuth } from "@sdxc/http-signatures/web-bot-auth";
 import { isSuccess } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 
 let verified = await verifyWebBotAuth(request, {
 	cache: new WorkerKVCache(env.CACHE),
