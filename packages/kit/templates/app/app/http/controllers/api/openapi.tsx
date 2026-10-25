@@ -10,8 +10,14 @@ import api from "~/app/http/middleware/api";
 import { createApiDocument } from "~/app/initializers/openapi";
 import routes from "~/routes/api";
 
+/**
+ * Builds the document on the first request and serves that build, with its `ETag`, to every
+ * later one for the life of the Worker.
+ */
+const serveDocument = openapiHandler(() => createApiDocument().build());
+
 export default createAction(routes.api.openapi, {
 	middleware: api,
-	/** GET /api/openapi.json, naming the origin the request reached as the API's server. */
-	handler: (ctx) => openapiHandler(() => createApiDocument(ctx.url.origin).build())(ctx),
+	/** GET /api/openapi.json, as JSON or YAML by `Accept` or `?format=`. */
+	handler: (ctx) => serveDocument(ctx),
 });
