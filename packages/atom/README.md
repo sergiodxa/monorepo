@@ -140,6 +140,8 @@ document had one and an array when it had several.
 
 - `Atom.Feed`: feed metadata. `id`, `title` and `updated` are required; `subtitle`, `rights`,
   `author`, `contributor`, `link`, `category`, `generator`, `icon` and `logo` are optional.
+  `complete` and `archive` are RFC 5005's `fh:complete` and `fh:archive` markers; its paging
+  and archive relations (`next`, `prev-archive`, `current`…) are ordinary `link` entries.
   `lang` and `base` hold the root's `xml:lang` and `xml:base`, `namespaces` its prefix
   declarations, and `attributes` any other root attributes.
 - `Atom.Entry`: one entry. `id`, `title` and `updated` are required; it adds `published`,

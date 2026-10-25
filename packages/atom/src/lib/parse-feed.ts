@@ -20,9 +20,15 @@ import type { NamespaceScope } from "./namespaces.js";
 import type { Scope } from "./xml-base.js";
 
 import { cloneAttributes } from "./clone.js";
+import { FEED_HISTORY_NAMESPACE } from "./constants.js";
 import { parseContent } from "./content.js";
 import { toExtensionElement } from "./extensions.js";
-import { extendNamespaceScope, isAtomName, readNamespaceDeclarations } from "./namespaces.js";
+import {
+	extendNamespaceScope,
+	isAtomName,
+	namespaceOf,
+	readNamespaceDeclarations,
+} from "./namespaces.js";
 import { parseText } from "./text-construct.js";
 import {
 	collapseArray,
@@ -91,7 +97,15 @@ function parseFeed(
 	};
 
 	for (let child of getChildElements(element)) {
-		if (!isAtomName(child.name, extendNamespaceScope(namespaces, child))) {
+		let childNamespaces = extendNamespaceScope(namespaces, child);
+		let marker = readHistoryMarker(child, childNamespaces);
+
+		if (marker !== undefined) {
+			feed[marker] = true;
+			continue;
+		}
+
+		if (!isAtomName(child.name, childNamespaces)) {
 			extensions.push(toExtensionElement(child));
 			continue;
 		}
@@ -170,6 +184,21 @@ function parseFeed(
 	if (extensions.length > 0) feed.extensions = extensions;
 
 	return success(feed as Atom.Feed);
+}
+
+/**
+ * Names the RFC 5005 marker a feed child is, judged by the namespace its prefix resolves
+ * to, so `<h:complete xmlns:h="…history/1.0"/>` reads the same as the usual `fh:` spelling.
+ */
+function readHistoryMarker(
+	element: XML.Element,
+	namespaces: NamespaceScope,
+): "complete" | "archive" | undefined {
+	if (namespaceOf(element.name, namespaces) !== FEED_HISTORY_NAMESPACE) return undefined;
+
+	let name = localName(element.name);
+	if (name === "complete" || name === "archive") return name;
+	return undefined;
 }
 
 /** Parses one entry element. */

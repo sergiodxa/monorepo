@@ -147,6 +147,16 @@ export namespace Atom {
 		generator?: Generator;
 		icon?: string;
 		logo?: string;
+		/**
+		 * The document lists every entry of the feed (`fh:complete`, RFC 5005 §2), so an
+		 * entry missing from it has left the feed.
+		 */
+		complete?: boolean;
+		/**
+		 * The document is an archive (`fh:archive`, RFC 5005 §4): a fixed page of older
+		 * entries reached through `prev-archive`, never the one to subscribe to.
+		 */
+		archive?: boolean;
 		/** `xml:lang` on the feed element, inherited by everything inside it. */
 		lang?: string;
 		/** `xml:base` on the feed element, against which its references resolved. */

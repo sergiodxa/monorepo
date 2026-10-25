@@ -17,3 +17,12 @@ export const ATOM_NAMESPACE = "http://www.w3.org/2005/Atom";
  * which RFC 4287 §3.1.1 defines as `text`.
  */
 export const DEFAULT_TEXT_TYPE = "text";
+
+/**
+ * Stores the Feed History namespace RFC 5005 declares `complete` and `archive` in,
+ * which a document may bind to any prefix.
+ */
+export const FEED_HISTORY_NAMESPACE = "http://purl.org/syndication/history/1.0";
+
+/** Stores the prefix a built document binds the Feed History namespace to when none is bound. */
+export const FEED_HISTORY_PREFIX = "fh";

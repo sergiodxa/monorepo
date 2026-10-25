@@ -10,7 +10,7 @@ import type { XML } from "@sdxc/xml";
 
 import type { Atom } from "../index.js";
 
-import { ATOM_NAMESPACE } from "./constants.js";
+import { ATOM_NAMESPACE, FEED_HISTORY_NAMESPACE, FEED_HISTORY_PREFIX } from "./constants.js";
 import { buildContentElement } from "./content.js";
 import { toXMLElement } from "./extensions.js";
 import { buildTextElement } from "./text-construct.js";
@@ -49,10 +49,25 @@ function buildRootAttributes(feed: Atom.Feed): Record<string, string> {
 		attributes[`xmlns:${prefix}`] = uri;
 	}
 
+	if ((feed.complete || feed.archive) && historyPrefix(feed) === undefined) {
+		attributes[`xmlns:${FEED_HISTORY_PREFIX}`] = FEED_HISTORY_NAMESPACE;
+	}
+
 	if (feed.base !== undefined) attributes["xml:base"] = feed.base;
 	if (feed.lang !== undefined) attributes["xml:lang"] = feed.lang;
 
 	return attributes;
+}
+
+/**
+ * The prefix the feed already binds the Feed History namespace to, so a parsed document
+ * writes its markers back under its own spelling.
+ */
+function historyPrefix(feed: Atom.Feed): string | undefined {
+	for (let [prefix, uri] of Object.entries(feed.namespaces ?? {})) {
+		if (prefix !== "" && uri === FEED_HISTORY_NAMESPACE) return prefix;
+	}
+	return undefined;
 }
 
 /** Builds the feed element's own children, in the order RFC 4287 presents them. */
@@ -77,6 +92,10 @@ function buildFeedChildren(feed: Atom.Feed): XML.Element[] {
 	if (feed.generator) children.push(buildGeneratorElement(feed.generator));
 	if (feed.icon !== undefined) children.push(textElement("icon", feed.icon));
 	if (feed.logo !== undefined) children.push(textElement("logo", feed.logo));
+
+	let prefix = historyPrefix(feed) ?? FEED_HISTORY_PREFIX;
+	if (feed.complete) children.push({ name: `${prefix}:complete`, attributes: {}, children: [] });
+	if (feed.archive) children.push({ name: `${prefix}:archive`, attributes: {}, children: [] });
 
 	for (let extension of feed.extensions ?? []) children.push(toXMLElement(extension));
 
