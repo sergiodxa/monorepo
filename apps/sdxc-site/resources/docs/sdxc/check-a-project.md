@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-10-22
+lastUpdated: 2026-10-25
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -24,23 +24,23 @@ It runs every check against the project and prints one line per check, each mark
 `pass`, `warn`, `fail` or `skip`, with the exact command or edit that fixes what it found:
 
 ```text
-pass  pins        Every @sdxc package is at release 2026.10.17
-fail  installed   node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.17. Fix: bun install
-pass  remix       remix 3.0.0 is the peer release 2026.10.17 declares
-pass  env         .env.example lists every secret cloudflare.config.ts declares
-warn  typegen     The Worker's env types were never generated; .cloudflare/types/index.d.ts is missing. Fix: sdxc run typegen
-skip  migrations  The project has no migrations
-pass  layout      app/ holds only the layout's folders and nothing imports bootstrap/
-warn  routes      Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
-pass  models      app/models/index.ts registers every model in app/models/
-pass  emails      3 declared emails mapped, tested and previewable
-pass  jsdoc         Every comment is JSDoc within three description lines
+pass  pins             Every @sdxc package is at release 2026.10.17
+fail  installed        node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.17. Fix: bun install
+pass  remix            remix 3.1.0 is the peer release 2026.10.17 declares
+pass  env              .env.example lists every secret cloudflare.config.ts declares
+warn  typegen          The Worker's env types were never generated; .cloudflare/types/index.d.ts is missing. Fix: sdxc run typegen
+skip  migrations       The project has no migrations
+pass  layout           app/ holds only the layout's folders and nothing imports bootstrap/
+warn  routes           Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
+pass  models           app/models/index.ts registers every model in app/models/
+pass  emails           3 declared emails mapped, tested and previewable
+pass  jsdoc            Every comment is JSDoc within three description lines
 pass  complexity       Every function stays at cyclomatic complexity 4 or below
 pass  module-size      Every module stays within 200 code lines
 pass  dependencies     No import cycles; every layer edge points inward
 pass  fan-out          Every module imports at most 15 others
 pass  orphans          Every non-entry module is imported somewhere
-skip  feature-scatter  Fewer than two layers use feature folders
+skip  feature-scatter  No feature folder name appears in more than one layer
 pass  duplication      No duplicated blocks of 8+ code lines
 pass  result-throws    App source returns Result failures instead of throw
 pass  test-ratio       Code to test ratio is 1:0.8 (min 1:0.3)
@@ -55,6 +55,26 @@ project with no migrations, or one that could not reach the npm registry.
 
 `doctor` changes nothing itself, and exits 1 when any check fails, so it fits a CI step or a
 pre-commit hook. Warnings leave the exit code at 0.
+
+## Apply the fixes it can make
+
+Several fixes are a command or an edit with one right answer, and `sdxc fix` makes them for you:
+
+```bash
+sdxc fix --dry-run
+sdxc fix
+sdxc fix env
+```
+
+| Command           | What it repairs                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `sdxc fix`        | runs the command `pins`, `installed`, `remix`, `typegen` or `ui` names, such as `bun install` or `sdxc run typegen` |
+| `sdxc fix env`    | appends each secret `cloudflare.config.ts` declares and `.env.example` lacks                                        |
+| `sdxc fix models` | registers each model `app/models/index.ts` leaves out                                                               |
+| `sdxc fix emails` | maps each declared email in `app/initializers/mail.ts`                                                              |
+
+`--dry-run` prints what each would run or write. Run `sdxc doctor` again afterwards; the rest of
+its findings, such as a migration to correct, need your judgement.
 
 ## The checks
 
@@ -161,7 +181,7 @@ sdxc doctor --skip ui --skip typegen
 A name `doctor` does not have stops it with the list it has:
 
 ```text
-No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, ui
+No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, test-ratio, crap, mutation, ui
 ```
 
 ## As JSON
