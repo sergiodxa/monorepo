@@ -48,7 +48,7 @@ export async function spendRateLimit(adapter: Adapter, key: string): Promise<Res
 	let response = applyRateLimitHeaders(
 		tooManyRequests({ error: LIMITED_ERROR, error_description: LIMITED_DESCRIPTION }),
 		decision,
-		adapter.window,
+		adapter,
 	);
 
 	response.headers.set("Retry-After", String(toSeconds(adapter.window)));
