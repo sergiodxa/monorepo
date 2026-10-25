@@ -92,6 +92,19 @@ describe("publishMetadata", () => {
 		expect(openid.tokenEndpoint?.href).toBe(`${ISSUER}/oauth/token`);
 	});
 
+	test("advertises the DPoP proof algorithms and the step-up acr value", async () => {
+		await advanceSigningKeys(db, { now: T0 });
+
+		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
+
+		expect(authorizationServerMetadataFor(published).dpopSigningAlgValuesSupported).toEqual([
+			"ES256",
+			"Ed25519",
+			"RS256",
+		]);
+		expect(openIdConfigurationFor(published).acrValuesSupported).toEqual(["mfa"]);
+	});
+
 	test("scopes_supported and claims_supported reflect the tenant's scope catalog, including a tenant-defined scope", async () => {
 		await advanceSigningKeys(db, { now: T0 });
 

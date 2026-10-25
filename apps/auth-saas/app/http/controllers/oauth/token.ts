@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DPoP } from "@sdxc/auth/dpop";
+
+import { verifyProof } from "@sdxc/auth/dpop";
 import { Base64 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
@@ -109,6 +112,46 @@ export function tokenError(status: number, error: string, description: string): 
 }
 
 /**
+ * The replay store DPoP proofs at this tenant are claimed in: the tenant's Durable Object,
+ * which every Worker verifying a proof for this tenant shares.
+ *
+ * @param stub - The tenant's Durable Object.
+ */
+export function tenantReplayStore(stub: {
+	claimDPoPProof(input: { key: string; expiresAt: number; now: number }): Promise<boolean>;
+}): DPoP.ReplayStore {
+	return {
+		claim: (key, expiresAt) =>
+			stub.claimDPoPProof({ key, expiresAt: expiresAt.getTime(), now: Date.now() }),
+	};
+}
+
+/**
+ * Checks the DPoP proof a token request carries, if any (RFC 9449 §5), against the token
+ * endpoint the tenant publishes.
+ *
+ * @returns The proof key's thumbprint, `null` for a request carrying no proof, or the
+ *   `400 invalid_dpop_proof` refusal.
+ */
+async function proofKey(ctx: {
+	request: Request;
+	tenant: { issuer: string };
+	tenantStub: Parameters<typeof tenantReplayStore>[0];
+}): Promise<{ jkt: string | null } | { refusal: Response }> {
+	if (!ctx.request.headers.has("DPoP")) return { jkt: null };
+
+	let verified = await verifyProof(ctx.request, {
+		replay: tenantReplayStore(ctx.tenantStub),
+		url: new URL("/oauth/token", ctx.tenant.issuer),
+	});
+	if (isFailure(verified)) {
+		return { refusal: tokenError(400, verified.error.code, verified.error.message) };
+	}
+
+	return { jkt: verified.data.jkt };
+}
+
+/**
  * Turns an authorization code or a refresh token into a token set.
  *
  * @param ctx - The request context (provides `tenantStub`).
@@ -136,6 +179,10 @@ export default createAction(routes.token, async (ctx) => {
 	let clientAuth = resolveClientAuth(ctx.request, form);
 	if (!clientAuth.ok)
 		return tokenError(clientAuth.status, clientAuth.error, clientAuth.description);
+
+	let proof = await proofKey(ctx);
+	if ("refusal" in proof) return proof.refusal;
+	let jkt = proof.jkt;
 
 	let now = Date.now();
 
@@ -166,6 +213,7 @@ export default createAction(routes.token, async (ctx) => {
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme: clientAuth.auth.authScheme,
 			now,
+			jkt,
 		});
 	} else if (grantType === "refresh_token") {
 		let refreshToken = form.get("refresh_token");
@@ -182,6 +230,7 @@ export default createAction(routes.token, async (ctx) => {
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme: clientAuth.auth.authScheme,
 			now,
+			jkt,
 		});
 	} else if (grantType === "client_credentials") {
 		let authScheme = clientAuth.auth.authScheme;
@@ -203,6 +252,7 @@ export default createAction(routes.token, async (ctx) => {
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme,
 			now,
+			jkt,
 		});
 	} else {
 		let deviceCode = form.get("device_code");
@@ -217,6 +267,7 @@ export default createAction(routes.token, async (ctx) => {
 			clientSecret: clientAuth.auth.clientSecret,
 			authScheme: clientAuth.auth.authScheme,
 			now,
+			jkt,
 		});
 	}
 

@@ -68,6 +68,7 @@ describe("runMigrations", () => {
 			"0036-client-id-token-alg",
 			"0037-idempotency-keys",
 			"0038-pushed-authorization-requests",
+			"0039-dpop",
 		]);
 	});
 
@@ -177,6 +178,7 @@ describe("runMigrations", () => {
 			{ id: "0036-client-id-token-alg", applied_at: expect.any(Number) },
 			{ id: "0037-idempotency-keys", applied_at: expect.any(Number) },
 			{ id: "0038-pushed-authorization-requests", applied_at: expect.any(Number) },
+			{ id: "0039-dpop", applied_at: expect.any(Number) },
 		]);
 	});
 

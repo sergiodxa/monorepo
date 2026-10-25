@@ -75,6 +75,8 @@ export const refreshTokenRows = table({
 		absolute_expires_at: c.integer(),
 		redeemed_at: c.integer().nullable(),
 		revoked_at: c.integer().nullable(),
+		/** The key a public client's token is bound to (RFC 9449 §5), `null` when unbound. */
+		jkt: c.text().nullable(),
 	},
 });
 
@@ -135,6 +137,14 @@ export class AccessToken extends JWT {
 	get sessionId(): string {
 		return this.parser.string("sid");
 	}
+
+	/** The thumbprint of the DPoP key the token is bound to, from `cnf.jkt`. */
+	get jkt(): string | null {
+		let confirmation = this.parser.has("cnf") ? this.parser.get("cnf") : null;
+		if (typeof confirmation !== "object" || confirmation === null) return null;
+		let jkt = (confirmation as Record<string, unknown>).jkt;
+		return typeof jkt === "string" ? jkt : null;
+	}
 }
 
 /**
@@ -148,7 +158,8 @@ export type TokenOutcome =
 			accessToken: string;
 			idToken: string | null;
 			refreshToken: string | null;
-			tokenType: "Bearer";
+			/** `DPoP` for a token bound to the key a proof was presented with (RFC 9449 §5). */
+			tokenType: "Bearer" | "DPoP";
 			expiresIn: number;
 			scope: string;
 	  }
@@ -389,6 +400,8 @@ export interface MintTokensInput {
 	now: number;
 	/** The session's own active organization, named in the `org` claim when the granted scopes cover it. */
 	activeOrganizationId: string | null;
+	/** The thumbprint of the key the access token is bound to, written as `cnf.jkt`. */
+	jkt?: string | null;
 }
 
 export type MintTokensResult =
@@ -426,6 +439,7 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 		auth_time: Math.floor(input.authTime / 1000),
 	};
 	if (input.acr) accessClaims.acr = input.acr;
+	if (input.jkt) accessClaims.cnf = { jkt: input.jkt };
 
 	let idClaims: Record<string, unknown> | null = null;
 
@@ -512,6 +526,8 @@ export interface IssueRefreshTokenInput {
 	scopes: string[];
 	now: number;
 	absoluteExpiresAt: number;
+	/** The key the token is bound to, `null` for an unbound token. */
+	jkt?: string | null;
 }
 
 /** Mints a refresh token, storing only its digest, and writes the row it redeems from next time. */
@@ -536,9 +552,26 @@ export async function issueRefreshToken(
 		absolute_expires_at: input.absoluteExpiresAt,
 		redeemed_at: null,
 		revoked_at: null,
+		jkt: input.jkt ?? null,
 	});
 
 	return { token };
+}
+
+/**
+ * The key a new refresh token family is bound to: the proof's key for a public client,
+ * which holds no other credential, and none for a confidential client (RFC 9449 §5).
+ *
+ * @param client - The client the token is issued to.
+ * @param jkt - The thumbprint of the proof presented with the grant.
+ */
+export function refreshTokenBinding(client: ClientRow, jkt: string | null): string | null {
+	return client.kind === "public" ? jkt : null;
+}
+
+/** The `token_type` a set is answered with: `DPoP` once its access token is bound. */
+export function tokenTypeFor(jkt: string | null): "Bearer" | "DPoP" {
+	return jkt === null ? "Bearer" : "DPoP";
 }
 
 /** What a code or a refresh token's session lookup needs: its `amr`, `auth_time`, `acr` and active organization. */
@@ -588,6 +621,8 @@ export interface ExchangeCodeInput {
 	now: number;
 	/** The tenant's own issuer, stamped onto every token as `iss`. */
 	issuer: string;
+	/** The thumbprint of the verified DPoP proof sent with the request, binding the tokens. */
+	jkt?: string | null;
 }
 
 let ExchangeCodeSchema = s.object({
@@ -599,6 +634,7 @@ let ExchangeCodeSchema = s.object({
 	authScheme: AuthSchemeSchema,
 	now: s.number(),
 	issuer: s.string(),
+	jkt: s.optional(s.nullable(s.string())),
 });
 
 /**
@@ -704,6 +740,7 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		scopes: grantedScopes,
 		now: parsed.now,
 		activeOrganizationId: session.active_organization_id,
+		jkt: parsed.jkt ?? null,
 	});
 	if (minted.kind === "error") return minted;
 
@@ -721,6 +758,7 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 			scopes: grantedScopes,
 			now: parsed.now,
 			absoluteExpiresAt: parsed.now + REFRESH_TOKEN_FAMILY_TTL_MS,
+			jkt: refreshTokenBinding(client, parsed.jkt ?? null),
 		});
 		refreshToken = issued.token;
 
@@ -732,7 +770,7 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		accessToken: minted.accessToken,
 		idToken: minted.idToken,
 		refreshToken,
-		tokenType: "Bearer",
+		tokenType: tokenTypeFor(parsed.jkt ?? null),
 		expiresIn: minted.expiresIn,
 		scope: grantedScopes.join(" "),
 	};
@@ -747,6 +785,8 @@ export interface RefreshTokensInput {
 	now: number;
 	/** The tenant's own issuer, stamped onto every token as `iss`. */
 	issuer: string;
+	/** The thumbprint of the verified DPoP proof sent with the request. */
+	jkt?: string | null;
 }
 
 let RefreshTokensSchema = s.object({
@@ -757,6 +797,7 @@ let RefreshTokensSchema = s.object({
 	authScheme: AuthSchemeSchema,
 	now: s.number(),
 	issuer: s.string(),
+	jkt: s.optional(s.nullable(s.string())),
 });
 
 /**
@@ -795,6 +836,16 @@ export async function refreshTokens(
 		};
 	}
 	let tokenHash = Hex.encode(hashed.data);
+
+	let presented = await db.findOne(refreshTokenRows, { where: { token_hash: tokenHash } });
+	if (presented?.jkt != null && presented.jkt !== (parsed.jkt ?? null)) {
+		return {
+			kind: "error",
+			status: 400,
+			error: "invalid_grant",
+			description: "This refresh token is bound to a DPoP key the request did not prove.",
+		};
+	}
 
 	let redemption = await db
 		.query(refreshTokenRows)
@@ -875,6 +926,7 @@ export async function refreshTokens(
 		scopes: requestedScopes,
 		now: parsed.now,
 		activeOrganizationId: session.active_organization_id,
+		jkt: parsed.jkt ?? null,
 	});
 	if (minted.kind === "error") return minted;
 
@@ -887,6 +939,7 @@ export async function refreshTokens(
 		scopes: requestedScopes,
 		now: parsed.now,
 		absoluteExpiresAt: redeemedRow.absolute_expires_at,
+		jkt: redeemedRow.jkt,
 	});
 
 	return {
@@ -894,7 +947,7 @@ export async function refreshTokens(
 		accessToken: minted.accessToken,
 		idToken: minted.idToken,
 		refreshToken: issued.token,
-		tokenType: "Bearer",
+		tokenType: tokenTypeFor(parsed.jkt ?? null),
 		expiresIn: minted.expiresIn,
 		scope: requestedScopes.join(" "),
 	};
@@ -909,6 +962,8 @@ export interface IssueClientCredentialsTokenInput {
 	now: number;
 	/** The tenant's own issuer, stamped onto the token as `iss` and, absent a named resource, as its `aud`. */
 	issuer: string;
+	/** The thumbprint of the verified DPoP proof sent with the request, binding the token. */
+	jkt?: string | null;
 }
 
 let IssueClientCredentialsTokenSchema = s.object({
@@ -919,6 +974,7 @@ let IssueClientCredentialsTokenSchema = s.object({
 	authScheme: s.enum_(["basic", "post"] as const),
 	now: s.number(),
 	issuer: s.string(),
+	jkt: s.optional(s.nullable(s.string())),
 });
 
 /**
@@ -988,6 +1044,7 @@ export async function issueClientCredentialsToken(
 		exp: issuedAt + Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
 		jti: accessTokenId(generateTokenId()).toString(),
 		scope: grantedScopes.join(" "),
+		...(parsed.jkt ? { cnf: { jkt: parsed.jkt } } : {}),
 	}).sign(JWK.Algorithm.ES256, [keyPair]);
 
 	return {
@@ -995,7 +1052,7 @@ export async function issueClientCredentialsToken(
 		accessToken,
 		idToken: null,
 		refreshToken: null,
-		tokenType: "Bearer",
+		tokenType: tokenTypeFor(parsed.jkt ?? null),
 		expiresIn: Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
 		scope: grantedScopes.join(" "),
 	};

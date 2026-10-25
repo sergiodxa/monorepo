@@ -42,7 +42,9 @@ import {
 	mintTokens,
 	refreshTokenFamilyId,
 	REFRESH_TOKEN_FAMILY_TTL_MS,
+	refreshTokenBinding,
 	revokeFamily,
+	tokenTypeFor,
 } from "~/app/models/tenant/tokens";
 
 /** How long a device authorization stands before a person has to have picked up a phone. */
@@ -298,6 +300,8 @@ export interface RedeemDeviceCodeInput {
 	now: number;
 	/** The tenant's own issuer, stamped onto every token as `iss`. */
 	issuer: string;
+	/** The thumbprint of the verified DPoP proof sent with the poll, binding the tokens. */
+	jkt?: string | null;
 }
 
 let RedeemDeviceCodeSchema = s.object({
@@ -307,6 +311,7 @@ let RedeemDeviceCodeSchema = s.object({
 	authScheme: AuthSchemeSchema,
 	now: s.number(),
 	issuer: s.string(),
+	jkt: s.optional(s.nullable(s.string())),
 });
 
 /**
@@ -469,6 +474,7 @@ export async function redeemDeviceCode(
 		scopes: grantedScopes,
 		now: parsed.now,
 		activeOrganizationId: sessionRow?.active_organization_id ?? null,
+		jkt: parsed.jkt ?? null,
 	});
 	if (minted.kind === "error") return minted;
 
@@ -486,6 +492,7 @@ export async function redeemDeviceCode(
 			scopes: grantedScopes,
 			now: parsed.now,
 			absoluteExpiresAt: parsed.now + REFRESH_TOKEN_FAMILY_TTL_MS,
+			jkt: refreshTokenBinding(client, parsed.jkt ?? null),
 		});
 		refreshToken = issued.token;
 
@@ -497,7 +504,7 @@ export async function redeemDeviceCode(
 		accessToken: minted.accessToken,
 		idToken: minted.idToken,
 		refreshToken,
-		tokenType: "Bearer",
+		tokenType: tokenTypeFor(parsed.jkt ?? null),
 		expiresIn: minted.expiresIn,
 		scope: grantedScopes.join(" "),
 	};

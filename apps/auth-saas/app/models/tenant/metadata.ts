@@ -11,6 +11,7 @@ import type { AuthorizationServerMetadata } from "@sdxc/well-known/oauth-authori
 import type { OpenIdProviderMetadata } from "@sdxc/well-known/openid-configuration";
 import type { Database } from "remix/data-table";
 
+import { DPOP_ALGORITHMS } from "@sdxc/auth/dpop";
 import { define as defineAuthorizationServerMetadata } from "@sdxc/well-known/oauth-authorization-server";
 import { define as defineOpenIdConfiguration } from "@sdxc/well-known/openid-configuration";
 import * as s from "remix/data-schema";
@@ -33,6 +34,12 @@ const MAX_AGE_SECONDS = 300;
 
 /** The claims every issued token carries regardless of scope, advertised alongside them. */
 const REGISTERED_CLAIMS = ["sub", "iss", "aud", "exp", "iat"];
+
+/**
+ * The `acr` values `/authorize` honours in `acr_values` and stamps on a stepped-up
+ * session's tokens, so a resource server's RFC 9470 challenge names one a login reaches.
+ */
+const ACR_VALUES_SUPPORTED = ["mfa"];
 
 /** Standard `/userinfo` claim names read straight off a subject's profile columns. */
 const PROFILE_CLAIM_COLUMNS: Record<string, keyof SubjectRow> = {
@@ -142,6 +149,7 @@ function sharedMembers(published: PublishMetadataResult) {
 		codeChallengeMethodsSupported: ["S256"],
 		scopesSupported: published.scopesSupported,
 		authorizationResponseIssParameterSupported: true,
+		dpopSigningAlgValuesSupported: [...DPOP_ALGORITHMS],
 	};
 }
 
@@ -159,6 +167,7 @@ export function openIdConfigurationFor(published: PublishMetadataResult): OpenId
 		subjectTypesSupported: ["public"],
 		idTokenSigningAlgValuesSupported: SIGNING_ALGORITHMS,
 		claimsSupported: published.claimsSupported,
+		acrValuesSupported: ACR_VALUES_SUPPORTED,
 	});
 }
 
