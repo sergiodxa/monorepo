@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 10
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to let a customer's directory sign people in over SAML 2.0"
     - "How to verify an assertion and remember it for as long as it is valid"
@@ -310,8 +310,7 @@ Key the account on the `NameID` for this connection, and keep the email as a fie
 directory may change an email, and an account keyed on it changes hands with the address.
 </warning>
 
-For encrypted
-assertions, pass your private key imported for `RSA-OAEP` as `decryptionKey`, once with
+For encrypted assertions, pass your private key imported for `RSA-OAEP` as `decryptionKey`, once with
 SHA-1 and once with SHA-256 in an array, since providers use both.
 
 <note>
@@ -360,9 +359,9 @@ export function replayStore(db: Database, connectionId: string): ReplayStore {
 }
 ```
 
-The connection id is part of the key because the provider chooses assertion ids, and two
-providers must not collide. A store that throws surfaces as
-`ReplayStoreError`: no verdict was reached, so let the person retry.
+The connection id is part of the key because the provider chooses assertion ids, so each
+provider's ids stay apart. A store that throws surfaces as `ReplayStoreError`: no verdict was
+reached, so let the person retry.
 
 <warning>
 Keep the replay store in D1. KV is eventually consistent, so a second use of a captured
@@ -569,7 +568,9 @@ export const list = createAction(routes.scim.users.list, {
 ```
 
 `parseListQuery` clamps `startIndex` and `count` to the ranges the RFC allows and caps `count`
-at `maxCount`. `project` applies the `attributes` and `excludedAttributes` a client asked for,
+at `maxCount`. For a directory too large to slice in memory, pass `cursor: true` as well and
+answer a cursor page with `nextCursor` in place of `startIndex`, so your store pages by key
+(RFC 9865) and `serviceProviderConfig` advertises it under `pagination`. `project` applies the `attributes` and `excludedAttributes` a client asked for,
 and each attribute's `returned` rule. A directory's first call is usually
 `filter=userName eq "ada@example.com"`, to find out whether a person already exists. The
 filter is where the two sub-packages meet:
