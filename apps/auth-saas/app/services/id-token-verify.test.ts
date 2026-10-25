@@ -39,7 +39,7 @@ beforeAll(async () => {
 	server.listen({ onUnhandledRequest: "error" });
 	keyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
 	otherKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.ES256))];
-	edwardsKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.EdDSA))];
+	edwardsKeyPair = [await JWK.importKeyPair(await JWK.generateKeyPair(JWK.Algorithm.Ed25519))];
 });
 
 afterEach(() => server.resetHandlers());
@@ -248,10 +248,13 @@ describe("verifyIdToken — refuses", () => {
 	test("a token signed with an algorithm the provider does not sign with", async () => {
 		let { origin } = stubProvider({ jwks: JWK.toJSON([...keyPair, ...edwardsKeyPair]) });
 
-		let idToken = await verifyIdToken(await signIdToken({}, edwardsKeyPair, JWK.Algorithm.EdDSA), {
-			origin,
-			audience: AUDIENCE,
-		});
+		let idToken = await verifyIdToken(
+			await signIdToken({}, edwardsKeyPair, JWK.Algorithm.Ed25519),
+			{
+				origin,
+				audience: AUDIENCE,
+			},
+		);
 
 		expect(idToken).toBeNull();
 	});
