@@ -5,27 +5,27 @@ section:
     title: The sdxc command
     order: 2
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to move every `@sdxc` package to a newer release, or catch up the ones that lag"
     - "How `upgrade` lists the breaking changes between two releases"
     - "How to hand the upgrade prompt to your AI agent"
 ---
 
-Every `@sdxc` package ships on one dated release, so upgrading is moving them all together and
-then changing your code for what changed between the two releases. One command does the first
-and writes the instructions for the second:
+A daily release publishes the `@sdxc` packages that changed, and the packages that depend on
+them, each versioned by that day's date, so your pins carry several dates. Upgrading is moving
+every pin forward to a newer release, then changing your code for what changed in between. One
+command does the first and writes the instructions for the second:
 
 ```bash
 sdxc upgrade
 ```
 
-It moves every `@sdxc/*` package your `package.json` lists to its version at the
-target release, and `remix` to the version that release declares. It installs, then prints a
-prompt for an AI agent with the release notes of the packages your code imports, so the agent
-edits the code for exactly the changes you crossed.
-[Install and pin](/docs/getting-started/install-and-pin) covers why a release is one exact
-date.
+It moves every `@sdxc/*` package your `package.json` lists to its newest version published on or
+before the target release, and `remix` to the version that release declares. It installs, then
+prints a prompt for an AI agent with the release notes of the packages your code imports, so the
+agent edits the code for exactly the changes you crossed.
+[Install and pin](/docs/getting-started/install-and-pin) covers how a release decides each pin.
 
 ## Pick the release
 
@@ -34,11 +34,10 @@ sdxc upgrade               # the latest release
 sdxc upgrade 2026.10.14    # a release you name
 ```
 
-The project's release is the newest date among its `@sdxc` pins. Each package moves to its
-newest version published on or before the target date, since a release republishes only the
-packages that changed. A target older than the project's release is refused: `upgrade` only
-moves forward. A `package.json` that lists no `@sdxc/*` package, or pins none to an exact
-release, is refused too.
+The project's release is the newest date among its `@sdxc` pins, and a package whose own version
+is older than that is current when no newer version was published by then. A target older than
+the project's release is refused: `upgrade` only moves forward. A `package.json` that lists no
+`@sdxc/*` package, or pins none to an exact release, is refused too.
 
 ## Catch up lagging packages
 
@@ -64,7 +63,7 @@ manager:
 
 ```text
 package.json: @sdxc/jwt 2026.9.1 -> 2026.10.14
-package.json: @sdxc/result 2026.10.1 -> 2026.10.14
+package.json: @sdxc/result 2026.10.1 -> 2026.10.13
 package.json: remix 3.0.0 -> 3.1.0
 ```
 

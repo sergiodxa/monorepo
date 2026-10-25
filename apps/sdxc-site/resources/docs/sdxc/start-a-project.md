@@ -39,8 +39,8 @@ with `cloudflare.config.ts`, a Vite+ configuration, a test runner and its own co
 
 - `package.json` takes the folder's name, lower-cased with any character npm refuses turned
   into `-`.
-- Each `@sdxc` package the template lists is pinned to its latest release, and `remix` to the
-  version those releases need, so the project starts on one release date.
+- Each `@sdxc` package the template lists is pinned to its newest version, and `remix` to the
+  version those versions need, so every pin belongs to the same release.
 - `.env.example` is copied to `.dev.vars`, so the development secrets it lists are in place for
   the first `bun dev`.
 - `.config/sdxc.jsonc` is written with every setting spelled out and `format` set to

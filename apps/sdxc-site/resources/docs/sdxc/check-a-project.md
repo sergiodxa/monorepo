@@ -275,5 +275,5 @@ replay stops the pipeline before production.
 - [Upgrade](/docs/sdxc/upgrade) — move every package to a newer release.
 - [List routes](/docs/sdxc/list-routes) — `sdxc routes --unused` lists what the `routes` check
   warns about, with the controller files nothing loads.
-- [Install and pin](/docs/getting-started/install-and-pin) — why every package in a project
-  shares one release date.
+- [Install and pin](/docs/getting-started/install-and-pin) — how one release decides the version
+  of every package in a project.
