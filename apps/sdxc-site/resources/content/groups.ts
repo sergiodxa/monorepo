@@ -157,6 +157,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"billing",
 			"attribution",
 			"mail",
+			"jmap",
 			"messaging",
 			"web-push",
 			"hostname",
