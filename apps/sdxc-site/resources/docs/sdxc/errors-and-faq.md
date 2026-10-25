@@ -41,15 +41,15 @@ names, such as `bun install`.
 ### ".env.example leaves out a secret cloudflare.config.ts declares"
 
 CI copies `.env.example` to `.dev.vars` before it type checks, so a secret only your own
-`.dev.vars` holds type checks on your machine and fails there. Add the line the fix prints, with
-a development value. [Deploy your app](/docs/getting-started/first-deploy#secrets) covers where
+`.dev.vars` holds type checks on your machine and fails there. `sdxc fix env` appends each
+missing key; give it a development value. [Deploy your app](/docs/getting-started/first-deploy#secrets) covers where
 each secret is named.
 
 ### ".cloudflare/types/index.d.ts is older than what it is generated from"
 
 `cloudflare.config.ts`, `.dev.vars` or `.env.example` changed after the Worker's `env` types were
 generated, so `env` may type check against bindings the Worker no longer receives. Run
-`sdxc run typegen`.
+`sdxc run typegen`, or `sdxc fix`, which runs it for you.
 
 ### "A migration chain does not replay on an empty database"
 
@@ -75,14 +75,15 @@ imported with the router, so every request loads it. Map it as
 ### "app/models/index.ts leaves out a model"
 
 A file in `app/models/` calls `createModel` but the registry does not list it, so
-`ctx.models.<name>` is undefined. Add it to `createModels({ … })` as
+`ctx.models.<name>` is undefined. `sdxc fix models` adds it to `createModels({ … })` as
 `key: () => import("./<file>")`.
 
 ### "app/initializers/mail.ts maps no template for N declared emails"
 
 An email is declared in `app/emails/index.ts` with no template mapped onto the registry, so every
-send of it fails. Map it as `mail.map(emails.<name>, lazy(() => import(…)))`, or remove the
-declaration; [`sdxc make email`](/docs/sdxc/make-email) declares and maps one in a single step.
+send of it fails. `sdxc fix emails` maps it as `mail.map(emails.<name>, lazy(() => import(…)))`
+when its template file exists. Otherwise remove the declaration and write the email with
+[`sdxc make email`](/docs/sdxc/make-email), which declares and maps it in one step.
 The warning "Found N templates without a test" or "… without preview()" names a template that
 `/_emails` and `sdxc run emails preview` cannot render, or that no test covers.
 
@@ -202,8 +203,8 @@ trigger to add; add it and deploy.
 
 ### Why does `env.MY_SECRET` not type check?
 
-The types are generated from `cloudflare.config.ts`. Declare the secret there with
-`bindings.secret()` and run `sdxc run typegen`.
+The types are generated from `cloudflare.config.ts`. `sdxc make secret MY_SECRET` declares it
+there with `bindings.secret()` and adds it to `.env.example`; then run `sdxc run typegen`.
 
 ### Can I undo a migration?
 
