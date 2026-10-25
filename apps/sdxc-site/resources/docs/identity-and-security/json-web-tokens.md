@@ -17,7 +17,7 @@ This guide has your app sign short-lived tokens for requests it makes to a secon
 reports API, then publish its public keys so that service verifies each token on its own. It
 ends with rotating the signing key without breaking a single token in flight.
 
-[`@sdxc/jwt`](/api/jwt) models tokens as classes and manages the ES256, RS256 and EdDSA keys
+[`@sdxc/jwt`](/api/jwt) models tokens as classes and manages the ES256, RS256 and Ed25519 keys
 that sign them. [`@sdxc/well-known`](/api/well-known) serves the key set at
 `/.well-known/jwks.json`, [`@sdxc/http`](/api/http) answers the refusals, and
 [`@sdxc/result`](/api/result) turns a failed verification into a value.
