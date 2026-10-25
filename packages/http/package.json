@@ -12,6 +12,7 @@
 		"./response/html": "./src/response/html.ts",
 		"./negotiate": "./src/negotiate.ts",
 		"./deprecation": "./src/deprecation.ts",
+		"./retry-after": "./src/retry-after.ts",
 		"./cache": "./src/cache/index.ts",
 		"./middleware/head-requests": "./src/middleware/head-requests.ts"
 	},

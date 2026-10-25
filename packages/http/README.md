@@ -3,8 +3,8 @@
 Response builders, content negotiation, and HTTP caching for the Fetch API.
 
 Each concern is its own entry point — status codes, content types, response builders,
-`Accept` negotiation, `Cache-Control` and validators, deprecation notices, and `HEAD`
-middleware — so a handler imports only the surface it uses.
+`Accept` negotiation, `Cache-Control` and validators, deprecation notices, `Retry-After`,
+and `HEAD` middleware — so a handler imports only the surface it uses.
 
 ## Installation
 
@@ -264,6 +264,18 @@ setDeprecation(response.headers, {
 #### `getDeprecation(headers: Headers): DeprecationNotice | null`
 
 Reads the notice back on the client, leaving out any field that does not parse.
+
+### `@sdxc/http/retry-after`
+
+#### `parseRetryAfter(value: string | null, now?: Date): number | null`
+
+Reads a [`Retry-After`](https://www.rfc-editor.org/rfc/rfc9110#section-10.2.3) as
+milliseconds to wait, from delay-seconds or an HTTP-date measured from `now` (a past date
+is `0`). Anything else is `null`.
+
+```typescript
+let wait = parseRetryAfter(response.headers.get("Retry-After")) ?? backoff(attempt);
+```
 
 ### `@sdxc/http/cache`
 
