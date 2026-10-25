@@ -130,9 +130,9 @@ Normalizes an authentic delivery into its events. A platform event type with no 
 
 The error in every failed `Result`: a normalized `code`, the platform's `providerCode`, `connection`, `retryable` (true only for `rate_limited`) and `retryAfter` in seconds or `null`. `invalid_address` and `suppressed` are the refusals a visitor can act on; `unknown` is a timeout or 5xx after which a write may have landed. Providers never retry on their own.
 
-### `new NewsletterWebhook(provider: Newsletter, handlers: NewsletterWebhookHandlers, options?: NewsletterWebhookOptions)`
+### `new NewsletterWebhook<Context>(provider: Newsletter, handlers: NewsletterWebhookHandlers<Context>, options?: NewsletterWebhookOptions)`
 
-A webhook endpoint whose `handler` mounts as a route handler. It answers `401` to an unproven delivery, `200` to an authentic one (including one it cannot parse), and `503` when a handler throws, so the platform redelivers. With a `ReplayStore` from [`@sdxc/webhooks`](https://www.npmjs.com/package/@sdxc/webhooks) in `options.store`, it skips event ids already handled for `options.ttl` (default `"7 days"`); without one, handlers must be idempotent. Buttondown signs without a timestamp, so give its endpoint a store.
+A webhook endpoint whose `handler` mounts as a route handler. Each handler receives `(event, context)`, with `context` typed as the `Context` you pass (your router's `RouterContext`, so services its middleware publishes are typed; it defaults to `RequestContext`). It answers `401` to an unproven delivery, `200` to an authentic one (including one it cannot parse), and `503` when a handler returns a `Failure` (or throws), so the platform redelivers. With a `ReplayStore` from [`@sdxc/webhooks`](https://www.npmjs.com/package/@sdxc/webhooks) in `options.store`, it skips event ids already handled for `options.ttl` (default `"7 days"`); without one, handlers must be idempotent. Buttondown signs without a timestamp, so give its endpoint a store.
 
 ### `@sdxc/newsletter/middleware`
 
@@ -345,11 +345,11 @@ Without that package, pass the fields directly: `{ source: "newsletter", medium:
 
 ## Pattern: Reacting to webhook events
 
-Mount a `NewsletterWebhook` and key handlers by event type. A throw answers `503`, and with a replay store the redelivery skips the events already handled.
+Mount a `NewsletterWebhook` and key handlers by event type. A returned `Failure` answers `503`, and with a replay store the redelivery skips the events already handled.
 
 ```typescript
 import { NewsletterWebhook } from "@sdxc/newsletter";
-import { unwrap } from "@sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { KVReplayStore } from "@sdxc/webhooks";
 import { createRouter } from "remix/router";
 
@@ -357,8 +357,12 @@ let endpoint = new NewsletterWebhook(
 	newsletter,
 	{
 		async "subscriber.confirmed"(event) {
-			let reader =
-				event.subscriber ?? unwrap(await newsletter.subscribers.find({ id: event.subscriberId }));
+			let reader = event.subscriber;
+			if (reader === null) {
+				let found = await newsletter.subscribers.find({ id: event.subscriberId });
+				if (isFailure(found)) return found;
+				reader = found.data;
+			}
 			await sendWelcome(reader.email);
 		},
 		async "subscriber.suppressed"(event) {

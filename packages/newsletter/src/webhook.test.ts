@@ -10,11 +10,12 @@
 
 import type { DurationInput } from "@sdxc/duration";
 import type { ReplayStore } from "@sdxc/webhooks";
+import type { Middleware, RouterContext } from "remix/router";
 
-import { unwrap } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
-import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { createContextKey, createRouter, RequestContext } from "remix/router";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { MemoryNewsletter } from "./memory.js";
 import newsletterMiddleware from "./middleware.js";
@@ -34,6 +35,22 @@ class MapReplayStore implements ReplayStore {
 	async remember(id: string, ttl: DurationInput): Promise<void> {
 		this.remembered.set(id, ttl);
 	}
+}
+
+/** The tenant a middleware publishes, standing in for a service such as `ctx.db`. */
+const TENANT = createContextKey<string>();
+
+/** Publishes the tenant as `ctx.tenant`, the way an app publishes its services. */
+function tenant(): Middleware<{ key: typeof TENANT; value: string; property: "tenant" }> {
+	return async (context, next) => {
+		context.set(TENANT, "acme", { property: "tenant" });
+		return next();
+	};
+}
+
+/** A router whose middleware publishes `ctx.tenant`, so its context type carries it. */
+function tenantRouter() {
+	return createRouter({ middleware: [tenant()] });
 }
 
 describe("NewsletterWebhook", () => {
@@ -163,6 +180,57 @@ describe("NewsletterWebhook", () => {
 		expect((await endpoint.handler(new RequestContext(delivery.request))).status).toBe(200);
 		expect(runs).toBe(2);
 		expect(store.remembered.has("evt_2")).toBe(true);
+	});
+
+	test("answers 503 when a handler returns a Failure and leaves the event unremembered", async () => {
+		let newsletter = new MemoryNewsletter({ webhookSecret: SECRET });
+		let store = new MapReplayStore();
+
+		let endpoint = new NewsletterWebhook(
+			newsletter,
+			{
+				"subscriber.created": () => failure(new Error("database unavailable")),
+			},
+			{ store },
+		);
+
+		let delivery = await unwrap(
+			newsletter.webhooks.emit({ type: "subscriber.created", subscriberId: "sub_1", id: "evt_4" }),
+		);
+
+		expect((await endpoint.handler(new RequestContext(delivery.request))).status).toBe(503);
+		expect(store.remembered.has("evt_4")).toBe(false);
+	});
+
+	test("hands every handler the router's own context, services included", async () => {
+		let newsletter = new MemoryNewsletter({ webhookSecret: SECRET });
+		let router = tenantRouter();
+		let tenants: string[] = [];
+
+		let endpoint = new NewsletterWebhook<RouterContext<typeof router>>(newsletter, {
+			async "subscriber.created"(_event, ctx) {
+				expectTypeOf(ctx).toEqualTypeOf<RouterContext<typeof router>>();
+				expectTypeOf(ctx.tenant).toEqualTypeOf<string>();
+				tenants.push(ctx.tenant);
+			},
+		});
+
+		router.post("/webhooks/newsletter", (ctx) => endpoint.handler(ctx));
+
+		let delivery = await unwrap(
+			newsletter.webhooks.emit({ type: "subscriber.created", subscriberId: "sub_1", id: "evt_5" }),
+		);
+
+		let response = await router.fetch(
+			new Request("https://example.com/webhooks/newsletter", {
+				method: "POST",
+				headers: delivery.request.headers,
+				body: await delivery.request.text(),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(tenants).toEqual(["acme"]);
 	});
 
 	test("acknowledges an unrecognized event type and remembers it", async () => {
