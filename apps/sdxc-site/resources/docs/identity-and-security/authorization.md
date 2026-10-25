@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 13
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to name every ability once and grant them through additive roles"
     - "How to check abilities in routes, handlers, background jobs and MCP tools"
@@ -188,10 +188,9 @@ Install `access()` after your authentication middleware: its role and fact reade
 `ctx.user`, `ctx.team` and `ctx.membership`, which stand for what yours publishes.
 </note>
 
-A later `access()` replaces an earlier one,
-so the pages, an API and an MCP endpoint can each bind their own principal. `load` lists
-abilities or whole groups to load before the handler runs, for a page that checks many of
-them, and `ctx.access.as({ roles })` answers synchronously for another role over the facts
+A later `access()` replaces an earlier one, so the pages, an API and an MCP endpoint can each
+bind their own principal. `load` lists abilities or whole groups to load before the handler
+runs, for a page that checks many of them, and `ctx.access.as({ roles })` answers synchronously for another role over the facts
 already loaded, such as a role per team on one page.
 
 ## Guard a route
@@ -334,8 +333,7 @@ Render the same not-found page an unknown URL gets: a 404 that looks different f
 one tells a stranger the record exists.
 </warning>
 
-Without a responder, a refusal answers a bare `403`
-or `404`, and `requireAbility(ability, { onDenied })` overrides the responder for one route.
+Without a responder, a refusal answers a bare `403` or `404`, and `requireAbility(ability, { onDenied })` overrides the responder for one route.
 
 ## Gate on the plan
 
@@ -430,10 +428,10 @@ const policy = definePolicy(abilities, {
 
 The fact declares the flags the policy reads, by their property names in your `features`
 catalog. Then add `flags: fromFlags(features)` from `@sdxc/authz/facts/flags` to the
-`access()` facts.
-It evaluates through the client `featureFlags()` from `@sdxc/flags/middleware/router`
-published, so list that middleware before `access()`; pass `client` to use another. A split
-on a flag no rule reads records no exposure, because nothing evaluated it.
+`access()` facts. It evaluates through the client that `featureFlags()` from
+`@sdxc/flags/middleware/router` publishes, so list that middleware before `access()`, or pass
+`client` to use another. An experiment records exposure only for the flags some rule reads,
+because those are the only ones `fromFlags` evaluates.
 
 Testing `== false` keeps the feature on while the flag answers its default, and the default
 is what a flag system that is down answers. To refuse instead, pass `onError: "missing"`: a
@@ -449,8 +447,8 @@ for, and answers a `Result`, so a settings fact can read only the settings some 
 
 A job has no signed-in user, so its handler binds the subject from its own payload.
 `authz()` from `@sdxc/authz/middleware/dispatcher` publishes `ctx.authz` with the fact
-sources every job shares, added to the dispatcher's chain after flags. With the `JobTypes` augmentation from
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), every handler sees
+sources every job shares, added to the dispatcher's chain after flags. With the `JobTypes`
+augmentation from [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), every handler sees
 it typed from the registered policy:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
@@ -578,8 +576,7 @@ router.map(
 ```
 
 `router` is the one `createWebRouter` builds, and `requireToken` is your token middleware,
-publishing the token and its holder. A check outside
-the ceiling refuses with cause `outOfScope`, and a viewer's write-scoped token still cannot
+publishing the token and its holder. A check outside the ceiling refuses with cause `outOfScope`, and a viewer's write-scoped token still cannot
 write, because the holder's roles must allow it too.
 
 `@sdxc/authz/mcp` connects the abilities to the tools. `guard(claim)` returns the tool's
@@ -693,8 +690,7 @@ position, like `roles.member.1`. `testAccess` throws the `AuthzError` of a polic
 not compile, which fails the test that bound it.
 
 To review a change to the policy, `diffPolicies(before, after, cases)` from
-`@sdxc/authz/testing` decides each case under
-both and answers the ones whose decisions differ. `policy.definition` is the policy as plain
+`@sdxc/authz/testing` decides each case under both and answers the ones whose decisions differ. `policy.definition` is the policy as plain
 JSON, so the previous version can be derived from it, or kept beside it.
 
 ## Where to go next
