@@ -181,6 +181,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/email-auth](packages/email-auth)             | Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM    |
 | [@sdxc/honeypot](packages/honeypot)                 | Honeypot form fields with a signed render timestamp, router middleware and a `remix/component` component        |
 | [@sdxc/outbound](packages/outbound)                 | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies      |
+| [@sdxc/privacy-pass](packages/privacy-pass)         | Privacy Pass for origins: PrivateToken challenges, token redemption and Blind RSA verification                  |
 | [@sdxc/rate-limit](packages/rate-limit)             | Adapter-based rate limiting with standard response headers                                                      |
 | [@sdxc/security-headers](packages/security-headers) | Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware                |
 | [@sdxc/spam](packages/spam)                         | Spam scoring for user-generated content, with local rules, reputation checks and a trainable classifier         |

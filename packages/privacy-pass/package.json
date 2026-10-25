@@ -1,0 +1,25 @@
+{
+	"name": "@sdxc/privacy-pass",
+	"version": "0.0.1",
+	"description": "Privacy Pass for origins: PrivateToken challenges, token redemption and Blind RSA verification",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
+	}
+}

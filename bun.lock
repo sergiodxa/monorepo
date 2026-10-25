@@ -1736,6 +1736,22 @@
         "@sdxc/zip": "workspace:*",
       },
     },
+    "packages/privacy-pass": {
+      "name": "@sdxc/privacy-pass",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
+      },
+    },
     "packages/problem": {
       "name": "@sdxc/problem",
       "version": "0.0.1",
@@ -3187,6 +3203,8 @@
     "@sdxc/password-policy": ["@sdxc/password-policy@workspace:packages/password-policy"],
 
     "@sdxc/png": ["@sdxc/png@workspace:packages/png"],
+
+    "@sdxc/privacy-pass": ["@sdxc/privacy-pass@workspace:packages/privacy-pass"],
 
     "@sdxc/problem": ["@sdxc/problem@workspace:packages/problem"],
 
