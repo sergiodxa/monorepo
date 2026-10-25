@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Which file each `sdxc make` kind writes, and what it edits to wire the file in"
     - 'What to do when `make` prints "Declare and map it by hand"'
@@ -44,6 +44,18 @@ writes and how to fill it in.
 | [`mcp`](/docs/sdxc/make-mcp)                 | `app/mcp/tools/<name>.ts`                 | yes  | `app/mcp/tools/index.ts`, the MCP handler                                                        |
 | [`command`](/docs/sdxc/make-command)         | `app/commands/<name>.ts`                  | yes  | `app/commands/index.ts`, the command line                                                        |
 
+Three more kinds write to the Worker's configuration rather than a layer folder, so they take no
+test:
+
+| Kind                      | Writes                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `secret <NAME>`           | `NAME: bindings.secret()` in `cloudflare.config.ts`, and `NAME=` in `.env.example`                                                                |
+| `binding <helper> <NAME>` | a `bindings.kv()`, `d1()`, `r2()`, `queue()`, `rateLimit()`, `sendEmail()`, `durableObject()` or `secret()` entry in `cloudflare.config.ts`       |
+| `do <name>`               | a Durable Object class in `app/services/`, or `app/models/` with `--role model`, re-exported from `bootstrap/worker.ts` with its binding declared |
+
+A KV namespace or D1 database binding is written with a placeholder id; replace it with the id
+Cloudflare prints when you create the namespace or database before you deploy.
+
 `sdxc make` alone asks for the kind and the name on a terminal. Without one, a missing kind or
 name is a usage error that lists the kinds, so a script always names both. `sdxc make <kind>
 --help` prints the flags of one kind.
@@ -73,8 +85,12 @@ guide says which of them its declaration uses.
   nothing.
 - `--no-test` skips the test for one run, and `--test` writes it when `make.tests` is `false`.
   Migrations and factories never get one.
-- `--force` writes the file and its test from the stub again when they exist. Every kind but
-  `migration` takes it.
+- `--no-spec` skips the pairing `.spec` a controller, an MCP tool or a command gets under
+  `spec/`, and `--spec` writes it when `make.specs` is `false`. A spec checks the running app
+  from the outside; [Write executable specs](/docs/operations-and-testing/executable-specs)
+  covers running one.
+- `--force` writes the file, its test and its spec from the stub again when they exist. Every
+  kind but `migration` takes it.
 
 <note>
 A run plans every file and every edit before it writes any, and leaves every existing file as
@@ -86,7 +102,7 @@ app/http/controllers/home.tsx already exists; sdxc make leaves it as it is unles
 ```
 
 Pass `--force` when you want the stub's version back, such as after editing a stub of your own.
-The file and its test are replaced, and the declaration, mapping and mount they already have are
+The file, its test and its spec are replaced, and the declaration, mapping and mount they already have are
 kept, so nothing is declared twice:
 
 ```bash
@@ -96,6 +112,7 @@ sdxc make controller home --force
 ```text
 Replaced app/http/controllers/home.tsx
 Replaced app/http/controllers/home.test.tsx
+Replaced spec/home.spec
 Kept the declaration, mapping and mount home already has; --force replaces files only
 ```
 
@@ -196,6 +213,8 @@ default spelled out:
 		"migrations": { "default": "database/migrations" },
 		// Write a test beside every generated file except migrations and factories
 		"tests": true,
+		// Write a pairing .spec under spec/ for controllers, commands, MCP tools and scaffolds
+		"specs": true,
 		// Stubs here replace the built-in ones; `sdxc make stubs` copies them out
 		"stubs": ".config/sdxc/stubs",
 	},
@@ -209,12 +228,12 @@ default spelled out:
 | `make.routes`     | `web`                                  | the contract in `routes/` a controller is declared in without `--routes` |
 | `make.migrations` | `{ "default": "database/migrations" }` | the chains `make migration --chain` picks from                           |
 | `make.tests`      | `true`                                 | whether a test is written beside the file without `--test`/`--no-test`   |
+| `make.specs`      | `true`                                 | whether a pairing spec is written without `--spec`/`--no-spec`           |
 | `make.stubs`      | `.config/sdxc/stubs`                   | the folder whose stubs replace the built-in ones                         |
 | `format`          | none                                   | the command run once over every written and edited file                  |
 
-The `doctor` key holds the settings of [`sdxc doctor`](/docs/sdxc/check-a-project):
-`doctor.checks`, the folder of your own checks (`.config/sdxc/checks`), and
-`doctor.migrations.accept`, the migration errors its `migrations` check steps past (`[]`).
+The `doctor` key holds the settings of [`sdxc doctor`](/docs/sdxc/check-a-project), and
+[Configuration](/docs/sdxc/configuration) covers every key.
 
 ## Make the generated files your own
 
@@ -222,7 +241,7 @@ Each file is written from a stub, and a stub in `make.stubs` replaces the built-
 same name. Copy the built-in stubs to start from:
 
 ```bash
-sdxc make stubs controller job
+sdxc make stubs job
 ```
 
 ```text
@@ -231,10 +250,10 @@ Wrote .config/sdxc/stubs/job.stub
 Wrote .config/sdxc/stubs/job.test.stub
 ```
 
-That writes every stub whose name starts with each kind, such as `controller.stub`,
-`controller.form.stub`, `controller.api.stub` and their `.test.stub` partners. `sdxc make stubs
-scaffold` copies the ones [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes from, and with
-no kind it copies all of them. A stub already in the folder is kept, so your edits survive a
+That writes every stub whose name starts with the kind; `controller` copies `controller.stub`,
+`controller.form.stub`, `controller.api.stub` and their `.test.stub` and `.spec.stub` partners.
+`sdxc make stubs scaffold` copies the ones [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource)
+writes from, and with no kind it copies all of them. A stub already in the folder is kept, so your edits survive a
 second run.
 
 <note>
@@ -244,7 +263,8 @@ and takes its improvements when you upgrade.
 
 A kind's stub is `<kind>.stub`, a flag that changes the file selects `<kind>.<variant>.stub`, and
 the test is `<kind>.test.stub` or `<kind>.<variant>.test.stub`, falling back to the kind's test
-stub when a variant has none of its own:
+stub when a variant has none of its own. The pairing spec is `<kind>.spec.stub`, with
+`controller.api.spec.stub` for an endpoint:
 
 | Stub                   | Selected by                                      |
 | ---------------------- | ------------------------------------------------ |
