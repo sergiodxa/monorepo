@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 2.5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "What each test `sdxc make` writes checks, and what is left for you"
     - "How to run every test, one file, one case or one line"
@@ -35,11 +35,11 @@ after the script name reaches Vitest, so you narrow a run the way Vitest does.
 | the case on one line          | `bun run test app/models/bookmark.test.ts:29`            |
 | again on every save           | `bunx vp test watch app/models`                          |
 
-A path is matched as a substring, so `bun run test bookmarks` runs the model's, the validator's,
-the policy's and every page's tests for the resource at once. The line number is the one the case's
-`test(` call starts on; any other line answers "No test found".
+A path is matched as a substring, so `bun run test bookmarks` runs the model's, the
+validator's, the policy's and every page's tests for the resource at once. The line number is
+the one the case's `test(` call starts on; any other line answers "No test found".
 
-## What each kind's test checks
+## Read what each generated test checks
 
 `make` writes the test that proves the file loads and is wired in, and leaves the cases about
 your rules to you. That keeps a fresh suite green, and Vitest lists each `test.todo` as a gap to
@@ -49,7 +49,7 @@ fill.
 | ------------- | --------------------------------------------------------------------- | ---------------------------------- |
 | controller    | the module exports what the router maps, and a `test.todo`            | what the page answers              |
 | validator     | a complete submission passes, and one missing a field fails           | each rule you add to the schema    |
-| model         | a row the factory creates reads back                                  | each method and callback           |
+| model         | the model is defined over its table, and a `test.todo`                | each method and callback           |
 | policy        | who may read, create, update and delete                               | each condition you add to a grant  |
 | job, MCP tool | the handler is exported where it is mapped, and a `test.todo`         | the work                           |
 | command       | the command runs through the app's CLI and exits 0, and a `test.todo` | its output and effects             |
@@ -58,27 +58,27 @@ fill.
 | email         | its preview props render into the subject and both body parts         | the copy your app sends            |
 | initializer   | the instance is built at import                                       | how it is configured               |
 
-`sdxc scaffold` writes fuller page tests: they create rows with the factory, sign a member in,
-and submit the forms with valid honeypot fields, so the page, the policy and the validator all
-run as in the Worker. Use them as the model for a controller's own cases.
+`sdxc scaffold` writes fuller tests: the model's reads back a row the factory creates, and the
+pages' create rows with the factory, sign a member in, and submit the forms with valid honeypot
+fields, so the page, the policy and the validator all run as in the Worker. Use them as the model for a controller's own cases.
 
 <note>
-A generated test is a starting point you own. When you change a rule on purpose, a generated case
-that encoded the old rule fails; rewrite it to say what the app does now, as
+A generated test is a starting point you own. When you change a rule on purpose, a generated
+case that encoded the old rule fails; rewrite it to say what the app does now, as
 [Build an app](/docs/getting-started/build-an-app#run-the-tests) does when guests may post.
 </note>
 
-## The helpers in app/test
+## Use the helpers in app/test
 
-The template and the scaffold put what every test needs in `app/test/`, so a test reads like the
-code it checks:
+The template and the scaffold put what every test needs in `app/test/`, so a test reads like
+the code it checks:
 
-- **`app/test/database.ts`** has `migrate()`, which applies every migration in
-  `database/migrations/` to the in-memory `DB` binding, and `factories()`, which writes rows
-  through your own models. Call `migrate` once per file in `beforeAll`; each file starts with an
-  empty database.
-- **`app/test/session.ts`** has `signIn(actor?)`, which answers the session cookie of a signed-in
-  member, for a request that needs one.
+- **`app/test/database.ts`**, which the first `sdxc scaffold` writes, has `migrate()`, which
+  applies every migration in `database/migrations/` to the in-memory `DB` binding, and
+  `factories()`, which writes rows through your own models. Call `migrate` once per file in
+  `beforeAll`; each file starts with an empty database.
+- **`app/test/session.ts`** has `signIn(actor?)`, which answers the session cookie of a
+  signed-in member, for a request that needs one.
 - **`app/test/cloudflare-workers.ts`** stands in for `cloudflare:workers` under Vitest, so a
   module that imports `env` loads in a test as it does in the Worker. Its `EMAIL` binding keeps
   every message sent through it on `messages`.
@@ -89,6 +89,13 @@ code it checks:
 A page test builds the router the Worker builds and sends it a `Request`:
 
 ```ts {% title="app/http/controllers/bookmarks/index.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { BookmarkFactory } from "~/database/factories/bookmark";
+import routes from "~/routes/web";
+
 beforeAll(migrate);
 
 test("lists each bookmark, linking to its page", async () => {
@@ -127,7 +134,7 @@ Put each case beside the code that holds the rule, and test it there with the le
 
 The page test then needs one case per outcome a visitor sees, rather than one per rule.
 
-## Factories
+## Override only what a case is about
 
 `sdxc make model` writes a factory beside the model, in `database/factories/`, with a value per
 field that carries the factory's sequence, so two rows a test creates never collide on a unique
@@ -140,7 +147,7 @@ let old = await factories().create(BookmarkFactory, { title: "Old link" });
 [Generate believable test data](/docs/operations-and-testing/test-data) covers traits, seeds and
 the sample generators, and [Make a factory](/docs/sdxc/make-factory) what the command writes.
 
-## Before you commit
+## Check before you commit
 
 ```bash
 bun run test
