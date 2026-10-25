@@ -10,8 +10,8 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { importTokenKey, verifyToken } from "./blind-rsa.js";
-import { createTestIssuer } from "./fixtures/issuer.js";
 import { BLIND_RSA_VECTORS, TOKEN_KEY } from "./fixtures/rfc-vectors.js";
+import { createTestIssuer } from "./testing.js";
 import { parseToken } from "./token.js";
 
 let tokenKey = unwrap(Hex.decode(TOKEN_KEY));

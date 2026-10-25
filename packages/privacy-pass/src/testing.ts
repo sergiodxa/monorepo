@@ -1,7 +1,7 @@
 /**
  * A test issuer: a fresh RSA-PSS key published in the `id-RSASSA-PSS` encoding an issuer
- * directory serves, and a client that answers a challenge with a token signed by it, so
- * tests redeem tokens for challenges they issued themselves.
+ * directory serves, its directory document, and a client that answers a challenge with a
+ * token signed by it, so an origin's tests redeem tokens for challenges it issued itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,20 +11,19 @@ import type { Bytes } from "@sdxc/crypto";
 import { Base64Url, Hex, concatBytes, randomBytes, sha256 } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
 
-import type { Token } from "../token.js";
+import type { Token } from "./token.js";
 
-import { toPaddedBase64Url } from "../lib/wire.js";
-import { BLIND_RSA_TOKEN_TYPE, encodeToken, tokenAuthenticatorInput } from "../token.js";
+import { toPaddedBase64Url } from "./lib/wire.js";
+import { BLIND_RSA_TOKEN_TYPE, encodeToken, tokenAuthenticatorInput } from "./token.js";
 
-import { TOKEN_KEY } from "./rfc-vectors.js";
-
-/** The `id-RSASSA-PSS` AlgorithmIdentifier RFC 9578 issuers publish, taken from its vectors. */
-const PSS_ALGORITHM = TOKEN_KEY.slice(8, 8 + 63 * 2);
+/** The `id-RSASSA-PSS` AlgorithmIdentifier RFC 9578 issuers publish, as in its test vectors. */
+const PSS_ALGORITHM =
+	"303d06092a864886f70d01010a3030a00d300b0609608648016503040202a11a301806092a864886f70d010108300b0609608648016503040202a203020130";
 
 /** The header and `rsaEncryption` AlgorithmIdentifier Web Crypto writes before the key bits. */
 const RSA_ENCRYPTION_PREFIX_BYTES = 4 + 15;
 
-/** An issuer key pair and its published encoding. */
+/** An issuer key pair and its published encoding; `tokenKeyId` is the key's SHA-256. */
 export interface TestIssuer {
 	tokenKey: Bytes;
 	tokenKeyId: Bytes;
@@ -93,4 +92,23 @@ export async function signToken(
 		tokenAuthenticatorInput(input),
 	);
 	return { ...input, authenticator: new Uint8Array(signature) };
+}
+
+/**
+ * The token directory the issuer serves at `/.well-known/private-token-issuer-directory`, so
+ * an MSW handler stands in for the issuer behind `IssuerDirectory`.
+ *
+ * @param issuer - The issuer whose key the directory lists
+ * @returns The directory response, with the media type an issuer sends
+ */
+export function issuerDirectoryResponse(issuer: TestIssuer): Response {
+	return Response.json(
+		{
+			"issuer-request-uri": "/token-request",
+			"token-keys": [
+				{ "token-type": BLIND_RSA_TOKEN_TYPE, "token-key": toPaddedBase64Url(issuer.tokenKey) },
+			],
+		},
+		{ headers: { "content-type": "application/private-token-issuer-directory" } },
+	);
 }

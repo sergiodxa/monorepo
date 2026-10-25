@@ -202,6 +202,24 @@ async function guard(
 A client that holds tokens answers the 401 by retrying with one; any other client sees the
 CAPTCHA page in the same response.
 
+## Testing
+
+`@sdxc/privacy-pass/testing` stands in for an issuer: `createTestIssuer()` makes a key,
+`issuerDirectoryResponse(issuer)` is its directory for an MSW handler, and
+`answerChallenge(issuer, header)` returns the `Authorization` value a client would send.
+
+```ts
+import {
+	answerChallenge,
+	createTestIssuer,
+	issuerDirectoryResponse,
+} from "@sdxc/privacy-pass/testing";
+
+let issuer = await createTestIssuer();
+server.use(http.get(directory.url, () => issuerDirectoryResponse(issuer)));
+let authorization = await answerChallenge(issuer, unwrap(await privacyPass.challenge()));
+```
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,

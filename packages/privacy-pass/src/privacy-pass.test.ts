@@ -13,11 +13,11 @@ import type { IssuerKeySource } from "./directory.js";
 
 import { importTokenKey } from "./blind-rsa.js";
 import { PrivacyPassError } from "./errors.js";
-import { answerChallenge, createTestIssuer } from "./fixtures/issuer.js";
 import { BLIND_RSA_VECTORS, TOKEN_KEY } from "./fixtures/rfc-vectors.js";
 import { toPaddedBase64Url } from "./lib/wire.js";
 import { PrivacyPass } from "./privacy-pass.js";
 import { MemoryRedemptionStore } from "./store.js";
+import { answerChallenge, createTestIssuer } from "./testing.js";
 
 /**
  * A key source serving fixed keys.
