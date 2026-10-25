@@ -2,6 +2,7 @@
  * Public surface of the cache subpath: policies that decide who may store a
  * response and for how long, validators that identify its content, and the
  * conditional-request handling that turns a current client copy into a `304`.
+ * Targeted fields give an edge cache its own lifetime apart from the browser's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,4 +20,5 @@ export { ifModifiedSince, isModifiedSince } from "./if-modified-since.js";
 export { Policies } from "./policies.js";
 export { policy } from "./policy.js";
 export { precondition, PreconditionFailedError } from "./precondition.js";
+export { parseTargetedPolicy, targetedPolicy } from "./targeted.js";
 export { vary } from "./vary.js";

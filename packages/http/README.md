@@ -282,6 +282,13 @@ policy({ visibility: "public", maxAge: "1 hour", sMaxAge: "1 day" }).toString();
 // "public, max-age=3600, s-maxage=86400"
 ```
 
+#### `targetedPolicy(options?: PolicyOptions): string` and `parseTargetedPolicy(value: string | null): CacheControl | null`
+
+Write and read [RFC 9213](https://www.rfc-editor.org/rfc/rfc9213) targeted fields such as
+`CDN-Cache-Control`, as Structured Field Dictionaries, to give an edge its own lifetime
+(`targetedPolicy({ maxAge: "1 day" })` is `"max-age=86400"`). The parser answers `null` for
+a field a cache ignores: absent, empty or invalid.
+
 #### `Policies`
 
 The recurring policies, each returning a `CacheControl`:
