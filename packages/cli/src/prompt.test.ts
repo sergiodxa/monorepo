@@ -141,20 +141,20 @@ describe("prompts bound to flags and arguments", () => {
 	});
 });
 
-describe("tri-state boolean flags", () => {
-	/** A command whose `--git` stays unset unless passed or answered. */
-	const TRI_STATE = commands({
-		go: command({
-			flags: {
-				git: flag.boolean("git", {
-					default: undefined,
-					prompt: prompt.confirm({ message: "Initialize git?" }),
-				}),
-				cache: flag.boolean("cache", { default: undefined }),
-			},
-		}),
-	});
+/** A command whose `--git` stays unset unless passed or answered. */
+const TRI_STATE = commands({
+	go: command({
+		flags: {
+			git: flag.boolean("git", {
+				default: undefined,
+				prompt: prompt.confirm({ message: "Initialize git?" }),
+			}),
+			cache: flag.boolean("cache", { default: undefined }),
+		},
+	}),
+});
 
+describe("tri-state boolean flags", () => {
 	test("read undefined when neither spelling is passed, and ask on a terminal", async () => {
 		let cli = createCLI({ name: "app", commands: TRI_STATE });
 		cli.map(TRI_STATE.go, (ctx) => {

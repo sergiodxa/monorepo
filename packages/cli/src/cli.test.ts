@@ -314,6 +314,15 @@ describe("running", () => {
 	});
 });
 
+/** A context key one middleware publishes beside {@link COUNT}, typed as a string. */
+const LOCALE = createContextKey<string>();
+
+/** A context key one middleware publishes beside {@link LOCALE}, typed as a number. */
+const COUNT = createContextKey<number>();
+
+/** A middleware chain several commands share, so one helper types against it. */
+const CHAIN = [project()] as const;
+
 describe("middleware", () => {
 	test("publishes onto the context for the CLI's handlers, typed from the chain", async () => {
 		let cli = createCLI({ name: "sdxc", commands: CONTRACT, middleware: [project()] });
@@ -357,8 +366,6 @@ describe("middleware", () => {
 	});
 
 	test("types every property a middleware declares as a union of effects", async () => {
-		const LOCALE = createContextKey<string>();
-		const COUNT = createContextKey<number>();
 		let both: CommandMiddleware<
 			| { key: typeof LOCALE; value: string; property: "locale" }
 			| { key: typeof COUNT; value: number; property: "count" }
@@ -380,7 +387,6 @@ describe("middleware", () => {
 	});
 
 	test("types a helper shared by commands behind one chain", async () => {
-		const CHAIN = [project()] as const;
 		/** Reads what every command behind `CHAIN` receives. */
 		let where = (ctx: ChainContext<typeof CHAIN>) => `${ctx.project} ${ctx.path.join(" ")}\n`;
 		let cli = createCLI({ name: "sdxc", commands: CONTRACT });
