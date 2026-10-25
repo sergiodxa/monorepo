@@ -16,8 +16,29 @@ import type { Result } from "@sdxc/result";
  * @example let outcome = await captcha.verify(token, { remoteIp: "203.0.113.7" });
  */
 export interface Captcha {
-	/** The form field the provider's widget writes its token into. */
+	/**
+	 * Where the token arrives: the form field a widget writes it into, or the header a
+	 * provider that defines {@link Captcha.readToken} reads it from.
+	 */
 	readonly field: string;
+
+	/**
+	 * Reads the token from the request itself, for a provider whose client sends it in a
+	 * header; the middleware then uses it in place of the form field.
+	 *
+	 * @param request - The incoming request
+	 * @returns The token, or `null` when the request carries none
+	 */
+	readToken?(request: Request): string | null;
+
+	/**
+	 * Answers a failed verification on a route with no `onFailure`, for a provider whose
+	 * client retries on its own challenge, such as a `401` with `WWW-Authenticate`.
+	 *
+	 * @param error - Why the verification failed
+	 * @returns The refusal to send
+	 */
+	refuse?(error: CaptchaError): Response | Promise<Response>;
 
 	/**
 	 * Checks one token. A provider that verifies locally ignores `remoteIp`; a provider

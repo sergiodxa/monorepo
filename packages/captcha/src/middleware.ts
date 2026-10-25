@@ -70,7 +70,7 @@ export interface CaptchaMiddlewareOptions {
 	 * Answers a failed verification: a `Response` refuses the request with it, `null`
 	 * continues to the handler with the failure published on `ctx.captcha`.
 	 *
-	 * @default a plain-text 403 response
+	 * @default the provider's own `refuse`, or a plain-text 403 response
 	 */
 	onFailure?: (
 		error: CaptchaError,
@@ -79,9 +79,9 @@ export interface CaptchaMiddlewareOptions {
 }
 
 /**
- * Verifies the token in `provider.field` on every request the route receives, so install it
- * on the action that accepts the submission. The body stays readable afterwards; with
- * `formData()` installed, the parsed form is reused.
+ * Verifies the token in `provider.field`, or the one `provider.readToken` finds, on every
+ * request the route receives, so install it on the action that accepts the submission. The
+ * body stays readable afterwards; with `formData()` installed, the parsed form is reused.
  *
  * @param provider - The CAPTCHA provider whose widget the form embeds
  * @param options - The expected action and hostname, the address resolver and the failure policy
@@ -93,7 +93,9 @@ export function captcha(
 	options: CaptchaMiddlewareOptions = {},
 ): Middleware<{ key: typeof CaptchaKey; value: CaptchaOutcome; property: "captcha" }> {
 	return async (ctx, next) => {
-		let token = await readToken(ctx, provider.field);
+		let token = provider.readToken
+			? provider.readToken(ctx.request)
+			: await readToken(ctx, provider.field);
 		let remoteIp = (options.remoteIp ?? connectingIp)(ctx.request) ?? undefined;
 		let outcome: CaptchaOutcome =
 			token === null
@@ -106,7 +108,9 @@ export function captcha(
 		ctx.set(CaptchaKey, outcome, CAPTCHA_PROPERTY);
 		if (!isFailure(outcome)) return next();
 
-		let answer = await (options.onFailure ?? refuse)(outcome.error, ctx);
+		let answer = options.onFailure
+			? await options.onFailure(outcome.error, ctx)
+			: await (provider.refuse?.(outcome.error) ?? refuse());
 		return answer ?? next();
 	};
 }

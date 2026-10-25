@@ -713,10 +713,12 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/privacy-pass": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/crypto": "workspace:*",
         "remix": "3.1.0",
       },
       "peerDependencies": {

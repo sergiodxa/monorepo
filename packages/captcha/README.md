@@ -1,6 +1,6 @@
 # @sdxc/captcha
 
-Turnstile, hCaptcha and reCAPTCHA verification, with middleware and widgets.
+Turnstile, hCaptcha, reCAPTCHA and Privacy Pass verification, with middleware and widgets.
 
 Every provider implements one `Captcha` contract, so the middleware, the widgets and an
 in-memory provider for tests work the same over any of them. A failure carries a neutral
@@ -84,12 +84,35 @@ captcha(new ReCaptcha({ secretKey: RECAPTCHA_SECRET, minScore: 0.7 }), { action:
 
 Pair each with its widget from `@sdxc/captcha/hcaptcha/ui` or `@sdxc/captcha/recaptcha/ui`.
 
+### Accept Privacy Pass tokens
+
+```ts
+import { captcha } from "@sdxc/captcha/middleware";
+import { PrivacyPassCaptcha } from "@sdxc/captcha/privacy-pass";
+import { MemoryRedemptionStore, PrivacyPass } from "@sdxc/privacy-pass";
+
+let privacyPass = new PrivacyPass({
+	issuer: "demo-pat.issuer.cloudflare.com",
+	store: new MemoryRedemptionStore(),
+});
+
+router.post("/sign-up", {
+	middleware: [captcha(new PrivacyPassCaptcha(privacyPass))],
+	handler: () => new Response("Welcome"),
+});
+```
+
+There is no widget: the token arrives in `Authorization: PrivateToken`, and a failure answers
+`401` with a `WWW-Authenticate` challenge that a client holding tokens retries on its own.
+
 ## API
 
 ### `Captcha`
 
 The interface a provider implements: `field`, the form field its widget writes, and
 `verify(token, { remoteIp? })`, which answers `Result<Captcha.Verification, CaptchaError>`.
+A provider whose token arrives outside the form also defines `readToken(request)`, and one
+whose client retries on a challenge defines `refuse(error)`, the default failure answer.
 A field of the verification the provider does not report stays unset.
 
 ### `new CaptchaError(code, providerCodes?)`
@@ -99,7 +122,7 @@ provider's own codes verbatim, for logs.
 
 ### `captcha(provider, options?)` from `./middleware`
 
-Verifies `provider.field` on every request of the route it is installed on, and publishes the
+Verifies `provider.field` (or what `provider.readToken` finds) on every request of the route it is installed on, and publishes the
 outcome as `ctx.captcha`. It reuses the form parsed by `remix`'s `formData()` middleware when
 present; a missing field or a non-form body is `missing-token`.
 
@@ -108,7 +131,7 @@ present; a missing field or a non-form body is `missing-token`.
 - `remoteIp(request)`: the visitor's address. Defaults to the `CF-Connecting-IP` header when it
   holds a valid address.
 - `onFailure(error, ctx)`: answer a `Response` to refuse, or `null` to reach the handler with
-  the failure on `ctx.captcha`. Defaults to a plain-text 403.
+  the failure on `ctx.captcha`. Defaults to the provider's `refuse`, or a plain-text 403.
 
 ### `CaptchaKey` from `./middleware`
 
@@ -135,6 +158,15 @@ Verifies v2 and v3 tokens with
 [Google's `siteverify`](https://developers.google.com/recaptcha/docs/verify). A v3 score under
 `minScore` (default `0.5`) fails with `low-score`; a v2 answer has no score and passes on
 success alone. `field` defaults to `g-recaptcha-response`.
+
+### `new PrivacyPassCaptcha(privacyPass)` from `./privacy-pass`
+
+Redeems [Privacy Pass](https://www.npmjs.com/package/@sdxc/privacy-pass) tokens through a
+configured `PrivacyPass`. `readToken(request)` takes the `PrivateToken` credentials from the
+`Authorization` header, and `refuse()` answers a `401` with a fresh challenge (a `403` when the
+issuer's keys cannot be read). A spent or expired challenge is `expired`, an unreachable issuer
+`unavailable`, any other bad token `rejected`; the Privacy Pass code is in `providerCodes`. A
+token vouches for no hostname or action, so leave those middleware options unset.
 
 ### `new MemoryCaptcha({ field?, verification?, unknownTokens? })` from `./memory`
 

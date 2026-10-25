@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/captcha",
 	"version": "0.0.1",
-	"description": "Turnstile, hCaptcha and reCAPTCHA verification, with middleware and widgets",
+	"description": "Turnstile, hCaptcha, reCAPTCHA and Privacy Pass verification, with middleware and widgets",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -13,17 +13,20 @@
 		"./hcaptcha": "./src/hcaptcha.ts",
 		"./hcaptcha/ui": "./src/hcaptcha-ui.tsx",
 		"./recaptcha": "./src/recaptcha.ts",
-		"./recaptcha/ui": "./src/recaptcha-ui.tsx"
+		"./recaptcha/ui": "./src/recaptcha-ui.tsx",
+		"./privacy-pass": "./src/privacy-pass.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/privacy-pass": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/crypto": "workspace:*",
 		"remix": "3.1.0"
 	},
 	"peerDependencies": {
