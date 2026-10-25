@@ -17,7 +17,7 @@ import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
 import routes from "~/routes/web";
 
 /** Verifies, deduplicates and applies each billing provider delivery. */
-let webhook = new BillingWebhook(
+const WEBHOOK = new BillingWebhook(
 	polar,
 	createBillingWebhookHandlers(models.bind({ db: openDatabase() }), polar),
 	{
@@ -25,10 +25,5 @@ let webhook = new BillingWebhook(
 	},
 );
 
-/**
- * The billing webhook endpoint.
- *
- * @example
- * router.map(routes.billing.webhook, webhook);
- */
-export default createAction(routes.billing.webhook, (ctx) => webhook.handler(ctx));
+/** `POST /webhooks/billing`, behind no guard: the delivery's signature alone says whether to trust it. */
+export default createAction(routes.billing.webhook, (ctx) => WEBHOOK.handler(ctx));
