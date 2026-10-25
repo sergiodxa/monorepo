@@ -203,6 +203,18 @@ describe(importWebBotAuthKey, () => {
 		expect(key.privateKey.extractable).toBe(false);
 	});
 
+	test("publishes a Web Crypto export without its alg, ext and key_ops members", async () => {
+		let pair = (await crypto.subtle.generateKey({ name: "Ed25519" }, true, [
+			"sign",
+			"verify",
+		])) as CryptoKeyPair;
+		let exported = await crypto.subtle.exportKey("jwk", pair.privateKey);
+
+		let key = unwrap(await importWebBotAuthKey(exported as DirectoryKey));
+
+		expect(Object.keys(key.publicKey).sort()).toEqual(["crv", "kid", "kty", "x"]);
+	});
+
 	test("refuses a public key", async () => {
 		let key = await importWebBotAuthKey(ed25519PublicKey());
 

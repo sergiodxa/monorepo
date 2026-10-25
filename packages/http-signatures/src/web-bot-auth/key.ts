@@ -24,7 +24,7 @@ export interface WebBotAuthKey {
 	keyid: string;
 	/** Imported non-extractable, so the private half never leaves the runtime. */
 	privateKey: CryptoKey;
-	/** The public half with `kid` set, ready for the directory's `build`. */
+	/** The public half with `kid` set and no JOSE `alg`, ready for the directory's `build`. */
 	publicKey: DirectoryKey;
 	algorithm: Algorithm;
 }
@@ -126,6 +126,8 @@ export async function importWebBotAuthKey(
 	let publicKey: DirectoryKey = { ...jwk };
 	for (let member of PRIVATE_MEMBERS) delete publicKey[member];
 	delete publicKey.key_ops;
+	delete publicKey.ext;
+	delete publicKey.alg;
 	delete publicKey.kid;
 
 	let keyid = await JWK.thumbprint(publicKey);
