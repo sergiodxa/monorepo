@@ -16,6 +16,7 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { DEVICE_CODE_GRANT_TYPE } from "~/app/models/tenant/device-authorization";
+import { TOKEN_EXCHANGE_GRANT_TYPE } from "~/app/models/tenant/token-exchange";
 import routes from "~/routes/tenant";
 
 /** How a client may present itself here, mirroring what the tenant's token module accepts. */
@@ -42,6 +43,13 @@ const INVALID_BASIC_HEADER: ClientAuthResult = {
 function stringField(form: FormData, name: string): string | null {
 	let value = form.get(name);
 	return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/** Reads every non-empty string value a repeatable form field carries. */
+function stringFields(form: FormData, name: string): string[] {
+	return form
+		.getAll(name)
+		.filter((value): value is string => typeof value === "string" && value.length > 0);
 }
 
 /**
@@ -171,7 +179,8 @@ export default createAction(routes.token, async (ctx) => {
 		grantType !== "authorization_code" &&
 		grantType !== "refresh_token" &&
 		grantType !== "client_credentials" &&
-		grantType !== DEVICE_CODE_GRANT_TYPE
+		grantType !== DEVICE_CODE_GRANT_TYPE &&
+		grantType !== TOKEN_EXCHANGE_GRANT_TYPE
 	) {
 		return tokenError(400, "unsupported_grant_type", `Grant type "${grantType}" is not supported.`);
 	}
@@ -254,6 +263,41 @@ export default createAction(routes.token, async (ctx) => {
 			now,
 			jkt,
 		});
+	} else if (grantType === TOKEN_EXCHANGE_GRANT_TYPE) {
+		let authScheme = clientAuth.auth.authScheme;
+		if (authScheme === "none") {
+			return tokenError(
+				401,
+				"invalid_client",
+				"The token exchange grant requires the application to authenticate.",
+			);
+		}
+
+		let subjectToken = stringField(form, "subject_token");
+		let subjectTokenType = stringField(form, "subject_token_type");
+		if (subjectToken === null || subjectTokenType === null) {
+			return tokenError(
+				400,
+				"invalid_request",
+				"subject_token and subject_token_type are required.",
+			);
+		}
+
+		outcome = await ctx.tenantStub.exchangeToken({
+			subjectToken,
+			subjectTokenType,
+			actorToken: stringField(form, "actor_token"),
+			actorTokenType: stringField(form, "actor_token_type"),
+			requestedTokenType: stringField(form, "requested_token_type"),
+			audiences: stringFields(form, "audience"),
+			resources: stringFields(form, "resource"),
+			scope: stringField(form, "scope"),
+			clientId: clientAuth.auth.clientId,
+			clientSecret: clientAuth.auth.clientSecret,
+			authScheme,
+			now,
+			jkt,
+		});
 	} else {
 		let deviceCode = form.get("device_code");
 
@@ -279,6 +323,7 @@ export default createAction(routes.token, async (ctx) => {
 			access_token: outcome.accessToken,
 			...(outcome.idToken ? { id_token: outcome.idToken } : {}),
 			...(outcome.refreshToken ? { refresh_token: outcome.refreshToken } : {}),
+			...(outcome.issuedTokenType ? { issued_token_type: outcome.issuedTokenType } : {}),
 			token_type: outcome.tokenType,
 			expires_in: outcome.expiresIn,
 			scope: outcome.scope,

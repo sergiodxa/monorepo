@@ -59,6 +59,7 @@ export const CLIENT_BODY_SCHEMA = s.object({
 	jwks: s.optional(s.nullable(CLIENT_JWKS)),
 	jwksUri: s.optional(s.nullable(s.string())),
 	requirePushedAuthorizationRequests: s.optional(s.boolean()),
+	tokenExchangeAudiences: s.optional(s.array(s.string())),
 });
 
 /** The merge patch a client update reads: any writable member, a changed `kind` refused. */
@@ -76,6 +77,7 @@ const CLIENT_PATCH = s.object({
 	jwks: s.optional(s.nullable(CLIENT_JWKS)),
 	jwksUri: s.optional(s.nullable(s.string())),
 	requirePushedAuthorizationRequests: s.optional(s.boolean()),
+	tokenExchangeAudiences: s.optional(s.array(s.string())),
 });
 
 /** A client's whole record; timestamps are epoch milliseconds, `disabledAt` null while enabled. */
@@ -99,6 +101,7 @@ export const CLIENT = s
 		jwks: s.nullable(CLIENT_JWKS),
 		jwksUri: s.nullable(s.string()),
 		requirePushedAuthorizationRequests: s.boolean(),
+		tokenExchangeAudiences: s.array(s.string()),
 	})
 	.meta({ id: "Client" });
 

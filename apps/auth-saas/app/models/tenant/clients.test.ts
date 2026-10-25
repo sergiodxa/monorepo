@@ -355,6 +355,7 @@ describe("updateClient", () => {
 				jwks: null,
 				jwksUri: null,
 				requirePushedAuthorizationRequests: false,
+				tokenExchangeAudiences: [],
 			},
 		});
 	});
@@ -814,3 +815,39 @@ function legacyHash(secret: string, logN: number): string {
 
 	return `$scrypt$ln=${logN},r=8,p=1$${Base64Url.encode(salt)}$${Base64Url.encode(new Uint8Array(key))}`;
 }
+
+describe("tokenExchangeAudiences", () => {
+	test("stores each audience once and keeps the policy across an update that omits it", async () => {
+		let registered = await registerClient(db, {
+			name: "Gateway",
+			kind: "confidential",
+			redirectUris: [],
+			postLogoutRedirectUris: [],
+			grantTypes: ["client_credentials"],
+			responseTypes: [],
+			scopes: [],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+			tokenExchangeAudiences: ["https://api.example.com", " https://api.example.com ", ""],
+		});
+		if (!registered.ok) throw new Error("unreachable");
+		expect(registered.client.tokenExchangeAudiences).toEqual(["https://api.example.com"]);
+
+		let {
+			id: _id,
+			createdAt: _c,
+			updatedAt: _u,
+			disabledAt: _d,
+			includePermissions: _i,
+			tokenExchangeAudiences: _t,
+			...rest
+		} = registered.client;
+		let updated = await updateClient(db, {
+			...rest,
+			clientId: registered.client.id,
+			name: "Renamed",
+		});
+		if (!updated.ok) throw new Error("unreachable");
+		expect(updated.client.tokenExchangeAudiences).toEqual(["https://api.example.com"]);
+	});
+});

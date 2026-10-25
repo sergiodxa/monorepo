@@ -50,6 +50,7 @@ import m0036 from "./tenant-migrations/0036-client-id-token-alg.sql?raw";
 import m0037 from "./tenant-migrations/0037-idempotency-keys.sql?raw";
 import m0038 from "./tenant-migrations/0038-pushed-authorization-requests.sql?raw";
 import m0039 from "./tenant-migrations/0039-dpop.sql?raw";
+import m0040 from "./tenant-migrations/0040-token-exchange.sql?raw";
 
 /** One migration, identified so the journal can record that it ran. */
 export interface Migration {
@@ -98,6 +99,7 @@ export const MIGRATIONS: Migration[] = [
 	{ id: "0037-idempotency-keys", sql: m0037 },
 	{ id: "0038-pushed-authorization-requests", sql: m0038 },
 	{ id: "0039-dpop", sql: m0039 },
+	{ id: "0040-token-exchange", sql: m0040 },
 ];
 
 /** The journal `0001-init` creates, read back to find out what has already run. */

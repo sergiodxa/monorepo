@@ -38,6 +38,7 @@ export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIEN
 		...(client.jwks ? { jwks: client.jwks } : {}),
 		...(client.jwksUri ? { jwksUri: client.jwksUri } : {}),
 		requirePushedAuthorizationRequests: client.requirePushedAuthorizationRequests,
+		tokenExchangeAudiences: client.tokenExchangeAudiences,
 	};
 }
 

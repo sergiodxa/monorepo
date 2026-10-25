@@ -28,6 +28,7 @@ import { resolveRoleAndPermissionClaims } from "~/app/models/tenant/roles";
 import { sessions } from "~/app/models/tenant/sessions";
 import { publishKeySet, SIGNING_ALGORITHMS } from "~/app/models/tenant/signing-keys";
 import { subjectIdentifiers, subjects } from "~/app/models/tenant/subjects";
+import { TOKEN_EXCHANGE_GRANT_TYPE } from "~/app/models/tenant/token-exchange";
 
 /** How long `Cache-Control` lets a cached copy of these documents stand, in seconds. */
 const MAX_AGE_SECONDS = 300;
@@ -138,8 +139,8 @@ function sharedMembers(published: PublishMetadataResult) {
 			: null,
 		responseTypesSupported: ["code"],
 		grantTypesSupported: published.hasDeviceGrant
-			? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE]
-			: ["authorization_code", "refresh_token"],
+			? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE, TOKEN_EXCHANGE_GRANT_TYPE]
+			: ["authorization_code", "refresh_token", TOKEN_EXCHANGE_GRANT_TYPE],
 		pushedAuthorizationRequestEndpoint: endpoint("/oauth/par"),
 		requirePushedAuthorizationRequests: published.requirePushedAuthorizationRequests,
 		requestParameterSupported: true,

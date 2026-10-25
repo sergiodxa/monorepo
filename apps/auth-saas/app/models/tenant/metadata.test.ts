@@ -170,8 +170,16 @@ describe("publishMetadata", () => {
 
 		expect(openid.deviceAuthorizationEndpoint).toBeNull();
 		expect(oauth.deviceAuthorizationEndpoint).toBeNull();
-		expect(openid.grantTypesSupported).toEqual(["authorization_code", "refresh_token"]);
-		expect(oauth.grantTypesSupported).toEqual(["authorization_code", "refresh_token"]);
+		expect(openid.grantTypesSupported).toEqual([
+			"authorization_code",
+			"refresh_token",
+			"urn:ietf:params:oauth:grant-type:token-exchange",
+		]);
+		expect(oauth.grantTypesSupported).toEqual([
+			"authorization_code",
+			"refresh_token",
+			"urn:ietf:params:oauth:grant-type:token-exchange",
+		]);
 	});
 
 	test("advertises device_authorization_endpoint and the device grant URN once the entitlement holds", async () => {
@@ -187,11 +195,13 @@ describe("publishMetadata", () => {
 			"authorization_code",
 			"refresh_token",
 			"urn:ietf:params:oauth:grant-type:device_code",
+			"urn:ietf:params:oauth:grant-type:token-exchange",
 		]);
 		expect(oauth.grantTypesSupported).toEqual([
 			"authorization_code",
 			"refresh_token",
 			"urn:ietf:params:oauth:grant-type:device_code",
+			"urn:ietf:params:oauth:grant-type:token-exchange",
 		]);
 	});
 });

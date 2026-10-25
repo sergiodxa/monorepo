@@ -75,6 +75,7 @@ export const clients = table({
 		jwks: c.json().nullable(),
 		jwks_uri: c.text().nullable(),
 		require_pushed_authorization_requests: c.boolean().default(false),
+		token_exchange_audiences: c.json().nullable(),
 	},
 });
 
@@ -355,6 +356,8 @@ export interface ClientRecord {
 	jwksUri: string | null;
 	/** Whether this client may start an authorization request only through the PAR endpoint (RFC 9126 §6). */
 	requirePushedAuthorizationRequests: boolean;
+	/** The audiences this client may exchange a token for (RFC 8693); empty refuses the grant. */
+	tokenExchangeAudiences: string[];
 }
 
 /** Maps a stored row's snake_case columns to the API's camelCase record. */
@@ -378,7 +381,18 @@ function toClientRecord(row: ClientRow): ClientRecord {
 		jwks: (row.jwks as ClientJwks | null) ?? null,
 		jwksUri: row.jwks_uri ?? null,
 		requirePushedAuthorizationRequests: row.require_pushed_authorization_requests ?? false,
+		tokenExchangeAudiences: (row.token_exchange_audiences as string[] | null) ?? [],
 	};
+}
+
+/**
+ * A token exchange policy as stored: each audience once, blank entries dropped, so a
+ * policy reads back exactly as the grant compares against it.
+ *
+ * @param audiences - The audiences as the caller listed them.
+ */
+function exchangeAudiences(audiences: string[]): string[] {
+	return [...new Set(audiences.map((audience) => audience.trim()).filter(Boolean))];
 }
 
 /** Mints a secret, stores only its hash and hint, and hands back the plaintext once. */
@@ -442,6 +456,8 @@ export interface RegisterClientInput {
 	jwksUri?: string | null;
 	/** @default false */
 	requirePushedAuthorizationRequests?: boolean;
+	/** @default [] */
+	tokenExchangeAudiences?: string[];
 }
 
 export type RegisterClientResult =
@@ -463,6 +479,7 @@ let RegisterClientSchema = s.object({
 	jwks: s.optional(s.nullable(JwksSchema)),
 	jwksUri: s.optional(s.nullable(s.string())),
 	requirePushedAuthorizationRequests: s.optional(s.boolean()),
+	tokenExchangeAudiences: s.optional(s.array(s.string())),
 });
 
 /**
@@ -503,6 +520,7 @@ export async function registerClient(
 		jwks,
 		jwks_uri: jwksUri,
 		require_pushed_authorization_requests: parsed.requirePushedAuthorizationRequests ?? false,
+		token_exchange_audiences: exchangeAudiences(parsed.tokenExchangeAudiences ?? []),
 		created_at: now,
 		updated_at: now,
 		disabled_at: null,
@@ -545,6 +563,8 @@ export interface UpdateClientInput {
 	jwksUri?: string | null;
 	/** Keeps the client's current setting when omitted. */
 	requirePushedAuthorizationRequests?: boolean;
+	/** Keeps the client's current token exchange audiences when omitted. */
+	tokenExchangeAudiences?: string[];
 }
 
 export type UpdateClientResult =
@@ -569,6 +589,7 @@ let UpdateClientSchema = s.object({
 	jwks: s.optional(s.nullable(JwksSchema)),
 	jwksUri: s.optional(s.nullable(s.string())),
 	requirePushedAuthorizationRequests: s.optional(s.boolean()),
+	tokenExchangeAudiences: s.optional(s.array(s.string())),
 });
 
 /**
@@ -614,6 +635,10 @@ export async function updateClient(
 			jwks_uri: jwksUri,
 			require_pushed_authorization_requests:
 				parsed.requirePushedAuthorizationRequests ?? existing.require_pushed_authorization_requests,
+			token_exchange_audiences:
+				parsed.tokenExchangeAudiences === undefined
+					? existing.token_exchange_audiences
+					: exchangeAudiences(parsed.tokenExchangeAudiences),
 			updated_at: Date.now(),
 		},
 	);

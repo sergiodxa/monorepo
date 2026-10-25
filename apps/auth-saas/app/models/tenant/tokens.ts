@@ -162,6 +162,8 @@ export type TokenOutcome =
 			tokenType: "Bearer" | "DPoP";
 			expiresIn: number;
 			scope: string;
+			/** The RFC 8693 `issued_token_type`, set only on a token exchange's answer. */
+			issuedTokenType?: string;
 	  }
 	| { kind: "error"; status: 400 | 401 | 500; error: string; description: string };
 

@@ -411,6 +411,7 @@ import {
 	validateImportRow,
 } from "~/app/models/tenant/subject-import";
 import * as Subjects from "~/app/models/tenant/subjects";
+import * as TokenExchange from "~/app/models/tenant/token-exchange";
 import * as Tokens from "~/app/models/tenant/tokens";
 import * as Totp from "~/app/models/tenant/totp";
 import * as WebhookDeliveries from "~/app/models/tenant/webhook-deliveries";
@@ -3804,6 +3805,24 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 		return this.#withCost(async () => {
 			let issuer = await this.#issuer();
 			return Tokens.exchangeCode(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Exchanges an access token this tenant issued for one aimed at an audience the
+	 * calling client's token exchange policy lists (RFC 8693).
+	 *
+	 * @param input - The tokens presented, the target and scope asked for, and the client.
+	 * @returns The new access token, or why the exchange was refused.
+	 */
+	async exchangeToken(
+		input: Omit<TokenExchange.ExchangeTokenInput, "issuer">,
+	): Promise<WithCost<TokenOutcome>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return TokenExchange.exchangeToken(this.#db, { ...input, issuer });
 		});
 	}
 

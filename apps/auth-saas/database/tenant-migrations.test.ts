@@ -69,6 +69,7 @@ describe("runMigrations", () => {
 			"0037-idempotency-keys",
 			"0038-pushed-authorization-requests",
 			"0039-dpop",
+			"0040-token-exchange",
 		]);
 	});
 
@@ -179,6 +180,7 @@ describe("runMigrations", () => {
 			{ id: "0037-idempotency-keys", applied_at: expect.any(Number) },
 			{ id: "0038-pushed-authorization-requests", applied_at: expect.any(Number) },
 			{ id: "0039-dpop", applied_at: expect.any(Number) },
+			{ id: "0040-token-exchange", applied_at: expect.any(Number) },
 		]);
 	});
 
