@@ -25,6 +25,7 @@ export default route({
 	userinfoPost: post("/userinfo"),
 	token: post("/oauth/token"),
 	tokenIntrospection: post("/oauth/introspect"),
+	revoke: post("/oauth/revoke"),
 	register: post("/oauth/register"),
 	deviceAuthorization: post("/oauth/device_authorization"),
 	pushedAuthorizationRequest: post("/oauth/par"),

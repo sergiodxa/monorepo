@@ -399,6 +399,7 @@ import * as Organizations from "~/app/models/tenant/organizations";
 import * as Passkeys from "~/app/models/tenant/passkeys";
 import * as Passwords from "~/app/models/tenant/passwords";
 import * as PushedAuthorization from "~/app/models/tenant/pushed-authorization";
+import * as Revocation from "~/app/models/tenant/revocation";
 import * as Roles from "~/app/models/tenant/roles";
 import * as SamlConnections from "~/app/models/tenant/saml-connections";
 import * as SamlSignIn from "~/app/models/tenant/saml-sign-in";
@@ -3842,6 +3843,24 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 		return this.#withCost(async () => {
 			let issuer = await this.#issuer();
 			return Introspection.introspectToken(this.#db, { ...input, issuer });
+		});
+	}
+
+	/**
+	 * Revokes a refresh token the calling client holds, and the rest of its rotation
+	 * family (RFC 7009).
+	 *
+	 * @param input - The token, its type hint, and the caller's credentials.
+	 * @returns That the token no longer works, or why the request was refused.
+	 */
+	async revokeToken(
+		input: Omit<Revocation.RevokeTokenInput, "issuer">,
+	): Promise<WithCost<Revocation.RevokeTokenResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let issuer = await this.#issuer();
+			return Revocation.revokeToken(this.#db, { ...input, issuer });
 		});
 	}
 

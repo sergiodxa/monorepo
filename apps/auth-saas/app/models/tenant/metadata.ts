@@ -152,6 +152,8 @@ function sharedMembers(published: PublishMetadataResult) {
 		scopesSupported: published.scopesSupported,
 		authorizationResponseIssParameterSupported: true,
 		dpopSigningAlgValuesSupported: [...DPOP_ALGORITHMS],
+		revocationEndpoint: endpoint("/oauth/revoke"),
+		revocationEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post", "none"],
 		introspectionEndpoint: endpoint("/oauth/introspect"),
 		introspectionEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post"],
 		introspectionSigningAlgValuesSupported: [...INTROSPECTION_SIGNING_ALGORITHMS],

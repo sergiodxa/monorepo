@@ -107,6 +107,7 @@ describe("publishMetadata", () => {
 		let oauth = authorizationServerMetadataFor(published);
 		expect(oauth.introspectionEndpoint?.href).toBe(`${ISSUER}/oauth/introspect`);
 		expect(oauth.introspectionSigningAlgValuesSupported).toEqual(["ES256"]);
+		expect(oauth.revocationEndpoint?.href).toBe(`${ISSUER}/oauth/revoke`);
 	});
 
 	test("scopes_supported and claims_supported reflect the tenant's scope catalog, including a tenant-defined scope", async () => {
