@@ -35,7 +35,7 @@ import authorizationMigration from "~/database/tenant-migrations/0009-authorizat
 /** The shape one row of `authorization_codes` takes, for the sweep tests' own fixture. */
 type AuthorizationCodeRowShape = TableRow<typeof authorizationCodes>;
 
-/** The tenant's issuer, stamped onto every redirected error as `iss`. */
+/** The tenant's issuer, stamped onto every redirect back to the client as `iss`. */
 const ISSUER = "https://tenant.example.com";
 
 /** The default redirect URI every test client registers. */
@@ -507,6 +507,7 @@ describe("beginAuthorization", () => {
 			expect(outcome.kind).toBe("redirect");
 			if (outcome.kind !== "redirect") throw new Error("unreachable");
 			expect(new URL(outcome.location).searchParams.get("code")).toEqual(expect.any(String));
+			expect(new URL(outcome.location).searchParams.get("iss")).toBe(ISSUER);
 		});
 
 		test("several valid sessions, prompt absent: parks an unforced authenticate outcome", async () => {

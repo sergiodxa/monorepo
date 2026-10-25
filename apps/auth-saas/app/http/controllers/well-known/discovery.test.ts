@@ -72,6 +72,7 @@ describe("GET /.well-known/openid-configuration", () => {
 		expect(body.userinfo_endpoint).toBe(`${ISSUER}/userinfo`);
 		expect(body.jwks_uri).toBe(`${ISSUER}/.well-known/jwks.json`);
 		expect(body.request_uri_parameter_supported).toBe(false);
+		expect(body.authorization_response_iss_parameter_supported).toBe(true);
 		expect(body).not.toHaveProperty("device_authorization_endpoint");
 	});
 
@@ -103,6 +104,7 @@ describe("GET /.well-known/oauth-authorization-server", () => {
 		expect(body.issuer).toBe(ISSUER);
 		expect(body.token_endpoint).toBe(`${ISSUER}/oauth/token`);
 		expect(body.protected_resources).toEqual([`${ISSUER}/userinfo`]);
+		expect(body.authorization_response_iss_parameter_supported).toBe(true);
 	});
 });
 

@@ -214,11 +214,15 @@ function redirectError(
 	};
 }
 
-/** A `redirect` outcome carrying a freshly minted code onto the request's verified target. */
-function redirectCode(target: RedirectTarget, code: string): AuthorizationOutcome {
+/**
+ * A `redirect` outcome carrying a freshly minted code onto the request's verified target,
+ * with the tenant's `iss` beside it (RFC 9207) so the client can tell which authorization
+ * server produced the code before redeeming it.
+ */
+function redirectCode(target: RedirectTarget, issuer: string, code: string): AuthorizationOutcome {
 	return {
 		kind: "redirect",
-		location: withQueryParams(target.redirectUri, { code, state: target.state }),
+		location: withQueryParams(target.redirectUri, { code, state: target.state, iss: issuer }),
 	};
 }
 
@@ -451,7 +455,7 @@ async function decide(db: Database, ctx: DecisionContext): Promise<Authorization
 			grantedScopes: consentResult.grantedScopes,
 			now,
 		});
-		return redirectCode(request, code);
+		return redirectCode(request, issuer, code);
 	}
 
 	if (consentResult.decision === "show") {
@@ -487,7 +491,7 @@ export interface BeginAuthorizationInput {
 	query: Record<string, string>;
 	sessionIds: string[];
 	now: number;
-	/** The tenant's own issuer, carried on every redirected error as `iss`. */
+	/** The tenant's own issuer, carried on every redirect back to the client as `iss`. */
 	issuer: string;
 }
 

@@ -125,6 +125,7 @@ function sharedMembers(published: PublishMetadataResult) {
 		tokenEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post", "none"],
 		codeChallengeMethodsSupported: ["S256"],
 		scopesSupported: published.scopesSupported,
+		authorizationResponseIssParameterSupported: true,
 	};
 }
 
