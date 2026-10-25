@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 16
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to look up a domain's expiry, status and registrar over RDAP with `@sdxc/rdap`"
     - "How to decide what a lookup result means"
@@ -84,7 +84,9 @@ knows a zone's apex, from a custom-domain setup or an imported zone file, has th
 Dates arrive as epoch milliseconds: `expiresAt`, `registeredAt` and `updatedAt`, each `null` when
 the registry publishes no such event. `status` holds EPP status codes in their usual spelling,
 such as `clientTransferProhibited` or `pendingDelete`. `document` keeps the registry's response
-as sent for any field the model leaves out.
+as sent for any field the model leaves out. A contact field the registry withheld under RFC 9537
+reads as `null`, and `isRedacted(domain, "registrant.email")` tells it apart from one the
+registry never had, so a view can say "hidden by the registry".
 
 <note>
 Some ccTLD registries publish no expiry at all, so plan for a domain whose date stays unknown.
@@ -112,7 +114,7 @@ import { isSuccess } from "@sdxc/result";
 
 const DAY_MS = 86_400_000;
 
-const RETRY = createBackoff({ base: "1 hour", max: "1 day", jitter: 0.1 });
+const retryBackoff = createBackoff({ base: "1 hour", max: "1 day", jitter: 0.1 });
 
 const ABOUT_THE_NAME = new Set<RDAPError["code"]>(["not-found", "unsupported-tld"]);
 
@@ -178,7 +180,10 @@ export function expiryOutcome(
 		eppStatuses: state.eppStatuses,
 		failures,
 		error: code,
-		nextCheckAt: Math.max(RETRY.at(failures, now), now + (retryAfter ?? 0)),
+		nextCheckAt: Math.max(
+			retryBackoff.at(failures, now),
+			now + (retryAfter ?? 0),
+		),
 	};
 }
 ```
@@ -240,8 +245,8 @@ Registries rate-limit without documenting the limits, and a sweep that sends a h
 lookups at once finds Verisign's.
 </warning>
 
-The sweep groups its domains by registry with `rdap.server`,
-runs each group two at a time, and lets different registries run side by side. The bootstrap
+The sweep groups its domains by registry with `rdap.server`, runs each group two at a time,
+and lets different registries run side by side. The bootstrap
 file is read once per client, so the grouping costs no extra requests.
 
 Declare the job with an hourly trigger. Each domain is looked up once a day, and the hourly tick
@@ -361,12 +366,8 @@ the registry and IANA's bootstrap URL with MSW, as
 
 ## Where to go next
 
-- [Import and export DNS zone files](/docs/data-and-background-work/zone-files): the records
-  under the domain this guide watches.
-- [Custom domains for your customers](/docs/identity-and-security/verify-domains): proving a
-  customer owns the domain before you monitor it.
-- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff): the schedules
+- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) — the schedules
   `createBackoff` builds.
-- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging): where an
+- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — where an
   expiry alert goes out.
-- [`@sdxc/rdap`](/api/rdap): every option, field and error code.
+- [`@sdxc/rdap`](/api/rdap) — every option, field and error code.
