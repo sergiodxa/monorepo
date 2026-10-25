@@ -67,6 +67,9 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 | `sdxc stats`        | Counts lines of code per kind of code, and the code to test ratio                       |
 | `sdxc run`          | Runs the project's command line (`run.entry`, default `bootstrap/cli.ts`)               |
 | `sdxc doctor`       | Lints the project: release drift, secrets, migrations, layout, JSDoc and its own checks |
+| `sdxc fix`          | Applies the repairs `sdxc doctor` names that the kit can make safely                    |
+| `sdxc setup`        | Installs a multi-file feature (auth, billing, flags), or lists them with no name        |
+| `sdxc diagram`      | Draws the project's layer architecture as Mermaid, or as SVG through `@sdxc/diagram`    |
 | `sdxc ui`           | Copies `@sdxc/ui` components into the project and points imports at the copies          |
 | `sdxc upgrade`      | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt             |
 | `sdxc deploy`       | Builds, then runs the app's own `db migrate --remote` and `deploy`, once confirmed      |
@@ -502,20 +505,30 @@ Move the @sdxc packages to another release and print the prompt for the code
 
 The CLI reads `.config/sdxc.jsonc` (or `sdxc.jsonc` at the project root). Every key is optional.
 
-| Key                        | Default                                | Meaning                                                                      |
-| -------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `ui.directory`             | `resources/components/ui`              | Where `sdxc ui add` writes components                                        |
-| `ui.alias`                 | inferred from tsconfig `paths`         | Import prefix for the copies                                                 |
-| `ui.tests`                 | `false`                                | Copy a component's tests beside it                                           |
-| `make.routes`              | `web`                                  | Route contract `sdxc make controller` adds to, a module in `routes/`         |
-| `make.migrations`          | `{ "default": "database/migrations" }` | Migration chains by name                                                     |
-| `make.tests`               | `true`                                 | Write a test beside every generated file except migrations and factories     |
-| `make.specs`               | `true`                                 | Write a pairing `.spec` for controllers, commands, MCP tools and scaffolds   |
-| `make.stubs`               | `.config/sdxc/stubs`                   | Stubs that replace the built-in ones                                         |
-| `doctor.checks`            | `.config/sdxc/checks`                  | The project's own `sdxc doctor` checks, one module each                      |
-| `doctor.migrations.accept` | `[]`                                   | Migration errors `sdxc doctor` steps past, each `{ "file", "column" }`       |
-| `format`                   | none                                   | Command run once on every file a command wrote or edited, the paths appended |
-| `lock`                     | `.config/sdxc.lock.jsonl`              | Where the CLI keeps its state                                                |
+| Key                           | Default                                | Meaning                                                                      |
+| ----------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `ui.directory`                | `resources/components/ui`              | Where `sdxc ui add` writes components                                        |
+| `ui.alias`                    | inferred from tsconfig `paths`         | Import prefix for the copies                                                 |
+| `ui.tests`                    | `false`                                | Copy a component's tests beside it                                           |
+| `make.routes`                 | `web`                                  | Route contract `sdxc make controller` adds to, a module in `routes/`         |
+| `make.migrations`             | `{ "default": "database/migrations" }` | Migration chains by name                                                     |
+| `make.tests`                  | `true`                                 | Write a test beside every generated file except migrations and factories     |
+| `make.specs`                  | `true`                                 | Write a pairing `.spec` for controllers, commands, MCP tools and scaffolds   |
+| `make.stubs`                  | `.config/sdxc/stubs`                   | Stubs that replace the built-in ones                                         |
+| `doctor.checks`               | `.config/sdxc/checks`                  | The project's own `sdxc doctor` checks, one module each                      |
+| `doctor.migrations.accept`    | `[]`                                   | Migration errors `sdxc doctor` steps past, each `{ "file", "column" }`       |
+| `doctor.complexity.max`       | `4`                                    | Highest cyclomatic complexity a function may have                            |
+| `doctor.moduleSize.maxLines`  | `200`                                  | Most code lines a module may hold                                            |
+| `doctor.crap.max`             | `12`                                   | Highest CRAP score a function may have                                       |
+| `doctor.crap.coverage`        | `coverage/coverage-final.json`         | Istanbul coverage the `crap` check reads                                     |
+| `doctor.testRatio.min`        | `0.3`                                  | Lowest test lines per code line                                              |
+| `doctor.fanOut.max`           | `15`                                   | Most project modules one module may import statically                        |
+| `doctor.duplication.minLines` | `8`                                    | Fewest code lines that count as a duplicated block                           |
+| `doctor.mutation.report`      | `reports/mutation/mutation.json`       | Mutation-testing report the `mutation` check reads                           |
+| `doctor.mutation.maxSurvived` | `0`                                    | Most surviving mutants the `mutation` check allows                           |
+| `run.entry`                   | `bootstrap/cli.ts`                     | Module `sdxc run` starts, relative to the project root                       |
+| `format`                      | none                                   | Command run once on every file a command wrote or edited, the paths appended |
+| `lock`                        | `.config/sdxc.lock.jsonl`              | Where the CLI keeps its state                                                |
 
 `format` is an argument list, such as `["bunx", "vp", "fmt"]`.
 
