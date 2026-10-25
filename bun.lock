@@ -959,6 +959,21 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/email-auth": {
+      "name": "@sdxc/email-auth",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/doh": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/ip": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
+      },
+      "devDependencies": {
+        "@sdxc/zone-file": "workspace:*",
+      },
+    },
     "packages/epub": {
       "name": "@sdxc/epub",
       "version": "0.0.1",
@@ -3035,6 +3050,8 @@
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
 
     "@sdxc/email-address": ["@sdxc/email-address@workspace:packages/email-address"],
+
+    "@sdxc/email-auth": ["@sdxc/email-auth@workspace:packages/email-auth"],
 
     "@sdxc/epub": ["@sdxc/epub@workspace:packages/epub"],
 
