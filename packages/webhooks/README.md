@@ -1,7 +1,7 @@
 # @sdxc/webhooks
 
-Sign and verify [Standard Webhooks](https://www.standardwebhooks.com/) deliveries, reporting
-every failure as a typed value.
+Sign and verify [Standard Webhooks](https://www.standardwebhooks.com/) deliveries and deliver
+Security Event Tokens by push or poll, reporting every failure as a typed value.
 
 Signatures are `HMAC-SHA256` over `id.timestamp.body`, computed with
 [`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto) and compared in constant time.
@@ -88,6 +88,48 @@ let result = await Webhooks.verify(request, { secret, store });
 The timestamp tolerance limits how long a captured request stays valid; a store also rejects a
 delivery id it has already accepted, with `DuplicateDeliveryError`.
 
+### Deliver Security Event Tokens
+
+`@sdxc/webhooks/security-events` delivers RFC 8417 SETs, built with `SecurityEventToken` from
+[`@sdxc/jwt`](https://www.npmjs.com/package/@sdxc/jwt), by push (RFC 8935) or poll (RFC 8936).
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import {
+	SecurityEventError,
+	setAccepted,
+	setReceiver,
+	transmitSet,
+} from "@sdxc/webhooks/security-events";
+
+/** Transmitter: 202 is delivered, a SecurityEventError is the recipient's refusal. */
+let result = await transmitSet("https://rp.example.com/events", set);
+if (isFailure(result) && !(result.error instanceof SecurityEventError)) await retryLater();
+
+/** Recipient: a 400 {err, description} answers every SET that fails verification. */
+router.post(routes.events, {
+	middleware: [setReceiver({ issuers: { "https://idp.example.com/": jwks }, audience })],
+	async handler(ctx) {
+		await inbox.save(ctx.securityEvent);
+		return setAccepted();
+	},
+});
+```
+
+For poll delivery, the transmitter queues SETs per recipient stream in a `SetStore`
+(`MemorySetStore` in tests) and serves them with `answerPoll`. The recipient polls with
+`pollSets`, checks the batch with `verifyPolledSets`, and acknowledges it on the next poll.
+
+```typescript
+import { answerPoll, pollSets, verifyPolledSets } from "@sdxc/webhooks/security-events";
+
+await store.add(recipient.id, token.id, await token.sign(JWK.Algorithm.ES256, keys));
+router.post(routes.poll, (ctx) => answerPoll(ctx.request, { store, stream: recipient.id }));
+
+let batch = await pollSets(endpoint, { ack, setErrs, maxEvents: 50 });
+if (isSuccess(batch)) ({ events, ack, setErrs } = await verifyPolledSets(batch.data.sets, options));
+```
+
 ## API
 
 ### `verify(request: Request, options: VerifyOptions): Promise<Result<VerifiedDelivery, WebhookError>>`
@@ -129,6 +171,26 @@ Resolves `true` while the id is remembered.
 #### `store.remember(id: string, ttl: DurationInput): Promise<void>`
 
 Remembers the id for `ttl`, raised to KV's one-minute minimum.
+
+### `@sdxc/webhooks/security-events`
+
+- `transmitSet(endpoint, set, { headers?, signal? })`: POSTs one SET as
+  `application/secevent+jwt`. It resolves to a `SecurityEventError` carrying the recipient's
+  `code` and `description`, or to a `TransmissionError` when no verdict arrived
+- `setReceiver(options)`: verifies an RFC 8935 push and publishes `ctx.securityEvent`. A SET
+  that fails is answered `400` with `invalid_request`, `invalid_key`, `invalid_issuer` or
+  `invalid_audience`, and unreadable issuer keys are answered `503`
+- `verifySetRequest(request, options)` and `verifySet(token, options)`: the same verification
+  as a `Result`. `options` is `{ issuers, audience, algorithms?, token? }`, where `issuers` maps
+  each `iss` to its keys or is a lookup answering `null` for an unknown issuer
+- `setAccepted()` and `setRejected(error)`: the `202` and `400` answers
+- `answerPoll(request, { store, stream, timeout?, interval? })`: applies `ack` and `setErrs`,
+  then returns up to `maxEvents` pending SETs. Without `returnImmediately` it long polls
+- `pollSets(endpoint, request?, options?)` and `verifyPolledSets(sets, options)`: the recipient
+  side. A SET whose issuer keys are unavailable stays out of both `ack` and `setErrs`, so the
+  transmitter delivers it again
+- `SetStore`: `add`, `pending`, `acknowledge` and `reject`, per stream; `MemorySetStore`
+  implements it in memory and reads reported errors back with `errors(stream)`
 
 ### Errors
 

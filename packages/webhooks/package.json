@@ -1,11 +1,12 @@
 {
 	"name": "@sdxc/webhooks",
 	"version": "0.0.1",
-	"description": "Sign and verify Standard Webhooks deliveries, reporting every failure as a typed value",
+	"description": "Sign and verify Standard Webhooks deliveries and deliver Security Event Tokens by push or poll, reporting every failure as a typed value",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./security-events": "./src/security-events.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -13,11 +14,15 @@
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/jwt": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
 		"remix": "3.1.0"
 	}
 }
