@@ -28,6 +28,11 @@ export class JSONFeedFetchError extends Error {
 	override name = "JSONFeedFetchError";
 }
 
+/** Raised when feed data holds a value JSON cannot represent, such as a `BigInt` or a cycle. */
+export class JSONFeedStringifyError extends Error {
+	override name = "JSONFeedStringifyError";
+}
+
 export namespace JSONFeed {
 	/**
 	 * A publisher extension's name. JSON Feed reserves a leading underscore for
@@ -127,6 +132,12 @@ export namespace JSONFeed {
 		[extension: ExtensionKey]: unknown;
 	}
 
+	/** A whole feed as this package holds it: the shape `JSONFeed.from` accepts. */
+	export interface Data {
+		feed: Feed;
+		items: Item[];
+	}
+
 	/**
 	 * A whole feed as JSON Feed writes it, keys and all, which is what
 	 * `JSON.stringify` receives and therefore exactly the document a publisher serves.
@@ -185,40 +196,25 @@ export namespace JSONFeed {
  * A JSON Feed 1.1 document, holding feed-level metadata and an ordered list of
  * items.
  *
- * Reading accessors hand back clones, so a caller cannot reach into the instance
- * by mutating what it returned.
+ * Every way in validates what JSON Feed requires, so an instance always holds a
+ * feed a reader accepts; reading accessors hand back clones the caller may mutate.
  */
 export class JSONFeed {
 	/** The media type a JSON Feed is served under. */
 	static readonly mediaType = MEDIA_TYPE;
 
 	#feed: JSONFeed.Feed;
-	#items: JSONFeed.Item[] = [];
+	#items: JSONFeed.Item[];
 
-	/**
-	 * Builds a feed from its metadata, starting with no items.
-	 *
-	 * @param feed - The feed-level metadata
-	 * @throws JSONFeedParseError When the title is missing
-	 */
-	constructor(feed: JSONFeed.Feed) {
-		validateFeed(feed);
-		this.#feed = structuredClone(feed);
+	/** Takes ownership of already-validated data, so callers pass clones. */
+	private constructor(feed: JSONFeed.Feed, items: JSONFeed.Item[]) {
+		this.#feed = feed;
+		this.#items = items;
 	}
 
 	/** The feed-level metadata. */
 	get feed(): JSONFeed.Feed {
 		return structuredClone(this.#feed);
-	}
-
-	/**
-	 * Replaces the feed-level metadata, leaving the items in place.
-	 *
-	 * @throws JSONFeedParseError When the title is missing
-	 */
-	set feed(feed: JSONFeed.Feed) {
-		validateFeed(feed);
-		this.#feed = structuredClone(feed);
 	}
 
 	/** The version URL this feed declares, which a built feed takes from the package. */
@@ -232,14 +228,30 @@ export class JSONFeed {
 	}
 
 	/**
-	 * Appends one item.
+	 * Replaces the feed-level metadata, leaving the items in place. A refused feed
+	 * leaves the instance unchanged.
+	 *
+	 * @param feed - The new feed-level metadata
+	 * @returns An error when the title is missing
+	 */
+	setFeed(feed: JSONFeed.Feed): Result<void, JSONFeedParseError> {
+		let valid = validateFeed(feed);
+		if (isFailure(valid)) return valid;
+		this.#feed = structuredClone(feed);
+		return success(undefined);
+	}
+
+	/**
+	 * Appends one item. A refused item leaves the instance unchanged.
 	 *
 	 * @param item - The item to append
-	 * @throws JSONFeedParseError When the id is missing
+	 * @returns An error when the id is missing
 	 */
-	addItem(item: JSONFeed.Item): void {
-		validateItem(item);
+	addItem(item: JSONFeed.Item): Result<void, JSONFeedParseError> {
+		let valid = validateItem(item);
+		if (isFailure(valid)) return valid;
 		this.#items.push(structuredClone(item));
+		return success(undefined);
 	}
 
 	/**
@@ -262,9 +274,46 @@ export class JSONFeed {
 		return buildDocument(this.#feed, this.#items);
 	}
 
-	/** Serializes the feed into JSON Feed 1.1 text. */
-	toString(): string {
-		return JSON.stringify(this.toJSON());
+	/**
+	 * Builds a feed from camelCase data, the way this package holds it.
+	 *
+	 * @param data - The feed-level metadata and its items, in order
+	 * @returns The feed, or an error when the feed lacks a title or an item an id
+	 * @example JSONFeed.from({ feed: { title: "My Blog" }, items: [] })
+	 */
+	static from(data: JSONFeed.Data): Result<JSONFeed, JSONFeedParseError> {
+		let feed = validateFeed(data.feed);
+		if (isFailure(feed)) return feed;
+
+		for (let item of data.items) {
+			let valid = validateItem(item);
+			if (isFailure(valid)) return valid;
+		}
+
+		return success(new JSONFeed(structuredClone(data.feed), structuredClone(data.items)));
+	}
+
+	/**
+	 * Serializes a feed into JSON Feed 1.1 text. Plain data is validated first, so
+	 * one call builds and writes a feed.
+	 *
+	 * @param input - A feed instance, or the camelCase data `JSONFeed.from` accepts
+	 * @returns The JSON text, a `JSONFeedParseError` when plain data lacks a required
+	 * field, or a `JSONFeedStringifyError` when an extension holds a value JSON cannot
+	 * represent
+	 * @example JSONFeed.stringify({ feed: { title: "My Blog" }, items })
+	 */
+	static stringify(
+		input: JSONFeed | JSONFeed.Data,
+	): Result<string, JSONFeedParseError | JSONFeedStringifyError> {
+		let feed = input instanceof JSONFeed ? success(input) : JSONFeed.from(input);
+		if (isFailure(feed)) return feed;
+
+		try {
+			return success(JSON.stringify(feed.data.toJSON()));
+		} catch (error) {
+			return failure(new JSONFeedStringifyError(`Failed to write JSON Feed: ${message(error)}`));
+		}
 	}
 
 	/**
@@ -294,10 +343,7 @@ export class JSONFeed {
 	static fromJSON(value: unknown): Result<JSONFeed, JSONFeedParseError> {
 		let document = parseFeed(value);
 		if (isFailure(document)) return document;
-
-		let feed = new JSONFeed(document.data.feed);
-		for (let item of document.data.items) feed.addItem(item);
-		return success(feed);
+		return success(new JSONFeed(document.data.feed, document.data.items));
 	}
 
 	/**

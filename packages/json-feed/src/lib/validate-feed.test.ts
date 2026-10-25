@@ -5,16 +5,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
+
+import { JSONFeedParseError } from "../index.js";
 
 import { validateFeed } from "./validate-feed.js";
 
 describe("validateFeed", () => {
 	test("accepts a feed carrying a title", () => {
-		expect(() => validateFeed({ title: "My Blog" })).not.toThrow();
+		expect(isSuccess(validateFeed({ title: "My Blog" }))).toBe(true);
 	});
 
 	test("rejects a feed missing a title", () => {
-		expect(() => validateFeed({ title: "" })).toThrow("Feed must include a title.");
+		let result = validateFeed({ title: "" });
+		expect(isFailure(result) && result.error).toEqual(
+			new JSONFeedParseError("Feed must include a title."),
+		);
 	});
 });

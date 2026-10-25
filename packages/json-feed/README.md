@@ -13,49 +13,46 @@ Build feeds to publish and read feeds others publish, covering every field
 npm add @sdxc/json-feed
 ```
 
-Reading a feed answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
-which installs alongside this package.
+Every operation that can fail answers a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
-### Build a feed
+### Build and serialize a feed
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
+import { isFailure } from "@sdxc/result";
 
-let feed = new JSONFeed({
-	title: "My Blog",
-	homePageUrl: "https://example.com",
-	feedUrl: "https://example.com/feed.json",
-	authors: [{ name: "Jane Doe", url: "https://example.com/jane" }],
-	language: "en-US",
+let json = JSONFeed.stringify({
+	feed: {
+		title: "My Blog",
+		homePageUrl: "https://example.com",
+		feedUrl: "https://example.com/feed.json",
+		authors: [{ name: "Jane Doe", url: "https://example.com/jane" }],
+		language: "en-US",
+	},
+	items: [
+		{
+			id: "https://example.com/posts/hello-world",
+			url: "https://example.com/posts/hello-world",
+			title: "Hello World",
+			contentHtml: "<p>Full post content</p>",
+			datePublished: new Date().toISOString(),
+			tags: ["updates"],
+		},
+	],
 });
+if (isFailure(json)) throw json.error;
 
-feed.addItem({
-	id: "https://example.com/posts/hello-world",
-	url: "https://example.com/posts/hello-world",
-	title: "Hello World",
-	contentHtml: "<p>Full post content</p>",
-	datePublished: new Date().toISOString(),
-	tags: ["updates"],
-});
-```
-
-An item requires only an `id`, which must stay the same across every edit of that item. Dates
-are RFC 3339 strings, which is what `toISOString()` produces.
-
-### Serialize it
-
-```typescript
-let json = feed.toString();
-
-return new Response(JSON.stringify(feed), {
+return new Response(json.data, {
 	headers: { "content-type": JSONFeed.mediaType },
 });
 ```
 
-The version URL is written for you and empty fields are left out. `toJSON()` returns the
-document, so `JSON.stringify` accepts the instance directly.
+A feed requires a `title`, and an item only an `id`, which must stay the same across every edit of
+that item; a missing one answers a `JSONFeedParseError`. Dates are RFC 3339 strings, which is what
+`toISOString()` produces. The version URL is written for you and empty fields are left out.
 
 ### Parse a feed
 
@@ -81,14 +78,23 @@ declares a JSON Feed version URL parses.
 
 ## API
 
-### `new JSONFeed(feed: JSONFeed.Feed)`
+### `JSONFeed.from(data: JSONFeed.Data): Result<JSONFeed, JSONFeedParseError>`
 
-Creates a feed with the given metadata and no items. Throws `JSONFeedParseError` without a
-`title`.
+Builds an instance from camelCase `{ feed, items }`. Fails without a feed `title` or an item `id`.
+
+### `JSONFeed.stringify(input: JSONFeed | JSONFeed.Data): Result<string, JSONFeedParseError | JSONFeedStringifyError>`
+
+Serializes an instance, or validates and serializes plain data, to JSON Feed text.
+`JSONFeedStringifyError` reports an extension holding a value JSON cannot represent, such as a
+`BigInt`.
 
 ### `feed.feed`
 
-The metadata, as a clone. Assigning a new `JSONFeed.Feed` replaces it and keeps the items.
+The metadata, as a clone.
+
+### `feed.setFeed(feed: JSONFeed.Feed): Result<void, JSONFeedParseError>`
+
+Replaces the metadata and keeps the items. Fails without a `title`, leaving the feed unchanged.
 
 ### `feed.items`
 
@@ -98,9 +104,9 @@ The items, as clones, in the order they were added.
 
 The version URL the feed declares: the one a parsed document carried, or JSON Feed 1.1.
 
-### `feed.addItem(item: JSONFeed.Item): void`
+### `feed.addItem(item: JSONFeed.Item): Result<void, JSONFeedParseError>`
 
-Appends a clone of the item. Throws `JSONFeedParseError` without an `id`.
+Appends a clone of the item. Fails without an `id`, leaving the feed unchanged.
 
 ### `feed.removeItem(id: string): void`
 
@@ -109,10 +115,6 @@ Removes the item carrying that id.
 ### `feed.toJSON(): JSONFeed.Document`
 
 The JSON Feed document: format field names, in the format's order, empty fields omitted.
-
-### `feed.toString(): string`
-
-The document as JSON text.
 
 ### `JSONFeed.parse(source: string): Result<JSONFeed, JSONFeedParseError>`
 
@@ -136,15 +138,18 @@ The JSON Feed version URL a value declares, or `undefined` for any other JSON.
 
 `"application/feed+json"`.
 
-### `JSONFeedParseError`, `JSONFeedFetchError`
+### `JSONFeedParseError`, `JSONFeedFetchError`, `JSONFeedStringifyError`
 
 `JSONFeedParseError` reports a value that is not a usable feed, or a missing `title`/`id` when
 building. `JSONFeedFetchError` reports a request that failed or answered a non-`ok` status.
+`JSONFeedStringifyError` reports data JSON cannot represent.
 
 ### Types
 
 - `JSONFeed.Feed`, `JSONFeed.Item`, `JSONFeed.Author`, `JSONFeed.Attachment`, `JSONFeed.Hub`: a
   feed as this package holds it, camelCase. `Feed` and `Item` accept extension keys.
+- `JSONFeed.Data`: `{ feed: JSONFeed.Feed; items: JSONFeed.Item[] }`, what `from` and `stringify`
+  accept.
 - `JSONFeed.ExtensionKey`: `` `_${string}` ``, the name of a publisher extension.
 - `JSONFeed.Document`, `JSONFeed.DocumentItem`, `JSONFeed.DocumentAttachment`: the feed as JSON
   Feed writes it, which is what `toJSON` returns.
@@ -155,33 +160,38 @@ Attachments carry the episode files; hubs let readers subscribe to change notifi
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
+import { isFailure } from "@sdxc/result";
 
-let feed = new JSONFeed({
-	title: "The Weekly Show",
-	homePageUrl: "https://podcast.example.com",
-	feedUrl: "https://podcast.example.com/feed.json",
-	icon: "https://podcast.example.com/icon.png",
-	favicon: "https://podcast.example.com/favicon.png",
-	hubs: [{ type: "WebSub", url: "https://hub.example.com" }],
-});
-
-feed.addItem({
-	id: "episode-1",
-	title: "Episode 1",
-	contentText: "Show notes for the first episode.",
-	image: "https://podcast.example.com/episode-1.jpg",
-	datePublished: "2026-02-07T14:04:00-05:00",
-	attachments: [
+let json = JSONFeed.stringify({
+	feed: {
+		title: "The Weekly Show",
+		homePageUrl: "https://podcast.example.com",
+		feedUrl: "https://podcast.example.com/feed.json",
+		icon: "https://podcast.example.com/icon.png",
+		favicon: "https://podcast.example.com/favicon.png",
+		hubs: [{ type: "WebSub", url: "https://hub.example.com" }],
+	},
+	items: [
 		{
-			url: "https://podcast.example.com/episode-1.mp3",
-			mimeType: "audio/mpeg",
-			sizeInBytes: 48_000_000,
-			durationInSeconds: 3_600,
+			id: "episode-1",
+			title: "Episode 1",
+			contentText: "Show notes for the first episode.",
+			image: "https://podcast.example.com/episode-1.jpg",
+			datePublished: "2026-02-07T14:04:00-05:00",
+			attachments: [
+				{
+					url: "https://podcast.example.com/episode-1.mp3",
+					mimeType: "audio/mpeg",
+					sizeInBytes: 48_000_000,
+					durationInSeconds: 3_600,
+				},
+			],
 		},
 	],
 });
+if (isFailure(json)) throw json.error;
 
-let response = new Response(feed.toString(), {
+let response = new Response(json.data, {
 	headers: { "content-type": JSONFeed.mediaType },
 });
 ```
@@ -194,14 +204,19 @@ Any field whose name starts with an underscore is written as-is and read back un
 import { JSONFeed } from "@sdxc/json-feed";
 import { isFailure } from "@sdxc/result";
 
-let feed = new JSONFeed({
-	title: "The Record",
-	_blue_shed: { about: "https://blueshed-podcasts.com/json-feed-extension-docs", explicit: false },
+let json = JSONFeed.stringify({
+	feed: {
+		title: "The Record",
+		_blue_shed: {
+			about: "https://blueshed-podcasts.com/json-feed-extension-docs",
+			explicit: false,
+		},
+	},
+	items: [{ id: "1", contentText: "Episode one", _blue_shed: { season: 1 } }],
 });
+if (isFailure(json)) throw json.error;
 
-feed.addItem({ id: "1", contentText: "Episode one", _blue_shed: { season: 1 } });
-
-let result = JSONFeed.parse(feed.toString());
+let result = JSONFeed.parse(json.data);
 if (isFailure(result)) throw result.error;
 
 result.data.feed["_blue_shed"]; // { about: "…", explicit: false }
@@ -257,11 +272,12 @@ let result = JSONFeed.parse(stored);
 if (isFailure(result)) throw result.error;
 
 let feed = result.data;
-feed.feed = { ...feed.feed, expired: true };
+let replaced = feed.setFeed({ ...feed.feed, expired: true });
+if (isFailure(replaced)) throw replaced.error;
 feed.removeItem("https://example.com/posts/retracted");
 
 feed.version; // "https://jsonfeed.org/version/1" when the source was 1.0
-let updated = feed.toString();
+let updated = JSONFeed.stringify(feed);
 ```
 
 ## Versioning

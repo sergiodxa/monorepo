@@ -6,14 +6,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { JSONFeed, JSONFeedFetchError, JSONFeedParseError } from "./index.js";
+import {
+	JSONFeed,
+	JSONFeedFetchError,
+	JSONFeedParseError,
+	JSONFeedStringifyError,
+} from "./index.js";
 
 let FEED_URL = "https://example.com/feed.json";
+
+/** Builds a feed holding `feed` and no items. */
+function create(feed: JSONFeed.Feed): JSONFeed {
+	return unwrap(JSONFeed.from({ feed, items: [] }));
+}
 
 let server = setupServer();
 
@@ -70,9 +80,9 @@ let FULL_SPEC_DOCUMENT = {
 
 describe("JSONFeed", () => {
 	test("builds a feed and writes the version the package implements", () => {
-		let feed = new JSONFeed({ title: "My Blog" });
+		let feed = create({ title: "My Blog" });
 
-		feed.addItem({ id: "1", contentText: "Cats are neat." });
+		unwrap(feed.addItem({ id: "1", contentText: "Cats are neat." }));
 
 		expect(feed.version).toBe("https://jsonfeed.org/version/1.1");
 		expect(feed.toJSON()).toEqual({
@@ -83,14 +93,14 @@ describe("JSONFeed", () => {
 	});
 
 	test("writes the fields in the order the format lists them", () => {
-		let feed = new JSONFeed({ title: "My Blog", homePageUrl: "https://example.com" });
-		feed.addItem({ id: "1", contentText: "Hi" });
+		let feed = create({ title: "My Blog", homePageUrl: "https://example.com" });
+		unwrap(feed.addItem({ id: "1", contentText: "Hi" }));
 
 		expect(Object.keys(feed.toJSON())).toEqual(["version", "title", "home_page_url", "items"]);
 	});
 
 	test("leaves out the fields a feed never filled in", () => {
-		let feed = new JSONFeed({ title: "My Blog", description: "", authors: [] });
+		let feed = create({ title: "My Blog", description: "", authors: [] });
 
 		expect(feed.toJSON()).toEqual({
 			version: "https://jsonfeed.org/version/1.1",
@@ -99,20 +109,31 @@ describe("JSONFeed", () => {
 		});
 	});
 
-	test("requires a title", () => {
-		expect(() => new JSONFeed({ title: "" })).toThrow(JSONFeedParseError);
-		expect(() => new JSONFeed({ title: "" })).toThrow("Feed must include a title.");
+	test("refuses plain data whose feed lacks a title or whose item lacks an id", () => {
+		let untitled = JSONFeed.from({ feed: { title: "" }, items: [] });
+		let anonymous = JSONFeed.from({ feed: { title: "My Blog" }, items: [{ id: "1" }, { id: "" }] });
+
+		expect(isFailure(untitled) && untitled.error).toEqual(
+			new JSONFeedParseError("Feed must include a title."),
+		);
+		expect(isFailure(anonymous) && anonymous.error).toEqual(
+			new JSONFeedParseError("Item must include an id."),
+		);
 	});
 
-	test("requires an item id", () => {
-		let feed = new JSONFeed({ title: "My Blog" });
+	test("refuses an item without an id and keeps the items it had", () => {
+		let feed = create({ title: "My Blog" });
+		let result = feed.addItem({ id: "", contentText: "Hi" });
 
-		expect(() => feed.addItem({ id: "", contentText: "Hi" })).toThrow("Item must include an id.");
+		expect(isFailure(result) && result.error).toEqual(
+			new JSONFeedParseError("Item must include an id."),
+		);
+		expect(feed.items).toEqual([]);
 	});
 
 	test("hands back clones, so a caller cannot reach into the instance", () => {
-		let feed = new JSONFeed({ title: "My Blog", authors: [{ name: "Jane" }] });
-		feed.addItem({ id: "1", title: "Post", tags: ["one"] });
+		let feed = create({ title: "My Blog", authors: [{ name: "Jane" }] });
+		unwrap(feed.addItem({ id: "1", title: "Post", tags: ["one"] }));
 
 		let metadata = feed.feed;
 		let [author] = metadata.authors ?? [];
@@ -126,19 +147,22 @@ describe("JSONFeed", () => {
 	});
 
 	test("replaces the metadata and keeps the items", () => {
-		let feed = new JSONFeed({ title: "My Blog" });
-		feed.addItem({ id: "1", contentText: "Hi" });
+		let feed = create({ title: "My Blog" });
+		unwrap(feed.addItem({ id: "1", contentText: "Hi" }));
 
-		feed.feed = { ...feed.feed, language: "en-US" };
+		unwrap(feed.setFeed({ ...feed.feed, language: "en-US" }));
+		let refused = feed.setFeed({ ...feed.feed, title: "" });
 
+		expect(isFailure(refused) && refused.error.message).toBe("Feed must include a title.");
 		expect(feed.feed.language).toBe("en-US");
+		expect(feed.feed.title).toBe("My Blog");
 		expect(feed.items).toHaveLength(1);
 	});
 
 	test("removes the item carrying an id", () => {
-		let feed = new JSONFeed({ title: "My Blog" });
-		feed.addItem({ id: "1", contentText: "One" });
-		feed.addItem({ id: "2", contentText: "Two" });
+		let feed = create({ title: "My Blog" });
+		unwrap(feed.addItem({ id: "1", contentText: "One" }));
+		unwrap(feed.addItem({ id: "2", contentText: "Two" }));
 
 		feed.removeItem("1");
 		feed.removeItem("missing");
@@ -163,10 +187,10 @@ describe("JSONFeed", () => {
 	});
 
 	test("serializes to text a reader can parse back", () => {
-		let feed = new JSONFeed({ title: "My Blog", homePageUrl: "https://example.com" });
-		feed.addItem({ id: "1", contentHtml: "<p>Hello</p>" });
+		let feed = create({ title: "My Blog", homePageUrl: "https://example.com" });
+		unwrap(feed.addItem({ id: "1", contentHtml: "<p>Hello</p>" }));
 
-		expect(JSON.parse(feed.toString())).toEqual({
+		expect(JSON.parse(unwrap(JSONFeed.stringify(feed)))).toEqual({
 			version: "https://jsonfeed.org/version/1.1",
 			title: "My Blog",
 			home_page_url: "https://example.com",
@@ -174,8 +198,22 @@ describe("JSONFeed", () => {
 		});
 	});
 
+	test("writes plain data in one call, refusing data that lacks a required field", () => {
+		let written = JSONFeed.stringify({ feed: { title: "My Blog" }, items: [{ id: "1" }] });
+		let refused = JSONFeed.stringify({ feed: { title: "My Blog" }, items: [{ id: "" }] });
+
+		expect(unwrap(JSONFeed.parse(unwrap(written))).items).toEqual([{ id: "1" }]);
+		expect(isFailure(refused) && refused.error).toBeInstanceOf(JSONFeedParseError);
+	});
+
+	test("reports an extension JSON cannot represent as a stringify failure", () => {
+		let result = JSONFeed.stringify({ feed: { title: "My Blog", _count: 1n }, items: [] });
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(JSONFeedStringifyError);
+	});
+
 	test("pretty-prints through JSON.stringify, since toJSON writes the document", () => {
-		let feed = new JSONFeed({ title: "My Blog" });
+		let feed = create({ title: "My Blog" });
 
 		expect(JSON.stringify(feed, null, "\t")).toContain('\n\t"title": "My Blog"');
 	});

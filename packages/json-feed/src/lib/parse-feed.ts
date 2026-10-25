@@ -26,19 +26,13 @@ import {
 	readStringArray,
 } from "./utils.js";
 
-/** A document read apart into the metadata a feed holds and the items it lists. */
-export interface ParsedFeed {
-	feed: JSONFeed.Feed;
-	items: JSONFeed.Item[];
-}
-
 /**
  * Reads one JSON value as a JSON Feed document.
  *
  * @param value - The parsed JSON value
  * @returns The metadata and items, or the reason the value is not a feed
  */
-export function parseFeed(value: unknown): Result<ParsedFeed, JSONFeedParseError> {
+export function parseFeed(value: unknown): Result<JSONFeed.Data, JSONFeedParseError> {
 	if (!isRecord(value)) {
 		return failure(new JSONFeedParseError("Expected a JSON Feed object."));
 	}
