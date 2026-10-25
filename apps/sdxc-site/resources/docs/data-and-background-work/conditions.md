@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 10
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to define a condition dialect once with `@sdxc/expression`"
     - "How to accept a rule as text or JSON and refuse a broken one with its path"
@@ -321,7 +321,9 @@ export function alertContext(result: CheckResult): Context {
 
 Listing the fields keeps a rule from reading a column you never meant to expose, and a
 `Date` stays a value rather than an object to walk into. A path that resolves to nothing
-makes every operator false except `exists`, so a misspelled field never matches everyone.
+makes every operator false except `exists`, so a misspelled field never matches everyone. A
+rule that must fail closed instead, such as one granting access, belongs in a language created
+with `strict: true`, whose `evaluate` answers a `Result` naming the missing path.
 When code beside a rule reads a field the author named, such as a `groupBy` path deciding
 which alerts collapse into one, `read(context, rule.groupBy)` from `@sdxc/expression`
 resolves it exactly the way a condition would.
@@ -436,9 +438,5 @@ as a cycle or a rule naming `matches`, so a change to the dialect fails here fir
   the same conditions.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — sampling, and the
   `keep` exemption.
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the form
-  and body validation the rule endpoints build on.
-- [Standard Schema validation](/docs/conventions/standard-schema-validation) — why the
-  language's `schema` fits inside any body schema.
-- [Result everywhere](/docs/conventions/result-everywhere) — the `Result` every step of the
-  language answers with.
+- [`@sdxc/expression`](/api/expression) — strict languages, `paths`, and every built-in
+  operator.
