@@ -135,6 +135,9 @@ It returns a promise of the result when any handler is asynchronous.
 Merges visitors into one. Handlers for the same node type run in order, each on the node the
 previous one returned.
 
+A parent's handlers all run before the walk reaches its children, so text one visitor produces
+inside a node, such as a value `variables()` fills, reaches the others only in a later walk.
+
 #### `MarkdownParseError`, `MarkdownStringifyError`, `MarkdownWalkError`
 
 The failures. `MarkdownParseError` carries the `position` and any schema `issues`;

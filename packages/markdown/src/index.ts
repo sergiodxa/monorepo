@@ -116,7 +116,7 @@ export class Markdown {
 	 *
 	 * @param visitors - The visitors to merge, in the order their handlers run
 	 * @returns One visitor, asynchronous only when one of the handlers is
-	 * @example Markdown.walk(document, Markdown.compose(variables(values), headings()))
+	 * @example Markdown.walk(document, Markdown.compose(headings(), typography()))
 	 */
 	static compose<V extends Markdown.Visitor[]>(...visitors: V): Markdown.Composed<V> {
 		return composeVisitors(visitors) as Markdown.Composed<V>;
