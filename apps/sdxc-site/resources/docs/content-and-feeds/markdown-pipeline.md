@@ -114,7 +114,7 @@ Starter costs $9 a month. {/* TODO: confirm the annual discount */}
 ## Transform the tree in one walk
 
 `Markdown.walk` is the only transform. A visitor is a plain object with one handler per node
-type, so visitors merge by spread and a whole preparation runs as a single pass. `highlight`
+type, and `Markdown.compose` merges several so a whole preparation runs as a single pass. `highlight`
 from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding one `code`
 handler that attaches the painted tokens to each fence, and the plugins that ship with
 `@sdxc/markdown` are built the same way.
@@ -128,11 +128,10 @@ import { links } from "@sdxc/markdown/plugin/links";
 const SITE_ORIGIN = "https://example.com/";
 
 export function preparePost(document: Markdown.Document) {
-	return Markdown.walk(document, {
-		...highlight,
-		...headings(),
-		...links({ base: SITE_ORIGIN }),
-	});
+	return Markdown.walk(
+		document,
+		Markdown.compose(highlight, headings(), links({ base: SITE_ORIGIN })),
+	);
 }
 ```
 
@@ -146,11 +145,10 @@ the same document is rendered into a feed, where a reader resolves `/posts/…` 
 wrong origin.
 
 What a handler returns decides the node's fate: a node replaces it, `null` removes it, and
-returning nothing leaves it alone. The three visitors spread into one object because each
-handles node types the others leave alone.
+returning nothing leaves it alone. Handlers for the same node type run in the order the
+visitors are listed, each on the node the one before returned.
 [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) covers the other
-plugins, the order to run them in, and the ones that share a node type and so take a walk of
-their own.
+plugins and the order to list them in.
 
 Every handler here is synchronous, so the walk answers with a `Result` rather than a promise.
 A handler that throws lands on the failure branch with the node's position attached, which is

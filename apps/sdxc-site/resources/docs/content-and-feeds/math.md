@@ -117,9 +117,8 @@ The sum of the first $`n`$ integers is:
 ```
 
 `math` from `@sdxc/math/markdown` is a walk visitor. It turns each form into a `math` tag
-carrying `tex` and `display` attributes and leaves every other code block alone. Its handlers
-are synchronous, so it spreads into the same single walk as the rest of your preparation and
-the walk still answers with a `Result`:
+carrying `tex` and `display` attributes and leaves every other code block alone, so it composes
+with a highlighter in one walk:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
@@ -127,26 +126,14 @@ import { Markdown } from "@sdxc/markdown";
 import { math } from "@sdxc/math/markdown";
 
 export function preparePost(document: Markdown.Document) {
-	return Markdown.walk(document, {
-		...math,
-		code(node) {
-			let converted = math.code(node);
-			if (converted.type !== "code") return converted;
-			return highlight.code(converted);
-		},
-	});
+	return Markdown.walk(document, Markdown.compose(math, highlight));
 }
 ```
 
-<warning>
-Both visitors handle fenced code, and a spread keeps only the last `code` handler. Spreading
-`highlight` beside `math` drops one of them, so the walk gets a `code` handler that runs both.
-</warning>
-
-The handler above runs them in turn: a `math` fence becomes a tag, and every other block
-comes back from `math.code` as the same node for the highlighter to paint. The rest of the
-math visitor spreads in as it is, covering inline math in paragraphs, headings, table cells,
-emphasis and links.
+`Markdown.compose` runs the `code` handlers in order: a `math` fence becomes a tag, which ends
+its chain, and every other block reaches the highlighter as the code node it was. The rest of
+the math visitor covers inline math in paragraphs, headings, table cells, emphasis and links.
+Its handlers are synchronous, so the walk answers with a `Result`.
 
 A formula that does not convert fails the walk. The failure's `position` is where the fence
 or inline code sits in the document, and its `cause` is the `MathError` with the place inside
@@ -242,8 +229,8 @@ the item for the ones that show source.
 
 ## Test it
 
-The combined `code` handler is the part of the preparation you wrote, and the check is what
-fails a broken post, so test both:
+The order of the visitors decides which `code` handler sees a fence first, and the check is
+what fails a broken post, so test both:
 
 ```typescript {% title="app/services/content/prepare.test.ts" %}
 import { Markdown } from "@sdxc/markdown";

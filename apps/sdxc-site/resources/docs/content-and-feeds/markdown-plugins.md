@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to give headings anchors and build a table of contents"
     - "How to rewrite links, set typographic punctuation and turn pasted URLs into embeds"
@@ -17,7 +17,7 @@ run over that tree as plugins: anchors and a table of contents for headings, lin
 typographic punctuation, embeds made from pasted URLs, and a linter that reports what an
 author got wrong with the line to fix. Each one is a visitor for `Markdown.walk`, built by a
 function you call with its options, so a plugin composes with the visitors you write yourself
-and with [`@sdxc/highlight`](/api/highlight).
+and with [`@sdxc/highlight`](/api/highlight) into a single walk.
 
 This guide picks up where [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline)
 leaves off: posts are parsed per request with a shared `MARKDOWN_OPTIONS`, and a
@@ -39,14 +39,9 @@ Every plugin lives at its own subpath, so a page imports only the passes it runs
 | `typography()` | `@sdxc/markdown/plugin/typography` | `paragraph`, `heading`, `tableCell`, `tag`, `element` |
 | `lint()`       | `@sdxc/markdown/plugin/lint`       | reads a document and returns its problems             |
 
-Visitors whose node types are disjoint spread into one object and run as a single pass.
-
-<warning>
-Two visitors that handle the same node type take a walk each. A spread keeps only the last
-handler for a key, so spreading them together silently drops the first one's work.
-</warning>
-
-That gives a post three walks, in this order:
+`Markdown.compose` merges visitors into one, so every pass runs in a single walk. Handlers for
+the same node type run in the order you list the visitors, each on the node the one before it
+returned, and a handler that turns the node into another type ends its chain:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
@@ -55,30 +50,32 @@ import { embeds, gist, vimeo, youtube } from "@sdxc/markdown/plugin/embeds";
 import { headings } from "@sdxc/markdown/plugin/headings";
 import { links } from "@sdxc/markdown/plugin/links";
 import { typography } from "@sdxc/markdown/plugin/typography";
-import { isFailure } from "@sdxc/result";
 
 const SITE_ORIGIN = "https://example.com/";
 
 export function preparePost(document: Markdown.Document) {
-	let embedded = Markdown.walk(document, embeds([youtube(), vimeo(), gist()]));
-	if (isFailure(embedded)) return embedded;
-
-	let anchored = Markdown.walk(embedded.data, {
-		...highlight,
-		...headings(),
-		...links({ base: SITE_ORIGIN }),
-	});
-	if (isFailure(anchored)) return anchored;
-
-	return Markdown.walk(anchored.data, typography());
+	return Markdown.walk(
+		document,
+		Markdown.compose(
+			embeds([youtube(), vimeo(), gist()]),
+			highlight,
+			headings(),
+			links({ base: SITE_ORIGIN }),
+			typography(),
+		),
+	);
 }
 ```
 
 Embeds go first, so a pasted video URL becomes a tag before anything else reads it as a link.
 Headings take their ids before typography curls the quotes in their text, so a heading's id is
 the slug of what the author typed, which is also what the linter resolves `#fragment` links
-against. Every plugin is synchronous, so each walk answers with a `Result` you check and pass
-on.
+against. Every plugin is synchronous, so the walk answers with a `Result`.
+
+<warning>
+Merge visitors with `Markdown.compose`. An object spread keeps only the last handler for each
+key, so of two visitors that both handle `paragraph` or `heading`, only the second one runs.
+</warning>
 
 ## Anchor headings and build a table of contents
 
@@ -182,8 +179,8 @@ in backticks stays one a reader can copy.
 
 Each paragraph, heading, table cell, and block-level tag or element is set as one run, so a
 quote is decided by the characters around it even across formatting: in `"**Ship it**"` the
-first quote opens before the bold text and the second closes after it. A `'` inside a word (`don't`) or ahead of
-an elided year (`'90s`) is an apostrophe.
+first quote opens before the bold text and the second closes after it. A `'` inside a word
+(`don't`) or ahead of an elided year (`'90s`) is an apostrophe.
 
 A locale that writes other marks passes them as pairs, and each of the three rules can be turned
 off on its own:
@@ -272,7 +269,7 @@ export const CODEPEN: EmbedProvider = {
 
 ## Test the order
 
-The order of the walks is the part of `preparePost` a later edit can break without any one
+The order of the visitors is the part of `preparePost` a later edit can break without any one
 plugin failing, so pin it with a test: a pasted URL becomes an embed, and a heading keeps the
 id of what its author typed while its quotes curl:
 
