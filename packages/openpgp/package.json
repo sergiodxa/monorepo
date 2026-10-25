@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/openpgp",
+	"version": "0.0.1",
+	"description": "OpenPGP (RFC 9580) signing and verification on Web Crypto: armor, keys, cleartext and detached signatures",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

@@ -1241,7 +1241,6 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
-        "@sdxc/json-canonical": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -1715,6 +1714,14 @@
         "remix": "3.1.0",
       },
     },
+    "packages/openpgp": {
+      "name": "@sdxc/openpgp",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/opml": {
       "name": "@sdxc/opml",
       "version": "0.0.1",
@@ -1991,7 +1998,6 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/catch-response-middleware": "workspace:*",
-        "@sdxc/cbor": "workspace:*",
         "@sdxc/cli": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
         "@sdxc/codemod": "workspace:*",
@@ -2080,7 +2086,6 @@
         "@sdxc/saml": "workspace:*",
         "@sdxc/sample": "workspace:*",
         "@sdxc/scim": "workspace:*",
-        "@sdxc/scitt": "workspace:*",
         "@sdxc/search": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/semver": "workspace:*",
@@ -3259,6 +3264,8 @@
     "@sdxc/no-www-middleware": ["@sdxc/no-www-middleware@workspace:packages/no-www-middleware"],
 
     "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
+
+    "@sdxc/openpgp": ["@sdxc/openpgp@workspace:packages/openpgp"],
 
     "@sdxc/opml": ["@sdxc/opml@workspace:packages/opml"],
 
