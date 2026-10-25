@@ -24,3 +24,17 @@ export const env = {
 	TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
 	TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
 } as Partial<Cloudflare.Env> as Cloudflare.Env;
+
+/**
+ * The base class a Durable Object extends, holding the state and `env` it is constructed with,
+ * so a test builds one with `createDurableObjectState()` from `@sdxc/cloudflare-mocks`.
+ */
+export class DurableObject<Env = Cloudflare.Env> {
+	ctx: DurableObjectState;
+	env: Env;
+
+	constructor(ctx: DurableObjectState, env: Env) {
+		this.ctx = ctx;
+		this.env = env;
+	}
+}
