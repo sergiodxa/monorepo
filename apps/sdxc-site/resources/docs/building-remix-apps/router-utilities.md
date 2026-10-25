@@ -366,24 +366,26 @@ export const quota: Middleware = async (ctx, next) => {
 			? json({ error: "Quota exceeded" }, { status: 429 })
 			: await next();
 
-	let field = {
-		limit: usage.limit,
-		remaining: Math.max(0, usage.remaining),
-		reset: usage.resetSeconds,
-	};
-	setField(response.headers, "RateLimit", field, "dictionary");
+	let field = [
+		{
+			value: "default",
+			params: { r: Math.max(0, usage.remaining), t: usage.resetSeconds },
+		},
+	];
+	setField(response.headers, "RateLimit", field, "list");
 	return response;
 };
 ```
 
 `setField` serializes the value to the field's canonical text,
-`RateLimit: limit=100, remaining=0, reset=30`, and replaces any earlier value. An integer
+`RateLimit: "default";r=0;t=30`, and replaces any earlier value. An integer
 writes as an Integer and any other number as a Decimal; a string writes quoted, and a member
 whose value is `true` writes as its bare key. It returns a `Result`: a value with no
 representation, such as a string outside printable ASCII, fails with a
 `StructuredFieldStringifyError` naming its `path`, and leaves the headers as they were.
-`Quotas.consume` is your own counter, returning the limit, what remains, and the seconds until
-the window resets.
+`Quotas.consume` is your own counter, returning what remains and the seconds until the window
+resets. [`@sdxc/rate-limit`](/api/rate-limit) writes this field, and the `RateLimit-Policy`
+beside it, for you.
 
 `servedFromCache` is a plain function of a response, so its test builds one with the header a
 CDN writes:

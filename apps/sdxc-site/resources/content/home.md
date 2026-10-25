@@ -253,7 +253,7 @@ export async function spend(adapter: Adapter, key: string) {
 	}
 	if (result.data.allowed) return null;
 
-	return tooManyRequests(result.data, adapter.window, JSON.stringify({ error: "rate_limited" }), {
+	return tooManyRequests(result.data, adapter, JSON.stringify({ error: "rate_limited" }), {
 		headers: { "Content-Type": "application/json" },
 	});
 }
