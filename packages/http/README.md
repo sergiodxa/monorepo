@@ -3,8 +3,8 @@
 Response builders, content negotiation, and HTTP caching for the Fetch API.
 
 Each concern is its own entry point — status codes, content types, response builders,
-`Accept` negotiation, `Cache-Control` and validators, and `HEAD` middleware — so a handler
-imports only the surface it uses.
+`Accept` negotiation, `Cache-Control` and validators, deprecation notices, and `HEAD`
+middleware — so a handler imports only the surface it uses.
 
 ## Installation
 
@@ -16,6 +16,8 @@ It installs alongside [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/resul
 `Result` that `etag` and `precondition` answer),
 [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) (cache ages),
 [`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto),
+[`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields),
+[`@sdxc/link-header`](https://www.npmjs.com/package/@sdxc/link-header) (deprecation notices),
 [`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location) and
 [`remix`](https://www.npmjs.com/package/remix) (typed headers and the router).
 
@@ -241,6 +243,26 @@ list.preferred("application/json", "text/html"); // "text/html"
 Calls the handler for the most preferred type, then `default`, then answers
 `406 Not Acceptable`. `respond.Handlers` holds an optional `() => Response` per shorthand
 plus `default`.
+
+### `@sdxc/http/deprecation`
+
+#### `setDeprecation(headers: Headers, notice: DeprecationNotice): Result<void, DeprecationNoticeError>`
+
+Writes the RFC 9745 `Deprecation` and RFC 8594 `Sunset` fields and their `deprecation` and
+`sunset` links, keeping the response's other links. Fails for a sunset earlier than the
+deprecation.
+
+```typescript
+setDeprecation(response.headers, {
+	deprecation: new Date("2026-12-01T00:00:00Z"),
+	sunset: new Date("2027-06-01T00:00:00Z"),
+	deprecationLink: "https://example.com/changelog",
+});
+```
+
+#### `getDeprecation(headers: Headers): DeprecationNotice | null`
+
+Reads the notice back on the client, leaving out any field that does not parse.
 
 ### `@sdxc/http/cache`
 

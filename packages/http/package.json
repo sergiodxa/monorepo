@@ -11,6 +11,7 @@
 		"./response/json": "./src/response/json.ts",
 		"./response/html": "./src/response/html.ts",
 		"./negotiate": "./src/negotiate.ts",
+		"./deprecation": "./src/deprecation.ts",
 		"./cache": "./src/cache/index.ts",
 		"./middleware/head-requests": "./src/middleware/head-requests.ts"
 	},
@@ -20,8 +21,10 @@
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/link-header": "workspace:*",
 		"@sdxc/location": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"@sdxc/structured-fields": "workspace:*"
 	},
 	"devDependencies": {
 		"remix": "3.1.0"

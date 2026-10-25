@@ -1138,8 +1138,10 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/link-header": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
       },
       "devDependencies": {
         "remix": "3.1.0",
