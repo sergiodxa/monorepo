@@ -5,11 +5,11 @@ section:
     title: HTTP APIs
     order: 5
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to parse and write RFC 8288 `Link` headers with `@sdxc/link-header`"
     - "How to merge headers without dropping foreign links"
-    - "How to follow `next` links as a client and drop malformed entries"
+    - "How to follow `next` links as a client and publish links as an RFC 9264 link set"
 ---
 
 A `Link` header is a list of URI-References with relation types and parameters. A target
@@ -97,9 +97,7 @@ export function setNextLink(headers: Headers, nextUrl: string) {
 }
 ```
 
-`paginate` from `@sdxc/pagination` does this for the four paging relations. `@sdxc/pagination`
-still re-exports `parse` as `parseLinkHeader`; import from `@sdxc/link-header` when the
-header is the work, not the page.
+`paginate` from `@sdxc/pagination` does this for the four paging relations.
 
 ## Follow next links as a client
 
@@ -114,7 +112,7 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 	let next: string | null = start;
 
 	while (next !== null) {
-		let response = await fetch(next);
+		let response: Response = await fetch(next);
 		items.push(...((await response.json()) as T[]));
 
 		let links = parse(response.headers.get("Link"));
@@ -130,6 +128,29 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 [Write a typed API client](/docs/http-apis/api-clients) does the same walk behind a schema
 on each page. When an API hands out a template such as `/books{?page}` rather than a finished
 link, [Expand URI templates](/docs/http-apis/uri-templates) fills it in.
+
+## Publish the links as a link set
+
+Every link makes the header longer, and proxies cap how long a header may be. RFC 9264 moves
+the same links into a document of their own, `application/linkset+json`, which a response
+points at with `rel="linkset"`. `@sdxc/link-header/linkset` reads a header into a flat list of
+links and writes that list in either link set form:
+
+```typescript {% title="app/services/linkset.ts" %}
+import { JSON_MEDIA_TYPE, parse, stringifyJson } from "@sdxc/link-header/linkset";
+
+export function linksetResponse(header: string | null, context: string): Response {
+	let links = parse(header, { context });
+	return new Response(stringifyJson(links), {
+		headers: { "Content-Type": JSON_MEDIA_TYPE },
+	});
+}
+```
+
+`context` is the URL the links describe: it fills each link's missing `anchor` and resolves
+relative targets, so the set keeps its meaning away from the response it came from.
+`parseJson` reads a set back as a `Result`, listing every member that breaks the RFC at a JSON
+Pointer, and `toHeader` turns the list into one `Link` value again.
 
 ## Test the merge
 
