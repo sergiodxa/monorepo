@@ -84,6 +84,8 @@ The prompt is Markdown, in this order:
 - `## Breaking changes`, `## Features` and `## Fixes`: each note in full, for the packages the
   code imports only. Notes with nothing for a consumer to do, such as docs and tests, stay in
   the GitHub Releases.
+- `## Corrected notes`: notes from releases you already had that a release you move across
+  [corrected](/docs/releases/corrected-release-notes), each with its replacement text.
 - `## Older releases`, linking the full notes of releases too old for the changelog the kit
   ships.
 - `## Vendored components`: copies made with [`sdxc ui add`](/docs/sdxc/copy-ui-components)

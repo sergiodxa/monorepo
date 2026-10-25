@@ -55,16 +55,11 @@ Each surface that shows release notes treats a correction differently:
   first, so you meet the replacement before the note it replaces.
 - **`sdxc upgrade`** shows the replacement in place of the original, under the original's
   summary and release, so the prompt your agent reads holds one current note for the change.
+  When your project already had the original's release, the prompt of the upgrade that crosses
+  the correction's release lists the replacement under `## Corrected notes`.
 
 When a note in an older release looks wrong, search the releases after it on the Changelog for
 an entry in the same package whose summary names it.
-
-<warning>
-`sdxc upgrade` covers the releases after your project's release, and it files a replaced note under
-the release of the original. When you already moved past that release, the next upgrade's prompt
-holds neither the original nor the correction, so read the correction in the GitHub Release of the
-day it shipped.
-</warning>
 
 ## Decide whether to act
 
@@ -75,8 +70,9 @@ you read the original:
 - **The correction says there is nothing to do**, as most do: it rewords the note, or replaces a
   note for an option that never shipped. Your code stays as it is.
 - **It corrects a breaking change's migration**, with a step that was missing or showed the wrong
-  code: when you migrated by the original, apply the steps it adds or changes. When you have not
-  taken that release yet, `sdxc upgrade` hands your agent the corrected steps directly.
+  code: when you migrated by the original, apply the steps it adds or changes. `sdxc upgrade`
+  hands your agent the corrected steps either way, as a breaking change when you have not taken
+  that release yet and under `## Corrected notes` when you have.
 - **It changes what a fix or feature says it does**: check your code against the described
   behavior where you rely on it.
 
