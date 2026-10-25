@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "What each `sdxc doctor` failure means and the command that fixes it"
     - "What to do when `sdxc make`, `sdxc run` or `sdxc deploy` stops"
@@ -25,7 +25,7 @@ for the first words of a message.
 The project's release is the newest date among its `@sdxc` pins, and these packages lag behind
 it. Mixed dates install two copies of a shared package, whose context keys and `instanceof`
 checks then stop matching. Run the `sdxc upgrade <release>` the line names, which moves every
-package to that one date.
+package to its newest version on or before that release.
 
 ### "N @sdxc packages are not pinned to a release"
 

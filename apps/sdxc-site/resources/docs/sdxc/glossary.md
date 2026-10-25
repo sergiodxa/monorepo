@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 12
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "What the words ability, grant and policy mean in sdxc"
     - "What the template terms initializer, kind, stub and seed refer to"
@@ -105,7 +105,7 @@ as each [copy](#copy) and the hashes of its files. You commit it.
 ## Pin
 
 An exact `@sdxc` version in `package.json`, such as `"2026.10.17"`, rather than a range. Every
-package in a project is pinned to one [release](#release).
+package in a project is pinned to its newest version on or before one [release](#release).
 [Install and pin](/docs/getting-started/install-and-pin)
 
 ## Policy
@@ -126,7 +126,8 @@ command runs there, so it works from any folder inside the project.
 
 ## Release
 
-One day's publish of the `@sdxc` packages, named for its date, such as `2026.10.17`. A project's
+One day's publish of the `@sdxc` packages that changed and the packages that depend on them, each
+versioned by its date, such as `2026.10.17`. A project's
 release is the newest date among its [pins](#pin). [Versioning](/docs/releases/versioning)
 
 ## Seed
