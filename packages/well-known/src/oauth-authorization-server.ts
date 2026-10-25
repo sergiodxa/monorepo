@@ -63,6 +63,10 @@ export interface AuthorizationServerMetadata<Extensions extends object = {}> {
 	authorizationResponseIssParameterSupported: boolean;
 	/** RFC 9728 §4. */
 	protectedResources: URL[];
+	/** RFC 9701 §7: the JWS algorithms a JWT introspection response is signed with. */
+	introspectionSigningAlgValuesSupported: string[];
+	/** RFC 9449 §5.1: the JWS algorithms a DPoP proof may be signed with. */
+	dpopSigningAlgValuesSupported: string[];
 	/** A JWT carrying the metadata, kept opaque. */
 	signedMetadata: string | null;
 	extensions: Extensions;

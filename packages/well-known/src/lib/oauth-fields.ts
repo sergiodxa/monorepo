@@ -75,6 +75,11 @@ export const AUTHORIZATION_SERVER_FIELDS = {
 		kind: "boolean",
 	},
 	protectedResources: { wire: "protected_resources", kind: "urls" },
+	introspectionSigningAlgValuesSupported: {
+		wire: "introspection_signing_alg_values_supported",
+		kind: "strings",
+	},
+	dpopSigningAlgValuesSupported: { wire: "dpop_signing_alg_values_supported", kind: "strings" },
 	signedMetadata: { wire: "signed_metadata", kind: "text" },
 } satisfies FieldTable;
 

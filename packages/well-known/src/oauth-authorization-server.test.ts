@@ -171,6 +171,26 @@ describe(stringify, () => {
 		});
 	});
 
+	test("writes the DPoP and JWT introspection algorithm lists", () => {
+		let metadata = define({
+			issuer: "https://as.example",
+			responseTypesSupported: ["code"],
+			dpopSigningAlgValuesSupported: ["ES256", "Ed25519"],
+			introspectionSigningAlgValuesSupported: ["ES256"],
+		});
+
+		expect(JSON.parse(stringify(metadata))).toEqual({
+			issuer: "https://as.example",
+			response_types_supported: ["code"],
+			dpop_signing_alg_values_supported: ["ES256", "Ed25519"],
+			introspection_signing_alg_values_supported: ["ES256"],
+		});
+		expect(unwrap(parse(stringify(metadata))).dpopSigningAlgValuesSupported).toEqual([
+			"ES256",
+			"Ed25519",
+		]);
+	});
+
 	test("writes a false request_uri_parameter_supported, since absent means true", () => {
 		let metadata = define({
 			issuer: "https://as.example",
