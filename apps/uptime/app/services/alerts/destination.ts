@@ -45,6 +45,10 @@ export function destinationFor(config: MessagingAlertConfig): Destination {
 				source: new URL(APP_ORIGIN).host,
 			});
 		case "webhook":
-			return new UptimeWebhook({ url: config.config.url, secret: config.config.secret });
+			return new UptimeWebhook({
+				url: config.config.url,
+				secret: config.config.secret,
+				signature: config.config.signature ?? "legacy",
+			});
 	}
 }

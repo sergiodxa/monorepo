@@ -192,6 +192,26 @@ describe("POST /actions/:team/create-alert", () => {
 		});
 	});
 
+	test("stores a new webhook alert on the scheme the form chose", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(createAlert, routes.actions.alert.create, team, membership, db, {
+			name: "Hook",
+			strategy: "webhook",
+			webhook_url: "https://hooks.acme-receiver.com/uptime",
+			webhook_secret: "shh",
+			webhook_signature: "legacy",
+		});
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "webhook",
+			config: { url: "https://hooks.acme-receiver.com/uptime", secret: "shh", signature: "legacy" },
+		});
+	});
+
 	test("refuses a slack webhook URL outside hooks.slack.com, creating no row", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

@@ -2874,10 +2874,19 @@ export default {
 								label: "Secret de signature (optionnel)",
 								placeholder: "secret-optionnel",
 								description:
-									"Un secret optionnel à inclure dans les en-têtes de la requête. Un en-tête `Webhook-Signature` sera ajouté avec une signature HMAC SHA256 de la charge utile utilisant ce secret.",
+									"Un secret optionnel qui signe chaque requête, pour que votre endpoint puisse vérifier qu'elle provient d'Uptime.",
+							},
+							signature: {
+								label: "Schéma de signature",
+								options: {
+									"standard-webhooks": "Standard Webhooks",
+									legacy: "Ancien (Webhook-Signature: sha256)",
+								},
 							},
 							signatureNote:
-								"Lorsqu'il est défini, les requêtes portent un en-tête {#code}Webhook-Signature: sha256=<hex>{/code} — un HMAC-SHA256 du corps JSON brut utilisant ce secret.",
+								"Standard Webhooks envoie {#code}webhook-id{/code}, {#code}webhook-timestamp{/code} et {#code}webhook-signature: v1,<base64>{/code}, vérifiables avec n'importe quelle bibliothèque Standard Webhooks. L'ancien schéma envoie {#code}Webhook-Signature: sha256=<hex>{/code}, un HMAC-SHA256 du corps JSON brut. Les deux utilisent le même nom d'en-tête, donc chaque requête en porte un seul.",
+							standardSecret:
+								"Secret Standard Webhooks pour votre récepteur : {#code}{$secret}{/code}",
 						},
 						email: {
 							to: {

@@ -5,7 +5,7 @@ section:
   title: Concepts
   order: 2
 order: 7
-lastUpdated: 2026-08-04
+lastUpdated: 2026-10-24
 ---
 
 When a monitor detects an issue—a website goes down, an API returns errors, a cron job misses its schedule—alerts deliver that information to the right people through the right channels.
@@ -61,6 +61,7 @@ Webhooks send HTTP POST requests to your endpoint when alerts trigger. This is t
 
 - **URL** — Your endpoint that will receive the POST request
 - **Secret** (optional) — A shared secret used to sign requests, allowing you to verify they came from Uptime
+- **Signature scheme** — How requests are signed: **Standard Webhooks** (the default for new alerts) or **Legacy**
 
 When an alert fires, Uptime sends a JSON payload containing:
 
@@ -69,7 +70,108 @@ When an alert fires, Uptime sends a JSON payload containing:
 - Timestamp
 - Additional context based on monitor type
 
-If you configure a secret, Uptime includes a signature header that you can use to verify the request's authenticity. This prevents malicious actors from spoofing alert notifications.
+If you configure a secret, Uptime signs every request so you can verify its authenticity. This prevents malicious actors from spoofing alert notifications.
+
+#### Verifying Webhook Signatures
+
+With the **Standard Webhooks** scheme, each request carries the three headers defined by [Standard Webhooks](https://www.standardwebhooks.com/):
+
+- `webhook-id` — The delivery's id. Retries of one notification reuse it, so you can drop duplicates.
+- `webhook-timestamp` — When the request was signed, in seconds since the epoch.
+- `webhook-signature` — `v1,` followed by the base64 HMAC-SHA256 of `webhook-id.webhook-timestamp.body`.
+
+Any Standard Webhooks library verifies these. It takes a secret written as `whsec_` plus base64, which the alert form shows under the signature scheme once the alert is saved. A secret you entered in that form already is used as it is; any other secret becomes `whsec_` followed by the secret in base64.
+
+In Node.js with the [`standardwebhooks`](https://www.npmjs.com/package/standardwebhooks) package:
+
+```typescript
+import { Webhook } from "standardwebhooks";
+
+let webhook = new Webhook(process.env.UPTIME_WEBHOOK_SECRET); // "whsec_…"
+
+export async function handle(request: Request): Promise<Response> {
+	let body = await request.text();
+	try {
+		let alert = webhook.verify(body, Object.fromEntries(request.headers));
+		await processAlert(alert);
+		return new Response(null, { status: 204 });
+	} catch {
+		return new Response(null, { status: 401 });
+	}
+}
+```
+
+Libraries for Python, Go, Ruby, PHP, Java, Rust and more are listed on [standardwebhooks.com](https://www.standardwebhooks.com/). They also reject a request whose timestamp is more than five minutes away from your clock, which stops a captured request from being replayed later.
+
+Without a library, verify with Web Crypto, comparing in constant time:
+
+```typescript
+async function verifyStandardWebhook(request: Request, secret: string) {
+	let id = request.headers.get("webhook-id");
+	let timestamp = request.headers.get("webhook-timestamp");
+	let signatures = request.headers.get("webhook-signature") ?? "";
+	if (!id || !timestamp) return null;
+	if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return null;
+
+	let body = await request.text();
+	let keyBytes = Uint8Array.from(atob(secret.replace(/^whsec_/, "")), (c) => c.charCodeAt(0));
+	let key = await crypto.subtle.importKey(
+		"raw",
+		keyBytes,
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["verify"],
+	);
+
+	for (let entry of signatures.split(" ")) {
+		let [version, signature] = entry.split(",");
+		if (version !== "v1" || !signature) continue;
+		let mac = Uint8Array.from(atob(signature), (c) => c.charCodeAt(0));
+		let valid = await crypto.subtle.verify(
+			"HMAC",
+			key,
+			mac,
+			new TextEncoder().encode(`${id}.${timestamp}.${body}`),
+		);
+		if (valid) return JSON.parse(body);
+	}
+	return null;
+}
+```
+
+With the **Legacy** scheme, each request carries `Webhook-Signature: sha256=<hex>`, the hex HMAC-SHA256 of the raw body keyed by the secret exactly as you entered it:
+
+```typescript
+async function verifyLegacyWebhook(request: Request, secret: string) {
+	let header = request.headers.get("webhook-signature") ?? "";
+	if (!header.startsWith("sha256=")) return null;
+
+	let body = await request.text();
+	let encoder = new TextEncoder();
+	let key = await crypto.subtle.importKey(
+		"raw",
+		encoder.encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["verify"],
+	);
+	let mac = Uint8Array.from(header.slice(7).match(/../g) ?? [], (byte) => parseInt(byte, 16));
+	let valid = await crypto.subtle.verify("HMAC", key, mac, encoder.encode(body));
+	return valid ? JSON.parse(body) : null;
+}
+```
+
+Both schemes send their signature in the header named `webhook-signature` (header names are case-insensitive), so a request carries exactly one of them. The legacy scheme covers only the body; Standard Webhooks also covers the delivery id and the time, which is what lets a receiver reject replays.
+
+#### Moving an Alert to Standard Webhooks
+
+Alerts created before Standard Webhooks signing existed keep the legacy signature until you switch them, so nothing changes for a receiver that is already in place. To switch one without dropping a notification:
+
+1. Update your receiver to accept either scheme for the moment: a `webhook-signature` value starting with `sha256=` is legacy, and anything else goes to your Standard Webhooks verifier.
+2. Edit the alert and change **Signature scheme** to **Standard Webhooks**, or send `{"signature": "standard-webhooks"}` in a [`PATCH`](/docs/api/resources/alerts#patch-apiv1alertsid).
+3. Once notifications arrive with the new headers, remove the legacy branch from your receiver.
+
+The legacy scheme is deprecated: plan to move every webhook alert to Standard Webhooks.
 
 Webhooks are ideal for:
 

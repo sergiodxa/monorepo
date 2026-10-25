@@ -12,6 +12,8 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
+import type { WebhookSignatureScheme } from "~/database/schema";
+
 import { deliverableAddress, isEmailAddress } from "~/app/http/validators/email-address";
 import { isDiscordWebhookUrl, isSlackWebhookUrl } from "~/app/http/validators/webhook-url";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
@@ -23,6 +25,12 @@ import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
 export const MAX_ROUTING_KEY_LENGTH = 255;
 
 const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord", "pagerduty"] as const;
+
+/** The signature schemes a webhook alert can sign with, in the order the form lists them. */
+export const WEBHOOK_SIGNATURE_SCHEMES = [
+	"standard-webhooks",
+	"legacy",
+] as const satisfies readonly WebhookSignatureScheme[];
 
 const isUrl = checks.url().check;
 
@@ -55,6 +63,8 @@ const alertFields = {
 	email_subject_prefix: f.field(s.optional(s.string())),
 	webhook_url: f.field(s.optional(s.string())),
 	webhook_secret: f.field(s.optional(s.string())),
+	/** A new alert signs with Standard Webhooks; an edit posts the scheme it was saved with. */
+	webhook_signature: f.field(s.defaulted(s.enum_(WEBHOOK_SIGNATURE_SCHEMES), "standard-webhooks")),
 	slack_webhook_url: f.field(s.optional(s.string())),
 	discord_webhook_url: f.field(s.optional(s.string())),
 	/** Trimmed, since a key pasted from PagerDuty's settings page often carries whitespace. */

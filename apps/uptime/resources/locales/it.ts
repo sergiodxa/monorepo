@@ -2860,10 +2860,19 @@ export default {
 								label: "Segreto di firma (opzionale)",
 								placeholder: "segreto-opzionale",
 								description:
-									"Un segreto opzionale da includere negli header della richiesta. Verrà aggiunto un header `Webhook-Signature` con una firma HMAC SHA256 del payload usando questo segreto.",
+									"Un segreto opzionale con cui viene firmata ogni richiesta, così il tuo endpoint può verificare che provenga da Uptime.",
+							},
+							signature: {
+								label: "Schema di firma",
+								options: {
+									"standard-webhooks": "Standard Webhooks",
+									legacy: "Legacy (Webhook-Signature: sha256)",
+								},
 							},
 							signatureNote:
-								"Se impostato, le richieste includono un header {#code}Webhook-Signature: sha256=<hex>{/code} — un HMAC-SHA256 del corpo JSON grezzo utilizzando questo segreto.",
+								"Standard Webhooks invia {#code}webhook-id{/code}, {#code}webhook-timestamp{/code} e {#code}webhook-signature: v1,<base64>{/code}, verificabili con qualsiasi libreria Standard Webhooks. Lo schema legacy invia {#code}Webhook-Signature: sha256=<hex>{/code}, un HMAC-SHA256 del corpo JSON grezzo. Entrambi usano lo stesso nome di header, quindi ogni richiesta ne porta uno.",
+							standardSecret:
+								"Segreto Standard Webhooks per il tuo ricevitore: {#code}{$secret}{/code}",
 						},
 						email: {
 							to: {

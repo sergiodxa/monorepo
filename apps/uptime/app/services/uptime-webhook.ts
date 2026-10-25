@@ -1,23 +1,57 @@
 /**
- * The webhook strategy's destination: posts the JSON body and `Webhook-Signature` header
- * customers verify today, so moving delivery onto `@sdxc/messaging` changes nothing on
- * their end. The body is rebuilt from the portable message's `data` and `text`.
+ * The webhook strategy's destination: posts uptime's JSON body, rebuilt from the portable
+ * message's `data` and `text`, signed with Standard Webhooks or, for an alert still on it,
+ * the `Webhook-Signature: sha256=<hex>` header receivers verified before.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Message, MessageData } from "@sdxc/messaging";
-import type { WebhookDelivery, WebhookSignContext } from "@sdxc/messaging/webhook";
+import type { WebhookDelivery, WebhookOptions, WebhookSignContext } from "@sdxc/messaging/webhook";
 import type { Result } from "@sdxc/result";
 
-import { Hex, hmac } from "@sdxc/crypto";
+import { Base64, Hex, hmac } from "@sdxc/crypto";
 import { MessagingError } from "@sdxc/messaging";
 import { Webhook } from "@sdxc/messaging/webhook";
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
+import type { WebhookSignatureScheme } from "~/database/schema";
+
 import { incidentNote, statusWord } from "~/app/services/alerts/message";
+
+/** The prefix Standard Webhooks puts on a base64 signing secret. */
+const STANDARD_SECRET_PREFIX = "whsec_";
+
+/**
+ * The secret a Standard Webhooks library verifies an alert's deliveries with. A secret
+ * already written as `whsec_<base64>` is used as it is; any other text is keyed by its
+ * UTF-8 bytes, which is `whsec_` followed by that text in base64.
+ *
+ * @param secret - The alert's signing secret as the customer saved it.
+ * @returns The `whsec_` secret to configure on the receiver.
+ * @example standardWebhooksSecret("shh"); // "whsec_c2ho"
+ */
+export function standardWebhooksSecret(secret: string): string {
+	if (secret.startsWith(STANDARD_SECRET_PREFIX)) {
+		let encoded = secret.slice(STANDARD_SECRET_PREFIX.length);
+		let padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+		if (encoded !== "" && isSuccess(Base64.decode(padded))) return secret;
+	}
+	return `${STANDARD_SECRET_PREFIX}${Base64.encode(secret)}`;
+}
+
+/** How an uptime webhook is configured: the generic destination plus its signature scheme. */
+export interface UptimeWebhookOptions extends WebhookOptions {
+	/**
+	 * Which signature a delivery carries. The two schemes share the `webhook-signature`
+	 * header name, so a delivery carries exactly one of them.
+	 *
+	 * @default "legacy"
+	 */
+	signature?: WebhookSignatureScheme;
+}
 
 /** The body every uptime webhook delivery has carried, field for field. */
 export interface UptimeWebhookBody {
@@ -43,13 +77,22 @@ const ALERT_DATA_SCHEMA = s.object({
 });
 
 /**
- * Posts uptime's own payload, signed with `Webhook-Signature: sha256=<hex HMAC-SHA256 of
- * the body>` keyed by the raw secret; an empty secret sends the body unsigned.
+ * Posts uptime's own payload, signed with Standard Webhooks or with the legacy
+ * `Webhook-Signature: sha256=<hex HMAC-SHA256 of the body>` keyed by the raw secret; an
+ * empty secret sends the body unsigned.
  *
- * @example await new UptimeWebhook({ url: config.url, secret: config.secret }).send(message, { id: eventId });
+ * @example await new UptimeWebhook({ url, secret, signature: "standard-webhooks" }).send(message, { id: eventId });
  */
 export class UptimeWebhook extends Webhook {
 	override readonly provider: string = "uptime-webhook";
+
+	#signature: WebhookSignatureScheme;
+
+	/** @param options - The URL, the signing secret and the signature scheme. */
+	constructor(options: UptimeWebhookOptions) {
+		super(options);
+		this.#signature = options.signature ?? "legacy";
+	}
 
 	/**
 	 * Rebuilds the body from the message; a message carrying no alert data is posted as the
@@ -90,18 +133,26 @@ export class UptimeWebhook extends Webhook {
 	}
 
 	/**
-	 * Signs the body with the raw secret as the HMAC key; the signature header stays off
-	 * a delivery whose alert has no secret configured.
+	 * Signs the body with the alert's scheme. Standard Webhooks covers the delivery id and
+	 * timestamp too, keyed by {@link standardWebhooksSecret}; every header stays off a
+	 * delivery whose alert has no secret configured.
 	 *
 	 * @param body - The exact text sent.
-	 * @param context - The secret read for this send.
+	 * @param context - The delivery id, send time and the secret read for this send.
 	 */
 	protected override async sign(
 		body: string,
 		context: WebhookSignContext,
 	): Promise<Result<Headers, MessagingError>> {
+		if (context.secret === "") return success(new Headers());
+		if (this.#signature === "standard-webhooks") {
+			return await super.sign(body, {
+				...context,
+				secret: standardWebhooksSecret(context.secret),
+			});
+		}
+
 		let headers = new Headers();
-		if (context.secret === "") return success(headers);
 
 		let mac = await hmac.sign(context.secret, body);
 		if (isFailure(mac)) {

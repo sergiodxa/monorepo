@@ -1,7 +1,7 @@
 /**
  * Pins the webhook contract customers verify: the exact JSON body, field for field and in
- * order, and the `Webhook-Signature: sha256=<hex>` header keyed by the raw secret, which an
- * empty secret leaves off. Deliveries are intercepted with MSW at a public host.
+ * order, and either signature scheme, which an empty secret leaves off. Signatures are
+ * recomputed with Web Crypto as a receiver would; MSW intercepts them at a public host.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,8 +16,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import type { AlertEventSnapshot } from "~/database/schema";
 
+import { destinationFor } from "~/app/services/alerts/destination";
 import { alertMessage } from "~/app/services/alerts/message";
-import { UptimeWebhook } from "~/app/services/uptime-webhook";
+import { standardWebhooksSecret, UptimeWebhook } from "~/app/services/uptime-webhook";
 
 const WEBHOOK_URL = "https://hooks.acme-receiver.com/uptime";
 
@@ -86,6 +87,25 @@ async function expectedSignature(secret: string, body: string): Promise<string> 
 	return `sha256=${hex}`;
 }
 
+/**
+ * The Standard Webhooks `v1` signature a receiver computes: HMAC-SHA256 over
+ * `id.timestamp.body`, keyed by the decoded `whsec_` secret, in base64.
+ */
+async function expectedStandardSignature(secret: string, headers: Headers, body: string) {
+	let encoder = new TextEncoder();
+	let keyBytes = Uint8Array.from(atob(secret.slice("whsec_".length)), (char) => char.charCodeAt(0));
+	let key = await crypto.subtle.importKey(
+		"raw",
+		keyBytes,
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	let content = `${headers.get("webhook-id")}.${headers.get("webhook-timestamp")}.${body}`;
+	let mac = await crypto.subtle.sign("HMAC", key, encoder.encode(content));
+	return `v1,${btoa(String.fromCharCode(...new Uint8Array(mac)))}`;
+}
+
 describe("UptimeWebhook", () => {
 	test("posts exactly the body customers have always received", async () => {
 		let sent = await new UptimeWebhook({ url: WEBHOOK_URL, secret: "" }).send(queuedMessage(), {
@@ -131,6 +151,48 @@ describe("UptimeWebhook", () => {
 		await new UptimeWebhook({ url: WEBHOOK_URL, secret: "" }).send(queuedMessage());
 
 		expect(deliveries[0]?.headers.has("Webhook-Signature")).toBe(false);
+	});
+
+	test("signs a Standard Webhooks delivery a receiver verifies with the derived secret", async () => {
+		await new UptimeWebhook({
+			url: WEBHOOK_URL,
+			secret: "shh",
+			signature: "standard-webhooks",
+		}).send(queuedMessage(), { id: "event-1" });
+
+		let headers = deliveries[0]?.headers ?? new Headers();
+		expect(headers.get("webhook-id")).toBe("event-1");
+		expect(headers.get("webhook-timestamp")).toMatch(/^\d+$/);
+		expect(headers.get("webhook-signature")).toBe(
+			await expectedStandardSignature("whsec_c2ho", headers, deliveries[0]?.body ?? ""),
+		);
+	});
+
+	test("sends no Standard Webhooks headers when the alert has no secret", async () => {
+		await new UptimeWebhook({
+			url: WEBHOOK_URL,
+			secret: "",
+			signature: "standard-webhooks",
+		}).send(queuedMessage());
+
+		expect(deliveries[0]?.headers.has("webhook-signature")).toBe(false);
+		expect(deliveries[0]?.headers.has("webhook-id")).toBe(false);
+	});
+
+	test("signs a stored alert with the scheme it was saved with", async () => {
+		await destinationFor({
+			strategy: "webhook",
+			config: { url: WEBHOOK_URL, secret: "shh", signature: "standard-webhooks" },
+		}).send(queuedMessage());
+		await destinationFor({
+			strategy: "webhook",
+			config: { url: WEBHOOK_URL, secret: "shh" },
+		}).send(queuedMessage());
+
+		expect(deliveries[0]?.headers.get("webhook-signature")).toMatch(/^v1,/);
+		expect(deliveries[1]?.headers.get("Webhook-Signature")).toBe(
+			await expectedSignature("shh", deliveries[1]?.body ?? ""),
+		);
 	});
 
 	test("ends a recovery's text with the incident totals, after the dashboard link", async () => {
@@ -179,5 +241,18 @@ describe("UptimeWebhook", () => {
 
 		expect(isFailure(sent) && sent.error.code).toBe("invalid-destination");
 		expect(deliveries).toHaveLength(0);
+	});
+});
+
+describe("standardWebhooksSecret", () => {
+	test("encodes any other secret's UTF-8 bytes behind the whsec_ prefix", () => {
+		expect(standardWebhooksSecret("shh")).toBe("whsec_c2ho");
+		expect(standardWebhooksSecret("whsec_")).toBe("whsec_d2hzZWNf");
+	});
+
+	test("keeps a secret already written as whsec_ and base64", () => {
+		expect(standardWebhooksSecret("whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw")).toBe(
+			"whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+		);
 	});
 });

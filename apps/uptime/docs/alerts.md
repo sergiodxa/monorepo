@@ -44,7 +44,7 @@ Slack and Discord URLs are checked against the platform's own host when the aler
 
 - Slack, Discord and PagerDuty receive a rich message: a title naming the monitor and its state, the check's details, a severity color, the monitor type, and an "Open dashboard" link.
 - A recovery closes the loop: PagerDuty resolves the incident it opened (both share the dedup key `<monitor type>:<monitor id>`), and a platform that can edit a sent message updates the original alert in place; elsewhere the recovery is sent as its own message.
-- Webhooks keep their JSON body (`monitorId`, `monitorType`, `monitorName`, `eventType`, `snapshot`, `message`, `timestamp`) and, when a secret is set, the `Webhook-Signature: sha256=<hex HMAC-SHA256 of the body>` header. Webhook URLs must resolve to a public host.
+- Webhooks keep their JSON body (`monitorId`, `monitorType`, `monitorName`, `eventType`, `snapshot`, `message`, `timestamp`) and, when a secret is set, sign it with the alert's scheme. `standard-webhooks` sends `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`, keyed by the secret as written when it is already `whsec_<base64>` and by its UTF-8 bytes otherwise; `legacy` sends `Webhook-Signature: sha256=<hex HMAC-SHA256 of the body>` keyed by the raw secret. The two share one header name, so a delivery carries exactly one. Alerts saved before schemes existed have no `signature` in their config and sign `legacy`; new alerts default to `standard-webhooks`. Webhook URLs must resolve to a public host.
 - When a destination answers that it no longer exists (a deleted Slack channel or Discord webhook, a `410` from a webhook), the alert is marked broken and the alert list shows the reason. Saving the alert's channel again clears the mark.
 
 ## Event Types

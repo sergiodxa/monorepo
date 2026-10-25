@@ -2806,10 +2806,19 @@ export default {
 								label: "署名シークレット（任意）",
 								placeholder: "オプションのシークレット",
 								description:
-									"リクエストヘッダーに含めるオプションのシークレット。このシークレットを使用したペイロードのHMAC SHA256署名が`Webhook-Signature`ヘッダーとして追加されます。",
+									"各リクエストの署名に使うオプションのシークレット。エンドポイントはUptimeから送られたことを検証できます。",
+							},
+							signature: {
+								label: "署名方式",
+								options: {
+									"standard-webhooks": "Standard Webhooks",
+									legacy: "従来方式（Webhook-Signature: sha256）",
+								},
 							},
 							signatureNote:
-								"設定すると、リクエストに{#code}Webhook-Signature: sha256=<hex>{/code}ヘッダーが付与されます。これはこのシークレットを使用した生のJSONボディのHMAC-SHA256です。",
+								"Standard Webhooksは{#code}webhook-id{/code}、{#code}webhook-timestamp{/code}、{#code}webhook-signature: v1,<base64>{/code}を送信し、任意のStandard Webhooksライブラリで検証できます。従来方式は生のJSONボディのHMAC-SHA256である{#code}Webhook-Signature: sha256=<hex>{/code}を送信します。両者は同じヘッダー名を使うため、各リクエストにはどちらか一方が付きます。",
+							standardSecret:
+								"受信側に設定するStandard Webhooksシークレット：{#code}{$secret}{/code}",
 						},
 						email: {
 							to: {

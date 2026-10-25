@@ -42,7 +42,11 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 		case "webhook":
 			return {
 				strategy: "webhook",
-				config: { url: values.webhook_url ?? "", secret: values.webhook_secret ?? "" },
+				config: {
+					url: values.webhook_url ?? "",
+					secret: values.webhook_secret ?? "",
+					signature: values.webhook_signature,
+				},
 			};
 		case "slack":
 			return { strategy: "slack", config: { webhookUrl: values.slack_webhook_url ?? "" } };

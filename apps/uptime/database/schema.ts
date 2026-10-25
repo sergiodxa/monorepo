@@ -573,12 +573,22 @@ export type SelectCronJobPing = TableRow<typeof cronJobPings>;
 export type InsertCronJobPing = InsertRow<typeof cronJobPings>;
 
 /**
+ * The signature a webhook alert's deliveries carry: `legacy` is uptime's original
+ * `Webhook-Signature: sha256=<hex>`, `standard-webhooks` the `webhook-id`,
+ * `webhook-timestamp` and `webhook-signature: v1,<base64>` triple.
+ */
+export type WebhookSignatureScheme = "legacy" | "standard-webhooks";
+
+/**
  * Where an alert notifies. Rows saved while Slack still offered a `channel` override keep
  * it in their JSON; Slack app webhooks post to the channel they were created for, so the
- * stored value is read as absent.
+ * stored value is read as absent. A webhook saved before `signature` existed signs `legacy`.
  */
 export type AlertConfig =
-	| { strategy: "webhook"; config: { url: string; secret: string } }
+	| {
+			strategy: "webhook";
+			config: { url: string; secret: string; signature?: WebhookSignatureScheme };
+	  }
 	| { strategy: "email"; config: { to: string; subjectPrefix: string } }
 	| { strategy: "slack"; config: { webhookUrl: string } }
 	| { strategy: "discord"; config: { webhookUrl: string } }

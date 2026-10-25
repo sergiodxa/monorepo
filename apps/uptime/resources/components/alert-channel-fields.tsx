@@ -20,8 +20,9 @@ import { Select, TextField } from "@sdxc/ui";
 
 import type { AlertConfig } from "~/database/schema";
 
-import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
+import { MAX_ROUTING_KEY_LENGTH, WEBHOOK_SIGNATURE_SCHEMES } from "~/app/http/validators/alert";
 import { withPrefix } from "~/app/services/prefixed-translate";
+import { standardWebhooksSecret } from "~/app/services/uptime-webhook";
 import Field from "~/resources/components/field";
 import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
 
@@ -46,6 +47,15 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 		 * and edit pages label these fields identically.
 		 */
 		let t = withPrefix(intl.t, "page.alerts.form.fields");
+
+		let savedWebhook = config?.strategy === "webhook" ? config.config : null;
+		let savedSecret = savedWebhook?.secret ?? "";
+
+		/**
+		 * A webhook saved before schemes existed signs `legacy`, so its edit form keeps
+		 * that; a new alert, or one switching to webhook, starts on Standard Webhooks.
+		 */
+		let savedScheme = savedWebhook ? (savedWebhook.signature ?? "legacy") : "standard-webhooks";
 
 		/**
 		 * The saved channel's own `<option>` is marked `selected`, which is
@@ -114,6 +124,15 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							name="webhook_secret"
 							defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
 						/>
+						<Field label={t("config.webhook.signature.label")}>
+							<Select name="webhook_signature">
+								{WEBHOOK_SIGNATURE_SCHEMES.map((scheme) => (
+									<Select.Option key={scheme} value={scheme} selected={scheme === savedScheme}>
+										{t(`config.webhook.signature.options.${scheme}`)}
+									</Select.Option>
+								))}
+							</Select>
+						</Field>
 						<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
 							<Trans
 								intl={intl}
@@ -121,6 +140,16 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 								components={{ code: <code /> }}
 							/>
 						</p>
+						{savedSecret === "" ? null : (
+							<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+								<Trans
+									intl={intl}
+									i18nKey="page.alerts.form.fields.config.webhook.standardSecret"
+									values={{ secret: standardWebhooksSecret(savedSecret) }}
+									components={{ code: <code /> }}
+								/>
+							</p>
+						)}
 					</div>
 				</fieldset>
 

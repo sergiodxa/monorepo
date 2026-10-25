@@ -219,9 +219,11 @@ describe("alertEdit", () => {
 		 * Exactly one option carries `selected`, so the saved channel is what the browser
 		 * shows and what `:checked` reads with no JavaScript involved.
 		 */
-		expect(body.match(/<option value="[a-z]+" selected/g)).toHaveLength(1);
-		/** The saved channel is the selected option, so its block is the one CSS leaves visible. */
-		expect(body).toContain('value="webhook" selected');
+		expect(body.match(/<option value="(email|webhook|slack|discord|pagerduty)" selected/g)).toEqual(
+			['<option value="webhook" selected'],
+		);
+		/** A webhook saved before signature schemes keeps signing the legacy way. */
+		expect(body).toContain('value="legacy" selected');
 		expect(body).toContain('value="shh"');
 
 		for (let channel of ["email", "webhook", "slack", "discord", "pagerduty"]) {

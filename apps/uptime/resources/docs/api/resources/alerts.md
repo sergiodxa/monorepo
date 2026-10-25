@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 7
-lastUpdated: 2026-10-07
+lastUpdated: 2026-10-24
 ---
 
 Alerts notify you when monitors detect issues. Each team can have up to 10 alerts with different notification strategies: email, webhook, Slack, Discord, or PagerDuty.
@@ -95,7 +95,7 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts?perPage=25" \
 }
 ```
 
-Webhook URLs, secrets and integration keys stay out of `config`, so a webhook, Slack, Discord or PagerDuty alert reports only its `strategy`.
+Webhook URLs, secrets and integration keys stay out of `config`, so a Slack, Discord or PagerDuty alert reports only its `strategy`, and a webhook alert its `strategy` and `signature` scheme.
 
 ## POST /api/v1/alerts
 
@@ -123,10 +123,11 @@ Creates a new alert. The request body varies based on the notification strategy.
 
 ### Strategy: Webhook
 
-| Field    | Type   | Required | Description                                                  |
-| -------- | ------ | -------- | ------------------------------------------------------------ |
-| `url`    | string | Yes      | Webhook URL to POST notifications to                         |
-| `secret` | string | No       | Secret for HMAC signature verification, up to 255 characters |
+| Field       | Type   | Required | Description                                                                                                                                |
+| ----------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `url`       | string | Yes      | Webhook URL to POST notifications to                                                                                                       |
+| `secret`    | string | No       | Secret every delivery is signed with, up to 255 characters                                                                                 |
+| `signature` | string | No       | `standard-webhooks` (default) or `legacy`. See [Verifying Webhook Signatures](/docs/concepts/alerts#verifying-webhook-signatures) for both |
 
 ### Strategy: Slack
 
@@ -296,7 +297,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 }
 ```
 
-Webhook URLs, secrets and integration keys stay out of `config`, so a webhook, Slack, Discord or PagerDuty alert reports only its `strategy`.
+Webhook URLs, secrets and integration keys stay out of `config`, so a Slack, Discord or PagerDuty alert reports only its `strategy`, and a webhook alert its `strategy` and `signature` scheme.
 
 ## PATCH /api/v1/alerts/:id
 
@@ -308,7 +309,8 @@ Updates an existing alert with a [JSON merge patch](/docs/api/overview#updating-
 
 Every field `POST /api/v1/alerts` accepts is accepted here, with the same limits. Include only the fields you want to change:
 
-- `null` resets `notifyOnRecovery` and `cooldownMinutes` to their defaults, and clears `subjectPrefix` and `secret`.
+- `null` resets `notifyOnRecovery`, `cooldownMinutes` and `signature` to their defaults, and clears `subjectPrefix` and `secret`.
+- `{"signature": "standard-webhooks"}` moves a webhook alert created with the legacy signature onto Standard Webhooks.
 - `name`, `strategy` and a strategy's required setting (`email`, `url`, `webhookUrl` or `routingKey`) cannot be removed.
 - A channel setting changes on its own, keeping the others: `{"email": "oncall@example.com"}` keeps the alert's `subjectPrefix`.
 - Switching `strategy` needs the new strategy's required setting in the same patch, `{"strategy": "discord", "webhookUrl": "..."}`, and drops the previous strategy's settings.

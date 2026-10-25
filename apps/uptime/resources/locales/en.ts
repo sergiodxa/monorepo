@@ -2888,10 +2888,18 @@ export default {
 								label: "Signing secret (optional)",
 								placeholder: "optional-secret",
 								description:
-									"An optional secret to include in the request headers. A `Webhook-Signature` header will be added with a HMAC SHA256 signature of the payload using this secret.",
+									"An optional secret used to sign each request, so your endpoint can verify it came from Uptime.",
+							},
+							signature: {
+								label: "Signature scheme",
+								options: {
+									"standard-webhooks": "Standard Webhooks",
+									legacy: "Legacy (Webhook-Signature: sha256)",
+								},
 							},
 							signatureNote:
-								"When set, requests carry a {#code}Webhook-Signature: sha256=<hex>{/code} header — an HMAC-SHA256 of the raw JSON body using this secret.",
+								"Standard Webhooks sends {#code}webhook-id{/code}, {#code}webhook-timestamp{/code} and {#code}webhook-signature: v1,<base64>{/code}, verifiable with any Standard Webhooks library. Legacy sends {#code}Webhook-Signature: sha256=<hex>{/code}, an HMAC-SHA256 of the raw JSON body. Both use the same header name, so each request carries one.",
+							standardSecret: "Standard Webhooks secret for your receiver: {#code}{$secret}{/code}",
 						},
 						email: {
 							to: {

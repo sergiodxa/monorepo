@@ -47,6 +47,7 @@ const CHANNEL_MEMBERS = [
 	"subjectPrefix",
 	"url",
 	"secret",
+	"signature",
 	"webhookUrl",
 	"routingKey",
 ] as const;
@@ -83,6 +84,7 @@ function writableChannel(alert: SelectAlert) {
 				strategy: "webhook",
 				url: alert.config.config.url,
 				secret: alert.config.config.secret,
+				signature: alert.config.config.signature ?? "legacy",
 			};
 		case "slack":
 			return { strategy: "slack", webhookUrl: alert.config.config.webhookUrl };

@@ -14,7 +14,7 @@ import { defineOperation } from "@sdxc/openapi";
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
 import { ALERT_EVENT } from "~/app/http/openapi/monitors";
-import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
+import { MAX_ROUTING_KEY_LENGTH, WEBHOOK_SIGNATURE_SCHEMES } from "~/app/http/validators/alert";
 import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
 import { discordWebhookUrl, slackWebhookUrl } from "~/app/http/validators/webhook-url";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
@@ -48,12 +48,21 @@ const SCOPE_FIELDS = {
 };
 
 /**
+ * The signature a webhook alert's deliveries carry; the two schemes share the
+ * `webhook-signature` header name, so a delivery carries one of them.
+ */
+const WEBHOOK_SIGNATURE = s.enum_(WEBHOOK_SIGNATURE_SCHEMES).meta({
+	description:
+		"`standard-webhooks` signs with `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`; `legacy` with `Webhook-Signature: sha256=<hex>`",
+});
+
+/**
  * An alert's channel as a read returns it: webhook URLs, signing secrets and PagerDuty
  * integration keys stay server-side.
  */
 const ALERT_CHANNEL = s.variant("strategy", {
 	email: s.object({ strategy: s.literal("email"), to: s.string(), subjectPrefix: s.string() }),
-	webhook: s.object({ strategy: s.literal("webhook") }),
+	webhook: s.object({ strategy: s.literal("webhook"), signature: WEBHOOK_SIGNATURE }),
 	slack: s.object({ strategy: s.literal("slack") }),
 	discord: s.object({ strategy: s.literal("discord") }),
 	pagerduty: s.object({ strategy: s.literal("pagerduty") }),
@@ -138,6 +147,7 @@ export const CREATE_ALERT_BODY = s.variant("strategy", {
 		strategy: s.literal("webhook"),
 		url: s.string().pipe(checks.url()),
 		secret: s.optional(s.string().pipe(checks.maxLength(255))),
+		signature: s.defaulted(WEBHOOK_SIGNATURE, "standard-webhooks"),
 		...COMMON_ALERT_FIELDS,
 	}),
 	slack: s.object({
@@ -203,6 +213,7 @@ const ALERT_PATCH = s.object({
 	subjectPrefix: s.optional(s.nullable(s.string().pipe(checks.maxLength(100)))),
 	url: s.optional(s.string().pipe(checks.url()).meta({ description: "`webhook` strategy" })),
 	secret: s.optional(s.nullable(s.string().pipe(checks.maxLength(255)))),
+	signature: s.optional(s.nullable(WEBHOOK_SIGNATURE)),
 	webhookUrl: s.optional(
 		s.string().pipe(checks.url()).meta({ description: "`slack` and `discord` strategies" }),
 	),

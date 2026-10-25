@@ -5690,6 +5690,15 @@
                         "type": "string",
                         "maxLength": 255
                       },
+                      "signature": {
+                        "type": "string",
+                        "enum": [
+                          "standard-webhooks",
+                          "legacy"
+                        ],
+                        "description": "`standard-webhooks` signs with `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`; `legacy` with `Webhook-Signature: sha256=<hex>`",
+                        "default": "standard-webhooks"
+                      },
                       "name": {
                         "type": "string",
                         "minLength": 1,
@@ -6154,6 +6163,18 @@
                     ],
                     "maxLength": 255
                   },
+                  "signature": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "standard-webhooks",
+                      "legacy",
+                      null
+                    ],
+                    "description": "`standard-webhooks` signs with `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`; `legacy` with `Webhook-Signature: sha256=<hex>`"
+                  },
                   "webhookUrl": {
                     "type": "string",
                     "format": "uri",
@@ -6247,6 +6268,18 @@
                       "null"
                     ],
                     "maxLength": 255
+                  },
+                  "signature": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "standard-webhooks",
+                      "legacy",
+                      null
+                    ],
+                    "description": "`standard-webhooks` signs with `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`; `legacy` with `Webhook-Signature: sha256=<hex>`"
                   },
                   "webhookUrl": {
                     "type": "string",
@@ -12150,10 +12183,19 @@
                   "strategy": {
                     "type": "string",
                     "const": "webhook"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "enum": [
+                      "standard-webhooks",
+                      "legacy"
+                    ],
+                    "description": "`standard-webhooks` signs with `webhook-id`, `webhook-timestamp` and `webhook-signature: v1,<base64>`; `legacy` with `Webhook-Signature: sha256=<hex>`"
                   }
                 },
                 "required": [
-                  "strategy"
+                  "strategy",
+                  "signature"
                 ]
               },
               {

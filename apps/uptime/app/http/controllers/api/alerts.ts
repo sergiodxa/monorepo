@@ -16,7 +16,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/services/monitor-scope";
-import type { AlertConfig, SelectAlert } from "~/database/schema";
+import type { AlertConfig, SelectAlert, WebhookSignatureScheme } from "~/database/schema";
 
 import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
@@ -66,6 +66,9 @@ export function serializeAlertSafe(alert: SelectAlert) {
 				to: alert.config.config.to,
 				subjectPrefix: alert.config.config.subjectPrefix,
 			}),
+			...(alert.config.strategy === "webhook" && {
+				signature: alert.config.config.signature ?? "legacy",
+			}),
 		},
 		monitorType: scope.monitorType,
 		monitorId:
@@ -99,7 +102,13 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
  */
 export type CreateAlertValues =
 	| { strategy: "email"; email: string; subjectPrefix?: string; monitorId?: string }
-	| { strategy: "webhook"; url: string; secret?: string; monitorId?: string }
+	| {
+			strategy: "webhook";
+			url: string;
+			secret?: string;
+			signature?: WebhookSignatureScheme;
+			monitorId?: string;
+	  }
 	| { strategy: "slack"; webhookUrl: string; monitorId?: string }
 	| { strategy: "discord"; webhookUrl: string; monitorId?: string }
 	| { strategy: "pagerduty"; routingKey: string; monitorId?: string };
@@ -115,7 +124,11 @@ export function buildConfig(values: CreateAlertValues): AlertConfig {
 		case "webhook":
 			return {
 				strategy: "webhook",
-				config: { url: values.url, secret: values.secret ?? "" },
+				config: {
+					url: values.url,
+					secret: values.secret ?? "",
+					signature: values.signature ?? "standard-webhooks",
+				},
 			};
 		case "slack":
 			return { strategy: "slack", config: { webhookUrl: values.webhookUrl } };

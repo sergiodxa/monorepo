@@ -2871,10 +2871,19 @@ export default {
 								label: "Signatur-Geheimschlüssel (optional)",
 								placeholder: "optionaler-geheimschlüssel",
 								description:
-									"Ein optionaler Geheimschlüssel für die Request-Header. Ein `Webhook-Signature`-Header wird mit einer HMAC SHA256-Signatur der Payload unter Verwendung dieses Geheimnisses hinzugefügt.",
+									"Ein optionaler Geheimschlüssel, mit dem jede Anfrage signiert wird, damit dein Endpunkt prüfen kann, dass sie von Uptime stammt.",
+							},
+							signature: {
+								label: "Signaturverfahren",
+								options: {
+									"standard-webhooks": "Standard Webhooks",
+									legacy: "Veraltet (Webhook-Signature: sha256)",
+								},
 							},
 							signatureNote:
-								"Wenn festgelegt, tragen Anfragen einen {#code}Webhook-Signature: sha256=<hex>{/code}-Header — eine HMAC-SHA256-Signatur des rohen JSON-Bodys mit diesem Geheimnis.",
+								"Standard Webhooks sendet {#code}webhook-id{/code}, {#code}webhook-timestamp{/code} und {#code}webhook-signature: v1,<base64>{/code}, prüfbar mit jeder Standard-Webhooks-Bibliothek. Das veraltete Verfahren sendet {#code}Webhook-Signature: sha256=<hex>{/code}, eine HMAC-SHA256-Signatur des rohen JSON-Bodys. Beide nutzen denselben Header-Namen, daher trägt jede Anfrage genau eine.",
+							standardSecret:
+								"Standard-Webhooks-Geheimnis für deinen Empfänger: {#code}{$secret}{/code}",
 						},
 						email: {
 							to: {

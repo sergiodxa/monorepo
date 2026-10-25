@@ -383,6 +383,24 @@ describe("POST /api/v1/alerts", () => {
 		expect(dns.asked).toEqual([]);
 	});
 
+	test("signs a webhook alert created without a scheme with Standard Webhooks", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, { name: "Hook", strategy: "webhook", url: "https://hooks.example/uptime" }),
+		);
+
+		expect(response.status).toBe(201);
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "webhook",
+			config: { url: "https://hooks.example/uptime", secret: "", signature: "standard-webhooks" },
+		});
+	});
+
 	test("returns 400 when the payload fails validation", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

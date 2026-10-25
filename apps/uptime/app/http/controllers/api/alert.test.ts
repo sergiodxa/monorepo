@@ -695,7 +695,49 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.config).toEqual({
 			strategy: "webhook",
-			config: { url: "https://example.com/hook", secret: "" },
+			config: { url: "https://example.com/hook", secret: "", signature: "legacy" },
+		});
+	});
+
+	test("keeps a webhook saved before signature schemes on the legacy signature", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: { strategy: "webhook", config: { url: "https://example.com/hook", secret: "shh" } },
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { url: "https://example.com/hook-2" }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "webhook",
+			config: { url: "https://example.com/hook-2", secret: "shh", signature: "legacy" },
+		});
+	});
+
+	test("switches a webhook to Standard Webhooks signatures", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: { strategy: "webhook", config: { url: "https://example.com/hook", secret: "shh" } },
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { signature: "standard-webhooks" }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "webhook",
+			config: { url: "https://example.com/hook", secret: "shh", signature: "standard-webhooks" },
 		});
 	});
 
