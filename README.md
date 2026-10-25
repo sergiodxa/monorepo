@@ -232,6 +232,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/flags](packages/flags)               | Feature flag evaluation implementing the OpenFeature specification                                            |
 | [@sdxc/flags-engine](packages/flags-engine) | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                         |
 | [@sdxc/health](packages/health)             | Dependency health checks in the application/health+json format, and a reader for other services' reports      |
+| [@sdxc/jmap](packages/jmap)                 | A typed JMAP client: session, batched method calls with result references, mail and contacts, blobs and push  |
 | [@sdxc/jobs](packages/jobs)                 | Declared background jobs dispatched over a pluggable queue backend                                            |
 | [@sdxc/logger](packages/logger)             | One wide event per Worker invocation, attached at the router and the job dispatcher                           |
 | [@sdxc/mail](packages/mail)                 | Transactional email with pluggable transports                                                                 |

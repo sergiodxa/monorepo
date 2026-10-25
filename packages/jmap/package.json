@@ -1,0 +1,27 @@
+{
+	"name": "@sdxc/jmap",
+	"version": "0.0.1",
+	"description": "A typed JMAP client: session, batched method calls with result references, mail and contacts, blobs and push",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/api-client": "workspace:*",
+		"@sdxc/json-pointer": "workspace:*",
+		"@sdxc/problem": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
+	}
+}

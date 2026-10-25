@@ -1268,6 +1268,24 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/jmap": {
+      "name": "@sdxc/jmap",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/api-client": "workspace:*",
+        "@sdxc/json-pointer": "workspace:*",
+        "@sdxc/problem": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
+      },
+    },
     "packages/jobs": {
       "name": "@sdxc/jobs",
       "version": "0.0.1",
@@ -1299,22 +1317,6 @@
         "remix",
         "vitest",
       ],
-    },
-    "packages/jscalendar": {
-      "name": "@sdxc/jscalendar",
-      "version": "0.0.1",
-      "dependencies": {
-        "@sdxc/dates": "workspace:*",
-        "@sdxc/icalendar": "workspace:*",
-        "@sdxc/json-pointer": "workspace:*",
-        "@sdxc/result": "workspace:*",
-      },
-      "devDependencies": {
-        "remix": "3.1.0",
-      },
-      "peerDependencies": {
-        "remix": "3.1.0",
-      },
     },
     "packages/jsdoc": {
       "name": "@sdxc/jsdoc",
