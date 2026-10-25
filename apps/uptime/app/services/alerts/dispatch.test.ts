@@ -1240,6 +1240,9 @@ function makeHttpMonitor(overrides: Partial<SelectMonitor> = {}): SelectMonitor 
 		ssl_issuer: null,
 		ssl_last_checked_at: null,
 		ssl_status: "unknown",
+		ssl_expiry_source: "transparency",
+		ssl_transparency_status: null,
+		ssl_transparency_checked_at: null,
 		last_status: null,
 		last_checked_at: null,
 		last_response_time_ms: null,
@@ -1352,6 +1355,8 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 		registration_error: null,
 		registration_failures: 0,
 		registration_next_check_at: null,
+		registrant: null,
+		registration_redacted: null,
 		...overrides,
 	};
 }

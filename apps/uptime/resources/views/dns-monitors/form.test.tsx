@@ -50,6 +50,8 @@ function monitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMonitor {
 		registration_error: null,
 		registration_failures: 0,
 		registration_next_check_at: null,
+		registrant: null,
+		registration_redacted: null,
 		...overrides,
 	};
 }
