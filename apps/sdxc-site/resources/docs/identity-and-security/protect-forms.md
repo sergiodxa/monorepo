@@ -38,6 +38,7 @@ challenge and the spam score go on the action alone.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import type { Captcha } from "@sdxc/captcha";
+import type { RouterContext } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -49,6 +50,7 @@ import { spam } from "@sdxc/spam/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
 import { env } from "cloudflare:workers";
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import {
@@ -64,7 +66,7 @@ const SPAM = createSpamFilter({ checks: DEFAULT_RULES });
 
 export function createWebRouter(guard: Captcha = productionCaptcha()) {
 	let router = createRouter({
-		middleware: [formData(), getClientIP(), userAgent()],
+		middleware: [formData(), render(), getClientIP(), userAgent()],
 	});
 	let trap = honeypot(TRAP, { onFailure: answerTrappedBots });
 	let scored = spam(SPAM, {
@@ -95,7 +97,18 @@ export function createWebRouter(guard: Captcha = productionCaptcha()) {
 
 	return router;
 }
+
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
 ```
+
+`AppContext` is the context that chain builds, and declaring it on `RouterTypes` types every
+`createAction` with it, so the handlers below read `ctx.formData` and `ctx.render`.
 
 The order is the cost order: an HMAC check, one KV read and write, a call to the CAPTCHA
 provider, then local spam rules. Only a submission that passes all four is parsed, has its
@@ -115,18 +128,17 @@ challenge, the spam score and the handler all read the submission it parsed.
 input fills it. Issue the fields once per render, so a re-rendered form carries a fresh token:
 
 ```tsx {% title="app/http/controllers/sign-up/render.tsx" %}
-import type { RequestContext } from "remix/router";
-
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
+import type { AppContext } from "~/app/initializers/router";
 import { SignUpPage } from "~/resources/views/sign-up";
 import routes from "~/routes/web";
 
-export async function renderSignUp(ctx: RequestContext, error?: string) {
+export async function renderSignUp(ctx: AppContext, error?: string) {
 	let fields = unwrap(await ctx.honeypot.issue());
 
 	return ctx.render(
@@ -277,18 +289,18 @@ characters, not a common password, not built from the email, not in a breach.
 [`@sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
 
 ```typescript {% title="app/http/controllers/sign-up/action.ts" %}
-import type { RequestContext } from "remix/router";
-
 import { checkPassword } from "@sdxc/password-policy";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
 
 import { checkYourEmail } from "~/app/http/controllers/sign-up/bots";
 import { renderSignUp } from "~/app/http/controllers/sign-up/render";
 import { passwordMessage } from "~/app/services/password-message";
 import { checkSignUpEmail } from "~/app/services/sign-up-email";
 import { createAccount } from "~/app/services/accounts";
+import routes from "~/routes/web";
 
 const SIGN_UP = s.object({
 	email: s.string(),
@@ -296,7 +308,7 @@ const SIGN_UP = s.object({
 	about: s.optional(s.string()),
 });
 
-export async function action(ctx: RequestContext): Promise<Response> {
+export const action = createAction(routes.signUp.action, async (ctx) => {
 	let trap = ctx.honeypotOutcome;
 	let form = await validate(ctx.formData, SIGN_UP);
 	if (isFailure(trap) || isFailure(form))
@@ -317,7 +329,7 @@ export async function action(ctx: RequestContext): Promise<Response> {
 	let held = ctx.spamAssessment.verdict === "unsure";
 	await createAccount(ctx, email.data, form.data.password, held);
 	return checkYourEmail();
-}
+});
 ```
 
 The breach lookup sends Have I Been Pwned only the first five characters of the password's
