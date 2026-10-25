@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to declare flags in a typed catalog and publish `ctx.flags`"
     - "How to target a flag by rule or percentage and store definitions in KV"
@@ -221,6 +221,7 @@ Segments are conditions declared once under the set's `segments` and referenced 
 
 A split hashes the subject with the flag key, so a subject lands in the same arm on every request
 in every isolate, and widening `on: 10` to `on: 25` keeps the first ten percent where they were.
+
 <warning>
 When the context has no `targetingKey`, the split cannot place anyone: the evaluation reports
 `TARGETING_KEY_MISSING` and serves the default, so a rollout that reached nobody reads as one.
@@ -251,8 +252,8 @@ export function flagProvider(): EngineProvider {
 }
 ```
 
-In `app/initializers/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the in-memory
-provider.
+In `app/initializers/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the
+in-memory provider.
 
 <note>
 Reloading is yours to schedule, because a Worker only has time while an invocation is running.
@@ -265,8 +266,8 @@ writes a new set with `store.write(set)`, and validates an edit first against
 
 ## Edit a rule as text
 
-A person editing a rule in an admin page reads `ctx.plan.tier == "pro" and segment("staff")` faster
-than the JSON it stands for. `flagConditions` is the dialect the engine evaluates with, and it
+A person editing a rule in an admin page reads `ctx.plan.tier == "pro" and segment("staff")`
+faster than the JSON it stands for. `flagConditions` is the dialect the engine evaluates with, and it
 converts between the two: `stringify` shows a stored condition as text, and `parse` reads what
 was typed back into JSON, with the line and column where it broke:
 
@@ -299,11 +300,11 @@ Store the JSON that `parse` answered, never the text: the text form is for peopl
 stored set stays the one the engine reads.
 </warning>
 
-Compiling against the set's segments catches what
-parsing cannot — a segment nobody declared, two segments that reference each other, a `matches`
-pattern that does not compile — and the error's `path` names the node, so the page can point at
-it. [Rules your users write](/docs/data-and-background-work/conditions) covers the condition language
-on its own, for rules that are not flags.
+Compiling against the set's segments catches what parsing cannot — a segment nobody declared,
+two segments that reference each other, a `matches` pattern that does not compile — and the
+error's `path` names the node, so the page can point at it.
+[Rules your users write](/docs/data-and-background-work/conditions) covers the condition
+language on its own, for rules that are not flags.
 
 ## Switch an ability off
 
@@ -401,11 +402,7 @@ context)` answers what every flag would serve for a given context, with no store
 
 - [Decide who can do what](/docs/identity-and-security/authorization) — flags as guards over
   the abilities a policy grants.
-- [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
-  — where `ctx.flags` sits in the middleware order.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — evaluating flags
   inside a job.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — reading evaluations
   off the request's log record.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — the same KV
-  namespace pattern for values.
