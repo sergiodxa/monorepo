@@ -2073,6 +2073,7 @@
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jsonc": "workspace:*",
         "@sdxc/jsonl": "workspace:*",
+        "@sdxc/jsonpath": "workspace:*",
         "@sdxc/jwt": "workspace:*",
         "@sdxc/kit": "workspace:*",
         "@sdxc/lazy-frame": "workspace:*",
