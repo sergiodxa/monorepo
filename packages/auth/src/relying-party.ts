@@ -128,6 +128,7 @@ const CALLBACK_SCHEMA = s.object({
 	state: s.optional(s.string()),
 	error: s.optional(s.string()),
 	error_description: s.optional(s.string()),
+	iss: s.optional(s.string()),
 });
 
 /** A successful token response, of which only `access_token` is guaranteed. */
@@ -431,7 +432,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	 *
 	 * @param ctx - The callback request and the session store the login was written to.
 	 * @returns The verified tokens, the subject, the mapped profile, and where to go.
-	 * @throws {AuthError} `authorization_failed`, `missing_transaction`,
+	 * @throws {AuthError} `authorization_failed`, `issuer_mismatch`, `missing_transaction`,
 	 *   `state_mismatch`, `missing_code`, `token_request_failed`,
 	 *   `missing_id_token`, `invalid_token`, `nonce_mismatch`, `at_hash_mismatch`,
 	 *   `acr_not_satisfied`, `max_age_not_satisfied`, or `user_info_failed`.
@@ -442,6 +443,8 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	async callback(ctx: RelyingParty.Context): Promise<RelyingParty.Grant<profile>> {
 		let transaction = this.#takeTransaction(ctx.session);
 		let params = this.#readCallback(new URL(ctx.request.url).searchParams);
+
+		await this.#assertResponseIssuer(params.iss);
 
 		if (params.error) {
 			throw new AuthError(`The issuer refused the authorization request: ${params.error}`, {
@@ -731,6 +734,32 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		throw tooManyRequests(result.data, adapter, RATE_LIMITED_BODY, {
 			headers: { "content-type": "text/plain; charset=utf-8" },
 		});
+	}
+
+	/**
+	 * Holds an authorization response to the issuer this client sent the browser to
+	 * (RFC 9207), so only a response that server produced reaches the token endpoint, which
+	 * defeats the mix-up attack. `iss` compares as an exact string with the published `issuer`.
+	 *
+	 * @param iss - The response's `iss`, if it carried one.
+	 * @throws {AuthError} `issuer_mismatch` when `iss` names another issuer, or is absent
+	 *   from a response whose issuer advertises `authorization_response_iss_parameter_supported`.
+	 */
+	async #assertResponseIssuer(iss: string | undefined): Promise<void> {
+		let metadata = await this.#issuer.metadata();
+
+		if (iss === undefined) {
+			if (!metadata.authorization_response_iss_parameter_supported) return;
+			throw new AuthError("The authorization response carried no `iss` its issuer promised", {
+				code: AuthErrorCode.IssuerMismatch,
+			});
+		}
+
+		if (iss !== metadata.issuer) {
+			throw new AuthError("The authorization response's `iss` names another issuer", {
+				code: AuthErrorCode.IssuerMismatch,
+			});
+		}
 	}
 
 	/**

@@ -681,6 +681,89 @@ describe("callback", () => {
 		expect(AuthError.is(error, AuthErrorCode.StateMismatch)).toBe(true);
 	});
 
+	test("completes a login whose response carries the issuer's own iss", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty({}, { authorization_response_iss_parameter_supported: true });
+		let params = await startLogin(agent, rp);
+
+		stubTokenEndpoint(() => tokenResponse({ nonce: params.get("nonce") }));
+
+		let grant = await agent.run(
+			callbackPath({ code: "code-1", state: params.get("state") ?? "", iss: ISSUER }),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(grant.subject).toBe("user-1");
+	});
+
+	/**
+	 * A response from another authorization server, the mix-up attack RFC 9207 closes, is
+	 * refused before its code reaches the token endpoint, even when the issuer never
+	 * promised to send `iss`.
+	 */
+	test("throws issuer_mismatch when iss names another issuer", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty();
+		let params = await startLogin(agent, rp);
+
+		let request = stubTokenEndpoint(() => tokenResponse({ nonce: params.get("nonce") }));
+
+		let error = await agent.attempt(
+			callbackPath({
+				code: "code-1",
+				state: params.get("state") ?? "",
+				iss: "https://attacker.example.com",
+			}),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(AuthError.is(error, AuthErrorCode.IssuerMismatch)).toBe(true);
+		expect(request.body).toBeNull();
+	});
+
+	test("compares iss as an exact string, so a trailing slash is another issuer", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty();
+		let params = await startLogin(agent, rp);
+
+		let error = await agent.attempt(
+			callbackPath({ code: "code-1", state: params.get("state") ?? "", iss: `${ISSUER}/` }),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(AuthError.is(error, AuthErrorCode.IssuerMismatch)).toBe(true);
+	});
+
+	test("throws issuer_mismatch when an issuer that promises iss sends none", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty({}, { authorization_response_iss_parameter_supported: true });
+		let params = await startLogin(agent, rp);
+
+		let error = await agent.attempt(
+			callbackPath({ code: "code-1", state: params.get("state") ?? "" }),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(AuthError.is(error, AuthErrorCode.IssuerMismatch)).toBe(true);
+	});
+
+	test("checks iss on an error response too, before reporting the refusal", async () => {
+		let agent = createAgent();
+		let rp = createRelyingParty();
+		let params = await startLogin(agent, rp);
+
+		let error = await agent.attempt(
+			callbackPath({
+				error: "access_denied",
+				state: params.get("state") ?? "",
+				iss: "https://attacker.example.com",
+			}),
+			(ctx) => rp.callback(ctx),
+		);
+
+		expect(AuthError.is(error, AuthErrorCode.IssuerMismatch)).toBe(true);
+	});
+
 	test("throws missing_transaction when the session holds no login", async () => {
 		let agent = createAgent();
 		let rp = createRelyingParty();

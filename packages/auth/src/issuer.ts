@@ -79,6 +79,7 @@ const METADATA_SCHEMA = s.object({
 	token_endpoint_auth_methods_supported: VALUES_SCHEMA,
 	acr_values_supported: VALUES_SCHEMA,
 	code_challenge_methods_supported: VALUES_SCHEMA,
+	authorization_response_iss_parameter_supported: s.optional(s.boolean()),
 });
 
 /**
@@ -91,7 +92,10 @@ const JWKS_SCHEMA = s.object({ keys: s.array(s.record(s.string(), s.any())) });
 type EndpointName = Extract<keyof Issuer.Metadata, `${string}_endpoint` | "jwks_uri">;
 
 /** Metadata members listing advertised values, read by the corresponding accessors. */
-type ValuesName = Extract<keyof Issuer.Metadata, `${string}_supported`>;
+type ValuesName = Exclude<
+	Extract<keyof Issuer.Metadata, `${string}_supported`>,
+	"authorization_response_iss_parameter_supported"
+>;
 
 /**
  * An identifier in the form it compares. A URL identifier is read as a URL, so host
@@ -710,6 +714,11 @@ export namespace Issuer {
 		token_endpoint_auth_methods_supported?: string[];
 		acr_values_supported?: string[];
 		code_challenge_methods_supported?: string[];
+		/**
+		 * Whether every authorization response carries `iss` (RFC 9207), which makes the
+		 * callback refuse one that arrives without it.
+		 */
+		authorization_response_iss_parameter_supported?: boolean;
 	}
 
 	/** Expiration a cache write carries. */

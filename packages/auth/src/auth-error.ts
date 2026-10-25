@@ -14,7 +14,10 @@
 export const AuthErrorCode = {
 	/** Discovery metadata could not be fetched or parsed. */
 	DiscoveryFailed: "discovery_failed",
-	/** The issuer's document names an issuer other than the one asked for. */
+	/**
+	 * The issuer's document names an issuer other than the one asked for, or an
+	 * authorization response's `iss` is missing where promised or names another issuer.
+	 */
 	IssuerMismatch: "issuer_mismatch",
 	/** The endpoint a step needs is absent from the issuer's metadata. */
 	EndpointUnsupported: "endpoint_unsupported",
