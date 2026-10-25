@@ -179,13 +179,14 @@ describe("sessions.deleteByRefreshToken", () => {
 	});
 });
 
+/** The migration under test; the database is built up to just before it, then it runs. */
+const MIGRATION = "20261012000000_session_public_id.sql";
+
 /**
  * The migration that split the public id from the refresh token. Every id it finds was a
  * refresh token, and possibly a leaked one, so the migration ends every session.
  */
 describe("session public id migration", () => {
-	const MIGRATION = "20261012000000_session_public_id.sql";
-
 	test("deletes every session, so no pre-migration id refreshes again", async () => {
 		let { db, sqliteDb } = createTestDatabase((file) => file < MIGRATION);
 		let oldModels = bindModels(db);

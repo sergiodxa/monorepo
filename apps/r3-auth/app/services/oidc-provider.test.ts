@@ -1844,17 +1844,17 @@ describe("loginWithCredential() password policy", () => {
 	});
 });
 
-describe("generateAuthzCode", () => {
-	/** The authorization request the failing storage below is asked to answer. */
-	const INPUT = {
-		subjectId: testSubject.id,
-		clientId: testClient.id,
-		ip: null,
-		ua: null,
-		redirectUri: testClient.redirectUri,
-		state: "state-123",
-	};
+/** The authorization request the `generateAuthzCode` tests ask a failing storage to answer. */
+const AUTHZ_REQUEST = {
+	subjectId: testSubject.id,
+	clientId: testClient.id,
+	ip: null,
+	ua: null,
+	redirectUri: testClient.redirectUri,
+	state: "state-123",
+};
 
+describe("generateAuthzCode", () => {
 	/**
 	 * The description travels to the relying party as an `error_description` query
 	 * parameter on its redirect URI, so it stays a fixed sentence: a runtime message put
@@ -1871,7 +1871,7 @@ describe("generateAuthzCode", () => {
 			storeAuthorizationCode: vi.fn(async () => {}),
 		} as unknown as OIDC.Repository;
 
-		let result = await new OIDC(ISSUER, repo, log).generateAuthzCode(INPUT);
+		let result = await new OIDC(ISSUER, repo, log).generateAuthzCode(AUTHZ_REQUEST);
 
 		expect(result.status).toBe("failure");
 		if (result.status !== "failure") return;
@@ -1898,7 +1898,9 @@ describe("generateAuthzCode", () => {
 			storeAuthorizationCode,
 		} as unknown as OIDC.Repository;
 
-		let result = unwrap(await new OIDC(ISSUER, repo, createMockLog()).generateAuthzCode(INPUT));
+		let result = unwrap(
+			await new OIDC(ISSUER, repo, createMockLog()).generateAuthzCode(AUTHZ_REQUEST),
+		);
 		let code = result.params.code ?? "";
 
 		expect(code).toMatch(/^[\w-]{43}$/);
