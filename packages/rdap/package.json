@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/rdap",
 	"version": "0.0.1",
-	"description": "Domain registration data over RDAP: expiry, status, registrar and nameservers from the registry",
+	"description": "Domain registration data over RDAP: expiry, status, registrar, contacts and nameservers from the registry",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/jscontact": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	},

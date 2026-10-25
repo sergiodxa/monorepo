@@ -1,8 +1,7 @@
 /**
  * Validates the part of an RFC 9083 domain response the model reads and builds the
- * camelCase `RDAP.Domain` from it: the three dates, EPP statuses, the registrar from
- * its jCard and public ids, nameservers, DNSSEC, the registrar's `related` link and the
- * RFC 9537 redactions.
+ * camelCase `RDAP.Domain` from it: dates, statuses, contacts and registrar from their jCard
+ * or JSContact cards, nameservers, DNSSEC, the `related` link and RFC 9537 redactions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +14,7 @@ import * as s from "remix/data-schema";
 
 import type { RDAP } from "./rdap.js";
 
+import { contacts, toContact } from "./contact.js";
 import { RDAPError } from "./error.js";
 import { redactions } from "./redacted.js";
 import { eppStatus } from "./status.js";
@@ -25,20 +25,8 @@ const IANA_REGISTRAR_ID = "iana registrar id";
 /** The media type a `related` link names when it points at another RDAP server. */
 const RDAP_MEDIA_TYPE = "application/rdap+json";
 
-/** An entity's fields the model reads; its jCard is read defensively, so any shape passes. */
-const CONTACT_SCHEMA = s.object({
-	roles: s.optional(s.array(s.string())),
-	vcardArray: s.optional(s.any()),
-	publicIds: s.optional(s.array(s.object({ type: s.string(), identifier: s.string() }))),
-});
-
-/** A top-level entity, whose own entities hold the registrar's abuse contact. */
-const ENTITY_SCHEMA = s.object({
-	roles: s.optional(s.array(s.string())),
-	vcardArray: s.optional(s.any()),
-	publicIds: s.optional(s.array(s.object({ type: s.string(), identifier: s.string() }))),
-	entities: s.optional(s.array(CONTACT_SCHEMA)),
-});
+/** A public id, such as the `IANA Registrar ID` a registrar entity carries. */
+const PUBLIC_ID_SCHEMA = s.object({ type: s.string(), identifier: s.string() });
 
 /** The members of a domain response the model reads; everything else passes unvalidated. */
 const DOMAIN_SCHEMA = s.object({
@@ -50,7 +38,9 @@ const DOMAIN_SCHEMA = s.object({
 	events: s.optional(
 		s.array(s.object({ eventAction: s.string(), eventDate: s.optional(s.string()) })),
 	),
-	entities: s.optional(s.array(ENTITY_SCHEMA)),
+	entities: s.optional(
+		s.array(s.record(s.string(), s.any()) as s.Schema<unknown, Record<string, unknown>>),
+	),
 	nameservers: s.optional(s.array(s.object({ ldhName: s.optional(s.string()) }))),
 	secureDNS: s.optional(s.object({ delegationSigned: s.optional(s.boolean()) })),
 	links: s.optional(
@@ -63,9 +53,6 @@ const DOMAIN_SCHEMA = s.object({
 
 /** A validated domain response. */
 type DomainDocument = s.InferOutput<typeof DOMAIN_SCHEMA>;
-
-/** A validated entity, top-level or nested. */
-type Entity = s.InferOutput<typeof CONTACT_SCHEMA>;
 
 /**
  * Builds the model from a parsed response. A body that fails the schema, or that
@@ -102,6 +89,7 @@ export function toDomain(
 		updatedAt: dates.get("last changed") ?? null,
 		status: (document.status ?? []).map(eppStatus),
 		registrar: registrar(document),
+		contacts: contacts(document.entities),
 		nameservers: (document.nameservers ?? []).flatMap((nameserver) =>
 			nameserver.ldhName ? [hostName(nameserver.ldhName)] : [],
 		),
@@ -138,40 +126,44 @@ function eventDates(document: DomainDocument): Map<string, number> {
 	return dates;
 }
 
-/** The registrar entity's name, IANA id and abuse email, or `null` when the response names none. */
+/** A validated entity, which keeps every member it was sent. */
+type Entity = Record<string, unknown>;
+
+/**
+ * The registrar entity's name, IANA id and abuse email, or `null` when the response names
+ * none. The name is the card's full name, or its organization when the name is empty.
+ */
 function registrar(document: DomainDocument): RDAP.Registrar | null {
 	let entity = document.entities?.find((candidate) => hasRole(candidate, "registrar"));
 	if (entity === undefined) return null;
 
-	let abuse = entity.entities?.find((candidate) => hasRole(candidate, "abuse"));
-	let ianaId = entity.publicIds?.find((id) => id.type.toLowerCase() === IANA_REGISTRAR_ID);
+	let contact = toContact(entity);
+	let nested = Array.isArray(entity.entities) ? (entity.entities as unknown[]) : [];
+	let abuse = nested.find(
+		(candidate): candidate is Entity =>
+			typeof candidate === "object" && candidate !== null && hasRole(candidate as Entity, "abuse"),
+	);
+	let ids: unknown[] = Array.isArray(entity.publicIds) ? entity.publicIds : [];
+	let ianaId = ids.find((id) => {
+		let parsed = s.parseSafe(PUBLIC_ID_SCHEMA, id);
+		return parsed.success && parsed.value.type.toLowerCase() === IANA_REGISTRAR_ID;
+	}) as { identifier: string } | undefined;
 
 	return {
-		name: jCardText(entity.vcardArray, "fn"),
+		name: contact.name ?? contact.organization,
 		ianaId: ianaId?.identifier || null,
-		abuseEmail: abuse ? jCardText(abuse.vcardArray, "email") : null,
+		abuseEmail: abuse ? (toContact(abuse).emails[0] ?? null) : null,
 	};
 }
 
 /** Whether an entity plays a role, compared case-insensitively since registries vary the spelling. */
 function hasRole(entity: Entity, role: string): boolean {
-	return entity.roles?.some((candidate) => candidate.toLowerCase() === role) ?? false;
-}
-
-/**
- * Reads the first text value of a jCard property (RFC 7095):
- * `["vcard", [["fn", {}, "text", "Example Registrar"], …]]`. A malformed card or a
- * redacted empty value reads as `null`.
- */
-export function jCardText(card: unknown, property: string): string | null {
-	if (!Array.isArray(card) || card[0] !== "vcard" || !Array.isArray(card[1])) return null;
-
-	for (let entry of card[1] as unknown[]) {
-		if (!Array.isArray(entry) || entry[0] !== property) continue;
-		let value: unknown = entry[3];
-		if (typeof value === "string" && value.trim() !== "") return value.trim();
-	}
-	return null;
+	return (
+		Array.isArray(entity.roles) &&
+		entity.roles.some(
+			(candidate) => typeof candidate === "string" && candidate.toLowerCase() === role,
+		)
+	);
 }
 
 /** The `related` link that points at another RDAP server, which on a thin registry is the registrar's. */

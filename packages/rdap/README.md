@@ -1,6 +1,6 @@
 # @sdxc/rdap
 
-Domain registration data over RDAP: a domain's expiry, status, registrar and nameservers, read from the registry that holds it.
+Domain registration data over RDAP: a domain's expiry, status, registrar, contacts and nameservers, read from the registry that holds it.
 
 ## Installation
 
@@ -123,6 +123,7 @@ Every status the model names, in EPP spelling: the RFC 8056 codes such as `clien
 | `expiresAt`, `registeredAt`, `updatedAt` | Epoch milliseconds of the latest `expiration`, `registration` and `last changed` event |
 | `status`                                 | `RDAP.Status[]`: EPP spelling, an unknown value kept as written                        |
 | `registrar`                              | `RDAP.Registrar`, or `null`                                                            |
+| `contacts`                               | `RDAP.Contact[]`: every entity, nested ones after their parent                         |
 | `nameservers`                            | Lowercased, no trailing dot, in the order published                                    |
 | `dnssec`                                 | `secureDNS.delegationSigned`, or `null` when the registry does not say                 |
 | `relatedUrl`                             | The `related` RDAP link, the registrar's record on a thin registry                     |
@@ -134,7 +135,11 @@ A date the registry omits or writes in a form that does not parse is `null`; som
 
 #### `RDAP.Registrar`
 
-`{ name, ianaId, abuseEmail }`, each `string | null`: the registrar's jCard name, its IANA Registrar ID and its abuse contact's email.
+`{ name, ianaId, abuseEmail }`, each `string | null`: the registrar's card name (its organization when the name is empty), its IANA Registrar ID and its abuse contact's email.
+
+#### `RDAP.Contact`
+
+`{ roles, handle, kind, name, organization, emails, phones, faxes, address, contactUri, url, card }`, read alike from a jCard `vcardArray` or a JSContact `jscontact_card`; `card` is the card as JSContact, via [`@sdxc/jscontact`](https://www.npmjs.com/package/@sdxc/jscontact). A redacted empty value reads as `null`.
 
 #### `RDAP.Status`, `RDAP.EppStatus`
 

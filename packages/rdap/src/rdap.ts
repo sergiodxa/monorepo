@@ -9,6 +9,7 @@
 
 import type { Cache } from "@sdxc/cache";
 import type { DurationInput } from "@sdxc/duration";
+import type { JSContact } from "@sdxc/jscontact";
 import type { Result } from "@sdxc/result";
 
 import { toMs } from "@sdxc/duration";
@@ -229,6 +230,11 @@ export namespace RDAP {
 		/** EPP status codes, such as `clientTransferProhibited`; an unknown value is kept as written. */
 		status: Status[];
 		registrar: Registrar | null;
+		/**
+		 * Every entity of the response, nested ones after their parent, read from a jCard or a
+		 * JSContact card alike.
+		 */
+		contacts: Contact[];
 		/** Lowercased, no trailing dot, in the order published. */
 		nameservers: string[];
 		/** `secureDNS.delegationSigned`; `null` when the registry does not say. */
@@ -254,6 +260,45 @@ export namespace RDAP {
 		ianaId: string | null;
 		/** The email of the registrar's `abuse` entity, from its jCard. */
 		abuseEmail: string | null;
+	}
+
+	/**
+	 * An entity's contact details in one shape, whether the server sent a jCard or a
+	 * JSContact card. A field the server left out or emptied is `null` or empty.
+	 */
+	export interface Contact {
+		/** The entity's roles, lowercased, such as `registrant` or `abuse`. */
+		roles: ContactRole[];
+		handle: string | null;
+		/** Whether the card describes a person or an organization, when it says. */
+		kind: "individual" | "org" | null;
+		/** The full name: jCard `fn`, JSContact `name.full`. */
+		name: string | null;
+		organization: string | null;
+		emails: string[];
+		/** Voice numbers, usually `tel:` URIs. */
+		phones: string[];
+		faxes: string[];
+		address: Address | null;
+		/** A `contact-uri`, such as a web form that stands in for a redacted email. */
+		contactUri: string | null;
+		url: string | null;
+		/** The card as JSContact, converted from the jCard when the server sent one. */
+		card: JSContact.Card | null;
+	}
+
+	/** A contact's postal address, from the card's preferred address. */
+	export interface Address {
+		/** The address as one formatted text, when the card carries one. */
+		full: string | null;
+		/** Street lines, in order. */
+		street: string[];
+		locality: string | null;
+		region: string | null;
+		postcode: string | null;
+		country: string | null;
+		/** ISO 3166-1 alpha-2. */
+		countryCode: string | null;
 	}
 
 	/** One RFC 9537 `redacted` entry, with the model field it resolves onto. */

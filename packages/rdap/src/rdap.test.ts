@@ -92,6 +92,14 @@ describe("RDAP.domain", () => {
 			nameservers: ["ns1.exampledns.com", "ns2.exampledns.com"],
 			dnssec: false,
 			relatedUrl: "https://rdap.exampleregistrar.com/domain/ACME-WIDGETS.COM",
+			contacts: [
+				expect.objectContaining({
+					roles: ["registrar"],
+					handle: "9999",
+					name: "Example Registrar, LLC",
+				}),
+				expect.objectContaining({ roles: ["abuse"], name: null, emails: [] }),
+			],
 			redacted: [],
 			server: `${VERISIGN}/acme-widgets.com`,
 			document: THIN_COM,
