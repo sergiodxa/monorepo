@@ -29,11 +29,15 @@ import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
 import { authorizationCodes } from "~/app/models/tenant/authorization";
 import TenantObject from "~/app/models/tenant/object";
-import { openSession } from "~/app/models/tenant/sessions";
+import { openSession, sessions } from "~/app/models/tenant/sessions";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
 
-import { managementAuth } from "./management-auth";
+import {
+	CREDENTIALS_EXPORT_AUTHENTICATION,
+	managementAuth,
+	managementStepUp,
+} from "./management-auth";
 
 const ISSUER = "https://api.example.com";
 
@@ -154,6 +158,7 @@ async function signHumanToken(input: {
 	subjectId: string;
 	sessionId: string;
 	scopes: string[];
+	authTime?: number;
 }): Promise<string> {
 	let redirectUri = "https://example.com/callback";
 
@@ -187,7 +192,7 @@ async function signHumanToken(input: {
 		subject_id: input.subjectId,
 		session_id: input.sessionId,
 		nonce: null,
-		auth_time: now,
+		auth_time: input.authTime ?? now,
 		created_at: now,
 		expires_at: now + 60_000,
 		redeemed_at: null,
@@ -265,6 +270,98 @@ describe("machine bearer token", () => {
 		expect(response.headers.get("WWW-Authenticate")).toBe(
 			`Bearer error="invalid_token", resource_metadata="${METADATA_URL}"`,
 		);
+	});
+});
+
+describe("step-up authentication", () => {
+	/** A router whose probe demands the credentials export's user authentication. */
+	function buildStepUpRouter() {
+		let router = createRouter({ middleware: [database(db), modelsMiddleware()] });
+		router.get("/tenants/:tenantId/probe", {
+			middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId: async () => null })],
+			handler: (ctx) =>
+				managementStepUp(ctx, CREDENTIALS_EXPORT_AUTHENTICATION) ?? new Response("ok"),
+		});
+		return router;
+	}
+
+	/** A member of the probe's tenant and their open session on the platform tenant. */
+	async function createMember() {
+		let member = await createPlatformSubjectAndSession();
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenantId,
+				subject_id: member.subjectId,
+				role: "owner",
+			}),
+		);
+		return member;
+	}
+
+	test("challenges a member token minted without a second factor", async () => {
+		let member = await createMember();
+		let token = await signHumanToken({ ...member, scopes: ["export:read"] });
+
+		let response = await buildStepUpRouter().fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(401);
+		expect(response.headers.get("WWW-Authenticate")).toBe(
+			`Bearer error="insufficient_user_authentication", error_description="A different authentication level is required.", acr_values="mfa", max_age="900", resource_metadata="${METADATA_URL}"`,
+		);
+	});
+
+	test("lets through a member token minted right after a step-up", async () => {
+		let member = await createMember();
+		let steppedUpAt = Date.now();
+		await platformDb.update(
+			sessions,
+			{ id: member.sessionId },
+			{ acr: "mfa", auth_time: steppedUpAt },
+		);
+		let token = await signHumanToken({ ...member, scopes: ["export:read"], authTime: steppedUpAt });
+
+		let response = await buildStepUpRouter().fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(200);
+	});
+
+	test("challenges a step-up older than the window", async () => {
+		let member = await createMember();
+		let steppedUpAt = Date.now() - 16 * 60 * 1000;
+		await platformDb.update(
+			sessions,
+			{ id: member.sessionId },
+			{ acr: "mfa", auth_time: steppedUpAt },
+		);
+		let token = await signHumanToken({ ...member, scopes: ["export:read"], authTime: steppedUpAt });
+
+		let response = await buildStepUpRouter().fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(401);
+	});
+
+	test("lets a machine credential through, since it acts for no person", async () => {
+		let token = await signMachineToken(tenantId);
+
+		let response = await buildStepUpRouter().fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(200);
 	});
 });
 

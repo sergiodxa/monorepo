@@ -14,7 +14,12 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { managementAuth, managementDenied } from "~/app/http/middleware/management-auth";
+import {
+	CREDENTIALS_EXPORT_AUTHENTICATION,
+	managementAuth,
+	managementDenied,
+	managementStepUp,
+} from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
@@ -52,6 +57,9 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			if (includeCredentials) {
 				let credentials = ctx.access.check(abilities.subjects.export.credentials);
 				if (!credentials.allowed) return managementDenied(ctx, credentials);
+
+				let stepUp = managementStepUp(ctx, CREDENTIALS_EXPORT_AUTHENTICATION);
+				if (stepUp) return stepUp;
 			}
 
 			let tenantId = ctx.managementCaller.tenantId;

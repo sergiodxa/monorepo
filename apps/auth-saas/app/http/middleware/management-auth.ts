@@ -11,6 +11,7 @@ import type { BearerChallenge } from "@sdxc/auth/bearer-challenge";
 import type { Refusal } from "@sdxc/authz";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { AccessToken as BearerToken } from "@sdxc/auth/access-token";
 import { access } from "@sdxc/authz/middleware/router";
 import { JWK } from "@sdxc/jwt";
 import { createContextKey } from "remix/router";
@@ -32,7 +33,18 @@ export interface ManagementCaller {
 	scopes: string[];
 	/** The principal a route's own audit trail names as having acted. */
 	actor: { type: "client" | "member"; id: string };
+	/** The bearer token a member presented, read for its `acr` and `auth_time`; `null` otherwise. */
+	token: BearerToken | null;
 }
+
+/**
+ * The user authentication exporting password hashes needs: a second factor proven within
+ * the last fifteen minutes, the same window the hosted step-up screen grants.
+ */
+export const CREDENTIALS_EXPORT_AUTHENTICATION: BearerToken.AuthenticationRequirement = {
+	acrValues: ["mfa"],
+	maxAge: "15 minutes",
+};
 
 export const ManagementCallerContext = createContextKey<ManagementCaller>();
 
@@ -115,6 +127,36 @@ export function managementDenied(
 	return forbidden(ctx.managementApi, `This route requires the "${scope}" scope.`, [scope]);
 }
 
+/**
+ * Holds a member's bearer token to a route's user-authentication requirement, answering
+ * RFC 9470's `insufficient_user_authentication` challenge when it falls short, so the
+ * client sends the person back through `/authorize` with the `acr_values` and `max_age`
+ * it names. A machine credential, which acts for no person, and a dashboard session pass.
+ *
+ * @param ctx - A request `managementAuth` resolved.
+ * @param requirement - The classes accepted and how old the authentication may be.
+ * @returns The `401` refusal, or `null` when the caller may continue.
+ * @example
+ * let stepUp = managementStepUp(ctx, CREDENTIALS_EXPORT_AUTHENTICATION);
+ * if (stepUp) return stepUp;
+ */
+export function managementStepUp(
+	ctx: { managementApi: ManagementResourceServer; managementCaller: ManagementCaller },
+	requirement: BearerToken.AuthenticationRequirement,
+): Response | null {
+	let token = ctx.managementCaller.token;
+	if (token === null || ctx.managementCaller.actor.type !== "member") return null;
+
+	let challenge = ctx.managementApi.authenticationChallenge(token, requirement);
+	if (challenge === null) return null;
+
+	return managementProblem(
+		"unauthorized",
+		{ detail: "This operation requires a more recent sign-in with a second factor." },
+		{ headers: { "WWW-Authenticate": challenge } },
+	);
+}
+
 /** A resolved caller, and the roles and consent ceiling the policy binds it with. */
 interface ResolvedCaller {
 	caller: ManagementCaller;
@@ -182,6 +224,7 @@ async function resolveBearerCaller(
 				tenantId: binding.tenant_id,
 				scopes,
 				actor: { type: "client", id: verified.clientId },
+				token: null,
 			},
 			roles: scopeRoles(scopes),
 		};
@@ -209,6 +252,7 @@ async function resolveBearerCaller(
 			tenantId: pathTenantId,
 			scopes: grantedScopes,
 			actor: { type: "member", id: verified.subject },
+			token: new BearerToken(verified.payload),
 		},
 		roles: [membership.role],
 		within: scopeRoles(scopes),
@@ -280,6 +324,7 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 			tenantId: pathTenantId,
 			scopes: scopesForRole(membership.role),
 			actor: { type: "member", id: subjectId },
+			token: null,
 		};
 		ctx.set(ManagementCallerContext, caller, CALLER_PROPERTY);
 

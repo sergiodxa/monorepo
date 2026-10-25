@@ -382,6 +382,8 @@ export interface MintTokensInput {
 	sessionId: string;
 	amr: string[];
 	authTime: number;
+	/** The authentication context class `authTime` was reached at, `null` for a plain sign-in. */
+	acr: string | null;
 	nonce: string | null;
 	scopes: string[];
 	now: number;
@@ -421,7 +423,9 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 		client_id: input.client.id,
 		scope: input.scopes.join(" "),
 		sid: input.sessionId,
+		auth_time: Math.floor(input.authTime / 1000),
 	};
+	if (input.acr) accessClaims.acr = input.acr;
 
 	let idClaims: Record<string, unknown> | null = null;
 
@@ -437,6 +441,7 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 			sid: input.sessionId,
 		};
 		if (input.nonce) idClaims.nonce = input.nonce;
+		if (input.acr) idClaims.acr = input.acr;
 
 		await addStandardProfileClaims(db, idClaims, input.subjectId, input.scopes);
 	}
@@ -536,11 +541,28 @@ export async function issueRefreshToken(
 	return { token };
 }
 
-/** What a code or a refresh token's session lookup needs: its `amr`, `auth_time` and active organization. */
+/** What a code or a refresh token's session lookup needs: its `amr`, `auth_time`, `acr` and active organization. */
 interface SessionAmrAndAuthTime {
 	amr: string[];
 	auth_time: number;
+	acr: string | null;
 	active_organization_id: string | null;
+}
+
+/**
+ * The `acr` a token minted at `authTime` carries: the session's step-up class while the
+ * session's own `auth_time` is still the instant that step-up verified, so a code minted
+ * before a later step-up never claims the class that step-up earned.
+ *
+ * @param session - The session the grant names, `null` once it no longer resolves.
+ * @param authTime - The authentication instant the token states as `auth_time`.
+ */
+export function acrAt(
+	session: { acr: string | null; auth_time: number } | null,
+	authTime: number,
+): string | null {
+	if (session === null || session.auth_time !== authTime) return null;
+	return session.acr;
 }
 
 /** The session row a code or a refresh token names, or a bare fallback for one that no longer resolves. */
@@ -550,9 +572,10 @@ async function sessionFor(db: Database, sessionId: string): Promise<SessionAmrAn
 		? {
 				amr: row.amr as string[],
 				auth_time: row.auth_time,
+				acr: row.acr,
 				active_organization_id: row.active_organization_id,
 			}
-		: { amr: [], auth_time: Date.now(), active_organization_id: null };
+		: { amr: [], auth_time: Date.now(), acr: null, active_organization_id: null };
 }
 
 export interface ExchangeCodeInput {
@@ -676,6 +699,7 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		sessionId: redeemedRow.session_id,
 		amr: session.amr,
 		authTime: redeemedRow.auth_time,
+		acr: acrAt(session, redeemedRow.auth_time),
 		nonce: redeemedRow.nonce,
 		scopes: grantedScopes,
 		now: parsed.now,
@@ -846,6 +870,7 @@ export async function refreshTokens(
 		sessionId: redeemedRow.session_id,
 		amr: session.amr,
 		authTime: session.auth_time,
+		acr: session.acr,
 		nonce: null,
 		scopes: requestedScopes,
 		now: parsed.now,

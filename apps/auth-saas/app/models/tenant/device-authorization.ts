@@ -35,6 +35,7 @@ import { clients } from "~/app/models/tenant/clients";
 import { evaluateConsent, recordConsentDecision } from "~/app/models/tenant/consent";
 import { sessions } from "~/app/models/tenant/sessions";
 import {
+	acrAt,
 	AuthSchemeSchema,
 	authenticateClient,
 	issueRefreshToken,
@@ -463,6 +464,7 @@ export async function redeemDeviceCode(
 		sessionId: redeemedRow.session_id,
 		amr: (redeemedRow.amr as string[] | null) ?? [],
 		authTime: redeemedRow.auth_time,
+		acr: acrAt(sessionRow ?? null, redeemedRow.auth_time),
 		nonce: null,
 		scopes: grantedScopes,
 		now: parsed.now,

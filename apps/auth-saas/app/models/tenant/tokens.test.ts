@@ -614,6 +614,70 @@ async function issueTestRefreshToken(
 	return { client, secret, subjectId, session, refreshToken: outcome.refreshToken, now };
 }
 
+describe("step-up claims", () => {
+	/**
+	 * Exchanges a code minted at `authTime` for a session whose own step-up stands at
+	 * `steppedUpAt`, answering the decoded tokens.
+	 */
+	async function exchangeAfterStepUp(authTime: number, steppedUpAt: number | null) {
+		let now = 1_700_000_000_000;
+		let { client, secret } = await createTestClient();
+		let subjectId = await createTestSubject();
+		let session = await openTestSession(subjectId);
+		if (steppedUpAt !== null) {
+			await db.update(sessions, { id: session.sessionId }, { acr: "mfa", auth_time: steppedUpAt });
+		}
+		let { code, codeVerifier } = await createTestCode({
+			clientId: client.id,
+			subjectId,
+			sessionId: session.sessionId,
+			authTime,
+			now,
+		});
+
+		let outcome = await exchangeCode(db, {
+			code,
+			codeVerifier,
+			redirectUri: REDIRECT_URI,
+			clientId: client.id,
+			clientSecret: secret,
+			authScheme: "basic",
+			now,
+			issuer: ISSUER,
+		});
+		if (outcome.kind !== "tokens" || !outcome.idToken) throw new Error("unreachable");
+
+		return {
+			accessToken: AccessToken.decode(outcome.accessToken),
+			idToken: IdToken.decode(outcome.idToken),
+		};
+	}
+
+	test("names a stepped-up session's acr and auth_time on both tokens", async () => {
+		let steppedUpAt = 1_699_999_990_000;
+		let { accessToken, idToken } = await exchangeAfterStepUp(steppedUpAt, steppedUpAt);
+
+		expect(accessToken.payload.acr).toBe("mfa");
+		expect(accessToken.payload.auth_time).toBe(steppedUpAt / 1000);
+		expect(idToken.payload.acr).toBe("mfa");
+	});
+
+	test("states auth_time with no acr for a session that never stepped up", async () => {
+		let { accessToken, idToken } = await exchangeAfterStepUp(1_699_999_990_000, null);
+
+		expect(accessToken.payload.auth_time).toBe(1_699_999_990);
+		expect(accessToken.payload.acr).toBeUndefined();
+		expect(idToken.payload.acr).toBeUndefined();
+	});
+
+	test("leaves acr off a code minted before the session's later step-up", async () => {
+		let { accessToken } = await exchangeAfterStepUp(1_699_999_900_000, 1_699_999_990_000);
+
+		expect(accessToken.payload.auth_time).toBe(1_699_999_900);
+		expect(accessToken.payload.acr).toBeUndefined();
+	});
+});
+
 describe("refreshTokens", () => {
 	test("rotates into a new token in the same family, chained by parent_hash", async () => {
 		let { client, secret, refreshToken, now } = await issueTestRefreshToken();
