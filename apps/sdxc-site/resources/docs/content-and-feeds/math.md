@@ -12,57 +12,26 @@ outcomes:
     - "How to catch broken formulas at build time and render to HTML for feeds and email"
 ---
 
-Browsers draw MathML Core on their own: no stylesheet to link, no web font to load and no
-script to run after the page arrives. What authors write, though, is TeX. This guide converts
-one into the other wherever a formula appears: in a markdown post, in a string you render for
-a feed, and directly in a `remix/component` view. It uses [`@sdxc/math`](/api/math) together
-with [`@sdxc/markdown`](/api/markdown).
+Browsers draw MathML Core on their own, with no stylesheet, web font or script, but authors
+write TeX. This guide converts one into the other on the server wherever a formula appears: in a
+markdown post, in a string you render for a feed, and in a `remix/component` view, using
+[`@sdxc/math`](/api/math) with [`@sdxc/markdown`](/api/markdown).
 
 ```bash
 npm add @sdxc/highlight @sdxc/markdown @sdxc/math @sdxc/result remix
 ```
 
-The conversion happens on the server, so the page carries finished markup. Every formula
-also keeps its TeX source as an annotation, which screen readers and copy-paste read back.
+Every formula keeps its TeX source as an annotation, which screen readers and copy-paste read
+back.
 
 ## What it looks like
 
 Every formula on this page is drawn the way this guide describes. Euler's identity,
-$`e^{i\pi} + 1 = 0`$, sits inline in a sentence, while a display formula gets a line of its
-own. The quadratic formula:
+$`e^{i\pi} + 1 = 0`$, sits inline in a sentence, while a display formula, such as the quadratic
+formula, gets a line of its own:
 
 ```math
 x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
-```
-
-The Gaussian integral:
-
-```math
-\int_{-\infty}^{\infty} e^{-x^2} \, dx = \sqrt{\pi}
-```
-
-The Basel problem, a big operator with its limits above and below:
-
-```math
-\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
-```
-
-Bayes' theorem:
-
-```math
-P(A \mid B) = \frac{P(B \mid A) \, P(A)}{P(B)}
-```
-
-A rotation by $`\theta`$ as a matrix:
-
-```math
-R(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}
-```
-
-The absolute value, defined by cases:
-
-```math
-\lvert x \rvert = \begin{cases} x & \text{if } x \geq 0 \\ -x & \text{if } x < 0 \end{cases}
 ```
 
 The source of each is the TeX inside a `math` fence, as the next sections show.
@@ -87,26 +56,13 @@ export function sumFormula(): string {
 }
 ```
 
-The string is safe to place in HTML or XHTML as it is: every operator and the annotation are
-escaped. TeX outside the supported subset fails with a `MathError` whose message ends in
-`line:column`, so it reads on its own in a build log, while `reason`, `index`, `line` and
-`column` carry the same place for a tool that points an editor at it.
-
-The subset covers what prose math reaches for: scripts, `\frac` and `\binom`, roots,
-Greek letters, relations and arrows, function names and `\operatorname`, big operators with
-`\limits` and `\nolimits`, `\left` and `\right` fences, `\text`, the `\mathrm`, `\mathbf`,
-`\mathit` and `\mathbb` styles, accents, TeX spacing, and the `matrix`, `pmatrix`, `bmatrix`,
-`vmatrix` and `cases` environments.
-
-When you want the structure rather than a string, `parseMath` takes the same arguments and
-answers with a JSON tree of MathML elements rooted at `math`. It survives
-`JSON.stringify`, so a build can store it and a renderer can draw it later.
+The string is safe to place in HTML as it is. TeX outside the supported subset, which
+[`@sdxc/math`](/api/math) lists, fails with a `MathError` carrying the `line` and `column`.
 
 ## Find the math in markdown
 
-Authors write math in markdown the way GitHub reads it: a fenced block with the `math`
-language for a display formula, and inline code wrapped in dollar signs for one inside a
-sentence.
+Authors write math in markdown the way GitHub reads it: a `math` fence for a display formula,
+and inline code wrapped in dollar signs inside a sentence.
 
 ```text
 The sum of the first $`n`$ integers is:
@@ -130,14 +86,11 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-`Markdown.compose` runs the `code` handlers in order: a `math` fence becomes a tag, which ends
-its chain, and every other block reaches the highlighter as the code node it was. The rest of
-the math visitor covers inline math in paragraphs, headings, table cells, emphasis and links.
-Its handlers are synchronous, so the walk answers with a `Result`.
+List `math` first: a `math` fence becomes a tag, and every other block reaches the highlighter
+as the code node it was.
 
-A formula that does not convert fails the walk. The failure's `position` is where the fence
-or inline code sits in the document, and its `cause` is the `MathError` with the place inside
-the formula, so a broken post fails the build with both:
+A formula that does not convert fails the walk, with the `position` in the document and the
+`MathError` as its `cause`, so a check script fails the build on a broken post:
 
 ```typescript {% title="scripts/check-posts.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -161,16 +114,14 @@ export function checkMath(path: string, source: string): string | null {
 
 <warning>
 A walk with `math` fails on the first formula that does not convert. For content you do not
-control, such as comments or imported notes, build the visitor with
-`createMathVisitor({ invalid: "keep" })`: a formula that does not convert then stays the code
-block or inline code its author wrote, and the walk succeeds.
+control, such as comments, build the visitor with `createMathVisitor({ invalid: "keep" })`, which
+leaves such a formula as the code its author wrote.
 </warning>
 
 ## Draw the tags in a route
 
-`MathTag` from `@sdxc/math/ui` is a `remix/component` component that takes the attributes the
-visitor writes, plus the `children` `toRemix` passes every tag, so it goes straight into the
-`components` map:
+`MathTag` from `@sdxc/math/ui` takes the attributes the visitor writes, so it goes straight
+into `toRemix`'s `components` map:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -182,11 +133,6 @@ export function renderPost(document: Markdown.Document) {
 	return toRemix(document, { components: { math: MathTag } });
 }
 ```
-
-It builds the MathML as element nodes the renderer owns, and the browser's HTML parser places
-them in the MathML namespace when the page arrives. A tag whose TeX does not convert, which a
-walk with `invalid: "keep"` never produces but a hand-built tag can, renders as the TeX in a
-`<code>`, so a reader still sees what the author wrote.
 
 `MathFormula` draws a formula outside markdown, in any view, from the same `tex` and `display`:
 
@@ -205,13 +151,9 @@ export function PricingNote(handle: Handle) {
 }
 ```
 
-`display` defaults to inline; pass `display` for a block formula of its own.
-
 ## Render to HTML for feeds and email
 
-A feed item or an email body wants a string. `renderMath` is the tag renderer for `toHTML`,
-turning each `math` tag into the markup `toMathML` writes, with unconvertible TeX as escaped
-`<code>`:
+A feed item or an email body wants a string. `renderMath` is the tag renderer for `toHTML`:
 
 ```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -224,13 +166,10 @@ export function renderHTML(document: Markdown.Document): string {
 }
 ```
 
-Feed readers that understand MathML draw the formula, and the `annotation` keeps the TeX in
-the item for the ones that show source.
-
 ## Test it
 
-The order of the visitors decides which `code` handler sees a fence first, and the check is
-what fails a broken post, so test both:
+Test the visitor order, which decides who sees a fence first, and the check that fails a broken
+post:
 
 ```typescript {% title="app/services/content/prepare.test.ts" %}
 import { Markdown } from "@sdxc/markdown";

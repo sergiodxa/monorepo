@@ -42,12 +42,9 @@ export function requestCache(): Cache {
 }
 ```
 
-Build one per request rather than one per isolate. A deferred write is held on the instance
-until KV has it, so a read on the same instance sees what was just written, and the request is
-the scope where reading your own writes matters.
-
-Code that uses a cache should take the `Cache` interface rather than the class. That is what lets
-a test hand it a `MemoryCache` instead.
+Build one per request: a deferred write is held on the instance until KV has it, so a read on
+the same instance sees what was just written. Code that uses a cache takes the `Cache` interface,
+so a test can hand it a `MemoryCache`.
 
 ## Read through with `fetch`
 
@@ -74,41 +71,20 @@ export default createAction(routes.packages, async (ctx) => {
 ```
 
 Here `listPackages` is your own loader and `PackagesPage` your view. `fetch` absorbs everything
-the store can do wrong. An unreachable namespace, an entry that is not
-JSON and a refused write all still answer with the loaded value, so a failure here means
-`listPackages` itself failed and there was nothing to show. The error's `code` says which case
-you are in: `load_failed` for the loader, `unavailable` and `invalid_value` for the store.
-
-What comes back is what reads out of KV, which is JSON. A `Date` your loader returned arrives as
-the string it serialized to, and the type says so, on a hit and on a miss alike.
-
-## Choose a TTL
-
-`ttl` takes a duration string such as `"10 minutes"` or `"1 day"`, checked at compile time by
-[`@sdxc/duration`](/api/duration), or a number of whole seconds. Leave it out and the entry never
-expires.
+the store can do wrong, so a failure here means `listPackages` itself failed. What comes back is
+JSON, so a `Date` your loader returned arrives as a string, and the type says so. `ttl` takes a
+duration string or a number of whole seconds; leave it out and the entry never expires.
 
 <warning>
 KV refuses a TTL under 60 seconds. A shorter one leaves the entry unwritten and reports
 `unavailable`, so a lifetime you compute at runtime needs a floor.
 </warning>
 
-```typescript {% title="app/services/daily-report.ts" %}
-import type { Cache } from "@sdxc/cache";
-
-import { buildReport, secondsUntilMidnight } from "~/app/services/report";
-
-export async function storeDailyReport(cache: Cache) {
-	let seconds = Math.max(secondsUntilMidnight(new Date()), 60);
-	return await cache.write("report:today", await buildReport(), { ttl: seconds });
-}
-```
-
 ## Keep a stale copy for when the source is down
 
-A TTL decides when a value stops being fresh. It should not also decide when your page goes
-blank. Write every successful fetch under two keys: one that expires, whose presence is what
-"fresh" means, and one that never does, which answers when the upstream refuses you.
+A TTL decides when a value stops being fresh, not when your page goes blank. Write every
+successful fetch under two keys: one that expires, whose presence means "fresh", and one that
+never does, which answers when the upstream refuses you:
 
 ```typescript {% title="app/services/releases.ts" %}
 import type { Cache } from "@sdxc/cache";
@@ -141,20 +117,13 @@ export async function readReleases(cache: Cache): Promise<Release[]> {
 ```
 
 `fetchReleases` is your own call to the upstream API, answering a `Result`. This uses `read` and
-`write` rather than `fetch` because the fallback needs to know the load
-failed, which `fetch` would report only as a failure with no stale value beside it. `read`
-succeeds with `null` on a miss, so a missing entry and a present one are both a success. Reading
-the type parameter back is an assertion: KV cannot prove what a key holds, so prefix keys by what
-they hold and keep one shape per prefix.
+`write` because the fallback needs to know the load failed. `read` succeeds with `null` on a miss.
 
 ## Store whole responses at the edge
 
-A value in KV still costs a Worker invocation to serve. For a public page, the edge can serve the
-response itself. `@sdxc/workers-cache` handles the part HTTP does not standardize: tagging a
-response and purging by tag.
-
-Declare the tags once, as functions, so the header a page writes and the purge that clears it
-cannot drift apart:
+A value in KV still costs a Worker invocation to serve; for a public page, the edge can serve the
+response itself. Declare the tags once, as functions, so the header a page writes and the purge
+that clears it cannot drift apart:
 
 ```typescript {% title="app/services/edge-cache.ts" %}
 import { policy } from "@sdxc/http/cache";
@@ -172,15 +141,8 @@ export const PUBLIC_PAGE = policy({
 }).toString();
 ```
 
-Each builder validates the tag it produces and throws on one the platform would drop, so a bad tag
-fails where you wrote it rather than silently at the edge.
-
-Register the middleware once, handing it the platform cache:
-
-<note>
-List the middleware ahead of your session and auth middleware, so the check it runs on the
-finished response sees everything they added.
-</note>
+Register the middleware once, handing it the platform cache, ahead of your session and auth
+middleware so its check on the finished response sees everything they added:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
@@ -215,35 +177,9 @@ export default createAction(routes.releases, async (ctx) => {
 });
 ```
 
-`ctx.cache()` records intent and writes nothing. The middleware writes `Cache-Control` and
-`Cache-Tag` after the handler returns, once it can inspect the finished response. A response
-carrying `Set-Cookie`, or a `public` policy on a request that carried a session, is downgraded to
-`private, no-store` and logged as a warning (and throws in development), so a signed-in page
-cannot end up in a shared cache. A route that never calls `ctx.cache()` gets `private, no-store`,
-unless it set its own `Cache-Control` or `Expires`.
-
-To keep a page at the edge far longer than browsers keep it, declare an edge-only lifetime with
-the object form. `cdn` is written as `CDN-Cache-Control`, which the edge obeys over
-`Cache-Control`, so browsers revalidate on every visit while the edge serves its copy for a day,
-or until a purge drops it:
-
-```typescript {% title="app/http/controllers/releases.tsx" %}
-import { policy, targetedPolicy } from "@sdxc/http/cache";
-
-ctx.cache({
-	policy: policy({
-		visibility: "public",
-		maxAge: 0,
-		mustRevalidate: true,
-	}).toString(),
-	cdn: targetedPolicy({ maxAge: "1 day" }),
-	tags: [TAGS.releaseList()],
-});
-```
-
-`cloudflare` writes `Cloudflare-CDN-Cache-Control`, which only Cloudflare's edge reads and which
-wins over `cdn`. On a request with a session, a targeted field without `private` or `no-store`
-downgrades the page to `private, no-store`, as a `public` policy does.
+The middleware writes `Cache-Control` and `Cache-Tag` once it can inspect the finished response.
+A response carrying `Set-Cookie`, or a `public` policy on a request that carried a session, is
+downgraded to `private, no-store` and logged, so a signed-in page cannot end up in a shared cache.
 
 <warning>
 Workers Cache stores a `200` with no freshness headers for two hours under a key that ignores
@@ -277,18 +213,14 @@ export default createAction(routes.publishRelease, async (ctx) => {
 });
 ```
 
-`saveRelease` stands for your own write, answering the version it stored.
-
-When nobody is about to look, `ctx.cache.purgeLater(...tags)` runs the purge after the response
-and logs a failure instead of returning one. Outside a request, `purge(platformCache, { tags })`
-does the same from a job, and `{ everything: true }` empties the cache when you no longer know
-which entries are wrong.
+`saveRelease` stands for your own write, answering the version it stored. When nobody is about to
+look, `ctx.cache.purgeLater(...tags)` runs the purge after the response instead.
 
 ## Test both layers without a platform
 
-`MemoryCache` from `@sdxc/cache/memory` serializes on write and parses on read, so it behaves
-like KV down to the `Date` coming back as a string, and its `now` option expires an entry without
-waiting for one. `createRecordingCache()` records purges instead of sending them:
+`MemoryCache` from `@sdxc/cache/memory` behaves like KV down to the `Date` coming back as a
+string, and its `now` option expires an entry without waiting. `createRecordingCache()` records
+purges instead of sending them:
 
 ```typescript {% title="app/services/edge-cache.test.ts" %}
 import { MemoryCache } from "@sdxc/cache/memory";
@@ -314,10 +246,6 @@ test("expires the fresh copy and purges the list", async () => {
 });
 ```
 
-In production, `cacheStatus(response)` reads the `cf-cache-status` header as `"hit"`, `"miss"`,
-`"expired"`, `"bypass"` or `"unknown"`, which is worth logging while you check that pages are
-actually being stored.
-
 ## Where to go next
 
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the data the
@@ -326,5 +254,3 @@ actually being stored.
   a schedule instead of on a reader's miss.
 - [Test Workers apps](/docs/operations-and-testing/testing) — run a KV assertion against a real
   binding.
-- [`Result` everywhere](/docs/conventions/result-everywhere) — the shape every cache call answers
-  with.

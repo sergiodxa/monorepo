@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to pick the Web Crypto primitive by what happens to the value next"
     - "How to build reset links from hashed tokens and store passwords with scrypt"
@@ -15,13 +15,9 @@ outcomes:
 Most security code in an app is a handful of primitives used in the right place: a random
 token, a digest of it, a signature, a password hash, an encrypted column. This guide builds the
 account features that need them: a password-reset link, password storage, a signed unsubscribe
-link and secrets encrypted at rest. The TOTP second factor built on the same package has a
-guide of its own.
-
-[`@sdxc/crypto`](/api/crypto) wraps the Web Crypto API with the details decided once:
-encodings, constant-time comparison, a versioned encryption envelope, scrypt parameters. Every
-call that can fail returns a `Result` from [`@sdxc/result`](/api/result), so a refusal from the
-runtime is a branch, not an exception.
+link and secrets encrypted at rest. [`@sdxc/crypto`](/api/crypto) wraps the Web Crypto API with
+the encodings, constant-time comparison and parameters decided once, and returns a `Result` from
+every call that can fail.
 
 ```bash
 npm add @sdxc/crypto @sdxc/http @sdxc/result @sdxc/validate remix
@@ -38,6 +34,9 @@ What you will do with a value later decides how you store it:
 | Prove a value you issued is unchanged   | `hmac.sign` / `hmac.verify`         | only the holder of the secret can produce the signature       |
 | Read a secret back later                | `seal` / `open`                     | AES-GCM encrypts and detects tampering                        |
 | Accept a code from an authenticator app | `totp`                              | RFC 6238, the algorithm those apps implement                  |
+
+The last row has a guide of its own:
+[Add two-factor sign-in with TOTP](/docs/identity-and-security/two-factor).
 
 ## Mint an opaque token for a reset link
 
@@ -77,23 +76,15 @@ export async function consumeReset(token: string): Promise<string | null> {
 }
 ```
 
-`randomToken` returns unpadded base64url, safe in a URL as it is, so the link is
-`/password/reset?token=…` with nothing to escape. A plain digest is enough here, where a
-password needs scrypt, because the token carries 256 bits of entropy: nobody guesses it, and
-the digest only has to keep a reader of the store from using what they read. It also has to be
-deterministic, since the presented token is hashed again to find the record.
-
-`consumeReset` deletes the record as it reads it, so a link works once. Mail the link as in
-[Send email](/docs/data-and-background-work/send-email).
+`randomToken` returns unpadded base64url, so the link is `/password/reset?token=…` with nothing
+to escape. A plain digest is enough here, where a password needs scrypt, because the token
+carries 256 bits of entropy. `consumeReset` deletes the record as it reads it, so a link works
+once.
 
 <warning>
 KV is eventually consistent, so two clicks landing in different locations within seconds can
 both find the record. Keep it in D1 or a Durable Object when single use has to be strict.
 </warning>
-
-The same shape serves API keys. Give them a prefix, `randomToken({ prefix: "sk" })` for
-`sk_…`, so a key pasted into a log or a public repository is recognizable, and a secret
-scanner can flag it.
 
 ## Store the new password with scrypt
 
@@ -134,18 +125,15 @@ export default createAction(routes.password.reset.update, async (ctx) => {
 });
 ```
 
-`NewPasswordSchema` is your `remix/data-schema` object for the two fields, with the length
-rules from [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms).
-`password.hash` salts every hash freshly and encodes it as
-`$scrypt$ln=15,r=8,p=3$<salt>$<key>`, parameters included.
+`NewPasswordSchema` is your `remix/data-schema` object for the two fields. `password.hash`
+salts every hash freshly and records its parameters in the encoded string.
 
 <note>
 Scrypt has no Web Crypto equivalent, so `password.hash` and `password.verify` run on
 `node:crypto`, which needs the `nodejs_compat` compatibility flag on Workers.
 </note>
 
-Signing in checks the password against the stored hash, using the parameters that hash
-records:
+Signing in checks the password against the stored hash:
 
 ```typescript {% title="app/services/sign-in.ts" %}
 import type { Database } from "remix/data-table";
@@ -171,11 +159,9 @@ export async function checkPassword(db: Database, email: string, secret: string)
 }
 ```
 
-A wrong password is `success(false)`; a failure means the stored value is not a hash this
-package wrote, `MalformedHashError`, or names another algorithm, `UnsupportedAlgorithmError`.
-Both end in `null` here. `needsRehash` is true when the stored hash is behind the current
-parameters, so when those rise, every account moves to them on its next sign-in, with no
-migration and no forced reset.
+A wrong password is `success(false)`, and a stored value this package cannot read is a failure;
+both end in `null`. `needsRehash` is true when the stored hash is behind the current
+parameters, so every account moves to new ones on its next sign-in.
 
 <note>
 An unknown address returns faster than a wrong password, since nothing is hashed, which tells a
@@ -185,9 +171,8 @@ fixed hash you generated once before returning `null`.
 
 ## Sign a link with HMAC
 
-An unsubscribe link in an email has to work without a session, and must not let anyone
-unsubscribe someone else by editing the query string. Sign what the link says with a secret
-only your app holds:
+An unsubscribe link has to work without a session, and must not let anyone unsubscribe someone
+else by editing the query string. Sign what the link says with a secret only your app holds:
 
 ```typescript {% title="app/services/unsubscribe-links.ts" %}
 import { Hex, hmac } from "@sdxc/crypto";
@@ -219,36 +204,22 @@ export async function verifyUnsubscribe(url: URL) {
 ```
 
 A missing secret fails closed on both sides: no link is minted and none is accepted.
-`hmac.verify` recomputes the signature and compares in constant time, so response timing does
-not reveal how much of a forged signature was right, and a `sig` that is not valid hex is a
-plain mismatch. Signing the JSON array of the values keeps the payload unambiguous, so
-`("a:b", "c")` and `("a", "b:c")` cannot produce the same signature. To sign an object, sign
-its [canonical JSON](/docs/http-apis/canonical-json): `JSON.stringify` writes members in
-insertion order, so an equal object built in another order would not verify.
-
-This link never expires, which suits an unsubscribe. For one that should, put the expiry in
-the signed payload, or issue a [JWT](/docs/identity-and-security/json-web-tokens) when a
-different service has to verify it without your secret. Webhooks are the same idea with a
-standard around it: [Receive and send webhooks](/docs/identity-and-security/webhooks) uses
-[`@sdxc/webhooks`](/api/webhooks), which handles the timestamps, replay checks and secret
-rotation. When anyone outside your services must check a signature, such as a file people
-download, sign it with a private key they verify with your public one:
-[Sign files and security.txt with OpenPGP](/docs/identity-and-security/openpgp-signatures).
+`hmac.verify` compares in constant time, so response timing reveals nothing about a forged
+signature. Signing the JSON array of the values keeps the payload unambiguous, so
+`("a:b", "c")` and `("a", "b:c")` cannot produce the same signature. This link never expires;
+for one that should, put the expiry in the signed payload.
 
 ## Seal secrets at rest
 
-Some secrets must be read back: a TOTP secret, a provider's refresh token, a customer's API
-key for a service you call. `seal` encrypts a string with AES-GCM under a key only your Worker
-holds. Declare `SEAL_KEY: bindings.secret()` in `cloudflare.config.ts`, generate 32 bytes of key
-material as base64url, and set it for production, pasting the key when asked:
+Some secrets must be read back: a TOTP secret, a provider's refresh token. `seal` encrypts a
+string with AES-GCM under a key only your Worker holds. Declare `SEAL_KEY: bindings.secret()`
+in `cloudflare.config.ts`, generate 32 bytes of key material as base64url, and set it for
+production:
 
 ```bash
 openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
 bunx cf workers secrets update SEAL_KEY
 ```
-
-[Deploy your app](/docs/getting-started/first-deploy) covers declaring a secret and its
-development value.
 
 Import it once per isolate and seal through one module:
 
@@ -274,30 +245,15 @@ export async function openSecret(sealed: string) {
 }
 ```
 
-`importKey` accepts 16, 24 or 32 bytes and imports them non-extractable, so code that gets
-hold of the `CryptoKey` still cannot read the bytes out. `seal` returns
-`v1.<iv>.<ciphertext>`, with a fresh IV each call and GCM's authentication tag inside the
-ciphertext. `open` fails with `DecryptionError` when the value was altered or sealed under
-another key, and gives the same message for both, so the error tells an attacker nothing.
-
-<note>
-A fresh IV means sealing the same value twice gives two different strings, so a sealed column
-matches no lookup. When a value must be both found and read back, store two columns: its
-`sha256` for the lookup, and its sealed form for the read.
-</note>
+`importKey` imports the key non-extractable, so code that gets hold of the `CryptoKey` still
+cannot read the bytes out. `open` fails with `DecryptionError` when the value was altered or
+sealed under another key. Each seal uses a fresh IV, so a sealed column matches no lookup: when
+a value must be both found and read back, also store its `sha256`.
 
 <warning>
 A sealed value opens only under the key that sealed it. Replacing `SEAL_KEY` without first
 resealing every stored value under the new key leaves each of them unreadable.
 </warning>
-
-## Check codes from an authenticator app
-
-The `totp` functions generate a shared secret, build the `otpauth://` URI an authenticator app
-scans, and check the six-digit codes it shows. The secret belongs sealed, as in the section
-above. [Add two-factor sign-in with TOTP](/docs/identity-and-security/two-factor) builds the
-whole flow: enrollment, the code step after the password, replay protection, recovery codes
-and turning it off.
 
 ## Test the signed link and the seal
 

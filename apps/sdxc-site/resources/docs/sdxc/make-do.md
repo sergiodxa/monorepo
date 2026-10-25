@@ -63,24 +63,14 @@ calls to an outside API.
 The class is the name in PascalCase with `DO` after it, and the binding is the name in
 SCREAMING_SNAKE_CASE:
 
-| Name              | Class         | Binding      | File                              |
-| ----------------- | ------------- | ------------ | --------------------------------- |
-| `page-views`      | `PageViewsDO` | `PAGE_VIEWS` | `app/services/page-views.ts`      |
-| `Feed`            | `FeedDO`      | `FEED`       | `app/services/feed.ts`            |
-| `rooms/chat-room` | `ChatRoomDO`  | `CHAT_ROOM`  | `app/services/rooms/chat-room.ts` |
-| `feed-do`         | `FeedDO`      | `FEED`       | `app/services/feed-do.ts`         |
-
-A name that already ends in `do`, in any case, gets `DO` once: `feed-do` and `FeedDO` both
-write `FeedDO`. A folder in the name is a
-folder in the layer, as with every kind. `--binding` takes SCREAMING_SNAKE_CASE as it is, and
-turns kebab-case or camelCase into it: `--binding chat-rooms` declares `CHAT_ROOMS`.
+`page-views` writes the class `PageViewsDO` with the binding `PAGE_VIEWS`, and a name that
+already ends in `do` gets `DO` once. `--binding` turns kebab-case or camelCase into
+SCREAMING_SNAKE_CASE: `--binding chat-rooms` declares `CHAT_ROOMS`.
 
 ## What it writes
 
 The class extends `DurableObject` from `cloudflare:workers` and overrides `fetch` to answer with
-its own name, so the binding answers the first time something reaches it. Its module comment and
-`fetch` are where your code goes. Every file it writes and edits then goes through the project's
-`format` command, as with every `make` kind.
+its own name, so the binding answers the first time something reaches it.
 
 ## What it edits
 
@@ -110,10 +100,6 @@ among the entry point's exports:
 +export { PageViewsDO } from "~/app/models/page-views";
 ```
 
-A second Durable Object joins the same `exports` block, and a new binding is added at the top
-of `env`. `bootstrap/worker.ts` stays the entry point and nothing else: the class lives in the
-layer its role names.
-
 <warning>
 Cloudflare keeps an object's storage under its class name, so pick the name before the first
 deploy. To rename a deployed class, declare the new name as its own entry in `exports` and turn
@@ -121,18 +107,9 @@ the old one into `exports.durableObject({ state: "renamed", renamedTo: "NewName"
 deploy moves its objects, data included, to the new class.
 </warning>
 
-Every file is read before any is written, so a file that already exists, or a binding of that
-name already in `env`, stops the run with the project as it was:
-
-```text
-app/models/page-views.ts already exists; pass --force to replace it
-```
-
-`--force` writes the class again from the stub and declares its binding again where the old
-declaration stands; the export and the re-export, already there, are kept as they are.
-
-`make do` edits `cloudflare.config.ts`, so a Worker configured in `wrangler.jsonc` stops with
-`No cloudflare.config.ts in the project`; declare the class there by hand.
+A file that already exists, or a binding of that name already in `env`, stops the run with the
+project as it was; `--force` writes the class and its binding again and keeps the export and the
+re-export. A Worker configured in `wrangler.jsonc` declares the class there by hand.
 
 ## Fill it in
 
@@ -169,9 +146,6 @@ export async function countView(path: string): Promise<number> {
 }
 ```
 
-A controller, a job or a command calls `countView(url.pathname)`; the same path always reaches
-the same object.
-
 ## Test it
 
 Vitest imports the app's modules in Node, where `cloudflare:workers` is the stand-in in
@@ -204,9 +178,7 @@ describe("PageViewsDO", () => {
 bun run test app/models/page-views.test.ts
 ```
 
-`make do` writes no test of its own, so this file is yours to add. A test of code that calls the
-object through its binding gives the stand-in's `env` a `PAGE_VIEWS` from
-`createDurableObjectNamespace()`, which routes each name to an object the test builds.
+`make do` writes no test of its own, so this file is yours to add.
 
 ## Where to go next
 

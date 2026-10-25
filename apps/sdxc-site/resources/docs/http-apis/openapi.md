@@ -12,15 +12,12 @@ outcomes:
     - "How to test responses against the document"
 ---
 
-An API reference written by hand drifts from the code the day after it is published. This
-guide takes the books API from [Build a JSON API with problem details](/docs/http-apis/json-apis)
-and makes the schemas the handlers validate with the same values the published OpenAPI 3.1
-document is built from, so the contract and its enforcement cannot disagree.
-
-[`@sdxc/json-schema`](/api/json-schema) provides schema builders that validate exactly like
-`remix/data-schema` and can also describe themselves as JSON Schema 2020-12.
-[`@sdxc/openapi`](/api/openapi) binds those schemas to routes as operations, assembles the
-document, serves it, and checks responses against it in tests.
+An API reference written by hand drifts from the code. This guide takes the books API from
+[Build a JSON API with problem details](/docs/http-apis/json-apis) and builds its OpenAPI 3.1
+document from the same schemas the handlers validate with.
+[`@sdxc/json-schema`](/api/json-schema) validates like `remix/data-schema` and also describes
+itself as JSON Schema, and [`@sdxc/openapi`](/api/openapi) builds, serves and tests the
+document.
 
 ```bash
 npm add @sdxc/http @sdxc/json-schema @sdxc/openapi @sdxc/problem @sdxc/result remix
@@ -28,11 +25,9 @@ npm add @sdxc/http @sdxc/json-schema @sdxc/openapi @sdxc/problem @sdxc/result re
 
 ## Swap the schema import
 
-A `remix/data-schema` schema validates, but nothing can read back what it accepts.
-`@sdxc/json-schema` has the same combinators with the same names, so rewriting the schema
-module from the first guide changes the import and the checks' subpath, and every handler
-that imports it keeps working. It also adds `integer()`, which a reference can state and a
-`number()` cannot, and a `BOOK` schema for the response the API answers with.
+`@sdxc/json-schema` has the same combinators as `remix/data-schema`, so the schema module
+changes only its imports, and every handler keeps working. Add a `BOOK` schema for the
+response:
 
 ```typescript {% title="app/http/validators/books.ts" %}
 import * as s from "@sdxc/json-schema";
@@ -61,27 +56,18 @@ export const BOOK_PARAMS = s.object({
 });
 ```
 
-`meta({ id: "Book" })` hoists the schema into `components.schemas`, and every use becomes a
-`$ref`, so the reference shows one `Book` rather than a copy per endpoint. A check from
-`@sdxc/json-schema/checks` both validates and adds its keyword (`minLength`, `maximum`), so a
-limit is written once.
-
-Make the same change in the problem catalog, `config/problems.ts`: import `s` from
-`@sdxc/json-schema` instead of `remix/data-schema`, so the `validationFailed` extensions can
-be described.
+`meta({ id: "Book" })` puts the schema in `components.schemas`, so every use is a `$ref`.
 
 <note>
-The document describes every problem type in the catalog, so a catalog built with
-`remix/data-schema` fails the build: its extension schemas have no JSON Schema form.
+Make the same import change in `config/problems.ts`. The document describes every problem
+type in the catalog, so extension schemas from `remix/data-schema` fail the build.
 </note>
 
 ## Declare the operations
 
-An operation binds one route to what it reads and what it answers. The first argument
-becomes the `operationId`, which a generated client turns into a method name, so `build()`
-fails when two operations share one. Declare the operations in
-`routes/api.ts`, after the contract they describe, where
-[`sdxc scaffold --api`](/docs/sdxc/scaffold-a-resource) writes its own:
+An operation binds one route to what it reads and answers; the first argument is its unique
+`operationId`. Declare the operations in `routes/api.ts`, after the contract, so building
+the document never loads a controller:
 
 ```typescript {% title="routes/api.ts" %}
 import * as s from "@sdxc/json-schema";
@@ -137,24 +123,13 @@ export const SHOW_BOOK = defineOperation("showBook", routes.api.books.show, {
 });
 ```
 
-`coerce.number()` accepts the text a query string carries and documents both forms. The
-`problems` names come from your catalog, and adding an operation that lists a name the
-catalog lacks fails to compile. `params` must name exactly the pattern's variables, so a
-schema for `/api/books/:bookId` without `bookId` is a type error. `tags` and `description`
-group and explain an operation in the rendered reference. `deprecated` marks an operation
-for retirement: given a notice with `deprecation` and `sunset` dates, the document carries
-it, and `deprecationHeaders(operation)` from `@sdxc/openapi/router`, in the route's
-middleware, writes the matching `Deprecation` and `Sunset` fields on every response.
-
-Keep this module free of handlers. It holds only routes and schemas, so building the document
-never loads a controller, and a controller imports its operation from the contract it already
-reads its route from.
+`coerce.number()` accepts the text a query string carries. The `problems` names come from
+your catalog, so a name the catalog lacks fails to compile.
 
 ## Parse through the operation
 
-`operation.parse` validates params, query and body in that order, reads the body by its
-`Content-Type`, and answers with a `Result`. The handler gets typed input from the same
-declaration the reference is built from.
+`operation.parse` validates params, query and body, and answers with a `Result`, so the
+handler gets typed input from the same declaration the reference is built from:
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
 import { created } from "@sdxc/http/response/json";
@@ -182,22 +157,14 @@ export default createAction(routes.api.books.create, async (ctx) => {
 });
 ```
 
-The failure is an `OperationInputError` whose `location` says which part failed
-(`"params"`, `"query"` or `"body"`), and `issuesFrom` reads its issues directly. In `show`,
-a failure in `"params"` is the one to answer with `notFound`, as before.
-
-The list handler keeps parsing its query with the `createPaging` binding, because that binding
-also writes the `Link` URLs. The `query` schema on `LIST_BOOKS` documents the same names and
-limits, so keep the two side by side. A client reads that header with
-[`@sdxc/link-header`](/api/link-header), as
-[Paginate lists](/docs/http-apis/paginate-lists) shows.
+The failure's `location` says which part failed (`"params"`, `"query"` or `"body"`); in
+`show`, a `"params"` failure answers `notFound`. The list handler keeps parsing with its
+`createPaging` binding, so keep `LIST_BOOKS`'s `query` schema beside it with the same limits.
 
 ## Build and serve the document
 
-`createDocument` collects the operations and the catalog. Nothing is assembled until
-`build()`, which returns a `Result` and fails on a duplicate `operationId`, a route OpenAPI
-cannot express, or a schema without a JSON Schema form. A conversion failure names the
-combinator with an RFC 6901 pointer from [`@sdxc/json-pointer`](/api/json-pointer).
+`createDocument` collects the operations and the catalog. `build()` assembles it and fails
+on a duplicate `operationId` or a schema without a JSON Schema form:
 
 ```typescript {% title="app/initializers/openapi.ts" %}
 import { createDocument } from "@sdxc/openapi";
@@ -218,12 +185,7 @@ export function buildApiDocument() {
 }
 ```
 
-The catalog becomes a `Problem` schema plus one response per entry, and each operation's
-problems are `$ref`s to those responses. An operation that requires a key declares
-`security: [{ apiKey: ["books:write"] }]`, and `builder.scopes()` lists every scope the
-document requires, for OAuth protected-resource metadata.
-
-Add `openapi: get("/api/openapi.json")` to the `api` group of the route contract, then serve
+An operation that requires a key declares `security: [{ apiKey: ["books:write"] }]`. Add `openapi: get("/api/openapi.json")` to the `api` group of the route contract, then serve
 it:
 
 ```typescript {% title="app/http/controllers/api/openapi.ts" %}
@@ -239,20 +201,14 @@ export default createAction(
 );
 ```
 
-The handler builds on the first request and reuses the outcome.
-
 <warning>
 Keep `build()` inside the function you hand to `openapiHandler`. Called at module scope, the
 assembly runs during the Worker's startup, whose time Cloudflare limits, so a slow build can
 fail the deploy.
 </warning>
 
-It answers `application/openapi+json; version=3.1.1` by default and
-`application/openapi+yaml` for `?format=yaml` or an `Accept` preferring it, and plain
-`application/json` or `application/yaml` to a client that asks for those. Each carries a
-strong `ETag` and `Cache-Control: public, max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
-problem document. An app from `sdxc create` serves `/api/openapi.json` this way already, from a
-`createApiDocument()` that names `SITE_URL` from `config/constants.ts` as the server.
+The handler answers JSON by default and YAML for `?format=yaml`, with an `ETag` a client
+revalidates against.
 
 ## Keep it honest in tests
 
@@ -274,10 +230,9 @@ test("the document builds and matches the committed snapshot", async () => {
 });
 ```
 
-The snapshot proves the document is stable, and `checkResponse` from `@sdxc/openapi/testing`
-proves the handlers answer what it says. It finds the operation a request matches and reports
-every departure: an undocumented status, a problem `type` the operation does not list, a
-missing required header, or a body that fails its schema.
+`checkResponse` from `@sdxc/openapi/testing` proves the handlers answer what the document
+says, reporting an undocumented status, an unlisted problem `type` or a body that fails its
+schema:
 
 ```typescript {% title="app/http/controllers/api/books/create.test.ts" %}
 import { checkResponse } from "@sdxc/openapi/testing";
@@ -302,10 +257,6 @@ test("a refused create answers as documented", async () => {
 	expect(response.status).toBe(422);
 });
 ```
-
-To cover a whole suite at once, `createConformanceRecorder(buildApiDocument())` returns a
-`middleware` to install first on the test router. Its `violations()` collects every departure
-the suite produced, and `uncovered()` lists the declared status codes no test reached.
 
 ## Where to go next
 

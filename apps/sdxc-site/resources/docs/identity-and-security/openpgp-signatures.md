@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 15
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to make an OpenPGP signing key GnuPG can verify against"
     - "How to serve a cleartext-signed `security.txt` and sign files with detached signatures"
@@ -84,22 +84,17 @@ sdxc run openpgp key --user-id "Security <security@example.com>" > signing.key
 npx wrangler secret put OPENPGP_SIGNING_KEY < signing.key
 ```
 
-A key you already hold in GnuPG works as is: `gpg --armor --export-secret-keys <fingerprint>`
-exports it in the form `readPrivateKey` reads.
-
 <note>
-Store the Worker's copy without a passphrase and let the secret store protect it. Unlocking a
-protected key runs its S2K, many hashing rounds by design, each time the key is read. Keep the
-passphrase-protected copy (`key.lock(passphrase)`) for the backup you keep offline, and pass
-`{ passphrase }` to `readPrivateKey` when you read that one.
+Store the Worker's copy without a passphrase and let the secret store protect it: unlocking a
+protected key runs many hashing rounds by design, each time the key is read. Keep the
+passphrase-protected copy (`key.lock(passphrase)`) for the backup you keep offline.
 </note>
 
 ## Sign security.txt
 
 `cleartextSigner` from `@sdxc/well-known/security-txt` is a body transform for `serve`: it
 wraps the file in an OpenPGP cleartext signature, so the text stays readable and the signature
-follows it. It reads the key once per distinct secret value and signs each body once, so
-repeated requests share one `ETag` and a `304` still answers a client whose copy is current:
+follows it:
 
 ```typescript {% title="app/initializers/router.tsx" %}
 import { currentLog } from "@sdxc/logger";
@@ -165,10 +160,6 @@ export async function publishRelease(name: string, bytes: Uint8Array) {
 }
 ```
 
-A binary signature covers the exact octets. Pass `{ text: true }` for a text file people may
-open on another platform: a text signature verifies whatever line endings the file travels
-with. Signatures use SHA-512 unless `hash` names `SHA-256` or `SHA-384`.
-
 Whoever downloads `app.tar.gz` and `app.tar.gz.asc` checks them with your public key:
 
 ```bash
@@ -212,27 +203,8 @@ export async function signedDownload(url: string, certificate: PublicKey) {
 
 The caller reads the pinned key once with `readPublicKey(VENDOR_PUBLIC_KEY)` and passes it in.
 `verifyDetached` accepts one certificate or a list, so a key rotation is a second entry in the
-list until the old key retires. On success it answers who signed (`signingKey`, the primary
-key or signing subkey, and `primaryKey`, the certificate), `created`, `hash` and whether it
-was a text signature.
-
-Verification checks the signer as well as the signature: a signature by a revoked or expired
-key, an unbound subkey, or one past its own expiration answers `invalid-signature`. To inspect a
-certificate before you pin it, `verifyKey(certificate)` checks every self-signature and reports
-`revoked`, `expires`, `canSign` and each User ID and subkey.
-
-Every failure is an `OpenPgpError` whose `code` names the step:
-
-| `code`              | What it means                                                          |
-| ------------------- | ---------------------------------------------------------------------- |
-| `malformed`         | Armor, a packet, a key or a signature breaks RFC 9580's grammar        |
-| `unsupported`       | A version, algorithm or S2K mode Web Crypto cannot compute             |
-| `locked`            | The private key is protected and no passphrase was given               |
-| `bad-passphrase`    | The passphrase does not unlock the key                                 |
-| `no-signature`      | The input carries no signature the package can evaluate                |
-| `unknown-signer`    | None of the given certificates made the signature                      |
-| `invalid-signature` | The signature does not verify, or its key is revoked, expired, unbound |
-| `crypto`            | The runtime refused a Web Crypto operation                             |
+list until the old key retires. A signature by a revoked or expired key answers
+`invalid-signature`, and one from a key you did not pass answers `unknown-signer`.
 
 <warning>
 Treat `unknown-signer` and `invalid-signature` as a refusal, never as a reason to fall back
@@ -240,9 +212,9 @@ to the unsigned file. A verifier that accepts a file when the signature is missi
 nothing, since an attacker who can replace the file can also delete the `.asc`.
 </warning>
 
-Verifying a cleartext message, such as another site's `security.txt`, is the same call shape:
-`verifyCleartext(text, certificate)` answers the signed `text` and the `signature` details.
-Only the text it returns is covered by the signature, so read the fields from that.
+`verifyCleartext(text, certificate)` checks a cleartext message, such as another site's
+`security.txt`. Only the `text` it returns is covered by the signature, so read the fields from
+that.
 
 ## Test signing and verifying
 

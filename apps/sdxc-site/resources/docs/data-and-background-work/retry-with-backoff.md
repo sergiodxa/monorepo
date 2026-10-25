@@ -12,19 +12,16 @@ outcomes:
     - "How to let the first failures through and test the exact delays"
 ---
 
-A fixed retry delay is wrong in both directions. Ten minutes is too slow for a blip that
-cleared in five seconds, and too fast for a host that is down all afternoon: every message
-waiting on it comes back every ten minutes, all at once, and the host meets the whole herd the
-moment it recovers. A delay that grows with each failure answers both, and a little randomness
-on top keeps the retries that failed together from returning together.
+A fixed retry delay is wrong in both directions: too slow for a blip that cleared in five
+seconds, and too fast for a host that is down all afternoon, which meets every waiting retry at
+once when it recovers. A delay that grows with each failure answers both, and a little jitter
+keeps the retries that failed together from returning together.
 
-[`@sdxc/backoff`](/api/backoff) is one schedule that answers "how long after the Nth
-failure": a base, a growth rule, a ceiling, optional free attempts and optional jitter. It
-plugs into [`@sdxc/jobs`](/api/jobs) through `ctx.retry`, into `retry` from
-[`@sdxc/result`](/api/result) through its `delay` option, and into any row that stores when
-to try again. Jitter draws from a [`@sdxc/random`](/api/random) stream, so a test can make it
-exact. [`@sdxc/outbound`](/api/outbound) does the fetching in the examples, and its errors say
-which failures are worth another attempt.
+[`@sdxc/backoff`](/api/backoff) is one schedule that answers "how long after the Nth failure".
+It plugs into [`@sdxc/jobs`](/api/jobs) through `ctx.retry`, into `retry` from
+[`@sdxc/result`](/api/result), and into any row that stores when to try again. Jitter draws from
+a [`@sdxc/random`](/api/random) stream, so a test can make it exact, and
+[`@sdxc/outbound`](/api/outbound) does the fetching in the examples.
 
 ```bash
 npm add @sdxc/backoff @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/random @sdxc/result
@@ -46,14 +43,8 @@ export const previewBackoff = createBackoff({
 ```
 
 `delay(attempt)` answers milliseconds after `attempt` failures, counting from 1, so this one
-waits about 1, 2, 4 and 8 minutes and then keeps doubling until it sits at 6 hours. `growth`
-switches the curve to `"linear"` or `"constant"`, and `factor` changes the multiplier. Durations
-are the strings or millisecond numbers the rest of the packages take.
-
-`jitter: 0.2` spreads each delay across ±20%, and it applies after the ceiling, so retries
-parked at 6 hours still spread out instead of arriving in one wave. Construction is the only
-step that can fail: a `max` below `base` or a `jitter` above 1 throws a `RangeError` when the
-module loads, because those are fixed by the code rather than by any input.
+waits about 1, 2, 4 and 8 minutes and keeps doubling until it sits at 6 hours. `jitter: 0.2`
+spreads each delay across ±20%, after the ceiling, so retries parked at 6 hours still spread out.
 
 <warning>
 Keep the ceiling plus its jitter under 12 hours when the delay goes to `ctx.retry`. That is the
@@ -82,26 +73,19 @@ export function waitAfter(response: Response, attempt: number): number {
 }
 ```
 
-`Retry-After` is either a number of seconds or an HTTP date, and both forms show up in the
-wild. `parseRetryAfter` from [`@sdxc/http`](/api/http) reads either as milliseconds, measuring a
-date from now (or from the `Date` passed as its second argument), and answers `null` for a
-missing or unreadable header, which leaves the schedule to decide.
+`parseRetryAfter` from [`@sdxc/http`](/api/http) reads either the seconds or the HTTP-date form
+as milliseconds, and answers `null` for a missing or unreadable header, which leaves the schedule
+to decide.
 
 <warning>
 The header is the remote server's to write, so `waitAfter` clamps it to the queue's hold limit:
 an answer of a year would otherwise make the retry itself fail.
 </warning>
 
-Some packages read the header for you. A failed send from [`@sdxc/messaging`](/api/messaging)
-carries `retryAfter` in milliseconds, taken from `Retry-After` or the `retry_after` Discord and
-Telegram put in the body, and `null` when the platform named none, so
-`error.retryAfter ?? backoff.delay(ctx.attempts)` falls back to the schedule.
-
 ## Retry a job on a growing delay
 
-The job hands `ctx.attempts`, the delivery count starting at 1, straight to the schedule. At
-the moment a delivery fails, that count is the number of failures so far, which is what
-`delay` expects:
+The job hands `ctx.attempts`, the delivery count starting at 1, straight to the schedule; at the
+moment a delivery fails, that is the number of failures so far:
 
 ```typescript {% title="app/jobs/previews/fetch.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
@@ -145,22 +129,16 @@ export default createJobHandler(jobs.previews.fetch, async (ctx) => {
 });
 ```
 
-`Previews` is your own model. Every failure takes one of two endings. A `timeout` or
-`network` error from `@sdxc/outbound` is `retryable`, and so is a `429` or a `5xx`: the next
-attempt could succeed, so the job waits on the schedule. A refused host, a body over the cap or
-a `404` reaches the same result on every attempt, so `ctx.exit` ends the message and reports
-the run as failed instead of spending a day of retries on it.
-
-`ctx.retry` takes a duration, and a plain number counts as milliseconds, which is what `delay`
-answers. The schedule says how long to wait; the queue consumer's `max_retries` says how many
-times. With this schedule, `max_retries: 12` gives up a little over a day after the first
-failure.
+`Previews` is your own model. A `retryable` error, a `429` or a `5xx` could succeed next time, so
+the job waits on the schedule; a refused host or a `404` fails the same way every time, so
+`ctx.exit` ends the message. The schedule says how long to wait, and the queue consumer's
+`max_retries` says how many times.
 
 ## Retry inside one request
 
 Some retries cannot leave the request, such as a profile fetch a page is waiting to render.
-`retry` from `@sdxc/result` reruns a `Result`-returning function, and its `delay` accepts a
-function of the attempt, so the same kind of schedule plugs straight in:
+`retry` from `@sdxc/result` reruns a `Result`-returning function, and its `delay` accepts the
+schedule:
 
 ```typescript {% title="app/services/profile.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -178,25 +156,16 @@ export function fetchProfile(url: string) {
 }
 ```
 
-A function `delay` replaces `retry`'s own `backoff` option, so the ceiling and the jitter are
-the schedule's.
-
 <note>
 Keep the whole budget short, since a visitor is waiting through every attempt: four tries here
 spend at most three seconds waiting.
 </note>
 
-`jitter: "full"` draws anywhere from zero to the delay, the widest spread, which suits many
-requests retrying the same API after the same blip. When the attempts run out, or `when`
-declines an error, the failure holds a `RetryError`;
-[Result everywhere](/docs/conventions/result-everywhere) covers narrowing it.
-
 ## Store the next attempt for a polled resource
 
-A feed that fails keeps being polled, so its retry state outlives any queue message. It lives
-on the row instead: a failure count, and the time the feed is next due. `at(attempt, now)` is
-`now + delay(attempt)`, the value to store. Build the schedule from a function taking the
-`Random` to draw from, so a test can pass a seeded one:
+A feed that fails keeps being polled, so its retry state lives on the row: a failure count and
+the time it is next due. `at(attempt, now)` is `now + delay(attempt)`, the value to store. Build
+the schedule from a function taking the `Random` to draw from, so a test can pass a seeded one:
 
 ```typescript {% title="app/services/feeds/backoff.ts" %}
 import type { Random } from "@sdxc/random";
@@ -252,37 +221,7 @@ export default createJobHandler(jobs.feeds.sweep, async (ctx) => {
 ```
 
 `Feeds` and `fetchFeed` are your own: `due` selects rows whose `nextAttemptAt` has passed, and
-`fetchFeed` answers a `Result`. The same shape fits any resource re-checked on a timer, such as
-a [customer domain](/docs/identity-and-security/verify-domains) whose DNS has not caught up.
-A stored time has no hold limit, so the ceiling can be a day, and the jitter keeps a thousand
-feeds on one host that failed in the same sweep from all coming due in the same one.
-
-## Write the steps by hand
-
-A schedule your customers read in your documentation, such as webhook delivery, reads better
-as a table of round numbers than as a curve. `steps` replaces the curve, and the last step
-repeats for every attempt past the end:
-
-```typescript {% title="app/services/webhooks/schedule.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-
-export const deliveryBackoff = createBackoff({
-	steps: [
-		"15 seconds",
-		"1 minute",
-		"5 minutes",
-		"30 minutes",
-		"2 hours",
-		"10 hours",
-	],
-	jitter: 0.1,
-});
-```
-
-A delivery job like the one in [Receive and send webhooks](/docs/identity-and-security/webhooks)
-then retries with `ctx.retry({ delay: deliveryBackoff.delay(ctx.attempts) })`. Set the consumer's
-`max_retries` to the table's length and the table is the whole policy. The last step stops at
-10 hours so that, with its jitter, it stays under the queue's 12-hour hold.
+`fetchFeed` answers a `Result`. A stored time has no hold limit, so the ceiling can be a day.
 
 ## Let the first failures through
 
@@ -310,11 +249,9 @@ export function lockedFor(state: SignInState, now: number): number {
 }
 ```
 
-The fifth wrong password waits 1 second, the sixth 2, and from the fifteenth on every attempt
-waits the full 15 minutes. The sign-in action calls `lockedFor` before checking the password
-and answers `429` with that wait as `Retry-After`. This schedule has no jitter, since a person
-sees the wait. When the count resets, after a success or a quiet day, is your rule: the
-schedule answers only what a given count costs.
+The fifth wrong password waits 1 second, the sixth 2, up to 15 minutes. The sign-in action calls
+`lockedFor` before checking the password and answers `429` with that wait as `Retry-After`. When
+the count resets is your rule.
 
 ## Test the exact delays
 
@@ -345,10 +282,8 @@ test("every delay stays within its jitter around the curve", () => {
 });
 ```
 
-The first test pins the sequence, so a change to the base, the factor or the jitter shows up
-as a changed number. The second runs on the system stream and asserts the band instead, which
-is what holds whatever the draws. [Randomness you can replay](/docs/operations-and-testing/randomness)
-covers seeds and streams beyond jitter.
+The first test pins the sequence, so a change to the schedule shows up as a changed number; the
+second runs on the system stream and asserts the band.
 
 ## Where to go next
 

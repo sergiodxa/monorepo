@@ -45,21 +45,6 @@ For `sdxc scaffold post`:
 | `app/test/database.ts`                         | the in-memory database the tests use, when an older app lacks it |
 | `spec/posts.spec`                              | the pairing spec, one case per way in the scaffold wrote         |
 
-Every table also gets `id`, `created_at` and `updated_at`, so a field may not use those names:
-
-```text
--- CreatePosts: creates the posts table.
-
-CREATE TABLE "posts" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "title" TEXT NOT NULL,
-  "body" TEXT NOT NULL,
-  "views" INTEGER NOT NULL,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL
-);
-```
-
 It edits the files that make the pages answer: the model registry in `app/models/index.ts`, the
 `post` abilities in `app/policies/abilities.ts` and their grants in `app/policies/policy.ts`, the
 routes in `routes/web.ts`, their mapping in the router initializer, the sitemap's decisions, and
@@ -75,68 +60,27 @@ every `resources/locales/*.json`, which take each label and title under `posts`:
 	},
 ```
 
-When the generated code imports an `@sdxc` package `package.json` lacks, such as `@sdxc/uuid`
-for the ids, `@sdxc/validate` for the form, or `@sdxc/sample`, which the factory's
-`@sdxc/data-model/testing` loads, the scaffold adds it at your release and prints the install
-command to run:
-
-```text
-Added @sdxc/uuid@2026.10.13, @sdxc/validate@2026.10.13 to package.json; run bun install
-```
+When the generated code imports an `@sdxc` package `package.json` lacks, the scaffold adds it at
+your release and prints the install command to run.
 
 ## Fields
 
-Each field is `name` or `name:type`, with an optional `:index` or `:unique`, and a trailing `?`
-on any part makes it nullable. Quote a
-`?` field in zsh, which reads `?` as a pattern:
+Fields are typed as [`sdxc make model`](/docs/sdxc/make-model#fields) types them: a bare name
+by its name, `name:type` explicitly, `name?` nullable, with an optional `:index` or `:unique`.
+Each type gets its form field: a checkbox for a boolean, a date field for a date, a text area for
+`body` or `description`. Quote a `?` field in zsh, which reads `?` as a pattern:
 
 ```bash
 sdxc scaffold event name starts_at 'ends_at?' contact_email website
 ```
 
-A bare name takes its type from its name, by the first of these rules that matches, and an
-explicit type always wins, as in `email:string`:
+A nullable field is nullable everywhere: the column, the form field, the MCP tool's input and
+the command's flag. A scaffold needs at least one required field, since a form must have one
+field to fill.
 
-| A bare name like                                                                                                                 | Type         | Stored as            | Edited with                              |
-| -------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------- | ---------------------------------------- |
-| `author_id`, ending in `_id`                                                                                                     | `references` | a foreign key        | refused by `scaffold`, see below         |
-| `published_at`, ending in `_at`                                                                                                  | `timestamp`  | an integer, epoch ms | a date-and-time field, read as UTC       |
-| `born_on`, `due_date`, `birthday`                                                                                                | `date`       | `YYYY-MM-DD` as text | a date field                             |
-| `is_public`, `has_paid`, starting `can_`, `should_`, `was_`, `allow_`; `published`, `active`, `enabled`, `archived`, `featured`… | `boolean`    | `0` or `1`           | a checkbox                               |
-| `view_count`, `price_cents`; `position`, `quantity`, `age`, `rank`, `priority`, `score`, `year`…                                 | `integer`    | an integer           | a number field                           |
-| `email`, `contact_email`                                                                                                         | `email`      | text                 | an email field                           |
-| `website_url`, `website`, `homepage`                                                                                             | `url`        | text                 | a URL field, checked with `URL.canParse` |
-| `body`, `description`, `content`, `notes`, `bio`, `summary`, `excerpt`, `message`…                                               | `text`       | text                 | a text area                              |
-| anything else                                                                                                                    | `string`     | text                 | a text field                             |
-
-The rules read the name's words, so `published_at` is a timestamp and `published` a box, and a
-camelCase name such as `publishedOn` becomes the column `published_on`. An `email` field gets no
-unique index by itself; `email:unique` gives it one.
-
-`:unique` or `:index` after the name or the type indexes the column: a unique one is declared on
-the model and enforced by the migration's `CREATE UNIQUE INDEX`, and a plain one lives in the
-migration alone.
-
-```bash
-sdxc scaffold person name email:unique 'nickname?:index'
-```
-
-A nullable field is nullable everywhere it appears: the column is `.nullable()`, the form field
-is optional and a blank answer is stored as `null`, the MCP tool's input takes `null`, and the
-command's flag is optional. A required field is required in all of them.
-
-Some fields are refused, naming the spec, before anything is written:
-
-- `id`, `created_at` and `updated_at`, which every table already has, and a name given twice.
-- A nullable `boolean`: a box is ticked or not, so drop the `?`.
-- A scaffold with no field, or whose fields are all nullable: a form must have one field to
-  fill.
-- Any name holding `password`, unless it ends in `hash` or `digest`: a scaffolded form would
-  store what the visitor typed.
-- `references`, and a bare `*_id`: the scaffold writes no pages for a reference yet. Write it
-  as `author_id:string`, or add it afterwards with
-  [`sdxc make model`](/docs/sdxc/make-model#fields), which writes a foreign key from the same
-  field.
+The scaffold writes no pages for a reference yet, so `references` and a bare `*_id` are refused:
+write it as `author_id:string`, or add it afterwards with `sdxc make model`, which writes a
+foreign key from the same field.
 
 ## Names and plurals
 
@@ -168,24 +112,11 @@ OpenAPI operations that type them:
 sdxc scaffold post title body published --api
 ```
 
-| Endpoint                | Controller in `app/http/controllers/api/posts/` | Answers                   |
-| ----------------------- | ----------------------------------------------- | ------------------------- |
-| `GET /api/posts`        | `index.tsx`                                     | `{ data: [...] }`         |
-| `GET /api/posts/:id`    | `show.tsx`                                      | `{ data }`, or `notFound` |
-| `POST /api/posts`       | `create.tsx`                                    | `201` with `{ data }`     |
-| `PATCH /api/posts/:id`  | `update.tsx`                                    | `{ data }`                |
-| `DELETE /api/posts/:id` | `destroy.tsx`                                   | `204`                     |
-
-`routes/api.ts` gains the routes and, after them, `POST_SCHEMA` and one operation per endpoint,
-`POSTS_INDEX`, `POST_SHOW`, `POST_CREATE`, `POST_UPDATE` and `POST_DESTROY`, each body typed from
-the fields. `app/initializers/openapi.ts` adds them to the document, so `/api/openapi.json`
-describes every endpoint. Each write parses its body through its operation and answers a
-refused body, or a row the model refuses, with the `validationError` problem from
-`config/problems.ts`, and a missing or hidden row with `notFound`.
-
-The model, migration, factory and policy are written as they are for pages; the validator, the
-form, the page controllers and the locale copy are left out, and `--skip pages` leaves out the
-endpoints too.
+It writes `index`, `show`, `create`, `update` and `destroy` in
+`app/http/controllers/api/posts/`, served under `/api/posts`, and one OpenAPI operation per
+endpoint in `routes/api.ts`, so `/api/openapi.json` describes every endpoint. A refused body
+answers with the `validationError` problem, and a missing or hidden row with `notFound`. The
+model, migration, factory and policy are written as they are for pages.
 
 <note>
 The template's API binds every caller as a guest, who may only read, so the create, update and
@@ -212,37 +143,24 @@ Every page and tool checks the visitor's access against them:
 - A create, update or delete the policy refuses is a 403 on a page and a forbidden call from a
   tool.
 
-So a guest reads every post and a signed-in member writes them. A visitor is a member once the
-session holds them, `ctx.session.set("actor", { id })`, which your sign-in does; until the app
-signs people in, the new and edit pages answer 403. Narrow the grants with conditions, such as
-letting members change only their own posts, in `app/policies/policy.ts`. App commands check
-nothing, since whoever runs them already holds the database.
+So a guest reads every post and a signed-in member writes them; until the app signs people in,
+the new and edit pages answer 403. Narrow the grants in `app/policies/policy.ts`. App commands
+check nothing, since whoever runs them already holds the database.
 
 ## Tests
 
 The generated tests pass as written: they apply your migrations to the in-memory database and
 drive the pages through the router, the tools through `/mcp` and the commands through the app's
 command line. Each write is tested as a member, signed in with `signIn()` from
-`app/test/session.ts`, and refused to a guest; `app/policies/post.test.ts` decides every ability
-for both. `--no-test` skips them for one run, and `make.tests: false` skips them
-everywhere. With `--mcp`, the tool tests call `/mcp` through `app/test/mcp.ts`, which
-every app from `sdxc create` has.
+`app/test/session.ts`, and refused to a guest. `--no-test` skips them for one run.
 
-`spec/posts.spec` checks the running app from the outside: the index page loads in a browser,
-and with `--mcp` and `--command`, `list_posts` answers over `/mcp` and `posts list` exits `0`.
-[Write executable specs](/docs/operations-and-testing/executable-specs) covers running it, and
-`--no-spec` or `make.specs: false` leaves it out.
+`spec/posts.spec` checks the running app from the outside, starting with the index page loading
+in a browser; `--no-spec` leaves it out.
 
 ## Taken names and dry runs
 
-Everything is planned in a staged copy of the project before anything is written, so the
-declarations build on one another and a refusal anywhere leaves the project as it was. A file
-that already exists, or a locale that already has the plural's key, stops the command, since
-a scaffold writes new files only:
-
-```text
-app/models/post.ts already exists; sdxc scaffold leaves it as it is
-```
+Everything is planned before anything is written, so a refusal anywhere leaves the project as it
+was. A file that already exists stops the command, since a scaffold writes new files only.
 
 When the project already has some of the pieces, `--skip` leaves them out. Pages for a model
 [`sdxc make model`](/docs/sdxc/make-model) wrote are the common case:
@@ -261,26 +179,10 @@ sdxc scaffold post title body --skip model,migration,factory
 | `policy`    | the abilities, their grants and the policy test                 |
 | `pages`     | the five controllers, their tests, the form and the locale copy |
 
-A skipped piece the rest of the scaffold reads must already exist, so the files it writes
-type check. Otherwise the command stops before writing anything:
+A skipped piece the rest of the scaffold reads must already exist, so the files it writes type
+check; otherwise the command stops before writing anything.
 
-```text
---skip model needs app/models/post.ts, which the pages, tools and commands read; drop model from --skip
-```
-
-The same holds for the validator the pages submit through, the factory the tests seed rows
-with, and the abilities in `app/policies/abilities.ts` the pages and tools check. The run ends
-by naming every piece it left out, after the formatter's output:
-
-```text
-Wrote no model, migration, factory, as --skip asked
-```
-
-`--dry-run` prints every file in full and every edit as a diff, and writes nothing. An edit that
-cannot be placed, such as a router laid out differently, is printed for you to make, as
-`sdxc make` does. Once it writes, the `format` command from your configuration runs over every
-file it wrote or edited, and the edits to make by hand and the other notes print after it, so
-the run ends with what still needs you.
+`--dry-run` prints every file in full and every edit as a diff, and writes nothing.
 
 ## Change what it writes
 

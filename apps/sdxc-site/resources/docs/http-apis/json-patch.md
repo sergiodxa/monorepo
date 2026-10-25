@@ -5,25 +5,20 @@ section:
     title: HTTP APIs
     order: 5
 order: 8
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to apply an `application/json-patch+json` body to a resource, all or nothing"
     - "How to answer a malformed, unresolvable or failed-test patch with 400, 422 or 409"
     - "When to send JSON Patch instead of a merge patch, and how `diff` and `test` guard an edit"
 ---
 
-A merge patch sends a partial resource, which is the simplest update to write, but it cannot
-set a member to `null`, insert into or remove from the middle of an array, or make a change
-depend on what the resource holds now. A JSON Patch sends a list of operations instead: `add`,
-`remove`, `replace`, `move`, `copy` and `test`, each aimed at a JSON Pointer. This guide adds a
+A merge patch cannot set a member to `null`, edit the middle of an array, or make a change
+depend on what the resource holds now. A JSON Patch can: it is a list of operations (`add`,
+`remove`, `replace`, `move`, `copy`, `test`), each aimed at a JSON Pointer. This guide adds a
 JSON Patch update to the books API from
-[Build a JSON API with problem details](/docs/http-apis/json-apis), and a client that sends
-only what changed, guarded so it never overwrites an edit it did not see.
-
-[`@sdxc/json-patch`](/api/json-patch) parses, validates, applies and computes RFC 6902
-patches. Every operation's `path` is an RFC 6901 pointer, encoded by
-[`@sdxc/json-pointer`](/api/json-pointer), and fallible calls return a
-[`@sdxc/result`](/api/result).
+[Build a JSON API with problem details](/docs/http-apis/json-apis) with
+[`@sdxc/json-patch`](/api/json-patch), and a client that sends only what changed, guarded so it
+never overwrites an edit it did not see.
 
 ```bash
 npm add @sdxc/http @sdxc/json-patch @sdxc/json-pointer @sdxc/problem @sdxc/result \
@@ -32,10 +27,9 @@ npm add @sdxc/http @sdxc/json-patch @sdxc/json-pointer @sdxc/problem @sdxc/resul
 
 ## Add the patch failures to the problem catalog
 
-A patch fails in three ways, and RFC 5789 gives each its own status. A malformed document is a
-`400`, a `path` or `from` with nothing to act on is a `422`, and a `test` operation that did not
-hold is a `409`, the answer that tells a client to reload and try again. `JsonPatchError` carries
-the case as `reason`, so the catalog needs one entry per status:
+A patch fails in three ways, each with its own status: a malformed document is a `400`, a
+`path` with nothing to act on is a `422`, and a failed `test` is a `409`, which tells a client
+to reload and try again. Add an entry for each to the catalog:
 
 ```typescript {% title="config/problems.ts" %}
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
@@ -82,8 +76,7 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 });
 ```
 
-Map the reason onto those builders in one function, so every endpoint that applies a patch
-answers alike:
+Map `JsonPatchError`'s `reason` onto those builders in one function:
 
 ```typescript {% title="app/http/controllers/api/books/json-patch-problem.ts" %}
 import type { JsonPatchError } from "@sdxc/json-patch";
@@ -103,15 +96,11 @@ export function jsonPatchProblem(error: JsonPatchError): Response {
 }
 ```
 
-`error.message` starts with `Operation <n>:` whenever one operation is at fault, and
-`error.index` holds that position, so the client learns which step failed.
-
 ## Apply the patch in the update action
 
-Add `update: patch("/api/books/:bookId")` to `routes/api.ts` and map its controller through
-`lazy()` like the others. The action checks the media type, reads the body with `parse`, applies
-it to the book's writable members and validates the result with the create schema, so a patch
-can only produce a book a create would accept:
+Add `update: patch("/api/books/:bookId")` to `routes/api.ts`. The action checks the media type,
+applies the patch to the book's writable members, and validates the result with the create
+schema, so a patch can only produce a book a create would accept:
 
 ```typescript {% title="app/http/controllers/api/books/update.ts" %}
 import { ok } from "@sdxc/http/response/json";
@@ -156,13 +145,8 @@ export default createAction(routes.api.books.update, async (ctx) => {
 ```
 
 `writableBook` is the function from
-[Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes): the book's writable
-members as the API spells them, with an unset `summary` left out. A patch that removes `title`
-applies, then fails validation on `/title`.
-
-`apply` validates the operations before running any, then runs them in order against a private
-copy. When one fails, none take effect, and the book you passed in is left exactly as it was, so
-a failed patch needs no cleanup.
+[Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes). `apply` runs the
+operations against a private copy, so when one fails none take effect.
 
 <note>
 JSON Patch never creates missing parents: `add` at `/a/b` needs `/a` to exist, and `-` appends
@@ -170,17 +154,11 @@ only to an array. Clients that patch a member a resource may lack add the parent
 earlier operation of the same patch.
 </note>
 
-To take merge patches on the same route, branch on `isMergePatch(ctx.request)` from
-`@sdxc/merge-patch/request` before the media type check, run the merge-patch path there, and
-list both types in `Accept-Patch`, comma separated, so a client sees every format the
-resource accepts.
-
 ## Send only what changed, guarded by test
 
-A client that holds the book it read and the copy the user edited computes the patch with
-`diff`. Each `replace` and `remove` in it overwrites a value the client last saw, so prefixing it
-with a `test` of that value turns the patch into a compare-and-set: it applies only while the
-member still holds what the client read.
+A client holding the book it read and the edited copy computes the patch with `diff`.
+Prefixing each `replace` and `remove` with a `test` of the value it overwrites makes the patch
+a compare-and-set:
 
 ```typescript {% title="app/services/books/save-book.ts" %}
 import type { JSONObject, JSONValue, Operation } from "@sdxc/json-patch";
@@ -230,18 +208,13 @@ Editing the year and clearing the summary sends four operations:
 ]
 ```
 
-A `409` answer means another client changed one of those members since the read: read the book
-again and reapply the edit. A member nobody else touched never conflicts, which is the
-difference from an `If-Match` check on the whole resource.
-
-`diff` writes an explicit `null` as a `replace`, and edits an array by keeping its shared
-leading and trailing elements and touching only the span between them. Equal documents give
-`[]`, so the client skips the request.
+A `409` means another client changed one of those members: read the book again and reapply
+the edit. A member nobody else touched never conflicts, unlike an `If-Match` check on the whole
+resource.
 
 ## Test the patch rules
 
-The rules live in `apply`, `writableBook` and `jsonPatchProblem`, all pure, so a test applies
-patches to a book built by hand and checks the answer each failure gets:
+The rules are pure, so a test applies patches to a book built by hand:
 
 ```typescript {% title="app/http/controllers/api/books/json-patch-problem.test.ts" %}
 import type { BookRow } from "~/app/models/book";

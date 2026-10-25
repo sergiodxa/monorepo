@@ -5,23 +5,19 @@ section:
     title: Content & feeds
     order: 8
 order: 4
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"
     - "How to describe a weekly series in a time zone and offer a single event as a download"
-    - "How to read an uploaded `.ics` file and invite people by email"
+    - "How to read an uploaded `.ics` file back into your database"
 ---
 
-A calendar feed is the lowest-effort way to keep people coming to your events. They subscribe
-once from Apple Calendar, Google Calendar or Outlook, and every change you make afterwards shows
-up in their calendar on the next poll: a moved start time, a new venue, a cancellation. This
-guide serves your app's meetups as an iCalendar feed and as single-event downloads, writes a
-weekly series that stays at 19:00 local time across daylight saving changes, and reads an
-uploaded `.ics` file back into your database.
-
-It uses [`@sdxc/icalendar`](/api/icalendar) for the format, [`@sdxc/http`](/api/http) for
-the cache and error responses, and [`@sdxc/result`](/api/result) for the parts that can fail.
-The meetups come from your own `Meetups` model.
+A calendar feed keeps people coming to your events: they subscribe once from Apple Calendar,
+Google Calendar or Outlook, and every change you make shows up on the next poll. This guide
+serves your app's meetups as an iCalendar feed and as single-event downloads, writes a weekly
+series that stays at 19:00 local time across daylight saving changes, and reads an uploaded
+`.ics` file back into your database. It uses [`@sdxc/icalendar`](/api/icalendar) for the
+format; the meetups come from your own `Meetups` model.
 
 ```bash
 npm add @sdxc/http @sdxc/icalendar @sdxc/result remix
@@ -45,9 +41,6 @@ export default route({
 	},
 });
 ```
-
-The `.ics` extension is for whoever saves the file. A client goes by the `Content-Type` the
-response carries, which the next sections set.
 
 ## Turn a meetup into an event
 
@@ -84,11 +77,9 @@ export function calendarEvent(meetup: Meetup, url: string): ICalendar.Event {
 ```
 
 The seconds between creation and the last edit only ever grow, which makes them a `SEQUENCE`
-with no extra column. `utc()` turns an epoch timestamp into a UTC date-time, the form that
-needs no time zone definition, and drops the milliseconds the format has no room for. A
-cancelled meetup stays in the feed with `STATUS:CANCELLED`, so subscribers see it cancelled
-instead of watching it vanish. `properties` holds any property the typed fields don't name,
-and is empty here.
+with no extra column. `utc()` turns an epoch timestamp into a UTC date-time, which needs no time
+zone definition. A cancelled meetup stays in the feed with `STATUS:CANCELLED`, so subscribers
+see it cancelled instead of watching it vanish.
 
 ## Serve the feed
 
@@ -129,8 +120,6 @@ export default createAction(routes.events.feed, async (ctx) => {
 });
 ```
 
-`listRecent` is your own query.
-
 <warning>
 Include meetups that ended in the last few weeks as well as the upcoming ones. A client that
 stops seeing an event removes it, so a feed of only future events empties people's history as
@@ -138,14 +127,7 @@ it goes.
 </warning>
 
 `name` is the title the client gives the subscription, and `refreshInterval` asks it to poll
-hourly. Both are written twice, once under the RFC 7986 name and once under the older `X-WR-`
-and `X-PUBLISHED-TTL` names some clients still read. Clients treat the interval as a hint and
-poll on their own schedule; the five-minute `max-age` keeps a busy feed cheap without holding a
-change back for long.
-
-To offer a one-click subscription, link to the feed with `webcal:` in place of `https:`. Most
-operating systems hand that scheme to the default calendar app, which subscribes instead of
-downloading.
+hourly. For a one-click subscription, link to the feed with `webcal:` in place of `https:`.
 
 ## A weekly series in a time zone
 
@@ -180,13 +162,6 @@ export function weeklyMeetup(now: number) {
 		recurrence: { frequency: "WEEKLY", byDay: [{ weekday: "TH" }] },
 		exceptionDates: [at([2026, 4, 2])],
 		summary: "Thursday meetup",
-		alarms: [
-			{
-				action: "DISPLAY",
-				trigger: { before: { minutes: 30 } },
-				description: "Thursday meetup starts in 30 minutes",
-			},
-		],
 		properties: [],
 	};
 	return success({ zone: zone.data, event });
@@ -194,30 +169,21 @@ export function weeklyMeetup(now: number) {
 ```
 
 Add `zone` to the feed's `timeZones` and `event` to its `events`. The writer puts
-`TZID=Europe/Madrid` on the start and a `VTIMEZONE` block in the calendar, so a client in any
-zone sees 19:00 Madrid time in January and in June alike.
-
-`vtimezone` builds that block from the runtime's `Intl` data, as one observance per offset
-change inside the span.
+`TZID=Europe/Madrid` on the start and a `VTIMEZONE` block, built from the runtime's `Intl`
+data, in the calendar, so a client in any zone sees 19:00 Madrid time all year.
 
 <warning>
 Past the span the last offset holds, so make it cover every date the series will be read for,
 and rebuild it as time moves: here it runs from a year back to two years ahead of each request.
 </warning>
 
-An unknown zone name fails with a `TimeZoneError`, which makes the
-same call a good check on a zone a person picked in a form.
-
-The rest reads as the format does. `byDay` lists the weekdays, and `exceptionDates` removes
-the Thursday before Easter, written with the same wall time as the start so it matches that
-occurrence. `duration` gives every occurrence its length: hours and minutes are exact, while
-days and weeks are nominal and keep their local time across a change. The alarm is written as
-`TRIGGER:-PT30M`, half an hour before each occurrence.
+`exceptionDates` removes the Thursday before Easter, written with the same wall time as the
+start so it matches that occurrence.
 
 ## Show the next sessions on your pages
 
-Your own pages need the dates too, and computing them separately is how a page and a calendar
-end up disagreeing. `occurrences` expands the same event the feed publishes:
+Your pages need the dates too, and `occurrences` expands the same event the feed publishes, so
+the two never disagree:
 
 ```typescript {% title="app/services/calendar/next-sessions.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
@@ -231,12 +197,8 @@ export function nextSessions(event: ICalendar.Event, now: number) {
 }
 ```
 
-It returns a `Result` holding `{ start, end }` pairs in epoch milliseconds, earliest first.
-The event's own start counts as the first occurrence, as the format says, and each exception
-is left out.
-A session running at `now` is included, which is what a "happening now" badge wants. A `TZID`
-resolves through `Intl` here; pass `calendar` in the options to resolve it through that
-calendar's own `VTIMEZONE`s first, which matters for files you did not write.
+It returns a `Result` holding `{ start, end }` pairs in epoch milliseconds, earliest first,
+with each exception left out.
 
 ## Offer a single event as a download
 
@@ -271,9 +233,8 @@ export default createAction(routes.events.download, async (ctx) => {
 });
 ```
 
-`filename` adds `Content-Disposition: attachment`, with an encoded `filename*` when the name
-has characters outside ASCII. The event comes from the same `calendarEvent`, so it carries the
-feed's `UID`: someone who downloads it and later subscribes sees one event, not two.
+`filename` adds `Content-Disposition: attachment`. The event carries the feed's `UID`, so someone
+who downloads it and later subscribes sees one event, not two.
 
 ## Read an uploaded calendar
 
@@ -312,39 +273,16 @@ export default createAction(routes.events.import, async (ctx) => {
 });
 ```
 
-`ctx.formData` and `ctx.log` come from the form-data and [`@sdxc/logger`](/api/logger)
-middleware your router already runs. A structural failure, such as an unmatched `BEGIN` or a
-line with no `:`, is an `ICalendarParseError` whose message starts with the line number, so it
-is worth showing as it is. Everything recoverable becomes a warning instead, like a missing `UID`
-or a `STATUS:MAYBE`, and the property is kept verbatim. Each warning is a string starting with
-its line, so count them in the log, or show them beside the result, rather than rejecting the
-file.
-
-`toInstant` resolves a start through the file's own `VTIMEZONE`s and then `Intl`. It returns
-`null` for an all-day `DATE` and for a floating time with no zone, since neither names one
-instant; this import skips them, and yours could store the date alone. A recurring event in the
-file expands with `occurrences(event, { from, to, calendar })`, passing the parsed `calendar`
-so its time zones are the ones the file defined. Store `event.uid` and upsert on it, so a second
-import of the same file updates rows instead of duplicating them.
-
-To keep each imported event whole, with its rules, overrides, alerts and participants, store it
-as JSON: `fromICalendar` from `@sdxc/jscalendar/icalendar` turns the parsed calendar into
-JSCalendar objects, and `toICalendar` writes them back for this feed, as
-[Model events and tasks as JSCalendar](/docs/content-and-feeds/jscalendar) shows.
-
-## Invite people by email
-
-A feed publishes; an invitation asks for an answer. `@sdxc/icalendar/itip` builds the RFC 5546
-messages for one event: `request` to invite or send a revision, `cancel` to call it off, and
-`readReply` to read what an attendee answered. `calendarPart` turns one into the shape
-[`@sdxc/mail`](/api/mail) accepts as its `calendar` option, and `nextSequence` decides whether
-a change is significant enough to bump `SEQUENCE`.
+A structural failure is an `ICalendarParseError` whose message starts with the line number, so
+show it as it is; anything recoverable becomes a warning instead. `toInstant` returns `null`
+for an all-day date or a floating time, which this import skips. Upsert on `event.uid`, so a
+second import of the same file updates rows instead of duplicating them.
 
 ## Test the series
 
-The series is where a calendar goes wrong quietly, an hour off after a daylight saving change,
-so test it through `nextSessions`: a January session and a June session both start at 19:00 in
-Madrid, which is 18:00 and 17:00 UTC, and the excluded Thursday is skipped:
+The series is where a calendar goes wrong quietly, so test it through `nextSessions`: January
+and June sessions both start at 19:00 in Madrid (18:00 and 17:00 UTC), and the excluded
+Thursday is skipped:
 
 ```typescript {% title="app/services/calendar/series.test.ts" %}
 import { unwrap } from "@sdxc/result";
@@ -376,7 +314,7 @@ test("skips the Thursday before Easter", () => {
 
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds): the other feeds
   a site publishes, with the same caching concerns.
-- [Send email](/docs/data-and-background-work/send-email): the mailer an iTIP invitation goes
-  out through.
+- [Model events and tasks as JSCalendar](/docs/content-and-feeds/jscalendar): store imported
+  events whole, as JSON, and write them back to this feed.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers): keep a busy
   feed cheap without delaying a change.

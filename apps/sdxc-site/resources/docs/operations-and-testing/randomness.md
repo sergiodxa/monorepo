@@ -22,12 +22,10 @@ dice shows up once.
 `Random` offers the draws you actually want: `int`, `float`, `bool`, `pick` and `shuffle`.
 `systemRandom()` backs one with Web Crypto for production, and `createRandom(seed)` opens one
 that produces the same values in the same order from the same seed, on any machine. A seeded
-stream can also save where it is and resume from there later. Its main entry point has no
-dependencies; `RANDOM_STATE_SCHEMA` in `@sdxc/random/schema` validates a saved stream with
-`remix/data-schema`.
+stream can also save where it is and resume from there later.
 
 ```bash
-npm add @sdxc/backoff @sdxc/http @sdxc/jobs @sdxc/random @sdxc/sample remix
+npm add @sdxc/http @sdxc/random remix
 ```
 
 ## Accept a `Random` in your own functions
@@ -58,14 +56,9 @@ export function pickTip(
 }
 ```
 
-`pick` throws a `RangeError` on an empty list, and so does `int` on bounds that are not
-integers or that run backwards, because those are mistakes in the calling code rather than
-outcomes to handle. Check for the empty case first, as `pickTip` does, and the function
-returns a value for every input it accepts.
-
-`systemRandom()` reads Web Crypto through a small buffer, so a burst of draws costs one call.
-Each call to it opens a new stream, which is cheap; a module that draws on every request can
-also keep one at module level.
+`pick` throws a `RangeError` on an empty list, because that is a mistake in the calling code
+rather than an outcome to handle. Check for the empty case first, as `pickTip` does, and the
+function returns a value for every input it accepts.
 
 ## Pass a seeded stream in tests
 
@@ -98,10 +91,9 @@ test("a member with no eligible tips gets none", () => {
 });
 ```
 
-Fifty draws from a seeded stream are the same fifty draws on every run, so a test that passes
-keeps passing and a test that fails fails the same way on your laptop and in CI. Assert the
-rule rather than the particular tip a seed happens to produce, and a later change to how the
-function draws does not rewrite the test.
+Fifty draws from a seeded stream are the same fifty draws on every run, so a test that fails
+fails the same way on your laptop and in CI. Assert the rule rather than the particular tip a
+seed happens to produce.
 
 ## Draw a result you can replay
 
@@ -125,10 +117,8 @@ export function drawWinners(
 }
 ```
 
-Sorting first is what makes the draw depend only on the seed and the set of entrants. Rows
-come back from a query in whatever order the database chose, and a shuffle of the same ids in
-a different order lands on a different winner. `shuffle` returns a copy, so the caller's list
-stays as it was.
+Sorting first is what makes the draw depend only on the seed and the set of entrants, since
+rows come back from a query in whatever order the database chose.
 
 The action that closes the giveaway draws the seed with `systemSeed()`, so nobody picks it in
 advance, and keeps it on the row:
@@ -159,49 +149,24 @@ export default createAction(routes.giveaways.draw, async (ctx) => {
 });
 ```
 
-`Giveaways` is your own model over the tables in
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases). Publishing the
-seed and the entrant list next to the winners turns "trust us" into a check anyone can run:
-`drawWinners(entrants, seed, prizes)` gives back the stored winners.
+`Giveaways` is your own model. Publishing the seed and the entrant list next to the winners
+turns "trust us" into a check anyone can run: `drawWinners(entrants, seed, prizes)` gives back
+the stored winners. Recording the seed on the log the same way makes any run that should differ
+each time, such as a nightly audit sample, replayable.
 
-When the seed can be something everyone already knows, you need not store it at all. A daily
-puzzle opened on ``createRandom(`puzzle ${date}`)`` deals the same board to every player that
-day, and next year's archive page rebuilds it from the date alone.
-
-## Keep independent streams apart
-
-Draws follow the order of the calls, so one extra draw early in a run shifts every value
-after it. When a run has parts that should not disturb each other, give each part its own
-stream with `derive(label)`:
-
-```typescript {% title="app/services/season.ts" %}
-import type { Seed } from "@sdxc/random";
-
-import { createRandom } from "@sdxc/random";
-
-export function openSeason(seed: Seed) {
-	let season = createRandom(seed);
-	return {
-		fixtures: season.derive("fixtures"),
-		weather: season.derive("weather"),
-		injuries: season.derive("injuries"),
-	};
-}
-```
-
-A derived stream is seeded from its parent's seed and the label alone, so
-`season.derive("weather")` yields the same values however much the other streams have drawn.
-Adding a draw to how injuries work next month leaves every fixture and every forecast exactly
-where it was. The derived seed is readable, `"<seed> weather"`, so a
-log line naming it points straight at the stream.
+<warning>
+A seeded stream is predictable to anyone who learns its seed, so keep it to draws that guard
+nothing. Session ids, API keys, reset tokens and nonces come from `randomToken` in
+`@sdxc/crypto`, which [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto)
+covers.
+</warning>
 
 ## Save a stream and resume it
 
 A seed replays a stream from the start. When a stream lives across requests, such as a bingo
 hall calling one number per request, save where it is instead. `state()` is plain JSON, and
 `restoreRandom(state)` continues from the next draw the original would have taken. A Durable
-Object keeps it in its own storage. It owns stored state, so the class lives in `app/models/`,
-and `bootstrap/worker.ts` re-exports it so the runtime can instantiate it:
+Object keeps it in its own storage:
 
 ```typescript {% title="app/models/bingo-hall.ts" %}
 import type { SeededRandom } from "@sdxc/random";
@@ -231,90 +196,14 @@ export class BingoHall extends DurableObject {
 ```
 
 Storage hands back whatever was written, by this deploy, an older one, or a hand-edited
-backup, so read it as untrusted input. `RANDOM_STATE_SCHEMA` checks the seed's type and that
-each of the four generator words is an unsigned 32-bit integer; anything else opens a fresh
-stream instead of a broken one. The object holds other calls back while its storage read is in
-flight, so two calls never draw from the same saved position.
-
-The same state fits a D1 column as JSON. Store it beside the row it shaped, a saved game or a
-half-run simulation, and validate it on the way out exactly as above.
-
-## Log the seed of a run you may need to replay
-
-Work that should differ on every run, such as a nightly audit that samples a few orders, still
-deserves a replay when it finds something odd. Draw a fresh seed, record it on the run's log,
-and open the stream on it:
-
-```typescript {% title="app/jobs/orders/audit.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { createRandom, systemSeed } from "@sdxc/random";
-
-import jobs from "~/app/jobs";
-import { Orders } from "~/app/models/orders";
-
-const AUDIT_RATE = 0.01;
-
-export default createJobHandler(jobs.orders.audit, async (ctx) => {
-	let seed = systemSeed();
-	let random = createRandom(seed);
-	let orders = await Orders.placedYesterday(ctx.db);
-	let picked = orders.filter(() => random.bool(AUDIT_RATE));
-
-	await Orders.flagForAudit(ctx.db, picked);
-	ctx.log.set({ audit: { seed, sampled: picked.length, of: orders.length } });
-});
-```
-
-The seed lands on the run's log line, so a question about why an order was or was not picked
-is answered by running the same filter over the same list with that seed. The same move makes
-a fuzz test or a property test replayable;
-[Generate believable test data](/docs/operations-and-testing/test-data) shows it with the seed
-read back from an environment variable.
-
-## Hand a stream to other packages
-
-Packages that draw take the same `Random`, so one seed can drive a whole test.
-[`@sdxc/sample`](/api/sample) accepts an open `SeededRandom` as its `seed`, and
-[`@sdxc/backoff`](/api/backoff) draws its jitter from a `random` option:
-
-```typescript {% title="app/test/streams.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-import { createRandom } from "@sdxc/random";
-import { createSample } from "@sdxc/sample";
-
-export function testStreams(seed: string) {
-	let random = createRandom(seed);
-	return {
-		sample: createSample({ seed: random.derive("people") }),
-		backoff: createBackoff({
-			base: "1 second",
-			max: "5 minutes",
-			jitter: 0.2,
-			random: random.derive("jitter"),
-		}),
-	};
-}
-```
-
-The fake people and the retry delays now come from one seed and stay independent of each
-other. Without `random`, a backoff schedule draws its jitter from `systemRandom()`, which is
-what spreads retries apart in production. A plugin for an executable spec receives
-`context.random`, a `SeededRandom` already opened on the run's seed and the test's identity, so
-its values replay with `--seed` like everything else in the run.
-
-## Make secrets with Web Crypto
-
-`@sdxc/random` draws numbers, elements and orderings. Session ids, API keys, reset tokens,
-nonces and IVs come from Web Crypto directly or from `randomToken` and `randomBytes` in
-`@sdxc/crypto`, which
-[Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) covers. A
-seeded stream is predictable to anyone who learns its seed, which is exactly what makes it
-useful for a draw you want to replay and what keeps it to draws that guard nothing.
+backup, so read it as untrusted input: `RANDOM_STATE_SCHEMA` validates the saved state, and
+anything else opens a fresh stream instead of a broken one. The same state fits a D1 column as
+JSON, validated on the way out exactly as above.
 
 ## Where to go next
 
 - [Generate believable test data](/docs/operations-and-testing/test-data) — seeded fake
-  people, companies and dates, and a fuzz run that prints its seed.
+  people, companies and dates for tests and fixtures.
 - [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) — the schedules
   that draw jitter from a stream.
 - [Write executable specs](/docs/operations-and-testing/executable-specs) — seeded runs that

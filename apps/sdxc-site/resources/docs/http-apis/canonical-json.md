@@ -1,6 +1,6 @@
 ---
 title: Hash and sign JSON in canonical form
-description: Serialize JSON with the RFC 8785 JSON Canonicalization Scheme, so equal values hash, sign, tag and deduplicate to the same bytes whatever their key order.
+description: Serialize JSON with the RFC 8785 JSON Canonicalization Scheme, so equal values hash, sign and deduplicate to the same bytes whatever their key order.
 section:
     title: HTTP APIs
     order: 5
@@ -8,7 +8,7 @@ order: 11
 lastUpdated: 2026-10-25
 outcomes:
     - "Why `JSON.stringify` is the wrong input for a hash or a signature"
-    - "How to hash, deduplicate and tag JSON with `@sdxc/json-canonical`"
+    - "How to hash and deduplicate JSON with `@sdxc/json-canonical`"
     - "How to sign a JSON value so a receiver that re-serializes it still verifies"
 ---
 
@@ -17,22 +17,17 @@ outcomes:
 computed from that text differs too. The
 [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) (JCS) fixes every
 choice the serializer makes, so equal values always produce the same bytes. This guide
-uses those bytes to deduplicate documents, tag responses and sign values that travel as
-data.
-
-[`@sdxc/json-canonical`](/api/json-canonical) writes that form and returns a
-[`@sdxc/result`](/api/result), [`@sdxc/crypto`](/api/crypto) hashes and signs the bytes, and
-[`@sdxc/http`](/api/http) turns them into an `ETag`.
+writes that form with [`@sdxc/json-canonical`](/api/json-canonical) and uses it to
+deduplicate documents and sign values that travel as data.
 
 ```bash
-npm add @sdxc/json-canonical @sdxc/result @sdxc/crypto @sdxc/http remix
+npm add @sdxc/json-canonical @sdxc/result @sdxc/crypto
 ```
 
 ## Serialize a value canonically
 
-`canonicalize` writes no whitespace, sorts object members by the UTF-16 code units of
-their names at every depth, and writes numbers and strings exactly as ECMAScript does.
-Arrays keep their order, since order is part of an array's value.
+`canonicalize` writes no whitespace, sorts object members at every depth, and writes numbers
+and strings exactly as ECMAScript does. Arrays keep their order:
 
 ```typescript {% title="app/services/canonical.ts" %}
 import { canonicalize } from "@sdxc/json-canonical";
@@ -44,14 +39,11 @@ canonicalize(JSON.parse('{"n": 1E30, "x": 0.000001, "z": -0}'));
 // success('{"n":1e+30,"x":0.000001,"z":0}')
 ```
 
-The output is a string. JCS is defined over its UTF-8 bytes, and `sha256`, `hmac` and
-`etag` below accept the string and hash exactly those bytes.
-
 ## Hash a document to deduplicate it
 
-A content hash over the canonical bytes names a value rather than one spelling of it. Store
-it in a column with a unique index and a second import of the same document, with its keys
-in another order, is refused by the database instead of stored twice.
+A hash over the canonical bytes names a value rather than one spelling of it. Store it in a
+column with a unique index, and a second import of the same document with its keys reordered
+is refused instead of stored twice:
 
 ```typescript {% title="app/services/content-hash.ts" %}
 import { canonicalize } from "@sdxc/json-canonical";
@@ -68,53 +60,11 @@ export async function contentHash(value: unknown) {
 }
 ```
 
-The same hash is a cache key for work keyed by its input, such as a rendered report keyed
-by its filters, and a stable job id for a payload that must enqueue once.
-
-## Answer with an ETag that follows the data
-
-An `ETag` is strong only when it names the exact bytes sent. Send the canonical text as the
-body and hash that text, so the tag and the bytes are one thing, and two isolates that
-assembled the same book in a different order answer the same tag.
-
-```typescript {% title="app/http/controllers/api/books/show.ts" %}
-import { conditional, etag, Policies } from "@sdxc/http/cache";
-import { canonicalize } from "@sdxc/json-canonical";
-import { isFailure } from "@sdxc/result";
-import { createAction } from "remix/router";
-
-import Book, { serializeBook } from "~/app/models/book";
-import problems from "~/config/problems";
-import routes from "~/routes/api";
-
-export default createAction(routes.api.books.show, async (ctx) => {
-	let book = await Book.find(ctx.db, ctx.params.bookId);
-	if (book === null) return problems.notFound({ detail: "No book has that id." });
-
-	let body = canonicalize({ book: serializeBook(book) });
-	if (isFailure(body)) return problems.internal();
-	let tag = await etag(body.data);
-	if (isFailure(tag)) return problems.internal();
-
-	let headers = new Headers({
-		"Cache-Control": Policies.revalidate().toString(),
-		"Content-Type": "application/json",
-		ETag: tag.data,
-	});
-	return await conditional(ctx.request, new Response(body.data, { headers }));
-});
-```
-
-A write that checks `If-Match` computes the tag the same way, so a reordered serializer
-never turns a current client into a `412`.
-
 ## Sign a value that travels as data
 
-A signature over a raw request body is checked against the bytes received, and
-[Receive and send webhooks](/docs/identity-and-security/webhooks) does exactly that. A
-receipt, a licence or a grant is different: it is stored in a JSON column, embedded in
-another document and parsed again, and its text changes on the way. Sign its canonical
-form, carry the signature beside it, and verify by canonicalizing what arrives.
+A receipt or a grant is stored, embedded in other documents and parsed again, so its text
+changes on the way. Sign its canonical form, carry the signature beside it, and verify by
+canonicalizing what arrives:
 
 ```typescript {% title="app/services/receipts.ts" %}
 import { hmac, Hex } from "@sdxc/crypto";
@@ -151,10 +101,8 @@ export async function verifyReceipt(secret: string, signed: SignedReceipt) {
 }
 ```
 
-Read the secret from `env` in the caller and refuse to sign when it is unset, as
-[Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) does for
-signed links. `hmac.verify` compares in constant time and answers `false` for a signature
-that is not hex, so a tampered receipt fails closed.
+Read the secret from `env` in the caller and refuse to sign when it is unset. `hmac.verify`
+compares in constant time, so a tampered receipt fails closed.
 
 <warning>
 Canonical form is defined over I-JSON, where numbers are IEEE doubles. An integer above
@@ -165,10 +113,8 @@ units past that range, and other exact values as strings, as `total` does above.
 
 ## Handle a value JCS refuses
 
-`canonicalize` fails on anything without one JSON spelling: `NaN`, `Infinity`, a lone
-surrogate, `undefined`, a sparse array hole, a cycle, and any object other than a plain
-one, `Date` included. The `CanonicalJsonError` carries a JSON Pointer to the offending
-value, so the failure names the field.
+`canonicalize` fails on anything without one JSON spelling: `NaN`, `undefined`, a cycle, and
+any object other than a plain one, `Date` included. The error's `pointer` names the field:
 
 ```typescript {% title="app/services/canonical-errors.ts" %}
 import { canonicalize } from "@sdxc/json-canonical";
@@ -177,22 +123,16 @@ import { isFailure } from "@sdxc/result";
 let result = canonicalize({ items: [1, Number.NaN] });
 if (isFailure(result)) result.error.pointer; // "/items/1"
 
-canonicalize({ note: undefined }); // fails at "/note"
 canonicalize({ issuedAt: new Date() }); // fails at "/issuedAt"
 canonicalize({ issuedAt: new Date().toISOString() }); // succeeds
 ```
 
-<note>
-`JSON.stringify` drops an `undefined` member and calls a `Date`'s `toJSON`, so a value it
-accepts can still fail here. Convert dates to ISO strings and drop optional members that
-are `undefined` before you canonicalize, the way your serializer already does for the
-response.
-</note>
+Convert dates to ISO strings and drop `undefined` members before you canonicalize.
 
 ## Test the signature
 
-The test that matters is the one `JSON.stringify` would fail: a receipt that comes back
-with its members in another order still verifies, and a changed total does not.
+The test that matters is the one `JSON.stringify` would fail: a reordered receipt still
+verifies, and a changed total does not.
 
 ```typescript {% title="app/services/receipts.test.ts" %}
 import { unwrap } from "@sdxc/result";

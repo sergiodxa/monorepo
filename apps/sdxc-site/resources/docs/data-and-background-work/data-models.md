@@ -12,29 +12,26 @@ outcomes:
     - "How to build test data with factories and seed a new database"
 ---
 
-Once an app has more than a few tables, the code around them settles into a pattern: a module
-per table with `findBy…` and `listBy…` functions that all take the database first, plus some
-place where a write enqueues a job or sends a mail. [`@sdxc/data-model`](/api/data-model)
-is that layer, written once. A model is a `remix/data-table` table plus named scopes, custom
-methods and async callbacks. It is bound to a database once per request, job or test, and every
-member runs there.
+Once an app has more than a few tables, every table grows a module of `findBy…` functions that
+take the database first, plus some place where a write enqueues a job.
+[`@sdxc/data-model`](/api/data-model) is that layer, written once: a model is a
+`remix/data-table` table plus scopes, methods and callbacks, bound to a database once per
+request, job or test.
 
-This guide defines a model, publishes the app's models as `ctx.models`, dispatches side effects
-only after a write lands, keeps several record types in one table, stores open-ended attributes
-in a key/value table, builds test data with factories, and seeds a new database. Your tables
-stay as you declared them; the database setup is the one from
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
+This guide defines a model, publishes the app's models as `ctx.models`, dispatches jobs after a
+write lands, stores open-ended attributes in a meta table, and builds test and seed data. The
+database setup is the one from [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
 
 ```bash
-npm add @sdxc/data-model @sdxc/database-middleware @sdxc/jobs @sdxc/pagination \
-	@sdxc/result @sdxc/sample @sdxc/uuid remix
+npm add @sdxc/data-model @sdxc/database-middleware @sdxc/jobs @sdxc/result @sdxc/sample \
+	@sdxc/uuid remix
 ```
 
 ## Define a model
 
-`createModel` takes a table and returns a definition. Scopes are named refinements of a query;
-a default scope is one every read applies; methods run with `this` bound to the model, so they
-compose its scopes and each other; callbacks run around every write made through the model:
+`createModel` takes a table and returns a definition. Scopes are named refinements of a query, a
+default scope applies to every read, methods run with `this` bound to the model, and callbacks run
+around every write made through it:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
@@ -65,20 +62,10 @@ export const Users = createModel(users, {
 });
 ```
 
-`generateId` creates the primary key of every row inserted without one, so `create` takes `id`
-as optional and every callback already sees the new key; a key the caller passes is kept.
-`optional` lists the other columns `create` may leave out because a callback or the database
-fills them, a `.default()` column included; nullable columns and `created_at`/`updated_at` are
-optional already, and every other column is required by the type of `create`. A scope receives
-a query it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row
-type, and answers it. `with()` and `select()` change the row, so they belong in a method.
-
-The default scope keeps soft-deleted users out of every read without each call site
-remembering a filter: queries, scopes and `find` leave them out, and an update or delete of one
-answers `NotFound`. `unscoped()` reads past it, for the code that restores a user. A method
-answers a promise or a model query, so a model loaded on demand can answer it before its module
-loads; one answering a plain value turns the definition into a type error naming it, and so
-does a method or scope named like a member the model already has, such as `exists` or `db`.
+`generateId` fills the primary key of every row inserted without one. The default scope keeps
+soft-deleted users out of every read, and `unscoped()` reads past it for the code that restores
+one. A method answers a promise or a model query, so a model loaded on demand can answer it
+before its module loads.
 
 Bind the definition to a database and use it:
 
@@ -92,43 +79,17 @@ if (isFailure(created)) return created.error.issues;
 
 await users.find(created.data.id); // the row, or null
 await users.inTeam(teamId).orderBy("name", "asc").all(); // deleted users left out
-await users.unscoped().where({ id }).first(); // including a deleted one
 ```
 
 Reads answer `null` for a missing row. Writes answer a `Result`: a `ValidationError` from
-[`@sdxc/validate`](/api/validate) when a callback, the table's own hooks or a database
-constraint refuses the write, and `NotFound` when an update or delete names a key the model has
-no row for. A constraint the database enforces comes back as a `ConstraintViolation`, a
-`ValidationError` with its issue at the indexed column, so a form renders the duplicate email
-the same way it renders a failed schema, and code that treats a duplicate differently checks
-`error.kind === "unique"`.
-
-A table that declares its key as `primaryKey: ["id"]` still takes the key as a plain value:
-`users.find(id)`, `users.update(id, values)`.
-
-Every scope returns a real data-table query, so [`@sdxc/pagination`](/api/pagination) pages it
-unchanged:
-
-```typescript
-import { Pagination } from "@sdxc/pagination";
-
-let page = await Pagination.byOffset(users.inTeam(teamId).orderBy("name", "asc"), {
-	page: 1,
-	perPage: 25,
-});
-```
-
-<note>
-`Pagination.byKeyset` owns the ordering, so give it a scope that only filters; it refuses a
-query that already orders.
-</note>
+[`@sdxc/validate`](/api/validate) when a callback or a database constraint refuses the write,
+with a duplicate's issue at the indexed column, and `NotFound` when an update or delete names a
+missing key.
 
 ## Publish the models on `ctx.models`
 
-A registry lists the models under the names handlers read them by. An entry can be an import,
-which loads the module on its first call in each request, so a request evaluates only the
-models it touches, or a `createModel(...)` call written inline, typed exactly like a model
-declared in its own variable:
+A registry lists the models under the names handlers read them by. An import entry loads its
+module on first use, so a request evaluates only the models it touches:
 
 ```typescript {% title="app/models/index.ts" %}
 import { createModels } from "@sdxc/data-model";
@@ -141,9 +102,8 @@ export const models = createModels({
 });
 ```
 
-The router middleware binds the registry per request. Its function builds the model context
-from the request context, once, on the first model access, so it reads whatever earlier
-middleware published, such as the database on `ctx.db`:
+The router middleware binds the registry per request, reading the database earlier middleware
+published on `ctx.db`:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/router";
@@ -171,9 +131,8 @@ export function createWebRouter() {
 }
 ```
 
-An MCP tool mounted on the router runs on the same request context, so it reads
-`ctx.get(Models)` the same way. A job dispatcher takes the counterpart from
-`@sdxc/data-model/jobs`, given the database its own middleware published:
+A job dispatcher takes the counterpart from `@sdxc/data-model/jobs`. Its middleware sees the
+bare job context, so it reads the database by the `Database` key:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
@@ -191,71 +150,28 @@ export const dispatcher = createJobDispatcher({
 });
 ```
 
-A job's middleware sees the bare job context, so it reads the database by the `Database` key
-`database()` sets it under, while the job's handler reads it as `ctx.db`. A command line built with
-[`@sdxc/cli`](/api/cli) takes the same middleware from `@sdxc/data-model/cli`, so a command
-handler reads `ctx.models` too.
-
 ## Dispatch side effects after commit
 
-Callbacks receive a model context, and methods read the same object as `this.context`. You
-extend it the way middleware extends a router's context. It starts with `db`, the database the
-model is bound to, and `get(key)`, which reads what the host context published. Anything a model
-depends on, you declare on the interface, and every binding then has to supply it:
+Callbacks receive a model context that starts with `db` and `get(key)`. Declare anything else a
+model depends on, and every binding then has to supply it:
 
 ```typescript {% title="config/model-context.d.ts" %}
-import type { BoundModels } from "@sdxc/data-model";
 import type { JobEnqueuer } from "@sdxc/jobs";
-
-import type { Articles } from "~/app/models/articles";
-import type { Users } from "~/app/models/users";
-
-interface AppModels {
-	users: typeof Users;
-	articles: typeof Articles;
-}
 
 declare module "@sdxc/data-model" {
 	interface ModelContext {
 		jobs: JobEnqueuer;
-		models: BoundModels<AppModels>;
 	}
 }
 ```
 
-`models` is always there at runtime: the rest of the registry, bound to the same request and
-unit of work. The declaration types it from an interface of the entries, which resolves each
-model only when it is read, so a method that calls a sibling keeps every other model typed.
-Two models whose methods call each other need a return type written on one of them.
-
-A method reaches a sibling the same way:
-
-```typescript {% title="app/models/users.ts" %}
-import { createModel } from "@sdxc/data-model";
-import { isFailure } from "@sdxc/result";
-
-import { users } from "~/database/schema";
-
-export const Users = createModel(users, {
-	methods: {
-		async signUp(email: string, name: string) {
-			let user = await this.create({ email, name });
-			if (isFailure(user)) return user;
-			return this.context.models.teams.create({
-				owner_id: user.data.id,
-				name: "Personal",
-			});
-		},
-	},
-});
-```
-
-A callback reads `ctx.jobs` directly:
+An `afterCommit` callback enqueues the job once the write has landed:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
 
 import jobs from "~/app/jobs";
+import { users } from "~/database/schema";
 
 export const Users = createModel(users, {
 	callbacks: {
@@ -267,21 +183,17 @@ export const Users = createModel(users, {
 });
 ```
 
-Each binding supplies it, the router's from `ctx.jobs` and the dispatcher's from itself, so a
-binding that leaves it out fails to type-check:
+The router binding passes `ctx.jobs` and the dispatcher's passes itself, so a binding that leaves
+it out fails to type-check:
 
 ```typescript
 modelsMiddleware(models, (ctx) => ({ db: ctx.db, jobs: ctx.jobs }));
 modelsMiddleware(models, (ctx) => ({ db: ctx.require(Database), jobs: dispatcher }));
 ```
 
-Keep the language out of the model context. A callback runs for every caller of the model,
-scripts and jobs included, so an email worded for the visitor is the controller's to enqueue,
-with the request's locale, after the write it follows.
-
-`afterCommit` runs right after a write made on its own. Inside `ctx.models.transaction(...)` it
-waits for the whole callback, and runs only when the callback resolves with something other than
-a `Failure`:
+Inside `ctx.models.transaction(...)`, `afterCommit` waits for the whole callback and runs only
+when it resolves with something other than a `Failure`, so a failed team drops the queued welcome
+job:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -294,122 +206,29 @@ let result = await ctx.models.transaction(async (models) => {
 });
 ```
 
-If the team fails, the returned `Failure` drops the queued welcome job.
-
 <warning>
-On D1 the transaction keeps the user row: D1 commits every statement as it runs, so the caller
-decides on the compensating delete. Bind with `{ transactions: "database" }` on an adapter with
-real transactions, such as SQLite in tests, and the user rolls back too.
+D1 commits every statement as it runs, so on D1 the transaction above keeps the user row and the
+caller decides on the compensating delete. The same holds for `afterCreate`, `afterUpdate` and
+`afterDelete`: their database work has committed when one fails, so put anything with
+consequences outside the database in `afterCommit`.
 </warning>
-
-`afterCreate`, `afterUpdate` and `afterDelete` run before the write is reported, and can fail it.
-
-<warning>
-On D1 the database work of `afterCreate`, `afterUpdate` and `afterDelete` has already committed
-when one fails, so keep them to work the model can repeat, and put anything with consequences
-outside the database in `afterCommit`.
-</warning>
-
-An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
-statement over every matching row.
 
 <note>
-A query-built update or delete runs no model callbacks. It is the escape hatch for set-based
-writes; iterate and call `update(key, values)` per row when each row needs its callbacks.
+An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
+statement and runs no model callbacks. Call `update(key, values)` per row when each row needs them.
 </note>
-
-A query-built update takes `{ touch: false }` to leave `updated_at` as it is, and `returning`
-to answer the rows it changed. `update(key, {})` with no values marks one row as changed.
-
-`upsert` writes a row or the one it conflicts with in a single statement, with no read first:
-
-```typescript
-await ctx.models.deliveries.upsert(
-	{ id: delivery.id, type: delivery.type, payload, processed: false },
-	{ update: { payload, processed: false } },
-);
-
-let claimed = await ctx.models.bookmarks.upsert(
-	{ post_id: postId, address },
-	{ conflict: ["post_id"], update: {} },
-);
-```
-
-`conflict` defaults to the primary key, and `update` to every value but the key and
-`created_at`; `update: {}` leaves a conflicting row as it was. Either way it answers the row as it
-stands, so the second call tells whether this address won. Being one statement, it runs no
-callbacks; the model's `generateId` still fills the key of the row it inserts.
-
-## Bind several registries
-
-An app with one database per tenant and a shared one binds a registry per database. Each
-registry types its models' context with `withContext`, which answers a `createModel` whose
-callbacks and `this.context` read that context instead of the global `ModelContext`:
-
-```typescript {% title="app/models/feed/context.ts" %}
-import type { BoundModels, ModelContext } from "@sdxc/data-model";
-import { withContext } from "@sdxc/data-model";
-
-import type { Feeds } from "./feeds";
-import type { Items } from "./items";
-
-interface FeedModels {
-	feeds: typeof Feeds;
-	items: typeof Items;
-}
-
-interface FeedContext extends ModelContext {
-	models: BoundModels<FeedModels>;
-}
-
-export const { createModel } = withContext<FeedContext>();
-```
-
-The feed models import `createModel` from this module, and the registry's `bind` and middleware
-require whatever else that context declares. Declare the context as an interface, as above: an
-intersection type resolves every model at once and brings the cycle back.
-
-## Keep several record types in one table
-
-A model can pin columns to fixed values with `constraints`, and a base model that names a
-discriminator column can be extended once per value. Every query of a sub-model filters on its
-value, every create writes it, and a key belonging to another type answers `NotFound`:
-
-```typescript {% title="app/models/posts.ts" %}
-import { createModel } from "@sdxc/data-model";
-import { fail } from "remix/data-table";
-
-export const Posts = createModel(posts, {
-	inheritance: "type",
-	scopes: { live: (query) => query.where({ deleted_at: null }) },
-	callbacks: {
-		async beforeDelete(row) {
-			if (row.federated_at !== null)
-				return fail("Federated posts are retracted");
-		},
-	},
-});
-
-export const Articles = Posts.extend("article", {});
-export const Likes = Posts.extend("like", {});
-```
-
-A sub-model has every scope, method and callback of its base, and its own callbacks run after
-the base's. Its rows type `type` as `"article"`, and its `create` input leaves `type` out. The
-base reads every row with `type` as the full union, and writing through the base runs only the
-base's callbacks.
 
 ## Store open-ended attributes in a meta table
 
-Attributes that differ per record type, or that change too often to deserve a migration, often
-live in a key/value table beside the main one. A model names that table once and declares typed
-fields over it; rows then carry a decoded `meta` object:
+Attributes that differ per record type, or change too often to deserve a migration, can live in
+a key/value table beside the main one. A model names that table once and declares typed fields
+over it; `extend` adds a sub-model per value of the `type` column:
 
 ```typescript {% title="app/models/articles.ts" %}
-import { field } from "@sdxc/data-model";
+import { createModel, field } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v7";
 
-import { postMeta } from "~/database/schema";
+import { postMeta, posts } from "~/database/schema";
 
 export const Posts = createModel(posts, {
 	inheritance: "type",
@@ -420,12 +239,11 @@ export const Articles = Posts.extend("article", {
 	meta: {
 		slug: field.text().required(),
 		title: field.text(),
-		locale: field.enum(["en", "es"]).default("en"),
 		tags: field.list(field.text()),
 	},
 	methods: {
 		findBySlug(slug: string) {
-			return this.live().whereMeta("slug", slug).first();
+			return this.query().whereMeta("slug", slug).first();
 		},
 	},
 });
@@ -433,11 +251,11 @@ export const Articles = Posts.extend("article", {
 export default Articles;
 ```
 
-Writes take a `meta` object, and an update touches only the keys it names, with `null` removing
-one:
+Rows carry a decoded `meta` object. Writes take one, and an update touches only the keys it
+names, with `null` removing one:
 
 ```typescript
-let article = await ctx.models.articles.create({
+await ctx.models.articles.create({
 	author_id: ctx.user.id,
 	meta: { slug: "hello", title: "Hello", tags: ["remix"] },
 });
@@ -445,40 +263,9 @@ let article = await ctx.models.articles.create({
 await ctx.models.articles.update(id, { meta: { title: "Hello, world", tags: null } });
 ```
 
-Every field reads as possibly missing unless it declares a default, since any key can be
-absent for any row; `required()` makes `create` refuse a write without it, with the issue at
-`["meta", "slug"]`. A value the field's codec rejects reads as missing. `withMeta(["title"])`
-loads only the keys a list shows, and `whereMeta(key, value)` keeps the rows holding a value.
-The first `whereMeta` on a query joins the meta table into the read, so filtering every article
-by locale stays one statement however many match. Each further `whereMeta` looks its matches up
-first, so chain the broad key first and the selective ones after it. A value a listing sorts by
-belongs in a column, where keyset paging can seek on it.
-
-An update that names only meta keys still touches `updated_at`, when the table declares
-`timestamps`, so a post whose title changed reads as updated in a feed or a sitemap.
-
-A write inserts the new meta rows before deleting the old ones, and reads take each key's
-latest row, so a failure between the two statements on D1 still reads the new value.
-
-## Write helpers over any model
-
-`BoundModel<typeof Users>` names a bound model's type, and `ModelRow`, `CreateValues` and
-`UpdateValues` name its row and write inputs. `AnyModel` is the constraint for a helper written
-once for every model, and its optional shape narrows it to models whose rows have those columns:
-
-```typescript {% title="app/models/helpers.ts" %}
-import type { AnyModel, BoundModel, ModelRow } from "@sdxc/data-model";
-
-export async function forPost<M extends AnyModel<{ post_id: string }>>(
-	model: BoundModel<M>,
-	postId: string,
-): Promise<ModelRow<M>[]> {
-	return model.query().where({ post_id: postId }).all();
-}
-```
-
-`forPost(ctx.models.comments, id)` answers comment rows, decoded meta included, and
-`forPost(ctx.models.users, id)` fails to type-check, because a user row has no `post_id`.
+A field reads as possibly missing unless it declares a default, and `required()` makes `create`
+refuse a write without it. Keep a value a listing sorts by in a column, where keyset paging can
+seek on it.
 
 ## Build test data with factories
 
@@ -531,39 +318,20 @@ test("keeps drafts out of the published list", async () => {
 });
 ```
 
-An attribute's function runs only for a value the call leaves out, so the articles above
-create no extra users. Each factory draws from a stream derived from the seed by its name, so
-adding a factory leaves every other factory's values where they were, and a failing run
-reproduces from its seed. A write that fails throws, with the `ValidationError` as its cause.
-
-To make a write fail or to count calls, replace the member on the model rather than on one
-bound copy. `overrideModel` applies to every binding until it is restored, including the
-registry the router binds per request, and hands you the original members to wrap:
-
-```typescript
-import { overrideModel, publishModels } from "@sdxc/data-model/testing";
-
-let restore = overrideModel(Users, (users) => ({ create: vi.fn(users.create) }));
-afterEach(() => restore());
-
-let ctx = createJobContext(jobs.sendWelcome, { id: "m1", attempts: 1 });
-let models = publishModels(ctx, registry, { db });
-```
-
-`publishModels` binds a registry and publishes it as `ctx.models`, for a test that calls a job
-handler with a context it built by hand.
+An attribute's function runs only for a value the call leaves out, so the articles above create
+no extra users. Each factory draws from a stream derived from the seed, so a failing run
+reproduces from its seed.
 
 ## Seed a new database
 
-`@sdxc/data-model/seed` declares the rows a new database starts with as named steps over the
-registry. Each step writes fixed rows through `models` or generated ones through `factories`, so
-every write runs the models' callbacks and constraints:
+`@sdxc/data-model/seed` declares the rows a new database starts with as named steps, each
+writing through `models` or `factories`:
 
 ```typescript {% title="database/seed.ts" %}
 import { defineSeed } from "@sdxc/data-model/seed";
 
-import { ArticleFactory } from "~/database/factories";
 import { models } from "~/app/models";
+import { ArticleFactory } from "~/database/factories";
 
 export default defineSeed(models, {
 	admin: ({ models }) =>
@@ -572,17 +340,9 @@ export default defineSeed(models, {
 });
 ```
 
-```typescript
-import seeder from "~/database/seed";
-
-let ran = await seeder.run({ db }); // success(["admin", "articles"])
-```
-
-`run(context, options?)` binds the registry with `context`, runs the steps in order, and answers
-the names that ran, or a failure naming the step that threw. Factory values come from
-`options.seed`, 1 unless you pass another, so the same seed writes the same rows. Like
-`./testing`, it needs `@sdxc/sample` installed. An app from `sdxc create` runs it with
-`sdxc run db seed`, and `sdxc run db fresh --seed` rebuilds the local database and seeds it.
+`run({ db })` runs the steps in order and answers the names that ran, or a failure naming the step
+that threw. An app from `sdxc create` runs it with `sdxc run db seed`, and
+`sdxc run db fresh --seed` rebuilds the local database and seeds it.
 
 ## Where to go next
 
@@ -590,6 +350,4 @@ the names that ran, or a failure naming the step that threw. Factory values come
   database the models bind to.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — define the jobs an
   `afterCommit` callback enqueues.
-- [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) — a search
-  index kept beside the tables your models own.
 - [`@sdxc/data-model`](/api/data-model) — every option, member and type.

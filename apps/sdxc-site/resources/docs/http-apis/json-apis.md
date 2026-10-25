@@ -13,23 +13,19 @@ outcomes:
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
-back. Every failure answers as an RFC 9457 problem document, lists page by cursor with `Link`
-headers, and every response names the rate limit policy the caller is counted against.
-
-Six packages do the work. [`@sdxc/validate`](/api/validate) checks the body against a
-`remix/data-schema` schema, [`@sdxc/http`](/api/http) names the success statuses,
-[`@sdxc/problem`](/api/problem) names the failures, [`@sdxc/pagination`](/api/pagination)
-pages the list, [`@sdxc/rate-limit`](/api/rate-limit) counts the calls, and
-[`@sdxc/get-client-ip`](/api/get-client-ip) names the caller they are counted against.
+back. Every failure answers as an RFC 9457 problem document from
+[`@sdxc/problem`](/api/problem), bodies are checked by [`@sdxc/validate`](/api/validate),
+lists page by cursor with [`@sdxc/pagination`](/api/pagination), and
+[`@sdxc/rate-limit`](/api/rate-limit) counts every call.
 
 ```bash
 npm add @sdxc/get-client-ip @sdxc/http @sdxc/lazy-route @sdxc/pagination @sdxc/problem \
 	@sdxc/rate-limit @sdxc/result @sdxc/validate remix
+npm add -D @sdxc/cloudflare-mocks
 ```
 
 The handlers read the database as `ctx.db`, published by middleware as described in
-[Wire the router](/docs/building-remix-apps/wire-the-router), and hang on three routes in
-the API's own route contract, beside the pages':
+[Wire the router](/docs/building-remix-apps/wire-the-router), and hang on three routes:
 
 ```typescript {% title="routes/api.ts" %}
 import { get, post, route } from "remix/routes";
@@ -45,21 +41,13 @@ export default route({
 });
 ```
 
-An app from `sdxc create` already has this contract, and
-[`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes a whole resource into it, with its
-model, its endpoints and their OpenAPI operations:
-
-```bash
-sdxc scaffold book title author year:integer 'summary?' --api
-```
-
-This guide writes each piece by hand, so you can see what the scaffold's endpoints do.
+[`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) can write a whole resource like this one;
+this guide writes each piece by hand, so you can see what it does.
 
 ## Declare the problem catalog
 
-A client branches on a problem's `type`, so every failure the API can answer with deserves a
-stable URI. `defineProblems` writes each one once: the slug, the status and the title. Every
-entry becomes a builder, so a handler supplies only what differs per occurrence.
+A client branches on a problem's `type`, so every failure deserves a stable URI.
+`defineProblems` declares each one once, and every entry becomes a builder:
 
 ```typescript {% title="config/problems.ts" %}
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
@@ -91,10 +79,8 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 });
 ```
 
-Each `type` should resolve to a page describing the error: `problems.entries()` lists every
-entry with its resolved `type`, which is what an error reference page renders from. The
-`extensions` schema types the builder's argument, so `validationFailed` compiles only with its
-`errors`.
+The `extensions` schema types the builder's argument, so `validationFailed` compiles only
+with its `errors`. `problems.entries()` lists every entry, for an error reference page.
 
 <note>
 End the base URL with `/`. Each `type` is the base followed by the slug, so a base without the
@@ -103,10 +89,9 @@ trailing slash runs into it, and every `type` names a page such as `…/errorsno
 
 ## Validate the body and create
 
-The body and the path params are described as `remix/data-schema` schemas, in a module of
-their own so every handler and the later guides import the same values. A path param schema
-that only accepts the shape your ids have lets a malformed id answer `404` without a query,
-since no book can have it.
+Describe the body and the path params as `remix/data-schema` schemas, in a module every
+handler imports. A param schema that accepts only your ids' shape answers a malformed id
+`404` without a query.
 
 ```typescript {% title="app/http/validators/books.ts" %}
 import * as s from "remix/data-schema";
@@ -124,10 +109,9 @@ export const BOOK_PARAMS = s.object({
 });
 ```
 
-`validate` reads a `Request` according to its `Content-Type` and answers with a `Result`, so
-a refused body is a branch rather than an exception. `issuesFrom` turns the schema's issues
-into `errors` entries whose `pointer` is a JSON Pointer into the body, encoded by
-[`@sdxc/json-pointer`](/api/json-pointer) so a member named `a/b` still points at itself.
+`validate` reads a `Request` by its `Content-Type` and answers with a `Result`. `issuesFrom`
+turns the schema's issues into `errors` entries whose `pointer` is a JSON Pointer into the
+body:
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
 import { created } from "@sdxc/http/response/json";
@@ -157,11 +141,8 @@ export default createAction(routes.api.books.create, async (ctx) => {
 });
 ```
 
-`Book` is the app's own data module, with `create`, `find` and `update` over the books
-table, and `serializeBook` maps a row to the public shape. Keep that mapping explicit: the
-JSON a client sees is a contract, and a renamed column should not change it.
-
-A `422` answer reads like this, which a client can map straight onto its form fields:
+`Book` is the app's own model, and `serializeBook` maps a row to the public shape, so a
+renamed column never changes the API. A `422` answer reads like this:
 
 ```json
 {
@@ -176,7 +157,7 @@ A `422` answer reads like this, which a client can map straight onto its form fi
 
 ## Answer a missing resource
 
-Path params are input too, so `show` validates them with `BOOK_PARAMS` before it queries.
+Path params are input too, so `show` validates them with `BOOK_PARAMS` before it queries:
 
 ```typescript {% title="app/http/controllers/api/books/show.ts" %}
 import { ok } from "@sdxc/http/response/json";
@@ -201,16 +182,10 @@ export default createAction(routes.api.books.show, async (ctx) => {
 });
 ```
 
-Each builder also takes `instance`, a URI for this one occurrence. A fresh
-`urn:uuid:` value there gives a caller something to quote in a support request that you can
-find in your logs.
-
 ## Page the list
 
-A books table only grows, so the list pages by keyset: each page ends in an opaque cursor,
-and the next request seeks from it instead of counting and skipping rows. `createPaging`
-binds the parameter names and limits once, so the names you parse are the names the `Link`
-header advertises.
+A books table only grows, so the list pages by keyset: each page ends in an opaque cursor the
+next request seeks from. `createPaging` binds the parameter names and limits once:
 
 ```typescript {% title="app/http/controllers/api/books/index.ts" %}
 import { ok } from "@sdxc/http/response/json";
@@ -251,22 +226,15 @@ export default createAction(routes.api.books.index, async (ctx) => {
 });
 ```
 
-The ordering ends in `id` because two books created in the same millisecond would otherwise
-share a boundary and one of them would be skipped or served twice; `byKeyset` refuses a
-single non-unique sort key for that reason. The response carries `rel="next"` and
-`rel="prev"` links, and a client walks the list by following them with
-[`@sdxc/link-header`](/api/link-header), as
-[Paginate lists](/docs/http-apis/paginate-lists) shows.
-
-A numbered pager wants offset paging instead: `Pagination.byOffset` counts the query, and the
-same `paginate` call then writes `first`, `last` and an `X-Total-Count` header.
+The ordering ends in `id` so two books created in the same millisecond never share a
+boundary. The response carries `rel="next"` and `rel="prev"` links;
+[Paginate lists](/docs/http-apis/paginate-lists) covers offset paging and HTML pagers.
 
 ## Rate limit the API
 
 `rateLimit` counts each request before the handler runs and writes the `RateLimit-Policy`
-header, the quota and window, onto whatever comes back. A refused request also gets `RateLimit`
-with nothing remaining and `Retry-After`. `onLimit` replaces the default `429` body with an
-entry from your catalog, and those headers are applied to it either way.
+header onto the response. A refused request also gets `Retry-After`, and `onLimit` answers it
+with an entry from your catalog:
 
 ```typescript {% title="app/http/middleware/api-rate-limit.ts" %}
 import { env } from "cloudflare:workers";
@@ -288,9 +256,7 @@ export function apiRateLimit() {
 }
 ```
 
-`API_RATE_LIMITER` is a Workers rate limiting binding. It counts without reporting what is
-left, so an allowed response carries the policy alone; a `KVAdapter` or `DataTableAdapter`
-counts in your own storage and adds `RateLimit` with the remaining budget to every response.
+`API_RATE_LIMITER` is a Workers rate limiting binding.
 
 <warning>
 Give the adapter the same `limit` and `window` as the binding's own configuration. The binding
@@ -298,17 +264,12 @@ does the counting and the adapter only uses the numbers to describe it, so a mis
 `RateLimit-Policy` and `Retry-After` headers that tell callers the wrong budget.
 </warning>
 
-`getClientIP` parses the `CF-Connecting-IP` header into an address, and `addressKey` keys the
-budget on the network it sits in: the address itself for IPv4, its `/64` for IPv6, since an
-IPv6 client holds the whole block and could rotate through it. A request without a parseable
-header shares the `"unknown"` budget. Once your API authenticates callers, key on the caller's
-identity instead of the address, so one client cannot spend another's budget.
+`addressKey` keys the budget on the caller's network: the address for IPv4, its `/64` for
+IPv6. Once your API authenticates callers, key on their identity instead.
 
-Each controller default-exports its action, and the router maps each one through `lazy()`, so a
-request imports only the controller it reaches. The limiter goes in `lazy()`'s second argument,
-so a caller over budget is answered before any controller loads, and the three actions share one
-budget per caller. The `createWebRouter()` below shows only that mapping; the app's own router
-also runs the global middleware that publishes `ctx.db`:
+Map each controller through `lazy()` with the limiter as its second argument, so a caller
+over budget is answered before any controller loads. Your router also runs the global
+middleware that publishes `ctx.db`:
 
 ```typescript {% title="app/initializers/router.tsx" %}
 import { lazy } from "@sdxc/lazy-route";
@@ -338,10 +299,9 @@ export function createWebRouter() {
 
 ## Test the endpoints
 
-A route test sends a `Request` through the router the Worker builds, so the limiter, the
-validation and the problem catalog all run. Add the limiter's binding to the
-`cloudflare:workers` stand-in in `app/test/cloudflare-workers.ts`, beside the bindings it
-already holds, with the same numbers as the adapter:
+A route test sends a `Request` through the router, so the limiter, the validation and the
+catalog all run. Add the limiter's binding to the `cloudflare:workers` stand-in, with the
+same numbers as the adapter:
 
 ```typescript {% title="app/test/cloudflare-workers.ts" %}
 import { createD1Database, createRateLimit } from "@sdxc/cloudflare-mocks";

@@ -15,16 +15,12 @@ outcomes:
 A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a
 projects page from [`@sdxc/ui`](/api/ui) components: a header, a grid of cards, and a dialog
 holding a form. It lays them out with [`@sdxc/u`](/api/u) mixins, adds glyphs from
-[`@sdxc/icons`](/api/icons), and hydrates exactly one small island, a copy-link button, since
-that is the only part of the page the platform cannot do on its own.
+[`@sdxc/icons`](/api/icons), and hydrates exactly one small island, a copy-link button. The
+rest of the page works with no client JavaScript at all.
 
 ```bash
 npm add @pitlane/assets @sdxc/assets-middleware @sdxc/icons @sdxc/u @sdxc/ui remix
 ```
-
-The page works with no client JavaScript at all. The dialog opens, the form submits and the
-errors render through HTML the browser already understands, and script is an addition you
-make where it earns its place.
 
 ## The stylesheets
 
@@ -77,8 +73,7 @@ export default function DocumentLayout(handle: Handle<Props>) {
 ```
 
 A build renames those files whenever their contents change, so the document links the names
-the build reports. With [Pitlane's Vite plugin](https://pitlane.tools/guides/assets), they come
-from its asset manifest, through one resolver the app builds once:
+from [Pitlane's](https://pitlane.tools/guides/assets) asset manifest, through one resolver:
 
 ```typescript {% title="app/initializers/assets.ts" %}
 import { createAssetResolver } from "@pitlane/assets";
@@ -87,9 +82,9 @@ import manifest from "@pitlane/assets/manifest";
 export const assetResolver = createAssetResolver(manifest);
 ```
 
-`assets()` from [`@sdxc/assets-middleware`](/api/assets-middleware) resolves the document's
-stylesheets and the browser entry per request, before the page renders, and publishes them as
-`ctx.assets`. List it in the middleware every page runs, ahead of `render()`:
+`assets()` from [`@sdxc/assets-middleware`](/api/assets-middleware) resolves them per request
+and publishes them as `ctx.assets`. List it in the middleware every page runs, ahead of
+`render()`:
 
 ```typescript {% title="app/http/middleware/page.ts" %}
 import { assets } from "@sdxc/assets-middleware";
@@ -107,20 +102,18 @@ export default createMiddleware(
 );
 ```
 
-A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`.
+A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`, and the
+class `system` on `<html>` makes the theme follow the visitor's `prefers-color-scheme`.
 
 <warning>
 A Worker runs no async work at module scope, and a deploy fails validation when the module
 tries. Resolve the assets in the middleware, per request, as above.
 </warning>
 
-Put the class `system` on `<html>` and the theme follows the visitor's
-`prefers-color-scheme`, with no script deciding the scheme and nothing flashing on first paint.
-
 ## Compose a card
 
-Every `@sdxc/ui` component is a `remix/component` component used as JSX, and compound parts such as
-`Card.Header` hang off the root. A component of your own composes them:
+Every `@sdxc/ui` component is used as JSX, and compound parts such as `Card.Header` hang off the
+root. A component of your own composes them:
 
 ```tsx {% title="resources/components/project-card.tsx" %}
 import type { Handle } from "remix/component";
@@ -167,10 +160,9 @@ export function ProjectCard(handle: Handle<Props>) {
 }
 ```
 
-Props such as `color`, `variant` and `size` become `data-*` attributes and a stylesheet rule
-paints the rest, so this renders as static HTML. `color` takes one of the five semantic
-roles, never a raw color, which is what lets two apps with different palettes share the
-components.
+Props such as `color`, `variant` and `size` become `data-*` attributes a stylesheet paints, so
+this renders as static HTML. `color` takes one of the five semantic roles, so two apps with
+different palettes share the components.
 
 ## Lay out the page with mixins
 
@@ -209,20 +201,13 @@ export function ProjectGrid(handle: Handle<{ projects: Project[] }>) {
 }
 ```
 
-`at()` is a container query. `container("projects")` on the section makes
-it the thing the grid measures, so the same list shows two columns in a wide main area and
-one inside a narrow sidebar, whatever the viewport. Narrow is the unwrapped case, and each
-`at()` layers on above its breakpoint.
-
-Reach for a component before a pile of mixins. When `@sdxc/ui` has the element, the
-component already carries its spacing, focus ring and states. When it is close but not
-exact, pass a small `css({...})` from `remix/component` in its `mix` rather than rebuilding it.
+`at()` is a container query against `container("projects")`, so the same list shows two
+columns in a wide main area and one inside a narrow sidebar, whatever the viewport.
 
 ## Open a dialog with no script
 
-The native `<dialog>` element and Invoker Commands open and close a modal declaratively. A
-button names its target with `commandfor` and the verb with `command`, and there is no
-open-state for you to track.
+The native `<dialog>` element and Invoker Commands open and close a modal declaratively: a
+button names its target with `commandfor` and the verb with `command`.
 
 ```tsx {% title="resources/components/new-project-dialog.tsx" %}
 import type { Handle } from "remix/component";
@@ -274,12 +259,10 @@ export function NewProjectDialog(
 }
 ```
 
-The icon renders with `aria-hidden="true"` beside the visible label, and its stroke is
-`currentColor`, so it takes the button's text color in every state. An icon-only button,
-such as `Dialog.Close`, needs an `aria-label` instead.
-
-When the action refuses the submission and re-renders the page with `issues`, the `open`
-attribute shows the dialog again with each field's error beside it.
+The icon renders `aria-hidden` beside the visible label; an icon-only button, such as
+`Dialog.Close`, needs an `aria-label`. When the action refuses the submission and re-renders
+the page with `issues`, the `open` attribute shows the dialog again with each field's error,
+as [Validate forms and route params](/docs/building-remix-apps/forms-and-params) shows.
 
 <note>
 A dialog opened by the `open` attribute is non-modal and sits in the page's flow with no
@@ -287,15 +270,10 @@ A dialog opened by the `open` attribute is non-modal and sits in the page's flow
 the visitor submitted from.
 </note>
 
-That is the whole loop: see [Validate forms and route params](/docs/building-remix-apps/forms-and-params) for the
-action side.
-
 ## Hydrate an island only where it's needed
 
-Copying a URL to the clipboard is behavior the platform has no declarative form for, so that
-one button becomes a `remix/component` client entry. The `@sdxc/ui` side of it is small: a `Button`
-takes a behavior mixin such as `on("click", …)` through `mix` like any element does, and the
-icons swap on the next render.
+Copying a URL to the clipboard has no declarative form, so that one button becomes a client
+entry. A `Button` takes `on("click", …)` through `mix` like any element does:
 
 ```tsx {% title="resources/components/copy-link.tsx" %}
 import type { Handle } from "remix/component";
@@ -336,17 +314,13 @@ export const CopyLink = clientEntry(
 );
 ```
 
-Everything else about islands, from the client bootstrap that loads them to which props can
-cross to the browser, is `remix/component`'s own; see Remix's
+The client bootstrap that loads islands is `remix/component`'s own; see Remix's
 [hydration guide](https://github.com/remix-run/remix/blob/main/packages/ui/docs/hydration.md).
-Link the client script only from pages that render an island, and every other page ships no
-script at all.
 
 ## Test what the server renders
 
-A component renders to HTML on the server, so a test renders it with `renderToString` from
-`remix/component/server` and reads the markup a browser would receive. The dialog's one
-decision, opening itself when the action refused a submission, is a string check:
+A test renders the dialog with `renderToString` from `remix/component/server` and checks that
+it opens itself when the action refused a submission:
 
 ```tsx {% title="resources/components/new-project-dialog.test.tsx" %}
 import { renderToString } from "remix/component/server";

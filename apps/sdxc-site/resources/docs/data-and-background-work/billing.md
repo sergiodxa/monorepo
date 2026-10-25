@@ -19,18 +19,17 @@ contract in front of the platform, so the rest of your code reads `Customer`, `S
 `EntitlementState` and the vendor's name appears in a single module.
 
 This guide sells a `pro` plan through a hosted checkout, keeps a local projection of what each
-customer holds in sync from webhooks and a nightly job, and gates a feature on that projection.
-[`@sdxc/jobs`](/api/jobs) runs the nightly job, and [`@sdxc/authz`](/api/authz) folds the
-plan into the same checks as roles and ownership.
+customer holds in sync from webhooks and a nightly [`@sdxc/jobs`](/api/jobs) job, and gates a
+feature on that projection.
 
 ```bash
-npm add @sdxc/authz @sdxc/billing @sdxc/http @sdxc/jobs @sdxc/result remix
+npm add @sdxc/billing @sdxc/http @sdxc/jobs @sdxc/result remix
 ```
 
 ## Configure the provider
 
-A provider is a class built once at module scope. Its constructor makes no request, so
-importing it costs no startup work, and a route and a job share the same instance:
+A provider is a class built once at module scope, shared by routes and jobs. Its constructor
+makes no request:
 
 ```typescript {% title="app/initializers/billing.ts" %}
 import type { Billing } from "@sdxc/billing";
@@ -46,23 +45,14 @@ export const billing: Billing = new PolarBilling({
 });
 ```
 
-Products and features are your own slugs mapped to the platform's ids. A checkout is opened for
-`"pro"`, and a snapshot answers `products: ["pro"]` and `features: { reports: true }`, so no
-platform id leaks into a controller or a column. The credentials are functions, read on the first
-call that needs them, and a signing secret that is unset or unreadable makes verification fail
-rather than throw.
-
-Annotating the export as `Billing` keeps every caller on the contract. The same file is the only
-one that changes to move platforms: `StripeBilling` from `@sdxc/billing/providers/stripe` and
-`MercadoPagoBilling` from `@sdxc/billing/providers/mercado-pago` answer the same groups, and
-`MemoryBilling` from `@sdxc/billing/providers/memory` is a full in-memory platform for tests.
-Groups only some platforms offer, such as `portal` and `usage`, are optional on the contract,
-and `supports(billing, "portal")` narrows one to present before you call it.
+Products and features are your own slugs mapped to the platform's ids, so no platform id leaks
+into a controller or a column. Annotating the export as `Billing` keeps every caller on the
+contract, so moving to `StripeBilling` or another provider changes only this file.
 
 ## Publish it on the request
 
-The billing middleware publishes the provider as `ctx.billing`. Importing it is what types the
-property, and its `entitlements` option is the reader the feature gate calls further down:
+The billing middleware publishes the provider as `ctx.billing`, and its `entitlements` option is
+the reader the feature gate calls:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import billingMiddleware from "@sdxc/billing/middleware";
@@ -120,9 +110,7 @@ export async function linkCustomer(
 ```
 
 Every call answers a `Result<T, BillingError>`, and a lookup that matches nothing is a
-`not_found` failure. The error's `code` is what you
-branch on. `rate_limited` is the one marked `retryable`, and `unknown` means a timeout or a 5xx
-where the call may or may not have taken effect.
+`not_found` failure.
 
 ## Open a hosted checkout
 
@@ -153,14 +141,9 @@ export default createAction(routes.billing.checkout, async (ctx) => {
 });
 ```
 
-A session with no `url` is no longer payable, which is why it is checked before redirecting.
-When a double-submitted form must not open two sessions, pass an `idempotencyKey` derived from
-the attempt. A customer who already subscribes goes to `ctx.billing.portal.create(...)`
-instead, behind a `supports()` check, where they change plans and payment methods on the
-platform's page.
-
-A subscription comes into being when the checkout completes, and your app learns of it from an
-event.
+A session with no `url` is no longer payable, so it is checked before redirecting. The
+subscription comes into being when the checkout completes, and your app learns of it from a
+webhook.
 
 ## Sync what the customer holds
 
@@ -191,44 +174,14 @@ export async function syncEntitlements(
 }
 ```
 
-The snapshot is keyed by `externalId`, your account id, and a customer who never had one was
-never linked to an account, so there is nothing to write. Store `readAt` beside it: deliveries
-arrive out of order, and `Entitlements.save` skipping a snapshot older than the stored one is
-what stops a late event from rolling an account back.
+Store `readAt` beside the snapshot: deliveries arrive out of order, and `Entitlements.save`
+skipping a snapshot older than the stored one stops a late event from rolling an account back.
 
 ## Receive the platform's webhooks
 
-A purchase reaches your app twice: once as the buyer's redirect, and again as the platform's
-webhook, which is the one that changes what the account holds:
-
-```mermaid {% alt="Checkout: the buyer posts to the app, which creates a checkout and redirects to the payment platform; after payment the platform sends a webhook the app records with its signature verdict, answering 401 when unproven, 200 when already processed, or saving the account's entitlements and marking the delivery processed; requests read the Entitlements table" %}
-sequenceDiagram
-    actor Buyer
-    participant App as Your app
-    participant Platform as Payment platform
-    participant Store as Delivery store
-    Buyer->>App: POST checkout
-    App->>Platform: checkouts.create
-    App-->>Buyer: 303 to checkout url
-    Buyer->>Platform: pays
-    Platform->>App: webhook delivery
-    App->>Store: record with signature verdict
-    alt unproven
-        App-->>Platform: 401
-    else already processed
-        App-->>Platform: 200 without running
-    else handler runs
-        App->>Platform: entitlements.of
-        App->>App: Entitlements.save
-        App->>Store: markProcessed
-        App-->>Platform: 200, or 503 on a retryable error
-    end
-    Note over Buyer,App: Requests read the Entitlements table
-```
-
-`BillingWebhook` is the whole receiver. The provider verifies the signature, a store records the
-delivery, and a handler per event type does the work. Every handler here does the same thing,
-on purpose, and the controller hands each delivery to the endpoint's `handler`:
+`BillingWebhook` is the whole receiver: the provider verifies the signature, a store records the
+delivery, and a handler per event type re-reads the customer's snapshot, since only a fresh
+snapshot says what is true now:
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import { BillingWebhook } from "@sdxc/billing";
@@ -266,20 +219,9 @@ const ENDPOINT = new BillingWebhook<AppContext>(
 export default createAction(routes.webhooks.billing, (ctx) => ENDPOINT.handler(ctx));
 ```
 
-`AppContext` is your router's context type, `RouterContext<ReturnType<typeof createWebRouter>>`,
-so every handler receives the request's own `ctx.db` and whatever else your middleware publishes.
-
-A delivery says that something changed, and only a fresh snapshot says what is true now, so a
-handler re-reads rather than applying the payload as a diff. The handler map is typed from the
-event union: a misspelled key is a compile error, and a `"order.paid"` handler reaches
-`event.order` and nothing else.
-
-Each status code is chosen for the platform, which disables an endpoint that keeps failing. An
-unproven delivery is the only `401`. An event type with no handler, or one the platform added
-after your release, is logged and acknowledged. A handler reports a failure by returning the
-failed `Result`: the endpoint answers `503` when the error is retryable, so the platform delivers again, and `200`
-when a retry would fail the same way; the `retry` option changes that decision. Map the
-controller through `lazy()` like any other.
+An unproven delivery answers `401`, and an event type with no handler is logged and
+acknowledged. A handler that returns a failed `Result` answers `503` when the error is
+retryable, so the platform delivers again, and `200` otherwise.
 
 <warning>
 A platform sends its webhooks with no session and no `Origin` header. If your app runs
@@ -290,8 +232,8 @@ the endpoint's authentication.
 
 ## Keep a delivery store
 
-The store is how a redelivery is recognized after the request that first saw it has ended. It
-implements `WebhookStore`, three calls over a table of your own:
+The store recognizes a redelivery after the request that first saw it has ended. It implements
+`WebhookStore` over a table of your own:
 
 ```typescript {% title="app/models/webhook-deliveries.ts" %}
 import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
@@ -320,9 +262,8 @@ export class WebhookDeliveries implements WebhookStore {
 }
 ```
 
-`webhookDeliveries` is a table whose columns are the five fields of `WebhookDelivery`, with the
-id as its primary key. The endpoint is built at module scope, before any request has a
-database, so the store takes a function and opens one per call.
+`webhookDeliveries` holds the fields of `WebhookDelivery`, keyed by id. The endpoint is built at
+module scope, before any request has a database, so the store opens one per call.
 
 <note>
 The order matters. The endpoint records every delivery with its signature verdict before any
@@ -330,8 +271,6 @@ handler trusts it, so a forged one is kept as evidence. It marks a delivery proc
 its handler finishes, so a redelivery of a processed id answers `200` without running the
 handler twice, and one whose handler failed runs again.
 </note>
-
-`MemoryWebhookStore` implements the same interface in memory for tests.
 
 ## Gate a feature
 
@@ -359,55 +298,15 @@ export default createAction(routes.reports, {
 });
 ```
 
-The guard publishes the snapshot it decided on as `ctx.entitlements`, so the handler reads the
-same projection instead of loading it a second time. Without `onDenied` a denied request answers
-`403`; with it, the upsell can be a redirect or a page rendered in place. The reader runs only on
-routes that guard, once per request.
-
-### Gate inside an authorization policy
-
-When the same feature also depends on who is asking, a role that may export or an owner of the
-record, keep the plan in the policy that decides the rest. `@sdxc/authz/facts/billing` binds
-the snapshot as a fact, `{ products, features }`, read through the same `entitlements` reader,
-so the request still reads the projection once:
-
-```typescript {% title="app/policies/policy.ts" %}
-import type { BillingFacts } from "@sdxc/authz/facts/billing";
-
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
-
-import abilities from "~/app/policies/abilities";
-
-export default definePolicy(abilities, {
-	facts: { billing: fact<BillingFacts>() },
-	roles: { member: [allow("reports.export")] },
-	guards: [
-		deny("reports.export", {
-			id: "plan-reports",
-			when: {
-				op: "not",
-				of: { op: "includes", field: "billing.features", value: "reports" },
-			},
-			reason: "entitlement:reports",
-		}),
-	],
-});
-```
-
-Bind it with `access(policy, { facts: { billing: fromEntitlements() } })`, after the billing
-middleware, and a route guards with `requireAbility(abilities.reports.export)`. `features`
-lists only what the snapshot grants as `true`, and an account with no snapshot binds two empty
-lists, so the guard refuses a free account, an admin's included. A failed read refuses only
-the plan-gated abilities, and the guard's `reason` is what the refusal page reads to offer the
-upgrade. [Decide who can do what](/docs/identity-and-security/authorization) covers the
-policy, the responder and the same check inside a job.
+The guard publishes the snapshot it decided on as `ctx.entitlements`. Without `onDenied` a
+denied request answers `403`. To combine the plan with roles and ownership,
+[Decide who can do what](/docs/identity-and-security/authorization) covers policies.
 
 ## Repair what webhooks missed
 
 Deliveries get lost: a deploy mid-delivery, a rotated secret, an outage longer than the
 platform's retries. A nightly job walks the platform's live subscriptions and syncs each
-customer, which repairs a lapse nobody announced and finds a customer whose first event never
-arrived:
+customer:
 
 ```typescript {% title="app/jobs/reconcile-billing.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
@@ -449,22 +348,14 @@ export default createJobHandler(jobs.reconcileBilling, async (ctx) => {
 });
 ```
 
-`jobs.reconcileBilling` is declared with a `cron` such as `"0 4 * * *"`. Only a `null` cursor
-ends a list, because a provider that filters a platform page can hand back a short page with
-more behind it, and the page cap keeps a large account from hanging the run. One customer's
-failed read is logged and skipped, so it cannot hold up the repairs behind it, while a failed
-list retries the whole run, which is safe because every sync writes a full snapshot.
-
-Walking live subscriptions finds the customers the platform says are paying. The other
-direction, an account your table still marks as subscribed after a cancellation nobody
-announced, is one more loop over those rows calling the same `syncEntitlements` with
-`{ externalId: account.id }`.
+Declare `jobs.reconcileBilling` with a `cron` such as `"0 4 * * *"`. Only a `null` cursor ends a
+list, since a provider can hand back a short page with more behind it. A failed list retries the
+whole run, which is safe because every sync writes a full snapshot.
 
 ## Test the sync against an in-memory platform
 
-`MemoryBilling` from `@sdxc/billing/providers/memory` is a whole platform in memory, with real
-state: a test seeds a catalog, buys a product through a checkout, and asserts on what the sync
-wrote to your table:
+`MemoryBilling` is a whole platform in memory: a test seeds a catalog, buys a product through a
+checkout, and asserts on what the sync wrote to your table:
 
 ```typescript {% title="app/services/entitlements.test.ts" %}
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
@@ -511,10 +402,6 @@ test("a platform outage answers a failure the caller can retry", async () => {
 	expect(isFailure(synced)).toBe(true);
 });
 ```
-
-`billing.webhooks.emit(event)` signs a delivery the way the platform would, so a test can post
-it to a `BillingWebhook` with a `MemoryWebhookStore` and check that a redelivery runs its
-handler once; [`@sdxc/billing`](/api/billing) shows that flow.
 
 ## Where to go next
 

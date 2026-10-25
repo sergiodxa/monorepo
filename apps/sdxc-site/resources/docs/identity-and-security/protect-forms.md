@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to stack a honeypot, a CAPTCHA and a per-address budget on a form"
     - "How to score spam and check the address and password on sign-up"
@@ -32,9 +32,9 @@ npm add @sdxc/captcha @sdxc/email-address @sdxc/get-client-ip @sdxc/honeypot @sd
 ## Mount the guards on the route
 
 The route is `signUp: form("/sign-up")` in `routes/web.ts`, beside a `checkYourEmail` page:
-`index` renders the form, `action` accepts it. The honeypot
-goes on both, because the page that renders the form has to issue the fields the submission is
-checked against. The budget, the challenge and the spam score go on the action alone.
+`index` renders the form, `action` accepts it. The honeypot goes on both, because the page
+that renders the form issues the fields the submission is checked against. The budget, the
+challenge and the spam score go on the action alone.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import type { Captcha } from "@sdxc/captcha";
@@ -97,14 +97,11 @@ export function createWebRouter(guard: Captcha = productionCaptcha()) {
 }
 ```
 
-The order is the cost order. The honeypot is an HMAC check over two form fields. The budget is
-one KV read and write. The challenge is a call to the provider. The spam score runs local rules
-over the free-text field. Only a submission that passes all four is parsed, has its domain
-looked up in DNS and has its password checked against a breach corpus. The guards are
-`lazy()`'s second argument, so a refused submission never loads the controller. `guard` is the
-CAPTCHA provider, passed in so a test can hand in its own. Beside `formData()`, `getClientIP()`
-and `userAgent()` publish `ctx.ip` and `ctx.userAgent`, which the spam score sends to its
-checks. Each module this file imports is built in the sections below.
+The order is the cost order: an HMAC check, one KV read and write, a call to the CAPTCHA
+provider, then local spam rules. Only a submission that passes all four is parsed, has its
+domain looked up in DNS and has its password checked against a breach corpus. The guards are
+`lazy()`'s second argument, so a refused submission never loads the controller, and `guard` is
+passed in so a test can hand in its own provider.
 
 <note>
 Keep `formData()` in the router's global middleware, ahead of every guard: the honeypot, the
@@ -115,8 +112,7 @@ challenge, the spam score and the handler all read the submission it parsed.
 
 `HoneypotFields` renders a signed token as a hidden input and a trap field that sits off-screen,
 `inert` and hidden from assistive technology. A person never sees the trap; a bot filling every
-input fills it. The token records when the form was rendered and which trap it carried, so a bot
-can neither pick the field nor backdate the form.
+input fills it. Issue the fields once per render, so a re-rendered form carries a fresh token:
 
 ```tsx {% title="app/http/controllers/sign-up/render.tsx" %}
 import type { RequestContext } from "remix/router";
@@ -151,18 +147,9 @@ export async function renderSignUp(ctx: RequestContext, error?: string) {
 export const index = createAction(routes.signUp.index, (ctx) => renderSignUp(ctx));
 ```
 
-Issuing fails only when the honeypot has no secret, a misconfiguration worth crashing on, which
-is where `unwrap` belongs.
-
-<note>
-Issue once per render, so a re-rendered form carries a fresh token, and mount the honeypot on
-the page route as well as the action: the page issues the fields the submission is checked
-against.
-</note>
-
-A refusal teaches a bot to adapt, so a filled trap is answered like a success. Anything else —
-a missing or expired token, from a person whose page predates a secret rotation — continues to
-the handler with the failure published, which asks them to send the form again:
+A refusal teaches a bot to adapt, so a filled trap is answered like a success. Anything else,
+such as an expired token from a page that predates a secret rotation, continues to the handler
+with the failure published, which asks the person to send the form again:
 
 ```typescript {% title="app/http/controllers/sign-up/bots.ts" %}
 import type { HoneypotError } from "@sdxc/honeypot";
@@ -184,12 +171,10 @@ export function answerTrappedBots(error: HoneypotError): Response | null {
 
 ## Budget each address
 
-An anonymous form has one thing to key a budget on: the connecting address. `getClientIP` parses
-the `CF-Connecting-IP` header Cloudflare attaches, and answers `null` when something else served
-the request or the header is not an address, so every unidentified request shares one bucket
-rather than going unlimited. An IPv6 client controls a whole `/64`, so `addressKey` keys on the
-network the address sits in: the full address for IPv4, its `/64` for IPv6, and the shared
-`"unknown"` bucket for `null`.
+An anonymous form has one thing to key a budget on: the connecting address. `getClientIP`
+answers `null` when the address is unknown, so every unidentified request shares one bucket
+rather than going unlimited, and `addressKey` keys an IPv6 client on its `/64`, the network it
+controls:
 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
 import type { Middleware } from "remix/router";
@@ -208,15 +193,9 @@ export function callerBudget(prefix: string, limit: number): Middleware {
 }
 ```
 
-A denied request is answered with a `429` carrying `RateLimit`, `RateLimit-Policy` and
-`Retry-After` before the handler runs; pass `onLimit` to render your own page instead. `prefix`
-keeps the sign-up budget apart from any other limiter over the same namespace.
-
-<note>
-Callers behind one egress address, such as an office or a carrier-grade NAT, share a budget,
-which is the cost of keying on an address at all. Set the limit for the busiest shared address
-you expect to serve.
-</note>
+A denied request is answered with a `429` and `Retry-After` before the handler runs. Callers
+behind one egress address, such as an office, share a budget, so set the limit for the busiest
+shared address you expect to serve.
 
 ## Ask for a challenge, with a test provider
 
@@ -239,19 +218,11 @@ export function testCaptcha(): Captcha {
 }
 ```
 
-The Worker calls `createWebRouter()`, which defaults to `productionCaptcha()`, and a test
-calls `createWebRouter(testCaptcha())`. `MemoryCaptcha` passes every non-empty token unless told otherwise, `failNext` queues one
-refusal, and `last` records the token and address it was asked about, so a test drives both
-branches without reaching Cloudflare. Its field is `captcha-response`, so a test posts that
-instead of Turnstile's. Every failure carries a `code` that separates what the visitor can fix
-(`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that answers
-`null` for `unavailable` keeps sign-ups open through a provider outage.
-
-`PrivacyPassCaptcha` from `@sdxc/captcha/privacy-pass` is a provider with no widget at all: it
-redeems the Privacy Pass token a client sends in `Authorization` and answers a missing one with a
-`401` challenge the client retries. [Accept Privacy Pass tokens instead of a
-CAPTCHA](/docs/identity-and-security/privacy-pass) gates a route on tokens and keeps the widget
-for clients that hold none.
+The Worker calls `createWebRouter()`, and a test calls `createWebRouter(testCaptcha())`.
+`MemoryCaptcha` passes every non-empty token posted as `captcha-response`, and `failNext`
+queues one refusal. Every failure carries a `code` that separates what the visitor can fix
+(`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that
+answers `null` for `unavailable` keeps sign-ups open through a provider outage.
 
 <warning>
 An `onFailure` that lets `unavailable` through opens the form to every bot for as long as the
@@ -261,13 +232,10 @@ front of the handler.
 
 ## Score what was written
 
-`scored`, the `spam(filter, options)` guard in the router, scores the submission before the
-handler runs. Each entry in `fields` names a form field: `content` the free-text field, `email`
-the one describing who sent it. The middleware reads their values from the parsed form and adds
-`ctx.ip`, `ctx.userAgent` and the time the honeypot token signed, which the timing rule
-scores: a form sent within three seconds of rendering is a signal. A spam verdict goes to
-`onSpam`, here answered like a success so a bot learns nothing, and every other verdict reaches
-the handler as `ctx.spamAssessment`. Without `onSpam`, spam is refused with a `422`.
+`scored`, the `spam(filter, options)` guard in the router, scores the free-text `content` field
+and the sender's `email`, together with the address, the user agent and how fast the form came
+back after rendering. A spam verdict goes to `onSpam`, here answered like a success so a bot
+learns nothing, and every other verdict reaches the handler as `ctx.spamAssessment`.
 
 ## Check the address
 
@@ -300,12 +268,11 @@ export async function checkSignUpEmail(input: string) {
 `lookup-failed` means the resolver did not answer, so it fails open: a DNS outage never blocks a
 sign-up, and the confirmation email is the real test. Store `address` for sending and put the
 unique index on `canonical`, so a second sign-up with different capitalization finds the
-existing account. `suggestDomain` from `@sdxc/email-address/typo` offers "did you mean
-gmail.com?" for a mistyped provider.
+existing account.
 
 ## Check the password
 
-With the address known, the handler checks the password against NIST's rules — at least 15
+With the address known, the handler checks the password against NIST's rules: at least 15
 characters, not a common password, not built from the email, not in a breach.
 [`@sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
 
@@ -354,12 +321,10 @@ export async function action(ctx: RequestContext): Promise<Response> {
 ```
 
 The breach lookup sends Have I Been Pwned only the first five characters of the password's
-SHA-1, and it runs after every local rule has passed, so `breach-check-unavailable` always means
-an otherwise acceptable password — here it fails open. `issue` carries the values a message
-needs (`minLength`, the matched `fragment`), so `passwordMessage` is your own function turning an
-issue into copy. `createAccount` is your own service: hash the password exactly as submitted with
-`password.hash` from [`@sdxc/crypto`](/api/crypto) there, and hold the account for review when it
-is told to. An unsure spam verdict creates the account held for review.
+SHA-1, and it runs after every local rule has passed, so `breach-check-unavailable` fails open
+on an otherwise acceptable password. `passwordMessage` and `createAccount` are your own: the
+first turns an issue into copy, and the second hashes the password with `password.hash` from
+[`@sdxc/crypto`](/api/crypto) and holds the account for review on an unsure spam verdict.
 
 <note>
 The root import of `@sdxc/password-policy` bundles the common-password list, about 220 KB
@@ -367,42 +332,11 @@ gzipped. Import from `/length`, `/context` and `/breached` when the Worker's siz
 than that check.
 </note>
 
-## Guard a newsletter sign-up
-
-A newsletter box is the same kind of form with one field, and bots fill it to send confirmation
-emails to addresses that never asked, which spends your list's sending reputation. The
-guards mount the same way on its route, inside the same `createWebRouter`:
-
-```typescript {% title="app/initializers/router.ts" %}
-router.map(
-	routes.subscribe.index,
-	lazy(
-		() => import("~/app/http/controllers/subscribe").then((it) => it.index),
-		[trap],
-	),
-);
-router.map(
-	routes.subscribe.action,
-	lazy(
-		() => import("~/app/http/controllers/subscribe").then((it) => it.action),
-		[trap, callerBudget("subscribe", 5), captcha(guard)],
-	),
-);
-```
-
-The form renders `HoneypotFields` and the challenge widget beside its email input, as the sign-up
-form does. Inside the action, `checkSignUpEmail` runs before the address reaches the list,
-because a disposable inbox or a domain with no mail server can never confirm. The subscribe call
-itself is in [Run a newsletter list](/docs/data-and-background-work/newsletter). It answers an
-address already on the list like a new one, so the trapped bot, the returning reader and the new
-reader all land on the same page.
-
 ## Test the guards
 
-Build the router with `testCaptcha()` and post to it as a browser would. The honeypot issues
-the fields from the same secret the router reads, so the test signs a real token, and the
-budget runs on the `RATE_LIMITS` mock, which you add to `app/test/cloudflare-workers.ts` as
-`createKVNamespace()`:
+Build the router with `testCaptcha()` and post to it as a browser would. The test signs a real
+honeypot token from the same secret the router reads, and the budget runs on the `RATE_LIMITS`
+mock, which you add to `app/test/cloudflare-workers.ts` as `createKVNamespace()`:
 
 ```typescript {% title="app/http/controllers/sign-up/action.test.ts" %}
 import { Honeypot } from "@sdxc/honeypot";
@@ -452,7 +386,7 @@ refused there, and the controller never loads.
 
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — allow the
   challenge's script and frame before enforcing a policy.
-- [Run a newsletter list](/docs/data-and-background-work/newsletter) — the subscribe action
-  behind the guards above.
+- [Accept Privacy Pass tokens instead of a CAPTCHA](/docs/identity-and-security/privacy-pass) —
+  a challenge with no widget for clients that hold tokens.
 - [`@sdxc/spam`](/api/spam) — reputation providers, a trainable classifier and a Workers AI
   second opinion.

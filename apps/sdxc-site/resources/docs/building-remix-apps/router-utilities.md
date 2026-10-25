@@ -1,6 +1,6 @@
 ---
 title: Canonical URLs, lazy routes and header fields
-description: Redirect to one canonical host and path, end a request with a thrown Response, load routes on demand, and read structured headers.
+description: Redirect to one canonical host and path, end a request with a thrown Response, load routes on demand, and read structured header fields.
 section:
     title: Building Remix apps
     order: 4
@@ -23,7 +23,7 @@ word. Each has a package, and each takes a line or two in the composition root f
 path, [`@sdxc/catch-response-middleware`](/api/catch-response-middleware) turns a thrown
 `Response` into the answer, [`@sdxc/lazy-route`](/api/lazy-route) imports a route's module on
 the first request that reaches it, and [`@sdxc/structured-fields`](/api/structured-fields)
-parses and writes the RFC 9651 header values that newer HTTP fields use.
+parses the RFC 9651 header values that newer HTTP fields use.
 
 ```bash
 npm add @sdxc/catch-response-middleware @sdxc/http @sdxc/lazy-route @sdxc/logger \
@@ -31,53 +31,11 @@ npm add @sdxc/catch-response-middleware @sdxc/http @sdxc/lazy-route @sdxc/logger
 	@sdxc/trailing-slash-middleware remix
 ```
 
-## Pick one canonical path
+## Redirect to one canonical host and path
 
-`/pricing` and `/pricing/` are two URLs to a search engine, a cache and an analytics query,
-even when your router answers both with the same page. Choose one and redirect the other.
-`trailingSlash()` with no options makes the slash-free form canonical:
-
-```typescript {% title="app/initializers/router.ts" %}
-import { log } from "@sdxc/logger/middleware";
-import { trailingSlash } from "@sdxc/trailing-slash-middleware";
-import { createRouter } from "remix/router";
-
-import pricing from "~/app/http/controllers/pricing";
-import routes from "~/routes/web";
-
-import { logger } from "./logger";
-
-export function createWebRouter() {
-	let router = createRouter({ middleware: [log(logger), trailingSlash()] });
-	router.map(routes.pricing, pricing);
-	return router;
-}
-```
-
-`GET /pricing/?plan=team` answers `308`, redirecting to `/pricing?plan=team`: only the path
-changes, so the origin and the query string survive. A `308` makes the client repeat the
-method and the body, so a form posted to `/comments/` still arrives at `/comments` as a
-`POST`. `/` never redirects, and a run of slashes (`/pricing///`) collapses in one hop.
-
-Put it near the top of the chain, right after `log(logger)`, where `logger` is the one from
-Wire the router. A redirected request then skips the session lookup, the body parsing and
-everything else its canonical retry is about to do anyway, while the log still records the
-redirect. `{ mode: "always" }` makes the slashed form canonical instead and leaves a path whose
-last segment has a dot, such as `/robots.txt` or `/feed.xml`, as it is.
-
-<warning>
-Browsers cache a `308`, so switching a live site from one mode to the other sends returning
-visitors into a loop until those entries expire. Pick once.
-</warning>
-
-Generate links in the canonical form so a click never pays for the redirect; the middleware
-is for the links other people write by hand.
-
-## Keep one canonical host
-
-`www.example.com` and `example.com` are two sites to a search engine, and a cookie set on the
-apex domain without a `Domain` attribute never reaches the `www.` host. `noWWW()` makes the
-apex domain the only one that answers:
+`/pricing` and `/pricing/`, or `www.example.com` and `example.com`, are two URLs to a search
+engine, a cache and an analytics query. `noWWW()` makes the apex domain the only host, and
+`trailingSlash()` with no options makes the slash-free path canonical:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
@@ -99,30 +57,22 @@ export function createWebRouter() {
 }
 ```
 
-`GET https://www.example.com/pricing?plan=team` answers `308`, redirecting to
-`https://example.com/pricing?plan=team`: only the leading `www.` label goes, so the scheme,
-the port, the path and the query string carry over. It is the same `308` as the trailing
-slash, for the same reason: a comment form posted to the `www.` host is repeated on the apex
-domain as a `POST` with its body, where a `301` or `302` would let the browser turn it into a
-`GET` and drop what the visitor typed. The hostname is compared as the URL parser normalizes
-it, so `WWW.Example.com` redirects too, while `blog.example.com` and `wwwexample.com` pass
-through untouched.
+Each answers `308` and changes only its own part of the URL, so the query string survives and a
+form posted to `/comments/` still arrives at `/comments` as a `POST`. Put both right after
+`log(logger)`, where `logger` is the one from Wire the router, so a redirected request skips
+the session and body parsing its retry is about to do anyway.
 
-Each middleware fixes only its own part of the URL and redirects to the rest as it arrived,
-so `https://www.example.com/pricing/` takes two hops in either order. With `noWWW()` first,
-as above, the first hop lands on the canonical host and only the slash is left for the
-second: `www.example.com/pricing/` to `example.com/pricing/`, then to `example.com/pricing`.
-Both sit right after `log(logger)`, ahead of the session and body parsing, so neither hop pays
-for work the final request repeats, and the log records each redirect. Links you generate in
-the canonical form never pay either hop.
+<warning>
+Browsers cache a `308`, so switching a live site between `trailingSlash()` and
+`{ mode: "always" }` sends returning visitors into a loop until those entries expire. Pick once.
+</warning>
 
 <note>
 The `www.` host must still reach the Worker for the redirect to run, so route it to the same
 Worker as the apex domain.
 </note>
 
-A test sends the router a request for that host and reads the
-redirect, with both middleware running as they do in production:
+A test sends the router a request for that host and reads both hops:
 
 ```typescript {% title="app/initializers/router.test.ts" %}
 import { expect, test } from "vitest";
@@ -145,10 +95,9 @@ test("the www. host redirects to the apex domain, then the slash goes", async ()
 
 ## End a request from any depth
 
-A helper that needs a signed-in user has two ways to say "there isn't one": return `null` and
-make every caller check, or end the request itself. The router only reads the value a handler
-returns, so a thrown `Response` escapes as a rejected promise and becomes a `500`.
-`catchResponse()` catches it and answers with it, which makes the second way work:
+A helper that needs a signed-in user can end the request itself by throwing a redirect.
+`catchResponse()` catches a thrown `Response` and answers with it, where the router alone would
+turn it into a `500`:
 
 ```typescript {% title="app/services/require-user.ts" %}
 import { redirect } from "@sdxc/http/response";
@@ -182,10 +131,8 @@ export default createAction(routes.billing, async (ctx) => {
 });
 ```
 
-`currentUser` is your own lookup of the session's user, reading the request through Remix's
-`asyncContext()` middleware so it needs no argument. `catchResponse()` returns the thrown
-response untouched and rethrows anything else as it was, so a real bug still reaches the
-runtime with its stack.
+`currentUser` is your own lookup of the session's user. Anything thrown that is not a `Response`
+is rethrown as it was, so a real bug still reaches the runtime with its stack.
 
 <warning>
 A throw unwinds the chain, so a middleware between the throw and the catch never resumes
@@ -195,27 +142,7 @@ session middleware that commits the `Set-Cookie`, as the router in
 [Import each route on first use](#import-each-route-on-first-use) does.
 </warning>
 
-A redirect thrown from the action unwinds only as far as the catch:
-
-```mermaid {% alt="A redirect thrown by requireUser() in the action unwinds to catchResponse(), which hands it back as the response; the session middleware then resumes after next() and commits the Set-Cookie, and log(logger) receives the redirect with the cookie" %}
-sequenceDiagram
-    participant L as log(logger)
-    participant S as Session middleware
-    participant C as catchResponse()
-    participant H as Action
-    L->>S: next()
-    S->>C: next()
-    C->>H: next()
-    Note over H: requireUser() throws a redirect
-    H--xC: Thrown Response
-    Note over C,H: A middleware here never resumes
-    C-->>S: The redirect as the response
-    Note over S: Resumes after next(),<br>commits the Set-Cookie
-    S-->>L: Redirect with Set-Cookie
-```
-
-A test asks for the billing page with no session and reads the redirect `requireUser` threw,
-which proves `catchResponse()` sits in the chain:
+A test asks for the billing page with no session and reads the redirect `requireUser` threw:
 
 ```typescript {% title="app/http/controllers/billing.test.ts" %}
 import { expect, test } from "vitest";
@@ -235,11 +162,10 @@ test("sends a visitor with no session to the login page", async () => {
 
 ## Import each route on first use
 
-A Worker evaluates its whole module graph when an isolate starts, and a cold isolate can start
-for any request. With every controller imported statically, a request for `/pricing` pays to
-evaluate the admin area, the billing views and whatever those import. `lazy()` keeps the route
-mapped at startup, so matching and `href()` are unchanged, and imports the module behind it on
-the first request that matches:
+A Worker evaluates its whole module graph when a cold isolate starts, so with every controller
+imported statically a request for `/pricing` pays for the admin area too. `lazy()` keeps the
+route mapped, so matching and `href()` are unchanged, and imports the module on the first
+request that matches:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import type { Middleware } from "remix/router";
@@ -284,37 +210,22 @@ export function createWebRouter() {
 }
 ```
 
-The loader runs at most once per isolate, and its module is reused for every request after
-that. A module may default-export a `createAction` for a single route or a `createController`
-for a route map; the router decides which shape it expects from the route you mapped, and the
-stand-in is typed as the module's own default export, so pointing a route map at an action
-module is still a type error at `router.map`. Middleware the module declares runs as it would
-with a static import.
-
-The second argument is for guards the composition root owns. `requireAdmin` runs before
-anything the module declares, and it answers an unauthorized request before the admin module
-is loaded at all, so a section most visitors cannot enter is never evaluated for them. It must
-be middleware that publishes nothing onto the context, because the loaded handler's type
-cannot learn about a value declared at the map call; publish those from the router's chain.
+The loader runs at most once per isolate. The second argument holds guards: `requireAdmin`
+answers an unauthorized request before the admin module loads. A guard there must publish
+nothing onto the context; publish values from the router's chain instead.
 
 <note>
 Write each loader as a bare `import()` of a fixed path, so the bundler splits it into its own
 chunk. A computed specifier lands in the main bundle, and the deferral saves nothing.
 </note>
 
-## Read and write structured header fields
+## Read structured header fields
 
 Newer HTTP fields share one grammar, RFC 9651: `Priority`, `Cache-Status`, `RateLimit` and
-`Idempotency-Key` are each a List, a Dictionary or an Item of typed values. Splitting them on
-commas by hand works until a quoted string contains one. Every call to `@sdxc/structured-fields`
-names the field's top-level type, because the RFC fixes it in the field's definition rather
-than in the text. `Link` is a different grammar, RFC 8288:
-[Parse and write Link headers](/docs/http-apis/link-header) covers it with
-[`@sdxc/link-header`](/api/link-header).
-
-When your Worker fetches from an origin behind a CDN, `Cache-Status` says which caches
-answered. Describe a hop once, at module scope, with the `sf` builders, which compose with
-`remix/data-schema`:
+`Idempotency-Key` are each a List, a Dictionary or an Item of typed values, and splitting them on
+commas by hand breaks on a quoted comma. When your Worker fetches from an origin behind a CDN,
+`Cache-Status` says which caches answered. Describe a hop once with the `sf` builders, which
+compose with `remix/data-schema`:
 
 ```typescript {% title="app/services/cache-status.ts" %}
 import { isSuccess } from "@sdxc/result";
@@ -338,56 +249,12 @@ export function servedFromCache(response: Response): boolean {
 }
 ```
 
-`getField` answers `null` for an absent field, a `StructuredFieldParseError` for text that
-breaks the grammar, and a `ValidationError` for a well-formed value your schema refuses. The
-RFC has a recipient ignore an invalid field as a whole, which is what `servedFromCache` does
-by answering `false`. Parameters you do not list are dropped rather than refused, so a CDN that
-adds its own keeps working. `servedFromCache(upstream)` is then a field for `ctx.log.set`, and
-a request's log shows which origin calls a cache absorbed.
+`getField` answers `null` for an absent field and a failure for text that breaks the grammar or
+a value your schema refuses; the RFC has a recipient ignore an invalid field, which is what
+answering `false` does. [`@sdxc/rate-limit`](/api/rate-limit) writes the `RateLimit` field for
+you, and `setField` writes any other.
 
-Writing goes the other way. An API that meters its callers reports what is left of the quota
-on every response:
-
-```typescript {% title="app/http/middleware/quota.ts" %}
-import type { Middleware } from "remix/router";
-
-import { json } from "@sdxc/http/response";
-import { setField } from "@sdxc/structured-fields";
-
-import { Quotas } from "~/app/models/quotas";
-
-export const quota: Middleware = async (ctx, next) => {
-	let key = ctx.request.headers.get("Authorization") ?? "anonymous";
-	let usage = await Quotas.consume(ctx.db, key);
-
-	let response =
-		usage.remaining < 0
-			? json({ error: "Quota exceeded" }, { status: 429 })
-			: await next();
-
-	let field = [
-		{
-			value: "default",
-			params: { r: Math.max(0, usage.remaining), t: usage.resetSeconds },
-		},
-	];
-	setField(response.headers, "RateLimit", field, "list");
-	return response;
-};
-```
-
-`setField` serializes the value to the field's canonical text,
-`RateLimit: "default";r=0;t=30`, and replaces any earlier value. An integer
-writes as an Integer and any other number as a Decimal; a string writes quoted, and a member
-whose value is `true` writes as its bare key. It returns a `Result`: a value with no
-representation, such as a string outside printable ASCII, fails with a
-`StructuredFieldStringifyError` naming its `path`, and leaves the headers as they were.
-`Quotas.consume` is your own counter, returning what remains and the seconds until the window
-resets. [`@sdxc/rate-limit`](/api/rate-limit) writes this field, and the `RateLimit-Policy`
-beside it, for you.
-
-`servedFromCache` is a plain function of a response, so its test builds one with the header a
-CDN writes:
+Its test builds a response with the header a CDN writes:
 
 ```typescript {% title="app/services/cache-status.test.ts" %}
 import { expect, test } from "vitest";

@@ -13,12 +13,11 @@ outcomes:
 ---
 
 Names here are boring on purpose, so that a reader who has used two of these packages can
-predict the third. This page lists the conventions a package name and its exports follow —
-what a name suffix means, which verbs come in pairs, what each prefix promises, and where a
-function's types live — so you can guess an import before you look it up.
+predict the third. This page lists the conventions a package name and its exports follow, so you
+can guess an import before you look it up.
 
 ```bash
-npm add @sdxc/http @sdxc/logger @sdxc/opml @sdxc/response @sdxc/result
+npm add @sdxc/http @sdxc/logger @sdxc/opml @sdxc/result
 ```
 
 ## Read what a package name tells you
@@ -30,11 +29,8 @@ want is the one you would have typed.
 
 Where a package binds a contract to one vendor, the vendor is a suffix on the contract:
 `@sdxc/session-storage-kv`, `@sdxc/data-table-d1`, `@sdxc/data-table-sqlstorage`. The name reads
-as "this contract, on that thing", and swapping the vendor is swapping the last segment. A
-package that is Remix middleware and nothing else says so at the end:
-`@sdxc/no-www-middleware`, `@sdxc/trailing-slash-middleware`.
-
-The scope carries the attribution, and the name carries the job.
+as "this contract, on that thing". A package that is Remix middleware and nothing else says so
+at the end: `@sdxc/no-www-middleware`.
 
 ## Expect parse and stringify together
 
@@ -57,9 +53,7 @@ export function exportSubscriptions(outlines: OPML.Outline[]) {
 ```
 
 `parse` reads text, which can be wrong, so it answers with a `Result`. `stringify` answers with
-a `Result` too wherever its input can hold something the format cannot write, such as a YAML
-value with a cycle; OPML's outlines are fully checked by their types, so it answers with the
-string.
+a `Result` too wherever its input can hold something the format cannot write.
 
 ## Read the prefix
 
@@ -93,10 +87,8 @@ export const REFRESH_RETRY: retry.Options<Error> = {
 };
 ```
 
-The same holds for constants a function takes: `redirect.Status.SeeOther` from
-`@sdxc/response` is the 303 a form submission redirects with. A component and its props follow
-it too: `Button.Props`, `Button.Variant` and `Button.Size` come from the same import as `Button`
-itself in `@sdxc/ui`.
+The same holds for constants a function takes, such as `redirect.Status.SeeOther`, and for a
+component's props, such as `Button.Props` in `@sdxc/ui`.
 
 ## Name options at the call site
 
@@ -114,8 +106,8 @@ let cacheControl = policy({
 });
 ```
 
-Durations are written the way you would say them — `"1 hour"`, `"5 minutes"` — and converted
-internally, so a cache age at a call site reads as a duration rather than arithmetic.
+Durations are written the way you would say them — `"1 hour"`, `"5 minutes"` — so a cache age
+at a call site reads as a duration rather than arithmetic.
 
 <note>
 A duration string is checked when your code type-checks: the amount must be a whole number, so

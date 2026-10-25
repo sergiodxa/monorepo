@@ -15,10 +15,8 @@ outcomes:
 This guide adds "sign in with your provider" to a Remix v3 app on Workers: a login route that
 sends the browser to the provider, a callback that verifies the ID token before believing a
 single claim, and a logout that ends the session on both sides.
-[`@sdxc/auth`](/api/auth) runs the protocol, [`@sdxc/jwt`](/api/jwt) names the signature
-algorithms you accept, [`@sdxc/session-storage-kv`](/api/session-storage-kv) keeps the session
-in Workers KV, [`@sdxc/location`](/api/location) keeps redirects on your origin, and
-[`@sdxc/result`](/api/result) turns the flow's throws into values.
+[`@sdxc/auth`](/api/auth) runs the protocol and
+[`@sdxc/session-storage-kv`](/api/session-storage-kv) keeps the session in Workers KV.
 
 ```bash
 npm add @sdxc/auth @sdxc/cache @sdxc/http @sdxc/jwt @sdxc/location @sdxc/result \
@@ -27,9 +25,8 @@ npm add @sdxc/auth @sdxc/cache @sdxc/http @sdxc/jwt @sdxc/location @sdxc/result 
 
 ## Declare the routes
 
-Login and logout are forms, so a login starts from a `POST` and no link on another site can
-start one on a visitor's behalf. The callback is a `GET`, which is how the provider sends the
-browser back.
+Login and logout are forms, so no link on another site can start one on a visitor's behalf.
+The callback is a `GET`, which is how the provider sends the browser back.
 
 ```typescript {% title="routes/auth.ts" %}
 import { form, get, route } from "remix/routes";
@@ -46,11 +43,9 @@ beside the `home` and `dashboard` pages a login returns to.
 
 ## Keep the login in a KV session
 
-The flow writes `state`, the `nonce` and the PKCE verifier between the login and the callback,
-then the token set it received. `@sdxc/auth` reads and writes all of it through the session
+The flow keeps `state`, the `nonce`, the PKCE verifier and then the token set in the session
 Remix's session middleware puts on the context, so the session has to exist before any auth
-route runs. `KVSessionStorage` keeps its values in Workers KV while the cookie carries only the
-id:
+route runs. `KVSessionStorage` keeps the values in KV while the cookie carries only the id:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
@@ -74,9 +69,7 @@ export function createWebRouter() {
 ```
 
 `sessionCookie` is your app's signed session cookie, made with `createCookie` from
-`remix/cookie`; see Remix's
-[session middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware)
-for its options. `authenticate` is defined at the end of this guide.
+`remix/cookie`. `authenticate` is defined at the end of this guide.
 
 <note>
 Give the session cookie `sameSite: "Lax"`. The callback is a top-level navigation from the
@@ -86,9 +79,9 @@ transaction.
 
 ## Describe the provider
 
-An `Issuer` holds the provider's discovery document and its signing keys. `Issuer.for` hands
-the same instance to every caller in the isolate, so the documents are fetched once, and a
-`cache` shares them across isolates so a cold start reads KV instead of the provider.
+An `Issuer` holds the provider's discovery document and its signing keys. `Issuer.for` shares
+one instance per isolate, and the `cache` shares the documents across isolates so a cold start
+reads KV instead of the provider.
 
 ```typescript {% title="app/initializers/issuer.ts" %}
 import { Issuer } from "@sdxc/auth/issuer";
@@ -102,14 +95,10 @@ export function issuer(): Issuer {
 }
 ```
 
-The cache is written as a factory because it is resolved on every read, so an instance that
-outlives a request never holds a binding that belonged to it.
-
 ## Build the relying party
 
 The relying party is your app as the provider's client. It is built per request because the
-callback URL is derived from the origin the request arrived on, so a preview deploy and
-production each present the URL they are registered under.
+callback URL is derived from the origin the request arrived on.
 
 ```typescript {% title="app/initializers/relying-party.ts" %}
 import { RelyingParty } from "@sdxc/auth/relying-party";
@@ -131,38 +120,14 @@ export function relyingParty(url: URL): RelyingParty {
 }
 ```
 
-`algorithms` pins what an ID token may be signed with: naming the one algorithm your provider
-uses means a token signed any other way is refused even if a matching key turns up.
-`fallbackReturnTo` is where a login lands when it names no destination, or names one on
-another origin. The default mapped profile carries `name`, `email`, `emailVerified`,
-`username` and `picture`; pass `mapProfile` to shape it into your own account fields.
+`algorithms` pins what an ID token may be signed with, so a token signed any other way is
+refused even if a matching key turns up. `fallbackReturnTo` is where a login lands when it
+names no destination, or names one on another origin.
 
 ## Start the login
 
-A login is two requests to your app with the provider in between:
-
-```mermaid {% alt="OpenID Connect login: the browser posts to /login, the app stores state, nonce and PKCE verifier in the session and redirects to the provider, the provider redirects back to /auth/callback with a code, the app exchanges the code for an ID token, verifies it, rotates the session id and redirects to the return URL" %}
-sequenceDiagram
-    participant B as Browser
-    participant A as App
-    participant P as Provider
-    B->>A: POST /login
-    Note over A: authorize() stores state, nonce<br>and PKCE verifier in the session
-    A-->>B: 303 to the provider
-    B->>P: Authorization request
-    P-->>B: Redirect to /auth/callback
-    B->>A: GET /auth/callback with code and state
-    Note over B,A: The Lax session cookie rides along
-    A->>P: Exchange the code with the verifier
-    P-->>A: Token set with the ID token
-    Note over A: Verify signature, issuer, audience,<br>expiry and nonce
-    Note over A: Rotate the session id
-    A-->>B: 303 to the return URL
-```
-
 The login controller renders the page on `GET` and hands off to the provider on `POST`.
-`contextOf(ctx)` pairs the request with the session the middleware stored, which is the shape
-every browser-flow method takes.
+`contextOf(ctx)` pairs the request with the session, the shape every browser-flow method takes.
 
 ```tsx {% title="app/http/controllers/auth/login.tsx" %}
 import { contextOf } from "@sdxc/auth/remix/context";
@@ -187,17 +152,15 @@ export default createController(routes.auth.login, {
 });
 ```
 
-`authorize` mints `state`, the `nonce` and the PKCE verifier, writes them to the session as one
-transaction, and answers the `303` to the provider. The `next` parameter arrives from the
-browser, so `authorize` resolves it through `Location.safe` before storing it: anything naming
-another origin becomes `fallbackReturnTo`.
+`authorize` mints `state`, the `nonce` and the PKCE verifier, stores them in the session, and
+answers the `303` to the provider. It holds the `next` parameter to your origin before storing
+it.
 
 ## Finish it in the callback
 
 `callback` spends the transaction, exchanges the code, verifies the ID token's signature,
 issuer, audience, expiry and nonce, rotates the session id and writes the token set. Every way
-it can refuse is a thrown `AuthError`, so `wrap` turns the call into a `Result` and the handler
-keeps one shape.
+it can refuse is a thrown `AuthError`, which `wrap` turns into a `Result`.
 
 ```tsx {% title="app/http/controllers/auth/callback.tsx" %}
 import { AuthError } from "@sdxc/auth/auth-error";
@@ -237,20 +200,14 @@ provider, so someone who takes over an address there would sign in to the accoun
 name; the subject is the one claim OpenID Connect promises stays with the person.
 </warning>
 
-The session needs nothing more from you: `callback` already wrote the token set, and
-`sessionScheme` resolves the account from it at the end of this guide. `grant.returnTo` was
-already held to your origin when the login stored it, and passing it through `Location.safe`
-again at the redirect keeps that guarantee in the one line that writes the `Location` header.
-
-`AuthError.code` separates the causes — `missing_transaction` for a callback nobody started
-from this browser, `state_mismatch`, `nonce_mismatch`, `authorization_failed` when the provider
-itself refused — so the log says which step failed while the visitor reads one message.
+Passing `grant.returnTo` through `Location.safe` again at the redirect keeps it on your origin
+in the one line that writes the `Location` header. `AuthError.code` names the step that failed,
+such as `state_mismatch`, so the log says which while the visitor reads one message.
 
 ## Sign out on both sides
 
-Destroying your own session signs the person out of your app, but the provider still has a
-session of its own and would sign them straight back in. `endSession` hands the browser to the
-provider's logout endpoint with the `id_token_hint` that names that session.
+The provider has a session of its own and would sign the person straight back in.
+`endSession` hands the browser to the provider's logout endpoint to end it too.
 
 ```tsx {% title="app/http/controllers/auth/logout.tsx" %}
 import { contextOf } from "@sdxc/auth/remix/context";
@@ -286,15 +243,14 @@ export default createController(routes.auth.logout, {
 });
 ```
 
-`redirect: false` makes `endSession` answer the provider's URL instead of a response, so you
-write the redirect yourself. The local session is destroyed whatever the provider answers, so
-a provider without a logout endpoint still signs the person out here.
+`redirect: false` makes `endSession` answer the provider's URL. The local session is destroyed
+whatever the provider answers, so a provider without a logout endpoint still signs the person
+out here.
 
 ## Know who is signed in
 
-`sessionScheme` is the scheme `remix/middleware/auth` resolves a signed-in request through. It
-renews tokens that have lapsed, then asks your `verify` who the session belongs to; answering
-`null` treats the request as signed out.
+`sessionScheme` renews tokens that have lapsed, then asks your `verify` who the session belongs
+to; answering `null` treats the request as signed out.
 
 ```typescript {% title="app/http/middleware/auth.ts" %}
 import type { Middleware } from "remix/router";
@@ -314,15 +270,13 @@ export const authenticate: Middleware = (ctx, next) => {
 };
 ```
 
-It is built per request because the relying party is. Protecting routes with the account it
-resolves is Remix's
+Protecting routes with the account it resolves is Remix's
 [auth middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware).
 
 ## Test the login
 
 Starting a login needs the provider's discovery document, so answer it with MSW. A callback
-nobody started needs nothing from the provider, because the missing transaction refuses it
-first:
+nobody started is refused before the provider is asked:
 
 ```typescript {% title="app/http/controllers/auth/login.test.ts" %}
 import { http, HttpResponse } from "msw";

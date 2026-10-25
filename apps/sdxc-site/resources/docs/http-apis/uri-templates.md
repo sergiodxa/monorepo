@@ -13,17 +13,11 @@ outcomes:
 ---
 
 Many APIs describe their URLs instead of listing them: a root document holds
-`https://api.example.com/books/{id}`, a JMAP session holds a `downloadUrl` with
-`{accountId}` and `{blobId}`, an MCP server lists resource templates. Each is an
-[RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI Template, and string replacement
-gets it wrong as soon as a value holds a space, a `/` or a list. This guide expands those
-templates as a client, publishes them from your own API, and reads a URI back into the
-values it was built from.
-
-[`@sdxc/uri-template`](/api/uri-template) implements all four levels of the RFC and passes
-the uritemplate-test suite. Its fallible calls return a [`@sdxc/result`](/api/result), the
-client checks the document it fetches with [`@sdxc/validate`](/api/validate), and the
-server answers with [`@sdxc/http`](/api/http).
+`https://api.example.com/books/{id}`. That is an
+[RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI Template, and string replacement gets
+it wrong as soon as a value holds a space, a `/` or a list. This guide expands templates with
+[`@sdxc/uri-template`](/api/uri-template), publishes them from your own API, follows them as a
+client, and reads a URI back into its values.
 
 ```bash
 npm add @sdxc/uri-template @sdxc/result @sdxc/types @sdxc/validate @sdxc/http remix
@@ -31,9 +25,9 @@ npm add @sdxc/uri-template @sdxc/result @sdxc/types @sdxc/validate @sdxc/http re
 
 ## Expand a template
 
-`expand` fills a template with values and encodes each one for the place it lands. The
-operator in front of the variable decides that place: `{?q,page}` writes a query, `{/path*}`
-writes segments, and `{+path}` keeps reserved characters such as `/` as they are.
+`expand` encodes each value for the place it lands. The operator decides that place:
+`{?q,page}` writes a query, `{/path*}` writes segments, and `{+path}` keeps reserved
+characters such as `/`:
 
 ```typescript {% title="app/services/book-urls.ts" %}
 import { expand } from "@sdxc/uri-template";
@@ -49,15 +43,10 @@ expand("{/segments*}{?filters*}", {
 	filters: { state: "open", sort: "new" },
 });
 // success("/docs/api?state=open&sort=new")
-
-expand("/books{?ids}", { ids: ["a", "b"] }); // success("/books?ids=a,b")
-expand("/books{?ids*}", { ids: ["a", "b"] }); // success("/books?ids=a&ids=b")
 ```
 
 A variable that is `undefined`, `null`, `[]` or `{}` disappears together with its `?`, `&`
-or `/`, so an optional parameter needs no branch. Numbers and booleans are written as text.
-`{id:3}` keeps the first three characters of a string, and applying that prefix to a list
-or an object is the one way expansion fails.
+or `/`, so an optional parameter needs no branch.
 
 <warning>
 `{+var}` and `{#var}` pass `/`, `?`, `#` and `..` through unencoded. Expand a value someone
@@ -67,10 +56,9 @@ instead of rewriting the path and the query.
 
 ## Publish templates from your API
 
-A root document that lists your templates lets a client find every URL from one address,
-and you can then move a path without breaking it. Write the templates once and expand the
-same ones into the concrete links you return, so the shape you advertise and the URLs you
-write cannot drift apart:
+A root document that lists your templates lets a client find every URL from one address, so
+you can move a path without breaking it. Write the templates once and expand the same ones
+into the links you return:
 
 ```typescript {% title="config/link-templates.ts" %}
 export const BOOK_TEMPLATE = "https://books.example.com/api/books/{id}";
@@ -100,16 +88,13 @@ export function bookUrl(id: string): string {
 }
 ```
 
-`unwrap` is safe here because the template is yours and a string value cannot meet a
-prefix modifier; the test below parses every template you publish, so a typo fails there
-rather than in a request.
+`unwrap` is safe here because the template is yours, and the test below parses every
+template you publish.
 
 ## Follow a template as a client
 
 A client fetches the root document once, checks it, and parses each template before it
-trusts it. `UriTemplate.parse` refuses an unclosed expression, a reserved operator or a
-literal a URI cannot hold, and `variableNames` tells you whether the template takes the
-values you are about to pass.
+trusts it. `variableNames` tells you whether a template takes the values you will pass:
 
 ```typescript {% title="app/services/books/discovery.ts" %}
 import type { JSONValue } from "@sdxc/types";
@@ -149,34 +134,14 @@ export async function discover(origin: URL) {
 }
 ```
 
-A parsed `UriTemplate` expands as many times as you call it, so keep the directory for the
-life of the client and expand per call:
-
-```typescript {% title="app/services/books/search.ts" %}
-import type { BooksDirectory } from "~/app/services/books/discovery";
-
-import { isFailure } from "@sdxc/result";
-
-export async function searchBooks(
-	directory: BooksDirectory,
-	q: string,
-	page?: number,
-) {
-	let url = directory.search.expand({ q, page });
-	if (isFailure(url)) return url;
-	return await fetch(url.data);
-}
-```
-
-`page` left `undefined` drops `&page=` from the URL. A `UriTemplate` interpolates and
-serializes as its source text, so `JSON.stringify(directory)` stores the templates as the
-server wrote them.
+Keep the directory for the life of the client and expand per call:
+`directory.search.expand({ q, page })` answers the URL, with `&page=` dropped when `page` is
+`undefined`.
 
 ## Match a URI back to its variables
 
-A client that refers to a resource by its URL, as a JSON body linking to a book does,
-hands you a URI rather than an id. `match` reads it with the same template you published:
-it answers the variables, or `null` when the template cannot produce that URI.
+A client that links to a resource hands you a URI rather than an id. `match` reads it with the
+template you published, answering the variables or `null`:
 
 ```typescript {% title="app/services/books/book-id-from-uri.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -196,10 +161,8 @@ export function bookIdFromUri(uri: string): string | null {
 }
 ```
 
-Matched values come back decoded, so `/api/books/a%20b` answers `"a b"`. A value holding a
-raw `,` comes back as a list and exploded `key=value` items as an object, which is why the
-function checks that `id` is a string. Query items match in any order, and a URI on another
-host or path is `null`, so a link to someone else's API is refused rather than misread.
+Matched values come back decoded, and a value holding a raw `,` comes back as a list, which
+is why the function checks that `id` is a string. A URI on another host is `null`.
 
 <note>
 `match` fails for a template whose adjacent expressions have no literal between them, such
@@ -209,9 +172,8 @@ between expressions when you intend to read them back.
 
 ## Test the templates
 
-The templates are module constants, so the test parses each one and checks that a link you
-write reads back to the id it came from. The client's discovery goes through the global
-`fetch`, so MSW answers the root document.
+The test parses each published template, reads a link back to its id, and answers the
+client's discovery with MSW:
 
 ```typescript {% title="app/services/books/book-url.test.ts" %}
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";

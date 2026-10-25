@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How fields become an email's props, subject and body"
     - "What `make email` writes, declares and maps"
@@ -55,8 +55,6 @@ in zsh. Each field becomes a camelCase prop, and its type decides how the templa
 
 The first required `string` or `text` prop is the subject and the `<Email.Heading>`. An optional
 prop renders only when it is set. With no fields, the email takes a `heading` and a `body`.
-An email's props are values, so a `references` field and the `:index` and `:unique` modifiers
-are refused.
 
 ## What it writes
 
@@ -100,12 +98,6 @@ the registry the initializer in `app/initializers/` creates with `createMail`:
 ```text
 --- a/app/emails/index.ts
 +++ b/app/emails/index.ts
--import { emails } from "@sdxc/mail";
-+import { emails, email } from "@sdxc/mail";
-+import * as s from "remix/data-schema";
-
--export default emails({});
-+export default emails({
 +	teams: {
 +		invite: email({
 +			props: s.object({
@@ -116,21 +108,13 @@ the registry the initializer in `app/initializers/` creates with `createMail`:
 +			}),
 +		}),
 +	},
-+});
 --- a/app/initializers/mail.ts
 +++ b/app/initializers/mail.ts
--import { createMail } from "@sdxc/mail";
-+import { createMail, lazy } from "@sdxc/mail";
-+import emails from "~/app/emails";
-@@
- export const mail = createMail({ translator: translate });
 +mail.map(emails.teams.invite, lazy(() => import("~/app/emails/teams/invite")));
 ```
 
 The path is the email's name: `teams/invite` is `emails.teams.invite`, named `teams.invite` on
-every queued delivery, so rename it only when no delivery under the old name is waiting. In a
-project with no registry initializer, the command writes the files and prints the declaration
-and the mapping to add by hand.
+every queued delivery, so rename it only when no delivery under the old name is waiting.
 
 ## The test
 
@@ -173,9 +157,6 @@ The template's `preview()` feeds the app's previews too: `bun dev` lists the ema
 sdxc run emails preview teams.invite --locale es
 ```
 
-`sdxc doctor` fails when `app/emails/index.ts` declares an email no template is mapped for, and
-warns on a template without a test or a `preview()`.
-
 ## Fill it in
 
 1. Write the copy in your message bundles and read it through `t`, such as
@@ -194,10 +175,7 @@ await ctx.email.queue(emails.teams.invite, {
 });
 ```
 
-`queue()` validates the props now and a job delivers the email with retries; `send()` waits and
-returns a `Result`, and `later()` sends once the response is out.
-[Send email](/docs/data-and-background-work/send-email) covers the three, the delivery job,
-previews and testing what was sent.
+`queue()` validates the props now and a job delivers the email with retries.
 
 ## Where to go next
 

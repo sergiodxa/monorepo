@@ -57,32 +57,24 @@ export function createWebRouter() {
 }
 ```
 
-Importing the middleware module types `ctx.ip` as `IP | null` across your project, so a handler
-reads it like any other property. Code that holds a context without the property installed, such
-as a helper typed against a bare `RequestContext`, reads the same value with `ctx.get(ClientIP)`,
-importing the `ClientIP` key from the same module; on a context the middleware never ran on, the
-key answers `null`.
+Importing the middleware module types `ctx.ip` as `IP | null` across your project.
 
 ## Decide what `null` means
 
-`ctx.ip` is `null` in two cases: the header is absent, which happens exactly when something
-other than Cloudflare's edge served the request (a local dev server, a test, another host), or
-the header is present and is not one address. Both mean the same thing to your app: nobody
-vouched for the caller's address. Pick the answer per use, by what an unknown caller should get:
+`ctx.ip` is `null` when something other than Cloudflare's edge served the request (a local dev
+server, a test) or the header is not one address. Either way nobody vouched for the caller's
+address, so pick the answer per use, by what an unknown caller should get:
 
 - A **budget** shares one bucket across every unknown caller, so it stays finite.
 - A **gate** refuses, because admitting an unknown caller is the same as having no gate.
 - A **record** stores `null`, so the column says "unknown" rather than a made-up value.
 
-The sections below take each of those in turn.
-
 ## Key a budget on the client's network
 
-An IPv6 client is normally handed a whole `/64`, and its operating system rotates through
-addresses inside it on its own. A limit keyed on the full address gives that client a fresh
-budget with every rotation. `addressKey` from `@sdxc/rate-limit` keys on the network the
-address sits in instead: the address itself for IPv4, its `/64` for IPv6, written as canonical
-text. A `null` address answers `"unknown"`, the one bucket every unidentified caller shares.
+An IPv6 client is normally handed a whole `/64` and rotates through addresses inside it, so a
+limit keyed on the full address gives it a fresh budget with every rotation. `addressKey` from
+`@sdxc/rate-limit` keys on the network instead: the address itself for IPv4, its `/64` for
+IPv6. A `null` address answers `"unknown"`, the one bucket every unidentified caller shares.
 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
 import type { Middleware } from "remix/router";
@@ -101,12 +93,7 @@ export function clientBudget(prefix: string, limit: number): Middleware {
 ```
 
 Every address in one `/64` prints the same network, so `2001:DB8:1:2::7` and
-`2001:db8:1:2:0:0:0:9` spend the same budget. A `/64` is the narrowest prefix that is reliably
-one subscriber. A provider that hands out a `/56` or a `/48` lets a client spread across
-several keys; to cap that, key on `ctx.ip?.network({ v4: 32, v6: 56 }).toString() ?? "unknown"`
-yourself, at the cost of grouping more neighbours behind one budget.
-[Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) puts this key in
-front of a sign-up form, with a CAPTCHA after it.
+`2001:db8:1:2:0:0:0:9` spend the same budget.
 
 ## Pass an `IP`, not a string
 
@@ -140,37 +127,24 @@ export async function isNewNetwork(db: Database, userId: string, ip: IP) {
 ```
 
 `SignIns` is your own model over a table with a text `ip` column. `toString()` writes the
-canonical form, so equal addresses store equal strings and an index on the column finds them.
-Reading it back goes through `IP.parse`, which turns a row written by older code, or edited by
-hand, into a failure you handle instead of a value you trust.
+canonical form, so equal addresses store equal strings, and reading it back goes through
+`IP.parse`, so a row edited by hand becomes a failure you handle instead of a value you trust.
 
 <note>
-Compare two addresses or two networks with `equals`. Two `IP`s parsed from the same text are
-two objects, and `===` compares objects by identity. The same goes for anything that crosses a
-structured clone, such as Durable Object storage or `postMessage`: the copy arrives without its
-methods, so store `toString()` and parse it on the other side.
+Compare two addresses or two networks with `equals`: two `IP`s parsed from the same text are
+two objects, and `===` compares objects by identity.
 </note>
 
-A handler hands over what the middleware published:
+A handler hands over what the middleware published, and adds the canonical text to the
+request's log record:
 
 ```typescript {% title="app/http/controllers/sessions/create.ts" %}
 await recordSignIn(ctx.db, user.id, ctx.ip);
 if (ctx.ip && (await isNewNetwork(ctx.db, user.id, ctx.ip))) {
 	ctx.log.set({ sign_in: { new_network: true } });
 }
-```
-
-## Write it into the log
-
-An `IP` serializes as its canonical text through `toJSON`, and `toString()` makes that explicit
-when you add it to the request's record:
-
-```typescript {% title="app/http/controllers/sessions/create.ts" %}
 ctx.log.set({ client: { ip: ctx.ip?.toString() ?? null } });
 ```
-
-One field on the record that is already open covers the whole request, so a query groups by
-client without each handler writing its own line.
 
 <warning>
 An IP address is personal data in many jurisdictions. Decide how long your logs keep it before
@@ -181,7 +155,7 @@ you add the field.
 
 An admin area that only staff on the office network or the VPN should reach is a list of
 ranges and a membership test. Keep the list as plain strings at module level, and parse inside
-the function; parsing a handful of ranges per request costs microseconds.
+the function:
 
 <note>
 A Worker that does work in its global scope fails upload validation, so a range parsed at
@@ -214,17 +188,8 @@ export default function officeOnly(): Middleware {
 
 Pass `[officeOnly()]` as the second argument of the admin routes' `lazy()` in the router, so it
 runs after the global chain has published `ctx.ip` and before the admin module loads. A
-request with no usable address is refused with the rest.
-
-`IP.Range.parse` refuses `203.0.113.1/24` with `host-bits-set`, because an address with bits
-past its prefix names a host where a network was meant. A typo in the list therefore fails to
-parse rather than silently matching a different network, and the test at the end of this guide
-asserts every entry parses.
-
-<note>
-`contains` matches within one IP version, so an IPv4 range admits no IPv6 client: list the
-office's IPv6 prefix too when it has one.
-</note>
+request with no usable address is refused with the rest. `contains` matches within one IP
+version, so list the office's IPv6 prefix too when it has one.
 
 ## Refuse an internal address someone typed
 
@@ -263,19 +228,10 @@ export default createAction(routes.webhooks.create, async (ctx) => {
 });
 ```
 
-The checks run on the parsed URL. `URL` rewrites the octal, hex and bare-integer spellings of
-IPv4 (`http://0x7f.1/`, `http://2130706433/`) into dotted decimal, so every spelling of
-`127.0.0.1` is judged as that address. A literal that is not public fails with
-`refused-address`, and the message names its classification (`10.0.0.1 is private`):
-`loopback`, `private`, `link-local`, `documentation` and the rest. Names such as `localhost` or
-`db.internal` fail with `refused-host`, and a scheme other than HTTP(S) or a URL carrying
-credentials fails too. When you need the classification as a value, `IP.parse(url.hostname)`
-answers the same `IP` the check judged.
-
-IPv6 can carry an IPv4 address inside it: IPv4-mapped (`::ffff:10.0.0.1`), NAT64
-(`64:ff9b::a00:1`) and 6to4 addresses. `classification` and `isPublic` judge those by the IPv4
-inside, so all three spellings of `10.0.0.1` are `private`, and `embeddedIPv4` answers the inner
-address when you want to log or show it.
+The checks run on the parsed URL, so every spelling of `127.0.0.1` (`http://0x7f.1/`,
+`http://2130706433/`, `::ffff:127.0.0.1`) is judged as that address. A literal that is not
+public fails with `refused-address`, naming its classification (`10.0.0.1 is private`), and
+names such as `localhost` or `db.internal` fail with `refused-host`.
 
 <warning>
 `checkUrl` reads the URL alone. `hooks.example.com` passes it and can still resolve to
@@ -329,10 +285,8 @@ test("every office network parses", () => {
 });
 ```
 
-The third request in the refusal test is what a header repeated across two lines reads as: a
-comma-joined string, which is not one address, so `ctx.ip` is `null` and the gate holds. Use the
-documentation ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32`) for
-test addresses; they are reserved for examples and never belong to a real client.
+The third request in the refusal test is a comma-joined header, which is not one address, so
+`ctx.ip` is `null` and the gate holds.
 
 ## Where to go next
 

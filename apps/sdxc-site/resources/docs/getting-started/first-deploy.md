@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "Which Cloudflare resources a new app needs before its first deploy, and where each id goes"
     - "How a secret moves from `cloudflare.config.ts` to `.env.example`, `.dev.vars` and production"
@@ -18,8 +18,7 @@ exist in your Cloudflare account first. You do this once per app; after that, ev
 `sdxc deploy`.
 
 The commands below use [`cf`](https://github.com/cloudflare/cf#readme), the Cloudflare command
-line the project installs, run through `bunx` so you get the project's version. They are the few
-you need here; `cf`'s own documentation covers each one in full.
+line the project installs, run through `bunx` so you get the project's version.
 
 ## Sign in
 
@@ -93,10 +92,8 @@ key, an API key. Four places name each one, and each has its own job:
 | `.dev.vars`             | the values `bun dev` reads           | no        |
 | your Cloudflare account | the production value                 | —         |
 
-`cloudflare.config.ts` is the source of truth: `sdxc run typegen` types `env` from it, and
-`cf deploy` uploads the Worker with exactly the secrets it declares. `.env.example` is what a
-fresh clone and CI copy to `.dev.vars`, which is why it holds working development values rather
-than blanks.
+`cloudflare.config.ts` is the source of truth: `sdxc run typegen` types `env` from it. A fresh
+clone and CI copy `.env.example` to `.dev.vars`, so it holds working development values.
 
 <warning>
 A deploy fails when a secret the file declares is missing in production, and removes any
@@ -127,12 +124,7 @@ When your code needs a new secret, such as an API key:
 3. Run `sdxc run typegen`, so `env.STRIPE_KEY` type checks.
 4. Set the production value with `bunx cf workers secrets update STRIPE_KEY`.
 
-`sdxc doctor` fails when step 2 is missing, since CI builds `.dev.vars` from `.env.example` and
-would type check without the key. In a fresh clone, copy the file yourself:
-
-```bash
-cp .env.example .dev.vars
-```
+`sdxc doctor` fails when step 2 is missing, since CI builds `.dev.vars` from `.env.example`.
 
 ## Deploy
 
@@ -178,10 +170,8 @@ jobs:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 ```
 
-`sdxc` runs through `bunx` because the project lists `@sdxc/kit` in its `devDependencies`, so
-CI uses the release the project pins. `sdxc doctor` runs before the deploy so a secret missing
-from `.env.example`, or a migration an empty database cannot replay, stops the run before
-production changes.
+`bunx sdxc` runs the release the project pins in its `devDependencies`, and `sdxc doctor` stops
+the run before production changes when a secret or migration is out of step.
 
 ## Where to go next
 

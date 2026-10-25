@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 7.5
-lastUpdated: 2026-10-22
+lastUpdated: 2026-10-25
 outcomes:
     - "How to see each model's table and whether its migrations match it"
     - "How to check that every scheduled job has a trigger that fires it"
@@ -63,9 +63,7 @@ Factory: database/factories/post.ts
 
 `Migrations` replays the default chain and diffs it against the table, as
 [`sdxc make migration`](/docs/sdxc/make-migration#write-the-sql-from-a-model) does with
-`--from-model`.
-A model you changed after its migration ran reads `behind`, and the full view names the command
-that writes the SQL to catch up.
+`--from-model`. A model you changed after its migration ran reads `behind`.
 
 ## Scheduled jobs
 
@@ -90,9 +88,7 @@ A job whose trigger reads `none` never runs in production. That is a job declare
 one whose Worker is configured in `wrangler.jsonc`: add the trigger the row names, then deploy.
 </warning>
 
-A trigger no job declares is listed below the table, as
-`cloudflare.config.ts fires "0 5 * * 1", which no job declares`. Expressions are compared as
-parsed, so `0 9 * * MON-FRI` matches `0 9 * * 1-5`, and next runs are in UTC, the zone Workers
+A trigger no job declares is listed below the table. Next runs are in UTC, the zone Workers
 deliver triggers in.
 
 ## Middleware
@@ -118,8 +114,7 @@ app/http/middleware/page.ts, a chain 2 routes run:
   …
 ```
 
-A middleware that sits inside a chain counts the routes of that chain, so a count of 0 is one no
-route reaches.
+A count of 0 is a middleware no route reaches.
 
 ## Initializers
 
@@ -136,9 +131,6 @@ app/initializers/cli.ts         cli           createCLI (@sdxc/cli), createLogge
 app/initializers/database.ts    openDatabase  createD1DatabaseAdapter (@sdxc/data-table-d1)
 app/initializers/dispatcher.ts  dispatcher    createJobDispatcher (@sdxc/jobs)
 ```
-
-A factory is an imported `create*`, `open*`, `define*` or `connect*` the module calls; the app's
-own modules and Node's built-ins are left out.
 
 ## Notes left in the code
 
@@ -157,8 +149,7 @@ app/jobs/reports/daily.ts:
   [18] TODO: do the work, through the services on `ctx`
 ```
 
-`--tag` reads other tags instead, as `sdxc notes --tag TODO,REVIEW`. The notes come from comments
-alone, after `//`, `/*`, `*`, `{/*`, `--` or `<!--`, in the folders the app layout names.
+`--tag` reads other tags instead, as `sdxc notes --tag TODO,REVIEW`.
 
 ## Lines of code
 
@@ -169,20 +160,7 @@ code the app layout names, with tests apart wherever they sit:
 sdxc stats
 ```
 
-```text
-Kind                 Files  Lines  Code
--------------------  -----  -----  ----
-Controllers              9    225   122
-Middleware               4    165    87
-Jobs                     2     36    11
-Models                   2     52    22
-…
-Tests                   24    855   514
--------------------  -----  -----  ----
-Total                   90   2991  1669
-
-Code: 1155  Tests: 514  Code to test ratio: 1:0.4
-```
+It ends with the totals and the code to test ratio, `Code to test ratio: 1:0.4`.
 
 ## Architecture diagram
 
@@ -199,18 +177,10 @@ sdxc diagram --svg architecture.svg
 ```
 
 ```text
-Modules: 42
-Imports: 87
-Layer edges: 9
-Dependency-rule breaches: 0
-Import cycles: 0
-
 flowchart TB
   L_http["http"]
   L_services["services"]
-  L_models["models"]
   L_http -->|12 imports| L_services
-  L_services -->|8 imports| L_models
 ```
 
 ## Where to go next

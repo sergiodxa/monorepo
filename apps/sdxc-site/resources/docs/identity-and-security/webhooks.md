@@ -18,21 +18,19 @@ receiver that verifies each delivery, rejects replays and answers fast by handin
 background job, then turns around and signs deliveries of its own.
 
 [`@sdxc/webhooks`](/api/webhooks) implements [Standard Webhooks](https://www.standardwebhooks.com/)
-on WebCrypto, [`@sdxc/jobs`](/api/jobs) runs the work off the request, and
-[`@sdxc/billing`](/api/billing) shows the same shape for a billing platform's deliveries.
-Sending your own, [`@sdxc/outbound`](/api/outbound) keeps each delivery on the public internet
-and [`@sdxc/backoff`](/api/backoff) spaces out the retries.
+on WebCrypto and [`@sdxc/jobs`](/api/jobs) runs the work off the request. Sending your own,
+[`@sdxc/outbound`](/api/outbound) keeps each delivery on the public internet and
+[`@sdxc/backoff`](/api/backoff) spaces out the retries.
 
 ```bash
-npm add @sdxc/backoff @sdxc/billing @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/outbound \
+npm add @sdxc/backoff @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/outbound \
 	@sdxc/result @sdxc/webhooks remix
 ```
 
 ## Declare the job a delivery becomes
 
-The endpoint's only job is to decide whether a delivery is authentic. Everything it means for
-your app runs in a job, so a slow database or a third-party call never makes the sender time
-out and retry.
+The endpoint only decides whether a delivery is authentic. Everything it means for your app
+runs in a job, so a slow database never makes the sender time out and retry.
 
 ```typescript {% title="app/jobs/index.ts" %}
 import { job, jobs } from "@sdxc/jobs";
@@ -50,35 +48,9 @@ export default jobs({
 });
 ```
 
-The second job is for sending, further down. Build the queue once, in a module both the
-dispatcher and the router import, so the router writes to the same backend the dispatcher
-delivers from:
-
-```typescript {% title="app/initializers/queue.ts" %}
-import * as cloudflare from "@sdxc/jobs/cloudflare";
-import { env } from "cloudflare:workers";
-
-export const queue = cloudflare.queue(() => env.QUEUE);
-```
-
-`jobEnqueuer(queue)` from `@sdxc/jobs/router` goes in the router's middleware and publishes
-`ctx.jobs`, which is how a route handler enqueues. Only the queue enters the request path; the
-dispatcher and every job handler stay out of it:
-
-```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "@sdxc/jobs/router";
-import { createRouter } from "remix/router";
-
-import { queue } from "~/app/initializers/queue";
-
-export function createWebRouter() {
-	return createRouter({ middleware: [jobEnqueuer(queue)] });
-}
-```
-
-Put it alongside the middleware your app already runs, after `trace()` if you use it, so each
-message carries the request's trace. How the dispatcher is built over the same `queue` is in
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron).
+The second job is for sending, further down.
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue, the
+dispatcher, and the `ctx.jobs` a route handler enqueues through.
 
 ## Verify, then enqueue
 
@@ -117,20 +89,14 @@ export default createAction(routes.webhooks.orders, async (ctx) => {
 });
 ```
 
-The route is a `post("/webhooks/orders")`. A sender has no session and no `Origin` header, so
-if your app runs Remix's
+A sender has no session and no `Origin` header, so if your app runs Remix's
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
 webhook paths from it: the signature is the stronger claim.
-
-The payload comes back typed from the schema, and the exact text the signature covered is on
-`result.data.body` if you want to store the raw delivery.
 
 <note>
 Verify before anything else reads the request: the body is a stream, and one consumed upstream
 fails with `UnreadableBodyError`.
 </note>
-
-The replay store remembers each accepted delivery id for twice the tolerance.
 
 <warning>
 KV reads are eventually consistent, so a duplicate arriving within seconds in another location
@@ -140,11 +106,9 @@ makes a repeat harmless.
 
 ## Fail closed, and answer each failure honestly
 
-A secret that is not configured must mean "refuse everything", and here it does:
-`env.ORDERS_WEBHOOK_SECRET` being unset, empty or not base64 fails the call with
-`InvalidSecretError`, so every delivery is refused until the secret exists. What remains is
-choosing the status for each failure, because the status is what tells the sender whether to
-retry. That is the `refuse` helper the endpoint imports:
+An unset, empty or malformed secret fails the call with `InvalidSecretError`, so every delivery
+is refused until the secret exists. What remains is choosing the status for each failure, since
+the status tells the sender whether to retry:
 
 ```typescript {% title="app/http/controllers/webhooks/refuse.ts" %}
 import type { Log } from "@sdxc/logger";
@@ -174,17 +138,11 @@ export function refuse(log: Log, error: Webhooks.WebhookError): Response {
 }
 ```
 
-A duplicate means the work already happened, so a success stops the retries. A
-`PayloadValidationError` is authentic but shaped like nothing you model — an event type you
-never subscribed to — so a retry would change nothing and `202` acknowledges it. A missing
-secret is your fault rather than the sender's, and a `503` asks it to try again once you have
-fixed it. Everything else — a missing header, a stale timestamp, a signature that matches no
-secret — is an authentication failure. `name` and `deliveryId` are safe to log; no error carries
-a secret or a signature.
-
-To rotate your secret, pass both in `secrets` instead of `secret` — the new one first, the old
-one after — wait for the sender's queue to drain, and drop the old one. A delivery is accepted
-when any configured secret matches it.
+A duplicate means the work already happened, so a success stops the retries. An authentic
+event type you never modeled gets a `202`, since a retry would change nothing. A missing secret
+is your fault, and a `503` asks the sender to try again later. Everything else is an
+authentication failure. To rotate your secret, pass both in `secrets`, new one first, and drop
+the old one once the sender's queue drains.
 
 ## Do the work in the job
 
@@ -205,17 +163,14 @@ export default createJobHandler(jobs.orders.fulfil, async (ctx) => {
 });
 ```
 
-`ctx.input` is parsed against the job's schema before the handler runs. Checking the order's
-state first is what keeps a repeated message harmless: `ctx.ack` finishes the run as completed.
-`ctx.exit` gives up for good on a message that can never succeed, so it is not retried forever.
-`ctx.db` is published by job middleware, as it is on a request.
+Checking the order's state first keeps a repeated message harmless: `ctx.ack` finishes the run
+as completed, and `ctx.exit` gives up for good on a message that can never succeed.
 
 ## Send webhooks of your own
 
-Delivering is a job too, one per endpoint per event, so a slow subscriber holds up nobody else
-and a failed attempt is retried by the queue. Enqueue one for each subscriber with
-`ctx.jobs.enqueueMany(jobs.webhooks.deliver, …)` from the route handler where the event
-happens, or with `dispatcher.enqueueMany` when it happens inside another job.
+Delivering is a job too, one per endpoint per event, so a slow subscriber holds up nobody else.
+Enqueue one for each subscriber with `ctx.jobs.enqueueMany(jobs.webhooks.deliver, …)` where
+the event happens.
 
 ```typescript {% title="app/jobs/webhooks/deliver.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -265,13 +220,10 @@ export default createJobHandler(jobs.webhooks.deliver, async (ctx) => {
 });
 ```
 
-The endpoint URL is one a subscriber typed, so it is checked before anything is sent:
-`checkUrl` refuses anything but HTTP(S), credentials in the URL, private and reserved
-addresses such as `169.254.169.254`, and names that cannot be public, such as `localhost` or
-`.internal`. Run the same check when a subscriber saves the URL, so they see the refusal on the
-form rather than in a failed delivery. The delivery reads a redirect as a failure, since a
-receiver answers a webhook directly. Nothing reads the receiver's reply, so `release` lets go
-of it at once.
+The endpoint URL is one a subscriber typed, so `checkUrl` refuses private and reserved
+addresses such as `169.254.169.254` before anything is sent; run the same check when the
+subscriber saves the URL. [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls)
+covers it further.
 
 <warning>
 Keep `redirect: "manual"`. A followed redirect carries the signed body to whatever host the
@@ -279,68 +231,13 @@ subscriber's server names, including the private addresses `checkUrl` refused.
 </warning>
 
 A receiver that is down gets a minute before the second attempt, then twice as long each time
-up to six hours, with ±20% jitter so the deliveries that failed together do not all return at
-once. `ctx.attempts` is the delivery count the queue keeps, so the schedule needs no row of its
-own. [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) and
-[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) cover both
-packages further.
+up to six hours, with jitter so failed deliveries do not all return at once. Reuse the same `id`
+on every attempt, so the receiver can recognize a retry, and sign each attempt with a fresh
+`timestamp`, so a slow retry still lands inside its tolerance.
 
-Reuse the same `id` on every attempt, so the receiver can recognize a retry, and sign each
-attempt with a fresh `timestamp`, so a slow retry still lands inside its tolerance. Send
-`signed.data.body` rather than re-serializing the payload: it is the exact text the signature
-covers. `sign()` sets only the three signature headers, which is why the content type is added
-here.
-
-Each subscriber gets its own secret, in the format receivers expect: `whsec_` followed by
-base64. Mint one with [`@sdxc/crypto`](/api/crypto) as
-`` `whsec_${Base64.encode(randomBytes(32))}` ``, show it once, and store it sealed with `seal`
-rather than in plain text.
-
-## Receive a billing platform's deliveries
-
-Billing platforms sign their webhooks in their own ways, so [`@sdxc/billing`](/api/billing)
-wraps the whole receiver in one class: the provider verifies the signature, a store records
-each delivery before anything trusts it, and a handler per event type does the work.
-
-```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
-import { BillingWebhook } from "@sdxc/billing";
-import { createAction } from "remix/router";
-
-import type { AppContext } from "~/app/initializers/router";
-
-import jobs from "~/app/jobs";
-import { polar } from "~/app/initializers/billing";
-import { deliveries } from "~/app/models/webhook-deliveries";
-import routes from "~/routes/web";
-
-const BILLING_WEBHOOK = new BillingWebhook<AppContext>(
-	polar,
-	{
-		async "order.paid"(event, ctx) {
-			await ctx.jobs.enqueue(jobs.orders.fulfil, { orderId: event.order.id });
-		},
-	},
-	{ store: deliveries },
-);
-
-export default createAction(routes.webhooks.billing, (ctx) =>
-	BILLING_WEBHOOK.handler(ctx),
-);
-```
-
-The receiver is built once, at module scope, so a misconfigured store fails as the module
-loads. Each handler is called with the event and the request's own context, typed as your
-router's `AppContext`, so it reaches the same `ctx.jobs` the orders endpoint enqueues through. `polar` is your `PolarBilling` provider
-from `@sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
-processed answers `200` at once, an event type with no handler is logged and acknowledged, and a
-handler that returns a failed `Result` with a retryable error answers `503` so the platform
-delivers again. The provider
-reads its secret through a function such as `webhookSecret: () => env.POLAR_WEBHOOK_SECRET`, and
-an unreadable secret fails verification, so this receiver fails closed too.
-
-`deliveries` is your own table behind the `WebhookStore` interface — `find`, `record` and
-`markProcessed` — which keeps forged deliveries as evidence and unprocessed ones ready to retry.
-`MemoryWebhookStore` stands in for it in tests.
+Each subscriber gets its own secret: `whsec_` followed by base64, minted with
+[`@sdxc/crypto`](/api/crypto) as `` `whsec_${Base64.encode(randomBytes(32))}` ``, shown once
+and stored sealed.
 
 ## Test the receiver
 

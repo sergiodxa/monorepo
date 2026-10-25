@@ -5,25 +5,22 @@ section:
     title: Data & background work
     order: 7
 order: 20
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to check a customer's DMARC policy, SPF lookups and DKIM key before you send from their domain"
-    - "How to serve an MTA-STS policy and confirm senders can read it with the TLS-RPT record"
+    - "How to serve an MTA-STS policy and its TLS-RPT record for your own domain"
     - "What a DMARC aggregate report says about who sends mail as your domain"
 ---
 
-When your app sends mail from a customer's domain, a newsletter from `news@shop.com` or a
-receipt from `orders@shop.com`, receivers judge it by the records that domain publishes in DNS.
-A missing DKIM key, an SPF record that never names your servers, or one with more than ten
-lookups lands that mail in spam, and the customer blames your product. Checking the records
-before the first send turns that into a checklist the customer can fix.
+When your app sends mail from a customer's domain, receivers judge it by the records that domain
+publishes in DNS. A missing DKIM key, or an SPF record that never names your servers, lands that
+mail in spam, and the customer blames your product. Checking the records before the first send
+turns that into a checklist the customer can fix.
 
-This guide builds that check as a background job: the DMARC policy that applies, an SPF
-evaluation of your sending address, and the DKIM key at your selector. Then it serves an
+This guide builds that check as a background job over DMARC, SPF and DKIM, then serves an
 MTA-STS policy for your own domain and reads the DMARC aggregate reports receivers send back.
-[`@sdxc/email-auth`](/api/email-auth) parses and evaluates every record, looking each one up
-over DNS over HTTPS so it runs in a Worker, and answers a [`@sdxc/result`](/api/result) for
-every call that can fail. [`@sdxc/jobs`](/api/jobs) runs the checks off the request.
+[`@sdxc/email-auth`](/api/email-auth) parses and evaluates every record over DNS over HTTPS, so
+it runs in a Worker, and [`@sdxc/jobs`](/api/jobs) runs the checks off the request.
 
 ```bash
 npm add @sdxc/doh @sdxc/email-auth @sdxc/jobs @sdxc/result remix
@@ -73,18 +70,15 @@ export async function checkDmarc(domain: string) {
 }
 ```
 
-`policy` is `null` when no DMARC applies at all, and `record.testing` is the `t=y` flag that asks
-receivers to apply one step less than the policy says. A resolver that could not answer is the
-failure, never "no policy", so the job retries it rather than telling the customer their record
-is missing. A record with a broken tag still parses, as receivers read it: the tag falls back to
-its default and is listed in `record.issues`.
+`policy` is `null` when no DMARC applies, and `record.testing` is the `t=y` flag. A resolver that
+could not answer is the failure, never "no policy", so the job retries it rather than telling the
+customer their record is missing.
 
 ## Evaluate SPF for your sending address
 
-SPF lists the addresses allowed to send for a domain. Two things go wrong with it: the record
-never authorizes your servers, or its `include` chain needs more than ten DNS lookups, which
-makes every receiver answer `permerror`. `analyzeSpf` counts the lookups across every include
-and lists what is wrong; `checkHost` runs the evaluation a receiver runs for one address:
+SPF lists the addresses allowed to send for a domain. It fails when the record never authorizes
+your servers, or when its `include` chain needs more than ten DNS lookups. `analyzeSpf` counts the
+lookups and lists what is wrong; `checkHost` runs the evaluation a receiver runs for one address:
 
 ```typescript {% title="app/services/sending-domain.ts" %}
 import { analyzeSpf, checkHost } from "@sdxc/email-auth";
@@ -134,12 +128,8 @@ export async function checkSpf(domain: string) {
 }
 ```
 
-Each problem carries a `code` (`too-many-lookups`, `target-missing`, `multiple-records`,
-`invalid-record`, `loop`, `lookup-failed`, `ptr-mechanism`, `permissive-all`) and the domain it
-was found at, which is enough to write a message per code. `checkHost` answers a value rather
-than a `Result`: a DNS failure is the `temperror` result, as RFC 7208 defines it, and
-`evaluation.mechanism` names the term that decided it. `domain` is the domain of the envelope
-sender, so pass the bounce domain when your bounces go somewhere other than the From address.
+Each problem carries a `code`, such as `too-many-lookups`, and the domain it was found at.
+`checkHost` answers a value rather than a `Result`: a DNS failure is its `temperror` result.
 
 ## Confirm the DKIM key is published
 
@@ -189,9 +179,7 @@ export async function checkDkim(domain: string) {
 
 An unpublished selector is `null`. A record that does not parse is a `RecordParseError`, which
 the customer fixes, so it becomes a finding; a resolver failure stays a failure for the job to
-retry. An empty `p=` is a revoked key. When you sign with `d=` on a subdomain, such as
-`mail.shop.com`, `isAligned("shop.com", "mail.shop.com", record.dkimAlignment)` answers whether
-DMARC counts that signature for the From domain.
+retry.
 
 ## Run the audit off the request
 
@@ -234,9 +222,7 @@ export default createJobHandler(jobs.sendingDomains.audit, async (ctx) => {
 
 The job is declared as `audit: job({ input: s.object({ domainId: s.string() }) })` under
 `sendingDomains`, and `SendingDomains` is your own model.
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue; a
-cron trigger that enqueues the audit for every domain each day catches a record a customer
-removes later.
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue.
 
 <note>
 Every lookup goes to Cloudflare's resolver by default and waits up to five seconds. Pass
@@ -246,10 +232,8 @@ that, and keep the whole audit inside the job's own time limit.
 
 ## Serve an MTA-STS policy for your own domain
 
-MTA-STS tells servers delivering mail to your domain to require TLS and to accept only the MX
-hosts you list, so a network attacker can no longer strip encryption from inbound mail. The
-policy is a small text file at `https://mta-sts.<domain>/.well-known/mta-sts.txt`; keep its text
-in configuration and serve it from a route:
+MTA-STS tells servers delivering mail to your domain to require TLS and accept only the MX hosts
+you list. The policy is a text file at `https://mta-sts.<domain>/.well-known/mta-sts.txt`:
 
 ```typescript {% title="config/mta-sts.ts" %}
 export const MTA_STS_POLICY = [
@@ -275,9 +259,8 @@ export default createAction(routes.mtaSts, () => {
 
 The route is `mtaSts: get("/.well-known/mta-sts.txt")`, served on `mta-sts.example.com` as a
 custom domain of the Worker. Two TXT records complete it: `_mta-sts.example.com` with
-`v=STSv1; id=20261024`, which senders compare to decide whether to refetch the policy, and
-`_smtp._tls.example.com` with `v=TLSRPTv1; rua=mailto:tls-reports@example.com`, where senders
-report the TLS failures they see.
+`v=STSv1; id=20261024`, and `_smtp._tls.example.com` with
+`v=TLSRPTv1; rua=mailto:tls-reports@example.com`, where senders report the TLS failures they see.
 
 <warning>
 Senders fetch the policy over HTTPS with no redirects and accept only a `200` with
@@ -286,64 +269,10 @@ keep the cached copy for `max_age` seconds. Start with `mode: testing` and read 
 before switching to `enforce`, which refuses delivery when an MX host is missing from the list.
 </warning>
 
-## Check what senders will see
-
-Fetch the policy the way a sending server does and compare it with your MX hosts. `follow` from
-[`@sdxc/outbound`](/api/outbound) runs underneath, so the fetch refuses a redirect, a private
-address and a body over 64 KiB:
-
-```typescript {% title="app/services/mail-transport.ts" %}
-import {
-	discoverMtaSts,
-	discoverTlsRpt,
-	fetchMtaStsPolicy,
-	matchesMxPattern,
-} from "@sdxc/email-auth";
-import { isFailure, success } from "@sdxc/result";
-
-export async function mailTransportProblems(
-	domain: string,
-	mxHosts: readonly string[],
-) {
-	let problems: string[] = [];
-
-	let record = await discoverMtaSts(domain);
-	if (isFailure(record)) return record;
-	if (record.data.status !== "found") {
-		problems.push(`${record.data.name}: ${record.data.status}`);
-	}
-
-	let policy = await fetchMtaStsPolicy(domain, { timeout: "10 seconds" });
-	if (isFailure(policy)) {
-		problems.push(`policy file: ${policy.error.reason}`);
-	} else {
-		for (let host of mxHosts) {
-			if (!matchesMxPattern(host, policy.data.mx))
-				problems.push(`${host} is not listed`);
-		}
-	}
-
-	let reporting = await discoverTlsRpt(domain);
-	if (isFailure(reporting)) return reporting;
-	if (reporting.data.status !== "found") {
-		problems.push(`${reporting.data.name}: ${reporting.data.status}`);
-	}
-
-	return success(problems);
-}
-```
-
-`status` is `none`, `multiple` or `invalid` when the TXT record is missing, published twice or
-broken, and `reason` names the step of the policy fetch that failed: `request`, `status`,
-`content-type` or `invalid`. An empty list means senders find the record, fetch the policy and
-match every MX host you pass.
-
 ## Read DMARC aggregate reports
 
-The `rua` address in a DMARC record receives a daily aggregate report from every large
-receiver: which addresses sent mail as your domain, how many messages, and whether DKIM and SPF
-passed. Most arrive as gzip attachments; hand the attachment's stream to a service that
-decompresses and parses it:
+The `rua` address in a DMARC record receives a daily report from every large receiver: which
+addresses sent mail as your domain, and whether DKIM and SPF passed. Most arrive gzipped:
 
 ```typescript {% title="app/services/dmarc-reports.ts" %}
 import { parseDmarcReport } from "@sdxc/email-auth";
@@ -374,11 +303,8 @@ export async function readAggregateReport(gzipped: ReadableStream<Uint8Array>) {
 }
 ```
 
-`parseDmarcReport` reads both the RFC 9990 format and the older RFC 7489 one, and each row's
-`dkim` and `spf` are the aligned results DMARC used. A source that fails both is either a
-service you forgot to authorize or someone sending as your domain, and `disposition` says what
-the receiver did with it. `dkimResults` and `spfResult` on each row hold the raw results with
-the domains and selectors behind them.
+A source that fails both DKIM and SPF is either a service you forgot to authorize or someone
+sending as your domain, and `disposition` says what the receiver did with it.
 
 ## Test the checks
 
@@ -439,10 +365,7 @@ test("a reporting-only policy is flagged", async () => {
 });
 ```
 
-`Status: 3` is NXDOMAIN, which every check reads as nothing published. A test for
-`mailTransportProblems` adds an MSW handler for `https://mta-sts.shop.com/.well-known/mta-sts.txt`
-beside the DNS one, and `parseMtaStsPolicy(MTA_STS_POLICY)` in a plain unit test catches a typo
-in your own policy before a sender does.
+`Status: 3` is NXDOMAIN, which every check reads as nothing published.
 
 ## Where to go next
 

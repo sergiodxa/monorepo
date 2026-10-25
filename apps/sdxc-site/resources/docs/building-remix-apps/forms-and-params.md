@@ -56,21 +56,15 @@ export const NewTeamSchema = f.object({
 export type NewTeam = s.InferOutput<typeof NewTeamSchema>;
 ```
 
-Three decisions are worth noticing. `coerce.number()` turns the submitted `"12"` into `12`
-before `min` and `max` check it, so the handler never parses a number itself. `.transform()`
-normalizes while it validates, so the email is lowercased once, at the boundary. And
-`s.enum_()` refuses any plan outside the list, which is what keeps a hand-edited form from
-reaching the database with a value your code has no branch for.
-
-Keep schemas in their own module. The same object can validate the browser form, an API body
-and a test fixture, and a rule stated once cannot drift between them.
+`coerce.number()` turns the submitted `"12"` into `12` before `min` and `max` check it,
+`.transform()` lowercases the email once at the boundary, and `s.enum_()` refuses any plan
+outside the list.
 
 ## Validate in the action
 
-`validate(input, schema)` accepts `FormData`, `URLSearchParams`, a `Request` or a plain value,
-and resolves to a `Result`: the schema's output on success, a `ValidationError` carrying the
-schema's `issues` on failure. It never throws for bad input, so the handler is a straight
-line with an early return.
+`validate(input, schema)` resolves to a `Result`: the schema's output on success, a
+`ValidationError` carrying the schema's `issues` on failure, so the handler is a straight line
+with an early return.
 
 ```tsx {% title="app/http/controllers/teams-new.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -110,24 +104,15 @@ export default createController(routes.teams.new, {
 });
 ```
 
-The route is declared as `form("/teams/new")` from `remix/routes`, which gives it an `index`
-for the `GET` and an `action` for the `POST` on one pattern.
-
-The two outcomes answer differently on purpose:
-
-- **Refused, re-render with a 400.** The issues and what the visitor typed exist only in this
-  request. A redirect back would drop both, unless you carried them through a session flash,
-  so answering the `POST` with the same page and its errors is the simpler and more honest
-  response. The 400 status keeps the refusal from reading as a success to anything watching
-  status codes.
-- **Accepted, redirect with a 303.** `redirect.Status.SeeOther` turns the next request into a
-  `GET`, so a reload shows the new team instead of offering to submit the form again.
+The route is declared as `form("/teams/new")` from `remix/routes`, an `index` for the `GET`
+and an `action` for the `POST`. A refused post re-renders with a 400, since the issues and what
+the visitor typed exist only in this request. An accepted one redirects with a 303, so a reload
+shows the new team instead of submitting the form again.
 
 ## Render the issues
 
-`ValidationError.issues` already has the shape [`@sdxc/ui`](/api/ui)'s `Form` takes. Each
-field finds its own messages by `name`, marks itself `aria-invalid`, and the first invalid
-field takes focus, with no client JavaScript.
+`ValidationError.issues` already has the shape [`@sdxc/ui`](/api/ui)'s `Form` takes: each
+field finds its messages by `name` and marks itself `aria-invalid`, with no client JavaScript.
 
 ```tsx {% title="resources/views/new-team.tsx" %}
 import type { Handle } from "remix/component";
@@ -182,20 +167,17 @@ export function NewTeamPage(handle: Handle<Props>) {
 }
 ```
 
-The native `required`, `type`, `min` and `max` attributes stop most mistakes before the
-request is sent.
-
 <warning>
 Anything can post to your action, with or without the form's attributes, so the schema in
-the action is the rule that counts. Treat `required`, `type` and `pattern` as hints for the
+the action is the rule that counts. Treat `required`, `type` and `min` as hints for the
 visitor and keep every rule in the schema too.
 </warning>
 
-## Validate route params
+## Validate route params and the query string
 
 A matched route's params are a plain object of strings, and `validate` takes plain objects
-too. When a param is input, a value the URL can carry but your app does not know, validate it
-and answer a failure with the 404 page:
+too. When a param can name something your app does not know, validate it and answer a failure
+with the router's 404:
 
 ```tsx {% title="app/http/controllers/plans-show.tsx" %}
 import { isFailure } from "@sdxc/result";
@@ -217,47 +199,14 @@ export default createAction(routes.plans.show, async (ctx) => {
 });
 ```
 
-The router's own default handler answers, so an unknown plan looks exactly like any other URL
-that names nothing. A param that only has to be present, such as the `:id` of `/teams/:id`,
-cannot be missing once the route matched, so reading it with
-`s.parse(s.object({ id: s.string() }), ctx.params)` and letting a routing bug throw is enough.
-
-## Validate the query string
-
-`ctx.url.searchParams` is a `URLSearchParams`, so it goes through the same form-data schemas.
-`s.defaulted` fills a value the link left out:
-
-```tsx {% title="app/http/controllers/search.tsx" %}
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import { min } from "remix/data-schema/checks";
-import * as coerce from "remix/data-schema/coerce";
-import * as f from "remix/data-schema/form-data";
-import { createAction } from "remix/router";
-
-import defaultHandler from "~/app/http/controllers/default-handler";
-import SearchPage from "~/resources/views/search";
-import routes from "~/routes/web";
-
-const SEARCH = f.object({
-	q: f.field(s.defaulted(s.string(), "")),
-	page: f.field(s.defaulted(coerce.number().pipe(min(1)), 1)),
-});
-
-export default createAction(routes.search, async (ctx) => {
-	let query = await validate(ctx.url.searchParams, SEARCH);
-	if (isFailure(query)) return defaultHandler(ctx);
-
-	return ctx.render(<SearchPage q={query.data.q} page={query.data.page} />);
-});
-```
+`ctx.url.searchParams` is a `URLSearchParams`, so it goes through the same form-data schemas,
+with `s.defaulted` filling a value the link left out;
+[Read nested query strings and forms](/docs/building-remix-apps/nested-fields) covers filters.
 
 ## Answer an API client
 
-A JSON endpoint validates the `Request` itself. `validate` reads the body by its
-`Content-Type`: JSON, `+json` types, multipart or URL-encoded. A client reading JSON wants the
-failure as data, and [`@sdxc/problem`](/api/problem) writes it as an RFC 9457 problem
+A JSON endpoint validates the `Request` itself, and `validate` reads the body by its
+`Content-Type`. [`@sdxc/problem`](/api/problem) writes the failure as an RFC 9457 problem
 document with one entry per invalid field.
 
 ```typescript {% title="app/http/controllers/api/teams.ts" %}
@@ -287,10 +236,7 @@ export default createAction(routes.api.teams.create, async (ctx) => {
 ```
 
 `validationProblem` answers `422` with `Content-Type: application/problem+json`, and
-`issuesFrom` turns each issue's path into a JSON Pointer such as `/billingEmail`, through
-[`@sdxc/json-pointer`](/api/json-pointer). Where an
-API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
-`@sdxc/http/response/json` is the one-line alternative.
+`issuesFrom` turns each issue's path into a JSON Pointer such as `/billingEmail`.
 
 ## Test both refusals
 

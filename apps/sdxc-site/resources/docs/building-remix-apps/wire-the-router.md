@@ -34,9 +34,8 @@ deploy this chain.
 
 ## Create one logger per Worker
 
-A logger is configuration that every request shares. Create it once in its own module, so the
-router and anything else that opens a log (a job dispatcher, a cron handler) write records
-under the same `service` name and a query can group them.
+A logger is configuration every request shares. Create it once, so the router, a job dispatcher
+and a cron handler all write records under the same `service` name:
 
 ```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
@@ -44,80 +43,13 @@ import { createLogger } from "@sdxc/logger";
 export const logger = createLogger({ service: "my-app" });
 ```
 
-The `log(logger)` middleware opens one wide record per request, publishes it as `ctx.log`,
-and writes it once the response settles. Handlers never construct a logger; they add fields
-to the one already open.
-
-## Build the composition root
-
-Build the router in a function rather than at module scope. The Worker calls it per request,
-and a test calls the same function, so what the test drives is the chain production runs.
-Each route is mapped through `lazy()` from [`@sdxc/lazy-route`](/api/lazy-route), so a request
-imports only the controller it reaches; [Canonical URLs, lazy routes and header
-fields](/docs/building-remix-apps/router-utilities) covers it in full.
-
-```tsx {% title="app/initializers/router.tsx" %}
-import { headRequests } from "@sdxc/http/middleware/head-requests";
-import { lazy } from "@sdxc/lazy-route";
-import { log } from "@sdxc/logger/middleware";
-import { trace } from "@sdxc/trace-context/middleware";
-import { userAgent } from "@sdxc/user-agent/middleware";
-import { asyncContext } from "remix/middleware/async-context";
-import { createRouter } from "remix/router";
-
-import defaultHandler from "~/app/http/controllers/default-handler";
-import routes from "~/routes/web";
-
-import { logger } from "./logger";
-
-export function createWebRouter() {
-	let router = createRouter({
-		middleware: [
-			headRequests(),
-			asyncContext(),
-			log(logger),
-			trace(),
-			userAgent(),
-			// …then the Remix middleware your app already runs:
-			// cop(), formData(), a renderer
-		],
-		defaultHandler,
-	});
-	router.map(
-		routes.home,
-		lazy(() => import("~/app/http/controllers/home")),
-	);
-	return router;
-}
-```
-
-The order carries meaning:
-
-- **`headRequests()` goes first.** The router matches methods strictly, so without it a `HEAD`
-  probe from a monitor falls through to the 404 handler. It dispatches the `HEAD` as a `GET`
-  and strips the body, and because it leads the chain, a `HEAD` runs through every guard a
-  `GET` does.
-- **`asyncContext()` is there for `@sdxc/user-agent/helpers`.** Predicates such as
-  `isTouch()` read the current request through it when called with no argument, so a
-  component deep inside a render asks without being handed anything.
-- **`trace()` after `log()`.** It continues the caller's `traceparent` or starts a trace,
-  publishes it as `ctx.trace`, and stamps `trace_id` and `span_id` on the log that is already
-  open.
-- **`userAgent()` anywhere before the handlers.** It reads the `User-Agent` header once and
-  publishes the parsed browser, engine, system and device as `ctx.userAgent`.
-
-The Remix middleware after them (cross-origin protection, form parsing, rendering) is
-unchanged by any of this; see the
-[Remix documentation](https://github.com/remix-run/remix) for those.
-
-Write the list inline in `createRouter()`, so the router's context type records what each
-middleware adds. Each package also augments `RequestContext` in `remix/router`, so installing
-`log()` is what makes `ctx.log` exist in your editor.
+The `log(logger)` middleware opens one wide record per request, publishes it as `ctx.log`, and
+writes it once the response settles.
 
 ## Publish a service
 
 A service a handler needs, such as the database, belongs on the context rather than in an
-import. The database opens from the D1 binding:
+import, so a test can replace it. The database opens from the D1 binding:
 
 ```typescript {% title="app/initializers/database.ts" %}
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
@@ -129,39 +61,16 @@ export function openDatabase(): Database {
 }
 ```
 
-`database(db)` from `@sdxc/database-middleware` publishes it as `ctx.db`, typed on every
-request context. A service of your own follows the same pattern: a context key, a `db`-style
-property declared on `RequestContext`, and middleware that sets the value per request, typed
-with what it publishes so the router's context type picks it up:
+`database(db)` from `@sdxc/database-middleware` publishes it as `ctx.db`, typed on every request
+context.
 
-```typescript {% title="app/http/middleware/billing.ts" %}
-import type { Middleware } from "remix/router";
+## Build the composition root
 
-import type { BillingClient } from "~/app/services/billing";
-
-import { createContextKey } from "remix/router";
-
-export const Billing = createContextKey<BillingClient>();
-
-declare module "remix/router" {
-	interface RequestContext {
-		billing: BillingClient;
-	}
-}
-
-export function billing(
-	client: BillingClient,
-): Middleware<{ key: typeof Billing; value: BillingClient; property: "billing" }> {
-	return (ctx, next) => {
-		ctx.set(Billing, client, { property: "billing" });
-		return next();
-	};
-}
-```
-
-A test hands in a database of its own. Pass it through the composition root, defaulting to the
-production one. Since the router is built per request, so is the database, and each request
-uses the binding it was served with:
+Build the router in a function that takes the database, defaulting to the production one. The
+Worker calls it per request and a test calls the same function, so what the test drives is the
+chain production runs. Each route is mapped through `lazy()`, so a request imports only the
+controller it reaches; [Canonical URLs, lazy routes and header
+fields](/docs/building-remix-apps/router-utilities) covers it.
 
 ```tsx {% title="app/initializers/router.tsx" %}
 import type { Database as DataTable } from "remix/data-table";
@@ -190,7 +99,8 @@ export function createWebRouter(db: DataTable = openDatabase()) {
 			trace(),
 			userAgent(),
 			database(db),
-			// …then cop(), formData() and a renderer, as before
+			// …then the Remix middleware your app already runs:
+			// cop(), formData(), a renderer
 		],
 		defaultHandler,
 	});
@@ -206,10 +116,24 @@ export function createWebRouter(db: DataTable = openDatabase()) {
 }
 ```
 
+The order carries meaning:
+
+- **`headRequests()` goes first.** It dispatches a `HEAD` as a `GET` and strips the body, so a
+  monitor's probe runs through every guard a `GET` does instead of reaching the 404 handler.
+- **`asyncContext()`** lets `@sdxc/user-agent/helpers` such as `isTouch()` read the current
+  request with no argument.
+- **`trace()` after `log()`.** It continues the caller's `traceparent` or starts a trace,
+  publishes `ctx.trace`, and stamps `trace_id` on the open log.
+- **`userAgent()` before the handlers.** It publishes the parsed browser, system and device as
+  `ctx.userAgent`.
+
+Write the list inline in `createRouter()`, so the router's context type records what each
+middleware adds.
+
 ## Read it from a handler
 
-A handler reads everything from `ctx`, and adds what it learned to the log instead of
-writing a line of its own. `Project` is your model and `ProjectPage` your view.
+A handler reads everything from `ctx`, and adds what it learned to the log. `Project` is your
+model and `ProjectPage` your view.
 
 ```tsx {% title="app/http/controllers/project.tsx" %}
 import * as s from "remix/data-schema";
@@ -231,15 +155,13 @@ export default createAction(routes.project, async (ctx) => {
 });
 ```
 
-`ctx.log.time("db", …)` adds `db.count` and `db.duration_ms` to the request's single record,
-and `project.id` becomes a field you can filter on. Code with no `ctx` in reach calls
-`currentLog()` from `@sdxc/logger`, which returns the same log.
+`ctx.log.time("db", …)` adds `db.count` and `db.duration_ms` to the request's single record.
+Code with no `ctx` in reach calls `currentLog()` from `@sdxc/logger` for the same log.
 
 ## Swap it in a test
 
-Because the service arrives through the composition root, a test builds the real router with
-a different source and sends it a request. `createTestDatabase` is a helper of your own that
-opens an in-memory D1 database with your schema applied.
+A test builds the real router with a database of its own. `createTestDatabase` is your helper
+that opens an in-memory database with your schema applied:
 
 ```typescript {% title="app/initializers/router.test.ts" %}
 import { expect, test } from "vitest";
@@ -257,10 +179,7 @@ test("the home page lists projects", async () => {
 });
 ```
 
-Nothing is mocked: the log, the trace and the rest of the chain run as they do in
-production, and only the database differs.
-
-The Worker entry is then a thin wrapper:
+Only the database differs from production. The Worker entry is a thin wrapper:
 
 ```typescript {% title="bootstrap/worker.ts" %}
 import { createWebRouter } from "~/app/initializers/router";

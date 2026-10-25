@@ -1,6 +1,6 @@
 ---
 title: Sign and verify HTTP requests
-description: Sign requests with RFC 9421 or draft-cavage, verify them with a freshness window and replay checks, and attach and check Content-Digest, Repr-Digest and Digest.
+description: Sign requests with RFC 9421 or draft-cavage, verify them with a freshness window and replay checks, and attach and check Content-Digest and Repr-Digest.
 section:
     title: Identity & security
     order: 6
@@ -9,7 +9,7 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"
     - "How to verify signatures with a freshness window and replay checks"
-    - "How to attach and check `Content-Digest`, `Repr-Digest` and `Digest`"
+    - "How to attach and check `Content-Digest` and `Repr-Digest`"
 ---
 
 A bearer token proves the caller once had a secret. An HTTP message signature proves more: this
@@ -22,26 +22,23 @@ This guide builds both ends between two services: one signs each request it send
 verifies each request it receives, refuses a replay, and tells an unsigned caller what to sign.
 Then it attaches body digests on their own, for downloads and uploads whose integrity matters
 without a signature.
-
 [`@sdxc/http-signatures`](/api/http-signatures) signs and verifies with
 [RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) and with
 [draft-cavage-12](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12), the
-older scheme much of the fediverse still speaks.
-[`@sdxc/digest-fields`](/api/digest-fields) reads, writes and checks the
-[RFC 9530](https://www.rfc-editor.org/rfc/rfc9530) `Content-Digest` and `Repr-Digest` and the
-legacy `Digest`. [`@sdxc/crypto`](/api/crypto) reads PEM keys, and every call answers a
-`Result` from [`@sdxc/result`](/api/result).
+older scheme much of the fediverse still speaks. [`@sdxc/digest-fields`](/api/digest-fields)
+reads, writes and checks the [RFC 9530](https://www.rfc-editor.org/rfc/rfc9530)
+`Content-Digest` and `Repr-Digest`, and every call answers a `Result` from
+[`@sdxc/result`](/api/result).
 
 ```bash
-npm add @sdxc/cache @sdxc/crypto @sdxc/digest-fields @sdxc/http @sdxc/http-signatures \
-	@sdxc/logger @sdxc/outbound @sdxc/result @sdxc/uuid @sdxc/validate @sdxc/well-known remix
+npm add @sdxc/crypto @sdxc/digest-fields @sdxc/http @sdxc/http-signatures @sdxc/logger \
+	@sdxc/outbound @sdxc/result @sdxc/uuid @sdxc/validate remix
 ```
 
 ## Make a key pair
 
-Keys are Web Crypto `CryptoKey`s. Ed25519 is short and fast; `sign` also takes RSA PKCS#1 v1.5
-with SHA-256, RSA-PSS with SHA-512 and ECDSA P-256, and reads which one from the key. Generate a
-pair once:
+Keys are Web Crypto `CryptoKey`s. Ed25519 is short and fast, and `sign` also takes RSA and
+ECDSA P-256 keys, reading the algorithm from the key. Generate a pair once:
 
 ```bash
 openssl genpkey -algorithm ed25519 -out signing.pem
@@ -127,33 +124,19 @@ because the verifier's key decides the algorithm.
 
 `nonce` makes each signature unique, which is what lets the verifier refuse a replay, and `tag`
 names the protocol it was made for, so a signature made for one API cannot be presented to
-another that trusts the same key. Neither is required. The rest of `SignOptions`:
+another that trusts the same key.
 
-- `components` replaces the default coverage, in order. Pass names, or
-  `{ name, params }` objects for a component with parameters, such as
-  `{ name: "@query-param", params: { name: "page" } }`.
-- `created` is the signing time, now by default, also written as `Date` when the request has
-  none. `expires` adds an expiry the verifier enforces.
-- `label` names the signature, `sig1` by default. Signing again under another label keeps the
-  first, so a request can carry signatures from two parties.
+To talk to a server that predates RFC 9421, Mastodon before 4.5 among them, sign a fresh
+request with `scheme: "draft-cavage"`.
+[Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) falls back this way
+for every delivery and remembers which scheme each server accepted.
 
 ## Verify the requests you receive
 
-`verify` reads `Signature-Input` and selects RFC 9421, or reads `Signature` (or
-`Authorization: Signature …`) alone and selects draft-cavage, so one endpoint accepts both. Its
-checks run in this order and stop at the first failure, so a stale or incomplete request never
-costs a key lookup:
-
-1. The signature covers the method, the target, the host, a time (`created` or `Date`) and,
-   when there is a body, its digest.
-2. Each covered `Content-Digest`, `Repr-Digest` or `Digest` matches the body.
-3. `created`, else `Date`, is within `maxAge`, not in the future, and before `expires`, each
-   allowing `clockSkew` (five minutes by default).
-4. Your `key(keyId, algorithm)` lookup answers a public key, and the key fits the algorithm the
-   sender declared.
-5. The signature verifies.
-
-The key lookup is yours. Here it reads the PEM a partner registered under its key id:
+`verify` reads `Signature-Input` and selects RFC 9421, or reads `Signature` alone and selects
+draft-cavage, so one endpoint accepts both. It checks coverage, the body digest and freshness
+before it asks for a key, so a stale or incomplete request never costs a key lookup. The key
+lookup is yours; here it reads the PEM a partner registered under its key id:
 
 ```typescript {% title="app/services/partner-keys.ts" %}
 import type { Result } from "@sdxc/result";
@@ -232,13 +215,12 @@ A partner's server has no session and no `Origin` header, so when your app runs 
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
 signed paths from it.
 </note>
-
 ### Refuse in a way the caller can act on
 
-Every failure is an `HttpSignatureError` whose `code` names the check. All of them mean the
-request is not proven, so all answer `401`; what differs is what you log and what you tell the
-caller. `Accept-Signature` (RFC 9421 §5.1) says which signature you would accept, so a caller
-that signed too little learns what to cover:
+Every failure is an `HttpSignatureError` whose `code` names the check, such as
+`digest-mismatch` or `stale-signature`. All of them mean the request is not proven, so all
+answer `401`. `Accept-Signature` (RFC 9421 §5.1) says which signature you would accept, so a
+caller that signed too little learns what to cover:
 
 ```typescript {% title="app/http/controllers/refuse-signature.ts" %}
 import type { HttpSignatureError } from "@sdxc/http-signatures";
@@ -271,20 +253,6 @@ export function refuseSignature(log: Log, error: HttpSignatureError): Response {
 }
 ```
 
-`created: true` asks the signer to include a creation time, and `tag` names the protocol the
-signature is for. Each code names the check that failed:
-
-| `code`                                       | What it means                                               |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| `unsigned`                                   | No signature, or none under the requested label             |
-| `malformed`                                  | A signature field or component breaks its grammar           |
-| `insufficient-coverage`                      | The method, target, host, a time or the digest is uncovered |
-| `missing-component`, `unsupported-component` | A covered component is absent or cannot be derived          |
-| `digest-mismatch`                            | The body is not the body that was signed                    |
-| `stale-signature`                            | Too old, dated in the future, or past `expires`             |
-| `key-unavailable`, `unsupported-algorithm`   | No key for the id, or a key of another algorithm            |
-| `invalid-signature`                          | The signature does not verify                               |
-
 A spike of `stale-signature` is usually a clock, not an attacker; `digest-mismatch` and
 `invalid-signature` are worth an alert.
 
@@ -292,8 +260,8 @@ A spike of `stale-signature` is usually a clock, not an attacker; `digest-mismat
 
 `maxAge` bounds how long a signature is good for, and within that window the same request can
 be sent again. A `nonce` closes it: remember each one for as long as a signature can be fresh,
-and refuse one seen before. `verify` reports the verified label, and `parseSignatureInput` reads
-that signature's parameters, `nonce` and `tag` among them:
+and refuse one seen before. `parseSignatureInput` reads the verified signature's parameters,
+`nonce` and `tag` among them:
 
 ```typescript {% title="app/services/signature-nonce.ts" %}
 import type { Verified } from "@sdxc/http-signatures";
@@ -330,110 +298,27 @@ both pass. The nonce narrows the window, and an idempotent `saveOrder`, keyed on
 id, is what makes a repeat harmless.
 </warning>
 
-## Fall back to draft-cavage
-
-Servers that predate RFC 9421, Mastodon before 4.5 among them, answer it with a `401`. Sign
-with RFC 9421 first and, on a refusal, sign the same request again with
-`scheme: "draft-cavage"`, which writes one `Signature` header with `algorithm="hs2019"` and a
-legacy `Digest` instead of `Content-Digest`:
-
-```typescript {% title="app/services/deliver.ts" %}
-import type { Scheme, SigningKey } from "@sdxc/http-signatures";
-
-import { sign } from "@sdxc/http-signatures";
-import { isFailure, success } from "@sdxc/result";
-
-const REFUSED = [400, 401, 403];
-
-async function send(url: string, body: Uint8Array, key: SigningKey, scheme: Scheme) {
-	let request = new Request(url, {
-		method: "POST",
-		headers: { "content-type": "application/activity+json" },
-		body,
-	});
-	let signed = await sign(request, { scheme, key, body });
-	if (isFailure(signed)) return signed;
-	return success(await fetch(signed.data));
-}
-
-export async function deliver(url: string, body: Uint8Array, key: SigningKey) {
-	let first = await send(url, body, key, "rfc9421");
-	if (isFailure(first) || !REFUSED.includes(first.data.status)) return first;
-	return await send(url, body, key, "draft-cavage");
-}
-```
-
-<note>
-Build a fresh `Request` for each attempt: the first one's body was consumed when it was sent.
-</note>
-
-The cavage
-default covers `(request-target) host date digest content-type`, and `components` takes those
-names plus `(created)` and `(expires)`. Remember which scheme each server accepted, and start
-with it next time. [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) does
-all of this for every delivery, and keeps the answer per server for thirty days.
-
-On the receiving side nothing changes: `verify` accepts either scheme, and `verified.scheme`
-says which arrived. An `hs2019` signature takes the key's own algorithm, and `rsa-sha256`
-requires an RSA PKCS#1 v1.5 SHA-256 key.
-
-## Read and write the signature fields
-
-The fields themselves parse and serialize on their own, through the Structured Fields grammar,
-for a proxy that inspects signatures or a test that builds one by hand:
-
-- `parseSignatureInput` and `stringifySignatureInput` read `Signature-Input` as
-  `Record<label, { components, params }>`. Parameter order survives the round trip, because the
-  signature base serializes them as written, and `created` and `expires` read as `Date`.
-- `parseSignature` and `stringifySignature` read `Signature` as `Record<label, Uint8Array>`.
-- `parseAcceptSignature` and `stringifyAcceptSignature` read the requests a server sends, with
-  `created` and `expires` as `true` when asked for.
-- `parseCavageSignature` and `stringifyCavageSignature` read a draft-cavage header as
-  `{ keyId, algorithm, created, expires, headers, signature }`; `headers` is `null` when the
-  sender left the list out.
-
 ## Attach digests on their own
 
 A digest alone proves the body arrived as it was sent; a signature over the digest proves who
-sent it. For a file people keep after the response is gone, a detached
-[OpenPGP signature](/docs/identity-and-security/openpgp-signatures) beside it proves who
-published it to anyone with `gpg`. The digest by itself still earns its place on a large download, an upload resumed in
-parts, or a cached response, where corruption is the risk rather than forgery.
-
-The fields name two different things. `Content-Digest` is the hash of the content of this
-message, the exact bytes sent. `Repr-Digest` is the hash of the whole representation the URL
-names, so a range response carrying part of a file still carries the digest of the complete
-file, which the client checks once it holds every part. `Want-Content-Digest` and
-`Want-Repr-Digest` are how a client says which algorithms it prefers, as weights from 0 to 10.
-
-A download that answers in the algorithm the client weighs highest:
+sent it. A digest by itself earns its place on a large download, an upload resumed in parts,
+or a cached response, where corruption is the risk rather than forgery. `Content-Digest` is
+the hash of the exact bytes of this message:
 
 ```typescript {% title="app/http/controllers/exports.ts" %}
-import { DIGEST_ALGORITHMS, digest, parse, stringify } from "@sdxc/digest-fields";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { digest, stringify } from "@sdxc/digest-fields";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { buildExport } from "~/app/models/exports";
 import routes from "~/routes/web";
 
-function preferred(request: Request) {
-	let header = request.headers.get("want-content-digest") ?? "";
-	let wanted = parse(header, "want-content-digest");
-	if (!isSuccess(wanted)) return "sha-256";
-
-	let weights = wanted.data;
-	let ranked = DIGEST_ALGORITHMS.filter((name) => (weights[name] ?? 0) > 0);
-	ranked.sort((a, b) => (weights[b] ?? 0) - (weights[a] ?? 0));
-	return ranked[0] ?? "sha-256";
-}
-
 export default createAction(routes.exports.download, async (ctx) => {
 	let body = new TextEncoder().encode(JSON.stringify(await buildExport(ctx.db)));
-	let algorithm = preferred(ctx.request);
 
-	let hashed = await digest(body, algorithm);
+	let hashed = await digest(body, "sha-256");
 	if (isFailure(hashed)) return new Response(body);
-	let field = stringify({ [algorithm]: hashed.data }, "content-digest");
+	let field = stringify({ "sha-256": hashed.data }, "content-digest");
 	if (isFailure(field)) return new Response(body);
 
 	return new Response(body, {
@@ -445,12 +330,8 @@ export default createAction(routes.exports.download, async (ctx) => {
 });
 ```
 
-`digest` hashes with `sha-256` or `sha-512`; text is read as UTF-8, so pass the exact bytes sent
-when they are not UTF-8 text. `stringify` writes `sha-256=:…:` for the RFC 9530 fields, and an
-empty value answers `""`, which means "send no field". `"repr-digest"` writes `Repr-Digest`
-with the same call. A `Repr-Digest` should change only when the representation does, so
-serialize a JSON body built per request in [canonical form](/docs/http-apis/canonical-json)
-and equal exports always carry the same digest.
+`"repr-digest"` writes `Repr-Digest` with the same call, the hash of the whole representation
+the URL names, which a range response carries for the complete file.
 
 <note>
 Both fields describe the bytes as encoded, so compute them where the body is final: a layer
@@ -484,18 +365,7 @@ export default createAction(routes.uploads.create, async (ctx) => {
 ```
 
 Every `sha-256` and `sha-512` entry the field carries must match, so a forged entry next to a
-valid one still fails, and entries for algorithms the package does not compute are skipped. A
-`DigestError` carries one `code`: `missing` (no such field), `malformed` (the text breaks the
-grammar), `unsupported-algorithm` (no `sha-256` or `sha-512` entry to check), `mismatch` (the
-body changed), `coding` (an `Unencoded-Digest` body that does not decode), `invalid`
-(`stringify` was given a name or weight the field cannot carry) or `crypto` (the runtime
-refused the hash). Only `mismatch` says the content changed. To check an `Unencoded-Digest` on
-a body still compressed as `Content-Encoding` says, pass `decode: true` to `verify`.
-
-The legacy RFC 3230 `Digest` header, which draft-cavage signatures cover, goes through the same
-functions with `"digest"`: `stringify` writes `SHA-256=…` with the uppercase names every cavage
-verifier expects, and `parse` accepts any case and skips entries such as `UNIXsum=30637` whose
-value is not base64.
+valid one still fails. Of the `DigestError` codes, only `mismatch` says the content changed.
 
 ## Identify your bot with Web Bot Auth
 
@@ -504,12 +374,10 @@ is no key to exchange ahead of time.
 [Web Bot Auth](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/) solves
 that with an RFC 9421 profile: the bot signs every request under `tag="web-bot-auth"`, names its
 own origin in a `Signature-Agent` header, and publishes its public keys at
-`/.well-known/http-message-signatures-directory` there. Any origin can then fetch the directory
-and verify the request, and attribute it to the URL it fetched rather than to a User-Agent string
-anyone can copy.
+`/.well-known/http-message-signatures-directory` there, so any origin can verify the request
+and attribute it to that URL rather than to a User-Agent string anyone can copy.
 
-`@sdxc/http-signatures/web-bot-auth` covers both sides. Keep the bot's key as a private JWK in a
-Worker secret, imported once per isolate:
+Keep the bot's key as a private JWK in a Worker secret, imported once per isolate:
 
 ```typescript {% title="app/initializers/web-bot-auth.ts" %}
 import type { WebBotAuthKey } from "@sdxc/http-signatures/web-bot-auth";
@@ -541,10 +409,9 @@ export async function requestSigner() {
 }
 ```
 
-`importWebBotAuthKey` names the key by its RFC 7638 thumbprint, which goes out as `keyid`. The
-signer covers `@authority`, `@method`, `@path` and its own `Signature-Agent` member, valid for five
-minutes. Hand it to `follow` from [`@sdxc/outbound`](/api/outbound), or to `Feed.fetch` and
-`distill`, which pass it on, and every hop of a redirect chain is signed for its own authority:
+The signer covers `@authority`, `@method`, `@path` and its own `Signature-Agent` member,
+valid for five minutes. Hand it to `follow` from [`@sdxc/outbound`](/api/outbound), and every
+hop of a redirect chain is signed for its own authority:
 
 ```typescript
 let followed = await follow(url, {
@@ -553,73 +420,14 @@ let followed = await follow(url, {
 });
 ```
 
-Publish the directory with [`@sdxc/well-known`](/api/well-known). `signDirectoryResponse` adds the
-possession proof the draft recommends: a signature by each key over the request's authority and
-the body's `Content-Digest`, so the key set cannot be re-served under another origin.
+Publish the directory with [`@sdxc/well-known`](/api/well-known)'s
+`httpMessageSignaturesDirectory`, and pass `signDirectoryResponse` as its `sign` option so each
+key signs the response over the request's authority, and the key set cannot be re-served under
+another origin.
 
-```typescript {% title="app/initializers/router.ts" %}
-import { signDirectoryResponse } from "@sdxc/http-signatures/web-bot-auth";
-import { isFailure } from "@sdxc/result";
-import {
-	build,
-	httpMessageSignaturesDirectory,
-} from "@sdxc/well-known/http-message-signatures-directory";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { createRouter } from "remix/router";
-
-import { webBotAuthKey } from "~/app/initializers/web-bot-auth";
-
-const KEY_DIRECTORY = serve(
-	httpMessageSignaturesDirectory,
-	async () => {
-		let key = await webBotAuthKey();
-		let built = key ? build([key.publicKey]) : null;
-		return built && !isFailure(built) ? built.data : null;
-	},
-	{
-		async sign(response, request) {
-			let key = await webBotAuthKey();
-			if (!key || !request) return response;
-			let signed = await signDirectoryResponse(response, request, {
-				keys: [key],
-			});
-			return isFailure(signed) ? response : signed.data;
-		},
-	},
-);
-
-export function createWebRouter() {
-	return createRouter({
-		middleware: [
-			wellKnown({ "http-message-signatures-directory": KEY_DIRECTORY }),
-		],
-	});
-}
-```
-
-On the receiving side, `verifyWebBotAuth` checks the profile, fetches the directory the covered
-`Signature-Agent` member names through `follow` with no redirects and a size cap, and caches it
-for its `max-age`:
-
-```typescript
-import { WorkerKVCache } from "@sdxc/cache/worker-kv";
-import { verifyWebBotAuth } from "@sdxc/http-signatures/web-bot-auth";
-import { isSuccess } from "@sdxc/result";
-import { env } from "cloudflare:workers";
-
-let verified = await verifyWebBotAuth(request, {
-	cache: new WorkerKVCache(env.CACHE),
-	components: ["@method", "@path"],
-});
-if (isSuccess(verified)) {
-	verified.data.agent; // "https://bot.example.com/.well-known/http-message-signatures-directory"
-}
-```
-
-`agent` is the identifier to allowlist or rate limit. A failure keeps the codes above:
-`unsigned` for a request with no `web-bot-auth` signature, `stale-signature` past `expires` or
-past `maxLifetime` (24 hours), and `key-unavailable` when the directory does not answer a 200 or
-publishes no key with that thumbprint.
+On the receiving side, `verifyWebBotAuth` checks the profile, fetches and caches the directory
+the `Signature-Agent` names, and answers that directory's URL as `agent`, the identifier to
+allowlist or rate limit.
 
 ## Test both ends
 

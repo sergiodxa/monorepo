@@ -9,20 +9,15 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to keep an FTS5 index beside your tables with `@sdxc/search`"
     - "How to parse what a reader typed, rank title matches first, highlight and page results"
-    - "How to rebuild the index in batches and search without FTS5"
+    - "How to rebuild the index in batches from a background job"
 ---
 
 A help center needs a search box long before it needs a search service. SQLite ships FTS5, a
-full-text index with ranking, and D1 and Durable Objects both carry it. The part between the box
-and the index is the app's to write: reading what a person typed so a stray quote stays a
-character, deciding that a title match beats a body match, and showing where each result
-matched.
-
-This guide adds search to a help center's articles. [`@sdxc/search`](/api/search) parses the
-query, builds the FTS5 statement, ranks it with per-column weights, highlights matches and
-rebuilds the index in batches. [`@sdxc/pagination`](/api/pagination) pages the results,
-[`@sdxc/jobs`](/api/jobs) runs the rebuild, and [`@sdxc/result`](/api/result) carries every
-failure.
+full-text index with ranking, and D1 and Durable Objects both carry it. This guide adds search
+to a help center's articles: [`@sdxc/search`](/api/search) parses the query, ranks title matches
+above body matches, highlights them and rebuilds the index in batches,
+[`@sdxc/pagination`](/api/pagination) pages the results, and [`@sdxc/jobs`](/api/jobs) runs the
+rebuild.
 
 ```bash
 npm add @sdxc/http @sdxc/jobs @sdxc/pagination @sdxc/result @sdxc/search remix
@@ -30,12 +25,8 @@ npm add @sdxc/http @sdxc/jobs @sdxc/pagination @sdxc/result @sdxc/search remix
 
 ## Keep a search table beside the content
 
-FTS5 indexes rows by an integer `rowid`, and it wants every searched column on one row. The
-articles here are keyed by a text id, so the searchable text lives in a table of its own: one
-row per article, an `INTEGER PRIMARY KEY` the index mirrors, and the article's id as a unique
-column. The columns a search filters by, the article's section and publish date, ride along on
-the same row, so a query reads one table.
-
+FTS5 indexes rows by an integer `rowid`, so the searchable text lives in a table of its own: one
+row per article, an `INTEGER PRIMARY KEY` the index mirrors, and the columns a search filters by.
 The migration creates that table, the index over it, and the triggers that keep the index in
 step with every write:
 
@@ -81,22 +72,13 @@ SELECT "id", "slug", "section", "published_at", "title", "tags", "body"
 FROM "articles";
 ```
 
-`content=''` makes the index contentless: it holds the inverted index and nothing else, since
-the text is already in `article_search`. `contentless_delete=1` lets a contentless index delete
-a row. `remove_diacritics 2` makes `resume` find `résumé`.
+`content=''` makes the index contentless, since the text is already in `article_search`, and
+`remove_diacritics 2` makes `resume` find `résumé`. Each trigger deletes the `rowid` before
+inserting it, so an upsert never leaves the old words indexed beside the new ones. The last
+statement backfills the articles that already exist.
 
-<note>
-`contentless_delete=1` needs SQLite 3.43 or later, which D1 and Durable Objects run.
-</note>
-
-Each trigger deletes the `rowid` before inserting it. A trigger runs under the conflict policy
-of the statement that fired it, so under the upsert in the next section a plain insert would
-keep the old words indexed beside the new ones. The last statement backfills the articles that
-already exist, and the insert trigger indexes each row it writes.
-
-Store `body` as the text a reader reads. If articles are written in Markdown, write the
-plain-text rendering into `article_search`, so `**` and link URLs never match a query or show up
-in an excerpt.
+Store `body` as plain text: if articles are written in Markdown, write the rendered text, so
+`**` and link URLs never match a query.
 
 ## Describe the search
 
@@ -120,9 +102,8 @@ export const articleSearch = table({
 });
 ```
 
-`defineSearch` describes which of its columns are searched, how much a match in each counts,
-and which FTS5 table indexes them. It holds no connection, so one definition at module scope
-serves every request and every tenant's database:
+`defineSearch` describes which columns are searched, how much a match in each counts, and which
+FTS5 table indexes them. It holds no connection, so one definition serves every database:
 
 ```typescript {% title="app/models/search/articles.ts" %}
 import { defineSearch, parseQuery } from "@sdxc/search";
@@ -152,18 +133,12 @@ List `columns` in the order the FTS5 table declares them, because the weights ar
 `bm25()` by position: a different order weighs each column by another column's weight.
 </warning>
 
-With these weights a word in the title counts ten times a word in the body, so an article
-titled "Reset your password" outranks one that mentions passwords in passing, while a body that is about nothing else can still beat a passing title. `field: "title"` lets a
-reader write `title:invoice` to search the title alone.
-
-The key defaults to the table's primary key, `id`, which is the integer the index's `rowid`
-mirrors. A description that can never work throws a `RangeError` when the module loads: an
-empty `columns`, a weight of zero, a column the table lacks, or a non-integer key with `fts`.
+A word in the title counts ten times a word in the body, and `field: "title"` lets a reader
+write `title:invoice` to search the title alone.
 
 ## Keep the table current
 
-An article's write action writes its search row too, in one upsert, so the row is created the
-first time and replaced after:
+An article's write action writes its search row too, in one upsert:
 
 ```typescript {% title="app/models/search/articles.ts" %}
 import type { Database } from "remix/data-table";
@@ -198,10 +173,8 @@ export async function indexArticle(db: Database, article: SearchableArticle) {
 }
 ```
 
-The triggers follow every write to `article_search`, so nothing else touches the index.
-Deleting an article takes its search row with it through `ON DELETE CASCADE`, and the delete
-trigger takes it out of the index. Drafts are indexed too: whether a row is published is checked
-when the search runs, so publishing an article later needs no second write.
+The triggers follow every write, and deleting an article removes its row through
+`ON DELETE CASCADE`. Drafts are indexed too; the search checks the publish date when it runs.
 
 ## Rebuild the index in batches
 
@@ -213,10 +186,9 @@ D1 refuses to export a database while a virtual table exists. For an export, dro
 triggers and the index, export, recreate both, and rebuild.
 </warning>
 
-`reindex` writes the next `limit` rows with a key above `after`, and answers how many it wrote
-and where the next batch starts. Each batch is a short statement, which is what a D1 request
-budget wants, and a batch that fails or runs twice leaves the index correct. A job that writes
-one batch and enqueues the next walks a table of any size:
+`reindex` writes the next `limit` rows with a key above `after` and answers where the next batch
+starts. A batch that fails or runs twice leaves the index correct, so a job that writes one batch
+and enqueues the next walks a table of any size:
 
 ```typescript {% title="app/jobs/index.ts" %}
 import { job, jobs } from "@sdxc/jobs";
@@ -254,38 +226,26 @@ export default createJobHandler(jobs.reindexArticleSearch, async (ctx) => {
 });
 ```
 
-Enqueue it with `{ after: null }` to start from the first row. Articles written while it runs
-stay current through the triggers, whichever side of the batch they fall on.
+Enqueue it with `{ after: null }` to start from the first row.
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the dispatcher
 and the `ctx.db` middleware.
 
 ## Parse what the reader typed
 
-`parseArticleQuery` reads the box the way people expect a search box to read. Every word must
-match and matches as a prefix, so `pass` finds "password". `"exact phrase"` matches the phrase,
-`-word` leaves out results holding it, `refund OR chargeback` accepts either, `title:invoice`
-searches one field and `section:billing` is a filter. Operators count only in capitals.
-
-Nothing a person types is a syntax error. An unmatched quote, `c++`, `it's` or `a:b` with no
-declared `a` all read as ordinary words, and characters FTS5 would treat as syntax never reach
-it. What the parse answers is one of three things:
+`parseArticleQuery` reads the box the way people expect. Every word must match as a prefix, so
+`pass` finds "password"; `"exact phrase"`, `-word`, `refund OR chargeback`, `title:invoice` and
+the `section:billing` filter work as written. Nothing a person types is a syntax error: an
+unmatched quote or `c++` reads as ordinary words. The parse answers one of three things:
 
 - `success(null)` for a blank box, which is no search at all.
 - `success(query)` with the `clauses` to match and the `filters` to apply.
-- `failure(ValidationError)` for a query that cannot run: past 256 characters, more than 8 terms,
-  or nothing left to find once exclusions are set aside, as with `-legacy` alone.
-
-The error carries one issue, at the path `q`, with a message written for the reader, such as "A
-search holds at most 8 terms." Show it beside the box, with the text kept in it to edit, so the
-reader learns what to change. The limits are options: `maxLength` and `maxTerms` raise or lower
-them, and `prefix: "last"` makes only the final word a prefix, the
-reading for a box that searches as the reader types.
+- `failure(ValidationError)` for a query that cannot run, such as one past 8 terms, with a
+  message written for the reader to show beside the box.
 
 ## Search, filter and page
 
-`ARTICLE_SEARCH.query` answers a query that orders by relevance, best first, and composes like
-any `remix/data-table` query. The filters the parse read out are yours to apply, because only
-the app knows what `section:billing` means:
+`ARTICLE_SEARCH.query` orders by relevance, best first, and composes like any
+`remix/data-table` query. The filters the parse read out are yours to apply:
 
 ```typescript {% title="app/models/search/articles.ts" %}
 import type { ParsedQuery } from "@sdxc/search";
@@ -310,13 +270,9 @@ export function matchingArticles(db: Database, query: ParsedQuery) {
 }
 ```
 
-`published_at <= now` leaves out drafts, whose date is `null`, and articles scheduled for later.
-A query of filters alone, `section:billing`, matches every published article in the section with
-nothing to rank by, so it lists the newest first.
-
-Each row comes back with every column of `article_search` plus `rank`. With FTS5, `rank` is the
-weighted `bm25()` score, where lower is better. A search result list is one a reader pages by
-number and expects a total for, so page it by offset:
+`published_at <= now` leaves out drafts and scheduled articles, and a query of filters alone
+lists the newest first. Each row carries every column plus `rank`. Readers page search results by
+number, so the controller pages by offset:
 
 ```tsx {% title="app/http/controllers/search.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -373,23 +329,15 @@ export default createAction(routes.search, async (ctx) => {
 });
 ```
 
-A page past the end renders the last page, as `Pagination` clamps it, and a malformed `?page=`
-starts the query over from its first page. A statement the database refuses reaches
-`Pagination` as a `SearchError`, and `byOffset` answers it as a failure holding a
-`QueryFailedError`, which the log records before the page answers 500.
+A malformed `?page=` starts the query over from its first page.
 [Paginate lists](/docs/http-apis/paginate-lists) covers the parameters and the `Link` headers
 `paginate` writes.
-
-Offset paging suits relevance order, which is how a reader expects results. When search only
-narrows a list that has its own order, such as the newest articles in one section, page it by
-keyset over that order with `Pagination.byKeyset` instead: a stable order pages exactly, while
-relevance shifts each time the index changes between two pages.
 
 ## Highlight what matched
 
 `highlight` splits a text into `{ text, match }` segments that concatenate back to the text, and
-`excerpt` picks a window of words around the first match. Both compare the way the index
-does, ignoring case and diacritics, and both keep the text exactly as written:
+`excerpt` picks a window of words around the first match, both ignoring case and diacritics the
+way the index does:
 
 ```typescript {% title="app/services/search/hits.ts" %}
 import type { SearchRow } from "@sdxc/search";
@@ -417,59 +365,14 @@ export function toHit(
 }
 ```
 
-`field: "title"` tells `highlight` which declared field the text is, so `title:invoice` marks
-"invoice" in titles and nowhere else, while unscoped words mark in every text. Excluded words
-never highlight. An excerpt of a body with no match, such as an article that matched on a tag,
-is its opening words, and `truncatedStart` and `truncatedEnd` say whether to draw an ellipsis on
-either side.
-
-Segments are data, so the view renders each match as a `<mark>` element with no HTML built from
-strings. [Build a search dialog](/docs/building-remix-apps/search-dialog) draws them with
-`@sdxc/ui`'s `Highlight`. `@sdxc/search/query` holds only the parser and the highlighters, so a
-browser bundle can parse and highlight with the same functions the server searched with.
-
-## Search without FTS5
-
-Leave out `fts` and the same definition runs every query as `LIKE` over the columns. The table
-you already have is all it reads, so this search ships without a migration:
-
-```typescript {% title="app/models/search/faq.ts" %}
-import { defineSearch } from "@sdxc/search";
-
-import { faqs } from "~/database/schema/faqs";
-
-export const FAQ_SEARCH = defineSearch({
-	table: faqs,
-	columns: [
-		{ name: "question", weight: 3 },
-		{ name: "answer", weight: 1 },
-	],
-});
-```
-
-`LIKE` matches anywhere inside a word, so `voice` finds "invoice". `rank` is then the negated
-weighted count of the columns each term hit, still lower-is-better, so the rest of this guide
-reads the same. `LIKE` reads every row, which suits a table of hundreds of rows, not hundreds of
-thousands. Highlight its results with `{ mode: "substring" }`, so the marks agree with what
-matched.
-
-FTS5's `trigram` tokenizer is the middle ground: an index that matches substrings. Declare the
-virtual table with `tokenize='trigram'` and the definition with
-`fts: { table: "faqs_fts", tokenizer: "trigram" }`. A trigram index needs three characters to
-look anything up, so a query holding a shorter term runs as `LIKE` on its own.
-
-<note>
-`LIKE` binds two values per term per column, and SQLite on D1 and Durable Objects binds at most
-100 per statement. A query over that limit is refused before it runs with a
-`ParameterBudgetError`, a `SearchError`. With the default 8 terms, a `LIKE` search stays under it
-up to 6 columns.
-</note>
+`field: "title"` marks `title:invoice` in titles only. The view renders each match segment as a
+`<mark>`; [Build a search dialog](/docs/building-remix-apps/search-dialog) draws them with
+`@sdxc/ui`'s `Highlight`.
 
 ## Test the ranking
 
-The search runs on the in-memory SQLite your tests already migrate, which carries FTS5, so a
-test writes two articles through `indexArticle` and checks the order a reader sees.
-`ArticleFactory` is the factory for your `articles` table:
+The in-memory SQLite your tests already migrate carries FTS5, so a test writes two articles
+through `indexArticle` and checks the order a reader sees:
 
 ```typescript {% title="app/models/search/articles.test.ts" %}
 import { unwrap } from "@sdxc/result";
@@ -524,8 +427,7 @@ test("reads a stray quote as part of a word", () => {
 });
 ```
 
-`passw` matches as a prefix, so the test also proves the reader's half-typed word finds
-"password". To check the page itself, request `routes.search` with `?q=` through
+To check the page itself, request `routes.search` with `?q=` through
 `createWebRouter().fetch(...)`, as [Test Workers apps](/docs/operations-and-testing/testing)
 shows.
 

@@ -53,31 +53,18 @@ test:
 | [`binding <helper> <NAME>`](/docs/sdxc/make-binding) | a `bindings.kv()`, `d1()`, `r2()`, `queue()`, `rateLimit()`, `sendEmail()`, `durableObject()` or `secret()` entry in `cloudflare.config.ts`       |
 | [`do <name>`](/docs/sdxc/make-do)                    | a Durable Object class in `app/services/`, or `app/models/` with `--role model`, re-exported from `bootstrap/worker.ts` with its binding declared |
 
-A KV namespace or D1 database binding is written with a placeholder id; replace it with the id
-Cloudflare prints when you create the namespace or database before you deploy.
-
-`sdxc make` alone asks for the kind and the name on a terminal. Without one, a missing kind or
-name is a usage error that lists the kinds, so a script always names both. `sdxc make <kind>
---help` prints the flags of one kind.
+`sdxc make` alone asks for the kind and the name on a terminal, and `sdxc make <kind> --help`
+prints the flags of one kind.
 
 ## Names
 
 A slash in the name is a folder inside the kind's folder, so a feature stays together across
 layers: `sdxc make job trials/expire` writes `app/jobs/trials/expire.ts`, and
-`sdxc make service trials/extend` writes `app/services/trials/extend.ts`. A migration's name is
-the one that holds no folders.
+`sdxc make service trials/extend` writes `app/services/trials/extend.ts`.
 
-Every segment is written in kebab-case on disk, so `Trials/ExpireOld`, `trials/expire_old` and
-`trials/expire-old` write the same file. Each segment must start with a letter and hold only
-letters, digits and dashes:
-
-```text
-"1abc" is not a name; use letters, digits and dashes in each segment, starting with a letter
-```
-
-The other spellings come from the last segment: `expire-old` is the camelCase key `expireOld`,
-the PascalCase `ExpireOld`, the snake_case `expire_old` and the title `Expire old`. Each kind's
-guide says which of them its declaration uses.
+Every segment is written in kebab-case on disk, so `Trials/ExpireOld` and `trials/expire-old`
+write the same file. Declarations use the last segment's other spellings, such as the key
+`expireOld`.
 
 ## Flags every kind takes
 
@@ -97,13 +84,9 @@ A run plans every file and every edit before it writes any, and leaves every exi
 it is: a name that is taken, test included, stops the command and leaves the project as it was.
 </note>
 
-```text
-app/http/controllers/home.tsx already exists; sdxc make leaves it as it is unless --force
-```
-
 Pass `--force` when you want the stub's version back, such as after editing a stub of your own.
-The file, its test and its spec are replaced, and the declaration, mapping and mount they already have are
-kept, so nothing is declared twice:
+The file, its test and its spec are replaced, and the declaration and mapping they already have
+are kept, so nothing is declared twice:
 
 ```bash
 sdxc make controller home --force
@@ -120,10 +103,8 @@ On an existing model, `--force` rewrites the model, its test and its factory, an
 second migration; add columns with [`sdxc make migration`](/docs/sdxc/make-migration).
 
 When the run finishes it prints `Wrote` and `Edited` for each path, then runs the `format`
-command from your configuration once over all of them, so the files land in your project's
-style. A formatter that fails leaves the files as `make` wrote them and says so. Anything that
-still needs you comes last, after the formatter's output: an edit to make by hand, a piece
-`--skip` left out, a declaration `--force` kept.
+command from your configuration once over all of them. Anything that still needs you, such as an
+edit to make by hand, prints last.
 
 ## Add a test later
 
@@ -139,12 +120,7 @@ Wrote app/services/billing/charge.test.ts
 ```
 
 The kind comes from the folder the file sits in, so the test is rendered from that kind's test
-stub, yours included. A controller's test takes the route that maps it from the router, and a
-form controller gets the form test. An existing test stops the command unless `--force`
-replaces it, and `--dry-run` prints the test instead.
-
-Migrations and factories never get a test, and a policy's test comes with its abilities from
-[`sdxc make policy`](/docs/sdxc/make-policy), so `make test` refuses all three and says why.
+stub, yours included. An existing test stops the command unless `--force` replaces it.
 
 ## Declared and mapped
 
@@ -162,15 +138,8 @@ entry in a declaration module and a mapping before the app reaches them, and `ma
 
 `make` finds the initializer that serves each one by reading `app/initializers/`: the one that
 imports the declaration module and calls `createRouter`, `createJobDispatcher`, `createHandler`,
-`createCLI` or `createMail`. The new mapping goes after the last mapping already there, and imports follow
-the form the file already uses, `~/app/…` or relative.
-
-Two kinds declare without a mapping: `make policy` adds the resource's `create`, `read`,
-`update` and `delete` abilities to `app/policies/abilities.ts` and grants them in
-`app/policies/policy.ts`, reads to everyone and writes to members, and `make job --cron` adds
-`triggers.scheduled({ schedule })` to `cloudflare.config.ts`, since a scheduled job runs only
-when a trigger delivers its expression. [`sdxc destroy`](/docs/sdxc/undo-generated-files)
-removes every declaration and mapping but a policy's again.
+`createCLI` or `createMail`. [`sdxc destroy`](/docs/sdxc/undo-generated-files) removes the
+declarations and mappings again.
 
 ## When an edit cannot be placed
 
@@ -187,17 +156,10 @@ In the job dispatcher's initializer:
   dispatcher.map(jobs.digest, () => import("~/app/jobs/digest"));
 ```
 
-`--dry-run` prints the same instructions after the files.
-
 ## Packages the code imports
 
 When the generated code imports an `@sdxc` package your `package.json` does not list yet, `make`
-adds it at the same release as the packages you have, the newest version published on or
-before that date, and prints the install command to run:
-
-```text
-Added @sdxc/uuid@2026.10.13 to package.json; run bun install
-```
+adds it at the same release as the packages you have and prints the install command to run.
 
 ## Configuration
 
@@ -223,16 +185,6 @@ default spelled out:
 }
 ```
 
-| Key               | Default                                | What it decides                                                          |
-| ----------------- | -------------------------------------- | ------------------------------------------------------------------------ |
-| `make.routes`     | `web`                                  | the contract in `routes/` a controller is declared in without `--routes` |
-| `make.migrations` | `{ "default": "database/migrations" }` | the chains `make migration --chain` picks from                           |
-| `make.tests`      | `true`                                 | whether a test is written beside the file without `--test`/`--no-test`   |
-| `make.specs`      | `true`                                 | whether a pairing spec is written without `--spec`/`--no-spec`           |
-| `make.stubs`      | `.config/sdxc/stubs`                   | the folder whose stubs replace the built-in ones                         |
-| `format`          | none                                   | the command run once over every written and edited file                  |
-
-The `doctor` key holds the settings of [`sdxc doctor`](/docs/sdxc/check-a-project), and
 [Configuration](/docs/sdxc/configuration) covers every key.
 
 ## Make the generated files your own
@@ -250,30 +202,17 @@ Wrote .config/sdxc/stubs/job.stub
 Wrote .config/sdxc/stubs/job.test.stub
 ```
 
-That writes every stub whose name starts with the kind; `controller` copies `controller.stub`,
-`controller.form.stub`, `controller.api.stub` and their `.test.stub` and `.spec.stub` partners.
-`sdxc make stubs scaffold` copies the ones [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource)
-writes from, and with no kind it copies all of them. A stub already in the folder is kept, so your edits survive a
-second run.
+That writes every stub whose name starts with the kind, and with no kind it copies all of them.
+A stub already in the folder is kept, so your edits survive a second run.
 
 <note>
 Delete the stubs you leave unchanged: every kind without a stub of yours keeps the built-in one,
 and takes its improvements when you upgrade.
 </note>
 
-A kind's stub is `<kind>.stub`, a flag that changes the file selects `<kind>.<variant>.stub`, and
-the test is `<kind>.test.stub` or `<kind>.<variant>.test.stub`, falling back to the kind's test
-stub when a variant has none of its own. The pairing spec is `<kind>.spec.stub`, with
-`controller.api.spec.stub` for an endpoint:
-
-| Stub                   | Selected by                                      |
-| ---------------------- | ------------------------------------------------ |
-| `controller.form.stub` | `make controller --method form`                  |
-| `controller.api.stub`  | `make controller --routes api`, by contract name |
-| `job.cron.stub`        | `make job --cron`                                |
-| `mcp.resource.stub`    | `make mcp --resource`                            |
-
-A stub is the file's text with `{{placeholder}}`s. Every kind can use these:
+A kind's stub is `<kind>.stub`, a flag that changes the file selects `<kind>.<variant>.stub`
+(`job.cron.stub` for `make job --cron`), and the test is `<kind>.test.stub`. A stub is the file's
+text with `{{placeholder}}`s. Every kind can use these:
 
 | Placeholder     | For `trials/expire-old`                                                              |
 | --------------- | ------------------------------------------------------------------------------------ |
@@ -285,19 +224,8 @@ A stub is the file's text with `{{placeholder}}`s. Every kind can use these:
 | `{{specifier}}` | `~/app/jobs/trials/expire-old`, the file's import path                               |
 | `{{header}}`    | the `@author` and `@copyright` tags, from `package.json`'s `author` or your git user |
 
-Some kinds add their own:
-
-| Kind         | Placeholders                                                                                                    |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| `controller` | `{{path}}`, the route's key path (`posts.show`); `{{routes}}`, the contract (`~/routes/web`)                    |
-| `job`        | `{{path}}`, the job's key path (`trials.expireOld`)                                                             |
-| `model`      | `{{columns}}`, a column line per field; `{{table}}`, the plural table (`posts`)                                 |
-| `factory`    | `{{model}}`, the model's import path (`~/app/models/post`); `{{attributes}}`, a sample value per field          |
-| `mcp`        | `{{path}}`; `{{tool}}`, the tool name (`search_posts`); `{{uri}}`, a resource's URI                             |
-| `command`    | `{{command}}`, the words typed (`users grant`); `{{member}}` (`.users.grant`); `{{words}}` (`"users", "grant"`) |
-
-A placeholder the kind does not define stops the command and lists the ones it accepts, so a
-typo never reaches a generated file.
+Some kinds add their own, such as a controller's `{{path}}`; a placeholder the kind does not
+define stops the command and lists the ones it accepts, so a typo never reaches a generated file.
 
 ## Where to go next
 

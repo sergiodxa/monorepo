@@ -39,12 +39,9 @@ Loading the color picker…
 </frame>
 ```
 
-With a fallback, the page streams its first chunk straight away, and the client runtime swaps
-the region in for the fallback when it arrives. A self-closing
-`<frame src="/frames/latest-release" />` has no fallback, so the page waits for the region and
-sends it inline, which is the form to pick when the region has to read before any script
-loads. Add `name="…"` when a client entry elsewhere on the page reloads the region through
-`handle.frames.get(name)`.
+With a fallback, the page streams straight away and swaps the region in when it arrives. A
+self-closing `<frame src="/frames/latest-release" />` has no fallback, so the page waits and
+sends the region inline, for a region that has to read before any script loads.
 
 ## Register the tag
 
@@ -130,8 +127,8 @@ whole.
 
 ## Test it
 
-The parse is where a frame's `src` is checked, and the plain-text render is what a feed or
-search index reads, so one test covers both through `readGuide`:
+Test the parse, which checks a frame's `src`, and the plain-text render a feed or search index
+reads:
 
 ```typescript {% title="app/services/content/guide.test.ts" %}
 import { toPlainText } from "@sdxc/markdown/plain";

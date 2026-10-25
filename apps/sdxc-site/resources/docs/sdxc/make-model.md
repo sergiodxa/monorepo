@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.05
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How field names type a model's columns"
     - "What `make model` writes beside the model: its migration and its factory"
@@ -55,29 +55,10 @@ policy around the model, is one [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource
 sdxc make model post title --skip migration,factory
 ```
 
-The run ends by naming what `--skip` left out, after the formatter's output:
-
-```text
-Wrote app/models/post.ts
-Wrote app/models/post.test.ts
-Edited app/models/index.ts
-Wrote no migration or factory, as --skip asked
-```
-
-Every file is planned before any is written, so a model, migration or factory that already
-exists, or a table the chain already creates, stops the run with the project as it was.
-
-`--force` writes an existing model, its test and its factory again from the fields you give,
-keeps its registry entry, and writes no second migration, since the database already has the
-table. The run ends with the migration to write for the columns you added:
-
-```text
-Replaced app/models/post.ts
-Replaced app/models/post.test.ts
-Replaced database/factories/post.ts
-Kept the declaration, mapping and mount post already has; --force replaces files only
-Wrote no migration, since the model existed; add its new columns with sdxc make migration add-<columns>-to-posts
-```
+A model, migration or factory that already exists stops the run with the project as it was.
+`--force` writes an existing model, its test and its factory again from the fields you give and
+writes no second migration, since the database already has the table; it prints the
+`sdxc make migration` to run for the columns you added.
 
 ## Fields
 
@@ -103,37 +84,19 @@ Quote a field with `?` in zsh, which reads a bare `?` as a pattern.
 | ends in long text such as `body`, `description`, `content`, `summary`, `notes`, `bio`                                               | `text`       | `c.text()`                              |
 | anything else                                                                                                                       | `string`     | `c.text()`                              |
 
-The rules apply in that order, so `published_at` is a timestamp and `published` a box.
-`sdxc make model --help` lists them too.
+The rules apply in that order, so `published_at` is a timestamp and `published` a box. A
+reference such as `author_id` points at the table `app/models/author.ts` declares, or at the
+plural, `authors`, when the project has no such model.
 
-A reference points at the table its model declares. `author_id`, or `author:references`, reads
-`app/models/author.ts` for its table and its `id` type, and falls back to the plural, `authors`,
-with a text id when the project has no such model. The foreign key is named
-`<table>_<column>_fkey`:
-
-```typescript
-author_id: c.text().references("authors", "posts_author_id_fkey"),
-```
-
-### Indexes
-
-`:unique` or `:index` after the name or the type indexes the column:
+`:unique` or `:index` after the name or the type indexes the column: a unique column is declared
+on the model, `slug: c.text().unique()`, and a plain index lives in the migration alone.
 
 ```bash
 sdxc make model post title slug:unique rank:index 'code?:index'
 ```
 
-A unique column is declared on the model, `slug: c.text().unique()`, and its migration creates
-`posts_slug_unique`. A plain index lives in the migration alone, as
-`CREATE INDEX "posts_rank_index" ON "posts" ("rank");`, since the model declares none.
-
-Some names are refused, each with the reason:
-
-- `id`, `created_at` and `updated_at`, which every table already has.
-- Two types or two modifiers in one field, such as `slug:index:unique`.
-- A name listed twice, or one that does not start with a letter.
-- A nullable box, `is_public?`: a box is ticked or not.
-- A column holding a password as typed; name it `password_hash` or `password_digest`.
+`id`, `created_at` and `updated_at` are refused, since every table already has them, and so is a
+column holding a password as typed; name it `password_hash` instead.
 
 ## The model
 
@@ -170,34 +133,13 @@ export default Post;
 
 The model is named in the singular and its table in the plural snake_case: `post` declares
 `posts`, `blog-post` declares `blog_posts`, `category` declares `categories`. Each row gets a
-UUIDv7 id and the two timestamps. With no fields, the columns hold a reminder to add them:
-
-```typescript
-		id: c.text().primaryKey(),
-		// TODO: add the columns the migration creates
-		created_at: c.integer(),
-```
+UUIDv7 id and the two timestamps.
 
 ## The migration
 
-The migration is `create-<table>`, written as
+The migration is `create-<table>`, written from the same fields as
 [`sdxc make migration create-posts …`](/docs/sdxc/make-migration#create-alter-or-drop-from-fields)
-writes it, from the same fields, next in the chain:
-
-```sql {% title="database/migrations/0001_CreatePosts.sql" %}
--- CreatePosts: creates the posts table.
-
-CREATE TABLE "posts" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "title" TEXT NOT NULL,
-  "body" TEXT NOT NULL,
-  "published_at" INTEGER NOT NULL,
-  "author_id" TEXT NOT NULL,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL,
-  CONSTRAINT "posts_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "authors" ("id")
-);
-```
+writes it, next in the chain.
 
 ## The factory
 
@@ -216,10 +158,8 @@ export const PostFactory = defineFactory(Post, {
 });
 ```
 
-Text, string and email fields count up with the row's sequence, integers take the sequence, a
-box is `false`, a date `"2026-01-01"` and a URL `https://example.com/<sequence>`. A nullable
-reference is `null`. A required reference is left out, with the note shown above, since only the
-test knows which row it points at: pass it when creating one.
+A required reference is left out, with the note shown above, since only the test knows which row
+it points at: pass it when creating one.
 
 ## What it edits
 
@@ -234,8 +174,7 @@ The model is registered under its key, imported the first time a handler reads i
 +});
 ```
 
-The key is the file's last segment in camelCase: `blog-post` is `ctx.models.blogPost`, and a
-model in a folder, `billing/invoice`, is `ctx.models.invoice`.
+The key is the file's last segment in camelCase: `blog-post` is `ctx.models.blogPost`.
 
 ## The test
 
@@ -260,14 +199,6 @@ bun run test app/models/post.test.ts
 Turn the `test.todo` into a test of each rule the model adds, against an in-memory database and
 rows from the factory.
 
-## Your own stubs
-
-A model stub of your own needs `name: "{{table}}"` for the table and `{{columns}}` inside the
-table's columns, and a factory stub needs `{{{attributes}}}` as `defineFactory`'s second argument;
-given fields and a stub without its placeholder, the command stops and says so.
-[Generate files](/docs/sdxc/generate-files#make-the-generated-files-your-own) covers copying the
-stubs.
-
 ## Fill it in
 
 1. Apply the migration with `sdxc run db migrate`.
@@ -286,8 +217,8 @@ let post = await ctx.models.post.create({
 
 A column you add to the model later reaches the table through
 [`sdxc make migration <name> --from-model post`](/docs/sdxc/make-migration#write-the-sql-from-a-model).
-[Data models](/docs/data-and-background-work/data-models) covers scopes, callbacks, meta fields
-and transactions, and [`@sdxc/data-model`](/api/data-model) the whole API.
+[Data models](/docs/data-and-background-work/data-models) covers scopes, callbacks and
+transactions.
 
 ## Where to go next
 

@@ -5,25 +5,19 @@ section:
     title: HTTP APIs
     order: 5
 order: 9
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to select values from a fetched JSON document with `@sdxc/jsonpath`"
     - "How to accept a client's JSONPath query and answer an invalid one with its offset"
     - "How to turn the nodes a query selects into JSON Patch operations"
 ---
 
-Code that reads a JSON document it did not shape — another service's response, a stored report,
-a configuration blob — ends up walking it by hand: loops, optional chaining and type checks at
-every level. A JSONPath query says what to select in one expression,
-`$.releases[?@.draft == false].tag_name`, and returns every match with its location. This guide
-reads values from a fetched document, lets API clients narrow a large document with a query
-parameter, and redacts every node a query finds with a JSON Patch.
-
-[`@sdxc/jsonpath`](/api/jsonpath) implements RFC 9535 in full: name, wildcard, index, slice and
-filter selectors, the descendant segment `..`, and the `length`, `count`, `match`, `search` and
-`value` functions. A query is parsed once into a `JSONPath` that selects from any number of
-documents, and a malformed query is a [`@sdxc/result`](/api/result) failure carrying the offset
-where reading stopped.
+Code that reads a JSON document it did not shape ends up walking it by hand: loops, optional
+chaining and type checks at every level. A JSONPath query says what to select in one
+expression, `$.releases[?@.draft == false].tag_name`, and returns every match with its
+location. This guide uses [`@sdxc/jsonpath`](/api/jsonpath), a full RFC 9535 implementation,
+to read a fetched document, let API clients narrow a response with a query parameter, and
+redact every node a query finds.
 
 ```bash
 npm add @sdxc/http @sdxc/json-patch @sdxc/json-pointer @sdxc/jsonpath @sdxc/problem \
@@ -32,10 +26,9 @@ npm add @sdxc/http @sdxc/json-patch @sdxc/json-pointer @sdxc/jsonpath @sdxc/prob
 
 ## Select values from a fetched document
 
-`query` parses and selects in one call, which suits a query written once in your code. Each
-selected node carries its `value`, its `location` as member names and indexes from the root, and
-its normalized `path`. Here a service reads a repository's newest stable release tag from the
-GitHub REST API:
+`query` parses and selects in one call. Each node carries its `value`, its `location` from the
+root, and its normalized `path`. Here a service reads a repository's newest stable release tag
+from the GitHub REST API:
 
 ```typescript {% title="app/services/releases/latest-stable.ts" %}
 import type { JSONValue } from "@sdxc/jsonpath";
@@ -67,15 +60,14 @@ export async function latestStableTag(repository: string): Promise<string | null
 }
 ```
 
-Nodes come back in document order, so the first match is the newest release the API listed. A
-release without `tag_name` contributes no node, and a filter comparing a missing member is
-false, so a response missing fields selects less instead of failing.
+Nodes come back in document order, and a response missing fields selects less instead of
+failing.
 
 ## Accept a query from the client
 
-A large document is cheaper to send narrowed. Add `reports: { show: get("/api/reports/:reportId") }`
-to `routes/api.ts`, and let a `select` parameter carry a JSONPath query. A client's query is
-untrusted input, so the catalog gains an entry that tells the client where its query broke:
+Add `reports: { show: get("/api/reports/:reportId") }` to `routes/api.ts`, and let a `select`
+parameter carry a JSONPath query. The catalog gains an entry that tells the client where its
+query broke:
 
 ```typescript {% title="config/problems.ts" %}
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
@@ -113,9 +105,8 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 });
 ```
 
-The action parses the query with `JSONPath.parse`, which refuses everything RFC 9535 refuses,
-including an unknown function and a comparison against a query that can select several nodes.
-`Report` is the app's own model, and its `document` is the stored JSON:
+The action parses the query with `JSONPath.parse`. `Report` is the app's own model, and its
+`document` is the stored JSON:
 
 ```typescript {% title="app/http/controllers/api/reports/show.ts" %}
 import { ok } from "@sdxc/http/response/json";
@@ -157,9 +148,9 @@ export default createAction(routes.api.reports.show, async (ctx) => {
 });
 ```
 
-`GET /api/reports/42?select=$.rows[?@.total > 100].customer` answers with each match and its
-normalized path, such as `$['rows'][3]['customer']`, so the client knows where every value came
-from. An invalid query answers `400` with `offset`, the UTF-16 position where parsing stopped.
+`GET /api/reports/42?select=$.rows[?@.total > 100].customer` answers each match with its
+path, such as `$['rows'][3]['customer']`. An invalid query answers `400` with the `offset`
+where parsing stopped.
 
 <warning>
 The query runs over the document the response would send, so redact before you select: a
@@ -168,14 +159,10 @@ Cap the query's length too, since a descendant segment visits every node of the 
 each step that follows it.
 </warning>
 
-When the same query runs on many documents, as in a job that scans every report, parse it once
-and call `select` or `values` on each document.
-
 ## Patch every node a query selects
 
-A node's `location` is a list of member names and indexes, which `stringify` from
-`@sdxc/json-pointer` turns into the pointer a JSON Patch operation aims at. One query finds every
-email at any depth, and one patch replaces them all:
+`stringify` from `@sdxc/json-pointer` turns a node's `location` into the pointer a JSON Patch
+operation aims at, so one query finds every email and one patch replaces them all:
 
 ```typescript {% title="app/services/reports/redact-emails.ts" %}
 import type { JsonPatchError, JSONValue, Operation } from "@sdxc/json-patch";
@@ -199,14 +186,11 @@ export function redactEmails(document: JSONValue): Result<JSONValue, JsonPatchEr
 }
 ```
 
-`apply` works on a copy, so the stored report is left as it was, and a `replace` aimed at a
-location the query just found always resolves. The
-[JSON Patch guide](/docs/http-apis/json-patch) covers the operations and their failures.
+`apply` works on a copy, so the stored report is left as it was.
 
 ## Test the queries
 
-The release lookup calls `fetch`, so its test answers GitHub with MSW and checks that drafts and
-prereleases are skipped:
+The release lookup calls `fetch`, so its test answers GitHub with MSW:
 
 ```typescript {% title="app/services/releases/latest-stable.test.ts" %}
 import { http, HttpResponse } from "msw";

@@ -25,8 +25,7 @@ npm add @sdxc/i18n @sdxc/logger @sdxc/messageformat @sdxc/result @sdxc/ui remix
 ## Write the messages
 
 A bundle is a plain object per language, nested by key segment, with MessageFormat 2 strings
-as leaves. JSON is a convenient home for them, since translators can edit it without touching
-code.
+as leaves:
 
 ```json {% title="resources/locales/en.json" %}
 {
@@ -39,11 +38,8 @@ code.
 }
 ```
 
-- `{$name}` interpolates a value. It is inserted raw, and JSX escapes it when it renders.
-- A plural is one key: `.input` declares `$count` as a number, `.match` picks a variant by
-  the language's plural category, an exact key such as `0` beats a category, and `*` catches
-  the rest. Spanish and Polish get their own categories from the same syntax.
-- `{#docs}…{/docs}` is markup, which a component turns into an element.
+`{$name}` interpolates a value, a plural `.match`es on the language's plural category with `*`
+catching the rest, and `{#docs}…{/docs}` is markup a component turns into an element.
 
 State the languages once, in a module the middleware and everything outside a request share:
 
@@ -60,8 +56,7 @@ export const FALLBACK_LANGUAGE = "en";
 export const RESOURCES: Record<string, Messages> = { en, es };
 ```
 
-Keep one resources object for the whole app. Compiled messages are cached per resources
-object, language and key, so every request shares the work of compiling a message once.
+Keep one resources object for the whole app, since compiled messages are cached per object.
 
 ## Detect the language per request
 
@@ -105,17 +100,13 @@ export function createWebRouter() {
 ```
 
 Detection tries a `?lng=` search parameter, a cookie, the session and the `Accept-Language`
-header, in that order, and always resolves to a supported language: `es-AR` matches a
-supported `es`, and anything unmatched gets the fallback. A key missing from the detected
-language falls back through the primary subtag and then the fallback language, and a key
-missing everywhere renders as the key itself, which makes it easy to spot on the page.
+header, in that order, and always resolves to a supported language: `es-AR` matches `es`, and
+anything unmatched gets the fallback. A key missing everywhere renders as the key itself.
 
 ## Translate in a handler
 
-A handler calls `ctx.intl.t` with a key and its values, and passes `ctx.locale` to the
-document so `<html lang>` states the language the page is written in. `Project` is your model,
-read through the `ctx.db` your database middleware publishes, and `DocumentLayout` is your
-layout, taking the title and the language.
+A handler calls `ctx.intl.t` with a key and its values, and passes `ctx.locale` to your layout
+so `<html lang>` states the page's language:
 
 ```tsx {% title="app/http/controllers/projects.tsx" %}
 import { Heading, Text } from "@sdxc/ui";
@@ -140,8 +131,7 @@ export default createAction(routes.projects.index, async (ctx) => {
 ## Render messages with markup
 
 A message containing markup renders through `Trans`. Each `{#name}…{/name}` pair becomes the
-element you pass under that name, with the text between them as its children, so a
-translator can move the link anywhere in the sentence.
+element you pass under that name, so a translator can move the link anywhere in the sentence:
 
 ```tsx {% title="app/http/controllers/welcome.tsx" %}
 import { Trans } from "@sdxc/i18n/ui";
@@ -162,13 +152,10 @@ export default createAction(routes.welcome, (ctx) =>
 );
 ```
 
-The prop is `i18nKey` because `key` is `remix/component`'s own reconciliation prop and never reaches
-the component.
-
 ## Reach the translator from any component
 
-Passing `ctx.intl` down through every prop gets old quickly. `IntlProvider` publishes it
-through context, and `intl(handle)` reads it back wherever the component sits.
+`IntlProvider` publishes the translator through context, and `intl(handle)` reads it back
+wherever the component sits:
 
 ```tsx {% title="resources/components/empty-projects.tsx" %}
 import type { Handle } from "remix/component";
@@ -180,8 +167,7 @@ export function EmptyProjects(handle: Handle) {
 }
 ```
 
-Wrap the page once, in the handler, and every component under it reads the same translator.
-`ProjectsPage` is your view, with `EmptyProjects` somewhere inside it:
+Wrap the page once, in the handler. `ProjectsPage` is your view, with `EmptyProjects` inside it:
 
 ```tsx {% title="app/http/controllers/projects.tsx" %}
 import { IntlProvider } from "@sdxc/i18n/ui";
@@ -202,55 +188,10 @@ export default createAction(routes.projects.index, async (ctx) => {
 });
 ```
 
-## Let the visitor choose
-
-Detection reads a cookie when you give it one, so a language picker is a form that writes it.
-Hand the detector the `remix/cookie` cookie your picker writes, exported here from your own
-`app/http/cookies.ts`:
-
-```typescript {% title="app/initializers/router.tsx" %}
-import i18n from "@sdxc/i18n/middleware";
-import { log } from "@sdxc/logger/middleware";
-import { createRouter } from "remix/router";
-
-import { LOCALE_COOKIE } from "~/app/http/cookies";
-import {
-	FALLBACK_LANGUAGE,
-	RESOURCES,
-	SUPPORTED_LANGUAGES,
-} from "~/app/initializers/i18n";
-
-import { logger } from "./logger";
-
-export function createWebRouter() {
-	return createRouter({
-		middleware: [
-			log(logger),
-			i18n({
-				detection: {
-					supportedLanguages: SUPPORTED_LANGUAGES,
-					fallbackLanguage: FALLBACK_LANGUAGE,
-					cookie: LOCALE_COOKIE,
-				},
-				resources: RESOURCES,
-			}),
-			// …the rest of your chain
-		],
-	});
-}
-```
-
-The picker's action validates the submitted language against `SUPPORTED_LANGUAGES` and
-answers with a redirect that sets the cookie; creating and serializing it is covered in
-Remix's
-[cookie documentation](https://github.com/remix-run/remix/tree/main/packages/cookie). The
-search parameter still runs first, so a `?lng=es` link overrides the stored choice for one
-request.
-
 ## Translate outside a request
 
-A background job that sends an email has no `ctx.intl`. `createTranslator` builds one over the
-same bundles. Build it once, beside the languages, so every job, command and email shares it:
+A background job has no `ctx.intl`. `createTranslator` builds one over the same bundles, once,
+beside the languages:
 
 ```typescript {% title="app/initializers/i18n.ts" %}
 import { createTranslator } from "@sdxc/i18n";
@@ -262,8 +203,7 @@ export const translate = createTranslator({
 });
 ```
 
-Binding it to a language is synchronous, so a job calls a plain function like this one with
-the language stored in its input:
+A job binds it to the language stored in its input:
 
 ```typescript {% title="app/services/welcome-email.ts" %}
 import { translate } from "~/app/initializers/i18n";
@@ -279,21 +219,14 @@ A language you do not ship resolves to the fallback, so record the `locale` the 
 returns, not the one you asked for.
 </note>
 
-Store the request's `ctx.locale` in the job's input when you enqueue
-it, and the email arrives in the language the visitor was reading.
-
-A hydrated island is the same case in the browser. Call
-`setIntl(translate(document.documentElement.lang).intl)`, with `setIntl` from
-`@sdxc/i18n/ui`, once in `bootstrap/browser.ts` before `run()`, and `intl(handle)` and `Trans`
-inside every island fall back to it. The browser bundle then carries every language's
-messages, so keep the islands' copy small.
+Store the request's `ctx.locale` in the job's input when you enqueue it. For hydrated islands,
+call `setIntl(translate(document.documentElement.lang).intl)`, with `setIntl` from
+`@sdxc/i18n/ui`, in `bootstrap/browser.ts` before `run()`.
 
 ## Catch broken messages in a test
 
-A message that fails to parse renders its key, and a placeholder that fails to format renders
-as `{$name}`. Neither throws, which keeps a page up, and also means a typo in a translation
-ships silently. `parse` from `@sdxc/messageformat` returns a `Result`, so a test can check
-every message in every bundle.
+A message that fails to parse renders its key instead of throwing, so a typo ships silently.
+`parse` from `@sdxc/messageformat` returns a `Result`, so a test can check every message:
 
 ```typescript {% title="resources/locales/locales.test.ts" %}
 import type { Messages } from "@sdxc/i18n";
@@ -323,9 +256,7 @@ test.each(Object.entries(RESOURCES))(
 );
 ```
 
-The detection is one request through the router. A visitor whose browser asks for Argentine
-Spanish gets the supported `es`, written into `<html lang>`; `migrate()` prepares the
-in-memory database the projects page reads, as
+Detection is one request through the router; `migrate()` prepares the in-memory database, as
 [Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
 
 ```typescript {% title="app/http/controllers/projects.test.tsx" %}
@@ -347,9 +278,6 @@ test("answers in the closest language the app ships", async () => {
 	expect(await response.text()).toMatch(/<html[^>]* lang="es"/);
 });
 ```
-
-For formatting a single message outside a bundle, `new MessageFormat(locale, source)` from
-the same package compiles it once and formats it with `format(values)` as often as you need.
 
 ## Where to go next
 

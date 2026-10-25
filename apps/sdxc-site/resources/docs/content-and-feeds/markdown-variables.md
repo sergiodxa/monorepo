@@ -1,26 +1,23 @@
 ---
 title: Fill markdown templates with variables
-description: Write one markdown document with holes for per-render values, fill them per tenant, plan or locale, and keep the template round-tripping through an editor.
+description: Write one markdown document with holes for per-render values and fill them per tenant, plan or locale.
 section:
     title: Content & feeds
     order: 8
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write one markdown document with holes for per-render values"
     - "How to fill the values per tenant, plan or locale and decide what a missing one means"
-    - "How to serve the template itself so it round-trips through an editor"
+    - "When a tag's schema checks a filled value"
 ---
 
 Onboarding pages, plan summaries and transactional copy say the same thing to every reader
 with a few values changed: the product's name, the plan a workspace pays for, the link to its
-billing page. [`@sdxc/markdown`](/api/markdown) reads those values as variables. The parser
-keeps each one as a node in the tree, and the `variables` plugin fills them in when a page
-renders, so one parsed document serves every reader and the file an author edits stays the
-template.
-
-This guide builds on [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline),
-which covers the options object, the loader and the route.
+billing page. [`@sdxc/markdown`](/api/markdown) keeps each variable as a node in the tree, and
+the `variables` plugin fills them in when a page renders, so one parsed document serves every
+reader. This guide builds on
+[A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline).
 
 ```bash
 npm add @sdxc/markdown @sdxc/result remix
@@ -28,9 +25,8 @@ npm add @sdxc/markdown @sdxc/result remix
 
 ## Write the holes into the document
 
-A variable is a name after a `$`. In text it sits inside `{% … %}`, and in an attribute value
-inside braces. A name may continue as a dotted path whose segments are property names or array
-indexes, so `$plan.seats` reads a field and `$plans.0` the first item of a list.
+A variable is a name after a `$`, inside `{% … %}` in text and inside braces in an attribute
+value. A dotted path reads a field (`$plan.seats`) or an array index (`$plans.0`).
 
 ```text {% title="resources/content/onboarding/welcome.md" %}
 Welcome to {% $product %}. Your {% $plan.name %} plan includes {% $plan.seats %} seats.
@@ -42,23 +38,8 @@ Invoices and receipts live on <a href={$links.billing}>your billing page</a>.
 {/* The seat count comes from the plan; never write it down here. */}
 ```
 
-An attribute value takes any data a braced value can hold, variables included at any depth:
-
-| Written                                            | Reads as                                 |
-| -------------------------------------------------- | ---------------------------------------- |
-| `title="Plans"`                                    | the string                               |
-| `wide`                                             | `true`                                   |
-| `count={3}`, `open={false}`, `empty={null}`        | the number, boolean or `null`            |
-| `src={$cdn}`, `price={$plan.price}`                | a variable, filled when the page renders |
-| `data={[1, 2, $three]}`                            | an array                                 |
-| `options={{ stacked: true, "max-width": $width }}` | an object                                |
-
-Arrays and objects nest, take a trailing comma and may span lines. Braces hold data and names
-alone: `$a.b[0]` and `$a.b()` stay text, and so does a path ending in a dot.
-
-The tag and the allowlisted element in that file are declared the usual way. A tag's attribute
-schema describes the values it receives once filled, so `plans` is an array of plan objects
-even though the source writes a variable:
+A tag's attribute schema describes the values it receives once filled, so `plans` is an array of
+plan objects even though the source writes a variable:
 
 ```typescript {% title="app/services/content/schema.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -80,10 +61,8 @@ export const MARKDOWN_OPTIONS = {
 
 ## Fill the values per render
 
-`variables(values, options)` returns a visitor for `Markdown.walk`. A text hole becomes a
-`text` node holding the value, and an attribute takes the value itself, arrays and objects
-included. Pass the options the document was parsed with, so the plugin can run the checks that
-were waiting on these values:
+`variables(values, options)` returns a visitor for `Markdown.walk`. Pass the options the
+document was parsed with, so the plugin can run the checks that were waiting on these values:
 
 ```typescript {% title="app/services/content/onboarding.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -117,29 +96,18 @@ export function fillOnboarding(document: Markdown.Document, workspace: Workspace
 }
 ```
 
-The values are read when the walk runs, so the same parsed document is filled again for the
-next workspace, and a block holding no variable is handed back as the same object. A parsed
-document is plain JSON, which makes it a value you can cache by file and fill per request.
-
-A dotted path is filled one segment at a time: a name reads an object's own property and a
-number indexes an array, so `$plan.seats` reads `10` from the plan above. A text hole takes a
-string, a number or a boolean; a list, an object or `null` there fails the walk, since none of
-them has a text form.
+A parsed document is plain JSON, so you can cache it by file and fill it per request. A text
+hole takes a string, a number or a boolean; a list, an object or `null` there fails the walk.
 
 <note>
 Fill variables before the other [markdown plugins](/docs/content-and-feeds/markdown-plugins)
-run. `variables` handles nearly every block type, so it takes a walk of its own, and the passes
-after it then read the final text and URLs: `links()` resolves the billing link once it is a
-URL, and `typography()` sets the quotes in a product name that holds one.
+run, in a walk of its own, so the passes after it read the final text and URLs.
 </note>
 
-## Let the schemas wait for their values
-
 A tag's schema runs at parse time when every attribute is literal. When an attribute holds a
-variable, anywhere inside an array or object included, the check waits: `variables` runs the
-schema once the names are filled in, and the tag keeps the schema's output, coercions included.
-A value that fails it fails the walk at the tag's position, with a `MarkdownParseError` carrying
-the schema's issues as the failure's `cause`.
+variable, `variables` runs the schema once the names are filled in, and a value that fails it
+fails the walk at the tag's position, with a `MarkdownParseError` carrying the schema's issues
+as the failure's `cause`.
 
 <note>
 Allowlisted elements are held to the same rules at fill time. An `href` or `src` filled from a
@@ -148,36 +116,11 @@ variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a val
 written it.
 </note>
 
-```typescript {% title="app/services/content/onboarding-page.ts" %}
-import type { Markdown } from "@sdxc/markdown";
-
-import { MarkdownParseError } from "@sdxc/markdown";
-import { isFailure } from "@sdxc/result";
-
-import { fillOnboarding } from "~/app/services/content/onboarding";
-
-export function onboardingPage(
-	document: Markdown.Document,
-	workspace: Parameters<typeof fillOnboarding>[1],
-) {
-	let filled = fillOnboarding(document, workspace);
-	if (isFailure(filled)) {
-		let { cause, position } = filled.error;
-		let issues = cause instanceof MarkdownParseError ? cause.issues : undefined;
-		return { ok: false as const, line: position?.start.line, issues };
-	}
-	return { ok: true as const, document: filled.data };
-}
-```
-
 ## Decide what a missing value means
 
-A name with no value fails the walk by default, at the variable's position, and the error names
-the full path: `No value for $plan.name`. A path that runs off its data at any segment counts as
-missing the same way. That suits pages a reader sees, where a hole left open is a bug.
-
-An editor's preview wants the opposite, so it passes `missing: "keep"` and the variable stays in
-the tree for the renderer to show:
+A name with no value fails the walk by default, with an error naming the full path
+(`No value for $plan.name`), which suits pages a reader sees. An editor's preview passes
+`missing: "keep"` instead, and the variable stays in the tree:
 
 ```typescript
 Markdown.walk(
@@ -186,44 +129,11 @@ Markdown.walk(
 );
 ```
 
-A kept text hole renders as its source spelling: `toHTML` writes it as
-`<span class="md-variable">{% $plan.name %}</span>`, so a stylesheet can mark the holes still
-open, and `toRemix` as the text `{% $plan.name %}`. A kept attribute value is written as the
-braced spelling the author used. A visitor of your own that handles `variable` nodes covers any
-other policy, such as filling a default.
-
-## Serve the template, not one reader's copy
-
-Variables survive parsing, so `Markdown.stringify` writes them back as the author wrote them,
-comments included. An editing API can parse a file, change its frontmatter, and save it without
-filling a value or dropping a note:
-
-```typescript {% title="app/services/content/save.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { isFailure, success } from "@sdxc/result";
-
-import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
-
-export function touch(source: string) {
-	let parsed = Markdown.parse(source, MARKDOWN_OPTIONS);
-	if (isFailure(parsed)) return parsed;
-
-	let written = Markdown.stringify(parsed.data.document, {
-		frontmatter: { updatedAt: new Date().toISOString() },
-	});
-	if (isFailure(written)) return written;
-
-	return success(written.data);
-}
-```
-
-The output still reads `{% $plan.name %}` and `plans={$plans}`, so the markdown a client fetches
-is the template every workspace is filled from.
+A kept hole renders as its source spelling, so a preview shows the holes still open.
 
 ## Test it
 
-The fill is where a reader's values meet the template, so test that a workspace's values land
-in the text and that a hole with no value fails instead of rendering:
+Test that a workspace's values land in the text and that a hole with no value fails:
 
 ```typescript {% title="app/services/content/onboarding.test.ts" %}
 import { Markdown } from "@sdxc/markdown";

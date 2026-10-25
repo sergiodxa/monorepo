@@ -122,8 +122,7 @@ export function spendChallenge(ctx: RequestContext): string | null {
 ```
 
 `sessionOf` from [`@sdxc/auth`](/api/auth) reads the session Remix's session middleware put on
-the context, and throws when that middleware has not run. `spendChallenge` drops the value in
-the same call that reads it.
+the context, and `spendChallenge` drops the value in the same call that reads it.
 
 <warning>
 Spend the challenge on read. A challenge that survives its ceremony is one an attacker can
@@ -132,15 +131,10 @@ replay an assertion against; spent on read, it buys exactly one.
 
 ## Store what the ceremony proves
 
-Registration answers the row to store, as a `RegisteredPasskey`: the credential `id`, the
-`publicKey`, its COSE `algorithm`, the signature `counter`, the `transports`, and whether the
-credential is `syncable` and `backedUp`. Authentication later needs `id`, `publicKey` and
-`counter` back. Keep them in a table of your own, beside the account id and a `suspended` flag;
-the controllers below reach it through a small `Passkeys` model of yours.
-
-`publicKey` is the authenticator's COSE key in base64url: a CBOR map with integer labels.
-Store it as it arrives; [Encode and decode CBOR](/docs/http-apis/cbor) reads it with
-`@sdxc/cbor` when a settings page wants each passkey's thumbprint or a JWK.
+Registration answers the row to store, as a `RegisteredPasskey`, and authentication later
+needs its `id`, `publicKey` and `counter` back. Keep it in a table of your own, beside the
+account id and a `suspended` flag; the controllers below reach it through a small `Passkeys`
+model of yours.
 
 ## Enroll a passkey
 
@@ -176,8 +170,7 @@ on the device, so use your opaque primary key rather than an email.
 </warning>
 
 `exclude` lists the credentials the account already has, so the browser refuses to enroll the
-same device twice. `currentAccount` is your own helper that answers the signed-in account's
-`id` and `email`, and `Passkeys.listIds` answers the credential ids the account holds.
+same device twice. `currentAccount` is your own helper answering the signed-in account.
 
 The verify endpoint hands the request straight to the relying party, which reads and validates
 the JSON body itself:
@@ -274,13 +267,10 @@ export default createAction(routes.passkeys.signIn.verify, async (ctx) => {
 });
 ```
 
-`AuthenticationResponseJSON` is the browser's own type for what `Passkey.authenticate` posts.
-The cast only names that shape: `verifyAuthentication` validates the whole response and answers
-a `MalformedResponseError` for anything else, and `wrap` catches a body that is not JSON.
-`Passkeys.find` answers the stored `id`, `publicKey` and `counter` the relying party checks
-against, with the `accountId` and `suspended` flag beside them. Every refusal answers the same
-body and is logged by error name, so a caller never learns which check failed while your logs
-do. `userId` stands for whichever key your app's session marks a signed-in account with.
+The cast only names the browser's shape: `verifyAuthentication` validates the whole response,
+and `wrap` catches a body that is not JSON. Every refusal answers the same body and is logged
+by error name, so a caller never learns which check failed while your logs do. `userId` stands
+for whichever key your app's session marks a signed-in account with.
 
 <warning>
 Record the new `counter`: the next assertion has to exceed it. A `CounterError` means two
@@ -362,23 +352,9 @@ export const PasskeySignIn = clientEntry(
 
 Render it beside your other sign-in options, passing
 `routes.passkeys.signIn.challenge.href()` and `routes.passkeys.signIn.verify.href()` as the
-two URLs; a browser without WebAuthn gets an `UnsupportedError` message from the same button.
-How client entries hydrate is covered in
-[Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui).
-
-Enrollment is the same shape with `Passkey.register` in place of `Passkey.authenticate`. There,
-an `AlreadyRegisteredError` means this device is already enrolled, so point the person at
-signing in instead.
-
-To offer passkeys inside the browser's autocomplete menu, mark the identifier field
-`autocomplete="username webauthn"` and start
-`Passkey.autofill(options, { signal: handle.signal })` when the island mounts. It stays pending
-until someone picks a credential.
-
-<note>
-A browser keeps one ceremony open at a time. `handle.signal` aborts the autofill when the
-island disconnects, which releases it for the next one.
-</note>
+two URLs. Enrollment is the same shape with `Passkey.register` in place of
+`Passkey.authenticate`; there, an `AlreadyRegisteredError` means this device is already
+enrolled, so point the person at signing in instead.
 
 ## Test the endpoints
 

@@ -14,9 +14,8 @@ outcomes:
 
 Most packages here publish one entry point — reach for the name and you have the whole thing.
 Where a package covers several concerns, each concern is its own subpath, and importing one
-leaves the rest out of your bundle entirely. This page shows the subpath shapes that recur
-across the collection, so you can guess where an adapter, a middleware or a test suite lives
-before you open a README.
+leaves the rest out of your bundle. This page shows the subpath shapes that recur, so you can
+guess where an adapter, a middleware or a test suite lives before you open a README.
 
 ```bash
 npm add @sdxc/cache @sdxc/http @sdxc/markdown @sdxc/rate-limit @sdxc/result @sdxc/u
@@ -85,9 +84,8 @@ import { openDatabase } from "~/app/initializers/database";
 conformance({ name: "D1Cache", create: () => new D1Cache(openDatabase()) });
 ```
 
-`conformance` registers Vitest tests, so it runs inside your own test file. Leave out its
-`expire` option when your adapter can only expire in real time, and the suite skips the expiry
-cases. [`@sdxc/jobs`](/api/jobs), [`@sdxc/messaging`](/api/messaging),
+`conformance` registers Vitest tests, so it runs inside your own test file.
+[`@sdxc/jobs`](/api/jobs), [`@sdxc/messaging`](/api/messaging),
 [`@sdxc/newsletter`](/api/newsletter) and [`@sdxc/flags`](/api/flags) publish the same subpath
 for their contracts.
 
@@ -119,10 +117,9 @@ import { Policies } from "@sdxc/http/cache";
 import { ok } from "@sdxc/http/response/json";
 ```
 
-The package is several independent concerns that happen to be about HTTP — caching, content
-negotiation, status codes, responses — and a root that re-exported all of them would make
-importing the status codes drag in the caching layer. The subpath is the unit, so the import
-names what you actually wanted.
+The package is several independent concerns about HTTP — caching, content negotiation, status
+codes, responses — so the subpath is the unit, and importing the status codes leaves the
+caching layer out.
 
 <note>
 Only the subpaths a package's manifest names are importable. A path into a package's internals,
@@ -132,9 +129,8 @@ file you want sits deeper in the source.
 
 ## Why this rather than more packages
 
-The alternative is publishing `@sdxc/http-cache` and `@sdxc/http-status` as separate releases.
 Subpaths keep concerns that version together in one release, so a change that touches two of
-them lands as one version that you take at once, while you still pay only for what you import.
+them lands as one version, while you still pay only for what you import.
 
 ## Where to go next
 

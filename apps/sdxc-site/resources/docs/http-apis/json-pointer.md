@@ -18,10 +18,6 @@ points at that member. The empty string is the whole document.
 
 [`@sdxc/json-pointer`](/api/json-pointer) is that encoding. Fallible calls return a
 [`@sdxc/result`](/api/result), so a missing path is a branch rather than `undefined`.
-[`@sdxc/problem`](/api/problem) writes the same pointers onto validation issues, and
-[`@sdxc/merge-patch`](/api/merge-patch) names the member a patch cannot express.
-[`@sdxc/json-patch`](/api/json-patch) aims every operation at a pointer, and each node
-[`@sdxc/jsonpath`](/api/jsonpath) selects carries a location that `stringify` turns into one.
 
 ```bash
 npm add @sdxc/json-pointer @sdxc/problem @sdxc/result
@@ -42,8 +38,7 @@ stringify([]); // ""
 unwrap(parse("")); // []
 ```
 
-A string that does not start with `/`, or that contains a `~` not followed by `0` or `1`,
-fails. Callers that already hold segments skip `parse` and pass them to `stringify`.
+A string that does not start with `/`, or holds a `~` not followed by `0` or `1`, fails.
 
 ## Read a value
 
@@ -62,9 +57,6 @@ unwrap(get(document, "/a~1b")); // 1
 let missing = get(document, "/foo/9");
 isFailure(missing); // true
 ```
-
-The empty pointer is the document itself. Use it when a problem's `pointer` is `""` and the
-issue is about the whole body.
 
 ## Write a value
 
@@ -88,17 +80,14 @@ let missing = set({}, "/a/b", 1);
 isFailure(missing); // true
 ```
 
-A key named `__proto__` is stored as data. The original document is left unchanged.
+The original document is left unchanged.
 
 ## Name a validation issue
 
 A problem's `errors` entries point at the member each issue is about. `issuesFrom` in
-[`@sdxc/problem`](/docs/http-apis/json-apis) writes those pointers for the issues a schema
-reports, and `toPointer` from the same package does it for an issue you raise yourself, such
-as a check that needs the database. Both escape every segment, so a member named `a/b` still
-points at itself.
-
-Here a book's `labels` object is keyed by names the user chose, so a label may hold a `/`:
+[`@sdxc/problem`](/docs/http-apis/json-apis) writes them for schema issues, and `toPointer`
+does it for an issue you raise yourself. Here a book's `labels` are keyed by names the user
+chose, so a label may hold a `/`:
 
 ```typescript {% title="app/services/books/label-issues.ts" %}
 import type { ProblemIssue } from "@sdxc/problem";
@@ -114,18 +103,12 @@ export function unknownLabelIssue(label: string): ProblemIssue {
 }
 ```
 
-`toPointer` takes a Standard Schema issue path, so segments may be keys or `{ key }`
-objects. When the path is plain strings and numbers, `stringify` from `@sdxc/json-pointer`
+`toPointer` takes a Standard Schema issue path; for plain strings and numbers, `stringify`
 gives the same pointer.
-
-A merge-patch `diff` that would set a member to a literal `null` fails with that member's
-pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors and
-`@sdxc/well-known` JSON document issues name the same locations.
 
 ## Test the pointer
 
-The case worth pinning is the label whose name holds the separator: the pointer the issue
-carries must resolve to that label in the body the client sent.
+The case worth pinning is a label whose name holds the separator:
 
 ```typescript {% title="app/services/books/label-issues.test.ts" %}
 import { get } from "@sdxc/json-pointer";
@@ -147,6 +130,6 @@ test("a label named sci-fi/classic still points at itself", () => {
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — `issuesFrom` writes
   these pointers onto a `422`.
-- [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — a patch that cannot
-  express a `null` names the member with a pointer.
+- [Accept JSON Patch updates](/docs/http-apis/json-patch) — every patch operation aims at a
+  pointer.
 - [`@sdxc/json-pointer`](/api/json-pointer) — every error type and the empty-pointer cases.

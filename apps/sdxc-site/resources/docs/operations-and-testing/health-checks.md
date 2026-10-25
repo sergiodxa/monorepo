@@ -9,7 +9,7 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to answer `GET /health` with a dependency report from `@sdxc/health`"
     - "How to probe D1, KV, R2, Durable Objects and third-party APIs without writing anything"
-    - "How to read and validate another service's health report"
+    - "How to read another service's health report"
 ---
 
 A health check that answers `200` as soon as the Worker starts tells a monitor very little:
@@ -21,7 +21,7 @@ response follows the `application/health+json` format that load balancers and up
 recognize.
 
 ```bash
-npm add @sdxc/health @sdxc/json-schema @sdxc/result remix
+npm add @sdxc/health @sdxc/result remix
 npm add -D msw
 ```
 
@@ -91,9 +91,8 @@ export default createAction(routes.health, (ctx) => health.respond(ctx));
 
 Each check is keyed `<name>:responseTime` and records how long its probe took. A check that
 did not pass carries an `output` naming the kind of failure (`"error"`, `"timeout"`,
-`"HTTP 503"`), and the report's own `output` lists those checks, so an alert says which
-dependency broke. The error itself goes to the request's log through
-[`@sdxc/logger`](/api/logger), with the probe's name, and stays out of the public response.
+`"HTTP 503"`), so an alert says which dependency broke. The error itself goes to the request's
+log and stays out of the public response.
 
 ## Probe every binding, read-only
 
@@ -122,8 +121,7 @@ health.probe("feeds", () => env.FEED.getByName("healthcheck").ping(), {
   at most one extra instance per class, ever. Calling it constructs the class, so a
   constructor that throws fails the check.
 
-The Durable Object needs the method the probe calls. A class with SQLite storage runs a query
-in it, so the probe also reaches its storage:
+The Durable Object needs the method the probe calls:
 
 ```typescript {% title="app/models/feed.ts" %}
 import { DurableObject } from "cloudflare:workers";
@@ -143,8 +141,7 @@ Leave out bindings whose every call has an effect: a queue `send` delivers a mes
 A service a user-facing feature depends on gets a probe too. Prefer the provider's own health
 endpoint; without one, the cheapest authenticated read with no side effects also proves your
 credential still works. A probe can return `fetch` as it is, since a 2xx `Response` passes
-and any other status fails with `"HTTP <status>"`. Its body is cancelled unread, so no
-connection stays open.
+and any other status fails with `"HTTP <status>"`.
 
 ```typescript {% title="app/initializers/health.ts" %}
 health.probe(
@@ -157,78 +154,24 @@ health.probe(
 		links: { about: "https://status.payments.example.com" },
 	},
 );
-
-health.probe(
-	"github",
-	(_, signal) =>
-		fetch("https://api.github.com/rate_limit", {
-			headers: {
-				authorization: `Bearer ${env.GITHUB_TOKEN}`,
-				"user-agent": "jobs-board",
-			},
-			signal,
-		}),
-	{ critical: false, componentType: "system" },
-);
 ```
 
-`affectedEndpoints` names the routes that break while the check fails, and appears only on a
-check that did not pass. `links.about` is the place for the provider's status page: it
-reports declared incidents, so it helps whoever reads the alert, while the probe answers
-whether your Worker reaches the API.
-
-### Critical and non-critical dependencies
+`affectedEndpoints` names the routes that break while the check fails. Hand the probe's
+`signal` to `fetch`, so the work stops at the probe's `timeout` (`2_000` milliseconds unless
+you set one) instead of running on after the report is sent.
 
 A probe is critical by default: its failure makes the report `fail` and the response `503`.
 Register it with `critical: false` when the app keeps doing its job without the dependency,
 for example when pages serve a cached copy of what the service returns. Its failure is then
-reported as `warn`, the response stays `200`, and the check still names what broke.
-
-Decide by what a visitor loses. A store every page reads is critical; a sign-in method among
-several, an advisory lookup or a service whose data is cached is not.
-
-### Bound every probe with its timeout
-
-Each probe gets `timeout` milliseconds, `2_000` unless the constructor or the probe's own
-options say otherwise, and fails with `output: "timeout"` when it runs out. The second
-argument a probe receives is an `AbortSignal` that aborts at that moment. Hand it to `fetch`,
-or to anything else that takes a signal, and the work stops at the timeout instead of
-running on after the report is sent.
-
-To also stop when the monitor disconnects, combine it with the request's signal:
-
-```typescript {% title="app/initializers/health.ts" %}
-health.probe("search", (ctx, signal) =>
-	fetch("https://search.example.com/health", {
-		signal: AbortSignal.any([ctx.request.signal, signal]),
-	}),
-);
-```
-
-Binding calls take no signal. The runner still stops waiting for them at the timeout, so a
-hanging namespace makes the check fail on time while the call settles in the background.
-The whole report is therefore bounded by the longest probe timeout.
+reported as `warn` and the response stays `200`.
 
 ## Read another service's report
 
 When a probe's `Response` is itself `application/health+json`, the runner reads the report
-and judges the dependency by what it says, not only by its status code. A service answering
-`200` with `"status": "fail"` fails the check (`warn` when the probe is not critical), one
-reporting `warn` warns, and the dependency's `serviceId` becomes the check's `componentId`.
-Its own checks and notes stay out of your report, since they describe its internals.
-
-```typescript {% title="app/initializers/health.ts" %}
-health.probe(
-	"identity",
-	(_, signal) => fetch("https://id.example.com/health", { signal }),
-	{ componentType: "system" },
-);
-```
-
-Outside a probe, for a status page or a monitor of your own, read a report with
-`parseHealth`. It takes the body text, validates it, and normalizes every status the format
-allows (`pass`, `ok`, `up`, `warn`, `fail`, `error`, `down`, in any case) to `pass`, `warn`
-or `fail`:
+and judges the dependency by what it says: a service answering `200` with `"status": "fail"`
+fails the check. Outside a probe, for a status page or a monitor of your own, read a report
+with `parseHealth`, which validates the body and normalizes every status the format allows to
+`pass`, `warn` or `fail`:
 
 ```typescript {% title="app/services/dependencies.ts" %}
 import { isHealthResponse, parseHealth } from "@sdxc/health";
@@ -250,40 +193,6 @@ export async function readStatus(url: string) {
 returns a failed `Result` naming why when the body is not JSON or not a report, so a
 malformed answer is something you branch on rather than an exception.
 
-## Validate with the JSON Schema
-
-The format ships as a schema in two forms. `@sdxc/health/schema` validates in code and
-converts to JSON Schema, which is how an OpenAPI document describes the route's response:
-
-```typescript {% title="app/services/dependencies.ts" %}
-import HEALTH_REPORT from "@sdxc/health/schema";
-import * as s from "@sdxc/json-schema";
-
-export function validateReport(json: unknown) {
-	let result = s.parseSafe(HEALTH_REPORT, json);
-	return result.success ? result.value : null;
-}
-
-export const HEALTH_REPORT_DOCUMENT = s.toJSONSchema(HEALTH_REPORT);
-```
-
-`parseSafe` comes from `remix/data-schema`, so a report that does not validate yields its
-issues rather than throwing. `toJSONSchema` returns a `Result` holding the document.
-
-`@sdxc/health/schema.json` is the same schema as a static JSON Schema 2020-12 document, for
-tools outside JavaScript. Its `$id` is `https://sdxc.dev/schemas/health.json`, and that URL
-serves the document, so an editor, a CI step or another monitor can reference it directly:
-
-```json
-{
-	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$ref": "https://sdxc.dev/schemas/health.json"
-}
-```
-
-Both accept everything the format allows from any service, not only what `HealthCheck`
-emits: `status` is the one required field, and both levels allow extra keys.
-
 ## Test the report
 
 The probes call real bindings, so the test runs in the Workers pool, where KV, R2, D1 and the
@@ -302,9 +211,6 @@ import { createWebRouter } from "~/app/initializers/router";
 
 let server = setupServer(
 	http.get("https://api.payments.example.com/healthz", () => HttpResponse.json({})),
-	http.get("https://api.github.com/rate_limit", () => HttpResponse.json({})),
-	http.get("https://search.example.com/health", () => HttpResponse.json({})),
-	http.get("https://id.example.com/health", () => HttpResponse.json({})),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));

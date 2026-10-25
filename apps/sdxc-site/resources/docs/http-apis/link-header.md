@@ -15,26 +15,16 @@ outcomes:
 A `Link` header is a list of URI-References with relation types and parameters. A target
 can contain a comma and a parameter value can be quoted, so
 [`@sdxc/link-header`](/api/link-header) splits entries only on the commas outside angle
-brackets and quoted strings.
-
-Malformed entries are dropped, so a merge into a response already under construction cannot
-fail on one bad link. [`@sdxc/pagination`](/api/pagination) writes paging relations with
-this package, [`@sdxc/websub`](/api/websub) advertises hubs, and
-[`@sdxc/webmention`](/api/webmention) discovers an endpoint from the header first.
+brackets and quoted strings, and drops malformed entries, so one bad link never fails a
+response.
 
 ```bash
 npm add @sdxc/link-header
 ```
 
-`Link` is RFC 8288. Newer fields such as `RateLimit` and `Cache-Status` use RFC 9651,
-which [Canonical URLs, lazy routes and header fields](/docs/building-remix-apps/router-utilities)
-covers with `@sdxc/structured-fields`.
-
 ## Parse a header
 
-`parse` splits the value into entries in source order. `parse(null)` is `[]`. The call
-never throws. A `type` parameter lands in `params.type`, which is how a feed reader learns
-the advertised media type.
+`parse` splits the value into entries in source order, and `parse(null)` is `[]`:
 
 ```typescript {% title="app/services/read-links.ts" %}
 import { parse } from "@sdxc/link-header";
@@ -50,9 +40,8 @@ links[0]?.params; // { as: "style" }
 links.find((link) => link.rels.includes("next"))?.target; // "/items?page=2"
 ```
 
-`rels` is the first `rel` parameter, lowercased and split on whitespace. `params` keeps
-the first of every other name, unquoted. An entry with no URI-Reference is skipped, so a
-malformed fragment ends that one link rather than the walk.
+`rels` is the `rel` parameter, lowercased and split on whitespace, and `params` holds every
+other parameter, unquoted.
 
 <note>
 Relative targets stay relative, and `fetch` in a Worker needs an absolute URL. Resolve each
@@ -62,9 +51,8 @@ it.
 
 ## Write a header
 
-`serializeLink` renders one link-value with a quoted `rel` and any extra parameters after
-it. `stringify` joins those texts. `stringify([])` is `null`, so the caller deletes the
-header instead of writing an empty one.
+`serializeLink` renders one link-value with quoted parameters, and `stringify` joins them.
+`stringify([])` is `null`, so the caller deletes the header instead of writing an empty one:
 
 ```typescript {% title="app/services/write-links.ts" %}
 import { serializeLink, stringify } from "@sdxc/link-header";
@@ -75,8 +63,6 @@ stringify([
 ]);
 // <https://api.example.com/items?page=2>; rel="next", </feed.xml>; rel="self"; type="application/atom+xml"
 ```
-
-Values are quoted so a comma inside one cannot split the header.
 
 ## Merge without dropping foreign links
 
@@ -124,10 +110,8 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 }
 ```
 
-[Paginate lists](/docs/http-apis/paginate-lists) is the server side of those headers.
 [Write a typed API client](/docs/http-apis/api-clients) does the same walk behind a schema
-on each page. When an API hands out a template such as `/books{?page}` rather than a finished
-link, [Expand URI templates](/docs/http-apis/uri-templates) fills it in.
+on each page.
 
 ## Publish the links as a link set
 
@@ -147,15 +131,12 @@ export function linksetResponse(header: string | null, context: string): Respons
 }
 ```
 
-`context` is the URL the links describe: it fills each link's missing `anchor` and resolves
-relative targets, so the set keeps its meaning away from the response it came from.
-`parseJson` reads a set back as a `Result`, listing every member that breaks the RFC at a JSON
-Pointer, and `toHeader` turns the list into one `Link` value again.
+`context` is the URL the links describe, so the set keeps its meaning away from the response
+it came from.
 
 ## Test the merge
 
-`setNextLink` works on a `Headers` instance, so its test needs no request. The case to prove
-is the foreign link surviving while `next` is replaced:
+`setNextLink` works on a `Headers` instance, so its test needs no request:
 
 ```typescript {% title="app/services/set-next-link.test.ts" %}
 import { parse } from "@sdxc/link-header";

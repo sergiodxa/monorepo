@@ -18,7 +18,7 @@ and moves the project to a newer release with a prompt that tells an AI agent wh
 the code you have.
 
 It ships in [`@sdxc/kit`](/api/kit). Install it globally so you can type the commands as
-written; your app imports each package it uses by its own name, such as `@sdxc/result`:
+written:
 
 ```bash
 npm add -g @sdxc/kit

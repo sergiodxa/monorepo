@@ -9,7 +9,7 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to find the modules a project imports"
     - "How to rename a package or move names to another module across every file"
-    - "How to add and remove declarations and calls while changing only the text each edit touches"
+    - "How to add declarations and calls while changing only the text each edit touches"
 ---
 
 A tool that changes code for people, such as a migration script, a generator or an upgrade
@@ -73,14 +73,11 @@ for (let file of await projectFiles(process.cwd())) {
 process.stdout.write(`${[...used].sort().join("\n")}\n`);
 ```
 
-The file name's extension decides how the text is read: `.ts` as TypeScript, `.tsx` as
-TypeScript with JSX, and every JavaScript extension with JSX. Strings, comments, template
-literals, regular expressions and JSX text are tokens of their own, so a specifier written
-inside a string or a paragraph is never mistaken for an import. `calls` adds the first argument
-of listed calls, such as `vi.mock` or `require`, as `call` references.
-
-A file the scanner cannot read fails with its position, such as
-`page.tsx:12:8: string is never closed`, and the script above reports it and moves on.
+The file name's extension decides how the text is read, `.tsx` as TypeScript with JSX. Strings,
+comments and JSX text are tokens of their own, so a specifier written inside a string is never
+mistaken for an import. `calls` adds the first argument of listed calls, such as `vi.mock`, as
+`call` references. A file the scanner cannot read fails with its position, such as
+`page.tsx:12:8: string is never closed`.
 
 ## Rename a package everywhere
 
@@ -116,7 +113,7 @@ for (let file of await projectFiles(process.cwd())) {
 
 `@acme/ui/icons` becomes `@acme/design/icons`, and a dynamic `import("@acme/ui/chart")`
 moves with the static imports. Writing only when `changed` keeps every untouched file's
-modification time, so a watcher or a build cache sees only the files that moved.
+modification time.
 
 ## Move names to another module
 
@@ -139,21 +136,10 @@ import { Dialog } from "~/components/dialog";
 ```
 
 A declaration whose names all move has its specifier replaced in place. Otherwise it keeps the
-rest, and the moved names join one declaration of the new module, keeping their aliases,
-`type` modifiers and the file's quote and semicolon style. Name `"default"` to move a default
-import and `"*"` to move a namespace import or `export *`.
-
-A namespace import of the old module that stays, such as `import * as ui from "@acme/ui"`,
-still reaches the moved name as `ui.Dialog`, and no rewrite of the import line can fix that.
-The edit returns it in `unhandled` and leaves it as it is, so report each one for a person to
-change:
-
-```typescript {% title="scripts/adopt-dialog.ts" %}
-for (let reference of edit.data.unhandled) {
-	let text = source.slice(reference.range.start, reference.range.end);
-	process.stderr.write(`${file}: change by hand: ${text}\n`);
-}
-```
+rest, and the moved names join one declaration of the new module, keeping their aliases and
+`type` modifiers. A namespace import of the old module, such as `import * as ui from "@acme/ui"`,
+still reaches the moved name as `ui.Dialog`; the edit returns it in `unhandled`, so report each
+one for a person to change.
 
 ## Add a declaration and its call
 
@@ -191,49 +177,18 @@ export default jobs({
 
 The property follows the last one, with its siblings' indentation and trailing-comma style. A
 key that already exists fails with `duplicate-key`, so running the generator twice cannot
-declare a job twice. `insertAfterLast` places the statement on a new line after the last
-statement that calls `dispatcher.map`, at its indentation, inside a function when that is
-where the calls are; with no such call yet, it follows the declaration that calls
+declare a job twice. `insertAfterLast` places the statement after the last statement that
+calls `dispatcher.map`; with no such call yet, it follows the declaration that calls
 `createJobDispatcher`, and with neither it fails with `not-found`.
 
+<warning>
 Compute both edits before writing either. When one fails, write neither and print both for a
 person to make, so a declaration never lands without the call that maps it.
+</warning>
 
-## Remove a declaration and its call
-
-The same two edits run backwards when a generator undoes what it added. `removeProperty` takes
-the `call`, `path` and `key` `addProperty` took and removes the property with its comma, and
-its line when it sits on one; a group the removal leaves empty, such as `reports: {}`, goes
-too. `removeStatements` removes every statement holding a string literal equal to
-`specifier`, with the rest of its lines:
-
-```typescript {% title="scripts/remove-job.ts" %}
-import { removeProperty, removeStatements } from "@sdxc/codemod";
-
-let undeclared = removeProperty("app/jobs/index.ts", jobsSource, {
-	call: "jobs",
-	path: ["reports"],
-	key: "daily",
-});
-
-let unmapped = removeStatements("app/initializers/dispatcher.ts", dispatcherSource, {
-	specifier: "~/app/jobs/reports/daily",
-});
-```
-
-A missing call, path or key fails with `not-found`, and a specifier no statement holds leaves
-the source as it is. `findStatements` answers the same statements with their `text`, `start`
-and `end` without removing them, so a script can read what a mapping maps, or list it for a
-person, before it removes anything.
-
-## Trust the output
-
-Every edit scans its own output again before answering, and fails with `invalid-output` rather
-than return text that does not scan. A failure carries a `code`, the `filename` you passed, and
-an `offset` the message renders as `line:column`, so a script can say exactly which file to
-look at. `value` and `statement` are inserted as source text, indented to match the code
-around them and otherwise as written; run the project's formatter over the files you wrote for
-anything beyond indentation.
+Every edit scans its own output again and fails with `invalid-output` rather than return text
+that does not scan. `value` and `statement` are inserted as written apart from indentation, so
+run the project's formatter over the files you wrote.
 
 ## Test an edit against a fixture
 

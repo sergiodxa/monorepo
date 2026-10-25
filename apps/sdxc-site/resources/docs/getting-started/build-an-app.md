@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 3
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How `sdxc create`, `sdxc scaffold` and `sdxc run db migrate` take you from an empty folder to working pages"
     - "Where a validator, a policy, a model method and a job go, and how to change each one"
@@ -22,34 +22,19 @@ You need [Bun](https://bun.sh) to run it locally and a
 you have written a [Cloudflare Worker](https://developers.cloudflare.com/workers/) and know
 [Remix](https://remix.run) routes and controllers; it covers what `sdxc` adds on top.
 
-## Install sdxc
+## Create the project
+
+Install the `sdxc` command and create the app:
 
 ```bash
 npm add -g @sdxc/kit
-```
-
-That puts the `sdxc` command on your path. [The sdxc command](/docs/getting-started/the-sdxc-command)
-maps every command to its guide.
-
-## Create the project
-
-```bash
 sdxc create links
 ```
 
-```text
-Created links from the app template
-
-Next steps:
-  cd links
-  bun install
-  bun dev
-```
-
 `create` writes a Remix app on Cloudflare Workers with a router, a D1 database, a job queue,
-email, an MCP endpoint and their tests already wired together, and pins every `@sdxc` package
-to one release. It copies `.env.example` to `.dev.vars`, so the development secrets are in
-place. Install the dependencies, generate the Worker's `env` types, and start the dev server:
+email, an MCP endpoint and their tests already wired together, and copies `.env.example` to
+`.dev.vars` for the development secrets. Install the dependencies, generate the Worker's `env`
+types, and start the dev server:
 
 ```bash
 cd links
@@ -58,10 +43,8 @@ sdxc run typegen
 bun dev
 ```
 
-Open the address `bun dev` prints and you see the template's home page. Leave the server
-running; the next steps reload it as files change.
-[How it fits together](/docs/getting-started/how-it-fits-together) explains each folder you
-just got.
+Open the address `bun dev` prints and leave the server running; the next steps reload it as
+files change.
 
 ## Scaffold the bookmarks
 
@@ -76,32 +59,10 @@ A field's name picks its type, so `link_url` is a URL because it ends in `_url`,
 a string. `notes?:text` names the type itself, and the `?` makes it nullable; quote it so your
 shell leaves the `?` alone.
 
-```text
-Wrote app/models/bookmark.ts
-Wrote app/models/bookmark.test.ts
-Wrote database/factories/bookmark.ts
-Wrote app/http/validators/bookmark.ts
-Wrote app/http/validators/bookmark.test.ts
-Wrote app/policies/bookmark.test.ts
-Wrote resources/views/bookmarks/form.tsx
-Wrote app/http/controllers/bookmarks/index.tsx
-…
-Wrote database/migrations/0001_CreateBookmarks.sql
-Edited app/models/index.ts
-Edited app/policies/abilities.ts
-Edited app/policies/policy.ts
-Edited routes/web.ts
-Edited app/initializers/router.tsx
-Edited app/http/controllers/sitemap.ts
-Edited resources/locales/en.json
-Added @sdxc/uuid@2026.10.13, @sdxc/validate@2026.10.13 to package.json; run bun install
-✓ Formatting 27 files
-```
-
-Every file has a test beside it, `app/test/database.ts` gives those tests a migrated database
-and factories, and every edit wires a file in: the routes are declared in
-`routes/web.ts` and mapped in the router, the model is registered as `ctx.models.bookmark`, and
-the abilities join the app's policy. Install the two packages the new code imports:
+It writes the model, validator, policy, controllers, views, a migration and a test beside each,
+then wires them in: the routes go in `routes/web.ts` and the router, the model becomes
+`ctx.models.bookmark`, and the abilities join the app's policy. Install the packages the new
+code imports:
 
 ```bash
 bun install
@@ -111,22 +72,8 @@ bun install
 
 ## Create the table
 
-The scaffold wrote the migration that creates the `bookmarks` table:
-
-```sql {% title="database/migrations/0001_CreateBookmarks.sql" %}
--- CreateBookmarks: creates the bookmarks table.
-
-CREATE TABLE "bookmarks" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "title" TEXT NOT NULL,
-  "link_url" TEXT NOT NULL,
-  "notes" TEXT,
-  "created_at" INTEGER NOT NULL,
-  "updated_at" INTEGER NOT NULL
-);
-```
-
-Apply it to the local database, the same one `bun dev` serves:
+The scaffold wrote `database/migrations/0001_CreateBookmarks.sql`. Apply it to the local
+database, the same one `bun dev` serves:
 
 ```bash
 sdxc run db migrate
@@ -268,18 +215,8 @@ Edited cloudflare.config.ts
 ✓ Formatting 5 files
 ```
 
-The job is declared with its schedule in `app/jobs/index.ts` and mapped on the dispatcher.
-Cloudflare fires only the schedules the Worker declares, so `--cron` also adds the trigger that
-fires it to `cloudflare.config.ts`:
-
-```ts {% title="cloudflare.config.ts" %}
-triggers: [
-	triggers.queue({ name: manifest.name }),
-	triggers.scheduled({ schedule: "0 3 * * *" }),
-],
-```
-
-Fill in the handler, which reads the model through `ctx.models` as a controller does:
+Cloudflare fires only the schedules the Worker declares, so `--cron` also adds the trigger to
+`cloudflare.config.ts`. Fill in the handler, which reads the model through `ctx.models` as a controller does:
 
 ```ts {% title="app/jobs/bookmarks/prune.ts" %}
 /** How long a bookmark stays on the board. */
@@ -302,9 +239,6 @@ sdxc schedule
 Job              Schedule   Next run              Trigger
 bookmarks.prune  0 3 * * *  2026-10-20 03:00 UTC  cloudflare.config.ts
 ```
-
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers
-jobs with input, retries and enqueuing one from a controller.
 
 ## Run the tests
 
@@ -343,9 +277,8 @@ bun run test
       Tests  77 passed (77)
 ```
 
-The page tests drive the app's real router, so the honeypot, the policy and the validator all
-run as they do in the Worker. [Test your app](/docs/operations-and-testing/test-your-app) shows
-how to run one file or one case while you work.
+The page tests drive the app's real router, so the policy and the validator run as they do in
+the Worker.
 
 ## Check the project
 
@@ -356,11 +289,9 @@ bun check
 sdxc doctor
 ```
 
-`bun check` formats, lints and type checks. `sdxc doctor` checks the project itself: every
-`@sdxc` package on one release, every secret `cloudflare.config.ts` declares listed in
-`.env.example`, the migrations replaying on an empty database, every route mapped through
-`lazy()`, every model registered, and every declared email mapped to a template. [Check a project](/docs/sdxc/check-a-project) lists each
-check and its fix.
+`bun check` formats, lints and type checks. `sdxc doctor` checks the project itself, such as
+every `@sdxc` package on one release and the migrations replaying on an empty database;
+[Check a project](/docs/sdxc/check-a-project) lists each check and its fix.
 
 ## Deploy
 

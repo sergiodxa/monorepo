@@ -9,18 +9,14 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
     - "How to compare the records with live DNS"
-    - "How to export the zone as a file and read one with includes"
+    - "How to export the zone as a normalized file"
 ---
 
-DNS will not list the names in a zone from outside it. A resolver answers questions about names
-you already know, so an app that monitors, migrates or audits someone's DNS has to learn the
-names some other way. The usual way is the zone file: every DNS provider exports one, and it
-holds every record, subdomains included.
-
-This guide imports a pasted zone file into an app and exports it back.
-[`@sdxc/zone-file`](/api/zone-file) reads and writes the RFC 1035 format and reports every line
-it could not use. [`@sdxc/doh`](/api/doh) looks the records up over DNS over HTTPS, since a
-Worker has no DNS socket. [`@sdxc/validate`](/api/validate) checks the form, and
+DNS will not list the names in a zone from outside it, so an app that monitors, migrates or
+audits someone's DNS learns them from the zone file every provider exports. This guide imports a
+pasted zone file and exports it back. [`@sdxc/zone-file`](/api/zone-file) reads and writes the
+RFC 1035 format and reports every line it could not use, [`@sdxc/doh`](/api/doh) looks the
+records up over DNS over HTTPS, [`@sdxc/validate`](/api/validate) checks the form, and
 [`@sdxc/http`](/api/http) sends the export as a download.
 
 ```bash
@@ -30,10 +26,8 @@ npm add @sdxc/doh @sdxc/http @sdxc/result @sdxc/validate @sdxc/zone-file remix
 ## Read the paste
 
 `parse` takes the text and the zone's origin, the domain that `@` and relative names stand for.
-Provider exports differ in small ways. Some drop the trailing dot on a fully-qualified name, which
-RFC 1035 reads as relative: `example.com` written in the `example.com` zone means
-`example.com.example.com`. `relativeNames: "origin-suffix"` reads such a name as the absolute
-name it was meant to be:
+Some provider exports drop the trailing dot on a fully-qualified name, and
+`relativeNames: "origin-suffix"` reads such a name as the absolute name it was meant to be:
 
 ```typescript {% title="app/services/zones/read-zone.ts" %}
 import * as ZoneFile from "@sdxc/zone-file";
@@ -49,24 +43,15 @@ export function readZone(text: string, domain: string) {
 }
 ```
 
-The `Result` fails in one case only: text past `maxBytes`, where the error's `bytes` says how
-large it was. Everything else succeeds with `records` and `rejected`. A file with one bad line
-in a thousand still gives you the other 999, and the bad line comes back with its `line`, the
-`input` as written and a `reason`: `malformed`, `invalid-data` for an `A` record that is not an
-address, `missing-owner`, `include`, or `unsupported-directive` for `$GENERATE`.
-
-The full grammar is read: `$ORIGIN`, `$TTL`, records spread over lines with parentheses, lines
-that start with whitespace to reuse the previous name, TTLs like `1h30m`, and escaped names. Each
-record comes back with an absolute, lowercased `name`, its `ttl`, `class`, `type`, the line it
-started on, its trailing `;` comment, and typed fields: `address` for `A`, `preference` and
-`exchange` for `MX`, `text` and `strings` for `TXT`, down to `priority`, `target` and `params`
-for `HTTPS`, and the key, digest and certificate fields of `DNSKEY`, `DS` and `TLSA`.
+The `Result` fails only for text past `maxBytes`. Everything else succeeds with `records` and
+`rejected`: a file with one bad line in a thousand still gives you the other 999, and the bad
+line comes back with its `line` and a `reason`. Each record has an absolute, lowercased `name`,
+its `ttl`, `class`, `type`, `line`, and typed fields such as `address` for `A`.
 
 ## Keep the records you track
 
-`parse` returns every record it read, including records outside the domain, repeats, classes
-other than `IN` and types you may not handle. Deciding what to keep is a policy, and it is a
-filter over the records:
+`parse` returns every record it read, including records outside the domain, repeats and types
+you may not handle. Deciding what to keep is a filter over the records:
 
 ```typescript {% title="app/services/zones/tracked-records.ts" %}
 import type { ZoneFile } from "@sdxc/zone-file";
@@ -107,10 +92,8 @@ export function trackedRecords(records: ZoneFile.Record[], domain: string) {
 }
 ```
 
-`formatRecordData` prints a record's data in one canonical spelling, so it makes a good identity
-key. `2001:DB8::1` and `2001:db8:0:0:0:0:0:1` print the same, and so do a CAA record written
-`0 ISSUE "ca.example"` and the RFC 3597 form `\# 15 00 05 …` a resolver may answer with. A
-record a file lists twice is kept once, since DNS serves it once.
+`formatRecordData` prints a record's data in one canonical spelling, so `2001:DB8::1` and
+`2001:db8:0:0:0:0:0:1` share a key and a record listed twice is kept once.
 
 <note>
 An unquoted TXT value is several character-strings, as DNS reads it, so `v=spf1 -all` imports
@@ -120,9 +103,8 @@ hand-written files.
 
 ## Accept the paste
 
-The action validates the form, reads the zone, and either shows the review screen or the
-reasons it cannot. The review screen should show the skipped and rejected lines next to the
-records, so the person importing sees what the import covers and what it does not:
+The action validates the form, reads the zone, and shows a review screen with the skipped and
+rejected lines next to the records:
 
 ```tsx {% title="app/http/controllers/zones/import.tsx" %}
 import { isFailure } from "@sdxc/result";
@@ -171,16 +153,14 @@ export default createAction(routes.zones.import, async (ctx) => {
 });
 ```
 
-`maxLength` counts characters while `maxBytes` counts UTF-8 bytes. The schema stops an
-oversized paste early, and `parse` gives the exact limit. Once the person confirms the review, a
-second action stores the records it lists.
+The schema stops an oversized paste early, and `parse` enforces the exact byte limit. Once the
+person confirms the review, a second action stores the records.
 
 ## Compare with live DNS
 
-A zone file says what the provider holds. A resolver says what the world sees. Comparing the two
-finds records that are still propagating or edited by hand on the provider's side. `resolve`
-returns records with the same typed fields `parse` gives, so the same `formatRecordData` key
-lines them up:
+A zone file says what the provider holds and a resolver says what the world sees, so comparing
+the two finds records still propagating. `resolve` returns the same typed fields `parse` gives,
+so `formatRecordData` lines them up:
 
 ```typescript {% title="app/services/zones/compare.ts" %}
 import { resolve } from "@sdxc/doh";
@@ -213,26 +193,17 @@ export async function missingFromDns(records: TrackedRecord[]) {
 }
 ```
 
-A failed lookup counts every record in the group as missing. Use the error classes to tell
-NXDOMAIN, where the name is gone, apart from a resolver having a bad minute, as
-[Custom domains for your customers](/docs/identity-and-security/verify-domains) does.
+A failed lookup counts every record in the group as missing.
 
 <note>
 The comparison sends one query per name and type, which adds up on a large zone, so run it in a
 background job and keep the request to the import.
 </note>
 
-Matching text tells you a TXT record is live, and a DMARC, SPF or DKIM record also has to read
-the way a mail receiver reads it. `parseDmarcRecord`, `parseSpfRecord` and `parseDkimRecord`
-from [`@sdxc/email-auth`](/api/email-auth) check an imported record's text;
-[Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
-evaluates the live ones.
-
 ## Export the zone
 
 `stringify` writes records back as a zone file. With `relative: true`, names under the origin are
-written relative to it and the apex as `@`, the form people keep in git and paste into another
-provider:
+written relative to it and the apex as `@`:
 
 ```typescript {% title="app/http/controllers/zones/export.ts" %}
 import { file } from "@sdxc/http/response";
@@ -258,57 +229,14 @@ export default createAction(routes.zones.export, async (ctx) => {
 });
 ```
 
-`Zones` is your own table, holding each record's name, type, TTL and typed fields as `parse`
-returned them. `file()` sends the text as a download named after the domain, typed `text/dns`,
-the media type registered for zone files. The file starts with `$ORIGIN` and `$TTL`, and a record's TTL is written only when
-it differs from `$TTL`. Records parsed from a file go back out through `stringify` and parse
-again to the same records. Spacing, comments on lines of their own and parentheses are not kept,
-so an export is normalized: two exports of the same zone diff only where the records differ.
-
-## Read a zone with includes
-
-A zone kept in a repository is often split up, with `$INCLUDE` lines pulling in a file per
-service. `parse` has no file system, so the `include` option hands it the text. Without the
-option, every `$INCLUDE` is rejected with the `include` reason:
-
-```typescript {% title="scripts/check-zone.ts" %}
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
-import { isFailure } from "@sdxc/result";
-import * as ZoneFile from "@sdxc/zone-file";
-
-let directory = "zones";
-let parsed = ZoneFile.parse(
-	readFileSync(join(directory, "example.com.zone"), "utf8"),
-	{
-		origin: "example.com",
-		include: (fileName) => readFileSync(join(directory, fileName), "utf8"),
-	},
-);
-
-if (isFailure(parsed)) throw parsed.error;
-for (let rejection of parsed.data.rejected) {
-	console.error(
-		`${rejection.file ?? "example.com.zone"}:${rejection.line} ${rejection.message}`,
-	);
-}
-process.exitCode = parsed.data.rejected.length > 0 ? 1 : 0;
-```
-
-Each record and rejection names the `file` it came from, `null` for the text passed to `parse`.
-
-<note>
-The included text counts toward `maxBytes`, and includes nest up to eight files deep.
-</note>
-
-Run it in CI and a typo in a zone fails the build with its file and line, before a provider rejects it.
+`Zones` is your own table, holding the records as `parse` returned them. The export is
+normalized, so two exports of the same zone diff only where the records differ.
 
 ## Test the import
 
-`readZone` and `trackedRecords` take text and records and answer data, so their test needs no
-request. One paste with a provider's missing trailing dot, a repeat, an unusable line and a
-record outside the domain covers the import's decisions:
+`readZone` and `trackedRecords` answer data, so their test needs no request. One paste with a
+missing trailing dot, a repeat, an unusable line and a record outside the domain covers the
+import's decisions:
 
 ```typescript {% title="app/services/zones/tracked-records.test.ts" %}
 import { unwrap } from "@sdxc/result";
@@ -339,8 +267,7 @@ test("keeps each tracked record once and reports the rest by line", () => {
 });
 ```
 
-`www.example.com` without its trailing dot reads as the absolute name because of
-`relativeNames: "origin-suffix"`. A test for `missingFromDns` answers its DNS over HTTPS
+A test for `missingFromDns` answers its DNS over HTTPS
 requests with MSW, as [Test Workers apps](/docs/operations-and-testing/testing) shows for
 outbound HTTP.
 

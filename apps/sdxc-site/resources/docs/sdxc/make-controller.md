@@ -57,23 +57,10 @@ sdxc make controller posts/archive --resource post --method delete
 
 ## What it writes
 
-The file comes from the stub that fits the route:
-
-| Stub                            | Written for                                   | What it is                                                 |
-| ------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| `controller.stub`               | any method on a contract without its own stub | a page rendered in the document layout with the page chain |
-| `controller.form.stub`          | `--method form`                               | a page with a form and the action that receives it         |
-| `controller.api.stub`           | `--routes api`                                | a JSON endpoint with the API chain                         |
-| `controller.resource.stub`      | `--resource`                                  | the page, checking the resource's ability first            |
-| `controller.resource.form.stub` | `--resource` with `--method form`             | the form, checking the ability in both actions             |
-| `controller.api.resource.stub`  | `--resource` with `--routes api`              | the JSON endpoint, checking the ability first              |
-
-A contract with a stub named after it, `controller.<contract>.stub`, takes that stub, so a
-project can add `controller.admin.stub` for `--routes admin`. `--method` sets the route helper
-the contract declares; the handler's shape comes from the stub, so a `post` route on the web
-contract starts from the page stub for you to turn into the action you need.
-
-The page controller for `sdxc make controller sponsors`:
+The file comes from the stub that fits the route: a page by default, a form with
+`--method form`, a JSON endpoint with `--routes api`, each checking an ability first with
+`--resource`. A contract with its own `controller.<contract>.stub` takes that stub. The page
+controller for `sdxc make controller sponsors`:
 
 ```tsx {% title="app/http/controllers/sponsors.tsx" %}
 import { createAction } from "remix/router";
@@ -102,16 +89,13 @@ export default createAction(routes.sponsors, {
 
 `--method form` writes a `createController` with two actions: `index` renders the form with its
 honeypot fields and Turnstile widget, and `action` receives the submission behind the CAPTCHA
-and spam checks, then redirects back with a `303`. A form route with params, such as
-`--path "/posts/:id/edit"`, builds its form action and redirect with `href(ctx.params)`, and its
-test requests it with sample values (`{ id: "1" }`). `--routes api` writes a `createAction` with
+and spam checks, then redirects back with a `303`. `--routes api` writes a `createAction` with
 the API chain that answers `Response.json({})`.
 
 ## Guard it with a resource's abilities
 
 `--resource <name>` checks the request's access against the abilities
-[`sdxc make policy <name>`](/docs/sdxc/make-policy) declares, the way a scaffolded controller
-does. `--method` picks the ability:
+[`sdxc make policy <name>`](/docs/sdxc/make-policy) declares. `--method` picks the ability:
 
 | `--method`     | Ability                 | Refused, or the row hidden or missing                |
 | -------------- | ----------------------- | ---------------------------------------------------- |
@@ -121,10 +105,9 @@ does. `--method` picks the ability:
 | `delete`       | `<name>.read`, `delete` | `404` when the read is refused, `403` for the delete |
 
 A read, update or delete checks one row, so its route defaults to `/<controller>/:id`, and a
-`--path` must hold `:id`. When `app/models/<name>.ts` exports its row type, the row comes from
-`ctx.models`, so a missing one is a 404 like a hidden one; otherwise it is `{ id: ctx.params.id }`
-for you to replace. `sdxc make controller posts/archive --resource post --method delete` starts
-its handler with:
+`--path` must hold `:id`. The row comes from `ctx.models` when `app/models/<name>.ts` exports its
+row type, so a missing one is a 404 like a hidden one.
+`sdxc make controller posts/archive --resource post --method delete` starts its handler with:
 
 ```tsx {% title="app/http/controllers/posts/archive.tsx" %}
 let row = await ctx.models.post.find(ctx.params.id);
@@ -148,14 +131,12 @@ if (!ctx.access.can(abilities.post.delete, { post: row })) {
 ```
 
 Run `sdxc make policy <name>` first; when `app/policies/abilities.ts` does not declare the
-resource yet, `make` writes the controller and prints a note saying so. A nested name checks the
-nested group: `--resource billing/invoice` checks `abilities.billing.invoice.*` against
-`{ invoice: row }`.
+resource yet, `make` writes the controller and prints a note saying so.
 
 ## Every action of a resource
 
 `--actions` writes one controller per action under the name, each with the method and route a
-resource's pages take, and formats them together:
+resource's pages take:
 
 ```bash
 sdxc make controller posts --actions all --resource post
@@ -169,26 +150,11 @@ sdxc make controller posts --actions all --resource post
 | `edit`    | form at `/posts/:id/edit` | `update`                  |
 | `destroy` | `POST /posts/:id/destroy` | `delete`                  |
 
-In the `api` contract the actions are the endpoints of a JSON resource:
-
-```bash
-sdxc make controller api/posts --routes api --actions index,show,create,update,destroy
-```
-
-| Action    | Route               | Ability with `--resource` |
-| --------- | ------------------- | ------------------------- |
-| `index`   | `GET /posts`        | none; filter each row     |
-| `show`    | `GET /posts/:id`    | `read`                    |
-| `create`  | `POST /posts`       | `create`                  |
-| `update`  | `PATCH /posts/:id`  | `update`                  |
-| `destroy` | `DELETE /posts/:id` | `delete`                  |
-
-`all` writes every action the contract has, and a list writes the ones it names. Each
-controller is the one `--method` and `--path` would write, so `--actions` refuses both. A list
-shows many rows, so `index` checks none and the run prints a note: show each row a visitor may
-read with `ctx.access.can(abilities.post.read, { post: row })`. Every file is checked free
-before the first is written, and the notes, this one and any missing ability, print once the
-controllers are written.
+In the `api` contract the actions are a JSON resource's endpoints: `index`, `show`, `create`,
+`update` and `destroy`. `all` writes every action the contract has, and a list such as
+`--actions index,show` writes the ones it names; `--actions` refuses `--method` and `--path`. A
+list shows many rows, so `index` checks none: show each row a visitor may read with
+`ctx.access.can(abilities.post.read, { post: row })`.
 
 <note>
 `--actions` writes the controllers alone. For the model, the form and the validator too, run
@@ -215,40 +181,18 @@ contract and calls `createRouter`, and the decision into the sitemap:
 +			sponsors: true,
 ```
 
-The contract gains the import of the route helper when it lacks it: `post`, `put`, `patch`,
-`del` for `--method delete`, or `form`.
-
 ### The sitemap decision
 
-A `get` or `form` route is a page, so when a controller builds the sitemap with `fromRoutes` over
-the same contract, `make` adds the page's decision there:
-
-- `true` lists the page.
-- `[]` is written for a pattern with required params, such as `/posts/:slug`, for you to fill
-  with the pages to list.
-- A `form` route decides its page under `index`: `signup: { index: true }`.
-- A page inside a group the sitemap already excludes with `false` stays excluded.
-
-`post`, `put`, `patch` and `delete` routes are no pages and get no decision.
+A `get` or `form` route is a page, so `make` adds its decision to the sitemap: `true` lists it,
+and a pattern with required params, such as `/posts/:slug`, gets `[]` for you to fill with the
+pages to list. A page inside a group the sitemap excludes with `false` stays excluded.
 
 ## Names, routes and patterns
 
-The name's folders nest the route in the contract and the file in `app/http/controllers/`.
-`sdxc make controller posts/show --path "/posts/:slug"` writes
-`app/http/controllers/posts/show.tsx`, declares `show` inside a `posts` group, created when
-missing, and maps `webRoutes.posts.show`:
-
-```text
---- a/routes/web.ts
-+++ b/routes/web.ts
-+	posts: {
-+		show: get("/posts/:slug"),
-+	},
-```
-
-A group `make` creates carries no path prefix, so the pattern is the whole path: `/<name>` with
-the folders included, or what `--path` says. `api/keys --routes api` joins the template's `api`
-group and is served at `/api/keys`.
+The name's folders nest the route in the contract and the file in `app/http/controllers/`:
+`posts/show` writes `app/http/controllers/posts/show.tsx` and declares `show` inside a `posts`
+group. A group `make` creates carries no path prefix, so the pattern is the whole path:
+`/<name>` with the folders included, or what `--path` says.
 
 ## The test
 
@@ -279,9 +223,8 @@ bun run test app/http/controllers/signup.test.tsx
 
 ## The pairing spec
 
-The test checks the controller from the inside; the pairing spec checks the running app from the
-outside, the way a visitor reaches the route. A page's spec opens it in a browser and expects its
-heading, and an endpoint's spec requests it and expects a `200`:
+The pairing spec checks the running app from the outside: a page's spec opens it in a browser
+and expects its heading, and an endpoint's spec requests it and expects a `200`:
 
 ```text {% title="spec/sponsors.spec" %}
 use browser
@@ -296,7 +239,6 @@ test "Sponsors page loads" {
 }
 ```
 
-Grow it into the behavior the page promises as you fill the controller in.
 [Write executable specs](/docs/operations-and-testing/executable-specs) covers the language and
 how to run a suite against your dev server.
 
@@ -308,10 +250,6 @@ how to run a suite against your dev server.
 - Decide who may reach it with `--resource`, or by checking `ctx.access` against the abilities
   [`sdxc make policy`](/docs/sdxc/make-policy) adds.
 - Add a check every page needs with [`sdxc make middleware --mount page`](/docs/sdxc/make-middleware).
-
-[Wire the router](/docs/building-remix-apps/wire-the-router) covers the router the controller is
-mapped on, [Forms and params](/docs/building-remix-apps/forms-and-params) a form's fields and
-route params, and [JSON APIs](/docs/http-apis/json-apis) an endpoint's responses.
 
 ## Where to go next
 

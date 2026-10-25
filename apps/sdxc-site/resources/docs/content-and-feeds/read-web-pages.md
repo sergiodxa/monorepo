@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to fetch a saved link under bounds in a job and pull out its article with `@sdxc/distill`"
     - "How to keep a plain-text excerpt of the page"
@@ -18,10 +18,9 @@ byte cap and a deadline, and treat whatever comes back as hostile markup. This g
 that feature: an endpoint accepts a link, a background job reads the article out of the page,
 and your app stores a sanitized copy and a plain-text excerpt.
 
-[`@sdxc/distill`](/api/distill) fetches under bounds, scores the page to find the article and
-sanitizes it. [`@sdxc/html`](/api/html) parses markup and answers questions about it: the
-visible text, a meta tag, a canonical link. [`@sdxc/robots`](/api/robots) lets a publisher say
-no, and [`@sdxc/jobs`](/api/jobs) keeps the fetch off the request.
+[`@sdxc/distill`](/api/distill) fetches under bounds, finds the article and sanitizes it,
+[`@sdxc/html`](/api/html) reads text and meta tags out of markup, [`@sdxc/robots`](/api/robots)
+lets a publisher say no, and [`@sdxc/jobs`](/api/jobs) keeps the fetch off the request.
 
 ```bash
 npm add @sdxc/distill @sdxc/html @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/result \
@@ -44,15 +43,13 @@ export default jobs({
 });
 ```
 
-The message carries the link's id rather than its URL, so the job always reads the row as it is
-now, and a link deleted before the queue gets to it ends the run early.
+The message carries the link's id, so the job reads the row as it is now.
 
 ## Accept the link
 
 `addressable(url)` is the check the fetch itself makes before any request: HTTP(S) only, no
-credentials in the URL, no literal IP address, and no name that cannot be public, such as a
-single label, `localhost`, `.local`, `.internal` or `.test`. Running it in the endpoint turns a link
-the job would refuse into an immediate `422`, instead of a row that fails later:
+credentials, no literal IP address, and no name that cannot be public. Running it in the
+endpoint turns a link the job would refuse into an immediate `422`:
 
 ```typescript {% title="app/http/controllers/links/create.ts" %}
 import { addressable } from "@sdxc/distill";
@@ -81,31 +78,14 @@ export default createAction(routes.links.create, async (ctx) => {
 });
 ```
 
-`Links` is your own model; `save` inserts a row with a `pending` status. The route is a
-`post("/api/links")`, and `validate` reads a JSON or form body alike, so a browser extension
-and a plain form can share it.
-
-`ctx.jobs` comes from `jobEnqueuer(queue)` in the router's middleware, over the queue your
-dispatcher delivers from. [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)
-builds both:
-
-```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "@sdxc/jobs/router";
-import { createRouter } from "remix/router";
-
-import { queue } from "~/app/initializers/queue";
-
-export function createWebRouter() {
-	return createRouter({ middleware: [jobEnqueuer(queue)] });
-}
-```
+`Links` is your own model; `save` inserts a row with a `pending` status. `ctx.jobs` comes from
+`jobEnqueuer(queue)` in the router's middleware, which
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds.
 
 ## Read the article in the job
 
-`distill(url, options)` walks the redirect chain itself, re-checking every hop with the same
-`addressable` rule, reads at most 2 MB off the stream, and gives the whole chain eight seconds.
-It scores the page's containers, keeps the one holding the article, and sanitizes it before
-answering:
+`distill(url, options)` re-checks every redirect with the same `addressable` rule, reads at most
+2 MB, and gives the whole chain eight seconds. It answers the page's article, sanitized:
 
 ```typescript {% title="app/jobs/links/read.ts" %}
 import { distill } from "@sdxc/distill";
@@ -149,20 +129,10 @@ export default createJobHandler(jobs.links.read, async (ctx) => {
 });
 ```
 
-The user agent is required, and it names your app and a page about it, so a publisher who wants
-to refuse you in particular can do it without refusing browsers. `fetchRobots` retrieves the
-origin's `robots.txt`, and a path it disallows is refused before `distill` sends a request.
-Its outcome carries a `lifetimeMs`, so once many links share an origin, cache it as JSON for
-that long instead of asking on every run.
-
-Every failure carries an `outcome` your interface can have copy for: `refused` (the site said
-no, by status or by `robots.txt`), `timeout` (time, bytes or hops ran out) and `empty` (the page
-arrived with no article in it). Only a timeout is worth trying again, and only a few times;
-the other two would give the same answer. `ctx.db` is published by job middleware,
-as it is on a request.
-
-On success, `url` is the article's canonical address, so two links to one article can be
-recognized as one.
+The user agent names your app and a page about it, so a publisher can refuse you in particular.
+A path `robots.txt` disallows is refused before `distill` sends a request. Every failure carries
+an `outcome`: `refused`, `timeout` or `empty`; only a timeout is worth trying again. On success,
+`url` is the article's canonical address.
 
 <note>
 `mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`. That publisher is
@@ -171,9 +141,8 @@ asking you not to keep a copy, so the row keeps the title and the excerpt and dr
 
 ## Keep a plain-text excerpt
 
-A list of saved links needs a line or two under each title, and it must be text, not markup.
-`HTML.parse` reads the sanitized article back, and `text` is what a reader would see, with
-block boundaries turned into spaces:
+A list of saved links needs a line of text under each title. `HTML.parse` reads the sanitized
+article back, and `text` is what a reader would see:
 
 ```typescript {% title="app/services/excerpt.ts" %}
 import { HTML } from "@sdxc/html";
@@ -194,23 +163,16 @@ export function excerptOf(html: string): string | null {
 }
 ```
 
-The stored `html` is already safe to put in your page. The sanitizer keeps prose, lists,
-tables, figures, links and images, drops scripts, iframes, forms, every `on*` handler, `style`
-and `class`, restricts URLs to `http:`, `https:` and `mailto:`, and resolves relative ones
-against the article's address. A
+The stored `html` is already safe to put in your page: scripts, forms, handlers and styles are
+gone, and relative URLs point at the publisher. A
 [Content-Security-Policy](/docs/identity-and-security/security-headers) on the page that
 renders it is the second line behind that.
 
-<note>
-An image in a saved article still loads from the publisher, who sees the reader's address when
-it does. Closing that takes an image proxy of your own.
-</note>
-
 ## Build a preview card from the head
 
-Not every link needs its article. A URL pasted into a comment only needs a card: a title, a
-line of description, an image. `@sdxc/outbound` is the bounded fetch `distill` runs on, and
-`@sdxc/html` reads the head of what it returns:
+A URL pasted into a comment only needs a card: a title, a description, an image.
+`@sdxc/outbound` is the bounded fetch `distill` runs on, and `@sdxc/html` reads the head of what
+it returns:
 
 ```typescript {% title="app/services/link-preview.ts" %}
 import { HTML } from "@sdxc/html";
@@ -258,44 +220,15 @@ export async function previewOf(input: string): Promise<LinkPreview | null> {
 }
 ```
 
-`follow` applies the same host rules as `addressable` to the first URL and to every redirect,
-and answers the final response whatever its status, so the card checks `response.ok` itself
-and lets go of a body it will not read. `url` is where the redirect chain ended, which is the
-address to show and the base every relative URL in the page resolves against. The timeout
-covers the chain and the body read after it. `doc.meta` matches `name` or `property`, so Open
-Graph tags and plain `<meta name>` tags are one lookup, and each answers a `Result` because a
-page is free to leave any of them out.
-
-A card is optional, so every failure here becomes `null` and the comment renders without one.
-The shorter deadline is for the same reason: a card that takes eight seconds is not worth
-having. Call `previewOf` from a job, the same way the article is read.
-
-## Clean markup that arrives another way
-
-Some markup reaches you without a fetch: the `content` of a feed item, or an HTML email.
-`HTML.sanitize(source, policy)` is the same allow-list `distill` applies, run on markup in
-hand:
-
-```typescript {% title="app/services/feed-content.ts" %}
-import { HTML } from "@sdxc/html";
-import { isFailure } from "@sdxc/result";
-
-export function cleanContent(source: string, itemUrl: string): string | null {
-	let clean = HTML.sanitize(source, { baseUrl: itemUrl });
-	return isFailure(clean) ? null : clean.data;
-}
-```
-
-`baseUrl` is where the markup came from, so a relative `src` points at the publisher's site
-rather than yours. When you already hold a whole page, from a test fixture or a response
-something else retrieved, `distillFrom(source, url)` from `@sdxc/distill` runs the scoring and
-sanitizing without a fetch, which is how to test the job's extraction without the network.
+`follow` applies the same host rules to every redirect and answers the final response whatever
+its status, so the card checks `response.ok` and releases a body it will not read. `url` is
+where the chain ended, the base relative URLs resolve against. A card is optional, so every
+failure becomes `null`; call `previewOf` from a job, the same way the article is read.
 
 ## Test the extraction
 
-`distillFrom` runs the job's scoring and sanitizing on a page in hand, so a fixture tests what
-your app stores without the network: the publisher's script and handlers are gone, relative
-URLs point at the publisher, and the excerpt fits its length:
+`distillFrom(source, url)` runs the job's extraction on a page in hand, so a fixture tests what
+your app stores without the network:
 
 ```typescript {% title="app/services/excerpt.test.ts" %}
 import { distillFrom } from "@sdxc/distill";

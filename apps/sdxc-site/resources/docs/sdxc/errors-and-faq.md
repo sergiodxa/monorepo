@@ -22,16 +22,14 @@ for the first words of a message.
 
 ### "N @sdxc packages are behind release …"
 
-The project's release is the newest date among its `@sdxc` pins, and these packages lag behind
-it. Mixed dates install two copies of a shared package, whose context keys and `instanceof`
-checks then stop matching. Run the `sdxc upgrade <release>` the line names, which moves every
-package to its newest version on or before that release.
+These packages lag behind the newest date among the project's `@sdxc` pins. Mixed dates install
+two copies of a shared package, whose context keys and `instanceof` checks then stop matching.
+Run the `sdxc upgrade <release>` the line names.
 
 ### "N @sdxc packages are not pinned to a release"
 
-A range such as `^2026.9.21` is in `package.json`. A date says only that a release is later, so
-a range lets each install pick a different one. The same `sdxc upgrade <release>` writes exact
-pins. [Versioning](/docs/releases/versioning) explains the scheme.
+A range such as `^2026.9.21` is in `package.json`, so each install may pick a different release.
+The same `sdxc upgrade <release>` writes exact pins.
 
 ### "node_modules differs from package.json"
 
@@ -42,8 +40,7 @@ names, such as `bun install`.
 
 CI copies `.env.example` to `.dev.vars` before it type checks, so a secret only your own
 `.dev.vars` holds type checks on your machine and fails there. `sdxc fix env` appends each
-missing key; give it a development value. [Deploy your app](/docs/getting-started/first-deploy#secrets) covers where
-each secret is named.
+missing key; give it a development value.
 
 ### ".cloudflare/types/index.d.ts is older than what it is generated from"
 
@@ -54,8 +51,8 @@ generated, so `env` may type check against bindings the Worker no longer receive
 ### "A migration chain does not replay on an empty database"
 
 A new database, and every new tenant, applies the whole chain from the first file, with SQLite's
-double-quoted strings off. A `"value"` meant as a string, or a table rebuild whose `SELECT` reads
-a column by its new name, fails there. Correct the migration it names. When production already
+double-quoted strings off, so a `"value"` meant as a string fails there. Correct the migration it
+names. When production already
 ran that file, list it under `doctor.migrations.accept` instead, as
 [Check a project](/docs/sdxc/check-a-project#accept-a-migration-that-already-ran) shows.
 
@@ -81,11 +78,8 @@ A file in `app/models/` calls `createModel` but the registry does not list it, s
 ### "app/initializers/mail.ts maps no template for N declared emails"
 
 An email is declared in `app/emails/index.ts` with no template mapped onto the registry, so every
-send of it fails. `sdxc fix emails` maps it as `mail.map(emails.<name>, lazy(() => import(…)))`
-when its template file exists. Otherwise remove the declaration and write the email with
-[`sdxc make email`](/docs/sdxc/make-email), which declares and maps it in one step.
-The warning "Found N templates without a test" or "… without preview()" names a template that
-`/_emails` and `sdxc run emails preview` cannot render, or that no test covers.
+send of it fails. `sdxc fix emails` maps it when its template file exists; otherwise write the
+email with [`sdxc make email`](/docs/sdxc/make-email), which declares and maps it in one step.
 
 ## sdxc make and sdxc scaffold
 
@@ -97,11 +91,9 @@ from the stub again; the declaration and mapping it already has are kept.
 
 ### "Declare and map it by hand, since no initializer in app/initializers/ creates …"
 
-`make` wrote the file and its test, but found no initializer to add the mapping to, usually
-because the project keeps its router, dispatcher, MCP handler or command line somewhere other
-than `app/initializers/`. It printed the declaration and the mapping; paste each where it says.
-Moving that initializer into `app/initializers/` lets the next `make` place them itself.
-[Generate files](/docs/sdxc/generate-files#when-an-edit-cannot-be-placed) has an example.
+`make` wrote the file and its test, but found no initializer to add the mapping to, because the
+project keeps it outside `app/initializers/`. Paste the declaration and the mapping it printed
+where it says. [Generate files](/docs/sdxc/generate-files#when-an-edit-cannot-be-placed) has an example.
 
 ### "… is not a name; use letters, digits and dashes in each segment"
 
@@ -119,18 +111,15 @@ The kind is misspelt or does not exist. `sdxc make --help` lists every kind.
 
 ### "… does not exist; sdxc destroy removes what sdxc make wrote"
 
-`sdxc destroy` looks for the file `make` would have written for that kind and name, and stops
-before editing anything when it is missing. Check the name against the file, as `reports/daily`
-for `app/jobs/reports/daily.ts`. [Undo a make](/docs/sdxc/undo-generated-files) lists the kinds
-it takes.
+`sdxc destroy` looks for the file `make` would have written for that kind and name. Check the
+name against the file, as `reports/daily` for `app/jobs/reports/daily.ts`.
 
 ## sdxc run and sdxc deploy
 
 ### "bootstrap/cli.ts not found …; an app's command line starts there"
 
-`sdxc run` runs the app's own command line from the project root, the nearest folder with a
-`package.json`, and that folder has no `bootstrap/cli.ts`. Run it inside the app, or, in a project
-with no command line, see [Your app's command line](/docs/operations-and-testing/your-apps-command-line).
+`sdxc run` runs the app's own command line from the nearest folder with a `package.json`, and
+that folder has no `bootstrap/cli.ts`. Run it inside the app.
 
 ### "Deploying to production without a terminal needs --yes"
 
@@ -142,7 +131,6 @@ no one to answer. Pass `--yes` there, after a step that runs `sdxc doctor`.
 The first remote step could not reach your Cloudflare account or database, and nothing was
 migrated or deployed. Sign in with `bunx cf auth login`, or set `CLOUDFLARE_API_TOKEN` in CI, and
 check that the `DB` binding in `cloudflare.config.ts` holds your database's id.
-[Deploy your app](/docs/getting-started/first-deploy) creates it.
 
 ### ".config/sdxc.jsonc: … Unknown key"
 
@@ -173,8 +161,6 @@ test: {
 
 The tests `sdxc` writes record what the code did when it was written, such as a guest getting a
 403 from a form. When you change that on purpose, rewrite the case to say what the app does now.
-[Test your app](/docs/operations-and-testing/test-your-app) covers what each generated test
-checks.
 
 ## Questions a first app raises
 
@@ -194,11 +180,9 @@ create the tables there; the old file stays under `.cloudflare/state/`.
 
 ### Why does my cron job never run?
 
-Cloudflare fires only the schedules the Worker declares. The expression in `app/jobs/index.ts`
-says which job a schedule runs; the same expression in `triggers.scheduled({ schedule })` in
-`cloudflare.config.ts` is what makes it fire. `sdxc make job` with `--cron` adds both, so the
-job that lacks its trigger is one declared by hand, or one in a Worker configured in
-`wrangler.jsonc`. [`sdxc schedule`](/docs/sdxc/inspect-a-project#scheduled-jobs) names the
+Cloudflare fires only the schedules the Worker declares in `triggers.scheduled({ schedule })` in
+`cloudflare.config.ts`. `sdxc make job` with `--cron` adds the trigger, so the job that lacks one
+was declared by hand. [`sdxc schedule`](/docs/sdxc/inspect-a-project#scheduled-jobs) names the
 trigger to add; add it and deploy.
 
 ### Why does `env.MY_SECRET` not type check?
@@ -217,7 +201,6 @@ replays.
 D1 commits each statement as it runs, so a failure halfway leaves the earlier statements
 applied. Write a change that spans several rows as one statement, such as an upsert, or with
 steps that undo the earlier ones when a later one fails.
-[Databases](/docs/data-and-background-work/databases) covers both adapters.
 
 ### Do I need `sdxc` installed globally?
 

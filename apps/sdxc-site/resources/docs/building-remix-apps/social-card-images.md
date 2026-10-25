@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 14
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to render an Open Graph image inside a Worker with `@sdxc/raster` and `@sdxc/font`"
     - "How to store each card in R2 under a hash of its text"
@@ -29,33 +29,14 @@ npm add @sdxc/crypto @sdxc/file-storage-r2 @sdxc/font @sdxc/http @sdxc/png \
     @sdxc/raster @sdxc/result @sdxc/seo remix
 ```
 
-## Follow a card through three stores
-
-A post at `/blog/hello` has its card at `/blog/hello.png`, and the page advertises
-`/blog/hello.png?v=<hash>`, where the hash covers the card's text and the design's version. A
-request for the card goes through three stores before anything is drawn:
-
-1. The colo's edge cache, which answers a repeat request without running your code past the
-   first lookup.
-2. The R2 bucket, which holds every card ever drawn under its hash, so a card is drawn once per
-   text no matter how many colos ask for it.
-3. Drawing, which loads the fonts and the canvas only on this path, stores the result after the
-   response, and answers with it.
-
-Because the URL names the hash, a card served for a matching `?v=` never changes and can be
-cached for a year. Edit the post and the page advertises a new hash, which platforms see as a new
-image.
+A post at `/blog/hello` advertises its card as `/blog/hello.png?v=<hash>`, where the hash covers
+the card's text. A request reads the card from R2 and draws it only when it is missing, so each
+card is drawn once per text and a matching `?v=` can be cached for a year.
 
 ## Bundle the fonts
 
-`@sdxc/font` reads TrueType outlines, the `.ttf` files of a static font with `glyf` outlines.
-
-<note>
-Pick faces whose license allows embedding, such as the SIL Open Font License that Inter and
-most Google Fonts carry. The Worker ships the font file to every colo.
-</note>
-
-Rename each file with a `.bin` extension, for example
+`@sdxc/font` reads TrueType `.ttf` files with `glyf` outlines; pick faces whose license allows
+embedding, such as Inter's SIL Open Font License. Rename each file with a `.bin` extension, for example
 `resources/fonts/inter-bold.ttf.bin`: Wrangler and the Cloudflare Vite plugin bundle a `.bin`
 import as a data module, which the Worker receives as an `ArrayBuffer`. Declare that shape once
 for TypeScript:
@@ -103,10 +84,7 @@ function parseAll(): Result<CardFonts, FontError> {
 }
 ```
 
-`parseFont` reads only the table headers; each glyph is decoded the first time it is drawn and
-cached on the `Font`. A failure is a `FontError` whose `code` is `unsupported` for a CFF-based
-`.otf` or a font collection, and `missing-table` or `malformed` for a damaged file, with `table`
-naming the table at fault.
+A failure is a `FontError` whose `code` says why, such as `unsupported` for a CFF-based `.otf`.
 
 ## Decide what the card says
 
@@ -155,32 +133,19 @@ export function cardKey(version: string): string {
 }
 ```
 
-`Post` is your own model. The NUL separator keeps `"ab" + "c"` and `"a" + "bc"` from hashing
-alike. Sixteen hex characters, 64 bits, tell a site's cards apart with room to spare, and keep
-the URL short. A new `CARD_TEMPLATE` changes every hash, so a redesign reaches every platform
-and every stored card is redrawn on its next request.
-
-1200 by 630 is the size Open Graph consumers display a large card at.
+`Post` is your own model. Bump `CARD_TEMPLATE` when the drawing changes: every hash changes with
+it, so every card is redrawn on its next request. 1200 by 630 is the size Open Graph consumers
+display a large card at.
 
 ## Draw the card
 
-The canvas fills shapes with antialiasing, blends gradients the way browsers do, and sets text
-in a font you pass it. `text` wraps at spaces to `maxWidth`, shrinks in 2 px steps toward
-`minSize` until the text fits `maxLines`, and ends the last line with `…` when it still does not,
-so a long title stays inside the card:
+`text` wraps at spaces to `maxWidth`, shrinks toward `minSize` until the text fits `maxLines`,
+and ends the last line with `…` when it still does not, so a long title stays inside the card:
 
 ```typescript {% title="app/services/social-cards/draw.ts" %}
 import type { Font } from "@sdxc/font";
 
-import {
-	Canvas,
-	color,
-	linearGradient,
-	Path,
-	radialGradient,
-	TRANSPARENT,
-	withAlpha,
-} from "@sdxc/raster";
+import { Canvas, color, linearGradient } from "@sdxc/raster";
 
 import type { CardContent } from "~/app/services/social-cards/content";
 
@@ -193,7 +158,6 @@ export interface CardFonts {
 
 const INK = color("#f5f5f7");
 const MUTED = color("#a1a1aa");
-const ACCENT = color("oklch(0.62 0.19 275)");
 const LEFT = 80;
 const TEXT_WIDTH = 1040;
 
@@ -218,21 +182,6 @@ export async function drawCard(
 			],
 		}),
 	);
-	canvas.fillRect(
-		0,
-		0,
-		width,
-		height,
-		radialGradient({
-			center: [width, 0],
-			radius: [720, 440],
-			stops: [
-				[0, withAlpha(ACCENT, 0.35)],
-				[0.7, TRANSPARENT],
-			],
-		}),
-	);
-
 	let title = canvas.text(content.title, {
 		font: fonts.bold,
 		size: 72,
@@ -257,11 +206,10 @@ export async function drawCard(
 		paint: MUTED,
 	});
 
-	canvas.fillPath(Path.roundedRect(LEFT, 540, 16, 16, 8), ACCENT);
 	canvas.text(content.site, {
 		font: fonts.bold,
 		size: 28,
-		x: LEFT + 32,
+		x: LEFT,
 		y: 558,
 		paint: INK,
 	});
@@ -270,14 +218,8 @@ export async function drawCard(
 }
 ```
 
-`y` is the baseline of the first line, and `text` answers with the size it settled on, the
-lines it drew and their `height`, which is where the description starts. `measureText` answers
-the same metrics without drawing, for a layout that centres a block before drawing it.
-
-Colours are parsed from hex, `rgb()` or `oklch()`, so the card can use the same tokens as your
-stylesheet; a malformed one throws a `RangeError` where it is written. `toPNG()` drops the
-alpha channel when every pixel is opaque, which makes the file a quarter smaller before
-compression.
+`y` is the baseline of the first line, and `text` answers with the `height` it drew, which is
+where the description starts.
 
 <note>
 Drawing a card takes tens of milliseconds of CPU, which counts against the Worker's CPU limit
@@ -307,10 +249,8 @@ export function socialCards(): FileStorage {
 }
 ```
 
-`get` answers a native `File` with the name and type it was stored with, or `null`. A key is
-written once and never overwritten, since its name is its content, so a lifecycle rule on the
-bucket that deletes objects after 90 days keeps it to the cards still being shared. A card the
-rule removed is drawn again the next time someone asks for it.
+A key's name is its content, so a bucket lifecycle rule that deletes objects after 90 days is
+safe: a removed card is drawn again the next time someone asks for it.
 
 ## Serve the card at the page's address
 
@@ -326,9 +266,8 @@ export default route({
 });
 ```
 
-The action checks the edge cache, then the bucket, then draws. It imports the drawing code and
-the fonts only when it is about to draw, so the requests R2 or the edge answer never load
-them:
+The action reads the bucket, then draws. It imports the drawing code and the fonts only when it
+is about to draw, so the requests R2 answers never load them:
 
 ```typescript {% title="app/http/controllers/post-card.ts" %}
 import { notFound } from "@sdxc/http/response/html";
@@ -350,21 +289,14 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 const REVALIDATE = "public, max-age=3600";
 
 export default createAction(routes.postCard, async (ctx) => {
-	let edge = edgeCache();
-	let cached = await edge.match(ctx.request);
-	if (cached) return cached;
-
-	let respond = (card: File, cacheControl: string) => {
-		let response = new Response(card.stream(), {
+	let respond = (card: File, cacheControl: string) =>
+		new Response(card.stream(), {
 			headers: {
 				"Content-Type": "image/png",
 				"Content-Length": String(card.size),
 				"Cache-Control": cacheControl,
 			},
 		});
-		waitUntil(edge.put(ctx.request, response.clone()));
-		return response;
-	};
 
 	let storage = socialCards();
 	let version = ctx.url.searchParams.get("v");
@@ -404,21 +336,11 @@ export default createAction(routes.postCard, async (ctx) => {
 	waitUntil(storage.set(key, card));
 	return respond(card, cacheControl);
 });
-
-function edgeCache(): Cache {
-	return (caches as unknown as { default: Cache }).default;
-}
 ```
 
-A `v` that names a stored card is answered from R2 without reading the post at all: the hash
-already says which card it is. A request without `v`, or with one from before the post changed,
-renders from the post as it is now and is cached for an hour, so a person who pastes the bare
-`.png` address still sees an up-to-date card.
-
-`caches.default` is the colo's Workers cache, keyed by the full URL, query included. The
-`edgeCache` helper names its type for projects whose `tsconfig.json` also loads the DOM library,
-whose `CacheStorage` declares no `default`. Both writes, to the edge and to R2, run in
-`waitUntil`, after the response has gone out.
+A `v` that names a stored card is answered from R2 without reading the post. A request without
+`v`, or with a stale one, renders from the post as it is now and is cached for an hour. The R2
+write runs in `waitUntil`, after the response has gone out.
 
 ## Advertise the card
 
@@ -456,17 +378,14 @@ export async function postCardMeta(post: Post): Promise<Seo.OpenGraph> {
 }
 ```
 
-In the post's action, `og: await postCardMeta(post)` goes into the `Seo.Props` it renders.
-`Seo` writes `og:image` and `twitter:image` with the URL, `og:image:alt`, and
-`og:image:width` and `og:image:height`, which let a platform lay out the preview on the first
-share, before it has fetched the image. Since the URL changes with the text, a platform that
-caches images by URL fetches the new card after an edit with no purge on your side.
+In the post's action, `og: await postCardMeta(post)` goes into the `Seo.Props` it renders. The
+width and height let a platform lay out the preview before it fetches the image, and the URL
+changes with the text, so an edit needs no purge.
 
 ## Test the card
 
-The drawing is a function of the text and the fonts, so a test reads the font files from
-disk, draws a card with a title too long for three lines, and decodes the PNG to check its
-size. The version test proves the hash follows the text and only the text:
+A test reads the fonts from disk, draws a card with a title too long for three lines, and
+decodes the PNG to check its size; a second checks that the hash follows the text:
 
 ```typescript {% title="app/services/social-cards/draw.test.ts" %}
 import { parseFont } from "@sdxc/font";

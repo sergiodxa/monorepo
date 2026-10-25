@@ -18,14 +18,11 @@ declare every job in one map, write each handler in its own module, and a dispat
 with the same middleware, logging, timeouts and retries whether a request enqueued them or a cron
 trigger did.
 
-The shape will feel familiar from the router: a map of addressable definitions, handlers mapped
-onto them, and middleware that publishes services onto a typed context. At the end,
-[`@sdxc/cron`](/api/cron) covers the other half of scheduling: checking an expression a person
-typed into a form.
+At the end, [`@sdxc/cron`](/api/cron) checks a schedule a person typed into a form.
 
 ```bash
 npm add @sdxc/cron @sdxc/database-middleware @sdxc/http @sdxc/jobs @sdxc/logger \
-	@sdxc/messaging @sdxc/result @sdxc/trace-context remix
+	@sdxc/result @sdxc/trace-context remix
 ```
 
 ## Declare the jobs
@@ -44,9 +41,8 @@ export default jobs({
 ```
 
 `input` is parsed before the handler runs, so the handler receives only messages that match
-it. A `cron` makes the job schedulable as well as enqueuable. The expression is parsed at
-declaration: its type requires five fields, and an out-of-range value throws
-`InvalidCronExpression` as the module loads, long before the trigger would fire.
+it. A `cron` makes the job schedulable as well as enqueuable, and an invalid expression throws
+as the module loads, long before the trigger would fire.
 
 <warning>
 The key is the job's name on the wire. A message enqueued by one deploy is consumed by the next,
@@ -71,56 +67,13 @@ export default createJobHandler(jobs.expirePostings, async (ctx) => {
 });
 ```
 
-`expireBefore` is your own model function, closing the rows older than a cutoff and answering
-how many it closed. `ctx.log` is the run's record, emitted once when the run ends: `set()` a
-field you will query by, `note()` a breadcrumb, `time()` anything with a duration. Every run gets its own record, carrying
-the job name, attempt count and how it ended, and a job enqueued during a request shares that
-request's trace id.
+`expireBefore` is your own model function. `ctx.log` is the run's record, emitted once when
+the run ends with the job name, attempt count and how it ended.
 
-Returning normally acks the message. When you need another ending, the context has a verb for
-each: `ctx.retry({ delay: "5 minutes" })` asks for a redelivery later, `ctx.exit(reason)` gives up
-for good because a retry would reach the same result, and anything else thrown is retried by the
-platform.
-
-<note>
-Write every verb as `return ctx.retry(…)`: each one throws, so nothing after it runs, and the
-`return` is what tells TypeScript the lines below are unreachable, since it narrows on a
-never-returning call only through a `const` name and `ctx` is a parameter.
-</note>
-
-## Publish services onto the job context
-
-`ctx.db` above came from job middleware, the same way it comes from request middleware.
-`database()` from `@sdxc/database-middleware/jobs` publishes it, taking the database or a
-function that opens one per run, so a test hands in its own and the handler never touches a
-binding.
-
-A service of your own is published the same way. The middleware sets a context key under a
-property name, and its effect type names what it publishes, so the dispatcher folds it out of
-its chain to type the property on every handler:
-
-```typescript {% title="app/jobs/middleware/search.ts" %}
-import type { JobMiddleware } from "@sdxc/jobs";
-
-import { createContextKey } from "remix/router";
-
-import type { SearchIndex } from "~/app/services/search";
-
-export const Search = createContextKey<SearchIndex>();
-
-interface SearchEffect {
-	key: typeof Search;
-	value: SearchIndex;
-	property: "search";
-}
-
-export function search(index: SearchIndex): JobMiddleware<SearchEffect> {
-	return async (ctx, next) => {
-		ctx.set(Search, index, { property: "search" });
-		await next();
-	};
-}
-```
+Returning normally acks the message. `ctx.retry({ delay: "5 minutes" })` asks for a redelivery
+later, `ctx.exit(reason)` gives up for good, and anything else thrown is retried by the
+platform. Write each as `return ctx.retry(…)`, so TypeScript knows the lines below are
+unreachable.
 
 ## Share one queue
 
@@ -141,7 +94,9 @@ binding until something is enqueued.
 ## Build the dispatcher
 
 The dispatcher owns the middleware chain and the timeout, delivers from the shared queue, and
-maps each job to a loader so a handler module is imported only once a message for it arrives:
+maps each job to a loader so a handler module is imported only once a message for it arrives.
+`database()` from `@sdxc/database-middleware/jobs` publishes the `ctx.db` the handler above
+reads:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobQueue } from "@sdxc/jobs/queue";
@@ -189,8 +144,7 @@ declare module "@sdxc/jobs" {
 }
 ```
 
-Keeping the block beside the dispatcher means importing the dispatcher is what registers it.
-The factory's options exist for tests: the defaults are what production runs.
+The factory's options exist for tests; the defaults are what production runs.
 
 ## Enqueue from a request
 
@@ -214,9 +168,9 @@ export function createWebRouter() {
 }
 ```
 
-Importing the middleware is what types `ctx.jobs`. Listing `trace()` before it makes every
-message carry the request's trace, so each job run links back to the request that enqueued it.
-A handler then enqueues with exactly the payload the job's schema accepts:
+Listing `trace()` before it makes every message carry the request's trace, so each job run
+links back to the request that enqueued it. A handler then enqueues with exactly the payload
+the job's schema accepts:
 
 ```typescript {% title="app/http/controllers/publish-posting.ts" %}
 import { redirect } from "@sdxc/http/response";
@@ -236,18 +190,9 @@ export default createAction(routes.postings.create, async (ctx) => {
 });
 ```
 
-`publishPosting` is your own model function, and `index-posting.ts` is a handler like the sweep
-above, adding the posting to your search index off the request.
-
-Email needs no job of its own. `ctx.email.queue(emails.postings.published, { to, locale, props })`
-hands a declared email to the one `email` job that delivers every queued email, with the same
-retries; [Send email](/docs/data-and-background-work/send-email) wires it.
-
-A job with no `input` is enqueued with no second argument, and `enqueueMany` writes one message
-per input in a single call. When the queue refuses a send, `enqueue` raises the backend's
-`JobQueueError`, so the request fails instead of reporting work that will never run. Inside a
-job handler or a test, where the dispatcher is already in hand, `dispatcher.enqueue` takes the
-same arguments.
+`publishPosting` is your own model function, and `index-posting.ts` a handler like the sweep
+above. When the queue refuses a send, `enqueue` throws, so the request fails instead of
+reporting work that will never run.
 
 ## Wire the Worker
 
@@ -269,9 +214,8 @@ export default {
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```
 
-A cron delivery runs no job. It enqueues every job declaring the expression that fired and
-returns, so the nightly sweep gets the same retries, timeout and dead-letter handling as any other
-message. Every job, however it started, reaches its handler through the one queue:
+A cron delivery only enqueues every job declaring the expression that fired, so the nightly
+sweep gets the same retries, timeout and dead-letter handling as any other message:
 
 ```mermaid {% alt="Route handlers and cron triggers both enqueue onto the app-jobs queue; the dispatcher runs each job, acking it when it returns or exits, and on a retry or throw sending it back to the queue until maxRetries, after which it goes to dead-letter handling" %}
 flowchart LR
@@ -306,12 +250,11 @@ export default defineConfig({
 });
 ```
 
-`sdxc make job` declares, maps and tests a scheduled job and adds its trigger in one step, and
-`sdxc schedule` pairs every scheduled job with the trigger that fires it:
+[`sdxc make job`](/docs/sdxc/make-job) declares, maps and tests a scheduled job and adds its
+trigger in one step:
 
 ```bash
 sdxc make job expire-postings --cron "0 3 * * *"
-sdxc schedule
 ```
 
 <warning>
@@ -319,60 +262,6 @@ A scheduled job whose trigger is missing from the Worker's configuration never r
 production. `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test
 comparing it against your configuration catches a job whose trigger was never added.
 </warning>
-
-[Make a job](/docs/sdxc/make-job) covers the generated files, and
-[Inspect a project](/docs/sdxc/inspect-a-project) reads the schedule.
-
-## Alert a channel when a job gives up
-
-A job that exits, or fails on its last delivery, is work that will not happen unless someone
-looks. The dispatcher's `onEnd` hook runs once a delivery's ending is decided and before it is
-settled, so it can tell a channel before the message is acked. [`@sdxc/messaging`](/api/messaging)
-sends one portable message to Slack, Discord, PagerDuty and the rest:
-
-```typescript {% title="app/services/alert-ops.ts" %}
-import type { AnyJobContext, JobStatus } from "@sdxc/jobs";
-
-import { SlackWebhook } from "@sdxc/messaging/slack";
-import { isFailure } from "@sdxc/result";
-import { env } from "cloudflare:workers";
-
-const LAST_ATTEMPT = 4;
-
-export async function alertOps(ctx: AnyJobContext, status: JobStatus) {
-	if (status.type !== "refuse" && status.type !== "failed") return;
-	if (status.type === "failed" && ctx.attempts < LAST_ATTEMPT) return;
-
-	let slack = new SlackWebhook({ url: env.OPS_SLACK_WEBHOOK_URL });
-	let sent = await slack.send(
-		{
-			title: `${ctx.name} gave up`,
-			text: status.error instanceof Error ? status.error.message : undefined,
-			severity: "critical",
-			fields: [
-				{ label: "Message", value: ctx.id, inline: true },
-				{ label: "Attempts", value: String(ctx.attempts), inline: true },
-			],
-			timestamp: new Date(),
-		},
-		{ timeout: "4 seconds" },
-	);
-	if (isFailure(sent)) ctx.log.warn("ops_alert.failed", { code: sent.error.code });
-}
-```
-
-Pass it as `onEnd: alertOps` beside `timeout` in `createJobDispatcher`. `refuse` is a
-`ctx.exit`, and `LAST_ATTEMPT` is the first delivery plus the consumer's `maxRetries` of 3.
-The hook's failure is never the job's: anything it throws is recorded as `job.hook_failed`.
-
-<note>
-The dispatcher waits five seconds for the hook at most, which is why the send's own timeout is
-shorter.
-</note>
-
-An alert that has to survive a Slack outage belongs in a delivery job of its own, with
-retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
-builds.
 
 ## Run jobs in a test
 
@@ -401,8 +290,8 @@ test("the nightly sweep runs to completion", async () => {
 });
 ```
 
-The middleware and handlers are the ones production runs, so what the test substitutes is the
-queue and the database, and nothing between them.
+The middleware and handlers are the ones production runs; the test substitutes only the queue
+and the database.
 
 ## Validate a schedule someone typed
 
@@ -437,10 +326,8 @@ A form action calls `planSchedule` with the fields it validated. On a failure it
 `error.reason` and `error.position`; on a success it stores what came back.
 
 Every occurrence query takes the time zone explicitly, so a report at 09:00 stays at 09:00 local
-across a daylight saving change. Store `toString()`, the normalized form, beside the zone.
-`schedule.describe()` returns structured data such as `{ kind: "weekly", weekdays: [1], at: [...] }`
-for you to translate, and `schedule.isDue(lastRun, { now, timeZone })` is what a frequent cron job
-calls to find the user schedules that are due.
+across a daylight saving change. A frequent cron job calls
+`schedule.isDue(lastRun, { now, timeZone })` to find the user schedules that are due.
 
 ## Where to go next
 

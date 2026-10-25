@@ -106,49 +106,17 @@ They run in this order:
 | `mutation`        | warn: surviving mutants exceed `doctor.mutation.maxSurvived` (default 0); skip when the report file is missing                                                                     | kill survivors, or raise the max                   |
 | `ui`              | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff`           |
 
-The project's release is the newest date among its `@sdxc` pins, so `pins` names each package
-that lags behind the others. `pins` and `remix` read the npm registry; without it they report
-`skip` and every other check still runs.
+`pins` and `remix` read the npm registry; without it they report `skip` and every other check
+still runs. `env` exists because CI builds `.dev.vars` from `.env.example` before it generates
+the Worker's types, so a secret only your local `.dev.vars` holds fails there. `migrations`
+replays each chain the way a new database or tenant gets it, with SQLite's double-quoted string
+literals off, so a `"value"` meant as a string fails here instead of in production.
 
-`env` exists because CI builds `.dev.vars` from `.env.example` before it generates the Worker's
-types: a secret only your local `.dev.vars` holds types fine on your machine and fails there.
-`migrations` replays each chain the way a new database or a new tenant gets it, with SQLite's
-double-quoted string literals off, so a `"value"` meant as a string, or a rebuild that reads a
-column by its new name, fails here instead of in production.
-
-`routes` judges each mapping by what loads with the router. A controller mapped through
-`lazy()` loads on the first request that reaches it. A controller with several actions passes
-when each action sits behind `lazy()` or is an inline handler that loads its module with a
-dynamic `import()`; an action that imports its code up front is named by its key path, as in
-`app/initializers/router.ts maps routes.board action edit without lazy()`.
-
-`emails` fails on a declared email with no template, because every send of it fails at
-runtime, and warns on a template `sdxc run emails preview` and `/_emails` cannot render without
-a `preview()`. A project without `app/emails/index.ts` reports `skip`.
-
-`jsdoc` warns when a comment in app source is not a `/** … */` block, when its description runs
-past three prose lines, when `@description` appears, or when `@param`, `@returns` or `@throws`
-spill onto a second line. Tooling directives (`@ts-expect-error`, `oxlint-disable`, and the
-rest the repository already allows) stay as they are. Tags other than that one-line set do not
-count toward the description budget.
-
-`complexity`, `module-size`, `dependencies`, `fan-out`, `orphans`, `feature-scatter`,
-`duplication`, `result-throws`, `test-ratio`, `crap` and `mutation` cover project-level metrics
-oxlint does not. Each check that takes a threshold reads its own keys under `doctor` in
-[configuration](/docs/sdxc/configuration#doctor). `dependencies` applies Clean Architecture's
-dependency rule to the app-layout layers: outer kinds (http, jobs, commands) may import views
-in `resources/`, views may import inner ones (initializers, services, policies, models), and
-the reverse warns, and so does any import cycle. Route contracts and the declarations in
-`app/{jobs,commands,emails}/index.ts` and `app/mcp/{tools,resources}/index.ts` are data any
-layer reads, and an initializer may import the middleware its router lists. A `lazy()`
-mapping, or any dynamic `import()`, loads after startup, so it closes no cycle, breaches no
-layer and adds nothing to `fan-out`. `orphans` reads the same import graph, plus the imports of
-test files and the paths a root config file such as `vite.config.ts` names. `bootstrap/` holds
-the entry points the runtime calls, whose callbacks report a failure by throwing, so
-`result-throws` leaves it out. `crap` combines complexity with
-Istanbul coverage (default `coverage/coverage-final.json`) using
-`CRAP = CC² × (1 − coverage)³ + CC`; without that file the check skips. `mutation` skips the
-same way when its report file is missing.
+`routes` warns on a controller that loads with the router rather than through `lazy()`.
+`dependencies` warns when an inner layer (models, services, policies, initializers) imports an
+outer one (http, jobs, commands), or on any import cycle; a `lazy()` mapping or dynamic
+`import()` loads after startup, so it closes no cycle. Each check that takes a threshold reads
+its own keys under `doctor` in [configuration](/docs/sdxc/configuration#doctor).
 
 ### Accept a migration that already ran
 
@@ -167,10 +135,7 @@ names, rather than editing the file:
 ```
 
 The replay steps past that error alone, so a different error in the same file still fails, and
-checks the rest of the chain. In a file split by Drizzle's `--> statement-breakpoint`, it skips
-only the statement that raised the error and runs the ones after it; any other file is one step.
-A passing line counts the accepted errors and lists each as a finding, and an entry whose error
-no longer occurs warns, so the list shrinks once the migration is fixed.
+an entry whose error no longer occurs warns, so the list shrinks once the migration is fixed.
 
 <warning>
 Leave a migration production applied as it is. The databases that ran it never run it again, so
@@ -185,31 +150,11 @@ sdxc doctor --skip ui --skip typegen
 ```
 
 `--only` and `--skip` take check names, repeated or comma-separated, your own checks included.
-A name `doctor` does not have stops it with the list it has:
-
-```text
-No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, test-ratio, crap, mutation, ui
-```
 
 ## As JSON
 
 `--json` prints the same report as one JSON document for an agent: `ok` is `false` when any
-check failed, and each check carries its `findings` one per entry, and its `fix`:
-
-```text
-{
-  "ok": true,
-  "checks": [
-    {
-      "name": "routes",
-      "status": "warn",
-      "message": "Found 1 route no router maps",
-      "findings": ["GET /pricing (routes/web.ts pricing) is mapped by no router"],
-      "fix": "Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one"
-    }
-  ]
-}
-```
+check failed, and each check carries its `status`, `message`, `findings` and `fix`.
 
 ## Add your own checks
 
@@ -254,13 +199,9 @@ changes nothing:
 | `exists`   | whether a path exists                                               |
 | `files`    | every file under a folder, leaving out `node_modules` and dot-files |
 
-Every path these take stays inside the project. A check's name is lowercase words joined by
-dashes, unique among your checks, and none of the built-in names. Checks run with the project's
-runtime; on Node, a check written in TypeScript needs Node 22.18 or newer.
-
-A check that fails to load, throws, returns something other than a result, shares a name, or
-runs longer than 30 seconds is reported as `fail` under its name, and every other check still
-runs.
+A check's name is lowercase words joined by dashes, and none of the built-in names. A check that
+fails to load, throws, or runs longer than 30 seconds is reported as `fail` under its name, and
+every other check still runs.
 
 ## In a workflow
 
@@ -271,11 +212,8 @@ sdxc upgrade
 sdxc doctor
 ```
 
-A `pins` or `remix` failure names the `sdxc upgrade <release>` that fixes it,
-[`sdxc upgrade`](/docs/sdxc/upgrade) catches up a lagging package even when no newer release is
-out, and a `ui` warning names the copies `sdxc ui update` brings current. In CI, run it before
-[`sdxc deploy`](/docs/sdxc/deploy) so a missing secret or a migration a new database cannot
-replay stops the pipeline before production.
+In CI, run it before [`sdxc deploy`](/docs/sdxc/deploy) so a missing secret or a migration a new
+database cannot replay stops the pipeline before production.
 
 ## Where to go next
 

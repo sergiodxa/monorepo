@@ -61,15 +61,11 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 };
 ```
 
-A few choices here are load-bearing. `styleSrc` keeps `"unsafe-inline"`, for the reason in the
-warning below. `formAction` names your identity provider, because a login form that posts to it — the one in
-[Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — is a form action
-too. The Turnstile origin appears in `scriptSrc` and `frameSrc` because the challenge from
-[Protect forms](/docs/identity-and-security/protect-forms) loads a script that renders a frame.
-Once the policy is enforced, `frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`, so
-the two can never disagree, and `X-Content-Type-Options: nosniff` is written unless you turn it
-off. The `sha256-…` source allows `BOOT_SCRIPT` inline, as the section on hashing a fixed script
-below explains.
+`formAction` names your identity provider, because the login in
+[Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) redirects a form
+there. The Turnstile origin in `scriptSrc` and `frameSrc` is for the challenge from
+[Protect forms](/docs/identity-and-security/protect-forms). Once the policy is enforced,
+`frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`.
 
 <warning>
 Keep `"nonce"` out of `styleSrc`. `remix/component` writes one `<style>` per `css()` mixin
@@ -78,7 +74,7 @@ every one of them.
 </warning>
 
 The CSP starts as `contentSecurityPolicyReportOnly`: the browser reports what it would have
-blocked without blocking it. You move it to `contentSecurityPolicy` once the reports go quiet.
+blocked without blocking it.
 
 <warning>
 A report-only policy protects nothing. Scripts it would block still run, framing is still
@@ -87,10 +83,8 @@ allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecu
 
 ## Install it before the renderer
 
-`securityHeaders(policy)` publishes `ctx.securityHeaders` and writes the headers onto whatever
-response the chain returns, keeping any header the response set itself. Place it right before
-`assets()` and the renderer, so it decorates the rendered page and its nonce exists before the
-document asks for it.
+`securityHeaders(policy)` writes the headers onto whatever response the chain returns. Place it
+right before `assets()` and the renderer, so its nonce exists before the document asks for it.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { assets } from "@sdxc/assets-middleware";
@@ -119,18 +113,15 @@ export function createWebRouter() {
 }
 ```
 
-The comment stands for whatever your app already runs ahead of it, from
-[Wire the router](/docs/building-remix-apps/wire-the-router), and `assets()` from
-`@sdxc/assets-middleware` publishes the stylesheets, entry script and nonce each page passes to
-its document as `ctx.assets`. Its `nonce` option runs only when a page reads `ctx.assets.nonce`,
-so a redirect or a JSON response never advertises one. The order among the rest does not matter
-to the headers.
+The comment stands for the middleware from
+[Wire the router](/docs/building-remix-apps/wire-the-router). `assets()` publishes the
+stylesheets, entry script and nonce each page passes to its document as `ctx.assets`.
 
 ## Put nonces on the scripts you render
 
-The nonce is generated on first read, and a response that never reads it gets every `"nonce"`
-source removed, so an unused nonce is never advertised. The document puts `ctx.assets.nonce` on
-its import map:
+The nonce is generated on first read, and a response that never reads it advertises none. The
+document puts `ctx.assets.nonce` on its import map, which `remix/component` copies onto every
+import map it appends later, so client entries load under a nonce-based `script-src`:
 
 ```tsx {% title="resources/layouts/document.tsx" %}
 import type { DocumentAssets } from "@sdxc/assets-middleware";
@@ -161,15 +152,8 @@ export function Document(handle: Handle<DocumentProps>) {
 }
 ```
 
-A page renders it as `ctx.render(<Document assets={ctx.assets}>…</Document>)`. The boot script
-needs no nonce, because its hash is in the policy.
-
-A page with client entries — the passkey button from
-[Add passkeys](/docs/identity-and-security/passkeys), say — needs the nonce on its import map.
-`remix/component` copies it onto every import map it appends later; without it, a nonce-based
-`script-src` blocks the client entries. Any other inline script a handler renders takes
-`ctx.securityHeaders.nonce` the same way, and `TurnstileWidget` and the other CAPTCHA widgets
-take a `nonce` prop for their loader script.
+The boot script needs no nonce, because its hash is in the policy. Any other inline script a
+handler renders takes `ctx.securityHeaders.nonce` the same way.
 
 <note>
 Read the nonce while the chain is still running, in the handler or in the document
@@ -183,9 +167,9 @@ A nonce is per response, so an HTML response stored in a shared cache replays on
 visitor, and anyone who reads it can run a script under it.
 </warning>
 
-For a script whose text never changes, list its hash instead. The policy module above
-exports the script's text as `BOOT_SCRIPT` and lists its `sha256-…` source as a literal, and a
-test fails when the two drift apart:
+For a script whose text never changes, list its hash instead. The policy module exports
+`BOOT_SCRIPT` and lists its `sha256-…` source as a literal, and a test fails when the two drift
+apart:
 
 ```typescript {% title="config/security-policy.test.ts" %}
 import { Base64, sha256 } from "@sdxc/crypto";
@@ -201,14 +185,12 @@ test("the policy allows the boot script exactly as written", async () => {
 });
 ```
 
-CSP hashes are standard, padded base64, which is what `Base64.encode` writes. Hashing in a test
-keeps the work out of the Worker's global scope and off every cold start.
+Hashing in a test keeps the work out of the Worker's global scope and off every cold start.
 
 ## Collect reports before enforcing
 
-`reportTo: "csp"` names the endpoint `reportingEndpoints` points at. `parseReports` reads either
-format a browser sends — the Reporting API's `application/reports+json` batches and the legacy
-`application/csp-report` document — into one violation shape.
+`reportTo: "csp"` names the endpoint `reportingEndpoints` points at. `parseReports` reads both
+report formats browsers send into one violation shape.
 
 ```typescript {% title="app/http/controllers/csp-reports.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -233,38 +215,15 @@ export default createAction(routes.cspReports, async (ctx) => {
 });
 ```
 
-Declare the route as `cspReports: post("/reports/csp")` in `routes/web.ts`. The slice caps
-how much one crafted batch can write to your logs. When the only violations left are browser extensions, rename
-`contentSecurityPolicyReportOnly` to `contentSecurityPolicy` and the policy is enforced.
-
-## Loosen one route, not the policy
-
-A route that has to differ — an embeddable widget that other sites frame — patches its own
-response instead of weakening the policy for every page:
-
-```tsx {% title="app/http/controllers/embed.tsx" %}
-import { securityHeadersOverride } from "@sdxc/security-headers/middleware";
-import { createAction } from "remix/router";
-
-import { EmbedCard } from "~/resources/views/embed-card";
-import routes from "~/routes/web";
-
-export default createAction(routes.embed, {
-	middleware: [
-		securityHeadersOverride({ contentSecurityPolicy: { frameAncestors: ["*"] } }),
-	],
-	handler: (ctx) => ctx.render(<EmbedCard />),
-});
-```
-
-A CSP patch merges directive by directive, and the derived `X-Frame-Options` disappears with the
-`'none'` it came from. A handler can do the same with `ctx.securityHeaders.override(patch)`.
+Declare the route as `cspReports: post("/reports/csp")`. The slice caps how much one crafted
+batch can write to your logs. When the only violations left are browser extensions, rename
+`contentSecurityPolicyReportOnly` to `contentSecurityPolicy` and the policy is enforced. A route
+that has to differ, such as an embeddable widget, patches its own response with
+`securityHeadersOverride` instead of weakening the policy for every page.
 
 ## Publish security.txt
 
-RFC 9116's `/.well-known/security.txt` is where a researcher looks for your security contact.
-`wellKnown()` answers it with the right media type, an `ETag` and caching, and hands every other
-path to the next middleware.
+RFC 9116's `/.well-known/security.txt` is where a researcher looks for your security contact:
 
 ```typescript {% title="config/security-txt.ts" %}
 import type { SecurityTxt } from "@sdxc/well-known/security-txt";
@@ -284,16 +243,9 @@ export const SECURITY_TXT: SecurityTxt = {
 
 Register `wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) })` — `wellKnown`
 and `serve` from `@sdxc/well-known/middleware`, `securityTxt` from
-`@sdxc/well-known/security-txt` — near the top of the chain, before session work, since the
-document is the same for every visitor. Keep `expires` a literal date, and add a test that fails
-30 days before it with `isExpired(SECURITY_TXT, thirtyDaysFromNow)`: a date computed from the
-clock keeps the file looking fresh while the inbox behind it goes stale.
-
-RFC 9116 also recommends signing the file, so a researcher can trust the contact even when the
-page around it was tampered with. Pass `transform: cleartextSigner({ key: () => env.OPENPGP_SIGNING_KEY })`
-to `serve` and the file goes out as an OpenPGP cleartext signed message;
-[Sign files and security.txt with OpenPGP](/docs/identity-and-security/openpgp-signatures)
-makes the key and tests the signature.
+`@sdxc/well-known/security-txt` — near the top of the chain, before session work. Keep
+`expires` a literal date, and add a test that fails 30 days before it with
+`isExpired(SECURITY_TXT, thirtyDaysFromNow)`, so a stale contact cannot go unnoticed.
 
 ## Test the headers
 

@@ -9,7 +9,7 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to subscribe readers to Buttondown or Kit through one `@sdxc/newsletter` contract"
     - "How to credit the campaign and follow confirmations and unsubscribes from webhooks"
-    - "How to test against the in-memory list and hold your own provider to the contract"
+    - "How to test the sign-up form against the in-memory list"
 ---
 
 This guide builds the sign-up box at the bottom of a blog: a visitor types an address, the list
@@ -49,44 +49,13 @@ export const buttondown: Newsletter = new ButtondownNewsletter({
 ```
 
 Declare both values as secrets in your Worker's configuration. `confirmation: "double"`, the
-default, creates each new reader unconfirmed, so Buttondown sends the confirmation email and the
-reader starts `pending`; `"single"` starts them `active`. The provider pins the Buttondown API
-version it reads, so a platform change to its default version leaves your app's answers as they
-were. `newsletterId` narrows the webhook deliveries it accepts to one newsletter when the account
-holds several.
+default, creates each new reader `pending` and has Buttondown send the confirmation email. On Kit,
+`KitNewsletter` from `@sdxc/newsletter/kit` takes the same shape plus the `form` readers are added
+through, whose `confirmation` must match the form's own setting in Kit; see [`@sdxc/newsletter`](/api/newsletter) for its options.
 
-On Kit, double opt-in belongs to the form a reader is added through, so the provider names that
-form and repeats its setting:
-
-```typescript {% title="app/initializers/newsletter.ts" %}
-import type { Newsletter } from "@sdxc/newsletter";
-
-import { KitNewsletter } from "@sdxc/newsletter/kit";
-import { env } from "cloudflare:workers";
-
-export const kit: Newsletter = new KitNewsletter({
-	apiKey: env.KIT_API_KEY,
-	webhookSecret: env.KIT_WEBHOOK_SECRET,
-	form: { id: "55", confirmation: "double" },
-});
-```
-
-<warning>
-`form.confirmation` has to match the form's own setting in Kit, which is what decides whether
-the confirmation email goes out.
-</warning>
-
-The form is also where Kit records attribution.
-
-<note>
-Metadata keys must already exist as Kit custom fields, and creating a reader costs up to four
-requests against Kit's rate limit.
-</note>
-
-Every call on either provider answers a `Result<T, NewsletterError>`. The error's `code` is the
-normalized reason, `providerCode` the platform's own, and only `rate_limited` is `retryable`,
-with the delay the platform asked for in `retryAfter`. `unknown` means a timeout or a 5xx after
-which the write may have landed; every write in the contract is safe to repeat.
+Every call answers a `Result<T, NewsletterError>`. The error's `code` is the normalized reason,
+and only `rate_limited` is `retryable`, with the platform's delay in `retryAfter`. Every write in
+the contract is safe to repeat.
 
 ## Publish it on the request
 
@@ -139,12 +108,9 @@ export function createWebRouter(list: Newsletter = buttondown) {
 }
 ```
 
-Your app's `cop()` and renderer follow these in the same chain. `getClientIP()` publishes
-`ctx.ip`, which platforms use to screen sign-ups, and `attribution()` publishes
-`ctx.attribution`, set up in
+`getClientIP()` publishes `ctx.ip`, which platforms use to screen sign-ups, and `attribution()`
+publishes `ctx.attribution`, set up in
 [Know where visitors come from](/docs/data-and-background-work/attribution).
-An app whose list varies by tenant passes `provider` a function of the request context instead,
-and the middleware calls it once per request.
 
 ## Subscribe from a form
 
@@ -225,85 +191,14 @@ export const action = createAction(routes.subscribe.action, async (ctx) => {
 ```
 
 An address already on the list, in any status, is a success with `created: false` and its record
-untouched, so the page answers it like a new reader and never tells a visitor who else is
-subscribed. Tags, metadata and attribution apply only to a reader the call created.
-`outcome.data.subscriber.status` is `pending` until the reader clicks the confirmation link.
-
-`ip` takes the `IP` the middleware published, or the `Result` of `IP.parse` as it is; `null` or a
-failed parse records no address.
+untouched, so the page never tells a visitor who else is subscribed. `toCampaign` turns the
+visitor's touch into the UTM fields, referrer and landing page the platform records.
 
 <warning>
 Bots find a public sign-up form quickly, so put the layers from
 [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) in front of this
 action.
 </warning>
-
-## Credit the campaign
-
-`toCampaign` turns a touch into the flat fields `attribution` takes: the five UTM values, the
-referring hostname and the absolute landing page. Buttondown stores source, medium and campaign
-in its own columns and the referrer (or, without one, the landing page) as the reader's referrer;
-`term` and `content` travel as `utm_term` and `utm_content` metadata. Kit records attribution
-through the form the provider names.
-
-To keep both touches rather than one, add them as metadata:
-
-```typescript
-import { toMetadata } from "@sdxc/attribution";
-
-let outcome = await ctx.newsletter.subscribers.subscribe({
-	email: email.data,
-	attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
-	metadata: toMetadata(ctx.attribution),
-	ip: ctx.ip,
-});
-```
-
-`toMetadata` writes keys such as `first_channel`, `first_source` and `last_campaign`, only for
-the fields a touch carries. On Kit each of those keys must already exist as a custom field.
-
-## Change a reader from your app
-
-`update` adds and removes tags by name and merges metadata, where a `null` value removes the key.
-Tag a reader who became a customer so the platform can segment them:
-
-```typescript {% title="app/services/newsletter.ts" %}
-import type { EmailAddress } from "@sdxc/email-address";
-import type { Newsletter, NewsletterError } from "@sdxc/newsletter";
-import type { Result } from "@sdxc/result";
-
-import { failure, isFailure, success } from "@sdxc/result";
-
-export async function tagCustomer(
-	newsletter: Newsletter,
-	email: EmailAddress,
-	plan: string,
-): Promise<Result<null, NewsletterError>> {
-	let updated = await newsletter.subscribers.update(
-		{ email },
-		{ tags: { add: ["customer"] }, metadata: { plan, trial: null } },
-	);
-
-	if (isFailure(updated) && updated.error.code !== "not_found") {
-		return failure(updated.error);
-	}
-	return success(null);
-}
-```
-
-A buyer who never subscribed answers `not_found`, which is a normal outcome here. A lookup by
-`{ email }` compares the parsed address, so a different capitalization of the local part finds
-the same reader on a platform that compares canonically.
-
-`unsubscribe(ref)` marks a reader unsubscribed and keeps the record, and repeating it succeeds.
-The contract leaves resubscribing to the reader, since an unsubscribe is revoked consent: the
-next `subscribe` of that address answers `created: false` with the status left as it is.
-`find`, `tags` and `list` read readers back; `list` pages by cursor, and only `cursor === null`
-ends a walk.
-
-A `rate_limited` failure carries `retryAfter`, and the provider makes one attempt per call. Run a
-bulk change from a [background job](/docs/data-and-background-work/jobs-and-cron) that retries
-after that delay.
 
 ## Follow confirmations and unsubscribes
 
@@ -343,22 +238,12 @@ export function createNewsletterWebhook(
 }
 ```
 
-`setReaderStatus` is your own model function over the table where you mirror readers. `AppContext`
-is your router's context type, `RouterContext<ReturnType<typeof createWebRouter>>`, so each handler
-receives the request's own `ctx.db`, published by `database()` as
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) sets it up. The
-endpoint is the value `router.map` takes, as the router above shows.
+`setReaderStatus` is your own model function over the table where you mirror readers, and
+`AppContext` is your router's context type, so each handler receives the request's `ctx.db`.
 
 The endpoint answers `401` to a delivery the secret does not prove, and a provider with no secret
-configured proves none, so the route fails closed. An authentic delivery it cannot parse is
-acknowledged, since the same bytes would fail again. A handler that returns a failed `Result`
-answers `503`, so the platform redelivers; the replay store remembers each event id once its handler finishes, so the
-redelivery skips the events already handled and resumes at the one that failed. Buttondown signs
-deliveries without a timestamp, which makes the store what bounds a replay there.
-
-Each event carries `subscriberId` and, when the platform sent it, `subscriber` with the record;
-when it is `null`, `ctx.newsletter.subscribers.find({ id })` reads it. A platform event type with
-no mapping arrives as `unrecognized` and is acknowledged.
+proves none, so the route fails closed. A handler that returns a failed `Result` answers `503`, so
+the platform redelivers, and the replay store skips the events already handled.
 
 <warning>
 The webhook is a cross-origin `POST`, so exempt its path from `cop()` as
@@ -369,8 +254,8 @@ The webhook is a cross-origin `POST`, so exempt its path from `cop()` as
 
 `MemoryNewsletter` from `@sdxc/newsletter/memory` implements the whole contract in memory, so a
 test drives the real router and asserts on the list's state. It adds `seed`, `confirm`, `fail`
-and `heal` for setting a scene, and `attribution(email)` and `ip(email)` for reading back what a
-subscribe recorded:
+and `heal` for setting a scene, and `attribution(email)` for reading back what a subscribe
+recorded:
 
 ```typescript {% title="app/http/controllers/subscribe.test.ts" %}
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
@@ -401,15 +286,6 @@ test("a new reader waits for confirmation", async () => {
 	expect(unwrap(list.confirm("reader@example.com")).status).toBe("active");
 });
 
-test("a suppressed address sees its own copy", async () => {
-	let list = new MemoryNewsletter();
-	list.fail("subscribers.subscribe", "suppressed");
-
-	let response = await post(list, "reader@example.com");
-
-	expect(await response.text()).toContain("cannot be subscribed");
-});
-
 test("credits the campaign the visitor landed from", async () => {
 	let list = new MemoryNewsletter();
 	let landing = await createWebRouter(list).fetch(
@@ -428,70 +304,8 @@ test("credits the campaign the visitor landed from", async () => {
 });
 ```
 
-`fail(target, code)` arms a failure on every subscriber call or on one method, until `heal`
-disarms it; without a code it reports `unknown`, the timeout case. `seed` adds readers directly,
-in any status, bypassing confirmation.
-
-`webhooks.emit` signs a Standard Webhooks delivery for an event, addressed to
-`/webhooks/newsletter`, so the same router receives it. A list built with an empty
-`webhookSecret` proves nothing, which is how a test holds the endpoint to failing closed:
-
-```typescript {% title="app/http/controllers/newsletter-webhook.test.ts" %}
-import { MemoryNewsletter } from "@sdxc/newsletter/memory";
-import { unwrap } from "@sdxc/result";
-import { expect, test } from "vitest";
-
-import { createWebRouter } from "~/app/initializers/router";
-
-test("refuses a delivery the configured secret does not prove", async () => {
-	let sender = new MemoryNewsletter();
-	let [reader] = sender.seed([{ email: "reader@example.com" }]);
-	let delivery = unwrap(
-		await sender.webhooks.emit({
-			type: "subscriber.unsubscribed",
-			subscriberId: reader?.id ?? "",
-		}),
-	);
-
-	let unconfigured = new MemoryNewsletter({ webhookSecret: "" });
-	let response = await createWebRouter(unconfigured).fetch(delivery.request);
-
-	expect(response.status).toBe(401);
-});
-```
-
-Passing an `id` to `emit` and emitting it twice models a redelivery.
-
-## Hold your own provider to the contract
-
-A platform the package has no provider for is one class implementing `Newsletter`.
-`@sdxc/newsletter/conformance` registers the contract's rules as Vitest tests against it: one
-subscribe per address, lookups by id and email, tags, metadata merging, idempotent unsubscribe, a
-full cursor walk and fail-closed webhooks. The memory, Buttondown and Kit providers pass the same
-suite.
-
-```typescript {% title="app/services/mailing-list.test.ts" %}
-import { conformance } from "@sdxc/newsletter/conformance";
-
-import { MailingListNewsletter, signDelivery } from "~/app/services/mailing-list";
-
-const API_KEY = "test-key";
-const SECRET = "test-webhook-secret";
-
-conformance({
-	name: "MailingListNewsletter",
-	create: () =>
-		new MailingListNewsletter({ apiKey: API_KEY, webhookSecret: SECRET }),
-	createWithoutSecret: () => new MailingListNewsletter({ apiKey: API_KEY }),
-	confirmation: "double",
-	deliver: (_provider, subscriber) => signDelivery(SECRET, subscriber),
-});
-```
-
-`create` runs for every test, so each one starts clean; point it at a sandbox list or at MSW
-handlers that model the platform. `deliver` signs a delivery about the subscriber exactly as the
-platform would. `metadataKeys` names two keys the platform accepts when its keys must exist
-first, and `missingId` an id well-formed for the platform that names no reader.
+`fail(target, code)` makes subscriber calls fail with that code until `heal` disarms it, which is
+how a test reaches the action's error copy.
 
 ## Where to go next
 

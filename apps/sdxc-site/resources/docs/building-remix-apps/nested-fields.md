@@ -37,9 +37,7 @@ indices, or `[]` pushes, becomes an array.
 | `q=bug`                             | `{ q: "bug" }`                              |
 | `filter[status]=open`               | `{ filter: { status: "open" } }`            |
 | `tags[]=a&tags[]=b`                 | `{ tags: ["a", "b"] }`                      |
-| `tags=a&tags=b`                     | `{ tags: ["a", "b"] }`                      |
 | `items[0][name]=A&items[1][name]=B` | `{ items: [{ name: "A" }, { name: "B" }] }` |
-| `items[1][name]=B&items[0][name]=A` | the same array, ordered by index            |
 
 A key used both as a value and as a group (`a=1&a[b]=2`) fails the parse.
 
@@ -77,10 +75,9 @@ export const TaskQuerySchema = s.object({
 export type TaskQuery = s.InferOutput<typeof TaskQuerySchema>;
 ```
 
-`parse(source, schema)` reads a `URL` directly, and it also takes a query string, a
-`URLSearchParams` or an `@sdxc/location` `Location`. It returns a `Result`: the schema's
-output, or a `ValidationError` whose issues carry each path. A query the page cannot read is a
-URL that names nothing, so it gets the router's 404:
+`parse(source, schema)` reads a `URL` and returns a `Result`: the schema's output, or a
+`ValidationError` whose issues carry each path. A query the page cannot read names nothing, so
+it gets the router's 404:
 
 ```tsx {% title="app/http/controllers/tasks.tsx" %}
 import { parse } from "@sdxc/bracket-params";
@@ -102,24 +99,11 @@ export default createAction(routes.tasks, async (ctx) => {
 });
 ```
 
-`?q=invoice&filter[status][]=open&filter[status][]=blocked&sort[field]=title&sort[dir]=desc&page=2`
-arrives as:
-
-```typescript
-{
-	q: "invoice",
-	filter: { status: ["open", "blocked"] },
-	sort: { field: "title", dir: "desc" },
-	page: 2,
-}
-```
-
 ### Write the filters as a form
 
-A `GET` form writes the query for you. Name each input with the key it fills: every checked
-box submits one `filter[status][]`, so the statuses arrive as an array, and none checked falls
-back to the schema's `[]`. The current sort travels along in hidden inputs, so filtering keeps
-it.
+A `GET` form writes the query for you. Each checked box submits one `filter[status][]`, so the
+statuses arrive as an array, and hidden inputs carry the current sort along. The form leaves
+`page` out, so a new filter starts from the first page.
 
 ```tsx {% title="resources/views/tasks.tsx" %}
 import type { Handle } from "remix/component";
@@ -176,13 +160,10 @@ export function TasksPage(handle: Handle<Props>) {
 }
 ```
 
-The form leaves `page` out on purpose: a new filter starts again from the first page.
-
 ### Link to another page of the same view
 
-A sort header or a pager link changes one part of the query and keeps the rest. `stringify`
-writes a nested value back in the syntax `parse` reads, so a link is the current query with one
-field replaced:
+`stringify` writes a nested value back in the syntax `parse` reads, so a sort or pager link is
+the current query with one field replaced:
 
 ```tsx {% title="resources/views/task-links.tsx" %}
 import type { Handle } from "remix/component";
@@ -212,15 +193,10 @@ export function TaskLinks(handle: Handle<{ query: TaskQuery }>) {
 }
 ```
 
-`stringify` returns the encoded string without its `?`, so `new URLSearchParams(stringify(value))`
-gives the object form when an API wants one. Arrays are written with indices
-(`filter[status][0]=open`), which `parse` reads back as the same array.
-
 ## Read a form with nested fields
 
-A form that edits a document with parts, such as an invoice with a customer, repeated line items
-and attachments, names its inputs after the path each value takes. The schema then reads like
-the document rather than a list of flat names:
+A form that edits a document with parts, such as an invoice with a customer and repeated line
+items, names its inputs after the path each value takes, and the schema reads like the document:
 
 ```typescript {% title="app/http/validators/invoice.ts" %}
 import * as s from "remix/data-schema";
@@ -238,26 +214,19 @@ export const InvoiceSchema = s.object({
 			quantity: coerce.number().pipe(min(1)),
 		}),
 	),
-	attachments: s
-		.defaulted(s.array(s.instanceof_(File)), [])
-		.transform((files) => files.filter((file) => file.size > 0)),
 });
 ```
 
-A file input the visitor left empty still submits one nameless, empty `File`, which is why
-`attachments` drops files with no bytes.
-
 ### Name the inputs
 
-The customer's fields are written out, so the syntax is visible. The line items are generated,
-and `fieldName(path)` writes a path as its bracket name: `fieldName(["items", 0, "quantity"])`
-is `items[0][quantity]`. The file input submits one `attachments[]` per chosen file.
+The customer's fields are written out, so the syntax is visible. The line items are generated
+with `fieldName(path)`, which writes `["items", 0, "quantity"]` as `items[0][quantity]`.
 
 ```tsx {% title="resources/views/new-invoice.tsx" %}
 import type { Handle } from "remix/component";
 
 import { fieldName } from "@sdxc/bracket-params";
-import { Button, FileTrigger, Form, TextField } from "@sdxc/ui";
+import { Button, Form, TextField } from "@sdxc/ui";
 
 interface Props {
 	issues?: ReadonlyArray<Form.Issue>;
@@ -271,7 +240,7 @@ export function NewInvoicePage(handle: Handle<Props>) {
 		let value = (name: string) => String(submitted?.get(name) ?? "");
 
 		return (
-			<Form method="post" encType="multipart/form-data" issues={issues}>
+			<Form method="post" issues={issues}>
 				<TextField
 					label="Customer name"
 					name="customer[name]"
@@ -308,10 +277,6 @@ export function NewInvoicePage(handle: Handle<Props>) {
 					);
 				})}
 
-				<FileTrigger name="attachments[]" multiple accept="application/pdf">
-					Attach PDFs
-				</FileTrigger>
-
 				<Button type="submit">Create invoice</Button>
 			</Form>
 		);
@@ -319,14 +284,9 @@ export function NewInvoicePage(handle: Handle<Props>) {
 }
 ```
 
-<note>
-The form needs `encType="multipart/form-data"` for the files to be sent at all. A form without
-files reads the same way from the default URL-encoded body.
-</note>
-
 ### Validate in the action
 
-`parse` reads `ctx.formData` like it reads a URL, and a `File` arrives as a value unchanged:
+`parse` reads `ctx.formData` like it reads a URL:
 
 ```tsx {% title="app/http/controllers/invoices-new.tsx" %}
 import { fieldName, parse } from "@sdxc/bracket-params";
@@ -367,21 +327,17 @@ export default createController(routes.invoices.new, {
 });
 ```
 
-An issue's `path` is the structural path, `["items", 0, "quantity"]`. `@sdxc/ui`'s `Form`
-finds a field's issues by its `name`, so the action rewrites each path into the one-segment
-bracket name the input carries, and the message lands beside `items[0][quantity]`. An issue with
-no path is about the form as a whole and passes through unchanged. Indices match as long as the
-rows are numbered from `0` without gaps, which is how the view writes them.
-
-A refused post answers with the same page, its issues and what the visitor typed, and a 400; an
-accepted one redirects with a 303. [Validate forms and route params](/docs/building-remix-apps/forms-and-params)
-explains why each outcome answers the way it does.
+An issue's `path` is structural, `["items", 0, "quantity"]`, and `@sdxc/ui`'s `Form` finds a
+field's issues by its `name`, so the action rewrites each path into the bracket name the input
+carries. A refused post answers 400 with the page and what the visitor typed; an accepted one
+redirects with a 303, as [Validate forms and route params](/docs/building-remix-apps/forms-and-params)
+explains.
 
 ## Submit a nested form from code
 
-`toFormData(value)` writes an object as `FormData` with the same keys the view names, appending
-each `File` as its own field. It is how a test posts to the action without spelling every key,
-beside a request whose query the schema refuses:
+`toFormData(value)` writes an object as `FormData` with the same keys the view names, so a test
+posts to the action without spelling every key. `migrate()` prepares the in-memory database, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
 
 ```typescript {% title="app/http/controllers/invoices-new.test.ts" %}
 import { toFormData } from "@sdxc/bracket-params";
@@ -399,9 +355,6 @@ test("creates an invoice from a nested form", async () => {
 		items: [
 			{ description: "Design review", quantity: 2 },
 			{ description: "Implementation", quantity: 5 },
-		],
-		attachments: [
-			new File(["%PDF-1.7"], "brief.pdf", { type: "application/pdf" }),
 		],
 	});
 
@@ -427,12 +380,6 @@ test("answers a filter it cannot read with a 404", async () => {
 	expect(response.status).toBe(404);
 });
 ```
-
-`migrate()` prepares the in-memory database, as
-[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up. The
-same `toFormData` call builds the body of a `fetch` from a client script. Numbers and booleans
-are written as text and a `Date` as its ISO string. `null` and `undefined` are skipped, so an
-optional field can be passed as-is.
 
 ## Where to go next
 

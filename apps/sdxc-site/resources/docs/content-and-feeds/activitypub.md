@@ -5,27 +5,22 @@ section:
     title: Content & feeds
     order: 8
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to publish an actor and answer WebFinger with `@sdxc/well-known`"
-    - "How to verify an inbox that handles follows and undos with `@sdxc/http-signatures`"
+    - "How to verify each activity at the inbox and handle follows and undos"
     - "How to deliver signed posts to followers from jobs and test it all in memory"
 ---
 
-ActivityPub is the protocol Mastodon, Misskey, GoToSocial, Pixelfed and the rest of the
-fediverse speak. A site that federates has an actor, an account someone on any of those servers
-can search for and follow. Every post the site publishes lands in their timeline, and every
-reply, like and boost they send comes back to the site's inbox.
+ActivityPub is the protocol Mastodon and the rest of the fediverse speak. A site that
+federates has an actor someone on any of those servers can follow: every post lands in their
+timeline, and every reply, like and boost comes back to the site's inbox.
 
 This guide makes a Remix v3 app one such actor. It serves the actor document and WebFinger,
-verifies each activity at the inbox, processes follows and undos, delivers signed posts to every
-follower from background jobs, and serves each post as HTML to a browser and as an
-ActivityStreams `Article` to a server.
-
-[`@sdxc/activitypub`](/api/activitypub) holds the protocol: one `Federation` per actor, the
-vocabulary, and in-memory stores for tests. Its signatures come from
-[`@sdxc/http-signatures`](/api/http-signatures), [`@sdxc/well-known`](/api/well-known) answers
-WebFinger, [`@sdxc/jobs`](/api/jobs) runs every step off the request, and
+verifies each activity at the inbox, delivers signed posts to every follower from background
+jobs, and serves each post as HTML to a browser and as an `Article` to a server.
+[`@sdxc/activitypub`](/api/activitypub) holds the protocol, [`@sdxc/well-known`](/api/well-known)
+answers WebFinger, [`@sdxc/jobs`](/api/jobs) runs every step off the request, and
 [`@sdxc/cache`](/api/cache) holds the remote documents the federation fetches.
 
 ```bash
@@ -33,15 +28,13 @@ npm add @sdxc/activitypub @sdxc/cache @sdxc/http @sdxc/jobs @sdxc/result \
 	@sdxc/well-known remix
 ```
 
-The package keeps no state of its own. Followers, the activities already processed and the
-posts you serve live in your database, behind four small interfaces it calls, so the examples
-import a few modules from your own `~/app/models/*`.
+The package keeps no state of its own: followers and the posts you serve live in your
+database, behind small interfaces it calls, so the examples import your own `~/app/models/*`.
 
 ## Generate the actor's keys
 
-Every activity the site sends is signed with the actor's RSA key, and every server that receives
-one fetches the actor document to read the public half. `ActorKeys.generate` makes the pair
-Mastodon expects. Run it once, from a script, and store the private key as a secret:
+Every activity the site sends is signed with the actor's RSA key. Run `ActorKeys.generate` once,
+from a script, and store the private key as a secret:
 
 ```typescript {% title="scripts/actor-keys.ts" %}
 import { ActorKeys } from "@sdxc/activitypub";
@@ -56,15 +49,13 @@ else process.stdout.write(pair.data.privateKeyPem);
 bun scripts/actor-keys.ts | npx wrangler secret put ACTIVITYPUB_PRIVATE_KEY
 ```
 
-The private key is the only secret: `ActorKeys.import` derives the public half from it.
-
 <warning>
 Keep the key stable. Followers verify against the one they cached, and a new pair means
 announcing it to every one of them.
 </warning>
 
-Import it lazily through a `KeyProvider`, so the work happens inside the first request or job
-that signs, and once per isolate after that:
+Import it lazily through a `KeyProvider`, once per isolate, inside the first request or job
+that signs:
 
 ```typescript {% title="app/services/actor-keys.ts" %}
 import type { KeyProvider } from "@sdxc/activitypub";
@@ -93,8 +84,7 @@ class SiteKeys implements KeyProvider {
 export const SITE_KEYS = new SiteKeys();
 ```
 
-A failed import is forgotten, so the next call tries again. The key must be PKCS#8
-(`BEGIN PRIVATE KEY`), which is what `generate` writes.
+A failed import is forgotten, so the next call tries again.
 
 ## Describe the actor
 
@@ -126,9 +116,7 @@ export default route({
 });
 ```
 
-`parseActor` reads a document into the full `ActivityPub.Actor` shape, filling every member you
-leave out with `null`, `[]` or `false`, so the actor is written as the handful of members that
-matter:
+`parseActor` fills every member you leave out, so the actor is the handful that matter:
 
 ```typescript {% title="app/services/site-actor.ts" %}
 import type { ActivityPub, ActivityPubParseError } from "@sdxc/activitypub";
@@ -161,16 +149,13 @@ export function siteActor(): Result<ActivityPub.Actor, ActivityPubParseError> {
 }
 ```
 
-`preferredUsername` is the `hello` of `hello@example.com`, the handle people search for.
-`publicKey` stays out: the federation fills it from the keys wherever it serves the actor.
-`endpoints.sharedInbox` lets a server holding many of your followers deliver one copy for all of
-them, and pointing it at the inbox keeps one URL to verify.
+`preferredUsername` is the `hello` of `hello@example.com`, the handle people search for. The
+federation fills `publicKey` from the keys wherever it serves the actor.
 
 ## Build the federation
 
 One `Federation` wires the actor, its keys, your stores, the cache and the queue together. It
-holds nothing between calls, so build it wherever a database and a job enqueuer are at hand: in
-a request with `ctx.db` and `ctx.jobs`, in a job with its database and the dispatcher.
+holds nothing between calls, so build it wherever a database and a job enqueuer are at hand.
 
 ```typescript {% title="app/services/federation.ts" %}
 import type { ActivityPubParseError } from "@sdxc/activitypub";
@@ -238,34 +223,14 @@ export function createFederation(
 }
 ```
 
-`followers` and `objects` are yours, each a small class over your own tables, and `seen` comes
-with the package:
-
-- `Followers` implements `FollowerStore`: `put`, `get`, `remove` and `removeInbox` keyed by
-  `(actor, id)`, and `list`, `count` and `inboxes` over accepted followers only.
-- `CacheSeenActivities` implements `SeenActivities` over the same `Cache`: `claim(id, ttl)`
-  answers `true` the first time an activity id is claimed, which spares a redelivered activity
-  a second pass. Claims live under `activitypub:seen:<id>` and are held for at least a minute,
-  the shortest expiration Workers KV accepts.
-- `FederatedPosts` implements `LocalObjects`: `find(id)` answers the post you serve under `id`,
-  which is how the inbox tells a reply to one of your posts from noise. It is built further down.
-
-The cache holds remote actors and objects, the signature scheme each server accepted, and the
-servers that keep failing. Any `@sdxc/cache` `Cache` works; a failing one costs a refetch, never
-a wrong answer. `userAgent` goes out on every request, since some servers refuse requests
-without one.
-
-Pass `blocked: (host) => …` to refuse a server: a blocked host can neither deliver to the
-inbox, follow the actor, nor receive its posts. `authorizedFetch: true` requires a signed `GET`
-for the collections and for every document `respond` serves, which is the secure mode some
-servers run; the actor document always answers unsigned, since that is where a server reads the
-key it verifies with.
+`Followers` implements `FollowerStore` over your own table, and `FederatedPosts`, built further
+down, implements `LocalObjects`, which is how the inbox tells a reply to one of your posts from
+noise. `CacheSeenActivities` comes with the package and spares a redelivered activity a second
+pass. `userAgent` goes out on every request, since some servers refuse requests without one.
 
 ## Answer the actor's URLs
 
-`federation.fetch` answers every URL the actor document names: the actor itself with
-`publicKey` filled in, the inbox, the outbox, and the followers and following collections, each
-with an `ETag`, `304` revalidation and a five-minute public cache. Every route maps to the same
+`federation.fetch` answers every URL the actor document names, so every route maps to the same
 action:
 
 ```typescript {% title="app/http/controllers/activitypub.ts" %}
@@ -304,31 +269,9 @@ export default createController(routes.activityPub, {
 });
 ```
 
-Map it with `router.map(routes.activityPub, activityPub)`. The followers collection reads
-`count` and `list` from your store. The outbox is empty until you pass `outbox: (cursor) => …`,
-which answers a page of your `Create` activities as `{ items, next, totalItems }`.
-
-### What the inbox does inside the request
-
-A `POST` to the inbox is verified before it is queued, and the response is the verdict: `202`
-once the activity is on the queue, or the status of the check it failed. The checks run in
-order and stop at the first failure, so a malformed or blocked delivery costs no fetch:
-
-1. The content type is `application/activity+json` or `application/ld+json` (`415`), and the
-   body fits 100 KB (`413`).
-2. The body is an activity with an `id`, a `type` and an `actor` (`400`), from a host you have
-   not blocked (`403`).
-3. The request is signed, with RFC 9421 or draft-cavage, over a digest that matches the body,
-   within an hour of now (`401`).
-4. The signature verifies with the sender's key, fetched from its actor document and refetched
-   once when it fails, so a rotated key still lands (`401`).
-5. The key belongs to the activity's actor, or the activity, fetched fresh from its own origin,
-   is the same activity by the same actor. That second path is how a reply Mastodon forwards to
-   a thread's participants is accepted.
-
-Verifying inside the request is what lets a sender learn from a `401` and retry at once with
-the other signature scheme. A `Delete` from an account whose key now answers `410` gets an empty
-`202`, since a deleted account's last messages can no longer be verified.
+Map it with `router.map(routes.activityPub, activityPub)`. A `POST` to the inbox is verified
+inside the request (content type, size, signature, and that the key belongs to the activity's
+actor) and answers `202` once the activity is queued, or the status of the check it failed.
 
 <warning>
 Verify before anything else reads the request: the body is a stream. A server delivering an
@@ -342,9 +285,7 @@ path from it: the signature is the stronger claim.
 Someone on Mastodon types `@hello@example.com`. Their server asks
 `https://example.com/.well-known/webfinger?resource=acct:hello@example.com` for a `self` link
 typed `application/activity+json`, then fetches the actor it points at. `actorLink` writes that
-link, and the `wellKnown` middleware from `@sdxc/well-known` answers the path. The `links`
-array on a WebFinger JRD is JSON, not an HTTP `Link` header; RFC 8288 headers are
-[Parse and write Link headers](/docs/http-apis/link-header).
+link, and the `wellKnown` middleware answers the path:
 
 ```typescript {% title="app/http/middleware/webfinger.ts" %}
 import { actorLink } from "@sdxc/activitypub";
@@ -371,19 +312,13 @@ export const webFingerMiddleware = wellKnown({
 ```
 
 Add it to the router's `middleware`. A resource you do not host returns `null`, which falls
-through to your router's `404`. Mastodon also checks the reverse direction:
-`preferredUsername@<actor host>` must resolve back to the same actor, which holds here because
-the handle and the actor share `example.com`.
-
-The same lookup runs the other way through `federation.lookup("@someone@mastodon.social")`,
-which resolves a remote handle to its actor, confirming it against the actor's own host, for a
-form where someone types a handle to block or to mention.
+through to your router's `404`.
 
 ## Process the queue
 
 Every step the federation queues (an inbox activity, the fan-out of a post, one delivery) is
-one message shape, `Federation.MESSAGE`, a schema from `remix/data-schema`. Declare one job for
-it, beside the job that publishes a post:
+one message shape, `Federation.MESSAGE`. Declare one job for it, beside the job that publishes a
+post:
 
 ```typescript {% title="app/jobs/index.ts" %}
 import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
@@ -427,10 +362,8 @@ export default createJobHandler(jobs.federation.process, async (ctx) => {
 ```
 
 `ctx.attempts` picks the step of the retry schedule, and `delay` is in milliseconds, which
-`ctx.retry` takes as it is. The job runs inside the dispatcher, so it enqueues through
-`dispatcher` rather than `ctx.jobs`; [Background jobs and
-cron](/docs/data-and-background-work/jobs-and-cron) builds both, and the `database()` job
-middleware that publishes `ctx.db`.
+`ctx.retry` takes as it is. [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)
+builds the dispatcher and the `database()` job middleware that publishes `ctx.db`.
 
 ## Handle follows, undos and replies
 
@@ -439,34 +372,9 @@ your handler for the activity's type. By the time a handler runs, the sender's a
 fetched from its own server, and anything the activity embeds from another origin has been
 fetched fresh rather than trusted.
 
-One follow, from the remote server's first lookup to the `Accept` it gets back, runs like this:
-
-```mermaid {% alt="An ActivityPub follow: the remote server looks up the WebFinger and actor documents, then posts a signed Follow to the inbox; the site verifies the signature against the sender's key, enqueues the Follow and answers 202; the job stores the follower and enqueues an Accept, which is delivered signed to the remote inbox" %}
-sequenceDiagram
-    participant Remote as Remote server
-    participant Site as Your site
-    participant Queue
-    participant Job as federation.process
-    Remote->>Site: GET /.well-known/webfinger
-    Site-->>Remote: self link to /actor
-    Remote->>Site: GET /actor
-    Site-->>Remote: actor with publicKey
-    Remote->>+Site: POST /actor/inbox, signed Follow
-    Site->>Remote: fetch the sender's actor
-    Remote-->>Site: sender's public key
-    Site-)Queue: enqueue the verified Follow
-    Site-->>-Remote: 202 Accepted
-    Queue->>Job: process the Follow
-    Job->>Job: store the follower, run the Follow handler
-    Job-)Queue: enqueue the Accept
-    Queue->>Job: process the delivery
-    Job->>Remote: POST signed Accept to its inbox
-```
-
-**Follow.** The package stores the follower and delivers an `Accept` that embeds the `Follow`,
-which is how the remote server learns the follow went through. A repeated `Follow` means the
-sender never saw the first `Accept`, so it is sent again. Chain a `Follow` handler onto the
-federation to decide instead:
+**Follow.** The package stores the follower and delivers an `Accept`. Chain a `Follow` handler
+onto the federation to decide instead, answering `"accept"`, `"reject"`, `"pending"`, or `null`
+for the default:
 
 ```typescript {% title="app/services/federation.ts" %}
 federation.on("Follow", (inbound) =>
@@ -474,68 +382,20 @@ federation.on("Follow", (inbound) =>
 );
 ```
 
-`"accept"`, `"reject"` and `"pending"` decide; `null` keeps the default, which is `"accept"`
-unless the actor sets `manuallyApprovesFollowers: true`. A pending follower is stored with
-`state: "pending"` and left out of the collection and of deliveries until you decide.
-`federation.approve` accepts it and queues the `Accept` of its stored `Follow`;
-`federation.reject`, for a pending or an accepted follower, queues the `Reject` and forgets it:
+A pending follower is left out of deliveries until you call `federation.approve(id)` or
+`federation.reject(id)`.
 
-```typescript {% title="app/http/controllers/followers.ts" %}
-let federation = createFederation(ctx);
-if (isFailure(federation)) return serviceUnavailable({ error: "not federating" });
-let decided =
-	decision === "approve"
-		? await federation.data.approve(followerId)
-		: await federation.data.reject(followerId);
-if (isFailure(decided) && decided.error.code === "not-found") {
-	return notFound({ error: "not a follower" });
-}
-```
+**Undo.** An `Undo` of a `Follow` removes the follower. Every `Undo` reaches your handler with
+the undone activity as `inbound.object`, which is what `withdrawResponse` above removes.
 
-Both are safe to retry, and `not-found` means the actor no longer follows you, for instance
-because it sent an `Undo` first. A rejected follow, and any follow from a blocked server, gets a
-`Reject`.
+**Create, Update, Like, Announce.** Only activities that reply to, quote, mention, like or boost
+something of yours reach your handler. `inbound.summary()` answers what the activity says about
+your content (its `kind`, `author`, sanitized `content` and the `target` post), the same shape a
+verified Webmention carries; [Join the IndieWeb](/docs/content-and-feeds/indieweb) builds that
+side. Store responses as pending and show them once you approve them.
 
-**Undo.** An `Undo` of a `Follow` removes the follower when the follow it names is the one
-stored. Every `Undo` reaches your handler once the undone activity is shown to be the sender's,
-with that activity as `inbound.object`: the `withdrawResponse` call above removes the like or
-boost it undid, and finds nothing to remove for a follow.
-
-**Create, Update, Like, Announce.** A post must be attributed to its sender, live on the
-sender's server, and reply to, quote or mention something of yours; a like or boost must name a
-post your `LocalObjects` serves. Anything else is acknowledged and dropped before your handler
-runs. `inbound.summary()` then answers what the activity says about your content:
-
-```typescript
-interface Summary {
-	kind: "reply" | "like" | "repost" | "mention";
-	id: string;
-	url: string;
-	target: string;
-	author: {
-		id: string;
-		handle: string;
-		name: string | null;
-		url: string;
-		photo: string | null;
-	};
-	content: { html: string; text: string } | null;
-	published: Date | null;
-}
-```
-
-`target` is your post or actor, and `content.html` is already sanitized against the remote
-post's own URL. It is the shape a verified Webmention carries, so one table and one moderation
-queue can hold both; [Join the IndieWeb](/docs/content-and-feeds/indieweb) builds that side.
-Store responses as pending and show them once you approve them.
-
-**Delete.** A `Delete` of a post is believed once a fresh fetch answers `404`, `410` or a
-`Tombstone`, or still names the sender as its author; a `Delete` of an account removes its
-follow. Its handler gets `inbound.deleted`,
-`{ kind: "object" | "actor", id }`, and `inbound.actor` is `null` when the account is already
-gone.
-
-A handler answers nothing or a `Result`.
+**Delete.** A `Delete` is believed only once a fresh fetch confirms it. Its handler gets
+`inbound.deleted`, `{ kind: "object" | "actor", id }`.
 
 <warning>
 A failure, or an exception, retries the whole message, so write every handler to tolerate
@@ -613,14 +473,9 @@ export class FederatedPosts implements LocalObjects {
 }
 ```
 
-`Post` and `findPostByUrl` are your own model. `ActivityPub.Draft` is the shape you author:
-`id` and `type` are required and every other member may be left out. `stringify` writes the
-JSON-LD document with its `@context`, dates as ISO 8601, and nothing for an absent member;
-reading it back through `parseObject` gives the full shape `find` answers.
-
-Address `PUBLIC` in `to` for a public post, and the followers collection in `cc` to reach your
-followers. Each activity needs its own `id`, so each `Update` carries the time of the change.
-`content` is the post's HTML; receiving servers sanitize it to the elements they render.
+`Post` and `findPostByUrl` are your own model. Address `PUBLIC` in `to` for a public post, and
+the followers collection in `cc` to reach your followers. Each activity needs its own `id`, so
+each `Update` carries the time of the change.
 
 ### Deliver from a job
 
@@ -657,47 +512,21 @@ export default createJobHandler(jobs.federation.publish, async (ctx) => {
 });
 ```
 
-`publish` serializes the activity and queues one `fanOut` message carrying it whole, so every
-inbox receives the same bytes even if the post changes again before delivery ends.
+`publish` queues one fan-out message carrying the activity whole, which queues one signed
+delivery per distinct inbox. Marking the post federated only after that means a failed publish
+retries as a `Create`.
 
 <note>
-An activity over 120 KB fails `too-large`, since no queue message could carry it. Trim
-`content` to a summary and a link for a post that long.
+An activity over 120 KB fails `too-large`, since no queue message could carry it, so trim
+`content` to a summary and a link for a long post. Failed deliveries retry over about 21 hours
+in five steps, so give the queue at least six attempts.
 </note>
-
-Marking the post federated only after the fan-out is
-queued means a failed publish retries as a `Create`.
-
-The fan-out runs as its own message. It reads your followers' inboxes from the store a page at a
-time and queues one `deliver` message per distinct inbox, preferring each server's shared inbox,
-so a server with four hundred of your followers gets one request. Hosts you block are skipped,
-and so are servers that have failed every delivery for seven days.
-
-Each delivery is signed when it is sent, so `Date` is fresh on every retry. The first request
-to a server is signed with RFC 9421; a `400`, `401` or `403` is retried at once with
-draft-cavage, the scheme Mastodon before 4.5 requires, and the scheme that landed is remembered
-for that server for thirty days. An inbox that answers `410` is gone, so every follower reached
-through it is removed.
-
-A server that is down or rate-limiting fails the delivery as retryable, with a `delay` from
-`DELIVERY_BACKOFF`: five minutes, thirty minutes, two hours, six hours, then twelve, each with
-±20% jitter, or longer when the inbox sent a `Retry-After`.
-
-<note>
-The schedule spans about 21 hours over five retries, so give the queue at least six attempts.
-</note>
-
-A queue that retries more takes its own
-schedule as `backoff: createBackoff(…)` from [`@sdxc/backoff`](/api/backoff);
-[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
-options.
 
 ## Serve each post both ways
 
-A server that sees your post's URL, because someone pasted it into Mastodon's search or a reply
-links to it, asks that URL for `application/activity+json`. `federation.respond` answers it,
-and answers `null` for a browser, so the page renders as usual. Call it first in the post
-page's handler:
+A server that sees your post's URL asks it for `application/activity+json`.
+`federation.respond` answers it, and answers `null` for a browser, so the page renders as usual.
+Call it first in the post page's handler:
 
 ```typescript {% title="app/services/activity-response.ts" %}
 import type { JobEnqueuer } from "@sdxc/jobs";
@@ -738,17 +567,14 @@ let activity = await activityResponse(ctx, post);
 if (activity) return activity;
 ```
 
-The response carries `Vary: Accept`, an `ETag` and `304` revalidation. A `Tombstone` answers
-`410`, which is how a server refetching a deleted post learns to remove it. Link the
-representation from the page's `<head>` too, as
-`<link rel="alternate" type="application/activity+json" href={post.url} />`, for a client that
-reads the page first.
+A `Tombstone` answers `410`, which is how a server refetching a deleted post learns to remove
+it.
 
 ## Test it in memory
 
 `@sdxc/activitypub/testing` has an in-memory implementation of every store, and conformance
-suites that hold your own stores to the contracts the package relies on. Register a suite for
-each store you wrote:
+suites that hold your own stores to the package's contracts. Register one for each store you
+wrote:
 
 ```typescript {% title="app/models/followers.test.ts" %}
 import { followerStoreConformance } from "@sdxc/activitypub/testing";
@@ -761,11 +587,6 @@ followerStoreConformance({
 	create: async () => new Followers(await openTestDatabase()),
 });
 ```
-
-`create` builds a fresh store for every test, so give it an empty database each time.
-`seenActivitiesConformance` takes the same two options plus an `advance(ms)` that moves the
-store's clock, so its expiry is tested without waiting. `localObjectsConformance` takes the
-`served` ids your `create` serves, and `keyProviderConformance` the `hosted` actors.
 
 The federation itself runs on the memory stores and a `MemoryCache`, with a queue that
 collects what it is handed:
@@ -833,14 +654,9 @@ test("an unsigned activity is refused before it is queued", async () => {
 });
 ```
 
-Neither test leaves the process: the actor is served from memory, and an unsigned request is
-refused before anything is fetched. A test of a signed delivery serves the remote actor and
-its inbox with [MSW](https://mswjs.io/) and signs the request with
-[`@sdxc/http-signatures`](/api/http-signatures). Every outbound request also resolves its host
-over DNS-over-HTTPS first, so answer `https://cloudflare-dns.com/dns-query` with a public address
-as well; [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) shows
-that handler. `MemorySeenActivities` takes a `now` clock, so a test moves time to check a
-claim expires.
+Neither test leaves the process. A test of a signed delivery serves the remote actor and its
+inbox with [MSW](https://mswjs.io/) and signs the request with
+[`@sdxc/http-signatures`](/api/http-signatures).
 
 ## Where to go next
 

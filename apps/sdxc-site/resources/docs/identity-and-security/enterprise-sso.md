@@ -1,6 +1,6 @@
 ---
 title: Enterprise sign-on with SAML and SCIM
-description: Let a customer's directory sign its people in over SAML 2.0 and provision their users and groups over SCIM 2.0.
+description: Let a customer's directory sign its people in over SAML 2.0 and provision their users over SCIM 2.0.
 section:
     title: Identity & security
     order: 6
@@ -9,19 +9,19 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to let a customer's directory sign people in over SAML 2.0"
     - "How to verify an assertion and remember it for as long as it is valid"
-    - "How to provision users and groups over SCIM 2.0"
+    - "How to provision and deprovision users over SCIM 2.0"
 ---
 
 The first large customer asks two questions: can our people sign in through our own identity
 provider, and will your app know when someone leaves? The first is SAML, where their directory
 posts a signed assertion to your app. The second is SCIM, where their directory calls your API
-to create, update and deactivate the people and groups it manages.
+to create, update and deactivate the people it manages.
 
 [`@sdxc/saml`](/api/saml) is the service provider half of SAML 2.0: it builds the
 authentication request, verifies the signed response, and reads and writes the metadata the
 two sides exchange. [`@sdxc/scim`](/api/scim) is the standard's half of a SCIM 2.0 endpoint:
-resources, filters, PATCH and the discovery documents. Routing, storage and authentication
-stay in your app, and this guide wires both into a Remix v3 router.
+resources, filters and PATCH. Routing, storage and authentication
+stay in your app.
 
 ```bash
 npm add @sdxc/crypto @sdxc/duration @sdxc/http @sdxc/lazy-route @sdxc/result @sdxc/saml \
@@ -30,9 +30,9 @@ npm add @sdxc/crypto @sdxc/duration @sdxc/http @sdxc/lazy-route @sdxc/result @sd
 
 ## Declare the routes
 
-Every customer gets its own connection, named by a slug. Each connection is a separate
-service provider to the customer's directory, with its own entity id, so its URLs carry the
-slug. SCIM lives under `/scim/v2`, where the RFC's clients expect it.
+Every customer gets its own connection, named by a slug, and each connection is a separate
+service provider with its own entity id, so its URLs carry the slug. SCIM lives under
+`/scim/v2`, where clients expect it.
 
 ```typescript {% title="routes/web.ts" %}
 import { get, patch, post, route } from "remix/routes";
@@ -45,17 +45,11 @@ export default route({
 		acs: post("/sso/:slug/acs"),
 	},
 	scim: {
-		discovery: {
-			config: get("/scim/v2/ServiceProviderConfig"),
-			resourceTypes: get("/scim/v2/ResourceTypes"),
-			schemas: get("/scim/v2/Schemas"),
-		},
 		users: {
 			list: get("/scim/v2/Users"),
 			create: post("/scim/v2/Users"),
 			patch: patch("/scim/v2/Users/:id"),
 		},
-		groups: { create: post("/scim/v2/Groups") },
 	},
 });
 ```
@@ -74,11 +68,10 @@ export function serviceProvider(url: URL, slug: string) {
 }
 ```
 
-## Configure a connection from the provider's metadata
+## Exchange metadata with the provider
 
-An administrator on the customer's side hands you their identity provider's metadata, a URL
-or an XML file. `parseIdPMetadata` reads the entity id, the sign-on endpoints and the signing
-certificates out of it, each certificate already parsed:
+The customer's administrator hands you their identity provider's metadata. `parseIdPMetadata`
+reads the entity id, the sign-on endpoints and the signing certificates out of it:
 
 ```typescript {% title="app/services/sso/provider-metadata.ts" %}
 import { isFailure, success } from "@sdxc/result";
@@ -103,15 +96,11 @@ export async function readProviderMetadata(xml: string) {
 }
 ```
 
-Store every certificate, keyed by `fingerprint`. Providers rotate on their own schedule, and a
-response verifies when it matches any certificate you pass, so keeping the old and new ones
-side by side makes a rotation a non-event. `notAfter` is what a scheduled job reads to warn an
-administrator before an expiry stops sign-ins.
+Store every certificate, keyed by `fingerprint`. A response verifies when it matches any
+certificate you pass, so keeping the old and new ones side by side makes a provider's rotation
+a non-event.
 
-## Publish your own metadata
-
-The other direction: the customer's administrator needs your entity id, your ACS URL and your
-certificate. Serve them as a document rather than asking anyone to copy four fields.
+In the other direction, serve your entity id, ACS URL and certificate as a document:
 
 ```typescript {% title="app/http/controllers/sso/metadata.ts" %}
 import { text, xml } from "@sdxc/http/response";
@@ -145,39 +134,13 @@ export default createAction(routes.sso.metadata, async (ctx) => {
 });
 ```
 
-None of the options has a default, so `nameIdFormat: null` (let the provider choose) and
-`validUntil: null` are decisions written down. Generate the certificate once, from an RSA key
-pair you keep as a secret, with `SAML.Certificate.selfSigned({ keys, commonName, notBefore,
-notAfter })` and `toPem()`.
+Generate the certificate once, from an RSA key pair you keep as a secret, with
+`SAML.Certificate.selfSigned({ keys, commonName, notBefore, notAfter })` and `toPem()`.
 
 ## Start a sign-in
 
-The request id waits in KV while the browser visits the identity provider:
-
-```mermaid {% alt="SAML sign-in: the app signs an AuthnRequest, stores its id in the SSO namespace under the RelayState and redirects to the identity provider, which posts the SAMLResponse back to the ACS route; the app reads and deletes the pending request, verifies the response, starts a session and redirects home" %}
-sequenceDiagram
-    participant B as Browser
-    participant A as App
-    participant K as SSO namespace
-    participant I as Identity provider
-    B->>A: GET /sso/:slug
-    Note over A: createAuthnRequest signs the request
-    A->>K: Put the request id under RelayState
-    A-->>B: Redirect to the provider
-    B->>I: Signed AuthnRequest
-    I-->>B: Form with SAMLResponse and RelayState
-    B->>A: POST /sso/:slug/acs
-    Note over B,A: Cross-site, so the Lax cookie stays behind
-    A->>K: findPending reads the RelayState
-    A->>K: Delete the pending request
-    Note over A: verifyResponse checks InResponseTo,<br>signature, audience and replay
-    Note over A: startSession
-    A-->>B: 303 to home
-```
-
-The login form asks for the work email, finds the connection for its domain, and sends the
-browser to `routes.sso.start`. `createAuthnRequest` builds the request and signs it with your
-private key:
+The login form finds the connection for the work email's domain and sends the browser to
+`routes.sso.start`. `createAuthnRequest` builds the request and signs it with your private key:
 
 ```typescript {% title="app/http/controllers/sso/start.ts" %}
 import { redirect, text } from "@sdxc/http/response";
@@ -221,21 +184,19 @@ export default createAction(routes.sso.start, async (ctx) => {
 });
 ```
 
-Remember `request.data.id`: the response has to answer with it, and passing it back as
-`inResponseTo` binds the assertion to the browser that asked for it. It is stored under the
-`RelayState` rather than in the session, because the response arrives as a cross-site `POST`
-and a `SameSite=Lax` session cookie is not sent with it. The `RelayState` comes back in the
-form beside the response. `signingKey` imports your PKCS #8 private key with
-`crypto.subtle.importKey` for `RSASSA-PKCS1-v1_5` with SHA-256.
+The response must answer with `request.data.id`, which binds the assertion to the browser that
+asked for it. It waits in KV under the `RelayState` because the response arrives as a
+cross-site `POST` that carries no `SameSite=Lax` session cookie, while the `RelayState` comes
+back beside it. `signingKey` imports your PKCS #8 private key with `crypto.subtle.importKey`
+for `RSASSA-PKCS1-v1_5` with SHA-256.
 
 ## Verify the assertion
 
-The assertion consumer service is the one route where a stranger's XML decides who is signed
-in, so everything about it goes through one call. `verifyResponse` refuses a document type
-declaration, requires exactly one signature, checks the signature covers the assertion it
-returns, and checks `Destination`, `Audience`, `Recipient`, the validity window,
-`InResponseTo` and the replay store. Every option is required, so a forgotten audience does not
-compile.
+The assertion consumer service is where a stranger's XML decides who is signed in, so it all
+goes through one call. `verifyResponse` refuses a document type declaration, requires exactly
+one signature covering the assertion it returns, and checks `Destination`, `Audience`,
+`Recipient`, the validity window, `InResponseTo` and the replay store. Every option is
+required, so a forgotten audience does not compile.
 
 ```tsx {% title="app/http/controllers/sso/acs.tsx" %}
 import { Base64 } from "@sdxc/crypto";
@@ -289,42 +250,29 @@ export default createAction(routes.sso.acs, async (ctx) => {
 });
 ```
 
-`findPending` is yours: it validates the posted `SAMLResponse` and `RelayState` fields,
-reads the stored request under the `RelayState` from the `SSO` namespace, and loads the
-connection with its certificates parsed by `SAML.Certificate.parse`. `startSession` is your
-own sign-in, the one every other way in shares.
+`findPending` is yours: it validates the posted `SAMLResponse` and `RelayState`, reads the
+stored request from the `SSO` namespace, and loads the connection with its certificates parsed
+by `SAML.Certificate.parse`. The failure's `name` is safe to log; it carries no key material.
 
 <warning>
 Delete the pending entry before verifying anything, as the handler does, so each request
-answers at most one response. A response with no `RelayState` is a sign-in the provider
-started; refusing it is the safe default, and `inResponseTo: null` is how you accept one once
-you have decided to.
+answers at most one response. Key the account on the `NameID` for this connection and keep the
+email as a field: a directory may change an email, and an account keyed on it changes hands
+with the address.
 </warning>
-
-The failure's `name` is safe to log: no `SAMLError` carries key material or anything the
-document supplied beyond a fixed identifier. `UnsupportedFeatureError` names the setting the
-customer has to change, such as SHA-1 signatures.
-
-<warning>
-Key the account on the `NameID` for this connection, and keep the email as a field: the
-directory may change an email, and an account keyed on it changes hands with the address.
-</warning>
-
-For encrypted assertions, pass your private key imported for `RSA-OAEP` as `decryptionKey`, once with
-SHA-1 and once with SHA-256 in an array, since providers use both.
 
 <note>
-Two more things belong in front of this route. It receives a cross-site `POST`, so exempt it
-from Remix's [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware)
-protection the way you would a webhook. And canonicalizing the document is CPU work over the
-whole assertion, so cap the size of the body before it gets here.
+This route receives a cross-site `POST`, so exempt it from Remix's
+[`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) protection the
+way you would a webhook. Canonicalizing is CPU work over the whole assertion, so cap the size
+of the body before it gets here.
 </note>
 
 ## Remember assertions for as long as they are valid
 
-The replay store is two methods. `verifyResponse` calls `remember` only once every other check
-has passed, with a TTL covering the rest of the assertion's own window, so a forged document
-never fills the table and a stored row outlives exactly the period a captured one could be
+The replay store is two methods. `verifyResponse` calls `remember` only after every other
+check passes, with a TTL covering the rest of the assertion's window, so a forged document
+never fills the table and a row lives exactly as long as a captured assertion could be
 replayed.
 
 ```typescript {% title="app/models/replay-store.ts" %}
@@ -359,9 +307,8 @@ export function replayStore(db: Database, connectionId: string): ReplayStore {
 }
 ```
 
-The connection id is part of the key because the provider chooses assertion ids, so each
-provider's ids stay apart. A store that throws surfaces as `ReplayStoreError`: no verdict was
-reached, so let the person retry.
+The provider chooses assertion ids, so the connection id in the key keeps each provider's ids
+apart.
 
 <warning>
 Keep the replay store in D1. KV is eventually consistent, so a second use of a captured
@@ -372,11 +319,6 @@ assertion can reach a location that has yet to see the first, and pass.
 
 SCIM clients authenticate with a bearer token you issue per directory. Store only its SHA-256
 hash, and look the directory up by it:
-
-<warning>
-Store the hash and show the token once, when you issue it. A stored token is a working
-credential for anyone who reads the table, and a hash is worth nothing to them.
-</warning>
 
 ```typescript {% title="app/http/middleware/scim-auth.ts" %}
 import type { Middleware } from "remix/router";
@@ -412,24 +354,25 @@ export const scimAuth: Middleware = async (ctx, next) => {
 };
 ```
 
-`errorResponse` writes the SCIM error document of RFC 7644 with the
-`application/scim+json` type, which is what a directory's client parses. Every failure
-`@sdxc/scim` reports is a `ScimError` that `errorResponse` accepts, so all the handlers below
-answer the same way.
+<warning>
+Store the hash and show the token once, when you issue it. A stored token is a working
+credential for anyone who reads the table, and a hash is worth nothing to them.
+</warning>
 
-## Describe what you serve
+`errorResponse` writes the RFC 7644 error document with the `application/scim+json` type, and
+every failure `@sdxc/scim` reports is a `ScimError` it accepts.
 
-One set of definitions says which attributes your app models. The `/Schemas` document
-advertises it, and filters, PATCH and projection evaluate against it, so what the directory is
-told and what the server does cannot disagree.
+## Define the attributes you model
+
+One set of definitions says which attributes your app models, and filters, PATCH and
+projection evaluate against it:
 
 ```typescript {% title="app/services/scim/definitions.ts" %}
 import type { Discovery } from "@sdxc/scim/discovery";
 
-import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
+import { ENTERPRISE_USER_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
 import {
 	ENTERPRISE_USER_DEFINITION,
-	GROUP_DEFINITION,
 	pickAttributes,
 	USER_DEFINITION,
 } from "@sdxc/scim/discovery";
@@ -449,79 +392,17 @@ export const USER_DEFINITIONS: Discovery.Definitions = {
 		"department",
 	]),
 };
-
-export const GROUP_DEFINITIONS: Discovery.Definitions = {
-	[GROUP_SCHEMA]: pickAttributes(GROUP_DEFINITION, [
-		"displayName",
-		"members.value",
-	]),
-};
 ```
 
 Put the core schema first: an unqualified name such as `active` resolves against the
-definitions in insertion order. The three discovery documents come from the same values:
-
-```typescript {% title="app/http/controllers/scim/discovery.ts" %}
-import {
-	ENTERPRISE_USER_SCHEMA,
-	GROUP_SCHEMA,
-	scimResponse,
-	USER_SCHEMA,
-} from "@sdxc/scim";
-import { resourceTypes, schemas, serviceProviderConfig } from "@sdxc/scim/discovery";
-import { createController } from "remix/router";
-
-import {
-	GROUP_DEFINITIONS,
-	MAX_PAGE_SIZE,
-	USER_DEFINITIONS,
-} from "~/app/services/scim/definitions";
-import routes from "~/routes/web";
-
-const USER_TYPE = {
-	id: "User",
-	endpoint: "/Users",
-	schema: USER_SCHEMA,
-	extensions: [{ schema: ENTERPRISE_USER_SCHEMA, required: false }],
-};
-const GROUP_TYPE = { id: "Group", endpoint: "/Groups", schema: GROUP_SCHEMA };
-const BEARER = {
-	type: "oauthbearertoken",
-	name: "Bearer",
-	description: "Per directory.",
-};
-
-export default createController(routes.scim.discovery, {
-	actions: {
-		config: () =>
-			scimResponse(
-				serviceProviderConfig({
-					patch: true,
-					filter: { supported: true, maxResults: MAX_PAGE_SIZE },
-					sort: false,
-					etag: false,
-					authenticationSchemes: [BEARER],
-				}),
-			),
-		resourceTypes: () => scimResponse(resourceTypes([USER_TYPE, GROUP_TYPE])),
-		schemas: () =>
-			scimResponse(
-				schemas([
-					...Object.values(USER_DEFINITIONS),
-					...Object.values(GROUP_DEFINITIONS),
-				]),
-			),
-	},
-});
-```
-
-These answer without `scimAuth`: a client reads them to negotiate before it presents a token.
+definitions in insertion order. The same values build the `/ServiceProviderConfig`,
+`/ResourceTypes` and `/Schemas` documents from `@sdxc/scim/discovery`, when a directory asks
+for them.
 
 ## Create and list users
 
-`readBody` accepts `application/scim+json`, plain JSON or no content type, and `parseUser`
-reads the User, matching attribute names case-insensitively and typing the Enterprise User
-extension. `userResource` writes the wire form back.
+`readBody` accepts `application/scim+json`, plain JSON or no content type, `parseUser` reads the
+User, and `userResource` writes the wire form back.
 
 ```typescript {% title="app/http/controllers/scim/users.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -567,13 +448,8 @@ export const list = createAction(routes.scim.users.list, {
 });
 ```
 
-`parseListQuery` clamps `startIndex` and `count` to the ranges the RFC allows and caps `count`
-at `maxCount`. For a directory too large to slice in memory, pass `cursor: true` as well and
-answer a cursor page with `nextCursor` in place of `startIndex`, so your store pages by key
-(RFC 9865) and `serviceProviderConfig` advertises it under `pagination`. `project` applies the `attributes` and `excludedAttributes` a client asked for,
-and each attribute's `returned` rule. A directory's first call is usually
-`filter=userName eq "ada@example.com"`, to find out whether a person already exists. The
-filter is where the two sub-packages meet:
+A directory's first call is usually `filter=userName eq "ada@example.com"`, to find out
+whether a person already exists:
 
 ```typescript {% title="app/services/scim/find-users.ts" %}
 import type { Filter } from "@sdxc/scim/filter";
@@ -610,19 +486,16 @@ export async function findUsers(
 }
 ```
 
-`compileFilter` checks the filter against the definitions and the `allow` list first, so a
-path your store cannot answer is a `400 invalidFilter` rather than a silent full list. Then
-`filterToWhere` tries to turn it into a `remix/data-table` predicate. It fails with
-`UntranslatableFilterError` for what SQL cannot express exactly, such as a value path like
-`emails[type eq "work"]` or a column you did not map, and the compiled predicate filters in
-memory instead. `userName` is `caseExact: false` in the RFC, so its column folds case through
-`ilike`, and `userName eq "Ada@Example.com"` finds `ada@example.com` either way.
+`compileFilter` checks the filter against the definitions and the `allow` list, so a path your
+store cannot answer is a `400 invalidFilter`. `filterToWhere` then pushes it into SQL when it
+can, and the compiled predicate filters in memory when it cannot, such as for
+`emails[type eq "work"]`.
 
 ## Patch a user
 
-Directories change people with PATCH, and they deprovision with it too: Okta and Entra ID
-usually send `active: false` rather than a `DELETE`. Apply the operations to the current wire
-representation, then store the result the way a replace would:
+Directories change people with PATCH, and Okta and Entra ID usually deprovision with it too,
+sending `active: false`. Apply the operations to the current wire representation, then store
+the result:
 
 ```typescript {% title="app/http/controllers/scim/patch-user.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -649,9 +522,8 @@ export default createAction(routes.scim.users.patch, {
 		let operations = parsePatch(body.data);
 		if (isFailure(operations)) return Scim.errorResponse(operations.error);
 
-		let definitions = USER_DEFINITIONS;
 		let patched = applyPatch(Scim.userResource(current), operations.data, {
-			definitions,
+			definitions: USER_DEFINITIONS,
 		});
 		if (isFailure(patched)) return Scim.errorResponse(patched.error);
 		let next = Scim.parseUser(patched.data);
@@ -663,45 +535,15 @@ export default createAction(routes.scim.users.patch, {
 });
 ```
 
-`applyPatch` applies every operation or none, and reports `noTarget`, `mutability` and
-`invalidPath` as the RFC names them. Where an attribute is a boolean, it reads Entra ID's
-`"False"` string as `false`. When `Users.replace` sees `active` turn false, end that person's
-sessions there: that is the reason the customer asked for SCIM.
-
-## Provision groups
-
-Groups follow the same shape with `parseGroup` and `groupResource`. A member's `value` is the
-`id` your user resource answered with, and membership changes arrive as PATCH operations on
-`members`, applied with `applyPatch` against `GROUP_DEFINITIONS`.
-
-```typescript {% title="app/http/controllers/scim/groups.ts" %}
-import { isFailure } from "@sdxc/result";
-import * as Scim from "@sdxc/scim";
-import { createAction } from "remix/router";
-
-import { scimAuth } from "~/app/http/middleware/scim-auth";
-import { Groups } from "~/app/models/groups";
-import routes from "~/routes/web";
-
-export const create = createAction(routes.scim.groups.create, {
-	middleware: [scimAuth],
-	async handler(ctx) {
-		let body = await Scim.readBody(ctx.request);
-		if (isFailure(body)) return Scim.errorResponse(body.error);
-		let group = Scim.parseGroup(body.data);
-		if (isFailure(group)) return Scim.errorResponse(group.error);
-
-		let saved = await Groups.create(ctx.db, ctx.directoryId, group.data);
-		return Scim.scimResponse(Scim.groupResource(saved), { status: 201 });
-	},
-});
-```
+`applyPatch` applies every operation or none. When `Users.replace` sees `active` turn false,
+end that person's sessions there: that is the reason the customer asked for SCIM. Groups
+follow the same shape with `parseGroup` and `groupResource`.
 
 ## Mount it
 
 Map the routes in your router initializer from
-[Wire the router](/docs/building-remix-apps/wire-the-router), next to the rest of your app.
-Each controller loads through `lazy()`, so a sign-in never loads the SCIM handlers:
+[Wire the router](/docs/building-remix-apps/wire-the-router). Each controller loads through
+`lazy()`, so a sign-in never loads the SCIM handlers:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { lazy } from "@sdxc/lazy-route";
@@ -729,10 +571,6 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/sso/acs")),
 	);
 	router.map(
-		routes.scim.discovery,
-		lazy(() => import("~/app/http/controllers/scim/discovery")),
-	);
-	router.map(
 		routes.scim.users.list,
 		lazy(() => import("~/app/http/controllers/scim/users").then((it) => it.list)),
 	);
@@ -746,29 +584,15 @@ export function createWebRouter() {
 		routes.scim.users.patch,
 		lazy(() => import("~/app/http/controllers/scim/patch-user")),
 	);
-	router.map(
-		routes.scim.groups.create,
-		lazy(() =>
-			import("~/app/http/controllers/scim/groups").then((it) => it.create),
-		),
-	);
 
 	return router;
 }
 ```
 
-Reading, replacing and deleting a user or a group are the same calls in a different order:
-`parseUser` or `parseGroup` for a `PUT`, and a `204` for a `DELETE`.
-
-<note>
-Directories retry eagerly, so give the SCIM routes a rate limit of their own, keyed on the
-token's hash.
-</note>
-
 ## Test the SCIM endpoint
 
-Fetch the router a worker builds. Discovery answers a client that has no token yet, and every
-other SCIM route answers a missing token with the RFC's error document:
+Fetch the router: a SCIM route answers a token that matches no directory with the RFC's error
+document:
 
 ```typescript {% title="app/http/controllers/scim/users.test.ts" %}
 import { beforeAll, expect, test } from "vitest";
@@ -785,14 +609,6 @@ function scim(href: string, headers?: HeadersInit) {
 	);
 }
 
-test("discovery answers before a token is presented", async () => {
-	let response = await scim(routes.scim.discovery.config.href());
-
-	expect(response.status).toBe(200);
-	expect(response.headers.get("Content-Type")).toBe("application/scim+json");
-	expect(await response.json()).toMatchObject({ patch: { supported: true } });
-});
-
 test("a token that matches no directory is refused", async () => {
 	let response = await scim(routes.scim.users.list.href(), {
 		Authorization: "Bearer not-a-token",
@@ -803,9 +619,8 @@ test("a token that matches no directory is refused", async () => {
 });
 ```
 
-`migrate` is the helper from [Test Workers apps](/docs/operations-and-testing/testing) that applies
-your migrations to the in-memory database the test environment binds, so `scimAuth` reads a
-real, empty directories table.
+`migrate` is the helper from [Test Workers apps](/docs/operations-and-testing/testing) that
+applies your migrations to the in-memory database the test environment binds.
 
 ## Where to go next
 
@@ -813,5 +628,5 @@ real, empty directories table.
   protocol enterprise directories speak, and the session a sign-in lands in.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the
   database behind the replay store and the `Users` model.
-- [`@sdxc/scim`](/api/scim) — every error class, and the filter, PATCH and discovery
-  reference.
+- [`@sdxc/scim`](/api/scim) — groups, discovery documents, every error class, and the filter
+  and PATCH reference.

@@ -1,6 +1,6 @@
 ---
 title: Test Workers apps
-description: Vitest through Vite+, real bindings in the Workers pool, in-memory mocks, MSW, and executable specs against a running app.
+description: Vitest through Vite+, real bindings in the Workers pool, in-memory mocks, and MSW for outbound HTTP.
 section:
     title: Operations & testing
     order: 9
@@ -22,14 +22,13 @@ suite an app from `sdxc create` starts with, which tests all three without a han
 in sight. Vitest runs through Vite+ (`vp test`),
 [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks) supplies in-memory bindings that really
 store and really run SQL, MSW answers outbound HTTP, and tests that need Cloudflare's own
-implementation of a binding run inside workerd. On top, [`@sdxc/spec`](/api/spec) runs
-executable `.spec` suites against the app as a client sees it.
+implementation of a binding run inside workerd.
 
 The template already depends on Vite+, Vitest and `@sdxc/cloudflare-mocks`. Add the rest as you
 reach for them:
 
 ```bash
-npm add -D msw @cloudflare/vitest-pool-workers @sdxc/spec
+npm add -D msw @cloudflare/vitest-pool-workers
 ```
 
 ## Run the template's tests
@@ -72,9 +71,9 @@ export const env = {
 } as Partial<Cloudflare.Env> as Cloudflare.Env;
 ```
 
-When you declare a binding, add its mock here too. Each test file starts from a fresh module graph, so each
-file starts with empty bindings. `vp test run app/mcp` scopes a run to a path, and
-`vp test watch` reruns on change.
+When you declare a binding, add its mock here too. Each test file starts from a fresh module
+graph, so each file starts with empty bindings. Read the package's list of where a mock is more
+permissive than the platform before trusting a green run with anything size- or limit-related.
 
 ## Drive the real router
 
@@ -107,11 +106,9 @@ test("lists the open positions", async () => {
 
 `migrate()` applies every file in `database/migrations/` to the `DB` mock, a D1 binding over an
 in-memory SQLite database, so a malformed statement or a constraint violation fails in the test
-rather than in production. `factories()` writes through your own models, with values drawn
-from a fixed seed, as [Generate believable test data](/docs/operations-and-testing/test-data)
-covers. A page that needs a signed-in visitor gets a session cookie from `signIn()` in
-`app/test/session.ts`, and a form post carries the honeypot fields from
-`honeypot.issue()`, as the tests `sdxc scaffold` writes do.
+rather than in production. `factories()` writes through your own models, as
+[Generate believable test data](/docs/operations-and-testing/test-data) covers. A page that
+needs a signed-in visitor gets a session cookie from `signIn()` in `app/test/session.ts`.
 
 ## Run some tests in the Workers pool
 
@@ -159,16 +156,17 @@ export default defineConfig({
 
 `exclude` spreads Vitest's defaults back in, because naming it replaces them. The pool reads
 its bindings from a `wrangler.jsonc`, so a project that configures its Worker in
-`cloudflare.config.ts` keeps one beside it that declares the same bindings; `remoteBindings:
-false` keeps a binding declared with `remote: true` from opening a session against your real
-account. Add `@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your
-`tsconfig.json` so `cloudflare:test` type-checks. `vp test run --project workers` runs one
-project.
+`cloudflare.config.ts` keeps one beside it that declares the same bindings. Add
+`@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your `tsconfig.json` so
+`cloudflare:test` type-checks.
 
-### Use the real binding
+<warning>
+`remoteBindings: false` keeps a binding declared with `remote: true` from opening a session
+against your real account.
+</warning>
 
 A file named `*.workers.test.ts` runs inside workerd, and its `env` holds the bindings your
-Wrangler config declares, implemented by Cloudflare's own code.
+Wrangler config declares, implemented by Cloudflare's own code:
 
 ```typescript {% title="app/initializers/cache.workers.test.ts" %}
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
@@ -194,51 +192,9 @@ test("serves a stored value on the second read", async () => {
 });
 ```
 
-Storage persists between tests in the pool, so start each one from a clean slate. The pool
-also exposes the same `env` through `cloudflare:workers`. One limit to
-know: `node:sqlite` does not exist in workerd, so a test whose database comes from an
-in-memory SQLite engine stays in the unit project.
-
-## Reach for the in-memory mocks elsewhere
-
-Everything else lives in `@sdxc/cloudflare-mocks`. Each factory returns isolated state typed
-against the platform interface, so a mock that drifts from the platform's shape fails
-typecheck.
-
-```typescript {% title="bootstrap/worker.test.ts" %}
-import {
-	createEnv,
-	createExecutionContext,
-	createKVNamespace,
-	createQueue,
-} from "@sdxc/cloudflare-mocks";
-import { expect, test } from "vitest";
-
-import worker from "./worker";
-
-test("a refresh request enqueues one message", async () => {
-	let queue = createQueue<{ id: string }>();
-	let env = createEnv<Cloudflare.Env>({ CACHE: createKVNamespace(), QUEUE: queue });
-	let ctx = createExecutionContext();
-
-	await worker.fetch(new Request("https://app.test/refresh"), env, ctx);
-	await ctx.settled();
-
-	expect(queue.messages).toHaveLength(1);
-});
-```
-
-`worker` is your Worker's default export, called the way the platform calls it, and
-`Cloudflare.Env` is the binding type your Wrangler config generates.
-
-`createEnv` throws by name when code reads a binding the test did not supply, and
-`ctx.settled()` awaits every `waitUntil` promise, which is also what surfaces a rejected one.
-There are mocks for R2, Durable Object state and namespaces, rate limiting, `send_email`,
-secrets and service bindings too. When you build a `remix/data-table` SQLite database
-yourself, `openDatabase(":memory:")` from `@sdxc/cloudflare-mocks/sqlite` picks whichever
-built-in SQLite module the runtime has, so one test file runs under Node or Bun. Read the
-package's list of where a mock is more permissive than the platform before trusting a green
-run with anything size- or limit-related.
+Storage persists between tests in the pool, so start each one from a clean slate. `node:sqlite`
+does not exist in workerd, so a test whose database comes from an in-memory SQLite engine stays
+in the unit project.
 
 ## Answer outbound HTTP with MSW
 
@@ -302,76 +258,18 @@ test("mails the invitation", async () => {
 });
 ```
 
-Test an email's copy without a request: `mail.render(emails.teams.invite, { props })` from
-`app/initializers/mail.ts` answers its subject, HTML and text, as the test `sdxc make email`
-writes does. To test a job handler on its own, build its context with
-`createJobContext(jobs.sendConfirmation, { id: "message-1", attempts: 1, input })`, `set` the
-services its middleware would have published, and call it; the template's
-`app/jobs/email.test.tsx` does this with a `MemoryTransport` from `@sdxc/mail/memory`, which
-records every message a `Mailer` would have delivered. To assert on what a handler logged, pass
-`log: new Log({ kind: "job", sink: (record) => records.push(record) })` and run the handler
-inside `log.run(...)`.
+The form post carries the honeypot fields from `honeypot.issue()`, as the tests
+`sdxc scaffold` writes do.
 
 MCP tools are routes too, so the same router drives them: a tool call is a JSON-RPC `POST` to
 `/mcp`, and [Expose your app over MCP](/docs/operations-and-testing/mcp-server#test-a-tool-call)
 writes one.
 
-## Specify behavior with `.spec` files
-
-Unit tests say how the code behaves; an executable spec says how the running app behaves to
-someone who only has its URL. `@sdxc/spec` reads `.spec` files written in a deliberately tiny
-language (setup, action, expectation, no branches or loops) and runs each test in its own
-workspace under permissions you grant explicitly. Point it at your dev server once:
-
-```json {% title="spec/config.jsonc" %}
-{
-	"bases": {
-		"web": { "env": "APP_BASE_URL", "default": "http://localhost:8787" }
-	}
-}
-```
-
-```text {% title="spec/board.spec" %}
-use http
-use html
-
-test "the board lists open positions" {
-	when {
-		let page = http.get "/"
-	}
-	then {
-		expect page.status 200
-		expect html.element page.text heading "Open positions"
-	}
-}
-
-test "a submission with no title is refused" {
-	when {
-		let response = http.post "/" form { title: "" }
-	}
-	then {
-		expect response.status 400
-	}
-}
-```
-
-Relative targets resolve against the `web` base, so the same suite runs against a laptop,
-staging or CI by changing one variable. Reaching the network is privileged, so grant exactly
-the host:
-
-```bash
-npx spec run spec --allow-net=localhost:8787
-```
-
-Start with no flags and the denials tell you the suite's real footprint. The runner needs Bun
-on your `PATH`. `html` reads a page's markup with no browser; `browser` drives a real one
-when behavior depends on script; `db`, `sample` and shared `command` definitions under
-`spec/commands/` cover seeding and generated input.
-
 ## Where to go next
 
 - [Test your app](/docs/operations-and-testing/test-your-app) — the tests `sdxc make` writes
   and the helpers in `app/test/`.
+- [Write executable specs](/docs/operations-and-testing/executable-specs) — check the running
+  app from the outside, the way a client meets it.
 - [Wire the router](/docs/building-remix-apps/wire-the-router) — the middleware that publishes
   `ctx.db`, `ctx.models` and `ctx.email`.
-- [`@sdxc/spec`](/api/spec) — every capability and permission flag.

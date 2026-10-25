@@ -28,9 +28,8 @@ npm add @sdxc/highlight @sdxc/http @sdxc/markdown @sdxc/result @sdxc/ui remix
 
 ## Describe what a post may contain
 
-Start with the three things a post file is allowed to say: the fields its frontmatter
-carries, the tags its body may use, and the HTML elements it may write directly. All three go
-in one options object that every read of a post shares.
+A post file may say three things: the fields its frontmatter carries, the tags its body may
+use, and the HTML elements it may write directly. All three go in one options object.
 
 ```typescript {% title="app/services/content/schema.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -62,17 +61,13 @@ export const MARKDOWN_OPTIONS = {
 } satisfies Markdown.Options;
 ```
 
-The frontmatter schema is what types the parse. `publishedAt` arrives as a `Date` because
-`coerce.date()` converts the YAML string, and a post missing its `title` fails with the line the
-block starts on. Any [Standard Schema](/docs/conventions/standard-schema-validation) works here;
-`remix/data-schema` is the one the rest of a Remix app already uses.
+The frontmatter schema types the parse: `publishedAt` arrives as a `Date`, and a post missing
+its `title` fails with the line the block starts on.
 
-A tag is an element the parser knows by name. Only registered names become tags, so an
-unregistered `<div>` stays raw HTML and renders as escaped text. Registering one with an
-attribute schema moves a whole class of mistakes to parse time: `<callout type="tip">` is a
-parse error with a line number rather than a box that renders without a colour. `content`
-decides what the parser reads inside the tag: blocks by default, `"inline"` for a tag inside a
-sentence, and `"none"` for a self-closing one. A post then reads:
+Only registered names become tags, and each tag's attribute schema moves mistakes to parse
+time: `<callout type="tip">` is a parse error with a line number. `content: "none"` makes a tag
+self-closing. `html` allowlists plain HTML elements and the attributes each may carry; any other
+raw HTML renders as escaped text. A post then reads:
 
 ```text
 <callout type="warning">
@@ -82,42 +77,11 @@ Deleting a workspace also deletes its **history**.
 <video src="/media/tour.mp4" />
 ```
 
-`html` is the allowlist for plain HTML. Each key is an element that renders as itself, and
-its array names the attributes the element may carry, so `<details open>` parses and
-`<details class="x">` is a parse error at the opening tag. An allowlisted element's children
-are markdown, the way a tag's are, and where it stands comes from the element: `details`
-holds blocks, `summary` holds a line of inline content, and `kbd`, `sup` and `sub` sit inside
-a sentence. Event handlers are refused even when named, and `href` and `src` take only
-relative, `http`, `https`, `mailto` and `tel` URLs.
-
-```text
-<details>
-<summary>What does **retry** mean?</summary>
-
-A failed check runs again before it alerts.
-</details>
-
-Press <kbd>Cmd</kbd> then <kbd>K</kbd>, and H<sub>2</sub>O renders as chemistry.
-```
-
-A note for whoever edits the post goes in a `{/* … */}` comment. It may span lines and sit
-inside a paragraph, every renderer leaves it out, and `Markdown.stringify` writes it back, so
-a post an editor parses and saves keeps its notes. A comment missing its `*/}` is a parse error
-at the line it opened on.
-
-```text
-{/* Prices come from the billing page; update both together. */}
-
-Starter costs $9 a month. {/* TODO: confirm the annual discount */}
-```
-
 ## Transform the tree in one walk
 
 `Markdown.walk` is the only transform. A visitor is a plain object with one handler per node
-type, and `Markdown.compose` merges several so a whole preparation runs as a single pass.
-`highlight` from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding
-one `code` handler that attaches the painted tokens to each fence, and the plugins that ship
-with `@sdxc/markdown` are built the same way.
+type, and `Markdown.compose` merges several so the whole preparation runs as a single pass.
+`highlight` from [`@sdxc/highlight/markdown`](/api/highlight) is one such visitor:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
@@ -135,29 +99,15 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-`headings()` gives every heading an `id` taken from its text, using GitHub's slugs, so a
-`#fragment` copied from a rendered README on GitHub lands on the same heading here. A heading
-an author already named with `{% #install %}` keeps its id, and a generated slug never takes an
-id an author wrote further down; a repeated heading takes a `-1`, `-2` suffix so every one
-stays linkable. `links({ base })` resolves every relative URL against the base the way a
-browser would, for links, images and allowlisted elements alike. Absolute links matter once
-the same document is rendered into a feed, where a reader resolves `/posts/…` against the
-wrong origin.
-
-What a handler returns decides the node's fate: a node replaces it, `null` removes it, and
-returning nothing leaves it alone. Handlers for the same node type run in the order the
-visitors are listed, each on the node the one before returned.
+`headings()` gives every heading an `id` from its text, using GitHub's slugs, and
+`links({ base })` resolves every relative URL, which matters once the same document goes into a
+feed. A handler returns a node to replace, `null` to remove, or nothing to leave it alone;
 [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) covers the other
 plugins and the order to list them in.
 
-Every handler here is synchronous, so the walk answers with a `Result` rather than a promise.
-A handler that throws lands on the failure branch with the node's position attached, which is
-how a check you add later (a code block with no language, say) reports the line it found.
-
 ## Load and parse inside the request
 
-Keep the files as raw strings and parse per request, and a lazy glob means a page pays for the
-one post it renders.
+Keep the files as raw strings behind a lazy glob, so a page pays for the one post it renders.
 
 <warning>
 Parse inside the request, never at module scope. A Worker rejects an upload whose global scope
@@ -190,40 +140,14 @@ export async function readPost(slug: string) {
 }
 ```
 
-An index page needs titles and dates, not bodies. `Markdown.frontmatter` takes the same options
-and stops after the block, so listing a hundred posts reads a hundred frontmatter blocks and
-parses no markdown at all. It reads the same `POSTS` glob the loader above exports:
-
-```typescript {% title="app/services/content/list-posts.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { isFailure } from "@sdxc/result";
-
-import type { Frontmatter } from "~/app/services/content/schema";
-
-import { POSTS } from "~/app/services/content/posts";
-import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
-
-export async function listPosts() {
-	let posts: Array<Frontmatter & { slug: string }> = [];
-
-	for (let [path, load] of Object.entries(POSTS)) {
-		let read = Markdown.frontmatter(await load(), MARKDOWN_OPTIONS);
-		if (isFailure(read) || read.data.frontmatter.draft) continue;
-		let slug = path.slice(path.lastIndexOf("/") + 1, -".md".length);
-		posts.push({ ...read.data.frontmatter, slug });
-	}
-
-	return posts.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
-}
-```
+An index page that needs only titles and dates reads each file with `Markdown.frontmatter`,
+which takes the same options and stops after the block.
 
 ## Read the tree without changing it
 
-`tableOfContents` reads the ids the preparation pass wrote back as a tree. Each entry holds
-the heading's `id`, its plain text, its `level` and the deeper headings of its section as
-`children`, so a `##` followed by two `###` is one entry with two children. It lists levels 2
-and 3 unless you pass `{ levels }`, and leaves out a heading with no id, which is why it reads
-the prepared document:
+`tableOfContents` reads the ids the preparation pass wrote back as a tree, levels 2 and 3 by
+default, each entry with its deeper headings as `children`. It skips a heading with no id, so it
+reads the prepared document:
 
 ```tsx {% title="resources/components/toc.tsx" %}
 import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
@@ -245,17 +169,14 @@ export function TocList(handle: Handle<{ entries: TableOfContentsEntry[] }>) {
 }
 ```
 
-A handler that returns nothing changes nothing, so `Markdown.walk` also doubles as a
-traversal for anything the plugins do not read for you. `toPlainText` takes any node, which is
-what makes it usable inside such a visitor. Called on the whole document it gives you the
-prose for a word count or a search index; pass `{ code: true }` to include the bodies of code
-blocks.
+A visitor whose handlers return nothing changes nothing, so `Markdown.walk` doubles as a
+read-only traversal for anything else you need to collect.
 
 ## Render it in a route
 
 `toRemix` from `@sdxc/markdown/remix` turns the tree into `remix/component` nodes, and its
-`components` map is where a tag gets its markup. A component receives the tag's attributes as
-props, already validated by the schema you registered, plus its rendered `children`:
+`components` map gives each tag its markup. A component receives the tag's validated attributes
+as props, plus its rendered `children`:
 
 ```tsx {% title="resources/components/callout.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
@@ -282,9 +203,9 @@ export function Callout(handle: Handle<CalloutProps>) {
 }
 ```
 
-The controller is mapped to a `posts.show` route declared as `get("/posts/:slug")` in your
-`routes/web.ts`. It reads the slug, handles both kinds of failure the same way, and wraps the
-output in `Typeset`, which supplies the sizes, spacing and colours for markup it did not write:
+The controller answers a `posts.show` route declared as `get("/posts/:slug")`. It turns both
+kinds of failure into a 404, and wraps the output in `Typeset`, which styles markup it did not
+write:
 
 ```tsx {% title="app/http/controllers/posts/show.tsx" %}
 import { notFound } from "@sdxc/http/response/html";
@@ -328,14 +249,9 @@ export default createAction(routes.posts.show, async (ctx) => {
 });
 ```
 
-A tag with no component renders its children and nothing else, so `video` above shows nothing
-until you register one, and a missing component drops the chrome while keeping the content.
-The same map takes over built-in nodes when you key it by node type (`code`, `heading`,
-`link`, `alert`).
-
-The painted tokens become `<span class="token …">` runs, and the stylesheet that colours them
-ships with the highlighter. Import it from your document layout, after the theme, so the
-build links it with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
+A tag with no component renders only its children, so `video` shows nothing until you register
+one. The highlighted code needs the highlighter's stylesheet, imported from your document layout
+after the theme, with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
 
 ```tsx {% title="resources/components/document.tsx" %}
 import "@sdxc/highlight/styles.css";
@@ -343,8 +259,8 @@ import "@sdxc/highlight/styles.css";
 
 ## HTML and plain text for everything else
 
-A feed body, an email or a JSON API wants a string rather than UI nodes. `toHTML` renders any
-node as static HTML, with its own `tags` map returning markup for each tag:
+A feed body, an email or a JSON API wants a string. `toHTML` renders any node as static HTML,
+with its own `tags` map, and `toPlainText` gives the prose alone:
 
 ```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -372,30 +288,10 @@ Interpolating `attributes.type` is safe only because its schema allows three fix
 an attribute that takes free text before it goes into markup.
 </warning>
 
-Raw HTML an author typed renders as escaped text in both renderers, and an element the `html`
-allowlist let through renders as itself, so both write only markup you vetted. Comments render
-in neither.
-
-A consumer that parses the output as XML, such as an EPUB content document built with
-[`@sdxc/epub`](/api/epub), takes `syntax: "xhtml"`. Every void element is then self-closed
-(`<br />`) and every boolean attribute carries its name as its value (`open="open"`); markup a
-tag renderer returns is written as the renderer built it, so a renderer feeding XHTML writes
-XHTML itself:
-
-```typescript {% title="app/services/content/chapter.ts" %}
-import type { Markdown } from "@sdxc/markdown";
-
-import { toHTML } from "@sdxc/markdown/html";
-
-export function renderChapter(document: Markdown.Document): string {
-	return toHTML(document, { syntax: "xhtml" });
-}
-```
-
 ## Test it
 
-The walk is where a post gains its anchors and absolute links, and the route is where a missing
-or broken post becomes a 404, so test one of each:
+Test the walk, where a post gains its anchors and absolute links, and the route, where a
+missing post becomes a 404:
 
 ```typescript {% title="app/services/content/prepare.test.ts" %}
 import { Markdown } from "@sdxc/markdown";

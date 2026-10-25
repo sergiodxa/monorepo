@@ -1,15 +1,15 @@
 ---
 title: Fetch URLs a stranger chose
-description: Refuse private hosts at the endpoint, fetch in a job under one deadline and a byte cap on every redirect, and cap bodies that never came from fetch.
+description: Refuse private hosts at the endpoint, fetch in a job under one deadline and a byte cap on every redirect, and cap a request body before you read it.
 section:
     title: Identity & security
     order: 6
 order: 11
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to refuse private hosts at the endpoint before a URL is stored"
     - "How to fetch under one deadline and a byte cap on every redirect"
-    - "How to cap bodies that never came from `fetch`, including images"
+    - "How to cap an incoming request body before you read it"
 ---
 
 The moment your app fetches a URL someone typed, a calendar to subscribe to, an avatar to copy,
@@ -17,18 +17,11 @@ a feed to poll, your Worker sends requests on that person's behalf. They can poi
 `http://169.254.169.254/`, where a cloud metadata service answers, at `printer.local` or a
 `10.x` address on a network you reach, or at a public page that redirects to either. They can
 also point it at a server that drips one byte a second, or answers with a body that never ends.
-Every one of those holds the request open, reads into memory, or reaches something nobody
-outside should.
 
 This guide builds a calendar subscription that answers all of it: the endpoint refuses a URL
-that can never be fetched, a background job follows it under one deadline and a byte cap with
-every redirect re-checked, and the failures map onto the job's retry and give-up verbs. Then it
-caps bodies that did not come from `fetch` at all, such as a webhook delivery, and streams a
-capped image through a proxy.
-
-[`@sdxc/outbound`](/api/outbound) checks, follows and reads URLs a stranger chose, answering a
-`Result` from [`@sdxc/result`](/api/result) for every outcome. [`@sdxc/jobs`](/api/jobs) keeps
-the fetch off the request, and [`@sdxc/crypto`](/api/crypto) verifies the webhook signature.
+that can never be fetched, and a background job follows it under one deadline and a byte cap
+with every redirect re-checked. [`@sdxc/outbound`](/api/outbound) checks, follows and reads the
+URL, and [`@sdxc/jobs`](/api/jobs) keeps the fetch off the request.
 
 ```bash
 npm add @sdxc/crypto @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/result @sdxc/validate \
@@ -37,11 +30,10 @@ npm add @sdxc/crypto @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/result @sdxc/val
 
 ## Refuse the URL at the endpoint
 
-`checkUrl(input, options)` decides from the URL alone, with no request and no lookup: HTTP(S)
-only, no username or password, and a host that is a public address or a name with a dot outside
-the reserved suffixes (`localhost`, `local`, `internal`, `lan`, `home.arpa`, `test` and the
-rest). Running it where the URL arrives turns a subscription the job would refuse into an
-immediate `422`:
+`checkUrl` decides from the URL alone: HTTP(S) only, no username or password, and a host that
+is a public address or a name outside the reserved suffixes (`localhost`, `local`, `internal`
+and the rest). Running it where the URL arrives turns a subscription the job would refuse into
+an immediate `422`:
 
 ```typescript {% title="app/http/controllers/calendars/create.ts" %}
 import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
@@ -72,27 +64,19 @@ export default createAction(routes.calendars.create, async (ctx) => {
 });
 ```
 
-The check runs on the parsed URL, so `http://0x7f.1/` and `http://2130706433/` are judged as the
-`127.0.0.1` they normalize to, and an IPv6 address carrying an IPv4 one inside, such as
-`::ffff:10.0.0.1`, is judged by the IPv4. The code names the rule that refused it
-(`refused-address`, `refused-host`, `refused-port`, `refused-scheme`, `refused-credentials`,
-`invalid-url`), so the form can say which.
-
-`ports: "default"` allows only the scheme's own port, which keeps the URL off a database or
-admin port on a public host. A list such as `[80, 443, 8443]` allows the ports it names, an
-omitted port counting as the scheme's own. `literals: "refuse"` refuses every address literal,
-public or not, for a feature where a name is the only sensible input. `Calendars` is your own
-model, and the job is declared as `refresh: job({ input: s.object({ calendarId:
-s.string() }) })`; [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)
-builds the queue and `ctx.jobs`.
+The check runs on the parsed URL, so `http://0x7f.1/` is judged as the `127.0.0.1` it
+normalizes to, and the error's code names the rule that refused it. `ports: "default"` allows
+only the scheme's own port, which keeps the URL off a database or admin port on a public host.
+`Calendars` is your own model, and
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue and
+`ctx.jobs`.
 
 ## Follow and read it under one deadline
 
-`follow(input, options)` requests the URL with `redirect: "manual"` and `credentials: "omit"`
-and walks the chain itself, so every hop passes `checkUrl` with the same options before it is
-requested. A public page redirecting to `127.0.0.1` fails `refused-address` without the second
-request leaving. `readText` then reads the body within a byte cap. Wrap both in a function that
-translates `OutboundError` into your own error, so the job handles one type:
+`follow` walks the redirect chain itself, so every hop passes `checkUrl` with the same options
+before it is requested: a public page redirecting to `127.0.0.1` fails `refused-address`
+without the second request leaving. `readText` then reads the body within a byte cap. Wrap both
+in a function that translates `OutboundError` into your own error:
 
 ```typescript {% title="app/services/calendar-download.ts" %}
 import type { OutboundError, OutboundErrorCode } from "@sdxc/outbound";
@@ -143,24 +127,16 @@ export async function downloadCalendar(input: string) {
 }
 ```
 
-The `timeout` covers the whole chain and the body read after it: the deadline travels with the
-response, so a server that sends headers quickly and then drips the body fails `timeout` at ten
-seconds all the same. The cap is counted off the stream. A `Content-Length` over it fails
-before a byte is read, and a body that lies about its length fails at the byte that crosses the
-cap, with the stream cancelled so the origin stops sending.
-
-`follow` answers the final response whatever its status, because what a status means is yours
-to decide: a `304` is a success to a feed poller and a `403` a refusal to an article reader.
-`release` lets go of a body you will not read without waiting on the origin. `url` is where the
-chain ended, the base for any relative URL in the body. Keeping `CalendarError` at this boundary
-means the rest of your app never imports `@sdxc/outbound`, and swapping how the calendar is
-fetched changes one file.
+The `timeout` covers the whole chain and the body read after it, so a server that drips the
+body still fails at ten seconds. The cap is counted off the stream, so a body that lies about
+its length fails at the byte that crosses it. `follow` answers the final response whatever its
+status, since what a status means is yours to decide, and `release` lets go of a body you will
+not read.
 
 ## Turn failures into job verbs
 
-`retryable` is `true` for `timeout` and `network` alone, the two outcomes a later attempt can
-change. Every `refused-*` code, `too-many-redirects` and `too-large` gives the same answer next
-time, so the job records it and stops:
+`retryable` is `true` for `timeout` and `network` alone, the outcomes a later attempt can
+change. Every other code gives the same answer next time, so the job records it and stops:
 
 ```typescript {% title="app/jobs/calendars/refresh.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
@@ -193,12 +169,8 @@ export default createJobHandler(jobs.calendars.refresh, async (ctx) => {
 });
 ```
 
-A broken subscription is an outcome your interface shows, "the calendar at this address is too
-large", so the job stores the code and returns, which acks the message. `ctx.exit` is for a
-message that can never succeed for a reason that is yours, such as a row that no longer exists.
-A fixed fifteen minutes is the simplest delay;
-[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) spaces the
-attempts out instead.
+A broken subscription is an outcome your interface shows, so the job stores the code and
+returns, which acks the message. `ctx.exit` is for a row that no longer exists.
 
 ## Check where the name points
 
@@ -215,11 +187,8 @@ let followed = await follow(input, {
 });
 ```
 
-The lookup's time counts against `timeout`. `resolveHost(url)` is the same lookup on its own,
-answering every address when all are public, so the endpoint can call it on the URL `checkUrl`
-passed and answer `422` for `refused-host` (a name that does not exist) or `refused-address`.
-A resolver that could not answer fails `network`, which is retryable: accept the URL then, and
-let the job's own check decide.
+The lookup's time counts against `timeout`, and a resolver that could not answer fails
+`network`, which is retryable.
 
 <warning>
 A Worker connects to a name, and the addresses that were checked stay with the check. A name
@@ -229,45 +198,11 @@ a Worker that reaches its storage and its other services through bindings rather
 nothing private for an escaped request to reach.
 </warning>
 
-## Reach your own network on purpose
-
-Some URLs are yours: a health endpoint behind a tunnel, a feed served by another service on
-your network. `hosts: "any"` keeps only the scheme and credential rules and drops the host and
-address checks, and `resolve` is skipped with them:
-
-<warning>
-Give `hosts: "any"` a URL you configured, never one a visitor sent. It is the one setting that
-lets a request reach a private address.
-</warning>
-
-```typescript {% title="app/services/inventory-health.ts" %}
-import { follow, release } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
-import { env } from "cloudflare:workers";
-
-export async function inventoryIsUp(): Promise<boolean> {
-	let followed = await follow(env.INVENTORY_HEALTH_URL, {
-		hosts: "any",
-		method: "HEAD",
-		timeout: "2 seconds",
-		maxRedirects: 0,
-	});
-	if (isFailure(followed)) return false;
-
-	release(followed.data.response.body);
-	return followed.data.response.ok;
-}
-```
-
-`maxRedirects: 0` fails `too-many-redirects` on the first redirect, so a health check reports
-the endpoint it was given rather than wherever that endpoint sends it.
-
 ## Cap a body that did not come from fetch
 
-`readText` and `readBytes` take any `Request` or `Response`: an incoming request, a Durable
-Object stub's answer, a service binding's. A webhook endpoint reads the delivery before it can
-check the signature, so whoever posts first decides how much your Worker buffers unless you cap
-it. `readBytes` keeps the exact bytes the signature covers:
+`readText` and `readBytes` take any `Request` or `Response`, including an incoming request. A
+webhook endpoint reads the delivery before it can check the signature, so whoever posts decides
+how much your Worker buffers unless you cap it:
 
 ```typescript {% title="app/http/controllers/webhooks/inventory.ts" %}
 import { hmac } from "@sdxc/crypto";
@@ -311,117 +246,13 @@ export default createAction(routes.webhooks.inventory, async (ctx) => {
 });
 ```
 
-A `Content-Length` over the cap is answered `413` before any of the body is read. A missing
-secret answers `503` before the body is touched, so an unconfigured receiver accepts nothing.
-For a sender that follows [Standard Webhooks](/docs/identity-and-security/webhooks),
-`@sdxc/webhooks` reads and verifies the body itself.
+A `Content-Length` over the cap is answered `413` before any of the body is read. For a sender
+that follows [Standard Webhooks](/docs/identity-and-security/webhooks), `@sdxc/webhooks` reads
+and verifies the body itself.
 
-## Stream a capped image through
-
-An image proxy fetches what a post embeds, so readers never load it from the publisher and the
-publisher never sees their address. The bytes go straight to the client, so read nothing:
-`limitBody` keeps the status and headers and wraps the body in a stream that errors at the
-first chunk past the cap.
-
-```typescript {% title="app/http/controllers/images/show.ts" %}
-import { follow, limitBody, release } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
-import { createAction } from "remix/router";
-
-import routes from "~/routes/web";
-
-const IMAGE = s.object({ url: s.string() });
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-export default createAction(routes.images.show, async (ctx) => {
-	let query = await validate(ctx.url.searchParams, IMAGE);
-	if (isFailure(query)) return new Response(null, { status: 400 });
-
-	let followed = await follow(query.data.url, {
-		headers: { accept: "image/*" },
-		timeout: "10 seconds",
-		ports: "default",
-	});
-	if (isFailure(followed)) return new Response(null, { status: 404 });
-
-	let { response } = followed.data;
-	let type = response.headers.get("content-type") ?? "";
-	if (!response.ok || !type.startsWith("image/")) {
-		release(response.body);
-		return new Response(null, { status: 404 });
-	}
-
-	let capped = limitBody(response, { maxBytes: MAX_IMAGE_BYTES });
-	return new Response(capped.body, {
-		headers: {
-			"content-type": type,
-			"cache-control": "public, max-age=86400",
-			"content-security-policy": "default-src 'none'",
-		},
-	});
-});
-```
-
-The new `Response` forwards the body and only the headers you chose, so a cookie the origin
-set never reaches your readers, and the policy keeps an SVG's scripts from running. A declared
-length over the cap errors before a byte is forwarded; a body that crosses it mid-stream breaks
-off, and the browser shows a broken image. The ten-second deadline still covers the body, so a
-slow origin cannot hold the connection either.
-
-<warning>
-Sign the URLs your pages write with `hmac.sign`, and check the signature here. An unsigned
-proxy relays anything for anyone, under your domain.
-</warning>
-
-## Sign what you send
-
-`sign` runs on each hop's request just before it is sent and answers the signed copy, so an origin
-can tell which service is asking. A failure stops the walk as `signing-failed`. With
-`webBotAuthSigner` from `@sdxc/http-signatures/web-bot-auth`, every request carries a
-[Web Bot Auth](/docs/identity-and-security/http-message-signatures#identify-your-bot-with-web-bot-auth)
-signature over its own authority:
-
-```typescript
-let followed = await follow(url, {
-	timeout: "10 seconds",
-	sign: webBotAuthSigner({ key, agent }),
-});
-```
-
-`Feed.fetch` and `distill` take the same `sign` option and pass it through.
-
-## Use the packages that already fetch through it
-
-Several packages fetch URLs a stranger chose and do it through `@sdxc/outbound`, so the same
-hop checks, deadline and caps apply without your code calling it:
-
-- [`@sdxc/distill`](/api/distill) reads articles and refuses address literals;
-  [Read other people's pages](/docs/content-and-feeds/read-web-pages) builds a save-for-later
-  feature on it, and link preview cards on `follow` and `readText` directly.
-- [`@sdxc/feed`](/api/feed) checks every hop with `hosts: "public"` by default and takes
-  `hosts: "any"` for a feed on your own network, beside `maxBytes` and `maxRedirects`.
-- [`@sdxc/webmention`](/api/webmention) verifies a mention's source within `maxBytes`,
-  `timeoutMs` and `maxRedirects`, and refuses literals.
-- [`@sdxc/websub`](/api/websub) caps a hub's delivery with `maxBytes` before it compares the
-  signature.
-- [`@sdxc/activitypub`](/api/activitypub) fetches every remote actor, key and post through it
-  with each hop's host resolved, within one megabyte and ten seconds by default, and accepts a
-  document only when its `id` has the origin the chain ended at. Deliveries go to an inbox that
-  passed the same checks, with `redirect: "manual"`;
-  [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) builds on both.
-- [`@sdxc/privacy-pass`](/api/privacy-pass) reads an issuer's key directory on the default
-  port within ten seconds, and
-  [Accept Privacy Pass tokens instead of a CAPTCHA](/docs/identity-and-security/privacy-pass)
-  builds on it.
-- [`@sdxc/email-auth`](/api/email-auth) fetches a domain's MTA-STS policy as a sending server
-  does, with `maxRedirects: 0` and a 64 KiB cap;
-  [Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
-  serves and checks one.
-
-Each keeps its own error type and maps from `OutboundError` at its boundary, the way
-`downloadCalendar` does.
+Packages that fetch URLs a stranger chose, such as [`@sdxc/feed`](/api/feed),
+[`@sdxc/distill`](/api/distill) and [`@sdxc/activitypub`](/api/activitypub), do it through
+`@sdxc/outbound`, so the same hop checks, deadline and caps apply without your code calling it.
 
 ## Test it with MSW
 
@@ -458,8 +289,7 @@ test("a redirect into the network is refused before it is requested", async () =
 
 Nothing handles `10.0.0.5`, so a request to it would fail the test: the refusal is what keeps
 it green. With `resolve: true`, every hop also asks `https://cloudflare-dns.com/dns-query` for
-its `A` and `AAAA` records, so answer that URL too, with the addresses each case needs.
-[Test Workers apps](/docs/operations-and-testing/testing) covers the server setup.
+its records, so answer that URL too.
 
 ## Where to go next
 

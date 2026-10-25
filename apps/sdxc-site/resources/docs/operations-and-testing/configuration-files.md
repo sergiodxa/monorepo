@@ -40,9 +40,8 @@ npm add @sdxc/cli @sdxc/jsonc @sdxc/result remix
 }
 ```
 
-Everything else follows JSON exactly. Unquoted keys, single-quoted strings and hexadecimal
-numbers, which JSON5 allows, are mistakes here, so a file that parses is one any JSONC reader
-agrees on.
+Everything else follows JSON exactly: unquoted keys and single-quoted strings, which JSON5
+allows, are mistakes here.
 
 ## Parse it and point at the mistake
 
@@ -68,21 +67,8 @@ export async function readConfigText(path: string) {
 ```
 
 Written as `path:line:column`, the position is one an editor or a terminal opens straight at the
-character. `reason` is the message without the position, `line` and `column` count from one, and
-`offset` is the character's index in the text, for drawing the line with a marker under it:
-
-```typescript {% title="src/config.ts" %}
-import type { JSONCParseError } from "@sdxc/jsonc";
-
-export function frame(text: string, error: JSONCParseError): string {
-	let source = text.split(/\r\n|\r|\n/)[error.line - 1] ?? "";
-	return `${source}\n${" ".repeat(error.column - 1)}^ ${error.reason}`;
-}
-```
-
-The position comes from the parser rather than from the engine's `JSON.parse` message, so the
-same file reports the same position and wording on Node, Bun, Deno and Cloudflare Workers. A
-block comment that never closes is a failure too, at the place it opened.
+character, and it reads the same on Node, Bun, Deno and Cloudflare Workers. `line` and `column`
+count from one.
 
 ## Validate the shape
 
@@ -155,22 +141,6 @@ A failure returned from the middleware ends the run with its message, before any
 `deploy.jsonc:10:1: Unexpected character '}'` is the whole output of a run against a broken file.
 [Build a command line](/docs/operations-and-testing/build-a-command-line) writes the rest of the
 tool.
-
-## Strip it for another reader
-
-`strip` turns JSONC into plain JSON of the same length: comments and trailing commas become
-spaces, and line breaks inside block comments stay. A tool that only reads JSON can then read
-the file, and any offset it reports is an offset into the original:
-
-```typescript {% title="src/config.ts" %}
-import { strip } from "@sdxc/jsonc";
-
-let json = strip('{ "bucket": "assets", /* staging */ }');
-// '{ "bucket": "assets"                }'
-```
-
-`parse` strips before it parses, so reach for `strip` only when something other than `parse`
-reads the text.
 
 ## Test it
 

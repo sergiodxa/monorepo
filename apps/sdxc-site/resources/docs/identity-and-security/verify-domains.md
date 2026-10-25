@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to prove a customer owns a domain with a DNS TXT check"
     - "How to register the proven domain on Cloudflare for SaaS"
@@ -17,11 +17,10 @@ app serves their site on that name, or asks Cloudflare for a certificate for it,
 be proven, and the proof that works for any domain is DNS: you show them a TXT record, they
 publish it, and you look it up.
 
-This guide builds that flow end to end. [`@sdxc/doh`](/api/doh) does the lookups over DNS over
-HTTPS, since a Worker has no DNS socket. [`@sdxc/hostname`](/api/hostname) registers the proven
-domain as a Cloudflare for SaaS custom hostname and reports when its certificate is live.
-[`@sdxc/jobs`](/api/jobs) runs both checks in the background and retries them until DNS catches
-up, on a schedule from [`@sdxc/backoff`](/api/backoff).
+This guide builds that flow end to end. [`@sdxc/doh`](/api/doh) does the lookup over DNS over
+HTTPS, [`@sdxc/hostname`](/api/hostname) registers the proven domain as a Cloudflare for SaaS
+custom hostname, and [`@sdxc/jobs`](/api/jobs) retries both checks in the background until DNS
+catches up.
 
 ```bash
 npm add @sdxc/backoff @sdxc/crypto @sdxc/doh @sdxc/hostname @sdxc/http @sdxc/jobs \
@@ -30,9 +29,8 @@ npm add @sdxc/backoff @sdxc/crypto @sdxc/doh @sdxc/hostname @sdxc/http @sdxc/job
 
 ## Declare the two jobs
 
-Proving ownership and activating the hostname are separate waits. The first waits on the
-customer to publish a record, and the second waits on Cloudflare to validate and issue a
-certificate. Each gets its own job, keyed by your own domain row:
+Proving ownership waits on the customer to publish a record, and activating the hostname waits
+on Cloudflare to issue a certificate. Each gets its own job, keyed by your own domain row:
 
 ```typescript {% title="app/jobs/index.ts" %}
 import { job, jobs } from "@sdxc/jobs";
@@ -46,29 +44,13 @@ export default jobs({
 });
 ```
 
-Route handlers enqueue through `ctx.jobs`, which `jobEnqueuer(queue)` from `@sdxc/jobs/router`
-publishes when it runs in the router's middleware. The queue is the one module both the router
-and the dispatcher import:
-
-```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "@sdxc/jobs/router";
-import { createRouter } from "remix/router";
-
-import { queue } from "~/app/initializers/queue";
-
-export function createWebRouter() {
-	return createRouter({ middleware: [jobEnqueuer(queue)] });
-}
-```
-
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds that queue and
-the dispatcher that delivers from it.
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue, the
+dispatcher, and the `ctx.jobs` route handlers enqueue through.
 
 ## Show the customer a record to publish
 
-The record lives at an underscore name under the customer's domain, so it never collides with
-the TXT records they already keep at the apex, such as SPF. Its value carries a random token
-stored on the domain row, so nobody can publish it without reading your settings page:
+The record lives at an underscore name, so it never collides with TXT records the customer
+keeps at the apex, such as SPF. Its value carries a random token stored on the domain row:
 
 ```typescript {% title="app/services/domains/challenge.ts" %}
 export interface Challenge {
@@ -84,9 +66,8 @@ export function challengeFor(hostname: string, token: string): Challenge {
 }
 ```
 
-The action that adds a domain validates the form with [`@sdxc/validate`](/api/validate),
-stores the row with a fresh token from [`@sdxc/crypto`](/api/crypto), and enqueues the first
-check at once:
+The action that adds a domain validates the form, stores the row with a fresh token, and
+enqueues the first check:
 
 ```tsx {% title="app/http/controllers/domains/add.tsx" %}
 import { randomToken } from "@sdxc/crypto";
@@ -136,19 +117,15 @@ export default createAction(routes.domains.create, async (ctx) => {
 });
 ```
 
-`Domains` is your own table of claimed domains, and `ctx.account` is the signed-in account
-your auth middleware publishes. The schema lowercases the name and drops a trailing dot before
-checking it, because DNS names compare case-insensitively and a customer pasting
-`Shop.Example.com.` means the same domain. The pattern accepts ASCII only, so an
-internationalized domain is entered in its `xn--` form, which is the form DNS lookups take. The
-settings page renders `challengeFor(domain.hostname, domain.token)` beside every unverified
-domain.
+`Domains` is your own table, and `ctx.account` is the signed-in account your auth middleware
+publishes. The schema lowercases the name and drops a trailing dot, since `Shop.Example.com.`
+is the same domain. The settings page renders `challengeFor(domain.hostname, domain.token)`
+beside every unverified domain.
 
 ## Check the record until it appears
 
-The verify job looks the record up with `verifyTxtRecord`. It answers a `Result<boolean>`: a
-name that does not exist yet is `success(false)`, because a record not yet published is the
-ordinary state of a verification, while a resolver that failed to answer stays a failure:
+The verify job looks the record up with `verifyTxtRecord`. A name that does not exist yet is
+`success(false)`, while a resolver that failed to answer is a failure:
 
 ```typescript {% title="app/jobs/domains/verify.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -186,15 +163,10 @@ export default createJobHandler(jobs.domains.verify, async (ctx) => {
 });
 ```
 
-Each outcome ends the run differently. A missing record retries soon at first, since the
-customer is probably at their DNS host right now, then backs off: one minute, two, four, eight,
-and every fifteen minutes from then on. A resolver that could not
-answer, a `TransportError` or `ServerFailureError`, is retried as an unknown rather than read
-as "not published". A match marks the row and hands over to the next job, and the handler
-holds the dispatcher here because it is already running inside it.
-
-Retrying over minutes matters for another reason: a resolver that answered "no such name"
-before the record existed can keep that answer for the zone's negative-caching TTL.
+A missing record retries soon at first, since the customer is probably at their DNS host right
+now, then backs off to every fifteen minutes; a resolver can keep a "no such name" answer for
+the zone's negative-caching TTL. A failed lookup is retried as an unknown, never read as "not
+published". A match marks the row and hands over to the next job.
 
 <note>
 The queue consumer's `max_retries` bounds how long the job keeps trying, so set it to cover the
@@ -205,9 +177,7 @@ the job afresh once it gives up.
 ## Register the proven domain
 
 Registration waits for proof, so every custom hostname in your zone is one a customer showed
-they control, and a stranger claiming someone else's domain costs you nothing beyond a row.
-The client is bound to one zone and holds only configuration, so building one per use costs
-nothing:
+they control. The client is bound to one zone and holds only configuration:
 
 ```typescript {% title="app/initializers/hostnames.ts" %}
 import { HostnameClient } from "@sdxc/hostname";
@@ -224,21 +194,20 @@ export function hostnameClient(): HostnameClient {
 }
 ```
 
-`metadataKey` is where `create` tags each hostname with its owner, and where
-`listByEntity(accountId)` reads that tag back when you reconcile. `FALLBACK_ORIGIN` is the name
-in your own zone that customers point their domain at.
+`metadataKey` is where `create` tags each hostname with its owner. `FALLBACK_ORIGIN` is the
+name in your own zone that customers point their domain at with a CNAME record.
 
 ## Poll until the certificate is live
 
-The activate job registers the hostname on its first run and polls it on every run after,
-retrying until Cloudflare reports both the hostname and its certificate as active:
+The activate job registers the hostname on its first run and polls it after, until Cloudflare
+reports both the hostname and its certificate as active. `getStatusMessage` turns Cloudflare's
+status fields into one sentence for the settings page, such as "Pending DNS validation":
 
 ```typescript {% title="app/jobs/domains/activate.ts" %}
 import { HostnameClient } from "@sdxc/hostname";
 import { createJobHandler } from "@sdxc/jobs";
 
 import { Domains } from "~/app/models/domains";
-import { setupMessage } from "~/app/services/domains/status";
 import jobs from "~/app/jobs";
 import { hostnameClient } from "~/app/initializers/hostnames";
 
@@ -254,7 +223,7 @@ export default createJobHandler(jobs.domains.activate, async (ctx) => {
 			: await client.status(domain.hostnameId);
 
 	let certificate = HostnameClient.getValidationTxtRecord(hostname);
-	let message = await setupMessage(hostname);
+	let message = HostnameClient.getStatusMessage(hostname);
 	await Domains.recordHostname(ctx.db, domain.id, {
 		hostname,
 		certificate,
@@ -267,54 +236,16 @@ export default createJobHandler(jobs.domains.activate, async (ctx) => {
 });
 ```
 
-Looking the name up with `getByName` before calling `create` is what makes the first run safe to
-repeat: if the run registered the hostname and then failed before storing its id, the retry
-adopts it instead of registering it twice. `getValidationTxtRecord` returns the certificate's
-own TXT record while it is `pending_validation`, and `null` after, so the settings page shows
-it only while the customer still needs it. When the customer lets that record expire,
-`client.refresh(id)` issues a new one.
-
-The client throws `HostnameApiError` rather than returning a `Result`. In a job that is the
-right behavior: an uncaught throw is a failed delivery the queue retries, so a Cloudflare API
-outage costs a delay, not a lost domain.
-
-## Tell the customer what is missing
-
-`getStatusMessage` turns Cloudflare's two status fields into one sentence, such as "Pending DNS
-validation". The most common thing a customer has left to do is point their domain at you,
-and `checkCname` from `@sdxc/doh` can check that directly:
-
-```typescript {% title="app/services/domains/status.ts" %}
-import type { HostnameResult } from "@sdxc/hostname";
-
-import { checkCname } from "@sdxc/doh";
-import { HostnameClient } from "@sdxc/hostname";
-import { isSuccess } from "@sdxc/result";
-
-import { FALLBACK_ORIGIN } from "~/app/initializers/hostnames";
-
-export async function setupMessage(result: HostnameResult): Promise<string> {
-	if (HostnameClient.isActive(result)) return "Active";
-
-	let pointed = await checkCname(result.hostname, FALLBACK_ORIGIN);
-	if (isSuccess(pointed) && !pointed.data) {
-		return `Point ${result.hostname} at ${FALLBACK_ORIGIN} with a CNAME record`;
-	}
-
-	return HostnameClient.getStatusMessage(result);
-}
-```
-
-`checkCname` follows the alias chain one hop at a time, so a customer who points at an
-intermediate name of their own still matches, and it compares names without case or the
-trailing dot. A failed lookup falls through to Cloudflare's own message, because not knowing
-is not the same as knowing the record is wrong.
+Looking the name up with `getByName` before `create` makes the first run safe to repeat: a
+retry adopts a hostname an earlier run registered instead of registering it twice.
+`getValidationTxtRecord` returns the certificate's own TXT record while it is pending, and
+`null` after, so the settings page shows it only while the customer needs it. The client throws
+`HostnameApiError`, which in a job is a failed delivery the queue retries.
 
 ## Remove a domain
 
-Removing a domain deletes the custom hostname first and the row second. If the Cloudflare call
-fails, the row is still there to retry from, and a hostname that is already gone answers `404`,
-which counts as done:
+Delete the custom hostname first and the row second, so a failed Cloudflare call leaves the row
+to retry from. A hostname that is already gone answers `404`, which counts as done:
 
 ```typescript {% title="app/http/controllers/domains/remove.ts" %}
 import { HostnameApiError } from "@sdxc/hostname";
@@ -352,8 +283,6 @@ export default createAction(routes.domains.destroy, async (ctx) => {
 Look the domain up with `findForAccount`, scoped to the signed-in account. A lookup by id alone
 lets one customer remove another's domain by guessing its id.
 </warning>
-
-A verify or activate job still queued for the domain finds no row and exits for good.
 
 ## Test the verify job
 
@@ -427,16 +356,14 @@ test("marks the domain verified once the record matches", async () => {
 });
 ```
 
-A name that does not exist yet is `Status: 3`, NXDOMAIN, which `verifyTxtRecord` reads as
-`success(false)`. The verified run hands over to the activate job through the app's dispatcher,
-so `QUEUE` in `app/test/cloudflare-workers.ts` receives that message.
+A name that does not exist yet is `Status: 3`, NXDOMAIN. The verified run hands over to the
+activate job through the app's dispatcher, so `QUEUE` in `app/test/cloudflare-workers.ts`
+receives that message.
 
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   retries, and the queue configuration `max_retries` lives in.
-- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the token
-  generator and the rest of `@sdxc/crypto`.
 - [`@sdxc/doh`](/api/doh) — `resolve` for any record type, and the error classes that tell a
   missing name from a failing resolver.
 - [Check a domain's email authentication](/docs/data-and-background-work/email-authentication)

@@ -1,6 +1,6 @@
 ---
 title: Encode and decode CBOR
-description: Accept and answer application/cbor bodies within limits, store values in a deterministic byte form, read a passkey's COSE key and sign payloads with COSE_Sign1.
+description: Accept and answer application/cbor bodies within limits, store values in a deterministic byte form, and sign payloads with COSE_Sign1.
 section:
     title: HTTP APIs
     order: 5
@@ -9,22 +9,15 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to read an `application/cbor` request body within limits and answer in CBOR"
     - "Why deterministic encoding gives a value one byte form you can hash, store and sign"
-    - "How to read a passkey's COSE public key and sign a payload with COSE_Sign1"
+    - "How to sign a payload with COSE_Sign1 and verify it"
 ---
 
 CBOR is JSON's binary sibling: the same maps, arrays, strings and numbers, plus byte strings,
-integers beyond 2^53 and tags, written in fewer bytes and read without a text parser. It is
-what small devices send, what WebAuthn authenticators answer with, and the format COSE
-signatures are built on. This guide adds an endpoint that takes readings from devices as
-`application/cbor`, stores each one under the hash of its bytes, reads the COSE key a passkey
-holds, and signs a payload so another service can check it.
-
-[`@sdxc/cbor`](/api/cbor) decodes with bounds on depth and item count, so a hostile body
-cannot make the Worker allocate without limit, and always encodes in the deterministic form,
-so equal values produce identical bytes. Its `@sdxc/cbor/cose` entry handles COSE keys and
-COSE_Sign1 messages with WebCrypto keys. Every call answers with a
-[`@sdxc/result`](/api/result). [`@sdxc/validate`](/api/validate) checks the decoded fields and
-[`@sdxc/crypto`](/api/crypto) writes the hashes and keys as text.
+big integers and tags, in fewer bytes. It is what small devices send and what COSE signatures
+are built on. This guide adds an endpoint that takes device readings as `application/cbor`,
+stores each one under the hash of its bytes, and signs a payload another service can check.
+[`@sdxc/cbor`](/api/cbor) decodes within bounds and always encodes deterministically, so
+equal values produce identical bytes.
 
 ```bash
 npm add @sdxc/cbor @sdxc/crypto @sdxc/result @sdxc/validate remix
@@ -44,9 +37,7 @@ Each CBOR item decodes to one JavaScript form, and `encode` turns that form back
 | any other tag              | `Tagged`, with `tag` and `value`                       |
 | float                      | `number`                                               |
 
-A map decodes to a `Map` because CBOR keys may be integers or bytes, as COSE's are. `encode`
-takes a `Map` for the same reason and fails `unencodable` on a plain object, so build maps
-with `new Map([...])`.
+CBOR keys may be integers or bytes, so `encode` takes a `Map` and fails on a plain object:
 
 ```typescript {% title="app/services/cbor-example.ts" %}
 import * as CBOR from "@sdxc/cbor";
@@ -56,27 +47,10 @@ let bytes = unwrap(CBOR.encode(new Map([["values", [21.5, 22]]])));
 unwrap(CBOR.decode(bytes)); // Map { "values" => [21.5, 22] }
 ```
 
-## Declare the endpoint
-
-The route contract names the URL the controller below is mapped to.
-
-```typescript {% title="routes/api.ts" %}
-import { post, route } from "remix/routes";
-
-export default route({
-	api: {
-		readings: {
-			create: post("/api/readings"),
-		},
-	},
-});
-```
-
 ## Validate the decoded fields
 
-A decoded body is a `CBORValue`, which says nothing yet about which members it has. Copy the
-text-keyed members of the map into an object and check it with a `remix/data-schema` schema,
-the same way a JSON body is checked:
+A decoded body is a `CBORValue` of unknown shape. Copy the text-keyed members of the map into
+an object and check it with a `remix/data-schema` schema:
 
 ```typescript {% title="app/http/validators/readings.ts" %}
 import type { CBORValue } from "@sdxc/cbor";
@@ -108,9 +82,8 @@ export async function readReading(value: CBORValue) {
 
 ## Accept an `application/cbor` body
 
-The controller checks the media type and the declared size before it reads anything, then
-decodes with limits sized for what a reading can hold: a map holding an array is two levels
-deep, and a thousand items is more than any reading carries.
+Map `post("/api/readings")` in `routes/api.ts`. The controller checks the media type and
+size before reading, then decodes with limits sized for a reading:
 
 ```typescript {% title="app/http/controllers/api/readings/create.ts" %}
 import * as CBOR from "@sdxc/cbor";
@@ -165,11 +138,9 @@ export default createAction(routes.api.readings.create, async (ctx) => {
 });
 ```
 
-A failure carries a `code` (`truncated`, `malformed`, `trailing-bytes`, `duplicate-key`,
-`limit-exceeded`) and the `offset` of the byte where the failing item starts, so the device's
-developer sees where their encoder went wrong. A map that repeats a key fails
-`duplicate-key`, including keys JavaScript cannot tell apart, such as `1` and `1.0`, so a
-reading cannot carry two `device` members that a second parser would read differently.
+A failure carries a `code` (`truncated`, `malformed`, `duplicate-key`, `limit-exceeded`…)
+and the `offset` of the failing byte, so a device's developer sees where their encoder went
+wrong.
 
 <warning>
 `maxDepth` (64 by default) and `maxItems` (100,000) bound what one body allocates, and every
@@ -178,16 +149,10 @@ size is still yours to bound: a request sent chunked has no `Content-Length`, so
 endpoint behind a limit at the edge too when devices you do not control call it.
 </warning>
 
-[Build a JSON API with problem details](/docs/http-apis/json-apis) answers failures as
-problem documents; a CBOR API that serves both kinds of client can answer them there and keep
-CBOR for successes.
-
 ## Store a value under its hash
 
-`encode` always writes deterministic CBOR: shortest integers, definite lengths, the shortest
-float that holds the value exactly, and map keys sorted by their encoded bytes. Two equal
-readings therefore produce the same bytes and the same SHA-256, so the hash is an id that
-makes a resent reading land on the record it already wrote.
+`encode` always writes deterministic CBOR, so two equal readings produce the same bytes and
+the same SHA-256. The hash makes a resent reading land on the record it already wrote:
 
 ```typescript {% title="app/models/readings.ts" %}
 import type { Reading } from "~/app/http/validators/readings";
@@ -221,44 +186,9 @@ export async function findReading(id: string) {
 }
 ```
 
-Declare `READINGS` as a KV binding with `bindings.kv()` in `cloudflare.config.ts`. A reading
-stored this way takes fewer bytes than the same reading as JSON text, and a float stays the
-exact double it was rather than a decimal string read back.
-
-`decode(bytes, { deterministic: true })` refuses any encoding the deterministic rules rule out,
-with `not-deterministic`. Use it where the bytes themselves are the identity, as here and for a
-payload whose signature was made over its encoding.
-
-## Read a passkey's COSE public key
-
-A WebAuthn authenticator hands back its public key as a COSE key: a CBOR map with integer
-labels, `1` for the key type, `3` for the algorithm, negative labels for the curve and
-coordinates. [`@sdxc/passkey`](/docs/identity-and-security/passkeys) stores that key as
-base64url in `publicKey`, and `@sdxc/cbor/cose` reads it, so a settings page can show each
-passkey's RFC 9679 thumbprint as a short identifier, or export it as a JWK:
-
-```typescript {% title="app/services/passkeys/thumbprint.ts" %}
-import * as CBOR from "@sdxc/cbor";
-import * as COSE from "@sdxc/cbor/cose";
-import { Base64Url } from "@sdxc/crypto";
-import { failure, isFailure, success } from "@sdxc/result";
-
-export async function passkeyThumbprint(publicKey: string) {
-	let bytes = Base64Url.decode(publicKey);
-	if (isFailure(bytes)) return bytes;
-	let key = CBOR.decode(bytes.data, { maxDepth: 4 });
-	if (isFailure(key)) return key;
-	if (!(key.data instanceof Map)) return failure(new TypeError("Not a COSE key."));
-
-	let thumbprint = await COSE.thumbprint(key.data);
-	if (isFailure(thumbprint)) return thumbprint;
-	return success(Base64Url.encode(thumbprint.data));
-}
-```
-
-The thumbprint hashes only the key's required public parameters in deterministic form, so the
-same key always has the same thumbprint. `COSE.toJWK(key)` converts the same map to a JWK, and
-`COSE.importKey(key)` imports it as a `CryptoKey` for the algorithm its label `3` names.
+Declare `READINGS` as a KV binding with `bindings.kv()` in `cloudflare.config.ts`.
+`decode(bytes, { deterministic: true })` refuses any non-deterministic encoding, for bytes
+that are themselves the identity.
 
 ## Sign a payload with COSE_Sign1
 
@@ -285,21 +215,14 @@ export async function readReceipt(message: Uint8Array, publicKey: CryptoKey) {
 }
 ```
 
-The algorithm must sit in the protected header, where the signature covers it, and
+The algorithm sits in the protected header, where the signature covers it, and
 `verifySign1` refuses a key imported for any other algorithm, so a message cannot ask to be
-checked with a weaker one. Pass `detached: true` to `sign1` to leave the payload out of the
-message and `{ payload }` to `verifySign1` to supply it.
-
-<note>
-A COSE_Sign1 signature covers the protected header's encoded bytes, so re-encoding a decoded
-message keeps those bytes as they arrived. Add to the unprotected header, as a receipt does,
-and the signature still verifies.
-</note>
+checked with a weaker one.
 
 ## Test the endpoint
 
-A route test sends CBOR through the router the Worker builds. Both cases below are refused
-before anything is stored, so they need no KV namespace:
+A route test sends CBOR through the router. Both cases are refused before anything is
+stored, so they need no KV namespace:
 
 ```typescript {% title="app/http/controllers/api/readings/create.test.ts" %}
 import * as CBOR from "@sdxc/cbor";
@@ -345,9 +268,7 @@ The happy path writes to KV, so test it in a `*.workers.test.ts` file, where the
 
 ## Where to go next
 
-- [Add passkeys](/docs/identity-and-security/passkeys) — the ceremonies that produce the COSE
-  keys this guide reads.
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — problem documents for the
   failures a CBOR endpoint answers.
-- [`@sdxc/cbor`](/api/cbor) — `decodeFirst` for an item followed by other data, every COSE
-  algorithm and error code.
+- [`@sdxc/cbor`](/api/cbor) — COSE keys, every COSE algorithm and error code.
+- [Add passkeys](/docs/identity-and-security/passkeys) — the ceremonies that produce COSE keys.

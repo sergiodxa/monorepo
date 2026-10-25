@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 9
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to encode a link at the error correction level its surface needs with `@sdxc/qr`"
     - "How to render a QR code inline with `remix/component` and keep it inside its layout"
@@ -17,8 +17,7 @@ phone scans it, and the check-in page opens. The same code appears inline on the
 as an SVG file a printable badge links to.
 
 [`@sdxc/qr`](/api/qr) encodes text or bytes into a QR symbol and turns it into SVG path data.
-Its `./ui` entry draws that path as a `remix/component` element. Encoding runs anywhere
-`TextEncoder` does, so it needs no binding and no Node built-in on Workers.
+Its `./ui` entry draws that path as a `remix/component` element.
 
 ```bash
 npm add @sdxc/http @sdxc/logger @sdxc/qr @sdxc/result remix
@@ -38,25 +37,10 @@ export function checkInCode(ticketCode: string) {
 }
 ```
 
-A string is split into numeric, alphanumeric and byte segments with the fewest total bits.
-Alphanumeric mode holds digits, upper-case letters and a few symbols at 5.5 bits a character
-against 8 for a byte, so an upper-case URL fits a smaller symbol. The scheme and host are
-case-insensitive, and the path is yours to route, which here is a ticket code issued in upper
-case. Pass a `Uint8Array` instead to encode bytes exactly as given.
-
-`level` is the minimum error correction, the share of the symbol a scanner can rebuild when part
-of it is unreadable: `"L"` 7%, `"M"` 15% (the default), `"Q"` 25% and `"H"` 30%. A code read off
-a phone screen does well with `L` or `M`; a printed ticket that gets folded and scuffed earns
-`Q`. Each step up costs modules, so the symbol grows for the same data.
-
-`boostLevel`, on by default, raises the level as far as the chosen symbol still holds the data,
-since that extra correction costs nothing. The symbol reports what it got: `version` (1 to 40),
-`level` after the boost, `mask`, and `size`, the modules a side.
-
-A code holds any text a scanner understands. Encode vCard text, written by `stringifyVCard` from
-`@sdxc/jscontact/vcard`, and a phone camera offers to save the contact; a badge then carries
-the person instead of a link to them, as
-[Offer and import contact cards](/docs/content-and-feeds/contact-cards) builds.
+An upper-case URL fits a smaller symbol, since alphanumeric mode spends fewer bits a character.
+`level` is the minimum error correction, the share a scanner can rebuild when part is
+unreadable: `"L"` 7%, `"M"` 15% (the default), `"Q"` 25% and `"H"` 30%. A code read off a phone
+screen does well with `M`; a printed ticket that gets folded and scuffed earns `Q`.
 
 ## Keep a code inside its layout
 
@@ -78,11 +62,8 @@ export function badgeCode(url: string) {
 }
 ```
 
-Checking `code` narrows the error: `too-long` is a `QrTooLongError` whose `bits` holds the
-bits the data needs and the bits the largest allowed symbol has, so the log says how much to
-shorten. The other failure, `invalid-options`, is a version outside 1 to 40, a mask outside 0 to
-7 or an unknown level. Version 40 at level `L` holds 2,953 bytes, so without a cap a
-`too-long` comes only from unusually large data.
+A `too-long` error's `bits` holds what the data needs and what the largest allowed symbol has,
+so the log says how much to shorten.
 
 ## Render it on a page
 
@@ -114,9 +95,8 @@ export default createAction(routes.tickets.show, async (ctx) => {
 });
 ```
 
-`Tickets` is your own model. `toSVGPath()` answers plain JSON, `{ d, viewBox, size }`, with each
-horizontal run of dark modules as one rectangle and the standard four-module quiet zone
-included. Because it is JSON, the same value also works as a prop of a hydrated component.
+`Tickets` is your own model. `toSVGPath()` answers plain JSON, `{ d, viewBox, size }`, with the
+standard quiet zone included.
 
 `QrCode` from `@sdxc/qr/ui` draws it as an inline `<svg role="img">`:
 
@@ -155,19 +135,14 @@ export function TicketPage(handle: Handle<TicketPageProps>) {
 }
 ```
 
-`label` is the image's accessible name, and the payload stays out of the accessibility tree, so
-the page shows the ticket code beside it as the text a volunteer can type. `size` is any CSS
-length for the width and height. `dark` and `light` set the module and background colors,
-`#000` on `#fff` by default; they stay as given under a dark theme, and the SVG opts out of
-forced colors, because a scanner needs a dark code on a light margin. `mix` adds your own
-mixins after the component's.
+`label` is the image's accessible name, so the page shows the ticket code beside it as text a
+volunteer can type. `size` is any CSS length, and `dark` and `light` set the colors, `#000` on
+`#fff` by default.
 
 <note>
 A brand pair passed through `dark` and `light` needs the same strong contrast as black on
 white, with the darker color on the modules, or phones fail to scan the code.
 </note>
-
-An inline SVG needs no `img-src data:` in your Content Security Policy.
 
 ## Serve it as an SVG file
 
@@ -212,11 +187,8 @@ export default createAction(routes.tickets.qr, async (ctx) => {
 });
 ```
 
-`routes.tickets.qr` is a route such as `/tickets/:id/qr.svg` in your route map. `margin` sets
-the quiet zone in modules; 2 suits a badge whose own light border supplies the rest, and the
-default of 4 is what the standard asks for on a busy background. The `viewBox` is in modules,
-one unit each, so the file scales to any print size, and `crispEdges` keeps adjacent rows from
-showing seams at fractional scales.
+`routes.tickets.qr` is a route such as `/tickets/:id/qr.svg`. `margin` sets the quiet zone in
+modules; 2 suits a badge whose own light border supplies the rest.
 
 <warning>
 A ticket's code admits its holder, so answer it `private`, as above. A `public` response lets
@@ -225,8 +197,8 @@ a shared cache hand one attendee's code to another.
 
 ## Test the encoding
 
-The services are plain functions, so a test reads the symbol `QR.encode` chose and the failure
-a capped version answers, with no request involved:
+The services are plain functions, so a test reads the symbol and the failure a capped version
+answers:
 
 ```typescript {% title="app/services/tickets/qr.test.ts" %}
 import { isFailure, unwrap } from "@sdxc/result";

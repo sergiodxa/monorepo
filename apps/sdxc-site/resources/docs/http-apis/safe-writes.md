@@ -12,15 +12,13 @@ outcomes:
     - "How to refuse writes based on a stale read with an ETag"
 ---
 
-Writes fail in two quiet ways. A `POST` times out and the client cannot tell whether the book
-was created, so it retries and creates a second one. Two clients read the same book, both
-edit it, and the second write erases the first without anyone noticing. This guide closes
-both gaps in the books API from [Build a JSON API with problem details](/docs/http-apis/json-apis).
-
-[`@sdxc/idempotency`](/api/idempotency) replays the first outcome of a request sent again with
-the same `Idempotency-Key`. [`@sdxc/merge-patch`](/api/merge-patch) reads and applies RFC 7396
-patches, so an update sends only what changes. The `@sdxc/http/cache` subpath of
-[`@sdxc/http`](/api/http) hands out an `ETag` and checks it back on the write.
+Writes fail in two quiet ways. A `POST` times out, the client retries, and a second book is
+created. Two clients edit the same book, and the second write erases the first. This guide
+closes both gaps in the books API from
+[Build a JSON API with problem details](/docs/http-apis/json-apis):
+[`@sdxc/idempotency`](/api/idempotency) replays the first outcome of a retried request,
+[`@sdxc/merge-patch`](/api/merge-patch) applies partial updates, and `@sdxc/http/cache` checks
+an `ETag` on the write.
 
 ```bash
 npm add @sdxc/http @sdxc/idempotency @sdxc/merge-patch @sdxc/problem @sdxc/result \
@@ -29,9 +27,8 @@ npm add @sdxc/http @sdxc/idempotency @sdxc/merge-patch @sdxc/problem @sdxc/resul
 
 ## Extend the problem catalog
 
-Both features refuse requests, and those refusals should carry your API's problem types like
-every other failure. `IDEMPOTENCY_PROBLEM_ENTRIES` holds the four entries the middleware
-answers with, keyed by the builder names it calls.
+Both features refuse requests with your API's problem types. Add `preconditionFailed`,
+`unsupportedMediaType` and the middleware's own `IDEMPOTENCY_PROBLEM_ENTRIES` to the catalog:
 
 ```typescript {% title="config/problems.ts" %}
 import { IDEMPOTENCY_PROBLEM_ENTRIES } from "@sdxc/idempotency";
@@ -75,15 +72,11 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 });
 ```
 
-The first five entries are the ones from the first guide. The idempotency slugs are the wire
-contract clients match on, so they stay as the package defines them.
-
 ## Make create safe to retry
 
-The middleware claims the key before the handler runs, stores the response, and answers every
-later request with the same key from the store. The store needs one guarantee, an atomic
-claim, and `DataTableStore` provides it with a single conditional upsert, which holds on D1 as
-well as Durable Object SQLite.
+The middleware claims the key before the handler runs, stores the response, and replays it
+for every later request with the same key. `DataTableStore` claims with a single conditional
+upsert, so the claim is atomic on D1 and Durable Object SQLite.
 
 ```typescript {% title="app/http/middleware/idempotency.ts" %}
 import { DataTableStore } from "@sdxc/idempotency/data-table";
@@ -100,24 +93,15 @@ export const idempotent = idempotency({
 });
 ```
 
-`scope` says whose keys these are, and records never cross scopes, so one caller can never be
-answered with another caller's response.
-
 <warning>
 Scope on an identity your authentication middleware established, shown here as `ctx.apiKey`.
 A scope built from anything the caller sends, or one shared by every caller, lets a caller who
 guesses or reuses another's key receive that caller's stored response.
 </warning>
 
-Publish the `ttl` in your API reference, since the draft asks servers to state when
-keys expire.
-
 Create the `idempotency_keys` table by pasting `IDEMPOTENCY_KEYS_SCHEMA_SQL` into a migration,
-and delete expired records from a scheduled job with `purgeExpired(db)`, as described in
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron).
-
-Mount it on the create action only. The handler is the one from the first guide, moved
-into `handler` so the action can take `middleware`:
+and delete expired records from a scheduled job with `purgeExpired(db)`. Then mount the
+middleware on the create action:
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
 import { created } from "@sdxc/http/response/json";
@@ -151,32 +135,14 @@ export default createAction(routes.api.books.create, {
 });
 ```
 
-The rate limiter the first guide passes to every `lazy()` runs before the action's own
-middleware, so a replay still spends budget. A request without the header runs unprotected;
-pass `required: true` to answer `400` instead. The same key sent while the first request is still running gets `409` with `Retry-After`, and
-the same key with a different method, path or body gets `422`. Only outcomes below `500` are
-stored, so a failed write releases the key and the retry runs it.
-
-The middleware sends each create down one of these paths:
-
-```mermaid {% alt="Idempotency flow for POST /api/books: without an Idempotency-Key the request runs unprotected or gets a 400 when keys are required; with a key, a new key is claimed and the handler runs, storing a response below 500 or releasing the key otherwise; a key still running gets a 409 with Retry-After, a mismatched method, path or body gets a 422, and a completed key replays the stored response" %}
-flowchart TD
-    Req["POST /api/books"] --> HasKey{"Idempotency-Key?"}
-    HasKey -->|no| Unprotected["runs unprotected, or 400 with required: true"]
-    HasKey -->|yes| Lookup{record for the key?}
-    Lookup -->|none| Claim[claim the key] --> Run[run the handler] --> Status{below 500?}
-    Status -->|yes| Store[store the response]
-    Status -->|no| Release[release the key]
-    Lookup -->|still running| Conflict["409 with Retry-After"]
-    Lookup -->|"different method, path or body"| Mismatch[422]
-    Lookup -->|completed| Replay[replay the stored response]
-```
+A request without the header runs unprotected; pass `required: true` to answer `400`
+instead. The same key sent while the first request runs gets `409`, and the same key with a
+different body gets `422`. Only outcomes below `500` are stored, so a failed write releases
+the key and the retry runs it.
 
 ## Send a key
 
-A client mints the key once per operation and reuses it on every attempt. Here the client is
-a service in another app, retrying a create up to three times while no answer arrives or the
-server fails:
+A client mints the key once per operation and reuses it on every attempt:
 
 ```typescript {% title="app/services/books/create-book.ts" %}
 import { generateIdempotencyKey, withIdempotencyKey } from "@sdxc/idempotency/client";
@@ -204,23 +170,13 @@ export async function createBook(book: {
 }
 ```
 
-Every attempt sends the same `init`, key and body included, so the book is created once
-however many attempts it takes.
-
-<note>
-Every retry sends the same payload: the middleware fingerprints the method, path, content type
-and body, and answers `422` when a reused key arrives with a different one. A JSON body counts
-in its [canonical form](/docs/http-apis/canonical-json), so reordered keys and whitespace still
-match; any other body counts byte for byte. Serialize the body once and keep it.
-</note>
-
-For work retried by a queue, `await deriveIdempotencyKey(message.id, "create-book")` gives
-the same key on every delivery with nothing stored.
+Serialize the body once and send it unchanged: a reused key with a different body answers
+`422`.
 
 ## Hand out an ETag
 
-A conditional write needs a validator from the read. `etag` hashes the body into a strong
-tag, and `conditional` turns the response into a `304` when the client already holds it.
+A conditional write needs a validator from the read. `etag` hashes the body into a tag, and
+`conditional` answers `304` when the client already holds it:
 
 ```typescript {% title="app/http/controllers/api/books/show.ts" %}
 import { conditional, etag, Policies } from "@sdxc/http/cache";
@@ -245,18 +201,11 @@ export default createAction(routes.api.books.show, async (ctx) => {
 });
 ```
 
-`Policies.revalidate()` is `private, no-cache`: a client may store the book, but checks back
-with `If-None-Match` before every reuse, and gets the body again only when it changed.
-
 ## Accept a merge patch
 
-Add `update: patch("/api/books/:bookId")` to `routes/api.ts`, and map its controller in the
-first guide's `createWebRouter()` through `lazy()` with the same limiter. A merge patch is
-written in the shape of the resource: it lists only the members that change, and `null`
-removes one.
-
-The patch applies to the book's writable members as the API spells them, with unset ones
-left out, since absence is how a merge patch represents them:
+Add `update: patch("/api/books/:bookId")` to `routes/api.ts`. A merge patch lists only the
+members that change, and `null` removes one. It applies to the book's writable members, with
+unset ones left out:
 
 ```typescript {% title="app/http/controllers/api/books/writable-book.ts" %}
 import type { JSONObject } from "@sdxc/merge-patch";
@@ -321,9 +270,8 @@ export default createAction(routes.api.books.update, async (ctx) => {
 });
 ```
 
-The order is deliberate. The `404` comes before the body is read. `precondition` compares
-`If-Match` with the tag the book has now: an absent header passes, and a stale tag answers
-`412`, so a client that sends the tag it read cannot overwrite a change it never saw.
+`precondition` compares `If-Match` with the book's current tag: an absent header passes, and
+a stale tag answers `412`, so a client cannot overwrite a change it never saw.
 
 <warning>
 The check and the write are two statements, so on D1 another write can land between them.
@@ -331,24 +279,14 @@ When two writers racing matters, make the update itself conditional in SQL, matc
 columns the tag was computed from.
 </warning>
 
-`applyValidated` applies the patch and validates the **result** with `BOOK_INPUT`, the create
-schema, so create and update share one set of limits. It validates synchronously, so the
-schema it takes holds only synchronous checks; one that validates asynchronously fails every
-patch. A patch removing `title` fails on `/title`, and the issues point into the patched
-book. `alsoAccept` keeps callers that send
-`application/json` working.
-
-`Book.update` writes the validated book whole, so a removed `summary` is cleared. To write or
-log only what changed, `diff(writableBook(book), next.data)` answers the smallest patch between
-the two. A `diff` that would set a member to a literal `null` fails with that member's
-JSON Pointer on `UnrepresentableChangeError`, encoded by
-[`@sdxc/json-pointer`](/api/json-pointer).
+`applyValidated` validates the patched **result** with `BOOK_INPUT`, the create schema, so
+create and update share one set of limits. Its validation is synchronous, so the schema holds
+only synchronous checks.
 
 ## Send a patch
 
-`MergePatchOf<T>` types a patch for a resource: every member optional, and `null` allowed only
-where the member itself is optional, so a patch that would remove a required field fails to
-compile.
+`MergePatchOf<T>` types a patch: every member optional, and `null` allowed only where the
+member is optional, so removing a required field fails to compile.
 
 ```typescript {% title="app/services/books/patch-book.ts" %}
 import type { MergePatchOf } from "@sdxc/merge-patch";
@@ -374,24 +312,15 @@ export async function patchBook(id: string, patch: MergePatchOf<Book>) {
 }
 ```
 
-A caller passes only what changes, `patchBook(id, { year: 1979, summary: null })`, and a
-`412` answer means the book changed since the read: read it again and reapply the edit.
-
-`If-Match` carries the `ETag` from the `GET` the edit started from. A client holding the
-edited copy instead of a patch computes one with `diff(original, edited)`, which fails before sending when
-the edit sets a member to a literal `null`, something a merge patch cannot express. An API
-that needs an explicit `null`, an edit to one array element, or a per-member precondition
-accepts [JSON Patch](/docs/http-apis/json-patch) beside merge patch.
-
-To publish the update in your [OpenAPI document](/docs/http-apis/openapi), give the operation a
-`body` record naming both media types, `{ "application/merge-patch+json": BOOK_PATCH,
-"application/json": BOOK_PATCH }`, and list `preconditionFailed` and `unsupportedMediaType`
-in its `problems`.
+A caller passes only what changes, `patchBook(id, { year: 1979, summary: null })`. A `412`
+means the book changed since the read: read it again and reapply the edit. An API that needs
+an explicit `null` or an edit to one array element accepts
+[JSON Patch](/docs/http-apis/json-patch) beside merge patch.
 
 ## Test the update
 
-The update's rules live in two pure pieces, `writableBook` and the create schema, so a test
-applies patches to a book without a request. A book built by hand stands in for a row:
+The update's rules live in `writableBook` and the create schema, so a test applies patches
+without a request:
 
 ```typescript {% title="app/http/controllers/api/books/writable-book.test.ts" %}
 import type { BookRow } from "~/app/models/book";
@@ -432,9 +361,8 @@ test("a patch removing an optional member clears it", () => {
 
 ## Where to go next
 
-- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — get, set, and the pointer
-  a refused `diff` carries.
 - [Write a typed API client](/docs/http-apis/api-clients) — attach idempotency keys in one
   hook for every create.
+- [JSON Patch](/docs/http-apis/json-patch) — accept edits a merge patch cannot express.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — purge expired
   idempotency records on a schedule.

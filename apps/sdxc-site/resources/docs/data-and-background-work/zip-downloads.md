@@ -25,22 +25,13 @@ stream, and [`@sdxc/http`](/api/http) names the download.
 npm add @sdxc/csv @sdxc/http @sdxc/result @sdxc/zip remix
 ```
 
-## How the archive is written
-
-A `Zip` takes entries with `add` and writes them, in the order they were added, when its
-`stream()` is read. Every entry is stored uncompressed, with its CRC-32 and sizes in the header
-in front of it, which is the layout every unarchiver and every streaming reader opens.
-
-That layout decides how sources are read. An entry's header carries its size, so a stream
-entry is read whole when the archive reaches it, and its header and bytes go out together.
-Memory holds one entry at a time however many the archive has, and a source is read only once
-the download reaches it, so the response starts before the last file has been opened.
-
-Stored entries are larger than compressed ones: text such as CSV and JSON takes three to four
-times what a DEFLATE archive would. Images, PDFs and other files that are already compressed
-cost nothing extra, and those are usually most of an export's bytes.
-
 ## Add the entries
+
+A `Zip` takes entries with `add` and writes them, in order, when its `stream()` is read. Each
+entry is stored uncompressed and read whole when the archive reaches it, so memory holds one
+entry at a time and the response starts before the last file has been opened. Text takes three
+to four times the space a compressed archive would; PDFs and images, usually most of an
+export's bytes, cost nothing extra.
 
 An entry's source is a string, written as UTF-8, a `Uint8Array`, or a
 `ReadableStream<Uint8Array>`. `streamify` returns exactly that stream, so the contacts go in as
@@ -100,13 +91,8 @@ account's contacts, such as the keyset-paged one in
 [Import and export CSV](/docs/data-and-background-work/csv). Folders are part of the name:
 `invoices/1042.pdf` opens as a file inside an `invoices` folder.
 
-`modified` is the date an unarchiver shows beside each file. Without it, every entry is dated
-1 January 1980, which makes the same entries produce byte-for-byte the same archive: the
-choice for a file you hash or cache, and the reason a real export passes the time it was made.
-
-<note>
-The date is recorded in UTC with two-second precision and has to fall between 1980 and 2107.
-</note>
+`modified` is the date an unarchiver shows beside each file; without it, every entry is dated
+1 January 1980.
 
 ## Open stored files when the archive reaches them
 
@@ -145,9 +131,8 @@ export function storedFile(key: string): ReadableStream<Uint8Array> {
 }
 ```
 
-`highWaterMark: 0` is what keeps the stream from pulling as soon as it is built: it pulls only
-when read. One object is open at a time, which also keeps the export inside the number of
-connections a Worker may hold open at once.
+`highWaterMark: 0` keeps the stream from pulling until it is read, so one object is open at a
+time, inside the number of connections a Worker may hold open at once.
 
 <warning>
 Every entry is read whole into memory before it is written, so list a file larger than a Worker
@@ -180,18 +165,16 @@ export default createAction(routes.account.export, async (ctx) => {
 });
 ```
 
-`ctx.account` is the signed-in account your auth middleware publishes. `file()` writes the
-`Content-Disposition` header, with a non-ASCII account name in the filename carried exactly, and
-keeps the `Content-Type` passed in its headers, `application/octet-stream` when none is. The
-response has no `Content-Length`, since the size is known only once the last entry is read, so
-a browser shows the download's progress in bytes received.
+`ctx.account` is the signed-in account your auth middleware publishes, and `file()` writes the
+`Content-Disposition` header. The response has no `Content-Length`, since the size is known only
+once the last entry is read.
 
 ## Keep entry names safe to extract
 
-`add` checks a name as it is added, and a refused entry leaves the archive unchanged. It fails
-with `invalid-entry` for an empty name, a leading `/`, a backslash, an empty, `.` or `..`
-segment, a control character, or a name already in the archive. Those are the names an
-unarchiver would write outside the folder it extracts into, or would write over another file.
+`add` fails with `invalid-entry` for any name an unarchiver would write outside the folder it
+extracts into, or over another file: a leading `/`, a backslash, a `..` segment, a control
+character or a repeated name. The error's `entry` names the path it refused, which is what the
+action logs.
 
 <warning>
 A name built from something a person typed, such as an uploaded file's original name, is a name
@@ -199,65 +182,18 @@ A name built from something a person typed, such as an uploaded file's original 
 the characters it refuses and number repeats before adding.
 </warning>
 
-The error's `entry` names the path it refused, which is what the action logs.
-
-<note>
-`add` fails with `too-large` for the 65,536th entry and for bytes past 4 GiB, the limits of a
-ZIP written without ZIP64. A comment per entry goes in `options.comment`, up to 64 KiB.
-</note>
-
 ## When a source fails mid-download
 
-A stream source that errors, or yields something other than a `Uint8Array`, fails after the
-response has started with a `200`. The archive's output stream errors with a `ZipError` whose
-`code` is `source-failed`, whose `entry` names the file, and whose `cause` is the source's own
-error, and the connection closes. The archive's directory is written last, so a cut-short file
-fails to open, and the person sees a failed download and can retry it.
-
-Cancelling the output, which is what a closed browser tab does, cancels every stream source the
-archive has not reached. The CSV generator stops paging and the unread R2 objects are never
-opened.
-
-## Build the archive once and store it
-
-`bytes()` writes the whole archive into one `Uint8Array` and answers with a `Result`: the bytes,
-or the `ZipError` the stream failed with. Use it where the length has to be known, such as
-storing the export in R2 for a link that stays valid for a week, from a background job:
-
-```typescript {% title="app/services/exports/store-export.ts" %}
-import type { Database } from "remix/data-table";
-
-import { isFailure, success } from "@sdxc/result";
-import { env } from "cloudflare:workers";
-
-import type { Account } from "~/app/models/accounts";
-
-import { accountArchive } from "~/app/services/exports/account-archive";
-
-export async function storeExport(db: Database, account: Account) {
-	let archive = await accountArchive(db, account);
-	if (isFailure(archive)) return archive;
-
-	let bytes = await archive.data.bytes();
-	if (isFailure(bytes)) return bytes;
-
-	let key = `exports/${account.id}/${Date.now()}.zip`;
-	await env.FILES.put(key, bytes.data, {
-		httpMetadata: { contentType: "application/zip" },
-	});
-	return success(key);
-}
-```
-
-The whole archive is in memory at once here, so this suits exports of a size a Worker holds
-comfortably. A stream source is read once, so an archive holding one is written by a single
-call to `stream()` or `bytes()`.
+A stream source that errors fails after the response has started with a `200`: the output
+errors with a `source-failed` `ZipError` naming the entry, and the connection closes. The
+archive's directory is written last, so a cut-short file fails to open and the person retries
+the download. A closed browser tab cancels every source the archive has not reached.
 
 ## Test the archive
 
-`bytes()` answers the finished archive or the error its stream failed with, so a test reads the
-outcome without serving a response. Entries are stored uncompressed, so a stored file's text is
-readable in the bytes. Give the `cloudflare:workers` stand-in a `FILES: createR2Bucket()`
+`bytes()` writes the whole archive into one `Uint8Array` and answers a `Result`, so a test reads
+the outcome without serving a response; entries are uncompressed, so a file's text is readable
+in the bytes. Give the `cloudflare:workers` stand-in a `FILES: createR2Bucket()`
 binding from `@sdxc/cloudflare-mocks`, as
 [Test Workers apps](/docs/operations-and-testing/testing) sets up, and the test writes the
 object it reads:
@@ -295,8 +231,6 @@ test("names the entry whose stored file is missing", async () => {
 
 - [Import and export CSV](/docs/data-and-background-work/csv) — the paged generator and the
   formula escaping behind `contacts.csv`.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — running the stored
-  export off the request.
 - [Offer posts as EPUB ebooks](/docs/content-and-feeds/ebooks) — a format that is a ZIP inside,
   written by the same archive writer.
-- [`@sdxc/zip`](/api/zip) — every option and error code.
+- [`@sdxc/zip`](/api/zip) — every option, limit and error code.

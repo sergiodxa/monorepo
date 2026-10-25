@@ -31,15 +31,11 @@ npm add @sdxc/http @sdxc/result remix
 npm add -D @sdxc/jsdoc typescript
 ```
 
-`typescript` is a peer dependency, so the extraction parses with the compiler version your
-project already uses.
-
 ## Read every module
 
 `extract(source, { path })` turns one file's text into a `DocModule`: its header comment, the
-symbols it exports, and the exports it forwards from other modules. It reads only the string
-it is given, with no file system, no imports followed and no type checker, so the same text
-always produces the same document. Walking the files is your part:
+symbols it exports, and the exports it forwards. It reads only the string it is given, so
+walking the files is your part:
 
 ```typescript {% title="scripts/read-sources.ts" %}
 import type { DocModule, ExtractError } from "@sdxc/jsdoc";
@@ -73,17 +69,14 @@ export function readSources(root: string): Sources {
 }
 ```
 
-`path` selects the dialect from the extension, so a `.tsx` file parses with JSX, and it becomes
-each symbol's `source`, which is what a "view source" link needs. A file that does not parse
-comes back as an `ExtractError` whose `diagnostics` list every syntax error with its line and
-column. Symbols tagged `@internal` are left out unless you pass `includeInternal: true`, so a
-helper you export for your own tests stays off the public site.
+`path` selects the dialect from the extension and becomes each symbol's `source`. A file that
+does not parse comes back as an `ExtractError` listing every syntax error with its line, and
+symbols tagged `@internal` are left out.
 
 ## Find what the entry point publishes
 
-A barrel such as `src/index.ts` that only re-exports produces no symbols of its own. Its
-`reExports` list what it forwards, and following them from the entry point is what decides
-which symbols are public and under which name:
+A barrel such as `src/index.ts` produces no symbols of its own. Following its `reExports` from
+the entry point decides which symbols are public and under which name:
 
 ```typescript {% title="scripts/public-symbols.ts" %}
 import type { DocModule, DocNode } from "@sdxc/jsdoc";
@@ -113,21 +106,18 @@ export function publicSymbols(modules: DocModule[], entry: string): DocNode[] {
 }
 ```
 
-`kind` is `named` for `export { a } from`, `all` for `export *`, and `namespace` for
-`export * as ns from`. A namespace forward matches no child by name here, so give it a page of
-its own if your package uses one.
+An `export * as ns from` forward matches no child by name here, so give it a page of its own if
+your package uses one.
 
 ## Shape the records a page reads
 
-A `DocNode` is the whole model: signatures, type parameters, flags, members nested under
-`children`. The page needs less than that, and whatever the build leaves in the JSON the Worker
-ships, so turn each symbol into the record a page renders while the extractor's helpers are
-still at hand:
+A `DocNode` is the whole model, and whatever the build leaves in the JSON the Worker ships, so
+turn each symbol into the record a page renders:
 
 ```typescript {% title="scripts/reference-pages.ts" %}
 import type { DocNode } from "@sdxc/jsdoc";
 
-import { findTag, findTags, inlineLinks } from "@sdxc/jsdoc";
+import { findTag, findTags } from "@sdxc/jsdoc";
 
 export interface ReferencePage {
 	name: string;
@@ -140,27 +130,12 @@ export interface ReferencePage {
 	source: string;
 }
 
-function linked(text: string, names: Set<string>): string {
-	let out = text;
-	for (let link of inlineLinks(text).reverse()) {
-		let label = link.text ?? link.target;
-		let target = names.has(link.target)
-			? `[${label}](/reference/${link.target})`
-			: label;
-		out =
-			out.slice(0, link.index) +
-			target +
-			out.slice(link.index + link.raw.length);
-	}
-	return out;
-}
-
-export function toPage(node: DocNode, names: Set<string>): ReferencePage {
+export function toPage(node: DocNode): ReferencePage {
 	let signature = node.signatures[0];
 	return {
 		name: node.name,
 		kind: node.kind,
-		description: linked(node.comment?.description ?? "", names),
+		description: node.comment?.description ?? "",
 		parameters: (signature?.parameters ?? []).map((parameter) => ({
 			name: parameter.optional ? `${parameter.name}?` : parameter.name,
 			type: parameter.type,
@@ -179,22 +154,15 @@ export function toPage(node: DocNode, names: Set<string>): ReferencePage {
 }
 ```
 
-`inlineLinks` finds every `{@link}` with the offset it starts at, and walking them in reverse
-keeps each earlier offset valid while the text is rewritten. A link to a symbol the reference
-has becomes a markdown link to its page; any other target keeps its label. `findTag` takes
-`null` for a symbol with no comment, so nothing above needs a guard. Every parameter's
-`description` is already filled in from its `@param` tag, and `flags` is always present, so
-`flags.deprecated` reads without one either.
+`findTag` takes `null` for a symbol with no comment, so nothing above needs a guard, and every
+parameter's `description` is already filled in from its `@param` tag.
 
 ## Write the JSON at build time
 
 The script ties the three together, fails the build on a file that does not parse, and writes
-two documents: the full model, for any tool that wants it, and the pages, for the Worker:
+the pages for the Worker:
 
 ```typescript {% title="scripts/extract-reference.ts" %}
-import type { DocProject } from "@sdxc/jsdoc";
-
-import { SCHEMA_VERSION } from "@sdxc/jsdoc";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 import { publicSymbols } from "~/scripts/public-symbols";
@@ -208,27 +176,13 @@ function main(): void {
 	for (let error of errors) process.stderr.write(`${error.message}\n`);
 	if (errors.length > 0) process.exit(1);
 
-	let project: DocProject = {
-		schema: SCHEMA_VERSION,
-		name: "shelf",
-		version: null,
-		modules,
-	};
 	let symbols = publicSymbols(modules, "src/index.ts");
-	let names = new Set(symbols.map((node) => node.name));
-	let pages = Object.fromEntries(
-		symbols.map((node) => [node.name, toPage(node, names)]),
-	);
+	let pages = Object.fromEntries(symbols.map((node) => [node.name, toPage(node)]));
 
 	mkdirSync("resources/generated", { recursive: true });
-	writeFileSync("resources/generated/api.json", JSON.stringify(project));
 	writeFileSync("resources/generated/reference.json", JSON.stringify({ pages }));
 }
 ```
-
-`SCHEMA_VERSION` rises whenever a field of the model changes meaning or disappears, so a
-consumer of `api.json` can recognize a document an older version wrote. An `ExtractError`'s
-message leads with the first syntax error, since a later one is usually a consequence of it.
 
 Run the script before the dev server and the build, so the pages always describe the source as
 it is now:
@@ -246,9 +200,8 @@ Add `resources/generated/` to `.gitignore`: it is output, rebuilt on every run.
 
 ## Serve a page per symbol
 
-The Worker reads the JSON inside the request that needs it. Importing it dynamically keeps the
-parse out of the Worker's startup, and the only thing it takes from the build scripts is a
-type, which the bundler erases:
+The Worker imports the JSON dynamically inside the request that needs it, which keeps the parse
+out of startup; it takes only a type from the build scripts:
 
 ```typescript {% title="app/services/reference.ts" %}
 import type { ReferencePage } from "~/scripts/reference-pages";
@@ -311,15 +264,14 @@ export default createAction(routes.reference.show, async (ctx) => {
 });
 ```
 
-Descriptions and tag text are markdown as the author wrote it, links included once the build has
-rewritten them, and an `@example` may carry its own code fence. Put them through
+Descriptions and tag text are markdown as the author wrote it; put them through
 [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) to render the
-formatting, and through its highlighter for the examples.
+formatting.
 
 ## Keep every public symbol documented
 
 The same two functions the build uses make a test that fails when an export ships without a
-comment, which is the one way a generated reference goes quietly wrong:
+comment:
 
 ```typescript {% title="scripts/reference.test.ts" %}
 import { expect, test } from "vitest";
@@ -338,9 +290,7 @@ test("every public symbol has a description", () => {
 });
 ```
 
-A failure names each symbol with the file and line to fix. The same walk can check that every
-function documents its parameters, by comparing `signatures[0].parameters` against the
-`description` each one carries.
+A failure names each symbol with the file and line to fix.
 
 ## Where to go next
 

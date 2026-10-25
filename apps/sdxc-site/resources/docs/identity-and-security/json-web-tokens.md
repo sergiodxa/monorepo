@@ -48,11 +48,9 @@ export class ServiceToken extends JWT {
 ```
 
 The registered claims already have accessors on `JWT`, answering `null` when a claim is
-absent: `issuer`, `subject`, `audience`, `id`, `expiresAt` and the rest. Overriding `subject`
-narrows it to `string`, because every token this app issues is about a user. The parser's reads
-throw on a missing claim or one of the wrong JSON type, rather than coercing, so ask `has`
-first for an optional one, as `scopes` does. `verify` and `decode` return an instance of the
-class you call them on, so `ServiceToken.verify(…)` hands back these accessors.
+absent; overriding `subject` narrows it to `string`, because every token this app issues is
+about a user. The parser's reads throw on a missing claim, so ask `has` first for an optional
+one, as `scopes` does. `ServiceToken.verify(…)` hands back an instance with these accessors.
 
 ## Keep the signing keys in R2
 
@@ -68,9 +66,6 @@ export function keyStorage() {
 	return createR2KeyStorage(env.SIGNING_KEYS);
 }
 ```
-
-Any `R2Bucket` binding fits. A `FileStorage` from `remix/file-storage` satisfies the same
-contract, so a test can pass `createMemoryFileStorage()` instead of a bucket.
 
 Reading the keys is a listing, a read per key and two imports per key, so hold the result for a
 few minutes rather than repeating that on every request:
@@ -96,10 +91,9 @@ export function signingKeys(): Promise<JWK.KeyPair[]> {
 }
 ```
 
-Caching the promise means concurrent requests share one read, and a failed read is dropped so
-the next request tries again. On an empty bucket, `signingKeys` generates an ES256 pair, writes
-it back and returns it, so the first deploy needs no setup. The keys come back newest first,
-which is the order signing picks from.
+Concurrent requests share one read, and a failed read is dropped so the next request tries
+again. On an empty bucket, `signingKeys` generates an ES256 pair and writes it back, so the
+first deploy needs no setup.
 
 ## Sign a token
 
@@ -137,11 +131,9 @@ export async function requestReport(userId: string, invoiceIds: string[]) {
 }
 ```
 
-`sign` picks the first key generated for the algorithm, the newest, and writes its `kid` into
-the token's header, which is how a verifier finds the matching public key. It throws when the
-set holds no key for that algorithm. `scope` has no accessor on the base class, but the
-constructor carries any claim you pass into the signature, and `ServiceToken.scopes` reads it
-back on the other side.
+`sign` picks the newest key for the algorithm and writes its `kid` into the token's header,
+which is how a verifier finds the matching public key. Any claim you pass, such as `scope`, is
+carried into the signature.
 
 <warning>
 Keep the lifetime short. A bearer token works for whoever holds it until it expires, and one
@@ -168,10 +160,9 @@ export const publishKeys = wellKnown({
 });
 ```
 
-Add `publishKeys` to your router's middleware. It answers `GET` and `HEAD` for that one path
-with an `ETag` and a `304` for an unchanged set, and passes every other request on. Signing
-and publishing read the same cache, so an isolate that has not yet seen a new key is still
-publishing the set its own tokens verify against.
+Add `publishKeys` to your router's middleware; it answers that one path and passes every
+other request on. Signing and publishing read the same cache, so an isolate always publishes
+the set its own tokens verify against.
 
 ## Verify on the other side
 
@@ -206,8 +197,8 @@ export async function authenticate(request: Request) {
 }
 ```
 
-`verify` checks the signature, then `exp` and `nbf`, then the `issuer` and `audience` you
-name, and throws at the first failure; `wrap` makes that a `Result`.
+`verify` checks the signature, the expiry, the `issuer` and the `audience`, and throws at the
+first failure; `wrap` makes that a `Result`.
 
 <warning>
 Pass every option shown here, because each one closes a door. `audience` stops a token minted
@@ -216,8 +207,9 @@ algorithm other than the one you expect. `requiredClaims` refuses a token with n
 which would otherwise never expire.
 </warning>
 
-`requiredClaims` also refuses a token with no `sub`, which the narrowed `subject` accessor
-would throw on. `clockTolerance` allows 30 seconds of clock drift between the two services.
+`clockTolerance` allows 30 seconds of clock drift between the two services. An OpenID Connect
+ID token needs more checks than these, such as the login's nonce, so verify one through
+[Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) instead.
 
 The handler then decides what the verified token may do:
 
@@ -245,28 +237,9 @@ export default createAction(routes.api.reports.create, async (ctx) => {
 });
 ```
 
-Every verification failure answers the same `401`: an expired token, a wrong audience and a
-bad signature all mean the caller has to get a new token. The reason goes to your logs, never
-to the caller. A valid token without the scope is a `403`, because a new token for the same
+Every verification failure answers the same `401`, with the reason in your logs and never in
+the response. A valid token without the scope is a `403`, because a new token for the same
 caller would not help.
-
-When the same app signs and verifies, pass the key pairs instead of a resolver:
-`ServiceToken.verify(raw, await signingKeys(), options)`. A `KeyPair` carries its public JWK,
-and the key is still chosen by the token's `kid`.
-
-## Refresh a token before it expires
-
-`verify` is what enforces expiry. The accessors report what the claim says, which is what a
-caller needs to decide when to fetch a new token it was handed. `JWT.decode(raw)` reads the
-claims without verifying them, and on the result `expiresIn` is the seconds left, going
-negative once `exp` has passed, `expired` follows from it and `expiresAt` is the moment as a
-`Date`. Refreshing when `expiresIn` drops under a minute keeps a token from expiring
-mid-request.
-
-<warning>
-Use `decode` only on a token you were handed to send on. It trusts whatever the token says, so
-a request you received is decided by `verify` alone.
-</warning>
 
 ## Rotate the key
 
@@ -288,10 +261,8 @@ export async function rotateSigningKey() {
 }
 ```
 
-`generateKeyPair` returns the pair as PEM strings with a UUID `id` that becomes the `kid`,
-which is exactly the JSON `signingKeys` reads back. Within five minutes every isolate rereads
-the bucket, and the first token signed with the new key sends each verifier back for the
-updated set. Run it from a cron job, as in
+Within five minutes every isolate rereads the bucket, and the first token signed with the new
+key sends each verifier back for the updated set. Run it from a cron job, as in
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), or by hand when a key
 may have leaked.
 
@@ -299,20 +270,6 @@ may have leaked.
 Keep a retired key published for at least as long as the tokens it signed can live. With
 five-minute tokens that is short, but deleting it early fails every token still in flight.
 </warning>
-
-<note>
-The first time you publish more than one key, make sure every verifier resolves keys by `kid`,
-as `importRemote` does, before the issuer starts signing with the new one.
-</note>
-
-## Verify ID tokens through OpenID Connect
-
-An OpenID Connect ID token is a JWT too, but trusting one takes more than a signature and an
-audience: the nonce from your login request, the authorized party and, for some flows, the
-access token hash. [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc)
-does those checks through [`@sdxc/auth`](/api/auth), with `JWK.Algorithm` pinning what the
-provider may sign with, so reach for it instead of `JWT.verify` whenever the token comes from a
-login.
 
 ## Test the token end to end
 
@@ -380,9 +337,6 @@ test("a token minted for another service is refused", async () => {
 	expect(response.status).toBe(401);
 });
 ```
-
-`generateKeyPair` and `importKeyPair` make the same `KeyPair` that `signingKeys` reads from
-the bucket, so the test signs exactly the way your app does.
 
 ## Where to go next
 

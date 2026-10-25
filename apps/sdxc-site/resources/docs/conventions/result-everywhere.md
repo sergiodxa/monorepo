@@ -14,8 +14,8 @@ outcomes:
 
 A function in this collection that can fail returns a [`Result`](/api/result) rather than
 throwing, so a failure is a case in its signature instead of a control-flow surprise. This page
-shows how to branch on one, return one from your own code, retry it, and turn code that throws
-into one, so every handler in your app reads as a straight line of early returns.
+shows how to branch on one, return one from your own code, and turn code that throws into one,
+so every handler in your app reads as a straight line of early returns.
 
 ```bash
 npm add @sdxc/http @sdxc/markdown @sdxc/result @sdxc/validate remix
@@ -37,8 +37,7 @@ interface Failure<E extends Error> {
 }
 ```
 
-The compiler lets you read `data` only after you have handled the failure branch, which is the
-whole point.
+The compiler lets you read `data` only after you have handled the failure branch.
 
 ## Branch with an early return
 
@@ -81,8 +80,7 @@ export default createController(routes.teams.new, {
 ```
 
 A model's `create` answers with a `Result` too, so a refused submission and a refused row share
-one branch. `redirect.Status.SeeOther` turns the form's `POST` into a `GET` of the team's page;
-`redirect` defaults to `307`, which repeats the `POST` there.
+one branch.
 
 `match` handles both branches in one expression when there is no early exit to take:
 
@@ -126,32 +124,6 @@ export function importArticle(
 A failure from a package passes straight through: `return parsed` hands the caller the same
 error, with its position intact.
 
-## Retry a call that fails transiently
-
-`retry` calls a `Result`-returning function again until it succeeds, waiting between attempts,
-and answers with a `RetryError` once the attempts run out:
-
-```typescript {% title="app/services/feeds/fetch.ts" %}
-import { retry, wrap } from "@sdxc/result";
-
-export function fetchFeed(url: string) {
-	return retry(() => wrap(() => fetch(url)), {
-		times: 3,
-		delay: 200,
-		backoff: "exponential",
-	});
-}
-```
-
-<note>
-`times` must be at least 1: `retry` throws a `RangeError` on zero or a negative count, because
-that is a programming error rather than a failure of the call.
-</note>
-
-A `when` predicate receives each error and the attempt count, and stops retrying on an error a
-second attempt cannot fix. [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff)
-passes a full backoff schedule, with a ceiling and jitter, as the `delay`.
-
 ## Cross the boundary with wrap
 
 Code outside the collection throws. `wrap` turns that into a `Result`, and it awaits a function
@@ -164,16 +136,8 @@ let parsed = wrap(() => JSON.parse(input));
 if (isSuccess(parsed)) use(parsed.data);
 ```
 
-`partition` splits a batch into what succeeded and what did not, which is what you want when
-one failure should cost you only that one result:
-
-```typescript
-import { partition, wrap } from "@sdxc/result";
-
-let [responses, errors] = partition(
-	await Promise.all(urls.map((url) => wrap(() => fetch(url)))),
-);
-```
+To call a `Result`-returning function again on a transient failure, wrap it in `retry`;
+[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers it.
 
 ## Unwrap where a failure is a bug
 
@@ -194,19 +158,14 @@ input into a 500, so branch with `isFailure` there and keep `unwrap` for tests a
 
 ## Errors carry position
 
-A parse failure names where it happened. A `Markdown` error carries a `position` with the line
-and column it stopped at; a `YAML` one carries the line, and says so in its message. Either way
-an error points at the input, so a response can tell the client which line to fix. Where an
-error wraps another one, the original is kept as its `cause`, so a caller that recognizes a
-specific failure can look for it and still keep the rest.
+A parse failure names where it happened: a `Markdown` error carries a `position` with the line
+and column, so a response can tell the client which line to fix. An error that wraps another
+keeps the original as its `cause`.
 
 ## What still throws
 
-A fallible entry point hands every failure back as a value. A programming error still throws: a
-function called with an argument its signature forbids, such as `retry` with `times: 0`. A
-visitor of your own that throws inside a walk is caught by the walk, which attaches the position
-of the node it was standing on and hands it back on the failure branch, so even that arrives as
-a value.
+A programming error still throws: a function called with an argument its signature forbids,
+such as `retry` with `times: 0`. Every other failure arrives as a value.
 
 ## Where to go next
 

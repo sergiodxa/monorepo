@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 12
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to record a visitor's first and last touch with `@sdxc/attribution`"
     - "How to store the campaign with the account, the checkout or the newsletter reader"
@@ -45,17 +45,9 @@ let touch = readTouch(
 // touch.channel === "email"
 ```
 
-Every stored value is a slug: trimmed, lowercased, whitespace turned into `-` and cut at 64
-characters, so `Newsletter` and `newsletter ` group together in a report. A value holding `@` or
-`://` is an address or URL a merge tag put there, and it is dropped. The referrer keeps only its
-hostname, and a referrer on the page's own host is internal navigation. A click identifier such
-as `gclid` or `fbclid` is kept as the network's name and whether the click was paid. Parameters
-that identify an email subscriber, such as `mc_eid`, are never stored; they credit the touch to
-`email`.
-
-`channel` is the acquisition channel the touch adds up to: `paid-search`, `paid-social`,
-`display`, `email`, `affiliate`, `organic-social`, `organic-search`, `referral`, `other` or
-`direct`. The [API reference](/api/attribution) lists the rules in the order they are tried.
+Every stored value is a slug, so `Newsletter` and `newsletter ` group together in a report, and
+the referrer keeps only its hostname. `channel` is the acquisition channel the touch adds up to,
+such as `paid-search`, `email` or `direct`; the [API reference](/api/attribution) lists the rules.
 
 ## Keep the first and last touch
 
@@ -89,12 +81,7 @@ export function attributionCookie(): Cookie {
 ```
 
 `COOKIE_SECRET` is a secret declared in your Worker's configuration. Add the middleware to the
-global chain:
-
-<note>
-Put `attribution()` ahead of any middleware that ends a request early, so every page view
-reaches it and records its touch.
-</note>
+global chain, ahead of any middleware that ends a request early, so every page view reaches it:
 
 ```tsx {% title="app/initializers/router.tsx" %}
 import { attribution } from "@sdxc/attribution/middleware";
@@ -128,38 +115,10 @@ post, a `fetch`, a bot and a direct revisit write nothing, so a form action read
 the visitor's page views recorded.
 </note>
 
-The first touch is replaced when the stored one is older than `window` (90 days by default), so
-a visitor returning a year later from a new campaign is credited to it. A response that sets the
-cookie is marked `Cache-Control: private`, and a cookie that fails to verify or validate reads
-as no record.
-
-An app that already runs `remix/session`'s middleware passes `store: "session"` and installs
-`attribution()` after it; the record then lives under the session's `attribution` key and the
-session middleware commits it.
-
-The remaining options:
-
-- `consent` decides per request whether the visitor allows storage. It defaults to honoring
-  Global Privacy Control (`Sec-GPC: 1`). When it answers `false`, `current` is still published,
-  the stored record is removed and nothing is written.
-- `redirect: true` answers a page view that carries tracking parameters with a `302` to the same
-  URL without them, once the touch is stored.
-- `clickIds: "keep"` stores the click identifier's value too, for an app that uploads offline
-  conversions to an ad network.
-- `aliases` and `referrers` add parameters read as a UTM field and `host → kind` entries to the
-  referrer table; `ref` is already read as `utm_source`.
-
-An app serving visitors under the ePrivacy Directive reads its own consent cookie:
-
-```typescript {% title="app/initializers/router.tsx" %}
-attribution({
-	store: attributionCookie(),
-	consent: (ctx) => {
-		let cookie = ctx.request.headers.get("cookie") ?? "";
-		return /(?:^|;\s*)consent=analytics/.test(cookie);
-	},
-});
-```
+The first touch is replaced when the stored one is older than `window` (90 days by default).
+The `consent` option decides per request whether the visitor allows storage; it defaults to
+honoring Global Privacy Control (`Sec-GPC: 1`), and an app under the ePrivacy Directive passes
+a function that reads its own consent cookie.
 
 ## Store it with the account
 
@@ -211,9 +170,8 @@ export default createAction(routes.signUp.action, async (ctx) => {
 ```
 
 `createAccount` is your own model function. The spread columns are the ones a report filters
-on. `toMetadata` keeps both touches as one flat record, with keys such as `first_channel`,
-`first_source`, `last_campaign` and `last_landing`, only for the fields a touch carries, which
-fits a JSON column for the questions you have not asked yet.
+on, and `toMetadata` keeps both touches as one flat record (`first_channel`, `last_campaign`
+and so on) for a JSON column.
 
 ## Pass it to the checkout
 
@@ -249,15 +207,14 @@ let outcome = await ctx.newsletter.subscribers.subscribe({
 ```
 
 The last touch answers "what brought them back to sign up", falling back to the first when every
-later visit was direct. `toUtmParams(touch)` gives the same campaign under `utm_*` names, for a
-provider that takes those. [Run a newsletter list](/docs/data-and-background-work/newsletter)
+later visit was direct. [Run a newsletter list](/docs/data-and-background-work/newsletter)
 builds the whole form.
 
 ## Strip tracking parameters from links
 
 `@sdxc/attribution/parameters` knows every parameter the touch reader does. `withoutTracking`
-copies a URL without them, keeping every other parameter in the order and encoding its author
-wrote, which suits a canonical link or a link a visitor copies to share:
+copies a URL without them and keeps every other parameter as written, for a canonical link or a
+link a visitor copies to share:
 
 ```typescript
 import { withoutTracking } from "@sdxc/attribution/parameters";
@@ -265,9 +222,6 @@ import { withoutTracking } from "@sdxc/attribution/parameters";
 withoutTracking(new URL("https://example.com/post?p=123&utm_source=x&fbclid=abc"));
 // https://example.com/post?p=123
 ```
-
-`isTrackingParameter(name)` answers for one name, and `CAMPAIGN_PARAMETERS` and
-`CLICK_IDENTIFIERS` list them with the network each identifier belongs to.
 
 ## Test it
 
@@ -321,10 +275,9 @@ test("credits a sign-up to the campaign it first landed from", async () => {
 });
 ```
 
-Without `Sec-Fetch-Dest: document`, or an `Accept` naming `text/html`, the landing request is not
-a navigation and writes no cookie, which is also how a test checks that a `fetch` leaves the
-record alone. A link with a source and no medium credits the `other` channel, as the expectation
-shows; add `utm_medium` to links you control so they land in the channel you mean.
+Without `Sec-Fetch-Dest: document` the landing request is not a navigation and writes no cookie.
+A link with a source and no medium credits the `other` channel, so add `utm_medium` to links
+you control.
 
 ## Where to go next
 

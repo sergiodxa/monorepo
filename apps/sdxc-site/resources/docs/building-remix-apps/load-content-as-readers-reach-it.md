@@ -12,8 +12,8 @@ outcomes:
     - "How to keep plain links working for browsers running no script"
 ---
 
-This guide builds a job board. The list of postings continues as the reader scrolls, in both
-directions, and the address bar follows them so a reload lands on the page they were reading.
+This guide builds a job board. The list of postings continues as the reader scrolls, and the
+address bar follows them so a reload lands on the page they were reading.
 Each posting's "Read more" opens a dialog whose content is fetched the first time it opens.
 Every one of those pieces starts as a plain link, and a browser running no script follows the
 links instead.
@@ -30,10 +30,9 @@ npm add @sdxc/lazy-frame remix
 ## Register the client entry
 
 `LazyFrame` is a client entry named `@sdxc/lazy-frame/ui#LazyFrame`, so the server writes the
-bare specifier `@sdxc/lazy-frame/ui` into the page, and the browser entry's `loadModule` has
-to resolve it. An `import.meta.glob` over the app's own directories cannot reach into
-`node_modules`, so a package's islands get an explicit map keyed by that specifier. Keep the
-map in a module of its own, so a test can read it without starting the runtime:
+bare specifier `@sdxc/lazy-frame/ui` into the page. An `import.meta.glob` over the app's own
+directories cannot reach into `node_modules`, so give a package's islands an explicit map keyed
+by that specifier, in a module a test can read:
 
 ```typescript {% title="config/client-modules.ts" %}
 export const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
@@ -62,9 +61,6 @@ run({
 });
 ```
 
-The package map is checked first, because a bare specifier resolved as a URL turns into a
-path the glob has no key for.
-
 <warning>
 Miss this step and nothing fails loudly: the page renders, the island never mounts, and every
 reader gets the plain links. The last test in [Test it](#test-it) is the one that catches it.
@@ -84,25 +80,14 @@ import { LazyFrame } from "@sdxc/lazy-frame/ui";
 </LazyFrame>;
 ```
 
-The component renders a `<div>` around its content, holding the children until the reader
-arrives and then a `Frame` for `src`. While the request is in the air, `fallback` stands in,
-and it defaults to the children, so the link stays put until the postings replace it.
-
-<note>
-`children` and `fallback` each take one element, text, a number, a boolean or `null`, the
-values a client entry's props can carry to the browser.
-</note>
-
-The swap latches. A frame that has loaded keeps its content when it scrolls out of view or
-its dialog closes, and asks for `src` once.
+While the request is in the air, `fallback` stands in, and it defaults to the children, so the
+link stays put until the postings replace it. A frame asks for `src` once and keeps its content.
 
 ## Answer the frame with a fragment
 
-`src` points at a route like any link, and the route answers it with the piece that goes
-inside the frame: no doctype, no `<html>`, no layout, since the document it lands in already
-has those. Mark a frame's address with a parameter of its own, `frame` here, so the page and
-its fragment are two URLs, and a browser or CDN cache keyed by URL never serves one in place
-of the other:
+The route answers `src` with the piece that goes inside the frame: no doctype, no `<html>`, no
+layout. Mark a frame's address with a parameter of its own, `frame` here, so the page and its
+fragment are two URLs and a cache keyed by URL never serves one in place of the other:
 
 ```typescript {% title="app/services/frame.ts" %}
 export const FRAME_PARAM = "frame";
@@ -116,8 +101,7 @@ export function frameOf(href: string) {
 }
 ```
 
-The list's action renders the whole page for a visit and only the rows for a frame.
-`ctx.render` answers either one, since it renders whatever node it is given:
+The list's action renders the whole page for a visit and only the rows for a frame:
 
 ```tsx {% title="app/http/controllers/jobs/index.tsx" %}
 import { createAction } from "remix/router";
@@ -149,9 +133,8 @@ export interface JobPage {
 }
 ```
 
-A fragment can hold islands of its own, `LazyFrame` among them. The runtime hydrates what a
-frame brings in the same way it hydrates the document, which is what lets the list below go on
-for as many pages as there are.
+A fragment can hold islands of its own, `LazyFrame` among them, which is what lets the list
+below go on for as many pages as there are.
 
 ## Load the next page as the reader scrolls
 
@@ -194,11 +177,8 @@ export function JobList(handle: Handle<{ page: JobPage }>) {
 ```
 
 `rootMargin` is how far around the viewport the frame starts its fetch, in
-`IntersectionObserver` `rootMargin` syntax, and defaults to `"320px 0px"`: 320 pixels below
-the viewport, so the next page is usually there before the reader gets to it. Widen it for
-rows that are slow to answer, or pass a percentage such as `"100% 0px"` to stay one screen
-ahead whatever the device. Every frame asking for the same margin shares one observer, so a
-list read twenty pages deep watches with one, and nothing runs on scroll.
+`IntersectionObserver` syntax, and defaults to `"320px 0px"`. Widen it for rows that are slow to
+answer.
 
 ## Keep the address bar on the page being read
 
@@ -212,70 +192,9 @@ page it sits in, and it keeps the address bar on whichever the reader is in:
 </LazyFrame>
 ```
 
-The frame reaches from the first row of its page to the end of the list, so the address bar
-moves to `url` once the frame's top passes the top tenth of the viewport, and back to
-`parentUrl` when the reader scrolls above it. Nested frames settle among themselves on the
-deepest one the reader has reached. The entry is replaced rather than pushed, so Back leaves
-the list in one step instead of walking every page the reader scrolled through. A frame given
-only one of the two addresses leaves the address bar alone.
-
-## Walk the list back up
-
-A reload, or a shared link, can open the board on page 7. The newer postings then sit above
-the rows the reader is looking at, and loading them should neither jump the page nor fire
-before anybody asked. `sitsAbove` marks a frame placed above content the reader already sees:
-
-```tsx {% title="resources/views/jobs.tsx" %}
-export function JobList(handle: Handle<{ page: JobPage }>) {
-	return () => {
-		let { page } = handle.props;
-		return (
-			<div>
-				{page.newer && (
-					<LazyFrame
-						src={frameOf(page.newer)}
-						url={page.newer}
-						parentUrl={page.url}
-						sitsAbove
-					>
-						<a href={page.newer}>Newer postings</a>
-					</LazyFrame>
-				)}
-
-				<ol>
-					{page.rows.map((job) => (
-						<li key={job.id}>
-							<a href={`/jobs/${job.id}`}>{job.title}</a> at{" "}
-							{job.company}
-						</li>
-					))}
-				</ol>
-
-				{page.older && (
-					<LazyFrame
-						src={frameOf(page.older)}
-						url={page.older}
-						parentUrl={page.url}
-					>
-						<a href={page.older}>Older postings</a>
-					</LazyFrame>
-				)}
-			</div>
-		);
-	};
-}
-```
-
-A frame above the content is already within reach when the page opens, so it loads only once
-the reader has scrolled past it and come back. When the newer page lands, the frame scrolls the
-window by exactly the height it grew, in the same paint, so the posting under the reader's eyes
-stays where it was. It keeps doing so for its whole life, which also covers content that
-settles late, such as an image that finishes loading. Frames above the content nest like the
-ones below, and only the outermost one scrolls, since it has grown by everything that arrived
-inside it.
-
-This layout is the same component at every depth: each page renders its rows between a frame
-for the newer page and a frame for the older one, and each fetched page brings its own pair.
+The address bar moves to `url` once the frame's top passes the top of the viewport, and back to
+`parentUrl` when the reader scrolls above it. The entry is replaced, so Back leaves the list in
+one step.
 
 ## Load a dialog's content when it opens
 
@@ -325,42 +244,15 @@ export function JobRow(handle: Handle<Props>) {
 }
 ```
 
-`opener` is the `id` of a link that leads to the same content as a page of its own. Once
-script runs, clicking it opens the frame's container (`showModal()` for a dialog, `open` for a
-disclosure, `showPopover()` for a popover) and the reader stays on the list. Without script the
-link navigates to `/jobs/:id`, and the dialog is never shown. A click another handler has
-already cancelled is left alone.
-
-The frame watches the container's `toggle` event, so it loads however the container opened: a
-button with `commandfor`, a `popovertarget`, a `<summary>` click, or a script. A container that
-is already open, such as `<details open>`, loads at once, and a frame with no container around
-it keeps its children for good. `fallback` here replaces the link while the posting is in the
-air, because inside an open dialog a "Read the full posting" link reads as the content itself.
-
+`opener` is the `id` of a link to the posting's own page. Once script runs, clicking it opens
+the dialog and the reader stays on the list; without script the link navigates to `/jobs/:id`.
 The posting's route answers the frame the same way the list does, with
 `isFrameRequest(ctx.url)` choosing the fragment over the page.
 
-Add `prefetch` to have the posting ready by the time the dialog opens. The frame then fetches
-`src` once the reader rests the pointer or keyboard focus on the opener for 100ms, or presses
-it:
-
-```tsx {% title="resources/views/job-row.tsx" %}
-<LazyFrame src={frameOf(href)} loadOn="open" opener={opener} prefetch>
-	<a href={href}>Read the full posting</a>
-</LazyFrame>
-```
-
-<note>
-The frame reuses the prefetched response from the browser's HTTP cache, so the posting's
-route has to make it cacheable, for example with `Cache-Control: private, max-age=30`. With no
-such header the dialog fetches the posting again when it opens. The prefetch is skipped for a
-reader who saves data or is on a 2G connection.
-</note>
-
 ## Test it
 
-The fragment is an ordinary response, so a route test asks for the frame's address and checks
-that what comes back is a piece and not a page, and that the page names the island:
+A route test asks for the frame's address and checks that what comes back is a piece and not a
+page, and that the page names an island the browser entry can load:
 
 ```tsx {% title="app/http/controllers/jobs/index.test.tsx" %}
 import { expect, test } from "vitest";
@@ -406,72 +298,8 @@ test("names every island by a module the browser entry can load", async () => {
 });
 ```
 
-`router` is the app's router, built the way your other route tests build it. The last test
-is the one that catches a missing map entry. Every other assertion still passes when the
-browser cannot load the island, because the server writes the same HTML either way.
-
-To test a component of your own that wraps `LazyFrame`, run the test in a real browser with
-[Vitest Browser Mode](https://vitest.dev/guide/browser/), mount the component with
-`remix/component/test`, and answer its frames with `frameInit.resolveFrame`. The test decides
-when the reader nears the frame, so stand in for `IntersectionObserver` with one that reports
-the crossings the test announces:
-
-```tsx {% title="resources/views/jobs.browser.test.tsx" %}
-import { render } from "remix/component/test";
-import { beforeAll, expect, test, vi } from "vitest";
-
-import { JobList } from "./jobs";
-
-let observed: { callback: IntersectionObserverCallback; targets: Set<Element> }[] =
-	[];
-
-class AnnouncedObserver {
-	targets = new Set<Element>();
-	constructor(callback: IntersectionObserverCallback) {
-		observed.push({ callback, targets: this.targets });
-	}
-	observe(target: Element) {
-		this.targets.add(target);
-	}
-	unobserve(target: Element) {
-		this.targets.delete(target);
-	}
-	disconnect() {
-		this.targets.clear();
-	}
-}
-
-function approach(node: Element) {
-	let entry = { target: node, isIntersecting: true } as IntersectionObserverEntry;
-	for (let { callback, targets } of observed) {
-		if (targets.has(node)) callback([entry], {} as IntersectionObserver);
-	}
-}
-
-beforeAll(() => {
-	vi.stubGlobal("IntersectionObserver", AnnouncedObserver);
-});
-
-test("loads the older page once the reader nears it", async () => {
-	let page = { url: "/jobs", newer: null, older: "/jobs?page=2", rows: [] };
-	let result = render(<JobList page={page} />, {
-		frameInit: { resolveFrame: async (src) => `<p data-loaded>${src}</p>` },
-	});
-
-	let link = result.$('a[href="/jobs?page=2"]');
-	expect(link?.textContent).toBe("Older postings");
-
-	approach(link!.parentElement!);
-
-	await vi.waitFor(() => expect(result.$("[data-loaded]")).not.toBeNull());
-	expect(result.$("[data-loaded]")?.textContent).toBe("/jobs?page=2&frame");
-});
-```
-
-The observers are matched by target, which is the frame's `<div>`. Announcing a crossing on
-a node the observer stopped watching does nothing, the same as the browser's own observer. A `loadOn="open"` frame
-needs no observer at all: open the dialog with `showModal()` and dispatch a `toggle` event on
-it.
+The last test is the one that catches a missing map entry: every other assertion still passes
+when the browser cannot load the island, because the server writes the same HTML either way.
 
 ## Where to go next
 

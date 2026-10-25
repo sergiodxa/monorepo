@@ -13,17 +13,11 @@ outcomes:
 ---
 
 [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) builds the
-search itself: the index, the parse, the ranking and the highlighted hits. This guide puts it
-in front of readers. Every page's header gets a Search button that opens a dialog, the dialog
-shows the top matches as the reader types, and Enter or "See all" leads to a `/search` page
-with every match, paged. Each layer starts as plain HTML: a form that submits to `/search`
-works in a browser running no script, and the live results are an upgrade on top of it.
-
-[`@sdxc/ui`](/api/ui) supplies the dialog, the search field, the frame reload as the reader
-types, the highlighted text, the field error and the pager, and [`@sdxc/u`](/api/u) styles what
-sits between them. The server side comes from [`@sdxc/search`](/api/search) and [`@sdxc/pagination`](/api/pagination), as the
-search guide set them up, and [`@sdxc/workers-cache`](/api/workers-cache) caches the dialog's
-answers at the edge.
+search itself. This guide puts it in front of readers: a Search button in every page's header
+opens a dialog that shows the top matches as the reader types, and Enter or "See all" leads to
+a paged `/search` page. The form submits to `/search` with no script, and the live results are
+an upgrade on top of it. [`@sdxc/ui`](/api/ui) supplies the dialog, field, live frame,
+highlighting and pager, and [`@sdxc/u`](/api/u) styles what sits between them.
 
 ```bash
 npm add @sdxc/pagination @sdxc/result @sdxc/u @sdxc/ui remix
@@ -44,8 +38,8 @@ export default route({
 });
 ```
 
-Both read the same `?q=`, parse it with the same `parseArticleQuery`, and draw the same hits, so
-the dialog and the page always agree on what a query finds.
+Both parse `?q=` with the same `parseArticleQuery`, so the dialog and the page agree on what a
+query finds.
 
 ## Open the dialog from the header
 
@@ -98,14 +92,10 @@ export function SiteHeader(handle: Handle<SiteHeaderProps>) {
 }
 ```
 
-`Modal` is a native `<dialog>`, so `showModal()` traps focus inside it, Escape closes it, and
-`closedby="any"` closes it on a click on the backdrop as well. The frame has no `fallback`, so
-the server resolves it while it renders the page: the dialog arrives with its box already in it,
-and opening it costs no request. `searchQuery` is the text the dialog opens holding, blank on
-every page but `/search`, which passes its own query so the dialog continues that search.
-`apple` prints the hint as `⌘K` or `Ctrl K`, read from the request as
-[Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) shows, and
-`aria-keyshortcuts` names the keys for a screen reader while the `<kbd>` stays decoration.
+`Modal` is a native `<dialog>`: it traps focus, closes on Escape, and `closedby="any"` closes it
+on a backdrop click. The frame has no `fallback`, so the server renders the box into the page and
+opening the dialog costs no request. `apple` prints the hint as `⌘K` or `Ctrl K`, as
+[Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) shows.
 
 ## Answer the frame with a fragment
 
@@ -166,18 +156,11 @@ export default createAction(routes.searchFrame, async (ctx) => {
 });
 ```
 
-Every answer is a 200, a query that cannot run included. The fragment lands inside a dialog on
-whatever page the reader is on, so the reason shows under the box, where the reader is looking,
-and the answer stays cacheable. `X-Robots-Tag: noindex` keeps the fragments out of search
-engines: each one is a view of articles the sitemap already lists.
-
-## Cache what the dialog asks for
-
-Every page's dialog asks for the same blank `/frames/search`, and readers type the same few
-queries, so `ctx.cache` stores each answer at the edge under the tag every article listing
-carries. The action that saves an article purges that tag, and the next request for any query
-is answered fresh. `PUBLIC_PAGE` and `TAGS` are the policy and tags
-[Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) declares.
+Every answer is a 200, a query that cannot run included, so the reason shows under the box and
+the answer stays cacheable. `X-Robots-Tag: noindex` keeps the fragments out of search engines.
+`ctx.cache` stores each answer at the edge under the article-listing tag, which saving an article
+purges; `PUBLIC_PAGE` and `TAGS` come from
+[Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers).
 
 <note>
 A later call to `ctx.cache` replaces the earlier policy, which is how a failed search answers
@@ -268,12 +251,10 @@ export function SearchSuggestions(handle: Handle<SearchSuggestionsProps>) {
 }
 ```
 
-`SearchField` is the `<search>` landmark, so a screen reader lists the region among the page's
-landmarks. The status line is in the fragment in every state, the blank one included, so the
-live region already exists when the first results arrive and its change is what gets announced.
-While matches are on screen the line is visually hidden, because the list shows them, and a
-screen reader still hears "Top 6 of 40 results". A query with no matches, or one that cannot
-run, shows the line as well.
+The status line is in the fragment in every state, the blank one included, so the live region
+already exists when the first results arrive and its change is what gets announced. While
+matches are on screen it is visually hidden, and a screen reader still hears "Top 6 of 40
+results".
 
 Each match is a row the page and the dialog share:
 
@@ -309,10 +290,8 @@ export function SearchResult(handle: Handle<{ hit: SearchHit }>) {
 }
 ```
 
-`Highlight` renders each matched segment as a native `<mark>` and every other segment as text,
-so the title and excerpt are escaped by construction, and a match inside the link still reads
-as the link. `color` picks the tint: the brand color in the title, a quieter neutral in the
-excerpt.
+`Highlight` renders each matched segment as a `<mark>` and the rest as text, so the title and
+excerpt are escaped by construction.
 
 ## Reload the frame as the reader types
 
@@ -321,12 +300,11 @@ mixin from `@sdxc/ui/mixins` points the frame at the fragment for the text so fa
 it, once typing pauses:
 
 ```tsx {% title="resources/components/search-box.tsx" %}
-import type { LiveFrameEvent } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
 
 import { SearchField } from "@sdxc/ui";
 import { bindKeymap, LIVE_FRAME_RELOAD_EVENT, liveFrame } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/component";
+import { clientEntry } from "remix/component";
 
 export const SEARCH_DIALOG_ID = "site-search";
 export const SEARCH_RESULTS_ID = "site-search-results";
@@ -340,12 +318,6 @@ export function searchFrameSrc(frameSrc: string, text: string) {
 function searchDialog() {
 	let dialog = document.getElementById(SEARCH_DIALOG_ID);
 	return dialog instanceof HTMLDialogElement ? dialog : null;
-}
-
-function markBusy(event: LiveFrameEvent) {
-	let results = document.getElementById(SEARCH_RESULTS_ID);
-	if (event.state === "settled") results?.removeAttribute("aria-busy");
-	else results?.setAttribute("aria-busy", "true");
 }
 
 interface SearchBoxProps {
@@ -390,40 +362,21 @@ export const SearchBox = clientEntry(
 				autocomplete="off"
 				enterkeyhint="search"
 				autofocus
-				mix={[
-					liveFrame({
-						src: (text) => searchFrameSrc(handle.props.frameSrc, text),
-					}),
-					on<HTMLInputElement, "ui:live-frame">("ui:live-frame", markBusy),
-				]}
+				mix={liveFrame({
+					src: (text) => searchFrameSrc(handle.props.frameSrc, text),
+				})}
 			/>
 		);
 	},
 );
 ```
 
-`liveFrame` reloads the frame the island was rendered in, 200 milliseconds after the last
-keystroke, from the address `src` builds for the box's value. The reload diffs the fragment into
-the dialog: the matches change, and the box, being the same island, keeps its focus, its caret
-and what the reader has typed since. A blank box asks for the bare `/frames/search`, the same
-cached answer the page started with, and a value whose address the frame already shows settles
-without a request.
+`liveFrame` reloads the frame 200 milliseconds after the last keystroke. The reload diffs the
+fragment into the dialog, so the matches change while the box keeps its focus and caret.
 
-The mixin reports each reload as a `ui:live-frame` event, and `markBusy` mirrors it onto the
-results region: `aria-busy` from the first keystroke until the state is `settled`. Only the
-newest value settles, so an answer to an older query never marks the newer one done. A `slow`
-state also arrives once a wait passes 350 milliseconds, the moment to show a spinner if the box
-has one; `debounce` and `slowAfter` change either delay.
-
-Closing the dialog runs `reset`, which puts the query the page rendered with back in the box and
-dispatches `LIVE_FRAME_RELOAD_EVENT` on it, so the frame reloads at once, with no pause, and the
-dialog reopens where every reader starts. `autofocus` puts the caret in the box each time
-`showModal()` opens the dialog.
-
-The shortcuts are `bindKeymap` from `@sdxc/ui/mixins`: `⌘K` or `Ctrl+K` opens the dialog from
-anywhere on the page, and `/` does too. Both stand down for a keystroke typed into a field, so
-a `/` typed into a comment box stays a `/`. Escape needs no binding, since the dialog closes on
-it natively.
+Closing the dialog runs `reset`, which restores the page's query and reloads the frame at once,
+so the dialog reopens where every reader starts. `bindKeymap` opens it on `⌘K`, `Ctrl+K` or `/`,
+and stands down for keys typed into a field.
 
 <note>
 The browser entry has to know this module, or the box never hydrates and the dialog stays a
@@ -446,7 +399,6 @@ import type { Handle } from "remix/component";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
-import { tabularNums, text } from "@sdxc/u/typography";
 import { FieldError, Heading, Label, SearchField } from "@sdxc/ui";
 
 import type { SearchHit } from "~/app/services/search/hits";
@@ -503,10 +455,6 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
 
 					{props.state === "results" && props.hits.length > 0 ? (
 						<section aria-label="Search results" mix={[grid(), gap(3)]}>
-							<p mix={[m(0), text("sm"), tabularNums()]}>
-								{props.pagination.from}–{props.pagination.to} of{" "}
-								{props.pagination.total} results
-							</p>
 							<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(4)]}>
 								{props.hits.map((hit) => (
 									<SearchResult key={hit.href} hit={hit} />
@@ -526,22 +474,15 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
 }
 ```
 
-`Layout` is your document layout, rendering `SiteHeader` with the `searchQuery` it is given.
-`Pager` is the numbered pager from [Paginate lists](/docs/http-apis/paginate-lists): every page
-is a plain link that keeps `q`, the current page carries `aria-current="page"`, and a single page
-of results draws no pager.
-
-A query that cannot run answers 400 with its text still in the box. `aria-invalid` marks the
-field, and `aria-describedby` points at the `FieldError`, so a screen reader reads the reason
-right after the field's label. The box submits `q` alone, so a new query starts on its first
-page. `autofocus` only on a blank page puts the caret in the box for a reader who came to search,
-and leaves it alone on a results page, where the reader came to read.
+`Layout` is your document layout, rendering `SiteHeader` with `searchQuery` so the dialog
+continues this search. `Pager` is the numbered pager from
+[Paginate lists](/docs/http-apis/paginate-lists). A query that cannot run answers 400 with its
+text still in the box, and `aria-describedby` points the field at its `FieldError`.
 
 ## Test the fragment
 
-The fragment is an ordinary response, so a route test asks for the frame's address and checks
-that a piece comes back, kept out of search engines, with its status line in place. `migrate()`
-prepares the in-memory database, as
+The fragment is an ordinary response, so a route test asks for the frame's address through the
+router. `migrate()` prepares the in-memory database, as
 [Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
 
 ```typescript {% title="app/http/controllers/search-frame.test.ts" %}
@@ -574,20 +515,6 @@ test("says so when nothing matches", async () => {
 	expect(body).toContain("No articles match");
 });
 ```
-
-## Accessibility at a glance
-
-- The trigger is a `<button>` named "Search", with its keys in `aria-keyshortcuts`. It opens a
-  modal `<dialog>` named by `aria-label`, which traps focus and returns it to the button when it
-  closes.
-- The box has an accessible name in the dialog and a visible `Label` on the page. Both sit in a
-  `<search>` landmark.
-- One `role="status"` line per fragment announces the count, or the reason a query cannot run,
-  each time the frame reloads, and `aria-busy` on the results region marks newer results on
-  their way.
-- Every match is a link in an ordered list, reached with `Tab` in the dialog and on the page.
-- Matched words are `<mark>` elements, which a screen reader can report and Windows High
-  Contrast draws in its own highlight colors.
 
 ## Where to go next
 

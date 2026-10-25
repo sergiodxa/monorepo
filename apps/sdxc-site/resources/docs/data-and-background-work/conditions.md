@@ -9,32 +9,27 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to define a condition dialect once with `@sdxc/expression`"
     - "How to accept a rule as text or JSON and refuse a broken one with its path"
-    - "How to evaluate a stored rule in a request or a job and add your own operator"
+    - "How to evaluate a stored rule in a job and add your own operator"
 ---
 
 Sooner or later a customer asks for a rule your code does not have: notify me only when a
-production check fails in `eu-west`, only when the response is slower than two seconds, never
-for the staging monitors. Each one is a branch you could ship, but the next customer wants a
-different one. The way out is to let them write the condition themselves, store it as data,
-and have your app answer whether it holds for a given event.
+production check fails in `eu-west`, or when the response is slower than two seconds. Instead of
+shipping each branch, let them write the condition themselves, store it as data, and have your
+app answer whether it holds for a given event.
 
-That condition is untrusted input that lives in your database and runs on every event, so it
-needs a schema to accept it, a compile step to catch what a schema cannot, evaluation that
-never coerces a string into a number, and a way for a person to type it without writing JSON.
 This guide builds alert rules for a monitoring product with
-[`@sdxc/expression`](/api/expression), which supplies all four, and accepts the rules through
-[`@sdxc/validate`](/api/validate), with failures as [`@sdxc/result`](/api/result) values.
+[`@sdxc/expression`](/api/expression), which supplies the schema, compile step, evaluator and
+text form such a rule needs, and accepts the rules through [`@sdxc/validate`](/api/validate).
 
 ```bash
-npm add @sdxc/expression @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/result @sdxc/validate \
-	remix
+npm add @sdxc/expression @sdxc/http @sdxc/jobs @sdxc/result @sdxc/validate remix
 ```
 
 ## Define the dialect once
 
 A language is the set of operators a condition may use and how a shared condition is
-referenced. Define it in one module, and every step reads the same grammar: the schema that
-accepts a rule, the compiler, the evaluator, and the text form.
+referenced. Define it in one module, and the schema, compiler, evaluator and text form all read
+the same grammar:
 
 ```typescript {% title="app/services/alert-conditions.ts" %}
 import { createLanguage } from "@sdxc/expression";
@@ -70,15 +65,11 @@ Every built-in is there except `matches`.
 
 <warning>
 A regular expression written by a customer can take time exponential in its input. Leaving
-`matches` out of a dialect that customers write keeps evaluation linear in the size of the
-context, whatever anyone writes; a rule naming it is refused with
-`"matches" is not an operator of this language`.
+`matches` out keeps evaluation linear in the size of the context, whatever anyone writes.
 </warning>
 
 `reference: "filter"` lets a rule name a condition the team saved once, as
-`{ op: "filter", name: "production" }`. `createLanguage` builds a few maps and a schema that
-resolves on first use, so the module is safe to load in a Worker's global scope.
-`AlertCondition` is the JSON form as a type, a union an editor completes.
+`{ op: "filter", name: "production" }` or `filter("production")` in text.
 
 ## Accept a rule from an API
 
@@ -121,13 +112,10 @@ export default createAction(routes.api.alertRules.create, async (ctx) => {
 ```
 
 `ctx.team` is the team your API-key middleware published, and `AlertRules` and `Filters` are
-your own models over `ctx.db`.
-
-The schema accepts anything well-formed, and `compile` catches the rest before the row is
-written: a filter the team never saved, two filters that reference each other in a cycle,
-an operator whose own compile step refuses its arguments. Its failure is an `ExpressionError`
-whose `path` names the node at fault inside the condition, such as `of.1` for the second
-member of an `all`, empty for the condition itself, so a client can point at it.
+your own models over `ctx.db`. The schema accepts anything well-formed, and `compile` catches the
+rest before the row is written, such as a filter the team never saved or two filters in a cycle.
+Its `ExpressionError` carries a `path` naming the node at fault, such as `of.1` for the second
+member of an `all`.
 
 <warning>
 Store the JSON you validated, never what `compile` returned. The compiled tree carries resolved
@@ -144,11 +132,9 @@ ctx.check.environment == "production" and ctx.status != "up"
 	and (ctx.region in ["eu-west", "eu-central"] or ctx.responseMs > 2000)
 ```
 
-Every path into the context starts with `ctx.`, and everything else is a JSON literal, so a
-rule can compare two fields as easily as a field and a value: `ctx.check.ownerId == ctx.user.id`.
-
-`stringify` goes the other way, so the edit page shows the stored rule as text, and the
-action parses what came back:
+Every path into the context starts with `ctx.`, and everything else is a JSON literal.
+`stringify` goes the other way, so the edit page shows the stored rule as text and the action
+parses what came back:
 
 ```tsx {% title="app/http/controllers/alert-rules-edit.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -206,50 +192,8 @@ export default createController(routes.alertRules.edit, {
 ```
 
 `RuleEditor` is your own view: a `<textarea name="when">` holding `text`, and the error's
-`message` beside it. A parse failure also carries a 1-based `line` and `column`, so the view
-can point at the character that broke. A value of the wrong type fails there too:
-`responseMs > "2000"` is refused at the column of `"2000"`, since every comparison stays
-within one type.
-
-The text is a view of the rule, never the stored copy. `stringify` prints a canonical
-spelling that `parse` reads back to the same JSON, so a rule saved through the API and one
-typed into the form read the same the next time anyone opens them.
-
-## Share named filters
-
-Twenty rules that all mean "production checks" should say so once. A filter is a condition
-the team saves under a name, and a rule references it as `filter("production")` in text or
-`{ op: "filter", name: "production" }` in JSON. The references object is just those
-conditions by name:
-
-```typescript {% title="app/services/filters.ts" %}
-import type { AlertCondition } from "~/app/services/alert-conditions";
-
-import { alertConditions } from "~/app/services/alert-conditions";
-
-export function checkFilter(
-	filters: Readonly<Record<string, AlertCondition>>,
-	name: string,
-	when: unknown,
-) {
-	let next = { ...filters, [name]: when };
-	return alertConditions.compile({ op: "filter", name }, { references: next });
-}
-```
-
-Saving a filter compiles a reference to it against the set as it would be after the edit,
-so `production` naming `eu-only` naming `production` is refused with
-`Filter "production" takes part in a reference cycle` before it reaches the database. Deleting
-a filter is the same check in reverse: compile the team's rules against the set without it.
-
-Each reference resolves once per references object. The language keys its compiled filters on
-that object, so passing the same one to every rule's `compile` compiles a filter shared by
-twenty rules exactly once, and the cache goes with the object.
-
-<note>
-Treat a references object as fixed once you have compiled against it, and build a new one for
-an edit, as `checkFilter` does: a compiled filter stays cached on the object you mutated.
-</note>
+`message` beside it. A parse failure also carries a 1-based `line` and `column`. The text is a
+view of the rule; the stored copy is always the JSON.
 
 ## Evaluate in a job
 
@@ -296,12 +240,9 @@ export default createJobHandler(jobs.alerts.route, async (ctx) => {
 });
 ```
 
-A rule can stop compiling after it was stored, when a filter it names changes, so the job
-skips it with a breadcrumb on its log and the other rules still run. When the same rules
-serve many events, compile them once when they load and keep the trees: `evaluate` is the
-only part that has to run per event.
-
-The context is the vocabulary your customers write against, so build it on purpose:
+A rule can stop compiling after it was stored, when a filter it names changes, so the job skips
+it with a breadcrumb and the other rules still run. The context is the vocabulary your customers
+write against, so build it on purpose:
 
 ```typescript {% title="app/services/alert-context.ts" %}
 import type { Context } from "@sdxc/expression";
@@ -319,14 +260,9 @@ export function alertContext(result: CheckResult): Context {
 }
 ```
 
-Listing the fields keeps a rule from reading a column you never meant to expose, and a
-`Date` stays a value rather than an object to walk into. A path that resolves to nothing
-makes every operator false except `exists`, so a misspelled field never matches everyone. A
-rule that must fail closed instead, such as one granting access, belongs in a language created
-with `strict: true`, whose `evaluate` answers a `Result` naming the missing path.
-When code beside a rule reads a field the author named, such as a `groupBy` path deciding
-which alerts collapse into one, `read(context, rule.groupBy)` from `@sdxc/expression`
-resolves it exactly the way a condition would.
+Listing the fields keeps a rule from reading a column you never meant to expose. A path that
+resolves to nothing makes every operator false except `exists`, so a misspelled field never
+matches everyone.
 
 ## Add an operator of your own
 
@@ -359,40 +295,10 @@ export const alertConditions = createLanguage({
 });
 ```
 
-`ALERT_BUILTINS` is the list from the first section, unchanged.
-
-The text form calls it as `expiresWithin(certificate.expiresAt, 14)`, filling the node's
-fields in the order of `args`. `compile` runs once per node: its failure refuses the rule at
-the operator's path when it is saved, and what it returns arrives as `test`'s third argument
-on every evaluation. The language reads the field before `test` runs and answers `false` when
-it is missing, so `test` only ever sees a value that is there, and still checks that it is a
-`Date`, because a `null` is a value.
-
-## Speak the same language in flags and logs
-
-Two other packages read conditions in this language, so a rule learned once works in each.
-`@sdxc/flags-engine` exports `flagConditions`, its targeting dialect: every built-in, a
-`semver` operator, and references spelled `segment`. Its `parse` and `stringify` give a flag
-admin page the same text editing as above, and
-[Feature flags](/docs/data-and-background-work/feature-flags) covers the rules themselves.
-
-`@sdxc/logger` takes a condition in the JSON form as its sampling `keep`, so the exemption can
-come from configuration rather than code:
-
-```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "@sdxc/logger";
-
-export const logger = createLogger({
-	service: "alerts",
-	sample: { rate: 0.05, keep: { op: "gt", field: "alert.notified", value: 0 } },
-});
-```
-
-Every run that sent a notification is kept and the rest are sampled. The logger's language
-keeps every built-in and adds nothing, and reads `alert.notified` from what `ctx.log.set`
-wrote by its dotted path. A condition that does not compile keeps every log, so a broken
-exemption costs volume, never the logs it was written to keep. Sampling itself is covered in
-[Logs, traces and timings](/docs/operations-and-testing/observability).
+`ALERT_BUILTINS` is the list from the first section. The text form calls it as
+`expiresWithin(certificate.expiresAt, 14)`, filling the node's fields in the order of `args`.
+`compile` runs once per node, refusing the rule when it is saved, and what it returns arrives as
+`test`'s third argument on every evaluation.
 
 ## Test the dialect
 
@@ -429,14 +335,11 @@ test("a filter nobody saved is refused at its node", () => {
 ```
 
 The last assertion of the first test is the missing-field rule at work: a result with no
-`check` matches no rule about one. Keep the cases your customers rely on beside these, such
-as a cycle or a rule naming `matches`, so a change to the dialect fails here first.
+`check` matches no rule about one.
 
 ## Where to go next
 
 - [Feature flags](/docs/data-and-background-work/feature-flags) — targeting rules written in
   the same conditions.
-- [Logs, traces and timings](/docs/operations-and-testing/observability) — sampling, and the
-  `keep` exemption.
 - [`@sdxc/expression`](/api/expression) — strict languages, `paths`, and every built-in
   operator.

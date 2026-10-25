@@ -44,9 +44,8 @@ Workers.REQUESTS.included; // { quantity: 10_000_000, period: "month" }
 ```
 
 The service modules are `workers`, `durable-objects`, `d1`, `kv`, `queues`, `r2`,
-`analytics-engine` and `email-service`, each imported as a namespace. Prices are Workers Paid
-overage rates; Enterprise contracts, discounts, taxes and the plan's own monthly fee are
-outside them.
+`analytics-engine` and `email-service`. Prices are Workers Paid overage rates, before any
+Enterprise discount, tax or the plan's own monthly fee.
 
 ## Estimate a month
 
@@ -101,9 +100,7 @@ export function estimateMonth(usage: Usage) {
 ```
 
 `D1.STORAGE` is priced per GB-month, so `d1StorageGb` is the average number of gigabytes the
-database held over the month; the five included come off it like any other allowance. The
-per-line breakdown is what a usage dashboard renders: which meter crossed its allowance, and
-by how much.
+database held over the month.
 
 <note>
 The result is a floor rather than the invoice. Cloudflare rounds billable usage up to its next
@@ -142,12 +139,10 @@ export const UNIT_COSTS = defineRateCard({
 UNIT_COSTS.price({ requests: 1, cpuMs: 8, kvReads: 2, d1RowsRead: 40 }); // 0.00015
 ```
 
-A page view like that one costs $1.50 per million, and two thirds of it is the two KV reads.
-The forty D1 rows are 3% of it. That is the kind of answer that tells you which cache to fix
-before you have a bill to worry about. Storage is priced per GB-day for the same purpose:
-`centsPerGbDay` spreads the monthly price over `DAYS_PER_BILLING_MONTH`, 30 days. To total a
-whole request, start from `UNIT_COSTS.zero()`, add to it as the request runs, and price it once
-at the end.
+A page view like that one costs $1.50 per million, and two thirds of it is the two KV reads,
+which tells you which cache to fix before you have a bill to worry about. To total a whole
+request, start from `UNIT_COSTS.zero()`, add to it as the request runs, and price it once at
+the end.
 
 ## Count what you can measure
 
@@ -175,14 +170,10 @@ export function openDatabase(): Database {
 }
 ```
 
-The observer runs once per statement, so it stays cheap, and anything it throws is swallowed
-rather than failing the statement it measured. Requests you count the same way, one per
-record. KV operations you count where you call the binding. A queue message is usually three
-operations, one each for the write, the read and the delete, plus a read for every retry.
-
-CPU time is the one figure the runtime does not report per request. Model it from what the
-dashboard shows for your Worker, such as a median in milliseconds per request, and recheck the
-model against the dashboard now and then.
+The observer runs once per statement, and anything it throws is swallowed rather than failing
+the statement it measured. KV operations you count where you call the binding. CPU time is the
+one figure the runtime does not report per request, so model it from the median your dashboard
+shows.
 
 ## Warn before the bill arrives
 
@@ -239,28 +230,15 @@ export default createJobHandler(jobs.costs.forecast, async (ctx) => {
 ```
 
 `readMonthToDate` is your own module: it sums the counters your log records carry, or reads
-Cloudflare's GraphQL Analytics API, and answers a `Usage`. The day of the month stands in for
-elapsed days when your billing cycle starts on the first; count from its real start date
-otherwise. A warning on the run's log record is something your log pipeline can alert on, and
-[Send email](/docs/data-and-background-work/send-email) shows how to mail it instead. Map the
-handler in your dispatcher and add the cron trigger to the Worker's configuration, as
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) describes.
-
-## Know when prices move
-
-Every service module exports `PRICING_DOCS_URL`, the page its prices were transcribed from, and
-`PRICES_VERIFIED_ON`, the date they were last compared against it. Show both beside any number
-you derive, so a reader knows what the estimate rests on. `AnalyticsEngine.BILLING_ACTIVE` is
-`false` while Cloudflare publishes Analytics Engine prices ahead of invoicing them, so check it
-before you count those meters.
-
-Releases are dated, and any release may change a price. Pin one exact version, and keep a test
-that states what a known month costs, so an upgrade that moves a price fails there first.
+Cloudflare's GraphQL Analytics API, and answers a `Usage`. A warning on the run's log record is
+something your log pipeline can alert on. Map the handler in your dispatcher and add the cron
+trigger, as [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) describes.
 
 ## Test what a known month costs
 
-`estimateMonth` is plain arithmetic, so its test feeds it a month of usage and states the bill:
-one month inside every allowance, and one past a single allowance by a known amount.
+`estimateMonth` is plain arithmetic, so its test feeds it a month of usage and states the bill.
+Releases of `@sdxc/cloudflare-pricing` are dated and any one may change a price, so pin an exact
+version and let this test catch an upgrade that moves one.
 
 ```typescript {% title="app/services/estimate.test.ts" %}
 import { expect, test } from "vitest";

@@ -39,6 +39,9 @@ A path is matched as a substring, so `bun run test bookmarks` runs the model's, 
 validator's, the policy's and every page's tests for the resource at once. The line number is
 the one the case's `test(` call starts on; any other line answers "No test found".
 
+Before you commit, run `bun check` too: it type checks the test files, so a case that calls a
+renamed method fails there even when it is skipped.
+
 ## Read what each generated test checks
 
 `make` writes the test that proves the file loads and is wired in, and leaves the cases about
@@ -132,33 +135,17 @@ Put each case beside the code that holds the rule, and test it there with the le
   `env.EMAIL`'s `messages`, and `app/initializers/mail.test.ts` fails on a declared email with no
   template mapped.
 
-The page test then needs one case per outcome a visitor sees, rather than one per rule.
-
-## Override only what a case is about
-
-`sdxc make model` writes a factory beside the model, in `database/factories/`, with a value per
-field that carries the factory's sequence, so two rows a test creates never collide on a unique
-column. Override only the field a case is about:
+The page test then needs one case per outcome a visitor sees, rather than one per rule. When a
+case creates rows, override only the field it is about, and let the factory fill the rest:
 
 ```ts
 let old = await factories().create(BookmarkFactory, { title: "Old link" });
 ```
-
-[Generate believable test data](/docs/operations-and-testing/test-data) covers traits, seeds and
-the sample generators, and [Make a factory](/docs/sdxc/make-factory) what the command writes.
-
-## Check before you commit
-
-```bash
-bun run test
-bun check
-```
-
-`bun check` type checks the test files too, so a case that calls a renamed method fails there
-even when it is skipped.
 
 ## Where to go next
 
 - [Test Workers apps](/docs/operations-and-testing/testing) — real bindings in the Workers pool,
   MSW for outbound HTTP, and mail and jobs recorded in memory.
 - [Generate files](/docs/sdxc/generate-files) — the flags that write a test, or skip one.
+- [Generate believable test data](/docs/operations-and-testing/test-data) — factories, traits
+  and seeds for the rows a case creates.

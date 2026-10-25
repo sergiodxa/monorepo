@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 37
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to build a JSContact Card with `@sdxc/jscontact` and serve it as a vCard download"
     - "How to import uploaded vCard and jCard contacts as JSContact Cards"
@@ -14,16 +14,10 @@ outcomes:
 
 A team page earns a "Save contact" button: one tap and a visitor's phone holds the person's
 name, role, email and photo. That button downloads a vCard, the format every address book
-reads, and the same format arrives the other way when someone uploads the contacts they
-exported from their phone. vCard is line-based text with escaping, folding and parameters
-that differ between versions; [JSContact](https://www.rfc-editor.org/rfc/rfc9553) is the same
-data as a JSON object you build, store and validate like any other. This guide writes each
-team member as a JSContact Card, serves it as a `.vcf` download in the reader's language, and
-imports uploaded vCards as Cards.
-
-[`@sdxc/jscontact`](/api/jscontact) validates Cards, and its `./vcard` entry converts them to
-and from vCard 4.0 and jCard. [`@sdxc/http`](/api/http) names the download, and fallible calls
-return a [`@sdxc/result`](/api/result).
+reads, and the same format arrives when someone uploads the contacts they exported from their
+phone. This guide writes each team member as a [JSContact](https://www.rfc-editor.org/rfc/rfc9553)
+Card, the same data as plain JSON, serves it as a `.vcf` download, and imports uploaded vCards
+as Cards with [`@sdxc/jscontact`](/api/jscontact).
 
 ```bash
 npm add @sdxc/http @sdxc/jscontact @sdxc/result remix
@@ -50,9 +44,8 @@ export default route({
 
 ## Build a Card for a team member
 
-A Card is plain JSON: `@type` and `version` are required, and everything else is a property
-named for what it holds. Each map of objects (`emails`, `titles`, `links`) is keyed by an Id
-you choose, which is how one entry points at another, as the title here names its
+A Card is plain JSON with a required `@type` and `version`. Each map of objects (`emails`,
+`titles`, `links`) is keyed by an Id you choose, which is how the title here names its
 organization:
 
 ```typescript {% title="app/services/team/card.ts" %}
@@ -83,23 +76,15 @@ export function memberCard(member: Member, pageUrl: string): JSContact.Card {
 }
 ```
 
-`uid` is optional at version 2.0, and a stable one lets an address book that imports the card
-twice update the contact instead of adding a second. `localizations` holds a PatchObject per
-language: its keys are JSON Pointers into the Card without the leading `/`, so the Spanish
-version replaces only the role.
-
-A Card that arrives from somewhere else goes through `parse` first, as
-`parse(await ctx.request.text())`. It reads JSON text or an already-parsed value and checks it
-against RFC 9553, including the case of registered names. A failure is a `JSContactParseError`
-whose `issues` each name a `path` and a `message`.
-Properties the model does not name, vendor extensions included, are kept, so a parsed Card
-writes back unchanged with `stringify`.
+A stable `uid` lets an address book that imports the card twice update the contact instead of
+adding a second. `localizations` holds a patch per language, keyed by JSON Pointers into the
+Card, so the Spanish version replaces only the role. A Card that arrives from somewhere else
+goes through `parse` first, which checks it against RFC 9553.
 
 ## Serve the card as a vCard download
 
-`toVCard` turns the Card into a vCard, and `stringifyVCard` writes it with CRLF line endings
-and lines folded at 75 octets, as RFC 6350 requires. Serve it with `VCARD_MEDIA_TYPE` and a
-`Content-Disposition` naming the file:
+`toVCard` turns the Card into a vCard and `stringifyVCard` writes it. Serve it with
+`VCARD_MEDIA_TYPE` and a `Content-Disposition` naming the file:
 
 ```typescript {% title="app/http/controllers/team/card.ts" %}
 import { attachment } from "@sdxc/http/response";
@@ -136,24 +121,15 @@ export default createAction(routes.team.card, async (ctx) => {
 });
 ```
 
-Without `?lang`, the download carries every language: each localization becomes a `LANGUAGE`
-alternative of its property, tied to the original by `ALTID`, and an address book shows the
-one matching its settings. `localize` instead applies one language's patch and answers a Card
-in that language alone, for a reader whose address book shows only the first. A tag the Card
-has no localization for answers the Card unchanged, matched case-insensitively.
-
-Link the button straight at the route, `<a href={routes.team.card.href({ slug })}>`, so it
-works with no script. The conversion writes what a vCard property cannot carry into a `JSPROP`
-line and keeps each map key in `PROP-ID`, which is why the next section reads the same Card
-back.
-
-For a client that speaks JSON, such as a JMAP address book, answer `stringify(card)` with the
-package's `MEDIA_TYPE`, `application/jscontact+json;version=2.0`.
+Without `?lang`, the download carries every language as `LANGUAGE` alternatives, and an address
+book shows the one matching its settings. `localize` applies one language's patch instead, for
+an address book that shows only the first. Link the button straight at the route,
+`<a href={routes.team.card.href({ slug })}>`, so it works with no script.
 
 ## Import uploaded vCards
 
-A contacts export is usually one file holding many vCards. `parseVCard` reads all of them,
-versions 3.0 and 4.0 alike, and `fromVCard` turns each into a Card:
+A contacts export is usually one file holding many vCards. `parseVCard` reads all of them, and
+`fromVCard` turns each into a Card:
 
 ```typescript {% title="app/http/controllers/contacts/import.ts" %}
 import { redirect } from "@sdxc/http/response";
@@ -182,9 +158,8 @@ export default createAction(routes.contacts.import, async (ctx) => {
 });
 ```
 
-`Contacts` is your own model, storing `stringify(card)` in a text column. A structural failure,
-such as a line outside `BEGIN:VCARD`, is a `VCardParseError` whose message names the line, so
-show it as it is. An empty file is zero cards rather than a failure.
+`Contacts` is your own model, storing `stringify(card)` in a text column. A structural failure
+is a `VCardParseError` whose message names the line, so show it as it is.
 
 <warning>
 A vCard from someone else's address book is untrusted input. `PHOTO` and `URL` values arrive as
@@ -193,19 +168,14 @@ render one as a link or an image, and fetch a remote photo only as
 [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) describes.
 </warning>
 
-Each map entry gets the key the vCard's `PROP-ID` named, or one derived from the property
-(`EMAIL-1`, `PHONE-1`) when the file has none. A property with no JSContact counterpart is kept
-in the Card's `vCardProps`, so exporting the contact again writes it back. A Card with a `uid`
-is worth upserting on it, so a second import of the same export updates rows.
-
-jCard, the JSON form of vCard, reads through the same path: `readJCard(value)` answers a
-`Result` holding the vCard, ready for `fromVCard`. That is the shape of an RDAP entity's
-`vcardArray`, and `writeJCard(toVCard(card))` writes it.
+A property with no JSContact counterpart is kept in the Card's `vCardProps`, so exporting the
+contact again writes it back. jCard, the JSON form of vCard, reads through `readJCard(value)`
+into the same `fromVCard`.
 
 ## Test the round trip
 
-The promise worth pinning is that the download and the import agree: a member's Card written
-as vCard text and read back is the same Card, Spanish role included:
+Pin that the download and the import agree: a member's Card written as vCard text and read back
+is the same Card, Spanish role included:
 
 ```typescript {% title="app/services/team/card.test.ts" %}
 import {
@@ -241,9 +211,6 @@ test("reads the downloaded vCard back as the same Card", () => {
 	expect(vcard && fromVCard(vcard)).toEqual(card);
 });
 ```
-
-`FN` is the formatted name address books display; the conversion derives it from the name
-components and marks it `DERIVED` so reading the file back keeps the components as the source.
 
 ## Where to go next
 

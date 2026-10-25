@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "The order code runs in, from the Worker's `fetch` to the controller's action"
     - "What a handler reads from `ctx`, and which middleware publishes each part"
@@ -15,8 +15,7 @@ outcomes:
 An app from `sdxc create` is a [Cloudflare Worker](https://developers.cloudflare.com/workers/)
 whose requests are answered by a [Remix](https://remix.run) router. This page assumes you know
 both, and covers what the template adds: where each piece is built, the order it runs in, and
-the folder each kind of code goes in. Knowing that is what lets you find any file in an
-unfamiliar app, and tell where a new one belongs before `sdxc make` writes it.
+the folder each kind of code goes in, so you can find any file in an unfamiliar app.
 
 ## Four ways in, one set of services
 
@@ -32,9 +31,8 @@ The app is entered four ways, and each entry point hands over to what `app/initi
 
 The first three each run middleware that publishes the same services, so a controller, a job and
 a command all read `ctx.db`, `ctx.models` and `ctx.log`, and a model method you write once works
-in all three. `bootstrap/` holds the entry points and nothing else, and nothing outside it
-imports from it: the CLI's commands never ship in the Worker, and a test builds the router
-without starting a Worker.
+in all three. Nothing outside `bootstrap/` imports from it, so the CLI's commands never ship in
+the Worker and a test builds the router without starting one.
 
 ## A request, step by step
 
@@ -59,8 +57,7 @@ sequenceDiagram
    rate limit, the database, the models, the email previews `bun dev` serves at `/_emails`, and
    the mailer. `sdxc routes` prints it at the top.
 3. **A contract picks the route.** `routes/web.ts` declares the pages and `routes/api.ts` the
-   endpoints; each entry is a URL pattern and a method, and the typed `href()` every link uses
-   comes from the same declaration.
+   endpoints, and the typed `href()` every link uses comes from the same declaration.
 4. **`lazy()` loads one controller.** Every route is mapped through `lazy()`, so a request
    imports only the controller it reaches, and a cold start pays for one module.
 5. **The controller's chain runs.** A page declares `app/http/middleware/page.ts`: the form
@@ -73,9 +70,9 @@ sequenceDiagram
 
 ## What ctx carries
 
-A handler never builds its own services; the middleware publishes each one onto the context,
-and the router's type reads them back, so `ctx.models` is typed by the models you registered.
-That is also what lets a test swap one: it runs the same chain with its own database.
+Middleware publishes each service onto the context and the router's type reads them back, so
+`ctx.models` is typed by the models you registered, and a test runs the same chain with its own
+database.
 
 | On `ctx`                   | Published by                               | In         |
 | -------------------------- | ------------------------------------------ | ---------- |
@@ -87,35 +84,26 @@ That is also what lets a test swap one: it runs the same chain with its own data
 | `ctx.access`               | `access` in the page and api chains        | requests   |
 | `ctx.render`, `ctx.assets` | `render(…)`, `assets(…)` in the page chain | pages      |
 
-A middleware you write with [`sdxc make middleware`](/docs/sdxc/make-middleware) publishes its
-own value the same way, and `--mount` adds it to a chain.
-
 ## A job, step by step
 
-A controller or a command enqueues a job by its declaration in `app/jobs/index.ts`; Cloudflare
-delivers the message to the Worker's `queue` handler, and the dispatcher in
-`app/initializers/dispatcher.ts` runs its own middleware, the database, the models and the
-mailer, before it imports the handler the job is mapped to. A `--cron` job is enqueued by the
-Worker's `scheduled` handler when a trigger in `cloudflare.config.ts` fires. Either way the
-handler sees `ctx.input`, `ctx.models`, `ctx.email` and `ctx.log`, and a failure is retried by
-the dispatcher. `ctx.email.queue()` uses the same path: it enqueues the template's `email` job,
-which delivers the message and retries a provider failure.
+A controller or a command enqueues a job by its declaration in `app/jobs/index.ts`, and a
+`--cron` job is enqueued when a trigger in `cloudflare.config.ts` fires. Cloudflare delivers the
+message to the Worker's `queue` handler, and the dispatcher in `app/initializers/dispatcher.ts`
+runs its own middleware before it imports the mapped handler. The handler sees `ctx.input`,
+`ctx.models`, `ctx.email` and `ctx.log`, and a failure is retried.
 
 ## An email, step by step
 
-Each email is declared once in `app/emails/index.ts`, with the schema of the props it takes, and
-its template is a file beside it, such as `app/emails/teams/invite.tsx`. The registry in
-`app/initializers/mail.ts` maps each declaration to its template through `lazy()`, and the
-router, the dispatcher and the command line hand that registry to their mailers. A handler
+Each email is declared once in `app/emails/index.ts` with the schema of its props, and its
+template is a file beside it, mapped through `lazy()` in `app/initializers/mail.ts`. A handler
 sends by declaration, with the reader's language:
 
 ```ts
 await ctx.email.send(emails.teams.invite, { to, locale, props: { team } });
 ```
 
-`sdxc make email` writes the template, declares it and maps it, and `sdxc doctor` fails on a
-declared email with no template mapped. [Send email](/docs/data-and-background-work/send-email) covers
-templates, previews and the transports.
+[Send email](/docs/data-and-background-work/send-email) covers templates, previews and the
+transports.
 
 ## Where each kind of code goes
 
@@ -185,12 +173,6 @@ Group a crowded folder by feature with the same name in every layer, such as
 `app/jobs/bookmarks/` beside `app/services/bookmarks/`, and one search for `bookmarks/` finds the
 whole feature. `sdxc doctor`'s `layout` check fails on a folder in `app/` outside this table,
 and on an import from `bootstrap/`.
-
-<note>
-Code that knows nothing about your app, such as a parser or a client for a public API, belongs
-in a package rather than in any of these folders; the `@sdxc` packages are that code for the
-problems they solve.
-</note>
 
 ## Where to go next
 

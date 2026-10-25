@@ -9,27 +9,23 @@ lastUpdated: 2026-10-25
 outcomes:
     - "How to declare flags in a typed catalog and publish `ctx.flags`"
     - "How to target a flag by rule or percentage and store definitions in KV"
-    - "How to switch an ability off and test with a pinned flag"
+    - "How to evaluate a flag in a handler and test with a pinned flag"
 ---
 
 A feature flag lets you ship code that is switched off, turn it on for one team, then for ten
-percent of everyone, and switch it off again without a deploy if it misbehaves. This guide builds
-that from two packages. [`@sdxc/flags`](/api/flags) is the evaluation API, following the
-OpenFeature model: a provider resolves flags, a client evaluates them, and nothing on that path
-throws. [`@sdxc/flags-engine`](/api/flags-engine) is a provider you run yourself, with targeting
-rules, percentage splits and a store to read definitions from. [`@sdxc/authz`](/api/authz)
-turns a flag into a switch that refuses an ability wherever it is checked.
+percent of everyone, and switch it off again without a deploy if it misbehaves.
+[`@sdxc/flags`](/api/flags) is the evaluation API, following the OpenFeature model, and nothing
+on its path throws. [`@sdxc/flags-engine`](/api/flags-engine) is a provider you run yourself,
+with targeting rules, percentage splits and a store to read definitions from.
 
 ```bash
-npm add @sdxc/authz @sdxc/flags @sdxc/flags-engine @sdxc/http @sdxc/logger @sdxc/result \
-	remix
+npm add @sdxc/flags @sdxc/flags-engine @sdxc/http @sdxc/logger remix
 ```
 
 ## Write the definitions
 
 A definition names the values a flag can take as variants, and which one to serve by default.
-Start with the definitions in code: flipping a flag is then an edit and a deploy, with the review
-any other change gets.
+Start with the definitions in code, so flipping a flag gets the review any other change gets:
 
 ```typescript {% title="app/initializers/flags.ts" %}
 import type { StoredFlagSet } from "@sdxc/flags-engine/store";
@@ -52,13 +48,10 @@ export const FLAG_SET: StoredFlagSet = {
 };
 ```
 
-A key missing from the set resolves to the default its call site passed, so retiring a flag is
-deleting its entry, then its branch.
-
 ## Name them in a catalog
 
-Call sites should not repeat a key, a type and a default. A catalog writes each down once, so a
-misspelled key is a compile error rather than a flag that is silently off:
+A catalog writes each key, type and default down once, so a misspelled key is a compile error
+rather than a flag that is silently off:
 
 ```typescript {% title="app/initializers/flags.ts" %}
 import { defineFlags, flag } from "@sdxc/flags/catalog";
@@ -70,17 +63,13 @@ export const features = defineFlags({
 });
 ```
 
-The default here is what a call site gets when nothing resolved: no definition, a provider that
-failed to load, a variant of the wrong type. Pick the value that is safe to run with, which for a
-new feature is usually off. `flag.string` and `flag.object` cover the other two types; an object
-flag takes a `remix/data-schema` schema, because its value arrives from storage and is checked
-before your code sees it.
+The default is what a call site gets when nothing resolved, so pick the value that is safe to run
+with, which for a new feature is usually off.
 
 ## Build the instance
 
-`createFlags` builds the API instance. Build it once at module scope, since a provider built per
-request would initialize on every one. The provider itself is created lazily, the first time an
-evaluation needs it, so loading the module in a Worker does no work:
+`createFlags` builds the API instance once at module scope. The provider is created lazily, the
+first time an evaluation needs it:
 
 ```typescript {% title="app/initializers/flags.ts" %}
 import { createEngine } from "@sdxc/flags-engine";
@@ -96,8 +85,7 @@ export const flags = createFlags({
 ```
 
 `wideEventHook()` writes each evaluation's key, variant and reason onto the invocation's log
-record, so "which variant did this request get" is a field on the same record as its status and
-duration, and evaluating a flag adds no log lines of its own.
+record.
 
 ## Publish `ctx.flags`
 
@@ -131,16 +119,9 @@ export function createWebRouter() {
 }
 ```
 
-Here `auth()` stands for your own authentication middleware and `currentUser` for however you
-read the user it published.
-
-`targetingKey` is the subject: what a percentage split hashes and what a per-user rule matches.
-Every other field on the context is a fact about that subject or the request, available to
-targeting by name.
-
-Jobs get the same client through `@sdxc/flags/middleware/dispatcher`, added to the dispatcher's
-middleware chain. There is no signed-in user in a job, so name the subject it acts for, such as
-`featureFlags(flags, { context: (ctx) => ({ targetingKey: ctx.name }) })` for the job's own name.
+`auth()` and `currentUser` stand for your own authentication. `targetingKey` is the subject a
+percentage split hashes; every other context field is available to targeting by name. Jobs get
+the same client through `@sdxc/flags/middleware/dispatcher`.
 
 ## Evaluate in a handler
 
@@ -169,15 +150,9 @@ export default createAction(routes.api.ping, async (ctx) => {
 });
 ```
 
-`ctx.apiTeam` is whatever your API-key middleware published, and `runPing` your own service. An
-API key belongs to a team rather than a user, so the team is the subject, and a rule written
-against `team.slug` closes the endpoint for one caller while everyone else keeps it. Invocation
-context merges over the middleware's, so the rest of the request's facts are still there.
-
-Nothing in `get` fails. When a flag cannot be resolved, it answers with the default, and
-`ctx.flags.details(flag)` tells you why: its `reason` is `DEFAULT` when nothing matched and
-`ERROR`, with an `errorCode`, when the flag system itself is broken. That is the difference
-between a flag that is off and flags that are down.
+An API key belongs to a team, so the team is the subject here, merged over the middleware's
+context. Nothing in `get` fails: an unresolved flag answers its default, and
+`ctx.flags.details(flag)` reports `reason: "ERROR"` when the flag system itself is broken.
 
 ## Target a rule or a percentage
 
@@ -207,20 +182,11 @@ export const RULED_SET: FlagSet = {
 };
 ```
 
-Typing the set as `FlagSet` rather than `StoredFlagSet` checks every rule as you write it. It is
-still a `StoredFlagSet`, so it goes into `InMemoryFlagStore` the same way.
-
-Conditions are the JSON form of [`@sdxc/expression`](/api/expression), typed so an editor
-completes `op` as you write one: `eq`, `in`, `lt`, `startsWith`, `matches`, `semver`, `exists`,
-and `all`, `any` and `not` to combine them. `field` is a dotted path into the context. A path
-that resolves to nothing makes every operator except `exists` false, so a rule about a field the
-caller left out never matches everyone.
-
-Segments are conditions declared once under the set's `segments` and referenced by name, like
-`staff` above. Twenty flags can then share one definition of who counts as staff.
-
-A split hashes the subject with the flag key, so a subject lands in the same arm on every request
-in every isolate, and widening `on: 10` to `on: 25` keeps the first ten percent where they were.
+Typing the set as `FlagSet` checks every rule as you write it, and it goes into
+`InMemoryFlagStore` the same way. Conditions are the JSON form of
+[`@sdxc/expression`](/api/expression); `field` is a dotted path into the context, and segments
+like `staff` are conditions declared once and shared by name. A split hashes the subject with the
+flag key, so widening `on: 10` to `on: 25` keeps the first ten percent where they were.
 
 <warning>
 When the context has no `targetingKey`, the split cannot place anyone: the evaluation reports
@@ -229,9 +195,8 @@ When the context has no `targetingKey`, the split cannot place anyone: the evalu
 
 ## Move definitions into KV
 
-When you want to flip a flag without a deploy, keep the set in Workers KV. `WorkerKVFlagStore`
-stores the whole set as one JSON value, and `maxAge` says how long a loaded snapshot counts as
-current:
+To flip a flag without a deploy, keep the set in Workers KV. `WorkerKVFlagStore` stores the whole
+set as one JSON value, and `maxAge` says how long a loaded snapshot counts as current:
 
 ```typescript {% title="app/initializers/flag-provider.ts" %}
 import { createEngine } from "@sdxc/flags-engine";
@@ -252,110 +217,10 @@ export function flagProvider(): EngineProvider {
 }
 ```
 
-In `app/initializers/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the
-in-memory provider.
-
-<note>
-Reloading is yours to schedule, because a Worker only has time while an invocation is running.
-</note>
-
-`flagProvider().refresh()` reads the store again and answers with a `Result`, so hand it to
-`waitUntil` behind a response and log a failure rather than failing the request. An admin page
-writes a new set with `store.write(set)`, and validates an edit first against
-`FLAG_DEFINITION_SCHEMA`, the same schema the engine parses with.
-
-## Edit a rule as text
-
-A person editing a rule in an admin page reads `ctx.plan.tier == "pro" and segment("staff")`
-faster than the JSON it stands for. `flagConditions` is the dialect the engine evaluates with, and it
-converts between the two: `stringify` shows a stored condition as text, and `parse` reads what
-was typed back into JSON, with the line and column where it broke:
-
-```typescript {% title="app/services/flag-rule-editor.ts" %}
-import type { FlagSet } from "@sdxc/flags-engine";
-
-import { flagConditions } from "@sdxc/flags-engine";
-import { isFailure, success } from "@sdxc/result";
-
-export function conditionText(set: FlagSet, flag: string, rule: number) {
-	let when = set.flags[flag]?.targeting?.[rule]?.when;
-	return when ? flagConditions.stringify(when) : "";
-}
-
-export function readCondition(set: FlagSet, text: string) {
-	let parsed = flagConditions.parse(text);
-	if (isFailure(parsed)) return parsed;
-
-	let compiled = flagConditions.compile(parsed.data, {
-		references: set.segments ?? {},
-	});
-	if (isFailure(compiled)) return compiled;
-
-	return success(parsed.data);
-}
-```
-
-<warning>
-Store the JSON that `parse` answered, never the text: the text form is for people, and the
-stored set stays the one the engine reads.
-</warning>
-
-Compiling against the set's segments catches what parsing cannot — a segment nobody declared,
-two segments that reference each other, a `matches` pattern that does not compile — and the
-error's `path` names the node, so the page can point at it.
-[Rules your users write](/docs/data-and-background-work/conditions) covers the condition
-language on its own, for rules that are not flags.
-
-## Switch an ability off
-
-A flag that guards a whole ability, such as exporting reports, is checked on a page that hides
-the button, on the route that answers it, in the job that builds the file and in an agent's
-tool. Written as a guard in an [`@sdxc/authz`](/api/authz) policy, it is one rule that all four
-read. Add the flag to the catalog as `reportsExport: flag.boolean("reports-export", true)`,
-declare the catalog as a fact, and refuse while it is off:
-
-```typescript {% title="app/policies/policy.ts" %}
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
-
-import abilities from "~/app/policies/abilities";
-
-export default definePolicy(abilities, {
-	facts: { flags: fact<{ reportsExport: boolean }>() },
-	roles: { member: [allow("reports.export")] },
-	guards: [
-		deny("reports.export", {
-			id: "reports-switch",
-			when: { op: "eq", field: "flags.reportsExport", value: false },
-			reason: "switched-off",
-		}),
-	],
-});
-```
-
-`fromFlags` from `@sdxc/authz/facts/flags` binds the catalog as that fact, in the policy's
-`access()` middleware after `featureFlags()`:
-
-```typescript {% title="app/http/middleware/access.ts" %}
-import { fromFlags } from "@sdxc/authz/facts/flags";
-import { access } from "@sdxc/authz/middleware/router";
-
-import { features } from "~/app/initializers/flags";
-import policy from "~/app/policies/policy";
-
-export const memberAccess = access(policy, {
-	roles: (ctx) => [ctx.membership.role],
-	facts: { flags: fromFlags(features) },
-});
-```
-
-It evaluates through `ctx.flags`, so targeting, the wide-event hook and the request's subject
-apply as they do everywhere else, and it evaluates only the flags some rule reads: a split
-nobody's rule reads records no exposure. The guard tests `== false`, so the ability stays on
-while the flag answers its default; pass `fromFlags(features, { onError: "missing" })` to
-refuse instead when the flag system is down. A guard refuses every role, admins included, and
-its `reason` tells a refusal page that the feature is switched off rather than missing from
-the plan. [Decide who can do what](/docs/identity-and-security/authorization) covers the
-policy, the route guard and the job binding.
+Pass `provider: flagProvider` to `createFlags` in place of the in-memory provider. A Worker only
+has time while an invocation runs, so schedule reloads yourself: hand
+`flagProvider().refresh()` to `waitUntil` behind a response. An admin page writes a new set with
+`store.write(set)`.
 
 ## Test with a pinned flag
 
@@ -394,9 +259,8 @@ test("staff get the new checkout", () => {
 });
 ```
 
-Hand a pinned instance to the app the test drives. To check a targeting rule rather than a code
-path, the second test uses evaluation as the pure function it is: `evaluateAll(parseFlagSet(set),
-context)` answers what every flag would serve for a given context, with no store and no engine.
+To check a targeting rule rather than a code path, `evaluateAll(parseFlagSet(set), context)`
+answers what every flag would serve for a given context, with no store and no engine.
 
 ## Where to go next
 

@@ -14,15 +14,10 @@ outcomes:
 
 A time-based one-time password, the six digits an authenticator app shows, is a second thing
 an attacker needs after they have guessed or phished a password. This guide adds the whole
-flow to a Remix v3 app on Workers: enrolling an app and confirming its first code, asking for
-a code after the password step, refusing a code that has already been used, recovery codes for
-a lost phone, and turning two-factor off.
-
-[`@sdxc/crypto`](/api/crypto) generates and checks the codes (RFC 6238), seals the shared
-secret with AES-GCM and mints the recovery codes. [`@sdxc/auth`](/api/auth) reads the session
-the sign-in is held in, [`@sdxc/validate`](/api/validate) checks the submitted code, and
-[`@sdxc/result`](/api/result) and [`@sdxc/http`](/api/http) carry the outcomes.
-[`@sdxc/qr`](/api/qr) draws the code the authenticator app scans.
+flow to a Remix v3 app on Workers: enrolling an app, asking for a code after the password,
+refusing a code that has already been used, recovery codes for a lost phone, and turning
+two-factor off. [`@sdxc/crypto`](/api/crypto) generates and checks the codes (RFC 6238) and
+[`@sdxc/qr`](/api/qr) draws the code the app scans.
 
 ```bash
 npm add @sdxc/auth @sdxc/crypto @sdxc/http @sdxc/qr @sdxc/result @sdxc/ui @sdxc/validate \
@@ -31,9 +26,9 @@ npm add @sdxc/auth @sdxc/crypto @sdxc/http @sdxc/qr @sdxc/result @sdxc/ui @sdxc/
 
 ## Declare three tables
 
-A user has at most one factor. Its secret is stored sealed, and `confirmed_at` stays `null`
-until the user proves their app holds it. Codes already accepted and recovery codes each get
-a table whose primary key does the work, as the sections below show:
+A user has at most one factor, and `confirmed_at` stays `null` until the user proves their app
+holds its secret. Accepted codes and recovery codes each get a table whose primary key does the
+work:
 
 ```typescript {% title="database/two-factor.ts" %}
 import { column as c, table } from "remix/data-table";
@@ -61,10 +56,9 @@ export const recoveryCodes = table({
 });
 ```
 
-The secret is a key to the account, and it has to be read back to check every code, so it is
-sealed rather than hashed. `sealSecret` and `openSecret` are the two functions of the sealing
-module in [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto),
-which import your `SEAL_KEY` once and wrap `seal` and `open`.
+The secret has to be read back to check every code, so it is sealed rather than hashed.
+`sealSecret` and `openSecret` are the sealing module from
+[Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto).
 
 ## Start enrollment
 
@@ -103,13 +97,9 @@ export async function beginEnrollment(
 }
 ```
 
-`generateSecret` returns 20 random bytes as uppercase base32, the encoding authenticator apps
-accept. `uri` names the entry the app shows, here "Invoices: ada@example.com", and writes the
-defaults into the URI: SHA-1, six digits and a 30-second step, which is what those apps assume.
-Starting over replaces an unconfirmed secret, but never an active factor: turning it off comes
-first.
-
-The setup route is a `POST`, since it writes, and renders the page:
+`uri` writes the defaults authenticator apps assume into the URI: SHA-1, six digits and a
+30-second step. Starting over replaces an unconfirmed secret, never an active factor. The setup
+route is a `POST`, since it writes, and renders the page:
 
 ```tsx {% title="app/http/controllers/two-factor/setup.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -145,14 +135,9 @@ export default createAction(routes.twoFactor.setup, async (ctx) => {
 });
 ```
 
-`currentUser` is your own lookup of the signed-in account, behind whatever middleware protects
-the route. `QR.encode` turns the URI into a QR symbol and answers a `Result`, so the action
-encodes before rendering and logs the rare failure, such as a URI too long for any symbol;
-the page then renders without the code. `QrCode` draws the symbol as an inline SVG, which needs
-no `img-src data:` in your CSP and stays dark on light under a dark theme;
-[Draw QR codes](/docs/building-remix-apps/qr-codes) covers its options. The page shows the
-code, the setup key for anyone who cannot scan, and the URI as a link, which opens the app
-directly on a phone:
+`currentUser` is your own lookup of the signed-in account. When `QR.encode` fails, the page
+renders without the code. The page shows the QR code, the setup key for anyone who cannot scan,
+and the URI as a link, which opens the app directly on a phone:
 
 ```tsx {% title="resources/views/enroll-two-factor.tsx" %}
 import type { QR } from "@sdxc/qr";
@@ -202,15 +187,13 @@ The setup key is the secret itself. Render it on this one response, and never ag
 
 ## Accept each code once
 
-Checking a code opens the secret and verifies with a window of one step either side, which
-tolerates a phone clock that is a little off.
+Checking a code verifies with a window of one step either side, which tolerates a phone clock
+that is a little off, and records each code it accepts.
 
 <warning>
 That window keeps a code valid for up to 90 seconds, so a code read over someone's shoulder or
 lifted from a shared screen works a second time unless you record every code you accept.
 </warning>
-
-`acceptCode` records each one as it accepts it:
 
 ```typescript {% title="app/services/two-factor/accept-code.ts" %}
 import type { Database } from "remix/data-table";
@@ -240,20 +223,15 @@ export async function acceptCode(
 }
 ```
 
-`totp.verify` evaluates every step in the window, even after a match, and compares each in
-constant time, so neither the time taken nor the work done reveals which step matched. A code
-of the wrong shape is a plain mismatch, `success(false)`. The replay guard is the insert:
-`(user_id, code)` is the primary key, so a second use of the same code violates it and the
-claim fails. That is one statement, so it holds on D1 even when two submissions race, and any
-database failure fails closed. Delete rows older than a few minutes from a cron job, as in
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron); nothing older than
-the window can verify anyway.
+The replay guard is the insert: `(user_id, code)` is the primary key, so a second use of the
+same code fails the claim. That is one statement, so it holds on D1 even when two submissions
+race, and a database failure fails closed. Delete rows older than a few minutes from a
+[cron job](/docs/data-and-background-work/jobs-and-cron).
 
 ## Mint recovery codes
 
-A user who loses their phone needs another way past the second step. Ten single-use recovery
-codes, shown once when the factor is turned on, are that way. Store only their digests, like
-any other credential:
+A user who loses their phone needs another way past the second step: ten single-use recovery
+codes, shown once when the factor is turned on. Store only their digests:
 
 ```typescript {% title="app/services/two-factor/recovery-codes.ts" %}
 import type { Database } from "remix/data-table";
@@ -290,21 +268,15 @@ export async function spendRecoveryCode(db: Database, userId: string, code: stri
 }
 ```
 
-Each code is 10 random bytes, 80 bits, which no guessing budget behind a rate limit gets near.
-They are encoded with `Base32` because a person types them, and base32 has one case and no `0`
-or `1`. Shown
-as `ABCD-EFGH-JKLM-NPQR`, a code is folded back before hashing, so hyphens, spaces and case
-never matter. A plain `sha256` is enough, as for the reset tokens in the Web Crypto guide,
-because the codes carry their own entropy.
-
-Spending is `db.delete`, which answers whether a row was removed. A code works exactly once,
-in one statement, with no read before the write for a second request to slip between.
-Minting replaces the whole set, so offer "regenerate recovery codes" by calling it again.
+Each code is 80 random bits, so a plain `sha256` is enough, and it is folded back before
+hashing, so hyphens, spaces and case never matter. Spending is `db.delete`, which answers
+whether a row was removed, so a code works exactly once in one statement. Minting replaces the
+whole set, so call it again to regenerate them.
 
 ## Confirm the first code
 
-The factor turns on only once the user submits a code that verifies, which proves their app
-holds the secret. That same moment mints the recovery codes:
+The factor turns on once the user submits a code that verifies, and that moment mints the
+recovery codes:
 
 ```typescript {% title="app/services/two-factor/confirm.ts" %}
 import type { Database } from "remix/data-table";
@@ -330,7 +302,7 @@ export async function confirmEnrollment(db: Database, userId: string, code: stri
 }
 ```
 
-The code form is shared by every step that asks for one:
+Every step that asks for a code validates the same form:
 
 ```typescript {% title="app/http/validators/two-factor.ts" %}
 import * as s from "remix/data-schema";
@@ -341,8 +313,7 @@ export const CODE_FORM = s.object({
 });
 ```
 
-The confirm route shows the recovery codes on success. A wrong code sends the user back to
-start again, which mints a fresh secret:
+The confirm route shows the recovery codes on success:
 
 ```tsx {% title="app/http/controllers/two-factor/confirm.tsx" %}
 import { redirect } from "@sdxc/http/response";
@@ -399,13 +370,10 @@ export function completeSignIn(ctx: RequestContext, userId: string) {
 }
 ```
 
-`sessionOf` reads the session Remix's session middleware put on the context. In your password
-action, once the password checks out, look the factor up: when it is confirmed, call
-`holdSignIn(ctx, user.id)` and redirect to the code page; otherwise call `completeSignIn`
-directly. The pending entry lives under its own key and expires, and the app reads only
-`userId` as signed in, so a password alone reaches the code page and stops there.
-
-The code page accepts a current code or a recovery code:
+In your password action, once the password checks out and the factor is confirmed, call
+`holdSignIn(ctx, user.id)` and redirect to the code page; otherwise call `completeSignIn`. The
+app reads only `userId` as signed in, so a password alone stops at the code page. The code page
+accepts a current code or a recovery code:
 
 ```typescript {% title="app/services/two-factor/check.ts" %}
 import type { Database } from "remix/data-table";
@@ -454,9 +422,9 @@ export default createAction(routes.signIn.twoFactor, async (ctx) => {
 });
 ```
 
-A wrong code, a used code and an unknown recovery code all answer the same page, so the
-response never says which one it was. Regenerating the session id on the way in keeps the id
-the browser held during the password step from becoming the signed-in one.
+A wrong code, a used code and an unknown recovery code all answer the same page.
+Regenerating the session id keeps the id the browser held during the password step from
+becoming the signed-in one.
 
 <warning>
 Six digits are a million possibilities, and the window accepts three at a time, so an
@@ -466,8 +434,8 @@ user, as in [Protect forms from bots and abuse](/docs/identity-and-security/prot
 
 ## Turn two-factor off
 
-Turning the factor off takes the same proof as signing in with it, so only someone holding the
-app or a recovery code can remove it, whoever is sitting at an open session:
+Turning the factor off takes the same proof as signing in with it, so someone sitting at an
+open session cannot remove it without the app or a recovery code:
 
 ```typescript {% title="app/services/two-factor/disable.ts" %}
 import type { Database } from "remix/data-table";
@@ -484,18 +452,15 @@ export async function disableTwoFactor(db: Database, userId: string, code: strin
 }
 ```
 
-The route in front of it validates `CODE_FORM` and passes the signed-in user's id and the
-code. Removing the factor removes its recovery codes with it, since they exist only to stand
-in for it. Tell the user by email when it happens, as in
-[Send email](/docs/data-and-background-work/send-email): if it was not them, they learn while
-they can still act.
+The route in front of it validates `CODE_FORM` and passes the signed-in user's id. Tell the
+user by [email](/docs/data-and-background-work/send-email) when it happens, so they learn while
+they can still act if it was not them.
 
 ## Test the replay guard
 
-The guarantees that matter are the single-use ones, and both are checks against the database.
-Run them against the in-memory D1 from
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), with `SEAL_KEY` set
-in `app/test/cloudflare-workers.ts`:
+The guarantees that matter are the single-use ones. Run them against the in-memory D1 from
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), with `SEAL_KEY`
+set in `app/test/cloudflare-workers.ts`:
 
 ```typescript {% title="app/services/two-factor/accept-code.test.ts" %}
 import { totp } from "@sdxc/crypto";

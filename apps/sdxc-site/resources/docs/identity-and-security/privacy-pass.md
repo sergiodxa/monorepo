@@ -32,10 +32,9 @@ npm add @sdxc/captcha @sdxc/lazy-route @sdxc/privacy-pass @sdxc/result remix
 
 ## Keep spent tokens in shared storage
 
-Each token answers one challenge once, so the origin remembers two things: the challenges it
-issued, until they expire, and under the shared-challenge mode the nonce of every token already
-spent. `RedemptionStore` is those three calls; back it with KV, so every isolate of the Worker
-reads the same state:
+Each token answers one challenge once, so the origin remembers the challenges it issued until
+they expire, and the nonces of tokens already spent. `RedemptionStore` is those three calls;
+back it with KV, so every isolate of the Worker reads the same state:
 
 ```typescript {% title="app/models/redemptions.ts" %}
 import type { RedemptionStore } from "@sdxc/privacy-pass";
@@ -71,18 +70,14 @@ export class KVRedemptionStore implements RedemptionStore {
 }
 ```
 
-Keys arrive as lowercase hex and `ttl` in seconds. KV takes an `expirationTtl` of 60 seconds or
-more, so a shorter TTL is raised to that floor; the origin refuses an expired challenge on its
-own `max-age` regardless of how long the entry lives.
+KV takes an `expirationTtl` of 60 seconds or more, so a shorter `ttl` is raised to that floor;
+the origin refuses an expired challenge on its own `max-age` regardless.
 
 <warning>
 KV is eventually consistent, so two requests racing with one valid token can both pass; a
 forged token still fails at the signature. Back the store with a Durable Object, whose storage
 serializes the read and the write, where a double spend costs you something.
 </warning>
-
-`MemoryRedemptionStore` keeps the same state in one isolate's memory, which suits a test or a
-single-process server.
 
 ## Configure the origin
 
@@ -109,19 +104,9 @@ export const tokenCaptcha = new PrivacyPassCaptcha(privacyPass);
 ```
 
 `PRIVACY_PASS` is a KV namespace binding. `originInfo` lists the origins a token may be spent
-at, so a token minted for this challenge is worthless elsewhere; leave it empty to accept
-tokens a client fetched for any origin. Pick the issuer your visitors' clients already talk to.
-
-The default `redemptionContext: "fresh"` puts 32 random bytes in every challenge and saves its
-digest for `maxAge`, so a token answers one challenge once and the client fetches a new one
-each time. `redemptionContext: "empty"` sends everyone the same challenge, which lets a client
-spend a token it fetched earlier, and keeps every spent nonce for `nonceTtl` instead.
-
-<note>
-Under `"empty"`, keep `nonceTtl` (30 days by default) at least as long as the issuer keeps a
-key: a token stays valid until its key is retired, and a nonce forgotten before then can be
-spent again.
-</note>
+at, so a token minted for this challenge is worthless elsewhere. Pick the issuer your
+visitors' clients already talk to. Each challenge carries random bytes saved for `maxAge`, so
+a token answers one challenge once.
 
 ## Gate an API route on tokens alone
 
@@ -170,15 +155,10 @@ export function createWebRouter(widget = productionCaptcha()) {
 ```
 
 A client holding tokens answers the `401` by retrying with one, and the retry reaches the
-controller. The guards are `lazy()`'s second argument, so a refused request never loads it.
-`productionCaptcha()` is the Turnstile provider from
+controller. `productionCaptcha()` is the Turnstile provider from
 [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms), passed in so a
-test hands in its own.
-
-A failure lands on `ctx.captcha` with a neutral code: a spent or expired challenge is
-`expired`, an unreachable issuer `unavailable`, any other bad token `rejected`, and the Privacy
-Pass code itself is in `providerCodes` for your logs. When the issuer's keys cannot be read to
-write a challenge, the refusal is a plain `403`.
+test hands in its own. When the issuer's keys cannot be read to write a challenge, the refusal
+is a plain `403`.
 
 ## Show the CAPTCHA to everyone else
 
@@ -209,42 +189,10 @@ export const searchChallenge: Middleware = async (ctx, next) => {
 ```
 
 `redeem` checks the issuer's signature before it touches the store, so a forged token consumes
-no challenge and burns no nonce. `renderSearchForm` is your own controller function rendering
-the query box with the `TurnstileWidget` from `@sdxc/captcha/turnstile/ui`, as the sign-up form
-in [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) does. The
-form posts to `routes.search.action`, which `captcha(widget)` guards, so a visitor without
-tokens solves the widget once per search and a client with tokens never sees it.
-
-An issuer outage leaves `challenge` failing with `issuer-unavailable`; the middleware then
-serves the form alone, so the page keeps working with the widget as its only check.
-
-## Verify a token yourself
-
-`PrivacyPass` covers the whole redemption. When you already hold an issuer's key, from your own
-directory or a configuration value, the lower-level calls check a single token:
-
-```typescript {% title="app/services/token-signature.ts" %}
-import { importTokenKey, parseAuthorization, verifyToken } from "@sdxc/privacy-pass";
-import { isFailure } from "@sdxc/result";
-
-export async function issuerSigned(
-	authorization: string | null,
-	tokenKey: Uint8Array,
-) {
-	let token = parseAuthorization(authorization);
-	if (isFailure(token)) return token;
-
-	let key = await importTokenKey(tokenKey);
-	if (isFailure(key)) return key;
-
-	return verifyToken(token.data, key.data);
-}
-```
-
-`verifyToken` checks the issuer's RSASSA-PSS signature and nothing more: matching the challenge
-digest and refusing a spent nonce are yours. Tokens of type `0x0002` (Blind RSA) verify with the
-issuer's public key; `0x0001` (VOPRF) tokens decode, and redeeming them takes the issuer's
-private key, so only an issuer redeems those.
+no challenge. `renderSearchForm` is your own controller function rendering the query box with
+the `TurnstileWidget`, posting to `routes.search.action`, which `captcha(widget)` guards. An
+issuer outage leaves `challenge` failing, and the middleware then serves the form alone, so
+the page keeps working with the widget as its only check.
 
 ## Test the gate
 
@@ -322,10 +270,8 @@ test("a client holding a token reaches the results", async () => {
 serves a working issuer runs last, after the ones that need it down.
 </note>
 
-The directory is fetched through [`@sdxc/outbound`](/api/outbound), so the issuer must be a
-public name; `example.com` names pass, and the reserved `.example` and `.test` suffixes are
-refused before MSW sees the request. Add `PRIVACY_PASS` to `app/test/cloudflare-workers.ts`
-beside the other KV namespaces, so the initializer finds its binding.
+Add `PRIVACY_PASS` to `app/test/cloudflare-workers.ts` beside the other KV namespaces, so the
+initializer finds its binding.
 
 ## Where to go next
 

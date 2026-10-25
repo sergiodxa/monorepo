@@ -38,22 +38,17 @@ https://www.youtube.com/watch?v=dQw4w9WgXcQ
 Some links never stop working either.
 ```
 
-A paragraph becomes a player when it holds a single link that shows its own URL: written bare,
-in angle brackets, or as a `www.` autolink. A link with a label of its own, like
-`[the song](https://youtu.be/dQw4w9WgXcQ)`, or a URL in the middle of a sentence stays a link,
-so an author decides which videos play in place.
-
-Every URL form YouTube hands out works: a `watch?v=` page, a `youtu.be` share link, and the
-`shorts`, `live` and `embed` paths. A `t` or `start` parameter carries over, so a link shared
-from the chorus starts the player there:
+A paragraph becomes a player when it holds a single link that shows its own URL. A link with a
+label of its own, like `[the song](https://youtu.be/dQw4w9WgXcQ)`, stays a link, so an author
+decides which videos play in place. Every URL form YouTube hands out works, and a `t` or `start`
+parameter carries over, so a link shared from the chorus starts the player there:
 
 ```text
 {% title="Rick Astley — Never Gonna Give You Up" %}
 https://youtu.be/dQw4w9WgXcQ?t=43
 ```
 
-The annotation on the line above is optional. Its `title` names the player for screen readers,
-which announce it before a reader enters the frame.
+The optional annotation's `title` names the player for screen readers.
 
 ## Turn the URL into a tag
 
@@ -69,34 +64,13 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-The share link with the annotation above becomes this node, shown without its `position`:
-
-```json
-{
-	"type": "tag",
-	"name": "youtube",
-	"attributes": {
-		"title": "Rick Astley — Never Gonna Give You Up",
-		"id": "dQw4w9WgXcQ",
-		"start": 43,
-		"url": "https://youtu.be/dQw4w9WgXcQ?t=43"
-	},
-	"children": []
-}
-```
-
-`id` is the video, `start` is in seconds whichever form the link wrote it in (`43`, `43s`,
-`1m30s`), and `url` is the link as the author wrote it. Matching reads the URL alone, so the
-walk makes no request and works the same in a build script and inside a request. The walk
-answers with a `Result`, as every walk does.
-
-When a post already runs other visitors, `Markdown.compose` runs them in one walk:
-`Markdown.compose(embeds([youtube()]), highlight)`.
+Each tag carries the video's `id`, its `start` in seconds, the author's `title` and the `url` as
+written. Matching reads the URL alone, so the walk makes no request.
 
 ## Draw the player
 
 `YouTubeEmbed` takes `videoId`, an optional `start`, and a required `title`. A small component
-maps the tag's attributes onto it, and supplies a title when the author wrote none:
+maps the tag's attributes onto it:
 
 ```tsx {% title="resources/components/youtube-tag.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
@@ -136,25 +110,8 @@ export function renderPost(document: Markdown.Document) {
 }
 ```
 
-The pasted chorus link renders as this frame, plus the classes its styles generate:
-
-```html
-<iframe
-	data-slot="youtube-embed"
-	src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=43"
-	title="Rick Astley — Never Gonna Give You Up"
-	loading="lazy"
-	referrerpolicy="strict-origin-when-cross-origin"
-	allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-	allowfullscreen
-></iframe>
-```
-
-The frame fills the width of its container at 16:9, so it follows the column it sits in. YouTube
-plays only when it receives the embedding page's origin as referrer, which is why the frame sets
-its own `referrerpolicy` whatever the page's policy is. `YouTubeEmbed` works outside markdown too:
-`<YouTubeEmbed videoId="dQw4w9WgXcQ" title="Never Gonna Give You Up" />` in any view draws the
-same player. A video at the top of a page can pass `loading="eager"` to start loading with it.
+The player fills its container's width at 16:9, and `YouTubeEmbed` works in any view outside
+markdown too.
 
 <note>
 A `youtube` tag with no component registered renders nothing, so register `YouTubeTag` wherever
@@ -180,14 +137,12 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 ```
 
 [Security headers and CSP](/docs/identity-and-security/security-headers) covers the rest of the
-policy and how to roll it out in report-only mode first.
+policy.
 
 ## Keep a link in feeds and email
 
 Feed readers and mail clients strip `<iframe>`, so the HTML you render for them should keep the
-video as a link. `toHTML` renders a tag through the function registered under its name, and a
-tag without one renders its children, which an embed has none of. Register a renderer that
-writes the link back:
+video as a link. Register a `toHTML` renderer that writes the link back:
 
 ```typescript {% title="app/services/content/render-feed.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -210,15 +165,13 @@ export function renderFeedItem(document: Markdown.Document): string {
 }
 ```
 
-The link is rebuilt from `id` and `start`, which the provider has already checked, so it never
-carries anything else the author pasted. The `&amp;` keeps the markup valid in an Atom feed,
-which an XML parser reads.
+The link is rebuilt from the checked `id` and `start`, and the `&amp;` keeps it valid in an Atom
+feed.
 
 ## Test it
 
-The walk decides which links become players, and the feed renderer decides what a feed reader
-sees instead, so one test covers both: a pasted URL comes out as a plain link that keeps its
-start time, and a labelled link stays the link its author wrote:
+One test covers the walk and the feed renderer: a pasted URL comes out as a link that keeps its
+start time, and a labelled link stays as written:
 
 ```typescript {% title="app/services/content/render-feed.test.ts" %}
 import { Markdown } from "@sdxc/markdown";

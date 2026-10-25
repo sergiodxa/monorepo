@@ -85,12 +85,9 @@ Every path is relative to the project root.
 | `format` | none    | `["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"]` |
 
 The command every file the CLI writes or edits is run through, so generated code and copied
-components land in your project's style rather than the template's. It is an argument list,
-run without a shell, once per command, with every written path appended. `sdxc create` sets it
-to Vite+'s formatter; set it to your own, such as `["bunx", "prettier", "--write"]`.
-
-A formatter that fails leaves the files as the command wrote them and says so. Without the key,
-nothing is formatted.
+components land in your project's style. It is an argument list, run without a shell, once per
+command, with every written path appended; set it to your own formatter, such as
+`["bunx", "prettier", "--write"]`. Without the key, nothing is formatted.
 
 ## make
 
@@ -105,19 +102,12 @@ write and where.
 | `make.specs`      | `true`                                 | whether a file gets a pairing `.spec` without `--spec` or `--no-spec`    |
 | `make.stubs`      | `".config/sdxc/stubs"`                 | the folder whose stubs replace the built-in ones                         |
 
-- **`make.routes`** names a module in `routes/`. An app that is mostly an API sets it to
-  `"api"`, so `sdxc make controller keys` writes a JSON endpoint without `--routes api`.
-- **`make.migrations`** has one chain per database. An app with a database per tenant adds a
-  second chain, such as `"tenant": "database/tenant"`, and writes to it with
-  `sdxc make migration add-plan --chain tenant`; the `default` chain is the one used without
-  the flag. [Make a migration](/docs/sdxc/make-migration#chains) covers chains.
-- **`make.tests`** set to `false` skips the test for every kind; `--test` writes one for a single
-  run. Migrations and factories never get a test.
-- **`make.specs`** set to `false` skips the pairing `.spec` that controllers, MCP tools,
-  commands and scaffolds write under `spec/`; `--spec` writes one for a single run.
-- **`make.stubs`** is where `sdxc make stubs` copies the built-in stubs to, and where every kind
-  looks for yours first. [Generate files](/docs/sdxc/generate-files#make-the-generated-files-your-own)
-  lists the stubs and their placeholders.
+An app that is mostly an API sets `make.routes` to `"api"`, so `sdxc make controller keys`
+writes a JSON endpoint without `--routes api`. An app with a database per tenant adds a second
+chain to `make.migrations`, as [Make a migration](/docs/sdxc/make-migration#chains) shows.
+`make.stubs` is where `sdxc make stubs` copies the built-in stubs to, and where every kind looks
+for yours first, as
+[Generate files](/docs/sdxc/generate-files#make-the-generated-files-your-own) covers.
 
 ## ui
 
@@ -129,10 +119,8 @@ What [`sdxc ui`](/docs/sdxc/copy-ui-components) copies and where.
 | `ui.alias`     | from `tsconfig.json` `paths` | the import prefix the copies are imported through |
 | `ui.tests`     | `false`                      | whether a component's tests are copied beside it  |
 
-`ui.alias` is the specifier your code imports a copy by, such as `~/components/ui`, when
-`sdxc ui add` rewrites an import from `@sdxc/ui/dialog` to your copy. Leave it out and it is
-worked out from the `paths` entry in your `tsconfig.json` that covers `ui.directory`; with no such
-entry, the copies are imported by relative path.
+Leave `ui.alias` out and it is worked out from the `paths` entry in your `tsconfig.json` that
+covers `ui.directory`; with no such entry, the copies are imported by relative path.
 
 ## doctor
 
@@ -152,22 +140,9 @@ What [`sdxc doctor`](/docs/sdxc/check-a-project) runs besides its built-in check
 | `doctor.mutation.report`      | `"reports/mutation/mutation.json"` | mutation report JSON the `mutation` check reads                |
 | `doctor.mutation.maxSurvived` | `0`                                | maximum surviving mutants the `mutation` check allows          |
 
-Each entry in `doctor.migrations.accept` is `{ "file", "column" }`: a migration file name,
-without its folder, and the column SQLite's error names. It is for a migration production
-applied long ago that an empty database can no longer replay:
-
-```jsonc {% title=".config/sdxc.jsonc" %}
-{
-	"doctor": {
-		"migrations": {
-			"accept": [{ "file": "0007_rename_slug.sql", "column": "slug" }],
-		},
-	},
-}
-```
-
-[Check a project](/docs/sdxc/check-a-project#add-your-own-checks) shows how to write a check
-for `doctor.checks`.
+Each entry in `doctor.migrations.accept` is `{ "file", "column" }`: a migration file name and
+the column SQLite's error names. [Check a project](/docs/sdxc/check-a-project#add-your-own-checks)
+shows how to write a check for `doctor.checks`.
 
 ## run
 

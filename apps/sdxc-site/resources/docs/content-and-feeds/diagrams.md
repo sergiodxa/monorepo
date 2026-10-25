@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 31
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"
     - "How to find the diagrams in markdown and draw them in a route"
@@ -13,25 +13,21 @@ outcomes:
 ---
 
 A diagram written as text lives beside the prose it explains: it diffs, it reviews, and it
-changes in the same commit as the code it describes. This guide draws those diagrams as SVG
-on the server, wherever one appears: in a markdown post, in a string you render for a feed,
-and directly in a `remix/component` view. It uses [`@sdxc/diagram`](/api/diagram) together
-with [`@sdxc/markdown`](/api/markdown).
+changes in the same commit as the code it describes. This guide draws those diagrams in your
+markdown as SVG on the server with [`@sdxc/diagram`](/api/diagram) and
+[`@sdxc/markdown`](/api/markdown).
 
 ```bash
 npm add @sdxc/diagram @sdxc/highlight @sdxc/markdown @sdxc/result remix
 ```
 
-The page carries finished SVG: no script runs to draw it, and no stylesheet or font loads for
-it. Lines and text take the color of the text around them, so a diagram follows the page into
-dark mode.
+The page carries finished SVG, so no script runs to draw it.
 
 ## Write a diagram
 
-Diagrams use [Mermaid](https://mermaid.js.org)'s syntax, the one GitHub renders, so the same
-file shows the same picture on GitHub and on your site. The first line names the kind:
-`sequenceDiagram`, `classDiagram`, `stateDiagram-v2` or `flowchart` with a direction.
-Write it inside a fenced block marked `mermaid`:
+Diagrams use [Mermaid](https://mermaid.js.org)'s syntax, the one GitHub renders. The first line
+names the kind: `sequenceDiagram`, `classDiagram`, `stateDiagram-v2` or `flowchart` with a
+direction. Write it inside a fenced block marked `mermaid`:
 
 ```text
 sequenceDiagram
@@ -49,94 +45,14 @@ sequenceDiagram
     Worker-->>-Reader: 200 OK
 ```
 
-That source draws this:
-
-```mermaid {% alt="A reader requests /posts/hello from the Worker, which checks the cache; on a hit the cache returns the response, on a miss the Worker renders the post and puts it in the cache, then the Worker answers 200 OK" %}
-sequenceDiagram
-    actor Reader
-    participant Worker
-    participant Cache
-    Reader->>+Worker: GET /posts/hello
-    Worker->>Cache: match(request)
-    alt cached
-        Cache-->>Worker: response
-    else missing
-        Worker->>Worker: render the post
-        Worker-)Cache: put(request, response)
-    end
-    Worker-->>-Reader: 200 OK
-```
-
-Class and state diagrams read the same way. A class diagram puts each parent and each whole
-above the classes that point at it, whichever way round the relation is written:
-
-```mermaid {% alt="Class diagram: Post has slug, title and publish(); Draft inherits from Post; a Post is composed of many Comments, each with a body" %}
-classDiagram
-    class Post {
-        +String slug
-        +String title
-        +publish() void
-    }
-    class Draft
-    class Comment {
-        +String body
-    }
-    Post <|-- Draft
-    Post "1" *-- "many" Comment : collects
-```
-
-A state diagram nests composite states, each with its own start:
-
-```mermaid {% alt="State diagram: a post starts as Draft, is submitted to Review, goes back to Draft when changes are requested or to Live when approved; inside Live it starts Listed and moves to Archived when archived" %}
-stateDiagram-v2
-    [*] --> Draft
-    Draft --> Review : submit
-    Review --> Draft : request changes
-    Review --> Live : approve
-    state Live {
-        direction LR
-        [*] --> Listed
-        Listed --> Archived : archive
-    }
-```
-
-Labels break onto a new line at `<br>`. A `title` or `accTitle:` statement names the drawing
-for screen readers, and `accDescr:` describes it; without one, the drawing is named after its
-kind. An `alt` annotation on the fence, `{% alt="Posts move from draft to review to live" %}`
-after `mermaid`, names it from the markdown instead. The [package reference](/api/diagram)
-lists every statement each kind reads.
-
-## Draw a diagram from a string
-
-`toSVG` takes the source and answers with a `Result` holding the markup:
-
-```typescript {% title="app/services/content/architecture.ts" %}
-import { toSVG } from "@sdxc/diagram";
-import { isFailure } from "@sdxc/result";
-
-export function architecture(): string {
-	let result = toSVG("flowchart LR\n  Browser --> Worker --> D1[(D1)]");
-	if (isFailure(result)) {
-		let { reason, line, column } = result.error;
-		return `<code>${reason} at ${line}:${column}</code>`;
-	}
-	return result.data; // '<svg xmlns="http://www.w3.org/2000/svg" viewBox="…" role="img">…'
-}
-```
-
-The string is safe to place in HTML or XHTML, or to save as an `.svg` file. A statement
-outside the supported syntax fails with a `DiagramError` whose message ends in
-`line:column`, while `reason`, `index`, `line` and `column` carry the same place for a tool
-that points an editor at it.
-
-When you want the structure rather than a string, `parseDiagram` answers with a JSON tree of
-SVG elements rooted at `svg`, which a build can store and a renderer can draw later.
+An `alt` annotation on the fence, `{% alt="Posts move from draft to review to live" %}` after
+`mermaid`, names the drawing for screen readers. The [package reference](/api/diagram) lists
+every statement each kind reads.
 
 ## Find the diagrams in markdown
 
-`diagram` from `@sdxc/diagram/markdown` is a walk visitor. It turns each fenced block
-marked `mermaid` into a `diagram` tag carrying a `source` attribute and leaves every other
-code block alone, so it composes with a highlighter in one walk:
+`diagram` from `@sdxc/diagram/markdown` is a walk visitor that turns each `mermaid` fence into a
+`diagram` tag and leaves every other code block alone, so it composes with a highlighter:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { diagram } from "@sdxc/diagram/markdown";
@@ -148,12 +64,9 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-`Markdown.compose` runs the `code` handlers in order: a mermaid fence becomes a tag, which
-ends its chain, and every other block reaches the highlighter as the code node it was.
-
-A diagram that does not parse fails the walk. The failure's `position` is where the fence
-sits in the document, and its `cause` is the `DiagramError` with the place inside the
-diagram, so a broken post fails the build with both:
+A diagram that does not parse fails the walk. The failure's `position` is where the fence sits,
+and its `cause` is the `DiagramError` with the line inside the diagram, so a build check can
+point at the statement:
 
 ```typescript {% title="scripts/check-posts.ts" %}
 import { DiagramError } from "@sdxc/diagram";
@@ -176,9 +89,6 @@ export function checkDiagrams(path: string, source: string): string | null {
 }
 ```
 
-The fence's opening line comes first, so adding the line inside the diagram lands on the
-statement itself.
-
 <warning>
 A walk with `diagram` fails on the first diagram that does not parse. For content you do not
 control, or for posts stored in a database and rendered on request, build the visitor with
@@ -188,8 +98,8 @@ block its author wrote, and the walk succeeds.
 
 ## Draw the tags in a route
 
-`DiagramTag` from `@sdxc/diagram/ui` is a `remix/component` component whose props are the
-attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
+`DiagramTag` from `@sdxc/diagram/ui` takes the attributes the visitor writes, so it goes
+straight into the `components` map of `toRemix`:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -202,35 +112,12 @@ export function renderPost(document: Markdown.Document) {
 }
 ```
 
-`Diagram` draws one outside markdown, in any view:
-
-```tsx {% title="resources/components/request-flow.tsx" %}
-import type { Handle } from "remix/component";
-
-import { Diagram } from "@sdxc/diagram/ui";
-
-export function RequestFlow(handle: Handle) {
-	return () => (
-		<figure>
-			<Diagram
-				source={
-					"flowchart LR\n  Request --> Router --> Controller --> Response"
-				}
-			/>
-			<figcaption>Every request takes the same four steps.</figcaption>
-		</figure>
-	);
-}
-```
-
-Both build the SVG as elements the renderer owns, and render source that does not parse as a
-code block, so a reader still sees what the author wrote.
+`Diagram` from the same entry draws one outside markdown, from a `source` prop.
 
 ## Match your theme
 
-Lines and text use `currentColor`. Node bodies fill with `--diagram-fill`, and notes, groups
-and block labels with `--diagram-tint`; both fall back to the page background, so set them
-only where your surfaces differ from it:
+Lines and text use `currentColor`, so a diagram follows the page into dark mode. Node bodies fill
+with `--diagram-fill` and notes with `--diagram-tint`; both fall back to the page background:
 
 ```css {% title="resources/styles/prose.css" %}
 .prose svg[role="img"] {
@@ -239,12 +126,9 @@ only where your surfaces differ from it:
 }
 ```
 
-The drawing shrinks to its container and never grows past its natural size.
-
 ## Render to HTML for feeds and email
 
-A feed item or an email body wants a string. `renderDiagram` is the tag renderer for
-`toHTML`, turning each `diagram` tag into the markup `toSVG` writes:
+A feed item or an email body wants a string. `renderDiagram` is the tag renderer for `toHTML`:
 
 ```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -257,13 +141,9 @@ export function renderHTML(document: Markdown.Document): string {
 }
 ```
 
-Feed readers that show inline SVG draw the diagram, and its `title` names it for the ones
-that read the text.
-
 ## Test it
 
-A broken diagram should fail the check at the statement that broke it, and a valid one should
-pass, so test `checkDiagrams` with one of each:
+Test `checkDiagrams` with a valid diagram and a broken one:
 
 ```typescript {% title="scripts/check-posts.test.ts" %}
 import { expect, test } from "vitest";

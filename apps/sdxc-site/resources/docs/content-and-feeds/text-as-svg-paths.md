@@ -5,22 +5,18 @@ section:
     title: Content & feeds
     order: 8
 order: 34
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to measure text with a font's real metrics using `@sdxc/font`"
     - "How to shorten text to fit a width and turn glyphs into SVG path data"
     - "How to lay out a README badge and serve it from a route"
 ---
 
-A badge in a README, such as a project's latest version, is an SVG image the README links to.
-An image loads no web fonts, so an SVG `<text>` element is drawn in whatever font the viewer's
-machine picks, and a badge sized for one font clips or gaps in another. Measuring the text with
-the font's own metrics and drawing each glyph as a path gives a badge that is the same width
-and shape on every screen.
-
-[`@sdxc/font`](/api/font) reads a TrueType font in plain TypeScript: its metrics, its kerning
-and its glyph outlines. This guide uses it to size a two-part badge, shorten a long value to fit,
-and write the text as SVG path data, served from a route.
+A README badge is an SVG image, and an image loads no web fonts, so its `<text>` is drawn in
+whatever font the viewer's machine picks and clips or gaps in another. Measuring the text with
+the font's own metrics and drawing each glyph as a path gives a badge that looks the same on
+every screen. This guide uses [`@sdxc/font`](/api/font) to size a two-part badge, shorten a long
+value to fit, and write the text as SVG path data, served from a route.
 
 ```bash
 npm add @sdxc/font @sdxc/http @sdxc/result remix
@@ -28,11 +24,9 @@ npm add @sdxc/font @sdxc/http @sdxc/result remix
 
 ## Load the font
 
-`parseFont` takes the bytes of a `.ttf` with TrueType (`glyf`) outlines. In a Worker, bundle the
-file as a data module by naming it with a `.bin` extension, for example
-`resources/fonts/inter-regular.ttf.bin`, and declare the module shape for TypeScript, as
-[Draw social card images](/docs/building-remix-apps/social-card-images) shows. Parse it on the
-first badge and keep it for the isolate:
+`parseFont` takes the bytes of a `.ttf`. In a Worker, bundle the file as a data module by naming
+it with a `.bin` extension, as [Draw social card images](/docs/building-remix-apps/social-card-images)
+shows. Parse it on the first badge and keep it for the isolate:
 
 ```typescript {% title="app/initializers/badge-font.ts" %}
 import type { Font, FontError } from "@sdxc/font";
@@ -50,24 +44,15 @@ export function badgeFont(): Result<Font, FontError> {
 }
 ```
 
-Opening a font reads only its table headers, and each glyph is decoded the first time it is
-used and cached on the `Font`, so the cost of a font grows with the characters you draw.
-
 <warning>
-Bundle a `.ttf` with TrueType outlines. A failure is a `FontError` whose `code` is
-`unsupported` for a CFF-based `.otf`, a font collection, or a font with no Unicode character
-map, and `missing-table` or `malformed` for a damaged file.
+Bundle a `.ttf` with TrueType outlines. A CFF-based `.otf` or a font collection fails with an
+`unsupported` `FontError`.
 </warning>
 
 ## Measure in pixels
 
-`measure(text, size)` is the width a line takes at `size` pixels per em, with the font's pair
-kerning applied. The font's vertical metrics, `ascender`, `descender` (negative) and `lineGap`,
-are in font units; dividing by `unitsPerEm` and multiplying by the size converts them to
-pixels.
-
-That is enough to shorten text to a width. Drop characters from the end until the text plus an
-ellipsis fits:
+`measure(text, size)` is the width a line takes at `size` pixels per em, kerning applied. To
+shorten text to a width, drop characters from the end until the text plus an ellipsis fits:
 
 ```typescript {% title="app/services/badges/fit-width.ts" %}
 import type { Font } from "@sdxc/font";
@@ -89,35 +74,17 @@ export function fitWidth(
 }
 ```
 
-Spreading the string iterates by code point, the unit layout works in, so an astral character
-is never split in half.
-
 <note>
 Layout maps one code point to one glyph, with kerning and no ligatures, which suits Latin,
 Greek and Cyrillic labels. A script that needs shaping, such as Arabic or Devanagari, calls for
 a shaping engine.
 </note>
 
-`glyphIndex(codePoint)` answers `0`, the font's `.notdef` box, for a character the font does not
-have. Checking it before drawing tells you whether a second font is needed:
-
-```typescript {% title="app/services/badges/covers.ts" %}
-import type { Font } from "@sdxc/font";
-
-export function covers(font: Font, text: string): boolean {
-	for (let character of text) {
-		if (font.glyphIndex(character.codePointAt(0) ?? 0) === 0) return false;
-	}
-	return true;
-}
-```
-
 ## Turn glyphs into path data
 
-`layout(text, size)` places each glyph on a line, answering its glyph index and its `x` from the
-line's start. `path(glyph, size, x, y)` answers that glyph's outline in pixels, y down, with
-`(x, y)` on the baseline, as `move`, `line`, quadratic `quad` and `close` commands. Each one maps
-to an SVG path command:
+`layout(text, size)` places each glyph on a line, and `path(glyph, size, x, y)` answers its
+outline in pixels with `(x, y)` on the baseline, as commands that each map to an SVG path
+command:
 
 ```typescript {% title="app/services/badges/text-path.ts" %}
 import type { Font } from "@sdxc/font";
@@ -151,17 +118,12 @@ function round(value: number): number {
 }
 ```
 
-Two decimals is a hundredth of a pixel, finer than any screen shows, and it keeps the path
-data short. Composite glyphs, such as an accented letter built from a base and a mark,
-arrive already resolved into one outline.
-
-`outline(glyph)` answers the same commands in font units with y up, for a caller that scales and
-flips them itself, such as one writing a `viewBox` in font units.
+Two decimals is finer than any screen shows, and keeps the path data short.
 
 ## Lay out the badge
 
 A badge is a grey label and a coloured value, each padded on both sides. Both widths come from
-`measure`, and the baseline centres the font's ascender-to-descender box in the badge's height:
+`measure`, and the baseline centres the font's ascender-to-descender box vertically:
 
 ```typescript {% title="app/services/badges/badge-layout.ts" %}
 import type { Font } from "@sdxc/font";
@@ -200,9 +162,6 @@ export function badgeLayout(font: Font, label: string, value: string): BadgeLayo
 	};
 }
 ```
-
-Rounding each half's width up to a whole pixel keeps the edge between the two colours on a pixel
-boundary, where it stays sharp.
 
 ## Serve it from a route
 
@@ -263,16 +222,13 @@ export default createAction(routes.badge, async (ctx) => {
 });
 ```
 
-`<title>` and `aria-label` carry the text a screen reader announces, since the paths themselves
-are only shapes. The `width` and `height` attributes give the image its size in a README, which
-sizes images from their intrinsic dimensions. Image proxies such as GitHub's cache the badge per
-URL, so five minutes is roughly how long a new release takes to show.
+`<title>` and `aria-label` carry the text a screen reader announces, since the paths are only
+shapes.
 
 ## Test the layout
 
-The layout is where a long value gets shortened, so test it with the font the Worker bundles,
-read from disk: a long version comes back shortened with an ellipsis, and a short one comes
-back whole:
+Test the layout with the font the Worker bundles, read from disk: a long version comes back
+shortened, and a short one whole:
 
 ```typescript {% title="app/services/badges/badge-layout.test.ts" %}
 import { readFileSync } from "node:fs";

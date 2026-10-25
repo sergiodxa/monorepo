@@ -21,21 +21,14 @@ storage inside a SQLite-backed Durable Object. There is a driver for each:
 
 This guide opens a database over D1, publishes it on the request context, covers the writes D1
 can commit safely, moves the same models into a Durable Object, and tests all of it against real
-SQLite with [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks). Declaring tables and writing
-queries is `remix/data-table`'s own API, and its documentation covers it; everything here works
-with whatever tables you already have.
+SQLite with [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks). Your tables and queries stay as
+`remix/data-table` defines them; both drivers bridge the types SQLite lacks, so a `c.boolean()`
+column reads back as `true` or `false` and a `c.json()` value round-trips as JSON.
 
 ```bash
 npm add @sdxc/data-table-d1 @sdxc/data-table-sqlstorage @sdxc/database-middleware remix
 npm add -D @sdxc/cloudflare-mocks
 ```
-
-## What the drivers add to your tables
-
-Your tables and queries stay exactly as `remix/data-table` defines them. What a driver decides is
-how values cross into SQLite, which has no native boolean or JSON type. Both drivers bridge them:
-a `c.boolean()` column reads back as `true` or `false`, and a `c.json()` value is serialized on
-the way in and parsed on the way out, on a plain read and on a `RETURNING` row alike.
 
 ## Open the database over D1
 
@@ -50,10 +43,6 @@ export function openDatabase(): Database {
 	return new Database(createD1DatabaseAdapter(env.DB));
 }
 ```
-
-The adapter also takes an `onStatement` observer, called once per statement with the rows read,
-rows written and duration D1 already reports. Summing those per request is how you find the
-endpoint whose query plan changed.
 
 ## Publish it on `ctx.db`
 
@@ -74,12 +63,10 @@ export function createWebRouter(db = openDatabase()) {
 }
 ```
 
-`database(db)` installs the instance as `ctx.db`, typed on every request context, and under the
-`Database` key the package exports, for code that holds a context whose chain it does not know.
-A handler then passes `ctx.db` to its queries, and a query written against `Database` runs
-unchanged on either driver. The `@sdxc/database-middleware/jobs` and
-`@sdxc/database-middleware/cli` entry points publish the same `ctx.db` to an
-[`@sdxc/jobs`](/api/jobs) dispatcher and an [`@sdxc/cli`](/api/cli) command line.
+`database(db)` installs the instance as `ctx.db`, typed on every request context, and a query
+written against `Database` runs unchanged on either driver. The `@sdxc/database-middleware/jobs`
+and `@sdxc/database-middleware/cli` entry points publish the same `ctx.db` to a job dispatcher and
+a command line.
 
 ## Write what D1 can commit
 

@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.09
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How `make policy` adds a resource's abilities to the catalog"
     - "Who the generated grants let read and change the resource"
@@ -81,17 +81,10 @@ const policy = definePolicy(abilities, {
 
 A visitor is a `member` once the session holds them: the app template's
 `app/http/middleware/access.ts` binds `member` and the `actor` fact for a session where
-`ctx.session.set("actor", { id })` ran, and a guest otherwise. A folder in the name nests the
-abilities, so `sdxc make policy billing/invoice` declares `billing.invoice.read` and its siblings.
+`ctx.session.set("actor", { id })` ran, and a guest otherwise.
 
-When the catalog or the policy is missing, or not written the way `make` can edit, it writes the
-test and prints the lines to add to each file instead. A resource the catalog already declares
-keeps its abilities and grants: `--force` writes its test again and says so last:
-
-```text
-Replaced app/policies/post.test.ts
-Kept the declaration, mapping and mount post already has; --force replaces files only
-```
+A resource the catalog already declares keeps its abilities and grants; `--force` writes only its
+test again.
 
 ## The test
 
@@ -186,8 +179,7 @@ if (row === null || !ctx.access.can(abilities.post.read, { post: row })) {
 ```
 
 Add a test case for each condition, and give the record the fields it reads.
-[Authorization](/docs/identity-and-security/authorization) covers roles, guards, scopes and
-answering a refusal, and [`@sdxc/authz`](/api/authz) the whole API.
+[Authorization](/docs/identity-and-security/authorization) covers roles, guards and scopes.
 
 ## Where to go next
 

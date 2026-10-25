@@ -13,21 +13,17 @@ outcomes:
 ---
 
 This guide sends the message a job board owes someone who just published a position: a short
-confirmation, in the language they posted in, delivered through Cloudflare's email binding. The
-email is declared by the props it takes, its copy comes from your message bundles when it
-renders, and it is queued, so a slow provider never delays the page the poster lands on and a
-failed delivery is retried.
+confirmation, in the language they posted in, delivered through Cloudflare's email binding. It
+is queued, so a slow provider never delays the page the poster lands on and a failed delivery
+is retried.
 
 [`@sdxc/mail`](/api/mail) provides the registry, the mailers, the layout components and the
 transports, [`@sdxc/i18n`](/api/i18n) the translated copy, and [`@sdxc/jobs`](/api/jobs) the job
 that delivers queued email.
 
-Each message here goes to one person because of something they did. Mail to a list of readers
-belongs on a newsletter platform, which keeps their consent, their unsubscribe links and the
-sending reputation; [Run a newsletter list](/docs/data-and-background-work/newsletter) puts
-readers on one.
-Mail sent from a person's own mailbox, as them, goes through their provider instead;
-[Read and send mail over JMAP](/docs/data-and-background-work/jmap) does that with Fastmail.
+Each message here goes to one person because of something they did; mail to a list of
+readers belongs on a newsletter platform, as
+[Run a newsletter list](/docs/data-and-background-work/newsletter) shows.
 
 ```bash
 npm add @sdxc/database-middleware @sdxc/http @sdxc/i18n @sdxc/jobs @sdxc/logger @sdxc/mail \
@@ -59,8 +55,7 @@ export default emails({
 ```
 
 Each declaration is named by its path, `postings.published`. Importing the map costs the
-schemas alone, so a controller sends an email without loading the module that renders it, and
-the schema parses the props on every send.
+schemas alone, so a controller sends an email without loading the module that renders it.
 
 <warning>
 The declaration's name travels with every queued delivery, so rename it only when no delivery
@@ -105,16 +100,10 @@ export default createEmail(emails.postings.published, {
 });
 ```
 
-Every member receives the parsed props with `locale` and `t` beside them, bound to the
-language of the delivery. `replyTo`, `headers`, `unsubscribe`, `list` and `calendar` are
-optional members of the same shape, for mail that needs them, and `preview` supplies sample
-props for previews alone.
-
-`Email` is the layout kit. It renders tables with inline styles, the one layout every mail
-client agrees on, and takes every color as a prop so it carries no brand of its own.
-`Email.Link`, `Email.Table` and `Email.Img` cover the rest of a transactional message. The
-mailer renders the body to HTML and derives the plain-text part from that same HTML, so every
-message ships both parts from one source.
+Every member receives the parsed props with `locale` and `t` bound to the delivery's
+language, and `preview` supplies sample props for previews. `Email` renders tables with inline
+styles, the one layout every mail client agrees on, and the mailer derives the plain-text part
+from the same HTML.
 
 The copy lives in the same bundles your pages read:
 
@@ -135,8 +124,7 @@ The copy lives in the same bundles your pages read:
 ## Map it on the registry
 
 The registry maps each declaration onto its template through `lazy()`, so a send imports only
-the template it renders. It translates with the translator you give it, `createTranslator` from
-`@sdxc/i18n` over the app's bundles:
+the template it renders, and translates with the translator you give it:
 
 ```typescript {% title="app/initializers/mail.ts" %}
 import { createMail, lazy } from "@sdxc/mail";
@@ -160,17 +148,14 @@ declare module "@sdxc/mail" {
 
 `translate` is the translator
 [Translate your app](/docs/building-remix-apps/translate-your-app) builds for work outside a
-request; a language the app does not ship renders in the fallback. The `MailTypes` block types
-the `t` every template receives with the keys of your bundles, so a misspelled key fails the
-type check. The registry holds no transport, so the Worker and the command line, which runs on
-Bun, share it.
+request. The `MailTypes` block types `t` with the keys of your bundles, so a misspelled key
+fails the type check.
 
 ## Publish a mailer to requests and jobs
 
 A `Mailer` applies your sender identity and delivers through a transport, the only part that
-knows a provider. Given the registry as `mail`, it sends a declared email by its declaration,
-and given a `queue` function, it hands queued deliveries to a job. Both live in one module the
-Worker alone imports:
+knows a provider, and hands queued deliveries to a job through a `queue` function. Both live in
+one module the Worker alone imports:
 
 ```typescript {% title="app/initializers/mail-transport.ts" %}
 import type { QueuedEmail } from "@sdxc/mail";
@@ -195,9 +180,8 @@ export async function queue(delivery: QueuedEmail): Promise<void> {
 reads the DMARC, SPF and DKIM records receivers judge that domain by.
 </note>
 
-Each transport ships from its own subpath, so importing this one keeps every other provider
-out of your bundle. `queue` imports the dispatcher when the first email is queued, because the
-dispatcher's own middleware imports this module.
+`queue` imports the dispatcher lazily, because the dispatcher's own middleware imports this
+module.
 
 `@sdxc/mail/middleware` publishes a request-scoped mailer as `ctx.email`:
 
@@ -222,8 +206,8 @@ export function createWebRouter() {
 ```
 
 `MAIL_FROM` is your sender, such as `{ email: "jobs@example.com", name: "Example Jobs" }`.
-`@sdxc/mail/middleware/jobs` takes the same options and publishes `ctx.email` to every job, so
-add it to the chain of the dispatcher from
+`@sdxc/mail/middleware/jobs` publishes the same `ctx.email` to every job, so add it to the
+dispatcher from
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), with a `transport`
 option a test can replace:
 
@@ -329,9 +313,7 @@ A mailer sends a declared email three ways:
 
 Await `send()` when the response depends on whether the email went out, such as a password
 reset. `queue()` validates the props before the delivery enters the queue, so a refused prop
-fails here, where the caller can fix it, and the queue carries only plain JSON. Every delivery
-also accepts `from`, `cc`, `bcc`, `replyTo` and `headers`. A render failure, an invalid
-address and a provider refusal all arrive as a `MailError` failure value.
+fails where the caller can fix it.
 
 ## Deliver queued email
 
@@ -362,80 +344,24 @@ export default createJobHandler(jobs.email, async (ctx) => {
 ```
 
 An `EmailRefusedError` is a delivery no retry can send, a name nothing maps or props the schema
-refuses, so the job exits. Any other failure, such as the provider being down, is retried,
-bounded by the queue's retry limit. The email renders when the job runs, in the delivery's
-`locale`.
-
-Any other job sends through the same `ctx.email`: the nightly sweep that expires postings can
-`ctx.email.later(emails.postings.expired, { to, locale, props })` for each one, and the mailer
-sends them once the handler returns, logging each outcome.
+refuses, so the job exits; any other failure is retried up to the queue's limit. The email
+renders when the job runs, in the delivery's `locale`.
 
 ## Preview an email
 
-An app from `sdxc create` serves an inbox of its emails at `/_emails` while `bun dev` runs: every
-mapped email listed with its subject and opening lines in the language you pick, and the one you
-open shown beside the list, as HTML or as its text part, rendered from its template's `preview`
-props. The router mounts it from `@sdxc/mail/previews`, serving it only in development, and links
-the document's stylesheets so the inbox wears the app's theme:
-
-```typescript {% title="app/initializers/router.tsx" %}
-previews(mail, {
-	locales: SUPPORTED_LANGUAGES,
-	enabled: import.meta.env.DEV,
-	stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
-}),
-```
-
-Keep it a single entry in the router's middleware with `enabled` deciding, so the router's typed
-context keeps everything the rest of the chain publishes. Each email also renders on its own at
-`/_emails/<name>?locale=es&format=html`, or `format=text`.
-
-The same email prints in a terminal, its subject and text part, or the HTML with `--html`:
+An app from `sdxc create` serves an inbox of its emails at `/_emails` while `bun dev` runs,
+each rendered from its template's `preview` props in the language you pick. The same email
+prints in a terminal, its subject and text part, or the HTML with `--html`:
 
 ```bash
 sdxc run emails preview postings.published --locale es
 ```
 
-`sdxc doctor` fails on an email `app/emails/index.ts` declares and nothing maps, and warns on a
-template without a test or without `preview`.
-
-For a preview screen of your own, `mail.mapped` lists every declaration the registry maps,
-`mail.preview(email, locale)` renders one with its template's `preview` props, and
-`mail.hasPreview(email)` reports whether its template has them. `preview()` answers a `Result`
-holding the `subject`, `html` and `text`, and a failure for a template with no `preview`.
-
 ## Test with the memory transport
 
-A template's test renders it through the registry, so it reads the real bundles:
-
-```typescript {% title="app/emails/postings/published.test.tsx" %}
-import { unwrap } from "@sdxc/result";
-import { expect, test } from "vitest";
-
-import emails from "~/app/emails";
-import { mail } from "~/app/initializers/mail";
-
-test("tells the poster in Spanish that the posting is live", async () => {
-	let rendered = unwrap(
-		await mail.render(emails.postings.published, {
-			locale: "es",
-			props: {
-				title: "Staff engineer",
-				company: "Acme",
-				url: "https://example.com/p/1",
-			},
-		}),
-	);
-
-	expect(rendered.subject).toContain("Staff engineer");
-	expect(rendered.text).toContain("https://example.com/p/1");
-});
-```
-
-`MemoryTransport` from `@sdxc/mail/memory` records every message instead of sending it. What it
-records is the normalized message a provider would have received, with defaults applied and the
-text part derived. Queue through a mailer whose `queue` enqueues on a memory queue, drain it
-through the dispatcher, and pick the message out with `isComposedEmail`:
+`MemoryTransport` from `@sdxc/mail/memory` records the message a provider would have received
+instead of sending it. Queue through a mailer whose `queue` enqueues on a memory queue, drain
+it through the dispatcher, and pick the message out with `isComposedEmail`:
 
 ```typescript {% title="app/jobs/email.test.ts" %}
 import * as memory from "@sdxc/jobs/memory";
@@ -484,12 +410,8 @@ test("delivers the queued confirmation to the contact", async () => {
 ```
 
 `createTestDatabase` is the in-memory D1 from
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
-`transport.messages` lists everything sent, oldest first, and `transport.clear()` resets it
-between tests. To read messages in a terminal instead, `PrintTransport` from `@sdxc/mail/print`
-writes each one to a function you give it, which is how
-[Your app's command line](/docs/operations-and-testing/your-apps-command-line) resends an email
-from a laptop without reaching a real inbox.
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), and
+`transport.messages` lists everything sent, oldest first.
 
 ## Where to go next
 

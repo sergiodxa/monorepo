@@ -15,33 +15,20 @@ outcomes:
 A parsed document is a tree, and [`@sdxc/markdown`](/api/markdown) ships the passes most sites
 run over that tree as plugins: anchors and a table of contents for headings, link rewriting,
 typographic punctuation, embeds made from pasted URLs, and a linter that reports what an
-author got wrong with the line to fix. Each one is a visitor for `Markdown.walk`, built by a
-function you call with its options, so a plugin composes with the visitors you write yourself
-and with [`@sdxc/highlight`](/api/highlight) into a single walk.
+author got wrong with the line to fix. Each one is a visitor for `Markdown.walk`, so plugins
+compose with your own visitors and [`@sdxc/highlight`](/api/highlight) into a single walk.
 
 This guide picks up where [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline)
-leaves off: posts are parsed per request with a shared `MARKDOWN_OPTIONS`, and a
-`preparePost` function walks the tree before a route renders it.
+leaves off, with a `preparePost` function that walks the tree before a route renders it.
 
 ```bash
-npm add @sdxc/highlight @sdxc/markdown @sdxc/result @sdxc/ui remix
+npm add @sdxc/highlight @sdxc/markdown @sdxc/result
 ```
 
 ## Run the plugins in order
 
-Every plugin lives at its own subpath, so a page imports only the passes it runs:
-
-| Plugin         | Import                             | Handles                                               |
-| -------------- | ---------------------------------- | ----------------------------------------------------- |
-| `embeds()`     | `@sdxc/markdown/plugin/embeds`     | `paragraph`                                           |
-| `headings()`   | `@sdxc/markdown/plugin/headings`   | `document`, `heading`                                 |
-| `links()`      | `@sdxc/markdown/plugin/links`      | `link`, `image`, `element`                            |
-| `typography()` | `@sdxc/markdown/plugin/typography` | `paragraph`, `heading`, `tableCell`, `tag`, `element` |
-| `lint()`       | `@sdxc/markdown/plugin/lint`       | reads a document and returns its problems             |
-
-`Markdown.compose` merges visitors into one, so every pass runs in a single walk. Handlers for
-the same node type run in the order you list the visitors, each on the node the one before it
-returned, and a handler that turns the node into another type ends its chain:
+Every plugin lives at its own subpath. `Markdown.compose` merges visitors into one walk, and
+handlers for the same node type run in the order you list the visitors:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
@@ -67,10 +54,9 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-Embeds go first, so a pasted video URL becomes a tag before anything else reads it as a link.
-Headings take their ids before typography curls the quotes in their text, so a heading's id is
-the slug of what the author typed, which is also what the linter resolves `#fragment` links
-against. Every plugin is synchronous, so the walk answers with a `Result`.
+Embeds go first, so a pasted video URL becomes a tag before anything reads it as a link.
+Headings take their ids before typography curls the quotes in their text, so an id is the slug
+of what the author typed.
 
 <warning>
 Merge visitors with `Markdown.compose`. An object spread keeps only the last handler for each
@@ -79,12 +65,8 @@ key, so of two visitors that both handle `paragraph` or `heading`, only the seco
 
 ## Anchor headings and build a table of contents
 
-`headings()` gives every heading an `id` from its plain text, using the slugs GitHub writes, so
-a link copied from a README rendered on GitHub lands on the same heading on your site. An
-author who names a heading keeps that name, and the walk reserves every id written anywhere in
-the document before it generates one, so a slug never takes an id an author wrote further
-down. A repeated heading takes the first free `-1`, `-2` suffix, and a heading of punctuation
-alone stays without an id.
+`headings()` gives every heading an `id` from its plain text, using the slugs GitHub writes. An
+author who names a heading keeps that name, and a repeated heading takes a `-1`, `-2` suffix.
 
 ```text
 ## Install {% #setup %}
@@ -94,27 +76,10 @@ alone stays without an id.
 ## Configure
 ```
 
-The three headings above get `setup`, `configure` and `configure-1`. Two options shape the
-ids: `levels` limits which headings get a generated one, and `slug` replaces GitHub's slug with
-your own function, still numbered when two results repeat.
+The three headings above get `setup`, `configure` and `configure-1`.
 
-```typescript {% title="app/services/content/anchors.ts" %}
-import { headings } from "@sdxc/markdown/plugin/headings";
-
-export const ANCHORS = headings({
-	levels: [2, 3, 4],
-	slug: (text) => text.toLowerCase().replaceAll(/\s+/g, "_"),
-});
-```
-
-The visitor remembers the ids it handed out within a walk, and each walk of a whole document
-starts fresh. When you walk separate parts of a document one at a time, call `headings()` once
-per part, so a slug taken in one part is free again in the next.
-
-`tableOfContents` reads the walked document back as a tree. Each entry carries `id`, `text`,
-`level` and `children`, where the children are the deeper headings that follow until the next
-heading at the same level or shallower, so a skipped level (`##` then `####`) nests under the
-nearest shallower heading:
+`tableOfContents` reads the walked document back as a tree of entries with `id`, `text`,
+`level` and `children`:
 
 ```typescript {% title="app/services/content/outline.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -126,22 +91,14 @@ export function outline(document: Markdown.Document) {
 }
 ```
 
-It lists levels 2 and 3 by default and leaves out any heading with no id, which is why it reads
-the document `headings()` already walked.
+It leaves out any heading with no id, which is why it reads the document `headings()` walked.
 
 ## Rewrite the URLs a document points at
 
-`links()` rewrites a link's `href`, an image's `src`, and the `href` and `src` of an allowlisted
-HTML element. `base` resolves every relative URL the way a browser resolves it against the
-page: `./`, `../` and root-relative paths all resolve, and their query and fragment come along.
-Absolute URLs, `mailto:` and `tel:` links, and `#fragment` links that point inside the page keep
-what the author wrote.
-
-`rewrite` runs on every URL after `base` has resolved it, absolute ones included, beside the
-node that holds it. It returns the URL to write, or `undefined` to keep the one it was given.
-Documentation written as a folder of `.md` files that link to each other is the usual case:
-the links work on GitHub as written, and the rewrite maps each one to the route that renders
-it, while images move to a CDN.
+`links()` rewrites a link's `href` and an image's `src`. `base` resolves every relative URL the
+way a browser does, and `rewrite` runs on every URL after that, returning the URL to write or
+`undefined` to keep it. Here a folder of `.md` files that link to each other maps each link to
+the route that renders it, while images move to a CDN:
 
 ```typescript {% title="app/services/content/docs-links.ts" %}
 import { links } from "@sdxc/markdown/plugin/links";
@@ -162,8 +119,7 @@ export function docsLinks(path: string) {
 ```
 
 `docsLinks("guides/setup.md")` resolves `../reference/cli.md#flags` in that file to
-`https://example.com/docs/reference/cli#flags`. A URL held by a variable stays as written until
-[the variable is filled](/docs/content-and-feeds/markdown-variables).
+`https://example.com/docs/reference/cli#flags`.
 
 <note>
 Pass an absolute URL as `base`. Any other value fails the walk at the first relative URL it
@@ -173,17 +129,9 @@ meets, with that node's position.
 ## Set prose in typographic punctuation
 
 `typography()` turns straight quotes into curly ones, `--` into an en dash, `---` into an em
-dash and `...` into an ellipsis. It changes `text` nodes alone, so code blocks, inline code,
-attribute values, and `code`, `kbd`, `samp` and `var` elements keep their ASCII, and a command
-in backticks stays one a reader can copy.
-
-Each paragraph, heading, table cell, and block-level tag or element is set as one run, so a
-quote is decided by the characters around it even across formatting: in `"**Ship it**"` the
-first quote opens before the bold text and the second closes after it. A `'` inside a word
-(`don't`) or ahead of an elided year (`'90s`) is an apostrophe.
-
-A locale that writes other marks passes them as pairs, and each of the three rules can be turned
-off on its own:
+dash and `...` into an ellipsis. It changes `text` nodes alone, so code keeps its ASCII and a
+command in backticks stays one a reader can copy. A locale that writes other marks passes them
+as pairs, and each rule can be turned off:
 
 ```typescript {% title="app/services/content/typography.ts" %}
 import { typography } from "@sdxc/markdown/plugin/typography";
@@ -194,14 +142,10 @@ export const SPANISH = typography({
 });
 ```
 
-The apostrophe stays `’` whatever quote marks a locale sets.
-
 ## Turn pasted URLs into embeds
 
 `embeds()` takes a list of providers and turns a URL an author pasted on a line of its own into
-a block tag. A paragraph qualifies when it holds one link that shows its own URL, written bare,
-in angle brackets or as a `www.` autolink; a link with its own label, or a URL inside a
-sentence, stays a link. The first provider that recognises the URL names the tag.
+a block tag; a link with its own label, or a URL inside a sentence, stays a link.
 
 ```text
 Here is the walkthrough:
@@ -209,69 +153,14 @@ Here is the walkthrough:
 https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s
 ```
 
-| Provider    | Recognises                                                              | Attributes     |
-| ----------- | ----------------------------------------------------------------------- | -------------- |
-| `youtube()` | watch, `shorts`, `embed` and `live` pages, `youtu.be`, nocookie         | `id`, `start?` |
-| `vimeo()`   | `vimeo.com/ID`, `vimeo.com/ID/HASH`, `player.vimeo.com/video/ID?h=HASH` | `id`, `hash?`  |
-| `gist()`    | `gist.github.com/USER/ID`                                               | `user`, `id`   |
-| `x()`       | `x.com/USER/status/ID` and `twitter.com/USER/status/ID`                 | `user`, `id`   |
-
-Every embed tag also carries `url`, the link as written, so a renderer can always fall back to a
-plain link, and any annotation the author wrote above the URL. `start` is in seconds, read from
-YouTube's `t` or `start` parameter. Matching reads the URL alone, so the walk makes no request.
-
-Each tag renders through the component registered under its name, the way any other tag does.
-For YouTube, a small component hands the tag's attributes to
-[`YouTubeEmbed`](/api/ui/youtube-embed);
-[Embed YouTube videos in markdown](/docs/content-and-feeds/youtube-embeds) walks through it:
-
-```tsx {% title="resources/components/youtube-tag.tsx" %}
-import type { Handle, RemixNode } from "remix/component";
-
-import { YouTubeEmbed } from "@sdxc/ui";
-
-export function YouTubeTag(
-	handle: Handle<{ id: string; start?: number; url: string; children: RemixNode }>,
-) {
-	return () => (
-		<YouTubeEmbed
-			videoId={handle.props.id}
-			start={handle.props.start}
-			title="YouTube video player"
-		/>
-	);
-}
-```
-
-```tsx
-toRemix(document, { components: { youtube: YouTubeTag, vimeo: Vimeo, gist: Gist } });
-```
-
-An embed has no children, so a provider with no component renders nothing; leave a provider out
-of `embeds()` to keep its URLs as links. `youtube({ name: "video" })` renames the tag for a
-vocabulary that already uses the default name. A provider of your own is an object with the
-tag's `name` and a `match` function that returns the tag's attributes, or `null` for a URL that
-is someone else's:
-
-```typescript {% title="app/services/content/codepen.ts" %}
-import type { EmbedProvider } from "@sdxc/markdown/plugin/embeds";
-
-export const CODEPEN: EmbedProvider = {
-	name: "codepen",
-	match(url) {
-		if (url.hostname !== "codepen.io") return null;
-		let [user, kind, id] = url.pathname.split("/").filter(Boolean);
-		if (!user || kind !== "pen" || !id) return null;
-		return { user, id };
-	},
-};
-```
+The walk makes no request: `youtube()` reads the video `id` and `start` from the URL. Each
+tag renders through the component registered under its name, which
+[Embed YouTube videos in markdown](/docs/content-and-feeds/youtube-embeds) walks through.
 
 ## Test the order
 
-The order of the visitors is the part of `preparePost` a later edit can break without any one
-plugin failing, so pin it with a test: a pasted URL becomes an embed, and a heading keeps the
-id of what its author typed while its quotes curl:
+The order of the visitors is what a later edit can break without any one plugin failing, so pin
+it with a test:
 
 ```typescript {% title="app/services/content/prepare.test.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -302,27 +191,12 @@ test("embeds pasted URLs and anchors headings before setting them", () => {
 ## Lint content in CI
 
 `lint()` checks a parsed document and returns its problems as data, each a
-`{ rule, message, position }` ordered by where it starts in the source. An empty array means the
-document passed. Every rule runs unless you turn it off:
+`{ rule, message, position }`. Every rule runs unless you turn it off (the rule list is in
+[`@sdxc/markdown`](/api/markdown)), `ids` adds the ids the page has outside the document, and a
+rule of your own goes in `custom`.
 
-| Rule                | Reports                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `code-language`     | a code block with no language, indented code included        |
-| `heading-increment` | a heading more than one level deeper than the one before it  |
-| `single-h1`         | every level-1 heading after the first                        |
-| `image-alt`         | an image, or an `img` element, with empty alternative text   |
-| `empty-link`        | a link, or an `a` element, with an empty `href` or no text   |
-| `broken-anchor`     | a `#fragment` link that matches no id in the document        |
-| `duplicate-id`      | a block whose explicit `id` an earlier block already claimed |
-
-`broken-anchor` resolves a fragment against the ids `headings()` would assign: every id an
-author wrote, then a GitHub slug for each heading without one. `ids` adds the ones the page has
-outside the document, such as a layout's `#comments`. A rule of your own goes in `custom`, keyed
-by its name; it runs once on every node in document order and calls `report` with a message,
-and optionally a position narrower or wider than the node's.
-
-A Vitest test over every post makes the check part of CI, and the failure lists each problem with
-the file and line to open:
+A Vitest test over every post makes the check part of CI, listing each problem with its file and
+line:
 
 ```typescript {% title="app/services/content/posts.test.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -360,9 +234,7 @@ test.each(Object.entries(POSTS))("%s passes the content lint", (file, source) =>
 });
 ```
 
-`single-h1` is off here because the page draws the title from the frontmatter, so a post's body
-may open on its own `#` heading. A `{/* TODO */}` comment is a `comment` node rather than text,
-so a note an author left for editors passes the `no-todo` rule while one in the prose fails it.
+`single-h1` is off here because the page draws the title from the frontmatter.
 
 ## Where to go next
 

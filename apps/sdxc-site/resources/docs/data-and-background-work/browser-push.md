@@ -16,45 +16,13 @@ This guide lets a team member turn on alerts in their browser: a button on the s
 subscribes this browser, the server stores the subscription, and later a failed sync shows up
 as a notification even when the app is closed.
 
-[`@sdxc/web-push`](/api/web-push) holds both halves. Its main entry encrypts a payload for one
-browser (RFC 8291), signs a VAPID token for the push service (RFC 8292), sends one `POST` and
-says what the answer means for the stored subscription. `@sdxc/web-push/browser` subscribes
-from a click. Where subscriptions live, and when one is given up on, stay in your app.
-
-There is no push provider to sign up for. Each browser picks its vendor's push service (Chrome
-uses `fcm.googleapis.com`, Firefox `updates.push.services.mozilla.com`, Safari
-`web.push.apple.com`) and hands you an endpoint on it; your Worker `POST`s there, identified
-only by the key pair you generate below.
+[`@sdxc/web-push`](/api/web-push) holds both halves: its main entry encrypts and signs one
+`POST` to the browser's push service, and `@sdxc/web-push/browser` subscribes from a click.
+There is no provider to sign up for; each browser hands you an endpoint on its vendor's push
+service, and your Worker is identified only by the key pair you generate below.
 
 ```bash
 npm add @sdxc/messaging @sdxc/result @sdxc/validate @sdxc/web-push remix
-```
-
-A subscription travels from the browser to your Worker once, and every notification travels
-back through the browser's push service:
-
-```mermaid {% alt="Web push: the page subscribes through the browser, which registers with the push service and gets an endpoint; the page posts the subscription to the Worker, which saves it; later the Worker posts an encrypted payload with a VAPID token to the push service, removing the subscription on a 404 or 410, or the service worker receives a push event and shows a notification" %}
-sequenceDiagram
-    participant Page
-    participant Browser
-    participant Push as Push service
-    participant Worker as Your Worker
-    participant SW as Service worker
-    Page->>Browser: subscribe with applicationServerKey
-    Browser->>Push: register
-    Push-->>Browser: endpoint
-    Browser-->>Page: subscription (endpoint + keys)
-    Page->>Worker: POST subscription
-    Worker->>Worker: validate and save
-    Note over Page,SW: Later
-    Worker->>Push: POST encrypted payload + VAPID token
-    alt 404 or 410
-        Push-->>Worker: gone
-        Worker->>Worker: remove the row
-    else accepted
-        Push->>SW: push event
-        SW->>SW: showNotification
-    end
 ```
 
 ## Generate the sender's keys
@@ -148,12 +116,9 @@ export const EnablePush = clientEntry(
 );
 ```
 
-A failed `subscribe` answers `unsupported`, `denied` or `failed` and never throws.
-
-<note>
-On iOS and iPadOS, push exists only in a web app added to the Home Screen, which is when
-`isSupported` answers `true`.
-</note>
+A failed `subscribe` answers `unsupported`, `denied` or `failed` and never throws. On iOS and
+iPadOS, push exists only in a web app added to the Home Screen, which is when `isSupported`
+answers `true`.
 
 ## Store the subscription
 
@@ -190,13 +155,9 @@ export default createAction(routes.pushSubscriptions, async (ctx) => {
 ```
 
 `Subscriptions` is your own model, and `ctx.user` the signed-in user your auth middleware
-publishes. `save` upserts on the endpoint, since a browser that subscribes again hands back the
-endpoint it already had, and stores the endpoint, both keys, and `applicationServerKey`, the
-public key the browser subscribed under, as `vapidKey`.
-
-`subscriptionSchema({ allowedHosts: PUSH_SERVICE_HOSTS })` narrows endpoints to the push
-services of Chrome, Firefox, Safari and Edge, at the cost of refusing a browser whose vendor
-adds a new one.
+publishes. `save` upserts on the endpoint and stores both keys and `applicationServerKey`, the
+public key the browser subscribed under, as `vapidKey`. Treat a stored subscription like a
+credential, since it is all anyone needs to notify that browser.
 
 ## Send a notification
 
@@ -258,17 +219,9 @@ async function applyFailure(
 }
 ```
 
-Each stored row also counts its `failures`, which decides when a flaky endpoint is retired.
-
-- `gone` is a `404` or `410`: the browser unsubscribed, so the row goes now.
-- `unauthorized` is a `401` or `403`, which is your VAPID key being refused, never the
-  browser's fault. Keep the row and fix the key.
-- `invalid-vapid` is the same fault caught before any request: keys that do not form a pair,
-  or a `subject` that is neither `mailto:` nor `https:`.
-- `rate-limited`, `unavailable`, `timeout` and `network` are `retryable`; a run of them
-  retires the row, since an endpoint refusing for days is not coming back.
-- `invalid-subscription`, `invalid-options` and `payload-too-large` are answered before any
-  request, so a bad row costs no network call.
+`gone` is a `404` or `410`, meaning the browser unsubscribed, so the row goes now. A run of
+`retryable` failures retires the row too, counted in its `failures`. `unauthorized` is your
+VAPID key being refused, so keep the row and fix the key.
 
 <note>
 A payload holds at most 3,993 bytes once encrypted into the 4,096-byte body every push service
@@ -278,17 +231,11 @@ accepts.
 `topic` replaces an undelivered message with the same topic, so a laptop that was asleep all
 night wakes to one notification, not twenty.
 
-<warning>
-An endpoint plus its keys can notify that browser, so treat a stored subscription like a
-credential. Errors name the push service's host only, so logging one is safe.
-</warning>
-
 ## Send through messaging
 
 An app that already routes alerts through [`@sdxc/messaging`](/api/messaging), as
 [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) shows, adds
-browser push as one more destination. `BrowserPush` sends through `@sdxc/web-push`, which
-`@sdxc/messaging` takes as an optional peer:
+browser push as one more destination:
 
 ```typescript {% title="app/services/notifications/destinations.ts" %}
 import type { Destination } from "@sdxc/messaging";
@@ -304,30 +251,20 @@ export function browserDestination(
 }
 ```
 
-It sends the JSON the service worker above draws: `title`, a plain-text `body` with the
-message's text and fields cut to fit one push, the first link as `url`, the `key` as `tag`,
-`severity` and `timestamp`. The `key` is also the push topic, and a `critical` message goes
-out with high urgency. Failures arrive as `MessagingError` codes: `gone` when the browser
-unsubscribed, `invalid-destination` for a subscription a send refused.
+It sends the JSON the service worker above draws, with the message's first link as `url` and
+its `key` as `tag`, and answers `gone` when the browser unsubscribed.
 
 ## Rotate the keys
 
-A push service refuses a message signed by a key other than the one the browser subscribed
-under, so rotating needs both keys for a while. Store each subscription's
-`applicationServerKey`, then generate a new pair, deploy it as `vapid`, and keep the old one in
-`previous`:
+Rotating needs both keys for a while. Generate a new pair, deploy it as `vapid`, and keep the
+old one in `previous`; a send picks the pair matching each row's stored `applicationServerKey`:
 
 ```typescript
 let push = new WebPush({ vapid: current, previous: [old] });
 ```
 
-1. Pages hand the new public key to `subscribe`, which replaces a subscription made under the
-   old key the next time it runs; the registration route stores the new one.
-2. Once no stored row names the old key, drop it from `previous`.
-
-A send picks the pair whose public key matches the row's `applicationServerKey`, and the
-current pair for a row with none. A row naming a key the sender no longer holds fails
-`invalid-subscription` before any request.
+Pages hand the new public key to `subscribe`, which replaces a subscription made under the old
+key the next time it runs. Once no stored row names the old key, drop it from `previous`.
 
 ## Test without a push service
 

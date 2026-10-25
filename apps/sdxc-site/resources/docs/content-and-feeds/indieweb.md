@@ -18,16 +18,9 @@ under your post. Micropub lets a client you did not write publish to your site. 
 same vocabulary, microformats2: class names on ordinary HTML that say which part of a page is
 the entry, its author and its date.
 
-This guide adds all three to a Remix v3 app. It combines
-[`@sdxc/microformats`](/api/microformats), [`@sdxc/webmention`](/api/webmention) and
-[`@sdxc/micropub`](/api/micropub), with [`@sdxc/jobs`](/api/jobs) running every outbound
-fetch off the request and [`@sdxc/backoff`](/api/backoff) spacing out the retries.
-
-Mastodon and the rest of the fediverse reach your posts through a different protocol,
-ActivityPub, which [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) adds
-beside these. The two meet in one place: a fediverse reply, like or boost reads into the same
-kind, author and content a verified Webmention carries, so both can share the table and the
-moderation queue this guide builds.
+This guide adds all three to a Remix v3 app with [`@sdxc/microformats`](/api/microformats),
+[`@sdxc/webmention`](/api/webmention) and [`@sdxc/micropub`](/api/micropub), with
+[`@sdxc/jobs`](/api/jobs) running every outbound fetch off the request.
 
 ```bash
 npm add @sdxc/backoff @sdxc/jobs @sdxc/markdown @sdxc/microformats @sdxc/micropub \
@@ -78,17 +71,11 @@ export function PostEntry(handle: Handle<PostEntryProps>) {
 ```
 
 `MicroTime` renders a `<time>` whose `datetime` is the ISO instant, so a parser reads an exact
-time while the reader sees your formatted label. `mf` sits in `mix` beside your `css()` mixins
-and appends its classes after theirs.
-
-The parser that reads other people's pages reads yours too, which makes a template test short:
-render the page, then `parse(html, url)` and `readEntry(findItem(document, "h-entry"))` should
-hand back the title and author you rendered.
+time while the reader sees your formatted label.
 
 ## Receive Webmentions
 
-The guide maps three kinds of route: your posts, the Webmention endpoint, and a Micropub
-endpoint that answers both `GET` and `POST`:
+Map your posts, the Webmention endpoint, and a Micropub endpoint that answers `GET` and `POST`:
 
 ```typescript {% title="routes/web.ts" %}
 import { get, post, route } from "remix/routes";
@@ -100,9 +87,8 @@ export default route({
 });
 ```
 
-Advertise the endpoint first, in both places a sender looks. `advertise` from
-`@sdxc/webmention/discover` writes the RFC 8288 `Link` header value for a post's response,
-through [`@sdxc/link-header`](/api/link-header):
+Advertise the endpoint in both places a sender looks. `advertise` writes the `Link` header
+value for a post's response:
 
 ```typescript {% title="app/services/webmention.ts" %}
 import { advertise } from "@sdxc/webmention/discover";
@@ -117,10 +103,8 @@ export function webmentionHeaders(base: URL) {
 ```
 
 Pass it when you render a post, as in
-`ctx.render(<PostPage post={post} />, { headers: webmentionHeaders(ctx.url) })`. The header
-reaches a sender that only reads headers; a `<link>` reaches one that parses the page. Render
-the element in your document layout's `<head>`, where every page carries it, beside the one a
-Micropub client looks for:
+`ctx.render(<PostPage post={post} />, { headers: webmentionHeaders(ctx.url) })`, and render the
+`<link>` elements in your document layout's `<head>`, beside the one a Micropub client looks for:
 
 ```tsx {% title="resources/components/indieweb-links.tsx" %}
 import routes from "~/routes/web";
@@ -135,10 +119,8 @@ export function IndieWebLinks() {
 }
 ```
 
-The endpoint itself does as little as possible. `parseRequest` checks the request in the order
-the specification lists (form-encoded, both URLs present and public, source and target
-different, a target you accept) and fetches nothing. Verification means fetching `source`, a
-URL an anonymous caller chose, so it goes on the queue:
+`parseRequest` validates the request without fetching anything. Verification means fetching
+`source`, a URL an anonymous caller chose, so it goes on the queue:
 
 ```typescript {% title="app/http/controllers/webmention.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -165,13 +147,8 @@ export default createAction(routes.webmention, async (ctx) => {
 });
 ```
 
-The form-data middleware already read the body, so `ctx.formData` is passed in rather than read
-again. `rejected` answers `400` with the reason as text, and `accepted` answers `202`, which is
-what tells the sender its mention is being processed rather than published.
-
-`ctx.jobs` is published by `jobEnqueuer(queue)` from `@sdxc/jobs/router`, given the same queue
-your dispatcher delivers from, so the request writes the message and none of the job's code
-loads in the request path (see
+`rejected` answers `400` with the reason, and `accepted` answers `202`. `ctx.jobs` comes from
+`jobEnqueuer(queue)` in `@sdxc/jobs/router` (see
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)). Declare the jobs
 this guide uses in one map:
 
@@ -196,37 +173,9 @@ export default jobs({
 
 ## Verify in the background
 
-A mention reaches your table in two steps, the request and the job:
-
-```mermaid {% alt="Webmention: the endpoint validates the source and target without fetching anything, answering 400 with a reason or enqueueing the pair and answering 202; the job then fetches the source and saves a pending mention if it links, deletes it if gone or unlinked, retries on timeouts, 5xx or 429, and acknowledges refused hosts, redirects or oversized pages" %}
-sequenceDiagram
-    participant Sender as Sending site
-    participant Endpoint as POST /webmention
-    participant Job as webmentions.verify
-    participant Source as Source page
-    Sender->>Endpoint: POST source and target
-    Endpoint->>Endpoint: parseRequest, fetching nothing
-    alt rejected
-        Endpoint-->>Sender: 400 with the reason
-    else accepted
-        Endpoint-)Job: enqueue the pair
-        Endpoint-->>Sender: 202 Accepted
-    end
-    Job->>Source: GET source, bounded
-    alt linked
-        Job->>Job: saveMention as pending
-    else gone or unlinked
-        Job->>Job: deleteMention
-    else timeout, 5xx or 429
-        Job->>Job: retry on the backoff
-    else refused host, redirects or size
-        Job->>Job: ack
-    end
-```
-
-`verify` fetches the source under bounds (public hosts only, five redirects, one megabyte and
-five seconds by default), checks that it links to the target, and summarizes it from its
-microformats. Key what you store on the pair, since a repeated pair is an update:
+`verify` fetches the source under bounds (public hosts only, limited redirects, size and time),
+checks that it links to the target, and summarizes it from its microformats. Key what you
+store on the pair, since a repeated pair is an update:
 
 ```typescript {% title="app/jobs/webmentions/verify.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -260,35 +209,21 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 });
 ```
 
-A timeout, a broken connection, a `5xx` or a `429` is `retryable`; a refused host, a redirect
-chain past the limit or an oversized body is not, and retrying would get the same answer. A
-retry waits two minutes after the first failure and doubles from there up to an hour, so a
-source that was briefly down is read again quickly and one that stays down is left alone; the
-jitter spreads out retries that failed together. `gone` (the source answered `410`) and
-`unlinked` both mean the mention no longer stands, so both delete it. `USER_AGENT` is a string
-naming your site, such as `Example Webmention (+https://example.com)`, so a publisher can see
-who is fetching.
-
-A `linked` mention carries its `kind` (`reply`, `like`, `repost`, `bookmark` or `mention`), its
-author and its content. `content.html` is already sanitized with the source as its base, so an
-approved reply renders as it stands (in `remix/component`, through `unsafeHTML`); mark each one
-up as an `mf("h-cite")` so the replies under your post are themselves readable microformats.
+A timeout, a `5xx` or a `429` is `retryable`; a refused host or an oversized body is not.
+`gone` (the source answered `410`) and `unlinked` both mean the mention no longer stands, so
+both delete it. A `linked` mention carries its `kind`, author and content, and `content.html`
+is already sanitized, so an approved reply renders as it stands.
 
 <warning>
 Store mentions as pending and show them once you approve them. The endpoint is anonymous, and
 moderation is the one policy the protocol leaves entirely to you.
 </warning>
 
-Responses that arrive over ActivityPub can go through `saveMention` too, since their summary
-carries the same fields.
-
 ## Send Webmentions
 
-When a post is created, updated or deleted, enqueue `jobs.webmentions.send` with its id. The
-send job works out which pages to notify: `outboundLinks` lists the links in the post's HTML
-(other sites only, each once), and `plan` adds every page you notified before that the post no
-longer links to, since the specification asks you to notify a removed link too. It already
-runs inside a job, so it fans out through the dispatcher itself rather than `ctx.jobs`.
+When a post is created, updated or deleted, enqueue `jobs.webmentions.send` with its id.
+`outboundLinks` lists the links in the post's HTML, and `plan` adds every page you notified
+before that the post no longer links to, since a removed link is notified too.
 
 ```typescript {% title="app/jobs/webmentions/send.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
@@ -324,14 +259,12 @@ export default createJobHandler(jobs.webmentions.send, async (ctx) => {
 });
 ```
 
-A deleted post links nowhere, so every past target is notified.
-
 <note>
 Serve `410 Gone` from a deleted post's URL before the send job runs, so each receiver's own
 verification sees the deletion and removes the mention.
 </note>
 
-One delivery per target means a slow endpoint delays nobody else:
+Deliver one job per target, so a slow endpoint delays nobody else:
 
 ```typescript {% title="app/jobs/webmentions/deliver.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -375,25 +308,16 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 });
 ```
 
-`send` discovers the target's endpoint (the `Link` header first, then the first `<link>` or
-`<a>` in the page) and POSTs the pair. The header parse is the same `parse` from
-`@sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It
-answers `{ status: "no-endpoint" }` for a page that takes no mentions, which is an ordinary
-outcome, not a failure. A failure is either a `WebmentionFetchError`, which says itself whether
-it is `retryable`, or a `WebmentionSendError` carrying the status the endpoint answered. A
-receiver is someone else's server, so delivery backs off longer than verification: five minutes,
-doubling to six hours.
-[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
-schedule's options.
+`send` discovers the target's endpoint and POSTs the pair, answering
+`{ status: "no-endpoint" }` for a page that takes no mentions. A failure is either a
+`WebmentionFetchError`, which says whether it is `retryable`, or a `WebmentionSendError`
+carrying the status the endpoint answered.
 
 ## Accept posts over Micropub
 
-A Micropub client finds your endpoint through the `rel="micropub"` link `IndieWebLinks`
-renders, and signs in through IndieAuth, which ends with an access token you verify. The
-`micropub` pair in the route table gives the endpoint both methods.
-
-`parseOperation` decodes a POST in any of the three encodings clients use (form, multipart and
-JSON) into one of four typed operations, and returns the token from wherever it was sent.
+A Micropub client finds your endpoint through the `rel="micropub"` link and signs in through
+IndieAuth, which ends with an access token you verify. `parseOperation` decodes a form,
+multipart or JSON POST into one of four typed operations, plus the token.
 
 <warning>
 Verify the access token and its scopes before you act on anything in the body. A Micropub
@@ -444,14 +368,10 @@ export default createAction(routes.micropub.write, async (ctx) => {
 ```
 
 `verifyToken` is yours: it asks your token endpoint about the token and returns the scopes it
-grants, or `null`. `requiredScopes` names the scopes any one of which authorizes the operation,
-so a draft needs `draft` or `create`. Every response comes from the package: `created` is a
-`201` with `Location`, and `error` writes the status, the JSON body and the
-`WWW-Authenticate` header the specification asks for.
+grants, or `null`. `requiredScopes` names the scopes any one of which authorizes the operation.
 
-A create arrives already reshaped: form fields become microformats2 properties, and `mp-slug`,
-`mp-syndicate-to` and `post-status` are split out into `commands`. It has the shape of an
-`MF2.Item`, so the microformats readers work on it directly:
+A create arrives as microformats2 properties, with `mp-slug` and `post-status` split out into
+`commands`, so the microformats readers work on it directly:
 
 ```typescript {% title="app/services/micropub.ts" %}
 import type { Micropub } from "@sdxc/micropub";
@@ -472,20 +392,17 @@ export function draftFrom(operation: Micropub.Create) {
 }
 ```
 
-Your `createPost` can store what `draftFrom` reads and return the new post's URL, which
-`created` puts in `Location`. `postType` runs Post Type Discovery, so a create with
-`in-reply-to` is a `reply` and one with a name that is not a prefix of its content is an
-`article`. A reply you store this way is also a post whose `send` job notifies the page it
-replies to, which is the loop that makes a conversation across two sites.
+Your `createPost` stores what `draftFrom` reads and returns the new post's URL, which `created`
+puts in `Location`. `postType` runs Post Type Discovery, so a create with `in-reply-to` is a
+`reply`.
 
-The `GET` side answers queries. `parseQuery` reads `q`, and each answer has its own builder:
+The `GET` side answers queries; `parseQuery` reads `q`, and each answer has its own builder:
 
 ```typescript {% title="app/http/controllers/micropub/query.ts" %}
-import { config, error, parseQuery, source, syndicateTo } from "@sdxc/micropub";
+import { config, error, parseQuery, syndicateTo } from "@sdxc/micropub";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { postAsItem } from "~/app/models/posts";
 import { verifyToken } from "~/app/services/indieauth";
 import routes from "~/routes/web";
 
@@ -500,14 +417,9 @@ export default createAction(routes.micropub.query, async (ctx) => {
 
 	switch (query.q) {
 		case "config":
-			return config({ q: ["source", "syndicate-to"] });
+			return config({ q: ["syndicate-to"] });
 		case "syndicate-to":
 			return syndicateTo([]);
-		case "source": {
-			let item = await postAsItem(ctx.db, query.url);
-			if (!item) return error("invalid_request", "No such post");
-			return source(item, query.properties);
-		}
 		default:
 			return error("invalid_request", "Unsupported query");
 	}
@@ -519,14 +431,10 @@ List only the queries you answer in `config({ q })`, since clients treat a missi
 unsupported.
 </note>
 
-`source` writes the post back in the shape a JSON create sends, so a client's
-editor round-trips it.
-
 ## Test it
 
-The endpoint refuses a malformed mention before it reads your database or queues anything, so
-a request through the router proves it is mapped and answering. The Micropub side's one rule of
-your own is how a create becomes a draft, which `parseOperation` lets you test from a plain
+A malformed mention is refused before anything reads your database, so a request through the
+router proves the endpoint is mapped. Test how a Micropub create becomes a draft from a plain
 form post:
 
 ```typescript {% title="app/http/controllers/webmention.test.ts" %}

@@ -5,21 +5,19 @@ section:
     title: Building Remix apps
     order: 4
 order: 15
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to check an uploaded PNG's size before decoding it with `@sdxc/png`"
     - "How to crop an upload square and store a clean copy"
     - "How to draw an identicon from pixels for people with no upload"
 ---
 
-An avatar upload is a file a stranger chose, and the browser's `accept="image/png"` is a
-suggestion. The bytes may not be a PNG at all, may be a few kilobytes that inflate into a
-gigabyte of pixels, or may carry text chunks with a name or a location the uploader never meant
-to publish. This guide checks each of those, stores a square copy holding only pixels, and draws
-a placeholder for every account without an upload.
+An avatar upload is a file a stranger chose. The bytes may not be a PNG, may inflate into a
+gigabyte of pixels, or may carry metadata the uploader never meant to publish. This guide checks
+each of those, stores a square copy holding only pixels, and draws a placeholder for every
+account without an upload.
 
-[`@sdxc/png`](/api/png) decodes and encodes PNG in plain TypeScript over the platform's
-compression streams, with no WebAssembly, so the same code runs in a Worker, Bun and Node.
+[`@sdxc/png`](/api/png) decodes and encodes PNG in plain TypeScript, with no WebAssembly.
 [`@sdxc/file-storage-r2`](/api/file-storage-r2) keeps the stored copies in an R2 bucket, and
 [`@sdxc/crypto`](/api/crypto) hashes an account id into the placeholder's pattern.
 
@@ -29,10 +27,8 @@ npm add @sdxc/crypto @sdxc/file-storage-r2 @sdxc/http @sdxc/png @sdxc/result rem
 
 ## Read the size before decoding
 
-A PNG states its width and height in its first chunk, at a fixed place in the file: eight
-signature bytes, then the `IHDR` chunk's length and type, then two big-endian 32-bit numbers.
-Reading those costs nothing, and it answers whether decoding is safe before any pixel is
-inflated.
+A PNG states its width and height at a fixed place in its first chunk, so reading them answers
+whether decoding is safe before any pixel is inflated.
 
 <warning>
 `decode` refuses an image over 2²⁸ pixels on its own, but that is a gigabyte of RGBA, far more
@@ -105,21 +101,14 @@ function headerSize(bytes: Uint8Array): { width: number; height: number } | null
 }
 ```
 
-A 2048 by 2048 image decodes into 16 MiB of RGBA, which a Worker holds comfortably. `decode`
-then reads every chunk, so a file that passes the header check and is still broken fails here.
-Its `PNGError` carries a `code` worth logging: `crc` for a chunk whose checksum disagrees with
-its contents, `truncated` for a file cut short, `inflate` for corrupt pixel data, `header` for a
-chunk order the specification forbids, and `unsupported` for an unknown critical chunk. The
-person uploading gets one message, since every one of them means the same thing to them.
-
-Every PNG reads back the same way: palettes, grayscale, 16-bit samples and interlaced files all
-arrive as `{ width, height, data }`, 8-bit straight RGBA with the top row first, the layout of
-the web's `ImageData`.
+A 2048 by 2048 image decodes into 16 MiB, which a Worker holds comfortably. A file that passes
+the header check and is still broken fails in `decode`. Every PNG decodes to
+`{ width, height, data }`, 8-bit RGBA with the top row first.
 
 ## Crop it square and store a clean copy
 
-That layout makes pixel work a matter of indexes: pixel `(x, y)` starts at
-`(y * width + x) * 4`. A centred square crop copies one run of bytes per row:
+Pixel `(x, y)` starts at `(y * width + x) * 4`, so a centred square crop copies one run of bytes
+per row:
 
 ```typescript {% title="app/services/avatars/crop-square.ts" %}
 import type { PNG } from "@sdxc/png";
@@ -137,9 +126,8 @@ export function cropSquare(image: PNG.Image): PNG.Image {
 }
 ```
 
-`encode` writes the image back out. It writes the pixels and the `tEXt` entries you pass, and
-nothing else from the original file, so the stored copy carries none of the uploader's metadata.
-An image with no transparent pixel is written as RGB, a quarter smaller before compression:
+`encode` writes only the pixels and the text entries you pass, so the stored copy carries none of
+the uploader's metadata:
 
 ```typescript {% title="app/http/controllers/account/avatar.ts" %}
 import { redirect } from "@sdxc/http/response";
@@ -172,9 +160,8 @@ export default createAction(routes.account.avatar, async (ctx) => {
 });
 ```
 
-`ctx.user` is the signed-in account your auth middleware publishes, and `ctx.formData` is the
-body the `formData()` middleware parsed. A real page re-renders its form with the message; the
-plain response keeps the example on the image. `avatars()` opens the bucket:
+`ctx.user` is the signed-in account your auth middleware publishes. `avatars()` opens the
+bucket:
 
 ```typescript {% title="app/models/avatars.ts" %}
 import type { FileStorage } from "remix/file-storage";
@@ -189,10 +176,8 @@ export function avatars(): FileStorage {
 
 ## Draw a placeholder from pixels
 
-An account without an upload still needs a picture, and one that tells accounts apart reads
-better than a grey silhouette. An identicon is a five-by-five grid mirrored left to right,
-whose cells and colour come from a hash of the account id, so each account always gets the same
-one and no storage is needed:
+An identicon is a five-by-five grid mirrored left to right, whose cells and colour come from a
+hash of the account id, so each account always gets the same one and nothing is stored:
 
 ```typescript {% title="app/services/avatars/identicon.ts" %}
 import type { CryptoError } from "@sdxc/crypto";
@@ -255,10 +240,6 @@ function fillCell(
 }
 ```
 
-The one-cell margin around the grid is the quiet space a round avatar frame crops into. Every
-pixel is opaque, so `encode` writes RGB, and long runs of one colour compress to a file of a few
-hundred bytes.
-
 ## Serve either one
 
 One route answers every avatar: the stored upload when there is one, the identicon otherwise.
@@ -292,13 +273,11 @@ export default createAction(routes.avatar, async (ctx) => {
 ```
 
 `routes.avatar` is a route such as `/avatars/:id.png`; a pattern variable stops at the `.`, so
-`id` arrives without the extension. Five minutes of caching lets a new upload show up soon after
-it is saved.
+`id` arrives without the extension.
 
 ## Test on pixels
 
-Decoding what your code encoded lets a test assert on pixels instead of file bytes, which
-compression makes meaningless to compare:
+Decoding what your code encoded lets a test assert on pixels instead of compressed bytes:
 
 ```typescript {% title="app/services/avatars/identicon.test.ts" %}
 import { decode } from "@sdxc/png";
@@ -320,9 +299,8 @@ test("an identicon is mirrored left to right", async () => {
 });
 ```
 
-The size check runs on the header alone, so a test proves it by rewriting the width a small,
-valid PNG declares. The checksum no longer matches, and the refusal still names the size,
-which shows `decode` never ran:
+A second test rewrites the width a small PNG declares; the refusal names the size, which shows
+`decode` never ran:
 
 ```typescript {% title="app/services/avatars/read-avatar.test.ts" %}
 import { encode } from "@sdxc/png";

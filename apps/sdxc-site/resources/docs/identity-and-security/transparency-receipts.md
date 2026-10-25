@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 16
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to sign a SCITT Signed Statement about a release with an `@sdxc/jwt` key"
     - "How to register it with a Transparency Service and attach the Receipt"
@@ -17,16 +17,14 @@ thing: a vendor whose key leaks, or who is compelled, can sign a second SBOM for
 version and show it to one customer only. SCITT closes that gap with a public log. The issuer
 signs a statement, a Transparency Service appends it to an append-only Merkle tree and answers
 a Receipt, and anyone holding the service's public key checks the statement is in that log
-without asking the service again. A statement that never reached the log has no Receipt to
-show.
+without asking the service again.
 
 This guide signs a statement about each release your app publishes, registers it, ships the
 resulting Transparent Statement beside the release, and verifies one on the consuming side.
-[`@sdxc/scitt`](/api/scitt) implements the SCITT architecture (RFC 9943), COSE Receipts with
-RFC 9162 inclusion proofs (RFC 9942), and a client for the SCITT Reference API. Statements and
-Receipts are COSE_Sign1 messages, built and checked by the `cose` entry of
-[`@sdxc/cbor`](/api/cbor). [`@sdxc/jwt`](/api/jwt) makes the issuer's key pair, and every call
-answers a `Result` from [`@sdxc/result`](/api/result).
+[`@sdxc/scitt`](/api/scitt) implements SCITT (RFC 9943) and COSE Receipts (RFC 9942) with a
+client for the SCITT Reference API, over the COSE support in [`@sdxc/cbor`](/api/cbor).
+[`@sdxc/jwt`](/api/jwt) makes the issuer's key pair, and every call answers a `Result` from
+[`@sdxc/result`](/api/result).
 
 ```bash
 npm add @sdxc/cbor @sdxc/cli @sdxc/jwt @sdxc/result @sdxc/scitt
@@ -35,8 +33,7 @@ npm add @sdxc/cbor @sdxc/cli @sdxc/jwt @sdxc/result @sdxc/scitt
 ## Make an issuer key
 
 The issuer key signs every statement you make, so it is long-lived and kept as a secret. An
-`@sdxc/jwt` key pair already has the shape `signStatement` takes: its `id` becomes the
-statement's `kid` and its JOSE `alg` maps to the COSE algorithm. Generate one from a command,
+`@sdxc/jwt` key pair already has the shape `signStatement` takes. Generate one from a command,
 which runs on your machine:
 
 ```bash
@@ -79,8 +76,7 @@ sdxc run scitt key > issuer.json
 npx wrangler secret put SCITT_ISSUER_KEY < issuer.json
 ```
 
-The Worker imports it with `JWK.importKeyPair`, which answers the `{ id, alg, private }` the
-statement is signed with:
+The Worker imports it with `JWK.importKeyPair`:
 
 ```typescript {% title="app/services/issuer-key.ts" %}
 import { JWK } from "@sdxc/jwt";
@@ -126,10 +122,8 @@ export async function signRelease(version: string, sbom: Uint8Array) {
 }
 ```
 
-The answer is the tagged COSE_Sign1 bytes, ready to register. For a payload too large to
-carry, such as the release tarball, sign its SHA-256 digest with `detached: true`: the
-statement then holds no payload, and a verifier passes the digest it computed as `payload`.
-`claims` adds more CWT claims and `headers` more protected header parameters.
+The answer is the COSE_Sign1 bytes, ready to register. For a payload too large to carry, such
+as the release tarball, sign its SHA-256 digest with `detached: true`.
 
 ## Register it and attach the Receipt
 
@@ -147,11 +141,9 @@ export function transparencyService() {
 }
 ```
 
-`submit` posts the statement to `/entries`. A service that registers at once answers the
-Receipt; one that answers `202` is polled at the `Location` it names, waiting the `Retry-After`
-it sends or backing off with jitter, until the Receipt is ready or `maxAttempts` (10 by
-default) runs out. `attachReceipts` then writes the Receipt into the statement's unprotected
-header, which leaves the issuer's signature valid, and the result is a Transparent Statement:
+`submit` posts the statement and, when the service answers `202`, polls until the Receipt is
+ready. `attachReceipts` writes the Receipt into the statement's unprotected header, which
+leaves the issuer's signature valid, and the result is a Transparent Statement:
 
 ```typescript {% title="app/services/transparency.ts" %}
 import type { TransparencyService } from "@sdxc/scitt";
@@ -175,9 +167,7 @@ your public key, and never calls the service to check it.
 
 <note>
 Registration can wait minutes while the service polls, so call `registerStatement` from a
-background job or your release command, never inside a request. A refusal is a `ServiceError`
-whose `code` is `error-response` with the service's `status`, `title` and `detail`, or
-`pending` when polling ran out; `retryAfter` says when to try again.
+background job or your release command, never inside a request.
 </note>
 
 ## Verify a Transparent Statement
@@ -225,11 +215,8 @@ export async function verifyRelease(bytes: Uint8Array, check: ReleaseCheck) {
 ```
 
 `keys` is the service's key set, which `transparencyService().keys()` reads from
-`/.well-known/scitt-keys`, or a single `CryptoKey`. A Receipt names its key by `kid` or by the
-key's RFC 9679 thumbprint, and Receipts from services you hold no key for are skipped, so a
-statement registered with several services verifies against whichever you trust; at least one
-Receipt must verify. Each one verifies when its inclusion proof leads from the statement's leaf
-hash to a Merkle root the service signed.
+`/.well-known/scitt-keys`, or a single `CryptoKey`. Receipts from services you hold no key for
+are skipped, and at least one Receipt must verify.
 
 <warning>
 A valid statement says only what its issuer claimed about its subject. Compare `subject` with
@@ -242,12 +229,6 @@ The service's keys are the root of trust for every Receipt. Fetch them from the 
 origin, cache them, and review a change of key set before accepting it, the same way you would
 pin the issuer's key.
 </note>
-
-`SCITTError` names what failed: `invalid-signature` when the issuer's signature or a Receipt's
-does not verify, `invalid-proof` when no inclusion proof leads to a signed root, `unknown-key`
-when no Receipt verifies under the keys given, `untrusted-issuer` for a Receipt from another
-service, `missing-claim` and `malformed` for a statement or Receipt that breaks the format, and
-`unsupported-vds` for a log other than RFC9162_SHA256.
 
 ## Test registration and verification
 
@@ -356,9 +337,8 @@ test("a registered release verifies for its own subject only", async () => {
 });
 ```
 
-A log of one entry has a root equal to the entry's leaf hash and an empty inclusion path,
-which is why the mock signs `leafHash(entry)` directly. A real service's Receipt carries the
-path to a larger tree, and `verifyRelease` checks it the same way.
+A log of one entry has a root equal to the entry's leaf hash, which is why the mock signs
+`leafHash(entry)` directly.
 
 ## Where to go next
 

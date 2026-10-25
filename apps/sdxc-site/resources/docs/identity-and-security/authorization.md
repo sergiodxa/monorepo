@@ -14,26 +14,22 @@ outcomes:
 
 Signing someone in answers who is asking. Every route after that asks a second question: may
 this person, on this team, on this plan, do this to that record? This guide answers it from one
-place. It names every ability once, grants them through roles, refuses through guards, and
-checks them in a route, a page, a background job and an MCP tool, with the plan and the
-feature flags read as facts beside the user.
+place: it names every ability once, grants them through roles, refuses through guards, and
+checks them in a route, a page, a background job and an MCP tool.
 
 [`@sdxc/authz`](/api/authz) holds the catalog and the policy and answers every check
-synchronously from facts loaded once per request. Its conditions are
-[`@sdxc/expression`](/api/expression) JSON, and its failures are
-[`@sdxc/result`](/api/result) values. The adapters reach
-[`@sdxc/billing`](/api/billing), [`@sdxc/flags`](/api/flags), [`@sdxc/jobs`](/api/jobs) and
-[`@sdxc/mcp`](/api/mcp), each from its own subpath, so a bundle carries only the adapters it
-imports.
+synchronously from facts loaded once per request. Its adapters for
+[`@sdxc/billing`](/api/billing), [`@sdxc/jobs`](/api/jobs) and [`@sdxc/mcp`](/api/mcp) each
+live on their own subpath, so a bundle carries only the adapters it imports.
 
 ```bash
-npm add @sdxc/authz @sdxc/billing @sdxc/database-middleware @sdxc/flags @sdxc/http @sdxc/jobs \
+npm add @sdxc/authz @sdxc/billing @sdxc/http @sdxc/jobs \
 	@sdxc/lazy-route @sdxc/mcp @sdxc/result remix
 ```
 
-An app from `sdxc create` starts with the catalog, the policy and the request binding this
-guide writes, each empty, and [`sdxc make policy`](/docs/sdxc/make-policy) adds a resource's
-`create`, `read`, `update` and `delete` abilities with their grants:
+An app from `sdxc create` starts with an empty catalog, policy and request binding, and
+[`sdxc make policy`](/docs/sdxc/make-policy) adds a resource's `create`, `read`, `update` and
+`delete` abilities with their grants:
 
 ```bash
 sdxc make policy project
@@ -74,21 +70,18 @@ export default abilities({
 });
 ```
 
-`context<T>(...keys)` types what a check passes and names each key of `T` once. An ability
-without one is a claim, checked with nothing but the person. `fields` lists what an update may
-touch, so a grant can allow some of them and a handler can keep only those from the input.
-`deniedAs: "notFound"` makes every refusal of `project.read` answer as a missing record, so a
-project someone may not see looks like one that does not exist.
-
-The catalog names each ability by its keys, `project.update`, and importing it does no work,
-so route handlers, jobs and components share one module. Its root also answers `list()`, every
-ability in declaration order with its description, for an admin page that explains a role.
+`context<T>(...keys)` types what a check passes; an ability without one is a claim, checked
+with nothing but the person. `fields` lists what an update may touch, so a grant can allow
+some of them. `deniedAs: "notFound"` makes every refusal of `project.read` answer as a missing
+record, so a project someone may not see looks like one that does not exist.
 
 ## Write the policy
 
 The policy says who holds what. Roles only allow, and the only refusals are guards:
 
 ```typescript {% title="app/policies/policy.ts" %}
+import type { BillingFacts } from "@sdxc/authz/facts/billing";
+
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
@@ -96,6 +89,7 @@ import abilities from "~/app/policies/abilities";
 const policy = definePolicy(abilities, {
 	facts: {
 		actor: fact<{ id: string; teamId: string }>(),
+		billing: fact<BillingFacts>(),
 	},
 	conditions: {
 		author: { op: "eq", field: "project.ownerId", path: "actor.id" },
@@ -113,12 +107,22 @@ const policy = definePolicy(abilities, {
 			],
 		},
 		admin: { inherits: ["member"], grants: [allow("*")] },
+		"agent:read": [allow(["agent.read", "project.read"])],
+		"agent:write": [allow(["agent", "project"])],
 	},
 	guards: [
 		deny(["project.read", "project.update", "project.delete"], {
 			id: "other-team",
 			when: { op: "ne", field: "project.teamId", path: "actor.teamId" },
 			as: "notFound",
+		}),
+		deny("reports.export", {
+			id: "plan-reports",
+			when: {
+				op: "not",
+				of: { op: "includes", field: "billing.features", value: "reports" },
+			},
+			reason: "entitlement:reports",
 		}),
 	],
 });
@@ -132,43 +136,32 @@ declare module "@sdxc/authz" {
 export default policy;
 ```
 
-A fact is anything a condition reads beyond the check's own context, here the signed-in
-`actor`. `field` reads a path, and `path` compares it with another path rather than a
-literal. A condition used in more than one grant goes under `conditions` and is referenced
-by name.
+A fact is anything a condition reads beyond the check's own context: the signed-in `actor`,
+and the customer's `billing` entitlements as `{ products, features }`. `field` reads a path,
+and `path` compares it with another path rather than a literal.
 
 Holding two roles is their union, so giving someone another role never takes anything away.
-A member updates the name and description of projects they own, and an admin updates any field
-of any project, because `allow("*")` covers every ability with every field. The guard is what
-keeps a team's projects inside the team, and it refuses an admin too: a guard is the one thing
-no role outranks. `as: "notFound"` makes its refusal answer as a missing project. Grants
-listed under `everyone`, beside `roles`, hold for every principal, a guest included, such as
-reading a published record.
+A member updates the name and description of projects they own, and an admin updates any
+field of any project. The guards are the one thing no role outranks: `other-team` keeps a
+team's projects inside the team, and `plan-reports` refuses an export on a plan without the
+`reports` feature, an admin's included. The `agent:*` roles are the ceilings an agent token is
+bound to, further down.
 
-Nothing compiles when the module loads. The first check compiles the policy once, and
-`policy.compile()` answers a `Result` that names the first mistake by grant: an ability, field,
-role or fact the catalog does not have, a condition reading a context the ability never
-passes, an inheritance cycle, or two grants with one `id`. Call it in a test and a typo fails
-CI rather than a request.
-
-A fact declared `fact<T>({ optional: true })` may be left unbound, as `actor` is for a guest. A
-condition reading one starts with `{ op: "exists", field: "actor" }` inside an outer `all`, and
-the compiler requires it, so a guest is refused cleanly rather than failing the check. When
-people write rules in a form, `parseCondition("ctx.project.ownerId == ctx.actor.id")` reads
-the text form into this JSON.
-
-The `AuthzTypes` block at the end of the module registers the policy, so `ctx.access` and every
-check are typed from it in every controller, job and tool. It names `@sdxc/authz`, the module
-that declares `AuthzTypes`, and keeping it beside the policy means importing the policy is what
-registers it.
+The `AuthzTypes` block registers the policy, so `ctx.access` and every check are typed from it
+in every controller, job and tool. The first check compiles the policy, and
+`policy.compile()` answers a `Result` naming the first mistake (an unknown ability, field,
+role or fact, or an inheritance cycle), so call it in a test and a typo fails CI rather than a
+request.
 
 ## Bind the person on each request
 
 `access()` from `@sdxc/authz/middleware/router` binds the policy to the request's roles and
-facts and publishes it as `ctx.access`. Nothing loads when it runs: a role or fact given as a
-function is read the first time a check needs it, and only once.
+facts and publishes it as `ctx.access`. A role or fact given as a function is read the first
+time a check needs it, and only once, so a route that never checks `reports.export` never
+reads the entitlements:
 
 ```typescript {% title="app/http/middleware/access.ts" %}
+import { fromEntitlements } from "@sdxc/authz/facts/billing";
 import { access } from "@sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
@@ -178,20 +171,18 @@ export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
 	facts: {
 		actor: (ctx) => ({ id: ctx.user.id, teamId: ctx.team.id }),
+		billing: fromEntitlements(),
 	},
 	onDenied: renderDenied,
 });
 ```
 
 <note>
-Install `access()` after your authentication middleware: its role and fact readers read
-`ctx.user`, `ctx.team` and `ctx.membership`, which stand for what yours publishes.
+Install `access()` after your authentication middleware and the billing middleware: its role
+and fact readers read `ctx.user`, `ctx.team` and `ctx.membership`, which stand for what your
+authentication publishes, and `fromEntitlements()` reads through the billing middleware's own
+`entitlements` reader.
 </note>
-
-A later `access()` replaces an earlier one, so the pages, an API and an MCP endpoint can each
-bind their own principal. `load` lists abilities or whole groups to load before the handler
-runs, for a page that checks many of them, and `ctx.access.as({ roles })` answers synchronously for another role over the facts
-already loaded, such as a role per team on one page.
 
 ## Guard a route
 
@@ -237,17 +228,12 @@ export default createAction(routes.projects.update, {
 });
 ```
 
-The loader's answer is published under the ability itself, and `ctx.get(ability)` reads it
-back typed. A loader answering `null` is answered exactly like a `notFound` refusal, so a
-missing project and a hidden one reach the same page. `permittedFields` answers the fields
-this person may change, in the order the ability declares them: `["name", "description"]`
-for a member editing their own project, every field for an admin. `readProjectForm` is your
-own parse of the submitted form, keeping only those fields, so a member who adds
-`visibility` to the form changes nothing.
-
-A claim takes no loader: `requireAbility(abilities.reports.export)` is the whole guard. Every
-decision is counted on the request's log record, a refusal leaves a note naming the ability
-and its cause, and the decision a guard acted on is set as the record's `authz` fields.
+`ctx.get(ability)` reads back what the loader answered, typed. A loader answering `null` is
+answered exactly like a `notFound` refusal, so a missing project and a hidden one reach the
+same page. `permittedFields` answers the fields this person may change, `["name",
+"description"]` for a member editing their own project, and `readProjectForm`, your own form
+parse, keeps only those, so a member who adds `visibility` to the form changes nothing. A
+claim takes no loader: `requireAbility(abilities.reports.export)` is the whole guard.
 
 ## Check inside a handler
 
@@ -289,12 +275,8 @@ export default createAction(routes.projects.show, {
 });
 ```
 
-`can` is typed from the group, `{ create, read, update, delete }`, each a boolean, and each
-ability receives only the context keys it declares. `claims(group)` does the same for a group
-of claims, and both take the whole catalog too, answering every group in one call:
-`ctx.access.claims(abilities)`. For a single check, `can` answers a boolean, `check` the full
-`Decision`, and `authorize` a `Result<void, Forbidden>` whose failure carries the refusal, for
-code that already returns Results.
+`can` is typed from the group, `{ create, read, update, delete }`, each a boolean. For a single
+check, `ctx.access.can` answers a boolean and `authorize` a `Result<void, Forbidden>`.
 
 <note>
 A check never waits. One that reads a fact that has not been loaded, or whose source failed,
@@ -305,10 +287,9 @@ else. Await `ctx.access.load(...)` before checking synchronously, as the handler
 ## Answer refusals
 
 A refusal is plain data: its `cause` is `ungranted`, `outOfScope`, `denied` (a guard, with its
-`reason`) or `error` (with `errors`, each naming the grant and the missing fact or mismatched
-type that left it undecided), and its `as` is `notFound` or `forbidden`. Being plain data, a
-refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it into your app's
-own page:
+`reason`) or `error`, and its `as` is `notFound` or `forbidden`. The `onDenied` responder turns
+it into your app's own page, and sends a refusal from the `plan-reports` guard to the pricing
+page:
 
 ```tsx {% title="app/http/middleware/denied.tsx" %}
 import type { Refusal } from "@sdxc/authz";
@@ -333,150 +314,16 @@ Render the same not-found page an unknown URL gets: a 404 that looks different f
 one tells a stranger the record exists.
 </warning>
 
-Without a responder, a refusal answers a bare `403` or `404`, and `requireAbility(ability, { onDenied })` overrides the responder for one route.
-
-## Gate on the plan
-
-A paid feature is a guard over the customer's entitlements. `@sdxc/authz/facts/billing` binds
-them as a fact, read through the billing middleware's own `entitlements` reader, so the
-request shares one read with `requireEntitlement` and anything else that asks:
-
-```typescript {% title="app/policies/policy.ts" %}
-import type { BillingFacts } from "@sdxc/authz/facts/billing";
-
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
-
-import abilities from "~/app/policies/abilities";
-
-const policy = definePolicy(abilities, {
-	facts: {
-		actor: fact<{ id: string; teamId: string }>(),
-		billing: fact<BillingFacts>(),
-	},
-	// conditions and roles as before
-	guards: [
-		// the other-team guard as before
-		deny("reports.export", {
-			id: "plan-reports",
-			when: {
-				op: "not",
-				of: { op: "includes", field: "billing.features", value: "reports" },
-			},
-			reason: "entitlement:reports",
-		}),
-	],
-});
-
-// the AuthzTypes block and the default export as before
-```
-
-Bind it with `fromEntitlements()` in the `access()` facts, after the billing middleware in
-the chain:
-
-```typescript {% title="app/http/middleware/access.ts" %}
-import { fromEntitlements } from "@sdxc/authz/facts/billing";
-import { access } from "@sdxc/authz/middleware/router";
-
-import policy from "~/app/policies/policy";
-import { renderDenied } from "~/app/http/middleware/denied";
-
-export const teamAccess = access(policy, {
-	roles: (ctx) => [ctx.membership.role],
-	facts: {
-		actor: (ctx) => ({ id: ctx.user.id, teamId: ctx.team.id }),
-		billing: fromEntitlements(),
-	},
-	onDenied: renderDenied,
-});
-```
-
-`BillingFacts` is `{ products, features }`, with `features` listing every feature the snapshot
-grants as `true`, and an account with no snapshot binds two empty lists. The guard refuses an
-admin on the free plan too, and its `reason` is what `renderDenied` above reads to send them
-to the pricing page instead of a 403. Pass a loader, `fromEntitlements((ctx) => …)`, to read a
-snapshot from somewhere other than the billing middleware. The read only happens on a request
-that checks an ability whose grants read `billing`, so every other route costs nothing.
-
-## Switch an ability off with a flag
-
-An operational switch is a guard over a flag. `@sdxc/authz/facts/flags` binds a
-[`@sdxc/flags`](/api/flags) catalog as a fact keyed by its property names, and evaluates only
-the flags some condition reads:
-
-```typescript {% title="app/policies/policy.ts" %}
-import { definePolicy, deny, fact } from "@sdxc/authz";
-
-import abilities from "~/app/policies/abilities";
-
-const policy = definePolicy(abilities, {
-	facts: {
-		// actor and billing as before
-		flags: fact<{ reportsExport: boolean }>(),
-	},
-	guards: [
-		// the other-team and plan-reports guards as before
-		deny("reports.export", {
-			id: "reports-switch",
-			when: { op: "eq", field: "flags.reportsExport", value: false },
-			reason: "switched-off",
-		}),
-	],
-});
-
-// the AuthzTypes block and the default export as before
-```
-
-The fact declares the flags the policy reads, by their property names in your `features`
-catalog. Then add `flags: fromFlags(features)` from `@sdxc/authz/facts/flags` to the
-`access()` facts. It evaluates through the client that `featureFlags()` from
-`@sdxc/flags/middleware/router` publishes, so list that middleware before `access()`, or pass
-`client` to use another. An experiment records exposure only for the flags some rule reads,
-because those are the only ones `fromFlags` evaluates.
-
-Testing `== false` keeps the feature on while the flag answers its default, and the default
-is what a flag system that is down answers. To refuse instead, pass `onError: "missing"`: a
-flag that errored is left out, and a guard reading it refuses with cause `error`. When the
-flag's subject is the team rather than the viewer, pass
-`context: (ctx) => ({ targetingKey: ctx.team.id })`.
-
-A fact these two subpaths do not cover is a `factLoader` from the main entry. It receives the
-fact's `root`, the `paths` under it that the policy reads, and the request or job it loads
-for, and answers a `Result`, so a settings fact can read only the settings some rule names.
+Without a responder, a refusal answers a bare `403` or `404`.
 
 ## Check in a background job
 
-A job has no signed-in user, so its handler binds the subject from its own payload.
-`authz()` from `@sdxc/authz/middleware/dispatcher` publishes `ctx.authz` with the fact
-sources every job shares, added to the dispatcher's chain after flags. With the `JobTypes`
-augmentation from [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), every handler sees
-it typed from the registered policy:
-
-```typescript {% title="app/initializers/dispatcher.ts" %}
-import { authz } from "@sdxc/authz/middleware/dispatcher";
-import { fromFlags } from "@sdxc/authz/facts/flags";
-import { database } from "@sdxc/database-middleware/jobs";
-import featureFlags from "@sdxc/flags/middleware/dispatcher";
-import { createJobDispatcher } from "@sdxc/jobs";
-
-import policy from "~/app/policies/policy";
-import { queue } from "~/app/initializers/queue";
-import { openDatabase } from "~/app/initializers/database";
-import { features, flags } from "~/app/initializers/flags";
-import { logger } from "~/app/initializers/logger";
-
-export const dispatcher = createJobDispatcher({
-	logger,
-	queue,
-	middleware: [
-		database(openDatabase),
-		featureFlags(flags),
-		authz(policy, { facts: { flags: fromFlags(features) } }),
-	] as const,
-});
-```
-
-The handler reads the member the job acts for and binds them. Facts it passes replace the
-shared ones by root:
+A job has no signed-in user, so its handler binds the subject from its own payload. Add
+`authz(policy)` from `@sdxc/authz/middleware/dispatcher` to the dispatcher's middleware in
+`app/initializers/dispatcher.ts`; it publishes `ctx.authz`, typed from the registered policy
+through the `JobTypes` augmentation from
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron). The handler reads
+the member the job acts for and binds them:
 
 ```typescript {% title="app/jobs/export-report.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
@@ -514,35 +361,14 @@ Check again inside the job, at run time: a check made when the job was queued sa
 about a downgrade or a removal since, and the job's own check is what refuses that export.
 </warning>
 
-`Entitlements.facts` is your own read answering `{ products, features }`;
-`fromEntitlements()` reads a request, so a job hands the fact in directly. Decisions are
-counted on the run's log record, as they are on a request's.
+`Entitlements.facts` is your own read answering `{ products, features }`, since
+`fromEntitlements()` reads a request.
 
 ## Scope an agent
 
 An agent token acts for a person, and it should never do more than its scope allows nor more
-than its holder may. Declare a role per scope and bind it as `within`, a ceiling every allowed
-check must also pass:
-
-```typescript {% title="app/policies/policy.ts" %}
-import { allow, definePolicy } from "@sdxc/authz";
-
-import abilities from "~/app/policies/abilities";
-
-const policy = definePolicy(abilities, {
-	// facts, conditions and guards as before
-	roles: {
-		// viewer, member and admin as before
-		"agent:read": [allow(["agent.read", "project.read"])],
-		"agent:write": [allow(["agent", "project"])],
-	},
-});
-
-// the AuthzTypes block and the default export as before
-```
-
-The MCP route binds its own `access()`, with the token's scope as the ceiling and the agent
-claims loaded up front:
+than its holder may. The MCP route binds its own `access()`, with the token's scope as the
+`within` ceiling, an `agent:*` role every allowed check must also pass:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import type { RequestContext } from "remix/router";
@@ -576,13 +402,13 @@ router.map(
 ```
 
 `router` is the one `createWebRouter` builds, and `requireToken` is your token middleware,
-publishing the token and its holder. A check outside the ceiling refuses with cause `outOfScope`, and a viewer's write-scoped token still cannot
-write, because the holder's roles must allow it too.
+publishing the token and its holder. A check outside the ceiling refuses with cause
+`outOfScope`, and a viewer's write-scoped token still cannot write, because the holder's
+roles must allow it too.
 
-`@sdxc/authz/mcp` connects the abilities to the tools. `guard(claim)` returns the tool's
-`available` predicate, so one claim hides the tool from `tools/list` and refuses a call to it.
-`requireToolAbility` is tool middleware that checks an ability against the call's validated
-arguments. Here `toolset.renameProject` is a tool declared with a `projectId` and a `name`:
+`@sdxc/authz/mcp` connects the abilities to the tools. `guard(claim)` hides the tool from
+`tools/list` and refuses a call to it, and `requireToolAbility` checks an ability against the
+call's validated arguments:
 
 ```typescript {% title="app/mcp/tools/rename-project.ts" %}
 import type { InputOf } from "@sdxc/mcp";
@@ -618,11 +444,9 @@ export default createTool(toolset.renameProject, {
 });
 ```
 
-`guard` is synchronous, which is why the route lists `abilities.agent` under `load`.
-`field: "name"` checks that one field, so a member renaming their own project passes. A
-`notFound` refusal, or a loader answering `null`, reaches the model as the tool's own error
-with the `notFound` message, so a project on another team reads like one that does not exist,
-and any other refusal answers as `ForbiddenError` with the guard's reason.
+`guard` is synchronous, which is why the route lists `abilities.agent` under `load`. A
+`notFound` refusal reaches the model as the tool's own error with the `notFound` message, so a
+project on another team reads like one that does not exist.
 
 ## Test the policy as a table
 
@@ -630,8 +454,6 @@ and any other refusal answers as `ForbiddenError` with the guard's reason.
 cases is the whole test:
 
 ```typescript {% title="app/policies/policy.test.ts" %}
-import type { Decision } from "@sdxc/authz";
-
 import { testAccess } from "@sdxc/authz/testing";
 import { expect, test } from "vitest";
 
@@ -642,17 +464,10 @@ const ACTOR = { id: "u1", teamId: "t1" };
 const OWN = { id: "p1", teamId: "t1", ownerId: "u1" };
 const OTHER_TEAM = { id: "p2", teamId: "t2", ownerId: "u2" };
 
-const DECISIONS: Decision[] = [];
-
 function accessAs(role: string) {
 	return testAccess(policy, {
 		roles: [role],
-		facts: {
-			actor: ACTOR,
-			billing: { products: [], features: [] },
-			flags: { reportsExport: true },
-		},
-		onDecision: (decision) => DECISIONS.push(decision),
+		facts: { actor: ACTOR, billing: { products: [], features: [] } },
 	});
 }
 
@@ -683,15 +498,8 @@ test("the free plan refuses report exports", () => {
 ```
 
 A required fact a case leaves out fails the conditions reading it, so a case that forgot one
-refuses visibly instead of passing. `onDecision` records every decision the table reaches, and
-a last test asserting `policy.coverage(DECISIONS)` answers `success([])` names every grant no
-case matched, until the table reaches them all; a grant without an `id` is named by its
-position, like `roles.member.1`. `testAccess` throws the `AuthzError` of a policy that does
-not compile, which fails the test that bound it.
-
-To review a change to the policy, `diffPolicies(before, after, cases)` from
-`@sdxc/authz/testing` decides each case under both and answers the ones whose decisions differ. `policy.definition` is the policy as plain
-JSON, so the previous version can be derived from it, or kept beside it.
+refuses visibly instead of passing, and `testAccess` throws for a policy that does not
+compile.
 
 ## Where to go next
 
@@ -699,4 +507,4 @@ JSON, so the previous version can be derived from it, or kept beside it.
   authentication that tells `access()` who is asking.
 - [Expose your app over MCP](/docs/operations-and-testing/mcp-server) — the tools an agent's
   scope hides and refuses.
-- [`@sdxc/authz`](/api/authz) — every option, the decision shapes, and `factLoader`.
+- [`@sdxc/authz`](/api/authz) — every option, the decision shapes, and the flag and custom fact loaders.

@@ -13,14 +13,13 @@ outcomes:
 ---
 
 A domain that lapses takes everything on it down at once: the site stops resolving, mail
-bounces, and after the redemption period anyone can register the name. The date it happens is
-public. Every registry publishes it, along with the domain's status, registrar and nameservers,
-over RDAP, the Registration Data Access Protocol: JSON over HTTPS, one server per registry,
-found through a bootstrap file IANA maintains.
+bounces, and after the redemption period anyone can register the name. Every registry
+publishes the date, with the domain's status and registrar, over RDAP: JSON over HTTPS, one
+server per registry, found through a bootstrap file IANA maintains.
 
-This guide reads that data and turns it into an expiry monitor. [`@sdxc/rdap`](/api/rdap) finds
-the registry and looks the domain up. [`@sdxc/cache`](/api/cache) keeps the bootstrap file
-between requests. [`@sdxc/jobs`](/api/jobs) runs the lookups on a cron trigger, and
+This guide turns that data into an expiry monitor. [`@sdxc/rdap`](/api/rdap) finds the registry
+and looks the domain up, [`@sdxc/cache`](/api/cache) keeps the bootstrap file between requests,
+[`@sdxc/jobs`](/api/jobs) runs the lookups on a cron trigger, and
 [`@sdxc/backoff`](/api/backoff) spaces out the retries when a registry has a bad hour.
 
 ```bash
@@ -30,9 +29,8 @@ npm add @sdxc/backoff @sdxc/cache @sdxc/jobs @sdxc/rdap @sdxc/result remix
 ## Build the client
 
 An `RDAP` client is configured once with a cache and a user agent. The cache holds IANA's
-bootstrap file, the map from each TLD to its registry's server, so a lookup costs one request to
-the registry rather than two. The user agent goes out on every request, and it is how a registry
-that rate-limits identifies who to contact:
+bootstrap file, so a lookup costs one request rather than two, and the user agent tells a
+registry that rate-limits who to contact:
 
 ```typescript {% title="app/initializers/rdap.ts" %}
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
@@ -45,10 +43,7 @@ export const rdap = new RDAP({
 });
 ```
 
-The constructor stores its options and does no work, so the client is safe to build at module
-scope. A fetched bootstrap copy is trusted for a day, and an older copy keeps serving when IANA
-cannot be reached. `bootstrapTtl`, `timeout` and `maxBytes` change those bounds, and `servers`
-points a TLD at a registry IANA does not list yet.
+The constructor does no work, so the client is safe to build at module scope.
 
 ## Look up a domain
 
@@ -81,22 +76,10 @@ for the names registered with it, so a name below one answers `not-found`. An ap
 knows a zone's apex, from a custom-domain setup or an imported zone file, has the right name.
 </warning>
 
-Dates arrive as epoch milliseconds: `expiresAt`, `registeredAt` and `updatedAt`, each `null` when
-the registry publishes no such event. `status` holds EPP status codes in their usual spelling,
-such as `clientTransferProhibited` or `pendingDelete`. `document` keeps the registry's response
-as sent for any field the model leaves out. A contact field the registry withheld under RFC 9537
-reads as `null`, and `isRedacted(domain, "registrant.email")` tells it apart from one the
-registry never had, so a view can say "hidden by the registry".
-
-<note>
-Some ccTLD registries publish no expiry at all, so plan for a domain whose date stays unknown.
-</note>
-
-`related: true` is for `.com` and `.net`, whose registries hold the dates and link to the
-registrar's own RDAP server for the rest. The client follows that link and fills in the
-registrar's name, IANA id and abuse email where the registry left them empty. The registry's dates
-and statuses always stand, and a registrar server that fails leaves the registry's answer as it
-was.
+Dates arrive as epoch milliseconds, `null` when the registry publishes none; some ccTLD
+registries publish no expiry at all, so plan for a date that stays unknown. `status` holds EPP
+status codes such as `pendingDelete`. `related: true` follows `.com` and `.net` registries to
+the registrar's own RDAP server to fill in the registrar's details.
 
 ## Decide what a lookup means
 
@@ -190,14 +173,8 @@ export function expiryOutcome(
 
 A failed lookup classifies the stored date again, so a domain inside its warning window keeps
 reporting `expiring` while its registry is down. The retry starts an hour out and grows to a day,
-and a `rate-limited` failure carries the registry's `Retry-After` in `retryAfter`, which wins when
-it is longer. An unavailable name is asked about again a week later, in case its TLD gains an
-RDAP service.
-
-Every `RDAPError` carries a `code` and a `retryable` flag. `rate-limited`, `server-error`,
-`timeout`, `network` and `bootstrap-unavailable` are retryable. `invalid-response`, `too-large`
-and `refused` are not, though a registry that answers garbage today may be fixed tomorrow, which
-is why the backoff above treats every outage alike and caps at a day.
+unless a `rate-limited` failure's `retryAfter` is longer. An unavailable name is asked about
+again a week later.
 
 ## Alert before it lapses
 
@@ -229,14 +206,8 @@ export function needsAlert(patch: ExpiryPatch, now: number) {
 }
 ```
 
-`EPP_STATUSES` lists every status the package names, for a settings page that lets people pick
-their own. A status outside it is kept as the registry wrote it, so a registry's own extension
-still reaches your code.
-
-<note>
 A retry inside the same day can reach the same reminder twice, so store the day you last
 alerted beside the domain and skip a second alert on it.
-</note>
 
 ## Sweep on a schedule
 
@@ -245,12 +216,9 @@ Registries rate-limit without documenting the limits, and a sweep that sends a h
 lookups at once finds Verisign's.
 </warning>
 
-The sweep groups its domains by registry with `rdap.server`, runs each group two at a time,
-and lets different registries run side by side. The bootstrap
-file is read once per client, so the grouping costs no extra requests.
-
-Declare the job with an hourly trigger. Each domain is looked up once a day, and the hourly tick
-is what lets a retry come back in an hour rather than a day:
+The sweep groups its domains by registry with `rdap.server`, which costs no extra requests, and
+runs each group two at a time. Declare the job with an hourly trigger: each domain is looked up
+once a day, and the hourly tick lets a retry come back in an hour:
 
 ```typescript {% title="app/jobs/index.ts" %}
 import { job, jobs } from "@sdxc/jobs";
@@ -311,20 +279,14 @@ async function inTurns<T>(items: T[], size: number, run: (item: T) => Promise<vo
 }
 ```
 
-`Domains` is your own table: `due` returns up to 200 rows whose `nextCheckAt` has passed, each a
-`TrackedDomain` holding its `id`, `name` and the `ExpiryState` fields, and `recordExpiry` writes a
-patch to its row. A new row starts with `nextCheckAt` at zero, so the next tick looks it up.
-`alertExpiry` is where the notification goes out, by email or to a chat channel. The limit keeps
-one tick inside the dispatcher's timeout, and whatever is left over waits for the next tick.
-
-Map the handler on the dispatcher and add `0 * * * *` to the Worker's cron triggers, as
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) sets up. `ctx.db`
-comes from the job middleware that guide installs.
+`Domains` is your own model: `due` returns up to 200 rows whose `nextCheckAt` has passed, which
+keeps one tick inside the dispatcher's timeout, and `alertExpiry` sends the notification by
+email or to a chat channel. Map the handler and add `0 * * * *` to the Worker's cron triggers,
+as [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) sets up.
 
 ## Test the decisions
 
-`expiryOutcome` takes a `Result` and a time, so the outage rules are tested without a registry.
-An `RDAPError` is built with the code and the fields that code fills:
+`expiryOutcome` takes a `Result` and a time, so the outage rules are tested without a registry:
 
 ```typescript {% title="app/services/domains/expiry.test.ts" %}
 import { RDAPError } from "@sdxc/rdap";

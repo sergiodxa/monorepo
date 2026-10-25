@@ -14,18 +14,16 @@ outcomes:
 
 An inbox someone works through all day earns keys: `j` and `k` to move between messages,
 `e` to archive, `⌘K` to jump to search, and `?` to show what the keys are. This guide adds
-those to a Remix v3 page with [`@sdxc/ui`](/api/ui): the `keymap()` mixin binds them, the
-key-combo helpers print each hint in the glyphs of the keyboard in front of the reader,
-`ShortcutList` lays out the help panel, and an `Announcer` tells a screen reader what each
-keystroke did.
+those to a Remix v3 page with [`@sdxc/ui`](/api/ui): `keymap()` binds them, `keyComboGlyphs`
+prints each hint in the reader's key caps, `ShortcutList` lays out the help panel, and an
+`Announcer` tells a screen reader what each keystroke did.
 
 ```bash
 npm add @sdxc/u @sdxc/ui @sdxc/user-agent remix
 ```
 
-Every shortcut presses something already on the page. Each message is a link and each has
-an Archive button inside a form, so the page works by `Tab` and pointer with no script, and
-the keys are a faster path to the same controls.
+Every shortcut presses something already on the page, so the page works by `Tab` and pointer
+with no script, and the keys are a faster path to the same controls.
 
 ## Write each combo once
 
@@ -43,19 +41,15 @@ export const INBOX_SHORTCUTS = [
 ] as const;
 ```
 
-`mod` is Command on Apple keyboards and Control everywhere else, which is what most
-shortcuts mean. `ctrl` and `cmd` each name only their own key, for the rare binding that
-really is Control on a Mac. A bare character names the character typed, so `"?"` matches
-whatever Shift produced it, `"J"` and `"j"` are two different bindings, and a character
-combo never fires while Control, Alt or Command is held. Any other combo matches exactly
-the modifiers it lists, so `"mod+k"` stays quiet on `⌘⇧K`.
+`mod` is Command on Apple keyboards and Control everywhere else. A bare character names the
+character typed, so `"?"` matches whatever Shift produced it, and any other combo matches
+exactly the modifiers it lists, so `"mod+k"` stays quiet on `⌘⇧K`.
 
 ## Print hints in the reader's key caps
 
-`keyComboGlyphs(combo, apple)` turns a combo into the caps to draw, in press order:
-`["⌘", "K"]` on a Mac and `["Ctrl", "K"]` elsewhere. Which keyboard the reader has is in
-the request, so the controller answers it once and the first paint already shows the right
-glyphs:
+`keyComboGlyphs(combo, apple)` turns a combo into the caps to draw: `["⌘", "K"]` on a Mac and
+`["Ctrl", "K"]` elsewhere. The controller reads the platform from the request, so the first
+paint already shows the right glyphs, and the island receives it as a prop:
 
 ```tsx {% title="app/http/controllers/inbox.tsx" %}
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
@@ -74,14 +68,11 @@ export default createAction(routes.inbox, async (ctx) => {
 });
 ```
 
-The answer travels to the island as a prop, so hydration keeps the same glyphs the server
-drew.
-
 ## Bind the keys
 
-`keymap(bindings)` is a mixin: it listens on the document for as long as its host is
-mounted, and runs the first binding a keystroke matches. Put it on the element that wraps
-everything the keys act on. The island holding the list is that element here:
+`keymap(bindings)` is a mixin that listens on the document while its host is mounted and runs
+the first binding a keystroke matches. Put it on the element that wraps everything the keys act
+on. The same island renders the shortcuts panel with `ShortcutList` and announces each archive:
 
 ```tsx {% title="resources/components/inbox.tsx" %}
 import type { Handle } from "remix/component";
@@ -215,9 +206,7 @@ export const Inbox = clientEntry(
 ```
 
 A matched keystroke is default-prevented, so `⌘K` focuses the search field instead of the
-browser's own address bar search. The latest map passed is the one a keystroke runs, so a
-binding can read state set up in the component, and the mixin attaches its listener once
-the host is in a document: on the server it renders nothing extra.
+browser's own search.
 
 ## Know when the keys stand down
 
@@ -236,70 +225,21 @@ Render the shortcuts panel inside the keymap's host. A modal opened elsewhere on
 keeps its keys to itself, while the panel, rendered inside the host, still answers them.
 </note>
 
-`Escape` closes the panel through the native `<dialog>`, and the Keyboard shortcuts button
-opens the same panel by pointer.
+## List the shortcuts and announce what a key did
 
-For a single combo that only opens or closes one dialog or popover, `hotkey(combo)` on that
-element is enough: `<dialog mix={[hotkey("mod+k")]}>` toggles it from anywhere on the
-page.
+`ShortcutList` is a native `<dl>` pairing each action with a `<kbd>` per key, and `keys` takes
+the caps `keyComboGlyphs` formats. The panel and the bindings both read `INBOX_SHORTCUTS`'
+combo strings, so the printed hint follows a changed shortcut on every keyboard.
 
-## List the shortcuts
-
-`ShortcutList` is a native `<dl>` in two columns: each `ShortcutList.Item` pairs the action
-with a `<kbd>` per key, and every key run lines up on the right edge, so the panel reads
-down one line. `keys` takes the caps already formatted, which is where `keyComboGlyphs`
-fits; a combo with nothing to translate, such as `"?"`, prints as written.
-
-The panel draws from `INBOX_SHORTCUTS` and the bindings name the same combo strings, so
-changing a shortcut is one edit to the list and one to the binding beside it, and the
-printed hint follows on every keyboard.
-
-## Announce what a key did
-
-Archiving by key removes a row with no visible confirmation, and a screen reader hears
-nothing at all. The island owns an `Announcer` and renders its current message into a
-visually hidden `role="status"` region. `hold: 1200` keeps each message current for 1.2
-seconds and then moves to the next on its own, so pressing `e` three times in a row is
-heard as three separate announcements in order. Without `hold`, the queue moves only when
-your code calls `next()` or `dismiss(id)`.
-
-`announce(text, "assertive")` moves a message ahead of the polite ones already queued, for
-something the person has to hear now, such as a failed archive.
-
-## Bind outside a component
-
-Where the bindings come from a `ref` callback or plain script, `bindKeymap` takes the same
-map and follows the same stand-down rules:
-
-```typescript {% title="resources/scripts/reader-shortcuts.ts" %}
-import { bindKeymap } from "@sdxc/ui/mixins";
-
-export function bindReaderKeys(scope: Element, signal: AbortSignal) {
-	bindKeymap(
-		document,
-		{
-			n: () =>
-				document.querySelector<HTMLAnchorElement>("a[rel=next]")?.click(),
-			p: () =>
-				document.querySelector<HTMLAnchorElement>("a[rel=prev]")?.click(),
-		},
-		{ signal, scope },
-	);
-}
-```
-
-Aborting `signal` removes the listener. `scope` plays the host's part: a dialog inside it
-answers the bindings, and every other dialog keeps its keys.
-
-To match a combo in a handler of your own, `matchesKeyCombo(event, "mod+enter")` answers
-whether a keystroke is exactly that combo, and `isTypingTarget(event.target)` whether it
-was aimed at a field.
+Archiving by key removes a row with no visible confirmation, so the island renders its
+`Announcer`'s current message into a visually hidden `role="status"` region. `hold: 1200` keeps
+each message for 1.2 seconds before moving to the next, so pressing `e` three times is heard as
+three announcements in order.
 
 ## Test the hints per keyboard
 
-The controller decides the key caps from the request, and the island renders on the server
-with the panel inside it, so one request per platform proves each reader sees their own
-glyphs. `migrate()` prepares the in-memory database, as
+The island renders on the server with the panel inside it, so one request per platform proves
+each reader sees their own glyphs. `migrate()` prepares the in-memory database, as
 [Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
 
 ```typescript {% title="app/http/controllers/inbox.test.tsx" %}
