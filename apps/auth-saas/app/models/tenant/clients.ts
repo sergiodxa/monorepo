@@ -72,6 +72,9 @@ export const clients = table({
 		disabled_at: c.integer().nullable(),
 		include_permissions: c.boolean().default(false),
 		id_token_signed_response_alg: c.enum(["ES256", "RS256"] as const).default("ES256"),
+		jwks: c.json().nullable(),
+		jwks_uri: c.text().nullable(),
+		require_pushed_authorization_requests: c.boolean().default(false),
 	},
 });
 
@@ -98,6 +101,17 @@ export type ClientSecretRow = TableRow<typeof clientSecrets>;
  * `id_token_signed_response_alg`); a client that states none gets ES256.
  */
 export type IdTokenSignedResponseAlg = "ES256" | "RS256";
+
+/**
+ * The public keys a client signs its request objects with (RFC 7517 JWK Set). Each key
+ * carries only public members, so the set is safe to hand back on every read.
+ */
+export interface ClientJwks {
+	keys: Record<string, string | string[]>[];
+}
+
+/** JWK members that hold private or symmetric key material, refused in a client's key set. */
+const PRIVATE_JWK_MEMBERS = ["d", "p", "q", "dp", "dq", "qi", "oth", "k"];
 
 /** Whether a client holds a secret at all: a confidential one does, a public one never. */
 export type ClientKind = "confidential" | "public";
@@ -195,6 +209,42 @@ export function redirectUriMatches(registered: string, requested: string): boole
 	);
 }
 
+/** Why a client's key set or key set URL was refused at write time. */
+export type JwksValidationFailureReason =
+	| "both-given"
+	| "no-keys"
+	| "missing-kty"
+	| "private-key"
+	| "insecure-uri";
+
+/**
+ * Validates the keys a client verifies its request objects with: an inline key set of
+ * public keys, each naming its `kty`, or an `https` URL serving one, never both
+ * (RFC 7591 §2).
+ */
+function validateClientKeys(
+	jwks: ClientJwks | null,
+	jwksUri: string | null,
+): { ok: true } | { ok: false; reason: JwksValidationFailureReason } {
+	if (jwks !== null && jwksUri !== null) return { ok: false, reason: "both-given" };
+
+	if (jwks !== null) {
+		if (jwks.keys.length === 0) return { ok: false, reason: "no-keys" };
+		for (let key of jwks.keys) {
+			if (typeof key.kty !== "string") return { ok: false, reason: "missing-kty" };
+			if (PRIVATE_JWK_MEMBERS.some((member) => member in key)) {
+				return { ok: false, reason: "private-key" };
+			}
+		}
+	}
+
+	if (jwksUri !== null && tryParseUrl(jwksUri)?.protocol !== "https:") {
+		return { ok: false, reason: "insecure-uri" };
+	}
+
+	return { ok: true };
+}
+
 /** Whether an auth method matches what a client of this kind may present. */
 function isAuthMethodValidForKind(method: TokenEndpointAuthMethod, kind: ClientKind): boolean {
 	if (kind === "public") return method === "none";
@@ -209,6 +259,8 @@ interface ClientRecordInput {
 	grantTypes: string[];
 	responseTypes: string[];
 	tokenEndpointAuthMethod: TokenEndpointAuthMethod;
+	jwks: ClientJwks | null;
+	jwksUri: string | null;
 }
 
 /** The refusals {@link registerClient} and {@link updateClient} share, from validating the record. */
@@ -227,7 +279,8 @@ export type ClientRecordValidationFailure =
 	  }
 	| { ok: false; reason: "invalid-grant-type"; value: string }
 	| { ok: false; reason: "invalid-response-type"; value: string }
-	| { ok: false; reason: "invalid-auth-method"; method: TokenEndpointAuthMethod; kind: ClientKind };
+	| { ok: false; reason: "invalid-auth-method"; method: TokenEndpointAuthMethod; kind: ClientKind }
+	| { ok: false; reason: "invalid-jwks"; detail: JwksValidationFailureReason };
 
 /** Validates every redirect URI, grant type, response type and auth method in one record. */
 function validateClientRecord(
@@ -272,6 +325,9 @@ function validateClientRecord(
 		};
 	}
 
+	let keys = validateClientKeys(input.jwks, input.jwksUri);
+	if (!keys.ok) return { ok: false, reason: "invalid-jwks", detail: keys.reason };
+
 	return { ok: true };
 }
 
@@ -293,6 +349,12 @@ export interface ClientRecord {
 	/** Whether minting adds a `permissions` claim to this client's tokens, alongside the `roles` claim every client receives. */
 	includePermissions: boolean;
 	idTokenSignedResponseAlg: IdTokenSignedResponseAlg;
+	/** The keys this client's request objects verify against, held inline. */
+	jwks: ClientJwks | null;
+	/** Where this client serves the keys its request objects verify against. */
+	jwksUri: string | null;
+	/** Whether this client may start an authorization request only through the PAR endpoint (RFC 9126 §6). */
+	requirePushedAuthorizationRequests: boolean;
 }
 
 /** Maps a stored row's snake_case columns to the API's camelCase record. */
@@ -313,6 +375,9 @@ function toClientRecord(row: ClientRow): ClientRecord {
 		disabledAt: row.disabled_at,
 		includePermissions: row.include_permissions,
 		idTokenSignedResponseAlg: row.id_token_signed_response_alg as IdTokenSignedResponseAlg,
+		jwks: (row.jwks as ClientJwks | null) ?? null,
+		jwksUri: row.jwks_uri ?? null,
+		requirePushedAuthorizationRequests: row.require_pushed_authorization_requests ?? false,
 	};
 }
 
@@ -355,6 +420,9 @@ async function liveSecretsFor(
 let ClientKindSchema = s.enum_(["confidential", "public"] as const);
 let AuthMethodSchema = s.enum_(["client_secret_basic", "client_secret_post", "none"] as const);
 let IdTokenAlgSchema = s.enum_(["ES256", "RS256"] as const);
+let JwksSchema = s.object({
+	keys: s.array(s.record(s.string(), s.union([s.string(), s.array(s.string())]))),
+});
 
 export interface RegisterClientInput {
 	name: string;
@@ -368,6 +436,12 @@ export interface RegisterClientInput {
 	requireConsent: boolean;
 	/** @default "ES256" */
 	idTokenSignedResponseAlg?: IdTokenSignedResponseAlg;
+	/** @default null */
+	jwks?: ClientJwks | null;
+	/** @default null */
+	jwksUri?: string | null;
+	/** @default false */
+	requirePushedAuthorizationRequests?: boolean;
 }
 
 export type RegisterClientResult =
@@ -386,6 +460,9 @@ let RegisterClientSchema = s.object({
 	tokenEndpointAuthMethod: AuthMethodSchema,
 	requireConsent: s.boolean(),
 	idTokenSignedResponseAlg: s.optional(IdTokenAlgSchema),
+	jwks: s.optional(s.nullable(JwksSchema)),
+	jwksUri: s.optional(s.nullable(s.string())),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
 });
 
 /**
@@ -402,8 +479,10 @@ export async function registerClient(
 	input: RegisterClientInput,
 ): Promise<RegisterClientResult> {
 	let parsed = s.parse(RegisterClientSchema, input);
+	let jwks = parsed.jwks ?? null;
+	let jwksUri = parsed.jwksUri ?? null;
 
-	let validated = validateClientRecord(parsed);
+	let validated = validateClientRecord({ ...parsed, jwks, jwksUri });
 	if (!validated.ok) return validated;
 
 	let now = Date.now();
@@ -421,6 +500,9 @@ export async function registerClient(
 		token_endpoint_auth_method: parsed.tokenEndpointAuthMethod,
 		require_consent: parsed.requireConsent,
 		id_token_signed_response_alg: parsed.idTokenSignedResponseAlg ?? "ES256",
+		jwks,
+		jwks_uri: jwksUri,
+		require_pushed_authorization_requests: parsed.requirePushedAuthorizationRequests ?? false,
 		created_at: now,
 		updated_at: now,
 		disabled_at: null,
@@ -457,6 +539,12 @@ export interface UpdateClientInput {
 	requireConsent: boolean;
 	/** Keeps the client's current algorithm when omitted. */
 	idTokenSignedResponseAlg?: IdTokenSignedResponseAlg;
+	/** Keeps the client's current key set when omitted; `null` clears it. */
+	jwks?: ClientJwks | null;
+	/** Keeps the client's current key set URL when omitted; `null` clears it. */
+	jwksUri?: string | null;
+	/** Keeps the client's current setting when omitted. */
+	requirePushedAuthorizationRequests?: boolean;
 }
 
 export type UpdateClientResult =
@@ -478,6 +566,9 @@ let UpdateClientSchema = s.object({
 	tokenEndpointAuthMethod: AuthMethodSchema,
 	requireConsent: s.boolean(),
 	idTokenSignedResponseAlg: s.optional(IdTokenAlgSchema),
+	jwks: s.optional(s.nullable(JwksSchema)),
+	jwksUri: s.optional(s.nullable(s.string())),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
 });
 
 /**
@@ -499,7 +590,10 @@ export async function updateClient(
 	if (!existing) return { ok: false, reason: "not-found" };
 	if (existing.kind !== parsed.kind) return { ok: false, reason: "kind-immutable" };
 
-	let validated = validateClientRecord(parsed);
+	let jwks = parsed.jwks === undefined ? (existing.jwks as ClientJwks | null) : parsed.jwks;
+	let jwksUri = parsed.jwksUri === undefined ? existing.jwks_uri : parsed.jwksUri;
+
+	let validated = validateClientRecord({ ...parsed, jwks, jwksUri });
 	if (!validated.ok) return validated;
 
 	await db.update(
@@ -516,6 +610,10 @@ export async function updateClient(
 			require_consent: parsed.requireConsent,
 			id_token_signed_response_alg:
 				parsed.idTokenSignedResponseAlg ?? existing.id_token_signed_response_alg,
+			jwks,
+			jwks_uri: jwksUri,
+			require_pushed_authorization_requests:
+				parsed.requirePushedAuthorizationRequests ?? existing.require_pushed_authorization_requests,
 			updated_at: Date.now(),
 		},
 	);

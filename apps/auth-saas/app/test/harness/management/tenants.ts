@@ -36,6 +36,7 @@ import {
 } from "~/app/http/controllers/management/tenants/members";
 import { createTenantMembersInviteAction } from "~/app/http/controllers/management/tenants/members-invite";
 import { createTenantMfaPolicySetAction } from "~/app/http/controllers/management/tenants/mfa-policy";
+import { createTenantParPolicySetAction } from "~/app/http/controllers/management/tenants/par-policy";
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/management/tenants/session-policy";
 import { createTenantSessionPolicySetAction } from "~/app/http/controllers/management/tenants/set-session-policy";
@@ -120,6 +121,7 @@ export function buildTenantsRouter(
 	router.map(routes.tenantDomainsRemove, createTenantDomainsRemoveAction(controllerOptions));
 
 	router.map(routes.tenantMfaPolicySet, createTenantMfaPolicySetAction(controllerOptions));
+	router.map(routes.tenantParPolicySet, createTenantParPolicySetAction(controllerOptions));
 
 	router.map(routes.tenantSessionPolicySet, createTenantSessionPolicySetAction(controllerOptions));
 	router.map(

@@ -382,6 +382,7 @@ import * as Connections from "~/app/models/tenant/connections";
 import * as Consent from "~/app/models/tenant/consent";
 import { hasAnotherCredential } from "~/app/models/tenant/credentials";
 import * as DeviceAuthorization from "~/app/models/tenant/device-authorization";
+import * as DPoPProofs from "~/app/models/tenant/dpop-proofs";
 import { applyEntitlements, entitlementEnforcement } from "~/app/models/tenant/entitlements";
 import * as MagicLink from "~/app/models/tenant/magic-link";
 import { mailSendEnvelopes } from "~/app/models/tenant/mail-rate-limit";
@@ -396,6 +397,7 @@ import {
 import * as Organizations from "~/app/models/tenant/organizations";
 import * as Passkeys from "~/app/models/tenant/passkeys";
 import * as Passwords from "~/app/models/tenant/passwords";
+import * as PushedAuthorization from "~/app/models/tenant/pushed-authorization";
 import * as Roles from "~/app/models/tenant/roles";
 import * as SamlConnections from "~/app/models/tenant/saml-connections";
 import * as SamlSignIn from "~/app/models/tenant/saml-sign-in";
@@ -452,6 +454,7 @@ const settings = table({
 		concurrent_session_limit: c.integer().nullable(),
 		sessions_after_credential_change: c.enum(["revoke-others", "revoke-all"] as const).nullable(),
 		magic_link_jit_subject_creation: c.boolean().default(false),
+		require_pushed_authorization_requests: c.boolean().default(false),
 		created_at: c.integer(),
 	},
 });
@@ -1153,6 +1156,38 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 			}
 			return { ok: true } as const;
 		});
+	}
+
+	/**
+	 * Sets whether this tenant accepts authorization requests only through the PAR
+	 * endpoint (RFC 9126 §5), for every client whatever its own setting.
+	 *
+	 * @param input - Whether to require pushed authorization requests from now on.
+	 * @returns Success, once the setting is written.
+	 */
+	async setPushedAuthorizationRequestPolicy(input: {
+		required: boolean;
+	}): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
+			let row = await this.#settings();
+			if (row) {
+				await this.#db.update(
+					settings,
+					{ tenant_id: row.tenant_id },
+					{ require_pushed_authorization_requests: input.required },
+				);
+				this.#settingsRow = null;
+			}
+			return { ok: true } as const;
+		});
+	}
+
+	/** Whether this tenant accepts authorization requests only through the PAR endpoint. */
+	async #requiresPushedAuthorizationRequests(): Promise<boolean> {
+		let row = await this.#settings();
+		return row?.require_pushed_authorization_requests ?? false;
 	}
 
 	/**
@@ -1931,7 +1966,17 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 			}
 
 			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await PushedAuthorization.sweepExpiredPushedAuthorizationRequests(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
 				let { more } = await DeviceAuthorization.sweepDeviceAuthorizations(this.#db);
+				if (!more) break;
+			}
+
+			for (let iteration = 0; iteration < 20; iteration++) {
+				let { more } = await DPoPProofs.sweepExpiredDPoPProofs(this.#db);
 				if (!more) break;
 			}
 
@@ -3596,8 +3641,33 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
+			let [issuer, requirePushedAuthorizationRequests] = await Promise.all([
+				this.#issuer(),
+				this.#requiresPushedAuthorizationRequests(),
+			]);
+			return Authorization.beginAuthorization(this.#db, {
+				...input,
+				issuer,
+				requirePushedAuthorizationRequests,
+			});
+		});
+	}
+
+	/**
+	 * Authenticates a client and stores the authorization request it pushed under a
+	 * one-time `request_uri` (RFC 9126), validated exactly as `/authorize` would.
+	 *
+	 * @param input - The client's credentials as the token endpoint reads them, every posted form member, and the clock.
+	 * @returns The `request_uri` and its lifetime, or the OAuth error the request was refused with.
+	 */
+	async pushAuthorizationRequest(
+		input: Omit<PushedAuthorization.PushAuthorizationRequestInput, "issuer">,
+	): Promise<WithCost<PushedAuthorization.PushAuthorizationRequestResult>> {
+		await this.#migrated;
+
+		return this.#withCost(async () => {
 			let issuer = await this.#issuer();
-			return Authorization.beginAuthorization(this.#db, { ...input, issuer });
+			return PushedAuthorization.pushAuthorizationRequest(this.#db, { ...input, issuer });
 		});
 	}
 
@@ -3738,6 +3808,18 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Records a DPoP proof this tenant accepted, so every Worker verifying for the tenant
+	 * accepts each proof once (RFC 9449 §11.1).
+	 *
+	 * @param input - The proof's key thumbprint and `jti`, when it lapses, and the clock.
+	 * @returns Whether the proof was new.
+	 */
+	async claimDPoPProof(input: DPoPProofs.ClaimDPoPProofInput): Promise<boolean> {
+		await this.#migrated;
+		return DPoPProofs.claimDPoPProof(this.#db, input);
+	}
+
+	/**
 	 * Rotates a refresh token into a fresh token set, refusing a second
 	 * presentation of the same token by revoking its whole family and ending the
 	 * session behind it.
@@ -3798,11 +3880,17 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 		await this.#migrated;
 
 		return this.#withCost(async () => {
-			let [issuer, hasDeviceGrant] = await Promise.all([
+			let [issuer, hasDeviceGrant, requirePushedAuthorizationRequests] = await Promise.all([
 				this.#issuer(),
 				this.#isEntitled(DeviceAuthorization.DEVICE_GRANT_FEATURE),
+				this.#requiresPushedAuthorizationRequests(),
 			]);
-			return Metadata.publishMetadata(this.#db, { ...input, issuer, hasDeviceGrant });
+			return Metadata.publishMetadata(this.#db, {
+				...input,
+				issuer,
+				hasDeviceGrant,
+				requirePushedAuthorizationRequests,
+			});
 		});
 	}
 

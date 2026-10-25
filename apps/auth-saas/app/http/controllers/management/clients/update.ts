@@ -75,7 +75,12 @@ export function createClientsUpdateAction(options: ManagementControllerOptions) 
 			);
 			if (!patched.ok) return patched.response;
 
-			let result = await ctx.tenantStub.updateClient({ clientId, ...patched.next });
+			let result = await ctx.tenantStub.updateClient({
+				clientId,
+				...patched.next,
+				jwks: patched.next.jwks ?? null,
+				jwksUri: patched.next.jwksUri ?? null,
+			});
 			if (!result.ok) return updateClientFailure(result);
 
 			return json(result.client, { status: 200 });

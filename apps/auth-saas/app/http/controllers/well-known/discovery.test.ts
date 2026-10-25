@@ -76,6 +76,38 @@ describe("GET /.well-known/openid-configuration", () => {
 		expect(body).not.toHaveProperty("device_authorization_endpoint");
 	});
 
+	test("advertises pushed authorization requests and request objects in both documents", async () => {
+		let router = buildRouter();
+
+		for (let path of [
+			"/.well-known/openid-configuration",
+			"/.well-known/oauth-authorization-server",
+		]) {
+			let body = (await (await router.fetch(tenantRequest(path))).json()) as Record<
+				string,
+				unknown
+			>;
+			expect(body.pushed_authorization_request_endpoint).toBe(`${ISSUER}/oauth/par`);
+			expect(body).not.toHaveProperty("require_pushed_authorization_requests");
+			expect(body.request_parameter_supported).toBe(true);
+			expect(body.request_uri_parameter_supported).toBe(false);
+			expect(body.request_object_signing_alg_values_supported).toEqual([
+				"ES256",
+				"RS256",
+				"Ed25519",
+			]);
+		}
+	});
+
+	test("publishes require_pushed_authorization_requests once the tenant requires PAR", async () => {
+		await tenantDO.setPushedAuthorizationRequestPolicy({ required: true });
+
+		let response = await buildRouter().fetch(tenantRequest("/.well-known/openid-configuration"));
+		let body = (await response.json()) as Record<string, unknown>;
+
+		expect(body.require_pushed_authorization_requests).toBe(true);
+	});
+
 	test("answers 304 to a client whose ETag still matches", async () => {
 		let router = buildRouter();
 		let first = await router.fetch(tenantRequest("/.well-known/openid-configuration"));

@@ -2190,6 +2190,49 @@
                       "ES256",
                       "RS256"
                     ]
+                  },
+                  "jwks": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "keys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "keys"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "jwksUri": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "requirePushedAuthorizationRequests": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -2551,6 +2594,49 @@
                       "ES256",
                       "RS256"
                     ]
+                  },
+                  "jwks": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "keys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "keys"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "jwksUri": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "requirePushedAuthorizationRequests": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -2616,6 +2702,49 @@
                       "ES256",
                       "RS256"
                     ]
+                  },
+                  "jwks": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "keys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "keys"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "jwksUri": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "requirePushedAuthorizationRequests": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -7445,6 +7574,82 @@
         ]
       }
     },
+    "/tenants/{tenantId}/par-policy": {
+      "post": {
+        "operationId": "tenantParPolicySet",
+        "summary": "Set the pushed authorization request policy",
+        "description": "When required, /authorize accepts only a request_uri the PAR endpoint minted, for every client. A client can also require it for itself.",
+        "tags": [
+          "Sign-in policies"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "required": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "required"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The policy was set"
+          },
+          "400": {
+            "description": "This API version is not published; The request did not pass validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/UnsupportedApiVersionProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedProblem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "tenant:write"
+            ]
+          }
+        ]
+      }
+    },
     "/tenants/{tenantId}/session-policy": {
       "post": {
         "operationId": "tenantSessionPolicySet",
@@ -9474,6 +9679,49 @@
               "ES256",
               "RS256"
             ]
+          },
+          "jwks": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "keys"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jwksUri": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requirePushedAuthorizationRequests": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -9491,7 +9739,10 @@
           "updatedAt",
           "disabledAt",
           "includePermissions",
-          "idTokenSignedResponseAlg"
+          "idTokenSignedResponseAlg",
+          "jwks",
+          "jwksUri",
+          "requirePushedAuthorizationRequests"
         ]
       },
       "ClientSummary": {

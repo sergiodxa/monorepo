@@ -26,6 +26,7 @@ export default route({
 	token: post("/oauth/token"),
 	register: post("/oauth/register"),
 	deviceAuthorization: post("/oauth/device_authorization"),
+	pushedAuthorizationRequest: post("/oauth/par"),
 	apiKeysIntrospect: post("/api-keys/introspect"),
 	authorize: get("/authorize"),
 	hostedSignInShow: get("/u/sign-in"),

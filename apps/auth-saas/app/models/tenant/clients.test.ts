@@ -16,7 +16,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { RegisterClientInput } from "~/app/models/tenant/clients";
+import type { JwksValidationFailureReason, RegisterClientInput } from "~/app/models/tenant/clients";
 
 import { readAuditPage } from "~/app/models/tenant/audit-events";
 import {
@@ -260,6 +260,63 @@ describe("idTokenSignedResponseAlg", () => {
 	});
 });
 
+describe("jwks, jwksUri and requirePushedAuthorizationRequests", () => {
+	/** A public EC key, the shape a client registers to sign request objects with. */
+	const PUBLIC_KEY = {
+		kty: "EC",
+		crv: "P-256",
+		x: "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+		y: "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+	};
+
+	test("registers a client with neither, holding no keys and not requiring PAR", async () => {
+		let { client } = await createTestClient();
+
+		expect(client.jwks).toBeNull();
+		expect(client.jwksUri).toBeNull();
+		expect(client.requirePushedAuthorizationRequests).toBe(false);
+	});
+
+	test("registers an inline key set, or a key set URL, and the PAR requirement", async () => {
+		let { client: inline } = await createTestClient({
+			jwks: { keys: [PUBLIC_KEY] },
+			requirePushedAuthorizationRequests: true,
+		});
+		let { client: byUrl } = await createTestClient({
+			jwksUri: "https://client.example.com/jwks.json",
+		});
+
+		expect(inline.jwks).toEqual({ keys: [PUBLIC_KEY] });
+		expect(inline.requirePushedAuthorizationRequests).toBe(true);
+		expect(byUrl.jwksUri).toBe("https://client.example.com/jwks.json");
+	});
+
+	test.each([
+		["both-given", { jwks: { keys: [PUBLIC_KEY] }, jwksUri: "https://client.example.com/jwks" }],
+		["no-keys", { jwks: { keys: [] } }],
+		["missing-kty", { jwks: { keys: [{ crv: "P-256" }] } }],
+		["private-key", { jwks: { keys: [{ ...PUBLIC_KEY, d: "private" }] } }],
+		["insecure-uri", { jwksUri: "http://client.example.com/jwks.json" }],
+	] satisfies [JwksValidationFailureReason, Partial<RegisterClientInput>][])(
+		"refuses %s",
+		async (detail, overrides) => {
+			let result = await registerClient(db, baseInput(overrides));
+
+			expect(result).toEqual({ ok: false, reason: "invalid-jwks", detail });
+		},
+	);
+
+	test("an update keeps the key set when omitted and clears it when given null", async () => {
+		let { client } = await createTestClient({ jwks: { keys: [PUBLIC_KEY] } });
+
+		let kept = await updateClient(db, { ...baseInput(), clientId: client.id });
+		let cleared = await updateClient(db, { ...baseInput(), clientId: client.id, jwks: null });
+
+		expect(kept.ok && kept.client.jwks).toEqual({ keys: [PUBLIC_KEY] });
+		expect(cleared.ok && cleared.client.jwks).toBeNull();
+	});
+});
+
 describe("updateClient", () => {
 	test("replaces the whole editable record in one call", async () => {
 		let created = await createTestClient();
@@ -295,6 +352,9 @@ describe("updateClient", () => {
 				disabledAt: null,
 				includePermissions: false,
 				idTokenSignedResponseAlg: "ES256",
+				jwks: null,
+				jwksUri: null,
+				requirePushedAuthorizationRequests: false,
 			},
 		});
 	});

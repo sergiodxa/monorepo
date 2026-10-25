@@ -12,13 +12,17 @@ import * as s from "remix/data-schema";
 import type {
 	ClientRecord,
 	ClientRecordValidationFailure,
+	JwksValidationFailureReason,
 	RedirectUriValidationFailureReason,
 } from "~/app/models/tenant/clients";
 
 import { CLIENT_BODY_SCHEMA } from "~/app/http/openapi/clients";
 import { managementProblem } from "~/app/http/problem";
 
-/** Projects a client's record onto {@link CLIENT_BODY_SCHEMA}, the resource a merge patch edits. */
+/**
+ * Projects a client's record onto {@link CLIENT_BODY_SCHEMA}, the resource a merge patch
+ * edits. An unset key set is left out, since a merge patch writes no `null` member.
+ */
 export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIENT_BODY_SCHEMA> {
 	return {
 		name: client.name,
@@ -31,6 +35,9 @@ export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIEN
 		tokenEndpointAuthMethod: client.tokenEndpointAuthMethod,
 		requireConsent: client.requireConsent,
 		idTokenSignedResponseAlg: client.idTokenSignedResponseAlg,
+		...(client.jwks ? { jwks: client.jwks } : {}),
+		...(client.jwksUri ? { jwksUri: client.jwksUri } : {}),
+		requirePushedAuthorizationRequests: client.requirePushedAuthorizationRequests,
 	};
 }
 
@@ -61,7 +68,16 @@ function redirectUriDetail(reason: RedirectUriValidationFailureReason): string {
 	return "must use https, unless its host is a loopback address.";
 }
 
-/** Maps every redirect URI, grant type, response type and auth method refusal onto its own `problem+json` response. */
+/** Renders a key set refusal as the sentence a validation failure's `/jwks` issue carries. */
+function jwksDetail(reason: JwksValidationFailureReason): string {
+	if (reason === "both-given") return "Set jwks or jwksUri, not both.";
+	if (reason === "no-keys") return "jwks must hold at least one key.";
+	if (reason === "missing-kty") return "Every key in jwks must name its kty.";
+	if (reason === "private-key") return "jwks may hold only public keys.";
+	return "jwksUri must be an https URL.";
+}
+
+/** Maps every redirect URI, grant type, response type, auth method and key set refusal onto its own `problem+json` response. */
 export function clientRecordValidationFailure(result: ClientRecordValidationFailure): Response {
 	switch (result.reason) {
 		case "invalid-redirect-uri":
@@ -83,6 +99,19 @@ export function clientRecordValidationFailure(result: ClientRecordValidationFail
 		case "invalid-auth-method":
 			return managementProblem("invalidAuthMethod", {
 				detail: `"${result.method}" is not valid for a ${result.kind} client.`,
+			});
+		case "invalid-jwks":
+			return managementProblem("validationFailed", {
+				detail: "The request body did not pass validation.",
+				extensions: {
+					errors: [
+						{
+							pointer: result.detail === "insecure-uri" ? "/jwksUri" : "/jwks",
+							code: "invalid",
+							message: jwksDetail(result.detail),
+						},
+					],
+				},
 			});
 	}
 }

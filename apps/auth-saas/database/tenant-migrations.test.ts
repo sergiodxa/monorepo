@@ -67,6 +67,7 @@ describe("runMigrations", () => {
 			"0035-magic-link-attempt-uniformity",
 			"0036-client-id-token-alg",
 			"0037-idempotency-keys",
+			"0038-pushed-authorization-requests",
 		]);
 	});
 
@@ -175,6 +176,7 @@ describe("runMigrations", () => {
 			{ id: "0035-magic-link-attempt-uniformity", applied_at: expect.any(Number) },
 			{ id: "0036-client-id-token-alg", applied_at: expect.any(Number) },
 			{ id: "0037-idempotency-keys", applied_at: expect.any(Number) },
+			{ id: "0038-pushed-authorization-requests", applied_at: expect.any(Number) },
 		]);
 	});
 

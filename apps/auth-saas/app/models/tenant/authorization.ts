@@ -22,6 +22,11 @@ import type { StepUpScreen } from "~/app/models/tenant/totp";
 
 import { clients, redirectUriMatches } from "~/app/models/tenant/clients";
 import { evaluateConsent } from "~/app/models/tenant/consent";
+import {
+	redeemPushedAuthorizationRequest,
+	requiresPushedAuthorizationRequests,
+} from "~/app/models/tenant/pushed-authorization";
+import { verifyRequestObject } from "~/app/models/tenant/request-objects";
 import { sessions } from "~/app/models/tenant/sessions";
 import { describeStepUpScreen } from "~/app/models/tenant/totp";
 import { isClientIdUrl, resolveCimdClient } from "~/app/services/tenant/client-id-metadata";
@@ -160,7 +165,7 @@ export type AuthorizationOutcome =
 	| { kind: "step-up"; interactionId: string; screen: StepUpScreen };
 
 /** The request once every redirect-class rule has cleared it, independent of where it came from. */
-interface ValidatedRequest {
+export interface ValidatedRequest {
 	clientId: string;
 	redirectUri: string;
 	responseType: string;
@@ -186,7 +191,7 @@ function withQueryParams(uri: string, params: Record<string, string | null | und
 }
 
 /** The verified target every redirect-class outcome answers through, once one exists. */
-interface RedirectTarget {
+export interface RedirectTarget {
 	redirectUri: string;
 	state: string | null;
 }
@@ -480,74 +485,83 @@ async function decide(db: Database, ctx: DecisionContext): Promise<Authorization
 	);
 }
 
-let BeginAuthorizationSchema = s.object({
-	query: s.record(s.string(), s.string()),
-	sessionIds: s.array(s.string()),
-	now: s.number(),
-	issuer: s.string(),
-});
+/**
+ * Why an authorization request failed validation: `target` is the verified redirect URI
+ * and `state` once the client and redirect URI cleared, so the caller can answer through
+ * it, and `null` before then, when the error has nowhere safe to go but the browser.
+ */
+export interface RequestValidationFailure {
+	error: string;
+	description: string;
+	target: RedirectTarget | null;
+}
 
-export interface BeginAuthorizationInput {
-	query: Record<string, string>;
-	sessionIds: string[];
+export interface ValidateAuthorizationRequestInput {
+	/** The authorization parameters, from the query, a pushed request, or a request object. */
+	parameters: Record<string, string>;
 	now: number;
-	/** The tenant's own issuer, carried on every redirect back to the client as `iss`. */
-	issuer: string;
+}
+
+/** The request once every rule cleared it, or the first rule that refused it. */
+export type ValidateAuthorizationRequestResult =
+	| { ok: true; request: ValidatedRequest }
+	| { ok: false; failure: RequestValidationFailure };
+
+/** A failure with no verified redirect target yet. */
+function unverified(error: string, description: string): ValidateAuthorizationRequestResult {
+	return { ok: false, failure: { error, description, target: null } };
 }
 
 /**
- * Validates an `/authorize` request end to end and answers with one outcome: an error
- * rendered directly when there is no verified redirect target yet to answer through, an
- * error or a code redirected onto that target once there is, or a parked interaction for
+ * Runs every rule an authorization request must clear — client, redirect URI, response
+ * type, scope ceiling, PKCE, `prompt` and `max_age` — in the order that decides whether a
+ * failure may be redirected. `/authorize` and the PAR endpoint share it, so a pushed
+ * request is held to exactly what a direct one is.
  *
  * @param db - The tenant's database.
- * @param input - The request's raw query parameters, the caller's candidate session ids, and the clock to validate and decide against.
- * @returns The outcome this request reaches on its own, with no round trip still owed.
+ * @param input - The authorization parameters and the clock a client document is resolved against.
+ * @returns The validated request, or the failure and whether it has a verified target.
  */
-export async function beginAuthorization(
+export async function validateAuthorizationRequest(
 	db: Database,
-	input: BeginAuthorizationInput,
-): Promise<AuthorizationOutcome> {
-	let parsed = s.parse(BeginAuthorizationSchema, input);
-	let query = parsed.query;
+	input: ValidateAuthorizationRequestInput,
+): Promise<ValidateAuthorizationRequestResult> {
+	let query = input.parameters;
 
 	let clientId = query.client_id;
-	if (!clientId) return render("invalid_request", "client_id is required.");
+	if (!clientId) return unverified("invalid_request", "client_id is required.");
 
-	let client = await resolveAuthorizingClient(db, clientId, parsed.now);
-	if (!client) return render("invalid_client", "This application is not registered.");
+	let client = await resolveAuthorizingClient(db, clientId, input.now);
+	if (!client) return unverified("invalid_client", "This application is not registered.");
 	if (client.disabledAt !== null) {
-		return render("invalid_client", "This application has been disabled.");
+		return unverified("invalid_client", "This application has been disabled.");
 	}
 
 	let requestedRedirectUri = query.redirect_uri;
-	if (!requestedRedirectUri) return render("invalid_request", "redirect_uri is required.");
+	if (!requestedRedirectUri) return unverified("invalid_request", "redirect_uri is required.");
 
 	let registeredUris = client.redirectUris;
 	let redirectVerified = registeredUris.some((registered) =>
 		redirectUriMatches(registered, requestedRedirectUri),
 	);
 	if (!redirectVerified) {
-		return render("invalid_request", "redirect_uri does not match a registered value.");
+		return unverified("invalid_request", "redirect_uri does not match a registered value.");
 	}
 
 	let state = query.state ?? null;
 	let target: RedirectTarget = { redirectUri: requestedRedirectUri, state };
+	let refuse = (error: string, description: string): ValidateAuthorizationRequestResult => ({
+		ok: false,
+		failure: { error, description, target },
+	});
 
 	let responseType = query.response_type;
 
 	if (responseType !== "code") {
-		return redirectError(
-			target,
-			parsed.issuer,
-			"unsupported_response_type",
-			"Only the authorization code flow is supported.",
-		);
+		return refuse("unsupported_response_type", "Only the authorization code flow is supported.");
 	}
 	if (!client.responseTypes.includes("code")) {
-		return redirectError(
-			target,
-			parsed.issuer,
+		return refuse(
 			"unauthorized_client",
 			"This application is not authorized to use the authorization code flow.",
 		);
@@ -556,9 +570,7 @@ export async function beginAuthorization(
 	let requestedScopes = (query.scope ?? "").split(/\s+/).filter(Boolean);
 	let ceiling = client.scopes;
 	if (requestedScopes.some((scope) => !ceiling.includes(scope))) {
-		return redirectError(
-			target,
-			parsed.issuer,
+		return refuse(
 			"invalid_scope",
 			"One or more requested scopes are not allowed for this application.",
 		);
@@ -567,59 +579,172 @@ export async function beginAuthorization(
 	let codeChallenge = query.code_challenge;
 	let codeChallengeMethod = query.code_challenge_method;
 	if (!codeChallenge || codeChallengeMethod !== "S256") {
-		return redirectError(
-			target,
-			parsed.issuer,
-			"invalid_request",
-			"A code_challenge using the S256 method is required.",
-		);
+		return refuse("invalid_request", "A code_challenge using the S256 method is required.");
 	}
 
 	let promptTokens = query.prompt ? query.prompt.split(/\s+/).filter(Boolean) : [];
 	let hasUnknownPromptValue = promptTokens.some((token) => !PROMPT_VALUES.has(token));
 	if (hasUnknownPromptValue || (promptTokens.includes("none") && promptTokens.length > 1)) {
-		return redirectError(
-			target,
-			parsed.issuer,
-			"invalid_request",
-			"prompt carries an invalid combination of values.",
-		);
+		return refuse("invalid_request", "prompt carries an invalid combination of values.");
 	}
 
 	let maxAge: number | null = null;
 	if (query.max_age !== undefined) {
 		if (!/^\d+$/.test(query.max_age)) {
-			return redirectError(
-				target,
-				parsed.issuer,
-				"invalid_request",
-				"max_age must be a non-negative integer.",
-			);
+			return refuse("invalid_request", "max_age must be a non-negative integer.");
 		}
 		maxAge = Number(query.max_age);
 	}
 
 	let acrValues = query.acr_values ? query.acr_values.split(/\s+/).filter(Boolean) : [];
 
-	let request: ValidatedRequest = {
-		clientId,
-		redirectUri: requestedRedirectUri,
-		responseType,
-		scopes: requestedScopes,
-		state,
-		nonce: query.nonce ?? null,
-		codeChallenge,
-		codeChallengeMethod,
-		promptTokens,
-		maxAge,
-		loginHint: query.login_hint ?? null,
-		acrValues,
+	return {
+		ok: true,
+		request: {
+			clientId,
+			redirectUri: requestedRedirectUri,
+			responseType,
+			scopes: requestedScopes,
+			state,
+			nonce: query.nonce ?? null,
+			codeChallenge,
+			codeChallengeMethod,
+			promptTokens,
+			maxAge,
+			loginHint: query.login_hint ?? null,
+			acrValues,
+		},
 	};
+}
+
+let BeginAuthorizationSchema = s.object({
+	query: s.record(s.string(), s.string()),
+	sessionIds: s.array(s.string()),
+	now: s.number(),
+	issuer: s.string(),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
+});
+
+export interface BeginAuthorizationInput {
+	query: Record<string, string>;
+	sessionIds: string[];
+	now: number;
+	/** The tenant's own issuer, carried on every redirect back to the client as `iss`, and the audience a request object names. */
+	issuer: string;
+	/**
+	 * Whether the tenant accepts authorization requests only through the PAR endpoint.
+	 *
+	 * @default false
+	 */
+	requirePushedAuthorizationRequests?: boolean;
+}
+
+/** The authorization parameters a request carries, or the error to render for it. */
+type ResolvedParameters =
+	| { ok: true; parameters: Record<string, string> }
+	| { ok: false; error: string; description: string };
+
+/**
+ * Finds the parameters an `/authorize` call actually carries: a pushed request its
+ * `request_uri` redeems (RFC 9126), a signed request object (RFC 9101), or the query
+ * itself. With either of the first two, only `client_id` is read from the query.
+ */
+async function resolveParameters(
+	db: Database,
+	input: s.InferOutput<typeof BeginAuthorizationSchema>,
+): Promise<ResolvedParameters> {
+	let query = input.query;
+	let clientId = query.client_id;
+	if (!clientId)
+		return { ok: false, error: "invalid_request", description: "client_id is required." };
+
+	if (query.request_uri !== undefined) {
+		if (query.request !== undefined) {
+			return {
+				ok: false,
+				error: "invalid_request",
+				description: "request and request_uri may not both be present.",
+			};
+		}
+
+		let redeemed = await redeemPushedAuthorizationRequest(db, {
+			requestUri: query.request_uri,
+			clientId,
+			now: input.now,
+		});
+		if (!redeemed.ok) {
+			return {
+				ok: false,
+				error: "invalid_request_uri",
+				description:
+					"This request_uri is unknown, expired, already used, or belongs to another application.",
+			};
+		}
+		return { ok: true, parameters: redeemed.parameters };
+	}
+
+	let pushRequired = await requiresPushedAuthorizationRequests(db, {
+		clientId,
+		tenantRequires: input.requirePushedAuthorizationRequests ?? false,
+	});
+	if (pushRequired) {
+		return {
+			ok: false,
+			error: "invalid_request",
+			description:
+				"This application must push its authorization request to the PAR endpoint first.",
+		};
+	}
+
+	if (query.request !== undefined) {
+		let verified = await verifyRequestObject(db, {
+			token: query.request,
+			clientId,
+			issuer: input.issuer,
+			now: input.now,
+		});
+		if (!verified.ok) {
+			return { ok: false, error: "invalid_request_object", description: verified.description };
+		}
+		return { ok: true, parameters: verified.parameters };
+	}
+
+	return { ok: true, parameters: query };
+}
+
+/**
+ * Validates an `/authorize` request end to end and answers with one outcome: an error
+ * rendered directly when there is no verified redirect target yet to answer through, an
+ * error or a code redirected onto that target once there is, or a parked interaction for
+ *
+ * @param db - The tenant's database.
+ * @param input - The request's raw query parameters, the caller's candidate session ids, the tenant's PAR policy, and the clock to validate and decide against.
+ * @returns The outcome this request reaches on its own, with no round trip still owed.
+ */
+export async function beginAuthorization(
+	db: Database,
+	input: BeginAuthorizationInput,
+): Promise<AuthorizationOutcome> {
+	let parsed = s.parse(BeginAuthorizationSchema, input);
+
+	let resolved = await resolveParameters(db, parsed);
+	if (!resolved.ok) return render(resolved.error, resolved.description);
+
+	let validated = await validateAuthorizationRequest(db, {
+		parameters: resolved.parameters,
+		now: parsed.now,
+	});
+	if (!validated.ok) {
+		let { error, description, target } = validated.failure;
+		return target
+			? redirectError(target, parsed.issuer, error, description)
+			: render(error, description);
+	}
 
 	let candidateSessions = await resolveValidSessions(db, parsed.sessionIds, parsed.now);
 
 	return decide(db, {
-		request,
+		request: validated.request,
 		issuer: parsed.issuer,
 		now: parsed.now,
 		justAuthenticated: false,

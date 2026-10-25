@@ -35,6 +35,11 @@ const TOKEN_ENDPOINT_AUTH_METHOD = s.enum_([
 /** The algorithm a client's ID tokens are signed with. */
 const ID_TOKEN_SIGNED_RESPONSE_ALG = s.enum_(["ES256", "RS256"] as const);
 
+/** The public keys a client signs its request objects with, as an RFC 7517 JWK Set. */
+const CLIENT_JWKS = s.object({
+	keys: s.array(s.record(s.string(), s.union([s.string(), s.array(s.string())]))),
+});
+
 /**
  * A client's writable members: the body a registration sends whole, and the shape a
  * merge-patched client must still have, so both routes hold one set of rules.
@@ -51,6 +56,9 @@ export const CLIENT_BODY_SCHEMA = s.object({
 	tokenEndpointAuthMethod: TOKEN_ENDPOINT_AUTH_METHOD,
 	requireConsent: s.boolean(),
 	idTokenSignedResponseAlg: s.optional(ID_TOKEN_SIGNED_RESPONSE_ALG),
+	jwks: s.optional(s.nullable(CLIENT_JWKS)),
+	jwksUri: s.optional(s.nullable(s.string())),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
 });
 
 /** The merge patch a client update reads: any writable member, a changed `kind` refused. */
@@ -65,6 +73,9 @@ const CLIENT_PATCH = s.object({
 	tokenEndpointAuthMethod: s.optional(TOKEN_ENDPOINT_AUTH_METHOD),
 	requireConsent: s.optional(s.boolean()),
 	idTokenSignedResponseAlg: s.optional(ID_TOKEN_SIGNED_RESPONSE_ALG),
+	jwks: s.optional(s.nullable(CLIENT_JWKS)),
+	jwksUri: s.optional(s.nullable(s.string())),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
 });
 
 /** A client's whole record; timestamps are epoch milliseconds, `disabledAt` null while enabled. */
@@ -85,6 +96,9 @@ export const CLIENT = s
 		disabledAt: s.nullable(s.integer()),
 		includePermissions: s.boolean(),
 		idTokenSignedResponseAlg: ID_TOKEN_SIGNED_RESPONSE_ALG,
+		jwks: s.nullable(CLIENT_JWKS),
+		jwksUri: s.nullable(s.string()),
+		requirePushedAuthorizationRequests: s.boolean(),
 	})
 	.meta({ id: "Client" });
 

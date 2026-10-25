@@ -22,6 +22,7 @@ import type { SubjectRow } from "~/app/models/tenant/subjects";
 import { clients } from "~/app/models/tenant/clients";
 import { scopes } from "~/app/models/tenant/consent";
 import { DEVICE_CODE_GRANT_TYPE } from "~/app/models/tenant/device-authorization";
+import { REQUEST_OBJECT_SIGNING_ALGORITHMS } from "~/app/models/tenant/request-objects";
 import { resolveRoleAndPermissionClaims } from "~/app/models/tenant/roles";
 import { sessions } from "~/app/models/tenant/sessions";
 import { publishKeySet, SIGNING_ALGORITHMS } from "~/app/models/tenant/signing-keys";
@@ -50,6 +51,12 @@ export interface PublishMetadataInput {
 	issuer: string;
 	/** Whether this tenant currently holds the device grant add-on. */
 	hasDeviceGrant: boolean;
+	/**
+	 * Whether this tenant accepts authorization requests only through the PAR endpoint.
+	 *
+	 * @default false
+	 */
+	requirePushedAuthorizationRequests?: boolean;
 }
 
 /**
@@ -62,6 +69,7 @@ export interface PublishMetadataResult {
 	scopesSupported: string[];
 	claimsSupported: string[];
 	hasDeviceGrant: boolean;
+	requirePushedAuthorizationRequests: boolean;
 	jwks: PublishedKeySet;
 	/** How long the documents may be cached for, in seconds. */
 	maxAge: number;
@@ -71,6 +79,7 @@ let PublishMetadataSchema = s.object({
 	now: s.number(),
 	issuer: s.string(),
 	hasDeviceGrant: s.boolean(),
+	requirePushedAuthorizationRequests: s.optional(s.boolean()),
 });
 
 /**
@@ -97,6 +106,7 @@ export async function publishMetadata(
 		scopesSupported: scopeRows.map((row) => row.name),
 		claimsSupported: [...claimsSupported],
 		hasDeviceGrant: parsed.hasDeviceGrant,
+		requirePushedAuthorizationRequests: parsed.requirePushedAuthorizationRequests ?? false,
 		jwks: await publishKeySet(db, { now: parsed.now }),
 		maxAge: MAX_AGE_SECONDS,
 	};
@@ -104,7 +114,8 @@ export async function publishMetadata(
 
 /**
  * The members the OpenID configuration and the RFC 8414 document share, built once so
- * the two documents can never disagree about an endpoint or a supported value.
+ * the two documents can never disagree about an endpoint or a supported value. A
+ * `request_uri` resolves only when the PAR endpoint minted it, so fetching one is unsupported.
  */
 function sharedMembers(published: PublishMetadataResult) {
 	let endpoint = (path: string) => new URL(path, published.issuer);
@@ -122,6 +133,11 @@ function sharedMembers(published: PublishMetadataResult) {
 		grantTypesSupported: published.hasDeviceGrant
 			? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE]
 			: ["authorization_code", "refresh_token"],
+		pushedAuthorizationRequestEndpoint: endpoint("/oauth/par"),
+		requirePushedAuthorizationRequests: published.requirePushedAuthorizationRequests,
+		requestParameterSupported: true,
+		requestUriParameterSupported: false,
+		requestObjectSigningAlgValuesSupported: [...REQUEST_OBJECT_SIGNING_ALGORITHMS],
 		tokenEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post", "none"],
 		codeChallengeMethodsSupported: ["S256"],
 		scopesSupported: published.scopesSupported,
@@ -131,8 +147,7 @@ function sharedMembers(published: PublishMetadataResult) {
 
 /**
  * The tenant's OpenID Connect discovery document. It lists RS256, which OIDC Discovery
- * requires, beside ES256; `request_uri` is stated unsupported, since OIDC Discovery reads
- * an absent member as supported.
+ * requires, beside ES256.
  *
  * @param published - The facts {@link publishMetadata} read.
  * @returns The document `/.well-known/openid-configuration` serves.
@@ -144,7 +159,6 @@ export function openIdConfigurationFor(published: PublishMetadataResult): OpenId
 		subjectTypesSupported: ["public"],
 		idTokenSigningAlgValuesSupported: SIGNING_ALGORITHMS,
 		claimsSupported: published.claimsSupported,
-		requestUriParameterSupported: false,
 	});
 }
 

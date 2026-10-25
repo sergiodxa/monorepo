@@ -86,6 +86,7 @@ const OPERATION_SCOPES: Record<string, string> = {
 	tenantMembersUpdateRole: "members:write",
 	tenantMembersRemove: "members:write",
 	tenantMfaPolicySet: "tenant:write",
+	tenantParPolicySet: "tenant:write",
 	tenantRead: "tenant:write",
 	tenantSessionPolicyDescribe: "tenant:write",
 	tenantSessionPolicySet: "tenant:write",

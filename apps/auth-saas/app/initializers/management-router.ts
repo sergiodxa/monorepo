@@ -703,6 +703,14 @@ managementRouter.map(
 	),
 );
 managementRouter.map(
+	routes.tenantParPolicySet,
+	lazy(() =>
+		import("~/app/http/controllers/management/tenants/par-policy").then((it) =>
+			it.createTenantParPolicySetAction(controllerOptions),
+		),
+	),
+);
+managementRouter.map(
 	routes.tenantSessionPolicySet,
 	lazy(() =>
 		import("~/app/http/controllers/management/tenants/set-session-policy").then((it) =>

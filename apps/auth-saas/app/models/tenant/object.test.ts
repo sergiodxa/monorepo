@@ -69,6 +69,7 @@ describe("provision", () => {
 				"0035-magic-link-attempt-uniformity",
 				"0036-client-id-token-alg",
 				"0037-idempotency-keys",
+				"0038-pushed-authorization-requests",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: {
@@ -92,6 +93,7 @@ describe("provision", () => {
 				concurrent_session_limit: null,
 				sessions_after_credential_change: null,
 				magic_link_jit_subject_creation: 0,
+				require_pushed_authorization_requests: 0,
 				created_at: expect.any(Number),
 			},
 		]);

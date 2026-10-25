@@ -116,6 +116,7 @@ export default abilities({
 			remove: scoped("tenant:write", "tenantDomainsRemove"),
 		},
 		mfaPolicy: { set: scoped("tenant:write", "tenantMfaPolicySet") },
+		parPolicy: { set: scoped("tenant:write", "tenantParPolicySet") },
 		sessionPolicy: {
 			describe: scoped("tenant:write", "tenantSessionPolicyDescribe"),
 			set: scoped("tenant:write", "tenantSessionPolicySet"),

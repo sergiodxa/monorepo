@@ -51,6 +51,7 @@ import {
 	stepUpSubmit,
 } from "~/app/http/controllers/hosted/step-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
+import pushedAuthorizationRequest from "~/app/http/controllers/oauth/par";
 import register from "~/app/http/controllers/oauth/register";
 import token from "~/app/http/controllers/oauth/token";
 import i18n from "~/app/http/middleware/i18n";
@@ -101,6 +102,7 @@ function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCa
 	router.map(routes.authorize, authorize);
 	router.map(routes.token, token);
 	router.map(routes.register, register);
+	router.map(routes.pushedAuthorizationRequest, pushedAuthorizationRequest);
 	router.map(routes.hostedSignInShow, signInShow);
 	router.map(routes.hostedSignInSubmit, signInSubmit);
 	router.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);

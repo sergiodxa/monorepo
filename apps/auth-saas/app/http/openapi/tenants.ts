@@ -303,6 +303,23 @@ export const TENANT_MFA_POLICY_SET = defineOperation(
 	},
 );
 
+/** `POST /tenants/:tenantId/par-policy`: whether every client must push its authorization requests (RFC 9126). */
+export const TENANT_PAR_POLICY_SET = defineOperation(
+	"tenantParPolicySet",
+	routes.tenantParPolicySet,
+	{
+		summary: "Set the pushed authorization request policy",
+		description:
+			"When required, /authorize accepts only a request_uri the PAR endpoint minted, for every client. A client can also require it for itself.",
+		tags: ["Sign-in policies"],
+		params: TENANT_PARAMS,
+		body: s.object({ required: s.boolean() }),
+		responses: { 204: { description: "The policy was set" } },
+		problems: [...AUTH_PROBLEMS, "validationFailed"],
+		security: requires("tenant:write"),
+	},
+);
+
 /** `POST /tenants/:tenantId/session-policy`: a partial update; an omitted field stays as it is. */
 export const TENANT_SESSION_POLICY_SET = defineOperation(
 	"tenantSessionPolicySet",
@@ -362,6 +379,7 @@ export const TENANTS_OPERATIONS = [
 	TENANT_DOMAINS_VERIFICATION,
 	TENANT_DOMAINS_REMOVE,
 	TENANT_MFA_POLICY_SET,
+	TENANT_PAR_POLICY_SET,
 	TENANT_SESSION_POLICY_SET,
 	TENANT_SESSION_POLICY_DESCRIBE,
 ] as const;

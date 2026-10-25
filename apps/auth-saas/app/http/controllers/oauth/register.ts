@@ -22,6 +22,11 @@ let TokenEndpointAuthMethodSchema = s.enum_([
 	"none",
 ] as const);
 
+/** An RFC 7517 JWK Set whose members are strings or string lists, as every public JWK's are. */
+let JwksSchema = s.object({
+	keys: s.array(s.record(s.string(), s.union([s.string(), s.array(s.string())]))),
+});
+
 /** The registration request body's own fields, RFC 7591 §2's client metadata. */
 let RegisterClientBodySchema = s.object({
 	redirect_uris: s.array(s.string()),
@@ -31,6 +36,9 @@ let RegisterClientBodySchema = s.object({
 	grant_types: s.optional(s.array(s.string())),
 	response_types: s.optional(s.array(s.string())),
 	scope: s.optional(s.string()),
+	jwks: s.optional(JwksSchema),
+	jwks_uri: s.optional(s.string()),
+	require_pushed_authorization_requests: s.optional(s.boolean()),
 });
 
 /** Every reason `registerClient` can refuse a record, in the one client-facing sentence RFC 7591 §3.2.2's `invalid_client_metadata` names it with. */
@@ -49,6 +57,9 @@ function describeRegistrationFailure(failure: Exclude<RegisterClientResult, { ok
 	}
 	if (failure.reason === "invalid-response-type") {
 		return `response_types carries an unsupported value "${failure.value}".`;
+	}
+	if (failure.reason === "invalid-jwks") {
+		return `jwks or jwks_uri is not a usable key set (${failure.detail}).`;
 	}
 	return `token_endpoint_auth_method "${failure.method}" does not match the requested client kind.`;
 }
@@ -91,6 +102,9 @@ export default createAction(routes.register, async (ctx) => {
 		scopes: body.scope ? body.scope.split(/\s+/).filter(Boolean) : [],
 		tokenEndpointAuthMethod,
 		requireConsent: true,
+		jwks: body.jwks ?? null,
+		jwksUri: body.jwks_uri ?? null,
+		requirePushedAuthorizationRequests: body.require_pushed_authorization_requests ?? false,
 	});
 
 	if (!registered.ok) {
@@ -118,6 +132,11 @@ export default createAction(routes.register, async (ctx) => {
 			response_types: client.responseTypes,
 			client_name: client.name,
 			scope: client.scopes.join(" "),
+			...(client.jwks ? { jwks: client.jwks } : {}),
+			...(client.jwksUri ? { jwks_uri: client.jwksUri } : {}),
+			...(client.requirePushedAuthorizationRequests
+				? { require_pushed_authorization_requests: true }
+				: {}),
 		},
 		{ status: 201, headers: { "Cache-Control": "no-store" } },
 	);

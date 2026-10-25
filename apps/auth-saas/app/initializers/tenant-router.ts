@@ -152,6 +152,13 @@ tenantRouter.map(
 	),
 );
 tenantRouter.map(
+	routes.pushedAuthorizationRequest,
+	lazy(
+		() => import("~/app/http/controllers/oauth/par"),
+		[tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
+	),
+);
+tenantRouter.map(
 	routes.register,
 	lazy(() => import("~/app/http/controllers/oauth/register"), [protocolLimit]),
 );

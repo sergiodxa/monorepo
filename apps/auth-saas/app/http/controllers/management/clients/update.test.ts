@@ -102,6 +102,37 @@ describe("PATCH /tenants/:tenantId/clients/:clientId", () => {
 		expect(renamed.idTokenSignedResponseAlg).toBe("RS256");
 	});
 
+	test("a merge patch sets a key set and the PAR requirement, keeps them, and clears jwks with null", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerClient(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let patch = async (body: Record<string, unknown>) => {
+			let response = await harness.router.fetch(
+				harness.request(`/tenants/${harness.tenantId}/clients/${created.client.id}`, token, {
+					method: "PATCH",
+					headers: { "Content-Type": "application/merge-patch+json" },
+					body: JSON.stringify(body),
+				}),
+			);
+			return (await response.json()) as Record<string, unknown>;
+		};
+
+		let key = { kty: "OKP", crv: "Ed25519", x: "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo" };
+		let set = await patch({ jwks: { keys: [key] }, requirePushedAuthorizationRequests: true });
+		let renamed = await patch({ name: "Renamed" });
+		let cleared = await patch({ jwks: null });
+
+		expect(set).toMatchObject({ jwks: { keys: [key] }, requirePushedAuthorizationRequests: true });
+		expect(renamed).toMatchObject({
+			jwks: { keys: [key] },
+			requirePushedAuthorizationRequests: true,
+		});
+		expect(cleared).toMatchObject({ jwks: null, requirePushedAuthorizationRequests: true });
+	});
+
 	test("refuses a patch removing a required member", async () => {
 		let harness = await buildClientsHarness();
 		let token = await harness.signToken();

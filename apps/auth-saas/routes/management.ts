@@ -122,6 +122,8 @@ export default route({
 
 	tenantMfaPolicySet: post("/tenants/:tenantId/mfa-policy"),
 
+	tenantParPolicySet: post("/tenants/:tenantId/par-policy"),
+
 	tenantSessionPolicySet: post("/tenants/:tenantId/session-policy"),
 	tenantSessionPolicyDescribe: get("/tenants/:tenantId/session-policy"),
 });
