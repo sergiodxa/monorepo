@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 13
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write one message and deliver it to Slack, Discord, Telegram, PagerDuty or Opsgenie"
     - "How to deliver from a job with retries and fan out by severity"
@@ -92,8 +92,8 @@ share a key, which is what lets a paging service resolve the incident the failur
 ## Configure a destination per channel
 
 Every provider implements one `Destination` contract and lives behind its own subpath, so a
-bundle carries only the platforms you import. Constructing one does no I/O, which makes it
-cheap to build from a stored channel at the moment of sending:
+bundle carries only the platforms you import. Constructing one makes no request, which makes
+it cheap to build from a stored channel at the moment of sending:
 
 ```typescript {% title="app/services/notifications/destinations.ts" %}
 import type { Destination } from "@sdxc/messaging";
@@ -178,8 +178,8 @@ the 24 hours after the recipient last wrote; `template.parameters(message)` maps
 onto the template's body parameters.
 </note>
 
-Google Chat threads every message with the same `key`. `BrowserPush` notifies one browser through `@sdxc/web-push`; [Send
-browser push notifications](/docs/data-and-background-work/browser-push) covers subscribing
+Google Chat threads every message with the same `key`. `BrowserPush` notifies one browser
+through `@sdxc/web-push`; [Send browser push notifications](/docs/data-and-background-work/browser-push) covers subscribing
 and storing the browser.
 
 ## Check a pasted URL before saving it
@@ -212,8 +212,7 @@ refused too.
 
 ## Deliver from a job
 
-Every send makes exactly one attempt and answers a `Result`; it never throws. Retrying
-belongs to the job that sends, where the delay survives the isolate and the queue bounds
+Every send makes exactly one attempt and answers a `Result`. Retrying belongs to the job that sends, where the delay survives the isolate and the queue bounds
 the attempts. Declare the job with `MESSAGE_SCHEMA`, which reads the message's JSON form
 back, ISO `timestamp` included:
 
@@ -230,11 +229,12 @@ export default jobs({
 ```
 
 <note>
-The payload carries the channel's id and never its URL or token, which stay in your database
-rather than in every queued message.
+The payload carries the channel's id alone, so its URL and token stay in your database, out of
+every queued message.
 </note>
 
-The handler builds the destination through `ctx.destinations`, published by job middleware so a test can hand in its own:
+The handler builds the destination through `ctx.destinations`, published by job middleware
+so a test can hand in its own:
 
 ```typescript {% title="app/jobs/middleware/destinations.ts" %}
 import type { JobMiddleware } from "@sdxc/jobs";
@@ -360,9 +360,9 @@ export default createJobHandler(jobs.deliverMessage, async (ctx) => {
 - `unauthorized`, `rejected`, `invalid-destination` and `invalid-message` repeat on every
   attempt, so the job exits and the run is reported as failed.
 
-`MAX_ATTEMPTS` matches a consumer `max_retries` of 3: the last delivery exits with the
-failure on its log, before the queue would dead-letter it. The error names the provider and
-host only, never the URL or a token, so it is safe to log and to show. Every send also
+`MAX_ATTEMPTS` matches a queue consumer's `maxRetries` of 3: the last delivery exits with the
+failure on its log, before the queue would dead-letter it. The error names only the provider
+and host, so it is safe to log and to show. Every send also
 leaves a `messaging.send` note on the run's log, with the provider, the outcome and how long
 it took.
 
@@ -619,12 +619,7 @@ ships from its own subpath.
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
-  `ctx.retry`, `ctx.exit` and the consumer's `max_retries`.
-- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) — choosing the
-  backoff behind `RETRY_BACKOFF`.
+  `ctx.retry`, `ctx.exit` and the consumer's `maxRetries`.
 - [Receive and send webhooks](/docs/identity-and-security/webhooks) — the receiving side of a
   signed delivery, with replay protection.
-- [Send email](/docs/data-and-background-work/send-email) — the same job shape for mail.
-- [Send browser push notifications](/docs/data-and-background-work/browser-push) — subscribing
-  a browser, and the `BrowserPush` destination.
 - [`@sdxc/messaging`](/api/messaging) — every provider's options and error codes.
