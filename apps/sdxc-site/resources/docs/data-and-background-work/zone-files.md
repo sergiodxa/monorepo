@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 15
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
     - "How to compare the records with live DNS"
@@ -59,7 +59,8 @@ The full grammar is read: `$ORIGIN`, `$TTL`, records spread over lines with pare
 that start with whitespace to reuse the previous name, TTLs like `1h30m`, and escaped names. Each
 record comes back with an absolute, lowercased `name`, its `ttl`, `class`, `type`, the line it
 started on, its trailing `;` comment, and typed fields: `address` for `A`, `preference` and
-`exchange` for `MX`, `text` and `strings` for `TXT`.
+`exchange` for `MX`, `text` and `strings` for `TXT`, down to `priority`, `target` and `params`
+for `HTTPS`, and the key, digest and certificate fields of `DNSKEY`, `DS` and `TLSA`.
 
 ## Keep the records you track
 
@@ -344,12 +345,8 @@ outbound HTTP.
 
 ## Where to go next
 
-- [Custom domains for your customers](/docs/identity-and-security/verify-domains): proving a
+- [Custom domains for your customers](/docs/identity-and-security/verify-domains) — proving a
   customer owns a domain with a TXT lookup.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron): running the DNS
-  comparison off the request.
-- [Watch when a domain expires](/docs/data-and-background-work/domain-expiry): the registration
-  date that takes every record in the zone down with it.
-- [Import and export CSV](/docs/data-and-background-work/csv): the same import shape for
-  spreadsheets.
-- [`@sdxc/zone-file`](/api/zone-file): every option, record field and rejection reason.
+- [Check a domain's email authentication](/docs/data-and-background-work/email-authentication) —
+  evaluating the SPF, DKIM and DMARC records a zone holds.
+- [`@sdxc/zone-file`](/api/zone-file) — every option, record field and rejection reason.
