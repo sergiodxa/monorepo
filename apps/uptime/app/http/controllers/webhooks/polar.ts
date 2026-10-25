@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CustomerRef } from "@sdxc/billing";
+import type { BillingError, CustomerRef } from "@sdxc/billing";
+import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
 import { BillingWebhook } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
+import { isFailure, success } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 
 import { polar } from "~/app/initializers/billing";
@@ -30,17 +31,20 @@ const DELIVERIES = webhookStore(() => getContext().models.billingWebhookDeliveri
 
 /**
  * Re-reads the customer the delivery named and writes what the platform says, then records a
- * first payment. Throws on a failed read so the endpoint answers `503` and the platform
- * delivers again; the daily sweep repairs whatever never arrives.
+ * first payment. A failed read comes back as the failure, so the endpoint answers `503` and the
+ * platform delivers again; the daily sweep repairs whatever never arrives.
  */
-async function apply(ctx: RequestContext, customerId: string | null): Promise<void> {
+async function apply(
+	ctx: RequestContext,
+	customerId: string | null,
+): Promise<Result<null, BillingError>> {
 	if (customerId === null) {
 		/**
 		 * A delivery about no payer at all names nothing this projection is keyed on, so there
 		 * is no owner whose monitors it could apply to.
 		 */
 		ctx.log.warn("webhook.polar.unnamed_customer");
-		return;
+		return success(null);
 	}
 
 	ctx.log.set({ webhook: { customer_id: customerId } });
@@ -48,7 +52,7 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 	let customer: CustomerRef = { id: customerId };
 	let synced = await syncEntitlements(ctx.models, customer);
 
-	if (isFailure(synced)) throw synced.error;
+	if (isFailure(synced)) return synced;
 
 	if (synced.data === null) {
 		/**
@@ -56,7 +60,7 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 		 * nothing here can be attributed to an owner.
 		 */
 		ctx.log.warn("webhook.polar.unlinked_customer");
-		return;
+		return success(null);
 	}
 
 	let { ownerId, applied, entitled, monitors } = synced.data;
@@ -75,6 +79,8 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 		monitor: { count: monitors },
 		webhook: { applied, entitled, first_payment: firstPayment },
 	});
+
+	return success(null);
 }
 
 /**
@@ -112,32 +118,32 @@ export default new BillingWebhook(
 	polar,
 	{
 		async "customer.created"(event, ctx) {
-			await apply(ctx, event.customer.id);
+			return apply(ctx, event.customer.id);
 		},
 
 		/** Also where `customer.state_changed` lands, which is the broadest trigger there is. */
 		async "customer.updated"(event, ctx) {
-			await apply(ctx, event.customer.id);
+			return apply(ctx, event.customer.id);
 		},
 
 		async "subscription.activated"(event, ctx) {
-			await apply(ctx, event.subscription.customerId);
+			return apply(ctx, event.subscription.customerId);
 		},
 
 		async "subscription.updated"(event, ctx) {
-			await apply(ctx, event.subscription.customerId);
+			return apply(ctx, event.subscription.customerId);
 		},
 
 		async "subscription.canceled"(event, ctx) {
-			await apply(ctx, event.subscription.customerId);
+			return apply(ctx, event.subscription.customerId);
 		},
 
 		async "subscription.revoked"(event, ctx) {
-			await apply(ctx, event.subscription.customerId);
+			return apply(ctx, event.subscription.customerId);
 		},
 
 		async "order.paid"(event, ctx) {
-			await apply(ctx, event.order.customerId);
+			return apply(ctx, event.order.customerId);
 		},
 	},
 	{ store: DELIVERIES },
