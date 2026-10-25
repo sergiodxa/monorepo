@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 1
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How `sdxc create` writes a project from the built-in template or a GitHub repository"
     - "What a new project holds and which commands to run first"
@@ -86,8 +86,8 @@ resources/        layouts/, locales/
 routes/           web.ts, api.ts
 ```
 
-It serves a home page, `robots.txt`, a sitemap, an API with a health check and an OpenAPI
-document, and an MCP endpoint, and while `bun dev` runs, `/_emails` previews every email the
+It serves a home page, `robots.txt`, a sitemap, a health check at `/health`, an API with an
+OpenAPI document, and an MCP endpoint, and while `bun dev` runs, `/_emails` previews every email the
 app declares. Its `package.json` has `dev`, `build`, `start`, `check`, `test`, `typecheck` and
 `cli` scripts.
 
@@ -135,65 +135,38 @@ bun dev
 edits and deletes posts. [Build an app](/docs/getting-started/build-an-app) takes the same start
 through a policy, a validator, a job, the tests and a deploy.
 
-## Configure the command line
+## Add a feature
 
-Every setting has a default, so a project needs no configuration file until it changes one.
-`sdxc init` writes `.config/sdxc.jsonc` with every key spelled out, and a `$schema` your editor
-completes them from; `--dry-run` prints it instead:
+Sign-in, billing and feature flags each span an initializer, routes, secrets and packages.
+`sdxc setup` lists them, and naming one prints its plan: the files it writes, the packages it
+adds and what is left for you. Pass `-y` to write it:
 
-```jsonc {% title=".config/sdxc.jsonc" %}
-{
-	"$schema": "https://unpkg.com/@sdxc/kit/config.schema.json",
-	"ui": {
-		// Where `sdxc ui add` writes components
-		"directory": "resources/components/ui",
-		// Import prefix for the copies; inferred from tsconfig `paths` when omitted
-		// "alias": "~/components/ui",
-		// Copy a component's tests beside it
-		"tests": false,
-	},
-	"make": {
-		// Route contract `sdxc make controller` adds to, a module in routes/
-		"routes": "web",
-		// Migration chains by name; `--chain <name>` picks one
-		"migrations": { "default": "database/migrations" },
-		// Write a test beside every generated file except migrations and factories
-		"tests": true,
-		// Stubs here replace the built-in ones; `sdxc make stubs` copies them out
-		"stubs": ".config/sdxc/stubs",
-	},
-	"doctor": {
-		// Folder of the project's own checks, each module run by `sdxc doctor`
-		"checks": ".config/sdxc/checks",
-		"migrations": {
-			// Migration errors `sdxc doctor` steps past, each a file that already ran and the column its error names
-			"accept": [],
-		},
-	},
-	// Command run on every file the CLI writes or edits, paths appended
-	// "format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
-	// Where the CLI keeps its state; commit it with the project
-	"lock": ".config/sdxc.lock.jsonl",
-}
+```bash
+sdxc setup
+sdxc setup flags
+sdxc setup flags -y
 ```
-
-The file is JSON with comments, so each setting can say why it is set. `format` is the one most
-projects set: a generated file and a copied component then come out in your project's style.
-It is an argument list run without a shell, once per command, with the written paths appended.
-
-<note>
-`sdxc.jsonc` at the project root is read too, when you prefer it there; a project with both
-files is refused until you delete one. `init` leaves a configuration file that exists as it
-is.
-</note>
-
-Every command validates the file before it runs. A misspelt key, a value of the wrong type, or a
-path outside the project stops the command with one line per problem:
 
 ```text
-.config/sdxc.jsonc: make.test: Unknown key
+auth       OIDC relying party, login/callback/logout, client secrets, CSP formAction, signIn() helper
+billing    @sdxc/billing provider, webhook route stub, portal/checkout secrets, empty product catalog
+flags      @sdxc/flags + engine store, empty catalog, wide-event hook ready for router middleware
 ```
 
+`--provider` picks the backend for a feature that has more than one.
+
+## Configure the command line
+
+Every setting has a default, so a project needs no configuration file until it changes one, and
+the one `create` writes spells every key out. In any other project, `sdxc init` writes
+`.config/sdxc.jsonc` with a `$schema` your editor completes the keys from:
+
+```bash
+sdxc init
+```
+
+`format` is the key most projects set: an argument list run once per command over every file
+the command wrote, so a generated file and a copied component come out in your project's style.
 [Configuration](/docs/sdxc/configuration) covers every key, its default and the command it
 changes.
 
