@@ -1,14 +1,17 @@
 /**
  * `GET /rss.xml` — what has been written here, newest first, so a reader can follow the
  * documentation without visiting it. The guides are the dated content: each carries a
- * `lastUpdated` its author wrote, which is a real date for a real edit.
+ * `lastUpdated` its author wrote, which is a real date for a real edit. Data the RSS writer
+ * refuses is logged and answered with a 500.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createAction } from "remix/router";
-import { xml } from "sdxc/http/response";
+import { text, xml } from "sdxc/http/response";
+import { currentLog } from "sdxc/logger";
+import { isFailure } from "sdxc/result";
 import { RSS } from "sdxc/rss";
 
 import { withBundleCache } from "~/app/http/caching";
@@ -48,29 +51,33 @@ export default createAction(routes.feed, async (ctx) => {
 
 	entries.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
 
-	let feed = new RSS({
-		title: `${SITE_NAME} documentation`,
-		description: SITE_DESCRIPTION,
-		link: absoluteUrl(routes.home.href()),
-		language: "en",
-		lastBuildDate: entries[0]?.publishedAt.toUTCString(),
-		atomLink: {
-			href: absoluteUrl(routes.feed.href()),
-			rel: "self",
-			type: "application/rss+xml",
+	let feed = RSS.stringify({
+		channel: {
+			title: `${SITE_NAME} documentation`,
+			description: SITE_DESCRIPTION,
+			link: absoluteUrl(routes.home.href()),
+			language: "en",
+			lastBuildDate: entries[0]?.publishedAt.toUTCString(),
+			atomLink: {
+				href: absoluteUrl(routes.feed.href()),
+				rel: "self",
+				type: "application/rss+xml",
+			},
 		},
-	});
-
-	for (let entry of entries) {
-		feed.addItem({
+		items: entries.map((entry) => ({
 			guid: { value: entry.href, isPermaLink: true },
 			title: entry.title,
 			description: entry.description,
 			link: entry.href,
 			category: [entry.section],
 			pubDate: entry.publishedAt.toUTCString(),
-		});
+		})),
+	});
+
+	if (isFailure(feed)) {
+		currentLog()?.fail(feed.error, { feed: routes.feed.href() });
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return await withBundleCache(ctx.request, xml(feed.toString()));
+	return await withBundleCache(ctx.request, xml(feed.data));
 });
