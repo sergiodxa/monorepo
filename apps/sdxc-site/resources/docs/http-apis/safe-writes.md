@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 3
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to make a create safe to retry with an `Idempotency-Key`"
     - "How to accept partial updates as JSON Merge Patch"
@@ -152,10 +152,8 @@ export default createAction(routes.api.books.create, {
 ```
 
 The rate limiter the first guide passes to every `lazy()` runs before the action's own
-middleware, so it runs first and
-a replay still spends budget. A request without the header runs unprotected; pass
-`required: true` to answer `400` instead.
-The same key sent while the first request is still running gets `409` with `Retry-After`, and
+middleware, so a replay still spends budget. A request without the header runs unprotected;
+pass `required: true` to answer `400` instead. The same key sent while the first request is still running gets `409` with `Retry-After`, and
 the same key with a different method, path or body gets `422`. Only outcomes below `500` are
 stored, so a failed write releases the key and the retry runs it.
 
@@ -253,8 +251,9 @@ with `If-None-Match` before every reuse, and gets the body again only when it ch
 ## Accept a merge patch
 
 Add `update: patch("/api/books/:bookId")` to `routes/api.ts`, and map its controller in the
-first guide's `createWebRouter()` through `lazy()` with the same limiter. A merge patch is written in the shape of
-the resource: it lists only the members that change, and `null` removes one.
+first guide's `createWebRouter()` through `lazy()` with the same limiter. A merge patch is
+written in the shape of the resource: it lists only the members that change, and `null`
+removes one.
 
 The patch applies to the book's writable members as the API spells them, with unset ones
 left out, since absence is how a merge patch represents them:
@@ -335,8 +334,8 @@ columns the tag was computed from.
 `applyValidated` applies the patch and validates the **result** with `BOOK_INPUT`, the create
 schema, so create and update share one set of limits. It validates synchronously, so the
 schema it takes holds only synchronous checks; one that validates asynchronously fails every
-patch. A patch removing `title` fails on
-`/title`, and the issues point into the patched book. `alsoAccept` keeps callers that send
+patch. A patch removing `title` fails on `/title`, and the issues point into the patched
+book. `alsoAccept` keeps callers that send
 `application/json` working.
 
 `Book.update` writes the validated book whole, so a removed `summary` is cleared. To write or
@@ -378,8 +377,8 @@ export async function patchBook(id: string, patch: MergePatchOf<Book>) {
 A caller passes only what changes, `patchBook(id, { year: 1979, summary: null })`, and a
 `412` answer means the book changed since the read: read it again and reapply the edit.
 
-`If-Match` carries the `ETag` from the `GET` the edit started from. A client holding the edited copy
-instead of a patch computes one with `diff(original, edited)`, which fails before sending when
+`If-Match` carries the `ETag` from the `GET` the edit started from. A client holding the
+edited copy instead of a patch computes one with `diff(original, edited)`, which fails before sending when
 the edit sets a member to a literal `null`, something a merge patch cannot express. An API
 that needs an explicit `null`, an edit to one array element, or a per-member precondition
 accepts [JSON Patch](/docs/http-apis/json-patch) beside merge patch.
