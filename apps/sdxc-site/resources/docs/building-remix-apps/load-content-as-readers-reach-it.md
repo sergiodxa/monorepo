@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 10
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to load a list's next page as the reader scrolls with `@sdxc/lazy-frame`"
     - "How to load a dialog's content only when it opens"
@@ -24,7 +24,7 @@ reader reaches it, by scrolling near it or by opening the dialog around it, and 
 Remix `Frame` for its `src`.
 
 ```bash
-npm add @sdxc/http @sdxc/lazy-frame remix
+npm add @sdxc/lazy-frame remix
 ```
 
 ## Register the client entry
@@ -100,15 +100,11 @@ its dialog closes, and asks for `src` once.
 
 `src` points at a route like any link, and the route answers it with the piece that goes
 inside the frame: no doctype, no `<html>`, no layout, since the document it lands in already
-has those. Mark a frame's address with a parameter of its own, `frame` here, so the route can
-tell the two requests apart. The address is the one thing only the frame's request carries.
+has those. Mark a frame's address with a parameter of its own, `frame` here, so the page and
+its fragment are two URLs, and a browser or CDN cache keyed by URL never serves one in place
+of the other:
 
-```tsx {% title="app/http/fragment.tsx" %}
-import type { RemixNode } from "remix/component";
-
-import { HTML } from "@sdxc/http/content-type";
-import { renderToStream } from "remix/component/server";
-
+```typescript {% title="app/services/frame.ts" %}
 export const FRAME_PARAM = "frame";
 
 export function isFrameRequest(url: URL) {
@@ -118,28 +114,23 @@ export function isFrameRequest(url: URL) {
 export function frameOf(href: string) {
 	return `${href}${href.includes("?") ? "&" : "?"}${FRAME_PARAM}`;
 }
-
-export function fragment(node: RemixNode, init?: ResponseInit) {
-	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", `${HTML}; charset=utf-8`);
-	return new Response(renderToStream(node), { ...init, headers });
-}
 ```
 
-The list's action renders the whole page for a visit and only the rows for a frame:
+The list's action renders the whole page for a visit and only the rows for a frame.
+`ctx.render` answers either one, since it renders whatever node it is given:
 
 ```tsx {% title="app/http/controllers/jobs/index.tsx" %}
 import { createAction } from "remix/router";
 
 import Jobs from "~/app/models/job";
-import { fragment, isFrameRequest } from "~/app/http/fragment";
+import { isFrameRequest } from "~/app/services/frame";
 import { JobList, JobsPage } from "~/resources/views/jobs";
 import routes from "~/routes/web";
 
 export default createAction(routes.jobs.index, async (ctx) => {
 	let page = await Jobs.page(ctx.db, ctx.url);
 
-	if (isFrameRequest(ctx.url)) return fragment(<JobList page={page} />);
+	if (isFrameRequest(ctx.url)) return ctx.render(<JobList page={page} />);
 
 	return ctx.render(<JobsPage page={page} />);
 });
@@ -175,7 +166,7 @@ import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
 import type { JobPage } from "~/app/models/job";
 
-import { frameOf } from "~/app/http/fragment";
+import { frameOf } from "~/app/services/frame";
 
 export function JobList(handle: Handle<{ page: JobPage }>) {
 	return () => {
@@ -296,7 +287,7 @@ import type { Handle } from "remix/component";
 
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
-import { frameOf } from "~/app/http/fragment";
+import { frameOf } from "~/app/services/frame";
 
 interface Props {
 	job: { id: string; title: string };
@@ -348,6 +339,23 @@ air, because inside an open dialog a "Read the full posting" link reads as the c
 
 The posting's route answers the frame the same way the list does, with
 `isFrameRequest(ctx.url)` choosing the fragment over the page.
+
+Add `prefetch` to have the posting ready by the time the dialog opens. The frame then fetches
+`src` once the reader rests the pointer or keyboard focus on the opener for 100ms, or presses
+it:
+
+```tsx {% title="resources/views/job-row.tsx" %}
+<LazyFrame src={frameOf(href)} loadOn="open" opener={opener} prefetch>
+	<a href={href}>Read the full posting</a>
+</LazyFrame>
+```
+
+<note>
+The frame reuses the prefetched response from the browser's HTTP cache, so the posting's
+route has to make it cacheable, for example with `Cache-Control: private, max-age=30`. With no
+such header the dialog fetches the posting again when it opens. The prefetch is skipped for a
+reader who saves data or is on a 2G connection.
+</note>
 
 ## Test it
 
