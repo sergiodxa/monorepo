@@ -236,6 +236,10 @@ The `"YYYY-MM-DDTHH:mm"` value an `<input type="datetime-local">` takes, as a cl
 
 A submitted `datetime-local` value read as the instant it names in the zone. Seconds and fractions are accepted; impossible days and times fail.
 
+#### `formatZonedDateTime(value: ZonedDateTimeInit, options?): string`, `parseZonedDateTime(text: string, options?): Result<ZonedDateTime, InvalidZonedDateTimeError>`
+
+An instant with its zone, offset, calendar and tags as an RFC 9557 string (`"2026-10-24T10:00:00-03:00[America/Montevideo][u-ca=hebrew]"`), for a JSON field or TEXT column; parsing the formatted text gives back an equal value. Unknown critical tags, unlisted `_` keys and a critical zone that disagrees with the offset fail; an elective disagreement fails too unless `onInconsistentOffset` is `"keepInstant"` or `"keepWallClock"`.
+
 ### Day ranges
 
 A `DayRange` is two inclusive day keys, so it travels through a URL or form as written.
@@ -284,7 +288,7 @@ The runtime clock's zone: the browser's setting on a page, usually `"UTC"` on a 
 
 ### Errors
 
-`InvalidDateError` (rejected value on `error.input`), `InvalidDayKeyError` and `InvalidDateTimeLocalError` (on `error.text`), and `InvalidDayRangeError` (`error.problem` and `error.range`) are the classes the parsers return inside a failure.
+`InvalidDateError` (rejected value on `error.input`), `InvalidDayKeyError` and `InvalidDateTimeLocalError` (on `error.text`), `InvalidDayRangeError` (`error.problem` and `error.range`), and `InvalidZonedDateTimeError` (`error.problem` and `error.text`) are the classes the parsers return inside a failure.
 
 ### `@sdxc/dates/zone`
 

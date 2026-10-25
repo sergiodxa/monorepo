@@ -32,8 +32,17 @@ export type { FormatPartsOptions, FormatWeekdayOptions } from "./format-parts.js
 export type { FormatRelativeOptions } from "./format-relative.js";
 export type { GroupByWeekOptions, LastNDaysOptions, MonthGridDay } from "./grid.js";
 export type { DayRangeProblem } from "./invalid-day-range-error.js";
+export type { ZonedDateTimeProblem } from "./invalid-zoned-date-time-error.js";
 export type { TimeZoneGroup } from "./time-zones.js";
 export type { ValidateDayRangeOptions } from "./day-range.js";
+export type {
+	FormatZonedDateTimeOptions,
+	InconsistentOffsetPolicy,
+	ParseZonedDateTimeOptions,
+	SuffixTag,
+	ZonedDateTime,
+	ZonedDateTimeInit,
+} from "./zoned-date-time.js";
 
 export {
 	add,
@@ -66,6 +75,7 @@ export { InvalidDateError } from "./invalid-date-error.js";
 export { InvalidDateTimeLocalError } from "./invalid-date-time-local-error.js";
 export { InvalidDayKeyError } from "./invalid-day-key-error.js";
 export { InvalidDayRangeError } from "./invalid-day-range-error.js";
+export { InvalidZonedDateTimeError } from "./invalid-zoned-date-time-error.js";
 export { addMonths, endOfMonth, endOfQuarter, startOfMonth, startOfQuarter } from "./month.js";
 export { parseDate } from "./parse-date.js";
 export {
@@ -75,3 +85,4 @@ export {
 	timeZonesByRegion,
 } from "./time-zones.js";
 export { daysInMonth, isValidTimeZone } from "./zone.js";
+export { formatZonedDateTime, parseZonedDateTime } from "./zoned-date-time.js";
