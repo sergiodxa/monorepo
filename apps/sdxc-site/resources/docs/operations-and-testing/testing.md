@@ -81,7 +81,7 @@ file starts with empty bindings. `vp test run app/mcp` scopes a run to a path, a
 The test that catches the most is one request through the same middleware chain, controllers
 and jobs the Worker builds. The router reads its bindings through `cloudflare:workers`, so a
 test builds it exactly as `bootstrap/worker.ts` does, with `createWebRouter()`, and
-`app/test/database.ts` prepares the database it reads:
+`app/test/database.ts`, which the first `sdxc scaffold` writes, prepares the database it reads:
 
 ```typescript {% title="app/http/controllers/postings/index.test.tsx" %}
 import { beforeAll, expect, test } from "vitest";
