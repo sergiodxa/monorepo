@@ -23,6 +23,7 @@ import { createAction } from "remix/router";
 import { scimGate } from "~/app/http/middleware/scim-gate";
 import { scimFailure, userToScim } from "~/app/http/scim/response";
 import {
+	SCIM_DEFAULT_PAGE_SIZE,
 	SCIM_MAX_PAGE_SIZE,
 	SCIM_USER_DEFINITIONS,
 	SCIM_USER_EXTENSIONS,
@@ -68,13 +69,15 @@ export function createScimUsersController(limiter: RateLimit) {
 			},
 		}),
 
-		/** A page of this connection's users, filtered and paged per its own query. */
+		/** A page of this connection's users, filtered and paged by index or by cursor. */
 		list: createAction(routes.scimUsersList, {
 			middleware: [gate],
 			handler: async (ctx) => {
 				let query = parseListQuery(ctx.url, {
+					defaultCount: SCIM_DEFAULT_PAGE_SIZE,
 					maxCount: SCIM_MAX_PAGE_SIZE,
 					attributes: SCIM_USER_DEFINITIONS,
+					cursor: true,
 				});
 				if (isFailure(query)) return errorResponse(query.error);
 

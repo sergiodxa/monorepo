@@ -30,6 +30,9 @@ import type { AttributeValue } from "~/app/models/tenant/subjects";
 /** The largest page a list answers, whatever `count` asks for; `filter.maxResults` advertises it. */
 export const SCIM_MAX_PAGE_SIZE = 200;
 
+/** The page a list answers when `count` is absent; `pagination.defaultPageSize` advertises it. */
+export const SCIM_DEFAULT_PAGE_SIZE = 100;
+
 /**
  * The User attributes this tenant maps onto subjects, with the Enterprise extension's scalar
  * members, which land in declared subject attributes. The core schema comes first, so an

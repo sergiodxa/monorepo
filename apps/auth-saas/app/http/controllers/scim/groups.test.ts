@@ -117,3 +117,35 @@ describe("SCIM Groups lifecycle", () => {
 		expect(body.scimType).toBe("invalidPath");
 	});
 });
+
+describe("SCIM Groups cursor pagination", () => {
+	test("walks every group once by nextCursor, tied creation times broken by id", async () => {
+		for (let name of ["Alpha", "Beta", "Gamma"]) {
+			await harness.router.fetch(
+				harness.request("/scim/v2/Groups", token, {
+					method: "POST",
+					body: JSON.stringify({ displayName: name, externalId: `ext-${name}` }),
+				}),
+			);
+		}
+
+		let seen: string[] = [];
+		let cursor = "";
+		for (let pages = 0; pages < 3; pages++) {
+			let response = await harness.router.fetch(
+				harness.request(`/scim/v2/Groups?cursor=${cursor}&count=1`, token),
+			);
+			let body = (await response.json()) as {
+				totalResults: number;
+				nextCursor?: string;
+				Resources: { displayName: string }[];
+			};
+			expect(body.totalResults).toBe(3);
+			seen.push(...body.Resources.map((group) => group.displayName));
+			if (!body.nextCursor) break;
+			cursor = body.nextCursor;
+		}
+
+		expect([...seen].sort()).toEqual(["Alpha", "Beta", "Gamma"]);
+	});
+});

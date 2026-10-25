@@ -9,7 +9,11 @@
 
 import { errorResponse, ScimError } from "@sdxc/scim";
 
-import type { ScimFilterRefusal, ScimPatchRefusal } from "~/app/models/tenant/scim";
+import type {
+	ScimCursorRefusal,
+	ScimFilterRefusal,
+	ScimPatchRefusal,
+} from "~/app/models/tenant/scim";
 import type {
 	ScimGroupRepresentation,
 	ScimUserRepresentation,
@@ -36,6 +40,7 @@ export function scimFailure(
 		| { ok: false; reason: "not-found" }
 		| { ok: false; reason: "unsupported-operation"; index: number }
 		| { ok: false; reason: "unknown-member"; subjectId: string }
+		| ScimCursorRefusal
 		| ScimFilterRefusal
 		| ScimPatchRefusal,
 ): Response {
@@ -70,6 +75,12 @@ export function scimFailure(
 			);
 		case "not-found":
 			return errorResponse(new ScimError(404, "No resource matches the given id."));
+		case "invalid-cursor":
+			return errorResponse(
+				new ScimError(400, "The cursor is not one this server issued.", {
+					scimType: "invalidCursor",
+				}),
+			);
 		case "unsupported-filter":
 			return errorResponse(new ScimError(400, result.detail, { scimType: "invalidFilter" }));
 		case "unsupported-operation":

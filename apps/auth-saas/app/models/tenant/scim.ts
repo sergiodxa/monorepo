@@ -7,13 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { KeysetQuery } from "@sdxc/pagination";
 import type { Scim } from "@sdxc/scim";
 import type { Discovery } from "@sdxc/scim/discovery";
 import type { Filter } from "@sdxc/scim/filter";
 import type { Patch } from "@sdxc/scim/patch";
-import type { Database, Predicate, TableRow } from "remix/data-table";
+import type { Database, OrderByTuple, Predicate, TableRow } from "remix/data-table";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { decodeCursor, encodeCursor, InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { GROUP_SCHEMA, parseUser, ScimError } from "@sdxc/scim";
 import { filterToWhere } from "@sdxc/scim/data-table";
@@ -1100,20 +1102,130 @@ export interface ScimFilterRefusal {
 	detail: string;
 }
 
+/** A malformed cursor, or one minted for another ordering. */
+export interface ScimCursorRefusal {
+	ok: false;
+	reason: "invalid-cursor";
+}
+
+/**
+ * Where a list page sits: by `startIndex` for an index query, or with the cursor of the
+ * following page for a cursor query, `null` on the last page. `totalResults` is exact in both.
+ */
+export type ScimPagePosition =
+	| { totalResults: number; startIndex: number }
+	| { totalResults: number; nextCursor: string | null };
+
 export type ScimReadUserPageResult =
-	| {
-			ok: true;
-			representations: ScimUserRepresentation[];
-			totalResults: number;
-			startIndex: number;
-	  }
+	| ({ ok: true; representations: ScimUserRepresentation[] } & ScimPagePosition)
 	| { ok: false; reason: "invalid-token" }
+	| ScimCursorRefusal
 	| ScimFilterRefusal;
+
+/** Links in the order every user page reads them: by creation, then by the unique external id. */
+const LINK_ORDER: OrderByTuple<typeof scimLinks>[] = [
+	["created_at", "asc"],
+	["external_id", "asc"],
+];
+
+/** Groups in the order every group page reads them: by creation, then by id. */
+const GROUP_ORDER: OrderByTuple<typeof scimGroups>[] = [
+	["created_at", "asc"],
+	["id", "asc"],
+];
+
+/** One cursor page: its rows, and the cursor of the following page, `null` on the last. */
+interface CursorSlice<Row> {
+	rows: Row[];
+	nextCursor: string | null;
+}
+
+/**
+ * A cursor page read in SQL by keyset, seeking past `cursor` (`""` for the first page) on
+ * creation and then `tiebreaker`. It mints forward cursors only, the one RFC 9865 requires,
+ * and each stays valid indefinitely, carrying just the boundary row's sort keys.
+ *
+ * @param query - The connection-scoped query, unordered.
+ * @param tiebreaker - The column that makes the creation order unique.
+ * @param cursor - The client's cursor.
+ * @param count - The page size; `0` reads no rows.
+ * @returns The page, or the refusal of a malformed cursor.
+ */
+async function seekQuery<Row, WhereArg, ColumnArg>(
+	query: KeysetQuery<Row, WhereArg, ColumnArg>,
+	tiebreaker: string,
+	cursor: string,
+	count: number,
+): Promise<CursorSlice<Row> | InvalidCursorError> {
+	if (count === 0) {
+		let decoded = cursor === "" ? null : decodeCursor(cursor);
+		return decoded && isFailure(decoded) ? decoded.error : { rows: [], nextCursor: null };
+	}
+
+	let page = await Pagination.byKeyset(query, {
+		orderBy: [
+			["created_at", "asc"],
+			[tiebreaker, "asc"],
+		],
+		after: cursor,
+		limit: count,
+	});
+	if (isFailure(page)) {
+		if (page.error instanceof InvalidCursorError) return page.error;
+		throw page.error;
+	}
+	return { rows: page.data.items, nextCursor: page.data.cursors.next };
+}
+
+/**
+ * The same cursor page as `seekQuery`, over rows already loaded in that order, for a filter
+ * that evaluates in memory; its cursors are interchangeable with `seekQuery`'s.
+ *
+ * @param rows - Every matching row, in creation-then-tiebreaker order.
+ * @param tiebreaker - The tiebreaker column's name, as the cursor records it.
+ * @param key - Reads a row's creation time and tiebreaker value.
+ * @param cursor - The client's cursor; `""` for the first page.
+ * @param count - The page size.
+ * @returns The page, or the refusal of a malformed cursor.
+ */
+function seekRows<Row>(
+	rows: Row[],
+	tiebreaker: string,
+	key: (row: Row) => [number, string],
+	cursor: string,
+	count: number,
+): CursorSlice<Row> | InvalidCursorError {
+	let columns = ["created_at", tiebreaker];
+	let start = 0;
+	if (cursor !== "") {
+		let decoded = decodeCursor(cursor);
+		if (isFailure(decoded)) return decoded.error;
+		let [createdAt, value] = decoded.data.values;
+		if (
+			decoded.data.columns.join() !== columns.join() ||
+			typeof createdAt !== "number" ||
+			typeof value !== "string"
+		) {
+			return new InvalidCursorError("issued for a different ordering");
+		}
+		let after = rows.findIndex((row) => {
+			let [rowCreatedAt, rowValue] = key(row);
+			return rowCreatedAt > createdAt || (rowCreatedAt === createdAt && rowValue > value);
+		});
+		start = after === -1 ? rows.length : after;
+	}
+
+	let page = rows.slice(start, start + count);
+	let last = page.at(-1);
+	if (!last || start + count >= rows.length) return { rows: page, nextCursor: null };
+	let next = encodeCursor("after", columns, key(last));
+	return { rows: page, nextCursor: isFailure(next) ? null : next.data };
+}
 
 /**
  * A page of this connection's users, ordered by creation, with `totalResults` exact —
- * a directory is bounded by its plan's subject cap, so counting it exactly costs
- * nothing a cursor would have saved.
+ * a directory is bounded by its plan's subject cap, so counting it exactly costs little.
+ * An unfiltered cursor page seeks in SQL and assembles only its own users.
  *
  * @param db - The tenant's database.
  * @param input - The bearer token and the parsed list query.
@@ -1133,23 +1245,54 @@ export async function scimReadUserPage(
 	);
 	if (matches instanceof ScimError) return filterRefusal(matches);
 
-	let links = await db.findMany(scimLinks, {
-		where: eq("connection_id", resolved.connection.id),
-		orderBy: ["created_at", "asc"],
-	});
+	let scope = eq("connection_id", resolved.connection.id);
+	let { cursor, count } = input.query;
 
-	let representations: ScimUserRepresentation[] = [];
+	if (cursor !== null && !matches) {
+		let totalResults = await db.count(scimLinks, { where: scope });
+		let page = await seekQuery(db.query(scimLinks).where(scope), "external_id", cursor, count);
+		if (page instanceof InvalidCursorError) return { ok: false, reason: "invalid-cursor" };
+
+		let representations: ScimUserRepresentation[] = [];
+		for (let link of page.rows) {
+			representations.push(await assembleUserRepresentation(db, link.subject_id, link.external_id));
+		}
+		return { ok: true, representations, totalResults, nextCursor: page.nextCursor };
+	}
+
+	let links = await db.findMany(scimLinks, { where: scope, orderBy: LINK_ORDER });
+
+	let found: { link: TableRow<typeof scimLinks>; representation: ScimUserRepresentation }[] = [];
 	for (let link of links) {
 		let representation = await assembleUserRepresentation(db, link.subject_id, link.external_id);
 		if (matches && !matches(userWire(representation))) continue;
-		representations.push(representation);
+		found.push({ link, representation });
+	}
+
+	if (cursor !== null) {
+		let page = seekRows(
+			found,
+			"external_id",
+			({ link }) => [link.created_at, link.external_id],
+			cursor,
+			count,
+		);
+		if (page instanceof InvalidCursorError) return { ok: false, reason: "invalid-cursor" };
+		return {
+			ok: true,
+			representations: page.rows.map(({ representation }) => representation),
+			totalResults: found.length,
+			nextCursor: page.nextCursor,
+		};
 	}
 
 	let offset = input.query.startIndex - 1;
 	return {
 		ok: true,
-		representations: representations.slice(offset, offset + input.query.count),
-		totalResults: representations.length,
+		representations: found
+			.slice(offset, offset + count)
+			.map(({ representation }) => representation),
+		totalResults: found.length,
 		startIndex: input.query.startIndex,
 	};
 }
@@ -1633,17 +1776,14 @@ export interface ScimReadGroupPageInput {
 }
 
 export type ScimReadGroupPageResult =
-	| {
-			ok: true;
-			representations: ScimGroupRepresentation[];
-			totalResults: number;
-			startIndex: number;
-	  }
+	| ({ ok: true; representations: ScimGroupRepresentation[] } & ScimPagePosition)
 	| { ok: false; reason: "invalid-token" }
+	| ScimCursorRefusal
 	| ScimFilterRefusal;
 
 /**
- * A page of this connection's groups, ordered by creation, with `totalResults` exact.
+ * A page of this connection's groups, ordered by creation, with `totalResults` exact, by
+ * index or by cursor.
  * Groups live in one table, so the filter runs in SQL where it translates, and over the
  * loaded rows where it does not (a value containing a `LIKE` wildcard, say).
  *
@@ -1658,7 +1798,7 @@ export async function scimReadGroupPage(
 	let resolved = await resolveScimToken(db, input.token);
 	if (!resolved.ok) return { ok: false, reason: "invalid-token" };
 	let scope = eq("connection_id", resolved.connection.id);
-	let { filter, startIndex, count } = input.query;
+	let { filter, startIndex, count, cursor } = input.query;
 
 	let matches = compileListFilter(filter, SCIM_GROUP_DEFINITIONS, SCIM_GROUP_FILTER_PATHS);
 	if (matches instanceof ScimError) return filterRefusal(matches);
@@ -1671,8 +1811,20 @@ export async function scimReadGroupPage(
 		: null;
 
 	if (matches && (!where || !isSuccess(where))) {
-		let rows = await db.findMany(scimGroups, { where: scope, orderBy: ["created_at", "asc"] });
+		let rows = await db.findMany(scimGroups, { where: scope, orderBy: GROUP_ORDER });
 		let found = rows.filter((row) => matches(groupWire(toGroupRepresentation(row, []))));
+		if (cursor !== null) {
+			let slice = seekRows(found, "id", (row) => [row.created_at, row.id], cursor, count);
+			if (slice instanceof InvalidCursorError) return { ok: false, reason: "invalid-cursor" };
+			return {
+				ok: true,
+				representations: await Promise.all(
+					slice.rows.map((row) => assembleGroupRepresentation(db, row.id)),
+				),
+				totalResults: found.length,
+				nextCursor: slice.nextCursor,
+			};
+		}
 		let page = found.slice(startIndex - 1, startIndex - 1 + count);
 		return {
 			ok: true,
@@ -1689,12 +1841,20 @@ export async function scimReadGroupPage(
 			? and(scope, where.data as Predicate<"display_name" | "external_id">)
 			: scope;
 	let totalResults = await db.count(scimGroups, { where: scoped });
+	if (cursor !== null) {
+		let slice = await seekQuery(db.query(scimGroups).where(scoped), "id", cursor, count);
+		if (slice instanceof InvalidCursorError) return { ok: false, reason: "invalid-cursor" };
+		let representations: ScimGroupRepresentation[] = [];
+		for (let row of slice.rows) representations.push(await assembleGroupRepresentation(db, row.id));
+		return { ok: true, representations, totalResults, nextCursor: slice.nextCursor };
+	}
+
 	let rows =
 		count === 0
 			? []
 			: await db.findMany(scimGroups, {
 					where: scoped,
-					orderBy: ["created_at", "asc"],
+					orderBy: GROUP_ORDER,
 					limit: count,
 					offset: startIndex - 1,
 				});

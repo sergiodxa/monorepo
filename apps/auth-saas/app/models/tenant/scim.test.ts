@@ -555,7 +555,7 @@ describe("scimReadUser and scimReadUserPage", () => {
 		if (!page.ok) throw new Error("unreachable");
 		expect(page.totalResults).toBe(3);
 		expect(page.representations).toHaveLength(2);
-		expect(page.startIndex).toBe(1);
+		expect(page).toMatchObject({ startIndex: 1 });
 	});
 
 	test("filters by userName with eq", async () => {

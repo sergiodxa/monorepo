@@ -489,3 +489,84 @@ describe("SCIM Users conformance", () => {
 		expect(body.active).toBe(false);
 	});
 });
+
+describe("SCIM Users cursor pagination", () => {
+	/** A list page as the tests read it. */
+	interface ListBody {
+		totalResults: number;
+		startIndex?: number;
+		nextCursor?: string;
+		previousCursor?: string;
+		Resources: { id: string; userName: string }[];
+	}
+
+	/** Provisions three users through the endpoint and answers the harness and token. */
+	async function provisionThree() {
+		let harness = await buildScimHarness();
+		await setScimEntitled(harness.tenantDO, true);
+		let token = await createScimConnectionToken(harness.tenantDO);
+		for (let name of ["u1", "u2", "u3"]) {
+			await harness.router.fetch(
+				harness.request("/scim/v2/Users", token, {
+					method: "POST",
+					body: JSON.stringify({
+						userName: `${name}@example.com`,
+						externalId: `ext-${name}`,
+						emails: [{ value: `${name}@example.com`, primary: true }],
+					}),
+				}),
+			);
+		}
+		let list = async (search: string) => {
+			let response = await harness.router.fetch(harness.request(`/scim/v2/Users?${search}`, token));
+			return { status: response.status, body: (await response.json()) as ListBody };
+		};
+		return list;
+	}
+
+	test.each([
+		["unfiltered, seeking in SQL", ""],
+		["filtered, seeking over the matches", `filter=${encodeURIComponent('userName sw "u"')}&`],
+	])("walks every user once by nextCursor, %s", async (_, filter) => {
+		let list = await provisionThree();
+
+		let first = await list(`${filter}cursor&count=2`);
+		expect(first.status).toBe(200);
+		expect(first.body.totalResults).toBe(3);
+		expect(first.body.Resources).toHaveLength(2);
+		expect(first.body).not.toHaveProperty("startIndex");
+		expect(first.body).not.toHaveProperty("previousCursor");
+		expect(first.body.nextCursor).toMatch(/^[A-Za-z0-9._~-]+$/);
+
+		let second = await list(`${filter}cursor=${first.body.nextCursor}&count=2`);
+		expect(second.body.Resources).toHaveLength(1);
+		expect(second.body).not.toHaveProperty("nextCursor");
+
+		let names = [...first.body.Resources, ...second.body.Resources].map((user) => user.userName);
+		expect(names).toEqual(["u1@example.com", "u2@example.com", "u3@example.com"]);
+	});
+
+	test("keeps paging by index when the request names startIndex or nothing", async () => {
+		let list = await provisionThree();
+
+		let page = await list("startIndex=2&count=1");
+		expect(page.body).toMatchObject({ totalResults: 3, startIndex: 2 });
+		expect(page.body.Resources.map((user) => user.userName)).toEqual(["u2@example.com"]);
+		expect(page.body).not.toHaveProperty("nextCursor");
+
+		expect((await list("")).body).toMatchObject({ startIndex: 1, totalResults: 3 });
+	});
+
+	test("answers a cursor it did not mint with 400 invalidCursor", async () => {
+		let list = await provisionThree();
+
+		for (let search of [
+			"cursor=bm90LWEtY3Vyc29y",
+			`filter=${encodeURIComponent('userName sw "u"')}&cursor=bm90`,
+		]) {
+			let page = await list(search);
+			expect(page.status).toBe(400);
+			expect(page.body).toMatchObject({ status: "400", scimType: "invalidCursor" });
+		}
+	});
+});

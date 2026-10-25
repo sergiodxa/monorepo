@@ -12,6 +12,7 @@ import { resourceTypes, schemas, serviceProviderConfig } from "@sdxc/scim/discov
 import { createAction } from "remix/router";
 
 import {
+	SCIM_DEFAULT_PAGE_SIZE,
 	SCIM_GROUP_DEFINITIONS,
 	SCIM_MAX_PAGE_SIZE,
 	SCIM_USER_DEFINITIONS,
@@ -28,6 +29,13 @@ export const scimServiceProviderConfig = createAction(
 				filter: { supported: true, maxResults: SCIM_MAX_PAGE_SIZE },
 				sort: false,
 				etag: false,
+				pagination: {
+					cursor: true,
+					index: true,
+					defaultPaginationMethod: "index",
+					defaultPageSize: SCIM_DEFAULT_PAGE_SIZE,
+					maxPageSize: SCIM_MAX_PAGE_SIZE,
+				},
 				authenticationSchemes: [
 					{
 						type: "oauthbearertoken",

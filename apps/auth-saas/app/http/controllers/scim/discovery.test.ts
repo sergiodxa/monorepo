@@ -30,6 +30,13 @@ describe("SCIM discovery documents", () => {
 		expect(body.sort).toMatchObject({ supported: false });
 		expect(body.filter).toMatchObject({ supported: true });
 		expect(body.patch).toMatchObject({ supported: true });
+		expect(body.pagination).toEqual({
+			cursor: true,
+			index: true,
+			defaultPaginationMethod: "index",
+			defaultPageSize: 100,
+			maxPageSize: 200,
+		});
 		expect(calls).toHaveLength(0);
 	});
 
