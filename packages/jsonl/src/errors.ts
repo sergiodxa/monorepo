@@ -45,3 +45,47 @@ export class JSONLError extends Error {
 		this.issues = options.issues ?? [];
 	}
 }
+
+/**
+ * What went wrong in a JSON text sequence: a record longer than `maxRecordBytes`, a top-level
+ * scalar with no whitespace after it, a record that is not JSON, a value its schema rejected,
+ * or a value the writer cannot put in a record.
+ */
+export type JSONSeqErrorCode =
+	| "record-too-long"
+	| "truncated"
+	| "invalid-json"
+	| "invalid-value"
+	| "unserializable";
+
+/** A JSON text sequence failure at one record; `message` ends with that record number. */
+export class JSONSeqError extends Error {
+	override name = "JSONSeqError";
+
+	/** Which step failed, so a caller can branch without reading `message`. */
+	code: JSONSeqErrorCode;
+
+	/** 1-based position among the non-empty records, the same count `skip` takes. */
+	record: number;
+
+	/** The schema's issues for an `invalid-value` failure; empty for every other code. */
+	issues: readonly StandardSchemaV1.Issue[];
+
+	/**
+	 * @param code - What went wrong
+	 * @param reason - The failure in words, without the record number
+	 * @param record - 1-based record number the failure concerns
+	 * @param options - The schema's issues, and the native cause when there is one
+	 */
+	constructor(
+		code: JSONSeqErrorCode,
+		reason: string,
+		record: number,
+		options: { issues?: readonly StandardSchemaV1.Issue[]; cause?: unknown } = {},
+	) {
+		super(`${reason} at record ${record}`, { cause: options.cause });
+		this.code = code;
+		this.record = record;
+		this.issues = options.issues ?? [];
+	}
+}

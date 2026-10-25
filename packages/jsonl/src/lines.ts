@@ -134,7 +134,7 @@ export function isBlank(text: string): boolean {
  *
  * @yields Each chunk, in order.
  */
-async function* chunks(source: ByteSource): AsyncGenerator<Uint8Array> {
+export async function* chunks(source: ByteSource): AsyncGenerator<Uint8Array> {
 	if (!("getReader" in source)) {
 		yield* source;
 		return;
@@ -152,7 +152,7 @@ async function* chunks(source: ByteSource): AsyncGenerator<Uint8Array> {
 }
 
 /** The pending pieces and `last` as one contiguous array, copying only when there is more than one. */
-function join(pending: Uint8Array[], pendingBytes: number, last: Uint8Array): Uint8Array {
+export function join(pending: Uint8Array[], pendingBytes: number, last: Uint8Array): Uint8Array {
 	if (pending.length === 0) return last;
 	let bytes = new Uint8Array(pendingBytes + last.length);
 	let offset = 0;

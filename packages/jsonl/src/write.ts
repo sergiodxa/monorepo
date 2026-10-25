@@ -44,7 +44,8 @@ export function encode(
 	let number = 0;
 	return stream(values, (value) => {
 		number += 1;
-		return serialize(value, number);
+		let line = serialize(value, number);
+		return isFailure(line) ? line : success(`${line.data}\n`);
 	});
 }
 
@@ -63,7 +64,7 @@ export function encodeLines(
 		if (line.includes("\n") || line.includes("\r")) {
 			return failure(new JSONLError("unserializable", "Line contains a line break", number));
 		}
-		return success(line);
+		return success(`${line}\n`);
 	});
 }
 
@@ -86,10 +87,13 @@ function serialize(value: unknown, number: number): Result<string, JSONLError> {
 	return success(line);
 }
 
-/** A pull stream writing one line per item of `items`, each turned into text by `toLine`. */
-function stream<T>(
+/**
+ * A pull stream writing the framed text `toText` makes of each item, one item per pull; a
+ * failure errors the stream with its error and returns the iterator.
+ */
+export function stream<T>(
 	items: Iterable<T> | AsyncIterable<T>,
-	toLine: (item: T) => Result<string, JSONLError>,
+	toText: (item: T) => Result<string, Error>,
 ): ReadableStream<Uint8Array> {
 	let encoder = new TextEncoder();
 	let iterator: Iterator<T> | AsyncIterator<T> =
@@ -101,13 +105,13 @@ function stream<T>(
 				controller.close();
 				return;
 			}
-			let line = toLine(next.value);
-			if (isFailure(line)) {
-				controller.error(line.error);
+			let text = toText(next.value);
+			if (isFailure(text)) {
+				controller.error(text.error);
 				await iterator.return?.();
 				return;
 			}
-			controller.enqueue(encoder.encode(`${line.data}\n`));
+			controller.enqueue(encoder.encode(text.data));
 		},
 		async cancel(reason) {
 			await iterator.return?.(reason);

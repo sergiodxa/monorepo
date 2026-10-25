@@ -53,6 +53,17 @@ let body = JSONL.encode(rows); // ReadableStream<Uint8Array>, one value pulled p
 return new Response(body, { headers: { "Content-Type": "application/jsonl" } });
 ```
 
+### Read and write JSON text sequences
+
+```typescript
+import * as JSONL from "@sdxc/jsonl";
+
+let body = JSONL.encodeSequence(events); // RS, the JSON text, then LF per record
+return new Response(body, { headers: { "Content-Type": "application/json-seq" } });
+```
+
+[RFC 7464](https://www.rfc-editor.org/rfc/rfc7464) sequences get the same API under sequence names: `records`, `readSequence` (`maxRecordBytes`, `skip`, `schema`), `parseSequence`, `stringifySequence`, `encodeSequence` and `encodeSequenceTexts`, reporting a `JSONSeqError` with a `record` number. Empty records are skipped, and a top-level number, `true`, `false` or `null` with no whitespace after it fails as `truncated` while reading continues.
+
 ## API
 
 ### `parse(text: string): Result<unknown[], JSONLError>`
