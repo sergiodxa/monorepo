@@ -160,7 +160,7 @@ The action returns the archive's stream as the response body, so the first entry
 the rest are still unread. Assembling fails only on a refused entry, before anything is sent:
 
 ```typescript {% title="app/http/controllers/account/export.ts" %}
-import { attachment } from "@sdxc/http/response";
+import { file } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
@@ -174,18 +174,15 @@ export default createAction(routes.account.export, async (ctx) => {
 		return new Response("The export could not be assembled.", { status: 500 });
 	}
 
-	return new Response(archive.data.stream(), {
-		headers: {
-			"Content-Type": "application/zip",
-			"Content-Disposition": attachment(`${ctx.account.slug}-export.zip`),
-			"Cache-Control": "no-store",
-		},
+	return file(archive.data.stream(), `${ctx.account.slug}-export.zip`, {
+		headers: { "Content-Type": "application/zip", "Cache-Control": "no-store" },
 	});
 });
 ```
 
-`ctx.account` is the signed-in account your auth middleware publishes. `attachment()` writes the
-`Content-Disposition` value, with a non-ASCII account name in the filename carried exactly. The
+`ctx.account` is the signed-in account your auth middleware publishes. `file()` writes the
+`Content-Disposition` header, with a non-ASCII account name in the filename carried exactly, and
+keeps the `Content-Type` passed in its headers, `application/octet-stream` when none is. The
 response has no `Content-Length`, since the size is known only once the last entry is read, so
 a browser shows the download's progress in bytes received.
 

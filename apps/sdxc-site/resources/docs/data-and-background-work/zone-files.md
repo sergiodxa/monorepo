@@ -235,7 +235,7 @@ written relative to it and the apex as `@`, the form people keep in git and past
 provider:
 
 ```typescript {% title="app/http/controllers/zones/export.ts" %}
-import { attachment, text } from "@sdxc/http/response";
+import { file } from "@sdxc/http/response";
 import * as ZoneFile from "@sdxc/zone-file";
 import { createAction } from "remix/router";
 
@@ -249,9 +249,9 @@ export default createAction(routes.zones.export, async (ctx) => {
 		{ relative: true },
 	);
 
-	return text(body, {
+	return file(new Blob([body]), `${zone.domain}.zone`, {
 		headers: {
-			"Content-Disposition": attachment(`${zone.domain}.zone`),
+			"Content-Type": "text/dns; charset=utf-8",
 			"Cache-Control": "no-store",
 		},
 	});
@@ -259,7 +259,8 @@ export default createAction(routes.zones.export, async (ctx) => {
 ```
 
 `Zones` is your own table, holding each record's name, type, TTL and typed fields as `parse`
-returned them. The file starts with `$ORIGIN` and `$TTL`, and a record's TTL is written only when
+returned them. `file()` sends the text as a download named after the domain, typed `text/dns`,
+the media type registered for zone files. The file starts with `$ORIGIN` and `$TTL`, and a record's TTL is written only when
 it differs from `$TTL`. Records parsed from a file go back out through `stringify` and parse
 again to the same records. Spacing, comments on lines of their own and parentheses are not kept,
 so an export is normalized: two exports of the same zone diff only where the records differ.
