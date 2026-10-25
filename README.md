@@ -278,6 +278,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/font](packages/font)                     | TrueType font reader: glyph lookup, metrics, kerning, outlines and line layout                                |
 | [@sdxc/icalendar](packages/icalendar)           | Read and write iCalendar documents, with recurrence rules and time zones                                      |
 | [@sdxc/jscalendar](packages/jscalendar)         | Read, validate and write RFC 8984 JSCalendar, expand recurrences, and convert to and from iCalendar           |
+| [@sdxc/jscontact](packages/jscontact)           | Read, validate and write RFC 9553 JSContact Cards, and convert them to and from vCard and jCard               |
 | [@sdxc/jsdoc](packages/jsdoc)                   | Read JSDoc out of source text into a JSON documentation model                                                 |
 | [@sdxc/json-canonical](packages/json-canonical) | RFC 8785 JSON Canonicalization Scheme: one byte-exact serialization for hashing and signing JSON              |
 | [@sdxc/json-pointer](packages/json-pointer)     | Parse, stringify, get and set RFC 6901 JSON Pointers                                                          |
