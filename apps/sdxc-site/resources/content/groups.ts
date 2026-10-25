@@ -30,6 +30,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"user-agent",
 			"structured-fields",
 			"link-header",
+			"uri-template",
 			"digest-fields",
 			"http-signatures",
 			"server-timing",
