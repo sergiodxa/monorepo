@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 36
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to validate JSCalendar events and tasks from a request with `@sdxc/jscalendar`"
     - "How to expand recurring events into an agenda and edit one occurrence with a PatchObject"
@@ -175,12 +175,16 @@ change one participant's reply without resending the event. `applyPatch` applies
 all or nothing, and `parse` checks the result is still a valid object:
 
 ```typescript {% title="app/services/agenda/edit.ts" %}
-import type { JSCalendar } from "@sdxc/jscalendar";
+import type { JSCalendar, JSCalendarParseError, PatchError } from "@sdxc/jscalendar";
+import type { Result } from "@sdxc/result";
 
 import { applyPatch, parse } from "@sdxc/jscalendar";
 import { isFailure } from "@sdxc/result";
 
-export function editEntry(entry: JSCalendar.Entry, patch: JSCalendar.PatchObject) {
+export function editEntry(
+	entry: JSCalendar.Entry,
+	patch: JSCalendar.PatchObject,
+): Result<JSCalendar.CalendarObject, PatchError | JSCalendarParseError> {
 	let patched = applyPatch(entry, patch);
 	if (isFailure(patched)) return patched;
 	return parse(patched.data);
