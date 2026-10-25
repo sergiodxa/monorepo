@@ -131,4 +131,6 @@ export default route({
 	cms: route("/cms", cms),
 	/** Where browsers report Content Security Policy violations, named by `Reporting-Endpoints`. */
 	cspReports: post("/reports/csp"),
+	/** The crawl rules and AI usage preferences, served as robots.txt. */
+	robots: get("/robots.txt"),
 });

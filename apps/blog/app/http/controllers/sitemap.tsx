@@ -85,6 +85,7 @@ export default createAction(
 			atom: false,
 			jsonFeed: false,
 			cms: false,
+			robots: false,
 		});
 
 		return xml(sitemap.toString());

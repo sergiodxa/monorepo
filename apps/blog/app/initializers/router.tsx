@@ -516,6 +516,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.cspReports,
 		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
+	router.map(
+		routes.robots,
+		lazy(() => import("~/app/http/controllers/robots")),
+	);
 
 	return router;
 }
