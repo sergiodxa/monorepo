@@ -24,9 +24,9 @@ middleware, the webhook endpoint and an in-memory list for tests.
 [`@sdxc/attribution`](/api/attribution) remembers the campaign that brought them.
 
 ```bash
-npm add @sdxc/attribution @sdxc/email-address @sdxc/get-client-ip @sdxc/http \
-	@sdxc/lazy-route @sdxc/logger @sdxc/newsletter @sdxc/result @sdxc/validate \
-	@sdxc/webhooks remix
+npm add @sdxc/attribution @sdxc/database-middleware @sdxc/email-address \
+	@sdxc/get-client-ip @sdxc/http @sdxc/lazy-route @sdxc/logger @sdxc/newsletter \
+	@sdxc/result @sdxc/validate @sdxc/webhooks remix
 ```
 
 ## Pick a provider
@@ -97,6 +97,7 @@ The middleware publishes the provider as `ctx.newsletter`. Taking the list as a 
 import type { Newsletter } from "@sdxc/newsletter";
 
 import { attribution } from "@sdxc/attribution/middleware";
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -105,6 +106,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
 import { attributionCookie } from "~/app/initializers/cookies";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { buttondown } from "~/app/initializers/newsletter";
 import { createNewsletterWebhook } from "~/app/initializers/newsletter-webhook";
@@ -114,6 +116,7 @@ export function createWebRouter(list: Newsletter = buttondown) {
 	let router = createRouter({
 		middleware: [
 			log(logger),
+			database(openDatabase()),
 			getClientIP(),
 			attribution({ store: attributionCookie() }),
 			formData(),
@@ -315,29 +318,24 @@ import { NewsletterWebhook } from "@sdxc/newsletter";
 import { KVReplayStore } from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 
-import { openDatabase } from "~/app/initializers/database";
+import type { AppContext } from "~/app/initializers/router";
+
 import { setReaderStatus } from "~/app/models/readers";
 
-export function createNewsletterWebhook(provider: Newsletter): NewsletterWebhook {
-	return new NewsletterWebhook(
+export function createNewsletterWebhook(
+	provider: Newsletter,
+): NewsletterWebhook<AppContext> {
+	return new NewsletterWebhook<AppContext>(
 		provider,
 		{
-			async "subscriber.confirmed"(event) {
-				await setReaderStatus(openDatabase(), event.subscriberId, "active");
+			async "subscriber.confirmed"(event, ctx) {
+				await setReaderStatus(ctx.db, event.subscriberId, "active");
 			},
-			async "subscriber.unsubscribed"(event) {
-				await setReaderStatus(
-					openDatabase(),
-					event.subscriberId,
-					"unsubscribed",
-				);
+			async "subscriber.unsubscribed"(event, ctx) {
+				await setReaderStatus(ctx.db, event.subscriberId, "unsubscribed");
 			},
-			async "subscriber.suppressed"(event) {
-				await setReaderStatus(
-					openDatabase(),
-					event.subscriberId,
-					"suppressed",
-				);
+			async "subscriber.suppressed"(event, ctx) {
+				await setReaderStatus(ctx.db, event.subscriberId, "suppressed");
 			},
 		},
 		{ store: new KVReplayStore(env.WEBHOOKS, { prefix: "newsletter:" }) },
@@ -345,16 +343,16 @@ export function createNewsletterWebhook(provider: Newsletter): NewsletterWebhook
 }
 ```
 
-`setReaderStatus` is your own model function over the table where you mirror readers, and
-`openDatabase` the function from
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases). A handler receives
-the base request context, so it opens the database itself. The endpoint is the value
-`router.map` takes, as the router above shows.
+`setReaderStatus` is your own model function over the table where you mirror readers. `AppContext`
+is your router's context type, `RouterContext<ReturnType<typeof createWebRouter>>`, so each handler
+receives the request's own `ctx.db`, published by `database()` as
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) sets it up. The
+endpoint is the value `router.map` takes, as the router above shows.
 
 The endpoint answers `401` to a delivery the secret does not prove, and a provider with no secret
 configured proves none, so the route fails closed. An authentic delivery it cannot parse is
-acknowledged, since the same bytes would fail again. A handler that throws answers `503`, so the
-platform redelivers; the replay store remembers each event id once its handler finishes, so the
+acknowledged, since the same bytes would fail again. A handler that returns a failed `Result`
+answers `503`, so the platform redelivers; the replay store remembers each event id once its handler finishes, so the
 redelivery skips the events already handled and resumes at the one that failed. Buttondown signs
 deliveries without a timestamp, which makes the store what bounds a replay there.
 

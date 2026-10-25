@@ -306,12 +306,14 @@ each delivery before anything trusts it, and a handler per event type does the w
 import { BillingWebhook } from "@sdxc/billing";
 import { createAction } from "remix/router";
 
+import type { AppContext } from "~/app/initializers/router";
+
 import jobs from "~/app/jobs";
 import { polar } from "~/app/initializers/billing";
 import { deliveries } from "~/app/models/webhook-deliveries";
 import routes from "~/routes/web";
 
-const BILLING_WEBHOOK = new BillingWebhook(
+const BILLING_WEBHOOK = new BillingWebhook<AppContext>(
 	polar,
 	{
 		async "order.paid"(event, ctx) {
@@ -327,11 +329,12 @@ export default createAction(routes.webhooks.billing, (ctx) =>
 ```
 
 The receiver is built once, at module scope, so a misconfigured store fails as the module
-loads. Each handler is called with the event and the request's own context, so it reaches the
-same `ctx.jobs` the orders endpoint enqueues through. `polar` is your `PolarBilling` provider
+loads. Each handler is called with the event and the request's own context, typed as your
+router's `AppContext`, so it reaches the same `ctx.jobs` the orders endpoint enqueues through. `polar` is your `PolarBilling` provider
 from `@sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
 processed answers `200` at once, an event type with no handler is logged and acknowledged, and a
-handler that throws a retryable error answers `503` so the platform delivers again. The provider
+handler that returns a failed `Result` with a retryable error answers `503` so the platform
+delivers again. The provider
 reads its secret through a function such as `webhookSecret: () => env.POLAR_WEBHOOK_SECRET`, and
 an unreadable secret fails verification, so this receiver fails closed too.
 

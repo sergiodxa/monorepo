@@ -232,8 +232,9 @@ on purpose, and the controller hands each delivery to the endpoint's `handler`:
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import { BillingWebhook } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { billing } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
@@ -241,26 +242,32 @@ import { WebhookDeliveries } from "~/app/models/webhook-deliveries";
 import { syncEntitlements } from "~/app/services/entitlements";
 import routes from "~/routes/web";
 
-async function resync(customerId: string | null): Promise<void> {
+async function resync(ctx: AppContext, customerId: string | null) {
 	if (customerId === null) return;
-	let synced = await syncEntitlements(openDatabase(), billing, { id: customerId });
-	if (isFailure(synced)) throw synced.error;
+	return await syncEntitlements(ctx.db, billing, { id: customerId });
 }
 
-const ENDPOINT = new BillingWebhook(
+const ENDPOINT = new BillingWebhook<AppContext>(
 	billing,
 	{
-		"subscription.activated": (event) => resync(event.subscription.customerId),
-		"subscription.updated": (event) => resync(event.subscription.customerId),
-		"subscription.canceled": (event) => resync(event.subscription.customerId),
-		"subscription.revoked": (event) => resync(event.subscription.customerId),
-		"order.paid": (event) => resync(event.order.customerId),
+		"subscription.activated": (event, ctx) =>
+			resync(ctx, event.subscription.customerId),
+		"subscription.updated": (event, ctx) =>
+			resync(ctx, event.subscription.customerId),
+		"subscription.canceled": (event, ctx) =>
+			resync(ctx, event.subscription.customerId),
+		"subscription.revoked": (event, ctx) =>
+			resync(ctx, event.subscription.customerId),
+		"order.paid": (event, ctx) => resync(ctx, event.order.customerId),
 	},
 	{ store: new WebhookDeliveries(openDatabase) },
 );
 
 export default createAction(routes.webhooks.billing, (ctx) => ENDPOINT.handler(ctx));
 ```
+
+`AppContext` is your router's context type, `RouterContext<ReturnType<typeof createWebRouter>>`,
+so every handler receives the request's own `ctx.db` and whatever else your middleware publishes.
 
 A delivery says that something changed, and only a fresh snapshot says what is true now, so a
 handler re-reads rather than applying the payload as a diff. The handler map is typed from the
@@ -269,8 +276,8 @@ event union: a misspelled key is a compile error, and a `"order.paid"` handler r
 
 Each status code is chosen for the platform, which disables an endpoint that keeps failing. An
 unproven delivery is the only `401`. An event type with no handler, or one the platform added
-after your release, is logged and acknowledged. A handler reports a failure by throwing it: the
-endpoint answers `503` when the error is retryable, so the platform delivers again, and `200`
+after your release, is logged and acknowledged. A handler reports a failure by returning the
+failed `Result`: the endpoint answers `503` when the error is retryable, so the platform delivers again, and `200`
 when a retry would fail the same way; the `retry` option changes that decision. Map the
 controller through `lazy()` like any other.
 
