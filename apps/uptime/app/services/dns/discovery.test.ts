@@ -158,6 +158,10 @@ describe("dns limits", () => {
 			INVOCATION_QUERY_BUDGET,
 		);
 	});
+
+	test("keeps the 85-name cap existing monitors were imported under", () => {
+		expect(MAX_TRACKED_NAMES_PER_MONITOR).toBe(85);
+	});
 });
 
 describe("planDnsCheck", () => {

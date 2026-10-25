@@ -28,7 +28,7 @@ The single-probe DNS check on `POST /api/v1/ping` is **unchanged**: it still tak
 
 - **We cannot list your DNS records.** DNS does not allow it. Without a zone file, a monitor covers your domain's apex and nothing else — a record at `staging.example.com` is invisible unless that name was in a zone file you pasted.
 - **The zone file is a snapshot.** It is read once, parsed, and **never stored**. Names added to your zone afterwards are not tracked until you paste again.
-- **One monitor may track at most 60 names.** A create carrying more is refused, because a check sweeps every tracked name in one go.
+- **One monitor may track at most 85 names.** A create carrying more is refused, because a check sweeps every tracked name in one go.
 - **Seven record types.** `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
 - **Detection latency is floored by your records' TTL**, not by the check interval.
 - **One check is one ping**, however many names and types it swept.

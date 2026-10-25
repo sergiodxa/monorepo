@@ -575,7 +575,7 @@ describe("checkDns query budget", () => {
 		let record = await runJob(db);
 
 		/**
-		 * 600 queries buy {@link MAX_NAMES_PER_CHECK} names: three monitors are swept, two in
+		 * The query budget buys {@link MAX_NAMES_PER_CHECK} names: three monitors are swept, two in
 		 * full and one truncated, and the fourth waits for the next delivery.
 		 */
 		expect(sweepDnsNameMock).toHaveBeenCalledTimes(MAX_NAMES_PER_CHECK);

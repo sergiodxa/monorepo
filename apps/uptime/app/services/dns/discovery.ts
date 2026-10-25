@@ -29,11 +29,11 @@ import { normalizeDnsName } from "~/app/services/dns/record-value";
 const SUBREQUEST_LIMIT = 1_000;
 
 /**
- * How many of {@link SUBREQUEST_LIMIT} one invocation may spend on DNS queries; the
- * remaining budget covers the monitor claim, owner lookup, queue batch, ping ingestion and
- * each monitor's own D1 statements — sized so a sweep's failures trace to its queries.
+ * How many of {@link SUBREQUEST_LIMIT} one invocation may spend on DNS queries: enough for
+ * 85 names at ten queries each, with the remaining 150 covering the monitor claim, owner
+ * lookup, queue batch, ping ingestion and each monitor's own D1 statements.
  */
-export const INVOCATION_QUERY_BUDGET = Math.floor(SUBREQUEST_LIMIT * 0.6);
+export const INVOCATION_QUERY_BUDGET = Math.floor(SUBREQUEST_LIMIT * 0.85);
 
 /**
  * The most names one check of one monitor may sweep, from the invocation's whole query

@@ -82,7 +82,7 @@ Per monitor:
 
 - Default interval is `86400` seconds.
 - DNS monitors are enabled by default, and discovered records are watched by default at review; records discovered by a later check are not.
-- A monitor tracks at most `60` names, because one check sweeps every tracked name — ten queries each — against a per-invocation budget of `600` queries.
+- A monitor tracks at most `85` names, because one check sweeps every tracked name — ten queries each — against a per-invocation budget of `850` queries.
 - The product uses a team-level limit of `20` DNS monitors.
 - A check costs one ping, however many queries the sweep made — the resolver is free to us, so it is free to the customer.
 
