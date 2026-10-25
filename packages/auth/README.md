@@ -237,6 +237,8 @@ required to reuse a token).
 
 - `token({ resources?, scope? }): Promise<string>`: each resource is sent as its own RFC 8707
   `resource` parameter
+- `exchange({ subjectToken, actorToken?, audience?, resources?, scope? })`: RFC 8693 token
+  exchange, answering `{ accessToken, issuedTokenType, tokenType, expiresIn, scopes }`
 - `introspect(token, { tokenType? })`: RFC 7662; an unknown, expired, or revoked token answers
   `active: false`
 - `revoke(token, { tokenType? })`: RFC 7009; runs through `waitUntil` when configured

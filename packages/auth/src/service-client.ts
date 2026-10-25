@@ -71,6 +71,21 @@ const GRANT_SCHEMA = s.object({
 	scope: s.optional(s.string()),
 });
 
+/** The grant type RFC 8693 §2.1 registers for a token exchange. */
+const TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
+
+/** The token type RFC 8693 §3 registers for an access token. */
+const ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
+
+/** A successful token exchange, per RFC 8693 §2.2.1. */
+const EXCHANGE_SCHEMA = s.object({
+	access_token: s.string(),
+	issued_token_type: s.string(),
+	token_type: s.string(),
+	expires_in: s.optional(s.number()),
+	scope: s.optional(s.string()),
+});
+
 /** A refused request, in the shape RFC 6749 §5.2 defines for the token endpoint. */
 const REFUSAL_SCHEMA = s.object({
 	error: s.string(),
@@ -235,6 +250,59 @@ export class ServiceClient {
 			this.#grants.delete(key);
 			throw cause;
 		}
+	}
+
+	/**
+	 * Trades a token for one aimed at another audience, per RFC 8693, so a service calling
+	 * a downstream API on a user's behalf sends a token scoped to that API. Each call asks
+	 * the issuer, since the answer depends on the token presented.
+	 *
+	 * @param options - The subject token, an optional actor token, and the target and
+	 *   scopes the new token is for.
+	 * @returns The issued token and how it is presented.
+	 * @throws `TokenRequestFailed` when the issuer refuses the exchange, its `providerError`
+	 *   naming why (`invalid_target`, `unauthorized_client`, …), or answers unusably.
+	 * @example
+	 * let { accessToken } = await service.exchange({
+	 * 	subjectToken: userToken,
+	 * 	audience: ["https://reports.example.com"],
+	 * });
+	 */
+	async exchange(options: ServiceClient.ExchangeOptions): Promise<ServiceClient.ExchangedToken> {
+		let endpoint = await this.#issuer.tokenEndpoint();
+
+		let body = new URLSearchParams({
+			grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+			subject_token: options.subjectToken,
+			subject_token_type: options.subjectTokenType ?? ACCESS_TOKEN_TYPE,
+		});
+		if (options.actorToken !== undefined) {
+			body.set("actor_token", options.actorToken);
+			body.set("actor_token_type", options.actorTokenType ?? ACCESS_TOKEN_TYPE);
+		}
+		if (options.requestedTokenType) body.set("requested_token_type", options.requestedTokenType);
+		for (let audience of options.audience ?? []) body.append("audience", audience);
+		for (let resource of options.resources ?? []) body.append("resource", resource);
+		if (options.scope?.length) body.set("scope", options.scope.join(" "));
+
+		let document = await this.#read(endpoint, body, AuthErrorCode.TokenRequestFailed, this.#dpop);
+		let result = s.parseSafe(EXCHANGE_SCHEMA, document);
+
+		if (!result.success) {
+			throw new AuthError(`${endpoint.href} answered the exchange without an issued token.`, {
+				code: AuthErrorCode.TokenRequestFailed,
+				cause: result.issues,
+			});
+		}
+
+		let answer = result.value;
+		return {
+			accessToken: answer.access_token,
+			issuedTokenType: answer.issued_token_type,
+			tokenType: answer.token_type,
+			expiresIn: answer.expires_in ?? null,
+			scopes: answer.scope?.split(" ").filter((scope) => scope.length > 0) ?? null,
+		};
 	}
 
 	/**
@@ -662,6 +730,47 @@ export namespace ServiceClient {
 
 		/** Scopes for this token, in place of the client's configured scopes. */
 		scope?: string[];
+	}
+
+	/** What one token exchange asks for (RFC 8693 §2.1). */
+	export interface ExchangeOptions {
+		/** The token the new one is issued on behalf of. */
+		subjectToken: string;
+		/**
+		 * What kind of token `subjectToken` is.
+		 *
+		 * @default "urn:ietf:params:oauth:token-type:access_token"
+		 */
+		subjectTokenType?: string;
+		/** A token naming the party acting for the subject, recorded in the new token's `act`. */
+		actorToken?: string;
+		/**
+		 * What kind of token `actorToken` is.
+		 *
+		 * @default "urn:ietf:params:oauth:token-type:access_token"
+		 */
+		actorTokenType?: string;
+		/** The kind of token to issue, left to the issuer when absent. */
+		requestedTokenType?: string;
+		/** The logical names of the services the new token is for. */
+		audience?: string[];
+		/** The URIs of the services the new token is for (RFC 8707). */
+		resources?: string[];
+		/** The scopes the new token carries, the issuer's choice when absent. */
+		scope?: string[];
+	}
+
+	/** The token an exchange issued. */
+	export interface ExchangedToken {
+		accessToken: string;
+		/** What kind of token was issued, from `issued_token_type`. */
+		issuedTokenType: string;
+		/** How to present it: `Bearer`, `DPoP`, or `N_A` for a token that is not one to present. */
+		tokenType: string;
+		/** Seconds until it expires, `null` when the issuer did not say. */
+		expiresIn: number | null;
+		/** The scopes granted, `null` when they are the ones requested. */
+		scopes: string[] | null;
 	}
 
 	/** What one introspection call is about. */

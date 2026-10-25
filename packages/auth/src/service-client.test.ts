@@ -413,6 +413,61 @@ describe("dpop", () => {
 	});
 });
 
+describe("exchange", () => {
+	test("posts an RFC 8693 exchange and reads the issued token", async () => {
+		let body: URLSearchParams | null = null;
+		server.use(
+			http.post(TOKEN_ENDPOINT, async ({ request }) => {
+				body = new URLSearchParams(await request.text());
+				return HttpResponse.json({
+					access_token: "exchanged-1",
+					issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
+					token_type: "Bearer",
+					expires_in: 300,
+					scope: "reports:read",
+				});
+			}),
+		);
+
+		let exchanged = await clientFor().exchange({
+			subjectToken: "user-token",
+			actorToken: "agent-token",
+			audience: ["https://reports.example.com"],
+			scope: ["reports:read"],
+		});
+
+		expect(exchanged).toEqual({
+			accessToken: "exchanged-1",
+			issuedTokenType: "urn:ietf:params:oauth:token-type:access_token",
+			tokenType: "Bearer",
+			expiresIn: 300,
+			scopes: ["reports:read"],
+		});
+		let sent = body as URLSearchParams | null;
+		expect(sent?.get("grant_type")).toBe("urn:ietf:params:oauth:grant-type:token-exchange");
+		expect(sent?.get("subject_token")).toBe("user-token");
+		expect(sent?.get("subject_token_type")).toBe("urn:ietf:params:oauth:token-type:access_token");
+		expect(sent?.get("actor_token_type")).toBe("urn:ietf:params:oauth:token-type:access_token");
+		expect(sent?.getAll("audience")).toEqual(["https://reports.example.com"]);
+		expect(sent?.get("client_secret")).toBe("secret-1");
+	});
+
+	test("names the issuer's refusal", async () => {
+		server.use(
+			http.post(TOKEN_ENDPOINT, () =>
+				HttpResponse.json({ error: "invalid_target" }, { status: 400 }),
+			),
+		);
+
+		let error = await clientFor()
+			.exchange({ subjectToken: "user-token" })
+			.catch((cause: unknown) => cause);
+
+		expect(AuthError.is(error, AuthErrorCode.TokenRequestFailed)).toBe(true);
+		expect((error as AuthError).providerError).toBe("invalid_target");
+	});
+});
+
 describe("resource indicators", () => {
 	test("sends each resource as its own `resource` field", async () => {
 		serveToken();
