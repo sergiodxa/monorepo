@@ -98,14 +98,20 @@ The factory returns a `Middleware` from `remix/router`. Default key derivation u
 
 ### 4. Response Headers
 
-Allowed responses carry the IETF draft fields; limited responses add `Retry-After`:
+Allowed responses carry the fields of draft-ietf-httpapi-ratelimit-headers-11, each a List of
+Items named after the policy (`"default"` unless the registration names it); limited responses
+add `Retry-After`:
 
 ```http
 HTTP/1.1 429 Too Many Requests
-RateLimit: limit=10, remaining=0, reset=7
-RateLimit-Policy: 10;w=10
+RateLimit: "default";r=0;t=7
+RateLimit-Policy: "default";q=10;w=10
 Retry-After: 7
 ```
+
+Writing the fields keeps Items for other policies already on the response, so nested limiters
+each report their own. `quotaExceeded` answers the draft's `quota-exceeded` problem type, with
+`violated-policies` naming the policy, for an API that answers RFC 9457 problems.
 
 The default limited response is `429` JSON built with `@pkg/http/response/json`, matching the existing `too_many_requests` error body so the OAuth endpoints keep their current contract.
 

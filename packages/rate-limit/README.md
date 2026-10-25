@@ -5,7 +5,7 @@ Adapter-based rate limiting with standard response headers.
 An adapter counts attempts against a key and answers a decision; the middleware spends that
 budget for each request and writes the decision into the `RateLimit` and `RateLimit-Policy`
 fields of
-[draft-ietf-httpapi-ratelimit-headers-07](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-07).
+[draft-ietf-httpapi-ratelimit-headers-11](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-11).
 The same limit runs on a Cloudflare rate limiter binding, Workers KV, a SQL table or in process,
 chosen per endpoint.
 
@@ -66,8 +66,8 @@ A denied request never reaches the handler:
 ```http
 HTTP/1.1 429 Too Many Requests
 Content-Type: application/json
-RateLimit: limit=20, reset=37
-RateLimit-Policy: 20;w=60
+RateLimit: "default";r=0;t=37
+RateLimit-Policy: "default";q=20;w=60
 Retry-After: 37
 
 {"error":"too_many_requests","error_description":"Rate limit exceeded. Please try again later."}
@@ -106,12 +106,35 @@ async function handle(request: Request, clientId: string): Promise<Response> {
 	let result = await adapter.consume(`export:${clientId}`);
 	if (isFailure(result)) return runExport(request);
 	if (!result.data.allowed) {
-		return tooManyRequests(result.data, adapter.window, JSON.stringify({ error: "slow_down" }), {
+		return tooManyRequests(result.data, adapter, JSON.stringify({ error: "slow_down" }), {
 			headers: { "Content-Type": "application/json" },
 		});
 	}
-	return applyRateLimitHeaders(await runExport(request), result.data, adapter.window);
+	return applyRateLimitHeaders(await runExport(request), result.data, adapter);
 }
+```
+
+### Name the policy
+
+Both fields are Lists of Items named after the policy, so a client tells limiters apart.
+Each registration names its own with `policy`, and nested limiters each add their Item:
+
+```typescript
+let burst = rateLimit({ adapter: burstAdapter, key, policy: "burst" });
+let daily = rateLimit({ adapter: dailyAdapter, key, policy: "daily" });
+// RateLimit: "burst";r=9;t=7, "daily";r=999;t=43200
+// RateLimit-Policy: "burst";q=10;w=10, "daily";q=1000;w=86400
+```
+
+Outside the middleware, spread the adapter into a policy, and answer the draft's
+`quota-exceeded` problem with `quotaExceeded`:
+
+```typescript
+import { quotaExceeded } from "@sdxc/rate-limit";
+
+if (!result.data.allowed) return quotaExceeded(result.data, { ...adapter, name: "export" });
+// 429 application/problem+json
+// {"type":"https://iana.org/assignments/http-problem-types#quota-exceeded",…,"violated-policies":["export"]}
 ```
 
 ## API
@@ -179,30 +202,38 @@ budget is gone, and writes the decision onto whatever response comes back.
 - `onLimit?(context, decision)`: builds the denial response; the rate limit headers are added to it
 - `failurePolicy?`: `"open"` (default) lets a request through when the backend cannot answer,
   `"closed"` refuses it with a `429` carrying no rate limit headers
+- `policy?`: the policy name the fields carry; defaults to `"default"`
 
 It logs `rate_limit.exceeded` on a denial and `rate_limit.unavailable` on a backend failure
 through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger); the key stays out of the
 log.
 
-### `rateLimitHeaders(decision, window): [string, string][]`
+### `rateLimitHeaders(decision, policy): [string, string][]`
 
-The header pairs for a decision, in write order. A field the backend cannot report is left out,
-and `Retry-After` appears only on a denial.
+The header pairs for a decision, in write order: `RateLimit` with `r` (remaining) and `t`
+(seconds to reset), `RateLimit-Policy` with `q` (limit), `w` (window seconds) and, when the
+policy sets them, `qu` and `pk`. `RateLimit` is left out when an allowed request's remaining
+count is unknown (a denial reports `r=0`), and `Retry-After` appears only on a denial.
 
 ```typescript
-rateLimitHeaders(decision, "10 seconds");
-// [["RateLimit", "limit=10, remaining=0, reset=7"], ["RateLimit-Policy", "10;w=10"], ["Retry-After", "7"]]
+rateLimitHeaders(decision, adapter);
+// [["RateLimit", '"default";r=0;t=7'], ["RateLimit-Policy", '"default";q=10;w=10'], ["Retry-After", "7"]]
 ```
 
-### `applyRateLimitHeaders(response, decision, window): Response`
+### `applyRateLimitHeaders(response, decision, policy): Response`
 
-Writes those headers onto a response, answering an equivalent copy when its headers are
-immutable.
+Writes those headers onto a response, keeping other policies' Items already there and the
+longer `Retry-After`, and answering an equivalent copy when its headers are immutable.
 
-### `tooManyRequests(decision, window, body?, init?): Response`
+### `tooManyRequests(decision, policy, body?, init?): Response`
 
 A `429 Too Many Requests` with the decision's headers. The status always wins over `init`, and
 the body keeps whatever `Content-Type` the caller set.
+
+### `quotaExceeded(decision, policy, detail?, init?): Response`
+
+A `429` `application/problem+json` of type `QUOTA_EXCEEDED_TYPE`, listing the policy name in
+`violated-policies`, with the decision's headers.
 
 ### `addressKey(address): string`
 
@@ -222,6 +253,9 @@ It carries no decision: whether to let the request through is the caller's call.
 
 - `RateLimitDecision`: `allowed`, `limit`, `remaining` (`null` when the backend cannot report it),
   `reset` (a `Date`) and `retryAfter` (seconds).
+- `RateLimitPolicy`: `window`, plus optional `name` (`DEFAULT_POLICY_NAME`, `"default"`),
+  `quotaUnit` and `partitionKey` (a `Uint8Array`). Every `Adapter` is one.
+- `QuotaUnit`: `"requests" | "content-bytes" | "concurrent-requests"`.
 - `FailurePolicy`: `"open" | "closed"`, from `./middleware`.
 - `RateLimiterBinding` and `RateLimitKVNamespace`: the slice of a rate limiter binding and a KV
   namespace the adapters use, so a real binding or a test double fits.
@@ -368,7 +402,7 @@ test("the third request is refused", async () => {
 	await router.fetch(new Request("https://example.com/"));
 	let response = await router.fetch(new Request("https://example.com/"));
 	expect(response.status).toBe(429);
-	expect(response.headers.get("RateLimit-Policy")).toBe("2;w=60");
+	expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=2;w=60');
 });
 ```
 

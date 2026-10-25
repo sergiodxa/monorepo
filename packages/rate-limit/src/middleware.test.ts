@@ -135,9 +135,32 @@ describe("rateLimit middleware", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("handler body");
-		expect(response.headers.get("RateLimit")).toBe("limit=10, remaining=9, reset=7");
-		expect(response.headers.get("RateLimit-Policy")).toBe("10;w=10");
+		expect(response.headers.get("RateLimit")).toBe('"default";r=9;t=7');
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=10;w=10');
 		expect(response.headers.get("Retry-After")).toBeNull();
+	});
+
+	test("names the policy, so nested limiters each report their own", async () => {
+		vi.setSystemTime(new Date(WINDOW_START + 3000));
+		let burst = rateLimit({
+			adapter: new MemoryAdapter({ limit: 10, window: "10 seconds" }),
+			key: byClientIp,
+			policy: "burst",
+		});
+		let perMinute = rateLimit({
+			adapter: new MemoryAdapter({ limit: 1000, window: "1 minute" }),
+			key: byClientIp,
+			policy: "minute",
+		});
+
+		let response = await perMinute(createClientContext(), async () =>
+			burst(createClientContext(), async () => new Response("ok")),
+		);
+
+		expect(response.headers.get("RateLimit")).toBe('"burst";r=9;t=7, "minute";r=999;t=37');
+		expect(response.headers.get("RateLimit-Policy")).toBe(
+			'"burst";q=10;w=10, "minute";q=1000;w=60',
+		);
 	});
 
 	test("answers a denied request with 429, Retry-After, and the error body", async () => {
@@ -153,7 +176,7 @@ describe("rateLimit middleware", () => {
 
 		expect(response.status).toBe(429);
 		expect(response.headers.get("Retry-After")).toBe("7");
-		expect(response.headers.get("RateLimit")).toBe("limit=1, remaining=0, reset=7");
+		expect(response.headers.get("RateLimit")).toBe('"default";r=0;t=7');
 		expect(response.headers.get("Content-Type")).toBe("application/json");
 		expect(await response.json()).toEqual({
 			error: "too_many_requests",

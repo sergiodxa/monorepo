@@ -1759,6 +1759,7 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/logger": "workspace:*",
+        "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/uuid": "workspace:*",

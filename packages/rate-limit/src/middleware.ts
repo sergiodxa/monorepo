@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DurationInput } from "@sdxc/duration";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
+import type { RateLimitPolicy } from "./headers.js";
 import type { Adapter, RateLimitDecision } from "./types.js";
 
 import { applyRateLimitHeaders } from "./headers.js";
@@ -70,6 +70,11 @@ export interface RateLimitMiddlewareOptions {
 	onLimit?: (context: RequestContext, decision: RateLimitDecision) => Response | Promise<Response>;
 	/** What to do when the backend cannot answer. Defaults to `"open"`. */
 	failurePolicy?: FailurePolicy;
+	/**
+	 * The name the response fields give this limiter's policy, so a client tells
+	 * nested limiters apart. Printable ASCII; defaults to `"default"`.
+	 */
+	policy?: string;
 }
 
 /**
@@ -92,6 +97,7 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 	let failurePolicy = options.failurePolicy ?? "open";
 	registrations += 1;
 	let prefix = options.prefix ?? `limiter-${registrations}`;
+	let policy: RateLimitPolicy = { window: adapter.window, name: options.policy };
 
 	return async (context, next) => {
 		if (options.skip !== undefined && (await options.skip(context))) return next();
@@ -116,12 +122,12 @@ export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {
 		if (!decision.allowed) {
 			log?.set({ rate_limit: { limited: true } });
 			log?.warn(EXCEEDED_EVENT, { limit: decision.limit, retry_after_s: decision.retryAfter });
-			if (options.onLimit === undefined) return limitedResponse(decision, adapter.window);
+			if (options.onLimit === undefined) return limitedResponse(decision, policy);
 			let response = await options.onLimit(context, decision);
-			return applyRateLimitHeaders(response, decision, adapter.window);
+			return applyRateLimitHeaders(response, decision, policy);
 		}
 
-		return applyRateLimitHeaders(await next(), decision, adapter.window);
+		return applyRateLimitHeaders(await next(), decision, policy);
 	};
 }
 
@@ -157,12 +163,12 @@ function limitedBody(): [string, ResponseInit] {
  * supports.
  *
  * @param decision - The denial the adapter answered with.
- * @param window - The adapter's window, for the policy field.
+ * @param policy - The policy the decision was made under.
  * @returns A `429 Too Many Requests` JSON response.
  */
-function limitedResponse(decision: RateLimitDecision, window: DurationInput): Response {
+function limitedResponse(decision: RateLimitDecision, policy: RateLimitPolicy): Response {
 	let [body, init] = limitedBody();
-	return tooManyRequests(decision, window, body, init);
+	return tooManyRequests(decision, policy, body, init);
 }
 
 /**
