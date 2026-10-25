@@ -3600,6 +3600,12 @@ export default {
 						"{$domain} publishes no TLS-RPT record, so senders do not report TLS delivery failures to you.",
 					tlsRptInvalid:
 						"The TLS-RPT record at {$domain} is invalid or duplicated, so senders send no reports.",
+					bimiMissing:
+						"{$domain} publishes no BIMI record. Its DMARC policy already qualifies, so publishing one lets supporting inboxes show your logo beside your mail.",
+					bimiInvalid:
+						"The BIMI record at {$domain} is invalid or duplicated, so inboxes show no logo.",
+					bimiDmarcTooWeak:
+						"{$domain} publishes a BIMI logo, but inboxes will not show it: the DMARC policy must be p=quarantine or p=reject, with no t=y, sp=none or pct below 100.",
 					lookupFailed:
 						"The {$record} records could not be looked up. They are checked again on the next run.",
 				},

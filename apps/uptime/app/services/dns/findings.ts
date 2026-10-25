@@ -81,6 +81,9 @@ export const EMAIL_AUTH_FINDING_CODES = [
 	"mta-sts-mx-mismatch",
 	"tls-rpt-missing",
 	"tls-rpt-invalid",
+	"bimi-missing",
+	"bimi-invalid",
+	"bimi-dmarc-too-weak",
 	"lookup-failed",
 ] as const;
 

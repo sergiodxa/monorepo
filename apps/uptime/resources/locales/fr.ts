@@ -3588,6 +3588,12 @@ export default {
 						"{$domain} ne publie aucun enregistrement TLS-RPT : les expéditeurs ne vous signalent pas les échecs de livraison TLS.",
 					tlsRptInvalid:
 						"L'enregistrement TLS-RPT de {$domain} est invalide ou en double : les expéditeurs n'envoient aucun rapport.",
+					bimiMissing:
+						"{$domain} ne publie aucun enregistrement BIMI. Sa politique DMARC remplit déjà les conditions : en publier un permet aux messageries compatibles d'afficher votre logo à côté de vos e-mails.",
+					bimiInvalid:
+						"L'enregistrement BIMI à {$domain} est invalide ou en double : les messageries n'affichent aucun logo.",
+					bimiDmarcTooWeak:
+						"{$domain} publie un logo BIMI, mais les messageries ne l'afficheront pas : la politique DMARC doit être p=quarantine ou p=reject, sans t=y, sp=none ni pct inférieur à 100.",
 					lookupFailed:
 						"Les enregistrements {$record} n'ont pas pu être consultés. Ils seront vérifiés à nouveau lors de la prochaine exécution.",
 				},

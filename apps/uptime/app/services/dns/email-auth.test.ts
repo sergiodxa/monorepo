@@ -29,6 +29,7 @@ const HEALTHY: Zone = {
 	"_spf.example.net": { TXT: ['"v=spf1 ip4:192.0.2.0/24 -all"'] },
 	"_mta-sts.example.com": { TXT: ['"v=STSv1; id=20260101"'] },
 	"_smtp._tls.example.com": { TXT: ['"v=TLSRPTv1; rua=mailto:tls@example.com"'] },
+	"default._bimi.example.com": { TXT: ['"v=BIMI1; l=https://example.com/logo.svg"'] },
 };
 
 /** The policy file the healthy domain serves. */
@@ -89,12 +90,17 @@ describe("checkEmailAuth", () => {
 		let check = await checkEmailAuth("example.com");
 		expect(check.findings).toEqual([
 			{ code: "dmarc-missing", severity: "critical", values: { domain: "_dmarc.example.com" } },
+			{
+				code: "bimi-dmarc-too-weak",
+				severity: "warning",
+				values: { domain: "default._bimi.example.com" },
+			},
 		]);
 	});
 
 	test("reports p=none and a missing rua", async () => {
 		serve({ ...HEALTHY, "_dmarc.example.com": { TXT: ['"v=DMARC1; p=none"'] } });
-		expect(await codes()).toEqual(["dmarc-policy-none", "dmarc-no-reports"]);
+		expect(await codes()).toEqual(["dmarc-policy-none", "bimi-dmarc-too-weak", "dmarc-no-reports"]);
 	});
 
 	test("reports the testing flag on an enforcing policy", async () => {
@@ -102,7 +108,7 @@ describe("checkEmailAuth", () => {
 			...HEALTHY,
 			"_dmarc.example.com": { TXT: ['"v=DMARC1; p=reject; t=y; rua=mailto:d@example.com"'] },
 		});
-		expect(await codes()).toEqual(["dmarc-testing"]);
+		expect(await codes()).toEqual(["dmarc-testing", "bimi-dmarc-too-weak"]);
 	});
 
 	test("reports SPF over ten lookups with the count", async () => {
@@ -163,6 +169,40 @@ describe("checkEmailAuth", () => {
 		expect(await codes()).toEqual(["tls-rpt-missing"]);
 	});
 
+	test("suggests BIMI to a domain whose DMARC already qualifies", async () => {
+		let { "default._bimi.example.com": _, ...zone } = HEALTHY;
+		serve(zone);
+		let check = await checkEmailAuth("example.com");
+		expect(check.findings).toEqual([
+			{ code: "bimi-missing", severity: "notice", values: { domain: "default._bimi.example.com" } },
+		]);
+	});
+
+	test("reports a BIMI logo that DMARC is too weak to show", async () => {
+		serve({
+			...HEALTHY,
+			"_dmarc.example.com": { TXT: ['"v=DMARC1; p=quarantine; t=y; rua=mailto:d@example.com"'] },
+		});
+		expect(await codes()).toEqual(["dmarc-testing", "bimi-dmarc-too-weak"]);
+	});
+
+	test("reports an invalid BIMI record", async () => {
+		serve({
+			...HEALTHY,
+			"default._bimi.example.com": { TXT: ['"v=BIMI1; l=http://example.com/logo.svg"'] },
+		});
+		expect(await codes()).toEqual(["bimi-invalid"]);
+	});
+
+	test("accepts a declined BIMI record whatever the DMARC policy", async () => {
+		serve({
+			...HEALTHY,
+			"_dmarc.example.com": { TXT: ['"v=DMARC1; p=none; rua=mailto:d@example.com"'] },
+			"default._bimi.example.com": { TXT: ['"v=BIMI1; l=; a=;"'] },
+		});
+		expect(await codes()).toEqual(["dmarc-policy-none"]);
+	});
+
 	test("skips MTA-STS and TLS-RPT for a domain with a null MX", async () => {
 		serve({
 			...HEALTHY,
@@ -191,6 +231,7 @@ describe("checkEmailAuth", () => {
 		expect(await codes()).toEqual([
 			"spf-missing",
 			"dmarc-policy-none",
+			"bimi-dmarc-too-weak",
 			"dmarc-no-reports",
 			"tls-rpt-missing",
 		]);

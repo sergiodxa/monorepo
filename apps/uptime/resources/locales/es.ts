@@ -3571,6 +3571,12 @@ export default {
 						"{$domain} no publica un registro TLS-RPT, así que los remitentes no te informan de los fallos de entrega por TLS.",
 					tlsRptInvalid:
 						"El registro TLS-RPT de {$domain} no es válido o está duplicado, así que los remitentes no envían informes.",
+					bimiMissing:
+						"{$domain} no publica un registro BIMI. Su política DMARC ya cumple los requisitos, así que publicar uno permite que los buzones compatibles muestren tu logo junto a tu correo.",
+					bimiInvalid:
+						"El registro BIMI de {$domain} no es válido o está duplicado, así que los buzones no muestran ningún logo.",
+					bimiDmarcTooWeak:
+						"{$domain} publica un logo BIMI, pero los buzones no lo mostrarán: la política DMARC debe ser p=quarantine o p=reject, sin t=y, sp=none ni pct inferior a 100.",
 					lookupFailed:
 						"No se pudieron consultar los registros {$record}. Se volverán a comprobar en la próxima ejecución.",
 				},

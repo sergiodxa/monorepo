@@ -3517,6 +3517,12 @@ export default {
 						"{$domain} は TLS-RPT レコードを公開していないため、送信者から TLS 配信エラーの報告が届きません。",
 					tlsRptInvalid:
 						"{$domain} の TLS-RPT レコードが無効または重複しているため、送信者はレポートを送りません。",
+					bimiMissing:
+						"{$domain} は BIMI レコードを公開していません。DMARC ポリシーはすでに条件を満たしているため、公開すると対応するメールボックスでメールの横にロゴが表示されます。",
+					bimiInvalid:
+						"{$domain} の BIMI レコードが無効または重複しているため、メールボックスにロゴは表示されません。",
+					bimiDmarcTooWeak:
+						"{$domain} は BIMI ロゴを公開していますが、表示されません。DMARC ポリシーを p=quarantine または p=reject にし、t=y・sp=none・100 未満の pct を使わないでください。",
 					lookupFailed: "{$record} レコードを参照できませんでした。次回の実行時に再度確認します。",
 				},
 			},

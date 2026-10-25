@@ -3587,6 +3587,12 @@ export default {
 						"{$domain} veröffentlicht keinen TLS-RPT-Eintrag, daher melden Absender dir keine TLS-Zustellfehler.",
 					tlsRptInvalid:
 						"Der TLS-RPT-Eintrag von {$domain} ist ungültig oder doppelt, daher senden Absender keine Berichte.",
+					bimiMissing:
+						"{$domain} veröffentlicht keinen BIMI-Eintrag. Die DMARC-Richtlinie erfüllt die Voraussetzungen bereits, also lässt ein Eintrag unterstützende Postfächer dein Logo neben deinen E-Mails anzeigen.",
+					bimiInvalid:
+						"Der BIMI-Eintrag unter {$domain} ist ungültig oder doppelt, daher zeigen Postfächer kein Logo an.",
+					bimiDmarcTooWeak:
+						"{$domain} veröffentlicht ein BIMI-Logo, aber Postfächer zeigen es nicht an: Die DMARC-Richtlinie muss p=quarantine oder p=reject sein, ohne t=y, sp=none oder pct unter 100.",
 					lookupFailed:
 						"Die {$record}-Einträge konnten nicht abgefragt werden. Sie werden beim nächsten Durchlauf erneut geprüft.",
 				},

@@ -1,17 +1,19 @@
 /**
- * Audits how a monitored domain authenticates its email: its DMARC policy, the SPF record and
- * its lookup count, and, for a domain that receives mail, MTA-STS and TLS-RPT. Each problem
+ * Audits how a monitored domain authenticates its email: its DMARC policy, BIMI, the SPF record
+ * and its lookup count, and, for a domain that receives mail, MTA-STS and TLS-RPT. Each problem
  * becomes a finding with a severity and the values its translated message needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DMARC, LookupOptions, MTASTS, SpfAnalysis } from "@sdxc/email-auth";
+import type { BIMI, DMARC, LookupOptions, MTASTS, SpfAnalysis } from "@sdxc/email-auth";
 
 import { NameNotFoundError, resolve } from "@sdxc/doh";
 import {
 	analyzeSpf,
+	bimiDmarcShortfalls,
+	discoverBimi,
 	discoverDmarc,
 	discoverMtaSts,
 	discoverTlsRpt,
@@ -52,8 +54,8 @@ export async function checkEmailAuth(
 	options: LookupOptions = {},
 ): Promise<EmailAuthCheck> {
 	let name = domain.trim().toLowerCase().replace(/\.$/, "");
-	let [dmarc, spf, mx] = await Promise.all([
-		discoverDmarc(name, options),
+	let [[dmarc, bimi], spf, mx] = await Promise.all([
+		discoverDmarcAndBimi(name, options),
 		analyzeSpf(name, options),
 		mailExchangers(name, options),
 	]);
@@ -61,6 +63,9 @@ export async function checkEmailAuth(
 	let findings: EmailAuthFinding[] = [];
 	if (isFailure(dmarc)) findings.push(lookupFailed("DMARC"));
 	else findings.push(...dmarcFindings(name, dmarc.data));
+	if (bimi !== null && isFailure(bimi)) findings.push(lookupFailed("BIMI"));
+	else if (bimi !== null && !isFailure(dmarc))
+		findings.push(...bimiFindings(dmarc.data, bimi.data));
 	if (isFailure(spf)) findings.push(lookupFailed("SPF"));
 	else findings.push(...spfFindings(name, spf.data));
 
@@ -103,6 +108,23 @@ export function dmarcFindings(domain: string, discovery: DMARC.Discovery): Email
 		findings.push(finding("dmarc-no-reports", "notice", { domain: policyDomain }));
 	}
 	return findings;
+}
+
+/**
+ * The BIMI findings: an invalid or duplicated record, a logo published while DMARC is too
+ * weak for receivers to show it, and, for a domain whose DMARC already qualifies, no
+ * record at all. A domain with weak DMARC and no BIMI record gets only its DMARC findings.
+ */
+export function bimiFindings(dmarc: DMARC.Discovery, bimi: BIMI.Discovery): EmailAuthFinding[] {
+	let qualifies = bimiDmarcShortfalls(dmarc).length === 0;
+	if (bimi.status === "none") {
+		return qualifies
+			? [finding("bimi-missing", "notice", { domain: `default._bimi.${dmarc.domain}` })]
+			: [];
+	}
+	if (bimi.status !== "found") return [finding("bimi-invalid", "warning", { domain: bimi.name })];
+	if (bimi.record.declined || qualifies) return [];
+	return [finding("bimi-dmarc-too-weak", "warning", { domain: bimi.name })];
 }
 
 /**
@@ -204,6 +226,25 @@ export async function mtaStsFindings(
 		}
 	}
 	return findings;
+}
+
+/**
+ * DMARC discovery, then BIMI discovery reusing its Organizational Domain, so BIMI costs
+ * one or two TXT queries and no second Tree Walk. BIMI is `null` when DMARC failed.
+ */
+async function discoverDmarcAndBimi(
+	domain: string,
+	options: LookupOptions,
+): Promise<
+	[Awaited<ReturnType<typeof discoverDmarc>>, Awaited<ReturnType<typeof discoverBimi>> | null]
+> {
+	let dmarc = await discoverDmarc(domain, options);
+	if (isFailure(dmarc)) return [dmarc, null];
+	let bimi = await discoverBimi(domain, {
+		...options,
+		organizationalDomain: dmarc.data.organizationalDomain,
+	});
+	return [dmarc, bimi];
 }
 
 /**
