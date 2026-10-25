@@ -16,8 +16,7 @@ import { log } from "@sdxc/logger/middleware";
 import { previews } from "@sdxc/mail/previews";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { securityTxt } from "@sdxc/well-known/security-txt";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -41,7 +40,7 @@ import { mail } from "~/app/initializers/mail";
 import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import requireAgent, { agentAccess } from "~/app/mcp/agent";
 import { SECURITY_POLICY } from "~/config/security-policy";
-import { SECURITY_TXT } from "~/config/security-txt";
+import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/web";
 
 /**
@@ -141,7 +140,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * directory are served under the same policy as every other response.
 			 */
 			wellKnown({
-				"security.txt": serve(securityTxt, () => SECURITY_TXT),
+				"security.txt": securityTxtEntry,
 				"http-message-signatures-directory": signaturesDirectory,
 			}),
 			/**
