@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 14
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"
     - "How to send an encrypted notification from a Worker, directly or through messaging"
@@ -122,7 +122,7 @@ import { clientEntry, on } from "remix/component";
 type EnablePushProps = { applicationServerKey: string; action: string };
 
 export const EnablePush = clientEntry(
-	"/resources/components/enable-push.tsx#EnablePush",
+	import.meta.url,
 	function EnablePush(handle: Handle<EnablePushProps>) {
 		async function enable() {
 			let subscribed = await subscribe({
@@ -173,7 +173,7 @@ import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { savePushSubscription } from "~/app/models/push-subscriptions";
+import Subscriptions from "~/app/models/push-subscriptions";
 import routes from "~/routes/web";
 
 const REGISTRATION = s.object({ subscription: SUBSCRIPTION_SCHEMA });
@@ -184,15 +184,15 @@ export default createAction(routes.pushSubscriptions, async (ctx) => {
 		return Response.json({ errors: body.error.issues }, { status: 400 });
 	}
 
-	await savePushSubscription(ctx.db, ctx.user.id, body.data.subscription);
+	await Subscriptions.save(ctx.db, ctx.user.id, body.data.subscription);
 	return new Response(null, { status: 204 });
 });
 ```
 
-`savePushSubscription` is your own model function, and `ctx.user` the signed-in user your
-auth middleware publishes. Upsert on the endpoint, since a browser
-that subscribes again hands back the endpoint it already had, and store `endpoint`, both
-`keys` and `applicationServerKey`, the public key it subscribed under.
+`Subscriptions` is your own model, and `ctx.user` the signed-in user your auth middleware
+publishes. `save` upserts on the endpoint, since a browser that subscribes again hands back the
+endpoint it already had, and stores the endpoint, both keys, and `applicationServerKey`, the
+public key the browser subscribed under, as `vapidKey`.
 
 `subscriptionSchema({ allowedHosts: PUSH_SERVICE_HOSTS })` narrows endpoints to the push
 services of Chrome, Firefox, Safari and Edge, at the cost of refusing a browser whose vendor
@@ -201,17 +201,18 @@ adds a new one.
 ## Send a notification
 
 Build one `WebPush` per batch of sends: it caches one VAPID token per push service, so fifty
-browsers on Chrome's push service cost one signature. Each send makes one attempt and answers a `Result`
-whose error code says what to do with the row:
+browsers on Chrome's push service cost one signature. Each send makes one attempt and answers a
+`Result` whose error code says what to do with the row:
 
 ```typescript {% title="app/services/notifications/push.ts" %}
 import type { WebPushError } from "@sdxc/web-push";
 import type { Database } from "remix/data-table";
-import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
 import { env } from "cloudflare:workers";
+
+import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
 import Subscriptions from "~/app/models/push-subscriptions";
 
@@ -257,8 +258,7 @@ async function applyFailure(
 }
 ```
 
-`Subscriptions` is your model over the stored rows, each holding the endpoint, both keys,
-`vapidKey` and a `failures` count.
+Each stored row also counts its `failures`, which decides when a flaky endpoint is retired.
 
 - `gone` is a `404` or `410`: the browser unsubscribed, so the row goes now.
 - `unauthorized` is a `401` or `403`, which is your VAPID key being refused, never the
