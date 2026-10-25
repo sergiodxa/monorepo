@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 1.5
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-25
 outcomes:
     - "How to answer `GET /health` with a dependency report from `@sdxc/health`"
     - "How to probe D1, KV, R2, Durable Objects and third-party APIs without writing anything"
@@ -22,6 +22,7 @@ recognize.
 
 ```bash
 npm add @sdxc/health @sdxc/json-schema @sdxc/result remix
+npm add -D msw
 ```
 
 ## Answer `/health`
@@ -283,10 +284,71 @@ serves the document, so an editor, a CI step or another monitor can reference it
 Both accept everything the format allows from any service, not only what `HealthCheck`
 emits: `status` is the one required field, and both levels allow extra keys.
 
+## Test the report
+
+The probes call real bindings, so the test runs in the Workers pool, where KV, R2, D1 and the
+Durable Object come from your Worker's configuration. The third-party services stand behind
+[MSW](https://mswjs.io), answering as they do while up, and one test makes the payment
+provider fail to show that a critical dependency turns the response into a `503`:
+
+```typescript {% title="app/http/controllers/health.workers.test.ts" %}
+import type { Health } from "@sdxc/health";
+
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+
+let server = setupServer(
+	http.get("https://api.payments.example.com/healthz", () => HttpResponse.json({})),
+	http.get("https://api.github.com/rate_limit", () => HttpResponse.json({})),
+	http.get("https://search.example.com/health", () => HttpResponse.json({})),
+	http.get("https://id.example.com/health", () => HttpResponse.json({})),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+async function check() {
+	let response = await createWebRouter().fetch(
+		new Request("https://jobs.example.com/health"),
+	);
+	return { response, report: (await response.json()) as Health.Report };
+}
+
+test("passes while every dependency answers", async () => {
+	let { response, report } = await check();
+
+	expect(response.status).toBe(200);
+	expect(report.status).toBe("pass");
+});
+
+test("fails with 503 when the payment provider is down", async () => {
+	server.use(
+		http.get("https://api.payments.example.com/healthz", () =>
+			HttpResponse.json({}, { status: 503 }),
+		),
+	);
+
+	let { response, report } = await check();
+
+	expect(response.status).toBe(503);
+	expect(report.checks?.["payments:responseTime"]?.[0]).toMatchObject({
+		status: "fail",
+		output: "HTTP 503",
+	});
+});
+```
+
+`onUnhandledRequest: "error"` fails the run when a new probe reaches a service the test does
+not answer, so every dependency you add arrives with its handler.
+
 ## Where to go next
 
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — the log every
   failed probe is written to.
-- [Test Workers apps](/docs/operations-and-testing/testing) — run a probe against a real
-  KV, R2 or D1 binding in the Workers pool.
+- [Test Workers apps](/docs/operations-and-testing/testing) — set up the Workers pool the
+  test above runs in.
 - [`@sdxc/health`](/api/health) — every option and export.
