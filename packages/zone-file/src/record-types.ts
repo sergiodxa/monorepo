@@ -53,6 +53,13 @@ const TYPED_TYPES = new Set<string>([
 	"CAA",
 	"SRV",
 	"SOA",
+	"SVCB",
+	"HTTPS",
+	"TLSA",
+	"DS",
+	"CDS",
+	"DNSKEY",
+	"CDNSKEY",
 ] satisfies ZoneFile.TypedRecordType[]);
 
 /** The mnemonic for each code in {@link TYPE_CODES}. */
@@ -61,6 +68,23 @@ const TYPE_NAMES = new Map(Object.entries(TYPE_CODES).map(([name, code]) => [cod
 /** The mnemonic for a type code, or `TYPEnnn` when it has none here. */
 export function typeName(code: number): string {
 	return TYPE_NAMES.get(code) ?? `TYPE${code}`;
+}
+
+/**
+ * The IANA code of a type, given as a mnemonic or `TYPEnnn`, so a caller building a query
+ * message can name the type the way a zone file does; `null` for a mnemonic it does not know.
+ *
+ * @example typeCode("HTTPS") // 65
+ * @example typeCode("TYPE65280") // 65280
+ */
+export function typeCode(type: string): number | null {
+	let upper = type.trim().toUpperCase();
+	let generic = /^TYPE(\d{1,5})$/.exec(upper);
+	if (generic) {
+		let code = Number(generic[1]);
+		return code <= 0xffff ? code : null;
+	}
+	return TYPE_CODES[upper] ?? null;
 }
 
 /**

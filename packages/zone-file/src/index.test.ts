@@ -22,6 +22,7 @@ describe("@sdxc/zone-file", () => {
 			"parse",
 			"parseRecordData",
 			"stringify",
+			"typeCode",
 			"typeName",
 		]);
 	});

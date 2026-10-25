@@ -19,7 +19,14 @@ export type TypedRecordType =
 	| "TXT"
 	| "CAA"
 	| "SRV"
-	| "SOA";
+	| "SOA"
+	| "SVCB"
+	| "HTTPS"
+	| "TLSA"
+	| "DS"
+	| "CDS"
+	| "DNSKEY"
+	| "CDNSKEY";
 
 /** A record type by mnemonic; the typed ones autocomplete, any other name is accepted. */
 export type RecordType = TypedRecordType | (string & {});
@@ -116,6 +123,101 @@ export interface SOAData {
 	minimum: number;
 }
 
+/**
+ * The parameters of an SVCB or HTTPS record (RFC 9460), one optional field per key. A key
+ * that is absent was not published; `true` marks a key published without a value.
+ */
+export interface SvcParams {
+	/** Keys a client must understand to use the record, by presentation name (`alpn`, `key65000`). */
+	mandatory?: string[];
+	/** Protocol ids (`h2`, `h3`) in the publisher's order of preference. */
+	alpn?: string[];
+	/** The default ALPN (`http/1.1` for HTTPS) is unsupported; only `alpn` applies. */
+	noDefaultAlpn?: true;
+	port?: number;
+	/** IPv4 addresses a client may use before the target's A records resolve. */
+	ipv4Hint?: string[];
+	/** The ECHConfigList, base64-encoded as the presentation format writes it. */
+	ech?: string;
+	/** IPv6 addresses in RFC 5952 canonical form, as hints like `ipv4Hint`. */
+	ipv6Hint?: string[];
+	/** The DoH URI template's path (RFC 9461), relative to the target. */
+	dohPath?: string;
+	/** The service accepts Oblivious HTTP requests (RFC 9540). */
+	ohttp?: true;
+	/** Keys without a reading here, by key number, each value's octets read as UTF-8. */
+	other?: { [key: number]: string };
+}
+
+/** A service binding (RFC 9460): where and how to reach the service at the owner. */
+export interface SVCBData {
+	type: "SVCB";
+	/** `0` is AliasMode, which only names `target`; any other value orders ServiceMode records, lowest first. */
+	priority: number;
+	/** The service's host; `"."` means the owner itself in ServiceMode and no service in AliasMode. */
+	target: string;
+	params: SvcParams;
+}
+
+/** The SVCB record for HTTPS origins (RFC 9460), published at the origin's own name. */
+export interface HTTPSData extends Omit<SVCBData, "type"> {
+	type: "HTTPS";
+}
+
+/** Binds a TLS certificate or public key to a service, DANE (RFC 6698, RFC 7671). */
+export interface TLSAData {
+	type: "TLSA";
+	/** `0` PKIX-TA, `1` PKIX-EE, `2` DANE-TA, `3` DANE-EE. */
+	usage: number;
+	/** `0` matches the whole certificate, `1` its SubjectPublicKeyInfo. */
+	selector: number;
+	/** `0` the exact bytes, `1` their SHA-256, `2` their SHA-512. */
+	matchingType: number;
+	/** Lowercase hex. */
+	certificateAssociation: string;
+}
+
+/** A digest of the child zone's key-signing key, published in the parent (RFC 4034). */
+export interface DSData {
+	type: "DS";
+	/** The key tag of the DNSKEY the digest is of, for picking it out of the child's key set. */
+	keyTag: number;
+	/** The DNSSEC algorithm number; `13` is ECDSA P-256 with SHA-256. */
+	algorithm: number;
+	/** `1` SHA-1, `2` SHA-256, `4` SHA-384. */
+	digestType: number;
+	/** Lowercase hex. */
+	digest: string;
+}
+
+/** The child's DS record as it asks the parent to publish it (RFC 7344); `0 0 0 00` asks for removal. */
+export interface CDSData extends Omit<DSData, "type"> {
+	type: "CDS";
+}
+
+/** A zone's public signing key (RFC 4034). */
+export interface DNSKEYData {
+	type: "DNSKEY";
+	/** The flags as published, so the record prints back unchanged. */
+	flags: number;
+	/** Bit 7 of `flags`: the key signs the zone's records; DNSSEC ignores a key without it. */
+	zoneKey: boolean;
+	/** Bit 15 of `flags`: the key is a key-signing key, the one a DS record points at. */
+	secureEntryPoint: boolean;
+	/** Always `3` in a valid key. */
+	protocol: number;
+	algorithm: number;
+	/** Base64, as the presentation format writes it. */
+	publicKey: string;
+	/** The RFC 4034 Appendix B tag a DS or RRSIG names this key by. */
+	keyTag: number;
+}
+
+/** The child's DNSKEY as it asks the parent to derive a DS from it (RFC 7344). */
+export interface CDNSKEYData extends Omit<DNSKEYData, "type"> {
+	type: "CDNSKEY";
+}
+
 /** Data of a type without a typed reading, kept as written. */
 export interface UnknownData {
 	type: string;
@@ -145,7 +247,21 @@ export type RecordData<Type extends RecordType> = Type extends "A"
 										? SRVData
 										: Type extends "SOA"
 											? SOAData
-											: UnknownData;
+											: Type extends "SVCB"
+												? SVCBData
+												: Type extends "HTTPS"
+													? HTTPSData
+													: Type extends "TLSA"
+														? TLSAData
+														: Type extends "DS"
+															? DSData
+															: Type extends "CDS"
+																? CDSData
+																: Type extends "DNSKEY"
+																	? DNSKEYData
+																	: Type extends "CDNSKEY"
+																		? CDNSKEYData
+																		: UnknownData;
 
 /** What every record read from a file carries beside its data. */
 export interface RecordFields {

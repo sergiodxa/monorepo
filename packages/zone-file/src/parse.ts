@@ -39,6 +39,8 @@ const NAME_FIELDS: Record<string, number[]> = {
 	MX: [1],
 	SRV: [3],
 	SOA: [0, 1],
+	SVCB: [1],
+	HTTPS: [1],
 };
 
 /** The class numbers with a mnemonic, so `CLASS1` and `IN` read as one class. */

@@ -140,8 +140,9 @@ standalone comments and parentheses are not.
 ### `parseRecordData<Type extends RecordType>(type: Type, data: string): Result<RecordData<Type>, RecordDataError>`
 
 Reads RDATA in presentation format, or RFC 3597 generic form, into the typed fields of `A`,
-`AAAA`, `CNAME`, `NS`, `PTR`, `DNAME`, `MX`, `TXT`, `CAA`, `SRV` and `SOA` (SOA timers accept
-TTL units). Any other type returns `{ type, data }` as written. Names come back lowercased
+`AAAA`, `CNAME`, `NS`, `PTR`, `DNAME`, `MX`, `TXT`, `CAA`, `SRV`, `SOA` (SOA timers accept TTL
+units), `SVCB` and `HTTPS` (their SvcParams as `params`), `TLSA`, `DS`, `CDS`, `DNSKEY` and
+`CDNSKEY` (with the key's `keyTag`). Any other type returns `{ type, data }` as written. Names come back lowercased
 without the trailing dot, and a relative name stays relative.
 
 ```typescript
@@ -152,8 +153,8 @@ parseRecordData("TXT", '"v=DKIM1; p=AAA" "BBB"');
 ### `formatRecordData(data: RecordData<RecordType>): string`
 
 Prints record data in canonical presentation format, the inverse of `parseRecordData`: names
-absolute with the trailing dot, TXT strings and the CAA value quoted with non-printable octets as
-`\DDD`, untyped data as is. Two spellings of one record, such as `0 ISSUE "ca.example"` and its
+absolute with the trailing dot, TXT strings, the CAA value and SvcParam text quoted with
+non-printable octets as `\DDD`, hex lowercase, SvcParams in key order, untyped data as is. Two spellings of one record, such as `0 ISSUE "ca.example"` and its
 generic form, print to one string.
 
 ### `canonicalType(type: string): string`
@@ -164,6 +165,10 @@ is `"TXT"`.
 ### `typeName(code: number): string`
 
 The mnemonic for a type code, or `TYPEnnn` without one: `typeName(16)` is `"TXT"`.
+
+### `typeCode(type: string): number | null`
+
+The code for a mnemonic or `TYPEnnn`, `null` for an unknown mnemonic: `typeCode("HTTPS")` is `65`.
 
 ### `ZoneFileError`
 
@@ -189,7 +194,9 @@ Every type is exported top-level and under the `ZoneFile` namespace (`ZoneFile.Z
   (no `include` option, a file it returned `null` for, or nesting past 8) or
   `"unsupported-directive"` (`$GENERATE` or any other `$` word).
 - `RecordData<Type>`: the typed fields of a type: `AData`, `AAAAData`, `CNAMEData`, `NSData`,
-  `PTRData`, `DNAMEData`, `MXData`, `TXTData`, `CAAData`, `SRVData`, `SOAData`, or `UnknownData`.
+  `PTRData`, `DNAMEData`, `MXData`, `TXTData`, `CAAData`, `SRVData`, `SOAData`, `SVCBData`,
+  `HTTPSData` (with `SvcParams`), `TLSAData`, `DSData`, `CDSData`, `DNSKEYData`, `CDNSKEYData`,
+  or `UnknownData`.
 - `RecordType`, `TypedRecordType`, `RecordClass`: type and class names.
 - `ParseOptions`, `StringifyOptions`: the options above.
 - `ZoneInput`, `RecordInput`, `RecordInputFields`: what `stringify` accepts; a record needs only

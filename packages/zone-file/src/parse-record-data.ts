@@ -12,10 +12,14 @@ import { failure, isFailure, success } from "@sdxc/result";
 
 import type * as ZoneFile from "./types.js";
 
+import { canonicalIpv6, isIpv4, printIpv6 } from "./addresses.js";
 import { decodeOctets, readCharacterStrings } from "./character-strings.js";
+import { keyTag, readAlgorithm } from "./dnssec.js";
 import { RecordDataError } from "./errors.js";
 import { canonicalName, printLabels } from "./names.js";
+import { decodeBase64, decodeHex, encodeBase64, encodeHex } from "./octets.js";
 import { canonicalType } from "./record-types.js";
+import { readSvcParams, readWireSvcParams } from "./svc-params.js";
 import { readTtl } from "./ttl.js";
 
 /** A parsed record body before it is narrowed to the caller's `RecordData<Type>`. */
@@ -23,12 +27,6 @@ interface ParsedData {
 	type: string;
 	[field: string]: unknown;
 }
-
-/**
- * A dotted-quad IPv4 address without leading zeros, which `inet_aton` would read as octal
- * and browsers as decimal, so an address carrying them has no single meaning.
- */
-const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 /**
  * Reads a record's data into its typed fields; untyped types come back as `{ type, data }`.
@@ -65,11 +63,34 @@ function readNumber(field: string | undefined, max: number): number | null {
 	return number <= max ? number : null;
 }
 
-/** An IPv6 literal in RFC 5952 canonical form, or `null` when the text is not one. */
-function canonicalIpv6(value: string): string | null {
-	if (!value.includes(":")) return null;
-	let url = URL.parse(`http://[${value}]/`);
-	return url ? url.hostname.slice(1, -1) : null;
+/**
+ * The fields of DNSKEY data from its wire octets, the key tag computed over them, so the
+ * presentation and generic spellings of one key agree on every field.
+ */
+function dnskeyFields(rdata: Uint8Array): Record<string, unknown> {
+	let flags = ((rdata[0] ?? 0) << 8) | (rdata[1] ?? 0);
+	return {
+		flags,
+		zoneKey: (flags & 0x0100) !== 0,
+		secureEntryPoint: (flags & 0x0001) !== 0,
+		protocol: rdata[2] ?? 0,
+		algorithm: rdata[3] ?? 0,
+		publicKey: encodeBase64(rdata.subarray(4)),
+		keyTag: keyTag(rdata),
+	};
+}
+
+/** Reads the leading `count` whitespace-separated fields and the rest of the text after them. */
+function splitLeading(value: string, count: number): [string[], string] {
+	let fields: string[] = [];
+	let rest = value;
+	for (let index = 0; index < count; index++) {
+		let match = /^(\S+)\s*/.exec(rest);
+		if (!match) break;
+		fields.push(match[1] ?? "");
+		rest = rest.slice(match[0].length);
+	}
+	return [fields, rest];
 }
 
 /** Reads presentation-format data for the typed record types. */
@@ -78,7 +99,7 @@ function parsePresentation(type: string, value: string): Result<ParsedData, Reco
 
 	switch (type) {
 		case "A":
-			return IPV4_PATTERN.test(value) ? success({ type, address: value }) : invalid(type, value);
+			return isIpv4(value) ? success({ type, address: value }) : invalid(type, value);
 
 		case "AAAA": {
 			let address = canonicalIpv6(value);
@@ -171,6 +192,53 @@ function parsePresentation(type: string, value: string): Result<ParsedData, Reco
 			});
 		}
 
+		case "SVCB":
+		case "HTTPS": {
+			let [[priorityField, targetField], rest] = splitLeading(value, 2);
+			let priority = readNumber(priorityField, 0xffff);
+			let target = targetField === undefined ? null : canonicalName(targetField);
+			let params = readSvcParams(rest);
+			if (priority === null || target === null || params === null) return invalid(type, value);
+			return success({ type, priority, target, params });
+		}
+
+		case "TLSA": {
+			let [leading, rest] = splitLeading(value, 3);
+			let [usage, selector, matchingType] = leading.map((field) => readNumber(field, 0xff));
+			let association = decodeHex(rest);
+			if (usage == null || selector == null || matchingType == null || !association)
+				return invalid(type, value);
+			let certificateAssociation = encodeHex(association);
+			return success({ type, usage, selector, matchingType, certificateAssociation });
+		}
+
+		case "DS":
+		case "CDS": {
+			let [[tagField, algorithmField, digestTypeField], rest] = splitLeading(value, 3);
+			let keyTag = readNumber(tagField, 0xffff);
+			let algorithm = readAlgorithm(algorithmField);
+			let digestType = readNumber(digestTypeField, 0xff);
+			let digest = decodeHex(rest);
+			if (keyTag === null || algorithm === null || digestType === null || !digest)
+				return invalid(type, value);
+			return success({ type, keyTag, algorithm, digestType, digest: encodeHex(digest) });
+		}
+
+		case "DNSKEY":
+		case "CDNSKEY": {
+			let [[flagsField, protocolField, algorithmField], rest] = splitLeading(value, 3);
+			let flags = readNumber(flagsField, 0xffff);
+			let protocol = readNumber(protocolField, 0xff);
+			let algorithm = readAlgorithm(algorithmField);
+			let key = decodeBase64(rest);
+			if (flags === null || protocol === null || algorithm === null || !key)
+				return invalid(type, value);
+			let rdata = new Uint8Array(4 + key.length);
+			rdata.set([flags >> 8, flags & 0xff, protocol, algorithm]);
+			rdata.set(key, 4);
+			return success({ type, ...dnskeyFields(rdata) });
+		}
+
 		default:
 			return success({ type, data: value });
 	}
@@ -229,11 +297,7 @@ class WireReader {
 			}
 			case "AAAA": {
 				let bytes = this.#bytes(16);
-				if (!bytes) return null;
-				let groups = Array.from({ length: 8 }, (_, index) =>
-					(((bytes[index * 2] ?? 0) << 8) | (bytes[index * 2 + 1] ?? 0)).toString(16),
-				);
-				return { address: canonicalIpv6(groups.join(":")) ?? groups.join(":") };
+				return bytes ? { address: printIpv6(bytes) } : null;
 			}
 			case "CNAME":
 			case "PTR":
@@ -289,6 +353,34 @@ class WireReader {
 				let [serial, refresh, retry, expire, minimum] = numbers;
 				return { primary, mailbox, serial, refresh, retry, expire, minimum };
 			}
+			case "SVCB":
+			case "HTTPS": {
+				let priority = this.#uint(2);
+				let target = this.#name();
+				let params = readWireSvcParams(this.#rest());
+				if (priority === null || target === null || params === null) return null;
+				return { priority, target, params };
+			}
+			case "TLSA": {
+				let [usage, selector, matchingType] = [this.#uint(1), this.#uint(1), this.#uint(1)];
+				let association = this.#rest();
+				if (usage === null || selector === null || matchingType === null) return null;
+				if (association.length === 0) return null;
+				return { usage, selector, matchingType, certificateAssociation: encodeHex(association) };
+			}
+			case "DS":
+			case "CDS": {
+				let [keyTag, algorithm, digestType] = [this.#uint(2), this.#uint(1), this.#uint(1)];
+				let digest = this.#rest();
+				if (keyTag === null || algorithm === null || digestType === null) return null;
+				if (digest.length === 0) return null;
+				return { keyTag, algorithm, digestType, digest: encodeHex(digest) };
+			}
+			case "DNSKEY":
+			case "CDNSKEY": {
+				let rdata = this.#rest();
+				return rdata.length > 4 ? dnskeyFields(rdata) : null;
+			}
 			default:
 				return "unknown";
 		}
@@ -300,6 +392,11 @@ class WireReader {
 		let bytes = this.#octets.subarray(this.#offset, this.#offset + length);
 		this.#offset += length;
 		return bytes;
+	}
+
+	/** Every octet left, which the types ending in a variable-length field read as that field. */
+	#rest(): Uint8Array {
+		return this.#bytes(this.#octets.length - this.#offset) ?? new Uint8Array();
 	}
 
 	/** A big-endian unsigned integer of `size` octets. */

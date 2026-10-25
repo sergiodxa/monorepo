@@ -14,5 +14,5 @@ export { RecordDataError, ZoneFileError } from "./errors.js";
 export { formatRecordData } from "./format-record-data.js";
 export { parse } from "./parse.js";
 export { parseRecordData } from "./parse-record-data.js";
-export { canonicalType, typeName } from "./record-types.js";
+export { canonicalType, typeCode, typeName } from "./record-types.js";
 export { stringify } from "./stringify.js";

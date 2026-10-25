@@ -269,12 +269,12 @@ describe("parse", () => {
 
 	describe("types", () => {
 		test("read any mnemonic, keeping untyped data as written with its origin", () => {
-			expect(only('www 300 IN HTTPS 1 . alpn="h3,h2"')).toEqual({
+			expect(only("www 300 IN SSHFP 4 2 ABCDEF")).toEqual({
 				name: "www.example.com",
 				ttl: 300,
 				class: "IN",
-				type: "HTTPS",
-				data: '1 . alpn="h3,h2"',
+				type: "SSHFP",
+				data: "4 2 ABCDEF",
 				origin: "example.com",
 				file: null,
 				line: 1,

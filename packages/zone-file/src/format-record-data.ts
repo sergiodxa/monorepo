@@ -9,15 +9,15 @@
 import type * as ZoneFile from "./types.js";
 
 import { absoluteName } from "./names.js";
+import { printSvcParams } from "./svc-params.js";
 
 /** Encodes a character-string into the octets `\DDD` escapes stand for. */
 const ENCODER = new TextEncoder();
 
 /**
- * Prints a record's data in canonical presentation format. Names print absolute with the
- * trailing dot (the root stays `"."`), TXT and CAA values print quoted with `"` and `\`
- * escaped and every octet outside printable ASCII as `\DDD`, and untyped data prints as is.
- * `parseRecordData(data.type, formatRecordData(data))` gives back `data`.
+ * Prints a record's data in canonical presentation format: names absolute, free text quoted
+ * with every octet outside printable ASCII as `\DDD`, hex lowercase, SvcParams in key order,
+ * untyped data as is. `parseRecordData(data.type, formatRecordData(data))` gives back `data`.
  *
  * @param data - Record data, as `parseRecordData` produces it.
  * @returns The RDATA in presentation format.
@@ -77,6 +77,26 @@ export function printRecordData(
 				soa.expire,
 				soa.minimum,
 			].join(" ");
+		}
+		case "SVCB":
+		case "HTTPS": {
+			let { priority, target, params } = data as ZoneFile.SVCBData;
+			let printed = printSvcParams(params, quote);
+			return `${priority} ${printName(target)}${printed ? ` ${printed}` : ""}`;
+		}
+		case "TLSA": {
+			let tlsa = data as ZoneFile.TLSAData;
+			return `${tlsa.usage} ${tlsa.selector} ${tlsa.matchingType} ${tlsa.certificateAssociation}`;
+		}
+		case "DS":
+		case "CDS": {
+			let ds = data as ZoneFile.DSData;
+			return `${ds.keyTag} ${ds.algorithm} ${ds.digestType} ${ds.digest}`;
+		}
+		case "DNSKEY":
+		case "CDNSKEY": {
+			let key = data as ZoneFile.DNSKEYData;
+			return `${key.flags} ${key.protocol} ${key.algorithm} ${key.publicKey}`;
 		}
 		default:
 			return String((data as ZoneFile.UnknownData).data);

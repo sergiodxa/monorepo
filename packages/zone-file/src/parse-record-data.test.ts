@@ -177,9 +177,9 @@ describe("parseRecordData", () => {
 	});
 
 	test("keeps other types as raw data", () => {
-		expect(unwrap(parseRecordData("HTTPS", '1 . alpn="h3,h2"'))).toEqual({
-			type: "HTTPS",
-			data: '1 . alpn="h3,h2"',
+		expect(unwrap(parseRecordData("SSHFP", "4 2 ABCDEF"))).toEqual({
+			type: "SSHFP",
+			data: "4 2 ABCDEF",
 		});
 	});
 

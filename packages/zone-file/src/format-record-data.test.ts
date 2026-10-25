@@ -36,6 +36,13 @@ const FIXTURES: [string, string][] = [
 	["SOA", "dora.ns.cloudflare.com. dns.cloudflare.com. 2053809283 10000 2400 604800 3600"],
 	["SRV", "10 60 5060 SIP.example.com."],
 	["HTTPS", '1 . alpn="h3,h2"'],
+	["SVCB", "16 foo.example.org. alpn=h2,h3-19 mandatory=ipv4hint,alpn ipv4hint=192.0.2.1"],
+	["TLSA", "3 1 1 0C72AC70B745AC19998811B131D662C9AC69DBDBE7CB23E5B514B56664C5D3D6"],
+	["DS", "60485 5 1 2BB183AF5F22588179A53B0A98631FAD1A292118"],
+	["CDS", "0 0 0 00"],
+	["DNSKEY", "257 3 13 q80="],
+	["CDNSKEY", "0 3 0 AA=="],
+	["SSHFP", "4 2 ABCDEF"],
 ];
 
 /** The record types with typed fields. */
@@ -79,7 +86,7 @@ describe("formatRecordData", () => {
 	});
 
 	test("prints an untyped record's data as is", () => {
-		expect(formatRecordData({ type: "HTTPS", data: '1 . alpn="h3,h2"' })).toBe('1 . alpn="h3,h2"');
+		expect(formatRecordData({ type: "SSHFP", data: "4 2 ABCDEF" })).toBe("4 2 ABCDEF");
 	});
 
 	test("escapes quotes, backslashes and octets outside printable ASCII", () => {

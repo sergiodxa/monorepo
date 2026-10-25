@@ -75,7 +75,7 @@ function u16(random: Random): number {
 
 /** A type and its RDATA in presentation form. */
 function rdata(random: Random): string {
-	switch (random.int(0, 12)) {
+	switch (random.int(0, 16)) {
 		case 0:
 			return `A ${random.int(1, 223)}.${random.int(0, 255)}.${random.int(0, 255)}.${random.int(0, 255)}`;
 		case 1:
@@ -100,6 +100,14 @@ function rdata(random: Random): string {
 			return `TYPE${random.int(1000, 2000)} \\# 2 abcd`;
 		case 11:
 			return "TXT \\# 6 02 68 69 02 6f 6b";
+		case 12:
+			return `${random.pick(["SVCB", "HTTPS"])} ${random.int(0, 3)} ${random.pick([".", name(random)])} ${random.pick(['alpn="h3,h2" ipv4hint=192.0.2.80', "port=8443 mandatory=port", 'key667="hi there" no-default-alpn alpn=h2', ""])}`;
+		case 13:
+			return `TLSA 3 1 1 ( 0C72AC70B745AC19998811B131D662C9\n\tAC69DBDBE7CB23E5B514B56664C5D3D6 )`;
+		case 14:
+			return `${random.pick(["DS", "CDS"])} ${u16(random)} ${random.pick(["13", "RSASHA256"])} 2 ( 2BB183AF5F225881\n\t79A53B0A98631FAD1A292118 )`;
+		case 15:
+			return `${random.pick(["DNSKEY", "CDNSKEY"])} ${random.pick([256, 257])} 3 13 ( mdsswUyr3DPW132mOi8V9xESWE8jTo0d\n\txHjjnopKl+GqJxpVXckHAeF+KkxLbxIL fDLUT0rAK9iUzy1L53eKGQ== )`;
 		default:
 			return `RP admin.${relative(random)} txt`;
 	}
