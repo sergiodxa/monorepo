@@ -98,6 +98,13 @@ export default route({
 	pressMarkdown: get("/press.md"),
 
 	/**
+	 * Who the author is, what he works on and how he got here, in either language, plus the
+	 * same page as Markdown.
+	 */
+	about: get("/about"),
+	aboutMarkdown: get("/about.md"),
+
+	/**
 	 * What the author is focused on at this point in his life, in either language, plus the
 	 * same page as Markdown.
 	 */

@@ -202,6 +202,11 @@ with it empty, is answered with a 500.
 text/markdown`) writes the same kit as Markdown. Its invitation form mails
   `hello@sergiodxa.com` from `press@support.sergiodxa.com` with the organizer as Reply-To,
   behind the same guards as the Encore form (honeypot, rate limit, spam filter).
+- About (`/about`, in English or Spanish like the press kit): the author's portrait and
+  greeting, a row of figures, what he works on now, his story with a timeline of milestones,
+  what he cares about, his open-source projects and ways to work with him, from one
+  structured page per language in `resources/content/about/`. `/about.md` (or `Accept:
+text/markdown`) writes the same page as Markdown.
 - Now (`/now`, in English or Spanish like the press kit): what the author is focused on at
   this point in his life, in the nownownow.com tradition, with the day it was last updated,
   from one structured page per language in `resources/content/now/`; bump `NOW_UPDATED_AT`
@@ -254,6 +259,7 @@ text/markdown`) writes the same list as Markdown.
 | `/nodeinfo/2.1`          | NodeInfo: software, one user, post count               |
 | `/apps/encore/support`   | Encore support page and form                           |
 | `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)             |
+| `/about`                 | Who the author is (`.md` for Markdown)                 |
 | `/press`                 | Press kit for events and podcasts (`.md` for Markdown) |
 | `/now`                   | What the author is focused on now (`.md` for Markdown) |
 | `/uses`                  | What the author works with (`.md` for Markdown)        |

@@ -364,6 +364,14 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		lazy(() => import("~/app/http/controllers/press").then((it) => it.markdownPage)),
 	);
 	router.map(
+		routes.about,
+		lazy(() => import("~/app/http/controllers/about")),
+	);
+	router.map(
+		routes.aboutMarkdown,
+		lazy(() => import("~/app/http/controllers/about").then((it) => it.markdownPage)),
+	);
+	router.map(
 		routes.now,
 		lazy(() => import("~/app/http/controllers/now")),
 	);

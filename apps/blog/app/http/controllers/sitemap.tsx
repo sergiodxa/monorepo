@@ -58,6 +58,8 @@ export default createAction(
 			encorePrivacyMarkdown: false,
 			press: { index: true },
 			pressMarkdown: false,
+			about: true,
+			aboutMarkdown: false,
 			now: true,
 			nowMarkdown: false,
 			uses: true,
