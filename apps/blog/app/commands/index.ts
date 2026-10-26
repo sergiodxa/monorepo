@@ -59,4 +59,19 @@ export default commands({
 	typegen: command({
 		description: "Write the Worker's env types from wrangler.jsonc",
 	}),
+	resume: commands({
+		pdf: command({
+			description:
+				"Write the résumé's LaTeX source in each language from its content and typeset it to public/resume",
+			flags: {
+				tectonic: flag.string("tectonic", {
+					description: "The tectonic binary to typeset with; `tectonic` on PATH without one",
+				}),
+				texOnly: flag.boolean("tex-only", {
+					description: "Write the .tex sources and typeset nothing",
+				}),
+			},
+			examples: ["resume pdf", "resume pdf --tectonic ~/bin/tectonic", "resume pdf --tex-only"],
+		}),
+	}),
 });

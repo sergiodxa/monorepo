@@ -69,3 +69,7 @@ cli.map(
 	commandset.typegen,
 	lazy(() => import("~/app/commands/typegen")),
 );
+cli.map(
+	commandset.resume.pdf,
+	lazy(() => import("~/app/commands/resume/pdf")),
+);

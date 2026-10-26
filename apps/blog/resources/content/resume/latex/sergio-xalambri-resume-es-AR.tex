@@ -1,0 +1,81 @@
+% Generated from the résumé's structured content by `sdxc run resume pdf`; edit the
+% content in resources/content/resume/ and regenerate rather than editing this file.
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.55in]{geometry}
+\usepackage{fontspec}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Sergio Xalambrí — Currículum},pdfauthor={Sergio Xalambrí},pdflang={es-AR}}
+\definecolor{muted}{gray}{0.35}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\vspace{-4pt}\rule{\linewidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{9pt}{4pt}
+\setlist[itemize]{leftmargin=1.1em,itemsep=1pt,topsep=2pt,parsep=0pt}
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries Sergio Xalambrí}\\[3pt]
+Desarrollador Web Full-Stack · Lima, Perú (UTC−5) · Remoto\\[2pt]
+{\small \href{mailto:hello@sergiodxa.com}{hello@sergiodxa.com} · \href{https://sergiodxa.com}{sergiodxa.com} · \href{https://github.com/sergiodxa}{github.com/sergiodxa} · \href{https://www.linkedin.com/in/sergiodxa/}{linkedin.com/in/sergiodxa}}
+\end{center}
+
+Desarrollador web full-stack desde 2013, con TypeScript, React, Remix y React Router. Construyo la aplicación web de Daffy y mantengo librerías open source con más de 3M de descargas mensuales en npm, usadas en todo el ecosistema de Remix y React Router. Me importan la Web Platform, la mejora progresiva y las APIs que a otros desarrolladores les resultan obvias.
+
+\section*{Experiencia}
+\textbf{Web Developer}, \href{https://www.daffy.org}{Daffy} {\color{muted}(antes Silverback Ventures)} \hfill {\color{muted}[2021] – Actualidad}
+\begin{itemize}
+\item Construyo la aplicación web de Daffy, un fondo de donaciones que llegó a estar entre los 10 más grandes de EE. UU., con más de 16.000 cuentas.
+\item Migré la aplicación de Next.js a Remix en nueve meses sin congelar funcionalidades, con ambos en un mismo servidor y sesiones compartidas mientras las rutas pasaban de a una.
+\item Diseñé un backend-for-frontend en Remix sobre la API de Rails, con un cliente validado por esquemas, reportes de donaciones en PDF e imágenes Open Graph generadas.
+\item Extraje los patrones a Remix Utils, estrategias de Remix Auth y remix-i18next, hoy librerías open source sobre las que construyen otros equipos.
+\end{itemize}
+
+\textbf{Frontend Lead}, \href{https://able.co}{Able} \hfill {\color{muted}2018 – [2021]}
+\begin{itemize}
+\item Lideré la arquitectura frontend de un producto interno que se preparaba para lanzarse al público, con React sobre un backend en Rails.
+\item Escribí el primer programa de frontend de Codeable, el bootcamp full-stack de Able, y di su curso de React.
+\end{itemize}
+
+\textbf{Support Engineer}, \href{https://vercel.com}{ZEIT} {\color{muted}(hoy Vercel)} \hfill {\color{muted}2017 – 2018}
+\begin{itemize}
+\item Ayudé a clientes a deployar en Now y adoptar Next.js, construyendo aplicaciones de ejemplo para sus casos de uso.
+\item Trabajé en la documentación de la API de ZEIT, para que los clientes aprendieran la plataforma sin abrir un ticket de soporte.
+\end{itemize}
+
+\textbf{Frontend Developer}, \href{https://platzi.com}{Platzi} \hfill {\color{muted}2015 – 2017}
+\begin{itemize}
+\item Construí el sistema de clases en vivo, las discusiones, el reproductor de video y el render en servidor de React sobre la plataforma Django de una escuela online respaldada por YC.
+\item Publiqué como open source Pulse Editor, el editor Markdown de Platzi, y Pulse, su aplicación de escritorio en Electron; di cursos de desarrollo web.
+\end{itemize}
+
+\section*{Open source}
+\begin{itemize}
+\item \textbf{\href{https://github.com/sergiodxa/remix-utils}{Remix Utils}}: Utilidades para rutas, respuestas, server-sent events, CSRF y más. {\color{muted}(1.6M de descargas al mes, 2.3k estrellas)}
+\item \textbf{\href{https://github.com/sergiodxa/remix-auth}{Remix Auth}}: Autenticación para aplicaciones de Remix y React Router, con decenas de estrategias. {\color{muted}(650k descargas al mes, 2.2k estrellas)}
+\item \textbf{\href{https://github.com/sergiodxa/remix-i18next}{remix-i18next}}: Traducciones para aplicaciones de Remix y React Router con i18next. {\color{muted}(700k descargas al mes)}
+\item \textbf{\href{https://sdxc.dev}{Los paquetes @sdxc}}: 130+ paquetes y una CLI para aplicaciones full-stack sobre las APIs de la Web Platform y Cloudflare Workers.
+\item \textbf{\href{https://github.com/sergiodxa}{Contribuciones}}: Remix, React Router, Next.js, SWR y micro.
+\end{itemize}
+
+\section*{Charlas y escritura}
+\begin{itemize}
+\item \href{https://www.youtube.com/watch?v=o07u1oKE6VA}{The Remix Way}, Remix Jam 2026, Toronto \hfill {\color{muted}2026}
+\item \href{https://www.youtube.com/watch?v=eh6FfHFpYMM}{Remixing How We Give}, Remix Conf Europe 2022 \hfill {\color{muted}2022}
+\item \href{https://sergiodxa.com}{Cientos de artículos y tutoriales}, sergiodxa.com \hfill {\color{muted}2013 – Actualidad}
+\end{itemize}
+
+\section*{Habilidades}
+\textbf{Lenguajes y frameworks:} TypeScript, JavaScript, React, Remix, React Router, Next.js, Node.js, Bun\\
+\textbf{Plataforma:} Cloudflare Workers, D1, KV, Durable Objects, Express, APIs en Rails, SQL\\
+\textbf{Prácticas:} Autenticación (OAuth 2.0, OpenID Connect, passkeys), testing con Vitest, accesibilidad, mejora progresiva, diseño de librerías y APIs, escritura técnica\\
+
+\section*{Educación · Idiomas}
+\textbf{Autodidacta:} Cursos de desarrollo web en Mejorando.la, hoy Platzi (2013 – 2015).\\
+\textbf{Idiomas:} Español (nativo), Inglés (fluido)
+
+\vfill
+{\footnotesize\color{muted}Cifras de GitHub y npm, octubre de 2026. Versión más reciente: \href{https://sergiodxa.com/resume?lang=es-AR}{sergiodxa.com/resume?lang=es-AR}}
+\end{document}

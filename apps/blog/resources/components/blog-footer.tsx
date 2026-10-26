@@ -76,6 +76,7 @@ export const FOOTER_TRACKS: Array<Array<BlogFooter.Column>> = [
 				{ label: "Press kit", href: routes.press.index.href() },
 				{ label: "Now", href: routes.now.href() },
 				{ label: "Uses", href: routes.uses.href() },
+				{ label: "Résumé", href: routes.resume.href() },
 			],
 		},
 	],

@@ -64,6 +64,8 @@ export default createAction(
 			nowMarkdown: false,
 			uses: true,
 			usesMarkdown: false,
+			resume: true,
+			resumeMarkdown: false,
 			articles: { updatedAt: latest(lastArticleDate) },
 			tutorials: { updatedAt: latest(lastTutorialDate) },
 			bookmarks: { updatedAt: latest(lastBookmarkDate) },

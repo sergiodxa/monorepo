@@ -119,6 +119,13 @@ export default route({
 	usesMarkdown: get("/uses.md"),
 
 	/**
+	 * The author's résumé in either language, plus the same résumé as Markdown; the typeset PDF
+	 * of each language is a static file under `/resume/`.
+	 */
+	resume: get("/resume"),
+	resumeMarkdown: get("/resume.md"),
+
+	/**
 	 * Each kind's topic, at the root under the slug the kind registry names, served by the
 	 * shared topic controller; its feeds are `rss.topic`, `atom.topic` and `jsonFeed.topic`.
 	 * A new kind adds its page here and maps it with `kindTopic()` in the router.

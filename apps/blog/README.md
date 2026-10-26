@@ -215,6 +215,15 @@ text/markdown`) writes the same page as Markdown.
   and apps the author works with, each a card with a link and a line on why, from one
   structured page per language in `resources/content/uses/`. `/uses.md` (or `Accept:
 text/markdown`) writes the same list as Markdown.
+- Résumé (`/resume`, in English or Spanish like the press kit): experience, open source,
+  talks and skills, from one structured résumé per language in `resources/content/resume/`.
+  `/resume.md` (or `Accept: text/markdown`) writes the same résumé as Markdown, and each
+  language has a one-page PDF in `public/resume/`, typeset from the LaTeX that
+  `resources/content/resume/latex/` keeps generated from the same content. After editing the
+  content, run `sdxc run resume pdf` (needs [tectonic](https://tectonic-typesetting.github.io)
+  on `PATH`, or `--tectonic <path>`); `--tex-only` rewrites only the sources, which a test
+  compares against the content. The page offers the download once `RESUME_PDFS_PUBLISHED`
+  in `resources/content/resume/shared.ts` is `true`, so set it after the first typeset.
 
 ## Routes
 
@@ -263,6 +272,7 @@ text/markdown`) writes the same list as Markdown.
 | `/press`                 | Press kit for events and podcasts (`.md` for Markdown) |
 | `/now`                   | What the author is focused on now (`.md` for Markdown) |
 | `/uses`                  | What the author works with (`.md` for Markdown)        |
+| `/resume`                | The author's résumé (`.md` for Markdown, PDF download) |
 
 ## Client Islands
 
