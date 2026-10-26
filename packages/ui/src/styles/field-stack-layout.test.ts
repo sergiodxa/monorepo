@@ -1,6 +1,6 @@
 /**
  * Covers {@link fieldStackLayout} as pure `css()` output: the exact
- * single-column layout and its `0.25rem` gap.
+ * single-column layout and its `0.5rem` gap, wide enough to clear a focus ring.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,8 +23,8 @@ describe("fieldStackLayout", () => {
 		expect(style.flexDirection).toBe("column");
 	});
 
-	test("carries a small 0.25rem gap between stacked children", () => {
-		expect(styles(fieldStackLayout()).gap).toBe("0.25rem");
+	test("carries a 0.5rem gap, so a focused control's ring clears its label", () => {
+		expect(styles(fieldStackLayout()).gap).toBe("0.5rem");
 	});
 
 	test("carries exactly these three properties, nothing more", () => {
