@@ -111,6 +111,49 @@ function os2(fsSelection: number): number[] {
 }
 
 /**
+ * An `OS/2` table of a given version and length with the style and permission fields set.
+ *
+ * @param fields - The fields under test; anything left out stays zero.
+ */
+function os2Style(fields: {
+	version: number;
+	length: number;
+	weight?: number;
+	fsType?: number;
+	familyClass?: number;
+	fsSelection?: number;
+	xHeight?: number;
+	capHeight?: number;
+}): number[] {
+	let table = Array.from<number>({ length: fields.length }).fill(0);
+	let set = (offset: number, value: number) => {
+		if (offset + 2 <= table.length) table.splice(offset, 2, ...u16(value & 0xffff));
+	};
+	set(0, fields.version);
+	set(4, fields.weight ?? 0);
+	set(8, fields.fsType ?? 0);
+	set(30, fields.familyClass ?? 0);
+	set(62, fields.fsSelection ?? 0);
+	set(86, fields.xHeight ?? 0);
+	set(88, fields.capHeight ?? 0);
+	return table;
+}
+
+/**
+ * A 32-byte `post` header (format 3).
+ *
+ * @param italicAngle - 16.16 fixed bits.
+ * @param fixedPitch - `isFixedPitch`.
+ */
+function post(italicAngle: number, fixedPitch: number): number[] {
+	return [
+		...u32(0x00030000, italicAngle),
+		...u16(0x10000 - 75, 50),
+		...u32(fixedPitch, 0, 0, 0, 0),
+	];
+}
+
+/**
  * Assembles tables into an sfnt file, each table 4-byte aligned.
  *
  * @param tables - Table bytes by tag.
@@ -157,6 +200,24 @@ describe("Inter Regular", () => {
 		expect(font.family).toBe("Inter");
 		expect(font.subfamily).toBe("Regular");
 		expect(font.glyphCount).toBe(2926);
+	});
+
+	test("reads the metrics a PDF font descriptor needs", () => {
+		expect(font.postscriptName).toBe("Inter-Regular");
+		expect(font.bbox).toEqual({ xMin: -1513, yMin: -660, xMax: 5290, yMax: 2269 });
+		expect(font.italicAngle).toBe(0);
+		expect(font.capHeight).toBe(1490);
+		expect(font.xHeight).toBe(1118);
+		expect(font.weightClass).toBe(400);
+		expect(font.underlinePosition).toBe(-348);
+		expect(font.underlineThickness).toBe(140);
+		expect([font.isFixedPitch, font.isItalic, font.isBold, font.isSerif]).toEqual([
+			false,
+			false,
+			false,
+			false,
+		]);
+		expect(font.embedding).toEqual({ allowed: "installable", subsetting: true, bitmapOnly: false });
 	});
 
 	test("accepts a Uint8Array, an offset view of one, and an ArrayBuffer", () => {
@@ -323,6 +384,111 @@ describe("hand-built font", () => {
 		let font = unwrap(minimal({ glyf }));
 		expect(font.outline(1)).toEqual([]);
 		expect(font.outline(99)).toEqual([]);
+	});
+});
+
+describe("metrics, style and embedding permission", () => {
+	test("answers defaults for a font without OS/2 or post", () => {
+		let font = unwrap(minimal());
+		expect(font.bbox).toEqual({ xMin: 0, yMin: 0, xMax: 100, yMax: 100 });
+		expect(font.italicAngle).toBe(0);
+		expect([font.capHeight, font.xHeight]).toEqual([null, null]);
+		expect(font.weightClass).toBe(400);
+		expect([font.underlinePosition, font.underlineThickness]).toEqual([0, 0]);
+		expect([font.isFixedPitch, font.isItalic, font.isBold, font.isSerif]).toEqual([
+			false,
+			false,
+			false,
+			false,
+		]);
+		expect(font.embedding).toEqual({ allowed: "installable", subsetting: true, bitmapOnly: false });
+		expect(font.postscriptName).toBe("");
+	});
+
+	test("reads cap and x heights only from OS/2 version 2 and later", () => {
+		let v1 = unwrap(minimal({ "OS/2": os2Style({ version: 1, length: 86, capHeight: 700 }) }));
+		expect([v1.capHeight, v1.xHeight]).toEqual([null, null]);
+		let v2 = unwrap(
+			minimal({ "OS/2": os2Style({ version: 2, length: 96, xHeight: 500, capHeight: 700 }) }),
+		);
+		expect([v2.capHeight, v2.xHeight]).toEqual([700, 500]);
+		let v5 = unwrap(
+			minimal({ "OS/2": os2Style({ version: 5, length: 100, xHeight: 510, capHeight: 710 }) }),
+		);
+		expect([v5.capHeight, v5.xHeight]).toEqual([710, 510]);
+	});
+
+	test("reads a version 0 OS/2 shorter than the fields it lacks", () => {
+		let font = unwrap(minimal({ "OS/2": os2Style({ version: 0, length: 68, weight: 700 }) }));
+		expect(font.weightClass).toBe(700);
+		expect(font.capHeight).toBeNull();
+	});
+
+	test("reads italic angle, underline and fixed pitch from post", () => {
+		let font = unwrap(minimal({ post: post(0xfff38000, 1) }));
+		expect(font.italicAngle).toBe(-12.5);
+		expect([font.underlinePosition, font.underlineThickness]).toEqual([-75, 50]);
+		expect(font.isFixedPitch).toBe(true);
+	});
+
+	test("takes style from fsSelection or macStyle", () => {
+		let fromOs2 = unwrap(
+			minimal({ "OS/2": os2Style({ version: 4, length: 96, fsSelection: 0x0021 }) }),
+		);
+		expect([fromOs2.isItalic, fromOs2.isBold]).toEqual([true, true]);
+		let head = minimalTables().head ?? [];
+		head.splice(44, 2, ...u16(0x0003));
+		let fromHead = unwrap(minimal({ head }));
+		expect([fromHead.isItalic, fromHead.isBold]).toEqual([true, true]);
+	});
+
+	test("classes 1-5 and 7 of sFamilyClass are serif", () => {
+		let serif = (familyClass: number) =>
+			unwrap(minimal({ "OS/2": os2Style({ version: 4, length: 96, familyClass }) })).isSerif;
+		expect([1, 2, 3, 4, 5, 7].map((style) => serif(style << 8))).toEqual(Array(6).fill(true));
+		expect([0, 6, 8, 9, 10, 12].map((style) => serif((style << 8) | 1))).toEqual(
+			Array(6).fill(false),
+		);
+	});
+
+	test("decodes fsType, the least restrictive usage bit winning", () => {
+		let embedding = (fsType: number) =>
+			unwrap(minimal({ "OS/2": os2Style({ version: 4, length: 96, fsType }) })).embedding;
+		expect(embedding(0x0000).allowed).toBe("installable");
+		expect(embedding(0x0001).allowed).toBe("installable");
+		expect(embedding(0x0002).allowed).toBe("restricted");
+		expect(embedding(0x0004).allowed).toBe("preview-and-print");
+		expect(embedding(0x0008).allowed).toBe("editable");
+		expect(embedding(0x0006).allowed).toBe("preview-and-print");
+		expect(embedding(0x000e).allowed).toBe("editable");
+		expect(embedding(0x0302)).toEqual({
+			allowed: "restricted",
+			subsetting: false,
+			bitmapOnly: true,
+		});
+	});
+
+	test("refuses to subset a font whose fsType forbids it", () => {
+		let font = unwrap(minimal({ "OS/2": os2Style({ version: 4, length: 96, fsType: 0x0100 }) }));
+		let result = font.subset([1]);
+		expect(isFailure(result) && [result.error.code, result.error.table]).toEqual([
+			"not-permitted",
+			"OS/2",
+		]);
+	});
+
+	test("decodes Windows symbol-encoded names as UTF-16BE", () => {
+		let family = utf16("Symbol Test");
+		let postscript = utf16("SymbolTest-Regular");
+		let name = [
+			...u16(0, 2, 30),
+			...u16(3, 0, 0x409, 1, family.length, 0),
+			...u16(3, 0, 0x409, 6, postscript.length, family.length),
+			...family,
+			...postscript,
+		];
+		let font = unwrap(minimal({ name }));
+		expect([font.family, font.postscriptName]).toEqual(["Symbol Test", "SymbolTest-Regular"]);
 	});
 });
 

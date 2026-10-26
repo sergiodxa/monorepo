@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-26
+**Accepted** - 2026-10-26 (Implemented)
 
 ## Background
 
@@ -111,9 +111,15 @@ subset.data.glyphId(glyphA); // the glyph's id in the subset
   requested, and components of composite glyphs are added after them.
 - The subset keeps `head`, `hhea`, `maxp`, `hmtx`, `loca`, `glyf`, `name`, `OS/2` and `post`
   (rewritten as format 3, with no glyph names), plus the hinting tables `cvt `, `fpgm` and
-  `prep` when the font has them. It drops `cmap`, `kern` and `GPOS`, since a PDF addresses
-  glyphs by id and its text is already positioned. Which tables PDF viewers need is checked
-  against what fontkit's `TTFSubset` writes before this list is final.
+  `prep` when the font has them. It drops `kern`, `GPOS`, `GSUB`, `GDEF` and every other
+  table, since a PDF addresses glyphs by id and its text is already positioned. This is
+  fontkit's `TTFSubset` list (`head`, `hhea`, `loca`, `maxp`, `cvt `, `prep`, `glyf`, `hmtx`,
+  `fpgm`) plus `name`, `OS/2` and `post`, which keep the font's metadata readable.
+- The subset carries a `cmap` that maps no characters: one Windows Unicode format 4 subtable
+  holding only the `0xFFFF` terminator segment. `parseFont` and font sanitizers require a
+  Unicode `cmap`, and an empty one keeps glyph ids the only way into the font.
+- Every requested id that the font lacks, and every repeat, is skipped; `glyphId` answers `0`
+  for a glyph the subset does not hold. `hmtx` is written with one full metric per glyph.
 - `loca` uses the short format when every offset fits in it, the long format otherwise.
 - A font whose `embedding.subsetting` is `false` fails with a `FontError` whose `code` is
   `"not-permitted"`.
@@ -210,5 +216,5 @@ with two font readers that can disagree about a metric.
 
 ## Current Progress
 
-- [ ] Phase 1: Metrics, style and permission
-- [ ] Phase 2: Subsetting
+- [x] Phase 1: Metrics, style and permission
+- [x] Phase 2: Subsetting

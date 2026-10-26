@@ -34,7 +34,8 @@ export namespace FontError {
 	/**
 	 * `unsupported` is a valid font of a kind this package does not read (CFF outlines, a
 	 * collection, no Unicode `cmap` subtable); `missing-table` lacks a required table;
-	 * `malformed` has a header or table whose sizes or values cannot be right.
+	 * `malformed` has a header or table whose sizes or values cannot be right;
+	 * `not-permitted` is a font whose license (`OS/2.fsType`) forbids what was asked.
 	 */
-	export type Code = "unsupported" | "missing-table" | "malformed";
+	export type Code = "unsupported" | "missing-table" | "malformed" | "not-permitted";
 }

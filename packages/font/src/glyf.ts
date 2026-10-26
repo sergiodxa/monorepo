@@ -91,7 +91,10 @@ function decode(source: GlyphSource, glyph: number, depth: number): Point[][] {
  * @param source - The font's glyph tables.
  * @param glyph - Glyph index.
  */
-function glyphRange(source: GlyphSource, glyph: number): { start: number; end: number } | null {
+export function glyphRange(
+	source: GlyphSource,
+	glyph: number,
+): { start: number; end: number } | null {
 	if (!Number.isInteger(glyph) || glyph < 0 || glyph >= source.numGlyphs) return null;
 	let { reader, locaOffset } = source;
 	let start: number;

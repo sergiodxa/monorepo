@@ -7,20 +7,34 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
+import { failure } from "@sdxc/result";
+
 import type { GlyphSource, Point } from "./glyf.js";
+import type { FontMetrics } from "./metrics.js";
 import type { CmapSubtable, PairLookups } from "./tables.js";
 
+import { FontError } from "./font-error.js";
 import { contoursToCommands, decodeGlyph } from "./glyf.js";
+import { subsetFont } from "./subset.js";
 import { gposPair, gposPairLookups, kernTablePair, lookupCmap } from "./tables.js";
 
+/** A table's absolute location in the file. */
+export interface TableRecord {
+	offset: number;
+	length: number;
+}
+
 /** What `parseFont` located and validated, everything a `Font` reads from afterwards. */
-export interface FontData extends GlyphSource {
+export interface FontData extends GlyphSource, FontMetrics {
 	unitsPerEm: number;
 	ascender: number;
 	descender: number;
 	lineGap: number;
 	family: string;
 	subfamily: string;
+	postscriptName: string;
 	numberOfHMetrics: number;
 	hmtxOffset: number;
 	cmap: CmapSubtable;
@@ -28,6 +42,8 @@ export interface FontData extends GlyphSource {
 	kernOffset: number | null;
 	/** Absolute offset of `GPOS`, or `null` when the font has none. */
 	gposOffset: number | null;
+	/** Every table in the directory, by tag; the subsetter copies tables from here. */
+	tables: Map<string, TableRecord>;
 }
 
 /**
@@ -48,6 +64,35 @@ export class Font {
 	readonly family: string;
 	/** Typographic style name (`"Regular"`), `""` when the font has no `name` table. */
 	readonly subfamily: string;
+	/** PostScript name from `name` ID 6 (`"Inter-Regular"`), `""` when the font records none. */
+	readonly postscriptName: string;
+	/** The box every glyph fits in, from `head`, in font units. */
+	readonly bbox: Font.BBox;
+	/** Slant in degrees counter-clockwise from vertical, negative when the font leans right; `0` without `post`. */
+	readonly italicAngle: number;
+	/** Height of flat capitals in font units, `null` when `OS/2` is older than version 2. */
+	readonly capHeight: number | null;
+	/** Height of flat lowercase letters in font units, `null` when `OS/2` is older than version 2. */
+	readonly xHeight: number | null;
+	/** `OS/2.usWeightClass` (400 regular, 700 bold), `400` when the font has no `OS/2`. */
+	readonly weightClass: number;
+	/** Whether every glyph shares one advance, from `post.isFixedPitch`. */
+	readonly isFixedPitch: boolean;
+	/** Set by either `OS/2.fsSelection` ITALIC or `head.macStyle` Italic. */
+	readonly isItalic: boolean;
+	/** Set by either `OS/2.fsSelection` BOLD or `head.macStyle` Bold. */
+	readonly isBold: boolean;
+	/** Whether `OS/2.sFamilyClass` puts the design in a serif class (1–5 or 7). */
+	readonly isSerif: boolean;
+	/** Top of the underline relative to the baseline, negative below it, in font units. */
+	readonly underlinePosition: number;
+	/** Underline stroke thickness in font units, `0` without `post`. */
+	readonly underlineThickness: number;
+	/**
+	 * What the font's license allows when it ships inside a document, from `OS/2.fsType`.
+	 * The font only reports it; refusing a `restricted` font is the caller's decision.
+	 */
+	readonly embedding: Font.Embedding;
 
 	#data: FontData;
 	#contours = new Map<number, Point[][]>();
@@ -65,6 +110,19 @@ export class Font {
 		this.lineGap = data.lineGap;
 		this.family = data.family;
 		this.subfamily = data.subfamily;
+		this.postscriptName = data.postscriptName;
+		this.bbox = data.bbox;
+		this.italicAngle = data.italicAngle;
+		this.capHeight = data.capHeight;
+		this.xHeight = data.xHeight;
+		this.weightClass = data.weightClass;
+		this.isFixedPitch = data.isFixedPitch;
+		this.isItalic = data.isItalic;
+		this.isBold = data.isBold;
+		this.isSerif = data.isSerif;
+		this.underlinePosition = data.underlinePosition;
+		this.underlineThickness = data.underlineThickness;
+		this.embedding = data.embedding;
 	}
 
 	/** How many glyphs the font holds; valid glyph indices are `0` to `glyphCount - 1`. */
@@ -219,6 +277,29 @@ export class Font {
 	}
 
 	/**
+	 * Writes a smaller TrueType font holding only the given glyphs, for embedding. Glyph 0
+	 * (`.notdef`) stays 0, the rest are renumbered in the order given, and components of
+	 * composite glyphs follow them; ids the font lacks and repeats are skipped.
+	 *
+	 * @param glyphs - Glyph indices of this font.
+	 * @returns The subset, or a `FontError` with code `not-permitted` when
+	 *   `embedding.subsetting` is `false`.
+	 * @example let subset = unwrap(font.subset(line.glyphs.map(({ glyph }) => glyph)));
+	 */
+	subset(glyphs: Iterable<number>): Result<Font.Subset, FontError> {
+		if (!this.embedding.subsetting) {
+			return failure(
+				new FontError(
+					"not-permitted",
+					"The font's license (OS/2 fsType) forbids subsetting.",
+					"OS/2",
+				),
+			);
+		}
+		return subsetFont(this.#data, glyphs);
+	}
+
+	/**
 	 * Decoded contours for a glyph, cached so repeated draws of one character decode once.
 	 *
 	 * @param glyph - Glyph index.
@@ -233,6 +314,40 @@ export class Font {
 }
 
 export namespace Font {
+	/** A rectangle in font units, y up. */
+	export interface BBox {
+		xMin: number;
+		yMin: number;
+		xMax: number;
+		yMax: number;
+	}
+
+	/** `OS/2.fsType` usage permission, from least to most restrictive. */
+	export type EmbeddingLevel = "installable" | "editable" | "preview-and-print" | "restricted";
+
+	/** What a font's license allows a document that embeds it. */
+	export interface Embedding {
+		allowed: EmbeddingLevel;
+		/** `false` when the font must ship whole. */
+		subsetting: boolean;
+		/** `true` when only the font's bitmaps may be embedded, never its outlines. */
+		bitmapOnly: boolean;
+	}
+
+	/** A subset font file and how the original glyph ids map into it. */
+	export interface Subset {
+		/** A complete `.ttf`, readable by `parseFont`. */
+		bytes: Uint8Array;
+		/** Original glyph id of each subset glyph, indexed by subset id; `glyphs[0]` is `0`. */
+		glyphs: readonly number[];
+		/**
+		 * A glyph's id in the subset, `0` for one the subset does not hold.
+		 *
+		 * @param original - Glyph id in the font `subset` was called on.
+		 */
+		glyphId(original: number): number;
+	}
+
 	/** Starts a contour (`move`) or draws a straight segment to a point (`line`). */
 	export interface PointCommand {
 		type: "move" | "line";

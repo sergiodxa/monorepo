@@ -11,16 +11,13 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
+import type { TableRecord } from "./font.js";
+
 import { FontError } from "./font-error.js";
 import { Font } from "./font.js";
+import { readMetrics } from "./metrics.js";
 import { Reader } from "./reader.js";
 import { selectCmap } from "./tables.js";
-
-/** A table's absolute location in the file. */
-interface TableRecord {
-	offset: number;
-	length: number;
-}
 
 /** Tables every TrueType-outline font carries and this package reads. */
 const REQUIRED_TABLES = ["head", "hhea", "maxp", "hmtx", "cmap", "loca", "glyf"] as const;
@@ -136,6 +133,7 @@ export function parseFont(bytes: Uint8Array | ArrayBuffer): Result<Font, FontErr
 	let family = name === undefined ? "" : (readName(reader, name, 16) ?? readName(reader, name, 1));
 	let subfamily =
 		name === undefined ? "" : (readName(reader, name, 17) ?? readName(reader, name, 2));
+	let postscriptName = name === undefined ? "" : readName(reader, name, 6);
 
 	return success(
 		new Font({
@@ -146,6 +144,8 @@ export function parseFont(bytes: Uint8Array | ArrayBuffer): Result<Font, FontErr
 			lineGap,
 			family: family ?? "",
 			subfamily: subfamily ?? "",
+			postscriptName: postscriptName ?? "",
+			...readMetrics(reader, head, os2, tables.get("post")),
 			numGlyphs,
 			numberOfHMetrics,
 			hmtxOffset: hmtx.offset,
@@ -156,6 +156,7 @@ export function parseFont(bytes: Uint8Array | ArrayBuffer): Result<Font, FontErr
 			cmap: subtable,
 			kernOffset: tables.get("kern")?.offset ?? null,
 			gposOffset: tables.get("GPOS")?.offset ?? null,
+			tables,
 		}),
 	);
 }
@@ -181,12 +182,13 @@ function malformed(message: string, table?: string): Result<Font, FontError> {
 }
 
 /**
- * Decodes one name record, preferring Windows Unicode, then Unicode, then Mac Roman as
- * Latin-1, so the English name a font tool shows is the one returned.
+ * Decodes one name record, preferring Windows Unicode, then Unicode, then Windows symbol,
+ * then Mac Roman as Latin-1, so the English name a font tool shows is the one returned.
  *
  * @param reader - The font bytes.
  * @param table - The `name` table.
- * @param nameId - `16`/`17` for the typographic family/style, `1`/`2` for the legacy ones.
+ * @param nameId - `16`/`17` for the typographic family/style, `1`/`2` for the legacy ones,
+ *   `6` for the PostScript name.
  * @returns The name, or `null` when the font does not record it.
  */
 function readName(reader: Reader, table: TableRecord, nameId: number): string | null {
@@ -202,6 +204,7 @@ function readName(reader: Reader, table: TableRecord, nameId: number): string | 
 		let rank = 0;
 		if (platform === 3 && (encoding === 1 || encoding === 10)) rank = language === 0x409 ? 4 : 3;
 		else if (platform === 0) rank = 2;
+		else if (platform === 3 && encoding === 0) rank = 1.75;
 		else if (platform === 1 && encoding === 0) rank = language === 0 ? 1.5 : 1;
 		if (rank === 0 || (best !== null && best.rank >= rank)) continue;
 		best = {
