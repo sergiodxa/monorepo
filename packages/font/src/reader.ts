@@ -15,12 +15,14 @@ export class Reader {
 	/** Size of the font file in bytes. */
 	readonly length: number;
 	#view: DataView;
+	#bytes: Uint8Array;
 
 	/**
 	 * @param bytes - The whole font file; a view's `byteOffset` is respected.
 	 */
 	constructor(bytes: Uint8Array) {
 		this.#view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+		this.#bytes = bytes;
 		this.length = bytes.byteLength;
 	}
 
@@ -52,6 +54,19 @@ export class Reader {
 	u32(offset: number): number {
 		if (offset < 0 || offset + 4 > this.length) return 0;
 		return this.#view.getUint32(offset);
+	}
+
+	/**
+	 * A view of `length` bytes from `offset`, sharing the file's buffer and cut short at the
+	 * end of the file.
+	 *
+	 * @param offset - Absolute byte offset.
+	 * @param length - How many bytes.
+	 */
+	bytes(offset: number, length: number): Uint8Array {
+		let start = Math.min(Math.max(offset, 0), this.length);
+		let end = Math.min(start + Math.max(length, 0), this.length);
+		return this.#bytes.subarray(start, end);
 	}
 
 	/**

@@ -500,11 +500,11 @@ describe("rejected files", () => {
 		return { code: result.error.code, table: result.error.table };
 	}
 
-	test("declines CFF fonts and collections as unsupported", () => {
-		expect(rejection(sfnt(minimalTables(), ascii("OTTO")))).toEqual({
-			code: "unsupported",
-			table: undefined,
-		});
+	test("reads outlines by table, whatever the sfnt version says", () => {
+		expect(rejection(sfnt(minimalTables(), ascii("OTTO")))).toBeNull();
+	});
+
+	test("declines a collection as unsupported", () => {
 		expect(rejection(sfnt(minimalTables(), ascii("ttcf")))?.code).toBe("unsupported");
 	});
 

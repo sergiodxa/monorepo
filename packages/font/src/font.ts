@@ -11,6 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure } from "@sdxc/result";
 
+import type { CffOutlines } from "./cff/index.js";
 import type { GlyphSource, Point } from "./glyf.js";
 import type { FontMetrics } from "./metrics.js";
 import type { CmapSubtable, PairLookups } from "./tables.js";
@@ -44,6 +45,23 @@ export interface FontData extends GlyphSource, FontMetrics {
 	gposOffset: number | null;
 	/** Every table in the directory, by tag; the subsetter copies tables from here. */
 	tables: Map<string, TableRecord>;
+	/** The font's CFF outlines, `null` when it draws from `glyf`. */
+	cff: CffOutlines | null;
+}
+
+/** Each font's located tables, for the package's subpath entries to read. */
+const FONT_DATA = new WeakMap<Font, FontData>();
+
+/**
+ * The tables `parseFont` located for a font. Package-internal: the subpath entries
+ * (shaping, variations, color, subsetting) read a font through it.
+ *
+ * @param font - A font built by this package.
+ */
+export function fontData(font: Font): FontData {
+	let data = FONT_DATA.get(font);
+	if (data === undefined) throw new TypeError("The font was not created by @sdxc/font.");
+	return data;
 }
 
 /**
@@ -104,6 +122,7 @@ export class Font {
 	 */
 	constructor(data: FontData) {
 		this.#data = data;
+		FONT_DATA.set(this, data);
 		this.unitsPerEm = data.unitsPerEm;
 		this.ascender = data.ascender;
 		this.descender = data.descender;
@@ -183,12 +202,29 @@ export class Font {
 
 	/**
 	 * A glyph's contours in font units with y up, composites resolved. Every contour is a
-	 * `move`, then `line`/`quad` segments, then `close`; an empty glyph answers `[]`.
+	 * `move`, then `line` segments and `quad` (TrueType) or `cubic` (CFF) curves, then
+	 * `close`; an empty glyph answers `[]`.
 	 *
 	 * @param glyph - Glyph index.
 	 */
 	outline(glyph: number): Font.Command[] {
+		let cff = this.#data.cff;
+		if (cff !== null) return cff.commands(glyph);
 		return contoursToCommands(this.#glyphContours(glyph));
+	}
+
+	/**
+	 * A table's raw bytes, for reading what this package does not interpret. The view shares
+	 * the font's buffer, so it is cheap and must not be written to.
+	 *
+	 * @param tag - A four-character table tag, `"OS/2"` or `"cvt "` with their padding.
+	 * @returns The bytes, or `null` when the font has no such table.
+	 * @example font.table("DSIG")?.byteLength
+	 */
+	table(tag: string): Uint8Array | null {
+		let record = this.#data.tables.get(tag);
+		if (record === undefined) return null;
+		return this.#data.reader.bytes(record.offset, record.length);
 	}
 
 	/**
@@ -210,6 +246,17 @@ export class Font {
 					type: "quad",
 					cx: x + command.cx * scale,
 					cy: y - command.cy * scale,
+					x: x + command.x * scale,
+					y: y - command.y * scale,
+				};
+			}
+			if (command.type === "cubic") {
+				return {
+					type: "cubic",
+					c1x: x + command.c1x * scale,
+					c1y: y - command.c1y * scale,
+					c2x: x + command.c2x * scale,
+					c2y: y - command.c2y * scale,
 					x: x + command.x * scale,
 					y: y - command.y * scale,
 				};
@@ -287,6 +334,11 @@ export class Font {
 	 * @example let subset = unwrap(font.subset(line.glyphs.map(({ glyph }) => glyph)));
 	 */
 	subset(glyphs: Iterable<number>): Result<Font.Subset, FontError> {
+		if (this.#data.cff !== null) {
+			return failure(
+				new FontError("unsupported", "Subsetting CFF outlines is not supported yet.", "CFF "),
+			);
+		}
 		if (!this.embedding.subsetting) {
 			return failure(
 				new FontError(
@@ -364,13 +416,24 @@ export namespace Font {
 		y: number;
 	}
 
+	/** A cubic Bézier segment through control points `(c1x, c1y)` and `(c2x, c2y)` to `(x, y)`. */
+	export interface CubicCommand {
+		type: "cubic";
+		c1x: number;
+		c1y: number;
+		c2x: number;
+		c2y: number;
+		x: number;
+		y: number;
+	}
+
 	/** Ends the contour with a straight segment back to its `move` point. */
 	export interface CloseCommand {
 		type: "close";
 	}
 
 	/** One step of an outline, in font units from `outline` and pixels from `path`. */
-	export type Command = PointCommand | QuadCommand | CloseCommand;
+	export type Command = PointCommand | QuadCommand | CubicCommand | CloseCommand;
 
 	/** How `layout` and `measure` space glyphs. */
 	export interface LayoutOptions {
