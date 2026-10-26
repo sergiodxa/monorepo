@@ -53,7 +53,7 @@ describe("GET /uses", () => {
 		]) {
 			expect(html).toContain(heading);
 		}
-		expect(html).toContain('href="https://code.visualstudio.com"');
+		expect(html).toContain('href="https://cursor.com"');
 		expect(html).toContain('href="#editor"');
 		expect(html).toContain('href="/uses?lang=es-AR"');
 		expect(html).toContain('href="/uses.md?lang=en"');

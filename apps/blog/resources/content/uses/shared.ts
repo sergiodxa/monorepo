@@ -12,14 +12,9 @@ export const ITEMS = {
 	macbookPro: { name: "MacBook Pro M5", href: "https://www.apple.com/macbook-pro/" },
 	mv7: { name: "Shure MV7", href: "https://www.shure.com/en-US/products/microphones/mv7" },
 	terminal: { name: "Terminal", href: "https://support.apple.com/guide/terminal/welcome/mac" },
-	vscode: { name: "Visual Studio Code", href: "https://code.visualstudio.com" },
-	githubTheme: {
-		name: "GitHub Theme",
-		href: "https://marketplace.visualstudio.com/items?itemName=GitHub.github-vscode-theme",
-	},
 	oxc: {
 		name: "Oxc",
-		href: "https://marketplace.visualstudio.com/items?itemName=oxc.oxc-vscode",
+		href: "https://open-vsx.org/extension/oxc/oxc-vscode",
 	},
 	zsh: { name: "Zsh", href: "https://www.zsh.org" },
 	claudeCode: { name: "Claude Code", href: "https://www.claude.com/product/claude-code" },

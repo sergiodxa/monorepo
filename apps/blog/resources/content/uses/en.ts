@@ -39,12 +39,8 @@ const EN: UsesPage = {
 			title: "Editor and terminal",
 			items: [
 				{
-					...ITEMS.vscode,
-					note: "My one editor for code and writing, with the repository’s recommended extensions.",
-				},
-				{
-					...ITEMS.githubTheme,
-					note: "Switches between its light and dark versions with the system appearance.",
+					...ITEMS.cursor,
+					note: "My one editor, for code and writing, with the repository’s recommended extensions.",
 				},
 				{
 					...ITEMS.oxc,
@@ -111,7 +107,6 @@ const EN: UsesPage = {
 				{ ...ITEMS.safari, note: "My main browser." },
 				{ ...ITEMS.mail, note: "Email, with the app that ships with macOS." },
 				{ ...ITEMS.calendar, note: "Meetings and plans, also built into macOS." },
-				{ ...ITEMS.cursor, note: "An AI-first editor I keep beside VS Code." },
 				{ ...ITEMS.xcode, note: "For building and running apps for Apple’s platforms." },
 				{ ...ITEMS.figma, note: "To design and mock up interfaces before I build them." },
 				{ ...ITEMS.chatgpt, note: "An AI assistant on the desktop." },
