@@ -9,6 +9,9 @@
 
 /** Every item the page lists, by key, with the product's own name and site. */
 export const ITEMS = {
+	macbookPro: { name: "MacBook Pro M5", href: "https://www.apple.com/macbook-pro/" },
+	mv7: { name: "Shure MV7", href: "https://www.shure.com/en-US/products/microphones/mv7" },
+	terminal: { name: "Terminal", href: "https://support.apple.com/guide/terminal/welcome/mac" },
 	vscode: { name: "Visual Studio Code", href: "https://code.visualstudio.com" },
 	githubTheme: {
 		name: "GitHub Theme",
@@ -34,4 +37,12 @@ export const ITEMS = {
 	npm: { name: "npm", href: "https://www.npmjs.com/org/sdxc" },
 	safari: { name: "Safari", href: "https://www.apple.com/safari/" },
 	githubDesktop: { name: "GitHub Desktop", href: "https://desktop.github.com" },
+	mail: { name: "Mail", href: "https://support.apple.com/guide/mail/welcome/mac" },
+	calendar: { name: "Calendar", href: "https://support.apple.com/guide/calendar/welcome/mac" },
+	cursor: { name: "Cursor", href: "https://cursor.com" },
+	xcode: { name: "Xcode", href: "https://developer.apple.com/xcode/" },
+	figma: { name: "Figma", href: "https://www.figma.com" },
+	chatgpt: { name: "ChatGPT", href: "https://chatgpt.com" },
+	claude: { name: "Claude", href: "https://claude.ai/download" },
+	docker: { name: "Docker Desktop", href: "https://www.docker.com/products/docker-desktop/" },
 } as const;

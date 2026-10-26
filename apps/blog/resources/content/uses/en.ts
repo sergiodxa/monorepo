@@ -1,7 +1,6 @@
 /**
- * The `/uses` page in English: the desk, editor, stack, apps and services the author works
- * with, each with a line on why. Entries in square brackets are still to be filled in. The
- * page and `/uses.md` both read this document.
+ * The `/uses` page in English: the hardware, editor, stack, apps and services the author works
+ * with, each with a line on why. The page and `/uses.md` both read this document.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,13 +28,10 @@ const EN: UsesPage = {
 	sections: [
 		{
 			id: "desk",
-			title: "Desk",
+			title: "Hardware",
 			items: [
-				{ name: "[Computer]", note: "[Model and why it’s the one I work on]" },
-				{ name: "[Display]", note: "[Model and setup]" },
-				{ name: "[Keyboard]", note: "[Model and layout]" },
-				{ name: "[Mouse or trackpad]", note: "[Model]" },
-				{ name: "[Headphones and microphone]", note: "[What I use for calls and recordings]" },
+				{ ...ITEMS.macbookPro, note: "The computer I write, build and record everything on." },
+				{ ...ITEMS.mv7, note: "My microphone for calls, podcasts and talks." },
 			],
 		},
 		{
@@ -54,7 +50,7 @@ const EN: UsesPage = {
 					...ITEMS.oxc,
 					note: "Formats and lints on save with the same oxfmt and oxlint the repository checks with.",
 				},
-				{ name: "[Terminal]", note: "[The terminal app I run the shell in]" },
+				{ ...ITEMS.terminal, note: "The terminal that ships with macOS, where my shell runs." },
 				{ ...ITEMS.zsh, note: "My shell, set up to pick the right Node.js version per project." },
 				{
 					...ITEMS.claudeCode,
@@ -113,8 +109,15 @@ const EN: UsesPage = {
 			title: "Apps",
 			items: [
 				{ ...ITEMS.safari, note: "My main browser." },
+				{ ...ITEMS.mail, note: "Email, with the app that ships with macOS." },
+				{ ...ITEMS.calendar, note: "Meetings and plans, also built into macOS." },
+				{ ...ITEMS.cursor, note: "An AI-first editor I keep beside VS Code." },
+				{ ...ITEMS.xcode, note: "For building and running apps for Apple’s platforms." },
+				{ ...ITEMS.figma, note: "To design and mock up interfaces before I build them." },
+				{ ...ITEMS.chatgpt, note: "An AI assistant on the desktop." },
+				{ ...ITEMS.claude, note: "Claude’s desktop app, for chats and longer work sessions." },
 				{ ...ITEMS.githubDesktop, note: "To review and stage changes visually before a commit." },
-				{ name: "[Other apps]", note: "[Apps I use every day, and why]" },
+				{ ...ITEMS.docker, note: "Runs containers locally when a project needs one." },
 			],
 		},
 	],

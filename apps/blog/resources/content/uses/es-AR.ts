@@ -1,7 +1,6 @@
 /**
- * The `/uses` page in Spanish: the desk, editor, stack, apps and services the author works
- * with, each with a line on why. Entries in square brackets are still to be filled in. The
- * page and `/uses.md` both read this document.
+ * The `/uses` page in Spanish: the hardware, editor, stack, apps and services the author works
+ * with, each with a line on why. The page and `/uses.md` both read this document.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,13 +28,10 @@ const ES_AR: UsesPage = {
 	sections: [
 		{
 			id: "desk",
-			title: "Escritorio",
+			title: "Hardware",
 			items: [
-				{ name: "[Computadora]", note: "[Modelo y por qué es la que uso para trabajar]" },
-				{ name: "[Monitor]", note: "[Modelo y configuración]" },
-				{ name: "[Teclado]", note: "[Modelo y distribución]" },
-				{ name: "[Mouse o trackpad]", note: "[Modelo]" },
-				{ name: "[Auriculares y micrófono]", note: "[Lo que uso para llamadas y grabaciones]" },
+				{ ...ITEMS.macbookPro, note: "La computadora en la que escribo, construyo y grabo todo." },
+				{ ...ITEMS.mv7, note: "Mi micrófono para llamadas, podcasts y charlas." },
 			],
 		},
 		{
@@ -54,7 +50,7 @@ const ES_AR: UsesPage = {
 					...ITEMS.oxc,
 					note: "Formatea y revisa al guardar con el mismo oxfmt y oxlint que usa el repositorio.",
 				},
-				{ name: "[Terminal]", note: "[La app de terminal donde corro la shell]" },
+				{ ...ITEMS.terminal, note: "La terminal que viene con macOS, donde corre mi shell." },
 				{
 					...ITEMS.zsh,
 					note: "Mi shell, configurada para elegir la versión de Node.js de cada proyecto.",
@@ -113,11 +109,21 @@ const ES_AR: UsesPage = {
 			title: "Apps",
 			items: [
 				{ ...ITEMS.safari, note: "Mi navegador principal." },
+				{ ...ITEMS.mail, note: "El correo, con la app que viene con macOS." },
+				{ ...ITEMS.calendar, note: "Reuniones y planes, también incluida en macOS." },
+				{ ...ITEMS.cursor, note: "Un editor pensado para IA que tengo junto a VS Code." },
+				{ ...ITEMS.xcode, note: "Para construir y correr apps para las plataformas de Apple." },
+				{ ...ITEMS.figma, note: "Para diseñar y bocetar interfaces antes de construirlas." },
+				{ ...ITEMS.chatgpt, note: "Un asistente de IA en el escritorio." },
+				{
+					...ITEMS.claude,
+					note: "La app de escritorio de Claude, para chats y sesiones de trabajo largas.",
+				},
 				{
 					...ITEMS.githubDesktop,
 					note: "Para revisar y preparar cambios de forma visual antes de un commit.",
 				},
-				{ name: "[Otras apps]", note: "[Apps que uso todos los días, y por qué]" },
+				{ ...ITEMS.docker, note: "Corre contenedores localmente cuando un proyecto lo necesita." },
 			],
 		},
 	],

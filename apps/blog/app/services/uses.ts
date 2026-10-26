@@ -36,7 +36,7 @@ export namespace UsesPage {
 		contents: string;
 	}
 
-	/** A group of items, such as the desk or the editor, anchored on its `id`. */
+	/** A group of items, such as the hardware or the editor, anchored on its `id`. */
 	export interface Section {
 		id: string;
 		title: string;

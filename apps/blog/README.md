@@ -211,7 +211,7 @@ text/markdown`) writes the same page as Markdown.
   this point in his life, in the nownownow.com tradition, with the day it was last updated,
   from one structured page per language in `resources/content/now/`; bump `NOW_UPDATED_AT`
   there with every edit. `/now.md` (or `Accept: text/markdown`) writes the same page as Markdown.
-- Uses (`/uses`, in English or Spanish like the press kit): the desk, editor, stack, services
+- Uses (`/uses`, in English or Spanish like the press kit): the hardware, editor, stack, services
   and apps the author works with, each a card with a link and a line on why, from one
   structured page per language in `resources/content/uses/`. `/uses.md` (or `Accept:
 text/markdown`) writes the same list as Markdown.

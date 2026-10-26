@@ -44,7 +44,13 @@ describe("GET /uses", () => {
 		expect(response.status).toBe(200);
 		expect(html).toMatch(/<title[^>]*>Uses<\/title>/);
 		expect(html).toContain('lang="en"');
-		for (let heading of ["Desk", "Editor and terminal", "Stack", "Hosting and services", "Apps"]) {
+		for (let heading of [
+			"Hardware",
+			"Editor and terminal",
+			"Stack",
+			"Hosting and services",
+			"Apps",
+		]) {
 			expect(html).toContain(heading);
 		}
 		expect(html).toContain('href="https://code.visualstudio.com"');
