@@ -1,7 +1,7 @@
 /**
  * A test issuer: a fresh RSA-PSS key published in the `id-RSASSA-PSS` encoding an issuer
- * directory serves, its directory document, and a client that answers a challenge with a
- * token signed by it, so an origin's tests redeem tokens for challenges it issued itself.
+ * directory serves, its directory document, an origin trusting it, and a client that answers
+ * a challenge with a token signed by it, so an origin's tests redeem tokens it challenged for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,11 +9,14 @@
 import type { Bytes } from "@sdxc/crypto";
 
 import { Base64Url, Hex, concatBytes, randomBytes, sha256 } from "@sdxc/crypto";
-import { unwrap } from "@sdxc/result";
+import { success, unwrap } from "@sdxc/result";
 
 import type { Token } from "./token.js";
 
+import { importTokenKey } from "./blind-rsa.js";
 import { toPaddedBase64Url } from "./lib/wire.js";
+import { PrivacyPass } from "./privacy-pass.js";
+import { MemoryRedemptionStore } from "./store.js";
 import { BLIND_RSA_TOKEN_TYPE, encodeToken, tokenAuthenticatorInput } from "./token.js";
 
 /** The `id-RSASSA-PSS` AlgorithmIdentifier RFC 9578 issuers publish, as in its test vectors. */
@@ -111,4 +114,48 @@ export function issuerDirectoryResponse(issuer: TestIssuer): Response {
 		},
 		{ headers: { "content-type": "application/private-token-issuer-directory" } },
 	);
+}
+
+/** An origin and the issuer whose tokens it accepts. */
+export interface TestPrivacyPass {
+	issuer: TestIssuer;
+	privacyPass: PrivacyPass;
+}
+
+/**
+ * Creates an origin that accepts tokens from a freshly generated issuer. Its keys are served
+ * from memory and its redemptions kept in a `MemoryRedemptionStore`, so a test never reaches
+ * an issuer's directory.
+ *
+ * @returns The origin, and the issuer a test signs tokens with
+ */
+export async function createTestPrivacyPass(): Promise<TestPrivacyPass> {
+	let issuer = await createTestIssuer();
+	let key = unwrap(await importTokenKey(issuer.tokenKey));
+	let privacyPass = new PrivacyPass({
+		issuer: "issuer.test",
+		keys: { keys: async () => success([key]) },
+		store: new MemoryRedemptionStore(),
+	});
+	return { issuer, privacyPass };
+}
+
+/**
+ * Requests `url` the way a client holding tokens does: reads the challenge from the first
+ * answer, signs a token for it, and repeats the request with the token.
+ *
+ * @param fetch - Sends a request to the app under test
+ * @param issuer - The issuer that signs the token
+ * @param url - The URL that challenges, such as a `redeemOrChallenge()` route
+ * @returns The response to the request carrying the token
+ */
+export async function redeemThrough(
+	fetch: (request: Request) => Promise<Response>,
+	issuer: TestIssuer,
+	url: string,
+): Promise<Response> {
+	let challenged = await fetch(new Request(url));
+	let header = challenged.headers.get("WWW-Authenticate") ?? "";
+	let authorization = await answerChallenge(issuer, header);
+	return fetch(new Request(url, { headers: { Authorization: authorization } }));
 }

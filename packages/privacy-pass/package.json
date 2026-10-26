@@ -6,6 +6,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./kv": "./src/kv.ts",
+		"./middleware": "./src/middleware.ts",
 		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
@@ -14,6 +16,7 @@
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
+		"@sdxc/logger": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	},

@@ -66,31 +66,29 @@ spent nonce is kept for `nonceTtl` instead.
 ### Back the store with shared storage
 
 ```ts
-import type { RedemptionStore } from "@sdxc/privacy-pass";
+import { KVRedemptionStore } from "@sdxc/privacy-pass/kv";
 
-class KVRedemptionStore implements RedemptionStore {
-	constructor(private kv: KVNamespace) {}
-
-	async saveChallenge(digest: string, ttl: number) {
-		await this.kv.put(`challenge:${digest}`, "1", { expirationTtl: Math.max(ttl, 60) });
-	}
-
-	async takeChallenge(digest: string) {
-		let found = (await this.kv.get(`challenge:${digest}`)) !== null;
-		if (found) await this.kv.delete(`challenge:${digest}`);
-		return found;
-	}
-
-	async spendNonce(nonce: string, ttl: number) {
-		if ((await this.kv.get(`nonce:${nonce}`)) !== null) return false;
-		await this.kv.put(`nonce:${nonce}`, "1", { expirationTtl: Math.max(ttl, 60) });
-		return true;
-	}
-}
+new PrivacyPass({ issuer, store: new KVRedemptionStore(env.CACHE, { prefix: "privacy-pass:" }) });
 ```
 
-KV is eventually consistent, so two requests racing with one token can both pass; a Durable
-Object closes that gap where it matters.
+`@sdxc/privacy-pass/kv` keeps challenges and nonces in Workers KV. KV is eventually consistent,
+so two requests racing with one token can both pass; a Durable Object closes that gap where it
+matters.
+
+### Serve it from a Remix router
+
+```ts
+import { privacyPass, redeemOrChallenge } from "@sdxc/privacy-pass/middleware";
+
+router.get(routes.privacyPass, {
+	middleware: [privacyPass(instance)],
+	handler: (ctx) => redeemOrChallenge(ctx, { onRedeem: () => ({ "Set-Cookie": cookie }) }),
+});
+```
+
+`@sdxc/privacy-pass/middleware` publishes the instance as `ctx.privacyPass`; `redeemOrChallenge`
+answers `401` with a challenge, `204` plus `onRedeem`'s headers once a token redeems, or `204`
+when the issuer is unavailable, always `no-store`.
 
 ### Verify a token yourself
 
@@ -206,7 +204,9 @@ CAPTCHA page in the same response.
 
 `@sdxc/privacy-pass/testing` stands in for an issuer: `createTestIssuer()` makes a key,
 `issuerDirectoryResponse(issuer)` is its directory for an MSW handler, and
-`answerChallenge(issuer, header)` returns the `Authorization` value a client would send.
+`answerChallenge(issuer, header)` returns the `Authorization` value a client would send,
+`createTestPrivacyPass()` builds an origin trusting a fresh issuer, and
+`redeemThrough(fetch, issuer, url)` replays a challenged request with a token.
 
 ```ts
 import {
