@@ -1,7 +1,7 @@
 /**
  * Drives `/privacy-pass` through the real router inside workerd, against the local session
  * KV, with a test issuer standing in for the public one: a challenge for a device without a
- * token, a session marked once a token redeems, and a token refused when spent twice.
+ * token, an attestation cookie once a token redeems, and a token from an untrusted issuer refused.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,12 +50,15 @@ describe("GET /privacy-pass", () => {
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
 	});
 
-	test("redeems a token and starts a session for the device", async () => {
+	test("redeems a token into an attestation cookie, leaving the session empty", async () => {
 		let { issuer, privacyPass } = await createTestPrivacyPass();
 		let response = await redeemToken(appWith(privacyPass), issuer, URL_);
 
 		expect(response.status).toBe(204);
-		expect(response.headers.get("set-cookie")).toContain("r3:session=");
+		let cookie = response.headers.get("set-cookie") ?? "";
+		expect(cookie).toContain("r3:attested=");
+		expect(cookie).toContain("Max-Age=3600");
+		expect(cookie).not.toContain("r3:session=");
 	});
 
 	test("refuses a token signed by an issuer it does not trust", async () => {

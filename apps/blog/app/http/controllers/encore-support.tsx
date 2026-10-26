@@ -129,7 +129,7 @@ export default createController(routes.encoreSupport, {
 				ip: ctx.ip?.toString(),
 				userAgent: ctx.request.headers.get("user-agent") ?? undefined,
 				renderedAt: trap.data.renderedAt,
-				attested: isAttested(session),
+				attested: await isAttested(ctx.request),
 			});
 			ctx.log.set({
 				spam: {

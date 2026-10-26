@@ -1,7 +1,7 @@
 /**
  * HTTP action for `/privacy-pass`, which the contact forms load as a hidden image. It
- * challenges for a Privacy Pass token, and a device that answers with one gets its session
- * marked as attested, which the forms' spam filter counts in the sender's favor.
+ * challenges for a Privacy Pass token, and a device that answers with one gets a signed
+ * attestation cookie, which the forms' spam filter counts in the sender's favor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,6 @@
 
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
-import { Session } from "remix/session";
 
 import { recordAttestation } from "~/app/services/attestation";
 import routes from "~/routes/web";
@@ -28,9 +27,11 @@ export default createAction(routes.privacyPass, async (ctx) => {
 	if (authorization !== null) {
 		let redeemed = await ctx.privacyPass.redeem(authorization);
 		if (!isFailure(redeemed)) {
-			recordAttestation(ctx.get(Session));
 			ctx.log.set({ privacyPass: { outcome: "redeemed" } });
-			return new Response(null, { status: 204, headers: NO_STORE });
+			return new Response(null, {
+				status: 204,
+				headers: { ...NO_STORE, "Set-Cookie": await recordAttestation() },
+			});
 		}
 		ctx.log.set({ privacyPass: { outcome: "refused", reason: redeemed.error.code } });
 	}
