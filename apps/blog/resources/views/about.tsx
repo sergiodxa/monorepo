@@ -281,7 +281,7 @@ function Timeline(handle: Handle<{ milestones: ReadonlyArray<AboutPage.Milestone
 			]}
 		>
 			{handle.props.milestones.map((milestone) => (
-				<li key={milestone.year} mix={[relative(), grid(), gap(1)]}>
+				<li key={`${milestone.year}-${milestone.title}`} mix={[relative(), grid(), gap(1)]}>
 					<span
 						aria-hidden="true"
 						mix={[

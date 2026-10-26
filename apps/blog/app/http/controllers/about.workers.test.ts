@@ -87,6 +87,7 @@ describe("GET /about.md", () => {
 		expect(body).toContain(`(${ORIGIN}/.well-known/avatar)`);
 		expect(body).toContain(`[Open the press kit](${ORIGIN}/press?lang=en)`);
 		expect(body).toContain("- **2017: ZEIT, now Vercel.**");
+		expect(body).toContain("- **2021: Daffy.**");
 	});
 
 	test("writes the Spanish page for ?lang=es-AR", async () => {
