@@ -202,6 +202,10 @@ with it empty, is answered with a 500.
 text/markdown`) writes the same kit as Markdown. Its invitation form mails
   `hello@sergiodxa.com` from `press@support.sergiodxa.com` with the organizer as Reply-To,
   behind the same guards as the Encore form (honeypot, rate limit, spam filter).
+- Uses (`/uses`, in English or Spanish like the press kit): the desk, editor, stack, services
+  and apps the author works with, each a card with a link and a line on why, from one
+  structured page per language in `resources/content/uses/`. `/uses.md` (or `Accept:
+text/markdown`) writes the same list as Markdown.
 
 ## Routes
 
@@ -247,6 +251,7 @@ text/markdown`) writes the same kit as Markdown. Its invitation form mails
 | `/apps/encore/support`   | Encore support page and form                           |
 | `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)             |
 | `/press`                 | Press kit for events and podcasts (`.md` for Markdown) |
+| `/uses`                  | What the author works with (`.md` for Markdown)        |
 
 ## Client Islands
 

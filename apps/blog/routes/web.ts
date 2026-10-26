@@ -98,6 +98,13 @@ export default route({
 	pressMarkdown: get("/press.md"),
 
 	/**
+	 * The hardware, editor, stack and services the author works with, plus the same list as
+	 * Markdown.
+	 */
+	uses: get("/uses"),
+	usesMarkdown: get("/uses.md"),
+
+	/**
 	 * Each kind's topic, at the root under the slug the kind registry names, served by the
 	 * shared topic controller; its feeds are `rss.topic`, `atom.topic` and `jsonFeed.topic`.
 	 * A new kind adds its page here and maps it with `kindTopic()` in the router.
