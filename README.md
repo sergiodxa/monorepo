@@ -288,6 +288,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/jsonl](packages/jsonl)                   | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure              |
 | [@sdxc/jsonpath](packages/jsonpath)             | RFC 9535 JSONPath queries over JSON values, with normalized paths and every function extension                |
 | [@sdxc/messageformat](packages/messageformat)   | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                   |
+| [@sdxc/pdf](packages/pdf)                       | PDF writer with an imperative API: pages, shapes, embedded TrueType text, images and links                    |
 | [@sdxc/png](packages/png)                       | PNG encoder and decoder over Web Streams, with no WebAssembly                                                 |
 | [@sdxc/qr](packages/qr)                         | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer               |
 | [@sdxc/raster](packages/raster)                 | 2D canvas for Workers: antialiased paths, gradients, masks and text, out to PNG                               |

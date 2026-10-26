@@ -1,0 +1,18 @@
+{
+	"name": "@sdxc/pdf",
+	"version": "0.0.1",
+	"description": "PDF writer with an imperative API: pages, shapes, embedded TrueType text, images and links",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/font": "workspace:*",
+		"@sdxc/png": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

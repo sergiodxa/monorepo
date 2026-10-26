@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-26
+**Accepted** - 2026-10-26
 
 ## Background
 
@@ -288,11 +288,11 @@ and keeps an intermediate document between the content and the PDF.
 
 ## Current Progress
 
-- [ ] Phase 1: Document, pages and shapes
-- [ ] Phase 2: Text
-- [ ] Phase 3: Images and links
+- [x] Phase 1: Document, pages and shapes
+- [x] Phase 2: Text
+- [x] Phase 3: Images and links
 - [ ] Phase 4: The résumé
-- [ ] Phase 5: Font subsetting
+- [x] Phase 5: Font subsetting
 
 ## Notes
 

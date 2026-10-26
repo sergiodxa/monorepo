@@ -1806,6 +1806,15 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/pdf": {
+      "name": "@sdxc/pdf",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/font": "workspace:*",
+        "@sdxc/png": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/png": {
       "name": "@sdxc/png",
       "version": "0.0.1",
@@ -3321,6 +3330,8 @@
     "@sdxc/passkey": ["@sdxc/passkey@workspace:packages/passkey"],
 
     "@sdxc/password-policy": ["@sdxc/password-policy@workspace:packages/password-policy"],
+
+    "@sdxc/pdf": ["@sdxc/pdf@workspace:packages/pdf"],
 
     "@sdxc/png": ["@sdxc/png@workspace:packages/png"],
 
