@@ -54,7 +54,6 @@ export default createAction(
 			mcp: false,
 			mcpMarkdown: false,
 			encoreSupport: false,
-			privacyPass: false,
 			encorePrivacy: false,
 			encorePrivacyMarkdown: false,
 			press: { index: true },

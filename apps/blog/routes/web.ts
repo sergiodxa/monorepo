@@ -90,12 +90,6 @@ export default route({
 	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
 
 	/**
-	 * The hidden image the contact forms load, which challenges for a Privacy Pass token and
-	 * sets an attestation cookie once the visitor's device redeems one.
-	 */
-	privacyPass: get("/privacy-pass"),
-
-	/**
 	 * The press kit sent to events and podcasts that need the author's bio and photos, which
 	 * takes invitations on `POST` at the same address, plus the same kit as Markdown, which
 	 * pastes cleanly into a speaker form.

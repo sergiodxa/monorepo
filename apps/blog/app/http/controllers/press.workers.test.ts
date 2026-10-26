@@ -113,7 +113,6 @@ describe("GET /press", () => {
 		expect(html).toContain('src="/.well-known/avatar"');
 		expect(html).toContain("The Remix Way");
 		expect(html).toContain('action="/press?lang=en"');
-		expect(html).toContain('src="/privacy-pass"');
 		expect(html).toContain('href="/press?lang=es-AR"');
 	});
 

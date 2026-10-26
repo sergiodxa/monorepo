@@ -486,7 +486,6 @@ function Contact(handle: Handle<PressView.ContactProps>) {
 				</div>
 
 				{honeypot ? <HoneypotFields {...honeypot} /> : null}
-				<img src={routes.privacyPass.href()} alt="" hidden />
 
 				<div mix={[hstack({ gap: 4, align: "center", justify: "between" }), flexWrap("wrap")]}>
 					<p mix={[m(0), text("sm"), fg("neutral.muted"), grow(), basis("20rem")]}>

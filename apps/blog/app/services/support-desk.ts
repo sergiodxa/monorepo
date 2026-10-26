@@ -14,7 +14,7 @@ import type { SpamFilter } from "@sdxc/spam";
 import { Mailer } from "@sdxc/mail";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { failure, isFailure, success } from "@sdxc/result";
-import { createSpamFilter, DEFAULT_RULES, DEFAULT_THRESHOLDS, verdictFor } from "@sdxc/spam";
+import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
 import { authorEmail } from "@sdxc/spam/author-email";
 import { stopForumSpam } from "@sdxc/spam/stop-forum-spam";
 
@@ -49,12 +49,6 @@ export const PRESS_SENDER: Address = {
 export const SUPPORT_RATE_LIMIT = 5;
 
 /**
- * What a Privacy Pass attestation takes off a request's spam score: enough to move a borderline
- * request out of the unsure band, not enough to clear one that several rules flagged.
- */
-export const ATTESTATION_SCORE = -3;
-
-/**
  * The spam filter a support request is scored by when the deployment supplies none: the local
  * rules, the disposable-email rule and StopForumSpam's free reputation lookup. Every check is
  * free to run; none sends the message itself anywhere.
@@ -77,8 +71,6 @@ export interface SupportSender {
 	userAgent?: string;
 	/** When the form was rendered, as the honeypot token signed it. */
 	renderedAt?: Date;
-	/** Whether the visitor's device redeemed a Privacy Pass token in this session. */
-	attested?: boolean;
 }
 
 /** Why a request could not be delivered, as a code the log records instead of the message. */
@@ -148,15 +140,14 @@ export class SupportDesk {
 
 	/**
 	 * Scores a valid request as the plain text it was typed as, with its sender's details. A
-	 * reputation lookup that fails adds nothing and is listed in the assessment's failures; an
-	 * attested sender earns {@link ATTESTATION_SCORE}, judged against the default thresholds.
+	 * reputation lookup that fails adds nothing and is listed in the assessment's failures.
 	 *
 	 * @param request The validated submission.
-	 * @param sender The client's address, user agent, verified render time and attestation.
+	 * @param sender The client's address, user agent and verified render time.
 	 * @returns The verdict and the signals behind it.
 	 */
-	async assess(request: ContactMessage, sender: SupportSender): Promise<SpamFilter.Assessment> {
-		let assessment = await this.#spamFilter.check({
+	assess(request: ContactMessage, sender: SupportSender): Promise<SpamFilter.Assessment> {
+		return this.#spamFilter.check({
 			content: request.message,
 			format: "text",
 			author: {
@@ -167,18 +158,6 @@ export class SupportDesk {
 			},
 			renderedAt: sender.renderedAt,
 		});
-		if (!sender.attested) return assessment;
-
-		let score = assessment.score + ATTESTATION_SCORE;
-		return {
-			...assessment,
-			score,
-			verdict: verdictFor(score, DEFAULT_THRESHOLDS),
-			signals: [
-				...assessment.signals,
-				{ check: "privacy-pass.attested", score: ATTESTATION_SCORE, detail: "device attested" },
-			],
-		};
 	}
 
 	/**

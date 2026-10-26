@@ -21,7 +21,6 @@ import type { AppContext } from "~/app/initializers/router";
 import type { PressKit } from "~/app/services/press-kit";
 
 import { PressContactSchema } from "~/app/http/validators/press-contact";
-import { isAttested } from "~/app/services/attestation";
 import { resolvePageLocale } from "~/app/services/page-locale";
 import { pressKitFor, pressKitMarkdown } from "~/app/services/press-kit";
 import { PressView } from "~/resources/views/press";
@@ -162,7 +161,6 @@ export default createController(routes.press, {
 				ip: ctx.ip?.toString(),
 				userAgent: ctx.request.headers.get("user-agent") ?? undefined,
 				renderedAt: trap.data.renderedAt,
-				attested: await isAttested(ctx.request),
 			});
 			ctx.log.set({
 				spam: {

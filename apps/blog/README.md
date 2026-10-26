@@ -162,11 +162,7 @@ with it empty, is answered with a 500.
   listings: a public form that mails each request to `SUPPORT_INBOX` from
   `encore@support.sergiodxa.com` with the visitor as Reply-To, behind same-origin checks,
   signed honeypot fields, a per-address rate limit, and a spam filter (local rules, a
-  disposable-email check, and StopForumSpam's free lookup). The form also loads
-  `/privacy-pass` as a hidden image, which asks the device for a Privacy Pass token from
-  Cloudflare's issuer; a device that redeems one (Safari on Apple devices does so on its own)
-  gets a signed `r3:attested` cookie for an hour, kept out of the session so cached pages
-  stay cacheable, and its requests score 3 points less. A request scored as spam is
+  disposable-email check, and StopForumSpam's free lookup). A request scored as spam is
   discarded as if sent; an uncertain one arrives tagged `[Possible spam]` with its signals.
   An unset inbox makes the form report a failure.
 - Bookmarks saved from a URL alone: the quick add on `/cms` and `/cms/bookmarks`, or
@@ -205,7 +201,7 @@ with it empty, is answered with a 500.
   structured kit per language in `resources/content/press/`. `/press.md` (or `Accept:
 text/markdown`) writes the same kit as Markdown. Its invitation form mails
   `hello@sergiodxa.com` from `press@support.sergiodxa.com` with the organizer as Reply-To,
-  behind the same guards as the Encore form (honeypot, rate limit, spam filter, Privacy Pass).
+  behind the same guards as the Encore form (honeypot, rate limit, spam filter).
 
 ## Routes
 
