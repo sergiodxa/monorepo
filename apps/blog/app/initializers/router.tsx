@@ -357,6 +357,14 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.encorePrivacyMarkdown,
 		lazy(() => import("~/app/http/controllers/encore-privacy").then((it) => it.markdownPage)),
 	);
+	router.map(
+		routes.press,
+		lazy(() => import("~/app/http/controllers/press")),
+	);
+	router.map(
+		routes.pressMarkdown,
+		lazy(() => import("~/app/http/controllers/press").then((it) => it.markdownPage)),
+	);
 	router.map(routes.articles, kindTopic("articles"));
 	router.map(routes.tutorials, kindTopic("tutorials"));
 	router.map(routes.bookmarks, kindTopic("bookmarks"));

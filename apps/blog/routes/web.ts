@@ -90,6 +90,13 @@ export default route({
 	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
 
 	/**
+	 * The press kit sent to events and podcasts that need the author's bio and photos,
+	 * plus the same kit as Markdown, which pastes cleanly into a speaker form.
+	 */
+	press: get("/press"),
+	pressMarkdown: get("/press.md"),
+
+	/**
 	 * Each kind's topic, at the root under the slug the kind registry names, served by the
 	 * shared topic controller; its feeds are `rss.topic`, `atom.topic` and `jsonFeed.topic`.
 	 * A new kind adds its page here and maps it with `kindTopic()` in the router.

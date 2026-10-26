@@ -195,50 +195,54 @@ with it empty, is answered with a 500.
   every sponsorship change, and a Monday cron queues it to catch a missed delivery. Each
   list draws only when it names someone. The
   short `/sponsor` link and the card under every post lead here.
+- Press kit (`/press`, `.md` for Markdown): the bios, photos, talk topics and past
+  appearances an event or podcast asks for, written in `resources/content/press.md`. Photos
+  are static files under `public/press/`.
 
 ## Routes
 
-| Route                    | Description                                           |
-| ------------------------ | ----------------------------------------------------- |
-| `/`                      | Homepage                                              |
-| `/articles`              | Articles topic                                        |
-| `/articles/:slug`        | Article detail page                                   |
-| `/articles/:slug.epub`   | Article as an EPUB ebook                              |
-| `/tutorials`             | Tutorials topic                                       |
-| `/tutorials/:slug`       | Tutorial detail page                                  |
-| `/tutorials/:slug.epub`  | Tutorial as an EPUB ebook                             |
-| `/bookmarks`             | Bookmarks topic                                       |
-| `/glossary`              | Glossary topic, every entry at `#<slug>`              |
-| `/notes`                 | Notes topic                                           |
-| `/notes/:slug`           | One note, `:slug` its publish instant in base 36      |
-| `/til`                   | TIL topic                                             |
-| `/til/:slug`             | One TIL                                               |
-| `/releases`              | Weekly releases topic                                 |
-| `/releases/:slug`        | One week's releases post, `:slug` as `2026-w42`       |
-| `/topics`                | Every topic                                           |
-| `/topics/:slug`          | An author's topic                                     |
-| `/topics/:slug.rss`      | An author's topic as RSS (also `.atom`, `.json`)      |
-| `/search`                | Full-text search over published posts                 |
-| `/frames/search`         | Search dialog body and top matches for `q`            |
-| `/rss`                   | Main RSS feed                                         |
-| `/atom.xml`              | Main feed as Atom                                     |
-| `/feed.json`             | Main feed as JSON Feed                                |
-| `/:topic.rss`            | A kind's topic as RSS, e.g. `/articles.rss`           |
-| `/:topic.atom`           | A kind's topic as Atom                                |
-| `/:topic.json`           | A kind's topic as JSON Feed                           |
-| `/sitemap.xml`           | Sitemap for search engines                            |
-| `/health`                | Dependency health report (`application/health+json`)  |
-| `/webmention`            | Webmention endpoint (POST)                            |
-| `/activitypub/actor`     | ActivityPub actor (`@hello@sergiodxa.com`)            |
-| `/activitypub/inbox`     | ActivityPub inbox, personal and shared (POST, signed) |
-| `/activitypub/outbox`    | Published posts as `Create`s, `?page=true` pages      |
-| `/activitypub/followers` | Follower count and pages                              |
-| `/activitypub/following` | Empty collection                                      |
-| `/.well-known/webfinger` | WebFinger; `self` is the ActivityPub actor            |
-| `/.well-known/nodeinfo`  | Links the NodeInfo 2.1 document                       |
-| `/nodeinfo/2.1`          | NodeInfo: software, one user, post count              |
-| `/apps/encore/support`   | Encore support page and form                          |
-| `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)            |
+| Route                    | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| `/`                      | Homepage                                               |
+| `/articles`              | Articles topic                                         |
+| `/articles/:slug`        | Article detail page                                    |
+| `/articles/:slug.epub`   | Article as an EPUB ebook                               |
+| `/tutorials`             | Tutorials topic                                        |
+| `/tutorials/:slug`       | Tutorial detail page                                   |
+| `/tutorials/:slug.epub`  | Tutorial as an EPUB ebook                              |
+| `/bookmarks`             | Bookmarks topic                                        |
+| `/glossary`              | Glossary topic, every entry at `#<slug>`               |
+| `/notes`                 | Notes topic                                            |
+| `/notes/:slug`           | One note, `:slug` its publish instant in base 36       |
+| `/til`                   | TIL topic                                              |
+| `/til/:slug`             | One TIL                                                |
+| `/releases`              | Weekly releases topic                                  |
+| `/releases/:slug`        | One week's releases post, `:slug` as `2026-w42`        |
+| `/topics`                | Every topic                                            |
+| `/topics/:slug`          | An author's topic                                      |
+| `/topics/:slug.rss`      | An author's topic as RSS (also `.atom`, `.json`)       |
+| `/search`                | Full-text search over published posts                  |
+| `/frames/search`         | Search dialog body and top matches for `q`             |
+| `/rss`                   | Main RSS feed                                          |
+| `/atom.xml`              | Main feed as Atom                                      |
+| `/feed.json`             | Main feed as JSON Feed                                 |
+| `/:topic.rss`            | A kind's topic as RSS, e.g. `/articles.rss`            |
+| `/:topic.atom`           | A kind's topic as Atom                                 |
+| `/:topic.json`           | A kind's topic as JSON Feed                            |
+| `/sitemap.xml`           | Sitemap for search engines                             |
+| `/health`                | Dependency health report (`application/health+json`)   |
+| `/webmention`            | Webmention endpoint (POST)                             |
+| `/activitypub/actor`     | ActivityPub actor (`@hello@sergiodxa.com`)             |
+| `/activitypub/inbox`     | ActivityPub inbox, personal and shared (POST, signed)  |
+| `/activitypub/outbox`    | Published posts as `Create`s, `?page=true` pages       |
+| `/activitypub/followers` | Follower count and pages                               |
+| `/activitypub/following` | Empty collection                                       |
+| `/.well-known/webfinger` | WebFinger; `self` is the ActivityPub actor             |
+| `/.well-known/nodeinfo`  | Links the NodeInfo 2.1 document                        |
+| `/nodeinfo/2.1`          | NodeInfo: software, one user, post count               |
+| `/apps/encore/support`   | Encore support page and form                           |
+| `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)             |
+| `/press`                 | Press kit for events and podcasts (`.md` for Markdown) |
 
 ## Client Islands
 

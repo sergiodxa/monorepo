@@ -56,6 +56,8 @@ export default createAction(
 			encoreSupport: false,
 			encorePrivacy: false,
 			encorePrivacyMarkdown: false,
+			press: true,
+			pressMarkdown: false,
 			articles: { updatedAt: latest(lastArticleDate) },
 			tutorials: { updatedAt: latest(lastTutorialDate) },
 			bookmarks: { updatedAt: latest(lastBookmarkDate) },
