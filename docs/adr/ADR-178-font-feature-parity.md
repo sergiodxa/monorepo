@@ -256,6 +256,16 @@ by one under pressure leaves the package shaped by whichever font broke first.
 - [ADR-150: `@sdxc/font`](./ADR-150-font-package.md)
 - [ADR-177: Embedding metrics and subsetting](./ADR-177-font-embedding-metrics-and-subsetting.md)
 
+## Implementation Notes
+
+Decisions made while implementing, where this ADR left a choice open:
+
+- **Color.** `@sdxc/font/color` exposes functions over a `Font` (`colorLayers`, `palettes`,
+  `bitmap`, `strikes`). `colorLayers` answers `null` for a glyph without color, so a caller
+  draws the plain outline; a layer that takes the text color carries `"foreground"`. `COLR`
+  version 1 paint graphs are not read; their version 0 fallback layers are. An `sbix` request
+  picks the smallest strike at or above the size, else the largest.
+
 ## Current Progress
 
 - [ ] Phase 1: Mapping, names, glyph data and metrics
@@ -263,5 +273,5 @@ by one under pressure leaves the package shaped by whichever font broke first.
 - [ ] Phase 3: CFF and CFF2 outlines
 - [ ] Phase 4: Shaping
 - [ ] Phase 5: Variable fonts
-- [ ] Phase 6: Color glyphs
+- [x] Phase 6: Color glyphs
 - [ ] Phase 7: Subsetting beyond TrueType
