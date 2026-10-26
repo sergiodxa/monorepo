@@ -85,6 +85,7 @@ describes, and every package missing here is listed on the [API reference](/api)
 | stream JSON Lines                              | [`@sdxc/jsonl`](/api/jsonl)         | [Stream JSON Lines](/docs/data-and-background-work/json-lines)                |
 | bundle several files into one ZIP download     | [`@sdxc/zip`](/api/zip)             | [Stream several files as a ZIP](/docs/data-and-background-work/zip-downloads) |
 | publish calendar feeds and read `.ics` uploads | [`@sdxc/icalendar`](/api/icalendar) | [Publish calendar feeds](/docs/content-and-feeds/calendar-feeds)              |
+| write invoices and reports as PDF              | [`@sdxc/pdf`](/api/pdf)             | [Generate PDF documents](/docs/content-and-feeds/pdf-documents)               |
 
 ## Build the interface
 
