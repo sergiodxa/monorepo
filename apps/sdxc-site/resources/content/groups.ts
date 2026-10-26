@@ -96,6 +96,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"zip",
 			"png",
 			"font",
+			"pdf",
 			"distill",
 			"jsdoc",
 			"codemod",
