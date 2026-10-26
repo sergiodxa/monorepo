@@ -12,18 +12,9 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { MarkdownPage } from "~/app/services/markdown-page";
+import type { PageLocale } from "~/app/services/page-locale";
 
 import { parseMarkdownPage } from "~/app/services/markdown-page";
-
-/**
- * Languages the page is written in.
- *
- * English leads because it is the fallback: a reader whose language is neither gets it.
- */
-export const MCP_PAGE_LOCALES = ["en", "es-AR"] as const;
-
-/** One of the languages the page is written in. */
-export type McpPageLocale = (typeof MCP_PAGE_LOCALES)[number];
 
 /**
  * The bundled sources, keyed by path.
@@ -38,55 +29,7 @@ const sources = import.meta.glob<string>("../../resources/content/mcp/*.md", {
 
 /** The page as one language states it. */
 export interface McpPage extends MarkdownPage {
-	locale: McpPageLocale;
-}
-
-/** Reports whether a string is exactly one of the languages the page is written in. */
-export function isMcpPageLocale(value: string): value is McpPageLocale {
-	return (MCP_PAGE_LOCALES as readonly string[]).includes(value);
-}
-
-/**
- * Finds the language a request tag should be served in. An exact match wins, then a match
- * on the base tag, so `es`, `es-MX` and `es-419` all reach the Argentine Spanish page — the
- * regional tag identifies the written dialect, independent of the intended reader.
- *
- * @param tag A language tag, from a header or a query parameter.
- * @returns The language to serve, or `undefined` when nothing matches.
- */
-function matchLocale(tag: string): McpPageLocale | undefined {
-	let wanted = tag.trim().toLowerCase();
-	if (wanted === "") return undefined;
-
-	let exact = MCP_PAGE_LOCALES.find((locale) => locale.toLowerCase() === wanted);
-	if (exact) return exact;
-
-	let base = wanted.split("-")[0];
-	return MCP_PAGE_LOCALES.find((locale) => locale.toLowerCase().split("-")[0] === base);
-}
-
-/**
- * Picks the language to serve. An explicit `?lang=` wins first, since it is the only way to
- * share a link to one translation regardless of browser settings; otherwise the first
- * matching `Accept-Language` entry wins, honouring quality only by request order.
- *
- * @param url The request URL, read for `?lang=`.
- * @param acceptLanguage The request's `Accept-Language` header, when it sent one.
- * @returns The language to serve, defaulting to English.
- */
-export function resolveMcpPageLocale(url: URL, acceptLanguage: string | null): McpPageLocale {
-	let requested = url.searchParams.get("lang");
-	if (requested !== null) {
-		let chosen = matchLocale(requested);
-		if (chosen) return chosen;
-	}
-
-	for (let entry of acceptLanguage?.split(",") ?? []) {
-		let chosen = matchLocale(entry.split(";")[0] ?? "");
-		if (chosen) return chosen;
-	}
-
-	return "en";
+	locale: PageLocale;
 }
 
 /**
@@ -100,7 +43,7 @@ export function resolveMcpPageLocale(url: URL, acceptLanguage: string | null): M
  * @example
  * let page = await loadMcpPage("es");
  */
-export async function loadMcpPage(locale: McpPageLocale): Promise<Result<McpPage, Error>> {
+export async function loadMcpPage(locale: PageLocale): Promise<Result<McpPage, Error>> {
 	let load = sources[`../../resources/content/mcp/${locale}.md`];
 	if (!load) return failure(new Error(`No MCP page source for locale "${locale}"`));
 

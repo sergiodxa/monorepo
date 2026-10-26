@@ -341,17 +341,15 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	 * honeypot keys off the session secret under a `honeypot:` label, so it needs no secret of
 	 * its own; a refused submission reaches the controller, which answers a trap like a success.
 	 */
+	let contactGuards = [
+		honeypot(new Honeypot({ secret: `honeypot:${env.COOKIE_SESSION_SECRET}` }), {
+			onFailure: () => null,
+		}),
+		supportDesk(env, options.mailTransport, options.spamFilter),
+	];
 	router.map(
 		routes.encoreSupport,
-		lazy(
-			() => import("~/app/http/controllers/encore-support"),
-			[
-				honeypot(new Honeypot({ secret: `honeypot:${env.COOKIE_SESSION_SECRET}` }), {
-					onFailure: () => null,
-				}),
-				supportDesk(env, options.mailTransport, options.spamFilter),
-			],
-		),
+		lazy(() => import("~/app/http/controllers/encore-support"), contactGuards),
 	);
 	router.map(
 		routes.privacyPass,
@@ -370,7 +368,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	);
 	router.map(
 		routes.press,
-		lazy(() => import("~/app/http/controllers/press")),
+		lazy(() => import("~/app/http/controllers/press"), contactGuards),
 	);
 	router.map(
 		routes.pressMarkdown,

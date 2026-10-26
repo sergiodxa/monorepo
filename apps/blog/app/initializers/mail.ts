@@ -22,3 +22,7 @@ mail.map(
 	emails.encore.support,
 	lazy(() => import("~/app/emails/encore/support")),
 );
+mail.map(
+	emails.press.contact,
+	lazy(() => import("~/app/emails/press/contact")),
+);

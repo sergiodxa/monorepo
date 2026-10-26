@@ -15,6 +15,9 @@ export const PROFILE = {
 	summary:
 		"Web Developer from Buenos Aires with 10+ years of experience. I work at Daffy and maintain several open-source libraries around React Router and OAuth2.",
 
+	/** Where the press kit's contact form delivers invitations. */
+	email: "hello@sergiodxa.com",
+
 	canonical: {
 		origin: "https://sergiodxa.com",
 		resource: "acct:hello@sergiodxa.com",

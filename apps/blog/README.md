@@ -165,7 +165,8 @@ with it empty, is answered with a 500.
   disposable-email check, and StopForumSpam's free lookup). The form also loads
   `/privacy-pass` as a hidden image, which asks the device for a Privacy Pass token from
   Cloudflare's issuer; a device that redeems one (Safari on Apple devices does so on its own)
-  has its session marked for an hour, and its requests score 3 points less. A request scored as spam is
+  gets a signed `r3:attested` cookie for an hour, kept out of the session so cached pages
+  stay cacheable, and its requests score 3 points less. A request scored as spam is
   discarded as if sent; an uncertain one arrives tagged `[Possible spam]` with its signals.
   An unset inbox makes the form report a failure.
 - Bookmarks saved from a URL alone: the quick add on `/cms` and `/cms/bookmarks`, or
@@ -198,9 +199,13 @@ with it empty, is answered with a 500.
   every sponsorship change, and a Monday cron queues it to catch a missed delivery. Each
   list draws only when it names someone. The
   short `/sponsor` link and the card under every post lead here.
-- Press kit (`/press`, `.md` for Markdown): the bios, photos, talk topics and past
-  appearances an event or podcast asks for, written in `resources/content/press.md`. Photos
-  are static files under `public/press/`.
+- Press kit (`/press`, in English or Spanish by `Accept-Language` or `?lang=es`): a cover
+  with the avatar and cover photo, quick facts, bios in five lengths with a copy button each,
+  downloadable photos, topics, open-source work, past talks, formats and links, from one
+  structured kit per language in `resources/content/press/`. `/press.md` (or `Accept:
+text/markdown`) writes the same kit as Markdown. Its invitation form mails
+  `hello@sergiodxa.com` from `press@support.sergiodxa.com` with the organizer as Reply-To,
+  behind the same guards as the Encore form (honeypot, rate limit, spam filter, Privacy Pass).
 
 ## Routes
 
@@ -257,9 +262,11 @@ hydrates only the components marked with `clientEntry()` and keeps every link an
 document navigation. An island lives in `resources/components/`, one per file, declaring its
 own module path (`/resources/components/<file>.tsx#<Export>`):
 
-| Island      | Does                                                                                                                                                        |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SearchBox` | The dialog's box, reloading its frame as you type; also the trigger clicks on wide screens, ⌘K / Ctrl+K, `/`, Escape and backdrop clicks (`search-keys.ts`) |
+| Island         | Does                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CopyButton`   | Copies a press kit bio and says so for two seconds                                                                                                          |
+| `SubmitButton` | A contact form's submit button, busy after a valid click so a double click sends once                                                                       |
+| `SearchBox`    | The dialog's box, reloading its frame as you type; also the trigger clicks on wide screens, ⌘K / Ctrl+K, `/`, Escape and backdrop clicks (`search-keys.ts`) |
 
 The search trigger itself is a static link to `/search` (`SearchTrigger`, a `NavPill` like the
 navigation's), so it works before any script loads.

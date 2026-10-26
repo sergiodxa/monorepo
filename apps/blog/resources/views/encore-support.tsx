@@ -20,7 +20,6 @@ import { bleed, m, minIs, p } from "@sdxc/u/size";
 import { overflowWrap, text } from "@sdxc/u/typography";
 import {
 	Alert,
-	Button,
 	FieldError,
 	Form,
 	Heading,
@@ -38,11 +37,9 @@ import {
 	SUPPORT_PLATFORMS,
 	SUPPORT_TOPICS,
 } from "~/app/http/validators/encore-support";
+import { SubmitButton } from "~/resources/components/submit-button";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
-
-/** Where the progressive enhancement lives: busy state and one submission per page load. */
-const ENHANCEMENT_SRC = "/js/encore-support.js";
 
 /**
  * Types used by the Encore support page renderer.
@@ -173,8 +170,8 @@ function MessageField(handle: Handle<EncoreSupportView.MessageProps>) {
 
 /**
  * The page. The form panel declares a container so the paired fields sit side by side only
- * when the panel itself is wide enough, on any viewport. The enhancement script is optional:
- * without it the form posts and re-renders the same way.
+ * when the panel itself is wide enough, on any viewport. The submit button's island is
+ * optional: without it the form posts and re-renders the same way.
  *
  * @returns View function rendering the support page for the controller's state.
  */
@@ -253,7 +250,7 @@ export function EncoreSupportView() {
 								</p>
 							</div>
 						) : (
-							<Form method="post" action={action} issues={issues} data-support-form="">
+							<Form method="post" action={action} issues={issues}>
 								{state === "failed" ? (
 									<Alert color="danger" live="assertive">
 										<Alert.Content>
@@ -364,15 +361,12 @@ export function EncoreSupportView() {
 								</p>
 
 								<div mix={[hstack({ gap: 3, align: "center" }), flexWrap("wrap")]}>
-									<Button type="submit" color="brand" data-support-submit="">
-										Send support request
-									</Button>
+									<SubmitButton label="Send support request" pendingLabel="Sending…" />
 								</div>
 							</Form>
 						)}
 					</section>
 				</main>
-				<script src={ENHANCEMENT_SRC} defer />
 			</BlogLayout>
 		);
 	};

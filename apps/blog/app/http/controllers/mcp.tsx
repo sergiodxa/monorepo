@@ -13,7 +13,8 @@ import { createAction } from "remix/router";
 
 import type { McpPage } from "~/app/services/mcp-page";
 
-import { loadMcpPage, resolveMcpPageLocale } from "~/app/services/mcp-page";
+import { loadMcpPage } from "~/app/services/mcp-page";
+import { resolvePageLocale } from "~/app/services/page-locale";
 import { MarkdownPageView } from "~/resources/views/markdown-page";
 import routes from "~/routes/web";
 
@@ -30,7 +31,7 @@ function markdown(status: number, body: string): Response {
  * @returns The parsed page, or `null` when its source could not be parsed.
  */
 async function pageFor(url: URL, request: Request): Promise<McpPage | null> {
-	let locale = resolveMcpPageLocale(url, request.headers.get("Accept-Language"));
+	let locale = resolvePageLocale(url, request.headers.get("Accept-Language"));
 	let loaded = await loadMcpPage(locale);
 	if (isFailure(loaded)) return null;
 	return loaded.data;

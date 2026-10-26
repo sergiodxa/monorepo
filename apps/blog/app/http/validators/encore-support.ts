@@ -9,10 +9,10 @@
 
 import type { InferOutput } from "remix/data-schema";
 
-import { parseEmailAddress } from "@sdxc/email-address";
-import { isSuccess } from "@sdxc/result";
 import { defaulted, string } from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
+
+import { choice, optionalLine, replyAddress } from "~/app/http/validators/fields";
 
 /** The topics a visitor picks from, in the order the form lists them. */
 export const SUPPORT_TOPICS = ["Bug report", "Question", "Feature request", "Other"] as const;
@@ -33,58 +33,6 @@ export const SUPPORT_LIMITS = {
 
 /** The shortest message worth sending: enough for one sentence describing the problem. */
 export const SUPPORT_MESSAGE_MIN = 10;
-
-/**
- * The address the reply goes to, in the form mail headers carry: NFKC-normalized with an ASCII
- * domain. Only its syntax is checked, since the reply itself proves the mailbox receives mail.
- *
- * @returns The parsed address, or `null` when it is no mailbox address at all.
- */
-function replyAddress(value: string): string | null {
-	let parsed = parseEmailAddress(value);
-	return isSuccess(parsed) ? parsed.data.address : null;
-}
-
-/** Whether `value` holds a line break or another control character, out of place in a one-line field. */
-function hasControlCharacter(value: string): boolean {
-	return Array.from(value).some((character) => {
-		let code = character.codePointAt(0) ?? 0;
-		return code < 0x20 || code === 0x7f;
-	});
-}
-
-/**
- * A one-line text field that may be left blank, trimmed and capped at `max` characters.
- *
- * @param label How the error message names the field.
- * @param max The longest value accepted.
- */
-function optionalLine(label: string, max: number) {
-	return f.field(
-		defaulted(string(), "")
-			.transform((value) => value.trim())
-			.refine((value) => value.length <= max, `${label} must be ${max} characters or fewer.`)
-			.refine((value) => !hasControlCharacter(value), `${label} must fit on one line.`),
-	);
-}
-
-/**
- * One value out of a fixed list, with a message asking the visitor to choose. A missing value
- * becomes the empty string, so it fails the membership check and reports that message too.
- *
- * @param options The accepted values.
- * @param message What the field shows when nothing valid was chosen.
- */
-function choice<const Option extends string>(options: ReadonlyArray<Option>, message: string) {
-	let isOption = (value: string): value is Option =>
-		(options as ReadonlyArray<string>).includes(value);
-
-	return f.field(
-		defaulted(string(), "")
-			.refine(isOption, message)
-			.transform((value) => (isOption(value) ? value : options[0]!)),
-	);
-}
 
 /**
  * The support request as the form posts it. The honeypot fields post alongside it and are

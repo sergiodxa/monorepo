@@ -91,15 +91,16 @@ export default route({
 
 	/**
 	 * The hidden image the contact forms load, which challenges for a Privacy Pass token and
-	 * marks the visitor's session once their device redeems one.
+	 * sets an attestation cookie once the visitor's device redeems one.
 	 */
 	privacyPass: get("/privacy-pass"),
 
 	/**
-	 * The press kit sent to events and podcasts that need the author's bio and photos,
-	 * plus the same kit as Markdown, which pastes cleanly into a speaker form.
+	 * The press kit sent to events and podcasts that need the author's bio and photos, which
+	 * takes invitations on `POST` at the same address, plus the same kit as Markdown, which
+	 * pastes cleanly into a speaker form.
 	 */
-	press: get("/press"),
+	press: form("/press"),
 	pressMarkdown: get("/press.md"),
 
 	/**

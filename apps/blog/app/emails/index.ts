@@ -34,6 +34,15 @@ const SUPPORT_REQUEST = s.object({
 	message: s.string(),
 });
 
+/** A validated press kit invitation, as the contact form's validator produced it. */
+const PRESS_CONTACT = s.object({
+	name: s.string(),
+	email: s.string(),
+	kind: s.string(),
+	event: s.string(),
+	message: s.string(),
+});
+
 /** The spam filter's doubt about a request, listed in the email when it was unsure. */
 const SPAM_DOUBT = s.object({
 	score: s.number(),
@@ -46,6 +55,16 @@ export default emails({
 	bookmarks: {
 		/** The bookmarks the weekly check found moved or gone since the last digest. */
 		digest: email({ props: s.object({ items: s.array(DIGEST_ITEM) }) }),
+	},
+	press: {
+		/** One invitation from the press kit's contact form, delivered to the author. */
+		contact: email({
+			props: s.object({
+				request: PRESS_CONTACT,
+				pageLanguage: s.string(),
+				flagged: s.optional(SPAM_DOUBT),
+			}),
+		}),
 	},
 	encore: {
 		/** One support request, delivered to the support inbox. */

@@ -1,7 +1,7 @@
 /**
- * The server side of the Encore support form: the per-address budget a submission spends, the
- * spam assessment of a valid request, and its delivery to the support inbox. The inbox and the
- * sending binding live in Worker configuration, so neither ever reaches the page.
+ * The server side of the site's contact forms, Encore support and the press kit: the
+ * per-address budget a submission spends, the spam assessment of a valid request, and its
+ * delivery. The sending binding lives in Worker configuration, so it never reaches a page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,9 +19,11 @@ import { authorEmail } from "@sdxc/spam/author-email";
 import { stopForumSpam } from "@sdxc/spam/stop-forum-spam";
 
 import type { SupportRequest } from "~/app/http/validators/encore-support";
+import type { PressContact } from "~/app/http/validators/press-contact";
 
 import emails from "~/app/emails";
 import { mail } from "~/app/initializers/mail";
+import { PROFILE } from "~/config/profile";
 
 /**
  * Mailbox every request is sent from. The domain has to be a verified sender for the Workers
@@ -31,6 +33,12 @@ import { mail } from "~/app/initializers/mail";
 export const SUPPORT_SENDER: Address = {
 	email: "encore@support.sergiodxa.com",
 	name: "Encore Support",
+};
+
+/** Mailbox press kit invitations are sent from, on the same verified sending domain. */
+export const PRESS_SENDER: Address = {
+	email: "press@support.sergiodxa.com",
+	name: "sergiodxa.com Press Kit",
 };
 
 /**
@@ -53,6 +61,13 @@ export const ATTESTATION_SCORE = -3;
  */
 export function createSupportSpamFilter(): SpamFilter {
 	return createSpamFilter({ checks: [...DEFAULT_RULES, authorEmail(), stopForumSpam()] });
+}
+
+/** The fields every contact form collects, which the spam filter reads. */
+export interface ContactMessage {
+	name: string;
+	email: string;
+	message: string;
 }
 
 /** What is known about who sent a request, beyond the fields they typed. */
@@ -86,7 +101,7 @@ export class SupportDeliveryError extends Error {
 export interface SupportDeskOptions {
 	/** How mail leaves the worker; absent when the deployment declares no email binding. */
 	transport: Transport | undefined;
-	/** The address requests are delivered to. */
+	/** The address Encore support requests are delivered to. */
 	inbox: string | undefined;
 	/** The per-client budget; absent in a local run without the binding, which admits all. */
 	limiter: RateLimit | undefined;
@@ -95,8 +110,8 @@ export interface SupportDeskOptions {
 }
 
 /**
- * Admits and delivers support requests. One instance per request, built by the
- * `supportDesk()` middleware and read by the controller as `ctx.supportDesk`.
+ * Admits and delivers contact form requests. One instance per request, built by the
+ * `supportDesk()` middleware and read by the controllers as `ctx.supportDesk`.
  */
 export class SupportDesk {
 	#mailer: Mailer | undefined;
@@ -116,8 +131,9 @@ export class SupportDesk {
 	}
 
 	/**
-	 * Spends one unit of the client's budget. Every submission counts, valid or not, so a
-	 * script probing the validation spends the same budget as one sending mail. A limiter that
+	 * Spends one unit of the client's budget, shared by every contact form. Every submission
+	 * counts, valid or not, so a script probing the validation spends the same budget as one
+	 * sending mail. A limiter that
 	 * cannot answer admits the request, since the form is worth more than a perfect count.
 	 *
 	 * @param client The client's network (an IPv4 address or an IPv6 /64), or `unknown`, which then shares one budget.
@@ -125,7 +141,7 @@ export class SupportDesk {
 	 */
 	async admit(client: string): Promise<boolean> {
 		if (!this.#adapter) return true;
-		let decision = await this.#adapter.consume(`encore-support:${client}`);
+		let decision = await this.#adapter.consume(`contact:${client}`);
 		if (isFailure(decision)) return true;
 		return decision.data.allowed;
 	}
@@ -139,7 +155,7 @@ export class SupportDesk {
 	 * @param sender The client's address, user agent, verified render time and attestation.
 	 * @returns The verdict and the signals behind it.
 	 */
-	async assess(request: SupportRequest, sender: SupportSender): Promise<SpamFilter.Assessment> {
+	async assess(request: ContactMessage, sender: SupportSender): Promise<SpamFilter.Assessment> {
 		let assessment = await this.#spamFilter.check({
 			content: request.message,
 			format: "text",
@@ -184,6 +200,34 @@ export class SupportDesk {
 		let sent = await this.#mailer.send(emails.encore.support, {
 			to: this.#inbox,
 			props: { request, flagged },
+		});
+		if (isFailure(sent)) {
+			return failure(new SupportDeliveryError("rejected", { cause: sent.error }));
+		}
+		return success(undefined);
+	}
+
+	/**
+	 * Mails a press kit invitation to the author, from {@link PRESS_SENDER}, and waits for the
+	 * provider's answer. An `unsure` assessment is delivered flagged, with its signals.
+	 *
+	 * @param request The validated invitation.
+	 * @param locale The language the organizer read the press kit in.
+	 * @param assessment The spam assessment, flagged in the email when unsure.
+	 * @returns Success once the provider accepted the message.
+	 */
+	async deliverInvitation(
+		request: PressContact,
+		locale: string,
+		assessment?: SpamFilter.Assessment,
+	): Promise<Result<void, SupportDeliveryError>> {
+		if (!this.#mailer) return failure(new SupportDeliveryError("unconfigured"));
+
+		let flagged = assessment?.verdict === "unsure" ? assessment : undefined;
+		let sent = await this.#mailer.send(emails.press.contact, {
+			to: PROFILE.email,
+			from: PRESS_SENDER,
+			props: { request, pageLanguage: locale, flagged },
 		});
 		if (isFailure(sent)) {
 			return failure(new SupportDeliveryError("rejected", { cause: sent.error }));
