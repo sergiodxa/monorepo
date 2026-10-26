@@ -42,7 +42,22 @@ const ES_AR: NowPage = {
 				{
 					title: "Todo con Remix v3",
 					href: NOW_LINKS.monorepo,
-					text: "Estoy reconstruyendo las aplicaciones que mantengo con Remix v3, en un monorepo público: este blog, un monitor de uptime, un lector de feeds, un proveedor de identidad multi-tenant y el sitio de mi React Router OAuth2 Handbook.",
+					text: "Estoy reconstruyendo las aplicaciones que mantengo con Remix v3, en un monorepo público, incluidos este blog y un lector de feeds, además de los productos de abajo.",
+				},
+				{
+					title: "Uptime",
+					href: NOW_LINKS.uptime,
+					text: "Monitoreo de uptime simple y confiable para desarrolladores: sitios, APIs, DNS, certificados SSL y cron jobs, con alertas y páginas de estado públicas.",
+				},
+				{
+					title: "Auth",
+					href: NOW_LINKS.auth,
+					text: "Una plataforma de identidad multi-tenant donde cada tenant tiene su propio proveedor de OpenID Connect y OAuth 2.0.",
+				},
+				{
+					title: "React Router OAuth2 Handbook",
+					href: NOW_LINKS.handbook,
+					text: "Mi libro, una guía práctica para implementar autenticación OAuth2 segura en aplicaciones con React Router y Remix.",
 				},
 				{
 					title: "Los paquetes @sdxc",
@@ -52,7 +67,7 @@ const ES_AR: NowPage = {
 				{
 					title: "Encore",
 					href: NOW_LINKS.encore,
-					text: "Un juego de cartas musical para fiestas, para iPhone, iPad, Apple Watch y Mac: juntás a tus amigos, das vuelta una carta y cantan una canción que cumpla el desafío.",
+					text: "Ya disponible en la App Store: un juego de cartas musical para fiestas, para iPhone, iPad, Apple Watch y Mac. Juntás a tus amigos, das vuelta una carta y cantan una canción que cumpla el desafío.",
 				},
 			],
 		},

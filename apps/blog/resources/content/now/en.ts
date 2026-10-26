@@ -42,7 +42,22 @@ const EN: NowPage = {
 				{
 					title: "Everything on Remix v3",
 					href: NOW_LINKS.monorepo,
-					text: "I’m rebuilding the apps I run on Remix v3 in one public monorepo: this blog, an uptime monitor, a feed reader, a multi-tenant identity provider and the site for my React Router OAuth2 Handbook.",
+					text: "I’m rebuilding the apps I run on Remix v3 in one public monorepo, this blog and a feed reader included, alongside the products below.",
+				},
+				{
+					title: "Uptime",
+					href: NOW_LINKS.uptime,
+					text: "Simple, reliable uptime monitoring for developers: websites, APIs, DNS, SSL certificates and cron jobs, with alerts and public status pages.",
+				},
+				{
+					title: "Auth",
+					href: NOW_LINKS.auth,
+					text: "A multi-tenant identity platform where every tenant gets its own OpenID Connect and OAuth 2.0 provider.",
+				},
+				{
+					title: "React Router OAuth2 Handbook",
+					href: NOW_LINKS.handbook,
+					text: "My book, a practical guide to implementing secure OAuth2 authentication in React Router and Remix apps.",
 				},
 				{
 					title: "The @sdxc packages",
@@ -52,7 +67,7 @@ const EN: NowPage = {
 				{
 					title: "Encore",
 					href: NOW_LINKS.encore,
-					text: "A music party card game for iPhone, iPad, Apple Watch and Mac: gather friends, reveal a card, and sing a song that fits the challenge.",
+					text: "Out now on the App Store: a music party card game for iPhone, iPad, Apple Watch and Mac. Gather friends, reveal a card, and sing a song that fits the challenge.",
 				},
 			],
 		},
