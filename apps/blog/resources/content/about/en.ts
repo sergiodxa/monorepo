@@ -90,8 +90,8 @@ const EN: AboutPage = {
 	story: [
 		"In 2002, when I was about ten, I wondered how web pages were made. Someone I knew who was studying systems engineering answered my email with a few links about HTML. I built my first site in Microsoft Word, full of GIFs and tables with hidden borders, and uploaded it to GeoCities five files at a time.",
 		"Learning to program took another eleven years. In 2013 I convinced my mom to lend me her credit card for a two-week online course at Mejorando.la, and I finally learned JavaScript. (I never paid her back.) I published my first open-source project, an electrical calculator, and found my first job by searching Google Maps for web design studios in Buenos Aires that I could walk to.",
-		"In 2015 I dropped Angular for React and moved to Colombia to work at Platzi, the same school whose course got me started. There we open-sourced Pulse, a Markdown editor. In 2017 I joined ZEIT, now Vercel, to help people deploy their apps, and I started writing in English. At Able I led the frontend of an internal product and wrote the first frontend curriculum for Codeable, its bootcamp.",
-		"I bought an early Remix license, built Remix Utils and Remix Auth on it in 2021, and have contributed to Remix since it went open source. Today I work at Daffy, and I spend my spare time on the @sdxc packages and on this site.",
+		"In 2015 I dropped Angular for React and moved to Colombia to work at Platzi, the same school whose course got me started. There we open-sourced Pulse, a Markdown editor. In 2017 I joined ZEIT, now Vercel, to help people deploy their apps, and I started writing in English. At Able I led the frontend of an internal product and wrote the first frontend curriculum for Codeable, its bootcamp. Until the pandemic, I also organized the Tech Talks Peru meetups in Lima.",
+		"I bought an early Remix license, built Remix Utils and Remix Auth on it in 2021, and have contributed to Remix since it went open source. After Able I joined Daffy (Silverback Ventures), where I still build the web app, and I spend my spare time on the @sdxc packages and on this site.",
 	],
 	timeline: [
 		{
