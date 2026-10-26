@@ -84,7 +84,9 @@ export class Path {
 			if (command.type === "move") into.moveTo(command.x, command.y);
 			else if (command.type === "line") into.lineTo(command.x, command.y);
 			else if (command.type === "quad") into.quadTo(command.cx, command.cy, command.x, command.y);
-			else into.close();
+			else if (command.type === "cubic") {
+				into.cubicTo(command.c1x, command.c1y, command.c2x, command.c2y, command.x, command.y);
+			} else into.close();
 		}
 		return into.close();
 	}
