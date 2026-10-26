@@ -151,9 +151,14 @@ while (rest) {
   pair as an adjustment, so the PDF shows the same spacing `Font.layout` measured.
 - A `W` array carries the advance of each glyph used, and a `ToUnicode` CMap maps each glyph
   back to the code point it was drawn for, so copying and searching return the original text.
-- The first version embeds the whole font file (`FontFile2`). Subsetting to the glyphs a
-  document uses is a later phase, since it means rewriting `glyf`, `loca` and `hmtx`,
-  including the components of composite glyphs.
+- The `FontDescriptor` is filled from the metrics `@sdxc/font` exposes for embedding
+  ([ADR-177](./ADR-177-font-embedding-metrics-and-subsetting.md)): PostScript name, bounding
+  box, italic angle, cap height and style flags. `StemV` is estimated from the weight class.
+- A font whose license forbids embedding fails with a `PDFError`. A font whose license allows
+  embedding but not subsetting embeds whole.
+- The first version embeds the whole font file (`FontFile2`). Once `@sdxc/font` can subset,
+  `@sdxc/pdf` embeds a subset of the glyphs each document uses, renumbered, and writes the
+  subset's glyph ids in its text.
 - Fonts are TrueType only, inheriting `@sdxc/font`'s limits: no CFF, no shaping, no
   bidirectional text.
 
@@ -208,7 +213,7 @@ while (rest) {
 
 ### Phase 2: Text
 
-**Priority:** High
+**Priority:** High, after ADR-177's metrics phase
 **Estimated Effort:** 2 days
 
 1. `pdf.font()` over `@sdxc/font`, `Type0` and `CIDFontType2` embedding, `W` array, `ToUnicode`
@@ -235,10 +240,10 @@ while (rest) {
 ### Phase 5: Font Subsetting
 
 **Priority:** Low
-**Estimated Effort:** 2 days
+**Estimated Effort:** half a day, after ADR-177's subsetting phase
 
-1. Rewrite `glyf`, `loca`, `hmtx` and `maxp` with only the glyphs used, composites' components
-   included, and embed the subset
+1. Collect the glyphs each font draws, embed `font.subset()`'s bytes, and write the subset's
+   glyph ids in the text, `W` array and `ToUnicode` map
 
 ## Alternatives Considered
 
@@ -252,9 +257,10 @@ résumé's content.
 
 A pure-JavaScript PDF writer that runs in Workers.
 
-**Rejected because**: it has had no release since 2021, it needs `fontkit` to embed custom
-fonts, which duplicates what `@sdxc/font` already does, and it offers no text wrapping, so
-the paragraph work would still be ours.
+**Rejected because**: it has had no release since 2021, and it needs fontkit to embed custom
+fonts. That would mean a second font reader beside `@sdxc/font`, which already measures the
+text, and the two could disagree about a metric. It also offers no text wrapping, so the
+paragraph work would still be ours.
 
 ### 3. `pdfkit`
 
@@ -278,6 +284,7 @@ and keeps an intermediate document between the content and the PDF.
 - [PDF 1.7 (ISO 32000-1)](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf)
 - [ADR-150: `@sdxc/font`](./ADR-150-font-package.md)
 - [ADR-149: `@sdxc/png`](./ADR-149-png-package.md)
+- [ADR-177: `@sdxc/font` embedding metrics and subsetting](./ADR-177-font-embedding-metrics-and-subsetting.md)
 
 ## Current Progress
 
