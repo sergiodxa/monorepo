@@ -23,6 +23,7 @@ import { describe, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { SUPPORT_RATE_LIMIT, SUPPORT_SENDER } from "~/app/services/support-desk";
+import { createTestPrivacyPass, redeemToken } from "~/app/test/privacy-pass";
 
 const ORIGIN = "https://blog.test";
 const PATH = "/apps/encore/support";
@@ -144,6 +145,18 @@ function submit(body: URLSearchParams, options: SubmitOptions = {}) {
 	);
 }
 
+/** A session cookie whose device redeemed a Privacy Pass token, as `/privacy-pass` sets it. */
+async function attestedCookie(): Promise<string> {
+	let { issuer, privacyPass } = await createTestPrivacyPass();
+	let app = createWebRouter(environment(), { privacyPass });
+	let response = await redeemToken(
+		(request) => app.fetch(request),
+		issuer,
+		new URL("/privacy-pass", ORIGIN).href,
+	);
+	return response.headers.get("set-cookie")?.split(";")[0] ?? "";
+}
+
 /** Loads the page, carrying a session cookie when one is given. */
 function load(cookie?: string) {
 	let app = createWebRouter(environment());
@@ -168,6 +181,7 @@ describe("GET /apps/encore/support", () => {
 		expect(html).toContain("Describe your question, problem, or suggestion…");
 		expect(html).toContain("Please don’t include passwords, payment details");
 		expect(html).toContain('href="/apps/encore/privacy"');
+		expect(html).toContain('src="/privacy-pass"');
 	});
 
 	test("renders the honeypot trap out of reach of people and autofill", async () => {
@@ -360,6 +374,21 @@ describe("POST /apps/encore/support", () => {
 		expect(transport.last?.text).toContain("This request may be spam (score 6)");
 		expect(transport.last?.text).toContain("links.count");
 		expect(transport.last?.text).toContain("The timer stops when I reveal the second card.");
+	});
+
+	test("delivers an attested sender's borderline request unflagged", async () => {
+		let transport = new MemoryTransport();
+		let check = new MemoryCheck({
+			signals: [{ check: "links.count", score: 6, detail: "4 links" }],
+		});
+		let response = await submit(await submission(), {
+			transport,
+			spamFilter: createSpamFilter({ checks: [check] }),
+			headers: { cookie: await attestedCookie() },
+		});
+
+		expect(response.status).toBe(303);
+		expect(transport.last?.subject).toBe("[Encore] Bug report on iPhone");
 	});
 
 	test("delivers normally when a reputation check is down", async () => {

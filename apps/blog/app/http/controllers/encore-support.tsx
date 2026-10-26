@@ -16,6 +16,7 @@ import { Session } from "remix/session";
 import type { AppContext } from "~/app/initializers/router";
 
 import { SupportRequestSchema } from "~/app/http/validators/encore-support";
+import { isAttested } from "~/app/services/attestation";
 import { EncoreSupportView } from "~/resources/views/encore-support";
 import routes from "~/routes/web";
 
@@ -128,6 +129,7 @@ export default createController(routes.encoreSupport, {
 				ip: ctx.ip?.toString(),
 				userAgent: ctx.request.headers.get("user-agent") ?? undefined,
 				renderedAt: trap.data.renderedAt,
+				attested: isAttested(session),
 			});
 			ctx.log.set({
 				spam: {

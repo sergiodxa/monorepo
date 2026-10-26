@@ -354,6 +354,7 @@ export function EncoreSupportView() {
 								<MessageField value={values.message} issues={issues} />
 
 								{honeypot ? <HoneypotFields {...honeypot} /> : null}
+								<img src={routes.privacyPass.href()} alt="" hidden />
 
 								<p mix={[m(0), text("sm")]}>
 									We’ll use the information you submit to respond to your request and investigate

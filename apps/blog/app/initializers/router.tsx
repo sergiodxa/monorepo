@@ -8,6 +8,7 @@
  */
 
 import type { Transport } from "@sdxc/mail";
+import type { PrivacyPass } from "@sdxc/privacy-pass";
 import type { SpamFilter } from "@sdxc/spam";
 import type { Middleware, RequestContext, RouterContext } from "remix/router";
 
@@ -48,6 +49,7 @@ import githubWebhook from "~/app/http/middleware/github-webhook";
 import importMapHash from "~/app/http/middleware/import-map-hash";
 import mcpRateLimit from "~/app/http/middleware/mcp-rate-limit";
 import pingHubFor from "~/app/http/middleware/ping-hub";
+import privacyPass from "~/app/http/middleware/privacy-pass";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
@@ -200,6 +202,8 @@ export interface ApplicationOptions {
 	mailTransport?: Transport;
 	/** Scores Encore support requests in place of the free default checks. */
 	spamFilter?: SpamFilter;
+	/** Challenges for and redeems Privacy Pass tokens in place of the public issuer and KV. */
+	privacyPass?: PrivacyPass;
 }
 
 /**
@@ -347,6 +351,13 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				}),
 				supportDesk(env, options.mailTransport, options.spamFilter),
 			],
+		),
+	);
+	router.map(
+		routes.privacyPass,
+		lazy(
+			() => import("~/app/http/controllers/privacy-pass"),
+			[privacyPass(env, options.privacyPass)],
 		),
 	);
 	router.map(
