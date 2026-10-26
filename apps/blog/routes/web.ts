@@ -98,6 +98,13 @@ export default route({
 	pressMarkdown: get("/press.md"),
 
 	/**
+	 * What the author is focused on at this point in his life, in either language, plus the
+	 * same page as Markdown.
+	 */
+	now: get("/now"),
+	nowMarkdown: get("/now.md"),
+
+	/**
 	 * The hardware, editor, stack and services the author works with, plus the same list as
 	 * Markdown.
 	 */
