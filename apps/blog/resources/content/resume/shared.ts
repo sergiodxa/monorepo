@@ -19,8 +19,8 @@ export const CONTACT_LINKS = {
 
 /** Each employer's site and the years the author worked there, newest first. */
 export const EMPLOYERS = {
-	daffy: { company: "Daffy", href: "https://www.daffy.org", start: "[2021]" },
-	able: { company: "Able", href: "https://able.co", start: "2018", end: "[2021]" },
+	daffy: { company: "Daffy", href: "https://www.daffy.org", start: "2021" },
+	able: { company: "Able", href: "https://able.co", start: "2018", end: "2021" },
 	zeit: { company: "ZEIT", href: "https://vercel.com", start: "2017", end: "2018" },
 	platzi: { company: "Platzi", href: "https://platzi.com", start: "2015", end: "2017" },
 } as const;
