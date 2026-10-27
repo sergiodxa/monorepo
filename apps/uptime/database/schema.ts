@@ -137,6 +137,11 @@ export const apiKeyScopes = [
 	"tcp-monitors:delete",
 	"flow-monitors:delete",
 	"cron-jobs:delete",
+	/**
+	 * Reach the Streamable HTTP MCP endpoint at `/mcp`. It grants no API ability of its
+	 * own: every tool still needs the resource scope that tool maps to.
+	 */
+	"mcp",
 ] as const;
 
 export type ApiKeyScope = (typeof apiKeyScopes)[number];

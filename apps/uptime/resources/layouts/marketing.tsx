@@ -184,6 +184,7 @@ export function buildMarketingChrome(
 				{ label: t("landing.footer.sections.docs.overview"), href: routes.docs.index.href() },
 				{ label: t("landing.footer.sections.docs.quickstart"), href: "/docs/quickstart" },
 				{ label: t("landing.footer.sections.docs.apiReference"), href: "/docs/api/overview" },
+				{ label: t("landing.footer.sections.docs.mcp"), href: routes.mcp.index.href() },
 			],
 		},
 		{

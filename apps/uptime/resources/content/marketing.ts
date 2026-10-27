@@ -533,63 +533,69 @@ export const features: Record<string, MarketingContent.Page> = {
 
 	api: {
 		slug: "api",
-		metaTitle: "Public API | Uptime Monitors",
+		metaTitle: "Public API & MCP | Uptime Monitors",
 		metaDescription:
-			"Integrate monitoring into your workflow with our REST API. Create monitors, manage alerts, and access metrics programmatically.",
-		badge: "API",
+			"Integrate monitoring with the REST API or Streamable HTTP MCP. Scoped API keys, every resource as a tool, and a cron-job ping endpoint.",
+		badge: "API & MCP",
 		title: "Automate your monitoring",
-		highlight: "with a REST API",
+		highlight: "with REST or MCP",
 		description:
-			"Integrate monitoring into your workflow with a REST API. Create monitors, manage alerts, and read metrics programmatically.",
-		highlights: ["API key scopes", "REST resources", "Cron-job ping endpoint"],
+			"Integrate monitoring into your workflow with a REST API — or point an agent at the same capabilities over Streamable HTTP MCP.",
+		highlights: ["API key scopes", "MCP tools", "Cron-job ping endpoint"],
 		trustIndicators: [
 			{ icon: "code", value: "REST", label: "API" },
-			{ icon: "book-open", value: "Full", label: "Documentation" },
+			{ icon: "bot", value: "MCP", label: "Agents" },
 			{ icon: "key", value: "Scoped", label: "API Keys" },
 			{ icon: "zap", value: "Fast", label: "Responses" },
 		],
 		features: [
 			{
 				title: "Scoped API keys",
-				description: "Issue keys with only the permissions each integration needs.",
+				description:
+					"Issue keys with only the permissions each integration needs, including an mcp scope for agents.",
 				icon: "key",
 			},
 			{
 				title: "Full resource coverage",
 				description:
-					"Monitors, DNS/TCP monitors, alerts, maintenance windows, status pages, and more.",
+					"Monitors, DNS/TCP monitors, alerts, maintenance windows, status pages, and more — as REST and as MCP tools.",
 				icon: "layers",
+			},
+			{
+				title: "Streamable HTTP MCP",
+				description:
+					"Connect an agent with @abluva/mcp-remote (protocol 2026-07-28) to https://uptime.sergiodxa.com/mcp.",
+				icon: "bot",
 			},
 			{
 				title: "Cron-job ping endpoint",
 				description: "A dedicated public endpoint your scheduled jobs call to report a heartbeat.",
 				icon: "radio-tower",
 			},
-			{
-				title: "Predictable errors",
-				description:
-					"Consistent error codes and rate limits so client integrations are easy to write.",
-				icon: "shield-check",
-			},
 		],
 		steps: [
 			{
 				title: "Create an API key",
-				description: "Generate a key with the scopes your integration needs.",
+				description: "Generate a key with mcp plus the resource scopes your tools need.",
 			},
 			{
-				title: "Call the API",
-				description: "Create and manage monitors, alerts, and more programmatically.",
+				title: "Call the API or MCP",
+				description: "Use REST from scripts, or MCP tools from an agent — same scopes either way.",
 			},
 			{
 				title: "Automate your workflow",
-				description: "Wire monitoring into deploy scripts or infrastructure tooling.",
+				description: "Wire monitoring into deploy scripts, infrastructure tooling, or agents.",
 			},
 		],
 		faqs: [
 			{
 				question: "Is there a public API?",
 				answer: "Yes — a full REST API with scoped API keys covers monitors, alerts, and more.",
+			},
+			{
+				question: "Can agents use Uptime?",
+				answer:
+					"Yes — POST /mcp is Streamable HTTP MCP. Keys need the mcp scope plus the same resource scopes as REST.",
 			},
 			{
 				question: "How do scheduled jobs report in?",
@@ -1113,13 +1119,13 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		slug: "solo-devs",
 		metaTitle: "Uptime for Solo Developers | Free Monitoring",
 		metaDescription:
-			"Professional uptime monitoring for solo developers. Start free, upgrade when ready. Perfect for portfolios and side projects.",
+			"Professional uptime monitoring for solo developers — REST API and MCP for agents. Start free, upgrade when ready.",
 		badge: "For Solo Developers",
 		title: "Professional monitoring",
 		highlight: "on a solo budget",
 		description:
-			"Start free, upgrade when ready. Perfect for portfolios, side projects, and the first real users of your next idea.",
-		highlights: ["Free to start", "No credit card required", "Pay only for automation"],
+			"Start free, upgrade when ready. Perfect for portfolios, side projects, and agents that keep an eye on them for you.",
+		highlights: ["Free to start", "MCP for agents", "Pay only for automation"],
 		trustIndicators: [
 			{ icon: "code", value: "Free", label: "To Start" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
@@ -1384,13 +1390,13 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		slug: "devops",
 		metaTitle: "Uptime for DevOps | API-First Monitoring",
 		metaDescription:
-			"Uptime monitoring built for DevOps workflows. API-first design, webhook integrations, and fits into your existing toolchain.",
+			"Uptime monitoring built for DevOps workflows. REST API, Streamable HTTP MCP, webhook integrations, and fits into your existing toolchain.",
 		badge: "For DevOps",
 		title: "Built for your",
 		highlight: "existing toolchain",
 		description:
-			"API-first design and webhook integrations mean Uptime fits into your deploy pipeline instead of asking you to change it.",
-		highlights: ["Full REST API", "Signed webhooks", "Cron & TCP monitoring"],
+			"API-first design, MCP for agents, and webhook integrations mean Uptime fits into your deploy pipeline instead of asking you to change it.",
+		highlights: ["REST & MCP", "Signed webhooks", "Cron & TCP monitoring"],
 		/**
 		 * "Signed Webhooks" leads this strip because the HMAC contract is a concrete
 		 * claim a DevOps reader can verify directly.
@@ -1553,13 +1559,13 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		slug: "api-monitoring",
 		metaTitle: "API Monitoring | Uptime",
 		metaDescription:
-			"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and verify API health.",
+			"Monitor REST APIs and endpoints with detailed status checks — and operate Uptime itself through REST or MCP.",
 		badge: "API Monitoring",
 		title: "Verify your API",
 		highlight: "actually works",
 		description:
-			"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and verify API health.",
-		highlights: ["Custom headers", "Any status code", "Latency tracking"],
+			"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and let agents manage the monitors over MCP.",
+		highlights: ["Custom headers", "MCP tools", "Latency tracking"],
 		trustIndicators: [
 			{ icon: "code", value: "REST", label: "& GraphQL" },
 			{ icon: "globe", value: "9", label: "Regions" },

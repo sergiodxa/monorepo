@@ -10,6 +10,42 @@
 import type { ApiKeyScope } from "~/database/schema";
 
 export default {
+	mcp: {
+		meta: {
+			title: "MCP for agents | Uptime",
+			description:
+				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
+		},
+		heading: "エージェント向け Uptime",
+		description:
+			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
+		setup: {
+			heading: "Connect your client",
+			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this config into a client that supports remote MCP (for example via mcp-remote).",
+			steps: {
+				token: "Open your team’s API keys and create a key.",
+				scopes:
+					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
+				configure: "Add the remote MCP config below to your client.",
+				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
+			},
+			configLabel: "Remote MCP config",
+			copy: "Copy config",
+			openKeys: "Open the dashboard",
+		},
+		sell: {
+			heading: "Agent-first monitoring",
+			body: "Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
+			points: {
+				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
+				scopes:
+					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
+				remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
+			},
+			cta: "サインインして MCP を設定",
+		},
+	},
+
 	landing: {
 		meta: {
 			title: "Uptime by Sergio Xalambrí",
@@ -511,6 +547,7 @@ export default {
 					overview: "概要",
 					quickstart: "クイックスタート",
 					apiReference: "APIリファレンス",
+					mcp: "エージェント向け MCP",
 				},
 				legal: {
 					title: "法的情報",
@@ -5553,6 +5590,7 @@ export default {
 							"flow-monitors:delete": "フローモニターとその実行履歴を削除します。",
 							"cron-jobs:delete":
 								"Cronジョブを削除します。削除すると、そのping URLは受け付けられなくなります。",
+							mcp: "Streamable HTTP の MCP エンドポイントに接続します。これだけでは API 権限は付与されません。各ツールに必要なリソーススコープも付与してください。",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {
