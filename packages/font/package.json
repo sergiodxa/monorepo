@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/font",
 	"version": "0.0.1",
-	"description": "TrueType font reader: glyph lookup, metrics, kerning, outlines and line layout",
+	"description": "Font reader: metrics, outlines, layout, shaping, variable fonts, color glyphs, subsetting",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

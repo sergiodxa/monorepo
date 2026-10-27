@@ -1,6 +1,6 @@
 # @sdxc/font
 
-TrueType font reader: glyph lookup, metrics, kerning, outlines and line layout, in plain JavaScript with no WebAssembly.
+Font reader: metrics, outlines, layout, shaping, variable fonts, color glyphs, subsetting, in plain JavaScript with no WebAssembly.
 
 ## Installation
 
@@ -37,7 +37,7 @@ for (let { glyph, x } of line.glyphs) {
 
 ### `parseFont(bytes: Uint8Array | ArrayBuffer): Result<Font, FontError>`
 
-Reads a `.ttf` (OpenType with `glyf` outlines). Opening a font reads only the table headers; glyphs are decoded on first use. Fails with `FontError` whose `code` is `"unsupported"` (CFF `OTTO` fonts, `ttcf` collections, no Unicode `cmap`), `"missing-table"` or `"malformed"`, and whose `table` names the table at fault.
+Reads a `.ttf`, `.otf` (TrueType, CFF or CFF2 outlines) or `.woff`. Opening a font reads only the table headers; glyphs are decoded on first use. Fails with `FontError` whose `code` is `"unsupported"` (a collection or `.woff2`, whose message names the function that opens it, or no usable `cmap`), `"missing-table"` or `"malformed"`, and whose `table` names the table at fault. `parseFontCollection(bytes)` opens `.ttc` and `.dfont` files.
 
 ### `Font`
 
@@ -49,7 +49,15 @@ Reads a `.ttf` (OpenType with `glyf` outlines). Opening a font reads only the ta
 - `layout(text, size, { tracking?, kerning? })` — `{ glyphs: { glyph, codePoint, x, advance }[], width }` in pixels. `tracking` adds pixels between glyphs; `kerning` defaults to `true`.
 - `measure(text, size, options?)` — `layout(...).width` without the glyph list.
 
-Layout maps one code point to one glyph: no ligatures, no GPOS mark positioning, no bidirectional text.
+Layout maps one code point to one glyph: no ligatures, no GPOS mark positioning, no bidirectional text. Use `@sdxc/font/shaping` for complex scripts and OpenType features.
+
+### Entry points
+
+- `@sdxc/font/shaping` — `shape(font, text, { script, language, direction, features })`.
+- `@sdxc/font/variations` — `axes(font)`, `namedInstances(font)`, `instance(font, { wght: 700 })`.
+- `@sdxc/font/color` — `colorLayers(font, glyph)`, `palettes(font)`, `bitmap(font, glyph, ppem)`.
+- `@sdxc/font/woff2` — `parseWoff2(bytes)`, `decodeWoff2(bytes)`.
+- `@sdxc/font/subset` — `subset(font, glyphs)` for CFF fonts and variable font instances.
 
 ## Pattern: Wrap a paragraph to a width
 

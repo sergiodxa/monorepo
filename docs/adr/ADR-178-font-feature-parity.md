@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-26
+**Implemented** - 2026-10-26
 
 ## Background
 
@@ -107,6 +107,16 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
   visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
   first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
   buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
+- **Shapers.** One Arabic shaper serves every joining script (Arabic, Syriac, Mongolian,
+  N'Ko, Phags-pa, Mandaic, Manichaean, Psalter Pahlavi) from the generated joining types.
+  Indic and Universal Shaping Engine syllables are matched by our own combinator grammar,
+  compiled lazily to an automaton with longest match and a 256-glyph cap per syllable. USE and
+  Indic categories are derived at run time from the generated Indic and general-category
+  properties, so they add no data. Myanmar has no shaper of its own.
+- **AAT and fallback marks.** `morx` drives substitution only for a font without GSUB, with
+  the caller's OpenType feature tags mapped to AAT settings through `feat`. Marks are placed by
+  combining class only when the font has no GPOS at all. GPOS VariationIndex and anchor deltas
+  are rounded to font units.
 - **Variable fonts.** `axes`, `namedInstances`, and `instance({ wght: 700 })` returning a
   `Font`. Covers `avar`, `gvar` with shared, enumerated and empty point sets, interpolation of
   untouched points, `HVAR` metrics, CFF2 blending, and feature variations in GSUB and GPOS.
@@ -146,6 +156,16 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
   visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
   first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
   buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
+- **Shapers.** One Arabic shaper serves every joining script (Arabic, Syriac, Mongolian,
+  N'Ko, Phags-pa, Mandaic, Manichaean, Psalter Pahlavi) from the generated joining types.
+  Indic and Universal Shaping Engine syllables are matched by our own combinator grammar,
+  compiled lazily to an automaton with longest match and a 256-glyph cap per syllable. USE and
+  Indic categories are derived at run time from the generated Indic and general-category
+  properties, so they add no data. Myanmar has no shaper of its own.
+- **AAT and fallback marks.** `morx` drives substitution only for a font without GSUB, with
+  the caller's OpenType feature tags mapped to AAT settings through `feat`. Marks are placed by
+  combining class only when the font has no GPOS at all. GPOS VariationIndex and anchor deltas
+  are rounded to font units.
 - **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
   `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
   outlines and advances are varied per glyph on first use and cached. Normalized coordinates
@@ -360,6 +380,16 @@ Decisions made while implementing, where this ADR left a choice open:
   visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
   first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
   buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
+- **Shapers.** One Arabic shaper serves every joining script (Arabic, Syriac, Mongolian,
+  N'Ko, Phags-pa, Mandaic, Manichaean, Psalter Pahlavi) from the generated joining types.
+  Indic and Universal Shaping Engine syllables are matched by our own combinator grammar,
+  compiled lazily to an automaton with longest match and a 256-glyph cap per syllable. USE and
+  Indic categories are derived at run time from the generated Indic and general-category
+  properties, so they add no data. Myanmar has no shaper of its own.
+- **AAT and fallback marks.** `morx` drives substitution only for a font without GSUB, with
+  the caller's OpenType feature tags mapped to AAT settings through `feat`. Marks are placed by
+  combining class only when the font has no GPOS at all. GPOS VariationIndex and anchor deltas
+  are rounded to font units.
 - **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
   `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
   outlines and advances are varied per glyph on first use and cached. Normalized coordinates
@@ -383,12 +413,16 @@ Decisions made while implementing, where this ADR left a choice open:
   version 1 paint graphs are not read; their version 0 fallback layers are. An `sbix` request
   picks the smallest strike at or above the size, else the largest.
 
+Left for later, outside what fontkit covers or its tests assert: ZWJ/ZWNJ auto-skipping in
+contextual matching, `stringsForGlyph` through `morx`, `kerx`/`ankr`/`trak`, `avar` version 2,
+`VVAR`, COLR version 1 paint graphs, and a Myanmar shaper.
+
 ## Current Progress
 
 - [x] Phase 1: Mapping, names, glyph data and metrics
 - [x] Phase 2: Containers
 - [x] Phase 3: CFF and CFF2 outlines
-- [ ] Phase 4: Shaping
-- [ ] Phase 5: Variable fonts
+- [x] Phase 4: Shaping
+- [x] Phase 5: Variable fonts
 - [x] Phase 6: Color glyphs
 - [x] Phase 7: Subsetting beyond TrueType
