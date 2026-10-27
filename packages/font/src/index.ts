@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export { FontCollection, parseFontCollection } from "./collection.js";
 export { Font } from "./font.js";
 export { FontError } from "./font-error.js";
 export { parseFont } from "./parse-font.js";
+export { toSVGPath } from "./svg-path.js";

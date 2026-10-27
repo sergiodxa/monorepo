@@ -8,7 +8,8 @@
 		".": "./src/index.ts",
 		"./color": "./src/color/index.ts",
 		"./shaping": "./src/shaping/index.ts",
-		"./variations": "./src/variations/index.ts"
+		"./variations": "./src/variations/index.ts",
+		"./woff2": "./src/woff2/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

@@ -18,6 +18,7 @@ import { fontData } from "../font.js";
 import { contoursToCommands, decodeGlyph } from "../glyf.js";
 import { parseFont } from "../index.js";
 import { toSVGPath } from "../svg-path.js";
+import { parseWoff2 } from "../woff2/index.js";
 
 import { featureVariationSubstitutions } from "./feature-variations.js";
 import { variationOf } from "./variation.js";
@@ -308,5 +309,30 @@ describe("an instance as a Font", () => {
 		let bold = unwrap(instance(open("Mada/Mada-VF.ttf"), { wght: 900 }));
 		let result = bold.subset([1]);
 		expect(isFailure(result) && result.error.code).toBe("unsupported");
+	});
+});
+
+describe("variations of a font in a WOFF2 container", () => {
+	test.each([
+		["fonttest/TestGVAROne.woff2", "fonttest/TestGVAROne.ttf", { wght: 300 }],
+		["Mada/Mada-VF.woff2", "Mada/Mada-VF.ttf", { wght: 900 }],
+		[
+			"fonttest/AdobeVFPrototype-Subset.woff2",
+			"fonttest/AdobeVFPrototype-Subset.otf",
+			{ wght: 100 },
+		],
+	])("varies %s like the sfnt it was made from", (woff2, sfnt, settings) => {
+		let packed = unwrap(
+			instance(
+				unwrap(parseWoff2(readFileSync(new URL(`../fixtures/${woff2}`, import.meta.url)))),
+				settings,
+			),
+		);
+		let plain = unwrap(instance(open(sfnt), settings));
+		expect(packed.glyphCount).toBe(plain.glyphCount);
+		for (let glyph = 0; glyph < plain.glyphCount; glyph++) {
+			expect(packed.outline(glyph)).toEqual(plain.outline(glyph));
+			expect(packed.advance(glyph)).toBe(plain.advance(glyph));
+		}
 	});
 });

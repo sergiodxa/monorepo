@@ -110,6 +110,17 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
 - **Variable fonts.** `axes`, `namedInstances`, and `instance({ wght: 700 })` returning a
   `Font`. Covers `avar`, `gvar` with shared, enumerated and empty point sets, interpolation of
   untouched points, `HVAR` metrics, CFF2 blending, and feature variations in GSUB and GPOS.
+- **WOFF stays synchronous.** `DecompressionStream` is asynchronous, and making `parseFont`
+  async would change every caller, so WOFF tables inflate through a small DEFLATE decoder in the
+  package. It checks Adler-32 and exact sizes and refuses a table that claims to expand past
+  DEFLATE's 1032:1 limit or the whole font past 1 GiB, so those sizes are never allocated.
+- **Collections and WOFF2.** `parseFont` fails `unsupported` on a `.ttc` or `.dfont` with a
+  message naming `parseFontCollection`, and on a `.woff2` naming `@sdxc/font/woff2`.
+  `parseFontCollection` opens every font of a `.ttc` (versions 1 and 2) or `.dfont`, accepts a
+  single font as a collection of one, and finds a font by PostScript name. `@sdxc/font/woff2`
+  carries a Brotli decoder and the static dictionary (decoded on first use) and rebuilds a real
+  sfnt with sorted, aligned, checksummed tables: `decodeWoff2` answers its bytes, `parseWoff2`
+  the font. A test walks the main entry's imports to keep Brotli out of it.
 - **Glyph data on `Font`.** Per-glyph data is methods taking a glyph id (`glyphBBox`,
   `glyphCBox`, `glyphName`, `svgPath`, `verticalAdvance`, `deviceAdvance`); `Font.bbox` stays
   the font's own box. `name(id, language)` takes the language per call, falling back to a
@@ -303,6 +314,17 @@ by one under pressure leaves the package shaped by whichever font broke first.
 
 Decisions made while implementing, where this ADR left a choice open:
 
+- **WOFF stays synchronous.** `DecompressionStream` is asynchronous, and making `parseFont`
+  async would change every caller, so WOFF tables inflate through a small DEFLATE decoder in the
+  package. It checks Adler-32 and exact sizes and refuses a table that claims to expand past
+  DEFLATE's 1032:1 limit or the whole font past 1 GiB, so those sizes are never allocated.
+- **Collections and WOFF2.** `parseFont` fails `unsupported` on a `.ttc` or `.dfont` with a
+  message naming `parseFontCollection`, and on a `.woff2` naming `@sdxc/font/woff2`.
+  `parseFontCollection` opens every font of a `.ttc` (versions 1 and 2) or `.dfont`, accepts a
+  single font as a collection of one, and finds a font by PostScript name. `@sdxc/font/woff2`
+  carries a Brotli decoder and the static dictionary (decoded on first use) and rebuilds a real
+  sfnt with sorted, aligned, checksummed tables: `decodeWoff2` answers its bytes, `parseWoff2`
+  the font. A test walks the main entry's imports to keep Brotli out of it.
 - **Glyph data on `Font`.** Per-glyph data is methods taking a glyph id (`glyphBBox`,
   `glyphCBox`, `glyphName`, `svgPath`, `verticalAdvance`, `deviceAdvance`); `Font.bbox` stays
   the font's own box. `name(id, language)` takes the language per call, falling back to a
@@ -344,7 +366,7 @@ Decisions made while implementing, where this ADR left a choice open:
 ## Current Progress
 
 - [x] Phase 1: Mapping, names, glyph data and metrics
-- [ ] Phase 2: Containers
+- [x] Phase 2: Containers
 - [x] Phase 3: CFF and CFF2 outlines
 - [ ] Phase 4: Shaping
 - [ ] Phase 5: Variable fonts
