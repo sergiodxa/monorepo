@@ -85,4 +85,14 @@ describe("pickSidebarAd", () => {
 			].sort(),
 		);
 	});
+
+	test("highlights Uptime MCP support on the Streamable HTTP landing", () => {
+		let mcp = SIDEBAR_ADS.find((ad) => ad.id === "ft-mcp");
+		expect(mcp).toMatchObject({
+			href: "https://uptime.sergiodxa.com/mcp",
+			kicker: "MCP",
+			title: "Agent-first",
+			brand: "uptime",
+		});
+	});
 });

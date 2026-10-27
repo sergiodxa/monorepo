@@ -261,6 +261,17 @@ export const SIDEBAR_ADS: SidebarAdDefinition[] = [
 		brand: "uptime",
 	},
 	{
+		id: "ft-mcp",
+		href: `${UP}/mcp`,
+		kicker: "MCP",
+		title: "Agent-first",
+		tagline: "Streamable HTTP MCP for the full Uptime API.",
+		cta: "/mcp →",
+		surface: "uptime-steel",
+		titleFace: "mono",
+		brand: "uptime",
+	},
+	{
 		id: "ft-integrations",
 		href: `${UP}/features/integrations`,
 		kicker: "Feature",
