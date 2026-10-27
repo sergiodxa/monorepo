@@ -1,7 +1,7 @@
 /**
- * The failure `parseFont` answers inside a `Result` when bytes are not a TrueType font it
- * can read. `code` separates a font this package declines (CFF, collections) from one that
- * lacks a table or is corrupt, so a caller can tell "ship a .ttf" from "this file is broken".
+ * The failure every parse in this package answers inside a `Result`. `code` separates a font
+ * that needs another entry point or holds no mappable `cmap` from one that lacks a table or
+ * is corrupt, so a caller can tell "open it elsewhere" from "this file is broken".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +32,9 @@ export class FontError extends Error {
 
 export namespace FontError {
 	/**
-	 * `unsupported` is a valid font of a kind this package does not read (CFF outlines, a
-	 * collection, no Unicode `cmap` subtable); `missing-table` lacks a required table;
+	 * `unsupported` is a valid font this call does not read (a container another entry point
+	 * opens, no Unicode, symbol or single-byte legacy `cmap` subtable); `missing-table` lacks a
+	 * required table;
 	 * `malformed` has a header or table whose sizes or values cannot be right;
 	 * `not-permitted` is a font whose license (`OS/2.fsType`) forbids what was asked.
 	 */

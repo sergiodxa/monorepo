@@ -1,7 +1,7 @@
 /**
- * Lookups that read straight from a font's bytes on each call: `cmap` subtables, `kern`
- * format 0 pairs and GPOS pair adjustments. Each one binary-searches the sorted arrays the
- * format guarantees, so a font costs nothing to open and a lookup stays logarithmic.
+ * Lookups that read straight from a font's bytes on each call: `kern` format 0 pairs and
+ * GPOS pair adjustments. Each one binary-searches the sorted arrays the format guarantees,
+ * so a font costs nothing to open and a lookup stays logarithmic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,122 +9,11 @@
 
 import type { Reader } from "./reader.js";
 
-/** A located `cmap` subtable this package can read. */
-export interface CmapSubtable {
-	format: 4 | 12;
-	/** Absolute offset of the subtable header. */
-	offset: number;
-}
-
 /** GPOS `PairPos` subtables grouped by the lookup that owns them, in lookup order. */
 export type PairLookups = number[][];
 
 /** XAdvance's bit in a GPOS ValueFormat; the two placement bits precede it in the record. */
 const VALUE_X_ADVANCE = 0x0004;
-
-/**
- * Picks the subtable that covers the most of Unicode: format 12 with a Unicode encoding
- * first, since it reaches astral code points, then a BMP format 4. Subtables whose arrays
- * would run past the table are skipped, so lookups never read outside the subtable.
- *
- * @param reader - The font bytes.
- * @param offset - Absolute offset of the `cmap` table.
- * @param length - Length of the `cmap` table.
- * @returns The chosen subtable, or `null` when none is a Unicode format 4 or 12.
- */
-export function selectCmap(reader: Reader, offset: number, length: number): CmapSubtable | null {
-	let count = reader.u16(offset + 2);
-	if (4 + count * 8 > length) return null;
-	let full: CmapSubtable | null = null;
-	let bmp: CmapSubtable | null = null;
-	for (let index = 0; index < count; index++) {
-		let record = offset + 4 + index * 8;
-		let platform = reader.u16(record);
-		let encoding = reader.u16(record + 2);
-		let relative = reader.u32(record + 4);
-		let unicode = platform === 0 || (platform === 3 && (encoding === 1 || encoding === 10));
-		if (!unicode || relative >= length) continue;
-		let subtable = offset + relative;
-		let format = reader.u16(subtable);
-		if (format === 12 && full === null) {
-			let groups = reader.u32(subtable + 12);
-			if (relative + 16 + groups * 12 <= length) full = { format: 12, offset: subtable };
-		} else if (format === 4 && bmp === null) {
-			let segments = reader.u16(subtable + 6) / 2;
-			if (relative + 16 + segments * 8 <= length) bmp = { format: 4, offset: subtable };
-		}
-	}
-	return full ?? bmp;
-}
-
-/**
- * The glyph a code point maps to in a subtable, `0` when it maps to nothing.
- *
- * @param reader - The font bytes.
- * @param cmap - The subtable from `selectCmap`.
- * @param codePoint - A Unicode scalar value.
- */
-export function lookupCmap(reader: Reader, cmap: CmapSubtable, codePoint: number): number {
-	if (cmap.format === 12) return lookupFormat12(reader, cmap.offset, codePoint);
-	return lookupFormat4(reader, cmap.offset, codePoint);
-}
-
-/**
- * Segment-mapping lookup: find the first segment whose end is at or past the code point,
- * then map through `idDelta` or the `idRangeOffset` glyph array.
- *
- * @param reader - The font bytes.
- * @param offset - Absolute offset of the format 4 subtable.
- * @param codePoint - A Unicode scalar value.
- */
-function lookupFormat4(reader: Reader, offset: number, codePoint: number): number {
-	if (codePoint > 0xffff) return 0;
-	let segX2 = reader.u16(offset + 6);
-	let segments = segX2 / 2;
-	let ends = offset + 14;
-	let starts = ends + segX2 + 2;
-	let deltas = starts + segX2;
-	let ranges = deltas + segX2;
-	let low = 0;
-	let high = segments - 1;
-	while (low < high) {
-		let middle = (low + high) >> 1;
-		if (reader.u16(ends + middle * 2) < codePoint) low = middle + 1;
-		else high = middle;
-	}
-	if (segments === 0 || reader.u16(ends + low * 2) < codePoint) return 0;
-	let start = reader.u16(starts + low * 2);
-	if (codePoint < start) return 0;
-	let delta = reader.u16(deltas + low * 2);
-	let rangeAt = ranges + low * 2;
-	let range = reader.u16(rangeAt);
-	if (range === 0) return (codePoint + delta) & 0xffff;
-	let glyph = reader.u16(rangeAt + range + (codePoint - start) * 2);
-	return glyph === 0 ? 0 : (glyph + delta) & 0xffff;
-}
-
-/**
- * Segmented-coverage lookup over sequential map groups sorted by start code.
- *
- * @param reader - The font bytes.
- * @param offset - Absolute offset of the format 12 subtable.
- * @param codePoint - A Unicode scalar value.
- */
-function lookupFormat12(reader: Reader, offset: number, codePoint: number): number {
-	let groups = reader.u32(offset + 12);
-	let low = 0;
-	let high = groups - 1;
-	while (low <= high) {
-		let middle = (low + high) >> 1;
-		let group = offset + 16 + middle * 12;
-		let start = reader.u32(group);
-		let end = reader.u32(group + 4);
-		if (codePoint < start) high = middle - 1;
-		else if (codePoint > end) low = middle + 1;
-		else return reader.u32(group + 8) + (codePoint - start);
-	}
-	return 0;
-}
 
 /**
  * Sums the horizontal format 0 subtables of a version 0 `kern` table for one pair. Minimum

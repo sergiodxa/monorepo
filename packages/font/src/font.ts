@@ -12,14 +12,27 @@ import type { Result } from "@sdxc/result";
 import { failure } from "@sdxc/result";
 
 import type { CffOutlines } from "./cff/index.js";
+import type { CharacterMap } from "./cmap.js";
 import type { GlyphSource, Point } from "./glyf.js";
 import type { FontMetrics } from "./metrics.js";
-import type { CmapSubtable, PairLookups } from "./tables.js";
+import type { GlyphNamer } from "./post.js";
+import type { PairLookups } from "./tables.js";
+import type { VerticalTables } from "./vertical.js";
 
+import { isVariationSelector, mapCharacter, mappedCharacters } from "./cmap.js";
 import { FontError } from "./font-error.js";
-import { contoursToCommands, decodeGlyph } from "./glyf.js";
+import { contoursToCommands, decodeGlyph, glyphRange } from "./glyf.js";
+import { pickName } from "./names.js";
+import { postGlyphNamer } from "./post.js";
 import { subsetFont } from "./subset.js";
-import { gposPair, gposPairLookups, kernTablePair, lookupCmap } from "./tables.js";
+import { boundingBox, controlBox, toSVGPath } from "./svg-path.js";
+import { gposPair, gposPairLookups, kernTablePair } from "./tables.js";
+import {
+	deviceAdvanceOf,
+	readVerticalTables,
+	verticalMetric,
+	verticalOriginOf,
+} from "./vertical.js";
 
 /** A table's absolute location in the file. */
 export interface TableRecord {
@@ -38,7 +51,9 @@ export interface FontData extends GlyphSource, FontMetrics {
 	postscriptName: string;
 	numberOfHMetrics: number;
 	hmtxOffset: number;
-	cmap: CmapSubtable;
+	cmap: CharacterMap;
+	/** Every decoded `name` record, by name ID and language tag. */
+	names: Font.Names;
 	/** Absolute offset of `kern`, or `null` when the font has none. */
 	kernOffset: number | null;
 	/** Absolute offset of `GPOS`, or `null` when the font has none. */
@@ -84,6 +99,12 @@ export class Font {
 	readonly subfamily: string;
 	/** PostScript name from `name` ID 6 (`"Inter-Regular"`), `""` when the font records none. */
 	readonly postscriptName: string;
+	/** Full name from `name` ID 4 (`"Inter Regular"`) in English, `""` when the font records none. */
+	readonly fullName: string;
+	/** Copyright notice from `name` ID 0 in English, `""` when the font records none. */
+	readonly copyright: string;
+	/** Version string from `name` ID 5 (`"Version 3.019"`) in English, `""` when the font records none. */
+	readonly version: string;
 	/** The box every glyph fits in, from `head`, in font units. */
 	readonly bbox: Font.BBox;
 	/** Slant in degrees counter-clockwise from vertical, negative when the font leans right; `0` without `post`. */
@@ -116,6 +137,10 @@ export class Font {
 	#contours = new Map<number, Point[][]>();
 	#pairs = new Map<number, number>();
 	#gpos: PairLookups | null = null;
+	#characterSet: readonly number[] | null = null;
+	#codePointsByGlyph: Map<number, number[]> | null = null;
+	#glyphNamer: GlyphNamer | null = null;
+	#vertical: VerticalTables | null = null;
 
 	/**
 	 * @param data - Tables located and checked by `parseFont`.
@@ -130,6 +155,9 @@ export class Font {
 		this.family = data.family;
 		this.subfamily = data.subfamily;
 		this.postscriptName = data.postscriptName;
+		this.fullName = pickName(data.names, 4) ?? "";
+		this.copyright = pickName(data.names, 0) ?? "";
+		this.version = pickName(data.names, 5) ?? "";
 		this.bbox = data.bbox;
 		this.italicAngle = data.italicAngle;
 		this.capHeight = data.capHeight;
@@ -150,16 +178,200 @@ export class Font {
 	}
 
 	/**
-	 * The glyph a character draws with.
+	 * The glyph a character draws with. With a variation selector, the variant the font's
+	 * format 14 `cmap` lists for the pair, falling back to the character's usual glyph.
 	 *
 	 * @param codePoint - A Unicode code point, astral ones included.
+	 * @param variationSelector - The selector following the character (U+FE00–FE0F,
+	 *   U+E0100–E01EF), when there is one.
 	 * @returns The glyph index, `0` (`.notdef`) when the font has no glyph for it.
 	 * @example font.glyphIndex("A".codePointAt(0) ?? 0)
+	 * @example font.glyphIndex(0x82a6, 0xe0101)
 	 */
-	glyphIndex(codePoint: number): number {
+	glyphIndex(codePoint: number, variationSelector?: number): number {
 		if (!Number.isInteger(codePoint) || codePoint < 0) return 0;
-		let glyph = lookupCmap(this.#data.reader, this.#data.cmap, codePoint);
+		let selector = Number.isInteger(variationSelector) ? variationSelector : undefined;
+		let glyph = mapCharacter(this.#data.reader, this.#data.cmap, codePoint, selector);
 		return glyph < this.#data.numGlyphs ? glyph : 0;
+	}
+
+	/**
+	 * Whether the font draws a character with a glyph of its own rather than `.notdef`.
+	 *
+	 * @param codePoint - A Unicode code point.
+	 */
+	hasGlyph(codePoint: number): boolean {
+		return this.glyphIndex(codePoint) !== 0;
+	}
+
+	/**
+	 * Every code point the font maps to a glyph other than `.notdef`, ascending. Built on
+	 * first use and shared afterwards, so treat it as read-only.
+	 */
+	get characterSet(): readonly number[] {
+		this.#characterSet ??= mappedCharacters(this.#data.reader, this.#data.cmap).filter(
+			(codePoint) => this.glyphIndex(codePoint) !== 0,
+		);
+		return this.#characterSet;
+	}
+
+	/**
+	 * The characters `cmap` maps to a glyph, the reverse of `glyphIndex`. The reverse index is
+	 * built from `characterSet` on the first call.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns One string per code point, ascending; `[]` for a glyph no character maps to.
+	 * @example font.stringsForGlyph(font.glyphIndex(97)) // ["a"]
+	 */
+	stringsForGlyph(glyph: number): string[] {
+		if (this.#codePointsByGlyph === null) {
+			let index = new Map<number, number[]>();
+			for (let codePoint of this.characterSet) {
+				let target = this.glyphIndex(codePoint);
+				let list = index.get(target);
+				if (list === undefined) index.set(target, [codePoint]);
+				else list.push(codePoint);
+			}
+			this.#codePointsByGlyph = index;
+		}
+		return (this.#codePointsByGlyph.get(glyph) ?? []).map((codePoint) =>
+			String.fromCodePoint(codePoint),
+		);
+	}
+
+	/** Every `name` record the font carries, by name ID and then BCP 47 language tag. */
+	get names(): Font.Names {
+		return this.#data.names;
+	}
+
+	/**
+	 * One `name` record in the best available language: the requested one or a regional
+	 * variant of it, then English, then the first language the font lists.
+	 *
+	 * @param nameId - `0` copyright, `1`/`2` family/style, `4` full name, `5` version,
+	 *   `6` PostScript name, `16`/`17` typographic family/style, and so on.
+	 * @param language - A BCP 47 tag such as `"ar"` or `"fr-CA"`; English when omitted.
+	 * @returns The name, or `null` when the font records none with that ID.
+	 * @example font.name(2, "ar") // the style name in Arabic, when the font has one
+	 */
+	name(nameId: number, language?: string): string | null {
+		return pickName(this.#data.names, nameId, language);
+	}
+
+	/**
+	 * A glyph's PostScript name, from the CFF charset or the `post` table.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns The name (`"eacute"`), or `null` when the font names no glyph or not this one.
+	 */
+	glyphName(glyph: number): string | null {
+		let fromCff = this.#data.cff?.glyphName(glyph) ?? null;
+		if (fromCff !== null) return fromCff;
+		let { reader, tables, numGlyphs } = this.#data;
+		this.#glyphNamer ??= postGlyphNamer(reader, tables.get("post"), numGlyphs);
+		return this.#glyphNamer(glyph);
+	}
+
+	/**
+	 * The tightest box around a glyph's outline, curve extremes included, in font units.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns The box, all zeros for an empty glyph or an index the font lacks.
+	 */
+	glyphBBox(glyph: number): Font.BBox {
+		return boundingBox(this.outline(glyph));
+	}
+
+	/**
+	 * A glyph's control box: the box around every outline point, control points included.
+	 * TrueType glyphs answer the box stored in their `glyf` header without decoding.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns The box in font units, all zeros for an empty glyph or an index the font lacks.
+	 */
+	glyphCBox(glyph: number): Font.BBox {
+		if (this.#data.cff !== null) return controlBox(this.outline(glyph));
+		let range = glyphRange(this.#data, glyph);
+		if (range === null) return { xMin: 0, yMin: 0, xMax: 0, yMax: 0 };
+		let { reader } = this.#data;
+		return {
+			xMin: reader.i16(range.start + 2),
+			yMin: reader.i16(range.start + 4),
+			xMax: reader.i16(range.start + 6),
+			yMax: reader.i16(range.start + 8),
+		};
+	}
+
+	/**
+	 * A glyph's outline as SVG path data in font units with y up, coordinates rounded to two
+	 * decimals; wrap it in a transform that flips y to draw it.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns Path data such as `"M201 0L201 1462…Z"`, `""` for an empty glyph.
+	 * @example `<path transform="scale(1 -1)" d="${font.svgPath(glyph)}"/>`
+	 */
+	svgPath(glyph: number): string {
+		return toSVGPath(this.outline(glyph));
+	}
+
+	/** The vertical line metrics from `vhea`, `null` when the font has no `vhea`. */
+	get verticalMetrics(): Font.VerticalMetrics | null {
+		return this.#verticalTables().header;
+	}
+
+	/**
+	 * How far the pen moves down after a glyph in vertical text, in font units: the `vmtx`
+	 * advance, or the line height `ascender - descender` for a font without one.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns The advance, `0` for an index the font does not have.
+	 */
+	verticalAdvance(glyph: number): number {
+		if (!this.#hasIndex(glyph)) return 0;
+		let metric = verticalMetric(this.#data.reader, this.#verticalTables(), glyph);
+		return metric?.advance ?? Math.abs(this.ascender - this.descender);
+	}
+
+	/**
+	 * Distance from the top of the vertical line to the top of a glyph, in font units: the
+	 * `vmtx` bearing, or `ascender` minus the glyph's top for a font without one.
+	 *
+	 * @param glyph - Glyph index.
+	 * @returns The bearing, `0` for an index the font does not have.
+	 */
+	topSideBearing(glyph: number): number {
+		if (!this.#hasIndex(glyph)) return 0;
+		let metric = verticalMetric(this.#data.reader, this.#verticalTables(), glyph);
+		return metric?.bearing ?? this.ascender - this.glyphCBox(glyph).yMax;
+	}
+
+	/**
+	 * The y of a glyph's origin in vertical text, in font units: from `VORG` when the font
+	 * has one, the glyph's top plus its `vmtx` top side bearing otherwise, and `ascender`
+	 * for a font without vertical metrics.
+	 *
+	 * @param glyph - Glyph index.
+	 */
+	verticalOrigin(glyph: number): number {
+		let vertical = this.#verticalTables();
+		let origin = verticalOriginOf(this.#data.reader, vertical, glyph);
+		if (origin !== null) return origin;
+		if (!this.#hasIndex(glyph)) return this.ascender;
+		let metric = verticalMetric(this.#data.reader, vertical, glyph);
+		if (metric === null) return this.ascender;
+		return this.glyphCBox(glyph).yMax + metric.bearing;
+	}
+
+	/**
+	 * A glyph's advance hinted for one pixel size, in whole pixels, from `hdmx`.
+	 *
+	 * @param glyph - Glyph index.
+	 * @param ppem - Pixels per em.
+	 * @returns The advance, or `null` when the font has no `hdmx` record for the size.
+	 */
+	deviceAdvance(glyph: number, ppem: number): number | null {
+		if (!this.#hasIndex(glyph)) return null;
+		return deviceAdvanceOf(this.#data.reader, this.#verticalTables(), glyph, ppem);
 	}
 
 	/**
@@ -266,9 +478,9 @@ export class Font {
 	}
 
 	/**
-	 * Places a single line of text, one glyph per code point with no shaping. Each glyph's
-	 * `x` is its origin relative to the line start; kerning (on by default) and `tracking`
-	 * apply between glyphs, so `width` ends at the last glyph's advance.
+	 * Places a single line of text, one glyph per code point with no shaping; a variation
+	 * selector picks its character's variant glyph and places none of its own. Each glyph's
+	 * `x` is its origin relative to the line start; kerning and `tracking` apply between glyphs.
 	 *
 	 * @param text - The line; line breaks are drawn as whatever glyph the font maps them to.
 	 * @param size - Font size in pixels per em.
@@ -308,9 +520,13 @@ export class Font {
 		let kerning = options.kerning ?? true;
 		let pen = 0;
 		let previous = -1;
-		for (let character of text) {
-			let codePoint = character.codePointAt(0) ?? 0;
-			let glyph = this.glyphIndex(codePoint);
+		for (let index = 0; index < text.length;) {
+			let codePoint = text.codePointAt(index) ?? 0;
+			index += codePoint > 0xffff ? 2 : 1;
+			if (isVariationSelector(codePoint)) continue;
+			let next = text.codePointAt(index);
+			let selector = next !== undefined && isVariationSelector(next) ? next : undefined;
+			let glyph = this.glyphIndex(codePoint, selector);
 			if (previous >= 0) {
 				pen += tracking;
 				if (kerning) pen += this.kerning(previous, glyph) * scale;
@@ -352,6 +568,22 @@ export class Font {
 	}
 
 	/**
+	 * Whether a glyph index exists in the font.
+	 *
+	 * @param glyph - Glyph index.
+	 */
+	#hasIndex(glyph: number): boolean {
+		return Number.isInteger(glyph) && glyph >= 0 && glyph < this.#data.numGlyphs;
+	}
+
+	/** The vertical and device metric tables, located on first use. */
+	#verticalTables(): VerticalTables {
+		let { reader, tables, numGlyphs } = this.#data;
+		this.#vertical ??= readVerticalTables(reader, tables, numGlyphs);
+		return this.#vertical;
+	}
+
+	/**
 	 * Decoded contours for a glyph, cached so repeated draws of one character decode once.
 	 *
 	 * @param glyph - Glyph index.
@@ -372,6 +604,20 @@ export namespace Font {
 		yMin: number;
 		xMax: number;
 		yMax: number;
+	}
+
+	/** `name` records by name ID, then BCP 47 language tag (`"en"`, `"ar"`, `"3-1033"`). */
+	export interface Names {
+		readonly [nameId: number]: Readonly<Record<string, string>>;
+	}
+
+	/** Line metrics for vertical text from `vhea`, in font units. */
+	export interface VerticalMetrics {
+		/** Distance from the centre line to the right edge of the vertical line box. */
+		ascender: number;
+		/** Distance from the centre line to the left edge, usually negative. */
+		descender: number;
+		lineGap: number;
 	}
 
 	/** `OS/2.fsType` usage permission, from least to most restrictive. */

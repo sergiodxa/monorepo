@@ -15,10 +15,11 @@ import type { FontData, TableRecord } from "./font.js";
 import type { Reader } from "./reader.js";
 
 import { openCff } from "./cff/index.js";
+import { selectCharacterMap } from "./cmap.js";
 import { FontError } from "./font-error.js";
 import { Font } from "./font.js";
 import { readMetrics } from "./metrics.js";
-import { selectCmap } from "./tables.js";
+import { pickName, readNames } from "./names.js";
 
 /** Tables every font this package reads carries, whatever its outlines. */
 const REQUIRED_TABLES = ["head", "hhea", "maxp", "hmtx", "cmap"] as const;
@@ -101,12 +102,12 @@ export function openSfnt(reader: Reader, offset: number): Result<Font, FontError
 	let outlines = locateOutlines(reader, tables, numGlyphs, indexToLocFormat);
 	if (isFailure(outlines)) return outlines;
 
-	let subtable = selectCmap(reader, cmap.offset, cmap.length);
-	if (subtable === null) {
+	let characterMap = selectCharacterMap(reader, cmap.offset, cmap.length);
+	if (characterMap === null) {
 		return failure(
 			new FontError(
 				"unsupported",
-				"The cmap table has no Unicode format 4 or 12 subtable.",
+				"The cmap table has no Unicode, symbol or single-byte legacy subtable.",
 				"cmap",
 			),
 		);
@@ -124,11 +125,10 @@ export function openSfnt(reader: Reader, offset: number): Result<Font, FontError
 		}
 	}
 
-	let name = tables.get("name");
-	let family = name === undefined ? "" : (readName(reader, name, 16) ?? readName(reader, name, 1));
-	let subfamily =
-		name === undefined ? "" : (readName(reader, name, 17) ?? readName(reader, name, 2));
-	let postscriptName = name === undefined ? "" : readName(reader, name, 6);
+	let names = readNames(reader, tables.get("name"));
+	let family = pickName(names, 16) ?? pickName(names, 1);
+	let subfamily = pickName(names, 17) ?? pickName(names, 2);
+	let postscriptName = pickName(names, 6);
 
 	return success(
 		new Font({
@@ -146,7 +146,8 @@ export function openSfnt(reader: Reader, offset: number): Result<Font, FontError
 			hmtxOffset: hmtx.offset,
 			indexToLocFormat,
 			...outlines.data,
-			cmap: subtable,
+			cmap: characterMap,
+			names,
 			kernOffset: tables.get("kern")?.offset ?? null,
 			gposOffset: tables.get("GPOS")?.offset ?? null,
 			tables,
@@ -214,50 +215,4 @@ function required(tables: Map<string, TableRecord>, tag: string): TableRecord {
  */
 function malformed(message: string, table?: string): Result<never, FontError> {
 	return failure(new FontError("malformed", message, table));
-}
-
-/**
- * Decodes one name record, preferring Windows Unicode, then Unicode, then Windows symbol,
- * then Mac Roman as Latin-1, so the English name a font tool shows is the one returned.
- *
- * @param reader - The font bytes.
- * @param table - The `name` table.
- * @param nameId - `16`/`17` for the typographic family/style, `1`/`2` for the legacy ones,
- *   `6` for the PostScript name.
- * @returns The name, or `null` when the font does not record it.
- */
-function readName(reader: Reader, table: TableRecord, nameId: number): string | null {
-	let count = reader.u16(table.offset + 2);
-	let storage = table.offset + reader.u16(table.offset + 4);
-	let best: { rank: number; offset: number; length: number; wide: boolean } | null = null;
-	for (let index = 0; index < count; index++) {
-		let record = table.offset + 6 + index * 12;
-		if (reader.u16(record + 6) !== nameId) continue;
-		let platform = reader.u16(record);
-		let encoding = reader.u16(record + 2);
-		let language = reader.u16(record + 4);
-		let rank = 0;
-		if (platform === 3 && (encoding === 1 || encoding === 10)) rank = language === 0x409 ? 4 : 3;
-		else if (platform === 0) rank = 2;
-		else if (platform === 3 && encoding === 0) rank = 1.75;
-		else if (platform === 1 && encoding === 0) rank = language === 0 ? 1.5 : 1;
-		if (rank === 0 || (best !== null && best.rank >= rank)) continue;
-		best = {
-			rank,
-			offset: storage + reader.u16(record + 10),
-			length: reader.u16(record + 8),
-			wide: platform !== 1,
-		};
-	}
-	if (best === null || best.offset + best.length > table.offset + table.length) return null;
-
-	let codes: number[] = [];
-	if (best.wide) {
-		for (let index = 0; index + 1 < best.length; index += 2) {
-			codes.push(reader.u16(best.offset + index));
-		}
-	} else {
-		for (let index = 0; index < best.length; index++) codes.push(reader.u8(best.offset + index));
-	}
-	return String.fromCharCode(...codes);
 }

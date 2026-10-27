@@ -492,6 +492,274 @@ describe("metrics, style and embedding permission", () => {
 	});
 });
 
+/**
+ * A `cmap` table holding the given subtables, each under its platform and encoding IDs.
+ *
+ * @param subtables - `[platform, encoding, bytes]` in record order.
+ */
+function cmapOf(...subtables: [number, number, number[]][]): number[] {
+	let header = u16(0, subtables.length);
+	let body: number[] = [];
+	let offset = 4 + subtables.length * 8;
+	for (let [platform, encoding, bytes] of subtables) {
+		header.push(...u16(platform, encoding), ...u32(offset + body.length));
+		body.push(...bytes);
+	}
+	return [...header, ...body];
+}
+
+/**
+ * A format 4 subtable mapping a run of BMP code points to consecutive glyphs from 1.
+ *
+ * @param start - First code point, mapped to glyph 1.
+ * @param count - How many code points.
+ */
+function format4(start: number, count: number): number[] {
+	let end = start + count - 1;
+	return [
+		...u16(4, 32, 0, 4, 4, 1, 0),
+		...u16(end, 0xffff),
+		...u16(0),
+		...u16(start, 0xffff),
+		...u16((1 - start) & 0xffff, 1),
+		...u16(0, 0),
+	];
+}
+
+/**
+ * A format 12 or 13 subtable of one group.
+ *
+ * @param format - `12` sequential or `13` constant.
+ * @param start - First code point.
+ * @param end - Last code point.
+ * @param glyph - The group's first (format 12) or only (format 13) glyph.
+ */
+function groups(format: number, start: number, end: number, glyph: number): number[] {
+	return [...u16(format, 0), ...u32(28, 0, 1), ...u32(start, end, glyph)];
+}
+
+/** Code points of a laid-out line, glyph by glyph. */
+function placed(font: Font, text: string): [number, number][] {
+	return font.layout(text, 1000).glyphs.map(({ glyph, codePoint }) => [glyph, codePoint]);
+}
+
+describe("character mapping", () => {
+	test("reads every mapping format", () => {
+		let byFormat = (subtable: number[]) => unwrap(minimal({ cmap: cmapOf([0, 3, subtable]) }));
+
+		let format0 = byFormat([
+			...u16(0, 262, 0),
+			...Array.from({ length: 256 }, (_, code) => (code === 0x41 ? 2 : 0)),
+		]);
+		expect([format0.glyphIndex(0x41), format0.glyphIndex(0x42), format0.glyphIndex(0x141)]).toEqual(
+			[2, 0, 0],
+		);
+		expect(format0.characterSet).toEqual([0x41]);
+
+		let keys = Array.from({ length: 256 }, (_, byte) => (byte === 0x81 ? 8 : 0));
+		let format2 = byFormat([
+			...u16(2, 538, 0),
+			...u16(...keys),
+			...u16(0x41, 1, 0, 10),
+			...u16(0x40, 1, 0, 4),
+			...u16(1, 2),
+		]);
+		expect([0x41, 0x8140, 0x81, 0x8141].map((code) => format2.glyphIndex(code))).toEqual([
+			1, 2, 0, 0,
+		]);
+		expect(format2.characterSet).toEqual([0x41, 0x8140]);
+
+		let format6 = byFormat([...u16(6, 14, 0, 0x41, 2), ...u16(1, 2)]);
+		expect([format6.glyphIndex(0x40), format6.glyphIndex(0x41), format6.glyphIndex(0x42)]).toEqual([
+			0, 1, 2,
+		]);
+
+		let format8 = byFormat([
+			...u16(8, 0),
+			...u32(8220, 0),
+			...Array.from<number>({ length: 8192 }).fill(0),
+			...u32(1, 0x10000, 0x10001, 1),
+		]);
+		expect([format8.glyphIndex(0x10000), format8.glyphIndex(0x10001)]).toEqual([1, 2]);
+		expect(format8.characterSet).toEqual([0x10000, 0x10001]);
+
+		let format10 = byFormat([...u16(10, 0), ...u32(24, 0, 0x1f600, 2), ...u16(2, 1)]);
+		expect([format10.glyphIndex(0x1f600), format10.glyphIndex(0x1f601)]).toEqual([2, 1]);
+
+		let format13 = byFormat(groups(13, 0x41, 0x43, 2));
+		expect(format13.stringsForGlyph(2)).toEqual(["A", "B", "C"]);
+		expect(format13.glyphIndex(0x44)).toBe(0);
+	});
+
+	test("prefers full-repertoire Unicode subtables and skips truncated ones", () => {
+		let both = cmapOf([3, 1, format4(0x41, 1)], [3, 10, groups(12, 0x41, 0x41, 2)]);
+		expect(unwrap(minimal({ cmap: both })).glyphIndex(0x41)).toBe(2);
+		let truncated = [...u16(12, 0), ...u32(28, 0, 99), ...u32(0x41, 0x41, 2)];
+		let fallback = cmapOf([3, 1, format4(0x41, 1)], [3, 10, truncated]);
+		expect(unwrap(minimal({ cmap: fallback })).glyphIndex(0x41)).toBe(1);
+	});
+
+	test("finds a symbol font's characters in the U+F000 block too", () => {
+		let font = unwrap(minimal({ cmap: cmapOf([3, 0, format4(0xf041, 2)]) }));
+		expect([font.glyphIndex(0xf041), font.glyphIndex(0x41), font.glyphIndex(0x42)]).toEqual([
+			1, 1, 2,
+		]);
+		expect(font.characterSet).toEqual([0xf041, 0xf042]);
+	});
+
+	test("maps Unicode through Mac Roman for a Macintosh-only cmap", () => {
+		let bytes = Array.from({ length: 256 }, (_, code) => [0, 0x41, 0xa5].indexOf(code)).map(
+			(glyph) => Math.max(glyph, 0),
+		);
+		let font = unwrap(minimal({ cmap: cmapOf([1, 0, [...u16(0, 262, 0), ...bytes]]) }));
+		expect([font.glyphIndex(0x41), font.glyphIndex(0x2022), font.glyphIndex(0xa5)]).toEqual([
+			1, 2, 0,
+		]);
+		expect(font.characterSet).toEqual([0x41, 0x2022]);
+		expect(font.stringsForGlyph(2)).toEqual(["•"]);
+	});
+
+	test("folds variation selectors into the glyph before them", () => {
+		let variations = [
+			...u16(14),
+			...u32(10 + 11 + 8 + 9, 1),
+			0x00,
+			0xfe,
+			0x00,
+			...u32(21, 29),
+			...u32(1),
+			0x00,
+			0x00,
+			0x42,
+			0,
+			...u32(1),
+			0x00,
+			0x00,
+			0x41,
+			...u16(2),
+		];
+		let font = unwrap(minimal({ cmap: cmapOf([0, 3, format4(0x41, 2)], [0, 5, variations]) }));
+		expect([
+			font.glyphIndex(0x41, 0xfe00),
+			font.glyphIndex(0x42, 0xfe00),
+			font.glyphIndex(0x41, 0xfe01),
+		]).toEqual([2, 2, 1]);
+		expect(placed(font, "A\uFE00B\uFE00A")).toEqual([
+			[2, 0x41],
+			[2, 0x42],
+			[1, 0x41],
+		]);
+		expect(font.measure("A\uFE00", 1000)).toBe(700);
+	});
+});
+
+describe("names", () => {
+	test("reads language-tag records and Macintosh-encoded names", () => {
+		let family = utf16("Mini");
+		let mac = [...ascii("Mini"), 0xa5];
+		let tag = utf16("de-CH");
+		let storage = [...family, ...mac, ...tag];
+		let name = [
+			...u16(1, 2, 6 + 24 + 2 + 4),
+			...u16(1, 0, 0, 4, mac.length, family.length),
+			...u16(3, 1, 0x8000, 1, family.length, 0),
+			...u16(1),
+			...u16(tag.length, family.length + mac.length),
+			...storage,
+		];
+		let font = unwrap(minimal({ name }));
+		expect(font.names[1]).toEqual({ "de-CH": "Mini" });
+		expect([font.fullName, font.name(4, "de"), font.family]).toEqual(["Mini•", "Mini•", "Mini"]);
+		expect([font.copyright, font.version]).toEqual(["", ""]);
+	});
+
+	test("skips records that point past the table", () => {
+		let name = [...u16(0, 1, 18), ...u16(3, 1, 0x409, 1, 40, 0), ...utf16("Mini")];
+		let font = unwrap(minimal({ name }));
+		expect([font.family, font.names]).toEqual(["", {}]);
+	});
+});
+
+describe("glyph names", () => {
+	/** A `post` table of a version with the given glyph data after its header. */
+	function postVersion(version: number, data: number[]): number[] {
+		return [...u32(version), ...Array.from<number>({ length: 28 }).fill(0), ...data];
+	}
+
+	test("reads every post format", () => {
+		let names = (post: number[]) => {
+			let font = unwrap(minimal({ post }));
+			return [0, 1, 2, 3].map((glyph) => font.glyphName(glyph));
+		};
+		expect(names(postVersion(0x00010000, []))).toEqual([
+			".notdef",
+			".null",
+			"nonmarkingreturn",
+			null,
+		]);
+		let format2 = postVersion(0x00020000, [...u16(3, 0, 258, 36), 7, ...ascii("diamond")]);
+		expect(names(format2)).toEqual([".notdef", "diamond", "A", null]);
+		expect(names(postVersion(0x00025000, [...u16(3), 0, 35, 0x10000 - 1]))).toEqual([
+			".notdef",
+			"A",
+			".null",
+			null,
+		]);
+		expect(names(postVersion(0x00030000, []))).toEqual([null, null, null, null]);
+		expect(names(postVersion(0x00040000, u16(0xffff, 0x41, 0x42)))).toEqual([null, "A", "B", null]);
+	});
+
+	test("answers null for a format 2 string past the table", () => {
+		let post = postVersion(0x00020000, [...u16(3, 0, 258, 259), 7, ...ascii("diamond"), 40, 0x41]);
+		let font = unwrap(minimal({ post }));
+		expect([font.glyphName(1), font.glyphName(2)]).toEqual(["diamond", null]);
+	});
+});
+
+describe("vertical and device metrics", () => {
+	let vhea = [
+		...u32(0x00011000),
+		...u16(500, 0x10000 - 500, 0),
+		...Array.from<number>({ length: 24 }).fill(0),
+		...u16(2),
+	];
+
+	test("reads vhea and vmtx, later glyphs sharing the last advance", () => {
+		let font = unwrap(minimal({ vhea, vmtx: [...u16(1100, 50, 900, 60), ...u16(70)] }));
+		expect(font.verticalMetrics).toEqual({ ascender: 500, descender: -500, lineGap: 0 });
+		expect([0, 1, 2].map((glyph) => font.verticalAdvance(glyph))).toEqual([1100, 900, 900]);
+		expect([0, 1, 2].map((glyph) => font.topSideBearing(glyph))).toEqual([50, 60, 70]);
+		expect(font.verticalOrigin(1)).toBe(100 + 60);
+	});
+
+	test("falls back to the line height without usable vertical metrics", () => {
+		for (let font of [unwrap(minimal()), unwrap(minimal({ vhea, vmtx: u16(1100) }))]) {
+			expect(font.verticalAdvance(1)).toBe(1000);
+			expect(font.topSideBearing(1)).toBe(800 - 100);
+			expect(font.verticalOrigin(1)).toBe(800);
+		}
+		expect(unwrap(minimal()).verticalMetrics).toBeNull();
+	});
+
+	test("reads vertical origins from VORG", () => {
+		let font = unwrap(minimal({ VORG: [...u16(1, 0, 880, 1), ...u16(2, 900)] }));
+		expect([font.verticalOrigin(1), font.verticalOrigin(2)]).toEqual([880, 900]);
+	});
+
+	test("reads hdmx records padded to their record size", () => {
+		let hdmx = [...u16(0, 2), ...u32(8), 11, 7, 3, 4, 5, 0, 0, 0, 12, 9, 5, 6, 7, 0, 0, 0];
+		let font = unwrap(minimal({ hdmx }));
+		expect([
+			font.deviceAdvance(1, 11),
+			font.deviceAdvance(2, 12),
+			font.deviceAdvance(0, 12),
+		]).toEqual([4, 7, 5]);
+		expect([font.deviceAdvance(1, 13), font.deviceAdvance(5, 11)]).toEqual([null, null]);
+		let short = [...u16(0, 1), ...u32(4), 11, 7, 3, 4];
+		expect(unwrap(minimal({ hdmx: short })).deviceAdvance(1, 11)).toBeNull();
+	});
+});
+
 describe("rejected files", () => {
 	/** The code and table of a rejection, for compact assertions. */
 	function rejection(bytes: Uint8Array | ReturnType<typeof parseFont>) {
@@ -513,10 +781,10 @@ describe("rejected files", () => {
 		expect(rejection(minimal({ cmap: null }))).toEqual({ code: "missing-table", table: "cmap" });
 	});
 
-	test("declines a font with no Unicode cmap subtable", () => {
+	test("declines a font whose only cmap subtable has an encoding it cannot map", () => {
 		let cmap = [
 			...u16(0, 1),
-			...u16(1, 0),
+			...u16(1, 1),
 			...u32(12),
 			...u16(0, 262, 0),
 			...Array.from({ length: 256 }, () => 0),

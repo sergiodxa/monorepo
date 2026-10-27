@@ -99,6 +99,12 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
 - **Variable fonts.** `axes`, `namedInstances`, and `instance({ wght: 700 })` returning a
   `Font`. Covers `avar`, `gvar` with shared, enumerated and empty point sets, interpolation of
   untouched points, `HVAR` metrics, CFF2 blending, and feature variations in GSUB and GPOS.
+- **Glyph data on `Font`.** Per-glyph data is methods taking a glyph id (`glyphBBox`,
+  `glyphCBox`, `glyphName`, `svgPath`, `verticalAdvance`, `deviceAdvance`); `Font.bbox` stays
+  the font's own box. `name(id, language)` takes the language per call, falling back to a
+  regional variant, then English, then the first language listed.
+- **Character mapping.** Unicode subtables are preferred, then a Windows symbol subtable
+  (where a byte code `c` also tries U+F000 + `c`), then the first single-byte legacy one.
 - **CFF outlines.** A CFF table is parsed and validated when the font opens; charstrings run
   on first draw and the default instance is cached per glyph. A charstring that exceeds the
   limits (subroutine depth 10, the format's stack size, 100,000 operators per glyph), calls a
@@ -268,6 +274,12 @@ by one under pressure leaves the package shaped by whichever font broke first.
 
 Decisions made while implementing, where this ADR left a choice open:
 
+- **Glyph data on `Font`.** Per-glyph data is methods taking a glyph id (`glyphBBox`,
+  `glyphCBox`, `glyphName`, `svgPath`, `verticalAdvance`, `deviceAdvance`); `Font.bbox` stays
+  the font's own box. `name(id, language)` takes the language per call, falling back to a
+  regional variant, then English, then the first language listed.
+- **Character mapping.** Unicode subtables are preferred, then a Windows symbol subtable
+  (where a byte code `c` also tries U+F000 + `c`), then the first single-byte legacy one.
 - **CFF outlines.** A CFF table is parsed and validated when the font opens; charstrings run
   on first draw and the default instance is cached per glyph. A charstring that exceeds the
   limits (subroutine depth 10, the format's stack size, 100,000 operators per glyph), calls a
@@ -284,7 +296,7 @@ Decisions made while implementing, where this ADR left a choice open:
 
 ## Current Progress
 
-- [ ] Phase 1: Mapping, names, glyph data and metrics
+- [x] Phase 1: Mapping, names, glyph data and metrics
 - [ ] Phase 2: Containers
 - [x] Phase 3: CFF and CFF2 outlines
 - [ ] Phase 4: Shaping
