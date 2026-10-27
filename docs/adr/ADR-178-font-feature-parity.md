@@ -96,6 +96,17 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
 
   `layout()` keeps its current fast path for text that needs no shaping.
 
+- **Unicode data.** `scripts/generate-unicode.ts` reads the Unicode Character Database files
+  from unicode.org and writes `src/shaping/unicode/unicode.data.ts`: one run-length table of
+  records (general category, script, combining class, joining type, Indic syllabic and
+  positional categories) as base64 LEB128, binary-searched and decoded on first lookup, plus
+  bidi mirroring and default-ignorable ranges; about 15 KB gzipped. Regenerate it with each
+  Unicode release. Canonical composition uses `String.prototype.normalize`, so no
+  decomposition tables ship.
+- **Shaping output.** `shape(font, text, options)` from `@sdxc/font/shaping` answers glyphs in
+  visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
+  first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
+  buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
 - **Variable fonts.** `axes`, `namedInstances`, and `instance({ wght: 700 })` returning a
   `Font`. Covers `avar`, `gvar` with shared, enumerated and empty point sets, interpolation of
   untouched points, `HVAR` metrics, CFF2 blending, and feature variations in GSUB and GPOS.
@@ -113,6 +124,17 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
   `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
   The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
   variation tables alike.
+- **Unicode data.** `scripts/generate-unicode.ts` reads the Unicode Character Database files
+  from unicode.org and writes `src/shaping/unicode/unicode.data.ts`: one run-length table of
+  records (general category, script, combining class, joining type, Indic syllabic and
+  positional categories) as base64 LEB128, binary-searched and decoded on first lookup, plus
+  bidi mirroring and default-ignorable ranges; about 15 KB gzipped. Regenerate it with each
+  Unicode release. Canonical composition uses `String.prototype.normalize`, so no
+  decomposition tables ship.
+- **Shaping output.** `shape(font, text, options)` from `@sdxc/font/shaping` answers glyphs in
+  visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
+  first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
+  buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
 - **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
   `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
   outlines and advances are varied per glyph on first use and cached. Normalized coordinates
@@ -295,6 +317,17 @@ Decisions made while implementing, where this ADR left a choice open:
   `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
   The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
   variation tables alike.
+- **Unicode data.** `scripts/generate-unicode.ts` reads the Unicode Character Database files
+  from unicode.org and writes `src/shaping/unicode/unicode.data.ts`: one run-length table of
+  records (general category, script, combining class, joining type, Indic syllabic and
+  positional categories) as base64 LEB128, binary-searched and decoded on first lookup, plus
+  bidi mirroring and default-ignorable ranges; about 15 KB gzipped. Regenerate it with each
+  Unicode release. Canonical composition uses `String.prototype.normalize`, so no
+  decomposition tables ship.
+- **Shaping output.** `shape(font, text, options)` from `@sdxc/font/shaping` answers glyphs in
+  visual order, positions in font units, and clusters as UTF-16 offsets of each cluster's
+  first character. A lookup pass is bounded per glyph, contextual nesting to 64 levels and
+  buffer growth to 32 times the input, so a hostile font cannot hang a shaper.
 - **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
   `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
   outlines and advances are varied per glyph on first use and cached. Normalized coordinates
