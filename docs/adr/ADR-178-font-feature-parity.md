@@ -99,6 +99,14 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
 - **Variable fonts.** `axes`, `namedInstances`, and `instance({ wght: 700 })` returning a
   `Font`. Covers `avar`, `gvar` with shared, enumerated and empty point sets, interpolation of
   untouched points, `HVAR` metrics, CFF2 blending, and feature variations in GSUB and GPOS.
+- **CFF outlines.** A CFF table is parsed and validated when the font opens; charstrings run
+  on first draw and the default instance is cached per glyph. A charstring that exceeds the
+  limits (subroutine depth 10, the format's stack size, 100,000 operators per glyph), calls a
+  missing subroutine or uses an unknown operator ends that glyph with what it drew so far.
+  Operand order follows the Type 2 specification where implementations disagree (`sub`, `div`,
+  `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
+  The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
+  variation tables alike.
 - **Color.** Layered `COLR` glyphs with `CPAL` palettes, and `sbix` bitmaps handed back as PNG
   or JPEG bytes for `@sdxc/png` or a browser to decode.
 - **Subsetting.** CFF and CID-keyed CFF, keeping only the defaults that differ, and variable
@@ -260,6 +268,14 @@ by one under pressure leaves the package shaped by whichever font broke first.
 
 Decisions made while implementing, where this ADR left a choice open:
 
+- **CFF outlines.** A CFF table is parsed and validated when the font opens; charstrings run
+  on first draw and the default instance is cached per glyph. A charstring that exceeds the
+  limits (subroutine depth 10, the format's stack size, 100,000 operators per glyph), calls a
+  missing subroutine or uses an unknown operator ends that glyph with what it drew so far.
+  Operand order follows the Type 2 specification where implementations disagree (`sub`, `div`,
+  `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
+  The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
+  variation tables alike.
 - **Color.** `@sdxc/font/color` exposes functions over a `Font` (`colorLayers`, `palettes`,
   `bitmap`, `strikes`). `colorLayers` answers `null` for a glyph without color, so a caller
   draws the plain outline; a layer that takes the text color carries `"foreground"`. `COLR`
@@ -270,7 +286,7 @@ Decisions made while implementing, where this ADR left a choice open:
 
 - [ ] Phase 1: Mapping, names, glyph data and metrics
 - [ ] Phase 2: Containers
-- [ ] Phase 3: CFF and CFF2 outlines
+- [x] Phase 3: CFF and CFF2 outlines
 - [ ] Phase 4: Shaping
 - [ ] Phase 5: Variable fonts
 - [x] Phase 6: Color glyphs
