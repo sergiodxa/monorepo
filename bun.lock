@@ -2114,6 +2114,7 @@
         "@sdxc/pagination": "workspace:*",
         "@sdxc/passkey": "workspace:*",
         "@sdxc/password-policy": "workspace:*",
+        "@sdxc/pdf": "workspace:*",
         "@sdxc/png": "workspace:*",
         "@sdxc/privacy-pass": "workspace:*",
         "@sdxc/problem": "workspace:*",
