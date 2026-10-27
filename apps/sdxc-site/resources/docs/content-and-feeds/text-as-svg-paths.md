@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 34
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-26
 outcomes:
     - "How to measure text with a font's real metrics using `@sdxc/font`"
     - "How to shorten text to fit a width and turn glyphs into SVG path data"
@@ -123,7 +123,9 @@ Two decimals is finer than any screen shows, and keeps the path data short.
 ## Lay out the badge
 
 A badge is a grey label and a coloured value, each padded on both sides. Both widths come from
-`measure`, and the baseline centres the font's ascender-to-descender box vertically:
+`measure`. The baseline centres the font's cap height, the height of a capital or a digit, so
+the text sits in the middle of the badge whatever room the font leaves above for accents.
+`capHeight` is `null` in a font too old to record it, and the ascender stands in:
 
 ```typescript {% title="app/services/badges/badge-layout.ts" %}
 import type { Font } from "@sdxc/font";
@@ -150,7 +152,7 @@ export function badgeLayout(font: Font, label: string, value: string): BadgeLayo
 	let labelWidth = Math.ceil(font.measure(label, SIZE)) + PADDING * 2;
 	let valueWidth = Math.ceil(font.measure(shown, SIZE)) + PADDING * 2;
 	let scale = SIZE / font.unitsPerEm;
-	let baseline = HEIGHT / 2 + ((font.ascender + font.descender) / 2) * scale;
+	let baseline = HEIGHT / 2 + ((font.capHeight ?? font.ascender) / 2) * scale;
 
 	return {
 		width: labelWidth + valueWidth,
@@ -224,6 +226,31 @@ export default createAction(routes.badge, async (ctx) => {
 
 `<title>` and `aria-label` carry the text a screen reader announces, since the paths are only
 shapes.
+
+## Embed the font in a file of your own
+
+Path data carries the shapes and leaves the font behind. A format that carries the font itself,
+such as a PDF or a font file for another program, embeds it, which the font's license may
+forbid. `font.embedding` reports what the license allows, and `font.subset(glyphs)` writes a
+`.ttf` holding only the glyphs you name:
+
+```typescript {% title="app/services/badges/embedded-font.ts" %}
+import type { Font } from "@sdxc/font";
+
+export function embeddedFont(font: Font, text: string) {
+	if (font.embedding.allowed === "restricted") return null;
+	let glyphs = font
+		.layout(text, font.unitsPerEm)
+		.glyphs.map((placed) => placed.glyph);
+	return font.subset(glyphs);
+}
+```
+
+The subset is a `Result` holding `bytes`, a complete `.ttf`, and `glyphId(original)`, the id a
+glyph has in it. Its character map is empty, so the file you write addresses glyphs by those ids,
+as PDF does. A font whose license forbids subsetting answers a `not-permitted` `FontError`, and
+embeds whole or not at all. [`@sdxc/pdf`](/api/pdf) does all of this for you, as
+[Generate PDF documents](/docs/content-and-feeds/pdf-documents) shows.
 
 ## Test the layout
 
