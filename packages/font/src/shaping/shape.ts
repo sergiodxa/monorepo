@@ -1,7 +1,7 @@
 /**
- * `shape()`: turns a run of text into positioned glyphs with OpenType layout. It picks the
- * script, language system and shaper, runs the plan's GSUB stages and GPOS, falls back to
- * the legacy `kern` table, and answers glyphs in visual order with their clusters.
+ * `shape()`: turns a run of text into positioned glyphs. It runs the plan's GSUB and GPOS
+ * stages, or an AAT font's `morx` chains, places marks by combining class without GPOS,
+ * kerns with the legacy `kern` table, and answers glyphs in visual order with clusters.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,8 +11,11 @@ import type { Font } from "../font.js";
 
 import type { UserFeatures } from "./plan.js";
 import type { GlyphPosition } from "./processor.js";
+import type { DefaultShaper } from "./shapers/index.js";
 import type { ShapingFont } from "./shaping-font.js";
 
+import { applyMorx, morxFeatureTags } from "./aat/morx.js";
+import { positionMarksFallback } from "./fallback-marks.js";
 import { GlyphInfo } from "./glyph-info.js";
 import { GposProcessor } from "./gpos.js";
 import { GsubProcessor } from "./gsub.js";
@@ -70,7 +73,10 @@ export interface ShapedText {
 	/** The language system tag used, `null` for the script's default. */
 	language: string | null;
 	direction: "ltr" | "rtl";
-	/** Every feature the plan applied, the shaper's and the user's. */
+	/**
+	 * Every feature the plan applied, the shaper's and the user's; for a `morx` font, the
+	 * OpenType tags of the AAT features its chains ran with.
+	 */
 	features: string[];
 	/** The sum of the glyphs' `xAdvance`. */
 	advanceWidth: number;
@@ -78,7 +84,8 @@ export interface ShapedText {
 
 /**
  * Shapes one run of text, a single script in a single direction: ligatures, contextual
- * forms, mark positioning and kerning as the font's GSUB, GPOS and `kern` tables describe.
+ * forms, mark positioning and kerning as the font's GSUB, GPOS, `morx` and `kern` tables
+ * describe, at the font's own instance for a variable font.
  *
  * @param font - A font from `parseFont`.
  * @param text - The run; split mixed-direction text into runs first.
@@ -96,13 +103,15 @@ export function shape(font: Font, text: string, options: ShapeOptions = {}): Sha
 	let language =
 		options.language === undefined ? null : options.language.padEnd(4, " ").slice(0, 4);
 	let glyphs = glyphsForText(shaping, text);
-	let gsub = shaping.gsub === null ? null : new GsubProcessor(shaping, shaping.gsub);
-	let gpos = shaping.gpos === null ? null : new GposProcessor(shaping, shaping.gpos);
+	let { coords } = shaping;
+	let gsub = shaping.gsub === null ? null : new GsubProcessor(shaping, shaping.gsub, coords);
+	let gpos = shaping.gpos === null ? null : new GposProcessor(shaping, shaping.gpos, coords);
 	let chosen = gpos?.selectScript(candidates, language, direction) ?? null;
 	chosen = gsub?.selectScript(candidates, language, direction) ?? chosen;
 	let script = chosen !== null && candidates.includes(chosen) ? chosen : (candidates[0] ?? "DFLT");
 	let plan = new ShapingPlan(shaping, chosen ?? script, direction, language);
-	let shaper = chooseShaper([script]);
+	let morx = gsub === null ? shaping.morx : null;
+	let shaper = chooseShaper(morx === null ? [script] : []);
 	shaper.plan(plan, glyphs, options.features);
 	for (let required of [gsub?.requiredFeature, gpos?.requiredFeature]) {
 		if (required == null || plan.allFeatures.has(required)) continue;
@@ -111,25 +120,21 @@ export function shape(font: Font, text: string, options: ShapeOptions = {}): Sha
 		for (let glyph of glyphs) glyph.features.add(required);
 	}
 	if (direction === "rtl") mirrorGlyphs(shaping, glyphs);
-	plan.substitute(gsub, glyphs);
-
-	let positions: GlyphPosition[] = glyphs.map((glyph) => ({
-		xAdvance: font.advance(glyph.glyph),
-		yAdvance: 0,
-		xOffset: 0,
-		yOffset: 0,
-	}));
-	if (shaper.zeroMarkWidths === "before-gpos") zeroMarkAdvances(glyphs, positions);
-	if (gpos !== null) plan.position(gpos, glyphs, positions);
-	if (shaper.zeroMarkWidths === "after-gpos") zeroMarkAdvances(glyphs, positions);
-	gpos?.fixAttachments(glyphs, positions);
-	if (direction === "rtl") {
-		glyphs.reverse();
-		positions.reverse();
+	let features = [...plan.allFeatures.keys()];
+	let positions: GlyphPosition[] = [];
+	if (morx === null) {
+		plan.substitute(gsub, glyphs);
+		positions = positionOpenType(plan, shaper, gpos, glyphs);
+	} else {
+		if (direction === "rtl") glyphs.reverse();
+		let requested = requestedFeatures(options.features);
+		features = applyMorx(shaping, morx, glyphs, requested, shaping.feat);
+		positions = initialPositions(shaping, glyphs);
 	}
 	let kernEnabled = !plan.disabledFeatures.has("kern");
 	if (shaping.kern !== null && kernEnabled && gpos?.features.has("kern") !== true) {
 		applyKernTable(shaping, glyphs, positions);
+		if (!features.includes("kern")) features.push("kern");
 	}
 	hideDefaultIgnorables(shaping, glyphs, positions);
 
@@ -147,14 +152,15 @@ export function shape(font: Font, text: string, options: ShapeOptions = {}): Sha
 		script: plan.script,
 		language: gsub?.languageTag ?? gpos?.languageTag ?? null,
 		direction,
-		features: [...plan.allFeatures.keys()],
+		features,
 		advanceWidth: shaped.reduce((sum, glyph) => sum + glyph.xAdvance, 0),
 	};
 }
 
 /**
- * The feature tags a font's GSUB and GPOS offer under a script and language system, plus
- * `kern` when the font has a legacy `kern` table; the tags `features` can turn on.
+ * The feature tags a font's GSUB and GPOS offer under a script and language system, or a
+ * `morx` font's AAT features by their OpenType tags, plus `kern` when the font has a legacy
+ * `kern` table; the tags `features` can turn on.
  *
  * @param font - A font from `parseFont`.
  * @param options - The script and language to look under; the default script when left out.
@@ -171,12 +177,78 @@ export function availableFeatures(
 	let tags = new Set<string>();
 	for (let table of [shaping.gsub, shaping.gpos]) {
 		if (table === null) continue;
-		let processor = new GsubProcessor(shaping, table);
+		let processor = new GsubProcessor(shaping, table, shaping.coords);
 		processor.selectScript(candidates, language, "ltr");
 		for (let tag of processor.features.keys()) tags.add(tag);
 	}
+	if (shaping.gsub === null && shaping.morx !== null) {
+		for (let tag of morxFeatureTags(shaping.morx)) tags.add(tag);
+	}
 	if (shaping.kern !== null) tags.add("kern");
 	return [...tags];
+}
+
+/**
+ * Each glyph's advance, before any positioning.
+ *
+ * @param font - The shaping view.
+ * @param glyphs - The buffer.
+ */
+function initialPositions(font: ShapingFont, glyphs: readonly GlyphInfo[]): GlyphPosition[] {
+	return glyphs.map((glyph) => ({
+		xAdvance: font.font.advance(glyph.glyph),
+		yAdvance: 0,
+		xOffset: 0,
+		yOffset: 0,
+	}));
+}
+
+/**
+ * Positions an OpenType-substituted buffer: GPOS and attachments, mark advances zeroed when
+ * the shaper asks, combining-class mark placement for a font without GPOS, then the buffer
+ * and its positions reversed into visual order for a right-to-left run.
+ *
+ * @param plan - The plan GSUB ran.
+ * @param shaper - The shaper that planned it.
+ * @param gpos - The GPOS processor, `null` without GPOS.
+ * @param glyphs - The buffer in logical order, reversed in place for a right-to-left run.
+ */
+function positionOpenType(
+	plan: ShapingPlan,
+	shaper: DefaultShaper,
+	gpos: GposProcessor | null,
+	glyphs: GlyphInfo[],
+): GlyphPosition[] {
+	let positions = initialPositions(plan.font, glyphs);
+	if (shaper.zeroMarkWidths === "before-gpos") zeroMarkAdvances(glyphs, positions);
+	if (gpos !== null) plan.position(gpos, glyphs, positions);
+	if (shaper.zeroMarkWidths === "after-gpos") zeroMarkAdvances(glyphs, positions);
+	gpos?.fixAttachments(glyphs, positions);
+	if (gpos === null) positionMarksFallback(plan.font, glyphs, positions, plan.direction);
+	if (plan.direction === "rtl") {
+		glyphs.reverse();
+		positions.reverse();
+	}
+	return positions;
+}
+
+/**
+ * The features the caller turned on or off, by tag; a number turns a feature on unless it
+ * is `0`.
+ *
+ * @param features - The `features` option.
+ */
+function requestedFeatures(features: UserFeatures | undefined): Map<string, boolean> {
+	let requested = new Map<string, boolean>();
+	if (features === undefined) return requested;
+	if (Array.isArray(features)) {
+		for (let tag of features as readonly string[]) requested.set(tag, true);
+		return requested;
+	}
+	for (let [tag, value] of Object.entries(features as Record<string, boolean | number>)) {
+		requested.set(tag, value !== false && value !== 0);
+	}
+	return requested;
 }
 
 /**

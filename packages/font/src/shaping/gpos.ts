@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { itemDelta } from "../item-variation-store.js";
+
 import type { GlyphInfo } from "./glyph-info.js";
 import type { GlyphPosition } from "./processor.js";
 
@@ -24,6 +26,9 @@ const GPOS_TYPE = {
 	CONTEXT: 7,
 	CHAINING: 8,
 };
+
+/** The `deltaFormat` of a device table that holds an ItemVariationStore address instead. */
+const VARIATION_INDEX_FORMAT = 0x8000;
 
 /** A point in font units. */
 interface Anchor {
@@ -59,9 +64,10 @@ export class GposProcessor extends LayoutProcessor {
 				let index = coverageIndex(reader, offset + reader.u16(offset + 2), glyph.glyph);
 				if (index === -1) return false;
 				let format = reader.u16(offset + 4);
-				if (reader.u16(offset) === 1) this.#applyValue(this.iterator.index, offset + 6, format);
+				let at = this.iterator.index;
+				if (reader.u16(offset) === 1) this.#applyValue(at, offset + 6, format, offset);
 				else if (index < reader.u16(offset + 6)) {
-					this.#applyValue(this.iterator.index, offset + 8 + index * valueSize(format), format);
+					this.#applyValue(at, offset + 8 + index * valueSize(format), format, offset);
 				} else return false;
 				return true;
 			}
@@ -84,31 +90,50 @@ export class GposProcessor extends LayoutProcessor {
 	}
 
 	/**
-	 * Adds a value record to a glyph's position. Device and variation adjustments are left
-	 * out: positions are those of the default instance at the font's design resolution.
+	 * Adds a value record to a glyph's position. VariationIndex device tables add their delta
+	 * at the font's instance; hinting device tables depend on a pixel size and are left out.
 	 *
 	 * @param index - Buffer index of the glyph.
 	 * @param offset - Absolute offset of the value record.
 	 * @param format - Its `ValueFormat`.
+	 * @param base - Absolute offset of the subtable its device offsets are relative to.
 	 */
-	#applyValue(index: number, offset: number, format: number) {
+	#applyValue(index: number, offset: number, format: number, base: number) {
 		let position = this.positions[index];
 		if (position === undefined) return;
 		let { reader } = this.font;
+		let fields = [0, 0, 0, 0];
 		let at = offset;
-		if ((format & 0x0001) !== 0) {
-			position.xOffset += reader.i16(at);
+		for (let field = 0; field < 4; field++) {
+			if ((format & (1 << field)) === 0) continue;
+			fields[field] = reader.i16(at);
 			at += 2;
 		}
-		if ((format & 0x0002) !== 0) {
-			position.yOffset += reader.i16(at);
+		for (let field = 0; field < 4; field++) {
+			if ((format & (0x10 << field)) === 0) continue;
+			let device = reader.u16(at);
 			at += 2;
+			if (device !== 0) fields[field] = (fields[field] ?? 0) + this.#deviceDelta(base + device);
 		}
-		if ((format & 0x0004) !== 0) {
-			position.xAdvance += reader.i16(at);
-			at += 2;
-		}
-		if ((format & 0x0008) !== 0) position.yAdvance += reader.i16(at);
+		position.xOffset += fields[0] ?? 0;
+		position.yOffset += fields[1] ?? 0;
+		position.xAdvance += fields[2] ?? 0;
+		position.yAdvance += fields[3] ?? 0;
+	}
+
+	/**
+	 * The delta a device table adds at the font's instance: a VariationIndex table reads
+	 * GDEF's item variation store, rounded to font units; any other device table adds `0`.
+	 *
+	 * @param offset - Absolute offset of the device or VariationIndex table.
+	 */
+	#deviceDelta(offset: number): number {
+		let { reader, variationStore, coords } = this.font;
+		if (variationStore === null || coords.length === 0) return 0;
+		if (reader.u16(offset + 4) !== VARIATION_INDEX_FORMAT) return 0;
+		return Math.round(
+			itemDelta(variationStore, reader.u16(offset), reader.u16(offset + 2), coords),
+		);
 	}
 
 	/**
@@ -154,21 +179,30 @@ export class GposProcessor extends LayoutProcessor {
 			let stride = size1 + valueSize(format2);
 			record = offset + 16 + (class1 * class2Count + class2) * stride;
 		} else return false;
-		this.#applyValue(iterator.index, record, format1);
-		this.#applyValue(secondIndex, record + size1, format2);
+		this.#applyValue(iterator.index, record, format1, offset);
+		this.#applyValue(secondIndex, record + size1, format2, offset);
 		if (format2 !== 0) iterator.index = secondIndex;
 		return true;
 	}
 
 	/**
-	 * An anchor's coordinates; formats 2 and 3 add a contour point and device tables, which
-	 * apply only to hinted or variable rendering, so their design coordinates are used.
+	 * An anchor's coordinates. A format 3 anchor adds its VariationIndex deltas at the font's
+	 * instance; a format 2 contour point matters only to hinted rendering, so its design
+	 * coordinates are used.
 	 *
 	 * @param offset - Absolute offset of the anchor table.
 	 */
 	#anchor(offset: number): Anchor {
 		let { reader } = this.font;
-		return { x: reader.i16(offset + 2), y: reader.i16(offset + 4) };
+		let x = reader.i16(offset + 2);
+		let y = reader.i16(offset + 4);
+		if (reader.u16(offset) === 3) {
+			let xDevice = reader.u16(offset + 6);
+			let yDevice = reader.u16(offset + 8);
+			if (xDevice !== 0) x += this.#deviceDelta(offset + xDevice);
+			if (yDevice !== 0) y += this.#deviceDelta(offset + yDevice);
+		}
+		return { x, y };
 	}
 
 	/**

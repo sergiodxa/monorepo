@@ -1,19 +1,26 @@
 /**
- * What shaping reads from a font, located once per `Font` and cached: the GSUB, GPOS, GDEF
- * and `kern` tables and a cached character-to-glyph lookup. Shapers and processors take it
- * instead of the `Font` so every table is found only once however much text is shaped.
+ * What shaping reads from a font, located once per `Font` and cached: its layout tables
+ * (GSUB, GPOS, GDEF, `kern`, `morx`, `feat`), its instance coordinates and a cached
+ * character-to-glyph lookup, so every table is found once however much text is shaped.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Font, FontData, TableRecord } from "../font.js";
+import type { ItemVariationStore } from "../item-variation-store.js";
 import type { Reader } from "../reader.js";
 
 import { fontData } from "../font.js";
+import { readItemVariationStore } from "../item-variation-store.js";
+import { variationOf } from "../variations/variation.js";
 
+import type { AatFeature } from "./aat/feat.js";
+import type { MorxTable } from "./aat/morx.js";
 import type { LayoutTable } from "./layout-table.js";
 
+import { readFeat } from "./aat/feat.js";
+import { readMorx } from "./aat/morx.js";
 import { coverageIndex, glyphClass, readLayoutTable } from "./layout-table.js";
 
 /** GDEF glyph classes, the values `glyphClass` answers from its glyph class definition. */
@@ -38,8 +45,19 @@ export interface ShapingFont {
 	gpos: LayoutTable | null;
 	gdef: Gdef | null;
 	kern: TableRecord | null;
-	/** How many variation axes `fvar` declares; feature variations evaluate at their default. */
+	/** The AAT `morx` table, which shapes a font that has no GSUB. */
+	morx: MorxTable | null;
+	/** The AAT `feat` table's feature types, by type; empty without one. */
+	feat: Map<number, AatFeature>;
+	/** How many variation axes `fvar` declares. */
 	axisCount: number;
+	/**
+	 * The normalized coordinates of the instance this font was varied to, one per axis; empty
+	 * at the default location. Feature variations and GPOS variation deltas read them.
+	 */
+	coords: readonly number[];
+	/** GDEF's item variation store, which GPOS VariationIndex tables point into. */
+	variationStore: ItemVariationStore | null;
 	/**
 	 * The glyph a code point maps to, `0` when the font has none; cached per code point.
 	 *
@@ -72,6 +90,8 @@ export function shapingFont(font: Font): ShapingFont {
 	let gposRecord = tables.get("GPOS");
 	let gdefRecord = tables.get("GDEF");
 	let fvar = tables.get("fvar");
+	let morxRecord = tables.get("morx");
+	let featRecord = tables.get("feat");
 	let gdef = gdefRecord === undefined ? null : readGdef(reader, gdefRecord);
 	let glyphs = new Map<number, number>();
 	let shaping: ShapingFont = {
@@ -82,7 +102,14 @@ export function shapingFont(font: Font): ShapingFont {
 		gpos: gposRecord === undefined ? null : readLayoutTable(reader, "GPOS", gposRecord),
 		gdef,
 		kern: tables.get("kern") ?? null,
+		morx: morxRecord === undefined ? null : readMorx(reader, morxRecord),
+		feat: featRecord === undefined ? new Map() : readFeat(reader, featRecord),
 		axisCount: fvar === undefined ? 0 : reader.u16(fvar.offset + 8),
+		coords: variationOf(data)?.coords ?? [],
+		variationStore:
+			gdef === null || gdef.itemVariationStore === 0
+				? null
+				: readItemVariationStore(reader, gdef.itemVariationStore),
 		glyphIndex(codePoint) {
 			let glyph = glyphs.get(codePoint);
 			if (glyph === undefined) {

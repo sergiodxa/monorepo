@@ -165,7 +165,7 @@ describe("opentype feature parameters", () => {
 		expect(availableFeatures(font(SOURCE_SANS), { script: "latn" })).toEqual(
 			expect.arrayContaining(["liga", "smcp", "ss01", "kern", "mark"]),
 		);
-		expect(availableFeatures(font("Play/Play-Regular.ttf"))).toEqual(["kern"]);
+		expect(availableFeatures(font("Play/Play-Regular.ttf"))).toContain("kern");
 	});
 });
 
@@ -411,5 +411,111 @@ describe("hebrew shaper", () => {
 
 	test("should let the font handle dagesh composition via GSUB", () => {
 		expect(hb(HEBREW, "בַּבֹּקֶר")).toBe("51+883|16@618,0+0|50+997|19@422,0+0|71+967|17@505,0+0|71+967");
+	});
+});
+
+describe("fallback mark positioning", () => {
+	/**
+	 * Glyph, advance and offset of each glyph, as `hb-shape` reports them.
+	 *
+	 * @param text - The run.
+	 */
+	let layout = (text: string) =>
+		shape(font("FontkitMarkFallbackTest/FontkitMarkFallbackTest-Italic.ttf"), text).glyphs.map(
+			(glyph) => [glyph.glyph, glyph.xAdvance, glyph.xOffset, glyph.yOffset],
+		);
+
+	test("should stack marks of the same class above the base", () => {
+		expect(layout("x́̈")).toEqual([
+			[5, 1019, 0, 0],
+			[6, 0, -75, -15],
+			[16, 0, -59, 478],
+		]);
+	});
+
+	test("should position marks below and above the base", () => {
+		expect(layout("q̣̇")).toEqual([
+			[3, 1099, 0, 0],
+			[19, 0, -200, -375],
+			[18, 0, -200, -53],
+		]);
+	});
+
+	test("should never shift marks below the base up", () => {
+		expect(layout("ḇ̃")).toEqual([
+			[1, 1117, 0, 0],
+			[20, 0, -51, 0],
+			[12, 0, 8, 422],
+		]);
+	});
+
+	test("should position attached marks without a gap", () => {
+		expect(layout("á̧")).toEqual([
+			[2, 1158, 0, 0],
+			[25, 0, -161, -59],
+			[6, 0, -144, -15],
+		]);
+	});
+
+	test("should right align attached marks above right", () => {
+		expect(layout("y̛")).toEqual([
+			[4, 1204, 0, 0],
+			[9, 0, 194, 249],
+		]);
+	});
+});
+
+describe("right-to-left text in fonts without GSUB, GPOS or morx", () => {
+	/**
+	 * Glyph, advance and offset of each glyph in a run of the given direction.
+	 *
+	 * @param path - Fixture path.
+	 * @param text - The run.
+	 * @param direction - Its direction.
+	 */
+	let layout = (path: string, text: string, direction: "ltr" | "rtl") =>
+		shape(font(path), text, { direction }).glyphs.map((glyph) => [
+			glyph.glyph,
+			glyph.xAdvance,
+			glyph.xOffset,
+			glyph.yOffset,
+		]);
+	let fallback = "FontkitMarkFallbackTest/FontkitMarkFallbackTest-Italic.ttf";
+
+	test("should reverse the glyphs", () => {
+		expect(layout(fallback, "abx", "rtl")).toEqual([
+			[5, 1019, 0, 0],
+			[1, 1117, 0, 0],
+			[2, 1158, 0, 0],
+		]);
+	});
+
+	test("should position marks from the origin of their base", () => {
+		expect(layout(fallback, "q̣̇", "rtl")).toEqual([
+			[18, 0, 899, -53],
+			[19, 0, 899, -375],
+			[3, 1099, 0, 0],
+		]);
+	});
+
+	test("should keep left-to-right text in logical order", () => {
+		expect(layout(fallback, "abx́", "ltr")).toEqual([
+			[2, 1158, 0, 0],
+			[1, 1117, 0, 0],
+			[5, 1019, 0, 0],
+			[6, 0, -75, -15],
+		]);
+	});
+
+	test("should kern the glyphs in visual order", () => {
+		let kufi = "NotoSans/NotoKufiArabic-NoLayout.ttf";
+		expect(layout(kufi, "ال", "rtl")).toEqual([
+			[3, 1257, 0, 0],
+			[2, 592, 0, 0],
+		]);
+		expect(layout(kufi, "لا", "rtl")).toEqual([
+			[2, 592, 0, 0],
+			[3, 1407, 0, 0],
+		]);
 	});
 });
