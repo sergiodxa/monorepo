@@ -6,7 +6,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./color": "./src/color/index.ts"
+		"./color": "./src/color/index.ts",
+		"./variations": "./src/variations/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

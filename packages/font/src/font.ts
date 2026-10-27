@@ -17,6 +17,7 @@ import type { GlyphSource, Point } from "./glyf.js";
 import type { FontMetrics } from "./metrics.js";
 import type { GlyphNamer } from "./post.js";
 import type { PairLookups } from "./tables.js";
+import type { FontVariation } from "./variations/variation.js";
 import type { VerticalTables } from "./vertical.js";
 
 import { isVariationSelector, mapCharacter, mappedCharacters } from "./cmap.js";
@@ -62,6 +63,8 @@ export interface FontData extends GlyphSource, FontMetrics {
 	tables: Map<string, TableRecord>;
 	/** The font's CFF outlines, `null` when it draws from `glyf`. */
 	cff: CffOutlines | null;
+	/** The design-space point `instance()` fixed the font at; absent at the default location. */
+	variation?: FontVariation;
 }
 
 /** Each font's located tables, for the package's subpath entries to read. */
@@ -290,7 +293,9 @@ export class Font {
 	 * @returns The box in font units, all zeros for an empty glyph or an index the font lacks.
 	 */
 	glyphCBox(glyph: number): Font.BBox {
-		if (this.#data.cff !== null) return controlBox(this.outline(glyph));
+		if (this.#data.cff !== null || this.#data.variation !== undefined) {
+			return controlBox(this.outline(glyph));
+		}
 		let range = glyphRange(this.#data, glyph);
 		if (range === null) return { xMin: 0, yMin: 0, xMax: 0, yMax: 0 };
 		let { reader } = this.#data;
@@ -383,6 +388,7 @@ export class Font {
 	advance(glyph: number): number {
 		let { reader, hmtxOffset, numberOfHMetrics, numGlyphs } = this.#data;
 		if (!Number.isInteger(glyph) || glyph < 0 || glyph >= numGlyphs) return 0;
+		if (this.#data.variation !== undefined) return this.#data.variation.advance(glyph);
 		let metric = Math.min(glyph, numberOfHMetrics - 1);
 		return reader.u16(hmtxOffset + metric * 4);
 	}
@@ -421,7 +427,7 @@ export class Font {
 	 */
 	outline(glyph: number): Font.Command[] {
 		let cff = this.#data.cff;
-		if (cff !== null) return cff.commands(glyph);
+		if (cff !== null) return cff.commands(glyph, this.#data.variation?.coords);
 		return contoursToCommands(this.#glyphContours(glyph));
 	}
 
@@ -550,9 +556,12 @@ export class Font {
 	 * @example let subset = unwrap(font.subset(line.glyphs.map(({ glyph }) => glyph)));
 	 */
 	subset(glyphs: Iterable<number>): Result<Font.Subset, FontError> {
-		if (this.#data.cff !== null) {
+		if (this.#data.cff !== null || this.#data.variation !== undefined) {
 			return failure(
-				new FontError("unsupported", "Subsetting CFF outlines is not supported yet.", "CFF "),
+				new FontError(
+					"unsupported",
+					"Subset CFF fonts and variable font instances with subset() from @sdxc/font/subset.",
+				),
 			);
 		}
 		if (!this.embedding.subsetting) {
@@ -591,7 +600,7 @@ export class Font {
 	#glyphContours(glyph: number): Point[][] {
 		let cached = this.#contours.get(glyph);
 		if (cached !== undefined) return cached;
-		let contours = decodeGlyph(this.#data, glyph);
+		let contours = this.#data.variation?.contours(glyph) ?? decodeGlyph(this.#data, glyph);
 		this.#contours.set(glyph, contours);
 		return contours;
 	}

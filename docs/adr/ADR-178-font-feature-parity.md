@@ -113,6 +113,13 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
   `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
   The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
   variation tables alike.
+- **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
+  `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
+  outlines and advances are varied per glyph on first use and cached. Normalized coordinates
+  snap to 2.14 before and after `avar`; `gvar` deltas sum as floats and each point rounds once;
+  `HVAR` decides advances when present, phantom points otherwise; `MVAR` varies line metrics.
+  `featureVariationSubstitutions(font, "GSUB" | "GPOS")` answers the feature tables that apply
+  at the instance's location, for the shaper to read. `avar` version 2 and `VVAR` are not read.
 - **Color.** Layered `COLR` glyphs with `CPAL` palettes, and `sbix` bitmaps handed back as PNG
   or JPEG bytes for `@sdxc/png` or a browser to decode.
 - **Subsetting.** CFF and CID-keyed CFF, keeping only the defaults that differ, and variable
@@ -288,6 +295,13 @@ Decisions made while implementing, where this ADR left a choice open:
   `put`, `hflex1`), and `random` is seeded per glyph so a glyph always draws the same outline.
   The ItemVariationStore reader in `src/item-variation-store.ts` serves CFF2 `blend` and the
   variation tables alike.
+- **Variable fonts.** `@sdxc/font/variations` exposes `axes(font)`, `namedInstances(font)` and
+  `instance(font, settings | name)`. An instance is lazy: a `Font` over the same bytes whose
+  outlines and advances are varied per glyph on first use and cached. Normalized coordinates
+  snap to 2.14 before and after `avar`; `gvar` deltas sum as floats and each point rounds once;
+  `HVAR` decides advances when present, phantom points otherwise; `MVAR` varies line metrics.
+  `featureVariationSubstitutions(font, "GSUB" | "GPOS")` answers the feature tables that apply
+  at the instance's location, for the shaper to read. `avar` version 2 and `VVAR` are not read.
 - **Color.** `@sdxc/font/color` exposes functions over a `Font` (`colorLayers`, `palettes`,
   `bitmap`, `strikes`). `colorLayers` answers `null` for a glyph without color, so a caller
   draws the plain outline; a layer that takes the text color carries `"foreground"`. `COLR`
