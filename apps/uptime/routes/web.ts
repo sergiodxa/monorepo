@@ -111,6 +111,12 @@ export default route({
 		show: get("/docs/*slug"),
 	},
 
+	/**
+	 * Streamable HTTP MCP: `GET` sells the agent surface (or shows setup when signed in);
+	 * `POST` is the protocol endpoint behind an API key that carries the `mcp` scope.
+	 */
+	mcp: form("/mcp"),
+
 	app: {
 		index: get("/app"),
 		team: {

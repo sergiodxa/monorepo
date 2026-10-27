@@ -10,6 +10,42 @@
 import type { ApiKeyScope } from "~/database/schema";
 
 export default {
+	mcp: {
+		meta: {
+			title: "MCP for agents | Uptime",
+			description:
+				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
+		},
+		heading: "Uptime para agentes",
+		description:
+			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
+		setup: {
+			heading: "Connect your client",
+			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this config into a client that supports remote MCP (for example via mcp-remote).",
+			steps: {
+				token: "Open your team’s API keys and create a key.",
+				scopes:
+					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
+				configure: "Add the remote MCP config below to your client.",
+				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
+			},
+			configLabel: "Remote MCP config",
+			copy: "Copy config",
+			openKeys: "Open the dashboard",
+		},
+		sell: {
+			heading: "Agent-first monitoring",
+			body: "Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
+			points: {
+				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
+				scopes:
+					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
+				remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
+			},
+			cta: "Inicia sesión para configurar MCP",
+		},
+	},
+
 	landing: {
 		meta: {
 			title: "Uptime por Sergio Xalambrí",
@@ -521,6 +557,7 @@ export default {
 					overview: "Introducción",
 					quickstart: "Inicio rápido",
 					apiReference: "Referencia de API",
+					mcp: "MCP para agentes",
 				},
 				legal: {
 					title: "Legal",
@@ -5629,6 +5666,7 @@ export default {
 								"Eliminar monitores de flujo y el historial de sus ejecuciones.",
 							"cron-jobs:delete":
 								"Eliminar trabajos cron. Eliminar uno hace que su URL de ping deje de aceptarse.",
+							mcp: "Alcanza el endpoint MCP Streamable HTTP. No otorga ninguna capacidad de API por sí solo: también concede los alcances de recurso que cada herramienta necesita.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

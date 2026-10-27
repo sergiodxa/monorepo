@@ -56,6 +56,11 @@ export const API_SCOPES: Record<ApiKeyScope, UptimeAbility[]> = {
 	"api-keys:read": ["apiKeys.read"],
 	"api-keys:write": ["apiKeys.write"],
 	"ping:trigger": ["ping.trigger", "ping.api", "checks.run"],
+	/**
+	 * Gates the MCP transport only. Tools still claim their own abilities through the
+	 * resource scopes above, so a key with `mcp` alone lists and calls nothing.
+	 */
+	mcp: [],
 };
 
 /**

@@ -52,6 +52,9 @@ export default createAction(routes.sitemap, async ({ request }) => {
 		},
 		browserFlows: { priority: 0.9, frequency: "monthly", updatedAt },
 		trust: false,
+		mcp: {
+			index: { priority: 0.8, frequency: "monthly", updatedAt },
+		},
 		legal: {
 			privacy: { priority: 0.3, frequency: "yearly", updatedAt },
 			terms: { priority: 0.3, frequency: "yearly", updatedAt },

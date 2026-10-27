@@ -42,8 +42,11 @@ import { teamAccess } from "~/app/http/middleware/access";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
+import mcpAccess from "~/app/http/middleware/mcp-access";
 import models from "~/app/http/middleware/models";
 import publicPageCache from "~/app/http/middleware/public-page-cache";
+import requireApiKey from "~/app/http/middleware/require-api-key";
+import requireMcpScope from "~/app/http/middleware/require-mcp-scope";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
@@ -254,7 +257,14 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * from a caller with no browser to send one from.
 			 */
 			cop({
-				insecureBypassPatterns: MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
+				/**
+				 * `/mcp` is named beside the machine prefixes: agents authenticate with a Bearer
+				 * API key and send no browser `Origin`, so COP would refuse every call.
+				 */
+				insecureBypassPatterns: [
+					...MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
+					"/mcp",
+				],
 			}),
 			/**
 			 * Right before the assets and the renderer, so the headers land on the response it
@@ -404,6 +414,18 @@ export function createWebRouter(options: WebRouterOptions) {
 		routes.trust,
 		lazy(() => import("~/app/http/controllers/trust"), PUBLIC_PAGE_GUARDS),
 	);
+	router.map(
+		routes.mcp.index,
+		lazy(() => import("~/app/http/controllers/mcp"), PUBLIC_PAGE_GUARDS),
+	);
+	router.map(routes.mcp.action, {
+		middleware: [requireApiKey, requireMcpScope, mcpAccess],
+		/**
+		 * Imported here rather than through `lazy()`, because `requireApiKey` publishes the
+		 * key the tools read, so this stays an action object whose `handler` is a function.
+		 */
+		handler: async (ctx) => (await import("~/app/initializers/mcp")).default.fetch(ctx),
+	});
 	router.map(
 		routes.legal.privacy,
 		lazy(() => import("~/app/http/controllers/privacy"), PUBLIC_PAGE_GUARDS),
