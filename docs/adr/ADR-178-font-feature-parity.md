@@ -153,6 +153,16 @@ Heavy capabilities ship behind subpath exports, so a consumer imports only what 
   `HVAR` decides advances when present, phantom points otherwise; `MVAR` varies line metrics.
   `featureVariationSubstitutions(font, "GSUB" | "GPOS")` answers the feature tables that apply
   at the instance's location, for the shaper to read. `avar` version 2 and `VVAR` are not read.
+- **Subsetting.** `subset(font, glyphs)` from `@sdxc/font/subset` handles every outline
+  format and instances. `Font.subset()` stays on the main entry for TrueType fonts, so a
+  document that embeds `.ttf` fonts keeps its current import; it answers `unsupported` for CFF
+  fonts and instances, naming the subpath. CFF subsets keep the subroutine numbering and empty
+  every subroutine no kept glyph calls (a "hello" subset of Source Sans Pro is 8 KB this way,
+  29 KB with whole subroutine INDEXes), unless a charstring uses arithmetic operators, which
+  keeps them all. CID-keyed subsets use the Adobe-Identity-0 ordering, so a glyph's CID is its
+  subset id. CFF2 fonts and instances are written as CID-keyed CFF from the varied outlines,
+  without hints; TrueType instances are written as simple glyphs, composites flattened and
+  hinting dropped. No variation table is written.
 - **Color.** Layered `COLR` glyphs with `CPAL` palettes, and `sbix` bitmaps handed back as PNG
   or JPEG bytes for `@sdxc/png` or a browser to decode.
 - **Subsetting.** CFF and CID-keyed CFF, keeping only the defaults that differ, and variable
@@ -357,6 +367,16 @@ Decisions made while implementing, where this ADR left a choice open:
   `HVAR` decides advances when present, phantom points otherwise; `MVAR` varies line metrics.
   `featureVariationSubstitutions(font, "GSUB" | "GPOS")` answers the feature tables that apply
   at the instance's location, for the shaper to read. `avar` version 2 and `VVAR` are not read.
+- **Subsetting.** `subset(font, glyphs)` from `@sdxc/font/subset` handles every outline
+  format and instances. `Font.subset()` stays on the main entry for TrueType fonts, so a
+  document that embeds `.ttf` fonts keeps its current import; it answers `unsupported` for CFF
+  fonts and instances, naming the subpath. CFF subsets keep the subroutine numbering and empty
+  every subroutine no kept glyph calls (a "hello" subset of Source Sans Pro is 8 KB this way,
+  29 KB with whole subroutine INDEXes), unless a charstring uses arithmetic operators, which
+  keeps them all. CID-keyed subsets use the Adobe-Identity-0 ordering, so a glyph's CID is its
+  subset id. CFF2 fonts and instances are written as CID-keyed CFF from the varied outlines,
+  without hints; TrueType instances are written as simple glyphs, composites flattened and
+  hinting dropped. No variation table is written.
 - **Color.** `@sdxc/font/color` exposes functions over a `Font` (`colorLayers`, `palettes`,
   `bitmap`, `strikes`). `colorLayers` answers `null` for a glyph without color, so a caller
   draws the plain outline; a layer that takes the text color carries `"foreground"`. `COLR`
@@ -371,4 +391,4 @@ Decisions made while implementing, where this ADR left a choice open:
 - [ ] Phase 4: Shaping
 - [ ] Phase 5: Variable fonts
 - [x] Phase 6: Color glyphs
-- [ ] Phase 7: Subsetting beyond TrueType
+- [x] Phase 7: Subsetting beyond TrueType

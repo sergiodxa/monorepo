@@ -14,14 +14,17 @@ import { success } from "@sdxc/result";
 import type { FontError } from "./font-error.js";
 import type { Font, FontData } from "./font.js";
 import type { Reader } from "./reader.js";
+import type { TableBytes } from "./subset/sfnt-writer.js";
 
 import { glyphRange } from "./glyf.js";
-
-/** Bytes of one table, ready to be placed in the file. */
-interface TableBytes {
-	tag: string;
-	bytes: Uint8Array;
-}
+import {
+	align,
+	assemble,
+	copyBytes,
+	copyTable,
+	emptyCmap,
+	postTable,
+} from "./subset/sfnt-writer.js";
 
 const ARGS_ARE_WORDS = 0x0001;
 const HAS_SCALE = 0x0008;
@@ -31,9 +34,6 @@ const HAS_TWO_BY_TWO = 0x0080;
 
 /** The largest `glyf` length whose offsets still fit `loca`'s halved 16-bit form. */
 const SHORT_LOCA_LIMIT = 0x1fffe;
-
-/** `head.checkSumAdjustment` makes the whole file's u32 sum equal this. */
-const CHECKSUM_MAGIC = 0xb1b0afba;
 
 /** Tables copied byte for byte when the source has them; the hinting programs index `cvt `. */
 const COPIED_TABLES = ["name", "OS/2", "cvt ", "fpgm", "prep"] as const;
@@ -72,7 +72,7 @@ export function subsetFont(
 	}
 
 	return success({
-		bytes: assemble(tables),
+		bytes: assemble(tables, 0x00010000),
 		glyphs: order,
 		glyphId: (original: number) => ids.get(original) ?? 0,
 	});
@@ -219,61 +219,6 @@ function locaTable(offsets: readonly number[], shortLoca: boolean): Uint8Array {
 }
 
 /**
- * `post` format 3: the source's metrics header (italic angle, underline, fixed pitch) with no
- * glyph names, which would otherwise need renumbering; a font without `post` gets zeros.
- *
- * @param data - The source font.
- */
-function postTable(data: FontData): Uint8Array {
-	let bytes = new Uint8Array(32);
-	let post = data.tables.get("post");
-	if (post !== undefined) copyBytes(data.reader, post.offset, Math.min(post.length, 32), bytes, 0);
-	new DataView(bytes.buffer).setUint32(0, 0x00030000);
-	return bytes;
-}
-
-/**
- * A Windows Unicode `cmap` whose only format 4 segment is the mandatory 0xFFFF terminator, so
- * it maps no characters yet satisfies parsers and sanitizers that require a Unicode subtable.
- */
-function emptyCmap(): Uint8Array {
-	let bytes = new Uint8Array(36);
-	let view = new DataView(bytes.buffer);
-	let fields = [0, 1, 3, 1, 0, 12, 4, 24, 0, 2, 2, 0, 0, 0xffff, 0, 0xffff, 1, 0];
-	fields.forEach((value, index) => view.setUint16(index * 2, value));
-	return bytes;
-}
-
-/**
- * A fresh copy of a source table, so patching it leaves the source font untouched; an absent
- * table copies as empty.
- *
- * @param data - The source font.
- * @param tag - Table tag.
- */
-function copyTable(data: FontData, tag: string): Uint8Array {
-	let table = data.tables.get(tag);
-	if (table === undefined) return new Uint8Array();
-	let bytes = new Uint8Array(table.length);
-	copyBytes(data.reader, table.offset, table.length, bytes, 0);
-	return bytes;
-}
-
-/**
- * Copies source bytes through the bounds-checked reader, so a table that runs past the file
- * reads as zeros.
- *
- * @param reader - The source font bytes.
- * @param start - Absolute source offset.
- * @param length - Bytes to copy.
- * @param target - Destination buffer.
- * @param at - Destination offset.
- */
-function copyBytes(reader: Reader, start: number, length: number, target: Uint8Array, at: number) {
-	for (let index = 0; index < length; index++) target[at + index] = reader.u8(start + index);
-}
-
-/**
  * Writes a u16 in place when the table is long enough to hold it, so a truncated source table
  * is carried over as is.
  *
@@ -284,66 +229,4 @@ function copyBytes(reader: Reader, start: number, length: number, target: Uint8A
 function patchU16(bytes: Uint8Array, offset: number, value: number): Uint8Array {
 	if (offset + 2 <= bytes.length) new DataView(bytes.buffer).setUint16(offset, value);
 	return bytes;
-}
-
-/**
- * Lays out the sfnt: a directory sorted by tag, every table 4-byte aligned and zero-padded and
- * checksummed over its padded bytes, then `head.checkSumAdjustment` set from the whole file.
- *
- * @param tables - Tables in any order; `head` must have its adjustment zeroed.
- */
-function assemble(tables: TableBytes[]): Uint8Array {
-	let sorted = [...tables].sort((left, right) => (left.tag < right.tag ? -1 : 1));
-	let count = sorted.length;
-	let directorySize = 12 + count * 16;
-	let size = sorted.reduce((total, table) => total + align(table.bytes.length), directorySize);
-	let file = new Uint8Array(size);
-	let view = new DataView(file.buffer);
-
-	let selector = Math.floor(Math.log2(count));
-	let searchRange = 2 ** selector * 16;
-	view.setUint32(0, 0x00010000);
-	view.setUint16(4, count);
-	view.setUint16(6, searchRange);
-	view.setUint16(8, selector);
-	view.setUint16(10, count * 16 - searchRange);
-
-	let offset = directorySize;
-	let headOffset = 0;
-	sorted.forEach((table, index) => {
-		let record = 12 + index * 16;
-		file.set(table.bytes, offset);
-		for (let char = 0; char < 4; char++) view.setUint8(record + char, table.tag.charCodeAt(char));
-		view.setUint32(record + 4, checksum(view, offset, align(table.bytes.length)));
-		view.setUint32(record + 8, offset);
-		view.setUint32(record + 12, table.bytes.length);
-		if (table.tag === "head") headOffset = offset;
-		offset += align(table.bytes.length);
-	});
-	view.setUint32(headOffset + 8, (CHECKSUM_MAGIC - checksum(view, 0, size)) >>> 0);
-	return file;
-}
-
-/**
- * The sum of big-endian u32 words modulo 2^32, the checksum sfnt uses for tables and the file.
- *
- * @param view - The file.
- * @param start - 4-aligned start offset.
- * @param length - A multiple of 4.
- */
-function checksum(view: DataView, start: number, length: number): number {
-	let sum = 0;
-	for (let offset = start; offset < start + length; offset += 4) {
-		sum = (sum + view.getUint32(offset)) >>> 0;
-	}
-	return sum;
-}
-
-/**
- * Rounds a byte count up to the next multiple of 4.
- *
- * @param length - Byte count.
- */
-function align(length: number): number {
-	return (length + 3) & ~3;
 }

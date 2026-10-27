@@ -8,6 +8,7 @@
 		".": "./src/index.ts",
 		"./color": "./src/color/index.ts",
 		"./shaping": "./src/shaping/index.ts",
+		"./subset": "./src/subset/index.ts",
 		"./variations": "./src/variations/index.ts",
 		"./woff2": "./src/woff2/index.ts"
 	},
