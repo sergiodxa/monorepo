@@ -1,6 +1,7 @@
 /**
- * The résumé's writers: the checked-in LaTeX sources must match what the content generates,
- * so the PDFs never drift from the page, and TeX's special characters must typeset literally.
+ * The résumé's writers: each language typesets to one page carrying its text, links and
+ * metadata, the checked-in PDFs match what the content typesets, and the Markdown lists every
+ * role and links the PDF.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,35 +10,69 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { PROJECT_ROOT } from "~/app/initializers/local-database";
 import { PAGE_LOCALES } from "~/app/services/page-locale";
-import { resumeFor, resumeLatex, resumeMarkdown, texSourcePath } from "~/app/services/resume";
+import { RESUME_FONT_PATHS, resumeFor, resumeMarkdown, resumePdf } from "~/app/services/resume";
+import { readPdf } from "~/app/test/pdf";
 import { PROFILE } from "~/config/profile";
 
-describe("resumeLatex", () => {
-	test.each(PAGE_LOCALES)("the checked-in %s source matches the content", async (locale) => {
-		let checkedIn = await readFile(join(PROJECT_ROOT, texSourcePath(locale)), "utf8");
+/** The checked-in faces the command typesets with. */
+async function fonts() {
+	return {
+		regular: new Uint8Array(await readFile(join(PROJECT_ROOT, RESUME_FONT_PATHS.regular))),
+		bold: new Uint8Array(await readFile(join(PROJECT_ROOT, RESUME_FONT_PATHS.bold))),
+	};
+}
 
-		expect(checkedIn, "run `sdxc run resume pdf` in apps/blog").toBe(
-			resumeLatex(resumeFor(locale), PROFILE.canonical.origin),
-		);
+describe("resumePdf", () => {
+	test.each(PAGE_LOCALES)("typesets the %s résumé on one page", async (locale) => {
+		let resume = resumeFor(locale);
+		let pdf = await resumePdf(resume, await fonts(), PROFILE.canonical.origin);
+		if (isFailure(pdf)) throw pdf.error;
+		let read = await readPdf(pdf.data);
+
+		expect(read.pages).toBe(1);
+		expect(read.title).toBe(`Sergio Xalambrí — ${resume.title}`);
+		expect(read.author).toBe("Sergio Xalambrí");
+		expect(read.lang).toBe(locale);
+		expect(read.text).toContain("Sergio Xalambrí");
+		expect(read.text).toContain(`${resume.headline} · ${resume.location}`);
+		expect(read.text).toContain(resume.labels.experience);
+		expect(read.text).toContain(resume.labels.metricsNote);
+		expect(read.text).toContain(`sergiodxa.com/resume?lang=${locale}`);
+		for (let role of resume.experience) expect(read.text).toContain(role.role);
+		let hrefs = [
+			...resume.contact.map((item) => item.href),
+			...resume.experience.map((role) => role.href),
+			...resume.openSource.map((project) => project.href),
+			...resume.speaking.map((talk) => talk.href),
+			`https://sergiodxa.com/resume?lang=${locale}`,
+		];
+		expect(read.links).toEqual(hrefs.map((href) => new URL(href).href));
 	});
 
-	test("escapes TeX's special characters in prose and URLs", () => {
-		let resume = resumeFor("en");
-		let source = resumeLatex(
-			{
-				...resume,
-				summary: "50% of R&D at #1, costing $5_000 {approx}",
-				speaking: [{ title: "Talk", event: "Event", date: "2026", href: "https://a.com/x#y" }],
-			},
-			"https://sergiodxa.com",
-		);
+	test.each(PAGE_LOCALES)("the checked-in %s PDF matches the content", async (locale) => {
+		let resume = resumeFor(locale);
+		let pdf = await resumePdf(resume, await fonts(), PROFILE.canonical.origin);
+		if (isFailure(pdf)) throw pdf.error;
+		let checkedIn = await readFile(join(PROJECT_ROOT, "public", resume.pdf.href));
 
-		expect(source).toContain("50\\% of R\\&D at \\#1, costing \\$5\\_000 \\{approx\\}");
-		expect(source).toContain("\\href{https://a.com/x\\#y}{Talk}");
+		expect(
+			await readPdf(new Uint8Array(checkedIn)),
+			"run `sdxc run resume pdf` in apps/blog",
+		).toEqual(await readPdf(pdf.data));
+	});
+
+	test("fails when the content outgrows the page", async () => {
+		let resume = resumeFor("en");
+		let long = { ...resume, experience: [...resume.experience, ...resume.experience] };
+
+		let pdf = await resumePdf(long, await fonts(), PROFILE.canonical.origin);
+
+		expect(isFailure(pdf)).toBe(true);
 	});
 });
 
@@ -50,13 +85,11 @@ describe("resumeMarkdown", () => {
 		expect(body).toContain("_2015 – 2017_");
 	});
 
-	test("links the PDF absolutely only once it is published", () => {
-		let resume = resumeFor("en");
-		let link = "[Download PDF](https://sergiodxa.com/resume/sergio-xalambri-resume-en.pdf)";
-		let unpublished = { ...resume, pdf: { ...resume.pdf, published: false } };
-		let published = { ...resume, pdf: { ...resume.pdf, published: true } };
+	test("links the PDF absolutely", () => {
+		let body = resumeMarkdown(resumeFor("en"), "https://sergiodxa.com");
 
-		expect(resumeMarkdown(unpublished, "https://sergiodxa.com")).not.toContain(link);
-		expect(resumeMarkdown(published, "https://sergiodxa.com")).toContain(link);
+		expect(body).toContain(
+			"[Download PDF](https://sergiodxa.com/resume/sergio-xalambri-resume-en.pdf)",
+		);
 	});
 });

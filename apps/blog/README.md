@@ -218,12 +218,10 @@ text/markdown`) writes the same list as Markdown.
 - Résumé (`/resume`, in English or Spanish like the press kit): experience, open source,
   talks and skills, from one structured résumé per language in `resources/content/resume/`.
   `/resume.md` (or `Accept: text/markdown`) writes the same résumé as Markdown, and each
-  language has a one-page PDF in `public/resume/`, typeset from the LaTeX that
-  `resources/content/resume/latex/` keeps generated from the same content. After editing the
-  content, run `sdxc run resume pdf` (needs [tectonic](https://tectonic-typesetting.github.io)
-  on `PATH`, or `--tectonic <path>`); `--tex-only` rewrites only the sources, which a test
-  compares against the content. The page offers the download once `RESUME_PDFS_PUBLISHED`
-  in `resources/content/resume/shared.ts` is `true`, so set it after the first typeset.
+  language has a one-page PDF in `public/resume/`, typeset from the same content with
+  `@sdxc/pdf` in CMU Serif, the Computer Modern faces in `resources/fonts/cmu-serif/` (SIL
+  Open Font License). After editing the content, run `sdxc run resume pdf`; it fails when a
+  language outgrows its page, and a test fails while a checked-in PDF differs from the content.
 
 ## Routes
 

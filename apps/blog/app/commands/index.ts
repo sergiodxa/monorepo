@@ -61,17 +61,14 @@ export default commands({
 	}),
 	resume: commands({
 		pdf: command({
-			description:
-				"Write the résumé's LaTeX source in each language from its content and typeset it to public/resume",
+			description: "Typeset the résumé in each language from its content to public/resume",
 			flags: {
-				tectonic: flag.string("tectonic", {
-					description: "The tectonic binary to typeset with; `tectonic` on PATH without one",
-				}),
-				texOnly: flag.boolean("tex-only", {
-					description: "Write the .tex sources and typeset nothing",
+				out: flag.string("out", {
+					description:
+						"The directory to write the PDFs to, relative to the app; public/resume without one",
 				}),
 			},
-			examples: ["resume pdf", "resume pdf --tectonic ~/bin/tectonic", "resume pdf --tex-only"],
+			examples: ["resume pdf", "resume pdf --out /tmp/resume"],
 		}),
 	}),
 });

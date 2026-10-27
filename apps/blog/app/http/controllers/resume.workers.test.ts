@@ -37,7 +37,7 @@ function fetchPage(path: string, init: RequestInit = {}) {
 }
 
 describe("GET /resume", () => {
-	test("renders the English résumé with its sections and language switch, without an unpublished PDF", async () => {
+	test("renders the English résumé with its sections, PDF download and language switch", async () => {
 		let response = await fetchPage("/resume");
 		let html = await response.text();
 
@@ -48,7 +48,7 @@ describe("GET /resume", () => {
 			expect(html).toContain(heading);
 		}
 		expect(html).toContain("Support Engineer");
-		expect(html).not.toContain("sergio-xalambri-resume-en.pdf");
+		expect(html).toContain('href="/resume/sergio-xalambri-resume-en.pdf"');
 		expect(html).toContain('href="/resume?lang=es-AR"');
 	});
 
@@ -61,7 +61,7 @@ describe("GET /resume", () => {
 		for (let html of [byHeader, byQuery]) {
 			expect(html).toMatch(/<title[^>]*>Currículum<\/title>/);
 			expect(html).toContain("Experiencia");
-			expect(html).not.toContain("sergio-xalambri-resume-es-AR.pdf");
+			expect(html).toContain('href="/resume/sergio-xalambri-resume-es-AR.pdf"');
 		}
 	});
 
@@ -74,20 +74,20 @@ describe("GET /resume", () => {
 });
 
 describe("GET /resume.md", () => {
-	test("writes the résumé as Markdown, linking no PDF until one is published", async () => {
+	test("writes the résumé as Markdown, linking its PDF", async () => {
 		let response = await fetchPage("/resume.md");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/markdown");
 		expect(body).toMatch(/^# Sergio Xalambrí\n/);
-		expect(body).not.toContain("/resume/sergio-xalambri-resume-en.pdf");
+		expect(body).toContain("/resume/sergio-xalambri-resume-en.pdf");
 	});
 
 	test("writes the Spanish résumé for ?lang=es-AR", async () => {
 		let body = await (await fetchPage("/resume.md?lang=es-AR")).text();
 
 		expect(body).toContain("## Experiencia");
-		expect(body).not.toContain("[Descargar PDF]");
+		expect(body).toContain("[Descargar PDF]");
 	});
 });

@@ -53,6 +53,7 @@
 		"@sdxc/no-www-middleware": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
+		"@sdxc/pdf": "workspace:*",
 		"@sdxc/raster": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",

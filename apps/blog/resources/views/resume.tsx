@@ -120,16 +120,14 @@ function Header(handle: Handle<{ resume: Resume }>) {
 				<p mix={[m(0), text("lg"), leading("relaxed"), maxIs("65ch")]}>{resume.summary}</p>
 
 				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap("wrap")]}>
-					{resume.pdf.published ? (
-						<LinkButton
-							href={resume.pdf.href}
-							download={resume.pdf.filename}
-							type="application/pdf"
-							color="brand"
-						>
-							{labels.downloadPdf}
-						</LinkButton>
-					) : null}
+					<LinkButton
+						href={resume.pdf.href}
+						download={resume.pdf.filename}
+						type="application/pdf"
+						color="brand"
+					>
+						{labels.downloadPdf}
+					</LinkButton>
 					<LinkButton
 						href={resumeHref(resume.otherLanguage.locale)}
 						hreflang={resume.otherLanguage.locale}

@@ -62,19 +62,13 @@ export const TALKS = {
 } as const;
 
 /**
- * Whether the typeset PDFs are in `public/resume/`. The page and `/resume.md` offer the
- * download only while this is `true`; set it once `sdxc run resume pdf` has written the files.
- */
-const RESUME_PDFS_PUBLISHED = false;
-
-/**
  * Where a résumé's PDF is served, so the page's download link and the command writing the
  * file agree on one path.
  *
  * @param locale The résumé's language.
- * @returns The PDF's path, the name a download saves it under, and whether it is served yet.
+ * @returns The PDF's path and the name a download saves it under.
  */
-export function pdfFor(locale: string): { href: string; filename: string; published: boolean } {
+export function pdfFor(locale: string): { href: string; filename: string } {
 	let filename = `sergio-xalambri-resume-${locale}.pdf`;
-	return { href: `/resume/${filename}`, filename, published: RESUME_PDFS_PUBLISHED };
+	return { href: `/resume/${filename}`, filename };
 }
