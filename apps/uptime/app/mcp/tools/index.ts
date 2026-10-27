@@ -16,7 +16,6 @@ import { CREATE_API_KEY_BODY, API_KEY_ID_PARAMS } from "~/app/http/openapi/api-k
 import {
 	CREATE_CRON_JOB_BODY,
 	CRON_JOB_ID_PARAMS,
-	CRON_JOB_PING_PARAMS,
 	UPDATE_CRON_JOB_BODY,
 } from "~/app/http/openapi/cron-jobs";
 import {
@@ -212,14 +211,6 @@ export default tools({
 			"Runs one throwaway TCP connect check. Billed as one metered ping; stores nothing. Equivalent to POST /api/v1/ping with type tcp.",
 		input: PING_TCP_INPUT,
 		annotations: PING_ANN,
-	}),
-
-	cronJobPing: tool("cron_job_ping", {
-		title: "Ping a cron job",
-		description:
-			"Reports that a cron job ran (the job's heartbeat). Equivalent to POST /api/v1/cron-jobs/:cronJobId/ping.",
-		input: CRON_JOB_PING_PARAMS,
-		annotations: WRITE,
 	}),
 
 	listMonitors: tool("list_monitors", {

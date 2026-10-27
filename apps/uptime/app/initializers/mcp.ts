@@ -77,10 +77,6 @@ mcp.tools.map(
 	lazy(() => import("~/app/mcp/tools/ping-tcp")),
 );
 mcp.tools.map(
-	toolset.cronJobPing,
-	lazy(() => import("~/app/mcp/tools/cron-job-ping")),
-);
-mcp.tools.map(
 	toolset.listMonitors,
 	lazy(() => import("~/app/mcp/tools/list-monitors")),
 );
