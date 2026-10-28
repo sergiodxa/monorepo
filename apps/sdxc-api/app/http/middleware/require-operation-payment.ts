@@ -13,11 +13,12 @@ import { requirePayment } from "@sdxc/x402/middleware";
 
 import { httpBazaar } from "~/app/services/bazaar";
 import { isOwnerRequest } from "~/app/services/owner-access";
+import { paymentsEnabled } from "~/app/services/payments";
 import { findOperation } from "~/config/catalog";
 
 /**
  * Answers 404 when the `*id` is unknown, otherwise collects payment for that catalog row.
- * The operator's `Authorization: Bearer` matching `OWNER_ACCESS_TOKEN` skips payment.
+ * Soft-launch (`X402_FACILITATOR_URL=memory`) and the operator Bearer skip payment.
  */
 export const requireOperationPayment: Middleware = async (ctx, next) => {
 	let id = ctx.params.id;
@@ -34,6 +35,11 @@ export const requireOperationPayment: Middleware = async (ctx, next) => {
 			status: 404,
 			headers: { "content-type": "application/json" },
 		});
+	}
+
+	if (!paymentsEnabled()) {
+		ctx.log.set({ payment: { disabled: true, operation: operation.id, surface: "http" } });
+		return next();
 	}
 
 	if (isOwnerRequest(ctx.request)) {

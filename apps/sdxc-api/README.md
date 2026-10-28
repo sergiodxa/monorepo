@@ -15,9 +15,10 @@ bun dev
 ```
 
 Copy `.env.example` to `.dev.vars` first. `bun dev` serves the Worker at
-http://localhost:3010. With `X402_FACILITATOR_URL=memory` (the default when unset),
-payments settle through an in-memory facilitator — use `@sdxc/x402/testing`'s
-`withMemoryPayment` helpers in tests.
+http://localhost:3010. Soft-launch default: `X402_FACILITATOR_URL=memory` (or
+empty) skips charging so every caller gets the ops for free. To exercise 402
+locally with the in-memory facilitator, set a non-http stub such as
+`test-local`. Vitest stubs use `test-*` values and keep the charge path.
 
 ## Routes
 
@@ -69,6 +70,30 @@ See `config/catalog.ts`. Current set:
 Priced routes are rate-limited to 60 requests/minute per payer (when
 `PAYMENT-SIGNATURE` is present) or per connecting address.
 
+## Soft-launch secrets (no wallet yet)
+
+`bindings.secret()` requires every declared secret before deploy. Ship placeholders
+so priced routes stay free ([ADR-182](../../docs/adr/ADR-182-x402-soft-launch-without-charging.md)):
+
+```sh
+# Values to paste when prompted:
+# X402_FACILITATOR_URL = memory
+# X402_PAY_TO          = 0x00000000000000000000000000000000000000fe
+# X402_FACILITATOR_AUTH = -          (placeholder; ignored while soft-launching)
+# X402_NETWORK         = eip155:84532
+# X402_ASSET           = 0x036CbD53842c5426634e7929541eC2318f3dCF7e
+# OWNER_ACCESS_TOKEN   = owner_replace-me   (mint a real one before enabling charges)
+cf workers secrets update X402_FACILITATOR_URL --name sdxc-api
+cf workers secrets update X402_PAY_TO --name sdxc-api
+cf workers secrets update X402_FACILITATOR_AUTH --name sdxc-api
+cf workers secrets update X402_NETWORK --name sdxc-api
+cf workers secrets update X402_ASSET --name sdxc-api
+cf workers secrets update OWNER_ACCESS_TOKEN --name sdxc-api
+```
+
+Flip to charging later by updating the same secrets to mainnet values — no code
+redeploy required beyond secret changes.
+
 ## Production secrets (Base mainnet)
 
 ```sh
@@ -114,5 +139,6 @@ Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`.
 
 ## Architecture
 
-[ADR-180](../../docs/adr/ADR-180-package-backed-micro-apis.md) and
-[ADR-179](../../docs/adr/ADR-179-x402-agent-payments.md).
+[ADR-180](../../docs/adr/ADR-180-package-backed-micro-apis.md),
+[ADR-179](../../docs/adr/ADR-179-x402-agent-payments.md), and
+[ADR-182](../../docs/adr/ADR-182-x402-soft-launch-without-charging.md).

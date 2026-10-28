@@ -21,11 +21,11 @@ const DEFAULT_NETWORK = "eip155:84532";
 const DEFAULT_PAY_TO = "0x00000000000000000000000000000000000000fe";
 
 /**
- * Seller config for the router middleware. Secrets come from the Worker env;
- * a missing, `memory`, or non-http facilitator URL selects the memory facilitator
- * so Vitest's `test-<KEY>` stubs and bare local runs settle without a chain.
- * When `X402_FACILITATOR_AUTH` is set, it is sent as `Authorization` on every
- * facilitator `/verify` and `/settle` call (CDP and similar).
+ * Seller config for the router middleware. Secrets come from the Worker env.
+ * Soft-launch (`memory` / empty) disables charging in the payment guards and
+ * still publishes a memory seller so `ctx.x402` exists. Vitest's `test-<KEY>`
+ * stubs keep the memory facilitator so settlement tests can collect. A real
+ * `https://…` URL selects {@link HTTPFacilitator}, with optional CDP auth.
  */
 export function sellerConfig(): SellerConfig {
 	let facilitatorUrl = readOptional("X402_FACILITATOR_URL");
@@ -47,12 +47,12 @@ export function sellerConfig(): SellerConfig {
 }
 
 /**
- * True when the configured facilitator is a real HTTP endpoint.
+ * True when the configured facilitator is a real HTTP endpoint (production charge path).
  *
  * @param url - Raw `X402_FACILITATOR_URL` or `null` when unset
  */
 function isHttpFacilitatorUrl(url: string | null): url is string {
-	if (url === null || url === "" || url === "memory") return false;
+	if (url === null || url === "") return false;
 	return /^https?:\/\//i.test(url);
 }
 

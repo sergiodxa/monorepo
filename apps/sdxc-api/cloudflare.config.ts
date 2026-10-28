@@ -25,13 +25,15 @@ export default defineConfig({
 			/** Receive wallet for settled payments (Base USDC address). */
 			X402_PAY_TO: bindings.secret(),
 			/**
-			 * Facilitator base URL. Empty or `memory` uses the in-memory facilitator
-			 * (local and tests only). Production: CDP or another HTTP facilitator.
+			 * Facilitator base URL. Soft-launch: `memory` (or empty) disables
+			 * charging (ADR-182). Non-http stubs keep MemoryFacilitator while
+			 * still charging. Production: CDP or another HTTPS facilitator.
 			 */
 			X402_FACILITATOR_URL: bindings.secret(),
 			/**
 			 * Optional `Authorization` value sent on every facilitator call
-			 * (for example `Bearer <cdp-jwt>`). Leave empty for public facilitators.
+			 * (for example `Bearer <cdp-jwt>`). Soft-launch / public facilitators:
+			 * a placeholder such as `-` is fine until a real value is set.
 			 */
 			X402_FACILITATOR_AUTH: bindings.secret(),
 			/** CAIP-2 network id, e.g. `eip155:84532` (Sepolia) or `eip155:8453` (Base). */
