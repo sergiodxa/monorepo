@@ -1,6 +1,6 @@
 /**
  * HTTP router for the micro-APIs Worker: logging, x402 seller, security headers,
- * and every free or priced route.
+ * document assets and every free or priced route.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +8,7 @@
 
 import type { RouterContext } from "remix/router";
 
+import { assets } from "@sdxc/assets-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
@@ -16,10 +17,12 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { x402 } from "@sdxc/x402/middleware";
 import { asyncContext } from "remix/middleware/async-context";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { requireMcpToolPayment } from "~/app/http/middleware/require-mcp-tool-payment";
 import { requireOperationPayment } from "~/app/http/middleware/require-operation-payment";
+import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import { sellerConfig } from "~/app/initializers/x402";
 import { SECURITY_POLICY } from "~/config/security-policy";
@@ -49,6 +52,12 @@ export function createWebRouter() {
 			getClientIP(),
 			x402(sellerConfig()),
 			securityHeaders(SECURITY_POLICY),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+				nonce: (ctx) => ctx.securityHeaders.nonce,
+			}),
+			render({ assets: assetResolver }),
 		],
 	});
 
