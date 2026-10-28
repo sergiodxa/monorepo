@@ -26,6 +26,7 @@ import { OG_IMAGE_URL } from "~/config/constants";
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
+import "~/resources/css/marketing.css";
 import "~/resources/css/parity-deals.css";
 import "~/resources/css/prose.css";
 import "@sdxc/highlight/styles.css";

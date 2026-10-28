@@ -60,6 +60,13 @@ export default function SampleView(handle: Handle<SampleView.Props>) {
 			);
 		}
 
-		return <SampleChapterSection action={action} confirmEmail={confirmEmail} error={error} />;
+		return (
+			<SampleChapterSection
+				action={action}
+				confirmEmail={confirmEmail}
+				error={error}
+				ruled={false}
+			/>
+		);
 	};
 }
