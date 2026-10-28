@@ -59,15 +59,16 @@ describe("GET /mcp", () => {
 	/**
 	 * Checked against the Markdown — syntax highlighting splits a fenced command
 	 * into HTML spans, so only the Markdown twin is one copyable string — and
-	 * the bridge command reflects Claude Desktop's older protocol revision.
+	 * the stdio bridge is the first-party `mcp-bridge` bin on `@sdxc/mcp`.
 	 */
 	test("gives a copyable configuration", async () => {
 		let source = await body("https://sergiodxa.com/mcp.md");
 
 		expect(source).toContain("claude mcp add --transport http sergiodxa");
 		expect(source).toContain('"mcpServers"');
-		expect(source).toContain("@abluva/mcp-remote@latest");
-		expect(source).toContain("2026-07-28");
+		expect(source).toContain("@sdxc/mcp@latest");
+		expect(source).toContain("mcp-bridge");
+		expect(source).not.toContain("@abluva/mcp-remote");
 	});
 
 	/**
