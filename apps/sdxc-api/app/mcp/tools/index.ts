@@ -86,4 +86,49 @@ export default tools({
 		}),
 		annotations: READ_ONLY,
 	}),
+
+	pdfBuild: tool("pdf.build", {
+		title: "Build PDF",
+		description:
+			"Build a one-page PDF. Pass { text, fontBase64, title? }. fontBase64 is a .ttf ≤ 500 KiB. Paid via x402.",
+		input: s.object({
+			text: s.string().pipe(checks.minLength(1), checks.maxLength(50_000)),
+			fontBase64: s.string().pipe(checks.minLength(1), checks.maxLength(700_000)),
+			title: s.optional(s.string().pipe(checks.maxLength(200))),
+		}),
+		annotations: READ_ONLY,
+	}),
+
+	epubBuild: tool("epub.build", {
+		title: "Build EPUB",
+		description:
+			"Build an EPUB 3.3 from metadata and XHTML chapters. Pass { metadata, chapters }. Paid via x402.",
+		input: s.object({
+			metadata: s.object({
+				identifier: s.string().pipe(checks.minLength(1), checks.maxLength(200)),
+				title: s.string().pipe(checks.minLength(1), checks.maxLength(500)),
+				language: s.string().pipe(checks.minLength(2), checks.maxLength(32)),
+				modified: s.optional(s.string()),
+			}),
+			chapters: s.array(
+				s.object({
+					id: s.string().pipe(checks.minLength(1), checks.maxLength(64)),
+					title: s.string().pipe(checks.minLength(1), checks.maxLength(500)),
+					body: s.string().pipe(checks.minLength(1), checks.maxLength(500_000)),
+				}),
+			),
+		}),
+		annotations: READ_ONLY,
+	}),
+
+	feedNormalize: tool("feed.normalize", {
+		title: "Normalize feed",
+		description:
+			"Parse feed text or fetch a URL (≤ 1 MiB) into the normalized feed shape. Pass { source } or { url }. Paid via x402.",
+		input: s.object({
+			source: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(1_048_576))),
+			url: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(2048))),
+		}),
+		annotations: { readOnlyHint: true, openWorldHint: true },
+	}),
 });

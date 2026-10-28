@@ -1,7 +1,7 @@
 /**
  * Looks up the priced operation from the route param and runs {@link requirePayment}
- * with that operation's amount and description, unless the operator Bearer token
- * is present.
+ * with that operation's amount, description and Bazaar metadata, unless the
+ * operator Bearer token is present.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,7 @@ import type { Middleware } from "remix/router";
 
 import { requirePayment } from "@sdxc/x402/middleware";
 
+import { httpBazaar } from "~/app/services/bazaar";
 import { isOwnerRequest } from "~/app/services/owner-access";
 import { findOperation } from "~/config/catalog";
 
@@ -44,5 +45,6 @@ export const requireOperationPayment: Middleware = async (ctx, next) => {
 		amount: operation.amount,
 		description: operation.description,
 		resourceUrl: () => new URL(`/v1/${operation.id}`, ctx.url).href,
+		extensions: { bazaar: httpBazaar(operation) },
 	})(ctx, next);
 };

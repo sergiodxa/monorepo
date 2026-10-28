@@ -20,6 +20,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
+import { operationRateLimit } from "~/app/http/middleware/operation-rate-limit";
 import { requireMcpToolPayment } from "~/app/http/middleware/require-mcp-tool-payment";
 import { requireOperationPayment } from "~/app/http/middleware/require-operation-payment";
 import { assetResolver } from "~/app/initializers/assets";
@@ -78,12 +79,15 @@ export function createWebRouter() {
 		lazy(
 			() =>
 				import("~/app/initializers/mcp").then((it) => (ctx: AppContext) => it.default.fetch(ctx)),
-			[requireMcpToolPayment],
+			[operationRateLimit(), requireMcpToolPayment],
 		),
 	);
 	router.map(
 		routes.operation,
-		lazy(() => import("~/app/http/controllers/operation"), [requireOperationPayment]),
+		lazy(
+			() => import("~/app/http/controllers/operation"),
+			[operationRateLimit(), requireOperationPayment],
+		),
 	);
 
 	return router;

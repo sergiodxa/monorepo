@@ -9,10 +9,13 @@
 import type { Result } from "@sdxc/result";
 import type { SemVerComparison } from "@sdxc/semver";
 
+import { EPUB } from "@sdxc/epub";
+import { Feed } from "@sdxc/feed";
 import { tokenize } from "@sdxc/highlight";
 import { apply as applyPatch, diff as diffPatch } from "@sdxc/json-patch";
 import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
+import { PDF } from "@sdxc/pdf";
 import { QR } from "@sdxc/qr";
 import { failure, isFailure, success } from "@sdxc/result";
 import { satisfies } from "@sdxc/semver";
@@ -22,6 +25,15 @@ import type { OperationId } from "~/config/catalog";
 
 /** Comparisons {@link satisfies} accepts. */
 const SEMVER_COMPARISONS = new Set<SemVerComparison>(["=", "!=", "<", "<=", ">", ">=", "~", "^"]);
+
+/** Hard cap on a client-supplied TrueType font for `pdf.build` (500 KiB). */
+const PDF_FONT_MAX_BYTES = 500 * 1024;
+
+/** Hard cap on outbound feed bodies for `feed.normalize` (1 MiB). */
+const FEED_MAX_BYTES = 1 * 1024 * 1024;
+
+/** Hard cap on feed source text when the client posts the document inline. */
+const FEED_SOURCE_MAX_CHARS = 1 * 1024 * 1024;
 
 /** A refused operation with a stable machine code. */
 export class OperationError extends Error {
@@ -64,6 +76,12 @@ export async function runOperation(
 			return runJsonPatchApply(input);
 		case "json-patch.diff":
 			return runJsonPatchDiff(input);
+		case "pdf.build":
+			return runPdfBuild(input);
+		case "epub.build":
+			return runEpubBuild(input);
+		case "feed.normalize":
+			return runFeedNormalize(input);
 		default:
 			return failure(new OperationError("unknown_operation", `Unknown operation "${id}"`));
 	}
@@ -203,4 +221,187 @@ function runJsonPatchDiff(input: unknown): Result<unknown, OperationError> {
 	}
 
 	return success({ patch: diffPatch(record.before as never, record.after as never) });
+}
+
+async function runPdfBuild(input: unknown): Promise<Result<unknown, OperationError>> {
+	let text = stringField(input, "text");
+	if (isFailure(text)) return text;
+	let fontBase64 = stringField(input, "fontBase64");
+	if (isFailure(fontBase64)) return fontBase64;
+
+	let title: string | undefined;
+	if (
+		typeof input === "object" &&
+		input !== null &&
+		typeof (input as Record<string, unknown>).title === "string"
+	) {
+		title = (input as Record<string, unknown>).title as string;
+	}
+
+	let fontBytes = decodeBase64(fontBase64.data, PDF_FONT_MAX_BYTES);
+	if (isFailure(fontBytes)) return fontBytes;
+
+	let pdf = new PDF(title === undefined ? {} : { title });
+	let font = pdf.font(fontBytes.data);
+	if (isFailure(font)) {
+		return failure(new OperationError("failed", font.error.message));
+	}
+
+	let page = pdf.page();
+	if (title !== undefined && title.trim() !== "") {
+		page.text(title, { x: 40, y: 40, font: font.data, size: 18 });
+		page.text(text.data, { x: 40, y: 72, font: font.data, size: 12 });
+	} else {
+		page.text(text.data, { x: 40, y: 40, font: font.data, size: 12 });
+	}
+
+	let bytes = await pdf.bytes();
+	return success({
+		mediaType: "application/pdf",
+		encoding: "base64",
+		bytes: encodeBase64(bytes),
+		byteLength: bytes.byteLength,
+	});
+}
+
+async function runEpubBuild(input: unknown): Promise<Result<unknown, OperationError>> {
+	if (typeof input !== "object" || input === null) {
+		return failure(new OperationError("invalid_input", "Body must be a JSON object"));
+	}
+	let record = input as Record<string, unknown>;
+	let metadata = record.metadata;
+	let chapters = record.chapters;
+	if (typeof metadata !== "object" || metadata === null) {
+		return failure(new OperationError("invalid_input", 'Field "metadata" must be an object'));
+	}
+	if (!Array.isArray(chapters) || chapters.length === 0) {
+		return failure(
+			new OperationError("invalid_input", 'Field "chapters" must be a non-empty array'),
+		);
+	}
+
+	let meta = metadata as Record<string, unknown>;
+	let identifier = meta.identifier;
+	let title = meta.title;
+	let language = meta.language;
+	if (typeof identifier !== "string" || typeof title !== "string" || typeof language !== "string") {
+		return failure(
+			new OperationError(
+				"invalid_input",
+				'metadata needs string "identifier", "title" and "language"',
+			),
+		);
+	}
+
+	let built = EPUB.build({
+		metadata: {
+			identifier,
+			title,
+			language,
+			modified:
+				typeof meta.modified === "string"
+					? new Date(meta.modified)
+					: new Date("2026-01-01T00:00:00Z"),
+		},
+		chapters: chapters as EPUB.Chapter[],
+	});
+	if (isFailure(built)) {
+		return failure(new OperationError("failed", built.error.message));
+	}
+
+	let bytes = await built.data.bytes();
+	if (isFailure(bytes)) {
+		return failure(new OperationError("failed", bytes.error.message));
+	}
+
+	return success({
+		mediaType: "application/epub+zip",
+		encoding: "base64",
+		bytes: encodeBase64(bytes.data),
+		byteLength: bytes.data.byteLength,
+	});
+}
+
+async function runFeedNormalize(input: unknown): Promise<Result<unknown, OperationError>> {
+	if (typeof input !== "object" || input === null) {
+		return failure(new OperationError("invalid_input", "Body must be a JSON object"));
+	}
+	let record = input as Record<string, unknown>;
+	let source = record.source;
+	let url = record.url;
+
+	if (typeof source === "string") {
+		if (source.length > FEED_SOURCE_MAX_CHARS) {
+			return failure(
+				new OperationError(
+					"invalid_input",
+					`Field "source" exceeds ${FEED_SOURCE_MAX_CHARS} characters`,
+				),
+			);
+		}
+		let parsed = Feed.parse(source, typeof url === "string" ? { url } : {});
+		if (isFailure(parsed)) {
+			return failure(new OperationError("failed", parsed.error.message));
+		}
+		return success(parsed.data.toJSON());
+	}
+
+	if (typeof url === "string") {
+		let fetched = await Feed.fetch(url, { maxBytes: FEED_MAX_BYTES });
+		if (isFailure(fetched)) {
+			return failure(new OperationError("failed", fetched.error.message));
+		}
+		if (fetched.data.notModified || fetched.data.feed === undefined) {
+			return failure(
+				new OperationError("failed", "Feed was not modified; send source text instead"),
+			);
+		}
+		return success({
+			...fetched.data.feed.toJSON(),
+			fetchedUrl: fetched.data.url,
+			status: fetched.data.status,
+		});
+	}
+
+	return failure(
+		new OperationError("invalid_input", 'Body needs a string "source" or a string "url"'),
+	);
+}
+
+/**
+ * Decodes a base64 string into bytes, refusing payloads past `maxBytes`.
+ *
+ * @param value - Base64 text
+ * @param maxBytes - Inclusive byte ceiling
+ */
+function decodeBase64(value: string, maxBytes: number): Result<Uint8Array, OperationError> {
+	let binary: string;
+	try {
+		binary = atob(value);
+	} catch {
+		return failure(new OperationError("invalid_input", "Field must be valid base64"));
+	}
+	if (binary.length > maxBytes) {
+		return failure(
+			new OperationError("invalid_input", `Decoded payload exceeds ${maxBytes} bytes`),
+		);
+	}
+	let bytes = new Uint8Array(binary.length);
+	for (let index = 0; index < binary.length; index++) {
+		bytes[index] = binary.charCodeAt(index);
+	}
+	return success(bytes);
+}
+
+/**
+ * Encodes bytes as standard base64 for JSON responses.
+ *
+ * @param bytes - Binary payload
+ */
+function encodeBase64(bytes: Uint8Array): string {
+	let binary = "";
+	for (let index = 0; index < bytes.length; index++) {
+		binary += String.fromCharCode(bytes[index]!);
+	}
+	return btoa(binary);
 }

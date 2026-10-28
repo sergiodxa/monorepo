@@ -1,6 +1,6 @@
 /**
  * Builds the x402 seller for this isolate: memory facilitator when the facilitator
- * secret is empty or `memory`, otherwise an HTTP facilitator.
+ * secret is empty or `memory`, otherwise an HTTP facilitator with optional CDP auth.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,11 +24,17 @@ const DEFAULT_PAY_TO = "0x00000000000000000000000000000000000000fe";
  * Seller config for the router middleware. Secrets come from the Worker env;
  * a missing, `memory`, or non-http facilitator URL selects the memory facilitator
  * so Vitest's `test-<KEY>` stubs and bare local runs settle without a chain.
+ * When `X402_FACILITATOR_AUTH` is set, it is sent as `Authorization` on every
+ * facilitator `/verify` and `/settle` call (CDP and similar).
  */
 export function sellerConfig(): SellerConfig {
 	let facilitatorUrl = readOptional("X402_FACILITATOR_URL");
+	let auth = readOptional("X402_FACILITATOR_AUTH");
 	let facilitator: Facilitator = isHttpFacilitatorUrl(facilitatorUrl)
-		? new HTTPFacilitator({ url: facilitatorUrl })
+		? new HTTPFacilitator({
+				url: facilitatorUrl,
+				...(auth === null ? {} : { headers: { Authorization: auth } }),
+			})
 		: new MemoryFacilitator();
 
 	return {

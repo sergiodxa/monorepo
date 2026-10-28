@@ -91,19 +91,27 @@ validation with `remix/data-schema` via `@sdxc/validate`, no D1 — compute only
 
 ## Implementation Plan
 
-### Phase 1 (this change)
+### Phase 1 — done
 
-Package `@sdxc/x402`, app `apis` with the seven operations above, HTTP + MCP, memory
-facilitator in tests, catalog + health.
+Package `@sdxc/x402`, app `apps/sdxc-api` with the seven operations above, HTTP + MCP,
+memory facilitator in tests, catalog + health, operator Bearer bypass (ADR-181).
 
-### Phase 2
+### Phase 2 — done
 
-Mainnet facilitator, Bazaar discovery metadata, rate limits per payer, more packages
-(`@sdxc/pdf`, `@sdxc/epub`, `@sdxc/feed` normalize with outbound caps).
+- Mainnet-ready facilitator wiring: `HTTPFacilitator` optional auth headers,
+  `X402_FACILITATOR_AUTH`, documented Base mainnet USDC + CAIP-2 defaults.
+- Bazaar discovery metadata on every priced HTTP and MCP challenge
+  (`bazaarHttpPost` / `bazaarMcpTool` via `@sdxc/x402`).
+- Rate limits: Cloudflare `RATE_LIMITER` (60/min), keyed by payer when
+  `PAYMENT-SIGNATURE` is present else by connecting address.
+- Operations `pdf.build`, `epub.build`, `feed.normalize` (feed fetch capped at 1 MiB).
 
-### Phase 3
+### Phase 3 — done
 
-Optional: Uptime anonymous probe behind the same middleware.
+Uptime guest one-shot probe behind `@sdxc/x402` at `POST /api/v1/guest/probe`.
+Marketing `/try` stays free for humans; the paid lane is accountless HTTP that
+does not create a monitor row and does not bill Polar. Polar remains the product
+for continuous monitoring and API-key `/api/v1/ping`.
 
 ## Alternatives Considered
 

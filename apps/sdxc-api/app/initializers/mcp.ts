@@ -46,5 +46,17 @@ mcp.tools.map(
 	toolset.jsonPatchDiff,
 	lazy(() => import("~/app/mcp/tools/json-patch-diff")),
 );
+mcp.tools.map(
+	toolset.pdfBuild,
+	lazy(() => import("~/app/mcp/tools/pdf-build")),
+);
+mcp.tools.map(
+	toolset.epubBuild,
+	lazy(() => import("~/app/mcp/tools/epub-build")),
+);
+mcp.tools.map(
+	toolset.feedNormalize,
+	lazy(() => import("~/app/mcp/tools/feed-normalize")),
+);
 
 export default mcp;

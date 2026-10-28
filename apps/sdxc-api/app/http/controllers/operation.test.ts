@@ -37,7 +37,7 @@ describe("POST /v1/semver.satisfies", () => {
 		router = createWebRouter();
 	});
 
-	test("answers 402 without payment", async () => {
+	test("answers 402 without payment and stamps Bazaar discovery", async () => {
 		let response = await router.fetch(
 			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
 				method: "POST",
@@ -50,7 +50,15 @@ describe("POST /v1/semver.satisfies", () => {
 			}),
 		);
 		expect(response.status).toBe(402);
-		expect(response.headers.get(PAYMENT_REQUIRED)).toBeTruthy();
+		let header = response.headers.get(PAYMENT_REQUIRED);
+		expect(header).toBeTruthy();
+		let decoded = decodeHeader(header!);
+		expect(isFailure(decoded)).toBe(false);
+		if (isFailure(decoded)) throw new Error("unreachable");
+		let body = decoded.data as PaymentRequired;
+		expect(body.extensions?.bazaar).toBeTruthy();
+		let bazaar = body.extensions!.bazaar as { info: { input: { type: string } } };
+		expect(bazaar.info.input.type).toBe("http");
 	});
 
 	test("runs the operation after a memory payment", async () => {
