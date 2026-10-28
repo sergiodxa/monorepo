@@ -26,8 +26,9 @@ export default defineConfig({
 			X402_PAY_TO: bindings.secret(),
 			/**
 			 * Facilitator base URL. Soft-launch: `memory` (or empty) disables
-			 * charging (ADR-182). Non-http stubs keep MemoryFacilitator while
-			 * still charging. Production: CDP or another HTTPS facilitator.
+			 * charging so the Worker can be exercised without a receive wallet.
+			 * Non-http stubs keep MemoryFacilitator while still charging.
+			 * Production: CDP or another HTTPS facilitator.
 			 */
 			X402_FACILITATOR_URL: bindings.secret(),
 			/**
