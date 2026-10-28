@@ -35,7 +35,7 @@ Uptime's anonymous `/try` probe remains a strong second candidate and is out of 
 
 ## Decision
 
-1. Ship app **`apps/apis`** (Worker `apis`, domain `apis.sdxc.dev`) as the collection.
+1. Ship app **`apps/apis`** (Worker `apis`, domain `api.sdxc.dev`) as the collection.
 2. Ship package **`@sdxc/x402`** as the Remix seller middleware and facilitator client used by
    that app (and later by others).
 3. First operations wrap packages that are pure, bounded and useful alone:
