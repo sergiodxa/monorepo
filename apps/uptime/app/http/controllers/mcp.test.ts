@@ -51,7 +51,9 @@ describe("GET /mcp", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
+		expect(body).toContain("Uptime");
 		expect(body).toContain("Agent-first monitoring");
+		expect(body).toContain("Streamable HTTP");
 		expect(body).not.toContain("@abluva/mcp-remote@latest");
 	});
 

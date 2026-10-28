@@ -16,10 +16,36 @@ export default {
 			description:
 				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
 		},
-		heading: "Uptime for agents",
-		description:
-			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
+		brand: "Uptime",
+		hero: {
+			title: "Monitoring that agents can",
+			highlight: "operate",
+			description:
+				"Streamable HTTP MCP turns the whole monitoring API into tools — create monitors, read status, manage alerts — from any client that can reach a remote server.",
+			ctaOut: "Sign in to set up MCP",
+			ctaIn: "Jump to setup",
+			signalLabel: "Live Streamable HTTP endpoint",
+			endpoint: "https://uptime.sergiodxa.com/mcp",
+			protocol: "2026-07-28",
+		},
+		protocol: {
+			badge: "Streamable HTTP",
+			title: "One URL. Protocol 2026-07-28.",
+			description:
+				"Agents connect over Streamable HTTP. No custom SDK — point mcp-remote (or any remote-MCP client) at the endpoint and authenticate with a scoped API key.",
+		},
+		tools: {
+			badge: "Agent-first monitoring",
+			title: "The REST API, as tools",
+			description:
+				"Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
+			api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
+			scopes:
+				"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
+			remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
+		},
 		setup: {
+			badge: "Your setup",
 			heading: "Connect your client",
 			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this config into a client that supports remote MCP (for example via mcp-remote).",
 			steps: {
@@ -29,19 +55,15 @@ export default {
 				configure: "Add the remote MCP config below to your client.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
+			scopesNote:
+				"API tokens need the mcp scope to connect, plus every other scope the tools you want already require (for example monitors:read).",
 			configLabel: "Remote MCP config",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
-		sell: {
-			heading: "Agent-first monitoring",
-			body: "Skip writing one-off scripts. Give an agent a scoped API key and let it operate Uptime the same way the REST API does.",
-			points: {
-				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
-				scopes:
-					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
-				remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
-			},
+		finalCta: {
+			title: "Put an agent on watch",
+			body: "Sign in, mint a key with mcp plus the resource scopes you need, and paste the config into your client.",
 			cta: "Sign in to set up MCP",
 		},
 	},

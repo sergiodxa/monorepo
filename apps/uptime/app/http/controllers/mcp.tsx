@@ -7,22 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { IntlProvider } from "@sdxc/i18n/ui";
-import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { vstack } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { m, maxIs, mbs, p, pbe, pbs, pi } from "@sdxc/u/size";
-import { font, text, weight, whiteSpace } from "@sdxc/u/typography";
-import { Description, Heading, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/initializers/seo";
-import CopyButton from "~/resources/components/copy-button";
-import AuthCta from "~/resources/components/marketing/auth-cta";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
+import McpLandingView from "~/resources/views/marketing/mcp";
 import routes from "~/routes/web";
 
 /**
@@ -60,89 +51,46 @@ export default createAction(routes.mcp.index, async (ctx) => {
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				<article
-					mix={[
-						maxIs("720px"),
-						m(0, "auto"),
-						pbs("48px"),
-						pi("24px"),
-						pbe("80px"),
-						vstack({ gap: 6 }),
+				<McpLandingView
+					isSignedIn={isSignedIn}
+					brand={t("mcp.brand")}
+					heroTitle={t("mcp.hero.title")}
+					heroHighlight={t("mcp.hero.highlight")}
+					heroDescription={t("mcp.hero.description")}
+					heroCtaOut={t("mcp.hero.ctaOut")}
+					heroCtaIn={t("mcp.hero.ctaIn")}
+					signalLabel={t("mcp.hero.signalLabel")}
+					endpoint={t("mcp.hero.endpoint")}
+					protocol={t("mcp.hero.protocol")}
+					protocolBadge={t("mcp.protocol.badge")}
+					protocolTitle={t("mcp.protocol.title")}
+					protocolDescription={t("mcp.protocol.description")}
+					toolsBadge={t("mcp.tools.badge")}
+					toolsTitle={t("mcp.tools.title")}
+					toolsDescription={t("mcp.tools.description")}
+					toolsApi={t("mcp.tools.api")}
+					toolsScopes={t("mcp.tools.scopes")}
+					toolsRemote={t("mcp.tools.remote")}
+					setupBadge={t("mcp.setup.badge")}
+					setupHeading={t("mcp.setup.heading")}
+					setupLead={t("mcp.setup.lead")}
+					setupSteps={[
+						t("mcp.setup.steps.token"),
+						t("mcp.setup.steps.scopes"),
+						t("mcp.setup.steps.configure"),
+						t("mcp.setup.steps.ask"),
 					]}
-				>
-					<HeadingScope>
-						<Heading level={1}>{t("mcp.heading")}</Heading>
-						<Description>{t("mcp.description")}</Description>
-					</HeadingScope>
-
-					{isSignedIn ? (
-						<section mix={[vstack({ gap: 4 })]}>
-							<Heading level={2}>{t("mcp.setup.heading")}</Heading>
-							<Description>{t("mcp.setup.lead")}</Description>
-
-							<ol mix={[m(0), vstack({ gap: 2 }), text("sm"), fg("neutral")]}>
-								<li>{t("mcp.setup.steps.token")}</li>
-								<li>{t("mcp.setup.steps.scopes")}</li>
-								<li>{t("mcp.setup.steps.configure")}</li>
-								<li>{t("mcp.setup.steps.ask")}</li>
-							</ol>
-
-							<div mix={[vstack({ gap: 2 })]}>
-								<Text mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-									{t("mcp.setup.configLabel")}
-								</Text>
-								<pre
-									mix={[
-										m(0),
-										p(3),
-										rounded("md"),
-										bg("neutral.tint"),
-										fg("neutral.emphasis"),
-										text("sm"),
-										font("mono"),
-										whiteSpace("pre-wrap"),
-										overflow("auto"),
-										maxIs("100%"),
-									]}
-								>
-									<code>{MCP_REMOTE_CONFIG_JSON}</code>
-								</pre>
-								<IntlProvider intl={ctx.intl}>
-									<CopyButton value={MCP_REMOTE_CONFIG_JSON} label={t("mcp.setup.copy")} />
-								</IntlProvider>
-							</div>
-
-							<div mix={[mbs(2)]}>
-								<LinkButton href={routes.app.index.href()} color="brand">
-									{t("mcp.setup.openKeys")}
-								</LinkButton>
-							</div>
-						</section>
-					) : (
-						<section
-							mix={[
-								vstack({ gap: 4 }),
-								pbs(2),
-								borderEdge("block-start", { color: "neutral.border", width: 1 }),
-							]}
-						>
-							<Heading level={2}>{t("mcp.sell.heading")}</Heading>
-							<Description>{t("mcp.sell.body")}</Description>
-							<ul mix={[m(0), vstack({ gap: 2 }), text("sm"), fg("neutral")]}>
-								<li>{t("mcp.sell.points.api")}</li>
-								<li>{t("mcp.sell.points.scopes")}</li>
-								<li>{t("mcp.sell.points.remote")}</li>
-							</ul>
-							<div>
-								<AuthCta
-									isSignedIn={false}
-									startLabel={t("mcp.sell.cta")}
-									dashboardLabel={t("landing.header.nav.cta.in")}
-								/>
-							</div>
-						</section>
-					)}
-				</article>
+					scopesNote={t("mcp.setup.scopesNote")}
+					configLabel={t("mcp.setup.configLabel")}
+					configJson={MCP_REMOTE_CONFIG_JSON}
+					copyLabel={t("mcp.setup.copy")}
+					openKeysLabel={t("mcp.setup.openKeys")}
+					dashboardLabel={t("landing.header.nav.cta.in")}
+					finalCtaTitle={t("mcp.finalCta.title")}
+					finalCtaBody={t("mcp.finalCta.body")}
+					finalCtaLabel={t("mcp.finalCta.cta")}
+					intl={ctx.intl}
+				/>
 			</MarketingLayout>
 		</DocumentLayout>,
 	);
