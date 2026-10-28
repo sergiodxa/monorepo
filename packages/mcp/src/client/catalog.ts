@@ -7,11 +7,12 @@
  */
 
 /**
- * One tool in a first-party catalog: `input` types `call`'s arguments, `output`
- * types `structuredContent` when no result schema is passed.
+ * One tool in a first-party catalog: `input` types `call`'s tool fields (the
+ * optional client-only `schema` key is separate), `output` types
+ * `structuredContent` when no result schema is passed.
  */
 export interface ToolContract {
-	/** Argument object for `call`; a concrete object type or a record. */
+	/** Tool argument fields for `call` (not including client-only `schema`). */
 	input: object;
 	/** Expected `structuredContent` shape when no result schema is passed. */
 	output?: unknown;
