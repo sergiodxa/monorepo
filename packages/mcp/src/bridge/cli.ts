@@ -5,8 +5,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Readable, Writable } from "node:stream";
-
 import { connect as defaultConnect } from "../client.js";
 
 import type { BridgeIo } from "./run.js";
@@ -15,6 +13,8 @@ import type { UpstreamClient } from "./upstream.js";
 import { writeLog } from "./framing.js";
 import { isBridgeArgvError, parseBridgeArgv } from "./parse-argv.js";
 import { runBridge } from "./run.js";
+
+import type { Readable, Writable } from "node:stream";
 
 /** Options for connecting to a remote MCP endpoint (matches `@sdxc/mcp/client` `connect`). */
 export interface BridgeConnectOptions {
