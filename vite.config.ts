@@ -497,6 +497,9 @@ export default defineConfig({
 				plugins: [cloudflareWorkersStub()],
 				resolve: {
 					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/apis/app/test/assets-manifest.ts`,
+					},
 				},
 				test: {
 					name: "apis",

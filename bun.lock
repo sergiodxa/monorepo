@@ -51,6 +51,8 @@
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/semver": "workspace:*",
         "@sdxc/trace-context": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/x402": "workspace:*",
         "@sdxc/zone-file": "workspace:*",

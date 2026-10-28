@@ -21,13 +21,33 @@ payments settle through an in-memory facilitator — use `@sdxc/x402/testing`'s
 
 ## Routes
 
-| Route     | Method | Payment              | Purpose                                        |
-| --------- | ------ | -------------------- | ---------------------------------------------- |
-| `/`       | GET    | Free                 | Plain-text orientation                         |
-| `/v1`     | GET    | Free                 | JSON catalog of operations                     |
-| `/v1/*id` | POST   | x402                 | Run one catalog operation (dots allowed in id) |
-| `/mcp`    | POST   | x402 on `tools/call` | Model Context Protocol                         |
-| `/health` | GET    | Free                 | Health report                                  |
+| Route     | Method | Payment              | Purpose                                                               |
+| --------- | ------ | -------------------- | --------------------------------------------------------------------- |
+| `/`       | GET    | Free                 | HTML landing (MCP, x402, catalog); `Accept: text/markdown` for agents |
+| `/v1`     | GET    | Free                 | JSON catalog of operations                                            |
+| `/v1/*id` | POST   | x402                 | Run one catalog operation (dots allowed in id)                        |
+| `/mcp`    | POST   | x402 on `tools/call` | Model Context Protocol                                                |
+| `/health` | GET    | Free                 | Health report                                                         |
+
+## Connect MCP
+
+```sh
+claude mcp add --transport http sdxc-apis https://api.sdxc.dev/mcp
+```
+
+```json
+{
+	"mcpServers": {
+		"sdxc-apis": {
+			"type": "http",
+			"url": "https://api.sdxc.dev/mcp"
+		}
+	}
+}
+```
+
+Unpaid `tools/call` answers HTTP `402` with x402 `PAYMENT-REQUIRED`. Settle and retry with
+`PAYMENT-SIGNATURE`.
 
 ## Operations
 
