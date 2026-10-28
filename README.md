@@ -122,12 +122,12 @@ dispatcher.map(catalog.sendWelcome, () => import("./jobs/send-welcome"));
 await dispatcher.enqueue(catalog.sendWelcome, { userId: user.id });
 ```
 
-**[@sdxc/mcp](packages/mcp)**: an MCP server for your agent-facing API, served over stateless
+**[@sdxc/mcp](packages/mcp)**: MCP servers and a Streamable HTTP client for your agent-facing API, over stateless
 Streamable HTTP from any `fetch` handler.
 
 ```typescript
 import * as s from "@sdxc/json-schema";
-import { createHandler, tool, tools, ToolError } from "@sdxc/mcp";
+import { createHandler, tool, tools, ToolError } from "@sdxc/mcp/server";
 
 let toolset = tools({
 	search: tool("search_documents", {
@@ -207,7 +207,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it                                                                             |
 | [@sdxc/link-header](packages/link-header)                             | Parse and stringify RFC 8288 Link headers and RFC 9264 link sets                                                                                   |
 | [@sdxc/location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                                                                          |
-| [@sdxc/mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                                                         |
+| [@sdxc/mcp](packages/mcp)                                             | MCP server and Streamable HTTP client (plus mcp-bridge bin)                                                                                        |
 | [@sdxc/merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                                                           |
 | [@sdxc/no-www-middleware](packages/no-www-middleware)                 | Router middleware that permanently redirects a `www.` hostname to the apex domain                                                                  |
 | [@sdxc/openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                                                 |
