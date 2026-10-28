@@ -7,4 +7,4 @@
 
 import { createLogger } from "@sdxc/logger";
 
-export const logger = createLogger({ service: "apis" });
+export const logger = createLogger({ service: "sdxc-api" });

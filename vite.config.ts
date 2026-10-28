@@ -493,16 +493,16 @@ export default defineConfig({
 				},
 			},
 			{
-				root: "apps/apis",
+				root: "apps/sdxc-api",
 				plugins: [cloudflareWorkersStub()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/apis/app/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc-api/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {
-					name: "apis",
+					name: "sdxc-api",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
 					testTimeout: 20_000,

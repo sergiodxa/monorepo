@@ -10,7 +10,7 @@ import { bindings, defineConfig } from "cf/config";
 
 export default defineConfig({
 	worker: {
-		name: "apis",
+		name: "sdxc-api",
 		compatibilityDate: "2026-09-02",
 		compatibilityFlags: ["nodejs_compat"],
 		entrypoint: "./bootstrap/worker.ts",

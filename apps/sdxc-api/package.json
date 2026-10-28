@@ -1,5 +1,5 @@
 {
-	"name": "@apps/apis",
+	"name": "@apps/sdxc-api",
 	"private": true,
 	"type": "module",
 	"scripts": {
