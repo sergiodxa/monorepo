@@ -19,7 +19,7 @@ import {
 	createDurableObjectState,
 	createKVNamespace,
 } from "@sdxc/cloudflare-mocks";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 

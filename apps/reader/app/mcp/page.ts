@@ -7,7 +7,7 @@
  */
 
 import { currentLog } from "@sdxc/logger";
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { DEFAULT_MAX_QUERY_LENGTH, DEFAULT_MAX_QUERY_TERMS } from "@sdxc/search/query";
 
 import type { UserStore } from "~/app/models/user-store";

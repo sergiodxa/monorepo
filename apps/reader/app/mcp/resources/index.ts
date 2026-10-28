@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp/server";
 
 /** The resource tree the MCP handler is mapped against. */
 export default resources({

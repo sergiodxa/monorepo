@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createResource } from "@sdxc/mcp";
+import { createResource } from "@sdxc/mcp/server";
 
 import { agentPage, agentStore, reported } from "~/app/mcp/page";
 import resourceset from "~/app/mcp/resources";

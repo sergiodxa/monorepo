@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext } from "@sdxc/mcp";
+import type { AnyRequestContext } from "@sdxc/mcp/server";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";

@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ToolContext } from "@sdxc/mcp";
+import type { ToolContext } from "@sdxc/mcp/server";
 
-import { ForbiddenError } from "@sdxc/mcp";
+import { ForbiddenError } from "@sdxc/mcp/server";
 import { RequestContext } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
