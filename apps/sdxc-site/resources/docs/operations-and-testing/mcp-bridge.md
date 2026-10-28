@@ -1,6 +1,6 @@
 ---
 title: Bridge Agents to a modern MCP server
-description: Point handshake-era agents at a 2026-07-28 Streamable HTTP MCP URL through the mcp-bridge bin on @sdxc/mcp.
+description: Connect handshake-era agents to a modern Streamable HTTP MCP endpoint.
 section:
     title: Operations & testing
     order: 9
