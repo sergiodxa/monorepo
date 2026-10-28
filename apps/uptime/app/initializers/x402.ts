@@ -1,6 +1,7 @@
 /**
  * Builds the x402 seller used by the accountless guest probe: memory facilitator
- * when the facilitator secret is empty or `memory`, otherwise an HTTP facilitator.
+ * when the facilitator secret is empty, `memory`, or non-http; otherwise HTTP.
+ * Soft-launch disables charging in the payment guard while still publishing a seller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,9 +22,10 @@ const DEFAULT_NETWORK = "eip155:84532";
 const DEFAULT_PAY_TO = "0x00000000000000000000000000000000000000fe";
 
 /**
- * Seller config for the guest-probe route. A missing, `memory`, or non-http
- * facilitator URL selects the memory facilitator so Vitest stubs and bare local
- * runs settle without a chain.
+ * Seller config for the guest-probe route. Soft-launch (`memory` / empty) disables
+ * charging in the payment guard and still publishes a memory seller so `ctx.x402`
+ * exists. Vitest's `test-<KEY>` stubs keep the memory facilitator so settlement
+ * tests can collect. A real `https://…` URL selects {@link HTTPFacilitator}.
  */
 export function sellerConfig(): SellerConfig {
 	let facilitatorUrl = readOptional("X402_FACILITATOR_URL");
