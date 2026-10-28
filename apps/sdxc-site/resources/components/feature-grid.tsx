@@ -1,7 +1,7 @@
 /**
  * The `feature-grid` tag: the claims of a section as a ruled grid, each in a cell of its
- * own with hairlines between them rather than cards floating apart. The grid collapses to
- * one column below the breakpoint, and `columns` caps how wide the set spreads above it.
+ * own with hairlines between them rather than cards floating apart. Thin adapter over
+ * {@link Feature.Grid} so the markdown `columns` attribute stays a string.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,13 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { gap, grid, gridTemplate, repeat } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { media } from "sdxc/u/responsive";
-import { when } from "sdxc/u/state";
+import { Feature } from "sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -36,30 +30,6 @@ export default function FeatureGrid(handle: Handle<FeatureGrid.Props>) {
 	return () => {
 		let { children, columns = "2" } = handle.props;
 
-		return (
-			<div
-				mix={[
-					grid(),
-					gap("1px"),
-					rounded("xl"),
-					overflow("hidden"),
-					border({ color: "neutral.border", width: 1, style: "solid" }),
-					raw({ backgroundColor: "var(--ui-neutral-border)", textAlign: "start" }),
-					gridTemplate({ columns: "minmax(0, 1fr)" }),
-					media("(min-width: 48rem)", [
-						gridTemplate({ columns: repeat(Number(columns), "minmax(0, 1fr)") }),
-
-						columns === "2"
-							? when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" }))
-							: [
-									when("& > :last-child:nth-child(3n + 1)", raw({ gridColumn: "1 / -1" })),
-									when("& > :last-child:nth-child(3n + 2)", raw({ gridColumn: "span 2" })),
-								],
-					]),
-				]}
-			>
-				{children}
-			</div>
-		);
+		return <Feature.Grid columns={Number(columns) as 2 | 3}>{children}</Feature.Grid>;
 	};
 }

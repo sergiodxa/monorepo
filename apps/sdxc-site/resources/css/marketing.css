@@ -1,0 +1,10 @@
+/*
+ * Site overrides for `@sdxc/ui` marketing tokens. Loaded after `theme.css` so the
+ * landing measure stays aligned with the site bar and footer, and CTAs keep the
+ * soft-rect radius of the ruled frame.
+ */
+
+:root {
+	--ui-marketing-measure: 76rem;
+	--ui-marketing-cta-radius: 0.375rem;
+}

@@ -31,6 +31,7 @@ import SiteFooter from "~/resources/components/site-footer";
 import "sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
 import "sdxc/ui/theme.css";
+import "~/resources/css/marketing.css";
 import "sdxc/highlight/styles.css";
 
 /**

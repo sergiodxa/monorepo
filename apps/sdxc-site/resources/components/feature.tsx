@@ -1,7 +1,7 @@
 /**
  * The `feature` tag: one cell of a claim grid, carrying a title, an optional glyph, an
  * optional number that backs the claim up, and an optional link to where it is argued in
- * full.
+ * full. Thin adapter over {@link Feature} that keeps the markdown attribute vocabulary.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,13 +18,8 @@ import {
 	ShieldCheckIcon,
 	ZapIcon,
 } from "sdxc/icons";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { center, hstack, inlineFlex, vstack } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { bs, is, m, mbs, p } from "sdxc/u/size";
-import { leading, text, tracking, weight } from "sdxc/u/typography";
-import { Badge, LinkButton } from "sdxc/ui";
+import { hstack } from "sdxc/u/layout";
+import { Badge, Feature as UiFeature, LinkButton } from "sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -61,59 +56,29 @@ export default function Feature(handle: Handle<Feature.Props>) {
 		let Glyph = icon ? ICONS[icon] : undefined;
 
 		return (
-			<div
-				mix={[
-					vstack({ gap: 4, align: "stretch" }),
-					bg(),
-					p(8, 6),
-					media("(min-width: 48rem)", p(10, 10)),
-				]}
-			>
+			<UiFeature href={href}>
 				{Glyph ? (
-					<span
-						mix={[
-							inlineFlex(),
-							center(),
-							is(10),
-							bs(10),
-							rounded("lg"),
-							bg("brand.tint"),
-							fg("brand"),
-							border({ color: "brand.border", width: 1, style: "solid" }),
-						]}
-					>
+					<UiFeature.Icon>
 						<Glyph size={18} aria-hidden="true" />
-					</span>
+					</UiFeature.Icon>
 				) : null}
 
 				<div mix={[hstack({ gap: 2, align: "center" })]}>
-					<h3 mix={[m(0), text("xl"), weight("medium"), tracking("tight"), fg("neutral.emphasis")]}>
-						{title}
-					</h3>
+					<UiFeature.Title>{title}</UiFeature.Title>
 					{metric ? <Badge color="brand">{metric}</Badge> : null}
 				</div>
 
-				<div
-					mix={[
-						vstack({ gap: 2 }),
-						blocksUseGap(),
-						text("base"),
-						leading("relaxed"),
-						fg("neutral"),
-					]}
-				>
-					{children}
-				</div>
+				<UiFeature.Description mix={[blocksUseGap()]}>{children}</UiFeature.Description>
 
 				{href && linkLabel ? (
-					<span mix={[mbs(2)]}>
+					<UiFeature.Action>
 						<LinkButton href={href} size="sm" color="neutral" variant="outline">
 							{linkLabel}
 							<ArrowRightIcon size={14} aria-hidden="true" />
 						</LinkButton>
-					</span>
+					</UiFeature.Action>
 				) : null}
-			</div>
+			</UiFeature>
 		);
 	};
 }
