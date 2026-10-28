@@ -1,0 +1,7 @@
+# Artifacts the root .gitignore does not already cover.
+
+# Folders
+/.cloudflare
+
+# Files
+.dev.vars

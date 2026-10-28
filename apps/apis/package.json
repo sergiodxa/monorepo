@@ -1,0 +1,42 @@
+{
+	"name": "@apps/apis",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vp build",
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "vp dev",
+		"start": "vp preview",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pitlane/assets": "0.1.0",
+		"@sdxc/assets-middleware": "workspace:*",
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/health": "workspace:*",
+		"@sdxc/highlight": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/json-patch": "workspace:*",
+		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
+		"@sdxc/qr": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/security-headers": "workspace:*",
+		"@sdxc/semver": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@sdxc/x402": "workspace:*",
+		"@sdxc/zone-file": "workspace:*",
+		"remix": "3.1.0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+		"@pitlane/vite-plugin-remix": "0.8.0",
+		"cf": "1.0.0-beta.5",
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"extends": "../../tsconfig.json",
+	"include": [
+		"app/**/*",
+		"bootstrap/**/*",
+		"config/**/*",
+		"resources/**/*",
+		"routes/**/*",
+		".cloudflare/types/index.d.ts",
+		"cloudflare.config.ts",
+		"vite.config.ts"
+	],
+	"compilerOptions": {
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/component",
+		"types": ["@total-typescript/ts-reset", "vite/client", "bun", "node"],
+		"rootDirs": ["."],
+		"paths": {
+			"~/app/*": ["./app/*"],
+			"~/config/*": ["./config/*"],
+			"~/resources/*": ["./resources/*"],
+			"~/routes/*": ["./routes/*"]
+		}
+	}
+}
