@@ -9,6 +9,8 @@
 
 import {
 	componentMarkdown,
+	MARKETING_COMPONENTS_SUMMARY,
+	MARKETING_COMPONENTS_TITLE,
 	MARKETING_FOUNDATIONS_SUMMARY,
 	MARKETING_FOUNDATIONS_TITLE,
 	THEMING_SUMMARY,
@@ -33,6 +35,9 @@ export const THEMING_SLUG = "theming";
 
 /** The marketing foundations overview under the same component tree. */
 export const MARKETING_FOUNDATIONS_SLUG = "marketing-foundations";
+
+/** The marketing components overview under the same component tree. */
+export const MARKETING_COMPONENTS_SLUG = "marketing-components";
 
 /** One reference page of a catalogue, as a listing or an index names it. */
 /** What every catalogue page carries, whichever tree it lives in. */
@@ -121,6 +126,17 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 		markdownHref: routes.markdown.component.href({ component: MARKETING_FOUNDATIONS_SLUG }),
 	});
 
+	pages.push({
+		title: MARKETING_COMPONENTS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: MARKETING_COMPONENTS_SUMMARY,
+		params: { component: MARKETING_COMPONENTS_SLUG },
+		href: routes.api.component.href({ component: MARKETING_COMPONENTS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: MARKETING_COMPONENTS_SLUG }),
+	});
+
 	for (let entry of await listComponents()) {
 		let reference = await readComponent(entry.slug);
 		pages.push({
@@ -176,6 +192,7 @@ export async function readUtilityMarkdown(utility: string): Promise<string | nul
 export async function readComponentMarkdown(component: string): Promise<string | null> {
 	if (component === THEMING_SLUG) return themeMarkdown(await readTheme());
 	if (component === MARKETING_FOUNDATIONS_SLUG) return marketingFoundationsMarkdown();
+	if (component === MARKETING_COMPONENTS_SLUG) return marketingComponentsMarkdown();
 
 	let reference = await readComponent(component);
 	return reference === null ? null : componentMarkdown(reference);
@@ -226,7 +243,38 @@ function marketingFoundationsMarkdown(): string {
 		"",
 		"Apply `viewReveal()` from `@sdxc/ui/animations` on band hosts. Reduced-motion is handled there.",
 		"",
-		"Listbox `Section` remains for menus; marketing bands compose these factories today and will use `MarketingSection` later.",
+		"Listbox `Section` remains for menus; landing pages compose `MarketingSection` and the other marketing primitives documented under Marketing components.",
+		"",
+	].join("\n");
+}
+
+/**
+ * The markdown twin of the marketing components overview: the Phase 1
+ * primitives and how they compose, matching what the HTML page demonstrates.
+ */
+function marketingComponentsMarkdown(): string {
+	return [
+		`# ${MARKETING_COMPONENTS_TITLE}`,
+		`> ${MARKETING_COMPONENTS_SUMMARY}`,
+		"",
+		"Import from `@sdxc/ui`. Style factories and tokens stay on `@sdxc/ui/styles` and `@sdxc/ui/theme.css`.",
+		"",
+		"## Primitives",
+		"",
+		"- `MarketingSection` — band host (`tone`, `spacing`, `align`, `ruled`, `variant`)",
+		"- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: pill | mono | chip)",
+		"- `CtaGroup` — wrapping primary/secondary actions (`sm` nav / `lg` hero)",
+		"- `Split` / `Split.Copy` / `Split.Media` — two-column band content",
+		"- `StatStrip` / `StatStrip.Item` — numeric proof strip",
+		"- `LogoCloud` — muted adopter marks at `--ui-marketing-logo-height`",
+		"- `Feature` / `Feature.Grid` — claim cells and hairline grid",
+		"",
+		"## Pairing notes",
+		"",
+		'- Hero CTAs: `size="lg"` (~48px) with optional `marketingCtaChrome()`',
+		'- Nav CTAs: `size="sm"` (~32px)',
+		'- `Heading size="display" | "chapter"` for marketing type without a header wrapper',
+		"- Product empty states stay on `Empty` / `Card`; landing claims use `Feature`",
 		"",
 	].join("\n");
 }

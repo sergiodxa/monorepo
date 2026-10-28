@@ -119,7 +119,11 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 						<PageTitle eyebrow="@sdxc/ui" title={MARKETING_FOUNDATIONS_TITLE}>
 							Layout tokens and style factories for landing bands. Override the tokens per brand;
 							compose the factories into section hosts. Listbox <code>Section</code> stays for menus
-							— marketing bands will use <code>MarketingSection</code> once that primitive lands.
+							— landing bands use <code>MarketingSection</code> and the other primitives on{" "}
+							<a href={routes.api.component.href({ component: "marketing-components" })}>
+								Marketing components
+							</a>
+							.
 						</PageTitle>
 						<PageActions
 							markdownHref={markdownHref}
@@ -300,8 +304,8 @@ import { marketingBandTone, marketingSectionSpace } from "@sdxc/ui/styles";
 					>
 						<p mix={[m(0), text("sm"), fg("neutral")]}>
 							Factories live under <code>@sdxc/ui/styles</code>. The listbox <code>Section</code>{" "}
-							component remains for menus; marketing pages compose these factories today and will
-							move onto <code>MarketingSection</code> in a later phase.
+							component remains for menus; landing pages compose <code>MarketingSection</code> and
+							the other marketing primitives documented under Marketing components.
 						</p>
 					</ReferenceSection>
 				</article>

@@ -111,6 +111,10 @@ export async function buildComponentsNav(): Promise<NavTree> {
 						title: "Marketing foundations",
 						href: routes.api.component.href({ component: "marketing-foundations" }),
 					},
+					{
+						title: "Marketing components",
+						href: routes.api.component.href({ component: "marketing-components" }),
+					},
 				],
 				groups: [],
 			},

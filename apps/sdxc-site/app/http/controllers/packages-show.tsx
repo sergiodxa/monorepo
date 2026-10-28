@@ -178,6 +178,10 @@ async function readCatalogue(name: string) {
 					title: "Marketing foundations",
 					href: routes.api.component.href({ component: "marketing-foundations" }),
 				},
+				{
+					title: "Marketing components",
+					href: routes.api.component.href({ component: "marketing-components" }),
+				},
 				...(await listComponentEntries()),
 			],
 		},
