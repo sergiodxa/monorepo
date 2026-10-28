@@ -123,6 +123,24 @@ export function isMetadataProblem(
 /** Marks a header value carried as Base64 because it is not header-safe as written. */
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
 
+/** Printable ASCII (space through `~`); anything outside needs the Base64 sentinel. */
+const HEADER_SAFE = /^[\u0020-\u007E]*$/;
+
+/**
+ * Encodes a header value that is not plain printable ASCII into the Base64 sentinel
+ * form servers decode with {@link decodeHeaderValue}, so `Mcp-Name` can carry a URI.
+ *
+ * @param value The logical header value.
+ * @returns The value as written when it is header-safe, otherwise the sentinel form.
+ */
+export function encodeHeaderValue(value: string): string {
+	if (HEADER_SAFE.test(value)) return value;
+	let bytes = new TextEncoder().encode(value);
+	let binary = "";
+	for (let byte of bytes) binary += String.fromCodePoint(byte);
+	return `=?base64?${btoa(binary)}?=`;
+}
+
 /**
  * Decodes a header value that may use the Base64 sentinel form clients use for any value
  * that is not plain printable ASCII. An undecodable value is returned as written, so the

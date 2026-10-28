@@ -1,12 +1,17 @@
 # @sdxc/mcp
 
-Model Context Protocol servers as `remix/router` actions over Streamable HTTP.
+Model Context Protocol servers as `remix/router` actions, a Streamable HTTP client, and an
+`mcp-bridge` bin for agent stdio.
 
 Revision `2026-07-28` of the [Model Context Protocol](https://modelcontextprotocol.io) is
-stateless: every request carries everything it needs and gets one complete response. That makes an
-MCP server an ordinary route. Tools and resources are declared like a route table, their handlers
-receive the request's own `RequestContext`, and the application's middleware runs in front of
-them.
+stateless: every request carries everything it needs and gets one complete response. Import the
+face you need — there is no root `@sdxc/mcp` export.
+
+| Entry              | Role                                                                 |
+| ------------------ | -------------------------------------------------------------------- |
+| `@sdxc/mcp/server` | Declare tools and resources; serve them over Streamable HTTP         |
+| `@sdxc/mcp/client` | Call a `2026-07-28` endpoint (`connect`, one-word session methods)   |
+| `mcp-bridge`       | Stdio bridge for agents (body ships in a follow-up; bin is reserved) |
 
 ## Installation
 
@@ -14,12 +19,38 @@ them.
 npm add @sdxc/mcp
 ```
 
-Handlers receive the `RequestContext` from [`remix`](https://www.npmjs.com/package/remix), and tool
-schemas are [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schemas. The
-package also depends on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and
-[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger).
+`@sdxc/mcp/server` needs the [`remix`](https://www.npmjs.com/package/remix) peer (optional at
+install time — required when you import `/server`). `@sdxc/mcp/client` and `mcp-bridge` do not.
+Tool schemas use [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema). The package
+also depends on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and
+[`@sdxc/uuid`](https://www.npmjs.com/package/@sdxc/uuid).
 
 ## Usage
+
+### Call a server
+
+```typescript
+import { connect } from "@sdxc/mcp/client";
+
+using mcp = connect({
+	url: "https://example.com/mcp",
+	client: { name: "my-app", version: "1.0.0" },
+	headers: { Authorization: `Bearer ${token}` },
+});
+
+await mcp.discover();
+await mcp.list();
+await mcp.call("search_documents", { query: "…" });
+await mcp.resources();
+await mcp.templates();
+await mcp.read("https://example.com/articles/hello.md");
+```
+
+`connect` is sync and opens no network until the first RPC. The session implements `Disposable`:
+prefer `using`; call `close()` when `using` is unavailable. Methods return
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) — a tool result with `isError` is still
+a successful RPC.
 
 ### Declare a tool
 
@@ -29,7 +60,7 @@ input schema is published in `tools/list`, parses every call, and types the hand
 ```typescript
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 
 export let toolset = tools({
 	searchDocuments: tool("search_documents", {
@@ -64,7 +95,7 @@ failed constraint is reported in one answer. Values are taken as sent, so `"20"`
 ### Handle it and serve requests
 
 ```typescript
-import { createHandler, ToolError } from "@sdxc/mcp";
+import { createHandler, ToolError } from "@sdxc/mcp/server";
 
 import { toolset } from "./tools.js";
 
@@ -93,7 +124,7 @@ A resource is addressed by URI, declared with a `remix/route-pattern`. A tool is
 model; a resource is picked by the person or attached by their client.
 
 ```typescript
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp/server";
 
 let resourceset = resources({
 	article: resource("https://example.com/articles/:slug.md", {
@@ -123,6 +154,26 @@ mcp.resources.map(resourceset.article, {
 published there (`https://example.com/articles/{slug}.md`) is derived from the pattern.
 
 ## API
+
+### Client (`@sdxc/mcp/client`)
+
+### `connect(options: ConnectOptions): McpClient`
+
+Binds a session to a Streamable HTTP endpoint. `options` holds `url`, `client` (`name` /
+`version`, optional `title`), and optional `headers` / `credentials`. Protocol version and
+transport stay internal (`2026-07-28`, with one `-32022` retry).
+
+### `McpClient`
+
+One-word methods: `discover`, `list`, `call(name, args?)`, `resources`, `templates`, `read(uri)`,
+plus `close()` and `[Symbol.dispose]()`. Each RPC returns `Result<…, McpClientError>`.
+
+### `McpClientError`
+
+Transport or JSON-RPC failure. Optional `code` and `data` when the server answered with an error
+object.
+
+### Server (`@sdxc/mcp/server`)
 
 ### `createHandler(options: HandlerOptions): McpHandler`
 
@@ -290,7 +341,7 @@ record gains `mcp.method`, `mcp.protocol_version`, `mcp.tool` with `mcp.is_error
 ```typescript
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
-import { createHandler } from "@sdxc/mcp";
+import { createHandler } from "@sdxc/mcp/server";
 import { createRouter } from "remix/router";
 import { route } from "remix/routes";
 
@@ -338,7 +389,7 @@ declared name.
 
 ```typescript
 import * as s from "@sdxc/json-schema";
-import { createHandler, tool, tools } from "@sdxc/mcp";
+import { createHandler, tool, tools } from "@sdxc/mcp/server";
 
 import { requireScope } from "./auth.js";
 
@@ -371,7 +422,7 @@ every tool.
 
 ```typescript
 // tools/search-documents.ts
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import { toolset } from "../tools.js";
 
@@ -380,7 +431,7 @@ export default createTool(toolset.searchDocuments, (ctx) => search(ctx.input.que
 
 ```typescript
 // resources/article.ts
-import { createResource } from "@sdxc/mcp";
+import { createResource } from "@sdxc/mcp/server";
 
 import { resourceset } from "../resources.js";
 
@@ -391,7 +442,7 @@ export default createResource(resourceset.article, {
 
 ```typescript
 // server.ts
-import { createHandler, lazy } from "@sdxc/mcp";
+import { createHandler, lazy } from "@sdxc/mcp/server";
 
 import { resourceset } from "./resources.js";
 import { toolset } from "./tools.js";
@@ -423,9 +474,9 @@ A tool whose `available` returns `false` is absent from `tools/list` and answere
 same rule on the call itself, for a client working from a stale list.
 
 ```typescript
-import type { ToolMiddleware } from "@sdxc/mcp";
+import type { ToolMiddleware } from "@sdxc/mcp/server";
 
-import { ForbiddenError } from "@sdxc/mcp";
+import { ForbiddenError } from "@sdxc/mcp/server";
 
 import { ApiKey } from "./auth.js";
 
@@ -454,9 +505,9 @@ controller's `middleware`, then an action's. Type `ctx.input` with `InputOf` onl
 middleware reads it.
 
 ```typescript
-import type { InputOf, ToolMiddleware } from "@sdxc/mcp";
+import type { InputOf, ToolMiddleware } from "@sdxc/mcp/server";
 
-import { createHandler, ToolError } from "@sdxc/mcp";
+import { createHandler, ToolError } from "@sdxc/mcp/server";
 
 import { ApiKey } from "./auth.js";
 import { toolset } from "./tools.js";
@@ -490,7 +541,7 @@ Declaring `output` publishes an `outputSchema`, and the handler's return value i
 
 ```typescript
 import * as s from "@sdxc/json-schema";
-import { createHandler, tool, ToolError } from "@sdxc/mcp";
+import { createHandler, tool, ToolError } from "@sdxc/mcp/server";
 
 let getWeather = tool("get_weather", {
 	description: "Current conditions for a city.",
@@ -534,7 +585,7 @@ follows from its declaration:
 | Captures nothing               | itself                   | —                          |
 
 ```typescript
-import { createHandler, resource, resources } from "@sdxc/mcp";
+import { createHandler, resource, resources } from "@sdxc/mcp/server";
 
 let resourceset = resources({
 	index: resource("notes://index", { name: "Index", mimeType: "text/markdown" }),

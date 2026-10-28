@@ -1,11 +1,15 @@
 {
 	"name": "@sdxc/mcp",
 	"version": "0.0.1",
-	"description": "Model Context Protocol servers as remix/router actions over Streamable HTTP",
+	"description": "Model Context Protocol servers and a Streamable HTTP client, plus an mcp-bridge bin for agent stdio",
 	"license": "MIT",
+	"bin": {
+		"mcp-bridge": "./src/bridge/index.ts"
+	},
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		"./client": "./src/client.ts",
+		"./server": "./src/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -13,12 +17,18 @@
 	"dependencies": {
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/logger": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"@sdxc/uuid": "workspace:*"
 	},
 	"devDependencies": {
 		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"remix": "3.1.0"
+	},
+	"peerDependenciesMeta": {
+		"remix": {
+			"optional": true
+		}
 	}
 }
