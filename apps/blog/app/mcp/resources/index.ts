@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp/server";
 
 /**
  * Origin the resource URIs are built against.

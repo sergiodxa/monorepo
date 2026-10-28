@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createResource } from "@sdxc/mcp";
+import { createResource } from "@sdxc/mcp/server";
 
 import { cached } from "~/app/mcp/cache";
 import { findPublished } from "~/app/mcp/posts";

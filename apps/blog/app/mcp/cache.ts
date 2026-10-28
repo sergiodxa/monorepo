@@ -8,7 +8,7 @@
  */
 
 import type { Cache } from "@sdxc/cache";
-import type { CallToolResult, ToolMiddleware } from "@sdxc/mcp";
+import type { CallToolResult, ToolMiddleware } from "@sdxc/mcp/server";
 import type { JSONSerialized } from "@sdxc/types";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
