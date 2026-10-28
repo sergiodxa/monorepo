@@ -1,7 +1,9 @@
 /**
  * The `hero` tag: the band the page opens on, set over a faded grid and drawn directly
  * under the site bar, so it carries no rule of its own. Its headings are set at display
- * size; what it holds and how it is laid out come from the content file.
+ * size; what it holds and how it is laid out come from the content file. Keeps free-form
+ * markdown children (rather than {@link LandingHero}'s structured slots) so home.md stays
+ * unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

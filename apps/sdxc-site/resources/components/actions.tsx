@@ -1,7 +1,7 @@
 /**
  * The `actions` tag: the one or two places a band sends a reader, drawn as buttons. The
  * destinations and their wording live in the content file, so changing where the page
- * sends someone is an edit to one attribute.
+ * sends someone is an edit to one attribute. Layout comes from {@link CtaGroup}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,8 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, ArrowUpRightIcon } from "sdxc/icons";
-import { flexWrap, hstack } from "sdxc/u/layout";
-import { LinkButton } from "sdxc/ui";
+import { CtaGroup, LinkButton } from "sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -41,7 +40,7 @@ export default function Actions(handle: Handle<Actions.Props>) {
 		let hasAlternate = Boolean(props["alt-href"] && props["alt-label"]);
 
 		return (
-			<div data-slot="actions" mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+			<CtaGroup data-slot="actions">
 				<LinkButton
 					href={props["cta-href"]}
 					size={size}
@@ -58,7 +57,7 @@ export default function Actions(handle: Handle<Actions.Props>) {
 						{isExternal(props["alt-href"] ?? "") ? <Arrow href={props["alt-href"] ?? ""} /> : null}
 					</LinkButton>
 				) : null}
-			</div>
+			</CtaGroup>
 		);
 	};
 }
