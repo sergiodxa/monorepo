@@ -29,6 +29,7 @@ import { previews } from "@sdxc/mail/previews";
 import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
+import { x402 } from "@sdxc/x402/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -61,6 +62,7 @@ import { mail as emailRegistry } from "~/app/initializers/mail";
 import { queue, transport } from "~/app/initializers/mail-transport";
 import { jobQueue } from "~/app/initializers/queue";
 import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
+import { sellerConfig } from "~/app/initializers/x402";
 import abilities from "~/app/policies/abilities";
 import { apiCatalogEntry } from "~/config/api-catalog";
 import { SECURITY_POLICY } from "~/config/security-policy";
@@ -177,6 +179,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * rate limits and recorded addresses all read the same canonical address.
 			 */
 			getClientIP(),
+			/**
+			 * Publishes `ctx.x402` for the accountless guest probe. Other routes ignore it;
+			 * marketing `/try` stays free and never mounts `requirePayment`.
+			 */
+			x402(sellerConfig()),
 			/**
 			 * Answers `/.well-known/security.txt`, the Web Bot Auth key directory and the API
 			 * catalog before anything that reads a session or the database, since none needs a cookie.
@@ -1096,6 +1103,10 @@ export function createWebRouter(options: WebRouterOptions) {
 	router.map(
 		routes.api.v1.ping,
 		lazy(() => import("~/app/http/controllers/api/ping")),
+	);
+	router.map(
+		routes.api.v1.guestProbe,
+		lazy(() => import("~/app/http/controllers/api/guest-probe")),
 	);
 
 	router.map(
