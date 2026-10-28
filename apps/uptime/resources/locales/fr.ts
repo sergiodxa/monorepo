@@ -21,15 +21,15 @@ export default {
 			"The whole monitoring API is available as Model Context Protocol tools. Create monitors, read status, manage alerts, and more — from any MCP client that can reach a remote server.",
 		setup: {
 			heading: "Connect your client",
-			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this config into a client that supports remote MCP (for example via mcp-remote).",
+			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
 			steps: {
 				token: "Open your team’s API keys and create a key.",
 				scopes:
 					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
-				configure: "Add the remote MCP config below to your client.",
+				configure: "Add the mcp-bridge config below to your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
-			configLabel: "Remote MCP config",
+			configLabel: "mcp-bridge config",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
@@ -40,7 +40,8 @@ export default {
 				api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
 				scopes:
 					"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
-				remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
+				remote:
+					"Connect over Streamable HTTP with protocol 2026-07-28 through mcp-bridge on @sdxc/mcp.",
 			},
 			cta: "Connectez-vous pour configurer MCP",
 		},

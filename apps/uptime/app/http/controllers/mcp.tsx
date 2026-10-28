@@ -1,6 +1,6 @@
 /**
  * The page at `GET /mcp`: sells the agent surface to anonymous visitors, and shows a
- * signed-in teammate how to point a client at this endpoint with an API key that carries
+ * signed-in teammate how to point mcp-bridge at this endpoint with an API key that carries
  * the `mcp` scope.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -17,22 +17,22 @@ import McpLandingView from "~/resources/views/marketing/mcp";
 import routes from "~/routes/web";
 
 /**
- * The remote MCP client config a signed-in visitor pastes into their agent. Protocol and
- * URL are the product contract; keep them literal.
+ * The mcp-bridge stdio config a signed-in visitor pastes into their agent. URL and auth
+ * header are the product contract; keep them literal (ADR-180).
  */
-const MCP_REMOTE_CONFIG = {
+const MCP_BRIDGE_CONFIG = {
 	command: "npx",
 	args: [
 		"-y",
-		"@abluva/mcp-remote@latest",
-		"--protocol",
-		"2026-07-28",
+		"@sdxc/mcp@latest",
 		"https://uptime.sergiodxa.com/mcp",
+		"--header",
+		"Authorization:Bearer ${UPTIME_MCP_TOKEN}",
 	],
 } as const;
 
 /** Pretty-printed config JSON for the setup snippet. */
-const MCP_REMOTE_CONFIG_JSON = `${JSON.stringify(MCP_REMOTE_CONFIG, null, 2)}\n`;
+const MCP_BRIDGE_CONFIG_JSON = `${JSON.stringify(MCP_BRIDGE_CONFIG, null, 2)}\n`;
 
 /** GET /mcp — marketing for anonymous visitors; setup instructions when signed in. */
 export default createAction(routes.mcp.index, async (ctx) => {
@@ -82,7 +82,7 @@ export default createAction(routes.mcp.index, async (ctx) => {
 					]}
 					scopesNote={t("mcp.setup.scopesNote")}
 					configLabel={t("mcp.setup.configLabel")}
-					configJson={MCP_REMOTE_CONFIG_JSON}
+					configJson={MCP_BRIDGE_CONFIG_JSON}
 					copyLabel={t("mcp.setup.copy")}
 					openKeysLabel={t("mcp.setup.openKeys")}
 					dashboardLabel={t("landing.header.nav.cta.in")}

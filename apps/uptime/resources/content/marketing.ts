@@ -564,7 +564,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				title: "Streamable HTTP MCP",
 				description:
-					"Connect an agent with @abluva/mcp-remote (protocol 2026-07-28) to https://uptime.sergiodxa.com/mcp.",
+					"Connect an agent with mcp-bridge from @sdxc/mcp (protocol 2026-07-28) to https://uptime.sergiodxa.com/mcp.",
 				icon: "bot",
 			},
 			{
