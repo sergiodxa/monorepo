@@ -1,7 +1,7 @@
 /**
  * Sales page view: hero, what's inside, the free-sample offer, the testimonial, both
  * packages with their live prices, the upgrade call-out, the author bio, and the FAQ, each
- * section separated by a rule.
+ * section separated by a marketing hairline.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +14,7 @@ import { rounded } from "@sdxc/u/effects";
 import { pseudoContent, raw } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hstack, repeat, shrink, vstack } from "@sdxc/u/layout";
 import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mi, p, pb, pi } from "@sdxc/u/size";
+import { bs, is, maxIs, mi, mbe, p, pb, pi } from "@sdxc/u/size";
 import { after, before } from "@sdxc/u/state";
 import {
 	balance,
@@ -27,6 +27,9 @@ import {
 	weight,
 	whiteSpace,
 } from "@sdxc/u/typography";
+import { Heading, HeadingScope, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { CheckList, CheckRow } from "@sdxc/ui/patterns";
+import { marketingLead } from "@sdxc/ui/styles";
 import { css } from "remix/component";
 
 import type { PackageCopy } from "~/resources/content/release";
@@ -50,6 +53,12 @@ const LARGE = "(min-width: 64rem)";
 
 /** The viewport width the upgrade call-out becomes a row at, matching the site's `sm`. */
 const SMALL = "(min-width: 40rem)";
+
+/**
+ * Serif chapter title overrides: capitalize and keep the handbook face even when
+ * a marketing header already applies display tokens.
+ */
+const CHAPTER_TITLE_MIX = [textTransform("capitalize")];
 
 /** One package's price as the page shows it, already formatted as currency. */
 export interface PriceView {
@@ -78,30 +87,6 @@ export namespace ReleaseView {
 	}
 }
 
-/** The section heading shared by every section below the hero. */
-function SectionHeading(handle: Handle<{ children: string }>) {
-	return () => (
-		<h2
-			mix={[
-				font("serif"),
-				text("3xl"),
-				leading("none"),
-				weight("light"),
-				balance(),
-				textTransform("capitalize"),
-				media(LARGE, text("4xl")),
-			]}
-		>
-			{handle.props.children}
-		</h2>
-	);
-}
-
-/** The rule separating one section from the next. */
-function SectionRule() {
-	return () => <hr mix={[is("100%"), border({ color: "color.neutral.300", width: 1 })]} />;
-}
-
 /**
  * The hero: the title, the pitch, and the jump link down to the packages.
  * The jump link is a literal `#pricing` fragment, pointing to a section
@@ -109,21 +94,21 @@ function SectionRule() {
  */
 function Hero() {
 	return () => (
-		<div id="hero" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), p(5)]}>
-			<header mix={[vstack({ gap: 5 }), font("serif")]}>
-				<h1
+		<MarketingSection id="hero" spacing="hero">
+			<header mix={[vstack({ gap: 5 })]}>
+				<Heading size="display" mix={[text("4xl"), balance(), media(LARGE, text("8xl"))]}>
+					{HERO.title}
+				</Heading>
+
+				<p
 					mix={[
-						text("4xl"),
-						leading("none"),
-						weight("light"),
-						balance(),
-						media(LARGE, text("8xl")),
+						marketingLead(),
+						maxIs("65ch"),
+						fg("neutral.emphasis"),
+						text("xl"),
+						media(LARGE, text("3xl")),
 					]}
 				>
-					{HERO.title}
-				</h1>
-
-				<p mix={[maxIs("65ch"), text("xl"), media(LARGE, text("3xl"))]}>
 					{HERO.pitchBefore}
 					<strong mix={[weight("semibold")]}>{HERO.pitchStrong}</strong>
 					{HERO.pitchAfter}
@@ -136,46 +121,62 @@ function Hero() {
 					{HERO.packagesLink}
 				</a>
 			</header>
-		</div>
+		</MarketingSection>
 	);
 }
 
 /** The "what's inside" blocks, two per row on a wide viewport. */
 function Description() {
 	return () => (
-		<section id="description" mix={[vstack({ gap: 7 }), is("100%"), maxIs("64rem"), p(5)]}>
-			<SectionHeading>{DESCRIPTION.title}</SectionHeading>
+		<MarketingSection id="description" ruled spacing="compact">
+			<HeadingScope>
+				<div mix={[vstack({ gap: 7 })]}>
+					<MarketingHeader mix={[mbe(0)]} parts={{ title: CHAPTER_TITLE_MIX }}>
+						{DESCRIPTION.title}
+					</MarketingHeader>
 
-			<dl mix={[grid(), gap(10), media(LARGE, gridTemplate({ columns: repeat(2, 1) }))]}>
-				{DESCRIPTION.blocks.map((block) => (
-					<div key={block.title} mix={[vstack({ gap: 4 })]}>
-						<dt mix={[font("serif"), text("2xl"), weight("medium"), media(LARGE, leading("none"))]}>
-							{block.title}
-						</dt>
-						<dd mix={[leading("relaxed")]}>{block.description}</dd>
-					</div>
-				))}
-			</dl>
-		</section>
+					<dl mix={[grid(), gap(10), media(LARGE, gridTemplate({ columns: repeat(2, 1) }))]}>
+						{DESCRIPTION.blocks.map((block) => (
+							<div mix={[vstack({ gap: 4 })]}>
+								<dt
+									mix={[
+										font("serif"),
+										text("2xl"),
+										weight("medium"),
+										media(LARGE, leading("none")),
+									]}
+								>
+									{block.title}
+								</dt>
+								<dd mix={[leading("relaxed")]}>{block.description}</dd>
+							</div>
+						))}
+					</dl>
+				</div>
+			</HeadingScope>
+		</MarketingSection>
 	);
 }
 
 /**
  * The single testimonial: portrait, quote, and attribution. Quotation marks
  * render as pseudo-elements, keeping the quoted text itself plain and
- * reusable elsewhere.
+ * reusable elsewhere. Wrapped in a ruled marketing band so the quote sits
+ * in the same section rhythm as the rest of the page.
  */
 function Testimonial() {
 	return () => (
-		<section
+		<MarketingSection
 			id="testimonial"
-			mix={[
-				vstack({ gap: 5, align: "center" }),
-				is("100%"),
-				maxIs("64rem"),
-				p(5),
-				media(LARGE, hstack({ gap: 5, align: "center" })),
-			]}
+			ruled
+			spacing="compact"
+			align="center"
+			parts={{
+				container: [
+					vstack({ gap: 5, align: "center" }),
+					media(LARGE, hstack({ gap: 5, align: "center" })),
+				],
+			}}
 		>
 			<img
 				src={TESTIMONIAL.photo}
@@ -227,7 +228,7 @@ function Testimonial() {
 					</p>
 				</div>
 			</div>
-		</section>
+		</MarketingSection>
 	);
 }
 
@@ -273,104 +274,108 @@ function Pricing(handle: Handle<ReleaseView.Props>) {
 		let { links, prices } = handle.props;
 
 		return (
-			<section id="pricing" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), p(5)]}>
-				<header mix={[vstack({ gap: 2 })]}>
-					<SectionHeading>{PRICING.title}</SectionHeading>
-
-					<p mix={[maxIs("65ch"), text("xl"), balance()]}>{PRICING.description}</p>
-				</header>
-
-				{PACKAGES.map((pkg) => (
-					<article key={pkg.title} mix={[vstack({ gap: 3 })]}>
-						<h3
-							mix={[
-								font("serif"),
-								text("xl"),
-								leading("none"),
-								weight("medium"),
-								balance(),
-								media(LARGE, text("2xl")),
-							]}
+			<MarketingSection id="pricing" ruled spacing="normal">
+				<HeadingScope>
+					<div mix={[vstack({ gap: 10 })]}>
+						<MarketingHeader
+							description={PRICING.description}
+							mix={[mbe(0)]}
+							parts={{
+								title: CHAPTER_TITLE_MIX,
+								description: [maxIs("65ch"), text("xl"), balance(), fg("neutral.emphasis")],
+							}}
 						>
-							{pkg.title}
-						</h3>
+							{PRICING.title}
+						</MarketingHeader>
 
-						<div mix={[vstack({ gap: 2 }), maxIs("65ch")]}>
-							{pkg.lead.map((paragraph) => (
-								<p key={paragraph}>{paragraph}</p>
-							))}
-
-							{pkg.includesLabel && <p>{pkg.includesLabel}</p>}
-
-							{pkg.includes && (
-								<ul
+						{PACKAGES.map((pkg) => (
+							<article mix={[vstack({ gap: 3 })]}>
+								<h3
 									mix={[
-										vstack({ gap: 1.5 }),
-										css({ listStyle: "disc inside", paddingInlineStart: "0.5rem" }),
+										font("serif"),
+										text("xl"),
+										leading("none"),
+										weight("medium"),
+										balance(),
+										media(LARGE, text("2xl")),
 									]}
 								>
-									{pkg.includes.map((item) => (
-										<li key={item.name}>
-											{item.icon} <strong mix={[weight("semibold")]}>{item.name}</strong> —{" "}
-											{item.description}
-										</li>
+									{pkg.title}
+								</h3>
+
+								<div mix={[vstack({ gap: 2 }), maxIs("65ch")]}>
+									{pkg.lead.map((paragraph) => (
+										<p>{paragraph}</p>
 									))}
-								</ul>
-							)}
 
-							{pkg.trailing?.map((paragraph) => (
-								<p key={paragraph}>{paragraph}</p>
-							))}
+									{pkg.includesLabel && <p>{pkg.includesLabel}</p>}
+
+									{pkg.includes && (
+										<CheckList>
+											{pkg.includes.map((item) => (
+												<CheckRow>
+													<strong mix={[weight("semibold")]}>{item.name}</strong> —{" "}
+													{item.description}
+												</CheckRow>
+											))}
+										</CheckList>
+									)}
+
+									{pkg.trailing?.map((paragraph) => (
+										<p>{paragraph}</p>
+									))}
+								</div>
+
+								<div mix={[vstack({ gap: 1, align: "start" })]}>
+									<PurchaseButton href={links.checkout[pkg.type]} price={prices[pkg.type]} />
+								</div>
+							</article>
+						))}
+
+						<div
+							mix={[
+								vstack({ gap: 4, align: "start", justify: "between" }),
+								p(6),
+								rounded("1rem"),
+								border({ color: "color.neutral.800", width: 1 }),
+								bg("color.neutral.100"),
+								media(SMALL, hstack({ gap: 4, align: "center", justify: "between" })),
+								media(LARGE, mi(-6)),
+								dark(bg("color.neutral.950")),
+							]}
+						>
+							<div>
+								<p mix={[text("sm"), fg("color.neutral.600"), dark(fg("color.neutral.400"))]}>
+									{UPGRADE_CALLOUT.eyebrow}
+								</p>
+
+								<h3 mix={[text("lg"), weight("medium")]}>
+									{UPGRADE_CALLOUT.titleBefore}
+									<strong mix={[weight("semibold")]}>{UPGRADE_CALLOUT.titleStrong}</strong>
+								</h3>
+
+								<p mix={[text("sm"), fg("color.neutral.500")]}>{UPGRADE_CALLOUT.description}</p>
+							</div>
+
+							<a
+								href={links.upgrade}
+								mix={[
+									is("fit-content"),
+									shrink(0),
+									css({ borderRadius: "0.125rem" }),
+									pi(5),
+									pb(2.5),
+									bg("color.neutral.950"),
+									fg("color.neutral.50"),
+									dark([bg("color.neutral.50"), fg("color.neutral.950")]),
+								]}
+							>
+								{UPGRADE_CALLOUT.action}
+							</a>
 						</div>
-
-						<div mix={[vstack({ gap: 1, align: "start" })]}>
-							<PurchaseButton href={links.checkout[pkg.type]} price={prices[pkg.type]} />
-						</div>
-					</article>
-				))}
-
-				<div
-					mix={[
-						vstack({ gap: 4, align: "start", justify: "between" }),
-						p(6),
-						rounded("1rem"),
-						border({ color: "color.neutral.800", width: 1 }),
-						bg("color.neutral.100"),
-						media(SMALL, hstack({ gap: 4, align: "center", justify: "between" })),
-						media(LARGE, mi(-6)),
-						dark(bg("color.neutral.950")),
-					]}
-				>
-					<div>
-						<p mix={[text("sm"), fg("color.neutral.600"), dark(fg("color.neutral.400"))]}>
-							{UPGRADE_CALLOUT.eyebrow}
-						</p>
-
-						<h3 mix={[text("lg"), weight("medium")]}>
-							{UPGRADE_CALLOUT.titleBefore}
-							<strong mix={[weight("semibold")]}>{UPGRADE_CALLOUT.titleStrong}</strong>
-						</h3>
-
-						<p mix={[text("sm"), fg("color.neutral.500")]}>{UPGRADE_CALLOUT.description}</p>
 					</div>
-
-					<a
-						href={links.upgrade}
-						mix={[
-							is("fit-content"),
-							shrink(0),
-							css({ borderRadius: "0.125rem" }),
-							pi(5),
-							pb(2.5),
-							bg("color.neutral.950"),
-							fg("color.neutral.50"),
-							dark([bg("color.neutral.50"), fg("color.neutral.950")]),
-						]}
-					>
-						{UPGRADE_CALLOUT.action}
-					</a>
-				</div>
-			</section>
+				</HeadingScope>
+			</MarketingSection>
 		);
 	};
 }
@@ -382,12 +387,20 @@ function Pricing(handle: Handle<ReleaseView.Props>) {
  */
 function Author() {
 	return () => (
-		<section
+		<MarketingSection
 			id="author"
-			mix={[vstack({ gap: 5 }), is("100%"), maxIs("64rem"), p(5), media(LARGE, hstack({ gap: 5 }))]}
+			ruled
+			spacing="compact"
+			parts={{
+				container: [vstack({ gap: 5 }), media(LARGE, hstack({ gap: 5 }))],
+			}}
 		>
 			<div mix={[vstack({ gap: 2 }), maxIs("65ch")]}>
-				<SectionHeading>{AUTHOR.title}</SectionHeading>
+				<HeadingScope>
+					<MarketingHeader mix={[mbe(0)]} parts={{ title: CHAPTER_TITLE_MIX }}>
+						{AUTHOR.title}
+					</MarketingHeader>
+				</HeadingScope>
 
 				<p>
 					Hi,{" "}
@@ -433,31 +446,46 @@ function Author() {
 					media(LARGE, [raw({ order: 1 }), mi(0)]),
 				]}
 			/>
-		</section>
+		</MarketingSection>
 	);
 }
 
 /** The FAQ, laid out as the two columns the content module groups it into. */
 function FrequentQuestions() {
 	return () => (
-		<section id="faq" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), p(5)]}>
-			<SectionHeading>{FAQ_TITLE}</SectionHeading>
+		<MarketingSection id="faq" ruled spacing="normal">
+			<HeadingScope>
+				<div mix={[vstack({ gap: 10 })]}>
+					<MarketingHeader mix={[mbe(0)]} parts={{ title: CHAPTER_TITLE_MIX }}>
+						{FAQ_TITLE}
+					</MarketingHeader>
 
-			<div mix={[grid(), gap(5), media(LARGE, [gridTemplate({ columns: repeat(2, 1) }), gap(10)])]}>
-				{FREQUENT_QUESTIONS.map((column, index) => (
-					<dl key={index} mix={[vstack({ gap: 5 })]}>
-						{column.map((item) => (
-							<div key={item.question} mix={[vstack({ gap: 4 }), balance()]}>
-								<dt mix={[font("serif"), text("lg"), weight("semibold"), media(LARGE, text("xl"))]}>
-									{item.question}
-								</dt>
-								<dd mix={[weight("light"), whiteSpace("pre-line")]}>{item.answer}</dd>
-							</div>
+					<div
+						mix={[grid(), gap(5), media(LARGE, [gridTemplate({ columns: repeat(2, 1) }), gap(10)])]}
+					>
+						{FREQUENT_QUESTIONS.map((column) => (
+							<dl mix={[vstack({ gap: 5 })]}>
+								{column.map((item) => (
+									<div mix={[vstack({ gap: 4 }), balance()]}>
+										<dt
+											mix={[
+												font("serif"),
+												text("lg"),
+												weight("semibold"),
+												media(LARGE, text("xl")),
+											]}
+										>
+											{item.question}
+										</dt>
+										<dd mix={[weight("light"), whiteSpace("pre-line")]}>{item.answer}</dd>
+									</div>
+								))}
+							</dl>
 						))}
-					</dl>
-				))}
-			</div>
-		</section>
+					</div>
+				</div>
+			</HeadingScope>
+		</MarketingSection>
 	);
 }
 
@@ -467,30 +495,27 @@ export default function ReleaseView(handle: Handle<ReleaseView.Props>) {
 		let { links, prices } = handle.props;
 
 		return (
-			<div
-				mix={[
-					vstack({ gap: 5, align: "center" }),
-					is("100%"),
-					maxIs("64rem"),
-					pb(5),
-					media(LARGE, [gap(15), pb(10)]),
-				]}
-			>
+			<div mix={[vstack({ align: "stretch" }), is("100%"), pb(5), media(LARGE, pb(10))]}>
 				<Hero />
-				<SectionRule />
 				<Description />
-				<SectionRule />
 				<SampleChapterSection action={links.sample} />
-				<SectionRule />
 				<Testimonial />
-				<SectionRule />
 				<Pricing links={links} prices={prices} />
-				<SectionRule />
 				<Author />
-				<SectionRule />
 				<FrequentQuestions />
 
-				<footer mix={[textAlign("center"), text("sm"), weight("light")]}>{FOOTER}</footer>
+				<footer
+					mix={[
+						textAlign("center"),
+						text("sm"),
+						weight("light"),
+						pi(5),
+						pb(5),
+						media(LARGE, pb(0)),
+					]}
+				>
+					{FOOTER}
+				</footer>
 			</div>
 		);
 	};

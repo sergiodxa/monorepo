@@ -10,17 +10,14 @@
 import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, maxIs, pb, pi } from "@sdxc/u/size";
-import { balance, font, leading, text, textTransform, weight } from "@sdxc/u/typography";
+import { mbe } from "@sdxc/u/size";
+import { textTransform } from "@sdxc/u/typography";
+import { HeadingScope, MarketingHeader, MarketingSection } from "@sdxc/ui";
 
 import type { SubscribeForm } from "~/resources/components/subscribe-form";
 
 import SubscribeFormComponent from "~/resources/components/subscribe-form";
 import { SAMPLE } from "~/resources/content/release";
-
-/** The viewport width the heading steps up a size at, matching the site's `lg`. */
-const LARGE = "(min-width: 64rem)";
 
 export namespace SampleChapterSection {
 	export interface Props {
@@ -30,6 +27,12 @@ export namespace SampleChapterSection {
 		error?: string;
 		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
 		confirmEmail?: SubscribeForm.Props["confirmEmail"];
+		/**
+		 * Draws the marketing hairline above this band. On for the sales page,
+		 * off when the sample page is the whole document.
+		 * @default true
+		 */
+		ruled?: boolean;
 	}
 }
 
@@ -38,36 +41,31 @@ export namespace SampleChapterSection {
  */
 export default function SampleChapterSection(handle: Handle<SampleChapterSection.Props>) {
 	return () => {
-		let { action, confirmEmail, error } = handle.props;
+		let { action, confirmEmail, error, ruled } = handle.props;
+		let isRuled = ruled ?? true;
 
 		return (
-			<section id="sample" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), pb(5)]}>
-				<header mix={[vstack({ gap: 2.5 }), pi(5)]}>
-					<h2
-						mix={[
-							font("serif"),
-							text("3xl"),
-							leading("none"),
-							weight("light"),
-							balance(),
-							textTransform("capitalize"),
-							media(LARGE, text("4xl")),
-						]}
-					>
-						{SAMPLE.title}
-					</h2>
+			<MarketingSection id="sample" ruled={isRuled} spacing="compact">
+				<div mix={[vstack({ gap: 10 })]}>
+					<HeadingScope>
+						<MarketingHeader
+							description={SAMPLE.description}
+							mix={[mbe(0)]}
+							parts={{ title: [textTransform("capitalize")] }}
+						>
+							{SAMPLE.title}
+						</MarketingHeader>
+					</HeadingScope>
 
-					<p mix={[maxIs("65ch"), balance()]}>{SAMPLE.description}</p>
-				</header>
-
-				<SubscribeFormComponent
-					action={action}
-					confirmEmail={confirmEmail}
-					error={error}
-					label="Email address"
-					submitLabel={SAMPLE.submitLabel}
-				/>
-			</section>
+					<SubscribeFormComponent
+						action={action}
+						confirmEmail={confirmEmail}
+						error={error}
+						label="Email address"
+						submitLabel={SAMPLE.submitLabel}
+					/>
+				</div>
+			</MarketingSection>
 		);
 	};
 }

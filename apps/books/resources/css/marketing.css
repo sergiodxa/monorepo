@@ -1,0 +1,15 @@
+/*
+ * Books overrides for `@sdxc/ui` marketing tokens. Loaded after `theme.css` so
+ * the sales page keeps its 64rem column, serif display face, and light weight
+ * while still reading the shared spacing and lead recipes.
+ */
+
+:root {
+	--ui-marketing-measure: 64rem;
+	--ui-marketing-display-weight: 300;
+	--ui-marketing-section-space: 4rem;
+	--ui-marketing-section-space-compact: 3rem;
+	--ui-marketing-section-space-hero: 5rem;
+	--ui-marketing-chapter-size: 2.25rem;
+	--ui-font-display: var(--ui-font-serif);
+}
