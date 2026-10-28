@@ -107,6 +107,10 @@ export async function buildComponentsNav(): Promise<NavTree> {
 				entries: [
 					{ title: "Overview", href: routes.api.show.href({ name: "ui" }) },
 					{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
+					{
+						title: "Marketing foundations",
+						href: routes.api.component.href({ component: "marketing-foundations" }),
+					},
 				],
 				groups: [],
 			},

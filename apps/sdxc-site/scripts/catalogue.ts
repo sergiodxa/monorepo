@@ -83,6 +83,20 @@ const SEGMENT_MEANING: Record<string, string> = {
 	"shadow-ring": "Ring plus lift an elevated surface draws in place of a solid border",
 	"shadow-ring-hover": "That ring while the pointer is over the surface",
 	"image-outline": "Inset hairline that holds an image's edge against a same-tone background",
+	"marketing-measure": "Max content width of a marketing column",
+	"marketing-gutter": "Inline padding at the narrowest marketing container step",
+	"marketing-section-space": "Block padding for a normal marketing band",
+	"marketing-section-space-compact": "Block padding for a compact marketing band",
+	"marketing-section-space-hero": "Block padding for a hero marketing band",
+	"marketing-display-tracking": "Letter-spacing for marketing display headlines",
+	"marketing-display-weight": "Font weight for marketing display headlines",
+	"marketing-display-leading": "Line-height for marketing display headlines",
+	"marketing-lead-measure": "Max width of supporting lead copy under a headline",
+	"marketing-lead-size": "Font size of supporting lead copy",
+	"marketing-chapter-size": "Font size of a marketing section H2",
+	"marketing-logo-height": "Forced height of a logo-cloud mark",
+	"marketing-header-height": "Sticky marketing header target height",
+	"marketing-cta-radius": "Corner radius language for brand CTAs on landings",
 };
 
 /**
@@ -109,6 +123,7 @@ const GROUP_INTROS: Record<string, string> = {
 	"font stacks": "The three families, resolved to system faces.",
 	"container scale": "The named widths a container query compares against.",
 	chart: "The categorical sequence a multi-series chart walks in order.",
+	marketing: "Layout and display tokens for landing bands, overridden per brand.",
 };
 
 /** The order the theme page reads its bands in. */
@@ -121,6 +136,7 @@ const GROUP_ORDER = [
 	"font stacks",
 	"container scale",
 	"chart",
+	"marketing",
 ];
 
 /**
@@ -669,6 +685,7 @@ function readBlock(source: string, selector: string): ThemeDeclaration[] {
 /** Which band a token with no tone belongs to, read from the family its name starts with. */
 function groupOf(segment: string): string {
 	if (segment.startsWith("chart-")) return "chart";
+	if (segment.startsWith("marketing-")) return "marketing";
 	if (segment.startsWith("text-")) return "type scale";
 	if (segment.startsWith("font-")) return "font stacks";
 	if (segment.startsWith("container-")) return "container scale";

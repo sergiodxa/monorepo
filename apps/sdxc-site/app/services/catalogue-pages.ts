@@ -9,6 +9,8 @@
 
 import {
 	componentMarkdown,
+	MARKETING_FOUNDATIONS_SUMMARY,
+	MARKETING_FOUNDATIONS_TITLE,
 	THEMING_SUMMARY,
 	THEMING_TITLE,
 	themeMarkdown,
@@ -28,6 +30,9 @@ export const CATALOGUE_SOURCE_BASE = "https://github.com/sergiodxa/monorepo/blob
 
 /** The one segment under the component tree that is a page rather than a component. */
 export const THEMING_SLUG = "theming";
+
+/** The marketing foundations overview under the same component tree. */
+export const MARKETING_FOUNDATIONS_SLUG = "marketing-foundations";
 
 /** One reference page of a catalogue, as a listing or an index names it. */
 /** What every catalogue page carries, whichever tree it lives in. */
@@ -105,6 +110,17 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 		markdownHref: routes.markdown.component.href({ component: THEMING_SLUG }),
 	});
 
+	pages.push({
+		title: MARKETING_FOUNDATIONS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: MARKETING_FOUNDATIONS_SUMMARY,
+		params: { component: MARKETING_FOUNDATIONS_SLUG },
+		href: routes.api.component.href({ component: MARKETING_FOUNDATIONS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: MARKETING_FOUNDATIONS_SLUG }),
+	});
+
 	for (let entry of await listComponents()) {
 		let reference = await readComponent(entry.slug);
 		pages.push({
@@ -159,9 +175,60 @@ export async function readUtilityMarkdown(utility: string): Promise<string | nul
  */
 export async function readComponentMarkdown(component: string): Promise<string | null> {
 	if (component === THEMING_SLUG) return themeMarkdown(await readTheme());
+	if (component === MARKETING_FOUNDATIONS_SLUG) return marketingFoundationsMarkdown();
 
 	let reference = await readComponent(component);
 	return reference === null ? null : componentMarkdown(reference);
+}
+
+/**
+ * The markdown twin of the marketing foundations overview: tokens, factories,
+ * and the motion recipe, matching what the HTML page demonstrates.
+ */
+function marketingFoundationsMarkdown(): string {
+	return [
+		`# ${MARKETING_FOUNDATIONS_TITLE}`,
+		`> ${MARKETING_FOUNDATIONS_SUMMARY}`,
+		"",
+		"Import the factories from `@sdxc/ui/styles` and the tokens from `@sdxc/ui/theme.css`.",
+		"",
+		"## Tokens",
+		"",
+		"| Token | Default |",
+		"| --- | --- |",
+		"| `--ui-marketing-measure` | `72rem` |",
+		"| `--ui-marketing-gutter` | `1rem` (steps to 1.5rem / 2rem via container) |",
+		"| `--ui-marketing-section-space` | `6rem` |",
+		"| `--ui-marketing-section-space-compact` | `4rem` |",
+		"| `--ui-marketing-section-space-hero` | `8rem` |",
+		"| `--ui-marketing-display-tracking` | `-0.04em` |",
+		"| `--ui-marketing-display-weight` | `500` |",
+		"| `--ui-marketing-display-leading` | `1` |",
+		"| `--ui-marketing-lead-measure` | `40rem` |",
+		"| `--ui-marketing-lead-size` | `1.125rem` |",
+		"| `--ui-marketing-chapter-size` | `2.75rem` |",
+		"| `--ui-marketing-logo-height` | `1rem` |",
+		"| `--ui-marketing-header-height` | `4rem` |",
+		"| `--ui-marketing-cta-radius` | `0.5rem` |",
+		"| `--ui-font-display` | `var(--ui-font-sans)` |",
+		"",
+		"## Factories",
+		"",
+		"- `marketingContainer()`",
+		'- `marketingSectionSpace("hero" | "normal" | "compact")`',
+		'- `marketingBandTone("plain" | "tinted" | "grid" | "inverse")`',
+		"- `displayHeading(1 | 2 | 3)`",
+		"- `marketingLead()`",
+		"- `marketingHairline()`",
+		"- `logoCloudMark()`",
+		"",
+		"## Motion",
+		"",
+		"Apply `viewReveal()` from `@sdxc/ui/animations` on band hosts. Reduced-motion is handled there.",
+		"",
+		"Listbox `Section` remains for menus; marketing bands compose these factories today and will use `MarketingSection` later.",
+		"",
+	].join("\n");
 }
 
 /**

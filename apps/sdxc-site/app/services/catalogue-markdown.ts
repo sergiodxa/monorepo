@@ -29,6 +29,13 @@ export const THEMING_TITLE = "Theming";
 export const THEMING_SUMMARY =
 	"Every theme variable the catalogue reads, and the two schemes that answer them.";
 
+/** The marketing foundations page's heading. */
+export const MARKETING_FOUNDATIONS_TITLE = "Marketing foundations";
+
+/** What the marketing foundations page is, in the one line a listing shows. */
+export const MARKETING_FOUNDATIONS_SUMMARY =
+	"Layout tokens and style factories for landing bands: measure, tones, spacing, and display type.";
+
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
  *
