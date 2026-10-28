@@ -1,6 +1,7 @@
 /**
  * Dedicated `/browser-flows` marketing view — a selling page built around a live
- * click-through spec rather than the shared feature-grid template.
+ * click-through spec rather than the shared feature-grid template. Assembled from
+ * `@sdxc/ui` marketing primitives so section rhythm matches the rest of the kit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,45 +10,27 @@
 import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, CheckIcon } from "@sdxc/icons";
-import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
+import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { counterReset, listStyle } from "@sdxc/u/general";
-import {
-	absolute,
-	flex,
-	flexWrap,
-	gap,
-	grid,
-	gridTemplate,
-	inlineFlex,
-	insBs,
-	insIs,
-	items,
-	justify,
-	relative,
-	shrink,
-	vstack,
-} from "@sdxc/u/layout";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, inlineFlex, items, shrink, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, m, maxIs, mi, minIs, mbs, p, pb, pi } from "@sdxc/u/size";
-import { translateX, translateY } from "@sdxc/u/transform";
+import { bs, is, m, maxIs, mbs, minIs, p } from "@sdxc/u/size";
+import { font, fontSize, leading, textAlign, weight, whiteSpace } from "@sdxc/u/typography";
+import { Heading, HeadingScope, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
 import {
-	font,
-	fontSize,
-	leading,
-	textAlign,
-	tracking,
-	weight,
-	whiteSpace,
-} from "@sdxc/u/typography";
-import { Heading, HeadingScope, LinkButton } from "@sdxc/ui";
+	AccentText,
+	ClosingCta,
+	FaqBand,
+	FeatureBand,
+	LandingHero,
+	StepList,
+} from "@sdxc/ui/patterns";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import BrowserFlowExamplesCarousel from "~/resources/components/marketing/browser-flow-examples-carousel";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import SectionHeader from "~/resources/components/marketing/section-header";
-import MarketingStep from "~/resources/components/marketing/step";
 import { BROWSER_FLOW_EXAMPLES, browserFlowsPage } from "~/resources/content/browser-flows";
 import routes from "~/routes/web";
 
@@ -59,27 +42,6 @@ namespace BrowserFlowsView {
 		pricingLabel: string;
 		tryLabel: string;
 	}
-}
-
-/** Vertical section padding shared with the homepage marketing sections. */
-function sectionPadding() {
-	return [pb(16), media("(min-width: 640px)", pb(24)), media("(min-width: 1024px)", pb(32))];
-}
-
-/** Centered content wrapper capped at 1152px. */
-function marketingContainer() {
-	return [
-		maxIs("1152px"),
-		mi("auto"),
-		pi(4),
-		media("(min-width: 640px)", pi(6)),
-		media("(min-width: 1024px)", pi(8)),
-	];
-}
-
-/** Soft alternate-section background. */
-function tintedSection() {
-	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
 }
 
 /** Mixins shared by every monospace flow-spec `<pre>` on this page. */
@@ -118,106 +80,45 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 
 		return (
 			<>
-				<section
-					mix={[
-						...sectionPadding(),
-						relative(),
-						overflow("hidden"),
-						bg({
-							image: linearGradient(
-								"to bottom",
-								"var(--ui-brand-bg-tint)",
-								"var(--ui-neutral-bg-tint)",
-							),
-						}),
-					]}
-				>
-					<div
-						aria-hidden="true"
-						mix={[
-							absolute(),
-							insBs(0),
-							insIs("50%"),
-							is("800px"),
-							bs("800px"),
-							translateX("-50%"),
-							translateY("-50%"),
-							bg({
-								image: radialGradient(
-									"circle closest-side",
-									{ color: "var(--ui-brand-bg-tint)", position: "0%" },
-									{ color: "transparent", position: "100%" },
-								),
-							}),
-						]}
-					/>
-
-					<div
-						mix={[
-							...marketingContainer(),
-							relative(),
-							vstack({ gap: 10, align: "center" }),
-							textAlign("center"),
-						]}
-					>
-						<div mix={[vstack({ gap: 5, align: "center" }), maxIs("720px")]}>
-							<p
-								mix={[
-									m(0),
-									fontSize("5xl"),
-									weight(700),
-									leading(1),
-									tracking("tight"),
-									fg("brand"),
-									media("(min-width: 640px)", fontSize("6xl")),
-									media("(min-width: 1024px)", fontSize("7xl")),
-								]}
-							>
-								{page.brand}
-							</p>
-							<Heading
-								level={1}
-								mix={[
-									m(0),
-									fontSize("3xl"),
-									weight(700),
-									leading(1.15),
-									tracking("tight"),
-									media("(min-width: 640px)", fontSize("4xl")),
-									media("(min-width: 1024px)", fontSize("5xl")),
-								]}
-							>
-								{page.title} <span mix={[fg("brand")]}>{page.highlight}</span>
-							</Heading>
-							<p mix={[m(0), maxIs("560px"), fontSize("lg"), leading(1.625), fg("neutral")]}>
-								{page.description}
-							</p>
-							<div mix={[flex(), flexWrap("wrap"), gap(3), justify("center"), mbs(1)]}>
-								{isSignedIn ? (
-									<AuthCta
-										isSignedIn
-										startLabel={startLabel}
-										dashboardLabel={dashboardLabel}
-										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-									/>
-								) : (
-									<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
-										{tryLabel}
-										<ArrowRightIcon size={20} strokeWidth={1.5} />
-									</LinkButton>
-								)}
-								<LinkButton
-									href={`${routes.home.href()}#pricing`}
-									prefetch="intent"
-									color="neutral"
-									variant="outline"
-									size="lg"
-								>
-									{pricingLabel}
+				<LandingHero
+					tone="tinted"
+					align="center"
+					mediaPlacement="below"
+					eyebrow={page.brand}
+					eyebrowVariant="pill"
+					title={
+						<>
+							{page.title} <AccentText>{page.highlight}</AccentText>
+						</>
+					}
+					description={page.description}
+					actions={
+						<>
+							{isSignedIn ? (
+								<AuthCta
+									isSignedIn
+									startLabel={startLabel}
+									dashboardLabel={dashboardLabel}
+									icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+								/>
+							) : (
+								<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
+									{tryLabel}
+									<ArrowRightIcon size={20} strokeWidth={1.5} />
 								</LinkButton>
-							</div>
-						</div>
-
+							)}
+							<LinkButton
+								href={`${routes.home.href()}#pricing`}
+								prefetch="intent"
+								color="neutral"
+								variant="outline"
+								size="lg"
+							>
+								{pricingLabel}
+							</LinkButton>
+						</>
+					}
+					media={
 						<figure mix={[m(0), is("full"), maxIs("960px"), vstack({ gap: 3 })]}>
 							<figcaption mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
 								{heroExample.title}
@@ -226,72 +127,78 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 								<code>{heroExample.source}</code>
 							</pre>
 						</figure>
-					</div>
-				</section>
+					}
+				/>
 
-				<section mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={page.contrast.badge}
-							title={page.contrast.title}
+				<MarketingSection>
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={page.contrast.badge}
 							description={page.contrast.description}
-						/>
-						<div
-							mix={[
-								grid(),
-								gap(6),
-								media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-							]}
+							align="center"
 						>
-							{[page.contrast.http, page.contrast.browser].map((column) => (
-								<article
-									key={column.title}
-									mix={[
-										vstack({ gap: 4 }),
-										p(6),
-										rounded("xl"),
-										border({ color: "neutral", width: 1 }),
-										bg("neutral.tint"),
-									]}
-								>
-									<HeadingScope level={3}>
-										<Heading mix={[m(0), fontSize("xl"), weight(600)]}>{column.title}</Heading>
-									</HeadingScope>
-									<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
-										{column.points.map((point) => (
-											<li
-												key={point}
-												mix={[
-													inlineFlex(),
-													items("start"),
-													gap(2),
-													fontSize("sm"),
-													leading("relaxed"),
-													fg("neutral"),
-												]}
-											>
-												<CheckIcon
-													size={16}
-													strokeWidth={2}
-													mix={[fg("brand"), mbs("2px"), shrink(0)]}
-												/>
-												{point}
-											</li>
-										))}
-									</ul>
-								</article>
-							))}
-						</div>
+							{page.contrast.title}
+						</MarketingHeader>
+					</HeadingScope>
+					<div
+						mix={[
+							grid(),
+							gap(6),
+							media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+						]}
+					>
+						{[page.contrast.http, page.contrast.browser].map((column) => (
+							<article
+								key={column.title}
+								mix={[
+									vstack({ gap: 4 }),
+									p(6),
+									rounded("xl"),
+									border({ color: "neutral", width: 1 }),
+									bg("neutral.tint"),
+								]}
+							>
+								<HeadingScope level={3}>
+									<Heading mix={[m(0), fontSize("xl"), weight(600)]}>{column.title}</Heading>
+								</HeadingScope>
+								<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
+									{column.points.map((point) => (
+										<li
+											key={point}
+											mix={[
+												inlineFlex(),
+												items("start"),
+												gap(2),
+												fontSize("sm"),
+												leading("relaxed"),
+												fg("neutral"),
+											]}
+										>
+											<CheckIcon
+												size={16}
+												strokeWidth={2}
+												mix={[fg("brand"), mbs("2px"), shrink(0)]}
+											/>
+											{point}
+										</li>
+									))}
+								</ul>
+							</article>
+						))}
 					</div>
-				</section>
+				</MarketingSection>
 
-				<section id="examples" mix={[...sectionPadding(), ...tintedSection(), overflow("hidden")]}>
-					<div mix={[...marketingContainer(), minIs(0)]}>
-						<SectionHeader
-							badge={page.examples.badge}
-							title={page.examples.title}
+				<MarketingSection id="examples" tone="tinted" mix={[overflow("hidden")]}>
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={page.examples.badge}
 							description={page.examples.description}
-						/>
+							align="center"
+						>
+							{page.examples.title}
+						</MarketingHeader>
+					</HeadingScope>
+					<div mix={[minIs(0)]}>
 						<BrowserFlowExamplesCarousel
 							label={page.examples.title}
 							previousLabel="Previous example"
@@ -299,126 +206,101 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 							examples={[...BROWSER_FLOW_EXAMPLES]}
 						/>
 					</div>
-				</section>
+				</MarketingSection>
 
-				<section id="pricing" mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								items("center"),
-								media("(min-width: 768px)", [
-									gridTemplate({ columns: "minmax(0, 1.4fr) minmax(0, 1fr)" }),
-								]),
-							]}
-						>
-							<div>
-								<SectionHeader
-									badge={page.pricing.badge}
-									title={page.pricing.title}
+				<MarketingSection id="pricing">
+					<div
+						mix={[
+							grid(),
+							gap(8),
+							items("center"),
+							media("(min-width: 768px)", [
+								gridTemplate({ columns: "minmax(0, 1.4fr) minmax(0, 1fr)" }),
+							]),
+						]}
+					>
+						<div>
+							<HeadingScope>
+								<MarketingHeader
+									eyebrow={page.pricing.badge}
 									description={page.pricing.description}
-								/>
-								<p mix={[m(0), mbs(4), fontSize("sm"), fg("neutral")]}>{page.pricing.note}</p>
-							</div>
-							<aside
-								mix={[
-									vstack({ gap: 2, align: "center" }),
-									p(8),
-									rounded("xl"),
-									border({ color: "brand", width: 1 }),
-									bg("brand.tint"),
-									textAlign("center"),
-								]}
-							>
-								<p mix={[m(0), fontSize("4xl"), weight(700), font("mono"), fg("brand.emphasis")]}>
-									{page.pricing.figure}
-								</p>
-								<p mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
-									{page.pricing.figureLabel}
-								</p>
-							</aside>
+								>
+									{page.pricing.title}
+								</MarketingHeader>
+							</HeadingScope>
+							<p mix={[m(0), mbs(4), fontSize("sm"), fg("neutral")]}>{page.pricing.note}</p>
 						</div>
-					</div>
-				</section>
-
-				<section mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={page.steps.badge}
-							title={page.steps.title}
-							description={page.steps.description}
-						/>
-						<div
+						<aside
 							mix={[
-								grid(),
-								gap(8),
-								counterReset("marketing-step"),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-							]}
-						>
-							{page.steps.list.map((step) => (
-								<MarketingStep key={step.title} title={step.title} description={step.description} />
-							))}
-						</div>
-					</div>
-				</section>
-
-				<section id="faq" mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge="FAQ"
-							title="Questions about browser flows"
-							description="When to use a browser session, how a run is billed, and what a short spec can express."
-						/>
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								items("start"),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-							]}
-						>
-							<FaqAccordion items={firstFaqColumn} />
-							<FaqAccordion items={secondFaqColumn} />
-						</div>
-					</div>
-				</section>
-
-				<section mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<div
-							mix={[
-								vstack({ gap: 6, align: "center" }),
-								p(10),
-								rounded("2xl"),
-								bg("brand.solid"),
+								vstack({ gap: 2, align: "center" }),
+								p(8),
+								rounded("xl"),
+								border({ color: "brand", width: 1 }),
+								bg("brand.tint"),
 								textAlign("center"),
 							]}
 						>
-							<Heading level={2} mix={[m(0), fontSize("3xl"), weight(700), fg("brand.onSolid")]}>
-								{page.finalCta.title}
-							</Heading>
-							<p mix={[m(0), maxIs("540px"), fontSize("lg"), fg("brand.onSolid")]}>
-								{page.finalCta.body}
+							<p mix={[m(0), fontSize("4xl"), weight(700), font("mono"), fg("brand.emphasis")]}>
+								{page.pricing.figure}
 							</p>
-							{isSignedIn ? (
-								<AuthCta
-									isSignedIn
-									startLabel={startLabel}
-									dashboardLabel={dashboardLabel}
-									color="neutral"
-									icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-								/>
-							) : (
-								<LinkButton href={routes.trial.check.index.href()} color="neutral" size="lg">
-									{tryLabel}
-									<ArrowRightIcon size={20} strokeWidth={1.5} />
-								</LinkButton>
-							)}
-						</div>
+							<p mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
+								{page.pricing.figureLabel}
+							</p>
+						</aside>
 					</div>
-				</section>
+				</MarketingSection>
+
+				<FeatureBand
+					layout="steps"
+					tone="tinted"
+					eyebrow={page.steps.badge}
+					title={page.steps.title}
+					description={page.steps.description}
+				>
+					{page.steps.list.map((step) => (
+						<StepList.Item key={step.title} title={step.title}>
+							{step.description}
+						</StepList.Item>
+					))}
+				</FeatureBand>
+
+				<FaqBand
+					id="faq"
+					columns={2}
+					eyebrow="FAQ"
+					title="Questions about browser flows"
+					description="When to use a browser session, how a run is billed, and what a short spec can express."
+				>
+					<FaqAccordion items={firstFaqColumn} />
+					<FaqAccordion items={secondFaqColumn} />
+				</FaqBand>
+
+				<ClosingCta
+					tone="plain"
+					title={page.finalCta.title}
+					description={page.finalCta.body}
+					mix={[bg("brand.solid"), fg("brand.onSolid"), rounded("2xl")]}
+					parts={{
+						title: [fg("brand.onSolid")],
+						description: [fg("brand.onSolid")],
+					}}
+					actions={
+						isSignedIn ? (
+							<AuthCta
+								isSignedIn
+								startLabel={startLabel}
+								dashboardLabel={dashboardLabel}
+								color="neutral"
+								icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+							/>
+						) : (
+							<LinkButton href={routes.trial.check.index.href()} color="neutral" size="lg">
+								{tryLabel}
+								<ArrowRightIcon size={20} strokeWidth={1.5} />
+							</LinkButton>
+						)
+					}
+				/>
 			</>
 		);
 	};

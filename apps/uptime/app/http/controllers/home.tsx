@@ -17,7 +17,6 @@ import {
 	AppWindowIcon,
 	ArrowRightIcon,
 	BellIcon,
-	CheckIcon,
 	CirclePauseIcon,
 	ClockIcon,
 	CodeIcon,
@@ -36,10 +35,9 @@ import {
 	WorkflowIcon,
 } from "@sdxc/icons";
 import { unwrap } from "@sdxc/result";
-import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import {
-	absolute,
 	block,
 	flex,
 	flexRow,
@@ -49,19 +47,15 @@ import {
 	gridTemplate,
 	grow,
 	inlineFlex,
-	insBs,
-	insIs,
 	items,
 	justify,
-	relative,
 	shrink,
 	vstack,
 } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { bs, is, m, maxIs, mbs, mi, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
-import { translateX, translateY } from "@sdxc/u/transform";
 import {
 	font,
 	fontSize,
@@ -69,12 +63,41 @@ import {
 	nowrap,
 	textAlign,
 	textDecoration,
-	tracking,
 	weight,
 	whiteSpace,
 } from "@sdxc/u/typography";
-import { Button, Heading, HeadingScope, LinkButton, TextField } from "@sdxc/ui";
+import {
+	Button,
+	Heading,
+	HeadingScope,
+	LinkButton,
+	MarketingHeader,
+	MarketingSection,
+	TextField,
+} from "@sdxc/ui";
+import {
+	CheckList,
+	CheckRow,
+	FaqBand,
+	FeatureBand,
+	LandingHero,
+	ProductFrame,
+} from "@sdxc/ui/patterns";
 import { createAction } from "remix/router";
+
+/**
+ * The one/two/three-column ladder mid-page content grids share when they are
+ * not {@link Feature.Grid} cells (browser-flow samples, audience pills).
+ */
+function contentGrid() {
+	return [
+		grid(),
+		gap(8),
+		gridTemplate({ columns: "1fr" }),
+		media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
+		media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
+	];
+}
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
@@ -91,7 +114,6 @@ import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
-import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
 import { BROWSER_FLOW_EXAMPLES } from "~/resources/content/browser-flows";
@@ -104,50 +126,6 @@ const SCREENSHOT_LIGHT = "/screenshot-light.webp";
 
 /** Dark-mode hero screenshot, selected by the `<source>` media condition. */
 const SCREENSHOT_DARK = "/screenshot-dark.webp";
-
-/**
- * Vertical section padding shared by every full-width section: 64px, growing to
- * 96px at ≥640px and 128px at ≥1024px.
- */
-function sectionPadding() {
-	return [pb(16), media("(min-width: 640px)", pb(24)), media("(min-width: 1024px)", pb(32))];
-}
-
-/**
- * Centered content wrapper shared by every section: capped at 1152px, horizontally
- * centered, with 16/24/32px side padding by breakpoint.
- */
-function marketingContainer() {
-	return [
-		maxIs("1152px"),
-		mi("auto"),
-		pi(4),
-		media("(min-width: 640px)", pi(6)),
-		media("(min-width: 1024px)", pi(8)),
-	];
-}
-
-/**
- * The one/two/three-column ladder every content grid on this page shares. Grids
- * list breakpoints in ascending order because `css()` layers mixins by first
- * appearance, and layer order decides which overlapping media rule wins.
- */
-function responsiveGrid() {
-	return [
-		gridTemplate({ columns: "1fr" }),
-		media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-		media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-	];
-}
-
-/**
- * Background for the alternating sections: one palette step off the page's own
- * `--ui-neutral-bg-tint` body color in each scheme, so the alternation stays visible
- * against a body already painted with the semantic `neutral.tint` token.
- */
-function tintedSection() {
-	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
-}
 
 /** Formats a USD amount in `locale`, dropping the cents on whole amounts. */
 function formatMoney(locale: string, amount: number): string {
@@ -407,165 +385,42 @@ export default createAction(routes.home, async (ctx) => {
 			]}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				<section
-					mix={[
-						...sectionPadding(),
-						relative(),
-						overflow("hidden"),
-						bg({
-							image: linearGradient(
-								"to bottom",
-								"var(--ui-brand-bg-tint)",
-								"var(--ui-neutral-bg-tint)",
-							),
-						}),
-					]}
-				>
-					<div
-						aria-hidden="true"
-						mix={[
-							absolute(),
-							insBs(0),
-							insIs("50%"),
-							is("800px"),
-							bs("800px"),
-							translateX("-50%"),
-							translateY("-50%"),
-							bg({
-								image: radialGradient(
-									"circle closest-side",
-									{ color: "var(--ui-brand-bg-tint)", position: "0%" },
-									{ color: "transparent", position: "100%" },
-								),
-							}),
-						]}
-					/>
-
-					<div mix={[...marketingContainer(), relative()]}>
-						<div
-							mix={[
-								grid(),
-								gap(12),
-								items("center"),
-								media("(min-width: 1024px)", [
-									gridTemplate({ columns: "repeat(2, 1fr)" }),
-									gap(16),
-								]),
-							]}
-						>
-							<div
-								mix={[
-									vstack({ align: "center" }),
-									textAlign("center"),
-									media("(min-width: 1024px)", [items("start"), textAlign("start")]),
-								]}
-							>
-								<span
-									mix={[
-										inlineFlex(),
-										items("center"),
-										p("2px", "10px"),
-										rounded("999px"),
-										fontSize("xs"),
-										weight(600),
-										border({ color: "brand", width: 1 }),
-										bg("brand.tint"),
-										fg("brand"),
-										mbe(6),
-									]}
-								>
-									{t("landing.hero.pill")}
-								</span>
-
-								<Heading
-									level={1}
-									mix={[
-										m(0),
-										fontSize("4xl"),
-										weight(700),
-										leading(1.1),
-										tracking("tight"),
-										maxIs("760px"),
-										media("(min-width: 640px)", fontSize("5xl")),
-										media("(min-width: 1024px)", fontSize("6xl")),
-									]}
-								>
-									<Trans
-										intl={ctx.intl}
-										i18nKey="landing.hero.title"
-										components={{ strong: <span mix={[fg("brand")]} /> }}
-									/>
-								</Heading>
-
-								<p
-									mix={[
-										m(0),
-										mbs(6),
-										maxIs("576px"),
-										fontSize("lg"),
-										leading(1.625),
-										fg("neutral"),
-									]}
-								>
-									{t("landing.hero.description")}
-								</p>
-
-								<div
-									mix={[
-										vstack({ gap: 4, align: "center" }),
-										mbs(6),
-										media("(min-width: 640px)", [flexRow(), items("center")]),
-									]}
-								>
-									<AuthCta
-										isSignedIn={isSignedIn}
-										dashboardLabel={t("landing.hero.cta.in")}
-										startLabel={t("landing.hero.cta.out")}
-										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-									/>
-									<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
-										{t("landing.hero.cta.pricing")}
-									</LinkButton>
-								</div>
-
-								<div
-									mix={[
-										flex(),
-										flexWrap("wrap"),
-										justify("center"),
-										gap(2, 6),
-										mbs(8),
-										media("(min-width: 1024px)", justify("start")),
-									]}
-								>
-									{HERO_TRUST_INDICATORS.map((indicator) => (
-										<span
-											key={indicator}
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap("6px"),
-												fontSize("sm"),
-												fg("neutral.muted"),
-											]}
-										>
-											<CheckIcon size={16} strokeWidth={2} mix={[fg("success")]} />
-											{indicator}
-										</span>
-									))}
-								</div>
-							</div>
-
-							<picture
-								mix={[
-									block(),
-									relative(),
-									overflow("hidden"),
-									rounded("xl"),
-									shadow("xl"),
-									border({ color: "neutral", width: 1 }),
-								]}
-							>
+				<LandingHero
+					tone="tinted"
+					mediaPlacement="end"
+					eyebrow={t("landing.hero.pill")}
+					eyebrowVariant="pill"
+					title={
+						<Trans
+							intl={ctx.intl}
+							i18nKey="landing.hero.title"
+							components={{ strong: <span mix={[fg("brand")]} /> }}
+						/>
+					}
+					description={t("landing.hero.description")}
+					actions={
+						<>
+							<AuthCta
+								isSignedIn={isSignedIn}
+								dashboardLabel={t("landing.hero.cta.in")}
+								startLabel={t("landing.hero.cta.out")}
+								icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+							/>
+							<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
+								{t("landing.hero.cta.pricing")}
+							</LinkButton>
+						</>
+					}
+					below={
+						<CheckList orientation="horizontal">
+							{HERO_TRUST_INDICATORS.map((indicator) => (
+								<CheckRow key={indicator}>{indicator}</CheckRow>
+							))}
+						</CheckList>
+					}
+					media={
+						<ProductFrame lights>
+							<picture mix={[block(), overflow("hidden")]}>
 								<source media="(prefers-color-scheme: dark)" srcSet={SCREENSHOT_DARK} />
 								<source media="(prefers-color-scheme: light)" srcSet={SCREENSHOT_LIGHT} />
 								<img
@@ -576,286 +431,272 @@ export default createAction(routes.home, async (ctx) => {
 									mix={[block(), is("full"), bs("auto")]}
 								/>
 							</picture>
-						</div>
-					</div>
-				</section>
+						</ProductFrame>
+					}
+				/>
 
-				<section id="try" mix={[pbs(0), pbe(10), media("(min-width: 1024px)", pbe(14))]}>
-					<div mix={[...marketingContainer(), vstack({ gap: 4, align: "center" })]}>
-						<Heading level={2} mix={[m(0), fontSize("2xl"), textAlign("center")]}>
+				<MarketingSection id="try" spacing="compact" align="center">
+					<HeadingScope>
+						<Heading mix={[m(0), fontSize("2xl"), textAlign("center")]}>
 							{t("landing.try.title")}
 						</Heading>
-						<p mix={[m(0), maxIs("560px"), textAlign("center"), fontSize("sm"), fg("neutral")]}>
-							{t("landing.try.description")}
-						</p>
+					</HeadingScope>
+					<p
+						mix={[m(0), mbs(4), maxIs("560px"), textAlign("center"), fontSize("sm"), fg("neutral")]}
+					>
+						{t("landing.try.description")}
+					</p>
 
-						<form
-							method="post"
-							action={routes.trial.check.action.href()}
-							mix={[
-								vstack({ gap: 3, align: "center" }),
-								mbs(2),
-								mi("auto"),
-								is("full"),
-								maxIs("560px"),
-								media("(min-width: 640px)", [flexRow(), items("end"), gap(3)]),
-							]}
-						>
-							<HoneypotFields {...honeypot} />
-							<TextField
-								name={TRIAL_URL_FIELD}
-								type="url"
-								label={t("landing.try.label")}
-								placeholder={t("landing.try.placeholder")}
-								autoComplete="url"
-								required
-								mix={[grow(1), is("full"), textAlign("start")]}
-							/>
-							{turnstileSiteKey === null ? null : (
-								<TurnstileWidget siteKey={turnstileSiteKey} field={TURNSTILE_FIELD} theme="auto" />
-							)}
-							<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>
-								{t("landing.try.submit")}
-							</Button>
-						</form>
-					</div>
-				</section>
+					<form
+						method="post"
+						action={routes.trial.check.action.href()}
+						mix={[
+							vstack({ gap: 3, align: "center" }),
+							mbs(2),
+							mi("auto"),
+							is("full"),
+							maxIs("560px"),
+							media("(min-width: 640px)", [flexRow(), items("end"), gap(3)]),
+						]}
+					>
+						<HoneypotFields {...honeypot} />
+						<TextField
+							name={TRIAL_URL_FIELD}
+							type="url"
+							label={t("landing.try.label")}
+							placeholder={t("landing.try.placeholder")}
+							autoComplete="url"
+							required
+							mix={[grow(1), is("full"), textAlign("start")]}
+						/>
+						{turnstileSiteKey === null ? null : (
+							<TurnstileWidget siteKey={turnstileSiteKey} field={TURNSTILE_FIELD} theme="auto" />
+						)}
+						<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>
+							{t("landing.try.submit")}
+						</Button>
+					</form>
+				</MarketingSection>
 
 				<MarketingTrustIndicators indicators={TRUST_INDICATORS} />
 
-				<section id="benefits" mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.benefits.badge")}
-							title={t("landing.benefits.title")}
-							description={t("landing.benefits.description")}
+				<FeatureBand
+					id="benefits"
+					layout="grid"
+					columns={3}
+					eyebrow={t("landing.benefits.badge")}
+					title={t("landing.benefits.title")}
+					description={t("landing.benefits.description")}
+				>
+					{BENEFITS.map((benefit) => (
+						<MarketingFeatureRow
+							key={benefit.title}
+							icon={benefit.icon}
+							title={benefit.title}
+							description={benefit.description}
 						/>
+					))}
+				</FeatureBand>
 
-						<div mix={[grid(), gap(6), ...responsiveGrid()]}>
-							{BENEFITS.map((benefit) => (
-								<MarketingFeatureRow
-									key={benefit.title}
-									icon={benefit.icon}
-									title={benefit.title}
-									description={benefit.description}
-								/>
-							))}
-						</div>
-					</div>
-				</section>
-
-				<section id="features" mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.features.badge")}
-							title={t("landing.features.title")}
-							description={t("landing.features.description")}
+				<FeatureBand
+					id="features"
+					layout="grid"
+					columns={3}
+					eyebrow={t("landing.features.badge")}
+					title={t("landing.features.title")}
+					description={t("landing.features.description")}
+				>
+					{FEATURE_LINKS.map((feature) => (
+						<MarketingCard
+							key={feature.href}
+							href={feature.href}
+							icon={feature.icon}
+							title={feature.title}
+							description={feature.description}
+							learnMore={t("landing.features.learnMore")}
 						/>
+					))}
+				</FeatureBand>
 
-						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
-							{FEATURE_LINKS.map((feature) => (
-								<MarketingCard
-									key={feature.href}
-									href={feature.href}
-									icon={feature.icon}
-									title={feature.title}
-									description={feature.description}
-									learnMore={t("landing.features.learnMore")}
-								/>
-							))}
-						</div>
-					</div>
-				</section>
-
-				<section id="browser-flows" mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.browserExamples.badge")}
-							title={t("landing.browserExamples.title")}
+				<MarketingSection id="browser-flows" tone="tinted">
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={t("landing.browserExamples.badge")}
 							description={t("landing.browserExamples.description")}
-						/>
+							align="center"
+						>
+							{t("landing.browserExamples.title")}
+						</MarketingHeader>
+					</HeadingScope>
 
-						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
-							{BROWSER_EXAMPLES.map((example) => (
-								<article
-									key={example.key}
-									mix={[
-										vstack({ gap: 4 }),
-										p(5),
-										rounded("xl"),
-										border({ color: "neutral", width: 1 }),
-										bg("neutral.tint"),
-									]}
-								>
-									<div mix={[vstack({ gap: 2 })]}>
-										<HeadingScope level={3}>
-											<Heading mix={[m(0), fontSize("lg"), weight(600)]}>{example.title}</Heading>
-										</HeadingScope>
-										<p mix={[m(0), fontSize("sm"), leading("relaxed"), fg("neutral")]}>
-											{example.description}
-										</p>
-									</div>
-									<pre
-										mix={[
-											m(0),
-											p(4),
-											rounded("lg"),
-											bg("color.neutral.900"),
-											dark(bg("color.neutral.950")),
-											fg("color.neutral.100"),
-											font("mono"),
-											fontSize("xs"),
-											leading("relaxed"),
-											whiteSpace("pre"),
-											overflow("auto"),
-										]}
-									>
-										<code>{example.source}</code>
-									</pre>
-								</article>
-							))}
-						</div>
-
-						<div mix={[mbs(8), flex(), justify("center")]}>
-							<a
-								href={routes.browserFlows.href()}
-								data-rmx-prefetch="intent"
+					<div mix={[...contentGrid()]}>
+						{BROWSER_EXAMPLES.map((example) => (
+							<article
+								key={example.key}
 								mix={[
-									inlineFlex(),
-									items("center"),
-									gap(2),
-									fontSize("sm"),
-									weight(600),
-									fg("brand"),
-									textDecoration("none"),
-									hover([textDecoration("underline")]),
+									vstack({ gap: 4 }),
+									p(5),
+									rounded("xl"),
+									border({ color: "neutral", width: 1 }),
+									bg("neutral.tint"),
 								]}
 							>
-								{t("landing.browserExamples.learnMore")}
-								<ArrowRightIcon size={16} strokeWidth={1.5} />
-							</a>
-						</div>
+								<div mix={[vstack({ gap: 2 })]}>
+									<HeadingScope level={3}>
+										<Heading mix={[m(0), fontSize("lg"), weight(600)]}>{example.title}</Heading>
+									</HeadingScope>
+									<p mix={[m(0), fontSize("sm"), leading("relaxed"), fg("neutral")]}>
+										{example.description}
+									</p>
+								</div>
+								<pre
+									mix={[
+										m(0),
+										p(4),
+										rounded("lg"),
+										bg("color.neutral.900"),
+										dark(bg("color.neutral.950")),
+										fg("color.neutral.100"),
+										font("mono"),
+										fontSize("xs"),
+										leading("relaxed"),
+										whiteSpace("pre"),
+										overflow("auto"),
+									]}
+								>
+									<code>{example.source}</code>
+								</pre>
+							</article>
+						))}
 					</div>
-				</section>
 
-				<section mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.completeFeatureSet.badge")}
-							title={t("landing.completeFeatureSet.title")}
-							description={t("landing.completeFeatureSet.description")}
+					<div mix={[mbs(8), flex(), justify("center")]}>
+						<a
+							href={routes.browserFlows.href()}
+							data-rmx-prefetch="intent"
+							mix={[
+								inlineFlex(),
+								items("center"),
+								gap(2),
+								fontSize("sm"),
+								weight(600),
+								fg("brand"),
+								textDecoration("none"),
+								hover([textDecoration("underline")]),
+							]}
+						>
+							{t("landing.browserExamples.learnMore")}
+							<ArrowRightIcon size={16} strokeWidth={1.5} />
+						</a>
+					</div>
+				</MarketingSection>
+
+				<FeatureBand
+					layout="grid"
+					columns={3}
+					eyebrow={t("landing.completeFeatureSet.badge")}
+					title={t("landing.completeFeatureSet.title")}
+					description={t("landing.completeFeatureSet.description")}
+				>
+					{COMPLETE_FEATURES.map((feature) => (
+						<MarketingFeatureRow
+							key={feature.title}
+							icon={feature.icon}
+							title={feature.title}
+							description={feature.description}
 						/>
+					))}
+				</FeatureBand>
 
-						<div mix={[grid(), gap(6), ...responsiveGrid()]}>
-							{COMPLETE_FEATURES.map((feature) => (
-								<MarketingFeatureRow
-									key={feature.title}
-									icon={feature.icon}
-									title={feature.title}
-									description={feature.description}
-								/>
-							))}
-						</div>
-					</div>
-				</section>
-
-				<section mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.useCases.badge")}
-							title={t("landing.useCases.title")}
+				<MarketingSection tone="tinted">
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={t("landing.useCases.badge")}
 							description={t("landing.useCases.description")}
-						/>
+							align="center"
+						>
+							{t("landing.useCases.title")}
+						</MarketingHeader>
+					</HeadingScope>
 
-						<div mix={[grid(), gap(6), ...responsiveGrid()]}>
-							{USE_CASE_LINKS.map((useCase) => (
-								<MarketingCard
-									key={useCase.slug}
-									href={routes.marketing.useCase.href({ slug: useCase.slug })}
-									title={useCase.title}
-									description={useCase.description}
-									learnMore={t("landing.useCases.learnMore")}
-								/>
+					<div mix={[...contentGrid(), gap(6)]}>
+						{USE_CASE_LINKS.map((useCase) => (
+							<MarketingCard
+								key={useCase.slug}
+								href={routes.marketing.useCase.href({ slug: useCase.slug })}
+								title={useCase.title}
+								description={useCase.description}
+								learnMore={t("landing.useCases.learnMore")}
+							/>
+						))}
+					</div>
+
+					<div
+						mix={[
+							mbs(12),
+							p(6),
+							rounded("xl"),
+							border({ color: "neutral", width: 1 }),
+							bg("neutral.tint"),
+							textAlign("center"),
+						]}
+					>
+						<p mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
+							{t("landing.useCases.tailoredFor")}
+						</p>
+						<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(3), mbs(4)]}>
+							{AUDIENCE_LINKS.map((audience) => (
+								<a
+									key={audience.slug}
+									href={routes.marketing.audience.href({ slug: audience.slug })}
+									data-rmx-prefetch="intent"
+									mix={[
+										inlineFlex(),
+										items("center"),
+										p(2, 4),
+										rounded("999px"),
+										border({ color: "neutral", width: 1 }),
+										bg("color.neutral.100"),
+										dark(bg("color.neutral.800")),
+										fontSize("sm"),
+										weight(500),
+										fg("neutral"),
+										textDecoration("none"),
+										hover([border("brand"), bg("brand.tint"), fg("brand")]),
+									]}
+								>
+									{audience.label}
+								</a>
 							))}
 						</div>
-
-						<div
-							mix={[
-								mbs(12),
-								p(6),
-								rounded("xl"),
-								border({ color: "neutral", width: 1 }),
-								bg("neutral.tint"),
-								textAlign("center"),
-							]}
-						>
-							<p mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
-								{t("landing.useCases.tailoredFor")}
-							</p>
-							<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(3), mbs(4)]}>
-								{AUDIENCE_LINKS.map((audience) => (
-									<a
-										key={audience.slug}
-										href={routes.marketing.audience.href({ slug: audience.slug })}
-										data-rmx-prefetch="intent"
-										mix={[
-											inlineFlex(),
-											items("center"),
-											p(2, 4),
-											rounded("999px"),
-											border({ color: "neutral", width: 1 }),
-											bg("color.neutral.100"),
-											dark(bg("color.neutral.800")),
-											fontSize("sm"),
-											weight(500),
-											fg("neutral"),
-											textDecoration("none"),
-											hover([border("brand"), bg("brand.tint"), fg("brand")]),
-										]}
-									>
-										{audience.label}
-									</a>
-								))}
-							</div>
-						</div>
 					</div>
-				</section>
+				</MarketingSection>
 
-				<section id="pricing" mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.pricing.badge")}
-							title={t("landing.pricing.title")}
+				<MarketingSection id="pricing" tone="tinted">
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={t("landing.pricing.badge")}
 							description={t("landing.pricing.description")}
-						/>
-
-						<IntlProvider intl={ctx.intl}>
-							<PricingCalculator initialFrequencies={[10]} />
-						</IntlProvider>
-					</div>
-				</section>
-
-				<section id="faq" mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={t("landing.faq.badge")}
-							title={t("landing.faq.title")}
-							description={t("landing.faq.description")}
-						/>
-
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								items("start"),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-							]}
+							align="center"
 						>
-							<FaqAccordion items={firstFaqColumn} />
-							<FaqAccordion items={secondFaqColumn} />
-						</div>
-					</div>
-				</section>
+							{t("landing.pricing.title")}
+						</MarketingHeader>
+					</HeadingScope>
+					<IntlProvider intl={ctx.intl}>
+						<PricingCalculator initialFrequencies={[10]} />
+					</IntlProvider>
+				</MarketingSection>
+
+				<FaqBand
+					id="faq"
+					columns={2}
+					eyebrow={t("landing.faq.badge")}
+					title={t("landing.faq.title")}
+					description={t("landing.faq.description")}
+				>
+					<FaqAccordion items={firstFaqColumn} />
+					<FaqAccordion items={secondFaqColumn} />
+				</FaqBand>
 			</MarketingLayout>
 		</DocumentLayout>,
 	);
