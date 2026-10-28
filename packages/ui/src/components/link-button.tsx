@@ -57,6 +57,8 @@ export namespace LinkButton {
 
 	/**
 	 * Size variant controlling the link's padding and font size.
+	 * Marketing pairing: `"sm"` is ~32px for nav rows, `"lg"` is ~48px for
+	 * hero {@link CtaGroup} actions — keep those slots on different sizes.
 	 */
 	export type Size = "sm" | "md" | "lg";
 
@@ -101,6 +103,8 @@ export namespace LinkButton {
  * <LinkButton href="/projects" color="neutral" variant="outline" size="sm">{t("actions.cancel")}</LinkButton>
  * @example
  * <LinkButton href="/export/report.csv" download aria-disabled={!hasReport || undefined}>{t("actions.download")}</LinkButton>
+ * @example
+ * <LinkButton href={docs} size="lg" variant="outline">{t("hero.docs")}</LinkButton>
  */
 export function LinkButton(handle: Handle<LinkButton.Props>) {
 	return () => {

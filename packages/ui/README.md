@@ -222,6 +222,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 ### Components: layout and content
 
 - `Card`, `Item`, `Group`, `Section`, `Separator`, `Toolbar` — panels, rows, groupings and dividers.
+  Prefer `Feature` over `Card`/`Empty` for marketing claim cells.
 - `ImagePlaceholder`, `Avatar`, `Logo` — an image with fallback, and its round and rounded-square
   presets.
 - `AspectRatio`, `Resizable`, `ScrollArea`, `Carousel` — a ratio lock, split panes, a scroll region,
@@ -233,9 +234,20 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `ShortcutList` — a `<dl>` pairing actions with key caps.
 - `Highlight` — `{ text, match }` segments rendered with each match in a `<mark>`.
 - `HeadingScope`, `Heading` — a heading-depth scope, and the `<h1>`–`<h6>` that reads it.
+  `Heading` accepts `size="display" | "chapter"` for marketing type recipes.
 - `SharedElement` — a host with a stable view-transition name across page loads.
 - `Calendar`, `RangeCalendar`, `DatePicker`, `DateRangePicker` — month grids for a day or a range,
   and popover pickers around them; `Calendar` without children renders `<input type="date">`.
+
+### Components: marketing
+
+- `MarketingSection` — landing band (`tone`, `spacing`, `align`, `ruled`, `variant="frame"`).
+- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: `pill` | `mono` | `chip`).
+- `CtaGroup` — wrapping primary/secondary actions; pair nav `sm` (~32px) with hero `lg` (~48px).
+- `Split`, `Split.Copy`, `Split.Media` — two-column band content (`lean`, optional `checks`).
+- `StatStrip`, `StatStrip.Item` — numeric proof strip (`ruled` | `gap`).
+- `LogoCloud` — muted adopter marks at `--ui-marketing-logo-height`.
+- `Feature`, `Feature.Grid` — claim cells and a hairline-ruled grid (`variant="panel"` optional).
 
 ### Component helpers
 
@@ -361,10 +373,10 @@ Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `
 Marketing / landing recipes (same entry): `marketingContainer()`,
 `marketingSectionSpace("hero" | "normal" | "compact")`,
 `marketingBandTone("plain" | "tinted" | "grid" | "inverse")`, `displayHeading(1 | 2 | 3)`,
-`marketingLead()`, `marketingHairline()`, `logoCloudMark()`. They read the `--ui-marketing-*`
-tokens and optional `--ui-font-display` from `theme.css`. Apply `viewReveal()` from
-`@sdxc/ui/animations` on band hosts for scroll entry; reduced-motion is handled there — no
-separate marketing animation system.
+`marketingLead()`, `marketingHairline()`, `logoCloudMark()`, `marketingCtaChrome()`. They read
+the `--ui-marketing-*` tokens and optional `--ui-font-display` from `theme.css`. Apply
+`viewReveal()` from `@sdxc/ui/animations` on band hosts for scroll entry; reduced-motion is
+handled there — no separate marketing animation system.
 
 ### Utilities
 

@@ -276,3 +276,27 @@ export function logoCloudMark<Node extends Element = Element>(): MixinDescriptor
 		}),
 	]);
 }
+
+/** Soft elevation a solid marketing CTA carries over the band behind it. */
+const CTA_SHADOW =
+	"0 1px 2px color-mix(in oklab, CanvasText 6%, transparent), 0 4px 12px color-mix(in oklab, CanvasText 8%, transparent)";
+
+/**
+ * Corner radius and soft elevation for a solid marketing CTA. Compose onto a
+ * {@link Button} or {@link LinkButton} in a hero {@link CtaGroup}; override
+ * `--ui-marketing-cta-radius` per brand for pill (`9999px`) vs soft-rect.
+ *
+ * @returns A `css()` mixin ready for a CTA control's `mix` prop.
+ * @example
+ * <Button size="lg" color="brand" mix={[marketingCtaChrome()]}>{label}</Button>;
+ */
+export function marketingCtaChrome<Node extends Element = Element>(): MixinDescriptor<
+	Node,
+	[styles: CSSStyles],
+	ElementProps
+> {
+	return raw<Node>({
+		borderRadius: "var(--ui-marketing-cta-radius, 0.5rem)",
+		boxShadow: CTA_SHADOW,
+	});
+}

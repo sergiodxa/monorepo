@@ -3,7 +3,8 @@
  * role and underlined to read as a link among surrounding prose. Its
  * current-page state comes straight from `aria-current` set on the host
  * server-side, rendering the emphasized, non-underlined treatment directly
- * from that attribute.
+ * from that attribute. Marketing sticky headers usually mix `text("sm")`
+ * (~13–15px) and a quiet hover so the bar stays dense beside the brand.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -83,6 +84,8 @@ export namespace NavLink {
  * <NavLink href="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>{t("nav.settings")}</NavLink>
  * @example
  * <NavLink href="/settings" hasBackground mix={css({ paddingInline: "0.75rem", paddingBlock: "0.5rem" })}>{t("nav.settings")}</NavLink>
+ * @example
+ * <NavLink href="/pricing" mix={[text("sm")]}>{t("nav.pricing")}</NavLink>
  */
 export function NavLink(handle: Handle<NavLink.Props>) {
 	return () => {

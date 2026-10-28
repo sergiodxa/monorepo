@@ -1,9 +1,11 @@
 /**
  * A bounded container grouping a header, body content, and footer actions
- * into one ring-edged, softly lifted panel tinted by a semantic color role.
- * The role colors border, background, and text together, so {@link Card.Title}
- * and {@link Card.Description} inherit their text color from the root through
- * ordinary CSS inheritance.
+ * into one ring-edged, softly lifted panel tinted by a semantic color role —
+ * product chrome, plan tiles, settings panels. Landing claim cells stay on
+ * the lighter {@link Feature} (use `variant="panel"` only when the cell itself
+ * is the interaction). The role colors border, background, and text together,
+ * so {@link Card.Title} and {@link Card.Description} inherit their text color
+ * from the root through ordinary CSS inheritance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

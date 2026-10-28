@@ -76,6 +76,8 @@ export namespace Button {
 
 	/**
 	 * Size variant controlling the button's padding and font size.
+	 * Marketing pairing: `"sm"` is ~32px for nav rows, `"lg"` is ~48px for
+	 * hero {@link CtaGroup} actions — keep those slots on different sizes.
 	 */
 	export type Size = "sm" | "md" | "lg";
 
@@ -140,6 +142,8 @@ function holdsOnlyAGlyph(children: RemixNode): boolean {
  * <Button color="danger" variant="outline" size="sm">{t("actions.delete")}</Button>
  * @example
  * <Button type="submit" isPending={isSubmitting}>{t("actions.save")}</Button>
+ * @example
+ * <Button size="lg" color="brand" mix={[marketingCtaChrome()]}>{t("hero.cta")}</Button>
  */
 export function Button(handle: Handle<Button.Props>) {
 	return () => {
