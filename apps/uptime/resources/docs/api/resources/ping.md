@@ -244,3 +244,34 @@ Ad-hoc pings are limited to **60 requests per minute per API key**. The limit is
 Every accepted ping is billable and counts against the same metered ping allowance as monitor checks: the pings included in your subscription first, then whole blocks of additional pings. Requests refused before the probe runs — invalid body, missing scope, inactive subscription, rate limited — are not counted.
 
 Ad-hoc pings belong to a team but to no monitor, so they appear in your team's monthly usage total and on no individual monitor's usage figure.
+
+## Run a Guest Probe
+
+Agents and CI that have no team can pay per call with [x402](https://x402.org/) instead of an API key. Marketing `/try` stays free; this route is the paid accountless lane. An unpaid request answers HTTP `402` with a `PAYMENT-REQUIRED` challenge ($0.01 USDC). After settling, retry with `PAYMENT-SIGNATURE`. No monitor is created and Polar is not billed.
+
+```
+POST /api/v1/guest/probe
+```
+
+<!-- operation: guestProbeCreate -->
+
+### Request Body
+
+| Field | Type   | Required | Description                                                         |
+| ----- | ------ | -------- | ------------------------------------------------------------------- |
+| `url` | string | Yes      | Absolute URL to probe; only public `http`/`https` hosts are allowed |
+
+### cURL
+
+```bash
+# Unpaid → 402 with PAYMENT-REQUIRED
+curl -i https://uptime.sergiodxa.com/api/v1/guest/probe \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+
+# After settling, retry with PAYMENT-SIGNATURE
+curl https://uptime.sergiodxa.com/api/v1/guest/probe \
+  -H "Content-Type: application/json" \
+  -H "PAYMENT-SIGNATURE: …" \
+  -d '{"url":"https://example.com"}'
+```

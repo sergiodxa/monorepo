@@ -15,6 +15,7 @@ import { OPERATIONS as API_KEYS } from "~/app/http/openapi/api-keys";
 import { OPERATIONS as CRON_JOBS } from "~/app/http/openapi/cron-jobs";
 import { OPERATIONS as DNS_MONITORS } from "~/app/http/openapi/dns-monitors";
 import { OPERATIONS as FLOW_MONITORS } from "~/app/http/openapi/flow-monitors";
+import { OPERATIONS as GUEST_PROBE } from "~/app/http/openapi/guest-probe";
 import { OPERATIONS as MAINTENANCE } from "~/app/http/openapi/maintenance";
 import { OPERATIONS as MONITORS } from "~/app/http/openapi/monitors";
 import { OPERATIONS as PING } from "~/app/http/openapi/ping";
@@ -58,5 +59,6 @@ export function buildApiDocument() {
 		...TEAM,
 		...API_KEYS,
 		...PING,
+		...GUEST_PROBE,
 	);
 }
