@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import { summarize } from "~/app/mcp/postings";
 import toolset from "~/app/mcp/tools";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp/server";
 
 /** Registers the board's resources. */
 export default resources({
