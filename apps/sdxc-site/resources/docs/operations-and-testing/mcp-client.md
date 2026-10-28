@@ -8,7 +8,7 @@ order: 2.1
 lastUpdated: 2026-10-28
 outcomes:
     - "How to open a session with connect and prefer using so it closes with the scope"
-    - "How to discover, list, call, and read with one-word methods that return Result"
+    - "How to discover, list, call, and read tools and resources, with Result-shaped failures"
     - "How to type tool names with a catalog and optionally validate a call's result"
 ---
 
@@ -57,10 +57,9 @@ aborts in-flight requests and marks the session closed. Prefer `using`; call `cl
 the session opens outside a `using` scope. Pass `credentials` for a browser same-origin
 cookie session; Workers and Node usually send a bearer header.
 
-## One-word methods
+## Discover, list, call, and read
 
-The session names each RPC with one word. Tools are the hot path; resources use a separate
-trio:
+Tools are the hot path; resources use their own methods:
 
 | Method              | Wire method                | Returns                       |
 | ------------------- | -------------------------- | ----------------------------- |
@@ -81,9 +80,8 @@ await mcp.templates();
 await mcp.read("https://example.com/articles/hello.md");
 ```
 
-The API is those one-word names. The protocol version stays internal: every POST speaks
-`2026-07-28`, and a `-32022` unsupported-version answer is retried once with a supported
-intersection.
+The protocol version stays internal: every POST speaks `2026-07-28`, and a `-32022`
+unsupported-version answer is retried once with a supported intersection.
 
 A transport or JSON-RPC failure is a `Result` failure (`McpClientError`). A tool result with
 `isError: true` is still a successful RPC — that flag is model-facing guidance from the
