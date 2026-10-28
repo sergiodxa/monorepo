@@ -37,20 +37,15 @@ In a client you configure with a file:
 }
 ```
 
-Claude Desktop does not speak this version of the protocol yet, so it needs a bridge:
+Claude Desktop does not speak this version of the protocol yet, so it needs
+`mcp-bridge` from `@sdxc/mcp`:
 
 ```json
 {
 	"mcpServers": {
 		"sergiodxa": {
 			"command": "npx",
-			"args": [
-				"-y",
-				"@abluva/mcp-remote@latest",
-				"https://sergiodxa.com/mcp",
-				"--protocol",
-				"2026-07-28"
-			]
+			"args": ["-y", "@sdxc/mcp@latest", "https://sergiodxa.com/mcp"]
 		}
 	}
 }

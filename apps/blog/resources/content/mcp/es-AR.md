@@ -37,20 +37,15 @@ En un cliente que se configura con un archivo:
 }
 ```
 
-Claude Desktop todavía no habla esta versión del protocolo, así que necesita un puente:
+Claude Desktop todavía no habla esta versión del protocolo, así que necesita
+`mcp-bridge` de `@sdxc/mcp`:
 
 ```json
 {
 	"mcpServers": {
 		"sergiodxa": {
 			"command": "npx",
-			"args": [
-				"-y",
-				"@abluva/mcp-remote@latest",
-				"https://sergiodxa.com/mcp",
-				"--protocol",
-				"2026-07-28"
-			]
+			"args": ["-y", "@sdxc/mcp@latest", "https://sergiodxa.com/mcp"]
 		}
 	}
 }
