@@ -1,7 +1,7 @@
 /**
  * Accountless one-shot HTTP probe charged with x402: `POST /api/v1/guest/probe`.
  * Marketing `/try` stays free; this lane is for agents and CI that pay per call
- * without creating a team or monitor row (ADR-179 / ADR-180 Phase 3).
+ * without creating a team or monitor row, so Polar is not billed either.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
