@@ -143,12 +143,12 @@ upload — see above. A dry run is available from the same workflow form.
 
 ## Scripts
 
-| Script                       | Purpose                          |
-| ---------------------------- | -------------------------------- |
-| `bun run dev`                | Dev server on port 3010          |
-| `bun run build`              | Production build                 |
-| `sdxc run typegen`           | Cloudflare env types             |
-| `sdxc deploy --skip migrate` | Build and upload to Cloudflare   |
+| Script                       | Purpose                        |
+| ---------------------------- | ------------------------------ |
+| `bun run dev`                | Dev server on port 3010        |
+| `bun run build`              | Production build               |
+| `sdxc run typegen`           | Cloudflare env types           |
+| `sdxc deploy --skip migrate` | Build and upload to Cloudflare |
 
 ## Architecture
 
