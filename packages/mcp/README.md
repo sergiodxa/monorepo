@@ -26,6 +26,40 @@ also depends on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
 [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and
 [`@sdxc/uuid`](https://www.npmjs.com/package/@sdxc/uuid).
 
+## Protocol bridge (`mcp-bridge`)
+
+Cursor's remote MCP client still opens with the handshake protocol (through `2025-11-25`). A
+modern-only `@sdxc/mcp` endpoint speaks only `2026-07-28` Streamable HTTP and refuses that
+handshake. The `mcp-bridge` binary is a local stdio process that answers `initialize` to the
+agent and talks `2026-07-28` upstream — the first-party replacement for `@abluva/mcp-remote` on
+first-party servers (ADR-180). OAuth is not included yet; pass headers or a bearer token.
+
+```json
+{
+	"mcpServers": {
+		"uptime": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@sdxc/mcp@latest",
+				"https://uptime.example.com/mcp",
+				"--header",
+				"Authorization:Bearer ${UPTIME_MCP_TOKEN}"
+			]
+		}
+	}
+}
+```
+
+Or invoke the bin directly once the package is installed:
+
+```sh
+mcp-bridge https://uptime.example.com/mcp --token "$UPTIME_MCP_TOKEN"
+mcp-bridge http://127.0.0.1:8787/mcp --allow-http
+```
+
+Stdout is the MCP byte stream; logs go to stderr only.
+
 ## Usage
 
 ### Call a server
