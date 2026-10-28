@@ -32,7 +32,7 @@ export default {
 			badge: "Streamable HTTP",
 			title: "One URL. Protocol 2026-07-28.",
 			description:
-				"Agents connect over Streamable HTTP. No custom SDK — point mcp-remote (or any remote-MCP client) at the endpoint and authenticate with a scoped API key.",
+				"Agents connect over Streamable HTTP. No custom SDK — run mcp-bridge from @sdxc/mcp against the endpoint and authenticate with a scoped API key.",
 		},
 		tools: {
 			badge: "Agent-first monitoring",
@@ -42,22 +42,23 @@ export default {
 			api: "Every public API capability is a tool — monitors, DNS, TCP, flows, cron jobs, alerts, maintenance, status pages, reports, and team admin.",
 			scopes:
 				"Keys need the mcp scope to connect, then the same resource scopes the REST API already uses.",
-			remote: "Connect over Streamable HTTP with protocol 2026-07-28 through @abluva/mcp-remote.",
+			remote:
+				"Connect over Streamable HTTP with protocol 2026-07-28 through mcp-bridge on @sdxc/mcp.",
 		},
 		setup: {
 			badge: "Your setup",
 			heading: "Connect your client",
-			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this config into a client that supports remote MCP (for example via mcp-remote).",
+			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
 			steps: {
 				token: "Open your team’s API keys and create a key.",
 				scopes:
 					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
-				configure: "Add the remote MCP config below to your client.",
+				configure: "Add the mcp-bridge config below to your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
 			scopesNote:
-				"API tokens need the mcp scope to connect, plus every other scope the tools you want already require (for example monitors:read).",
-			configLabel: "Remote MCP config",
+				"Set UPTIME_MCP_TOKEN to your API key. Keys need the mcp scope to connect, plus every other scope the tools you want already require (for example monitors:read).",
+			configLabel: "mcp-bridge config",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},

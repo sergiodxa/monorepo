@@ -1,6 +1,6 @@
 /**
  * The public `GET /mcp` page: anonymous visitors see the sell pitch; a signed-in viewer
- * sees the remote MCP config JSON the product documents.
+ * sees the mcp-bridge config JSON the product documents.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,10 +54,10 @@ describe("GET /mcp", () => {
 		expect(body).toContain("Uptime");
 		expect(body).toContain("Agent-first monitoring");
 		expect(body).toContain("Streamable HTTP");
-		expect(body).not.toContain("@abluva/mcp-remote@latest");
+		expect(body).not.toContain("@sdxc/mcp@latest");
 	});
 
-	test("shows the remote MCP config when signed in", async () => {
+	test("shows the mcp-bridge config when signed in", async () => {
 		viewer = {
 			id: generateUUID(),
 			name: "Ada",
@@ -72,7 +72,9 @@ describe("GET /mcp", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("@abluva/mcp-remote@latest");
+		expect(body).toContain("@sdxc/mcp@latest");
+		expect(body).toContain("--header");
+		expect(body).toContain("Authorization:Bearer ${UPTIME_MCP_TOKEN}");
 		expect(body).toContain("2026-07-28");
 		expect(body).toContain("https://uptime.sergiodxa.com/mcp");
 	});
