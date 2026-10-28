@@ -401,7 +401,7 @@ async function declareMcp(request: DeclarationRequest, root: string): Promise<De
 	if (isFailure(builderImport)) return manual(builderImport.error.message);
 	let source = builderImport.data.source;
 	if (!resource) {
-		let schemaSpecifier = mcpSpecifier.replace(/mcp$/, "json-schema");
+		let schemaSpecifier = jsonSchemaBeside(mcpSpecifier);
 		let schema = ensureImport(
 			declarations,
 			source,
@@ -1149,6 +1149,18 @@ function staticSpecifiers(file: SourceFile): string[] {
 	return file.references
 		.filter((reference) => reference.kind === "import")
 		.map((reference) => reference.specifier);
+}
+
+/**
+ * The `@sdxc/json-schema` (or `sdxc/json-schema`) specifier that sits beside an MCP
+ * import — whether that import is the bare package or its `/server` / `/client` entry.
+ *
+ * @param mcpSpecifier The MCP module the declarations already import.
+ */
+function jsonSchemaBeside(mcpSpecifier: string): string {
+	return mcpSpecifier
+		.replace(/\/mcp\/(?:server|client)$/, "/json-schema")
+		.replace(/mcp$/, "json-schema");
 }
 
 /** Where a nested declaration goes, for the printed instructions. */
