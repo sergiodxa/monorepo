@@ -36,7 +36,7 @@ export function sellerConfig(): SellerConfig {
 		payTo: readOptional("X402_PAY_TO") ?? DEFAULT_PAY_TO,
 		network: readOptional("X402_NETWORK") ?? DEFAULT_NETWORK,
 		asset: readOptional("X402_ASSET") ?? DEFAULT_ASSET,
-		serviceName: "sdxc-apis",
+		serviceName: "sdxc-api",
 	};
 }
 

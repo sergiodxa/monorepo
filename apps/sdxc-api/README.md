@@ -80,7 +80,7 @@ Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`, put it
 `.dev.vars` locally, and set the production secret before deploy:
 
 ```sh
-cf workers secrets update OWNER_ACCESS_TOKEN --name apis
+cf workers secrets update OWNER_ACCESS_TOKEN --name sdxc-api
 ```
 
 For MCP, configure the same Bearer header on the client. Everyone else still pays;

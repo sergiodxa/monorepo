@@ -20,7 +20,7 @@ payment to themselves on every request.
 
 ## Decision
 
-1. Declare `OWNER_ACCESS_TOKEN` as a Worker secret on `apps/apis`.
+1. Declare `OWNER_ACCESS_TOKEN` as a Worker secret on `apps/sdxc-api`.
 2. When a priced request carries `Authorization: Bearer <token>` that
    [`timingSafeEqual`](https://www.npmjs.com/package/@sdxc/crypto)-matches that secret,
    `requireOperationPayment` / `requireMcpToolPayment` call `next()` and skip x402.
