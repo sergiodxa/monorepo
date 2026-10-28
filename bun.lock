@@ -1593,10 +1593,14 @@
     "packages/mcp": {
       "name": "@sdxc/mcp",
       "version": "0.0.1",
+      "bin": {
+        "mcp-bridge": "./src/bridge/index.ts",
+      },
       "dependencies": {
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
       },
       "devDependencies": {
         "remix": "3.1.0",
@@ -1604,6 +1608,9 @@
       "peerDependencies": {
         "remix": "3.1.0",
       },
+      "optionalPeers": [
+        "remix",
+      ],
     },
     "packages/merge-patch": {
       "name": "@sdxc/merge-patch",

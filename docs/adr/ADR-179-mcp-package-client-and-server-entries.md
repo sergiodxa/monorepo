@@ -223,7 +223,7 @@ root export and no long-lived alias.
 
 ## Current Progress
 
-- [ ] Export reshape + `/server` migration
-- [ ] `./client` library
-- [ ] Optional Remix peer + README
-- [ ] Bridge ([ADR-180](./ADR-180-mcp-stdio-protocol-bridge.md))
+- [x] Export reshape + `/server` migration
+- [x] `./client` library
+- [x] Optional Remix peer + README
+- [ ] Bridge ([ADR-180](./ADR-180-mcp-stdio-protocol-bridge.md)) — bin stub only; body is a follow-up
