@@ -84,8 +84,6 @@ export namespace NavLink {
  * <NavLink href="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>{t("nav.settings")}</NavLink>
  * @example
  * <NavLink href="/settings" hasBackground mix={css({ paddingInline: "0.75rem", paddingBlock: "0.5rem" })}>{t("nav.settings")}</NavLink>
- * @example
- * <NavLink href="/pricing" mix={[text("sm")]}>{t("nav.pricing")}</NavLink>
  */
 export function NavLink(handle: Handle<NavLink.Props>) {
 	return () => {
