@@ -1,4 +1,4 @@
-import { resources } from "@sdxc/mcp";
+import { resources } from "@sdxc/mcp/server";
 
 export const resourceset = resources({
 	postings: {

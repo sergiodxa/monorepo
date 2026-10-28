@@ -1,4 +1,4 @@
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 
 export const toolset = tools({
   search: tool({ description: "Search postings" }),
