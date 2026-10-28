@@ -74,10 +74,12 @@
 	// Plain secrets (COOKIE_SESSION_SECRET, CLIENT_ID/SECRET, POLAR_ACCESS_TOKEN,
 	// POLAR_WEBHOOK_SECRET, UPTIME_CRON_API_KEY,
 	// CLOUDFLARE_ACCOUNT_ID/ANALYTICS_TOKEN, TURNSTILE_SITE_KEY/SECRET_KEY,
-	// FUNNEL_REPORT_TO) are
+	// FUNNEL_REPORT_TO, and the x402 guest-probe set X402_FACILITATOR_URL /
+	// X402_PAY_TO / X402_FACILITATOR_AUTH / X402_NETWORK / X402_ASSET) are
 	// set via `.dev.vars` locally and `wrangler secret put` in production — same as the
 	// OLD APP (`apps/uptime/app/cookies.ts` reads `env.COOKIE_SESSION_SECRET` directly)
-	// and `apps/auth-saas`. Not declared here; only bindings need a wrangler.jsonc entry.
+	// and `apps/auth-saas`. Soft-launch: `X402_FACILITATOR_URL=memory` skips charging
+	// (ADR-182). Not declared here; only bindings need a wrangler.jsonc entry.
 
 	// The key digest unsubscribe links are signed with, kept apart from the session secret so
 	// rotating one leaves the other standing. Create it once per account with

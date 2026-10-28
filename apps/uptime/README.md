@@ -30,6 +30,16 @@ public-target check, the Turnstile challenge and a daily budget of free probes. 
 is `@sdxc/outbound`'s `checkUrl` (ports 80 and 443 only) and `resolveHost`, so a refusal's logged
 `detail` is that package's error code, and its README states the DNS rebinding limit the check carries.
 
+## Guest probe soft-launch (x402)
+
+`POST /api/v1/guest/probe` is the paid accountless lane; marketing `/try` stays free.
+Until a receive wallet and facilitator are ready, set `X402_FACILITATOR_URL=memory`
+(or leave it unset) so the route skips charging
+([ADR-182](../../docs/adr/ADR-182-x402-soft-launch-without-charging.md)). Plain secrets
+go in `.dev.vars` locally and `wrangler secret put` in production — same as the other
+uptime secrets. Flip to an `https://…` facilitator URL plus Base mainnet
+`X402_PAY_TO` / `X402_NETWORK` / `X402_ASSET` when you want to start collecting.
+
 ## Health check
 
 `GET /health` answers an `application/health+json` report from `app/initializers/health.ts`,
