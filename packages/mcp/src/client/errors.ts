@@ -1,7 +1,8 @@
 /**
- * Failures the MCP client returns through `@sdxc/result` when transport or
- * JSON-RPC goes wrong. A tool result with `isError` is not one of these — that
- * is a successful RPC whose payload is model-facing guidance.
+ * Failures the MCP client returns through `@sdxc/result` when transport,
+ * JSON-RPC, or an optional result schema goes wrong. A tool result with
+ * `isError` is not one of these — that is a successful RPC carrying
+ * model-facing guidance.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +13,7 @@
  * a `Result` failure; the client never throws it across the public API.
  */
 export class McpClientError extends Error {
-	override readonly name = "McpClientError";
+	override readonly name: string = "McpClientError";
 
 	/**
 	 * Optional JSON-RPC error code when the failure came from a protocol error
@@ -31,5 +32,22 @@ export class McpClientError extends Error {
 		super(message);
 		this.code = options.code;
 		this.data = options.data;
+	}
+}
+
+/**
+ * A tool result failed an optional `@sdxc/json-schema` check. `issues` lists
+ * each constraint the structured payload (or JSON text content) broke.
+ */
+export class InvalidToolResultError extends McpClientError {
+	override readonly name = "InvalidToolResultError";
+
+	/** One entry per failed constraint, each naming the property path it applies to. */
+	readonly issues: readonly string[];
+
+	/** @param issues Human-readable constraint failures, in declaration order. */
+	constructor(issues: readonly string[]) {
+		super(`Invalid tool result: ${issues.join("; ")}`);
+		this.issues = issues;
 	}
 }

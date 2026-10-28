@@ -1,11 +1,13 @@
 /**
  * Bound MCP client session: one-word methods over Streamable HTTP, with sync
- * `Disposable` teardown that aborts in-flight work.
+ * `Disposable` teardown that aborts in-flight work. An optional {@link ToolCatalog}
+ * types `call` names and arguments; an optional result schema validates at runtime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DescribedSchema, InferOutput } from "@sdxc/json-schema";
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
@@ -14,6 +16,7 @@ import type { Implementation } from "../protocol.js";
 
 import { MetaKey } from "../protocol.js";
 
+import type { OutputOf, ToolContract, UntypedTools } from "./catalog.js";
 import type {
 	CallResult,
 	ConnectOptions,
@@ -26,13 +29,20 @@ import type {
 
 import { McpClientError } from "./errors.js";
 import { rpc } from "./rpc.js";
+import { validateToolResult } from "./validate-result.js";
 
 /**
  * A session against one MCP endpoint. Prefer `using mcp = connect(options)` so
  * `[Symbol.dispose]` closes the session when the scope ends; call `close()` when
- * `using` is unavailable.
+ * `using` is unavailable. Pass a {@link ToolCatalog} as `connect<Tools>(…)` to
+ * type tool names and arguments.
+ *
+ * @template Tools First-party tool map (`Record<keyof Tools, ToolContract>`),
+ * or {@link UntypedTools} by default.
  */
-export class McpClient implements Disposable {
+export class McpClient<
+	Tools extends Record<keyof Tools, ToolContract> = UntypedTools,
+> implements Disposable {
 	/** Endpoint URL this session posts to. */
 	readonly url: URL;
 
@@ -83,18 +93,48 @@ export class McpClient implements Disposable {
 
 	/**
 	 * Calls one tool by name (`tools/call`). A result with `isError` is still a
-	 * successful RPC — only wire failures are `Result` failures.
+	 * successful RPC — only wire failures (and an optional result-schema miss)
+	 * are `Result` failures. Without a schema, `structuredContent` is typed from
+	 * the catalog only — no runtime check.
 	 *
-	 * @param name Tool name from `list`.
+	 * @param name Tool name from `list` (or a catalog key when `Tools` is set).
 	 * @param args Arguments object; defaults to `{}`.
 	 */
+	async call<Name extends keyof Tools & string>(
+		name: Name,
+		args?: Tools[Name]["input"],
+	): Promise<Result<CallResult<OutputOf<Tools[Name]>>, McpClientError>>;
+
+	/**
+	 * Calls one tool and validates the result with an `@sdxc/json-schema` schema.
+	 * Prefers `structuredContent`; otherwise parses the first text content as JSON.
+	 * Success narrows `structuredContent` to {@link InferOutput}`<Schema>`.
+	 *
+	 * @param name Tool name from `list` (or a catalog key when `Tools` is set).
+	 * @param args Arguments object.
+	 * @param schema Schema for the structured tool result.
+	 */
+	async call<Name extends keyof Tools & string, Schema extends DescribedSchema>(
+		name: Name,
+		args: Tools[Name]["input"],
+		schema: Schema,
+	): Promise<Result<CallResult<InferOutput<Schema>>, McpClientError>>;
+
 	async call(
 		name: string,
-		args: Record<string, unknown> = {},
+		args: object = {},
+		schema?: DescribedSchema,
 	): Promise<Result<CallResult, McpClientError>> {
-		let result = await this.#request("tools/call", { name, arguments: args });
+		let result = await this.#request("tools/call", {
+			name,
+			arguments: args as Record<string, unknown>,
+		});
 		if (isFailure(result)) return result;
-		return success(asCall(result.data));
+		let callResult = asCall(result.data);
+		if (schema === undefined) return success(callResult);
+		let validated = validateToolResult(callResult, schema);
+		if (isFailure(validated)) return validated;
+		return success(validated.data);
 	}
 
 	/**

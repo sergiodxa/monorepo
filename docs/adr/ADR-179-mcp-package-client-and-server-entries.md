@@ -113,6 +113,11 @@ await mcp.read("https://example.com/articles/hello.md");
   on `-32022`, retry once with a supported intersection — app code never picks a revision.
 - I/O and protocol failures use `@sdxc/result`. A tool result with `isError` is a successful
   RPC carrying model-facing guidance, not a thrown exception.
+- **`connect()` stays untyped by default.** Optional `connect<Tools>(…)` types `call` names and
+  arguments from a first-party catalog (`{ input; output? }` per tool). An optional third
+  `call` argument is an `@sdxc/json-schema` schema that validates the result at runtime
+  (`structuredContent`, else JSON text content) and narrows success; without a schema the
+  catalog's `output` is types-only.
 
 ### 5. Explicit Resource Management (`Disposable`)
 
@@ -225,5 +230,6 @@ root export and no long-lived alias.
 
 - [x] Export reshape + `/server` migration
 - [x] `./client` library
+- [x] Optional typed catalogs + result-schema `call` third argument
 - [x] Optional Remix peer + README
 - [ ] Bridge ([ADR-180](./ADR-180-mcp-stdio-protocol-bridge.md)) — bin stub only; body is a follow-up
