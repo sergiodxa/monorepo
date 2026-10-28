@@ -51,6 +51,11 @@ export interface HTTPFacilitatorOptions {
 	url: string;
 	/** Per-request deadline in milliseconds. @default 30_000 */
 	timeoutMs?: number;
+	/**
+	 * Extra headers on every `/verify` and `/settle` call (for example a CDP
+	 * `Authorization` bearer). Never log these values.
+	 */
+	headers?: HeadersInit;
 }
 
 /**
@@ -59,13 +64,15 @@ export interface HTTPFacilitatorOptions {
 export class HTTPFacilitator implements Facilitator {
 	readonly #url: string;
 	readonly #timeoutMs: number;
+	readonly #headers: HeadersInit | undefined;
 
 	/**
-	 * @param options - Facilitator URL and timeout
+	 * @param options - Facilitator URL, timeout and optional auth headers
 	 */
 	constructor(options: HTTPFacilitatorOptions) {
 		this.#url = options.url.replace(/\/$/, "");
 		this.#timeoutMs = options.timeoutMs ?? 30_000;
+		this.#headers = options.headers;
 	}
 
 	/** @inheritdoc */
@@ -101,9 +108,12 @@ export class HTTPFacilitator implements Facilitator {
 	async #post<T>(path: string, body: unknown): Promise<Result<T, X402Error>> {
 		let response: Response;
 		try {
+			let headers = new Headers(this.#headers);
+			headers.set("content-type", "application/json");
+			headers.set("accept", "application/json");
 			response = await fetch(new URL(path, `${this.#url}/`), {
 				method: "POST",
-				headers: { "content-type": "application/json", accept: "application/json" },
+				headers,
 				body: JSON.stringify(body),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});

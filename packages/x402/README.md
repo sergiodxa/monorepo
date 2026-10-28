@@ -140,6 +140,27 @@ POSTs JSON to `{url}/verify` and `{url}/settle`.
 
 - `options.url`: facilitator base URL
 - `options.timeoutMs?`: request timeout; defaults to `30_000`
+- `options.headers?`: extra headers on every call (for example a CDP
+  `Authorization` bearer). Never log these values.
+
+### Bazaar discovery
+
+Stamp `extensions.bazaar` on a `PriceRequest` (or `requirePayment({ extensions })`)
+so facilitators that index [Bazaar](https://docs.x402.org/) can catalog the
+resource after a successful settle.
+
+```typescript
+import { bazaarHttpPost, bazaarMcpTool } from "@sdxc/x402";
+
+let extensions = {
+	bazaar: bazaarHttpPost(
+		{ text: "https://sdxc.dev" },
+		{ type: "json", example: { svgPath: "M…", size: 21 } },
+	),
+};
+
+// MCP tools use bazaarMcpTool("qr.encode", output, args) instead.
+```
 
 ### `new MemoryFacilitator()`
 
