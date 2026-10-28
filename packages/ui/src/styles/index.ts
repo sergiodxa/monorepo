@@ -15,6 +15,7 @@ export * from "./graphic-host.js";
 export * from "./hit-area.js";
 export * from "./interactive-transition.js";
 export * from "./legend-toggle.js";
+export * from "./marketing.js";
 export * from "./output-caption-text.js";
 export * from "./panel-chrome.js";
 export * from "./range-thumb-appearance.js";

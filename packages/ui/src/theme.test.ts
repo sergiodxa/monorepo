@@ -28,6 +28,26 @@ describe("theme.css", () => {
 		expect(root).toContain("--ui-image-outline: rgb(0 0 0 / 0.1);");
 	});
 
+	test("defines the marketing layout and display tokens for light mode", () => {
+		let root = block(":root {");
+
+		expect(root).toContain("--ui-marketing-measure: 72rem;");
+		expect(root).toContain("--ui-marketing-gutter: 1rem;");
+		expect(root).toContain("--ui-marketing-section-space: 6rem;");
+		expect(root).toContain("--ui-marketing-section-space-compact: 4rem;");
+		expect(root).toContain("--ui-marketing-section-space-hero: 8rem;");
+		expect(root).toContain("--ui-marketing-display-tracking: -0.04em;");
+		expect(root).toContain("--ui-marketing-display-weight: 500;");
+		expect(root).toContain("--ui-marketing-display-leading: 1;");
+		expect(root).toContain("--ui-marketing-lead-measure: 40rem;");
+		expect(root).toContain("--ui-marketing-lead-size: 1.125rem;");
+		expect(root).toContain("--ui-marketing-chapter-size: 2.75rem;");
+		expect(root).toContain("--ui-marketing-logo-height: 1rem;");
+		expect(root).toContain("--ui-marketing-header-height: 4rem;");
+		expect(root).toContain("--ui-marketing-cta-radius: 0.5rem;");
+		expect(root).toContain("--ui-font-display: var(--ui-font-sans);");
+	});
+
 	test("swaps every token for a light hairline in both dark blocks", () => {
 		for (let opener of ["/* Forced dark mode */", "/* System-preference dark mode */"]) {
 			let dark = block(opener);
