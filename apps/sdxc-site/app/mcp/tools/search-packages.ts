@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool, ToolError } from "sdxc/mcp";
+import { createTool, ToolError } from "sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 import { searchPackages } from "~/app/services/search";

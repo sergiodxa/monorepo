@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext } from "sdxc/mcp";
+import type { AnyRequestContext } from "sdxc/mcp/server";
 
 import { createAction } from "remix/router";
 import { toRemix } from "sdxc/markdown/remix";

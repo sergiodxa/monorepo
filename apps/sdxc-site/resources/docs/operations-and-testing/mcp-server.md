@@ -37,7 +37,7 @@ satisfy, which `tools/list` publishes as JSON Schema. Keep declarations in the f
 ```typescript {% title="app/mcp/tools/index.ts" %}
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 
 export default tools({
 	searchJobs: tool("search_jobs", {
@@ -66,7 +66,7 @@ client fills with `resources/list`. A resource is addressed by a URI, declared w
 pattern syntax as your routes.
 
 ```typescript {% title="app/mcp/resources/index.ts" %}
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp/server";
 
 export default resources({
 	posting: resource("jobs://postings/:id", {
@@ -115,7 +115,7 @@ export. Handlers receive the router's `RequestContext`, so `ctx.models` and ever
 your middleware publishes is already there.
 
 ```typescript {% title="app/mcp/tools/search-jobs.ts" %}
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import { cachedSearch } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
@@ -150,7 +150,7 @@ Once a tool answers per credential, the credential belongs in the cache key.
 A resource implements `read`, and optionally a `list` that fills the client's picker:
 
 ```typescript {% title="app/mcp/resources/posting.ts" %}
-import { createResource } from "@sdxc/mcp";
+import { createResource } from "@sdxc/mcp/server";
 
 import { toMarkdown } from "~/app/mcp/markdown";
 import resourceset from "~/app/mcp/resources";
@@ -176,7 +176,7 @@ export default createResource(resourceset.posting, {
 through `lazy()`, so a call imports only the handler it reaches:
 
 ```typescript {% title="app/initializers/mcp.ts" %}
-import { createHandler, lazy } from "@sdxc/mcp";
+import { createHandler, lazy } from "@sdxc/mcp/server";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -247,7 +247,7 @@ export function waitUntil(promise: Promise<unknown>) {
 Then call the tool once with a query that matches and once with one that matches nothing:
 
 ```typescript {% title="app/mcp/tools/search-jobs.test.ts" %}
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { beforeAll, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
