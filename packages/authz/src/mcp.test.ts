@@ -8,7 +8,7 @@
  */
 
 import * as s from "@sdxc/json-schema";
-import { createHandler, LATEST_PROTOCOL_VERSION, MetaKey, tool, tools } from "@sdxc/mcp";
+import { createHandler, LATEST_PROTOCOL_VERSION, MetaKey, tool, tools } from "@sdxc/mcp/server";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 

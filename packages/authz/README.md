@@ -431,7 +431,7 @@ One claim both hides a tool and refuses a call to it; a record check runs after 
 ```typescript
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";
 import { access } from "@sdxc/authz/middleware/router";
-import { createHandler } from "@sdxc/mcp";
+import { createHandler } from "@sdxc/mcp/server";
 
 import abilities from "./abilities";
 import policy from "./policy";
