@@ -32,7 +32,7 @@ Cursor's remote MCP client still opens with the handshake protocol (through `202
 modern-only `@sdxc/mcp` endpoint speaks only `2026-07-28` Streamable HTTP and refuses that
 handshake. The `mcp-bridge` binary is a local stdio process that answers `initialize` to the
 agent and talks `2026-07-28` upstream — the first-party replacement for `@abluva/mcp-remote` on
-first-party servers (ADR-180). OAuth is not included yet; pass headers or a bearer token.
+first-party servers. OAuth is not included yet; pass headers or a bearer token.
 
 ```json
 {
