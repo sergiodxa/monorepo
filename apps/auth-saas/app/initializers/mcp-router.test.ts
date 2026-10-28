@@ -15,7 +15,7 @@ import type { Database } from "remix/data-table";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { database } from "@sdxc/database-middleware";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";

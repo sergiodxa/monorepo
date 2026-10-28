@@ -8,11 +8,11 @@
  */
 
 import type { DescribedSchema } from "@sdxc/json-schema";
-import type { Tool, ToolAnnotations, ToolGroup } from "@sdxc/mcp";
+import type { Tool, ToolAnnotations, ToolGroup } from "@sdxc/mcp/server";
 import type { Operation } from "@sdxc/openapi";
 
 import * as s from "@sdxc/json-schema";
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 import { isFailure } from "@sdxc/result";
 
 import { AGENT_CLIENTS_OPERATIONS } from "~/app/http/openapi/agent-clients";
