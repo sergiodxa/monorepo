@@ -18,9 +18,11 @@ import { overflow } from "@sdxc/u/overflow";
 import { dark, media } from "@sdxc/u/responsive";
 import { bs, is, m, maxIs, mbs, minIs, p } from "@sdxc/u/size";
 import { font, fontSize, leading, textAlign, weight, whiteSpace } from "@sdxc/u/typography";
-import { Heading, HeadingScope, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { HeadingScope, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
+	Bento,
 	ClosingCta,
 	FaqBand,
 	FeatureBand,
@@ -86,6 +88,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					mediaPlacement="below"
 					eyebrow={page.brand}
 					eyebrowVariant="pill"
+					mix={[viewReveal()]}
 					title={
 						<>
 							{page.title} <AccentText>{page.highlight}</AccentText>
@@ -130,7 +133,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					}
 				/>
 
-				<MarketingSection>
+				<MarketingSection mix={[viewReveal()]}>
 					<HeadingScope>
 						<MarketingHeader
 							eyebrow={page.contrast.badge}
@@ -140,55 +143,40 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 							{page.contrast.title}
 						</MarketingHeader>
 					</HeadingScope>
-					<div
-						mix={[
-							grid(),
-							gap(6),
-							media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-						]}
-					>
-						{[page.contrast.http, page.contrast.browser].map((column) => (
-							<article
-								key={column.title}
-								mix={[
-									vstack({ gap: 4 }),
-									p(6),
-									rounded("xl"),
-									border({ color: "neutral", width: 1 }),
-									bg("neutral.tint"),
-								]}
-							>
-								<HeadingScope level={3}>
-									<Heading mix={[m(0), fontSize("xl"), weight(600)]}>{column.title}</Heading>
-								</HeadingScope>
-								<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
-									{column.points.map((point) => (
-										<li
-											key={point}
-											mix={[
-												inlineFlex(),
-												items("start"),
-												gap(2),
-												fontSize("sm"),
-												leading("relaxed"),
-												fg("neutral"),
-											]}
-										>
-											<CheckIcon
-												size={16}
-												strokeWidth={2}
-												mix={[fg("brand"), mbs("2px"), shrink(0)]}
-											/>
-											{point}
-										</li>
-									))}
-								</ul>
-							</article>
-						))}
-					</div>
+					<HeadingScope>
+						<Bento columns={2}>
+							{[page.contrast.http, page.contrast.browser].map((column) => (
+								<Bento.Cell key={column.title}>
+									<Bento.Title>{column.title}</Bento.Title>
+									<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
+										{column.points.map((point) => (
+											<li
+												key={point}
+												mix={[
+													inlineFlex(),
+													items("start"),
+													gap(2),
+													fontSize("sm"),
+													leading("relaxed"),
+													fg("neutral"),
+												]}
+											>
+												<CheckIcon
+													size={16}
+													strokeWidth={2}
+													mix={[fg("brand"), mbs("2px"), shrink(0)]}
+												/>
+												{point}
+											</li>
+										))}
+									</ul>
+								</Bento.Cell>
+							))}
+						</Bento>
+					</HeadingScope>
 				</MarketingSection>
 
-				<MarketingSection id="examples" tone="tinted" mix={[overflow("hidden")]}>
+				<MarketingSection id="examples" tone="tinted" mix={[overflow("hidden"), viewReveal()]}>
 					<HeadingScope>
 						<MarketingHeader
 							eyebrow={page.examples.badge}
@@ -208,7 +196,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					</div>
 				</MarketingSection>
 
-				<MarketingSection id="pricing">
+				<MarketingSection id="pricing" mix={[viewReveal()]}>
 					<div
 						mix={[
 							grid(),
@@ -256,6 +244,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					eyebrow={page.steps.badge}
 					title={page.steps.title}
 					description={page.steps.description}
+					mix={[viewReveal()]}
 				>
 					{page.steps.list.map((step) => (
 						<StepList.Item key={step.title} title={step.title}>
@@ -270,6 +259,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					eyebrow="FAQ"
 					title="Questions about browser flows"
 					description="When to use a browser session, how a run is billed, and what a short spec can express."
+					mix={[viewReveal()]}
 				>
 					<FaqAccordion items={firstFaqColumn} />
 					<FaqAccordion items={secondFaqColumn} />
@@ -279,7 +269,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					tone="plain"
 					title={page.finalCta.title}
 					description={page.finalCta.body}
-					mix={[bg("brand.solid"), fg("brand.onSolid"), rounded("2xl")]}
+					mix={[viewReveal(), bg("brand.solid"), fg("brand.onSolid"), rounded("2xl")]}
 					parts={{
 						title: [fg("brand.onSolid")],
 						description: [fg("brand.onSolid")],

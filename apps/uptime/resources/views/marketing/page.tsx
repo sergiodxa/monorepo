@@ -14,17 +14,20 @@ import type { Handle } from "remix/component";
 import { ArrowRightIcon, Icon } from "@sdxc/icons";
 import { bg, border, fg, linearGradient } from "@sdxc/u/color";
 import { rounded, shadow } from "@sdxc/u/effects";
-import { block } from "@sdxc/u/layout";
+import { block, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is } from "@sdxc/u/size";
-import { LinkButton } from "@sdxc/ui";
+import { HeadingScope, LinkButton, MarketingSection } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
+	Bento,
 	CheckList,
 	CheckRow,
 	ClosingCta,
 	FaqBand,
 	FeatureBand,
+	IconWell,
 	LandingHero,
 	ProductFrame,
 	StepList,
@@ -34,7 +37,6 @@ import type { MarketingContent } from "~/resources/content/marketing";
 
 import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import routes from "~/routes/web";
@@ -167,6 +169,8 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 		let faqSplitIndex = Math.ceil(faqs.length / 2);
 		let firstFaqColumn = faqs.slice(0, faqSplitIndex);
 		let secondFaqColumn = faqs.slice(faqSplitIndex);
+		/** Hairline bento track count: short feature lists stay two-up. */
+		let featureColumns: 2 | 3 = features.length <= 4 ? 2 : 3;
 
 		return (
 			<>
@@ -175,6 +179,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					mediaPlacement="end"
 					eyebrow={badge}
 					eyebrowVariant="pill"
+					mix={[viewReveal()]}
 					title={
 						<>
 							{title} <AccentText>{highlight}</AccentText>
@@ -182,37 +187,37 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					}
 					description={description}
 					actions={
-						<>
-							{isSignedIn ? (
-								<AuthCta
-									isSignedIn
-									startLabel={startLabel}
-									dashboardLabel={dashboardLabel}
-									icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-								/>
-							) : (
-								<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
-									{tryLabel}
-									<ArrowRightIcon size={20} strokeWidth={1.5} />
+						<div mix={[vstack({ gap: 4, align: "start" }), is("full")]}>
+							<div mix={[inlineFlex(), flexWrap(), items("center"), gap(3)]}>
+								{isSignedIn ? (
+									<AuthCta
+										isSignedIn
+										startLabel={startLabel}
+										dashboardLabel={dashboardLabel}
+										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+									/>
+								) : (
+									<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
+										{tryLabel}
+										<ArrowRightIcon size={20} strokeWidth={1.5} />
+									</LinkButton>
+								)}
+								<LinkButton
+									href={`${routes.home.href()}#pricing`}
+									prefetch="intent"
+									color="neutral"
+									variant="outline"
+									size="lg"
+								>
+									{pricingLabel}
 								</LinkButton>
-							)}
-							<LinkButton
-								href={`${routes.home.href()}#pricing`}
-								prefetch="intent"
-								color="neutral"
-								variant="outline"
-								size="lg"
-							>
-								{pricingLabel}
-							</LinkButton>
-						</>
-					}
-					below={
-						<CheckList orientation="horizontal">
-							{highlights.map((item) => (
-								<CheckRow key={item}>{item}</CheckRow>
-							))}
-						</CheckList>
+							</div>
+							<CheckList orientation="horizontal">
+								{highlights.map((item) => (
+									<CheckRow key={item}>{item}</CheckRow>
+								))}
+							</CheckList>
+						</div>
 					}
 					media={
 						<ProductFrame lights>
@@ -241,6 +246,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 
 				{trustIndicators && (
 					<MarketingTrustIndicators
+						mix={[viewReveal()]}
 						indicators={trustIndicators.map((indicator) => ({
 							icon: <Icon name={indicator.icon} size={24} strokeWidth={1.5} />,
 							value: indicator.value,
@@ -251,21 +257,52 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 				)}
 
 				<FeatureBand
-					layout="grid"
-					columns={3}
+					layout="split"
+					lean="media"
 					eyebrow={everythingBadge}
 					title={everythingTitle}
 					description={everythingDescription}
+					mix={[viewReveal()]}
+					media={
+						<ProductFrame lights>
+							<picture mix={[block(), overflow("hidden")]}>
+								<source media="(prefers-color-scheme: dark)" srcSet={SCREENSHOT_DARK} />
+								<source media="(prefers-color-scheme: light)" srcSet={SCREENSHOT_LIGHT} />
+								<img
+									src={SCREENSHOT_LIGHT}
+									alt={screenshotAlt}
+									width={3216}
+									height={2080}
+									mix={[block(), is("full"), bs("auto")]}
+								/>
+							</picture>
+						</ProductFrame>
+					}
 				>
-					{features.map((feature) => (
-						<MarketingCard
-							key={feature.title}
-							icon={feature.icon && <Icon name={feature.icon} size={24} strokeWidth={1.5} />}
-							title={feature.title}
-							description={feature.description}
-						/>
-					))}
+					<ul>
+						{features.slice(0, 5).map((feature) => (
+							<li key={feature.title}>{feature.title}</li>
+						))}
+					</ul>
 				</FeatureBand>
+
+				<MarketingSection spacing="compact" mix={[viewReveal()]}>
+					<HeadingScope>
+						<Bento columns={featureColumns}>
+							{features.map((feature) => (
+								<Bento.Cell key={feature.title}>
+									{feature.icon ? (
+										<IconWell size="sm" aria-hidden="true">
+											<Icon name={feature.icon} size={20} strokeWidth={1.5} />
+										</IconWell>
+									) : null}
+									<Bento.Title>{feature.title}</Bento.Title>
+									<Bento.Body>{feature.description}</Bento.Body>
+								</Bento.Cell>
+							))}
+						</Bento>
+					</HeadingScope>
+				</MarketingSection>
 
 				<FeatureBand
 					layout="steps"
@@ -273,6 +310,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					eyebrow={howItWorksBadge}
 					title={howItWorksTitle}
 					description={howItWorksDescription}
+					mix={[viewReveal()]}
 				>
 					{steps.map((step) => (
 						<StepList.Item key={step.title} title={step.title}>
@@ -281,7 +319,13 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					))}
 				</FeatureBand>
 
-				<FaqBand columns={2} eyebrow={faqBadge} title={faqTitle} description={faqDescription}>
+				<FaqBand
+					columns={2}
+					eyebrow={faqBadge}
+					title={faqTitle}
+					description={faqDescription}
+					mix={[viewReveal()]}
+				>
 					<FaqAccordion items={firstFaqColumn} />
 					{secondFaqColumn.length > 0 ? <FaqAccordion items={secondFaqColumn} /> : null}
 				</FaqBand>
@@ -291,6 +335,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					title={finalCtaTitle}
 					description={finalCtaBody}
 					mix={[
+						viewReveal(),
 						bg({
 							image: linearGradient(
 								"to right",
