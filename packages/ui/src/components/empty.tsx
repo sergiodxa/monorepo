@@ -1,8 +1,10 @@
 /**
- * A placeholder for a section that currently has nothing to show — a
+ * A placeholder for a product section that currently has nothing to show — a
  * dashed-bordered panel that composes an icon, a title, a description, and
- * an action into one empty-state layout. The compound parts let a consumer
- * include only the pieces a given empty state needs.
+ * an action into one empty-state layout. Marketing claim cells belong on
+ * {@link Feature} instead; {@link Empty} stays for in-app zero-data states.
+ * The compound parts let a consumer include only the pieces a given empty
+ * state needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

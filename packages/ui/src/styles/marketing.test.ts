@@ -16,6 +16,7 @@ import {
 	logoCloudMark,
 	marketingBandTone,
 	marketingContainer,
+	marketingCtaChrome,
 	marketingHairline,
 	marketingLead,
 	marketingSectionSpace,
@@ -146,5 +147,14 @@ describe("logoCloudMark", () => {
 		expect(style.opacity).toBe(0.65);
 		expect(style.objectFit).toBe("contain");
 		expect(style.color).toBe("currentColor");
+	});
+});
+
+describe("marketingCtaChrome", () => {
+	test("applies the marketing CTA radius and a soft elevation", () => {
+		let style = styles(marketingCtaChrome());
+
+		expect(style.borderRadius).toBe("var(--ui-marketing-cta-radius, 0.5rem)");
+		expect(style.boxShadow).toContain("0 1px 2px");
 	});
 });

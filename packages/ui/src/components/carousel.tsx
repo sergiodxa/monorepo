@@ -135,6 +135,21 @@ export namespace Carousel {
  * 		<Carousel.Next commandfor="gallery-viewport" aria-label={t("gallery.next")} />
  * 	</Carousel.Controls>
  * </Carousel>
+ * @example
+ * // Marketing browser-flow strip: widen `--ui-carousel-slide-size` for product
+ * // frames and keep Previous/Next on `size="sm"` so controls stay quiet.
+ * <Carousel
+ * 	aria-label={t("flows.label")}
+ * 	style={{ "--ui-carousel-slide-size": "28rem" }}
+ * >
+ * 	<Carousel.Viewport id="flows" mix={[carouselControls()]}>
+ * 		<Carousel.Track>{slides}</Carousel.Track>
+ * 	</Carousel.Viewport>
+ * 	<Carousel.Controls>
+ * 		<Carousel.Previous commandfor="flows" aria-label={t("flows.previous")} />
+ * 		<Carousel.Next commandfor="flows" aria-label={t("flows.next")} />
+ * 	</Carousel.Controls>
+ * </Carousel>
  */
 export function Carousel(handle: Handle<Carousel.Props>) {
 	return () => {

@@ -97,6 +97,13 @@ export namespace Accordion {
  * 		</Accordion.Content>
  * 	</Accordion.Item>
  * </Accordion>
+ * @example
+ * // Marketing FAQ: two Accordion columns under a MarketingHeader, each with
+ * // the same `name` so only one item opens across both columns.
+ * <div mix={[grid(), gap(8), at("lg", gridTemplate({ columns: "1fr 1fr" }))]}>
+ * 	<Accordion>{leftItems}</Accordion>
+ * 	<Accordion>{rightItems}</Accordion>
+ * </div>
  */
 export function Accordion(handle: Handle<Accordion.Props>) {
 	return () => {
