@@ -308,6 +308,10 @@ test("search_jobs tells the model to broaden an empty search", async () => {
 
 ## Where to go next
 
+- [Call an MCP server](/docs/operations-and-testing/mcp-client) — `@sdxc/mcp/client` against
+  the endpoint you just mounted.
+- [Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge) — stdio
+  `mcp-bridge` for handshake-era agents.
 - [Test Workers apps](/docs/operations-and-testing/testing) — the mocks, factories and MSW the
   test above builds on.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — the cache
