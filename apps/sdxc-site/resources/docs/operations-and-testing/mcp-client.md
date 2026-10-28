@@ -115,10 +115,11 @@ let result = unwrap(await mcp.call("list_monitors", { limit: 20 }));
 
 ## Validate a call's result
 
-Pass an [`@sdxc/json-schema`](/api/json-schema) schema as the third argument to check the
-result at runtime. Validation prefers `structuredContent`; when that is absent it parses the
-first text `content` block as JSON. A miss is an `InvalidToolResultError` inside a `Result`
-failure. A tool result with `isError` skips the schema:
+Pass a `{ schema }` option as the third argument to check the result at runtime with an
+[`@sdxc/json-schema`](/api/json-schema) schema. Validation prefers `structuredContent`; when
+that is absent it parses the first text `content` block as JSON. A miss is an
+`InvalidToolResultError` inside a `Result` failure. A tool result with `isError` skips the
+schema:
 
 ```bash
 npm add @sdxc/json-schema
@@ -138,7 +139,7 @@ using mcp = connect({
 	client: { name: "uptime-bridge", version: "1.0.0" },
 });
 
-let result = await mcp.call("list_monitors", { limit: 20 }, MonitorList);
+let result = await mcp.call("list_monitors", { limit: 20 }, { schema: MonitorList });
 if (isFailure(result)) {
 	// InvalidToolResultError or McpClientError
 	throw result.error;
