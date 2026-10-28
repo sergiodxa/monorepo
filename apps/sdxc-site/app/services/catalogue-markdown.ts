@@ -43,6 +43,13 @@ export const MARKETING_COMPONENTS_TITLE = "Marketing components";
 export const MARKETING_COMPONENTS_SUMMARY =
 	"Landing primitives: MarketingSection, MarketingHeader, CtaGroup, Split, StatStrip, LogoCloud, and Feature.";
 
+/** The landing patterns page's heading. */
+export const LANDING_PATTERNS_TITLE = "Landing patterns";
+
+/** What the landing patterns page is, in the one line a listing shows. */
+export const LANDING_PATTERNS_SUMMARY =
+	"Building blocks and composition craft from @sdxc/ui/patterns: Hero, Proof, FeatureBand, Faq, ClosingCta.";
+
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
  *

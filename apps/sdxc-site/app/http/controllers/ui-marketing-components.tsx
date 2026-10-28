@@ -279,7 +279,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 									</Feature.Icon>
 									<Feature.Title>Composites later</Feature.Title>
 									<Feature.Description>
-										LandingHero and FeatureBand encode full patterns in Phase 2.
+										LandingHero and FeatureBand encode full patterns — see Landing patterns.
 									</Feature.Description>
 								</Feature>
 							</Feature.Grid>

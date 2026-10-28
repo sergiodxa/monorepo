@@ -64,13 +64,14 @@ describe("buildComponentsNav", () => {
 	test("holds only @sdxc/ui, with theming ahead of the components", async () => {
 		let flat = flattenNav(await buildComponentsNav());
 
-		expect(flat.slice(0, 4)).toEqual([
+		expect(flat.slice(0, 5)).toEqual([
 			{ title: "Overview", href: "/api/ui" },
 			{ title: "Theming", href: "/api/ui/theming" },
 			{ title: "Marketing foundations", href: "/api/ui/marketing-foundations" },
 			{ title: "Marketing components", href: "/api/ui/marketing-components" },
+			{ title: "Landing patterns", href: "/api/ui/landing-patterns" },
 		]);
-		expect(flat.length).toBeGreaterThan(4);
+		expect(flat.length).toBeGreaterThan(5);
 		for (let entry of flat.slice(1)) expect(entry.href).toMatch(/^\/api\/ui\//);
 	});
 
