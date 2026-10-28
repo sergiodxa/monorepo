@@ -4,7 +4,7 @@
  * this one.
  */
 
-import { tools } from "@sdxc/mcp";
+import { tools } from "@sdxc/mcp/server";
 
 /** The app's tools; `sdxc make mcp <name>` declares one here and maps its handler. */
 export default tools({});

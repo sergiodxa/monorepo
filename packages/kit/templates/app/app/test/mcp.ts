@@ -9,7 +9,7 @@
 import { access } from "@sdxc/authz/middleware/router";
 import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { createRouter } from "remix/router";
 
 import { openDatabase } from "~/app/initializers/database";

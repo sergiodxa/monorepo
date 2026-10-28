@@ -8,7 +8,7 @@
  */
 
 import { NotFound } from "@sdxc/data-model";
-import { createTool, ForbiddenError, ToolError } from "@sdxc/mcp";
+import { createTool, ForbiddenError, ToolError } from "@sdxc/mcp/server";
 import { isFailure } from "@sdxc/result";
 
 import toolset from "~/app/mcp/tools";
