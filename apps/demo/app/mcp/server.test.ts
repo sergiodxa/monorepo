@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { beforeEach, expect, test } from "vitest";
 
 import { outbox } from "~/app/initializers/mail";

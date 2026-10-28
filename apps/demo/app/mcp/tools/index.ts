@@ -9,7 +9,7 @@
 
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 
 /** Registers the board's tools. */
 export default tools({
