@@ -124,32 +124,30 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 		let { marketingCardVersion, socialCardUrl } = await import("~/app/services/social-card");
+		let description =
+			"Uptime monitoring built for developers and agents — REST API and Streamable HTTP MCP, with scoped keys.";
 		let card = socialCardUrl(
 			"/",
-			marketingCardVersion(
-				"Uptime by Sergio Xalambrí",
-				"Simple & reliable uptime monitoring for developers",
-				"/",
-			),
+			marketingCardVersion("Uptime by Sergio Xalambrí", description, "/"),
 		);
 
 		expect(body).toContain(
 			[
 				"<title>Uptime by Sergio Xalambrí</title>",
-				'<meta name="description" content="Simple &amp; reliable uptime monitoring for developers" />',
+				`<meta name="description" content="${description}" />`,
 				`<link rel="canonical" href="${SEO.baseUrl}/" />`,
 				'<meta property="og:type" content="website" />',
 				`<meta property="og:url" content="${SEO.baseUrl}/" />`,
 				'<meta property="og:site_name" content="Uptime" />',
 				'<meta property="og:title" content="Uptime by Sergio Xalambrí" />',
-				'<meta property="og:description" content="Simple &amp; reliable uptime monitoring for developers" />',
+				`<meta property="og:description" content="${description}" />`,
 				`<meta property="og:image" content="${card}" />`,
 				'<meta property="og:image:alt" content="Uptime by Sergio Xalambrí" />',
 				'<meta property="og:image:width" content="1200" />',
 				'<meta property="og:image:height" content="630" />',
 				'<meta name="twitter:card" content="summary_large_image" />',
 				'<meta name="twitter:title" content="Uptime by Sergio Xalambrí" />',
-				'<meta name="twitter:description" content="Simple &amp; reliable uptime monitoring for developers" />',
+				`<meta name="twitter:description" content="${description}" />`,
 				`<meta name="twitter:image" content="${card}" />`,
 			].join(""),
 		);
