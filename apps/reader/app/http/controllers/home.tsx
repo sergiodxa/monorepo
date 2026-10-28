@@ -8,25 +8,38 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { fg } from "@sdxc/u/color";
-import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
-import { maxIs, mi, p } from "@sdxc/u/size";
-import { fontSize, leading, textAlign } from "@sdxc/u/typography";
-import { Button, Card, Heading, Text } from "@sdxc/ui";
+import { EyeOffIcon, GlobeIcon, ListOrderedIcon } from "@sdxc/icons";
+import { Button, Feature, HeadingScope } from "@sdxc/ui";
+import {
+	CheckList,
+	CheckRow,
+	ClosingCta,
+	FeatureBand,
+	LandingHero,
+	ProductFrame,
+} from "@sdxc/ui/patterns";
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import DocumentLayout from "~/resources/layouts/document";
+import LandingQueuePreview from "~/resources/views/landing-queue-preview";
 import routes from "~/routes/web";
 
 /** The landing page's three selling points, in the order they are rendered. */
 const FEATURE_KEYS = ["queue", "private", "openWeb"] as const;
 
-/**
- * The card row's track list. `auto-fit` rather than a breakpoint, so the three cards
- * collapse to one column on a phone and spread on a laptop from one declaration.
- */
-const FEATURE_COLUMNS = "repeat(auto-fit, minmax(16rem, 1fr))";
+/** Short hero check-row keys, same claims as the feature band titles. */
+const HERO_CHECK_KEYS = ["queue", "private", "openWeb"] as const;
+
+/** Glyph each feature cell shows in its icon well. */
+const FEATURE_ICONS = {
+	queue: <ListOrderedIcon size={18} strokeWidth={1.5} aria-hidden="true" />,
+	private: <EyeOffIcon size={18} strokeWidth={1.5} aria-hidden="true" />,
+	openWeb: <GlobeIcon size={18} strokeWidth={1.5} aria-hidden="true" />,
+} as const;
+
+/** Keys for the illustrative queue rows inside the hero product frame. */
+const PREVIEW_ROW_KEYS = ["one", "two", "three", "four"] as const;
 
 /**
  * GET / — the landing page for a visitor, or a redirect to the queue for a signed-in
@@ -38,42 +51,92 @@ export default createAction(routes.home, (ctx) => {
 		return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
 	}
 
+	let t = ctx.intl.t.bind(ctx.intl);
+
+	let signIn = (
+		<form method="post" action={routes.auth.action.href()} data-rmx-document="">
+			<Button type="submit" size="lg">
+				{t("landing.hero.cta")}
+			</Button>
+		</form>
+	);
+
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={ctx.intl.t("landing.meta.title")}
-			description={ctx.intl.t("landing.meta.description")}
+			title={t("landing.meta.title")}
+			description={t("landing.meta.description")}
 			locale={ctx.locale}
 		>
-			<main mix={[vstack({ gap: 16 }), maxIs("64rem"), mi("auto"), p(8, 6)]}>
-				<section mix={[vstack({ gap: 6, align: "center" }), textAlign("center"), p(12, 0)]}>
-					<Heading level={1} mix={[fontSize("4xl"), leading("tight")]}>
-						{ctx.intl.t("landing.hero.title")}
-					</Heading>
+			<main>
+				<LandingHero
+					tone="tinted"
+					mediaPlacement="end"
+					eyebrow={t("landing.hero.eyebrow")}
+					eyebrowVariant="mono"
+					title={t("landing.hero.title")}
+					description={t("landing.hero.description")}
+					actions={signIn}
+					below={
+						<CheckList orientation="horizontal">
+							{HERO_CHECK_KEYS.map((key) => (
+								<CheckRow key={key}>{t(`landing.hero.checks.${key}`)}</CheckRow>
+							))}
+						</CheckList>
+					}
+					media={
+						<ProductFrame
+							lights
+							title={t("landing.hero.frame.title")}
+							url={t("landing.hero.frame.url")}
+						>
+							<LandingQueuePreview
+								label={t("landing.hero.media.alt")}
+								chrome={t("landing.hero.media.chrome")}
+								rows={PREVIEW_ROW_KEYS.map((key) => ({
+									read: key === "three" || key === "four",
+									title: t(`landing.hero.media.rows.${key}.title`),
+									source: t(`landing.hero.media.rows.${key}.source`),
+									time: t(`landing.hero.media.rows.${key}.time`),
+								}))}
+							/>
+						</ProductFrame>
+					}
+				/>
 
-					<Text mix={[maxIs("42rem"), fontSize("lg"), leading("relaxed"), fg("neutral.muted")]}>
-						{ctx.intl.t("landing.hero.description")}
-					</Text>
-
-					<form method="post" action={routes.auth.action.href()} data-rmx-document="">
-						<Button type="submit" size="lg">
-							{ctx.intl.t("landing.hero.cta")}
-						</Button>
-					</form>
-				</section>
-
-				<section mix={[grid(), gridTemplate({ columns: FEATURE_COLUMNS }), gap(6)]}>
+				<FeatureBand
+					layout="grid"
+					columns={3}
+					eyebrow={t("landing.features.badge")}
+					eyebrowVariant="mono"
+					title={t("landing.features.title")}
+					description={t("landing.features.description")}
+				>
 					{FEATURE_KEYS.map((key) => (
-						<Card key={key}>
-							<Card.Header>
-								<Card.Title>{ctx.intl.t(`landing.features.${key}.title`)}</Card.Title>
-								<Card.Description>
-									{ctx.intl.t(`landing.features.${key}.description`)}
-								</Card.Description>
-							</Card.Header>
-						</Card>
+						<HeadingScope key={key} level={3}>
+							<Feature>
+								<Feature.Icon>{FEATURE_ICONS[key]}</Feature.Icon>
+								<Feature.Title>{t(`landing.features.${key}.title`)}</Feature.Title>
+								<Feature.Description>
+									{t(`landing.features.${key}.description`)}
+								</Feature.Description>
+							</Feature>
+						</HeadingScope>
 					))}
-				</section>
+				</FeatureBand>
+
+				<ClosingCta
+					tone="tinted"
+					title={t("landing.closing.title")}
+					description={t("landing.closing.description")}
+					actions={
+						<form method="post" action={routes.auth.action.href()} data-rmx-document="">
+							<Button type="submit" size="lg">
+								{t("landing.closing.cta")}
+							</Button>
+						</form>
+					}
+				/>
 			</main>
 		</DocumentLayout>,
 	);
