@@ -51,7 +51,9 @@ export namespace Accordion {
 /**
  * Renders the list's root host: a plain `<div>` that stacks
  * {@link Accordion.Item} sections in normal block flow, each drawing its own
- * divider so the whole list reads as one continuous group.
+ * divider so the whole list reads as one continuous group. A marketing FAQ
+ * lays two of these in a container-query grid under a {@link MarketingHeader},
+ * sharing one `name` across columns so only one item opens at a time.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the list's markup.
@@ -97,13 +99,6 @@ export namespace Accordion {
  * 		</Accordion.Content>
  * 	</Accordion.Item>
  * </Accordion>
- * @example
- * // Marketing FAQ: two Accordion columns under a MarketingHeader, each with
- * // the same `name` so only one item opens across both columns.
- * <div mix={[grid(), gap(8), at("lg", gridTemplate({ columns: "1fr 1fr" }))]}>
- * 	<Accordion>{leftItems}</Accordion>
- * 	<Accordion>{rightItems}</Accordion>
- * </div>
  */
 export function Accordion(handle: Handle<Accordion.Props>) {
 	return () => {

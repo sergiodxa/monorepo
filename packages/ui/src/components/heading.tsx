@@ -75,7 +75,7 @@ export namespace Heading {
  * @example
  * <Heading level={1}>Page title</Heading>
  * @example
- * <Heading size="display">{t("hero.title")}</Heading>
+ * <Heading>Section title</Heading>
  * @example
  * <Heading size="chapter">{t("section.title")}</Heading>
  */
