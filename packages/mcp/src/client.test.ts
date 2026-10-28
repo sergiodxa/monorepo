@@ -264,9 +264,14 @@ describe("connect", () => {
 	});
 
 	test("validates structuredContent with a result schema", async () => {
+		let sentArguments: unknown;
 		SERVER.use(
-			http.post(ENDPOINT, () =>
-				HttpResponse.json({
+			http.post(ENDPOINT, async ({ request }) => {
+				let body = (await request.json()) as {
+					params?: { arguments?: unknown };
+				};
+				sentArguments = body.params?.arguments;
+				return HttpResponse.json({
 					jsonrpc: "2.0",
 					id: 1,
 					result: {
@@ -274,13 +279,39 @@ describe("connect", () => {
 						content: [{ type: "text", text: JSON.stringify({ reply: "pong" }) }],
 						structuredContent: { reply: "pong" },
 					},
-				}),
-			),
+				});
+			}),
 		);
 		using mcp = connect({ url: ENDPOINT, client: CLIENT });
-		let result = unwrap(await mcp.call("ping", { message: "hi" }, PingOutput));
+		let result = unwrap(await mcp.call("ping", { message: "hi", schema: PingOutput }));
+		expect(sentArguments).toEqual({ message: "hi" });
 		expect(result.structuredContent).toEqual({ reply: "pong" });
 		expectTypeOf(result.structuredContent).toEqualTypeOf<{ reply: string } | undefined>();
+	});
+
+	test("strips schema from arguments sent to tools/call", async () => {
+		let sentArguments: unknown;
+		SERVER.use(
+			http.post(ENDPOINT, async ({ request }) => {
+				let body = (await request.json()) as {
+					params?: { arguments?: unknown };
+				};
+				sentArguments = body.params?.arguments;
+				return HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: '{"reply":"ok"}' }],
+						structuredContent: { reply: "ok" },
+					},
+				});
+			}),
+		);
+		using mcp = connect<PingTools>({ url: ENDPOINT, client: CLIENT });
+		unwrap(await mcp.call("ping", { message: "hi", schema: PingOutput }));
+		expect(sentArguments).toEqual({ message: "hi" });
+		expect(sentArguments).not.toHaveProperty("schema");
 	});
 
 	test("fails the Result when a result schema does not match", async () => {
@@ -298,7 +329,7 @@ describe("connect", () => {
 			),
 		);
 		using mcp = connect({ url: ENDPOINT, client: CLIENT });
-		let result = await mcp.call("ping", { message: "hi" }, PingOutput);
+		let result = await mcp.call("ping", { message: "hi", schema: PingOutput });
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) throw new Error("expected failure");
 		expect(result.error).toBeInstanceOf(InvalidToolResultError);
@@ -322,7 +353,7 @@ describe("connect", () => {
 			),
 		);
 		using mcp = connect({ url: ENDPOINT, client: CLIENT });
-		let result = unwrap(await mcp.call("ping", {}, PingOutput));
+		let result = unwrap(await mcp.call("ping", { schema: PingOutput }));
 		expect(result.structuredContent).toEqual({ reply: "from-text" });
 	});
 
@@ -341,7 +372,7 @@ describe("connect", () => {
 			),
 		);
 		using mcp = connect({ url: ENDPOINT, client: CLIENT });
-		let result = unwrap(await mcp.call("ping", {}, PingOutput));
+		let result = unwrap(await mcp.call("ping", { schema: PingOutput }));
 		expect(result.isError).toBe(true);
 		expect(result.structuredContent).toBeUndefined();
 	});

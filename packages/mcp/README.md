@@ -108,18 +108,19 @@ using mcp = connect<UptimeTools>({
 await mcp.call("list_monitors", { limit: 20 });
 ```
 
-Pass an [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schema as the
-third argument to validate the result at runtime. Validation prefers `structuredContent`;
-when that is absent it parses the first text `content` block as JSON. A miss is an
-`InvalidToolResultError` inside a `Result` failure — never a throw. A tool result with
-`isError` skips the schema (it is model-facing guidance).
+Pass an [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schema as
+`schema` on the same input object as the tool fields to validate the result at runtime.
+The client strips `schema` before sending `arguments` upstream. Validation prefers
+`structuredContent`; when that is absent it parses the first text `content` block as JSON.
+A miss is an `InvalidToolResultError` inside a `Result` failure — never a throw. A tool
+result with `isError` skips the schema (it is model-facing guidance).
 
 ```typescript
 let MonitorList = s.object({
 	monitors: s.array(s.object({ id: s.string() })),
 });
 
-let result = await mcp.call("list_monitors", { limit: 20 }, MonitorList);
+let result = await mcp.call("list_monitors", { limit: 20, schema: MonitorList });
 ```
 
 ### Declare a tool
@@ -236,9 +237,10 @@ catalog; pass a map of `{ input; output? }` for typed `call` names and arguments
 
 ### `McpClient<Tools>`
 
-One-word methods: `discover`, `list`, `call(name, args?, schema?)`, `resources`, `templates`,
+One-word methods: `discover`, `list`, `call(name, input?)`, `resources`, `templates`,
 `read(uri)`, plus `close()` and `[Symbol.dispose]()`. Each RPC returns `Result<…, McpClientError>`.
-An optional third `call` argument is an `@sdxc/json-schema` schema for the tool result.
+`call`'s optional second argument is tool fields plus an optional client-only `schema`
+(`@sdxc/json-schema`) for the tool result; `schema` is omitted from upstream `arguments`.
 
 ### `McpClientError` / `InvalidToolResultError`
 

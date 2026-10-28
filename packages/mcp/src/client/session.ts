@@ -92,42 +92,42 @@ export class McpClient<
 	}
 
 	/**
+	 * Calls one tool and validates the result with `input.schema`. Prefers
+	 * `structuredContent`; otherwise parses the first text content as JSON.
+	 * Success narrows `structuredContent` to {@link InferOutput}`<Schema>`.
+	 * `schema` is client-only — omitted from the `arguments` sent upstream.
+	 *
+	 * @param name Tool name from `list` (or a catalog key when `Tools` is set).
+	 * @param input Tool argument fields plus a required `schema`.
+	 */
+	async call<Name extends keyof Tools & string, Schema extends DescribedSchema>(
+		name: Name,
+		input: Tools[Name]["input"] & { schema: Schema },
+	): Promise<Result<CallResult<InferOutput<Schema>>, McpClientError>>;
+
+	/**
 	 * Calls one tool by name (`tools/call`). A result with `isError` is still a
 	 * successful RPC — only wire failures (and an optional result-schema miss)
 	 * are `Result` failures. Without a schema, `structuredContent` is typed from
 	 * the catalog only — no runtime check.
 	 *
 	 * @param name Tool name from `list` (or a catalog key when `Tools` is set).
-	 * @param args Arguments object; defaults to `{}`.
+	 * @param input Tool argument fields; defaults to `{}`. Optional `schema`
+	 * validates the result and is stripped before the RPC.
 	 */
 	async call<Name extends keyof Tools & string>(
 		name: Name,
-		args?: Tools[Name]["input"],
+		input?: Tools[Name]["input"] & { schema?: DescribedSchema },
 	): Promise<Result<CallResult<OutputOf<Tools[Name]>>, McpClientError>>;
 
-	/**
-	 * Calls one tool and validates the result with an `@sdxc/json-schema` schema.
-	 * Prefers `structuredContent`; otherwise parses the first text content as JSON.
-	 * Success narrows `structuredContent` to {@link InferOutput}`<Schema>`.
-	 *
-	 * @param name Tool name from `list` (or a catalog key when `Tools` is set).
-	 * @param args Arguments object.
-	 * @param schema Schema for the structured tool result.
-	 */
-	async call<Name extends keyof Tools & string, Schema extends DescribedSchema>(
-		name: Name,
-		args: Tools[Name]["input"],
-		schema: Schema,
-	): Promise<Result<CallResult<InferOutput<Schema>>, McpClientError>>;
-
-	async call(
-		name: string,
-		args: object = {},
-		schema?: DescribedSchema,
-	): Promise<Result<CallResult, McpClientError>> {
+	async call(name: string, input: object = {}): Promise<Result<CallResult, McpClientError>> {
+		let bag = input as Record<string, unknown> & { schema?: DescribedSchema };
+		let schema = bag.schema;
+		let args: Record<string, unknown> = { ...bag };
+		delete args.schema;
 		let result = await this.#request("tools/call", {
 			name,
-			arguments: args as Record<string, unknown>,
+			arguments: args,
 		});
 		if (isFailure(result)) return result;
 		let callResult = asCall(result.data);
