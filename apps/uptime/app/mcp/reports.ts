@@ -9,7 +9,7 @@
 import type { DayRange } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
 
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { decodeCursor, encodeCursor, InvalidCursorError } from "@sdxc/pagination";
 import { failure, isFailure, success } from "@sdxc/result";
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 import { unwrap } from "@sdxc/result";
 
 import { apiScopeFrom } from "~/app/http/controllers/api/maintenance";

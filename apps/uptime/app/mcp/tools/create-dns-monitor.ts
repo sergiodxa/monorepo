@@ -7,7 +7,7 @@
  */
 
 import { currentLog } from "@sdxc/logger";
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 import { isFailure, unwrap } from "@sdxc/result";
 
 import type { ZoneFileImport } from "~/app/services/zone-file";

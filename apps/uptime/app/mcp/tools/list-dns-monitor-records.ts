@@ -7,7 +7,7 @@
 
 import type { OrderByTuple } from "@sdxc/pagination";
 
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 import { Pagination } from "@sdxc/pagination";
 
 import { forAbility } from "~/app/mcp/ability";

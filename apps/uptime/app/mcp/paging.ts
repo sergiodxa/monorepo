@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { InvalidCursorError } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import { forAbility } from "~/app/mcp/ability";
 import { serializeStatusPage } from "~/app/mcp/serialize";

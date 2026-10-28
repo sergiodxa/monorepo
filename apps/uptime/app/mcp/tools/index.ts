@@ -9,7 +9,7 @@
 
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
-import { tool, tools } from "@sdxc/mcp";
+import { tool, tools } from "@sdxc/mcp/server";
 
 import { ALERT_ID_PARAMS, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
 import { CREATE_API_KEY_BODY, API_KEY_ID_PARAMS } from "~/app/http/openapi/api-keys";
