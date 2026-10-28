@@ -52,6 +52,42 @@ prefer `using`; call `close()` when `using` is unavailable. Methods return
 [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) — a tool result with `isError` is still
 a successful RPC.
 
+### Typed tools and result schemas
+
+Untyped `connect()` keeps string names and `Record` args. Pass a catalog generic for
+first-party servers — names and arguments become typed; without a schema that is types only
+(no runtime check of the result).
+
+```typescript
+import * as s from "@sdxc/json-schema";
+import { connect } from "@sdxc/mcp/client";
+
+interface UptimeTools {
+	list_monitors: { input: { limit?: number }; output: { monitors: { id: string }[] } };
+}
+
+using mcp = connect<UptimeTools>({
+	url: "https://uptime.example.com/mcp",
+	client: { name: "uptime-bridge", version: "1.0.0" },
+});
+
+await mcp.call("list_monitors", { limit: 20 });
+```
+
+Pass an [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schema as the
+third argument to validate the result at runtime. Validation prefers `structuredContent`;
+when that is absent it parses the first text `content` block as JSON. A miss is an
+`InvalidToolResultError` inside a `Result` failure — never a throw. A tool result with
+`isError` skips the schema (it is model-facing guidance).
+
+```typescript
+let MonitorList = s.object({
+	monitors: s.array(s.object({ id: s.string() })),
+});
+
+let result = await mcp.call("list_monitors", { limit: 20 }, MonitorList);
+```
+
 ### Declare a tool
 
 A tool's name is what a client calls, its description is what a model chooses it by, and its
@@ -157,21 +193,23 @@ published there (`https://example.com/articles/{slug}.md`) is derived from the p
 
 ### Client (`@sdxc/mcp/client`)
 
-### `connect(options: ConnectOptions): McpClient`
+### `connect<Tools>(options: ConnectOptions): McpClient<Tools>`
 
 Binds a session to a Streamable HTTP endpoint. `options` holds `url`, `client` (`name` /
 `version`, optional `title`), and optional `headers` / `credentials`. Protocol version and
-transport stay internal (`2026-07-28`, with one `-32022` retry).
+transport stay internal (`2026-07-28`, with one `-32022` retry). `Tools` defaults to an untyped
+catalog; pass a map of `{ input; output? }` for typed `call` names and arguments.
 
-### `McpClient`
+### `McpClient<Tools>`
 
-One-word methods: `discover`, `list`, `call(name, args?)`, `resources`, `templates`, `read(uri)`,
-plus `close()` and `[Symbol.dispose]()`. Each RPC returns `Result<…, McpClientError>`.
+One-word methods: `discover`, `list`, `call(name, args?, schema?)`, `resources`, `templates`,
+`read(uri)`, plus `close()` and `[Symbol.dispose]()`. Each RPC returns `Result<…, McpClientError>`.
+An optional third `call` argument is an `@sdxc/json-schema` schema for the tool result.
 
-### `McpClientError`
+### `McpClientError` / `InvalidToolResultError`
 
-Transport or JSON-RPC failure. Optional `code` and `data` when the server answered with an error
-object.
+Transport or JSON-RPC failure (`McpClientError`, optional `code` / `data`). A result-schema miss
+is `InvalidToolResultError` with `issues`.
 
 ### Server (`@sdxc/mcp/server`)
 

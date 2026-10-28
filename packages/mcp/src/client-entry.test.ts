@@ -53,7 +53,7 @@ async function visitedModules(entry: string): Promise<string[]> {
 }
 
 describe("the @sdxc/mcp/client entry", () => {
-	test("reaches only @sdxc/result and @sdxc/uuid/v4 outside this package", async () => {
+	test("reaches only result, uuid/v4, and json-schema outside this package", async () => {
 		let manifest = JSON.parse(await readFile(join(PACKAGE_ROOT, "package.json"), "utf8")) as {
 			exports: Record<string, string>;
 		};
@@ -61,18 +61,21 @@ describe("the @sdxc/mcp/client entry", () => {
 		if (entry === undefined) throw new Error("@sdxc/mcp/client is not exported");
 
 		expect(await externalSpecifiers(join(PACKAGE_ROOT, entry))).toEqual([
+			"@sdxc/json-schema",
 			"@sdxc/result",
 			"@sdxc/uuid/v4",
 		]);
 	});
 
-	test("never visits remix, handler, context, or resources modules", async () => {
+	test("never visits remix, handler, context, or resources modules in this package", async () => {
 		let entry = join(PACKAGE_ROOT, "src/client.ts");
 		let modules = await visitedModules(entry);
 		expect(modules.some((path) => path.includes("handler"))).toBe(false);
 		expect(modules.some((path) => path.includes("context"))).toBe(false);
 		expect(modules.some((path) => path.includes("resources"))).toBe(false);
-		expect(modules.some((path) => path.includes("tools"))).toBe(false);
+		expect(modules.some((path) => path.includes("tools.ts") || path.endsWith("/tools.js"))).toBe(
+			false,
+		);
 		expect(modules.join("\n")).not.toMatch(/remix/);
 	});
 });

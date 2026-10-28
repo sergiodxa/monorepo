@@ -55,11 +55,12 @@ export interface TextContent {
 
 /**
  * What `call` returns. `isError` is model-facing guidance from the tool, not a
- * transport failure — those come as `Result` failures instead.
+ * transport failure — those come as `Result` failures instead. `Output` is the
+ * typed `structuredContent` when a catalog or result schema supplies one.
  */
-export interface CallResult {
+export interface CallResult<Output = unknown> {
 	content: TextContent[];
-	structuredContent?: unknown;
+	structuredContent?: Output;
 	isError?: boolean;
 }
 

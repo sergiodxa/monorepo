@@ -10,15 +10,23 @@ import * as s from "@sdxc/json-schema";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, expectTypeOf, test } from "vitest";
 
-import { connect, McpClientError } from "./client.js";
+import { connect, InvalidToolResultError, McpClientError } from "./client.js";
 import { rpc } from "./client/rpc.js";
 import { createHandler } from "./handler.js";
 import { ErrorCode } from "./jsonrpc.js";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "./protocol.js";
 import { resource, resources } from "./resources.js";
 import { tool, tools } from "./tools.js";
+
+/** First-party catalog used to prove `connect<Tools>` types names and args. */
+interface PingTools {
+	ping: { input: { message: string }; output: { reply: string } };
+}
+
+/** Schema for a structured ping result. */
+const PingOutput = s.object({ reply: s.string() });
 
 const SERVER = setupServer();
 
@@ -232,5 +240,109 @@ describe("connect", () => {
 		let result = unwrap(await mcp.call("missing"));
 		expect(result.isError).toBe(true);
 		expect(result.content[0]?.text).toBe("Try a different query.");
+	});
+
+	test("connect<Tools> types call names and arguments", async () => {
+		SERVER.use(
+			http.post(ENDPOINT, () =>
+				HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: '{"reply":"pong"}' }],
+						structuredContent: { reply: "pong" },
+					},
+				}),
+			),
+		);
+		using mcp = connect<PingTools>({ url: ENDPOINT, client: CLIENT });
+		let result = unwrap(await mcp.call("ping", { message: "hi" }));
+		expectTypeOf(result.structuredContent).toEqualTypeOf<{ reply: string } | undefined>();
+		expectTypeOf<keyof PingTools>().toEqualTypeOf<"ping">();
+		expectTypeOf<PingTools["ping"]["input"]>().toEqualTypeOf<{ message: string }>();
+	});
+
+	test("validates structuredContent with a result schema", async () => {
+		SERVER.use(
+			http.post(ENDPOINT, () =>
+				HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: JSON.stringify({ reply: "pong" }) }],
+						structuredContent: { reply: "pong" },
+					},
+				}),
+			),
+		);
+		using mcp = connect({ url: ENDPOINT, client: CLIENT });
+		let result = unwrap(await mcp.call("ping", { message: "hi" }, PingOutput));
+		expect(result.structuredContent).toEqual({ reply: "pong" });
+		expectTypeOf(result.structuredContent).toEqualTypeOf<{ reply: string } | undefined>();
+	});
+
+	test("fails the Result when a result schema does not match", async () => {
+		SERVER.use(
+			http.post(ENDPOINT, () =>
+				HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: "{}" }],
+						structuredContent: { reply: 12 },
+					},
+				}),
+			),
+		);
+		using mcp = connect({ url: ENDPOINT, client: CLIENT });
+		let result = await mcp.call("ping", { message: "hi" }, PingOutput);
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) throw new Error("expected failure");
+		expect(result.error).toBeInstanceOf(InvalidToolResultError);
+		if (!(result.error instanceof InvalidToolResultError)) {
+			throw new Error("expected InvalidToolResultError");
+		}
+		expect(result.error.issues.some((issue) => issue.includes("reply"))).toBe(true);
+	});
+
+	test("validates JSON text content when structuredContent is absent", async () => {
+		SERVER.use(
+			http.post(ENDPOINT, () =>
+				HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: JSON.stringify({ reply: "from-text" }) }],
+					},
+				}),
+			),
+		);
+		using mcp = connect({ url: ENDPOINT, client: CLIENT });
+		let result = unwrap(await mcp.call("ping", {}, PingOutput));
+		expect(result.structuredContent).toEqual({ reply: "from-text" });
+	});
+
+	test("skips result schema validation when the tool reported isError", async () => {
+		SERVER.use(
+			http.post(ENDPOINT, () =>
+				HttpResponse.json({
+					jsonrpc: "2.0",
+					id: 1,
+					result: {
+						resultType: "complete",
+						content: [{ type: "text", text: "missing" }],
+						isError: true,
+					},
+				}),
+			),
+		);
+		using mcp = connect({ url: ENDPOINT, client: CLIENT });
+		let result = unwrap(await mcp.call("ping", {}, PingOutput));
+		expect(result.isError).toBe(true);
+		expect(result.structuredContent).toBeUndefined();
 	});
 });
