@@ -109,7 +109,7 @@ bun run test                       # every test, under Vitest
   (`app/jobs/billing/`, `app/services/billing/`).
 - `app/mcp/` declares tools in `tools/index.ts` and resources in `resources/index.ts`, with one
   handler file per tool or resource beside them; `app/initializers/mcp.ts` maps each one
-  through `lazy()` from `@sdxc/mcp`. `app/commands/` follows the same shape, with the contract
+  through `lazy()` from `@sdxc/mcp/server`. `app/commands/` follows the same shape, with the contract
   in `app/commands/index.ts` and the wiring in `app/initializers/cli.ts`.
 
 ### Writing code
