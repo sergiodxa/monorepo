@@ -163,6 +163,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"flags",
 			"flags-engine",
 			"billing",
+			"x402",
 			"attribution",
 			"mail",
 			"jmap",
