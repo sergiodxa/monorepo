@@ -85,10 +85,13 @@ package.
 
 ### 4. One-word public client API
 
+`connect` is **sync**: it stores URL, identity, and auth and returns a session; the first RPC
+opens the wire. That matches Explicit Resource Management’s sync `using` binding.
+
 ```typescript
 import { connect } from "@sdxc/mcp/client";
 
-let mcp = await connect({
+using mcp = connect({
 	url: "https://example.com/mcp",
 	client: { name: "my-app", version: "1.0.0" },
 	headers: { Authorization: `Bearer ${token}` },
@@ -100,7 +103,7 @@ await mcp.call("search_documents", { query: "…" }); // tools/call
 await mcp.resources(); // resources/list
 await mcp.templates(); // resources/templates/list
 await mcp.read("https://example.com/articles/hello.md");
-await mcp.close();
+// scope end → [Symbol.dispose]()
 ```
 
 - **`list` / `call`** are the tool surface (the hot path).
@@ -111,7 +114,34 @@ await mcp.close();
 - I/O and protocol failures use `@sdxc/result`. A tool result with `isError` is a successful
   RPC carrying model-facing guidance, not a thrown exception.
 
-### 5. What we reject
+### 5. Explicit Resource Management (`Disposable`)
+
+The session implements `Disposable`. Preferred Worker / Durable Object / CLI pattern:
+
+```typescript
+using mcp = connect(options);
+```
+
+| Symbol / method            | Contract                                                    |
+| -------------------------- | ----------------------------------------------------------- |
+| `[Symbol.dispose](): void` | Runtime calls this at end of `using` scope                  |
+| `close(): void`            | Same teardown path; for callers that cannot use `using` yet |
+
+Teardown is **sync**: abort in-flight work (`AbortController.abort`), mark the session closed,
+refuse further RPCs. No `[Symbol.asyncDispose]` / `await using` for v1 — a fetch client does
+not need async cleanup, and sync dispose is the right fit on Workers (where RpcTarget forbids
+`Symbol.asyncDispose` for RPC stubs; that rule is RPC-specific and does not apply to this
+client, but sync dispose avoids the question).
+
+**Runtime support (verified / documented):**
+
+| Runtime                | Notes                                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node** v24.21.0      | `using` + `Symbol.dispose` works (verified on this machine)                                                                                          |
+| **Bun** 1.4.2          | Same (verified)                                                                                                                                      |
+| **Cloudflare Workers** | Wrangler v4+ parses `using` natively; workerd enabled explicit resource management (2025-05-22); CF docs recommend `using` for RPC stubs / lifecycle |
+
+### 6. What we reject
 
 | Alternative                                                           | Why not                                                                                                  |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -119,8 +149,9 @@ await mcp.close();
 | Umbrella package + children                                           | Empty umbrella is not how this monorepo ships; renaming the server breaks every app                      |
 | Keep `"."` as server (or a soft alias / throw stub)                   | Locked: passkey-style explicit subpaths; migrate once                                                    |
 | Extract `@sdxc/jsonrpc` (or `@sdxc/mcp-protocol`) in v1               | MCP's envelope (`resultType`, `-3202x`) is not generic JSON-RPC; same package already shares the modules |
+| Async `connect` + `await using` / `[Symbol.asyncDispose]` for v1      | Sync `connect` + sync dispose match the fetch lifecycle; no network at construct time                    |
 
-### 6. Commits and release notes
+### 7. Commits and release notes
 
 Still one workspace (`mcp`). The path move is a **breaking** change for consumers:
 `feat(mcp)!: …` with a migration step (`@sdxc/mcp` → `@sdxc/mcp/server`). Client and bridge
@@ -135,6 +166,8 @@ land as further `feat(mcp): …` commits as they ship.
   clean.
 - Shared wire helpers without a third package or duplicated version constants.
 - Explicit subpaths make the dual role obvious in import sites.
+- `using mcp = connect(…)` ties session lifetime to scope on Node, Bun, and Workers without
+  try/finally boilerplate; `close()` remains for non-`using` call sites.
 
 ### Negative
 
@@ -155,7 +188,8 @@ land as further `feat(mcp): …` commits as they ship.
 
 1. Reshape `package.json` exports; mark Remix optional; migrate every `@sdxc/mcp` import to
    `/server`.
-2. Add `./client` with the one-word API and tests (MSW + in-package `createHandler`).
+2. Add `./client` with the one-word API, sync `connect`, `Disposable` / `close`, and tests
+   (MSW + in-package `createHandler`; a `using` scope test where the harness supports it).
 3. Prove `/client` does not resolve Remix / `handler` / `context` in a Worker or browser
    bundle check.
 4. Update package README / description for dual role.
