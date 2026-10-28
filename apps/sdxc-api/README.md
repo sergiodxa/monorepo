@@ -1,10 +1,10 @@
-# apis
+# sdxc-api
 
 Package-backed micro-APIs for agents: each `POST /v1/<id>` runs one `@sdxc/*` capability
 and charges through [x402](https://x402.org/). Humans keep installing packages from npm
 and reading docs on [sdxc.dev](https://sdxc.dev) for free.
 
-Production URL: https://api.sdxc.dev (once deployed)
+Production URL: https://api.sdxc.dev
 
 ## Start
 
@@ -32,13 +32,13 @@ payments settle through an in-memory facilitator — use `@sdxc/x402/testing`'s
 ## Connect MCP
 
 ```sh
-claude mcp add --transport http sdxc-apis https://api.sdxc.dev/mcp
+claude mcp add --transport http sdxc-api https://api.sdxc.dev/mcp
 ```
 
 ```json
 {
 	"mcpServers": {
-		"sdxc-apis": {
+		"sdxc-api": {
 			"type": "http",
 			"url": "https://api.sdxc.dev/mcp"
 		}
@@ -46,24 +46,50 @@ claude mcp add --transport http sdxc-apis https://api.sdxc.dev/mcp
 }
 ```
 
-Unpaid `tools/call` answers HTTP `402` with x402 `PAYMENT-REQUIRED`. Settle and retry with
-`PAYMENT-SIGNATURE`.
+Unpaid `tools/call` answers HTTP `402` with x402 `PAYMENT-REQUIRED` (including Bazaar
+discovery metadata). Settle and retry with `PAYMENT-SIGNATURE`.
 
 ## Operations
 
-See `config/catalog.ts`. First set: `qr.encode`, `highlight`, `markdown.plain`,
-`semver.satisfies`, `zone-file.parse`, `json-patch.apply`, `json-patch.diff`.
+See `config/catalog.ts`. Current set:
 
-## Pay with a test facilitator
+| Id                 | Package            | Notes                                      |
+| ------------------ | ------------------ | ------------------------------------------ |
+| `qr.encode`        | `@sdxc/qr`         | SVG path                                   |
+| `highlight`        | `@sdxc/highlight`  | Tokens                                     |
+| `markdown.plain`   | `@sdxc/markdown`   | Plain text                                 |
+| `semver.satisfies` | `@sdxc/semver`     | Boolean                                    |
+| `zone-file.parse`  | `@sdxc/zone-file`  | Records                                    |
+| `json-patch.apply` | `@sdxc/json-patch` | Patched document                           |
+| `json-patch.diff`  | `@sdxc/json-patch` | Patch                                      |
+| `pdf.build`        | `@sdxc/pdf`        | Client-supplied `.ttf` ≤ 500 KiB → base64  |
+| `epub.build`       | `@sdxc/epub`       | Metadata + XHTML chapters → base64         |
+| `feed.normalize`   | `@sdxc/feed`       | Source text or URL (≤ 1 MiB outbound body) |
+
+Priced routes are rate-limited to 60 requests/minute per payer (when
+`PAYMENT-SIGNATURE` is present) or per connecting address.
+
+## Production secrets (Base mainnet)
 
 ```sh
-# 1. Ask for the challenge
-curl -i -X POST http://localhost:3010/v1/semver.satisfies \
-  -H 'content-type: application/json' \
-  -d '{"version":"1.2.3","comparison":"^","against":"1.0.0"}'
-
-# 2. Retry with PAYMENT-SIGNATURE from @sdxc/x402/testing (memory facilitator)
+cf workers secrets update X402_PAY_TO --name sdxc-api
+cf workers secrets update X402_FACILITATOR_URL --name sdxc-api
+cf workers secrets update X402_FACILITATOR_AUTH --name sdxc-api   # e.g. Bearer <cdp-jwt>
+cf workers secrets update X402_NETWORK --name sdxc-api            # eip155:8453
+cf workers secrets update X402_ASSET --name sdxc-api              # Base USDC
+cf workers secrets update OWNER_ACCESS_TOKEN --name sdxc-api
 ```
+
+Suggested mainnet values:
+
+- `X402_NETWORK=eip155:8453`
+- `X402_ASSET=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` (USDC on Base)
+- `X402_PAY_TO=<your Base USDC receive address>`
+- Facilitator: CDP x402 URL + `X402_FACILITATOR_AUTH=Bearer …`, or another HTTP facilitator
+
+Settled USDC lands in `X402_PAY_TO`. That is any EVM address that can hold USDC on Base
+(Coinbase Wallet, MetaMask, Rabby, a hardware wallet, a CDP-managed wallet). Facilitator
+API keys and `OWNER_ACCESS_TOKEN` are separate secrets — wallets do not mint those.
 
 ## Operator free pass
 
@@ -76,15 +102,7 @@ curl -s -X POST https://api.sdxc.dev/v1/semver.satisfies \
   -d '{"version":"1.2.3","comparison":"^","against":"1.0.0"}'
 ```
 
-Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`, put it in
-`.dev.vars` locally, and set the production secret before deploy:
-
-```sh
-cf workers secrets update OWNER_ACCESS_TOKEN --name sdxc-api
-```
-
-For MCP, configure the same Bearer header on the client. Everyone else still pays;
-a wrong Bearer answers `402` like an unpaid call.
+Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`.
 
 ## Scripts
 

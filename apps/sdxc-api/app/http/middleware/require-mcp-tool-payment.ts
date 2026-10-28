@@ -2,7 +2,7 @@
  * Collects x402 payment for priced MCP `tools/call` requests, keyed off the
  * `Mcp-Name` header so the body stays unread for the MCP handler. Discovery
  * methods and unknown tools pass through unpaid; the operator Bearer token
- * skips payment on priced calls.
+ * skips payment on priced calls. Challenges carry Bazaar discovery metadata.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +12,7 @@ import type { Middleware } from "remix/router";
 
 import { requirePayment } from "@sdxc/x402/middleware";
 
+import { mcpBazaar } from "~/app/services/bazaar";
 import { isOwnerRequest } from "~/app/services/owner-access";
 import { findOperation } from "~/config/catalog";
 
@@ -45,5 +46,6 @@ export const requireMcpToolPayment: Middleware = async (ctx, next) => {
 		description: operation.description,
 		resourceUrl: () => `mcp://tool/${operation.id}`,
 		mimeType: "application/json",
+		extensions: { bazaar: mcpBazaar(operation) },
 	})(ctx, next);
 };

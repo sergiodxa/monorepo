@@ -1,6 +1,6 @@
 /**
- * Cloudflare deployment for the package-backed micro-APIs Worker. No storage bindings —
- * every request is pure compute settled through x402.
+ * Cloudflare deployment for the package-backed micro-APIs Worker. No storage
+ * bindings beyond a rate limiter — every request is pure compute settled through x402.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,14 +22,19 @@ export default defineConfig({
 		},
 		domains: ["api.sdxc.dev"],
 		env: {
-			/** Receive wallet for settled payments. */
+			/** Receive wallet for settled payments (Base USDC address). */
 			X402_PAY_TO: bindings.secret(),
 			/**
 			 * Facilitator base URL. Empty or `memory` uses the in-memory facilitator
-			 * (local and tests only).
+			 * (local and tests only). Production: CDP or another HTTP facilitator.
 			 */
 			X402_FACILITATOR_URL: bindings.secret(),
-			/** CAIP-2 network id, e.g. `eip155:84532` or `eip155:8453`. */
+			/**
+			 * Optional `Authorization` value sent on every facilitator call
+			 * (for example `Bearer <cdp-jwt>`). Leave empty for public facilitators.
+			 */
+			X402_FACILITATOR_AUTH: bindings.secret(),
+			/** CAIP-2 network id, e.g. `eip155:84532` (Sepolia) or `eip155:8453` (Base). */
 			X402_NETWORK: bindings.secret(),
 			/** Asset contract charged (USDC on the configured network). */
 			X402_ASSET: bindings.secret(),
@@ -38,6 +43,14 @@ export default defineConfig({
 			 * HTTP or MCP calls to skip x402. Mint with `randomToken({ prefix: "owner" })`.
 			 */
 			OWNER_ACCESS_TOKEN: bindings.secret(),
+			/**
+			 * 60 requests per minute per payer (when `PAYMENT-SIGNATURE` is present)
+			 * or per connecting address. Keep in step with `OPERATION_RATE_LIMIT`.
+			 */
+			RATE_LIMITER: bindings.rateLimit({
+				namespace: "2101",
+				simple: { limit: 60, period: 60 },
+			}),
 			CF_VERSION_METADATA: bindings.versionMetadata(),
 		},
 	},
