@@ -37,15 +37,17 @@ describes, and every package missing here is listed on the [API reference](/api)
 
 ## Build an API
 
-| I need to…                                          | Packages                                                                         | Guide                                                                         |
-| --------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| build a JSON API that answers failures as problems  | [`@sdxc/problem`](/api/problem), [`@sdxc/http`](/api/http)                       | [Build a JSON API with problem details](/docs/http-apis/json-apis)            |
-| page a list by offset or keyset                     | [`@sdxc/pagination`](/api/pagination), [`@sdxc/link-header`](/api/link-header)   | [Paginate lists](/docs/http-apis/paginate-lists)                              |
-| limit how often a caller may ask                    | [`@sdxc/rate-limit`](/api/rate-limit)                                            | [Client addresses and networks](/docs/identity-and-security/client-addresses) |
-| describe the API as an OpenAPI 3.1 document         | [`@sdxc/openapi`](/api/openapi), [`@sdxc/json-schema`](/api/json-schema)         | [Describe your API with OpenAPI](/docs/http-apis/openapi)                     |
-| make a create safe to retry, accept partial updates | [`@sdxc/idempotency`](/api/idempotency), [`@sdxc/merge-patch`](/api/merge-patch) | [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes)         |
-| write a typed client for someone else's API         | [`@sdxc/api-client`](/api/api-client)                                            | [Write a typed API client](/docs/http-apis/api-clients)                       |
-| expose the app to AI agents over MCP                | [`@sdxc/mcp`](/api/mcp)                                                          | [Expose your app over MCP](/docs/operations-and-testing/mcp-server)           |
+| I need to…                                          | Packages                                                                         | Guide                                                                           |
+| --------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| build a JSON API that answers failures as problems  | [`@sdxc/problem`](/api/problem), [`@sdxc/http`](/api/http)                       | [Build a JSON API with problem details](/docs/http-apis/json-apis)              |
+| page a list by offset or keyset                     | [`@sdxc/pagination`](/api/pagination), [`@sdxc/link-header`](/api/link-header)   | [Paginate lists](/docs/http-apis/paginate-lists)                                |
+| limit how often a caller may ask                    | [`@sdxc/rate-limit`](/api/rate-limit)                                            | [Client addresses and networks](/docs/identity-and-security/client-addresses)   |
+| describe the API as an OpenAPI 3.1 document         | [`@sdxc/openapi`](/api/openapi), [`@sdxc/json-schema`](/api/json-schema)         | [Describe your API with OpenAPI](/docs/http-apis/openapi)                       |
+| make a create safe to retry, accept partial updates | [`@sdxc/idempotency`](/api/idempotency), [`@sdxc/merge-patch`](/api/merge-patch) | [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes)           |
+| write a typed client for someone else's API         | [`@sdxc/api-client`](/api/api-client)                                            | [Write a typed API client](/docs/http-apis/api-clients)                         |
+| expose the app to AI agents over MCP                | [`@sdxc/mcp`](/api/mcp)                                                          | [Expose your app over MCP](/docs/operations-and-testing/mcp-server)             |
+| call a Streamable HTTP MCP endpoint from code       | [`@sdxc/mcp`](/api/mcp)                                                          | [Call an MCP server](/docs/operations-and-testing/mcp-client)                   |
+| point Cursor at a modern-only MCP URL               | [`@sdxc/mcp`](/api/mcp)                                                          | [Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge) |
 
 ## Sign people in and decide what they may do
 
