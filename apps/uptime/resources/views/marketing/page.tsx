@@ -2,6 +2,7 @@
  * Generic marketing page view shared by `/features/:slug`, `/for/:slug`, and
  * `/use-cases/:slug`: a split hero, trust-indicator strip, feature grid, numbered
  * "how it works" row, two-column FAQ accordion, and a final call to action, driven
+ * by content records and assembled from `@sdxc/ui` marketing primitives.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,34 +11,24 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
-import { ArrowRightIcon, CheckIcon, Icon } from "@sdxc/icons";
-import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
-import { opacity, rounded, shadow } from "@sdxc/u/effects";
-import { counterReset } from "@sdxc/u/general";
-import {
-	absolute,
-	block,
-	flex,
-	flexCol,
-	flexRow,
-	flexWrap,
-	gap,
-	grid,
-	gridTemplate,
-	inlineFlex,
-	insBs,
-	insIs,
-	items,
-	justify,
-	relative,
-	vstack,
-} from "@sdxc/u/layout";
+import { ArrowRightIcon, Icon } from "@sdxc/icons";
+import { bg, border, fg, linearGradient } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { block } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
-import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pi } from "@sdxc/u/size";
-import { translateX, translateY } from "@sdxc/u/transform";
-import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
-import { Heading, LinkButton } from "@sdxc/ui";
+import { bs, is } from "@sdxc/u/size";
+import { LinkButton } from "@sdxc/ui";
+import {
+	AccentText,
+	CheckList,
+	CheckRow,
+	ClosingCta,
+	FaqBand,
+	FeatureBand,
+	LandingHero,
+	ProductFrame,
+	StepList,
+} from "@sdxc/ui/patterns";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
@@ -45,8 +36,6 @@ import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import SectionHeader from "~/resources/components/marketing/section-header";
-import MarketingStep from "~/resources/components/marketing/step";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import routes from "~/routes/web";
 
@@ -55,65 +44,6 @@ export const SCREENSHOT_LIGHT = "/screenshot-light.webp";
 
 /** Dark-mode hero screenshot, selected by the `<source>` media condition. */
 export const SCREENSHOT_DARK = "/screenshot-dark.webp";
-
-/**
- * Vertical section padding shared by every full-width section: 64px, growing
- * to 96px at ≥640px and 128px at ≥1024px.
- */
-function sectionPadding() {
-	return [pb(16), media("(min-width: 640px)", pb(24)), media("(min-width: 1024px)", pb(32))];
-}
-
-/**
- * Centered content wrapper shared by every section: capped at 1152px,
- * horizontally centered, with 16/24/32px side padding by breakpoint.
- */
-function marketingContainer() {
-	return [
-		maxIs("1152px"),
-		mi("auto"),
-		pi(4),
-		media("(min-width: 640px)", pi(6)),
-		media("(min-width: 1024px)", pi(8)),
-	];
-}
-
-/**
- * The one/two/three-column ladder every content grid on this page shares. Every section
- * keeps the same breakpoints on purpose: `css()` orders each mixin's `@layer` by first
- * appearance in the document, so one shared ladder keeps every grid's rules in the ascending order the cascade needs.
- */
-function responsiveGrid() {
-	return [
-		gridTemplate({ columns: "1fr" }),
-		media("(min-width: 768px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-		media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-	];
-}
-
-/**
- * Background for the alternating sections: one palette step off the page's own
- * `--ui-neutral-bg-tint` body color in each scheme, keeping each band visually distinct
- * against the page.
- */
-function tintedSection() {
-	return [bg("color.neutral.100"), dark(bg("color.neutral.900"))];
-}
-
-/**
- * The CTA button row: stacked and centered below 640px, side-by-side and
- * centered at ≥640px.
- */
-function ctaRow() {
-	return [
-		flex(),
-		flexCol(),
-		items("center"),
-		gap(4),
-		mbs(8),
-		media("(min-width: 640px)", [flexRow(), justify("center")]),
-	];
-}
 
 namespace MarketingPageView {
 	/** Adds `isSignedIn` (drives the CTA's copy/target) and the translated section titles/CTA copy on top of the raw marketing-page content shape. */
@@ -198,9 +128,9 @@ export function buildMarketingPageChrome(t: Translate): MarketingPageView.Chrome
 }
 
 /**
- * Renders the generic marketing page sections, populated entirely from `handle.props`. The
- * final CTA band sets `fg` explicitly on its heading and `neutral` on its button, since each
- * would otherwise lose contrast against the brand-filled background.
+ * Renders the generic marketing page sections from `@sdxc/ui` patterns. The
+ * closing band keeps the brand gradient via `mix` so the final CTA still reads
+ * as the product's own close rather than a neutral inverse strip.
  */
 export default function MarketingPageView(handle: Handle<MarketingPageView.Props>) {
 	return () => {
@@ -240,162 +170,55 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 
 		return (
 			<>
-				<section
-					mix={[
-						...sectionPadding(),
-						relative(),
-						overflow("hidden"),
-						bg({
-							image: linearGradient(
-								"to bottom",
-								"var(--ui-brand-bg-tint)",
-								"var(--ui-neutral-bg-tint)",
-							),
-						}),
-					]}
-				>
-					<div
-						aria-hidden="true"
-						mix={[
-							absolute(),
-							insBs(0),
-							insIs("50%"),
-							is("800px"),
-							bs("800px"),
-							translateX("-50%"),
-							translateY("-50%"),
-							bg({
-								image: radialGradient(
-									"circle closest-side",
-									{ color: "var(--ui-brand-bg-tint)", position: "0%" },
-									{ color: "transparent", position: "100%" },
-								),
-							}),
-						]}
-					/>
-
-					<div mix={[...marketingContainer(), relative()]}>
-						<div
-							mix={[
-								grid(),
-								gap(12),
-								items("center"),
-								media("(min-width: 1024px)", [
-									gridTemplate({ columns: "repeat(2, 1fr)" }),
-									gap(16),
-								]),
-							]}
-						>
-							<div
-								mix={[
-									vstack({ align: "center" }),
-									textAlign("center"),
-									media("(min-width: 1024px)", [items("start"), textAlign("start")]),
-								]}
+				<LandingHero
+					tone="tinted"
+					mediaPlacement="end"
+					eyebrow={badge}
+					eyebrowVariant="pill"
+					title={
+						<>
+							{title} <AccentText>{highlight}</AccentText>
+						</>
+					}
+					description={description}
+					actions={
+						<>
+							{isSignedIn ? (
+								<AuthCta
+									isSignedIn
+									startLabel={startLabel}
+									dashboardLabel={dashboardLabel}
+									icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+								/>
+							) : (
+								<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
+									{tryLabel}
+									<ArrowRightIcon size={20} strokeWidth={1.5} />
+								</LinkButton>
+							)}
+							<LinkButton
+								href={`${routes.home.href()}#pricing`}
+								prefetch="intent"
+								color="neutral"
+								variant="outline"
+								size="lg"
 							>
-								<span
-									mix={[
-										inlineFlex(),
-										items("center"),
-										p("2px", "10px"),
-										rounded("999px"),
-										fontSize("xs"),
-										weight(600),
-										border({ color: "brand", width: 1 }),
-										bg("brand.tint"),
-										fg("brand"),
-										mbe(6),
-									]}
-								>
-									{badge}
-								</span>
-
-								<Heading
-									level={1}
-									mix={[
-										m(0),
-										fontSize("4xl"),
-										weight(700),
-										leading(1.1),
-										tracking("tight"),
-										maxIs("760px"),
-										media("(min-width: 640px)", fontSize("5xl")),
-										media("(min-width: 1024px)", fontSize("6xl")),
-									]}
-								>
-									{title} <span mix={[fg("brand")]}>{highlight}</span>
-								</Heading>
-
-								<p
-									mix={[
-										m(0),
-										mbs(6),
-										maxIs("576px"),
-										fontSize("lg"),
-										leading(1.625),
-										fg("neutral"),
-									]}
-								>
-									{description}
-								</p>
-
-								<div mix={[...ctaRow()]}>
-									{isSignedIn ? (
-										<AuthCta
-											isSignedIn
-											startLabel={startLabel}
-											dashboardLabel={dashboardLabel}
-											icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-										/>
-									) : (
-										<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
-											{tryLabel}
-											<ArrowRightIcon size={20} strokeWidth={1.5} />
-										</LinkButton>
-									)}
-									<LinkButton
-										href={`${routes.home.href()}#pricing`}
-										prefetch="intent"
-										color="neutral"
-										variant="outline"
-										size="lg"
-									>
-										{pricingLabel}
-									</LinkButton>
-								</div>
-
-								<div
-									mix={[
-										flex(),
-										flexWrap("wrap"),
-										justify("center"),
-										gap(2, 6),
-										mbs(8),
-										media("(min-width: 1024px)", justify("start")),
-									]}
-								>
-									{highlights.map((item) => (
-										<span
-											key={item}
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap("6px"),
-												fontSize("sm"),
-												fg("neutral.muted"),
-											]}
-										>
-											<CheckIcon size={16} strokeWidth={2} mix={[fg("success")]} />
-											{item}
-										</span>
-									))}
-								</div>
-							</div>
-
+								{pricingLabel}
+							</LinkButton>
+						</>
+					}
+					below={
+						<CheckList orientation="horizontal">
+							{highlights.map((item) => (
+								<CheckRow key={item}>{item}</CheckRow>
+							))}
+						</CheckList>
+					}
+					media={
+						<ProductFrame lights>
 							<picture
 								mix={[
 									block(),
-									relative(),
 									overflow("hidden"),
 									rounded("xl"),
 									shadow("xl"),
@@ -412,9 +235,9 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 									mix={[block(), is("full"), bs("auto")]}
 								/>
 							</picture>
-						</div>
-					</div>
-				</section>
+						</ProductFrame>
+					}
+				/>
 
 				{trustIndicators && (
 					<MarketingTrustIndicators
@@ -427,65 +250,47 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 					/>
 				)}
 
-				<section mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={everythingBadge}
-							title={everythingTitle}
-							description={everythingDescription}
+				<FeatureBand
+					layout="grid"
+					columns={3}
+					eyebrow={everythingBadge}
+					title={everythingTitle}
+					description={everythingDescription}
+				>
+					{features.map((feature) => (
+						<MarketingCard
+							key={feature.title}
+							icon={feature.icon && <Icon name={feature.icon} size={24} strokeWidth={1.5} />}
+							title={feature.title}
+							description={feature.description}
 						/>
+					))}
+				</FeatureBand>
 
-						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
-							{features.map((feature) => (
-								<MarketingCard
-									key={feature.title}
-									icon={feature.icon && <Icon name={feature.icon} size={24} strokeWidth={1.5} />}
-									title={feature.title}
-									description={feature.description}
-								/>
-							))}
-						</div>
-					</div>
-				</section>
+				<FeatureBand
+					layout="steps"
+					tone="tinted"
+					eyebrow={howItWorksBadge}
+					title={howItWorksTitle}
+					description={howItWorksDescription}
+				>
+					{steps.map((step) => (
+						<StepList.Item key={step.title} title={step.title}>
+							{step.description}
+						</StepList.Item>
+					))}
+				</FeatureBand>
 
-				<section mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader
-							badge={howItWorksBadge}
-							title={howItWorksTitle}
-							description={howItWorksDescription}
-						/>
+				<FaqBand columns={2} eyebrow={faqBadge} title={faqTitle} description={faqDescription}>
+					<FaqAccordion items={firstFaqColumn} />
+					{secondFaqColumn.length > 0 ? <FaqAccordion items={secondFaqColumn} /> : null}
+				</FaqBand>
 
-						<div mix={[grid(), gap(8), counterReset("marketing-step"), ...responsiveGrid()]}>
-							{steps.map((step) => (
-								<MarketingStep key={step.title} title={step.title} description={step.description} />
-							))}
-						</div>
-					</div>
-				</section>
-
-				<section mix={[...sectionPadding()]}>
-					<div mix={[...marketingContainer()]}>
-						<SectionHeader badge={faqBadge} title={faqTitle} description={faqDescription} />
-
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								items("start"),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(2, 1fr)" })),
-							]}
-						>
-							<FaqAccordion items={firstFaqColumn} />
-							{secondFaqColumn.length > 0 && <FaqAccordion items={secondFaqColumn} />}
-						</div>
-					</div>
-				</section>
-
-				<section
+				<ClosingCta
+					tone="plain"
+					title={finalCtaTitle}
+					description={finalCtaBody}
 					mix={[
-						pb(16),
-						textAlign("center"),
 						bg({
 							image: linearGradient(
 								"to right",
@@ -494,49 +299,21 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 							),
 						}),
 						fg("brand.onSolid"),
-						media("(min-width: 640px)", pb(24)),
 					]}
-				>
-					<div mix={[...marketingContainer()]}>
-						<Heading
-							level={2}
-							mix={[
-								m(0),
-								fontSize("3xl"),
-								weight(700),
-								leading(1.15),
-								tracking("tight"),
-								fg("brand.onSolid"),
-								media("(min-width: 640px)", fontSize("4xl")),
-							]}
-						>
-							{finalCtaTitle}
-						</Heading>
-						<p
-							mix={[
-								m(0),
-								mbs(4),
-								mi("auto"),
-								maxIs("672px"),
-								fontSize("lg"),
-								leading(1.625),
-								opacity(90),
-							]}
-						>
-							{finalCtaBody}
-						</p>
-
-						<div mix={[...ctaRow()]}>
-							<AuthCta
-								isSignedIn={isSignedIn}
-								startLabel={startLabel}
-								dashboardLabel={dashboardLabel}
-								color="neutral"
-								icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-							/>
-						</div>
-					</div>
-				</section>
+					parts={{
+						title: [fg("brand.onSolid")],
+						description: [fg("brand.onSolid")],
+					}}
+					actions={
+						<AuthCta
+							isSignedIn={isSignedIn}
+							startLabel={startLabel}
+							dashboardLabel={dashboardLabel}
+							color="neutral"
+							icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+						/>
+					}
+				/>
 			</>
 		);
 	};

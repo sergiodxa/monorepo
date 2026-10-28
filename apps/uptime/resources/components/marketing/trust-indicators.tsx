@@ -1,6 +1,7 @@
 /**
- * The four-up band of headline figures below a marketing hero: one brand-tinted icon,
- * mono figure, and label per column, inside a bordered tinted strip.
+ * Numeric proof strip below a marketing hero: icon + mono figure + label per
+ * cell. Thin adapter over {@link ProofStrip} and {@link StatStrip} so the
+ * product's four-up metrics share the marketing proof rhythm.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,11 +9,11 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { gap, grid, gridTemplate, inlineFlex, items, vstack } from "@sdxc/u/layout";
-import { dark, media } from "@sdxc/u/responsive";
-import { m, maxIs, mi, pb, pi } from "@sdxc/u/size";
-import { font, fontSize, leading, textAlign, weight } from "@sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { gap, inlineFlex, items } from "@sdxc/u/layout";
+import { font, fontSize, leading, weight } from "@sdxc/u/typography";
+import { StatStrip } from "@sdxc/ui";
+import { ProofStrip } from "@sdxc/ui/patterns";
 
 namespace MarketingTrustIndicators {
 	/** One headline figure: its icon, the figure itself, and what the figure measures. */
@@ -36,66 +37,38 @@ namespace MarketingTrustIndicators {
 }
 
 /**
- * Renders the trust-indicator strip: two columns of figures below 768px, four
- * at or above it, painted one palette step off the page's own body color in
- * each scheme so it reads as a distinct band framed by the hero and content.
+ * Renders the trust-indicator strip as a compact ruled proof band: two columns
+ * below the stack breakpoint, opening wider on large containers.
  */
 export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIndicators.Props>) {
 	return () => (
-		<section
-			mix={[
-				pb(8),
-				bg("color.neutral.100"),
-				dark(bg("color.neutral.900")),
-				borderEdge("top", { color: "neutral", width: 1 }),
-				borderEdge("bottom", { color: "neutral", width: 1 }),
-			]}
-		>
-			<div
-				mix={[
-					maxIs("1152px"),
-					mi("auto"),
-					pi(4),
-					media("(min-width: 640px)", pi(6)),
-					media("(min-width: 1024px)", pi(8)),
-				]}
-			>
-				<div
-					mix={[
-						grid(),
-						gap(8),
-						gridTemplate({ columns: "repeat(2, 1fr)" }),
-						textAlign("center"),
-						media("(min-width: 768px)", gridTemplate({ columns: "repeat(4, 1fr)" })),
-					]}
-				>
-					{handle.props.indicators.map((indicator) => (
-						<div key={indicator.label} mix={[vstack({ gap: 2, align: "center" })]}>
-							<div
-								mix={[
-									inlineFlex(),
-									items("center"),
-									gap(1),
-									fontSize("3xl"),
-									weight(700),
-									leading(1),
-									fg("neutral.emphasis"),
-								]}
-							>
-								<span mix={[fg("brand")]}>{indicator.icon}</span>
-								{indicator.valueLabel ? (
-									<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
-										{indicator.value}
-									</span>
-								) : (
-									<span mix={[font("mono")]}>{indicator.value}</span>
-								)}
-							</div>
-							<p mix={[m(0), fontSize("sm"), fg("neutral")]}>{indicator.label}</p>
-						</div>
-					))}
-				</div>
-			</div>
-		</section>
+		<ProofStrip tone="tinted">
+			<StatStrip variant="gap">
+				{handle.props.indicators.map((indicator) => (
+					<StatStrip.Item key={indicator.label} label={indicator.label} mix={[items("center")]}>
+						<span
+							mix={[
+								inlineFlex(),
+								items("center"),
+								gap(1),
+								fontSize("3xl"),
+								weight(700),
+								leading(1),
+								fg("neutral.emphasis"),
+							]}
+						>
+							<span mix={[fg("brand")]}>{indicator.icon}</span>
+							{indicator.valueLabel ? (
+								<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
+									{indicator.value}
+								</span>
+							) : (
+								<span mix={[font("mono")]}>{indicator.value}</span>
+							)}
+						</span>
+					</StatStrip.Item>
+				))}
+			</StatStrip>
+		</ProofStrip>
 	);
 }
