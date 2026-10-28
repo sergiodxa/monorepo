@@ -17,7 +17,7 @@ import { PrivacyPassError } from "./errors.js";
 import { privacyPass, redeemOrChallenge } from "./middleware.js";
 import { createTestPrivacyPass, redeemThrough } from "./testing.js";
 
-const URL_ = "https://example.com/privacy-pass";
+const PRIVACY_PASS_URL = "https://example.com/privacy-pass";
 
 /** Sends requests through a router serving `redeemOrChallenge` behind `privacyPass(instance)`. */
 function appWith(instance: PrivacyPass, options?: RedeemOrChallengeOptions) {
@@ -51,7 +51,7 @@ describe("privacyPass", () => {
 describe("redeemOrChallenge", () => {
 	test("challenges a client without a token, uncached", async () => {
 		let { privacyPass: instance } = await createTestPrivacyPass();
-		let response = await appWith(instance)(new Request(URL_));
+		let response = await appWith(instance)(new Request(PRIVACY_PASS_URL));
 
 		expect(response.status).toBe(401);
 		expect(response.headers.get("WWW-Authenticate")).toMatch(/^PrivateToken challenge="/);
@@ -68,7 +68,7 @@ describe("redeemOrChallenge", () => {
 			},
 		});
 
-		let response = await redeemThrough(fetch, issuer, URL_);
+		let response = await redeemThrough(fetch, issuer, PRIVACY_PASS_URL);
 
 		expect(response.status).toBe(204);
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -79,7 +79,7 @@ describe("redeemOrChallenge", () => {
 	test("challenges again for a token from an issuer it does not trust", async () => {
 		let { privacyPass: instance } = await createTestPrivacyPass();
 		let other = await createTestPrivacyPass();
-		let response = await redeemThrough(appWith(instance), other.issuer, URL_);
+		let response = await redeemThrough(appWith(instance), other.issuer, PRIVACY_PASS_URL);
 
 		expect(response.status).toBe(401);
 		expect(response.headers.has("WWW-Authenticate")).toBe(true);
@@ -89,7 +89,7 @@ describe("redeemOrChallenge", () => {
 		let { privacyPass: instance } = await createTestPrivacyPass();
 		instance.challenge = async () =>
 			failure(new PrivacyPassError("issuer-unavailable", "directory unreachable"));
-		let response = await appWith(instance)(new Request(URL_));
+		let response = await appWith(instance)(new Request(PRIVACY_PASS_URL));
 
 		expect(response.status).toBe(204);
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
