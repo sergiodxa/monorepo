@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 import { waitUntil } from "cloudflare:workers";
 
 import type { UserStore } from "~/app/models/user-store";

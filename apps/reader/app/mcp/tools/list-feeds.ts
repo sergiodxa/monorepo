@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import { agentStore, toAgentFeed } from "~/app/mcp/page";
 import toolset from "~/app/mcp/tools";

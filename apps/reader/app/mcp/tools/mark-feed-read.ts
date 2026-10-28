@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import { WRITES } from "~/app/mcp/agent";
 import { agentStore } from "~/app/mcp/page";

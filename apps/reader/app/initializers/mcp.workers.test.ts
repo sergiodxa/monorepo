@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
