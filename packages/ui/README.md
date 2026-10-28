@@ -249,6 +249,31 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `LogoCloud` — muted adopter marks at `--ui-marketing-logo-height`.
 - `Feature`, `Feature.Grid` — claim cells and a hairline-ruled grid (`variant="panel"` optional).
 
+### Patterns (`@sdxc/ui/patterns`)
+
+Marketing building blocks and composition craft. Import from `@sdxc/ui/patterns` so product
+chrome on the root catalog stays free of landing weight.
+
+**Building blocks**
+
+- `LandingHero` — eyebrow, display title, lead, `CtaGroup`, media (`mediaPlacement`: `end` | `below` | `background`).
+- `ProofStrip` — compact ruled band for `LogoCloud` and/or `StatStrip` children.
+- `FeatureBand` — header + `layout`: `split` | `grid` | `steps`.
+- `FaqBand` — header + one or two `Accordion` columns (`columns={1|2}`).
+- `ClosingCta` — inverse/tinted close with title, lead, and actions.
+
+**Composition craft**
+
+- `ProductFrame` — window/device chrome (`lights`, `title`, `url`).
+- `CodeStage` / `TerminalPanel` — titled mono panel with optional actions slot.
+- `InstallTabs`, `InstallTabs.Option` — radio dialect strip (no JS).
+- `TabbedStage`, `TabbedStage.Item` — pill tabs controlling a media panel (no JS).
+- `CheckList`, `CheckRow` — checked claims (`orientation`: `stacked` | `horizontal`).
+- `IconWell` — tinted marketing glyph well (`sm` | `md` | `lg`).
+- `Bento`, `Bento.Cell` — hairline-ruled equal columns.
+- `StepList`, `StepList.Item` — numbered how-it-works steps.
+- `AnnouncementChip`, `AccentText` — louder chip; emphasized phrase inside a headline.
+
 ### Component helpers
 
 - `readFormContext(handle): Form.Context | undefined` and

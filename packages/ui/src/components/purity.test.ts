@@ -19,6 +19,9 @@ import { describe, expect, test } from "vitest";
 /** Absolute path to `src/components/`, the directory the purity rule covers. */
 const COMPONENTS_DIR = dirname(fileURLToPath(import.meta.url));
 
+/** Absolute path to `src/patterns/`, which follows the same purity rule. */
+const PATTERNS_DIR = join(COMPONENTS_DIR, "..", "patterns");
+
 /** Bindings from `remix/component` that carry behavior and may never appear in a component module. */
 const BANNED_BINDINGS = ["on", "ref", "createMixin"];
 
@@ -156,6 +159,36 @@ describe("component purity (src/components/**)", () => {
 	for (let relative of modules) {
 		test(`${relative} imports only css/attrs/types from remix/component`, () => {
 			let source = readFileSync(join(COMPONENTS_DIR, relative), "utf8");
+
+			expect(findPurityViolations(source)).toEqual([]);
+		});
+	}
+});
+
+/** Pattern modules covered by the purity rule: every `.ts`/`.tsx` file under `src/patterns/` except the barrel and test files. */
+function listPatternModules(): string[] {
+	let files: string[] = [];
+
+	for (let relative of globSync("**/*.{ts,tsx}", { cwd: PATTERNS_DIR })) {
+		if (/^index\.tsx?$/.test(relative)) continue;
+		if (relative.endsWith(".test.ts") || relative.endsWith(".test.tsx")) continue;
+		files.push(relative);
+	}
+
+	return files.sort();
+}
+
+describe("pattern purity (src/patterns/**)", () => {
+	let modules = listPatternModules();
+
+	test("scanned the patterns catalog, not an empty directory", () => {
+		expect(modules.length).toBeGreaterThan(5);
+		expect(modules).not.toContain("index.ts");
+	});
+
+	for (let relative of modules) {
+		test(`${relative} imports only css/attrs/types from remix/component`, () => {
+			let source = readFileSync(join(PATTERNS_DIR, relative), "utf8");
 
 			expect(findPurityViolations(source)).toEqual([]);
 		});
