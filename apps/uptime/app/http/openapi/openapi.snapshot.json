@@ -10527,6 +10527,112 @@
           }
         ]
       }
+    },
+    "/api/v1/guest/probe": {
+      "post": {
+        "operationId": "guestProbeCreate",
+        "summary": "Run an accountless HTTP probe",
+        "description": "Runs one GET probe from a fixed region and stores nothing. Unpaid requests answer HTTP 402 with an x402 `PAYMENT-REQUIRED` challenge for 10000 atomic USDC ($0.01). Marketing `/try` stays free and does not use this route.",
+        "tags": [
+          "Ping"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "description": "The absolute URL to probe; only public http(s) hosts are allowed"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The check ran; its outcome is `data.probe.status`",
+            "headers": {
+              "PAYMENT-RESPONSE": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Base64 JSON settlement receipt from the x402 facilitator"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "probe": {
+                          "$ref": "#/components/schemas/GuestProbe"
+                        }
+                      },
+                      "required": [
+                        "probe"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "402": {
+            "description": "Payment required. Retry with a `PAYMENT-SIGNATURE` header built from the `PAYMENT-REQUIRED` challenge.",
+            "headers": {
+              "PAYMENT-REQUIRED": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Base64 JSON x402 V2 challenge (amount, network, payTo, Bazaar info)"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`no-store`"
+              }
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "components": {
@@ -13200,6 +13306,92 @@
         "discriminator": {
           "propertyName": "type"
         }
+      },
+      "GuestProbe": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The normalized absolute URL that was probed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "degraded",
+              "down"
+            ]
+          },
+          "responseTimeMs": {
+            "type": "number",
+            "description": "0 when the target never answered"
+          },
+          "responseStatus": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Null when unreachable"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Redirect target when redirects were not followed"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "payer": {
+                    "type": "string"
+                  },
+                  "transaction": {
+                    "type": "string"
+                  },
+                  "network": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "string"
+                  },
+                  "asset": {
+                    "type": "string"
+                  },
+                  "scheme": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "transaction",
+                  "network",
+                  "amount",
+                  "asset",
+                  "scheme"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Settlement receipt when payment cleared"
+          }
+        },
+        "required": [
+          "url",
+          "status",
+          "responseTimeMs",
+          "responseStatus",
+          "location",
+          "checkedAt",
+          "payment"
+        ]
       }
     },
     "responses": {
