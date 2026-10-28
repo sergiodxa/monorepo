@@ -174,6 +174,10 @@ async function readCatalogue(name: string) {
 			title: "Components",
 			entries: [
 				{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
+				{
+					title: "Marketing foundations",
+					href: routes.api.component.href({ component: "marketing-foundations" }),
+				},
 				...(await listComponentEntries()),
 			],
 		},

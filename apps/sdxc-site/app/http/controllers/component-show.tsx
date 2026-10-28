@@ -19,9 +19,14 @@ import type { PropsTable } from "~/app/services/components";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import marketingFoundationsPage from "~/app/http/controllers/ui-marketing-foundations";
 import themingPage from "~/app/http/controllers/ui-theming";
 import { adsDayTag } from "~/app/services/ads";
-import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
+import {
+	MARKETING_FOUNDATIONS_SLUG,
+	THEMING_SLUG,
+	CATALOGUE_SOURCE_BASE,
+} from "~/app/services/catalogue-pages";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
@@ -50,6 +55,7 @@ export default createAction(routes.api.component, async (ctx) => {
 	let tree = await buildComponentsNav();
 
 	if (component === THEMING_SLUG) return await themingPage(ctx, tree);
+	if (component === MARKETING_FOUNDATIONS_SLUG) return await marketingFoundationsPage(ctx, tree);
 
 	let reference = await readComponent(component);
 	if (reference === null) return notFound(ctx, tree);
