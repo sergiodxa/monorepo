@@ -2,7 +2,10 @@
 
 ## Status
 
-**Proposed** - 2026-10-27
+**Accepted** - 2026-10-27
+
+First product chosen in [ADR-180](./ADR-180-package-backed-micro-apis.md): package-backed
+micro-APIs on `apis.sdxc.dev`. Other surfaces in the charge map stay proposed until picked.
 
 ## Background
 
