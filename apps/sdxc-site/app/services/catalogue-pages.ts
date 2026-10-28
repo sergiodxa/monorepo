@@ -9,6 +9,8 @@
 
 import {
 	componentMarkdown,
+	LANDING_PATTERNS_SUMMARY,
+	LANDING_PATTERNS_TITLE,
 	MARKETING_COMPONENTS_SUMMARY,
 	MARKETING_COMPONENTS_TITLE,
 	MARKETING_FOUNDATIONS_SUMMARY,
@@ -38,6 +40,9 @@ export const MARKETING_FOUNDATIONS_SLUG = "marketing-foundations";
 
 /** The marketing components overview under the same component tree. */
 export const MARKETING_COMPONENTS_SLUG = "marketing-components";
+
+/** The landing patterns overview under the same component tree. */
+export const LANDING_PATTERNS_SLUG = "landing-patterns";
 
 /** One reference page of a catalogue, as a listing or an index names it. */
 /** What every catalogue page carries, whichever tree it lives in. */
@@ -137,6 +142,17 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 		markdownHref: routes.markdown.component.href({ component: MARKETING_COMPONENTS_SLUG }),
 	});
 
+	pages.push({
+		title: LANDING_PATTERNS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: LANDING_PATTERNS_SUMMARY,
+		params: { component: LANDING_PATTERNS_SLUG },
+		href: routes.api.component.href({ component: LANDING_PATTERNS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: LANDING_PATTERNS_SLUG }),
+	});
+
 	for (let entry of await listComponents()) {
 		let reference = await readComponent(entry.slug);
 		pages.push({
@@ -193,6 +209,7 @@ export async function readComponentMarkdown(component: string): Promise<string |
 	if (component === THEMING_SLUG) return themeMarkdown(await readTheme());
 	if (component === MARKETING_FOUNDATIONS_SLUG) return marketingFoundationsMarkdown();
 	if (component === MARKETING_COMPONENTS_SLUG) return marketingComponentsMarkdown();
+	if (component === LANDING_PATTERNS_SLUG) return landingPatternsMarkdown();
 
 	let reference = await readComponent(component);
 	return reference === null ? null : componentMarkdown(reference);
@@ -275,6 +292,39 @@ function marketingComponentsMarkdown(): string {
 		'- Nav CTAs: `size="sm"` (~32px)',
 		'- `Heading size="display" | "chapter"` for marketing type without a header wrapper',
 		"- Product empty states stay on `Empty` / `Card`; landing claims use `Feature`",
+		"",
+	].join("\n");
+}
+
+/**
+ * The markdown twin of the landing patterns overview: building blocks and
+ * composition craft from `@sdxc/ui/patterns`.
+ */
+function landingPatternsMarkdown(): string {
+	return [
+		`# ${LANDING_PATTERNS_TITLE}`,
+		`> ${LANDING_PATTERNS_SUMMARY}`,
+		"",
+		"Import from `@sdxc/ui/patterns`. Primitives stay on `@sdxc/ui`.",
+		"",
+		"## Building blocks",
+		"",
+		"- `LandingHero` — eyebrow, display title, lead, actions, media",
+		"- `ProofStrip` — LogoCloud and/or StatStrip after the hero",
+		"- `FeatureBand` — header + `layout`: split | grid | steps",
+		"- `FaqBand` — header + one or two Accordion columns",
+		"- `ClosingCta` — inverse/tinted close with CTAs",
+		"",
+		"## Composition craft",
+		"",
+		"- `ProductFrame`, `CodeStage` / `TerminalPanel`",
+		"- `InstallTabs`, `TabbedStage`",
+		"- `CheckList` / `CheckRow`, `IconWell`, `Bento`, `StepList`",
+		"- `AnnouncementChip`, `AccentText`",
+		"",
+		"## Assembled page",
+		"",
+		"Hero → Proof → FeatureBand × N → Faq → ClosingCta. Copy is always props.",
 		"",
 	].join("\n");
 }
