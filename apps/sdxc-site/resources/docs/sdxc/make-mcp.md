@@ -45,7 +45,7 @@ Edited app/initializers/mcp.ts
 The handler answers with text, for you to replace with what the tool returns:
 
 ```typescript {% title="app/mcp/tools/search-posts.ts" %}
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 
@@ -58,8 +58,8 @@ initializer creates with `createHandler`:
 ```text
 --- a/app/mcp/tools/index.ts
 +++ b/app/mcp/tools/index.ts
--import { tools } from "@sdxc/mcp";
-+import { tools, tool } from "@sdxc/mcp";
+-import { tools } from "@sdxc/mcp/server";
++import { tools, tool } from "@sdxc/mcp/server";
 +import * as s from "@sdxc/json-schema";
 
 -export default tools({});
@@ -71,8 +71,8 @@ initializer creates with `createHandler`:
 +});
 --- a/app/initializers/mcp.ts
 +++ b/app/initializers/mcp.ts
--import { createHandler } from "@sdxc/mcp";
-+import { createHandler, lazy } from "@sdxc/mcp";
+-import { createHandler } from "@sdxc/mcp/server";
++import { createHandler, lazy } from "@sdxc/mcp/server";
 +import toolset from "~/app/mcp/tools";
 @@
 +mcp.tools.map(toolset.searchPosts, lazy(() => import("~/app/mcp/tools/search-posts")));
@@ -83,7 +83,7 @@ initializer creates with `createHandler`:
 `--resource` writes a handler that reads Markdown:
 
 ```typescript {% title="app/mcp/resources/article.ts" %}
-import { createResource } from "@sdxc/mcp";
+import { createResource } from "@sdxc/mcp/server";
 
 import resourceset from "~/app/mcp/resources";
 

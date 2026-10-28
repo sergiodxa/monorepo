@@ -90,7 +90,7 @@ export default createAction(routes.board.create, async (ctx) => {
 <code-tab label="Cache">
 
 ```typescript {% title="app/mcp/cache.ts" %}
-import type { ToolMiddleware } from "@sdxc/mcp";
+import type { ToolMiddleware } from "@sdxc/mcp/server";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isSuccess } from "@sdxc/result";

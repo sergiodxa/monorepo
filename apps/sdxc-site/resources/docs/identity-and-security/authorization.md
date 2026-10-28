@@ -411,10 +411,10 @@ roles must allow it too.
 call's validated arguments:
 
 ```typescript {% title="app/mcp/tools/rename-project.ts" %}
-import type { InputOf } from "@sdxc/mcp";
+import type { InputOf } from "@sdxc/mcp/server";
 
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import abilities from "~/app/policies/abilities";
 import { Projects } from "~/app/models/projects";
