@@ -14,13 +14,13 @@ outcomes:
 
 An MCP server that speaks the stateless Streamable HTTP revision is an ordinary URL: one
 `POST` is one exchange. When you want your own Worker, Durable Object, browser page, or CLI
-to call that URL — list tools, invoke one, attach a resource — you need a client that speaks
-the same revision, not a hand-rolled JSON-RPC envelope.
+to call that URL — list tools, invoke one, attach a resource — reach for a client that speaks
+the same revision.
 
 [`@sdxc/mcp/client`](/api/mcp) is that client. It posts revision `2026-07-28`, keeps protocol
 headers and `_meta` inside the package, and returns every outcome as a
-[`@sdxc/result`](/api/result) value. Remix is not on this entry: the same import runs in a
-Worker, a browser, Node, and Bun.
+[`@sdxc/result`](/api/result) value. The same import runs in a Worker, a browser, Node, and
+Bun.
 
 ```bash
 npm add @sdxc/mcp @sdxc/result
@@ -49,13 +49,13 @@ if (isFailure(listed)) throw listed.error;
 
 let called = await mcp.call("search_documents", { query: "remix" });
 if (isFailure(called)) throw called.error;
-// called.data.isError means the tool answered guidance, not a transport failure
+// called.data.isError is model-facing guidance from the tool
 ```
 
 `McpClient` implements `Disposable`: `[Symbol.dispose]` and `close()` share one path that
-aborts in-flight requests and refuses further RPCs. Call `close()` when `using` is
-unavailable. Pass `credentials` for a browser same-origin cookie session; Workers and Node
-usually send a bearer header instead.
+aborts in-flight requests and marks the session closed. Prefer `using`; call `close()` when
+the session opens outside a `using` scope. Pass `credentials` for a browser same-origin
+cookie session; Workers and Node usually send a bearer header.
 
 ## One-word methods
 
@@ -81,19 +81,19 @@ await mcp.templates();
 await mcp.read("https://example.com/articles/hello.md");
 ```
 
-Compound names (`listTools`, `callTool`) are not on the API. The protocol version stays
-internal: every POST speaks `2026-07-28`, and a `-32022` unsupported-version answer is
-retried once with a supported intersection.
+The API is those one-word names. The protocol version stays internal: every POST speaks
+`2026-07-28`, and a `-32022` unsupported-version answer is retried once with a supported
+intersection.
 
 A transport or JSON-RPC failure is a `Result` failure (`McpClientError`). A tool result with
 `isError: true` is still a successful RPC — that flag is model-facing guidance from the
-tool, not an exception.
+tool.
 
 ## Type tools with a catalog
 
 Untyped `connect()` accepts any string name and a `Record` of arguments. For a first-party
-server you already know, pass a catalog generic so `call` names and arguments are typed.
-Without a result schema that is types only — nothing checks the payload at runtime:
+server you already know, pass a catalog generic so `call` names and arguments are typed. A
+catalog alone is compile-time typing; add a result schema when you want a runtime check:
 
 ```typescript {% title="src/uptime-tools.ts" %}
 import { connect } from "@sdxc/mcp/client";
@@ -120,7 +120,7 @@ let result = unwrap(await mcp.call("list_monitors", { limit: 20 }));
 Pass an [`@sdxc/json-schema`](/api/json-schema) schema as the third argument to check the
 result at runtime. Validation prefers `structuredContent`; when that is absent it parses the
 first text `content` block as JSON. A miss is an `InvalidToolResultError` inside a `Result`
-failure — never a throw. A tool result with `isError` skips the schema:
+failure. A tool result with `isError` skips the schema:
 
 ```bash
 npm add @sdxc/json-schema
@@ -149,7 +149,7 @@ if (isFailure(result)) {
 
 ## Where it runs
 
-The client is `fetch`-based. There is no injectable fetch and no Remix peer on this entry:
+The client uses the global `fetch` and runs wherever that exists:
 
 | Runtime                            | Notes                                                          |
 | ---------------------------------- | -------------------------------------------------------------- |

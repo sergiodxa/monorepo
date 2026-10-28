@@ -13,19 +13,20 @@ outcomes:
 ---
 
 First-party MCP endpoints built with [`@sdxc/mcp/server`](/api/mcp) speak only revision
-`2026-07-28`: one `POST`, mirrored protocol headers, `_meta` on every body, no `initialize`,
-no session id, no GET SSE. That design keeps the Worker a plain route.
+`2026-07-28`: one `POST`, mirrored protocol headers, and `_meta` on every body. Every
+request carries its own version and identity, so the Worker stays a plain route.
 
 Many agents still open with the **handshake** protocol — typically through `2025-11-25`.
 Against a modern-only URL they send `initialize` or omit `MCP-Protocol-Version`, the server
-refuses, SSE fallback gets `405`, and tools never appear. Cursor's remote MCP client is one
-example; Claude Desktop's stdio launcher and other handshake-era clients hit the same wall.
+answers with a protocol error, SSE fallback gets `405`, and the agent stops with an empty
+tool list. Cursor's remote MCP client is one example; Claude Desktop's stdio launcher and
+other handshake-era clients hit the same wall.
 
 `mcp-bridge` is the first-party stdio process that closes that gap. The agent spawns a local
 command; the process answers handshake-era MCP on stdio and posts `2026-07-28` Streamable
-HTTP upstream. For first-party servers it replaces configuring `@abluva/mcp-remote` (or other
-third-party mcp-remote forks). OAuth is not on the bridge yet — pass a header or bearer
-token.
+HTTP upstream. For first-party servers it is the recommended replacement for
+`@abluva/mcp-remote` (and other third-party mcp-remote forks). Auth for v1 is a header or
+bearer token.
 
 The binary ships on [`@sdxc/mcp`](/api/mcp) and talks upstream through `@sdxc/mcp/client`.
 
@@ -44,8 +45,8 @@ mcp-bridge https://example.com/mcp --token "$DOCUMENTS_MCP_TOKEN"
 mcp-bridge http://127.0.0.1:8787/mcp --allow-http
 ```
 
-`bunx @sdxc/mcp@latest …` works the same way when you prefer Bun. Stdout is the MCP byte
-stream the agent reads. Logs go to **stderr** only — never write debug noise on stdout.
+`bunx @sdxc/mcp@latest …` works the same way when you prefer Bun. Stdout carries the MCP
+byte stream the agent reads; put logs on **stderr**.
 
 ## Cursor
 
@@ -90,9 +91,9 @@ the Authorization header:
 
 ## Claude Desktop
 
-Claude Desktop's `claude_desktop_config.json` is **stdio-only**: each entry needs `command`
-and `args` (optional `env`). It does not accept a raw Streamable HTTP `url` in that file —
-point it at `mcp-bridge` the same way you would any local MCP process.
+Claude Desktop's `claude_desktop_config.json` launches **local stdio** processes: each entry
+needs `command` and `args` (optional `env`). Point it at `mcp-bridge` the same way you would
+any other local MCP process.
 
 Config path:
 
@@ -116,8 +117,8 @@ Config path:
 }
 ```
 
-Restart Claude Desktop after saving. Prefer a real secret in `YOUR_TOKEN` (or an `env` value
-your launcher expands into `args`) rather than committing the token to the file.
+Restart Claude Desktop after saving. Put the secret in `YOUR_TOKEN` or an `env` value your
+launcher expands into `args`, and keep that value out of version control.
 
 ## Claude Code
 
@@ -177,9 +178,9 @@ codex mcp add documents -- \
   npx -y @sdxc/mcp@latest https://example.com/mcp --token "$DOCUMENTS_MCP_TOKEN"
 ```
 
-Codex can also speak Streamable HTTP with a `url` entry. Use that only when the remote
-already accepts the dialect Codex sends; for a modern-only `@sdxc/mcp/server` endpoint,
-prefer the stdio `mcp-bridge` path above until the client negotiates `2026-07-28` natively.
+Codex also supports Streamable HTTP with a `url` entry when the remote speaks the dialect
+Codex sends. For a modern-only `@sdxc/mcp/server` endpoint, use the stdio `mcp-bridge` path
+above so the agent gets a handshake face while the upstream stays `2026-07-28`.
 
 ## Flags
 
@@ -192,32 +193,31 @@ prefer the stdio `mcp-bridge` path above until the client negotiates `2026-07-28
 | `--help` / `-h`       | Usage                                               |
 | `--version` / `-v`    | Version string                                      |
 
-The URL must be `https://` unless you pass `--allow-http`. That keeps accidental cleartext
-out of an agent config while still letting a local `wrangler`/`bun` server through.
+URLs are `https://` by default. Pass `--allow-http` for a local cleartext
+`wrangler`/`bun` server on `http://`.
 
 ## What the bridge does
 
 | Face              | Transport            | Revision     | Job                                                                                |
 | ----------------- | -------------------- | ------------ | ---------------------------------------------------------------------------------- |
 | Inbound (agent)   | stdio JSON-RPC       | `2025-11-25` | Local `initialize` / `notifications/initialized`, capabilities, in-process session |
-| Outbound (server) | Streamable HTTP POST | `2026-07-28` | Via `@sdxc/mcp/client`: headers, `_meta`, no `Mcp-Session-Id` upstream             |
+| Outbound (server) | Streamable HTTP POST | `2026-07-28` | Via `@sdxc/mcp/client`: headers, `_meta`, per-request identity upstream            |
 
 It translates `tools/list`, `tools/call`, `resources/list`, `resources/templates/list`, and
-`resources/read`. The Worker server stays modern-only — dual-era support lives in this local
-Node/Bun process, not on the Remix route.
+`resources/read`. The Worker server stays modern-only; the dual-era face lives in this local
+Node/Bun process.
 
 ## Prefer this over third-party mcp-remote
 
-| Approach                        | When                                                                              |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `mcp-bridge` on `@sdxc/mcp`     | First-party `@sdxc/mcp/server` URLs, API-key / bearer auth                        |
-| Direct URL in the agent config  | Clients that already speak `2026-07-28` Streamable HTTP natively                  |
-| `@sdxc/mcp/client` in your code | Your Worker, browser, or Node app calling the endpoint                            |
-| Third-party mcp-remote          | Only when you still need a feature the bridge has not shipped (for example OAuth) |
+| Approach                        | When                                                             |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `mcp-bridge` on `@sdxc/mcp`     | First-party `@sdxc/mcp/server` URLs, API-key / bearer auth       |
+| Direct URL in the agent config  | Clients that already speak `2026-07-28` Streamable HTTP natively |
+| `@sdxc/mcp/client` in your code | Your Worker, browser, or Node app calling the endpoint           |
+| Third-party mcp-remote          | Features still on the bridge roadmap (for example OAuth)         |
 
-When agents negotiate `2026-07-28` natively, the bridge becomes optional for open or
-header-auth remotes. Keep it for stdio-only clients and for auth headers a raw URL config
-cannot attach.
+When agents negotiate `2026-07-28` natively, the bridge stays useful for stdio-only clients
+and for auth headers the agent attaches through the local process.
 
 ## Where to go next
 
