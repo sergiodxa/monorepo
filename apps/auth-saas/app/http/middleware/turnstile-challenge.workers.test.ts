@@ -3,6 +3,7 @@
  * address under half its shared budget sees no challenge, one that has spent half does, each
  * address counts apart, sign-in and reset spend one shared counter, and a namespace that
  * cannot answer means no challenge. Real KV also enforces its 60-second TTL floor on each write.
+ * Wall-clock time is pinned so a 10-second fixed window cannot roll mid-test and reset the count.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,9 +13,19 @@ import type { Middleware } from "remix/router";
 
 import { env } from "cloudflare:test";
 import { createRouter } from "remix/router";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { shouldChallengeWithTurnstile, turnstileChallenge } from "./turnstile-challenge";
+
+/**
+ * Midpoint of a 10-second epoch-aligned window, so every consume in a test shares one KV
+ * counter key even when the suite or workerd startup stretches wall time past a boundary.
+ */
+const PINNED_NOW_MS = 1_000_000_005_000;
+
+beforeEach(() => {
+	vi.spyOn(Date, "now").mockReturnValue(PINNED_NOW_MS);
+});
 
 afterEach(() => {
 	vi.restoreAllMocks();
