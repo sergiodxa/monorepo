@@ -18,7 +18,8 @@ import routes from "~/routes/web";
 
 /**
  * The mcp-bridge stdio config a signed-in visitor pastes into their agent. URL and auth
- * header are the product contract; keep them literal (ADR-180).
+ * header are the product contract agents copy verbatim, so keep them literal rather than
+ * deriving them from the request host or env at render time.
  */
 const MCP_BRIDGE_CONFIG = {
 	command: "npx",
