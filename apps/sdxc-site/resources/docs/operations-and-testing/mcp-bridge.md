@@ -27,8 +27,7 @@ HTTP upstream. For first-party servers it replaces configuring `@abluva/mcp-remo
 third-party mcp-remote forks). OAuth is not on the bridge yet — pass a header or bearer
 token.
 
-The binary ships on [`@sdxc/mcp`](/api/mcp). It uses `@sdxc/mcp/client` under the hood; you
-do not import Remix to run it.
+The binary ships on [`@sdxc/mcp`](/api/mcp) and talks upstream through `@sdxc/mcp/client`.
 
 ## The command every agent runs
 
