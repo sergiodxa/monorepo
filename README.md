@@ -230,6 +230,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/attribution](packages/attribution)   | Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch                |
 | [@sdxc/backoff](packages/backoff)           | Retry delay schedules with growth, a ceiling, free attempts and seedable jitter                               |
 | [@sdxc/billing](packages/billing)           | Vendor-neutral billing with pluggable providers and a webhook endpoint                                        |
+| [@sdxc/x402](packages/x402)                 | x402 seller middleware for Remix: 402 challenges, facilitator verify/settle and payment receipts              |
 | [@sdxc/cron](packages/cron)                 | Cron schedules with zone-aware occurrences and descriptors                                                    |
 | [@sdxc/expression](packages/expression)     | Boolean conditions over a context, stored as typed JSON or written as text, with operators you add            |
 | [@sdxc/flags](packages/flags)               | Feature flag evaluation implementing the OpenFeature specification                                            |

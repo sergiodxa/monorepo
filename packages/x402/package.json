@@ -1,0 +1,26 @@
+{
+	"name": "@sdxc/x402",
+	"version": "0.0.1",
+	"description": "x402 seller middleware for Remix: 402 challenges, facilitator verify/settle and payment receipts on the request context",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts",
+		"./testing": "./src/testing.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
+	}
+}
