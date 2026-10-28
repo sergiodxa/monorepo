@@ -8,7 +8,7 @@ order: 2.1
 lastUpdated: 2026-10-28
 outcomes:
     - "How to open a session with connect and prefer using so it closes with the scope"
-    - "How to discover, list, call, and read tools and resources, with Result-shaped failures"
+    - "How to discover, list, and call tools, and read resources"
     - "How to type tool names with a catalog and optionally validate a call's result"
 ---
 
