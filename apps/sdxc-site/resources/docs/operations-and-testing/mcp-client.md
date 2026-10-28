@@ -1,6 +1,6 @@
 ---
 title: Call an MCP server
-description: Connect to a Streamable HTTP MCP endpoint from a Worker, browser, or Node process with one-word methods, Result-shaped failures, and a Disposable session.
+description: Call a modern Streamable HTTP MCP endpoint from a Worker, browser, Node, or Bun.
 section:
     title: Operations & testing
     order: 9
