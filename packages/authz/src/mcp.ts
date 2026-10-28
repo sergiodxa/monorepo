@@ -7,9 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext, CallToolResult, ToolContext, ToolMiddleware } from "@sdxc/mcp";
+import type {
+	AnyRequestContext,
+	CallToolResult,
+	ToolContext,
+	ToolMiddleware,
+} from "@sdxc/mcp/server";
 
-import { ForbiddenError } from "@sdxc/mcp";
+import { ForbiddenError } from "@sdxc/mcp/server";
 
 import type { Access } from "./access.js";
 import type { AnyAbility, ContextOf, FieldOf } from "./catalog.js";
