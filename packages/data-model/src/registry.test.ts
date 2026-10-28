@@ -9,7 +9,7 @@
 
 import { createJobContext, job, jobs } from "@sdxc/jobs";
 import * as s from "@sdxc/json-schema";
-import { createHandler, LATEST_PROTOCOL_VERSION, MetaKey, tool, tools } from "@sdxc/mcp";
+import { createHandler, LATEST_PROTOCOL_VERSION, MetaKey, tool, tools } from "@sdxc/mcp/server";
 import { Pagination } from "@sdxc/pagination";
 import { unwrap } from "@sdxc/result";
 import { Query } from "remix/data-table";
