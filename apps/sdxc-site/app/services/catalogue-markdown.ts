@@ -36,6 +36,13 @@ export const MARKETING_FOUNDATIONS_TITLE = "Marketing foundations";
 export const MARKETING_FOUNDATIONS_SUMMARY =
 	"Layout tokens and style factories for landing bands: measure, tones, spacing, and display type.";
 
+/** The marketing components page's heading. */
+export const MARKETING_COMPONENTS_TITLE = "Marketing components";
+
+/** What the marketing components page is, in the one line a listing shows. */
+export const MARKETING_COMPONENTS_SUMMARY =
+	"Landing primitives: MarketingSection, MarketingHeader, CtaGroup, Split, StatStrip, LogoCloud, and Feature.";
+
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
  *
