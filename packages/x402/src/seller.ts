@@ -60,6 +60,8 @@ export interface PriceRequest {
 	resource: ResourceInfo;
 	/** Optional scheme-specific extra fields. */
 	extra?: Record<string, unknown>;
+	/** Optional protocol extensions (for example Bazaar discovery). */
+	extensions?: Record<string, unknown>;
 }
 
 /**
@@ -115,11 +117,13 @@ export class Seller {
 			...price.resource,
 			serviceName: price.resource.serviceName ?? this.#serviceName,
 		};
-		return {
+		let body: PaymentRequired = {
 			x402Version: 2,
 			resource,
 			accepts: [this.requirements(price.amount, price.extra)],
 		};
+		if (price.extensions !== undefined) body.extensions = price.extensions;
+		return body;
 	}
 
 	/**

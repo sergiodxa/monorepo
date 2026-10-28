@@ -16,24 +16,35 @@ describe("Seller", () => {
 		let seller = testSeller();
 		let response = seller.challenge({
 			amount: "1000",
-			resource: { url: "https://apis.example/v1/qr", description: "QR" },
+			resource: { url: "https://api.example/v1/qr", description: "QR" },
 		});
 		expect(response.status).toBe(402);
 		expect(response.headers.get(PAYMENT_REQUIRED)).toBeTruthy();
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
 	});
 
+	test("paymentRequired carries optional extensions", () => {
+		let seller = testSeller();
+		let body = seller.paymentRequired({
+			amount: "1000",
+			resource: { url: "https://api.example/v1/qr", description: "QR" },
+			extensions: { bazaar: { info: { input: { type: "http" } } } },
+		});
+		expect(body.extensions?.bazaar).toEqual({ info: { input: { type: "http" } } });
+	});
+
 	test("collect settles a memory payment signature", async () => {
 		let seller = testSeller();
 		let requirements = seller.requirements("1000");
-		let request = new Request("https://apis.example/v1/qr", {
+		let request = new Request("https://api.example/v1/qr", {
 			method: "POST",
 			headers: { [PAYMENT_SIGNATURE]: memoryPaymentSignature(requirements) },
 		});
 		let receipt = await seller.collect(request, {
 			amount: "1000",
-			resource: { url: "https://apis.example/v1/qr", description: "QR" },
+			resource: { url: "https://api.example/v1/qr", description: "QR" },
 		});
+
 		expect(isSuccess(receipt)).toBe(true);
 		if (isSuccess(receipt)) {
 			expect(receipt.data.amount).toBe("1000");
@@ -44,26 +55,28 @@ describe("Seller", () => {
 	test("collect refuses a missing signature", async () => {
 		let seller = testSeller();
 		let receipt = await seller.collect(
-			new Request("https://apis.example/v1/qr", { method: "POST" }),
+			new Request("https://api.example/v1/qr", { method: "POST" }),
 			{
 				amount: "1000",
-				resource: { url: "https://apis.example/v1/qr", description: "QR" },
+				resource: { url: "https://api.example/v1/qr", description: "QR" },
 			},
 		);
+
 		expect(isFailure(receipt)).toBe(true);
 	});
 
 	test("collect refuses a wrong amount", async () => {
 		let seller = testSeller();
 		let wrong = seller.requirements("999");
-		let request = new Request("https://apis.example/v1/qr", {
+		let request = new Request("https://api.example/v1/qr", {
 			method: "POST",
 			headers: { [PAYMENT_SIGNATURE]: memoryPaymentSignature(wrong) },
 		});
 		let receipt = await seller.collect(request, {
 			amount: "1000",
-			resource: { url: "https://apis.example/v1/qr", description: "QR" },
+			resource: { url: "https://api.example/v1/qr", description: "QR" },
 		});
+
 		expect(isFailure(receipt)).toBe(true);
 	});
 });

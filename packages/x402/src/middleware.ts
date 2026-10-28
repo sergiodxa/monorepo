@@ -70,6 +70,8 @@ export interface RequirePaymentOptions {
 	resourceUrl?: (ctx: RequestContext) => string;
 	/** Optional scheme extras. */
 	extra?: Record<string, unknown>;
+	/** Optional protocol extensions stamped on the 402 (for example Bazaar). */
+	extensions?: Record<string, unknown>;
 }
 
 /**
@@ -92,6 +94,7 @@ export function requirePayment(options: RequirePaymentOptions): Middleware {
 			amount: options.amount,
 			resource,
 			extra: options.extra,
+			extensions: options.extensions,
 		};
 
 		let collected = await seller.collect(ctx.request, price);
