@@ -30,6 +30,7 @@ on:
           - blog
           - books
           - r3-auth
+          - sdxc-api
           - sdxc-site
           - uptime
           - all
@@ -208,9 +209,10 @@ jobs:
           fi
 
       # blog / uptime / r3-auth need D1 before migrate; fail here with the dashboard fix
-      # instead of building for a minute and dying on "exited with 1".
+      # instead of building for a minute and dying on "exited with 1". books, sdxc-api
+      # and sdxc-site have no D1 and skip migrate below.
       - name: Require D1 for apps that migrate
-        if: ${{ matrix.app != 'books' && matrix.app != 'sdxc-site' }}
+        if: ${{ matrix.app != 'books' && matrix.app != 'sdxc-api' && matrix.app != 'sdxc-site' }}
         env:
           D1_OK: ${{ needs.secrets.outputs.d1 }}
         run: |
@@ -243,8 +245,8 @@ jobs:
         run: bun "$GITHUB_WORKSPACE/packages/kit/src/bin.ts" run typegen
 
       # `sdxc deploy` builds, then runs the app's `db migrate --remote` and `deploy`. Apps
-      # without a database (books, sdxc-site) skip migrate. `--yes` stands in for the
-      # interactive confirmation a CI run cannot answer; `--dry-run` stops after the plan.
+      # without a database (books, sdxc-api, sdxc-site) skip migrate. `--yes` stands in for
+      # the interactive confirmation a CI run cannot answer; `--dry-run` stops after the plan.
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -253,7 +255,7 @@ jobs:
         run: |
           flags=(--yes)
           case "$APP" in
-            books|sdxc-site) flags+=(--skip migrate) ;;
+            books|sdxc-api|sdxc-site) flags+=(--skip migrate) ;;
           esac
           if [ "$DRY_RUN" = "true" ]; then
             flags+=(--dry-run)
