@@ -1,6 +1,7 @@
 /**
  * Looks up the priced operation from the route param and runs {@link requirePayment}
- * with that operation's amount and description.
+ * with that operation's amount and description, unless the operator Bearer token
+ * is present.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,10 +11,12 @@ import type { Middleware } from "remix/router";
 
 import { requirePayment } from "@sdxc/x402/middleware";
 
+import { isOwnerRequest } from "~/app/services/owner-access";
 import { findOperation } from "~/config/catalog";
 
 /**
  * Answers 404 when the `*id` is unknown, otherwise collects payment for that catalog row.
+ * The operator's `Authorization: Bearer` matching `OWNER_ACCESS_TOKEN` skips payment.
  */
 export const requireOperationPayment: Middleware = async (ctx, next) => {
 	let id = ctx.params.id;
@@ -30,6 +33,11 @@ export const requireOperationPayment: Middleware = async (ctx, next) => {
 			status: 404,
 			headers: { "content-type": "application/json" },
 		});
+	}
+
+	if (isOwnerRequest(ctx.request)) {
+		ctx.log.set({ owner: { bypass: true, operation: operation.id, surface: "http" } });
+		return next();
 	}
 
 	return requirePayment({

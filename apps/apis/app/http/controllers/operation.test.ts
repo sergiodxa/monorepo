@@ -102,4 +102,50 @@ describe("POST /v1/semver.satisfies", () => {
 		);
 		expect(response.status).toBe(404);
 	});
+
+	test("runs without payment when the operator Bearer token matches", async () => {
+		let response = await router.fetch(
+			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: "Bearer test-OWNER_ACCESS_TOKEN",
+				},
+				body: JSON.stringify({
+					version: "1.2.3",
+					comparison: "^",
+					against: "1.0.0",
+				}),
+			}),
+		);
+		expect(response.status).toBe(200);
+		expect(response.headers.get(PAYMENT_RESPONSE)).toBeNull();
+		let body = (await response.json()) as {
+			operation: string;
+			payment: null;
+			result: { satisfies: boolean };
+		};
+		expect(body.operation).toBe("semver.satisfies");
+		expect(body.payment).toBeNull();
+		expect(body.result.satisfies).toBe(true);
+	});
+
+	test("still requires payment when Authorization carries the wrong token", async () => {
+		let response = await router.fetch(
+			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: "Bearer wrong-token",
+				},
+				body: JSON.stringify({
+					version: "1.2.3",
+					comparison: "^",
+					against: "1.0.0",
+				}),
+			}),
+		);
+		expect(response.status).toBe(402);
+		expect(response.headers.get(PAYMENT_REQUIRED)).toBeTruthy();
+	});
 });

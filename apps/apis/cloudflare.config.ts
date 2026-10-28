@@ -33,6 +33,11 @@ export default defineConfig({
 			X402_NETWORK: bindings.secret(),
 			/** Asset contract charged (USDC on the configured network). */
 			X402_ASSET: bindings.secret(),
+			/**
+			 * Operator free pass. Send `Authorization: Bearer <value>` on priced
+			 * HTTP or MCP calls to skip x402. Mint with `randomToken({ prefix: "owner" })`.
+			 */
+			OWNER_ACCESS_TOKEN: bindings.secret(),
 			CF_VERSION_METADATA: bindings.versionMetadata(),
 		},
 	},

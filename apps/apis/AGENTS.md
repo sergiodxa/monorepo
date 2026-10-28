@@ -7,6 +7,8 @@ capability; HTML docs and npm packages stay free.
 
 - MUST keep operations declared in `config/catalog.ts` and implemented in `app/services/run.ts`
 - MUST collect payment through `@sdxc/x402` (`requireOperationPayment` / `requireMcpToolPayment`)
+- MUST allow only the operator to skip payment, via `Authorization: Bearer` matching `OWNER_ACCESS_TOKEN` (`isOwnerRequest`); a wrong or missing Bearer still charges
+- MUST NOT advertise the owner bypass on the public HTML landing
 - MUST NOT add D1, KV or other durable state without an ADR — this Worker is compute-only
 - MUST map routes through `lazy()` from `@sdxc/lazy-route`
 - MUST use `MemoryFacilitator` in tests via `@sdxc/x402/testing`
