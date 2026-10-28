@@ -39,7 +39,7 @@ describe("POST /v1/semver.satisfies", () => {
 
 	test("answers 402 without payment", async () => {
 		let response = await router.fetch(
-			new Request("https://apis.sdxc.dev/v1/semver.satisfies", {
+			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
@@ -55,7 +55,7 @@ describe("POST /v1/semver.satisfies", () => {
 
 	test("runs the operation after a memory payment", async () => {
 		let challenge = await router.fetch(
-			new Request("https://apis.sdxc.dev/v1/semver.satisfies", {
+			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
@@ -69,7 +69,7 @@ describe("POST /v1/semver.satisfies", () => {
 		let requirements = acceptedRequirements(challenge.headers.get(PAYMENT_REQUIRED));
 
 		let response = await router.fetch(
-			new Request("https://apis.sdxc.dev/v1/semver.satisfies", {
+			new Request("https://api.sdxc.dev/v1/semver.satisfies", {
 				method: "POST",
 				headers: {
 					"content-type": "application/json",
@@ -94,7 +94,7 @@ describe("POST /v1/semver.satisfies", () => {
 
 	test("answers 404 for an unknown operation", async () => {
 		let response = await router.fetch(
-			new Request("https://apis.sdxc.dev/v1/nope", {
+			new Request("https://api.sdxc.dev/v1/nope", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: "{}",

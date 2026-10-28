@@ -20,7 +20,7 @@ export default defineConfig({
 			enabled: true,
 			traces: { enabled: true, headSamplingRate: 0.1 },
 		},
-		domains: ["apis.sdxc.dev"],
+		domains: ["api.sdxc.dev"],
 		env: {
 			/** Receive wallet for settled payments. */
 			X402_PAY_TO: bindings.secret(),

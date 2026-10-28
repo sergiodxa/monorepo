@@ -4,7 +4,7 @@ Package-backed micro-APIs for agents: each `POST /v1/<id>` runs one `@sdxc/*` ca
 and charges through [x402](https://x402.org/). Humans keep installing packages from npm
 and reading docs on [sdxc.dev](https://sdxc.dev) for free.
 
-Production URL: https://apis.sdxc.dev (once deployed)
+Production URL: https://api.sdxc.dev (once deployed)
 
 ## Start
 
