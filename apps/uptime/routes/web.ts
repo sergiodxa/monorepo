@@ -448,6 +448,12 @@ export default route({
 			 */
 			ping: post("/api/v1/ping"),
 
+			/**
+			 * Accountless HTTP probe charged with x402. Marketing `/try` stays free; this
+			 * lane is for agents and CI that pay per call without a team or API key.
+			 */
+			guestProbe: post("/api/v1/guest/probe"),
+
 			monitors: {
 				...resources("/api/v1/monitors", { param: "monitorId", exclude: ["new", "edit"] }),
 				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */

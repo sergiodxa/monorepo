@@ -83,6 +83,7 @@
 		"@sdxc/uuid": "workspace:*",
 		"@sdxc/validate": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
+		"@sdxc/x402": "workspace:*",
 		"@sdxc/zip": "workspace:*",
 		"@sdxc/zone-file": "workspace:*",
 		"remix": "3.1.0"
