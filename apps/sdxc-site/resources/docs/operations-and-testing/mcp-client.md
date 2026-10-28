@@ -160,13 +160,13 @@ The client is `fetch`-based. There is no injectable fetch and no Remix peer on t
 Serving tools is a different entry — import [`@sdxc/mcp/server`](/api/mcp) and follow
 [Expose your app over MCP](/docs/operations-and-testing/mcp-server). Agents that still speak
 the handshake protocol need a local stdio face —
-[Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge).
+[Bridge Agents to a modern MCP server](/docs/operations-and-testing/mcp-bridge).
 
 ## Where to go next
 
 - [Expose your app over MCP](/docs/operations-and-testing/mcp-server) — declare tools and
   resources and mount them as a route.
-- [Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge) — the
+- [Bridge Agents to a modern MCP server](/docs/operations-and-testing/mcp-bridge) — the
   `mcp-bridge` bin for handshake-era agents.
 - [Result everywhere](/docs/conventions/result-everywhere) — the `Result` shape every method
   returns.
