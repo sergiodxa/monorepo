@@ -390,6 +390,7 @@
 		"./ui/animations": "./src/ui/animations.ts",
 		"./ui/behaviors": "./src/ui/behaviors.ts",
 		"./ui/mixins": "./src/ui/mixins.ts",
+		"./ui/patterns": "./src/ui/patterns.ts",
 		"./ui/styles": "./src/ui/styles.ts",
 		"./ui/utils": "./src/ui/utils.ts",
 		"./ui/reset.css": "./src/ui/reset.css",
