@@ -28,6 +28,11 @@
  *   tone of whatever sits behind it; high contrast turns it into a solid line.
  * - `--ui-image-outline`, the inset hairline that keeps an image's edge
  *   visible against a background of the same tone.
+ * - `--ui-marketing-*` layout and display tokens (measure, gutter, section
+ *   space steps, display tracking/weight/leading, lead measure/size, chapter
+ *   size, logo height, header height, CTA radius) plus `--ui-font-display`
+ *   for landing bands. Apps override per brand; brand colors stay on the
+ *   existing `--ui-color-*` / `--ui-*-*` scales.
  *
  * Dark Mode:
  * - Add .dark class to <html> for forced dark mode
@@ -93,6 +98,27 @@
 
 	/* Images: an inset hairline that holds the edge against a same-tone background */
 	--ui-image-outline: rgb(0 0 0 / 0.1);
+
+	/*
+	 * Marketing layout: measure, gutters, band spacing, and display type for
+	 * landing bands. Apps override per brand; 72rem matches a 1152px content
+	 * column (override to 76rem where a wider frame is already shipping).
+	 */
+	--ui-marketing-measure: 72rem;
+	--ui-marketing-gutter: 1rem;
+	--ui-marketing-section-space: 6rem;
+	--ui-marketing-section-space-compact: 4rem;
+	--ui-marketing-section-space-hero: 8rem;
+	--ui-marketing-display-tracking: -0.04em;
+	--ui-marketing-display-weight: 500;
+	--ui-marketing-display-leading: 1;
+	--ui-marketing-lead-measure: 40rem;
+	--ui-marketing-lead-size: 1.125rem;
+	--ui-marketing-chapter-size: 2.75rem;
+	--ui-marketing-logo-height: 1rem;
+	--ui-marketing-header-height: 4rem;
+	--ui-marketing-cta-radius: 0.5rem;
+	--ui-font-display: var(--ui-font-sans);
 }
 
 /* Touch input: grow every hitArea() target to the 44px a fingertip needs */

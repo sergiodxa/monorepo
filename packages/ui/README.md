@@ -358,6 +358,14 @@ Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `
 `rtlAwareGradientDirection(propertyName)`, `chartPalette(property, combinator?)` (one of
 `CHART_COLOR_SLOT_COUNT` chart colors from `data-color`) and `legendToggle()`.
 
+Marketing / landing recipes (same entry): `marketingContainer()`,
+`marketingSectionSpace("hero" | "normal" | "compact")`,
+`marketingBandTone("plain" | "tinted" | "grid" | "inverse")`, `displayHeading(1 | 2 | 3)`,
+`marketingLead()`, `marketingHairline()`, `logoCloudMark()`. They read the `--ui-marketing-*`
+tokens and optional `--ui-font-display` from `theme.css`. Apply `viewReveal()` from
+`@sdxc/ui/animations` on band hosts for scroll entry; reduced-motion is handled there — no
+separate marketing animation system.
+
 ### Utilities
 
 - **Color** — `parseColor(input): RGBAColor | null`, `formatHex`, `formatRgb`, `formatHsl`,
