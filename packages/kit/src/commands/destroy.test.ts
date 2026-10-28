@@ -172,7 +172,7 @@ describe("destroy", () => {
 describe("pruneImports", () => {
 	test("drops only the bindings whose last use the edit removed", () => {
 		let before = [
-			'import { createHandler, lazy } from "@sdxc/mcp";',
+			'import { createHandler, lazy } from "@sdxc/mcp/server";',
 			'import toolset from "~/app/mcp/tools";',
 			'import unused from "~/app/unused";',
 			"",
@@ -185,7 +185,7 @@ describe("pruneImports", () => {
 
 		expect(pruneImports("mcp.ts", before, after)).toBe(
 			[
-				'import { createHandler } from "@sdxc/mcp";',
+				'import { createHandler } from "@sdxc/mcp/server";',
 				'import unused from "~/app/unused";',
 				"",
 				"/** The lazy server. */",

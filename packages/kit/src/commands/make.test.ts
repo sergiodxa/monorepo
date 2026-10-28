@@ -899,7 +899,7 @@ describe("declaring and mapping", () => {
 			);
 			expect(tools).toContain('getPost: tool("get_post", {');
 			expect(mcp).toContain('article: resource("app://article", {');
-			expect(handler).toContain('import { createHandler, lazy } from "@sdxc/mcp";');
+			expect(handler).toContain('import { createHandler, lazy } from "@sdxc/mcp/server";');
 			expect(handler).toContain('import toolset from "~/app/mcp/tools";');
 			expect(handler).toContain(
 				'mcp.tools.map(toolset.getPost, lazy(() => import("~/app/mcp/tools/get-post")));',

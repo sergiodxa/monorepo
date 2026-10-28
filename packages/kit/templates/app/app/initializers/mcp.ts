@@ -4,7 +4,7 @@
  * `lazy()`, so a request imports only the handlers it reaches.
  */
 
-import { createHandler } from "@sdxc/mcp";
+import { createHandler } from "@sdxc/mcp/server";
 
 /** The server `app/http/controllers/mcp.ts` forwards each `/mcp` request to. */
 const mcp = createHandler({
