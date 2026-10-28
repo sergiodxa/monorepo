@@ -15,7 +15,7 @@
  */
 
 import { Log } from "@sdxc/logger";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { describe, expect, test } from "vitest";
 
 import mcp from "~/app/initializers/mcp";

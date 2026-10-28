@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { walk, walkResources } from "@sdxc/mcp";
+import { walk, walkResources } from "@sdxc/mcp/server";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 

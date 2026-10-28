@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import { published } from "~/app/mcp/glossary";
 import toolset from "~/app/mcp/tools";

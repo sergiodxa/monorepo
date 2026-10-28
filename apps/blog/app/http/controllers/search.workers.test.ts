@@ -8,7 +8,7 @@
  */
 
 import { parse } from "@sdxc/link-header";
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";

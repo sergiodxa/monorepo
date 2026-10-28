@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 
 import { listItem } from "~/app/mcp/posts";
 import toolset from "~/app/mcp/tools";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import { COLLECTION_PATHS, findPublished } from "~/app/mcp/posts";
 import toolset from "~/app/mcp/tools";
