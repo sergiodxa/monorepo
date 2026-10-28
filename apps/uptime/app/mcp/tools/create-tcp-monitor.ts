@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createTool } from "@sdxc/mcp";
+import { createTool } from "@sdxc/mcp/server";
 import { unwrap } from "@sdxc/result";
 
 import { forAbility } from "~/app/mcp/ability";

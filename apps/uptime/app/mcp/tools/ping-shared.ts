@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext } from "@sdxc/mcp";
+import type { AnyRequestContext } from "@sdxc/mcp/server";
 
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { ContentCheckRule } from "~/app/models/content-checks";

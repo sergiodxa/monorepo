@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resources } from "@sdxc/mcp";
+import { resources } from "@sdxc/mcp/server";
 
 /** Empty resource set; tools cover the API surface. */
 export default resources({});

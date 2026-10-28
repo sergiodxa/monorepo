@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext } from "@sdxc/mcp";
+import type { AnyRequestContext } from "@sdxc/mcp/server";
 
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { unwrap } from "@sdxc/result";
 
 import type { CreateAlertValues } from "~/app/http/controllers/api/alerts";

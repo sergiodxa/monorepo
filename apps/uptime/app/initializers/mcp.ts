@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ToolMiddleware } from "@sdxc/mcp";
+import type { ToolMiddleware } from "@sdxc/mcp/server";
 
 import { currentLog } from "@sdxc/logger";
-import { createHandler, lazy } from "@sdxc/mcp";
+import { createHandler, lazy } from "@sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 
