@@ -7,11 +7,11 @@ Revision `2026-07-28` of the [Model Context Protocol](https://modelcontextprotoc
 stateless: every request carries everything it needs and gets one complete response. Import the
 face you need — there is no root `@sdxc/mcp` export.
 
-| Entry              | Role                                                                 |
-| ------------------ | -------------------------------------------------------------------- |
-| `@sdxc/mcp/server` | Declare tools and resources; serve them over Streamable HTTP         |
-| `@sdxc/mcp/client` | Call a `2026-07-28` endpoint (`connect`, one-word session methods)   |
-| `mcp-bridge`       | Stdio bridge for agents (body ships in a follow-up; bin is reserved) |
+| Entry              | Role                                                               |
+| ------------------ | ------------------------------------------------------------------ |
+| `@sdxc/mcp/server` | Declare tools and resources; serve them over Streamable HTTP       |
+| `@sdxc/mcp/client` | Call a `2026-07-28` endpoint (`connect`, one-word session methods) |
+| `mcp-bridge`       | Stdio bridge: agent `2025-11-25` ↔ upstream `2026-07-28` HTTP      |
 
 ## Installation
 

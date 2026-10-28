@@ -155,16 +155,19 @@ async function handleInitialize(
  * @param id Agent request id.
  * @param outcome Upstream Result.
  */
-function forwardResult(
+function forwardResult<T extends object>(
 	id: RequestId,
-	outcome: Result<Record<string, unknown>, SessionUpstreamError>,
+	outcome: Result<T, SessionUpstreamError>,
 ): SessionOutcome {
 	if (isFailure(outcome)) {
 		return { kind: "response", response: upstreamFailure(id, outcome.error) };
 	}
 	return {
 		kind: "response",
-		response: agentReply(id, stripModernResultFields(outcome.data)),
+		response: agentReply(
+			id,
+			stripModernResultFields({ ...outcome.data } as Record<string, unknown>),
+		),
 	};
 }
 
