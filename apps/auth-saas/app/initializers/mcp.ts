@@ -7,7 +7,7 @@
  */
 
 import { requireToolAbility } from "@sdxc/authz/mcp";
-import { createHandler } from "@sdxc/mcp";
+import { createHandler } from "@sdxc/mcp/server";
 
 import { managementToolHandler } from "~/app/mcp/controller";
 import GENERATED_TOOLS from "~/app/mcp/tools";

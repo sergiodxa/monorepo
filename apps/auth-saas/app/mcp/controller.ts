@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ToolHandler } from "@sdxc/mcp";
+import type { ToolHandler } from "@sdxc/mcp/server";
 
-import { ToolError } from "@sdxc/mcp";
+import { ToolError } from "@sdxc/mcp/server";
 import { env } from "cloudflare:workers";
 
 import type { GeneratedTool } from "~/app/mcp/tools";
