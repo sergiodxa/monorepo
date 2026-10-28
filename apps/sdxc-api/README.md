@@ -129,13 +129,26 @@ curl -s -X POST https://api.sdxc.dev/v1/semver.satisfies \
 
 Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`.
 
+## Deploy
+
+There is no D1 database, so every ship skips migrate:
+
+```sh
+sdxc deploy --skip migrate
+```
+
+From GitHub Actions: **Actions → Deploy app → Run workflow**, pick `sdxc-api` (or
+`all`). Soft-launch secrets must already exist on the Worker before the first
+upload — see above. A dry run is available from the same workflow form.
+
 ## Scripts
 
-| Script             | Purpose                 |
-| ------------------ | ----------------------- |
-| `bun run dev`      | Dev server on port 3010 |
-| `bun run build`    | Production build        |
-| `sdxc run typegen` | Cloudflare env types    |
+| Script                       | Purpose                          |
+| ---------------------------- | -------------------------------- |
+| `bun run dev`                | Dev server on port 3010          |
+| `bun run build`              | Production build                 |
+| `sdxc run typegen`           | Cloudflare env types             |
+| `sdxc deploy --skip migrate` | Build and upload to Cloudflare   |
 
 ## Architecture
 
