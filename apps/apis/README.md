@@ -65,6 +65,27 @@ curl -i -X POST http://localhost:3010/v1/semver.satisfies \
 # 2. Retry with PAYMENT-SIGNATURE from @sdxc/x402/testing (memory facilitator)
 ```
 
+## Operator free pass
+
+Priced HTTP and MCP calls skip x402 when the request carries the operator secret:
+
+```sh
+curl -s -X POST https://api.sdxc.dev/v1/semver.satisfies \
+  -H 'content-type: application/json' \
+  -H "Authorization: Bearer $OWNER_ACCESS_TOKEN" \
+  -d '{"version":"1.2.3","comparison":"^","against":"1.0.0"}'
+```
+
+Mint a value with `randomToken({ prefix: "owner" })` from `@sdxc/crypto`, put it in
+`.dev.vars` locally, and set the production secret before deploy:
+
+```sh
+cf workers secrets update OWNER_ACCESS_TOKEN --name apis
+```
+
+For MCP, configure the same Bearer header on the client. Everyone else still pays;
+a wrong Bearer answers `402` like an unpaid call.
+
 ## Scripts
 
 | Script             | Purpose                 |

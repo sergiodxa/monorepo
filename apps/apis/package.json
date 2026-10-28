@@ -13,6 +13,7 @@
 		"@pitlane/assets": "0.1.0",
 		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/cli": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/health": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
