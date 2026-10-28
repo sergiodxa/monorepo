@@ -10052,7 +10052,8 @@
                         "dns-monitors:delete",
                         "tcp-monitors:delete",
                         "flow-monitors:delete",
-                        "cron-jobs:delete"
+                        "cron-jobs:delete",
+                        "mcp"
                       ]
                     },
                     "description": "At least one scope, each held by the calling key"
@@ -13009,7 +13010,8 @@
                 "dns-monitors:delete",
                 "tcp-monitors:delete",
                 "flow-monitors:delete",
-                "cron-jobs:delete"
+                "cron-jobs:delete",
+                "mcp"
               ]
             }
           },
