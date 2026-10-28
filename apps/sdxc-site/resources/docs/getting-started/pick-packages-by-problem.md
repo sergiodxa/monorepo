@@ -47,7 +47,7 @@ describes, and every package missing here is listed on the [API reference](/api)
 | write a typed client for someone else's API         | [`@sdxc/api-client`](/api/api-client)                                            | [Write a typed API client](/docs/http-apis/api-clients)                         |
 | expose the app to AI agents over MCP                | [`@sdxc/mcp`](/api/mcp)                                                          | [Expose your app over MCP](/docs/operations-and-testing/mcp-server)             |
 | call a Streamable HTTP MCP endpoint from code       | [`@sdxc/mcp`](/api/mcp)                                                          | [Call an MCP server](/docs/operations-and-testing/mcp-client)                   |
-| point Cursor at a modern-only MCP URL               | [`@sdxc/mcp`](/api/mcp)                                                          | [Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge) |
+| point handshake-era agents at a modern-only MCP URL | [`@sdxc/mcp`](/api/mcp)                                                          | [Bridge Agents to a modern MCP server](/docs/operations-and-testing/mcp-bridge) |
 
 ## Sign people in and decide what they may do
 

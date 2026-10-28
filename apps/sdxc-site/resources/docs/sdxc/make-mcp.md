@@ -168,7 +168,7 @@ test "search_posts answers over /mcp" {
 
 [Expose your app over MCP](/docs/operations-and-testing/mcp-server) covers the server, its context
 and testing a tool through it; [Call an MCP server](/docs/operations-and-testing/mcp-client) and
-[Bridge Cursor to a modern MCP server](/docs/operations-and-testing/mcp-bridge) cover the client
+[Bridge Agents to a modern MCP server](/docs/operations-and-testing/mcp-bridge) cover the client
 and the stdio bridge; [`@sdxc/mcp`](/api/mcp) is the whole API.
 
 ## Where to go next
