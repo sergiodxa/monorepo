@@ -493,6 +493,19 @@ export default defineConfig({
 				},
 			},
 			{
+				root: "apps/apis",
+				plugins: [cloudflareWorkersStub()],
+				resolve: {
+					tsconfigPaths: true,
+				},
+				test: {
+					name: "apis",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+					testTimeout: 20_000,
+				},
+			},
+			{
 				root: "apps/sdxc-site",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -613,6 +626,8 @@ export default defineConfig({
 			"**/openapi.snapshot.json",
 			"packages/epub/src/fixtures/**",
 			"test/browser-public/**",
+			/** Generated Worker env types; `cf workers types` owns their layout. */
+			"**/.cloudflare/**",
 		],
 		useTabs: true,
 		experimentalSortPackageJson: true,
