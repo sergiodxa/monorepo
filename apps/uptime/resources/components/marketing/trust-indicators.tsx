@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/component";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { gap, inlineFlex, items } from "@sdxc/u/layout";
@@ -33,6 +33,11 @@ namespace MarketingTrustIndicators {
 
 	export interface Props {
 		indicators: Indicator[];
+		/**
+		 * Forwarded to {@link ProofStrip} so landing bands can share scroll
+		 * reveals and other host mixins without a second wrapper.
+		 */
+		mix?: TagProps<"section">["mix"];
 	}
 }
 
@@ -41,34 +46,38 @@ namespace MarketingTrustIndicators {
  * below the stack breakpoint, opening wider on large containers.
  */
 export default function MarketingTrustIndicators(handle: Handle<MarketingTrustIndicators.Props>) {
-	return () => (
-		<ProofStrip tone="tinted">
-			<StatStrip variant="gap">
-				{handle.props.indicators.map((indicator) => (
-					<StatStrip.Item key={indicator.label} label={indicator.label} mix={[items("center")]}>
-						<span
-							mix={[
-								inlineFlex(),
-								items("center"),
-								gap(1),
-								fontSize("3xl"),
-								weight(700),
-								leading(1),
-								fg("neutral.emphasis"),
-							]}
-						>
-							<span mix={[fg("brand")]}>{indicator.icon}</span>
-							{indicator.valueLabel ? (
-								<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
-									{indicator.value}
-								</span>
-							) : (
-								<span mix={[font("mono")]}>{indicator.value}</span>
-							)}
-						</span>
-					</StatStrip.Item>
-				))}
-			</StatStrip>
-		</ProofStrip>
-	);
+	return () => {
+		let { indicators, mix } = handle.props;
+
+		return (
+			<ProofStrip tone="tinted" mix={mix}>
+				<StatStrip variant="gap">
+					{indicators.map((indicator) => (
+						<StatStrip.Item key={indicator.label} label={indicator.label} mix={[items("center")]}>
+							<span
+								mix={[
+									inlineFlex(),
+									items("center"),
+									gap(1),
+									fontSize("3xl"),
+									weight(700),
+									leading(1),
+									fg("neutral.emphasis"),
+								]}
+							>
+								<span mix={[fg("brand")]}>{indicator.icon}</span>
+								{indicator.valueLabel ? (
+									<span mix={[font("mono")]} role="img" aria-label={indicator.valueLabel}>
+										{indicator.value}
+									</span>
+								) : (
+									<span mix={[font("mono")]}>{indicator.value}</span>
+								)}
+							</span>
+						</StatStrip.Item>
+					))}
+				</StatStrip>
+			</ProofStrip>
+		);
+	};
 }

@@ -75,11 +75,15 @@ import {
 	MarketingSection,
 	TextField,
 } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
+	AccentText,
+	Bento,
 	CheckList,
 	CheckRow,
 	FaqBand,
 	FeatureBand,
+	IconWell,
 	LandingHero,
 	ProductFrame,
 } from "@sdxc/ui/patterns";
@@ -113,7 +117,6 @@ import {
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
 import { BROWSER_FLOW_EXAMPLES } from "~/resources/content/browser-flows";
@@ -390,33 +393,34 @@ export default createAction(routes.home, async (ctx) => {
 					mediaPlacement="end"
 					eyebrow={t("landing.hero.pill")}
 					eyebrowVariant="pill"
+					mix={[viewReveal()]}
 					title={
 						<Trans
 							intl={ctx.intl}
 							i18nKey="landing.hero.title"
-							components={{ strong: <span mix={[fg("brand")]} /> }}
+							components={{ strong: <AccentText>{""}</AccentText> }}
 						/>
 					}
 					description={t("landing.hero.description")}
 					actions={
-						<>
-							<AuthCta
-								isSignedIn={isSignedIn}
-								dashboardLabel={t("landing.hero.cta.in")}
-								startLabel={t("landing.hero.cta.out")}
-								icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-							/>
-							<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
-								{t("landing.hero.cta.pricing")}
-							</LinkButton>
-						</>
-					}
-					below={
-						<CheckList orientation="horizontal">
-							{HERO_TRUST_INDICATORS.map((indicator) => (
-								<CheckRow key={indicator}>{indicator}</CheckRow>
-							))}
-						</CheckList>
+						<div mix={[vstack({ gap: 4, align: "start" }), is("full")]}>
+							<div mix={[inlineFlex(), flexWrap(), items("center"), gap(3)]}>
+								<AuthCta
+									isSignedIn={isSignedIn}
+									dashboardLabel={t("landing.hero.cta.in")}
+									startLabel={t("landing.hero.cta.out")}
+									icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+								/>
+								<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
+									{t("landing.hero.cta.pricing")}
+								</LinkButton>
+							</div>
+							<CheckList orientation="horizontal">
+								{HERO_TRUST_INDICATORS.map((indicator) => (
+									<CheckRow key={indicator}>{indicator}</CheckRow>
+								))}
+							</CheckList>
+						</div>
 					}
 					media={
 						<ProductFrame lights>
@@ -435,7 +439,7 @@ export default createAction(routes.home, async (ctx) => {
 					}
 				/>
 
-				<MarketingSection id="try" spacing="compact" align="center">
+				<MarketingSection id="try" spacing="compact" align="center" mix={[viewReveal()]}>
 					<HeadingScope>
 						<Heading mix={[m(0), fontSize("2xl"), textAlign("center")]}>
 							{t("landing.try.title")}
@@ -478,47 +482,105 @@ export default createAction(routes.home, async (ctx) => {
 					</form>
 				</MarketingSection>
 
-				<MarketingTrustIndicators indicators={TRUST_INDICATORS} />
+				<MarketingTrustIndicators indicators={TRUST_INDICATORS} mix={[viewReveal()]} />
 
-				<FeatureBand
-					id="benefits"
-					layout="grid"
-					columns={3}
-					eyebrow={t("landing.benefits.badge")}
-					title={t("landing.benefits.title")}
-					description={t("landing.benefits.description")}
-				>
-					{BENEFITS.map((benefit) => (
-						<MarketingFeatureRow
-							key={benefit.title}
-							icon={benefit.icon}
-							title={benefit.title}
-							description={benefit.description}
-						/>
-					))}
-				</FeatureBand>
+				<MarketingSection id="benefits" mix={[viewReveal()]}>
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={t("landing.benefits.badge")}
+							description={t("landing.benefits.description")}
+							align="center"
+						>
+							{t("landing.benefits.title")}
+						</MarketingHeader>
+					</HeadingScope>
+					<HeadingScope>
+						<Bento columns={3}>
+							{BENEFITS.map((benefit) => (
+								<Bento.Cell key={benefit.title}>
+									<IconWell size="sm" aria-hidden="true">
+										{benefit.icon}
+									</IconWell>
+									<Bento.Title>{benefit.title}</Bento.Title>
+									<Bento.Body>{benefit.description}</Bento.Body>
+								</Bento.Cell>
+							))}
+						</Bento>
+					</HeadingScope>
+				</MarketingSection>
 
 				<FeatureBand
 					id="features"
-					layout="grid"
-					columns={3}
+					layout="split"
+					lean="media"
 					eyebrow={t("landing.features.badge")}
 					title={t("landing.features.title")}
 					description={t("landing.features.description")}
+					mix={[viewReveal()]}
+					media={
+						<ProductFrame lights>
+							<picture mix={[block(), overflow("hidden")]}>
+								<source media="(prefers-color-scheme: dark)" srcSet={SCREENSHOT_DARK} />
+								<source media="(prefers-color-scheme: light)" srcSet={SCREENSHOT_LIGHT} />
+								<img
+									src={SCREENSHOT_LIGHT}
+									alt={t("landing.hero.screenshot.alt")}
+									width={3216}
+									height={2080}
+									mix={[block(), is("full"), bs("auto")]}
+								/>
+							</picture>
+						</ProductFrame>
+					}
 				>
-					{FEATURE_LINKS.map((feature) => (
-						<MarketingCard
-							key={feature.href}
-							href={feature.href}
-							icon={feature.icon}
-							title={feature.title}
-							description={feature.description}
-							learnMore={t("landing.features.learnMore")}
-						/>
-					))}
+					<ul>
+						{FEATURE_LINKS.slice(0, 5).map((feature) => (
+							<li key={feature.href}>{feature.title}</li>
+						))}
+					</ul>
 				</FeatureBand>
 
-				<MarketingSection id="browser-flows" tone="tinted">
+				<MarketingSection spacing="compact" mix={[viewReveal()]}>
+					<HeadingScope>
+						<Bento columns={4}>
+							{FEATURE_LINKS.map((feature) => (
+								<Bento.Cell key={feature.href}>
+									<a
+										href={feature.href}
+										data-rmx-prefetch="intent"
+										mix={[
+											vstack({ gap: 3, align: "stretch" }),
+											bs("full"),
+											textDecoration("none"),
+											fg("inherit"),
+										]}
+									>
+										<IconWell size="sm" aria-hidden="true">
+											{feature.icon}
+										</IconWell>
+										<Bento.Title>{feature.title}</Bento.Title>
+										<Bento.Body>{feature.description}</Bento.Body>
+										<span
+											mix={[
+												inlineFlex(),
+												items("center"),
+												gap(1),
+												fontSize("sm"),
+												weight(500),
+												fg("brand"),
+											]}
+										>
+											{t("landing.features.learnMore")}
+											<ArrowRightIcon size={16} strokeWidth={1.5} />
+										</span>
+									</a>
+								</Bento.Cell>
+							))}
+						</Bento>
+					</HeadingScope>
+				</MarketingSection>
+
+				<MarketingSection id="browser-flows" tone="tinted" mix={[viewReveal()]}>
 					<HeadingScope>
 						<MarketingHeader
 							eyebrow={t("landing.browserExamples.badge")}
@@ -591,24 +653,32 @@ export default createAction(routes.home, async (ctx) => {
 					</div>
 				</MarketingSection>
 
-				<FeatureBand
-					layout="grid"
-					columns={3}
-					eyebrow={t("landing.completeFeatureSet.badge")}
-					title={t("landing.completeFeatureSet.title")}
-					description={t("landing.completeFeatureSet.description")}
-				>
-					{COMPLETE_FEATURES.map((feature) => (
-						<MarketingFeatureRow
-							key={feature.title}
-							icon={feature.icon}
-							title={feature.title}
-							description={feature.description}
-						/>
-					))}
-				</FeatureBand>
+				<MarketingSection mix={[viewReveal()]}>
+					<HeadingScope>
+						<MarketingHeader
+							eyebrow={t("landing.completeFeatureSet.badge")}
+							description={t("landing.completeFeatureSet.description")}
+							align="center"
+						>
+							{t("landing.completeFeatureSet.title")}
+						</MarketingHeader>
+					</HeadingScope>
+					<HeadingScope>
+						<Bento columns={3}>
+							{COMPLETE_FEATURES.map((feature) => (
+								<Bento.Cell key={feature.title}>
+									<IconWell size="sm" aria-hidden="true">
+										{feature.icon}
+									</IconWell>
+									<Bento.Title>{feature.title}</Bento.Title>
+									<Bento.Body>{feature.description}</Bento.Body>
+								</Bento.Cell>
+							))}
+						</Bento>
+					</HeadingScope>
+				</MarketingSection>
 
-				<MarketingSection tone="tinted">
+				<MarketingSection tone="tinted" mix={[viewReveal()]}>
 					<HeadingScope>
 						<MarketingHeader
 							eyebrow={t("landing.useCases.badge")}
@@ -672,7 +742,7 @@ export default createAction(routes.home, async (ctx) => {
 					</div>
 				</MarketingSection>
 
-				<MarketingSection id="pricing" tone="tinted">
+				<MarketingSection id="pricing" tone="tinted" mix={[viewReveal()]}>
 					<HeadingScope>
 						<MarketingHeader
 							eyebrow={t("landing.pricing.badge")}
@@ -693,6 +763,7 @@ export default createAction(routes.home, async (ctx) => {
 					eyebrow={t("landing.faq.badge")}
 					title={t("landing.faq.title")}
 					description={t("landing.faq.description")}
+					mix={[viewReveal()]}
 				>
 					<FaqAccordion items={firstFaqColumn} />
 					<FaqAccordion items={secondFaqColumn} />
