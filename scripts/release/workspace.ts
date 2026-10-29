@@ -20,13 +20,6 @@ export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 /** The npm scope every workspace package publishes under; dependencies in it are internal. */
 export const WORKSPACE_SCOPE = "@sdxc/";
 
-/**
- * Workspace packages published under their bare directory name instead of the scope. Each is
- * as internal as a scoped one: its `workspace:` ranges are pinned, and it republishes with
- * every package it depends on.
- */
-export const UNSCOPED_PACKAGES: ReadonlySet<string> = new Set(["sdxc"]);
-
 /** The repository on GitHub, for release links. */
 export const REPOSITORY_PAGE = "https://github.com/sergiodxa/monorepo";
 
@@ -160,14 +153,14 @@ export function packageFromManifest(dir: string, manifest: PackageManifest): Pac
 	};
 }
 
-/** The name `packages/<dir>` publishes under: `@sdxc/<dir>`, or `<dir>` for an unscoped package. */
+/** The name `packages/<dir>` publishes under: `@sdxc/<dir>`. */
 export function packageNameFor(dir: string): string {
-	return UNSCOPED_PACKAGES.has(dir) ? dir : `${WORKSPACE_SCOPE}${dir}`;
+	return `${WORKSPACE_SCOPE}${dir}`;
 }
 
-/** Whether `name` is published from this workspace, scoped or listed in {@link UNSCOPED_PACKAGES}. */
+/** Whether `name` is published from this workspace under the `@sdxc` scope. */
 export function isWorkspacePackageName(name: string): boolean {
-	return name.startsWith(WORKSPACE_SCOPE) || UNSCOPED_PACKAGES.has(name);
+	return name.startsWith(WORKSPACE_SCOPE);
 }
 
 /**
