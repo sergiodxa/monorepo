@@ -8,8 +8,8 @@
  */
 
 import HEALTH_SCHEMA from "@sdxc/health/schema.json" with { type: "json" };
+import { policy } from "@sdxc/http/cache";
 import { createAction } from "remix/router";
-import { policy } from "sdxc/http/cache";
 
 import routes from "~/routes/web";
 

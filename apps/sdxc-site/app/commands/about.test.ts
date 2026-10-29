@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { invoke } from "sdxc/cli/test";
+import { invoke } from "@sdxc/cli/test";
 import { describe, expect, test } from "vitest";
 
 import { cli } from "~/app/initializers/cli";
@@ -18,7 +18,7 @@ describe("about", () => {
 
 		expect(run.code).toBe(0);
 		expect(run.stdout).toContain(manifest.name);
-		expect(run.stdout).toContain(`sdxc     ${manifest.dependencies.sdxc}`);
+		expect(run.stdout).toContain(`@sdxc/cli  ${manifest.dependencies["@sdxc/cli"]}`);
 	});
 
 	test("--json prints the same as one JSON document", async () => {

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SecurityHeaders } from "sdxc/security-headers";
+import type { SecurityHeaders } from "@sdxc/security-headers";
 
 /** Where the Cloudflare Web Analytics beacon script loads from. */
 const WEB_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";

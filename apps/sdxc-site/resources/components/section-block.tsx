@@ -9,13 +9,13 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { raw } from "sdxc/u/general";
-import { vstack } from "sdxc/u/layout";
-import { m, maxIs } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { balance, font, leading, text, textTransform, tracking } from "sdxc/u/typography";
-import { HeadingScope, MarketingHeader } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { m, maxIs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { balance, font, leading, text, textTransform, tracking } from "@sdxc/u/typography";
+import { HeadingScope, MarketingHeader } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

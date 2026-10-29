@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { diffInDays, formatWeekday, fromDayKey, quarterRange, systemTimeZone } from "sdxc/dates";
-import { isSuccess } from "sdxc/result";
+import { diffInDays, formatWeekday, fromDayKey, quarterRange, systemTimeZone } from "@sdxc/dates";
+import { isSuccess } from "@sdxc/result";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createCommand, success } from "sdxc/cli";
+import { createCommand, success } from "@sdxc/cli";
 
 import commandset from "~/app/commands";
 
@@ -22,7 +22,7 @@ function runtime(): string {
 export default createCommand(commandset.about, (ctx) => {
 	let about = {
 		name: manifest.name,
-		sdxc: manifest.dependencies.sdxc,
+		cli: manifest.dependencies["@sdxc/cli"],
 		remix: manifest.dependencies.remix,
 		runtime: runtime(),
 	};
@@ -31,7 +31,7 @@ export default createCommand(commandset.about, (ctx) => {
 		return success();
 	}
 	ctx.stdout(
-		`${about.name}\n  sdxc     ${about.sdxc}\n  remix    ${about.remix}\n  runtime  ${about.runtime}\n`,
+		`${about.name}\n  @sdxc/cli  ${about.cli}\n  remix      ${about.remix}\n  runtime    ${about.runtime}\n`,
 	);
 	return success();
 });

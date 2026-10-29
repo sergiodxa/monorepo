@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { toDayKey } from "sdxc/dates";
-import { createRandom } from "sdxc/random";
+import { toDayKey } from "@sdxc/dates";
+import { createRandom } from "@sdxc/random";
 
 import type { SidebarAdDefinition } from "~/resources/content/ads";
 

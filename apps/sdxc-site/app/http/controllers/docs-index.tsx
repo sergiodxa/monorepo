@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { m } from "@sdxc/u/size";
 import { createAction } from "remix/router";
-import { m } from "sdxc/u/size";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";

@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/component";
 
-import { flex, items } from "sdxc/u/layout";
-import { minBs, pb, pi } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Sidebar } from "sdxc/ui";
+import { flex, items } from "@sdxc/u/layout";
+import { minBs, pb, pi } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Sidebar } from "@sdxc/ui";
 
 import type { NavGroup, NavTree } from "~/app/services/navigation-tree";
 

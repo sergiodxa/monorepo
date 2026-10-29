@@ -6,16 +6,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Markdown } from "@sdxc/markdown";
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text } from "@sdxc/u/typography";
+import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Markdown } from "sdxc/markdown";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, text } from "sdxc/u/typography";
-import { Typeset } from "sdxc/ui";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";

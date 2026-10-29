@@ -11,9 +11,9 @@
 
 import type { Handle } from "remix/component";
 
-import { grow, shrink, vstack } from "sdxc/u/layout";
-import { overflowY } from "sdxc/u/overflow";
-import { minBs } from "sdxc/u/size";
+import { grow, shrink, vstack } from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { minBs } from "@sdxc/u/size";
 
 import type { Anchor } from "~/app/services/article";
 

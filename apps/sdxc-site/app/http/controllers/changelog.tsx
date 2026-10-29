@@ -6,14 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDate } from "@sdxc/dates";
+import { toRemix } from "@sdxc/markdown/remix";
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text, tracking, weight } from "@sdxc/u/typography";
+import { Separator, Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
-import { formatDate } from "sdxc/dates";
-import { toRemix } from "sdxc/markdown/remix";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, text, tracking, weight } from "sdxc/u/typography";
-import { Separator, Typeset } from "sdxc/ui";
 
 import type { Anchor } from "~/app/services/article";
 

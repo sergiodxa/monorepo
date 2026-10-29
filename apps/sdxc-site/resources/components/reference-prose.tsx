@@ -8,8 +8,8 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { font } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { font } from "@sdxc/u/typography";
 
 import { toRuns } from "~/app/services/reference-prose";
 

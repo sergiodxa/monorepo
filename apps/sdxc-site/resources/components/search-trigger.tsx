@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/component";
 
-import { SearchIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { Keyboard, LinkButton } from "sdxc/ui";
-import { keyComboGlyphs } from "sdxc/ui/utils";
+import { SearchIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { Keyboard, LinkButton } from "@sdxc/ui";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 
 import routes from "~/routes/web";
 

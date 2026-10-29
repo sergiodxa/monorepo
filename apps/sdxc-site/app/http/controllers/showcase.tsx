@@ -7,15 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
+import { bg, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, mbs, p } from "@sdxc/u/size";
+import { font, leading, nowrap, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { Badge, LinkButton } from "@sdxc/ui";
 import { createAction } from "remix/router";
-import { ArrowRightIcon, ArrowUpRightIcon } from "sdxc/icons";
-import { bg, fg } from "sdxc/u/color";
-import { raw } from "sdxc/u/general";
-import { flexWrap, hstack, vstack } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { is, m, maxIs, mbs, p } from "sdxc/u/size";
-import { font, leading, nowrap, text, textTransform, tracking, weight } from "sdxc/u/typography";
-import { Badge, LinkButton } from "sdxc/ui";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";

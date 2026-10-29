@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createResource } from "sdxc/mcp/server";
+import { createResource } from "@sdxc/mcp/server";
 
 import { listCatalogueResources } from "~/app/mcp/catalogue";
 import resourceset from "~/app/mcp/resources";

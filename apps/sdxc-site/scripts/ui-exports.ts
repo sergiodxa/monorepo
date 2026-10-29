@@ -10,7 +10,7 @@
 import type { DocNode } from "@sdxc/jsdoc";
 
 import { extract } from "@sdxc/jsdoc";
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 
 import type { PropRow } from "~/app/services/components";
 import type { UiExportReference, UiMethod, UiSymbol } from "~/app/services/ui-exports";

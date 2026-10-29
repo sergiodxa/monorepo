@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { OptionSelections } from "~/app/services/option-groups";

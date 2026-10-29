@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The records the cron's logger wrote during the current test. */

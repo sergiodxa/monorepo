@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "sdxc/u/layout";
-import { LinkButton } from "sdxc/ui";
+import { vstack } from "@sdxc/u/layout";
+import { LinkButton } from "@sdxc/ui";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { NavTree } from "~/app/services/navigation";

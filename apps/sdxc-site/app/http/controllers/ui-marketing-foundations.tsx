@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { container, gap, inlineFlex, items, relative, vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { font, nowrap, text, tracking, weight } from "sdxc/u/typography";
-import { viewReveal } from "sdxc/ui/animations";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { container, gap, inlineFlex, items, relative, vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
 	displayHeading,
 	logoCloudMark,
@@ -20,7 +20,7 @@ import {
 	marketingHairline,
 	marketingLead,
 	marketingSectionSpace,
-} from "sdxc/ui/styles";
+} from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";

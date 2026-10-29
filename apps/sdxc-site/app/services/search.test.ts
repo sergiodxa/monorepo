@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "sdxc/markdown";
-import { isSuccess } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { prepareArticle, preparePackageReadme, tableOfContents } from "~/app/services/article";

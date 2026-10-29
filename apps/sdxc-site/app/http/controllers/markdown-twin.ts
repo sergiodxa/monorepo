@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { markdown, text } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { markdown, text } from "sdxc/http/response";
 
 import { withBundleCache } from "~/app/http/caching";
 import {

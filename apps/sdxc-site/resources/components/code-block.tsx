@@ -9,15 +9,15 @@
 
 import type { Handle } from "remix/component";
 
-import { FileCodeIcon } from "sdxc/icons";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { hstack, inlineFlex, shrink } from "sdxc/u/layout";
-import { overflowX } from "sdxc/u/overflow";
-import { m, p } from "sdxc/u/size";
-import { font, text, weight } from "sdxc/u/typography";
-import { Separator } from "sdxc/ui";
+import { FileCodeIcon } from "@sdxc/icons";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { hstack, inlineFlex, shrink } from "@sdxc/u/layout";
+import { overflowX } from "@sdxc/u/overflow";
+import { m, p } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
+import { Separator } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
-import type { DocumentAssets } from "sdxc/assets-middleware";
 
-import { ChevronRightIcon } from "sdxc/icons";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded, shadow, transition } from "sdxc/u/effects";
-import { cursor, listStyle, raw } from "sdxc/u/general";
+import { ChevronRightIcon } from "@sdxc/icons";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, shadow, transition } from "@sdxc/u/effects";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
 import {
 	contents,
 	gap,
@@ -24,13 +24,13 @@ import {
 	items,
 	shrink,
 	vstack,
-} from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { is, m, maxIs, mbs, p, pi } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { rotate } from "sdxc/u/transform";
-import { font, nowrap, tabularNums, text } from "sdxc/u/typography";
-import { FieldError, Heading } from "sdxc/ui";
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, mbs, p, pi } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { rotate } from "@sdxc/u/transform";
+import { font, nowrap, tabularNums, text } from "@sdxc/u/typography";
+import { FieldError, Heading } from "@sdxc/ui";
 
 import type { SearchResults } from "~/app/services/search-results";
 

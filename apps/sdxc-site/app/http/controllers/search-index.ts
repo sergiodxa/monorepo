@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
-import { json } from "sdxc/http/response";
 
 import { withBundleCache } from "~/app/http/caching";
 import { buildSearchIndex } from "~/app/services/search";

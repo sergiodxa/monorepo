@@ -9,16 +9,16 @@
 
 import type { Handle } from "remix/component";
 
+import { ListIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
+import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { listStyle, pseudoContent } from "@sdxc/u/general";
+import { absolute, block, hstack, insBs, insIs, relative, vstack } from "@sdxc/u/layout";
+import { bs, is, m, mis, p, pis } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { text, truncate, weight } from "@sdxc/u/typography";
 import { clientEntry, ref } from "remix/component";
-import { ListIcon } from "sdxc/icons";
-import { bg, borderEdge, fg } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { listStyle, pseudoContent } from "sdxc/u/general";
-import { absolute, block, hstack, insBs, insIs, relative, vstack } from "sdxc/u/layout";
-import { bs, is, m, mis, p, pis } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { text, truncate, weight } from "sdxc/u/typography";
 
 /**
  * The band at the top of the viewport a heading has to sit in to count as the one

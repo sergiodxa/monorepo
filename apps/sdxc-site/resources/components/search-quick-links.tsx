@@ -9,14 +9,14 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, fg } from "sdxc/u/color";
-import { rounded, visibility } from "sdxc/u/effects";
-import { listStyle } from "sdxc/u/general";
-import { gap, grid, gridTemplate, hidden, items } from "sdxc/u/layout";
-import { dark, light, startingStyle } from "sdxc/u/responsive";
-import { m, minIs, p } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { text, textDecoration, truncate, weight } from "sdxc/u/typography";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded, visibility } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, hidden, items } from "@sdxc/u/layout";
+import { dark, light, startingStyle } from "@sdxc/u/responsive";
+import { m, minIs, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 
 import type { SearchKind } from "~/app/services/search-query";
 

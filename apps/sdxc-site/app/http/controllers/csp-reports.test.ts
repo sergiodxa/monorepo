@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Log } from "@sdxc/logger";
 import type { Middleware, RequestHandler } from "remix/router";
-import type { Log } from "sdxc/logger";
 
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
-import { createLogger } from "sdxc/logger";
-import { log } from "sdxc/logger/middleware";
 import { describe, expect, test } from "vitest";
 
 import routes from "~/routes/web";

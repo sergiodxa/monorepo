@@ -9,14 +9,14 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { bg, border, fg, outline } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { cursor, raw } from "sdxc/u/general";
-import { basis, flex, flexWrap, gap, hidden } from "sdxc/u/layout";
-import { minIs, p } from "sdxc/u/size";
-import { precededBy, when } from "sdxc/u/state";
-import { text, weight } from "sdxc/u/typography";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
+import { basis, flex, flexWrap, gap, hidden } from "@sdxc/u/layout";
+import { minIs, p } from "@sdxc/u/size";
+import { precededBy, when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 
 import type { OptionGroupName } from "~/app/services/option-groups";
 import type { MarkdownProps } from "~/resources/components/markdown-props";

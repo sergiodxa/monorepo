@@ -8,10 +8,10 @@
 
 import type { Handle } from "remix/component";
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { bg, border, borderEdge, fg, outline } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { cursor, listStyle, raw } from "sdxc/u/general";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
 import {
 	flex,
 	flexWrap,
@@ -22,12 +22,12 @@ import {
 	hstack,
 	repeat,
 	vstack,
-} from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { media } from "sdxc/u/responsive";
-import { m, p } from "sdxc/u/size";
-import { precededBy, when } from "sdxc/u/state";
-import { font, text, textTransform, tracking, weight } from "sdxc/u/typography";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { m, p } from "@sdxc/u/size";
+import { precededBy, when } from "@sdxc/u/state";
+import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

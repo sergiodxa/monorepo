@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { tokenize } from "sdxc/highlight";
+import { tokenize } from "@sdxc/highlight";
 
 import CodeBlock from "~/resources/components/code-block";
 

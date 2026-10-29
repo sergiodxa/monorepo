@@ -10,9 +10,9 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { raw } from "sdxc/u/general";
-import { text } from "sdxc/u/typography";
-import { MarketingSection } from "sdxc/ui";
+import { raw } from "@sdxc/u/general";
+import { text } from "@sdxc/u/typography";
+import { MarketingSection } from "@sdxc/ui";
 
 namespace Band {
 	/** What sits behind the band: nothing, a brand glow from one corner, or a faded grid. */

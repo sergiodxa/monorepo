@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { m } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { text } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { m } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_HANDLE, AUTHOR_X_URL } from "~/config/constants";
 import routes from "~/routes/web";

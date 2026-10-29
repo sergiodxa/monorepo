@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixOptions } from "sdxc/markdown/remix";
+import type { RemixOptions } from "@sdxc/markdown/remix";
 
 import Actions from "~/resources/components/actions";
 import CodeBlock from "~/resources/components/code-block";

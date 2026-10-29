@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Cache } from "sdxc/cache";
+import type { Cache } from "@sdxc/cache";
 
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env, waitUntil } from "cloudflare:workers";
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
 
 /**
  * The store for one request. A write is handed to the invocation rather than awaited,

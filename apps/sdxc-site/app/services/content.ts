@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MarkdownParseError, MarkdownWalkError } from "sdxc/markdown";
-import type { Result } from "sdxc/result";
+import type { MarkdownParseError, MarkdownWalkError } from "@sdxc/markdown";
+import type { Result } from "@sdxc/result";
 
+import { Markdown } from "@sdxc/markdown";
+import { FRAME_TAG } from "@sdxc/markdown/plugin/frames";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { Markdown } from "sdxc/markdown";
-import { FRAME_TAG } from "sdxc/markdown/plugin/frames";
-import { isFailure } from "sdxc/result";
 
 import { prepareArticle } from "~/app/services/article";
 import { OPTION_GROUP_NAMES } from "~/app/services/option-groups";

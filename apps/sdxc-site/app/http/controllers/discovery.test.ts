@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "sdxc/mcp/server";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp/server";
 import { describe, expect, test } from "vitest";
 
 import { listCataloguePages } from "~/app/services/catalogue-pages";

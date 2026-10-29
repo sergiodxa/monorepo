@@ -9,11 +9,11 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { listStyle } from "sdxc/u/general";
-import { vstack } from "sdxc/u/layout";
-import { m, pis } from "sdxc/u/size";
-import { font, text, weight } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { listStyle } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { m, pis } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
 
 import type { ComponentPart } from "~/app/services/components";
 

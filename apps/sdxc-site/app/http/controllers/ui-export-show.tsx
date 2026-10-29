@@ -9,12 +9,12 @@
 
 import type { Handle } from "remix/component";
 
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, text, textTransform, tracking, weight } from "sdxc/u/typography";
 
 import type { Anchor } from "~/app/services/article";
 import type { PropRow } from "~/app/services/components";

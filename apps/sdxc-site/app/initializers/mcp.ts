@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createHandler, lazy } from "sdxc/mcp/server";
+import { createHandler, lazy } from "@sdxc/mcp/server";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";

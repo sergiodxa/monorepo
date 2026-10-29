@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { HighlightSegment, ParsedQuery } from "sdxc/search/query";
-import type { ValidationError } from "sdxc/validate";
+import type { HighlightSegment, ParsedQuery } from "@sdxc/search/query";
+import type { ValidationError } from "@sdxc/validate";
 
-import { Pagination } from "sdxc/pagination";
-import { highlight } from "sdxc/search/query";
+import { Pagination } from "@sdxc/pagination";
+import { highlight } from "@sdxc/search/query";
 
 import type { SearchDocument, SearchKind } from "~/app/services/search-query";
 

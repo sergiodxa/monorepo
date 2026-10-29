@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
+import { createPaging } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
-import { redirect } from "sdxc/http/response";
-import { createPaging } from "sdxc/pagination";
-import { isFailure } from "sdxc/result";
 
 import { withBundleCache } from "~/app/http/caching";
 import { buildSearchIndex } from "~/app/services/search";

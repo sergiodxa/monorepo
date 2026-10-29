@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, isSuccess } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
 import { SearchFrameQuerySchema } from "~/app/http/validators/search";

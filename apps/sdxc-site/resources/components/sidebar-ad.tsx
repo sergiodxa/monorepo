@@ -11,13 +11,13 @@
 import type { Handle } from "remix/component";
 
 import { iife } from "@sdxc/iife";
-import { rounded } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { vstack } from "sdxc/u/layout";
-import { dark } from "sdxc/u/responsive";
-import { aspect, is, m, p } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { font, leading, nowrap, text, tracking, weight } from "sdxc/u/typography";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { dark } from "@sdxc/u/responsive";
+import { aspect, is, m, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font, leading, nowrap, text, tracking, weight } from "@sdxc/u/typography";
 
 import type { SidebarAdDefinition, SidebarAdSurface } from "~/resources/content/ads";
 

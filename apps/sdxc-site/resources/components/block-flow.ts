@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mb } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
+import { mb } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 
 /**
  * Hands the column's block spacing to its own `gap`.

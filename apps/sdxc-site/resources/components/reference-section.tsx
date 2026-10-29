@@ -9,10 +9,10 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { text, tracking, weight } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text, tracking, weight } from "@sdxc/u/typography";
 
 namespace ReferenceSection {
 	export interface Props {

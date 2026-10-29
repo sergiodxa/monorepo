@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { text } from "@sdxc/http/response";
 import { createAction } from "remix/router";
-import { text } from "sdxc/http/response";
 
 import { withBundleCache } from "~/app/http/caching";
 import { buildLlmsTxt } from "~/app/services/llms";

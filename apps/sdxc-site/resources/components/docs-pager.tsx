@@ -9,13 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, fg } from "sdxc/u/color";
-import { rounded, shadow } from "sdxc/u/effects";
-import { gap, grid, gridColumn, gridTemplate, vstack } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { is, m, p } from "sdxc/u/size";
-import { text, textAlign, textTransform, tracking, weight } from "sdxc/u/typography";
-import { Card, Separator } from "sdxc/ui";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { gap, grid, gridColumn, gridTemplate, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, p } from "@sdxc/u/size";
+import { text, textAlign, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { Card, Separator } from "@sdxc/ui";
 
 import type { NavEntry } from "~/app/services/navigation-tree";
 

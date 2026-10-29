@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "sdxc/markdown";
-import { toPlainText } from "sdxc/markdown/plain";
-import { isFailure } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";

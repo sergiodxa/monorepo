@@ -20,7 +20,7 @@ import {
 
 /** A formatted example module, the shape every file under `utility-examples/` takes. */
 const MODULE = `
-import { p } from "sdxc/u/size";
+import { p } from "@sdxc/u/size";
 
 /** Docs. */
 export default {

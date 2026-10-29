@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, colorMix, fg } from "sdxc/u/color";
+import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import {
 	backdropBlur,
 	backdropSaturate,
@@ -17,11 +17,11 @@ import {
 	transitionDelay,
 	transitionDuration,
 	transitionProperty,
-} from "sdxc/u/effects";
-import { dark, light, media, startingStyle } from "sdxc/u/responsive";
-import { when } from "sdxc/u/state";
-import { scaleProperty, translateProperty } from "sdxc/u/transform";
-import { durations, easings } from "sdxc/ui/animations";
+} from "@sdxc/u/effects";
+import { dark, light, media, startingStyle } from "@sdxc/u/responsive";
+import { when } from "@sdxc/u/state";
+import { scaleProperty, translateProperty } from "@sdxc/u/transform";
+import { durations, easings } from "@sdxc/ui/animations";
 
 import { SEARCH_FOLLOW_ATTRIBUTE } from "~/resources/components/search-box";
 

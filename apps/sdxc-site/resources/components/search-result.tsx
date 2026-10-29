@@ -9,15 +9,15 @@
 
 import type { Handle } from "remix/component";
 
-import { BlocksIcon, BookOpenIcon, PackageIcon, PaintbrushIcon } from "sdxc/icons";
-import { bg, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { gap, grid, gridTemplate, items } from "sdxc/u/layout";
-import { dark, light } from "sdxc/u/responsive";
-import { minIs, p } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { text, textDecoration, truncate, weight } from "sdxc/u/typography";
-import { Highlight } from "sdxc/ui";
+import { BlocksIcon, BookOpenIcon, PackageIcon, PaintbrushIcon } from "@sdxc/icons";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { gap, grid, gridTemplate, items } from "@sdxc/u/layout";
+import { dark, light } from "@sdxc/u/responsive";
+import { minIs, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { text, textDecoration, truncate, weight } from "@sdxc/u/typography";
+import { Highlight } from "@sdxc/ui";
 
 import type { SearchKind } from "~/app/services/search-query";
 import type { SearchResults } from "~/app/services/search-results";

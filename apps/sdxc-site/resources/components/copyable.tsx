@@ -9,11 +9,11 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { hstack, items } from "sdxc/u/layout";
-import { p } from "sdxc/u/size";
-import { font, text } from "sdxc/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { hstack, items } from "@sdxc/u/layout";
+import { p } from "@sdxc/u/size";
+import { font, text } from "@sdxc/u/typography";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

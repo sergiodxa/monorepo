@@ -7,14 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { RenderFunction } from "remix/middleware/render";
-import type { DocumentAssets } from "sdxc/assets-middleware";
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { LinkButton } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { LinkButton } from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

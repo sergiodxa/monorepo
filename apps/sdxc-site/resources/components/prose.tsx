@@ -8,12 +8,12 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { media } from "sdxc/u/responsive";
-import { m, mbe, pis } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { balance, leading, text, textDecoration, tracking, weight } from "sdxc/u/typography";
-import { TAG_BY_LEVEL } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { media } from "@sdxc/u/responsive";
+import { m, mbe, pis } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { balance, leading, text, textDecoration, tracking, weight } from "@sdxc/u/typography";
+import { TAG_BY_LEVEL } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

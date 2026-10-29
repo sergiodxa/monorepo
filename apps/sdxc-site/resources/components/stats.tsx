@@ -10,7 +10,7 @@
 
 import type { Handle } from "remix/component";
 
-import { StatStrip } from "sdxc/ui";
+import { StatStrip } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

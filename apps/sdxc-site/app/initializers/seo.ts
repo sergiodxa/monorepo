@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createSeo } from "sdxc/seo";
+import { createSeo } from "@sdxc/seo";
 
 import { AUTHOR_X_HANDLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/constants";
 

@@ -9,8 +9,8 @@
 
 import type { Middleware } from "remix/router";
 
+import { currentLog } from "@sdxc/logger";
 import { waitUntil } from "cloudflare:workers";
-import { currentLog } from "sdxc/logger";
 
 import { socialCards as cardStorage } from "~/app/models/social-cards";
 import {

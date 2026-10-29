@@ -9,8 +9,8 @@
 
 import type { Handle } from "remix/component";
 
-import { ArrowRightIcon, ArrowUpRightIcon } from "sdxc/icons";
-import { CtaGroup, LinkButton } from "sdxc/ui";
+import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
+import { CtaGroup, LinkButton } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

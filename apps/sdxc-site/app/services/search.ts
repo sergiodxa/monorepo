@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Markdown } from "sdxc/markdown";
-import { isFailure } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
 
 import type { Anchor } from "~/app/services/article";
 import type { SearchDocument, SearchKind } from "~/app/services/search-query";

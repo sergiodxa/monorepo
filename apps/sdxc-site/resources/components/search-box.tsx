@@ -7,13 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LiveFrameEvent } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
-import type { LiveFrameEvent } from "sdxc/ui/mixins";
 
-import { clientEntry, on } from "remix/component";
-import { pi } from "sdxc/u/size";
-import { Spinner } from "sdxc/ui";
-import { spin } from "sdxc/ui/animations";
+import { pi } from "@sdxc/u/size";
+import { Spinner } from "@sdxc/ui";
+import { spin } from "@sdxc/ui/animations";
 import {
 	activeDescendantKeys,
 	chooseOption,
@@ -21,7 +20,8 @@ import {
 	LIVE_FRAME_RELOAD_EVENT,
 	liveFrame,
 	prefetchOption,
-} from "sdxc/ui/mixins";
+} from "@sdxc/ui/mixins";
+import { clientEntry, on } from "remix/component";
 
 import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
 import { watchSearchDialog } from "~/resources/components/search-keys";

@@ -9,10 +9,10 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, text, textTransform, tracking } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text, textTransform, tracking } from "@sdxc/u/typography";
 
 import type { NavEntry, NavGroup } from "~/app/services/navigation-tree";
 

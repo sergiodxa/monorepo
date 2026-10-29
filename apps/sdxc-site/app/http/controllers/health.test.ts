@@ -7,15 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Cache } from "sdxc/cache";
+import type { Cache } from "@sdxc/cache";
 
+import { CacheError } from "@sdxc/cache";
+import { MemoryCache } from "@sdxc/cache/memory";
+import { parseHealth } from "@sdxc/health";
+import { failure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createMemoryFileStorage } from "remix/file-storage/memory";
-import { CacheError } from "sdxc/cache";
-import { MemoryCache } from "sdxc/cache/memory";
-import { parseHealth } from "sdxc/health";
-import { failure, unwrap } from "sdxc/result";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The cache the `cache` probe reads, replaced per test. */

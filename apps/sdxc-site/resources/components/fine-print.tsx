@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { m } from "sdxc/u/size";
-import { leading, text } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { m } from "@sdxc/u/size";
+import { leading, text } from "@sdxc/u/typography";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

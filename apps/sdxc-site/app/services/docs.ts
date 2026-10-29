@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Markdown } from "@sdxc/markdown";
+import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { Markdown } from "sdxc/markdown";
-import { isSuccess } from "sdxc/result";
 
 import { TAGS } from "~/app/services/content";
 
