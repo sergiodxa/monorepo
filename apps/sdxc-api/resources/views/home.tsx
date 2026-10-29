@@ -27,7 +27,15 @@ import { overflow, overflowX } from "@sdxc/u/overflow";
 import { m, maxIs, minBs, mbs, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { before, hover } from "@sdxc/u/state";
-import { font, leading, nowrap, tabularNums, textDecoration, weight } from "@sdxc/u/typography";
+import {
+	font,
+	leading,
+	nowrap,
+	tabularNums,
+	textAlign,
+	textDecoration,
+	weight,
+} from "@sdxc/u/typography";
 
 import type { Operation } from "~/config/catalog";
 
@@ -217,6 +225,29 @@ const TD = [
 		borderBottom: "1px solid var(--apis-line)",
 		verticalAlign: "top",
 	}),
+];
+
+/**
+ * Price column: physical right alignment and tabular mono figures so amounts
+ * share one trailing edge down the column.
+ */
+const PRICE_TH = [
+	...TH,
+	nowrap(),
+	textAlign("right"),
+	tabularNums(),
+	font("mono"),
+	raw({ paddingInlineEnd: "0" }),
+];
+
+/** Body cell companion to {@link PRICE_TH}. */
+const PRICE_TD = [
+	...TD,
+	nowrap(),
+	textAlign("right"),
+	tabularNums(),
+	font("mono"),
+	raw({ paddingInlineEnd: "0" }),
 ];
 
 /**
@@ -480,9 +511,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 									<tr>
 										<th mix={TH}>Id</th>
 										<th mix={[TH, nowrap(), raw({ paddingInlineEnd: "1.25rem" })]}>Package</th>
-										<th mix={[TH, nowrap(), raw({ textAlign: "end", paddingInlineEnd: "0" })]}>
-											Price
-										</th>
+										<th mix={PRICE_TH}>Price</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -510,9 +539,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 													{operation.package}
 												</a>
 											</td>
-											<td mix={[TD, nowrap(), raw({ textAlign: "end", paddingInlineEnd: "0" })]}>
-												<span mix={[tabularNums()]}>{operation.priceUsd}</span>
-											</td>
+											<td mix={PRICE_TD}>{operation.priceUsd}</td>
 										</tr>
 									))}
 								</tbody>
