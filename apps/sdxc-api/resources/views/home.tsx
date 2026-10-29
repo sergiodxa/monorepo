@@ -1,6 +1,6 @@
 /**
- * Marketing landing for api.sdxc.dev: brand hero, x402 charging, MCP setup and
- * the priced operation catalog, composed from `@sdxc/ui` marketing primitives.
+ * Marketing landing for api.sdxc.dev: brand hero pinned to the bottom-left of
+ * the first viewport, then x402 charging, MCP setup and the priced catalog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,23 +8,26 @@
 
 import type { Handle } from "remix/component";
 
-import { bg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { flexWrap, gap, hstack, vstack } from "@sdxc/u/layout";
-import { mbs, pb, pi } from "@sdxc/u/size";
-import { font, nowrap, text, weight } from "@sdxc/u/typography";
-import { HeadingScope, Link, LinkButton, MarketingHeader, MarketingSection, Table } from "@sdxc/ui";
-import { viewReveal } from "@sdxc/ui/animations";
+import { counterIncrement, counterReset, pseudoContent, raw } from "@sdxc/u/general";
 import {
-	CheckList,
-	CheckRow,
-	ClosingCta,
-	CodeStage,
-	FeatureBand,
-	LandingHero,
-	StepList,
-	TabbedStage,
-} from "@sdxc/ui/patterns";
+	absolute,
+	flex,
+	flexCol,
+	flexWrap,
+	gap,
+	grid,
+	gridTemplate,
+	inlineFlex,
+	inset,
+	items,
+	justify,
+	relative,
+} from "@sdxc/u/layout";
+import { overflow, overflowX } from "@sdxc/u/overflow";
+import { m, maxIs, minBs, mbs, p } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { before, hover } from "@sdxc/u/state";
+import { font, leading, nowrap, tabularNums, textDecoration, weight } from "@sdxc/u/typography";
 
 import type { Operation } from "~/config/catalog";
 
@@ -85,233 +88,489 @@ curl -i -X POST ${SITE_ORIGIN}/v1/semver.satisfies \\
 # 2. Retry with PAYMENT-SIGNATURE from your x402 wallet
 # → 200 + PAYMENT-RESPONSE + JSON result`;
 
-/** Numbered charging steps shown in the how-it-works band. */
-const CHARGE_STEPS: ReadonlyArray<{ title: string; body: string }> = [
-	{
-		title: "Call unpaid",
-		body: "Hit an operation or MCP tool without a payment signature.",
-	},
-	{
-		title: "Read the 402",
-		body: "The server answers HTTP 402 with PAYMENT-REQUIRED (amount, network, destination).",
-	},
-	{
-		title: "Sign and retry",
-		body: "Your client signs a payment and retries with PAYMENT-SIGNATURE.",
-	},
-	{
-		title: "Settle and run",
-		body: "We verify through a facilitator, then return the result with PAYMENT-RESPONSE.",
-	},
+/** Soft entrance for the hero (keyframes live in `colors.css`). */
+const RISE = raw({ animation: "apis-rise 0.7s ease-out both" });
+
+/** Soft entrance for content sections under the hero. */
+const SECTION_RISE = raw({ animation: "apis-rise 0.6s ease-out 0.08s both" });
+
+/** Mono chip for inline path and flag names. */
+const INLINE_CODE = [
+	font("mono"),
+	raw({
+		fontSize: "0.88em",
+		padding: "0.1em 0.35em",
+		borderRadius: "0.25rem",
+		background: "color-mix(in oklch, var(--apis-accent) 18%, var(--apis-paper))",
+	}),
 ];
 
-/** Mono chip for inline path and flag names inside marketing copy. */
-const CODE_CHIP = [font("mono"), text("sm"), rounded("sm"), bg("brand.tint"), pb(0.5), pi(1)];
+/** Underlined accent link used in body copy and the footer. */
+const LINK = [
+	raw({ color: "var(--apis-accent-ink)", textUnderlineOffset: "0.15em" }),
+	textDecoration("underline"),
+	hover(raw({ color: "var(--apis-ink)" })),
+];
+
+/** Primary hero CTA — ink fill. */
+const CTA_PRIMARY = [
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	weight("semibold"),
+	raw({
+		padding: "0.7rem 1.15rem",
+		borderRadius: "0.35rem",
+		background: "var(--apis-ink)",
+		color: "var(--apis-paper)",
+		textDecoration: "none",
+		transition: "transform 0.2s ease, background-color 0.2s ease",
+	}),
+	hover(
+		raw({
+			background: "var(--apis-accent-ink)",
+			transform: "translateY(-1px)",
+		}),
+	),
+];
+
+/** Secondary hero CTA — ink outline. */
+const CTA_SECONDARY = [
+	inlineFlex(),
+	items("center"),
+	justify("center"),
+	weight("semibold"),
+	raw({
+		padding: "0.7rem 1.15rem",
+		borderRadius: "0.35rem",
+		border: "1px solid var(--apis-ink)",
+		color: "var(--apis-ink)",
+		textDecoration: "none",
+		background: "transparent",
+		transition: "background-color 0.2s ease, transform 0.2s ease",
+	}),
+	hover(
+		raw({
+			background: "color-mix(in oklch, var(--apis-accent) 25%, transparent)",
+			transform: "translateY(-1px)",
+		}),
+	),
+];
+
+/** Content section stack under the hero. */
+const SECTION = [flex(), flexCol(), gap(4), SECTION_RISE];
+
+/** Section chapter title. */
+const SECTION_HEADING = [
+	m(0),
+	weight("semibold"),
+	raw({
+		fontSize: "clamp(1.5rem, 3vw, 1.85rem)",
+		letterSpacing: "-0.03em",
+	}),
+];
+
+/** Section lead paragraph. */
+const SECTION_LEAD = [
+	m(0),
+	maxIs("40rem"),
+	raw({ color: "var(--apis-ink-soft)", fontSize: "1.05rem" }),
+];
+
+/** Dark mono sample block. */
+const PRE = [
+	m(0),
+	overflowX("auto"),
+	font("mono"),
+	raw({
+		padding: "1rem 1.1rem",
+		background: "var(--apis-code-bg)",
+		color: "var(--apis-code-fg)",
+		fontSize: "0.82rem",
+		lineHeight: "1.55",
+		borderRadius: "0.35rem",
+	}),
+];
+
+/** Mono label above a sample block. */
+const SAMPLE_LABEL = [
+	font("mono"),
+	raw({
+		margin: "0 0 0.5rem",
+		fontSize: "0.85rem",
+		color: "var(--apis-ink-soft)",
+	}),
+];
+
+/** Table header cell. */
+const TH = [
+	raw({
+		padding: "0.75rem 0.85rem 0.75rem 0",
+		borderBottom: "1px solid var(--apis-line)",
+		fontSize: "0.8rem",
+		fontWeight: "600",
+		textTransform: "uppercase",
+		letterSpacing: "0.04em",
+		color: "var(--apis-ink-soft)",
+	}),
+];
+
+/** Table body cell. */
+const TD = [
+	raw({
+		padding: "1rem 0.85rem 1rem 0",
+		borderBottom: "1px solid var(--apis-line)",
+		verticalAlign: "top",
+	}),
+];
 
 /**
- * Renders the landing composition: hero, charging, MCP, catalog, HTTP.
+ * Renders the landing composition: bottom-left hero, charging, MCP, catalog, HTTP.
  */
 export default function HomeView(handle: Handle<HomeView.Props>) {
 	return () => {
 		let { operations } = handle.props;
 
 		return (
-			<>
-				<LandingHero
-					tone="grid"
-					mix={[viewReveal()]}
-					title={SITE_BRAND}
-					description={
-						<>
-							{SITE_TAGLINE} Install packages from npm for free. When an agent needs hosted
-							execution — encode a QR, highlight source, parse a zone file — it pays per call with{" "}
-							<Link href="https://x402.org/">x402</Link>.
-						</>
-					}
-					actions={
-						<>
-							<LinkButton href="#mcp" color="brand" size="lg">
-								Connect MCP
-							</LinkButton>
-							<LinkButton href="#catalog" color="neutral" variant="outline" size="lg">
-								Browse operations
-							</LinkButton>
-							<LinkButton href="/v1" color="neutral" variant="outline" size="lg">
-								JSON catalog
-							</LinkButton>
-						</>
-					}
+			<div mix={[relative(), raw({ isolation: "isolate" }), overflow("clip")]}>
+				<div
+					aria-hidden="true"
+					mix={[
+						absolute(),
+						inset(0),
+						z(-1),
+						raw({
+							backgroundImage: `
+								linear-gradient(160deg, var(--apis-paper) 0%, var(--apis-paper-deep) 55%, oklch(0.9 0.03 195) 100%),
+								linear-gradient(var(--apis-grid) 1px, transparent 1px),
+								linear-gradient(90deg, var(--apis-grid) 1px, transparent 1px)
+							`,
+							backgroundSize: "auto, 48px 48px, 48px 48px",
+							animation: "apis-grid-drift 48s linear infinite",
+						}),
+					]}
 				/>
 
-				<FeatureBand
-					id="pay"
-					layout="steps"
-					tone="tinted"
-					eyebrow="x402"
-					eyebrowVariant="mono"
-					title="How charging works"
-					description={
-						<>
-							Every priced call uses the <Link href="https://x402.org/">x402</Link> protocol. No API
-							keys, no accounts — a wallet settles USDC on the configured network. Discovery stays
-							free; only running an operation charges.
-						</>
-					}
-					mix={[viewReveal()]}
+				<header
+					mix={[
+						flex(),
+						flexCol(),
+						justify("end"),
+						gap(5),
+						minBs("100dvh"),
+						RISE,
+						raw({
+							padding: "clamp(1.5rem, 4vw, 3rem)",
+							paddingBottom: "clamp(2.5rem, 8vh, 5rem)",
+							boxSizing: "border-box",
+						}),
+					]}
 				>
-					{CHARGE_STEPS.map((step) => (
-						<StepList.Item key={step.title} title={step.title}>
-							{step.body}
-						</StepList.Item>
-					))}
-				</FeatureBand>
+					<p
+						mix={[
+							m(0),
+							weight("bold"),
+							leading("none"),
+							raw({
+								fontSize: "clamp(2.75rem, 9vw, 5.5rem)",
+								letterSpacing: "-0.04em",
+								lineHeight: "0.95",
+								color: "var(--apis-ink)",
+							}),
+						]}
+					>
+						{SITE_BRAND}
+					</p>
+					<h1
+						mix={[
+							m(0),
+							maxIs("22ch"),
+							weight("medium"),
+							raw({
+								fontSize: "clamp(1.35rem, 3.2vw, 2rem)",
+								letterSpacing: "-0.02em",
+								lineHeight: "1.2",
+								color: "var(--apis-ink-soft)",
+								textWrap: "balance",
+							}),
+						]}
+					>
+						{SITE_TAGLINE}
+					</h1>
+					<p
+						mix={[
+							m(0),
+							maxIs("42rem"),
+							raw({ fontSize: "1.05rem", color: "var(--apis-ink-soft)" }),
+						]}
+					>
+						Install packages from npm for free. When an agent needs hosted execution — encode a QR,
+						highlight source, parse a zone file — it pays per call with{" "}
+						<a href="https://x402.org/" mix={LINK}>
+							x402
+						</a>
+						.
+					</p>
+					<div mix={[flex(), flexWrap(), gap(3), mbs(2)]}>
+						<a href="#mcp" mix={CTA_PRIMARY}>
+							Connect MCP
+						</a>
+						<a href="#catalog" mix={CTA_SECONDARY}>
+							Browse operations
+						</a>
+						<a href="/v1" mix={CTA_SECONDARY}>
+							JSON catalog
+						</a>
+					</div>
+				</header>
 
-				<MarketingSection spacing="compact" mix={[viewReveal()]}>
-					<CheckList orientation="horizontal">
-						<CheckRow>
-							<code mix={CODE_CHIP}>GET /</code> free
-						</CheckRow>
-						<CheckRow>
-							<code mix={CODE_CHIP}>GET /v1</code> free
-						</CheckRow>
-						<CheckRow>
-							<code mix={CODE_CHIP}>GET /health</code> free
-						</CheckRow>
-						<CheckRow>MCP discovery free</CheckRow>
-					</CheckList>
-				</MarketingSection>
-
-				<MarketingSection id="mcp" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow="MCP"
-							eyebrowVariant="mono"
-							description={
-								<>
-									Handshake-era agents (Cursor, Claude Desktop) speak an older MCP revision. Point{" "}
-									<code mix={CODE_CHIP}>mcp-bridge</code> from{" "}
-									<Link href="https://www.npmjs.com/package/@sdxc/mcp">@sdxc/mcp</Link> at the
-									Streamable HTTP endpoint and pass <code mix={CODE_CHIP}>OWNER_ACCESS_TOKEN</code>{" "}
-									so priced <code mix={CODE_CHIP}>tools/call</code> skips x402. Tool names match the
-									catalog ids.
-								</>
-							}
+				<main
+					mix={[
+						flex(),
+						flexCol(),
+						raw({
+							gap: "clamp(3rem, 8vw, 5.5rem)",
+							padding: "0 clamp(1.5rem, 4vw, 3rem) clamp(3rem, 8vw, 5rem)",
+							maxWidth: "56rem",
+						}),
+					]}
+				>
+					<section id="pay" mix={SECTION} aria-labelledby="pay-heading">
+						<h2 id="pay-heading" mix={SECTION_HEADING}>
+							How charging works
+						</h2>
+						<p mix={SECTION_LEAD}>
+							Every priced call uses the{" "}
+							<a href="https://x402.org/" mix={LINK}>
+								x402
+							</a>{" "}
+							protocol. No API keys, no accounts — a wallet settles USDC on the configured network.
+						</p>
+						<ol
+							mix={[
+								m(0),
+								p(0),
+								flex(),
+								flexCol(),
+								gap(3),
+								counterReset("step"),
+								raw({ listStyle: "none" }),
+							]}
 						>
+							{[
+								"Call an operation or MCP tool without payment.",
+								"The server answers HTTP 402 with a PAYMENT-REQUIRED header (amount, network, destination).",
+								"Your client signs a payment and retries with PAYMENT-SIGNATURE.",
+								"We verify and settle through a facilitator, then return the result with PAYMENT-RESPONSE.",
+							].map((step) => (
+								<li
+									key={step}
+									mix={[
+										grid(),
+										gridTemplate({ columns: "1.35rem 1fr" }),
+										gap(3),
+										items("baseline"),
+										counterIncrement("step"),
+										before([
+											pseudoContent("counter(step)"),
+											inlineFlex(),
+											items("center"),
+											justify("center"),
+											tabularNums(),
+											weight("semibold"),
+											raw({
+												width: "1.35rem",
+												height: "1.35rem",
+												borderRadius: "999px",
+												background: "var(--apis-accent)",
+												color: "var(--apis-accent-ink)",
+												fontSize: "0.72rem",
+												lineHeight: "1",
+												translate: "0 0.12em",
+											}),
+										]),
+									]}
+								>
+									<span mix={[leading("normal")]}>{step}</span>
+								</li>
+							))}
+						</ol>
+						<p
+							mix={[
+								raw({ margin: "1.25rem 0 0", color: "var(--apis-ink-soft)", fontSize: "0.95rem" }),
+							]}
+						>
+							<code mix={INLINE_CODE}>GET /</code>, <code mix={INLINE_CODE}>GET /v1</code>,{" "}
+							<code mix={INLINE_CODE}>GET /health</code> and MCP discovery stay free. Only running
+							an operation charges.
+						</p>
+					</section>
+
+					<section id="mcp" mix={SECTION} aria-labelledby="mcp-heading">
+						<h2 id="mcp-heading" mix={SECTION_HEADING}>
 							Connect over MCP
-						</MarketingHeader>
+						</h2>
+						<p mix={SECTION_LEAD}>
+							Handshake-era agents (Cursor, Claude Desktop) speak an older MCP revision. Point{" "}
+							<code mix={INLINE_CODE}>mcp-bridge</code> from{" "}
+							<a href="https://www.npmjs.com/package/@sdxc/mcp" mix={LINK}>
+								@sdxc/mcp
+							</a>{" "}
+							at the Streamable HTTP endpoint and pass{" "}
+							<code mix={INLINE_CODE}>OWNER_ACCESS_TOKEN</code> so priced{" "}
+							<code mix={INLINE_CODE}>tools/call</code> skips x402. Tool names match the catalog
+							ids.
+						</p>
 
-						<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-							<CodeStage variant="terminal" title="Endpoint">
-								{`${SITE_ORIGIN}/mcp`}
-							</CodeStage>
+						<p mix={SAMPLE_LABEL}>Endpoint</p>
+						<pre mix={PRE}>
+							<code>{`${SITE_ORIGIN}/mcp`}</code>
+						</pre>
 
-							<CodeStage variant="terminal" title="Shell">
-								{MCP_BRIDGE_SHELL}
-							</CodeStage>
+						<p mix={[SAMPLE_LABEL, raw({ marginBlockStart: "1.5rem" })]}>Shell</p>
+						<pre mix={PRE}>
+							<code>{MCP_BRIDGE_SHELL}</code>
+						</pre>
 
-							<TabbedStage name="mcp-client" aria-label="Cursor / Claude Desktop config">
-								<TabbedStage.Item value="npx" label="npx" defaultChecked>
-									<CodeStage title="mcp.json">{MCP_BRIDGE_JSON}</CodeStage>
-								</TabbedStage.Item>
-								<TabbedStage.Item value="bunx" label="bunx">
-									<CodeStage title="mcp.json">{MCP_BRIDGE_BUN_JSON}</CodeStage>
-								</TabbedStage.Item>
-							</TabbedStage>
+						<p mix={[SAMPLE_LABEL, raw({ marginBlockStart: "1.5rem" })]}>
+							Cursor / Claude Desktop (npx)
+						</p>
+						<pre mix={PRE}>
+							<code>{MCP_BRIDGE_JSON}</code>
+						</pre>
 
-							<p mix={[mbs(2), text("sm")]}>
-								<code mix={CODE_CHIP}>--token</code> sends{" "}
-								<code mix={CODE_CHIP}>Authorization: Bearer …</code>. Without it, unpaid{" "}
-								<code mix={CODE_CHIP}>tools/call</code> answers HTTP 402 with the same x402 headers
-								as <code mix={CODE_CHIP}>POST /v1/…</code> and needs a wallet to settle.
-							</p>
-						</div>
-					</HeadingScope>
-				</MarketingSection>
+						<p mix={[SAMPLE_LABEL, raw({ marginBlockStart: "1.5rem" })]}>
+							Cursor / Claude Desktop (bunx)
+						</p>
+						<pre mix={PRE}>
+							<code>{MCP_BRIDGE_BUN_JSON}</code>
+						</pre>
 
-				<MarketingSection id="catalog" tone="tinted" ruled mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow="Catalog"
-							eyebrowVariant="mono"
-							description="Each row wraps one published package. Prices are USDC atomic units (6 decimals) on the configured network."
+						<p
+							mix={[
+								raw({ margin: "1.25rem 0 0", color: "var(--apis-ink-soft)", fontSize: "0.95rem" }),
+							]}
 						>
-							Operations
-						</MarketingHeader>
+							<code mix={INLINE_CODE}>--token</code> sends{" "}
+							<code mix={INLINE_CODE}>Authorization: Bearer …</code>. Without it, unpaid{" "}
+							<code mix={INLINE_CODE}>tools/call</code> answers HTTP 402 with the same x402 headers
+							as <code mix={INLINE_CODE}>POST /v1/…</code> and needs a wallet to settle.
+						</p>
+					</section>
 
-						<Table.Container>
-							<Table aria-label="Priced operations">
-								<Table.Header>
-									<Table.Row>
-										<Table.Column>Id</Table.Column>
-										<Table.Column>Package</Table.Column>
-										<Table.Column numeric>Price</Table.Column>
-									</Table.Row>
-								</Table.Header>
-								<Table.Body>
+					<section id="catalog" mix={SECTION} aria-labelledby="catalog-heading">
+						<h2 id="catalog-heading" mix={SECTION_HEADING}>
+							Operations
+						</h2>
+						<p mix={SECTION_LEAD}>
+							Each row wraps one published package. Prices are USDC atomic units (6 decimals) on the
+							configured network.
+						</p>
+						<div
+							mix={[
+								overflowX("auto"),
+								raw({
+									borderTop: "1px solid var(--apis-line)",
+									borderBottom: "1px solid var(--apis-line)",
+								}),
+							]}
+						>
+							<table
+								mix={[
+									raw({
+										width: "100%",
+										borderCollapse: "collapse",
+										fontSize: "0.95rem",
+										textAlign: "left",
+									}),
+								]}
+							>
+								<thead>
+									<tr>
+										<th mix={TH}>Id</th>
+										<th mix={[TH, nowrap(), raw({ paddingInlineEnd: "1.25rem" })]}>Package</th>
+										<th mix={[TH, nowrap(), raw({ textAlign: "end", paddingInlineEnd: "0" })]}>
+											Price
+										</th>
+									</tr>
+								</thead>
+								<tbody>
 									{operations.map((operation) => (
-										<Table.Row key={operation.id}>
-											<Table.Cell>
-												<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-													<code mix={[font("mono"), text("sm"), weight("medium")]}>
-														{operation.id}
-													</code>
-													<span mix={[text("sm")]}>{operation.description}</span>
+										<tr key={operation.id}>
+											<td mix={TD}>
+												<code mix={INLINE_CODE}>{operation.id}</code>
+												<div
+													mix={[
+														raw({
+															marginTop: "0.35rem",
+															color: "var(--apis-ink-soft)",
+															fontSize: "0.85rem",
+														}),
+													]}
+												>
+													{operation.description}
 												</div>
-											</Table.Cell>
-											<Table.Cell>
-												<Link
+											</td>
+											<td mix={[TD, nowrap(), raw({ paddingInlineEnd: "1.25rem" })]}>
+												<a
 													href={`https://www.npmjs.com/package/${operation.package}`}
-													mix={[font("mono"), text("sm"), nowrap()]}
+													mix={[LINK, nowrap(), font("mono"), raw({ fontSize: "0.9em" })]}
 												>
 													{operation.package}
-												</Link>
-											</Table.Cell>
-											<Table.Cell numeric>{operation.priceUsd}</Table.Cell>
-										</Table.Row>
+												</a>
+											</td>
+											<td mix={[TD, nowrap(), raw({ textAlign: "end", paddingInlineEnd: "0" })]}>
+												<span mix={[tabularNums()]}>{operation.priceUsd}</span>
+											</td>
+										</tr>
 									))}
-								</Table.Body>
-							</Table>
-						</Table.Container>
-					</HeadingScope>
-				</MarketingSection>
-
-				<MarketingSection id="http" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow="HTTP"
-							eyebrowVariant="mono"
-							description={
-								<>
-									<code mix={CODE_CHIP}>POST /v1/&lt;id&gt;</code> with a JSON body. Same prices and
-									payment headers as MCP.
-								</>
-							}
-						>
-							Call over plain HTTP
-						</MarketingHeader>
-
-						<CodeStage variant="terminal" title="curl">
-							{HTTP_EXAMPLE}
-						</CodeStage>
-					</HeadingScope>
-				</MarketingSection>
-
-				<ClosingCta
-					tone="plain"
-					ruled
-					title="Docs and packages stay free"
-					description="Install from npm and read guides on sdxc.dev. Agents settle only when they run a hosted operation."
-					actions={
-						<div mix={[hstack(), flexWrap(), gap(4)]}>
-							<Link href="https://sdxc.dev">sdxc.dev</Link>
-							<Link href="https://x402.org/">x402.org</Link>
-							<Link href="/v1">/v1</Link>
-							<Link href="/health">/health</Link>
+								</tbody>
+							</table>
 						</div>
-					}
-					mix={[viewReveal()]}
-				/>
-			</>
+					</section>
+
+					<section id="http" mix={SECTION} aria-labelledby="http-heading">
+						<h2 id="http-heading" mix={SECTION_HEADING}>
+							Call over plain HTTP
+						</h2>
+						<p mix={SECTION_LEAD}>
+							<code mix={INLINE_CODE}>POST /v1/&lt;id&gt;</code> with a JSON body. Same prices and
+							payment headers as MCP.
+						</p>
+						<pre mix={PRE}>
+							<code>{HTTP_EXAMPLE}</code>
+						</pre>
+					</section>
+				</main>
+
+				<footer
+					mix={[
+						flex(),
+						flexWrap(),
+						gap(4, 6),
+						raw({
+							padding: "2rem clamp(1.5rem, 4vw, 3rem) 3rem",
+							borderTop: "1px solid var(--apis-line)",
+							color: "var(--apis-ink-soft)",
+							fontSize: "0.9rem",
+						}),
+					]}
+				>
+					<span>Docs and packages stay free on npm and sdxc.dev.</span>
+					<a href="https://sdxc.dev" mix={LINK}>
+						sdxc.dev
+					</a>
+					<a href="https://x402.org/" mix={LINK}>
+						x402.org
+					</a>
+					<a href="/v1" mix={LINK}>
+						/v1
+					</a>
+					<a href="/health" mix={LINK}>
+						/health
+					</a>
+				</footer>
+			</div>
 		);
 	};
 }
