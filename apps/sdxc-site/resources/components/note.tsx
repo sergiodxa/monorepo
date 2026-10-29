@@ -9,12 +9,12 @@
 
 import type { Handle } from "remix/component";
 
-import { border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { font, text, textTransform, tracking, weight } from "sdxc/u/typography";
-import { semanticColorPanel } from "sdxc/ui/styles";
+import { border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { semanticColorPanel } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

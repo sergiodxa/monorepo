@@ -20,7 +20,7 @@ vi.doMock("remix/component", async (importOriginal) => ({
 }));
 
 const { SEARCH_LISTBOX_ID, SearchBox } = await import("~/resources/components/search-box");
-const { LiveFrameEvent } = await import("sdxc/ui/mixins");
+const { LiveFrameEvent } = await import("@sdxc/ui/mixins");
 
 let mounted: RenderResult | undefined;
 

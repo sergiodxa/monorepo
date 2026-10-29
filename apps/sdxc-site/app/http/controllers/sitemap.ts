@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { xml } from "@sdxc/http/response";
+import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
-import { xml } from "sdxc/http/response";
-import { fromRoutes } from "sdxc/sitemap/remix";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listCataloguePages } from "~/app/services/catalogue-pages";

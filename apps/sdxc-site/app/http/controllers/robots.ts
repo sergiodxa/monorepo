@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Robots } from "sdxc/robots";
+import type { Robots } from "@sdxc/robots";
 
+import { text } from "@sdxc/http/response";
+import { stringify } from "@sdxc/robots";
 import { createAction } from "remix/router";
-import { text } from "sdxc/http/response";
-import { stringify } from "sdxc/robots";
 
 import { SITE_URL } from "~/config/constants";
 import routes from "~/routes/web";

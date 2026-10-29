@@ -6,16 +6,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixOptions } from "@sdxc/markdown/remix";
 import type { Handle } from "remix/component";
-import type { RemixOptions } from "sdxc/markdown/remix";
 
-import { HeartIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { listStyle } from "sdxc/u/general";
-import { flexWrap, hstack, inlineFlex, vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { text, tracking, weight } from "sdxc/u/typography";
-import { Avatar } from "sdxc/ui";
+import { HeartIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { listStyle } from "@sdxc/u/general";
+import { flexWrap, hstack, inlineFlex, vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { text, tracking, weight } from "@sdxc/u/typography";
+import { Avatar } from "@sdxc/ui";
 
 import type { Sponsor } from "~/app/services/sponsors";
 import type { MarkdownProps } from "~/resources/components/markdown-props";

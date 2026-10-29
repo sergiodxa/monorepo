@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext } from "sdxc/mcp/server";
+import type { AnyRequestContext } from "@sdxc/mcp/server";
 
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
 
 import { withBundleCache } from "~/app/http/caching";
 import mcp from "~/app/initializers/mcp";

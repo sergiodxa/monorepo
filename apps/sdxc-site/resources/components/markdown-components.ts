@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixOptions } from "sdxc/markdown/remix";
+import type { RemixOptions } from "@sdxc/markdown/remix";
 
-import { DiagramTag } from "sdxc/diagram/ui";
-import { FrameTag } from "sdxc/markdown/remix";
-import { MathTag } from "sdxc/math/ui";
+import { DiagramTag } from "@sdxc/diagram/ui";
+import { FrameTag } from "@sdxc/markdown/remix";
+import { MathTag } from "@sdxc/math/ui";
 
 import CodeBlock from "~/resources/components/code-block";
 import Files, { File, Folder } from "~/resources/components/files";

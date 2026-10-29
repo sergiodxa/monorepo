@@ -8,14 +8,14 @@
 
 import type { Handle } from "remix/component";
 
-import { FileIcon, FolderIcon } from "sdxc/icons";
-import { bg, border, borderEdge, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { listStyle } from "sdxc/u/general";
-import { hstack, inlineFlex, vstack } from "sdxc/u/layout";
-import { m, mis, p, pis } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { font, text } from "sdxc/u/typography";
+import { FileIcon, FolderIcon } from "@sdxc/icons";
+import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { hstack, inlineFlex, vstack } from "@sdxc/u/layout";
+import { m, mis, p, pis } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font, text } from "@sdxc/u/typography";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

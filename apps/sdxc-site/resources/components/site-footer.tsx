@@ -9,14 +9,14 @@
 
 import type { Handle } from "remix/component";
 
-import { borderEdge, fg } from "sdxc/u/color";
-import { listStyle, raw } from "sdxc/u/general";
-import { gap, grid, gridTemplate, repeat, vstack } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { media } from "sdxc/u/responsive";
-import { is, m, maxIs, p } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { leading, text, tracking, weight } from "sdxc/u/typography";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { listStyle, raw } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { leading, text, tracking, weight } from "@sdxc/u/typography";
 
 import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/config/constants";
 import routes from "~/routes/web";

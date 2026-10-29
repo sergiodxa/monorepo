@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ParsedQuery } from "sdxc/search/query";
+import type { ParsedQuery } from "@sdxc/search/query";
 
-import { isSuccess } from "sdxc/result";
+import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { SearchDocument } from "~/app/services/search-query";

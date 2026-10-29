@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736";

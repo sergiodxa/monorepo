@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { hidden } from "@sdxc/u/layout";
 import { clientEntry, ref } from "remix/component";
-import { hidden } from "sdxc/u/layout";
 
 /**
  * Closes the `<dialog>` this renders inside. It owns no markup, and a page restored from

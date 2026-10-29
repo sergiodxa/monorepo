@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "sdxc/result";
-import type { ParsedQuery, SearchFilter, SearchTerm } from "sdxc/search/query";
-import type { ValidationError } from "sdxc/validate";
+import type { Result } from "@sdxc/result";
+import type { ParsedQuery, SearchFilter, SearchTerm } from "@sdxc/search/query";
+import type { ValidationError } from "@sdxc/validate";
 
-import { isFailure } from "sdxc/result";
-import { parseQuery } from "sdxc/search/query";
+import { isFailure } from "@sdxc/result";
+import { parseQuery } from "@sdxc/search/query";
 
 /** The part of the site an entry belongs to, which is what a search tab or `kind:` narrows to. */
 export type SearchKind = "guide" | "api" | "ui" | "u";

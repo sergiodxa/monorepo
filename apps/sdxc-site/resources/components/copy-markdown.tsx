@@ -8,10 +8,10 @@
 
 import type { Handle } from "remix/component";
 
+import { CheckIcon, CopyIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { Button } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { CheckIcon, CopyIcon } from "sdxc/icons";
-import { visuallyHidden } from "sdxc/u/a11y";
-import { Button } from "sdxc/ui";
 
 /** How long the confirmation stands before the button offers the action again. */
 const CONFIRMATION_MS = 2000;

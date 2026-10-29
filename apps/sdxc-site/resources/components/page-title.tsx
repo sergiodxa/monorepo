@@ -9,11 +9,11 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { m, maxIs } from "sdxc/u/size";
-import { balance, font, leading, text, textTransform, tracking, weight } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { m, maxIs } from "@sdxc/u/size";
+import { balance, font, leading, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 
 namespace PageTitle {
 	export interface Props {

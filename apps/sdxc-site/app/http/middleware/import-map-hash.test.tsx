@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { assets } from "@sdxc/assets-middleware";
+import { Base64, sha256 } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { ImportMap, renderToString } from "remix/component/server";
 import { createRouter } from "remix/router";
-import { assets } from "sdxc/assets-middleware";
-import { Base64, sha256 } from "sdxc/crypto";
-import { unwrap } from "sdxc/result";
-import { securityHeaders } from "sdxc/security-headers/middleware";
 import { describe, expect, test } from "vitest";
 
 import importMapHash from "~/app/http/middleware/import-map-hash";

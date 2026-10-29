@@ -9,13 +9,13 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { bg, fg, outline } from "sdxc/u/color";
-import { transition } from "sdxc/u/effects";
-import { listStyle, raw } from "sdxc/u/general";
-import { gap, grid, gridTemplate, repeat, vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { font, text } from "sdxc/u/typography";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { transition } from "@sdxc/u/effects";
+import { listStyle, raw } from "@sdxc/u/general";
+import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font, text } from "@sdxc/u/typography";
 
 namespace RuledGrid {
 	export interface Props {

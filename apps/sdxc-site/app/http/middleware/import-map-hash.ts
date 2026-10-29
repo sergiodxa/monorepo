@@ -8,11 +8,11 @@
  */
 
 import type { ScriptEntry } from "@pitlane/assets";
+import type { SecurityHeaders } from "@sdxc/security-headers";
 import type { Middleware } from "remix/router";
-import type { SecurityHeaders } from "sdxc/security-headers";
 
-import { Base64, sha256 } from "sdxc/crypto";
-import { isFailure } from "sdxc/result";
+import { Base64, sha256 } from "@sdxc/crypto";
+import { isFailure } from "@sdxc/result";
 
 /** The CSP headers whose `script-src` the hash joins. */
 const POLICY_HEADERS = ["contentSecurityPolicy", "contentSecurityPolicyReportOnly"] as const;

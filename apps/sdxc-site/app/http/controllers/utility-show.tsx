@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, nowrap, text, weight } from "@sdxc/u/typography";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, nowrap, text, weight } from "sdxc/u/typography";
 
 import type { Anchor } from "~/app/services/article";
 

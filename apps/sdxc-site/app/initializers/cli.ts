@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createCLI, lazy } from "sdxc/cli";
-import { createLogger } from "sdxc/logger";
-import { log } from "sdxc/logger/middleware/cli";
-import { trace } from "sdxc/trace-context/middleware/cli";
+import { createCLI, lazy } from "@sdxc/cli";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware/cli";
+import { trace } from "@sdxc/trace-context/middleware/cli";
 
 import commandset from "~/app/commands";
 import { logger } from "~/app/initializers/logger";

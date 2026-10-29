@@ -9,11 +9,11 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { is, m, maxIs } from "sdxc/u/size";
-import { font, leading, text, textTransform, tracking } from "sdxc/u/typography";
-import { Typeset } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { is, m, maxIs } from "@sdxc/u/size";
+import { font, leading, text, textTransform, tracking } from "@sdxc/u/typography";
+import { Typeset } from "@sdxc/ui";
 
 import Band from "~/resources/components/band";
 import { DisplayHeadings, ProseHeading } from "~/resources/components/prose";

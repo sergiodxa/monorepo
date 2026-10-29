@@ -9,16 +9,16 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, colorMix, fg } from "sdxc/u/color";
-import { opacity, rounded, transition } from "sdxc/u/effects";
-import { listStyle } from "sdxc/u/general";
-import { flex, gap, inlineFlex, items, shrink } from "sdxc/u/layout";
-import { overflowX } from "sdxc/u/overflow";
-import { startingStyle } from "sdxc/u/responsive";
-import { bs, m, minBs, p, pi } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { translateProperty } from "sdxc/u/transform";
-import { nowrap, text, textDecoration } from "sdxc/u/typography";
+import { bg, colorMix, fg } from "@sdxc/u/color";
+import { opacity, rounded, transition } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { flex, gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
+import { overflowX } from "@sdxc/u/overflow";
+import { startingStyle } from "@sdxc/u/responsive";
+import { bs, m, minBs, p, pi } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { translateProperty } from "@sdxc/u/transform";
+import { nowrap, text, textDecoration } from "@sdxc/u/typography";
 
 import type { SearchResults } from "~/app/services/search-results";
 

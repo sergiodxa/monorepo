@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ChevronDownIcon } from "sdxc/icons";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { container, inlineFlex, items, relative, vstack } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { p } from "sdxc/u/size";
-import { font, text, weight } from "sdxc/u/typography";
+import { ChevronDownIcon } from "@sdxc/icons";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { container, inlineFlex, items, relative, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { p } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
 import {
 	Accordion,
 	Button,
@@ -22,8 +22,8 @@ import {
 	LinkButton,
 	LogoCloud,
 	StatStrip,
-} from "sdxc/ui";
-import { viewReveal } from "sdxc/ui/animations";
+} from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
 	Bento,
 	CheckList,
@@ -38,8 +38,8 @@ import {
 	ProofStrip,
 	StepList,
 	TabbedStage,
-} from "sdxc/ui/patterns";
-import { marketingCtaChrome } from "sdxc/ui/styles";
+} from "@sdxc/ui/patterns";
+import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";

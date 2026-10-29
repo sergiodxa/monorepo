@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { invoke } from "sdxc/cli/test";
+import { invoke } from "@sdxc/cli/test";
 import { describe, expect, test } from "vitest";
 
 import { cli } from "~/app/initializers/cli";

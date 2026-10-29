@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { contentUsage, isAllowed, parse } from "sdxc/robots";
+import { contentUsage, isAllowed, parse } from "@sdxc/robots";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";

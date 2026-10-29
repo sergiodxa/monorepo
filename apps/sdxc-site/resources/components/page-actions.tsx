@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { ChevronDownIcon } from "sdxc/icons";
-import { hstack } from "sdxc/u/layout";
-import { Button, Menu } from "sdxc/ui";
+import { ChevronDownIcon } from "@sdxc/icons";
+import { hstack } from "@sdxc/u/layout";
+import { Button, Menu } from "@sdxc/ui";
 
 import { buildOpenLinks } from "~/app/services/open-links";
 import { CopyMarkdown } from "~/resources/components/copy-markdown";

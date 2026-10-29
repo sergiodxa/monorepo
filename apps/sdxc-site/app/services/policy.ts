@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MarkdownParseError, MarkdownWalkError } from "sdxc/markdown";
-import type { Result } from "sdxc/result";
+import type { MarkdownParseError, MarkdownWalkError } from "@sdxc/markdown";
+import type { Result } from "@sdxc/result";
 
+import { Markdown } from "@sdxc/markdown";
+import { isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { Markdown } from "sdxc/markdown";
-import { isFailure, success } from "sdxc/result";
 
 import { prepareArticle } from "~/app/services/article";
 import { MARKDOWN_OPTIONS as CONTENT_OPTIONS } from "~/app/services/content";

@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { readContent } from "~/app/services/content";

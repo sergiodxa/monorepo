@@ -9,8 +9,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { SearchIcon } from "sdxc/icons";
-import { bg, border, fg, outlineStyle } from "sdxc/u/color";
+import { SearchIcon } from "@sdxc/icons";
+import { bg, border, fg, outlineStyle } from "@sdxc/u/color";
 import {
 	appearance,
 	gap,
@@ -20,10 +20,10 @@ import {
 	inlineFlex,
 	items,
 	shrink,
-} from "sdxc/u/layout";
-import { bs, is, m, minIs, p } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { text } from "sdxc/u/typography";
+} from "@sdxc/u/layout";
+import { bs, is, m, minIs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 /** Prop types for {@link QuietSearchInput} and {@link QuietSearchRow}. */
 export namespace QuietSearchInput {

@@ -9,8 +9,8 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { hidden } from "@sdxc/u/layout";
 import { clientEntry, ref } from "remix/component";
-import { hidden } from "sdxc/u/layout";
 
 import type { OptionGroupName, OptionSelections } from "~/app/services/option-groups";
 

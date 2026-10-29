@@ -7,18 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MarkdownWalkError } from "sdxc/markdown";
-import type { Result } from "sdxc/result";
+import type { MarkdownWalkError } from "@sdxc/markdown";
+import type { Result } from "@sdxc/result";
 
+import { diagram } from "@sdxc/diagram/markdown";
+import { highlight } from "@sdxc/highlight/markdown";
 import { iife } from "@sdxc/iife";
-import { diagram } from "sdxc/diagram/markdown";
-import { highlight } from "sdxc/highlight/markdown";
-import { Markdown } from "sdxc/markdown";
-import { toPlainText } from "sdxc/markdown/plain";
-import { headings } from "sdxc/markdown/plugin/headings";
-import { variables } from "sdxc/markdown/plugin/variables";
-import { math } from "sdxc/math/markdown";
-import { isFailure } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { headings } from "@sdxc/markdown/plugin/headings";
+import { variables } from "@sdxc/markdown/plugin/variables";
+import { math } from "@sdxc/math/markdown";
+import { isFailure } from "@sdxc/result";
 
 import { findPackage, readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";

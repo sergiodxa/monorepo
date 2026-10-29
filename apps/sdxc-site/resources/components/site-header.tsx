@@ -9,19 +9,19 @@
 
 import type { Handle } from "remix/component";
 
+import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { rounded, transition, transitionBehavior } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { hidden, hstack, inline, insBs, sticky, vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { light, media } from "@sdxc/u/responsive";
+import { bs, is, maxBs, maxIs, mi, minBs, p } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { when } from "@sdxc/u/state";
+import { text, tracking, weight } from "@sdxc/u/typography";
+import { Dialog, NavLink } from "@sdxc/ui";
+import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { Frame } from "remix/component";
-import { bg, borderEdge, fg } from "sdxc/u/color";
-import { rounded, transition, transitionBehavior } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { hidden, hstack, inline, insBs, sticky, vstack } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { light, media } from "sdxc/u/responsive";
-import { bs, is, maxBs, maxIs, mi, minBs, p } from "sdxc/u/size";
-import { z } from "sdxc/u/stacking";
-import { when } from "sdxc/u/state";
-import { text, tracking, weight } from "sdxc/u/typography";
-import { Dialog, NavLink } from "sdxc/ui";
-import { isApplePlatform } from "sdxc/user-agent/helpers";
 
 import { searchFrameSrc } from "~/resources/components/search-box";
 import { SearchQuickLinks } from "~/resources/components/search-quick-links";

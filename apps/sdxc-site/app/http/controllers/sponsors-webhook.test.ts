@@ -1,5 +1,3 @@
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 /**
  * Tests GitHub's sponsorship webhook through the real router: only a delivery signed with
  * the hook's secret is acted on, and a signed `sponsorship` event stores a fresh roster
@@ -8,9 +6,11 @@ import { setupServer } from "msw/node";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { MemoryCache } from "sdxc/cache/memory";
-import { hmac, Hex } from "sdxc/crypto";
-import { unwrap } from "sdxc/result";
+import { MemoryCache } from "@sdxc/cache/memory";
+import { hmac, Hex } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The secret the test environment supplies for every binding named like this one. */

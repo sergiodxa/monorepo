@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createResource } from "sdxc/mcp/server";
+import { createResource } from "@sdxc/mcp/server";
 
 import resourceset from "~/app/mcp/resources";
 import { findPackage, listPackageGroups, readPackageReadme } from "~/app/services/packages";

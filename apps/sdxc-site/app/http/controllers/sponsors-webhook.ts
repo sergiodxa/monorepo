@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
-import { isFailure } from "sdxc/result";
 
 import { siteCache } from "~/app/initializers/cache";
 import { verifyGitHubDelivery } from "~/app/services/github-webhook";

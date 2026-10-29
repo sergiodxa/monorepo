@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { Feature } from "sdxc/ui";
+import { Feature } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

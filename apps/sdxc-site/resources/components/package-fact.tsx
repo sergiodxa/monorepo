@@ -9,10 +9,10 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { flexWrap, hstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, hstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
 
 namespace PackageFact {
 	export interface Props {

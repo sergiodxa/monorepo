@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Cache } from "@sdxc/cache";
 import type { InferOutput } from "remix/data-schema";
-import type { Cache } from "sdxc/cache";
 
+import { APIClient } from "@sdxc/api-client";
+import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { APIClient } from "sdxc/api-client";
-import { isSuccess } from "sdxc/result";
 
 /** The GitHub account the sponsorships belong to. */
 export const SPONSORED_LOGIN = "sergiodxa";

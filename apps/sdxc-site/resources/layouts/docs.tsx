@@ -9,9 +9,9 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { MenuIcon } from "sdxc/icons";
-import { borderEdge, fg } from "sdxc/u/color";
-import { raw } from "sdxc/u/general";
+import { MenuIcon } from "@sdxc/icons";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import {
 	basis,
 	hidden,
@@ -22,14 +22,14 @@ import {
 	shrink,
 	sticky,
 	vstack,
-} from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { media } from "sdxc/u/responsive";
-import { bs, is, maxBs, maxIs, mis, p, pbe } from "sdxc/u/size";
-import { z } from "sdxc/u/stacking";
-import { before } from "sdxc/u/state";
-import { text, tracking, weight } from "sdxc/u/typography";
-import { Breadcrumbs, Button, Sidebar } from "sdxc/ui";
+} from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, maxBs, maxIs, mis, p, pbe } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
+import { before } from "@sdxc/u/state";
+import { text, tracking, weight } from "@sdxc/u/typography";
+import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
 
 import type { NavTree } from "~/app/services/navigation-tree";
 

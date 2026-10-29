@@ -9,8 +9,8 @@
 
 import { fileURLToPath } from "node:url";
 
-import { createCommand, success } from "sdxc/cli";
-import { isFailure } from "sdxc/result";
+import { createCommand, success } from "@sdxc/cli";
+import { isFailure } from "@sdxc/result";
 
 import commandset from "~/app/commands";
 

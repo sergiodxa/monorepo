@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
 
 import { withBundleCache } from "~/app/http/caching";
 import { readPolicy } from "~/app/services/policy";

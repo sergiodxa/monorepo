@@ -8,11 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { text, xml } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
+import { isFailure } from "@sdxc/result";
+import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
-import { text, xml } from "sdxc/http/response";
-import { currentLog } from "sdxc/logger";
-import { isFailure } from "sdxc/result";
-import { RSS } from "sdxc/rss";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";

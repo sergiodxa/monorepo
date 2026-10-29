@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { command, commands, flag } from "sdxc/cli";
+import { command, commands, flag } from "@sdxc/cli";
 
 /** The site's commands; `sdxc make command <name>` declares one here and maps its handler. */
 export default commands({

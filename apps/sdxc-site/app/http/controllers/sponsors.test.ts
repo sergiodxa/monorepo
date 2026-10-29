@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { MemoryCache } from "sdxc/cache/memory";
+import { MemoryCache } from "@sdxc/cache/memory";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SponsorRoster } from "~/app/services/sponsors";

@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { flexWrap } from "sdxc/u/layout";
-import { mbs } from "sdxc/u/size";
-import { Pagination } from "sdxc/ui";
+import { flexWrap } from "@sdxc/u/layout";
+import { mbs } from "@sdxc/u/size";
+import { Pagination } from "@sdxc/ui";
 
 import type { SearchResults } from "~/app/services/search-results";
 

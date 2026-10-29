@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { container, inlineFlex, items, relative, vstack } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { font, text, weight } from "sdxc/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { container, inlineFlex, items, relative, vstack } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
 import {
 	Button,
 	CtaGroup,
@@ -22,9 +22,9 @@ import {
 	MarketingSection,
 	Split,
 	StatStrip,
-} from "sdxc/ui";
-import { viewReveal } from "sdxc/ui/animations";
-import { marketingCtaChrome } from "sdxc/ui/styles";
+} from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
+import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";

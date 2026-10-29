@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { conditional, etag, policy, vary } from "sdxc/http/cache";
-import { isSuccess } from "sdxc/result";
+import { conditional, etag, policy, vary } from "@sdxc/http/cache";
+import { isSuccess } from "@sdxc/result";
 
 import { readOptionSelections } from "~/app/initializers/cookies";
 import { serializeOptionSelections } from "~/app/services/option-groups";

@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { Split as UiSplit } from "sdxc/ui";
+import { Split as UiSplit } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

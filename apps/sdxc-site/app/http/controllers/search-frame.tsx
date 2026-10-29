@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
 
 import type { SearchKind } from "~/app/services/search-query";
 

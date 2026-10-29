@@ -8,7 +8,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { Table } from "sdxc/ui";
+import { Table } from "@sdxc/ui";
 
 namespace ReferenceTable {
 	export interface Props {

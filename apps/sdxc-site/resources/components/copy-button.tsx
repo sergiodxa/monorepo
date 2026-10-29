@@ -9,16 +9,16 @@
 
 import type { Handle } from "remix/component";
 
+import { CheckIcon, CopyIcon } from "@sdxc/icons";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { inlineFlex, items, justify } from "@sdxc/u/layout";
+import { p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-import { CheckIcon, CopyIcon } from "sdxc/icons";
-import { visuallyHidden } from "sdxc/u/a11y";
-import { bg, border, fg, outline } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { inlineFlex, items, justify } from "sdxc/u/layout";
-import { p } from "sdxc/u/size";
-import { hover, when } from "sdxc/u/state";
-import { COPY_COMMAND, copyToClipboard } from "sdxc/ui/mixins";
 
 /** Props must be a `type` rather than an `interface` to satisfy `SerializableProps`. */
 type CopyButtonProps = {

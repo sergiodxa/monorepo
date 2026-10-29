@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure } from "@sdxc/result";
+import { parseReports } from "@sdxc/security-headers/reports";
 import { createAction } from "remix/router";
-import { isFailure } from "sdxc/result";
-import { parseReports } from "sdxc/security-headers/reports";
 
 import routes from "~/routes/web";
 

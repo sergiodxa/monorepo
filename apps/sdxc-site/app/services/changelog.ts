@@ -6,15 +6,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Cache } from "sdxc/cache";
-import type { Result } from "sdxc/result";
+import type { Cache } from "@sdxc/cache";
+import type { Result } from "@sdxc/result";
 
+import { addDays, startOfDay } from "@sdxc/dates";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-import { addDays, startOfDay } from "sdxc/dates";
-import { highlight } from "sdxc/highlight/markdown";
-import { Markdown } from "sdxc/markdown";
-import { failure, isFailure, isSuccess, success } from "sdxc/result";
 
 /** The repository whose releases this page is a view of. */
 const RELEASES_ENDPOINT = "https://api.github.com/repos/sergiodxa/monorepo/releases?per_page=100";

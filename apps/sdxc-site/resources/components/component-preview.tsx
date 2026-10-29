@@ -9,14 +9,14 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { bg, border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { flexWrap, hstack, vstack } from "sdxc/u/layout";
-import { clip, overflowX } from "sdxc/u/overflow";
-import { is, minBs, p } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Disclosure } from "sdxc/ui";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { clip, overflowX } from "@sdxc/u/overflow";
+import { is, minBs, p } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Disclosure } from "@sdxc/ui";
 
 import Snippet from "~/resources/components/snippet";
 

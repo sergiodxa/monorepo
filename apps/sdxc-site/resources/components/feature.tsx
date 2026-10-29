@@ -17,9 +17,9 @@ import {
 	PackageIcon,
 	ShieldCheckIcon,
 	ZapIcon,
-} from "sdxc/icons";
-import { hstack } from "sdxc/u/layout";
-import { Badge, Feature as UiFeature, LinkButton } from "sdxc/ui";
+} from "@sdxc/icons";
+import { hstack } from "@sdxc/u/layout";
+import { Badge, Feature as UiFeature, LinkButton } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

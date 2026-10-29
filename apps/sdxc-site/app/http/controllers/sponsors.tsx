@@ -9,15 +9,15 @@
 
 import type { Handle } from "remix/component";
 
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
+import { fg } from "@sdxc/u/color";
+import { listStyle, raw } from "@sdxc/u/general";
+import { flexWrap, gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
+import { is, m, p } from "@sdxc/u/size";
+import { textAlign, text, weight } from "@sdxc/u/typography";
+import { Avatar } from "@sdxc/ui";
 import { createAction } from "remix/router";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
-import { fg } from "sdxc/u/color";
-import { listStyle, raw } from "sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, hstack, vstack } from "sdxc/u/layout";
-import { is, m, p } from "sdxc/u/size";
-import { textAlign, text, weight } from "sdxc/u/typography";
-import { Avatar } from "sdxc/ui";
 
 import type { Sponsor } from "~/app/services/sponsors";
 

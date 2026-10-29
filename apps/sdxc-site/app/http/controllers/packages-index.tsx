@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { SearchIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text, textTransform, tracking } from "@sdxc/u/typography";
+import { Button, Keyboard } from "@sdxc/ui";
 import { createAction } from "remix/router";
-import { SearchIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { font, text, textTransform, tracking } from "sdxc/u/typography";
-import { Button, Keyboard } from "sdxc/ui";
 
 import { withBundleCache } from "~/app/http/caching";
 import { buildPackagesNav } from "~/app/services/navigation";

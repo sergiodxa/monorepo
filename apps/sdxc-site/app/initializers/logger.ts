@@ -6,6 +6,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({ service: "sdxc" });

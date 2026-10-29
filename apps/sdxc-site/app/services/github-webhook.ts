@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "sdxc/result";
+import type { Result } from "@sdxc/result";
 
-import { hmac } from "sdxc/crypto";
-import { failure, isFailure, success } from "sdxc/result";
+import { hmac } from "@sdxc/crypto";
+import { failure, isFailure, success } from "@sdxc/result";
 
 /** How GitHub prefixes the hex HMAC-SHA256 in `X-Hub-Signature-256`. */
 const SIGNATURE_PREFIX = "sha256=";

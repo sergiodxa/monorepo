@@ -12,7 +12,7 @@
 import type { DocNode, DocSignature } from "@sdxc/jsdoc";
 
 import { extract, inlineLinks } from "@sdxc/jsdoc";
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 
 import type {
 	ComponentPart,

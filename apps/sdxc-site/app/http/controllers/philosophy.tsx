@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
-import { toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
-import { vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
 
 import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/initializers/cache";

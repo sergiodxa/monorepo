@@ -9,12 +9,12 @@
 
 import type { Handle } from "remix/component";
 
-import { border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { listStyle } from "sdxc/u/general";
-import { vstack } from "sdxc/u/layout";
-import { m, maxIs, p, pis } from "sdxc/u/size";
-import { font, leading, text, textTransform, tracking } from "sdxc/u/typography";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { m, maxIs, p, pis } from "@sdxc/u/size";
+import { font, leading, text, textTransform, tracking } from "@sdxc/u/typography";
 
 namespace GuideOutcomes {
 	export interface Props {

@@ -9,11 +9,11 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { bg, border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { vstack } from "sdxc/u/layout";
-import { overflowX } from "sdxc/u/overflow";
-import { is, minBs, p } from "sdxc/u/size";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { vstack } from "@sdxc/u/layout";
+import { overflowX } from "@sdxc/u/overflow";
+import { is, minBs, p } from "@sdxc/u/size";
 
 import Snippet from "~/resources/components/snippet";
 

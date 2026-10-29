@@ -9,15 +9,15 @@
 
 import type { Handle } from "remix/component";
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { bg, border, borderEdge, fg, outline } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { cursor, raw } from "sdxc/u/general";
-import { basis, flex, flexWrap, gap, hidden, items, justify } from "sdxc/u/layout";
-import { overflow, overflowX } from "sdxc/u/overflow";
-import { minIs, p } from "sdxc/u/size";
-import { precededBy } from "sdxc/u/state";
-import { font, text, weight } from "sdxc/u/typography";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { cursor, raw } from "@sdxc/u/general";
+import { basis, flex, flexWrap, gap, hidden, items, justify } from "@sdxc/u/layout";
+import { overflow, overflowX } from "@sdxc/u/overflow";
+import { minIs, p } from "@sdxc/u/size";
+import { precededBy } from "@sdxc/u/state";
+import { font, text, weight } from "@sdxc/u/typography";
 
 import type { OptionGroupName } from "~/app/services/option-groups";
 import type { MarkdownProps } from "~/resources/components/markdown-props";
