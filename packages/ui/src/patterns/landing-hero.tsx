@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { bg, border, fg } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { absolute, inlineFlex, inset, items, relative, vstack } from "@sdxc/u/layout";
+import { absolute, inlineFlex, inset, items, relative, self, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -173,6 +173,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 						mix={[
 							inlineFlex(),
 							items("center"),
+							self(isCenter ? "center" : "start"),
 							text("xs"),
 							weight("semibold"),
 							when('&[data-variant="pill"]', [

@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { borderEdge, fg } from "@sdxc/u/color";
 import { container, gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { p } from "@sdxc/u/size";
+import { p, width } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { balance, leading, text, tracking, weight } from "@sdxc/u/typography";
 
@@ -50,11 +50,9 @@ export namespace StatStrip {
 }
 
 /**
- * Lays {@link StatStrip.Item} children in a responsive grid. The host is the
- * named sizing container; an inner wrapper holds the tracks and `@container`
- * column / seam rules so the query can restyle a descendant. Starts at two
- * columns and opens to five above `xl` (64rem), matching the landing's original
- * viewport threshold so mid-width viewports stay a readable pair.
+ * Lays {@link StatStrip.Item} children in two columns that open to five above
+ * `xl` (64rem) of its own width. The host is the sizing container and fills its
+ * parent's inline size, so a centering band still gives the tracks room.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -75,7 +73,7 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 				{...rest}
 				data-variant={resolvedVariant}
 				data-slot="stat-strip"
-				mix={[container("ui-marketing-stat-strip"), mix]}
+				mix={[container("ui-marketing-stat-strip"), width("full"), mix]}
 			>
 				<div
 					mix={[

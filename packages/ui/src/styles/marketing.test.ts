@@ -87,10 +87,19 @@ describe("marketingBandTone", () => {
 	});
 
 	test("inverse uses the solid neutral surface and on-solid text", () => {
-		expect(styles(marketingBandTone("inverse"))).toEqual({
-			backgroundColor: "var(--ui-neutral-bg-solid)",
-			color: "var(--ui-neutral-fg-on-solid)",
-		});
+		let style = styles(marketingBandTone("inverse"));
+
+		expect(style.backgroundColor).toBe("var(--ui-neutral-bg-solid)");
+		expect(style.color).toBe("var(--ui-neutral-fg-on-solid)");
+	});
+
+	test("inverse re-points neutral text and border tokens at the on-solid foreground", () => {
+		let style = styles(marketingBandTone("inverse"));
+
+		expect(style["--ui-neutral-fg-emphasis"]).toBe("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-neutral-fg"]).toContain("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-neutral-fg-muted"]).toContain("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-neutral-border"]).toContain("var(--ui-neutral-fg-on-solid)");
 	});
 });
 

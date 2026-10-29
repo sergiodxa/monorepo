@@ -128,6 +128,18 @@ export function marketingSectionSpace<Node extends Element = Element>(
 }
 
 /**
+ * The neutral text, border and tint tokens re-pointed at the solid fill's foreground, so
+ * headings, leads and outlined controls inside an inverse band stay legible on it.
+ */
+const INVERSE_NEUTRAL_TOKENS = {
+	"--ui-neutral-fg-emphasis": "var(--ui-neutral-fg-on-solid)",
+	"--ui-neutral-fg": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 78%, transparent)",
+	"--ui-neutral-fg-muted": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 64%, transparent)",
+	"--ui-neutral-border": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 18%, transparent)",
+	"--ui-neutral-bg-tint": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 6%, transparent)",
+} as const;
+
+/**
  * Paints a marketing band's background: a quiet neutral tint, a faded grid,
  * an inverted solid, or nothing for `"plain"`.
  *
@@ -171,7 +183,11 @@ export function marketingBandTone<Node extends Element = Element>(
 				),
 			]);
 		case "inverse":
-			return combine<Node>([bg<Node>("neutral.solid"), fg<Node>("neutral.onSolid")]);
+			return combine<Node>([
+				bg<Node>("neutral.solid"),
+				fg<Node>("neutral.onSolid"),
+				raw<Node>(INVERSE_NEUTRAL_TOKENS),
+			]);
 		default:
 			return raw<Node>({});
 	}

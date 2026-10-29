@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { inlineFlex, items, vstack } from "@sdxc/u/layout";
+import { inlineFlex, items, self, vstack } from "@sdxc/u/layout";
 import { m, mbe, mi, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import {
@@ -127,6 +127,7 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 						mix={[
 							inlineFlex(),
 							items("center"),
+							self(isCenter ? "center" : "start"),
 							text("xs"),
 							weight("semibold"),
 							when('&[data-variant="pill"]', [

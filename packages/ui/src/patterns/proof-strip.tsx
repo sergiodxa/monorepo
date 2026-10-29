@@ -10,6 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
+import { width } from "@sdxc/u/size";
 
 import { HeadingScope } from "../components/heading-scope.js";
 import { MarketingSection } from "../components/marketing-section.js";
@@ -71,7 +72,7 @@ export function ProofStrip(handle: Handle<ProofStrip.Props>) {
 				mix={mix}
 			>
 				<HeadingScope>
-					<div mix={[vstack({ gap: 8, align: "center" })]}>{children}</div>
+					<div mix={[vstack({ gap: 8, align: "center" }), width("full")]}>{children}</div>
 				</HeadingScope>
 			</MarketingSection>
 		);

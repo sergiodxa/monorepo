@@ -134,7 +134,7 @@ export function FaqBand(handle: Handle<FaqBand.Props>) {
 							<div
 								mix={[
 									grid(),
-									gap(8),
+									gap(0, 8),
 									gridTemplate({ columns: "minmax(0, 1fr)" }),
 									isTwo
 										? at(
