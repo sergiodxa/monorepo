@@ -13,7 +13,7 @@ import { borderEdge } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { container, relative, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { is } from "@sdxc/u/size";
+import { is, maxIs, mi, pi } from "@sdxc/u/size";
 import { after, before } from "@sdxc/u/state";
 import { textAlign } from "@sdxc/u/typography";
 
@@ -90,6 +90,12 @@ export namespace MarketingSection {
 		ruled?: boolean;
 		/** Outer chrome. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
+		/**
+		 * Zeroes block padding on a framed column so a flush strip (stats) keeps
+		 * full-height rails without the section gap. Ignored when `variant` is
+		 * not `"frame"`.
+		 */
+		flush?: boolean;
 		/** Per-part styling for the measured inner column. */
 		parts?: PartsProps;
 		/** Band content — headers, splits, feature grids, and so on. */
@@ -98,10 +104,10 @@ export namespace MarketingSection {
 }
 
 /**
- * Renders a marketing band: tone and spacing on the `<section>`, a named
- * container for descendant queries, and a measured inner column from the
- * marketing gutters. Pair the host with `viewReveal()` from the animations
- * entry when the band should enter on scroll.
+ * Renders a marketing band: tone on the `<section>`, a named container for
+ * descendant queries, and a measured inner column. When `variant="frame"`,
+ * block padding lives on that column with the dashed rails so the rails run
+ * the full band height instead of stopping at the content box.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
  * @returns The render function producing the band's markup.
@@ -116,13 +122,15 @@ export namespace MarketingSection {
  */
 export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 	return () => {
-		let { align, children, mix, parts, ruled, spacing, tone, variant, ...rest } = handle.props;
+		let { align, children, flush, mix, parts, ruled, spacing, tone, variant, ...rest } =
+			handle.props;
 		let resolvedTone = tone ?? DEFAULT_TONE;
 		let resolvedSpacing = spacing ?? DEFAULT_SPACING;
 		let resolvedAlign = align ?? DEFAULT_ALIGN;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let isCenter = resolvedAlign === "center";
 		let isFrame = resolvedVariant === "frame";
+		let isFlushFrame = isFrame && Boolean(flush);
 
 		return (
 			<section
@@ -131,6 +139,7 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 				data-spacing={resolvedSpacing}
 				data-align={resolvedAlign}
 				data-variant={resolvedVariant}
+				data-flush={isFlushFrame ? "true" : undefined}
 				mix={[
 					container("ui-marketing-section"),
 					relative(),
@@ -138,24 +147,30 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 					is("100%"),
 					raw({ isolation: "isolate" }),
 					marketingBandTone(resolvedTone),
-					marketingSectionSpace(resolvedSpacing),
+					/**
+					 * Framed bands keep block padding on the measured column so the
+					 * dashed rails share that box and run the full band height.
+					 */
+					isFrame ? [] : marketingSectionSpace(resolvedSpacing),
 					ruled ? marketingHairline() : [],
 					mix,
 				]}
 			>
 				<div
 					mix={[
-						marketingContainer(),
-						vstack({
-							align: isCenter ? "center" : "stretch",
-							gap: 0,
-						}),
-						relative(),
-						is("100%"),
-						isCenter ? textAlign("center") : [],
 						isFrame
 							? [
+									maxIs("var(--ui-marketing-measure, 72rem)"),
+									mi("auto"),
+									is("100%"),
+									/**
+									 * Match the pre-migration framed band: quiet gutters that
+									 * open to 3rem above `lg`, so copy clears the rails.
+									 */
+									pi(5),
+									isFlushFrame ? [] : marketingSectionSpace(resolvedSpacing),
 									at("lg", "ui-marketing-section", [
+										pi(12),
 										borderEdge("inline-start", {
 											color: "neutral",
 											width: 1,
@@ -174,7 +189,14 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 											: [],
 									]),
 								]
-							: [],
+							: marketingContainer(),
+						vstack({
+							align: isCenter ? "center" : "stretch",
+							gap: 0,
+						}),
+						relative(),
+						is("100%"),
+						isCenter ? textAlign("center") : [],
 						parts?.container,
 					]}
 				>
