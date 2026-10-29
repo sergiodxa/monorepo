@@ -1,7 +1,7 @@
 /**
  * `GET /showcase` — the applications these packages are built and proven in. The list
  * is curated rather than exhaustive: an app reaching for a handful of packages proves
- * nothing about them, and the same five are the ones a package page names as its us
+ * nothing about them, and the same set is what a package page names as its users.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,16 +27,49 @@ import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** The one-sentence summary search results and link previews show. */
-const DESCRIPTION =
-	"Five applications built on these packages, each with the number of them it installs, read from its own manifest.";
+/** Cardinal words for the curated count, so the prose stays exact as the list grows. */
+const CARDINALS = [
+	"zero",
+	"one",
+	"two",
+	"three",
+	"four",
+	"five",
+	"six",
+	"seven",
+	"eight",
+	"nine",
+	"ten",
+] as const;
 
-/** What the page argues, which is Rails' framing rather than a logo wall's. */
-const INTRODUCTION =
-	"These are reference applications rather than customers: five things that run on the collection, listed with what reading each one is worth and how deep into the set it goes. Two of them have no deployment, and say so.";
+/**
+ * The page's one-sentence summary and intro, written from the live list so a new
+ * application or a newly shipped URL moves the prose with the cards.
+ */
+function showcaseCopy(applications: ReturnType<typeof listShowcase>): {
+	description: string;
+	introduction: string;
+} {
+	let count = applications.length;
+	let cardinal = CARDINALS[count] ?? String(count);
+	let sourceOnly = applications.filter((application) => application.href === null).length;
+	let sourceOnlyCardinal = CARDINALS[sourceOnly] ?? String(sourceOnly);
+	let sourceOnlyClause = "Every one of them is running somewhere a reader can open.";
+	if (sourceOnly === 1) {
+		sourceOnlyClause = "One of them has no deployment, and says so.";
+	} else if (sourceOnly > 1) {
+		sourceOnlyClause = `${sourceOnlyCardinal.charAt(0).toUpperCase()}${sourceOnlyCardinal.slice(1)} of them have no deployment, and say so.`;
+	}
+
+	return {
+		description: `${cardinal.charAt(0).toUpperCase()}${cardinal.slice(1)} applications built on these packages, each with the number of them it installs, read from its own manifest.`,
+		introduction: `These are reference applications rather than customers: ${cardinal} things that run on the collection, listed with what reading each one is worth and how deep into the set it goes. ${sourceOnlyClause}`,
+	};
+}
 
 export default createAction(routes.showcase, async (ctx) => {
 	let applications = listShowcase();
+	let { description, introduction } = showcaseCopy(applications);
 	let first = (await listGuides()).at(0)?.guides.at(0);
 	let firstGuide = first ? routes.docs.show.href({ slug: first.slug }) : null;
 
@@ -44,7 +77,7 @@ export default createAction(routes.showcase, async (ctx) => {
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Showcase — sdxc"
-			description={DESCRIPTION}
+			description={description}
 			canonical={ctx.url.href}
 		>
 			<SiteHeader activePath={routes.showcase.href()} />
@@ -66,7 +99,7 @@ export default createAction(routes.showcase, async (ctx) => {
 								[ Showcase ]
 							</p>
 							<ProseHeading level={1}>Built on these packages</ProseHeading>
-							<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{INTRODUCTION}</p>
+							<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{introduction}</p>
 						</header>
 					</DisplayHeadings>
 				</Band>
@@ -185,7 +218,7 @@ export default createAction(routes.showcase, async (ctx) => {
 						<p mix={[m(0), maxIs("48rem"), text("sm"), leading("relaxed"), fg("neutral")]}>
 							Each count is that application&apos;s <code mix={[font("mono")]}>@sdxc/*</code>{" "}
 							dependencies, read from its own <code mix={[font("mono")]}>package.json</code>. Every
-							package&apos;s reference page names which of these five install it, read from the same
+							package&apos;s reference page names which of these install it, read from the same
 							files.
 						</p>
 					</div>

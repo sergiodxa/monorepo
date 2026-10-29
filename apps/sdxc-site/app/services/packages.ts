@@ -38,6 +38,7 @@ const applicationManifests = import.meta.glob<Manifest>(
 		"../../../blog/package.json",
 		"../../../books/package.json",
 		"../../../reader/package.json",
+		"../../../sdxc-api/package.json",
 		"../../../uptime/package.json",
 	],
 	{ eager: true, import: "default" },
@@ -222,7 +223,7 @@ export async function readPackageReadme(directory: string): Promise<string | nul
 
 /**
  * The applications that install a package, named the way the site names them. The
- * list is the curated one, so a page claiming five users and a site listing five
+ * list is the curated one, so a page claiming more users than the showcase lists
  * applications agree; a workspace outside it never appears here.
  */
 export function listApplicationsUsing(name: string): string[] {

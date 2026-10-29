@@ -767,27 +767,28 @@ The page ends by linking `docs/adr/` on GitHub, with the sponsors block beneath 
 
 ### `/showcase` — the apps, with the receipts
 
-Five apps, listed because they are the ones worth showing. The monorepo holds more, and the
-showcase is curated rather than exhaustive — `r3-gallery` at four packages and `pkmn` at one
-prove nothing, and listing them would dilute the ones that do.
+Six apps, listed because they are the ones worth showing. The monorepo holds more, and the
+showcase is curated rather than exhaustive — `pkmn` at a handful of packages proves nothing,
+and listing it would dilute the ones that do. Counts on the page are read from each app's
+manifest at request time; the numbers below are illustrative of the set, not a snapshot to
+keep in sync by hand.
 
-| App         | `@sdxc` packages | Where                  |
-| ----------- | ---------------- | ---------------------- |
-| `uptime`    | 32               | `uptime.sergiodxa.com` |
-| `auth-saas` | 30               | Source only            |
-| `reader`    | 29               | Source only            |
-| `blog`      | 23               | `sergiodxa.com`        |
-| `books`     | 13               | `books.sergiodxa.com`  |
-
-Counts are each app's `@sdxc/*` dependencies, read from its manifest.
+| App         | Where                  |
+| ----------- | ---------------------- |
+| `uptime`    | `uptime.sergiodxa.com` |
+| `blog`      | `sergiodxa.com`        |
+| `auth-saas` | Source only            |
+| `reader`    | Source only            |
+| `sdxc-api`  | `api.sdxc.dev`         |
+| `books`     | `books.sergiodxa.com`  |
 
 The valuable part is that this is **bidirectional and generated**: an app page lists the packages
 it uses, and every package reference page gains a "used by" line naming the apps that depend on
 it. Both read from the manifests, so neither can go stale.
 
 The "used by" line reads **this same curated set**, not every workspace. A package page that
-claims five users while the showcase lists five apps is consistent; one that counts nine and
-links five is a reader noticing the discrepancy before anything else on the page.
+claims six users while the showcase lists six apps is consistent; one that counts nine and
+links six is a reader noticing the discrepancy before anything else on the page.
 
 Apps that are source-only are labelled that way rather than hidden — unshipped code is still
 readable code, and quietly implying a deployment would be the same dishonesty as a logo wall.

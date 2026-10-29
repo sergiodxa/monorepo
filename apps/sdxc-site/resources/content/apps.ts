@@ -1,5 +1,5 @@
 /**
- * The applications the showcase lists, and the same five a package page may name as
+ * The applications the showcase lists, and the same set a package page may name as
  * users of it. The list is curated rather than exhaustive: an app that reaches for a
  * handful of packages proves nothing about them, and a count a reader cannot check
  *
@@ -58,9 +58,17 @@ export const APPLICATIONS: ApplicationDefinition[] = [
 	{
 		directory: "books",
 		title: "books",
-		summary: "A reading log, kept small on purpose.",
+		summary: "A sales funnel for the React Router OAuth2 Handbook.",
 		study:
-			"The smallest complete application here, and the shortest read: what an app needs from the collection before it needs anything else.",
+			"Billing, attribution, a newsletter and EPUB delivery on a zero-JS storefront: Polar, Buttondown and a signed cookie, with nothing else in the Worker.",
 		href: "https://books.sergiodxa.com",
+	},
+	{
+		directory: "sdxc-api",
+		title: "sdxc-api",
+		summary: "Package-backed micro-APIs for agents, each operation charged through x402.",
+		study:
+			"What the collection looks like as a paid HTTP and MCP surface: one Worker runs package capabilities, settles payments and keeps a catalog humans can still read for free.",
+		href: "https://api.sdxc.dev",
 	},
 ];

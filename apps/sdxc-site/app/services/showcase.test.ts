@@ -15,12 +15,12 @@ import { listShowcase } from "~/app/services/showcase";
 import { APPLICATIONS } from "~/resources/content/apps";
 
 describe("listShowcase", () => {
-	test("lists the five curated applications and no others", () => {
+	test("lists the curated applications and no others", () => {
 		expect(
 			listShowcase()
 				.map((entry) => entry.directory)
 				.sort(),
-		).toEqual(["auth-saas", "blog", "books", "reader", "uptime"]);
+		).toEqual(["auth-saas", "blog", "books", "reader", "sdxc-api", "uptime"]);
 	});
 
 	test("counts each application's packages rather than quoting a written-down number", () => {

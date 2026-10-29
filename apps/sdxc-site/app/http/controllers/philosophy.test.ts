@@ -61,7 +61,7 @@ describe("GET /philosophy", () => {
 });
 
 describe("GET /showcase", () => {
-	test("lists exactly the five curated applications", async () => {
+	test("lists exactly the curated applications", async () => {
 		let response = await fetchApp("/showcase");
 		let body = await response.text();
 
@@ -85,6 +85,23 @@ describe("GET /showcase", () => {
 		expect(body).toContain("Source only");
 		expect(body).toContain("https://uptime.sergiodxa.com");
 		expect(body).toContain("https://books.sergiodxa.com");
+		expect(body).toContain("https://api.sdxc.dev");
+	});
+
+	test("describes books as the handbook funnel rather than a reading log", async () => {
+		let body = await (await fetchApp("/showcase")).text();
+
+		expect(body).toContain("React Router OAuth2 Handbook");
+		expect(body).not.toContain("reading log");
+	});
+
+	test("counts the curated set in the intro rather than quoting a fixed number", async () => {
+		let applications = listShowcase();
+		let body = await (await fetchApp("/showcase")).text();
+
+		expect(applications).toHaveLength(6);
+		expect(body).toContain("six things that run");
+		expect(body).toContain("Two of them have no deployment");
 	});
 });
 
