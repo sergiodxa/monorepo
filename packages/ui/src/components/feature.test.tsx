@@ -52,6 +52,34 @@ describe("Feature", () => {
 		expect(html).toContain("var(--ui-neutral-border)");
 	});
 
+	test("keeps the named container on the host and the column tracks on an inner wrapper", async () => {
+		let html = await renderToString(
+			<Feature.Grid columns={2}>
+				<Feature>
+					<Feature.Title>One</Feature.Title>
+				</Feature>
+				<Feature>
+					<Feature.Title>Two</Feature.Title>
+				</Feature>
+			</Feature.Grid>,
+		);
+
+		expect(html).toMatch(/data-slot="feature-grid"[^>]*>\s*<div\b/);
+		expect(html).toContain("container: ui-marketing-feature-grid / inline-size");
+		expect(html).toContain("@container ui-marketing-feature-grid (min-width:");
+
+		let hostClasses = new Set(
+			(html.match(/data-slot="feature-grid"[^>]*class="([^"]+)"/)?.[1] ?? "")
+				.split(/\s+/)
+				.filter(Boolean),
+		);
+		let tracksMatch = html.match(
+			/@container ui-marketing-feature-grid \(min-width:[^)]+\)\s*\{\s*\.([a-z0-9-]+)\s*\{/,
+		);
+		expect(tracksMatch?.[1]).toBeTruthy();
+		expect(hostClasses.has(tracksMatch![1]!)).toBe(false);
+	});
+
 	test("adds panel chrome when variant is panel", async () => {
 		let html = await renderToString(
 			<Feature variant="panel">

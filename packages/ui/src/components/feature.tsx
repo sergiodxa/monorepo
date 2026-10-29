@@ -246,9 +246,9 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
 };
 
 /**
- * Hairline-ruled grid of {@link Feature} cells. Collapses to one column below
- * `md` on its own named container; above it, `columns` caps the row width and
- * a lone trailing cell spans the remaining tracks.
+ * Hairline-ruled grid of {@link Feature} cells. The host is the named sizing
+ * container; an inner wrapper holds the grid and `@container` column tracks so
+ * the query can restyle a descendant. Collapses to one column below `md`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the grid.
@@ -261,7 +261,7 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
  */
 Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 	return () => {
-		let { columns, mix, ...rest } = handle.props;
+		let { children, columns, mix, ...rest } = handle.props;
 		let resolvedColumns = columns ?? DEFAULT_COLUMNS;
 
 		return (
@@ -269,32 +269,36 @@ Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 				{...rest}
 				data-columns={String(resolvedColumns)}
 				data-slot="feature-grid"
-				mix={[
-					container("ui-marketing-feature-grid"),
-					grid(),
-					gap("1px"),
-					rounded("xl"),
-					overflow("hidden"),
-					border({ color: "neutral", width: 1, style: "solid" }),
-					raw({
-						backgroundColor: "var(--ui-neutral-border)",
-						textAlign: "start",
-					}),
-					gridTemplate({ columns: "minmax(0, 1fr)" }),
-					at("md", "ui-marketing-feature-grid", [
-						gridTemplate({
-							columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
+				mix={[container("ui-marketing-feature-grid"), mix]}
+			>
+				<div
+					mix={[
+						grid(),
+						gap("1px"),
+						rounded("xl"),
+						overflow("hidden"),
+						border({ color: "neutral", width: 1, style: "solid" }),
+						raw({
+							backgroundColor: "var(--ui-neutral-border)",
+							textAlign: "start",
 						}),
-						resolvedColumns === 2
-							? when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" }))
-							: [
-									when("& > :last-child:nth-child(3n + 1)", raw({ gridColumn: "1 / -1" })),
-									when("& > :last-child:nth-child(3n + 2)", raw({ gridColumn: "span 2" })),
-								],
-					]),
-					mix,
-				]}
-			/>
+						gridTemplate({ columns: "minmax(0, 1fr)" }),
+						at("md", "ui-marketing-feature-grid", [
+							gridTemplate({
+								columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
+							}),
+							resolvedColumns === 2
+								? when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" }))
+								: [
+										when("& > :last-child:nth-child(3n + 1)", raw({ gridColumn: "1 / -1" })),
+										when("& > :last-child:nth-child(3n + 2)", raw({ gridColumn: "span 2" })),
+									],
+						]),
+					]}
+				>
+					{children}
+				</div>
+			</div>
 		);
 	};
 };
