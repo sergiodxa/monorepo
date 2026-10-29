@@ -1,7 +1,7 @@
 /**
  * The `sdxc ui` registry: the import rewrite and dependency list over a fixture package,
  * `changedIn` over a fixture git history with release tags, and the real `@sdxc/ui`, whose every
- * rewritten specifier has to be one the `sdxc` export map serves.
+ * rewritten specifier has to be one the `@sdxc/ui` export map serves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
