@@ -32,23 +32,33 @@ locally with the in-memory facilitator, set a non-http stub such as
 
 ## Connect MCP
 
+Handshake-era agents need `mcp-bridge` from `@sdxc/mcp`. Pass `OWNER_ACCESS_TOKEN` so
+priced `tools/call` skips x402:
+
 ```sh
-claude mcp add --transport http sdxc-api https://api.sdxc.dev/mcp
+export SDXC_API_OWNER_TOKEN='owner_…'
+npx -y @sdxc/mcp@latest https://api.sdxc.dev/mcp --token "$SDXC_API_OWNER_TOKEN"
 ```
 
 ```json
 {
 	"mcpServers": {
 		"sdxc-api": {
-			"type": "http",
-			"url": "https://api.sdxc.dev/mcp"
+			"command": "npx",
+			"args": [
+				"-y",
+				"@sdxc/mcp@latest",
+				"https://api.sdxc.dev/mcp",
+				"--token",
+				"${SDXC_API_OWNER_TOKEN}"
+			]
 		}
 	}
 }
 ```
 
-Unpaid `tools/call` answers HTTP `402` with x402 `PAYMENT-REQUIRED` (including Bazaar
-discovery metadata). Settle and retry with `PAYMENT-SIGNATURE`.
+Without the Bearer, unpaid `tools/call` answers HTTP `402` with x402 `PAYMENT-REQUIRED`
+(including Bazaar discovery metadata). Settle and retry with `PAYMENT-SIGNATURE`.
 
 ## Operations
 

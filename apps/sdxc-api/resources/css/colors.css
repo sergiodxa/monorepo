@@ -1,22 +1,12 @@
 /**
- * Visual tokens for api.sdxc.dev: cool slate ground, ink type, teal accent.
- * Avoids purple/indigo and cream-serif marketing defaults.
+ * Brand tokens for api.sdxc.dev: cool slate neutrals and a teal brand scale.
+ * Fonts and semantic `--ui-color-*` scales feed `@sdxc/ui` marketing chrome.
  */
 :root {
-	--apis-ink: oklch(0.18 0.02 230);
-	--apis-ink-soft: oklch(0.32 0.025 230);
-	--apis-paper: oklch(0.97 0.008 220);
-	--apis-paper-deep: oklch(0.93 0.012 220);
-	--apis-accent: oklch(0.62 0.12 195);
-	--apis-accent-ink: oklch(0.28 0.06 195);
-	--apis-line: oklch(0.82 0.015 220);
-	--apis-code-bg: oklch(0.16 0.02 230);
-	--apis-code-fg: oklch(0.9 0.02 195);
-	--apis-grid: oklch(0.88 0.012 220);
-
 	--ui-font-sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
 	--ui-font-serif: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
 	--ui-font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+	--ui-font-display: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
 
 	--ui-color-neutral-50: oklch(0.98 0.004 220);
 	--ui-color-neutral-100: oklch(0.96 0.006 220);
@@ -41,46 +31,40 @@
 	--ui-color-brand-800: oklch(0.32 0.07 195);
 	--ui-color-brand-900: oklch(0.24 0.05 195);
 	--ui-color-brand-950: oklch(0.16 0.03 195);
-}
 
-@keyframes apis-rise {
-	from {
-		opacity: 0;
-		transform: translateY(0.75rem);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
+	--ui-color-danger-50: oklch(0.97 0.02 25);
+	--ui-color-danger-100: oklch(0.93 0.04 25);
+	--ui-color-danger-200: oklch(0.86 0.07 25);
+	--ui-color-danger-300: oklch(0.76 0.11 25);
+	--ui-color-danger-400: oklch(0.66 0.15 25);
+	--ui-color-danger-500: oklch(0.58 0.18 25);
+	--ui-color-danger-600: oklch(0.5 0.17 25);
+	--ui-color-danger-700: oklch(0.42 0.14 25);
+	--ui-color-danger-800: oklch(0.34 0.1 25);
+	--ui-color-danger-900: oklch(0.26 0.07 25);
+	--ui-color-danger-950: oklch(0.18 0.04 25);
 
-@keyframes apis-grid-drift {
-	from {
-		background-position: 0 0;
-	}
-	to {
-		background-position: 48px 48px;
-	}
-}
+	--ui-color-warning-50: oklch(0.98 0.02 85);
+	--ui-color-warning-100: oklch(0.95 0.04 85);
+	--ui-color-warning-200: oklch(0.9 0.08 85);
+	--ui-color-warning-300: oklch(0.84 0.12 85);
+	--ui-color-warning-400: oklch(0.76 0.14 85);
+	--ui-color-warning-500: oklch(0.68 0.14 85);
+	--ui-color-warning-600: oklch(0.58 0.13 85);
+	--ui-color-warning-700: oklch(0.48 0.11 85);
+	--ui-color-warning-800: oklch(0.38 0.08 85);
+	--ui-color-warning-900: oklch(0.3 0.06 85);
+	--ui-color-warning-950: oklch(0.2 0.04 85);
 
-@media (prefers-reduced-motion: reduce) {
-	@keyframes apis-rise {
-		from {
-			opacity: 1;
-			transform: none;
-		}
-		to {
-			opacity: 1;
-			transform: none;
-		}
-	}
-
-	@keyframes apis-grid-drift {
-		from {
-			background-position: 0 0;
-		}
-		to {
-			background-position: 0 0;
-		}
-	}
+	--ui-color-success-50: oklch(0.97 0.02 155);
+	--ui-color-success-100: oklch(0.94 0.04 155);
+	--ui-color-success-200: oklch(0.88 0.07 155);
+	--ui-color-success-300: oklch(0.78 0.1 155);
+	--ui-color-success-400: oklch(0.7 0.12 155);
+	--ui-color-success-500: oklch(0.6 0.13 155);
+	--ui-color-success-600: oklch(0.5 0.12 155);
+	--ui-color-success-700: oklch(0.42 0.1 155);
+	--ui-color-success-800: oklch(0.34 0.08 155);
+	--ui-color-success-900: oklch(0.26 0.06 155);
+	--ui-color-success-950: oklch(0.18 0.04 155);
 }

@@ -9,7 +9,9 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { css } from "remix/component";
+import { bg, fg } from "@sdxc/u/color";
+import { minBs } from "@sdxc/u/size";
+import { font, leading } from "@sdxc/u/typography";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -63,15 +65,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					))}
 				</head>
 				<body
-					mix={css({
-						margin: 0,
-						minHeight: "100dvh",
-						color: "var(--apis-ink)",
-						backgroundColor: "var(--apis-paper)",
-						fontFamily: "var(--ui-font-sans)",
-						lineHeight: 1.5,
-						WebkitFontSmoothing: "antialiased",
-					})}
+					mix={[minBs("100dvh"), fg("neutral.emphasis"), bg(), font("sans"), leading("normal")]}
 				>
 					{children}
 				</body>
