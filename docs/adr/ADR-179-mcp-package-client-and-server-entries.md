@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-27
 
+> The private `packages/sdxc` re-export this ADR mentions is gone; see
+> [ADR-183](./ADR-183-drop-sdxc-umbrella.md). Import `@sdxc/mcp/client` or `@sdxc/mcp/server`.
+
 ## Background
 
 [ADR-036](./ADR-036-model-context-protocol-server-package.md) shipped `@sdxc/mcp` as a

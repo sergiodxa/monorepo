@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> Superseded by [ADR-183](./ADR-183-drop-sdxc-umbrella.md) for import spelling: prefer `@sdxc/*`.
+> Codemod fixtures may still show fictional `sdxc/` rewrite targets.
+
 ## Background
 
 The `sdxc` CLI edits import declarations in a consumer's project: `sdxc ui add` (ADR-141) points
