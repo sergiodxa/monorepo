@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type { Package, PackageManifest } from "./workspace.js";
 
 import {
+	assertWorkspaceLinks,
 	buildPackage,
 	checkDistSpecifiers,
 	checkExportTargets,
@@ -162,6 +163,30 @@ describe("checkDistSpecifiers", () => {
 		expect(isFailure(result) && result.error.message).toBe(
 			"Emitted files reach outside dist/:\ndist/index.d.ts: ../../types/src/index.js",
 		);
+	});
+});
+
+describe("assertWorkspaceLinks", () => {
+	test("passes when dependencies are linked under the package", async () => {
+		let packages = await unwrap(readPackages(ROOT));
+		let pkg = packageNamed(packages, "@sdxc/x402");
+		expect(isSuccess(await assertWorkspaceLinks(join(ROOT, "packages", pkg.dir), pkg))).toBe(true);
+	});
+
+	test("names every dependency that has no node_modules entry", async () => {
+		let packages = await unwrap(readPackages(ROOT));
+		let pkg = packageNamed(packages, "@sdxc/x402");
+		let emptyDir = join(stagingRoot, "unlinked-x402");
+		await mkdir(emptyDir, { recursive: true });
+		let result = await assertWorkspaceLinks(emptyDir, pkg);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error.message).toContain("@sdxc/x402 cannot resolve");
+			expect(result.error.message).toContain("@sdxc/logger");
+			expect(result.error.message).toContain("@sdxc/outbound");
+			expect(result.error.message).toContain("remix");
+			expect(result.error.message).toContain("bun install");
+		}
 	});
 });
 

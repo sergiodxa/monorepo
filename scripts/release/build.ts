@@ -33,6 +33,9 @@ import type { Package, PackageManifest } from "./workspace.js";
 import { nonTypeScriptTargets } from "./manifest.js";
 import { collectExportTargets, SHIPPED_FOLDERS } from "./workspace.js";
 
+/** TypeScript's "Cannot find module '…'" diagnostic code. */
+const TS_CANNOT_FIND_MODULE = 2307;
+
 /** Test files under `src/`, left out of the program so nothing test-only reaches `dist/`. */
 const TEST_FILE = /\.(?:workers\.)?test\.tsx?$/;
 
@@ -65,6 +68,8 @@ export async function buildPackage(
 		await mkdir(stagingDir, { recursive: true });
 	});
 	if (isFailure(prepared)) return prepared;
+	let linked = await assertWorkspaceLinks(packageDir, pkg);
+	if (isFailure(linked)) return linked;
 	let emitted = emitDist(packageDir, join(stagingDir, "dist"));
 	if (isFailure(emitted)) return emitted;
 	let copies = await Promise.all([
@@ -185,9 +190,47 @@ function emitDist(packageDir: string, outDir: string): Result<void, Error> {
 		(diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
 	);
 	if (diagnostics.length > 0) {
-		return failure(new Error(ts.formatDiagnostics(diagnostics, FORMAT_HOST)));
+		let message = ts.formatDiagnostics(diagnostics, FORMAT_HOST);
+		if (diagnostics.some((diagnostic) => diagnostic.code === TS_CANNOT_FIND_MODULE)) {
+			message +=
+				"A dependency did not resolve from this package. From the repo root run `bun install`, then retry.";
+		}
+		return failure(new Error(message));
 	}
 	return success(undefined);
+}
+
+/**
+ * Fails when a runtime or peer dependency has no `node_modules` entry reachable from the
+ * package directory — the usual cause of opaque TS2307 errors during a release build after
+ * pulling a new workspace package without reinstalling.
+ */
+export async function assertWorkspaceLinks(
+	packageDir: string,
+	pkg: Package,
+): Promise<Result<void, Error>> {
+	let names = new Set([...pkg.dependencies, ...Object.keys(pkg.manifest.peerDependencies ?? {})]);
+	let missing: string[] = [];
+	for (let name of names) {
+		if (!(await isLinkedFrom(packageDir, name))) missing.push(name);
+	}
+	if (missing.length === 0) return success(undefined);
+	return failure(
+		new Error(
+			`${pkg.name} cannot resolve ${missing.join(", ")} from ${packageDir}. From the repo root run \`bun install\`, then retry.`,
+		),
+	);
+}
+
+/** Whether `name` is reachable by walking `node_modules` from `packageDir` up to the filesystem root. */
+async function isLinkedFrom(packageDir: string, name: string): Promise<boolean> {
+	let dir = packageDir;
+	for (;;) {
+		if (await exists(join(dir, "node_modules", ...name.split("/")))) return true;
+		let parent = dirname(dir);
+		if (parent === dir) return false;
+		dir = parent;
+	}
 }
 
 /** Every emitted `.js` and `.d.ts` file under `distDir` with its text, keyed by path. */
