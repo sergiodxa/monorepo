@@ -145,7 +145,7 @@ export function Feature(handle: Handle<Feature.Props>) {
 					vstack({ gap: 4, align: "stretch" }),
 					bg(),
 					p(8, 6),
-					at("md", p(10, 10)),
+					at("lg", p(10, 10)),
 					when('&[data-variant="panel"]', [
 						bg("neutral.tint"),
 						border({ color: "neutral", width: 1, style: "solid" }),
@@ -248,7 +248,8 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
 /**
  * Hairline-ruled grid of {@link Feature} cells. The host is the named sizing
  * container; an inner wrapper holds the grid and `@container` column tracks so
- * the query can restyle a descendant. Collapses to one column below `md`.
+ * the query can restyle a descendant. Collapses to one column below `lg`
+ * (48rem), matching the landing's original viewport threshold.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the grid.
@@ -283,7 +284,7 @@ Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 							textAlign: "start",
 						}),
 						gridTemplate({ columns: "minmax(0, 1fr)" }),
-						at("md", "ui-marketing-feature-grid", [
+						at("lg", "ui-marketing-feature-grid", [
 							gridTemplate({
 								columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
 							}),

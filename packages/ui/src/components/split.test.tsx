@@ -52,7 +52,7 @@ describe("Split", () => {
 
 		expect(html).toMatch(/data-slot="split"[^>]*>\s*<div\b/);
 		expect(html).toContain("container: ui-marketing-split / inline-size");
-		expect(html).toContain("@container ui-marketing-split (min-width:");
+		expect(html).toContain("@container ui-marketing-split (min-width: 64rem)");
 
 		let hostClasses = new Set(
 			(html.match(/data-slot="split"[^>]*class="([^"]+)"/)?.[1] ?? "").split(/\s+/).filter(Boolean),

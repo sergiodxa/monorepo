@@ -57,8 +57,8 @@ export namespace StepList {
 /**
  * Lays numbered steps in a responsive three-column track. A sizing wrapper is
  * the named container; the `<ol>` holds the grid and `@container` column tracks
- * so the query can restyle a descendant. Collapses below `lg`. Connector lines
- * appear between items only when the track is wide.
+ * so the query can restyle a descendant. Collapses below `xl` (64rem).
+ * Connector lines appear between items only when the track is wide.
  *
  * @param handle Runtime handle carrying the host `<ol>`'s props.
  * @returns The render function producing the list's markup.
@@ -84,7 +84,7 @@ export function StepList(handle: Handle<StepList.Props>) {
 						gap(8),
 						gridTemplate({ columns: "minmax(0, 1fr)" }),
 						at(
-							"lg",
+							"xl",
 							"ui-marketing-step-list",
 							gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
 						),
@@ -146,7 +146,7 @@ StepList.Item = function StepListItem(handle: Handle<StepList.ItemProps>) {
 								backgroundColor: "var(--ui-neutral-border)",
 								display: "none",
 							}),
-							at("lg", "ui-marketing-step-list", raw({ display: "block" })),
+							at("xl", "ui-marketing-step-list", raw({ display: "block" })),
 						]),
 					),
 					mix,

@@ -69,7 +69,7 @@ export namespace Bento {
 /**
  * Hairline-ruled equal columns. The host is the named sizing container; an
  * inner wrapper holds the grid and `@container` column tracks so the query can
- * restyle a descendant. Collapses to one track below `md`.
+ * restyle a descendant. Collapses to one track below `lg` (48rem).
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the bento's markup.
@@ -105,7 +105,7 @@ export function Bento(handle: Handle<Bento.Props>) {
 							textAlign: "start",
 						}),
 						gridTemplate({ columns: "minmax(0, 1fr)" }),
-						at("md", "ui-marketing-bento", [
+						at("lg", "ui-marketing-bento", [
 							gridTemplate({
 								columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
 							}),
@@ -137,7 +137,7 @@ Bento.Cell = function BentoCell(handle: Handle<Bento.CellProps>) {
 					vstack({ gap: 3, align: "stretch" }),
 					raw({ backgroundColor: "var(--ui-bg, Canvas)" }),
 					p(6, 5),
-					at("md", "ui-marketing-bento", p(8, 8)),
+					at("lg", "ui-marketing-bento", p(8, 8)),
 					mix,
 				]}
 			/>

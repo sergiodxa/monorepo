@@ -155,7 +155,7 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 						isCenter ? textAlign("center") : [],
 						isFrame
 							? [
-									at("md", "ui-marketing-section", [
+									at("lg", "ui-marketing-section", [
 										borderEdge("inline-start", {
 											color: "neutral",
 											width: 1,

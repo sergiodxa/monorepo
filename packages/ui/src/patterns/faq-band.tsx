@@ -138,7 +138,7 @@ export function FaqBand(handle: Handle<FaqBand.Props>) {
 									gridTemplate({ columns: "minmax(0, 1fr)" }),
 									isTwo
 										? at(
-												"lg",
+												"xl",
 												"ui-marketing-faq",
 												gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" }),
 											)
