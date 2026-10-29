@@ -41,8 +41,8 @@ namespace HomeView {
 }
 
 /**
- * Cursor / Claude Desktop: first-party mcp-bridge with the operator Bearer so
- * priced tools/call skips x402 when OWNER_ACCESS_TOKEN is presented.
+ * Cursor / Claude Desktop config: first-party mcp-bridge at the Streamable HTTP
+ * endpoint. Public samples omit operator credentials.
  */
 const MCP_BRIDGE_JSON = `{
   "mcpServers": {
@@ -51,9 +51,7 @@ const MCP_BRIDGE_JSON = `{
       "args": [
         "-y",
         "@sdxc/mcp@latest",
-        "${SITE_ORIGIN}/mcp",
-        "--token",
-        "\${SDXC_API_OWNER_TOKEN}"
+        "${SITE_ORIGIN}/mcp"
       ]
     }
   }
@@ -66,17 +64,14 @@ const MCP_BRIDGE_BUN_JSON = `{
       "command": "bunx",
       "args": [
         "@sdxc/mcp@latest",
-        "${SITE_ORIGIN}/mcp",
-        "--token",
-        "\${SDXC_API_OWNER_TOKEN}"
+        "${SITE_ORIGIN}/mcp"
       ]
     }
   }
 }`;
 
 /** Stdio smoke from a shell. */
-const MCP_BRIDGE_SHELL = `export SDXC_API_OWNER_TOKEN='owner_…'  # Worker secret OWNER_ACCESS_TOKEN
-npx -y @sdxc/mcp@latest ${SITE_ORIGIN}/mcp --token "$SDXC_API_OWNER_TOKEN"`;
+const MCP_BRIDGE_SHELL = `npx -y @sdxc/mcp@latest ${SITE_ORIGIN}/mcp`;
 
 /** Example unpaid → paid HTTP exchange. */
 const HTTP_EXAMPLE = `# 1. Challenge
@@ -416,10 +411,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 							<a href="https://www.npmjs.com/package/@sdxc/mcp" mix={LINK}>
 								@sdxc/mcp
 							</a>{" "}
-							at the Streamable HTTP endpoint and pass{" "}
-							<code mix={INLINE_CODE}>OWNER_ACCESS_TOKEN</code> so priced{" "}
-							<code mix={INLINE_CODE}>tools/call</code> skips x402. Tool names match the catalog
-							ids.
+							at the Streamable HTTP endpoint. Tool names match the catalog ids.
 						</p>
 
 						<p mix={SAMPLE_LABEL}>Endpoint</p>
@@ -451,10 +443,9 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 								raw({ margin: "1.25rem 0 0", color: "var(--apis-ink-soft)", fontSize: "0.95rem" }),
 							]}
 						>
-							<code mix={INLINE_CODE}>--token</code> sends{" "}
-							<code mix={INLINE_CODE}>Authorization: Bearer …</code>. Without it, unpaid{" "}
-							<code mix={INLINE_CODE}>tools/call</code> answers HTTP 402 with the same x402 headers
-							as <code mix={INLINE_CODE}>POST /v1/…</code> and needs a wallet to settle.
+							Unpaid <code mix={INLINE_CODE}>tools/call</code> answers HTTP 402 with the same x402
+							headers as <code mix={INLINE_CODE}>POST /v1/…</code>. Your MCP client needs an
+							x402-aware wallet or bridge to settle.
 						</p>
 					</section>
 
