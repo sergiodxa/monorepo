@@ -162,7 +162,7 @@ describe("GET /api/:name", () => {
 		expect(body).not.toContain("Through sdxc");
 	});
 
-	test("leaves the private sdxc umbrella out of the package pages", async () => {
+	test("has no package page for a bare sdxc name", async () => {
 		let page = await fetchApp("/api/sdxc");
 		let index = await (await fetchApp("/api")).text();
 
