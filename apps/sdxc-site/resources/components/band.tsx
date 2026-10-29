@@ -10,7 +10,6 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
 import { text } from "@sdxc/u/typography";
 import { MarketingSection } from "@sdxc/ui";
 
@@ -66,7 +65,8 @@ export default function Band(handle: Handle<Band.Props>) {
 				ruled={ruled}
 				variant="frame"
 				spacing={sectionSpacing}
-				mix={[isFlush ? raw({ paddingBlock: "0" }) : [], text("base")]}
+				flush={isFlush}
+				mix={[text("base")]}
 			>
 				{children}
 			</MarketingSection>
