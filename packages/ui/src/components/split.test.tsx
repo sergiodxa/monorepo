@@ -41,4 +41,26 @@ describe("Split", () => {
 		expect(html).toContain("list-style: none");
 		expect(html).toContain("-webkit-mask:");
 	});
+
+	test("keeps the named container on the host and the column tracks on an inner wrapper", async () => {
+		let html = await renderToString(
+			<Split lean="media">
+				<Split.Copy>Claims</Split.Copy>
+				<Split.Media>Shot</Split.Media>
+			</Split>,
+		);
+
+		expect(html).toMatch(/data-slot="split"[^>]*>\s*<div\b/);
+		expect(html).toContain("container: ui-marketing-split / inline-size");
+		expect(html).toContain("@container ui-marketing-split (min-width:");
+
+		let hostClasses = new Set(
+			(html.match(/data-slot="split"[^>]*class="([^"]+)"/)?.[1] ?? "").split(/\s+/).filter(Boolean),
+		);
+		let tracksMatch = html.match(
+			/@container ui-marketing-split \(min-width:[^)]+\)\s*\{\s*\.([a-z0-9-]+)\s*\{/,
+		);
+		expect(tracksMatch?.[1]).toBeTruthy();
+		expect(hostClasses.has(tracksMatch![1]!)).toBe(false);
+	});
 });

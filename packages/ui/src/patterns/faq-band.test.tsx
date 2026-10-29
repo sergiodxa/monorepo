@@ -35,5 +35,8 @@ describe("FaqBand", () => {
 		expect(html).toContain("One?");
 		expect(html).toContain("Two?");
 		expect(html).toContain('data-columns="2"');
+		expect(html).toContain("container: ui-marketing-faq / inline-size");
+		expect(html).toContain("@container ui-marketing-faq (min-width:");
+		expect(html).toMatch(/data-columns="2"[^>]*>\s*<div\b/);
 	});
 });

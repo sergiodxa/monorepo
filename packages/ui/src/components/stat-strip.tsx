@@ -50,8 +50,10 @@ export namespace StatStrip {
 }
 
 /**
- * Lays {@link StatStrip.Item} children in a responsive grid that starts at two
- * columns and opens to as many as five above `lg` on its own named container.
+ * Lays {@link StatStrip.Item} children in a responsive grid. The host is the
+ * named sizing container; an inner wrapper holds the tracks and `@container`
+ * column / seam rules so the query can restyle a descendant. Starts at two
+ * columns and opens to five above `lg`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -63,7 +65,7 @@ export namespace StatStrip {
  */
 export function StatStrip(handle: Handle<StatStrip.Props>) {
 	return () => {
-		let { mix, variant, ...rest } = handle.props;
+		let { children, mix, variant, ...rest } = handle.props;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let isRuled = resolvedVariant === "ruled";
 
@@ -72,34 +74,38 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 				{...rest}
 				data-variant={resolvedVariant}
 				data-slot="stat-strip"
-				mix={[
-					container("ui-marketing-stat-strip"),
-					grid(),
-					isRuled ? gap(0) : gap(6),
-					gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-					at(
-						"lg",
-						"ui-marketing-stat-strip",
-						gridTemplate({ columns: repeat(5, "minmax(0, 1fr)") }),
-					),
-					when("& > *", [p(6, 5), at("md", "ui-marketing-stat-strip", p(8, 8))]),
-					isRuled
-						? when(
-								"& > * + *",
-								at(
-									"lg",
-									"ui-marketing-stat-strip",
-									borderEdge("inline-start", {
-										color: "neutral",
-										width: 1,
-										style: "solid",
-									}),
-								),
-							)
-						: [],
-					mix,
-				]}
-			/>
+				mix={[container("ui-marketing-stat-strip"), mix]}
+			>
+				<div
+					mix={[
+						grid(),
+						isRuled ? gap(0) : gap(6),
+						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
+						at(
+							"lg",
+							"ui-marketing-stat-strip",
+							gridTemplate({ columns: repeat(5, "minmax(0, 1fr)") }),
+						),
+						when("& > *", [p(6, 5), at("md", "ui-marketing-stat-strip", p(8, 8))]),
+						isRuled
+							? when(
+									"& > * + *",
+									at(
+										"lg",
+										"ui-marketing-stat-strip",
+										borderEdge("inline-start", {
+											color: "neutral",
+											width: 1,
+											style: "solid",
+										}),
+									),
+								)
+							: [],
+					]}
+				>
+					{children}
+				</div>
+			</div>
 		);
 	};
 }
