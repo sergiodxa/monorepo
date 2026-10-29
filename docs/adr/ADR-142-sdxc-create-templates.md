@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> Superseded by [ADR-183](./ADR-183-drop-sdxc-umbrella.md) for the install package: templates ship
+> in `@sdxc/kit` and pin `@sdxc/*`. The `sdxc create` command itself is unchanged.
+
 ## Background
 
 A project built on `sdxc` (ADR-136) starts from the same pieces every app in this repo has: a
