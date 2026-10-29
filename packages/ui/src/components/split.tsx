@@ -68,8 +68,10 @@ export namespace Split {
 }
 
 /**
- * Lays {@link Split.Copy} and {@link Split.Media} as a two-track grid that
- * collapses to one column below `lg` on its own named container.
+ * Lays {@link Split.Copy} and {@link Split.Media} as a two-track grid. The host
+ * is the named sizing container; an inner wrapper holds the tracks and
+ * `@container` column rules so the query can restyle a descendant. Collapses
+ * to one column below `lg`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the split's markup.
@@ -81,7 +83,7 @@ export namespace Split {
  */
 export function Split(handle: Handle<Split.Props>) {
 	return () => {
-		let { lean, mix, ...rest } = handle.props;
+		let { children, lean, mix, ...rest } = handle.props;
 		let resolvedLean = lean ?? DEFAULT_LEAN;
 		let columns =
 			resolvedLean === "copy"
@@ -93,16 +95,20 @@ export function Split(handle: Handle<Split.Props>) {
 				{...rest}
 				data-lean={resolvedLean}
 				data-slot="split"
-				mix={[
-					container("ui-marketing-split"),
-					grid(),
-					gap(12),
-					items("start"),
-					gridTemplate({ columns: "minmax(0, 1fr)" }),
-					at("lg", "ui-marketing-split", gridTemplate({ columns })),
-					mix,
-				]}
-			/>
+				mix={[container("ui-marketing-split"), mix]}
+			>
+				<div
+					mix={[
+						grid(),
+						gap(12),
+						items("start"),
+						gridTemplate({ columns: "minmax(0, 1fr)" }),
+						at("lg", "ui-marketing-split", gridTemplate({ columns })),
+					]}
+				>
+					{children}
+				</div>
+			</div>
 		);
 	};
 }

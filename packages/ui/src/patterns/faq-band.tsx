@@ -76,6 +76,8 @@ export namespace FaqBand {
 
 /**
  * Renders a FAQ band with a chapter header and one or two accordion columns.
+ * The column host is the named sizing container; an inner wrapper holds the
+ * `@container` tracks so the query can restyle a descendant.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -127,22 +129,24 @@ export function FaqBand(handle: Handle<FaqBand.Props>) {
 						</MarketingHeader>
 						<div
 							data-columns={String(resolvedColumns)}
-							mix={[
-								container("ui-marketing-faq"),
-								grid(),
-								gap(8),
-								gridTemplate({ columns: "minmax(0, 1fr)" }),
-								isTwo
-									? at(
-											"lg",
-											"ui-marketing-faq",
-											gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" }),
-										)
-									: [],
-								parts?.columns,
-							]}
+							mix={[container("ui-marketing-faq"), parts?.columns]}
 						>
-							{children}
+							<div
+								mix={[
+									grid(),
+									gap(8),
+									gridTemplate({ columns: "minmax(0, 1fr)" }),
+									isTwo
+										? at(
+												"lg",
+												"ui-marketing-faq",
+												gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" }),
+											)
+										: [],
+								]}
+							>
+								{children}
+							</div>
 						</div>
 					</div>
 				</HeadingScope>

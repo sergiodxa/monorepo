@@ -67,8 +67,9 @@ export namespace Bento {
 }
 
 /**
- * Hairline-ruled equal columns that collapse to one track below `md` on their
- * own named container.
+ * Hairline-ruled equal columns. The host is the named sizing container; an
+ * inner wrapper holds the grid and `@container` column tracks so the query can
+ * restyle a descendant. Collapses to one track below `md`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the bento's markup.
@@ -82,7 +83,7 @@ export namespace Bento {
  */
 export function Bento(handle: Handle<Bento.Props>) {
 	return () => {
-		let { columns, mix, ...rest } = handle.props;
+		let { children, columns, mix, ...rest } = handle.props;
 		let resolvedColumns = columns ?? DEFAULT_COLUMNS;
 
 		return (
@@ -90,26 +91,30 @@ export function Bento(handle: Handle<Bento.Props>) {
 				{...rest}
 				data-slot="bento"
 				data-columns={String(resolvedColumns)}
-				mix={[
-					container("ui-marketing-bento"),
-					grid(),
-					gap("1px"),
-					rounded("xl"),
-					overflow("hidden"),
-					border({ color: "neutral", width: 1, style: "solid" }),
-					raw({
-						backgroundColor: "var(--ui-neutral-border)",
-						textAlign: "start",
-					}),
-					gridTemplate({ columns: "minmax(0, 1fr)" }),
-					at("md", "ui-marketing-bento", [
-						gridTemplate({
-							columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
+				mix={[container("ui-marketing-bento"), mix]}
+			>
+				<div
+					mix={[
+						grid(),
+						gap("1px"),
+						rounded("xl"),
+						overflow("hidden"),
+						border({ color: "neutral", width: 1, style: "solid" }),
+						raw({
+							backgroundColor: "var(--ui-neutral-border)",
+							textAlign: "start",
 						}),
-					]),
-					mix,
-				]}
-			/>
+						gridTemplate({ columns: "minmax(0, 1fr)" }),
+						at("md", "ui-marketing-bento", [
+							gridTemplate({
+								columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
+							}),
+						]),
+					]}
+				>
+					{children}
+				</div>
+			</div>
 		);
 	};
 }

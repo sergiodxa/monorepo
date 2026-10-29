@@ -55,8 +55,10 @@ export namespace StepList {
 }
 
 /**
- * Lays numbered steps in a responsive three-column track that collapses below
- * `lg`. Connector lines appear between items only when the track is wide.
+ * Lays numbered steps in a responsive three-column track. A sizing wrapper is
+ * the named container; the `<ol>` holds the grid and `@container` column tracks
+ * so the query can restyle a descendant. Collapses below `lg`. Connector lines
+ * appear between items only when the track is wide.
  *
  * @param handle Runtime handle carrying the host `<ol>`'s props.
  * @returns The render function producing the list's markup.
@@ -68,27 +70,30 @@ export namespace StepList {
  */
 export function StepList(handle: Handle<StepList.Props>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<ol
-				{...rest}
-				data-slot="step-list"
-				mix={[
-					container("ui-marketing-step-list"),
-					counterReset("ui-marketing-step"),
-					raw({ listStyle: "none", padding: "0", margin: "0" }),
-					grid(),
-					gap(8),
-					gridTemplate({ columns: "minmax(0, 1fr)" }),
-					at(
-						"lg",
-						"ui-marketing-step-list",
-						gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
-					),
-					mix,
-				]}
-			/>
+			<div mix={[container("ui-marketing-step-list")]}>
+				<ol
+					{...rest}
+					data-slot="step-list"
+					mix={[
+						counterReset("ui-marketing-step"),
+						raw({ listStyle: "none", padding: "0", margin: "0" }),
+						grid(),
+						gap(8),
+						gridTemplate({ columns: "minmax(0, 1fr)" }),
+						at(
+							"lg",
+							"ui-marketing-step-list",
+							gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
+						),
+						mix,
+					]}
+				>
+					{children}
+				</ol>
+			</div>
 		);
 	};
 }
