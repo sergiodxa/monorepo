@@ -16,8 +16,7 @@ import { closeOverDependents, topologicalOrder } from "./workspace.js";
 
 /**
  * The package carrying each release's changelog and component registry. It joins every release
- * that ships anything, so those files always describe the release they ship in, and the `sdxc`
- * umbrella, which depends on it, always ships at the same version.
+ * that ships anything, so those files always describe the release they ship in.
  */
 export const HISTORY_PACKAGE = "@sdxc/kit";
 

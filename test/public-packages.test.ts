@@ -99,20 +99,10 @@ describe("public packages are ready to publish", () => {
 			]);
 		});
 
-		test("accepts the unscoped umbrella under its bare directory name", () => {
-			expect(publicPackageProblems([facts("sdxc"), facts("result")])).toEqual([]);
-		});
-
 		test("reports a public package whose name its directory does not publish", () => {
-			let problems = publicPackageProblems([
-				facts("sdxc", { name: "@sdxc/sdxc" }),
-				facts("result", { name: "result" }),
-			]);
+			let problems = publicPackageProblems([facts("result", { name: "result" })]);
 
-			expect(problems).toEqual([
-				"@sdxc/sdxc is public but packages/sdxc publishes as sdxc",
-				"result is public but packages/result publishes as @sdxc/result",
-			]);
+			expect(problems).toEqual(["result is public but packages/result publishes as @sdxc/result"]);
 		});
 
 		test("reports every private package a public one reaches, naming the chain", () => {

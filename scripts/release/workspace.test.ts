@@ -281,19 +281,6 @@ describe("packageFromManifest", () => {
 		expect(example.dependencies).toEqual(["@sdxc/result"]);
 	});
 
-	test("reads an unscoped workspace package and counts its scoped dependencies as internal", () => {
-		let umbrella = packageFromManifest("sdxc", {
-			name: "sdxc",
-			exports: { "./result": "./src/result/index.ts" },
-			dependencies: { "@sdxc/result": "workspace:*" },
-			peerDependencies: { remix: "3.0.0" },
-		});
-
-		expect(umbrella.name).toBe("sdxc");
-		expect(umbrella.dependencies).toEqual(["@sdxc/result"]);
-		expect(umbrella.shippedPaths).toContain("packages/sdxc/package.json");
-	});
-
 	test("ships the command line's templates and stubs folders as release inputs", () => {
 		let kit = packageFromManifest("kit", {
 			name: "@sdxc/kit",
@@ -305,41 +292,19 @@ describe("packageFromManifest", () => {
 		expect(kit.shippedPaths).toContain("packages/kit/stubs");
 		expect(kit.shippedPaths).toContain("packages/kit/config.schema.json");
 	});
-
-	test("counts a dependency on an unscoped workspace package as internal", () => {
-		let consumer = packageFromManifest("example", {
-			name: "@sdxc/example",
-			dependencies: { sdxc: "workspace:*", left: "1.0.0" },
-		});
-
-		expect(consumer.dependencies).toEqual(["sdxc"]);
-	});
 });
 
 describe("workspace package names", () => {
-	test("scopes every directory but the unscoped ones", () => {
+	test("scopes every directory under @sdxc", () => {
 		expect(packageNameFor("result")).toBe("@sdxc/result");
-		expect(packageNameFor("sdxc")).toBe("sdxc");
+		expect(packageNameFor("kit")).toBe("@sdxc/kit");
 	});
 
-	test("recognises scoped and unscoped workspace names and nothing else", () => {
+	test("recognises scoped workspace names and nothing else", () => {
 		expect(isWorkspacePackageName("@sdxc/result")).toBe(true);
-		expect(isWorkspacePackageName("sdxc")).toBe(true);
+		expect(isWorkspacePackageName("sdxc")).toBe(false);
 		expect(isWorkspacePackageName("remix")).toBe(false);
 		expect(isWorkspacePackageName("@remix-run/ui")).toBe(false);
-	});
-
-	test("republishes the unscoped umbrella whenever a package it depends on ships", () => {
-		let result = pkg("result");
-		let umbrella = packageFromManifest("sdxc", {
-			name: "sdxc",
-			dependencies: { "@sdxc/result": "workspace:*" },
-		});
-
-		expect([...closeOverDependents(["@sdxc/result"], [result, umbrella])]).toEqual([
-			"@sdxc/result",
-			"sdxc",
-		]);
 	});
 });
 

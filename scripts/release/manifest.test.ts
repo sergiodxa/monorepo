@@ -225,28 +225,6 @@ describe("publishManifest", () => {
 		});
 	});
 
-	test("publishes an unscoped package under its own name with its docs page and pins", () => {
-		let umbrella = packageFromManifest("sdxc", {
-			name: "sdxc",
-			version: "0.0.1",
-			private: true,
-			exports: { "./result": "./src/result/index.ts", "./ui/reset.css": "./src/ui/reset.css" },
-			dependencies: { "@sdxc/result": "workspace:*" },
-			peerDependencies: { remix: "3.0.0" },
-		});
-
-		let output = unwrap(publishManifest(umbrella, OPTIONS));
-
-		expect(output.name).toBe("sdxc");
-		expect(output.homepage).toBe("https://sdxc.dev/api/sdxc");
-		expect(output.dependencies).toEqual({ "@sdxc/result": "2026.9.3" });
-		expect(output.peerDependencies).toEqual({ remix: "3.0.0" });
-		expect(output.exports).toEqual({
-			"./result": "./dist/result/index.js",
-			"./ui/reset.css": "./src/ui/reset.css",
-		});
-	});
-
 	test("leaves the workspace manifest untouched", () => {
 		let source = manifest({
 			dependencies: { "@sdxc/result": "workspace:*" },
