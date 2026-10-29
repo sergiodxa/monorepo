@@ -36,5 +36,38 @@ describe("MarketingSection", () => {
 		expect(html).toContain('data-variant="frame"');
 		expect(html).toContain("border-block-start");
 		expect(html).toContain("border-inline-start");
+		expect(html).toContain("var(--ui-marketing-section-space");
+	});
+
+	test("puts framed block padding on the rail column so rails run the full band height", async () => {
+		let html = await renderToString(
+			<MarketingSection ruled variant="frame" spacing="hero">
+				Framed
+			</MarketingSection>,
+		);
+
+		let spaceClass = html.match(
+			/\.([a-z0-9-]+) \{\s*padding-block: var\(--ui-marketing-section-space-hero/,
+		)?.[1];
+		let sectionClasses = html.match(/<section[^>]*data-variant="frame"[^>]*class="([^"]*)"/)?.[1];
+
+		expect(spaceClass).toBeTruthy();
+		expect(sectionClasses).toBeTruthy();
+		expect(sectionClasses).not.toContain(spaceClass!);
+		expect(html).toMatch(new RegExp(`<div class="[^"]*${spaceClass}`));
+		expect(html).toContain("border-inline-start");
+		expect(html).toContain("padding-inline");
+	});
+
+	test("flush framed bands keep rails without section block padding", async () => {
+		let html = await renderToString(
+			<MarketingSection ruled variant="frame" spacing="compact" flush>
+				Strip
+			</MarketingSection>,
+		);
+
+		expect(html).toContain('data-flush="true"');
+		expect(html).toContain("border-inline-start");
+		expect(html).not.toContain("var(--ui-marketing-section-space-compact");
 	});
 });
