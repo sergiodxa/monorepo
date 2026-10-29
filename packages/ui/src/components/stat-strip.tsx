@@ -53,7 +53,8 @@ export namespace StatStrip {
  * Lays {@link StatStrip.Item} children in a responsive grid. The host is the
  * named sizing container; an inner wrapper holds the tracks and `@container`
  * column / seam rules so the query can restyle a descendant. Starts at two
- * columns and opens to five above `lg`.
+ * columns and opens to five above `xl` (64rem), matching the landing's original
+ * viewport threshold so mid-width viewports stay a readable pair.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -82,16 +83,16 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 						isRuled ? gap(0) : gap(6),
 						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
 						at(
-							"lg",
+							"xl",
 							"ui-marketing-stat-strip",
 							gridTemplate({ columns: repeat(5, "minmax(0, 1fr)") }),
 						),
-						when("& > *", [p(6, 5), at("md", "ui-marketing-stat-strip", p(8, 8))]),
+						when("& > *", [p(6, 5), at("lg", "ui-marketing-stat-strip", p(8, 8))]),
 						isRuled
 							? when(
 									"& > * + *",
 									at(
-										"lg",
+										"xl",
 										"ui-marketing-stat-strip",
 										borderEdge("inline-start", {
 											color: "neutral",

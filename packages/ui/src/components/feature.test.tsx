@@ -66,7 +66,7 @@ describe("Feature", () => {
 
 		expect(html).toMatch(/data-slot="feature-grid"[^>]*>\s*<div\b/);
 		expect(html).toContain("container: ui-marketing-feature-grid / inline-size");
-		expect(html).toContain("@container ui-marketing-feature-grid (min-width:");
+		expect(html).toContain("@container ui-marketing-feature-grid (min-width: 48rem)");
 
 		let hostClasses = new Set(
 			(html.match(/data-slot="feature-grid"[^>]*class="([^"]+)"/)?.[1] ?? "")

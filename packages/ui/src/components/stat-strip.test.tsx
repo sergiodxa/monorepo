@@ -47,7 +47,7 @@ describe("StatStrip", () => {
 
 		expect(html).toMatch(/data-slot="stat-strip"[^>]*>\s*<div\b/);
 		expect(html).toContain("container: ui-marketing-stat-strip / inline-size");
-		expect(html).toContain("@container ui-marketing-stat-strip (min-width:");
+		expect(html).toContain("@container ui-marketing-stat-strip (min-width: 64rem)");
 		expect(html).toContain("repeat(5, minmax(0, 1fr))");
 
 		let hostClasses = new Set(
