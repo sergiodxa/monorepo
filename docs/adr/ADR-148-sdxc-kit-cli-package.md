@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> The wait on npm granting `sdxc` is over: the name stays refused. [ADR-183](./ADR-183-drop-sdxc-umbrella.md)
+> deletes the private umbrella; `@sdxc/kit` remains the CLI.
+
 ## Background
 
 ADR-136 put the umbrella re-exports and the `sdxc` command line in one unscoped package,

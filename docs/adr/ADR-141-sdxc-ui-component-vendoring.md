@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> Superseded by [ADR-183](./ADR-183-drop-sdxc-umbrella.md) for the install package: use `@sdxc/*`
+> and `@sdxc/kit`. The `sdxc ui` command itself is unchanged.
+
 ## Background
 
 An app built on `sdxc` (ADR-136) imports `@sdxc/ui` components from the package. When it needs a

@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> Superseded by [ADR-183](./ADR-183-drop-sdxc-umbrella.md) for the install package: changelog and
+> registry ship in `@sdxc/kit`. The `sdxc upgrade` command itself is unchanged.
+
 ## Background
 
 `sdxc` (ADR-136) publishes a dated release whenever any package ships, so a project falls behind
