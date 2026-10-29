@@ -81,15 +81,30 @@ describe("buildComponentsNav", () => {
 		expect(tree.sections.map((section) => section.title)).toEqual([
 			"@sdxc/ui",
 			"Components",
+			"Marketing",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(2)?.entries).toContainEqual({
+		expect(tree.sections.at(3)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});
+	});
+});
+
+describe("Marketing group", () => {
+	test("lists every landing pattern and marketing primitive apart from the components", async () => {
+		let tree = await buildComponentsNav();
+		let components = tree.sections.find((section) => section.title === "Components");
+		let marketing = tree.sections.find((section) => section.title === "Marketing");
+		let titles = marketing?.entries.map((entry) => entry.title) ?? [];
+
+		expect(titles).toEqual(expect.arrayContaining(["LandingHero", "FaqBand", "MarketingSection"]));
+		expect(titles).toHaveLength(22);
+		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
+		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 	});
 });
 

@@ -30,6 +30,7 @@ import {
 	buildPackageNav,
 	CATALOGUE_PACKAGES,
 	listComponentEntries,
+	listMarketingEntries,
 	listUiExportGroups,
 	listUtilityGroups,
 } from "~/app/services/navigation";
@@ -189,6 +190,7 @@ async function readCatalogue(name: string) {
 				...(await listComponentEntries()),
 			],
 		},
+		{ title: "Marketing", entries: await listMarketingEntries() },
 		...(await listUiExportGroups()),
 	];
 }

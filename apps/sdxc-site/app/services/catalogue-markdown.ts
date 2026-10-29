@@ -13,6 +13,7 @@ import type { UiExportReference, UiSymbol } from "~/app/services/ui-exports";
 import type { UtilityReference } from "~/app/services/utilities";
 import type { UtilityExampleSource } from "~/app/services/utility-examples";
 
+import { importPath } from "~/app/services/components";
 import {
 	atWidth,
 	customValue,
@@ -151,7 +152,7 @@ export function componentMarkdown(reference: ComponentReference): string {
 	let blocks = [
 		`# ${reference.name}`,
 		`> ${oneLine(reference.summary)}`,
-		fence(`import { ${reference.name} } from "@sdxc/ui";`, "ts"),
+		fence(`import { ${reference.name} } from "${importPath(reference.module)}";`, "ts"),
 		reference.description,
 	];
 

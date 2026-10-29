@@ -159,7 +159,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 			title: entry.name,
 			package: "@sdxc/ui",
 			kind: "component",
-			section: "Components",
+			section: entry.marketing ? "Marketing" : "Components",
 			summary: reference?.summary ?? "",
 			params: { component: entry.slug },
 			href: routes.api.component.href({ component: entry.slug }),

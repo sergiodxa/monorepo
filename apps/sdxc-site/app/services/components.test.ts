@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { listComponents, readComponent } from "~/app/services/components";
+import { importPath, listComponents, readComponent } from "~/app/services/components";
 
 describe("listComponents", () => {
 	test("names every component in the catalogue, alphabetically", async () => {
@@ -17,8 +17,17 @@ describe("listComponents", () => {
 		let names = components.map((entry) => entry.name);
 		let sorted = names.slice().sort((a, b) => a.localeCompare(b));
 
-		expect(components).toHaveLength(110);
+		expect(components).toHaveLength(125);
 		expect(names).toEqual(sorted);
+	});
+
+	test("reads the landing patterns beside the components, imported from their own subpath", async () => {
+		let hero = await readComponent("landing-hero");
+
+		expect(hero?.module).toBe("patterns");
+		expect(importPath("patterns")).toBe("@sdxc/ui/patterns");
+		expect((await readComponent("badge"))?.module).toBe("components");
+		expect(importPath("components")).toBe("@sdxc/ui");
 	});
 
 	test("reads the exported name rather than spelling the file name back", async () => {

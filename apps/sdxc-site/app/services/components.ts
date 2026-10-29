@@ -18,6 +18,19 @@ export interface ComponentEntry {
 	slug: string;
 }
 
+/**
+ * The `@sdxc/ui` folder a component's module lives in, which decides the subpath it is
+ * imported from: `components` from `@sdxc/ui`, `patterns` from `@sdxc/ui/patterns`.
+ */
+export type ComponentModule = "components" | "patterns";
+
+/** One catalogue page as the tree lists it, sorted into the group it belongs to. */
+export interface CatalogueEntry extends ComponentEntry {
+	module: ComponentModule;
+	/** Whether the component builds landing pages, which lists it under Marketing. */
+	marketing: boolean;
+}
+
 /** One row of a props table. */
 export interface PropRow {
 	name: string;
@@ -55,6 +68,7 @@ export interface ComponentType {
 export interface ComponentReference {
 	name: string;
 	slug: string;
+	module: ComponentModule;
 	/** What the pattern is, which the module's own comment opens with. */
 	definition: string;
 	/** The first sentence of that definition, which is what a listing shows. */
@@ -72,13 +86,18 @@ export interface ComponentReference {
 
 /** The generated document: the tree's order, and one reference per component. */
 export interface ComponentDocument {
-	entries: ComponentEntry[];
+	entries: CatalogueEntry[];
 	references: Record<string, ComponentReference>;
 }
 
 /** Every component, alphabetically, which is how the tree and the index list them. */
-export async function listComponents(): Promise<ComponentEntry[]> {
+export async function listComponents(): Promise<CatalogueEntry[]> {
 	return (await readDocument()).entries;
+}
+
+/** The specifier a reader imports a component from, which follows the folder it lives in. */
+export function importPath(module: ComponentModule): string {
+	return module === "patterns" ? "@sdxc/ui/patterns" : "@sdxc/ui";
 }
 
 /**

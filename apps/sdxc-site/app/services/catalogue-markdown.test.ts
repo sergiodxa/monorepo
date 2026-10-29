@@ -18,6 +18,7 @@ describe("componentMarkdown", () => {
 		let body = componentMarkdown({
 			name: "Badge",
 			slug: "badge",
+			module: "components",
 			definition: "A compact pill.",
 			summary: "A compact pill.",
 			description: "Renders a pill.",
@@ -47,6 +48,7 @@ describe("componentMarkdown", () => {
 		let body = componentMarkdown({
 			name: "Field",
 			slug: "field",
+			module: "components",
 			definition: "A field.",
 			summary: "A field.",
 			description: "Renders a field.",

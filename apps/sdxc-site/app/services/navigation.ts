@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CatalogueEntry } from "~/app/services/components";
 import type { NavEntry, NavGroup, NavTree } from "~/app/services/navigation-tree";
 
 import { listComponents } from "~/app/services/components";
@@ -123,6 +124,7 @@ export async function buildComponentsNav(): Promise<NavTree> {
 				groups: [],
 			},
 			{ title: "Components", entries: await listComponentEntries(), groups: [] },
+			{ title: "Marketing", entries: await listMarketingEntries(), groups: [] },
 			...(await listUiExportGroups()).map((group) => ({ ...group, groups: [] })),
 		],
 	};
@@ -152,16 +154,26 @@ export async function listUtilityGroups(): Promise<NavGroup[]> {
 }
 
 /**
- * Every component as one list. The names are already alphabetical and share a flat
- * namespace, so a reader scans them the way they would scan an index.
+ * Every application component as one list. The names are already alphabetical and share a
+ * flat namespace, so a reader scans them the way they would scan an index.
  */
 export async function listComponentEntries(): Promise<NavEntry[]> {
 	let components = await listComponents();
+	return components.filter((entry) => !entry.marketing).map(componentNavEntry);
+}
 
-	return components.map((entry) => ({
-		title: entry.name,
-		href: routes.api.component.href({ component: entry.slug }),
-	}));
+/**
+ * Every component and pattern that builds a landing page, apart from the application
+ * components so a reader assembling a marketing page finds its whole kit in one place.
+ */
+export async function listMarketingEntries(): Promise<NavEntry[]> {
+	let components = await listComponents();
+	return components.filter((entry) => entry.marketing).map(componentNavEntry);
+}
+
+/** A component's link in the tree, titled with the name it is imported by. */
+function componentNavEntry(entry: CatalogueEntry): NavEntry {
+	return { title: entry.name, href: routes.api.component.href({ component: entry.slug }) };
 }
 
 /** Each `@sdxc/ui` subpath beside the components as one group, in the order they are taught. */

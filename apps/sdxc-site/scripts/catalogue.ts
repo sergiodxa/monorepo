@@ -16,6 +16,7 @@ import { isFailure } from "@sdxc/result";
 
 import type {
 	ComponentPart,
+	ComponentModule,
 	ComponentReference,
 	ComponentType,
 	PropRow,
@@ -246,6 +247,7 @@ export function componentName(source: string): string | null {
  * @param source - The module's text.
  * @param slug - The module's file name, which is what its URL carries.
  * @param shared - Text of the modules declaring the types several components share.
+ * @param module - The `@sdxc/ui` folder the module lives in.
  * @returns The page's content, or `null` when the module will not parse or publishes
  * no component.
  */
@@ -253,6 +255,7 @@ export function readComponent(
 	source: string,
 	slug: string,
 	shared: string[],
+	module: ComponentModule = "components",
 ): ComponentReference | null {
 	let extracted = extract(source, { path: `${slug}.tsx` });
 	if (isFailure(extracted)) return null;
@@ -289,6 +292,7 @@ export function readComponent(
 	return {
 		name: host.name,
 		slug,
+		module,
 		definition,
 		summary: toSummary(definition),
 		description: toProse(host.comment?.description ?? ""),

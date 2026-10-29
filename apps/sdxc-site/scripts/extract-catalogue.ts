@@ -13,8 +13,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type {
+	CatalogueEntry,
 	ComponentDocument,
-	ComponentEntry,
+	ComponentModule,
 	ComponentReference,
 } from "~/app/services/components";
 import type { ThemeReference } from "~/app/services/theming";
@@ -47,6 +48,23 @@ const OUTPUT = join(APP, "resources", "generated");
  * union's members instead of its name.
  */
 const SHARED_TYPE_MODULES = ["semantic-color.ts", "placement.ts"];
+
+/** The `@sdxc/ui` folders whose modules each publish one component page. */
+const COMPONENT_MODULES: ComponentModule[] = ["components", "patterns"];
+
+/**
+ * The components under `components/` that exist to build landing pages, which the tree
+ * lists under Marketing beside every pattern rather than among the application components.
+ */
+const MARKETING_COMPONENTS = new Set([
+	"cta-group",
+	"feature",
+	"logo-cloud",
+	"marketing-header",
+	"marketing-section",
+	"split",
+	"stat-strip",
+]);
 
 /** A directory under `packages/u/src` that holds no family of its own. */
 const NOT_A_FAMILY = new Set(["internal"]);
@@ -108,25 +126,35 @@ function buildUtilities(): UtilityDocument {
 	return { families: families.sort((a, b) => a.name.localeCompare(b.name)), references };
 }
 
-/** Every component, alphabetically, which is the order the tree lists them in. */
+/**
+ * Every component and landing pattern, alphabetically, which is the order the tree lists
+ * them in. Both folders share one URL space, so a pattern named like a component fails
+ * the run rather than hiding one of the two pages.
+ */
 function buildComponents(): ComponentDocument {
-	let root = join(PACKAGES, "ui", "src", "components");
 	let shared = SHARED_TYPE_MODULES.flatMap((name) => {
 		let source = read(join(PACKAGES, "ui", "src", "utils", name));
 		return source === null ? [] : [source];
 	});
 
-	let entries: ComponentEntry[] = [];
+	let entries: CatalogueEntry[] = [];
 	let references: Record<string, ComponentReference> = {};
 
-	for (let file of componentFiles(root)) {
-		let slug = file.replace(/\.tsx$/, "");
-		let source = read(join(root, file));
-		let reference = source === null ? null : readComponent(source, slug, shared);
-		if (reference === null) throw new Error(`@sdxc/ui: could not read ${file}`);
+	for (let module of COMPONENT_MODULES) {
+		let root = join(PACKAGES, "ui", "src", module);
 
-		entries.push({ name: reference.name, slug });
-		references[slug] = reference;
+		for (let file of componentFiles(root)) {
+			let slug = file.replace(/\.tsx$/, "");
+			if (references[slug]) throw new Error(`@sdxc/ui: ${module}/${file} reuses the slug ${slug}`);
+
+			let source = read(join(root, file));
+			let reference = source === null ? null : readComponent(source, slug, shared, module);
+			if (reference === null) throw new Error(`@sdxc/ui: could not read ${module}/${file}`);
+
+			let marketing = module === "patterns" || MARKETING_COMPONENTS.has(slug);
+			entries.push({ name: reference.name, slug, module, marketing });
+			references[slug] = reference;
+		}
 	}
 
 	return { entries: entries.sort((a, b) => a.name.localeCompare(b.name)), references };

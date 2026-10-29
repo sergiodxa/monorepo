@@ -31,7 +31,7 @@ import {
 	THEMING_SLUG,
 	CATALOGUE_SOURCE_BASE,
 } from "~/app/services/catalogue-pages";
-import { readComponent } from "~/app/services/components";
+import { importPath, readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
@@ -109,7 +109,7 @@ export default createAction(routes.api.component, async (ctx) => {
 						<PageActions
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/components/${component}.tsx`}
+							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.module}/${component}.tsx`}
 						/>
 					</header>
 
@@ -129,7 +129,7 @@ export default createAction(routes.api.component, async (ctx) => {
 					<ReferenceSection id="usage" title="Usage">
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 							<Snippet
-								code={`import { ${reference.name} } from "@sdxc/ui";`}
+								code={`import { ${reference.name} } from "${importPath(reference.module)}";`}
 								language="typescript"
 							/>
 							<p mix={[m(0), text("base"), fg("neutral")]}>
