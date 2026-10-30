@@ -17,7 +17,7 @@ describe("listComponents", () => {
 		let names = components.map((entry) => entry.name);
 		let sorted = names.slice().sort((a, b) => a.localeCompare(b));
 
-		expect(components).toHaveLength(127);
+		expect(components).toHaveLength(139);
 		expect(names).toEqual(sorted);
 	});
 

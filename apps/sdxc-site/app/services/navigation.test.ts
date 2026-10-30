@@ -101,8 +101,16 @@ describe("Marketing group", () => {
 		let marketing = tree.sections.find((section) => section.title === "Marketing");
 		let titles = marketing?.entries.map((entry) => entry.title) ?? [];
 
-		expect(titles).toEqual(expect.arrayContaining(["LandingHero", "FaqBand", "MarketingSection"]));
-		expect(titles).toHaveLength(24);
+		expect(titles).toEqual(
+			expect.arrayContaining([
+				"LandingHero",
+				"FaqBand",
+				"MarketingSection",
+				"SiteHeader",
+				"SiteFooter",
+			]),
+		);
+		expect(titles).toHaveLength(36);
 		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
 		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 	});
