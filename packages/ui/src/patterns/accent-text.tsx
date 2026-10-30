@@ -1,7 +1,7 @@
 /**
- * A single emphasized phrase inside a marketing headline — brand color, a
- * hand-drawn swash under it, or a marker band behind it — so the surrounding
- * display heading stays one weight and size.
+ * A single emphasized phrase inside a marketing headline — brand color, a swash, a
+ * marker band, a fading sheen, or a word set in a pill or a tinted chip — so the
+ * surrounding display heading stays one weight and size.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,8 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
+import { forcedColors } from "@sdxc/u/responsive";
+import { before } from "@sdxc/u/state";
 
 /** Treatment {@link AccentText} applies when `variant` is omitted. */
 const DEFAULT_VARIANT: AccentText.Variant = "color";
@@ -24,15 +26,52 @@ const ACCENT = "var(--ui-marketing-accent-color, var(--ui-brand-fg))";
 /** Brand at 18%, the marker ink a highlight band lays behind the glyphs. */
 const MARKER = "color-mix(in oklch, var(--ui-brand-bg-solid) 18%, transparent)";
 
+/** Per-variant styles for the treatments that only restyle the span itself. */
+const SPAN_VARIANTS: Partial<Record<AccentText.Variant, Record<string, string>>> = {
+	sheen: {
+		backgroundImage:
+			"linear-gradient(to right bottom, currentColor 30%, color-mix(in oklch, currentColor 50%, transparent))",
+		backgroundClip: "text",
+		WebkitBackgroundClip: "text",
+		WebkitTextFillColor: "transparent",
+		boxDecorationBreak: "clone",
+		WebkitBoxDecorationBreak: "clone",
+	},
+	pill: {
+		display: "inline-block",
+		fontSize: "0.5em",
+		lineHeight: "1.2",
+		letterSpacing: "0.04em",
+		textTransform: "uppercase",
+		whiteSpace: "nowrap",
+		verticalAlign: "0.35em",
+		paddingBlock: "0.05em",
+		paddingInline: "0.35em",
+		border: "0.08em solid currentColor",
+		borderRadius: "9999px",
+	},
+	chip: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: "0.2em",
+		whiteSpace: "nowrap",
+		paddingInline: "0.25em",
+		borderRadius: "0.25em",
+		color: ACCENT,
+		backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 12%, transparent)",
+	},
+};
+
 /**
  * Prop types for {@link AccentText}.
  */
 export namespace AccentText {
 	/**
-	 * How the phrase is stressed: brand color, brand color over a hand-drawn
-	 * swash, or a marker band behind the lower part of the glyphs.
+	 * How the phrase is stressed: brand color, brand color over a hand-drawn swash, a
+	 * marker band behind the glyphs, a `sheen` fading the ink toward the end, an
+	 * outlined uppercase `pill` at half size, or a tinted `chip` led by a dot.
 	 */
-	export type Variant = "color" | "swash" | "highlight";
+	export type Variant = "color" | "swash" | "highlight" | "sheen" | "pill" | "chip";
 
 	/**
 	 * Props accepted by {@link AccentText}.
@@ -49,9 +88,9 @@ export namespace AccentText {
 }
 
 /**
- * Stresses one phrase of a display heading without changing its weight or
- * inventing a gradient recipe; the swash and marker are decorative and hidden
- * from assistive technology.
+ * Stresses one phrase of a display heading while the heading keeps one weight; the
+ * swash, marker and chip dot are decorative, and the sheen falls back to solid ink
+ * under forced colors.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the accent span.
@@ -59,6 +98,8 @@ export namespace AccentText {
  * <Heading size="display">Ship <AccentText>{t("hero.accent")}</AccentText> faster</Heading>
  * @example
  * <Heading size="display">Know <AccentText variant="swash">{t("hero.accent")}</AccentText></Heading>
+ * @example
+ * <Heading size="display">The <AccentText variant="pill">{t("hero.tag")}</AccentText> gateway</Heading>
  */
 export function AccentText(handle: Handle<AccentText.Props>) {
 	return () => {
@@ -92,6 +133,38 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 						<path d={SWASH_PATH} />
 					</svg>
 					<span mix={[raw({ position: "relative" })]}>{children}</span>
+				</span>
+			);
+		}
+
+		let spanVariant = SPAN_VARIANTS[resolvedVariant];
+		if (spanVariant) {
+			return (
+				<span
+					{...rest}
+					data-slot="accent-text"
+					data-variant={resolvedVariant}
+					mix={[
+						raw(spanVariant),
+						resolvedVariant === "chip"
+							? before(
+									raw({
+										content: '""',
+										inlineSize: "0.3em",
+										blockSize: "0.3em",
+										flexShrink: "0",
+										borderRadius: "9999px",
+										backgroundColor: "currentColor",
+									}),
+								)
+							: [],
+						resolvedVariant === "sheen"
+							? forcedColors(raw({ backgroundImage: "none", WebkitTextFillColor: "currentColor" }))
+							: [],
+						mix,
+					]}
+				>
+					{children}
 				</span>
 			);
 		}
