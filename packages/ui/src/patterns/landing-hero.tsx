@@ -15,7 +15,7 @@ import { raw } from "@sdxc/u/general";
 import { absolute, inset, relative, self, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
-import { text, textAlign } from "@sdxc/u/typography";
+import { pretty, text, textAlign } from "@sdxc/u/typography";
 
 import type { HeadingLevel } from "../components/heading-scope.js";
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
@@ -196,7 +196,9 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				mix={[
 					vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
 					isCenter ? textAlign("center") : [],
-					isSplit ? raw({ "--ui-marketing-display-size": SPLIT_DISPLAY_SIZE }) : [],
+					isSplit
+						? raw({ "--ui-marketing-display-size": SPLIT_DISPLAY_SIZE })
+						: raw({ inlineSize: "100%", minInlineSize: "0" }),
 				]}
 			>
 				{eyebrow ? (
@@ -248,7 +250,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				{note ? (
 					<p
 						data-slot="landing-hero-note"
-						mix={[raw({ marginBlockStart: "0.75rem" }), text("xs"), fg("neutral.muted")]}
+						mix={[raw({ marginBlockStart: "0.75rem" }), text("xs"), fg("neutral.muted"), pretty()]}
 					>
 						{note}
 					</p>
@@ -304,7 +306,12 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 								]),
 							]
 						: [relative(), raw({ isolation: "isolate" })],
-					isBelow ? [self("stretch"), raw({ marginBlockStart: MEDIA_GAP })] : [],
+					isBelow
+						? [
+								self("stretch"),
+								raw({ inlineSize: "100%", minInlineSize: "0", marginBlockStart: MEDIA_GAP }),
+							]
+						: [],
 					parts?.media,
 				]}
 			>
@@ -314,7 +321,12 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 		) : null;
 
 		let body = (
-			<div mix={[vstack({ align: isCenter ? "center" : "stretch", gap: 0 })]}>
+			<div
+				mix={[
+					vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
+					raw({ inlineSize: "100%", minInlineSize: "0" }),
+				]}
+			>
 				{copy}
 				{isBelow ? mediaSlot : null}
 				{belowSlot}
