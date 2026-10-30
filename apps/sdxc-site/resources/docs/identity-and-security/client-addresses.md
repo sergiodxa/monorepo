@@ -59,6 +59,11 @@ export function createWebRouter() {
 
 Importing the middleware module types `ctx.ip` as `IP | null` across your project.
 
+Behind another platform or your own reverse proxy, name the header it sets, such as
+`getClientIP({ header: "X-Forwarded-For" })`. Only that header is read, so a client cannot pick
+its own address by sending a different one, and `X-Forwarded-For` is read from the right, where
+your proxy appends.
+
 ## Decide what `null` means
 
 `ctx.ip` is `null` when something other than Cloudflare's edge served the request (a local dev
