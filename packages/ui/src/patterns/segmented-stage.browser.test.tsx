@@ -19,14 +19,18 @@ import "../reset.css";
  * Mounts a three-tab stage with panels of different heights in a `width`-pixel column,
  * named after the stages already on the page so each mount gets its own radio group.
  */
-function mountStage(width: number, labels = ["Board", "Inbox", "API"]): HTMLElement {
+function mountStage(
+	width: number,
+	labels = ["Board", "Inbox", "API"],
+	align?: SegmentedStage.Align,
+): HTMLElement {
 	let host = document.createElement("div");
 	host.style.width = `${width}px`;
 	document.body.appendChild(host);
 	let [board, inbox, api] = labels;
 	let mounted = document.querySelectorAll('[data-slot="segmented-stage"]').length;
 	return render(
-		<SegmentedStage name={`hero-${mounted}`} aria-label="Product views">
+		<SegmentedStage name={`hero-${mounted}`} aria-label="Product views" align={align}>
 			<SegmentedStage.Item value="board" label={board} defaultChecked>
 				<div style={{ height: "120px" }}>Board panel</div>
 			</SegmentedStage.Item>
@@ -71,6 +75,14 @@ describe("SegmentedStage", () => {
 		);
 		expect(getComputedStyle(tab).fontSize).toBe("14px");
 		expect(getComputedStyle(tab).fontWeight).toBe("500");
+	});
+
+	test("puts the control on the stage's start edge when aligned to the start", () => {
+		let root = mountStage(1280, undefined, "start");
+		let control = root.querySelector<HTMLElement>('[data-slot="segmented-stage-control"]')!;
+		let stage = root.querySelector<HTMLElement>('[data-slot="segmented-stage-panels"]')!;
+
+		expect(control.getBoundingClientRect().left).toBe(stage.getBoundingClientRect().left);
 	});
 
 	test("swaps panels on a tab click without changing the stage height", async () => {

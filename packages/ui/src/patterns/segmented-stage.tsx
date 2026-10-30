@@ -1,5 +1,5 @@
 /**
- * A centred pill segmented control over a media stage, the switcher a hero puts between its
+ * A pill segmented control over a media stage, the switcher a hero puts between its
  * calls to action and the product. Selection is a native radio group, so it switches with
  * arrow keys and without JavaScript, and the stage holds the tallest panel's height.
  *
@@ -23,10 +23,16 @@ const ACTIVE_LIFT =
 /** Track behind the tabs: a 4% wash of the emphasis ink, so it reads in either scheme. */
 const TRACK_FILL = "color-mix(in oklch, var(--ui-neutral-fg-emphasis) 4%, transparent)";
 
+/** Edge {@link SegmentedStage} puts its control on when `align` is omitted. */
+const DEFAULT_ALIGN: SegmentedStage.Align = "center";
+
 /**
  * Prop types for {@link SegmentedStage} and its items.
  */
 export namespace SegmentedStage {
+	/** Edge the control sits on: centred over the stage, or flush with a start-aligned hero's copy. */
+	export type Align = "start" | "center";
+
 	/** Which half of the stage an item is drawing: its tab in the control, or its panel. */
 	export type Part = "tab" | "panel";
 
@@ -49,6 +55,8 @@ export namespace SegmentedStage {
 		name: string;
 		/** Accessible name for the control. Required — the library ships no copy. */
 		"aria-label": string;
+		/** Where the control sits over the stage. Defaults to {@link DEFAULT_ALIGN}. */
+		align?: Align;
 		/** Two or more {@link SegmentedStage.Item} entries. */
 		children: RemixNode;
 	}
@@ -102,13 +110,15 @@ function inputIdFor(name: string, value: string): string {
  */
 export function SegmentedStage(handle: Handle<SegmentedStage.Props>) {
 	return () => {
-		let { "aria-label": ariaLabel, children, mix, name, ...rest } = handle.props;
+		let { "aria-label": ariaLabel, align, children, mix, name, ...rest } = handle.props;
+		let isStart = (align ?? DEFAULT_ALIGN) === "start";
 
 		return (
 			<div
 				{...rest}
 				data-slot="segmented-stage"
 				data-name={name}
+				data-align={isStart ? "start" : "center"}
 				mix={[
 					raw({ display: "flex", flexDirection: "column", gap: "1.5rem", minInlineSize: "0" }),
 					mix,
@@ -135,7 +145,7 @@ export function SegmentedStage(handle: Handle<SegmentedStage.Props>) {
 								display: "inline-flex",
 								flex: "none",
 								gap: "2px",
-								marginInline: "auto",
+								marginInline: isStart ? "0" : "auto",
 								padding: "4px",
 								borderRadius: "9999px",
 								backgroundColor: TRACK_FILL,
