@@ -1,7 +1,7 @@
 /**
- * Lays {@link Rails} out in a real browser: the rails and corner marks show from the `md`
- * container and hide on a phone, the marks centre on the rail pixels, and copy inside the
- * rails starts where a `MarketingSection` band's copy starts.
+ * Lays {@link Rails} out in a real browser: the rails and corner marks show once there is
+ * room outside the column and hide while it is full-bleed, the marks centre on the rail
+ * pixels, and copy inside the rails starts where a `MarketingSection` band's copy starts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,6 +55,19 @@ describe("Rails", () => {
 		expect(getComputedStyle(marks).display).toBe("none");
 		expect(railed.getBoundingClientRect().width).toBe(375);
 		expect(root.scrollWidth).toBeLessThanOrEqual(375);
+	});
+
+	test("hides the rails and marks while the column is full-bleed, with nothing past the edge", () => {
+		for (let width of [768, 1024]) {
+			let root = mount(width, stacked());
+			let marks = root.querySelector<HTMLElement>('[data-slot="rails-marks"]')!;
+
+			expect(getComputedStyle(column(root)).borderInlineStartWidth, `rail at ${width}px`).toBe(
+				"0px",
+			);
+			expect(getComputedStyle(marks).display, `marks at ${width}px`).toBe("none");
+			expect(root.scrollWidth, `overflow at ${width}px`).toBeLessThanOrEqual(width);
+		}
 	});
 
 	test("draws both rails and the top rule at desktop widths", () => {

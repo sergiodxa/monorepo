@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { combine, raw } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 
@@ -21,6 +21,12 @@ import { Crosshair } from "./crosshair.js";
 
 /** Container the column queries, sized to the full width the rails sit in. */
 const RAILS_CONTAINER = "ui-rails";
+
+/**
+ * Container width the rails and marks appear from: the default 72rem measure plus 1rem on
+ * each side, so a rail never sits on the viewport edge and a mark never hangs past it.
+ */
+const RAILS_FROM = "74rem";
 
 /** Translucent ink the rails and the top rule draw with. */
 const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
@@ -58,9 +64,8 @@ export namespace Rails {
 
 /**
  * Wraps content in a column at `--ui-marketing-measure` whose hairline rails run its full
- * height. From the `md` container up each rail takes 1px out of the gutter, so text inside
- * lines up with a `marketingContainer()` band above or below; below `md` the rails and
- * marks hide and the column keeps the full phone width.
+ * height once the page is wider than the column, each taking 1px out of the gutter, so
+ * text inside lines up with a `marketingContainer()` band above or below at every width.
  *
  * @param handle Runtime handle carrying the outer `<div>`'s props.
  * @returns The render function producing the framed column.
@@ -93,12 +98,15 @@ export function Rails(handle: Handle<Rails.Props>) {
 						}),
 						ruled ? raw({ borderBlockStart: RULE }) : [],
 						resolvedSpacing === "flush" ? [] : marketingSectionSpace(resolvedSpacing),
-						at(
-							"md",
-							RAILS_CONTAINER,
-							raw({ borderInline: RULE, paddingInline: "calc(1.5rem - 1px)" }),
-						),
-						at("lg", RAILS_CONTAINER, raw({ paddingInline: "calc(2rem - 1px)" })),
+						combine([
+							at("md", RAILS_CONTAINER, raw({ paddingInline: "1.5rem" })),
+							at("lg", RAILS_CONTAINER, raw({ paddingInline: "2rem" })),
+							at(
+								RAILS_FROM,
+								RAILS_CONTAINER,
+								raw({ borderInline: RULE, paddingInline: "calc(2rem - 1px)" }),
+							),
+						]),
 					]}
 				>
 					{children}
@@ -112,7 +120,7 @@ export function Rails(handle: Handle<Rails.Props>) {
 /**
  * The four corner marks, on a layer pulled out half a pixel past the column's padding edge
  * so each mark's centre lands on the middle of a rail pixel and its arms stay crisp.
- * Hidden with the rails below the `md` container.
+ * They show with the rails.
  *
  * @param _handle Runtime handle; the marks take no props.
  * @returns The render function producing the mark layer.
@@ -123,8 +131,11 @@ function CornerMarks(_handle: Handle<Record<string, never>>) {
 			aria-hidden="true"
 			data-slot="rails-marks"
 			mix={[
-				raw({ display: "none", position: "absolute", inset: "-0.5px", pointerEvents: "none" }),
-				at("md", RAILS_CONTAINER, raw({ display: "block" })),
+				raw({ position: "absolute", inset: "-0.5px", pointerEvents: "none" }),
+				combine([
+					raw({ display: "none" }),
+					at(RAILS_FROM, RAILS_CONTAINER, raw({ display: "block" })),
+				]),
 			]}
 		>
 			<Crosshair corner="start-start" />
