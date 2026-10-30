@@ -36,10 +36,13 @@ export function SplitCopy(handle: Handle<MarkdownProps>) {
 }
 
 /**
- * Renders what the copy is about, sized to the column rather than to its own content. A
- * long sample scrolls inside its own block past a fixed height, so switching between the
- * samples of a tab strip never leaves one towering over the copy beside it.
+ * Renders the media column. `bleed="end"` runs its content past the column and off the
+ * viewport once the split sits side by side, for a window that reads larger than the copy.
  */
-export function SplitMedia(handle: Handle<MarkdownProps>) {
-	return () => <UiSplit.Media mix={[blocksUseGap()]}>{handle.props.children}</UiSplit.Media>;
+export function SplitMedia(handle: Handle<MarkdownProps & { bleed?: "end" }>) {
+	return () => (
+		<UiSplit.Media bleed={handle.props.bleed} mix={[blocksUseGap()]}>
+			{handle.props.children}
+		</UiSplit.Media>
+	);
 }

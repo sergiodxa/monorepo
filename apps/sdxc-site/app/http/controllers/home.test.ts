@@ -7,10 +7,38 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { parseDocument } from "@sdxc/html/document";
+import { unwrap } from "@sdxc/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { readPackageFacts } from "~/app/services/packages";
 import { fetchApp } from "~/app/test/router";
+
+/** What the release pin reads, as GitHub sends it. */
+const ENDPOINT = "https://api.github.com/repos/sergiodxa/monorepo/releases";
+
+/** The newest published release, which the pin names. */
+const RELEASE = {
+	tag_name: "v2026.10.30",
+	body: "## @sdxc/result\n\n- feat: the thing that shipped\n",
+	published_at: "2026-10-30T02:46:27Z",
+	html_url: "https://github.com/sergiodxa/monorepo/releases/tag/v2026.10.30",
+	draft: false,
+	prerelease: false,
+};
+
+const server = setupServer(http.get(ENDPOINT, () => HttpResponse.json([RELEASE])));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** The landing page, parsed. */
+async function landing() {
+	return unwrap(parseDocument(await (await fetchApp("/")).text()));
+}
 
 describe("GET /", () => {
 	test("renders the landing document", async () => {
@@ -57,6 +85,31 @@ describe("GET /", () => {
 
 		expect(ids.length).toBeGreaterThan(0);
 		expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
+	});
+
+	test("pins the newest release, linking to its changelog entry", async () => {
+		let page = await landing();
+		let pin = page.querySelector('a[href="/docs/releases/changelog#2026.10.30"]');
+
+		expect(pin?.textContent).toContain("Latest release");
+		expect(pin?.querySelector("time")?.textContent).toBe("2026.10.30");
+	});
+
+	test("leaves the pin out when no release can be read", async () => {
+		server.use(http.get(ENDPOINT, () => new HttpResponse(null, { status: 403 })));
+		let body = await (await fetchApp("/")).text();
+
+		expect(body).not.toContain("Latest release");
+	});
+
+	test("shows one handler on Workers, Bun, Deno and Node", async () => {
+		let page = await landing();
+		let tabs = Array.from(
+			page.querySelectorAll('[data-slot="code-stage-tab"]'),
+			(tab) => tab.textContent,
+		);
+
+		expect(tabs).toEqual(["Workers", "Bun", "Deno", "Node"]);
 	});
 
 	test("answers 404 for an unmapped path", async () => {

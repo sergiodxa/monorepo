@@ -9,21 +9,14 @@ Take one, or take the set. There are {% $packageCount %} of them, built on `fetc
 
 <actions cta-href="/docs" cta-label="Read the docs" alt-href="/api" alt-label="Browse the API" />
 
-<install-command command="npm add -g @sdxc/kit" />
+<install-command command="npm add @sdxc/markdown @sdxc/response @sdxc/result" />
+
+<latest-release />
 
 </split-copy>
-<split-media>
+<split-media bleed="end">
 
-```bash {% title="Terminal" %}
-sdxc create blog
-cd blog && bun install
-
-sdxc make controller posts/show
-sdxc make job digests/send --cron "0 8 * * *"
-sdxc ui add dialog
-
-sdxc run about
-```
+<runtime-showcase />
 
 </split-media>
 </split>
@@ -34,6 +27,7 @@ sdxc run about
 <stat label="RFCs the packages follow">{% $rfcCount %}</stat>
 <stat label="components in @sdxc/ui">{% $componentCount %}</stat>
 <stat label="styling utilities in @sdxc/u">{% $utilityCount %}</stat>
+<stat label="packages that need no framework">{% $frameworkFreeCount %}</stat>
 <stat label="apps running on them">{% $applicationCount %}</stat>
 </stats>
 

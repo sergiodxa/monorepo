@@ -34,7 +34,11 @@ export const TAGS = {
 
 	"split-copy": { content: "blocks" },
 
-	"split-media": { content: "blocks" },
+	/** `bleed="end"` runs a wide window past the column once the split sits side by side. */
+	"split-media": {
+		content: "blocks",
+		attributes: s.object({ bleed: s.optional(s.enum_(["end"])) }),
+	},
 
 	actions: {
 		content: "none",
@@ -106,6 +110,12 @@ export const TAGS = {
 
 	/** The people funding the work now, read per request, so the page supplies its component. */
 	"current-sponsors": { content: "none" },
+
+	/** The newest dated release, read per request, so the page supplies its component. */
+	"latest-release": { content: "none" },
+
+	/** One request handler shown as the entry file of every runtime it serves. */
+	"runtime-showcase": { content: "none" },
 
 	/**
 	 * A directory layout, written as structure rather than drawn inside a fence: the

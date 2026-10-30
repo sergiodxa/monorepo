@@ -1,6 +1,6 @@
 /**
- * The people funding this work now, named with their avatar and their profile, and a
- * link to the page that makes the case for joining them.
+ * The people funding this work, as a wall of their GitHub avatars, and the links to join
+ * them: the page that makes the case for it and the sponsorship profile itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,18 +10,20 @@ import type { RemixOptions } from "@sdxc/markdown/remix";
 import type { Handle } from "remix/component";
 
 import { HeartIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { listStyle } from "@sdxc/u/general";
-import { flexWrap, hstack, inlineFlex, vstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { text, tracking, weight } from "@sdxc/u/typography";
-import { Avatar } from "@sdxc/ui";
+import { raw } from "@sdxc/u/general";
+import { is } from "@sdxc/u/size";
+import { LinkButton } from "@sdxc/ui";
+import { SponsorWall } from "@sdxc/ui/patterns";
 
 import type { Sponsor } from "~/app/services/sponsors";
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
-import Band from "~/resources/components/band";
+import { SPONSORED_LOGIN } from "~/app/services/sponsors";
+import SectionBlock from "~/resources/components/section-block";
 import routes from "~/routes/web";
+
+/** The GitHub Sponsors profile the sponsorships are taken through. */
+const SPONSOR_PROFILE_HREF = `https://github.com/sponsors/${SPONSORED_LOGIN}`;
 
 /** What the block is titled, everywhere it appears. */
 const HEADING = "People who fund this work";
@@ -32,49 +34,51 @@ namespace Sponsors {
 	}
 }
 
-/** The initials an avatar falls back to while its image loads or fails. */
-function initials(name: string): string {
-	return name.trim().slice(0, 2).toUpperCase();
-}
-
-/** Renders the named sponsors, or nothing when there are none. */
+/**
+ * Renders the current sponsors as a wall of their GitHub avatars, then the ways to join
+ * them. Every circle is a real sponsor's profile, so the wall claims no tier nobody has
+ * taken, and it renders nothing while nobody funds the work.
+ */
 export default function Sponsors(handle: Handle<Sponsors.Props>) {
 	return () => {
 		let { sponsors } = handle.props;
 		if (sponsors.length === 0) return null;
 
 		return (
-			<section mix={[vstack({ gap: 4 })]}>
-				<h2 mix={[m(0), text("lg"), weight("semibold"), tracking("tight")]}>{HEADING}</h2>
+			<SectionBlock id="sponsors" eyebrow="Sponsors" title={HEADING} align="center">
+				<p>
+					The collection is written and maintained in the open, funded through GitHub Sponsors by
+					the people and teams below.
+				</p>
 
-				<ul mix={[hstack({ gap: 4, align: "center" }), flexWrap(), m(0), p(0), listStyle("none")]}>
-					{sponsors.map((sponsor) => (
-						<li key={sponsor.login}>
-							<a
-								href={sponsor.url}
-								rel="noreferrer"
-								mix={[hstack({ gap: 2, align: "center" }), text("sm"), fg("neutral")]}
-							>
-								<Avatar size="sm">
-									<Avatar.Image src={sponsor.avatarUrl} alt="" />
-									<Avatar.Fallback>{initials(sponsor.name)}</Avatar.Fallback>
-								</Avatar>
-								{sponsor.name}
-							</a>
-						</li>
-					))}
-				</ul>
-
-				<a
-					href={routes.sponsors.href()}
-					mix={[hstack({ gap: 2, align: "center" }), text("sm"), weight("medium"), fg("brand")]}
+				<SponsorWall
+					mix={[is("100%"), raw({ marginBlockStart: "1rem" })]}
+					actions={
+						<>
+							<LinkButton href={routes.sponsors.href()} color="brand">
+								<HeartIcon size={16} aria-hidden="true" />
+								Sponsor this work
+							</LinkButton>
+							<LinkButton href={SPONSOR_PROFILE_HREF} variant="outline" color="neutral">
+								GitHub Sponsors
+							</LinkButton>
+						</>
+					}
 				>
-					<span mix={[inlineFlex()]}>
-						<HeartIcon size={16} />
-					</span>
-					Sponsor this work
-				</a>
-			</section>
+					<SponsorWall.Individuals>
+						{sponsors.map((sponsor) => (
+							<SponsorWall.Person
+								key={sponsor.login}
+								href={sponsor.url}
+								name={sponsor.name}
+								src={sponsor.avatarUrl}
+								size="lg"
+								rel="noreferrer"
+							/>
+						))}
+					</SponsorWall.Individuals>
+				</SponsorWall>
+			</SectionBlock>
 		);
 	};
 }
@@ -90,12 +94,7 @@ export default function Sponsors(handle: Handle<Sponsors.Props>) {
 export function sponsorTags(sponsors: Sponsor[]): NonNullable<RemixOptions["components"]> {
 	return {
 		"current-sponsors": function CurrentSponsors(_handle: Handle<MarkdownProps>) {
-			return () =>
-				sponsors.length > 0 ? (
-					<Band>
-						<Sponsors sponsors={sponsors} />
-					</Band>
-				) : null;
+			return () => <Sponsors sponsors={sponsors} />;
 		},
 	};
 }

@@ -15,9 +15,12 @@ import { createAction } from "remix/router";
 
 import { siteCache } from "~/app/initializers/cache";
 import { readOptionSelections } from "~/app/initializers/cookies";
+import { readChangelog } from "~/app/services/changelog";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
+import { releaseTags } from "~/resources/components/release-pin";
+import RuntimeShowcase from "~/resources/components/runtime-showcase";
 import SiteHeader from "~/resources/components/site-header";
 import { sponsorTags } from "~/resources/components/sponsors";
 import homeSource from "~/resources/content/home.md?raw";
@@ -36,7 +39,10 @@ export default createAction(routes.home, async (ctx) => {
 		throw content.error;
 	}
 
-	let roster = await readStoredSponsors(siteCache());
+	let [roster, releases] = await Promise.all([
+		readStoredSponsors(siteCache()),
+		readChangelog(siteCache()),
+	]);
 
 	return ctx.render(
 		<DocumentLayout
@@ -50,7 +56,12 @@ export default createAction(routes.home, async (ctx) => {
 
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
 				{toRemix(content.data, {
-					components: { ...LANDING_COMPONENTS, ...sponsorTags(roster.current) },
+					components: {
+						...LANDING_COMPONENTS,
+						...sponsorTags(roster.current),
+						...releaseTags(releases[0]),
+						"runtime-showcase": RuntimeShowcase,
+					},
 				})}
 			</main>
 		</DocumentLayout>,
