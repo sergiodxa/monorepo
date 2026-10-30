@@ -40,7 +40,7 @@ export function Hero() {
 			eyebrowHref="#features"
 			title={
 				<>
-					Run the whole household from <AccentText variant="swash">one list</AccentText>
+					Run the whole household from <AccentText>one list</AccentText>
 				</>
 			}
 			description={
