@@ -564,7 +564,7 @@ export function marketingCtaChrome<Node extends Element = Element>(): MixinDescr
 		"--ui-button-radius": "var(--ui-marketing-cta-radius, 0.5rem)",
 		"--ui-button-weight": "var(--ui-marketing-cta-weight, 600)",
 		boxShadow: "var(--ui-shadow-control, 0 1px 2px rgb(0 0 0 / 0.05))",
-		minBlockSize: "var(--ui-marketing-cta-height, 0)",
+		blockSize: "var(--ui-marketing-cta-height, auto)",
 		transitionProperty: "background-color, box-shadow, color",
 	});
 }

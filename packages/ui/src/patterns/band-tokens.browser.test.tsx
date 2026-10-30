@@ -259,6 +259,12 @@ describe("band tokens", () => {
 		);
 	});
 
+	test("marketing CTA chrome keeps the button's own height when no CTA height is set", () => {
+		let root = mount(<Button mix={[marketingCtaChrome()]}>Start</Button>);
+
+		expect(root.querySelector("button")!.getBoundingClientRect().height).toBe(40);
+	});
+
 	test("marketing CTA chrome animates only colour and shadow", () => {
 		let root = mount(<Button mix={[marketingCtaChrome()]}>Start</Button>);
 
