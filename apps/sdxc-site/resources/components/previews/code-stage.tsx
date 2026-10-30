@@ -1,6 +1,7 @@
 /**
- * Live preview for `CodeStage`: a numbered snippet on a dark slab, a raised code card for
- * an install line and a terminal panel for a command's output, the ways a landing shows code.
+ * Live preview for `CodeStage`: a highlighted, numbered snippet on a dark slab, a raised
+ * code card for an install line and a terminal panel for a command's output, the ways a
+ * landing shows code.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,7 +24,7 @@ monitor.on("down", (incident) => incident.page("on-call"));`;
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-	<CodeStage variant="slab" title="monitor.ts" lineNumbers>
+	<CodeStage variant="slab" title="monitor.ts" language="ts" lineNumbers>
 		{snippet}
 	</CodeStage>
 	<CodeStage title="install.sh">npm add @beacon/cli</CodeStage>
@@ -38,7 +39,7 @@ export default {
 	render: () => (
 		<div mix={[is("full")]}>
 			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-				<CodeStage variant="slab" title="monitor.ts" lineNumbers>
+				<CodeStage variant="slab" title="monitor.ts" language="ts" lineNumbers>
 					{SNIPPET}
 				</CodeStage>
 				<CodeStage title="install.sh">npm add @beacon/cli</CodeStage>

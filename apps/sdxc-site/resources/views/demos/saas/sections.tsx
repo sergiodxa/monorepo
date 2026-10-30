@@ -266,7 +266,7 @@ export function MeteringBand() {
 				</>
 			}
 			media={
-				<CodeStage variant="code" title="track-usage.ts" lineNumbers>
+				<CodeStage variant="code" title="track-usage.ts" language="ts" lineNumbers>
 					{TRACK_USAGE}
 				</CodeStage>
 			}
