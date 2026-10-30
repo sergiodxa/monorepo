@@ -132,13 +132,17 @@
 	--ui-brand-border: var(--ui-color-brand-800);
 	--ui-brand-border-strong: var(--ui-color-brand-600);
 
-	--ui-neutral-bg-tint: var(--ui-color-neutral-950);
+	--ui-neutral-bg-tint: color-mix(
+		in oklch,
+		var(--ui-color-neutral-950),
+		var(--ui-color-neutral-900)
+	);
 	--ui-neutral-bg-solid: var(--ui-color-neutral-100);
-	--ui-neutral-fg: var(--ui-color-neutral-400);
+	--ui-neutral-fg: var(--ui-color-neutral-300);
 	--ui-neutral-fg-muted: var(--ui-color-neutral-400);
 	--ui-neutral-fg-emphasis: var(--ui-color-neutral-100);
 	--ui-neutral-fg-on-solid: var(--ui-color-neutral-900);
-	--ui-neutral-border: var(--ui-color-neutral-700);
+	--ui-neutral-border: color-mix(in oklch, white 10%, transparent);
 	--ui-neutral-border-strong: var(--ui-color-neutral-400);
 
 	--ui-success-bg-tint: var(--ui-color-success-950);
@@ -161,6 +165,8 @@
 	--ui-danger-fg-emphasis: var(--ui-color-danger-100);
 	--ui-danger-border: var(--ui-color-danger-800);
 	--ui-danger-border-strong: var(--ui-color-danger-600);
+
+	--ui-bg: var(--ui-color-neutral-950, Canvas);
 }
 
 /* System-preference dark mode */
@@ -174,13 +180,17 @@
 		--ui-brand-border: var(--ui-color-brand-800);
 		--ui-brand-border-strong: var(--ui-color-brand-600);
 
-		--ui-neutral-bg-tint: var(--ui-color-neutral-950);
+		--ui-neutral-bg-tint: color-mix(
+			in oklch,
+			var(--ui-color-neutral-950),
+			var(--ui-color-neutral-900)
+		);
 		--ui-neutral-bg-solid: var(--ui-color-neutral-100);
-		--ui-neutral-fg: var(--ui-color-neutral-400);
+		--ui-neutral-fg: var(--ui-color-neutral-300);
 		--ui-neutral-fg-muted: var(--ui-color-neutral-400);
 		--ui-neutral-fg-emphasis: var(--ui-color-neutral-100);
 		--ui-neutral-fg-on-solid: var(--ui-color-neutral-900);
-		--ui-neutral-border: var(--ui-color-neutral-700);
+		--ui-neutral-border: color-mix(in oklch, white 10%, transparent);
 		--ui-neutral-border-strong: var(--ui-color-neutral-400);
 
 		--ui-success-bg-tint: var(--ui-color-success-950);
@@ -203,6 +213,8 @@
 		--ui-danger-fg-emphasis: var(--ui-color-danger-100);
 		--ui-danger-border: var(--ui-color-danger-800);
 		--ui-danger-border-strong: var(--ui-color-danger-600);
+
+		--ui-bg: var(--ui-color-neutral-950, Canvas);
 	}
 }
 
