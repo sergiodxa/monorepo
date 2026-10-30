@@ -39,18 +39,26 @@ const DEFAULT_TONE: PricingBand.Tone = "plain";
 /** Container the plan grid and every plan card query. */
 const CONTAINER_NAME = "ui-marketing-pricing";
 
-/** Corner radius of a plan card, a step rounder than a staged surface. */
-const PLAN_RADIUS = "1.5rem";
+/**
+ * Corner radius of a plan card, a step rounder than a staged surface by default; a page
+ * sets `--ui-marketing-plan-radius` to square or soften every plan at once.
+ */
+const PLAN_RADIUS = "var(--ui-marketing-plan-radius, 1.5rem)";
 
-/** The lift a featured plan floats on in light mode. */
-const FEATURED_LIFT = "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)";
+/**
+ * The lift a featured plan floats on in light mode. A page sets `--ui-marketing-plan-lift`
+ * to a shadow of its own, or to `0 0 #0000` for a plan that sits flat on the band.
+ */
+const FEATURED_LIFT =
+	"var(--ui-marketing-plan-lift, 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1))";
 
 /**
  * The featured plan's edge on a dark page, where the inverse tone renders as a raised
  * surface: a strong brand ring over a deeper lift keeps it distinct from its neighbours.
+ * The ring stays when a page flattens the lift through `--ui-marketing-plan-lift`.
  */
 const FEATURED_DARK_EDGE =
-	"inset 0 0 0 1px var(--ui-brand-border-strong), 0 20px 25px -5px rgb(0 0 0 / 0.5)";
+	"inset 0 0 0 1px var(--ui-brand-border-strong), var(--ui-marketing-plan-lift, 0 20px 25px -5px rgb(0 0 0 / 0.5))";
 
 /**
  * Prop types for {@link PricingBand} and {@link PricingBand.Plan}.

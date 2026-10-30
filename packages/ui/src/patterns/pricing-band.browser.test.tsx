@@ -125,6 +125,33 @@ describe("pricing band rows and actions", () => {
 	});
 });
 
+describe("pricing band plan tokens", () => {
+	test("a page squares and flattens every plan through the plan tokens", () => {
+		let root = mount(
+			900,
+			<div style={{ "--ui-marketing-plan-radius": "0px", "--ui-marketing-plan-lift": "0 0 #0000" }}>
+				{plans()}
+			</div>,
+		);
+		let plain = root.querySelector('[data-slot="pricing-plan"]:not([data-featured])');
+		let featured = root.querySelector('[data-slot="pricing-plan"][data-featured]');
+
+		expect(getComputedStyle(plain!).borderStartStartRadius).toBe("0px");
+		expect(getComputedStyle(featured!).borderStartStartRadius).toBe("0px");
+		expect(getComputedStyle(featured!, "::after").boxShadow).toBe(
+			"rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+		);
+	});
+
+	test("plans keep their rounded corners and lift when no token is set", () => {
+		let root = mount(900, plans());
+		let featured = root.querySelector('[data-slot="pricing-plan"][data-featured]');
+
+		expect(getComputedStyle(featured!).borderStartStartRadius).toBe("24px");
+		expect(getComputedStyle(featured!, "::after").boxShadow).not.toBe("none");
+	});
+});
+
 describe("testimonial band layout", () => {
 	test("a wide band flows quotes into three columns and a phone into one", () => {
 		let quotes = (
