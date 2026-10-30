@@ -1,7 +1,7 @@
 /**
  * `GET /frames/previews/…`, `/frames/u/…` and `/frames/guides/:guide/:demo` — a component's
  * live preview or example, a utility example, or a guide's demo, as an HTML fragment for a
- * `<Frame>` to load, or inside the site document when a reader opens the URL directly.
+ * `<Frame>` to load, or as a bare page when it is opened directly or framed in an iframe.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,7 +30,12 @@ import routes from "~/routes/web";
 /** The opening preview a component's reference page leads with. */
 export default createAction(routes.frames.preview, async (ctx) => {
 	let { component } = s.parse(s.object({ component: s.string() }), ctx.params);
-	return await renderPreview(ctx, findPreview(component), component);
+	return await renderPreview(
+		ctx,
+		findPreview(component),
+		component,
+		routes.frames.preview.href({ component }),
+	);
 });
 
 /** One live example; the page that embeds it names it, so the fragment stays the demo alone. */
@@ -39,7 +44,12 @@ export const frameExample = createAction(routes.frames.example, async (ctx) => {
 		s.object({ component: s.string(), example: s.string() }),
 		ctx.params,
 	);
-	return await renderPreview(ctx, findExample(component, example), `${component}/${example}`);
+	return await renderPreview(
+		ctx,
+		findExample(component, example),
+		`${component}/${example}`,
+		routes.frames.example.href({ component, example }),
+	);
 });
 
 /**
@@ -63,6 +73,8 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
 			{ status: 404 },
 		);
 	}
+
+	if (isStandalone(ctx.request.headers)) return renderStandalone(ctx, module.render());
 
 	return renderFrame(
 		ctx,
@@ -89,13 +101,16 @@ export const frameGuideDemo = createAction(routes.frames.guide, async (ctx) => {
 		);
 	}
 
+	let node = module.render();
+	if (isStandalone(ctx.request.headers)) return renderStandalone(ctx, node, module.viewports);
+
 	return renderFrame(
 		ctx,
 		<ComponentPreview flush={module.flush || module.viewports}>
 			{module.viewports ? (
-				<ViewportDemo name={`${guide}-${demo}`}>{module.render()}</ViewportDemo>
+				<ViewportDemo name={`${guide}-${demo}`} src={routes.frames.guide.href({ guide, demo })} />
 			) : (
-				module.render()
+				node
 			)}
 		</ComponentPreview>,
 	);
@@ -110,25 +125,26 @@ async function renderPreview(
 	ctx: AppContext,
 	preview: Preview | null,
 	slug: string,
+	src: string,
 ): Promise<Response> {
 	if (preview === null) {
 		return renderFrame(ctx, <p>No preview for “{slug}”.</p>, { status: 404 });
 	}
 
 	let node = preview.render({ appleKeyboard: isApplePlatform(ctx) });
+	if (isStandalone(ctx.request.headers)) return renderStandalone(ctx, node, preview.viewports);
 
 	return renderFrame(
 		ctx,
 		<ComponentPreview code={preview.code} flush={preview.flush || preview.viewports}>
-			{preview.viewports ? <ViewportDemo name={slug.replace("/", "-")}>{node}</ViewportDemo> : node}
+			{preview.viewports ? <ViewportDemo name={slug.replace("/", "-")} src={src} /> : node}
 		</ComponentPreview>,
 	);
 }
 
 /**
- * Answers a frame request with the bare fragment, and a top-level navigation — someone
- * opening or sharing the frame URL — with that fragment inside the site document, so the
- * demo carries the theme, fonts and stylesheets it was built against.
+ * Answers a frame request with the fragment, and a standalone request with that fragment
+ * inside the site document, so even a missing demo's message carries the site's styles.
  *
  * @param ctx The request context, read for its headers, assets and renderer.
  * @param node The fragment the frame draws.
@@ -137,19 +153,51 @@ async function renderPreview(
  */
 function renderFrame(ctx: AppContext, node: RemixNode, init?: ResponseInit): Response {
 	if (!isStandalone(ctx.request.headers)) return ctx.render(node, init);
+	return renderStandalone(ctx, node, false, init);
+}
 
+/**
+ * Draws the demo alone as a page: the site document's theme, fonts and stylesheets, with no
+ * preview surround, source toggle or site footer, so the URL shows exactly what a stage frames.
+ * A page-wide demo meets the viewport's edges; anything smaller sits centred with a margin.
+ * The root carries `data-frame-root`, the element a stage's iframe measures its height from.
+ *
+ * @param ctx The request context, read for its assets and renderer.
+ * @param node The demo itself.
+ * @param pageWide Whether the demo is a landing band laid out against the whole viewport.
+ * @param init Status and headers for the response.
+ * @returns The rendered response.
+ */
+function renderStandalone(
+	ctx: AppContext,
+	node: RemixNode,
+	pageWide = false,
+	init?: ResponseInit,
+): Response {
 	return ctx.render(
-		<DocumentLayout assets={ctx.assets} title="Live demo — sdxc">
-			<main mix={[is("100%"), maxIs("80rem"), mi("auto"), p(4)]}>{node}</main>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Live demo — sdxc"
+			robots="noindex"
+			siteFooter={false}
+		>
+			<main
+				data-frame-root
+				mix={pageWide ? [is("100%")] : [is("100%"), maxIs("80rem"), mi("auto"), p(4)]}
+			>
+				{node}
+			</main>
 		</DocumentLayout>,
 		init,
 	);
 }
 
 /**
- * Whether the browser navigated to the frame URL itself: a frame load carries
- * `X-Remix-Frame`, and only a navigation asks for a whole `document`.
+ * Whether the URL was asked for as a page of its own: opened in a tab, or loaded into an
+ * `<iframe>` by a viewport stage. A `<Frame>` load carries `X-Remix-Frame` and gets the fragment.
  */
 function isStandalone(headers: Headers): boolean {
-	return headers.get("X-Remix-Frame") !== "true" && headers.get("Sec-Fetch-Dest") === "document";
+	if (headers.get("X-Remix-Frame") === "true") return false;
+	let destination = headers.get("Sec-Fetch-Dest");
+	return destination === "document" || destination === "iframe";
 }

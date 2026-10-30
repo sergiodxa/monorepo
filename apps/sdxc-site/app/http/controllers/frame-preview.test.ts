@@ -42,6 +42,17 @@ describe("GET /frames/previews/:component", () => {
 		expect(response.headers.get("cache-control")).toBeNull();
 	});
 
+	test("draws the preview alone, without its source toggle, when opened as a page", async () => {
+		let response = await fetchApp("/frames/previews/faq-band", {
+			headers: { "Sec-Fetch-Dest": "document" },
+		});
+		let body = await response.text();
+
+		expect(body).toContain("data-frame-root");
+		expect(body).not.toContain("View code");
+		expect(body).not.toContain('data-slot="viewport-demo"');
+	});
+
 	test("answers a slug with no preview with a 404 fragment naming it", async () => {
 		let response = await fetchApp("/frames/previews/not-a-component");
 
@@ -80,14 +91,22 @@ describe("GET /frames/previews/:component/:example", () => {
 });
 
 describe("GET /frames/guides/:guide/:demo", () => {
-	test("answers with the demo alone, since the guide prints its source", async () => {
+	test("answers with the demo's stage alone, since the guide prints its source", async () => {
 		let response = await fetchApp("/frames/guides/landing-pages/faq");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(body).not.toContain("<html");
-		expect(body).toContain("How often do checks run?");
+		expect(body).toContain('data-slot="viewport-demo"');
 		expect(body).not.toContain("View code");
+	});
+
+	test("draws the demo itself in the page its stage frames", async () => {
+		let response = await fetchApp("/frames/guides/landing-pages/faq", {
+			headers: { "Sec-Fetch-Dest": "iframe" },
+		});
+
+		expect(await response.text()).toContain("How often do checks run?");
 	});
 
 	test("draws a page-wide demo on a stage that switches between desktop and phone", async () => {
@@ -97,6 +116,30 @@ describe("GET /frames/guides/:guide/:demo", () => {
 		expect(body).toMatch(/value="desktop"[^>]*checked|checked[^>]*value="desktop"/);
 		expect(body).toContain('value="phone"');
 	});
+
+	test("frames the demo through its own URL, so it lays out against the stage's viewport", async () => {
+		let body = await (await fetchApp("/frames/guides/landing-pages/landing")).text();
+
+		expect(body).toMatch(/<iframe[^>]*src="\/frames\/guides\/landing-pages\/landing"/);
+	});
+
+	test.each(["document", "iframe"])(
+		"draws the demo alone when the URL is loaded as a %s",
+		async (destination) => {
+			let response = await fetchApp("/frames/guides/landing-pages/landing", {
+				headers: { "Sec-Fetch-Dest": destination },
+			});
+			let body = await response.text();
+
+			expect(response.status).toBe(200);
+			expect(body).toContain("<html");
+			expect(body).toContain("data-frame-root");
+			expect(body).toContain('content="noindex"');
+			expect(body).not.toContain('data-slot="viewport-demo"');
+			expect(body).not.toContain("data-not-typeset");
+			expect(body).not.toContain("<footer");
+		},
+	);
 
 	test("answers a demo the guide lacks with a 404 fragment naming it", async () => {
 		let response = await fetchApp("/frames/guides/landing-pages/not-a-demo");
