@@ -1,47 +1,70 @@
 /**
- * Tests getClientIP: the default CF-Connecting-IP header, a configured single
- * address header, and the X-Forwarded-For and Forwarded lists read from the right
- * so an entry the client wrote never answers.
+ * Tests getClientIP's discovery: a platform's single-address header, the
+ * Forwarded and X-Forwarded-For lists read from the right, the Cloudflare
+ * runtime marker, and every forged or conflicting combination answering `null`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
 
-import type { ClientIPOptions } from "./index.js";
+import { CLIENT_IP_HEADERS, getClientIP } from "./index.js";
 
-import { getClientIP } from "./index.js";
+/** The address getClientIP answers for the given headers, as text. */
+function read(init: HeadersInit): string | null {
+	return getClientIP(new Request("https://example.com", { headers: init }))?.toString() ?? null;
+}
 
-/** A request carrying the given `CF-Connecting-IP` header, or none. */
-function requestFrom(header?: string): Request {
-	let headers = new Headers();
-	if (header !== undefined) headers.set("CF-Connecting-IP", header);
-	return new Request("https://example.com", { headers });
+/** A request carrying Cloudflare's `cf` marker, as the Workers runtime delivers one. */
+function cloudflareRequest(init: HeadersInit): Request {
+	let request = new Request("https://example.com", { headers: init });
+	Object.defineProperty(request, "cf", { value: { country: "US" } });
+	return request;
 }
 
 describe("getClientIP", () => {
 	test("parses an IPv4 address", () => {
-		let ip = getClientIP(requestFrom("203.0.113.42"));
+		let ip = getClientIP(new Headers({ "CF-Connecting-IP": "203.0.113.42" }));
 
 		expect(ip?.version).toBe(4);
 		expect(ip?.toString()).toBe("203.0.113.42");
 	});
 
 	test("parses an IPv6 address into its canonical text", () => {
-		let ip = getClientIP(requestFrom("2001:0db8:85a3:0000:0000:8a2e:0370:7334"));
-
-		expect(ip?.version).toBe(6);
-		expect(ip?.toString()).toBe("2001:db8:85a3::8a2e:370:7334");
+		expect(read({ "CF-Connecting-IP": "2001:0db8:85a3:0000:0000:8a2e:0370:7334" })).toBe(
+			"2001:db8:85a3::8a2e:370:7334",
+		);
 	});
 
-	test("returns null when the header is missing", () => {
-		expect(getClientIP(requestFrom())).toBeNull();
+	test.each(
+		CLIENT_IP_HEADERS.filter((name) => name !== "CloudFront-Viewer-Address").map((name) => [name]),
+	)("discovers %s", (name) => {
+		expect(read({ [name]: "203.0.113.42" })).toBe("203.0.113.42");
 	});
 
-	test.each([["unknown"], [""], ["10.0.0"], ["example.com"]])(
+	test.each([["X-Forwarded-For"], ["X-Vercel-Forwarded-For"]])("discovers %s", (name) => {
+		expect(read({ [name]: "10.0.0.1, 203.0.113.42" })).toBe("203.0.113.42");
+	});
+
+	test("drops the port CloudFront appends to the viewer address", () => {
+		expect(read({ "CloudFront-Viewer-Address": "203.0.113.42:46532" })).toBe("203.0.113.42");
+		expect(
+			read({ "CloudFront-Viewer-Address": "2001:0db8:85a3:0000:0000:8a2e:0370:7334:46532" }),
+		).toBe("2001:db8:85a3::8a2e:370:7334");
+	});
+
+	test("returns null for a CloudFront viewer address without a port", () => {
+		expect(read({ "CloudFront-Viewer-Address": "203.0.113.42" })).toBeNull();
+	});
+
+	test("returns null without any header", () => {
+		expect(read({})).toBeNull();
+	});
+
+	test.each([["unknown"], [""], ["10.0.0"], ["example.com"], ["203.0.113.42, 198.51.100.1"]])(
 		"returns null for the malformed header %j",
-		(header) => {
-			expect(getClientIP(requestFrom(header))).toBeNull();
+		(value) => {
+			expect(read({ "X-Real-IP": value })).toBeNull();
 		},
 	);
 
@@ -50,59 +73,35 @@ describe("getClientIP", () => {
 		headers.append("CF-Connecting-IP", "203.0.113.42");
 		headers.append("CF-Connecting-IP", "198.51.100.1");
 
-		expect(getClientIP(new Request("https://example.com", { headers }))).toBeNull();
-	});
-
-	test("reads the headers of a request or a bare Headers", () => {
-		let headers = new Headers({ "CF-Connecting-IP": "203.0.113.42" });
-
-		expect(getClientIP(headers)?.toString()).toBe("203.0.113.42");
+		expect(getClientIP(headers)).toBeNull();
 	});
 });
 
-/** The address getClientIP answers for one header value under the given options. */
-function readWith(name: string, value: string, options: ClientIPOptions = {}): string | null {
-	let headers = new Headers({ [name]: value });
-	return getClientIP(headers, { header: name, ...options })?.toString() ?? null;
-}
-
-describe("getClientIP with a configured header", () => {
-	test("reads only the configured header", () => {
-		let headers = new Headers({ "X-Real-IP": "203.0.113.42", "CF-Connecting-IP": "198.51.100.1" });
-
-		expect(getClientIP(headers, { header: "X-Real-IP" })?.toString()).toBe("203.0.113.42");
+describe("getClientIP with several headers", () => {
+	test("answers the address every present header agrees on", () => {
+		expect(read({ "Fly-Client-IP": "203.0.113.42", "X-Real-IP": "203.0.113.42" })).toBe(
+			"203.0.113.42",
+		);
 	});
 
-	test("ignores every other header a client sends", () => {
-		let headers = new Headers({
-			"X-Client-IP": "10.0.0.1",
-			"X-Forwarded-For": "10.0.0.2",
-			"True-Client-IP": "10.0.0.3",
-		});
-
-		expect(getClientIP(headers, { header: "Fly-Client-IP" })).toBeNull();
-		expect(getClientIP(headers)).toBeNull();
+	test("returns null when a client adds a header naming another address", () => {
+		expect(read({ "X-Client-IP": "10.0.0.1", "Fly-Client-IP": "203.0.113.42" })).toBeNull();
 	});
 
-	test("matches the header name case-insensitively", () => {
-		expect(readWith("x-forwarded-for", "10.0.0.1, 203.0.113.42")).toBe("203.0.113.42");
+	test("returns null when a client adds a malformed header", () => {
+		expect(read({ "True-Client-IP": "nope", "Fly-Client-IP": "203.0.113.42" })).toBeNull();
 	});
 
-	test("reads an unlisted header as a single address", () => {
-		expect(readWith("X-My-Proxy-IP", "203.0.113.42")).toBe("203.0.113.42");
-		expect(readWith("X-My-Proxy-IP", "203.0.113.42, 198.51.100.1")).toBeNull();
+	test("prefers a platform header over the proxy lists", () => {
+		let headers = { "Fly-Client-IP": "203.0.113.42", "X-Forwarded-For": "203.0.113.42, 10.0.0.9" };
+
+		expect(read(headers)).toBe("203.0.113.42");
 	});
 });
 
 describe("getClientIP with X-Forwarded-For", () => {
-	test("answers the entry the trusted proxy appended, not the one the client wrote", () => {
-		expect(readWith("X-Forwarded-For", "10.0.0.1, 203.0.113.42")).toBe("203.0.113.42");
-	});
-
-	test("counts trusted proxies from the right", () => {
-		let value = "10.0.0.1, 203.0.113.42, 198.51.100.9";
-
-		expect(readWith("X-Forwarded-For", value, { proxies: 2 })).toBe("203.0.113.42");
+	test("answers the entry the proxy appended, not the one the client wrote", () => {
+		expect(read({ "X-Forwarded-For": "10.0.0.1, 203.0.113.42" })).toBe("203.0.113.42");
 	});
 
 	test("joins repeated header lines in order", () => {
@@ -110,27 +109,19 @@ describe("getClientIP with X-Forwarded-For", () => {
 		headers.append("X-Forwarded-For", "10.0.0.1");
 		headers.append("X-Forwarded-For", "203.0.113.42");
 
-		expect(getClientIP(headers, { header: "X-Forwarded-For" })?.toString()).toBe("203.0.113.42");
+		expect(getClientIP(headers)?.toString()).toBe("203.0.113.42");
 	});
 
 	test("drops a port the proxy appended", () => {
-		expect(readWith("X-Forwarded-For", "203.0.113.42:4711")).toBe("203.0.113.42");
-		expect(readWith("X-Forwarded-For", "[2001:db8::1]:4711")).toBe("2001:db8::1");
-		expect(readWith("X-Forwarded-For", "2001:db8::1")).toBe("2001:db8::1");
+		expect(read({ "X-Forwarded-For": "203.0.113.42:4711" })).toBe("203.0.113.42");
+		expect(read({ "X-Forwarded-For": "[2001:db8::1]:4711" })).toBe("2001:db8::1");
+		expect(read({ "X-Forwarded-For": "2001:db8::1" })).toBe("2001:db8::1");
 	});
 
-	test("returns null when the list is shorter than the proxy count", () => {
-		expect(readWith("X-Forwarded-For", "203.0.113.42", { proxies: 2 })).toBeNull();
-	});
-
-	test.each([[0], [-1], [1.5], [Number.NaN]])("returns null for a proxy count of %d", (proxies) => {
-		expect(readWith("X-Forwarded-For", "203.0.113.42", { proxies })).toBeNull();
-	});
-
-	test.each([["10.0.0.1, unknown"], ["10.0.0.1, "], ["10.0.0.1, 203.0.113.42:port"]])(
-		"returns null when the trusted entry of %j is not an address",
+	test.each([["10.0.0.1, unknown"], ["10.0.0.1, "], ["203.0.113.42:port"]])(
+		"returns null when the last entry of %j is not an address",
 		(value) => {
-			expect(readWith("X-Forwarded-For", value)).toBeNull();
+			expect(read({ "X-Forwarded-For": value })).toBeNull();
 		},
 	);
 });
@@ -139,27 +130,42 @@ describe("getClientIP with Forwarded", () => {
 	test("reads the for parameter of the last element", () => {
 		let value = "for=10.0.0.1, for=203.0.113.42;proto=https;by=198.51.100.9";
 
-		expect(readWith("Forwarded", value)).toBe("203.0.113.42");
+		expect(read({ Forwarded: value })).toBe("203.0.113.42");
 	});
 
 	test("reads a quoted IPv6 address with a port", () => {
-		expect(readWith("Forwarded", 'For="[2001:db8:cafe::17]:4711"')).toBe("2001:db8:cafe::17");
-	});
-
-	test("counts trusted proxies from the right", () => {
-		let value = "for=10.0.0.1, for=203.0.113.42, for=198.51.100.9";
-
-		expect(readWith("Forwarded", value, { proxies: 2 })).toBe("203.0.113.42");
+		expect(read({ Forwarded: 'For="[2001:db8:cafe::17]:4711"' })).toBe("2001:db8:cafe::17");
 	});
 
 	test("keeps an unclosed quote the client wrote from swallowing the proxy's element", () => {
-		expect(readWith("Forwarded", 'for="10.0.0.1, for=203.0.113.42')).toBe("203.0.113.42");
+		expect(read({ Forwarded: 'for="10.0.0.1, for=203.0.113.42' })).toBe("203.0.113.42");
+	});
+
+	test("returns null when it disagrees with X-Forwarded-For", () => {
+		expect(read({ Forwarded: "for=10.0.0.1", "X-Forwarded-For": "203.0.113.42" })).toBeNull();
 	});
 
 	test.each([["for=unknown"], ["for=_hidden"], ["proto=https"], ["for=10.0.0.1, by=203.0.113.1"]])(
 		"returns null for %j",
 		(value) => {
-			expect(readWith("Forwarded", value)).toBeNull();
+			expect(read({ Forwarded: value })).toBeNull();
 		},
 	);
+});
+
+describe("getClientIP on Cloudflare Workers", () => {
+	test("reads CF-Connecting-IP and ignores every other header", () => {
+		let request = cloudflareRequest({
+			"CF-Connecting-IP": "203.0.113.42",
+			"X-Client-IP": "10.0.0.1",
+		});
+
+		expect(getClientIP(request)?.toString()).toBe("203.0.113.42");
+	});
+
+	test("returns null without CF-Connecting-IP instead of trusting another header", () => {
+		let request = cloudflareRequest({ "X-Real-IP": "10.0.0.1", "X-Forwarded-For": "10.0.0.2" });
+
+		expect(getClientIP(request)).toBeNull();
+	});
 });
