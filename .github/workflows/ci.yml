@@ -178,7 +178,7 @@ jobs:
       - name: Cache Chromium
         if: steps.browser.outputs.needed == 'true'
         id: chromium-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.browser.outputs.playwright }}-chromium-headless-shell
