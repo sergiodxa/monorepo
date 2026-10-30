@@ -78,7 +78,8 @@ export namespace Split {
  * Lays {@link Split.Copy} and {@link Split.Media} as a two-track grid. The host
  * is the named sizing container; an inner wrapper holds the tracks and
  * `@container` column rules so the query can restyle a descendant. Goes two
- * columns at the `lg` container (48rem); the gap grows from 2rem to 3rem at `xl`.
+ * columns at the `lg` container (48rem), centred on each other so a short column sits
+ * level with a tall one; the gap grows from 2rem to 3rem at `xl`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the split's markup.
@@ -111,7 +112,10 @@ export function Split(handle: Handle<Split.Props>) {
 							items("start"),
 							gap(8),
 							gridTemplate({ columns: "minmax(0, 1fr)" }),
-							at("lg", "ui-marketing-split", gridTemplate({ columns })),
+							at("lg", "ui-marketing-split", [
+								gridTemplate({ columns }),
+								raw({ alignItems: "center" }),
+							]),
 							at("xl", "ui-marketing-split", gap(12)),
 						]),
 					]}

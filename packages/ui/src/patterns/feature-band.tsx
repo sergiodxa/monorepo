@@ -9,6 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 
 import { Feature } from "../components/feature.js";
@@ -110,7 +111,8 @@ export namespace FeatureBand {
 
 /**
  * Renders a feature band with a chapter header and a split, grid, steps, timeline,
- * or stage body. Cell and step titles sit one heading level under the band title.
+ * or stage body. A split with media carries its header in the copy column, so copy and
+ * media share one grid; cell and step titles sit one heading level under the band title.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -156,6 +158,7 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		let resolvedSpacing = spacing ?? "normal";
 
 		let body = <div mix={[vstack({ gap: 4, align: "stretch" })]}>{children}</div>;
+		let isSplit = resolvedLayout === "split" && media !== undefined;
 		let isSelfScoped =
 			resolvedLayout === "grid" || resolvedLayout === "steps" || resolvedLayout === "timeline";
 
@@ -175,12 +178,45 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 					{children}
 				</TabbedStage>
 			);
-		} else if (media !== undefined) {
-			body = (
-				<Split lean={lean}>
-					<Split.Copy checks={Boolean(children)}>{children}</Split.Copy>
-					<Split.Media mix={[parts?.media]}>{media}</Split.Media>
-				</Split>
+		}
+
+		let header = (
+			<MarketingHeader
+				eyebrow={eyebrow}
+				eyebrowHref={eyebrowHref}
+				eyebrowIndex={eyebrowIndex}
+				eyebrowVariant={eyebrowVariant}
+				description={description}
+				mix={isSplit ? [raw({ "--ui-marketing-header-end": "0" })] : []}
+				parts={{
+					title: parts?.title,
+					description: parts?.description,
+				}}
+			>
+				{title}
+			</MarketingHeader>
+		);
+
+		if (isSplit) {
+			return (
+				<MarketingSection
+					{...rest}
+					id={id}
+					tone={resolvedTone}
+					spacing={resolvedSpacing}
+					ruled={ruled}
+					mix={mix}
+				>
+					<Split lean={lean}>
+						<Split.Copy checks={Boolean(children)}>
+							{header}
+							<HeadingScope>{children}</HeadingScope>
+						</Split.Copy>
+						<Split.Media mix={[parts?.media]}>
+							<HeadingScope>{media}</HeadingScope>
+						</Split.Media>
+					</Split>
+				</MarketingSection>
 			);
 		}
 
@@ -194,19 +230,7 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 				mix={mix}
 			>
 				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-					<MarketingHeader
-						eyebrow={eyebrow}
-						eyebrowHref={eyebrowHref}
-						eyebrowIndex={eyebrowIndex}
-						eyebrowVariant={eyebrowVariant}
-						description={description}
-						parts={{
-							title: parts?.title,
-							description: parts?.description,
-						}}
-					>
-						{title}
-					</MarketingHeader>
+					{header}
 					{isSelfScoped ? body : <HeadingScope>{body}</HeadingScope>}
 				</div>
 			</MarketingSection>
