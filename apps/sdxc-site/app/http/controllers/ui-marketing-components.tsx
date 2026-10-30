@@ -39,6 +39,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { MARKETING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
+import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
@@ -47,6 +48,7 @@ import ReferenceSection from "~/resources/components/reference-section";
 import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
+import { listDemoLandings } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The eyebrow looks the header demo walks through: variant, eyebrow copy and title. */
@@ -70,6 +72,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 	let activePath = routes.api.component.href({ component: MARKETING_COMPONENTS_SLUG });
 
 	let anchors: Anchor[] = [
+		{ id: "demos", text: "Demo landings", level: 2 },
 		{ id: "section", text: "MarketingSection", level: 2 },
 		{ id: "header", text: "MarketingHeader", level: 2 },
 		{ id: "cta", text: "CtaGroup", level: 2 },
@@ -118,6 +121,14 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 							vstack({ gap: 10, align: "stretch" }),
 						]}
 					>
+						<ReferenceSection
+							id="demos"
+							title="Demo landings"
+							lead="Whole landing pages built only from these components and the landing patterns, each with its own product, palette and type. They open in a new tab."
+						>
+							<DemoLandingLinks demos={await listDemoLandings()} />
+						</ReferenceSection>
+
 						<ReferenceSection
 							id="section"
 							title="MarketingSection"

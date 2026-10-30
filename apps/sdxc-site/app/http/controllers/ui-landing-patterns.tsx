@@ -56,6 +56,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { LANDING_PATTERNS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
+import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, StatusBoard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
@@ -64,6 +65,7 @@ import ReferenceSection from "~/resources/components/reference-section";
 import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
+import { listDemoLandings } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The 45 days the bento's availability chart draws, oldest first. */
@@ -155,6 +157,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 	let activePath = routes.api.component.href({ component: LANDING_PATTERNS_SLUG });
 
 	let anchors: Anchor[] = [
+		{ id: "demos", text: "Demo landings", level: 2 },
 		{ id: "page", text: "Assembled page", level: 2 },
 		{ id: "craft", text: "Composition craft", level: 2 },
 		{ id: "usage", text: "Usage", level: 2 },
@@ -200,6 +203,14 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 						]}
 					>
 						<ReferenceSection
+							id="demos"
+							title="Demo landings"
+							lead="The patterns assembled into three complete landings, each with its own product, palette and type, to see how far the same bands stretch. They open in a new tab."
+						>
+							<DemoLandingLinks demos={await listDemoLandings()} />
+						</ReferenceSection>
+
+						<ReferenceSection
 							id="page"
 							title="Assembled page"
 							lead="A sample uptime product, top to bottom: LandingHero, ProofStrip, FeatureBand as split, grid and stage, Bento in a MarketingSection, PricingBand, TestimonialBand, FaqBand and ClosingCta."
@@ -213,8 +224,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 										eyebrowHref="/examples/changelog"
 										title={
 											<>
-												Catch the outage{" "}
-												<AccentText variant="swash">before customers do</AccentText>
+												Catch the outage <AccentText>before customers do</AccentText>
 											</>
 										}
 										description={

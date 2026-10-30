@@ -47,3 +47,26 @@ export function listDemoSlugs(): string[] {
 		.map((key) => key.slice(2, -"/index.tsx".length))
 		.sort();
 }
+
+/** One demo as a docs page links to it: its slug and the title and description it declares. */
+export interface DemoSummary {
+	slug: string;
+	title: string;
+	description: string;
+}
+
+/**
+ * Every demo with the title and description its own module declares, so a page linking to
+ * the demos lists a new one as soon as its folder exists.
+ *
+ * @returns One summary per demo, in slug order.
+ */
+export async function listDemoLandings(): Promise<DemoSummary[]> {
+	let demos = await Promise.all(
+		listDemoSlugs().map(async (slug) => {
+			let demo = await findDemoLanding(slug);
+			return demo === null ? null : { slug, title: demo.title, description: demo.description };
+		}),
+	);
+	return demos.filter((demo): demo is DemoSummary => demo !== null);
+}
