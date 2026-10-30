@@ -19,6 +19,9 @@ import { bs, is, m, p, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, truncate, weight } from "@sdxc/u/typography";
 
+/** Corner radius of a framed window or panel; a page sets `--ui-marketing-radius-frame` once. */
+const FRAME_RADIUS = "var(--ui-marketing-radius-frame, 0.75rem)";
+
 /** Chrome density {@link ProductFrame} applies when `variant` is omitted. */
 const DEFAULT_VARIANT: ProductFrame.Variant = "window";
 
@@ -203,7 +206,7 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 					overflow("hidden"),
 					raw({
 						backgroundColor: SURFACE,
-						borderRadius: isDevice ? "16% / 8%" : "0.75rem",
+						borderRadius: isDevice ? "16% / 8%" : FRAME_RADIUS,
 						boxShadow: edge,
 					}),
 					isStaged

@@ -306,8 +306,12 @@ function railTab() {
  */
 function pillPanel() {
 	return combine([
-		raw({ flex: "0 0 100%", overflow: "hidden", visibility: "hidden" }),
-		rounded("xl"),
+		raw({
+			flex: "0 0 100%",
+			overflow: "hidden",
+			visibility: "hidden",
+			borderRadius: "var(--ui-marketing-radius-frame, 0.75rem)",
+		}),
 		when(
 			'[data-slot="tabbed-stage-item"] ~ [data-slot="tabbed-stage-item"] > &',
 			raw({ marginInlineStart: `calc(-100% - ${PILL_GAP})` }),

@@ -17,7 +17,7 @@ import { inlineFlex, items, relative } from "@sdxc/u/layout";
 import { at, dark, motionSafe } from "@sdxc/u/responsive";
 import { bs, is, maxIs, mi, pb, pi } from "@sdxc/u/size";
 import { before, when } from "@sdxc/u/state";
-import { balance, font, pretty, text, textTransform, weight } from "@sdxc/u/typography";
+import { balance, font, pretty, text, weight } from "@sdxc/u/typography";
 
 import type { CSSStyles } from "../utils/css-styles.js";
 
@@ -319,7 +319,8 @@ const BRAND_GLOW =
 	"radial-gradient(60% 70% at 85% 0%, color-mix(in oklch, var(--ui-brand-bg-solid) 14%, transparent), transparent 70%)";
 
 /**
- * Paints a marketing band's background: a quiet neutral tint, a hairline grid, an
+ * Paints a marketing band's background: a quiet neutral tint (`--ui-marketing-band-tint`,
+ * `-tint-dark`, and `--ui-marketing-band-glow`, `none` to drop it), a hairline grid, an
  * inverted solid, the brand solid, a page-supplied gradient, or nothing for `"plain"`.
  * Inverse and brand bands re-point the neutral tokens at the fill's foreground; on a
  * dark page an inverse band renders as a raised surface with hairlines and the glow.
@@ -337,9 +338,15 @@ export function marketingBandTone<Node extends Element = Element>(
 	switch (tone) {
 		case "tinted":
 			return combine<Node>([
-				bg<Node>("color.neutral.100"),
-				dark<Node>(raw<Node>({ backgroundColor: "var(--ui-neutral-bg-tint)" })),
-				raw<Node>({ backgroundImage: BRAND_GLOW }),
+				raw<Node>({
+					backgroundColor: "var(--ui-marketing-band-tint, var(--ui-color-neutral-100))",
+					backgroundImage: `var(--ui-marketing-band-glow, ${BRAND_GLOW})`,
+				}),
+				dark<Node>(
+					raw<Node>({
+						backgroundColor: "var(--ui-marketing-band-tint-dark, var(--ui-neutral-bg-tint))",
+					}),
+				),
 			]);
 		case "grid":
 			return combine<Node>([
@@ -540,7 +547,8 @@ export function logoCloudMark<Node extends Element = Element>(): MixinDescriptor
  * Corner radius, weight and tactile edge for a marketing CTA. Compose onto a
  * {@link Button} or {@link LinkButton}; it sets `--ui-button-radius` and
  * `--ui-button-weight`, which the control reads, so `--ui-marketing-cta-radius` (pill,
- * 8px, 6px) applies whatever order the stylesheets load in. Only colour and shadow
+ * 8px, 6px) applies whatever order the stylesheets load in; `--ui-marketing-cta-height`
+ * raises every CTA to one height. Only colour and shadow
  * animate, so a hover never eases the control's size or radius.
  *
  * @returns A `css()` mixin ready for a CTA control's `mix` prop.
@@ -556,6 +564,7 @@ export function marketingCtaChrome<Node extends Element = Element>(): MixinDescr
 		"--ui-button-radius": "var(--ui-marketing-cta-radius, 0.5rem)",
 		"--ui-button-weight": "var(--ui-marketing-cta-weight, 600)",
 		boxShadow: "var(--ui-shadow-control, 0 1px 2px rgb(0 0 0 / 0.05))",
+		minBlockSize: "var(--ui-marketing-cta-height, 0)",
 		transitionProperty: "background-color, box-shadow, color",
 	});
 }
@@ -563,7 +572,8 @@ export function marketingCtaChrome<Node extends Element = Element>(): MixinDescr
 /**
  * The label above a headline, in one of five looks. `mono` and `soft` stay neutral,
  * `quiet` is a hairline pill for hero announcements, `pill` and `numbered` carry the
- * brand. Pills round at 1rem, so a label that wraps on a phone reads as a soft card. Variants live in `data-variant`; a brand tints the mono label through
+ * brand. Pills round at 1rem, so a label that wraps on a phone reads as a soft card. The
+ * mono label's face, weight, case and tracking read `--ui-marketing-eyebrow-*` tokens. Variants live in `data-variant`; a brand tints the mono label through
  * `--ui-marketing-eyebrow-color`, and a linked eyebrow nudges its arrow on hover.
  *
  * @returns A `css()` mixin ready for an eyebrow `span` or `a`'s `mix` prop; set
@@ -584,12 +594,12 @@ export function eyebrow<Node extends Element = Element>(): MixinDescriptor<
 		raw<Node>({ gap: "0.375rem", textDecoration: "none", maxInlineSize: "100%" }),
 		text<Node>("xs"),
 		when<Node>(`&:not([data-variant]), &[data-variant="${DEFAULT_EYEBROW_VARIANT}"]`, [
-			font<Node>("mono"),
-			weight<Node>("semibold"),
-			textTransform<Node>("uppercase"),
 			raw<Node>({
+				fontFamily: "var(--ui-marketing-eyebrow-font, var(--ui-font-mono, monospace))",
+				fontWeight: "var(--ui-marketing-eyebrow-weight, 600)",
+				textTransform: "var(--ui-marketing-eyebrow-transform, uppercase)",
 				color: "var(--ui-marketing-eyebrow-color, var(--ui-neutral-fg-muted))",
-				letterSpacing: "0.1em",
+				letterSpacing: "var(--ui-marketing-eyebrow-tracking, 0.1em)",
 				lineHeight: "1.25rem",
 			}),
 		]),

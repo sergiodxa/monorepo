@@ -49,7 +49,7 @@ describe("MarketingHeader", () => {
 		expect(numbered).toContain('data-variant="numbered"');
 		expect(numbered).toContain('data-slot="eyebrow-index"');
 		expect(fallback).toContain('data-variant="mono"');
-		expect(mono).toContain("text-transform: uppercase");
+		expect(mono).toContain("text-transform: var(--ui-marketing-eyebrow-transform, uppercase)");
 	});
 
 	test("centers the stack when align is center", async () => {

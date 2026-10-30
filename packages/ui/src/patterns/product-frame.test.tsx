@@ -24,7 +24,7 @@ describe("ProductFrame", () => {
 			/data-slot="product-frame"[^>]*id="shot"|id="shot"[^>]*data-slot="product-frame"/,
 		);
 		expect(html).toContain("box-shadow: var(--ui-shadow-stage)");
-		expect(html).toContain("border-radius: 0.75rem");
+		expect(html).toContain("border-radius: var(--ui-marketing-radius-frame, 0.75rem)");
 		expect(html).toContain("background-color: var(--ui-surface-raised, Canvas)");
 		expect(html).not.toMatch(/border: 1px solid|border-width: 1px/);
 	});

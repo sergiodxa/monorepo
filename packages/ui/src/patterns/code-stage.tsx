@@ -13,7 +13,6 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { tokenize } from "@sdxc/highlight";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
@@ -22,6 +21,9 @@ import { when } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 
 import { marketingSurface } from "../styles/marketing.js";
+
+/** Corner radius of a framed window or panel; a page sets `--ui-marketing-radius-frame` once. */
+const FRAME_RADIUS = "var(--ui-marketing-radius-frame, 0.75rem)";
 
 /** Panel chrome {@link CodeStage} applies when `variant` is omitted. */
 const DEFAULT_VARIANT: CodeStage.Variant = "code";
@@ -571,7 +573,7 @@ function headerChrome(variant: CodeStage.Variant, hasTabs: boolean) {
 function hostSurface(variant: CodeStage.Variant) {
 	if (variant === "terminal") {
 		return [
-			rounded("lg"),
+			raw({ borderRadius: FRAME_RADIUS }),
 			border({ color: "neutral", width: 1, style: "solid" }),
 			raw({
 				...TERMINAL_TOKENS,
@@ -585,7 +587,7 @@ function hostSurface(variant: CodeStage.Variant) {
 			raw({
 				...SLAB_TOKENS,
 				padding: "4px",
-				borderRadius: "0.75rem",
+				borderRadius: FRAME_RADIUS,
 				backgroundColor: "oklch(0.18 0.005 260)",
 				color: SLAB_INK,
 				colorScheme: "dark",
@@ -614,7 +616,7 @@ function bodySurface(variant: CodeStage.Variant) {
 			color: SLAB_INK,
 			backgroundColor: "rgb(255 255 255 / 0.08)",
 			boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.1)",
-			borderRadius: "0.5rem",
+			borderRadius: `calc(${FRAME_RADIUS} - 4px)`,
 		});
 	}
 	return raw({

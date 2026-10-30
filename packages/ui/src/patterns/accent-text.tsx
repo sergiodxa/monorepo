@@ -9,7 +9,6 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 
 /** Treatment {@link AccentText} applies when `variant` is omitted. */
@@ -18,6 +17,9 @@ const DEFAULT_VARIANT: AccentText.Variant = "color";
 /** Brush stroke drawn under a swash phrase; stretched to the phrase's width. */
 const SWASH_PATH =
 	"M3.2 17.4C46 8.6 98 5.2 152 5.6c50 .4 98 4 143.6 10.6 1.7.3 2.5 2.1 1.3 3.1-.9.7-2.3.8-3.5.6C246 13.6 198.8 10.9 151.6 10.8 97.4 10.6 49.6 13.6 5.8 21.6c-1.7.3-3.3-.6-3.6-2.1-.1-.8.4-1.6 1-2.1Z";
+
+/** Ink of the stressed phrase; a page that accents in another hue sets `--ui-marketing-accent-color`. */
+const ACCENT = "var(--ui-marketing-accent-color, var(--ui-brand-fg))";
 
 /** Brand at 18%, the marker ink a highlight band lays behind the glyphs. */
 const MARKER = "color-mix(in oklch, var(--ui-brand-bg-solid) 18%, transparent)";
@@ -69,7 +71,7 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 					{...rest}
 					data-slot="accent-text"
 					data-variant="swash"
-					mix={[fg("brand"), raw({ position: "relative", whiteSpace: "nowrap" }), mix]}
+					mix={[raw({ color: ACCENT, position: "relative", whiteSpace: "nowrap" }), mix]}
 				>
 					<svg
 						aria-hidden="true"
@@ -116,7 +118,12 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 		}
 
 		return (
-			<span {...rest} data-slot="accent-text" data-variant="color" mix={[fg("brand"), mix]}>
+			<span
+				{...rest}
+				data-slot="accent-text"
+				data-variant="color"
+				mix={[raw({ color: ACCENT }), mix]}
+			>
 				{children}
 			</span>
 		);

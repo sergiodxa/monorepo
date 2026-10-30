@@ -18,7 +18,10 @@ import { MarketingSection } from "../components/marketing-section.js";
 import { marketingCtaChrome, themeScope } from "../styles/marketing.js";
 import { Eyebrow } from "../utils/eyebrow.js";
 
+import { AccentText } from "./accent-text.js";
+import { CodeStage } from "./code-stage.js";
 import { LandingHero } from "./landing-hero.js";
+import { ProductFrame } from "./product-frame.js";
 
 import "../reset.css";
 import "../theme.css";
@@ -278,5 +281,51 @@ describe("band tokens", () => {
 		expect(sizes[0]![0]).toBeLessThanOrEqual(18);
 		expect(sizes[0]![1]).toBeLessThanOrEqual(28);
 		expect(sizes[1]![0]).toBeCloseTo(20, 0);
+	});
+
+	test("a page restyles CTAs, eyebrows, tints, frames and accents through tokens", () => {
+		let root = mount(
+			<div
+				style={{
+					"--ui-marketing-cta-height": "48px",
+					"--ui-marketing-eyebrow-transform": "none",
+					"--ui-marketing-eyebrow-tracking": "0",
+					"--ui-marketing-eyebrow-font": "serif",
+					"--ui-marketing-band-tint": "rgb(250, 240, 220)",
+					"--ui-marketing-band-glow": "none",
+					"--ui-marketing-radius-frame": "2px",
+					"--ui-marketing-accent-color": "rgb(200, 0, 0)",
+				}}
+			>
+				<Button mix={[marketingCtaChrome()]}>Start</Button>
+				<MarketingSection tone="tinted">
+					<MarketingHeader eyebrow="Platform">
+						Know <AccentText>first</AccentText>
+					</MarketingHeader>
+				</MarketingSection>
+				<ProductFrame title="App">
+					<div>Shot</div>
+				</ProductFrame>
+				<CodeStage variant="slab">let a = 1</CodeStage>
+			</div>,
+		);
+		let label = getComputedStyle(root.querySelector("header span[data-variant]")!);
+		let band = getComputedStyle(root.querySelector("section")!);
+
+		expect(root.querySelector("button")!.getBoundingClientRect().height).toBe(48);
+		expect(label.textTransform).toBe("none");
+		expect(label.letterSpacing).toBe("normal");
+		expect(label.fontFamily).toBe("serif");
+		expect(band.backgroundColor).toBe("rgb(250, 240, 220)");
+		expect(band.backgroundImage).toBe("none");
+		expect(getComputedStyle(root.querySelector('[data-slot="accent-text"]')!).color).toBe(
+			"rgb(200, 0, 0)",
+		);
+		expect(
+			getComputedStyle(root.querySelector('[data-slot="product-frame"]')!).borderTopLeftRadius,
+		).toBe("2px");
+		expect(
+			getComputedStyle(root.querySelector('[data-slot="code-stage"]')!).borderTopLeftRadius,
+		).toBe("2px");
 	});
 });

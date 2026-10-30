@@ -74,9 +74,13 @@ describe("marketingBandTone", () => {
 	test("tinted paints a quiet neutral step with a brand corner glow, lifted in dark", () => {
 		let style = styles(marketingBandTone("tinted"));
 
-		expect(style.backgroundColor).toBe("var(--ui-color-neutral-100)");
+		expect(style.backgroundColor).toBe(
+			"var(--ui-marketing-band-tint, var(--ui-color-neutral-100))",
+		);
 		expect(style.backgroundImage).toContain("var(--ui-brand-bg-solid)");
-		expect(style[".dark &"]).toEqual({ backgroundColor: "var(--ui-neutral-bg-tint)" });
+		expect(style[".dark &"]).toEqual({
+			backgroundColor: "var(--ui-marketing-band-tint-dark, var(--ui-neutral-bg-tint))",
+		});
 	});
 
 	test("grid draws a hairline mesh behind the band at full strength", () => {

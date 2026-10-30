@@ -15,7 +15,7 @@ describe("AccentText", () => {
 		let html = await renderToString(<AccentText>faster</AccentText>);
 
 		expect(html).toContain('data-variant="color"');
-		expect(html).toContain("color: var(--ui-brand-fg)");
+		expect(html).toContain("color: var(--ui-marketing-accent-color, var(--ui-brand-fg))");
 		expect(html).not.toContain("<svg");
 	});
 
