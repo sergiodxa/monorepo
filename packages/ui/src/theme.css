@@ -28,11 +28,13 @@
  *   tone of whatever sits behind it; high contrast turns it into a solid line.
  * - `--ui-image-outline`, the inset hairline that keeps an image's edge
  *   visible against a background of the same tone.
- * - `--ui-marketing-*` layout and display tokens (measure, gutter, section
- *   space steps, display tracking/weight/leading, lead measure/size, chapter
- *   size, logo height, header height, CTA radius) plus `--ui-font-display`
- *   for landing bands. Apps override per brand; brand colors stay on the
- *   existing `--ui-color-*` / `--ui-*-*` scales.
+ * - `--ui-surface-raised` and the `--ui-shadow-surface` / `-stage` / `-control`
+ *   edges a frame, card or CTA sits on, lifted a step above the page in dark.
+ * - `--ui-marketing-*` layout and display tokens (measure, gutter, fluid
+ *   section space steps, display and chapter type, lead, logo height, header
+ *   space, CTA radius and weight, surface radius, hairline) plus
+ *   `--ui-font-display` for landing bands. Apps override per brand; brand
+ *   colors stay on the existing `--ui-color-*` / `--ui-*-*` scales.
  *
  * Dark Mode:
  * - Add .dark class to <html> for forced dark mode
@@ -99,25 +101,45 @@
 	/* Images: an inset hairline that holds the edge against a same-tone background */
 	--ui-image-outline: rgb(0 0 0 / 0.1);
 
+	/* Raised surfaces: frames, cards and code that sit above a band, and their edges */
+	--ui-surface-raised: white;
+	--ui-shadow-surface: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.05);
+	--ui-shadow-stage: 0 0 0 1px rgb(0 0 0 / 0.06), 0 12px 32px -12px rgb(0 0 0 / 0.18);
+	--ui-shadow-control:
+		0 1px 3px rgb(0 0 0 / 0.04), inset 0 1px 0 rgb(255 255 255 / 0.12),
+		inset 0 0 0 1px rgb(0 0 0 / 0.06);
+
 	/*
 	 * Marketing layout: measure, gutters, band spacing, and display type for
-	 * landing bands. Apps override per brand; 72rem matches a 1152px content
-	 * column (override to 76rem where a wider frame is already shipping).
+	 * landing bands. Sizes and spacing are fluid in the band's container width
+	 * (`cqi`), so a phone gets the tight end and a desktop band the generous one.
+	 * Apps override per brand; 72rem matches a 1152px content column.
 	 */
 	--ui-marketing-measure: 72rem;
 	--ui-marketing-gutter: 1rem;
-	--ui-marketing-section-space: 6rem;
-	--ui-marketing-section-space-compact: 4rem;
-	--ui-marketing-section-space-hero: 8rem;
-	--ui-marketing-display-tracking: -0.04em;
+	--ui-marketing-section-space: clamp(5rem, 3.86rem + 4.85cqi, 7.5rem);
+	--ui-marketing-section-space-compact: clamp(3rem, 2.32rem + 2.91cqi, 4.5rem);
+	--ui-marketing-section-space-hero: clamp(3.5rem, 1.45rem + 8.73cqi, 8rem);
+	--ui-marketing-section-space-cta: clamp(5rem, 4.09rem + 3.88cqi, 7rem);
+	--ui-marketing-header-space: clamp(2.5rem, 1.82rem + 2.91cqi, 4rem);
+	--ui-marketing-display-tracking: -0.035em;
 	--ui-marketing-display-weight: 500;
-	--ui-marketing-display-leading: 1;
+	--ui-marketing-display-max: 4.5rem;
+	--ui-marketing-chapter-size: clamp(1.75rem, 1.18rem + 2.42cqi, 3rem);
+	--ui-marketing-chapter-leading: 1.1;
+	--ui-marketing-chapter-tracking: -0.025em;
 	--ui-marketing-lead-measure: 40rem;
 	--ui-marketing-lead-size: 1.125rem;
-	--ui-marketing-chapter-size: 2.75rem;
-	--ui-marketing-logo-height: 1rem;
+	--ui-marketing-lead-leading: 2rem;
+	--ui-marketing-lead-weight: 400;
+	--ui-marketing-hero-lead-size: clamp(1.25rem, 1.14rem + 0.49cqi, 1.5rem);
+	--ui-marketing-logo-height: 1.75rem;
+	--ui-marketing-logo-height-lg: 2.25rem;
 	--ui-marketing-header-height: 4rem;
 	--ui-marketing-cta-radius: 0.5rem;
+	--ui-marketing-cta-weight: 600;
+	--ui-marketing-radius-surface: 1rem;
+	--ui-marketing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 6%, transparent);
 	--ui-font-display: var(--ui-font-sans);
 }
 
@@ -229,6 +251,46 @@
 }
 
 /*
+ * Dark surfaces and marketing lines, declared on the root alone: they inherit, so an
+ * inverse or brand band that re-points them on its own element reaches its children.
+ */
+.dark {
+	/* Raised surfaces: one step above the page, edged by a top-lit hairline */
+	--ui-surface-raised: color-mix(
+		in oklch,
+		var(--ui-color-neutral-950),
+		var(--ui-color-neutral-900)
+	);
+	--ui-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.08);
+	--ui-shadow-stage:
+		inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.08),
+		0 16px 40px -12px rgb(0 0 0 / 0.6);
+	--ui-shadow-control:
+		0 1px 3px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04),
+		inset 0 0 0 1px rgb(255 255 255 / 0.08);
+	--ui-marketing-hairline: color-mix(in oklch, white 10%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+	.system {
+		/* Raised surfaces: one step above the page, edged by a top-lit hairline */
+		--ui-surface-raised: color-mix(
+			in oklch,
+			var(--ui-color-neutral-950),
+			var(--ui-color-neutral-900)
+		);
+		--ui-shadow-surface: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.08);
+		--ui-shadow-stage:
+			inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.08),
+			0 16px 40px -12px rgb(0 0 0 / 0.6);
+		--ui-shadow-control:
+			0 1px 3px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04),
+			inset 0 0 0 1px rgb(255 255 255 / 0.08);
+		--ui-marketing-hairline: color-mix(in oklch, white 10%, transparent);
+	}
+}
+
+/*
  * High contrast: the resting border is already promoted, so its hover step follows it,
  * and an elevated surface's ring becomes a solid line in that promoted border color.
  * Listed after both dark blocks and matching the same elements, so it wins in every scheme.
@@ -245,5 +307,7 @@
 
 		--ui-shadow-ring: 0 0 0 1px var(--ui-neutral-border-strong);
 		--ui-shadow-ring-hover: 0 0 0 1px var(--ui-neutral-border-strong);
+		--ui-shadow-surface: 0 0 0 1px var(--ui-neutral-border-strong);
+		--ui-marketing-hairline: var(--ui-neutral-border-strong);
 	}
 }

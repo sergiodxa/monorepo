@@ -1,9 +1,8 @@
 /**
- * One marketing claim cell — icon, title, description, optional link chrome —
- * and an optional {@link Feature.Grid} that lays cells as a hairline-ruled
- * track via container queries. Default chrome stays light; pass
- * `variant="panel"` only when a filled panel is the right container for the
- * interaction.
+ * One marketing claim cell — icon, media, title, description, optional link
+ * chrome — and an optional {@link Feature.Grid} that lays cells as separate
+ * cards or a hairline mosaic via container queries. Also ships the card-grid,
+ * card-media and icon-tile style factories the bento pattern shares.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,22 +13,13 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import {
-	center,
-	container,
-	gap,
-	grid,
-	gridTemplate,
-	hstack,
-	inlineFlex,
-	repeat,
-	vstack,
-} from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { at } from "@sdxc/u/responsive";
-import { bs, is, m, mbs, p } from "@sdxc/u/size";
+import { container, hstack, vstack } from "@sdxc/u/layout";
+import { m, mbs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { leading, pretty, text, tracking, weight } from "@sdxc/u/typography";
+import { leading, pretty, text, weight } from "@sdxc/u/typography";
+
+import { cardGrid, cardMedia, cardPadding, iconTile } from "../styles/card-grid.js";
+import { marketingEmphasis } from "../styles/marketing.js";
 
 import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
@@ -39,13 +29,20 @@ const DEFAULT_VARIANT: Feature.Variant = "plain";
 /** How many cells a wide {@link Feature.Grid} puts on one row. */
 const DEFAULT_COLUMNS: Feature.Columns = 2;
 
+/** Grid chrome {@link Feature.Grid} applies when `variant` is omitted. */
+const DEFAULT_GRID_VARIANT: Feature.GridVariant = "cards";
+
+/** Glyph tile {@link Feature.Icon} draws when `tone` is omitted. */
+const DEFAULT_ICON_TONE: Feature.IconTone = "quiet";
+
 /**
  * Prop types for {@link Feature} and its compound parts.
  */
 export namespace Feature {
 	/**
 	 * Cell chrome: a light claim with no fill, or a panel when the cell itself
-	 * is the interaction surface.
+	 * is the interaction surface. A panel belongs outside a {@link Feature.Grid},
+	 * which draws its own cell chrome.
 	 */
 	export type Variant = "plain" | "panel";
 
@@ -53,6 +50,18 @@ export namespace Feature {
 	 * How many cells a wide {@link Feature.Grid} puts on one row.
 	 */
 	export type Columns = 2 | 3;
+
+	/**
+	 * Grid chrome: separate raised `cards` with larger outer corners, or one
+	 * `mosaic` box whose 1px gaps draw hairlines between flush cells.
+	 */
+	export type GridVariant = "cards" | "mosaic";
+
+	/**
+	 * Glyph tile: a `quiet` hairline ring in the heading ink, or a `brand`
+	 * tinted and bordered badge.
+	 */
+	export type IconTone = "quiet" | "brand";
 
 	/**
 	 * Props accepted by {@link Feature}.
@@ -67,8 +76,9 @@ export namespace Feature {
 		 */
 		href?: string;
 		/**
-		 * Compound parts: {@link Feature.Icon}, {@link Feature.Title},
-		 * {@link Feature.Description}, {@link Feature.Action}, or other content.
+		 * Compound parts: {@link Feature.Media}, {@link Feature.Icon},
+		 * {@link Feature.Title}, {@link Feature.Description},
+		 * {@link Feature.Action}, or other content.
 		 */
 		children: RemixNode;
 	}
@@ -77,7 +87,17 @@ export namespace Feature {
 	 * Props accepted by {@link Feature.Icon}.
 	 */
 	export interface IconProps extends TagProps<"span"> {
-		/** Glyph rendered inside the tinted icon well. */
+		/** Tile chrome. Defaults to {@link DEFAULT_ICON_TONE}. */
+		tone?: IconTone;
+		/** Glyph rendered inside the tile. */
+		children: RemixNode;
+	}
+
+	/**
+	 * Props accepted by {@link Feature.Media}.
+	 */
+	export interface MediaProps extends TagProps<"div"> {
+		/** Illustration or screenshot drawn edge to edge at the top of the cell. */
 		children: RemixNode;
 	}
 
@@ -94,7 +114,7 @@ export namespace Feature {
 	 * Props accepted by {@link Feature.Description}.
 	 */
 	export interface DescriptionProps extends TagProps<"div"> {
-		/** Supporting copy for the claim. */
+		/** Supporting copy for the claim; `<strong>` fragments render in the heading ink. */
 		children: RemixNode;
 	}
 
@@ -110,16 +130,19 @@ export namespace Feature {
 	 * Props accepted by {@link Feature.Grid}.
 	 */
 	export interface GridProps extends TagProps<"div"> {
-		/** Columns above the stack breakpoint. Defaults to {@link DEFAULT_COLUMNS}. */
+		/** Columns at the `lg` container. Defaults to {@link DEFAULT_COLUMNS}. */
 		columns?: Columns;
+		/** Grid chrome. Defaults to {@link DEFAULT_GRID_VARIANT}. */
+		variant?: GridVariant;
 		/** {@link Feature} cells to lay out. */
 		children: RemixNode;
 	}
 }
 
 /**
- * Renders one claim cell. Compose {@link Feature.Icon}, {@link Feature.Title},
- * {@link Feature.Description}, and {@link Feature.Action} inside it.
+ * Renders one claim cell. Compose {@link Feature.Media}, {@link Feature.Icon},
+ * {@link Feature.Title}, {@link Feature.Description}, and
+ * {@link Feature.Action} inside it.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the cell's markup.
@@ -143,9 +166,7 @@ export function Feature(handle: Handle<Feature.Props>) {
 				data-slot="feature"
 				mix={[
 					vstack({ gap: 4, align: "stretch" }),
-					bg(),
-					p(8, 6),
-					at("lg", p(10, 10)),
+					cardPadding("2rem", "1.5rem", "2.5rem"),
 					when('&[data-variant="panel"]', [
 						bg("neutral.tint"),
 						border({ color: "neutral", width: 1, style: "solid" }),
@@ -159,32 +180,39 @@ export function Feature(handle: Handle<Feature.Props>) {
 }
 
 /**
- * Tinted rounded well that holds the claim's glyph.
+ * Glyph tile that leads the claim, quiet by default.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
- * @returns The render function producing the icon well.
+ * @returns The render function producing the icon tile.
  */
 Feature.Icon = function FeatureIcon(handle: Handle<Feature.IconProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { mix, tone, ...rest } = handle.props;
+		let resolvedTone = tone ?? DEFAULT_ICON_TONE;
 
 		return (
 			<span
 				{...rest}
 				data-slot="feature-icon"
-				mix={[
-					inlineFlex(),
-					center(),
-					is(10),
-					bs(10),
-					rounded("lg"),
-					bg("brand.tint"),
-					fg("brand"),
-					border({ color: "brand", width: 1, style: "solid" }),
-					mix,
-				]}
+				data-tone={resolvedTone}
+				mix={[iconTile(resolvedTone, 10), mix]}
 			/>
 		);
+	};
+};
+
+/**
+ * Illustration at the top of the cell, bleeding past the cell padding and
+ * fading into the fill; hidden below the `md` container. Place it first.
+ *
+ * @param handle Runtime handle carrying the host `<div>`'s props.
+ * @returns The render function producing the media area.
+ */
+Feature.Media = function FeatureMedia(handle: Handle<Feature.MediaProps>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+
+		return <div {...rest} data-slot="feature-media" mix={[cardMedia(), mix]} />;
 	};
 };
 
@@ -205,14 +233,14 @@ Feature.Title = function FeatureTitle(handle: Handle<Feature.TitleProps>) {
 				{...rest}
 				data-slot="feature-title"
 				data-heading-level={resolved}
-				mix={[m(0), text("xl"), weight("medium"), tracking("tight"), fg("neutral.emphasis"), mix]}
+				mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis"), mix]}
 			/>
 		);
 	};
 };
 
 /**
- * Supporting copy under the claim title.
+ * Supporting copy under the claim title, with emphasis fragments in the heading ink.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the description.
@@ -225,7 +253,19 @@ Feature.Description = function FeatureDescription(handle: Handle<Feature.Descrip
 			<div
 				{...rest}
 				data-slot="feature-description"
-				mix={[vstack({ gap: 2 }), text("base"), leading("relaxed"), pretty(), fg("neutral"), mix]}
+				mix={[
+					/**
+					 * Block flow, so an inline `<strong>` stays inside its sentence; paragraphs a
+					 * page passes are spaced by their own margin.
+					 */
+					when("& > * + *", raw({ marginBlockStart: "0.5rem" })),
+					text("base"),
+					leading("relaxed"),
+					pretty(),
+					fg("neutral"),
+					marketingEmphasis(),
+					mix,
+				]}
 			/>
 		);
 	};
@@ -246,10 +286,10 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
 };
 
 /**
- * Hairline-ruled grid of {@link Feature} cells. The host is the named sizing
- * container; an inner wrapper holds the grid and `@container` column tracks so
- * the query can restyle a descendant. Collapses to one column below `lg`
- * (48rem), matching the landing's original viewport threshold.
+ * Grid of {@link Feature} cells, as separate cards by default. The host is the
+ * named sizing container; an inner wrapper holds the tracks so the query can
+ * restyle a descendant: one column on a phone, two from the `md` container
+ * (36rem), `columns` from `lg` (48rem).
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the grid.
@@ -262,39 +302,25 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
  */
 Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 	return () => {
-		let { children, columns, mix, ...rest } = handle.props;
+		let { children, columns, mix, variant, ...rest } = handle.props;
 		let resolvedColumns = columns ?? DEFAULT_COLUMNS;
+		let resolvedVariant = variant ?? DEFAULT_GRID_VARIANT;
 
 		return (
 			<div
 				{...rest}
 				data-columns={String(resolvedColumns)}
+				data-variant={resolvedVariant}
 				data-slot="feature-grid"
 				mix={[container("ui-marketing-feature-grid"), mix]}
 			>
 				<div
 					mix={[
-						grid(),
-						gap("1px"),
-						rounded("xl"),
-						overflow("hidden"),
-						border({ color: "neutral", width: 1, style: "solid" }),
-						raw({
-							backgroundColor: "var(--ui-neutral-border)",
-							textAlign: "start",
+						cardGrid({
+							columns: resolvedColumns,
+							variant: resolvedVariant,
+							containerName: "ui-marketing-feature-grid",
 						}),
-						gridTemplate({ columns: "minmax(0, 1fr)" }),
-						at("lg", "ui-marketing-feature-grid", [
-							gridTemplate({
-								columns: repeat(resolvedColumns, "minmax(0, 1fr)"),
-							}),
-							resolvedColumns === 2
-								? when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" }))
-								: [
-										when("& > :last-child:nth-child(3n + 1)", raw({ gridColumn: "1 / -1" })),
-										when("& > :last-child:nth-child(3n + 2)", raw({ gridColumn: "span 2" })),
-									],
-						]),
 					]}
 				>
 					{children}

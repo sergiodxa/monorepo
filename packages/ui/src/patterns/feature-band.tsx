@@ -1,6 +1,7 @@
 /**
- * Mid-page feature band: a {@link MarketingHeader} plus either a {@link Split},
- * a {@link Feature.Grid}, or a {@link StepList}, selected by `layout`.
+ * Mid-page feature band: a {@link MarketingHeader} plus a {@link Split}, a
+ * {@link Feature.Grid}, a numbered or timeline {@link StepList}, or a vertical
+ * {@link TabbedStage}, selected by `layout`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +18,13 @@ import { MarketingSection } from "../components/marketing-section.js";
 import { Split } from "../components/split.js";
 
 import { StepList } from "./step-list.js";
+import { TabbedStage } from "./tabbed-stage.js";
 
 /** Layout {@link FeatureBand} applies when `layout` is omitted. */
 const DEFAULT_LAYOUT: FeatureBand.Layout = "split";
+
+/** Radio group name a `stage` band uses when it has neither `stageName` nor `id`. */
+const DEFAULT_STAGE_NAME = "feature-band-stage";
 
 /** Band fill {@link FeatureBand} applies when `tone` is omitted. */
 const DEFAULT_TONE: FeatureBand.Tone = "plain";
@@ -31,7 +36,7 @@ export namespace FeatureBand {
 	/**
 	 * How the band body lays out under the header.
 	 */
-	export type Layout = "split" | "grid" | "steps";
+	export type Layout = "split" | "grid" | "steps" | "stage" | "timeline";
 
 	/**
 	 * Band fill forwarded to {@link MarketingSection}.
@@ -65,12 +70,16 @@ export namespace FeatureBand {
 		eyebrow?: RemixNode;
 		/** Eyebrow chrome forwarded to {@link MarketingHeader}. */
 		eyebrowVariant?: MarketingHeader.EyebrowVariant;
+		/** Turns the eyebrow into a link to this URL, forwarded to {@link MarketingHeader}. */
+		eyebrowHref?: string;
+		/** Index a `numbered` eyebrow leads with, such as `"02"`. */
+		eyebrowIndex?: RemixNode;
 		/** Section title — required, always supplied by the page. */
 		title: RemixNode;
 		/** Supporting lead under the title. */
 		description?: RemixNode;
 		/**
-		 * Media for `layout="split"`. Ignored for `"grid"` and `"steps"`.
+		 * Media for `layout="split"`. Every other layout carries its media in its items.
 		 */
 		media?: RemixNode;
 		/** Which column is wider when `layout="split"`. */
@@ -78,8 +87,20 @@ export namespace FeatureBand {
 		/** Grid column count when `layout="grid"`. */
 		columns?: Feature.Columns;
 		/**
+		 * Radio group name for `layout="stage"`. Defaults to `"<id>-stage"` when the band
+		 * has an `id`, else {@link DEFAULT_STAGE_NAME}; give every stage band on a page
+		 * its own `id` or `stageName` so their selections stay independent.
+		 */
+		stageName?: string;
+		/**
+		 * Accessible name for the stage when `layout="stage"`. Defaults to the title when
+		 * the title is a string; pass it whenever the title is markup.
+		 */
+		stageLabel?: string;
+		/**
 		 * Body content: claim list / copy for `"split"`, {@link Feature} cells
-		 * for `"grid"`, or {@link StepList.Item} children for `"steps"`.
+		 * for `"grid"`, {@link StepList.Item} children for `"steps"` and `"timeline"`,
+		 * or {@link TabbedStage.Item} children for `"stage"`.
 		 */
 		children?: RemixNode;
 		/** Per-part styling for title, lead, and media. */
@@ -88,9 +109,9 @@ export namespace FeatureBand {
 }
 
 /**
- * Renders a feature band with a chapter header and a split, grid, or steps
- * body. Opens a nested {@link HeadingScope} so cell titles sit under the
- * section heading.
+ * Renders a feature band with a chapter header and a split, grid, steps, timeline,
+ * or stage body. Opens a nested {@link HeadingScope} so cell and step titles sit
+ * under the section heading.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -99,8 +120,12 @@ export namespace FeatureBand {
  * 	<ul><li>{t("f1.claim")}</li></ul>
  * </FeatureBand>
  * @example
- * <FeatureBand layout="grid" title={t("grid.title")} columns={3}>
- * 	<Feature>...</Feature>
+ * <FeatureBand layout="stage" id="how" title={t("how.title")}>
+ * 	<TabbedStage.Item value="detect" label={t("how.detect")} defaultChecked>{shot}</TabbedStage.Item>
+ * </FeatureBand>
+ * @example
+ * <FeatureBand layout="timeline" title={t("incident.title")}>
+ * 	<StepList.Item meta="14:02 UTC" title={t("incident.detect")}>{t("incident.body")}</StepList.Item>
  * </FeatureBand>
  */
 export function FeatureBand(handle: Handle<FeatureBand.Props>) {
@@ -110,7 +135,10 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 			columns,
 			description,
 			eyebrow,
+			eyebrowHref,
+			eyebrowIndex,
 			eyebrowVariant,
+			id,
 			layout,
 			lean,
 			media,
@@ -118,6 +146,8 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 			parts,
 			ruled,
 			spacing,
+			stageLabel,
+			stageName,
 			title,
 			tone,
 			...rest
@@ -132,6 +162,18 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 			body = <Feature.Grid columns={columns}>{children}</Feature.Grid>;
 		} else if (resolvedLayout === "steps") {
 			body = <StepList>{children}</StepList>;
+		} else if (resolvedLayout === "timeline") {
+			body = <StepList variant="timeline">{children}</StepList>;
+		} else if (resolvedLayout === "stage") {
+			body = (
+				<TabbedStage
+					name={stageName ?? (id ? `${id}-stage` : DEFAULT_STAGE_NAME)}
+					orientation="vertical"
+					aria-label={stageLabel ?? (typeof title === "string" ? title : "")}
+				>
+					{children}
+				</TabbedStage>
+			);
 		} else if (media !== undefined) {
 			body = (
 				<Split lean={lean}>
@@ -144,6 +186,7 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		return (
 			<MarketingSection
 				{...rest}
+				id={id}
 				tone={resolvedTone}
 				spacing={resolvedSpacing}
 				ruled={ruled}
@@ -153,6 +196,8 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
 						<MarketingHeader
 							eyebrow={eyebrow}
+							eyebrowHref={eyebrowHref}
+							eyebrowIndex={eyebrowIndex}
 							eyebrowVariant={eyebrowVariant}
 							description={description}
 							parts={{

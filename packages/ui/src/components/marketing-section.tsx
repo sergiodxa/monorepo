@@ -43,10 +43,16 @@ const DEFAULT_VARIANT: MarketingSection.Variant = "default";
  */
 export namespace MarketingSection {
 	/**
-	 * What sits behind the band: nothing, a quiet tint, a faded grid, or an
-	 * inverted solid for a closing call-to-action.
+	 * What sits behind the band: nothing, a quiet tint, a hairline grid, an
+	 * inverted solid, the brand solid, or a page-supplied gradient.
 	 */
 	export type Tone = MarketingBandTone;
+
+	/**
+	 * Whether the band floats as a rounded panel inside the page: `true` rounds every
+	 * corner, `"top"` / `"bottom"` round only that end so two inset bands join.
+	 */
+	export type Inset = boolean | "top" | "bottom";
 
 	/**
 	 * How much block padding the band leaves around its content.
@@ -91,6 +97,12 @@ export namespace MarketingSection {
 		/** Outer chrome. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
 		/**
+		 * Paints the band as a panel 0.5rem in from the page edges with
+		 * `--ui-marketing-band-radius` (2rem) corners and an inset hairline, so a tone
+		 * reads as an object on the page rather than a full-bleed stripe.
+		 */
+		inset?: Inset;
+		/**
 		 * Zeroes block padding on a framed column so a flush strip (stats) keeps
 		 * full-height rails without the section gap. Ignored when `variant` is
 		 * not `"frame"`.
@@ -122,7 +134,7 @@ export namespace MarketingSection {
  */
 export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 	return () => {
-		let { align, children, flush, mix, parts, ruled, spacing, tone, variant, ...rest } =
+		let { align, children, flush, inset, mix, parts, ruled, spacing, tone, variant, ...rest } =
 			handle.props;
 		let resolvedTone = tone ?? DEFAULT_TONE;
 		let resolvedSpacing = spacing ?? DEFAULT_SPACING;
@@ -140,13 +152,15 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 				data-align={resolvedAlign}
 				data-variant={resolvedVariant}
 				data-flush={isFlushFrame ? "true" : undefined}
+				data-inset={inset ? String(inset) : undefined}
 				mix={[
 					container("ui-marketing-section"),
 					relative(),
 					vstack({ align: "center" }),
-					is("100%"),
-					raw({ isolation: "isolate" }),
+					is(inset ? "calc(100% - 1rem)" : "100%"),
+					raw({ isolation: "isolate", overflowX: "clip" }),
 					marketingBandTone(resolvedTone),
+					inset ? insetPanel(inset) : [],
 					/**
 					 * Framed bands keep block padding on the measured column so the
 					 * dashed rails share that box and run the full band height.
@@ -208,8 +222,8 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 }
 
 /**
- * The square drawn where a framed band's top rule crosses a rail, so the rails
- * read as a frame the rule is fixed to.
+ * The "+" drawn where a framed band's top rule crosses a rail, so the rails read as a
+ * frame the rule is fixed to; two 1px gradients in the hairline ink keep it quiet.
  */
 function frameMarker(edge: { insetInlineStart: string } | { insetInlineEnd: string }) {
 	return raw({
@@ -217,8 +231,33 @@ function frameMarker(edge: { insetInlineStart: string } | { insetInlineEnd: stri
 		position: "absolute",
 		insetBlockStart: "-4px",
 		...edge,
-		inlineSize: "7px",
-		blockSize: "7px",
-		backgroundColor: "var(--ui-brand-bg-solid)",
+		inlineSize: "9px",
+		blockSize: "9px",
+		backgroundImage:
+			"linear-gradient(var(--ui-neutral-fg-muted), var(--ui-neutral-fg-muted)), linear-gradient(var(--ui-neutral-fg-muted), var(--ui-neutral-fg-muted))",
+		backgroundSize: "1px 100%, 100% 1px",
+		backgroundPosition: "center",
+		backgroundRepeat: "no-repeat",
+	});
+}
+
+/**
+ * The rounded panel an inset band paints: margins that hold it off the page edges, the
+ * band radius on the ends it rounds, and an inset hairline that keeps a light tone's
+ * edge visible against the page.
+ */
+function insetPanel(inset: MarketingSection.Inset) {
+	let radius = "var(--ui-marketing-band-radius, 2rem)";
+	let top = inset === "bottom" ? "0" : radius;
+	let bottom = inset === "top" ? "0" : radius;
+
+	return raw({
+		marginInline: "0.5rem",
+		marginBlockStart: inset === "bottom" ? "0" : "0.5rem",
+		borderStartStartRadius: top,
+		borderStartEndRadius: top,
+		borderEndStartRadius: bottom,
+		borderEndEndRadius: bottom,
+		boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
 	});
 }

@@ -9,7 +9,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { borderEdge, fg } from "@sdxc/u/color";
+import { fg } from "@sdxc/u/color";
+import { combine, raw } from "@sdxc/u/general";
 import { container, gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { p, width } from "@sdxc/u/size";
@@ -50,8 +51,8 @@ export namespace StatStrip {
 }
 
 /**
- * Lays {@link StatStrip.Item} children in two columns that open to five above
- * `xl` (64rem) of its own width. The host is the sizing container and fills its
+ * Lays {@link StatStrip.Item} children in two columns, then in one row from `lg`
+ * (48rem) of its own width. The host is the sizing container and fills its
  * parent's inline size, so a centering band still gives the tracks room.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
@@ -79,23 +80,35 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 					mix={[
 						grid(),
 						isRuled ? gap(0) : gap(6),
-						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
-						at(
-							"xl",
-							"ui-marketing-stat-strip",
-							gridTemplate({ columns: repeat(5, "minmax(0, 1fr)") }),
-						),
+						/**
+						 * Two columns on a phone with an odd last figure spanning the row, then
+						 * every figure in one row from the `lg` container, whatever the count, so
+						 * no figure is ever left alone on a row or beside an empty track. One rule
+						 * owns `grid-column`, so the reset at `lg` wins in any stylesheet order.
+						 */
+						combine([
+							gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
+							when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" })),
+							at("lg", "ui-marketing-stat-strip", [
+								raw({
+									gridTemplateColumns: "none",
+									gridAutoFlow: "column",
+									gridAutoColumns: "minmax(0, 1fr)",
+								}),
+								when("& > :last-child:nth-child(odd)", raw({ gridColumn: "auto" })),
+							]),
+						]),
 						when("& > *", [p(6, 5), at("lg", "ui-marketing-stat-strip", p(8, 8))]),
 						isRuled
 							? when(
 									"& > * + *",
 									at(
-										"xl",
+										"lg",
 										"ui-marketing-stat-strip",
-										borderEdge("inline-start", {
-											color: "neutral",
-											width: 1,
-											style: "solid",
+										raw({
+											borderInlineStartWidth: "1px",
+											borderInlineStartStyle: "solid",
+											borderInlineStartColor: "var(--ui-marketing-hairline)",
 										}),
 									),
 								)

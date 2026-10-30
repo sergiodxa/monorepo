@@ -1,24 +1,24 @@
 /**
  * Style-mixin factories for marketing / landing bands: content measure and
- * gutters, section spacing, band tones, display type, lead copy, hairlines,
- * and logo-cloud marks. Pair a band host with `viewReveal()` from the
- * animations entry so sections enter on scroll; reduced-motion is already
- * collapsed there.
+ * gutters, fluid section spacing, band tones, display type, lead copy,
+ * hairlines, raised surfaces, eyebrows, CTA chrome and logo-cloud marks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { ElementProps, MixinDescriptor } from "remix/component";
 
-import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { opacity } from "@sdxc/u/effects";
+import { keyframes } from "@sdxc/u/animation";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { combine, raw, var as varUtility } from "@sdxc/u/general";
-import { relative } from "@sdxc/u/layout";
-import { at, dark } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mi, pi } from "@sdxc/u/size";
-import { before } from "@sdxc/u/state";
-import { balance, font, pretty } from "@sdxc/u/typography";
+import { inlineFlex, items, relative } from "@sdxc/u/layout";
+import { at, dark, motionSafe } from "@sdxc/u/responsive";
+import { bs, is, maxIs, mi, pb, pi } from "@sdxc/u/size";
+import { before, when } from "@sdxc/u/state";
+import { balance, font, pretty, text, textTransform, weight } from "@sdxc/u/typography";
 
 import type { CSSStyles } from "../utils/css-styles.js";
 
@@ -28,23 +28,65 @@ const MEASURE = varUtility("ui-marketing-measure", "72rem");
 /** Inline padding at the narrowest container step. */
 const GUTTER = varUtility("ui-marketing-gutter", "1rem");
 
-/** Block padding for a normal marketing band. */
-const SECTION_SPACE = varUtility("ui-marketing-section-space", "6rem");
+/** Block padding for a normal band: 5rem on a phone, 7.5rem from a ~1200px band up. */
+const SECTION_SPACE = varUtility(
+	"ui-marketing-section-space",
+	"clamp(5rem, 3.86rem + 4.85cqi, 7.5rem)",
+);
 
-/** Block padding for a compact marketing band. */
-const SECTION_SPACE_COMPACT = varUtility("ui-marketing-section-space-compact", "4rem");
+/** Block padding for a compact band: 3rem on a phone, 4.5rem wide. */
+const SECTION_SPACE_COMPACT = varUtility(
+	"ui-marketing-section-space-compact",
+	"clamp(3rem, 2.32rem + 2.91cqi, 4.5rem)",
+);
 
-/** Block padding for a hero marketing band. */
-const SECTION_SPACE_HERO = varUtility("ui-marketing-section-space-hero", "8rem");
+/** Block padding for a hero band, measured from the header: 3.5rem on a phone, 8rem wide. */
+const SECTION_SPACE_HERO = varUtility(
+	"ui-marketing-section-space-hero",
+	"clamp(3.5rem, 1.45rem + 8.73cqi, 8rem)",
+);
 
-/** Letter-spacing for display headlines. */
-const DISPLAY_TRACKING = varUtility("ui-marketing-display-tracking", "-0.04em");
+/** Block padding for a closing call-to-action band: 5rem on a phone, 7rem wide. */
+const SECTION_SPACE_CTA = varUtility(
+	"ui-marketing-section-space-cta",
+	"clamp(5rem, 4.09rem + 3.88cqi, 7rem)",
+);
 
-/** Font weight for display headlines. */
+/** Letter-spacing for the page headline. */
+const DISPLAY_TRACKING = varUtility("ui-marketing-display-tracking", "-0.035em");
+
+/** Font weight for display and chapter headlines. */
 const DISPLAY_WEIGHT = varUtility("ui-marketing-display-weight", "500");
 
-/** Line-height for display headlines. */
-const DISPLAY_LEADING = varUtility("ui-marketing-display-leading", "1");
+/**
+ * Page headline size: 42px on a phone, rising with the band to 72px, or to
+ * `--ui-marketing-display-max` (up to 8rem) where a page opts into a larger top step.
+ */
+const DISPLAY_SIZE = varUtility(
+	"ui-marketing-display-size",
+	"clamp(2.625rem, 1.77rem + 3.64cqi, var(--ui-marketing-display-max, 4.5rem))",
+);
+
+/**
+ * Page headline leading tied to its size: 1.1 at 40px, 1.0 at 72px and 0.9 from 96px up,
+ * so a two-line display never collides and a short one never floats apart.
+ */
+const DISPLAY_LEADING = varUtility(
+	"ui-marketing-display-leading",
+	"min(calc(0.875em + 0.5625rem), calc(0.6em + 1.8rem))",
+);
+
+/** Chapter (band H2) size: 28px on a phone, 48px wide, two thirds of the headline. */
+const CHAPTER_SIZE = varUtility(
+	"ui-marketing-chapter-size",
+	"clamp(1.75rem, 1.18rem + 2.42cqi, 3rem)",
+);
+
+/** Chapter leading. */
+const CHAPTER_LEADING = varUtility("ui-marketing-chapter-leading", "1.1");
+
+/** Chapter letter-spacing. */
+const CHAPTER_TRACKING = varUtility("ui-marketing-chapter-tracking", "-0.025em");
 
 /** Max width of supporting lead copy under a headline. */
 const LEAD_MEASURE = varUtility("ui-marketing-lead-measure", "40rem");
@@ -52,11 +94,38 @@ const LEAD_MEASURE = varUtility("ui-marketing-lead-measure", "40rem");
 /** Font size of supporting lead copy. */
 const LEAD_SIZE = varUtility("ui-marketing-lead-size", "1.125rem");
 
-/** Font size of a marketing section H2 (chapter). */
-const CHAPTER_SIZE = varUtility("ui-marketing-chapter-size", "2.75rem");
+/** Font size of the hero's lead: 1.25rem on a phone, 1.5rem wide. */
+const HERO_LEAD_SIZE = varUtility(
+	"ui-marketing-hero-lead-size",
+	"clamp(1.25rem, 1.14rem + 0.49cqi, 1.5rem)",
+);
 
-/** Forced height of a logo-cloud mark. */
-const LOGO_HEIGHT = varUtility("ui-marketing-logo-height", "1rem");
+/** Line height of lead copy, held at 2rem as every reference template does. */
+const LEAD_LEADING = varUtility("ui-marketing-lead-leading", "2rem");
+
+/** Font weight of lead copy; a display-led brand sets 500. */
+const LEAD_WEIGHT = varUtility("ui-marketing-lead-weight", "400");
+
+/** Height of a logo-cloud mark at the narrowest step. */
+const LOGO_HEIGHT = varUtility("ui-marketing-logo-height", "1.75rem");
+
+/** Height of a logo-cloud mark from the `lg` container up. */
+const LOGO_HEIGHT_LG = varUtility("ui-marketing-logo-height-lg", "2.25rem");
+
+/** Translucent line every marketing edge, rule and grid draws with. */
+const HAIRLINE = varUtility(
+	"ui-marketing-hairline",
+	"color-mix(in oklch, CanvasText 8%, transparent)",
+);
+
+/** Fill of a surface that sits above the band: frames, cards, code. */
+const SURFACE_RAISED = varUtility("ui-surface-raised", "Canvas");
+
+/** Corner radius of a staged surface. */
+const RADIUS_SURFACE = varUtility("ui-marketing-radius-surface", "1rem");
+
+/** Edge a raised surface draws: a ring plus a small drop, or a top-lit hairline in dark. */
+const SHADOW_SURFACE = varUtility("ui-shadow-surface", "0 0 0 1px rgb(0 0 0 / 0.06)");
 
 /** Default spacing step {@link marketingSectionSpace} applies. */
 const DEFAULT_SECTION_SPACING = "normal" as const;
@@ -67,24 +136,44 @@ const DEFAULT_BAND_TONE = "plain" as const;
 /** Default outline depth {@link displayHeading} draws at. */
 const DEFAULT_DISPLAY_LEVEL = 1 as const;
 
+/** Default step {@link marketingLead} sizes for. */
+const DEFAULT_LEAD_STEP = "band" as const;
+
+/** Default look {@link eyebrow} draws. */
+const DEFAULT_EYEBROW_VARIANT = "mono" as const;
+
+/** Name of the keyframes {@link marketingSlowSpin} turns through. */
+const SLOW_SPIN_KEYFRAMES = "ui-marketing-slow-spin";
+
 /**
  * How much block padding a marketing band leaves around its content.
  * `"hero"` is the first viewport, `"normal"` the repeating mid-page rhythm,
- * `"compact"` a tighter strip such as a proof row.
+ * `"compact"` a tighter strip such as a proof row, `"cta"` a closing band.
  */
-export type MarketingSectionSpacing = "hero" | "normal" | "compact";
+export type MarketingSectionSpacing = "hero" | "normal" | "compact" | "cta";
 
 /**
- * What sits behind a marketing band: nothing, a quiet tint, a faded grid, or
- * an inverted solid for a closing call-to-action.
+ * What sits behind a marketing band: nothing, a quiet tint, a faded grid, an
+ * inverted solid, the brand solid, or a gradient the page supplies through
+ * `--ui-marketing-band-gradient`.
  */
-export type MarketingBandTone = "plain" | "tinted" | "grid" | "inverse";
+export type MarketingBandTone = "plain" | "tinted" | "grid" | "inverse" | "brand" | "gradient";
 
 /**
  * Outline depth {@link displayHeading} sizes for: `1` is the page H1,
- * `2` a section chapter (~40–48px), `3` a quieter in-band title.
+ * `2` a section chapter, `3` a quieter in-band title.
  */
 export type MarketingDisplayLevel = 1 | 2 | 3;
+
+/** Which lead {@link marketingLead} sizes: a band's, or the larger hero step. */
+export type MarketingLeadStep = "band" | "hero";
+
+/**
+ * How an eyebrow reads: `mono` a quiet uppercase label for section headers,
+ * `quiet` a hairline pill for hero announcements, `soft` a filled muted pill,
+ * `pill` the brand pill, `numbered` a brand-ringed pill led by its index.
+ */
+export type MarketingEyebrowVariant = "mono" | "quiet" | "soft" | "pill" | "numbered";
 
 /**
  * Centers a marketing content column at `--ui-marketing-measure` and pads
@@ -110,9 +199,11 @@ export function marketingContainer<Node extends Element = Element>(): MixinDescr
 }
 
 /**
- * Applies the band's block padding from the marketing section-space tokens.
+ * Applies the band's block padding from the marketing section-space tokens. Each
+ * step is fluid in the width of the container around the band, so a phone gets
+ * the tighter end and a desktop band the generous one without a breakpoint jump.
  *
- * @param spacing Which of the three steps to apply. Defaults to `"normal"`.
+ * @param spacing Which step to apply. Defaults to `"normal"`.
  * @returns A `css()` mixin ready for a band host's `mix` prop.
  * @example
  * <section mix={[marketingSectionSpace("hero")]}>{children}</section>;
@@ -123,33 +214,67 @@ export function marketingSectionSpace<Node extends Element = Element>(
 	let padding = SECTION_SPACE;
 	if (spacing === "hero") padding = SECTION_SPACE_HERO;
 	if (spacing === "compact") padding = SECTION_SPACE_COMPACT;
+	if (spacing === "cta") padding = SECTION_SPACE_CTA;
 
 	return raw<Node>({ paddingBlock: padding });
 }
 
 /**
- * The neutral text, border and tint tokens re-pointed at the solid fill's foreground, so
- * headings, leads and outlined controls inside an inverse band stay legible on it.
+ * The neutral text, line, surface and focus tokens re-pointed at a solid fill's
+ * foreground, so headings, leads, hairlines, raised controls and focus rings inside an
+ * inverse or brand band stay legible on it.
  */
-const INVERSE_NEUTRAL_TOKENS = {
-	"--ui-neutral-fg-emphasis": "var(--ui-neutral-fg-on-solid)",
-	"--ui-neutral-fg": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 78%, transparent)",
-	"--ui-neutral-fg-muted": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 64%, transparent)",
-	"--ui-neutral-border": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 18%, transparent)",
-	"--ui-neutral-bg-tint": "color-mix(in oklch, var(--ui-neutral-fg-on-solid) 6%, transparent)",
-} as const;
+function onSolidTokens(onSolid: string): CSSStyles {
+	return {
+		"--ui-neutral-fg-emphasis": onSolid,
+		"--ui-neutral-fg": `color-mix(in oklch, ${onSolid} 80%, transparent)`,
+		"--ui-neutral-fg-muted": `color-mix(in oklch, ${onSolid} 66%, transparent)`,
+		"--ui-neutral-border": `color-mix(in oklch, ${onSolid} 18%, transparent)`,
+		"--ui-neutral-bg-tint": `color-mix(in oklch, ${onSolid} 6%, transparent)`,
+		"--ui-marketing-hairline": `color-mix(in oklch, ${onSolid} 12%, transparent)`,
+		"--ui-surface-raised": `color-mix(in oklch, ${onSolid} 12%, transparent)`,
+		"--ui-shadow-surface": `inset 0 0 0 1px color-mix(in oklch, ${onSolid} 14%, transparent)`,
+		"--ui-shadow-control": `inset 0 0 0 1px color-mix(in oklch, ${onSolid} 16%, transparent)`,
+		"--ui-brand-ring": onSolid,
+		"--ui-neutral-ring": onSolid,
+	};
+}
 
 /**
- * Paints a marketing band's background: a quiet neutral tint, a faded grid,
- * an inverted solid, or nothing for `"plain"`.
+ * The tokens a dark page's inverse band restores: rather than painting a near-white slab
+ * at the foot of a dark page, the band becomes a raised surface carrying the page's own
+ * text and line tokens.
+ */
+const DARK_INVERSE_TOKENS = {
+	"--ui-neutral-fg-emphasis": "inherit",
+	"--ui-neutral-fg": "inherit",
+	"--ui-neutral-fg-muted": "inherit",
+	"--ui-neutral-border": "inherit",
+	"--ui-neutral-bg-tint": "inherit",
+	"--ui-marketing-hairline": "inherit",
+	"--ui-surface-raised": "inherit",
+	"--ui-shadow-surface": "inherit",
+	"--ui-shadow-control": "inherit",
+	"--ui-brand-ring": "inherit",
+	"--ui-neutral-ring": "inherit",
+} as const;
+
+/** The quiet brand glow a tinted or dark-inverse band carries in its top corner. */
+const BRAND_GLOW =
+	"radial-gradient(60% 70% at 85% 0%, color-mix(in oklch, var(--ui-brand-bg-solid) 14%, transparent), transparent 70%)";
+
+/**
+ * Paints a marketing band's background: a quiet neutral tint, a hairline grid, an
+ * inverted solid, the brand solid, a page-supplied gradient, or nothing for `"plain"`.
+ * Inverse and brand bands re-point the neutral tokens at the fill's foreground; on a
+ * dark page an inverse band renders as a raised surface with hairlines and the glow.
  *
  * @param tone Which fill to apply. Defaults to `"plain"`.
  * @returns A `css()` mixin ready for a band host's `mix` prop.
  * @example
  * <section mix={[marketingBandTone("tinted"), marketingSectionSpace()]}>{children}</section>;
  * @example
- * // Pair with viewReveal so the band enters as it scrolls into view:
- * // mix={[marketingBandTone("grid"), viewReveal()]}
+ * <section mix={[marketingBandTone("brand")]} style="--ui-marketing-band-gradient: …">…</section>;
  */
 export function marketingBandTone<Node extends Element = Element>(
 	tone: MarketingBandTone = DEFAULT_BAND_TONE,
@@ -158,11 +283,8 @@ export function marketingBandTone<Node extends Element = Element>(
 		case "tinted":
 			return combine<Node>([
 				bg<Node>("color.neutral.100"),
-				dark<Node>(bg<Node>("color.neutral.900")),
-				raw<Node>({
-					backgroundImage:
-						"radial-gradient(60% 70% at 85% 0%, color-mix(in oklch, var(--ui-brand-bg-solid) 14%, transparent), transparent 70%)",
-				}),
+				dark<Node>(raw<Node>({ backgroundColor: "var(--ui-neutral-bg-tint)" })),
+				raw<Node>({ backgroundImage: BRAND_GLOW }),
 			]);
 		case "grid":
 			return combine<Node>([
@@ -173,10 +295,8 @@ export function marketingBandTone<Node extends Element = Element>(
 						position: "absolute",
 						inset: "0",
 						zIndex: "-1",
-						backgroundImage:
-							"linear-gradient(to right, var(--ui-neutral-border) 1px, transparent 1px), linear-gradient(to bottom, var(--ui-neutral-border) 1px, transparent 1px)",
+						backgroundImage: `linear-gradient(to right, ${HAIRLINE} 1px, transparent 1px), linear-gradient(to bottom, ${HAIRLINE} 1px, transparent 1px)`,
 						backgroundSize: "3rem 3rem",
-						opacity: "0.55",
 						maskImage: "radial-gradient(70% 80% at 70% 40%, black, transparent 75%)",
 						WebkitMaskImage: "radial-gradient(70% 80% at 70% 40%, black, transparent 75%)",
 					}),
@@ -186,17 +306,39 @@ export function marketingBandTone<Node extends Element = Element>(
 			return combine<Node>([
 				bg<Node>("neutral.solid"),
 				fg<Node>("neutral.onSolid"),
-				raw<Node>(INVERSE_NEUTRAL_TOKENS),
+				raw<Node>(onSolidTokens("var(--ui-neutral-fg-on-solid)")),
+				dark<Node>(
+					raw<Node>({
+						...DARK_INVERSE_TOKENS,
+						backgroundColor: SURFACE_RAISED,
+						backgroundImage: BRAND_GLOW,
+						color: "var(--ui-neutral-fg-emphasis)",
+						boxShadow: `inset 0 1px 0 ${HAIRLINE}, inset 0 -1px 0 ${HAIRLINE}`,
+					}),
+				),
 			]);
+		case "brand":
+			return combine<Node>([
+				bg<Node>("brand.solid"),
+				fg<Node>("brand.onSolid"),
+				raw<Node>(onSolidTokens("var(--ui-brand-fg-on-solid)")),
+			]);
+		case "gradient":
+			return raw<Node>({
+				backgroundImage: "var(--ui-marketing-band-gradient, none)",
+				backgroundColor: "var(--ui-marketing-band-gradient-base, transparent)",
+			});
 		default:
 			return raw<Node>({});
 	}
 }
 
 /**
- * Sets display typography for a marketing headline: the optional display
- * family, light weight, tight tracking, and near-1.0 leading from the
- * marketing tokens, with size stepping by outline depth.
+ * Sets display typography for a marketing headline. Level 1 is the page H1, sized
+ * fluidly from 42px to 72px (or `--ui-marketing-display-max`) with leading that tightens
+ * as it grows; level 2 is the band chapter at two thirds of that, so the H1:H2 ratio
+ * holds at 1.5:1 at every width. Sizes read `cqi`, so a headline in a narrow column steps
+ * down on its own.
  *
  * @param level Outline depth. Defaults to `1` (page H1).
  * @returns A `css()` mixin ready for a heading's `mix` prop.
@@ -209,7 +351,13 @@ export function displayHeading<Node extends Element = Element>(
 	level: MarketingDisplayLevel = DEFAULT_DISPLAY_LEVEL,
 ): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
 	let size = varUtility("ui-text-xl", "1.25rem");
-	if (level === 1) size = varUtility("ui-text-5xl", "3rem");
+	let leading = CHAPTER_LEADING;
+	let tracking = CHAPTER_TRACKING;
+	if (level === 1) {
+		size = DISPLAY_SIZE;
+		leading = DISPLAY_LEADING;
+		tracking = DISPLAY_TRACKING;
+	}
 	if (level === 2) size = CHAPTER_SIZE;
 
 	return combine<Node>([
@@ -218,44 +366,60 @@ export function displayHeading<Node extends Element = Element>(
 		balance<Node>(),
 		raw<Node>({
 			fontWeight: DISPLAY_WEIGHT,
-			letterSpacing: DISPLAY_TRACKING,
-			lineHeight: DISPLAY_LEADING,
+			letterSpacing: tracking,
+			lineHeight: leading,
 			fontSize: size,
-			margin: "0",
 		}),
-		level === 1 ? at<Node>("lg", raw<Node>({ fontSize: varUtility("ui-text-7xl", "4.5rem") })) : [],
-		level === 2 ? at<Node>("md", raw<Node>({ fontSize: varUtility("ui-text-5xl", "3rem") })) : [],
 	]);
 }
 
 /**
- * Muted supporting copy under a marketing headline: lead size and measure,
- * pretty wrapping, and balanced lines.
+ * Draws `strong`, `b` and `[data-emphasis]` inside supporting copy in the emphasis ink at
+ * the copy's own weight, so a key phrase gives the scanning eye a second level without
+ * turning bold.
  *
+ * @returns A `css()` mixin ready for a lead, description or body's `mix` prop.
+ * @example
+ * <p mix={[marketingEmphasis()]}>Ship <strong>one worker</strong> per app.</p>;
+ */
+export function marketingEmphasis<Node extends Element = Element>(): UtilityMixin<Node> {
+	return when<Node>(
+		"& :is(strong, b, [data-emphasis])",
+		raw<Node>({ color: "var(--ui-neutral-fg-emphasis)", fontWeight: "inherit" }),
+	);
+}
+
+/**
+ * Supporting copy under a marketing headline, in the body ink so it reads at 4.5:1 or
+ * better on the band, on a 2rem line, with emphasis fragments in the heading ink.
+ *
+ * @param step `"hero"` for the larger first-viewport lead. Defaults to `"band"`.
  * @returns A `css()` mixin ready for a lead paragraph's `mix` prop.
  * @example
  * <p mix={[marketingLead()]}>{description}</p>;
+ * @example
+ * <p mix={[marketingLead("hero")]}>{description}</p>;
  */
-export function marketingLead<Node extends Element = Element>(): MixinDescriptor<
-	Node,
-	[styles: CSSStyles],
-	ElementProps
-> {
+export function marketingLead<Node extends Element = Element>(
+	step: MarketingLeadStep = DEFAULT_LEAD_STEP,
+): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
 	return combine<Node>([
-		fg<Node>("neutral.muted"),
+		fg<Node>("neutral"),
 		pretty<Node>(),
 		raw<Node>({
-			fontSize: LEAD_SIZE,
+			fontSize: step === "hero" ? HERO_LEAD_SIZE : LEAD_SIZE,
+			fontWeight: LEAD_WEIGHT,
 			maxInlineSize: LEAD_MEASURE,
-			lineHeight: "1.625",
-			margin: "0",
+			lineHeight: LEAD_LEADING,
 		}),
+		marketingEmphasis<Node>(),
 	]);
 }
 
 /**
- * A low-contrast 1px rule along the block-start edge — the hairline a sticky
- * header, footer, or band uses to separate itself from what sits above.
+ * A translucent 1px rule along the block-start edge — the hairline a sticky header,
+ * footer, or band uses to separate itself from what sits above. It takes the tone of
+ * whatever is behind it, and high contrast promotes it to the strong border.
  *
  * @returns A `css()` mixin ready for a host element's `mix` prop.
  * @example
@@ -266,12 +430,36 @@ export function marketingHairline<Node extends Element = Element>(): MixinDescri
 	[styles: CSSStyles],
 	ElementProps
 > {
-	return borderEdge<Node>("block-start", { color: "neutral", width: 1, style: "solid" });
+	return raw<Node>({
+		borderBlockStartWidth: "1px",
+		borderBlockStartStyle: "solid",
+		borderBlockStartColor: HAIRLINE,
+	});
 }
 
 /**
- * Forces a logo-cloud mark to `--ui-marketing-logo-height` with muted
- * currentColor treatment so adopter marks read as one quiet row.
+ * A surface raised above the band — a frame, card or code sheet: the raised fill, the
+ * surface radius and the surface edge, which is a ring and a small drop in light and a
+ * top-lit hairline in dark. Drawn as a shadow, so the edge never changes the box size.
+ *
+ * @returns A `css()` mixin ready for a surface's `mix` prop.
+ * @example
+ * <div mix={[marketingSurface()]}>{card}</div>;
+ */
+export function marketingSurface<Node extends Element = Element>(): UtilityMixin<Node> {
+	return combine<Node>([
+		raw<Node>({
+			backgroundColor: SURFACE_RAISED,
+			borderRadius: RADIUS_SURFACE,
+			boxShadow: SHADOW_SURFACE,
+		}),
+	]);
+}
+
+/**
+ * Sizes a logo-cloud mark at `--ui-marketing-logo-height` (1.75rem, 2.25rem from the
+ * `lg` container) in full ink, so adopter marks read at the size a visitor recognizes
+ * them. Dimming belongs to the cloud, never to the mark.
  *
  * @returns A `css()` mixin ready for an `img` or inline SVG's `mix` prop.
  * @example
@@ -285,26 +473,20 @@ export function logoCloudMark<Node extends Element = Element>(): MixinDescriptor
 	return combine<Node>([
 		bs<Node>(LOGO_HEIGHT),
 		is<Node>("auto"),
-		opacity<Node>(65),
-		raw<Node>({
-			objectFit: "contain",
-			color: "currentColor",
-		}),
+		raw<Node>({ objectFit: "contain", color: "currentColor" }),
+		at<Node>("lg", bs<Node>(LOGO_HEIGHT_LG)),
 	]);
 }
 
-/** Soft elevation a solid marketing CTA carries over the band behind it. */
-const CTA_SHADOW =
-	"0 1px 2px color-mix(in oklab, CanvasText 6%, transparent), 0 4px 12px color-mix(in oklab, CanvasText 8%, transparent)";
-
 /**
- * Corner radius and soft elevation for a solid marketing CTA. Compose onto a
- * {@link Button} or {@link LinkButton} in a hero {@link CtaGroup}; override
- * `--ui-marketing-cta-radius` per brand for pill (`9999px`) vs soft-rect.
+ * Corner radius, weight and tactile edge for a marketing CTA. Compose onto a
+ * {@link Button} or {@link LinkButton}; it sets `--ui-button-radius` and
+ * `--ui-button-weight`, which the control reads, so `--ui-marketing-cta-radius` (pill,
+ * 8px, 6px) applies whatever order the stylesheets load in.
  *
  * @returns A `css()` mixin ready for a CTA control's `mix` prop.
  * @example
- * <Button size="lg" color="brand" mix={[marketingCtaChrome()]}>{label}</Button>;
+ * <Button color="brand" mix={[marketingCtaChrome()]}>{label}</Button>;
  */
 export function marketingCtaChrome<Node extends Element = Element>(): MixinDescriptor<
 	Node,
@@ -312,7 +494,122 @@ export function marketingCtaChrome<Node extends Element = Element>(): MixinDescr
 	ElementProps
 > {
 	return raw<Node>({
-		borderRadius: "var(--ui-marketing-cta-radius, 0.5rem)",
-		boxShadow: CTA_SHADOW,
+		"--ui-button-radius": "var(--ui-marketing-cta-radius, 0.5rem)",
+		"--ui-button-weight": "var(--ui-marketing-cta-weight, 600)",
+		boxShadow: "var(--ui-shadow-control, 0 1px 2px rgb(0 0 0 / 0.05))",
 	});
+}
+
+/**
+ * The label above a headline, in one of five looks. `mono` and `soft` stay neutral,
+ * `quiet` is a hairline pill for hero announcements, `pill` and `numbered` carry the
+ * brand. Variants live in `data-variant`; a brand tints the mono label through
+ * `--ui-marketing-eyebrow-color`, and a linked eyebrow nudges its arrow on hover.
+ *
+ * @returns A `css()` mixin ready for an eyebrow `span` or `a`'s `mix` prop; set
+ * `data-variant` on the host.
+ * @example
+ * <span data-variant="mono" mix={[eyebrow()]}>{t("features.eyebrow")}</span>;
+ * @example
+ * <a href={post} data-variant="quiet" mix={[eyebrow()]}>{t("hero.news")}</a>;
+ */
+export function eyebrow<Node extends Element = Element>(): MixinDescriptor<
+	Node,
+	[styles: CSSStyles],
+	ElementProps
+> {
+	return combine<Node>([
+		inlineFlex<Node>(),
+		items<Node>("center"),
+		raw<Node>({ gap: "0.375rem", textDecoration: "none", maxInlineSize: "100%" }),
+		text<Node>("xs"),
+		when<Node>(`&:not([data-variant]), &[data-variant="${DEFAULT_EYEBROW_VARIANT}"]`, [
+			font<Node>("mono"),
+			weight<Node>("semibold"),
+			textTransform<Node>("uppercase"),
+			raw<Node>({
+				color: "var(--ui-marketing-eyebrow-color, var(--ui-neutral-fg-muted))",
+				letterSpacing: "0.1em",
+				lineHeight: "1.25rem",
+			}),
+		]),
+		when<Node>('&:is([data-variant="quiet"], [data-variant="soft"], [data-variant="pill"])', [
+			pb<Node>(1.5),
+			pi<Node>(3.5),
+			rounded<Node>("full"),
+			raw<Node>({ lineHeight: "1rem" }),
+		]),
+		when<Node>('&[data-variant="quiet"]', [
+			weight<Node>("normal"),
+			fg<Node>("neutral"),
+			raw<Node>({ boxShadow: `inset 0 0 0 1px ${HAIRLINE}`, backgroundColor: "transparent" }),
+		]),
+		when<Node>('&[data-variant="soft"]', [
+			weight<Node>("medium"),
+			fg<Node>("neutral.emphasis"),
+			bg<Node>("neutral.bg-tint-hover"),
+		]),
+		when<Node>('&[data-variant="pill"]', [
+			weight<Node>("semibold"),
+			fg<Node>("brand"),
+			bg<Node>("brand.tint"),
+			raw<Node>({ boxShadow: "inset 0 0 0 1px var(--ui-brand-border)" }),
+		]),
+		when<Node>('&[data-variant="numbered"]', [
+			pb<Node>(1),
+			pi<Node>(4),
+			rounded<Node>("full"),
+			text<Node>("sm"),
+			weight<Node>("medium"),
+			fg<Node>("brand"),
+			raw<Node>({
+				boxShadow: "inset 0 0 0 1px var(--ui-brand-border-strong)",
+				fontVariantNumeric: "tabular-nums",
+			}),
+		]),
+		when<Node>("& > [data-slot='eyebrow-index']", [
+			raw<Node>({
+				paddingInlineEnd: "0.5rem",
+				marginInlineEnd: "0.125rem",
+				borderInlineEnd: "1px solid currentColor",
+				opacity: "0.6",
+			}),
+		]),
+		when<Node>("&:is(a)", [
+			raw<Node>({ transition: "color 150ms, background-color 150ms, box-shadow 150ms" }),
+		]),
+		when<Node>("&:is(a):hover", fg<Node>("neutral.emphasis")),
+		when<Node>("& > [data-slot='eyebrow-arrow']", [
+			raw<Node>({ inlineSize: "0.875rem", blockSize: "0.875rem", transition: "translate 150ms" }),
+		]),
+		when<Node>(
+			"&:is(a):hover > [data-slot='eyebrow-arrow']",
+			motionSafe<Node>(raw<Node>({ translate: "2px 0" })),
+		),
+	]);
+}
+
+/**
+ * A slow, endless turn for decoration behind hero media — concentric rings or a glow —
+ * that only runs when the visitor has not asked for reduced motion.
+ *
+ * @param direction `"reverse"` turns counter-clockwise, so two layers can counter-rotate.
+ * @returns A `css()` mixin ready for a backdrop layer's `mix` prop.
+ * @example
+ * <svg mix={[marketingSlowSpin()]}>…</svg>;
+ */
+export function marketingSlowSpin<Node extends Element = Element>(
+	direction: "normal" | "reverse" = "normal",
+): MixinDescriptor<Node, [styles: CSSStyles], ElementProps> {
+	return combine<Node>([
+		keyframes<Node>(SLOW_SPIN_KEYFRAMES, {
+			from: { rotate: "0deg" },
+			to: { rotate: "360deg" },
+		}),
+		motionSafe<Node>(
+			raw<Node>({
+				animation: `${SLOW_SPIN_KEYFRAMES} ${direction === "reverse" ? "80s" : "60s"} linear infinite ${direction}`,
+			}),
+		),
+	]);
 }

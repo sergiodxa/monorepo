@@ -1,5 +1,5 @@
 /**
- * Covers {@link FeatureBand} layout variants: split, grid, and steps.
+ * Covers {@link FeatureBand} layout variants: split, grid, steps, timeline, and stage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +12,7 @@ import { Feature } from "../components/feature.js";
 
 import { FeatureBand } from "./feature-band.js";
 import { StepList } from "./step-list.js";
+import { TabbedStage } from "./tabbed-stage.js";
 
 describe("FeatureBand", () => {
 	test("renders a split layout with checks and media", async () => {
@@ -64,5 +65,58 @@ describe("FeatureBand", () => {
 		expect(html).toContain("How it works");
 		expect(html).toContain("Connect");
 		expect(html).toContain('data-slot="step-list"');
+	});
+
+	test("renders a timeline of steps", async () => {
+		let html = await renderToString(
+			<FeatureBand layout="timeline" title="One incident">
+				<StepList.Item meta="14:02 UTC" title="Detected">
+					Probes agree.
+				</StepList.Item>
+			</FeatureBand>,
+		);
+
+		expect(html).toContain('data-variant="timeline"');
+		expect(html).toContain("14:02 UTC");
+	});
+
+	test("renders a vertical stage named after the band id", async () => {
+		let html = await renderToString(
+			<FeatureBand
+				layout="stage"
+				id="how"
+				title="How it works"
+				eyebrow="Workflow"
+				eyebrowVariant="numbered"
+				eyebrowIndex="02"
+				eyebrowHref="/docs"
+			>
+				<TabbedStage.Item value="detect" label="Detect" defaultChecked>
+					<p>Detect panel</p>
+				</TabbedStage.Item>
+				<TabbedStage.Item value="page" label="Page">
+					<p>Page panel</p>
+				</TabbedStage.Item>
+			</FeatureBand>,
+		);
+
+		expect(html).toContain('data-orientation="vertical"');
+		expect(html).toContain('name="how-stage"');
+		expect(html).toContain('aria-label="How it works"');
+		expect(html).toContain('href="/docs"');
+		expect(html).toContain('data-slot="eyebrow-index"');
+	});
+
+	test("prefers an explicit stage name and label", async () => {
+		let html = await renderToString(
+			<FeatureBand layout="stage" title="How it works" stageName="flow" stageLabel="Alert flow">
+				<TabbedStage.Item value="detect" label="Detect" defaultChecked>
+					<p>Detect panel</p>
+				</TabbedStage.Item>
+			</FeatureBand>,
+		);
+
+		expect(html).toContain('name="flow"');
+		expect(html).toContain('aria-label="Alert flow"');
 	});
 });

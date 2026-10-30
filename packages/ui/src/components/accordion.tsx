@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import { justify, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, pb, pbe, pi } from "@sdxc/u/size";
@@ -191,7 +192,12 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 					justify("between"),
 					pb(4),
 					pi(0),
-					rounded("none"),
+					rounded("sm"),
+					/**
+					 * The row runs flush to the column edge, so the focus ring is drawn inside it
+					 * where an outer offset would be clipped by the band.
+					 */
+					when("&:focus-visible", raw({ outlineOffset: "-2px" })),
 					hover([bg("transparent"), textDecoration("underline")]),
 					when('& [data-slot="icon"]', [
 						is(4),

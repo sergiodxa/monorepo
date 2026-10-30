@@ -1,7 +1,8 @@
 /**
  * Two-column marketing band content: prose on one side and the media it
  * describes on the other. Stacks to a single column under the nearest
- * container; `lean` hands the wider track to copy or media.
+ * container; `lean` hands the wider track to copy or media, and `Split.Media
+ * bleed` lets a wide shot run past the measure.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +11,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { combine, raw } from "@sdxc/u/general";
 import { container, gap, grid, gridTemplate, items, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { minIs } from "@sdxc/u/size";
@@ -62,6 +63,12 @@ export namespace Split {
 	 * Props accepted by {@link Split.Media}.
 	 */
 	export interface MediaProps extends TagProps<"div"> {
+		/**
+		 * Lets the media's content grow to `max(100%, 60rem)` and run past the
+		 * measure toward the inline end once the split has two columns; the
+		 * enclosing band clips it at the viewport edge.
+		 */
+		bleed?: "end";
 		/** Media, samples, or staged UI for the column. */
 		children: RemixNode;
 	}
@@ -70,9 +77,8 @@ export namespace Split {
 /**
  * Lays {@link Split.Copy} and {@link Split.Media} as a two-track grid. The host
  * is the named sizing container; an inner wrapper holds the tracks and
- * `@container` column rules so the query can restyle a descendant. Collapses
- * to one column below `xl` (64rem), matching the landing's original viewport
- * threshold so copy and media do not squeeze side-by-side too early.
+ * `@container` column rules so the query can restyle a descendant. Goes two
+ * columns at the `lg` container (48rem); the gap grows from 2rem to 3rem at `xl`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the split's markup.
@@ -100,11 +106,14 @@ export function Split(handle: Handle<Split.Props>) {
 			>
 				<div
 					mix={[
-						grid(),
-						gap(12),
-						items("start"),
-						gridTemplate({ columns: "minmax(0, 1fr)" }),
-						at("xl", "ui-marketing-split", gridTemplate({ columns })),
+						combine([
+							grid(),
+							items("start"),
+							gap(8),
+							gridTemplate({ columns: "minmax(0, 1fr)" }),
+							at("lg", "ui-marketing-split", gridTemplate({ columns })),
+							at("xl", "ui-marketing-split", gap(12)),
+						]),
 					]}
 				>
 					{children}
@@ -184,7 +193,8 @@ Split.Copy = function SplitCopy(handle: Handle<Split.CopyProps>) {
 
 /**
  * The media column of a {@link Split}, sized to the track rather than its
- * content so a long sample does not tower over the copy beside it.
+ * content so a long sample does not tower over the copy beside it. With
+ * `bleed="end"` a stacked split keeps the media at the column width.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the media column.
@@ -195,17 +205,28 @@ Split.Copy = function SplitCopy(handle: Handle<Split.CopyProps>) {
  */
 Split.Media = function SplitMedia(handle: Handle<Split.MediaProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { bleed, mix, ...rest } = handle.props;
 
 		return (
 			<div
 				{...rest}
 				data-slot="split-media"
+				data-bleed={bleed}
 				mix={[
 					vstack({ gap: 4, align: "stretch" }),
 					minIs(0),
 					text("base"),
 					when("& pre", raw({ maxBlockSize: "22rem", overflowY: "auto" })),
+					bleed === "end"
+						? at(
+								"lg",
+								"ui-marketing-split",
+								when(
+									"& > *",
+									raw({ inlineSize: "max(100%, 60rem)", maxInlineSize: "none", flexShrink: "0" }),
+								),
+							)
+						: [],
 					mix,
 				]}
 			/>

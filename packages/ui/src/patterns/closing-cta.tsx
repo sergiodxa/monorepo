@@ -8,6 +8,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 
 import { CtaGroup } from "../components/cta-group.js";
@@ -78,7 +79,7 @@ export function ClosingCta(handle: Handle<ClosingCta.Props>) {
 	return () => {
 		let { actions, description, eyebrow, mix, parts, spacing, title, tone, ...rest } = handle.props;
 		let resolvedTone = tone ?? DEFAULT_TONE;
-		let resolvedSpacing = spacing ?? "normal";
+		let resolvedSpacing = spacing ?? "cta";
 
 		return (
 			<MarketingSection
@@ -89,11 +90,12 @@ export function ClosingCta(handle: Handle<ClosingCta.Props>) {
 				mix={mix}
 			>
 				<HeadingScope>
-					<div mix={[vstack({ gap: 6, align: "center" })]}>
+					<div mix={[vstack({ gap: 8, align: "center" })]}>
 						<MarketingHeader
 							eyebrow={eyebrow}
 							description={description}
 							align="center"
+							mix={[raw({ "--ui-marketing-header-end": "0" })]}
 							parts={{
 								title: parts?.title,
 								description: parts?.description,

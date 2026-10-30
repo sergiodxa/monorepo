@@ -1,7 +1,7 @@
 /**
  * Eyebrow, chapter title, and lead copy that open a marketing band. The title
  * uses display chapter typography; the lead stays on the marketing lead measure
- * so the claim reads first and the support follows.
+ * so the claim reads first and the support follows, at token-driven spacing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,30 +9,30 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { inlineFlex, items, self, vstack } from "@sdxc/u/layout";
-import { m, mbe, mi, pb, pi } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import {
-	font,
-	leading,
-	text,
-	textAlign,
-	textTransform,
-	tracking,
-	weight,
-} from "@sdxc/u/typography";
+import { raw } from "@sdxc/u/general";
+import { self, vstack } from "@sdxc/u/layout";
+import { m, mi } from "@sdxc/u/size";
+import { textAlign } from "@sdxc/u/typography";
+
+import type { MarketingEyebrowVariant } from "../styles/marketing.js";
 
 import { marketingLead } from "../styles/marketing.js";
+import { Eyebrow } from "../utils/eyebrow.js";
 
 import { Heading } from "./heading.js";
 
 /** Content alignment {@link MarketingHeader} applies when `align` is omitted. */
 const DEFAULT_ALIGN: MarketingHeader.Align = "start";
 
-/** Eyebrow chrome {@link MarketingHeader} applies when `eyebrowVariant` is omitted. */
-const DEFAULT_EYEBROW_VARIANT: MarketingHeader.EyebrowVariant = "pill";
+/** Eyebrow look {@link MarketingHeader} applies when `eyebrowVariant` is omitted. */
+const DEFAULT_EYEBROW_VARIANT: MarketingHeader.EyebrowVariant = "mono";
+
+/**
+ * Space below the header, before the band's body: 2.5rem on a phone, 4rem wide. A host
+ * that lays out its own gap sets `--ui-marketing-header-end` on the header instead.
+ */
+const HEADER_SPACE =
+	"var(--ui-marketing-header-end, var(--ui-marketing-header-space, clamp(2.5rem, 1.82rem + 2.91cqi, 4rem)))";
 
 /**
  * Prop types for {@link MarketingHeader}.
@@ -44,10 +44,11 @@ export namespace MarketingHeader {
 	export type Align = "start" | "center";
 
 	/**
-	 * How the optional eyebrow reads: a filled pill, a mono label, or a chip
-	 * with stronger tracking for short announcements.
+	 * How the optional eyebrow reads: a quiet mono label (the section default), a
+	 * hairline `quiet` pill, a filled `soft` pill, the brand `pill`, or a
+	 * brand-ringed `numbered` pill led by `eyebrowIndex`.
 	 */
-	export type EyebrowVariant = "pill" | "mono" | "chip";
+	export type EyebrowVariant = MarketingEyebrowVariant;
 
 	/**
 	 * Per-part styling for the elements the header renders besides its host.
@@ -68,11 +69,15 @@ export namespace MarketingHeader {
 		/** Short label above the title. */
 		eyebrow?: RemixNode;
 		/**
-		 * Eyebrow chrome. Defaults to {@link DEFAULT_EYEBROW_VARIANT} when an
+		 * Eyebrow look. Defaults to {@link DEFAULT_EYEBROW_VARIANT} when an
 		 * eyebrow is present.
 		 */
 		eyebrowVariant?: EyebrowVariant;
-		/** Supporting copy under the title. */
+		/** Turns the eyebrow into a link with a trailing arrow that nudges on hover. */
+		eyebrowHref?: string;
+		/** Index a `numbered` eyebrow leads with, such as `"01"`. */
+		eyebrowIndex?: RemixNode;
+		/** Supporting copy under the title; `<strong>` fragments draw in the heading ink. */
 		description?: RemixNode;
 		/** Stack alignment. Defaults to {@link DEFAULT_ALIGN}. */
 		align?: Align;
@@ -85,8 +90,10 @@ export namespace MarketingHeader {
 
 /**
  * Renders an optional eyebrow, a chapter-sized {@link Heading} from `children`,
- * and an optional lead paragraph. Nest inside a {@link HeadingScope} so the
- * title picks up the band's outline depth.
+ * and an optional lead paragraph. A mono eyebrow sits 0.5rem above the title and a
+ * pill 1.5rem; the lead follows 1rem below; the band's body starts
+ * `--ui-marketing-header-space` after. Nest inside a {@link HeadingScope} so the title
+ * picks up the band's outline depth.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the header's markup.
@@ -95,14 +102,24 @@ export namespace MarketingHeader {
  * 	{t("title")}
  * </MarketingHeader>
  * @example
- * <MarketingHeader eyebrow={t("new")} eyebrowVariant="chip" description={t("lead")}>
+ * <MarketingHeader eyebrow={t("chapter")} eyebrowVariant="numbered" eyebrowIndex="02">
  * 	{t("title")}
  * </MarketingHeader>
  */
 export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 	return () => {
-		let { align, children, description, eyebrow, eyebrowVariant, mix, parts, ...rest } =
-			handle.props;
+		let {
+			align,
+			children,
+			description,
+			eyebrow,
+			eyebrowHref,
+			eyebrowIndex,
+			eyebrowVariant,
+			mix,
+			parts,
+			...rest
+		} = handle.props;
 		let resolvedAlign = align ?? DEFAULT_ALIGN;
 		let resolvedEyebrowVariant = eyebrowVariant ?? DEFAULT_EYEBROW_VARIANT;
 		let isCenter = resolvedAlign === "center";
@@ -114,54 +131,29 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 				mix={[
 					vstack({
 						align: isCenter ? "center" : "stretch",
-						gap: 2,
+						gap: 0,
 					}),
 					isCenter ? [textAlign("center"), mi("auto")] : [],
-					mbe(10),
+					raw({ marginBlockEnd: HEADER_SPACE }),
 					mix,
 				]}
 			>
 				{eyebrow ? (
-					<span
-						data-variant={resolvedEyebrowVariant}
+					<Eyebrow
+						href={eyebrowHref}
+						variant={resolvedEyebrowVariant}
+						index={resolvedEyebrowVariant === "numbered" ? eyebrowIndex : undefined}
 						mix={[
-							inlineFlex(),
-							items("center"),
 							self(isCenter ? "center" : "start"),
-							text("xs"),
-							weight("semibold"),
-							when('&[data-variant="pill"]', [
-								pb(0.5),
-								pi(2.5),
-								rounded("full"),
-								border({ color: "brand", width: 1, style: "solid" }),
-								bg("brand.tint"),
-								fg("brand"),
-							]),
-							when('&[data-variant="mono"]', [
-								font("mono"),
-								tracking("wide"),
-								textTransform("uppercase"),
-								fg("neutral.muted"),
-							]),
-							when('&[data-variant="chip"]', [
-								pb(0.5),
-								pi(2.5),
-								rounded("full"),
-								border({ color: "brand", width: 1, style: "solid" }),
-								bg("brand.solid"),
-								fg("brand.onSolid"),
-								tracking("wider"),
-								textTransform("uppercase"),
-							]),
+							raw({ marginBlockEnd: resolvedEyebrowVariant === "mono" ? "0.5rem" : "1.5rem" }),
 							parts?.eyebrow,
 						]}
 					>
 						{eyebrow}
-					</span>
+					</Eyebrow>
 				) : null}
 
-				<Heading size="chapter" mix={[m(0), description ? mbe(2) : [], parts?.title]}>
+				<Heading size="chapter" mix={[m(0), parts?.title]}>
 					{children}
 				</Heading>
 
@@ -169,7 +161,7 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 					<p
 						mix={[
 							marketingLead(),
-							leading("relaxed"),
+							raw({ marginBlockStart: "1rem" }),
 							isCenter ? mi("auto") : [],
 							parts?.description,
 						]}

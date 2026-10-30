@@ -45,18 +45,21 @@ describe("marketingContainer", () => {
 });
 
 describe("marketingSectionSpace", () => {
-	test("defaults to the normal section-space token", () => {
+	test("defaults to the fluid normal section-space token", () => {
 		expect(styles(marketingSectionSpace())).toEqual({
-			paddingBlock: "var(--ui-marketing-section-space, 6rem)",
+			paddingBlock: "var(--ui-marketing-section-space, clamp(5rem, 3.86rem + 4.85cqi, 7.5rem))",
 		});
 	});
 
-	test("maps hero and compact onto their tokens", () => {
-		expect(styles(marketingSectionSpace("hero")).paddingBlock).toBe(
-			"var(--ui-marketing-section-space-hero, 8rem)",
+	test("maps hero, compact and cta onto their tokens", () => {
+		expect(styles(marketingSectionSpace("hero")).paddingBlock).toMatch(
+			/^var\(--ui-marketing-section-space-hero, clamp\(3\.5rem, .+, 8rem\)\)$/,
 		);
-		expect(styles(marketingSectionSpace("compact")).paddingBlock).toBe(
-			"var(--ui-marketing-section-space-compact, 4rem)",
+		expect(styles(marketingSectionSpace("compact")).paddingBlock).toMatch(
+			/^var\(--ui-marketing-section-space-compact, clamp\(3rem, .+, 4\.5rem\)\)$/,
+		);
+		expect(styles(marketingSectionSpace("cta")).paddingBlock).toMatch(
+			/^var\(--ui-marketing-section-space-cta, clamp\(5rem, .+, 7rem\)\)$/,
 		);
 	});
 });
@@ -67,23 +70,22 @@ describe("marketingBandTone", () => {
 		expect(styles(marketingBandTone("plain"))).toEqual({});
 	});
 
-	test("tinted paints a quiet neutral step with a brand corner glow", () => {
+	test("tinted paints a quiet neutral step with a brand corner glow, lifted in dark", () => {
 		let style = styles(marketingBandTone("tinted"));
 
 		expect(style.backgroundColor).toBe("var(--ui-color-neutral-100)");
 		expect(style.backgroundImage).toContain("var(--ui-brand-bg-solid)");
-		expect(style[".dark &"]).toEqual({ backgroundColor: "var(--ui-color-neutral-900)" });
+		expect(style[".dark &"]).toEqual({ backgroundColor: "var(--ui-neutral-bg-tint)" });
 	});
 
-	test("grid draws a faded absolute mesh behind the band", () => {
+	test("grid draws a hairline mesh behind the band at full strength", () => {
 		let style = styles(marketingBandTone("grid"));
+		let mesh = style["&::before"] as Record<string, unknown>;
 
 		expect(style.position).toBe("relative");
-		expect(style["&::before"]).toMatchObject({
-			content: '""',
-			position: "absolute",
-			opacity: "0.55",
-		});
+		expect(mesh).toMatchObject({ content: '""', position: "absolute" });
+		expect(mesh.backgroundImage).toContain("var(--ui-marketing-hairline");
+		expect(mesh.opacity).toBeUndefined();
 	});
 
 	test("inverse uses the solid neutral surface and on-solid text", () => {
@@ -93,77 +95,120 @@ describe("marketingBandTone", () => {
 		expect(style.color).toBe("var(--ui-neutral-fg-on-solid)");
 	});
 
-	test("inverse re-points neutral text and border tokens at the on-solid foreground", () => {
+	test("inverse re-points text, line, surface and focus tokens at the on-solid foreground", () => {
 		let style = styles(marketingBandTone("inverse"));
 
 		expect(style["--ui-neutral-fg-emphasis"]).toBe("var(--ui-neutral-fg-on-solid)");
 		expect(style["--ui-neutral-fg"]).toContain("var(--ui-neutral-fg-on-solid)");
 		expect(style["--ui-neutral-fg-muted"]).toContain("var(--ui-neutral-fg-on-solid)");
 		expect(style["--ui-neutral-border"]).toContain("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-marketing-hairline"]).toContain("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-surface-raised"]).toContain("var(--ui-neutral-fg-on-solid)");
+		expect(style["--ui-brand-ring"]).toBe("var(--ui-neutral-fg-on-solid)");
+	});
+
+	test("inverse becomes a raised surface on a dark page rather than a light slab", () => {
+		let style = styles(marketingBandTone("inverse"));
+		let dark = style[".dark &"] as Record<string, unknown>;
+
+		expect(dark.backgroundColor).toBe("var(--ui-surface-raised, Canvas)");
+		expect(dark["--ui-neutral-fg-emphasis"]).toBe("inherit");
+	});
+
+	test("brand paints the brand solid and re-points tokens at its foreground", () => {
+		let style = styles(marketingBandTone("brand"));
+
+		expect(style.backgroundColor).toBe("var(--ui-brand-bg-solid)");
+		expect(style["--ui-neutral-fg-emphasis"]).toBe("var(--ui-brand-fg-on-solid)");
+	});
+
+	test("gradient paints whatever the page supplies", () => {
+		expect(styles(marketingBandTone("gradient")).backgroundImage).toBe(
+			"var(--ui-marketing-band-gradient, none)",
+		);
 	});
 });
 
 describe("displayHeading", () => {
-	test("sets display family, weight, tracking and leading from marketing tokens", () => {
+	test("sizes the page H1 fluidly up to the display max, leading tied to size", () => {
 		let style = styles(displayHeading());
 
 		expect(style.fontFamily).toBe("var(--ui-font-display, sans-serif)");
 		expect(style.fontWeight).toBe("var(--ui-marketing-display-weight, 500)");
-		expect(style.letterSpacing).toBe("var(--ui-marketing-display-tracking, -0.04em)");
-		expect(style.lineHeight).toBe("var(--ui-marketing-display-leading, 1)");
-		expect(style.fontSize).toBe("var(--ui-text-5xl, 3rem)");
-		expect(style.textWrap).toBe("balance");
+		expect(style.letterSpacing).toBe("var(--ui-marketing-display-tracking, -0.035em)");
+		expect(style.fontSize).toContain("var(--ui-marketing-display-max, 4.5rem)");
+		expect(style.lineHeight).toContain("var(--ui-marketing-display-leading, min(");
 	});
 
-	test("grows the page H1 at the lg container step", () => {
-		expect(styles(displayHeading(1))["@container (min-width: 48rem)"]).toEqual({
-			fontSize: "var(--ui-text-7xl, 4.5rem)",
-		});
-	});
+	test("sizes a chapter at two thirds of the headline at both ends of the clamp", () => {
+		let h1 = String(styles(displayHeading(1)).fontSize);
+		let h2 = String(styles(displayHeading(2)).fontSize);
+		let min = (value: string) => Number(value.match(/clamp\(([\d.]+)rem/)?.[1]);
 
-	test("uses the chapter size token for level 2", () => {
-		expect(styles(displayHeading(2)).fontSize).toBe("var(--ui-marketing-chapter-size, 2.75rem)");
+		expect(h2).toContain("var(--ui-marketing-chapter-size, clamp(1.75rem");
+		expect(min(h1) / min(h2)).toBe(1.5);
+		expect(styles(displayHeading(2)).lineHeight).toBe("var(--ui-marketing-chapter-leading, 1.1)");
+		expect(styles(displayHeading(2)).letterSpacing).toBe(
+			"var(--ui-marketing-chapter-tracking, -0.025em)",
+		);
 	});
 });
 
 describe("marketingLead", () => {
-	test("is muted lead-sized copy capped at the lead measure", () => {
+	test("is body-ink copy on a 2rem line, capped at the lead measure", () => {
 		let style = styles(marketingLead());
 
+		expect(style.color).toBe("var(--ui-neutral-fg)");
 		expect(style.fontSize).toBe("var(--ui-marketing-lead-size, 1.125rem)");
+		expect(style.lineHeight).toBe("var(--ui-marketing-lead-leading, 2rem)");
+		expect(style.fontWeight).toBe("var(--ui-marketing-lead-weight, 400)");
 		expect(style.maxInlineSize).toBe("var(--ui-marketing-lead-measure, 40rem)");
-		expect(style.color).toBe("var(--ui-neutral-fg-muted)");
-		expect(style.textWrap).toBe("pretty");
+	});
+
+	test("draws emphasis fragments in the heading ink at the copy's weight", () => {
+		let style = styles(marketingLead());
+
+		expect(style["& :is(strong, b, [data-emphasis])"]).toEqual({
+			color: "var(--ui-neutral-fg-emphasis)",
+			fontWeight: "inherit",
+		});
+	});
+
+	test("steps up to the hero lead size", () => {
+		expect(styles(marketingLead("hero")).fontSize).toContain("var(--ui-marketing-hero-lead-size");
 	});
 });
 
 describe("marketingHairline", () => {
-	test("is a 1px solid neutral rule on the block-start edge", () => {
+	test("is a 1px rule in the translucent hairline on the block-start edge", () => {
 		expect(styles(marketingHairline())).toEqual({
 			borderBlockStartWidth: "1px",
 			borderBlockStartStyle: "solid",
-			borderBlockStartColor: "var(--ui-neutral-border)",
+			borderBlockStartColor:
+				"var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%, transparent))",
 		});
 	});
 });
 
 describe("logoCloudMark", () => {
-	test("forces the logo height token and mutes the mark", () => {
+	test("sizes the mark in full ink and steps it up at the lg container", () => {
 		let style = styles(logoCloudMark());
 
-		expect(style.blockSize).toBe("var(--ui-marketing-logo-height, 1rem)");
-		expect(style.inlineSize).toBe("auto");
-		expect(style.opacity).toBe(0.65);
-		expect(style.objectFit).toBe("contain");
-		expect(style.color).toBe("currentColor");
+		expect(style.blockSize).toBe("var(--ui-marketing-logo-height, 1.75rem)");
+		expect(style.opacity).toBeUndefined();
+		expect(style["@container (min-width: 48rem)"]).toEqual({
+			blockSize: "var(--ui-marketing-logo-height-lg, 2.25rem)",
+		});
 	});
 });
 
 describe("marketingCtaChrome", () => {
-	test("applies the marketing CTA radius and a soft elevation", () => {
+	test("hands the CTA radius and weight to the control through its own properties", () => {
 		let style = styles(marketingCtaChrome());
 
-		expect(style.borderRadius).toBe("var(--ui-marketing-cta-radius, 0.5rem)");
-		expect(style.boxShadow).toContain("0 1px 2px");
+		expect(style["--ui-button-radius"]).toBe("var(--ui-marketing-cta-radius, 0.5rem)");
+		expect(style["--ui-button-weight"]).toBe("var(--ui-marketing-cta-weight, 600)");
+		expect(style.borderRadius).toBeUndefined();
+		expect(style.boxShadow).toContain("var(--ui-shadow-control");
 	});
 });

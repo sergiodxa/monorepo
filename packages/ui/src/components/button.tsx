@@ -12,8 +12,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { opacity, rounded, visibility } from "@sdxc/u/effects";
-import { cursor, userSelect } from "@sdxc/u/general";
+import { opacity, visibility } from "@sdxc/u/effects";
+import { cursor, raw, userSelect } from "@sdxc/u/general";
 import {
 	absolute,
 	flex,
@@ -27,14 +27,17 @@ import {
 } from "@sdxc/u/layout";
 import { bs, is, minBs, p, pb, pi, pie, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
+import { text } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
 import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { surfaceControl } from "../styles/surface-control.js";
 import { glyphEdges } from "../utils/glyph-edges.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
+
+import { CtaGroup } from "./cta-group.js";
 
 const DEFAULT_COLOR: Button.Color = "neutral";
 
@@ -69,15 +72,17 @@ export namespace Button {
 
 	/**
 	 * Visual weight the button renders with: a solid fill with an on-solid
-	 * foreground, a transparent fill with a strong colored border, or a fully
-	 * transparent fill with just a colored label.
+	 * foreground, a transparent fill with a strong colored border, a fully
+	 * transparent fill with just a colored label, or a raised `surface` fill with
+	 * the emphasis ink and a tactile edge — a secondary that reads as a control
+	 * beside a solid primary, and turns translucent inside inverse and brand bands.
 	 */
-	export type Variant = "solid" | "outline" | "ghost";
+	export type Variant = "solid" | "outline" | "ghost" | "surface";
 
 	/**
 	 * Size variant controlling the button's padding and font size.
-	 * Marketing pairing: `"sm"` is ~32px for nav rows, `"lg"` is ~48px for
-	 * hero {@link CtaGroup} actions — keep those slots on different sizes.
+	 * Inside a {@link CtaGroup} an omitted size takes the group's, so a hero row
+	 * sizes every action at once; `"md"` is the 40px marketing CTA.
 	 */
 	export type Size = "sm" | "md" | "lg";
 
@@ -153,7 +158,8 @@ export function Button(handle: Handle<Button.Props>) {
 		let resolvedType = type ?? (isInvoker ? INVOKER_TYPE : undefined);
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
-		let resolvedSize = size ?? DEFAULT_SIZE;
+		let group = handle.context.get(CtaGroup) as CtaGroup.Context | undefined;
+		let resolvedSize = size ?? group?.size ?? DEFAULT_SIZE;
 		let resolvedDisabled = disabled || isPending;
 		let iconOnly = holdsOnlyAGlyph(children);
 		let edges = glyphEdges(children);
@@ -197,8 +203,10 @@ export function Button(handle: Handle<Button.Props>) {
 					 * icon reads as a rendering fault.
 					 */
 					when("& > svg", [shrink(), is(4), bs(4)]),
-					rounded("md"),
-					weight("medium"),
+					raw({
+						borderRadius: "var(--ui-button-radius, var(--ui-radius-md, 0.375rem))",
+						fontWeight: "var(--ui-button-weight, 500)",
+					}),
 					cursor("default"),
 					/** A small control reaches `--ui-target-size` however a consumer positions it. */
 					hitArea({ anchor: "flex-center" }),
@@ -264,7 +272,7 @@ export function Button(handle: Handle<Button.Props>) {
 						bs(ICON_ONLY_SIZE_MD),
 						minBs(ICON_ONLY_SIZE_MD),
 						shrink(),
-						rounded("full"),
+						raw({ "--ui-button-radius": "9999px" }),
 					]),
 					when('&[data-size="sm"][data-icon-only]', [
 						is(ICON_ONLY_SIZE_SM),
@@ -334,7 +342,7 @@ export function Button(handle: Handle<Button.Props>) {
 						]),
 						when('&[data-color="neutral"]', [
 							border("neutral"),
-							fg("neutral"),
+							fg("neutral.emphasis"),
 							when("&:hover", [bg("neutral.tint"), border("neutral.border-hover")]),
 							when("&:active", bg("neutral.bg-tint-hover")),
 						]),
@@ -367,7 +375,7 @@ export function Button(handle: Handle<Button.Props>) {
 							when("&:active", bg("brand.bg-tint-hover")),
 						]),
 						when('&[data-color="neutral"]', [
-							fg("neutral"),
+							fg("neutral.emphasis"),
 							when("&:hover", bg("neutral.bg-tint-hover")),
 							when("&:active", bg("neutral.bg-tint-pressed")),
 						]),
@@ -387,6 +395,8 @@ export function Button(handle: Handle<Button.Props>) {
 							when("&:active", bg("danger.bg-tint-hover")),
 						]),
 					]),
+
+					when('&[data-variant="surface"]', [surfaceControl()]),
 
 					when("&:disabled:not([data-pending])", [cursor("not-allowed"), opacity(50)]),
 

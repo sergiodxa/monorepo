@@ -241,13 +241,13 @@ Every export carries JSDoc, so the editor shows each full signature.
 
 ### Components: marketing
 
-- `MarketingSection` — landing band (`tone`, `spacing`, `align`, `ruled`, `variant="frame"`).
-- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: `pill` | `mono` | `chip`).
-- `CtaGroup` — wrapping primary/secondary actions; pair nav `sm` (~32px) with hero `lg` (~48px).
+- `MarketingSection` — landing band (`tone` incl. `brand` | `gradient`, `spacing`, `align`, `ruled`, `inset`, `variant="frame"`).
+- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: `mono` | `quiet` | `soft` | `pill` | `numbered`).
+- `CtaGroup` — wrapping primary/secondary actions; `size` (40px `md` default) reaches every action, `stack="phone"`.
 - `Split`, `Split.Copy`, `Split.Media` — two-column band content (`lean`, optional `checks`).
 - `StatStrip`, `StatStrip.Item` — numeric proof strip (`ruled` | `gap`).
-- `LogoCloud` — muted adopter marks at `--ui-marketing-logo-height`.
-- `Feature`, `Feature.Grid` — claim cells and a hairline-ruled grid (`variant="panel"` optional).
+- `LogoCloud` — adopter marks at `--ui-marketing-logo-height` (`layout`: `row` | `spread` | `grid`, `label`, `muted`).
+- `Feature`, `Feature.Grid` — claim cells in a grid of cards or a hairline mosaic (`variant`).
 
 ### Patterns (`@sdxc/ui/patterns`)
 
@@ -256,23 +256,25 @@ chrome on the root catalog stays free of landing weight.
 
 **Building blocks**
 
-- `LandingHero` — eyebrow, display title, lead, `CtaGroup`, media (`mediaPlacement`: `end` | `below` | `background`).
+- `LandingHero` — eyebrow, display title, lead, `CtaGroup`, `note`, `proof`, media (`mediaPlacement`: `below` | `end` | `background`).
 - `ProofStrip` — compact ruled band for `LogoCloud` and/or `StatStrip` children.
-- `FeatureBand` — header + `layout`: `split` | `grid` | `steps`.
+- `FeatureBand` — header + `layout`: `split` | `grid` | `steps` | `stage` | `timeline`.
+- `PricingBand`, `PricingBand.Plan` — plan cards; a `featured` plan inverts and leads on phones.
+- `TestimonialBand`, `TestimonialBand.Quote` — quote cards in masonry columns.
 - `FaqBand` — header + one or two `Accordion` columns (`columns={1|2}`).
 - `ClosingCta` — inverse/tinted close with title, lead, and actions.
 
 **Composition craft**
 
-- `ProductFrame` — window/device chrome (`lights`, `title`, `url`).
-- `CodeStage` / `TerminalPanel` — titled mono panel with optional actions slot.
+- `ProductFrame` — window/device chrome (`stage`, `shadow`, `lights`, `title`, `url`, `footer`).
+- `CodeStage` / `TerminalPanel` — titled mono panel (`variant`: `code` | `terminal` | `slab`, `lineNumbers`).
 - `InstallTabs`, `InstallTabs.Option` — radio dialect strip (no JS).
-- `TabbedStage`, `TabbedStage.Item` — pill tabs controlling a media panel (no JS).
+- `TabbedStage`, `TabbedStage.Item` — tabs or a vertical rail controlling a media panel (no JS).
 - `CheckList`, `CheckRow` — checked claims (`orientation`: `stacked` | `horizontal`).
-- `IconWell` — tinted marketing glyph well (`sm` | `md` | `lg`).
-- `Bento`, `Bento.Cell` — hairline-ruled equal columns.
-- `StepList`, `StepList.Item` — numbered how-it-works steps.
-- `AnnouncementChip`, `AccentText` — louder chip; emphasized phrase inside a headline.
+- `IconWell` — marketing glyph tile (`tone`: `quiet` | `brand`; `sm` | `md` | `lg`).
+- `Bento`, `Bento.Cell`, `Bento.Media` — cards or a hairline mosaic in equal columns.
+- `StepList`, `StepList.Item` — numbered steps or a `timeline`.
+- `AnnouncementChip`, `AccentText` — announcement label; marked phrase inside a headline (`color` | `swash` | `highlight`).
 
 ### Component helpers
 

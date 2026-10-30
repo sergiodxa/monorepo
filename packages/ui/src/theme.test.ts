@@ -33,19 +33,35 @@ describe("theme.css", () => {
 
 		expect(root).toContain("--ui-marketing-measure: 72rem;");
 		expect(root).toContain("--ui-marketing-gutter: 1rem;");
-		expect(root).toContain("--ui-marketing-section-space: 6rem;");
-		expect(root).toContain("--ui-marketing-section-space-compact: 4rem;");
-		expect(root).toContain("--ui-marketing-section-space-hero: 8rem;");
-		expect(root).toContain("--ui-marketing-display-tracking: -0.04em;");
+		expect(root).toContain("--ui-marketing-section-space: clamp(5rem, 3.86rem + 4.85cqi, 7.5rem);");
+		expect(root).toContain("--ui-marketing-section-space-compact: clamp(3rem,");
+		expect(root).toContain("--ui-marketing-section-space-hero: clamp(3.5rem,");
+		expect(root).toContain("--ui-marketing-section-space-cta: clamp(5rem,");
+		expect(root).toContain("--ui-marketing-header-space: clamp(2.5rem,");
+		expect(root).toContain("--ui-marketing-display-tracking: -0.035em;");
 		expect(root).toContain("--ui-marketing-display-weight: 500;");
-		expect(root).toContain("--ui-marketing-display-leading: 1;");
-		expect(root).toContain("--ui-marketing-lead-measure: 40rem;");
-		expect(root).toContain("--ui-marketing-lead-size: 1.125rem;");
-		expect(root).toContain("--ui-marketing-chapter-size: 2.75rem;");
-		expect(root).toContain("--ui-marketing-logo-height: 1rem;");
+		expect(root).toContain("--ui-marketing-display-max: 4.5rem;");
+		expect(root).toContain("--ui-marketing-chapter-size: clamp(1.75rem, 1.18rem + 2.42cqi, 3rem);");
+		expect(root).toContain("--ui-marketing-chapter-leading: 1.1;");
+		expect(root).toContain("--ui-marketing-lead-leading: 2rem;");
+		expect(root).toContain("--ui-marketing-logo-height: 1.75rem;");
+		expect(root).toContain("--ui-marketing-logo-height-lg: 2.25rem;");
 		expect(root).toContain("--ui-marketing-header-height: 4rem;");
 		expect(root).toContain("--ui-marketing-cta-radius: 0.5rem;");
+		expect(root).toContain("--ui-marketing-radius-surface: 1rem;");
 		expect(root).toContain("--ui-font-display: var(--ui-font-sans);");
+	});
+
+	test("draws marketing lines as ink at 6% and raises surfaces to white in light mode", () => {
+		let root = block(":root {");
+
+		expect(root).toContain(
+			"--ui-marketing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 6%, transparent);",
+		);
+		expect(root).toContain("--ui-surface-raised: white;");
+		expect(root).toContain("--ui-shadow-surface:");
+		expect(root).toContain("--ui-shadow-stage:");
+		expect(root).toContain("--ui-shadow-control:");
 	});
 
 	test("swaps every token for a light hairline in both dark blocks", () => {
@@ -58,11 +74,24 @@ describe("theme.css", () => {
 		}
 	});
 
+	test("declares dark surfaces and hairlines on the root alone, so a band can re-point them", () => {
+		for (let opener of [".dark {", "\t.system {"]) {
+			let root = block(opener);
+
+			expect(root).toContain(
+				"--ui-marketing-hairline: color-mix(in oklch, white 10%, transparent);",
+			);
+			expect(root).toContain("--ui-surface-raised: color-mix(");
+		}
+		expect(block("/* Forced dark mode */")).not.toContain("--ui-surface-raised");
+	});
+
 	test("draws the ring as a solid strong border under high contrast, in every scheme", () => {
 		let contrast = block("@media (prefers-contrast: more)");
 
 		expect(contrast).toContain(":is(.dark, .dark *)");
 		expect(contrast).toContain(":is(.system, .system *)");
 		expect(contrast).toContain("--ui-shadow-ring: 0 0 0 1px var(--ui-neutral-border-strong);");
+		expect(contrast).toContain("--ui-marketing-hairline: var(--ui-neutral-border-strong);");
 	});
 });

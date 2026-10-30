@@ -1,7 +1,7 @@
 /**
- * A short announcement with a stronger rim than the default eyebrow pill —
- * reserved for “new” / forward callouts that should read louder than a band
- * eyebrow.
+ * A short announcement above a hero — "new release", "we raised" — drawn with the
+ * same eyebrow looks a band header uses, so a page's labels share one vocabulary.
+ * Given an `href` it becomes a link whose trailing arrow nudges on hover.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,83 +9,80 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { inlineFlex, items } from "@sdxc/u/layout";
-import { pb, pi } from "@sdxc/u/size";
-import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 
-/** Rim treatment {@link AnnouncementChip} applies when `variant` is omitted. */
-const DEFAULT_VARIANT: AnnouncementChip.Variant = "rim";
+import type { MarketingEyebrowVariant } from "../styles/marketing.js";
+
+import { Eyebrow } from "../utils/eyebrow.js";
+
+/** Look {@link AnnouncementChip} applies when `variant` is omitted. */
+const DEFAULT_VARIANT: AnnouncementChip.Variant = "quiet";
+
+/** Dual-tone brand edge the `special` chip draws, louder than every eyebrow look. */
+const SPECIAL_STYLES = {
+	border: "1px solid transparent",
+	color: "var(--ui-brand-fg)",
+	backgroundImage:
+		"linear-gradient(var(--ui-brand-bg-tint), var(--ui-brand-bg-tint)), linear-gradient(120deg, var(--ui-brand-bg-solid), color-mix(in oklab, var(--ui-brand-bg-solid) 40%, Canvas))",
+	backgroundOrigin: "border-box",
+	backgroundClip: "padding-box, border-box",
+	borderRadius: "9999px",
+	paddingBlock: "0.375rem",
+	paddingInline: "0.875rem",
+	lineHeight: "1rem",
+	fontWeight: "600",
+} as const;
 
 /**
  * Prop types for {@link AnnouncementChip}.
  */
 export namespace AnnouncementChip {
 	/**
-	 * How the chip draws its edge: a solid brand rim, or a soft dual-tone
-	 * border for a louder announcement.
+	 * How the chip reads: one of the eyebrow looks (the hairline `quiet` pill by
+	 * default), or `special`, a dual-tone brand edge for the loudest callout.
 	 */
-	export type Variant = "rim" | "special";
+	export type Variant = MarketingEyebrowVariant | "special";
 
 	/**
 	 * Props accepted by {@link AnnouncementChip}.
 	 */
-	export interface Props extends TagProps<"span"> {
-		/** Rim treatment. Defaults to {@link DEFAULT_VARIANT}. */
+	export interface Props {
+		/** Extra styling, applied after the chip look. */
+		mix?: TagProps<"span">["mix"];
+		/** Look. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
+		/** Turns the chip into a link with a trailing arrow. */
+		href?: string;
 		/** Announcement label — always supplied by the page. */
 		children: RemixNode;
 	}
 }
 
 /**
- * Renders a compact announcement label. Prefer {@link MarketingHeader}'s
- * eyebrow for ordinary section labels; reach for this when the callout itself
- * is the news.
+ * Renders the announcement as a `span`, or an `a` with a trailing arrow when `href` is
+ * set, styled by the shared eyebrow looks.
  *
- * @param handle Runtime handle carrying the host `<span>`'s props.
+ * @param handle Runtime handle carrying the host's props.
  * @returns The render function producing the chip's markup.
  * @example
- * <AnnouncementChip>{t("announce.forward")}</AnnouncementChip>
+ * <AnnouncementChip href="/blog/v2">{t("hero.announcement")}</AnnouncementChip>
  * @example
- * <AnnouncementChip variant="special">{t("announce.launch")}</AnnouncementChip>
+ * <AnnouncementChip variant="special">{t("hero.launch")}</AnnouncementChip>
  */
 export function AnnouncementChip(handle: Handle<AnnouncementChip.Props>) {
 	return () => {
-		let { mix, variant, ...rest } = handle.props;
+		let { children, href, mix, variant } = handle.props;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 
 		return (
-			<span
-				{...rest}
-				data-slot="announcement-chip"
-				data-variant={resolvedVariant}
-				mix={[
-					inlineFlex(),
-					items("center"),
-					pb(0.5),
-					pi(2.5),
-					rounded("full"),
-					text("xs"),
-					weight("semibold"),
-					tracking("wider"),
-					textTransform("uppercase"),
-					bg("brand.tint"),
-					fg("brand"),
-					resolvedVariant === "special"
-						? raw({
-								border: "1px solid transparent",
-								backgroundImage:
-									"linear-gradient(var(--ui-brand-bg-tint), var(--ui-brand-bg-tint)), linear-gradient(120deg, var(--ui-brand-bg-solid), color-mix(in oklab, var(--ui-brand-bg-solid) 40%, Canvas))",
-								backgroundOrigin: "border-box",
-								backgroundClip: "padding-box, border-box",
-							})
-						: border({ color: "brand", width: 1, style: "solid" }),
-					mix,
-				]}
-			/>
+			<Eyebrow
+				href={href}
+				slot="announcement-chip"
+				variant={resolvedVariant}
+				mix={[resolvedVariant === "special" ? raw(SPECIAL_STYLES) : [], mix]}
+			>
+				{children}
+			</Eyebrow>
 		);
 	};
 }

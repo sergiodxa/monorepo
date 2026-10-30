@@ -37,16 +37,19 @@ describe("MarketingHeader", () => {
 				Title
 			</MarketingHeader>,
 		);
-		let chip = await renderToString(
-			<MarketingHeader eyebrow="Beta" eyebrowVariant="chip">
+		let numbered = await renderToString(
+			<MarketingHeader eyebrow="Features" eyebrowVariant="numbered" eyebrowIndex="01">
 				Title
 			</MarketingHeader>,
 		);
+		let fallback = await renderToString(<MarketingHeader eyebrow="Section">Title</MarketingHeader>);
 
 		expect(pill).toContain('data-variant="pill"');
 		expect(mono).toContain('data-variant="mono"');
-		expect(chip).toContain('data-variant="chip"');
-		expect(chip).toContain("text-transform: uppercase");
+		expect(numbered).toContain('data-variant="numbered"');
+		expect(numbered).toContain('data-slot="eyebrow-index"');
+		expect(fallback).toContain('data-variant="mono"');
+		expect(mono).toContain("text-transform: uppercase");
 	});
 
 	test("centers the stack when align is center", async () => {

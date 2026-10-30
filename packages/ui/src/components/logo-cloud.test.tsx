@@ -21,6 +21,7 @@ describe("LogoCloud", () => {
 
 		expect(html).toContain('data-slot="logo-cloud"');
 		expect(html).toContain('data-muted="true"');
+		expect(html).toContain('data-layout="row"');
 		expect(html).toContain("var(--ui-marketing-logo-height");
 		expect(html).toContain('src="/acme.svg"');
 	});

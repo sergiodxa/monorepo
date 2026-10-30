@@ -12,20 +12,23 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, pointerEvents, userSelect } from "@sdxc/u/general";
+import { opacity } from "@sdxc/u/effects";
+import { cursor, pointerEvents, raw, userSelect } from "@sdxc/u/general";
 import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
 import { bs, is, minBs, pb, pi, pie, pis } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
+import { text } from "@sdxc/u/typography";
 
 import type { LinkPrefetch } from "../utils/link-prefetch.js";
 import type { SemanticColor } from "../utils/semantic-color.js";
 
 import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { surfaceControl } from "../styles/surface-control.js";
 import { glyphEdges } from "../utils/glyph-edges.js";
 import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
+
+import { CtaGroup } from "./cta-group.js";
 
 /** Semantic color role {@link LinkButton} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: LinkButton.Color = "neutral";
@@ -50,15 +53,17 @@ export namespace LinkButton {
 
 	/**
 	 * Visual weight the link renders with: a solid fill with an on-solid
-	 * foreground, a transparent fill with a strong colored border, or a fully
-	 * transparent fill with just a colored label.
+	 * foreground, a transparent fill with a strong colored border, a fully
+	 * transparent fill with just a colored label, or a raised `surface` fill with
+	 * the emphasis ink and a tactile edge — a secondary that reads as a control
+	 * beside a solid primary, and turns translucent inside inverse and brand bands.
 	 */
-	export type Variant = "solid" | "outline" | "ghost";
+	export type Variant = "solid" | "outline" | "ghost" | "surface";
 
 	/**
 	 * Size variant controlling the link's padding and font size.
-	 * Marketing pairing: `"sm"` is ~32px for nav rows, `"lg"` is ~48px for
-	 * hero {@link CtaGroup} actions — keep those slots on different sizes.
+	 * Inside a {@link CtaGroup} an omitted size takes the group's, so a hero row
+	 * sizes every action at once; `"md"` is the 40px marketing CTA.
 	 */
 	export type Size = "sm" | "md" | "lg";
 
@@ -109,7 +114,8 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 		let { color, variant, size, prefetch, children, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
-		let resolvedSize = size ?? DEFAULT_SIZE;
+		let group = handle.context.get(CtaGroup) as CtaGroup.Context | undefined;
+		let resolvedSize = size ?? group?.size ?? DEFAULT_SIZE;
 		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 		let edges = glyphEdges(children);
 
@@ -144,8 +150,10 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 						 * than the words and a squashed icon reads as a rendering fault.
 						 */
 						when("& > svg", [shrink(), is(4), bs(4)]),
-						rounded("md"),
-						weight("medium"),
+						raw({
+							borderRadius: "var(--ui-button-radius, var(--ui-radius-md, 0.375rem))",
+							fontWeight: "var(--ui-button-weight, 500)",
+						}),
 						/** A small control reaches `--ui-target-size` however a consumer positions it. */
 						hitArea({ anchor: "flex-center" }),
 						pi(4),
@@ -232,7 +240,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 							]),
 							data("color", "neutral", [
 								border("neutral"),
-								fg("neutral"),
+								fg("neutral.emphasis"),
 								hover([bg("neutral.tint"), border("neutral.border-hover")]),
 								active(bg("neutral.bg-tint-hover")),
 							]),
@@ -264,7 +272,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 								active(bg("brand.bg-tint-hover")),
 							]),
 							data("color", "neutral", [
-								fg("neutral"),
+								fg("neutral.emphasis"),
 								hover(bg("neutral.bg-tint-hover")),
 								active(bg("neutral.bg-tint-pressed")),
 							]),
@@ -285,6 +293,8 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 							]),
 						]),
 						data("variant", "ghost", [bg("transparent"), border("transparent")]),
+
+						data("variant", "surface", surfaceControl()),
 
 						when('&[aria-disabled="true"]', opacity(50)),
 						when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
