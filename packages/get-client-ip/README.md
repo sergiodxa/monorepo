@@ -1,12 +1,13 @@
 # @sdxc/get-client-ip
 
-Read the client IP from a Cloudflare Workers request, parsed into an address.
+Read the client IP your proxy or edge reports for a request, parsed into an address.
 
-Cloudflare attaches
-[`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip)
-to every request it routes, carrying the address the connection came from. This package reads
-that header and parses it into an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip),
-so only a valid address ever becomes a rate limit key or a stored value.
+Every hosting platform puts the connecting client's address in a header: Cloudflare in
+[`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip),
+a reverse proxy in `X-Forwarded-For` or `Forwarded`, Fly.io in `Fly-Client-IP`. This package reads
+the one header your platform sets and parses it into an `IP` from
+[`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip), so only a valid address ever becomes a rate
+limit key or a stored value. It runs on any runtime with the Fetch API.
 
 ## Installation
 
@@ -32,9 +33,43 @@ export function GET(request: Request) {
 
 An `IP` serializes as its canonical text, so it goes straight into JSON.
 
+`CF-Connecting-IP` is read unless you name another header.
+
+### Read the header your platform sets
+
+```typescript
+getClientIP(request, { header: "Fly-Client-IP" });
+getClientIP(request, { header: "X-Forwarded-For" }); // behind one reverse proxy
+getClientIP(request, { header: "X-Forwarded-For", proxies: 2 }); // a CDN, then a load balancer
+```
+
+Only the named header is read. A client can send any header it likes, so a header is trustworthy
+only when the platform in front of your app overwrites it, and reading a second one would let a
+client pick its own address. Name exactly the header your platform documents.
+
+`X-Forwarded-For` and `Forwarded` are lists every proxy appends to, and a client can write the
+first entries itself. The address is read from the right: `proxies` is how many trusted proxies
+append an entry (one by default), and the entry the outermost of them appended is the client.
+
+| Platform                        | `header`           |
+| ------------------------------- | ------------------ |
+| Cloudflare                      | `CF-Connecting-IP` |
+| Fly.io                          | `Fly-Client-IP`    |
+| Fastly                          | `Fastly-Client-IP` |
+| Akamai, Cloudflare Enterprise   | `True-Client-IP`   |
+| Azure Front Door                | `X-Azure-ClientIP` |
+| DigitalOcean App Platform       | `DO-Connecting-IP` |
+| Shopify Oxygen                  | `Oxygen-Buyer-IP`  |
+| nginx with `proxy_set_header`   | `X-Real-IP`        |
+| Most load balancers and proxies | `X-Forwarded-For`  |
+| Proxies following RFC 7239      | `Forwarded`        |
+
+`CLIENT_IP_HEADERS` lists these names, and `header` accepts any other name as a header carrying
+one address.
+
 ### Fall back when there is no address
 
-A request Cloudflare did not route (a local dev server, a test) has no header, and a header that
+A request no trusted proxy routed (a local dev server, a test) has no header, and a header that
 is not one address parses to nothing; both answer `null`, so one fallback covers them:
 
 ```typescript
@@ -58,16 +93,24 @@ router.get("/", (ctx) => {
 
 ## API
 
-### `getClientIP(request: Request): IP | null`
+### `getClientIP(source: Request | Headers, options?: ClientIPOptions): IP | null`
 
-Parses the request's `CF-Connecting-IP` header into an `IP`, or answers `null` when the header
-is absent or is not a single address.
+Parses the configured header into an `IP`, or answers `null` when the header is absent, is not
+one address, or (for a list) has fewer entries than `proxies`.
+
+- `header`: the header to read. Default `"CF-Connecting-IP"`.
+- `proxies`: for `X-Forwarded-For` and `Forwarded`, how many trusted proxies append an entry,
+  counted from the right. A port on the entry is dropped. Default `1`.
+
+### `CLIENT_IP_HEADERS`
+
+The header names platforms and proxies use for the client's address, typed as `ClientIPHeader`.
 
 ### `@sdxc/get-client-ip/middleware`
 
-#### `getClientIP(): Middleware` (default export)
+#### `getClientIP(options?: ClientIPOptions): Middleware` (default export)
 
-A router middleware that sets `ctx.ip` to the parsed address. Importing the module types
+A router middleware that sets `ctx.ip` to the address `getClientIP` reads with the same options. Importing the module types
 `ctx.ip` as `IP | null`.
 
 #### `ClientIP`

@@ -76,4 +76,22 @@ describe("getClientIP middleware", () => {
 
 		expect(ctx.get(ClientIP)).toBeNull();
 	});
+
+	test("reads the header the options name", async () => {
+		let seen: IP | null = null;
+
+		let router = createRouter({ middleware: [getClientIP({ header: "X-Forwarded-For" })] });
+		router.get("/", (ctx) => {
+			seen = ctx.ip;
+			return new Response("ok");
+		});
+
+		await router.fetch(
+			new Request("https://example.com/", {
+				headers: { "X-Forwarded-For": "10.0.0.1, 198.51.100.7", "CF-Connecting-IP": "10.0.0.2" },
+			}),
+		);
+
+		expect(String(seen)).toBe("198.51.100.7");
+	});
 });

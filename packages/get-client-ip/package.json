@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/get-client-ip",
 	"version": "0.0.1",
-	"description": "Read the client IP from a Cloudflare Workers request",
+	"description": "Read the client IP your proxy or edge reports for a request",
 	"license": "MIT",
 	"type": "module",
 	"exports": {

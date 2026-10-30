@@ -12,6 +12,8 @@ import type { Middleware } from "remix/router";
 
 import { createContextKey } from "remix/router";
 
+import type { ClientIPOptions } from "./index.js";
+
 import { getClientIP as readClientIP } from "./index.js";
 
 /**
@@ -20,7 +22,7 @@ import { getClientIP as readClientIP } from "./index.js";
  */
 declare module "remix/router" {
 	interface RequestContext {
-		/** The client's address from `CF-Connecting-IP`, or `null` when absent or malformed. */
+		/** The client's address from the trusted header, or `null` when absent or malformed. */
 		ip: IP | null;
 	}
 }
@@ -36,16 +38,19 @@ export const ClientIP: { defaultValue: IP | null } = createContextKey<IP | null>
 const IP_PROPERTY = { property: "ip" } as const;
 
 /**
- * Creates a middleware that parses `CF-Connecting-IP` and exposes the result as
- * `ctx.ip`.
+ * Creates a middleware that parses the trusted header (`CF-Connecting-IP` unless
+ * configured) and exposes the result as `ctx.ip`.
  *
+ * @param options - The header to read and, for proxy lists, the proxy count.
  * @returns A middleware that populates `ctx.ip`.
  * @example
  * let router = createRouter({ middleware: [log(logger), getClientIP()] });
+ * @example
+ * getClientIP({ header: "X-Forwarded-For" });
  */
-export default function getClientIP(): Middleware {
+export default function getClientIP(options?: ClientIPOptions): Middleware {
 	return (ctx, next) => {
-		ctx.set(ClientIP, readClientIP(ctx.request), IP_PROPERTY);
+		ctx.set(ClientIP, readClientIP(ctx.request, options), IP_PROPERTY);
 		return next();
 	};
 }
