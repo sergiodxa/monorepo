@@ -213,4 +213,23 @@ describe("marketing grids leave no short last row hanging", () => {
 
 		expect(cells.reduce((sum, cell) => sum + cell.width, 0)).toBeCloseTo(marks.width, 0);
 	});
+
+	test("a page rounds the corners cards share with --ui-marketing-card-radius-inner", () => {
+		let root = mount(
+			1200,
+			<div style="--ui-marketing-card-radius-inner: 20px">
+				<Bento columns={3}>
+					{range(6).map((index) => (
+						<Bento.Cell key={index}>
+							<Bento.Title>Cell {index}</Bento.Title>
+						</Bento.Cell>
+					))}
+				</Bento>
+			</div>,
+		);
+		let middle = root.querySelectorAll('[data-slot="bento-cell"]')[1]!;
+
+		expect(getComputedStyle(middle).borderEndEndRadius).toBe("20px");
+		expect(getComputedStyle(middle).borderStartStartRadius).toBe("20px");
+	});
 });

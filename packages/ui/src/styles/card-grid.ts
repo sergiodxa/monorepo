@@ -23,8 +23,11 @@ const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%
 /** Radius of a card corner that sits on the grid's outer edge. */
 const OUTER_RADIUS = "var(--ui-marketing-card-radius-outer, 1.5rem)";
 
-/** Radius of a card corner that faces a neighbouring card. */
-const INNER_RADIUS = "0.5rem";
+/**
+ * Radius of a card corner that faces a neighbouring card; a page that wants every corner
+ * alike sets `--ui-marketing-card-radius-inner` to the outer radius.
+ */
+const INNER_RADIUS = "var(--ui-marketing-card-radius-inner, 0.5rem)";
 
 /** Custom property holding a card cell's block padding, read back by the media slot. */
 const PADDING_BLOCK = "--ui-marketing-cell-padding-block";
