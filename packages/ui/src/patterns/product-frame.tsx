@@ -12,8 +12,9 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
+import { container, gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
+import { atMax } from "@sdxc/u/responsive";
 import { bs, is, m, p, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, truncate, weight } from "@sdxc/u/typography";
@@ -46,6 +47,18 @@ const SHADOWS: Record<ProductFrame.Shadow | "device", string> = {
 /** Fill of a neutral traffic-light dot: ink at 15%, quiet enough to leave the shot the focus. */
 const NEUTRAL_LIGHT = "color-mix(in oklch, var(--ui-neutral-fg-emphasis) 15%, transparent)";
 
+/** Container the framed body declares so a design-width canvas can measure its crop. */
+const BODY_CONTAINER = "ui-product-frame-body";
+
+/** Width of the fade a cropped canvas draws at its clipped edge. */
+const CROP_FADE = "2rem";
+
+/**
+ * Container width under which a stage drops to a thin pad and lets the frame take its full
+ * width, so a phone spends its few pixels on the product rather than on the panel.
+ */
+const STAGE_COMPACT_BELOW = "md";
+
 /** Glow a `backdrop` stage paints when the page passes no backdrop of its own. */
 const BACKDROP_GLOW =
 	"radial-gradient(ellipse 80% 70% at 50% 0%, color-mix(in oklch, var(--ui-brand-bg-solid) 12%, transparent), transparent 70%)";
@@ -73,6 +86,12 @@ export namespace ProductFrame {
 	export type Shadow = "stage" | "tinted";
 
 	/**
+	 * How a body narrower than `designWidth` shows its content: cropped at the end edge
+	 * under a fade, or scaled down whole.
+	 */
+	export type Fit = "crop" | "scale";
+
+	/**
 	 * Per-part styling for chrome the frame renders besides its host.
 	 */
 	export interface PartsProps {
@@ -93,8 +112,8 @@ export namespace ProductFrame {
 		/** Outer chrome. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
 		/**
-		 * Panel the frame is staged on, centred at 86% of its width. The host
-		 * props and `mix` land on the stage when one is drawn.
+		 * Panel the frame is staged on, centred at 86% of its width, and at full width
+		 * under a thin pad below the `md` container. Host props and `mix` land on the stage.
 		 * Defaults to {@link DEFAULT_STAGE}.
 		 */
 		stage?: Stage;
@@ -119,6 +138,14 @@ export namespace ProductFrame {
 		url?: RemixNode;
 		/** Optional caption row under the body, set as a 12px muted strip. */
 		footer?: RemixNode;
+		/**
+		 * Narrowest width the framed UI lays out at, such as `"56rem"`. A narrower body keeps
+		 * the desktop composition and shows it through `fit`, so nothing inside reflows or
+		 * truncates on a phone.
+		 */
+		designWidth?: string;
+		/** How a body narrower than `designWidth` shows it. Defaults to `"crop"`. */
+		fit?: Fit;
 		/** Per-part styling for frame, chrome, body and footer. */
 		parts?: PartsProps;
 		/** Product UI, screenshot, or staged sample inside the frame. */
@@ -145,6 +172,8 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 		let {
 			backdrop,
 			children,
+			designWidth,
+			fit,
 			footer,
 			lights,
 			mix,
@@ -184,6 +213,7 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 									marginInline: "auto",
 									maxInlineSize: "86%",
 								}),
+								atMax(STAGE_COMPACT_BELOW, raw({ maxInlineSize: "100%" })),
 								parts?.frame,
 							]
 						: mix,
@@ -202,7 +232,13 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 							parts?.chrome,
 						]}
 					>
-						<span mix={[hstack({ gap: 3, align: "center" }), is("100%"), overflow("hidden")]}>
+						<span
+							mix={[
+								hstack({ gap: 3, align: "center" }),
+								raw({ flex: "1 1 0", minInlineSize: "0" }),
+								overflow("hidden"),
+							]}
+						>
 							{lights ? <FrameLights color={lights === "color"} /> : null}
 
 							{title ? (
@@ -220,7 +256,7 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 									fg("neutral.muted"),
 									truncate(),
 									pi(2),
-									raw({ maxInlineSize: "50%" }),
+									raw({ flexShrink: "0", maxInlineSize: "50%" }),
 								]}
 							>
 								{url}
@@ -239,10 +275,17 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 							bs("auto"),
 							raw({ display: "block", verticalAlign: "middle" }),
 						]),
+						designWidth ? container(BODY_CONTAINER) : [],
 						parts?.body,
 					]}
 				>
-					{children}
+					{designWidth ? (
+						<DesignCanvas width={designWidth} fit={fit ?? "crop"}>
+							{children}
+						</DesignCanvas>
+					) : (
+						children
+					)}
 				</div>
 
 				{footer ? (
@@ -290,6 +333,7 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 						paddingBlock: "clamp(1rem, 3cqi, 3rem)",
 						backgroundImage: isBackdrop && !backdrop ? BACKDROP_GLOW : "none",
 					}),
+					atMax(STAGE_COMPACT_BELOW, raw({ padding: "0.75rem" })),
 					mix,
 				]}
 			>
@@ -313,6 +357,62 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 					</div>
 				) : null}
 				{frame}
+			</div>
+		);
+	};
+}
+
+/**
+ * Props accepted by {@link DesignCanvas}.
+ */
+interface DesignCanvasProps {
+	/** Narrowest width the children lay out at. */
+	width: string;
+	/** Crop or scale once the body is narrower than `width`. */
+	fit: ProductFrame.Fit;
+	/** The framed UI. */
+	children: RemixNode;
+}
+
+/**
+ * Lays the framed UI out at least `width` wide inside the body. A body that narrow or wider
+ * shows it at full size; a narrower one crops its end edge under a fade, or with `scale`
+ * zooms the whole composition down to the body's width.
+ *
+ * @param handle Runtime handle carrying the design width and fit.
+ * @returns The render function producing the canvas.
+ */
+function DesignCanvas(handle: Handle<DesignCanvasProps>) {
+	return () => {
+		let { children, fit, width } = handle.props;
+		let narrow =
+			fit === "scale"
+				? raw({
+						inlineSize: width,
+						zoom: `tan(atan2(100cqi, ${width}))`,
+					})
+				: [
+						raw({
+							maskImage: `linear-gradient(to right, #000 calc(100cqi - ${CROP_FADE}), transparent 100cqi)`,
+						}),
+						when(
+							"&:dir(rtl)",
+							raw({
+								maskImage: `linear-gradient(to left, #000 calc(100cqi - ${CROP_FADE}), transparent 100cqi)`,
+							}),
+						),
+					];
+
+		return (
+			<div
+				data-slot="product-frame-canvas"
+				data-fit={fit}
+				mix={[
+					raw({ inlineSize: "100%", minInlineSize: fit === "scale" ? "0" : width }),
+					atMax(width, BODY_CONTAINER, narrow),
+				]}
+			>
+				{children}
 			</div>
 		);
 	};
