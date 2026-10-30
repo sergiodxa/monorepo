@@ -26,6 +26,10 @@ import {
 	marketingSectionSpace,
 } from "../styles/marketing.js";
 
+import type { HeadingLevel } from "./heading-scope.js";
+
+import { HeadingScope, readAmbientLevel } from "./heading-scope.js";
+
 /** Band fill {@link MarketingSection} applies when `tone` is omitted. */
 const DEFAULT_TONE: MarketingSection.Tone = "plain";
 
@@ -71,6 +75,12 @@ export namespace MarketingSection {
 	 */
 	export type Variant = "default" | "frame";
 
+	/** Value {@link MarketingSection} provides to bands nested inside it. */
+	export interface Context {
+		/** Heading level the enclosing band's title renders at. */
+		level: HeadingLevel;
+	}
+
 	/**
 	 * Per-part styling for the elements the band renders besides its host.
 	 */
@@ -108,6 +118,12 @@ export namespace MarketingSection {
 		 * not `"frame"`.
 		 */
 		flush?: boolean;
+		/**
+		 * Heading level of the band's title, and of every heading placed directly in it.
+		 * Defaults to one below the enclosing band, else one below the ambient
+		 * `HeadingScope`, so bands on a bare page render `<h2>` under the hero's `<h1>`.
+		 */
+		level?: HeadingLevel;
 		/** Per-part styling for the measured inner column. */
 		parts?: PartsProps;
 		/** Band content — headers, splits, feature grids, and so on. */
@@ -132,10 +148,23 @@ export namespace MarketingSection {
  * 	{children}
  * </MarketingSection>
  */
-export function MarketingSection(handle: Handle<MarketingSection.Props>) {
+export function MarketingSection(handle: Handle<MarketingSection.Props, MarketingSection.Context>) {
 	return () => {
-		let { align, children, flush, inset, mix, parts, ruled, spacing, tone, variant, ...rest } =
-			handle.props;
+		let {
+			align,
+			children,
+			flush,
+			inset,
+			level,
+			mix,
+			parts,
+			ruled,
+			spacing,
+			tone,
+			variant,
+			...rest
+		} = handle.props;
+		let resolvedLevel = level ?? resolveBandLevel(handle);
 		let resolvedTone = tone ?? DEFAULT_TONE;
 		let resolvedSpacing = spacing ?? DEFAULT_SPACING;
 		let resolvedAlign = align ?? DEFAULT_ALIGN;
@@ -143,6 +172,8 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 		let isCenter = resolvedAlign === "center";
 		let isFrame = resolvedVariant === "frame";
 		let isFlushFrame = isFrame && Boolean(flush);
+
+		handle.context.set({ level: resolvedLevel });
 
 		return (
 			<section
@@ -170,55 +201,77 @@ export function MarketingSection(handle: Handle<MarketingSection.Props>) {
 					mix,
 				]}
 			>
-				<div
-					mix={[
-						isFrame
-							? [
-									maxIs("var(--ui-marketing-measure, 72rem)"),
-									mi("auto"),
-									is("100%"),
-									/**
-									 * Match the pre-migration framed band: quiet gutters that
-									 * open to 3rem above `lg`, so copy clears the rails.
-									 */
-									pi(5),
-									isFlushFrame ? [] : marketingSectionSpace(resolvedSpacing),
-									at("lg", "ui-marketing-section", [
-										pi(12),
-										borderEdge("inline-start", {
-											color: "neutral",
-											width: 1,
-											style: "dashed",
-										}),
-										borderEdge("inline-end", {
-											color: "neutral",
-											width: 1,
-											style: "dashed",
-										}),
-										ruled
-											? [
-													before(frameMarker({ insetInlineStart: "-4px" })),
-													after(frameMarker({ insetInlineEnd: "-4px" })),
-												]
-											: [],
-									]),
-								]
-							: marketingContainer(),
-						vstack({
-							align: isCenter ? "center" : "stretch",
-							gap: 0,
-						}),
-						relative(),
-						is("100%"),
-						isCenter ? textAlign("center") : [],
-						parts?.container,
-					]}
-				>
-					{children}
-				</div>
+				<HeadingScope level={resolvedLevel}>
+					<div
+						mix={[
+							isFrame
+								? [
+										maxIs("var(--ui-marketing-measure, 72rem)"),
+										mi("auto"),
+										is("100%"),
+										/**
+										 * Match the pre-migration framed band: quiet gutters that
+										 * open to 3rem above `lg`, so copy clears the rails.
+										 */
+										pi(5),
+										isFlushFrame ? [] : marketingSectionSpace(resolvedSpacing),
+										at("lg", "ui-marketing-section", [
+											pi(12),
+											borderEdge("inline-start", {
+												color: "neutral",
+												width: 1,
+												style: "dashed",
+											}),
+											borderEdge("inline-end", {
+												color: "neutral",
+												width: 1,
+												style: "dashed",
+											}),
+											ruled
+												? [
+														before(frameMarker({ insetInlineStart: "-4px" })),
+														after(frameMarker({ insetInlineEnd: "-4px" })),
+													]
+												: [],
+										]),
+									]
+								: marketingContainer(),
+							vstack({
+								align: isCenter ? "center" : "stretch",
+								gap: 0,
+							}),
+							relative(),
+							is("100%"),
+							isCenter ? textAlign("center") : [],
+							parts?.container,
+						]}
+					>
+						{children}
+					</div>
+				</HeadingScope>
 			</section>
 		);
 	};
+}
+
+/**
+ * One level below the enclosing band, else one below the ambient scope, else `2`: the
+ * page's `<h1>` belongs to its hero, so a band composed on a bare page is a chapter of it.
+ */
+function resolveBandLevel(handle: Handle<MarketingSection.Props, MarketingSection.Context>) {
+	let enclosing = readEnclosingBand(handle);
+	let parent = enclosing ?? readAmbientLevel(handle) ?? 1;
+
+	return Math.min(parent + 1, 6) as HeadingLevel;
+}
+
+/** Level of the nearest enclosing band's title, or `undefined` outside any band. */
+function readEnclosingBand(handle: Handle<MarketingSection.Props, MarketingSection.Context>) {
+	try {
+		return (handle.context.get(MarketingSection) as MarketingSection.Context | undefined)?.level;
+	} catch {
+		return undefined;
+	}
 }
 
 /**

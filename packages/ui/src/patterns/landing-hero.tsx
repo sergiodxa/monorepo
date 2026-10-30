@@ -17,10 +17,11 @@ import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 import { text, textAlign } from "@sdxc/u/typography";
 
+import type { HeadingLevel } from "../components/heading-scope.js";
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
 
 import { CtaGroup } from "../components/cta-group.js";
-import { HeadingScope } from "../components/heading-scope.js";
+import { HeadingScope, readAmbientLevel } from "../components/heading-scope.js";
 import { Heading } from "../components/heading.js";
 import { MarketingSection } from "../components/marketing-section.js";
 import { Split } from "../components/split.js";
@@ -89,8 +90,13 @@ export namespace LandingHero {
 	 */
 	export interface Props extends Omit<
 		MarketingSection.Props,
-		"children" | "align" | "tone" | "title" | "parts"
+		"children" | "align" | "tone" | "title" | "parts" | "level"
 	> {
+		/**
+		 * Heading level of the display title. Defaults to the ambient `HeadingScope`'s
+		 * level, or `1` on a bare page, so the hero owns the page's only `<h1>`.
+		 */
+		level?: HeadingLevel;
 		/** Copy alignment. Defaults to {@link DEFAULT_ALIGN}. */
 		align?: Align;
 		/** Band fill. Defaults to {@link DEFAULT_TONE}. */
@@ -131,8 +137,8 @@ export namespace LandingHero {
 /**
  * Renders the eyebrow, display title, lead, actions, note and proof in the hero
  * rhythm — 24px, 20px, 32px and 12px between them — and places the media below,
- * beside, or behind that copy. Opens a {@link HeadingScope} so the title starts
- * the outline.
+ * beside, or behind that copy. The title starts the outline at `level`, and
+ * headings in `below` sit one level under it.
  *
  * @param handle Runtime handle carrying the hero band's props.
  * @returns The render function producing the hero's markup.
@@ -159,6 +165,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 			eyebrow,
 			eyebrowHref,
 			eyebrowVariant,
+			level,
 			media,
 			mediaPlacement,
 			mix,
@@ -175,6 +182,8 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 		let resolvedPlacement = mediaPlacement ?? DEFAULT_MEDIA_PLACEMENT;
 		let resolvedSpacing = spacing ?? "hero";
 		let resolvedEyebrowVariant = eyebrowVariant ?? DEFAULT_EYEBROW_VARIANT;
+		let resolvedLevel = level ?? readAmbientLevel(handle) ?? 1;
+		let belowSlot = below ? <HeadingScope>{below}</HeadingScope> : null;
 		let hasMedia = media !== undefined;
 		let isBackground = resolvedPlacement === "background" && hasMedia;
 		let isSplit = resolvedPlacement === "end" && hasMedia;
@@ -308,7 +317,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 			<div mix={[vstack({ align: isCenter ? "center" : "stretch", gap: 0 })]}>
 				{copy}
 				{isBelow ? mediaSlot : null}
-				{below}
+				{belowSlot}
 			</div>
 		);
 
@@ -317,7 +326,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				<div mix={[relative(), vstack({ gap: 8, align: "stretch" })]}>
 					{mediaSlot}
 					<div mix={[relative(), raw({ zIndex: "1" })]}>{copy}</div>
-					{below}
+					{belowSlot}
 				</div>
 			);
 		} else if (isSplit) {
@@ -327,7 +336,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 						<Split.Copy>{copy}</Split.Copy>
 						<Split.Media>{mediaSlot}</Split.Media>
 					</Split>
-					{below}
+					{belowSlot}
 				</div>
 			);
 		}
@@ -338,9 +347,10 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				tone={resolvedTone}
 				spacing={resolvedSpacing}
 				align={isCenter ? "center" : "start"}
+				level={resolvedLevel}
 				mix={[isBackground ? relative() : [], mix]}
 			>
-				<HeadingScope>{body}</HeadingScope>
+				{body}
 			</MarketingSection>
 		);
 	};

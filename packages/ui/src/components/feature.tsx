@@ -21,7 +21,7 @@ import { leading, pretty, text, weight } from "@sdxc/u/typography";
 import { cardGrid, cardMedia, cardPadding, iconTile } from "../styles/card-grid.js";
 import { marketingEmphasis } from "../styles/marketing.js";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
+import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
 
 /** Cell chrome {@link Feature} applies when `variant` is omitted. */
 const DEFAULT_VARIANT: Feature.Variant = "plain";
@@ -289,7 +289,8 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
  * Grid of {@link Feature} cells, as separate cards by default. The host is the
  * named sizing container; an inner wrapper holds the tracks so the query can
  * restyle a descendant: one column on a phone, two from the `md` container
- * (36rem), `columns` from `lg` (48rem).
+ * (36rem), `columns` from `lg` (48rem). Cell titles render one heading level
+ * below the grid's surroundings.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the grid.
@@ -314,17 +315,19 @@ Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 				data-slot="feature-grid"
 				mix={[container("ui-marketing-feature-grid"), mix]}
 			>
-				<div
-					mix={[
-						cardGrid({
-							columns: resolvedColumns,
-							variant: resolvedVariant,
-							containerName: "ui-marketing-feature-grid",
-						}),
-					]}
-				>
-					{children}
-				</div>
+				<HeadingScope>
+					<div
+						mix={[
+							cardGrid({
+								columns: resolvedColumns,
+								variant: resolvedVariant,
+								containerName: "ui-marketing-feature-grid",
+							}),
+						]}
+					>
+						{children}
+					</div>
+				</HeadingScope>
 			</div>
 		);
 	};

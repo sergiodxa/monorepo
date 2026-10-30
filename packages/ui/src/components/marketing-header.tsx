@@ -92,8 +92,8 @@ export namespace MarketingHeader {
  * Renders an optional eyebrow, a chapter-sized {@link Heading} from `children`,
  * and an optional lead paragraph. A mono eyebrow sits 0.5rem above the title and a
  * pill 1.5rem; the lead follows 1rem below; the band's body starts
- * `--ui-marketing-header-space` after. Nest inside a {@link HeadingScope} so the title
- * picks up the band's outline depth.
+ * `--ui-marketing-header-space` after. The title renders at the enclosing band's
+ * heading level: `<h2>` in a band on a bare page.
  *
  * @param handle Runtime handle carrying the host `<header>`'s props.
  * @returns The render function producing the header's markup.

@@ -11,7 +11,6 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { container, gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 
-import { HeadingScope } from "../components/heading-scope.js";
 import { MarketingHeader } from "../components/marketing-header.js";
 import { MarketingSection } from "../components/marketing-section.js";
 
@@ -115,41 +114,39 @@ export function FaqBand(handle: Handle<FaqBand.Props>) {
 				ruled={ruled}
 				mix={mix}
 			>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-						<MarketingHeader
-							eyebrow={eyebrow}
-							description={description}
-							parts={{
-								title: parts?.title,
-								description: parts?.description,
-							}}
-						>
-							{title}
-						</MarketingHeader>
+				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+					<MarketingHeader
+						eyebrow={eyebrow}
+						description={description}
+						parts={{
+							title: parts?.title,
+							description: parts?.description,
+						}}
+					>
+						{title}
+					</MarketingHeader>
+					<div
+						data-columns={String(resolvedColumns)}
+						mix={[container("ui-marketing-faq"), parts?.columns]}
+					>
 						<div
-							data-columns={String(resolvedColumns)}
-							mix={[container("ui-marketing-faq"), parts?.columns]}
+							mix={[
+								grid(),
+								gap(0, 8),
+								gridTemplate({ columns: "minmax(0, 1fr)" }),
+								isTwo
+									? at(
+											"xl",
+											"ui-marketing-faq",
+											gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" }),
+										)
+									: [],
+							]}
 						>
-							<div
-								mix={[
-									grid(),
-									gap(0, 8),
-									gridTemplate({ columns: "minmax(0, 1fr)" }),
-									isTwo
-										? at(
-												"xl",
-												"ui-marketing-faq",
-												gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1fr)" }),
-											)
-										: [],
-								]}
-							>
-								{children}
-							</div>
+							{children}
 						</div>
 					</div>
-				</HeadingScope>
+				</div>
 			</MarketingSection>
 		);
 	};

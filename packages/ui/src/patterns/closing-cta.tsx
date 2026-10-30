@@ -12,7 +12,6 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 
 import { CtaGroup } from "../components/cta-group.js";
-import { HeadingScope } from "../components/heading-scope.js";
 import { MarketingHeader } from "../components/marketing-header.js";
 import { MarketingSection } from "../components/marketing-section.js";
 
@@ -89,23 +88,21 @@ export function ClosingCta(handle: Handle<ClosingCta.Props>) {
 				align="center"
 				mix={mix}
 			>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 8, align: "center" })]}>
-						<MarketingHeader
-							eyebrow={eyebrow}
-							description={description}
-							align="center"
-							mix={[raw({ "--ui-marketing-header-end": "0" })]}
-							parts={{
-								title: parts?.title,
-								description: parts?.description,
-							}}
-						>
-							{title}
-						</MarketingHeader>
-						{actions ? <CtaGroup mix={[parts?.actions]}>{actions}</CtaGroup> : null}
-					</div>
-				</HeadingScope>
+				<div mix={[vstack({ gap: 8, align: "center" })]}>
+					<MarketingHeader
+						eyebrow={eyebrow}
+						description={description}
+						align="center"
+						mix={[raw({ "--ui-marketing-header-end": "0" })]}
+						parts={{
+							title: parts?.title,
+							description: parts?.description,
+						}}
+					>
+						{title}
+					</MarketingHeader>
+					{actions ? <CtaGroup mix={[parts?.actions]}>{actions}</CtaGroup> : null}
+				</div>
 			</MarketingSection>
 		);
 	};

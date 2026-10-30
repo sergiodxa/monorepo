@@ -17,7 +17,7 @@ import { m } from "@sdxc/u/size";
 import { leading, pretty, text, tracking, weight } from "@sdxc/u/typography";
 
 import { Feature } from "../components/feature.js";
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
+import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
 import { cardGrid, cardMedia, cardPadding } from "../styles/card-grid.js";
 import { marketingEmphasis } from "../styles/marketing.js";
 
@@ -110,6 +110,7 @@ export namespace Bento {
  * Bento grid of claim cells. The host is the named sizing container; an inner
  * wrapper holds the tracks so the query can restyle a descendant: one column
  * on a phone, two from the `md` container (36rem), `columns` from `lg` (48rem).
+ * Cell titles render one heading level below the band title.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the bento's markup.
@@ -135,17 +136,19 @@ export function Bento(handle: Handle<Bento.Props>) {
 				data-variant={resolvedVariant}
 				mix={[container(CONTAINER_NAME), mix]}
 			>
-				<div
-					mix={[
-						cardGrid({
-							columns: resolvedColumns,
-							variant: resolvedVariant,
-							containerName: CONTAINER_NAME,
-						}),
-					]}
-				>
-					{children}
-				</div>
+				<HeadingScope>
+					<div
+						mix={[
+							cardGrid({
+								columns: resolvedColumns,
+								variant: resolvedVariant,
+								containerName: CONTAINER_NAME,
+							}),
+						]}
+					>
+						{children}
+					</div>
+				</HeadingScope>
 			</div>
 		);
 	};

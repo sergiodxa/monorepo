@@ -41,8 +41,8 @@ describe("PricingBand", () => {
 		expect(html).toContain('data-slot="check-list"');
 		expect(html).toContain("Five monitors");
 		expect(html).toContain('href="/signup?plan=team"');
-		expect(html).toMatch(/<h1[^>]*>Pricing<\/h1>/);
-		expect(html).toMatch(/<h2[^>]*data-slot="pricing-plan-name"[^>]*>Hobby<\/h2>/);
+		expect(html).toMatch(/<h2[^>]*>Pricing<\/h2>/);
+		expect(html).toMatch(/<h3[^>]*data-slot="pricing-plan-name"[^>]*>Hobby<\/h3>/);
 	});
 
 	test("marks only the featured plan", async () => {

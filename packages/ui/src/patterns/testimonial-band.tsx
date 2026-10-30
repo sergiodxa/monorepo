@@ -16,7 +16,6 @@ import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
-import { HeadingScope } from "../components/heading-scope.js";
 import { MarketingHeader } from "../components/marketing-header.js";
 import { MarketingSection } from "../components/marketing-section.js";
 import { marketingEmphasis, marketingSurface } from "../styles/marketing.js";
@@ -120,32 +119,30 @@ export function TestimonialBand(handle: Handle<TestimonialBand.Props>) {
 
 		return (
 			<MarketingSection {...rest} tone={resolvedTone} spacing={resolvedSpacing} mix={mix}>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-						<MarketingHeader
-							eyebrow={eyebrow}
-							description={description}
-							parts={{ title: parts?.title, description: parts?.description }}
+				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+					<MarketingHeader
+						eyebrow={eyebrow}
+						description={description}
+						parts={{ title: parts?.title, description: parts?.description }}
+					>
+						{title}
+					</MarketingHeader>
+					<div data-columns={String(resolvedColumns)} mix={[container(CONTAINER_NAME)]}>
+						<div
+							data-slot="testimonial-quotes"
+							mix={[
+								combine([
+									raw({ columns: "1", columnGap: CARD_GAP }),
+									at("md", CONTAINER_NAME, raw({ columns: "2" })),
+									at("lg", CONTAINER_NAME, raw({ columns: String(resolvedColumns) })),
+								]),
+								parts?.quotes,
+							]}
 						>
-							{title}
-						</MarketingHeader>
-						<div data-columns={String(resolvedColumns)} mix={[container(CONTAINER_NAME)]}>
-							<div
-								data-slot="testimonial-quotes"
-								mix={[
-									combine([
-										raw({ columns: "1", columnGap: CARD_GAP }),
-										at("md", CONTAINER_NAME, raw({ columns: "2" })),
-										at("lg", CONTAINER_NAME, raw({ columns: String(resolvedColumns) })),
-									]),
-									parts?.quotes,
-								]}
-							>
-								{children}
-							</div>
+							{children}
 						</div>
 					</div>
-				</HeadingScope>
+				</div>
 			</MarketingSection>
 		);
 	};

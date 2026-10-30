@@ -110,8 +110,7 @@ export namespace FeatureBand {
 
 /**
  * Renders a feature band with a chapter header and a split, grid, steps, timeline,
- * or stage body. Opens a nested {@link HeadingScope} so cell and step titles sit
- * under the section heading.
+ * or stage body. Cell and step titles sit one heading level under the band title.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -157,6 +156,8 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		let resolvedSpacing = spacing ?? "normal";
 
 		let body = <div mix={[vstack({ gap: 4, align: "stretch" })]}>{children}</div>;
+		let isSelfScoped =
+			resolvedLayout === "grid" || resolvedLayout === "steps" || resolvedLayout === "timeline";
 
 		if (resolvedLayout === "grid") {
 			body = <Feature.Grid columns={columns}>{children}</Feature.Grid>;
@@ -192,24 +193,22 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 				ruled={ruled}
 				mix={mix}
 			>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-						<MarketingHeader
-							eyebrow={eyebrow}
-							eyebrowHref={eyebrowHref}
-							eyebrowIndex={eyebrowIndex}
-							eyebrowVariant={eyebrowVariant}
-							description={description}
-							parts={{
-								title: parts?.title,
-								description: parts?.description,
-							}}
-						>
-							{title}
-						</MarketingHeader>
-						<HeadingScope>{body}</HeadingScope>
-					</div>
-				</HeadingScope>
+				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+					<MarketingHeader
+						eyebrow={eyebrow}
+						eyebrowHref={eyebrowHref}
+						eyebrowIndex={eyebrowIndex}
+						eyebrowVariant={eyebrowVariant}
+						description={description}
+						parts={{
+							title: parts?.title,
+							description: parts?.description,
+						}}
+					>
+						{title}
+					</MarketingHeader>
+					{isSelfScoped ? body : <HeadingScope>{body}</HeadingScope>}
+				</div>
 			</MarketingSection>
 		);
 	};

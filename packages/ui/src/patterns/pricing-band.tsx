@@ -149,44 +149,42 @@ export function PricingBand(handle: Handle<PricingBand.Props>) {
 
 		return (
 			<MarketingSection {...rest} tone={resolvedTone} spacing={resolvedSpacing} mix={mix}>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-						<MarketingHeader
-							eyebrow={eyebrow}
-							description={description}
-							parts={{ title: parts?.title, description: parts?.description }}
-						>
-							{title}
-						</MarketingHeader>
-						<div data-columns={String(resolvedColumns)} mix={[container(CONTAINER_NAME)]}>
-							<HeadingScope>
-								<div
-									data-slot="pricing-plans"
-									mix={[
-										grid(),
-										gap(8),
-										combine([
-											gridTemplate({ columns: "minmax(0, 1fr)" }),
-											at(
-												"md",
-												CONTAINER_NAME,
-												gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" }),
-											),
-											at(
-												"lg",
-												CONTAINER_NAME,
-												gridTemplate({ columns: `repeat(${resolvedColumns}, minmax(0, 1fr))` }),
-											),
-										]),
-										parts?.plans,
-									]}
-								>
-									{children}
-								</div>
-							</HeadingScope>
-						</div>
+				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+					<MarketingHeader
+						eyebrow={eyebrow}
+						description={description}
+						parts={{ title: parts?.title, description: parts?.description }}
+					>
+						{title}
+					</MarketingHeader>
+					<div data-columns={String(resolvedColumns)} mix={[container(CONTAINER_NAME)]}>
+						<HeadingScope>
+							<div
+								data-slot="pricing-plans"
+								mix={[
+									grid(),
+									gap(8),
+									combine([
+										gridTemplate({ columns: "minmax(0, 1fr)" }),
+										at(
+											"md",
+											CONTAINER_NAME,
+											gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" }),
+										),
+										at(
+											"lg",
+											CONTAINER_NAME,
+											gridTemplate({ columns: `repeat(${resolvedColumns}, minmax(0, 1fr))` }),
+										),
+									]),
+									parts?.plans,
+								]}
+							>
+								{children}
+							</div>
+						</HeadingScope>
 					</div>
-				</HeadingScope>
+				</div>
 			</MarketingSection>
 		);
 	};

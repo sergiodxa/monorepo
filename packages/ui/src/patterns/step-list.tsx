@@ -30,7 +30,7 @@ import { bs, is, m, mbe } from "@sdxc/u/size";
 import { after, before, not } from "@sdxc/u/state";
 import { font, leading, pretty, text, textAlign, weight } from "@sdxc/u/typography";
 
-import { resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
+import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
 import { marketingEmphasis } from "../styles/marketing.js";
 
 /** Look {@link StepList} draws when `variant` is omitted. */
@@ -118,32 +118,34 @@ export function StepList(handle: Handle<StepList.Props, StepList.Context>) {
 
 		return (
 			<div mix={[container(LIST_CONTAINER)]}>
-				<ol
-					{...rest}
-					data-slot="step-list"
-					data-variant={resolvedVariant}
-					mix={[
-						counterReset("ui-marketing-step"),
-						raw({ listStyle: "none", padding: "0", margin: "0" }),
-						grid(),
-						resolvedVariant === "timeline"
-							? [gap(0), gridTemplate({ columns: "minmax(0, 1fr)" })]
-							: [
-									gap(8),
-									combine([
-										gridTemplate({ columns: "minmax(0, 1fr)" }),
-										at(
-											"xl",
-											LIST_CONTAINER,
-											gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
-										),
-									]),
-								],
-						mix,
-					]}
-				>
-					{children}
-				</ol>
+				<HeadingScope>
+					<ol
+						{...rest}
+						data-slot="step-list"
+						data-variant={resolvedVariant}
+						mix={[
+							counterReset("ui-marketing-step"),
+							raw({ listStyle: "none", padding: "0", margin: "0" }),
+							grid(),
+							resolvedVariant === "timeline"
+								? [gap(0), gridTemplate({ columns: "minmax(0, 1fr)" })]
+								: [
+										gap(8),
+										combine([
+											gridTemplate({ columns: "minmax(0, 1fr)" }),
+											at(
+												"xl",
+												LIST_CONTAINER,
+												gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
+											),
+										]),
+									],
+							mix,
+						]}
+					>
+						{children}
+					</ol>
+				</HeadingScope>
 			</div>
 		);
 	};

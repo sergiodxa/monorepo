@@ -24,7 +24,9 @@ describe("StepList", () => {
 		expect(html).toContain("container: ui-marketing-step-list / inline-size");
 		expect(html).toContain("@container ui-marketing-step-list (min-width:");
 		expect(html).toContain("repeat(3, minmax(0, 1fr))");
-		expect(html).toMatch(/<div class="[^"]+"[^>]*>\s*<ol data-slot="step-list"/);
+		expect(html).toMatch(
+			/<div class="[^"]+"[^>]*>\s*<div data-heading-level="[1-6]"[^>]*>\s*<ol data-slot="step-list"/,
+		);
 
 		let listClasses = new Set(
 			(html.match(/data-slot="step-list"[^>]*class="([^"]+)"/)?.[1] ?? "")

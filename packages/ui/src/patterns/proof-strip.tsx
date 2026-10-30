@@ -12,7 +12,6 @@ import type { Handle, RemixNode } from "remix/component";
 import { vstack } from "@sdxc/u/layout";
 import { width } from "@sdxc/u/size";
 
-import { HeadingScope } from "../components/heading-scope.js";
 import { MarketingSection } from "../components/marketing-section.js";
 
 /** Band fill {@link ProofStrip} applies when `tone` is omitted. */
@@ -71,9 +70,7 @@ export function ProofStrip(handle: Handle<ProofStrip.Props>) {
 				align="center"
 				mix={mix}
 			>
-				<HeadingScope>
-					<div mix={[vstack({ gap: 8, align: "center" }), width("full")]}>{children}</div>
-				</HeadingScope>
+				<div mix={[vstack({ gap: 8, align: "center" }), width("full")]}>{children}</div>
 			</MarketingSection>
 		);
 	};
