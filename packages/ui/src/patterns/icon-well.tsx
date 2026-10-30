@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import type { Feature } from "../components/feature.js";
 
-import { iconTile } from "../styles/card-grid.js";
+import { ICON_TILE_SIDE, iconTile } from "../styles/card-grid.js";
 
 /** Side length {@link IconWell} applies when `size` is omitted. */
 const DEFAULT_SIZE: IconWell.Size = "md";
@@ -19,16 +19,19 @@ const DEFAULT_SIZE: IconWell.Size = "md";
 /** Tile chrome {@link IconWell} applies when `tone` is omitted. */
 const DEFAULT_TONE: IconWell.Tone = "quiet";
 
-/** Side length on the spacing scale for each footprint: 2rem, 2.5rem, 3rem. */
-const SIDE_BY_SIZE: Record<IconWell.Size, number> = { sm: 8, md: 10, lg: 12 };
+/**
+ * Side length on the spacing scale for each footprint: 2rem, then the 2.5rem every
+ * claim tile shares, then 3rem.
+ */
+const SIDE_BY_SIZE: Record<IconWell.Size, number> = { sm: 8, md: ICON_TILE_SIDE, lg: 12 };
 
 /**
  * Prop types for {@link IconWell}.
  */
 export namespace IconWell {
 	/**
-	 * Well footprint: compact for dense grids, medium for feature cells, large
-	 * for hero metaphors.
+	 * Well footprint: compact for dense grids, medium for every claim beside a
+	 * {@link Feature.Icon}, large for a lone hero metaphor.
 	 */
 	export type Size = "sm" | "md" | "lg";
 

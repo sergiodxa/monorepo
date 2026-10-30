@@ -16,9 +16,9 @@ import { raw } from "@sdxc/u/general";
 import { container, hstack, vstack } from "@sdxc/u/layout";
 import { m, mbs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { leading, pretty, text, weight } from "@sdxc/u/typography";
+import { balance, leading, pretty, text, weight } from "@sdxc/u/typography";
 
-import { cardGrid, cardMedia, cardPadding, iconTile } from "../styles/card-grid.js";
+import { cardGrid, cardMedia, cardPadding, ICON_TILE_SIDE, iconTile } from "../styles/card-grid.js";
 import { marketingEmphasis } from "../styles/marketing.js";
 
 import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
@@ -195,7 +195,7 @@ Feature.Icon = function FeatureIcon(handle: Handle<Feature.IconProps>) {
 				{...rest}
 				data-slot="feature-icon"
 				data-tone={resolvedTone}
-				mix={[iconTile(resolvedTone, 10), mix]}
+				mix={[iconTile(resolvedTone, ICON_TILE_SIDE), mix]}
 			/>
 		);
 	};
@@ -233,7 +233,7 @@ Feature.Title = function FeatureTitle(handle: Handle<Feature.TitleProps>) {
 				{...rest}
 				data-slot="feature-title"
 				data-heading-level={resolved}
-				mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis"), mix]}
+				mix={[m(0), text("base"), balance(), weight("semibold"), fg("neutral.emphasis"), mix]}
 			/>
 		);
 	};

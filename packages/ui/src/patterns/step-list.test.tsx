@@ -23,7 +23,7 @@ describe("StepList", () => {
 		expect(html).toContain('data-slot="step-list"');
 		expect(html).toContain("container: ui-marketing-step-list / inline-size");
 		expect(html).toContain("@container ui-marketing-step-list (min-width:");
-		expect(html).toContain("repeat(3, minmax(0, 1fr))");
+		expect(html).toContain("grid-auto-flow: column");
 		expect(html).toMatch(
 			/<div class="[^"]+"[^>]*>\s*<div data-heading-level="[1-6]"[^>]*>\s*<ol data-slot="step-list"/,
 		);
@@ -77,7 +77,7 @@ describe("StepList", () => {
 		expect(html).toContain("Probe map");
 		expect(html).toContain("grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)");
 		expect(html).toContain("background-color: var(--ui-brand-bg-solid)");
-		expect(html).not.toContain("repeat(3, minmax(0, 1fr))");
+		expect(html).not.toContain("grid-auto-flow: column");
 		expect(html.match(/data-slot="step-list-media"/g)).toHaveLength(1);
 	});
 });

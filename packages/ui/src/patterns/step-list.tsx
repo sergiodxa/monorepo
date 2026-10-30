@@ -22,13 +22,12 @@ import {
 	items,
 	justify,
 	relative,
-	repeat,
 	vstack,
 } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { bs, is, m, mbe } from "@sdxc/u/size";
 import { after, before, not } from "@sdxc/u/state";
-import { font, leading, pretty, text, textAlign, weight } from "@sdxc/u/typography";
+import { balance, font, leading, pretty, text, textAlign, weight } from "@sdxc/u/typography";
 
 import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
 import { marketingEmphasis } from "../styles/marketing.js";
@@ -93,8 +92,8 @@ export namespace StepList {
 
 /**
  * Lays steps in a responsive track. A sizing wrapper is the named container; the `<ol>`
- * holds the grid so the query can restyle a descendant. A numbered list moves to three
- * columns from `xl` (64rem) with connectors between items; a timeline stays one column.
+ * holds the grid so the query can restyle a descendant. A numbered list sets every step in
+ * one row from `xl` (64rem) with connectors between them; a timeline stays one column.
  *
  * @param handle Runtime handle carrying the host `<ol>`'s props and providing {@link StepList.Context}.
  * @returns The render function producing the list's markup.
@@ -131,12 +130,20 @@ export function StepList(handle: Handle<StepList.Props, StepList.Context>) {
 								? [gap(0), gridTemplate({ columns: "minmax(0, 1fr)" })]
 								: [
 										gap(8),
+										/**
+										 * Every step shares one row from the `xl` container, whatever the count,
+										 * so connectors run step to step and no row is left short.
+										 */
 										combine([
 											gridTemplate({ columns: "minmax(0, 1fr)" }),
 											at(
 												"xl",
 												LIST_CONTAINER,
-												gridTemplate({ columns: repeat(3, "minmax(0, 1fr)") }),
+												raw({
+													gridTemplateColumns: "none",
+													gridAutoFlow: "column",
+													gridAutoColumns: "minmax(0, 1fr)",
+												}),
 											),
 										]),
 									],
@@ -256,7 +263,7 @@ StepList.Item = function StepListItem(handle: Handle<StepList.ItemProps>) {
 					<Tag
 						data-slot="step-list-title"
 						data-heading-level={resolved}
-						mix={[m(0), text("xl"), weight("medium"), fg("neutral.emphasis")]}
+						mix={[m(0), text("xl"), balance(), weight("medium"), fg("neutral.emphasis")]}
 					>
 						{title}
 					</Tag>
@@ -282,6 +289,7 @@ StepList.Item = function StepListItem(handle: Handle<StepList.ItemProps>) {
 					mix={[
 						m(0),
 						raw({ fontSize: "1rem", lineHeight: "1.5rem" }),
+						balance(),
 						weight("semibold"),
 						fg("neutral.emphasis"),
 					]}

@@ -16,6 +16,10 @@ import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
+import type { BalancedGridStep } from "../styles/card-grid.js";
+
+import { balancedGrid } from "../styles/card-grid.js";
+
 /** Height of each mark below the `lg` container. */
 const LOGO_HEIGHT = varUtility("ui-marketing-logo-height", "1.75rem");
 
@@ -25,6 +29,23 @@ const LOGO_HEIGHT_LG = varUtility("ui-marketing-logo-height-lg", "2.25rem");
 /** Container name the cloud's layout steps query. */
 const CONTAINER = "ui-marketing-logo-cloud";
 
+/** Hairline that rules the grid layout's cells. */
+const HAIRLINE = "var(--ui-marketing-hairline)";
+
+/** Each grid cell's own rules on its inline-end and block-end edges; the grid clips them at its outer edge. */
+const CELL_RULES = `1px 0 0 ${HAIRLINE}, 0 1px 0 ${HAIRLINE}`;
+
+/**
+ * The most cells a grid row holds at each width of the cloud, so each cell keeps
+ * at least 10rem; the grid then evens the rows for the mark count.
+ */
+const GRID_STEPS: ReadonlyArray<BalancedGridStep> = [
+	{ query: "(width < 30rem)", columns: 2 },
+	{ query: "(30rem <= width < 40rem)", columns: 3 },
+	{ query: "(40rem <= width < 60rem)", columns: 4 },
+	{ query: "(width >= 60rem)", columns: 6 },
+];
+
 /** Arrangement {@link LogoCloud} applies when `layout` is omitted. */
 const DEFAULT_LAYOUT: LogoCloud.Layout = "row";
 
@@ -33,9 +54,10 @@ const DEFAULT_LAYOUT: LogoCloud.Layout = "row";
  */
 export namespace LogoCloud {
 	/**
-	 * How the marks sit: a centered wrapping `row`, a row `spread` edge to edge across
-	 * the measure from the `lg` container (centered wrap below), or a `grid` of ruled
-	 * 4rem cells, as many 10rem columns as fit.
+	 * How the marks sit: a centered wrapping `row`; a `spread` row edge to edge across
+	 * the measure from the `lg` container, where marks shrink to stay on one line
+	 * (centered wrap below); or a `grid` of ruled 4rem cells in even rows, a short
+	 * last row centred.
 	 */
 	export type Layout = "row" | "spread" | "grid";
 
@@ -116,33 +138,34 @@ export function LogoCloud(handle: Handle<LogoCloud.Props>) {
 
 /**
  * The marks row in one rule, so a layout's sizing, ruling and dimming never compete with
- * another class over the same property: a wrapping flex row, or a grid whose children
- * become 4rem cells ruled by 1px shadows that the grid clips at its outer edge.
+ * another class over the same property: a wrapping flex row whose leftovers centre, or a
+ * grid whose children become 4rem cells ruled by 1px shadows clipped at its outer edge.
  */
 function marks(layout: LogoCloud.Layout, muted: boolean) {
 	let ink = muted ? "var(--ui-neutral-fg)" : "var(--ui-neutral-fg-emphasis)";
 
 	if (layout === "grid") {
 		return combine([
-			raw({
-				display: "grid",
-				gridTemplateColumns: "repeat(auto-fill, minmax(10rem, 1fr))",
-				clipPath: "inset(0)",
-				color: ink,
-			}),
+			raw({ display: "grid", clipPath: "inset(0)", color: ink }),
 			when(
 				"& > *",
 				raw({
-					boxSizing: "content-box",
-					blockSize: LOGO_HEIGHT,
-					inlineSize: "auto",
+					boxSizing: "border-box",
+					justifySelf: "stretch",
+					blockSize: `calc(${LOGO_HEIGHT} + 2.25rem)`,
+					inlineSize: "100%",
 					minInlineSize: "0",
 					padding: "1.125rem 1rem",
 					objectFit: "contain",
 					color: "currentColor",
-					boxShadow: "1px 0 0 var(--ui-marketing-hairline), 0 1px 0 var(--ui-marketing-hairline)",
+					boxShadow: CELL_RULES,
 					filter: muted ? "grayscale(1)" : "none",
 				}),
+			),
+			balancedGrid(
+				CONTAINER,
+				GRID_STEPS,
+				raw({ boxShadow: `${CELL_RULES}, -1px 0 0 ${HAIRLINE}` }),
 			),
 		]);
 	}
@@ -170,7 +193,10 @@ function marks(layout: LogoCloud.Layout, muted: boolean) {
 		),
 		at("lg", CONTAINER, when("& > *", raw({ blockSize: LOGO_HEIGHT_LG }))),
 		layout === "spread"
-			? at("lg", CONTAINER, raw({ justifyContent: "space-between", columnGap: "2rem" }))
+			? at("lg", CONTAINER, [
+					raw({ justifyContent: "space-between", columnGap: "2rem", flexWrap: "nowrap" }),
+					when("& > *", raw({ minInlineSize: "0" })),
+				])
 			: [],
 	]);
 }

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UtilityMixin } from "@sdxc/u";
+import type { UtilityInput, UtilityMixin } from "@sdxc/u";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -42,6 +42,12 @@ const GRID_STEPS: ReadonlyArray<{ query: string; columns: (requested: number) =>
 	{ query: "(36rem <= width < 48rem)", columns: (requested) => Math.min(2, requested) },
 	{ query: "(width >= 48rem)", columns: (requested) => requested },
 ];
+
+/** Side of a claim's glyph tile on the spacing scale (2.5rem), shared by every claim icon. */
+export const ICON_TILE_SIDE = 10;
+
+/** Longest run of children the quantity rules tune; a longer one keeps each step's full count. */
+const BALANCED_MAX_COUNT = 12;
 
 /** Corner names a page lists in a cell's `data-corner`, and the radius each one sets. */
 const CORNER_PROPERTIES: ReadonlyArray<readonly [corner: string, property: string]> = [
@@ -173,6 +179,107 @@ function outerCorners<Node extends Element>(
 	if (!explicit) return rules;
 	for (let [corner, property] of CORNER_PROPERTIES) {
 		rules.push(when(`& > [data-corner~="${corner}"]`, raw({ [property]: OUTER_RADIUS })));
+	}
+	return rules;
+}
+
+/**
+ * One container range of a {@link balancedGrid}: the query that selects it and the
+ * most items one row holds there.
+ */
+export interface BalancedGridStep {
+	/** Container size query, such as `(36rem <= width < 48rem)`. */
+	query: string;
+	/** The most items one row holds in this range. */
+	columns: number;
+}
+
+/**
+ * The column count that splits `count` items into the fewest rows of at most
+ * `columns` while keeping the rows as even as possible: 6 in at most 4 is 3 + 3,
+ * 5 in at most 4 is 3 + 2.
+ *
+ * @param count Items in the run.
+ * @param columns The most items one row may hold.
+ * @returns Columns between 1 and `columns`.
+ */
+export function balancedColumns(count: number, columns: number): number {
+	if (count <= columns) return Math.max(1, count);
+	return Math.ceil(count / Math.ceil(count / columns));
+}
+
+/**
+ * Applies `build(count)` to an element whose direct children number exactly
+ * `count`, for every count up to {@link BALANCED_MAX_COUNT}; a longer run keeps the
+ * rules written outside it.
+ *
+ * @param build Styles for a run of that many children.
+ * @returns One quantity rule per count.
+ */
+export function byChildCount<Node extends Element = Element>(
+	build: (count: number) => UtilityInput<Node>,
+): UtilityMixin<Node>[] {
+	let rules: UtilityMixin<Node>[] = [];
+	for (let count = 1; count <= BALANCED_MAX_COUNT; count++) {
+		rules.push(when<Node>(`&:has(> :nth-child(${count}):last-child)`, build(count)));
+	}
+	return rules;
+}
+
+/**
+ * Lays direct children in rows that are full or centred: each step picks the even
+ * column count for the run ({@link balancedColumns}), and a shorter last row sits
+ * in the middle at one column per item. Tracks are doubled so a centred row can
+ * start half a column in; the element must leave `grid-template-columns` and the
+ * children's `grid-column` to this mixin.
+ *
+ * @param containerName Named sizing container the steps query.
+ * @param steps Container ranges, each with the most items a row holds there.
+ * @param rowStart Extra styles for the first item of a centred last row, such as the edge it now exposes.
+ * @returns One mixin for the element whose children are the items.
+ * @example
+ * <div mix={[grid(), balancedGrid("ui-logos", [{ query: "(width < 30rem)", columns: 2 }, { query: "(width >= 30rem)", columns: 4 }])]}>{marks}</div>
+ */
+export function balancedGrid<Node extends Element = Element>(
+	containerName: string,
+	steps: ReadonlyArray<BalancedGridStep>,
+	rowStart?: UtilityInput<Node>,
+): UtilityMixin<Node> {
+	return combine<Node>(
+		steps.map((step) =>
+			when<Node>(`@container ${containerName} ${step.query}`, [
+				centredRows<Node>(step.columns, rowStart),
+				byChildCount<Node>((count) =>
+					centredRows<Node>(balancedColumns(count, step.columns), rowStart),
+				),
+			]),
+		),
+	);
+}
+
+/**
+ * Doubled tracks for `columns` items a row, each item spanning two, with the first
+ * item of a short last row pushed in by the half-tracks the row leaves free.
+ *
+ * @param columns Items in a full row.
+ * @param rowStart Extra styles for the first item of a centred last row.
+ * @returns The rules for one column count.
+ */
+function centredRows<Node extends Element>(
+	columns: number,
+	rowStart: UtilityInput<Node> | undefined,
+): UtilityMixin<Node>[] {
+	let rules: UtilityMixin<Node>[] = [
+		raw<Node>({ gridTemplateColumns: `repeat(${columns * 2}, minmax(0, 1fr))` }),
+		when<Node>("& > *", raw({ gridColumn: "span 2" })),
+	];
+	for (let short = 1; short < columns; short++) {
+		rules.push(
+			when(`& > :nth-child(${columns}n + 1):nth-last-child(${short})`, [
+				raw({ gridColumn: `${columns - short + 1} / span 2` }),
+				rowStart ?? [],
+			]),
+		);
 	}
 	return rules;
 }

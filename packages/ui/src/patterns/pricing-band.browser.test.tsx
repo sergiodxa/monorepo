@@ -1,7 +1,7 @@
 /**
  * Lays the pricing and testimonial bands out in a real browser: the featured plan reads
- * first on a phone and every plan shares one row on a wide band, with their actions lined
- * up, and testimonial cards flow into columns from a wide band.
+ * first on a phone, plans share one row on a wide band or centre a lone last plan, their
+ * actions line up in the CTA chrome, and testimonial cards fill rows of columns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,9 @@ import type { RemixNode } from "remix/component";
 
 import { render } from "remix/component/test";
 import { describe, expect, test } from "vitest";
+
+import { Button } from "../components/button.js";
+import { marketingCtaChrome } from "../styles/marketing.js";
 
 import { CheckRow } from "./check-row.js";
 import { PricingBand } from "./pricing-band.js";
@@ -82,6 +85,43 @@ describe("pricing band layout", () => {
 		expect(hobby!.right).toBeLessThanOrEqual(team!.left);
 		expect(team!.right).toBeLessThanOrEqual(business!.left);
 		expect(new Set(actions).size).toBe(1);
+	});
+});
+
+describe("pricing band rows and actions", () => {
+	test("a two-column band centres the third plan at one column's width", () => {
+		let root = mount(700, plans());
+		let [hobby, team, business] = cards(root);
+		let left = hobby!.left;
+		let right = team!.right;
+
+		expect(business!.top).toBeGreaterThan(hobby!.bottom);
+		expect(business!.width).toBeCloseTo(hobby!.width, 0);
+		expect(business!.left - left).toBeCloseTo(right - business!.right, 0);
+	});
+
+	test("plan actions match a hero CTA's height and pill radius", () => {
+		let root = mount(
+			900,
+			<div style={{ "--ui-marketing-cta-radius": "9999px" }}>
+				<Button color="brand" mix={[marketingCtaChrome()]}>
+					Start free
+				</Button>
+				<PricingBand title="Pricing">
+					<PricingBand.Plan name="Team" price="$29" action={<Button color="brand">Start</Button>} />
+				</PricingBand>
+			</div>,
+		);
+		let [hero, plan] = [...root.querySelectorAll("button")].map((button) => ({
+			height: button.getBoundingClientRect().height,
+			radius: getComputedStyle(button).borderStartStartRadius,
+			shadow: getComputedStyle(button).boxShadow,
+		}));
+
+		expect(plan!.height).toBe(hero!.height);
+		expect(plan!.height).toBe(40);
+		expect(plan!.radius).toBe(hero!.radius);
+		expect(plan!.shadow).toBe(hero!.shadow);
 	});
 });
 

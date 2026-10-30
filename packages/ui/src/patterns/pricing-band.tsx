@@ -7,28 +7,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UtilityMixin } from "@sdxc/u";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { combine, raw } from "@sdxc/u/general";
-import {
-	container,
-	flexWrap,
-	gap,
-	grid,
-	gridTemplate,
-	hstack,
-	items,
-	vstack,
-} from "@sdxc/u/layout";
+import { container, flexWrap, gap, grid, hstack, items, vstack } from "@sdxc/u/layout";
 import { at, dark } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
-import { leading, tabularNums, text, weight } from "@sdxc/u/typography";
+import { balance, leading, tabularNums, text, weight } from "@sdxc/u/typography";
 
 import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
 import { MarketingHeader } from "../components/marketing-header.js";
 import { MarketingSection } from "../components/marketing-section.js";
-import { marketingBandTone, marketingEmphasis, marketingSurface } from "../styles/marketing.js";
+import { balancedGrid } from "../styles/card-grid.js";
+import {
+	marketingBandTone,
+	marketingCtaChrome,
+	marketingEmphasis,
+	marketingSurface,
+} from "../styles/marketing.js";
 
 import { CheckList } from "./check-row.js";
 
@@ -118,7 +116,10 @@ export namespace PricingBand {
 		description?: RemixNode;
 		/** {@link CheckRow} items; the card lays them in a {@link CheckList}. */
 		features?: RemixNode;
-		/** The plan's call to action, stretched across the card's foot. */
+		/**
+		 * The plan's call to action, stretched across the card's foot. Its button or link
+		 * takes the marketing CTA radius, weight and edge; leave `size` at the 40px default.
+		 */
 		action: RemixNode;
 		/** Inverts the card, lifts it, and moves it first while plans stack. */
 		featured?: boolean;
@@ -128,9 +129,9 @@ export namespace PricingBand {
 }
 
 /**
- * Renders a pricing band with a chapter header and a responsive plan grid: one column on
- * a phone, two from the `md` container, and `columns` from `lg`. Every card is a column
- * that pushes its action to the foot, so actions in one row line up.
+ * Renders a pricing band with a chapter header and a plan grid of one column on a phone, two
+ * from the `md` container and `columns` from `lg`, evened per plan count with a short last
+ * row centred. Each card pushes its action to the foot, so actions in one row line up.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -164,18 +165,10 @@ export function PricingBand(handle: Handle<PricingBand.Props>) {
 								mix={[
 									grid(),
 									gap(8),
-									combine([
-										gridTemplate({ columns: "minmax(0, 1fr)" }),
-										at(
-											"md",
-											CONTAINER_NAME,
-											gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" }),
-										),
-										at(
-											"lg",
-											CONTAINER_NAME,
-											gridTemplate({ columns: `repeat(${resolvedColumns}, minmax(0, 1fr))` }),
-										),
+									balancedGrid(CONTAINER_NAME, [
+										{ query: "(width < 36rem)", columns: 1 },
+										{ query: "(36rem <= width < 48rem)", columns: 2 },
+										{ query: "(width >= 48rem)", columns: resolvedColumns },
 									]),
 									parts?.plans,
 								]}
@@ -225,6 +218,15 @@ function planSurface(featured: boolean) {
 }
 
 /**
+ * The marketing CTA chrome for the control in a plan's action, wrapped or not, so it
+ * shares the hero CTA's radius, weight and tactile edge. `marketingCtaChrome()` builds
+ * a `@sdxc/u` utility, which nests under the slot's descendant selector.
+ */
+function actionChrome(): UtilityMixin {
+	return marketingCtaChrome() as unknown as UtilityMixin;
+}
+
+/**
  * One plan card: name and badge, price with its period, a one-line pitch, the checked
  * features, and the action at the foot.
  *
@@ -255,7 +257,13 @@ PricingBand.Plan = function PricingBandPlan(handle: Handle<PricingBand.PlanProps
 					<div mix={[hstack({ gap: 3, justify: "between" }), items("center"), flexWrap()]}>
 						<Tag
 							data-slot="pricing-plan-name"
-							mix={[text("lg"), leading("snug"), weight("semibold"), fg("neutral.emphasis")]}
+							mix={[
+								text("lg"),
+								leading("snug"),
+								balance(),
+								weight("semibold"),
+								fg("neutral.emphasis"),
+							]}
 						>
 							{name}
 						</Tag>
@@ -296,7 +304,14 @@ PricingBand.Plan = function PricingBandPlan(handle: Handle<PricingBand.PlanProps
 					) : null}
 				</div>
 				{features ? <CheckList>{features}</CheckList> : null}
-				<div data-slot="pricing-plan-action" mix={[grid(), raw({ marginBlockStart: "auto" })]}>
+				<div
+					data-slot="pricing-plan-action"
+					mix={[
+						grid(),
+						raw({ marginBlockStart: "auto" }),
+						when("& :is(button, a)", actionChrome()),
+					]}
+				>
 					{action}
 				</div>
 			</div>

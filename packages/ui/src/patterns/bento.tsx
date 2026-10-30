@@ -10,11 +10,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine } from "@sdxc/u/general";
-import { container, vstack } from "@sdxc/u/layout";
+import { combine, raw } from "@sdxc/u/general";
+import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
-import { leading, pretty, text, tracking, weight } from "@sdxc/u/typography";
+import { when } from "@sdxc/u/state";
+import { balance, leading, pretty, text, tracking, weight } from "@sdxc/u/typography";
 
 import { Feature } from "../components/feature.js";
 import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "../components/heading-scope.js";
@@ -28,10 +29,14 @@ const DEFAULT_COLUMNS: Bento.Columns = 3;
 const DEFAULT_VARIANT: Bento.Variant = "cards";
 
 /** Title step {@link Bento.Title} applies when `size` is omitted. */
-const DEFAULT_TITLE_SIZE: Bento.TitleSize = "base";
+const DEFAULT_TITLE_SIZE: Bento.TitleSize = "lg";
 
 /** Named sizing container on the bento host that every column and padding step queries. */
 const CONTAINER_NAME = "ui-marketing-bento";
+
+/** A bento grid in which some cell opens with something other than its title. */
+const LEADING_BENTO =
+	'[data-slot="bento-grid"]:has(> * > :first-child:not([data-slot="bento-title"]))';
 
 /**
  * Prop types for {@link Bento} and its compound parts.
@@ -49,7 +54,8 @@ export namespace Bento {
 	export type Variant = Feature.GridVariant;
 
 	/**
-	 * Title step: `base` for a claim cell, `lg` for a hero cell that anchors the bento.
+	 * Title step: `lg`, 1.25rem rising to 1.5rem, for a bento's cells, or `base` for a
+	 * dense grid of short claims.
 	 */
 	export type TitleSize = "base" | "lg";
 
@@ -75,7 +81,7 @@ export namespace Bento {
 		 * outer corner to the page, for cells that span columns.
 		 */
 		"data-corner"?: string;
-		/** Cell content: an optional {@link Bento.Media}, then title and body. */
+		/** Cell content: an optional {@link Bento.Media} or glyph, then title and body. */
 		children: RemixNode;
 	}
 
@@ -138,6 +144,7 @@ export function Bento(handle: Handle<Bento.Props>) {
 			>
 				<HeadingScope>
 					<div
+						data-slot="bento-grid"
 						mix={[
 							cardGrid({
 								columns: resolvedColumns,
@@ -155,9 +162,9 @@ export function Bento(handle: Handle<Bento.Props>) {
 }
 
 /**
- * One bento cell, padded 1.5rem and 2.5rem from the `lg` container. Compose
- * an optional {@link Bento.Media} first, then {@link Bento.Title} and
- * {@link Bento.Body}.
+ * One bento cell, padded 1.5rem and 2.5rem from the `lg` container. Compose an optional
+ * {@link Bento.Media} or glyph first, then {@link Bento.Title} and {@link Bento.Body}; once
+ * any cell leads with one, cells share the row's lead, title and body tracks, so titles align.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the cell's markup.
@@ -170,15 +177,32 @@ Bento.Cell = function BentoCell(handle: Handle<Bento.CellProps>) {
 			<div
 				{...rest}
 				data-slot="bento-cell"
-				mix={[
-					vstack({ gap: 3, align: "stretch" }),
-					cardPadding("1.5rem", "1.5rem", "2.5rem", CONTAINER_NAME),
-					mix,
-				]}
+				mix={[cellTracks(), cardPadding("1.5rem", "1.5rem", "2.5rem", CONTAINER_NAME), mix]}
 			/>
 		);
 	};
 };
+
+/**
+ * A cell's stack in one rule: a single column spaced 0.75rem, which becomes a subgrid of
+ * three of the bento's rows (lead, title, body) when its title is a direct child and any
+ * cell in the bento leads with media or a glyph, so a row's titles share one line.
+ */
+function cellTracks() {
+	return combine([
+		raw({
+			display: "grid",
+			gridTemplateColumns: "minmax(0, 1fr)",
+			alignContent: "start",
+			rowGap: "0.75rem",
+		}),
+		when(`${LEADING_BENTO} > &:has(> [data-slot="bento-title"])`, [
+			raw({ gridRow: "span 3", gridTemplateRows: "subgrid" }),
+			when('& > [data-slot="bento-title"]', raw({ gridRow: "2" })),
+			when('& > [data-slot="bento-body"]', raw({ gridRow: "3" })),
+		]),
+	]);
+}
 
 /**
  * Illustration at the top of the cell, bleeding past the cell padding and
@@ -196,8 +220,8 @@ Bento.Media = function BentoMedia(handle: Handle<Bento.MediaProps>) {
 };
 
 /**
- * Cell title at the ambient heading depth: `base` semibold, or 1.25rem rising
- * to 1.5rem from the `md` container for a hero cell.
+ * Cell title at the ambient heading depth, balanced across its lines: 1.25rem rising to
+ * 1.5rem on 2rem leading from the `md` container, or `base` semibold for dense claims.
  *
  * @param handle Runtime handle carrying the host heading's props.
  * @returns The render function producing the title.
@@ -218,9 +242,13 @@ Bento.Title = function BentoTitle(handle: Handle<Bento.TitleProps>) {
 				mix={[
 					m(0),
 					resolvedSize === "lg"
-						? combine([text("xl"), tracking("tight"), at("md", CONTAINER_NAME, text("2xl"))])
-						: text("base"),
-					weight("semibold"),
+						? [
+								combine([text("xl"), at("md", CONTAINER_NAME, text("2xl"))]),
+								tracking("tight"),
+								weight("medium"),
+							]
+						: [text("base"), weight("semibold")],
+					balance(),
 					fg("neutral.emphasis"),
 					mix,
 				]}

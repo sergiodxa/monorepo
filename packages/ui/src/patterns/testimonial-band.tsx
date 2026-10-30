@@ -1,7 +1,7 @@
 /**
- * Testimonial band: a {@link MarketingHeader} over quote cards laid as masonry
- * columns, so quotes of any length pack without ragged rows. Each card is a
- * `<figure>` pairing the quote with who said it.
+ * Testimonial band: a {@link MarketingHeader} over a grid of quote cards whose rows
+ * share one height and span the band's content width, the way feature grids do. Each
+ * card is a `<figure>` pairing the quote with who said it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,26 +10,26 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
-import { container, hstack, items, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { raw } from "@sdxc/u/general";
+import { container, grid, hstack, items, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
 import { MarketingHeader } from "../components/marketing-header.js";
 import { MarketingSection } from "../components/marketing-section.js";
+import { balancedGrid } from "../styles/card-grid.js";
 import { marketingEmphasis, marketingSurface } from "../styles/marketing.js";
 
-/** How many columns the quotes flow into from the `lg` container when `columns` is omitted. */
+/** How many quotes share a row from the `lg` container when `columns` is omitted. */
 const DEFAULT_COLUMNS: TestimonialBand.Columns = 3;
 
 /** Band fill {@link TestimonialBand} applies when `tone` is omitted. */
 const DEFAULT_TONE: TestimonialBand.Tone = "plain";
 
-/** Container the quote columns query. */
+/** Container the quote grid queries. */
 const CONTAINER_NAME = "ui-marketing-testimonials";
 
-/** Space between quote cards, across columns and down each one. */
+/** Space between quote cards, across a row and between rows. */
 const CARD_GAP = "1.5rem";
 
 /**
@@ -37,7 +37,7 @@ const CARD_GAP = "1.5rem";
  */
 export namespace TestimonialBand {
 	/**
-	 * How many columns the quotes flow into from the `lg` container; a phone reads one
+	 * How many quotes share a row from the `lg` container; a phone reads one
 	 * column and the `md` container two.
 	 */
 	export type Columns = 2 | 3;
@@ -55,7 +55,7 @@ export namespace TestimonialBand {
 		title?: TagProps<"h1">["mix"];
 		/** Styling for the header lead. */
 		description?: TagProps<"p">["mix"];
-		/** Styling for the masonry column host. */
+		/** Styling for the quote grid. */
 		quotes?: TagProps<"div">["mix"];
 	}
 
@@ -78,7 +78,7 @@ export namespace TestimonialBand {
 		description?: RemixNode;
 		/** One {@link TestimonialBand.Quote} per testimonial; they fill each column top to bottom. */
 		children: RemixNode;
-		/** Per-part styling for title, lead, and quote columns. */
+		/** Per-part styling for title, lead, and quote grid. */
 		parts?: PartsProps;
 	}
 
@@ -98,9 +98,9 @@ export namespace TestimonialBand {
 }
 
 /**
- * Renders a testimonial band with a chapter header and quote cards in CSS columns: one on
- * a phone, two from the `md` container, and `columns` from `lg`. Cards never split across
- * columns, so a long quote moves whole to the next one.
+ * Renders a testimonial band with a chapter header and a quote grid of one column on a
+ * phone, two from the `md` container and `columns` from `lg`, evened per quote count with a
+ * short last row centred. Cards in a row stretch to one height, captions on one line.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -131,10 +131,12 @@ export function TestimonialBand(handle: Handle<TestimonialBand.Props>) {
 						<div
 							data-slot="testimonial-quotes"
 							mix={[
-								combine([
-									raw({ columns: "1", columnGap: CARD_GAP }),
-									at("md", CONTAINER_NAME, raw({ columns: "2" })),
-									at("lg", CONTAINER_NAME, raw({ columns: String(resolvedColumns) })),
+								grid(),
+								raw({ gap: CARD_GAP }),
+								balancedGrid(CONTAINER_NAME, [
+									{ query: "(width < 36rem)", columns: 1 },
+									{ query: "(36rem <= width < 48rem)", columns: 2 },
+									{ query: "(width >= 48rem)", columns: resolvedColumns },
 								]),
 								parts?.quotes,
 							]}
@@ -149,8 +151,8 @@ export function TestimonialBand(handle: Handle<TestimonialBand.Props>) {
 }
 
 /**
- * One testimonial card: the quote in a `<blockquote>` and the speaker in a
- * `<figcaption>`, with an optional round avatar beside their name and role.
+ * One testimonial card: the quote in a `<blockquote>` that grows to the row's height and
+ * the speaker in a `<figcaption>` at its foot, with an optional round avatar.
  *
  * @param handle Runtime handle carrying the card's props.
  * @returns The render function producing the card's markup.
@@ -172,9 +174,7 @@ TestimonialBand.Quote = function TestimonialBandQuote(handle: Handle<Testimonial
 					marketingSurface(),
 					raw({
 						margin: "0",
-						marginBlockEnd: CARD_GAP,
 						padding: "1.5rem",
-						breakInside: "avoid",
 					}),
 					mix,
 				]}
@@ -182,7 +182,7 @@ TestimonialBand.Quote = function TestimonialBandQuote(handle: Handle<Testimonial
 				<blockquote
 					mix={[
 						fg("neutral.emphasis"),
-						raw({ margin: "0", fontSize: "1rem", lineHeight: "1.75rem" }),
+						raw({ margin: "0", flexGrow: "1", fontSize: "1rem", lineHeight: "1.75rem" }),
 						marketingEmphasis(),
 					]}
 				>

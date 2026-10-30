@@ -1,6 +1,6 @@
 /**
  * Covers {@link TestimonialBand} markup: each quote is a figure pairing a blockquote with a
- * figcaption, and the masonry host carries the requested column count.
+ * figcaption, and the quote grid carries the requested column count.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +27,8 @@ describe("TestimonialBand", () => {
 		expect(html.match(/<blockquote\b/g)).toHaveLength(2);
 		expect(html).toMatch(/<figcaption\b[^>]*>[\s\S]*?Ana Ruiz[\s\S]*?SRE, Lumen/);
 		expect(html).toContain("<strong>before our customers did</strong>");
-		expect(html).toContain("break-inside: avoid");
-		expect(html).toContain("@container ui-marketing-testimonials (min-width:");
+		expect(html).toContain("flex-grow: 1");
+		expect(html).toContain("@container ui-marketing-testimonials (width >= 48rem)");
 	});
 
 	test("renders the avatar frame only when an avatar is given", async () => {
