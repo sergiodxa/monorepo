@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 12
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-30
 outcomes:
     - "How to read the caller's address once per request and decide what `null` means"
     - "How to key a rate limit on the client's network and admit only your own networks"
@@ -31,9 +31,9 @@ npm add @sdxc/get-client-ip @sdxc/http @sdxc/ip @sdxc/logger @sdxc/outbound \
 
 ## Publish the address once
 
-Add the middleware to the router's global chain. It reads the `CF-Connecting-IP` header
-Cloudflare attaches to every request it routes, parses it, and publishes the result as `ctx.ip`
-before any route middleware or handler runs.
+Add the middleware to the router's global chain. It finds the header your platform attaches to
+every request it routes (`CF-Connecting-IP` on Cloudflare), parses it, and publishes the result as
+`ctx.ip` before any route middleware or handler runs.
 
 ```tsx {% title="app/initializers/router.tsx" %}
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -66,9 +66,9 @@ The same middleware works on other platforms with nothing to configure: it finds
 
 ## Decide what `null` means
 
-`ctx.ip` is `null` when something other than Cloudflare's edge served the request (a local dev
-server, a test) or the header is not one address. Either way nobody vouched for the caller's
-address, so pick the answer per use, by what an unknown caller should get:
+`ctx.ip` is `null` when no platform header reached the request (a local dev server, a test) or
+the headers present do not name one address, as when a client adds a header of its own. Either
+way nobody vouched for the caller's address, so pick the answer per use, by what an unknown caller should get:
 
 - A **budget** shares one bucket across every unknown caller, so it stays finite.
 - A **gate** refuses, because admitting an unknown caller is the same as having no gate.
