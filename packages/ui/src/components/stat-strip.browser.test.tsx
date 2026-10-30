@@ -99,3 +99,24 @@ describe("StatStrip figures", () => {
 		expect(size(800)).toBeLessThan(72);
 	});
 });
+
+describe("StatStrip gap variant", () => {
+	test("starts the first figure on the strip's edge, at a phone width and a wide one", () => {
+		for (let width of [343, 1152]) {
+			let host = document.createElement("div");
+			host.style.width = `${width}px`;
+			document.body.appendChild(host);
+			let root = render(
+				<StatStrip variant="gap">
+					<StatStrip.Item label="Billed last year">$2.4B</StatStrip.Item>
+					<StatStrip.Item label="Events each month">41B</StatStrip.Item>
+				</StatStrip>,
+				{ container: host },
+			).container;
+			let strip = root.querySelector('[data-slot="stat-strip"]')!.getBoundingClientRect();
+			let figure = root.querySelector('[data-slot="stat-strip-figure"]')!.getBoundingClientRect();
+
+			expect(Math.abs(figure.left - strip.left)).toBeLessThan(1);
+		}
+	});
+});

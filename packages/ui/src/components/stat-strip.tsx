@@ -147,7 +147,16 @@ export function StatStrip(handle: Handle<StatStrip.Props, StatStrip.Context>) {
 								when("& > :last-child:nth-child(odd)", raw({ gridColumn: "auto" })),
 							]),
 						]),
-						when("& > *", [p(6, 5), at("lg", "ui-marketing-stat-strip", p(8, 8))]),
+						/**
+						 * Ruled cells pad away from their rules; gap cells pad only above and below,
+						 * so every figure starts on its column's edge and the first on the band's.
+						 */
+						isRuled
+							? when("& > *", [p(6, 5), at("lg", "ui-marketing-stat-strip", p(8, 8))])
+							: when("& > *", [
+									raw({ paddingBlock: "1.5rem" }),
+									at("lg", "ui-marketing-stat-strip", raw({ paddingBlock: "2rem" })),
+								]),
 						isRuled
 							? when(
 									"& > * + *",
