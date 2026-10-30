@@ -2,10 +2,10 @@
 <split lean="copy">
 <split-copy>
 
-# Remix on Workers, one package at a time
+# sdxc
 
-Take one, or take the set. There are {% $packageCount %} of them, written for Remix on
-Cloudflare Workers: `Request` and `Response` in, typed values out.
+Take one, or take the set. There are {% $packageCount %} of them, built on `fetch`, `Request`,
+`Response` and Web Crypto, so most run unchanged on Cloudflare Workers, Bun, Deno and Node.
 
 <actions cta-href="/docs" cta-label="Read the docs" alt-href="/api" alt-label="Browse the API" />
 
