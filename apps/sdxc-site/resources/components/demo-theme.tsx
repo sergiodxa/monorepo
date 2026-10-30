@@ -10,6 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
+import { themeScope } from "@sdxc/ui/styles";
 
 /** The eleven lightness steps every palette scale declares, lightest first. */
 const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
@@ -55,7 +56,8 @@ function semanticTokens(tone: "brand" | "neutral"): Record<string, string> {
 		[`--ui-${tone}-bg-tint`]: step(50),
 		[`--ui-${tone}-bg-solid`]: solid,
 		[`--ui-${tone}-fg`]: step(600),
-		[`--ui-${tone}-fg-muted`]: step(500),
+		[`--ui-${tone}-fg-muted`]:
+			tone === "neutral" ? `color-mix(in oklch, ${step(600)} 85%, ${step(500)})` : step(500),
 		[`--ui-${tone}-fg-emphasis`]: step(900),
 		[`--ui-${tone}-border`]: step(200),
 		[`--ui-${tone}-border-strong`]: step(600),
@@ -98,12 +100,11 @@ export default function DemoTheme(handle: Handle<DemoTheme.Props>) {
 			<div
 				data-slot="demo-theme"
 				mix={[
+					themeScope(),
 					raw({
 						...paletteTokens("brand", brand),
 						...semanticTokens("brand"),
 						...neutralTokens,
-						"--ui-marketing-hairline":
-							"color-mix(in oklch, var(--ui-neutral-fg-emphasis) 7%, transparent)",
 						...tokens,
 						inlineSize: "100%",
 						minBlockSize: "100dvh",

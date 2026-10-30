@@ -60,7 +60,8 @@ const TOKENS = {
 	"--ui-marketing-cta-radius": "9999px",
 	"--ui-marketing-display-max": "4.75rem",
 	"--ui-marketing-display-weight": "600",
-	"--ui-marketing-eyebrow-color": "var(--ui-color-brand-600)",
+	"--ui-marketing-eyebrow-color":
+		"color-mix(in oklch, var(--ui-brand-fg) 80%, var(--ui-brand-fg-emphasis))",
 } as const;
 
 /** The Keel page, from its sticky bar to its footer. */
