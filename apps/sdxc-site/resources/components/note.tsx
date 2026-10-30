@@ -9,9 +9,10 @@
 
 import type { Handle } from "remix/component";
 
+import { InfoIcon, TriangleAlertIcon } from "@sdxc/icons";
 import { border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { vstack } from "@sdxc/u/layout";
+import { hstack, inlineFlex, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { semanticColorPanel } from "@sdxc/ui/styles";
@@ -31,10 +32,14 @@ namespace Note {
 	}
 }
 
-/** Renders one aside, tinted by its kind and opened by its label when it has one. */
+/**
+ * Renders one aside, tinted by its kind and opened by its label when it has one. The
+ * label carries the kind's glyph, so a note and a warning differ by more than tint.
+ */
 export default function Note(handle: Handle<Note.Props>) {
 	return () => {
 		let { children, kind = "info", label } = handle.props;
+		let Glyph = kind === "caution" ? TriangleAlertIcon : InfoIcon;
 
 		return (
 			<aside
@@ -54,6 +59,7 @@ export default function Note(handle: Handle<Note.Props>) {
 					<p
 						mix={[
 							m(0),
+							hstack({ gap: 2, align: "center" }),
 							font("mono"),
 							text("xs"),
 							weight("semibold"),
@@ -61,6 +67,9 @@ export default function Note(handle: Handle<Note.Props>) {
 							tracking("widest"),
 						]}
 					>
+						<span mix={[inlineFlex()]}>
+							<Glyph size={14} aria-hidden="true" />
+						</span>
 						{label}
 					</p>
 				) : null}
