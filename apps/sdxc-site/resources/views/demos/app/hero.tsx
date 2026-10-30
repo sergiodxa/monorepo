@@ -1,32 +1,38 @@
 /**
- * Rooftree's first viewport: the claim and the store badges beside a phone on today's
- * screen, slow rings turning behind it, and the rating under the badges. The press
- * marks and figures follow in the proof strip directly under it.
+ * Rooftree's first viewport: a centered claim over the store badges and the rating, then
+ * three phones fanned on a sunny colour block with live notifications drifting beside
+ * them, and the press mastheads scrolling past in a marquee to close the band.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { StarIcon } from "@sdxc/icons";
+import type { Handle, RemixNode } from "remix/component";
+
+import { CheckIcon, RepeatIcon, StarIcon } from "@sdxc/icons";
+import { keyframes } from "@sdxc/u/animation";
 import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { text, weight } from "@sdxc/u/typography";
-import { LogoCloud, StatStrip } from "@sdxc/ui";
-import { AccentText, LandingHero, ProofStrip } from "@sdxc/ui/patterns";
-import { marketingSlowSpin } from "@sdxc/ui/styles";
+import { combine, raw } from "@sdxc/u/general";
+import { container, hstack, vstack } from "@sdxc/u/layout";
+import { at, dark, motionSafe } from "@sdxc/u/responsive";
+import { leading, text, weight } from "@sdxc/u/typography";
+import { LogoCloud } from "@sdxc/ui";
+import { AccentText, LandingHero, MotionLoop } from "@sdxc/ui/patterns";
 
 import { Masthead, MASTHEADS } from "~/resources/views/demos/app/brand";
 import { Initials } from "~/resources/views/demos/app/phone";
-import { TodayScreen } from "~/resources/views/demos/app/screens";
+import { ChoresScreen, MealsScreen, TodayScreen } from "~/resources/views/demos/app/screens";
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";
 
-/** The rings' radii, innermost first, in the backdrop's 800-unit box. */
-const RING_RADII = [170, 240, 310, 380] as const;
+/** Container the phone stage sizes its phones and notifications against. */
+const STAGE = "rooftree-hero-stage";
+
+/** Keyframes the drifting notifications bob on. */
+const DRIFT_KEYFRAMES = "rooftree-hero-drift";
 
 /**
- * The hero band: claim, lead, badges, the free-plan note and the rating on the copy side,
- * today's screen on the media side.
+ * The hero band: pill eyebrow, claim, lead, badges, the free-plan note and the rating,
+ * centered over the phone stage.
  *
  * @returns The render function producing the hero.
  */
@@ -35,12 +41,15 @@ export function Hero() {
 		<LandingHero
 			id="top"
 			tone="plain"
-			mediaPlacement="end"
+			align="center"
+			mediaPlacement="below"
+			entrance
 			eyebrow="New: meal plans that fill the grocery list"
+			eyebrowVariant="pill"
 			eyebrowHref="#features"
 			title={
 				<>
-					Run the whole household from <AccentText>one list</AccentText>
+					The whole household, on <AccentText variant="highlight">one list</AccentText>
 				</>
 			}
 			description={
@@ -49,7 +58,7 @@ export function Hero() {
 					roof. <strong>A tick on one phone shows on every phone in under a second.</strong>
 				</>
 			}
-			actions={<StoreBadges />}
+			actions={<StoreBadges align="center" />}
 			note={
 				<>
 					Free for up to four people. Also on{" "}
@@ -60,8 +69,8 @@ export function Hero() {
 				</>
 			}
 			proof={<RatingProof />}
-			backdrop={<HeroRings />}
-			media={<TodayScreen />}
+			media={<PhoneStage />}
+			below={<PressMarquee />}
 		/>
 	);
 }
@@ -74,7 +83,7 @@ export function Hero() {
  */
 function RatingProof() {
 	return () => (
-		<div mix={[hstack({ gap: 3, align: "center" })]}>
+		<div mix={[hstack({ gap: 3, align: "center", justify: "center" })]}>
 			<span mix={[hstack({ gap: 0, align: "center" }), raw({ paddingInlineStart: "0.375rem" })]}>
 				{(["maya", "jonah", "ari", "leo"] as const).map((person) => (
 					<span
@@ -96,7 +105,7 @@ function RatingProof() {
 				<span
 					role="img"
 					aria-label="Rated 4.9 out of 5"
-					mix={[hstack({ gap: 0.5, align: "center" }), raw({ color: "oklch(0.8 0.15 80)" })]}
+					mix={[hstack({ gap: 0.5, align: "center" }), raw({ color: "oklch(0.78 0.16 80)" })]}
 				>
 					{[1, 2, 3, 4, 5].map((star) => (
 						<StarIcon key={star} size={15} fill="currentColor" strokeWidth={0} />
@@ -112,77 +121,245 @@ function RatingProof() {
 }
 
 /**
- * Concentric rings with one brand arc each, turning slowly behind the phone; the turn
- * stops under reduced motion, and the hero hides the drawing from assistive technology.
+ * The colour block the phones stand in: sunshine in light, deep grape in dark, cropped
+ * at the bottom so the phones read as rising out of it. Today's screen leads in the
+ * middle; the rota and the meal plan fan out behind it once the stage is wide enough.
  *
- * @returns The render function producing the rings.
+ * @returns The render function producing the stage.
  */
-function HeroRings() {
+function PhoneStage() {
 	return () => (
-		<svg
-			viewBox="0 0 800 800"
-			mix={[
-				marketingSlowSpin(),
-				raw({
-					inlineSize: "min(48rem, 150%)",
-					blockSize: "auto",
-					maskImage: "radial-gradient(closest-side, black 70%, transparent)",
-				}),
-			]}
-		>
-			<defs>
-				<linearGradient id="rooftree-ring-arc" x1="0" y1="0" x2="1" y2="1">
-					<stop offset="0" stop-color="var(--ui-color-brand-400)" />
-					<stop offset="1" stop-color="var(--ui-color-brand-400)" stop-opacity="0" />
-				</linearGradient>
-			</defs>
-			{RING_RADII.map((radius, index) => (
-				<g key={radius}>
-					<circle
-						cx="400"
-						cy="400"
-						r={radius}
-						fill="none"
-						stroke="var(--ui-neutral-fg-emphasis)"
-						stroke-opacity="0.09"
+		<div mix={[container(STAGE), raw({ inlineSize: "100%", textAlign: "start" })]}>
+			<div
+				mix={[
+					raw({
+						"--phone": "min(17.5rem, 80cqi)",
+						position: "relative",
+						isolation: "isolate",
+						overflow: "hidden",
+						blockSize: "calc(var(--phone) * 1.5 + clamp(2.5rem, 7cqi, 4.5rem))",
+						paddingBlockStart: "clamp(2.5rem, 7cqi, 4.5rem)",
+						borderRadius: "var(--ui-marketing-band-radius, 2rem)",
+						backgroundColor: "oklch(0.9 0.13 92)",
+						backgroundImage: [
+							"radial-gradient(circle at 50% 62%, oklch(1 0 0 / 0.55) 0 calc(var(--phone) * 0.78), transparent calc(var(--phone) * 0.78 + 1px))",
+							"linear-gradient(170deg, oklch(0.94 0.1 98), oklch(0.86 0.15 82))",
+						].join(", "),
+					}),
+					dark(
+						raw({
+							backgroundColor: "var(--ui-color-brand-900)",
+							backgroundImage: [
+								"radial-gradient(circle at 50% 62%, oklch(1 0 0 / 0.06) 0 calc(var(--phone) * 0.78), transparent calc(var(--phone) * 0.78 + 1px))",
+								"linear-gradient(170deg, var(--ui-color-brand-800), var(--ui-color-brand-950))",
+							].join(", "),
+						}),
+					),
+				]}
+			>
+				<div mix={[hstack({ gap: 0, align: "start", justify: "center" })]}>
+					<FannedPhone side="start">
+						<ChoresScreen staged={false} />
+					</FannedPhone>
+					<div mix={[raw({ inlineSize: "var(--phone)", flexShrink: "0", zIndex: "1" })]}>
+						<TodayScreen />
+					</div>
+					<FannedPhone side="end">
+						<MealsScreen staged={false} />
+					</FannedPhone>
+				</div>
+				<MotionLoop
+					pauseLabel="Pause the drifting notifications"
+					mix={[
+						combine([
+							raw({ display: "none" }),
+							at(
+								"xl",
+								STAGE,
+								raw({ display: "block", position: "absolute", inset: "0", zIndex: "2" }),
+							),
+						]),
+					]}
+				>
+					<Notification
+						side="start"
+						icon={<CheckIcon size={14} strokeWidth={3} />}
+						title="Oat milk"
+						detail="Ticked off by Jonah · just now"
+						person="jonah"
 					/>
-					<circle
-						cx="400"
-						cy="400"
-						r={radius}
-						fill="none"
-						stroke="url(#rooftree-ring-arc)"
-						stroke-width="3"
-						stroke-linecap="round"
-						stroke-dasharray={`${radius * 1.1} ${radius * 7}`}
-						transform={`rotate(${index * 80} 400 400)`}
+					<Notification
+						side="end"
+						icon={<RepeatIcon size={14} strokeWidth={2.5} />}
+						title="Your turn: recycling"
+						detail="Leo passed it on · bins out by 8"
+						person="leo"
 					/>
-				</g>
-			))}
-		</svg>
+				</MotionLoop>
+			</div>
+		</div>
 	);
 }
 
+namespace FannedPhone {
+	/** Props of a phone fanned out behind the leading one. */
+	export interface Props {
+		/** Which side of the leading phone it leans out from. */
+		side: "start" | "end";
+		/** The screen. */
+		children: RemixNode;
+	}
+}
+
 /**
- * The proof strip under the hero: the invented outlets that reviewed Rooftree, then the
- * four figures a download decision weighs.
+ * A phone tilted out from behind today's screen, scaled down whole so its screen keeps
+ * the leading phone's layout; it appears from the `md` stage, bleeding off the block's
+ * edges until the stage is wide enough to hold all three.
  *
- * @returns The render function producing the strip.
+ * @param handle Runtime handle carrying the side and the screen.
+ * @returns The render function producing the tilted phone.
  */
-export function Proof() {
+function FannedPhone(handle: Handle<FannedPhone.Props>) {
+	return () => {
+		let isStart = handle.props.side === "start";
+		return (
+			<div
+				aria-hidden="true"
+				mix={[
+					combine([
+						raw({ display: "none" }),
+						at(
+							"md",
+							STAGE,
+							raw({
+								display: "block",
+								flexShrink: "0",
+								inlineSize: "var(--phone)",
+								marginBlockStart: "calc(var(--phone) * 0.16)",
+								marginInline: isStart
+									? "0 calc(var(--phone) * -0.1)"
+									: "calc(var(--phone) * -0.1) 0",
+								scale: "0.86",
+								rotate: isStart ? "-7deg" : "7deg",
+								transformOrigin: isStart ? "100% 0%" : "0% 0%",
+								filter: "saturate(0.9)",
+							}),
+						),
+					]),
+				]}
+			>
+				{handle.props.children}
+			</div>
+		);
+	};
+}
+
+namespace Notification {
+	/** Props of one drifting notification. */
+	export interface Props {
+		/** Which edge of the stage it floats beside. */
+		side: "start" | "end";
+		/** The glyph on the brand chip. */
+		icon: RemixNode;
+		/** The notification's first line. */
+		title: string;
+		/** The muted second line. */
+		detail: string;
+		/** Who it came from. */
+		person: "maya" | "jonah" | "ari" | "leo";
+	}
+}
+
+/**
+ * A notification card drifting beside the phones, the live sync the lead promises shown
+ * as it arrives; it bobs only for visitors who allow motion, inside the overlay that
+ * appears from the `xl` stage, where it clears the phones and the toggle can pause it.
+ *
+ * @param handle Runtime handle carrying the side, glyph, copy and sender.
+ * @returns The render function producing the card.
+ */
+function Notification(handle: Handle<Notification.Props>) {
+	return () => {
+		let { detail, icon, person, side, title } = handle.props;
+		let isStart = side === "start";
+		return (
+			<div
+				aria-hidden="true"
+				mix={[
+					keyframes(DRIFT_KEYFRAMES, {
+						"0%, 100%": { translate: "0 0" },
+						"50%": { translate: "0 -0.5rem" },
+					}),
+					raw({
+						position: "absolute",
+						insetBlockStart: isStart ? "34%" : "56%",
+						insetInlineStart: isStart ? "4%" : "auto",
+						insetInlineEnd: isStart ? "auto" : "4%",
+					}),
+					hstack({ gap: 3, align: "center" }),
+					raw({
+						inlineSize: "max-content",
+						maxInlineSize: "20rem",
+						padding: "0.75rem 1rem 0.75rem 0.75rem",
+						borderRadius: "1.25rem",
+						backgroundColor: "var(--ui-surface-raised)",
+						boxShadow: "var(--ui-shadow-stage)",
+					}),
+					motionSafe(
+						raw({
+							animationName: DRIFT_KEYFRAMES,
+							animationDuration: "6s",
+							animationTimingFunction: "ease-in-out",
+							animationIterationCount: "infinite",
+							animationDelay: isStart ? "0s" : "-3s",
+						}),
+					),
+				]}
+			>
+				<span
+					mix={[
+						raw({
+							display: "inline-grid",
+							placeItems: "center",
+							flexShrink: "0",
+							inlineSize: "2.25rem",
+							blockSize: "2.25rem",
+							borderRadius: "0.75rem",
+							color: "white",
+							backgroundColor: "var(--ui-brand-bg-solid)",
+						}),
+					]}
+				>
+					{icon}
+				</span>
+				<span mix={[vstack({ gap: 0, align: "start" }), raw({ flex: "1", minInlineSize: "0" })]}>
+					<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis"), leading("snug")]}>
+						{title}
+					</span>
+					<span mix={[text("xs"), fg("neutral.muted")]}>{detail}</span>
+				</span>
+				<Initials person={person} size={1.75} />
+			</div>
+		);
+	};
+}
+
+/**
+ * The press line closing the hero: the invented outlets that reviewed Rooftree, scrolling
+ * past slowly and holding still as a wrapped row for visitors who ask for less motion.
+ *
+ * @returns The render function producing the marquee.
+ */
+function PressMarquee() {
 	return () => (
-		<ProofStrip tone="tinted">
-			<LogoCloud layout="spread" label="As written about in" muted>
+		<div
+			mix={[raw({ inlineSize: "100%", paddingBlockStart: "clamp(3rem, 2.5rem + 2cqi, 4.5rem)" })]}
+		>
+			<LogoCloud layout="marquee" label="As written about in" muted>
 				{MASTHEADS.map((mark) => (
 					<Masthead key={mark.name} {...mark} />
 				))}
 			</LogoCloud>
-			<StatStrip>
-				<StatStrip.Item label="App Store rating">4.9</StatStrip.Item>
-				<StatStrip.Item label="Households sharing a list">1.2M</StatStrip.Item>
-				<StatStrip.Item label="Items ticked off last month">38M</StatStrip.Item>
-				<StatStrip.Item label="Median sync between phones">0.4s</StatStrip.Item>
-			</StatStrip>
-		</ProofStrip>
+		</div>
 	);
 }

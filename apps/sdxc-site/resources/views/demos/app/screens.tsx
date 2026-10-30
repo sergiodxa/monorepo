@@ -19,6 +19,14 @@ import type { Person } from "~/resources/views/demos/app/phone";
 
 import { Card, Initials, PEOPLE, Phone, Row } from "~/resources/views/demos/app/phone";
 
+namespace Screen {
+	/** Props every tour screen takes, so the hero can show one without the tour's stage. */
+	export interface Props {
+		/** Sets the phone on the tinted stage the tour rail sits beside. Defaults to `true`. */
+		staged?: boolean;
+	}
+}
+
 namespace ScreenTitle {
 	/** Props of a screen's large title. */
 	export interface Props {
@@ -86,9 +94,10 @@ export function TodayScreen() {
 						padding: "0.75rem",
 						borderRadius: "0.875rem",
 						color: "white",
+						backgroundColor: "var(--ui-color-brand-700)",
 						backgroundImage:
-							"linear-gradient(135deg, var(--ui-color-brand-500), var(--ui-color-brand-700))",
-						boxShadow: "0 8px 20px -10px var(--ui-color-brand-600)",
+							"linear-gradient(135deg, var(--ui-color-brand-600), var(--ui-color-brand-800))",
+						boxShadow: "0 8px 20px -10px var(--ui-color-brand-700)",
 					}),
 				]}
 			>
@@ -96,7 +105,6 @@ export function TodayScreen() {
 					mix={[
 						raw({
 							fontSize: "0.625rem",
-							opacity: "0.85",
 							letterSpacing: "0.06em",
 							textTransform: "uppercase",
 						}),
@@ -108,7 +116,7 @@ export function TodayScreen() {
 				<span mix={[text("base"), weight("semibold"), leading("tight")]}>
 					Lemon orzo with greens
 				</span>
-				<span mix={[hstack({ gap: 1.5, align: "center" }), raw({ opacity: "0.9" })]}>
+				<span mix={[hstack({ gap: 1.5, align: "center" })]}>
 					<Initials person="jonah" size={1} />
 					Jonah is cooking · serves 4
 				</span>
@@ -137,13 +145,14 @@ export function TodayScreen() {
  * The grocery list grouped by aisle while one person is at the shop, with the live
  * presence line that tells everyone else the list is being bought right now.
  *
+ * @param handle Runtime handle carrying whether the phone is staged.
  * @returns The render function producing the screen.
  */
-export function ListsScreen() {
+export function ListsScreen(handle: Handle<Screen.Props>) {
 	return () => (
 		<Phone
 			tab="lists"
-			staged
+			staged={handle.props.staged ?? true}
 			maxWidth="16.5rem"
 			label="The shared grocery list grouped by aisle, with Jonah shown live at the corner market checking items off."
 		>
@@ -154,7 +163,7 @@ export function ListsScreen() {
 					raw({
 						padding: "0.5rem 0.625rem",
 						borderRadius: "0.75rem",
-						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 12%, transparent)",
+						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 8%, transparent)",
 					}),
 				]}
 			>
@@ -163,7 +172,7 @@ export function ListsScreen() {
 					<span mix={[weight("semibold")]}>Jonah is shopping</span>
 					<span
 						mix={[
-							fg("neutral.muted"),
+							fg("neutral"),
 							hstack({ gap: 1, align: "center" }),
 							raw({ fontSize: "0.625rem" }),
 						]}
@@ -200,13 +209,14 @@ const CHORES: readonly { chore: string; who: Person; next: Person; when: string 
  * The chore rota: whose turn each chore is, and who it passes to next, with the week's
  * streak so the fairness is visible rather than argued about.
  *
+ * @param handle Runtime handle carrying whether the phone is staged.
  * @returns The render function producing the screen.
  */
-export function ChoresScreen() {
+export function ChoresScreen(handle: Handle<Screen.Props>) {
 	return () => (
 		<Phone
 			tab="chores"
-			staged
+			staged={handle.props.staged ?? true}
 			maxWidth="16.5rem"
 			label="The chore rota: four chores, whose turn each is and who it passes to next, above a household streak of nine weeks."
 		>
@@ -278,13 +288,14 @@ const AGENDA: readonly { time: string; title: string; note: string; who: Person 
  * The household calendar: a week strip over today's agenda, each entry tinted in the
  * colour of the person it belongs to.
  *
+ * @param handle Runtime handle carrying whether the phone is staged.
  * @returns The render function producing the screen.
  */
-export function CalendarScreen() {
+export function CalendarScreen(handle: Handle<Screen.Props>) {
 	return () => (
 		<Phone
 			tab="calendar"
-			staged
+			staged={handle.props.staged ?? true}
 			maxWidth="16.5rem"
 			label="The household calendar for Thursday: school run, a boiler service, swim practice and dinner, each in its person's colour."
 		>
@@ -307,7 +318,7 @@ export function CalendarScreen() {
 								}),
 							]}
 						>
-							<span mix={[raw({ fontSize: "0.5625rem", opacity: "0.7" })]}>{day}</span>
+							<span mix={[raw({ fontSize: "0.5625rem" }), weight("medium")]}>{day}</span>
 							<span mix={[weight("semibold")]}>{date}</span>
 						</span>
 					);
@@ -360,13 +371,14 @@ const MEALS: readonly { day: string; dish: string; who: Person }[] = [
  * The meal plan: a dinner and a cook per night, and the one action that turns the plan's
  * ingredients into grocery rows.
  *
+ * @param handle Runtime handle carrying whether the phone is staged.
  * @returns The render function producing the screen.
  */
-export function MealsScreen() {
+export function MealsScreen(handle: Handle<Screen.Props>) {
 	return () => (
 		<Phone
 			tab="meals"
-			staged
+			staged={handle.props.staged ?? true}
 			maxWidth="16.5rem"
 			label="The week's meal plan, four dinners each with a cook, and a button adding nine ingredients to the grocery list."
 		>

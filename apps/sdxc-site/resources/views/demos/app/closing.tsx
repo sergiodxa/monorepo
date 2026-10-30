@@ -6,19 +6,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/component";
+
 import { ChevronDownIcon, MonitorIcon } from "@sdxc/icons";
+import { raw } from "@sdxc/u/general";
 import { Accordion, LinkButton } from "@sdxc/ui";
 import { CheckRow, ClosingCta, FaqBand, PricingBand, TestimonialBand } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";
 
-/** What households say, in the order the masonry columns fill. */
+/** What households say: the first leads large, the rest fill the carousel in order. */
 const STORIES = [
 	{
 		name: "Priya Raman",
 		jobTitle: "Parent of three, Leeds",
 		avatar: "PR",
+		hue: 38,
 		quote: (
 			<>
 				We used to send <strong>forty messages a week</strong> about milk. Now we send none, and
@@ -30,6 +34,7 @@ const STORIES = [
 		name: "Tomás Herrera",
 		jobTitle: "Shares a flat with four",
 		avatar: "TH",
+		hue: 235,
 		quote: (
 			<>
 				The rota ended the bathroom argument. It just says whose week it is and{" "}
@@ -41,6 +46,7 @@ const STORIES = [
 		name: "Hannah Brooks",
 		jobTitle: "Cares for her father",
 		avatar: "HB",
+		hue: 160,
 		quote: (
 			<>
 				My brother lives two hours away and still sees the pharmacy list.{" "}
@@ -52,6 +58,7 @@ const STORIES = [
 		name: "Kofi Mensah",
 		jobTitle: "Android in an iPhone family",
 		avatar: "KM",
+		hue: 92,
 		quote: (
 			<>
 				Every shared-list app I tried left me out. This one works the same on my phone as on theirs.
@@ -62,6 +69,7 @@ const STORIES = [
 		name: "Elif Demir",
 		jobTitle: "Plans dinners for six",
 		avatar: "ED",
+		hue: 0,
 		quote: (
 			<>
 				I plan Sunday night, tap once, and the list is done.{" "}
@@ -73,6 +81,7 @@ const STORIES = [
 		name: "Sam Whitaker",
 		jobTitle: "Dad and occasional cook",
 		avatar: "SW",
+		hue: 292,
 		quote: <>The evening summary is the only notification I haven't turned off.</>,
 	},
 ] as const;
@@ -110,24 +119,75 @@ const QUESTIONS = [
 ] as const;
 
 /**
- * The testimonials band: six households in a masonry of three columns.
+ * A speaker's initials on a pastel disc in their own hue, filling the band's avatar circle,
+ * with deep ink of the same hue so the letters clear 6:1.
+ *
+ * @param handle Runtime handle carrying the initials and hue.
+ * @returns The render function producing the disc.
+ */
+function StoryAvatar(handle: Handle<{ initials: string; hue: number }>) {
+	return () => (
+		<span
+			mix={[
+				raw({
+					display: "grid",
+					placeItems: "center",
+					inlineSize: "100%",
+					blockSize: "100%",
+					fontWeight: "700",
+					color: `oklch(0.33 0.1 ${handle.props.hue})`,
+					backgroundColor: `oklch(0.87 0.085 ${handle.props.hue})`,
+				}),
+			]}
+		>
+			{handle.props.initials}
+		</span>
+	);
+}
+
+/**
+ * The testimonials band: the strongest story set large on the inverted card, then the
+ * other five in a row that scrolls and snaps sideways, the way a store's reviews read;
+ * the row's cards take a lift shallow enough that the scrolling track never clips it.
  *
  * @returns The render function producing the band.
  */
 export function Stories() {
+	let [lead, ...rest] = STORIES;
 	return () => (
 		<TestimonialBand
 			id="stories"
+			tone="tinted"
+			layout="carousel"
+			carouselLabel="More household stories"
+			parts={{
+				quotes: [
+					raw({
+						"--ui-shadow-surface":
+							"0 0 0 1px oklch(0.3 0.1 290 / 0.06), 0 1px 2px oklch(0.3 0.1 290 / 0.08)",
+					}),
+				],
+			}}
 			eyebrow="Households"
 			title="Fewer messages about milk"
 			description="What people told us after their first month of sharing one list."
+			featured={
+				<TestimonialBand.Quote
+					variant="featured"
+					name={lead.name}
+					jobTitle={lead.jobTitle}
+					avatar={<StoryAvatar initials={lead.avatar} hue={lead.hue} />}
+				>
+					{lead.quote}
+				</TestimonialBand.Quote>
+			}
 		>
-			{STORIES.map((story) => (
+			{rest.map((story) => (
 				<TestimonialBand.Quote
 					key={story.name}
 					name={story.name}
 					jobTitle={story.jobTitle}
-					avatar={story.avatar}
+					avatar={<StoryAvatar initials={story.avatar} hue={story.hue} />}
 				>
 					{story.quote}
 				</TestimonialBand.Quote>
@@ -203,8 +263,8 @@ export function Pricing() {
 }
 
 /**
- * The questions band: six answers in two accordion columns whose items share a name per
- * column, so opening one question closes the one before it.
+ * The questions band: six answers as soft cards in two accordion columns whose items
+ * share a name per column, so opening one question closes the one before it.
  *
  * @returns The render function producing the band.
  */
@@ -212,9 +272,30 @@ export function Questions() {
 	return () => (
 		<FaqBand id="faq" columns={2} eyebrow="Questions" title="Before you switch">
 			{QUESTIONS.map((column, index) => (
-				<Accordion key={index}>
+				<Accordion
+					key={index}
+					mix={[
+						raw({
+							"--ui-neutral-border": "transparent",
+							display: "flex",
+							flexDirection: "column",
+							gap: "0.75rem",
+						}),
+					]}
+				>
 					{column.map(([question, answer]) => (
-						<Accordion.Item key={question} name={`rooftree-faq-${index}`}>
+						<Accordion.Item
+							key={question}
+							name={`rooftree-faq-${index}`}
+							mix={[
+								raw({
+									paddingInline: "1.25rem",
+									borderRadius: "1.25rem",
+									backgroundColor: "var(--ui-surface-raised)",
+									boxShadow: "var(--ui-shadow-surface)",
+								}),
+							]}
+						>
 							<Accordion.Trigger>
 								{question}
 								<ChevronDownIcon data-slot="icon" aria-hidden="true" />

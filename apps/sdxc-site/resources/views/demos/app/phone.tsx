@@ -56,7 +56,7 @@ export const PEOPLE = {
 	maya: { name: "Maya", initials: "M", hue: 38 },
 	jonah: { name: "Jonah", initials: "J", hue: 250 },
 	ari: { name: "Ari", initials: "A", hue: 150 },
-	leo: { name: "Leo", initials: "L", hue: 300 },
+	leo: { name: "Leo", initials: "L", hue: 0 },
 } as const;
 
 /** One member of {@link PEOPLE}. */
@@ -145,7 +145,7 @@ export function Phone(handle: Handle<Phone.Props>) {
 					raw({
 						paddingBlock: "clamp(1.5rem, 5cqi, 3rem)",
 						paddingInline: "clamp(1rem, 6cqi, 4rem)",
-						borderRadius: "1.5rem",
+						borderRadius: "var(--ui-marketing-radius-frame, 1.5rem)",
 						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 7%, var(--ui-bg))",
 						backgroundImage: STAGE_GLOW,
 						boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
@@ -330,8 +330,9 @@ namespace Initials {
 }
 
 /**
- * A person's initial on a disc in their hue, the mark that tells the household who has
- * an item, a chore or an event.
+ * A person's initial on a pastel disc in their hue, the mark that tells the household who
+ * has an item, a chore or an event; the deep ink of the same hue keeps the letter above
+ * 6:1 on its disc in either scheme.
  *
  * @param handle Runtime handle carrying the person and size.
  * @returns The render function producing the disc.
@@ -352,9 +353,9 @@ export function Initials(handle: Handle<Initials.Props>) {
 						blockSize: edge,
 						borderRadius: "9999px",
 						fontSize: `calc(${edge} * 0.46)`,
-						fontWeight: "650",
-						color: "white",
-						backgroundColor: `oklch(0.62 0.13 ${hue})`,
+						fontWeight: "700",
+						color: `oklch(0.33 0.1 ${hue})`,
+						backgroundColor: `oklch(0.87 0.085 ${hue})`,
 						boxShadow: `0 0 0 2px ${SCREEN}`,
 					}),
 				]}

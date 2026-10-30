@@ -44,8 +44,8 @@ namespace StoreBadge {
 }
 
 /**
- * One store badge: an ink pill with a glyph and two lines of type, 44px tall so it
- * meets the touch target and sits level with the page's 40px buttons plus their edge.
+ * One store badge: an ink pill with a glyph and two lines of type, at the page's CTA
+ * height and radius, so a badge beside a button reads as the same shape and size.
  *
  * @param handle Runtime handle carrying the link, copy and glyph.
  * @returns The render function producing the badge link.
@@ -62,16 +62,16 @@ export function StoreBadge(handle: Handle<StoreBadge.Props>) {
 					interactiveTransition(),
 					raw({
 						gap: "0.625rem",
-						blockSize: "2.75rem",
-						paddingInline: "0.875rem 1.125rem",
-						borderRadius: "0.75rem",
-						backgroundColor: "oklch(0.18 0.006 70)",
+						blockSize: "var(--ui-marketing-cta-height, 3rem)",
+						paddingInline: "1.125rem 1.5rem",
+						borderRadius: "var(--ui-marketing-cta-radius, 0.75rem)",
+						backgroundColor: "oklch(0.2 0.02 290)",
 						color: "white",
 						textDecoration: "none",
 						boxShadow:
 							"inset 0 0 0 1px rgb(255 255 255 / 0.14), 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.2)",
 					}),
-					hover(raw({ backgroundColor: "oklch(0.26 0.008 70)" })),
+					hover(raw({ backgroundColor: "oklch(0.28 0.03 290)" })),
 					focusVisible(raw({ outline: "2px solid var(--ui-brand-ring)", outlineOffset: "2px" })),
 				]}
 			>
@@ -131,9 +131,9 @@ export function StoreBadges(handle: Handle<StoreBadges.Props>) {
 				store="Google Play"
 				glyph={
 					<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-						<path d={PLAY} fill="var(--ui-color-brand-300)" />
+						<path d={PLAY} fill="oklch(0.86 0.16 92)" />
 						<path d={PLAY_FACETS[0]} fill="white" fill-opacity="0.9" />
-						<path d={PLAY_FACETS[1]} fill="var(--ui-color-brand-500)" />
+						<path d={PLAY_FACETS[1]} fill="var(--ui-color-brand-400)" />
 						<path d={PLAY_FACETS[2]} fill="white" fill-opacity="0.65" />
 					</svg>
 				}

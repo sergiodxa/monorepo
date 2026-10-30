@@ -1,7 +1,7 @@
 /**
- * The bands that show what Rooftree does: a vertical tour through four screens, a grid
- * of the small things that make it stick, the privacy and sync band, and the platforms
- * it runs on. Each band reads on its own, so a reader can land on any of them.
+ * The bands that show what Rooftree does: a tour through four screens, the small things
+ * on colour blocks, the privacy and sync band, and the platforms with their figures.
+ * Each band reads on its own, so a reader can land on any of them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,10 +26,10 @@ import {
 import { fg } from "@sdxc/u/color";
 import { combine, raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { at, dark } from "@sdxc/u/responsive";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
-import { Feature, MarketingHeader, MarketingSection } from "@sdxc/ui";
-import { FeatureBand, IconWell, TabbedStage } from "@sdxc/ui/patterns";
+import { MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
+import { Bento, FeatureBand, IconWell, TabbedStage } from "@sdxc/ui/patterns";
 
 import {
 	CalendarScreen,
@@ -100,83 +100,137 @@ export function Tour() {
 	);
 }
 
+/** The six small features, each on its own colour block, keyed by the hue it is tinted with. */
+const DETAILS = [
+	{
+		hue: 292,
+		icon: CloudOffIcon,
+		title: "Works without signal",
+		body: (
+			<>
+				Tick items off in the basement aisle; Rooftree <strong>syncs the moment you're back</strong>{" "}
+				online.
+			</>
+		),
+	},
+	{
+		hue: 92,
+		icon: ScanBarcodeIcon,
+		title: "Scan to restock",
+		body: (
+			<>
+				Point the camera at an empty box and it lands on the list with{" "}
+				<strong>its exact name</strong>.
+			</>
+		),
+	},
+	{
+		hue: 235,
+		icon: MicIcon,
+		title: "Add by voice",
+		body: (
+			<>
+				Say "oat milk and two lemons" with flour on your hands, and{" "}
+				<strong>both rows appear</strong>.
+			</>
+		),
+	},
+	{
+		hue: 15,
+		icon: MapPinIcon,
+		title: "Reminders by place",
+		body: (
+			<>
+				Your phone nudges you <strong>as you walk past the shop</strong>, not at a time you guessed.
+			</>
+		),
+	},
+	{
+		hue: 160,
+		icon: UsersIcon,
+		title: "Accounts for kids",
+		body: (
+			<>
+				Children see their chores and the calendar, and <strong>nothing they can delete</strong>.
+			</>
+		),
+	},
+	{
+		hue: 55,
+		icon: BellRingIcon,
+		title: "Quiet by default",
+		body: (
+			<>
+				One summary each evening instead of a ping per tick, <strong>unless it's yours</strong> to
+				do.
+			</>
+		),
+	},
+] as const;
+
 /**
- * The details grid: six smaller features that make a shared list stick, on the tinted
- * band so it reads apart from the tour above it.
+ * The small things: six features on pastel colour blocks, one hue each, so the grid reads
+ * as playful at a glance while every line on it keeps 4.5:1 against its own fill.
  *
  * @returns The render function producing the band.
  */
 export function Details() {
 	return () => (
-		<FeatureBand
-			layout="grid"
-			tone="tinted"
-			columns={3}
-			eyebrow="The small things"
-			title="Built for the aisle, not the desk"
-			description="The features families asked for once they had used Rooftree for a month."
-		>
-			<Feature>
-				<Feature.Icon>
-					<CloudOffIcon />
-				</Feature.Icon>
-				<Feature.Title>Works without signal</Feature.Title>
-				<Feature.Description>
-					Tick items off in the basement aisle; Rooftree{" "}
-					<strong>syncs the moment you're back</strong> online.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<ScanBarcodeIcon />
-				</Feature.Icon>
-				<Feature.Title>Scan to restock</Feature.Title>
-				<Feature.Description>
-					Point the camera at an empty box and it lands on the list with{" "}
-					<strong>its exact name</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<MicIcon />
-				</Feature.Icon>
-				<Feature.Title>Add by voice</Feature.Title>
-				<Feature.Description>
-					Say "oat milk and two lemons" with flour on your hands, and{" "}
-					<strong>both rows appear</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<MapPinIcon />
-				</Feature.Icon>
-				<Feature.Title>Reminders by place</Feature.Title>
-				<Feature.Description>
-					Your phone nudges you <strong>as you walk past the shop</strong>, not at a time you
-					guessed.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<UsersIcon />
-				</Feature.Icon>
-				<Feature.Title>Accounts for kids</Feature.Title>
-				<Feature.Description>
-					Children see their chores and the calendar, and <strong>nothing they can delete</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<BellRingIcon />
-				</Feature.Icon>
-				<Feature.Title>Quiet by default</Feature.Title>
-				<Feature.Description>
-					One summary each evening instead of a ping per tick, <strong>unless it's yours</strong> to
-					do.
-				</Feature.Description>
-			</Feature>
-		</FeatureBand>
+		<MarketingSection id="small-things">
+			<MarketingHeader
+				eyebrow="The small things"
+				description="The features families asked for once they had used Rooftree for a month."
+			>
+				Built for the aisle, not the desk
+			</MarketingHeader>
+			<Bento columns={3}>
+				{DETAILS.map((detail) => {
+					let Icon = detail.icon;
+					return (
+						<Bento.Cell key={detail.title} mix={[colourBlock(detail.hue)]}>
+							<span
+								mix={[
+									raw({
+										display: "inline-grid",
+										placeItems: "center",
+										inlineSize: "3rem",
+										blockSize: "3rem",
+										borderRadius: "1rem",
+										color: `oklch(0.42 0.13 ${detail.hue})`,
+										backgroundColor: "oklch(1 0 0 / 0.75)",
+									}),
+									dark(
+										raw({
+											color: `oklch(0.86 0.1 ${detail.hue})`,
+											backgroundColor: "oklch(1 0 0 / 0.08)",
+										}),
+									),
+								]}
+							>
+								<Icon size={22} />
+							</span>
+							<Bento.Title size="lg">{detail.title}</Bento.Title>
+							<Bento.Body>{detail.body}</Bento.Body>
+						</Bento.Cell>
+					);
+				})}
+			</Bento>
+		</MarketingSection>
 	);
+}
+
+/**
+ * Paints a card as a flat pastel block in one hue: the card grid draws its fill from
+ * `--ui-surface-raised` and its lift from `--ui-shadow-surface`, so the block re-points both.
+ */
+function colourBlock(hue: number) {
+	return [
+		raw({
+			"--ui-surface-raised": `oklch(0.95 0.04 ${hue})`,
+			"--ui-shadow-surface": "none",
+		}),
+		dark(raw({ "--ui-surface-raised": `oklch(0.3 0.045 ${hue})` })),
+	];
 }
 
 /**
@@ -306,8 +360,8 @@ const PLATFORMS = [
 ] as const;
 
 /**
- * The platforms band: a centered header over a ruled row of six platform tiles, so a
- * household with mixed phones sees at a glance that nobody is left out.
+ * The platforms band: a centered header over six rounded platform tiles and the figures
+ * behind them, so a household with mixed phones sees at a glance nobody is left out.
  *
  * @returns The render function producing the band.
  */
@@ -326,54 +380,61 @@ export function Platforms() {
 			>
 				Mixed phones, one household
 			</MarketingHeader>
-			<ul
-				mix={[
-					combine([
-						raw({
-							display: "grid",
-							gap: "1px",
-							gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-							margin: "0",
-							padding: "0",
-							listStyle: "none",
-							inlineSize: "100%",
-							overflow: "hidden",
-							borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
-							backgroundColor: "var(--ui-marketing-hairline)",
-							boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
-						}),
-						at("md", raw({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" })),
-						at("xl", raw({ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" })),
-					]),
-				]}
-			>
-				{PLATFORMS.map((platform) => {
-					let Icon = platform.icon;
-					return (
-						<li
-							key={platform.name}
-							mix={[
-								vstack({ gap: 3, align: "center" }),
-								raw({
-									paddingBlock: "2rem",
-									paddingInline: "1rem",
-									backgroundColor: "var(--ui-bg)",
-								}),
-							]}
-						>
-							<IconWell>
-								<Icon />
-							</IconWell>
-							<span mix={[vstack({ gap: 0.5, align: "center" })]}>
-								<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
-									{platform.name}
+			<div mix={[vstack({ gap: 12, align: "stretch" }), raw({ inlineSize: "100%" })]}>
+				<ul
+					mix={[
+						combine([
+							raw({
+								display: "grid",
+								gap: "1rem",
+								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+								margin: "0",
+								padding: "0",
+								listStyle: "none",
+								inlineSize: "100%",
+							}),
+							at("md", raw({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" })),
+							at("xl", raw({ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" })),
+						]),
+					]}
+				>
+					{PLATFORMS.map((platform) => {
+						let Icon = platform.icon;
+						return (
+							<li
+								key={platform.name}
+								mix={[
+									vstack({ gap: 3, align: "center" }),
+									raw({
+										paddingBlock: "1.75rem",
+										paddingInline: "1rem",
+										textAlign: "center",
+										borderRadius: "var(--ui-marketing-radius-surface, 1.5rem)",
+										backgroundColor: "var(--ui-surface-raised)",
+										boxShadow: "var(--ui-shadow-surface)",
+									}),
+								]}
+							>
+								<IconWell tone="brand">
+									<Icon />
+								</IconWell>
+								<span mix={[vstack({ gap: 0.5, align: "center" })]}>
+									<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
+										{platform.name}
+									</span>
+									<span mix={[text("xs"), fg("neutral.muted")]}>{platform.detail}</span>
 								</span>
-								<span mix={[text("xs"), fg("neutral.muted")]}>{platform.detail}</span>
-							</span>
-						</li>
-					);
-				})}
-			</ul>
+							</li>
+						);
+					})}
+				</ul>
+				<StatStrip align="center" size="display">
+					<StatStrip.Item label="App Store rating">4.9</StatStrip.Item>
+					<StatStrip.Item label="Households sharing a list">1.2M</StatStrip.Item>
+					<StatStrip.Item label="Items ticked off last month">38M</StatStrip.Item>
+					<StatStrip.Item label="Median sync between phones">0.4s</StatStrip.Item>
+				</StatStrip>
+			</div>
 		</MarketingSection>
 	);
 }
