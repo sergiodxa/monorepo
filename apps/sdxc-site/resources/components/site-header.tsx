@@ -32,6 +32,9 @@ import routes from "~/routes/web";
 /** Where the collection is read and its issues are filed. */
 const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
 
+/** Widths a phone reads at, where the search link's shortcut hint names keys no screen has. */
+const PHONE_QUERY = "(max-width: 29.9375rem)";
+
 namespace SiteHeader {
 	export interface Props {
 		/** The path being read, which is what marks one destination as the current page. */
@@ -87,7 +90,11 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 	);
 }
 
-/** Renders the destinations alone, for a shell that already draws its own bar. */
+/**
+ * Renders the destinations alone, for a shell that already draws its own bar. On a phone
+ * the search link drops its shortcut hint, which leaves the row narrow enough to sit
+ * beside a wordmark or a menu button at 320px.
+ */
 export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 	return () => {
 		let { activePath = "" } = handle.props;
@@ -103,7 +110,7 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 		let onApi = isWithin(activePath, apiPath) && !onUtilities && !onComponents;
 
 		return (
-			<div mix={[hstack({ gap: 3, align: "center" })]}>
+			<div mix={[hstack({ gap: 3, align: "center" }), media(PHONE_QUERY, when("& kbd", hidden()))]}>
 				<SearchTrigger appleKeyboard={isApplePlatform()} />
 				<Dialog
 					id={SEARCH_DIALOG_ID}

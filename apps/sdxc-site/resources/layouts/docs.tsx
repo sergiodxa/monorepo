@@ -25,7 +25,7 @@ import {
 } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
-import { bs, is, maxBs, maxIs, mis, p, pbe } from "@sdxc/u/size";
+import { bs, is, maxBs, maxIs, minIs, mis, p, pbe } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { before } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
@@ -49,10 +49,17 @@ const DRAWER_BREAKPOINT = "(max-width: 47.9375rem)";
 
 /**
  * Width the page has to reach before the in-page rail is drawn beside the prose. Below it
- * the tree already takes 16rem of the viewport, and the two columns together would leave
- * the prose too narrow to read.
+ * the two columns would leave the prose too narrow to read; above it the prose is the
+ * column that narrows, so the rail always ends inside the viewport.
  */
 const ASIDE_BREAKPOINT = "(min-width: 75rem)";
+
+/**
+ * Width the trail across the top appears from. Narrower, the inset beside the docked tree
+ * holds only the rail toggle and the site's destinations, and the trail clips its tail
+ * whenever the two still compete for the row.
+ */
+const TRAIL_BREAKPOINT = "(min-width: 64rem)";
 
 /** Height the rail's header sets, which the trail across the page matches. */
 const HEADER_HEIGHT = "4rem";
@@ -146,7 +153,14 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</span>
 
 						{breadcrumbs.length > 0 ? (
-							<span mix={[hidden(), media("(min-width: 48rem)", inlineFlex())]}>
+							<span
+								mix={[
+									hidden(),
+									minIs(0),
+									overflow("hidden"),
+									media(TRAIL_BREAKPOINT, inlineFlex()),
+								]}
+							>
 								<Breadcrumbs aria-label="Breadcrumb">
 									<Breadcrumbs.List>
 										{breadcrumbs.map((crumb) => (
@@ -163,7 +177,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							</span>
 						) : null}
 
-						<span mix={[mis("auto")]}>
+						<span mix={[mis("auto"), shrink(0)]}>
 							<SiteNav activePath={activePath} />
 						</span>
 					</header>
@@ -197,7 +211,13 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							media(ASIDE_BREAKPOINT, [hstack({ gap: 12, align: "start", justify: "between" })]),
 						]}
 					>
-						<main mix={[is("100%"), maxIs("48rem")]}>
+						<main
+							mix={[
+								is("100%"),
+								maxIs("48rem"),
+								media(ASIDE_BREAKPOINT, [raw({ flex: "1 1 0" }), minIs(0)]),
+							]}
+						>
 							{children}
 							<DocsPager previous={previous} next={next} />
 							<AuthorNote />
