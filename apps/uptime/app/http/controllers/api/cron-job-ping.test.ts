@@ -183,9 +183,9 @@ async function dispatch(db: Db, request: Request) {
 }
 
 /**
- * A ping request, optionally authenticated and optionally from a named caller.
- * `CF-Connecting-IP` is the only address the caller budget keys on, so a test that omits
- * it lands in the shared "unknown" bucket — which is why the budget tests name one.
+ * A ping request as the Workers runtime delivers it, marked with `cf`, optionally
+ * authenticated and from a named caller. `CF-Connecting-IP` is then the only address the
+ * caller budget keys on, so a test that omits it lands in the shared "unknown" bucket.
  */
 function ping(
 	cronJobId: string,
@@ -196,10 +196,12 @@ function ping(
 	if (options.address !== undefined) headers.set("CF-Connecting-IP", options.address);
 	if (options.forwardedFor !== undefined) headers.set("X-Forwarded-For", options.forwardedFor);
 
-	return new Request(`https://uptime.test${routes.api.cronJobPing.href({ cronJobId })}`, {
+	let request = new Request(`https://uptime.test${routes.api.cronJobPing.href({ cronJobId })}`, {
 		method: "POST",
 		headers,
 	});
+	Object.defineProperty(request, "cf", { value: {} });
+	return request;
 }
 
 /** Everything an accepted ping leaves behind, so a refusal can be asserted to leave none. */
