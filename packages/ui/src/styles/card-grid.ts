@@ -63,8 +63,8 @@ const CORNER_PROPERTIES: ReadonlyArray<readonly [corner: string, property: strin
 export interface CardGridOptions {
 	/** Columns at the `lg` container; the grid shows one track on a phone and two from `md`. */
 	columns: number;
-	/** Separate raised cards, or one hairline-ruled mosaic box. */
-	variant: "cards" | "mosaic";
+	/** Separate raised cards, one hairline-ruled mosaic box, or an un-carded `list`. */
+	variant: "cards" | "mosaic" | "list";
 	/** Named sizing container on the grid's host that the column steps query. */
 	containerName: string;
 }
@@ -72,7 +72,8 @@ export interface CardGridOptions {
 /**
  * Lays a grid's direct children as cards or a mosaic in one class, so the
  * cell fill, edge and per-corner radii never compete across cascade layers.
- * A lone last cell spans the rest of its row at every step. In `cards`, the
+ * A lone last cell spans the rest of its row at every step, unless the cells set
+ * their own `data-span` or the grid is a `list`. In `cards`, the
  * corners on the grid's outer edge take `--ui-marketing-card-radius-outer`;
  * once any cell carries `data-corner`, the `lg` step rounds only the corners
  * those cells list, so a page with custom spans names its own outer corners.
@@ -93,44 +94,71 @@ export function cardGrid<Node extends Element = Element>({
 		let widest = step === GRID_STEPS[GRID_STEPS.length - 1];
 		return when<Node>(`@container ${containerName} ${step.query}`, [
 			raw({ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }),
-			orphanSpans<Node>(count),
+			variant === "list" ? null : orphanSpans<Node>(count),
+			cellSpans<Node>(count),
 			isCards ? outerCorners<Node>(count, widest) : null,
 		]);
 	});
 
-	return combine<Node>([
-		grid(),
-		raw({ textAlign: "start" }),
-		isCards
-			? [
-					gap(4),
-					when(
-						"& > *",
-						raw({
-							backgroundColor: "var(--ui-surface-raised, Canvas)",
-							boxShadow: "var(--ui-shadow-surface, 0 0 0 1px rgb(0 0 0 / 0.06))",
-							borderRadius: INNER_RADIUS,
-							overflow: "hidden",
-						}),
-					),
-				]
-			: [
-					gap("1px"),
-					rounded("xl"),
-					raw({
-						overflow: "hidden",
-						backgroundColor: HAIRLINE,
-						boxShadow: `0 0 0 1px ${HAIRLINE}`,
-					}),
-					when("& > *", raw({ backgroundColor: "var(--ui-surface-raised, Canvas)" })),
-				],
-		steps,
-	]);
+	return combine<Node>([grid(), raw({ textAlign: "start" }), cellChrome<Node>(variant), steps]);
+}
+
+/**
+ * The chrome a grid variant draws: raised cards on a 1rem gap, a mosaic box whose
+ * 1px gaps rule flush cells, or a `list` of bare cells on wide gaps.
+ *
+ * @param variant Grid chrome.
+ * @returns The rules for the grid and its cells.
+ */
+function cellChrome<Node extends Element>(variant: CardGridOptions["variant"]): UtilityInput<Node> {
+	if (variant === "list") return raw({ columnGap: "2.5rem", rowGap: "3rem" });
+	if (variant === "cards") {
+		return [
+			gap(4),
+			when(
+				"& > *",
+				raw({
+					backgroundColor: "var(--ui-surface-raised, Canvas)",
+					boxShadow: "var(--ui-shadow-surface, 0 0 0 1px rgb(0 0 0 / 0.06))",
+					borderRadius: INNER_RADIUS,
+					overflow: "hidden",
+				}),
+			),
+		];
+	}
+	return [
+		gap("1px"),
+		rounded("xl"),
+		raw({
+			overflow: "hidden",
+			backgroundColor: HAIRLINE,
+			boxShadow: `0 0 0 1px ${HAIRLINE}`,
+		}),
+		when("& > *", raw({ backgroundColor: "var(--ui-surface-raised, Canvas)" })),
+	];
+}
+
+/**
+ * Widens a cell carrying `data-span` across that many tracks, capped at the step's
+ * count, for a grid of mixed spans.
+ *
+ * @param count Tracks at this step.
+ * @returns The span rules for the step.
+ */
+function cellSpans<Node extends Element>(count: number): UtilityMixin<Node>[] {
+	if (count < 2) return [];
+	return [2, 3].map((span) =>
+		when(
+			`& > [data-span="${span}"]`,
+			raw({ gridColumn: span >= count ? "1 / -1" : `span ${span}` }),
+		),
+	);
 }
 
 /**
  * Spans a lone last cell across what its row leaves free, so a short last row
- * never strands an empty track.
+ * never strands an empty track. A grid whose cells set their own spans is left as the
+ * page laid it out.
  *
  * @param count Tracks at this step.
  * @returns One `grid-column` rule per possible short-row length.
@@ -140,7 +168,7 @@ function orphanSpans<Node extends Element>(count: number): UtilityMixin<Node>[] 
 	for (let filled = 1; filled < count; filled++) {
 		rules.push(
 			when(
-				`& > :last-child:nth-child(${count}n + ${filled})`,
+				`&:not(:has(> [data-span])) > :last-child:nth-child(${count}n + ${filled})`,
 				raw({ gridColumn: filled === 1 ? "1 / -1" : `span ${count - filled + 1}` }),
 			),
 		);

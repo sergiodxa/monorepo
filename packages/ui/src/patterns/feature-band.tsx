@@ -87,6 +87,8 @@ export namespace FeatureBand {
 		lean?: Split.Lean;
 		/** Grid column count when `layout="grid"`. */
 		columns?: Feature.Columns;
+		/** Grid chrome when `layout="grid"`: `cards`, `mosaic` or an un-carded `list`. */
+		gridVariant?: Feature.GridVariant;
 		/**
 		 * Radio group name for `layout="stage"`. Defaults to `"<id>-stage"` when the band
 		 * has an `id`, else {@link DEFAULT_STAGE_NAME}; give every stage band on a page
@@ -134,6 +136,7 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 		let {
 			children,
 			columns,
+			gridVariant,
 			description,
 			eyebrow,
 			eyebrowHref,
@@ -163,7 +166,11 @@ export function FeatureBand(handle: Handle<FeatureBand.Props>) {
 			resolvedLayout === "grid" || resolvedLayout === "steps" || resolvedLayout === "timeline";
 
 		if (resolvedLayout === "grid") {
-			body = <Feature.Grid columns={columns}>{children}</Feature.Grid>;
+			body = (
+				<Feature.Grid columns={columns} variant={gridVariant}>
+					{children}
+				</Feature.Grid>
+			);
 		} else if (resolvedLayout === "steps") {
 			body = <StepList>{children}</StepList>;
 		} else if (resolvedLayout === "timeline") {

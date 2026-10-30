@@ -52,10 +52,17 @@ export namespace Feature {
 	export type Columns = 2 | 3;
 
 	/**
-	 * Grid chrome: separate raised `cards` with larger outer corners, or one
-	 * `mosaic` box whose 1px gaps draw hairlines between flush cells.
+	 * Grid chrome: separate raised `cards` with larger outer corners, one `mosaic` box
+	 * whose 1px gaps draw hairlines between flush cells, or an un-carded `list` whose
+	 * cells set the icon beside the title and copy.
 	 */
-	export type GridVariant = "cards" | "mosaic";
+	export type GridVariant = "cards" | "mosaic" | "list";
+
+	/** What a {@link Feature.Grid} tells the cells inside it. */
+	export interface GridContext {
+		/** The grid's chrome, which decides the cell's padding and layout. */
+		variant: GridVariant;
+	}
 
 	/**
 	 * Glyph tile: a `quiet` hairline ring in the heading ink, or a `brand`
@@ -67,6 +74,12 @@ export namespace Feature {
 	 * Props accepted by {@link Feature}.
 	 */
 	export interface Props extends TagProps<"div"> {
+		/**
+		 * Tracks the cell spans from the grid's widest step, for a grid of mixed spans; it
+		 * spans the whole row where the grid has fewer tracks. Name the grid's outer
+		 * corners with `data-corner` on the cells that hold them.
+		 */
+		span?: 2 | 3;
 		/** Cell chrome. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
 		/**
@@ -155,18 +168,22 @@ export namespace Feature {
  */
 export function Feature(handle: Handle<Feature.Props>) {
 	return () => {
-		let { href, mix, variant, ...rest } = handle.props;
+		let { href, mix, span, variant, ...rest } = handle.props;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
+		let grid = handle.context.get(Feature.Grid) as Feature.GridContext | undefined;
+		let isListed = grid?.variant === "list";
 
 		return (
 			<div
 				{...rest}
 				data-variant={resolvedVariant}
 				data-href={href || undefined}
+				data-span={span ? String(span) : undefined}
 				data-slot="feature"
 				mix={[
-					vstack({ gap: 4, align: "stretch" }),
-					cardPadding("2rem", "1.5rem", "2.5rem"),
+					isListed
+						? listCell()
+						: [vstack({ gap: 4, align: "stretch" }), cardPadding("2rem", "1.5rem", "2.5rem")],
 					when('&[data-variant="panel"]', [
 						bg("neutral.tint"),
 						border({ color: "neutral", width: 1, style: "solid" }),
@@ -301,11 +318,13 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
  * 	<Feature>...</Feature>
  * </Feature.Grid>
  */
-Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
+Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps, Feature.GridContext>) {
 	return () => {
 		let { children, columns, mix, variant, ...rest } = handle.props;
 		let resolvedColumns = columns ?? DEFAULT_COLUMNS;
 		let resolvedVariant = variant ?? DEFAULT_GRID_VARIANT;
+
+		handle.context.set({ variant: resolvedVariant });
 
 		return (
 			<div
@@ -332,3 +351,30 @@ Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps>) {
 		);
 	};
 };
+
+/**
+ * A cell in a `list` grid: no padding or fill, the icon in its own column beside the
+ * title, copy and action, so a row of claims reads as a list of short paragraphs.
+ */
+function listCell() {
+	return [
+		raw({
+			display: "grid",
+			gridTemplateColumns: "auto minmax(0, 1fr)",
+			columnGap: "1rem",
+			rowGap: "0.5rem",
+			alignContent: "start",
+		}),
+		when('& > :not([data-slot="feature-icon"])', raw({ gridColumn: "2" })),
+		when('& > [data-slot="feature-icon"]', raw({ gridColumn: "1", gridRow: "1 / span 3" })),
+		when('& > [data-slot="feature-media"]', raw({ display: "none" })),
+		when('&:not(:has(> [data-slot="feature-icon"]))', [
+			raw({ gridTemplateColumns: "minmax(0, 1fr)" }),
+			when("& > *", raw({ gridColumn: "1" })),
+		]),
+		when(
+			'& > [data-slot="feature-title"]',
+			raw({ alignSelf: "center", minBlockSize: "2.5rem", display: "flex", alignItems: "center" }),
+		),
+	];
+}

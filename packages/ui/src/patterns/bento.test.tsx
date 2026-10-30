@@ -55,7 +55,7 @@ describe("Bento", () => {
 		expect(html).toContain("@container ui-marketing-bento (36rem <= width < 48rem)");
 		expect(html).toContain("@container ui-marketing-bento (width >= 48rem)");
 		expect(html).toContain("> :nth-child(4n + 1):nth-last-child(-n + 4)");
-		expect(html).toContain("& > :last-child:nth-child(4n + 3)");
+		expect(html).toContain("&:not(:has(> [data-span])) > :last-child:nth-child(4n + 3)");
 		expect(html).toContain("grid-column: span 2");
 	});
 

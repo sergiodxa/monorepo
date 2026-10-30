@@ -52,8 +52,8 @@ describe("Feature", () => {
 		expect(html).toContain('data-variant="cards"');
 		expect(html).toContain("var(--ui-surface-raised, Canvas)");
 		expect(html).toContain("var(--ui-marketing-card-radius-outer, 1.5rem)");
-		expect(html).toContain("& > :last-child:nth-child(3n + 1)");
-		expect(html).toContain("& > :last-child:nth-child(3n + 2)");
+		expect(html).toContain("&:not(:has(> [data-span])) > :last-child:nth-child(3n + 1)");
+		expect(html).toContain("&:not(:has(> [data-span])) > :last-child:nth-child(3n + 2)");
 	});
 
 	test("steps to two columns at the md container and the requested count at lg", async () => {
