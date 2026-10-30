@@ -15,8 +15,8 @@ import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { hstack, inlineFlex, shrink } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
-import { m, p } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
+import { bs, m, minIs, p, pi } from "@sdxc/u/size";
+import { font, text, truncate, weight } from "@sdxc/u/typography";
 import { Separator } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
@@ -110,14 +110,18 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 			<div
 				mix={[rounded("lg"), border({ color: "neutral.border", width: 1, style: "solid" }), bg()]}
 			>
-				<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), p(2, 2, 2, 3)]}>
-					<span mix={[hstack({ gap: 2, align: "center" }), fg("neutral")]}>
-						<span mix={[inlineFlex()]}>
+				<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), bs("2.5rem"), pi(4)]}>
+					<span mix={[hstack({ gap: 2, align: "center" }), minIs(0), fg("neutral")]}>
+						<span mix={[inlineFlex(), shrink(0)]}>
 							<FileCodeIcon size={16} aria-hidden="true" />
 						</span>
-						<span mix={[font("mono"), text("sm"), weight("normal")]}>{heading}</span>
+						<span mix={[minIs(0), truncate(), font("mono"), text("sm"), weight("normal")]}>
+							{heading}
+						</span>
 					</span>
-					<CopyButton target={codeId} bare />
+					<span mix={[inlineFlex(), shrink(0)]}>
+						<CopyButton target={codeId} bare />
+					</span>
 				</div>
 
 				<Separator />
