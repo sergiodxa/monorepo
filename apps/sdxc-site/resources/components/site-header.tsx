@@ -32,7 +32,10 @@ import routes from "~/routes/web";
 /** Where the collection is read and its issues are filed. */
 const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
 
-/** Widths a phone reads at, where the search link's shortcut hint names keys no screen has. */
+/**
+ * Widths a phone reads at, where the search link's shortcut hint names keys no screen has.
+ * The hint draws its own `display` in a later style layer, so hiding it takes importance.
+ */
 const PHONE_QUERY = "(max-width: 29.9375rem)";
 
 namespace SiteHeader {
@@ -110,7 +113,12 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 		let onApi = isWithin(activePath, apiPath) && !onUtilities && !onComponents;
 
 		return (
-			<div mix={[hstack({ gap: 3, align: "center" }), media(PHONE_QUERY, when("& kbd", hidden()))]}>
+			<div
+				mix={[
+					hstack({ gap: 3, align: "center" }),
+					media(PHONE_QUERY, when("& kbd", raw({ display: "none !important" }))),
+				]}
+			>
 				<SearchTrigger appleKeyboard={isApplePlatform()} />
 				<Dialog
 					id={SEARCH_DIALOG_ID}

@@ -94,6 +94,15 @@ describe("DocsLayout", () => {
 		expect(horizontalOverflow()).toBeLessThanOrEqual(0);
 	});
 
+	test("drops the search shortcut hint on a phone", async () => {
+		await page.viewport(320, 900);
+		mountComponentPage();
+
+		let hint = mounted!.$("header kbd") as HTMLElement;
+
+		expect(getComputedStyle(hint).display).toBe("none");
+	});
+
 	test("keeps the in-page rail inside the viewport once it is drawn", async () => {
 		await page.viewport(1280, 900);
 		mountComponentPage();
