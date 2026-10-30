@@ -15,10 +15,24 @@ import { container, gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layo
 import { at } from "@sdxc/u/responsive";
 import { p, width } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { balance, leading, text, tracking, weight } from "@sdxc/u/typography";
+import {
+	balance,
+	leading,
+	tabularNums,
+	text,
+	textAlign,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 
 /** Seam treatment {@link StatStrip} applies when `variant` is omitted. */
 const DEFAULT_VARIANT: StatStrip.Variant = "ruled";
+
+/** Edge every figure and label share when `align` is omitted. */
+const DEFAULT_ALIGN: StatStrip.Align = "start";
+
+/** Figure step {@link StatStrip} applies when `size` is omitted. */
+const DEFAULT_SIZE: StatStrip.Size = "base";
 
 /**
  * Prop types for {@link StatStrip} and its compound parts.
@@ -30,11 +44,40 @@ export namespace StatStrip {
 	export type Variant = "ruled" | "gap";
 
 	/**
+	 * Edge each cell's figure and label share: `start`, or `center` for a strip in a
+	 * centred band that should read centred too.
+	 */
+	export type Align = "start" | "center";
+
+	/**
+	 * Figure step: `base` at 1.875rem, or `display`, a fluid 2.5–4.5rem numeral that
+	 * scales with the strip's width for a strip that is the band's headline.
+	 */
+	export type Size = "base" | "display";
+
+	/**
+	 * Value {@link StatStrip} provides so every item draws for the strip's alignment and size.
+	 */
+	export interface Context {
+		/** Edge every item's figure and label share. */
+		align: Align;
+		/** Figure step every item draws. */
+		size: Size;
+	}
+
+	/**
 	 * Props accepted by {@link StatStrip}.
 	 */
 	export interface Props extends TagProps<"div"> {
 		/** Seam treatment. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
+		/**
+		 * Edge each figure and its label share, whatever text alignment the band
+		 * around the strip sets. Defaults to {@link DEFAULT_ALIGN}.
+		 */
+		align?: Align;
+		/** Figure step. Defaults to {@link DEFAULT_SIZE}. */
+		size?: Size;
 		/** One or more {@link StatStrip.Item} cells. */
 		children: RemixNode;
 	}
@@ -52,8 +95,8 @@ export namespace StatStrip {
 
 /**
  * Lays {@link StatStrip.Item} children in two columns, then in one row from `lg`
- * (48rem) of its own width. The host is the sizing container and fills its
- * parent's inline size, so a centering band still gives the tracks room.
+ * (48rem) of its own width. The host is the sizing container and fills its parent,
+ * and each cell sets its own text alignment, so a centring band never re-aligns labels.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -63,16 +106,22 @@ export namespace StatStrip {
  * 	<StatStrip.Item label={t("stats.apps")}>12</StatStrip.Item>
  * </StatStrip>
  */
-export function StatStrip(handle: Handle<StatStrip.Props>) {
+export function StatStrip(handle: Handle<StatStrip.Props, StatStrip.Context>) {
 	return () => {
-		let { children, mix, variant, ...rest } = handle.props;
+		let { align, children, mix, size, variant, ...rest } = handle.props;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
+		let resolvedAlign = align ?? DEFAULT_ALIGN;
+		let resolvedSize = size ?? DEFAULT_SIZE;
 		let isRuled = resolvedVariant === "ruled";
+
+		handle.context.set({ align: resolvedAlign, size: resolvedSize });
 
 		return (
 			<div
 				{...rest}
 				data-variant={resolvedVariant}
+				data-align={resolvedAlign}
+				data-size={resolvedSize}
 				data-slot="stat-strip"
 				mix={[container("ui-marketing-stat-strip"), width("full"), mix]}
 			>
@@ -123,7 +172,8 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 }
 
 /**
- * One proof cell: the figure as `children`, and what it counts as `label`.
+ * One proof cell: the figure as `children` in tabular digits, and what it counts as
+ * `label`, both on the strip's `align` edge.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the cell's markup.
@@ -133,15 +183,28 @@ export function StatStrip(handle: Handle<StatStrip.Props>) {
 StatStrip.Item = function StatStripItem(handle: Handle<StatStrip.ItemProps>) {
 	return () => {
 		let { children, label, mix, ...rest } = handle.props;
+		let context = handle.context.get(StatStrip) as StatStrip.Context | undefined;
+		let align = context?.align ?? DEFAULT_ALIGN;
+		let isDisplay = context?.size === "display";
 
 		return (
-			<div {...rest} data-slot="stat-strip-item" mix={[vstack({ gap: 1, align: "start" }), mix]}>
+			<div
+				{...rest}
+				data-slot="stat-strip-item"
+				mix={[vstack({ gap: isDisplay ? 2 : 1, align }), textAlign(align), mix]}
+			>
 				<span
+					data-slot="stat-strip-figure"
 					mix={[
-						text("3xl"),
+						isDisplay
+							? raw({
+									fontSize: "clamp(2.5rem, 1.6rem + 3.5cqi, 4.5rem)",
+									lineHeight: "1",
+									letterSpacing: "-0.04em",
+								})
+							: [text("3xl"), tracking("tight"), leading("none")],
 						weight("medium"),
-						tracking("tight"),
-						leading("none"),
+						tabularNums(),
 						fg("neutral.emphasis"),
 					]}
 				>
