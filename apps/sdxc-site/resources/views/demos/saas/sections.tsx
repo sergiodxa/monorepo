@@ -1,13 +1,14 @@
 /**
- * Every band of the Keel page, from the hero to the closing call, each one component
- * holding its copy. The bands alternate plain, tinted, inverse and brand fills, so the
- * page keeps a rhythm without a rule between every section.
+ * Every band of the Keel page, from the hero to the closing call. The chapters stack as
+ * ruled columns with registration marks, numbered in mono, and two near-black inset
+ * panels (the workflow and the closing call) break the column at the page's turning points.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import {
+	ArrowRightIcon,
 	ChevronDownIcon,
 	FileTextIcon,
 	FlaskConicalIcon,
@@ -16,29 +17,35 @@ import {
 	LockIcon,
 	ShieldCheckIcon,
 } from "@sdxc/icons";
+import { raw } from "@sdxc/u/general";
+import { hstack } from "@sdxc/u/layout";
+import { font, text } from "@sdxc/u/typography";
 import {
 	Accordion,
 	Badge,
 	Feature,
+	HeadingScope,
 	LinkButton,
 	LogoCloud,
 	MarketingHeader,
-	MarketingSection,
+	Split,
 	StatStrip,
 } from "@sdxc/ui";
 import {
-	AccentText,
 	Bento,
+	ChangelogStrip,
 	CheckList,
 	CheckRow,
 	ClosingCta,
 	CodeStage,
+	Crosshair,
 	FaqBand,
 	FeatureBand,
 	LandingHero,
 	PricingBand,
 	ProductFrame,
-	ProofStrip,
+	Rails,
+	SegmentedStage,
 	TabbedStage,
 	TestimonialBand,
 } from "@sdxc/ui/patterns";
@@ -60,8 +67,8 @@ import {
 } from "~/resources/views/demos/saas/product-panels";
 import { RevenueBoard } from "~/resources/views/demos/saas/revenue-board";
 
-/** The snippet the metering band shows: one usage event sent from a request handler. */
-const TRACK_USAGE = `import { Keel } from "@keel/node";
+/** One usage event sent from a Node request handler. */
+const TRACK_USAGE_TS = `import { Keel } from "@keel/node";
 
 let keel = new Keel(env.KEEL_SECRET);
 
@@ -70,22 +77,58 @@ await keel.events.send({
 	meter: "api_requests",
 	value: 1,
 	idempotencyKey: request.id,
-	timestamp: new Date(),
 });`;
 
-/** The testimonials, in the order the columns fill: name, job title, initials and quote. */
-const QUOTES = [
+/** The same event from a Python worker. */
+const TRACK_USAGE_PY = `from keel import Keel
+
+keel = Keel(os.environ["KEEL_SECRET"])
+
+keel.events.send(
+    customer="cus_orbitkit",
+    meter="api_requests",
+    value=1,
+    idempotency_key=request.id,
+)`;
+
+/** The same event over plain HTTP, for any other runtime. */
+const TRACK_USAGE_SH = `curl https://api.keel.dev/v1/events \\
+  -H "Authorization: Bearer $KEEL_SECRET" \\
+  -H "Idempotency-Key: req_8f2c41" \\
+  -d customer=cus_orbitkit \\
+  -d meter=api_requests \\
+  -d value=1`;
+
+/** The releases the changelog lists, newest first. */
+const RELEASES = [
 	{
-		name: "Amara Okafor",
-		jobTitle: "Head of Finance, Orbitkit",
-		initials: "AO",
-		quote: (
-			<>
-				We closed October in two days instead of nine. Every invoice line links back to the requests
-				behind it, so <strong>audit questions take minutes</strong> now.
-			</>
-		),
+		dateTime: "2026-10-28",
+		date: "Oct 28, 2026",
+		title: "Spend alerts on every plan",
+		body: "Warn customers at 80% of their commitment and again at 100%.",
 	},
+	{
+		dateTime: "2026-10-14",
+		date: "Oct 14, 2026",
+		title: "Replay a month in the sandbox",
+		body: "Diff every invoice a draft plan would change before you ship it.",
+	},
+	{
+		dateTime: "2026-09-30",
+		date: "Sep 30, 2026",
+		title: "Unique-count meters",
+		body: "Bill per active seat, device or project, counted once a period.",
+	},
+	{
+		dateTime: "2026-09-16",
+		date: "Sep 16, 2026",
+		title: "Credit notes over the API",
+		body: "Issue and void credit notes, each tied to the line it corrects.",
+	},
+] as const;
+
+/** The four testimonials under the featured one, two by two: name, job title, initials and quote. */
+const QUOTES = [
 	{
 		name: "Tomás Ibarra",
 		jobTitle: "Staff Engineer, Parcelbase",
@@ -93,7 +136,7 @@ const QUOTES = [
 		quote: (
 			<>
 				Our homegrown billing service was three cron jobs and a prayer. We replaced it with one
-				event call per request and deleted 14,000 lines.
+				event call per request and <strong>deleted 14,000 lines</strong>.
 			</>
 		),
 	},
@@ -103,8 +146,8 @@ const QUOTES = [
 		initials: "HL",
 		quote: (
 			<>
-				Moving from seats to usage pricing used to be a quarter-long project. With Keel we ran both
-				models side by side for a month and <strong>switched with a toggle</strong>.
+				Moving from seats to usage pricing used to be a quarter-long project. We ran both models
+				side by side for a month and <strong>switched with a toggle</strong>.
 			</>
 		),
 	},
@@ -114,8 +157,8 @@ const QUOTES = [
 		initials: "KW",
 		quote: (
 			<>
-				The sandbox replays real traffic against a draft plan. We priced our new tier off actual
-				data, not a spreadsheet guess.
+				The sandbox replays real traffic against a draft plan. We priced our new tier off{" "}
+				<strong>actual data</strong>, not a spreadsheet guess.
 			</>
 		),
 	},
@@ -125,20 +168,8 @@ const QUOTES = [
 		initials: "PR",
 		quote: (
 			<>
-				Recovery emails go out on each customer's payday, not on a fixed schedule. Failed payments
-				dropped by a third in the first quarter, and <strong>nobody on my team chases cards</strong>{" "}
-				anymore.
-			</>
-		),
-	},
-	{
-		name: "Daniel Mensah",
-		jobTitle: "Founder, Brightpath",
-		initials: "DM",
-		quote: (
-			<>
-				We launched usage pricing the week we signed. The portal answered the “why is my bill
-				higher” emails before they were sent.
+				Recovery emails go out on each customer's payday. Failed payments dropped by a third, and{" "}
+				<strong>nobody on my team chases cards</strong> anymore.
 			</>
 		),
 	},
@@ -177,23 +208,20 @@ const QUESTIONS = [
 ] as const;
 
 /**
- * The opening band: the claim centered over the dashboard on a backdrop stage, so the
- * product carries the hero rather than an illustration.
+ * The opening band: the claim set flush left over a stage that switches between the
+ * dashboard, the meters and the API call, pinned at its corners like a drawing. The
+ * release pin under the actions links the newest changelog entry.
  *
  * @returns The render function producing the hero.
  */
 export function HeroSection() {
 	return () => (
 		<LandingHero
-			align="center"
+			align="start"
+			mediaPlacement="below"
 			tone="grid"
-			eyebrow="New: spend alerts on every plan"
-			eyebrowHref="#workflow"
-			title={
-				<>
-					Turn API usage into <AccentText variant="swash">paid invoices</AccentText>
-				</>
-			}
+			entrance
+			title="Turn API usage into paid invoices"
 			description={
 				<>
 					Keel meters every event your product emits, prices it on any plan you can describe and
@@ -206,83 +234,124 @@ export function HeroSection() {
 					<LinkButton href="#start" color="brand" mix={[marketingCtaChrome()]}>
 						Start free
 					</LinkButton>
-					<LinkButton href="#start" variant="surface" mix={[marketingCtaChrome()]}>
-						Book a demo
+					<LinkButton href="#product" variant="surface" mix={[marketingCtaChrome()]}>
+						Read the quickstart
 					</LinkButton>
 				</>
 			}
-			note="Free until you bill $10k a month. No card required."
+			release={<a href="#changelog">v4.2 · Spend alerts, Oct 28</a>}
 			media={
-				<ProductFrame stage="backdrop" lights title="Revenue" url="keel · Acme Cloud">
-					<RevenueBoard />
-				</ProductFrame>
+				<div mix={[raw({ position: "relative" })]}>
+					<SegmentedStage name="keel-hero-views" aria-label="Keel product views" align="start">
+						<SegmentedStage.Item value="revenue" label="Revenue" defaultChecked>
+							<ProductFrame lights title="Revenue" url="app.keel.dev">
+								<RevenueBoard />
+							</ProductFrame>
+						</SegmentedStage.Item>
+						<SegmentedStage.Item value="meters" label="Meters">
+							<MetersPanel />
+						</SegmentedStage.Item>
+						<SegmentedStage.Item value="api" label="API">
+							<CodeStage variant="slab" title="track-usage.ts" language="ts" lineNumbers>
+								{TRACK_USAGE_TS}
+							</CodeStage>
+						</SegmentedStage.Item>
+					</SegmentedStage>
+					<Crosshair corner="end-start" size="md" />
+					<Crosshair corner="end-end" size="md" />
+				</div>
 			}
 		/>
 	);
 }
 
 /**
- * The proof strip: six customer marks over four figures about what runs through Keel.
+ * The customers: six marks in a ruled grid, the first column of the page's rails.
  *
  * @returns The render function producing the strip.
  */
-export function ProofSection() {
+export function CustomersStrip() {
 	return () => (
-		<ProofStrip>
-			<LogoCloud layout="spread" label="Billing for API-first companies like" muted>
+		<Rails ruled marks="corners" spacing="compact">
+			<LogoCloud layout="ruled" label="Billing for API-first companies like" muted>
 				{CUSTOMERS.map((customer) => (
 					<CustomerMark key={customer.name} name={customer.name} glyph={customer.glyph} />
 				))}
 			</LogoCloud>
-			<StatStrip>
+		</Rails>
+	);
+}
+
+/**
+ * Chapter 01, metering: the claim and its guarantees beside the one call that sends an
+ * event, in three languages, since the integration is the first thing an engineer asks about.
+ *
+ * @returns The render function producing the chapter.
+ */
+export function MeteringChapter() {
+	return () => (
+		<Rails id="product" ruled marks="corners">
+			<HeadingScope level={2}>
+				<Split>
+					<Split.Copy>
+						<MarketingHeader
+							mix={[raw({ "--ui-marketing-header-end": "2rem" })]}
+							eyebrow="01 / Metering"
+							description={
+								<>
+									One call per event, from any language. Keel{" "}
+									<strong>deduplicates, aggregates and keeps every event</strong> for seven years,
+									so each invoice line traces back to the requests behind it.
+								</>
+							}
+						>
+							Send events, Keel does the math
+						</MarketingHeader>
+						<CheckList>
+							<CheckRow>Idempotency keys drop retried events</CheckRow>
+							<CheckRow>Count, sum, max or unique per meter</CheckRow>
+							<CheckRow>Backfill a month without double billing</CheckRow>
+						</CheckList>
+					</Split.Copy>
+					<Split.Media>
+						<CodeStage
+							variant="code"
+							lineNumbers
+							name="keel-track-usage"
+							tabs={[
+								{ label: "node.ts", content: TRACK_USAGE_TS, language: "ts" },
+								{ label: "worker.py", content: TRACK_USAGE_PY, language: "py" },
+								{ label: "curl.sh", content: TRACK_USAGE_SH, language: "sh" },
+							]}
+						/>
+					</Split.Media>
+				</Split>
+			</HeadingScope>
+		</Rails>
+	);
+}
+
+/**
+ * Four figures about what runs through Keel, set at display size in the ruled column.
+ *
+ * @returns The render function producing the strip.
+ */
+export function FiguresStrip() {
+	return () => (
+		<Rails ruled marks="corners" spacing="compact">
+			<StatStrip size="display" variant="gap">
 				<StatStrip.Item label="Billed through Keel last year">$2.4B</StatStrip.Item>
 				<StatStrip.Item label="Usage events metered each month">41B</StatStrip.Item>
 				<StatStrip.Item label="Median days from contract to first invoice">18</StatStrip.Item>
 				<StatStrip.Item label="Fewer failed payments after recovery">37%</StatStrip.Item>
 			</StatStrip>
-		</ProofStrip>
+		</Rails>
 	);
 }
 
 /**
- * The metering band: the claim and its guarantees beside the one call that sends an
- * event, since the integration is the first thing an engineer evaluating Keel asks about.
- *
- * @returns The render function producing the band.
- */
-export function MeteringBand() {
-	return () => (
-		<FeatureBand
-			id="product"
-			layout="split"
-			ruled
-			eyebrow="Metering"
-			title="Send events, Keel does the math"
-			description={
-				<>
-					One call per event, from any language. Keel{" "}
-					<strong>deduplicates, aggregates and keeps every event</strong> for seven years, so each
-					invoice line traces back to the requests behind it.
-				</>
-			}
-			media={
-				<CodeStage variant="code" title="track-usage.ts" language="ts" lineNumbers>
-					{TRACK_USAGE}
-				</CodeStage>
-			}
-		>
-			<CheckList>
-				<CheckRow>Idempotency keys drop retried events</CheckRow>
-				<CheckRow>Count, sum, max or unique per meter</CheckRow>
-				<CheckRow>Backfill a month without double billing</CheckRow>
-			</CheckList>
-		</FeatureBand>
-	);
-}
-
-/**
- * The workflow band: a vertical stage on an inverse inset panel, one product screen per
- * step of a billing month, switched by native radios.
+ * Chapter 02, the workflow: a vertical stage on a near-black inset panel, one product
+ * screen per step of a billing month, switched by native radios.
  *
  * @returns The render function producing the band.
  */
@@ -293,7 +362,7 @@ export function WorkflowBand() {
 			layout="stage"
 			tone="inverse"
 			inset
-			eyebrow="Workflow"
+			eyebrow="02 / Workflow"
 			title="From raw events to paid invoices"
 			description={
 				<>
@@ -342,164 +411,212 @@ export function WorkflowBand() {
 }
 
 /**
- * The platform bento: five cells, each led by a scene, for what Keel handles once
- * usage is priced. Five cells over three columns leave the last one spanning two.
+ * Chapter 03, the platform: a split chapter header over five bento cells, each led by a
+ * product scene. Five cells over three columns leave the last one spanning two.
  *
- * @returns The render function producing the band.
+ * @returns The render function producing the chapter.
  */
-export function PlatformBand() {
+export function PlatformChapter() {
 	return () => (
-		<MarketingSection id="platform">
-			<MarketingHeader
-				eyebrow="Platform"
-				description={
-					<>
-						The parts of billing nobody wants to build twice,{" "}
-						<strong>shipped and maintained</strong> so your team works on the product.
-					</>
-				}
-			>
-				Everything after the meter
-			</MarketingHeader>
-			<Bento columns={3}>
-				<Bento.Cell>
-					<Bento.Media>
-						<PortalScene />
-					</Bento.Media>
-					<Bento.Title>A portal customers run</Bento.Title>
-					<Bento.Body>
-						Customers check usage, change plans and download invoices on a page with{" "}
-						<strong>your logo and domain</strong>.
-					</Bento.Body>
-				</Bento.Cell>
-				<Bento.Cell>
-					<Bento.Media>
-						<TaxScene />
-					</Bento.Media>
-					<Bento.Title>Tax in 60 countries</Bento.Title>
-					<Bento.Body>
-						Rates follow the customer's address and update when the law does, with{" "}
-						<strong>filing-ready reports</strong> each quarter.
-					</Bento.Body>
-				</Bento.Cell>
-				<Bento.Cell>
-					<Bento.Media>
-						<CurrencyScene />
-					</Bento.Media>
-					<Bento.Title>Prices in 135 currencies</Bento.Title>
-					<Bento.Body>
-						Set a price per currency or convert at the day's rate, and{" "}
-						<strong>settle in the one you report in</strong>.
-					</Bento.Body>
-				</Bento.Cell>
-				<Bento.Cell>
-					<Bento.Media>
-						<WebhookScene />
-					</Bento.Media>
-					<Bento.Title>Webhooks for every change</Bento.Title>
-					<Bento.Body>
-						Signed deliveries with retries for 72 hours, and a log to{" "}
-						<strong>replay any event</strong>.
-					</Bento.Body>
-				</Bento.Cell>
-				<Bento.Cell>
-					<Bento.Media>
-						<RecognitionScene />
-					</Bento.Media>
-					<Bento.Title size="lg">Revenue recognition, built in</Bento.Title>
-					<Bento.Body>
-						Annual contracts and prepaid credits recognize day by day, so the ledger your auditor
-						reads <strong>matches the invoices to the cent</strong>.
-					</Bento.Body>
-				</Bento.Cell>
-			</Bento>
-		</MarketingSection>
+		<Rails id="platform" ruled marks="corners">
+			<HeadingScope level={2}>
+				<MarketingHeader
+					layout="split"
+					eyebrow="03 / Platform"
+					description={
+						<>
+							The parts of billing nobody wants to build twice,{" "}
+							<strong>shipped and maintained</strong> so your team works on the product.
+						</>
+					}
+				>
+					Everything after the meter
+				</MarketingHeader>
+				<Bento columns={3}>
+					<Bento.Cell>
+						<Bento.Media>
+							<PortalScene />
+						</Bento.Media>
+						<Bento.Title>A portal customers run</Bento.Title>
+						<Bento.Body>
+							Customers check usage, change plans and download invoices on a page with{" "}
+							<strong>your logo and domain</strong>.
+						</Bento.Body>
+					</Bento.Cell>
+					<Bento.Cell>
+						<Bento.Media>
+							<TaxScene />
+						</Bento.Media>
+						<Bento.Title>Tax in 60 countries</Bento.Title>
+						<Bento.Body>
+							Rates follow the customer's address and update when the law does, with{" "}
+							<strong>filing-ready reports</strong> each quarter.
+						</Bento.Body>
+					</Bento.Cell>
+					<Bento.Cell>
+						<Bento.Media>
+							<CurrencyScene />
+						</Bento.Media>
+						<Bento.Title>Prices in 135 currencies</Bento.Title>
+						<Bento.Body>
+							Set a price per currency or convert at the day's rate, and{" "}
+							<strong>settle in the one you report in</strong>.
+						</Bento.Body>
+					</Bento.Cell>
+					<Bento.Cell>
+						<Bento.Media>
+							<WebhookScene />
+						</Bento.Media>
+						<Bento.Title>Webhooks for every change</Bento.Title>
+						<Bento.Body>
+							Signed deliveries with retries for 72 hours, and a log to{" "}
+							<strong>replay any event</strong>.
+						</Bento.Body>
+					</Bento.Cell>
+					<Bento.Cell>
+						<Bento.Media>
+							<RecognitionScene />
+						</Bento.Media>
+						<Bento.Title size="lg">Revenue recognition, built in</Bento.Title>
+						<Bento.Body>
+							Annual contracts and prepaid credits recognize day by day, so the ledger your auditor
+							reads <strong>matches the invoices to the cent</strong>.
+						</Bento.Body>
+					</Bento.Cell>
+				</Bento>
+			</HeadingScope>
+		</Rails>
 	);
 }
 
 /**
- * The security band: six controls a procurement review asks about, as a tinted grid.
+ * Chapter 04, security: six controls a procurement review asks about, as an un-carded
+ * icon list, so the chapter reads as a specification rather than a wall of cards.
  *
- * @returns The render function producing the band.
+ * @returns The render function producing the chapter.
  */
-export function SecurityBand() {
+export function SecurityChapter() {
 	return () => (
-		<FeatureBand
-			id="security"
-			layout="grid"
-			tone="tinted"
-			columns={3}
-			eyebrow="Security"
-			title="Built to pass your audit"
-			description={
-				<>
-					Billing data is financial data. Keel is held to the same controls as{" "}
-					<strong>the ledger it feeds</strong>.
-				</>
-			}
-		>
-			<Feature>
-				<Feature.Icon>
-					<ShieldCheckIcon />
-				</Feature.Icon>
-				<Feature.Title>SOC 2 Type II</Feature.Title>
-				<Feature.Description>
-					Audited every year, with the report and a bridge letter <strong>on request</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<LockIcon />
-				</Feature.Icon>
-				<Feature.Title>SSO and SCIM</Feature.Title>
-				<Feature.Description>
-					Sign in through your identity provider and remove access the moment someone leaves.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<FileTextIcon />
-				</Feature.Icon>
-				<Feature.Title>Audit log</Feature.Title>
-				<Feature.Description>
-					Every price change, credit and refund records <strong>who made it and why</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<KeyRoundIcon />
-				</Feature.Icon>
-				<Feature.Title>Scoped API keys</Feature.Title>
-				<Feature.Description>
-					Give a service the right to send events and nothing else, and rotate keys without
-					downtime.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<FlaskConicalIcon />
-				</Feature.Icon>
-				<Feature.Title>Sandbox workspaces</Feature.Title>
-				<Feature.Description>
-					Replay production traffic against a draft plan, with <strong>no customer billed</strong>.
-				</Feature.Description>
-			</Feature>
-			<Feature>
-				<Feature.Icon>
-					<GlobeIcon />
-				</Feature.Icon>
-				<Feature.Title>Data residency</Feature.Title>
-				<Feature.Description>
-					Keep each workspace's events in the United States or the European Union.
-				</Feature.Description>
-			</Feature>
-		</FeatureBand>
+		<Rails id="security" ruled marks="corners">
+			<HeadingScope level={2}>
+				<MarketingHeader
+					eyebrow="04 / Security"
+					description={
+						<>
+							Billing data is financial data. Keel is held to the same controls as{" "}
+							<strong>the ledger it feeds</strong>.
+						</>
+					}
+				>
+					Built to pass your audit
+				</MarketingHeader>
+				<Feature.Grid variant="list" columns={3}>
+					<Feature>
+						<Feature.Icon>
+							<ShieldCheckIcon />
+						</Feature.Icon>
+						<Feature.Title>SOC 2 Type II</Feature.Title>
+						<Feature.Description>
+							Audited every year, with the report and a bridge letter <strong>on request</strong>.
+						</Feature.Description>
+					</Feature>
+					<Feature>
+						<Feature.Icon>
+							<LockIcon />
+						</Feature.Icon>
+						<Feature.Title>SSO and SCIM</Feature.Title>
+						<Feature.Description>
+							Sign in through your identity provider and remove access the moment someone leaves.
+						</Feature.Description>
+					</Feature>
+					<Feature>
+						<Feature.Icon>
+							<FileTextIcon />
+						</Feature.Icon>
+						<Feature.Title>Audit log</Feature.Title>
+						<Feature.Description>
+							Every price change, credit and refund records <strong>who made it and why</strong>.
+						</Feature.Description>
+					</Feature>
+					<Feature>
+						<Feature.Icon>
+							<KeyRoundIcon />
+						</Feature.Icon>
+						<Feature.Title>Scoped API keys</Feature.Title>
+						<Feature.Description>
+							Give a service the right to send events and nothing else, and rotate keys without
+							downtime.
+						</Feature.Description>
+					</Feature>
+					<Feature>
+						<Feature.Icon>
+							<FlaskConicalIcon />
+						</Feature.Icon>
+						<Feature.Title>Sandbox workspaces</Feature.Title>
+						<Feature.Description>
+							Replay production traffic against a draft plan, with{" "}
+							<strong>no customer billed</strong>
+						</Feature.Description>
+					</Feature>
+					<Feature>
+						<Feature.Icon>
+							<GlobeIcon />
+						</Feature.Icon>
+						<Feature.Title>Data residency</Feature.Title>
+						<Feature.Description>
+							Keep each workspace's events in the United States or the European Union.
+						</Feature.Description>
+					</Feature>
+				</Feature.Grid>
+			</HeadingScope>
+		</Rails>
 	);
 }
 
 /**
- * The testimonials: six quotes from finance, engineering and revenue leads, flowing
- * into three masonry columns.
+ * The changelog: the four latest releases on one dated rule, closing the ruled column,
+ * since a billing product's pace of releases is part of what a buyer weighs.
+ *
+ * @returns The render function producing the strip.
+ */
+export function ChangelogSection() {
+	return () => (
+		<Rails id="changelog" ruled marks="corners">
+			<HeadingScope level={2}>
+				<ChangelogStrip
+					title="Changelog"
+					action={
+						<a
+							href="#changelog"
+							mix={[hstack({ gap: 1.5, align: "center" }), font("mono"), text("sm")]}
+						>
+							All releases
+							<ArrowRightIcon
+								aria-hidden="true"
+								mix={[raw({ inlineSize: "1em", blockSize: "1em" })]}
+							/>
+						</a>
+					}
+				>
+					{RELEASES.map((release) => (
+						<ChangelogStrip.Entry
+							key={release.dateTime}
+							dateTime={release.dateTime}
+							date={release.date}
+							title={release.title}
+						>
+							{release.body}
+						</ChangelogStrip.Entry>
+					))}
+				</ChangelogStrip>
+			</HeadingScope>
+		</Rails>
+	);
+}
+
+/**
+ * The customers band: one featured story with its mark and a link, then four short
+ * quotes in two columns, so every row is full at every width.
  *
  * @returns The render function producing the band.
  */
@@ -507,9 +624,25 @@ export function TestimonialSection() {
 	return () => (
 		<TestimonialBand
 			id="customers"
-			eyebrow="Customers"
+			tone="tinted"
+			columns={2}
+			eyebrow="05 / Customers"
 			title="Finance and engineering agree"
 			description="Teams that bill for usage moved off homegrown billing, and nobody asked to go back."
+			featured={
+				<TestimonialBand.Quote
+					variant="featured"
+					name="Amara Okafor"
+					jobTitle="Head of Finance, Orbitkit"
+					avatar="AO"
+					logo={<CustomerMark name="Orbitkit" glyph="orbit" />}
+					href="#customers"
+					linkLabel="Read the Orbitkit story"
+				>
+					We closed October in two days instead of nine. Every invoice line links back to the
+					requests behind it, so <strong>audit questions take minutes</strong> now.
+				</TestimonialBand.Quote>
+			}
 		>
 			{QUOTES.map((quote) => (
 				<TestimonialBand.Quote
@@ -535,8 +668,7 @@ export function PricingSection() {
 	return () => (
 		<PricingBand
 			id="pricing"
-			tone="tinted"
-			eyebrow="Pricing"
+			eyebrow="06 / Pricing"
 			title="Pay as your revenue grows"
 			description={
 				<>
@@ -621,7 +753,7 @@ export function FaqSection() {
 			id="faq"
 			ruled
 			columns={2}
-			eyebrow="FAQ"
+			eyebrow="07 / FAQ"
 			title="Questions, answered"
 			description="What finance and engineering teams ask before they move billing to Keel."
 		>
@@ -645,8 +777,8 @@ export function FaqSection() {
 }
 
 /**
- * The closing call on an inset brand panel: one sentence of promise and the same two
- * actions the hero offers.
+ * The closing call on a near-black inset panel, echoing the workflow band: one sentence
+ * of promise, the primary action and a quieter route to sales.
  *
  * @returns The render function producing the band.
  */
@@ -654,16 +786,16 @@ export function ClosingBand() {
 	return () => (
 		<ClosingCta
 			id="start"
-			tone="brand"
+			tone="inverse"
 			inset
 			title="Ship usage pricing this sprint"
 			description="Send your first event in ten minutes and invoice real customers when you are ready. Starter is free until you bill $10k a month."
 			actions={
 				<>
-					<LinkButton href="#top" color="neutral" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#top" color="brand" mix={[marketingCtaChrome()]}>
 						Start free
 					</LinkButton>
-					<LinkButton href="#faq" variant="ghost" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#faq" variant="surface" mix={[marketingCtaChrome()]}>
 						Talk to sales
 					</LinkButton>
 				</>

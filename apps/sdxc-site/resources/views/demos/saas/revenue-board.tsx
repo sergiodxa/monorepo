@@ -148,7 +148,7 @@ export function RevenueBoard() {
 								mix={[
 									raw({ flexDirection: "column", alignItems: "flex-start", gap: "0.25rem" }),
 									p(3, 3.5),
-									raw({ borderRadius: "0.75rem", boxShadow: "var(--ui-shadow-surface)" }),
+									raw({ borderRadius: "0.5rem", boxShadow: "var(--ui-shadow-surface)" }),
 									bg("var(--ui-surface-raised)"),
 									index === 2 ? showFrom("md", BOARD, "flex") : raw({ display: "flex" }),
 								]}
@@ -174,11 +174,16 @@ export function RevenueBoard() {
 						mix={[
 							vstack({ gap: 3, align: "stretch" }),
 							p(4),
-							raw({ borderRadius: "0.75rem", boxShadow: "var(--ui-shadow-surface)" }),
+							raw({ borderRadius: "0.5rem", boxShadow: "var(--ui-shadow-surface)" }),
 							bg("var(--ui-surface-raised)"),
 						]}
 					>
-						<span mix={[hstack({ gap: 3, align: "center", justify: "between" })]}>
+						<span
+							mix={[
+								hstack({ gap: 3, align: "center", justify: "between" }),
+								raw({ flexWrap: "wrap", rowGap: "0.5rem" }),
+							]}
+						>
 							<span mix={[weight("medium"), fg("neutral.emphasis")]}>Revenue by month</span>
 							<span mix={[hstack({ gap: 3, align: "center" }), text("xs"), fg("neutral")]}>
 								<Legend color="var(--ui-color-brand-300)">Committed</Legend>
@@ -190,20 +195,27 @@ export function RevenueBoard() {
 
 					<div
 						mix={[
-							vstack({ gap: 0, align: "stretch" }),
 							raw({
-								borderRadius: "0.75rem",
+								display: "grid",
+								gridTemplateColumns: "minmax(0, 1fr) auto auto",
+								columnGap: "1rem",
+								borderRadius: "0.5rem",
 								boxShadow: "var(--ui-shadow-surface)",
 								overflow: "hidden",
 							}),
+							at(
+								"md",
+								BOARD,
+								raw({ gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr) auto auto" }),
+							),
 							bg("var(--ui-surface-raised)"),
 						]}
 					>
 						<span
 							mix={[
 								hstack({ gap: 3, align: "center", justify: "between" }),
+								raw({ gridColumn: "1 / -1" }),
 								p(3, 4),
-								raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
 							]}
 						>
 							<span mix={[weight("medium"), fg("neutral.emphasis")]}>Latest invoices</span>
@@ -215,29 +227,34 @@ export function RevenueBoard() {
 								mix={[
 									raw({
 										display: "grid",
-										gridTemplateColumns: "minmax(0, 1fr) auto auto",
+										gridColumn: "1 / -1",
+										gridTemplateColumns: "subgrid",
 										alignItems: "center",
-										gap: "1rem",
+										borderBlockStart: "1px solid var(--ui-marketing-hairline)",
 									}),
-									at(
-										"md",
-										BOARD,
-										raw({ gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr) auto auto" }),
-									),
 									p(2.5, 4),
-									raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
 								]}
 							>
 								<span mix={[weight("medium"), fg("neutral.emphasis"), truncate()]}>{customer}</span>
 								<span mix={[showFrom("md", BOARD, "block"), fg("neutral"), truncate()]}>
 									{plan}
 								</span>
-								<span mix={[font("mono"), text("xs"), fg("neutral.emphasis"), tabularNums()]}>
+								<span
+									mix={[
+										font("mono"),
+										text("xs"),
+										fg("neutral.emphasis"),
+										tabularNums(),
+										raw({ justifySelf: "end" }),
+									]}
+								>
 									{amount}
 								</span>
-								<Badge color={INVOICE_COLOR[state]} variant="secondary">
-									{state}
-								</Badge>
+								<span mix={[raw({ justifySelf: "start" })]}>
+									<Badge color={INVOICE_COLOR[state]} variant="secondary">
+										{state}
+									</Badge>
+								</span>
 							</span>
 						))}
 					</div>
@@ -346,8 +363,9 @@ function Legend(handle: Handle<Legend.Props>) {
 }
 
 /**
- * Twelve stacked bars over three quiet gridlines, committed revenue under metered.
- * The SVG scales with the card and labels itself with the year's total growth.
+ * Twelve stacked bars over three quiet gridlines, committed revenue under metered. The
+ * bars scale with the card; the month initials sit in a row of text under them, so they
+ * keep the card's 12px size at a phone's width.
  *
  * @returns The render function producing the chart.
  */
@@ -358,59 +376,67 @@ function RevenueChart() {
 		let scale = (value: number) => (value / CHART.max) * CHART.height;
 
 		return (
-			<svg
-				viewBox={`0 0 ${CHART.width} ${CHART.height + 22}`}
-				role="img"
-				aria-label="Monthly revenue grew from $300k to $482k over the last twelve months"
-				mix={[is("100%"), raw({ blockSize: "auto", display: "block" })]}
-			>
-				{[0.25, 0.5, 0.75].map((line) => (
-					<line
-						key={line}
-						x1="0"
-						x2={CHART.width}
-						y1={CHART.height * line}
-						y2={CHART.height * line}
-						stroke="var(--ui-marketing-hairline)"
-						stroke-dasharray="3 5"
-					/>
-				))}
-				{MONTHS.map(([month, committed, metered], index) => {
-					let x = index * slot + (slot - barWidth) / 2;
-					let committedHeight = scale(committed);
-					let meteredHeight = scale(metered);
-					return (
-						<g key={index}>
-							<rect
-								x={x}
-								y={CHART.height - committedHeight}
-								width={barWidth}
-								height={committedHeight}
-								rx="3"
-								fill="var(--ui-color-brand-300)"
-							/>
-							<rect
-								x={x}
-								y={CHART.height - committedHeight - meteredHeight - 2}
-								width={barWidth}
-								height={meteredHeight}
-								rx="3"
-								fill="var(--ui-color-brand-600)"
-							/>
-							<text
-								x={x + barWidth / 2}
-								y={CHART.height + 17}
-								text-anchor="middle"
-								font-size="12"
-								fill="currentColor"
-								mix={[fg("neutral.muted")]}
-							>
-								{month}
-							</text>
-						</g>
-					);
-				})}
-			</svg>
+			<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+				<svg
+					viewBox={`0 0 ${CHART.width} ${CHART.height}`}
+					role="img"
+					aria-label="Monthly revenue grew from $300k to $482k over the last twelve months"
+					mix={[is("100%"), raw({ blockSize: "auto", display: "block" })]}
+				>
+					{[0.25, 0.5, 0.75].map((line) => (
+						<line
+							key={line}
+							x1="0"
+							x2={CHART.width}
+							y1={CHART.height * line}
+							y2={CHART.height * line}
+							stroke="var(--ui-marketing-hairline)"
+							stroke-dasharray="3 5"
+						/>
+					))}
+					{MONTHS.map(([, committed, metered], index) => {
+						let x = index * slot + (slot - barWidth) / 2;
+						let committedHeight = scale(committed);
+						let meteredHeight = scale(metered);
+						return (
+							<g key={index}>
+								<rect
+									x={x}
+									y={CHART.height - committedHeight}
+									width={barWidth}
+									height={committedHeight}
+									rx="3"
+									fill="var(--ui-color-brand-300)"
+								/>
+								<rect
+									x={x}
+									y={CHART.height - committedHeight - meteredHeight - 2}
+									width={barWidth}
+									height={meteredHeight}
+									rx="3"
+									fill="var(--ui-color-brand-600)"
+								/>
+							</g>
+						);
+					})}
+				</svg>
+				<span
+					aria-hidden="true"
+					mix={[
+						raw({
+							display: "grid",
+							gridTemplateColumns: `repeat(${MONTHS.length}, minmax(0, 1fr))`,
+							textAlign: "center",
+						}),
+						text("xs"),
+						fg("neutral.muted"),
+					]}
+				>
+					{MONTHS.map(([month], index) => (
+						<span key={index}>{month}</span>
+					))}
+				</span>
+			</div>
 		);
 	};
 }

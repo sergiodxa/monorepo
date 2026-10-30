@@ -11,11 +11,11 @@ import { bg, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, p } from "@sdxc/u/size";
-import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
+import { font, tabularNums, text, weight } from "@sdxc/u/typography";
 import { Badge, Button } from "@sdxc/ui";
 import { marketingSurface } from "@sdxc/ui/styles";
 
-/** Tax rates the tax scene lists: jurisdiction and rate. */
+/** Tax rates the tax scene lists: jurisdiction and rate. Eight fill two rows of four. */
 const TAX_RATES = [
 	["DE", "19%"],
 	["FR", "20%"],
@@ -24,7 +24,6 @@ const TAX_RATES = [
 	["AU", "10%"],
 	["JP", "10%"],
 	["CA-ON", "13%"],
-	["US-NY", "8.875%"],
 	["SG", "9%"],
 ] as const;
 
@@ -124,23 +123,32 @@ export function PortalScene() {
 
 /**
  * Tax rates as chips, one per jurisdiction, the way an invoice picks them by the
- * customer's address.
+ * customer's address. A fixed grid of four columns keeps both rows full at every width.
  *
  * @returns The render function producing the scene.
  */
 export function TaxScene() {
 	return () => (
 		<div
-			mix={[p(6), raw({ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignContent: "end" })]}
+			mix={[
+				p(6),
+				raw({
+					display: "grid",
+					gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+					gap: "0.5rem",
+					alignContent: "end",
+				}),
+			]}
 		>
 			{TAX_RATES.map(([region, rate]) => (
 				<span
 					key={region}
 					mix={[
-						hstack({ gap: 2, align: "center" }),
-						p(1.5, 2.5),
+						vstack({ gap: 0.5, align: "start" }),
+						p(1.5, 2),
 						raw({
-							borderRadius: "0.5rem",
+							minInlineSize: 0,
+							borderRadius: "0.375rem",
 							backgroundColor: "var(--ui-surface-raised)",
 							boxShadow: "var(--ui-shadow-surface)",
 						}),
@@ -185,7 +193,8 @@ export function CurrencyScene() {
 }
 
 /**
- * Webhook deliveries as a log: event name, response status and latency.
+ * Webhook deliveries as a log: event name, response status and latency. The rows share
+ * one subgrid, so the event column is as wide as the longest name and the figures align.
  *
  * @returns The render function producing the scene.
  */
@@ -193,7 +202,12 @@ export function WebhookScene() {
 	return () => (
 		<div mix={[p(6, 6, 0, 6), raw({ display: "grid", alignContent: "end" })]}>
 			<div
-				mix={[marketingSurface(), vstack({ gap: 0, align: "stretch" }), font("mono"), text("xs")]}
+				mix={[
+					marketingSurface(),
+					raw({ display: "grid", gridTemplateColumns: "minmax(max-content, 1fr) auto auto" }),
+					font("mono"),
+					text("xs"),
+				]}
 			>
 				{DELIVERIES.map(([event, status, latency], index) => (
 					<span
@@ -201,17 +215,18 @@ export function WebhookScene() {
 						mix={[
 							raw({
 								display: "grid",
-								gridTemplateColumns: "minmax(0, 1fr) auto auto",
-								gap: "0.75rem",
+								gridColumn: "1 / -1",
+								gridTemplateColumns: "subgrid",
+								columnGap: "0.75rem",
 								alignItems: "center",
 								borderBlockStart: index === 0 ? "none" : "1px solid var(--ui-marketing-hairline)",
 							}),
 							p(2.5, 4),
 						]}
 					>
-						<span mix={[fg("neutral.emphasis"), truncate()]}>{event}</span>
-						<span mix={[fg("success")]}>{status}</span>
-						<span mix={[fg("neutral.muted")]}>{latency}</span>
+						<span mix={[fg("neutral.emphasis")]}>{event}</span>
+						<span mix={[fg("success"), raw({ justifySelf: "end" })]}>{status}</span>
+						<span mix={[fg("neutral.muted"), raw({ justifySelf: "end" })]}>{latency}</span>
 					</span>
 				))}
 			</div>

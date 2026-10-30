@@ -8,8 +8,9 @@
  */
 
 import { bg, fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
+import { combine, raw } from "@sdxc/u/general";
+import { container, hstack, vstack } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
@@ -17,7 +18,7 @@ import { Badge } from "@sdxc/ui";
 import { ProductFrame } from "@sdxc/ui/patterns";
 
 /** The meters a workspace defines: name, the event it counts, the aggregation and the month's count. */
-const METERS = [
+const METER_ROWS = [
 	["API requests", "request.completed", "count", "38.2M"],
 	["Storage", "bucket.snapshot", "max GB", "4,120"],
 	["Compute", "job.finished", "sum seconds", "912k"],
@@ -57,52 +58,98 @@ function rowRule() {
 	return when("& + &", raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" }));
 }
 
+/** The named container the meters screen reads, so its columns follow the frame's width. */
+const METERS = "keel-meters";
+
 /**
  * The meters screen: each meter's name and event, its aggregation, a fortnight's
- * sparkline and the month's count.
+ * sparkline and the month's count. The rows share one subgrid, so sparklines and counts
+ * line up; on a narrow frame the sparkline steps aside and the descriptor wraps in full.
  *
  * @returns The render function producing the framed screen.
  */
 export function MetersPanel() {
 	return () => (
 		<ProductFrame lights title="Meters" url="keel · Acme Cloud">
-			<ul mix={[raw({ listStyle: "none" }), m(0), p(0), text("sm")]}>
-				{METERS.map(([name, event, aggregation, total]) => (
-					<li
-						key={name}
-						mix={[
-							raw({
-								display: "grid",
-								gridTemplateColumns: "minmax(0, 1fr) 4.5rem auto",
-								alignItems: "center",
-								gap: "1rem",
-							}),
-							p(3.5, 5),
-							rowRule(),
-						]}
-					>
-						<span mix={[vstack({ gap: 0.5, align: "stretch" }), raw({ minInlineSize: 0 })]}>
-							<span mix={[weight("semibold"), fg("neutral.emphasis")]}>{name}</span>
-							<span mix={[font("mono"), text("xs"), fg("neutral.muted"), truncate()]}>
-								{event} · {aggregation}
+			<div mix={[container(METERS)]}>
+				<ul
+					mix={[
+						raw({ display: "grid", columnGap: "1rem", listStyle: "none" }),
+						combine([
+							raw({ gridTemplateColumns: "minmax(0, 1fr) auto" }),
+							at("26rem", METERS, raw({ gridTemplateColumns: "minmax(0, 1fr) 4.5rem auto" })),
+						]),
+						m(0),
+						p(0),
+						text("sm"),
+					]}
+				>
+					{METER_ROWS.map(([name, event, aggregation, total]) => (
+						<li
+							key={name}
+							mix={[
+								raw({
+									display: "grid",
+									gridColumn: "1 / -1",
+									gridTemplateColumns: "subgrid",
+									alignItems: "center",
+									columnGap: "1rem",
+								}),
+								combine([
+									raw({ padding: "0.875rem 1rem" }),
+									at("26rem", METERS, raw({ padding: "0.875rem 1.25rem" })),
+								]),
+								rowRule(),
+							]}
+						>
+							<span mix={[vstack({ gap: 0.5, align: "stretch" }), raw({ minInlineSize: 0 })]}>
+								<span mix={[weight("semibold"), fg("neutral.emphasis")]}>{name}</span>
+								<span
+									mix={[
+										font("mono"),
+										text("xs"),
+										fg("neutral.muted"),
+										raw({ overflowWrap: "anywhere" }),
+									]}
+								>
+									{event} · {aggregation}
+								</span>
 							</span>
-						</span>
-						<svg viewBox="0 0 70 24" aria-hidden="true" mix={[raw({ inlineSize: "4.5rem" })]}>
-							<polyline
-								points={SPARK.map((value, index) => `${index * 5.3},${24 - value}`).join(" ")}
-								fill="none"
-								stroke="var(--ui-color-brand-500)"
-								stroke-width="1.75"
-								stroke-linejoin="round"
-								stroke-linecap="round"
-							/>
-						</svg>
-						<span mix={[font("mono"), weight("medium"), fg("neutral.emphasis"), tabularNums()]}>
-							{total}
-						</span>
-					</li>
-				))}
-			</ul>
+							<svg
+								viewBox="0 0 70 24"
+								aria-hidden="true"
+								mix={[
+									raw({ inlineSize: "4.5rem" }),
+									combine([
+										raw({ display: "none" }),
+										at("26rem", METERS, raw({ display: "block" })),
+									]),
+								]}
+							>
+								<polyline
+									points={SPARK.map((value, index) => `${index * 5.3},${24 - value}`).join(" ")}
+									fill="none"
+									stroke="var(--ui-color-brand-500)"
+									stroke-width="1.75"
+									stroke-linejoin="round"
+									stroke-linecap="round"
+								/>
+							</svg>
+							<span
+								mix={[
+									font("mono"),
+									weight("medium"),
+									fg("neutral.emphasis"),
+									tabularNums(),
+									raw({ textAlign: "end" }),
+								]}
+							>
+								{total}
+							</span>
+						</li>
+					))}
+				</ul>
+			</div>
 		</ProductFrame>
 	);
 }
