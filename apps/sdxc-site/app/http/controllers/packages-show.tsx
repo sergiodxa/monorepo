@@ -26,6 +26,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { readOptionSelections } from "~/app/initializers/cookies";
 import { adsDayTag } from "~/app/services/ads";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
+import { listGuidesAbout } from "~/app/services/docs";
 import {
 	buildPackageNav,
 	CATALOGUE_PACKAGES,
@@ -55,6 +56,9 @@ import routes from "~/routes/web";
 /** Where a package's source is read, which is what every "source" link points at. */
 const SOURCE_BASE = "https://github.com/sergiodxa/monorepo/tree/main/packages/";
 
+/** The closing section's anchor, the same one a guide's own closing section takes. */
+const NEXT_ID = "where-to-go-next";
+
 export default createAction(routes.api.show, async (ctx) => {
 	let { name } = s.parse(s.object({ name: s.string() }), ctx.params);
 	let tree = await buildPackageNav(name);
@@ -65,12 +69,16 @@ export default createAction(routes.api.show, async (ctx) => {
 	let selections = await readOptionSelections(ctx.request);
 
 	let users = listApplicationsUsing(entry.name);
+	let guides = await listGuidesAbout(name);
 	let group = listPackageGroups().find((candidate) =>
 		candidate.packages.some((member) => member.directory === name),
 	)?.title;
 
 	let body = CATALOGUE_PACKAGES.has(name) ? null : await readReference(ctx, entry);
-	let anchors: Anchor[] = body?.anchors ?? [];
+	let anchors: Anchor[] = [
+		...(body?.anchors ?? []),
+		...(guides.length > 0 ? [{ id: NEXT_ID, text: "Where to go next", level: 2 }] : []),
+	];
 	let markdownHref = routes.markdown.package.href({ name });
 	let activePath = routes.api.show.href({ name });
 
@@ -155,6 +163,21 @@ export default createAction(routes.api.show, async (ctx) => {
 							<CatalogueIndex groups={await readCatalogue(name)} />
 						</div>
 					)}
+
+					{guides.length > 0 ? (
+						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
+							<h2 id={NEXT_ID}>Where to go next</h2>
+							<ul>
+								{guides.map((guide) => (
+									<li key={guide.slug}>
+										<a href={routes.docs.show.href({ slug: guide.slug })}>
+											{guide.frontmatter.title}
+										</a>
+									</li>
+								))}
+							</ul>
+						</Typeset>
+					) : null}
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

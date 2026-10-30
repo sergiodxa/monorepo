@@ -100,3 +100,24 @@ export async function readGuide(slug: string): Promise<string | null> {
 	if (!load) return null;
 	return await load();
 }
+
+/**
+ * The guides that link to a package's reference page, in reading order. A link in a
+ * guide's prose is the author pointing a reader at the package, so the list holds the
+ * guides written about it.
+ *
+ * @param name - The package's directory, the segment its page answers under `/api`.
+ */
+export async function listGuidesAbout(name: string): Promise<GuideEntry[]> {
+	let links = [`](/api/${name})`, `](/api/${name}#`];
+	let guides: GuideEntry[] = [];
+
+	for (let section of await listGuides()) {
+		for (let guide of section.guides) {
+			let source = (await readGuide(guide.slug)) ?? "";
+			if (links.some((link) => source.includes(link))) guides.push(guide);
+		}
+	}
+
+	return guides;
+}

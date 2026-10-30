@@ -176,6 +176,14 @@ describe("GET /api/:name", () => {
 		expect(body).not.toContain("npmjs.com/package/@sdxc/result");
 	});
 
+	test("ends with the guides that link to the package", async () => {
+		let body = await (await fetchApp("/api/user-agent")).text();
+
+		expect(body).toContain('href="/docs/building-remix-apps/user-agents"');
+		expect(body).toContain(">Where to go next</h2>");
+		expect(body).toContain(">Read the visitor's browser and device</a>");
+	});
+
 	test("leaves a link outside the collection alone", async () => {
 		let body = await (await fetchApp("/api/markdown")).text();
 
