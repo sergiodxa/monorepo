@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { readComponent } from "~/app/services/components";
 import { fetchApp, ORIGIN } from "~/app/test/router";
+import { guideDemoKeys } from "~/resources/components/guide-demo-registry.server";
 import {
 	exampleComponents,
 	findPreview,
@@ -78,6 +79,45 @@ describe("GET /frames/previews/:component/:example", () => {
 	});
 });
 
+describe("GET /frames/guides/:guide/:demo", () => {
+	test("answers with the demo alone, since the guide prints its source", async () => {
+		let response = await fetchApp("/frames/guides/landing-pages/faq");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).not.toContain("<html");
+		expect(body).toContain("How often do checks run?");
+		expect(body).not.toContain("View code");
+	});
+
+	test("draws a page-wide demo on a stage that switches between desktop and phone", async () => {
+		let body = await (await fetchApp("/frames/guides/landing-pages/landing")).text();
+
+		expect(body).toContain('data-slot="viewport-demo"');
+		expect(body).toMatch(/value="desktop"[^>]*checked|checked[^>]*value="desktop"/);
+		expect(body).toContain('value="phone"');
+	});
+
+	test("answers a demo the guide lacks with a 404 fragment naming it", async () => {
+		let response = await fetchApp("/frames/guides/landing-pages/not-a-demo");
+
+		expect(response.status).toBe(404);
+		expect(await response.text()).toContain("No demo “not-a-demo” for the “landing-pages” guide.");
+	});
+
+	test("every frame the landing guide writes names a demo that answers", async () => {
+		let { readFile } = await import("node:fs/promises");
+		let guide = await readFile(
+			new URL("../../../resources/docs/building-remix-apps/landing-pages.md", import.meta.url),
+			"utf8",
+		);
+		let sources = [...guide.matchAll(/<frame src="([^"]+)"/g)].map((match) => match[1] ?? "");
+
+		expect(sources.length).toBeGreaterThan(0);
+		for (let src of sources) expect((await fetchApp(src)).status, src).toBe(200);
+	});
+});
+
 describe("live examples", () => {
 	/**
 	 * A component page shows either every documented example live or every one as source,
@@ -109,9 +149,13 @@ describe("live examples", () => {
 	);
 });
 
-/** Every fragment a component page frames: each opening preview, then each live example. */
+/**
+ * Every fragment a page frames: each component's opening preview, each live example, and
+ * each demo a guide frames.
+ */
 function previewSources(): string[] {
 	return [
+		...guideDemoKeys().map((key) => `/frames/guides/${key}`),
 		...previewSlugs().map((component) => `/frames/previews/${component}`),
 		...exampleComponents().flatMap((component) =>
 			listExamples(component).map((example) => `/frames/previews/${component}/${example.slug}`),

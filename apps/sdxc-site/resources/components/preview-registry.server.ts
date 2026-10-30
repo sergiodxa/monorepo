@@ -20,6 +20,7 @@ export interface PreviewModule {
 	code: string;
 	render: ComponentPreview["render"];
 	flush?: boolean;
+	viewports?: boolean;
 }
 
 /**
@@ -65,6 +66,7 @@ for (let [path, example] of Object.entries(exampleModules).sort(([a], [b]) => a.
 		code: example.code,
 		render: example.render,
 		flush: example.flush,
+		viewports: example.viewports,
 	});
 	EXAMPLES.set(component, list);
 }
@@ -72,7 +74,12 @@ for (let [path, example] of Object.entries(exampleModules).sort(([a], [b]) => a.
 const OWNED = new Map<string, ComponentPreview>(
 	Object.entries(modules).map(([path, preview]) => [
 		slugOf(path),
-		{ code: preview.code, render: preview.render, flush: preview.flush },
+		{
+			code: preview.code,
+			render: preview.render,
+			flush: preview.flush,
+			viewports: preview.viewports,
+		},
 	]),
 );
 

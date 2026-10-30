@@ -12,20 +12,33 @@ import type { Handle, RemixNode } from "remix/component";
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { container, flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { clip, overflowX } from "@sdxc/u/overflow";
+import { at, atMax } from "@sdxc/u/responsive";
 import { is, minBs, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Disclosure } from "@sdxc/ui";
 
 import Snippet from "~/resources/components/snippet";
 
+/** The container the preview's frame reads its own width from. */
+const PREVIEW_CONTAINER = "component-preview";
+
+/**
+ * Below this width the frame keeps a thin margin, so a page-wide demo on a phone keeps the
+ * room it needs rather than spending it on the dotted surround.
+ */
+const NARROW = "40rem";
+
 namespace ComponentPreview {
 	export interface Props {
 		/** The component as it renders, which is what the page is showing. */
 		children: RemixNode;
-		/** The markup that produced it, revealed by the toggle. */
-		code: string;
+		/**
+		 * The markup that produced it, revealed by the toggle. A demo whose source the page
+		 * already prints beside the frame leaves it out, and draws no toggle.
+		 */
+		code?: string;
 		/** What the toggle reads as, so several previews on a page stay distinguishable. */
 		label?: string;
 		/**
@@ -37,18 +50,25 @@ namespace ComponentPreview {
 	}
 }
 
-/** Renders one preview and its source. */
+/**
+ * Renders one preview and its source. The surface opts out of a guide's prose styles, so a
+ * demo framed into an article draws exactly as it does on its component page.
+ */
 export default function ComponentPreview(handle: Handle<ComponentPreview.Props>) {
 	return () => {
 		let { children, code, label = "View code", flush = false } = handle.props;
 
 		return (
-			<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+			<div
+				data-not-typeset
+				mix={[vstack({ gap: 3, align: "stretch" }), container(PREVIEW_CONTAINER)]}
+			>
 				<div
 					mix={[
 						hstack({ gap: 4, align: "center", justify: "center" }),
 						flexWrap(),
-						p(8),
+						atMax(NARROW, PREVIEW_CONTAINER, p(3)),
+						at(NARROW, PREVIEW_CONTAINER, p(8)),
 						minBs("10rem"),
 						overflowX("auto"),
 						rounded("lg"),
@@ -78,12 +98,14 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 					</div>
 				</div>
 
-				<Disclosure>
-					<Disclosure.Trigger mix={[text("sm")]}>{label}</Disclosure.Trigger>
-					<Disclosure.Panel>
-						<Snippet code={code} />
-					</Disclosure.Panel>
-				</Disclosure>
+				{code === undefined ? null : (
+					<Disclosure>
+						<Disclosure.Trigger mix={[text("sm")]}>{label}</Disclosure.Trigger>
+						<Disclosure.Panel>
+							<Snippet code={code} />
+						</Disclosure.Panel>
+					</Disclosure>
+				)}
 			</div>
 		);
 	};

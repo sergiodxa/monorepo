@@ -152,6 +152,12 @@ export interface ComponentPreview {
 	 * component rather than as the space the preview puts around it.
 	 */
 	flush?: boolean;
+	/**
+	 * Whether the example is page-wide, such as a landing band. Its frame draws it at a
+	 * desktop width zoomed to fit, with a switch to a phone width, since a band laid out at
+	 * the frame's own width would only ever show its phone layout.
+	 */
+	viewports?: boolean;
 }
 
 /**

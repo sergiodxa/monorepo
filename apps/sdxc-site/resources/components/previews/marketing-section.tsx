@@ -35,7 +35,7 @@ const CODE = `<MarketingSection tone="tinted" spacing="compact" ruled>
 /** What the preview registry reads: the source to show, and the band to draw edge to edge. */
 export default {
 	code: CODE,
-	flush: true,
+	viewports: true,
 	render: () => (
 		<HeadingScope>
 			<MarketingSection tone="tinted" spacing="compact" ruled>

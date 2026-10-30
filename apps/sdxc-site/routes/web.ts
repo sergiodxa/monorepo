@@ -87,6 +87,8 @@ export default route({
 		example: get("/frames/previews/:component/:example"),
 		/** One live example of a `@sdxc/u` utility, as its reference page lists it. */
 		utility: get("/frames/u/:utility/:example"),
+		/** One live demo a guide frames beside the snippet that produces it. */
+		guide: get("/frames/guides/:guide/:demo"),
 	},
 
 	/**
