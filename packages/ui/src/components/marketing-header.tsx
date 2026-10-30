@@ -10,8 +10,10 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { self, vstack } from "@sdxc/u/layout";
+import { container, self, vstack } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
 import { m, mi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { textAlign } from "@sdxc/u/typography";
 
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
@@ -34,6 +36,12 @@ const DEFAULT_EYEBROW_VARIANT: MarketingHeader.EyebrowVariant = "mono";
 const HEADER_SPACE =
 	"var(--ui-marketing-header-end, var(--ui-marketing-header-space, clamp(2.5rem, 1.82rem + 2.91cqi, 4rem)))";
 
+/** Container a split header's columns read; the header spans its band's measure. */
+const CONTAINER = "ui-marketing-header";
+
+/** The muted title ink: the heading ink at 62%, which keeps 4.5:1 at display size. */
+const MUTED_TITLE = "color-mix(in oklch, var(--ui-neutral-fg-emphasis) 62%, transparent)";
+
 /**
  * Prop types for {@link MarketingHeader}.
  */
@@ -42,6 +50,18 @@ export namespace MarketingHeader {
 	 * Whether the stack stretches start-aligned or centers as one statement.
 	 */
 	export type Align = "start" | "center";
+
+	/**
+	 * `stack` sets the eyebrow, title and lead in one column. `split` puts the lead
+	 * beside the title from the band's `lg` width, aligned to the title's last line.
+	 */
+	export type Layout = "stack" | "split";
+
+	/**
+	 * `default` sets the whole title in the heading ink. `statement` sets it in the muted
+	 * ink with its `<strong>` phrase in the heading ink, so it reads as a claim and support.
+	 */
+	export type Tone = "default" | "statement";
 
 	/**
 	 * How the optional eyebrow reads: a quiet mono label (the section default), a
@@ -79,8 +99,22 @@ export namespace MarketingHeader {
 		eyebrowIndex?: RemixNode;
 		/** Supporting copy under the title; `<strong>` fragments draw in the heading ink. */
 		description?: RemixNode;
-		/** Stack alignment. Defaults to {@link DEFAULT_ALIGN}. */
+		/** Stack alignment. Defaults to {@link DEFAULT_ALIGN}; a split or an action aligns start. */
 		align?: Align;
+		/** Arrangement of title and lead. Defaults to `"stack"`. */
+		layout?: Layout;
+		/** Title ink. Defaults to `"default"`. */
+		tone?: Tone;
+		/**
+		 * A second line at the title's size in the muted ink, inside the heading, so the
+		 * two lines read as one two-tone heading.
+		 */
+		subtitle?: RemixNode;
+		/**
+		 * A control at the header row's inline end, such as a "See all" link, aligned to
+		 * the title's last line; it wraps under the title when the row runs out of room.
+		 */
+		action?: RemixNode;
 		/** Per-part styling for eyebrow, title, and description. */
 		parts?: PartsProps;
 		/** Title copy — rendered through {@link Heading} at chapter display size. */
@@ -116,26 +150,26 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 			eyebrowHref,
 			eyebrowIndex,
 			eyebrowVariant,
+			action,
+			layout,
 			mix,
 			parts,
+			subtitle,
+			tone,
 			...rest
 		} = handle.props;
-		let resolvedAlign = align ?? DEFAULT_ALIGN;
+		let isSplit = layout === "split";
+		let resolvedAlign = isSplit || action ? "start" : (align ?? DEFAULT_ALIGN);
 		let resolvedEyebrowVariant = eyebrowVariant ?? DEFAULT_EYEBROW_VARIANT;
 		let isCenter = resolvedAlign === "center";
 
-		return (
-			<header
-				{...rest}
-				data-align={resolvedAlign}
+		let content = (
+			<div
+				data-slot="marketing-header-content"
 				mix={[
-					vstack({
-						align: isCenter ? "center" : "stretch",
-						gap: 0,
-					}),
-					isCenter ? [textAlign("center"), mi("auto")] : [],
-					raw({ marginBlockEnd: HEADER_SPACE }),
-					mix,
+					vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
+					isSplit ? splitGrid() : [],
+					action ? raw({ flex: "1 1 20rem", minInlineSize: "0" }) : [],
 				]}
 			>
 				{eyebrow ? (
@@ -146,6 +180,7 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 						mix={[
 							self(isCenter ? "center" : "start"),
 							raw({ marginBlockEnd: resolvedEyebrowVariant === "mono" ? "0.5rem" : "1.5rem" }),
+							isSplit ? raw({ gridArea: "eyebrow" }) : [],
 							parts?.eyebrow,
 						]}
 					>
@@ -153,8 +188,25 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 					</Eyebrow>
 				) : null}
 
-				<Heading size="chapter" mix={[m(0), parts?.title]}>
-					{children}
+				<Heading
+					size="chapter"
+					mix={[m(0), isSplit ? raw({ gridArea: "title" }) : [], parts?.title]}
+				>
+					{tone === "statement" ? (
+						<span data-slot="marketing-header-statement" mix={[statement()]}>
+							{children}
+						</span>
+					) : (
+						children
+					)}
+					{subtitle ? (
+						<span
+							data-slot="marketing-header-subtitle"
+							mix={[raw({ display: "block", color: MUTED_TITLE })]}
+						>
+							{subtitle}
+						</span>
+					) : null}
 				</Heading>
 
 				{description ? (
@@ -163,13 +215,88 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 							marketingLead(),
 							raw({ marginBlockStart: "1rem" }),
 							isCenter ? mi("auto") : [],
+							isSplit ? splitLead() : [],
 							parts?.description,
 						]}
 					>
 						{description}
 					</p>
 				) : null}
+			</div>
+		);
+
+		return (
+			<header
+				{...rest}
+				data-align={resolvedAlign}
+				data-layout={isSplit ? "split" : "stack"}
+				mix={[
+					isSplit ? [container(CONTAINER), raw({ inlineSize: "100%" })] : [],
+					action
+						? raw({
+								display: "flex",
+								flexWrap: "wrap",
+								alignItems: "flex-end",
+								justifyContent: "space-between",
+								columnGap: "2rem",
+								rowGap: "1.5rem",
+							})
+						: vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
+					isCenter ? [textAlign("center"), mi("auto")] : [],
+					raw({ marginBlockEnd: HEADER_SPACE }),
+					mix,
+				]}
+			>
+				{content}
+				{action ? (
+					<div data-slot="marketing-header-action" mix={[raw({ flex: "none" })]}>
+						{action}
+					</div>
+				) : null}
 			</header>
 		);
 	};
+}
+
+/**
+ * The split grid: eyebrow over title in the wider first column and the lead in the second,
+ * from the header's `lg` width. Narrower headers keep the stack.
+ */
+function splitGrid() {
+	return at(
+		"lg",
+		CONTAINER,
+		raw({
+			display: "grid",
+			gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)",
+			gridTemplateAreas: '"eyebrow ." "title lead"',
+			columnGap: "4rem",
+			alignItems: "end",
+		}),
+	);
+}
+
+/** The split lead: in the second column, on the title's last line, at most 28rem wide. */
+function splitLead() {
+	return at(
+		"lg",
+		CONTAINER,
+		raw({
+			gridArea: "lead",
+			marginBlockStart: "0",
+			marginBlockEnd: "0.35em",
+			maxInlineSize: "28rem",
+		}),
+	);
+}
+
+/** A statement title: muted ink, with its `<strong>` phrase back in the heading ink. */
+function statement() {
+	return [
+		raw({ color: MUTED_TITLE }),
+		when(
+			"& :is(strong, b, [data-emphasis])",
+			raw({ color: "var(--ui-neutral-fg-emphasis)", fontWeight: "inherit" }),
+		),
+	];
 }
