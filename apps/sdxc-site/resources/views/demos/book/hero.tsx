@@ -9,6 +9,7 @@
 
 import { StarIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
@@ -37,7 +38,8 @@ export default function BookHero() {
 			eyebrowHref="#pricing"
 			title={
 				<>
-					Set type people <AccentText variant="swash">finish</AccentText> reading
+					Set type people <AccentText mix={[raw({ fontStyle: "italic" })]}>finish</AccentText>{" "}
+					reading
 				</>
 			}
 			description={
