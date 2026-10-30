@@ -107,14 +107,6 @@ export const TAGS = {
 	/** The people funding the work now, read per request, so the page supplies its component. */
 	"current-sponsors": { content: "none" },
 
-	note: {
-		content: "blocks",
-		attributes: s.object({ kind: s.optional(s.enum_(["info", "caution"])) }),
-	},
-
-	/** What breaks, or cannot be undone, when a reader skips it; a guide's caution aside. */
-	warning: { content: "blocks" },
-
 	/**
 	 * A directory layout, written as structure rather than drawn inside a fence: the
 	 * renderer supplies the icons and the alignment, and a phone keeps the tree

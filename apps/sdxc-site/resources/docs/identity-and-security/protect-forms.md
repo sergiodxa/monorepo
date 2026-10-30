@@ -116,10 +116,9 @@ domain looked up in DNS and has its password checked against a breach corpus. Th
 `lazy()`'s second argument, so a refused submission never loads the controller, and `guard` is
 passed in so a test can hand in its own provider.
 
-<note>
-Keep `formData()` in the router's global middleware, ahead of every guard: the honeypot, the
-challenge, the spam score and the handler all read the submission it parsed.
-</note>
+> [!NOTE]
+> Keep `formData()` in the router's global middleware, ahead of every guard: the honeypot, the
+> challenge, the spam score and the handler all read the submission it parsed.
 
 ## Set a trap no person fills
 
@@ -236,11 +235,10 @@ queues one refusal. Every failure carries a `code` that separates what the visit
 (`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that
 answers `null` for `unavailable` keeps sign-ups open through a provider outage.
 
-<warning>
-An `onFailure` that lets `unavailable` through opens the form to every bot for as long as the
-provider is down. Choose it only while the honeypot, the budget and the spam score stay in
-front of the handler.
-</warning>
+> [!WARNING]
+> An `onFailure` that lets `unavailable` through opens the form to every bot for as long as the
+> provider is down. Choose it only while the honeypot, the budget and the spam score stay in
+> front of the handler.
 
 ## Score what was written
 
@@ -338,11 +336,10 @@ on an otherwise acceptable password. `passwordMessage` and `createAccount` are y
 first turns an issue into copy, and the second hashes the password with `password.hash` from
 [`@sdxc/crypto`](/api/crypto) and holds the account for review on an unsure spam verdict.
 
-<note>
-The root import of `@sdxc/password-policy` bundles the common-password list, about 220 KB
-gzipped. Import from `/length`, `/context` and `/breached` when the Worker's size matters more
-than that check.
-</note>
+> [!NOTE]
+> The root import of `@sdxc/password-policy` bundles the common-password list, about 220 KB
+> gzipped. Import from `/length`, `/context` and `/breached` when the Worker's size matters more
+> than that check.
 
 ## Test the guards
 

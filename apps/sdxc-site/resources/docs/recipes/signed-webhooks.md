@@ -42,10 +42,9 @@ store it and call `ctx.jobs.enqueueMany(jobs.webhooks.deliver, …)` with one in
 For an endpoint that answers `429` with `Retry-After`, wait as long as it asks:
 [Honor Retry-After](/docs/data-and-background-work/retry-with-backoff#honor-retry-after).
 
-<warning>
-Keep the backoff's ceiling plus its jitter under 12 hours, the longest Cloudflare Queues holds a
-message, and give the queue enough `maxRetries` to reach it.
-</warning>
+> [!WARNING]
+> Keep the backoff's ceiling plus its jitter under 12 hours, the longest Cloudflare Queues holds a
+> message, and give the queue enough `maxRetries` to reach it.
 
 ## Tell your users how to verify
 

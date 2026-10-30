@@ -162,11 +162,10 @@ the answer stays cacheable. `X-Robots-Tag: noindex` keeps the fragments out of s
 purges; `PUBLIC_PAGE` and `TAGS` come from
 [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers).
 
-<note>
-A later call to `ctx.cache` replaces the earlier policy, which is how a failed search answers
-with `no-store`. Keep that call on every failure path, so a passing database error is never
-served from the cache to every reader who types the same query.
-</note>
+> [!NOTE]
+> A later call to `ctx.cache` replaces the earlier policy, which is how a failed search answers
+> with `no-store`. Keep that call on every failure path, so a passing database error is never
+> served from the cache to every reader who types the same query.
 
 ## Render the box and the matches
 
@@ -378,12 +377,11 @@ Closing the dialog runs `reset`, which restores the page's query and reloads the
 so the dialog reopens where every reader starts. `bindKeymap` opens it on `⌘K`, `Ctrl+K` or `/`,
 and stands down for keys typed into a field.
 
-<note>
-The browser entry has to know this module, or the box never hydrates and the dialog stays a
-plain form. The `import.meta.glob` over `resources/` in
-[Load content as readers reach it](/docs/building-remix-apps/load-content-as-readers-reach-it#register-the-client-entry)
-already covers it.
-</note>
+> [!NOTE]
+> The browser entry has to know this module, or the box never hydrates and the dialog stays a
+> plain form. The `import.meta.glob` over `resources/` in
+> [Load content as readers reach it](/docs/building-remix-apps/load-content-as-readers-reach-it#register-the-client-entry)
+> already covers it.
 
 ## Render the full results page
 

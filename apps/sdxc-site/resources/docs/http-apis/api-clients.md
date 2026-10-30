@@ -174,11 +174,10 @@ the server's `Link` header, so a caller walks the list by handing each `next` ba
 `null`. `createBook` takes the idempotency key from its caller, as
 [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) describes.
 
-<warning>
-The key protects a create only while every retry reuses it. Mint it once per operation, before
-the first attempt: a key minted per attempt makes each retry a new request, and a retried
-timeout creates the book twice.
-</warning>
+> [!WARNING]
+> The key protects a create only while every retry reuses it. Mint it once per operation, before
+> the first attempt: a key minted per attempt makes each retry a new request, and a retried
+> timeout creates the book twice.
 
 ## Branch on the problem
 

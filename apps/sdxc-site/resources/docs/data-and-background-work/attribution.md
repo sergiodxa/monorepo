@@ -55,10 +55,9 @@ The middleware reads the touch on every page view and keeps two: the first withi
 the latest one that was not `direct`. It stores them in a cookie with the same lifetime as the
 window:
 
-<warning>
-Sign the cookie with `secrets`. A visitor can edit an unsigned cookie and credit themselves to
-any campaign, and every report built on it would count them there.
-</warning>
+> [!WARNING]
+> Sign the cookie with `secrets`. A visitor can edit an unsigned cookie and credit themselves to
+> any campaign, and every report built on it would count them there.
 
 ```typescript {% title="app/initializers/cookies.ts" %}
 import type { Cookie } from "remix/cookie";
@@ -109,11 +108,10 @@ export function createWebRouter() {
 Every request gets `ctx.attribution` with three fields: `current`, this request's own touch,
 and the stored `first` and `last`.
 
-<note>
-Writes happen only on a page navigation: a `GET` the browser marks as loading a document. A form
-post, a `fetch`, a bot and a direct revisit write nothing, so a form action reads the touches
-the visitor's page views recorded.
-</note>
+> [!NOTE]
+> Writes happen only on a page navigation: a `GET` the browser marks as loading a document. A form
+> post, a `fetch`, a bot and a direct revisit write nothing, so a form action reads the touches
+> the visitor's page views recorded.
 
 The first touch is replaced when the stored one is older than `window` (90 days by default).
 The `consent` option decides per request whether the visitor allows storage; it defaults to

@@ -206,17 +206,15 @@ let result = await ctx.models.transaction(async (models) => {
 });
 ```
 
-<warning>
-D1 commits every statement as it runs, so on D1 the transaction above keeps the user row and the
-caller decides on the compensating delete. The same holds for `afterCreate`, `afterUpdate` and
-`afterDelete`: their database work has committed when one fails, so put anything with
-consequences outside the database in `afterCommit`.
-</warning>
+> [!WARNING]
+> D1 commits every statement as it runs, so on D1 the transaction above keeps the user row and the
+> caller decides on the compensating delete. The same holds for `afterCreate`, `afterUpdate` and
+> `afterDelete`: their database work has committed when one fails, so put anything with
+> consequences outside the database in `afterCommit`.
 
-<note>
-An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
-statement and runs no model callbacks. Call `update(key, values)` per row when each row needs them.
-</note>
+> [!NOTE]
+> An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
+> statement and runs no model callbacks. Call `update(key, values)` per row when each row needs them.
 
 ## Store open-ended attributes in a meta table
 

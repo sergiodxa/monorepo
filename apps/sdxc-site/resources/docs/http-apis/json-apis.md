@@ -82,10 +82,9 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 The `extensions` schema types the builder's argument, so `validationFailed` compiles only
 with its `errors`. `problems.entries()` lists every entry, for an error reference page.
 
-<note>
-End the base URL with `/`. Each `type` is the base followed by the slug, so a base without the
-trailing slash runs into it, and every `type` names a page such as `…/errorsnot-found`.
-</note>
+> [!NOTE]
+> End the base URL with `/`. Each `type` is the base followed by the slug, so a base without the
+> trailing slash runs into it, and every `type` names a page such as `…/errorsnot-found`.
 
 ## Validate the body and create
 
@@ -258,11 +257,10 @@ export function apiRateLimit() {
 
 `API_RATE_LIMITER` is a Workers rate limiting binding.
 
-<warning>
-Give the adapter the same `limit` and `window` as the binding's own configuration. The binding
-does the counting and the adapter only uses the numbers to describe it, so a mismatch writes
-`RateLimit-Policy` and `Retry-After` headers that tell callers the wrong budget.
-</warning>
+> [!WARNING]
+> Give the adapter the same `limit` and `window` as the binding's own configuration. The binding
+> does the counting and the adapter only uses the numbers to describe it, so a mismatch writes
+> `RateLimit-Policy` and `Retry-After` headers that tell callers the wrong budget.
 
 `addressKey` keys the budget on the caller's network: the address for IPv4, its `/64` for
 IPv6. Once your API authenticates callers, key on their identity instead.

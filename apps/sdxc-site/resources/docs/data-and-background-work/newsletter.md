@@ -194,11 +194,10 @@ An address already on the list, in any status, is a success with `created: false
 untouched, so the page never tells a visitor who else is subscribed. `toCampaign` turns the
 visitor's touch into the UTM fields, referrer and landing page the platform records.
 
-<warning>
-Bots find a public sign-up form quickly, so put the layers from
-[Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) in front of this
-action.
-</warning>
+> [!WARNING]
+> Bots find a public sign-up form quickly, so put the layers from
+> [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) in front of this
+> action.
 
 ## Follow confirmations and unsubscribes
 
@@ -245,10 +244,9 @@ The endpoint answers `401` to a delivery the secret does not prove, and a provid
 proves none, so the route fails closed. A handler that returns a failed `Result` answers `503`, so
 the platform redelivers, and the replay store skips the events already handled.
 
-<warning>
-The webhook is a cross-origin `POST`, so exempt its path from `cop()` as
-[Receive and send webhooks](/docs/identity-and-security/webhooks) explains.
-</warning>
+> [!WARNING]
+> The webhook is a cross-origin `POST`, so exempt its path from `cop()` as
+> [Receive and send webhooks](/docs/identity-and-security/webhooks) explains.
 
 ## Test against the memory list
 

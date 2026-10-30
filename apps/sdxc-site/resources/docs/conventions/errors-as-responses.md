@@ -160,11 +160,10 @@ the values a program acts on. `instance` lets a caller quote the occurrence in a
 request, and you find the log record `ctx.log.fail` wrote under it, with the message, cause and
 stack the response leaves out.
 
-<warning>
-Write `detail` from the reason alone, and send `error.message` and `cause` to the log. A
-database or provider error names tables, columns, hosts and sometimes values, and a problem
-document is read by whoever sent the request.
-</warning>
+> [!WARNING]
+> Write `detail` from the reason alone, and send `error.message` and `cause` to the log. A
+> database or provider error names tables, columns, hosts and sometimes values, and a problem
+> document is read by whoever sent the request.
 
 ## Test the mapping
 

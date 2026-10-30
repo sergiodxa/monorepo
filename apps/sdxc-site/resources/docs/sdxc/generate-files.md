@@ -79,10 +79,9 @@ write the same file. Declarations use the last segment's other spellings, such a
 - `--force` writes the file, its test and its spec from the stub again when they exist. Every
   kind but `migration` takes it.
 
-<note>
-A run plans every file and every edit before it writes any, and leaves every existing file as
-it is: a name that is taken, test included, stops the command and leaves the project as it was.
-</note>
+> [!NOTE]
+> A run plans every file and every edit before it writes any, and leaves every existing file as
+> it is: a name that is taken, test included, stops the command and leaves the project as it was.
 
 Pass `--force` when you want the stub's version back, such as after editing a stub of your own.
 The file, its test and its spec are replaced, and the declaration and mapping they already have
@@ -205,10 +204,9 @@ Wrote .config/sdxc/stubs/job.test.stub
 That writes every stub whose name starts with the kind, and with no kind it copies all of them.
 A stub already in the folder is kept, so your edits survive a second run.
 
-<note>
-Delete the stubs you leave unchanged: every kind without a stub of yours keeps the built-in one,
-and takes its improvements when you upgrade.
-</note>
+> [!NOTE]
+> Delete the stubs you leave unchanged: every kind without a stub of yours keeps the built-in one,
+> and takes its improvements when you upgrade.
 
 A kind's stub is `<kind>.stub`, a flag that changes the file selects `<kind>.<variant>.stub`
 (`job.cron.stub` for `make job --cron`), and the test is `<kind>.test.stub`. A stub is the file's

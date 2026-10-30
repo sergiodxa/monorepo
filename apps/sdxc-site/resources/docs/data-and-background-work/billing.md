@@ -75,10 +75,9 @@ export function createWebRouter() {
 
 `Entitlements` is your own table holding one snapshot per account, written by the sync below.
 
-<note>
-Put the billing middleware after the middleware that publishes `ctx.db` and `ctx.account`, the
-signed-in account your auth middleware resolves, since the `entitlements` reader reads both.
-</note>
+> [!NOTE]
+> Put the billing middleware after the middleware that publishes `ctx.db` and `ctx.account`, the
+> signed-in account your auth middleware resolves, since the `entitlements` reader reads both.
 
 ## Link each account to a customer
 
@@ -223,12 +222,11 @@ An unproven delivery answers `401`, and an event type with no handler is logged 
 acknowledged. A handler that returns a failed `Result` answers `503` when the error is
 retryable, so the platform delivers again, and `200` otherwise.
 
-<warning>
-A platform sends its webhooks with no session and no `Origin` header. If your app runs
-`cop()`, exempt the webhook path from it the way
-[Receive and send webhooks](/docs/identity-and-security/webhooks) explains: the signature is
-the endpoint's authentication.
-</warning>
+> [!WARNING]
+> A platform sends its webhooks with no session and no `Origin` header. If your app runs
+> `cop()`, exempt the webhook path from it the way
+> [Receive and send webhooks](/docs/identity-and-security/webhooks) explains: the signature is
+> the endpoint's authentication.
 
 ## Keep a delivery store
 
@@ -265,12 +263,11 @@ export class WebhookDeliveries implements WebhookStore {
 `webhookDeliveries` holds the fields of `WebhookDelivery`, keyed by id. The endpoint is built at
 module scope, before any request has a database, so the store opens one per call.
 
-<note>
-The order matters. The endpoint records every delivery with its signature verdict before any
-handler trusts it, so a forged one is kept as evidence. It marks a delivery processed only after
-its handler finishes, so a redelivery of a processed id answers `200` without running the
-handler twice, and one whose handler failed runs again.
-</note>
+> [!NOTE]
+> The order matters. The endpoint records every delivery with its signature verdict before any
+> handler trusts it, so a forged one is kept as evidence. It marks a delivery processed only after
+> its handler finishes, so a redelivery of a processed id answers `200` without running the
+> handler twice, and one whose handler failed runs again.
 
 ## Gate a feature
 

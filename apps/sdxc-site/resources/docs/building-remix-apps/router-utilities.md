@@ -62,15 +62,13 @@ form posted to `/comments/` still arrives at `/comments` as a `POST`. Put both r
 `log(logger)`, where `logger` is the one from Wire the router, so a redirected request skips
 the session and body parsing its retry is about to do anyway.
 
-<warning>
-Browsers cache a `308`, so switching a live site between `trailingSlash()` and
-`{ mode: "always" }` sends returning visitors into a loop until those entries expire. Pick once.
-</warning>
+> [!WARNING]
+> Browsers cache a `308`, so switching a live site between `trailingSlash()` and
+> `{ mode: "always" }` sends returning visitors into a loop until those entries expire. Pick once.
 
-<note>
-The `www.` host must still reach the Worker for the redirect to run, so route it to the same
-Worker as the apex domain.
-</note>
+> [!NOTE]
+> The `www.` host must still reach the Worker for the redirect to run, so route it to the same
+> Worker as the apex domain.
 
 A test sends the router a request for that host and reads both hops:
 
@@ -134,13 +132,12 @@ export default createAction(routes.billing, async (ctx) => {
 `currentUser` is your own lookup of the session's user. Anything thrown that is not a `Response`
 is rethrown as it was, so a real bug still reaches the runtime with its stack.
 
-<warning>
-A throw unwinds the chain, so a middleware between the throw and the catch never resumes
-after its own `next()`, and whatever it meant to add to the response is lost. Put
-`catchResponse()` below every middleware that reads or decorates the response, such as the
-session middleware that commits the `Set-Cookie`, as the router in
-[Import each route on first use](#import-each-route-on-first-use) does.
-</warning>
+> [!WARNING]
+> A throw unwinds the chain, so a middleware between the throw and the catch never resumes
+> after its own `next()`, and whatever it meant to add to the response is lost. Put
+> `catchResponse()` below every middleware that reads or decorates the response, such as the
+> session middleware that commits the `Set-Cookie`, as the router in
+> [Import each route on first use](#import-each-route-on-first-use) does.
 
 A test asks for the billing page with no session and reads the redirect `requireUser` threw:
 
@@ -214,10 +211,9 @@ The loader runs at most once per isolate. The second argument holds guards: `req
 answers an unauthorized request before the admin module loads. A guard there must publish
 nothing onto the context; publish values from the router's chain instead.
 
-<note>
-Write each loader as a bare `import()` of a fixed path, so the bundler splits it into its own
-chunk. A computed specifier lands in the main bundle, and the deferral saves nothing.
-</note>
+> [!NOTE]
+> Write each loader as a bare `import()` of a fixed path, so the bundler splits it into its own
+> chunk. A computed specifier lands in the main bundle, and the deferral saves nothing.
 
 ## Read structured header fields
 

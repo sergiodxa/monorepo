@@ -44,10 +44,9 @@ An exact pin is the whole strategy. It keeps the upgrade yours to schedule: read
 [what shipped](/docs/releases/changelog), take the date when you have time to read it, and
 run your tests against it.
 
-<note kind="caution">
-A range such as `^2026.9.21` reads the date as major, minor and patch, and accepts every
-later release in the same year — asking for a promise the version was never making.
-</note>
+> [!WARNING]
+> A range such as `^2026.9.21` reads the date as major, minor and patch, and accepts every
+> later release in the same year — asking for a promise the version was never making.
 
 ## Documentation describes `main`
 

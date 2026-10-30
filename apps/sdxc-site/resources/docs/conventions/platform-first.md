@@ -60,10 +60,9 @@ row can send `show-modal` to this dialog. `Disclosure` and `Accordion` follow th
 with `<details>` and `<summary>`. [Open a dialog with no script](/docs/building-remix-apps/interface-with-remix-ui#open-a-dialog-with-no-script)
 covers the family in full.
 
-<note>
-Every target needs an `id`, since `commandfor` and `popovertarget` find it by that alone. In
-development `Dialog` logs a warning when it renders without one.
-</note>
+> [!NOTE]
+> Every target needs an `id`, since `commandfor` and `popovertarget` find it by that alone. In
+> development `Dialog` logs a warning when it renders without one.
 
 ## Call the global fetch
 
@@ -93,11 +92,10 @@ export async function fetchFeed(input: string) {
 `follow` checks every hop, so a redirect into a private address fails as `refused-address`
 before the request is sent.
 
-<note>
-On Cloudflare Workers the global `fetch` is the Worker's outbound request, so every package
-call counts toward the Worker's subrequest limit. A `follow` that walks three redirects is
-four subrequests.
-</note>
+> [!NOTE]
+> On Cloudflare Workers the global `fetch` is the Worker's outbound request, so every package
+> call counts toward the Worker's subrequest limit. A `follow` that walks three redirects is
+> four subrequests.
 
 ## Test the requests with MSW and the commands in a browser
 

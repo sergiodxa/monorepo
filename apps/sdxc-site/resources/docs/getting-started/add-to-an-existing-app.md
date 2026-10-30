@@ -43,11 +43,10 @@ uses this:
 The declarations name web platform globals such as `Request` and `CryptoKey`, so `lib` includes
 `dom`, or `types` lists your runtime's own, such as `@cloudflare/workers-types` or `@types/bun`.
 
-<note>
-Under `"moduleResolution": "node"` (also called `node10`), TypeScript ignores `exports`, and every
-import of a package fails with "Cannot find module". Switching to one of the three values above
-is the fix.
-</note>
+> [!NOTE]
+> Under `"moduleResolution": "node"` (also called `node10`), TypeScript ignores `exports`, and every
+> import of a package fails with "Cannot find module". Switching to one of the three values above
+> is the fix.
 
 ## Install the packages pinned exactly
 

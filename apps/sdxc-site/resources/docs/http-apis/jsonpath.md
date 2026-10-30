@@ -152,12 +152,11 @@ export default createAction(routes.api.reports.show, async (ctx) => {
 path, such as `$['rows'][3]['customer']`. An invalid query answers `400` with the `offset`
 where parsing stopped.
 
-<warning>
-The query runs over the document the response would send, so redact before you select: a
-`select` applied to the raw document lets `$..email` read every member the full response hides.
-Cap the query's length too, since a descendant segment visits every node of the document for
-each step that follows it.
-</warning>
+> [!WARNING]
+> The query runs over the document the response would send, so redact before you select: a
+> `select` applied to the raw document lets `$..email` read every member the full response hides.
+> Cap the query's length too, since a descendant segment visits every node of the document for
+> each step that follows it.
 
 ## Patch every node a query selects
 

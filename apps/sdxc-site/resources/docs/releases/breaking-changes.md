@@ -71,12 +71,11 @@ here to its opening paragraph and its migration:
 
 The same text is what `sdxc upgrade` hands your agent.
 
-<warning>
-A breaking change takes effect in the release that carries it. The old export is removed in that
-release, with no deprecated alias kept beside it, so the migration belongs to the pin move that
-crosses it. Taking a later feature means taking every breaking change released before it in that
-package.
-</warning>
+> [!WARNING]
+> A breaking change takes effect in the release that carries it. The old export is removed in that
+> release, with no deprecated alias kept beside it, so the migration belongs to the pin move that
+> crosses it. Taking a later feature means taking every breaking change released before it in that
+> package.
 
 ## List every breaking change before you move
 
@@ -99,11 +98,10 @@ question needs a terminal: without one, or with no breaking change to list, the 
 ahead. To read the notes in full first, open the [Changelog](/docs/releases/changelog) and look
 for `Breaking:` under the packages you import.
 
-<note>
-The release history `sdxc upgrade` reads keeps every breaking change, however old, and the full
-notes of the last twelve months. A move that starts further back still lists every breaking
-change, and its prompt links the GitHub Release of each older release for the rest.
-</note>
+> [!NOTE]
+> The release history `sdxc upgrade` reads keeps every breaking change, however old, and the full
+> notes of the last twelve months. A move that starts further back still lists every breaking
+> change, and its prompt links the GitHub Release of each older release for the rest.
 
 ## Apply the migration by hand
 

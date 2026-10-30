@@ -83,10 +83,9 @@ digest         0 8 * * *  2026-10-20 08:00 UTC  cloudflare.config.ts
 reports.daily  0 9 * * 1  2026-10-26 09:00 UTC  none; add triggers.scheduled({ schedule: "0 9 * * 1" })
 ```
 
-<warning>
-A job whose trigger reads `none` never runs in production. That is a job declared by hand, or
-one whose Worker is configured in `wrangler.jsonc`: add the trigger the row names, then deploy.
-</warning>
+> [!WARNING]
+> A job whose trigger reads `none` never runs in production. That is a job declared by hand, or
+> one whose Worker is configured in `wrangler.jsonc`: add the trigger the row names, then deploy.
 
 A trigger no job declares is listed below the table. Next runs are in UTC, the zone Workers
 deliver triggers in.

@@ -104,12 +104,11 @@ export async function verifyReceipt(secret: string, signed: SignedReceipt) {
 Read the secret from `env` in the caller and refuse to sign when it is unset. `hmac.verify`
 compares in constant time, so a tampered receipt fails closed.
 
-<warning>
-Canonical form is defined over I-JSON, where numbers are IEEE doubles. An integer above
-2^53 has already changed when `JSON.parse` reads it, so `9007199254740993` canonicalizes as
-`9007199254740992` and a signature over the original fails. Carry ids, amounts in minor
-units past that range, and other exact values as strings, as `total` does above.
-</warning>
+> [!WARNING]
+> Canonical form is defined over I-JSON, where numbers are IEEE doubles. An integer above
+> 2^53 has already changed when `JSON.parse` reads it, so `9007199254740993` canonicalizes as
+> `9007199254740992` and a signature over the original fails. Carry ids, amounts in minor
+> units past that range, and other exact values as strings, as `total` does above.
 
 ## Handle a value JCS refuses
 

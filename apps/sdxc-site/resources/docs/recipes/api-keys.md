@@ -80,10 +80,9 @@ Add the limiter from [Rate limit the API](/docs/http-apis/json-apis#rate-limit-t
 on the key rather than the address: `` key: (ctx) => `api-key:${ctx.apiKey.id}` ``. Then make
 each API route's guards `[authenticateApiKey, apiRateLimit()]`.
 
-<note>
-Keep `authenticateApiKey` first. The limiter's key reads `ctx.apiKey`, which exists only once the
-key has been checked.
-</note>
+> [!NOTE]
+> Keep `authenticateApiKey` first. The limiter's key reads `ctx.apiKey`, which exists only once the
+> key has been checked.
 
 ## Test it
 

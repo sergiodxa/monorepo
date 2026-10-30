@@ -128,10 +128,9 @@ export function parseArticleQuery(text: string) {
 }
 ```
 
-<warning>
-List `columns` in the order the FTS5 table declares them, because the weights are handed to
-`bm25()` by position: a different order weighs each column by another column's weight.
-</warning>
+> [!WARNING]
+> List `columns` in the order the FTS5 table declares them, because the weights are handed to
+> `bm25()` by position: a different order weighs each column by another column's weight.
 
 A word in the title counts ten times a word in the body, and `field: "title"` lets a reader
 write `title:invoice` to search the title alone.
@@ -181,10 +180,9 @@ The triggers follow every write, and deleting an article removes its row through
 The triggers keep the index correct from the migration on. Rebuild it when what it holds
 changes shape: a new tokenizer, a column added to the index, or after a D1 export.
 
-<warning>
-D1 refuses to export a database while a virtual table exists. For an export, drop the three
-triggers and the index, export, recreate both, and rebuild.
-</warning>
+> [!WARNING]
+> D1 refuses to export a database while a virtual table exists. For an export, drop the three
+> triggers and the index, export, recreate both, and rebuild.
 
 `reindex` writes the next `limit` rows with a key above `after` and answers where the next batch
 starts. A batch that fails or runs twice leaves the index correct, so a job that writes one batch

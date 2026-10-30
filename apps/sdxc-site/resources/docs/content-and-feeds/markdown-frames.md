@@ -60,11 +60,10 @@ export function readGuide(source: string) {
 }
 ```
 
-<warning>
-The region's HTML becomes part of the page, so `src` must be a path on the site's own
-origin. A frame pointing anywhere else fails the parse at the tag's line, and a frame with
-no `src` fails the same way.
-</warning>
+> [!WARNING]
+> The region's HTML becomes part of the page, so `src` must be a path on the site's own
+> origin. A frame pointing anywhere else fails the parse at the tag's line, and a frame with
+> no `src` fails the same way.
 
 ## Render it
 
@@ -93,11 +92,10 @@ export default createAction(routes.guide, (ctx) => {
 });
 ```
 
-<note>
-The page's renderer resolves each frame by requesting its `src`. Install `render()` from
-`remix/middleware/render` in the router's middleware, and that request goes through the same
-router, carrying the reader's cookies.
-</note>
+> [!NOTE]
+> The page's renderer resolves each frame by requesting its `src`. Install `render()` from
+> `remix/middleware/render` in the router's middleware, and that request goes through the same
+> router, carrying the reader's cookies.
 
 ## Serve the region
 

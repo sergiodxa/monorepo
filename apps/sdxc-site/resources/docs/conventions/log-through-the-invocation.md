@@ -23,10 +23,9 @@ does, and how to check a record in a test.
 npm add @sdxc/logger remix
 ```
 
-<note>
-The current log lives in `AsyncLocalStorage`, so enable the `nodejs_compat` compatibility flag
-on the Worker.
-</note>
+> [!NOTE]
+> The current log lives in `AsyncLocalStorage`, so enable the `nodejs_compat` compatibility flag
+> on the Worker.
 
 ## Find the log the invocation already has
 
@@ -92,11 +91,10 @@ export function applyDiscount(totalCents: number, code: string | null): number {
 Called from the quote controller, these fields land on the request's record; called from a
 job, on the job's.
 
-<warning>
-Construct no logger and no `Log` inside a request, a job or a service. A second log writes a
-second record that no query joins to the first, and one that is never emitted is lost. The
-invocation already has a log; `ctx.log` and `currentLog()` are how you reach it.
-</warning>
+> [!WARNING]
+> Construct no logger and no `Log` inside a request, a job or a service. A second log writes a
+> second record that no query joins to the first, and one that is never emitted is lost. The
+> invocation already has a log; `ctx.log` and `currentLog()` are how you reach it.
 
 ## Open a log where nothing opens one
 

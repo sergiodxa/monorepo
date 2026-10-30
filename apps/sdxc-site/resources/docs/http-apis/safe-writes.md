@@ -93,11 +93,10 @@ export const idempotent = idempotency({
 });
 ```
 
-<warning>
-Scope on an identity your authentication middleware established, shown here as `ctx.apiKey`.
-A scope built from anything the caller sends, or one shared by every caller, lets a caller who
-guesses or reuses another's key receive that caller's stored response.
-</warning>
+> [!WARNING]
+> Scope on an identity your authentication middleware established, shown here as `ctx.apiKey`.
+> A scope built from anything the caller sends, or one shared by every caller, lets a caller who
+> guesses or reuses another's key receive that caller's stored response.
 
 Create the `idempotency_keys` table by pasting `IDEMPOTENCY_KEYS_SCHEMA_SQL` into a migration,
 and delete expired records from a scheduled job with `purgeExpired(db)`. Then mount the
@@ -273,11 +272,10 @@ export default createAction(routes.api.books.update, async (ctx) => {
 `precondition` compares `If-Match` with the book's current tag: an absent header passes, and
 a stale tag answers `412`, so a client cannot overwrite a change it never saw.
 
-<warning>
-The check and the write are two statements, so on D1 another write can land between them.
-When two writers racing matters, make the update itself conditional in SQL, matching the
-columns the tag was computed from.
-</warning>
+> [!WARNING]
+> The check and the write are two statements, so on D1 another write can land between them.
+> When two writers racing matters, make the update itself conditional in SQL, matching the
+> columns the tag was computed from.
 
 `applyValidated` validates the patched **result** with `BOOK_INPUT`, the create schema, so
 create and update share one set of limits. Its validation is synchronous, so the schema holds

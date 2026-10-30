@@ -75,10 +75,9 @@ the store can do wrong, so a failure here means `listPackages` itself failed. Wh
 JSON, so a `Date` your loader returned arrives as a string, and the type says so. `ttl` takes a
 duration string or a number of whole seconds; leave it out and the entry never expires.
 
-<warning>
-KV refuses a TTL under 60 seconds. A shorter one leaves the entry unwritten and reports
-`unavailable`, so a lifetime you compute at runtime needs a floor.
-</warning>
+> [!WARNING]
+> KV refuses a TTL under 60 seconds. A shorter one leaves the entry unwritten and reports
+> `unavailable`, so a lifetime you compute at runtime needs a floor.
 
 ## Keep a stale copy for when the source is down
 
@@ -181,11 +180,10 @@ The middleware writes `Cache-Control` and `Cache-Tag` once it can inspect the fi
 A response carrying `Set-Cookie`, or a `public` policy on a request that carried a session, is
 downgraded to `private, no-store` and logged, so a signed-in page cannot end up in a shared cache.
 
-<warning>
-Workers Cache stores a `200` with no freshness headers for two hours under a key that ignores
-cookies. That default is why every route answers `private, no-store` until it declares a
-policy: a bare response would hand one visitor's page to the next.
-</warning>
+> [!WARNING]
+> Workers Cache stores a `200` with no freshness headers for two hours under a key that ignores
+> cookies. That default is why every route answers `private, no-store` until it declares a
+> policy: a bare response would hand one visitor's page to the next.
 
 ## Purge when the content changes
 

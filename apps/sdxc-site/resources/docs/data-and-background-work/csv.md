@@ -171,17 +171,15 @@ export default createAction(routes.contacts.import, async (ctx) => {
 The import is all or nothing: a file with one bad row saves nothing, so uploading it again after
 a fix cannot duplicate the rows that were fine.
 
-<note>
-D1 commits each statement as it runs, so `Contacts.createMany` keeps the import all or nothing
-only by writing every contact in one statement, such as the multi-row `INSERT` that
-`remix/data-table`'s own `createMany` compiles to, as
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) explains.
-</note>
+> [!NOTE]
+> D1 commits each statement as it runs, so `Contacts.createMany` keeps the import all or nothing
+> only by writing every contact in one statement, such as the multi-row `INSERT` that
+> `remix/data-table`'s own `createMany` compiles to, as
+> [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) explains.
 
-<warning>
-The whole file is read into memory, so cap its size where the body is parsed, with the
-`maxFileSize` option of Remix's `formData()` middleware.
-</warning>
+> [!WARNING]
+> The whole file is read into memory, so cap its size where the body is parsed, with the
+> `maxFileSize` option of Remix's `formData()` middleware.
 
 ## Stream an export
 
@@ -258,11 +256,10 @@ So the writer neutralizes by default: a string cell starting with `=`, `+`, `-`,
 carriage return gets a leading `'`, which a spreadsheet shows as text. Only strings are touched,
 so keep numeric columns numeric in the rows you export.
 
-<warning>
-Turn it off with `escapeFormulas: false` only for a file no spreadsheet opens, such as a feed a
-script reads, where the added `'` would be part of the text the program sees. Any export a
-person downloads keeps the default.
-</warning>
+> [!WARNING]
+> Turn it off with `escapeFormulas: false` only for a file no spreadsheet opens, such as a feed a
+> script reads, where the added `'` would be part of the text the program sees. Any export a
+> person downloads keeps the default.
 
 ## Test the import
 

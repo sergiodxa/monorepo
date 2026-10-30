@@ -142,12 +142,11 @@ A failure carries a `code` (`truncated`, `malformed`, `duplicate-key`, `limit-ex
 and the `offset` of the failing byte, so a device's developer sees where their encoder went
 wrong.
 
-<warning>
-`maxDepth` (64 by default) and `maxItems` (100,000) bound what one body allocates, and every
-item costs at least one byte, so a body can only claim lengths its own bytes hold. The body
-size is still yours to bound: a request sent chunked has no `Content-Length`, so put the
-endpoint behind a limit at the edge too when devices you do not control call it.
-</warning>
+> [!WARNING]
+> `maxDepth` (64 by default) and `maxItems` (100,000) bound what one body allocates, and every
+> item costs at least one byte, so a body can only claim lengths its own bytes hold. The body
+> size is still yours to bound: a request sent chunked has no `Content-Length`, so put the
+> endpoint behind a limit at the edge too when devices you do not control call it.
 
 ## Store a value under its hash
 

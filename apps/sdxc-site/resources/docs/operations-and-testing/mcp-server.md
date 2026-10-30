@@ -104,9 +104,8 @@ Open the cache per call: an instance holds its own deferred writes until KV has 
 handing it `waitUntil` means a miss never waits on the KV put. Rethrowing a `fetch` failure's
 cause makes the tool fail the same way with or without the cache.
 
-<note>
-KV refuses a TTL under 60 seconds.
-</note>
+> [!NOTE]
+> KV refuses a TTL under 60 seconds.
 
 ## Answer them with your app's context
 
@@ -142,10 +141,9 @@ A returned string is the answer verbatim, and anything else is serialized as JSO
 other exception reaches it only as "the tool failed". `href` builds a URI from the resource's
 pattern. The key stays bounded because the schema caps `query` at 100 characters.
 
-<warning>
-Every caller shares these cache entries, which is correct only while the endpoint is anonymous.
-Once a tool answers per credential, the credential belongs in the cache key.
-</warning>
+> [!WARNING]
+> Every caller shares these cache entries, which is correct only while the endpoint is anonymous.
+> Once a tool answers per credential, the credential belongs in the cache key.
 
 A resource implements `read`, and optionally a `list` that fills the client's picker:
 

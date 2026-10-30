@@ -49,10 +49,9 @@ export function newPostId(): PostId {
 The prefix is a literal type, so a function asking for a `TypeID<"post">` refuses an author
 id at compile time. A v7 UUID starts with a timestamp, so new ids sort in creation order.
 
-<note>
-A v7 value reveals when it was minted. Import `generateUUID` from `@sdxc/uuid/v4` instead for
-an id you hand to someone outside the system.
-</note>
+> [!NOTE]
+> A v7 value reveals when it was minted. Import `generateUUID` from `@sdxc/uuid/v4` instead for
+> an id you hand to someone outside the system.
 
 ## Keep UUIDs typed below the edge
 
@@ -118,10 +117,9 @@ export function derivePost(input: { title: string; body: string }) {
 the way you do. `slugify` folds accents, so "Cómo usar Remix" becomes `como-usar-remix`, and
 `excerpt` cuts at a word boundary, which makes a good meta description.
 
-<note>
-Slugs are not unique on their own. Check for a collision when you insert, and append a short
-suffix when there is one.
-</note>
+> [!NOTE]
+> Slugs are not unique on their own. Check for a collision when you insert, and append a short
+> suffix when there is one.
 
 ## Create and address the record
 
@@ -284,11 +282,10 @@ export const requireSupportedClient: Middleware = (ctx, next) => {
 
 Versions compare as numbers, so `2.10.0` is newer than `2.9.0`.
 
-<warning>
-`satisfies` answers `false` whenever either side is not a version, which is why the
-middleware parses first: without that check, a header reading `nightly` passes as "not below
-the minimum".
-</warning>
+> [!WARNING]
+> `satisfies` answers `false` whenever either side is not a version, which is why the
+> middleware parses first: without that check, a header reading `nightly` passes as "not below
+> the minimum".
 
 ## Test the derivation and the ids
 

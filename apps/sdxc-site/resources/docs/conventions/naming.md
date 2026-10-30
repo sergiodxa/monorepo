@@ -109,10 +109,9 @@ let cacheControl = policy({
 Durations are written the way you would say them — `"1 hour"`, `"5 minutes"` — so a cache age
 at a call site reads as a duration rather than arithmetic.
 
-<note>
-A duration string is checked when your code type-checks: the amount must be a whole number, so
-`"1.5 hours"` is a type error and `"90 minutes"` is the way to write it.
-</note>
+> [!NOTE]
+> A duration string is checked when your code type-checks: the amount must be a whole number, so
+> `"1.5 hours"` is a type error and `"90 minutes"` is the way to write it.
 
 ## Where to go next
 

@@ -101,6 +101,14 @@ Render `<Landing />` from the page's controller inside your document layout, lik
 page. Nothing on it hydrates: the FAQ is `<details>`, and tabbed bands switch with radio
 inputs and CSS.
 
+Here is that page, live. Switch between Desktop and Phone to see each band rearrange itself
+for the width it has:
+
+<frame src="/frames/guides/landing-pages/landing">
+The assembled landing: a hero with a framed monitors screen, the proof band, three feature
+bands, the questions, and the closing call to action.
+</frame>
+
 ## The hero
 
 `LandingHero` lays the eyebrow, title, lead and actions beside `media`. `mediaPlacement`
@@ -156,6 +164,10 @@ export function Proof() {
 `LogoCloud` sizes every mark to one height and, with `muted`, to one tone, so no customer's
 logo outshouts the others. `StatStrip` sets its columns from its own width, two at first
 and up to five on a wide band.
+
+<frame src="/frames/guides/landing-pages/proof">
+The proof band: three muted adopter marks over three figures.
+</frame>
 
 ## Feature bands
 
@@ -245,6 +257,11 @@ Alternate `tone` between bands (`"plain"`, `"tinted"`, `"grid"`) so a reader can
 one ends and the next begins. Leave `"inverse"` for the closing band, which uses it by
 default. `lean="media"` gives a split band's media the wider column.
 
+<frame src="/frames/guides/landing-pages/features">
+The three feature bands: checked claims beside an incident screen, a tinted grid of three
+features, and three numbered steps.
+</frame>
+
 ## Questions
 
 `FaqBand` takes one `Accordion`, or two for a pair of columns that stack into one list on a
@@ -283,6 +300,10 @@ export function Faq() {
 ```
 
 A shared `name` makes the items exclusive, so opening one question closes the one before.
+
+<frame src="/frames/guides/landing-pages/faq">
+The questions band, with three questions that open one at a time.
+</frame>
 
 ## Your brand
 
@@ -354,6 +375,34 @@ export function PricingTeaser() {
 `viewReveal()` from `@sdxc/ui/animations` brings a band in as it scrolls into view, and drops
 the movement for a visitor who asks for reduced motion. It works on any band, patterns included,
 through their `mix` prop.
+
+<frame src="/frames/guides/landing-pages/pricing-teaser">
+The pricing band: a tinted section with two checked claims and a link beside a terminal.
+</frame>
+
+## Test the outline
+
+The page renders on the server, so a test renders it to a string and reads the headings.
+It holds the outline to one `<h1>`, first, with every heading after it at most one level
+deeper than the one before, which is what the single `HeadingScope` buys:
+
+```tsx {% title="resources/components/landing.test.tsx" %}
+import { renderToString } from "remix/component/server";
+import { expect, test } from "vitest";
+
+import { Landing } from "~/resources/components/landing";
+
+test("opens with one h1 and never skips a heading level", async () => {
+	let html = await renderToString(<Landing />);
+	let levels = [...html.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]));
+
+	expect(levels[0]).toBe(1);
+	expect(levels.filter((level) => level === 1)).toHaveLength(1);
+	for (let [index, level] of levels.slice(1).entries()) {
+		expect(level).toBeLessThanOrEqual((levels[index] ?? 1) + 1);
+	}
+});
+```
 
 ## Where to go next
 

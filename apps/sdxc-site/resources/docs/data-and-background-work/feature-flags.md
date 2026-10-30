@@ -92,10 +92,9 @@ record.
 The router middleware from `@sdxc/flags/middleware/router` reads the request's subject once and
 publishes a client as `ctx.flags`:
 
-<note>
-List `featureFlags()` after your auth middleware, so the subject is known, and after `log()`,
-so the hook has a record to write to.
-</note>
+> [!NOTE]
+> List `featureFlags()` after your auth middleware, so the subject is known, and after `log()`,
+> so the hook has a record to write to.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import featureFlags from "@sdxc/flags/middleware/router";
@@ -188,10 +187,9 @@ Typing the set as `FlagSet` checks every rule as you write it, and it goes into
 like `staff` are conditions declared once and shared by name. A split hashes the subject with the
 flag key, so widening `on: 10` to `on: 25` keeps the first ten percent where they were.
 
-<warning>
-When the context has no `targetingKey`, the split cannot place anyone: the evaluation reports
-`TARGETING_KEY_MISSING` and serves the default, so a rollout that reached nobody reads as one.
-</warning>
+> [!WARNING]
+> When the context has no `targetingKey`, the split cannot place anyone: the evaluation reports
+> `TARGETING_KEY_MISSING` and serves the default, so a rollout that reached nobody reads as one.
 
 ## Move definitions into KV
 

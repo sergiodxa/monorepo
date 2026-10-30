@@ -67,19 +67,17 @@ there. The Turnstile origin in `scriptSrc` and `frameSrc` is for the challenge f
 [Protect forms](/docs/identity-and-security/protect-forms). Once the policy is enforced,
 `frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`.
 
-<warning>
-Keep `"nonce"` out of `styleSrc`. `remix/component` writes one `<style>` per `css()` mixin
-without a nonce, and a nonce in `style-src` makes browsers ignore `'unsafe-inline'` and block
-every one of them.
-</warning>
+> [!WARNING]
+> Keep `"nonce"` out of `styleSrc`. `remix/component` writes one `<style>` per `css()` mixin
+> without a nonce, and a nonce in `style-src` makes browsers ignore `'unsafe-inline'` and block
+> every one of them.
 
 The CSP starts as `contentSecurityPolicyReportOnly`: the browser reports what it would have
 blocked without blocking it.
 
-<warning>
-A report-only policy protects nothing. Scripts it would block still run, framing is still
-allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecurityPolicy`.
-</warning>
+> [!WARNING]
+> A report-only policy protects nothing. Scripts it would block still run, framing is still
+> allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecurityPolicy`.
 
 ## Install it before the renderer
 
@@ -155,17 +153,15 @@ export function Document(handle: Handle<DocumentProps>) {
 The boot script needs no nonce, because its hash is in the policy. Any other inline script a
 handler renders takes `ctx.securityHeaders.nonce` the same way.
 
-<note>
-Read the nonce while the chain is still running, in the handler or in the document
-`ctx.render` builds: the headers are written when the chain resolves, ahead of a streamed body.
-</note>
+> [!NOTE]
+> Read the nonce while the chain is still running, in the handler or in the document
+> `ctx.render` builds: the headers are written when the chain resolves, ahead of a streamed body.
 
 ## Hash a fixed inline script instead
 
-<warning>
-A nonce is per response, so an HTML response stored in a shared cache replays one nonce to every
-visitor, and anyone who reads it can run a script under it.
-</warning>
+> [!WARNING]
+> A nonce is per response, so an HTML response stored in a shared cache replays one nonce to every
+> visitor, and anyone who reads it can run a script under it.
 
 For a script whose text never changes, list its hash instead. The policy module exports
 `BOOT_SCRIPT` and lists its `sha256-…` source as a literal, and a test fails when the two drift

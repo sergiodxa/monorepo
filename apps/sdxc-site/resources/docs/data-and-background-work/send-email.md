@@ -57,10 +57,9 @@ export default emails({
 Each declaration is named by its path, `postings.published`. Importing the map costs the
 schemas alone, so a controller sends an email without loading the module that renders it.
 
-<warning>
-The declaration's name travels with every queued delivery, so rename it only when no delivery
-under the old name is waiting: the job exits on a name nothing maps.
-</warning>
+> [!WARNING]
+> The declaration's name travels with every queued delivery, so rename it only when no delivery
+> under the old name is waiting: the job exits on a name nothing maps.
 
 ## Write the template
 
@@ -173,12 +172,11 @@ export async function queue(delivery: QueuedEmail): Promise<void> {
 }
 ```
 
-<note>
-`CloudflareTransport` delivers through the Workers email sending binding, so the Worker needs a
-`send_email` binding named `EMAIL` and a verified sending domain.
-[Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
-reads the DMARC, SPF and DKIM records receivers judge that domain by.
-</note>
+> [!NOTE]
+> `CloudflareTransport` delivers through the Workers email sending binding, so the Worker needs a
+> `send_email` binding named `EMAIL` and a verified sending domain.
+> [Check a domain's email authentication](/docs/data-and-background-work/email-authentication)
+> reads the DMARC, SPF and DKIM records receivers judge that domain by.
 
 `queue` imports the dispatcher lazily, because the dispatcher's own middleware imports this
 module.

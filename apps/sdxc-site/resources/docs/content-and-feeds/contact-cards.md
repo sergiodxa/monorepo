@@ -161,12 +161,11 @@ export default createAction(routes.contacts.import, async (ctx) => {
 `Contacts` is your own model, storing `stringify(card)` in a text column. A structural failure
 is a `VCardParseError` whose message names the line, so show it as it is.
 
-<warning>
-A vCard from someone else's address book is untrusted input. `PHOTO` and `URL` values arrive as
-whatever URI the file holds, `data:` and `javascript:` included, so check the scheme before you
-render one as a link or an image, and fetch a remote photo only as
-[Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) describes.
-</warning>
+> [!WARNING]
+> A vCard from someone else's address book is untrusted input. `PHOTO` and `URL` values arrive as
+> whatever URI the file holds, `data:` and `javascript:` included, so check the scheme before you
+> render one as a link or an image, and fetch a remote photo only as
+> [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) describes.
 
 A property with no JSContact counterpart is kept in the Card's `vCardProps`, so exporting the
 contact again writes it back. jCard, the JSON form of vCard, reads through `readJCard(value)`

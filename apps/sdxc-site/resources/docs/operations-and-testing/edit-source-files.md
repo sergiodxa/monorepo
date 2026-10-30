@@ -181,10 +181,9 @@ declare a job twice. `insertAfterLast` places the statement after the last state
 calls `dispatcher.map`; with no such call yet, it follows the declaration that calls
 `createJobDispatcher`, and with neither it fails with `not-found`.
 
-<warning>
-Compute both edits before writing either. When one fails, write neither and print both for a
-person to make, so a declaration never lands without the call that maps it.
-</warning>
+> [!WARNING]
+> Compute both edits before writing either. When one fails, write neither and print both for a
+> person to make, so a declaration never lands without the call that maps it.
 
 Every edit scans its own output again and fails with `invalid-output` rather than return text
 that does not scan. `value` and `statement` are inserted as written apart from indentation, so

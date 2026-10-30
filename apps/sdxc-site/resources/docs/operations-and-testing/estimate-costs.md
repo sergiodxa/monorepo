@@ -102,11 +102,10 @@ export function estimateMonth(usage: Usage) {
 `D1.STORAGE` is priced per GB-month, so `d1StorageGb` is the average number of gigabytes the
 database held over the month.
 
-<note>
-The result is a floor rather than the invoice. Cloudflare rounds billable usage up to its next
-billing unit, such as R2 to the next million operations and Durable Objects to the next million
-GB-seconds, so a small overage costs more than the exact rate predicts.
-</note>
+> [!NOTE]
+> The result is a floor rather than the invoice. Cloudflare rounds billable usage up to its next
+> billing unit, such as R2 to the next million operations and Durable Objects to the next million
+> GB-seconds, so a small overage costs more than the exact rate predicts.
 
 ## Price one unit of work
 

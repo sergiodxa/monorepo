@@ -48,11 +48,10 @@ expand("{/segments*}{?filters*}", {
 A variable that is `undefined`, `null`, `[]` or `{}` disappears together with its `?`, `&`
 or `/`, so an optional parameter needs no branch.
 
-<warning>
-`{+var}` and `{#var}` pass `/`, `?`, `#` and `..` through unencoded. Expand a value someone
-else typed with `{var}`, which encodes them, so a name like `../admin?x=` stays one segment
-instead of rewriting the path and the query.
-</warning>
+> [!WARNING]
+> `{+var}` and `{#var}` pass `/`, `?`, `#` and `..` through unencoded. Expand a value someone
+> else typed with `{var}`, which encodes them, so a name like `../admin?x=` stays one segment
+> instead of rewriting the path and the query.
 
 ## Publish templates from your API
 
@@ -164,11 +163,10 @@ export function bookIdFromUri(uri: string): string | null {
 Matched values come back decoded, and a value holding a raw `,` comes back as a list, which
 is why the function checks that `id` is a string. A URI on another host is `null`.
 
-<note>
-`match` fails for a template whose adjacent expressions have no literal between them, such
-as `{a}{b}`, because nothing marks where one value ends. Publish templates with a separator
-between expressions when you intend to read them back.
-</note>
+> [!NOTE]
+> `match` fails for a template whose adjacent expressions have no literal between them, such
+> as `{a}{b}`, because nothing marks where one value ends. Publish templates with a separator
+> between expressions when you intend to read them back.
 
 ## Test the templates
 

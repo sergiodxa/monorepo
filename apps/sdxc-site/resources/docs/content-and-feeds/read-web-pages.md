@@ -134,10 +134,9 @@ A path `robots.txt` disallows is refused before `distill` sends a request. Every
 an `outcome`: `refused`, `timeout` or `empty`; only a timeout is worth trying again. On success,
 `url` is the article's canonical address.
 
-<note>
-`mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`. That publisher is
-asking you not to keep a copy, so the row keeps the title and the excerpt and drops the body.
-</note>
+> [!NOTE]
+> `mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`. That publisher is
+> asking you not to keep a copy, so the row keeps the title and the excerpt and drops the body.
 
 ## Keep a plain-text excerpt
 

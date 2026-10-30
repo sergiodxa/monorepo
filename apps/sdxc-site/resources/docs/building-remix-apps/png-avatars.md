@@ -30,11 +30,10 @@ npm add @sdxc/crypto @sdxc/file-storage-r2 @sdxc/http @sdxc/png @sdxc/result rem
 A PNG states its width and height at a fixed place in its first chunk, so reading them answers
 whether decoding is safe before any pixel is inflated.
 
-<warning>
-`decode` refuses an image over 2²⁸ pixels on its own, but that is a gigabyte of RGBA, far more
-than a Worker's memory. Check the header against a limit of your own before decoding an
-upload, as `readAvatar` does.
-</warning>
+> [!WARNING]
+> `decode` refuses an image over 2²⁸ pixels on its own, but that is a gigabyte of RGBA, far more
+> than a Worker's memory. Check the header against a limit of your own before decoding an
+> upload, as `readAvatar` does.
 
 ```typescript {% title="app/services/avatars/read-avatar.ts" %}
 import type { PNG } from "@sdxc/png";

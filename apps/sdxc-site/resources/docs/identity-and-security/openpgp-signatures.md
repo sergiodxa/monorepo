@@ -84,11 +84,10 @@ sdxc run openpgp key --user-id "Security <security@example.com>" > signing.key
 npx wrangler secret put OPENPGP_SIGNING_KEY < signing.key
 ```
 
-<note>
-Store the Worker's copy without a passphrase and let the secret store protect it: unlocking a
-protected key runs many hashing rounds by design, each time the key is read. Keep the
-passphrase-protected copy (`key.lock(passphrase)`) for the backup you keep offline.
-</note>
+> [!NOTE]
+> Store the Worker's copy without a passphrase and let the secret store protect it: unlocking a
+> protected key runs many hashing rounds by design, each time the key is read. Keep the
+> passphrase-protected copy (`key.lock(passphrase)`) for the backup you keep offline.
 
 ## Sign security.txt
 
@@ -129,10 +128,9 @@ says why, so a missing secret in a preview environment never takes the contact a
 offline. [Security headers and CSP](/docs/identity-and-security/security-headers)
 writes the `SECURITY_TXT` document itself.
 
-<note>
-RFC 9116 asks a signed file to carry a `Canonical` field naming where it lives, so a signed
-copy served from another address is recognisable as moved. Keep `canonical` filled in.
-</note>
+> [!NOTE]
+> RFC 9116 asks a signed file to carry a `Canonical` field naming where it lives, so a signed
+> copy served from another address is recognisable as moved. Keep `canonical` filled in.
 
 ## Publish detached signatures beside your files
 
@@ -206,11 +204,10 @@ The caller reads the pinned key once with `readPublicKey(VENDOR_PUBLIC_KEY)` and
 list until the old key retires. A signature by a revoked or expired key answers
 `invalid-signature`, and one from a key you did not pass answers `unknown-signer`.
 
-<warning>
-Treat `unknown-signer` and `invalid-signature` as a refusal, never as a reason to fall back
-to the unsigned file. A verifier that accepts a file when the signature is missing protects
-nothing, since an attacker who can replace the file can also delete the `.asc`.
-</warning>
+> [!WARNING]
+> Treat `unknown-signer` and `invalid-signature` as a refusal, never as a reason to fall back
+> to the unsigned file. A verifier that accepts a file when the signature is missing protects
+> nothing, since an attacker who can replace the file can also delete the `.asc`.
 
 `verifyCleartext(text, certificate)` checks a cleartext message, such as another site's
 `security.txt`. Only the `text` it returns is covered by the signature, so read the fields from

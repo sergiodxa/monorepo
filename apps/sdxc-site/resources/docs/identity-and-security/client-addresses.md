@@ -130,10 +130,9 @@ export async function isNewNetwork(db: Database, userId: string, ip: IP) {
 canonical form, so equal addresses store equal strings, and reading it back goes through
 `IP.parse`, so a row edited by hand becomes a failure you handle instead of a value you trust.
 
-<note>
-Compare two addresses or two networks with `equals`: two `IP`s parsed from the same text are
-two objects, and `===` compares objects by identity.
-</note>
+> [!NOTE]
+> Compare two addresses or two networks with `equals`: two `IP`s parsed from the same text are
+> two objects, and `===` compares objects by identity.
 
 A handler hands over what the middleware published, and adds the canonical text to the
 request's log record:
@@ -146,10 +145,9 @@ if (ctx.ip && (await isNewNetwork(ctx.db, user.id, ctx.ip))) {
 ctx.log.set({ client: { ip: ctx.ip?.toString() ?? null } });
 ```
 
-<warning>
-An IP address is personal data in many jurisdictions. Decide how long your logs keep it before
-you add the field.
-</warning>
+> [!WARNING]
+> An IP address is personal data in many jurisdictions. Decide how long your logs keep it before
+> you add the field.
 
 ## Admit only your own networks
 
@@ -157,10 +155,9 @@ An admin area that only staff on the office network or the VPN should reach is a
 ranges and a membership test. Keep the list as plain strings at module level, and parse inside
 the function:
 
-<note>
-A Worker that does work in its global scope fails upload validation, so a range parsed at
-module level stops the deploy.
-</note>
+> [!NOTE]
+> A Worker that does work in its global scope fails upload validation, so a range parsed at
+> module level stops the deploy.
 
 ```typescript {% title="app/http/middleware/office-only.ts" %}
 import type { Middleware } from "remix/router";
@@ -233,12 +230,11 @@ The checks run on the parsed URL, so every spelling of `127.0.0.1` (`http://0x7f
 public fails with `refused-address`, naming its classification (`10.0.0.1 is private`), and
 names such as `localhost` or `db.internal` fail with `refused-host`.
 
-<warning>
-`checkUrl` reads the URL alone. `hooks.example.com` passes it and can still resolve to
-`127.0.0.1`, and a redirect can lead anywhere. Check every address a name resolves to, on every
-hop, in the fetch itself:
-[Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) covers that.
-</warning>
+> [!WARNING]
+> `checkUrl` reads the URL alone. `hooks.example.com` passes it and can still resolve to
+> `127.0.0.1`, and a redirect can lead anywhere. Check every address a name resolves to, on every
+> hop, in the fetch itself:
+> [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) covers that.
 
 ## Test with the header Cloudflare sends
 

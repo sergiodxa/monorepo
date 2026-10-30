@@ -177,12 +177,11 @@ export const teamAccess = access(policy, {
 });
 ```
 
-<note>
-Install `access()` after your authentication middleware and the billing middleware: its role
-and fact readers read `ctx.user`, `ctx.team` and `ctx.membership`, which stand for what your
-authentication publishes, and `fromEntitlements()` reads through the billing middleware's own
-`entitlements` reader.
-</note>
+> [!NOTE]
+> Install `access()` after your authentication middleware and the billing middleware: its role
+> and fact readers read `ctx.user`, `ctx.team` and `ctx.membership`, which stand for what your
+> authentication publishes, and `fromEntitlements()` reads through the billing middleware's own
+> `entitlements` reader.
 
 ## Guard a route
 
@@ -278,11 +277,10 @@ export default createAction(routes.projects.show, {
 `can` is typed from the group, `{ create, read, update, delete }`, each a boolean. For a single
 check, `ctx.access.can` answers a boolean and `authorize` a `Result<void, Forbidden>`.
 
-<note>
-A check never waits. One that reads a fact that has not been loaded, or whose source failed,
-refuses with cause `error`, so an outage refuses the abilities that depend on it and nothing
-else. Await `ctx.access.load(...)` before checking synchronously, as the handler above does.
-</note>
+> [!NOTE]
+> A check never waits. One that reads a fact that has not been loaded, or whose source failed,
+> refuses with cause `error`, so an outage refuses the abilities that depend on it and nothing
+> else. Await `ctx.access.load(...)` before checking synchronously, as the handler above does.
 
 ## Answer refusals
 
@@ -309,10 +307,9 @@ export function renderDenied(ctx: RequestContext, decision: Refusal) {
 }
 ```
 
-<warning>
-Render the same not-found page an unknown URL gets: a 404 that looks different from the real
-one tells a stranger the record exists.
-</warning>
+> [!WARNING]
+> Render the same not-found page an unknown URL gets: a 404 that looks different from the real
+> one tells a stranger the record exists.
 
 Without a responder, a refusal answers a bare `403` or `404`.
 
@@ -356,10 +353,9 @@ export default createJobHandler(jobs.reports.export, async (ctx) => {
 });
 ```
 
-<warning>
-Check again inside the job, at run time: a check made when the job was queued says nothing
-about a downgrade or a removal since, and the job's own check is what refuses that export.
-</warning>
+> [!WARNING]
+> Check again inside the job, at run time: a check made when the job was queued says nothing
+> about a downgrade or a removal since, and the job's own check is what refuses that export.
 
 `Entitlements.facts` is your own read answering `{ products, features }`, since
 `fromEntitlements()` reads a request.

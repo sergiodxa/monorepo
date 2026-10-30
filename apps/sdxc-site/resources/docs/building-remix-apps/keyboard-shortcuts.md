@@ -220,10 +220,9 @@ down for a keystroke that something else owns:
   keys
 - one pressed inside a `<dialog>` that sits outside the keymap's host
 
-<note>
-Render the shortcuts panel inside the keymap's host. A modal opened elsewhere on the page
-keeps its keys to itself, while the panel, rendered inside the host, still answers them.
-</note>
+> [!NOTE]
+> Render the shortcuts panel inside the keymap's host. A modal opened elsewhere on the page
+> keeps its keys to itself, while the panel, rendered inside the host, still answers them.
 
 ## List the shortcuts and announce what a key did
 

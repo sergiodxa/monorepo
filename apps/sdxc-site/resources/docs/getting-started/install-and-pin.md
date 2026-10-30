@@ -48,13 +48,12 @@ not changed since `2026.10.13`:
 A package pins each sibling it depends on exactly, at that release, so pinning every package at
 one release gives you one copy of each.
 
-<warning>
-Pins from different releases duplicate a shared dependency: an `@sdxc/spec` and an `@sdxc/jwt`
-built against different versions of `@sdxc/duration` install two copies of it, and context keys
-and `instanceof` checks stop matching between the copies. `sdxc upgrade <release>` moves every
-pin to its version at one release, and in a project made with `sdxc create`, `sdxc doctor`
-reports a package pinned behind the others.
-</warning>
+> [!WARNING]
+> Pins from different releases duplicate a shared dependency: an `@sdxc/spec` and an `@sdxc/jwt`
+> built against different versions of `@sdxc/duration` install two copies of it, and context keys
+> and `instanceof` checks stop matching between the copies. `sdxc upgrade <release>` moves every
+> pin to its version at one release, and in a project made with `sdxc create`, `sdxc doctor`
+> reports a package pinned behind the others.
 
 Three packages run at build or test time: [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks),
 [`@sdxc/jsdoc`](/api/jsdoc) and [`@sdxc/spec`](/api/spec). Install them as dev dependencies,

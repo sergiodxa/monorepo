@@ -121,11 +121,10 @@ The package is several independent concerns about HTTP — caching, content nego
 codes, responses — so the subpath is the unit, and importing the status codes leaves the
 caching layer out.
 
-<note>
-Only the subpaths a package's manifest names are importable. A path into a package's internals,
-such as `@sdxc/cache/lib/ttl`, fails to resolve, so import from a listed subpath even when the
-file you want sits deeper in the source.
-</note>
+> [!NOTE]
+> Only the subpaths a package's manifest names are importable. A path into a package's internals,
+> such as `@sdxc/cache/lib/ttl`, fails to resolve, so import from a listed subpath even when the
+> file you want sits deeper in the source.
 
 ## Why this rather than more packages
 

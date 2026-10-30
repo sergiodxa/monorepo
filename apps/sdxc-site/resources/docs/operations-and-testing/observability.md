@@ -144,10 +144,9 @@ export async function readFlags() {
 }
 ```
 
-<note>
-One `createLogger()` per Worker and the invocation's own log is the whole model: a logger or
-log opened per request writes a second record that no trace or query joins to the first.
-</note>
+> [!NOTE]
+> One `createLogger()` per Worker and the invocation's own log is the whole model: a logger or
+> log opened per request writes a second record that no trace or query joins to the first.
 
 ## Hand the same logger to the job dispatcher
 
@@ -238,13 +237,11 @@ export default function serverTiming(): Middleware<{
 Add `serverTiming()` to the router's middleware after `trace()`. In a handler, wrap the work
 you want to see: `await ctx.timing.measure("db", "listPostings", () => Posting.listOpen(ctx.db))`.
 
-<note>
-Workers advance the clock only across I/O, so time I/O calls; pure computation reads as zero.
-</note>
+> [!NOTE]
+> Workers advance the clock only across I/O, so time I/O calls; pure computation reads as zero.
 
-<warning>
-Every client sees the `Server-Timing` header, so name entries as deliberately as a public API.
-</warning>
+> [!WARNING]
+> Every client sees the `Server-Timing` header, so name entries as deliberately as a public API.
 
 ## Sample only when you have to
 

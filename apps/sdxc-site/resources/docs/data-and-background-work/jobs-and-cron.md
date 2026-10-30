@@ -44,10 +44,9 @@ export default jobs({
 it. A `cron` makes the job schedulable as well as enqueuable, and an invalid expression throws
 as the module loads, long before the trigger would fire.
 
-<warning>
-The key is the job's name on the wire. A message enqueued by one deploy is consumed by the next,
-so renaming a key is a breaking change for whatever is still on the queue.
-</warning>
+> [!WARNING]
+> The key is the job's name on the wire. A message enqueued by one deploy is consumed by the next,
+> so renaming a key is a breaking change for whatever is still on the queue.
 
 ## Write a handler
 
@@ -257,11 +256,10 @@ trigger in one step:
 sdxc make job expire-postings --cron "0 3 * * *"
 ```
 
-<warning>
-A scheduled job whose trigger is missing from the Worker's configuration never runs in
-production. `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test
-comparing it against your configuration catches a job whose trigger was never added.
-</warning>
+> [!WARNING]
+> A scheduled job whose trigger is missing from the Worker's configuration never runs in
+> production. `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test
+> comparing it against your configuration catches a job whose trigger was never added.
 
 ## Run jobs in a test
 

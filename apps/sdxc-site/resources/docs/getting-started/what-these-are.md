@@ -39,11 +39,10 @@ own subpath, so the core stays importable on its own.
 
 **Versions are dates.** A later date says only that it is later.
 
-<note>
-A dated version carries no compatibility promise, so a caret range accepts breaking changes.
-Read [Install and pin](/docs/getting-started/install-and-pin) before you write a version into a
-manifest.
-</note>
+> [!NOTE]
+> A dated version carries no compatibility promise, so a caret range accepts breaking changes.
+> Read [Install and pin](/docs/getting-started/install-and-pin) before you write a version into a
+> manifest.
 
 ## Two ways in
 

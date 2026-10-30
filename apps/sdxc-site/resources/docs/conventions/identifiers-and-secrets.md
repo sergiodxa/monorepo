@@ -131,11 +131,10 @@ RFC 9562, which defines both versions, tells implementations to assume a UUID is
 Keep the two apart in your types: a record's id is a `UUID`, and a token is a `string` the code
 only hashes or compares.
 
-<warning>
-A link of the form `/invitations/<uuid>/accept` makes the record's id the credential. Anyone
-who sees the id in a log, a referrer header or an admin screen can accept the invitation. Put
-a `randomToken` in the link and keep the id for the row.
-</warning>
+> [!WARNING]
+> A link of the form `/invitations/<uuid>/accept` makes the record's id the credential. Anyone
+> who sees the id in a log, a referrer header or an admin screen can accept the invitation. Put
+> a `randomToken` in the link and keep the id for the row.
 
 ## Test what each generator promises
 

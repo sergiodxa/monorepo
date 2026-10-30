@@ -161,22 +161,20 @@ function escapeXml(text: string): string {
 }
 ```
 
-<note>
-The `identifier` is how a reading app recognises the book in its library. The permalink is
-stable per post, so downloading the post again after an edit replaces the copy a reader already
-has instead of adding a second book. `modified`, written to the second, is what tells a reading
-app the file changed, so pass the time of the post's last edit.
-</note>
+> [!NOTE]
+> The `identifier` is how a reading app recognises the book in its library. The permalink is
+> stable per post, so downloading the post again after an edit replaces the copy a reader already
+> has instead of adding a second book. `modified`, written to the second, is what tells a reading
+> app the file changed, so pass the time of the post's last edit.
 
 The required metadata is `identifier`, `title`, a BCP 47 `language` and `modified`.
 Accessibility metadata is a claim about the content, so it is written only when you pass it;
 the values above describe a rendered post. The stylesheet is your own CSS, linked from every
 chapter.
 
-<warning>
-Keep the stylesheet self-contained: a font or background image loaded from the web fails the
-build with `remote-resource`.
-</warning>
+> [!WARNING]
+> Keep the stylesheet self-contained: a font or background image loaded from the web fails the
+> build with `remote-resource`.
 
 ## Serve the download
 

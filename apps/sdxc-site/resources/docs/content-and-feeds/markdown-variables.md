@@ -99,22 +99,20 @@ export function fillOnboarding(document: Markdown.Document, workspace: Workspace
 A parsed document is plain JSON, so you can cache it by file and fill it per request. A text
 hole takes a string, a number or a boolean; a list, an object or `null` there fails the walk.
 
-<note>
-Fill variables before the other [markdown plugins](/docs/content-and-feeds/markdown-plugins)
-run, in a walk of its own, so the passes after it read the final text and URLs.
-</note>
+> [!NOTE]
+> Fill variables before the other [markdown plugins](/docs/content-and-feeds/markdown-plugins)
+> run, in a walk of its own, so the passes after it read the final text and URLs.
 
 A tag's schema runs at parse time when every attribute is literal. When an attribute holds a
 variable, `variables` runs the schema once the names are filled in, and a value that fails it
 fails the walk at the tag's position, with a `MarkdownParseError` carrying the schema's issues
 as the failure's `cause`.
 
-<note>
-Allowlisted elements are held to the same rules at fill time. An `href` or `src` filled from a
-variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a value of
-`javascript:alert(1)` fails the walk at the `<a>` the way it would fail the parse had the author
-written it.
-</note>
+> [!NOTE]
+> Allowlisted elements are held to the same rules at fill time. An `href` or `src` filled from a
+> variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a value of
+> `javascript:alert(1)` fails the walk at the `<a>` the way it would fail the parse had the author
+> written it.
 
 ## Decide what a missing value means
 

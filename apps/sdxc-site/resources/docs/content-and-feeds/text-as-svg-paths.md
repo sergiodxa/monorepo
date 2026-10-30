@@ -44,10 +44,9 @@ export function badgeFont(): Result<Font, FontError> {
 }
 ```
 
-<note>
-A `.woff2` file and a font collection (`.ttc`, `.dfont`) fail with an `unsupported` `FontError`.
-Open them with `parseWoff2` from `@sdxc/font/woff2` and with `parseFontCollection`.
-</note>
+> [!NOTE]
+> A `.woff2` file and a font collection (`.ttc`, `.dfont`) fail with an `unsupported` `FontError`.
+> Open them with `parseWoff2` from `@sdxc/font/woff2` and with `parseFontCollection`.
 
 ## Pick a weight from a variable font
 
@@ -107,11 +106,10 @@ export function fitWidth(
 }
 ```
 
-<note>
-`measure` and `layout` map one code point to one glyph, with kerning, which suits Latin, Greek
-and Cyrillic labels. Text in a script that joins or reorders its letters, such as Arabic or
-Devanagari, goes through `shape`, as [Shape text in any script](#shape-text-in-any-script) shows.
-</note>
+> [!NOTE]
+> `measure` and `layout` map one code point to one glyph, with kerning, which suits Latin, Greek
+> and Cyrillic labels. Text in a script that joins or reorders its letters, such as Arabic or
+> Devanagari, goes through `shape`, as [Shape text in any script](#shape-text-in-any-script) shows.
 
 ## Turn glyphs into path data
 
@@ -206,10 +204,9 @@ vertical offset is subtracted from the baseline. `features` turns OpenType featu
 To use it in the badge, call `shapedPath` where `badgeLayout` calls `textPath`, and take each
 part's width from its `width`.
 
-<note>
-`shape` sets one run: one script in one direction. Split a label that mixes scripts, such as
-English beside Arabic, into a run per script and place the runs side by side.
-</note>
+> [!NOTE]
+> `shape` sets one run: one script in one direction. Split a label that mixes scripts, such as
+> English beside Arabic, into a run per script and place the runs side by side.
 
 ## Lay out the badge
 

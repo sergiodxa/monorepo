@@ -210,13 +210,12 @@ export default createAction(routes.robots, (ctx) => {
 });
 ```
 
-<warning>
-Comparing the request's origin with `seo.baseUrl` is what keeps previews out of search
-results: every host except the canonical one asks crawlers to stay away entirely, while
-production only fences off the signed-in area. A `baseUrl` that differs from the production
-origin, such as `http://` where the site serves `https://`, blocks crawlers from production
-too.
-</warning>
+> [!WARNING]
+> Comparing the request's origin with `seo.baseUrl` is what keeps previews out of search
+> results: every host except the canonical one asks crawlers to stay away entirely, while
+> production only fences off the signed-in area. A `baseUrl` that differs from the production
+> origin, such as `http://` where the site serves `https://`, blocks crawlers from production
+> too.
 
 ## Serve security.txt
 
@@ -259,11 +258,10 @@ export function createWebRouter() {
 }
 ```
 
-<note>
-Write `expires` as a literal date. A computed date keeps the file looking fresh while the
-contact behind it goes stale, whereas a literal one, plus a test that fails 30 days before it
-passes, makes a person review the contact once a year.
-</note>
+> [!NOTE]
+> Write `expires` as a literal date. A computed date keeps the file looking fresh while the
+> contact behind it goes stale, whereas a literal one, plus a test that fails 30 days before it
+> passes, makes a person review the contact once a year.
 
 ## Test the crawl files
 

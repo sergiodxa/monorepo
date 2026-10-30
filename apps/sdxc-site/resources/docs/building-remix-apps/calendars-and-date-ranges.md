@@ -306,11 +306,10 @@ export const SETTINGS = s.object({
 });
 ```
 
-<note>
-An alias such as `"Etc/UTC"`, which `Intl` also accepts, fails `isSupportedTimeZone`. To
-accept every name `Intl` takes, such as a zone read from a calendar file, use
-`isValidTimeZone` instead.
-</note>
+> [!NOTE]
+> An alias such as `"Etc/UTC"`, which `Intl` also accepts, fails `isSupportedTimeZone`. To
+> accept every name `Intl` takes, such as a zone read from a calendar file, use
+> `isValidTimeZone` instead.
 
 ## Test the month and the range
 

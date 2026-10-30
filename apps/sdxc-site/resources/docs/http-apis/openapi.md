@@ -58,10 +58,9 @@ export const BOOK_PARAMS = s.object({
 
 `meta({ id: "Book" })` puts the schema in `components.schemas`, so every use is a `$ref`.
 
-<note>
-Make the same import change in `config/problems.ts`. The document describes every problem
-type in the catalog, so extension schemas from `remix/data-schema` fail the build.
-</note>
+> [!NOTE]
+> Make the same import change in `config/problems.ts`. The document describes every problem
+> type in the catalog, so extension schemas from `remix/data-schema` fail the build.
 
 ## Declare the operations
 
@@ -201,11 +200,10 @@ export default createAction(
 );
 ```
 
-<warning>
-Keep `build()` inside the function you hand to `openapiHandler`. Called at module scope, the
-assembly runs during the Worker's startup, whose time Cloudflare limits, so a slow build can
-fail the deploy.
-</warning>
+> [!WARNING]
+> Keep `build()` inside the function you hand to `openapiHandler`. Called at module scope, the
+> assembly runs during the Worker's startup, whose time Cloudflare limits, so a slow build can
+> fail the deploy.
 
 The handler answers JSON by default and YAML for `?format=yaml`, with an `ETag` a client
 revalidates against.

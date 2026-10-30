@@ -134,10 +134,9 @@ export function storedFile(key: string): ReadableStream<Uint8Array> {
 `highWaterMark: 0` keeps the stream from pulling until it is read, so one object is open at a
 time, inside the number of connections a Worker may hold open at once.
 
-<warning>
-Every entry is read whole into memory before it is written, so list a file larger than a Worker
-holds comfortably as a link in a text entry, and keep the archive for the files that fit.
-</warning>
+> [!WARNING]
+> Every entry is read whole into memory before it is written, so list a file larger than a Worker
+> holds comfortably as a link in a text entry, and keep the archive for the files that fit.
 
 ## Serve the download
 
@@ -176,11 +175,10 @@ extracts into, or over another file: a leading `/`, a backslash, a `..` segment,
 character or a repeated name. The error's `entry` names the path it refused, which is what the
 action logs.
 
-<warning>
-A name built from something a person typed, such as an uploaded file's original name, is a name
-`add` may refuse. Build it from values you control, like the invoice number above, or replace
-the characters it refuses and number repeats before adding.
-</warning>
+> [!WARNING]
+> A name built from something a person typed, such as an uploaded file's original name, is a name
+> `add` may refuse. Build it from values you control, like the invoice number above, or replace
+> the characters it refuses and number repeats before adding.
 
 ## When a source fails mid-download
 

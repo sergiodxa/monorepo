@@ -156,10 +156,9 @@ In the `api` contract the actions are a JSON resource's endpoints: `index`, `sho
 list shows many rows, so `index` checks none: show each row a visitor may read with
 `ctx.access.can(abilities.post.read, { post: row })`.
 
-<note>
-`--actions` writes the controllers alone. For the model, the form and the validator too, run
-[`sdxc scaffold`](/docs/sdxc/scaffold-a-resource).
-</note>
+> [!NOTE]
+> `--actions` writes the controllers alone. For the model, the form and the validator too, run
+> [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource).
 
 ## What it edits
 

@@ -154,12 +154,11 @@ turns "trust us" into a check anyone can run: `drawWinners(entrants, seed, prize
 the stored winners. Recording the seed on the log the same way makes any run that should differ
 each time, such as a nightly audit sample, replayable.
 
-<warning>
-A seeded stream is predictable to anyone who learns its seed, so keep it to draws that guard
-nothing. Session ids, API keys, reset tokens and nonces come from `randomToken` in
-`@sdxc/crypto`, which [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto)
-covers.
-</warning>
+> [!WARNING]
+> A seeded stream is predictable to anyone who learns its seed, so keep it to draws that guard
+> nothing. Session ids, API keys, reset tokens and nonces come from `randomToken` in
+> `@sdxc/crypto`, which [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto)
+> covers.
 
 ## Save a stream and resume it
 

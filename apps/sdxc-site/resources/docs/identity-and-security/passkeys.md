@@ -124,10 +124,9 @@ export function spendChallenge(ctx: RequestContext): string | null {
 `sessionOf` from [`@sdxc/auth`](/api/auth) reads the session Remix's session middleware put on
 the context, and `spendChallenge` drops the value in the same call that reads it.
 
-<warning>
-Spend the challenge on read. A challenge that survives its ceremony is one an attacker can
-replay an assertion against; spent on read, it buys exactly one.
-</warning>
+> [!WARNING]
+> Spend the challenge on read. A challenge that survives its ceremony is one an attacker can
+> replay an assertion against; spent on read, it buys exactly one.
 
 ## Store what the ceremony proves
 
@@ -164,10 +163,9 @@ export default createAction(routes.passkeys.register.challenge, async (ctx) => {
 });
 ```
 
-<warning>
-`user.id` is stored on the authenticator and comes back on every assertion, and it is readable
-on the device, so use your opaque primary key rather than an email.
-</warning>
+> [!WARNING]
+> `user.id` is stored on the authenticator and comes back on every assertion, and it is readable
+> on the device, so use your opaque primary key rather than an email.
 
 `exclude` lists the credentials the account already has, so the browser refuses to enroll the
 same device twice. `currentAccount` is your own helper answering the signed-in account.
@@ -272,16 +270,14 @@ and `wrap` catches a body that is not JSON. Every refusal answers the same body 
 by error name, so a caller never learns which check failed while your logs do. `userId` stands
 for whichever key your app's session marks a signed-in account with.
 
-<warning>
-Record the new `counter`: the next assertion has to exceed it. A `CounterError` means two
-devices are presenting the same credential, a cloned authenticator, so the credential is
-suspended along with the refusal.
-</warning>
+> [!WARNING]
+> Record the new `counter`: the next assertion has to exceed it. A `CounterError` means two
+> devices are presenting the same credential, a cloned authenticator, so the credential is
+> suspended along with the refusal.
 
-<warning>
-Regenerate the session id on sign-in. The id held while anonymous then never becomes the
-signed-in one, so a session id planted before sign-in is worth nothing after it.
-</warning>
+> [!WARNING]
+> Regenerate the session id on sign-in. The id held while anonymous then never becomes the
+> signed-in one, so a session id planted before sign-in is worth nothing after it.
 
 ## Run the ceremony in the browser
 

@@ -135,10 +135,9 @@ export async function requestReport(userId: string, invoiceIds: string[]) {
 which is how a verifier finds the matching public key. Any claim you pass, such as `scope`, is
 carried into the signature.
 
-<warning>
-Keep the lifetime short. A bearer token works for whoever holds it until it expires, and one
-you mint per call never needs to outlive the call. Signing a fresh one each time is cheap.
-</warning>
+> [!WARNING]
+> Keep the lifetime short. A bearer token works for whoever holds it until it expires, and one
+> you mint per call never needs to outlive the call. Signing a fresh one each time is cheap.
 
 ## Publish the key set
 
@@ -200,12 +199,11 @@ export async function authenticate(request: Request) {
 `verify` checks the signature, the expiry, the `issuer` and the `audience`, and throws at the
 first failure; `wrap` makes that a `Result`.
 
-<warning>
-Pass every option shown here, because each one closes a door. `audience` stops a token minted
-for another service from being replayed here. `algorithms` refuses a token that names any
-algorithm other than the one you expect. `requiredClaims` refuses a token with no `exp` at all,
-which would otherwise never expire.
-</warning>
+> [!WARNING]
+> Pass every option shown here, because each one closes a door. `audience` stops a token minted
+> for another service from being replayed here. `algorithms` refuses a token that names any
+> algorithm other than the one you expect. `requiredClaims` refuses a token with no `exp` at all,
+> which would otherwise never expire.
 
 `clockTolerance` allows 30 seconds of clock drift between the two services. An OpenID Connect
 ID token needs more checks than these, such as the login's nonce, so verify one through
@@ -266,10 +264,9 @@ key sends each verifier back for the updated set. Run it from a cron job, as in
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), or by hand when a key
 may have leaked.
 
-<warning>
-Keep a retired key published for at least as long as the tokens it signed can live. With
-five-minute tokens that is short, but deleting it early fails every token still in flight.
-</warning>
+> [!WARNING]
+> Keep a retired key published for at least as long as the tokens it signed can live. With
+> five-minute tokens that is short, but deleting it early fails every token still in flight.
 
 ## Test the token end to end
 

@@ -44,11 +44,10 @@ declare module "*.bin" {
 The document only embeds the glyphs it draws, so a full font file costs the PDF a few
 kilobytes, not the size of the font.
 
-<note>
-A font whose license forbids embedding fails with `restricted-font`, and one whose license
-forbids subsetting embeds whole. Pick faces whose license allows both, such as Inter's SIL Open
-Font License.
-</note>
+> [!NOTE]
+> A font whose license forbids embedding fails with `restricted-font`, and one whose license
+> forbids subsetting embeds whole. Pick faces whose license allows both, such as Inter's SIL Open
+> Font License.
 
 ## Create the document
 
@@ -292,11 +291,10 @@ function flowTerms(
 }
 ```
 
-<warning>
-A page draws whatever you give it, past its bottom edge included, and the document adds pages
-only when you call `pdf.page()`. Anything that can grow, terms or a long list of line items,
-needs a check against `page.height` like the one above, or it is cut off on paper.
-</warning>
+> [!WARNING]
+> A page draws whatever you give it, past its bottom edge included, and the document adds pages
+> only when you call `pdf.page()`. Anything that can grow, terms or a long list of line items,
+> needs a check against `page.height` like the one above, or it is cut off on paper.
 
 ## Serve the PDF
 
@@ -346,10 +344,9 @@ export default createAction(routes.invoices.pdf, async (ctx) => {
 store it in R2 or attach it to an email. A failure is a `PDFError` whose `code` is
 `invalid-font`, `restricted-font`, `invalid-image` or `unsupported-image`, which is what to log.
 
-<warning>
-An invoice names a customer and what they paid. Map this route behind the same authorization
-check as the invoice's page, so an id in the URL is not enough to download it.
-</warning>
+> [!WARNING]
+> An invoice names a customer and what they paid. Map this route behind the same authorization
+> check as the invoice's page, so an id in the URL is not enough to download it.
 
 ## Test the document
 

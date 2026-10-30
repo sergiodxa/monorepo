@@ -143,10 +143,9 @@ names, rather than editing the file:
 The replay steps past that error alone, so a different error in the same file still fails, and
 an entry whose error no longer occurs warns, so the list shrinks once the migration is fixed.
 
-<warning>
-Leave a migration production applied as it is. The databases that ran it never run it again, so
-an edit reaches only new databases, and they end up on a schema production does not have.
-</warning>
+> [!WARNING]
+> Leave a migration production applied as it is. The databases that ran it never run it again, so
+> an edit reaches only new databases, and they end up on a schema production does not have.
 
 ## Run some of them
 

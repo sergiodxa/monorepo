@@ -100,12 +100,11 @@ among the entry point's exports:
 +export { PageViewsDO } from "~/app/models/page-views";
 ```
 
-<warning>
-Cloudflare keeps an object's storage under its class name, so pick the name before the first
-deploy. To rename a deployed class, declare the new name as its own entry in `exports` and turn
-the old one into `exports.durableObject({ state: "renamed", renamedTo: "NewName" })`; the next
-deploy moves its objects, data included, to the new class.
-</warning>
+> [!WARNING]
+> Cloudflare keeps an object's storage under its class name, so pick the name before the first
+> deploy. To rename a deployed class, declare the new name as its own entry in `exports` and turn
+> the old one into `exports.durableObject({ state: "renamed", renamedTo: "NewName" })`; the next
+> deploy moves its objects, data included, to the new class.
 
 A file that already exists, or a binding of that name already in `env`, stops the run with the
 project as it was; `--force` writes the class and its binding again and keeps the export and the

@@ -24,10 +24,9 @@ written:
 npm add -g @sdxc/kit
 ```
 
-<note>
-A project made with `sdxc create` lists `@sdxc/kit` in its own `devDependencies`, so CI and a
-fresh clone run `bunx sdxc …` at the project's release without a global install.
-</note>
+> [!NOTE]
+> A project made with `sdxc create` lists `@sdxc/kit` in its own `devDependencies`, so CI and a
+> fresh clone run `bunx sdxc …` at the project's release without a global install.
 
 Every command runs from the project root, the nearest folder with a `package.json`, and
 `sdxc <command> --help` lists its arguments and flags. On a terminal a command asks for what

@@ -58,10 +58,9 @@ Embeds go first, so a pasted video URL becomes a tag before anything reads it as
 Headings take their ids before typography curls the quotes in their text, so an id is the slug
 of what the author typed.
 
-<warning>
-Merge visitors with `Markdown.compose`. An object spread keeps only the last handler for each
-key, so of two visitors that both handle `paragraph` or `heading`, only the second one runs.
-</warning>
+> [!WARNING]
+> Merge visitors with `Markdown.compose`. An object spread keeps only the last handler for each
+> key, so of two visitors that both handle `paragraph` or `heading`, only the second one runs.
 
 ## Anchor headings and build a table of contents
 
@@ -121,10 +120,9 @@ export function docsLinks(path: string) {
 `docsLinks("guides/setup.md")` resolves `../reference/cli.md#flags` in that file to
 `https://example.com/docs/reference/cli#flags`.
 
-<note>
-Pass an absolute URL as `base`. Any other value fails the walk at the first relative URL it
-meets, with that node's position.
-</note>
+> [!NOTE]
+> Pass an absolute URL as `base`. Any other value fails the walk at the first relative URL it
+> meets, with that node's position.
 
 ## Set prose in typographic punctuation
 

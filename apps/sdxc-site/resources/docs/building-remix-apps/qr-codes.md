@@ -139,10 +139,9 @@ export function TicketPage(handle: Handle<TicketPageProps>) {
 volunteer can type. `size` is any CSS length, and `dark` and `light` set the colors, `#000` on
 `#fff` by default.
 
-<note>
-A brand pair passed through `dark` and `light` needs the same strong contrast as black on
-white, with the darker color on the modules, or phones fail to scan the code.
-</note>
+> [!NOTE]
+> A brand pair passed through `dark` and `light` needs the same strong contrast as black on
+> white, with the darker color on the modules, or phones fail to scan the code.
 
 ## Serve it as an SVG file
 
@@ -190,10 +189,9 @@ export default createAction(routes.tickets.qr, async (ctx) => {
 `routes.tickets.qr` is a route such as `/tickets/:id/qr.svg`. `margin` sets the quiet zone in
 modules; 2 suits a badge whose own light border supplies the rest.
 
-<warning>
-A ticket's code admits its holder, so answer it `private`, as above. A `public` response lets
-a shared cache hand one attendee's code to another.
-</warning>
+> [!WARNING]
+> A ticket's code admits its holder, so answer it `private`, as above. A `public` response lets
+> a shared cache hand one attendee's code to another.
 
 ## Test the encoding
 

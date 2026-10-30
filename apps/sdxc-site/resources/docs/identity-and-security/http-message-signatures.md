@@ -205,16 +205,15 @@ parameters appended, as in `@query-param;name="page"`. The key id is the caller'
 the order is stored against it. When you already hold the body as bytes, pass it as `body` and
 `verify` hashes those.
 
-<warning>
-Verify before anything else reads the request: a handler that acts on the body first acts on
-a request nobody has proven.
-</warning>
+> [!WARNING]
+> Verify before anything else reads the request: a handler that acts on the body first acts on
+> a request nobody has proven.
 
-<note>
-A partner's server has no session and no `Origin` header, so when your app runs Remix's
-[`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
-signed paths from it.
-</note>
+> [!NOTE]
+> A partner's server has no session and no `Origin` header, so when your app runs Remix's
+> [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
+> signed paths from it.
+
 ### Refuse in a way the caller can act on
 
 Every failure is an `HttpSignatureError` whose `code` names the check, such as
@@ -292,11 +291,10 @@ Call it right after `verify` succeeds, and answer `401` when it returns `false`.
 signature has no label, nonce or tag, so this endpoint accepts RFC 9421 alone. Fifteen minutes
 covers the five-minute `maxAge` plus the clock skew on either side.
 
-<warning>
-KV is eventually consistent, so two copies arriving within a second at different locations can
-both pass. The nonce narrows the window, and an idempotent `saveOrder`, keyed on the order's own
-id, is what makes a repeat harmless.
-</warning>
+> [!WARNING]
+> KV is eventually consistent, so two copies arriving within a second at different locations can
+> both pass. The nonce narrows the window, and an idempotent `saveOrder`, keyed on the order's own
+> id, is what makes a repeat harmless.
 
 ## Attach digests on their own
 
@@ -333,12 +331,11 @@ export default createAction(routes.exports.download, async (ctx) => {
 `"repr-digest"` writes `Repr-Digest` with the same call, the hash of the whole representation
 the URL names, which a range response carries for the complete file.
 
-<note>
-Both fields describe the bytes as encoded, so compute them where the body is final: a layer
-that compresses or rewrites the response afterwards changes what the digest describes. When a
-proxy or CDN compresses for you, send `"unencoded-digest"` instead, the hash of the
-representation before any `Content-Encoding`, which holds whatever coding is applied on the way.
-</note>
+> [!NOTE]
+> Both fields describe the bytes as encoded, so compute them where the body is final: a layer
+> that compresses or rewrites the response afterwards changes what the digest describes. When a
+> proxy or CDN compresses for you, send `"unencoded-digest"` instead, the hash of the
+> representation before any `Content-Encoding`, which holds whatever coding is applied on the way.
 
 Checking a body someone sent is one call. `verify` takes the headers, the bytes and the field:
 

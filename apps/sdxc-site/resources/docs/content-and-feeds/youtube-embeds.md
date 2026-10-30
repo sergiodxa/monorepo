@@ -113,17 +113,15 @@ export function renderPost(document: Markdown.Document) {
 The player fills its container's width at 16:9, and `YouTubeEmbed` works in any view outside
 markdown too.
 
-<note>
-A `youtube` tag with no component registered renders nothing, so register `YouTubeTag` wherever
-the walked document renders, or skip the walk there and the URL stays a link.
-</note>
+> [!NOTE]
+> A `youtube` tag with no component registered renders nothing, so register `YouTubeTag` wherever
+> the walked document renders, or skip the walk there and the URL stays a link.
 
 ## Allow the player in your Content Security Policy
 
-<warning>
-A page with a `frame-src` directive, or a `default-src` without one, blocks frames from any
-origin it does not list, and the player shows as an empty box. Add the player's host.
-</warning>
+> [!WARNING]
+> A page with a `frame-src` directive, or a `default-src` without one, blocks frames from any
+> origin it does not list, and the player shows as an empty box. Add the player's host.
 
 ```typescript {% title="config/security-policy.ts" %}
 import type { SecurityHeaders } from "@sdxc/security-headers";

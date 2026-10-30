@@ -63,10 +63,9 @@ export type AlertCondition = typeof alertConditions.Expression;
 
 Every built-in is there except `matches`.
 
-<warning>
-A regular expression written by a customer can take time exponential in its input. Leaving
-`matches` out keeps evaluation linear in the size of the context, whatever anyone writes.
-</warning>
+> [!WARNING]
+> A regular expression written by a customer can take time exponential in its input. Leaving
+> `matches` out keeps evaluation linear in the size of the context, whatever anyone writes.
 
 `reference: "filter"` lets a rule name a condition the team saved once, as
 `{ op: "filter", name: "production" }` or `filter("production")` in text.
@@ -117,10 +116,9 @@ rest before the row is written, such as a filter the team never saved or two fil
 Its `ExpressionError` carries a `path` naming the node at fault, such as `of.1` for the second
 member of an `all`.
 
-<warning>
-Store the JSON you validated, never what `compile` returned. The compiled tree carries resolved
-filters, so storing it would freeze a copy of each filter into the rule.
-</warning>
+> [!WARNING]
+> Store the JSON you validated, never what `compile` returned. The compiled tree carries resolved
+> filters, so storing it would freeze a copy of each filter into the rule.
 
 ## Let people type the rule as text
 

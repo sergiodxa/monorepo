@@ -126,13 +126,12 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("<code>sdxc deploy</code> builds, migrates and deploys");
 	});
 
-	test("draws a note and a warning as labelled asides rather than as raw tags", async () => {
+	test("draws a note and a warning alert as labelled asides rather than as a quote", async () => {
 		let body = await (await fetchApp("/docs/sdxc/deploy")).text();
 
 		expect(body).toContain('aria-label="Note"');
 		expect(body).toContain('aria-label="Warning"');
-		expect(body).not.toContain("&lt;warning&gt;");
-		expect(body).not.toContain("<warning>");
+		expect(body).not.toContain("[!WARNING]");
 	});
 });
 

@@ -88,12 +88,11 @@ a declaration written by hand without its line is caught before CI type checks w
 bunx cf workers secrets update STRIPE_API_KEY
 ```
 
-<warning>
-`cf deploy` uploads the Worker with exactly the secrets `cloudflare.config.ts` declares, fails
-when one of them has no value in production, and removes a production secret the file no longer
-declares. Set the new secret before the first deploy that declares it, and remove its
-declaration only once nothing reads it.
-</warning>
+> [!WARNING]
+> `cf deploy` uploads the Worker with exactly the secrets `cloudflare.config.ts` declares, fails
+> when one of them has no value in production, and removes a production secret the file no longer
+> declares. Set the new secret before the first deploy that declares it, and remove its
+> declaration only once nothing reads it.
 
 ## Read it from env
 

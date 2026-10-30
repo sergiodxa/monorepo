@@ -89,12 +89,11 @@ export function checkDiagrams(path: string, source: string): string | null {
 }
 ```
 
-<warning>
-A walk with `diagram` fails on the first diagram that does not parse. For content you do not
-control, or for posts stored in a database and rendered on request, build the visitor with
-`createDiagramVisitor({ invalid: "keep" })`: a diagram that does not parse then stays the code
-block its author wrote, and the walk succeeds.
-</warning>
+> [!WARNING]
+> A walk with `diagram` fails on the first diagram that does not parse. For content you do not
+> control, or for posts stored in a database and rendered on request, build the visitor with
+> `createDiagramVisitor({ invalid: "keep" })`: a diagram that does not parse then stays the code
+> block its author wrote, and the walk succeeds.
 
 ## Draw the tags in a route
 

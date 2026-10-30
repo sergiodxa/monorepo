@@ -13,7 +13,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { readPolicy } from "~/app/services/policy";
-import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
+import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import source from "~/resources/content/maintenance.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import PageLayout from "~/resources/layouts/page";
@@ -43,7 +43,7 @@ export default createAction(routes.maintenance, async (ctx) => {
 				lastUpdated={frontmatter.lastUpdated}
 				activePath={routes.maintenance.href()}
 			>
-				{toRemix(document, { components: POLICY_COMPONENTS })}
+				{toRemix(document, { components: DOCS_COMPONENTS })}
 			</PageLayout>
 		</DocumentLayout>,
 	);

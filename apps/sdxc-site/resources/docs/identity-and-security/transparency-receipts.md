@@ -165,10 +165,9 @@ Publish the Transparent Statement beside the release, such as `cli-1.2.3.tgz.sci
 bucket that serves the download. It is self-contained: a consumer needs the service's keys and
 your public key, and never calls the service to check it.
 
-<note>
-Registration can wait minutes while the service polls, so call `registerStatement` from a
-background job or your release command, never inside a request.
-</note>
+> [!NOTE]
+> Registration can wait minutes while the service polls, so call `registerStatement` from a
+> background job or your release command, never inside a request.
 
 ## Verify a Transparent Statement
 
@@ -218,17 +217,15 @@ export async function verifyRelease(bytes: Uint8Array, check: ReleaseCheck) {
 `/.well-known/scitt-keys`, or a single `CryptoKey`. Receipts from services you hold no key for
 are skipped, and at least one Receipt must verify.
 
-<warning>
-A valid statement says only what its issuer claimed about its subject. Compare `subject` with
-the artifact you are about to use, and `issuer` with who you expect: a genuine, logged
-statement about version 1.2.2 is no evidence about 1.2.3.
-</warning>
+> [!WARNING]
+> A valid statement says only what its issuer claimed about its subject. Compare `subject` with
+> the artifact you are about to use, and `issuer` with who you expect: a genuine, logged
+> statement about version 1.2.2 is no evidence about 1.2.3.
 
-<note>
-The service's keys are the root of trust for every Receipt. Fetch them from the service's own
-origin, cache them, and review a change of key set before accepting it, the same way you would
-pin the issuer's key.
-</note>
+> [!NOTE]
+> The service's keys are the root of trust for every Receipt. Fetch them from the service's own
+> origin, cache them, and review a change of key set before accepting it, the same way you would
+> pin the issuer's key.
 
 ## Test registration and verification
 

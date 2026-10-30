@@ -251,10 +251,9 @@ export default createAction(routes.reportChart, async (ctx) => {
 
 A sent report's numbers never change, so the image is cacheable for a year.
 
-<warning>
-Anyone holding the link can load the image, so put a report id in the URL that a stranger
-cannot guess.
-</warning>
+> [!WARNING]
+> Anyone holding the link can load the image, so put a report id in the URL that a stranger
+> cannot guess.
 
 In the email, give the image its display size and an `alt` that states the numbers, which is
 what a reader sees while images are blocked:

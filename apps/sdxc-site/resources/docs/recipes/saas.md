@@ -97,10 +97,9 @@ export default access(policy, {
 });
 ```
 
-<note>
-The billing middleware runs in the router, but `teamEntitlements` reads the session, which the
-page chain loads. Put `page` before `requireEntitlement` on every gated page.
-</note>
+> [!NOTE]
+> The billing middleware runs in the router, but `teamEntitlements` reads the session, which the
+> page chain loads. Put `page` before `requireEntitlement` on every gated page.
 
 ## Invite teammates by email
 

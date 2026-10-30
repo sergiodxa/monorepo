@@ -254,19 +254,17 @@ export default createAction(routes.sso.acs, async (ctx) => {
 stored request from the `SSO` namespace, and loads the connection with its certificates parsed
 by `SAML.Certificate.parse`. The failure's `name` is safe to log; it carries no key material.
 
-<warning>
-Delete the pending entry before verifying anything, as the handler does, so each request
-answers at most one response. Key the account on the `NameID` for this connection and keep the
-email as a field: a directory may change an email, and an account keyed on it changes hands
-with the address.
-</warning>
+> [!WARNING]
+> Delete the pending entry before verifying anything, as the handler does, so each request
+> answers at most one response. Key the account on the `NameID` for this connection and keep the
+> email as a field: a directory may change an email, and an account keyed on it changes hands
+> with the address.
 
-<note>
-This route receives a cross-site `POST`, so exempt it from Remix's
-[`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) protection the
-way you would a webhook. Canonicalizing is CPU work over the whole assertion, so cap the size
-of the body before it gets here.
-</note>
+> [!NOTE]
+> This route receives a cross-site `POST`, so exempt it from Remix's
+> [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware) protection the
+> way you would a webhook. Canonicalizing is CPU work over the whole assertion, so cap the size
+> of the body before it gets here.
 
 ## Remember assertions for as long as they are valid
 
@@ -310,10 +308,9 @@ export function replayStore(db: Database, connectionId: string): ReplayStore {
 The provider chooses assertion ids, so the connection id in the key keeps each provider's ids
 apart.
 
-<warning>
-Keep the replay store in D1. KV is eventually consistent, so a second use of a captured
-assertion can reach a location that has yet to see the first, and pass.
-</warning>
+> [!WARNING]
+> Keep the replay store in D1. KV is eventually consistent, so a second use of a captured
+> assertion can reach a location that has yet to see the first, and pass.
 
 ## Authenticate the directory
 
@@ -354,10 +351,9 @@ export const scimAuth: Middleware = async (ctx, next) => {
 };
 ```
 
-<warning>
-Store the hash and show the token once, when you issue it. A stored token is a working
-credential for anyone who reads the table, and a hash is worth nothing to them.
-</warning>
+> [!WARNING]
+> Store the hash and show the token once, when you issue it. A stored token is a working
+> credential for anyone who reads the table, and a hash is worth nothing to them.
 
 `errorResponse` writes the RFC 7644 error document with the `application/scim+json` type, and
 every failure `@sdxc/scim` reports is a `ScimError` it accepts.

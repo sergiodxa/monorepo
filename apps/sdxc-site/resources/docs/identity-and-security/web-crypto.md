@@ -81,10 +81,9 @@ to escape. A plain digest is enough here, where a password needs scrypt, because
 carries 256 bits of entropy. `consumeReset` deletes the record as it reads it, so a link works
 once.
 
-<warning>
-KV is eventually consistent, so two clicks landing in different locations within seconds can
-both find the record. Keep it in D1 or a Durable Object when single use has to be strict.
-</warning>
+> [!WARNING]
+> KV is eventually consistent, so two clicks landing in different locations within seconds can
+> both find the record. Keep it in D1 or a Durable Object when single use has to be strict.
 
 ## Store the new password with scrypt
 
@@ -128,10 +127,9 @@ export default createAction(routes.password.reset.update, async (ctx) => {
 `NewPasswordSchema` is your `remix/data-schema` object for the two fields. `password.hash`
 salts every hash freshly and records its parameters in the encoded string.
 
-<note>
-Scrypt has no Web Crypto equivalent, so `password.hash` and `password.verify` run on
-`node:crypto`, which needs the `nodejs_compat` compatibility flag on Workers.
-</note>
+> [!NOTE]
+> Scrypt has no Web Crypto equivalent, so `password.hash` and `password.verify` run on
+> `node:crypto`, which needs the `nodejs_compat` compatibility flag on Workers.
 
 Signing in checks the password against the stored hash:
 
@@ -163,11 +161,10 @@ A wrong password is `success(false)`, and a stored value this package cannot rea
 both end in `null`. `needsRehash` is true when the stored hash is behind the current
 parameters, so every account moves to new ones on its next sign-in.
 
-<note>
-An unknown address returns faster than a wrong password, since nothing is hashed, which tells a
-caller timing the response which addresses have accounts. When that matters, verify against a
-fixed hash you generated once before returning `null`.
-</note>
+> [!NOTE]
+> An unknown address returns faster than a wrong password, since nothing is hashed, which tells a
+> caller timing the response which addresses have accounts. When that matters, verify against a
+> fixed hash you generated once before returning `null`.
 
 ## Sign a link with HMAC
 
@@ -250,10 +247,9 @@ cannot read the bytes out. `open` fails with `DecryptionError` when the value wa
 sealed under another key. Each seal uses a fresh IV, so a sealed column matches no lookup: when
 a value must be both found and read back, also store its `sha256`.
 
-<warning>
-A sealed value opens only under the key that sealed it. Replacing `SEAL_KEY` without first
-resealing every stored value under the new key leaves each of them unreadable.
-</warning>
+> [!WARNING]
+> A sealed value opens only under the key that sealed it. Replacing `SEAL_KEY` without first
+> resealing every stored value under the new key leaves each of them unreadable.
 
 ## Test the signed link and the seal
 

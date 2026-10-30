@@ -72,11 +72,10 @@ a command line.
 
 D1 commits every statement on its own, the moment it runs.
 
-<warning>
-`db.transaction(...)` on D1 gives you a scope and no atomicity: if the third statement throws,
-the first two are already in the database. Write every change that must land completely as a
-single statement.
-</warning>
+> [!WARNING]
+> `db.transaction(...)` on D1 gives you a scope and no atomicity: if the third statement throws,
+> the first two are already in the database. Write every change that must land completely as a
+> single statement.
 
 The D1 driver compiles `createMany()` to one multi-row `INSERT`, `updateMany()` and
 `deleteMany()` to one `UPDATE` or `DELETE`, and a query-builder upsert to one
@@ -127,10 +126,9 @@ runtime can find it. Your tables and queries do not change, because they only ev
 `COMMIT`, so `db.transaction()` rejects here. Instead, every write an object makes within one
 turn of its event loop commits together.
 
-<warning>
-Two `create` calls in a row are atomic; the same two calls with a `fetch` between them are not,
-because awaiting I/O ends the turn. Gather what a write needs before the first write.
-</warning>
+> [!WARNING]
+> Two `create` calls in a row are atomic; the same two calls with a `fetch` between them are not,
+> because awaiting I/O ends the turn. Gather what a write needs before the first write.
 
 Apply the schema from the object itself, since its database exists only once the object runs.
 The adapter's `executeScript` takes a whole migration file and runs it one statement at a time.

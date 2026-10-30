@@ -40,11 +40,10 @@ private key is a Worker secret:
 cf workers secrets update VAPID_PRIVATE_KEY
 ```
 
-<warning>
-Every browser subscription is bound to the public key it was made with, and a push service
-refuses a message signed by any other. Keep the pair stable, and when it must change, rotate
-it as [Rotate the keys](#rotate-the-keys) shows.
-</warning>
+> [!WARNING]
+> Every browser subscription is bound to the public key it was made with, and a push service
+> refuses a message signed by any other. Keep the pair stable, and when it must change, rotate
+> it as [Rotate the keys](#rotate-the-keys) shows.
 
 ## Draw the notification in a service worker
 
@@ -122,10 +121,9 @@ answers `true`.
 
 ## Store the subscription
 
-<warning>
-The endpoint in a subscription is a URL your Worker will later `POST` to, so it is untrusted
-input. Validate it before you store it.
-</warning>
+> [!WARNING]
+> The endpoint in a subscription is a URL your Worker will later `POST` to, so it is untrusted
+> input. Validate it before you store it.
 
 `SUBSCRIPTION_SCHEMA` applies the checks a send applies: a public `https:` host, a
 P-256 key on the curve and a 16-byte auth secret. A row it accepts is one a send will not
@@ -223,10 +221,9 @@ async function applyFailure(
 `retryable` failures retires the row too, counted in its `failures`. `unauthorized` is your
 VAPID key being refused, so keep the row and fix the key.
 
-<note>
-A payload holds at most 3,993 bytes once encrypted into the 4,096-byte body every push service
-accepts.
-</note>
+> [!NOTE]
+> A payload holds at most 3,993 bytes once encrypted into the 4,096-byte body every push service
+> accepts.
 
 `topic` replaces an undelivered message with the same topic, so a laptop that was asleep all
 night wakes to one notification, not twenty.

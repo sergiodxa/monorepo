@@ -47,10 +47,9 @@ export default route({
 A client decides what to do with an event by two fields. `UID` identifies it, and `SEQUENCE`
 says which revision is newer. Derive both from the row:
 
-<warning>
-Keep `UID` fixed for the same meetup and let `SEQUENCE` only grow. A client that sees a new
-`UID` adds a second event, and one that sees a lower `SEQUENCE` ignores the change.
-</warning>
+> [!WARNING]
+> Keep `UID` fixed for the same meetup and let `SEQUENCE` only grow. A client that sees a new
+> `UID` adds a second event, and one that sees a lower `SEQUENCE` ignores the change.
 
 ```typescript {% title="app/services/calendar/events.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
@@ -120,11 +119,10 @@ export default createAction(routes.events.feed, async (ctx) => {
 });
 ```
 
-<warning>
-Include meetups that ended in the last few weeks as well as the upcoming ones. A client that
-stops seeing an event removes it, so a feed of only future events empties people's history as
-it goes.
-</warning>
+> [!WARNING]
+> Include meetups that ended in the last few weeks as well as the upcoming ones. A client that
+> stops seeing an event removes it, so a feed of only future events empties people's history as
+> it goes.
 
 `name` is the title the client gives the subscription, and `refreshInterval` asks it to poll
 hourly. For a one-click subscription, link to the feed with `webcal:` in place of `https:`.
@@ -172,10 +170,9 @@ Add `zone` to the feed's `timeZones` and `event` to its `events`. The writer put
 `TZID=Europe/Madrid` on the start and a `VTIMEZONE` block, built from the runtime's `Intl`
 data, in the calendar, so a client in any zone sees 19:00 Madrid time all year.
 
-<warning>
-Past the span the last offset holds, so make it cover every date the series will be read for,
-and rebuild it as time moves: here it runs from a year back to two years ahead of each request.
-</warning>
+> [!WARNING]
+> Past the span the last offset holds, so make it cover every date the series will be read for,
+> and rebuild it as time moves: here it runs from a year back to two years ahead of each request.
 
 `exceptionDates` removes the Thursday before Easter, written with the same wall time as the
 start so it matches that occurrence.

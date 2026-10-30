@@ -62,11 +62,10 @@ export async function feedEntries(origin: string, limit = 20): Promise<FeedEntry
 }
 ```
 
-<warning>
-Write every URL in a feed as an absolute one. Readers fetch a feed from one place and display
-it in another, so a relative link in an item resolves against whatever the reader happens to
-use as its base.
-</warning>
+> [!WARNING]
+> Write every URL in a feed as an absolute one. Readers fetch a feed from one place and display
+> it in another, so a relative link in an item resolves against whatever the reader happens to
+> use as its base.
 
 Give each feed a route of its own:
 
@@ -185,11 +184,10 @@ export default createAction(routes.feeds.atom, async (ctx) => {
 });
 ```
 
-<warning>
-Keep an entry's `id` fixed for its whole life. Use the permalink only if permalinks never
-change on your site; a `tag:` URI minted from the post's creation date is the alternative when
-they might.
-</warning>
+> [!WARNING]
+> Keep an entry's `id` fixed for its whole life. Use the permalink only if permalinks never
+> change on your site; a `tag:` URI minted from the post's creation date is the alternative when
+> they might.
 
 ## JSON Feed 1.1
 
@@ -359,10 +357,9 @@ export function feedTopics(base: URL): string[] {
 Enqueue the job from whatever action publishes a post, after the post is stored, with
 `await ctx.jobs.enqueue(jobs.feeds.ping, { topics: feedTopics(ctx.url) })`.
 
-<warning>
-The hub fetches each topic the moment it is pinged. If you cache the feeds at the edge, purge
-them before enqueuing the ping, or the hub reads the copy without the new post.
-</warning>
+> [!WARNING]
+> The hub fetches each topic the moment it is pinged. If you cache the feeds at the edge, purge
+> them before enqueuing the ping, or the hub reads the copy without the new post.
 
 ## Test the feeds
 

@@ -93,16 +93,14 @@ A sender has no session and no `Origin` header, so if your app runs Remix's
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
 webhook paths from it: the signature is the stronger claim.
 
-<note>
-Verify before anything else reads the request: the body is a stream, and one consumed upstream
-fails with `UnreadableBodyError`.
-</note>
+> [!NOTE]
+> Verify before anything else reads the request: the body is a stream, and one consumed upstream
+> fails with `UnreadableBodyError`.
 
-<warning>
-KV reads are eventually consistent, so a duplicate arriving within seconds in another location
-can slip past the replay store. The store narrows the replay window; an idempotent job is what
-makes a repeat harmless.
-</warning>
+> [!WARNING]
+> KV reads are eventually consistent, so a duplicate arriving within seconds in another location
+> can slip past the replay store. The store narrows the replay window; an idempotent job is what
+> makes a repeat harmless.
 
 ## Fail closed, and answer each failure honestly
 
@@ -225,10 +223,9 @@ addresses such as `169.254.169.254` before anything is sent; run the same check 
 subscriber saves the URL. [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls)
 covers it further.
 
-<warning>
-Keep `redirect: "manual"`. A followed redirect carries the signed body to whatever host the
-subscriber's server names, including the private addresses `checkUrl` refused.
-</warning>
+> [!WARNING]
+> Keep `redirect: "manual"`. A followed redirect carries the signed body to whatever host the
+> subscriber's server names, including the private addresses `checkUrl` refused.
 
 A receiver that is down gets a minute before the second attempt, then twice as long each time
 up to six hours, with jitter so failed deliveries do not all return at once. Reuse the same `id`

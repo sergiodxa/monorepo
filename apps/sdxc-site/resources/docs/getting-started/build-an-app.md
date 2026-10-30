@@ -246,11 +246,10 @@ bookmarks.prune  0 3 * * *  2026-10-20 03:00 UTC  cloudflare.config.ts
 bun run test
 ```
 
-<note>
-If a file fails before any of its cases run, with `Cannot find package '@sdxc/sample'` or
-`reading 'DEV'`, [Errors and FAQ](/docs/sdxc/errors-and-faq#a-new-app-s-tests) has the one-line
-fix for each.
-</note>
+> [!NOTE]
+> If a file fails before any of its cases run, with `Cannot find package '@sdxc/sample'` or
+> `reading 'DEV'`, [Errors and FAQ](/docs/sdxc/errors-and-faq#a-new-app-s-tests) has the one-line
+> fix for each.
 
 One case fails: `app/http/controllers/bookmarks/new.test.tsx` still expects a guest to get a
 403 from the form. Replace that case with the behavior you chose:

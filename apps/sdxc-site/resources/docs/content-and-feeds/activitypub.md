@@ -49,10 +49,9 @@ else process.stdout.write(pair.data.privateKeyPem);
 bun scripts/actor-keys.ts | npx wrangler secret put ACTIVITYPUB_PRIVATE_KEY
 ```
 
-<warning>
-Keep the key stable. Followers verify against the one they cached, and a new pair means
-announcing it to every one of them.
-</warning>
+> [!WARNING]
+> Keep the key stable. Followers verify against the one they cached, and a new pair means
+> announcing it to every one of them.
 
 Import it lazily through a `KeyProvider`, once per isolate, inside the first request or job
 that signs:
@@ -273,12 +272,11 @@ Map it with `router.map(routes.activityPub, activityPub)`. A `POST` to the inbox
 inside the request (content type, size, signature, and that the key belongs to the activity's
 actor) and answers `202` once the activity is queued, or the status of the check it failed.
 
-<warning>
-Verify before anything else reads the request: the body is a stream. A server delivering an
-activity has no session and no `Origin` header, so if your app runs Remix's
-[`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the inbox
-path from it: the signature is the stronger claim.
-</warning>
+> [!WARNING]
+> Verify before anything else reads the request: the body is a stream. A server delivering an
+> activity has no session and no `Origin` header, so if your app runs Remix's
+> [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the inbox
+> path from it: the signature is the stronger claim.
 
 ## Answer WebFinger
 
@@ -397,11 +395,10 @@ side. Store responses as pending and show them once you approve them.
 **Delete.** A `Delete` is believed only once a fresh fetch confirms it. Its handler gets
 `inbound.deleted`, `{ kind: "object" | "actor", id }`.
 
-<warning>
-A failure, or an exception, retries the whole message, so write every handler to tolerate
-seeing the same activity twice; the upserts in `saveResponse` and the deletes in
-`withdrawResponse` already do.
-</warning>
+> [!WARNING]
+> A failure, or an exception, retries the whole message, so write every handler to tolerate
+> seeing the same activity twice; the upserts in `saveResponse` and the deletes in
+> `withdrawResponse` already do.
 
 ## Publish posts as articles
 
@@ -516,11 +513,10 @@ export default createJobHandler(jobs.federation.publish, async (ctx) => {
 delivery per distinct inbox. Marking the post federated only after that means a failed publish
 retries as a `Create`.
 
-<note>
-An activity over 120 KB fails `too-large`, since no queue message could carry it, so trim
-`content` to a summary and a link for a long post. Failed deliveries retry over about 21 hours
-in five steps, so give the queue at least six attempts.
-</note>
+> [!NOTE]
+> An activity over 120 KB fails `too-large`, since no queue message could carry it, so trim
+> `content` to a summary and a link for a long post. Failed deliveries retry over about 21 hours
+> in five steps, so give the queue at least six attempts.
 
 ## Serve each post both ways
 

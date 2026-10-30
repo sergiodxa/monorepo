@@ -16,7 +16,7 @@ import { createAction } from "remix/router";
 import { withBundleCache } from "~/app/http/caching";
 import mcp from "~/app/initializers/mcp";
 import { readContent } from "~/app/services/content";
-import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
+import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import mcpSource from "~/resources/content/mcp.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import PageLayout from "~/resources/layouts/page";
@@ -56,7 +56,7 @@ export default createAction(routes.mcp, async (ctx) => {
 				description={DESCRIPTION}
 				activePath={routes.mcp.href()}
 			>
-				{toRemix(content.data, { components: POLICY_COMPONENTS })}
+				{toRemix(content.data, { components: DOCS_COMPONENTS })}
 			</PageLayout>
 		</DocumentLayout>,
 	);

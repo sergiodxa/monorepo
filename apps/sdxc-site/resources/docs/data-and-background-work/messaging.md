@@ -165,11 +165,10 @@ export function checkChannelUrl(kind: "slack" | "discord" | "webhook", url: stri
 Each answers a `Result` holding the parsed `URL`, or an `invalid-destination` failure to show
 beside the field.
 
-<warning>
-A URL that passes `check` can later resolve somewhere else. `resolve: true` on the `Webhook`
-above adds a DNS check at send time, so a public name later pointed at a private address is
-refused too.
-</warning>
+> [!WARNING]
+> A URL that passes `check` can later resolve somewhere else. `resolve: true` on the `Webhook`
+> above adds a DNS check at send time, so a public name later pointed at a private address is
+> refused too.
 
 ## Deliver from a job
 
@@ -312,10 +311,9 @@ marked broken for its owner to fix; every other code repeats on each attempt, so
 exits. `MAX_ATTEMPTS` matches a queue consumer's `maxRetries` of 3, so the last delivery
 exits with the failure on its log before the queue would dead-letter it.
 
-<warning>
-Chat platforms have no idempotency key, so a retry after a `timeout` whose request did land
-posts the message a second time.
-</warning>
+> [!WARNING]
+> Chat platforms have no idempotency key, so a retry after a `timeout` whose request did land
+> posts the message a second time.
 
 ## Fan out by severity
 

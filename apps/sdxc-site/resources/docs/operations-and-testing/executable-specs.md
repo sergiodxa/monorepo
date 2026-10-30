@@ -203,10 +203,9 @@ Reciting the line on every run gets old, so the suite can declare it:
 }
 ```
 
-<warning>
-The declaration is inert until a run adds `--allow-config`, so cloning a repository never grants
-its suite anything. Flags passed beside `--allow-config` only add to what the file declares.
-</warning>
+> [!WARNING]
+> The declaration is inert until a run adds `--allow-config`, so cloning a repository never grants
+> its suite anything. Flags passed beside `--allow-config` only add to what the file declares.
 
 ## Run it in CI
 

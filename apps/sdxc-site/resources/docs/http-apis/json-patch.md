@@ -148,11 +148,10 @@ export default createAction(routes.api.books.update, async (ctx) => {
 [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes). `apply` runs the
 operations against a private copy, so when one fails none take effect.
 
-<note>
-JSON Patch never creates missing parents: `add` at `/a/b` needs `/a` to exist, and `-` appends
-only to an array. Clients that patch a member a resource may lack add the parent first, in an
-earlier operation of the same patch.
-</note>
+> [!NOTE]
+> JSON Patch never creates missing parents: `add` at `/a/b` needs `/a` to exist, and `-` appends
+> only to an array. Clients that patch a member a resource may lack add the parent first, in an
+> earlier operation of the same patch.
 
 ## Send only what changed, guarded by test
 

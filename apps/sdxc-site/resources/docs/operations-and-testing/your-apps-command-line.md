@@ -30,10 +30,9 @@ npm add @sdxc/cli @sdxc/data-model @sdxc/database-middleware @sdxc/i18n @sdxc/lo
 npm add -D @sdxc/cloudflare-mocks
 ```
 
-<note>
-This guide builds the command line and its commands. To run the commands an app already has,
-such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
-</note>
+> [!NOTE]
+> This guide builds the command line and its commands. To run the commands an app already has,
+> such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
 
 ## Find where it lives
 
@@ -205,11 +204,10 @@ The same database entry ships a SQL prompt, mounted as `db console` in the templ
 sdxc run db console --execute "SELECT count(*) FROM users"
 ```
 
-<warning>
-A command that may touch production declares a `--remote` flag that your middleware reads to
-pick the connection, queue and transport. Confirm before writing through `ctx.prompt.confirm`,
-naming what the run targets, with `--yes` for scripts.
-</warning>
+> [!WARNING]
+> A command that may touch production declares a `--remote` flag that your middleware reads to
+> pick the connection, queue and transport. Confirm before writing through `ctx.prompt.confirm`,
+> naming what the run targets, with `--yes` for scripts.
 
 ## Run app code outside the server
 

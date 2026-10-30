@@ -109,10 +109,9 @@ plugins and the order to list them in.
 
 Keep the files as raw strings behind a lazy glob, so a page pays for the one post it renders.
 
-<warning>
-Parse inside the request, never at module scope. A Worker rejects an upload whose global scope
-does real work, and a local build or a dry run passes without showing it.
-</warning>
+> [!WARNING]
+> Parse inside the request, never at module scope. A Worker rejects an upload whose global scope
+> does real work, and a local build or a dry run passes without showing it.
 
 ```typescript {% title="app/services/content/posts.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -307,10 +306,9 @@ export function summarize(document: Markdown.Document): string {
 }
 ```
 
-<warning>
-Interpolating `attributes.type` is safe only because its schema allows three fixed words. Escape
-an attribute that takes free text before it goes into markup.
-</warning>
+> [!WARNING]
+> Interpolating `attributes.type` is safe only because its schema allows three fixed words. Escape
+> an attribute that takes free text before it goes into markup.
 
 ## Test it
 

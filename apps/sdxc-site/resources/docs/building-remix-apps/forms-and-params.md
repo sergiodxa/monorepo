@@ -167,11 +167,10 @@ export function NewTeamPage(handle: Handle<Props>) {
 }
 ```
 
-<warning>
-Anything can post to your action, with or without the form's attributes, so the schema in
-the action is the rule that counts. Treat `required`, `type` and `min` as hints for the
-visitor and keep every rule in the schema too.
-</warning>
+> [!WARNING]
+> Anything can post to your action, with or without the form's attributes, so the schema in
+> the action is the rule that counts. Treat `required`, `type` and `min` as hints for the
+> visitor and keep every rule in the schema too.
 
 ## Validate route params and the query string
 

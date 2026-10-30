@@ -73,11 +73,10 @@ export class KVRedemptionStore implements RedemptionStore {
 KV takes an `expirationTtl` of 60 seconds or more, so a shorter `ttl` is raised to that floor;
 the origin refuses an expired challenge on its own `max-age` regardless.
 
-<warning>
-KV is eventually consistent, so two requests racing with one valid token can both pass; a
-forged token still fails at the signature. Back the store with a Durable Object, whose storage
-serializes the read and the write, where a double spend costs you something.
-</warning>
+> [!WARNING]
+> KV is eventually consistent, so two requests racing with one valid token can both pass; a
+> forged token still fails at the signature. Back the store with a Durable Object, whose storage
+> serializes the read and the write, where a double spend costs you something.
 
 ## Configure the origin
 
@@ -265,10 +264,9 @@ test("a client holding a token reaches the results", async () => {
 });
 ```
 
-<note>
-`privacyPass` reads the directory once and keeps the keys for its `max-age`, so the test that
-serves a working issuer runs last, after the ones that need it down.
-</note>
+> [!NOTE]
+> `privacyPass` reads the directory once and keeps the keys for its `max-age`, so the test that
+> serves a working issuer runs last, after the ones that need it down.
 
 Add `PRIVACY_PASS` to `app/test/cloudflare-workers.ts` beside the other KV namespaces, so the
 initializer finds its binding.

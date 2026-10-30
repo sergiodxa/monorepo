@@ -50,11 +50,10 @@ declare module "*.bin" {
 
 Parse the fonts on the first card an isolate draws and keep them for the isolate's life.
 
-<warning>
-Parsing at module scope runs while Cloudflare validates the upload, which can fail the
-deploy, and again on every cold start, including the ones that only serve a page. Keep the
-parse inside a function, as `cardFonts` does.
-</warning>
+> [!WARNING]
+> Parsing at module scope runs while Cloudflare validates the upload, which can fail the
+> deploy, and again on every cold start, including the ones that only serve a page. Keep the
+> parse inside a function, as `cardFonts` does.
 
 ```typescript {% title="app/initializers/card-fonts.ts" %}
 import type { FontError } from "@sdxc/font";
@@ -221,10 +220,9 @@ export async function drawCard(
 `y` is the baseline of the first line, and `text` answers with the `height` it drew, which is
 where the description starts.
 
-<note>
-Drawing a card takes tens of milliseconds of CPU, which counts against the Worker's CPU limit
-on every request that draws. That is why each card is drawn once and stored.
-</note>
+> [!NOTE]
+> Drawing a card takes tens of milliseconds of CPU, which counts against the Worker's CPU limit
+> on every request that draws. That is why each card is drawn once and stored.
 
 ## Store cards in R2
 

@@ -91,11 +91,10 @@ Follow [Logs, traces and timings](/docs/operations-and-testing/observability), w
 and `trace()` at the top of the router. The limiter's `rate_limit` fields and the agent's
 `agent.id` then land on the invocation's one log event, beside its route, status and duration.
 
-<note>
-Keep this order: `log(logger)` first, so everything after it writes into one record, and the
-limiter before `requireToken`, so an agent over its budget is refused before its token costs a
-verification.
-</note>
+> [!NOTE]
+> Keep this order: `log(logger)` first, so everything after it writes into one record, and the
+> limiter before `requireToken`, so an agent over its budget is refused before its token costs a
+> verification.
 
 ## Test that both surfaces share the budget
 

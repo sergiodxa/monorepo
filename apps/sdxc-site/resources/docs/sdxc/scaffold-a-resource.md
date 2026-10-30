@@ -118,12 +118,11 @@ endpoint in `routes/api.ts`, so `/api/openapi.json` describes every endpoint. A 
 answers with the `validationError` problem, and a missing or hidden row with `notFound`. The
 model, migration, factory and policy are written as they are for pages.
 
-<note>
-The template's API binds every caller as a guest, who may only read, so the create, update and
-delete endpoints answer `403` until the API authenticates its callers in
-`app/http/middleware/api.ts`. Their tests check that, and leave the signed-in case as a
-`test.todo` to fill in once it does.
-</note>
+> [!NOTE]
+> The template's API binds every caller as a guest, who may only read, so the create, update and
+> delete endpoints answer `403` until the API authenticates its callers in
+> `app/http/middleware/api.ts`. Their tests check that, and leave the signed-in case as a
+> `test.todo` to fill in once it does.
 
 ## Who may do what
 

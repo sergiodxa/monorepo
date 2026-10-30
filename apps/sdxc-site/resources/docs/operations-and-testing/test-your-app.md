@@ -65,11 +65,10 @@ fill.
 pages' create rows with the factory, sign a member in, and submit the forms with valid honeypot
 fields, so the page, the policy and the validator all run as in the Worker. Use them as the model for a controller's own cases.
 
-<note>
-A generated test is a starting point you own. When you change a rule on purpose, a generated
-case that encoded the old rule fails; rewrite it to say what the app does now, as
-[Build an app](/docs/getting-started/build-an-app#run-the-tests) does when guests may post.
-</note>
+> [!NOTE]
+> A generated test is a starting point you own. When you change a rule on purpose, a generated
+> case that encoded the old rule fails; rewrite it to say what the app does now, as
+> [Build an app](/docs/getting-started/build-an-app#run-the-tests) does when guests may post.
 
 ## Use the helpers in app/test
 

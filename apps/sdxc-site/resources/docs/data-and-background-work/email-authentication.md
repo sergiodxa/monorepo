@@ -224,11 +224,10 @@ The job is declared as `audit: job({ input: s.object({ domainId: s.string() }) }
 `sendingDomains`, and `SendingDomains` is your own model.
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds the queue.
 
-<note>
-Every lookup goes to Cloudflare's resolver by default and waits up to five seconds. Pass
-`{ timeoutMs, signal, resolver }` as the last argument of any discover or lookup call to change
-that, and keep the whole audit inside the job's own time limit.
-</note>
+> [!NOTE]
+> Every lookup goes to Cloudflare's resolver by default and waits up to five seconds. Pass
+> `{ timeoutMs, signal, resolver }` as the last argument of any discover or lookup call to change
+> that, and keep the whole audit inside the job's own time limit.
 
 ## Serve an MTA-STS policy for your own domain
 
@@ -262,12 +261,11 @@ custom domain of the Worker. Two TXT records complete it: `_mta-sts.example.com`
 `v=STSv1; id=20261024`, and `_smtp._tls.example.com` with
 `v=TLSRPTv1; rua=mailto:tls-reports@example.com`, where senders report the TLS failures they see.
 
-<warning>
-Senders fetch the policy over HTTPS with no redirects and accept only a `200` with
-`text/plain`. Change the `id` in the TXT record every time the policy text changes, or senders
-keep the cached copy for `max_age` seconds. Start with `mode: testing` and read the TLS reports
-before switching to `enforce`, which refuses delivery when an MX host is missing from the list.
-</warning>
+> [!WARNING]
+> Senders fetch the policy over HTTPS with no redirects and accept only a `200` with
+> `text/plain`. Change the `id` in the TXT record every time the policy text changes, or senders
+> keep the cached copy for `max_age` seconds. Start with `mode: testing` and read the TLS reports
+> before switching to `enforce`, which refuses delivery when an MX host is missing from the list.
 
 ## Read DMARC aggregate reports
 

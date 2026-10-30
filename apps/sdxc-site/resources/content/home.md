@@ -445,10 +445,9 @@ So pin exactly, and move when you are ready to read what changed.
 }
 ```
 
-<note kind="caution">
-A range such as `^2026.9.21` reads as "any release this year", which is not what you want from a
-scheme where the number carries no compatibility meaning.
-</note>
+> [!WARNING]
+> A range such as `^2026.9.21` reads as "any release this year", which is not what you want from a
+> scheme where the number carries no compatibility meaning.
 
 </split-media>
 </split>

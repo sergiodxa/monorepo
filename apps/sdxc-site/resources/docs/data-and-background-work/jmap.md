@@ -41,11 +41,10 @@ Declare `FASTMAIL_TOKEN: bindings.secret()` in `cloudflare.config.ts` and set it
 `cf workers secrets update` before the first deploy. The constructor does no I/O; the Session is
 fetched on first use and kept for the life of the isolate.
 
-<warning>
-The token reads and sends as the person who created it. Keep it a Worker secret, give it only
-the scopes the app calls, and revoke it from the same settings page when the app no longer
-needs it.
-</warning>
+> [!WARNING]
+> The token reads and sends as the person who created it. Keep it a Worker secret, give it only
+> the scopes the app calls, and revoke it from the same settings page when the app no longer
+> needs it.
 
 ## Find the account and its mailboxes
 
@@ -155,11 +154,10 @@ export async function latestInbox(jmap: JMAP, limit = 10) {
 `preview` is up to 256 characters of the body as plain text. A query that fails makes the
 `Email/get` that references it fail too, so reading the last call is enough.
 
-<note>
-A server caps the ids in one `/get` at `maxObjectsInGet`, in
-`session.capabilities["urn:ietf:params:jmap:core"]`, and refuses a request over it as a whole.
-Keep `limit` on a query below that cap.
-</note>
+> [!NOTE]
+> A server caps the ids in one `/get` at `maxObjectsInGet`, in
+> `session.capabilities["urn:ietf:params:jmap:core"]`, and refuses a request over it as a whole.
+> Keep `limit` on a query below that cap.
 
 ## Send a message
 
@@ -247,11 +245,10 @@ export async function sendMessage(jmap: JMAP, message: Message) {
 }
 ```
 
-<note>
-The identity decides the `From` address the recipient sees, and the server refuses a
-submission whose `From` does not match it with `forbiddenFrom`. List them with `Identity/get`
-and let the person pick one when the account has several.
-</note>
+> [!NOTE]
+> The identity decides the `From` address the recipient sees, and the server refuses a
+> submission whose `From` does not match it with `forbiddenFrom`. List them with `Identity/get`
+> and let the person pick one when the account has several.
 
 Send from a [background job](/docs/data-and-background-work/jobs-and-cron) when the request
 should answer before the server does.

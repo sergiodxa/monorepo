@@ -71,10 +71,9 @@ Make each book route's guards `[authenticateCaller, apiRateLimit()]`, with the l
 issue rather than tokens, [Give your users API keys](/docs/recipes/api-keys) publishes
 `ctx.apiKey` in place of this step.
 
-<note>
-Keep `authenticateCaller` first. The limiter's key and the idempotency scope both read the
-caller, which exists only once authentication has published it.
-</note>
+> [!NOTE]
+> Keep `authenticateCaller` first. The limiter's key and the idempotency scope both read the
+> caller, which exists only once authentication has published it.
 
 ## Make writes safe to retry
 

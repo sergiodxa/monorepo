@@ -49,10 +49,9 @@ with `cloudflare.config.ts`, a Vite+ configuration, a test runner and its own co
 - Every TypeScript module credits you in its `@author` and `@copyright` tags, from your git
   user.
 
-<note>
-`create` writes files and runs nothing from them: it installs no dependencies and runs no
-scripts, and prints the commands to run next with the project's package manager.
-</note>
+> [!NOTE]
+> `create` writes files and runs nothing from them: it installs no dependencies and runs no
+> scripts, and prints the commands to run next with the project's package manager.
 
 ### Where it writes
 

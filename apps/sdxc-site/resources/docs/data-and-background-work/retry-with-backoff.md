@@ -46,10 +46,9 @@ export const previewBackoff = createBackoff({
 waits about 1, 2, 4 and 8 minutes and keeps doubling until it sits at 6 hours. `jitter: 0.2`
 spreads each delay across ±20%, after the ceiling, so retries parked at 6 hours still spread out.
 
-<warning>
-Keep the ceiling plus its jitter under 12 hours when the delay goes to `ctx.retry`. That is the
-longest Cloudflare Queues holds a message, and 6 hours at +20% leaves plenty of room.
-</warning>
+> [!WARNING]
+> Keep the ceiling plus its jitter under 12 hours when the delay goes to `ctx.retry`. That is the
+> longest Cloudflare Queues holds a message, and 6 hours at +20% leaves plenty of room.
 
 ## Honor Retry-After
 
@@ -77,10 +76,9 @@ export function waitAfter(response: Response, attempt: number): number {
 as milliseconds, and answers `null` for a missing or unreadable header, which leaves the schedule
 to decide.
 
-<warning>
-The header is the remote server's to write, so `waitAfter` clamps it to the queue's hold limit:
-an answer of a year would otherwise make the retry itself fail.
-</warning>
+> [!WARNING]
+> The header is the remote server's to write, so `waitAfter` clamps it to the queue's hold limit:
+> an answer of a year would otherwise make the retry itself fail.
 
 ## Retry a job on a growing delay
 
@@ -156,10 +154,9 @@ export function fetchProfile(url: string) {
 }
 ```
 
-<note>
-Keep the whole budget short, since a visitor is waiting through every attempt: four tries here
-spend at most three seconds waiting.
-</note>
+> [!NOTE]
+> Keep the whole budget short, since a visitor is waiting through every attempt: four tries here
+> spend at most three seconds waiting.
 
 ## Store the next attempt for a polled resource
 

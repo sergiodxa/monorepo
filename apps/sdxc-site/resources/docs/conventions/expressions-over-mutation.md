@@ -50,11 +50,10 @@ export function describeDraft(draft: Draft) {
 of what the branches return. The same block fits an object field or a JSX child, where a nested
 ternary usually appears.
 
-<note>
-A `return` inside the callback leaves the callback. To leave the enclosing function on one of
-the branches, return a value that says so from the callback and branch on it after the
-assignment.
-</note>
+> [!NOTE]
+> A `return` inside the callback leaves the callback. To leave the enclosing function on one of
+> the branches, return a value that says so from the callback and branch on it after the
+> assignment.
 
 An async callback gives you a promise, which you `await` like any other:
 `let viewer = await iife(async () => { … })`. A callback that throws surfaces where the `iife`

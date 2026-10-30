@@ -239,11 +239,10 @@ Each seed is a case worth keeping, such as a void invoice with long notes. The n
 come from the seed, the ids from the seeded `string.uuid()`, and the dates from `REFERENCE`, so
 a failing snapshot is a change you made.
 
-<note>
-Format dates with an explicit `timeZone` in the component, or the same instant renders
-differently on a laptop and in CI. Values are reproducible for a given `@sdxc/sample` version,
-so an upgrade that grows its word lists changes the snapshots together, in one diff.
-</note>
+> [!NOTE]
+> Format dates with an explicit `timeZone` in the component, or the same instant renders
+> differently on a laptop and in CI. Values are reproducible for a given `@sdxc/sample` version,
+> so an upgrade that grows its word lists changes the snapshots together, in one diff.
 
 ## Where to go next
 

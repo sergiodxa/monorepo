@@ -46,10 +46,9 @@ Put the id it prints in the `DB` binding:
 DB: bindings.d1({ name: manifest.name, id: "<the id cf printed>" }),
 ```
 
-<note>
-The local database file is named after this id, so `bun dev` opens a new, empty one once you
-write it. Run `sdxc run db migrate` again to create your tables there.
-</note>
+> [!NOTE]
+> The local database file is named after this id, so `bun dev` opens a new, empty one once you
+> write it. Run `sdxc run db migrate` again to create your tables there.
 
 The KV namespace that holds visitors' sessions:
 
@@ -95,11 +94,10 @@ key, an API key. Four places name each one, and each has its own job:
 `cloudflare.config.ts` is the source of truth: `sdxc run typegen` types `env` from it. A fresh
 clone and CI copy `.env.example` to `.dev.vars`, so it holds working development values.
 
-<warning>
-A deploy fails when a secret the file declares is missing in production, and removes any
-production secret the file no longer declares. Set a new secret remotely before the first deploy
-that declares it.
-</warning>
+> [!WARNING]
+> A deploy fails when a secret the file declares is missing in production, and removes any
+> production secret the file no longer declares. Set a new secret remotely before the first deploy
+> that declares it.
 
 A new app declares four. Set each one for production, with a long random value for the two
 signing secrets, such as one from `openssl rand -base64 32`:

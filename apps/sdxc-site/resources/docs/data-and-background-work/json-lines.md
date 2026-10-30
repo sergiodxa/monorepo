@@ -103,11 +103,10 @@ one pass collects every problem in the file, each with the line number an editor
 action reads `request.body` straight into `readActivity`, then saves `events` only when
 `problems` is empty, so uploading a fixed file cannot duplicate rows.
 
-<warning>
-Pass `maxLineBytes` on every read of an upload. A line is unbounded until you set it, so one
-enormous line grows the Worker's memory until the isolate runs out. A longer line yields one
-`"line-too-long"` failure and reading stops there.
-</warning>
+> [!WARNING]
+> Pass `maxLineBytes` on every read of an upload. A line is unbounded until you set it, so one
+> enormous line grows the Worker's memory until the isolate runs out. A longer line yields one
+> `"line-too-long"` failure and reading stops there.
 
 ## Resume a long import
 

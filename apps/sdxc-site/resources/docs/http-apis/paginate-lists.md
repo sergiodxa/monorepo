@@ -112,11 +112,10 @@ curl -sI "https://app.example.com/api/invoices?status=open&page=3"
 Every other query parameter is carried into the links, so a filter such as `status` survives
 paging. A keyset page gets only `prev` and `next`, and no total.
 
-<warning>
-The links are built from the `url` you pass. Behind a proxy, pass the public URL the client
-called, so the header advertises your public hostname and every link a client follows reaches
-you through the proxy.
-</warning>
+> [!WARNING]
+> The links are built from the `url` you pass. Behind a proxy, pass the public URL the client
+> called, so the header advertises your public hostname and every link a client follows reaches
+> you through the proxy.
 
 ## A numbered pager in HTML
 
@@ -259,11 +258,10 @@ export default createAction(routes.activity.index, {
 refused unless `unique: true` says it cannot repeat, as time-ordered UUIDv7 ids can; order by
 a timestamp and add `id` after it as the tiebreaker.
 
-<warning>
-A cursor records the ordering it was minted for. Change `orderBy` and every cursor already
-issued fails with `InvalidCursorError`, which this page turns into a redirect to the newest
-page and an API turns into a `400`, so a client mid-walk starts over.
-</warning>
+> [!WARNING]
+> A cursor records the ordering it was minted for. Change `orderBy` and every cursor already
+> issued fails with `InvalidCursorError`, which this page turns into a redirect to the newest
+> page and an API turns into a `400`, so a client mid-walk starts over.
 
 ## Test the parameters and the headers
 

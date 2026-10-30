@@ -27,11 +27,10 @@ npm add @pitlane/assets @sdxc/assets-middleware @sdxc/icons @sdxc/u @sdxc/ui rem
 Components read semantic `--ui-*` variables, and those derive from five palette scales you
 define: `brand`, `neutral`, `danger`, `warning` and `success`, each from 50 to 950.
 
-<note>
-Import the reset, your palette, then the theme, in that order, from the document layout. The
-build keeps the import order as the cascade order, so a palette imported after the theme
-leaves the components on the theme's fallbacks.
-</note>
+> [!NOTE]
+> Import the reset, your palette, then the theme, in that order, from the document layout. The
+> build keeps the import order as the cascade order, so a palette imported after the theme
+> leaves the components on the theme's fallbacks.
 
 ```css {% title="resources/css/colors.css" %}
 :root {
@@ -105,10 +104,9 @@ export default createMiddleware(
 A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`, and the
 class `system` on `<html>` makes the theme follow the visitor's `prefers-color-scheme`.
 
-<warning>
-A Worker runs no async work at module scope, and a deploy fails validation when the module
-tries. Resolve the assets in the middleware, per request, as above.
-</warning>
+> [!WARNING]
+> A Worker runs no async work at module scope, and a deploy fails validation when the module
+> tries. Resolve the assets in the middleware, per request, as above.
 
 ## Compose a card
 
@@ -264,11 +262,10 @@ The icon renders `aria-hidden` beside the visible label; an icon-only button, su
 the page with `issues`, the `open` attribute shows the dialog again with each field's error,
 as [Validate forms and route params](/docs/building-remix-apps/forms-and-params) shows.
 
-<note>
-A dialog opened by the `open` attribute is non-modal and sits in the page's flow with no
-`::backdrop`. Give that state a fixed position through `mix` if it should look like the modal
-the visitor submitted from.
-</note>
+> [!NOTE]
+> A dialog opened by the `open` attribute is non-modal and sits in the page's flow with no
+> `::backdrop`. Give that state a fixed position through `mix` if it should look like the modal
+> the visitor submitted from.
 
 ## Hydrate an island only where it's needed
 

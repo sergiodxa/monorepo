@@ -71,11 +71,10 @@ export function createWebRouter() {
 `sessionCookie` is your app's signed session cookie, made with `createCookie` from
 `remix/cookie`. `authenticate` is defined at the end of this guide.
 
-<note>
-Give the session cookie `sameSite: "Lax"`. The callback is a top-level navigation from the
-provider's origin, which a `Strict` cookie stays off, so every callback would find no
-transaction.
-</note>
+> [!NOTE]
+> Give the session cookie `sameSite: "Lax"`. The callback is a top-level navigation from the
+> provider's origin, which a `Strict` cookie stays off, so every callback would find no
+> transaction.
 
 ## Describe the provider
 
@@ -194,11 +193,10 @@ export default createAction(routes.auth.callback, async (ctx) => {
 });
 ```
 
-<warning>
-Key the account on `grant.subject`, never on email or username. Those are mutable at the
-provider, so someone who takes over an address there would sign in to the account it used to
-name; the subject is the one claim OpenID Connect promises stays with the person.
-</warning>
+> [!WARNING]
+> Key the account on `grant.subject`, never on email or username. Those are mutable at the
+> provider, so someone who takes over an address there would sign in to the account it used to
+> name; the subject is the one claim OpenID Connect promises stays with the person.
 
 Passing `grant.returnTo` through `Location.safe` again at the redirect keeps it on your origin
 in the one line that writes the `Location` header. `AuthError.code` names the step that failed,

@@ -181,19 +181,17 @@ export function EnrollTwoFactorPage(handle: Handle<EnrollTwoFactorProps>) {
 }
 ```
 
-<warning>
-The setup key is the secret itself. Render it on this one response, and never again.
-</warning>
+> [!WARNING]
+> The setup key is the secret itself. Render it on this one response, and never again.
 
 ## Accept each code once
 
 Checking a code verifies with a window of one step either side, which tolerates a phone clock
 that is a little off, and records each code it accepts.
 
-<warning>
-That window keeps a code valid for up to 90 seconds, so a code read over someone's shoulder or
-lifted from a shared screen works a second time unless you record every code you accept.
-</warning>
+> [!WARNING]
+> That window keeps a code valid for up to 90 seconds, so a code read over someone's shoulder or
+> lifted from a shared screen works a second time unless you record every code you accept.
 
 ```typescript {% title="app/services/two-factor/accept-code.ts" %}
 import type { Database } from "remix/data-table";
@@ -426,11 +424,10 @@ A wrong code, a used code and an unknown recovery code all answer the same page.
 Regenerating the session id keeps the id the browser held during the password step from
 becoming the signed-in one.
 
-<warning>
-Six digits are a million possibilities, and the window accepts three at a time, so an
-unlimited code page falls to guessing. Put a rate limit on this route keyed on the pending
-user, as in [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms).
-</warning>
+> [!WARNING]
+> Six digits are a million possibilities, and the window accepts three at a time, so an
+> unlimited code page falls to guessing. Put a rate limit on this route keyed on the pending
+> user, as in [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms).
 
 ## Turn two-factor off
 

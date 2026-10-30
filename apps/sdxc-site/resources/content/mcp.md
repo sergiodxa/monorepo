@@ -39,10 +39,9 @@ picker carries the whole corpus and a person can attach one page before they sta
 resource's URI is the page's own markdown address, which means attaching it and fetching it
 give the same text.
 
-<note>
-Prefer a tool when you are looking for something and a resource when you already know what you
-want to read.
-</note>
+> [!NOTE]
+> Prefer a tool when you are looking for something and a resource when you already know what you
+> want to read.
 
 ## Reading it another way
 

@@ -71,11 +71,10 @@ Still referenced, to remove by hand:
   app/jobs/charge-all.ts:1: import { charge } from "~/app/services/billing/charge";
 ```
 
-<note>
-A model's migrations stay. A database may already have applied them, and removing a migration
-that ran leaves that database out of step with the chain. Write a migration that drops the
-table instead, with [`sdxc make migration`](/docs/sdxc/make-migration).
-</note>
+> [!NOTE]
+> A model's migrations stay. A database may already have applied them, and removing a migration
+> that ran leaves that database out of step with the chain. Write a migration that drops the
+> table instead, with [`sdxc make migration`](/docs/sdxc/make-migration).
 
 The packages `make` added to `package.json` stay too, since other code may import them.
 

@@ -20,11 +20,10 @@ records a page needs, and a route renders one page per public symbol.
 
 [`@sdxc/jsdoc`](/api/jsdoc) reads JSDoc out of JavaScript and TypeScript source text.
 
-<warning>
-`@sdxc/jsdoc` parses with the TypeScript compiler, which is larger than a whole Worker and
-expects globals a Worker lacks. Run it in the build, and let the Worker read only the JSON it
-produced.
-</warning>
+> [!WARNING]
+> `@sdxc/jsdoc` parses with the TypeScript compiler, which is larger than a whole Worker and
+> expects globals a Worker lacks. Run it in the build, and let the Worker read only the JSON it
+> produced.
 
 ```bash
 npm add @sdxc/http @sdxc/result remix
@@ -217,10 +216,9 @@ export async function findReference(name: string): Promise<ReferencePage | null>
 }
 ```
 
-<note>
-The name comes from the URL, and `Object.hasOwn` is what keeps `/reference/constructor` from
-answering with something inherited.
-</note>
+> [!NOTE]
+> The name comes from the URL, and `Object.hasOwn` is what keeps `/reference/constructor` from
+> answering with something inherited.
 
 The route is a `get("/reference/:name")`:
 

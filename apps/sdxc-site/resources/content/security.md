@@ -19,12 +19,11 @@ Nothing is backported. There are no maintenance branches, so an earlier date is 
 republished with a fix in it: an older version keeps working exactly as it was published,
 and taking the fix means moving your pin forward.
 
-<note kind="caution">
-Read the release notes before you move. A later date carries no compatibility promise, so
-the release that carries a fix may also change or remove an export — that is what
-[dated versions](/docs/releases/versioning) mean, and it is the trade the
-[maintenance policy](/maintenance) states in full.
-</note>
+> [!WARNING]
+> Read the release notes before you move. A later date carries no compatibility promise, so
+> the release that carries a fix may also change or remove an export — that is what
+> [dated versions](/docs/releases/versioning) mean, and it is the trade the
+> [maintenance policy](/maintenance) states in full.
 
 ## Reporting something privately
 

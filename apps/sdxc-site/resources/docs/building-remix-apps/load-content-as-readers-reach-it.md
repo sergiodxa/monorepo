@@ -61,10 +61,9 @@ run({
 });
 ```
 
-<warning>
-Miss this step and nothing fails loudly: the page renders, the island never mounts, and every
-reader gets the plain links. The last test in [Test it](#test-it) is the one that catches it.
-</warning>
+> [!WARNING]
+> Miss this step and nothing fails loudly: the page renders, the island never mounts, and every
+> reader gets the plain links. The last test in [Test it](#test-it) is the one that catches it.
 
 ## Start from a link
 

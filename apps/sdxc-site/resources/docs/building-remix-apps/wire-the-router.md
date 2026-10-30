@@ -26,11 +26,10 @@ npm add @sdxc/data-table-d1 @sdxc/database-middleware @sdxc/http @sdxc/lazy-rout
 	@sdxc/logger @sdxc/trace-context @sdxc/user-agent remix
 ```
 
-<warning>
-The logger, the trace and `asyncContext()` all keep per-request state in
-`AsyncLocalStorage`, so enable the `nodejs_compat` compatibility flag on the Worker before you
-deploy this chain.
-</warning>
+> [!WARNING]
+> The logger, the trace and `asyncContext()` all keep per-request state in
+> `AsyncLocalStorage`, so enable the `nodejs_compat` compatibility flag on the Worker before you
+> deploy this chain.
 
 ## Create one logger per Worker
 

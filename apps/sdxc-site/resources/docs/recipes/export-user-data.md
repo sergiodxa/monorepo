@@ -83,10 +83,9 @@ export default createJobHandler(jobs.exports.build, async (ctx) => {
 });
 ```
 
-<warning>
-`bytes()` holds the whole archive in memory to store it, so list files too large for a Worker as
-links in a text entry, as the ZIP guide's warning describes.
-</warning>
+> [!WARNING]
+> `bytes()` holds the whole archive in memory to store it, so list files too large for a Worker as
+> links in a text entry, as the ZIP guide's warning describes.
 
 ## Test it
 

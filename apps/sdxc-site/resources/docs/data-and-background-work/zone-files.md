@@ -95,11 +95,10 @@ export function trackedRecords(records: ZoneFile.Record[], domain: string) {
 `formatRecordData` prints a record's data in one canonical spelling, so `2001:DB8::1` and
 `2001:db8:0:0:0:0:0:1` share a key and a record listed twice is kept once.
 
-<note>
-An unquoted TXT value is several character-strings, as DNS reads it, so `v=spf1 -all` imports
-as `v=spf1-all`. Provider exports always quote TXT values; mention it next to the paste box for
-hand-written files.
-</note>
+> [!NOTE]
+> An unquoted TXT value is several character-strings, as DNS reads it, so `v=spf1 -all` imports
+> as `v=spf1-all`. Provider exports always quote TXT values; mention it next to the paste box for
+> hand-written files.
 
 ## Accept the paste
 
@@ -195,10 +194,9 @@ export async function missingFromDns(records: TrackedRecord[]) {
 
 A failed lookup counts every record in the group as missing.
 
-<note>
-The comparison sends one query per name and type, which adds up on a large zone, so run it in a
-background job and keep the request to the import.
-</note>
+> [!NOTE]
+> The comparison sends one query per name and type, which adds up on a large zone, so run it in a
+> background job and keep the request to the import.
 
 ## Export the zone
 

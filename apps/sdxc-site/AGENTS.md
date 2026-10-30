@@ -52,8 +52,10 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
     app-layout path (`app/services/…`, `app/http/controllers/…`).
   - A section that tests what the guide built, through the app's router, the package's own
     testing entry or MSW, whenever the guide writes code an app runs.
-  - A `<note>` or `<warning>` for each constraint a reader would otherwise learn in
-    production: a limit, an ordering requirement, a security consequence.
+  - A `> [!NOTE]` or `> [!WARNING]` alert for each constraint a reader would otherwise
+    learn in production: a limit, an ordering requirement, a security consequence. Every
+    content file writes asides as GitHub alerts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`,
+    `CAUTION`), which `resources/components/alert.tsx` draws with a label and an icon.
   - `## Where to go next`, last, with two or three links and a phrase on why to follow each.
   - Second person, affirmative, the reason before the flag or option, current APIs only.
     The schema and `app/http/controllers/docs.test.ts` hold the parts a machine can check.

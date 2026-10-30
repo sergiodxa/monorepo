@@ -112,11 +112,10 @@ export function checkMath(path: string, source: string): string | null {
 }
 ```
 
-<warning>
-A walk with `math` fails on the first formula that does not convert. For content you do not
-control, such as comments, build the visitor with `createMathVisitor({ invalid: "keep" })`, which
-leaves such a formula as the code its author wrote.
-</warning>
+> [!WARNING]
+> A walk with `math` fails on the first formula that does not convert. For content you do not
+> control, such as comments, build the visitor with `createMathVisitor({ invalid: "keep" })`, which
+> leaves such a formula as the code its author wrote.
 
 ## Draw the tags in a route
 

@@ -214,10 +214,9 @@ A timeout, a `5xx` or a `429` is `retryable`; a refused host or an oversized bod
 both delete it. A `linked` mention carries its `kind`, author and content, and `content.html`
 is already sanitized, so an approved reply renders as it stands.
 
-<warning>
-Store mentions as pending and show them once you approve them. The endpoint is anonymous, and
-moderation is the one policy the protocol leaves entirely to you.
-</warning>
+> [!WARNING]
+> Store mentions as pending and show them once you approve them. The endpoint is anonymous, and
+> moderation is the one policy the protocol leaves entirely to you.
 
 ## Send Webmentions
 
@@ -259,10 +258,9 @@ export default createJobHandler(jobs.webmentions.send, async (ctx) => {
 });
 ```
 
-<note>
-Serve `410 Gone` from a deleted post's URL before the send job runs, so each receiver's own
-verification sees the deletion and removes the mention.
-</note>
+> [!NOTE]
+> Serve `410 Gone` from a deleted post's URL before the send job runs, so each receiver's own
+> verification sees the deletion and removes the mention.
 
 Deliver one job per target, so a slow endpoint delays nobody else:
 
@@ -319,10 +317,9 @@ A Micropub client finds your endpoint through the `rel="micropub"` link and sign
 IndieAuth, which ends with an access token you verify. `parseOperation` decodes a form,
 multipart or JSON POST into one of four typed operations, plus the token.
 
-<warning>
-Verify the access token and its scopes before you act on anything in the body. A Micropub
-request writes to your site, and the token is the only thing that says who sent it.
-</warning>
+> [!WARNING]
+> Verify the access token and its scopes before you act on anything in the body. A Micropub
+> request writes to your site, and the token is the only thing that says who sent it.
 
 ```typescript {% title="app/http/controllers/micropub/write.ts" %}
 import {
@@ -426,10 +423,9 @@ export default createAction(routes.micropub.query, async (ctx) => {
 });
 ```
 
-<note>
-List only the queries you answer in `config({ q })`, since clients treat a missing one as
-unsupported.
-</note>
+> [!NOTE]
+> List only the queries you answer in `config({ q })`, since clients treat a missing one as
+> unsupported.
 
 ## Test it
 

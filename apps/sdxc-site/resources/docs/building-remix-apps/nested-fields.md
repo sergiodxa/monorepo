@@ -41,10 +41,9 @@ indices, or `[]` pushes, becomes an array.
 
 A key used both as a value and as a group (`a=1&a[b]=2`) fails the parse.
 
-<note>
-A key nested more than five brackets deep and a source with more than 1,000 entries fail the
-parse too, since a URL is input anyone can write. Both limits are options of `parse`.
-</note>
+> [!NOTE]
+> A key nested more than five brackets deep and a source with more than 1,000 entries fail the
+> parse too, since a URL is input anyone can write. Both limits are options of `parse`.
 
 ## Filter a list from the query string
 

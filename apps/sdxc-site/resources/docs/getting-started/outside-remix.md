@@ -98,10 +98,9 @@ process.stdout.write(`${JSON.stringify(pair)}\n`);
 bun scripts/generate-key.ts > signing-key.json
 ```
 
-<warning>
-`signing-key.json` holds the private key. Anyone who reads it can sign tokens your service
-accepts, so keep it out of the repository and hand it to each runtime as a secret.
-</warning>
+> [!WARNING]
+> `signing-key.json` holds the private key. Anyone who reads it can sign tokens your service
+> accepts, so keep it out of the repository and hand it to each runtime as a secret.
 
 ## Serve it with Bun
 
@@ -128,12 +127,11 @@ SIGNING_KEY="$(cat signing-key.json)" bun src/server.ts
 From a second terminal, `curl http://localhost:3000/.well-known/jwks.json` returns the
 public key another service verifies your tokens with.
 
-<note>
-A Cloudflare Worker serves the same handler. It receives `SIGNING_KEY` on the `env` argument of
-its `fetch` method, so it imports the key there and answers with
-`createHandler([pair.data])(request)`. The packages run on the Web Crypto the Workers runtime
-provides, so the Worker needs no compatibility flag.
-</note>
+> [!NOTE]
+> A Cloudflare Worker serves the same handler. It receives `SIGNING_KEY` on the `env` argument of
+> its `fetch` method, so it imports the key there and answers with
+> `createHandler([pair.data])(request)`. The packages run on the Web Crypto the Workers runtime
+> provides, so the Worker needs no compatibility flag.
 
 ## Test it
 

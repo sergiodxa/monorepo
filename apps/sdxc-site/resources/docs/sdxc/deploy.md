@@ -55,11 +55,10 @@ export default createCommand(commandset.deploy, async (ctx) => {
 });
 ```
 
-<warning>
-Keep the contract the table describes when you edit these commands: `--pending` prints names
-and applies nothing, and `deploy --dry-run` uploads nothing. `sdxc deploy` runs both before it
-asks, so a `--pending` that applies migrations changes production before you answer.
-</warning>
+> [!WARNING]
+> Keep the contract the table describes when you edit these commands: `--pending` prints names
+> and applies nothing, and `deploy --dry-run` uploads nothing. `sdxc deploy` runs both before it
+> asks, so a `--pending` that applies migrations changes production before you answer.
 
 A `db migrate` without `--pending` still works; the plan then says `db migrate --remote` runs
 without listing what it applies, which is safe because applying a migration twice skips it.
@@ -109,10 +108,9 @@ A failed step stops the run, and the message says what production runs now:
 | migrations       | nothing deployed; the migrations before the failure may be applied   |
 | deploy           | the previous version, on the new schema when migrations were applied |
 
-<note>
-A failed deploy after applied migrations leaves the previous version serving the new schema. The
-failure names the migrations it applied, so you know which schema that version is reading.
-</note>
+> [!NOTE]
+> A failed deploy after applied migrations leaves the previous version serving the new schema. The
+> failure names the migrations it applied, so you know which schema that version is reading.
 
 Fix the cause and run `sdxc deploy` again: the migrations already applied are no longer
 pending, so the second run applies only the rest.

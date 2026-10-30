@@ -189,20 +189,18 @@ DROP TABLE "posts";
 ALTER TABLE "__sdxc_new_posts" RENAME TO "posts";
 ```
 
-<warning>
-A table another table references with `ON DELETE CASCADE`, `SET NULL`, `SET DEFAULT` or
-`RESTRICT` is refused, naming the references: on D1 the rebuild's `DROP TABLE` would delete or
-change those rows. Write that migration by hand.
-</warning>
+> [!WARNING]
+> A table another table references with `ON DELETE CASCADE`, `SET NULL`, `SET DEFAULT` or
+> `RESTRICT` is refused, naming the references: on D1 the rebuild's `DROP TABLE` would delete or
+> change those rows. Write that migration by hand.
 
 ### Warnings
 
 Every warning prints on screen and stays in the file as a SQL comment, for whoever reviews it.
 
-<warning>
-Read each warning before you apply the migration. A dropped column's data is gone once
-production applies it, and the way back is a new migration that adds the column again, empty.
-</warning>
+> [!WARNING]
+> Read each warning before you apply the migration. A dropped column's data is gone once
+> production applies it, and the way back is a new migration that adds the column again, empty.
 
 - **Dropped columns.** A column the model no longer has is dropped with its data.
 - **Renames.** A model carries no history, so a renamed column reads as one column dropped and

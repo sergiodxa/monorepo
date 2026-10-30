@@ -151,10 +151,9 @@ let tag = unwrap(await etag(body));
 let port = unwrap(parsePort(input), () => 3000);
 ```
 
-<warning>
-`unwrap` without a fallback rethrows the failure's error. In a request path that turns bad
-input into a 500, so branch with `isFailure` there and keep `unwrap` for tests and startup.
-</warning>
+> [!WARNING]
+> `unwrap` without a fallback rethrows the failure's error. In a request path that turns bad
+> input into a 500, so branch with `isFailure` there and keep `unwrap` for tests and startup.
 
 ## Errors carry position
 

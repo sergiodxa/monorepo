@@ -53,11 +53,10 @@ feature flags are OpenFeature,
 feeds are Atom and JSON Feed as published,
 and sitemaps are the sitemaps protocol.
 
-<note kind="info">
-A spec's field names are the spec's. They live in the serialized document and nowhere else: the
-package's own surface is camelCase, like everything you already write, and the translation happens
-where the bytes are read and written.
-</note>
+> [!NOTE]
+> A spec's field names are the spec's. They live in the serialized document and nowhere else: the
+> package's own surface is camelCase, like everything you already write, and the translation happens
+> where the bytes are read and written.
 
 </section-block>
 

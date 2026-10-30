@@ -53,11 +53,10 @@ export default jobs({
 });
 ```
 
-<note>
-A job's `input` is parsed when the message is consumed, and a message that no longer matches the
-schema is refused with `invalid-input` before the handler runs. Change a job's schema in a way
-the messages already on the queue still satisfy, or drain the queue first.
-</note>
+> [!NOTE]
+> A job's `input` is parsed when the message is consumed, and a message that no longer matches the
+> schema is refused with `invalid-input` before the handler runs. Change a job's schema in a way
+> the messages already on the queue still satisfy, or drain the queue first.
 
 `remix/data-schema` is the schema library this collection's own code uses, and any library
 implementing the interface, such as Valibot or ArkType, works in exactly the same call.
@@ -101,11 +100,10 @@ export default createAction(routes.teams.create, async (ctx) => {
 A `Request` is read according to its `Content-Type`, so one call covers JSON, a urlencoded form
 and a multipart submission.
 
-<note>
-A `FormData` flattens before it is checked: a name submitted once becomes a value, and a name
-submitted more than once becomes an array. Write a field that may repeat, such as a group of
-checkboxes, as an array in the schema.
-</note>
+> [!NOTE]
+> A `FormData` flattens before it is checked: a name submitted once becomes a value, and a name
+> submitted more than once becomes an array. Write a field that may repeat, such as a group of
+> checkboxes, as an array in the schema.
 
 ## Read the issues on a failure
 

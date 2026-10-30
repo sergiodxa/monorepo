@@ -160,10 +160,9 @@ its bindings from a `wrangler.jsonc`, so a project that configures its Worker in
 `@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your `tsconfig.json` so
 `cloudflare:test` type-checks.
 
-<warning>
-`remoteBindings: false` keeps a binding declared with `remote: true` from opening a session
-against your real account.
-</warning>
+> [!WARNING]
+> `remoteBindings: false` keeps a binding declared with `remote: true` from opening a session
+> against your real account.
 
 A file named `*.workers.test.ts` runs inside workerd, and its `env` holds the bindings your
 Wrangler config declares, implemented by Cloudflare's own code:

@@ -63,11 +63,10 @@ isFailure(missing); // true
 `set` returns a new tree, and the empty pointer replaces the document. `undefined` has no
 JSON form, so setting it fails.
 
-<note>
-`set` assigns at an existing parent: every token before the last must already resolve, so
-`set({}, "/a/b", 1)` fails. Write the missing parents first, one `set` per level, when a path
-may not exist yet.
-</note>
+> [!NOTE]
+> `set` assigns at an existing parent: every token before the last must already resolve, so
+> `set({}, "/a/b", 1)` fails. Write the missing parents first, one `set` per level, when a path
+> may not exist yet.
 
 ```typescript {% title="app/services/write-field.ts" %}
 import { set } from "@sdxc/json-pointer";

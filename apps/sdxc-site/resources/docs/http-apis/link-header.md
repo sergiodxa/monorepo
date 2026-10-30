@@ -43,11 +43,10 @@ links.find((link) => link.rels.includes("next"))?.target; // "/items?page=2"
 `rels` is the `rel` parameter, lowercased and split on whitespace, and `params` holds every
 other parameter, unquoted.
 
-<note>
-Relative targets stay relative, and `fetch` in a Worker needs an absolute URL. Resolve each
-target against the response it came from, `new URL(target, response.url)`, before you follow
-it.
-</note>
+> [!NOTE]
+> Relative targets stay relative, and `fetch` in a Worker needs an absolute URL. Resolve each
+> target against the response it came from, `new URL(target, response.url)`, before you follow
+> it.
 
 ## Write a header
 

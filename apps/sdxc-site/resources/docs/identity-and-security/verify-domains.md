@@ -168,11 +168,10 @@ now, then backs off to every fifteen minutes; a resolver can keep a "no such nam
 the zone's negative-caching TTL. A failed lookup is retried as an unknown, never read as "not
 published". A match marks the row and hands over to the next job.
 
-<note>
-The queue consumer's `max_retries` bounds how long the job keeps trying, so set it to cover the
-window you promise customers, and give the settings page a "Check again" button that enqueues
-the job afresh once it gives up.
-</note>
+> [!NOTE]
+> The queue consumer's `max_retries` bounds how long the job keeps trying, so set it to cover the
+> window you promise customers, and give the settings page a "Check again" button that enqueues
+> the job afresh once it gives up.
 
 ## Register the proven domain
 
@@ -279,10 +278,9 @@ export default createAction(routes.domains.destroy, async (ctx) => {
 });
 ```
 
-<warning>
-Look the domain up with `findForAccount`, scoped to the signed-in account. A lookup by id alone
-lets one customer remove another's domain by guessing its id.
-</warning>
+> [!WARNING]
+> Look the domain up with `findForAccount`, scoped to the signed-in account. A lookup by id alone
+> lets one customer remove another's domain by guessing its id.
 
 ## Test the verify job
 

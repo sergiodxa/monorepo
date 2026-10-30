@@ -80,11 +80,10 @@ export default createAction(routes.agenda.create, async (ctx) => {
 
 A failure carries `issues`, each a `path` and a `message`.
 
-<warning>
-The iCalendar feed converts every entry at once, and one that iCalendar cannot express, such as
-a rule with a non-Gregorian `rscale`, fails the whole conversion. Checking `toICalendar` on write
-keeps such an entry out, so the feed always converts.
-</warning>
+> [!WARNING]
+> The iCalendar feed converts every entry at once, and one that iCalendar cannot express, such as
+> a rule with a non-Gregorian `rscale`, fails the whole conversion. Checking `toICalendar` on write
+> keeps such an entry out, so the feed always converts.
 
 `Entries` is your own model. Store `stringify(entry)` from `@sdxc/jscalendar` in a text column
 keyed by `uid` and read it back through `parse`, so a row is the same object that came in.
@@ -145,11 +144,10 @@ Each occurrence is `{ recurrenceId, start, end, object }`, with `start` and `end
 milliseconds and `object` the instance with its override applied. `timeZone` is the zone an
 entry without its own is read in: pass the viewer's.
 
-<note>
-One call returns at most `limit` occurrences, `1_000` by default, earliest first. A rule with an
-`rscale` other than Gregorian, a leap month, or a `skip` other than `omit` fails with a
-`RecurrenceError` rather than producing the wrong dates.
-</note>
+> [!NOTE]
+> One call returns at most `limit` occurrences, `1_000` by default, earliest first. A rule with an
+> `rscale` other than Gregorian, a leap month, or a `skip` other than `omit` fails with a
+> `RecurrenceError` rather than producing the wrong dates.
 
 ## Edit an entry with a PatchObject
 
@@ -212,10 +210,9 @@ A single occurrence is edited through `recurrenceOverrides`, keyed by the `recur
 expansion reported. `{ "recurrenceOverrides/2026-03-30T09:30:00": { "excluded": true } }`
 cancels that Monday, and `{ "start": "2026-03-30T11:00:00" }` in its place moves it.
 
-<note>
-A pointer must land in an existing parent, so for an event's first override send the map whole:
-`{ "recurrenceOverrides": { "2026-03-30T09:30:00": { "excluded": true } } }`.
-</note>
+> [!NOTE]
+> A pointer must land in an existing parent, so for an event's first override send the map whole:
+> `{ "recurrenceOverrides": { "2026-03-30T09:30:00": { "excluded": true } } }`.
 
 ## Publish and import iCalendar
 

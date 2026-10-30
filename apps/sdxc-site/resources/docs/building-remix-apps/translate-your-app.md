@@ -64,10 +64,9 @@ The `i18n` middleware detects the request's language and publishes `ctx.locale` 
 `ctx.intl`. The `logger` is the one from
 [Wire the router](/docs/building-remix-apps/wire-the-router).
 
-<note>
-Put `i18n` after `log()`. A message that fails to format is recorded as an `i18n.error`
-warning on the request's log, so the log has to exist before the translator runs.
-</note>
+> [!NOTE]
+> Put `i18n` after `log()`. A message that fails to format is recorded as an `i18n.error`
+> warning on the request's log, so the log has to exist before the translator runs.
 
 ```typescript {% title="app/initializers/router.tsx" %}
 import i18n from "@sdxc/i18n/middleware";
@@ -214,10 +213,9 @@ export function welcomeEmail(input: { locale: string; name: string }) {
 }
 ```
 
-<note>
-A language you do not ship resolves to the fallback, so record the `locale` the translator
-returns, not the one you asked for.
-</note>
+> [!NOTE]
+> A language you do not ship resolves to the fallback, so record the `locale` the translator
+> returns, not the one you asked for.
 
 Store the request's `ctx.locale` in the job's input when you enqueue it. For hydrated islands,
 call `setIntl(translate(document.documentElement.lang).intl)`, with `setIntl` from

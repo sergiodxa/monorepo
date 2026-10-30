@@ -25,11 +25,10 @@ sdxc init
 `sdxc` reads `.config/sdxc.jsonc` in the project root, the nearest folder with a
 `package.json`. `sdxc.jsonc` at the root works too, if you prefer it there.
 
-<note>
-A project holding both files is refused until you delete one, so two copies never disagree.
-`sdxc init` leaves an existing file as it is, and `--dry-run` prints the file instead of
-writing it.
-</note>
+> [!NOTE]
+> A project holding both files is refused until you delete one, so two copies never disagree.
+> `sdxc init` leaves an existing file as it is, and `--dry-run` prints the file instead of
+> writing it.
 
 The file is JSON with comments and trailing commas, so each setting can say why it is set. Its
 `$schema` points at `config.schema.json` in `@sdxc/kit`, and your editor completes and checks
@@ -164,11 +163,10 @@ The file where the CLI keeps its state, one JSON record per line, such as each `
 with the release it came from and a hash of each of its files. `sdxc ui` reads it to tell an
 edited copy from an untouched one.
 
-<warning>
-Commit the lock file and leave its contents to the CLI. It is the only record of which release
-each copy came from and whether you have edited it, so `sdxc ui diff` and `sdxc ui update` read
-it on every run.
-</warning>
+> [!WARNING]
+> Commit the lock file and leave its contents to the CLI. It is the only record of which release
+> each copy came from and whether you have edited it, so `sdxc ui diff` and `sdxc ui update` read
+> it on every run.
 
 ## What to commit
 

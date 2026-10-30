@@ -131,10 +131,9 @@ sdxc run emails preview teams.invite --html
 `--pending` works with `--remote` too, and that pair is how
 [`sdxc deploy`](/docs/sdxc/deploy) lists what production lacks before it asks.
 
-<warning>
-`db migrate --remote` changes production on its own. Ship a migration with `sdxc deploy`
-instead, which applies it right before the code that needs it and after one look at the plan.
-</warning>
+> [!WARNING]
+> `db migrate --remote` changes production on its own. Ship a migration with `sdxc deploy`
+> instead, which applies it right before the code that needs it and after one look at the plan.
 
 ## Add your own
 

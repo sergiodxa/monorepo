@@ -70,11 +70,10 @@ export async function describeDomain(name: string) {
 }
 ```
 
-<warning>
-Pass the registration, `example.co.uk` and never `www.example.co.uk`. A registry holds records
-for the names registered with it, so a name below one answers `not-found`. An app that already
-knows a zone's apex, from a custom-domain setup or an imported zone file, has the right name.
-</warning>
+> [!WARNING]
+> Pass the registration, `example.co.uk` and never `www.example.co.uk`. A registry holds records
+> for the names registered with it, so a name below one answers `not-found`. An app that already
+> knows a zone's apex, from a custom-domain setup or an imported zone file, has the right name.
 
 Dates arrive as epoch milliseconds, `null` when the registry publishes none; some ccTLD
 registries publish no expiry at all, so plan for a date that stays unknown. `status` holds EPP
@@ -211,10 +210,9 @@ alerted beside the domain and skip a second alert on it.
 
 ## Sweep on a schedule
 
-<warning>
-Registries rate-limit without documenting the limits, and a sweep that sends a hundred `.com`
-lookups at once finds Verisign's.
-</warning>
+> [!WARNING]
+> Registries rate-limit without documenting the limits, and a sweep that sends a hundred `.com`
+> lookups at once finds Verisign's.
 
 The sweep groups its domains by registry with `rdap.server`, which costs no extra requests, and
 runs each group two at a time. Declare the job with an hourly trigger: each domain is looked up

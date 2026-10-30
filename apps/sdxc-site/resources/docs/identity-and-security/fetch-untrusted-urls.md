@@ -190,13 +190,12 @@ let followed = await follow(input, {
 The lookup's time counts against `timeout`, and a resolver that could not answer fails
 `network`, which is retryable.
 
-<warning>
-A Worker connects to a name, and the addresses that were checked stay with the check. A name
-that answers with a public address to the check and a private one to the connection still gets
-through: DNS checks narrow rebinding and leave it open. What holds regardless is architecture:
-a Worker that reaches its storage and its other services through bindings rather than URLs has
-nothing private for an escaped request to reach.
-</warning>
+> [!WARNING]
+> A Worker connects to a name, and the addresses that were checked stay with the check. A name
+> that answers with a public address to the check and a private one to the connection still gets
+> through: DNS checks narrow rebinding and leave it open. What holds regardless is architecture:
+> a Worker that reaches its storage and its other services through bindings rather than URLs has
+> nothing private for an escaped request to reach.
 
 ## Cap a body that did not come from fetch
 
