@@ -1,7 +1,7 @@
 /**
  * Tabs that reveal one media panel at a time, as a row of pills over the stage or as a
- * rail of steps beside a sticky stage. Selection is a radio group styled with CSS, so the
- * stage works with JavaScript disabled; labels, icons, and panels stay on the page.
+ * rail of steps beside a sticky stage. Selection is a radio group styled with CSS, and every
+ * panel shares one stage cell, so the stage keeps its height on every tab without JavaScript.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,6 @@ import { rounded, transition } from "@sdxc/u/effects";
 import { combine, cursor, pseudoContent, raw } from "@sdxc/u/general";
 import {
 	absolute,
-	basis,
 	center,
 	container,
 	flex,
@@ -44,6 +43,12 @@ const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%
 
 /** Fill of the selected pill and of an idle rail marker. */
 const SURFACE_RAISED = "var(--ui-surface-raised, Canvas)";
+
+/** Space between neighbouring pills; panels pull back by it to share one flex line. */
+const PILL_GAP = "calc(var(--ui-spacing, 0.25rem) * 6)";
+
+/** Space between the pill row and the stage. */
+const PILL_ROW_GAP = "calc(var(--ui-spacing, 0.25rem) * 2)";
 
 /** Space between the rail and an item's copy. */
 const RAIL_INSET = "1.5rem";
@@ -136,7 +141,7 @@ function countItems(children: unknown): number {
 /**
  * Host for tabs and their panels. Nest {@link TabbedStage.Item} children; each item
  * pairs a tab with the media it reveals. A vertical stage wraps itself in a named
- * container so the rail and stage sit side by side only where there is room.
+ * container so the rail and stage sit side by side where there is room, and stack below.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing
  * {@link TabbedStage.Context}.
@@ -169,7 +174,13 @@ export function TabbedStage(handle: Handle<TabbedStage.Props, TabbedStage.Contex
 					data-slot="tabbed-stage"
 					data-name={name}
 					data-orientation={resolvedOrientation}
-					mix={[flex(), flexWrap("wrap"), justify("center"), gap(2, 6), mix]}
+					mix={[
+						flex(),
+						flexWrap("wrap"),
+						justify("center"),
+						raw({ rowGap: PILL_ROW_GAP, columnGap: PILL_GAP }),
+						mix,
+					]}
 				>
 					{children}
 				</div>
@@ -188,7 +199,11 @@ export function TabbedStage(handle: Handle<TabbedStage.Props, TabbedStage.Contex
 					data-orientation={resolvedOrientation}
 					mix={[
 						combine([
-							raw({ display: "flex", flexDirection: "column" }),
+							raw({
+								display: "grid",
+								gridTemplateColumns: "minmax(0, 1fr)",
+								gridTemplateRows: `repeat(${rows}, min-content) auto`,
+							}),
 							at(
 								"lg",
 								STAGE_CONTAINER,
@@ -285,31 +300,36 @@ function railTab() {
 }
 
 /**
- * Panel for a horizontal stage: the full stage width, shown while its radio is checked.
+ * Panel for a horizontal stage. Each panel after the first pulls back over the first by its
+ * width plus the pill gap, so every panel shares the line under the pills and the stage takes
+ * the tallest one's height; unselected panels stay hidden from sight, focus and the a11y tree.
  */
 function pillPanel() {
 	return combine([
-		basis("100%"),
-		raw({ display: "none", overflow: "hidden" }),
+		raw({ flex: "0 0 100%", overflow: "hidden", visibility: "hidden" }),
 		rounded("xl"),
-		precededBy("input:checked", raw({ display: "block" })),
+		when(
+			'[data-slot="tabbed-stage-item"] ~ [data-slot="tabbed-stage-item"] > &',
+			raw({ marginInlineStart: `calc(-100% - ${PILL_GAP})` }),
+		),
+		precededBy("input:checked", raw({ visibility: "visible" })),
 	]);
 }
 
 /**
- * Panel for a vertical stage. Below `lg` it sits under its item on the continued rail;
- * from `lg` up it fills the stage column across every rail row and sticks under the
- * marketing header while the rail scrolls past.
+ * Panel for a vertical stage. Every panel shares one grid cell sized to the tallest: under the
+ * rail below `lg`, and from `lg` up in the stage column, sticky under the marketing header.
+ * Unselected panels stay hidden from sight, focus and assistive technology.
  */
 function railPanel() {
 	return combine([
 		raw({
-			display: "none",
-			paddingBlock: "0.25rem 1.5rem",
-			paddingInlineStart: RAIL_INSET,
-			borderInlineStart: `1px solid ${HAIRLINE}`,
+			gridColumn: "1",
+			gridRow: "-2 / -1",
+			visibility: "hidden",
+			paddingBlockStart: "1.5rem",
 		}),
-		precededBy("input:checked", raw({ display: "block" })),
+		precededBy("input:checked", raw({ visibility: "visible" })),
 		at(
 			"lg",
 			STAGE_CONTAINER,
@@ -319,9 +339,7 @@ function railPanel() {
 				alignSelf: "start",
 				position: "sticky",
 				insetBlockStart: "calc(var(--ui-marketing-header-height, 4rem) + 2rem)",
-				paddingBlock: "0",
-				paddingInlineStart: "0",
-				borderInlineStart: "none",
+				paddingBlockStart: "0",
 			}),
 		),
 	]);
