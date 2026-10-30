@@ -13,7 +13,16 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { m, maxIs } from "@sdxc/u/size";
-import { balance, font, leading, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import {
+	balance,
+	font,
+	leading,
+	overflowWrap,
+	text,
+	textTransform,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 
 namespace PageTitle {
 	export interface Props {
@@ -27,13 +36,17 @@ namespace PageTitle {
 	}
 }
 
-/** Renders the label, the title and the lead. */
+/**
+ * Renders the label, the title and the lead, each as wide as the column, so text with no
+ * break point (a long package name, inline code in the lead) breaks inside it. A monospace
+ * title starts a step smaller on a phone.
+ */
 export default function PageTitle(handle: Handle<PageTitle.Props>) {
 	return () => {
 		let { children, eyebrow, mono = false, title } = handle.props;
 
 		return (
-			<div mix={[vstack({ gap: 4, align: "start" }), maxIs("48rem")]}>
+			<div mix={[vstack({ gap: 4, align: "stretch" }), maxIs("48rem"), overflowWrap("break-word")]}>
 				{eyebrow ? (
 					<p
 						mix={[
@@ -57,7 +70,7 @@ export default function PageTitle(handle: Handle<PageTitle.Props>) {
 						weight("medium"),
 						leading(1.05),
 						balance(),
-						text("4xl"),
+						text(mono ? "3xl" : "4xl"),
 						media("(min-width: 48rem)", text("5xl")),
 					]}
 				>

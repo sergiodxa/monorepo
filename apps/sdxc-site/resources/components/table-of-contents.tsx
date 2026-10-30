@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { ChevronDownIcon, ListIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { rounded, transition } from "@sdxc/u/effects";
+import { rounded, transition, transitionDuration } from "@sdxc/u/effects";
 import { listStyle, pseudoContent, raw } from "@sdxc/u/general";
 import {
 	absolute,
@@ -49,8 +49,8 @@ const BASE_LEVEL = 2;
 /** How far one extra heading depth sets an item in, in rem. */
 const INDENT_STEP = 0.75;
 
-/** The width the bar's gutter widens at, matching the docs header's own. */
-const GUTTER_BREAKPOINT = "(min-width: 48rem)";
+/** The width the bar's gutter widens at, matching the prose under it so their text aligns. */
+const GUTTER_BREAKPOINT = "(min-width: 60rem)";
 
 /** Props must be a `type` rather than an `interface` to satisfy `SerializableProps`. */
 type TableOfContentsProps = {
@@ -229,6 +229,7 @@ export const TableOfContents = clientEntry(
 									shrink(0),
 									mis("auto"),
 									transition("transform"),
+									media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
 									when("[open] > summary > &", rotate(180)),
 								]}
 							/>

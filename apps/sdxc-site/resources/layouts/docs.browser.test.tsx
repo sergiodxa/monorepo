@@ -69,8 +69,9 @@ afterEach(async () => {
 });
 
 /**
- * Mounts a component page as `/api/ui/*` draws it: a long trail, an in-page rail, and a
- * scrolling preview wider than the prose, which is what pushed the rail off the page.
+ * Mounts a component page as `/api/ui/*` draws it: a long trail, an in-page rail, a scrolling
+ * preview wider than the prose, and inline code with no break point, each of which once
+ * pushed the page wider than the screen.
  */
 function mountComponentPage() {
 	mounted = render(
@@ -85,6 +86,11 @@ function mountComponentPage() {
 			anchors={ANCHORS}
 		>
 			<h1>Bento</h1>
+			<p>
+				Configure it with{" "}
+				<code>serviceProviderConfig(options:Discovery.ServiceProviderConfigOptions)</code>, a name
+				longer than a phone is wide.
+			</p>
 			{ANCHORS.map((anchor) => (
 				<h2 key={anchor.id} id={anchor.id} style={{ marginBlock: "40rem" }}>
 					{anchor.text}
@@ -142,17 +148,24 @@ describe("DocsLayout", () => {
 		expect(bar().getBoundingClientRect().height).toBe(0);
 	});
 
-	test.each(BAR_WIDTHS)("folds the headings into a bar on a %ipx screen", async (width) => {
-		await page.viewport(width, 900);
-		mountComponentPage();
+	test.each(BAR_WIDTHS)(
+		"folds the headings into a bar aligned with the prose on a %ipx screen",
+		async (width) => {
+			await page.viewport(width, 900);
+			mountComponentPage();
 
-		let box = bar().getBoundingClientRect();
+			let box = bar().getBoundingClientRect();
 
-		expect(visibleOutline()).toBeUndefined();
-		expect(box.height).toBeGreaterThanOrEqual(44);
-		expect(box.left).toBeGreaterThanOrEqual(0);
-		expect(box.right).toBeLessThanOrEqual(window.innerWidth);
-	});
+			expect(visibleOutline()).toBeUndefined();
+			expect(box.height).toBeGreaterThanOrEqual(44);
+			expect(box.left).toBeGreaterThanOrEqual(0);
+			expect(box.right).toBeLessThanOrEqual(window.innerWidth);
+			expect(bar().querySelector("summary svg")!.getBoundingClientRect().left).toBeCloseTo(
+				mounted!.$("main")!.getBoundingClientRect().left,
+				0,
+			);
+		},
+	);
 
 	test("keeps the bar at the top of the screen while the page scrolls", async () => {
 		await page.viewport(375, 900);

@@ -28,7 +28,7 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, minIs, mis, p, pbe } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { before, when } from "@sdxc/u/state";
-import { text, tracking, weight } from "@sdxc/u/typography";
+import { overflowWrap, text, tracking, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
 
 import type { Anchor } from "~/app/services/article";
@@ -249,6 +249,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							mix={[
 								is("100%"),
 								maxIs("48rem"),
+								overflowWrap("break-word"),
 								media(ASIDE_BREAKPOINT, [raw({ flex: "1 1 0" }), minIs(0)]),
 							]}
 						>
