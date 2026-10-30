@@ -88,6 +88,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		health: false,
 		schemas: false,
 		robots: false,
+		demo: false,
 	});
 
 	return await withBundleCache(ctx.request, xml(sitemap.toString()));

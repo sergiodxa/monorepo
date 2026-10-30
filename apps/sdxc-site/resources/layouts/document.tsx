@@ -60,6 +60,10 @@ namespace DocumentLayout {
 		 * page renders itself from. A page carrying no such strip leaves it out.
 		 */
 		selections?: OptionSelections;
+		/** The `robots` meta directive, for a page search engines should leave out of results. */
+		robots?: string;
+		/** Whether the site footer closes the page; a page carrying its own footer turns it off. */
+		siteFooter?: boolean;
 	}
 }
 
@@ -70,7 +74,8 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, canonical, children, description, og, selections, title } = handle.props;
+		let { assets, canonical, children, description, og, robots, selections, siteFooter, title } =
+			handle.props;
 		let { script, stylesheets } = assets;
 		let canonicalUrl = seo.canonical(canonical ?? SITE_URL);
 		let card = canonical
@@ -114,6 +119,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						canonical={canonicalUrl}
 						site={seo.site}
 						og={{ ...card, ...og }}
+						robots={robots}
 					/>
 					<ImportMap value={script.importMap} />
 					{script.preloads.map((href) => (
@@ -123,7 +129,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<body mix={[m(0), vstack({ align: "center" }), minBs("100dvh"), font("sans"), bg(), fg()]}>
 					<OptionGroupScope selections={selections}>
 						{children}
-						<SiteFooter />
+						{siteFooter === false ? null : <SiteFooter />}
 					</OptionGroupScope>
 					<script type="module" async src={script.href}></script>
 					<script

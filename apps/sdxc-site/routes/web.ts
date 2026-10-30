@@ -134,4 +134,9 @@ export default route({
 	},
 	/** The crawl rules and AI usage preferences, served as robots.txt. */
 	robots: get("/robots.txt"),
+	/**
+	 * A complete sample landing built from `@sdxc/ui`'s marketing parts, kept out of search
+	 * engines: each one invents its product, so none of it is a page about sdxc.
+	 */
+	demo: get("/demo/:slug"),
 });

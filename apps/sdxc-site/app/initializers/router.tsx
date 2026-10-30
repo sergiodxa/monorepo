@@ -247,6 +247,10 @@ export function createWebRouter() {
 		routes.robots,
 		lazy(() => import("~/app/http/controllers/robots")),
 	);
+	router.map(
+		routes.demo,
+		lazy(() => import("~/app/http/controllers/demo")),
+	);
 
 	return router;
 }
