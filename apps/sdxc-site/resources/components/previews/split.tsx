@@ -1,17 +1,27 @@
 /**
- * Live preview for `Split`: claims with brand checks on the wide track and a staged incident
- * card beside them. The columns stack once the split's own width is too narrow for two.
+ * Live preview for `Split`: claims with brand checks on the wide track and a framed incident
+ * timeline beside them that bleeds past the measure. The columns stack, and the bleed stops,
+ * once the split's own width is too narrow for two.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
-import { vstack } from "@sdxc/u/layout";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { hstack, vstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
 import { Badge, Split } from "@sdxc/ui";
+import { ProductFrame } from "@sdxc/ui/patterns";
+
+/** The incident timeline the framed media lists, oldest first. */
+const TIMELINE = [
+	{ time: "14:02", event: "Latency above 800 ms p95 from fra and ams" },
+	{ time: "14:03", event: "Paged Dana Ruiz (primary on-call)" },
+	{ time: "14:05", event: "Acknowledged · status page set to Investigating" },
+	{ time: "14:19", event: "Rolled back api@4.18.2 in eu-west" },
+] as const;
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Split lean="copy">
@@ -23,12 +33,10 @@ const CODE = `<Split lean="copy">
 			<li>One link to share with customers</li>
 		</ul>
 	</Split.Copy>
-	<Split.Media>
-		<div mix={[vstack({ gap: 3, align: "stretch" }), p(5), rounded("lg"), bg("neutral.tint")]}>
-			<Badge color="warning" variant="secondary">Investigating</Badge>
-			<span>Elevated API latency in eu-west</span>
-			<span>14:02 UTC · 2 responders</span>
-		</div>
+	<Split.Media bleed="end">
+		<ProductFrame lights title="Elevated API latency in eu-west">
+			{timeline}
+		</ProductFrame>
 	</Split.Media>
 </Split>`;
 
@@ -36,7 +44,7 @@ const CODE = `<Split lean="copy">
 export default {
 	code: CODE,
 	render: () => (
-		<div mix={[is("full")]}>
+		<div mix={[is("full"), raw({ overflowX: "clip" })]}>
 			<Split lean="copy">
 				<Split.Copy checks>
 					<p mix={[m(0), text("base"), fg("neutral")]}>
@@ -48,27 +56,31 @@ export default {
 						<li>One link to share with customers</li>
 					</ul>
 				</Split.Copy>
-				<Split.Media>
-					<div
-						mix={[
-							vstack({ gap: 3, align: "stretch" }),
-							p(5),
-							rounded("lg"),
-							bg("neutral.tint"),
-							border({ color: "neutral", width: 1 }),
-							shadow("sm"),
-						]}
-					>
-						<Badge color="warning" variant="secondary">
-							Investigating
-						</Badge>
-						<span mix={[text("base"), weight("semibold"), fg("neutral.emphasis")]}>
-							Elevated API latency in eu-west
-						</span>
-						<span mix={[font("mono"), text("xs"), fg("neutral.muted")]}>
-							14:02 UTC · 2 responders
-						</span>
-					</div>
+				<Split.Media bleed="end">
+					<ProductFrame lights title="Elevated API latency in eu-west">
+						<div mix={[vstack({ gap: 3, align: "stretch" }), p(5)]}>
+							<span>
+								<Badge color="warning" variant="secondary">
+									Investigating
+								</Badge>
+							</span>
+							<ol
+								mix={[
+									vstack({ gap: 2, align: "stretch" }),
+									raw({ listStyle: "none", margin: "0", padding: "0" }),
+								]}
+							>
+								{TIMELINE.map((entry) => (
+									<li mix={[hstack({ gap: 3, align: "baseline" })]}>
+										<span mix={[font("mono"), text("xs"), fg("neutral.muted")]}>{entry.time}</span>
+										<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+											{entry.event}
+										</span>
+									</li>
+								))}
+							</ol>
+						</div>
+					</ProductFrame>
 				</Split.Media>
 			</Split>
 		</div>

@@ -11,6 +11,7 @@ import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
 import { CtaGroup, LinkButton } from "@sdxc/ui";
+import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -36,23 +37,28 @@ namespace Actions {
 export default function Actions(handle: Handle<Actions.Props>) {
 	return () => {
 		let props = handle.props;
-		let size = props.size ?? "lg";
+		let isMain = (props.size ?? "lg") === "lg";
 		let hasAlternate = Boolean(props["alt-href"] && props["alt-label"]);
 
 		return (
-			<CtaGroup data-slot="actions">
+			<CtaGroup data-slot="actions" size={isMain ? "md" : "sm"} stack={isMain ? "phone" : "never"}>
 				<LinkButton
 					href={props["cta-href"]}
-					size={size}
-					color={size === "lg" ? "brand" : "neutral"}
-					variant={size === "lg" ? "solid" : "outline"}
+					color={isMain ? "brand" : "neutral"}
+					variant={isMain ? "solid" : "outline"}
+					mix={[isMain ? marketingCtaChrome() : []]}
 				>
 					{props["cta-label"]}
 					<Arrow href={props["cta-href"]} />
 				</LinkButton>
 
 				{hasAlternate ? (
-					<LinkButton href={props["alt-href"]} size={size} color="neutral" variant="outline">
+					<LinkButton
+						href={props["alt-href"]}
+						color="neutral"
+						variant={isMain ? "surface" : "outline"}
+						mix={[isMain ? marketingCtaChrome() : []]}
+					>
 						{props["alt-label"]}
 						{isExternal(props["alt-href"] ?? "") ? <Arrow href={props["alt-href"] ?? ""} /> : null}
 					</LinkButton>

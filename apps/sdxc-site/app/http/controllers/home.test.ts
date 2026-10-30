@@ -19,7 +19,7 @@ describe("GET /", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("<!DOCTYPE html>");
-		expect(body).toMatch(/<h1[^>]*>sdxc<\/h1>/);
+		expect(body).toMatch(/<h1[^>]*>Remix on Workers, one package at a time<\/h1>/);
 		expect(body).toContain("Take one, or take the set.");
 	});
 

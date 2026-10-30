@@ -6,18 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { GlobeIcon, RocketIcon, ShieldCheckIcon } from "@sdxc/icons";
-import { hstack } from "@sdxc/u/layout";
-import { text, weight } from "@sdxc/u/typography";
 import { HeadingScope, LogoCloud, StatStrip } from "@sdxc/ui";
 import { ProofStrip } from "@sdxc/ui/patterns";
 
-/** The adopters the band shows, each a wordmark beside its glyph. */
-const MARKS = [
-	["Launchpad", RocketIcon],
-	["Northwind", GlobeIcon],
-	["Keystone", ShieldCheckIcon],
-] as const;
+import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 
 /** What the guide demo registry reads: the band, drawn at a page's width. */
 export default {
@@ -25,14 +17,9 @@ export default {
 	render: () => (
 		<HeadingScope>
 			<ProofStrip>
-				<LogoCloud muted>
-					{MARKS.map(([name, Icon]) => (
-						<span
-							key={name}
-							mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}
-						>
-							<Icon /> {name}
-						</span>
+				<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
+					{WORDMARKS.map((mark) => (
+						<Wordmark key={mark.name} name={mark.name} glyph={mark.glyph} />
 					))}
 				</LogoCloud>
 				<StatStrip>

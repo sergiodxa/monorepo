@@ -2,7 +2,7 @@
 <split lean="copy">
 <split-copy>
 
-# sdxc
+# Remix on Workers, one package at a time
 
 Take one, or take the set. There are {% $packageCount %} of them, written for Remix on
 Cloudflare Workers: `Request` and `Response` in, typed values out.

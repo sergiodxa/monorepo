@@ -1,7 +1,7 @@
 /**
- * Live preview for `ClosingCta`: the inverse band a landing ends on, with a centered
- * title, a lead and the two actions. A band is a page-width surface, so it meets the
- * frame's edges.
+ * Live preview for `ClosingCta`: the default inverse band a landing ends on, then the same
+ * close as a brand panel inset from the page edges. A band is a page-width surface, so
+ * both meet the frame's edges.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,20 +14,31 @@ import { marketingCtaChrome } from "@sdxc/ui/styles";
 /** The source the page shows, matching the markup below. */
 const CODE = `<ClosingCta
 	title="Start watching your endpoints today"
-	description="Five monitors free, forever. Upgrade when the pager needs more."
+	description={
+		<>
+			Five monitors and a status page, <strong>free for as long as you need them</strong>.
+		</>
+	}
 	actions={
 		<>
-			<Button size="lg" color="brand" mix={[marketingCtaChrome()]}>
-				Create an account
-			</Button>
-			<LinkButton href="/examples/pricing" size="lg" color="neutral" variant="outline">
-				Talk to sales
+			<Button color="brand" mix={[marketingCtaChrome()]}>Create an account</Button>
+			<LinkButton href="/examples/sales" variant="surface" mix={[marketingCtaChrome()]}>
+				Talk to us
 			</LinkButton>
 		</>
 	}
+/>
+
+<ClosingCta
+	tone="brand"
+	inset
+	eyebrow="Ready when you are"
+	title="Your next outage is already scheduled"
+	description="…"
+	actions={…}
 />`;
 
-/** What the preview registry reads: the source to show, and the markup to draw. */
+/** What the preview registry reads: the source to show, and the bands to draw. */
 export default {
 	code: CODE,
 	viewports: true,
@@ -35,14 +46,39 @@ export default {
 		<HeadingScope>
 			<ClosingCta
 				title="Start watching your endpoints today"
-				description="Five monitors free, forever. Upgrade when the pager needs more."
+				description={
+					<>
+						Five monitors and a status page, <strong>free for as long as you need them</strong>.
+					</>
+				}
 				actions={
 					<>
-						<Button size="lg" color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[marketingCtaChrome()]}>
 							Create an account
 						</Button>
-						<LinkButton href="/examples/pricing" size="lg" color="neutral" variant="outline">
-							Talk to sales
+						<LinkButton href="/examples/sales" variant="surface" mix={[marketingCtaChrome()]}>
+							Talk to us
+						</LinkButton>
+					</>
+				}
+			/>
+			<ClosingCta
+				tone="brand"
+				inset
+				eyebrow="Ready when you are"
+				title="Your next outage is already scheduled"
+				description={
+					<>
+						Find out from a probe, not a customer. Setup takes <strong>under five minutes</strong>.
+					</>
+				}
+				actions={
+					<>
+						<Button color="neutral" mix={[marketingCtaChrome()]}>
+							Start monitoring
+						</Button>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+							Compare plans
 						</LinkButton>
 					</>
 				}

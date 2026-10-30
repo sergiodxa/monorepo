@@ -8,12 +8,10 @@
  */
 
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
-import { bg, fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
-import { Badge, Feature, HeadingScope } from "@sdxc/ui";
+import { Feature, HeadingScope } from "@sdxc/ui";
 import { FeatureBand, ProductFrame, StepList } from "@sdxc/ui/patterns";
+
+import { IncidentCard } from "~/resources/components/demo-media";
 
 /** What the guide demo registry reads: the three bands, drawn at a page's width. */
 export default {
@@ -23,20 +21,16 @@ export default {
 			<FeatureBand
 				layout="split"
 				eyebrow="Incidents"
-				title="Every incident writes its own timeline"
+				title="Incidents write their own record"
+				description={
+					<>
+						Every state change lands on the timeline as it happens, so the{" "}
+						<strong>post-mortem is already written</strong> when the page clears.
+					</>
+				}
 				media={
-					<ProductFrame lights title="Incident">
-						<div mix={[vstack({ gap: 3, align: "start" }), p(6), bg("neutral.tint")]}>
-							<Badge color="warning" variant="secondary">
-								Investigating
-							</Badge>
-							<span mix={[text("base"), weight("semibold"), fg("neutral.emphasis")]}>
-								Elevated API latency in eu-west
-							</span>
-							<span mix={[font("mono"), text("xs"), fg("neutral.muted")]}>
-								14:02 UTC · 2 responders
-							</span>
-						</div>
+					<ProductFrame shadow="stage" lights title="Incident #482">
+						<IncidentCard />
 					</ProductFrame>
 				}
 			>
@@ -47,34 +41,55 @@ export default {
 				</ul>
 			</FeatureBand>
 
-			<FeatureBand layout="grid" tone="tinted" title="Built for on-call" columns={3}>
+			<FeatureBand
+				layout="grid"
+				tone="brand"
+				inset
+				eyebrow="On-call"
+				title="Built for the 3 a.m. page"
+				columns={3}
+			>
 				<Feature>
 					<Feature.Icon>
 						<GlobeIcon />
 					</Feature.Icon>
 					<Feature.Title>Six probe regions</Feature.Title>
-					<Feature.Description>Every check runs from three continents.</Feature.Description>
+					<Feature.Description>
+						Every check runs from <strong>three continents</strong>, so a local outage never hides
+						behind a healthy one.
+					</Feature.Description>
 				</Feature>
 				<Feature>
 					<Feature.Icon>
 						<BellRingIcon />
 					</Feature.Icon>
 					<Feature.Title>Alerts that agree</Feature.Title>
-					<Feature.Description>A page fires when two regions see it.</Feature.Description>
+					<Feature.Description>
+						A page fires only when <strong>two regions</strong> see the failure, which keeps flaky
+						networks off your phone.
+					</Feature.Description>
 				</Feature>
 				<Feature>
 					<Feature.Icon>
 						<GaugeIcon />
 					</Feature.Icon>
 					<Feature.Title>Latency per region</Feature.Title>
-					<Feature.Description>Response time, beyond up or down.</Feature.Description>
+					<Feature.Description>
+						Response time is charted per region, so you see <strong>slow before down</strong>.
+					</Feature.Description>
 				</Feature>
 			</FeatureBand>
 
-			<FeatureBand layout="steps" title="Live in three steps">
-				<StepList.Item title="Add a monitor">Paste the URL you want watched.</StepList.Item>
-				<StepList.Item title="Pick who gets paged">Route alerts to a rotation.</StepList.Item>
-				<StepList.Item title="Share the status page">Customers subscribe to it.</StepList.Item>
+			<FeatureBand layout="steps" eyebrow="Setup" title="Live in three steps">
+				<StepList.Item title="Add a monitor">
+					Paste the URL you want watched and pick the regions that check it.
+				</StepList.Item>
+				<StepList.Item title="Pick who gets paged">
+					Route alerts to a rotation, a channel, or a single phone.
+				</StepList.Item>
+				<StepList.Item title="Share the status page">
+					Customers subscribe and hear about incidents before they ask.
+				</StepList.Item>
 			</FeatureBand>
 		</HeadingScope>
 	),

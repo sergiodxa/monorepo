@@ -6,11 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { container, gap, inlineFlex, items, relative, vstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
+import { border, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { container, flexWrap, gap, items, relative, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { font, nowrap, text, weight } from "@sdxc/u/typography";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	displayHeading,
@@ -34,6 +35,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { MARKETING_FOUNDATIONS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
+import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -51,29 +53,45 @@ const MARKETING_TOKENS = [
 		"--ui-marketing-gutter",
 		"Inline padding at the narrowest container step (1rem → 1.5rem → 2rem)",
 	],
-	["--ui-marketing-section-space", "Block padding for a normal band (6rem)"],
-	["--ui-marketing-section-space-compact", "Block padding for a compact band (4rem)"],
-	["--ui-marketing-section-space-hero", "Block padding for a hero band (8rem)"],
-	["--ui-marketing-display-tracking", "Letter-spacing for display headlines (−0.04em)"],
+	["--ui-marketing-section-space", "Block padding for a normal band (5rem → 7.5rem)"],
+	["--ui-marketing-section-space-compact", "Block padding for a compact band (3rem → 4.5rem)"],
+	["--ui-marketing-section-space-hero", "Block padding for a hero band (3.5rem → 8rem)"],
+	["--ui-marketing-section-space-cta", "Block padding for a closing band (5rem → 7rem)"],
+	["--ui-marketing-display-tracking", "Letter-spacing for display headlines (−0.035em)"],
 	["--ui-marketing-display-weight", "Font weight for display headlines (500)"],
 	["--ui-marketing-display-leading", "Line-height for display headlines (1)"],
 	["--ui-marketing-lead-measure", "Max width of supporting lead copy (40rem)"],
 	["--ui-marketing-lead-size", "Font size of supporting lead copy (1.125rem)"],
-	["--ui-marketing-chapter-size", "Font size of a marketing section H2 (2.75rem)"],
-	["--ui-marketing-logo-height", "Forced height of a logo-cloud mark (1rem)"],
+	["--ui-marketing-chapter-size", "Font size of a marketing section H2 (1.75rem → 3rem)"],
+	["--ui-marketing-logo-height", "Height of a logo-cloud mark (1.75rem; 2.25rem from lg)"],
 	["--ui-marketing-header-height", "Sticky marketing header target (4rem)"],
 	[
 		"--ui-marketing-cta-radius",
 		"Corner radius language for brand CTAs (0.5rem; override per brand)",
 	],
+	["--ui-marketing-radius-surface", "Corner radius of a raised marketing surface (1rem)"],
+	["--ui-marketing-band-radius", "Corner radius of an inset band (2rem)"],
+	["--ui-marketing-band-gradient", "Fill a gradient band paints; the page supplies it"],
+	["--ui-marketing-hairline", "Rule ink between cells and bands (6% ink, 10% white in dark)"],
 	["--ui-font-display", "Optional display family; falls back to the body face"],
 ] as const;
 
-/** Band tones the live demo walks through. */
-const TONES = ["plain", "tinted", "grid", "inverse"] as const;
+/** Band tones the live demo walks through, each with the line its band says. */
+const TONES = [
+	["plain", "Nothing behind the column, for the bands between the louder ones."],
+	["tinted", "A quiet neutral tint with a brand glow, for alternating sections."],
+	["grid", "A hairline grid fading out from the corner, behind a hero."],
+	["inverse", "An inverted solid for the closing call to action."],
+	["brand", "The brand solid, with every neutral token re-pointed at its foreground."],
+	["gradient", "Whatever --ui-marketing-band-gradient holds, supplied by the page."],
+] as const;
+
+/** The gradient the `gradient` tone demo supplies, built from the brand and neutral tints. */
+const DEMO_GRADIENT =
+	"linear-gradient(135deg, var(--ui-brand-bg-tint), var(--ui-neutral-bg-tint) 60%)";
 
 /** Section spacing steps the live demo walks through. */
-const SPACINGS = ["compact", "normal", "hero"] as const;
+const SPACINGS = ["compact", "normal", "hero", "cta"] as const;
 
 /**
  * Renders the marketing foundations page.
@@ -171,7 +189,7 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 							lead="marketingBandTone() paints the band host. Pair it with marketingSectionSpace() and marketingContainer() on the inner column."
 						>
 							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
-								{TONES.map((tone) => (
+								{TONES.map(([tone, line]) => (
 									<section
 										key={tone}
 										mix={[
@@ -179,29 +197,18 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 											marketingSectionSpace("compact"),
 											viewReveal(),
 											border({ color: "neutral", width: 1 }),
+											tone === "gradient"
+												? raw({ "--ui-marketing-band-gradient": DEMO_GRADIENT })
+												: [],
 										]}
 									>
 										<div mix={[marketingContainer(), vstack({ gap: 2, align: "stretch" })]}>
 											<span
-												mix={[
-													font("mono"),
-													text("sm"),
-													weight("medium"),
-													tone === "inverse" ? fg("neutral.onSolid") : fg("neutral.emphasis"),
-												]}
+												mix={[font("mono"), text("sm"), weight("medium"), fg("neutral.emphasis")]}
 											>
 												marketingBandTone("{tone}")
 											</span>
-											<p
-												mix={[
-													m(0),
-													text("sm"),
-													tone === "inverse" ? fg("neutral.onSolid") : fg("neutral.muted"),
-												]}
-											>
-												A quiet band fill for alternating sections, a grid, or an inverted closing
-												call-to-action.
-											</p>
+											<p mix={[m(0), text("sm"), fg("neutral")]}>{line}</p>
 										</div>
 									</section>
 								))}
@@ -211,7 +218,7 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 						<ReferenceSection
 							id="spacing"
 							title="Section spacing"
-							lead="Three block-padding steps only — compact, normal, hero — so pages keep a shared rhythm."
+							lead="Four block-padding steps only — compact, normal, hero, cta — each fluid in the band's container, so pages keep a shared rhythm."
 						>
 							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 								{SPACINGS.map((spacing) => (
@@ -249,30 +256,30 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 								]}
 							>
 								<div mix={[marketingContainer(), vstack({ gap: 4, align: "stretch" })]}>
-									<h1 mix={[displayHeading(1)]}>Ship the landing with shared measure</h1>
+									<h1 mix={[displayHeading(1)]}>Know it is down before your users do</h1>
 									<p mix={[marketingLead()]}>
-										Lead copy stays narrower than the headline, at eighteen pixels, so the claim
-										reads first and the support follows.
+										Checks from six regions, alerts that only fire when{" "}
+										<strong>two regions agree</strong>, and a status page your customers trust.
 									</p>
-									<div mix={[inlineFlex(), items("center"), gap(3)]}>
-										{[0, 1, 2, 3].map((index) => (
+									<div
+										mix={[
+											raw({ display: "flex" }),
+											items("center"),
+											flexWrap(),
+											gap(8),
+											fg("neutral"),
+										]}
+									>
+										{WORDMARKS.map((mark) => (
 											<span
-												key={String(index)}
+												key={mark.name}
 												mix={[
 													logoCloudMark(),
-													inlineFlex(),
-													items("center"),
-													rounded("sm"),
-													bg("neutral.tint"),
-													border({ color: "neutral", width: 1 }),
-													p(0, 3),
-													font("mono"),
-													text("xs"),
-													tracking("wide"),
-													weight("medium"),
+													raw({ display: "inline-flex" }),
+													when("& > svg", raw({ blockSize: "100%", inlineSize: "auto" })),
 												]}
 											>
-												Mark
+												<Wordmark name={mark.name} glyph={mark.glyph} />
 											</span>
 										))}
 									</div>

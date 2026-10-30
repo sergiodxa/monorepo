@@ -102,7 +102,7 @@ describe("Marketing group", () => {
 		let titles = marketing?.entries.map((entry) => entry.title) ?? [];
 
 		expect(titles).toEqual(expect.arrayContaining(["LandingHero", "FaqBand", "MarketingSection"]));
-		expect(titles).toHaveLength(22);
+		expect(titles).toHaveLength(24);
 		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
 		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 	});

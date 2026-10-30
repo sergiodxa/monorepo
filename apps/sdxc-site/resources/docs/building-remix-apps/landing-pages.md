@@ -30,7 +30,7 @@ sets those up; this guide starts from a page that already renders `@sdxc/ui` com
 
 | Layer       | Import from         | What it gives you                                                                                                            |
 | ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Patterns    | `@sdxc/ui/patterns` | Whole bands: `LandingHero`, `ProofStrip`, `FeatureBand`, `FaqBand`, `ClosingCta`                                             |
+| Patterns    | `@sdxc/ui/patterns` | Whole bands: `LandingHero`, `ProofStrip`, `FeatureBand`, `PricingBand`, `TestimonialBand`, `FaqBand`, `ClosingCta`           |
 | Primitives  | `@sdxc/ui`          | The parts bands are made of: `MarketingSection`, `MarketingHeader`, `Split`, `StatStrip`, `LogoCloud`, `Feature`, `CtaGroup` |
 | Foundations | `@sdxc/ui/styles`   | Tokens and style factories: `marketingCtaChrome()`, `marketingBandTone()`, and the `--ui-marketing-*` variables              |
 
@@ -56,25 +56,32 @@ export function Landing() {
 	return () => (
 		<main>
 			<LandingHero
-				tone="grid"
-				eyebrow="Uptime monitoring"
+				align="center"
+				eyebrow="Status pages are here"
+				eyebrowHref="/changelog"
 				title="Know it is down before your users do"
-				description="Checks from six regions, alerts that agree, and a status page your customers trust."
+				description={
+					<>
+						Checks from six regions, alerts that only fire when{" "}
+						<strong>two regions agree</strong>, and a status page your
+						customers trust.
+					</>
+				}
 				actions={
 					<>
-						<Button size="lg" color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[marketingCtaChrome()]}>
 							Start free
 						</Button>
 						<LinkButton
 							href="/pricing"
-							size="lg"
-							color="neutral"
-							variant="outline"
+							variant="surface"
+							mix={[marketingCtaChrome()]}
 						>
 							See pricing
 						</LinkButton>
 					</>
 				}
+				note="Five monitors free, no card required."
 				media={<HeroShot />}
 			/>
 
@@ -83,12 +90,22 @@ export function Landing() {
 				<Features />
 				<Faq />
 				<ClosingCta
+					inset
 					title="Start watching your endpoints today"
-					description="Five monitors free, forever."
+					description="Five monitors and a status page, free for as long as you need them."
 					actions={
-						<Button size="lg" color="brand" mix={[marketingCtaChrome()]}>
-							Create an account
-						</Button>
+						<>
+							<Button color="brand" mix={[marketingCtaChrome()]}>
+								Create an account
+							</Button>
+							<LinkButton
+								href="/contact"
+								variant="surface"
+								mix={[marketingCtaChrome()]}
+							>
+								Talk to us
+							</LinkButton>
+						</>
 					}
 				/>
 			</HeadingScope>
@@ -99,29 +116,36 @@ export function Landing() {
 
 Render `<Landing />` from the page's controller inside your document layout, like any other
 page. Nothing on it hydrates: the FAQ is `<details>`, and tabbed bands switch with radio
-inputs and CSS.
+inputs and CSS. Actions take the 40px marketing size from the `CtaGroup` the hero puts them
+in, and `marketingCtaChrome()` gives both the brand's corner radius and a tactile edge; the
+`surface` variant is a secondary that still reads as a button beside a solid primary.
 
 Here is that page, live. Switch between Desktop and Phone to see each band rearrange itself
 for the width it has:
 
 <frame src="/frames/guides/landing-pages/landing">
-The assembled landing: a hero with a framed monitors screen, the proof band, three feature
-bands, the questions, and the closing call to action.
+The assembled landing: a centered hero over a staged status page, the proof band, three
+feature bands, the questions, and an inset closing call to action.
 </frame>
 
 ## The hero
 
-`LandingHero` lays the eyebrow, title, lead and actions beside `media`. `mediaPlacement`
-moves the media `"below"` the copy or behind it as a `"background"`, and `align="center"`
-centers the copy, which suits a hero with no media. Frame a screenshot with `ProductFrame` so
-it reads as the product rather than as a loose image:
+`LandingHero` stacks the eyebrow, title, lead, actions and a `note` line in a set rhythm, then
+places `media` under the copy at the full measure. That suits a text-led hero; for a
+product-led one, where the media is taller than the copy, `mediaPlacement="end"` puts it
+beside the copy and steps the headline down one size. `"background"` lays it behind the
+statement instead. The eyebrow is a quiet pill, and `eyebrowHref` turns it into a link to the
+announcement it names.
+
+Frame the product with `ProductFrame` so it reads as the product rather than as a loose
+image. `stage="panel"` sets the frame on a tinted panel, the way a product shot is staged:
 
 ```tsx {% title="resources/components/landing/hero-shot.tsx" %}
 import { ProductFrame } from "@sdxc/ui/patterns";
 
 export function HeroShot() {
 	return () => (
-		<ProductFrame lights title="Monitors" url="app.example.com">
+		<ProductFrame stage="panel" lights title="Status" url="status.example.com">
 			<img
 				src="/images/monitors.png"
 				alt="Monitors dashboard with six regions passing"
@@ -131,8 +155,9 @@ export function HeroShot() {
 }
 ```
 
-`ProductFrame variant="device"` draws a phone instead, and `CodeStage` frames a command or a
-code sample when the product is a tool.
+A rendered component works as well as an image, and stays sharp at every width.
+`ProductFrame variant="device"` draws a phone instead, `shadow="tinted"` lifts a frame off a
+brand band, and `CodeStage variant="slab"` frames a code sample when the product is a tool.
 
 ## Proof
 
@@ -146,10 +171,12 @@ import { ProofStrip } from "@sdxc/ui/patterns";
 export function Proof() {
 	return () => (
 		<ProofStrip>
-			<LogoCloud muted>
-				<img src="/logos/launchpad.svg" alt="Launchpad" />
+			<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
 				<img src="/logos/northwind.svg" alt="Northwind" />
-				<img src="/logos/keystone.svg" alt="Keystone" />
+				<img src="/logos/voltage.svg" alt="Voltage" />
+				<img src="/logos/layerline.svg" alt="Layerline" />
+				<img src="/logos/fernway.svg" alt="Fernway" />
+				<img src="/logos/quadrant.svg" alt="Quadrant" />
 			</LogoCloud>
 			<StatStrip>
 				<StatStrip.Item label="Checks run every day">4.2M</StatStrip.Item>
@@ -161,12 +188,14 @@ export function Proof() {
 }
 ```
 
-`LogoCloud` sizes every mark to one height and, with `muted`, to one tone, so no customer's
-logo outshouts the others. `StatStrip` sets its columns from its own width, two at first
-and up to five on a wide band.
+`LogoCloud` sizes every mark to one height, large enough to recognize, and `muted` draws them
+in one ink (an image goes grayscale), so no customer's logo outshouts the others.
+`layout="spread"` runs the marks edge to edge across the measure, and `layout="grid"` sets them
+in ruled cells. `StatStrip` puts every figure on one row once the band is wide enough, and on a
+phone gives an odd last figure the whole row.
 
 <frame src="/frames/guides/landing-pages/proof">
-The proof band: three muted adopter marks over three figures.
+The proof band: five muted wordmarks spread across the measure over three figures.
 </frame>
 
 ## Feature bands
@@ -174,8 +203,12 @@ The proof band: three muted adopter marks over three figures.
 `FeatureBand` is the band a landing repeats. Its `layout` decides the body:
 
 - `"split"` puts claims beside `media`. Children that are a `<ul>` render as checked claims.
-- `"grid"` lays `Feature` cells in `columns` with hairlines between them.
+- `"grid"` lays `Feature` cards in `columns`, two on a tablet and all of them on a wide band.
 - `"steps"` numbers `StepList.Item` children for a "how it works" band.
+- `"stage"` lists `TabbedStage.Item` children down a rail beside a sticky stage that shows the
+  selected one's media.
+- `"timeline"` sets `StepList.Item` children on a vertical rule, each with a `meta` line and
+  optional `media`.
 
 ```tsx {% title="resources/components/landing/features.tsx" %}
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
@@ -188,9 +221,16 @@ export function Features() {
 			<FeatureBand
 				layout="split"
 				eyebrow="Incidents"
-				title="Every incident writes its own timeline"
+				title="Incidents write their own record"
+				description={
+					<>
+						Every state change lands on the timeline as it happens, so the{" "}
+						<strong>post-mortem is already written</strong> when the page
+						clears.
+					</>
+				}
 				media={
-					<ProductFrame lights title="Incident">
+					<ProductFrame lights title="Incident #482">
 						<img src="/images/incident.png" alt="Incident timeline" />
 					</ProductFrame>
 				}
@@ -204,8 +244,10 @@ export function Features() {
 
 			<FeatureBand
 				layout="grid"
-				tone="tinted"
-				title="Built for on-call"
+				tone="brand"
+				inset
+				eyebrow="On-call"
+				title="Built for the 3 a.m. page"
 				columns={3}
 			>
 				<Feature>
@@ -214,7 +256,8 @@ export function Features() {
 					</Feature.Icon>
 					<Feature.Title>Six probe regions</Feature.Title>
 					<Feature.Description>
-						Every check runs from three continents.
+						Every check runs from <strong>three continents</strong>, so a
+						local outage never hides behind a healthy one.
 					</Feature.Description>
 				</Feature>
 				<Feature>
@@ -223,7 +266,8 @@ export function Features() {
 					</Feature.Icon>
 					<Feature.Title>Alerts that agree</Feature.Title>
 					<Feature.Description>
-						A page fires when two regions see it.
+						A page fires only when <strong>two regions</strong> see the
+						failure, which keeps flaky networks off your phone.
 					</Feature.Description>
 				</Feature>
 				<Feature>
@@ -232,20 +276,21 @@ export function Features() {
 					</Feature.Icon>
 					<Feature.Title>Latency per region</Feature.Title>
 					<Feature.Description>
-						Response time, beyond up or down.
+						Response time is charted per region, so you see{" "}
+						<strong>slow before down</strong>.
 					</Feature.Description>
 				</Feature>
 			</FeatureBand>
 
-			<FeatureBand layout="steps" title="Live in three steps">
+			<FeatureBand layout="steps" eyebrow="Setup" title="Live in three steps">
 				<StepList.Item title="Add a monitor">
-					Paste the URL you want watched.
+					Paste the URL you want watched and pick the regions that check it.
 				</StepList.Item>
 				<StepList.Item title="Pick who gets paged">
-					Route alerts to a rotation.
+					Route alerts to a rotation, a channel, or a single phone.
 				</StepList.Item>
 				<StepList.Item title="Share the status page">
-					Customers subscribe to it.
+					Customers subscribe and hear about incidents before they ask.
 				</StepList.Item>
 			</FeatureBand>
 		</>
@@ -253,13 +298,15 @@ export function Features() {
 }
 ```
 
-Alternate `tone` between bands (`"plain"`, `"tinted"`, `"grid"`) so a reader can tell where
-one ends and the next begins. Leave `"inverse"` for the closing band, which uses it by
-default. `lean="media"` gives a split band's media the wider column.
+Alternate `tone` between bands (`"plain"`, `"tinted"`, `"grid"`, `"brand"`) so a reader can
+tell where one ends and the next begins, and add `inset` to float a toned band as a rounded
+panel inside the page. Leave `"inverse"` for the closing band, which uses it by default. A
+`<strong>` in a description draws in the heading ink at the copy's weight, which gives a reader
+scanning the band a second level without turning anything bold.
 
 <frame src="/frames/guides/landing-pages/features">
-The three feature bands: checked claims beside an incident screen, a tinted grid of three
-features, and three numbered steps.
+The three feature bands: checked claims beside an incident timeline, an inset brand band of
+three feature cards, and three numbered steps.
 </frame>
 
 ## Questions
@@ -273,14 +320,23 @@ import { Accordion } from "@sdxc/ui";
 import { FaqBand } from "@sdxc/ui/patterns";
 
 const QUESTIONS = [
-	["How often do checks run?", "Every thirty seconds on paid plans."],
-	["Can I use my own domain?", "Yes, point a CNAME at your status page."],
-	["Is there a free plan?", "Five monitors and one status page, no card required."],
+	[
+		"How often do checks run?",
+		"Every thirty seconds on paid plans and every three minutes on the free one. Each check runs from every region you pick, so one slow network never decides the result on its own.",
+	],
+	[
+		"Can I use my own domain?",
+		"Yes. Point a CNAME at your status page and the certificate is issued for you within a few minutes. Subscribers keep their emails when you switch domains.",
+	],
+	[
+		"Is there a free plan?",
+		"Five monitors and one status page, free for as long as you need them. No card is required, and upgrading keeps every check's history.",
+	],
 ] as const;
 
 export function Faq() {
 	return () => (
-		<FaqBand title="Questions">
+		<FaqBand eyebrow="FAQ" title="Questions, answered">
 			<Accordion>
 				{QUESTIONS.map(([question, answer]) => (
 					<Accordion.Item key={question} name="faq">
@@ -315,11 +371,15 @@ your palette:
 :root {
 	--ui-marketing-measure: 76rem;
 	--ui-marketing-cta-radius: 9999px;
+	--ui-marketing-display-max: 6rem;
+	--ui-marketing-lead-weight: 500;
 	--ui-font-display: "Inter Display", var(--ui-font-sans);
 }
 ```
 
-That gives a wider column, pill-shaped calls to action, and a display face for headlines.
+That gives a wider column, pill-shaped calls to action, a larger top step for the hero
+headline, heavier leads, and a display face for headlines. Sizes and band spacing are fluid in
+the width of the band, so a phone gets the tight end of each without a breakpoint of yours.
 Colors stay on your palette's `brand` and `neutral` scales, so the landing and the app share
 them. [Marketing foundations](/api/ui/marketing-foundations) lists every token.
 

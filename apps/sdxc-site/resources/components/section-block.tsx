@@ -14,8 +14,9 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { balance, font, leading, text, textTransform, tracking } from "@sdxc/u/typography";
+import { balance, font, text, textTransform, tracking } from "@sdxc/u/typography";
 import { HeadingScope, MarketingHeader } from "@sdxc/ui";
+import { marketingLead } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -51,7 +52,7 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 						align={align}
 						mix={[maxIs("52rem")]}
 						parts={{
-							eyebrow: [tracking("widest"), fg("brand")],
+							eyebrow: [raw({ "--ui-marketing-eyebrow-color": "var(--ui-brand-fg)" })],
 						}}
 					>
 						{title}
@@ -99,11 +100,8 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 
 										align === "center"
 											? [
-													maxIs("40rem"),
-													text("lg"),
-													leading("relaxed"),
+													marketingLead(),
 													balance(),
-													fg("neutral"),
 
 													when('& [data-slot="actions"]', raw({ justifyContent: "center" })),
 													when('& [data-slot="cta-group"]', raw({ justifyContent: "center" })),

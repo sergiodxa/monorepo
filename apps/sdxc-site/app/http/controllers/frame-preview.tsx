@@ -1,12 +1,15 @@
 /**
  * `GET /frames/previews/…`, `/frames/u/…` and `/frames/guides/:guide/:demo` — a component's
  * live preview or example, a utility example, or a guide's demo, as an HTML fragment for a
- * `<Frame>` to load.
+ * `<Frame>` to load, or inside the site document when a reader opens the URL directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+
+import { is, maxIs, mi, p } from "@sdxc/u/size";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -21,6 +24,7 @@ import { findExample, findPreview } from "~/resources/components/preview-registr
 import UtilityExample from "~/resources/components/utility-example";
 import { findUtilityExample } from "~/resources/components/utility-example-registry.server";
 import ViewportDemo from "~/resources/components/viewport-demo";
+import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** The opening preview a component's reference page leads with. */
@@ -51,7 +55,8 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
 	let module = await findUtilityExample(utility, example);
 	let source = (await listUtilityExamples(utility)).find((it) => it.slug === example);
 	if (module === null || source === undefined) {
-		return ctx.render(
+		return renderFrame(
+			ctx,
 			<p>
 				No example “{example}” for “{utility}”.
 			</p>,
@@ -59,7 +64,8 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
 		);
 	}
 
-	return ctx.render(
+	return renderFrame(
+		ctx,
 		<UtilityExample code={source.code} align={module.align}>
 			{module.render()}
 		</UtilityExample>,
@@ -74,7 +80,8 @@ export const frameGuideDemo = createAction(routes.frames.guide, async (ctx) => {
 	let { guide, demo } = s.parse(s.object({ guide: s.string(), demo: s.string() }), ctx.params);
 	let module = findGuideDemo(guide, demo);
 	if (module === null) {
-		return ctx.render(
+		return renderFrame(
+			ctx,
 			<p>
 				No demo “{demo}” for the “{guide}” guide.
 			</p>,
@@ -82,7 +89,8 @@ export const frameGuideDemo = createAction(routes.frames.guide, async (ctx) => {
 		);
 	}
 
-	return ctx.render(
+	return renderFrame(
+		ctx,
 		<ComponentPreview flush={module.flush || module.viewports}>
 			{module.viewports ? (
 				<ViewportDemo name={`${guide}-${demo}`}>{module.render()}</ViewportDemo>
@@ -104,14 +112,44 @@ async function renderPreview(
 	slug: string,
 ): Promise<Response> {
 	if (preview === null) {
-		return ctx.render(<p>No preview for “{slug}”.</p>, { status: 404 });
+		return renderFrame(ctx, <p>No preview for “{slug}”.</p>, { status: 404 });
 	}
 
 	let node = preview.render({ appleKeyboard: isApplePlatform(ctx) });
 
-	return ctx.render(
+	return renderFrame(
+		ctx,
 		<ComponentPreview code={preview.code} flush={preview.flush || preview.viewports}>
 			{preview.viewports ? <ViewportDemo name={slug.replace("/", "-")}>{node}</ViewportDemo> : node}
 		</ComponentPreview>,
 	);
+}
+
+/**
+ * Answers a frame request with the bare fragment, and a top-level navigation — someone
+ * opening or sharing the frame URL — with that fragment inside the site document, so the
+ * demo carries the theme, fonts and stylesheets it was built against.
+ *
+ * @param ctx The request context, read for its headers, assets and renderer.
+ * @param node The fragment the frame draws.
+ * @param init Status and headers for the response.
+ * @returns The rendered response.
+ */
+function renderFrame(ctx: AppContext, node: RemixNode, init?: ResponseInit): Response {
+	if (!isStandalone(ctx.request.headers)) return ctx.render(node, init);
+
+	return ctx.render(
+		<DocumentLayout assets={ctx.assets} title="Live demo — sdxc">
+			<main mix={[is("100%"), maxIs("80rem"), mi("auto"), p(4)]}>{node}</main>
+		</DocumentLayout>,
+		init,
+	);
+}
+
+/**
+ * Whether the browser navigated to the frame URL itself: a frame load carries
+ * `X-Remix-Frame`, and only a navigation asks for a whole `document`.
+ */
+function isStandalone(headers: Headers): boolean {
+	return headers.get("X-Remix-Frame") !== "true" && headers.get("Sec-Fetch-Dest") === "document";
 }

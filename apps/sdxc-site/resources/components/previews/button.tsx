@@ -1,7 +1,7 @@
 /**
  * Live preview island for `Button`. A `<button>` already presses, so the component's job is
- * the tone, weight and size vocabulary, plus the pending state that swaps the label for a
- * spinner while holding the footprint.
+ * the tone, weight (solid, outline, raised surface, ghost) and size vocabulary, plus the
+ * pending state that swaps the label for a spinner while holding the footprint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,6 +40,9 @@ let copyState: keyof typeof COPY_LABELS = "idle";
 		<Button type="submit">Save changes</Button>
 		<Button type="button" variant="outline" color="neutral">
 			Discard
+		</Button>
+		<Button type="button" variant="surface">
+			Preview
 		</Button>
 		<Button type="button" variant="ghost" color="danger">
 			<Trash2Icon size={16} aria-hidden="true" />
@@ -110,6 +113,9 @@ export const ButtonPreview = clientEntry(import.meta.url, function ButtonPreview
 				<Button type="submit">Save changes</Button>
 				<Button type="button" variant="outline" color="neutral">
 					Discard
+				</Button>
+				<Button type="button" variant="surface">
+					Preview
 				</Button>
 				<Button type="button" variant="ghost" color="danger">
 					<Trash2Icon size={16} aria-hidden="true" />

@@ -1,27 +1,42 @@
 /**
- * Live preview for `AnnouncementChip`: the two callouts a hero opens with, the quiet rim
- * for a forward link and the special variant for a launch.
+ * Live preview for `AnnouncementChip`: the default quiet pill as a linked callout, then
+ * each eyebrow look it shares, and the dual-tone `special` edge kept for a launch.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack } from "@sdxc/u/layout";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { AnnouncementChip } from "@sdxc/ui/patterns";
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<div mix={[hstack({ gap: 3, align: "center" })]}>
-	<AnnouncementChip>Status pages now support custom domains</AnnouncementChip>
-	<AnnouncementChip variant="special">New: multi-region checks</AnnouncementChip>
-</div>`;
+const CODE = `<AnnouncementChip href="/examples/changelog/custom-domains">
+	Status pages now support custom domains
+</AnnouncementChip>
 
-/** What the preview registry reads: the source to show, and the markup to draw. */
+<AnnouncementChip variant="soft">Scheduled maintenance windows</AnnouncementChip>
+<AnnouncementChip variant="pill">New: heartbeat monitors</AnnouncementChip>
+<AnnouncementChip variant="mono">Changelog</AnnouncementChip>
+<AnnouncementChip variant="special" href="/examples/changelog/multi-region">
+	Launching multi-region checks
+</AnnouncementChip>`;
+
+/** What the preview registry reads: the source to show, and the chips to draw. */
 export default {
 	code: CODE,
 	render: () => (
-		<div mix={[hstack({ gap: 3, align: "center" })]}>
-			<AnnouncementChip>Status pages now support custom domains</AnnouncementChip>
-			<AnnouncementChip variant="special">New: multi-region checks</AnnouncementChip>
+		<div mix={[vstack({ gap: 5, align: "start" })]}>
+			<AnnouncementChip href="/examples/changelog/custom-domains">
+				Status pages now support custom domains
+			</AnnouncementChip>
+			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+				<AnnouncementChip variant="soft">Scheduled maintenance windows</AnnouncementChip>
+				<AnnouncementChip variant="pill">New: heartbeat monitors</AnnouncementChip>
+				<AnnouncementChip variant="mono">Changelog</AnnouncementChip>
+				<AnnouncementChip variant="special" href="/examples/changelog/multi-region">
+					Launching multi-region checks
+				</AnnouncementChip>
+			</div>
 		</div>
 	),
 };

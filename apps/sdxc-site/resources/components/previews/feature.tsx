@@ -1,6 +1,6 @@
 /**
- * Live preview for `Feature`: three claim cells in a ruled `Feature.Grid`, each with an icon
- * well, a title and one line of support. The grid draws its hairlines from the gap.
+ * Live preview for `Feature`: three uptime claims as separate cards in a `Feature.Grid`,
+ * each led by a quiet icon tile, with the phrase that carries the claim in the heading ink.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,21 +17,27 @@ const CODE = `<Feature.Grid columns={3}>
 			<GlobeIcon />
 		</Feature.Icon>
 		<Feature.Title>Six probe regions</Feature.Title>
-		<Feature.Description>Every check runs from three continents at once.</Feature.Description>
+		<Feature.Description>
+			<p>Every check runs from <strong>three continents at once</strong>, so a regional blip never pages you.</p>
+		</Feature.Description>
 	</Feature>
 	<Feature>
 		<Feature.Icon>
 			<BellRingIcon />
 		</Feature.Icon>
 		<Feature.Title>Alerts that agree</Feature.Title>
-		<Feature.Description>A page fires only when two regions see the outage.</Feature.Description>
+		<Feature.Description>
+			<p>An incident opens only when <strong>two regions see the outage</strong>, then routes to whoever is on call.</p>
+		</Feature.Description>
 	</Feature>
 	<Feature>
 		<Feature.Icon>
 			<GaugeIcon />
 		</Feature.Icon>
 		<Feature.Title>Latency, not just status</Feature.Title>
-		<Feature.Description>Track response time per region as well as up or down.</Feature.Description>
+		<Feature.Description>
+			<p>Track <strong>response time per region</strong> and publish it on your status page.</p>
+		</Feature.Description>
 	</Feature>
 </Feature.Grid>`;
 
@@ -48,7 +54,10 @@ export default {
 						</Feature.Icon>
 						<Feature.Title>Six probe regions</Feature.Title>
 						<Feature.Description>
-							Every check runs from three continents at once.
+							<p>
+								Every check runs from <strong>three continents at once</strong>, so a regional blip
+								never pages you.
+							</p>
 						</Feature.Description>
 					</Feature>
 					<Feature>
@@ -57,7 +66,10 @@ export default {
 						</Feature.Icon>
 						<Feature.Title>Alerts that agree</Feature.Title>
 						<Feature.Description>
-							A page fires only when two regions see the outage.
+							<p>
+								An incident opens only when <strong>two regions see the outage</strong>, then routes
+								to whoever is on call.
+							</p>
 						</Feature.Description>
 					</Feature>
 					<Feature>
@@ -66,7 +78,9 @@ export default {
 						</Feature.Icon>
 						<Feature.Title>Latency, not just status</Feature.Title>
 						<Feature.Description>
-							Track response time per region as well as up or down.
+							<p>
+								Track <strong>response time per region</strong> and publish it on your status page.
+							</p>
 						</Feature.Description>
 					</Feature>
 				</Feature.Grid>

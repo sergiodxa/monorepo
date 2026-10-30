@@ -1,57 +1,55 @@
 /**
- * Live preview for `LogoCloud`: a row of adopter marks, each an icon and a wordmark, sized to
- * the marketing logo height and muted to one tone so no single brand outshouts the row.
+ * Live preview for `LogoCloud`: the default centered row of adopter wordmarks in full
+ * ink, then a labelled row spread across the measure and muted to the body ink, then the
+ * ruled grid of cells.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ActivityIcon, GlobeIcon, RocketIcon, ShieldCheckIcon, ZapIcon } from "@sdxc/icons";
-import { hstack } from "@sdxc/u/layout";
-import { text, weight } from "@sdxc/u/typography";
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 import { LogoCloud } from "@sdxc/ui";
 
+import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
+
 /** The source the page shows, matching the markup below. */
-const CODE = `<LogoCloud muted>
-	<span mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}>
-		<RocketIcon /> Launchpad
-	</span>
-	<span mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}>
-		<GlobeIcon /> Northwind
-	</span>
-	<span mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}>
-		<ZapIcon /> Voltage
-	</span>
-	<span mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}>
-		<ShieldCheckIcon /> Keystone
-	</span>
-	<span mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}>
-		<ActivityIcon /> Pulse
-	</span>
+const CODE = `<LogoCloud>
+	<img src={northwind} alt="Northwind" />
+	<img src={voltage} alt="Voltage" />
+	<img src={layerline} alt="Layerline" />
+	<img src={fernway} alt="Fernway" />
+	<img src={quadrant} alt="Quadrant" />
+</LogoCloud>
+
+<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
+	{marks}
+</LogoCloud>
+
+<LogoCloud layout="grid" muted>
+	{marks}
 </LogoCloud>`;
 
-/** The adopters the preview draws, each a wordmark beside its glyph. */
-const MARKS = [
-	["Launchpad", RocketIcon],
-	["Northwind", GlobeIcon],
-	["Voltage", ZapIcon],
-	["Keystone", ShieldCheckIcon],
-	["Pulse", ActivityIcon],
-] as const;
-
-/** What the preview registry reads: the source to show, and the row to draw. */
+/** What the preview registry reads: the source to show, and the clouds to draw. */
 export default {
 	code: CODE,
 	render: () => (
-		<LogoCloud muted>
-			{MARKS.map(([name, Icon]) => (
-				<span
-					key={name}
-					mix={[hstack({ gap: 1.5, align: "center" }), text("lg"), weight("semibold")]}
-				>
-					<Icon /> {name}
-				</span>
-			))}
-		</LogoCloud>
+		<div mix={[is("full"), vstack({ gap: 12, align: "stretch" })]}>
+			<LogoCloud>
+				{WORDMARKS.map((mark) => (
+					<Wordmark key={mark.name} name={mark.name} glyph={mark.glyph} />
+				))}
+			</LogoCloud>
+			<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
+				{WORDMARKS.map((mark) => (
+					<Wordmark key={mark.name} name={mark.name} glyph={mark.glyph} />
+				))}
+			</LogoCloud>
+			<LogoCloud layout="grid" muted>
+				{WORDMARKS.map((mark) => (
+					<Wordmark key={mark.name} name={mark.name} glyph={mark.glyph} />
+				))}
+			</LogoCloud>
+		</div>
 	),
 };

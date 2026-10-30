@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { container, inlineFlex, items, relative, vstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
+import { ActivityIcon, GlobeIcon, ShieldCheckIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { container, relative, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
 import {
 	Button,
 	CtaGroup,
@@ -24,6 +24,7 @@ import {
 	StatStrip,
 } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
+import { ProductFrame } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
@@ -38,6 +39,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { MARKETING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
+import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -46,6 +48,15 @@ import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/** The eyebrow looks the header demo walks through: variant, eyebrow copy and title. */
+const EYEBROW_DEMOS = [
+	["mono", "Monitoring", "Know it is down before your users do"],
+	["quiet", "Status pages now support custom domains", "Your status page, on your domain"],
+	["soft", "Alerting", "Page the right person, once"],
+	["pill", "New", "Multi-region checks on every plan"],
+	["numbered", "Incidents", "Every incident writes its own timeline"],
+] as const satisfies readonly (readonly [MarketingHeader.EyebrowVariant, string, string])[];
 
 /**
  * Renders the marketing components overview page.
@@ -110,23 +121,50 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 						<ReferenceSection
 							id="section"
 							title="MarketingSection"
-							lead="Tone, spacing, optional hairline, and an optional framed column. Pair with viewReveal() for scroll entry."
+							lead='Tones plain, tinted, grid, inverse, brand and gradient; spacing compact, normal, hero and cta; an optional hairline and framed column. inset floats the band as a rounded panel ("top" / "bottom" join two). Pair with viewReveal() for scroll entry.'
 						>
 							<HeadingScope>
-								<MarketingSection tone="tinted" spacing="compact" ruled mix={[viewReveal()]}>
-									<MarketingHeader
-										eyebrow="Band"
-										description="A quiet tint behind the content column."
+								<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+									<MarketingSection tone="tinted" spacing="compact" inset mix={[viewReveal()]}>
+										<MarketingHeader
+											eyebrow="Status pages"
+											description={
+												<>
+													Publish incidents and maintenance from{" "}
+													<strong>the dashboard your team already watches</strong>.
+												</>
+											}
+											mix={[m(0)]}
+										>
+											Tell customers before they ask
+										</MarketingHeader>
+									</MarketingSection>
+									<MarketingSection
+										tone="brand"
+										spacing="compact"
+										align="center"
+										inset
+										mix={[viewReveal()]}
 									>
-										MarketingSection tone="tinted"
-									</MarketingHeader>
-								</MarketingSection>
+										<MarketingHeader
+											align="center"
+											description="Six regions, thirty-second checks and a public status page on the free plan."
+											mix={[m(0)]}
+										>
+											Five monitors free, forever
+										</MarketingHeader>
+									</MarketingSection>
+								</div>
 							</HeadingScope>
 							<Snippet
-								code={`<MarketingSection tone="tinted" spacing="normal" ruled>
+								code={`<MarketingSection tone="tinted" spacing="compact" inset>
 	<MarketingHeader eyebrow={t("badge")} description={t("lead")}>
 		{t("title")}
 	</MarketingHeader>
+</MarketingSection>
+
+<MarketingSection tone="brand" spacing="cta" align="center" inset>
+	…
 </MarketingSection>`}
 								language="tsx"
 							/>
@@ -135,25 +173,25 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 						<ReferenceSection
 							id="header"
 							title="MarketingHeader"
-							lead="Eyebrow variants: pill, mono, chip. Title uses chapter display size; lead uses marketingLead()."
+							lead="Eyebrow looks: mono (default), quiet, soft, pill and numbered, with eyebrowHref for a linked eyebrow and eyebrowIndex for a numbered one. Title uses chapter display size; lead uses marketingLead(), with <strong> drawn in the heading ink."
 						>
-							<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-								{(
-									[
-										["pill", "New"],
-										["mono", "Section"],
-										["chip", "Beta"],
-									] as const
-								).map(([variant, label]) => (
+							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+								{EYEBROW_DEMOS.map(([variant, label, title]) => (
 									<HeadingScope key={variant}>
 										<MarketingHeader
 											eyebrow={label}
 											eyebrowVariant={variant}
-											description={`eyebrowVariant="${variant}"`}
-											align="start"
+											eyebrowHref={variant === "quiet" ? "/examples/changelog" : undefined}
+											eyebrowIndex={variant === "numbered" ? "02" : undefined}
+											description={
+												<>
+													<code>eyebrowVariant="{variant}"</code> — checks from six regions, and an
+													alert only fires when <strong>two of them agree</strong>.
+												</>
+											}
 											mix={[m(0)]}
 										>
-											Chapter-sized title
+											{title}
 										</MarketingHeader>
 									</HeadingScope>
 								))}
@@ -163,13 +201,13 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 						<ReferenceSection
 							id="cta"
 							title="CtaGroup"
-							lead='Primary + secondary actions. Hero rows use size="lg" (~48px); nav rows use size="sm" (~32px). marketingCtaChrome() adds brand radius + soft shadow.'
+							lead='Primary + surface secondary. The group hands its size to every action without one: md (40px) by default for hero and closing rows, sm (32px) for nav. stack="phone" stacks the actions full width on a phone-width container. marketingCtaChrome() sets the CTA radius through --ui-button-radius and adds a soft edge.'
 						>
-							<CtaGroup>
-								<Button size="lg" color="brand" mix={[marketingCtaChrome()]}>
-									Start free
+							<CtaGroup stack="phone">
+								<Button color="brand" mix={[marketingCtaChrome()]}>
+									Start monitoring free
 								</Button>
-								<LinkButton href="/api/ui" size="lg" color="neutral" variant="outline">
+								<LinkButton href="/api/ui" variant="surface" mix={[marketingCtaChrome()]}>
 									Read the docs
 								</LinkButton>
 							</CtaGroup>
@@ -183,28 +221,18 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 							<Split lean="copy">
 								<Split.Copy checks>
 									<p mix={[m(0), text("base"), fg("neutral")]}>
-										Prose on the wide track; claims below carry brand checks.
+										Every incident writes its own timeline, so the postmortem starts half done.
 									</p>
 									<ul>
-										<li>Shared measure and gutters</li>
-										<li>Container-query stacks</li>
-										<li>No copy baked into the library</li>
+										<li>Status changes posted as they happen</li>
+										<li>Responders and acknowledgements recorded</li>
+										<li>One link to share with customers</li>
 									</ul>
 								</Split.Copy>
 								<Split.Media>
-									<div
-										mix={[
-											rounded("lg"),
-											border({ color: "neutral", width: 1 }),
-											bg("neutral.tint"),
-											p(8),
-											text("sm"),
-											fg("neutral.muted"),
-											font("mono"),
-										]}
-									>
-										Media slot
-									</div>
+									<ProductFrame stage="panel" lights title="Incident #2114">
+										<IncidentCard />
+									</ProductFrame>
 								</Split.Media>
 							</Split>
 						</ReferenceSection>
@@ -212,39 +240,24 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 						<ReferenceSection
 							id="stats"
 							title="StatStrip"
-							lead="Numeric proof cells. Values and labels are always props."
+							lead="Numeric proof cells in two columns, one row from the lg container; an odd last cell spans both columns on a phone. Values and labels are always props."
 						>
 							<StatStrip>
-								<StatStrip.Item label="Packages">80+</StatStrip.Item>
-								<StatStrip.Item label="Apps">12</StatStrip.Item>
-								<StatStrip.Item label="Tokens">1 theme</StatStrip.Item>
-								<StatStrip.Item label="Motion">viewReveal</StatStrip.Item>
+								<StatStrip.Item label="Checks run every day">4.2M</StatStrip.Item>
+								<StatStrip.Item label="Probe regions">6</StatStrip.Item>
+								<StatStrip.Item label="Median alert latency">38s</StatStrip.Item>
+								<StatStrip.Item label="Measured uptime">99.99%</StatStrip.Item>
 							</StatStrip>
 						</ReferenceSection>
 
 						<ReferenceSection
 							id="logos"
 							title="LogoCloud"
-							lead="Adopter marks forced to ~1rem with muted currentColor treatment."
+							lead="Adopter marks at 1.75rem, 2.25rem from the lg container, laid out as a centered row, a row spread across the measure, or a ruled grid. label adds a line above; muted draws SVG marks in the body ink and image marks grayscale, at full opacity."
 						>
-							<LogoCloud muted>
-								{(["Acme", "Globex", "Initech", "Umbrella"] as const).map((name) => (
-									<span
-										key={name}
-										mix={[
-											inlineFlex(),
-											items("center"),
-											rounded("sm"),
-											bg("neutral.tint"),
-											border({ color: "neutral", width: 1 }),
-											p(0, 3),
-											font("mono"),
-											text("xs"),
-											weight("medium"),
-										]}
-									>
-										{name}
-									</span>
+							<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
+								{WORDMARKS.map((mark) => (
+									<Wordmark key={mark.name} name={mark.name} glyph={mark.glyph} />
 								))}
 							</LogoCloud>
 						</ReferenceSection>
@@ -257,29 +270,29 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 							<Feature.Grid columns={2}>
 								<Feature>
 									<Feature.Icon>
-										<span mix={[text("sm"), weight("bold")]}>1</span>
+										<GlobeIcon />
 									</Feature.Icon>
-									<Feature.Title>Foundations first</Feature.Title>
+									<Feature.Title>Checks from six regions</Feature.Title>
 									<Feature.Description>
-										Tokens and factories unlock every later band.
+										Every monitor runs from every region, every thirty seconds.
 									</Feature.Description>
 								</Feature>
 								<Feature>
 									<Feature.Icon>
-										<span mix={[text("sm"), weight("bold")]}>2</span>
+										<ShieldCheckIcon />
 									</Feature.Icon>
-									<Feature.Title>Primitives next</Feature.Title>
+									<Feature.Title>Alerts that agree</Feature.Title>
 									<Feature.Description>
-										Assemble pages from section, header, split, and proof.
+										A page only fires when two regions see the same failure.
 									</Feature.Description>
 								</Feature>
 								<Feature>
 									<Feature.Icon>
-										<span mix={[text("sm"), weight("bold")]}>3</span>
+										<ActivityIcon />
 									</Feature.Icon>
-									<Feature.Title>Composites later</Feature.Title>
+									<Feature.Title>Status pages that update themselves</Feature.Title>
 									<Feature.Description>
-										LandingHero and FeatureBand encode full patterns — see Landing patterns.
+										Incidents post from the monitor that caught them.
 									</Feature.Description>
 								</Feature>
 							</Feature.Grid>
