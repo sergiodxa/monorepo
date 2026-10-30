@@ -52,7 +52,8 @@ namespace ComponentPreview {
 
 /**
  * Renders one preview and its source. The surface opts out of a guide's prose styles, so a
- * demo framed into an article draws exactly as it does on its component page.
+ * demo framed into an article draws exactly as it does on its component page. A demo wider
+ * than the surface, positioned parts included, starts at its left edge and scrolls inside it.
  */
 export default function ComponentPreview(handle: Handle<ComponentPreview.Props>) {
 	return () => {
@@ -71,6 +72,7 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 						at(NARROW, PREVIEW_CONTAINER, p(8)),
 						minBs("10rem"),
 						overflowX("auto"),
+						raw({ position: "relative" }),
 						rounded("lg"),
 						border({ color: "neutral.border", width: 1, style: "solid" }),
 
@@ -85,6 +87,7 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 					<div
 						mix={[
 							hstack({ gap: 4, align: flush ? "stretch" : "center", justify: "center" }),
+							raw({ justifyContent: "safe center" }),
 							flexWrap(),
 
 							is("100%"),

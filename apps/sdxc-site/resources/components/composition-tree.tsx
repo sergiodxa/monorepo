@@ -27,7 +27,7 @@ namespace CompositionTree {
 	}
 }
 
-/** Renders one component's composition tree. */
+/** Renders one component's composition tree; each description wraps to the column it sits in. */
 export default function CompositionTree(handle: Handle<CompositionTree.Props>) {
 	return () => {
 		let { host, parts } = handle.props;
@@ -41,7 +41,7 @@ export default function CompositionTree(handle: Handle<CompositionTree.Props>) {
 				</li>
 
 				{parts.map((part) => (
-					<li key={part.name} mix={[pis(6), vstack({ gap: 1, align: "start" })]}>
+					<li key={part.name} mix={[pis(6), vstack({ gap: 1, align: "stretch" })]}>
 						<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>{part.name}</code>
 						<span mix={[text("sm"), fg("neutral")]}>
 							<ReferenceProse>{part.description}</ReferenceProse>
