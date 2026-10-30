@@ -51,8 +51,8 @@ export namespace Accordion {
 
 /**
  * Renders the list's root host: a plain `<div>` that stacks
- * {@link Accordion.Item} sections in normal block flow, each drawing its own
- * divider so the whole list reads as one continuous group. A marketing FAQ
+ * {@link Accordion.Item} sections in normal block flow under one top rule, each
+ * drawing the divider below it, so the list reads as one group. A marketing FAQ
  * lays two of these in a container-query grid under a {@link MarketingHeader},
  * sharing one `name` across columns so only one item opens at a time.
  *
@@ -106,7 +106,14 @@ export function Accordion(handle: Handle<Accordion.Props>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[is("full"), mix]}>
+			<div
+				{...rest}
+				mix={[
+					is("full"),
+					borderEdge("block-start", { color: "neutral", width: 1, style: "solid" }),
+					mix,
+				]}
+			>
 				{children}
 			</div>
 		);
@@ -115,8 +122,9 @@ export function Accordion(handle: Handle<Accordion.Props>) {
 
 /**
  * Renders one section as {@link Disclosure} restyled into a flush list row:
- * only a shared block-end divider survives, restored block-start on the first
- * section. A trigger marked `aria-disabled="true"` dims the whole section.
+ * only a block-end divider survives, and {@link Accordion} draws the top rule, so
+ * every closed section is the same height. A trigger marked `aria-disabled="true"`
+ * dims the whole section.
  *
  * @param handle Runtime handle carrying the host `<details>`'s props.
  * @returns The render function producing the section's markup.
@@ -154,7 +162,6 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 					borderEdge("inline-end", { width: "0", noStyleDefault: true }),
 					borderEdge("block-start", { width: "0", noStyleDefault: true }),
 					open(when('& summary [data-slot="icon"]', rotate(180))),
-					when("&:first-child", borderEdge("block-start", { width: 1 })),
 					when('&:has(> summary[aria-disabled="true"])', opacity(50)),
 					mix,
 				]}
