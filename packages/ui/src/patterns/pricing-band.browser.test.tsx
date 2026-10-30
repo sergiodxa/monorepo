@@ -19,6 +19,8 @@ import { CheckRow } from "./check-row.js";
 import { PricingBand } from "./pricing-band.js";
 import { TestimonialBand } from "./testimonial-band.js";
 
+import "../reset.css";
+
 /** Mounts a band in a column of the given width attached to the document, so it gets real layout. */
 function mount(width: number, node: RemixNode): HTMLElement {
 	let host = document.createElement("div");
@@ -89,15 +91,35 @@ describe("pricing band layout", () => {
 });
 
 describe("pricing band rows and actions", () => {
-	test("a two-column band centres the third plan at one column's width", () => {
-		let root = mount(700, plans());
+	test("three plans at 768px stack one a row at the full width, with none left alone", () => {
+		let root = mount(768, plans());
+		let grid = root.querySelector('[data-slot="pricing-plans"]')!.getBoundingClientRect();
 		let [hobby, team, business] = cards(root);
-		let left = hobby!.left;
-		let right = team!.right;
 
-		expect(business!.top).toBeGreaterThan(hobby!.bottom);
-		expect(business!.width).toBeCloseTo(hobby!.width, 0);
-		expect(business!.left - left).toBeCloseTo(right - business!.right, 0);
+		for (let card of [hobby!, team!, business!]) {
+			expect(card.left).toBeCloseTo(grid.left, 0);
+			expect(card.right).toBeCloseTo(grid.right, 0);
+		}
+		expect(team!.top).toBeGreaterThan(hobby!.bottom);
+		expect(business!.top).toBeGreaterThan(team!.bottom);
+	});
+
+	test("four plans at 768px pair up in two full rows", () => {
+		let root = mount(
+			768,
+			<PricingBand title="Pricing">
+				<PricingBand.Plan name="One" price="$0" action={<a href="/1">Start</a>} />
+				<PricingBand.Plan name="Two" price="$9" action={<a href="/2">Start</a>} />
+				<PricingBand.Plan name="Three" price="$29" action={<a href="/3">Start</a>} />
+				<PricingBand.Plan name="Four" price="$99" action={<a href="/4">Start</a>} />
+			</PricingBand>,
+		);
+		let [one, two, three, four] = cards(root);
+
+		expect(two!.top).toBe(one!.top);
+		expect(four!.top).toBe(three!.top);
+		expect(three!.left).toBe(one!.left);
+		expect(four!.right).toBe(two!.right);
 	});
 
 	test("plan actions match a hero CTA's height and pill radius", () => {

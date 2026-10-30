@@ -66,7 +66,7 @@ const FEATURED_DARK_EDGE =
 export namespace PricingBand {
 	/**
 	 * How many plans share one row from the `lg` container; a phone stacks them and the
-	 * `md` container pairs them.
+	 * `md` container pairs an even count.
 	 */
 	export type Columns = 2 | 3;
 
@@ -137,9 +137,9 @@ export namespace PricingBand {
 }
 
 /**
- * Renders a pricing band with a chapter header and a plan grid of one column on a phone, two
- * from the `md` container and `columns` from `lg`, evened per plan count with a short last
- * row centred. Each card pushes its action to the foot, so actions in one row line up.
+ * Renders a pricing band with a chapter header and a plan grid of one column on a phone, an
+ * even count paired from the `md` container, and `columns` from `lg`, evened per plan count
+ * with a short last row centred. Each card pushes its action to the foot, so actions in one row line up.
  *
  * @param handle Runtime handle carrying the band's props.
  * @returns The render function producing the band's markup.
@@ -175,7 +175,7 @@ export function PricingBand(handle: Handle<PricingBand.Props>) {
 									gap(8),
 									balancedGrid(CONTAINER_NAME, [
 										{ query: "(width < 36rem)", columns: 1 },
-										{ query: "(36rem <= width < 48rem)", columns: 2 },
+										{ query: "(36rem <= width < 48rem)", columns: 2, columnsFor: pairedColumns },
 										{ query: "(width >= 48rem)", columns: resolvedColumns },
 									]),
 									parts?.plans,
@@ -189,6 +189,14 @@ export function PricingBand(handle: Handle<PricingBand.Props>) {
 			</MarketingSection>
 		);
 	};
+}
+
+/**
+ * Plans per row where the grid pairs them: an even run pairs up, and an odd run stays
+ * one plan a row until the full row step, so no plan ever stands alone under a pair.
+ */
+function pairedColumns(count: number): number {
+	return count % 2 === 0 ? 2 : 1;
 }
 
 /**

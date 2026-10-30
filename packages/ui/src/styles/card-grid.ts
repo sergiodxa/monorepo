@@ -223,6 +223,11 @@ export interface BalancedGridStep {
 	query: string;
 	/** The most items one row holds in this range. */
 	columns: number;
+	/**
+	 * Columns for a run of exactly `count` items in this range, where the even split
+	 * would still leave a short row the layout should not show.
+	 */
+	columnsFor?: (count: number) => number;
 }
 
 /**
@@ -281,7 +286,10 @@ export function balancedGrid<Node extends Element = Element>(
 			when<Node>(`@container ${containerName} ${step.query}`, [
 				centredRows<Node>(step.columns, rowStart),
 				byChildCount<Node>((count) =>
-					centredRows<Node>(balancedColumns(count, step.columns), rowStart),
+					centredRows<Node>(
+						step.columnsFor?.(count) ?? balancedColumns(count, step.columns),
+						rowStart,
+					),
 				),
 			]),
 		),
