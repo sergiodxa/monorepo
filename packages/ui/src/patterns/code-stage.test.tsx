@@ -1,6 +1,6 @@
 /**
- * Covers {@link CodeStage}'s surfaces, unwrapped lines, the slab variant and
- * counter-numbered lines.
+ * Covers {@link CodeStage}'s surfaces, unwrapped lines, the slab variant,
+ * counter-numbered lines, highlighted tokens and radio-driven file tabs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,5 +55,55 @@ describe("CodeStage", () => {
 
 		expect(html).not.toContain("data-line");
 		expect(html).toContain("<span>bun add</span>");
+	});
+
+	test("highlights a string child as tokens the shared stylesheet colors", async () => {
+		let html = await renderToString(<CodeStage language="ts">{"let total = 1; // sum"}</CodeStage>);
+
+		expect(html).toContain('<span class="token keyword ');
+		expect(html).toContain('<span class="token comment ');
+		expect(html).toContain("var(--highlight-keyword, light-dark(#d73a49, #ff7b72))");
+	});
+
+	test("numbers highlighted lines and splits a token that spans lines", async () => {
+		let html = await renderToString(
+			<CodeStage language="ts" lineNumbers>
+				{"/* one\ntwo */\nlet a = 1;\n"}
+			</CodeStage>,
+		);
+		let lines = html.match(/<span data-line="">.*?<\/span><\/span>(?=\n|<\/pre>)/gs) ?? [];
+
+		expect(html.match(/<span data-line="">/g)).toHaveLength(3);
+		expect(lines[0]).toContain('class="token comment ');
+		expect(lines[0]).toContain("/* one");
+		expect(lines[1]).toContain('class="token comment ');
+		expect(lines[1]).toContain("two */");
+		expect(lines[2]).toContain('class="token keyword ');
+	});
+
+	test("keeps plain string children unhighlighted without a language", async () => {
+		let html = await renderToString(<CodeStage>{"let total = 1;"}</CodeStage>);
+
+		expect(html).not.toContain("token");
+		expect(html).toContain("let total = 1;");
+	});
+
+	test("renders file tabs as a radio group with the first file selected", async () => {
+		let html = await renderToString(
+			<CodeStage
+				name="files"
+				tabs={[
+					{ label: "worker.ts", content: "export default {};", language: "ts" },
+					{ label: "wrangler.jsonc", content: '{ "name": "app" }', language: "jsonc" },
+				]}
+			/>,
+		);
+
+		expect(html.match(/type="radio"/g)).toHaveLength(2);
+		expect(html.match(/name="files"/g)).toHaveLength(2);
+		expect(html).toContain('id="files-tab-0"');
+		expect(html.match(/<input[^>]*checked/g)).toHaveLength(1);
+		expect(html.match(/data-slot="code-stage-panel"/g)).toHaveLength(2);
+		expect(html).toContain("visibility: hidden");
 	});
 });

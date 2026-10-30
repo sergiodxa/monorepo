@@ -2288,6 +2288,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@remix-run/ui": "0.12.1",
+        "@sdxc/highlight": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/u": "workspace:*",

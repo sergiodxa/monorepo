@@ -267,7 +267,7 @@ chrome on the root catalog stays free of landing weight.
 **Composition craft**
 
 - `ProductFrame` — window/device chrome (`stage`, `shadow`, `lights`, `title`, `url`, `footer`).
-- `CodeStage` / `TerminalPanel` — titled mono panel (`variant`: `code` | `terminal` | `slab`, `lineNumbers`).
+- `CodeStage` / `TerminalPanel` — titled mono panel (`variant`: `code` | `terminal` | `slab`, `language`, `lineNumbers`, `tabs`).
 - `InstallTabs`, `InstallTabs.Option` — radio dialect strip (no JS).
 - `TabbedStage`, `TabbedStage.Item` — tabs or a vertical rail controlling a media panel (no JS).
 - `CheckList`, `CheckRow` — checked claims (`orientation`: `stacked` | `horizontal`).
