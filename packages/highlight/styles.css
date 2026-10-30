@@ -15,7 +15,7 @@
 :root {
 	--highlight-text: #24292f;
 	--highlight-comment: #6a737d;
-	--highlight-keyword: #d73a49;
+	--highlight-keyword: #cf222e;
 	--highlight-string: #032f62;
 	--highlight-number: #005cc5;
 	--highlight-boolean: var(--highlight-number);
@@ -27,11 +27,11 @@
 	--highlight-builtin: var(--highlight-string);
 	--highlight-attr-name: var(--highlight-string);
 	--highlight-attr-value: var(--highlight-string);
-	--highlight-regex: #e36209;
+	--highlight-regex: #bc4c00;
 	--highlight-variable: var(--highlight-regex);
 	--highlight-operator: var(--highlight-keyword);
 	--highlight-punctuation: var(--highlight-text);
-	--highlight-inserted: #22863a;
+	--highlight-inserted: #116329;
 	--highlight-deleted: #b31d28;
 }
 

@@ -254,7 +254,7 @@ import { tokenize } from "@sdxc/highlight";
 
 let PALETTE: Partial<Record<Token.Type, string>> = {
 	comment: "#6a737d",
-	keyword: "#d73a49",
+	keyword: "#cf222e",
 	string: "#032f62",
 	number: "#005cc5",
 	function: "#6f42c1",
