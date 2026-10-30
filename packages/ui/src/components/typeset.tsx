@@ -41,6 +41,9 @@ import { easings } from "../animations/tokens.js";
  */
 const CONTAINER_NAME = "ui-typeset";
 
+/** Matches an element that is neither a `data-not-typeset` subtree's root nor inside one. */
+const OUTSIDE_OPT_OUT = ":not(:where([data-not-typeset], [data-not-typeset] *))";
+
 /** Rhythm context {@link Typeset} falls back to when `preset` is omitted. */
 const DEFAULT_PRESET: Typeset.Preset = "docs";
 
@@ -132,6 +135,17 @@ export namespace Typeset {
 }
 
 /**
+ * Narrows a descendant rule to elements outside every `data-not-typeset` subtree. Each rule
+ * the layer writes lands in a cascade layer of its own, so an opt-out has to be part of the
+ * rule's selector; the exclusion adds no specificity, and it sits ahead of a pseudo-element.
+ */
+function prose(selector: `&${string}`): `&${string}` {
+	let pseudoElement = selector.indexOf("::");
+	if (pseudoElement === -1) return `${selector}${OUTSIDE_OPT_OUT}`;
+	return `&${selector.slice(1, pseudoElement)}${OUTSIDE_OPT_OUT}${selector.slice(pseudoElement)}`;
+}
+
+/**
  * Renders a `<div>` that sizes and colors already-rendered markdown or HTML
  * content through `--ui-typeset-size`, `--ui-typeset-leading`, and
  * `--ui-typeset-flow`, computing heading sizes via `calc()` off one shared value.
@@ -185,70 +199,119 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							"--ui-typeset-leading": "1.8",
 							"--ui-typeset-flow": "1.5em",
 						},
-
-						"& > * + *": {
+					}),
+					when(
+						prose("& > * + *"),
+						raw({
 							marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
-						},
-						"& :where(blockquote, li) > * + *": {
+						}),
+					),
+					when(
+						prose("& :where(blockquote, li) > * + *"),
+						raw({
 							marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
-						},
-
-						"& :where(h1)": {
+						}),
+					),
+					when(
+						prose("& :where(h1)"),
+						raw({
 							fontSize: `calc(${TYPESET_SIZE} * 2)`,
-						},
-						"& :where(h2)": {
+						}),
+					),
+					when(
+						prose("& :where(h2)"),
+						raw({
 							fontSize: `calc(${TYPESET_SIZE} * 1.5)`,
-						},
-						"& :where(h3)": {
+						}),
+					),
+					when(
+						prose("& :where(h3)"),
+						raw({
 							fontSize: `calc(${TYPESET_SIZE} * 1.25)`,
-						},
-						"& :where(h4)": {
+						}),
+					),
+					when(
+						prose("& :where(h4)"),
+						raw({
 							fontSize: `calc(${TYPESET_SIZE} * 1.125)`,
-						},
-						"& :where(h5)": {
+						}),
+					),
+					when(
+						prose("& :where(h5)"),
+						raw({
 							fontSize: TYPESET_SIZE,
-						},
-						"& :where(h6)": {
+						}),
+					),
+					when(
+						prose("& :where(h6)"),
+						raw({
 							fontSize: `calc(${TYPESET_SIZE} * 0.875)`,
-						},
-
-						"& :where(ul)": {
+						}),
+					),
+					when(
+						prose("& :where(ul)"),
+						raw({
 							listStyleType: "disc",
-						},
-						"& :where(ol)": {
+						}),
+					),
+					when(
+						prose("& :where(ol)"),
+						raw({
 							listStyleType: "decimal",
-						},
-						"& :where(ul, ol) :where(ul)": {
+						}),
+					),
+					when(
+						prose("& :where(ul, ol) :where(ul)"),
+						raw({
 							listStyleType: "circle",
-						},
-
-						"& :where(blockquote)": {
+						}),
+					),
+					when(
+						prose("& :where(blockquote)"),
+						raw({
 							fontStyle: "italic",
-						},
-
-						"& :where(a)": {
+						}),
+					),
+					when(
+						prose("& :where(a)"),
+						raw({
 							textUnderlineOffset: "0.15em",
-						},
-						"& :where(a):hover": {
+						}),
+					),
+					when(
+						prose("& :where(a):hover"),
+						raw({
 							textDecorationThickness: "2px",
-						},
-
-						"& :where(em, i)": {
+						}),
+					),
+					when(
+						prose("& :where(em, i)"),
+						raw({
 							fontStyle: "italic",
-						},
-
-						"& :where(code)": {
+						}),
+					),
+					when(
+						prose("& :where(code)"),
+						raw({
 							fontSize: "0.875em",
-						},
-						"& :where(pre)": {
+						}),
+					),
+					when(
+						prose("& :where(pre)"),
+						raw({
 							fontSize: "0.875em",
-						},
-						"& :where(pre code)": {
+						}),
+					),
+					when(
+						prose("& :where(pre code)"),
+						raw({
 							padding: "0",
 							fontSize: "1em",
-						},
-
-						"& :where(table)": {
+						}),
+					),
+					when(
+						prose("& :where(table)"),
+						raw({
 							borderCollapse: "collapse",
 							fontSize: "0.875em",
 							scrollbarWidth: "thin",
@@ -293,65 +356,57 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 									"-webkit-mask-image": TABLE_FADE_SETTLED_MASK,
 								},
 							},
-						},
-						"& :where([data-not-typeset], [data-not-typeset] *)": {
-							all: "revert-layer",
-						},
-					}),
-
-					at(
-						"30rem",
-						CONTAINER_NAME,
-						raw({
-							"& :where(th, td)": {
-								paddingInline: "1em",
-							},
-							"& :where(pre)": {
-								paddingInline: "1.25em",
-							},
 						}),
 					),
 
-					when("& :where(pre)", leading(1.6)),
+					at("30rem", CONTAINER_NAME, [
+						when(prose("& :where(th, td)"), raw({ paddingInline: "1em" })),
+						when(prose("& :where(pre)"), raw({ paddingInline: "1.25em" })),
+					]),
 
-					when("& :where(h1, h2, h3, h4, h5, h6)", [
+					when(prose("& :where(pre)"), leading(1.6)),
+
+					when(prose("& :where(h1, h2, h3, h4, h5, h6)"), [
 						weight("semibold"),
 						leading(1.25),
 						tracking("tight"),
 						fg("neutral.emphasis"),
 						balance(),
 					]),
-					when("& :where(h6)", fg("neutral")),
+					when(prose("& :where(h6)"), fg("neutral")),
 
-					when("& :where(p, li, blockquote, dd)", pretty()),
+					when(prose("& :where(p, li, blockquote, dd)"), pretty()),
 
-					when("& :where(ul, ol)", pis("1.5em")),
-					when("& :where(li)::marker", fg("neutral.muted")),
+					when(prose("& :where(ul, ol)"), pis("1.5em")),
+					when(prose("& :where(li)::marker"), fg("neutral.muted")),
 
-					when("& :where(blockquote)", [
+					when(prose("& :where(blockquote)"), [
 						pis("1em"),
 						fg("neutral"),
 						borderEdge("inline-start", { color: "neutral", width: "0.25em" }),
 					]),
 
-					when("& :where(hr)", borderEdge("block-start", { color: "neutral", width: "1px" })),
+					when(
+						prose("& :where(hr)"),
+						borderEdge("block-start", { color: "neutral", width: "1px" }),
+					),
 
-					when("& :where(a)", [fg("brand"), textDecoration("underline")]),
-					when("& :where(a):focus-visible", [
+					when(prose("& :where(a)"), [fg("brand"), textDecoration("underline")]),
+					when(prose("& :where(a):focus-visible"), [
 						outline({ color: "brand.ring", offset: 2 }),
 						rounded("xs"),
 					]),
 
-					when("& :where(strong, b)", [weight("semibold"), fg("neutral.emphasis")]),
+					when(prose("& :where(strong, b)"), [weight("semibold"), fg("neutral.emphasis")]),
 
-					when("& :where(code)", [
+					when(prose("& :where(code)"), [
 						rounded("sm"),
 						bg("neutral.tint"),
 						fg("neutral.emphasis"),
 						pi("0.3em"),
 						pb("0.15em"),
 					]),
-					when("& :where(pre)", [
+					when(prose("& :where(pre)"), [
 						rounded("md"),
 						border({ color: "neutral.border", width: 1 }),
 						bg("neutral.tint"),
@@ -370,7 +425,7 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 					 * apply at the start of the box alone and indent the block's first line
 					 * past every line under it. The block's own padding is the `pre`'s.
 					 */
-					when("& :where(pre code)", [
+					when(prose("& :where(pre code)"), [
 						bg("transparent"),
 						fg("inherit"),
 						rounded("none"),
@@ -378,15 +433,15 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						pb(0),
 					]),
 
-					when("& :where(table)", [
+					when(prose("& :where(table)"), [
 						block(),
 						is("max(100%, max-content)"),
 						maxIs("full"),
 						overflow("auto"),
 					]),
-					when("& :where(th, td):not([align])", textAlign("start")),
-					when("& :where(th)", [weight("semibold"), fg("neutral.emphasis")]),
-					when("& :where(th, td)", [
+					when(prose("& :where(th, td):not([align])"), textAlign("start")),
+					when(prose("& :where(th)"), [weight("semibold"), fg("neutral.emphasis")]),
+					when(prose("& :where(th, td)"), [
 						tabularNums(),
 						pi("0.75em"),
 						pb("0.5em"),
