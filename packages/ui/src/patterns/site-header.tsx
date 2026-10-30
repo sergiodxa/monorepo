@@ -279,7 +279,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 								aria-label={menuLabel ?? "Open menu"}
 								aria-haspopup="dialog"
 								data-slot="site-header-menu-button"
-								mix={[menuButton(), at(breakpoint, CONTAINER, raw({ display: "none" }))]}
+								mix={[menuButton(), hideFrom(breakpoint, "inline-grid")]}
 							>
 								<MenuIcon aria-hidden="true" />
 							</button>
@@ -303,7 +303,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 							commandfor={sheetId}
 							command="close"
 							aria-label={closeLabel ?? "Close menu"}
-							mix={[menuButton()]}
+							mix={[menuButton(), raw({ display: "inline-grid" })]}
 						>
 							<XIcon aria-hidden="true" />
 						</button>
@@ -534,6 +534,14 @@ function showFrom(breakpoint: SiteHeader.CollapseAt, display: string) {
 }
 
 /**
+ * Gives an element `display` until `breakpoint`, then hides it. Both declarations share
+ * one class, so the hide wins above the breakpoint whatever order the page's styles load in.
+ */
+function hideFrom(breakpoint: SiteHeader.CollapseAt, display: string) {
+	return combine([raw({ display }), at(breakpoint, CONTAINER, raw({ display: "none" }))]);
+}
+
+/**
  * The full-width bar: transparent at the top of the page, then the blurred fill and a
  * hairline once the page has scrolled {@link FILL_RANGE}. Engines without scroll
  * timelines show the filled state from the start.
@@ -740,7 +748,6 @@ function groupTrigger() {
 function menuButton() {
 	return [
 		raw({
-			display: "inline-grid",
 			placeItems: "center",
 			flexShrink: "0",
 			position: "relative",
