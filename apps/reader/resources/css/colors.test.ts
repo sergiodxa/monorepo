@@ -30,8 +30,8 @@ const THEME = readFileSync(createRequire(import.meta.url).resolve("@sdxc/u/theme
 /** What a reader has to be able to read, against the surface every page is painted on. */
 const RENDERED_PAIRS = ["neutral-fg-emphasis", "neutral-fg", "brand-fg"] as const;
 
-/** The token every one of those is read against. */
-const SURFACE = "neutral-bg-tint";
+/** The token every one of those is read against, named for the messages a check prints. */
+const SURFACE = "bg";
 
 /** WCAG AA for body text, which is what each pair is held to on both sides. */
 const AA_RATIO = 4.5;
@@ -63,6 +63,18 @@ function stepOf(token: string, scheme: "light" | "dark"): string {
 	let declared = new RegExp(`--ui-${token}:\\s*var\\(--ui-color-([\\w-]+)\\)`).exec(block)?.[1];
 
 	if (declared === undefined) throw new Error(`${token} is not declared for ${scheme}`);
+	return declared;
+}
+
+/**
+ * The palette step a page is painted with in one scheme: the tint token in light, and in
+ * dark the step `--ui-bg` is pinned to, since the tint sits one step above the page there.
+ */
+function surfaceStep(scheme: "light" | "dark"): string {
+	if (scheme === "light") return stepOf("neutral-bg-tint", scheme);
+
+	let declared = /--ui-bg:\s*var\(--ui-color-([\w-]+)/.exec(themeBlock(scheme))?.[1];
+	if (declared === undefined) throw new Error("--ui-bg is not pinned for dark");
 	return declared;
 }
 
@@ -99,10 +111,7 @@ describe("the palette in both schemes", () => {
 	for (let scheme of ["light", "dark"] as const) {
 		for (let token of RENDERED_PAIRS) {
 			test(`${token} clears AA on ${SURFACE} in ${scheme}`, () => {
-				let ratio = contrast(
-					paletteStep(stepOf(token, scheme)),
-					paletteStep(stepOf(SURFACE, scheme)),
-				);
+				let ratio = contrast(paletteStep(stepOf(token, scheme)), paletteStep(surfaceStep(scheme)));
 
 				expect(ratio).toBeGreaterThanOrEqual(AA_RATIO);
 			});
@@ -116,7 +125,7 @@ describe("the palette in both schemes", () => {
 	 */
 	test("keeps a read post's title readable on both sides", () => {
 		for (let scheme of ["light", "dark"] as const) {
-			expect(stepOf("neutral-fg", scheme)).not.toBe(stepOf("neutral-bg-tint", scheme));
+			expect(stepOf("neutral-fg", scheme)).not.toBe(surfaceStep(scheme));
 		}
 	});
 
@@ -128,7 +137,7 @@ describe("the palette in both schemes", () => {
 	test("keeps the muted tokens short of AA on at least one side", () => {
 		for (let token of ["neutral-fg-muted", "brand-fg-muted"]) {
 			let ratios = (["light", "dark"] as const).map((scheme) =>
-				contrast(paletteStep(stepOf(token, scheme)), paletteStep(stepOf(SURFACE, scheme))),
+				contrast(paletteStep(stepOf(token, scheme)), paletteStep(surfaceStep(scheme))),
 			);
 
 			expect(Math.min(...ratios), `${token} is not a text colour`).toBeLessThan(AA_RATIO);
