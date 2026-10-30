@@ -44,7 +44,12 @@
 	--ui-neutral-bg-tint: var(--ui-color-neutral-50);
 	--ui-neutral-bg-solid: var(--ui-color-neutral-900);
 	--ui-neutral-fg: var(--ui-color-neutral-600);
-	--ui-neutral-fg-muted: var(--ui-color-neutral-500);
+	/* Muted text sits just above the 600 step: quieter than body copy, 4.5:1 on a tinted band */
+	--ui-neutral-fg-muted: color-mix(
+		in oklch,
+		var(--ui-color-neutral-600) 85%,
+		var(--ui-color-neutral-500)
+	);
 	--ui-neutral-fg-emphasis: var(--ui-color-neutral-900);
 	--ui-neutral-fg-on-solid: white;
 	--ui-neutral-border: var(--ui-color-neutral-200);
