@@ -18,6 +18,8 @@ import { MarketingSection } from "../components/marketing-section.js";
 import { marketingCtaChrome, themeScope } from "../styles/marketing.js";
 import { Eyebrow } from "../utils/eyebrow.js";
 
+import { LandingHero } from "./landing-hero.js";
+
 import "../reset.css";
 import "../theme.css";
 
@@ -260,5 +262,21 @@ describe("band tokens", () => {
 		expect(getComputedStyle(root.querySelector("button")!).transitionProperty).toBe(
 			"background-color, box-shadow, color",
 		);
+	});
+
+	test("the hero lead sets 16–18px on a phone and 20px wide", () => {
+		let sizes = [375, 1440].map((width) => {
+			let root = mount(
+				<LandingHero title="Uptime" description="Know before your users do." />,
+				width,
+			);
+			let lead = getComputedStyle(root.querySelector("p")!);
+			return [Number.parseFloat(lead.fontSize), Number.parseFloat(lead.lineHeight)];
+		});
+
+		expect(sizes[0]![0]).toBeGreaterThanOrEqual(16);
+		expect(sizes[0]![0]).toBeLessThanOrEqual(18);
+		expect(sizes[0]![1]).toBeLessThanOrEqual(28);
+		expect(sizes[1]![0]).toBeCloseTo(20, 0);
 	});
 });

@@ -93,11 +93,14 @@ const LEAD_MEASURE = varUtility("ui-marketing-lead-measure", "40rem");
 /** Font size of supporting lead copy. */
 const LEAD_SIZE = varUtility("ui-marketing-lead-size", "1.125rem");
 
-/** Font size of the hero's lead: 1.25rem on a phone, 1.5rem wide. */
+/** Font size of the hero's lead: 17px on a phone, 20px wide, as the reference landings set it. */
 const HERO_LEAD_SIZE = varUtility(
 	"ui-marketing-hero-lead-size",
-	"clamp(1.25rem, 1.14rem + 0.49cqi, 1.5rem)",
+	"clamp(1.0625rem, 0.98rem + 0.4cqi, 1.25rem)",
 );
+
+/** Line height of the hero's lead, proportional so it tracks the fluid size: 26px to 31px. */
+const HERO_LEAD_LEADING = varUtility("ui-marketing-hero-lead-leading", "1.55");
 
 /** Line height of lead copy, held at 2rem as every reference template does. */
 const LEAD_LEADING = varUtility("ui-marketing-lead-leading", "2rem");
@@ -465,7 +468,7 @@ export function marketingLead<Node extends Element = Element>(
 			fontSize: step === "hero" ? HERO_LEAD_SIZE : LEAD_SIZE,
 			fontWeight: LEAD_WEIGHT,
 			maxInlineSize: LEAD_MEASURE,
-			lineHeight: LEAD_LEADING,
+			lineHeight: step === "hero" ? HERO_LEAD_LEADING : LEAD_LEADING,
 		}),
 		marketingEmphasis<Node>(),
 	]);

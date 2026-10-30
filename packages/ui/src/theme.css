@@ -132,7 +132,8 @@
 	--ui-marketing-lead-size: 1.125rem;
 	--ui-marketing-lead-leading: 2rem;
 	--ui-marketing-lead-weight: 400;
-	--ui-marketing-hero-lead-size: clamp(1.25rem, 1.14rem + 0.49cqi, 1.5rem);
+	--ui-marketing-hero-lead-size: clamp(1.0625rem, 0.98rem + 0.4cqi, 1.25rem);
+	--ui-marketing-hero-lead-leading: 1.55;
 	--ui-marketing-logo-height: 1.75rem;
 	--ui-marketing-logo-height-lg: 2.25rem;
 	--ui-marketing-header-height: 4rem;

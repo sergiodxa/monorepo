@@ -177,6 +177,9 @@ describe("marketingLead", () => {
 
 	test("steps up to the hero lead size", () => {
 		expect(styles(marketingLead("hero")).fontSize).toContain("var(--ui-marketing-hero-lead-size");
+		expect(styles(marketingLead("hero")).lineHeight).toBe(
+			"var(--ui-marketing-hero-lead-leading, 1.55)",
+		);
 	});
 });
 
