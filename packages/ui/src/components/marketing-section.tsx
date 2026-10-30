@@ -30,6 +30,12 @@ import type { HeadingLevel } from "./heading-scope.js";
 
 import { HeadingScope, readAmbientLevel } from "./heading-scope.js";
 
+/**
+ * Width of an inset panel: the page less its 0.5rem margins, capped at the content measure
+ * plus 4rem a side, so the panel frames the column every other band aligns to.
+ */
+const INSET_INLINE_SIZE = "min(100% - 1rem, var(--ui-marketing-measure, 72rem) + 8rem)";
+
 /** Band fill {@link MarketingSection} applies when `tone` is omitted. */
 const DEFAULT_TONE: MarketingSection.Tone = "plain";
 
@@ -188,7 +194,7 @@ export function MarketingSection(handle: Handle<MarketingSection.Props, Marketin
 					container("ui-marketing-section"),
 					relative(),
 					vstack({ align: "center" }),
-					is(inset ? "calc(100% - 1rem)" : "100%"),
+					is(inset ? INSET_INLINE_SIZE : "100%"),
 					raw({ isolation: "isolate", overflowX: "clip" }),
 					marketingBandTone(resolvedTone),
 					inset ? insetPanel(inset) : [],
@@ -235,7 +241,7 @@ export function MarketingSection(handle: Handle<MarketingSection.Props, Marketin
 												: [],
 										]),
 									]
-								: marketingContainer(),
+								: measuredColumn(Boolean(inset)),
 							vstack({
 								align: isCenter ? "center" : "stretch",
 								gap: 0,
@@ -274,6 +280,26 @@ function readEnclosingBand(handle: Handle<MarketingSection.Props, MarketingSecti
 	}
 }
 
+/** The measured column of a band that is not framed: inset panels pull in their gutter. */
+function measuredColumn(inset: boolean) {
+	return inset ? insetContainer() : marketingContainer();
+}
+
+/**
+ * The measured column inside an inset panel: each gutter step, its breakpoint and the
+ * measure less the panel's 0.5rem margin a side, so the band's text shares the edges of
+ * the bands around it at every width.
+ */
+function insetContainer() {
+	return raw({
+		maxInlineSize: "calc(var(--ui-marketing-measure, 72rem) - 1rem)",
+		marginInline: "auto",
+		paddingInline: "calc(var(--ui-marketing-gutter, 1rem) - 0.5rem)",
+		"@container (min-width: 35rem)": { paddingInline: "1rem" },
+		"@container (min-width: 47rem)": { paddingInline: "1.5rem" },
+	});
+}
+
 /**
  * The "+" drawn where a framed band's top rule crosses a rail, so the rails read as a
  * frame the rule is fixed to; two 1px gradients in the hairline ink keep it quiet.
@@ -295,7 +321,7 @@ function frameMarker(edge: { insetInlineStart: string } | { insetInlineEnd: stri
 }
 
 /**
- * The rounded panel an inset band paints: margins that hold it off the page edges, the
+ * The rounded panel an inset band paints: centred inside the page's 0.5rem margins, the
  * band radius on the ends it rounds, and an inset hairline that keeps a light tone's
  * edge visible against the page.
  */
@@ -305,7 +331,7 @@ function insetPanel(inset: MarketingSection.Inset) {
 	let bottom = inset === "top" ? "0" : radius;
 
 	return raw({
-		marginInline: "0.5rem",
+		marginInline: "auto",
 		marginBlockStart: inset === "bottom" ? "0" : "0.5rem",
 		borderStartStartRadius: top,
 		borderStartEndRadius: top,

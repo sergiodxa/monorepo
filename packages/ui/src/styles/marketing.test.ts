@@ -47,19 +47,20 @@ describe("marketingContainer", () => {
 describe("marketingSectionSpace", () => {
 	test("defaults to the fluid normal section-space token", () => {
 		expect(styles(marketingSectionSpace())).toEqual({
-			paddingBlock: "var(--ui-marketing-section-space, clamp(5rem, 3.86rem + 4.85cqi, 7.5rem))",
+			paddingBlock:
+				"round(var(--ui-marketing-section-space, clamp(5rem, 3.86rem + 4.85cqi, 7.5rem)), 1px)",
 		});
 	});
 
-	test("maps hero, compact and cta onto their tokens", () => {
+	test("maps hero, compact and cta onto their tokens, rounded to whole pixels", () => {
 		expect(styles(marketingSectionSpace("hero")).paddingBlock).toMatch(
-			/^var\(--ui-marketing-section-space-hero, clamp\(3\.5rem, .+, 8rem\)\)$/,
+			/^round\(var\(--ui-marketing-section-space-hero, clamp\(3\.5rem, .+, 8rem\)\), 1px\)$/,
 		);
 		expect(styles(marketingSectionSpace("compact")).paddingBlock).toMatch(
-			/^var\(--ui-marketing-section-space-compact, clamp\(3rem, .+, 4\.5rem\)\)$/,
+			/^round\(var\(--ui-marketing-section-space-compact, clamp\(3rem, .+, 4\.5rem\)\), 1px\)$/,
 		);
 		expect(styles(marketingSectionSpace("cta")).paddingBlock).toMatch(
-			/^var\(--ui-marketing-section-space-cta, clamp\(5rem, .+, 7rem\)\)$/,
+			/^round\(var\(--ui-marketing-section-space-cta, clamp\(5rem, .+, 7rem\)\), 1px\)$/,
 		);
 	});
 });
@@ -115,10 +116,10 @@ describe("marketingBandTone", () => {
 		expect(dark["--ui-neutral-fg-emphasis"]).toBe("inherit");
 	});
 
-	test("brand paints the brand solid and re-points tokens at its foreground", () => {
+	test("brand paints the 700 step and re-points tokens at its foreground", () => {
 		let style = styles(marketingBandTone("brand"));
 
-		expect(style.backgroundColor).toBe("var(--ui-brand-bg-solid)");
+		expect(style.backgroundColor).toBe("var(--ui-marketing-brand-band, var(--ui-color-brand-700))");
 		expect(style["--ui-neutral-fg-emphasis"]).toBe("var(--ui-brand-fg-on-solid)");
 	});
 

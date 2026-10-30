@@ -12,7 +12,6 @@ import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
 import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
 import { combine, raw, var as varUtility } from "@sdxc/u/general";
 import { inlineFlex, items, relative } from "@sdxc/u/layout";
 import { at, dark, motionSafe } from "@sdxc/u/responsive";
@@ -199,9 +198,39 @@ export function marketingContainer<Node extends Element = Element>(): MixinDescr
 }
 
 /**
+ * Re-declares the surface tokens that derive from the neutral palette on the element that
+ * scopes its own `--ui-color-neutral-*` scale, so raised cards, frames and hairlines inside
+ * take that palette's hue in light and dark instead of the page root's.
+ *
+ * @returns A `css()` mixin for the element that overrides a palette scale.
+ * @example
+ * <div style="--ui-color-neutral-950: oklch(0.165 0.006 55)" mix={[themeScope()]}>{page}</div>;
+ */
+export function themeScope<Node extends Element = Element>(): MixinDescriptor<
+	Node,
+	[styles: CSSStyles],
+	ElementProps
+> {
+	return combine<Node>([
+		raw<Node>({
+			"--ui-marketing-hairline":
+				"color-mix(in oklch, var(--ui-neutral-fg-emphasis) 6%, transparent)",
+		}),
+		dark<Node>(
+			raw<Node>({
+				"--ui-surface-raised":
+					"color-mix(in oklch, var(--ui-color-neutral-950), var(--ui-color-neutral-900))",
+				"--ui-marketing-hairline": "color-mix(in oklch, white 10%, transparent)",
+			}),
+		),
+	]);
+}
+
+/**
  * Applies the band's block padding from the marketing section-space tokens. Each
  * step is fluid in the width of the container around the band, so a phone gets
  * the tighter end and a desktop band the generous one without a breakpoint jump.
+ * The step rounds to whole pixels, so band hairlines and edges stay crisp.
  *
  * @param spacing Which step to apply. Defaults to `"normal"`.
  * @returns A `css()` mixin ready for a band host's `mix` prop.
@@ -216,19 +245,21 @@ export function marketingSectionSpace<Node extends Element = Element>(
 	if (spacing === "compact") padding = SECTION_SPACE_COMPACT;
 	if (spacing === "cta") padding = SECTION_SPACE_CTA;
 
-	return raw<Node>({ paddingBlock: padding });
+	return raw<Node>({ paddingBlock: `round(${padding}, 1px)` });
 }
 
 /**
  * The neutral text, line, surface and focus tokens re-pointed at a solid fill's
  * foreground, so headings, leads, hairlines, raised controls and focus rings inside an
- * inverse or brand band stay legible on it.
+ * inverse or brand band stay legible on it: leads and labels keep at least 4.5:1 on the
+ * band's fill.
  */
 function onSolidTokens(onSolid: string): CSSStyles {
 	return {
 		"--ui-neutral-fg-emphasis": onSolid,
-		"--ui-neutral-fg": `color-mix(in oklch, ${onSolid} 80%, transparent)`,
-		"--ui-neutral-fg-muted": `color-mix(in oklch, ${onSolid} 66%, transparent)`,
+		"--ui-neutral-fg": `color-mix(in oklch, ${onSolid} 92%, transparent)`,
+		"--ui-neutral-fg-muted": `color-mix(in oklch, ${onSolid} 78%, transparent)`,
+		"--ui-marketing-eyebrow-color": `color-mix(in oklch, ${onSolid} 78%, transparent)`,
 		"--ui-neutral-border": `color-mix(in oklch, ${onSolid} 18%, transparent)`,
 		"--ui-neutral-bg-tint": `color-mix(in oklch, ${onSolid} 6%, transparent)`,
 		"--ui-marketing-hairline": `color-mix(in oklch, ${onSolid} 12%, transparent)`,
@@ -241,6 +272,19 @@ function onSolidTokens(onSolid: string): CSSStyles {
 }
 
 /**
+ * Marks every declaration `!important`. A dark theme re-declares the text tokens on each
+ * element, so a brand band asserts its own over its whole subtree to keep them in dark.
+ */
+function important(styles: CSSStyles): CSSStyles {
+	return Object.fromEntries(
+		Object.entries(styles).map(([property, value]) => [
+			property,
+			typeof value === "string" ? `${value} !important` : value,
+		]),
+	) as CSSStyles;
+}
+
+/**
  * The tokens a dark page's inverse band restores: rather than painting a near-white slab
  * at the foot of a dark page, the band becomes a raised surface carrying the page's own
  * text and line tokens.
@@ -249,6 +293,7 @@ const DARK_INVERSE_TOKENS = {
 	"--ui-neutral-fg-emphasis": "inherit",
 	"--ui-neutral-fg": "inherit",
 	"--ui-neutral-fg-muted": "inherit",
+	"--ui-marketing-eyebrow-color": "inherit",
 	"--ui-neutral-border": "inherit",
 	"--ui-neutral-bg-tint": "inherit",
 	"--ui-marketing-hairline": "inherit",
@@ -258,6 +303,13 @@ const DARK_INVERSE_TOKENS = {
 	"--ui-brand-ring": "inherit",
 	"--ui-neutral-ring": "inherit",
 } as const;
+
+/**
+ * The brand band's fill: the 700 step, one deeper than a brand button, so white leads and
+ * labels on it clear 4.5:1 for any 600 step a palette picks. Override with
+ * `--ui-marketing-brand-band`.
+ */
+const BRAND_BAND_FILL = "var(--ui-marketing-brand-band, var(--ui-color-brand-700))";
 
 /** The quiet brand glow a tinted or dark-inverse band carries in its top corner. */
 const BRAND_GLOW =
@@ -319,9 +371,12 @@ export function marketingBandTone<Node extends Element = Element>(
 			]);
 		case "brand":
 			return combine<Node>([
-				bg<Node>("brand.solid"),
+				raw<Node>({ backgroundColor: BRAND_BAND_FILL }),
 				fg<Node>("brand.onSolid"),
 				raw<Node>(onSolidTokens("var(--ui-brand-fg-on-solid)")),
+				dark<Node>(
+					when<Node>("&, & *", raw<Node>(important(onSolidTokens("var(--ui-brand-fg-on-solid)")))),
+				),
 			]);
 		case "gradient":
 			return raw<Node>({
@@ -482,7 +537,8 @@ export function logoCloudMark<Node extends Element = Element>(): MixinDescriptor
  * Corner radius, weight and tactile edge for a marketing CTA. Compose onto a
  * {@link Button} or {@link LinkButton}; it sets `--ui-button-radius` and
  * `--ui-button-weight`, which the control reads, so `--ui-marketing-cta-radius` (pill,
- * 8px, 6px) applies whatever order the stylesheets load in.
+ * 8px, 6px) applies whatever order the stylesheets load in. Only colour and shadow
+ * animate, so a hover never eases the control's size or radius.
  *
  * @returns A `css()` mixin ready for a CTA control's `mix` prop.
  * @example
@@ -497,13 +553,14 @@ export function marketingCtaChrome<Node extends Element = Element>(): MixinDescr
 		"--ui-button-radius": "var(--ui-marketing-cta-radius, 0.5rem)",
 		"--ui-button-weight": "var(--ui-marketing-cta-weight, 600)",
 		boxShadow: "var(--ui-shadow-control, 0 1px 2px rgb(0 0 0 / 0.05))",
+		transitionProperty: "background-color, box-shadow, color",
 	});
 }
 
 /**
  * The label above a headline, in one of five looks. `mono` and `soft` stay neutral,
  * `quiet` is a hairline pill for hero announcements, `pill` and `numbered` carry the
- * brand. Variants live in `data-variant`; a brand tints the mono label through
+ * brand. Pills round at 1rem, so a label that wraps on a phone reads as a soft card. Variants live in `data-variant`; a brand tints the mono label through
  * `--ui-marketing-eyebrow-color`, and a linked eyebrow nudges its arrow on hover.
  *
  * @returns A `css()` mixin ready for an eyebrow `span` or `a`'s `mix` prop; set
@@ -536,8 +593,7 @@ export function eyebrow<Node extends Element = Element>(): MixinDescriptor<
 		when<Node>('&:is([data-variant="quiet"], [data-variant="soft"], [data-variant="pill"])', [
 			pb<Node>(1.5),
 			pi<Node>(3.5),
-			rounded<Node>("full"),
-			raw<Node>({ lineHeight: "1rem" }),
+			raw<Node>({ lineHeight: "1rem", borderRadius: "1rem", textWrap: "balance" }),
 		]),
 		when<Node>('&[data-variant="quiet"]', [
 			weight<Node>("normal"),
@@ -558,7 +614,7 @@ export function eyebrow<Node extends Element = Element>(): MixinDescriptor<
 		when<Node>('&[data-variant="numbered"]', [
 			pb<Node>(1),
 			pi<Node>(4),
-			rounded<Node>("full"),
+			raw<Node>({ borderRadius: "1rem" }),
 			text<Node>("sm"),
 			weight<Node>("medium"),
 			fg<Node>("brand"),
@@ -571,8 +627,7 @@ export function eyebrow<Node extends Element = Element>(): MixinDescriptor<
 			raw<Node>({
 				paddingInlineEnd: "0.5rem",
 				marginInlineEnd: "0.125rem",
-				borderInlineEnd: "1px solid currentColor",
-				opacity: "0.6",
+				borderInlineEnd: "1px solid color-mix(in oklch, currentColor 40%, transparent)",
 			}),
 		]),
 		when<Node>("&:is(a)", [

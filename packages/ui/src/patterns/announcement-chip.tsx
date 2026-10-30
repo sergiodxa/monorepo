@@ -26,7 +26,7 @@ const SPECIAL_STYLES = {
 		"linear-gradient(var(--ui-brand-bg-tint), var(--ui-brand-bg-tint)), linear-gradient(120deg, var(--ui-brand-bg-solid), color-mix(in oklab, var(--ui-brand-bg-solid) 40%, Canvas))",
 	backgroundOrigin: "border-box",
 	backgroundClip: "padding-box, border-box",
-	borderRadius: "9999px",
+	borderRadius: "1rem",
 	paddingBlock: "0.375rem",
 	paddingInline: "0.875rem",
 	lineHeight: "1rem",

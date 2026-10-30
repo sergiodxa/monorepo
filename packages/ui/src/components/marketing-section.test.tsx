@@ -47,7 +47,7 @@ describe("MarketingSection", () => {
 		);
 
 		let spaceClass = html.match(
-			/\.([a-z0-9-]+) \{\s*padding-block: var\(--ui-marketing-section-space-hero/,
+			/\.([a-z0-9-]+) \{\s*padding-block: round\(var\(--ui-marketing-section-space-hero/,
 		)?.[1];
 		let sectionClasses = html.match(/<section[^>]*data-variant="frame"[^>]*class="([^"]*)"/)?.[1];
 
