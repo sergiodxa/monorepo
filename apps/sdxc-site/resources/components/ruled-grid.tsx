@@ -13,9 +13,9 @@ import { bg, fg, outline } from "@sdxc/u/color";
 import { transition } from "@sdxc/u/effects";
 import { listStyle, raw } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
+import { m, minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { font, text } from "@sdxc/u/typography";
+import { font, overflowWrap, text } from "@sdxc/u/typography";
 
 namespace RuledGrid {
 	export interface Props {
@@ -51,13 +51,13 @@ export default function RuledGrid(handle: Handle<RuledGrid.Props>) {
 	);
 }
 
-/** Renders one linked cell of a {@link RuledGrid}. */
+/** Renders one linked cell of a {@link RuledGrid}; a name wider than its column breaks inside it. */
 export function RuledCell(handle: Handle<RuledGrid.CellProps>) {
 	return () => {
 		let { description, href, name } = handle.props;
 
 		return (
-			<li mix={[raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border)" })]}>
+			<li mix={[minIs(0), raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border)" })]}>
 				<a
 					href={href}
 					mix={[
@@ -68,7 +68,9 @@ export function RuledCell(handle: Handle<RuledGrid.CellProps>) {
 						when("&:focus-visible", outline({ color: "brand.ring", offset: -2 })),
 					]}
 				>
-					<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>{name}</code>
+					<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), overflowWrap("anywhere")]}>
+						{name}
+					</code>
 					{description ? <span mix={[text("sm"), fg("neutral")]}>{description}</span> : null}
 				</a>
 			</li>
