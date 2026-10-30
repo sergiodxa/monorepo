@@ -11,7 +11,22 @@
 
 import type { Handle } from "remix/component";
 
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { combine, raw, userSelect } from "@sdxc/u/general";
+import { flex, inlineFlex, items, justify, relative, shrink } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { tabularNums, text, weight } from "@sdxc/u/typography";
+
 import { ImagePlaceholder } from "./image-placeholder.js";
+
+/**
+ * Ring that cuts each grouped avatar out of its predecessor, in the page surface behind
+ * the group, so it reads as a gap in light and dark alike.
+ */
+const GROUP_RING = "0 0 0 2px var(--ui-avatar-group-ring, var(--ui-bg, Canvas))";
 
 /**
  * Prop types for {@link Avatar} and its compound parts. Each part aliases
@@ -124,9 +139,9 @@ Avatar.Fallback = ImagePlaceholder.Fallback;
 Avatar.Badge = ImagePlaceholder.Badge;
 
 /**
- * Renders {@link Avatar.GroupProps.children} as a row of overlapping
- * avatars, pulling every child but the first back over its predecessor and
- * ringing it, so the overlap reads as stacked cutouts.
+ * Renders {@link Avatar.GroupProps.children} as a row of overlapping avatars, each
+ * pulled over about a fifth of its predecessor, so two-letter initials stay readable, and
+ * ringed in the page surface (`--ui-avatar-group-ring` to match another fill).
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.
@@ -138,13 +153,35 @@ Avatar.Badge = ImagePlaceholder.Badge;
  * </Avatar.Group>
  */
 function AvatarGroup(handle: Handle<Avatar.GroupProps>) {
-	return () => <ImagePlaceholder.Group {...handle.props} />;
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<div {...rest} data-slot="group" mix={[flex(), groupStack(), mix]}>
+				{children}
+			</div>
+		);
+	};
 }
 
 /**
- * Renders the "+N" overflow indicator that trails {@link Avatar.Group}: a
- * fixed medium-size box matching {@link Avatar}'s default dimensions, ringed
- * the same way a grouped avatar is and fixed to the same full circle.
+ * Overlap and ring for every grouped child in one rule: each child after the first
+ * moves back about a fifth of the avatar before it (2, 2.5 or 3rem), leaving room for
+ * two letters of initials beside the 2px ring.
+ */
+function groupStack() {
+	return combine([
+		when("& > *", raw({ boxShadow: GROUP_RING })),
+		when("& > * + *", raw({ marginInlineStart: "-0.5rem" })),
+		when('& > [data-size="sm"] + *', raw({ marginInlineStart: "-0.375rem" })),
+		when('& > [data-size="lg"] + *', raw({ marginInlineStart: "-0.625rem" })),
+	]);
+}
+
+/**
+ * Renders the "+N" overflow indicator that trails {@link Avatar.Group}: a fixed
+ * medium-size circle matching {@link Avatar}'s default dimensions, its tabular digits
+ * keeping a changing count one width; the group rings it like an avatar.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the overflow indicator's markup.
@@ -152,7 +189,37 @@ function AvatarGroup(handle: Handle<Avatar.GroupProps>) {
  * <Avatar.Group.Count>+3</Avatar.Group.Count>
  */
 function AvatarGroupCount(handle: Handle<Avatar.GroupCountProps>) {
-	return () => <ImagePlaceholder.GroupCount {...handle.props} shape="circle" />;
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<span
+				{...rest}
+				data-slot="group-count"
+				data-shape="circle"
+				mix={[
+					relative(),
+					inlineFlex(),
+					items("center"),
+					justify("center"),
+					overflow("hidden"),
+					weight("medium"),
+					bg("neutral.bg-tint-hover"),
+					fg("neutral"),
+					rounded("full"),
+					shrink(),
+					userSelect(),
+					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+					text("sm"),
+					tabularNums(),
+					mix,
+				]}
+			>
+				{children}
+			</span>
+		);
+	};
 }
 
 AvatarGroup.Count = AvatarGroupCount;
