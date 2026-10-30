@@ -10,7 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { MenuIcon } from "@sdxc/icons";
-import { borderEdge, fg } from "@sdxc/u/color";
+import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import {
 	basis,
@@ -27,18 +27,21 @@ import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, minIs, mis, p, pbe } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
-import { before } from "@sdxc/u/state";
+import { before, when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
 
+import type { Anchor } from "~/app/services/article";
 import type { NavTree } from "~/app/services/navigation-tree";
 
 import { findNeighbours } from "~/app/services/navigation-tree";
 import AuthorNote from "~/resources/components/author-note";
+import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import DocsNav from "~/resources/components/docs-nav";
 import DocsPager from "~/resources/components/docs-pager";
 import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { SiteNav } from "~/resources/components/site-header";
+import { TableOfContents } from "~/resources/components/table-of-contents";
 import routes from "~/routes/web";
 
 /** The drawer a narrow screen opens, and the button that opens it, agree on this id. */
@@ -53,6 +56,12 @@ const DRAWER_BREAKPOINT = "(max-width: 47.9375rem)";
  * column that narrows, so the rail always ends inside the viewport.
  */
 const ASIDE_BREAKPOINT = "(min-width: 75rem)";
+
+/** Every width below {@link ASIDE_BREAKPOINT}, where the headings fold into the sticky bar. */
+const BAR_BREAKPOINT = "(max-width: 74.9375rem)";
+
+/** How far a jumped-to heading stops below the viewport's top, clear of the sticky bar. */
+const BAR_CLEARANCE = "3.75rem";
 
 /**
  * Width the trail across the top appears from. Narrower, the inset beside the docked tree
@@ -84,15 +93,19 @@ namespace DocsLayout {
 		activePath: string;
 		breadcrumbs: Crumb[];
 		children: RemixNode;
-		/** The page's own in-page navigation, drawn beside it where there is room. */
-		aside?: RemixNode;
+		/**
+		 * The page's own headings: a rail beside the prose where there is room, and a sticky
+		 * "On this page" bar under the header where there is not. Too few draw neither.
+		 */
+		anchors?: Anchor[];
 	}
 }
 
 /** Renders the tree, the trail, and the page between them. */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
-		let { activePath, aside, breadcrumbs, children, tree } = handle.props;
+		let { activePath, anchors = [], breadcrumbs, children, tree } = handle.props;
+		let outlined = hasDocsAside(anchors);
 		let { next, previous } = findNeighbours(tree, activePath);
 
 		let heading = (
@@ -182,6 +195,21 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</span>
 					</header>
 
+					{outlined ? (
+						<div
+							mix={[
+								sticky(),
+								insBs(0),
+								z(2),
+								bg(),
+								borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
+								media(ASIDE_BREAKPOINT, hidden()),
+							]}
+						>
+							<TableOfContents anchors={anchors} layout="bar" />
+						</div>
+					) : null}
+
 					<div
 						mix={[
 							vstack({ gap: 10 }),
@@ -209,6 +237,12 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							p(8, 5, 16, 5),
 							media("(min-width: 60rem)", p(10, 8, 20, 8)),
 							media(ASIDE_BREAKPOINT, [hstack({ gap: 12, align: "start", justify: "between" })]),
+							outlined
+								? media(
+										BAR_BREAKPOINT,
+										when("& [id]", raw({ scrollMarginBlockStart: BAR_CLEARANCE })),
+									)
+								: [],
 						]}
 					>
 						<main
@@ -223,7 +257,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							<AuthorNote />
 						</main>
 
-						{aside ? (
+						{outlined ? (
 							<div
 								mix={[
 									hidden(),
@@ -239,7 +273,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 									]),
 								]}
 							>
-								{aside}
+								<DocsAside anchors={anchors} path={activePath} />
 							</div>
 						) : null}
 					</div>

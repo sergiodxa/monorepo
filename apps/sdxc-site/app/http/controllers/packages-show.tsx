@@ -43,7 +43,6 @@ import {
 } from "~/app/services/packages";
 import { absoluteUrl } from "~/config/constants";
 import CatalogueIndex from "~/resources/components/catalogue-index";
-import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import InstallCommand from "~/resources/components/install-command";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
@@ -95,9 +94,7 @@ export default createAction(routes.api.show, async (ctx) => {
 				tree={tree}
 				activePath={activePath}
 				breadcrumbs={[{ label: "API", href: routes.api.index.href() }, { label: entry.name }]}
-				aside={
-					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
-				}
+				anchors={anchors}
 			>
 				<article>
 					<header mix={[vstack({ gap: 4 })]}>

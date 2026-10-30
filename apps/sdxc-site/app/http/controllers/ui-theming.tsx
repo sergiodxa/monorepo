@@ -22,7 +22,6 @@ import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdow
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readTheme } from "~/app/services/theming";
 import { absoluteUrl } from "~/config/constants";
-import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -67,9 +66,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: THEMING_TITLE },
 				]}
-				aside={
-					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
-				}
+				anchors={anchors}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>

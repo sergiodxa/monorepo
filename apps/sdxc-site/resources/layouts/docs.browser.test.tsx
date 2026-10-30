@@ -1,7 +1,7 @@
 /**
  * Tests the documentation shell against the real layout engine: at every width a reader
- * meets it, from a phone to a wide desktop, the header row and the in-page rail stay inside
- * the viewport, so the page never scrolls sideways.
+ * meets it the page never scrolls sideways, and the page's headings are always one tap away,
+ * as a rail beside the prose or as a sticky bar under the header.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,13 +47,24 @@ const TREE: NavTree = {
 };
 
 /** Every width the shell is checked at, spanning the drawer, the docked tree and the rail. */
-const WIDTHS = [320, 375, 768, 1024, 1200, 1280, 1390, 1440];
+const WIDTHS = [320, 375, 414, 600, 768, 900, 1024, 1199, 1200, 1280, 1390, 1440, 1600, 1920];
+
+/** The widths below the rail's breakpoint, where the headings fold into the sticky bar. */
+const BAR_WIDTHS = [320, 375, 768, 1024, 1199];
+
+/** The page's headings, one with a title long enough to need truncating in the bar. */
+const ANCHORS = [
+	{ id: "usage", text: "Usage", level: 2 },
+	{ id: "props", text: "Props, and every variant a long section heading can describe", level: 2 },
+	{ id: "slots", text: "Slots", level: 3 },
+];
 
 let mounted: RenderResult | undefined;
 
 afterEach(async () => {
 	mounted?.cleanup();
 	mounted = undefined;
+	window.scrollTo(0, 0);
 	await page.viewport(414, 896);
 });
 
@@ -71,14 +82,30 @@ function mountComponentPage() {
 				{ label: "@sdxc/ui", href: "/api/ui" },
 				{ label: "Marketing section with a long name" },
 			]}
-			aside={<nav aria-label="On this page">On this page</nav>}
+			anchors={ANCHORS}
 		>
 			<h1>Bento</h1>
+			{ANCHORS.map((anchor) => (
+				<h2 key={anchor.id} id={anchor.id} style={{ marginBlock: "40rem" }}>
+					{anchor.text}
+				</h2>
+			))}
 			<div style={{ overflowX: "auto" }}>
 				<div style={{ inlineSize: "60rem" }}>A preview wider than the prose, which scrolls.</div>
 			</div>
 		</DocsLayout>,
 	);
+}
+
+/** The phone bar the headings fold into. */
+function bar(): HTMLDetailsElement {
+	return mounted!.$('[data-slot="toc-bar"]') as HTMLDetailsElement;
+}
+
+/** The in-page list a reader can see, or `undefined` while none is drawn. */
+function visibleOutline(): HTMLElement | undefined {
+	let navs = [...mounted!.$$('nav[aria-label="On this page"]')] as HTMLElement[];
+	return navs.find((nav) => nav.getBoundingClientRect().height > 0 && !nav.closest("details"));
 }
 
 /** How far the page reaches past the viewport's inline end, which is zero when it fits. */
@@ -107,9 +134,46 @@ describe("DocsLayout", () => {
 		await page.viewport(1280, 900);
 		mountComponentPage();
 
-		let rail = mounted!.$('nav[aria-label="On this page"]') as HTMLElement;
+		let rail = visibleOutline();
 
-		expect(rail.getBoundingClientRect().width).toBeGreaterThan(0);
-		expect(rail.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+		expect(rail?.closest("details")).toBeNull();
+		expect(rail!.getBoundingClientRect().width).toBeGreaterThan(0);
+		expect(rail!.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+		expect(bar().getBoundingClientRect().height).toBe(0);
+	});
+
+	test.each(BAR_WIDTHS)("folds the headings into a bar on a %ipx screen", async (width) => {
+		await page.viewport(width, 900);
+		mountComponentPage();
+
+		let box = bar().getBoundingClientRect();
+
+		expect(visibleOutline()).toBeUndefined();
+		expect(box.height).toBeGreaterThanOrEqual(44);
+		expect(box.left).toBeGreaterThanOrEqual(0);
+		expect(box.right).toBeLessThanOrEqual(window.innerWidth);
+	});
+
+	test("keeps the bar at the top of the screen while the page scrolls", async () => {
+		await page.viewport(375, 900);
+		mountComponentPage();
+
+		window.scrollTo(0, 2000);
+
+		await expect.poll(() => bar().getBoundingClientRect().top).toBe(0);
+	});
+
+	test("closes the bar once a reader jumps to a heading, and clears the heading of it", async () => {
+		await page.viewport(375, 900);
+		mountComponentPage();
+		let details = bar();
+		details.open = true;
+
+		(details.querySelector('a[href="#props"]') as HTMLAnchorElement).click();
+
+		await expect.poll(() => details.open).toBe(false);
+		await expect
+			.poll(() => document.getElementById("props")!.getBoundingClientRect().top)
+			.toBeGreaterThanOrEqual(details.getBoundingClientRect().bottom);
 	});
 });

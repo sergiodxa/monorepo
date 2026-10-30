@@ -33,7 +33,6 @@ import {
 import { listUtilityExamples } from "~/app/services/utility-examples";
 import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/constants";
-import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
@@ -92,9 +91,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 					{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
 					{ label: reference.property },
 				]}
-				aside={
-					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
-				}
+				anchors={anchors}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>

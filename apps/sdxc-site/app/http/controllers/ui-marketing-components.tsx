@@ -41,7 +41,6 @@ import { MARKETING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services
 import { absoluteUrl } from "~/config/constants";
 import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
-import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -97,9 +96,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: MARKETING_COMPONENTS_TITLE },
 				]}
-				aside={
-					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
-				}
+				anchors={anchors}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
