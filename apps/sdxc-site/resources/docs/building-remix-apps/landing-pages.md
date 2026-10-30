@@ -421,6 +421,17 @@ The rest of the patterns cover bands most landings reach for sooner or later:
 - `Curriculum`: course parts with expandable lessons, totals and a "Free" badge.
 - `SegmentedStage`: a pill switcher over hero media, so one stage shows several views.
 - `Rails` and `Crosshair`: frame the content column with hairline rails and "+" marks.
+- `LogoSentence`: customer marks set inline in one line of prose.
+
+So the bands on one page don't all share a shape, most of them come in more than one:
+
+- `LogoCloud` takes `layout="tiles"`, `"ruled"` or `"marquee"`.
+- `Feature.Grid` takes `variant="list"` for claims without cards, and a `Feature` takes
+  `span={2}` to widen it.
+- `MarketingHeader` takes `layout="split"`, `tone="statement"`, a `subtitle` or an `action`.
+- `TestimonialBand` takes a `featured` quote and `layout="carousel"`.
+- `AccentText` takes `variant="sheen"`, `"pill"` or `"chip"`.
+- `LandingHero` takes a `release` pin and an `entrance`.
 
 ## Your brand
 

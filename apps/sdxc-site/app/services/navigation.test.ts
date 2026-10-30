@@ -110,7 +110,7 @@ describe("Marketing group", () => {
 				"SiteFooter",
 			]),
 		);
-		expect(titles).toHaveLength(36);
+		expect(titles).toHaveLength(37);
 		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
 		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 	});
