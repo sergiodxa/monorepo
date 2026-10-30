@@ -1,7 +1,7 @@
 /**
- * The table of contents: the book's three parts side by side, each a timeline of its
- * chapters with the chapter number, page count and lesson count above the title, so a
- * reader scans it the way they would the contents page of the printed book.
+ * The table of contents, set as the printed book sets it: the band's title held at the
+ * start column while the three parts run down the other, each chapter a row with its
+ * number, title and opening page that opens on a summary and the videos that go with it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,12 +9,12 @@
 
 import { fg } from "@sdxc/u/color";
 import { combine, raw } from "@sdxc/u/general";
-import { container, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
+import { container, grid } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
-import { font, leading, text, tracking, weight } from "@sdxc/u/typography";
-import { Heading, HeadingScope, MarketingHeader, MarketingSection } from "@sdxc/ui";
-import { StepList } from "@sdxc/ui/patterns";
+import { text } from "@sdxc/u/typography";
+import { MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { Curriculum } from "@sdxc/ui/patterns";
 
 /** One chapter: its title, a line on what it covers, its pages and its video lessons. */
 interface Chapter {
@@ -137,90 +137,93 @@ const PARTS: readonly Part[] = [
 	},
 ];
 
-/** Name of the container the parts' columns query. */
+/** Pages of front matter before chapter 1 opens. */
+const FRONT_MATTER = 12;
+
+/** Name of the container the band's two columns query. */
 const CONTAINER_NAME = "book-contents";
 
+/** The chapter whose row carries the free-chapter badge. */
+const FREE_CHAPTER = 2;
+
 /**
- * Renders the contents on a tinted band: one column per part from the `lg` container up,
- * stacked below it. The part title takes the next heading level and each chapter the one
- * under it, so the outline matches the printed contents page.
+ * Renders the contents on a ruled band. From the `lg` container the header holds the
+ * start third and stays in view while the parts scroll past it; below, the header sits
+ * above the parts. Page numbers run on from the front matter, as in the printed book.
  *
  * @returns The render function producing the band.
  */
 export default function BookContents() {
 	return () => {
 		let chapterNumber = 0;
+		let page = FRONT_MATTER;
 
 		return (
-			<MarketingSection id="contents" tone="tinted">
-				<MarketingHeader
-					eyebrow="Table of contents"
-					description={
-						<>
-							312 pages in three parts, read in order or by the problem in front of you. Every
-							chapter has <strong>its own video lessons</strong> in the complete edition.
-						</>
-					}
-				>
-					Three parts, fourteen chapters
-				</MarketingHeader>
+			<MarketingSection id="contents" ruled>
 				<div mix={[container(CONTAINER_NAME)]}>
 					<div
 						mix={[
 							grid(),
 							combine([
-								raw({ gap: "3rem" }),
-								gridTemplate({ columns: "minmax(0, 1fr)" }),
-								at("lg", CONTAINER_NAME, raw({ gridTemplateColumns: repeat(3, "minmax(0, 1fr)") })),
+								raw({ gap: "2.5rem", gridTemplateColumns: "minmax(0, 1fr)" }),
+								at(
+									"lg",
+									CONTAINER_NAME,
+									raw({
+										gap: "4rem",
+										gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)",
+										alignItems: "start",
+									}),
+								),
 							]),
 						]}
 					>
-						{PARTS.map((part) => (
-							<HeadingScope key={part.numeral}>
-								<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-									<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-										<p
-											mix={[
-												m(0),
-												font("mono"),
-												text("xs"),
-												weight("semibold"),
-												tracking("widest"),
-												raw({ textTransform: "uppercase" }),
-												fg("brand"),
-											]}
-										>
-											{part.numeral}
-										</p>
-										<Heading>
-											<span
-												mix={[
-													font("display"),
-													raw({ fontSize: "1.75rem", fontWeight: "400" }),
-													leading("tight"),
-												]}
+						<MarketingHeader
+							eyebrow="Contents"
+							description={
+								<>
+									312 pages in three parts, read in order or by the problem in front of you. Every
+									chapter has <strong>its own video lessons</strong> in the complete edition.
+								</>
+							}
+							mix={[
+								combine([
+									raw({ "--ui-marketing-header-end": "0" }),
+									at("lg", CONTAINER_NAME, raw({ position: "sticky", insetBlockStart: "6rem" })),
+								]),
+							]}
+						>
+							Three parts, fourteen chapters
+						</MarketingHeader>
+						<Curriculum layout="stack">
+							{PARTS.map((part) => (
+								<Curriculum.Part
+									key={part.numeral}
+									title={`${part.numeral}: ${part.title}`}
+									meta={`${part.chapters.length} chapters`}
+								>
+									{part.chapters.map((chapter) => {
+										chapterNumber += 1;
+										let opens = page + 1;
+										page += chapter.pages;
+										return (
+											<Curriculum.Lesson
+												key={chapter.title}
+												number={String(chapterNumber).padStart(2, "0")}
+												title={chapter.title}
+												meta={`p. ${opens}`}
+												badge={chapterNumber === FREE_CHAPTER ? "Free" : undefined}
 											>
-												{part.title}
-											</span>
-										</Heading>
-									</div>
-									<StepList variant="timeline">
-										{part.chapters.map((chapter) => {
-											chapterNumber += 1;
-											return (
-												<StepList.Item
-													key={chapter.title}
-													meta={`Chapter ${String(chapterNumber).padStart(2, "0")} · ${chapter.pages} pages · ${chapter.lessons} videos`}
-													title={chapter.title}
-												>
-													{chapter.summary}
-												</StepList.Item>
-											);
-										})}
-									</StepList>
-								</div>
-							</HeadingScope>
-						))}
+												<p mix={[m(0), fg("neutral")]}>{chapter.summary}</p>
+												<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+													{chapter.pages} pages · {chapter.lessons} video lessons
+												</p>
+											</Curriculum.Lesson>
+										);
+									})}
+								</Curriculum.Part>
+							))}
+						</Curriculum>
 					</div>
 				</div>
 			</MarketingSection>

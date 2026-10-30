@@ -1,7 +1,7 @@
 /**
  * The opening page of the free chapter, set the way the book sets it: running head, a
  * large chapter numeral, a drop cap and a measure rule annotated in the margin colour,
- * so the sample band shows the book's own typography rather than describing it.
+ * so the sample band shows the book's own typography at work.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,8 +15,9 @@ import { font, leading, text, tracking, weight } from "@sdxc/u/typography";
 import { marketingSurface } from "@sdxc/ui/styles";
 
 /**
- * Renders the page on a raised paper surface whose text column is held to 34ch, the measure
- * the chapter argues for at this size.
+ * Renders the page square-on on a ruled paper surface. The measure rule and the paragraph
+ * share one 34ch column in the same face and size, so the rule spans exactly the line it
+ * annotates, with a tick at each end.
  *
  * @returns The render function producing the sample page.
  */
@@ -28,19 +29,19 @@ export default function BookSamplePage() {
 				marketingSurface(),
 				p(8),
 				vstack({ gap: 6, align: "stretch" }),
-				raw({ rotate: "-1deg", maxInlineSize: "30rem", marginInline: "auto" }),
+				raw({ maxInlineSize: "30rem", marginInline: "auto" }),
 			]}
 		>
 			<div
 				mix={[
 					hstack({ justify: "between" }),
-					font("mono"),
 					text("xs"),
-					tracking("wide"),
+					tracking("widest"),
 					fg("neutral.muted"),
+					raw({ textTransform: "uppercase" }),
 				]}
 			>
-				<span>THE MEASURE</span>
+				<span>The Measure</span>
 				<span>37</span>
 			</div>
 			<div mix={[vstack({ gap: 1, align: "start" })]}>
@@ -54,20 +55,48 @@ export default function BookSamplePage() {
 					The measure
 				</p>
 			</div>
-			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-				<div aria-hidden="true" mix={[hstack({ gap: 2, align: "center" }), fg("brand")]}>
-					<span mix={[raw({ flex: "1", borderBlockStart: "1px solid currentColor" })]} />
-					<span mix={[font("mono"), text("xs"), weight("semibold")]}>34 ch</span>
-					<span mix={[raw({ flex: "1", borderBlockStart: "1px solid currentColor" })]} />
+			<div
+				mix={[
+					vstack({ gap: 2, align: "stretch" }),
+					font("display"),
+					text("base"),
+					raw({ maxInlineSize: "34ch" }),
+				]}
+			>
+				<div
+					aria-hidden="true"
+					mix={[hstack({ gap: 2, align: "center" }), fg("brand"), raw({ blockSize: "0.75rem" })]}
+				>
+					<span
+						mix={[
+							raw({
+								flex: "1",
+								alignSelf: "stretch",
+								borderInlineStart: "1px solid currentColor",
+								background:
+									"linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat",
+							}),
+						]}
+					/>
+					<span mix={[text("xs"), tracking("wide"), weight("semibold")]}>34 ch</span>
+					<span
+						mix={[
+							raw({
+								flex: "1",
+								alignSelf: "stretch",
+								borderInlineEnd: "1px solid currentColor",
+								background:
+									"linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat",
+							}),
+						]}
+					/>
 				</div>
 				<p
 					mix={[
 						m(0),
-						font("display"),
-						text("base"),
 						leading("relaxed"),
 						fg("neutral"),
-						raw({ maxInlineSize: "34ch", hyphens: "auto", textWrap: "pretty" }),
+						raw({ hyphens: "auto", textWrap: "pretty" }),
 					]}
 				>
 					<span

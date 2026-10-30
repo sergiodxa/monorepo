@@ -91,8 +91,8 @@ const SKILLS: readonly Skill[] = [
 ];
 
 /**
- * Renders the skills as a three-column card grid from the `lg` container, two from `md`
- * and one on a phone.
+ * Renders the skills as an open list of glyphs and copy, three across from the `lg` container,
+ * two from `md` and one on a phone, so six skills always fill whole rows.
  *
  * @returns The render function producing the band.
  */
@@ -102,6 +102,7 @@ export default function BookLearn() {
 			id="learn"
 			layout="grid"
 			columns={3}
+			gridVariant="list"
 			eyebrow="What you’ll learn"
 			title="Fourteen chapters, one habit: look closer"
 			description={

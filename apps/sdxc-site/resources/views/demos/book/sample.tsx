@@ -66,14 +66,24 @@ export default function BookSample() {
 						</Button>
 					</div>
 				</form>
-				<p mix={[m(0), hstack({ gap: 2, align: "center" }), text("sm"), fg("neutral.muted")]}>
-					<DownloadIcon aria-hidden="true" mix={[raw({ inlineSize: "1rem", blockSize: "1rem" })]} />
+				<p mix={[m(0), hstack({ gap: 2, align: "start" }), text("sm"), fg("neutral.muted")]}>
+					<DownloadIcon
+						aria-hidden="true"
+						mix={[
+							raw({
+								inlineSize: "1rem",
+								blockSize: "1rem",
+								flexShrink: "0",
+								marginBlockStart: "0.125rem",
+							}),
+						]}
+					/>
 					<span>
 						Rather skip the email?{" "}
 						<Link href="/examples/book/sample-chapter.pdf" mix={[weight("medium")]}>
 							Download the PDF
 						</Link>{" "}
-						(2.1 MB)
+						{"(2.1\u00a0MB)"}
 					</span>
 				</p>
 			</div>

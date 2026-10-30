@@ -1,33 +1,109 @@
 /**
- * The about-the-author band: who Odile Varga is and why a reader should trust her on type,
- * beside a portrait card with her byline. The portrait is a drawn illustration, so the page
- * names an invented author without borrowing a real person's face.
+ * The author band: who wrote the book and why a reader should trust her on type, beside
+ * an engraved-style portrait, signed off with her signature and her profiles.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { GlobeIcon, MailIcon, RssIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
-import { Avatar } from "@sdxc/ui";
-import { FeatureBand } from "@sdxc/ui/patterns";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { when } from "@sdxc/u/state";
+import { AuthorBand } from "@sdxc/ui/patterns";
+
+import { SERIF } from "~/resources/views/demos/book/type";
+
+/** The credentials, in the order the bio earns them. */
+const CREDENTIALS = [
+	"Drew the Larch and Merrow type families",
+	"Built the design system behind three public banks",
+	"Has taught her typography workshop to 2,000 people",
+] as const;
 
 /**
- * Renders the bio and credentials beside the portrait card from the `lg` container up,
- * and above it on a phone.
+ * The portrait as a two-colour print in the page's ink and red, at the band's 3:4 crop.
+ * It reads from the theme's tokens, so it prints dark on paper and light in a dark room.
+ */
+function Portrait() {
+	return () => (
+		<svg
+			viewBox="0 0 300 400"
+			role="img"
+			aria-label="An illustrated portrait of Odile Varga at her drafting table"
+			mix={[raw({ display: "block", inlineSize: "100%", blockSize: "100%" })]}
+		>
+			<rect width="300" height="400" fill="var(--ui-neutral-bg-tint-hover)" />
+			{Array.from({ length: 24 }, (_, index) => (
+				<line
+					key={index}
+					x1="0"
+					x2="300"
+					y1={16 + index * 16}
+					y2={16 + index * 16}
+					stroke="var(--ui-marketing-hairline)"
+				/>
+			))}
+			<circle cx="216" cy="118" r="86" fill="var(--ui-brand-bg-solid)" opacity="0.9" />
+			<path d="M58 400c8-84 52-128 92-128s84 44 92 128Z" fill="var(--ui-neutral-fg-emphasis)" />
+			<rect x="136" y="226" width="28" height="52" fill="var(--ui-neutral-fg)" />
+			<ellipse cx="150" cy="186" rx="44" ry="52" fill="var(--ui-neutral-bg-tint)" />
+			<path
+				d="M104 188c-8-52 18-82 50-82 34 0 56 28 46 76-8-24-24-40-46-42-20 6-36 22-50 48Z"
+				fill="var(--ui-neutral-fg-emphasis)"
+			/>
+			<g fill="none" stroke="var(--ui-neutral-fg-emphasis)" stroke-width="3">
+				<circle cx="132" cy="194" r="12" />
+				<circle cx="170" cy="194" r="12" />
+				<path d="M144 194h14" />
+				<path d="M140 222q10 6 20 0" />
+			</g>
+			<rect x="0" y="352" width="300" height="48" fill="var(--ui-neutral-bg-tint-hover)" />
+			<line x1="0" x2="300" y1="352" y2="352" stroke="var(--ui-neutral-fg-emphasis)" />
+			<text
+				x="276"
+				y="384"
+				text-anchor="end"
+				fill="var(--ui-neutral-fg-emphasis)"
+				font-family={SERIF}
+				font-size="18"
+				font-style="italic"
+			>
+				Pl. 1 — The author
+			</text>
+		</svg>
+	);
+}
+
+/** "Odile V." as a single pen stroke, in the ink colour the band hands it. */
+function Signature() {
+	return () => (
+		<svg viewBox="0 0 160 56" aria-hidden="true">
+			<path
+				d="M8 34c0-14 12-22 20-18s4 22-8 24-12-14 2-18M34 30c6-2 8 8 14 4s4-14 4-14M58 12c-2 10-6 26-4 28s8-6 10-10M68 30c4 4 10 2 12-4M92 18c4 12 8 20 10 20s10-22 14-30M118 36c2 2 4 2 6 0"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.75"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
+		</svg>
+	);
+}
+
+/**
+ * Renders the band with the portrait first: beside the copy from the `lg` container and
+ * above it on a phone. The credentials are a ruled list, each line a printed entry.
  *
  * @returns The render function producing the band.
  */
 export default function BookAuthor() {
 	return () => (
-		<FeatureBand
+		<AuthorBand
 			id="author"
-			layout="split"
-			tone="tinted"
+			ruled
+			portrait={<Portrait />}
 			eyebrow="About the author"
 			title="Written by a type designer who ships code"
 			description={
@@ -37,87 +113,35 @@ export default function BookAuthor() {
 					<strong>the engineers who set the type</strong> that designers only drew.
 				</>
 			}
-			media={
-				<figure
+			credentials={
+				<ul
 					mix={[
 						m(0),
-						marketingSurface(),
-						p(6),
-						vstack({ gap: 5, align: "stretch" }),
-						raw({ maxInlineSize: "26rem", marginInline: "auto" }),
+						p(0),
+						raw({ listStyle: "none", borderBlockStart: "1px solid var(--ui-marketing-hairline)" }),
+						when(
+							"& > li",
+							raw({
+								paddingBlock: "0.75rem",
+								borderBlockEnd: "1px solid var(--ui-marketing-hairline)",
+							}),
+						),
+						fg("neutral"),
 					]}
 				>
-					<svg
-						viewBox="0 0 400 300"
-						role="img"
-						aria-label="An illustrated portrait of Odile Varga at her drafting table"
-						mix={[
-							raw({
-								display: "block",
-								inlineSize: "100%",
-								blockSize: "auto",
-								borderRadius: "0.75rem",
-							}),
-						]}
-					>
-						<rect width="400" height="300" fill="var(--ui-brand-bg-tint)" />
-						<circle cx="300" cy="70" r="120" fill="var(--ui-brand-border)" opacity="0.5" />
-						<rect
-							x="0"
-							y="232"
-							width="400"
-							height="68"
-							fill="var(--ui-brand-bg-solid)"
-							opacity="0.18"
-						/>
-						<path d="M120 300c6-62 44-96 80-96s74 34 80 96Z" fill="var(--ui-brand-bg-solid)" />
-						<rect x="186" y="170" width="28" height="34" rx="10" fill="#d9a588" />
-						<ellipse cx="200" cy="140" rx="40" ry="46" fill="#e5b597" />
-						<path
-							d="M158 140c-6-44 18-70 46-70 30 0 50 24 42 66-6-20-20-34-40-36-18 6-34 18-48 40Z"
-							fill="#3b2318"
-						/>
-						<g fill="none" stroke="#3b2318" stroke-width="3">
-							<circle cx="184" cy="146" r="11" />
-							<circle cx="218" cy="146" r="11" />
-							<path d="M195 146h12" />
-						</g>
-						<path d="M190 168q10 6 20 0" stroke="#7a3b25" stroke-width="2.5" fill="none" />
-						<text
-							x="310"
-							y="250"
-							text-anchor="middle"
-							fill="var(--ui-neutral-fg-emphasis)"
-							font-family='"Iowan Old Style", Palatino, Georgia, serif'
-							font-size="64"
-							font-style="italic"
-							opacity="0.85"
-						>
-							Ag
-						</text>
-					</svg>
-					<figcaption mix={[hstack({ gap: 3, align: "center" })]}>
-						<Avatar size="lg">
-							<Avatar.Fallback>OV</Avatar.Fallback>
-						</Avatar>
-						<span mix={[vstack({ gap: 0.5 })]}>
-							<span mix={[font("display"), text("lg"), fg("neutral.emphasis")]}>Odile Varga</span>
-							<span mix={[text("sm"), fg("neutral.muted")]}>Type designer, Lisbon</span>
-						</span>
-						<span
-							mix={[raw({ marginInlineStart: "auto" }), text("sm"), weight("medium"), fg("brand")]}
-						>
-							@odile.type
-						</span>
-					</figcaption>
-				</figure>
+					{CREDENTIALS.map((line) => (
+						<li key={line}>{line}</li>
+					))}
+				</ul>
 			}
-		>
-			<ul>
-				<li>Drew the Larch and Merrow type families</li>
-				<li>Built the design system behind three public banks</li>
-				<li>Has taught her typography workshop to 2,000 people</li>
-			</ul>
-		</FeatureBand>
+			signature={<Signature />}
+			name="Odile Varga"
+			jobTitle="Type designer, Lisbon"
+			social={[
+				{ href: "/examples/book/odile", label: "Website", icon: <GlobeIcon /> },
+				{ href: "/examples/book/letters", label: "Newsletter", icon: <MailIcon /> },
+				{ href: "/examples/book/feed.xml", label: "RSS feed", icon: <RssIcon /> },
+			]}
+		/>
 	);
 }

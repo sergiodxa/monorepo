@@ -1,20 +1,20 @@
 /**
- * The pricing band: the book alone, the book with the video course, and a team licence.
- * Every package is a one-time payment, bought through a form that posts to the example
- * checkout.
+ * The pricing band: the book alone and the book with the video course, side by side, with
+ * the team licence offered in the band's lead. Each package is a one-time payment, bought
+ * through a form that posts to the example checkout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Badge } from "@sdxc/ui";
+import { Badge, Link } from "@sdxc/ui";
 import { CheckRow, PricingBand } from "@sdxc/ui/patterns";
 
 import CheckoutButton from "~/resources/views/demos/book/checkout-button";
 
 /**
- * Renders the three packages with the complete edition featured, which inverts and moves
- * first on a phone.
+ * Renders the two packages in one row from the `md` container, the complete edition set in
+ * ink and moved first on a phone, so the band fills whole rows at every width.
  *
  * @returns The render function producing the band.
  */
@@ -24,10 +24,16 @@ export default function BookPricing() {
 			id="pricing"
 			eyebrow="Pricing"
 			title="Pick how you want to learn"
+			columns={2}
 			description={
 				<>
-					One payment, yours for good. Every package includes <strong>free updates</strong> for as
-					long as the book is in print.
+					One payment, yours for good, with <strong>free updates</strong> for as long as the book is
+					in print. Buying for a team of up to ten? The complete edition with a live Q&amp;A is
+					$349,{" "}
+					<Link href="/examples/book/team" color="neutral">
+						with seats you can reassign
+					</Link>
+					.
 				</>
 			}
 		>
@@ -67,21 +73,6 @@ export default function BookPricing() {
 						Get the complete edition
 					</CheckoutButton>
 				}
-			/>
-			<PricingBand.Plan
-				name="Team"
-				price="$349"
-				period="one-time"
-				description="The complete edition for a design and engineering team."
-				features={
-					<>
-						<CheckRow>Everything in the complete edition</CheckRow>
-						<CheckRow>Up to ten people, seats you can reassign</CheckRow>
-						<CheckRow>A live 90-minute Q&amp;A with Odile</CheckRow>
-						<CheckRow>Invoice and purchase order billing</CheckRow>
-					</>
-				}
-				action={<CheckoutButton plan="team">Buy for your team</CheckoutButton>}
 			/>
 		</PricingBand>
 	);

@@ -15,7 +15,7 @@ namespace CheckoutButton {
 	/** Which package the button buys, and how prominent it is. */
 	export interface Props {
 		/** The package id the checkout receives. */
-		plan: "book" | "complete" | "team";
+		plan: "book" | "complete";
 		/** The featured plan's button is the brand colour; the others are surface buttons. */
 		featured?: boolean;
 		children: RemixNode;

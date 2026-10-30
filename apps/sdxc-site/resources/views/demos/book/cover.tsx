@@ -1,15 +1,17 @@
 /**
- * The book's cover, drawn as SVG and staged as an object: turned a few degrees in
- * perspective, with a hinge crease, a block of page edges behind it and a soft contact
- * shadow, so the hero shows a book on a table rather than a flat image.
+ * The book's cover, drawn as SVG and shown flat and square-on, as a catalogue plate shows
+ * a book: matte cloth, a hinge crease and the title, edged by a single rule, so the hero
+ * carries the same print register as the page around it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { raw } from "@sdxc/u/general";
-import { absolute, grid, relative } from "@sdxc/u/layout";
-import { is, mi } from "@sdxc/u/size";
+import { grid, relative } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+
+import { SERIF } from "~/resources/views/demos/book/type";
 
 /** The cover's printed colours; fixed, since a printed cover keeps its ink in a dark room. */
 const INK = {
@@ -19,9 +21,6 @@ const INK = {
 	accent: "#f08a5d",
 } as const;
 
-/** The serif stack the cover's lettering is set in, matching the page's display face. */
-const SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif';
-
 /** Widths of the ragged lines in the cover's paragraph glyph, as a share of its measure. */
 const RAG = [1, 0.92, 0.97, 0.84, 0.95, 0.62] as const;
 
@@ -29,64 +28,18 @@ const RAG = [1, 0.92, 0.97, 0.84, 0.95, 0.62] as const;
 const BASELINES = Array.from({ length: 25 }, (_, index) => 48 + index * 16);
 
 /**
- * Renders the staged cover at up to 21rem wide. The object turns through a 3D transform,
- * so its layers share one `preserve-3d` context and the page block sits behind the board.
+ * Renders the cover at up to 20rem wide, centred in its column. The edge rule is drawn
+ * inside the box, so the plate never reaches past the column it sits in.
  *
- * @returns The render function producing the staged cover.
+ * @returns The render function producing the cover plate.
  */
 export default function BookCover() {
 	return () => (
-		<div
-			data-slot="book-stage"
-			mix={[
-				relative(),
-				grid(),
-				raw({ placeItems: "center", perspective: "1600px", paddingBlock: "1.5rem 3rem" }),
-			]}
-		>
-			<div
-				aria-hidden="true"
-				mix={[
-					absolute(),
-					raw({
-						insetInline: "18%",
-						insetBlockEnd: "1.25rem",
-						blockSize: "2.5rem",
-						borderRadius: "50%",
-						background: "radial-gradient(closest-side, rgb(40 18 8 / 0.45), transparent)",
-						filter: "blur(10px)",
-					}),
-				]}
-			/>
+		<div data-slot="book-stage" mix={[grid(), raw({ placeItems: "center" })]}>
 			<div
 				data-slot="book"
-				mix={[
-					relative(),
-					is("min(78%, 21rem)"),
-					mi("auto"),
-					raw({
-						aspectRatio: "2 / 3",
-						transformStyle: "preserve-3d",
-						transform: "rotateY(-18deg) rotateX(4deg) rotateZ(-0.5deg)",
-					}),
-				]}
+				mix={[relative(), is("min(82%, 20rem)"), raw({ aspectRatio: "2 / 3" })]}
 			>
-				<div
-					aria-hidden="true"
-					mix={[
-						absolute(),
-						raw({
-							insetBlock: "1.2% 0.8%",
-							insetInlineStart: "4%",
-							insetInlineEnd: "-3.2%",
-							borderRadius: "0 4px 4px 0",
-							background: `repeating-linear-gradient(90deg, ${INK.paper} 0 2px, #d8cbb3 2px 3px)`,
-							boxShadow:
-								"0 30px 50px -18px rgb(40 18 8 / 0.55), 0 12px 20px -10px rgb(40 18 8 / 0.35)",
-							transform: "translateZ(-14px)",
-						}),
-					]}
-				/>
 				<svg
 					viewBox="0 0 320 480"
 					role="img"
@@ -97,9 +50,8 @@ export default function BookCover() {
 							display: "block",
 							inlineSize: "100%",
 							blockSize: "auto",
-							borderRadius: "3px 7px 7px 3px",
-							boxShadow:
-								"0 1px 0 rgb(255 255 255 / 0.12) inset, 0 40px 60px -24px rgb(40 18 8 / 0.5), 0 0 0 1px rgb(40 18 8 / 0.25)",
+							outline: "1px solid rgb(40 18 8 / 0.35)",
+							outlineOffset: "-1px",
 						}),
 					]}
 				>
@@ -112,10 +64,6 @@ export default function BookCover() {
 							<stop offset="0" stop-color="#000" stop-opacity="0.35" />
 							<stop offset="0.45" stop-color="#fff" stop-opacity="0.18" />
 							<stop offset="1" stop-color="#000" stop-opacity="0" />
-						</linearGradient>
-						<linearGradient id="book-cover-gloss" x1="0" y1="0" x2="1" y2="0.6">
-							<stop offset="0" stop-color="#fff" stop-opacity="0.16" />
-							<stop offset="0.5" stop-color="#fff" stop-opacity="0" />
 						</linearGradient>
 					</defs>
 
@@ -137,7 +85,7 @@ export default function BookCover() {
 						x="36"
 						y="60"
 						fill={INK.paper}
-						font-family="ui-sans-serif, system-ui, sans-serif"
+						font-family={SERIF}
 						font-size="9"
 						font-weight="600"
 						letter-spacing="2.4"
@@ -213,7 +161,7 @@ export default function BookCover() {
 						x="36"
 						y="452"
 						fill={INK.paper}
-						font-family="ui-sans-serif, system-ui, sans-serif"
+						font-family={SERIF}
 						font-size="10"
 						font-weight="600"
 						letter-spacing="2.6"
@@ -222,7 +170,6 @@ export default function BookCover() {
 					</text>
 
 					<rect width="22" height="480" fill="url(#book-cover-hinge)" />
-					<rect width="320" height="480" fill="url(#book-cover-gloss)" />
 				</svg>
 			</div>
 		</div>

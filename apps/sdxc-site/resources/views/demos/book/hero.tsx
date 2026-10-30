@@ -1,30 +1,25 @@
 /**
- * The book page's opening band: the promise beside the staged cover, two ways in (buy or
- * read a chapter first) and the readers who already have it, over slowly turning rings
- * that echo the cover's measure bracket.
+ * The book page's opening: the promise set like a title page beside the flat cover, a buy
+ * button with an underlined way into the free chapter, and the review score as a printed
+ * line. The parts enter in turn on load for a reader who allows motion.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { StarIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
+import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Avatar, LinkButton } from "@sdxc/ui";
-import { AccentText, LandingHero } from "@sdxc/ui/patterns";
-import { marketingCtaChrome, marketingSlowSpin } from "@sdxc/ui/styles";
+import { Link, LinkButton } from "@sdxc/ui";
+import { LandingHero } from "@sdxc/ui/patterns";
+import { marketingCtaChrome } from "@sdxc/ui/styles";
 
 import BookCover from "~/resources/views/demos/book/cover";
 
-/** Initials of the readers the proof row shows, in the order they overlap. */
-const READERS = ["MK", "TS", "AO", "JB", "RL"] as const;
-
 /**
  * Renders the hero with the cover beside the copy from the `lg` container up and under
- * it on a phone, where the buttons stack full width.
+ * it on a phone. The secondary action is a text link, as a printed page would set it.
  *
  * @returns The render function producing the hero band.
  */
@@ -34,12 +29,12 @@ export default function BookHero() {
 			id="top"
 			tone="plain"
 			mediaPlacement="end"
-			eyebrow="Second edition, with 38 video lessons"
-			eyebrowHref="#pricing"
+			entrance
+			eyebrow="Second edition · 38 video lessons"
+			eyebrowVariant="mono"
 			title={
 				<>
-					Set type people <AccentText mix={[raw({ fontStyle: "italic" })]}>finish</AccentText>{" "}
-					reading
+					Set type people <i>finish</i> reading
 				</>
 			}
 			description={
@@ -52,61 +47,35 @@ export default function BookHero() {
 			actions={
 				<>
 					<LinkButton href="#pricing" color="brand" mix={[marketingCtaChrome()]}>
-						Buy the book
+						Buy the book — $39
 					</LinkButton>
-					<LinkButton href="#sample" variant="surface" mix={[marketingCtaChrome()]}>
-						Read a free chapter
-					</LinkButton>
+					<Link href="#sample" color="neutral" mix={[weight("medium")]}>
+						Read chapter 2 free
+					</Link>
 				</>
 			}
 			note="PDF, EPUB and Kindle. DRM-free, with every future update."
 			proof={
-				<div mix={[hstack({ gap: 3, align: "center" })]}>
-					<Avatar.Group>
-						{READERS.map((initials) => (
-							<Avatar key={initials} size="sm">
-								<Avatar.Fallback>{initials}</Avatar.Fallback>
-							</Avatar>
-						))}
-					</Avatar.Group>
-					<div mix={[vstack({ gap: 0.5 })]}>
-						<span
-							role="img"
-							aria-label="Rated 4.9 out of 5"
-							mix={[hstack({ gap: 0.5 }), fg("brand")]}
-						>
-							{[1, 2, 3, 4, 5].map((star) => (
-								<StarIcon
-									key={star}
-									aria-hidden="true"
-									fill="currentColor"
-									mix={[is("0.875rem")]}
-								/>
-							))}
-						</span>
-						<span mix={[text("sm"), fg("neutral")]}>
-							<span mix={[weight("semibold"), fg("neutral.emphasis")]}>4.9</span> from 1,260 reviews
-							by 18,400 readers
-						</span>
-					</div>
-				</div>
+				<p
+					mix={[
+						m(0),
+						text("sm"),
+						fg("neutral"),
+						raw({
+							paddingBlockStart: "1rem",
+							borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+							fontVariantNumeric: "oldstyle-nums",
+						}),
+					]}
+				>
+					<span mix={[fg("brand")]} aria-hidden="true">
+						★★★★★
+					</span>{" "}
+					<span mix={[weight("semibold"), fg("neutral.emphasis")]}>4.9</span> from 1,260 reviews by
+					18,400 readers
+				</p>
 			}
 			media={<BookCover />}
-			backdrop={
-				<svg viewBox="0 0 600 600" mix={[is("min(100%, 34rem)"), marketingSlowSpin()]}>
-					{[150, 200, 250, 295].map((radius) => (
-						<circle
-							key={radius}
-							cx="300"
-							cy="300"
-							r={radius}
-							fill="none"
-							stroke="var(--ui-brand-border)"
-							stroke-dasharray={radius === 250 ? "2 10" : undefined}
-						/>
-					))}
-				</svg>
-			}
 		/>
 	);
 }
