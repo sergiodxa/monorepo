@@ -360,6 +360,68 @@ A shared `name` makes the items exclusive, so opening one question closes the on
 The questions band, with three questions that open one at a time.
 </frame>
 
+## Header and footer
+
+`SiteHeader` is the sticky bar above the hero, and `SiteFooter` closes the page. Both take
+their links as data, so the header can draw each one twice: in the bar on a wide screen, and
+in a full-screen phone sheet behind the menu button. A group with `columns` opens a mega
+panel on a wide screen and a disclosure in the sheet. The `cta` stays in the bar at every
+width and repeats full width at the foot of the sheet. Panels and the sheet open through the
+Popover API and `<dialog>`, so they work before any script loads.
+
+```tsx {% title="resources/components/landing/header.tsx" %}
+import { SiteHeader } from "@sdxc/ui/patterns";
+
+export function Header() {
+	return () => (
+		<SiteHeader
+			brand={
+				<a href="/" aria-label="Beacon home">
+					<BeaconLogo />
+				</a>
+			}
+			items={[
+				{
+					label: "Product",
+					columns: [
+						{
+							title: "Monitor",
+							links: [{ label: "Uptime", href: "/uptime" }],
+						},
+					],
+				},
+				{ label: "Pricing", href: "/pricing" },
+			]}
+			actions={[{ label: "Log in", href: "/login" }]}
+			cta={{ label: "Start free", href: "/signup" }}
+		/>
+	);
+}
+```
+
+The bar starts transparent and fills once the page scrolls under it; `variant="floating"`
+holds it off the edges as a rounded bar. On a one-page site, where the links are anchors on the
+same page, pass a client island through `sheet` that closes the dialog when a link is
+followed. `SiteFooter` takes `columns` the same way, plus `newsletter`, `social`, `legal` and an
+optional full-width `wordmark`, and picks a column count that never leaves a short last row.
+
+## Motion and more bands
+
+Motion is opt-in and honors `prefers-reduced-motion`. `entrance({ order })` from
+`@sdxc/ui/animations` staggers the hero's parts on load, and `viewReveal()` fades a band in as it
+scrolls into view. `Marquee` scrolls a logo row, `RotatingText` cycles a word in a headline,
+and `MotionLoop` wraps any longer loop. Each looping piece carries a pause toggle and holds still
+for a visitor who asks for less motion.
+
+The rest of the patterns cover bands most landings reach for sooner or later:
+
+- `ChangelogStrip`: the latest releases on a ruled line, dated.
+- `SponsorWall`: sponsor tiers in ruled grids, then an avatar cloud of individual backers.
+- `AuthorBand`: a portrait beside the author's statement, with socials and an intro video.
+- `Curriculum`: course parts with expandable lessons, totals and a "Free" badge.
+- `SegmentedStage`: a pill switcher over hero media, so one stage shows several views.
+- `Rails` and `Crosshair`: frame the content column with hairline rails and "+" marks.
+
 ## Your brand
 
 The bands read their measure, spacing, type and CTA shape from `--ui-marketing-*` variables
