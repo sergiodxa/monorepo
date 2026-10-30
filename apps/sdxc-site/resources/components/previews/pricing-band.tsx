@@ -35,7 +35,7 @@ const CODE = `<PricingBand
 			</>
 		}
 		action={
-			<LinkButton href="/examples/signup" size="lg" color="neutral" variant="surface">
+			<LinkButton href="/examples/signup" color="neutral" variant="surface">
 				Start for free
 			</LinkButton>
 		}
@@ -57,7 +57,7 @@ const CODE = `<PricingBand
 			</>
 		}
 		action={
-			<LinkButton href="/examples/signup?plan=team" size="lg" color="brand">
+			<LinkButton href="/examples/signup?plan=team" color="brand">
 				Start a 14-day trial
 			</LinkButton>
 		}
@@ -77,7 +77,7 @@ const CODE = `<PricingBand
 			</>
 		}
 		action={
-			<LinkButton href="/examples/pricing" size="lg" color="neutral" variant="surface">
+			<LinkButton href="/examples/pricing" color="neutral" variant="surface">
 				Talk to sales
 			</LinkButton>
 		}
@@ -114,7 +114,7 @@ export default {
 						</>
 					}
 					action={
-						<LinkButton href="/examples/signup" size="lg" color="neutral" variant="surface">
+						<LinkButton href="/examples/signup" color="neutral" variant="surface">
 							Start for free
 						</LinkButton>
 					}
@@ -136,7 +136,7 @@ export default {
 						</>
 					}
 					action={
-						<LinkButton href="/examples/signup?plan=team" size="lg" color="brand">
+						<LinkButton href="/examples/signup?plan=team" color="brand">
 							Start a 14-day trial
 						</LinkButton>
 					}
@@ -156,7 +156,7 @@ export default {
 						</>
 					}
 					action={
-						<LinkButton href="/examples/pricing" size="lg" color="neutral" variant="surface">
+						<LinkButton href="/examples/pricing" color="neutral" variant="surface">
 							Talk to sales
 						</LinkButton>
 					}

@@ -559,7 +559,7 @@ export function PricingSection() {
 					</>
 				}
 				action={
-					<LinkButton href="#start" size="lg" variant="surface">
+					<LinkButton href="#start" variant="surface">
 						Start free
 					</LinkButton>
 				}
@@ -581,7 +581,7 @@ export function PricingSection() {
 					</>
 				}
 				action={
-					<LinkButton href="#start" size="lg" color="brand">
+					<LinkButton href="#start" color="brand">
 						Start a 30-day trial
 					</LinkButton>
 				}
@@ -600,7 +600,7 @@ export function PricingSection() {
 					</>
 				}
 				action={
-					<LinkButton href="#start" size="lg" variant="surface">
+					<LinkButton href="#start" variant="surface">
 						Talk to sales
 					</LinkButton>
 				}

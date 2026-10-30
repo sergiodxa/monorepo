@@ -361,7 +361,7 @@ export function Platforms() {
 								}),
 							]}
 						>
-							<IconWell size="lg">
+							<IconWell>
 								<Icon />
 							</IconWell>
 							<span mix={[vstack({ gap: 0.5, align: "center" })]}>

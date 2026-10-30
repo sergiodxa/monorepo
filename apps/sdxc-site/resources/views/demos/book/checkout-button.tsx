@@ -38,7 +38,6 @@ export default function CheckoutButton(handle: Handle<CheckoutButton.Props>) {
 				<input type="hidden" name="package" value={plan} />
 				<Button
 					type="submit"
-					size="lg"
 					color={featured ? "brand" : "neutral"}
 					variant={featured ? undefined : "surface"}
 				>

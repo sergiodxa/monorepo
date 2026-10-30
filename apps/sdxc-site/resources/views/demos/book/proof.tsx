@@ -44,7 +44,7 @@ const BLURBS = [
 export default function BookProof() {
 	return () => (
 		<ProofStrip>
-			<StatStrip>
+			<StatStrip align="center">
 				<StatStrip.Item label="Readers since the first edition">18,400</StatStrip.Item>
 				<StatStrip.Item label="Average from 1,260 reviews">4.9/5</StatStrip.Item>
 				<StatStrip.Item label="Pages in fourteen chapters">312</StatStrip.Item>

@@ -459,12 +459,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 												</>
 											}
 											action={
-												<LinkButton
-													href="/examples/signup"
-													size="lg"
-													color="neutral"
-													variant="surface"
-												>
+												<LinkButton href="/examples/signup" color="neutral" variant="surface">
 													Start for free
 												</LinkButton>
 											}
@@ -485,7 +480,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 												</>
 											}
 											action={
-												<LinkButton href="/examples/signup?plan=team" size="lg" color="brand">
+												<LinkButton href="/examples/signup?plan=team" color="brand">
 													Start a 14-day trial
 												</LinkButton>
 											}
@@ -504,12 +499,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 												</>
 											}
 											action={
-												<LinkButton
-													href="/examples/pricing"
-													size="lg"
-													color="neutral"
-													variant="surface"
-												>
+												<LinkButton href="/examples/pricing" color="neutral" variant="surface">
 													Talk to sales
 												</LinkButton>
 											}
