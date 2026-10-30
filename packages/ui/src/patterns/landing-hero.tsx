@@ -17,9 +17,11 @@ import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 import { pretty, text, textAlign } from "@sdxc/u/typography";
 
+import type { Entrance } from "../animations/entrance.js";
 import type { HeadingLevel } from "../components/heading-scope.js";
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
 
+import { entrance } from "../animations/entrance.js";
 import { CtaGroup } from "../components/cta-group.js";
 import { HeadingScope, readAmbientLevel } from "../components/heading-scope.js";
 import { Heading } from "../components/heading.js";
@@ -115,6 +117,16 @@ export namespace LandingHero {
 		description?: RemixNode;
 		/** CTA controls, laid out in a {@link CtaGroup} that stacks on phones. */
 		actions?: RemixNode;
+		/**
+		 * A release pin under the actions, such as "v8.1 — released Oct 28", set as mono
+		 * text on a brand-tinted chip; pass a link to make the pin clickable.
+		 */
+		release?: RemixNode;
+		/**
+		 * Plays the load entrance: eyebrow, title, lead, actions and the rest rise in turn,
+		 * and the media settles last. Visitors who ask for reduced motion see the hero at rest.
+		 */
+		entrance?: boolean;
 		/** One line of microcopy 12px under the actions ("No card required"). */
 		note?: RemixNode;
 		/** Social proof under the actions and note, such as a row of marks. */
@@ -162,6 +174,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 			backdrop,
 			below,
 			description,
+			entrance: hasEntrance,
 			eyebrow,
 			eyebrowHref,
 			eyebrowVariant,
@@ -172,6 +185,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 			note,
 			parts,
 			proof,
+			release,
 			spacing,
 			title,
 			tone,
@@ -189,6 +203,8 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 		let isSplit = resolvedPlacement === "end" && hasMedia;
 		let isBelow = resolvedPlacement === "below" && hasMedia;
 		let isCenter = resolvedAlign === "center" && !isSplit;
+		let enter = (order: number, kind: Entrance.Kind = "copy") =>
+			hasEntrance ? entrance({ order, kind }) : [];
 
 		let copy = (
 			<div
@@ -208,6 +224,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 						mix={[
 							self(isCenter ? "center" : "start"),
 							raw({ marginBlockEnd: "1.5rem" }),
+							enter(0),
 							parts?.eyebrow,
 						]}
 					>
@@ -215,7 +232,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 					</Eyebrow>
 				) : null}
 
-				<Heading size="display" mix={[parts?.title]}>
+				<Heading size="display" mix={[enter(1), parts?.title]}>
 					{title}
 				</Heading>
 
@@ -227,6 +244,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 								marginBlockStart: "1.25rem",
 								marginInline: isCenter ? "auto" : "0",
 							}),
+							enter(2),
 							parts?.description,
 						]}
 					>
@@ -240,6 +258,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 						mix={[
 							raw({ marginBlockStart: "2rem" }),
 							isCenter ? self("center") : [],
+							enter(3),
 							parts?.actions,
 						]}
 					>
@@ -247,10 +266,25 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 					</CtaGroup>
 				) : null}
 
+				{release ? (
+					<p
+						data-slot="landing-hero-release"
+						mix={[releasePin(), isCenter ? self("center") : self("start"), enter(4)]}
+					>
+						{release}
+					</p>
+				) : null}
+
 				{note ? (
 					<p
 						data-slot="landing-hero-note"
-						mix={[raw({ marginBlockStart: "0.75rem" }), text("xs"), fg("neutral.muted"), pretty()]}
+						mix={[
+							raw({ marginBlockStart: "0.75rem" }),
+							text("xs"),
+							fg("neutral.muted"),
+							pretty(),
+							enter(4),
+						]}
 					>
 						{note}
 					</p>
@@ -259,7 +293,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				{proof ? (
 					<div
 						data-slot="landing-hero-proof"
-						mix={[raw({ marginBlockStart: "2rem" }), isCenter ? self("center") : []]}
+						mix={[raw({ marginBlockStart: "2rem" }), isCenter ? self("center") : [], enter(5)]}
 					>
 						{proof}
 					</div>
@@ -312,6 +346,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 								raw({ inlineSize: "100%", minInlineSize: "0", marginBlockStart: MEDIA_GAP }),
 							]
 						: [],
+					isBackground ? [] : enter(4, "media"),
 					parts?.media,
 				]}
 			>
@@ -366,4 +401,30 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 			</MarketingSection>
 		);
 	};
+}
+
+/**
+ * The release pin: mono text on a brand-tinted chip, set apart from the actions above it
+ * so a dated version reads as news rather than a third button.
+ */
+function releasePin() {
+	return [
+		raw({
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "0.5rem",
+			marginBlockStart: "1.25rem",
+			paddingBlock: "0.3125rem",
+			paddingInline: "0.75rem",
+			borderRadius: "9999px",
+			fontFamily: "var(--ui-font-mono, ui-monospace, monospace)",
+			fontSize: "0.75rem",
+			lineHeight: "1rem",
+			color: "var(--ui-brand-fg)",
+			backgroundColor: "var(--ui-brand-bg-tint)",
+			boxShadow: "inset 0 0 0 1px var(--ui-brand-border)",
+		}),
+		when("& a", raw({ color: "inherit", textDecoration: "none" })),
+		when("& a:hover", raw({ textDecoration: "underline", textUnderlineOffset: "3px" })),
+	];
 }
