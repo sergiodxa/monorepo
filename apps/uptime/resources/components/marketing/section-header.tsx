@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { HeadingScope, MarketingHeader } from "@sdxc/ui";
+import { MarketingHeader } from "@sdxc/ui";
 
 namespace SectionHeader {
 	export interface Props {
@@ -25,15 +25,13 @@ namespace SectionHeader {
  */
 export default function SectionHeader(handle: Handle<SectionHeader.Props>) {
 	return () => (
-		<HeadingScope>
-			<MarketingHeader
-				eyebrow={handle.props.badge}
-				eyebrowVariant="pill"
-				description={handle.props.description}
-				align="center"
-			>
-				{handle.props.title}
-			</MarketingHeader>
-		</HeadingScope>
+		<MarketingHeader
+			eyebrow={handle.props.badge}
+			eyebrowVariant="pill"
+			description={handle.props.description}
+			align="center"
+		>
+			{handle.props.title}
+		</MarketingHeader>
 	);
 }

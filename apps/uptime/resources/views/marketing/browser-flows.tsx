@@ -18,7 +18,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { dark, media } from "@sdxc/u/responsive";
 import { bs, is, m, maxIs, mbs, minIs, p } from "@sdxc/u/size";
 import { font, fontSize, leading, textAlign, weight, whiteSpace } from "@sdxc/u/typography";
-import { HeadingScope, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -134,58 +134,52 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 				/>
 
 				<MarketingSection mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={page.contrast.badge}
-							description={page.contrast.description}
-							align="center"
-						>
-							{page.contrast.title}
-						</MarketingHeader>
-					</HeadingScope>
-					<HeadingScope>
-						<Bento columns={2}>
-							{[page.contrast.http, page.contrast.browser].map((column) => (
-								<Bento.Cell key={column.title}>
-									<Bento.Title>{column.title}</Bento.Title>
-									<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
-										{column.points.map((point) => (
-											<li
-												key={point}
-												mix={[
-													inlineFlex(),
-													items("start"),
-													gap(2),
-													fontSize("sm"),
-													leading("relaxed"),
-													fg("neutral"),
-												]}
-											>
-												<CheckIcon
-													size={16}
-													strokeWidth={2}
-													mix={[fg("brand"), mbs("2px"), shrink(0)]}
-												/>
-												{point}
-											</li>
-										))}
-									</ul>
-								</Bento.Cell>
-							))}
-						</Bento>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={page.contrast.badge}
+						description={page.contrast.description}
+						align="center"
+					>
+						{page.contrast.title}
+					</MarketingHeader>
+					<Bento columns={2}>
+						{[page.contrast.http, page.contrast.browser].map((column) => (
+							<Bento.Cell key={column.title}>
+								<Bento.Title>{column.title}</Bento.Title>
+								<ul mix={[vstack({ gap: 3 }), m(0), p(0), listStyle("none")]}>
+									{column.points.map((point) => (
+										<li
+											key={point}
+											mix={[
+												inlineFlex(),
+												items("start"),
+												gap(2),
+												fontSize("sm"),
+												leading("relaxed"),
+												fg("neutral"),
+											]}
+										>
+											<CheckIcon
+												size={16}
+												strokeWidth={2}
+												mix={[fg("brand"), mbs("2px"), shrink(0)]}
+											/>
+											{point}
+										</li>
+									))}
+								</ul>
+							</Bento.Cell>
+						))}
+					</Bento>
 				</MarketingSection>
 
 				<MarketingSection id="examples" tone="tinted" mix={[overflow("hidden"), viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={page.examples.badge}
-							description={page.examples.description}
-							align="center"
-						>
-							{page.examples.title}
-						</MarketingHeader>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={page.examples.badge}
+						description={page.examples.description}
+						align="center"
+					>
+						{page.examples.title}
+					</MarketingHeader>
 					<div mix={[minIs(0)]}>
 						<BrowserFlowExamplesCarousel
 							label={page.examples.title}
@@ -208,14 +202,9 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 						]}
 					>
 						<div>
-							<HeadingScope>
-								<MarketingHeader
-									eyebrow={page.pricing.badge}
-									description={page.pricing.description}
-								>
-									{page.pricing.title}
-								</MarketingHeader>
-							</HeadingScope>
+							<MarketingHeader eyebrow={page.pricing.badge} description={page.pricing.description}>
+								{page.pricing.title}
+							</MarketingHeader>
 							<p mix={[m(0), mbs(4), fontSize("sm"), fg("neutral")]}>{page.pricing.note}</p>
 						</div>
 						<aside

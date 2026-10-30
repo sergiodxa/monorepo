@@ -17,7 +17,7 @@ import { rounded, shadow } from "@sdxc/u/effects";
 import { block, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is } from "@sdxc/u/size";
-import { HeadingScope, LinkButton, MarketingSection } from "@sdxc/ui";
+import { LinkButton, MarketingSection } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -287,21 +287,19 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 				</FeatureBand>
 
 				<MarketingSection spacing="compact" mix={[viewReveal()]}>
-					<HeadingScope>
-						<Bento columns={featureColumns}>
-							{features.map((feature) => (
-								<Bento.Cell key={feature.title}>
-									{feature.icon ? (
-										<IconWell size="sm" aria-hidden="true">
-											<Icon name={feature.icon} size={20} strokeWidth={1.5} />
-										</IconWell>
-									) : null}
-									<Bento.Title>{feature.title}</Bento.Title>
-									<Bento.Body>{feature.description}</Bento.Body>
-								</Bento.Cell>
-							))}
-						</Bento>
-					</HeadingScope>
+					<Bento columns={featureColumns}>
+						{features.map((feature) => (
+							<Bento.Cell key={feature.title}>
+								{feature.icon ? (
+									<IconWell size="sm" aria-hidden="true">
+										<Icon name={feature.icon} size={20} strokeWidth={1.5} />
+									</IconWell>
+								) : null}
+								<Bento.Title>{feature.title}</Bento.Title>
+								<Bento.Body>{feature.description}</Bento.Body>
+							</Bento.Cell>
+						))}
+					</Bento>
 				</MarketingSection>
 
 				<FeatureBand

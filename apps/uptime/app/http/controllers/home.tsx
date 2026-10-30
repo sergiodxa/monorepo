@@ -440,11 +440,9 @@ export default createAction(routes.home, async (ctx) => {
 				/>
 
 				<MarketingSection id="try" spacing="compact" align="center" mix={[viewReveal()]}>
-					<HeadingScope>
-						<Heading mix={[m(0), fontSize("2xl"), textAlign("center")]}>
-							{t("landing.try.title")}
-						</Heading>
-					</HeadingScope>
+					<Heading mix={[m(0), fontSize("2xl"), textAlign("center")]}>
+						{t("landing.try.title")}
+					</Heading>
 					<p
 						mix={[m(0), mbs(4), maxIs("560px"), textAlign("center"), fontSize("sm"), fg("neutral")]}
 					>
@@ -485,28 +483,24 @@ export default createAction(routes.home, async (ctx) => {
 				<MarketingTrustIndicators indicators={TRUST_INDICATORS} mix={[viewReveal()]} />
 
 				<MarketingSection id="benefits" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={t("landing.benefits.badge")}
-							description={t("landing.benefits.description")}
-							align="center"
-						>
-							{t("landing.benefits.title")}
-						</MarketingHeader>
-					</HeadingScope>
-					<HeadingScope>
-						<Bento columns={3}>
-							{BENEFITS.map((benefit) => (
-								<Bento.Cell key={benefit.title}>
-									<IconWell size="sm" aria-hidden="true">
-										{benefit.icon}
-									</IconWell>
-									<Bento.Title>{benefit.title}</Bento.Title>
-									<Bento.Body>{benefit.description}</Bento.Body>
-								</Bento.Cell>
-							))}
-						</Bento>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={t("landing.benefits.badge")}
+						description={t("landing.benefits.description")}
+						align="center"
+					>
+						{t("landing.benefits.title")}
+					</MarketingHeader>
+					<Bento columns={3}>
+						{BENEFITS.map((benefit) => (
+							<Bento.Cell key={benefit.title}>
+								<IconWell size="sm" aria-hidden="true">
+									{benefit.icon}
+								</IconWell>
+								<Bento.Title>{benefit.title}</Bento.Title>
+								<Bento.Body>{benefit.description}</Bento.Body>
+							</Bento.Cell>
+						))}
+					</Bento>
 				</MarketingSection>
 
 				<FeatureBand
@@ -541,55 +535,51 @@ export default createAction(routes.home, async (ctx) => {
 				</FeatureBand>
 
 				<MarketingSection spacing="compact" mix={[viewReveal()]}>
-					<HeadingScope>
-						<Bento columns={4}>
-							{FEATURE_LINKS.map((feature) => (
-								<Bento.Cell key={feature.href}>
-									<a
-										href={feature.href}
-										data-rmx-prefetch="intent"
+					<Bento columns={4}>
+						{FEATURE_LINKS.map((feature) => (
+							<Bento.Cell key={feature.href}>
+								<a
+									href={feature.href}
+									data-rmx-prefetch="intent"
+									mix={[
+										vstack({ gap: 3, align: "stretch" }),
+										bs("full"),
+										textDecoration("none"),
+										fg("inherit"),
+									]}
+								>
+									<IconWell size="sm" aria-hidden="true">
+										{feature.icon}
+									</IconWell>
+									<Bento.Title>{feature.title}</Bento.Title>
+									<Bento.Body>{feature.description}</Bento.Body>
+									<span
 										mix={[
-											vstack({ gap: 3, align: "stretch" }),
-											bs("full"),
-											textDecoration("none"),
-											fg("inherit"),
+											inlineFlex(),
+											items("center"),
+											gap(1),
+											fontSize("sm"),
+											weight(500),
+											fg("brand"),
 										]}
 									>
-										<IconWell size="sm" aria-hidden="true">
-											{feature.icon}
-										</IconWell>
-										<Bento.Title>{feature.title}</Bento.Title>
-										<Bento.Body>{feature.description}</Bento.Body>
-										<span
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap(1),
-												fontSize("sm"),
-												weight(500),
-												fg("brand"),
-											]}
-										>
-											{t("landing.features.learnMore")}
-											<ArrowRightIcon size={16} strokeWidth={1.5} />
-										</span>
-									</a>
-								</Bento.Cell>
-							))}
-						</Bento>
-					</HeadingScope>
+										{t("landing.features.learnMore")}
+										<ArrowRightIcon size={16} strokeWidth={1.5} />
+									</span>
+								</a>
+							</Bento.Cell>
+						))}
+					</Bento>
 				</MarketingSection>
 
 				<MarketingSection id="browser-flows" tone="tinted" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={t("landing.browserExamples.badge")}
-							description={t("landing.browserExamples.description")}
-							align="center"
-						>
-							{t("landing.browserExamples.title")}
-						</MarketingHeader>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={t("landing.browserExamples.badge")}
+						description={t("landing.browserExamples.description")}
+						align="center"
+					>
+						{t("landing.browserExamples.title")}
+					</MarketingHeader>
 
 					<div mix={[...contentGrid()]}>
 						{BROWSER_EXAMPLES.map((example) => (
@@ -654,40 +644,34 @@ export default createAction(routes.home, async (ctx) => {
 				</MarketingSection>
 
 				<MarketingSection mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={t("landing.completeFeatureSet.badge")}
-							description={t("landing.completeFeatureSet.description")}
-							align="center"
-						>
-							{t("landing.completeFeatureSet.title")}
-						</MarketingHeader>
-					</HeadingScope>
-					<HeadingScope>
-						<Bento columns={3}>
-							{COMPLETE_FEATURES.map((feature) => (
-								<Bento.Cell key={feature.title}>
-									<IconWell size="sm" aria-hidden="true">
-										{feature.icon}
-									</IconWell>
-									<Bento.Title>{feature.title}</Bento.Title>
-									<Bento.Body>{feature.description}</Bento.Body>
-								</Bento.Cell>
-							))}
-						</Bento>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={t("landing.completeFeatureSet.badge")}
+						description={t("landing.completeFeatureSet.description")}
+						align="center"
+					>
+						{t("landing.completeFeatureSet.title")}
+					</MarketingHeader>
+					<Bento columns={3}>
+						{COMPLETE_FEATURES.map((feature) => (
+							<Bento.Cell key={feature.title}>
+								<IconWell size="sm" aria-hidden="true">
+									{feature.icon}
+								</IconWell>
+								<Bento.Title>{feature.title}</Bento.Title>
+								<Bento.Body>{feature.description}</Bento.Body>
+							</Bento.Cell>
+						))}
+					</Bento>
 				</MarketingSection>
 
 				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={t("landing.useCases.badge")}
-							description={t("landing.useCases.description")}
-							align="center"
-						>
-							{t("landing.useCases.title")}
-						</MarketingHeader>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={t("landing.useCases.badge")}
+						description={t("landing.useCases.description")}
+						align="center"
+					>
+						{t("landing.useCases.title")}
+					</MarketingHeader>
 
 					<div mix={[...contentGrid(), gap(6)]}>
 						{USE_CASE_LINKS.map((useCase) => (
@@ -743,15 +727,13 @@ export default createAction(routes.home, async (ctx) => {
 				</MarketingSection>
 
 				<MarketingSection id="pricing" tone="tinted" mix={[viewReveal()]}>
-					<HeadingScope>
-						<MarketingHeader
-							eyebrow={t("landing.pricing.badge")}
-							description={t("landing.pricing.description")}
-							align="center"
-						>
-							{t("landing.pricing.title")}
-						</MarketingHeader>
-					</HeadingScope>
+					<MarketingHeader
+						eyebrow={t("landing.pricing.badge")}
+						description={t("landing.pricing.description")}
+						align="center"
+					>
+						{t("landing.pricing.title")}
+					</MarketingHeader>
 					<IntlProvider intl={ctx.intl}>
 						<PricingCalculator initialFrequencies={[10]} />
 					</IntlProvider>
