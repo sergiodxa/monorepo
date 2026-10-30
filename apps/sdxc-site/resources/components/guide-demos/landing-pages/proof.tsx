@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { HeadingScope, LogoCloud, StatStrip } from "@sdxc/ui";
+import { LogoCloud, StatStrip } from "@sdxc/ui";
 import { ProofStrip } from "@sdxc/ui/patterns";
 
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
@@ -15,7 +15,7 @@ import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 export default {
 	viewports: true,
 	render: () => (
-		<HeadingScope>
+		<>
 			<ProofStrip>
 				<LogoCloud layout="spread" label="Trusted by on-call teams at" muted>
 					{WORDMARKS.map((mark) => (
@@ -28,6 +28,6 @@ export default {
 					<StatStrip.Item label="Median alert latency">38s</StatStrip.Item>
 				</StatStrip>
 			</ProofStrip>
-		</HeadingScope>
+		</>
 	),
 };

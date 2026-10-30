@@ -153,84 +153,76 @@ export default function BookContents() {
 
 		return (
 			<MarketingSection id="contents" tone="tinted">
-				<HeadingScope>
-					<MarketingHeader
-						eyebrow="Table of contents"
-						description={
-							<>
-								312 pages in three parts, read in order or by the problem in front of you. Every
-								chapter has <strong>its own video lessons</strong> in the complete edition.
-							</>
-						}
+				<MarketingHeader
+					eyebrow="Table of contents"
+					description={
+						<>
+							312 pages in three parts, read in order or by the problem in front of you. Every
+							chapter has <strong>its own video lessons</strong> in the complete edition.
+						</>
+					}
+				>
+					Three parts, fourteen chapters
+				</MarketingHeader>
+				<div mix={[container(CONTAINER_NAME)]}>
+					<div
+						mix={[
+							grid(),
+							combine([
+								raw({ gap: "3rem" }),
+								gridTemplate({ columns: "minmax(0, 1fr)" }),
+								at("lg", CONTAINER_NAME, raw({ gridTemplateColumns: repeat(3, "minmax(0, 1fr)") })),
+							]),
+						]}
 					>
-						Three parts, fourteen chapters
-					</MarketingHeader>
-					<div mix={[container(CONTAINER_NAME)]}>
-						<div
-							mix={[
-								grid(),
-								combine([
-									raw({ gap: "3rem" }),
-									gridTemplate({ columns: "minmax(0, 1fr)" }),
-									at(
-										"lg",
-										CONTAINER_NAME,
-										raw({ gridTemplateColumns: repeat(3, "minmax(0, 1fr)") }),
-									),
-								]),
-							]}
-						>
-							{PARTS.map((part) => (
-								<HeadingScope key={part.numeral}>
-									<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-										<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-											<p
+						{PARTS.map((part) => (
+							<HeadingScope key={part.numeral}>
+								<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+									<div mix={[vstack({ gap: 1, align: "stretch" })]}>
+										<p
+											mix={[
+												m(0),
+												font("mono"),
+												text("xs"),
+												weight("semibold"),
+												tracking("widest"),
+												raw({ textTransform: "uppercase" }),
+												fg("brand"),
+											]}
+										>
+											{part.numeral}
+										</p>
+										<Heading>
+											<span
 												mix={[
-													m(0),
-													font("mono"),
-													text("xs"),
-													weight("semibold"),
-													tracking("widest"),
-													raw({ textTransform: "uppercase" }),
-													fg("brand"),
+													font("display"),
+													raw({ fontSize: "1.75rem", fontWeight: "400" }),
+													leading("tight"),
 												]}
 											>
-												{part.numeral}
-											</p>
-											<Heading>
-												<span
-													mix={[
-														font("display"),
-														raw({ fontSize: "1.75rem", fontWeight: "400" }),
-														leading("tight"),
-													]}
-												>
-													{part.title}
-												</span>
-											</Heading>
-										</div>
-										<HeadingScope>
-											<StepList variant="timeline">
-												{part.chapters.map((chapter) => {
-													chapterNumber += 1;
-													return (
-														<StepList.Item
-															key={chapter.title}
-															meta={`Chapter ${String(chapterNumber).padStart(2, "0")} · ${chapter.pages} pages · ${chapter.lessons} videos`}
-															title={chapter.title}
-														>
-															{chapter.summary}
-														</StepList.Item>
-													);
-												})}
-											</StepList>
-										</HeadingScope>
+												{part.title}
+											</span>
+										</Heading>
 									</div>
-								</HeadingScope>
-							))}
-						</div>
+									<StepList variant="timeline">
+										{part.chapters.map((chapter) => {
+											chapterNumber += 1;
+											return (
+												<StepList.Item
+													key={chapter.title}
+													meta={`Chapter ${String(chapterNumber).padStart(2, "0")} · ${chapter.pages} pages · ${chapter.lessons} videos`}
+													title={chapter.title}
+												>
+													{chapter.summary}
+												</StepList.Item>
+											);
+										})}
+									</StepList>
+								</div>
+							</HeadingScope>
+						))}
 					</div>
-				</HeadingScope>
+				</div>
 			</MarketingSection>
 		);
 	};

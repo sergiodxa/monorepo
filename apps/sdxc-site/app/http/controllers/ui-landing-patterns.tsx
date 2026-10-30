@@ -99,7 +99,7 @@ const ALERT_PAYLOAD = `{
 }`;
 
 /** The source the usage section prints, matching the bands the assembled page draws. */
-const USAGE_CODE = `import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
+const USAGE_CODE = `import { Button, LinkButton } from "@sdxc/ui";
 import {
 	ClosingCta,
 	FaqBand,
@@ -110,7 +110,7 @@ import {
 } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
-<HeadingScope>
+<main>
 	<LandingHero
 		eyebrow={t("hero.eyebrow")}
 		eyebrowHref="/changelog"
@@ -143,7 +143,7 @@ import { marketingCtaChrome } from "@sdxc/ui/styles";
 		<Accordion>{right}</Accordion>
 	</FaqBand>
 	<ClosingCta inset title={t("close.title")} description={t("close.lead")} actions={...} />
-</HeadingScope>`;
+</main>`;
 
 /**
  * Renders the landing patterns overview page.
@@ -218,7 +218,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 							<div
 								mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow("hidden")]}
 							>
-								<HeadingScope>
+								<HeadingScope level={3}>
 									<LandingHero
 										eyebrow="Status pages on your own domain"
 										eyebrowHref="/examples/changelog"
@@ -388,51 +388,49 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 										>
 											One place for uptime
 										</MarketingHeader>
-										<HeadingScope>
-											<Bento columns={3}>
-												<Bento.Cell>
-													<Bento.Media>
-														<svg
-															viewBox="0 0 360 140"
-															role="img"
-															aria-label="Availability over the last 45 days"
-														>
-															{AVAILABILITY_DAYS.map((day) => (
-																<rect
-																	key={day}
-																	x={day * 8}
-																	y={OUTAGE_DAYS.has(day) ? 64 : 24}
-																	width="5"
-																	height={OUTAGE_DAYS.has(day) ? 76 : 116}
-																	rx="2"
-																	fill="currentColor"
-																	mix={[fg(OUTAGE_DAYS.has(day) ? "danger" : "success")]}
-																/>
-															))}
-														</svg>
-													</Bento.Media>
-													<Bento.Title size="lg">Monitors</Bento.Title>
-													<Bento.Body>
-														HTTP, TCP and DNS checks every thirty seconds, with{" "}
-														<strong>response time per region</strong> beside up or down.
-													</Bento.Body>
-												</Bento.Cell>
-												<Bento.Cell>
-													<Bento.Title>Incidents</Bento.Title>
-													<Bento.Body>
-														An outage opens an incident, pages whoever holds the pager and{" "}
-														<strong>closes itself</strong> once every region recovers.
-													</Bento.Body>
-												</Bento.Cell>
-												<Bento.Cell>
-													<Bento.Title>Status pages</Bento.Title>
-													<Bento.Body>
-														Publish live status on your own domain, with{" "}
-														<strong>subscriber updates</strong> by email and RSS.
-													</Bento.Body>
-												</Bento.Cell>
-											</Bento>
-										</HeadingScope>
+										<Bento columns={3}>
+											<Bento.Cell>
+												<Bento.Media>
+													<svg
+														viewBox="0 0 360 140"
+														role="img"
+														aria-label="Availability over the last 45 days"
+													>
+														{AVAILABILITY_DAYS.map((day) => (
+															<rect
+																key={day}
+																x={day * 8}
+																y={OUTAGE_DAYS.has(day) ? 64 : 24}
+																width="5"
+																height={OUTAGE_DAYS.has(day) ? 76 : 116}
+																rx="2"
+																fill="currentColor"
+																mix={[fg(OUTAGE_DAYS.has(day) ? "danger" : "success")]}
+															/>
+														))}
+													</svg>
+												</Bento.Media>
+												<Bento.Title size="lg">Monitors</Bento.Title>
+												<Bento.Body>
+													HTTP, TCP and DNS checks every thirty seconds, with{" "}
+													<strong>response time per region</strong> beside up or down.
+												</Bento.Body>
+											</Bento.Cell>
+											<Bento.Cell>
+												<Bento.Title>Incidents</Bento.Title>
+												<Bento.Body>
+													An outage opens an incident, pages whoever holds the pager and{" "}
+													<strong>closes itself</strong> once every region recovers.
+												</Bento.Body>
+											</Bento.Cell>
+											<Bento.Cell>
+												<Bento.Title>Status pages</Bento.Title>
+												<Bento.Body>
+													Publish live status on your own domain, with{" "}
+													<strong>subscriber updates</strong> by email and RSS.
+												</Bento.Body>
+											</Bento.Cell>
+										</Bento>
 									</MarketingSection>
 
 									<PricingBand

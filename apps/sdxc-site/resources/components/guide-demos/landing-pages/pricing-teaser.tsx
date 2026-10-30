@@ -6,14 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	CtaGroup,
-	HeadingScope,
-	LinkButton,
-	MarketingHeader,
-	MarketingSection,
-	Split,
-} from "@sdxc/ui";
+import { CtaGroup, LinkButton, MarketingHeader, MarketingSection, Split } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import { CheckList, CheckRow, CodeStage } from "@sdxc/ui/patterns";
 
@@ -21,7 +14,7 @@ import { CheckList, CheckRow, CodeStage } from "@sdxc/ui/patterns";
 export default {
 	viewports: true,
 	render: () => (
-		<HeadingScope>
+		<>
 			<MarketingSection tone="tinted" ruled mix={[viewReveal()]}>
 				<MarketingHeader eyebrow="Pricing" description="One price per monitor, billed monthly.">
 					Pay for what you watch
@@ -45,6 +38,6 @@ export default {
 					</Split.Media>
 				</Split>
 			</MarketingSection>
-		</HeadingScope>
+		</>
 	),
 };

@@ -8,7 +8,7 @@
  */
 
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
-import { Feature, HeadingScope } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui";
 import { FeatureBand, ProductFrame, StepList } from "@sdxc/ui/patterns";
 
 import { IncidentCard } from "~/resources/components/demo-media";
@@ -17,7 +17,7 @@ import { IncidentCard } from "~/resources/components/demo-media";
 export default {
 	viewports: true,
 	render: () => (
-		<HeadingScope>
+		<>
 			<FeatureBand
 				layout="split"
 				eyebrow="Incidents"
@@ -91,6 +91,6 @@ export default {
 					Customers subscribe and hear about incidents before they ask.
 				</StepList.Item>
 			</FeatureBand>
-		</HeadingScope>
+		</>
 	),
 };

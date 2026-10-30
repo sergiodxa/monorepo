@@ -39,11 +39,12 @@ section shows.
 
 ## Stack the page
 
-The hero renders the page's `<h1>`. Every band after it goes inside one `HeadingScope`, which
-moves their titles to `<h2>`, so the outline stays sequential with no level passed by hand.
+The hero renders the page's `<h1>`, every band after it titles at `<h2>`, and the cards inside a
+band at `<h3>`. Each band sets its own level, so the outline stays sequential with no level or
+scope placed by hand.
 
 ```tsx {% title="resources/components/landing.tsx" %}
-import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
+import { Button, LinkButton } from "@sdxc/ui";
 import { ClosingCta, LandingHero } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
@@ -85,30 +86,28 @@ export function Landing() {
 				media={<HeroShot />}
 			/>
 
-			<HeadingScope>
-				<Proof />
-				<Features />
-				<Faq />
-				<ClosingCta
-					inset
-					title="Start watching your endpoints today"
-					description="Five monitors and a status page, free for as long as you need them."
-					actions={
-						<>
-							<Button color="brand" mix={[marketingCtaChrome()]}>
-								Create an account
-							</Button>
-							<LinkButton
-								href="/contact"
-								variant="surface"
-								mix={[marketingCtaChrome()]}
-							>
-								Talk to us
-							</LinkButton>
-						</>
-					}
-				/>
-			</HeadingScope>
+			<Proof />
+			<Features />
+			<Faq />
+			<ClosingCta
+				inset
+				title="Start watching your endpoints today"
+				description="Five monitors and a status page, free for as long as you need them."
+				actions={
+					<>
+						<Button color="brand" mix={[marketingCtaChrome()]}>
+							Create an account
+						</Button>
+						<LinkButton
+							href="/contact"
+							variant="surface"
+							mix={[marketingCtaChrome()]}
+						>
+							Talk to us
+						</LinkButton>
+					</>
+				}
+			/>
 		</main>
 	);
 }
@@ -444,7 +443,9 @@ The pricing band: a tinted section with two checked claims and a link beside a t
 
 The page renders on the server, so a test renders it to a string and reads the headings.
 It holds the outline to one `<h1>`, first, with every heading after it at most one level
-deeper than the one before, which is what the single `HeadingScope` buys:
+deeper than the one before. A page nested under its own heading, such as a landing inside a
+docs article, wraps itself in a `HeadingScope` at that article's level and every heading
+shifts down with it:
 
 ```tsx {% title="resources/components/landing.test.tsx" %}
 import { renderToString } from "remix/component/server";

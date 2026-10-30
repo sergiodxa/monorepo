@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { HeadingScope } from "@sdxc/ui";
-
 import type { DemoLanding } from "~/resources/views/demos";
 
 import DemoTheme from "~/resources/components/demo-theme";
@@ -74,20 +72,16 @@ export default {
 		<DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
 			<SaasHeader />
 			<main id="top">
-				<HeadingScope>
-					<HeroSection />
-					<HeadingScope>
-						<ProofSection />
-						<MeteringBand />
-						<WorkflowBand />
-						<PlatformBand />
-						<SecurityBand />
-						<TestimonialSection />
-						<PricingSection />
-						<FaqSection />
-						<ClosingBand />
-					</HeadingScope>
-				</HeadingScope>
+				<HeroSection />
+				<ProofSection />
+				<MeteringBand />
+				<WorkflowBand />
+				<PlatformBand />
+				<SecurityBand />
+				<TestimonialSection />
+				<PricingSection />
+				<FaqSection />
+				<ClosingBand />
 			</main>
 			<SaasFooter />
 		</DemoTheme>

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
+import { Button, LinkButton } from "@sdxc/ui";
 import { ClosingCta, LandingHero, ProductFrame } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
@@ -20,7 +20,7 @@ import proof from "~/resources/components/guide-demos/landing-pages/proof";
 export default {
 	viewports: true,
 	render: () => (
-		<HeadingScope>
+		<>
 			<LandingHero
 				align="center"
 				eyebrow="Status pages are here"
@@ -53,23 +53,21 @@ export default {
 			{proof.render()}
 			{features.render()}
 			{faq.render()}
-			<HeadingScope>
-				<ClosingCta
-					inset
-					title="Start watching your endpoints today"
-					description="Five monitors and a status page, free for as long as you need them."
-					actions={
-						<>
-							<Button color="brand" mix={[marketingCtaChrome()]}>
-								Create an account
-							</Button>
-							<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
-								Talk to us
-							</LinkButton>
-						</>
-					}
-				/>
-			</HeadingScope>
-		</HeadingScope>
+			<ClosingCta
+				inset
+				title="Start watching your endpoints today"
+				description="Five monitors and a status page, free for as long as you need them."
+				actions={
+					<>
+						<Button color="brand" mix={[marketingCtaChrome()]}>
+							Create an account
+						</Button>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+							Talk to us
+						</LinkButton>
+					</>
+				}
+			/>
+		</>
 	),
 };

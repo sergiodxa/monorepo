@@ -7,7 +7,7 @@
  */
 
 import { ChevronDownIcon } from "@sdxc/icons";
-import { Accordion, HeadingScope } from "@sdxc/ui";
+import { Accordion } from "@sdxc/ui";
 import { FaqBand } from "@sdxc/ui/patterns";
 
 /** Each question and its answer, in the order the band lists them. */
@@ -30,7 +30,7 @@ const QUESTIONS = [
 export default {
 	viewports: true,
 	render: () => (
-		<HeadingScope>
+		<>
 			<FaqBand eyebrow="FAQ" title="Questions, answered">
 				<Accordion>
 					{QUESTIONS.map(([question, answer]) => (
@@ -46,6 +46,6 @@ export default {
 					))}
 				</Accordion>
 			</FaqBand>
-		</HeadingScope>
+		</>
 	),
 };
