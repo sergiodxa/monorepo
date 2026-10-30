@@ -734,7 +734,8 @@ function groupTrigger() {
 
 /**
  * The menu and close buttons: a framed 2.5rem control, matching the primary action's
- * height, whose hit area grows to the theme's coarse-pointer target of 44px.
+ * height and, through `--ui-button-radius`, its corners, whose hit area grows to the
+ * theme's coarse-pointer target of 44px.
  */
 function menuButton() {
 	return [
@@ -747,7 +748,7 @@ function menuButton() {
 			blockSize: "2.5rem",
 			padding: "0",
 			border: "0",
-			borderRadius: "0.625rem",
+			borderRadius: "var(--ui-button-radius, 0.625rem)",
 			background: "var(--ui-bg)",
 			boxShadow: "var(--ui-shadow-control, inset 0 0 0 1px var(--ui-marketing-hairline))",
 			color: "var(--ui-neutral-fg-emphasis)",

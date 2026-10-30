@@ -95,6 +95,15 @@ describe("SiteHeader on a phone", () => {
 		expect(menu.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
 	});
 
+	test("rounds the menu button like the page's buttons", async () => {
+		await page.viewport(375, 800);
+		let host = mount(375);
+		host.style.setProperty("--ui-button-radius", "9999px");
+		let menu = find(host, '[data-slot="site-header-menu-button"]');
+
+		expect(getComputedStyle(menu).borderTopLeftRadius).toBe("9999px");
+	});
+
 	test("opens a full-screen sheet of 44px rows with the actions full width, and closes it", async () => {
 		await page.viewport(375, 800);
 		let host = mount(375);
