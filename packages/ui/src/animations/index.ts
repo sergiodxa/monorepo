@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./entrance.js";
 export * from "./keyframes.js";
 export * from "./scroll.js";
 export * from "./tokens.js";
