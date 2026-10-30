@@ -20,7 +20,7 @@ text counts one client as many, and a check written against it lets an internal 
 
 This guide parses the address once, at the edge of your app, and passes a checked value
 everywhere after. [`@sdxc/get-client-ip`](/api/get-client-ip) reads the connecting address
-Cloudflare vouches for and publishes it as `ctx.ip`. [`@sdxc/ip`](/api/ip) is the value it
+your platform vouches for and publishes it as `ctx.ip`. [`@sdxc/ip`](/api/ip) is the value it
 holds: an `IP` that knows its canonical spelling, the network it sits in and what the IANA
 registries say it is for, plus `IP.Range` for networks.
 
@@ -59,10 +59,10 @@ export function createWebRouter() {
 
 Importing the middleware module types `ctx.ip` as `IP | null` across your project.
 
-Behind another platform or your own reverse proxy, name the header it sets, such as
-`getClientIP({ header: "X-Forwarded-For" })`. Only that header is read, so a client cannot pick
-its own address by sending a different one, and `X-Forwarded-For` is read from the right, where
-your proxy appends.
+The same middleware works on other platforms with nothing to configure: it finds `Fly-Client-IP`,
+`X-Real-IP`, `X-Forwarded-For` and the other headers platforms set. On Workers it reads only
+`CF-Connecting-IP`, and elsewhere a client adding a header that names another address gets
+`null`, so a forged header can cost a caller its own address but never choose one.
 
 ## Decide what `null` means
 
