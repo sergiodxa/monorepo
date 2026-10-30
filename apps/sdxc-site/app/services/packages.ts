@@ -89,7 +89,7 @@ export interface PackageFacts {
 	standalone: number;
 	/** Published packages that depend on no framework. */
 	frameworkFree: number;
-	/** How many target Remix directly, which is the framework these are written for. */
+	/** How many bind to Remix, through middleware, routing bindings or the request context. */
 	remixTargeted: number;
 }
 

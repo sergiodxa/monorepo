@@ -285,9 +285,9 @@ Subpath exports keep what you skip out of your bundle, and {% $standaloneCount %
 in nothing from outside the collection at all.
 </feature>
 
-<feature title="Built for Remix, not bound to it" icon="zap" href="/docs/getting-started/your-first-handler" link-label="Your first handler">
-{% $remixCount %} target Remix directly, because that is what they are written for. The other
-{% $frameworkFreeCount %} depend on no framework and run anywhere `fetch` does.
+<feature title="Framework-free at the core" icon="zap" href="/docs/getting-started/your-first-handler" link-label="Your first handler">
+{% $frameworkFreeCount %} depend on no framework and run anywhere `fetch` does. The other
+{% $remixCount %} add Remix middleware and bindings on top, as exports you opt into.
 </feature>
 </feature-grid>
 </section-block>

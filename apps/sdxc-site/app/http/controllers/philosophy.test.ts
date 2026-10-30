@@ -25,26 +25,27 @@ describe("GET /philosophy", () => {
 		expect(body).toContain("3. Implement the spec");
 		expect(body).toContain("4. One contract, adapters at the edge");
 		expect(body).toContain("5. Own the core, depend at the rim");
-		expect(body).toContain("6. Written for Remix, usable without it");
+		expect(body).toContain("6. Framework-free core, Remix where it helps");
 	});
 
 	test("counts the collection rather than quoting a written-down number", async () => {
 		let facts = readPackageFacts();
 		let body = await (await fetchApp("/philosophy")).text();
 
-		expect(body).toContain(`${facts.remixTargeted} of them depend on`);
+		expect(body).toContain(`The other ${facts.remixTargeted} bind something to Remix`);
 		expect(body).toContain(`${facts.standalone} of the`);
-		expect(body).toContain(`So ${facts.frameworkFree} of the ${facts.published}`);
+		expect(body).toContain(`${facts.frameworkFree} of\nthe ${facts.published}`);
 		expect(body).not.toContain("$packageCount");
 		expect(body).not.toContain("$remixCount");
 		expect(body).not.toContain("$standaloneCount");
 		expect(body).not.toContain("$frameworkFreeCount");
 	});
 
-	test("says what the packages are written for rather than selling neutrality", async () => {
+	test("puts the platform first and Remix as an opt-in binding", async () => {
 		let body = await (await fetchApp("/philosophy")).text();
 
-		expect(body).toContain("written for Remix on Cloudflare Workers");
+		expect(body).toContain("Most of these packages are about the web platform, not a framework.");
+		expect(body).toContain("the binding is an export you opt into");
 		expect(body).not.toContain("no framework required");
 	});
 

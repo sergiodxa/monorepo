@@ -96,21 +96,19 @@ rewrite.
 
 </section-block>
 
-<section-block id="written-for-remix" title="6. Written for Remix, usable without it">
+<section-block id="framework-free" title="6. Framework-free core, Remix where it helps">
 
-These are written for Remix on Cloudflare Workers. That is what they are for, and
-{% $remixCount %} of them depend on `remix` directly — the middleware, the routing bindings, the
-context integration. Pretending otherwise would undersell exactly the part most readers are here
-for.
+Most of these packages are about the web platform, not a framework. {% $frameworkFreeCount %} of
+the {% $packageCount %} depend on no framework at all and run anywhere `fetch` does: Cloudflare
+Workers, where most of them are used, and Bun, Deno and Node as well.
 
-What the habit actually says is narrower, and it is about where the framework sits: the logic goes
-in a core that needs no framework, and the binding is an export you opt into. The authentication
-core is independent of Remix and gets its Remix surface as a subpath,
-and services reach a request through Remix's own request context rather than a container of this
-collection's invention.
+The other {% $remixCount %} bind something to Remix — the middleware, the routing bindings, the
+context integration — because Remix is what the apps built on them use.
 
-So {% $frameworkFreeCount %} of the {% $packageCount %} depend on no framework at all and run
-anywhere `fetch` does. That is a consequence of where the seam was drawn, not a marketing position.
+The habit is about where that binding sits: the logic goes in a core that needs no framework, and
+the binding is an export you opt into. The authentication core is independent of Remix and gets
+its Remix surface as a subpath, and services reach a request through Remix's own request context
+rather than a container of this collection's invention.
 
 </section-block>
 
