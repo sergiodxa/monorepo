@@ -22,6 +22,7 @@ export * from "./feature-band.js";
 export * from "./icon-well.js";
 export * from "./install-tabs.js";
 export * from "./landing-hero.js";
+export * from "./logo-sentence.js";
 export * from "./marquee.js";
 export * from "./motion-loop.js";
 export * from "./pricing-band.js";

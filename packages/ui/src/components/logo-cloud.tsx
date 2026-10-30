@@ -18,6 +18,7 @@ import { text, weight } from "@sdxc/u/typography";
 
 import type { BalancedGridStep } from "../styles/card-grid.js";
 
+import { Marquee } from "../patterns/marquee.js";
 import { balancedGrid } from "../styles/card-grid.js";
 
 /** Height of each mark below the `lg` container. */
@@ -28,6 +29,10 @@ const LOGO_HEIGHT_LG = varUtility("ui-marketing-logo-height-lg", "2.25rem");
 
 /** Container name the cloud's layout steps query. */
 const CONTAINER = "ui-marketing-logo-cloud";
+
+/** Fill behind each mark in the `tiles` layout: the heading ink at 3% over the page. */
+const TILE =
+	"var(--ui-marketing-logo-tile, color-mix(in oklch, var(--ui-neutral-fg-emphasis) 4%, var(--ui-bg)))";
 
 /** Hairline that rules the grid layout's cells. */
 const HAIRLINE = "var(--ui-marketing-hairline)";
@@ -46,6 +51,14 @@ const GRID_STEPS: ReadonlyArray<BalancedGridStep> = [
 	{ query: "(width >= 60rem)", columns: 6 },
 ];
 
+/** Layouts that set the marks in grid cells rather than a flowing row. */
+const GRID_LAYOUTS: ReadonlySet<LogoCloud.Layout> = new Set(["grid", "ruled", "tiles"]);
+
+/** A mark's height scaled by its own `--logo-scale`, so one mark can stand taller than its neighbours. */
+function scaled(height: string): string {
+	return `calc(${height} * var(--logo-scale, 1))`;
+}
+
 /** Arrangement {@link LogoCloud} applies when `layout` is omitted. */
 const DEFAULT_LAYOUT: LogoCloud.Layout = "row";
 
@@ -55,11 +68,11 @@ const DEFAULT_LAYOUT: LogoCloud.Layout = "row";
 export namespace LogoCloud {
 	/**
 	 * How the marks sit: a centered wrapping `row`; a `spread` row edge to edge across
-	 * the measure from the `lg` container, where marks shrink to stay on one line
-	 * (centered wrap below); or a `grid` of ruled 4rem cells in even rows, a short
-	 * last row centred.
+	 * the measure from the `lg` container (centered wrap below); a `grid` of 4rem cells
+	 * ruled between them; `ruled`, the same grid closed by an outer frame; `tiles`, each
+	 * mark on its own tinted 3:2 tile; or a `marquee` that scrolls them past.
 	 */
-	export type Layout = "row" | "spread" | "grid";
+	export type Layout = "row" | "spread" | "grid" | "ruled" | "tiles" | "marquee";
 
 	/**
 	 * Props accepted by {@link LogoCloud}.
@@ -76,7 +89,8 @@ export namespace LogoCloud {
 		muted?: boolean;
 		/**
 		 * Consumer-supplied marks — `<img>` or inline SVG children. The cloud sizes each
-		 * direct child; an SVG draws with `currentColor`.
+		 * direct child; an SVG draws with `currentColor`, and a `--logo-scale` style on a
+		 * mark (default 1) lets a square glyph stand taller than a wordmark.
 		 */
 		children: RemixNode;
 	}
@@ -100,7 +114,7 @@ export function LogoCloud(handle: Handle<LogoCloud.Props>) {
 	return () => {
 		let { children, label, layout, mix, muted, ...rest } = handle.props;
 		let resolvedLayout = layout ?? DEFAULT_LAYOUT;
-		let isGrid = resolvedLayout === "grid";
+		let isGrid = GRID_LAYOUTS.has(resolvedLayout);
 
 		return (
 			<div
@@ -128,9 +142,21 @@ export function LogoCloud(handle: Handle<LogoCloud.Props>) {
 						{label}
 					</p>
 				) : null}
-				<div data-slot="logo-cloud-marks" mix={[marks(resolvedLayout, Boolean(muted))]}>
-					{children}
-				</div>
+				{resolvedLayout === "marquee" ? (
+					<Marquee
+						data-slot="logo-cloud-marks"
+						mix={[
+							raw({ color: ink(Boolean(muted)) }),
+							markSize(Boolean(muted), '& [data-slot="marquee-group"] > *'),
+						]}
+					>
+						{children}
+					</Marquee>
+				) : (
+					<div data-slot="logo-cloud-marks" mix={[marks(resolvedLayout, Boolean(muted))]}>
+						{children}
+					</div>
+				)}
 			</div>
 		);
 	};
@@ -142,17 +168,45 @@ export function LogoCloud(handle: Handle<LogoCloud.Props>) {
  * grid whose children become 4rem cells ruled by 1px shadows clipped at its outer edge.
  */
 function marks(layout: LogoCloud.Layout, muted: boolean) {
-	let ink = muted ? "var(--ui-neutral-fg)" : "var(--ui-neutral-fg-emphasis)";
-
-	if (layout === "grid") {
+	if (layout === "tiles") {
 		return combine([
-			raw({ display: "grid", clipPath: "inset(0)", color: ink }),
+			raw({ display: "grid", gap: "0.5rem", color: ink(muted) }),
 			when(
 				"& > *",
 				raw({
 					boxSizing: "border-box",
 					justifySelf: "stretch",
-					blockSize: `calc(${LOGO_HEIGHT} + 2.25rem)`,
+					aspectRatio: "3 / 2",
+					inlineSize: "100%",
+					blockSize: "auto",
+					minInlineSize: "0",
+					paddingBlock: `calc((100% * 2 / 3 - ${scaled(LOGO_HEIGHT)}) / 2)`,
+					paddingInline: "1rem",
+					objectFit: "contain",
+					color: "currentColor",
+					borderRadius: "var(--ui-marketing-tile-radius, 0.5rem)",
+					backgroundColor: TILE,
+					filter: muted ? "grayscale(1)" : "none",
+				}),
+			),
+			balancedGrid(CONTAINER, GRID_STEPS),
+		]);
+	}
+
+	if (layout === "grid" || layout === "ruled") {
+		return combine([
+			raw({
+				display: "grid",
+				clipPath: "inset(0)",
+				color: ink(muted),
+				boxShadow: layout === "ruled" ? `inset 0 0 0 1px ${HAIRLINE}` : "none",
+			}),
+			when(
+				"& > *",
+				raw({
+					boxSizing: "border-box",
+					justifySelf: "stretch",
+					blockSize: `calc(${scaled(LOGO_HEIGHT)} + 2.25rem)`,
 					inlineSize: "100%",
 					minInlineSize: "0",
 					padding: "1.125rem 1rem",
@@ -179,24 +233,36 @@ function marks(layout: LogoCloud.Layout, muted: boolean) {
 			columnGap: "2.5rem",
 			rowGap: "1.5rem",
 			inlineSize: "100%",
-			color: ink,
+			color: ink(muted),
 		}),
-		when(
-			"& > *",
-			raw({
-				blockSize: LOGO_HEIGHT,
-				inlineSize: "auto",
-				objectFit: "contain",
-				color: "currentColor",
-				filter: muted ? "grayscale(1)" : "none",
-			}),
-		),
-		at("lg", CONTAINER, when("& > *", raw({ blockSize: LOGO_HEIGHT_LG }))),
+		markSize(muted, "& > *"),
 		layout === "spread"
 			? at("lg", CONTAINER, [
 					raw({ justifyContent: "space-between", columnGap: "2rem", flexWrap: "nowrap" }),
 					when("& > *", raw({ minInlineSize: "0" })),
 				])
 			: [],
+	]);
+}
+
+/** The ink marks draw in: the body ink when muted, the heading ink otherwise. */
+function ink(muted: boolean): string {
+	return muted ? "var(--ui-neutral-fg)" : "var(--ui-neutral-fg-emphasis)";
+}
+
+/** Sizes the marks `selector` names to the logo height, a step taller from the `lg` container. */
+function markSize(muted: boolean, selector: string) {
+	return combine([
+		when(
+			selector,
+			raw({
+				blockSize: scaled(LOGO_HEIGHT),
+				inlineSize: "auto",
+				objectFit: "contain",
+				color: "currentColor",
+				filter: muted ? "grayscale(1)" : "none",
+			}),
+		),
+		at("lg", CONTAINER, when(selector, raw({ blockSize: scaled(LOGO_HEIGHT_LG) }))),
 	]);
 }
