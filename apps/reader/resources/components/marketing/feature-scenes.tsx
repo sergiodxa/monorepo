@@ -11,10 +11,11 @@ import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { CodeStage } from "@sdxc/ui/patterns";
+import { CodeStage, DrawnChart } from "@sdxc/ui/patterns";
 
 import type { FeatureSlug } from "~/config/marketing";
 
+import { POLL_BANDS, POLL_DORMANT_MS, POLL_FLOOR_MS } from "~/database/feed-schema";
 import {
 	ArticleView,
 	FeedView,
@@ -29,12 +30,16 @@ import {
 	ArticleScene,
 	CadenceScene,
 	DataScene,
+	formatInterval,
 	FiltersScene,
 	NotifyScene,
 	OrganizeScene,
 	SearchScene,
 	scenePanel,
 } from "~/resources/components/marketing/scenes";
+
+/** One day, the span the freshness chart counts fetches over. */
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A scene component that takes the translator and nothing else. */
 type SceneComponent = (handle: Handle<{ t: Translate; framed?: boolean }>) => () => RemixNode;
@@ -359,7 +364,28 @@ export const FEATURE_HEROES: Record<FeatureSlug, (t: Translate) => RemixNode> = 
 
 /** The visual each feature page's steps sit beside, a different screen from its hero. */
 export const FEATURE_STEP_VISUALS: Record<FeatureSlug, (t: Translate) => RemixNode> = {
-	freshness: (t) => <CadenceScene t={t} framed={false} />,
+	freshness: (t) => (
+		<DrawnChart
+			aria-label={t("landing.freshness.chart.label")}
+			pauseLabel={t("landing.freshness.chart.pause")}
+			metric={{
+				value: DAY_MS / POLL_FLOOR_MS,
+				label: t("landing.freshness.chart.metric"),
+			}}
+			series={POLL_BANDS.map((band, index) => ({
+				label:
+					band.minRate > 0
+						? t("landing.freshness.chart.rate", { rate: band.minRate })
+						: t("landing.freshness.chart.below", { rate: POLL_BANDS[index - 1]?.minRate ?? 0 }),
+				value: DAY_MS / band.intervalMs,
+				display: formatInterval(band.intervalMs),
+			}))}
+			highlight={0}
+			footnote={t("landing.freshness.chart.footnote", {
+				dormant: formatInterval(POLL_DORMANT_MS),
+			})}
+		/>
+	),
 	filters: (t) => (
 		<ReaderWindow
 			t={t}
