@@ -54,6 +54,13 @@ export class CopyEvent extends Event {
 }
 
 /**
+ * Attribute that keeps an element inside a copy target off the clipboard, together with
+ * the line break written right after it: a shell block's output lines, or the removed
+ * lines of a diff, stay on screen while the copied text is what a reader should paste.
+ */
+export const COPY_EXCLUDE_ATTRIBUTE = "data-copy-exclude";
+
+/**
  * Reads what a target offers to be copied. A form control keeps what it shows in its
  * `value` and has no text of its own, so the pairing a copy button is most often written
  * for — a read-only field beside a button — is read there rather than from its markup.
@@ -66,7 +73,17 @@ function copyableText(target: Element): string {
 		return target.value.trim();
 	}
 
-	return target.textContent?.trim() ?? "";
+	if (!target.querySelector(`[${COPY_EXCLUDE_ATTRIBUTE}]`)) return target.textContent?.trim() ?? "";
+
+	let copy = target.cloneNode(true) as Element;
+	for (let excluded of copy.querySelectorAll(`[${COPY_EXCLUDE_ATTRIBUTE}]`)) {
+		let next = excluded.nextSibling;
+		if (next?.nodeType === Node.TEXT_NODE && next.textContent?.startsWith("\n")) {
+			next.textContent = next.textContent.slice(1);
+		}
+		excluded.remove();
+	}
+	return copy.textContent?.trim() ?? "";
 }
 
 /**

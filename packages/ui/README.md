@@ -257,6 +257,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
 - `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
 - `PlanNotice` — the one-sentence plan or role box under a help page's title.
+- `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
 
 ### Patterns (`@sdxc/ui/patterns`)
 
@@ -322,7 +323,8 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `commandFilter(model)`          | `Command`                  | Items hidden by a `FilterModel` query.                                  |
 | `commandKeys(model)`            | `Command`                  | Arrow keys over matches; Enter activates the active item's link/button. |
 | `contextMenu(id, options?)`     | `ContextMenu.Trigger`      | Opens popover `id` at the pointer on right-click or the menu key.       |
-| `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target.                             |
+| `copyFeedback(copiedLabel)`     | a copy button              | `data-copied` for 2s and the label announced after a copy.              |
+| `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target, minus `data-copy-exclude`.  |
 | `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
 | `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
 | `dragReorder(session)`          | `GridList` / `Tree`        | Pointer reordering through a `DragSession`.                             |
