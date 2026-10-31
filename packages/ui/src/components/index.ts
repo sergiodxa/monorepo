@@ -105,6 +105,7 @@ export * from "./slider.js";
 export * from "./spinner.js";
 export * from "./split.js";
 export * from "./stat-strip.js";
+export * from "./steps.js";
 export * from "./switch.js";
 export * from "./table.js";
 export * from "./tabs.js";
