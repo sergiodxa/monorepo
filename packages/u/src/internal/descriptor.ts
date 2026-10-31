@@ -76,6 +76,16 @@ export function utility<Node extends Element = Element>(
 }
 
 /**
+ * Tells a utility mixin built by {@link utility} apart from any other mixin a
+ * `mix` prop accepts, so only utilities have their style trees merged.
+ */
+export function isUtility<Node extends Element = Element>(
+	value: unknown,
+): value is UtilityMixin<Node> {
+	return typeof value === "object" && value !== null && UTILITY in value;
+}
+
+/**
  * Recursively flattens a wrapper utility's input into a flat list of utility
  * mixins, dropping falsy values, the same way `mix` flattens nested arrays.
  */

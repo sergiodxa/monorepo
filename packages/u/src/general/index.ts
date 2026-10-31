@@ -12,6 +12,7 @@ export { env } from "./env.js";
 export { if } from "./if.js";
 export { listStyle } from "./list-style.js";
 export type { ListStyleValue } from "./list-style.js";
+export { mergeMix } from "./merge-mix.js";
 export { pointerEvents } from "./pointer-events.js";
 export type { PointerEventsValue } from "./pointer-events.js";
 export { pseudoContent } from "./pseudo-content.js";

@@ -176,6 +176,10 @@ Resolves a CSS environment variable reference: `env({name})`, or `env({name}, {f
 
 Conditionally returns `input` as one mixin, or `false` when `condition` is falsy. A list (`u.if(active, [u.bg("brand.solid"), u.fg("brand.onSolid")])`) is merged through `u.combine()`, so it cascades as one unit.
 
+#### `mergeMix(base: MixInput, mix: MixInput): MixInput`
+
+Applies `mix` on top of `base`: the utilities of both render as one class with `mix`'s in a later cascade sublayer, so they win on a property both set whatever selector `base` uses; other mixins apply unchanged. A component forwarding its caller's `mix` uses it: `mix={u.mergeMix([u.text("sm"), u.fg("neutral")], mix)}`.
+
 #### `listStyle(value: ListStyleValue = "none")`
 
 Applies `list-style`. Defaults to `"none"`, the common case of a `<ul>` or `<ol>` serving as a plain layout container.
