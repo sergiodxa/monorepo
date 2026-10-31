@@ -93,6 +93,7 @@ export * from "./pagination.js";
 export * from "./plan-notice.js";
 export * from "./popover.js";
 export * from "./progress-bar.js";
+export * from "./props-table.js";
 export * from "./radio-group.js";
 export * from "./range-calendar.js";
 export * from "./resizable.js";

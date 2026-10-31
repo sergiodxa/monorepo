@@ -260,6 +260,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
 - `CodeTabs` — radio tabs over code; `syncKey` switches every set together and `persist` (`cookie` | `local`) remembers it.
 - `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
+- `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
 - `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
 
 ### Patterns (`@sdxc/ui/patterns`)
