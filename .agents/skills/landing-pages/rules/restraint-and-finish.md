@@ -19,8 +19,9 @@ review of a page that otherwise looked done.
 ## Restraint
 
 - **One of each.** One `AccentText` highlight in the hero title, one marquee, one inverse band, one
-  statement band.
-- **Motion has a job.** It explains (a flow diagram running), reveals (`LandingHero entrance`,
+  statement band, one `FlowDiagram` (and not on every page of the site), and no animated device twice on
+  a page.
+- **Motion has a job.** It explains (a run, an exchange or a fan-out playing), reveals (`LandingHero entrance`,
   `viewReveal()` on bands) or shows that something is live. Never decorative spinning or parallax for its
   own sake. Everything is gated on `prefers-reduced-motion`, and the static render shows the finished state.
 - **Colour means something.** Brand marks action and emphasis; status colours mark status.

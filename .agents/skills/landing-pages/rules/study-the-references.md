@@ -60,10 +60,12 @@ Weak spots:
   hosts with the real `Sparkline` and `Badge`, one of them `Degraded` at 642 ms. One amber row makes the
   table look like a real Tuesday instead of a brochure.
 - **One world per page.** `sample-data.ts` feeds the hero and every card scene, so the same hosts recur.
-- **The flow diagram runs the product's own language.** On the home and `/browser-flows`, `FlowDiagram`
+- **The animated devices run the product's own language.** On the home, `FlowDiagram`
   plays "The schedule starts a run · As often as every 15 minutes", then each step with its real DSL line
   (`browser.click button "Sign in"`), and settles on "Run passed" with "A failed step alerts your team"
-  beneath (`resources/components/marketing/flow-diagram.tsx`).
+  beneath (`resources/components/marketing/flow-diagram.tsx`). `/browser-flows` types the same browser spec
+  in a `TypedTerminal`, and `/features/flows` lands runs 15 minutes apart in an `EventTicker`, one failing on
+  `expect account.status 200 → got 401` (`resources/components/marketing/flow-runs-ticker.tsx`).
 - **`/browser-flows` has the best copy on the site** (`resources/content/browser-flows.ts`). The lead opens
   on the problem: "A 200 on the homepage still hides a broken login." Every band title is a claim: "Three
   click-throughs teams run on a schedule", "HTTP can only see the request", "Priced per run, not per

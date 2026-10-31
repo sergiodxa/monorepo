@@ -60,7 +60,7 @@ Never repeat the `h1` as the table heading.
 
 `/browser-flows`: hero with the flow monitor's own screen (`ProductMockup area="flow"`) → a `CodeStage` of
 three example specs over cards naming each → "HTTP vs browser" list → pricing figures → split steps
-beside a `FlowDiagram` → FAQ → closing band. `/mcp` is shorter: a `CodeStage` hero of the client config →
+beside a `TypedTerminal` of the spec → FAQ → closing band. `/mcp` is shorter: a `CodeStage` hero of the client config →
 the tools as a split beside the API-keys mockup → steps → closing band.
 
 **SaaS landing** (`apps/sdxc-site/resources/views/demos/saas/sections.tsx`)

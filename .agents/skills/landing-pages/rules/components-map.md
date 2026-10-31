@@ -50,7 +50,12 @@ For any component `<name>` (kebab-case):
 | Bento | `Bento` | `columns`, `Bento.Cell`, `.Media`, `.Title` (`size="lg"` for a wide cell), `.Body`; every cell has media, hidden below the `md` container |
 | Code | `CodeStage` | `tabs`, `language`, `lineNumbers`, `variant` `code`/`slab`/`terminal`, unique `name` |
 | Install | `InstallTabs` | package-manager switcher with copy actions; `name` and `aria-label` |
-| Process | `FlowDiagram` | `aria-label`, `trigger`, `steps`, `outcome`, `footnote`, `pauseLabel` |
+| Linear run | `FlowDiagram` | `aria-label`, `trigger`, `steps`, `outcome`, `footnote`, `pauseLabel`; once per page |
+| Exchange | `SequenceDiagram` | `aria-label`, `actors`, `messages` (`from`, `to`, `label`, `code`), `outcome`, `footnote` |
+| One-to-many | `FanOutDiagram` | `aria-label`, `source`, `targets`, `direction` `out`/`in`, `outcome`, `footnote` |
+| Activity | `EventTicker` | `aria-label`, `rows` (`time`, `label`, `status`, `flipTo`), `statusLabels`, `title` |
+| Typed code | `TypedTerminal` | `aria-label`, `lines` (`kind`, `text`, `status`), `prompt`, `title` |
+| Figures | `DrawnChart` | `aria-label`, `metric`, `series`, `variant` `bars`/`line`, `highlight`, `footnote` |
 | Product UI | `ProductFrame` | `lights`, `title`, `url`, `designWidth` + `fit`, `variant="device"`, `stage`, `footer` |
 | Checks | `CheckList`, `CheckRow` | `orientation="horizontal"` for hero trust lines |
 | Chapters | `Rails`, `Crosshair` | wrap each chapter in `HeadingScope level={2}` |

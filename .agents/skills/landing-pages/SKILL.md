@@ -1,6 +1,6 @@
 ---
 name: landing-pages
-description: Design, build, redesign or review a marketing landing page in this monorepo with taste — a product home, feature, audience, comparison or pricing page, a book or app landing, a trial page, a docs hub, or a reading view behind a form. Teaches the judgment that makes a page good: show the product working instead of describing it (inline product mockups, animated flow diagrams, code in the reader's language, small scenes that each capture one moment), pick the right visual for each claim, commit to one art direction, compose with scale, cropping and pacing, write specific copy, keep proof honest, show restraint, and finish the details a reviewer notices. Use before planning or writing any landing, when redesigning one, when reviewing one, or when a page "looks fine but not great".
+description: Design, build, redesign or review a marketing landing page in this monorepo with taste — a product home, feature, audience, comparison or pricing page, a book or app landing, a trial page, a docs hub, or a reading view behind a form. Teaches the judgment that makes a page good: show the product working instead of describing it (inline product mockups, animated flow, sequence and fan-out diagrams, tickers, typing terminals and charts, code in the reader's language, small scenes that each capture one moment), pick the right visual for each claim, commit to one art direction, compose with scale, cropping and pacing, write specific copy, keep proof honest, show restraint, and finish the details a reviewer notices. Use before planning or writing any landing, when redesigning one, when reviewing one, or when a page "looks fine but not great".
 ---
 
 # Landing pages
@@ -24,7 +24,8 @@ one band by band, with the file behind every moment and the weak spots a review 
 - **sdxc.dev/demo/saas** (`apps/sdxc-site/resources/views/demos/saas/`) — the bar. A hero that is the
   product in three switchable views, numbered chapters, a bento where each cell is one moment.
 - **uptime.sergiodxa.com** (`apps/uptime`) — a real product: mockups drawn from its own components,
-  shared sample data, a flow diagram that runs its real spec language. `/browser-flows` has the best copy.
+  shared sample data, a flow diagram on the home that runs its real spec language, a live log of runs on
+  `/features/flows`, the spec typing itself on `/browser-flows`. `/browser-flows` has the best copy.
 - **sdxc.dev/demo/book** (`demos/book/`) — editorial: serif, paper, square corners, a sample page that
   demonstrates the book's subject.
 - **sdxc.dev/demo/app** (`demos/app/`) — consumer: a phone hero and colour-block scenes from daily life.
@@ -45,7 +46,9 @@ Strong: the outage alert for api.example.com at 14:02, and the recovery under it
 
 ### Pick the device that proves the claim (CRITICAL) — @rules/choose-the-visual-device.md
 
-A process animates (`FlowDiagram`), an integration is the real call in tabs (`CodeStage`), a product with
+A linear run animates (`FlowDiagram`, once per page), an exchange between parties is a `SequenceDiagram`,
+one-to-many is a `FanOutDiagram`, ongoing activity is an `EventTicker`, code that runs is a `TypedTerminal`,
+a measured figure is a `DrawnChart`, an integration is the real call in tabs (`CodeStage`), a product with
 several faces switches (`SegmentedStage`), breadth is a bento of moments, scale is four figures, a
 physical thing is the object. Never the same device twice in a row.
 

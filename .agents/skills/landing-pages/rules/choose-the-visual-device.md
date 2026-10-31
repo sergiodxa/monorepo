@@ -1,7 +1,7 @@
 ---
 title: Choose the Visual Device
 impact: CRITICAL
-tags: [taste, flow-diagram, code-stage, bento, switchers, visuals]
+tags: [taste, flow-diagram, sequence-diagram, fan-out, event-ticker, typed-terminal, drawn-chart, code-stage, bento, switchers, visuals]
 ---
 
 # Choose the Visual Device
@@ -16,13 +16,21 @@ decision, not a component lookup: match it to what the reader needs to see.
   ending on "passed", explains scheduled flows faster than any copy.
 - **Variety keeps a long page alive.** Three code splits in a row read as one long band; alternating a
   code stage, a flow diagram and a bento keeps each scroll a new thing to look at.
+- **Each animated device proves one shape of claim.** A run of steps, an exchange between parties, one
+  thing reaching many, activity that keeps arriving, code that does something, a figure that grows. Reach
+  for the one whose shape matches; a single device on every page reads as a template.
 
 ## Claim → device
 
 | When the claim is about… | Show | Component | Reference |
 | --- | --- | --- | --- |
 | The product as a whole | a full product window; a switcher if it has several faces | `ProductFrame`, `SegmentedStage` | Keel hero (`demos/saas/sections.tsx` `HeroSection`) |
-| Something that runs on its own (a schedule, a pipeline, an automation) | the run animating: trigger → steps → outcome | `FlowDiagram` | Uptime `/browser-flows`, `resources/components/marketing/flow-diagram.tsx` |
+| One linear run that passes or fails (a scheduled check, a pipeline) | the run animating: trigger → steps → outcome | `FlowDiagram` | Uptime home `#flows`, `resources/components/marketing/flow-diagram.tsx` |
+| An exchange between two to four parties (OAuth, a webhook handshake, a payment redirect) | messages travelling between lifelines in order | `SequenceDiagram` | book PKCE sign-in |
+| One thing serving many, or many feeding one (one fetch for every follower, one alert to every channel) | a source pulsing out to each target in turn | `FanOutDiagram` | Reader home freshness band |
+| Activity that keeps arriving, with the exception surfaced (checks landing, items arriving, jobs finishing) | rows arriving newest first, one flipping to failed | `EventTicker` | Uptime `/features/flows` |
+| "You write this, it does that" (a spec, a command, a config) | the input typing itself, then its output | `TypedTerminal` | Uptime `/browser-flows` |
+| A measured figure or a spread of values (intervals, latency, uptime) | a counter ticking to the real value over bars or a line that draws in | `DrawnChart` | Reader `/features` cadence |
 | How a developer integrates | the real call, in the languages your readers use, as file tabs | `CodeStage tabs` | Keel "01 / Metering", Uptime home `#agents` (curl / mcp.json) |
 | Running anywhere | the same code on each target, one tab per runtime | `CodeStage tabs` in a split with `bleed="end"` | sdxc.dev `runtime-showcase.tsx` |
 | Breadth (many small capabilities) | one tiny moment per cell | `Bento` with scenes | Keel platform bento, Rooftree colour blocks |
@@ -46,13 +54,16 @@ decision, not a component lookup: match it to what the reader needs to see.
 - **Strong**: `FlowDiagram` playing the run step by step, each step with its spec line, settling on
   "Run passed" with "A failed step alerts your team" under it. The claim is a process, so the device moves.
 
-Uptime uses both of the last two on `/browser-flows`: the screen in the hero, the diagram beside the
-steps, so neither repeats.
+The same product on another page makes a different claim, so it gets a different device: `/features/flows`
+shows runs landing 15 minutes apart in an `EventTicker`, one failing on its line; `/browser-flows` types
+the spec in a `TypedTerminal`. Only the home plays the `FlowDiagram`.
 
 ## Animated flow diagrams
 
-Use `FlowDiagram` whenever something happens without the user: a scheduled check, a webhook pipeline, a
-build, a sync. It loops a run every few seconds, pausable, and shows the finished run under reduced motion.
+Use `FlowDiagram` for one linear run with a pass/fail outcome: a scheduled check, a build, a deploy. At
+most once per page, and not on every page of a site; when the claim has another shape, use the device
+below that matches it. It loops a run every few seconds, pausable, and shows the finished run under
+reduced motion.
 
 ```tsx
 import { BellIcon, ClockIcon } from "@sdxc/icons";
@@ -81,6 +92,36 @@ What makes it good: each step carries a real line of the product's syntax, not a
 the real schedule; the footnote says what happens on failure. Three to five steps. An outcome with a
 figure ("Passed in 4.2 s") is stronger still.
 
+## The other animated devices
+
+All of them are CSS-only loops in a `MotionLoop` (pausable), show their finished state under reduced
+motion, take every string as a prop and need an `aria-label`. Feed each one real values from code.
+
+- **`SequenceDiagram`** — `actors` (two to four) and `messages` `{ from, to, label, code? }` by actor
+  index. For a protocol: the book's PKCE sign-in between the browser, the app and the Authorization Server,
+  with the `code_challenge` and `code_verifier` lines on the arrows that carry them.
+- **`FanOutDiagram`** — a `source` and two to six `targets`, `direction="in"` for many-to-one. For "one
+  fetch, however many people follow it": the feed on top, each reader's queue lighting with "+3".
+- **`EventTicker`** — `rows` `{ time, label, status, detail?, flipTo? }`, oldest first, and
+  `statusLabels`. For continuous activity: runs at 12:00, 12:05, 12:10, the 12:15 one flipping to failed
+  with the line that broke.
+- **`TypedTerminal`** — `lines` `{ kind: "input" | "output", text, status? }` and a `prompt`. For code
+  that does something: the spec types in, then `✓ 4 steps · 2.1s` prints. Keep it under ten lines.
+- **`DrawnChart`** — a `metric` that counts up and a `series` as `bars` or a `line`, `highlight` for the
+  bar that matters. For a figure the product measures: check intervals by how often a feed posts.
+
+```tsx
+import { FanOutDiagram } from "@sdxc/ui/patterns";
+
+<FanOutDiagram
+	aria-label="One fetch fills every follower's queue"
+	pauseLabel="Pause"
+	source={{ title: "Harbor Daily", detail: 'GET /feed.xml  If-None-Match: "a1f3"' }}
+	targets={[{ title: "Ana", detail: "+3" }, { title: "Ben", detail: "+3" }, { title: "Chloé", detail: "+3" }]}
+	footnote="One fetch, however many people follow it"
+/>
+```
+
 ## Code stages
 
 Code is a visual when it is short, real and in the reader's language. Show the one call that matters
@@ -97,13 +138,16 @@ jumps. Two or three faces in a hero; four to five stops in a tour.
 ## Pacing the devices
 
 Plan the page as a table — band, claim, device, moment — and read the device column top to bottom: no
-device twice in a row, and at least one thing that moves (a flow diagram, a switcher, a marquee of real
-logos) somewhere below the fold. @rules/worked-example.md shows the table and the check.
+device twice in a row, and at least one thing that moves (a flow diagram, a sequence, a ticker, a switcher,
+a marquee of real logos) somewhere below the fold. Across a site, read the animated devices page by page
+too: when every page plays a `FlowDiagram`, most of them are the wrong device. @rules/worked-example.md shows the table and the check.
 
 ## Rules
 
 1. Pick each band's visual from the shape of its claim, using the table above.
-2. Animate processes with `FlowDiagram`, with real code lines, a real schedule and a measured outcome.
+2. Animate a linear pass/fail run with `FlowDiagram` (real code lines, a real schedule, a measured
+   outcome), at most once per page and not on every page of a site; animate other shapes of claim with
+   `SequenceDiagram`, `FanOutDiagram`, `EventTicker`, `TypedTerminal` or `DrawnChart`.
 3. Show integration as the one real call in the reader's languages, short and titled.
 4. Use a bento for breadth, cards with scenes for features with pages, lists for facts without pictures.
 5. Never put the same device in adjacent bands.
