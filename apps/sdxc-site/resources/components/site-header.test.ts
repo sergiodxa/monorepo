@@ -1,7 +1,7 @@
 /**
  * Tests the header's markup: the search dialog keeps the box and the quick links in one
- * column of the page's own, and the bar's menu button opens a sheet holding every
- * destination, which is the only way a phone reaches them.
+ * column of the page's own, the bar's menu button opens a sheet holding every destination,
+ * which is the only way a phone reaches them, and the sheet ships the island that closes it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,5 +36,22 @@ describe("SiteHeader", () => {
 
 		expect(button?.getAttribute("command")).toBe("show-modal");
 		expect(rows).toEqual(["Docs", "API", "Utilities", "Components", "GitHub"]);
+	});
+
+	test("hydrates the island that closes the sheet once a link in it is followed", async () => {
+		let page = unwrap(parseDocument(await (await fetchApp("/philosophy")).text()));
+		let islands = Array.from(page.querySelectorAll("script#rmx-data"), (script) => {
+			let data = JSON.parse(script.textContent ?? "{}") as {
+				h?: Record<string, { moduleUrl: string; exportName: string }>;
+			};
+			return Object.values(data.h ?? {});
+		}).flat();
+
+		expect(islands).toContainEqual(
+			expect.objectContaining({
+				moduleUrl: "@sdxc/ui/dialog-dismiss",
+				exportName: "DialogDismiss",
+			}),
+		);
 	});
 });
