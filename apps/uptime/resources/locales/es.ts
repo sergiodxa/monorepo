@@ -640,15 +640,15 @@ export default {
 			whyTeamsSwitchTitle: "Por qué los equipos cambian a Uptime",
 			gettingStartedTitle: "Primeros pasos",
 			finalCtaTitle: "Cambie a Uptime",
+			tableTitle: "Cómo se compara {$competitor}",
+			costLink: "Comparar costos",
+			othersTitle: "Compare Uptime con otras herramientas",
 
 			honestTake: {
 				badge: "Opinión honesta",
 				title: "Cuándo {$competitor} puede ser mejor",
 				description:
 					"Creemos en la transparencia. Estos son los casos en los que {$competitor} podría ser la opción correcta.",
-			tableTitle: "Cómo se compara {$competitor}",
-			costLink: "Comparar costos",
-			othersTitle: "Compare Uptime con otras herramientas",
 			},
 
 			pricing: {

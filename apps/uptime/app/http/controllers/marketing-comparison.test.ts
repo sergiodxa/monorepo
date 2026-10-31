@@ -213,6 +213,16 @@ describe("GET /vs/:slug", () => {
 		expect(body).toContain("Switch to Uptime");
 	});
 
+	test("translates the table title, cost link and other-comparisons label", async () => {
+		let response = await getComparison("uptimerobot");
+
+		let body = await response.text();
+		expect(body).toContain("How UptimeRobot compares");
+		expect(body).toContain("Compare costs");
+		expect(body).toContain("Compare Uptime with other tools");
+		expect(body).not.toMatch(/landing\.comparison\.(tableTitle|costLink|othersTitle)/);
+	});
+
 	test("renders the not-found page for an unknown slug", async () => {
 		let response = await getComparison("does-not-exist");
 

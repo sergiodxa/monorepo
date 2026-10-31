@@ -720,15 +720,15 @@ export default {
 			whyTeamsSwitchTitle: "Why teams switch to Uptime",
 			gettingStartedTitle: "Getting started",
 			finalCtaTitle: "Switch to Uptime",
+			tableTitle: "How {$competitor} compares",
+			costLink: "Compare costs",
+			othersTitle: "Compare Uptime with other tools",
 
 			honestTake: {
 				badge: "Honest take",
 				title: "When {$competitor} might be better",
 				description:
 					"We believe in being transparent. Here's when {$competitor} could be the right choice.",
-			tableTitle: "How {$competitor} compares",
-			costLink: "Compare costs",
-			othersTitle: "Compare Uptime with other tools",
 			},
 
 			pricing: {
