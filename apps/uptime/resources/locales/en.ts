@@ -180,7 +180,7 @@ export default {
 		},
 
 		features: {
-			title: "Powerful Monitoring Made Simple",
+			title: "Powerful monitoring made simple",
 			description:
 				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
 			badge: "Features",
@@ -203,22 +203,22 @@ export default {
 						"Transparent pricing with no hidden fees. Scale up or down as needed, with plans that grow with your monitoring needs.",
 				},
 				fourth: {
-					title: "Status Pages",
+					title: "Status pages",
 					description:
 						"Create beautiful public status pages to keep your users informed about service availability and incidents.",
 				},
 				fifth: {
-					title: "SSL Monitoring",
+					title: "SSL monitoring",
 					description:
 						"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
 				},
 				sixth: {
-					title: "DNS Monitoring",
+					title: "DNS monitoring",
 					description:
 						"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
 				},
 				seventh: {
-					title: "Native Integrations",
+					title: "Native integrations",
 					description:
 						"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
 				},
@@ -289,31 +289,31 @@ export default {
 
 			list: {
 				maintenanceWindows: {
-					title: "Maintenance Windows",
+					title: "Maintenance windows",
 					description: "Schedule downtime and suppress alerts during planned maintenance",
 				},
 				contentMonitoring: {
-					title: "Content Monitoring",
+					title: "Content monitoring",
 					description: "Verify specific keywords or content appear on your pages",
 				},
 				recoveryAlerts: {
-					title: "Recovery Alerts",
+					title: "Recovery alerts",
 					description: "Get notified when services come back up after an incident",
 				},
 				apiAccess: {
-					title: "API Access",
+					title: "API access",
 					description: "Full REST API with key management for automation",
 				},
 				alertCooldowns: {
-					title: "Alert Cooldowns",
+					title: "Alert cooldowns",
 					description: "Prevent alert fatigue with configurable cooldown periods",
 				},
 				customHeaders: {
-					title: "Custom Headers",
+					title: "Custom headers",
 					description: "Add authentication headers and custom request parameters",
 				},
 				cronMonitoring: {
-					title: "Cron Job Monitoring",
+					title: "Cron job monitoring",
 					description: "Monitor scheduled jobs and background tasks with heartbeat checks",
 				},
 			},
@@ -385,16 +385,16 @@ export default {
 
 			list: {
 				websiteMonitoring: {
-					title: "Website Monitoring",
+					title: "Website monitoring",
 					description:
 						"Track uptime and performance for landing pages, blogs, and web applications.",
 				},
 				apiMonitoring: {
-					title: "API Monitoring",
+					title: "API monitoring",
 					description: "Monitor REST APIs, GraphQL endpoints, and webhooks for availability.",
 				},
 				saas: {
-					title: "SaaS Applications",
+					title: "SaaS applications",
 					description:
 						"Keep your SaaS product reliable with proactive monitoring and instant alerts.",
 				},
@@ -403,7 +403,7 @@ export default {
 					description: "Monitor distributed systems and catch failures before they cascade.",
 				},
 				healthChecks: {
-					title: "Health Checks",
+					title: "Health checks",
 					description: "Verify service health and database connections with scheduled pings.",
 				},
 				ecommerce: {
@@ -425,7 +425,7 @@ export default {
 
 		pricing: {
 			badge: "Pricing",
-			title: "Simple, Transparent Pricing",
+			title: "Simple, transparent pricing",
 			description:
 				"One subscription, no tiers. Pay only for what you use with our straightforward pricing model",
 
@@ -485,7 +485,7 @@ export default {
 
 		faq: {
 			badge: "FAQ",
-			title: "Frequently Asked Questions",
+			title: "Frequently asked questions",
 			description: "Find answers to common questions about Uptime",
 
 			list: {
