@@ -45,6 +45,6 @@ describe(Highlight.name, () => {
 		);
 
 		expect(html).toContain('data-color="warning"');
-		expect(html).toContain("--ui-warning-bg-tint");
+		expect(html).toContain("var(--ui-warning-fg) 20%");
 	});
 });

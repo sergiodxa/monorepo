@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
-import { bg, fg } from "@sdxc/u/color";
+import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw, mergeMix } from "@sdxc/u/general";
 import { data, when } from "@sdxc/u/state";
@@ -73,17 +73,16 @@ export function Highlight(handle: Handle<Highlight.Props>) {
 							rounded("sm"),
 							raw({
 								fontWeight: "inherit",
-								paddingInline: "0.1em",
-								marginInline: "-0.1em",
+								paddingInline: "0.08em",
 								boxDecorationBreak: "clone",
 								WebkitBoxDecorationBreak: "clone",
 							}),
 						]),
-						data("color", "brand", when("& > mark", bg("brand.tint"))),
-						data("color", "neutral", when("& > mark", bg("neutral.tint"))),
-						data("color", "success", when("& > mark", bg("success.tint"))),
-						data("color", "warning", when("& > mark", bg("warning.tint"))),
-						data("color", "danger", when("& > mark", bg("danger.tint"))),
+						data("color", "brand", when("& > mark", markTint("brand"))),
+						data("color", "neutral", when("& > mark", markTint("neutral"))),
+						data("color", "success", when("& > mark", markTint("success"))),
+						data("color", "warning", when("& > mark", markTint("warning"))),
+						data("color", "danger", when("& > mark", markTint("danger"))),
 					],
 					mix,
 				)}
@@ -92,4 +91,12 @@ export function Highlight(handle: Handle<Highlight.Props>) {
 			</span>
 		);
 	};
+}
+
+/**
+ * The tint behind a match: the role's ink at 20%, which reads in light and dark alike
+ * where the palette's own tint step fades into the page.
+ */
+function markTint(role: Highlight.Color) {
+	return raw({ backgroundColor: `color-mix(in oklab, var(--ui-${role}-fg) 20%, transparent)` });
 }
