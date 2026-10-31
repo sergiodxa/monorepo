@@ -16,9 +16,12 @@ import { container } from "@sdxc/u/layout";
 import { at, dark, motionSafe, startingStyle, supports } from "@sdxc/u/responsive";
 import { hover, when } from "@sdxc/u/state";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
+
 import { LinkButton } from "../components/link-button.js";
 import { hitArea } from "../styles/hit-area.js";
 import { eyebrow, marketingContainer } from "../styles/marketing.js";
+import { prefetchAttribute } from "../utils/link-prefetch.js";
 
 /** Container the bar's breakpoints read; the header spans the viewport, so it tracks it. */
 const CONTAINER = "ui-site-header";
@@ -155,6 +158,11 @@ export namespace SiteHeader {
 		 * here that closes the sheet when an in-page link is followed.
 		 */
 		sheet?: RemixNode;
+		/**
+		 * When every link and action the header draws starts loading its page. Defaults to
+		 * `"none"`; `"intent"` warms a destination as the visitor hovers or focuses it.
+		 */
+		prefetch?: LinkPrefetch;
 	}
 }
 
@@ -185,6 +193,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 			menuLabel,
 			mix,
 			navLabel,
+			prefetch,
 			sheet,
 			tools,
 			variant,
@@ -198,6 +207,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 		let label = navLabel ?? "Main";
 		let sheetId = `${handle.id}-sheet`;
 		let anchor = `--${handle.id}-bar`;
+		let linkPrefetch = prefetchAttribute(prefetch ?? "none");
 
 		return (
 			<header
@@ -242,11 +252,13 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 													panelId={`${handle.id}-panel-${index}`}
 													anchor={anchor}
 													floating={isFloating}
+													prefetch={prefetch}
 												/>
 											) : (
 												<a
 													href={item.href}
 													aria-current={item.current ? "page" : undefined}
+													data-rmx-prefetch={linkPrefetch}
 													mix={[navTrigger()]}
 												>
 													{item.label}
@@ -262,13 +274,18 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 							{tools}
 							{resolvedActions.map((action, index) => (
 								<span key={index} mix={[showFrom(breakpoint, "inline-flex")]}>
-									<LinkButton href={action.href} variant="ghost" color="neutral">
+									<LinkButton
+										href={action.href}
+										variant="ghost"
+										color="neutral"
+										prefetch={prefetch}
+									>
 										{action.label}
 									</LinkButton>
 								</span>
 							))}
 							{cta ? (
-								<LinkButton href={cta.href} color="brand">
+								<LinkButton href={cta.href} color="brand" prefetch={prefetch}>
 									{cta.label}
 								</LinkButton>
 							) : null}
@@ -317,11 +334,12 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 									mix={[raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" })]}
 								>
 									{isGroup(item) ? (
-										<SheetGroup group={item} />
+										<SheetGroup group={item} prefetch={prefetch} />
 									) : (
 										<a
 											href={item.href}
 											aria-current={item.current ? "page" : undefined}
+											data-rmx-prefetch={linkPrefetch}
 											mix={[sheetRow()]}
 										>
 											{item.label}
@@ -338,6 +356,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 								<LinkButton
 									key={index}
 									href={action.href}
+									prefetch={prefetch}
 									variant="surface"
 									color="neutral"
 									size="lg"
@@ -349,6 +368,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 							{cta ? (
 								<LinkButton
 									href={cta.href}
+									prefetch={prefetch}
 									color="brand"
 									size="lg"
 									mix={[raw({ inlineSize: "100%", justifyContent: "center" })]}
@@ -374,6 +394,7 @@ interface GroupEntryProps {
 	panelId: string;
 	anchor: string;
 	floating: boolean;
+	prefetch?: LinkPrefetch;
 }
 
 /**
@@ -382,7 +403,8 @@ interface GroupEntryProps {
  */
 function GroupEntry(handle: Handle<GroupEntryProps>) {
 	return () => {
-		let { anchor, floating, group, panelId } = handle.props;
+		let { anchor, floating, group, panelId, prefetch } = handle.props;
+		let linkPrefetch = prefetchAttribute(prefetch ?? "none");
 
 		return (
 			<>
@@ -415,6 +437,7 @@ function GroupEntry(handle: Handle<GroupEntryProps>) {
 											<a
 												href={link.href}
 												aria-current={link.current ? "page" : undefined}
+												data-rmx-prefetch={linkPrefetch}
 												mix={[panelLink()]}
 											>
 												{link.icon ? (
@@ -453,7 +476,11 @@ function GroupEntry(handle: Handle<GroupEntryProps>) {
 					</div>
 					{group.footer ? (
 						<div mix={[panelFooter(floating)]}>
-							<a href={group.footer.href} mix={[panelFooterLink()]}>
+							<a
+								href={group.footer.href}
+								data-rmx-prefetch={linkPrefetch}
+								mix={[panelFooterLink()]}
+							>
 								{group.footer.label}
 								<span aria-hidden="true">→</span>
 							</a>
@@ -470,6 +497,7 @@ function GroupEntry(handle: Handle<GroupEntryProps>) {
  */
 interface SheetGroupProps {
 	group: SiteHeader.Group;
+	prefetch?: LinkPrefetch;
 }
 
 /**
@@ -478,8 +506,9 @@ interface SheetGroupProps {
  */
 function SheetGroup(handle: Handle<SheetGroupProps>) {
 	return () => {
-		let { group } = handle.props;
+		let { group, prefetch } = handle.props;
 		let links = group.footer ? [group.footer] : [];
+		let linkPrefetch = prefetchAttribute(prefetch ?? "none");
 
 		return (
 			<details data-slot="site-header-sheet-group" mix={[sheetGroup()]}>
@@ -499,6 +528,7 @@ function SheetGroup(handle: Handle<SheetGroupProps>) {
 										<a
 											href={link.href}
 											aria-current={link.current ? "page" : undefined}
+											data-rmx-prefetch={linkPrefetch}
 											mix={[sheetSubRow()]}
 										>
 											{link.label}
@@ -512,6 +542,7 @@ function SheetGroup(handle: Handle<SheetGroupProps>) {
 						<a
 							key={`footer-${index}`}
 							href={link.href}
+							data-rmx-prefetch={linkPrefetch}
 							mix={[sheetSubRow(), raw({ fontWeight: "600" })]}
 						>
 							{link.label} <span aria-hidden="true">→</span>

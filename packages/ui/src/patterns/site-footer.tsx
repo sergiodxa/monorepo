@@ -16,6 +16,7 @@ import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
 import type { HeadingLevel } from "../components/heading-scope.js";
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
 
 import {
 	HeadingScope,
@@ -24,6 +25,7 @@ import {
 	TAG_BY_LEVEL,
 } from "../components/heading-scope.js";
 import { marketingContainer, marketingHairline } from "../styles/marketing.js";
+import { prefetchAttribute } from "../utils/link-prefetch.js";
 
 /** Container the footer's layout steps query: the full width of the footer host. */
 const CONTAINER = "ui-site-footer";
@@ -101,12 +103,19 @@ export namespace SiteFooter {
 		level?: HeadingLevel;
 		/** Draws the hairline along the footer's top edge. Defaults to `true`. */
 		ruled?: boolean;
+		/**
+		 * When the column links start loading their pages. Defaults to `"none"`; `"intent"`
+		 * warms a destination as the visitor hovers or focuses it.
+		 */
+		prefetch?: LinkPrefetch;
 	}
 
 	/** Props accepted by the internal column renderer. */
 	export interface ColumnProps {
 		/** The column to render. */
 		column: Column;
+		/** Prefetch mode for the column's links. */
+		prefetch?: LinkPrefetch;
 	}
 }
 
@@ -137,6 +146,7 @@ export function SiteFooter(handle: Handle<SiteFooter.Props>) {
 			mix,
 			newsletter,
 			newsletterPlacement,
+			prefetch,
 			ruled,
 			social,
 			tagline,
@@ -245,7 +255,7 @@ export function SiteFooter(handle: Handle<SiteFooter.Props>) {
 							{columns.length > 0 ? (
 								<div data-slot="site-footer-columns" mix={[linkGrid(columns.length)]}>
 									{columns.map((column, index) => (
-										<FooterColumn key={index} column={column} />
+										<FooterColumn key={index} column={column} prefetch={prefetch} />
 									))}
 								</div>
 							) : null}
@@ -300,7 +310,8 @@ export function SiteFooter(handle: Handle<SiteFooter.Props>) {
  */
 function FooterColumn(handle: Handle<SiteFooter.ColumnProps>) {
 	return () => {
-		let { column } = handle.props;
+		let { column, prefetch } = handle.props;
+		let linkPrefetch = prefetchAttribute(prefetch ?? "none");
 		let Tag = TAG_BY_LEVEL[resolveHeadingLevel(handle)];
 
 		return (
@@ -323,7 +334,7 @@ function FooterColumn(handle: Handle<SiteFooter.ColumnProps>) {
 				<ul mix={[raw({ listStyle: "none", margin: "0", padding: "0", columnGap: "1.5rem" })]}>
 					{column.links.map((link, index) => (
 						<li key={index} mix={[raw({ display: "flex", breakInside: "avoid" })]}>
-							<a href={link.href} mix={[footerLink()]}>
+							<a href={link.href} data-rmx-prefetch={linkPrefetch} mix={[footerLink()]}>
 								{link.label}
 							</a>
 						</li>

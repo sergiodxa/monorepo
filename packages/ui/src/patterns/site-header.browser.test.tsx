@@ -215,3 +215,43 @@ describe("SiteHeader on a desktop", () => {
 		expect(panelBox.top).toBeGreaterThan(barBox.bottom);
 	});
 });
+
+describe("SiteHeader prefetch", () => {
+	test("leaves every link unprefetched by default", () => {
+		let host = mount(1440);
+
+		expect(host.querySelectorAll("a[data-rmx-prefetch]")).toHaveLength(0);
+	});
+
+	test("prefetches every link and action on intent, in the bar, the panels and the sheet", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		render(
+			<SiteHeader
+				prefetch="intent"
+				brand={<a href="/">Keel</a>}
+				items={[PRODUCT, { label: "Pricing", href: "/pricing" }]}
+				actions={[{ label: "Log in", href: "/login" }]}
+				cta={{ label: "Start free", href: "/signup" }}
+			/>,
+			{ container: host },
+		);
+
+		let links = [...host.querySelectorAll<HTMLAnchorElement>('a:not([href="/"])')];
+		let hrefs = new Set(links.map((link) => link.getAttribute("href")));
+		expect(hrefs).toEqual(
+			new Set([
+				"/uptime",
+				"/cron",
+				"/on-call",
+				"/incidents",
+				"/status",
+				"/features",
+				"/pricing",
+				"/login",
+				"/signup",
+			]),
+		);
+		for (let link of links) expect(link.dataset.rmxPrefetch, link.href).toBe("intent");
+	});
+});

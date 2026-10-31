@@ -188,3 +188,25 @@ describe("SiteFooter wordmark", () => {
 		host.remove();
 	});
 });
+
+describe("SiteFooter prefetch", () => {
+	test("leaves column links unprefetched by default", () => {
+		let { host, footer } = mountFooter(1440, 2);
+
+		expect(footer.querySelectorAll("a[data-rmx-prefetch]")).toHaveLength(0);
+		host.remove();
+	});
+
+	test("prefetches every column link on intent", () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		let { container } = render(<SiteFooter prefetch="intent" columns={makeColumns(3)} />, {
+			container: host,
+		});
+		let links = container.querySelectorAll<HTMLAnchorElement>('[data-slot="site-footer-column"] a');
+
+		expect(links).toHaveLength(12);
+		for (let link of links) expect(link.dataset.rmxPrefetch).toBe("intent");
+		host.remove();
+	});
+});
