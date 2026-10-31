@@ -20,6 +20,7 @@ import {
 	needsGitHubStatsRefresh,
 	readGitHubStats,
 	refreshGitHubStats,
+	repositoryPath,
 } from "~/app/services/github-stats";
 
 let server = setupServer();
@@ -72,29 +73,6 @@ function githubHandlers(options: { traffic?: number } = {}) {
 				{ week: weekStart("2026-03-29"), total: 2, days: [0, 0, 0, 0, 2, 0, 0] },
 			]);
 		}),
-		http.get("https://api.github.com/search/issues", ({ request }) => {
-			let query = new URL(request.url).searchParams.get("q") ?? "";
-			let kind = query.includes("is:pr") ? "pr" : "issue";
-			return HttpResponse.json({
-				total_count: 2,
-				items: [
-					{
-						number: 35,
-						title: `A ${kind} from a bot`,
-						html_url: `https://github.com/sergiodxa/monorepo/pull/35`,
-						created_at: "2026-10-26T16:37:54Z",
-						user: { login: "dependabot[bot]", type: "Bot" },
-					},
-					{
-						number: 34,
-						title: `A ${kind} from a person`,
-						html_url: `https://github.com/sergiodxa/monorepo/issues/34`,
-						created_at: "2026-10-25T10:00:00Z",
-						user: { login: "someone", type: "User" },
-					},
-				],
-			});
-		}),
 		http.get(`${REPO}/traffic/views`, () =>
 			trafficStatus === 200
 				? HttpResponse.json({
@@ -129,8 +107,6 @@ function storedSnapshot(): GitHubStatsSnapshot {
 	return {
 		fetchedAt: "2026-10-20T04:00:00Z",
 		stars: [{ day: "2026-07-23", count: 1 }],
-		issues: { total: 5, items: [] },
-		pulls: { total: 3, items: [] },
 		trafficReadable: true,
 		traffic: {
 			views: [
@@ -174,8 +150,16 @@ describe("needsGitHubStatsRefresh", () => {
 	});
 });
 
+describe("repositoryPath", () => {
+	test("reads a popular path from inside the repository", () => {
+		expect(repositoryPath("/sergiodxa/monorepo")).toBe("/");
+		expect(repositoryPath("/sergiodxa/monorepo/tree/main/apps")).toBe("/tree/main/apps");
+		expect(repositoryPath("/sergiodxa/monorepo-other")).toBe("/sergiodxa/monorepo-other");
+	});
+});
+
 describe("refreshGitHubStats", () => {
-	test("counts stars per day across pages and leaves bots out of open work", async () => {
+	test("counts stars per day across pages and reads traffic", async () => {
 		server.use(...githubHandlers());
 		let cache = new MemoryCache();
 
@@ -185,19 +169,6 @@ describe("refreshGitHubStats", () => {
 			{ day: "2026-04-02", count: 2 },
 			{ day: "2026-10-30", count: 1 },
 		]);
-		expect(snapshot?.issues).toEqual({
-			total: 1,
-			items: [
-				{
-					number: 34,
-					title: "A issue from a person",
-					url: "https://github.com/sergiodxa/monorepo/issues/34",
-					author: "someone",
-					createdAt: "2026-10-25T10:00:00Z",
-				},
-			],
-		});
-		expect(snapshot?.pulls?.total).toBe(1);
 		expect(snapshot?.trafficReadable).toBe(true);
 		expect(snapshot?.traffic?.views14).toEqual({ count: 30, uniques: 9 });
 		expect(await readGitHubStats(cache)).toEqual(snapshot);
@@ -235,12 +206,12 @@ describe("refreshGitHubStats", () => {
 
 			expect(snapshot?.trafficReadable).toBe(false);
 			expect(snapshot?.traffic).toEqual(storedSnapshot().traffic);
-			expect(snapshot?.issues?.total).toBe(1);
+			expect(snapshot?.stars).toHaveLength(2);
 		},
 	);
 
 	test("treats a missing token as no traffic access", async () => {
-		server.use(...githubHandlers().filter((_, index) => index < 2));
+		server.use(...githubHandlers().filter((_, index) => index < 1));
 		let snapshot = await refreshGitHubStats(new MemoryCache(), undefined, NOW);
 
 		expect(snapshot?.trafficReadable).toBe(false);

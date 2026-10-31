@@ -1,7 +1,6 @@
 /**
- * The repository's own signals from GitHub: stars per day, open issues and pull requests from
- * people other than the maintainer, and the traffic GitHub keeps for fourteen days, stored
- * daily so the history outlives GitHub's window.
+ * The repository's own signals from GitHub: stars per day, and the traffic GitHub keeps for
+ * fourteen days, stored daily so the history outlives GitHub's window.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,9 +18,6 @@ export const GITHUB_STATS_CACHE_KEY = "github-stats:snapshot";
 /** The repository the section describes. */
 export const GITHUB_REPOSITORY = "sergiodxa/monorepo";
 
-/** The maintainer, whose own issues and pull requests are left out of "open work". */
-const MAINTAINER = "sergiodxa";
-
 /**
  * How long a stored snapshot stays readable. The traffic history lives only here once GitHub's
  * fourteen-day window moves past it, so the entry outlives any plausible gap in refreshes.
@@ -31,9 +27,6 @@ const SNAPSHOT_TTL = "365 days";
 /** How old a snapshot may get before a page visit starts a refresh. */
 const REFRESH_AFTER_MS = 20 * 60 * 60 * 1000;
 
-/** The most items GitHub answers with in one page. */
-const PAGE_SIZE = 100;
-
 /** The most weeks GitHub's star history answers with in one page. */
 const STAR_WEEKS_PER_PAGE = 30;
 
@@ -42,9 +35,6 @@ const MAX_STAR_PAGES = 100;
 
 /** One day in seconds, for stepping through a star-history week. */
 const DAY_SECONDS = 24 * 60 * 60;
-
-/** How many open items from other people the snapshot keeps for the table. */
-const OPEN_ITEMS_KEPT = 10;
 
 /** Identifies this site to GitHub, which requires a caller to name itself. */
 const USER_AGENT = "sdxc.dev";
@@ -89,35 +79,29 @@ export interface GitHubTraffic {
 	paths: TrafficSource[];
 }
 
-/** An open issue or pull request someone other than the maintainer opened. */
-export interface OpenItem {
-	number: number;
-	title: string;
-	url: string;
-	author: string;
-	createdAt: string;
-}
-
-/** Open issues or pull requests from other people: how many, and the most recent. */
-export interface OpenWork {
-	total: number;
-	/** Newest first, at most ten. */
-	items: OpenItem[];
-}
-
-/** The repository's stars, open work and traffic history. */
+/** The repository's stars and traffic history. */
 export interface GitHubStatsSnapshot {
 	/** When the sources were read, as an ISO timestamp. */
 	fetchedAt: string;
 	/** Stars gained per day, oldest first, only days with a star; `null` until read once. */
 	stars: DailyCount[] | null;
-	/** `null` until read once. */
-	issues: OpenWork | null;
-	pulls: OpenWork | null;
 	/** `false` when the token was refused traffic on the latest read, and the page says so. */
 	trafficReadable: boolean;
 	/** The stored traffic, kept through refusals; `null` until read once. */
 	traffic: GitHubTraffic | null;
+}
+
+/**
+ * A popular path as it reads inside the repository. GitHub reports every path from the site's
+ * root, so each one starts with the repository's own; the repository home becomes `/`.
+ *
+ * @param path The path GitHub reported, e.g. `/sergiodxa/monorepo/tree/main/apps`.
+ * @returns The rest of it, e.g. `/tree/main/apps`.
+ */
+export function repositoryPath(path: string): string {
+	let prefix = `/${GITHUB_REPOSITORY}`;
+	if (path !== prefix && !path.startsWith(`${prefix}/`)) return path;
+	return path.slice(prefix.length) || "/";
 }
 
 /** A GitHub request that did not succeed, carrying the status a caller branches on. */
@@ -138,20 +122,6 @@ export class GitHubRequestError extends Error {
 
 /** A page of star history: each week's start in Unix seconds and its stars per day from Sunday. */
 const starHistorySchema = s.array(s.object({ week: s.number(), days: s.array(s.number()) }));
-
-/** An issues search answer, of which the count and each item's shown fields are read. */
-const searchSchema = s.object({
-	total_count: s.number(),
-	items: s.array(
-		s.object({
-			number: s.number(),
-			title: s.string(),
-			html_url: s.string(),
-			created_at: s.string(),
-			user: s.nullable(s.object({ login: s.string(), type: s.optional(s.string()) })),
-		}),
-	),
-});
 
 /** Daily views or clones, under `views` or `clones` respectively. */
 const trafficDaysSchema = s.object({
@@ -247,45 +217,6 @@ export async function fetchStars(token: string | undefined): Promise<Result<Dail
 			.map(([day, count]) => ({ day, count }))
 			.sort((a, b) => a.day.localeCompare(b.day)),
 	);
-}
-
-/**
- * Reads open issues or pull requests that neither the maintainer nor a bot opened. Search has
- * no "not a bot" qualifier, so bots are dropped from the newest hundred and from the count.
- *
- * @param kind Which to read.
- * @param token The credential, when the worker has one.
- */
-export async function fetchOpenWork(
-	kind: "issue" | "pr",
-	token: string | undefined,
-): Promise<Result<OpenWork, Error>> {
-	let query = encodeURIComponent(
-		`repo:${GITHUB_REPOSITORY} is:${kind} is:open -author:${MAINTAINER}`,
-	);
-	let answer = await readGitHub(
-		`/search/issues?q=${query}&sort=created&order=desc&per_page=${PAGE_SIZE}`,
-		token,
-	);
-	if (isFailure(answer)) return answer;
-	let parsed = s.parseSafe(searchSchema, answer.data.body);
-	if (!parsed.success) return failure(new Error(`Unreadable ${kind} search`));
-
-	let people = parsed.value.items.filter(
-		(item) => item.user !== null && item.user.type !== "Bot" && !item.user.login.endsWith("[bot]"),
-	);
-	let bots = parsed.value.items.length - people.length;
-
-	return success({
-		total: Math.max(0, parsed.value.total_count - bots),
-		items: people.slice(0, OPEN_ITEMS_KEPT).map((item) => ({
-			number: item.number,
-			title: item.title,
-			url: item.html_url,
-			author: item.user?.login ?? "",
-			createdAt: item.created_at,
-		})),
-	});
 }
 
 /** What one traffic read found: the data, or that the token may not read traffic at all. */
@@ -416,23 +347,17 @@ export async function refreshGitHubStats(
 	token: string | undefined,
 	now = new Date(),
 ): Promise<GitHubStatsSnapshot | null> {
-	let [previous, stars, issues, pulls, traffic] = await Promise.all([
+	let [previous, stars, traffic] = await Promise.all([
 		readGitHubStats(cache),
 		fetchStars(token),
-		fetchOpenWork("issue", token),
-		fetchOpenWork("pr", token),
 		fetchTraffic(token),
 	]);
 
-	if (isFailure(stars) && isFailure(issues) && isFailure(pulls) && isFailure(traffic)) {
-		return null;
-	}
+	if (isFailure(stars) && isFailure(traffic)) return null;
 
 	let snapshot: GitHubStatsSnapshot = {
 		fetchedAt: now.toISOString(),
 		stars: isSuccess(stars) ? stars.data : (previous?.stars ?? null),
-		issues: isSuccess(issues) ? issues.data : (previous?.issues ?? null),
-		pulls: isSuccess(pulls) ? pulls.data : (previous?.pulls ?? null),
 		trafficReadable: isSuccess(traffic)
 			? traffic.data.readable
 			: (previous?.trafficReadable ?? false),

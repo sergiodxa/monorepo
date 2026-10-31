@@ -1,6 +1,6 @@
 /**
- * The stats page's GitHub section: stars over time, open issues and pull requests from other
- * people, and the repository's views, clones, referrers and most visited paths.
+ * The stats page's GitHub section: stars over time, and the repository's views, clones,
+ * referrers and most visited paths.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,14 +16,9 @@ import { focusVisible, hover } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Chart, Link, StatStrip, Table } from "@sdxc/ui";
 
-import type {
-	GitHubStatsSnapshot,
-	OpenItem,
-	TrafficDay,
-	TrafficSource,
-} from "~/app/services/github-stats";
+import type { GitHubStatsSnapshot, TrafficDay, TrafficSource } from "~/app/services/github-stats";
 
-import { GITHUB_REPOSITORY } from "~/app/services/github-stats";
+import { GITHUB_REPOSITORY, repositoryPath } from "~/app/services/github-stats";
 import { daysBetween } from "~/app/services/npm-stats";
 import { axisTop, formatDay, Plot } from "~/resources/components/download-chart";
 
@@ -133,10 +128,6 @@ function GitHubBody(handle: Handle<GitHubBody.Props>) {
 			.reduce((sum, entry) => sum + entry.count, 0);
 		let history = starHistory(stars, readDay);
 		let traffic = snapshot.trafficReadable ? snapshot.traffic : null;
-		let openItems = [
-			...(snapshot.issues?.items.map((item) => ({ ...item, kind: "Issue" })) ?? []),
-			...(snapshot.pulls?.items.map((item) => ({ ...item, kind: "Pull request" })) ?? []),
-		].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
 		return (
 			<div mix={vstack({ gap: 8, align: "stretch" })}>
@@ -147,16 +138,16 @@ function GitHubBody(handle: Handle<GitHubBody.Props>) {
 					<StatStrip.Item label="Stars, last 30 days">
 						{snapshot.stars ? NUMBER_FORMAT.format(starsLast30) : "—"}
 					</StatStrip.Item>
-					<StatStrip.Item label="Open issues from others">
-						{snapshot.issues ? NUMBER_FORMAT.format(snapshot.issues.total) : "—"}
-					</StatStrip.Item>
-					<StatStrip.Item label="Open pull requests from others">
-						{snapshot.pulls ? NUMBER_FORMAT.format(snapshot.pulls.total) : "—"}
-					</StatStrip.Item>
 					{traffic ? (
 						<StatStrip.Item label="Views / uniques, last 14 days">
 							{NUMBER_FORMAT.format(traffic.views14.count)} /{" "}
 							{NUMBER_FORMAT.format(traffic.views14.uniques)}
+						</StatStrip.Item>
+					) : null}
+					{traffic ? (
+						<StatStrip.Item label="Clones / uniques, last 14 days">
+							{NUMBER_FORMAT.format(traffic.clones14.count)} /{" "}
+							{NUMBER_FORMAT.format(traffic.clones14.uniques)}
 						</StatStrip.Item>
 					) : null}
 				</StatStrip>
@@ -205,11 +196,13 @@ function GitHubBody(handle: Handle<GitHubBody.Props>) {
 							heading="Referrer"
 							rows={traffic.referrers}
 						/>
-						<SourceTable label="Popular paths, last 14 days" heading="Path" rows={traffic.paths} />
+						<SourceTable
+							label="Popular paths, last 14 days"
+							heading="Path"
+							rows={traffic.paths.map((path) => ({ ...path, name: repositoryPath(path.name) }))}
+						/>
 					</div>
 				) : null}
-
-				<OpenItemsTable items={openItems} />
 			</div>
 		);
 	};
@@ -302,59 +295,6 @@ function SourceTable(handle: Handle<SourceTable.Props>) {
 									<Table.Cell>{row.name}</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.count)}</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.uniques)}</Table.Cell>
-								</Table.Row>
-							))
-						)}
-					</Table.Body>
-				</Table>
-			</Table.Container>
-		);
-	};
-}
-
-namespace OpenItemsTable {
-	export interface Props {
-		/** Issues and pull requests from other people, newest first. */
-		items: Array<OpenItem & { kind: string }>;
-	}
-}
-
-/** Renders the open issues and pull requests other people opened, each linking to GitHub. */
-function OpenItemsTable(handle: Handle<OpenItemsTable.Props>) {
-	return () => {
-		let { items } = handle.props;
-
-		return (
-			<Table.Container>
-				<Table aria-label="Open issues and pull requests from others">
-					<Table.Header>
-						<Table.Row>
-							<Table.Column>Open from others</Table.Column>
-							<Table.Column>Kind</Table.Column>
-							<Table.Column>Author</Table.Column>
-							<Table.Column numeric>Opened</Table.Column>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{items.length === 0 ? (
-							<Table.Row>
-								<Table.Cell colSpan={4}>
-									<span mix={fg("neutral.muted")}>Nothing open from other people</span>
-								</Table.Cell>
-							</Table.Row>
-						) : (
-							items.map((item) => (
-								<Table.Row key={item.url}>
-									<Table.Cell>
-										<Link href={item.url}>
-											#{item.number} {item.title}
-										</Link>
-									</Table.Cell>
-									<Table.Cell>{item.kind}</Table.Cell>
-									<Table.Cell>
-										<Link href={`https://github.com/${item.author}`}>{item.author}</Link>
-									</Table.Cell>
-									<Table.Cell numeric>{formatDay(item.createdAt.slice(0, 10))}</Table.Cell>
 								</Table.Row>
 							))
 						)}

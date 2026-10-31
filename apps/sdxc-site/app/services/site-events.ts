@@ -86,6 +86,8 @@ export interface SiteEventsDay {
 	hits: Record<string, StoredQuery>;
 	/** Normalized queries that found nothing. */
 	misses: Record<string, StoredQuery>;
+	/** Queries rejected as probes or junk, counted without keeping what they said. */
+	rejected: number;
 	/** Calls per MCP tool name. */
 	tools: Record<string, number>;
 	/** `get_package` calls per package name asked for, published or not. */
@@ -103,6 +105,7 @@ const DAY_SCHEMA = s.object({
 	searches: s.record(s.string(), s.number()),
 	hits: s.optional(QUERIES_SCHEMA),
 	misses: QUERIES_SCHEMA,
+	rejected: s.optional(s.number()),
 	tools: s.record(s.string(), s.number()),
 	packages: s.record(s.string(), s.number()),
 });
@@ -131,6 +134,8 @@ export interface SiteEventsSnapshot {
 	missCount: number;
 	/** The most frequent missed queries, most frequent first. */
 	misses: QueryCount[];
+	/** Queries left out as injection probes, payloads or junk; only how many is kept. */
+	rejectedCount: number;
 	/** Every MCP tool call. */
 	toolCallCount: number;
 	/** Calls per tool, most called first. */
@@ -218,13 +223,18 @@ export async function applySiteEvent(
  * so a dialog query that a recorded dialog query already extends is skipped (a reader
  * backspacing), and each dialog-only query the new one extends gives back one count.
  *
- * @returns Whether the day changed; an implausible query changes nothing.
+ * @returns Whether the day changed. A query under three characters is a reader still typing and
+ * changes nothing; an implausible one only adds to the rejected count.
  */
 function foldSearch(day: SiteEventsDay, search: SiteEvent["search"]): boolean {
 	if (search === undefined) return false;
 	let { surface } = search;
 	let query = normalizeQuery(search.query);
-	if (!isPlausibleQuery(query)) return false;
+	if (query.length < MIN_QUERY_LENGTH) return false;
+	if (!isPlausibleQuery(query)) {
+		day.rejected += 1;
+		return true;
+	}
 
 	if (surface === "dialog") {
 		if (extendsNoFurther(day, query)) return false;
@@ -279,8 +289,10 @@ function increment(counts: Record<string, number>, key: string): void {
 /** A stored day, or an empty one when nothing is stored or what is stored has another shape. */
 function parseDay(value: unknown): SiteEventsDay {
 	let parsed = s.parseSafe(DAY_SCHEMA, value);
-	if (parsed.success) return { ...parsed.value, hits: parsed.value.hits ?? {} };
-	return { searches: {}, hits: {}, misses: {}, tools: {}, packages: {} };
+	if (parsed.success) {
+		return { ...parsed.value, hits: parsed.value.hits ?? {}, rejected: parsed.value.rejected ?? 0 };
+	}
+	return { searches: {}, hits: {}, misses: {}, rejected: 0, tools: {}, packages: {} };
 }
 
 /** The UTC calendar day of a moment, as `YYYY-MM-DD`. */
@@ -334,11 +346,13 @@ function summarize(
 	let misses = new Map<string, QueryCount>();
 	let tools: Record<string, number> = {};
 	let packages: Record<string, number> = {};
+	let rejected = 0;
 
 	for (let { day, counts } of stored) {
 		for (let surface of SEARCH_SURFACES) searches[surface] += counts.searches[surface] ?? 0;
-		addQueries(hits, counts.hits, day);
-		addQueries(misses, counts.misses, day);
+		rejected += counts.rejected;
+		rejected += addQueries(hits, counts.hits, day);
+		rejected += addQueries(misses, counts.misses, day);
 		for (let [name, count] of Object.entries(counts.tools))
 			tools[name] = (tools[name] ?? 0) + count;
 		for (let [name, count] of Object.entries(counts.packages)) {
@@ -353,20 +367,30 @@ function summarize(
 		hits: topQueries(hits),
 		missCount: totalCount(misses),
 		misses: topQueries(misses),
+		rejectedCount: rejected,
 		toolCallCount: Object.values(tools).reduce((sum, count) => sum + count, 0),
 		tools: ranked(tools),
 		packages: ranked(packages).slice(0, TOP_ROWS),
 	};
 }
 
-/** Adds one day's queries into the window's totals, that day becoming each one's last seen. */
+/**
+ * Adds one day's queries into the window's totals, that day becoming each one's last seen. Days
+ * stored before probes were rejected can hold some, which are counted as rejected instead.
+ *
+ * @returns How many searches were left out as implausible.
+ */
 function addQueries(
 	totals: Map<string, QueryCount>,
 	queries: Record<string, StoredQuery>,
 	day: string,
-) {
+): number {
+	let rejected = 0;
 	for (let [query, stored] of Object.entries(queries)) {
-		if (!isPlausibleQuery(query)) continue;
+		if (!isPlausibleQuery(query)) {
+			rejected += stored.count;
+			continue;
+		}
 		let total = totals.get(query) ?? { query, count: 0, surfaces: [], lastSeen: day };
 		total.count += stored.count;
 		total.lastSeen = day;
@@ -375,6 +399,7 @@ function addQueries(
 		}
 		totals.set(query, total);
 	}
+	return rejected;
 }
 
 /** Every search counted in a window's queries. */

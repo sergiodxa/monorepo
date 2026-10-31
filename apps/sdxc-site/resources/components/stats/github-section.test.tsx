@@ -16,7 +16,7 @@ import GitHubSection, {
 	trafficSeries,
 } from "~/resources/components/stats/github-section";
 
-/** A snapshot with stars, one open issue from someone else, and readable traffic. */
+/** A snapshot with stars and readable traffic. */
 function snapshot(): GitHubStatsSnapshot {
 	return {
 		fetchedAt: "2026-10-31T04:00:00Z",
@@ -24,19 +24,6 @@ function snapshot(): GitHubStatsSnapshot {
 			{ day: "2026-07-23", count: 2 },
 			{ day: "2026-10-30", count: 1 },
 		],
-		issues: {
-			total: 1,
-			items: [
-				{
-					number: 34,
-					title: "Support for something",
-					url: "https://github.com/sergiodxa/monorepo/issues/34",
-					author: "someone",
-					createdAt: "2026-10-25T10:00:00Z",
-				},
-			],
-		},
-		pulls: { total: 0, items: [] },
 		trafficReadable: true,
 		traffic: {
 			views: [{ day: "2026-10-30", count: 20, uniques: 6 }],
@@ -44,7 +31,9 @@ function snapshot(): GitHubStatsSnapshot {
 			views14: { count: 291, uniques: 59 },
 			clones14: { count: 4, uniques: 2 },
 			referrers: [{ name: "sergiodxa.com", title: null, count: 4, uniques: 4 }],
-			paths: [{ name: "/sergiodxa/monorepo", title: "Overview", count: 42, uniques: 19 }],
+			paths: [
+				{ name: "/sergiodxa/monorepo/tree/main/apps", title: "Apps", count: 42, uniques: 19 },
+			],
 		},
 	};
 }
@@ -55,12 +44,13 @@ describe("GitHubSection", () => {
 		expect(html).toContain("Reading GitHub; this fills in after the next visit.");
 	});
 
-	test("renders the figures, referrers, paths and open work", async () => {
+	test("renders the figures, referrers and paths from inside the repository", async () => {
 		let html = await renderToString(<GitHubSection snapshot={snapshot()} />);
 		expect(html).toContain("291");
 		expect(html).toContain("sergiodxa.com");
-		expect(html).toContain("/sergiodxa/monorepo");
-		expect(html).toContain("Support for something");
+		expect(html).toContain("/tree/main/apps");
+		expect(html).not.toContain("/sergiodxa/monorepo/tree");
+		expect(html).not.toContain("from others");
 		expect(html).not.toContain("Administration read access");
 	});
 

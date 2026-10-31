@@ -15,8 +15,6 @@ import { StatStrip, Table } from "@sdxc/ui";
 
 import type { QueryCount, SearchSurface, SiteEventsSnapshot } from "~/app/services/site-events";
 
-import { SEARCH_SURFACES } from "~/app/services/site-events";
-
 /** How counts read in the section. */
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US");
 
@@ -71,7 +69,7 @@ namespace Recorded {
 function Recorded(handle: Handle<Recorded.Props>) {
 	return () => {
 		let { events } = handle.props;
-		let searches = SEARCH_SURFACES.reduce((sum, surface) => sum + events.searches[surface], 0);
+		let searches = events.hitCount + events.missCount;
 
 		return (
 			<div mix={vstack({ gap: 4, align: "stretch" })}>
@@ -97,15 +95,15 @@ function Recorded(handle: Handle<Recorded.Props>) {
 					/>
 				) : null}
 
-				{events.misses.length === 0 ? (
-					<p mix={[text("sm"), fg("neutral.muted")]}>Every search found something.</p>
-				) : (
+				{events.misses.length > 0 ? (
 					<QueryTable
 						label="Searches that found nothing, last 30 days"
 						heading="Found nothing"
 						rows={events.misses}
 					/>
-				)}
+				) : null}
+
+				<p mix={[text("sm"), fg("neutral.muted")]}>{searchNote(events)}</p>
 
 				{events.tools.length > 0 ? (
 					<CountTable label="MCP calls by tool, last 30 days" heading="Tool" rows={events.tools} />
@@ -121,6 +119,25 @@ function Recorded(handle: Handle<Recorded.Props>) {
 			</div>
 		);
 	};
+}
+
+/**
+ * The line under the search tables: what is missing from them and why, including how many
+ * queries were rejected as probes, which are counted but never shown.
+ */
+function searchNote(events: SiteEventsSnapshot): string {
+	let parts: string[] = [];
+	if (events.hits.length === 0 && events.misses.length === 0) {
+		parts.push("No search queries recorded yet.");
+	} else if (events.misses.length === 0) {
+		parts.push("Every search found something.");
+	}
+	parts.push(
+		events.rejectedCount > 0
+			? `${NUMBER_FORMAT.format(events.rejectedCount)} queries were left out as injection probes or junk.`
+			: "No queries were left out as probes or junk.",
+	);
+	return parts.join(" ");
 }
 
 namespace QueryTable {

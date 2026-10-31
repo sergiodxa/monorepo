@@ -70,7 +70,7 @@ describe("applySiteEvent", () => {
 		expect(await fold(cache, [])).toBeNull();
 	});
 
-	test("records nothing for injection probes, payloads or bare numbers", async () => {
+	test("counts injection probes, payloads and bare numbers as rejected, keeping no text", async () => {
 		let cache = new MemoryCache();
 		let probes = [
 			"1 and extractvalue(1,concat(0x7e,((select (elt(1=1,1)))),0x7e))",
@@ -84,7 +84,11 @@ describe("applySiteEvent", () => {
 			await applySiteEvent(cache, { search: { surface: "page", query, results: 0 } }, NOW);
 		}
 
-		expect(await fold(cache, [])).toBeNull();
+		let day = await fold(cache, []);
+		expect(day?.rejected).toBe(probes.length);
+		expect(day?.hits).toEqual({});
+		expect(day?.misses).toEqual({});
+		expect(day?.searches).toEqual({});
 		expect(isPlausibleQuery("@sdxc/jwt")).toBe(true);
 		expect(isPlausibleQuery("remix v3 middleware")).toBe(true);
 	});
@@ -156,6 +160,7 @@ describe("applySiteEvent", () => {
 			searches: {},
 			hits: {},
 			misses: {},
+			rejected: 0,
 			tools: { list_packages: 1 },
 			packages: {},
 		});
@@ -165,6 +170,30 @@ describe("applySiteEvent", () => {
 describe("readSiteEvents", () => {
 	test("answers null when nothing is recorded", async () => {
 		expect(await readSiteEvents(new MemoryCache(), NOW)).toBeNull();
+	});
+
+	test("counts probes stored before rejection as rejected and leaves them out", async () => {
+		let cache = new MemoryCache();
+		await cache.write(TODAY_KEY, {
+			searches: { page: 3 },
+			misses: {
+				"1')": { count: 2, surfaces: ["page"] },
+				opml: { count: 1, surfaces: ["page"] },
+			},
+			tools: {},
+			packages: {},
+		});
+		await applySiteEvent(
+			cache,
+			{ search: { surface: "page", query: "1 and sleep(5)", results: 0 } },
+			NOW,
+		);
+
+		let snapshot = await readSiteEvents(cache, NOW);
+
+		expect(snapshot?.rejectedCount).toBe(3);
+		expect(snapshot?.misses.map((miss) => miss.query)).toEqual(["opml"]);
+		expect(snapshot?.missCount).toBe(1);
 	});
 
 	test("sums the last 30 days and ranks what was asked for", async () => {

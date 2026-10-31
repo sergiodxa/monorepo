@@ -20,6 +20,7 @@ import type { SiteEventsSnapshot } from "~/app/services/site-events";
 import { needsAdoptionRefresh, readAdoption, refreshAdoption } from "~/app/services/adoption";
 import {
 	GITHUB_REPOSITORY,
+	repositoryPath,
 	needsGitHubStatsRefresh,
 	readGitHubStats,
 	refreshGitHubStats,
@@ -256,14 +257,11 @@ function adoptionMarkdown(adoption: AdoptionSnapshot | null): string {
 	].join("\n");
 }
 
-/** The GitHub part of the report: stars, open work from other people, and traffic. */
+/** The GitHub part of the report: stars and traffic. */
 function githubMarkdown(github: GitHubStatsSnapshot | null): string {
 	if (github === null) return pending("GitHub");
 	let stars = (github.stars ?? []).reduce((sum, day) => sum + day.count, 0);
 	let traffic = github.traffic;
-	let items = [...(github.issues?.items ?? []), ...(github.pulls?.items ?? [])].sort((a, b) =>
-		b.createdAt.localeCompare(a.createdAt),
-	);
 	let sources = (title: string, rows: Array<{ name: string; count: number; uniques: number }>) =>
 		rows.length > 0
 			? [
@@ -283,8 +281,6 @@ function githubMarkdown(github: GitHubStatsSnapshot | null): string {
 		`Read ${github.fetchedAt} for ${GITHUB_REPOSITORY}.`,
 		"",
 		`- Stars: ${github.stars === null ? "—" : NUMBER_FORMAT.format(stars)}`,
-		`- Open issues from others: ${github.issues?.total ?? "—"}`,
-		`- Open pull requests from others: ${github.pulls?.total ?? "—"}`,
 		traffic
 			? `- Views, last 14 days: ${NUMBER_FORMAT.format(traffic.views14.count)} (${NUMBER_FORMAT.format(traffic.views14.uniques)} unique); clones ${NUMBER_FORMAT.format(traffic.clones14.count)} (${NUMBER_FORMAT.format(traffic.clones14.uniques)} unique)`
 			: "- Traffic: the token cannot read repository traffic.",
@@ -304,17 +300,10 @@ function githubMarkdown(github: GitHubStatsSnapshot | null): string {
 				]
 			: []),
 		...sources("Referrers", traffic?.referrers ?? []),
-		...sources("Popular paths", traffic?.paths ?? []),
-		...(items.length > 0
-			? [
-					"### Open issues and pull requests from others",
-					"",
-					...items.map(
-						(item) =>
-							`- [#${item.number} ${item.title}](${item.url}) by ${item.author}, ${item.createdAt.slice(0, 10)}`,
-					),
-				]
-			: []),
+		...sources(
+			"Popular paths",
+			(traffic?.paths ?? []).map((path) => ({ ...path, name: repositoryPath(path.name) })),
+		),
 	].join("\n");
 }
 
@@ -323,7 +312,7 @@ function eventsMarkdown(events: SiteEventsSnapshot | null): string {
 	if (events === null) {
 		return ["## Searches and MCP calls", "", "Nothing recorded in the last 30 days."].join("\n");
 	}
-	let searches = Object.values(events.searches).reduce((sum, count) => sum + count, 0);
+	let searches = events.hitCount + events.missCount;
 
 	return [
 		"## Searches and MCP calls",
@@ -335,6 +324,7 @@ function eventsMarkdown(events: SiteEventsSnapshot | null): string {
 			.join(", ")})`,
 		`- Found something: ${NUMBER_FORMAT.format(events.hitCount)}`,
 		`- Found nothing: ${NUMBER_FORMAT.format(events.missCount)}`,
+		`- Left out as injection probes or junk: ${NUMBER_FORMAT.format(events.rejectedCount)} (counted, not shown)`,
 		`- MCP calls: ${NUMBER_FORMAT.format(events.toolCallCount)}`,
 		"",
 		...(events.hits.length > 0
