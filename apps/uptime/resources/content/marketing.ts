@@ -178,7 +178,7 @@ export const features: Record<string, MarketingContent.Page> = {
 		trustIndicators: [
 			{ icon: "globe", value: "9", label: "Global Regions" },
 			{ icon: "clock", value: "1-60m", label: "Check Intervals" },
-			{ icon: "activity", value: "HTTP", label: "Health Checks" },
+			{ icon: "chart-column", value: "90d", label: "Uptime History" },
 			{ icon: "database", value: "365d", label: "Data Retention" },
 		],
 		features: [
@@ -253,12 +253,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Email, Slack, Discord, and webhook alerts for downtime detection, with recovery notifications and configurable cooldowns.",
 		highlights: ["Alerts on every failed check", "4 alert channels", "Recovery notifications"],
-		trustIndicators: [
-			{ icon: "clock", value: "1min", label: "Min Interval" },
-			{ icon: "mail", value: "Email", label: "Notifications" },
-			{ icon: "webhook", value: "Webhooks", label: "Integrations" },
-			{ icon: "bell", value: "4", label: "Alert Channels" },
-		],
 		features: [
 			{
 				title: "Email alerts",
@@ -342,12 +336,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Beautiful, customizable public status pages with real-time status, uptime history, and your own branding.",
 		highlights: ["Custom branding", "90-day uptime history", "Public or private"],
-		trustIndicators: [
-			{ icon: "globe", value: "Public", label: "Status Pages" },
-			{ icon: "palette", value: "Custom", label: "Branding" },
-			{ icon: "trending-up", value: "Real-time", label: "Updates" },
-			{ icon: "eye", value: "24/7", label: "Visibility" },
-		],
 		features: [
 			{
 				title: "Overall status banner",
@@ -417,12 +405,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Visual uptime history, response time tracking, and 365 days of retained data across every monitor type.",
 		highlights: ["365-day retention", "90-day uptime history", "P99 response time"],
-		trustIndicators: [
-			{ icon: "calendar", value: "365", label: "Days Retention" },
-			{ icon: "chart-column", value: "90d", label: "Uptime History" },
-			{ icon: "clock", value: "P99", label: "Response Time" },
-			{ icon: "trending-up", value: "Trends", label: "Analysis" },
-		],
 		features: [
 			{
 				title: "Daily uptime history",
@@ -477,12 +459,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Collaborate on uptime monitoring with unlimited team members, role-based access, and domain auto-provisioning.",
 		highlights: ["Unlimited members", "Owner/Admin/Member roles", "Domain auto-provisioning"],
-		trustIndicators: [
-			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
-			{ icon: "shield", value: "3", label: "Role Levels" },
-			{ icon: "globe", value: "Domain", label: "Verification" },
-			{ icon: "user-plus", value: "Auto", label: "Provisioning" },
-		],
 		features: [
 			{
 				title: "Invite anyone",
@@ -542,12 +518,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Integrate monitoring into your workflow with a REST API — or point an agent at the same capabilities over Streamable HTTP MCP.",
 		highlights: ["API key scopes", "MCP tools", "Cron-job ping endpoint"],
-		trustIndicators: [
-			{ icon: "code", value: "REST", label: "API" },
-			{ icon: "bot", value: "MCP", label: "Agents" },
-			{ icon: "key", value: "Scoped", label: "API Keys" },
-			{ icon: "zap", value: "Fast", label: "Responses" },
-		],
 		features: [
 			{
 				title: "Scoped API keys",
@@ -616,12 +586,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Connect monitoring to your workflow with native Slack and Discord integrations, plus custom webhooks for everything else.",
 		highlights: ["Slack", "Discord", "Custom webhooks"],
-		trustIndicators: [
-			{ icon: "hash", value: "Slack", label: "Integration" },
-			{ icon: "message-square", value: "Discord", label: "Integration" },
-			{ icon: "zap", value: "Instant", label: "Delivery" },
-			{ icon: "bell", value: "Rich", label: "Notifications" },
-		],
 		features: [
 			{
 				title: "Slack",
@@ -676,12 +640,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Schedule planned downtime, suppress alerts automatically, and end a maintenance window early when work finishes ahead of schedule.",
 		highlights: ["One-time or recurring", "Team or monitor scoped", "End early anytime"],
-		trustIndicators: [
-			{ icon: "calendar", value: "Scheduled", label: "Maintenance" },
-			{ icon: "bell-off", value: "Alert", label: "Suppression" },
-			{ icon: "repeat", value: "Recurring", label: "Windows" },
-			{ icon: "calendar-clock", value: "Calendar", label: "Feed" },
-		],
 		features: [
 			{
 				title: "Scheduled suppression",
@@ -846,12 +804,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT, NS, CAA, TLSA, DS and SVCB — so hijacking and misconfiguration surface as findings rather than outages.",
 		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "One monitor per domain"],
-		trustIndicators: [
-			{ icon: "layers", value: "10", label: "Record types" },
-			{ icon: "globe", value: "1", label: "Monitor per domain" },
-			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
-			{ icon: "shield-check", value: "Hijack", label: "Detection" },
-		],
 		features: [
 			{
 				title: "Record change detection",
@@ -929,12 +881,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		 * a manually-entered expiry date against today's date, so the copy stays
 		 * scoped to what the check actually verifies.
 		 */
-		trustIndicators: [
-			{ icon: "calendar-clock", value: "Daily", label: "Expiry Checks" },
-			{ icon: "bell-ring", value: "Custom", label: "Warning Days" },
-			{ icon: "repeat", value: "Repeat", label: "Reminders" },
-			{ icon: "shield-check", value: "Valid", label: "Cert Status" },
-		],
 		features: [
 			{
 				title: "Expiry tracking",
@@ -996,12 +942,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Monitor scheduled tasks and background jobs with heartbeat pings. Get alerted when a job is late or misses its window entirely.",
 		highlights: ["Heartbeat pings", "Cron expressions", "Late/missed detection"],
-		trustIndicators: [
-			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
-			{ icon: "activity", value: "5", label: "Monitor Types" },
-			{ icon: "clock", value: "24/7", label: "Monitoring" },
-			{ icon: "calendar", value: "365d", label: "Retention" },
-		],
 		features: [
 			{
 				title: "Simple ping URL",
@@ -1063,12 +1003,6 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Verify specific content appears — or doesn't appear — on your pages. Check for keywords, patterns, or specific text to catch broken deploys and defacement.",
 		highlights: ["Contains / not-contains", "Regex patterns", "Case-sensitive option"],
-		trustIndicators: [
-			{ icon: "search", value: "Keyword", label: "Detection" },
-			{ icon: "circle-check", value: "Content", label: "Validation" },
-			{ icon: "regex", value: "Regex", label: "Patterns" },
-			{ icon: "shield-alert", value: "Defacement", label: "Detection" },
-		],
 		features: [
 			{
 				title: "Contains checks",
