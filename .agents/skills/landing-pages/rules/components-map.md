@@ -31,25 +31,25 @@ For any component `<name>` (kebab-case):
 
 ## Which piece for which section
 
-**Entry points**: bands come from `@sdxc/ui/patterns`; primitives (`MarketingSection`, `MarketingHeader`,
+**Entry points**: bands, `CheckList` and `CheckRow` come from `@sdxc/ui/patterns`; primitives (`MarketingSection`, `MarketingHeader`,
 `Feature`, `StatStrip`, `LogoCloud`, `Split`, `CtaGroup`, `LinkButton`, `Accordion`, `DialogDismiss`) from
 `@sdxc/ui`; `marketingCtaChrome()`, `marketingSurface()`, `eyebrow()`, `themeScope()` from
 `@sdxc/ui/styles`; `viewReveal()` from `@sdxc/ui/animations`.
 
 | Section | Use | Key props and notes |
 | --- | --- | --- |
-| Header | `SiteHeader` | `brand`, `items` (links or mega groups), `actions`, `cta`, `tools`, `sheet={<DialogDismiss />}`, `collapseAt`, stable `id`. A POST sign-in goes in `tools`. Render it first on the page |
+| Header | `SiteHeader` | `brand`, `items` (links or mega groups), `actions` (`{ label, href }[]`), `cta` (one `{ label, href }`), `tools`, `sheet={<DialogDismiss />}`, `collapseAt`, stable `id`. A POST sign-in goes in `tools`. Render it first on the page |
 | Hero | `LandingHero` | `title` (renders the `h1`), `eyebrow`/`eyebrowVariant`, `description`, `actions`, `note`, `proof`, `media`, `mediaPlacement` (`below`/`end`/`background`), `release`, `below`, `entrance`, `tone`, `align` |
 | Title highlight | `AccentText` | inside `title`; `variant` `color`/`swash`/`highlight`/`sheen`/`pill`/`chip` |
 | Proof strip | `ProofStrip`, `StatStrip`, `LogoCloud`, `LogoSentence` | logos only if real; `StatStrip size="display" variant="gap"` with four items |
 | Plain band | `MarketingSection` + `MarketingHeader` | `tone`, `spacing`, `inset`, `ruled`; header `eyebrow`, `description`, `layout="split"`, `action` |
-| Feature cards | `Feature.Grid` + `Feature` | `columns`, `variant` `cards`/`list`/`mosaic`; parts `.Icon`, `.Media`, `.Title`, `.Description`, `.Action` + `.Link`; `span` for wide cells |
+| Feature cards | `Feature.Grid` + `Feature` | `columns` (2 or 3; four across is `Bento columns={4}`), `variant` `cards`/`list`/`mosaic`; parts `.Icon`, `.Media`, `.Title`, `.Description`, `.Action` + `.Link`; `span` for wide cells |
 | Split | `FeatureBand layout="split"` or `Split` | `lean="media"`, `media`; a `<ul>` child renders as checked claims |
 | Steps | `StepList` | `variant="timeline"` inside a split; `StepList.Item title media` |
-| Tour | `FeatureBand layout="stage"`, `TabbedStage`, `SegmentedStage` | page-unique `name`; `SegmentedStage` needs `aria-label` |
-| Bento | `Bento` | `columns`, `Bento.Cell`, `.Media`, `.Title`, `.Body`; every cell has media |
+| Tour | `FeatureBand layout="stage"`, `TabbedStage`, `SegmentedStage` | each needs a page-unique `name` and an `aria-label` |
+| Bento | `Bento` | `columns`, `Bento.Cell`, `.Media`, `.Title` (`size="lg"` for a wide cell), `.Body`; every cell has media, hidden below the `md` container |
 | Code | `CodeStage` | `tabs`, `language`, `lineNumbers`, `variant` `code`/`slab`/`terminal`, unique `name` |
-| Install | `InstallTabs` | package-manager switcher with copy actions |
+| Install | `InstallTabs` | package-manager switcher with copy actions; `name` and `aria-label` |
 | Process | `FlowDiagram` | `aria-label`, `trigger`, `steps`, `outcome`, `footnote`, `pauseLabel` |
 | Product UI | `ProductFrame` | `lights`, `title`, `url`, `designWidth` + `fit`, `variant="device"`, `stage`, `footer` |
 | Checks | `CheckList`, `CheckRow` | `orientation="horizontal"` for hero trust lines |
@@ -61,15 +61,17 @@ For any component `<name>` (kebab-case):
 | Sponsors | `SponsorWall` | real sponsors only |
 | FAQ | `FaqBand` + `Accordion` | `columns={2}`; shared `name` on items; chevron with `data-slot="icon"` |
 | Closing | `ClosingCta` | `tone="brand" inset`, same primary CTA as the hero |
-| Footer | `SiteFooter` | `columns`, `brand`, `tagline`, `newsletter`, `social`, `legal`, `wordmark` |
-| Motion | `MotionLoop`, `Marquee`, `RotatingText` | translated `pauseLabel` |
+| Footer | `SiteFooter` | `columns` (required), `brand`, `tagline`, `newsletter`, `social`, `legal`, `wordmark` |
+| Motion | `MotionLoop`, `Marquee`, `RotatingText` | translated `pauseLabel` on the first two; `RotatingText` takes `words`, `interval`, `label` |
 
 ## A band of your own
 
 ```tsx
+import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
+
 <MarketingSection tone="tinted" mix={[viewReveal()]}>
 	<MarketingHeader eyebrow="Regions" description="…">Checked from nine regions</MarketingHeader>
-	<div mix={[u.grid(), u.gridTemplate({ columns: u.repeat(3, 1) }), u.gap(4)]}>…</div>
+	<div mix={[grid(), gridTemplate({ columns: repeat(3, 1) }), gap(4)]}>…</div>
 </MarketingSection>
 ```
 

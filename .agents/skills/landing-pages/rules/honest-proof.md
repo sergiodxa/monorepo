@@ -32,8 +32,8 @@ that section out instead of filling it with placeholders.
 // Bad: a word dressed as a statistic
 <StatStrip.Item label="Setup">Fast</StatStrip.Item>
 
-// Good: a figure from config
-<StatStrip.Item label="Check interval">{formatSeconds(MIN_INTERVAL_SECONDS)}</StatStrip.Item>
+// Good: a figure from config (FREE_TRIAL_DAYS lives in apps/uptime/config/pricing.ts)
+<StatStrip.Item label="Free trial">{`${FREE_TRIAL_DAYS} days`}</StatStrip.Item>
 ```
 
 ```tsx
@@ -51,8 +51,12 @@ that section out instead of filling it with placeholders.
 
 - **Counts**: compute them (`contentVariables()` in `apps/sdxc-site/app/services/article.ts` fills
   `{% $packageCount %}` and friends from the registry).
-- **Prices and limits**: import them from the app's pricing config (`apps/uptime/config/pricing.ts`) and
-  interpolate them into copy; Uptime's home test scans its source so no page states a price of its own.
+- **Prices and limits**: import them from the app's pricing config (`apps/uptime/config/pricing.ts` exports
+  `BASE_PRICE_USD`, `FREE_TRIAL_DAYS`, `FLOW_INTERVALS_SECONDS` and the formatters) and interpolate them into
+  copy; Uptime's `home.test.ts` scans `home.tsx` so the home never states a price of its own.
+- **When a figure cannot be imported**, keep it beside a comment naming what enforces it and a test that
+  checks it against that source. Uptime's home figures ("9 regions", "1min") are typed literals today,
+  backed only by a comment; that is the weaker form.
 - **Product limits**: state them exactly (Uptime's browser flows run at most every 15 minutes, and the copy
   and sample data respect that).
 - **People**: a real author, real sponsors from the sponsor API, real GitHub data.

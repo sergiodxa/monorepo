@@ -39,8 +39,8 @@ from daily life, store badges, a marquee of press marks, soft gradients behind t
 
 Never style components one by one; set the direction on the page root.
 
-```ts
-// Editorial: the book demo
+```tsx
+// Editorial: apps/sdxc-site/resources/views/demos/book/index.tsx (abridged)
 const TOKENS = {
 	"--ui-font-display": SERIF,
 	"--ui-font-sans": SERIF,
@@ -51,21 +51,33 @@ const TOKENS = {
 	"--ui-marketing-radius-surface": "0",
 	"--ui-marketing-card-radius-outer": "0",
 	"--ui-marketing-plan-lift": "0 0 #0000",
+	"--ui-shadow-float": "none",
 	"--ui-marketing-eyebrow-font": SERIF,
-};
+} as const;
+
+<DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>…</DemoTheme>
 ```
 
-The knobs (`packages/ui/src/theme.css` is the source of truth):
+The real map also zeroes `--ui-radius-xs` through `-xl`, the frame, band and plan radii, and sets the
+eyebrow's weight, case and colour: an editorial direction is decided in every corner, not just the buttons.
 
-- **Type**: `--ui-font-display/-sans/-mono`, `--ui-marketing-display-*`, `-chapter-*`, `-lead-*`, `-hero-lead-*`.
-- **Shape**: `--ui-marketing-cta-radius`, `--ui-button-radius`, `-radius-surface`, `-radius-frame`,
-  `-card-radius-outer/-inner`, `-band-radius`, `-plan-radius`, `-plan-lift`.
-- **Surface**: `--ui-shadow-surface/-stage/-control/-float`, `--ui-marketing-hairline`, `-band-tint`,
-  `-band-glow`, `-brand-band`, `-band-gradient`, `--ui-surface-raised`.
-- **Labels**: `--ui-marketing-eyebrow-color/-font/-weight/-transform/-tracking`, `--ui-marketing-accent-color`.
+The knobs come in two kinds. `packages/ui/src/theme.css` (and `packages/u/src/theme.css` for the base
+fonts) declares the ones with a page-wide default; the rest are hooks a component reads as
+`var(--x, fallback)`, so they do nothing until you set them. Grep `packages/ui/src` for a name to see what
+reads it.
 
-`DemoTheme` (`apps/sdxc-site/resources/components/demo-theme.tsx`) shows a complete direction as palette
-plus tokens; an app sets the same in its `colors.css` and layout (`apps/uptime/resources/layouts/marketing.tsx`).
+- **Declared in theme.css**: `--ui-font-display`, `--ui-marketing-display-*` (including `-display-max`),
+  `-chapter-*`, `-lead-*`, `-hero-lead-*`, `-cta-radius`, `-cta-weight`, `-radius-surface`, `-hairline`,
+  `-measure`, `-gutter`, `-section-space*`, `-header-space`, `-header-height`, `-logo-height`;
+  `--ui-shadow-surface/-stage/-control/-ring/-ring-hover`; `--ui-surface-raised`. `--ui-font-sans/-mono` come from `@sdxc/u`'s theme.
+- **Hooks**: `--ui-button-radius`, `--ui-marketing-radius-frame`, `-card-radius-outer/-inner`,
+  `-band-radius`, `-plan-radius`, `-plan-lift`, `-band-tint`, `-band-glow`, `-brand-band`,
+  `-band-gradient`, `-eyebrow-color/-font/-weight/-transform/-tracking`, `-accent-color`, and
+  `--ui-shadow-float`.
+
+`DemoTheme` (`apps/sdxc-site/resources/components/demo-theme.tsx`) applies a direction as palette plus
+tokens; an app sets the same in its `colors.css` and layout (`apps/uptime/resources/layouts/marketing.tsx`
+sets the eyebrow tokens there).
 
 ## Colour
 

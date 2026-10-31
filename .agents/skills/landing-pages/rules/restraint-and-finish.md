@@ -43,7 +43,7 @@ review of a page that otherwise looked done.
 **Hierarchy**: one `h1` from the hero, `h2` per band, `h3` per card; the patterns set levels, so never hand-
 place them. Every band has an eyebrow in one style.
 
-**Grids**: pick columns from the item count so no row is short — 3 → 3, 4 → 2 or 4, 6 → 3, 9 → 3, never 3
+**Grids**: pick columns from the item count so no row is short — 3 → 3, 4 → 2 (or a four-column `Bento`), 6 → 3, 9 → 3, never 3
 items in 2 columns. Change the content count before reaching for a layout trick. Stat strips carry four
 figures. Cards in a row share a height and a title baseline.
 

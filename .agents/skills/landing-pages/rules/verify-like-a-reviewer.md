@@ -43,19 +43,20 @@ watch it fail). Name layout tests `*.browser.test.tsx` so they measure the real 
   `packages/ui/src/patterns/outline.test.tsx`).
 - **Phone sheet**: a plain click on a sheet link closes it; a meta-click keeps it open
   (`apps/uptime/resources/layouts/marketing.browser.test.tsx`).
-- **No overflow at 320**: footer and stat strip stay inside the viewport
-  (`apps/uptime/resources/views/marketing/solution.browser.test.tsx`).
+- **No overflow at 320**: the stat strip (`apps/uptime/resources/views/marketing/solution.browser.test.tsx`)
+  and the footer (`apps/uptime/resources/layouts/marketing.browser.test.tsx`) stay inside the viewport.
 - **Tokens resolve**: every `var(--…)` inside scenes is defined
   (`apps/uptime/resources/components/marketing/capability-scenes.browser.test.tsx`), and no source names a
   `.tint-hover` token (`apps/sdxc-site/resources/views/demos/hover-tokens.test.ts`).
-- **Row alignment**: card titles in a row share one `top` at 1280
-  (`capability-scenes.browser.test.tsx`, `apps/sdxc-site/resources/views/demos/app/features.browser.test.tsx`).
+- **Row alignment**: card titles in a row share one `top` at 1280 (`capability-scenes.browser.test.tsx`);
+  scene media in a row share a top and height (`apps/sdxc-site/resources/views/demos/app/features.browser.test.tsx`).
 - **No clipped labels**: at 343px no leaf text has `scrollWidth > clientWidth`
   (`apps/sdxc-site/resources/views/demos/saas/product-panels.browser.test.tsx`).
 - **Mockups**: every slug maps to a mockup, the frame has `role="img"` with a translated label, and the
   inside is `aria-hidden="true"` (`apps/uptime/resources/components/marketing/product-mockups/index.test.tsx`).
-- **Honesty**: figures are interpolated, the stat strip has exactly its four figures, no page states its
-  own price (`apps/sdxc-site/app/http/controllers/home.test.ts`, `apps/uptime/app/http/controllers/home.test.ts`).
+- **Honesty**: the counted figures render and dropped ones stay gone
+  (`apps/sdxc-site/app/http/controllers/home.test.ts`), and the home states no price of its own
+  (`apps/uptime/app/http/controllers/home.test.ts`).
 - **No raw keys**: the render contains no `landing.` key text.
 
 Browser tests need the package theme on the host and `@sdxc/ui/reset.css` imported, or content-box sizing

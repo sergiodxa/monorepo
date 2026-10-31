@@ -18,7 +18,7 @@ Open them in the browser and study them before designing. Learn *why* each momen
   not a picture of it: a switcher between the revenue dashboard, the meters and the API call, pinned at its
   corners like a technical drawing, with the latest release as a small pin under the CTAs. Each chapter is
   numbered ("01 / Metering"), makes one claim, backs it with three concrete guarantees, and shows the one
-  API call in three languages. The bento is six tiny moments: tax rates as jurisdiction chips, one price in
+  API call in three languages. The bento is five tiny moments: tax rates as jurisdiction chips, one price in
   four currencies, a webhook delivery log, revenue recognised as deferred revenue drains.
 - **uptime.sergiodxa.com** (`apps/uptime`) — real product, no fake proof. Every card shows a moment of the
   product: an outage alert followed by its recovery, certificates counting down to expiry, a status page

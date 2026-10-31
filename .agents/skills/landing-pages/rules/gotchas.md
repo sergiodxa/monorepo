@@ -40,7 +40,13 @@ Without it the sheet stays open after following `/#pricing`. Copy the sheet-clos
 
 `SiteHeader` seeds its sheet and panel ids from `id`; pass a stable one so markup is byte-identical across
 renders. `CodeStage`, `TabbedStage`, `SegmentedStage` and `InstallTabs` switch with radio groups: each needs
-a page-unique `name`, or two switchers control each other.
+a page-unique `name`, or two switchers control each other. The last three also require an `aria-label`.
+
+## Card media disappears on phones
+
+`Bento.Media` and `Feature.Media` are hidden below the `md` container, because a phone has no room for a
+scene beside the copy. A bento or feature grid is text cards at 375. Keep the claims a phone reader must
+see in the hero and the split bands, whose media always shows, and write card copy that stands on its own.
 
 ## English defaults
 

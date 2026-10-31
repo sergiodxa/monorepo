@@ -32,7 +32,7 @@ decision, not a component lookup: match it to what the reader needs to see.
 | Scale or limits | four big figures | `StatStrip size="display"` | Uptime home figures |
 | Reasons, guarantees, facts without pictures | an uncarded list with icons; cards are for media | `Feature.Grid variant="list"`, `CheckList` | Uptime benefits, comparison "why switch" |
 | A comparison | an honest table, your column in brand ink | `Table` | Uptime `/vs/*` |
-| Something physical | the object: a flat cover, a sample page, a device | `ProductFrame variant="device"`, custom | book demo hero and sample, Rooftree phone |
+| Something physical | the object: a flat cover, a sample page, a device | `ProductFrame variant="device"`, or drawn by hand | book `cover.tsx` and `sample-page.tsx`, Rooftree `FannedPhone` (`demos/app/hero.tsx`) |
 | What shipped lately | dated entries | `ChangelogStrip`, the hero `release` pin | Keel changelog |
 | Who made it | a person, a portrait, a signature | `AuthorBand` | book demo |
 
@@ -42,22 +42,31 @@ Use `FlowDiagram` whenever something happens without the user: a scheduled check
 build, a sync. It loops a run every few seconds, pausable, and shows the finished run under reduced motion.
 
 ```tsx
+import { BellIcon, ClockIcon } from "@sdxc/icons";
+import { FlowDiagram } from "@sdxc/ui/patterns";
+
 <FlowDiagram
-	aria-label="A browser flow running"
+	aria-label="A flow monitor run"
 	pauseLabel="Pause"
-	trigger={{ icon: <ClockIcon size={14} aria-hidden="true" />, title: "Every 15 minutes", detail: "from 3 regions" }}
+	trigger={{ icon: <ClockIcon size={14} aria-hidden="true" />, title: "The schedule starts a run", detail: "As often as every 15 minutes" }}
 	steps={[
-		{ title: "Open the login page", code: 'await page.goto("/login")' },
-		{ title: "Sign in", code: 'await page.fill("#email", user.email)' },
-		{ title: "See the dashboard", code: 'await expect(page.getByRole("heading")).toBeVisible()' },
+		{ title: "Sign in", code: 'http.post "/api/sessions" form { … }' },
+		{ title: "Read the token", code: "session.json.token" },
+		{ title: "Call the endpoint it authorises", code: 'http.get "/v1/account" bearer session.json.token' },
+		{ title: "Check what comes back", code: "expect account.status 200" },
 	]}
-	outcome="Passed in 4.2 s"
-	footnote={<><BellIcon size={14} aria-hidden="true" />Alert on the first failure</>}
+	outcome="Run passed"
+	footnote={<><BellIcon size={14} aria-hidden="true" />A failed step alerts your team</>}
 />
 ```
 
-What makes it good: each step carries a real line of code, not a label; the trigger states the real
-schedule; the outcome has a figure; the footnote says what happens on failure. Three to five steps.
+These are the lines Uptime's home plays, in the product's own spec language. Uptime wraps the pattern in
+`resources/components/marketing/flow-diagram.tsx` so its pages pass translated `labels` and an optional
+`code` tuple; do the same once a second page needs the diagram.
+
+What makes it good: each step carries a real line of the product's syntax, not a label; the trigger states
+the real schedule; the footnote says what happens on failure. Three to five steps. An outcome with a
+figure ("Passed in 4.2 s") is stronger still.
 
 ## Code stages
 

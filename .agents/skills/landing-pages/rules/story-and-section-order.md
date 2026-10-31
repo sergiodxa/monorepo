@@ -45,7 +45,7 @@ hero's → FAQ → closing band.
 **Audience or use case** (`apps/uptime/resources/views/marketing/solution.tsx`)
 
 Hero with mockup → figures → capabilities as a linked `Feature.Grid variant="list"` → spotlight split with
-a scene that differs from the hero → steps → FAQ → closing band. Flip band tones when an optional section
+a scene that differs from the hero → steps (`FeatureBand layout="steps"`) → FAQ → closing band. Flip band tones when an optional section
 is absent so plain and tinted keep alternating.
 
 **Comparison** (`apps/uptime/app/http/controllers/marketing-comparison.tsx`)
@@ -58,33 +58,36 @@ Never repeat the `h1` as the table heading.
 
 **Standalone product page** (`apps/uptime/app/http/controllers/browser-flows.tsx`, `mcp.tsx`)
 
-Hero whose media is the thing itself (`CodeStage` tabs of a config, a flow mockup) → example cards under a
-code stage → pricing figures → split steps with a `FlowDiagram` → FAQ → closing band.
+`/browser-flows`: hero with the flow monitor's own screen (`ProductMockup area="flow"`) → a `CodeStage` of
+three example specs over cards naming each → "HTTP vs browser" list → pricing figures → split steps
+beside a `FlowDiagram` → FAQ → closing band. `/mcp` is shorter: a `CodeStage` hero of the client config →
+the tools as a split beside the API-keys mockup → steps → closing band.
 
 **SaaS landing** (`apps/sdxc-site/resources/views/demos/saas/sections.tsx`)
 
 Hero (`mediaPlacement="below"`, `tone="grid"`, `release` pin) with a `SegmentedStage` of product screens →
-ruled logo cloud → numbered chapters in `Rails` with code tabs → figures → `TabbedStage` workflow →
-`Bento` platform → security list → `ChangelogStrip` → testimonials → `PricingBand` → FAQ → `ClosingCta`.
+ruled logo cloud → `01 / Metering` chapter in `Rails` with code tabs → four display figures → `02 /
+Workflow` `TabbedStage` on an inverse band → `03 / Platform` `Bento` → `04 / Security` uncarded list →
+`ChangelogStrip` → `05 / Customers` testimonials → `06 / Pricing` → `07 / FAQ` → `ClosingCta`.
 
 **Book** (`apps/sdxc-site/resources/views/demos/book/index.tsx`)
 
 Hero with the flat cover (`mediaPlacement="end"`) → press line (`LogoSentence`, only if real) → the free
-chapter as a split with a sample page → `Curriculum` contents → what you will learn → figures (chapters,
-pages, exercises) → `AuthorBand` → reviews (only if real) → `PricingBand columns={2}` → FAQ →
+chapter as a split with a sample page → `Curriculum` contents → what you will learn → figures (readers,
+rating, pages, video hours) → `AuthorBand` → reviews (only if real) → `PricingBand columns={2}` → FAQ →
 `ClosingCta`. Editorial direction: serif display, flat surfaces, quiet radii, generous measure.
 
 **Consumer app** (`apps/sdxc-site/resources/views/demos/app/index.tsx`)
 
-Centred hero with a device frame and a `below` marquee → `TabbedStage` tour of screens → stories →
+Centred hero with a hand-drawn phone (`FannedPhone`) and a `below` marquee → `TabbedStage` tour of screens → stories →
 `Bento` of colour-block scenes → privacy (inverse inset) → platforms and figures → pricing → FAQ →
 download band.
 
 **Developer tool home** (`apps/sdxc-site/resources/content/home.md`)
 
 Split hero with the install command and a `CodeStage` showcase bleeding off the end → four counted
-figures → thesis statement band → code tabs → properties grid → package groups → sponsors → centred
-`tone="grid"` closing.
+figures → thesis statement band → code tabs → principles grid → package groups → three featured packages
+→ "Versions are dates" → sponsors → centred `tone="grid"` closing.
 
 **Trial or tool page** (`apps/uptime/app/http/controllers/trial/index.tsx`)
 
