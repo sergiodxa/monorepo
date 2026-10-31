@@ -1,11 +1,13 @@
 /**
  * Documentation module for the public `/docs` site. Loads the bundled Markdown files
  * under `resources/docs/**` via `import.meta.glob`, validates their frontmatter with
- * `remix/data-schema`, and groups entries into ordered sections for the docs index
+ * `remix/data-schema`, and groups entries into ordered sections for the sidebar and hub.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { DocsTree } from "@sdxc/ui/utils";
 
 import { Markdown } from "@sdxc/markdown";
 import { isSuccess } from "@sdxc/result";
@@ -20,22 +22,51 @@ const frontmatterSchema = s.object({
 	}),
 	order: s.number(),
 	lastUpdated: s.optional(s.string()),
+	/** One fixed sentence under the title naming who or what a page's task needs. */
+	notice: s.optional(s.string()),
+	/** Doc paths the page hands the reader on to, in the order a reader takes them. */
+	next: s.optional(s.array(s.string())),
+	/** Words a reader may search with that the page never uses ("check" for a monitor). */
+	keywords: s.optional(s.array(s.string())),
 });
 
 export type DocFrontmatter = s.InferOutput<typeof frontmatterSchema>;
 
 /**
- * Hoisted so the index's frontmatter-only reads and the page's full parse agree on
- * the schema every doc file is held to.
+ * The tags a doc may write beyond Markdown: a numbered procedure, the product's own
+ * controls as chips, keys, an inline product mockup, and a list of questions. Each
+ * `step` carries its own `id`, so the "On this page" rail links it like a heading.
  */
-export const MARKDOWN_OPTIONS = { frontmatter: frontmatterSchema } satisfies Markdown.Options;
+const DOC_TAGS = {
+	steps: {},
+	step: { attributes: s.object({ id: s.string(), title: s.string() }) },
+	ui: { content: "inline" },
+	uipath: { content: "none", attributes: s.object({ items: s.array(s.string()) }) },
+	kbd: { content: "inline" },
+	mockup: {
+		content: "none",
+		attributes: s.object({ area: s.string(), caption: s.optional(s.string()) }),
+	},
+	faq: {},
+	question: { attributes: s.object({ title: s.string() }) },
+} satisfies Markdown.Options["tags"];
+
+/**
+ * Hoisted so the index's frontmatter-only reads, the page's full parse and the search
+ * index agree on the schema and the tags every doc file is held to.
+ */
+export const MARKDOWN_OPTIONS = {
+	frontmatter: frontmatterSchema,
+	tags: DOC_TAGS,
+} satisfies Markdown.Options;
 
 const docFileLoaders = import.meta.glob<string>("../../resources/docs/**/*.md", {
 	query: "?raw",
 	import: "default",
 });
 
-interface DocEntry {
+/** One doc as the sidebar, hub and search list it. */
+export interface DocEntry {
 	path: string;
 	frontmatter: DocFrontmatter;
 }
@@ -46,6 +77,9 @@ export interface DocSection {
 	docs: DocEntry[];
 }
 
+/** What a reader does with a page, which search labels each result with. */
+export type DocKind = "guide" | "troubleshooting" | "concept" | "reference";
+
 /** Lists every doc, grouped into sections ordered by `frontmatter.section.order`. */
 export async function listDocs(): Promise<DocSection[]> {
 	let docs: DocEntry[] = [];
@@ -55,8 +89,7 @@ export async function listDocs(): Promise<DocSection[]> {
 		let result = Markdown.frontmatter(content, MARKDOWN_OPTIONS);
 		if (!isSuccess(result)) continue;
 
-		let urlPath = filePath.replace("../../resources/docs/", "/docs/").replace(/\.md$/, "");
-		docs.push({ path: urlPath, frontmatter: result.data.frontmatter });
+		docs.push({ path: docPath(filePath), frontmatter: result.data.frontmatter });
 	}
 
 	let sections = new Map<string, DocSection>();
@@ -77,6 +110,21 @@ export async function listDocs(): Promise<DocSection[]> {
 	return Array.from(sections.values()).sort((a, b) => a.order - b.order);
 }
 
+/** Every doc's raw source beside its path, for the search index. */
+export async function loadDocSources(): Promise<Array<{ path: string; source: string }>> {
+	return Promise.all(
+		Object.entries(docFileLoaders).map(async ([filePath, loadContent]) => ({
+			path: docPath(filePath),
+			source: await loadContent(),
+		})),
+	);
+}
+
+/** The URL a bundled doc file is served at. */
+function docPath(filePath: string): string {
+	return filePath.replace("../../resources/docs/", "/docs/").replace(/\.md$/, "");
+}
+
 /** Resolves the raw-content loader for one doc slug (e.g. `concepts/monitors`). */
 export function getDocLoader(slug: string) {
 	let path = `../../resources/docs/${slug}.md`;
@@ -85,25 +133,33 @@ export function getDocLoader(slug: string) {
 	return { loader, path };
 }
 
-/** One neighbouring doc, reduced to what a pager link draws. */
-export interface DocNeighbour {
-	path: string;
-	title: string;
+/**
+ * The kind of page a path holds, read from the folder it lives in, so a new doc is
+ * labelled by where it is filed.
+ */
+export function docKind(path: string): DocKind {
+	if (path.startsWith("/docs/troubleshooting/")) return "troubleshooting";
+	if (path.startsWith("/docs/concepts/")) return "concept";
+	if (path.startsWith("/docs/api/")) return "reference";
+	return "guide";
 }
 
-/**
- * The docs read just before and just after `path`, in the order the sidebar lists them,
- * so the pager at a page's foot walks the same sequence a reader sees on the left. A path
- * outside the list, or at either end of it, gets `null` on that side.
- */
-export function findNeighbours(
-	sections: DocSection[],
-	path: string,
-): { previous: DocNeighbour | null; next: DocNeighbour | null } {
-	let ordered = sections.flatMap((section) =>
-		section.docs.map((doc) => ({ path: doc.path, title: doc.frontmatter.title })),
-	);
-	let index = ordered.findIndex((doc) => doc.path === path);
-	if (index === -1) return { previous: null, next: null };
-	return { previous: ordered[index - 1] ?? null, next: ordered[index + 1] ?? null };
+/** The sections as the shared sidebar and pager read them, in sidebar order. */
+export function toDocsTree(sections: DocSection[], label: string): DocsTree {
+	return {
+		label,
+		sections: sections.map((section) => ({
+			title: section.title,
+			items: section.docs.map((doc) => ({ title: doc.frontmatter.title, href: doc.path })),
+		})),
+	};
+}
+
+/** Finds one doc by its path across every section, or `null` for a path no doc serves. */
+export function findDoc(sections: DocSection[], path: string): DocEntry | null {
+	for (let section of sections) {
+		let doc = section.docs.find((entry) => entry.path === path);
+		if (doc) return doc;
+	}
+	return null;
 }

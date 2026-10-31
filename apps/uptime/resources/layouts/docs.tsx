@@ -1,78 +1,62 @@
 /**
  * The shell every `/docs` page composes into, inside the marketing header and footer: the
- * guides by section on the left, the page in the middle closed by its neighbours, and its
- * own headings on the right. A narrow screen folds both sides into a sticky bar.
+ * guides by section on the left with support at their foot, the page in the middle closed
+ * by its neighbours, and its own headings on the right; a narrow screen folds both sides.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { TableOfContents } from "@sdxc/ui";
 import type { Handle, RemixNode } from "remix/component";
 
-import { MenuIcon } from "@sdxc/icons";
-import { bg, borderEdge, fg } from "@sdxc/u/color";
+import { MailIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { hidden, hstack, inlineFlex, insBs, shrink, sticky, vstack } from "@sdxc/u/layout";
-import { overflowY } from "@sdxc/u/overflow";
-import { at, media } from "@sdxc/u/responsive";
-import { maxBs, mi, minIs, pb, pbe, pbs, pi } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
-import { when } from "@sdxc/u/state";
-import { overflowWrap, text, weight } from "@sdxc/u/typography";
-import { Button, DialogDismiss, Sidebar } from "@sdxc/ui";
-import { marketingContainer } from "@sdxc/ui/styles";
+import { hstack } from "@sdxc/u/layout";
+import { mbe, pbe, pbs } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
+import { DocsNav, DocsPager } from "@sdxc/ui";
+import { DocsLayout as DocsShell } from "@sdxc/ui/patterns";
 
 import type { DocSection } from "~/app/services/docs";
-import type { DocsPagerEntry } from "~/resources/components/docs-pager";
-import type { DocsTocAnchor } from "~/resources/components/docs-toc";
 
-import DocsNav from "~/resources/components/docs-nav";
-import DocsPager from "~/resources/components/docs-pager";
-import DocsToc, { TOC_MIN_ANCHORS } from "~/resources/components/docs-toc";
+import { MAIL_REPLY_TO } from "~/app/emails/sender";
+import { toDocsTree } from "~/app/services/docs";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 
-/** The drawer a narrow screen opens, and the button that opens it, agree on this id. */
-const DRAWER_ID = "docs-drawer";
-
-/**
- * Width the sidebar docks from. Narrower, the guides open in a drawer from the sticky bar,
- * since a docked column would leave the prose too narrow to read.
- */
-const DOCK_BREAKPOINT = "(min-width: 64rem)";
-
-/** Width the heading rail is drawn from; narrower, the headings fold into the sticky bar. */
-const RAIL_BREAKPOINT = "(min-width: 75rem)";
-
-/** The marketing header's height, which every sticky column below it clears. */
+/** The marketing header's height, which every sticky column and jumped-to heading clears. */
 const HEADER_HEIGHT = "4rem";
 
 /**
- * Room the docked sidebar keeps beside its contents for a focus ring (3px wide, 2px out),
- * which its scroll box would otherwise clip; a matching negative margin keeps the
- * contents lined up with the column.
- */
-const RING_CLEARANCE = "0.375rem";
-
-/** The sticky bar's height, which a jumped-to heading also clears on a narrow screen. */
-const BAR_HEIGHT = "2.75rem";
-
-/**
- * How wide the shell (and the header and footer it shares a container with) may grow:
+ * How wide the shell (and the header and footer it shares a measure with) may grow:
  * room for the sidebar, a full reading measure and the heading rail side by side.
  */
 const DOCS_MEASURE = "88rem";
+
+/**
+ * Room between a page's header and what follows it, so the updated date and the page
+ * actions read as the header's last line instead of the body's first.
+ */
+const PAGE_HEADER_GAP = "2.5rem";
+
+/** Where "Contact support" writes to: the inbox every product email replies to. */
+export const SUPPORT_HREF = `mailto:${MAIL_REPLY_TO.email}`;
 
 namespace DocsLayout {
 	export interface Labels {
 		/** The guides' landmark name and the drawer's heading ("Documentation"). */
 		nav: string;
-		searchPlaceholder: string;
-		noResults: string;
 		/** The visible label of the button that opens the drawer. */
 		menu: string;
+		close: string;
 		/** "On this page". */
 		toc: string;
+		filter: { label: string; placeholder: string; noResults: string };
+		/** The link pinned at the sidebar's foot. */
+		support: string;
 		pager: { nav: string; previous: string; next: string };
 	}
 
@@ -85,24 +69,36 @@ namespace DocsLayout {
 		activePath: string;
 		labels: Labels;
 		/** The page's own headings; fewer than two draw neither the rail nor the bar's list. */
-		anchors?: DocsTocAnchor[];
-		previous?: DocsPagerEntry | null;
-		next?: DocsPagerEntry | null;
+		anchors?: TableOfContents.Item[];
+		previous?: DocsPager.Entry | null;
+		next?: DocsPager.Entry | null;
+		/** The section the page is filed under, which the pager leaves off a same-section card. */
+		section?: string;
+		/**
+		 * The article's widest line; the hub, which lays cards out rather than prose, widens it.
+		 * @default "48rem"
+		 */
+		measure?: string;
 		children: RemixNode;
 	}
 }
 
 /**
  * Every translated string the shell draws, from a controller's own `ctx.intl.t`, so the
- * hub and each page label the sidebar, the bar and the pager the same way.
+ * hub, the search page and each doc label the sidebar, the bar and the pager the same way.
  */
 export function buildDocsLabels(t: Translate): DocsLayout.Labels {
 	return {
 		nav: t("docs.sidebar.title"),
-		searchPlaceholder: t("docs.sidebar.searchPlaceholder"),
-		noResults: t("docs.shell.noResults"),
 		menu: t("docs.shell.menu"),
+		close: t("docs.sidebar.closeMenu"),
 		toc: t("docs.shell.toc"),
+		filter: {
+			label: t("docs.shell.filterLabel"),
+			placeholder: t("docs.shell.filterLabel"),
+			noResults: t("docs.shell.noResults"),
+		},
+		support: t("docs.shell.support"),
 		pager: {
 			nav: t("docs.pager.label"),
 			previous: t("docs.pager.previous"),
@@ -111,7 +107,11 @@ export function buildDocsLabels(t: Translate): DocsLayout.Labels {
 	};
 }
 
-/** Renders the docs shell inside the marketing chrome. */
+/**
+ * Renders the docs shell inside the marketing chrome. A control chip longer than a phone's
+ * line wraps inside the article, marked important so it outranks the chip's own later
+ * cascade layer, and a long product label never widens the page.
+ */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
 		let {
@@ -123,185 +123,69 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			anchors = [],
 			previous = null,
 			next = null,
+			section,
+			measure = "48rem",
 			children,
 		} = handle.props;
-		let outlined = anchors.length >= TOC_MIN_ANCHORS;
 
-		let navSections = sections.map((section) => ({
-			title: section.title,
-			docs: section.docs.map((doc) => ({ path: doc.path, title: doc.frontmatter.title })),
-		}));
-
-		let nav = (
+		let sidebar = (
 			<DocsNav
-				sections={navSections}
+				tree={toDocsTree(sections, labels.nav)}
 				activePath={activePath}
-				label={labels.nav}
-				searchPlaceholder={labels.searchPlaceholder}
-				noResults={labels.noResults}
+				filter={labels.filter}
+				footer={
+					<a
+						href={SUPPORT_HREF}
+						mix={[
+							hstack({ gap: 2, align: "center" }),
+							text("sm"),
+							weight("medium"),
+							fg("neutral"),
+							hover(fg("brand")),
+						]}
+					>
+						<MailIcon size={16} aria-hidden="true" />
+						{labels.support}
+					</a>
+				}
 			/>
 		);
 
 		return (
 			<div mix={[raw({ "--ui-marketing-measure": DOCS_MEASURE })]}>
 				<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-					<div data-slot="docs-frame" mix={[raw({ containerType: "inline-size" })]}>
+					<DocsShell
+						sidebar={sidebar}
+						toc={anchors}
+						tocLabel={labels.toc}
+						menuLabel={labels.menu}
+						drawerLabel={labels.nav}
+						closeLabel={labels.close}
+						stickyTop={HEADER_HEIGHT}
+						maxWidth={DOCS_MEASURE}
+						measure={measure}
+						main={false}
+					>
 						<div
-							data-slot="docs-shell"
+							data-slot="docs-page"
 							mix={[
-								marketingContainer(),
-								raw({
-									"--docs-gutter": "1rem",
-									display: "grid",
-									gridTemplateColumns: "minmax(0, 1fr)",
-									columnGap: "2.5rem",
-									alignItems: "start",
-								}),
-								at("md", raw({ "--docs-gutter": "1.5rem" })),
-								at("lg", raw({ "--docs-gutter": "2rem" })),
-								media(DOCK_BREAKPOINT, raw({ gridTemplateColumns: "15rem minmax(0, 1fr)" })),
-								outlined
-									? media(
-											RAIL_BREAKPOINT,
-											raw({ gridTemplateColumns: "15rem minmax(0, 1fr) 13rem" }),
-										)
-									: [],
+								pbs("2rem"),
+								pbe("5rem"),
+								when('& [data-slot="docs-page-header"]', mbe(PAGE_HEADER_GAP)),
+								when(
+									'& [data-slot="ui-label"]',
+									raw({
+										maxInlineSize: "100%",
+										whiteSpace: "normal !important",
+										overflowWrap: "anywhere",
+									}),
+								),
 							]}
 						>
-							<aside
-								data-slot="docs-sidebar"
-								mix={[
-									hidden(),
-									media(DOCK_BREAKPOINT, [
-										raw({ display: "block" }),
-										sticky(),
-										insBs(HEADER_HEIGHT),
-										maxBs(`calc(100dvh - ${HEADER_HEIGHT})`),
-										overflowY("auto"),
-										raw({ overscrollBehavior: "contain", scrollbarWidth: "thin" }),
-										pbs("2rem"),
-										pbe("3rem"),
-										pi(RING_CLEARANCE),
-										mi(`-${RING_CLEARANCE}`),
-									]),
-								]}
-							>
-								{nav}
-							</aside>
-
-							<div data-slot="docs-content" mix={[minIs(0)]}>
-								<div
-									data-slot="docs-bar"
-									mix={[
-										hstack({ gap: 1, align: "center" }),
-										sticky(),
-										insBs(HEADER_HEIGHT),
-										z(2),
-										raw({
-											minBlockSize: BAR_HEIGHT,
-											marginInline: "calc(-1 * var(--docs-gutter))",
-											paddingInline: "calc(var(--docs-gutter) - 0.5rem) var(--docs-gutter)",
-										}),
-										bg("neutral.bg-tint"),
-										borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
-										media(DOCK_BREAKPOINT, [
-											raw({ marginInline: 0, paddingInline: 0 }),
-											outlined ? [] : hidden(),
-										]),
-										media(RAIL_BREAKPOINT, hidden()),
-									]}
-								>
-									<span
-										mix={[
-											inlineFlex(),
-											shrink(0),
-											outlined
-												? raw({
-														borderInlineEnd: "1px solid var(--ui-neutral-border)",
-														paddingInlineEnd: "0.25rem",
-													})
-												: [],
-											media(DOCK_BREAKPOINT, hidden()),
-										]}
-									>
-										<Button
-											type="button"
-											variant="ghost"
-											color="neutral"
-											size="sm"
-											commandfor={DRAWER_ID}
-											command="show-modal"
-										>
-											<MenuIcon size={16} aria-hidden="true" />
-											{labels.menu}
-										</Button>
-									</span>
-
-									{outlined ? <DocsToc anchors={anchors} label={labels.toc} layout="bar" /> : null}
-								</div>
-
-								<div
-									data-slot="docs-article"
-									mix={[
-										raw({ maxInlineSize: "48rem" }),
-										overflowWrap("break-word"),
-										pbs("2rem"),
-										pbe("5rem"),
-										media("(min-width: 48rem)", pbs("2.5rem")),
-										when(
-											"& :is(h2, h3, h4)[id]",
-											raw({
-												scrollMarginBlockStart: `calc(${HEADER_HEIGHT} + ${BAR_HEIGHT} + 1rem)`,
-											}),
-										),
-										media(
-											RAIL_BREAKPOINT,
-											when(
-												"& :is(h2, h3, h4)[id]",
-												raw({ scrollMarginBlockStart: `calc(${HEADER_HEIGHT} + 1.5rem)` }),
-											),
-										),
-										when(
-											"& table",
-											raw({ display: "block", maxInlineSize: "100%", overflowX: "auto" }),
-										),
-									]}
-								>
-									{children}
-									<DocsPager previous={previous} next={next} labels={labels.pager} />
-								</div>
-							</div>
-
-							{outlined ? (
-								<div
-									data-slot="docs-rail"
-									mix={[
-										hidden(),
-										media(RAIL_BREAKPOINT, [
-											raw({ display: "block" }),
-											sticky(),
-											insBs(HEADER_HEIGHT),
-											maxBs(`calc(100dvh - ${HEADER_HEIGHT})`),
-											overflowY("auto"),
-											pb("2.5rem"),
-										]),
-									]}
-								>
-									<DocsToc anchors={anchors} label={labels.toc} />
-								</div>
-							) : null}
+							{children}
+							<DocsPager previous={previous} next={next} section={section} labels={labels.pager} />
 						</div>
-					</div>
-
-					<Sidebar.MobileNav id={DRAWER_ID} aria-label={labels.nav}>
-						<Sidebar.Header>
-							<span mix={[text("base"), weight("semibold"), fg("neutral.emphasis")]}>
-								{labels.nav}
-							</span>
-						</Sidebar.Header>
-						<Sidebar.Content mix={[vstack({ gap: 0 }), pb("1rem")]}>{nav}</Sidebar.Content>
-						<DialogDismiss />
-					</Sidebar.MobileNav>
+					</DocsShell>
 				</MarketingLayout>
 			</div>
 		);

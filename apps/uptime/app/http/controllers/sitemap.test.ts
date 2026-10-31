@@ -84,6 +84,7 @@ describe("GET /sitemap.xml", () => {
 		let response = await getSitemap();
 		let body = await response.text();
 
-		expect(body).toContain("<loc>https://uptime.test/docs/overview</loc>");
+		expect(body).toContain("<loc>https://uptime.test/docs/quickstart</loc>");
+		expect(body).not.toContain("<loc>https://uptime.test/docs/search</loc>");
 	});
 });

@@ -446,6 +446,14 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/docs-index"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
+		routes.docs.search,
+		lazy(() => import("~/app/http/controllers/docs-search"), PUBLIC_PAGE_GUARDS),
+	);
+	router.map(
+		routes.docs.feedback,
+		lazy(() => import("~/app/http/controllers/docs-feedback")),
+	);
+	router.map(
 		routes.docs.show,
 		lazy(() => import("~/app/http/controllers/docs-show"), PUBLIC_PAGE_GUARDS),
 	);

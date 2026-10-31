@@ -1,7 +1,7 @@
 /**
  * Tests the `/docs/*slug` controller. A real slug renders its document inside the docs
- * shell — breadcrumb, "On this page" rail, titled code, alerts and pager — with its own
- * canonical link and description; an unknown slug renders the unindexed not-found page.
+ * shell (breadcrumb, rail, titled code, feedback, support and pager) with its own canonical
+ * link; `.md` serves the source, and an unknown slug renders the unindexed 404.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,7 +40,7 @@ function createTestRenderer(): Renderer<RemixNode> {
 }
 
 /** Dispatches a real GET request to `/docs/*slug` as an anonymous visitor. */
-async function getDocsShow(slug: string) {
+async function getDocsShow(slug: string, search = "") {
 	let { db } = createTestDatabase();
 
 	let router = createRouter({
@@ -59,44 +59,36 @@ async function getDocsShow(slug: string) {
 	});
 	router.map(routes.docs.show, docsShow);
 
-	let request = new Request(`https://uptime.test${routes.docs.show.href({ slug })}`);
+	let request = new Request(`https://uptime.test${routes.docs.show.href({ slug })}${search}`);
 	return router.fetch(request);
 }
 
 describe("GET /docs/*slug", () => {
-	test("renders a real doc's frontmatter and parsed content", async () => {
-		let response = await getDocsShow("overview");
-
-		expect(response.status).toBe(200);
-		let body = await response.text();
-		expect(body).toContain("<title>Overview | Documentation - Uptime</title>");
-		expect(body).toContain(">Overview</h1>");
-		expect(body).toContain("Last updated: 2026-02-14");
-		expect(body).toContain("Key Features");
-	});
-
-	test("emits the canonical URL and the doc's own frontmatter description in <head>", async () => {
-		let response = await getDocsShow("overview");
-
-		expect(response.status).toBe(200);
-		let body = await response.text();
-		expect(body).toContain(
-			`<link rel="canonical" href="${SEO.baseUrl}${routes.docs.show.href({ slug: "overview" })}" />`,
-		);
-		expect(body).toContain(
-			'<meta name="description" content="Monitor your websites, APIs, servers, and scheduled tasks. Get alerted when something goes wrong and share status with your users." />',
-		);
-	});
-
-	test("marks the current page's sidebar link active and builds a Docs > section > page breadcrumb", async () => {
+	test("renders a real doc's frontmatter as the page header", async () => {
 		let response = await getDocsShow("concepts/http-monitors");
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain('href="/docs/concepts/http-monitors" aria-current="page"');
+		expect(body).toContain("<title>HTTP Monitors | Documentation - Uptime</title>");
+		expect(body).toMatch(/<h1[^>]*>HTTP Monitors<\/h1>/);
+		expect(body).toMatch(/Last updated[\s\S]*?<time[^>]*datetime="\d{4}-\d{2}-\d{2}"/i);
+	});
+
+	test("emits the canonical URL and the doc's own frontmatter description in <head>", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors")).text();
+
+		expect(body).toContain(
+			`<link rel="canonical" href="${SEO.baseUrl}${routes.docs.show.href({ slug: "concepts/http-monitors" })}" />`,
+		);
+		expect(body).toMatch(/<meta name="description" content="[^"]+" \/>/);
+	});
+
+	test("marks the current page's sidebar link and builds a Docs > section > page breadcrumb", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors")).text();
+
+		expect(body).toMatch(/href="\/docs\/concepts\/http-monitors"[^>]*aria-current="page"/);
 		expect(body).toContain(">Docs</a>");
-		expect(body).toContain(">Concepts</a>");
-		expect(body).toMatch(/aria-current="page"[^>]*>HTTP Monitors<\/a>/);
+		expect(body).not.toContain('href="/docs/concepts"');
 	});
 
 	test("lists the page's headings in the On this page rail, linked to their ids", async () => {
@@ -104,67 +96,70 @@ describe("GET /docs/*slug", () => {
 
 		expect(body).toContain('id="configuration-options"');
 		expect(body).toContain('href="#configuration-options"');
-		expect(body).toContain('aria-label="On this page"');
+		expect(body).toContain("On this page");
 	});
 
-	test("closes the page with links to its neighbours in sidebar order", async () => {
-		let body = await (await getDocsShow("quickstart")).text();
+	test("pages within the section and links its neighbours with rel", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors")).text();
 
-		expect(body).toMatch(/<a href="\/docs\/overview" rel="prev"/);
-		expect(body).toMatch(/<a href="\/docs\/concepts\/monitors" rel="next"/);
+		expect(body).toMatch(
+			/href="\/docs\/concepts\/monitors"[^>]*rel="prev"|rel="prev"[^>]*href="\/docs\/concepts\/monitors"/,
+		);
+		expect(body).toMatch(/rel="next"/);
 	});
 
-	test("titles every code block and gives it a copy button aimed at its code", async () => {
+	test("titles every code block and gives it a copy button", async () => {
 		let body = await (await getDocsShow("api/resources/http-monitors")).text();
-		let ids = [...body.matchAll(/<code id="(code-[a-z0-9]+)"/g)].map((match) => match[1]);
 
-		expect(ids.length).toBeGreaterThan(0);
-		for (let id of ids) expect(body).toContain(`commandfor="${id}"`);
-		expect(body).toContain('aria-label="Copy code"');
-	});
-
-	test("draws a GitHub alert as a labelled aside", async () => {
-		let body = await (await getDocsShow("quickstart")).text();
-
-		expect(body).toMatch(/<aside aria-label="Tip" data-color="success"/);
-	});
-
-	test("only links the docs root breadcrumb — intermediate path segments have no real page", async () => {
-		let response = await getDocsShow("api/resources/http-monitors");
-
-		expect(response.status).toBe(200);
-		let body = await response.text();
-
-		expect(body).toContain(`href="${routes.docs.index.href()}"`);
-		expect(body).not.toContain('href="/docs/api"');
-		expect(body).not.toContain('href="/docs/api/resources"');
+		expect(body).toContain('data-slot="code-block"');
+		expect(body).toContain("Copy code");
+		expect(body).toContain("Terminal");
 	});
 
 	test("paints the code fences a doc carries", async () => {
-		let response = await getDocsShow("api/resources/http-monitors");
+		let body = await (await getDocsShow("api/resources/http-monitors")).text();
 
-		expect(response.status).toBe(200);
-		let body = await response.text();
-		expect(body).toContain('class="language-bash"');
 		expect(body).toContain('class="token ');
 	});
 
 	test("renders an API page's scopes, errors and schemas from the OpenAPI document", async () => {
-		let response = await getDocsShow("api/resources/http-monitors");
+		let body = await (await getDocsShow("api/resources/http-monitors")).text();
 
-		expect(response.status).toBe(200);
-		let body = await response.text();
 		expect(body).not.toContain("<!-- operation:");
 		expect(body).toContain("Required scope:");
 		expect(body).toContain("idempotency-key-reused");
 		expect(body).toContain("Response Schema");
 	});
 
-	test("renders the signed-out dashboard CTA as a sign-in button", async () => {
-		let response = await getDocsShow("overview");
+	test("closes every page with feedback, a route to support and a copy-page action", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors")).text();
+
+		expect(body).toContain('action="/docs/feedback"');
+		expect(body).toContain('value="/docs/concepts/http-monitors"');
+		expect(body).toContain("Still stuck?");
+		expect(body).toContain('href="mailto:hello@sergiodxa.com"');
+		expect(body).toContain("Copy page");
+		expect(body).toContain("/docs/concepts/http-monitors.md");
+	});
+
+	test("thanks the reader in place of the form after they answered", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors", "?feedback=sent")).text();
+
+		expect(body).toContain("Thanks — your answer helps us improve this page.");
+		expect(body).not.toContain('action="/docs/feedback"');
+	});
+
+	test("serves a page's Markdown source at its .md twin", async () => {
+		let response = await getDocsShow("concepts/http-monitors.md");
 
 		expect(response.status).toBe(200);
-		let body = await response.text();
+		expect(response.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+		expect(await response.text()).toContain("title: HTTP Monitors");
+	});
+
+	test("renders the signed-out dashboard CTA as a sign-in button", async () => {
+		let body = await (await getDocsShow("concepts/http-monitors")).text();
+
 		expect(body).toContain("Start monitoring");
 	});
 
@@ -178,14 +173,22 @@ describe("GET /docs/*slug", () => {
 		}
 	});
 
-	test("renders the not-found page for an unknown slug", async () => {
-		let response = await getDocsShow("does-not-exist");
+	test("sends the retired overview page to the hub for good", async () => {
+		let response = await getDocsShow("overview");
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("Location")).toBe("/docs");
+	});
+
+	test("renders a 404 that searches for the missing page", async () => {
+		let response = await getDocsShow("guides/web-hooks");
 
 		expect(response.status).toBe(404);
 		let body = await response.text();
 		expect(body).toContain("<title>Page Not Found | Documentation - Uptime</title>");
-		expect(body).toContain(">Page Not Found</h1>");
-		expect(body).toContain("The documentation page you're looking for doesn't exist.");
+		expect(body).toContain("Page Not Found");
+		expect(body).toContain('action="/docs/search"');
+		expect(body).toContain('value="web hooks"');
 		expect(body).not.toContain('rel="canonical"');
 	});
 });

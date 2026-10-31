@@ -106,6 +106,10 @@ export default route({
 
 	docs: {
 		index: get("/docs"),
+		/** Searches every page's body; the hub, the 404 and the sidebar's form submit here. */
+		search: get("/docs/search"),
+		/** Receives a page's "Was this helpful?" answer. */
+		feedback: post("/docs/feedback"),
 		/**
 		 * Wildcard: captures every remaining path segment as one `slug` string
 		 * (e.g. `concepts/http-monitors`).

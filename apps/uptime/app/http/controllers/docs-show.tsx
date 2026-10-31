@@ -1,40 +1,65 @@
 /**
- * `/docs/*slug` serves one documentation page. Its frontmatter supplies the title,
- * description and last-updated date drawn above the body, so a doc carries its own
- * chrome, and the description doubles as the page's meta and Open Graph description.
+ * `/docs/*slug` serves one documentation page, and `/docs/*slug.md` its Markdown twin. Its
+ * frontmatter supplies the title, lead, notice, last-updated date and curated next pages,
+ * so a doc carries its own chrome; the shell adds feedback, a route to support and the pager.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
+import type { TableOfContents } from "@sdxc/ui";
+
 import { highlight } from "@sdxc/highlight/markdown";
 import { redirect } from "@sdxc/http/response";
 import { Markdown } from "@sdxc/markdown";
-import { headings, tableOfContents } from "@sdxc/markdown/plugin/headings";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { headings } from "@sdxc/markdown/plugin/headings";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
-import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { font, text } from "@sdxc/u/typography";
-import { Typeset } from "@sdxc/ui";
+import { m, p } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import {
+	DocsFeedback,
+	DocsPageHeader,
+	NextSteps,
+	PageActions,
+	PlanNotice,
+	Typeset,
+} from "@sdxc/ui";
+import { DocsNotFound } from "@sdxc/ui/patterns";
+import { findNeighbours } from "@sdxc/ui/utils";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-
-import type { DocsTocAnchor } from "~/resources/components/docs-toc";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { expandReference } from "~/app/http/openapi/reference";
 import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
-import { findNeighbours, getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
+import { findDoc, getDocLoader, listDocs, MARKDOWN_OPTIONS, toDocsTree } from "~/app/services/docs";
 import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
-import DocsTrail from "~/resources/components/docs-trail";
-import DocsLayout, { buildDocsLabels } from "~/resources/layouts/docs";
+import DocsSearchForm from "~/resources/components/docs-search-form";
+import DocsLayout, { buildDocsLabels, SUPPORT_HREF } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
+
+/** The suffix that asks for a page's Markdown source instead of its HTML. */
+const MARKDOWN_SUFFIX = ".md";
+
+/** The pages a reader who missed is offered, in this order; a path no doc serves is skipped. */
+const POPULAR_PATHS = [
+	"/docs/quickstart",
+	"/docs/guides/add-a-monitor",
+	"/docs/guides/choose-who-gets-alerted",
+	"/docs/troubleshooting/not-receiving-alerts",
+];
+
+/** Old doc paths and the page that now answers them, so a saved link keeps working. */
+const MOVED: Readonly<Record<string, string>> = { overview: "/docs" };
 
 /**
  * Whether `slug` is the path of an API problem `type`, which the API sends as an absolute
@@ -45,28 +70,32 @@ function isProblemType(slug: string): boolean {
 }
 
 /**
- * GET /docs/*slug — an individual documentation page. Falls back to the
- * shared docs description when frontmatter omits one, and to bare
- * title/canonical/OG metadata since author/date coverage varies across docs.
+ * GET /docs/*slug — an individual documentation page. Falls back to the shared docs
+ * description when frontmatter omits one; a `?feedback=sent` query thanks the reader in
+ * place of the feedback form after they answered it.
  */
 export default createAction(routes.docs.show, async (ctx) => {
-	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+	let { slug: requested } = s.parse(s.object({ slug: s.string() }), ctx.params);
+	let twin = requested.endsWith(MARKDOWN_SUFFIX);
+	let slug = twin ? requested.slice(0, -MARKDOWN_SUFFIX.length) : requested;
+	let t = ctx.intl.t;
 	let sections = await listDocs();
 	let isSignedIn = getViewer() !== null;
 	let activePath = routes.docs.show.href({ slug });
-	let chrome = buildMarketingChrome(ctx.intl.t);
-	let labels = buildDocsLabels(ctx.intl.t);
-	let section = sections.find((entry) => entry.docs.some((doc) => doc.path === activePath));
+	let chrome = buildMarketingChrome(t);
+	let labels = buildDocsLabels(t);
+	let tree = toDocsTree(sections, labels.nav);
 
 	/**
-	 * The 404 page for an unknown slug or an unparseable doc, kept out of the search
-	 * index since a canonical link here would tell crawlers this URL is real content.
+	 * The 404 page for an unknown slug or an unparseable doc: a search already filled in
+	 * from the missing path and the pages most readers want, kept out of the search index.
 	 */
 	let renderNotFound = () => {
+		let popular = POPULAR_PATHS.flatMap((path) => findDoc(sections, path) ?? []);
 		return ctx.render(
 			<DocumentLayout
 				assets={ctx.assets}
-				title={`${ctx.intl.t("docs.error.notFoundTitle")} | ${ctx.intl.t("docs.meta.title")}`}
+				title={`${t("docs.error.notFoundTitle")} | ${t("docs.meta.title")}`}
 				locale={ctx.locale}
 			>
 				<DocsLayout
@@ -76,13 +105,28 @@ export default createAction(routes.docs.show, async (ctx) => {
 					activePath={activePath}
 					labels={labels}
 				>
-					<Typeset preset="docs">
-						<h1>{ctx.intl.t("docs.error.notFoundTitle")}</h1>
-						<p>{ctx.intl.t("docs.error.notFoundDescription")}</p>
-						<p>
-							<a href={routes.docs.index.href()}>{ctx.intl.t("docs.shell.backToIndex")}</a>
-						</p>
-					</Typeset>
+					<DocsNotFound
+						path={activePath}
+						search={
+							<DocsSearchForm
+								label={t("docs.search.label")}
+								placeholder={t("docs.search.placeholder")}
+								submit={t("docs.search.submit")}
+								query={slug.split("/").at(-1)?.replace(/[-_]+/g, " ")}
+							/>
+						}
+						links={popular.map((doc) => ({
+							title: doc.frontmatter.title,
+							href: doc.path,
+							description: doc.frontmatter.description,
+						}))}
+						labels={{
+							eyebrow: t("docs.notFound.eyebrow"),
+							title: t("docs.error.notFoundTitle"),
+							body: t("docs.error.notFoundDescription"),
+							linksTitle: t("docs.notFound.links"),
+						}}
+					/>
 				</DocsLayout>
 			</DocumentLayout>,
 			{ status: 404 },
@@ -90,6 +134,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 	};
 
 	if (isProblemType(slug)) return redirect(routes.docs.show.href({ slug: "api/errors" }));
+	let moved = MOVED[slug];
+	if (moved) return redirect(moved, { status: redirect.Status.Permanent });
 
 	let docLoader = getDocLoader(slug);
 	if (!docLoader) return renderNotFound();
@@ -109,6 +155,12 @@ export default createAction(routes.docs.show, async (ctx) => {
 		});
 	}
 	let content = isFailure(expanded) ? source : expanded.data;
+
+	if (twin) {
+		return new Response(content, {
+			headers: { "Content-Type": "text/markdown; charset=utf-8" },
+		});
+	}
 
 	let parsed = Markdown.parse(content, MARKDOWN_OPTIONS);
 	if (isFailure(parsed)) {
@@ -139,16 +191,19 @@ export default createAction(routes.docs.show, async (ctx) => {
 	}
 
 	let body = isFailure(painted) ? outlined : painted.data;
-	let anchors = flattenAnchors(tableOfContents(outlined));
-	let { previous, next } = findNeighbours(sections, activePath);
+	let anchors = outlineOf(outlined);
+	let section = frontmatter.section.title;
+	let { previous, next } = findNeighbours(tree, activePath, { boundary: "section" });
+	let upNext = (frontmatter.next ?? []).flatMap((path) => findDoc(sections, path) ?? []);
+	let feedbackSent = ctx.url.searchParams.get("feedback") === "sent";
 
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${frontmatter.title} | ${ctx.intl.t("docs.meta.title")}`}
+			title={`${frontmatter.title} | ${t("docs.meta.title")}`}
 			locale={ctx.locale}
 			seo={{
-				description: frontmatter.description || ctx.intl.t("docs.meta.description"),
+				description: frontmatter.description || t("docs.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 				og: { type: "article" },
 			}}
@@ -162,67 +217,164 @@ export default createAction(routes.docs.show, async (ctx) => {
 				anchors={anchors}
 				previous={previous}
 				next={next}
+				section={section}
 			>
 				<article>
-					<header mix={[vstack({ gap: 3 }), m(0, 0, "2.5rem", 0)]}>
-						<DocsTrail
-							label={ctx.intl.t("app.layout.breadcrumbs.label")}
-							root={{ label: ctx.intl.t("docs.shell.root"), href: routes.docs.index.href() }}
-							section={section?.title}
-							page={frontmatter.title}
-						/>
-
-						<h1
-							mix={[
-								m(0),
-								text("4xl"),
-								font("sans"),
-								fg("neutral.emphasis"),
-								raw({
-									textWrap: "balance",
-									fontWeight: 650,
-									letterSpacing: "-0.02em",
-									lineHeight: 1.1,
-								}),
-							]}
-						>
-							{frontmatter.title}
-						</h1>
-						<p mix={[m(0), text("lg"), fg("neutral"), raw({ textWrap: "pretty" })]}>
-							{frontmatter.description}
-						</p>
-						{frontmatter.lastUpdated && (
-							<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
-								{ctx.intl.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}
-							</p>
-						)}
-					</header>
+					<DocsPageHeader
+						crumbsLabel={t("app.layout.breadcrumbs.label")}
+						crumbs={[
+							{ label: t("docs.shell.root"), href: routes.docs.index.href() },
+							{ label: section },
+							{ label: frontmatter.title },
+						]}
+						title={frontmatter.title}
+						description={frontmatter.description}
+						notice={frontmatter.notice ? <PlanNotice>{frontmatter.notice}</PlanNotice> : undefined}
+						updated={
+							frontmatter.lastUpdated
+								? { label: t("docs.shell.updated"), date: frontmatter.lastUpdated }
+								: undefined
+						}
+						actions={
+							<PageActions
+								markdownHref={`${activePath}${MARKDOWN_SUFFIX}`}
+								labels={{
+									copy: t("docs.actions.copy"),
+									copied: t("docs.actions.copied"),
+									failed: t("docs.actions.failed"),
+									more: t("docs.actions.more"),
+								}}
+								links={pageLinks(t, `${ctx.url.origin}${activePath}`)}
+							/>
+						}
+					/>
 
 					<Typeset preset="docs">
 						{toRemix(body, {
 							components: docsMarkdownComponents({
-								copy: ctx.intl.t("docs.code.copy"),
-								copied: ctx.intl.t("docs.code.copied"),
+								copy: t("docs.code.copy"),
+								copied: t("docs.code.copied"),
 								alerts: {
-									note: ctx.intl.t("docs.alerts.note"),
-									tip: ctx.intl.t("docs.alerts.tip"),
-									important: ctx.intl.t("docs.alerts.important"),
-									warning: ctx.intl.t("docs.alerts.warning"),
-									caution: ctx.intl.t("docs.alerts.caution"),
+									note: t("docs.alerts.note"),
+									tip: t("docs.alerts.tip"),
+									important: t("docs.alerts.important"),
+									warning: t("docs.alerts.warning"),
+									caution: t("docs.alerts.caution"),
 								},
+								t,
 							}),
 						})}
 					</Typeset>
 				</article>
+
+				<DocsFeedback
+					id="docs-feedback"
+					action={routes.docs.feedback.href()}
+					page={activePath}
+					state={feedbackSent ? "sent" : "idle"}
+					labels={{
+						question: t("docs.feedback.question"),
+						yes: t("docs.feedback.yes"),
+						no: t("docs.feedback.no"),
+						note: t("docs.feedback.note"),
+						send: t("docs.feedback.send"),
+						thanks: t("docs.feedback.thanks"),
+					}}
+				/>
+
+				{upNext.length > 0 ? (
+					<NextSteps
+						title={t("docs.next.title")}
+						id="up-next"
+						items={upNext.map((doc) => ({
+							title: doc.frontmatter.title,
+							href: doc.path,
+							description: doc.frontmatter.description,
+						}))}
+					/>
+				) : null}
+
+				<aside
+					aria-labelledby="docs-questions"
+					mix={[
+						vstack({ gap: 2 }),
+						m("2.5rem", 0, 0, 0),
+						p(5),
+						rounded("lg"),
+						border({ color: "neutral.border", width: 1, style: "solid" }),
+					]}
+				>
+					<h2
+						id="docs-questions"
+						mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
+					>
+						{t("docs.questions.title")}
+					</h2>
+					<p mix={[m(0), text("sm"), fg("neutral")]}>
+						{t("docs.questions.body")}{" "}
+						<a href={SUPPORT_HREF} mix={[fg("brand"), weight("medium")]}>
+							{t("docs.questions.link")}
+						</a>
+					</p>
+				</aside>
 			</DocsLayout>
 		</DocumentLayout>,
 	);
 });
 
-/** The table of contents in reading order, one entry per heading, as the rail lists it. */
-function flattenAnchors(entries: ReturnType<typeof tableOfContents>): DocsTocAnchor[] {
-	return entries.flatMap((entry) => [
-		{ id: entry.id, text: entry.text, level: entry.level },
-		...flattenAnchors(entry.children),
-	]);
+/**
+ * The page's outline in reading order: every `h2` and `h3` with an id, and each step of a
+ * procedure, whose title is drawn as a heading at the step's own anchor.
+ */
+function outlineOf(document: Markdown.Document): TableOfContents.Item[] {
+	let items: TableOfContents.Item[] = [];
+	let visit = (nodes: readonly Markdown.Node[]) => {
+		for (let node of nodes) {
+			if (node.type === "heading") {
+				let { id } = node.attributes;
+				if (typeof id === "string" && (node.level === 2 || node.level === 3)) {
+					items.push({ id, text: toPlainText(node), level: node.level });
+				}
+				continue;
+			}
+			if (node.type !== "tag") continue;
+			if (node.name === "step") {
+				let { id, title } = node.attributes;
+				if (typeof id === "string" && typeof title === "string") {
+					items.push({ id, text: title, level: 2 });
+				}
+				continue;
+			}
+			if (node.name === "steps") visit(node.children);
+		}
+	};
+	visit(document.children);
+	return items;
+}
+
+/**
+ * The page's menu beside "Copy page": its Markdown source, and the page handed to an
+ * assistant that can answer a question about it.
+ */
+function pageLinks(t: Translate, url: string): PageActions.Link[] {
+	let prompt = encodeURIComponent(t("docs.actions.prompt", { url }));
+	return [
+		{
+			label: t("docs.actions.markdown"),
+			description: t("docs.actions.markdownDescription"),
+			href: `${url}${MARKDOWN_SUFFIX}`,
+		},
+		{
+			label: t("docs.actions.claude"),
+			description: t("docs.actions.assistantDescription"),
+			href: `https://claude.ai/new?q=${prompt}`,
+			external: true,
+		},
+		{
+			label: t("docs.actions.chatgpt"),
+			description: t("docs.actions.assistantDescription"),
+			href: `https://chatgpt.com/?q=${prompt}`,
+			external: true,
+		},
+	];
 }

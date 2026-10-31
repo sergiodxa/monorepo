@@ -6313,14 +6313,14 @@ export default {
 			notFoundDescription: "Die gesuchte Dokumentationsseite existiert nicht.",
 		},
 
-		lastUpdated: "Zuletzt aktualisiert: {$date}",
-
 		shell: {
 			menu: "Doku-Menü",
 			noResults: "Keine Seite passt zu deiner Suche.",
 			toc: "Auf dieser Seite",
 			root: "Doku",
-			backToIndex: "Zurück zur Dokumentation",
+			filterLabel: "Seiten filtern",
+			support: "Support kontaktieren",
+			updated: "Zuletzt aktualisiert",
 		},
 
 		pager: {
@@ -6344,12 +6344,84 @@ export default {
 
 		hub: {
 			eyebrow: "Dokumentation",
-			title: "Uptime-Dokumentation",
+			title: "Wie können wir helfen?",
 			description:
-				"Richte Monitore ein, leite Alarme an dein Team weiter, veröffentliche Statusseiten und automatisiere alles über die API.",
-			start: "Hier starten",
-			topics: "Nach Thema stöbern",
-			read: "Anleitung lesen",
+				"Anleitungen zum Einrichten von Monitoren, zum Benachrichtigen der richtigen Personen und zum Informieren deiner Nutzer – und Antworten, wenn etwas nicht stimmt.",
+			start: "Wo fange ich an?",
+			step: "Schritt {$number}",
+			topicsTitle: "Häufige Themen",
+			sectionsTitle: "Nach Bereich durchsuchen",
+			popular: "Weitere Anleitungen",
+			count: ".input {$count :number}\n.match $count\none {{1 Seite}}\n* {{{$count} Seiten}}",
+			topics: {
+				monitors: "Monitore",
+				alerts: "Alarme",
+				statusPages: "Statusseiten",
+				troubleshooting: "Problem lösen",
+				api: "API",
+			},
+			sections: {
+				gettingStarted: "Dein erster Monitor und dein erster Alarm in fünf Minuten.",
+				guides: "Schritt-für-Schritt-Aufgaben: Monitore, Alarme, Statusseiten, Cronjobs und Flows.",
+				troubleshooting:
+					"Was du prüfen solltest, wenn Alarme, Checks oder Cronjobs sich nicht wie erwartet verhalten.",
+				concepts:
+					"Wie die einzelnen Monitortypen, Alarme, Statusseiten, Wartung und Berichte funktionieren.",
+				team: "Mitglieder und Rollen, Einladungen, verifizierte Domains und API-Schlüssel.",
+				api: "Authentifizierung, Paginierung, Fehler und Ratenlimits.",
+				apiResources: "Jeder Endpunkt mit seinen Feldern, Berechtigungen und Beispielen.",
+			},
+		},
+		actions: {
+			copy: "Seite kopieren",
+			copied: "Kopiert",
+			failed: "Kopieren fehlgeschlagen",
+			more: "Weitere Optionen für diese Seite",
+			markdown: "Als Markdown anzeigen",
+			markdownDescription: "Der Quelltext der Seite, zum Einfügen in Notizen oder einen Chat.",
+			claude: "In Claude öffnen",
+			chatgpt: "In ChatGPT öffnen",
+			assistantDescription: "Stelle Fragen zu dieser Seite.",
+			prompt: "Lies {$url}, damit ich dir Fragen dazu stellen kann.",
+		},
+		feedback: {
+			question: "War diese Seite hilfreich?",
+			yes: "Ja",
+			no: "Nein",
+			note: "Sollen wir etwas ergänzen oder korrigieren? (optional)",
+			send: "Feedback senden",
+			thanks: "Danke – deine Antwort hilft uns, diese Seite zu verbessern.",
+		},
+		next: {
+			title: "Als Nächstes",
+		},
+		questions: {
+			title: "Kommst du nicht weiter?",
+			body: "Schreib uns, was du versucht hast, und wir helfen dir, es zum Laufen zu bringen.",
+			link: "Support kontaktieren",
+		},
+		notFound: {
+			eyebrow: "404",
+			links: "Beliebte Seiten",
+		},
+		search: {
+			title: "Dokumentation durchsuchen",
+			label: "Dokumentation durchsuchen",
+			placeholder: "Suchen oder eine Frage stellen",
+			submit: "Suchen",
+			resultsFor: "Ergebnisse für „{$query}“",
+			results: "Suchergebnisse",
+			empty: "Keine Treffer für „{$query}“.",
+			emptyHint:
+				"Versuche es mit weniger oder anderen Wörtern oder beginne mit einer dieser Seiten.",
+			popular: "Beliebte Seiten",
+			contact: "Nicht gefunden, was du suchst?",
+			kinds: {
+				guide: "Anleitung",
+				troubleshooting: "Problem lösen",
+				concept: "Konzept",
+				reference: "API-Referenz",
+			},
 		},
 	},
 };

@@ -1,7 +1,7 @@
 /**
- * Tests the `/docs` hub: it renders inside the docs shell, points first-time readers at
- * the quickstart and the API overview, and lists every guide under its section with the
- * same prefetch-on-intent links the sidebar uses.
+ * Tests the `/docs` hub: it renders inside the docs shell, opens on a search field,
+ * points first-time readers at the quickstart, and routes every section from a card
+ * that says what the section covers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,25 +67,32 @@ describe("GET /docs", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<title>Documentation - Uptime</title>");
-		expect(body).toContain("Uptime documentation</h1>");
+		expect(body).toMatch(/<h1[^>]*>How can we help\?<\/h1>/);
 		expect(body).toContain('rel="canonical"');
 	});
 
-	test("points first-time readers at the quickstart and the API overview", async () => {
+	test("opens on a search field that searches every page's body", async () => {
 		let body = await (await getDocsIndex()).text();
 
-		expect(body).toContain("Start here");
-		expect(body).toMatch(/<a href="\/docs\/quickstart" data-rmx-prefetch="intent"/);
-		expect(body).toMatch(/<a href="\/docs\/api\/overview" data-rmx-prefetch="intent"/);
+		expect(body).toContain('action="/docs/search"');
+		expect(body).toContain('name="q"');
 	});
 
-	test("lists every guide under its section", async () => {
+	test("starts first-time readers at the quickstart", async () => {
 		let body = await (await getDocsIndex()).text();
-		let main = body.slice(body.indexOf("Browse by topic"));
+
+		expect(body).toContain("Where should I start?");
+		expect(body).toContain('href="/docs/quickstart"');
+	});
+
+	test("routes every section from a card that says what it covers", async () => {
+		let body = await (await getDocsIndex()).text();
+		let main = body.slice(body.indexOf("Browse by section"));
 
 		for (let section of await listDocs()) {
-			expect(main).toContain(`>${section.title.replace("&", "&amp;")}</h3>`);
-			for (let doc of section.docs) expect(main).toContain(`href="${doc.path}"`);
+			expect(main).toContain(section.title.replace("&", "&amp;"));
+			expect(main).toContain(`href="${section.docs[0]?.path}"`);
 		}
+		expect(main).toContain("Every endpoint, with its fields, scopes and examples.");
 	});
 });

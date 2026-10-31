@@ -6273,14 +6273,14 @@ export default {
 			notFoundDescription: "La pagina di documentazione che sta cercando non esiste.",
 		},
 
-		lastUpdated: "Ultimo aggiornamento: {$date}",
-
 		shell: {
 			menu: "Menu docs",
 			noResults: "Nessuna pagina corrisponde alla ricerca.",
 			toc: "In questa pagina",
 			root: "Documentazione",
-			backToIndex: "Torna alla documentazione",
+			filterLabel: "Filtra le pagine",
+			support: "Contatta il supporto",
+			updated: "Ultimo aggiornamento",
 		},
 
 		pager: {
@@ -6304,12 +6304,84 @@ export default {
 
 		hub: {
 			eyebrow: "Documentazione",
-			title: "Documentazione di Uptime",
+			title: "Come possiamo aiutarti?",
 			description:
-				"Configura i monitor, invia gli avvisi al team, pubblica pagine di stato e automatizza tutto tramite l'API.",
-			start: "Inizia da qui",
-			topics: "Esplora per argomento",
-			read: "Leggi la guida",
+				"Guide per configurare i monitor, avvisare le persone giuste e tenere informati i tuoi utenti, più le risposte quando qualcosa non va.",
+			start: "Da dove comincio?",
+			step: "Passo {$number}",
+			topicsTitle: "Argomenti frequenti",
+			sectionsTitle: "Sfoglia per sezione",
+			popular: "Altre guide",
+			count: ".input {$count :number}\n.match $count\none {{1 pagina}}\n* {{{$count} pagine}}",
+			topics: {
+				monitors: "Monitor",
+				alerts: "Avvisi",
+				statusPages: "Pagine di stato",
+				troubleshooting: "Risolvi un problema",
+				api: "API",
+			},
+			sections: {
+				gettingStarted: "Il tuo primo monitor e il tuo primo avviso, in cinque minuti.",
+				guides: "Attività passo passo: monitor, avvisi, pagine di stato, cron job e flussi.",
+				troubleshooting:
+					"Cosa controllare quando avvisi, controlli o cron job non si comportano come previsto.",
+				concepts:
+					"Come funzionano i tipi di monitor, gli avvisi, le pagine di stato, la manutenzione e i report.",
+				team: "Membri e ruoli, inviti, domini verificati e chiavi API.",
+				api: "Autenticazione, paginazione, errori e limiti di frequenza.",
+				apiResources: "Ogni endpoint, con campi, permessi ed esempi.",
+			},
+		},
+		actions: {
+			copy: "Copia pagina",
+			copied: "Copiata",
+			failed: "Copia non riuscita",
+			more: "Altre opzioni per questa pagina",
+			markdown: "Visualizza come Markdown",
+			markdownDescription: "Il sorgente della pagina, da incollare in note o in una chat.",
+			claude: "Apri in Claude",
+			chatgpt: "Apri in ChatGPT",
+			assistantDescription: "Fai domande su questa pagina.",
+			prompt: "Leggi {$url} così posso farti domande al riguardo.",
+		},
+		feedback: {
+			question: "Questa pagina ti è stata utile?",
+			yes: "Sì",
+			no: "No",
+			note: "C’è qualcosa da aggiungere o correggere? (facoltativo)",
+			send: "Invia feedback",
+			thanks: "Grazie, la tua risposta ci aiuta a migliorare questa pagina.",
+		},
+		next: {
+			title: "Prossimi passi",
+		},
+		questions: {
+			title: "Ancora bloccato?",
+			body: "Scrivici cosa hai provato e ti aiuteremo a farlo funzionare.",
+			link: "Contatta il supporto",
+		},
+		notFound: {
+			eyebrow: "404",
+			links: "Pagine popolari",
+		},
+		search: {
+			title: "Cerca nella documentazione",
+			label: "Cerca nella documentazione",
+			placeholder: "Cerca o fai una domanda",
+			submit: "Cerca",
+			resultsFor: "Risultati per «{$query}»",
+			results: "Risultati della ricerca",
+			empty: "Nessun risultato per «{$query}».",
+			emptyHint:
+				"Prova con meno parole o con parole diverse, oppure parti da una di queste pagine.",
+			popular: "Pagine popolari",
+			contact: "Non trovi quello che cerchi?",
+			kinds: {
+				guide: "Guida",
+				troubleshooting: "Risolvi un problema",
+				concept: "Concetto",
+				reference: "Riferimento API",
+			},
 		},
 	},
 };

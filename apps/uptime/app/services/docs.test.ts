@@ -2,8 +2,8 @@
  * Tests `listDocs` and `getDocLoader` against the real Markdown files under
  * `resources/docs/**`: sections come back ordered by `section.order`, docs within a
  * section are ordered by their own `order`, a known slug resolves a loader whose
- * content matches the real file, an unknown slug resolves to `null`, and the pager's
- * neighbours follow the sidebar's order across section boundaries.
+ * content matches the real file, an unknown slug resolves to `null`, every curated next
+ * page exists, and the sidebar tree and page kinds follow the folders.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { findNeighbours, getDocLoader, listDocs } from "./docs";
+import { docKind, findDoc, getDocLoader, listDocs, toDocsTree } from "./docs";
 
 describe("listDocs", () => {
 	test("returns non-empty sections", async () => {
@@ -26,6 +26,8 @@ describe("listDocs", () => {
 		let titles = sections.map((section) => section.title);
 		expect(titles).toEqual([
 			"Getting Started",
+			"Guides",
+			"Fix a problem",
 			"Concepts",
 			"Team & Settings",
 			"API Reference",
@@ -33,17 +35,14 @@ describe("listDocs", () => {
 		]);
 
 		let orders = sections.map((section) => section.order);
-		expect(orders).toEqual([1, 2, 3, 4, 5]);
+		expect(orders).toEqual([1, 2, 3, 4, 5, 6, 7]);
 	});
 
 	test("sorts docs within each section by their own order", async () => {
 		let sections = await listDocs();
 
 		let gettingStarted = sections.find((section) => section.title === "Getting Started");
-		expect(gettingStarted?.docs.map((doc) => doc.path)).toEqual([
-			"/docs/overview",
-			"/docs/quickstart",
-		]);
+		expect(gettingStarted?.docs.map((doc) => doc.path)).toEqual(["/docs/quickstart"]);
 
 		let concepts = sections.find((section) => section.title === "Concepts");
 		expect(concepts?.docs.map((doc) => doc.path)).toEqual([
@@ -66,27 +65,26 @@ describe("listDocs", () => {
 		}
 	});
 
-	test("includes the real overview doc with its actual frontmatter", async () => {
+	test("hands every page on only to pages that exist", async () => {
 		let sections = await listDocs();
 
-		let gettingStarted = sections.find((section) => section.title === "Getting Started");
-		let overview = gettingStarted?.docs.find((doc) => doc.path === "/docs/overview");
-
-		expect(overview?.frontmatter.title).toBe("Overview");
-		expect(overview?.frontmatter.order).toBe(1);
-		expect(overview?.frontmatter.section.order).toBe(1);
+		for (let doc of sections.flatMap((section) => section.docs)) {
+			for (let path of doc.frontmatter.next ?? []) {
+				expect(findDoc(sections, path), `${doc.path} → ${path}`).not.toBeNull();
+			}
+		}
 	});
 });
 
 describe("getDocLoader", () => {
 	test("resolves a real slug's loader with the real file content", async () => {
-		let entry = getDocLoader("overview");
+		let entry = getDocLoader("concepts/http-monitors");
 
 		expect(entry).not.toBeNull();
-		expect(entry?.path).toBe("../../resources/docs/overview.md");
+		expect(entry?.path).toBe("../../resources/docs/concepts/http-monitors.md");
 
 		let content = await entry?.loader();
-		expect(content).toContain("Uptime continuously monitors your infrastructure");
+		expect(content).toContain("title: HTTP Monitors");
 	});
 
 	test("returns null for an unknown slug", () => {
@@ -94,26 +92,25 @@ describe("getDocLoader", () => {
 	});
 });
 
-describe("findNeighbours", () => {
-	test("walks the sidebar order across a section boundary", async () => {
+describe("toDocsTree", () => {
+	test("lists every section's pages in sidebar order", async () => {
 		let sections = await listDocs();
+		let tree = toDocsTree(sections, "Documentation");
 
-		let { previous, next } = findNeighbours(sections, "/docs/quickstart");
-		expect(previous?.path).toBe("/docs/overview");
-		expect(next?.path).toBe("/docs/concepts/monitors");
+		expect(tree.label).toBe("Documentation");
+		expect(tree.sections.map((section) => section.title)).toEqual(
+			sections.map((section) => section.title),
+		);
+		expect(tree.sections[0]?.items[0]?.href).toBe(sections[0]?.docs[0]?.path);
 	});
+});
 
-	test("leaves an end of the list empty", async () => {
-		let sections = await listDocs();
-
-		expect(findNeighbours(sections, "/docs/overview").previous).toBeNull();
-		let last = sections.at(-1)?.docs.at(-1)?.path ?? "";
-		expect(findNeighbours(sections, last).next).toBeNull();
-	});
-
-	test("returns no neighbours for a path outside the list", async () => {
-		let sections = await listDocs();
-
-		expect(findNeighbours(sections, "/docs/missing")).toEqual({ previous: null, next: null });
+describe("docKind", () => {
+	test("labels a page by the folder it is filed in", () => {
+		expect(docKind("/docs/troubleshooting/not-receiving-alerts")).toBe("troubleshooting");
+		expect(docKind("/docs/concepts/alerts")).toBe("concept");
+		expect(docKind("/docs/api/resources/alerts")).toBe("reference");
+		expect(docKind("/docs/guides/add-a-monitor")).toBe("guide");
+		expect(docKind("/docs/quickstart")).toBe("guide");
 	});
 });

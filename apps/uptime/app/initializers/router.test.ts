@@ -160,7 +160,7 @@ describe("public page caching", () => {
 		routes.home.href(),
 		routes.marketing.feature.href({ slug: "monitors" }),
 		routes.trust.href(),
-		routes.docs.show.href({ slug: "overview" }),
+		routes.docs.show.href({ slug: "quickstart" }),
 	])("%s lets the browser keep the page, with the CSP for its own nonce", async (path) => {
 		viewer = null;
 

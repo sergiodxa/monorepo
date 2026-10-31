@@ -1,55 +1,45 @@
 /**
  * The components a documentation page renders its markdown through: fenced code as a
- * bordered card headed by its title (or language) with a copy button, and GitHub-style
- * `> [!KIND]` alerts as tinted asides. Built per request so every label is translated.
+ * titled block with a copy button, alerts as callouts, and the docs' own tags (steps,
+ * control chips, keys, product mockups, questions). Built per request so every label is translated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
 import type { RemixOptions } from "@sdxc/markdown/remix";
 import type { Handle, RemixNode } from "remix/component";
 
-import {
-	FileCodeIcon,
-	InfoIcon,
-	LightbulbIcon,
-	MessageSquareWarningIcon,
-	OctagonAlertIcon,
-	TerminalIcon,
-	TriangleAlertIcon,
-} from "@sdxc/icons";
-import { bg, border, borderEdge, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
-import {
-	absolute,
-	hstack,
-	inlineFlex,
-	insBs,
-	insIe,
-	relative,
-	shrink,
-	vstack,
-} from "@sdxc/u/layout";
-import { overflowX } from "@sdxc/u/overflow";
-import { bs, m, mb, minIs, p, pi, pie } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
-import { when } from "@sdxc/u/state";
-import { font, text, textTransform, tracking, truncate, weight } from "@sdxc/u/typography";
-import { semanticColorPanel } from "@sdxc/ui/styles";
+import { ChevronDownIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { m } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Accordion, Callout, CodeBlock, Keyboard, Steps, UiLabel, UiPath } from "@sdxc/ui";
 
-import { DocsCopyButton } from "~/resources/components/docs-copy-button";
+import type { MockupArea } from "~/resources/components/marketing/product-mockups";
 
-/** The language a fence left unnamed, so the highlighter's stylesheet still has a class to match. */
-const PLAIN_LANGUAGE = "plain";
+import ProductMockup from "~/resources/components/marketing/product-mockups";
 
-/** Languages a reader types into a shell, which the header marks with a terminal glyph. */
+/** Languages a reader types into a shell, whose untitled blocks read as "Terminal". */
 const SHELL_LANGUAGES = new Set(["bash", "sh", "shell", "zsh", "console"]);
 
-/** FNV-1a offset basis and prime, which give a short id with few collisions. */
-const FNV_OFFSET_BASIS = 0x811c9dc5;
-const FNV_PRIME = 0x01000193;
+/** Every area a `mockup` tag may name, so a typo draws nothing rather than the wrong screen. */
+const MOCKUP_AREAS = new Set<string>([
+	"dashboard",
+	"monitor",
+	"alerts",
+	"status-page",
+	"dns",
+	"tcp",
+	"ssl",
+	"cron",
+	"flow",
+	"maintenance",
+	"reports",
+	"team",
+	"api-keys",
+]);
 
 /** The five kinds GitHub's alert syntax names, from adding a fact to warning of a loss. */
 type AlertKind = "note" | "tip" | "important" | "warning" | "caution";
@@ -59,25 +49,21 @@ export interface DocsMarkdownLabels {
 	copy: string;
 	copied: string;
 	alerts: Record<AlertKind, string>;
+	/** The translator the product mockups label their own UI with. */
+	t: Translate;
 }
 
 /**
- * The tint and glyph each alert kind draws with, so every kind reads apart by shape as
- * well as colour. The tints are the semantic scales, which carry Uptime's own palette.
+ * The callout each alert kind draws as. `important` reads as a note under its own label,
+ * and `caution`, which warns of a loss, draws as danger.
  */
-const ALERT_KINDS: Record<AlertKind, { color: string; Glyph: typeof InfoIcon }> = {
-	note: { color: "brand", Glyph: InfoIcon },
-	tip: { color: "success", Glyph: LightbulbIcon },
-	important: { color: "neutral", Glyph: MessageSquareWarningIcon },
-	warning: { color: "warning", Glyph: TriangleAlertIcon },
-	caution: { color: "danger", Glyph: OctagonAlertIcon },
+const CALLOUT_KINDS: Record<AlertKind, Callout.Kind> = {
+	note: "note",
+	tip: "tip",
+	important: "note",
+	warning: "warning",
+	caution: "danger",
 };
-
-/** One painted run of source, structural so any painter's output renders here. */
-interface Token {
-	type: string;
-	value: string;
-}
 
 /** The props a fenced code node arrives with: its fields plus the annotation's attributes. */
 interface CodeProps {
@@ -90,27 +76,8 @@ interface CodeProps {
 	children?: RemixNode;
 }
 
-/** The props an alert node arrives with. */
-interface AlertProps {
-	kind?: unknown;
-	children?: RemixNode;
-}
-
-/**
- * An element id derived from the code it names, so a page renders byte-identical HTML on
- * every request and a prefetched copy matches the navigation.
- */
-function stableId(prefix: string, value: string): string {
-	let hash = FNV_OFFSET_BASIS;
-	for (let index = 0; index < value.length; index += 1) {
-		hash ^= value.charCodeAt(index);
-		hash = Math.imul(hash, FNV_PRIME);
-	}
-	return `${prefix}-${(hash >>> 0).toString(36)}`;
-}
-
-/** Guards each run, so a malformed field falls back to the raw source. */
-function isToken(value: unknown): value is Token {
+/** Guards each painted run, so a malformed field falls back to highlighting here. */
+function isToken(value: unknown): value is CodeBlock.Token {
 	if (typeof value !== "object" || value === null) return false;
 	let candidate = value as { type?: unknown; value?: unknown };
 	return typeof candidate.type === "string" && typeof candidate.value === "string";
@@ -118,151 +85,139 @@ function isToken(value: unknown): value is Token {
 
 /** Narrows the parsed kind, so a kind the table lacks still draws as a note. */
 function isAlertKind(kind: unknown): kind is AlertKind {
-	return typeof kind === "string" && kind in ALERT_KINDS;
+	return typeof kind === "string" && kind in CALLOUT_KINDS;
+}
+
+/** Narrows a `mockup` tag's area to one the product draws. */
+function isMockupArea(area: unknown): area is MockupArea {
+	return typeof area === "string" && MOCKUP_AREAS.has(area);
 }
 
 /**
  * Builds the component map for `toRemix` with the reader's labels baked in.
  *
- * @param labels - The copy button's and the alerts' translated labels
- * @returns Components keyed by the markdown node they draw
+ * @param labels - The copy button's and the alerts' translated labels, and the translator
+ * @returns Components keyed by the markdown node or tag they draw
  * @example toRemix(document, { components: docsMarkdownComponents(labels) })
  */
 export function docsMarkdownComponents(
 	labels: DocsMarkdownLabels,
 ): NonNullable<RemixOptions["components"]> {
 	/**
-	 * Draws one fenced block as a card: a header naming the file or language with the copy
-	 * button at its end, over code that scrolls sideways inside the card so a long line
-	 * never widens the page. A fence naming neither draws no header, and the copy button
-	 * sits in the card's corner with the code's lines kept clear of it.
+	 * Draws one fence as a titled block: the path or title the fence names, "Terminal" for
+	 * an untitled shell session, or the language. Painted runs pass through unchanged.
 	 */
 	function DocsCode(handle: Handle<CodeProps>) {
 		return () => {
-			let { content, language = PLAIN_LANGUAGE, path, title, tokens } = handle.props;
-			let heading = path ?? title ?? (language === PLAIN_LANGUAGE ? "" : language);
-			let codeId = stableId("code", content);
-			let runs = Array.isArray(tokens) ? tokens.filter(isToken) : [];
-			let Glyph = SHELL_LANGUAGES.has(language) && !path && !title ? TerminalIcon : FileCodeIcon;
-			let copy = <DocsCopyButton target={codeId} label={labels.copy} copiedLabel={labels.copied} />;
-
+			let { content, language, path, title, tokens } = handle.props;
+			let runs = Array.isArray(tokens) && tokens.every(isToken) ? tokens : undefined;
+			let shell = language !== undefined && SHELL_LANGUAGES.has(language);
 			return (
-				<figure
-					data-slot="docs-code"
-					mix={[
-						relative(),
-						m("1.5rem", 0),
-						rounded("lg"),
-						border({ color: "neutral.border", width: 1, style: "solid" }),
-						bg("neutral.bg-tint"),
-						raw({ overflow: "hidden" }),
-					]}
-				>
-					{heading ? (
-						<figcaption
-							mix={[
-								hstack({ gap: 2, align: "center", justify: "between" }),
-								bs("2.5rem"),
-								pi(4, 1.5),
-								borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
-							]}
-						>
-							<span mix={[hstack({ gap: 2, align: "center" }), minIs(0), fg("neutral")]}>
-								<span mix={[inlineFlex(), shrink(0)]}>
-									<Glyph size={14} aria-hidden="true" />
-								</span>
-								<span mix={[minIs(0), truncate(), font("mono"), text("xs")]}>{heading}</span>
-							</span>
-							{copy}
-						</figcaption>
-					) : (
-						<span
-							data-slot="docs-code-copy"
-							mix={[absolute(), insBs("1rem"), insIe("0.375rem"), z(1)]}
-						>
-							{copy}
-						</span>
-					)}
+				<CodeBlock
+					code={content}
+					language={language}
+					tokens={runs}
+					title={path ?? title ?? (shell ? "Terminal" : undefined)}
+					labels={{ copy: labels.copy, copied: labels.copied }}
+				/>
+			);
+		};
+	}
 
-					<pre
-						className={`language-${language}`}
-						style={{ border: 0, borderRadius: 0, margin: 0, background: "transparent" }}
-						mix={[
-							p(4),
-							heading ? [] : pie("3rem"),
-							overflowX("auto"),
-							raw({ overscrollBehaviorInline: "contain" }),
-							font("mono"),
-							text("sm"),
-						]}
-					>
-						<code id={codeId} className={`language-${language}`}>
-							{runs.length > 0
-								? runs.map((token, index) =>
-										token.type === "plain" ? (
-											token.value
-										) : (
-											<span key={index} className={`token ${token.type}`}>
-												{token.value}
-											</span>
-										),
-									)
-								: content}
-						</code>
-					</pre>
+	/** Draws a `> [!KIND]` alert as a callout named by its kind's translated label. */
+	function DocsAlert(handle: Handle<{ kind?: unknown; children?: RemixNode }>) {
+		return () => {
+			let { children, kind } = handle.props;
+			let resolved = isAlertKind(kind) ? kind : "note";
+			return (
+				<Callout kind={CALLOUT_KINDS[resolved]} label={labels.alerts[resolved]}>
+					{children}
+				</Callout>
+			);
+		};
+	}
+
+	/** Numbers the `step` tags inside it. */
+	function DocsSteps(handle: Handle<{ children?: RemixNode }>) {
+		return () => <Steps>{handle.props.children}</Steps>;
+	}
+
+	/** One step, titled by a heading whose `id` the "On this page" rail links. */
+	function DocsStep(handle: Handle<{ id: string; title: string; children?: RemixNode }>) {
+		return () => {
+			let { id, title, children } = handle.props;
+			return (
+				<Steps.Item id={id} title={title}>
+					{children}
+				</Steps.Item>
+			);
+		};
+	}
+
+	/** A product control the reader must find, named as a chip. */
+	function DocsUi(handle: Handle<{ children?: RemixNode }>) {
+		return () => <UiLabel>{handle.props.children}</UiLabel>;
+	}
+
+	/** A click path through the product, one chip per control. */
+	function DocsUiPath(handle: Handle<{ items: string[]; children?: RemixNode }>) {
+		return () => <UiPath items={handle.props.items} />;
+	}
+
+	/** One key a reader presses. */
+	function DocsKbd(handle: Handle<{ children?: RemixNode }>) {
+		return () => <Keyboard>{handle.props.children}</Keyboard>;
+	}
+
+	/**
+	 * The product's own screen for the task, redrawn with example data so it follows the
+	 * page's theme. An area the product lacks draws nothing.
+	 */
+	function DocsMockup(handle: Handle<{ area: string; caption?: string; children?: RemixNode }>) {
+		return () => {
+			let { area, caption } = handle.props;
+			if (!isMockupArea(area)) return null;
+			return (
+				<figure data-slot="docs-mockup" mix={[m("2rem", 0)]}>
+					<ProductMockup area={area} t={labels.t} />
+					{caption ? (
+						<figcaption mix={[m("0.75rem", 0, 0, 0), text("sm"), fg("neutral.muted")]}>
+							{caption}
+						</figcaption>
+					) : null}
 				</figure>
 			);
 		};
 	}
 
-	/**
-	 * Draws one alert, tinted by its kind and opened by the kind's glyph and label, so a
-	 * screen reader announces what the aside is before reading it.
-	 */
-	function DocsAlert(handle: Handle<AlertProps>) {
-		return () => {
-			let { children, kind } = handle.props;
-			let resolved = isAlertKind(kind) ? kind : "note";
-			let { color, Glyph } = ALERT_KINDS[resolved];
-			let label = labels.alerts[resolved];
-
-			return (
-				<aside
-					aria-label={label}
-					data-color={color}
-					mix={[
-						semanticColorPanel(),
-						vstack({ gap: 2 }),
-						m("1.5rem", 0),
-						p(4, 5),
-						rounded("lg"),
-						border({ width: 1, style: "solid" }),
-						text("sm"),
-						when("& > *", mb(0)),
-						when("& > p", m(0)),
-					]}
-				>
-					<p
-						mix={[
-							m(0),
-							hstack({ gap: 2, align: "center" }),
-							font("mono"),
-							text("xs"),
-							weight("semibold"),
-							textTransform("uppercase"),
-							tracking("widest"),
-						]}
-					>
-						<span mix={[inlineFlex()]}>
-							<Glyph size={14} aria-hidden="true" />
-						</span>
-						{label}
-					</p>
-					{children}
-				</aside>
-			);
-		};
+	/** A list of a reader's questions, each opening on its own. */
+	function DocsFaq(handle: Handle<{ children?: RemixNode }>) {
+		return () => <Accordion mix={[m("1.5rem", 0)]}>{handle.props.children}</Accordion>;
 	}
 
-	return { code: DocsCode, alert: DocsAlert };
+	/** One question, whose answer opens under it. */
+	function DocsQuestion(handle: Handle<{ title: string; children?: RemixNode }>) {
+		return () => (
+			<Accordion.Item>
+				<Accordion.Trigger>
+					{handle.props.title}
+					<ChevronDownIcon data-slot="icon" aria-hidden="true" />
+				</Accordion.Trigger>
+				<Accordion.Content>{handle.props.children}</Accordion.Content>
+			</Accordion.Item>
+		);
+	}
+
+	return {
+		code: DocsCode,
+		alert: DocsAlert,
+		steps: DocsSteps,
+		step: DocsStep,
+		ui: DocsUi,
+		uipath: DocsUiPath,
+		kbd: DocsKbd,
+		mockup: DocsMockup,
+		faq: DocsFaq,
+		question: DocsQuestion,
+	};
 }

@@ -6188,14 +6188,14 @@ export default {
 			notFoundDescription: "お探しのドキュメントページは存在しません。",
 		},
 
-		lastUpdated: "最終更新: {$date}",
-
 		shell: {
 			menu: "ドキュメント一覧",
 			noResults: "検索に一致するページはありません。",
 			toc: "このページの内容",
 			root: "ドキュメント",
-			backToIndex: "ドキュメントに戻る",
+			filterLabel: "ページを絞り込む",
+			support: "サポートに問い合わせる",
+			updated: "最終更新",
 		},
 
 		pager: {
@@ -6219,12 +6219,82 @@ export default {
 
 		hub: {
 			eyebrow: "ドキュメント",
-			title: "Uptime ドキュメント",
+			title: "どのようなことでお困りですか？",
 			description:
-				"モニターの設定、チームへのアラート配信、ステータスページの公開、そしてそのすべてを API で自動化する方法を説明します。",
-			start: "はじめに",
-			topics: "トピックから探す",
-			read: "ガイドを読む",
+				"モニターの設定、適切な担当者へのアラート、ユーザーへの状況共有のためのガイドと、問題が起きたときの対処法をまとめています。",
+			start: "どこから始めればいいですか？",
+			step: "ステップ {$number}",
+			topicsTitle: "よく見られるトピック",
+			sectionsTitle: "セクションから探す",
+			popular: "その他のガイド",
+			count: "{$count} ページ",
+			topics: {
+				monitors: "モニター",
+				alerts: "アラート",
+				statusPages: "ステータスページ",
+				troubleshooting: "問題を解決する",
+				api: "API",
+			},
+			sections: {
+				gettingStarted: "5 分で最初のモニターとアラートを設定します。",
+				guides: "モニター、アラート、ステータスページ、cron ジョブ、フローの手順ガイド。",
+				troubleshooting:
+					"アラートやチェック、cron ジョブが想定どおりに動かないときに確認すること。",
+				concepts: "各モニタータイプ、アラート、ステータスページ、メンテナンス、レポートの仕組み。",
+				team: "メンバーとロール、招待、認証済みドメイン、API キー。",
+				api: "認証、ページネーション、エラー、レート制限。",
+				apiResources: "すべてのエンドポイントとそのフィールド、スコープ、例。",
+			},
+		},
+		actions: {
+			copy: "ページをコピー",
+			copied: "コピーしました",
+			failed: "コピーできませんでした",
+			more: "このページのその他の操作",
+			markdown: "Markdown で表示",
+			markdownDescription: "ページのソース。メモやチャットに貼り付けられます。",
+			claude: "Claude で開く",
+			chatgpt: "ChatGPT で開く",
+			assistantDescription: "このページについて質問できます。",
+			prompt: "{$url} を読んで、内容についての質問に答えてください。",
+		},
+		feedback: {
+			question: "このページは役に立ちましたか？",
+			yes: "はい",
+			no: "いいえ",
+			note: "追加や修正してほしい点はありますか？（任意）",
+			send: "フィードバックを送信",
+			thanks: "ありがとうございます。いただいた回答はこのページの改善に役立てます。",
+		},
+		next: {
+			title: "次のステップ",
+		},
+		questions: {
+			title: "まだ解決しませんか？",
+			body: "試したことを添えてご連絡ください。解決までお手伝いします。",
+			link: "サポートに問い合わせる",
+		},
+		notFound: {
+			eyebrow: "404",
+			links: "よく読まれているページ",
+		},
+		search: {
+			title: "ドキュメントを検索",
+			label: "ドキュメントを検索",
+			placeholder: "検索、または質問を入力",
+			submit: "検索",
+			resultsFor: "「{$query}」の検索結果",
+			results: "検索結果",
+			empty: "「{$query}」に一致するページはありません。",
+			emptyHint: "語句を減らすか言い換えるか、下のページから始めてください。",
+			popular: "よく読まれているページ",
+			contact: "お探しの情報が見つかりませんか？",
+			kinds: {
+				guide: "ガイド",
+				troubleshooting: "問題を解決する",
+				concept: "コンセプト",
+				reference: "API リファレンス",
+			},
 		},
 	},
 };
