@@ -13,6 +13,7 @@ import { bg, fg } from "@sdxc/u/color";
 import { insTop, sticky } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
+import { is } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { nowrap, text } from "@sdxc/u/typography";
 import { Link, Table } from "@sdxc/ui";
@@ -140,6 +141,7 @@ export const PackageTable = clientEntry(
 		return () => {
 			let query = { ...handle.props.query, sort };
 			let rows = sortRows(handle.props.rows, sort);
+			let showJsdelivr = rows.some((row) => row.jsdelivr30 > 0);
 			let sortable = SORT_KEYS.reduce(
 				(columns, key) => {
 					columns[key] = {
@@ -155,10 +157,12 @@ export const PackageTable = clientEntry(
 			return (
 				<Table.Container mix={media("(min-width: 64rem)", overflow("visible"))}>
 					<Table aria-label="Downloads by package">
-						<Table.Header mix={[sticky(), insTop(HEADER_OFFSET), z(1), bg()]}>
+						<Table.Header mix={[sticky(), insTop(HEADER_OFFSET), z(1), bg(), nowrap()]}>
 							<Table.Row>
-								<Table.Column {...sortable.name}>Package</Table.Column>
-								<Table.Column>Last 30 days</Table.Column>
+								<Table.Column {...sortable.name} mix={is("1%")}>
+									Package
+								</Table.Column>
+								<Table.Column>Trend</Table.Column>
 								<Table.Column numeric {...sortable.week}>
 									7 days
 								</Table.Column>
@@ -171,9 +175,11 @@ export const PackageTable = clientEntry(
 								<Table.Column numeric {...sortable.total}>
 									Total
 								</Table.Column>
-								<Table.Column numeric {...sortable.jsdelivr}>
-									jsDelivr, 30 days
-								</Table.Column>
+								{showJsdelivr ? (
+									<Table.Column numeric {...sortable.jsdelivr}>
+										jsDelivr
+									</Table.Column>
+								) : null}
 								<Table.Column>Latest</Table.Column>
 								<Table.Column numeric>On latest</Table.Column>
 								<Table.Column numeric>Versions</Table.Column>
@@ -198,7 +204,9 @@ export const PackageTable = clientEntry(
 									</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.last30)}</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.total)}</Table.Cell>
-									<Table.Cell numeric>{NUMBER_FORMAT.format(row.jsdelivr30)}</Table.Cell>
+									{showJsdelivr ? (
+										<Table.Cell numeric>{NUMBER_FORMAT.format(row.jsdelivr30)}</Table.Cell>
+									) : null}
 									<Table.Cell mix={[nowrap(), text("xs"), fg("neutral.muted")]}>
 										{row.latest ?? "unpublished"}
 									</Table.Cell>

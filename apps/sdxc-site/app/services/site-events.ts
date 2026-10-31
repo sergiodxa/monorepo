@@ -1,7 +1,7 @@
 /**
- * What readers and agents ask sdxc.dev for: searches that found nothing, and which MCP tools
- * are called for which packages, counted per day in the site cache so the stats page can show
- * what the documentation is missing.
+ * What readers and agents ask sdxc.dev for: what they search, split by whether it found
+ * anything, and which MCP tools are called for which packages, counted per day in the site
+ * cache so the stats page shows what people look for and what the documentation is missing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,8 +37,17 @@ const DAY_TTL = "90 days";
 /** How many days, today included, the stats page sums. */
 const WINDOW_DAYS = 30;
 
-/** Queries shorter than this are a reader still typing, and are not recorded as misses. */
+/** Queries shorter than this are a reader still typing, and are not recorded. */
 const MIN_QUERY_LENGTH = 3;
+
+/** Longer queries are prose or payloads rather than something to look up, and are not recorded. */
+const MAX_RECORDED_QUERY_LENGTH = 80;
+
+/**
+ * The characters a lookup is written in: words, numbers, and the punctuation of package names,
+ * paths and versions. Quotes, brackets, `=` and `;` are the stuff of injection probes.
+ */
+const PLAUSIBLE_QUERY = /^[\p{L}\p{N} ._\-/@:#+]+$/u;
 
 /** Longer queries are cut to this, which is also the longest the MCP tools accept. */
 const MAX_QUERY_LENGTH = 200;
@@ -46,8 +55,8 @@ const MAX_QUERY_LENGTH = 200;
 /** Longest package name kept from a `get_package` call. */
 const MAX_PACKAGE_LENGTH = 100;
 
-/** Distinct missed queries one day keeps, so a flood of junk cannot grow an entry unbounded. */
-const MAX_MISSES_PER_DAY = 500;
+/** Distinct queries one day keeps per outcome, so a flood of junk cannot grow an entry unbounded. */
+const MAX_QUERIES_PER_DAY = 500;
 
 /** How many rows each of the page's tables shows. */
 const TOP_ROWS = 25;
@@ -63,34 +72,43 @@ export interface SiteEvent {
 	tool?: { name: string; package?: string };
 }
 
-/** A missed query as one day stores it. */
-interface StoredMiss {
+/** A query as one day stores it. */
+interface StoredQuery {
 	count: number;
 	surfaces: string[];
 }
 
 /** One day's counts, as the entry under `site-events:<YYYY-MM-DD>` holds them. */
 export interface SiteEventsDay {
-	/** Searches per surface; the dialog counts only its misses, since it searches per keystroke. */
+	/** Searches per surface; the dialog's keystrokes are collapsed into the query the reader meant. */
 	searches: Record<string, number>;
+	/** Normalized queries that found something. */
+	hits: Record<string, StoredQuery>;
 	/** Normalized queries that found nothing. */
-	misses: Record<string, StoredMiss>;
+	misses: Record<string, StoredQuery>;
 	/** Calls per MCP tool name. */
 	tools: Record<string, number>;
 	/** `get_package` calls per package name asked for, published or not. */
 	packages: Record<string, number>;
 }
 
-/** What a stored day must look like to be counted; anything else reads as an empty day. */
+/** A day's queries for one outcome; anything else in a stored day reads as an empty day. */
+const QUERIES_SCHEMA = s.record(
+	s.string(),
+	s.object({ count: s.number(), surfaces: s.array(s.string()) }),
+);
+
+/** What a stored day must look like to be counted; days stored before hits were kept have none. */
 const DAY_SCHEMA = s.object({
 	searches: s.record(s.string(), s.number()),
-	misses: s.record(s.string(), s.object({ count: s.number(), surfaces: s.array(s.string()) })),
+	hits: s.optional(QUERIES_SCHEMA),
+	misses: QUERIES_SCHEMA,
 	tools: s.record(s.string(), s.number()),
 	packages: s.record(s.string(), s.number()),
 });
 
-/** A query that found nothing, summed over the window. */
-export interface MissedQuery {
+/** A query, summed over the window. */
+export interface QueryCount {
 	query: string;
 	count: number;
 	/** Every surface it was typed on. */
@@ -103,12 +121,16 @@ export interface MissedQuery {
 export interface SiteEventsSnapshot {
 	/** Each day the counts cover, oldest first, as `YYYY-MM-DD`. */
 	days: string[];
-	/** Searches per surface; the dialog's figure is its misses alone. */
+	/** Searches per surface, the dialog's keystrokes collapsed into the queries meant. */
 	searches: Record<SearchSurface, number>;
+	/** Every search that found something, each surface included. */
+	hitCount: number;
+	/** The most frequent queries that found something, most frequent first. */
+	hits: QueryCount[];
 	/** Every search that found nothing, each surface included. */
 	missCount: number;
 	/** The most frequent missed queries, most frequent first. */
-	misses: MissedQuery[];
+	misses: QueryCount[];
 	/** Every MCP tool call. */
 	toolCallCount: number;
 	/** Calls per tool, most called first. */
@@ -125,6 +147,19 @@ export interface SiteEventsSnapshot {
  */
 export function normalizeQuery(query: string): string {
 	return query.trim().toLowerCase().replace(/\s+/g, " ").slice(0, MAX_QUERY_LENGTH);
+}
+
+/**
+ * Whether a normalized query reads as something a person or agent looks up. Scanners send SQL
+ * and script payloads to every search box, and those would otherwise top the tables.
+ *
+ * @param query A normalized query.
+ * @returns `true` for 3 to 80 characters with a letter, written only in word characters and
+ * the punctuation of names, paths and versions.
+ */
+export function isPlausibleQuery(query: string): boolean {
+	if (query.length < MIN_QUERY_LENGTH || query.length > MAX_RECORDED_QUERY_LENGTH) return false;
+	return PLAUSIBLE_QUERY.test(query) && /\p{L}/u.test(query);
 }
 
 /**
@@ -179,58 +214,60 @@ export async function applySiteEvent(
 }
 
 /**
- * Counts a search into the day. The dialog re-searches on every keystroke, so it counts only
- * a miss of three characters or more, skips one that extends no further than a miss it already
- * recorded, and takes back one count from each dialog-only miss the new one extends.
+ * Counts a search into the day, as a hit or a miss. The dialog re-searches on every keystroke,
+ * so a dialog query that a recorded dialog query already extends is skipped (a reader
+ * backspacing), and each dialog-only query the new one extends gives back one count.
  *
- * @returns Whether the day changed.
+ * @returns Whether the day changed; an implausible query changes nothing.
  */
 function foldSearch(day: SiteEventsDay, search: SiteEvent["search"]): boolean {
 	if (search === undefined) return false;
 	let { surface } = search;
 	let query = normalizeQuery(search.query);
-	let missed = search.results === 0 && query.length >= MIN_QUERY_LENGTH;
+	if (!isPlausibleQuery(query)) return false;
 
 	if (surface === "dialog") {
-		if (!missed) return false;
 		if (extendsNoFurther(day, query)) return false;
 		retractPrefixes(day, query);
 	}
 
 	increment(day.searches, surface);
-	if (!missed) return true;
-
-	let miss = day.misses[query];
-	if (miss === undefined) {
-		if (Object.keys(day.misses).length >= MAX_MISSES_PER_DAY) return true;
-		day.misses[query] = { count: 1, surfaces: [surface] };
+	let queries = search.results === 0 ? day.misses : day.hits;
+	let stored = queries[query];
+	if (stored === undefined) {
+		if (Object.keys(queries).length >= MAX_QUERIES_PER_DAY) return true;
+		queries[query] = { count: 1, surfaces: [surface] };
 		return true;
 	}
-	miss.count += 1;
-	if (!miss.surfaces.includes(surface)) miss.surfaces.push(surface);
+	stored.count += 1;
+	if (!stored.surfaces.includes(surface)) stored.surfaces.push(surface);
 	return true;
 }
 
-/** Whether a dialog miss already recorded today starts with `query`: a reader backspacing. */
+/** Whether a dialog query already recorded today starts with `query`: a reader backspacing. */
 function extendsNoFurther(day: SiteEventsDay, query: string): boolean {
-	return Object.entries(day.misses).some(
-		([recorded, miss]) =>
-			recorded !== query && recorded.startsWith(query) && miss.surfaces.includes("dialog"),
+	return [day.hits, day.misses].some((queries) =>
+		Object.entries(queries).some(
+			([recorded, stored]) =>
+				recorded !== query && recorded.startsWith(query) && stored.surfaces.includes("dialog"),
+		),
 	);
 }
 
 /**
- * Takes one count back from each dialog-only miss that `query` extends, on the reading that
- * the reader who typed the shorter query kept typing; a miss left at zero is removed.
+ * Takes one count back from each dialog-only query that `query` extends, hit or miss, on the
+ * reading that the reader who typed the shorter query kept typing; one left at zero is removed.
  */
 function retractPrefixes(day: SiteEventsDay, query: string): void {
-	for (let [recorded, miss] of Object.entries(day.misses)) {
-		if (recorded === query || !query.startsWith(recorded)) continue;
-		if (miss.surfaces.length !== 1 || miss.surfaces[0] !== "dialog") continue;
-		miss.count -= 1;
-		let dialog = day.searches.dialog ?? 0;
-		if (dialog > 0) day.searches.dialog = dialog - 1;
-		if (miss.count <= 0) delete day.misses[recorded];
+	for (let queries of [day.hits, day.misses]) {
+		for (let [recorded, stored] of Object.entries(queries)) {
+			if (recorded === query || !query.startsWith(recorded)) continue;
+			if (stored.surfaces.length !== 1 || stored.surfaces[0] !== "dialog") continue;
+			stored.count -= 1;
+			let dialog = day.searches.dialog ?? 0;
+			if (dialog > 0) day.searches.dialog = dialog - 1;
+			if (stored.count <= 0) delete queries[recorded];
+		}
 	}
 }
 
@@ -242,8 +279,8 @@ function increment(counts: Record<string, number>, key: string): void {
 /** A stored day, or an empty one when nothing is stored or what is stored has another shape. */
 function parseDay(value: unknown): SiteEventsDay {
 	let parsed = s.parseSafe(DAY_SCHEMA, value);
-	if (parsed.success) return parsed.value;
-	return { searches: {}, misses: {}, tools: {}, packages: {} };
+	if (parsed.success) return { ...parsed.value, hits: parsed.value.hits ?? {} };
+	return { searches: {}, hits: {}, misses: {}, tools: {}, packages: {} };
 }
 
 /** The UTC calendar day of a moment, as `YYYY-MM-DD`. */
@@ -293,21 +330,15 @@ function summarize(
 		search_docs: 0,
 		search_packages: 0,
 	};
-	let misses = new Map<string, MissedQuery>();
+	let hits = new Map<string, QueryCount>();
+	let misses = new Map<string, QueryCount>();
 	let tools: Record<string, number> = {};
 	let packages: Record<string, number> = {};
 
 	for (let { day, counts } of stored) {
 		for (let surface of SEARCH_SURFACES) searches[surface] += counts.searches[surface] ?? 0;
-		for (let [query, miss] of Object.entries(counts.misses)) {
-			let total = misses.get(query) ?? { query, count: 0, surfaces: [], lastSeen: day };
-			total.count += miss.count;
-			total.lastSeen = day;
-			for (let surface of miss.surfaces) {
-				if (isSurface(surface) && !total.surfaces.includes(surface)) total.surfaces.push(surface);
-			}
-			misses.set(query, total);
-		}
+		addQueries(hits, counts.hits, day);
+		addQueries(misses, counts.misses, day);
 		for (let [name, count] of Object.entries(counts.tools))
 			tools[name] = (tools[name] ?? 0) + count;
 		for (let [name, count] of Object.entries(counts.packages)) {
@@ -315,18 +346,47 @@ function summarize(
 		}
 	}
 
-	let allMisses = [...misses.values()];
 	return {
 		days,
 		searches,
-		missCount: allMisses.reduce((sum, miss) => sum + miss.count, 0),
-		misses: allMisses
-			.sort((a, b) => b.count - a.count || b.lastSeen.localeCompare(a.lastSeen))
-			.slice(0, TOP_ROWS),
+		hitCount: totalCount(hits),
+		hits: topQueries(hits),
+		missCount: totalCount(misses),
+		misses: topQueries(misses),
 		toolCallCount: Object.values(tools).reduce((sum, count) => sum + count, 0),
 		tools: ranked(tools),
 		packages: ranked(packages).slice(0, TOP_ROWS),
 	};
+}
+
+/** Adds one day's queries into the window's totals, that day becoming each one's last seen. */
+function addQueries(
+	totals: Map<string, QueryCount>,
+	queries: Record<string, StoredQuery>,
+	day: string,
+) {
+	for (let [query, stored] of Object.entries(queries)) {
+		if (!isPlausibleQuery(query)) continue;
+		let total = totals.get(query) ?? { query, count: 0, surfaces: [], lastSeen: day };
+		total.count += stored.count;
+		total.lastSeen = day;
+		for (let surface of stored.surfaces) {
+			if (isSurface(surface) && !total.surfaces.includes(surface)) total.surfaces.push(surface);
+		}
+		totals.set(query, total);
+	}
+}
+
+/** Every search counted in a window's queries. */
+function totalCount(totals: Map<string, QueryCount>): number {
+	return [...totals.values()].reduce((sum, query) => sum + query.count, 0);
+}
+
+/** The most frequent queries, ties broken by the most recently seen. */
+function topQueries(totals: Map<string, QueryCount>): QueryCount[] {
+	return [...totals.values()]
+		.sort((a, b) => b.count - a.count || b.lastSeen.localeCompare(a.lastSeen))
+		.slice(0, TOP_ROWS);
 }
 
 /** Counters as rows, most first, ties by name so the order is stable between reads. */

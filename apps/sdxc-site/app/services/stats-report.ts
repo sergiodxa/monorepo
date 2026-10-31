@@ -328,14 +328,26 @@ function eventsMarkdown(events: SiteEventsSnapshot | null): string {
 	return [
 		"## Searches and MCP calls",
 		"",
-		`Last 30 days, ${events.days[0] ?? "—"} to ${events.days.at(-1) ?? "—"}. The search dialog records only searches that found nothing.`,
+		`Last 30 days, ${events.days[0] ?? "—"} to ${events.days.at(-1) ?? "—"}. The search dialog's keystrokes are collapsed into the query the reader meant.`,
 		"",
 		`- Searches: ${NUMBER_FORMAT.format(searches)} (${Object.entries(events.searches)
 			.map(([surface, count]) => `${surface} ${count}`)
 			.join(", ")})`,
+		`- Found something: ${NUMBER_FORMAT.format(events.hitCount)}`,
 		`- Found nothing: ${NUMBER_FORMAT.format(events.missCount)}`,
 		`- MCP calls: ${NUMBER_FORMAT.format(events.toolCallCount)}`,
 		"",
+		...(events.hits.length > 0
+			? [
+					"### Top searches",
+					"",
+					markdownTable(
+						["Query", "Times", "Where", "Last seen"],
+						events.hits.map((hit) => [hit.query, hit.count, hit.surfaces.join(", "), hit.lastSeen]),
+					),
+					"",
+				]
+			: []),
 		...(events.misses.length > 0
 			? [
 					"### Searches that found nothing",

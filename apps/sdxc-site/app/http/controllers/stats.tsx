@@ -82,7 +82,7 @@ export default createAction(routes.stats, async (ctx) => {
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={focus ? `${focus.stats.name} downloads — sdxc` : "npm downloads — sdxc"}
+			title={focus ? `${focus.stats.name} stats — sdxc` : "Usage stats — sdxc"}
 			robots={STATS_ROBOTS}
 		>
 			<SiteHeader />

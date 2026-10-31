@@ -14,6 +14,7 @@ import type { SiteEvent, SiteEventsDay } from "~/app/services/site-events";
 
 import {
 	applySiteEvent,
+	isPlausibleQuery,
 	normalizeQuery,
 	readSiteEvents,
 	SITE_EVENTS_KEY_PREFIX,
@@ -57,25 +58,58 @@ describe("applySiteEvent", () => {
 		});
 	});
 
-	test("leaves queries under three characters out of the misses", async () => {
-		let day = await fold(new MemoryCache(), [
-			{ search: { surface: "page", query: "ws", results: 0 } },
-		]);
-
-		expect(day?.searches).toEqual({ page: 1 });
-		expect(day?.misses).toEqual({});
-	});
-
-	test("writes nothing for a dialog search that found something", async () => {
+	test("records nothing for a query under three characters", async () => {
 		let cache = new MemoryCache();
 		let written = await applySiteEvent(
 			cache,
-			{ search: { surface: "dialog", query: "result", results: 3 } },
+			{ search: { surface: "page", query: "ws", results: 0 } },
 			NOW,
 		);
 
 		expect(isSuccess(written) && written.data).toBe(false);
 		expect(await fold(cache, [])).toBeNull();
+	});
+
+	test("records nothing for injection probes, payloads or bare numbers", async () => {
+		let cache = new MemoryCache();
+		let probes = [
+			"1 and extractvalue(1,concat(0x7e,((select (elt(1=1,1)))),0x7e))",
+			"1')",
+			`1,'".)(abcd`,
+			"98766",
+			"<script>alert(1)</script>",
+			"a".repeat(81),
+		];
+		for (let query of probes) {
+			await applySiteEvent(cache, { search: { surface: "page", query, results: 0 } }, NOW);
+		}
+
+		expect(await fold(cache, [])).toBeNull();
+		expect(isPlausibleQuery("@sdxc/jwt")).toBe(true);
+		expect(isPlausibleQuery("remix v3 middleware")).toBe(true);
+	});
+
+	test("records a search that found something as a hit", async () => {
+		let day = await fold(new MemoryCache(), [
+			{ search: { surface: "page", query: "Result", results: 3 } },
+			{ search: { surface: "search_docs", query: "result", results: 1 } },
+		]);
+
+		expect(day?.hits).toEqual({ result: { count: 2, surfaces: ["page", "search_docs"] } });
+		expect(day?.misses).toEqual({});
+		expect(day?.searches).toEqual({ page: 1, search_docs: 1 });
+	});
+
+	test("collapses dialog keystrokes across hits and misses into the longest query", async () => {
+		let day = await fold(new MemoryCache(), [
+			{ search: { surface: "dialog", query: "web", results: 4 } },
+			{ search: { surface: "dialog", query: "webso", results: 1 } },
+			{ search: { surface: "dialog", query: "websockz", results: 0 } },
+		]);
+
+		expect(day?.hits).toEqual({});
+		expect(day?.misses).toEqual({ websockz: { count: 1, surfaces: ["dialog"] } });
+		expect(day?.searches).toEqual({ dialog: 1 });
 	});
 
 	test("records a reader typing in the dialog once, under the longest query", async () => {
@@ -118,7 +152,13 @@ describe("applySiteEvent", () => {
 		await cache.write(TODAY_KEY, { searches: "garbage" });
 		let day = await fold(cache, [{ tool: { name: "list_packages" } }]);
 
-		expect(day).toEqual({ searches: {}, misses: {}, tools: { list_packages: 1 }, packages: {} });
+		expect(day).toEqual({
+			searches: {},
+			hits: {},
+			misses: {},
+			tools: { list_packages: 1 },
+			packages: {},
+		});
 	});
 });
 
@@ -152,6 +192,10 @@ describe("readSiteEvents", () => {
 		expect(snapshot?.days.at(0)).toBe("2026-10-02");
 		expect(snapshot?.days.at(-1)).toBe("2026-10-31");
 		expect(snapshot?.searches).toEqual({ page: 3, dialog: 0, search_docs: 0, search_packages: 1 });
+		expect(snapshot?.hitCount).toBe(1);
+		expect(snapshot?.hits).toEqual([
+			{ query: "result", count: 1, surfaces: ["page"], lastSeen: "2026-10-31" },
+		]);
 		expect(snapshot?.missCount).toBe(3);
 		expect(snapshot?.misses).toEqual([
 			{ query: "opml", count: 2, surfaces: ["page", "search_packages"], lastSeen: "2026-10-31" },

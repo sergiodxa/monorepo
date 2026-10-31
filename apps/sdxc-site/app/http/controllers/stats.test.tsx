@@ -84,6 +84,7 @@ describe("GET /stats", () => {
 
 		let body = await (await fetchApp("/stats")).text();
 
+		expect(body).toContain("Usage stats");
 		expect(body).toContain("npm downloads");
 		expect(body).toContain("120");
 		expect(body).toContain('href="/stats?package=result"');
@@ -106,7 +107,7 @@ describe("GET /stats", () => {
 
 		let body = await (await fetchApp("/stats?package=result&range=30")).text();
 
-		expect(body).toContain("@sdxc/result downloads — sdxc");
+		expect(body).toContain("@sdxc/result stats — sdxc");
 		expect(body).toContain("Downloads by version, last week");
 		expect(body).toContain("75%");
 		expect(body).toContain('href="/stats?range=30"');
@@ -119,7 +120,7 @@ describe("GET /stats", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain("npm downloads — sdxc");
+		expect(body).toContain("Usage stats — sdxc");
 		expect(body).toContain('aria-current="page"');
 	});
 

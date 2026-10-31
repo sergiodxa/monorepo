@@ -60,11 +60,15 @@ namespace Headline {
 		summary: Pick<PackageSummary, "last7" | "previous7" | "last30" | "previous30" | "total">;
 		days: string[];
 		daily: number[];
+		/** Secondary figures, set as one quiet line under the strip so the four above stay large. */
 		children?: RemixNode;
 	}
 }
 
-/** Renders the headline strip: the last week and month against the ones before, and the peak. */
+/**
+ * Renders the headline strip, the last week and month against the ones before, all time and
+ * the peak, with any secondary figures on a quiet line beneath.
+ */
 function Headline(handle: Handle<Headline.Props>) {
 	return () => {
 		let { children, daily, days, summary } = handle.props;
@@ -72,23 +76,25 @@ function Headline(handle: Handle<Headline.Props>) {
 		let peakDay = days[daily.indexOf(peak)];
 
 		return (
-			<StatStrip>
-				<StatStrip.Item label={<Delta after={summary.last7} before={summary.previous7} />}>
-					{NUMBER_FORMAT.format(summary.last7)}
-				</StatStrip.Item>
-				<StatStrip.Item
-					label={<Delta after={summary.last30} before={summary.previous30} period="30 days" />}
-				>
-					{NUMBER_FORMAT.format(summary.last30)}
-				</StatStrip.Item>
-				<StatStrip.Item label="All time">{NUMBER_FORMAT.format(summary.total)}</StatStrip.Item>
-				<StatStrip.Item
-					label={peak > 0 && peakDay ? `Best day, ${formatDay(peakDay)}` : "Best day"}
-				>
-					{NUMBER_FORMAT.format(peak)}
-				</StatStrip.Item>
-				{children}
-			</StatStrip>
+			<div mix={vstack({ gap: 3, align: "stretch" })}>
+				<StatStrip>
+					<StatStrip.Item label={<Delta after={summary.last7} before={summary.previous7} />}>
+						{NUMBER_FORMAT.format(summary.last7)}
+					</StatStrip.Item>
+					<StatStrip.Item
+						label={<Delta after={summary.last30} before={summary.previous30} period="30 days" />}
+					>
+						{NUMBER_FORMAT.format(summary.last30)}
+					</StatStrip.Item>
+					<StatStrip.Item label="All time">{NUMBER_FORMAT.format(summary.total)}</StatStrip.Item>
+					<StatStrip.Item
+						label={peak > 0 && peakDay ? `Best day, ${formatDay(peakDay)}` : "Best day"}
+					>
+						{NUMBER_FORMAT.format(peak)}
+					</StatStrip.Item>
+				</StatStrip>
+				{children ? <p mix={[text("sm"), fg("neutral.muted")]}>{children}</p> : null}
+			</div>
 		);
 	};
 }
@@ -113,6 +119,25 @@ function Delta(handle: Handle<Delta.Props>) {
 			</span>
 		);
 	};
+}
+
+/**
+ * The collection's secondary figures as one line. jsDelivr hits join it only once there are
+ * any, since a zero there says the source is quiet rather than anything about adoption.
+ */
+function collectionFacts(facts: {
+	active: number;
+	packages: number;
+	hits: number;
+	medianShare: number | null;
+}): string {
+	let parts = [`${facts.active} of ${facts.packages} packages downloaded last week`];
+	if (facts.hits > 0)
+		parts.push(`${NUMBER_FORMAT.format(facts.hits)} jsDelivr hits in the last 30 days`);
+	if (facts.medianShare !== null) {
+		parts.push(`${SHARE_FORMAT.format(facts.medianShare)} median share on the latest version`);
+	}
+	return parts.join(" · ");
 }
 
 namespace StatsPage {
@@ -161,52 +186,59 @@ export default function StatsPage(handle: Handle<StatsPage.Props>) {
 				<header mix={vstack({ gap: 2, align: "stretch" })}>
 					<div mix={hstack({ gap: 3, align: "center", justify: "between" })}>
 						<h1 mix={[text("xl"), weight("bold"), fg("neutral.emphasis")]}>
-							{focus ? focus.stats.name : "npm downloads"}
+							{focus ? focus.stats.name : "Usage stats"}
 						</h1>
 						<RangePicker query={query} />
 					</div>
-					<p mix={[text("sm"), fg("neutral.muted")]}>
-						{focus ? (
-							<>
-								<Link href={statsHref(query, { package: null })}>All packages</Link>
-								{" · "}
-								<Link href={`https://www.npmjs.com/package/${focus.stats.name}`}>npm</Link>
-								{" · "}
-							</>
-						) : null}
-						Counts through {through ? formatDay(through) : "—"}, read from npm{" "}
-						{new Date(snapshot.fetchedAt).toISOString().slice(0, 16).replace("T", " ")} UTC. npm
-						counts every tarball fetch, CI and mirrors included.
-					</p>
-					{current < published ? (
-						<p mix={[text("sm"), fg("warning")]}>
-							{current} of {published} packages are up to date; npm rate-limits its downloads API,
-							so the rest are read over the next visits and the daily refresh.
+					{focus ? (
+						<p mix={[text("sm"), fg("neutral.muted")]}>
+							<Link href={statsHref(query, { package: null })}>All packages</Link>
+							{" · "}
+							<Link href={`https://www.npmjs.com/package/${focus.stats.name}`}>npm</Link>
 						</p>
 					) : null}
 				</header>
 
-				{focus ? (
-					<Headline summary={focus} days={snapshot.days} daily={focus.stats.daily}>
-						<StatStrip.Item label="On the latest version, last week">
-							{focus.latestShare === null ? "—" : SHARE_FORMAT.format(focus.latestShare)}
-						</StatStrip.Item>
-					</Headline>
-				) : (
-					<Headline summary={collectionSummary} days={snapshot.days} daily={collection}>
-						<StatStrip.Item label="Packages downloaded last week">
-							{active} of {rows.length}
-						</StatStrip.Item>
-						<StatStrip.Item label="jsDelivr hits, last 30 days">
-							{NUMBER_FORMAT.format(windowSum(hits, 30))}
-						</StatStrip.Item>
-						<StatStrip.Item label="Median share on the latest version">
-							{medianShare === null ? "—" : SHARE_FORMAT.format(medianShare)}
-						</StatStrip.Item>
-					</Headline>
-				)}
+				<section mix={vstack({ gap: 6, align: "stretch" })}>
+					<div mix={vstack({ gap: 2, align: "stretch" })}>
+						{focus ? null : (
+							<h2 mix={[text("lg"), weight("semibold"), fg("neutral.emphasis")]}>npm downloads</h2>
+						)}
+						<p mix={[text("sm"), fg("neutral.muted")]}>
+							Counts through {through ? formatDay(through) : "—"}, read from npm{" "}
+							{new Date(snapshot.fetchedAt).toISOString().slice(0, 16).replace("T", " ")} UTC. npm
+							counts every tarball fetch, CI and mirrors included.
+						</p>
+						{current < published ? (
+							<p mix={[text("sm"), fg("warning")]}>
+								{current} of {published} packages are up to date; npm rate-limits its downloads API,
+								so the rest are read over the next visits and the daily refresh.
+							</p>
+						) : null}
+					</div>
 
-				<DownloadChart label={focus?.stats.name ?? "Every package"} days={days} daily={series} />
+					{focus ? (
+						<Headline summary={focus} days={snapshot.days} daily={focus.stats.daily}>
+							{focus.latestShare === null
+								? "No installs last week"
+								: SHARE_FORMAT.format(focus.latestShare)}
+							{focus.latestShare === null
+								? null
+								: " of last week's installs were on the latest version"}
+						</Headline>
+					) : (
+						<Headline summary={collectionSummary} days={snapshot.days} daily={collection}>
+							{collectionFacts({
+								active,
+								packages: rows.length,
+								hits: windowSum(hits, 30),
+								medianShare,
+							})}
+						</Headline>
+					)}
+
+					<DownloadChart label={focus?.stats.name ?? "Every package"} days={days} daily={series} />
+				</section>
 
 				{focus ? (
 					<PackageTrends

@@ -1,6 +1,6 @@
 /**
- * The stats page's section on what readers and agents asked for: searches that found nothing,
- * and the MCP tools called and the packages they were called about.
+ * The stats page's section on what readers and agents asked for: the top searches, the ones
+ * that found nothing, and the MCP tools called and the packages they were called about.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,7 +13,7 @@ import { vstack } from "@sdxc/u/layout";
 import { text, weight } from "@sdxc/u/typography";
 import { StatStrip, Table } from "@sdxc/ui";
 
-import type { SearchSurface, SiteEventsSnapshot } from "~/app/services/site-events";
+import type { QueryCount, SearchSurface, SiteEventsSnapshot } from "~/app/services/site-events";
 
 import { SEARCH_SURFACES } from "~/app/services/site-events";
 
@@ -36,9 +36,9 @@ namespace SiteEventsSection {
 }
 
 /**
- * Renders the section: a headline strip, the queries that found nothing, and the MCP calls.
- * The dialog searches on every keystroke, so its figure counts only the misses it recorded,
- * and "Searches" sums every surface on those terms.
+ * Renders the section: a headline strip, the top searches, the ones that found nothing, and the
+ * MCP calls. The dialog searches on every keystroke, so its searches are counted after the
+ * keystrokes are collapsed into the query the reader meant.
  */
 export default function SiteEventsSection(handle: Handle<SiteEventsSection.Props>) {
 	return () => {
@@ -67,7 +67,7 @@ namespace Recorded {
 	}
 }
 
-/** Renders the strip and the three tables for a window with something recorded. */
+/** Renders the strip and the tables for a window with something recorded; MCP joins once called. */
 function Recorded(handle: Handle<Recorded.Props>) {
 	return () => {
 		let { events } = handle.props;
@@ -82,38 +82,29 @@ function Recorded(handle: Handle<Recorded.Props>) {
 					<StatStrip.Item label="Found nothing">
 						{NUMBER_FORMAT.format(events.missCount)}
 					</StatStrip.Item>
-					<StatStrip.Item label="MCP calls, last 30 days">
-						{NUMBER_FORMAT.format(events.toolCallCount)}
-					</StatStrip.Item>
+					{events.toolCallCount > 0 ? (
+						<StatStrip.Item label="MCP calls, last 30 days">
+							{NUMBER_FORMAT.format(events.toolCallCount)}
+						</StatStrip.Item>
+					) : null}
 				</StatStrip>
+
+				{events.hits.length > 0 ? (
+					<QueryTable
+						label="Top searches, last 30 days"
+						heading="Searched for"
+						rows={events.hits}
+					/>
+				) : null}
 
 				{events.misses.length === 0 ? (
 					<p mix={[text("sm"), fg("neutral.muted")]}>Every search found something.</p>
 				) : (
-					<Table.Container>
-						<Table aria-label="Searches that found nothing, last 30 days">
-							<Table.Header>
-								<Table.Row>
-									<Table.Column>Found nothing</Table.Column>
-									<Table.Column numeric>Times</Table.Column>
-									<Table.Column>Where</Table.Column>
-									<Table.Column>Last seen</Table.Column>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{events.misses.map((miss) => (
-									<Table.Row key={miss.query}>
-										<Table.Cell>{miss.query}</Table.Cell>
-										<Table.Cell numeric>{NUMBER_FORMAT.format(miss.count)}</Table.Cell>
-										<Table.Cell>
-											{miss.surfaces.map((surface) => SURFACE_LABELS[surface]).join(", ")}
-										</Table.Cell>
-										<Table.Cell>{miss.lastSeen}</Table.Cell>
-									</Table.Row>
-								))}
-							</Table.Body>
-						</Table>
-					</Table.Container>
+					<QueryTable
+						label="Searches that found nothing, last 30 days"
+						heading="Found nothing"
+						rows={events.misses}
+					/>
 				)}
 
 				{events.tools.length > 0 ? (
@@ -128,6 +119,49 @@ function Recorded(handle: Handle<Recorded.Props>) {
 					/>
 				) : null}
 			</div>
+		);
+	};
+}
+
+namespace QueryTable {
+	export interface Props {
+		/** The table's accessible name. */
+		label: string;
+		heading: string;
+		rows: QueryCount[];
+	}
+}
+
+/** Renders queries with how often, where and when they were last searched. */
+function QueryTable(handle: Handle<QueryTable.Props>) {
+	return () => {
+		let { heading, label, rows } = handle.props;
+
+		return (
+			<Table.Container>
+				<Table aria-label={label}>
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>{heading}</Table.Column>
+							<Table.Column numeric>Times</Table.Column>
+							<Table.Column>Where</Table.Column>
+							<Table.Column>Last seen</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{rows.map((row) => (
+							<Table.Row key={row.query}>
+								<Table.Cell>{row.query}</Table.Cell>
+								<Table.Cell numeric>{NUMBER_FORMAT.format(row.count)}</Table.Cell>
+								<Table.Cell>
+									{row.surfaces.map((surface) => SURFACE_LABELS[surface]).join(", ")}
+								</Table.Cell>
+								<Table.Cell>{row.lastSeen}</Table.Cell>
+							</Table.Row>
+						))}
+					</Table.Body>
+				</Table>
+			</Table.Container>
 		);
 	};
 }

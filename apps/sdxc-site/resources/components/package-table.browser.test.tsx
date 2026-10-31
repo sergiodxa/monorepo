@@ -86,10 +86,55 @@ describe("PackageTable", () => {
 	test("shows each package's jsDelivr hits beside its npm downloads", () => {
 		let host = mount([{ ...row("cache", 1, 1), jsdelivr30: 1234 }]);
 		let headers = Array.from(host.querySelectorAll("th"), (cell) => cell.textContent);
-		let column = headers.indexOf("jsDelivr, 30 days");
+		let column = headers.indexOf("jsDelivr");
 
 		expect(column).toBeGreaterThan(-1);
 		expect(host.querySelectorAll("tbody td")[column]?.textContent).toBe("1,234");
+	});
+
+	test("leaves the jsDelivr column out while no package has hits", () => {
+		let host = mount([row("cache", 1, 1), row("zip", 2, 2)]);
+		let headers = Array.from(host.querySelectorAll("th"), (cell) => cell.textContent);
+
+		expect(headers).not.toContain("jsDelivr");
+		expect(host.querySelectorAll("tbody tr:first-child td")).toHaveLength(headers.length);
+	});
+
+	test("keeps every header on one line", () => {
+		let host = mount([{ ...row("cache", 1, 1), jsdelivr30: 5 }]);
+
+		for (let header of host.querySelectorAll("th")) {
+			let walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
+			let tops = new Set<number>();
+			for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+				let range = document.createRange();
+				range.selectNodeContents(node);
+				for (let rect of range.getClientRects()) if (rect.width > 0) tops.add(Math.round(rect.top));
+			}
+			expect([header.textContent, tops.size]).toEqual([header.textContent, 1]);
+		}
+	});
+
+	test("sizes the package column to its longest name", () => {
+		let host = mount([row("catch-response-middleware", 1, 1), row("zip", 2, 2)]);
+		let column = host.querySelector("th");
+		let longest = Array.from(host.querySelectorAll("tbody td:first-child a")).reduce(
+			(widest, link) => Math.max(widest, link.getBoundingClientRect().width),
+			0,
+		);
+		if (!column) throw new Error("missing the package column");
+		let padding =
+			parseFloat(getComputedStyle(column).paddingInlineStart) +
+			parseFloat(getComputedStyle(column).paddingInlineEnd);
+		let cell = host.querySelector("tbody td:first-child");
+		let cellPadding = cell
+			? parseFloat(getComputedStyle(cell).paddingInlineStart) +
+				parseFloat(getComputedStyle(cell).paddingInlineEnd)
+			: 0;
+
+		expect(column.getBoundingClientRect().width).toBeLessThanOrEqual(
+			Math.max(longest + cellPadding, padding) + 2,
+		);
 	});
 
 	test("keeps the header row under the site header while the rows scroll past", async () => {

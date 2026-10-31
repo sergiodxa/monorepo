@@ -1,5 +1,5 @@
 /**
- * The focus view's trends beyond npm downloads: jsDelivr hits per day, the installed size
+ * The focus view's trends beyond npm downloads: jsDelivr hits per day once there are any, the installed size
  * of each release, and how much of each week's installs had moved to the latest release.
  * A plot with nothing to draw yet says so, since a fresh snapshot fills each one over time.
  *
@@ -67,23 +67,25 @@ export default function PackageTrends(handle: Handle<PackageTrends.Props>) {
 					media("(min-width: 64rem)", gridTemplate({ columns: "1fr 1fr 1fr" })),
 				]}
 			>
-				<Plot
-					title={`jsDelivr hits, ${NUMBER_FORMAT.format(summary.jsdelivr30)} in 30 days`}
-					label={`${stats.name}: jsDelivr hits per day`}
-					days={days}
-					top={axisTop(Math.max(0, ...jsdelivr))}
-				>
-					<Chart.Area
-						color={4}
-						markerCount={days.length}
-						parts={{ marker: [opacity(0), hover(opacity(100)), focusVisible(opacity(100))] }}
-						points={jsdelivr.map((value, index) => ({
-							x: index,
-							y: value,
-							label: `${formatDay(days[index] ?? "")}: ${NUMBER_FORMAT.format(value)} hits`,
-						}))}
-					/>
-				</Plot>
+				{jsdelivr.some((value) => value > 0) ? (
+					<Plot
+						title={`jsDelivr hits, ${NUMBER_FORMAT.format(summary.jsdelivr30)} in 30 days`}
+						label={`${stats.name}: jsDelivr hits per day`}
+						days={days}
+						top={axisTop(Math.max(0, ...jsdelivr))}
+					>
+						<Chart.Area
+							color={4}
+							markerCount={days.length}
+							parts={{ marker: [opacity(0), hover(opacity(100)), focusVisible(opacity(100))] }}
+							points={jsdelivr.map((value, index) => ({
+								x: index,
+								y: value,
+								label: `${formatDay(days[index] ?? "")}: ${NUMBER_FORMAT.format(value)} hits`,
+							}))}
+						/>
+					</Plot>
+				) : null}
 
 				{sizes.length > 0 && first && last ? (
 					<Plot
