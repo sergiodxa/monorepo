@@ -22,14 +22,19 @@ export default {
 		setup: {
 			heading: "Connect your client",
 			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
+			stepTitles: {
+				token: "Create a key",
+				scopes: "Grant the scopes",
+				configure: "Add the config",
+				ask: "Ask your agent",
+			},
 			steps: {
 				token: "Open your team’s API keys and create a key.",
 				scopes:
 					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
-				configure: "Add the mcp-bridge config below to your client’s mcp.json.",
+				configure: "Paste the mcp-bridge config into your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
-			configLabel: "mcp-bridge config",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
@@ -664,6 +669,19 @@ export default {
 	/**
 	 * `/trust` — comment fonctionne la surveillance et qui l'opère.
 	 */
+	browserFlows: {
+		eyebrow: "Flux navigateur",
+		figures: {
+			fastest: { label: "Intervalle le plus court", value: "{$minutes} min" },
+			default: { label: "Intervalle par défaut", value: "{$hours} h" },
+		},
+		faq: {
+			title: "Questions sur les flux navigateur",
+			description:
+				"Quand utiliser une session de navigateur, comment une exécution est facturée et ce qu’une courte spécification peut exprimer.",
+		},
+	},
+
 	trust: {
 		meta: {
 			title: "Confiance | Uptime",

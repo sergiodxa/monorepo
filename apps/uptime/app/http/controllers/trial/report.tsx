@@ -7,18 +7,21 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { Handle } from "remix/component";
 
 import { formatDate, formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
+import { ArrowRightIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
+import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { bs, m, maxIs, mi, minIs, p, pbe, pbs, pi } from "@sdxc/u/size";
-import { fontSize, leading, textAlign, weight, wordBreak } from "@sdxc/u/typography";
-import { Card, Heading, HeadingScope, LinkButton, Text } from "@sdxc/ui";
+import { bs, is, m, maxIs, mi, minIs, pi } from "@sdxc/u/size";
+import { fontSize, weight, wordBreak } from "@sdxc/u/typography";
+import { Card, LinkButton, MarketingHeader, MarketingSection, Text } from "@sdxc/ui";
+import { ClosingCta } from "@sdxc/ui/patterns";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -56,6 +59,41 @@ const REPORT_ZONE = "UTC";
 interface Figure {
 	label: string;
 	value: string;
+}
+
+/** Prop types for {@link FigureRow}. */
+namespace FigureRow {
+	export interface Props {
+		figures: Figure[];
+	}
+}
+
+/**
+ * A card's figures as one row of three, stacking only on a phone, so the uptime, the
+ * checks and the healthy count always read side by side as one measurement.
+ *
+ * @param handle - Runtime handle carrying the figures.
+ * @returns The render function producing the description list.
+ */
+function FigureRow(handle: Handle<FigureRow.Props>) {
+	return () => (
+		<dl
+			mix={[
+				m(0),
+				grid(),
+				gap(4),
+				gridTemplate({ columns: "repeat(3, minmax(0, 1fr))" }),
+				media("(max-width: 480px)", gridTemplate({ columns: "1fr" })),
+			]}
+		>
+			{handle.props.figures.map((figure) => (
+				<div key={figure.label} mix={[vstack({ gap: 1 })]}>
+					<dt mix={[fontSize("xs"), fg("neutral.muted")]}>{figure.label}</dt>
+					<dd mix={[m(0), fontSize("xl"), weight(700)]}>{figure.value}</dd>
+				</div>
+			))}
+		</dl>
+	);
 }
 
 /**
@@ -269,140 +307,100 @@ export default createAction(routes.trial.report, async (ctx) => {
 			}}
 		>
 			<MarketingLayout isSignedIn={false} {...chrome}>
-				<section mix={[pbs(12), pbe(12)]}>
-					<div
-						mix={[
-							maxIs("720px"),
-							mi("auto"),
-							pi(4),
-							media("(min-width: 640px)", pi(6)),
-							vstack({ gap: 6 }),
-						]}
-					>
-						<div mix={[vstack({ gap: 2 })]}>
-							<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-								{t("page.trial.report.eyebrow", { days: TRIAL_WATCH_DURATION_DAYS })}
-							</Text>
-							<Heading
-								level={1}
-								mix={[m(0), fontSize("2xl"), weight(700), leading(1.15), wordBreak("break-all")]}
-							>
-								{watch.url}
-							</Heading>
-							<Text mix={[fontSize("sm"), fg("neutral")]}>
-								{t("page.trial.report.period", {
-									start: formatDate(new Date(period.from), { locale, timeZone: REPORT_ZONE }),
-									end: formatDate(new Date(period.to), { locale, timeZone: REPORT_ZONE }),
-									zone: REPORT_ZONE,
-								})}
-							</Text>
-						</div>
-
-						<HeadingScope level={2}>
-							<Card>
-								<Card.Header>
-									<Card.Title>{t("page.trial.report.summary.title")}</Card.Title>
-								</Card.Header>
-								<Card.Content mix={[vstack({ gap: 6 })]}>
-									<div mix={[vstack({ gap: 2 })]}>
-										<div mix={[hstack({ align: "stretch", gap: "4px" }), bs("32px")]}>
-											{segments.map((status, day) => (
-												<div
-													key={`day-${day}`}
-													title={t(segmentLabelKey(status))}
-													mix={[
-														raw({ flex: "1" }),
-														minIs("2px"),
-														rounded("2px"),
-														segmentFill(status),
-													]}
-												/>
-											))}
-										</div>
-										<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-											{t("page.trial.report.bar.caption", { days: TRIAL_WATCH_DURATION_DAYS })}
-										</Text>
-									</div>
-
-									<dl
-										mix={[
-											m(0),
-											grid(),
-											gridTemplate({ columns: "repeat(3, minmax(0, 1fr))" }),
-											media("(max-width: 480px)", gridTemplate({ columns: "1fr" })),
-										]}
-									>
-										{headlineFigures.map((figure) => (
-											<div key={figure.label} mix={[vstack({ gap: 1 })]}>
-												<dt mix={[fontSize("xs"), fg("neutral.muted")]}>{figure.label}</dt>
-												<dd mix={[m(0), fontSize("xl"), weight(700)]}>{figure.value}</dd>
-											</div>
-										))}
-									</dl>
-
-									{measured ? null : (
-										<Text mix={[fontSize("sm"), fg("neutral")]}>
-											{t("page.trial.report.summary.noChecks")}
-										</Text>
-									)}
-								</Card.Content>
-							</Card>
-
-							<Card>
-								<Card.Header>
-									<Card.Title>{t("page.trial.report.incidents.title")}</Card.Title>
-								</Card.Header>
-								<Card.Content mix={[vstack({ gap: 3 })]}>{incidentBody}</Card.Content>
-							</Card>
-
-							{timings === null ? null : (
-								<Card>
-									<Card.Header>
-										<Card.Title>{t("page.trial.report.timing.title")}</Card.Title>
-									</Card.Header>
-									<Card.Content mix={[vstack({ gap: 3 })]}>
-										<dl
-											mix={[
-												m(0),
-												grid(),
-												gridTemplate({ columns: "repeat(3, minmax(0, 1fr))" }),
-												media("(max-width: 480px)", gridTemplate({ columns: "1fr" })),
-											]}
-										>
-											{timingFigures.map((figure) => (
-												<div key={figure.label} mix={[vstack({ gap: 1 })]}>
-													<dt mix={[fontSize("xs"), fg("neutral.muted")]}>{figure.label}</dt>
-													<dd mix={[m(0), fontSize("xl"), weight(700)]}>{figure.value}</dd>
-												</div>
-											))}
-										</dl>
-										<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
-											{t("page.trial.report.timing.basis", { count: timings.answered })}
-										</Text>
-									</Card.Content>
-								</Card>
-							)}
-
-							<Card mix={[bg("brand.bg-tint")]}>
-								<Card.Content
-									mix={[vstack({ gap: 4, align: "center" }), textAlign("center"), p(8)]}
-								>
-									<Heading level={2} mix={[m(0), fontSize("xl"), weight(700)]}>
-										{offer === "converted"
-											? t("page.trial.report.cta.converted.title")
-											: t("page.trial.report.cta.title", { price: formatUsd(BASE_PRICE_USD) })}
-									</Heading>
-									<Text mix={[fontSize("sm"), fg("neutral")]}>{ctaBody}</Text>
-									<LinkButton href={routes.app.index.href()} size="lg">
-										{offer === "converted"
-											? t("page.trial.report.cta.converted.action")
-											: t("page.trial.report.cta.action")}
-									</LinkButton>
-								</Card.Content>
-							</Card>
-						</HeadingScope>
+				<MarketingSection tone="tinted" spacing="compact" level={1}>
+					<div mix={[is("full"), mi("auto"), maxIs("720px")]}>
+						<MarketingHeader
+							eyebrow={t("page.trial.report.eyebrow", { days: TRIAL_WATCH_DURATION_DAYS })}
+							description={t("page.trial.report.period", {
+								start: formatDate(new Date(period.from), { locale, timeZone: REPORT_ZONE }),
+								end: formatDate(new Date(period.to), { locale, timeZone: REPORT_ZONE }),
+								zone: REPORT_ZONE,
+							})}
+							parts={{ title: [wordBreak("break-all")] }}
+						>
+							{watch.url}
+						</MarketingHeader>
 					</div>
-				</section>
+				</MarketingSection>
+
+				<MarketingSection spacing="compact">
+					<div mix={[is("full"), mi("auto"), maxIs("720px"), vstack({ gap: 6 })]}>
+						<Card>
+							<Card.Header>
+								<Card.Title>{t("page.trial.report.summary.title")}</Card.Title>
+							</Card.Header>
+							<Card.Content mix={[vstack({ gap: 6 })]}>
+								<div mix={[vstack({ gap: 2 })]}>
+									<div mix={[hstack({ align: "stretch", gap: "4px" }), bs("32px")]}>
+										{segments.map((status, day) => (
+											<div
+												key={`day-${day}`}
+												title={t(segmentLabelKey(status))}
+												mix={[
+													raw({ flex: "1" }),
+													minIs("2px"),
+													rounded("2px"),
+													segmentFill(status),
+												]}
+											/>
+										))}
+									</div>
+									<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
+										{t("page.trial.report.bar.caption", { days: TRIAL_WATCH_DURATION_DAYS })}
+									</Text>
+								</div>
+
+								<FigureRow figures={headlineFigures} />
+
+								{measured ? null : (
+									<Text mix={[fontSize("sm"), fg("neutral")]}>
+										{t("page.trial.report.summary.noChecks")}
+									</Text>
+								)}
+							</Card.Content>
+						</Card>
+
+						<Card>
+							<Card.Header>
+								<Card.Title>{t("page.trial.report.incidents.title")}</Card.Title>
+							</Card.Header>
+							<Card.Content mix={[vstack({ gap: 3 })]}>{incidentBody}</Card.Content>
+						</Card>
+
+						{timings === null ? null : (
+							<Card>
+								<Card.Header>
+									<Card.Title>{t("page.trial.report.timing.title")}</Card.Title>
+								</Card.Header>
+								<Card.Content mix={[vstack({ gap: 4 })]}>
+									<FigureRow figures={timingFigures} />
+									<Text mix={[fontSize("xs"), fg("neutral.muted")]}>
+										{t("page.trial.report.timing.basis", { count: timings.answered })}
+									</Text>
+								</Card.Content>
+							</Card>
+						)}
+					</div>
+				</MarketingSection>
+
+				<ClosingCta
+					tone="brand"
+					inset
+					title={
+						offer === "converted"
+							? t("page.trial.report.cta.converted.title")
+							: t("page.trial.report.cta.title", { price: formatUsd(BASE_PRICE_USD) })
+					}
+					description={ctaBody}
+					actions={
+						<LinkButton href={routes.app.index.href()} color="neutral" size="lg">
+							{offer === "converted"
+								? t("page.trial.report.cta.converted.action")
+								: t("page.trial.report.cta.action")}
+							<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden="true" />
+						</LinkButton>
+					}
+				/>
 			</MarketingLayout>
 		</DocumentLayout>,
 	);

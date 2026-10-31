@@ -1,6 +1,6 @@
 /**
- * The public `GET /mcp` page: anonymous visitors see the sell pitch; a signed-in viewer
- * sees the mcp-bridge config JSON the product documents.
+ * The public `GET /mcp` page: every visitor sees the mcp-bridge config the product documents,
+ * an anonymous one with the sign-in action, a signed-in one with the copy button and dashboard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,7 +41,7 @@ let { createWebRouter } = await import("~/app/initializers/router");
 let router = createWebRouter({ kv: env.KV, cookieSecret: "test", secure: false });
 
 describe("GET /mcp", () => {
-	test("sells MCP to an anonymous visitor", async () => {
+	test("sells MCP to an anonymous visitor with the config and a sign-in action", async () => {
 		viewer = null;
 		let response = await router.fetch(
 			new Request(`https://uptime.test${routes.mcp.index.href()}`, {
@@ -54,10 +54,12 @@ describe("GET /mcp", () => {
 		expect(body).toContain("Uptime");
 		expect(body).toContain("Agent-first monitoring");
 		expect(body).toContain("Streamable HTTP");
-		expect(body).not.toContain("@sdxc/mcp@latest");
+		expect(body).toContain("@sdxc/mcp@latest");
+		expect(body).toContain(`action="${routes.auth.action.href()}"`);
+		expect(body).not.toContain("Copy config");
 	});
 
-	test("shows the mcp-bridge config when signed in", async () => {
+	test("hands a signed-in teammate the config, the copy button and the dashboard", async () => {
 		viewer = {
 			id: generateUUID(),
 			name: "Ada",
@@ -77,5 +79,7 @@ describe("GET /mcp", () => {
 		expect(body).toContain("Authorization:Bearer ${UPTIME_MCP_TOKEN}");
 		expect(body).toContain("2026-07-28");
 		expect(body).toContain("https://uptime.sergiodxa.com/mcp");
+		expect(body).toContain("Copy config");
+		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 });

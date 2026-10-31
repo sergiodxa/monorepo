@@ -13,6 +13,8 @@ import { formatUsd, PRICE_PER_FLOW_RUN_USD } from "~/config/pricing";
 export interface BrowserFlowExample {
 	/** Stable key for the homepage locale strings that title the same example. */
 	key: "signIn" | "checkout" | "spa";
+	/** The tab label naming this spec beside the other examples, short enough for three on a phone. */
+	tab: string;
 	title: string;
 	description: string;
 	source: string;
@@ -25,6 +27,7 @@ export interface BrowserFlowExample {
 export const BROWSER_FLOW_EXAMPLES: readonly BrowserFlowExample[] = [
 	{
 		key: "signIn",
+		tab: "sign-in",
 		title: "Sign-in lands on the dashboard",
 		description:
 			"Fill the Email and Password fields, click Sign in, and expect the dashboard heading once the client has routed.",
@@ -47,6 +50,7 @@ test "signing in lands on the dashboard" {
 	},
 	{
 		key: "checkout",
+		tab: "checkout",
 		title: "Checkout reaches the confirmation",
 		description:
 			"Walk the cart through to pay, then assert on the confirmation heading that only renders after payment succeeds.",
@@ -68,6 +72,7 @@ test "checkout reaches confirmation" {
 	},
 	{
 		key: "spa",
+		tab: "settings",
 		title: "A client-rendered page paints",
 		description:
 			"Open a SPA route and wait for the heading that hydration is supposed to show — a 200 on the shell is not enough.",
@@ -97,7 +102,6 @@ export const browserFlowsPage = {
 	highlight: "a real browser",
 	description:
 		"A 200 on the homepage still hides a broken login. A browser flow clicks through the live page and asserts on what visitors see after JavaScript runs.",
-	heroExampleKey: "signIn" as const,
 	contrast: {
 		badge: "Why a browser",
 		title: "HTTP can only see the request",

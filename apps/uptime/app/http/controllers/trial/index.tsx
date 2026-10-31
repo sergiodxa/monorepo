@@ -7,13 +7,12 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle, RemixNode } from "remix/component";
+import type { RemixNode } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { formatDateTime } from "@sdxc/dates";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import {
-	ActivityIcon,
 	ArrowRightIcon,
 	BellIcon,
 	CheckIcon,
@@ -26,22 +25,11 @@ import {
 import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, unwrap } from "@sdxc/result";
-import { bg, fg, linearGradient } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
-import {
-	flex,
-	flexWrap,
-	gap,
-	grid,
-	gridTemplate,
-	inlineFlex,
-	items,
-	justify,
-	vstack,
-} from "@sdxc/u/layout";
-import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, m, maxIs, mbs, mi, minBs, p, pb, pbe, pbs, pi, pis } from "@sdxc/u/size";
+import { flex, flexWrap, gap, grid, items, justify, vstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxIs, mbs, mi, minBs, p, pb, pi, pis } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import {
 	fontSize,
@@ -49,8 +37,6 @@ import {
 	lineClamp,
 	textAlign,
 	textDecoration,
-	tracking,
-	weight,
 	wordBreak,
 } from "@sdxc/u/typography";
 import {
@@ -60,13 +46,18 @@ import {
 	Card,
 	Checkbox,
 	Description,
+	Feature,
 	FieldError,
 	Heading,
 	HeadingScope,
 	LinkButton,
+	MarketingHeader,
+	MarketingSection,
 	Text,
 	TextField,
 } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
+import { ClosingCta } from "@sdxc/ui/patterns";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
@@ -222,103 +213,11 @@ export interface TrialPageView {
 	leadEmail?: string;
 }
 
-/**
- * Vertical rhythm for the selling sections, each of which follows a section that
- * already ends with its own bottom padding. Each section here owns only the space
- * below it, so two neighbours never stack a full gap into a dead band.
- */
-function sectionPadding() {
-	return [
-		pbs(0),
-		pbe(16),
-		media("(min-width: 640px)", pbe(24)),
-		media("(min-width: 1024px)", pbe(32)),
-	];
-}
-
-/**
- * The closing CTA's own rhythm. It needs real padding on both sides because its tint makes
- * it a visible band rather than a boundary, but not a marketing chapter's 128px: one
- * heading, one line and two buttons inside that much space read as most of an empty screen.
- */
-function ctaPadding() {
-	return [pbs(10), pbe(10), media("(min-width: 1024px)", [pbs(14), pbe(14)])];
-}
-
-/** Centered content wrapper shared by every section, matching the rest of the marketing site. */
-function marketingContainer() {
-	return [
-		maxIs("1152px"),
-		mi("auto"),
-		pi(4),
-		media("(min-width: 640px)", pi(6)),
-		media("(min-width: 1024px)", pi(8)),
-	];
-}
-
-/** One card in either of the two selling grids. */
+/** One item in either of the two selling grids. */
 interface SellingPoint {
 	icon: RemixNode;
 	title: string;
 	description: string;
-}
-
-/** Prop types for {@link SellingGrid}. */
-namespace SellingGrid {
-	export interface Props {
-		/** The cards to lay out, in reading order. */
-		points: SellingPoint[];
-	}
-}
-
-/**
- * The card grid both selling sections are built from, so the four benefits of the
- * week and the three things it cannot show read as one design. `auto-fit` serves
- * both card counts at the same container width and collapses on its own as it narrows.
- *
- * @param handle - Runtime handle carrying the grid's props.
- * @returns The render function producing the grid.
- */
-function SellingGrid(handle: Handle<SellingGrid.Props>) {
-	return () => {
-		let { points } = handle.props;
-
-		return (
-			<div
-				mix={[
-					grid(),
-					gap(6),
-					mbs(10),
-					gridTemplate({ columns: "repeat(auto-fit, minmax(240px, 1fr))" }),
-				]}
-			>
-				{points.map((item) => (
-					<Card key={item.title}>
-						<Card.Content mix={[vstack({ gap: 3 }), p(6)]}>
-							<span
-								mix={[
-									inlineFlex(),
-									items("center"),
-									justify("center"),
-									is("40px"),
-									bs("40px"),
-									rounded("10px"),
-									bg("brand.tint"),
-									fg("brand"),
-								]}
-							>
-								{item.icon}
-							</span>
-							<Heading level={3} mix={[m(0), fontSize("base")]}>
-								{item.title}
-							</Heading>
-							<Text>{item.description}</Text>
-						</Card.Content>
-					</Card>
-				))}
-			</div>
-		);
-	};
 }
 
 /**
@@ -681,41 +580,14 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 			}}
 		>
 			<MarketingLayout isSignedIn={getViewer() !== null} {...chrome}>
-				<section
-					mix={[
-						pbs(12),
-						pbe(12),
-						...firstScreen,
-						bg({
-							image: linearGradient(
-								"to bottom",
-								"var(--ui-brand-bg-tint)",
-								"var(--ui-neutral-bg-tint)",
-							),
-						}),
-					]}
-				>
-					<div mix={[...marketingContainer(), maxIs("720px")]}>
-						<div mix={[vstack({ gap: 3, align: "center" }), textAlign("center")]}>
-							<Heading
-								level={1}
-								mix={[
-									m(0),
-									fontSize("2xl"),
-									weight(700),
-									leading(1.15),
-									tracking("tight"),
-									media("(min-width: 640px)", fontSize("3xl")),
-								]}
-							>
-								{t("page.trial.heading", { days })}
-							</Heading>
-							{probe !== undefined ? null : (
-								<p mix={[m(0), maxIs("560px"), fontSize("sm"), leading(1.6), fg("neutral")]}>
-									{t("page.trial.intro", { days })}
-								</p>
-							)}
-						</div>
+				<MarketingSection tone="tinted" spacing="compact" level={1} mix={[...firstScreen]}>
+					<div mix={[is("full"), mi("auto"), maxIs("720px")]}>
+						<MarketingHeader
+							align="center"
+							description={probe === undefined ? t("page.trial.intro", { days }) : undefined}
+						>
+							{t("page.trial.heading", { days })}
+						</MarketingHeader>
 
 						{probe !== undefined ? null : (
 							<Card mix={[mbs(8)]}>
@@ -849,100 +721,69 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 							</p>
 						)}
 					</div>
-				</section>
+				</MarketingSection>
 
 				{probe === undefined || monitorOffer !== undefined ? null : (
-					<section mix={[...sectionPadding()]}>
-						<div mix={[...marketingContainer()]}>
-							<div
-								mix={[
-									vstack({ gap: 3, align: "center" }),
-									textAlign("center"),
-									maxIs("640px"),
-									mi("auto"),
-								]}
-							>
-								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
-									{t("page.trial.benefits.title")}
-								</Heading>
-								<Text>{t("page.trial.benefits.description", { days })}</Text>
-							</div>
-
-							<SellingGrid points={benefits} />
-						</div>
-					</section>
+					<MarketingSection mix={[viewReveal()]}>
+						<MarketingHeader
+							align="center"
+							description={t("page.trial.benefits.description", { days })}
+						>
+							{t("page.trial.benefits.title")}
+						</MarketingHeader>
+						<Feature.Grid variant="list" columns={2}>
+							{benefits.map((point) => (
+								<Feature key={point.title}>
+									<Feature.Icon tone="brand">{point.icon}</Feature.Icon>
+									<Feature.Title>{point.title}</Feature.Title>
+									<Feature.Description>{point.description}</Feature.Description>
+								</Feature>
+							))}
+						</Feature.Grid>
+					</MarketingSection>
 				)}
 
 				{probe === undefined ? null : (
-					<section mix={[...sectionPadding()]}>
-						<div mix={[...marketingContainer()]}>
-							<div
-								mix={[
-									vstack({ gap: 3, align: "center" }),
-									textAlign("center"),
-									maxIs("640px"),
-									mi("auto"),
-								]}
-							>
-								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
-									{t("page.trial.more.title")}
-								</Heading>
-								<Text>{t("page.trial.more.description")}</Text>
-							</div>
-
-							<SellingGrid points={beyondHttp} />
-						</div>
-					</section>
+					<MarketingSection tone="tinted" mix={[viewReveal()]}>
+						<MarketingHeader align="center" description={t("page.trial.more.description")}>
+							{t("page.trial.more.title")}
+						</MarketingHeader>
+						<Feature.Grid columns={3}>
+							{beyondHttp.map((point) => (
+								<Feature key={point.title}>
+									<Feature.Icon>{point.icon}</Feature.Icon>
+									<Feature.Title>{point.title}</Feature.Title>
+									<Feature.Description>{point.description}</Feature.Description>
+								</Feature>
+							))}
+						</Feature.Grid>
+					</MarketingSection>
 				)}
 
 				{probe === undefined ? null : (
-					<section mix={[...ctaPadding(), bg("color.neutral.100"), dark(bg("color.neutral.900"))]}>
-						<div mix={[...marketingContainer()]}>
-							<div
-								mix={[
-									vstack({ gap: 4, align: "center" }),
-									textAlign("center"),
-									maxIs("640px"),
-									mi("auto"),
-								]}
-							>
-								<span
-									mix={[
-										inlineFlex(),
-										items("center"),
-										gap("6px"),
-										p("2px", "10px"),
-										rounded("999px"),
-										fontSize("xs"),
-										weight(600),
-										bg("brand.tint"),
-										fg("brand"),
-									]}
+					<ClosingCta
+						tone="brand"
+						inset
+						eyebrow={t("page.trial.cta.badge")}
+						title={t("page.trial.cta.title", { price })}
+						description={t("page.trial.cta.description", { price, days })}
+						actions={
+							<>
+								<LinkButton href={routes.app.index.href()} color="neutral" size="lg">
+									{t("page.trial.cta.action")}
+									<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden="true" />
+								</LinkButton>
+								<LinkButton
+									href={`${routes.home.href()}#pricing`}
+									color="neutral"
+									variant="ghost"
+									size="lg"
 								>
-									<ActivityIcon size={14} strokeWidth={2} />
-									{t("page.trial.cta.badge")}
-								</span>
-								<Heading level={2} mix={[m(0), fontSize("2xl"), weight(700), tracking("tight")]}>
-									{t("page.trial.cta.title", { price })}
-								</Heading>
-								<Text>{t("page.trial.cta.description", { price, days })}</Text>
-								<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(3), mbs(2)]}>
-									<LinkButton href={routes.app.index.href()} size="lg">
-										{t("page.trial.cta.action")}
-										<ArrowRightIcon size={18} strokeWidth={1.5} />
-									</LinkButton>
-									<LinkButton
-										href={`${routes.home.href()}#pricing`}
-										color="neutral"
-										variant="outline"
-										size="lg"
-									>
-										{t("page.trial.cta.pricing")}
-									</LinkButton>
-								</div>
-							</div>
-						</div>
-					</section>
+									{t("page.trial.cta.pricing")}
+								</LinkButton>
+							</>
+						}
+					/>
 				)}
 			</MarketingLayout>
 		</DocumentLayout>,

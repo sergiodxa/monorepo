@@ -7,12 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { m, maxIs, pbe, pbs, pi } from "@sdxc/u/size";
-import { Typeset } from "@sdxc/ui";
+import { ActivityIcon, CodeIcon, UserIcon } from "@sdxc/icons";
+import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
+import { is, maxIs, mbs, mi } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Feature, MarketingHeader, MarketingSection, Typeset } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
+import { CheckList, CheckRow, LandingHero } from "@sdxc/ui/patterns";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/initializers/seo";
+import ClosingBand from "~/resources/components/marketing/closing-band";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -46,156 +52,216 @@ const OWN_STATUS_PAGE_URL = "https://uptime.sergiodxa.com/status/uptime";
 const PROBE_REGIONS = ["afr", "apac", "eeur", "enam", "me", "oc", "sam", "weur", "wnam"] as const;
 
 /**
- * GET /trust — the trust and reliability page. Typography comes entirely from `Typeset`
- * with `preset="reading"`; the `<article>` around it carries only the page's own measure
- * and padding.
+ * GET /trust — the trust and reliability page. The accountability facts lead as cards and the
+ * regions as their own band; the policies that need reading in full stay prose in one
+ * `<article>` at reading measure, the only part the no-guarantee claim checks scan.
  */
 export default createAction(routes.trust, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.intl.t);
+	let t = ctx.intl.t;
 
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={ctx.intl.t("trust.meta.title")}
+			title={t("trust.meta.title")}
 			locale={ctx.locale}
 			seo={{
-				description: ctx.intl.t("trust.meta.description"),
+				description: t("trust.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
-					<Typeset preset="reading">
-						<h1>{ctx.intl.t("trust.heading")}</h1>
-						<p>{ctx.intl.t("trust.intro")}</p>
+				<LandingHero
+					tone="tinted"
+					align="center"
+					level={1}
+					title={t("trust.heading")}
+					description={t("trust.intro")}
+				/>
 
-						<h2>{ctx.intl.t("trust.sections.whoRuns.title")}</h2>
-						<p>
-							{ctx.intl.t("trust.sections.whoRuns.bodyPrefix")}
-							<a href={FOUNDER_URL} target="_blank" rel="noreferrer">
-								{ctx.intl.t("trust.sections.whoRuns.founderName")}
-							</a>
-							{ctx.intl.t("trust.sections.whoRuns.bodySuffix")}
-						</p>
-						<p>{ctx.intl.t("trust.sections.whoRuns.second")}</p>
+				<MarketingSection mix={[viewReveal()]}>
+					<Feature.Grid columns={3}>
+						<Feature>
+							<Feature.Icon tone="brand">
+								<UserIcon size={24} strokeWidth={1.5} />
+							</Feature.Icon>
+							<Feature.Title>{t("trust.sections.whoRuns.title")}</Feature.Title>
+							<Feature.Description>
+								<Typeset preset="chat">
+									<p>
+										{t("trust.sections.whoRuns.bodyPrefix")}
+										<a href={FOUNDER_URL} target="_blank" rel="noreferrer">
+											{t("trust.sections.whoRuns.founderName")}
+										</a>
+										{t("trust.sections.whoRuns.bodySuffix")}
+									</p>
+									<p>{t("trust.sections.whoRuns.second")}</p>
+								</Typeset>
+							</Feature.Description>
+						</Feature>
+						<Feature>
+							<Feature.Icon tone="brand">
+								<CodeIcon size={24} strokeWidth={1.5} />
+							</Feature.Icon>
+							<Feature.Title>{t("trust.sections.source.title")}</Feature.Title>
+							<Feature.Description>
+								<Typeset preset="chat">
+									<p>
+										{t("trust.sections.source.bodyPrefix")}
+										<a href={SOURCE_URL} target="_blank" rel="noreferrer">
+											{t("trust.sections.source.linkText")}
+										</a>
+										{t("trust.sections.source.bodySuffix")}
+									</p>
+									<p>{t("trust.sections.source.caveat")}</p>
+								</Typeset>
+							</Feature.Description>
+						</Feature>
+						<Feature>
+							<Feature.Icon tone="brand">
+								<ActivityIcon size={24} strokeWidth={1.5} />
+							</Feature.Icon>
+							<Feature.Title>{t("trust.sections.ownStatus.title")}</Feature.Title>
+							<Feature.Description>
+								<Typeset preset="chat">
+									<p>
+										{t("trust.sections.ownStatus.bodyPrefix")}
+										<a href={OWN_STATUS_PAGE_URL} target="_blank" rel="noreferrer">
+											{t("trust.sections.ownStatus.linkText")}
+										</a>
+										{t("trust.sections.ownStatus.bodySuffix")}
+									</p>
+									<p>{t("trust.sections.ownStatus.scope")}</p>
+								</Typeset>
+							</Feature.Description>
+						</Feature>
+					</Feature.Grid>
+				</MarketingSection>
 
-						<h2>{ctx.intl.t("trust.sections.source.title")}</h2>
-						<p>
-							{ctx.intl.t("trust.sections.source.bodyPrefix")}
-							<a href={SOURCE_URL} target="_blank" rel="noreferrer">
-								{ctx.intl.t("trust.sections.source.linkText")}
-							</a>
-							{ctx.intl.t("trust.sections.source.bodySuffix")}
-						</p>
-						<p>{ctx.intl.t("trust.sections.source.caveat")}</p>
+				<MarketingSection id="regions" tone="tinted" mix={[viewReveal()]}>
+					<MarketingHeader description={t("trust.sections.whereChecksRun.intro")} align="center">
+						{t("trust.sections.whereChecksRun.title")}
+					</MarketingHeader>
+					<CheckList
+						mix={[
+							grid(),
+							gap(4),
+							is("full"),
+							mi("auto"),
+							maxIs("960px"),
+							gridTemplate({ columns: "repeat(auto-fill, minmax(14rem, 1fr))" }),
+						]}
+					>
+						{PROBE_REGIONS.map((region) => (
+							<CheckRow key={region}>{t(`trust.regions.${region}`)}</CheckRow>
+						))}
+					</CheckList>
+					<div mix={[vstack({ gap: 4 }), mbs(12), is("full"), mi("auto"), maxIs("65ch")]}>
+						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.hint")}</p>
+						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.timing")}</p>
+					</div>
+				</MarketingSection>
 
-						<h2>{ctx.intl.t("trust.sections.ownStatus.title")}</h2>
-						<p>
-							{ctx.intl.t("trust.sections.ownStatus.bodyPrefix")}
-							<a href={OWN_STATUS_PAGE_URL} target="_blank" rel="noreferrer">
-								{ctx.intl.t("trust.sections.ownStatus.linkText")}
-							</a>
-							{ctx.intl.t("trust.sections.ownStatus.bodySuffix")}
-						</p>
-						<p>{ctx.intl.t("trust.sections.ownStatus.scope")}</p>
+				<MarketingSection mix={[viewReveal()]}>
+					<article mix={[is("full"), mi("auto"), maxIs("720px")]}>
+						<Typeset preset="reading">
+							<h2>{t("trust.sections.incidents.title")}</h2>
+							<p>{t("trust.sections.incidents.classification")}</p>
+							<p>
+								<strong>{t("trust.sections.incidents.noConfirmation")}</strong>
+							</p>
+							<p>{t("trust.sections.incidents.falsePositivesIntro")}</p>
+							<ul>
+								<li>
+									<strong>{t("trust.sections.incidents.infraFault.label")}</strong>{" "}
+									{t("trust.sections.incidents.infraFault.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.incidents.yourThresholds.label")}</strong>{" "}
+									{t("trust.sections.incidents.yourThresholds.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.incidents.cooldown.label")}</strong>{" "}
+									{t("trust.sections.incidents.cooldown.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.incidents.recovery.label")}</strong>{" "}
+									{t("trust.sections.incidents.recovery.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.incidents.maintenance.label")}</strong>{" "}
+									{t("trust.sections.incidents.maintenance.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.incidents.accounting.label")}</strong>{" "}
+									{t("trust.sections.incidents.accounting.body")}
+								</li>
+							</ul>
 
-						<h2>{ctx.intl.t("trust.sections.whereChecksRun.title")}</h2>
-						<p>{ctx.intl.t("trust.sections.whereChecksRun.intro")}</p>
-						<ul>
-							{PROBE_REGIONS.map((region) => (
-								<li key={region}>{ctx.intl.t(`trust.regions.${region}`)}</li>
-							))}
-						</ul>
-						<p>{ctx.intl.t("trust.sections.whereChecksRun.hint")}</p>
-						<p>{ctx.intl.t("trust.sections.whereChecksRun.timing")}</p>
+							<h2>{t("trust.sections.storage.title")}</h2>
+							<p>
+								<strong>{t("trust.sections.storage.noBodies")}</strong>
+							</p>
+							<p>{t("trust.sections.storage.contentChecks")}</p>
+							<p>{t("trust.sections.storage.storedIntro")}</p>
+							<ul>
+								<li>
+									<strong>{t("trust.sections.storage.httpResults.label")}</strong>{" "}
+									{t("trust.sections.storage.httpResults.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.storage.dailyStats.label")}</strong>{" "}
+									{t("trust.sections.storage.dailyStats.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.storage.otherResults.label")}</strong>{" "}
+									{t("trust.sections.storage.otherResults.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.storage.alertHistory.label")}</strong>{" "}
+									{t("trust.sections.storage.alertHistory.body")}
+								</li>
+								<li>
+									<strong>{t("trust.sections.storage.cronPings.label")}</strong>{" "}
+									{t("trust.sections.storage.cronPings.body")}
+								</li>
+							</ul>
 
-						<h2>{ctx.intl.t("trust.sections.incidents.title")}</h2>
-						<p>{ctx.intl.t("trust.sections.incidents.classification")}</p>
-						<p>
-							<strong>{ctx.intl.t("trust.sections.incidents.noConfirmation")}</strong>
-						</p>
-						<p>{ctx.intl.t("trust.sections.incidents.falsePositivesIntro")}</p>
-						<ul>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.infraFault.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.infraFault.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.yourThresholds.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.yourThresholds.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.cooldown.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.cooldown.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.recovery.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.recovery.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.maintenance.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.maintenance.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.incidents.accounting.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.incidents.accounting.body")}
-							</li>
-						</ul>
+							<h2>{t("trust.sections.customerData.title")}</h2>
+							<p>
+								{t("trust.sections.customerData.bodyPrefix")}
+								<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
+									{t("trust.sections.customerData.privacyLinkText")}
+								</a>
+								{t("trust.sections.customerData.bodySuffix")}
+							</p>
 
-						<h2>{ctx.intl.t("trust.sections.storage.title")}</h2>
-						<p>
-							<strong>{ctx.intl.t("trust.sections.storage.noBodies")}</strong>
-						</p>
-						<p>{ctx.intl.t("trust.sections.storage.contentChecks")}</p>
-						<p>{ctx.intl.t("trust.sections.storage.storedIntro")}</p>
-						<ul>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.storage.httpResults.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.storage.httpResults.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.storage.dailyStats.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.storage.dailyStats.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.storage.otherResults.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.storage.otherResults.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.storage.alertHistory.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.storage.alertHistory.body")}
-							</li>
-							<li>
-								<strong>{ctx.intl.t("trust.sections.storage.cronPings.label")}</strong>{" "}
-								{ctx.intl.t("trust.sections.storage.cronPings.body")}
-							</li>
-						</ul>
+							<h2>{t("trust.sections.ourIncidents.title")}</h2>
+							<p>{t("trust.sections.ourIncidents.retries")}</p>
+							<p>{t("trust.sections.ourIncidents.gaps")}</p>
+							<p>
+								<strong>{t("trust.sections.ourIncidents.missedAlerts")}</strong>
+							</p>
+							<p>
+								{t("trust.sections.ourIncidents.noSlaPrefix")}
+								<a href={routes.legal.terms.href()} data-rmx-prefetch="intent">
+									{t("trust.sections.ourIncidents.termsLinkText")}
+								</a>
+								{t("trust.sections.ourIncidents.noSlaSuffix")}
+							</p>
+						</Typeset>
+					</article>
+				</MarketingSection>
 
-						<h2>{ctx.intl.t("trust.sections.customerData.title")}</h2>
-						<p>
-							{ctx.intl.t("trust.sections.customerData.bodyPrefix")}
-							<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
-								{ctx.intl.t("trust.sections.customerData.privacyLinkText")}
-							</a>
-							{ctx.intl.t("trust.sections.customerData.bodySuffix")}
-						</p>
-
-						<h2>{ctx.intl.t("trust.sections.ourIncidents.title")}</h2>
-						<p>{ctx.intl.t("trust.sections.ourIncidents.retries")}</p>
-						<p>{ctx.intl.t("trust.sections.ourIncidents.gaps")}</p>
-						<p>
-							<strong>{ctx.intl.t("trust.sections.ourIncidents.missedAlerts")}</strong>
-						</p>
-						<p>
-							{ctx.intl.t("trust.sections.ourIncidents.noSlaPrefix")}
-							<a href={routes.legal.terms.href()} data-rmx-prefetch="intent">
-								{ctx.intl.t("trust.sections.ourIncidents.termsLinkText")}
-							</a>
-							{ctx.intl.t("trust.sections.ourIncidents.noSlaSuffix")}
-						</p>
-					</Typeset>
-				</article>
+				<ClosingBand
+					id="start"
+					isSignedIn={isSignedIn}
+					title={t("landing.marketingPage.finalCtaTitle")}
+					description={t("landing.finalCta.body")}
+					startLabel={chrome.startLabel}
+					dashboardLabel={chrome.dashboardLabel}
+				/>
 			</MarketingLayout>
 		</DocumentLayout>,
 	);

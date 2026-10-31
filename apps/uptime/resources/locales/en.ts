@@ -16,23 +16,15 @@ export default {
 			description:
 				"Point an agent at Uptime over Streamable HTTP MCP. One API key with the mcp scope plus the resource scopes your tools need.",
 		},
-		brand: "Uptime",
 		hero: {
 			title: "Monitoring that agents can",
 			highlight: "operate",
 			description:
 				"Streamable HTTP MCP turns the whole monitoring API into tools — create monitors, read status, manage alerts — from any client that can reach a remote server.",
 			ctaOut: "Sign in to set up MCP",
-			ctaIn: "Jump to setup",
-			signalLabel: "Live Streamable HTTP endpoint",
-			endpoint: "https://uptime.sergiodxa.com/mcp",
-			protocol: "2026-07-28",
 		},
 		protocol: {
 			badge: "Streamable HTTP",
-			title: "One URL. Protocol 2026-07-28.",
-			description:
-				"Agents connect over Streamable HTTP. No custom SDK — run mcp-bridge from @sdxc/mcp against the endpoint and authenticate with a scoped API key.",
 		},
 		tools: {
 			badge: "Agent-first monitoring",
@@ -49,16 +41,21 @@ export default {
 			badge: "Your setup",
 			heading: "Connect your client",
 			lead: "Create an API key with the mcp scope, add the resource scopes for the tools you want, then paste this mcp-bridge config into Cursor, Claude, or any stdio MCP client.",
+			stepTitles: {
+				token: "Create a key",
+				scopes: "Grant the scopes",
+				configure: "Add the config",
+				ask: "Ask your agent",
+			},
 			steps: {
 				token: "Open your team’s API keys and create a key.",
 				scopes:
 					"Grant mcp, plus every other scope the tools you want already require (for example monitors:read).",
-				configure: "Add the mcp-bridge config below to your client’s mcp.json.",
+				configure: "Paste the mcp-bridge config into your client’s mcp.json.",
 				ask: "Ask the agent to list monitors or create one — it will call the matching tool.",
 			},
 			scopesNote:
 				"Set UPTIME_MCP_TOKEN to your API key. Keys need the mcp scope to connect, plus every other scope the tools you want already require (for example monitors:read).",
-			configLabel: "mcp-bridge config",
 			copy: "Copy config",
 			openKeys: "Open the dashboard",
 		},
@@ -733,6 +730,19 @@ export default {
 	 * falling back to English in every other locale until translated, the same way the
 	 * legal pages' body prose does.
 	 */
+	browserFlows: {
+		eyebrow: "Browser flows",
+		figures: {
+			fastest: { label: "Fastest schedule", value: "{$minutes} min" },
+			default: { label: "Default schedule", value: "{$hours} h" },
+		},
+		faq: {
+			title: "Questions about browser flows",
+			description:
+				"When to use a browser session, how a run is billed, and what a short spec can express.",
+		},
+	},
+
 	trust: {
 		meta: {
 			title: "Trust | Uptime",
