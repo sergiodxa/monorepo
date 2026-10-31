@@ -150,4 +150,11 @@ describe("GET /:book", () => {
 
 		expect(body).not.toMatch(/early access|special pricing/i);
 	});
+
+	test("introduces the author in the third person, as a book jacket does", async () => {
+		let body = await load(memoryBilling()).then((response) => response.text());
+
+		expect(body).toContain("Sergio Xalambrí is an Argentinian web developer");
+		expect(body).not.toContain("Hi, I’m Sergio");
+	});
 });

@@ -169,9 +169,9 @@ authorizeUrl.searchParams.set("code_challenge_method", "S256");`,
 		title: "Written by the author of Remix Auth",
 		bio: (
 			<>
-				Hi, I’m Sergio, an Argentinian web developer with more than a decade of experience, based in
-				Lima, Peru. I work at Daffy and maintain <strong>Remix Auth</strong>, the authentication
-				library many Remix and React Router apps sign their users in with.
+				Sergio Xalambrí is an Argentinian web developer with more than a decade of experience, based
+				in Lima, Peru. He works at Daffy and maintains <strong>Remix Auth</strong>, the
+				authentication library many Remix and React Router apps sign their users in with.
 			</>
 		),
 		credentials: [
