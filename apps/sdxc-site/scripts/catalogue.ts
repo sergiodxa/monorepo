@@ -232,13 +232,19 @@ export function readUtility(source: string, entry: UtilityEntry): UtilityReferen
 
 /**
  * The component a module publishes, named by its own export line so a file called
- * `listbox.tsx` still reports itself as `ListBox`.
+ * `listbox.tsx` still reports itself as `ListBox`. A client island is exported as a constant
+ * holding its entry, and counts as a component too.
  *
  * @param source - The module's text.
  * @returns The exported name, or `null` when the module exports no component.
  */
 export function componentName(source: string): string | null {
-	return /^export function ([A-Z][A-Za-z0-9]*)\(/m.exec(source)?.[1] ?? null;
+	return (
+		/^export (?:function ([A-Z][A-Za-z0-9]*)\(|const ([A-Z][A-Za-z0-9]*)\b)/m
+			.exec(source)
+			?.slice(1)
+			.find(Boolean) ?? null
+	);
 }
 
 /**
@@ -249,7 +255,7 @@ export function componentName(source: string): string | null {
  * @param shared - Text of the modules declaring the types several components share.
  * @param module - The `@sdxc/ui` folder the module lives in.
  * @returns The page's content, or `null` when the module will not parse or publishes
- * no component.
+ * no component. A module publishing only a client island reads its entry constant.
  */
 export function readComponent(
 	source: string,
@@ -261,7 +267,7 @@ export function readComponent(
 	if (isFailure(extracted)) return null;
 
 	let components = extracted.data.children.filter((child) => child.kind === "function");
-	let host = components[0];
+	let host = components[0] ?? extracted.data.children.find(isIslandEntry);
 	if (!host) return null;
 
 	let unions = new Map<string, ComponentType>();
@@ -304,6 +310,11 @@ export function readComponent(
 		types: Array.from(unions.values()),
 		related: components.slice(1).map((child) => ({ name: child.name, slug })),
 	};
+}
+
+/** Whether a module-level symbol is a client island's entry: a constant named like a component. */
+function isIslandEntry(node: DocNode): boolean {
+	return node.kind === "variable" && /^[A-Z]/.test(node.name);
 }
 
 /**

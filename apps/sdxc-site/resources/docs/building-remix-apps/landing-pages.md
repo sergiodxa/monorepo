@@ -401,8 +401,9 @@ export function Header() {
 
 The bar starts transparent and fills once the page scrolls under it; `variant="floating"`
 holds it off the edges as a rounded bar. On a one-page site, where the links are anchors on the
-same page, pass a client island through `sheet` that closes the dialog when a link is
-followed. `SiteFooter` takes `columns` the same way, plus `newsletter`, `social`, `legal` and an
+same page, pass `<DialogDismiss />` from `@sdxc/ui` through `sheet`: it closes the sheet when
+a link is followed or the backdrop is pressed. It is a client island, so the browser entry
+imports `@sdxc/ui/dialog-dismiss` for it. `SiteFooter` takes `columns` the same way, plus `newsletter`, `social`, `legal` and an
 optional full-width `wordmark`, and picks a column count that never leaves a short last row.
 
 ## Motion and more bands
@@ -422,6 +423,8 @@ The rest of the patterns cover bands most landings reach for sooner or later:
 - `SegmentedStage`: a pill switcher over hero media, so one stage shows several views.
 - `Rails` and `Crosshair`: frame the content column with hairline rails and "+" marks.
 - `LogoSentence`: customer marks set inline in one line of prose.
+- `FlowDiagram`: an animated run, a trigger and then each step passing along a rail, for a
+  pipeline or a scheduled check shown in the product's own syntax.
 
 So the bands on one page don't all share a shape, most of them come in more than one:
 

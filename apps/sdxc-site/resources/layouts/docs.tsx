@@ -29,7 +29,7 @@ import { bs, is, maxBs, maxIs, minIs, mis, p, pbe } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { before, when } from "@sdxc/u/state";
 import { overflowWrap, text, tracking, weight } from "@sdxc/u/typography";
-import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
+import { Breadcrumbs, Button, DialogDismiss, Sidebar } from "@sdxc/ui";
 
 import type { Anchor } from "~/app/services/article";
 import type { NavTree } from "~/app/services/navigation-tree";
@@ -39,7 +39,6 @@ import AuthorNote from "~/resources/components/author-note";
 import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import DocsNav from "~/resources/components/docs-nav";
 import DocsPager from "~/resources/components/docs-pager";
-import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { SiteNav } from "~/resources/components/site-header";
 import { TableOfContents } from "~/resources/components/table-of-contents";
 import routes from "~/routes/web";
@@ -133,7 +132,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					<Sidebar.Content>
 						<DocsNav tree={tree} activePath={activePath} />
 					</Sidebar.Content>
-					<DrawerDismiss />
+					<DialogDismiss />
 				</Sidebar.MobileNav>
 
 				<Sidebar.Inset mix={[overflow("visible")]}>

@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { DialogDismiss } from "@sdxc/ui";
 import { SiteHeader } from "@sdxc/ui/patterns";
 
-import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import BookLogo from "~/resources/views/demos/book/logo";
 
 /** The sections the bar links to, in page order. */
@@ -37,7 +37,7 @@ export default function BookHeader() {
 			menuLabel="Open the section menu"
 			closeLabel="Close the section menu"
 			collapseAt="xl"
-			sheet={<DrawerDismiss />}
+			sheet={<DialogDismiss />}
 		/>
 	);
 }

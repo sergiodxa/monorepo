@@ -221,6 +221,17 @@ describe("cssProperty", () => {
 });
 
 describe("readComponent", () => {
+	test("reads a module that publishes only a client island by its entry constant", () => {
+		let reference = readComponent(
+			'/**\n * Closes its dialog.\n */\n\n/** Renders a hidden marker. */\nexport const DialogDismiss = clientEntry("x#DialogDismiss", function DialogDismiss() {\n\treturn () => null;\n});\n',
+			"dialog-dismiss",
+			[],
+		);
+
+		expect(reference?.name).toBe("DialogDismiss");
+		expect(reference?.props.rows).toEqual([]);
+	});
+
 	test("opens with what the pattern is, which the module's own comment states", () => {
 		let reference = readComponent(COMPONENT_MODULE, "badge", [SHARED_MODULE]);
 
@@ -268,6 +279,9 @@ describe("componentName", () => {
 	test("reads the exported name rather than spelling the file name back", () => {
 		expect(componentName(COMPONENT_MODULE)).toBe("Badge");
 		expect(componentName("export const x = 1;")).toBeNull();
+		expect(componentName('export const DialogDismiss = clientEntry("x#y", () => null);')).toBe(
+			"DialogDismiss",
+		);
 	});
 });
 

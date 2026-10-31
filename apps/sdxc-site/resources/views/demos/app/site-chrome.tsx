@@ -12,9 +12,9 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { leading, text } from "@sdxc/u/typography";
+import { DialogDismiss } from "@sdxc/ui";
 import { SiteFooter as Footer, SiteHeader as Header } from "@sdxc/ui/patterns";
 
-import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { Wordmark } from "~/resources/views/demos/app/brand";
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";
 
@@ -85,7 +85,7 @@ export function SiteHeader() {
 			items={NAV}
 			actions={[{ label: "Sign in", href: "#pricing" }]}
 			cta={{ label: "Get the app", href: "#download" }}
-			sheet={<DrawerDismiss />}
+			sheet={<DialogDismiss />}
 		/>
 	);
 }

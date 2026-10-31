@@ -8,9 +8,9 @@
  */
 
 import { fg } from "@sdxc/u/color";
+import { DialogDismiss } from "@sdxc/ui";
 import { SiteHeader } from "@sdxc/ui/patterns";
 
-import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { KeelLogo } from "~/resources/views/demos/saas/marks";
 
 /** The in-page destinations, in reading order; each lands on a chapter of this page. */
@@ -40,7 +40,7 @@ export function SaasHeader() {
 			items={ITEMS}
 			actions={[{ label: "Sign in", href: "#pricing" }]}
 			cta={{ label: "Start free", href: "#start" }}
-			sheet={<DrawerDismiss />}
+			sheet={<DialogDismiss />}
 		/>
 	);
 }

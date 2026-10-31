@@ -28,12 +28,11 @@ import { light, media } from "@sdxc/u/responsive";
 import { is, m, maxBs, maxIs, minBs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
-import { Dialog, NavLink } from "@sdxc/ui";
+import { Dialog, DialogDismiss, NavLink } from "@sdxc/ui";
 import { SiteHeader as UiSiteHeader } from "@sdxc/ui/patterns";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { Frame } from "remix/component";
 
-import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { searchFrameSrc } from "~/resources/components/search-box";
 import { SearchQuickLinks } from "~/resources/components/search-quick-links";
 import { SEARCH_EXIT_MS } from "~/resources/components/search-surface";
@@ -107,7 +106,7 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				sheet={
 					<>
 						<SheetLinks />
-						<DrawerDismiss />
+						<DialogDismiss />
 					</>
 				}
 				mix={[
