@@ -256,6 +256,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Steps`, `Steps.Item` — numbered procedure with CSS counters and a rail; each `title` is a heading with an optional `id`.
 - `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
 - `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
+- `PlanNotice` — the one-sentence plan or role box under a help page's title.
 
 ### Patterns (`@sdxc/ui/patterns`)
 

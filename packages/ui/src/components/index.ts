@@ -85,6 +85,7 @@ export * from "./number-field.js";
 export * from "./otp-field.js";
 export * from "./overlay-arrow.js";
 export * from "./pagination.js";
+export * from "./plan-notice.js";
 export * from "./popover.js";
 export * from "./progress-bar.js";
 export * from "./radio-group.js";
