@@ -265,6 +265,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `DocsPageHeader` — breadcrumb, `<h1>`, lead, `notice`, and a meta row with `updated` (a `<time>`) and `actions`.
 - `PageActions` — "Copy page" split button over a popover menu of `links`; the copy is the island `@sdxc/ui/page-actions`.
 - `NextSteps` — hand-written "Next steps" heading plus 2–4 links, as `cards` or a `list`.
+- `DocsFeedback` — "Was this helpful?" form posting `helpful`, `page` and `note` without JavaScript; `state="sent"` thanks.
 - `DocsPager` — previous/next whole-card links from `findNeighbours(tree, path, { boundary })` in `@sdxc/ui/utils`.
 - `DocsNav` — docs sidebar from a `DocsTree`: current page marked and scrolled into view, `<details>` groups, optional title `filter`, `footer`; island `@sdxc/ui/docs-nav-tools`.
 - `TableOfContents` — "On this page" `rail` or sticky `bar`: a marker slides over every section on screen and reaches the last; island `@sdxc/ui/table-of-contents`.
