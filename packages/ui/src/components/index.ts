@@ -49,6 +49,7 @@ export * from "./dialog-dismiss.js";
 export * from "./dialog.js";
 export * from "./docs-nav.js";
 export * from "./docs-nav-tools.js";
+export * from "./docs-pager.js";
 export * from "./disclosure.js";
 export * from "./drawer.js";
 export * from "./drop-indicator.js";
