@@ -102,6 +102,18 @@ describe("GET /maintenance", () => {
 	});
 });
 
+describe("the policy pages", () => {
+	test.each(["/security", "/maintenance"])(
+		"%s opens on one h1 and titles its bands at h2",
+		async (path) => {
+			let body = await (await fetchApp(path)).text();
+
+			expect(body.match(/<h1[\s>]/g)).toHaveLength(1);
+			expect(body.match(/<h2[\s>]/g)?.length).toBeGreaterThanOrEqual(4);
+		},
+	);
+});
+
 describe("the footer", () => {
 	test("offers both policy pages from a root-level page", async () => {
 		let body = await (await fetchApp("/security")).text();

@@ -1,7 +1,7 @@
 /**
  * `GET /maintenance` — what support a dated release carries. A version here is a date,
- * so the question a version number usually answers is one this page has to answer
- * instead, and it is a root route for the same reason the security page is.
+ * so the question a version number usually answers is one this page answers instead,
+ * drawn in the landing's bands at the root for the same reason the security page is.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,14 +9,16 @@
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { readPolicy } from "~/app/services/policy";
-import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
+import { LANDING_COMPONENTS } from "~/resources/components/landing";
+import SiteHeader from "~/resources/components/site-header";
 import source from "~/resources/content/maintenance.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
-import PageLayout from "~/resources/layouts/page";
 import routes from "~/routes/web";
 
 export default createAction(routes.maintenance, async (ctx) => {
@@ -36,15 +38,11 @@ export default createAction(routes.maintenance, async (ctx) => {
 			description={frontmatter.description}
 			canonical={ctx.url.href}
 		>
-			<PageLayout
-				eyebrow="Policy"
-				title={frontmatter.title}
-				description={frontmatter.description}
-				lastUpdated={frontmatter.lastUpdated}
-				activePath={routes.maintenance.href()}
-			>
-				{toRemix(document, { components: DOCS_COMPONENTS })}
-			</PageLayout>
+			<SiteHeader activePath={routes.maintenance.href()} />
+
+			<main mix={[vstack({ align: "center" }), is("100%")]}>
+				{toRemix(document, { components: LANDING_COMPONENTS })}
+			</main>
 		</DocumentLayout>,
 	);
 
