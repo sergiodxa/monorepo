@@ -113,11 +113,19 @@ interface RowsTableProps {
 /**
  * One level of rows. A row with children is followed by a row spanning every column that
  * holds a `<details>` with the next level, so the children expand right under their parent.
+ * The Default column is drawn only when a row at this level has a default to show.
  */
 function RowsTable(handle: Handle<RowsTableProps>) {
 	return () => {
 		let { label, labels, nested, rows } = handle.props;
-		let columns = [labels.name, labels.type, labels.default, labels.required, labels.description];
+		let defaults = rows.some((row) => row.default !== undefined);
+		let columns = [
+			labels.name,
+			labels.type,
+			...(defaults ? [labels.default] : []),
+			labels.required,
+			labels.description,
+		];
 
 		return (
 			<table aria-label={label} mix={[text("sm"), tableRules(nested)]}>
@@ -139,13 +147,15 @@ function RowsTable(handle: Handle<RowsTableProps>) {
 							<td data-cell="type" data-label={labels.type}>
 								<code mix={[font("mono")]}>{row.type}</code>
 							</td>
-							<td data-cell="default" data-label={labels.default}>
-								{row.default === undefined ? (
-									<span data-empty="">—</span>
-								) : (
-									<code mix={[font("mono")]}>{row.default}</code>
-								)}
-							</td>
+							{defaults ? (
+								<td data-cell="default" data-label={labels.default}>
+									{row.default === undefined ? (
+										<span data-empty="">—</span>
+									) : (
+										<code mix={[font("mono")]}>{row.default}</code>
+									)}
+								</td>
+							) : null}
 							<td
 								data-cell="required"
 								data-label={labels.required}

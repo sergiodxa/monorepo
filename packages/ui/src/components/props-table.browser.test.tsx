@@ -83,6 +83,16 @@ describe("PropsTable", () => {
 		expect(new Set(tops).size).toBe(1);
 	});
 
+	test("leaves out the Default column when no row has a default", () => {
+		let rows = ROWS.map(({ name, type, description }) => ({ name, type, description }));
+		let box = mount(<PropsTable rows={rows} labels={LABELS} />);
+		let table = box.querySelector("table")!;
+		let headers = [...table.querySelectorAll(":scope > thead th")].map((th) => th.textContent);
+
+		expect(headers).toEqual(["Name", "Type", "Required", "Description"]);
+		expect(table.querySelector('[data-cell="default"]')).toBeNull();
+	});
+
 	test("expands child rows in place under their parent", () => {
 		let box = mount(<PropsTable rows={ROWS} labels={LABELS} />);
 		let details = box.querySelector("details")!;
