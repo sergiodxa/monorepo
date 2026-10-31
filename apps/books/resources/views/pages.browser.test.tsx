@@ -261,4 +261,23 @@ describe("the chapter", () => {
 		for (let id of targets)
 			expect(container.querySelector(`[id='${id}']`)?.tagName).toMatch(/^H[23]$/);
 	});
+
+	test.each([
+		[900, "sticky"],
+		[600, "static"],
+	])(
+		"keeps the side contents still while scrolling, sticking only in a %ipx-tall window",
+		async (height, position) => {
+			await page.viewport(1280, height);
+			let container = await mount("chapter");
+			let sideNav = [...container.querySelectorAll("nav[aria-label='In this chapter']")].find(
+				(nav) => !nav.closest("details"),
+			);
+			let style = getComputedStyle(sideNav ?? document.body);
+
+			expect(style.position).toBe(position);
+			expect(style.overflowY).toBe("visible");
+			expect(style.maxBlockSize).toBe("none");
+		},
+	);
 });

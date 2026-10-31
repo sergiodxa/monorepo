@@ -166,21 +166,22 @@ authorizeUrl.searchParams.set("code_challenge_method", "S256");`,
 		],
 	},
 	author: {
-		title: "Written from flows that shipped",
+		title: "Written by the author of Remix Auth",
 		bio: (
 			<>
-				Hi, I’m Sergio, a full-stack developer working with TypeScript, React and Rails to build
-				scalable apps and secure APIs. Everything I write comes from{" "}
-				<strong>things I’ve built, broken and fixed</strong>.
+				Hi, I’m Sergio, an Argentinian web developer with more than a decade of experience, based in
+				Lima, Peru. I work at Daffy and maintain <strong>Remix Auth</strong>, the authentication
+				library many Remix and React Router apps sign their users in with.
 			</>
 		),
 		credentials: [
-			"Years refining OAuth2 flows in production",
-			"Deploys to Cloudflare, from the backend to the edge",
-			"Writes about web development at sergiodxa.com",
+			"Maintains Remix Auth and Remix Utils",
+			"Contributes to Remix and React Router",
+			"Spoke at Remix Jam 2026 and Remix Conf Europe 2022",
+			"Writes about authentication and data loading at sergiodxa.com",
 		],
 		name: "Sergio Xalambrí",
-		jobTitle: "Full-stack developer",
+		jobTitle: "Web developer at Daffy",
 		photo: "/avatar.png",
 		links: [
 			{ href: "https://sergiodxa.com", label: "Website", icon: <GlobeIcon /> },

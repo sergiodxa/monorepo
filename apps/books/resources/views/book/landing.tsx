@@ -341,8 +341,8 @@ function Inside(handle: Handle<{ copy: BookCopy; pages: number }>) {
 }
 
 /**
- * The author band, with the portrait printed in grey ink like the rest of the page and set
- * whole at the foot of its plate, so a square picture fills the band's 3:4 frame uncropped.
+ * The author band, with the portrait in its own colours, set whole at the foot of its plate
+ * so a square picture fills the band's 3:4 frame uncropped.
  */
 function Author(handle: Handle<{ copy: BookCopy }>) {
 	return () => {
@@ -367,7 +367,6 @@ function Author(handle: Handle<{ copy: BookCopy }>) {
 								objectPosition: "50% 100%",
 								paddingBlockStart: "12%",
 								backgroundColor: "var(--ui-neutral-bg-tint-hover)",
-								filter: "grayscale(1) contrast(1.05)",
 							}),
 						]}
 					/>

@@ -146,4 +146,12 @@ describe("the book landing", () => {
 
 		expect(Math.abs(middle(button) - middle(link))).toBeLessThanOrEqual(2);
 	});
+
+	test("shows the author's portrait in its own colours", async () => {
+		let container = await mountLanding();
+		let portrait = container.querySelector("#author img");
+
+		expect(portrait).toBeTruthy();
+		expect(getComputedStyle(portrait ?? document.body).filter).toBe("none");
+	});
 });

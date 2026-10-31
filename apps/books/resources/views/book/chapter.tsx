@@ -14,7 +14,7 @@ import { DownloadIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { combine, raw } from "@sdxc/u/general";
 import { grid, hstack, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { at, media } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
@@ -106,8 +106,9 @@ function ContentsLabel() {
 }
 
 /**
- * Renders the page's `<main>`. Headings in the chapter carry ids, so the contents link to
- * them and a sticky header never covers the one a reader jumps to.
+ * Renders the page's `<main>`. Headings carry ids the contents link to. The side contents stick
+ * only in a window tall enough to show them whole, and never scroll on their own: a sticky
+ * scroller shakes against the page in Safari.
  *
  * @param handle Runtime handle carrying the chapter, its outline and its links.
  * @returns The render function producing the page's main content.
@@ -203,15 +204,15 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 												display: "flex",
 												flexDirection: "column",
 												gap: "1rem",
-												position: "sticky",
-												insetBlockStart: "6rem",
-												maxBlockSize: "calc(100dvh - 8rem)",
-												overflowY: "auto",
 												paddingBlockStart: "1rem",
 												borderBlockStart: "1px solid var(--ui-marketing-hairline)",
 											}),
 										),
 									]),
+									media(
+										"(min-height: 46rem)",
+										raw({ position: "sticky", insetBlockStart: "6rem" }),
+									),
 								]}
 							>
 								<ContentsLabel />
