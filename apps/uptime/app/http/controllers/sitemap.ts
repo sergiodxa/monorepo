@@ -1,7 +1,7 @@
 /**
  * `/sitemap.xml` controller. Decides every route the site declares, listing the homepage,
- * every marketing page in `resources/content/marketing.ts`, the legal pages and every
- * documentation page, so search engines discover the full public site.
+ * every marketing page in `resources/content/marketing.ts`, the free check, the trust and
+ * legal pages and the documentation, so search engines discover the full public site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,7 +38,11 @@ export default createAction(routes.sitemap, async ({ request }) => {
 		statusPageCalendarJson: false,
 		statusPageMaintenanceEvent: false,
 		statusPageMaintenanceEventJson: false,
-		trial: false,
+		trial: {
+			check: { index: { priority: 0.9, frequency: "monthly", updatedAt } },
+			report: false,
+			unsubscribe: false,
+		},
 		digestUnsubscribe: false,
 		invite: false,
 		sitemap: false,
@@ -51,7 +55,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 			comparison: marketingPages(comparisons, 0.6, updatedAt),
 		},
 		browserFlows: { priority: 0.9, frequency: "monthly", updatedAt },
-		trust: false,
+		trust: { priority: 0.5, frequency: "monthly", updatedAt },
 		mcp: {
 			index: { priority: 0.8, frequency: "monthly", updatedAt },
 		},
@@ -60,7 +64,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 			terms: { priority: 0.3, frequency: "yearly", updatedAt },
 		},
 		docs: {
-			index: false,
+			index: { priority: 0.8, frequency: "weekly", updatedAt },
 			show: docSections.flatMap((section) =>
 				section.docs.map((doc) => ({
 					params: { slug: doc.path.replace(/^\/docs\//, "") },

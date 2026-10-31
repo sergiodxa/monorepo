@@ -2,7 +2,7 @@
  * Tests the `/sitemap.xml` controller: it responds with the `xml()` helper's
  * content type and includes the homepage, at least one real `/features`, `/for`,
  * and `/vs` marketing page (sourced from `resources/content/marketing.ts`), the
- * legal pages, and at least one real `/docs/*` page sourced from the real Markdown
+ * free check, trust, docs index and legal pages, and at least one real `/docs/*` page sourced from the real Markdown
  * files under `resources/docs/**`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -69,6 +69,15 @@ describe("GET /sitemap.xml", () => {
 
 		expect(body).toContain(`<loc>https://uptime.test${routes.legal.privacy.href()}</loc>`);
 		expect(body).toContain(`<loc>https://uptime.test${routes.legal.terms.href()}</loc>`);
+	});
+
+	test("includes the free check, trust, and docs index pages", async () => {
+		let response = await getSitemap();
+		let body = await response.text();
+
+		expect(body).toContain(`<loc>https://uptime.test${routes.trial.check.index.href()}</loc>`);
+		expect(body).toContain(`<loc>https://uptime.test${routes.trust.href()}</loc>`);
+		expect(body).toContain(`<loc>https://uptime.test${routes.docs.index.href()}</loc>`);
 	});
 
 	test("includes a real /docs page sourced from the real Markdown files", async () => {
