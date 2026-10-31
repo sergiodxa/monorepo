@@ -23,6 +23,9 @@ import { HISTORY_PACKAGE } from "./plan.js";
 /** The package whose tarball carries the registry, beside the CLI that reads it. */
 export const UI_REGISTRY_PACKAGE = HISTORY_PACKAGE;
 
+/** Stylesheets `@sdxc/ui` publishes at its root, which a browser test loads for its tokens. */
+const PUBLISHED_STYLESHEETS: ReadonlySet<string> = new Set(["reset.css", "theme.css"]);
+
 /** Where the entries go inside the staged package. */
 export const UI_REGISTRY_DIR = "registry/ui";
 
@@ -372,6 +375,10 @@ function publishedSpecifier(
 	let sibling = /^\.\/([a-z0-9-]+)\.js$/.exec(specifier)?.[1];
 	if (sibling !== undefined && options.components.has(sibling)) {
 		return { specifier: `@sdxc/ui/${sibling}`, component: sibling };
+	}
+	let stylesheet = /^\.\.\/([a-z-]+\.css)$/.exec(specifier)?.[1];
+	if (stylesheet !== undefined && PUBLISHED_STYLESHEETS.has(stylesheet)) {
+		return { specifier: `@sdxc/ui/${stylesheet}`, component: null };
 	}
 	let helper = /^\.\.\/([a-z]+)\/([a-z0-9-]+\.js)$/.exec(specifier);
 	if (helper !== null) {

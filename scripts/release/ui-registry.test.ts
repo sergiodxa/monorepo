@@ -139,6 +139,26 @@ describe("registryEntry", () => {
 		expect(dialog?.source.content).toContain('from "@sdxc/ui/patterns"');
 	});
 
+	test("points a test's theme and reset stylesheets at the ones @sdxc/ui publishes", async () => {
+		let { "packages/ui/src/components/button.test.tsx": _unitTest, ...files } = FIXTURE;
+		let root = await fixture({
+			...files,
+			"packages/ui/src/components/button.browser.test.tsx":
+				'import "../reset.css";\nimport "../theme.css";\nimport { Button } from "./button.js";\n',
+		});
+		let packageDir = join(root, "packages/ui");
+		let [button] = unwrap(await readComponents(packageDir));
+		let barrels = unwrap(await readBarrels(packageDir));
+
+		let entry = unwrap(
+			registryEntry(button!, { barrels, components: new Set(["button"]), changedIn: "2026.10.14" }),
+		);
+
+		expect(entry.test?.content).toBe(
+			'import "@sdxc/ui/reset.css";\nimport "@sdxc/ui/theme.css";\nimport { Button } from "@sdxc/ui/button";\n',
+		);
+	});
+
 	test("fails on a helper its folder's barrel does not re-export", async () => {
 		let root = await fixture({ ...FIXTURE, "packages/ui/src/utils/index.ts": "export {};\n" });
 		let packageDir = join(root, "packages/ui");
