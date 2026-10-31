@@ -216,4 +216,13 @@ export default emails({
 			}),
 		}),
 	},
+	/** A docs reader's question from the contact form, for whoever answers support. */
+	docsContact: email({
+		props: s.object({
+			name: s.string(),
+			email: s.string(),
+			message: s.string(),
+			page: s.string(),
+		}),
+	}),
 });

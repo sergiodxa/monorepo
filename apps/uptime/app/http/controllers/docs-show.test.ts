@@ -137,7 +137,7 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain('action="/docs/feedback"');
 		expect(body).toContain('value="/docs/concepts/http-monitors"');
 		expect(body).toContain("Still stuck?");
-		expect(body).toContain('href="mailto:hello@sergiodxa.com"');
+		expect(body).toContain('href="/docs/contact?page=%2Fdocs%2Fconcepts%2Fhttp-monitors"');
 		expect(body).toContain("Copy page");
 		expect(body).toContain("/docs/concepts/http-monitors.md");
 	});

@@ -23,9 +23,9 @@ import { DocsLayout as DocsShell } from "@sdxc/ui/patterns";
 
 import type { DocSection } from "~/app/services/docs";
 
-import { MAIL_REPLY_TO } from "~/app/emails/sender";
 import { toDocsTree } from "~/app/services/docs";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
+import routes from "~/routes/web";
 
 /** The marketing header's height, which every sticky column and jumped-to heading clears. */
 const HEADER_HEIGHT = "4rem";
@@ -42,8 +42,13 @@ const DOCS_MEASURE = "88rem";
  */
 const PAGE_HEADER_GAP = "2.5rem";
 
-/** Where "Contact support" writes to: the inbox every product email replies to. */
-export const SUPPORT_HREF = `mailto:${MAIL_REPLY_TO.email}`;
+/**
+ * The contact form, told which page the reader asks from, so their question arrives with
+ * the page it is about.
+ */
+export function supportHref(page: string): string {
+	return `${routes.docs.contact.index.href()}?page=${encodeURIComponent(page)}`;
+}
 
 namespace DocsLayout {
 	export interface Labels {
@@ -135,7 +140,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				filter={labels.filter}
 				footer={
 					<a
-						href={SUPPORT_HREF}
+						href={supportHref(activePath)}
 						mix={[
 							hstack({ gap: 2, align: "center" }),
 							text("sm"),

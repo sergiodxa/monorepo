@@ -67,6 +67,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 		docs: {
 			index: { priority: 0.8, frequency: "weekly", updatedAt },
 			search: false,
+			contact: false,
 			show: docSections.flatMap((section) =>
 				section.docs.map((doc) => ({
 					params: { slug: doc.path.replace(/^\/docs\//, "") },

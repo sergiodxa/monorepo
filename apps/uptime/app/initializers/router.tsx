@@ -313,8 +313,8 @@ export function createWebRouter(options: WebRouterOptions) {
 	});
 
 	/**
-	 * The public try-it form's honeypot, on every route that renders the form or accepts it: the
-	 * landing page, `/try` and `/try/lead`. Its key derives from the session secret under a
+	 * The public forms' honeypot, on every route that renders a form or accepts it: the landing
+	 * page, `/try`, `/try/lead` and the docs contact form. Its key derives from the session secret under a
 	 * `honeypot:` label, so no second secret is provisioned.
 	 */
 	let trialHoneypot = honeypot(new Honeypot({ secret: `honeypot:${options.cookieSecret}` }), {
@@ -448,6 +448,10 @@ export function createWebRouter(options: WebRouterOptions) {
 	router.map(
 		routes.docs.search,
 		lazy(() => import("~/app/http/controllers/docs-search"), PUBLIC_PAGE_GUARDS),
+	);
+	router.map(
+		routes.docs.contact,
+		lazy(() => import("~/app/http/controllers/docs-contact"), [trialHoneypot]),
 	);
 	router.map(
 		routes.docs.feedback,

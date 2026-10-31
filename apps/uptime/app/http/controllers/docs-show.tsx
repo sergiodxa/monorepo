@@ -42,7 +42,7 @@ import { apiProblems } from "~/app/services/api/problems";
 import { findDoc, getDocLoader, listDocs, MARKDOWN_OPTIONS, toDocsTree } from "~/app/services/docs";
 import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
 import DocsSearchForm from "~/resources/components/docs-search-form";
-import DocsLayout, { buildDocsLabels, SUPPORT_HREF } from "~/resources/layouts/docs";
+import DocsLayout, { buildDocsLabels, supportHref } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -312,7 +312,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 					</h2>
 					<p mix={[m(0), text("sm"), fg("neutral")]}>
 						{t("docs.questions.body")}{" "}
-						<a href={SUPPORT_HREF} mix={[fg("brand"), weight("medium")]}>
+						<a href={supportHref(activePath)} mix={[fg("brand"), weight("medium")]}>
 							{t("docs.questions.link")}
 						</a>
 					</p>

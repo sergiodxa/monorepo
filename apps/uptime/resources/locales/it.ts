@@ -6360,6 +6360,27 @@ export default {
 			body: "Scrivici cosa hai provato e ti aiuteremo a farlo funzionare.",
 			link: "Contatta il supporto",
 		},
+		contact: {
+			title: "Contatta il supporto",
+			lead: "Raccontaci cosa stavi cercando di fare e cosa è successo invece. Ti rispondiamo via email.",
+			name: "Nome (facoltativo)",
+			email: "Email",
+			emailHint: "Dove invieremo la risposta.",
+			message: "La tua domanda",
+			submit: "Invia messaggio",
+			sent: {
+				title: "Messaggio inviato",
+				body: "Grazie, abbiamo ricevuto la tua domanda e ti risponderemo via email.",
+				back: "Torna alla pagina che stavi leggendo",
+				hub: "Torna alla documentazione",
+			},
+			errors: {
+				email: "Inserisci l’indirizzo email a cui dobbiamo rispondere.",
+				message: "Scrivi la tua domanda prima di inviare.",
+				expired: "Questo modulo è scaduto. Invialo di nuovo.",
+				send: "Non siamo riusciti a inviare il messaggio. Riprova tra un momento.",
+			},
+		},
 		notFound: {
 			eyebrow: "404",
 			links: "Pagine popolari",

@@ -63,6 +63,10 @@ mail.map(
 	emails.trial.weeklyDigest,
 	lazy(() => import("~/app/emails/trial/weekly-digest")),
 );
+mail.map(
+	emails.docsContact,
+	lazy(() => import("~/app/emails/docs-contact")),
+);
 
 declare module "@sdxc/mail" {
 	/** Types the `t()` every template receives with the keys of the app's message bundles. */

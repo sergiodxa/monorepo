@@ -110,6 +110,8 @@ export default route({
 		search: get("/docs/search"),
 		/** Receives a page's "Was this helpful?" answer. */
 		feedback: post("/docs/feedback"),
+		/** A question for support: the form, and the `POST` that emails it. */
+		contact: form("/docs/contact"),
 		/**
 		 * Wildcard: captures every remaining path segment as one `slug` string
 		 * (e.g. `concepts/http-monitors`).

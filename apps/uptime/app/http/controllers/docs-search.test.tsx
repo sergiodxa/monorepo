@@ -94,6 +94,6 @@ describe("GET /docs/search", () => {
 
 		expect(body).toContain("Nothing matches “zzqx”.");
 		expect(body).toContain("Popular pages");
-		expect(body).toContain('href="mailto:hello@sergiodxa.com"');
+		expect(body).toContain('href="/docs/contact?page=%2Fdocs%2Fsearch"');
 	});
 });

@@ -6380,6 +6380,27 @@ export default {
 			body: "Write to us with what you tried, and we'll help you get it working.",
 			link: "Contact support",
 		},
+		contact: {
+			title: "Contact support",
+			lead: "Tell us what you were trying to do and what happened instead. We reply by email.",
+			name: "Name (optional)",
+			email: "Email",
+			emailHint: "Where we send our reply.",
+			message: "Your question",
+			submit: "Send message",
+			sent: {
+				title: "Message sent",
+				body: "Thanks — we've got your question and will reply by email.",
+				back: "Back to the page you were reading",
+				hub: "Back to the documentation",
+			},
+			errors: {
+				email: "Enter the email address we should reply to.",
+				message: "Write your question before sending.",
+				expired: "This form expired. Please send it again.",
+				send: "We couldn't send your message. Please try again in a moment.",
+			},
+		},
 		notFound: {
 			eyebrow: "404",
 			links: "Popular pages",

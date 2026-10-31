@@ -26,7 +26,7 @@ import { SEO } from "~/app/initializers/seo";
 import { findDoc, listDocs } from "~/app/services/docs";
 import { searchDocs } from "~/app/services/docs-search";
 import DocsSearchForm from "~/resources/components/docs-search-form";
-import DocsLayout, { buildDocsLabels, SUPPORT_HREF } from "~/resources/layouts/docs";
+import DocsLayout, { buildDocsLabels, supportHref } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -168,7 +168,7 @@ export default createAction(routes.docs.search, async (ctx) => {
 
 				<p mix={[m("2.5rem", 0, 0, 0), text("sm"), fg("neutral")]}>
 					{t("docs.search.contact")}{" "}
-					<a href={SUPPORT_HREF} mix={[fg("brand"), weight("medium")]}>
+					<a href={supportHref(routes.docs.search.href())} mix={[fg("brand"), weight("medium")]}>
 						{t("docs.questions.link")}
 					</a>
 				</p>

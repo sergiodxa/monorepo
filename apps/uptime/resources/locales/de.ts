@@ -6400,6 +6400,27 @@ export default {
 			body: "Schreib uns, was du versucht hast, und wir helfen dir, es zum Laufen zu bringen.",
 			link: "Support kontaktieren",
 		},
+		contact: {
+			title: "Support kontaktieren",
+			lead: "Schreib uns, was du tun wolltest und was stattdessen passiert ist. Wir antworten per E-Mail.",
+			name: "Name (optional)",
+			email: "E-Mail",
+			emailHint: "Dorthin schicken wir unsere Antwort.",
+			message: "Deine Frage",
+			submit: "Nachricht senden",
+			sent: {
+				title: "Nachricht gesendet",
+				body: "Danke – wir haben deine Frage erhalten und antworten per E-Mail.",
+				back: "Zurück zur Seite, die du gelesen hast",
+				hub: "Zurück zur Dokumentation",
+			},
+			errors: {
+				email: "Gib die E-Mail-Adresse ein, an die wir antworten sollen.",
+				message: "Schreib deine Frage, bevor du sendest.",
+				expired: "Dieses Formular ist abgelaufen. Bitte sende es erneut.",
+				send: "Wir konnten deine Nachricht nicht senden. Bitte versuch es gleich noch einmal.",
+			},
+		},
 		notFound: {
 			eyebrow: "404",
 			links: "Beliebte Seiten",

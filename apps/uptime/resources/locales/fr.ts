@@ -6384,6 +6384,27 @@ export default {
 			body: "Écrivez-nous en décrivant ce que vous avez essayé, et nous vous aiderons à le faire fonctionner.",
 			link: "Contacter le support",
 		},
+		contact: {
+			title: "Contacter le support",
+			lead: "Dites-nous ce que vous essayiez de faire et ce qui s’est passé à la place. Nous répondons par e-mail.",
+			name: "Nom (facultatif)",
+			email: "E-mail",
+			emailHint: "L’adresse où nous enverrons notre réponse.",
+			message: "Votre question",
+			submit: "Envoyer le message",
+			sent: {
+				title: "Message envoyé",
+				body: "Merci, nous avons bien reçu votre question et vous répondrons par e-mail.",
+				back: "Retour à la page que vous lisiez",
+				hub: "Retour à la documentation",
+			},
+			errors: {
+				email: "Saisissez l’adresse e-mail à laquelle nous devons répondre.",
+				message: "Écrivez votre question avant d’envoyer.",
+				expired: "Ce formulaire a expiré. Veuillez l’envoyer à nouveau.",
+				send: "Nous n’avons pas pu envoyer votre message. Réessayez dans un instant.",
+			},
+		},
 		notFound: {
 			eyebrow: "404",
 			links: "Pages populaires",
