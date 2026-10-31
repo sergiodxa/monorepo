@@ -139,4 +139,9 @@ export default route({
 	 * engines: each one invents its product, so none of it is a page about sdxc.
 	 */
 	demo: get("/demo/:slug"),
+	/**
+	 * npm download history for every package, for the maintainer. Linked from nowhere and
+	 * kept out of search engines; its address is the only way in.
+	 */
+	stats: get("/stats"),
 });

@@ -35,13 +35,17 @@ export default defineConfig({
 		 * The sponsor list is read into KV on a schedule, so a page never waits on GitHub and
 		 * an outage there leaves the previous list standing. GitHub's sponsorship webhook
 		 * refreshes it as soon as a sponsor changes, so the weekly run only catches a missed
-		 * delivery.
+		 * delivery. npm's download counts are read daily, once yesterday's are published, so
+		 * `/stats` renders from storage.
 		 */
-		triggers: [triggers.scheduled({ schedule: "0 5 * * 1" })],
+		triggers: [
+			triggers.scheduled({ schedule: "0 5 * * 1" }),
+			triggers.scheduled({ schedule: "0 4 * * *" }),
+		],
 		/**
 		 * `CACHE` holds what the site reads back from GitHub — the changelog, and who funds
-		 * the work; the rest renders from the deploy, and each page serves its cached copy
-		 * when a call fails. A deploy keeps exactly the secrets declared here, so
+		 * the work — and every package's npm download history; the rest renders from the
+		 * deploy, and each page serves its cached copy when a call fails. A deploy keeps exactly the secrets declared here, so
 		 * `GITHUB_TOKEN`, which the sponsor refresh needs, and the secret GitHub signs
 		 * sponsorship webhooks with both survive every release.
 		 */
