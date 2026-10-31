@@ -121,3 +121,50 @@ export async function listGuidesAbout(name: string): Promise<GuideEntry[]> {
 
 	return guides;
 }
+
+/**
+ * One line per guide section, saying what the section gets a reader, for the hub's cards.
+ * Keyed by the `section.title` the guides' frontmatter names.
+ */
+const SECTION_DESCRIPTIONS: Readonly<Record<string, string>> = {
+	"Getting started":
+		"What the collection is, how it fits together, and a first app built and deployed.",
+	"Packages à la carte":
+		"Install a few packages into a project you already have, with or without Remix.",
+	Recipes: "Whole features end to end: a blog, a contact form, API keys, paging on an outage.",
+	"The sdxc command": "Start a project, generate files where they belong, check it and deploy it.",
+	Conventions: "The rules every package keeps: results over throws, naming, logging, validation.",
+	"Building Remix apps": "The interface, forms, routing and the browser side of a Remix app.",
+	"HTTP APIs": "JSON APIs with problem details, typed clients, and the formats they speak.",
+	"Identity & security": "Sign-in, passkeys, tokens, permissions, and keeping abuse out.",
+	"Data & background work": "Tables, queries, caching, jobs, payments and notifications.",
+	"Content & feeds": "Markdown, diagrams, math, feeds, calendars and ebooks from your content.",
+	"Operations & testing": "Command lines, configuration, specs, health checks and costs.",
+	Releases: "How releases are numbered, what breaks between them, and the license.",
+};
+
+/**
+ * The line the hub shows under a section, or the section's first guide's description when
+ * no line is written for it yet, so a new section still reads as a sentence.
+ *
+ * @param section - The section as {@link listGuides} returns it.
+ */
+export function describeSection(section: GuideSection): string {
+	return SECTION_DESCRIPTIONS[section.title] ?? section.guides.at(0)?.frontmatter.description ?? "";
+}
+
+/**
+ * The path a newcomer reads first: the guides of the earliest section, in order. The hub
+ * draws them as its "Start here" cards and the 404 offers them as places to begin.
+ */
+export async function listStartGuides(): Promise<GuideEntry[]> {
+	return (await listGuides()).at(0)?.guides ?? [];
+}
+
+/**
+ * Whether every section has its own line on the hub, so a section added without one is
+ * caught by a test rather than read off its first guide.
+ */
+export function hasSectionDescription(title: string): boolean {
+	return Object.hasOwn(SECTION_DESCRIPTIONS, title);
+}

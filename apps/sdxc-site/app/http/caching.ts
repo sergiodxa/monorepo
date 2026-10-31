@@ -1,7 +1,7 @@
 /**
  * The cache policy a documentation page answers with. Every input to such a page is a
- * file in the deployed bundle plus the option groups the reader picked, so the page
- * changes when a deploy changes it or when the reader switches: worth storing in the
+ * file in the deployed bundle plus the code-tab choices the reader's cookies remember,
+ * so the page changes when a deploy changes it or when the reader switches tabs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,8 +10,7 @@
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { isSuccess } from "@sdxc/result";
 
-import { readOptionSelections } from "~/app/initializers/cookies";
-import { serializeOptionSelections } from "~/app/services/option-groups";
+import { rememberedTabsVariant } from "~/app/services/remembered-tabs";
 
 /** How long a browser reuses its own copy before revalidating against the tag. */
 const CLIENT_MAX_AGE = "5 minutes";
@@ -51,11 +50,11 @@ export async function withBundleCache(
 	let headers = new Headers(response.headers);
 
 	/**
-	 * A page renders the option groups the reader picked, so their picks are part of
+	 * A page renders the code-tab choices the reader picked, so their picks are part of
 	 * what a stored copy is a copy of: a reader who has picked stays inside their own
 	 * browser's cache, and only the page every reader gets the same way is worth a
 	 */
-	let selections = serializeOptionSelections(await readOptionSelections(request));
+	let selections = rememberedTabsVariant(request.headers.get("Cookie"));
 	let shared = selections === "";
 
 	/**

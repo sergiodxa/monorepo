@@ -16,6 +16,8 @@ import {
 	Accordion,
 	Badge,
 	Button,
+	CodeBlock,
+	DocsPageHeader,
 	Feature,
 	HeadingScope,
 	LinkButton,
@@ -58,10 +60,10 @@ import { LANDING_PATTERNS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/cat
 import { absoluteUrl } from "~/config/constants";
 import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, StatusBoard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { listDemoLandings } from "~/resources/views/demos";
@@ -172,23 +174,31 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: LANDING_PATTERNS_TITLE },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui/patterns" title={LANDING_PATTERNS_TITLE}>
-							Page-width bands that compose into a full landing. The library ships no copy: every
-							string on the sample page below is a prop the page passes.
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/patterns/landing-hero.tsx`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: LANDING_PATTERNS_TITLE },
+							]}
+							title={LANDING_PATTERNS_TITLE}
+							description={
+								<>
+									Page-width bands that compose into a full landing. The library ships no copy:
+									every string on the sample page below is a prop the page passes.
+								</>
+							}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/patterns/landing-hero.tsx`}
+								/>
+							}
 						/>
 					</header>
 
@@ -664,7 +674,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 							title="Usage"
 							lead="Import the bands from the patterns entry and pass every string from the page."
 						>
-							<Snippet code={USAGE_CODE} language="tsx" />
+							<CodeBlock labels={CODE_LABELS} code={USAGE_CODE} language="tsx" />
 						</ReferenceSection>
 					</div>
 				</article>

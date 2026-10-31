@@ -14,10 +14,11 @@ import { rounded } from "@sdxc/u/effects";
 import { hstack, items } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
+import { CopyButton } from "@sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
-import { CopyButton } from "~/resources/components/copy-button";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 
 namespace Copyable {
 	export interface Props extends MarkdownProps {}
@@ -42,7 +43,7 @@ export default function Copyable(handle: Handle<Copyable.Props>) {
 				<code id={valueId} mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
 					{handle.props.children}
 				</code>
-				<CopyButton target={valueId} />
+				<CopyButton target={valueId} label={CODE_LABELS.copy} copiedLabel={CODE_LABELS.copied} />
 			</div>
 		);
 	};

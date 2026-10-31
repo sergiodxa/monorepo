@@ -14,7 +14,6 @@ import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { siteCache } from "~/app/initializers/cache";
-import { readOptionSelections } from "~/app/initializers/cookies";
 import { readChangelog } from "~/app/services/changelog";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors } from "~/app/services/sponsors";
@@ -50,7 +49,7 @@ export default createAction(routes.home, async (ctx) => {
 			title="sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
-			selections={await readOptionSelections(ctx.request)}
+			cookie={ctx.request.headers.get("Cookie")}
 		>
 			<SiteHeader activePath={routes.home.href()} />
 

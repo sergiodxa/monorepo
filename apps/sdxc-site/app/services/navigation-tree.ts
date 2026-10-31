@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocsTree } from "@sdxc/ui/utils";
+
 /** One destination, titled the way both the sidebar and the pager name it. */
 export interface NavEntry {
 	title: string;
@@ -50,18 +52,18 @@ export function flattenNav(tree: NavTree): NavEntry[] {
 }
 
 /**
- * The entries either side of the page being read, crossing section boundaries so the
- * whole tree is one run. A path the tree has no entry for sits outside that run, and
- * reports neither neighbour.
+ * The tree in the shape the shared docs sidebar and pager read: a section's own entries
+ * first, then each group as an item holding its entries, which is the order both draw.
  */
-export function findNeighbours(
-	tree: NavTree,
-	activePath: string,
-): { previous: NavEntry | null; next: NavEntry | null } {
-	let entries = flattenNav(tree);
-	let index = entries.findIndex((entry) => entry.href === activePath);
-
-	if (index === -1) return { previous: null, next: null };
-
-	return { previous: entries[index - 1] ?? null, next: entries[index + 1] ?? null };
+export function toDocsTree(tree: NavTree): DocsTree {
+	return {
+		label: tree.label,
+		sections: tree.sections.map((section) => ({
+			title: section.title,
+			items: [
+				...section.entries,
+				...section.groups.map((group) => ({ title: group.title, items: group.entries })),
+			],
+		})),
+	};
 }

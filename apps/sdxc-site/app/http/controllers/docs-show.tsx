@@ -10,11 +10,9 @@
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
-import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, text } from "@sdxc/u/typography";
-import { Typeset } from "@sdxc/ui";
+import { DocsPageHeader, Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -25,10 +23,10 @@ import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import GuideOutcomes from "~/resources/components/guide-outcomes";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -77,20 +75,30 @@ export default createAction(routes.docs.show, async (ctx) => {
 			canonical={ctx.url.href}
 			og={{ type: "article" }}
 		>
-			<DocsLayout tree={tree} activePath={activePath} breadcrumbs={breadcrumbs} anchors={anchors}>
+			<DocsLayout
+				tree={tree}
+				activePath={activePath}
+				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
+			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
-						<PageTitle eyebrow={frontmatter.section.title} title={frontmatter.title}>
-							{frontmatter.description}
-						</PageTitle>
-						<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
-							Last updated {frontmatter.lastUpdated}
-						</p>
-
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
+						<DocsPageHeader
+							crumbs={breadcrumbs}
+							title={frontmatter.title}
+							description={frontmatter.description}
+							updated={{
+								label: "Last updated",
+								date: frontmatter.lastUpdated,
+								text: formatUpdated(frontmatter.lastUpdated),
+							}}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
+								/>
+							}
 						/>
 
 						<GuideOutcomes outcomes={frontmatter.outcomes} />
@@ -106,3 +114,14 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	return await withBundleCache(ctx.request, response, adsDayTag());
 });
+
+/**
+ * A guide's `lastUpdated` as a reader says it ("Oct 12, 2026"), read in UTC so the day
+ * printed is the day written in the frontmatter wherever the Worker runs. A value that is
+ * not a date is shown as written.
+ */
+function formatUpdated(date: string): string {
+	let parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return date;
+	return parsed.toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" });
+}

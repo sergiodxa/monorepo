@@ -9,6 +9,8 @@
 /** One destination the page's `Open` menu offers. */
 export interface OpenLink {
 	label: string;
+	/** One line on what the destination does with the page, shown under its label. */
+	description: string;
 	href: string;
 	/** Whether the destination is somewhere else, which is what earns a new tab. */
 	external: boolean;
@@ -42,14 +44,29 @@ export function buildOpenLinks(
 	sourceUrl: string,
 ): OpenLink[] {
 	let links: OpenLink[] = [
-		{ label: "View as Markdown", href: markdownHref, external: false },
-		{ label: "Open in GitHub", href: sourceUrl, external: true },
+		{
+			label: "View as Markdown",
+			description: "The page as plain text, ready for an agent",
+			href: markdownHref,
+			external: false,
+		},
+		{
+			label: "Open in GitHub",
+			description: "Read the source, or suggest an edit",
+			href: sourceUrl,
+			external: true,
+		},
 	];
 
 	for (let assistant of ASSISTANTS) {
 		let url = new URL(assistant.base);
 		url.searchParams.set(assistant.parameter, prompt(markdownUrl));
-		links.push({ label: assistant.label, href: url.href, external: true });
+		links.push({
+			label: assistant.label,
+			description: "Ask questions about this page",
+			href: url.href,
+			external: true,
+		});
 	}
 
 	return links;

@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SearchDocument } from "~/app/services/search-query";
 
-import { kindNamed, rankDocuments } from "~/app/services/search-query";
+import { kindNamed, rankDocuments, withoutKindFilters } from "~/app/services/search-query";
 
 const DOCUMENTS: SearchDocument[] = [
 	{
@@ -170,5 +170,13 @@ describe("search syntax", () => {
 		expect(kindNamed("components")).toBe("ui");
 		expect(kindNamed("utilities")).toBe("u");
 		expect(kindNamed("posts")).toBeNull();
+	});
+});
+
+describe("withoutKindFilters", () => {
+	test("drops every kind filter, excluded and quoted ones included, keeping the words", () => {
+		expect(withoutKindFilters("router kind:guides")).toBe("router");
+		expect(withoutKindFilters('kind:"ui" form -kind:api  fields')).toBe("form fields");
+		expect(withoutKindFilters("unkind:x")).toBe("unkind:x");
 	});
 });

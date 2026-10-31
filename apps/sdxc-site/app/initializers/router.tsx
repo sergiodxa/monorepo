@@ -96,6 +96,10 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/docs-show")),
 	);
 	router.map(
+		routes.docsFeedback,
+		lazy(() => import("~/app/http/controllers/docs-feedback")),
+	);
+	router.map(
 		routes.api.index,
 		lazy(() => import("~/app/http/controllers/packages-index")),
 	);

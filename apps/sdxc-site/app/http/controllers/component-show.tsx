@@ -10,6 +10,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -36,13 +37,14 @@ import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
 import CompositionTree from "~/resources/components/composition-tree";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
+import PropsReference from "~/resources/components/props-reference";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -94,22 +96,26 @@ export default createAction(routes.api.component, async (ctx) => {
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: reference.name },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui" title={reference.name}>
-							<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.module}/${component}.tsx`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: reference.name },
+							]}
+							title={reference.name}
+							description={<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.module}/${component}.tsx`}
+								/>
+							}
 						/>
 					</header>
 
@@ -121,8 +127,8 @@ export default createAction(routes.api.component, async (ctx) => {
 						lead="An ordinary dependency: install it, import the theme once, and import the component where it is used."
 					>
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<Snippet code={INSTALL} language="bash" />
-							<Snippet code={THEME_IMPORT} language="typescript" />
+							<CodeBlock labels={CODE_LABELS} code={INSTALL} language="bash" title="Terminal" />
+							<CodeBlock labels={CODE_LABELS} code={THEME_IMPORT} language="typescript" />
 							<p mix={[m(0), text("base"), fg("neutral")]}>
 								Or{" "}
 								<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
@@ -130,13 +136,19 @@ export default createAction(routes.api.component, async (ctx) => {
 								</a>{" "}
 								to edit it:
 							</p>
-							<Snippet code={`sdxc ui add ${component}`} language="bash" />
+							<CodeBlock
+								labels={CODE_LABELS}
+								code={`sdxc ui add ${component}`}
+								language="bash"
+								title="Terminal"
+							/>
 						</div>
 					</ReferenceSection>
 
 					<ReferenceSection id="usage" title="Usage">
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<Snippet
+							<CodeBlock
+								labels={CODE_LABELS}
 								code={`import { ${reference.name} } from "${importPath(reference.module)}";`}
 								language="typescript"
 							/>
@@ -166,7 +178,7 @@ export default createAction(routes.api.component, async (ctx) => {
 									</section>
 								))}
 								{examples.map((example) => (
-									<Snippet key={example} code={example} />
+									<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
 								))}
 							</div>
 						</ReferenceSection>
@@ -249,21 +261,7 @@ function propsBlock(owner: string, props: PropsTable) {
 	return (
 		<div mix={[vstack({ gap: 2, align: "stretch" })]}>
 			{props.rows.length > 0 ? (
-				<ReferenceTable
-					label={`${owner} props`}
-					columns={["Prop", "Type", "Description"]}
-					rows={props.rows.map((prop) => [
-						<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
-							{prop.optional ? `${prop.name}?` : prop.name}
-						</code>,
-						<code mix={[font("mono"), text("sm"), fg("neutral")]}>
-							{prop.values.length > 0 ? prop.values.join(" | ") : prop.type}
-						</code>,
-						<span mix={[text("sm"), fg("neutral")]}>
-							<ReferenceProse>{prop.description}</ReferenceProse>
-						</span>,
-					])}
-				/>
+				<PropsReference label={`${owner} props`} nameLabel="Prop" rows={props.rows} />
 			) : null}
 
 			{props.inherits.map((inherited) => (

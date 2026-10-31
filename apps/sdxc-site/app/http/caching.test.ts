@@ -55,4 +55,26 @@ describe(withBundleCache.name, () => {
 		expect(response.headers.get("ETag")).toBeNull();
 		expect(await response.text()).toBe("<p>current</p>");
 	});
+
+	/**
+	 * A page renders the reader's remembered code tab, so a copy rendered for a reader who
+	 * picked one must stay in their browser and never answer another reader's validator.
+	 */
+	test("keeps a page rendered for a remembered tab private to the reader", async () => {
+		vi.stubGlobal("__BUILD_ID__", "b1");
+		vi.stubEnv("PROD", true);
+		let shared = await withBundleCache(new Request("https://sdxc.com/docs"), page());
+		let picked = await withBundleCache(
+			new Request("https://sdxc.com/docs", {
+				headers: { Cookie: "ui-code-tabs.package-manager=bun" },
+			}),
+			page(),
+		);
+		vi.unstubAllEnvs();
+
+		expect(shared.headers.get("Cache-Control")).toContain("public");
+		expect(picked.headers.get("Cache-Control")).toContain("private");
+		expect(picked.headers.get("Vary")?.toLowerCase()).toContain("cookie");
+		expect(picked.headers.get("ETag")).not.toBe(shared.headers.get("ETag"));
+	});
 });

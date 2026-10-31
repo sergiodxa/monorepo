@@ -13,7 +13,9 @@ import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import {
 	Button,
+	CodeBlock,
 	CtaGroup,
+	DocsPageHeader,
 	Feature,
 	HeadingScope,
 	LinkButton,
@@ -41,10 +43,10 @@ import { MARKETING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services
 import { absoluteUrl } from "~/config/constants";
 import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { listDemoLandings } from "~/resources/views/demos";
@@ -91,23 +93,31 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: MARKETING_COMPONENTS_TITLE },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui" title={MARKETING_COMPONENTS_TITLE}>
-							Landing primitives built on the marketing foundations. Copy stays on the page — every
-							string below is a demo prop. Listbox <code>Section</code> remains for menus.
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/components/marketing-section.tsx`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: MARKETING_COMPONENTS_TITLE },
+							]}
+							title={MARKETING_COMPONENTS_TITLE}
+							description={
+								<>
+									Landing primitives built on the marketing foundations. Copy stays on the page —
+									every string below is a demo prop. Listbox <code>Section</code> remains for menus.
+								</>
+							}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/components/marketing-section.tsx`}
+								/>
+							}
 						/>
 					</header>
 
@@ -164,7 +174,8 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 									</MarketingSection>
 								</div>
 							</HeadingScope>
-							<Snippet
+							<CodeBlock
+								labels={CODE_LABELS}
 								code={`<MarketingSection tone="tinted" spacing="compact" inset>
 	<MarketingHeader eyebrow={t("badge")} description={t("lead")}>
 		{t("title")}

@@ -11,6 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, nowrap, text, weight } from "@sdxc/u/typography";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -33,12 +34,12 @@ import {
 import { listUtilityExamples } from "~/app/services/utility-examples";
 import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/constants";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -86,18 +87,27 @@ export default createAction(routes.api.utility, async (ctx) => {
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
-					{ label: reference.property },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow={`@sdxc/u/${reference.family}`} title={reference.property}>
-							<ReferenceProse>{reference.summary}</ReferenceProse>
-						</PageTitle>
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
+								{ label: reference.property },
+							]}
+							title={reference.property}
+							description={<ReferenceProse>{reference.summary}</ReferenceProse>}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}u/src/${entry.family}/${entry.module}.ts`}
+								/>
+							}
+						/>
 
 						{reference.see.map((link) => (
 							<a key={link.href} href={link.href} mix={[m(0), text("sm"), fg("brand")]}>
@@ -105,13 +115,11 @@ export default createAction(routes.api.utility, async (ctx) => {
 							</a>
 						))}
 
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}u/src/${entry.family}/${entry.module}.ts`}
+						<CodeBlock
+							language="tsx"
+							labels={CODE_LABELS}
+							code={`import { ${reference.name} } from "@sdxc/u/${reference.family}";`}
 						/>
-
-						<Snippet code={`import { ${reference.name} } from "@sdxc/u/${reference.family}";`} />
 					</header>
 
 					{table.length > 0 ? (
@@ -151,7 +159,12 @@ export default createAction(routes.api.utility, async (ctx) => {
 									</section>
 								))}
 								{snippets.map((example) => (
-									<Snippet key={example.call} code={example.call} language="typescript" />
+									<CodeBlock
+										labels={CODE_LABELS}
+										key={example.call}
+										code={example.call}
+										language="typescript"
+									/>
 								))}
 							</div>
 						</ReferenceSection>
@@ -163,7 +176,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 							title="Using a custom value"
 							lead="Every scale argument also takes a raw CSS value, which passes through untouched."
 						>
-							<Snippet code={custom} language="typescript" />
+							<CodeBlock labels={CODE_LABELS} code={custom} language="typescript" />
 						</ReferenceSection>
 					)}
 
@@ -173,7 +186,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 							title="Applying on a state"
 							lead="Wrap the call in a state utility to scope it to one selector."
 						>
-							<Snippet code={onState(reference)} language="typescript" />
+							<CodeBlock labels={CODE_LABELS} code={onState(reference)} language="typescript" />
 						</ReferenceSection>
 					)}
 
@@ -183,7 +196,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 							title="Responsive design"
 							lead="Wrap the call in a container query to scope it to one width."
 						>
-							<Snippet code={atWidth(reference)} language="typescript" />
+							<CodeBlock labels={CODE_LABELS} code={atWidth(reference)} language="typescript" />
 						</ReferenceSection>
 					)}
 
@@ -201,14 +214,18 @@ export default createAction(routes.api.utility, async (ctx) => {
 										<p mix={[m(0), text("base"), fg("neutral")]}>
 											<ReferenceProse>{scale.lead}</ReferenceProse>
 										</p>
-										<Snippet code={scale.css} language="css" />
+										<CodeBlock labels={CODE_LABELS} code={scale.css} language="css" />
 										{scale.declaration === null ? null : (
-											<Snippet code={scale.declaration} language="typescript" />
+											<CodeBlock
+												labels={CODE_LABELS}
+												code={scale.declaration}
+												language="typescript"
+											/>
 										)}
 										<p mix={[m(0), text("base"), fg("neutral")]}>
 											<ReferenceProse>{scale.usageLead}</ReferenceProse>
 										</p>
-										<Snippet code={scale.usage} language="typescript" />
+										<CodeBlock labels={CODE_LABELS} code={scale.usage} language="typescript" />
 									</section>
 								))}
 							</div>
@@ -216,7 +233,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 					) : null}
 
 					<ReferenceSection id="signature" title="Signature">
-						<Snippet code={reference.signature} language="typescript" />
+						<CodeBlock labels={CODE_LABELS} code={reference.signature} language="typescript" />
 					</ReferenceSection>
 				</article>
 			</DocsLayout>

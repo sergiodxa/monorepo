@@ -12,7 +12,7 @@ import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
-import { Separator, Typeset } from "@sdxc/ui";
+import { Callout, DocsPageHeader, Separator, Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { Anchor } from "~/app/services/article";
@@ -20,9 +20,8 @@ import type { Anchor } from "~/app/services/article";
 import { siteCache } from "~/app/initializers/cache";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
-import Alert from "~/resources/components/alert";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
-import PageTitle from "~/resources/components/page-title";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -61,23 +60,25 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Releases" },
-					{ label: TITLE },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
-						<PageTitle eyebrow="Releases" title={TITLE}>
-							{DESCRIPTION}
-						</PageTitle>
+						<DocsPageHeader
+							crumbs={[
+								{ label: "Documentation", href: routes.docs.index.href() },
+								{ label: "Releases" },
+								{ label: TITLE },
+							]}
+							title={TITLE}
+							description={DESCRIPTION}
+						/>
 					</header>
 
 					{releases.length === 0 ? (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
-							<Alert kind="note">
+							<Callout kind="note" label="Note">
 								<p mix={[m(0)]}>
 									The releases could not be read just now. Every one of them is published in full{" "}
 									<a href={RELEASES_HREF} mix={[fg("brand")]} rel="noreferrer">
@@ -85,7 +86,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 									</a>
 									, and this page fills in again as soon as the call answers.
 								</p>
-							</Alert>
+							</Callout>
 						</div>
 					) : (
 						<div mix={[vstack({ gap: 10 }), m("2.5rem", 0, 0, 0)]}>

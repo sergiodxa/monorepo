@@ -12,6 +12,7 @@ import { container, flexWrap, gap, items, relative, vstack } from "@sdxc/u/layou
 import { m } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, nowrap, text, weight } from "@sdxc/u/typography";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	displayHeading,
@@ -36,11 +37,11 @@ import {
 import { MARKETING_FOUNDATIONS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -122,28 +123,37 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: MARKETING_FOUNDATIONS_TITLE },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui" title={MARKETING_FOUNDATIONS_TITLE}>
-							Layout tokens and style factories for landing bands. Override the tokens per brand;
-							compose the factories into section hosts. Listbox <code>Section</code> stays for menus
-							— landing bands use <code>MarketingSection</code> and the other primitives on{" "}
-							<a href={routes.api.component.href({ component: "marketing-components" })}>
-								Marketing components
-							</a>
-							.
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/styles/marketing.ts`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: MARKETING_FOUNDATIONS_TITLE },
+							]}
+							title={MARKETING_FOUNDATIONS_TITLE}
+							description={
+								<>
+									Layout tokens and style factories for landing bands. Override the tokens per
+									brand; compose the factories into section hosts. Listbox <code>Section</code>{" "}
+									stays for menus — landing bands use <code>MarketingSection</code> and the other
+									primitives on{" "}
+									<a href={routes.api.component.href({ component: "marketing-components" })}>
+										Marketing components
+									</a>
+									.
+								</>
+							}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/styles/marketing.ts`}
+								/>
+							}
 						/>
 					</header>
 
@@ -162,7 +172,8 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 								<span mix={[text("sm"), fg("neutral")]}>{controls}</span>,
 							])}
 						/>
-						<Snippet
+						<CodeBlock
+							labels={CODE_LABELS}
 							code={`import "@sdxc/ui/theme.css";
 
 :root {
@@ -290,7 +301,8 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 						title="Motion"
 						lead="Landing bands reuse viewReveal() from @sdxc/ui/animations. Apply it on the band host; reduced-motion already collapses the translate. No separate marketing animation system."
 					>
-						<Snippet
+						<CodeBlock
+							labels={CODE_LABELS}
 							code={`import { viewReveal } from "@sdxc/ui/animations";
 import { marketingBandTone, marketingSectionSpace } from "@sdxc/ui/styles";
 

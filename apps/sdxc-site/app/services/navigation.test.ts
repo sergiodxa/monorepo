@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { findNeighbours } from "@sdxc/ui/utils";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -15,8 +16,8 @@ import {
 	buildPackageNav,
 	buildPackagesNav,
 	buildUtilitiesNav,
-	findNeighbours,
 	flattenNav,
+	toDocsTree,
 } from "~/app/services/navigation";
 
 describe("buildGuidesNav", () => {
@@ -148,44 +149,50 @@ describe("buildPackageNav", () => {
 	});
 });
 
-describe("findNeighbours", () => {
+describe("toDocsTree", () => {
+	test("keeps every entry in the order the sidebar draws it", async () => {
+		let tree = await buildComponentsNav();
+		let pages = findOrder(toDocsTree(tree));
+
+		expect(pages).toEqual(flattenNav(tree).map((entry) => entry.href));
+	});
+});
+
+describe("findNeighbours over a converted tree", () => {
 	test("leaves the first page without a previous and the last without a next", async () => {
 		let tree = await buildGuidesNav();
 		let flat = flattenNav(tree);
-		let first = flat.at(0);
-		let last = flat.at(-1);
 
-		expect(first).toBeDefined();
-		expect(last).toBeDefined();
-
-		expect(findNeighbours(tree, first?.href ?? "")).toEqual({
-			previous: null,
-			next: flat.at(1),
-		});
-		expect(findNeighbours(tree, last?.href ?? "")).toEqual({
-			previous: flat.at(-2),
-			next: null,
-		});
+		expect(findNeighbours(toDocsTree(tree), flat.at(0)?.href ?? "").previous).toBeNull();
+		expect(findNeighbours(toDocsTree(tree), flat.at(-1)?.href ?? "").next).toBeNull();
 	});
 
-	test("ends the guides at their last page rather than stepping into the packages", async () => {
+	test("keeps the pager inside the section being read", async () => {
 		let tree = await buildGuidesNav();
-		let last = flattenNav(tree).at(-1);
+		let section = tree.sections.find((candidate) => candidate.entries.length > 1);
+		let last = section?.entries.at(-1);
 
-		expect(findNeighbours(tree, last?.href ?? "").next).toBeNull();
-	});
-
-	test("steps across a section boundary inside one tree", async () => {
-		let tree = await buildPackagesNav();
-		let second = tree.sections.at(1)?.entries.at(0);
-
-		expect(findNeighbours(tree, "/api").next).toEqual(second);
+		expect(last).toBeDefined();
+		let { next, previous } = findNeighbours(toDocsTree(tree), last?.href ?? "", {
+			boundary: "section",
+		});
+		expect(previous?.section).toBe(section?.title);
+		expect(next === null || next.section === section?.title).toBe(true);
 	});
 
 	test("reports neither neighbour for a path the tree has no entry for", async () => {
-		let tree = await buildGuidesNav();
+		let tree = toDocsTree(await buildGuidesNav());
 
 		expect(findNeighbours(tree, "/docs")).toEqual({ previous: null, next: null });
-		expect(findNeighbours(tree, "/api")).toEqual({ previous: null, next: null });
 	});
 });
+
+/** Every page href in a converted tree, depth first, which is the order the pager reads. */
+function findOrder(tree: ReturnType<typeof toDocsTree>): string[] {
+	return tree.sections.flatMap((section) =>
+		section.items.flatMap((item) => [
+			...(item.href ? [item.href] : []),
+			...(item.items ?? []).flatMap((child) => (child.href ? [child.href] : [])),
+		]),
+	);
+}

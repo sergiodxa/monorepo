@@ -211,8 +211,8 @@ function animateResults(before: ResultsSnapshot, direction: number): void {
 
 /**
  * The dialog's box, a combobox over the result rows; typing reloads the frame once it pauses,
- * arrows choose a row with focus kept in the box, and closing the dialog restores the page's
- * own state.
+ * the first row of each fresh list starts chosen, arrows move the choice with focus kept in
+ * the box, Enter opens it, and closing the dialog restores the page's own state.
  */
 export const SearchBox = clientEntry(
 	import.meta.url,
@@ -224,8 +224,11 @@ export const SearchBox = clientEntry(
 		let markedKind: string | null = null;
 		/** The side the next rows slide in from: `1` or `-1` after a tab switch, `0` otherwise. */
 		let direction = 0;
-		/** Whether the next rows arrive with the first chosen, so arrows that switched tabs keep switching them. */
-		let chooseFirst = false;
+		/**
+		 * Whether the reader has moved the choice with ↑ or ↓ since they last typed, which is
+		 * what hands ← and → to the kind tabs; until then they move the caret in the box.
+		 */
+		let browsing = false;
 		/** The results as they stood when the reload under way began replacing them. */
 		let before: ResultsSnapshot | undefined;
 		/** What the page rendered the box with, which closing the dialog returns it to. */
@@ -233,6 +236,7 @@ export const SearchBox = clientEntry(
 
 		handle.queueTask(() => {
 			watchSearchDialog(handle.signal);
+			chooseFirst();
 			let dialog = document.getElementById(handle.props.dialogId);
 			dialog?.addEventListener("close", reset, { signal: handle.signal });
 			dialog?.addEventListener("click", onClick, { signal: handle.signal });
@@ -244,6 +248,15 @@ export const SearchBox = clientEntry(
 			return element instanceof HTMLInputElement ? element : null;
 		}
 
+		/**
+		 * Chooses the first option the box controls, a result or a quick link, so Enter opens
+		 * the top of whatever list shows without the reader reaching for an arrow first.
+		 */
+		function chooseFirst(): void {
+			let input = box();
+			if (input) chooseOption(input, 0);
+		}
+
 		/** The tab the reader is on: the one marked ahead of its results, else the frame's. */
 		function currentKind(): string {
 			return markedKind ?? handle.props.kind;
@@ -252,7 +265,7 @@ export const SearchBox = clientEntry(
 		/**
 		 * Follows the frame's reload: the results are busy from the first keystroke, the spinner
 		 * shows once the wait turns slow, and the newest rows animate in from how the old ones
-		 * stood, starting unchosen or with the first chosen as a tab switch by arrow asked.
+		 * stood, with the first of them chosen.
 		 */
 		function onLiveFrame(event: LiveFrameEvent): void {
 			if (event.state === "pending") {
@@ -266,13 +279,10 @@ export const SearchBox = clientEntry(
 				markBusy(false);
 				markedKind = null;
 				prefetchTopResult(event.currentTarget);
-				if (before && event.currentTarget instanceof HTMLElement) {
-					chooseOption(event.currentTarget, chooseFirst ? 0 : -1);
-					animateResults(before, direction);
-				}
+				if (event.currentTarget instanceof HTMLElement) chooseOption(event.currentTarget, 0);
+				if (before) animateResults(before, direction);
 				before = undefined;
 				direction = 0;
-				chooseFirst = false;
 				if (!spinning) return;
 				spinning = false;
 				void handle.update();
@@ -294,10 +304,9 @@ export const SearchBox = clientEntry(
 		 * one in flight before it renders, so quick presses end on the last tab pressed and never
 		 * flash back to one passed on the way. The rows slide in from the side the tab sits on.
 		 */
-		function switchTab(kind: string, first: boolean): void {
+		function switchTab(kind: string): void {
 			let { kinds } = handle.props;
 			direction = Math.sign(kinds.indexOf(kind) - kinds.indexOf(currentKind()));
-			chooseFirst = first;
 			markedKind = kind;
 			for (let tab of document.querySelectorAll(`[${SEARCH_KIND_ATTRIBUTE}]`)) {
 				if (tab.getAttribute(SEARCH_KIND_ATTRIBUTE) === kind) {
@@ -324,7 +333,7 @@ export const SearchBox = clientEntry(
 			let dialog = link.closest("dialog");
 			if (kind !== null) {
 				event.preventDefault();
-				switchTab(kind, false);
+				switchTab(kind);
 				box()?.focus();
 			} else if (samePage(link)) {
 				dialog?.close();
@@ -342,7 +351,7 @@ export const SearchBox = clientEntry(
 			let input = box();
 			if (!input) return;
 			input.value = initialQuery;
-			chooseOption(input, -1);
+			browsing = false;
 			if ((initialQuery === "") !== blank) {
 				blank = initialQuery === "";
 				void handle.update();
@@ -351,16 +360,38 @@ export const SearchBox = clientEntry(
 			input.dispatchEvent(new Event(LIVE_FRAME_RELOAD_EVENT));
 		}
 
-		/** While a row is chosen, left and right switch kind tabs, around from either end. */
-		function switchTabByArrow(event: KeyboardEvent): void {
+		/**
+		 * Up and down start browsing the rows; while the reader browses with a row chosen, left
+		 * and right switch kind tabs, around from either end.
+		 */
+		function onArrow(event: KeyboardEvent): void {
+			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				browsing = true;
+				return;
+			}
 			let { kinds } = handle.props;
 			if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-			if (kinds.length < 2 || !(event.currentTarget instanceof HTMLElement)) return;
+			if (!browsing || kinds.length < 2 || !(event.currentTarget instanceof HTMLElement)) return;
 			if (chosenOption(event.currentTarget) < 0) return;
 			event.preventDefault();
 			let step = event.key === "ArrowRight" ? 1 : -1;
 			let at = Math.max(0, kinds.indexOf(currentKind()));
-			switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true);
+			switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "");
+		}
+
+		/**
+		 * Drops the choice as the text changes, since the rows on screen answer the old text
+		 * and Enter must submit the new one until fresh rows arrive; clearing the box points
+		 * the combobox back at the quick links, the first of them chosen.
+		 */
+		function onInput(event: Event & { currentTarget: HTMLInputElement }): void {
+			browsing = false;
+			chooseOption(event.currentTarget, -1);
+			if ((event.currentTarget.value === "") === blank) return;
+			blank = !blank;
+			void handle.update().then(() => {
+				if (blank) chooseFirst();
+			});
 		}
 
 		return () => (
@@ -395,14 +426,9 @@ export const SearchBox = clientEntry(
 							slowAfter: SPINNER_DELAY_MS,
 						}),
 						activeDescendantKeys({ prefetch: SEARCH_PREFETCH }),
-						on<HTMLInputElement, "keydown">("keydown", switchTabByArrow),
+						on<HTMLInputElement, "keydown">("keydown", onArrow),
 						on<HTMLInputElement, "ui:live-frame">("ui:live-frame", onLiveFrame),
-						on<HTMLInputElement, "input">("input", (event) => {
-							if ((event.currentTarget.value === "") === blank) return;
-							chooseOption(event.currentTarget, -1);
-							blank = !blank;
-							void handle.update();
-						}),
+						on<HTMLInputElement, "input">("input", onInput),
 					]}
 				/>
 			</QuietSearchRow>

@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { listGuides, readGuide } from "~/app/services/docs";
+import { hasSectionDescription, listGuides, readGuide } from "~/app/services/docs";
 import { listPackages } from "~/app/services/packages";
 import { fetchApp } from "~/app/test/router";
 import routes from "~/routes/web";
@@ -43,13 +43,45 @@ function renderGuide(slug: string): Promise<{ status: number; body: string }> {
 }
 
 describe("GET /docs", () => {
-	test("routes by intent, one card per guide section", async () => {
-		let sections = await listGuides();
+	test("opens with the first section's guides as the start path", async () => {
+		let [first] = await listGuides();
+		let body = await (await fetchApp("/docs")).text();
+		let block = body.slice(body.indexOf('data-slot="docs-hub-start"'));
+		block = block.slice(0, block.indexOf("</section>"));
+
+		expect(first?.guides.length).toBeGreaterThan(0);
+		for (let guide of first?.guides ?? []) {
+			expect(block).toContain(`href="/docs/${guide.slug}"`);
+		}
+	});
+
+	test("draws every other section as a card with its own line and guide count", async () => {
+		let [, ...rest] = await listGuides();
 		let body = await (await fetchApp("/docs")).text();
 
-		expect(sections.length).toBeGreaterThan(0);
-		for (let section of sections) expect(body).toContain(section.title.replaceAll("&", "&amp;"));
-		expect(body).toContain("Browse the packages");
+		expect(rest.length).toBeGreaterThan(0);
+		for (let section of rest) {
+			expect(hasSectionDescription(section.title)).toBe(true);
+			expect(body).toContain(section.title.replaceAll("&", "&amp;"));
+			expect(body).toContain(
+				`${section.guides.length} ${section.guides.length === 1 ? "guide" : "guides"}`,
+			);
+		}
+	});
+
+	test("lists the package reference with its count, and the changelog", async () => {
+		let body = await (await fetchApp("/docs")).text();
+
+		expect(body).toContain(`href="${routes.api.index.href()}"`);
+		expect(body).toContain(`${listPackages().length} packages`);
+		expect(body).toContain(`href="${routes.docs.changelog.href()}"`);
+	});
+
+	test("offers search that opens the site's dialog and works as a link without it", async () => {
+		let body = await (await fetchApp("/docs")).text();
+		let block = body.slice(body.indexOf('data-slot="docs-hub-search"'));
+
+		expect(block).toMatch(/<a[^>]*href="\/search"[^>]*data-search-trigger/);
 	});
 
 	test.each(GUIDE_SLUGS)("guide %s parses and renders", async (slug) => {
@@ -86,7 +118,7 @@ describe("GET /docs", () => {
 		},
 	);
 
-	test("every card leads somewhere that answers", async () => {
+	test("every section card leads somewhere that answers", async () => {
 		let sections = await listGuides();
 
 		for (let section of sections) {
@@ -117,6 +149,29 @@ describe("GET /docs/*slug", () => {
 
 	test("answers 404 for a slug no file owns", async () => {
 		expect((await fetchApp("/docs/nothing/here")).status).toBe(404);
+	});
+
+	test("turns the 404 into a search pre-filled from the address", async () => {
+		let response = await fetchApp("/docs/guides/rate-limits");
+		let body = await response.text();
+
+		expect(response.status).toBe(404);
+		expect(body).toContain('data-slot="docs-not-found"');
+		expect(body).toContain("/docs/guides/rate-limits");
+		expect(body).toMatch(/<form[^>]*method="get"[^>]*action="\/search"/);
+		expect(body).toMatch(/name="q"[^>]*value="rate limits"|value="rate limits"[^>]*name="q"/);
+		expect(body).toContain('<meta name="robots" content="noindex"');
+	});
+
+	test("leads the 404's links with the way back, then the start guides", async () => {
+		let [first] = await listGuides();
+		let body = await (await fetchApp("/docs/guides/rate-limits")).text();
+		let links = body.slice(body.indexOf('data-slot="docs-not-found-links"'));
+
+		expect(links.indexOf("Back to")).toBeGreaterThan(-1);
+		expect(links.indexOf("Back to")).toBeLessThan(
+			links.indexOf(`href="/docs/${first?.guides.at(0)?.slug}"`),
+		);
 	});
 
 	test("lists what a reader will know under the title, with its code spans set as code", async () => {
@@ -231,9 +286,12 @@ describe("GET /api/ui/:subpath/:slug", () => {
 });
 
 describe("sidebars", () => {
-	/** The hrefs the docked rail links to, which is the first of the two copies drawn. */
+	/** The hrefs the docked sidebar links to, which is the first of the two copies drawn. */
 	function sidebarHrefs(body: string): string[] {
-		let rail = body.slice(body.indexOf("<nav"), body.indexOf("</nav>"));
+		let rail = body.slice(
+			body.indexOf('data-slot="docs-sidebar"'),
+			body.indexOf('data-slot="docs-content"'),
+		);
 		return [...rail.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? "");
 	}
 

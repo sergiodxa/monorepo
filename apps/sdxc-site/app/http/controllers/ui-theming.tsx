@@ -10,6 +10,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";
@@ -22,11 +23,11 @@ import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdow
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readTheme } from "~/app/services/theming";
 import { absoluteUrl } from "~/config/constants";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -61,23 +62,31 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: THEMING_TITLE },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui" title={THEMING_TITLE}>
-							Every color a component draws comes from a variable, and every variable belongs to a
-							role. Redefine the variables and the whole catalogue moves with them.
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/theme.css`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: THEMING_TITLE },
+							]}
+							title={THEMING_TITLE}
+							description={
+								<>
+									Every color a component draws comes from a variable, and every variable belongs to
+									a role. Redefine the variables and the whole catalogue moves with them.
+								</>
+							}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/theme.css`}
+								/>
+							}
 						/>
 					</header>
 
@@ -120,7 +129,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 						title="Light"
 						lead="What a document resolves to with no scheme class on it."
 					>
-						<Snippet code={block(":root", theme.light)} language="css" />
+						<CodeBlock labels={CODE_LABELS} code={block(":root", theme.light)} language="css" />
 					</ReferenceSection>
 
 					<ReferenceSection
@@ -128,7 +137,11 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 						title="Dark"
 						lead="The same names, redefined under a dark ancestor. Add `.dark` to force it, or `.system` to follow the reader's own setting."
 					>
-						<Snippet code={block(":is(.dark, .dark *)", theme.dark)} language="css" />
+						<CodeBlock
+							labels={CODE_LABELS}
+							code={block(":is(.dark, .dark *)", theme.dark)}
+							language="css"
+						/>
 					</ReferenceSection>
 				</article>
 			</DocsLayout>

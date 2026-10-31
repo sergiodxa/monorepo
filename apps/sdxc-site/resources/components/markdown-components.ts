@@ -13,16 +13,20 @@ import { DiagramTag } from "@sdxc/diagram/ui";
 import { FrameTag } from "@sdxc/markdown/remix";
 import { MathTag } from "@sdxc/math/ui";
 
-import Alert from "~/resources/components/alert";
-import CodeBlock from "~/resources/components/code-block";
-import Files, { File, Folder } from "~/resources/components/files";
+import {
+	AlertTag,
+	Fence,
+	FilesTag,
+	FileTag,
+	FolderTag,
+} from "~/resources/components/markdown-blocks";
 import { ProseHeading, ProseLink, ProseList, ProseParagraph } from "~/resources/components/prose";
 
 export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
-	files: Files,
-	folder: Folder,
-	file: File,
-	code: CodeBlock,
+	files: FilesTag,
+	folder: FolderTag,
+	file: FileTag,
+	code: Fence,
 	diagram: DiagramTag,
 	math: MathTag,
 	frame: FrameTag,
@@ -30,5 +34,5 @@ export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	paragraph: ProseParagraph,
 	list: ProseList,
 	link: ProseLink,
-	alert: Alert,
+	alert: AlertTag,
 };

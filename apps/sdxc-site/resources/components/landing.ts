@@ -10,16 +10,21 @@
 import type { RemixOptions } from "@sdxc/markdown/remix";
 
 import Actions from "~/resources/components/actions";
-import Alert from "~/resources/components/alert";
-import CodeBlock from "~/resources/components/code-block";
-import CodeTabs, { CodeTab } from "~/resources/components/code-tabs";
 import Copyable from "~/resources/components/copyable";
 import Feature from "~/resources/components/feature";
 import FeatureGrid from "~/resources/components/feature-grid";
-import Files, { File, Folder } from "~/resources/components/files";
 import FinePrint from "~/resources/components/fine-print";
 import Hero from "~/resources/components/hero";
-import InstallCommand from "~/resources/components/install-command";
+import {
+	AlertTag,
+	CodeTabsTag,
+	CodeTabTag,
+	Fence,
+	FilesTag,
+	FileTag,
+	FolderTag,
+	InstallCommandTag,
+} from "~/resources/components/markdown-blocks";
 import PackageGroups from "~/resources/components/package-groups";
 import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
@@ -39,15 +44,15 @@ export const LANDING_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	"section-block": SectionBlock,
 	"feature-grid": FeatureGrid,
 	feature: Feature,
-	"code-tabs": CodeTabs,
-	"code-tab": CodeTab,
-	"install-command": InstallCommand,
+	"code-tabs": CodeTabsTag,
+	"code-tab": CodeTabTag,
+	"install-command": InstallCommandTag,
 	"package-groups": PackageGroups,
-	alert: Alert,
-	files: Files,
-	folder: Folder,
-	file: File,
-	code: CodeBlock,
+	alert: AlertTag,
+	files: FilesTag,
+	folder: FolderTag,
+	file: FileTag,
+	code: Fence,
 	heading: ProseHeading,
 	paragraph: ProseParagraph,
 	link: ProseLink,

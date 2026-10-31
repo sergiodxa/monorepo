@@ -55,7 +55,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   - A `> [!NOTE]` or `> [!WARNING]` alert for each constraint a reader would otherwise
     learn in production: a limit, an ordering requirement, a security consequence. Every
     content file writes asides as GitHub alerts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`,
-    `CAUTION`), which `resources/components/alert.tsx` draws with a label and an icon.
+    `CAUTION`), which `resources/components/markdown-blocks.tsx` draws as `@sdxc/ui`'s `Callout`.
   - `## Where to go next`, last, with two or three links and a phrase on why to follow each.
   - Second person, affirmative, the reason before the flag or option, current APIs only.
     The schema and `app/http/controllers/docs.test.ts` hold the parts a machine can check.
@@ -71,10 +71,15 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   Remix API only where a package step builds on it — the schema `@sdxc/validate` checks, the
   route a handler is mapped to — and leave a Remix feature a package does not touch (the
   renderer, `cop`, cookies, the data-table query API) to Remix's own documentation.
-- **Name a tab strip only where the choice repeats.** A strip that names an option group
-  from `app/services/option-groups.ts` shares one selection with every other strip naming
-  it, site-wide, and labels its tabs with that group's options. Adding a group is adding it
+- **Name a tab strip only where the choice repeats.** A `code-tabs` strip naming a key from
+  `app/services/remembered-tabs.ts` syncs with every other strip naming it, site-wide, and
+  remembers the choice in that key's own `ui-code-tabs.<key>` cookie, which the server renders
+  the page from and `app/http/caching.ts` keys a reader's copy on. Adding a key is adding it
   there, which is also what holds a cookie written by the browser to what the site offers.
+- **Draw docs blocks with `@sdxc/ui`.** Fences, tab strips, install lines, alerts, file trees,
+  props tables and section headings are the shared `CodeBlock`, `CodeTabs`, `InstallCommand`,
+  `Callout`, `FileTree`, `PropsTable` and `AnchorHeading`; `resources/components/markdown-blocks.tsx`
+  maps the markdown onto them, and `resources/components/docs-labels.ts` holds their copy.
 - **Never invent a sponsor.** `/sponsors` and `/philosophy` name people, so they render
   only what GitHub answered with, read through the public-only view. A read that fails or
   returns nobody draws no list at all: there is no sample list, no placeholder and no
@@ -148,7 +153,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 | The applications the showcase and a package page name | `resources/content/apps.ts`, `app/services/showcase.ts`                      |
 | Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/controllers/sponsors.tsx`              |
 | The cache policy a documentation page carries         | `app/http/caching.ts`                                                        |
-| The named option groups and their cookie              | `app/services/option-groups.ts`, `app/initializers/cookies.ts`               |
+| The remembered code-tab choices and their cookies     | `app/services/remembered-tabs.ts`                                            |
 | The `@sdxc/ui` subpath pages and how a module is read | `app/services/ui-exports.ts`, `scripts/ui-exports.ts`                        |
 | The `@sdxc/u` examples, and how their code is read    | `resources/components/utility-examples/`, `app/services/utility-examples.ts` |
 | The theme scales a utility page teaches               | `app/services/utility-theme.ts`                                              |

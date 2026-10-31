@@ -112,6 +112,151 @@ describe("SearchResults.suggestions", () => {
 	});
 });
 
+/** A guide page and two of its headings, plus a heading whose page did not match. */
+const GROUPED: SearchDocument[] = [
+	{
+		href: "/docs/forms#validate",
+		title: "Validate a form",
+		page: "Forms",
+		section: "Guides",
+		kind: "guide",
+	},
+	{
+		href: "/docs/forms",
+		title: "Forms",
+		page: "Forms",
+		section: "Guides",
+		kind: "guide",
+		summary: "Submit and validate forms",
+	},
+	{
+		href: "/docs/actions#form-errors",
+		title: "Form errors",
+		page: "Actions",
+		section: "Guides",
+		kind: "guide",
+	},
+	{
+		href: "/docs/forms#form-fields",
+		title: "Form fields",
+		page: "Forms",
+		section: "Guides",
+		kind: "guide",
+	},
+];
+
+/** The dialog's rows for `text` over {@link GROUPED}, as `[href, nested]` pairs. */
+function groupedRows(text: string, limit = 10) {
+	let query = parsed(text);
+	let model = SearchResults.suggestions({
+		query: text,
+		parsed: query,
+		matches: matchDocuments(GROUPED, query),
+		kind: null,
+		limit,
+	});
+	return model.state === "results"
+		? { rows: model.items.map((item) => [item.href, item.nested]), listed: model.listed }
+		: null;
+}
+
+describe("SearchResults.suggestions grouping", () => {
+	test("lists each page's row first, then its headings nested under it", () => {
+		expect(groupedRows("form")?.rows).toEqual([
+			["/docs/forms", false],
+			["/docs/forms#form-fields", true],
+			["/docs/forms#validate", true],
+			["/docs/actions", false],
+			["/docs/actions#form-errors", true],
+		]);
+	});
+
+	test("names a page that only its headings matched after the page and its section", () => {
+		let query = parsed("errors");
+		let model = SearchResults.suggestions({
+			query: "errors",
+			parsed: query,
+			matches: matchDocuments(GROUPED, query),
+			kind: null,
+			limit: 10,
+		});
+		let page = model.state === "results" ? model.items[0] : undefined;
+
+		expect(page?.href).toBe("/docs/actions");
+		expect(page?.title).toEqual([{ text: "Actions", match: false }]);
+		expect(page?.description).toEqual([{ text: "Guides", match: false }]);
+	});
+
+	test("fills the row budget with whole matches, a heading's page row included", () => {
+		expect(groupedRows("form", 3)).toEqual({
+			rows: [
+				["/docs/forms", false],
+				["/docs/actions", false],
+				["/docs/actions#form-errors", true],
+			],
+			listed: 2,
+		});
+	});
+});
+
+describe("SearchResults.suggestions descriptions", () => {
+	test("unwraps the summary's code spans, so no backtick reaches the row", () => {
+		let documents: SearchDocument[] = [
+			{
+				href: "/api/ui/form",
+				title: "Form",
+				page: "Form",
+				section: "@sdxc/ui · Components",
+				kind: "ui",
+				summary: "Wraps a native `<form>` element",
+			},
+		];
+		let query = parsed("form");
+		let model = SearchResults.suggestions({
+			query: "form",
+			parsed: query,
+			matches: matchDocuments(documents, query),
+			kind: null,
+			limit: 10,
+		});
+		let description = model.state === "results" ? model.items[0]?.description : [];
+
+		expect(description?.map((segment) => segment.text).join("")).toBe(
+			"Wraps a native <form> element",
+		);
+	});
+});
+
+describe("SearchResults.suggestions with no matches", () => {
+	test("points at the kinds the words reach once the kind filter is dropped", () => {
+		let filtered = parsed("form kind:u");
+		let model = SearchResults.suggestions({
+			query: "form kind:u",
+			parsed: filtered,
+			matches: matchDocuments(DOCUMENTS, filtered),
+			kind: null,
+			limit: 10,
+			unfiltered: matchDocuments(DOCUMENTS, { ...filtered, filters: [] }),
+		});
+
+		expect(
+			model.state === "results"
+				? model.elsewhere.map((tab) => [tab.label, tab.count, tab.href])
+				: null,
+		).toEqual([
+			["Guides", 1, "/search?q=form+kind%3Aguide"],
+			["API", 1, "/search?q=form+kind%3Aapi"],
+			["UI", 2, "/search?q=form+kind%3Aui"],
+		]);
+	});
+
+	test("offers no other kinds while the query has matches", () => {
+		let model = suggest("form", null);
+
+		expect(model.state === "results" ? model.elsewhere : null).toEqual([]);
+	});
+});
+
 describe("SearchResults.results", () => {
 	test("pages every match and keeps the query in the pager's links", () => {
 		let query = parsed("form");

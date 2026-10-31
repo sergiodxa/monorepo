@@ -14,8 +14,9 @@ import { rounded } from "@sdxc/u/effects";
 import { vstack } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
 import { is, minBs, p } from "@sdxc/u/size";
+import { CodeBlock } from "@sdxc/ui";
 
-import Snippet from "~/resources/components/snippet";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 
 namespace UtilityExample {
 	export interface Props {
@@ -52,7 +53,7 @@ export default function UtilityExample(handle: Handle<UtilityExample.Props>) {
 				>
 					{children}
 				</div>
-				<Snippet code={code} />
+				<CodeBlock language="tsx" labels={CODE_LABELS} code={code} />
 			</div>
 		);
 	};

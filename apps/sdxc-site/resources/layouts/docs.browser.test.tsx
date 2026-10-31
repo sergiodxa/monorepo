@@ -43,6 +43,11 @@ const TREE: NavTree = {
 			],
 			groups: [],
 		},
+		{
+			title: "Docs",
+			entries: [{ title: "Callout", href: "/api/ui/callout" }],
+			groups: [],
+		},
 	],
 };
 
@@ -75,16 +80,7 @@ afterEach(async () => {
  */
 function mountComponentPage() {
 	mounted = render(
-		<DocsLayout
-			tree={TREE}
-			activePath="/api/ui/bento"
-			breadcrumbs={[
-				{ label: "API", href: "/api" },
-				{ label: "@sdxc/ui", href: "/api/ui" },
-				{ label: "Marketing section with a long name" },
-			]}
-			anchors={ANCHORS}
-		>
+		<DocsLayout tree={TREE} activePath="/api/ui/bento" anchors={ANCHORS}>
 			<h1>Bento</h1>
 			<p>
 				Configure it with{" "}
@@ -105,7 +101,12 @@ function mountComponentPage() {
 
 /** The phone bar the headings fold into. */
 function bar(): HTMLDetailsElement {
-	return mounted!.$('[data-slot="toc-bar"]') as HTMLDetailsElement;
+	return mounted!.$('details[data-toc="bar"]') as HTMLDetailsElement;
+}
+
+/** The sticky strip under the site header that holds the drawer button and the bar. */
+function strip(): HTMLElement {
+	return mounted!.$('[data-slot="docs-bar"]') as HTMLElement;
 }
 
 /** The in-page list a reader can see, or `undefined` while none is drawn. */
@@ -154,26 +155,55 @@ describe("DocsLayout", () => {
 			await page.viewport(width, 900);
 			mountComponentPage();
 
-			let box = bar().getBoundingClientRect();
+			let box = strip().getBoundingClientRect();
 
 			expect(visibleOutline()).toBeUndefined();
 			expect(box.height).toBeGreaterThanOrEqual(44);
 			expect(box.left).toBeGreaterThanOrEqual(0);
 			expect(box.right).toBeLessThanOrEqual(window.innerWidth);
-			expect(bar().querySelector("summary svg")!.getBoundingClientRect().left).toBeCloseTo(
-				mounted!.$("main")!.getBoundingClientRect().left,
-				0,
-			);
 		},
 	);
 
-	test("keeps the bar at the top of the screen while the page scrolls", async () => {
+	test("keeps the bar right under the site header while the page scrolls", async () => {
 		await page.viewport(375, 900);
 		mountComponentPage();
 
 		window.scrollTo(0, 2000);
 
-		await expect.poll(() => bar().getBoundingClientRect().top).toBe(0);
+		await expect.poll(() => strip().getBoundingClientRect().top).toBe(64);
+	});
+
+	test.each([375, 1280])(
+		"keeps the site header, and its search, on screen at %ipx",
+		async (width) => {
+			await page.viewport(width, 900);
+			mountComponentPage();
+
+			window.scrollTo(0, 3000);
+
+			let header = mounted!.$('[data-slot="docs-header"]') as HTMLElement;
+			await expect.poll(() => header.getBoundingClientRect().top).toBe(0);
+			expect(header.querySelector("[data-search-trigger]")).not.toBeNull();
+		},
+	);
+
+	test("gives the phone drawer a visible close button", async () => {
+		await page.viewport(375, 900);
+		mountComponentPage();
+
+		let close = mounted!.$('dialog#docs-drawer button[aria-label="Close menu"]');
+
+		expect(close).not.toBeNull();
+	});
+
+	test("ends a section's last page without stepping into the next section", async () => {
+		await page.viewport(1280, 900);
+		mountComponentPage();
+
+		let pager = mounted!.$('nav[aria-label="Pagination"]') as HTMLElement;
+
+		expect(pager.querySelector('a[href="/api/ui/announcement-chip"]')).not.toBeNull();
+		expect(pager.querySelector('a[href="/api/ui/callout"]')).toBeNull();
 	});
 
 	test("closes the bar once a reader jumps to a heading, and clears the heading of it", async () => {
@@ -187,6 +217,13 @@ describe("DocsLayout", () => {
 		await expect.poll(() => details.open).toBe(false);
 		await expect
 			.poll(() => document.getElementById("props")!.getBoundingClientRect().top)
-			.toBeGreaterThanOrEqual(details.getBoundingClientRect().bottom);
+			.toBeGreaterThanOrEqual(strip().getBoundingClientRect().bottom);
+	});
+
+	test("glides to a jumped-to heading while a docs page is mounted", async () => {
+		await page.viewport(1280, 900);
+		mountComponentPage();
+
+		expect(getComputedStyle(document.documentElement).scrollBehavior).toBe("smooth");
 	});
 });

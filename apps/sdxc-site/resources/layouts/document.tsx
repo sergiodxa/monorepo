@@ -20,12 +20,10 @@ import { when } from "@sdxc/u/state";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { OptionSelections } from "~/app/services/option-groups";
-
 import { seo } from "~/app/initializers/seo";
 import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
 import { SITE_DESCRIPTION, SITE_URL } from "~/config/constants";
-import OptionGroupScope from "~/resources/components/option-groups";
+import { RememberedTabsScope } from "~/resources/components/markdown-blocks";
 import SiteFooter from "~/resources/components/site-footer";
 
 import "@sdxc/ui/reset.css";
@@ -56,10 +54,10 @@ namespace DocumentLayout {
 		/** What the page is, for a social card: an article rather than the site itself. */
 		og?: Seo.OpenGraph;
 		/**
-		 * The option the reader picked in each named group, which every strip on the
-		 * page renders itself from. A page carrying no such strip leaves it out.
+		 * The request's `Cookie` header, which every remembered code-tab strip on the page
+		 * opens on the reader's choice from. A page carrying no such strip leaves it out.
 		 */
-		selections?: OptionSelections;
+		cookie?: string | null;
 		/** The `robots` meta directive, for a page search engines should leave out of results. */
 		robots?: string;
 		/** Whether the site footer closes the page; a page carrying its own footer turns it off. */
@@ -74,7 +72,7 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, canonical, children, description, og, robots, selections, siteFooter, title } =
+		let { assets, canonical, children, cookie, description, og, robots, siteFooter, title } =
 			handle.props;
 		let { script, stylesheets } = assets;
 		let canonicalUrl = seo.canonical(canonical ?? SITE_URL);
@@ -127,10 +125,10 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					))}
 				</head>
 				<body mix={[m(0), vstack({ align: "center" }), minBs("100dvh"), font("sans"), bg(), fg()]}>
-					<OptionGroupScope selections={selections}>
+					<RememberedTabsScope cookie={cookie}>
 						{children}
 						{siteFooter === false ? null : <SiteFooter />}
-					</OptionGroupScope>
+					</RememberedTabsScope>
 					<script type="module" async src={script.href}></script>
 					<script
 						type="module"

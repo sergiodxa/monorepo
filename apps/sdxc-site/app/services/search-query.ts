@@ -148,6 +148,19 @@ export function parseSearch(text: string): Result<ParsedQuery | null, Validation
 	return parseQuery(text, { filters: ["kind"] });
 }
 
+/** A `kind:` or `-kind:` filter as typed, its value quoted or a single word. */
+const KIND_FILTER_PATTERN = /(^|\s)-?kind:(?:"[^"]*"|\S*)/gi;
+
+/**
+ * The text with every `kind:` filter taken out, so a search that a filter emptied can say
+ * what the same words find across every kind.
+ *
+ * @example withoutKindFilters("router kind:guides") // "router"
+ */
+export function withoutKindFilters(text: string): string {
+	return text.replace(KIND_FILTER_PATTERN, " ").replace(/\s+/g, " ").trim();
+}
+
 /**
  * How well an entry answers one clause: its best alternative, since an `OR` is satisfied by
  * any one of them. Zero means none of them reached it.

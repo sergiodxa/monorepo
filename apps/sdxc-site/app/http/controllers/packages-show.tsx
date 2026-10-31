@@ -13,7 +13,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
-import { Typeset } from "@sdxc/ui";
+import { DocsPageHeader, InstallCommand, Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -23,7 +23,6 @@ import type { PackageEntry } from "~/app/services/packages";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import { readOptionSelections } from "~/app/initializers/cookies";
 import { adsDayTag } from "~/app/services/ads";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import { listGuidesAbout } from "~/app/services/docs";
@@ -41,13 +40,18 @@ import {
 	listPackageGroups,
 	readPackageReadme,
 } from "~/app/services/packages";
+import {
+	PACKAGE_MANAGER_KEY,
+	REMEMBERED_TABS,
+	rememberedTab,
+} from "~/app/services/remembered-tabs";
 import { absoluteUrl } from "~/config/constants";
 import CatalogueIndex from "~/resources/components/catalogue-index";
-import InstallCommand from "~/resources/components/install-command";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -65,7 +69,7 @@ export default createAction(routes.api.show, async (ctx) => {
 	let entry = findPackage(name);
 	if (entry === null) return notFound(ctx, tree);
 
-	let selections = await readOptionSelections(ctx.request);
+	let manager = rememberedTab(ctx.request.headers.get("Cookie"), PACKAGE_MANAGER_KEY);
 
 	let users = listApplicationsUsing(entry.name);
 	let guides = await listGuidesAbout(name);
@@ -87,24 +91,42 @@ export default createAction(routes.api.show, async (ctx) => {
 			title={`${entry.name} — sdxc`}
 			description={entry.description}
 			canonical={ctx.url.href}
-			selections={selections}
 			og={{ type: "article" }}
 		>
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[{ label: "API", href: routes.api.index.href() }, { label: entry.name }]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article>
 					<header mix={[vstack({ gap: 4 })]}>
-						<PageTitle eyebrow={group} title={entry.name} mono>
-							{entry.description}
-						</PageTitle>
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								...(group ? [{ label: group }] : []),
+								{ label: entry.name },
+							]}
+							title={entry.name}
+							mono
+							description={entry.description}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${SOURCE_BASE}${name}`}
+								/>
+							}
+						/>
 
-						<InstallCommand command={["npm add", entry.name, ...entry.peers].join(" ")}>
-							{null}
-						</InstallCommand>
+						<InstallCommand
+							packages={[entry.name, ...entry.peers]}
+							persist="cookie"
+							selected={manager}
+							title={TERMINAL_TITLE}
+							labels={CODE_LABELS}
+							aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
+						/>
 
 						<dl mix={[vstack({ gap: 2 }), m(0)]}>
 							{entry.internalDependencies.length > 0 ? (
@@ -143,12 +165,6 @@ export default createAction(routes.api.show, async (ctx) => {
 								</a>
 							</PackageFact>
 						</dl>
-
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${SOURCE_BASE}${name}`}
-						/>
 					</header>
 
 					{body ? (

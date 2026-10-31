@@ -1,7 +1,7 @@
 /**
  * The search dialog's quick links: the site's four sections, listed under an empty box so the
- * dialog doubles as the site's navigation. They fade in only after a pause, so a reader who
- * opens the dialog and types at once never sees them.
+ * dialog doubles as the site's navigation. They arrive with the box itself, so the dialog
+ * offers somewhere to go from its first frame, the first link chosen for Enter.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,10 +10,10 @@
 import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
-import { rounded, visibility } from "@sdxc/u/effects";
+import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hidden, items } from "@sdxc/u/layout";
-import { dark, light, startingStyle } from "@sdxc/u/responsive";
+import { dark, light } from "@sdxc/u/responsive";
 import { m, minIs, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, textDecoration, truncate, weight } from "@sdxc/u/typography";
@@ -67,7 +67,7 @@ const QUICK_LINKS: ReadonlyArray<QuickLink> = [
 /**
  * Renders the links as the listbox the box's combobox points into while it is empty, leaving
  * out the page the reader is on. The list hides the moment the box holds text, and shows
- * again, after the same pause, once the box is cleared.
+ * again once the box is cleared.
  */
 export function SearchQuickLinks(handle: Handle<{ currentPath?: string }>) {
 	return () => (
@@ -85,8 +85,7 @@ export function SearchQuickLinks(handle: Handle<{ currentPath?: string }>) {
 				grid(),
 				gap(1),
 				when(`:is(dialog:has(#${SEARCH_DIALOG_INPUT_ID}:not(:placeholder-shown))) &`, hidden()),
-				searchSurfaceMotion(300),
-				startingStyle(when(":is(dialog[open]) &", visibility("hidden"))),
+				searchSurfaceMotion(),
 			]}
 		>
 			{QUICK_LINKS.filter((link) => link.href !== handle.props.currentPath).map((link, index) => (
@@ -95,7 +94,7 @@ export function SearchQuickLinks(handle: Handle<{ currentPath?: string }>) {
 					id={searchQuickLinkId(index)}
 					// oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- Each item is an option of the listbox above, which the box's aria-activedescendant points at.
 					role="option"
-					aria-selected="false"
+					aria-selected={index === 0 ? "true" : "false"}
 					mix={[
 						rounded("1.25rem"),
 						hover([light(bg("brand.bg-tint-hover")), dark(bg("neutral.bg-tint-hover"))]),

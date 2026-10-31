@@ -13,6 +13,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -29,12 +30,13 @@ import { buildComponentsNav } from "~/app/services/navigation";
 import { readUiExport } from "~/app/services/ui-exports";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
 import { absoluteUrl } from "~/config/constants";
+import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import PageTitle from "~/resources/components/page-title";
+import PropsReference from "~/resources/components/props-reference";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
-import Snippet from "~/resources/components/snippet";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -91,24 +93,33 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 			<DocsLayout
 				tree={tree}
 				activePath={activePath}
-				breadcrumbs={[
-					{ label: "API", href: routes.api.index.href() },
-					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: reference.name },
-				]}
 				anchors={anchors}
+				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow={module} title={reference.name} mono>
-							<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
-						</PageTitle>
-						<PageActions
-							markdownHref={markdownHref}
-							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.subpath}/${reference.module}.ts`}
+						<DocsPageHeader
+							crumbs={[
+								{ label: "API", href: routes.api.index.href() },
+								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
+								{ label: reference.name },
+							]}
+							title={reference.name}
+							mono
+							description={<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>}
+							actions={
+								<PageActions
+									markdownHref={markdownHref}
+									markdownUrl={absoluteUrl(markdownHref)}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.subpath}/${reference.module}.ts`}
+								/>
+							}
 						/>
-						<Snippet code={`import { ${importedName(symbol)} } from "${module}";`} />
+						<CodeBlock
+							language="tsx"
+							labels={CODE_LABELS}
+							code={`import { ${importedName(symbol)} } from "${module}";`}
+						/>
 					</header>
 
 					{usage ? (
@@ -122,7 +133,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 					{symbol.signature ? (
 						<ReferenceSection id="signature" title="Signature">
 							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-								<Snippet code={symbol.signature} language="typescript" />
+								<CodeBlock labels={CODE_LABELS} code={symbol.signature} language="typescript" />
 								{symbol.returns ? (
 									<p mix={[m(0), text("sm"), fg("neutral")]}>
 										<ReferenceProse>{`Returns ${lowerFirst(symbol.returns)}`}</ReferenceProse>
@@ -162,7 +173,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 						<ReferenceSection id="examples" title="Examples">
 							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 								{symbol.examples.map((example) => (
-									<Snippet key={example} code={example} />
+									<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
 								))}
 							</div>
 						</ReferenceSection>
@@ -218,31 +229,12 @@ namespace RowTable {
 	}
 }
 
-/**
- * Parameters, properties or members as one table. A row typed as a union of strings
- * lists those strings, since which ones are allowed is what the type name leaves open.
- */
+/** Parameters, properties or members as one props table, its first column named for which. */
 function RowTable(handle: Handle<RowTable.Props>) {
 	return () => {
 		let { first, label, rows } = handle.props;
 
-		return (
-			<ReferenceTable
-				label={label}
-				columns={[first, "Type", "Description"]}
-				rows={rows.map((row) => [
-					<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
-						{row.optional ? `${row.name}?` : row.name}
-					</code>,
-					<code mix={[font("mono"), text("sm"), fg("neutral")]}>
-						{row.values.length > 0 ? row.values.join(" | ") : row.type}
-					</code>,
-					<span mix={[text("sm"), fg("neutral")]}>
-						<ReferenceProse>{row.description}</ReferenceProse>
-					</span>,
-				])}
-			/>
-		);
+		return <PropsReference label={label} nameLabel={first} rows={rows} />;
 	};
 }
 
@@ -314,7 +306,9 @@ function Companion(handle: Handle<Companion.Props>) {
 					</p>
 				) : null}
 
-				{symbol.signature ? <Snippet code={symbol.signature} language="typescript" /> : null}
+				{symbol.signature ? (
+					<CodeBlock labels={CODE_LABELS} code={symbol.signature} language="typescript" />
+				) : null}
 
 				{symbol.parameters.length > 0 && symbol.kind !== "event" ? (
 					<RowTable
@@ -335,7 +329,7 @@ function Companion(handle: Handle<Companion.Props>) {
 				{symbol.methods.length > 0 ? <MethodTable symbol={symbol} /> : null}
 
 				{symbol.examples.map((example) => (
-					<Snippet key={example} code={example} />
+					<CodeBlock language="tsx" labels={CODE_LABELS} key={example} code={example} />
 				))}
 			</section>
 		);

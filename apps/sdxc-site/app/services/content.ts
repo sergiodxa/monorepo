@@ -16,7 +16,7 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import { prepareArticle } from "~/app/services/article";
-import { OPTION_GROUP_NAMES } from "~/app/services/option-groups";
+import { REMEMBERED_TAB_KEYS } from "~/app/services/remembered-tabs";
 
 /** The glyphs a `feature` cell may name; the renderer draws one for every entry. */
 export const FEATURE_ICON_NAMES = [
@@ -116,12 +116,12 @@ export const TAGS = {
 
 	/**
 	 * Every label belongs to the panel it names, so a tab and its code never drift
-	 * apart. `name` states which axis of choice the tabs offer, where they offer one
-	 * the reader meets elsewhere on the site: a named strip labels its tabs with that
+	 * apart. `name` is the remembered choice the tabs offer, such as `package-manager`:
+	 * a named strip switches with every other strip naming it, site-wide.
 	 */
 	"code-tabs": {
 		content: "blocks",
-		attributes: s.object({ name: s.optional(s.enum_(OPTION_GROUP_NAMES)) }),
+		attributes: s.object({ name: s.optional(s.enum_(REMEMBERED_TAB_KEYS)) }),
 	},
 
 	"code-tab": {

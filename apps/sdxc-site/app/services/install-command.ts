@@ -1,58 +1,40 @@
 /**
- * Rewrites one authored npm command into the dialect each package manager speaks, so a
- * page carries a single install line and the strip offers the rest.
+ * Reads one authored npm install line into the packages it adds and whether they are
+ * development dependencies, so a page writes a single command and every package manager's
+ * spelling of it is derived from that.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-/** The dialects on offer, in the order the strip reads. The first one is the fallback. */
-export const MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
-
-export type PackageManager = (typeof MANAGERS)[number];
-
-/** The npm verbs that mean "add these packages", which every other manager spells `add`. */
+/** The npm verbs that mean "add these packages". */
 const INSTALL_VERBS = new Set(["install", "i", "add"]);
 
-/** The npm spellings of "as a dev dependency", which every other manager spells `-D`. */
+/** The npm spellings of "as a dev dependency". */
 const DEV_FLAGS = new Set(["-D", "--dev", "--save-dev"]);
 
-/** The npm spellings of "install globally", which Yarn spells as its own `global add` verb. */
-const GLOBAL_FLAGS = new Set(["-g", "--global"]);
+/** An install line read into its parts. */
+export interface ParsedInstall {
+	packages: string[];
+	/** Whether the packages install as development dependencies. */
+	dev: boolean;
+}
 
 /**
- * Rewrites one authored npm command into each manager's dialect, keeping the authored
- * text verbatim for npm so the source of truth stays the string the page was written
- * with.
+ * Reads an `npm add`/`npm install` line. Any other line — a global install, another
+ * verb, another flag, no packages — reads as `null`, and the page prints it verbatim.
  *
- * @param command - The command as authored, such as `npm add @sdxc/http`.
- * @returns One command line per manager.
- * @example installVariants("npm add @sdxc/http").bun // "bun add @sdxc/http"
+ * @param command - The command as authored, such as `npm add -D @sdxc/spec`.
+ * @returns The packages and the dev flag, or `null` when the line is printed as written.
+ * @example parseInstallCommand("npm add @sdxc/http") // { packages: ["@sdxc/http"], dev: false }
  */
-export function installVariants(command: string): Record<PackageManager, string> {
-	let authored = command.trim();
-	let [, ...rest] = authored.split(/\s+/);
-	let [verb, ...operands] = rest;
-	let words = verb !== undefined && INSTALL_VERBS.has(verb) ? ["add", ...operands] : rest;
+export function parseInstallCommand(command: string): ParsedInstall | null {
+	let [tool, verb, ...operands] = command.trim().split(/\s+/);
+	if (tool !== "npm" || verb === undefined || !INSTALL_VERBS.has(verb)) return null;
 
-	let global = words[0] === "add" && words.some((word) => GLOBAL_FLAGS.has(word));
-	let variants = {} as Record<PackageManager, string>;
-	for (let manager of MANAGERS) {
-		if (manager === "npm") variants[manager] = authored;
-		else if (manager === "yarn" && global) {
-			let packages = words.slice(1).filter((word) => !GLOBAL_FLAGS.has(word));
-			variants[manager] = ["yarn", "global", "add", ...packages].join(" ");
-		} else {
-			variants[manager] = [
-				manager,
-				...words.map((word) => {
-					if (DEV_FLAGS.has(word)) return "-D";
-					if (GLOBAL_FLAGS.has(word)) return "-g";
-					return word;
-				}),
-			].join(" ");
-		}
-	}
+	let dev = operands.some((word) => DEV_FLAGS.has(word));
+	let packages = operands.filter((word) => !DEV_FLAGS.has(word));
+	if (packages.length === 0 || packages.some((word) => word.startsWith("-"))) return null;
 
-	return variants;
+	return { packages, dev };
 }

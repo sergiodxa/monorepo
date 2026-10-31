@@ -1,5 +1,5 @@
 /**
- * The row a documentation page carries above its body: copy this page as markdown, and
+ * The row a documentation page carries beside its date: copy this page as markdown, and
  * open it somewhere else. Both exist because a reader's next move is often not reading —
  * it is handing the page to a model — and a rendered page is the wrong thing to hand over.
  *
@@ -9,15 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { ChevronDownIcon } from "@sdxc/icons";
-import { hstack } from "@sdxc/u/layout";
-import { Button, Menu } from "@sdxc/ui";
+import { PageActions as SharedPageActions } from "@sdxc/ui";
 
 import { buildOpenLinks } from "~/app/services/open-links";
-import { CopyMarkdown } from "~/resources/components/copy-markdown";
-
-/** The button and the surface it opens agree on this id; one page carries one menu. */
-const MENU_ID = "page-open-menu";
 
 namespace PageActions {
 	export interface Props {
@@ -30,42 +24,28 @@ namespace PageActions {
 	}
 }
 
-/** Renders the copy button and the `Open` menu beside it. */
+/**
+ * Renders the copy button and the menu beside it. Every menu link opens in a new tab, so
+ * the markdown twin loads as a document rather than through the page's client navigation.
+ */
 export default function PageActions(handle: Handle<PageActions.Props>) {
 	return () => {
 		let { markdownHref, markdownUrl, sourceUrl } = handle.props;
-		let links = buildOpenLinks(markdownHref, markdownUrl, sourceUrl);
 
 		return (
-			<div mix={[hstack({ gap: 2, align: "center" })]}>
-				<CopyMarkdown href={markdownHref} />
-
-				<Button
-					type="button"
-					color="neutral"
-					variant="outline"
-					size="sm"
-					commandfor={MENU_ID}
-					command="toggle-popover"
-				>
-					Open
-					<ChevronDownIcon size={16} aria-hidden="true" />
-				</Button>
-
-				<Menu id={MENU_ID} aria-label="Open this page elsewhere">
-					{links.map((link) => (
-						<Menu.Item
-							key={link.label}
-							href={link.href}
-							{...(link.external
-								? { target: "_blank", rel: "noreferrer" }
-								: { "data-rmx-document": true })}
-						>
-							{link.label}
-						</Menu.Item>
-					))}
-				</Menu>
-			</div>
+			<SharedPageActions
+				markdownHref={markdownHref}
+				labels={{
+					copy: "Copy page",
+					copied: "Copied",
+					failed: "Could not copy the page",
+					more: "Open this page elsewhere",
+				}}
+				links={buildOpenLinks(markdownHref, markdownUrl, sourceUrl).map((link) => ({
+					...link,
+					external: true,
+				}))}
+			/>
 		);
 	};
 }

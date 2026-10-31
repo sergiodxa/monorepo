@@ -1,7 +1,7 @@
 /**
  * One search match drawn as a row: its kind's icon, the title with its matched words marked,
- * and the page's summary (or, for a heading, the page and section it sits in). The `/search`
- * page and the search dialog both list matches with it, so the two look alike.
+ * and the page's summary; a heading under its page is a `#` and its title on a hairline rail.
+ * The `/search` page and the search dialog both list matches with it, so the two look alike.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,13 +10,24 @@
 import type { Handle } from "remix/component";
 
 import { BlocksIcon, BookOpenIcon, PackageIcon, PaintbrushIcon } from "@sdxc/icons";
-import { bg, fg } from "@sdxc/u/color";
+import { bg, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { gap, grid, gridTemplate, items } from "@sdxc/u/layout";
+import { raw } from "@sdxc/u/general";
+import {
+	absolute,
+	gap,
+	grid,
+	gridTemplate,
+	insBe,
+	insBs,
+	insIs,
+	items,
+	relative,
+} from "@sdxc/u/layout";
 import { dark, light } from "@sdxc/u/responsive";
-import { minIs, p } from "@sdxc/u/size";
+import { is, minIs, mis, p, pb, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
-import { text, textDecoration, truncate, weight } from "@sdxc/u/typography";
+import { text, textAlign, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Highlight } from "@sdxc/ui";
 
 import type { SearchKind } from "~/app/services/search-query";
@@ -56,20 +67,48 @@ interface SearchResultProps {
 	 * the same height and the dialog's matches fit on screen.
 	 */
 	optionId?: string;
+	/** Whether the row starts chosen, as the first row of a fresh list of options does. */
+	selected?: boolean;
+}
+
+/**
+ * The rail a heading row hangs on: a hairline under the page row's icon reaching halfway into
+ * the gap on either side, so consecutive headings under one page draw one continuous line.
+ */
+function headingRail() {
+	return [
+		relative(),
+		mis(8),
+		when("&::before", [
+			raw({ content: '""' }),
+			absolute(),
+			insBs("-0.125rem"),
+			insBe("-0.125rem"),
+			insIs("-0.5rem"),
+			is("1px"),
+			bg(colorMix("oklab", { color: "var(--ui-neutral-fg-emphasis)", weight: 20 }, "transparent")),
+		]),
+	];
+}
+
+/** The `aria-selected` value for an option, spelled out since ARIA reads the attribute's text. */
+function selectedState(selected: boolean): "true" | "false" {
+	return selected ? "true" : "false";
 }
 
 /** Renders a result row; the icon is named for assistive technology, since the kind is news here. */
 export function SearchResult(handle: Handle<SearchResultProps>) {
 	return () => {
-		let { item, optionId } = handle.props;
+		let { item, optionId, selected = false } = handle.props;
 
 		return (
 			<li
 				id={optionId}
 				// oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- A row is an option of the listbox it sits in, which the box's aria-activedescendant points at.
 				role={optionId ? "option" : undefined}
-				aria-selected={optionId ? "false" : undefined}
-				mix={
+				aria-selected={optionId ? selectedState(selected) : undefined}
+				mix={[
+					item.nested ? headingRail() : undefined,
 					optionId
 						? [
 								rounded("1.25rem"),
@@ -80,30 +119,43 @@ export function SearchResult(handle: Handle<SearchResultProps>) {
 									dark(bg("neutral.bg-tint-hover")),
 								]),
 							]
-						: undefined
-				}
+						: undefined,
+				]}
 			>
 				<a
 					href={item.href}
 					mix={[
 						grid(),
 						gridTemplate({ columns: "1.5rem minmax(0, 1fr)" }),
-						items("start"),
+						items(item.nested ? "center" : "start"),
 						gap(3),
-						p(3),
+						item.nested ? [pi(3), pb(2)] : p(3),
 						fg("neutral.emphasis"),
 						textDecoration("none"),
 					]}
 				>
-					<SearchKindIcon kind={item.kind} label={item.kindLabel} />
-					<span mix={[grid(), gap(0.5), minIs(0)]}>
-						<span mix={[text("base"), weight("medium"), optionId ? truncate() : undefined]}>
-							<Highlight segments={item.title} />
-						</span>
-						<span mix={[text("sm"), fg("neutral.muted"), optionId ? truncate() : undefined]}>
-							<Highlight segments={item.description} color="neutral" />
-						</span>
-					</span>
+					{item.nested ? (
+						<>
+							<span aria-hidden="true" mix={[textAlign("center"), fg("neutral.muted")]}>
+								#
+							</span>
+							<span mix={[text("sm"), weight("medium"), optionId ? truncate() : undefined]}>
+								<Highlight segments={item.title} />
+							</span>
+						</>
+					) : (
+						<>
+							<SearchKindIcon kind={item.kind} label={item.kindLabel} />
+							<span mix={[grid(), gap(0.5), minIs(0)]}>
+								<span mix={[text("base"), weight("medium"), optionId ? truncate() : undefined]}>
+									<Highlight segments={item.title} />
+								</span>
+								<span mix={[text("sm"), fg("neutral.muted"), optionId ? truncate() : undefined]}>
+									<Highlight segments={item.description} color="neutral" />
+								</span>
+							</span>
+						</>
+					)}
 				</a>
 			</li>
 		);

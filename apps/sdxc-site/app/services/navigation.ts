@@ -200,4 +200,4 @@ export async function listUiExportGroups(): Promise<NavGroup[]> {
 }
 
 export type { NavEntry, NavGroup, NavSection, NavTree } from "~/app/services/navigation-tree";
-export { findNeighbours, flattenNav } from "~/app/services/navigation-tree";
+export { flattenNav, toDocsTree } from "~/app/services/navigation-tree";

@@ -17,9 +17,9 @@ import { clip, overflowX } from "@sdxc/u/overflow";
 import { at, atMax } from "@sdxc/u/responsive";
 import { is, minBs, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Disclosure } from "@sdxc/ui";
+import { CodeBlock, Disclosure } from "@sdxc/ui";
 
-import Snippet from "~/resources/components/snippet";
+import { CODE_LABELS } from "~/resources/components/docs-labels";
 
 /** The container the preview's frame reads its own width from. */
 const PREVIEW_CONTAINER = "component-preview";
@@ -105,7 +105,7 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 					<Disclosure>
 						<Disclosure.Trigger mix={[text("sm")]}>{label}</Disclosure.Trigger>
 						<Disclosure.Panel>
-							<Snippet code={code} />
+							<CodeBlock language="tsx" labels={CODE_LABELS} code={code} />
 						</Disclosure.Panel>
 					</Disclosure>
 				)}

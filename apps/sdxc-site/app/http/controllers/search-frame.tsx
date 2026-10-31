@@ -22,15 +22,16 @@ import { SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
 /**
- * How many matches the dialog lists before pointing at the full page: as many two-line rows
- * as fit under the box, with the tabs and "See all", on a laptop screen without scrolling.
+ * How many rows the dialog lists before pointing at the full page: page rows take two lines
+ * and heading rows one, so seven fit under the box with the tabs and "See all" on a laptop
+ * screen without scrolling.
  */
-const SUGGESTION_COUNT = 5;
+const SUGGESTION_ROWS = 7;
 
 /**
  * Serves the dialog's body. Every state answers 200, a blank box and text that cannot run
  * included, because the fragment lands inside a dialog on whatever page the reader is on;
- * the reason a query cannot run is shown under the box instead.
+ * a `kind:` filter that empties the results is retried without it to point at other kinds.
  *
  * @returns HTML fragment for `GET /frames/search`.
  */
@@ -42,14 +43,19 @@ export default createAction(routes.searchFrame, async (ctx) => {
 	if (isFailure(parsed)) model = SearchResults.invalid(text, parsed.error);
 	else if (parsed.data === null) model = SearchResults.blank();
 	else {
-		let matches = matchDocuments(await buildSearchIndex(), parsed.data);
+		let index = await buildSearchIndex();
+		let matches = matchDocuments(index, parsed.data);
 		recordSiteEvent({ search: { surface: "dialog", query: text, results: matches.length } });
 		model = SearchResults.suggestions({
 			query: text,
 			parsed: parsed.data,
 			matches,
 			kind: await requestedKind(ctx.url),
-			limit: SUGGESTION_COUNT,
+			limit: SUGGESTION_ROWS,
+			unfiltered:
+				matches.length === 0 && parsed.data.filters.length > 0
+					? matchDocuments(index, { ...parsed.data, filters: [] })
+					: [],
 		});
 	}
 

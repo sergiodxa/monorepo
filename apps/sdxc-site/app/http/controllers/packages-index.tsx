@@ -12,13 +12,12 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, textTransform, tracking } from "@sdxc/u/typography";
-import { Button, Keyboard } from "@sdxc/ui";
+import { Button, DocsPageHeader, Keyboard } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
-import PageTitle from "~/resources/components/page-title";
 import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import DocsLayout from "~/resources/layouts/docs";
@@ -39,10 +38,8 @@ export default createAction(routes.api.index, async (ctx) => {
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
 		>
-			<DocsLayout tree={tree} activePath={routes.api.index.href()} breadcrumbs={[]}>
-				<PageTitle eyebrow="API" title="Every package">
-					{DESCRIPTION}
-				</PageTitle>
+			<DocsLayout tree={tree} activePath={routes.api.index.href()}>
+				<DocsPageHeader title="Every package" description={DESCRIPTION} />
 
 				<div mix={[m("2rem", 0, 0, 0)]}>
 					<Button

@@ -1,7 +1,8 @@
 /**
  * The search dialog's and the `/search` page's states, built from the matches a query
  * reached: rows whose title and description are already split into highlighted segments,
- * a tab per kind with its count, and pagination links that keep the query.
+ * a tab per kind with its count, heading rows grouped under their page, and pagination links
+ * that keep the query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +16,7 @@ import { highlight } from "@sdxc/search/query";
 
 import type { SearchDocument, SearchKind } from "~/app/services/search-query";
 
-import { SEARCH_KINDS } from "~/app/services/search-query";
+import { SEARCH_KINDS, withoutKindFilters } from "~/app/services/search-query";
 import routes from "~/routes/web";
 
 /** The states the search templates render, and the render-ready values each one carries. */
@@ -30,6 +31,11 @@ export namespace SearchResults {
 		title: Array<HighlightSegment>;
 		/** The page's summary, or for a heading the page and section it sits in. */
 		description: Array<HighlightSegment>;
+		/**
+		 * Whether the row is a heading listed under its page's row, drawn indented on a rail
+		 * with its title alone, since the page row above names where it sits.
+		 */
+		nested: boolean;
 	}
 
 	/**
@@ -86,6 +92,8 @@ export namespace SearchResults {
 				state: "results";
 				query: string;
 				total: number;
+				/** How many of the matches the rows list; a page row holding only headings adds a row, not a match. */
+				listed: number;
 				items: Array<Item>;
 				/** The `/search` page for the same text and tab, where every match is paged. */
 				seeAll: string;
@@ -93,6 +101,11 @@ export namespace SearchResults {
 				kind: SearchKind | null;
 				/** "All" then each kind with matches; empty while one kind holds every match. */
 				tabs: Array<Tab>;
+				/**
+				 * With no matches, each kind the same words reach once the typed `kind:` filters are
+				 * dropped, linking to `/search` for it; empty otherwise.
+				 */
+				elsewhere: Array<Tab>;
 		  };
 }
 
@@ -126,11 +139,12 @@ export class SearchResults {
 	}
 
 	/**
-	 * The dialog's state for a query: the first `limit` matches of the tab asked for. A tab
+	 * The dialog's state for a query: the top matches of the tab asked for, as many as fill
+	 * `limit` rows once grouped under their pages. A tab
 	 * naming a kind with no matches falls back to "All", so a tab that empties as the reader
 	 * types never strands them; tabs show only while matches span more than one kind.
 	 *
-	 * @param input The typed text, its parsed query, every match, the tab asked for, and how many rows the dialog lists.
+	 * @param input The typed text, its parsed query, every match, the tab asked for, how many matches the dialog lists, and what the words match with their `kind:` filters dropped.
 	 */
 	static suggestions(input: {
 		query: string;
@@ -138,12 +152,14 @@ export class SearchResults {
 		matches: ReadonlyArray<SearchDocument>;
 		kind: SearchKind | null;
 		limit: number;
+		unfiltered?: ReadonlyArray<SearchDocument>;
 	}): SearchResults.Suggestions {
 		let counts = countKinds(input.matches);
 		let kinds = SEARCH_KINDS.filter((kind) => counts[kind] > 0);
 		let current = input.kind !== null && counts[input.kind] > 0 ? input.kind : null;
 		let shown =
 			current === null ? input.matches : input.matches.filter((match) => match.kind === current);
+		let listed = fillRows(shown, input.limit);
 		let tab = (kind: SearchKind | null): SearchResults.Tab => ({
 			kind,
 			label: kind === null ? "All" : KIND_LABELS[kind],
@@ -156,10 +172,12 @@ export class SearchResults {
 			state: "results",
 			query: input.query,
 			total: shown.length,
-			items: shown.slice(0, input.limit).map((match) => item(match, input.parsed)),
+			listed: listed.length,
+			items: groupByPage(listed, input.parsed),
 			seeAll: searchHref(input.query, current),
 			kind: current,
 			tabs: kinds.length > 1 ? [tab(null), ...kinds.map(tab)] : [],
+			elsewhere: input.matches.length === 0 ? elsewhere(input.query, input.unfiltered ?? []) : [],
 		};
 	}
 
@@ -190,7 +208,7 @@ export class SearchResults {
 			total: pagination.total,
 			from: pagination.from,
 			to: pagination.to,
-			items: items.map((match) => item(match, input.parsed)),
+			items: groupByPage(items, input.parsed),
 			pager: pagination.pages > 1 ? pager(pagination, input.url) : null,
 		};
 	}
@@ -203,14 +221,114 @@ function countKinds(matches: ReadonlyArray<SearchDocument>): Record<SearchKind, 
 	return counts;
 }
 
+/**
+ * A tab per kind the unfiltered matches reach, each linking to `/search` for the typed words
+ * without their `kind:` filters, narrowed to that kind.
+ */
+function elsewhere(
+	query: string,
+	unfiltered: ReadonlyArray<SearchDocument>,
+): Array<SearchResults.Tab> {
+	let counts = countKinds(unfiltered);
+	let words = withoutKindFilters(query);
+	return SEARCH_KINDS.filter((kind) => counts[kind] > 0).map((kind) => ({
+		kind,
+		label: KIND_LABELS[kind],
+		count: counts[kind],
+		href: searchHref(words, kind),
+		current: false,
+	}));
+}
+
+/**
+ * The leading matches that fit in `rows` rows once grouped: a page costs one row, a heading
+ * one more, plus one for its page's row the first time that page appears.
+ */
+function fillRows(matches: ReadonlyArray<SearchDocument>, rows: number): Array<SearchDocument> {
+	let pages = new Set<string>();
+	let used = 0;
+	let taken: Array<SearchDocument> = [];
+	for (let match of matches) {
+		let page = pageHref(match);
+		let cost = pages.has(page) ? Number(isHeading(match)) : 1 + Number(isHeading(match));
+		if (used + cost > rows) break;
+		used += cost;
+		pages.add(page);
+		taken.push(match);
+	}
+	return taken;
+}
+
+/** The page a match belongs to: its address without the heading fragment. */
+function pageHref(match: SearchDocument): string {
+	return match.href.split("#")[0] ?? match.href;
+}
+
+/** Whether a match is a heading inside a page rather than the page itself. */
+function isHeading(match: SearchDocument): boolean {
+	return match.href.includes("#");
+}
+
+/**
+ * Lists the matches page by page, in the order each page first ranks: the page's row, then
+ * every heading match inside it nested under it. A page whose headings matched but whose own
+ * entry did not still gets a row, named after the page and its section, to hold them.
+ */
+function groupByPage(
+	matches: ReadonlyArray<SearchDocument>,
+	parsed: ParsedQuery,
+): Array<SearchResults.Item> {
+	let groups = new Map<string, { page: SearchDocument | null; headings: SearchDocument[] }>();
+
+	for (let match of matches) {
+		let key = pageHref(match);
+		let group = groups.get(key) ?? { page: null, headings: [] };
+		if (isHeading(match)) group.headings.push(match);
+		else group.page = match;
+		groups.set(key, group);
+	}
+
+	let items: Array<SearchResults.Item> = [];
+	for (let [href, group] of groups) {
+		let first = group.page ?? group.headings[0];
+		if (!first) continue;
+		items.push(
+			group.page
+				? item(group.page, parsed, false)
+				: {
+						href,
+						kind: first.kind,
+						kindLabel: KIND_LABELS[first.kind],
+						title: highlight(first.page, parsed),
+						description: highlight(first.section, parsed),
+						nested: false,
+					},
+		);
+		for (let heading of group.headings) items.push(item(heading, parsed, true));
+	}
+	return items;
+}
+
+/**
+ * A summary with its Markdown code spans unwrapped, since a row draws plain text and a raw
+ * backtick would read as part of the name it wraps.
+ */
+function withoutCodeTicks(text: string): string {
+	return text.replace(/`([^`]+)`/g, "$1");
+}
+
 /** Highlights one match's title and description against the query that found it. */
-function item(match: SearchDocument, parsed: ParsedQuery): SearchResults.Item {
+function item(match: SearchDocument, parsed: ParsedQuery, nested: boolean): SearchResults.Item {
 	return {
 		href: match.href,
 		kind: match.kind,
 		kindLabel: KIND_LABELS[match.kind],
 		title: highlight(match.title, parsed),
-		description: highlight(match.summary ?? `${match.page} · ${match.section}`, parsed),
+		description: highlight(
+			withoutCodeTicks(match.summary ?? `${match.page} · ${match.section}`),
+			parsed,
+		),
+		nested,
 	};
 }
 

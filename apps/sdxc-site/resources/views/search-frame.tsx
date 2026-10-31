@@ -1,7 +1,7 @@
 /**
  * View for the search dialog's frame, laid out as two floating surfaces: the live search box
- * as a pill, then a card under it with a tab per kind and the top matches drawn as activity
- * rows with their matched words marked. Rendered inside whichever page's dialog asked.
+ * as a pill, then a card under it with a tab per kind and the top matches grouped by page,
+ * or where to go next when nothing matches. Rendered inside whichever page's dialog asked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,11 +13,11 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { opacity, rounded, transition, transitionDelay } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
-import { gap, grid, shrink } from "@sdxc/u/layout";
+import { flex, flexWrap, gap, grid, shrink } from "@sdxc/u/layout";
 import { overflowY } from "@sdxc/u/overflow";
-import { m, minBs, p, pb, pi } from "@sdxc/u/size";
+import { m, minBs, p, pb, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { text } from "@sdxc/u/typography";
+import { text, weight } from "@sdxc/u/typography";
 import { Link } from "@sdxc/ui";
 
 import type { SearchResults } from "~/app/services/search-results";
@@ -48,10 +48,60 @@ export const SEARCH_LABEL = "Search guides and packages";
 function statusOf(model: SearchResults.Suggestions): string {
 	if (model.state === "blank") return "";
 	if (model.state === "invalid") return model.message;
-	if (model.total === 0) return `Nothing matches “${model.query}”.`;
+	if (model.total === 0) return `No results for “${model.query}”`;
 	if (model.total === 1) return "1 result";
-	if (model.total <= model.items.length) return `${model.total} results`;
-	return `Top ${model.items.length} of ${model.total} results`;
+	if (model.total <= model.listed) return `${model.total} results`;
+	return `Top ${model.listed} of ${model.total} results`;
+}
+
+/**
+ * How a shown status line looks: "No results" leads its own state as a heading would, while
+ * the reason a query cannot run is a quiet note under the box.
+ */
+function statusMix(model: SearchResults.Suggestions) {
+	if (model.state === "results") {
+		return [m(0), pi(3), pbs(2), text("base"), weight("medium"), fg("neutral.emphasis")];
+	}
+	return [m(0), pi(3), pb(2), text("sm"), fg("neutral.muted")];
+}
+
+/**
+ * What follows "No results": the kinds the same words reach once their `kind:` filter is
+ * dropped, when any do, then the docs hub and the full `/search` page as places to go next.
+ */
+function SearchNoResults(handle: Handle<{ query: string; elsewhere: Array<SearchResults.Tab> }>) {
+	return () => {
+		let { query, elsewhere } = handle.props;
+		return (
+			<div mix={[grid(), gap(3), pi(3), pb(2), text("sm"), fg("neutral.muted")]}>
+				{elsewhere.length > 0 ? (
+					<p mix={[m(0)]}>
+						Without the kind filter, these match:{" "}
+						{elsewhere.map((tab, index) => (
+							<span key={tab.href}>
+								{index > 0 ? ", " : null}
+								<Link href={tab.href}>
+									{tab.label} ({tab.count})
+								</Link>
+							</span>
+						))}
+					</p>
+				) : (
+					<p mix={[m(0)]}>Try fewer words, or another name for what you are after.</p>
+				)}
+				<ul mix={[m(0), p(0), listStyle("none"), flex(), flexWrap(), gap(4)]}>
+					<li>
+						<Link href={routes.docs.index.href()}>Browse the docs</Link>
+					</li>
+					<li>
+						<Link href={`${routes.search.href()}?${new URLSearchParams({ q: query })}`}>
+							Open the search page
+						</Link>
+					</li>
+				</ul>
+			</div>
+		);
+	};
 }
 
 /**
@@ -100,16 +150,12 @@ export function SearchFrameView(handle: Handle<{ model: SearchResults.Suggestion
 							: undefined
 					}
 				>
-					<p
-						role="status"
-						mix={
-							hasRows || status === ""
-								? [visuallyHidden()]
-								: [m(0), pi(3), pb(2), text("sm"), fg("neutral.muted")]
-						}
-					>
+					<p role="status" mix={hasRows || status === "" ? [visuallyHidden()] : statusMix(model)}>
 						{status}
 					</p>
+					{model.state === "results" && model.total === 0 ? (
+						<SearchNoResults query={model.query} elsewhere={model.elsewhere} />
+					) : null}
 					{tabs.length > 0 ? <SearchTabs tabs={tabs} /> : null}
 					{model.state === "results" && model.items.length > 0 ? (
 						<>
@@ -132,10 +178,15 @@ export function SearchFrameView(handle: Handle<{ model: SearchResults.Suggestion
 								]}
 							>
 								{model.items.map((item, index) => (
-									<SearchResult key={item.href} item={item} optionId={searchOptionId(index)} />
+									<SearchResult
+										key={item.href}
+										item={item}
+										optionId={searchOptionId(index)}
+										selected={index === 0}
+									/>
 								))}
 							</ol>
-							{model.total > model.items.length ? (
+							{model.total > model.listed ? (
 								<p mix={[m(0), pi(3), pb(2), text("sm")]}>
 									<Link href={model.seeAll}>See all {model.total} results →</Link>
 								</p>

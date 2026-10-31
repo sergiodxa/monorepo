@@ -12,28 +12,19 @@ import type { Handle } from "remix/component";
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { rounded, transition, transitionBehavior } from "@sdxc/u/effects";
 import { listStyle, raw } from "@sdxc/u/general";
-import {
-	flex,
-	grid,
-	gridTemplate,
-	hidden,
-	hstack,
-	inline,
-	inlineFlex,
-	repeat,
-	vstack,
-} from "@sdxc/u/layout";
+import { flex, grid, gridTemplate, inlineFlex, repeat, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { light, media } from "@sdxc/u/responsive";
 import { is, m, maxBs, maxIs, minBs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
-import { Dialog, DialogDismiss, NavLink } from "@sdxc/ui";
+import { Dialog, DialogDismiss } from "@sdxc/ui";
 import { SiteHeader as UiSiteHeader } from "@sdxc/ui/patterns";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { Frame } from "remix/component";
 
 import { searchFrameSrc } from "~/resources/components/search-box";
+import { SearchKeyHints } from "~/resources/components/search-key-hints";
 import { SearchQuickLinks } from "~/resources/components/search-quick-links";
 import { SEARCH_EXIT_MS } from "~/resources/components/search-surface";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
@@ -60,9 +51,12 @@ namespace SiteHeader {
 		 * `/search` page passes its own query so the dialog continues that search.
 		 */
 		searchQuery?: string;
+		/**
+		 * Lines the brand and search up with the docs shell's columns (its 88rem measure and
+		 * gutters) instead of a landing's bands.
+		 */
+		docs?: boolean;
 	}
-
-	export interface NavProps extends Props {}
 }
 
 /**
@@ -72,7 +66,7 @@ namespace SiteHeader {
  */
 export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 	return () => {
-		let { activePath = "", searchQuery } = handle.props;
+		let { activePath = "", docs = false, searchQuery } = handle.props;
 		let current = currentDestination(activePath);
 
 		return (
@@ -110,8 +104,16 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 					</>
 				}
 				mix={[
-					raw({ "--site-header-gutter": "1.25rem" }),
-					media("(min-width: 48rem)", raw({ "--site-header-gutter": "calc(3rem + 1px)" })),
+					docs
+						? [
+								raw({ "--site-header-gutter": "1rem", "--ui-marketing-measure": "88rem" }),
+								media("(min-width: 48rem)", raw({ "--site-header-gutter": "1.5rem" })),
+								media("(min-width: 64rem)", raw({ "--site-header-gutter": "2rem" })),
+							]
+						: [
+								raw({ "--site-header-gutter": "1.25rem" }),
+								media("(min-width: 48rem)", raw({ "--site-header-gutter": "calc(3rem + 1px)" })),
+							],
 					when(
 						'& :is([data-slot="site-header-row"], [data-slot="site-header-sheet"] > *)',
 						raw({ paddingInline: "var(--site-header-gutter) !important" }),
@@ -173,64 +175,6 @@ function SheetLinks(_handle: Handle) {
 }
 
 /**
- * Renders the destinations alone, for a shell that already draws its own bar. On a phone
- * the search link drops its shortcut hint, which leaves the row narrow enough to sit
- * beside a wordmark or a menu button at 320px.
- */
-export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
-	return () => {
-		let { activePath = "", searchQuery } = handle.props;
-		let current = currentDestination(activePath);
-
-		return (
-			<div mix={[hstack({ gap: 3, align: "center" })]}>
-				<SiteSearch activePath={activePath} searchQuery={searchQuery} />
-
-				<nav
-					aria-label="Site"
-					mix={[
-						hstack({ gap: 4, align: "center" }),
-						text("sm"),
-						media("(min-width: 30rem)", [hstack({ gap: 6, align: "center" }), text("base")]),
-					]}
-				>
-					<NavLink
-						href={routes.docs.index.href()}
-						aria-current={current === "docs" ? "page" : undefined}
-					>
-						Docs
-					</NavLink>
-					<NavLink
-						href={routes.api.index.href()}
-						aria-current={current === "api" ? "page" : undefined}
-					>
-						API
-					</NavLink>
-					<NavLink
-						href={routes.api.show.href({ name: "u" })}
-						aria-current={current === "utilities" ? "page" : undefined}
-					>
-						U
-					</NavLink>
-					<NavLink
-						href={routes.api.show.href({ name: "ui" })}
-						aria-current={current === "components" ? "page" : undefined}
-					>
-						UI
-					</NavLink>
-
-					<span mix={[hidden(), media("(min-width: 30rem)", inline())]}>
-						<NavLink href={REPOSITORY_HREF} rel="noreferrer">
-							GitHub
-						</NavLink>
-					</span>
-				</nav>
-			</div>
-		);
-	};
-}
-
-/**
  * Renders the search link and the dialog it opens, which every key binding opens too. On a
  * phone the link drops its shortcut hint, since a touch screen has none of those keys.
  */
@@ -265,6 +209,7 @@ function SiteSearch(handle: Handle<SiteHeader.Props>) {
 						src={searchFrameSrc(routes.searchFrame.href(), handle.props.searchQuery ?? "")}
 					/>
 					<SearchQuickLinks currentPath={handle.props.activePath ?? ""} />
+					<SearchKeyHints />
 				</div>
 			</Dialog>
 		</div>

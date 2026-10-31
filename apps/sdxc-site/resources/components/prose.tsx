@@ -13,10 +13,12 @@ import { media } from "@sdxc/u/responsive";
 import { m, mbe, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { balance, leading, text, textDecoration, tracking, weight } from "@sdxc/u/typography";
-import { TAG_BY_LEVEL } from "@sdxc/ui";
+import { AnchorHeading, TAG_BY_LEVEL } from "@sdxc/ui";
 import { displayHeading } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
+
+import { SECTION_LINK_LABEL } from "~/resources/components/docs-labels";
 
 /** Font size per heading depth, largest first, so the page reads as one outline. */
 const SIZE_BY_LEVEL = ["4xl", "2xl", "xl", "lg", "base", "base"] as const;
@@ -59,7 +61,11 @@ export function DisplayHeadings(handle: Handle<DisplayHeadings.Props, DisplayHea
 	return () => handle.props.children;
 }
 
-/** Draws every `heading` node in the document. */
+/**
+ * Draws every `heading` node in the document. A section heading (h2–h4) carrying an id
+ * gets a `#` link a reader can copy and room above it for the sticky header, so every
+ * fragment the table of contents or search links to lands in view.
+ */
 export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
 	return () => {
 		let { children, id, level } = handle.props;
@@ -73,23 +79,30 @@ export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
 			);
 		}
 
+		let style = [
+			m(0),
+			fg("neutral.emphasis"),
+			weight(level === 1 ? "bold" : "semibold"),
+			tracking("tight"),
+			leading("tight"),
+			balance(),
+			text(SIZE_BY_LEVEL[level - 1] ?? "base"),
+			media(
+				"(min-width: 48rem)",
+				level === 1 ? text("5xl") : text(SIZE_BY_LEVEL[level - 1] ?? "base"),
+			),
+		];
+
+		if (id && level >= 2 && level <= 4) {
+			return (
+				<AnchorHeading id={id} level={level} linkLabel={SECTION_LINK_LABEL} mix={style}>
+					{children}
+				</AnchorHeading>
+			);
+		}
+
 		return (
-			<Tag
-				id={id}
-				mix={[
-					m(0),
-					fg("neutral.emphasis"),
-					weight(level === 1 ? "bold" : "semibold"),
-					tracking("tight"),
-					leading("tight"),
-					balance(),
-					text(SIZE_BY_LEVEL[level - 1] ?? "base"),
-					media(
-						"(min-width: 48rem)",
-						level === 1 ? text("5xl") : text(SIZE_BY_LEVEL[level - 1] ?? "base"),
-					),
-				]}
-			>
+			<Tag id={id} mix={style}>
 				{children}
 			</Tag>
 		);

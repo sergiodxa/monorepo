@@ -32,10 +32,11 @@ describe("GET /frames/search", () => {
 		expect(rowCount(body)).toBe(0);
 	});
 
-	test("lists at most five matches, a tab per kind, and a link to every match", async () => {
+	test("lists at most seven rows, a tab per kind, and a link to every match", async () => {
 		let { body } = await frame("form");
 
-		expect(rowCount(body)).toBe(5);
+		expect(rowCount(body)).toBeGreaterThan(0);
+		expect(rowCount(body)).toBeLessThanOrEqual(7);
 		expect(body).toContain('data-search-kind=""');
 		expect(body).toContain('data-search-kind="ui"');
 		expect(body).toMatch(/See all \d+ results/);
@@ -56,5 +57,43 @@ describe("GET /frames/search", () => {
 
 		expect(status).toBe(200);
 		expect(body).toContain("A search needs at least one term to find.");
+	});
+
+	test("lists each heading under its page's row, the first row chosen", async () => {
+		let { body } = await frame("validation");
+		let rows = [
+			...body.matchAll(
+				/id="site-search-options-(\d+)"[^>]*aria-selected="(true|false)"[^]*?href="([^"]+)"/g,
+			),
+		].map((match) => ({ index: Number(match[1]), selected: match[2], href: match[3] ?? "" }));
+
+		expect(rows[0]?.selected).toBe("true");
+		expect(rows.slice(1).every((row) => row.selected === "false")).toBe(true);
+		for (let [at, row] of rows.entries()) {
+			if (!row.href.includes("#")) continue;
+			let page = row.href.split("#")[0];
+			let above = rows
+				.slice(0, at)
+				.reverse()
+				.find((candidate) => !candidate.href.includes("#"));
+			expect(above?.href).toBe(page);
+		}
+	});
+
+	test("says nothing matched and offers the docs and the full search page", async () => {
+		let { status, body } = await frame("zzqxv");
+
+		expect(status).toBe(200);
+		expect(body).toContain("No results for “zzqxv”");
+		expect(body).toContain('href="/docs"');
+		expect(body).toContain('href="/search?q=zzqxv"');
+		expect(rowCount(body)).toBe(0);
+	});
+
+	test("points a kind filter that emptied the results at the kinds that match", async () => {
+		let { body } = await frame("CopyButton kind:guides");
+
+		expect(body).toContain("No results for “CopyButton kind:guides”");
+		expect(body).toContain('href="/search?q=CopyButton+kind%3Aui"');
 	});
 });

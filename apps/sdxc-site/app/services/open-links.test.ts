@@ -20,7 +20,11 @@ describe("buildOpenLinks", () => {
 	test("opens on the page's own markdown, by path, so it stays on this host", () => {
 		let [first] = buildOpenLinks(MARKDOWN_HREF, MARKDOWN_URL, SOURCE_URL);
 
-		expect(first).toEqual({ label: "View as Markdown", href: MARKDOWN_HREF, external: false });
+		expect(first).toMatchObject({
+			label: "View as Markdown",
+			href: MARKDOWN_HREF,
+			external: false,
+		});
 	});
 
 	test("hands every assistant the markdown URL rather than the page", () => {

@@ -34,6 +34,11 @@ export default route({
 		/** Captures every remaining segment as one slug, e.g. `conventions/naming`. */
 		show: get("/docs/*slug"),
 	},
+	/**
+	 * Where a docs page's "Was this helpful?" form posts. It answers with a redirect back to
+	 * the page it was about, so the vote works as a plain form and a reload resends nothing.
+	 */
+	docsFeedback: post("/docs/feedback"),
 
 	/** The reference for every published package, each read from its own README. */
 	api: {
