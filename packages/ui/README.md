@@ -293,6 +293,7 @@ chrome on the root catalog stays free of landing weight.
 - `DrawnChart` — animated figure: a `metric` counting up over a `bars` or `line` `series` that draws in.
 - `DocsLayout` — docs shell: docked `sidebar` (drawer below `dock`), article `measure`, heading rail from 75rem, sticky bar with menu and `toc`.
 - `DocsHub` — docs home routing by task: `search`, `topics` chips, larger `start` cards, `sections` with counts, `popular`.
+- `DocsNotFound` — docs 404 body: the missing `path`, a `search` pre-filled by `searchQueryFromPath(path)`, start `links`.
 
 **Composition craft**
 
