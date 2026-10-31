@@ -3,7 +3,7 @@ title: TCP Monitors
 description: Create and manage TCP monitors. Check port connectivity and get connection history.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 4
 lastUpdated: 2026-09-05
 ---

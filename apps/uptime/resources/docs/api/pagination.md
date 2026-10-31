@@ -3,7 +3,7 @@ title: Pagination
 description: Walk long lists with cursors. Follow the Link header to page through results reliably, without missing or repeating rows.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 5
 lastUpdated: 2026-09-23
 ---

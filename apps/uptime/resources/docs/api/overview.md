@@ -3,7 +3,7 @@ title: API Overview
 description: The Uptime REST API lets you programmatically manage monitors, alerts, status pages, and more.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 1
 lastUpdated: 2026-09-23
 ---

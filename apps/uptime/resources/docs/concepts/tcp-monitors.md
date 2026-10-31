@@ -3,9 +3,10 @@ title: TCP Monitors
 description: Verify servers are accepting connections on specific ports. Ideal for monitoring databases, mail servers, and custom services.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 4
-lastUpdated: 2026-02-14
+lastUpdated: 2026-10-31
+next: ["/docs/guides/choose-who-gets-alerted"]
 ---
 
 TCP monitors focus on raw connectivity—they attempt to establish a TCP connection and report whether it was accepted, refused, or timed out. Unlike HTTP monitors that check web content, TCP monitors verify that a service is running and accepting connections at the network level.
@@ -92,19 +93,19 @@ Common ports:
 
 ### Timeout
 
-How long to wait for a connection before marking the check as timed out. Range is **1-30 seconds**.
+How long to wait for a connection before marking the check as timed out, in milliseconds. Range is **100 ms to 60 seconds**.
 
-- **Default**: 10 seconds
+- **Default**: 5 seconds
 - **Recommended**: 5-10 seconds for most services
 - **Longer timeouts**: Use for services that may be slow to accept connections under load
 
 ### Check Interval
 
-How frequently to run the monitor. Range is **1-60 minutes**.
+How frequently to run the monitor. Range is **1 minute to 24 hours**, and the default is **5 minutes**.
 
 - **1-5 minutes**: Critical production services
 - **5-15 minutes**: Standard monitoring
-- **15-60 minutes**: Non-critical services or development environments
+- **15 minutes and up**: Non-critical services or development environments
 
 ## Monitor Statuses
 
@@ -154,13 +155,7 @@ Set timeouts based on your service characteristics:
 
 ### Consider Firewall Rules
 
-The Uptime monitoring service needs network access to your servers. Ensure your firewall rules allow incoming connections from our monitoring infrastructure.
-
-If you're monitoring internal services:
-
-- Whitelist our monitoring IP addresses
-- Consider using a VPN or private network connection
-- Monitor from within your network if external access isn't possible
+The Uptime monitoring service needs network access to your servers: the host and port must accept connections from the public internet. A service reachable only from a private network can't be monitored with a TCP monitor.
 
 ### Combine with HTTP Monitors
 

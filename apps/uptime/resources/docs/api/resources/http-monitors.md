@@ -3,7 +3,7 @@ title: HTTP Monitors
 description: Create, update, delete, and query HTTP monitors. Get check results and performance statistics.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 2
 lastUpdated: 2026-09-05
 ---

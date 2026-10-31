@@ -3,12 +3,13 @@ title: Reports
 description: Download uptime reports as CSV for a month, a quarter or any range of days, to keep or to send to a client.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 10
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-31
+next: ["/docs/guides/publish-a-status-page"]
 ---
 
-Reports turn your monitors' history into a file you can open in a spreadsheet, keep with your records, or send to the client whose services you monitor. Open **Reports** in the sidebar, choose a range, the monitors and a format, and download.
+Reports turn your monitors' history into a file you can open in a spreadsheet, keep with your records, or send to the client whose services you monitor. Open <ui>Reports</ui> in the sidebar, choose a range, the monitors and a format, and download.
 
 ## The Two Reports
 

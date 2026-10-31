@@ -3,9 +3,10 @@ title: Cron Job Monitoring
 description: Ensure your scheduled tasks and background jobs run on time. Get alerted when jobs are late or miss their expected schedule.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 6
-lastUpdated: 2026-08-02
+lastUpdated: 2026-10-31
+next: ["/docs/guides/monitor-a-cron-job", "/docs/troubleshooting/cron-job-missed"]
 ---
 
 Unlike HTTP monitors that actively check endpoints, cron monitors work by receiving pings from your jobs—if a ping doesn't arrive on time, you get alerted. This "dead man's switch" approach works for any scheduled task, regardless of where it runs or what technology it uses.
@@ -22,7 +23,7 @@ This approach works for any scheduled task, regardless of where it runs or what 
 
 ## Authenticating Pings
 
-Pings require an API key with the `cron-jobs:ping` scope, sent as an `Authorization: Bearer` header. Create one under **Settings** > **API Keys** and give it only that scope—a ping key can record pings and nothing else, so leaking it can't expose or change your monitors.
+Pings require an API key with the `cron-jobs:ping` scope, sent as an `Authorization: Bearer` header. Create one from <ui>API Keys</ui> in the sidebar and give it only that scope—a ping key can record pings and nothing else, so leaking it can't expose or change your monitors.
 
 A key can only ping monitors belonging to the team that owns it. Pinging another team's monitor returns `404`, the same answer as an id that doesn't exist.
 
@@ -66,7 +67,7 @@ If your server runs in UTC but your business logic expects local time, make sure
 
 ### Grace Period
 
-The grace period defines how long Uptime waits for a ping after the scheduled time before marking the job as late. You can set this between 1 and 60 minutes.
+The grace period defines how long Uptime waits for a ping after the scheduled time before marking the job as late. Set it in seconds in <ui>Grace Period</ui>, from 60 seconds to 24 hours (86,400 seconds). The default is 5 minutes (300 seconds).
 
 **How to choose a grace period:**
 
@@ -78,7 +79,7 @@ For example, if your backup job usually takes 10 minutes but can take up to 20 m
 
 ### Alert on Late
 
-When enabled, you'll receive an alert as soon as the grace period expires without receiving a ping. If disabled, you'll only be alerted when the job is marked as missed (after the next scheduled run time passes).
+When enabled, you'll receive an alert as soon as the grace period expires without receiving a ping. If disabled, you'll only be alerted when the job is marked as missed (after the next scheduled run's grace period also passes).
 
 ## Monitor Statuses
 
@@ -88,8 +89,8 @@ Cron monitors have four possible statuses:
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | **Healthy** | The job is running on schedule. The last ping was received within the expected window.                                            |
 | **Late**    | The grace period has passed without receiving a ping. The job may still be running or may have failed.                            |
-| **Missed**  | The next scheduled run time has passed without ever receiving a ping for the previous run. The job definitely failed to complete. |
-| **New**     | The monitor was just created and hasn't received its first ping yet.                                                              |
+| **Missed**  | The next scheduled run's grace period has also passed without a ping for the previous run. The job definitely failed to complete. |
+| **New**     | The monitor hasn't received its first ping yet. A new monitor goes straight to Missed, never Late, if its runs don't check in.    |
 
 ## Integration Examples
 

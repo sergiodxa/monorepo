@@ -3,7 +3,7 @@ title: Error Handling
 description: API failures are RFC 9457 problem details. Learn the format, every problem type, and how to handle them in your integration.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 3
 lastUpdated: 2026-09-23
 ---

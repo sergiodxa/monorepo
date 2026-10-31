@@ -3,9 +3,10 @@ title: HTTP Monitors
 description: Check your websites, APIs, and web services for availability and performance. Track response times, status codes, SSL certificates, and content.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 2
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-31
+next: ["/docs/guides/add-a-monitor", "/docs/troubleshooting/alerts-but-site-is-up"]
 ---
 
 When an HTTP monitor runs, it:
@@ -26,18 +27,9 @@ Based on these checks, the monitor reports one of three statuses:
 
 ### URL and HTTP Method
 
-Specify the full URL to monitor, including the protocol (`http://` or `https://`).
+Specify the full URL to monitor, including the protocol (`http://` or `https://`). Redirects are followed, so the check judges the page the URL finally lands on.
 
-Choose the HTTP method that best fits your use case:
-
-| Method | Use Case                                                        |
-| ------ | --------------------------------------------------------------- |
-| GET    | Retrieve content and validate responses                         |
-| HEAD   | Quick availability checks without downloading the response body |
-| POST   | Test API endpoints that require POST requests                   |
-| PUT    | Test API update endpoints                                       |
-| DELETE | Test API deletion endpoints                                     |
-| PATCH  | Test partial update endpoints                                   |
+A monitor sends `HEAD` requests by default, which fetch the headers without the body. Adding a content check switches the request to `GET`, since the body is needed. The method can't be changed in the dashboard; set it through the [HTTP Monitors API](/docs/api/resources/http-monitors) with `method`, one of `GET`, `HEAD`, `POST`, `PUT`, `PATCH` or `DELETE`.
 
 ### Expected Status Code
 
@@ -46,10 +38,9 @@ Define which HTTP status code indicates a successful response. Common configurat
 - **200** - Standard successful response
 - **201** - Resource created successfully (for POST requests)
 - **204** - Successful with no content
-- **301/302** - Redirect responses (if you expect redirects)
 - **401** - Protected endpoints where authentication is expected to fail
 
-If the response status code doesn't match your expected value, the monitor reports as Down.
+Redirects are followed, so the code compared is the one the final page returns. If it doesn't match your expected value, the monitor reports as Down.
 
 ### Check Interval
 
@@ -64,22 +55,20 @@ Set how frequently the monitor checks your endpoint. Intervals range from **1 to
 
 ### Timeout Settings
 
-Configure how long the monitor waits for a response before considering the check failed. A shorter timeout helps detect slow or unresponsive services faster.
-
-The timeout should be longer than your typical response time but short enough to catch genuine issues. For most web services, 10-30 seconds works well.
+A check that gets no response within **10 seconds** reports as Down. The timeout can't be changed in the dashboard; set `timeoutSeconds` (1 to 60) through the [HTTP Monitors API](/docs/api/resources/http-monitors).
 
 ### Degraded Threshold
 
-Set a response time threshold (in milliseconds) above which the monitor reports as Degraded instead of Up. This helps you identify performance issues before they become outages.
+A response that takes **5 seconds** or longer reports as Degraded instead of Up, and alerts like a Down check. The threshold can't be changed in the dashboard; set `degradedAfterMs` (1,000 to 30,000) through the [HTTP Monitors API](/docs/api/resources/http-monitors).
 
-For example, if your API typically responds in 200ms, setting a degraded threshold of 1000ms alerts you when performance drops significantly.
+For example, if your API typically responds in 200ms, a threshold of 1,000ms tells you when performance drops significantly.
 
 ### Region Selection
 
-Monitors run from multiple geographic regions to give you a global view of your service availability. Select one or more regions:
+Each monitor runs from **one region**, chosen in <ui>Region</ui>:
 
 - **Africa**
-- **APAC** (Asia-Pacific)
+- **Asia-Pacific**
 - **Eastern Europe**
 - **Eastern North America**
 - **Middle East**
@@ -88,7 +77,7 @@ Monitors run from multiple geographic regions to give you a global view of your 
 - **Western Europe**
 - **Western North America**
 
-Running checks from multiple regions helps identify regional outages and latency issues that affect specific geographic areas.
+To watch a service from several places, create one monitor per region.
 
 ### Recognizing Uptime's Checks
 
@@ -96,15 +85,7 @@ Every HTTP check is signed with [Web Bot Auth](https://datatracker.ietf.org/doc/
 
 ## SSL Certificate Monitoring
 
-For HTTPS endpoints, Uptime automatically monitors your SSL certificate status.
-
-### Automatic SSL Checks
-
-Every HTTP check to an HTTPS URL also verifies:
-
-- The certificate is valid and trusted
-- The certificate hasn't expired
-- The certificate matches the requested domain
+SSL monitoring is off by default. Turn on <ui>Enable SSL Monitoring</ui> on the monitor's edit page, and Uptime tracks when the host's certificate expires and alerts before it does. The status is re-evaluated once a day.
 
 ### Where the Expiry Date Comes From
 
@@ -124,7 +105,7 @@ The logs record the certificates a CA issued, which is usually, but not always, 
 
 ### Expiry Warning Threshold
 
-Configure how many days before certificate expiration you want to be notified. The threshold ranges from **1 to 90 days**.
+Set <ui>Alert Before Expiry</ui> to how many days before expiration you want to be notified, from **1 to 365 days**. The default is **30 days**.
 
 Set this based on how long your certificate renewal process takes. A 30-day warning gives most teams enough time to renew without urgency, while a 14-day warning suits teams with automated renewal processes.
 
@@ -137,7 +118,7 @@ The monitor tracks SSL certificate details including:
 - Days until expiration
 - Certificate issuer
 
-You'll receive alerts when the certificate is about to expire or if any SSL validation fails.
+You'll receive alerts when the certificate is about to expire and when it has expired.
 
 ## Content Checks
 
@@ -145,15 +126,15 @@ Beyond status codes, you can validate that the response body contains (or doesn'
 
 ### Check Types
 
-| Type             | Description                                                  |
-| ---------------- | ------------------------------------------------------------ |
-| **Contains**     | Response must include the specified text                     |
-| **Not Contains** | Response must not include the specified text                 |
-| **Regex**        | Response must match the specified regular expression pattern |
+| Type                 | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| **Contains**         | Response must include the specified text                     |
+| **Does Not Contain** | Response must not include the specified text                 |
+| **Regex Pattern**    | Response must match the specified regular expression pattern |
 
 ### Case Sensitivity
 
-Enable or disable case-sensitive matching for Contains and Not Contains checks. Regex checks use their own case sensitivity flags.
+Tick <ui>Case sensitive matching</ui> to match case exactly. Left unticked, Contains and Does Not Contain ignore case, and a regex pattern runs with the `i` flag. Add checks on the monitor's edit page, under **Content Monitoring**; the monitor is Down whenever any enabled check fails.
 
 ### Use Cases
 
@@ -176,9 +157,9 @@ Regex: "\"status\":\s*\"ok\""
 
 ## Best Practices
 
-### Use HEAD for Simple Availability Checks
+### Use a Health-Check Route
 
-When you only need to verify a URL is reachable, use the HEAD method. It's faster and uses less bandwidth since the server doesn't send the response body.
+Point the monitor at a lightweight route such as `/healthz` rather than a heavy page. It answers faster, keeps clear of the degraded threshold, and fails only when the service itself does.
 
 ### Set Appropriate Expected Status Codes
 
@@ -186,13 +167,13 @@ Match your expected status code to what the endpoint actually returns:
 
 - API health endpoints typically return 200
 - Protected endpoints without credentials return 401 or 403
-- Endpoints that redirect return 301 or 302
+- Endpoints that redirect are judged on the page they redirect to
 
 Don't assume 200 is always correct - check what your endpoint actually returns.
 
 ### Configure Degraded Thresholds for Performance Monitoring
 
-Enable degraded threshold monitoring to catch performance regressions before they become outages. Base your threshold on:
+Adjust the degraded threshold through the API to catch performance regressions before they become outages. Base your threshold on:
 
 - Historical response times (set threshold at 2-3x normal)
 - User experience requirements
@@ -209,9 +190,9 @@ Set your expiry warning threshold based on:
 - Whether you use automated renewal (shorter threshold OK)
 - Manual renewal processes (longer threshold recommended)
 
-### Monitor from Multiple Regions
+### Monitor from Where Your Users Are
 
-Select regions where your users are located. If your service is global, monitor from at least 3-4 geographically distributed regions to detect regional issues.
+Pick the region closest to your users. If your service is global, add a monitor for the same URL in each region that matters, so a regional outage shows up as one failing monitor among passing ones.
 
 ### Use Content Checks for Critical Pages
 

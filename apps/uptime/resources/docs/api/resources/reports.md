@@ -3,7 +3,7 @@ title: Reports
 description: Read uptime reports as JSON or download them as CSV, for a month, a quarter or any range of days.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 14
 lastUpdated: 2026-09-29
 ---

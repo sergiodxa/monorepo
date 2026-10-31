@@ -1,93 +1,54 @@
 ---
-title: Quick Start Guide
-description: This guide walks you through creating your first HTTP monitor and setting up alerts. You'll be monitoring your service in under 5 minutes.
+title: Start monitoring in five minutes
+description: Watch your first URL, get an email when it breaks, and confirm both work before you walk away.
 section:
   title: Getting Started
   order: 1
-order: 2
-lastUpdated: 2026-02-14
+order: 1
+lastUpdated: 2026-10-31
+next:
+  [
+    "/docs/guides/add-a-monitor",
+    "/docs/guides/choose-who-gets-alerted",
+    "/docs/guides/publish-a-status-page",
+  ]
+keywords: ["getting started", "first monitor", "setup", "onboarding", "check", "ping"]
 ---
 
-Before you begin, you'll need:
+You need an Uptime account and a URL anyone on the internet can open: your homepage, an API endpoint or a health-check route.
 
-- An Uptime account (sign up at the homepage if you don't have one)
-- A publicly accessible URL to monitor (website, API endpoint, or health check route)
+<mockup area="monitor" caption="A monitor's page after its first checks" />
 
-## Step 1: Create Your First HTTP Monitor
+<steps>
+<step id="create-the-monitor" title="Create the monitor">
 
-HTTP monitors are the most common way to track service availability. They send requests to your URL and verify the response.
+1. Open <ui>HTTP Monitors</ui> in the sidebar and click <ui>Create Monitor</ui>.
+2. Under **Basics**, fill in <ui>Monitor Name</ui> (for example, "Landing page") and <ui>URL to Monitor</ui> (the full address, starting with `https://`).
+3. Under **Check settings**, leave <ui>Check Interval</ui> at 10 minutes or slide it anywhere from 1 to 60 minutes.
+4. Leave <ui>Expected Status Code</ui> at `200 OK` unless your URL answers with something else when it is healthy.
+5. Pick the <ui>Region</ui> closest to your visitors. Every check runs from that one region.
+6. Click <ui>Create Monitor</ui>.
 
-1. Navigate to **Monitors** in the sidebar
-2. Click **Create Monitor**
-3. Fill in the basic details:
-   - **Name**: A descriptive name (e.g., "Production API" or "Marketing Website")
-   - **URL**: The full URL to monitor (e.g., `https://api.example.com/health`)
-4. Configure the check settings:
-   - **Method**: Select `HEAD` for simple availability checks, or `GET` if you need response body validation
-   - **Expected Status**: Usually `200`, but set this to whatever your endpoint returns on success
-   - **Interval**: How often to check (1-60 minutes). Start with 5 minutes for most services
-5. Choose a **Region** closest to your users or where you want to measure performance from
-6. Click **Create Monitor**
+Uptime runs the first check right away and opens the monitor's page.
 
-Your monitor starts checking immediately. You'll see results appear in the dashboard within your configured interval.
+</step>
+<step id="add-an-alert" title="Add an alert">
 
-> [!TIP]
-> Use the **Run Now** button to test your monitor immediately after creation.
+1. Open <ui>Alerts</ui> in the sidebar and click <ui>Create Alert</ui>.
+2. Give it a <ui>Name</ui>, such as "Email me".
+3. Leave <ui>Scope</ui> on <ui>Team-wide (every monitor)</ui>, so this alert also covers monitors you add later.
+4. Under **Notification channel**, choose <ui>Email</ui> as the <ui>Channel</ui> and type your address in <ui>Recipient</ui>.
+5. Leave <ui>Notify on recovery</ui> on, so you also hear when the site is back.
+6. Click <ui>Create Alert</ui>.
 
-## Step 2: Set Up an Alert
+</step>
+<step id="check-it-works" title="Check it works">
 
-Alerts notify you when your monitor detects a problem. Without alerts, you'd have to watch the dashboard constantly.
+1. Open your monitor from <ui>HTTP Monitors</ui> and click <ui>Run Monitor</ui>. Uptime checks the URL now and tells you whether it is up, degraded or down.
+2. If it says down, compare the status code your URL returned with the one you expected, and fix the monitor with <ui>Edit Monitor</ui>.
+3. When the monitor next goes down, the alert email arrives on that first failing check. Every alert Uptime sends, or holds back, is listed under <ui>Alerts</ui> → <ui>View History</ui>.
 
-1. Navigate to **Alerts** in the sidebar
-2. Click **Create Alert**
-3. Configure the alert:
-   - **Name**: Describe what this alert is for (e.g., "Production API Down")
-   - **Monitor**: Select the monitor you just created, or leave blank to alert on all monitors
-4. Choose your notification channel:
-   - **Email**: Enter the recipient email address
-   - **Slack**: Paste your Slack webhook URL
-   - **Discord**: Paste your Discord webhook URL
-   - **Webhook**: Send to any HTTP endpoint with a shared secret for verification
-5. Optional settings:
-   - **Notify on Recovery**: Get notified when the service comes back up (recommended)
-   - **Cooldown**: Prevent alert spam by setting a minimum time between notifications
-6. Click **Create Alert**
+</step>
+</steps>
 
-You'll now receive notifications when your monitored service goes down or recovers.
-
-## Step 3: Verify Everything Works
-
-1. Go back to **Monitors** and click on your new monitor
-2. Check that results are appearing with the expected status code
-3. Look at the response time to ensure it's within acceptable limits
-4. If you set a degraded threshold (default 5000ms), responses slower than this will show as degraded
-
-## What's Next?
-
-Now that you have basic monitoring in place, explore these additional features:
-
-### Other Monitor Types
-
-- **DNS Monitors** - Watch a domain's records and get told when one changes, disappears, or appears. See [DNS Monitoring](/docs/concepts/dns-monitors).
-- **TCP Monitors** - Check if a port is open and responding. Useful for databases and custom services. See [TCP Monitoring](/docs/concepts/tcp-monitors).
-- **Cron Job Monitors** - Ensure your scheduled tasks run on time. Your jobs ping Uptime when they complete. See [Cron Job Monitoring](/docs/concepts/cron-jobs).
-- **Flow Monitors** - Check a whole sequence instead of one request: sign in, take the token, call the endpoint it authorises, and assert on each step. Requires a verified domain. See [Flow Monitors](/docs/concepts/flow-monitors).
-
-### Advanced HTTP Features
-
-- **Content Checks** - Verify the response body contains (or doesn't contain) specific text
-- **SSL Monitoring** - Get alerts before your SSL certificates expire
-- **Custom Headers** - Monitor authenticated endpoints by adding Authorization headers
-
-### Status Pages
-
-Share your service status publicly with a hosted status page. See [Status Pages](/docs/concepts/status-pages).
-
-### Maintenance Windows
-
-Prevent false alerts during planned maintenance. See [Maintenance Windows](/docs/concepts/maintenance).
-
-## Need Help?
-
-- Check the [API Reference](/docs/api/overview) for programmatic access
-- Review [Concepts](/docs/concepts/monitors) for detailed documentation on each feature
+A response that takes 5 seconds or longer counts as **degraded**, and a degraded check alerts just like a down one.

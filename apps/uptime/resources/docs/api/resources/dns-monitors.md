@@ -3,7 +3,7 @@ title: DNS Monitors
 description: Create and manage domain monitors. Import a zone file, choose which records are watched, and read check history.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 3
 lastUpdated: 2026-10-24
 ---

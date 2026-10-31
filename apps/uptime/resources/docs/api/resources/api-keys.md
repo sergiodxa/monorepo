@@ -3,7 +3,7 @@ title: API Keys
 description: Create and manage API keys programmatically. Keys can only be viewed once at creation.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 12
 lastUpdated: 2026-09-05
 ---

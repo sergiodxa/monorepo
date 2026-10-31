@@ -3,7 +3,7 @@ title: Flow Monitors
 description: Create and manage flow monitors. Run a multi-request spec on a schedule and read what each run asserted.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 5
 lastUpdated: 2026-09-05
 ---

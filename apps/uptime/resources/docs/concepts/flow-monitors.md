@@ -3,9 +3,10 @@ title: Flow Monitors
 description: Check a sequence of requests instead of one. Sign in, carry the token, call the endpoint it authorises — and assert on what comes back at every step.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 5
-lastUpdated: 2026-09-11
+lastUpdated: 2026-10-31
+next: ["/docs/guides/check-a-sign-in-flow", "/docs/troubleshooting/flow-monitor-fails"]
 ---
 
 A flow monitor runs a **multi-step API check**. An HTTP monitor asks one question — did this URL answer the way it should? A flow monitor asks whether a sequence still works: that signing in returns a token, that the token is accepted by the endpoint it authorises, and that the endpoint answers with the data it is supposed to.
@@ -624,7 +625,7 @@ The monitor's page shows:
 - Your source rendered as a numbered listing, with the failing line marked
 - A table of recent runs: Time, Status, Tests, Requests, Duration
 
-**Run now** runs the flow inline and reports the outcome straight back, which is how you check a source you just edited without waiting out the interval.
+<ui>Run now</ui> runs the flow inline and reports the outcome straight back, which is how you check a source you just edited without waiting out the interval.
 
 ## Alerting
 

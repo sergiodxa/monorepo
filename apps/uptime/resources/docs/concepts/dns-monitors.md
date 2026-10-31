@@ -3,9 +3,10 @@ title: DNS Monitors
 description: Watch a whole domain. Import its records once, then get alerted when one changes, stops resolving, or appears without you.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 3
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-31
+next: ["/docs/guides/choose-who-gets-alerted"]
 ---
 
 A DNS monitor watches a **domain**, not a single record. One monitor covers your domain's apex — plus every name a zone file you paste declares — and on each check it queries ten record types at each of those names.
@@ -215,7 +216,7 @@ Alerts reach the same alerts as the monitor's DNS results:
 - A registry status of `redemptionPeriod`, `pendingDelete`, `clientHold` or `serverHold` alerts every day whatever the date says: each means the domain has stopped resolving, or is about to.
 - **Lookup failing** alerts once when it begins. While the registry is unreachable, the last expiry date we read keeps alerting as it approaches.
 
-**Check now** on the monitor's page looks the registration up as well, so a renewal shows straight away. Set the warning window on the monitor's edit page, from 1 to 365 days. The domain must be the registered name, `example.co.uk` rather than `www.example.co.uk`: a registry holds no record for a name below it.
+<ui>Check Now</ui> on the monitor's page looks the registration up as well, so a renewal shows straight away. Set the warning window on the monitor's edit page, from 1 to 365 days. The domain must be the registered name, `example.co.uk` rather than `www.example.co.uk`: a registry holds no record for a name below it.
 
 ## Best Practices
 

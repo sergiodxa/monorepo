@@ -3,7 +3,7 @@ title: Authentication
 description: Authenticate API requests using Bearer tokens. Learn about API key scopes and security best practices.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 2
 lastUpdated: 2026-02-14
 ---

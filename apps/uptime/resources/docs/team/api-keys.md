@@ -3,9 +3,11 @@ title: API Keys
 description: Create and manage API keys for programmatic access. Configure scopes to control what each key can do.
 section:
   title: Team & Settings
-  order: 3
+  order: 5
 order: 4
-lastUpdated: 2026-08-02
+lastUpdated: 2026-10-31
+notice: "Only team owners and admins can do this."
+next: ["/docs/api/authentication", "/docs/guides/monitor-a-cron-job"]
 ---
 
 API keys allow you to access the Uptime API programmatically. Use them to integrate monitoring data into your own tools, automate monitor management, or build custom dashboards.
@@ -14,12 +16,12 @@ API keys allow you to access the Uptime API programmatically. Use them to integr
 
 To create a new API key:
 
-1. Navigate to **Settings** > **API Keys**
-2. Click **Create API Key**
-3. Enter a **name** to identify this key (e.g., "CI/CD Pipeline" or "Dashboard Integration")
-4. Select the **scopes** that define what the key can access
-5. Optionally set an **expiration date** for the key
-6. Click **Create**
+1. Open <ui>API Keys</ui> in the sidebar
+2. Click <ui>Create API Key</ui>
+3. Enter a <ui>Key Name</ui> to identify this key (e.g., "CI/CD Pipeline" or "Dashboard Integration")
+4. Under <ui>Permissions</ui>, select the scopes that define what the key can access
+5. Optionally set an <ui>Expiration Date (Optional)</ui> for the key
+6. Click <ui>Create API Key</ui>
 
 After creation, you'll see the full API key exactly once. Copy it immediately and store it securely—you won't be able to view it again.
 
@@ -100,10 +102,9 @@ The full key is never displayed after creation. If you lose a key, delete it and
 
 To revoke an API key:
 
-1. Navigate to **Settings** > **API Keys**
+1. Open <ui>API Keys</ui> in the sidebar
 2. Find the key you want to delete
-3. Click the **Delete** button
-4. Confirm the deletion
+3. Click <ui>Delete Key</ui> on its row
 
 Deletion is immediate. Any applications using the key will stop working as soon as the key is deleted.
 

@@ -3,7 +3,7 @@ title: Rate Limits
 description: Understand API rate limits and how to handle them. Implement backoff strategies for reliable integrations.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 4
 lastUpdated: 2026-09-23
 ---

@@ -3,7 +3,7 @@ title: Idempotent Requests
 description: Retry a create request safely with the Idempotency-Key header, and get the original response instead of a duplicate resource.
 section:
   title: API Reference
-  order: 4
+  order: 6
 order: 6
 lastUpdated: 2026-09-26
 ---

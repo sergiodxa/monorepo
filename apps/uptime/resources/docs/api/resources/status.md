@@ -3,7 +3,7 @@ title: Status
 description: Get the overall status of all your monitors with a single API call. Returns aggregate health and individual monitor states.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 1
 lastUpdated: 2026-02-14
 ---

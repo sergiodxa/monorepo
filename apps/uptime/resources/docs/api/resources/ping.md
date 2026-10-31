@@ -3,7 +3,7 @@ title: Ping
 description: Run a one-off HTTP, DNS, or TCP probe without creating a monitor. Built for CI checks against ephemeral deployments.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 13
 lastUpdated: 2026-10-24
 ---

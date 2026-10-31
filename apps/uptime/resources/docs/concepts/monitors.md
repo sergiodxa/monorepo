@@ -3,9 +3,10 @@ title: Understanding Monitors
 description: Monitors continuously check the health of your services and alert you when something goes wrong. Learn about HTTP, DNS, TCP, cron job, and flow monitors.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 1
-lastUpdated: 2026-02-14
+lastUpdated: 2026-10-31
+next: ["/docs/guides/add-a-monitor", "/docs/guides/choose-who-gets-alerted"]
 ---
 
 In modern infrastructure, services fail. Networks have hiccups. DNS records expire. Scheduled jobs silently stop running. Without monitoring, you might not discover these issues until your users do.
@@ -73,7 +74,7 @@ A flow monitor checks a sequence of requests rather than a single one. You write
 - Does a protected endpoint still refuse a caller without one?
 - Does a two-step API still hold together after a deploy?
 
-Because a flow drives a sequence rather than sending one anonymous request, **it can only reach hosts covered by a domain your team has verified**. There is no browser: a flow makes HTTP requests and asserts on responses. See [Flow Monitors](/docs/concepts/flow-monitors) for details.
+Because a flow drives a sequence rather than sending one anonymous request, **it can only reach hosts covered by a domain your team has verified**. A flow that only uses `http` makes requests and asserts on the responses, and each request counts as one ping. A flow that uses `browser` drives a real page the way a person would (open, fill, click) and is billed $0.0025 per run instead. Either kind runs at most every 15 minutes. See [Flow Monitors](/docs/concepts/flow-monitors) for details.
 
 ## Common Concepts
 
@@ -88,7 +89,7 @@ The interval determines how frequently Uptime checks your service. Common interv
 - **15 minutes** — For less critical services or to reduce costs
 - **30+ minutes** — For background services or infrequently changing resources
 
-Shorter intervals mean faster detection but more resource usage. Choose based on how quickly you need to know about issues.
+HTTP and TCP monitors can run as often as every minute. DNS and flow monitors run every 15 minutes at the most, and a cron job's schedule is its own cron expression. Shorter intervals mean faster detection but more pings. Choose based on how quickly you need to know about issues.
 
 ### Status
 
@@ -102,7 +103,7 @@ Status changes trigger alerts so you can respond appropriately.
 
 ### Enabling and Disabling
 
-Monitors can be enabled or disabled at any time. Disabled monitors:
+Cron jobs and DNS, TCP and flow monitors have an <ui>Enabled</ui> switch on their forms; an HTTP monitor is enabled or disabled through the [API](/docs/api/resources/http-monitors) with `enabled`. Disabled monitors:
 
 - Stop running checks
 - Don't trigger alerts
@@ -118,7 +119,7 @@ Monitors and alerts work together but serve different purposes:
 - **Monitors detect** — They check your services and determine status
 - **Alerts notify** — They tell you when status changes
 
-A single monitor can trigger multiple alerts through different channels (email, Slack, webhooks). You can also configure alert conditions, like only alerting after a service has been down for 5 minutes to avoid noise from brief hiccups.
+A single monitor can trigger multiple alerts through different channels (email, Slack, Discord, PagerDuty, webhooks). An alert fires on the first failing check, with no confirming re-check, and repeats while the monitor stays broken at the alert's cooldown.
 
 See [Understanding Alerts](/docs/concepts/alerts) for more on configuring notifications.
 
@@ -149,8 +150,8 @@ Not everything needs 1-minute checks:
 Configure thresholds that reflect real problems:
 
 - Set response time limits based on actual performance requirements
-- Allow for occasional slow responses before marking degraded
-- Consider requiring multiple consecutive failures before alerting
+- Point monitors at stable endpoints, since a single failing check alerts
+- Use alert cooldowns to space out repeats during a long outage
 
 ### Monitor from the User's Perspective
 

@@ -3,9 +3,10 @@ title: Maintenance Windows
 description: Schedule maintenance windows to prevent false alerts during planned downtime and communicate with your users.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 9
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-31
+next: ["/docs/guides/schedule-maintenance"]
 ---
 
 By defining maintenance windows in advance, you prevent false alerts during planned work and keep your team focused on real incidents.
@@ -35,36 +36,25 @@ When creating a maintenance window, you can configure the following options.
 
 ### Name
 
-A descriptive name for the maintenance window, such as "Database migration" or "Weekly infrastructure updates". This name appears in alerts, on status pages, and in maintenance history.
+A descriptive name for the maintenance window, such as "Database migration" or "Weekly infrastructure updates". This name appears on status pages, in their maintenance calendar, and in your list of maintenance windows.
 
 ### Scope
 
 Choose how wide the maintenance window reaches:
 
 - **All monitors** — Every monitor you have, of every kind
-- **A kind of monitor** — Every HTTP, DNS, TCP or cron monitor, including ones you create later
+- **A kind of monitor** — Every HTTP, DNS, TCP or flow monitor, or every cron job, including ones you create later
 - **A single monitor** — One monitor, picked from the monitors of its kind
 
 Narrow the scope when only some services are affected. If you're upgrading a database server, apply the window to the monitor that depends on that database.
 
 A whole kind is the right choice when the work happens below your services rather than inside one of them. Migrating a zone to a new nameserver puts every DNS monitor in doubt at once, and a DNS-wide window quiets all of them — including the records you add mid-migration — without touching the HTTP checks that should still page you if the site itself goes down.
 
-### Start Time
+### Start and End Time
 
-The date and time when the maintenance window begins. You can schedule maintenance windows in advance—set them up days or weeks before the actual work.
+<ui>Starts at</ui> and <ui>Ends at</ui> set when the window begins and ends, and the end must come after the start. Both are read in **UTC**, whatever your computer's time zone. You can schedule windows days or weeks before the actual work.
 
-### Duration
-
-How long the maintenance window lasts. Available durations:
-
-- 15 minutes
-- 30 minutes
-- 1 hour
-- 2 hours
-- 4 hours
-- 8 hours
-
-Choose a duration that covers your expected maintenance plus some buffer time. You can always end early if you finish ahead of schedule.
+Choose an end time that covers your expected maintenance plus some buffer. You can always end early if you finish ahead of schedule.
 
 ### Suppress Alerts
 
@@ -87,11 +77,11 @@ Enable this for any user-facing maintenance. Disable it for internal work that d
 
 ### Recurring Maintenance
 
-For regular maintenance schedules, you can set up recurring windows:
+For regular maintenance schedules, turn on <ui>Recurring</ui> and write a pattern in <ui>Recurrence pattern (when recurring)</ui>:
 
-- Daily
-- Weekly (select specific days)
-- Monthly (select specific dates)
+- Daily: `daily:02:00-04:00`
+- Weekly, on one day: `weekly:monday:02:00-04:00`
+- Monthly, on one date: `monthly:15:02:00-04:00`
 
 Recurring times are in UTC. An end time earlier than the start time runs past midnight, so 23:00 to 01:00 is a two-hour window. A monthly window on the 29th, 30th or 31st falls on the last day of shorter months.
 
@@ -101,7 +91,7 @@ Recurring windows are useful for:
 - Nightly backup windows
 - Monthly patching schedules
 
-Each occurrence creates a separate maintenance window instance that you can end early or modify independently.
+A recurring window is one entry in your list: editing or deleting it changes every occurrence.
 
 ## Maintenance States
 
@@ -134,7 +124,7 @@ The maintenance window has ended. Past windows:
 
 ## Ending Maintenance Early
 
-If you complete maintenance ahead of schedule, use the "End Early" option to:
+If you complete maintenance ahead of schedule, open the window with <ui>Edit</ui> and click <ui>End maintenance now</ui> to:
 
 - Resume normal alerting immediately
 - Update status pages to show services are operational
@@ -154,7 +144,7 @@ Create maintenance windows before starting planned work, not during. This ensure
 
 ### Enable Status Page Visibility
 
-For any maintenance that affects users, enable "Show on status page". Proactive communication:
+For any maintenance that affects users, enable <ui>Show on status page</ui>. Proactive communication:
 
 - Reduces support ticket volume
 - Builds user trust

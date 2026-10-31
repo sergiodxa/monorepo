@@ -3,7 +3,7 @@ title: Maintenance Windows
 description: Schedule and manage maintenance windows. Suppress alerts during planned downtime.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 9
 lastUpdated: 2026-09-05
 ---

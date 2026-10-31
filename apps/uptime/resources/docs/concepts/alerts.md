@@ -1,11 +1,12 @@
 ---
 title: Alerts & Notifications
-description: Get notified when your monitors detect issues. Configure alerts via email, Slack, Discord, or custom webhooks.
+description: Get notified when your monitors detect issues. Configure alerts via email, Slack, Discord, PagerDuty, or custom webhooks.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 7
-lastUpdated: 2026-10-24
+lastUpdated: 2026-10-31
+next: ["/docs/guides/choose-who-gets-alerted", "/docs/troubleshooting/not-receiving-alerts"]
 ---
 
 When a monitor detects an issue—a website goes down, an API returns errors, a cron job misses its schedule—alerts deliver that information to the right people through the right channels.
@@ -29,13 +30,13 @@ For any single outage, an alert follows the same three-part pattern:
 
 1. **Immediately, as soon as the monitor is detected down.** The first notification of an outage is never held back—no confirming second check, and no cooldown applies to it. Whatever cooldown you configure, the news that something just broke reaches you on the first failing check.
 2. **Again, each time the cooldown expires while the monitor is still down.** An ongoing outage keeps reminding you at your configured interval for as long as it lasts. There is no limit on how many notifications one outage can produce: a monitor that stays down for three days on a one-hour cooldown sends roughly one notification an hour for three days.
-3. **Once more when it recovers**, if "notify on recovery" is enabled.
+3. **Once more when it recovers**, if <ui>Notify on recovery</ui> is enabled.
 
 Between those, failing checks that fall inside the cooldown window are recorded in your alert history as skipped rather than sent, and the recovery notification reports how many were held back—so a quiet incident never looks like dropped alerts.
 
 ## Alert Channels
 
-Uptime supports four notification channels, each suited for different workflows and team setups.
+Uptime supports five notification channels, each suited for different workflows and team setups.
 
 ### Email
 
@@ -168,7 +169,7 @@ Both schemes send their signature in the header named `webhook-signature` (heade
 Alerts created before Standard Webhooks signing existed keep the legacy signature until you switch them, so nothing changes for a receiver that is already in place. To switch one without dropping a notification:
 
 1. Update your receiver to accept either scheme for the moment: a `webhook-signature` value starting with `sha256=` is legacy, and anything else goes to your Standard Webhooks verifier.
-2. Edit the alert and change **Signature scheme** to **Standard Webhooks**, or send `{"signature": "standard-webhooks"}` in a [`PATCH`](/docs/api/resources/alerts#patch-apiv1alertsid).
+2. Edit the alert and change <ui>Signature scheme</ui> to <ui>Standard Webhooks</ui>, or send `{"signature": "standard-webhooks"}` in a [`PATCH`](/docs/api/resources/alerts#patch-apiv1alertsid).
 3. Once notifications arrive with the new headers, remove the legacy branch from your receiver.
 
 The legacy scheme is deprecated: plan to move every webhook alert to Standard Webhooks.
@@ -186,15 +187,13 @@ Send alerts directly to Slack channels using an incoming webhook URL.
 
 **Configuration options:**
 
-- **Webhook URL** — Your Slack incoming webhook URL
-- **Channel override** (optional) — Send to a different channel than the webhook's default
+- **Webhook URL** — Your Slack incoming webhook URL. Each webhook posts to the channel it was created for, so create one webhook per channel.
 
 To set up Slack integration:
 
 1. Create an incoming webhook in your Slack workspace (Apps → Incoming Webhooks)
 2. Copy the webhook URL
-3. Paste it into your Uptime alert configuration
-4. Optionally specify a channel override (e.g., `#incidents` or `#oncall`)
+3. Paste it into <ui>Webhook URL</ui> on your Uptime alert
 
 Slack alerts include formatted messages with:
 
@@ -218,6 +217,14 @@ To set up Discord integration:
 4. Paste it into your Uptime alert configuration
 
 Discord alerts are formatted as embeds with clear status indicators and monitor details.
+
+### PagerDuty
+
+Send alerts to a PagerDuty service, which can page whoever is on call.
+
+**Configuration options:**
+
+- **Integration key** — The integration key of the service's Events API v2 integration, found in PagerDuty under Service → Integrations → Events API V2
 
 ## Alert Configuration
 
@@ -268,7 +275,7 @@ Changing an alert's cooldown only affects that alert. Alerts you configured befo
 Every alert is scoped one of three ways, chosen from a single dropdown on the alert form:
 
 - **Team-wide** — The alert fires for every monitor on your team, of every kind. This is the default, and it is what every alert created before scoping existed still does.
-- **Every monitor of one kind** — The alert fires for all your HTTP monitors, or all your DNS monitors, or all your TCP monitors, or all your cron jobs, and for nothing else. The choice covers monitors you add later too, so a new domain is watched the moment you create it.
+- **Every monitor of one kind** — The alert fires for all your HTTP monitors, or all your DNS, TCP or flow monitors, or all your cron jobs, and for nothing else. The choice covers monitors you add later too, so a new domain is watched the moment you create it.
 - **One monitor** — The alert fires only for that monitor, whichever kind it is.
 
 Narrowing the scope is useful when:
@@ -290,11 +297,13 @@ If an alert is scoped to a monitor you later delete, its scope reads as an unkno
 
 Every time an alert fires (or would fire but is in cooldown), Uptime records an event. The alert history shows:
 
-- **Timestamp** — When the event occurred
+- **Alert** — Which alert the event belongs to
 - **Monitor** — Which monitor triggered the alert
-- **Event type** — Down, up, degraded, or recovery
-- **Channel** — Which notification channel was used
+- **Event** — Down, Degraded, or Recovered
 - **Status** — Whether the notification was sent, skipped because the cooldown had not expired, or failed
+- **Time** — When the event occurred
+
+Open it from <ui>Alerts</ui> with <ui>View History</ui>. An alert held back by a maintenance window isn't recorded.
 
 Older events may show a "Skipped (Repeat Limit)" status. That came from a previous policy that stopped notifying after a fixed number of notifications per incident; nothing produces it any more, and the label is kept only so historical events still read correctly.
 
@@ -305,7 +314,7 @@ Alert history helps you:
 - Verify that notifications are being delivered
 - Debug integration issues with webhooks or chat platforms
 
-Events are retained according to your plan's data retention policy.
+Events are kept for 90 days.
 
 ## Best Practices
 
@@ -317,7 +326,7 @@ Start with the 60-minute default and shorten it for the services where an hour o
 
 ### Enable Recovery Notifications
 
-Always enable "notify on recovery" for alerts. Knowing when a service comes back up is just as important as knowing when it goes down. Recovery notifications:
+Always enable <ui>Notify on recovery</ui> for alerts. Knowing when a service comes back up is just as important as knowing when it goes down. Recovery notifications:
 
 - Let you close incidents confidently
 - Reduce the need to constantly check dashboards
@@ -330,7 +339,7 @@ Don't rely on a single notification channel. If Slack is down, you won't get you
 - **Primary**: Slack or Discord for team visibility
 - **Backup**: Email for guaranteed delivery
 
-For critical services, consider adding a third channel like PagerDuty or OpsGenie that can escalate to phone calls.
+For critical services, consider adding a PagerDuty alert that can escalate to phone calls.
 
 ### Use Webhooks for Custom Integrations
 

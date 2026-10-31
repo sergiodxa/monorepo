@@ -3,7 +3,7 @@ title: Status Pages
 description: Create and manage public status pages. Associate monitors and customize appearance.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 8
 lastUpdated: 2026-09-05
 ---

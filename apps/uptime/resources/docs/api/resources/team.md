@@ -3,7 +3,7 @@ title: Team
 description: Get and update team settings. Manage team domains for custom status page URLs.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 10
 lastUpdated: 2026-09-05
 ---

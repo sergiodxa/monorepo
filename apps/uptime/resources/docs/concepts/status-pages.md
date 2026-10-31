@@ -1,11 +1,12 @@
 ---
 title: Status Pages
-description: Create public or private status pages to communicate service health to your users and stakeholders.
+description: Create public status pages to communicate service health to your users and stakeholders.
 section:
   title: Concepts
-  order: 2
+  order: 4
 order: 8
-lastUpdated: 2026-09-26
+lastUpdated: 2026-10-31
+next: ["/docs/guides/publish-a-status-page"]
 ---
 
 Status pages provide a single place where users, customers, and stakeholders can check whether your systems are operational without contacting support.
@@ -48,55 +49,39 @@ The **description** provides additional context below the title. Use it to expla
 
 ### Custom Logo
 
-Upload your company or product logo to brand the status page. A recognizable logo helps users confirm they're on the official status page and not a phishing attempt.
-
-Logos should be:
-
-- PNG or SVG format
-- Reasonably sized (recommended max 200px width)
-- Visible on both light backgrounds
+Paste the address of your company or product logo in <ui>Logo URL</ui> to brand the status page. A recognizable logo helps users confirm they're on the official status page and not a phishing attempt.
 
 ### Public or Private Visibility
 
-**Public** status pages are accessible to anyone with the URL. No authentication required. This is the default and recommended setting for customer-facing status pages.
+**Public** status pages are accessible to anyone with the URL. No authentication required. This is the default.
 
-**Private** status pages require authentication to view. Users must be logged into your Uptime team to access them. Use private visibility for internal status pages that shouldn't be exposed publicly.
+A page with <ui>Public</ui> turned off is **not reachable by anyone**, your team included: its address answers "Status Page Not Found". Use it to prepare a page before launch, or to take one offline without deleting it.
 
 ### Overall Status Indicator
 
-When enabled, the status page displays a prominent indicator at the top showing the overall health of all included monitors:
+When <ui>Show Overall Status</ui> is on, the status page displays a banner at the top summarising every service on it:
 
-- **All Systems Operational** — Every monitor is up
-- **Partial Outage** — Some monitors are down or degraded
-- **Major Outage** — Most or all monitors are down
+- **All Systems Operational** — Every service is operational
+- **Partial System Outage** — At least one service is down or degraded
+- **Major System Outage** — More than half of the services are down or degraded
 
-This gives visitors an instant summary without scanning individual services.
+Services that haven't been checked yet don't count toward the banner.
 
-### Select HTTP Monitors to Display
+### Select Monitors to Display
 
-Choose which HTTP monitors appear on the status page. Each selected monitor shows:
-
-- Service name
-- Current status (up, down, degraded)
-- Response time trend
-- Uptime percentage over the selected time range
+Choose the monitors that appear on the status page in <ui>Monitors to Include</ui>. HTTP, DNS, TCP and flow monitors share one list. Each selected monitor shows its name, its current status (Operational, Degraded or Down) and a 90-day uptime bar.
 
 Not every monitor needs to be on your status page. Include only the services relevant to your status page's audience.
 
 ### Select Cron Jobs to Display
 
-Choose which cron job monitors appear on the status page. For cron monitors, the page shows:
-
-- Job name
-- Current status
-- Last successful check-in time
-- Expected schedule
+Choose the cron jobs that appear on the status page in <ui>Cron Jobs to Include</ui>. They're listed under **Scheduled Jobs** with their current status, schedule and last ping.
 
 This helps users understand whether background processes like data syncs or scheduled reports are running on schedule.
 
 ## Maintenance Window Integration
 
-A maintenance window with "Show on status page" enabled appears on every status page that shows a service it covers. A window for all monitors appears on every status page.
+A maintenance window with <ui>Show on status page</ui> enabled appears on every status page that shows a service it covers. A window for all monitors appears on every status page.
 
 The page lists each window that is in progress or upcoming, with its name, its time in UTC and the services it affects, plus an "Add to calendar" link for that one window.
 
@@ -135,7 +120,7 @@ A branded status page looks professional and helps users trust that they're view
 
 ### Keep Public for Transparency
 
-Unless you have a specific reason for privacy, keep your status page public. The benefits of transparency outweigh the minor risk of competitors seeing your uptime metrics. Most successful companies proudly publish their status pages.
+Keep your status page public. The benefits of transparency outweigh the minor risk of competitors seeing your uptime metrics. Most successful companies proudly publish their status pages.
 
 ### Create Separate Status Pages for Different Audiences
 
@@ -143,7 +128,6 @@ Consider creating multiple status pages for different use cases:
 
 - **Customer status page** — Public, shows services end-users interact with
 - **Developer status page** — Public, shows API endpoints, webhooks, and developer tools
-- **Partner status page** — Private or public, shows services specific partners depend on
-- **Internal status page** — Private, shows all services including internal tools
+- **Partner status page** — Shows services specific partners depend on
 
 This ensures each audience sees relevant information without noise from services they don't use.

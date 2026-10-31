@@ -3,7 +3,7 @@ title: Cron Jobs
 description: Create and manage cron job monitors, and record pings from your scheduled jobs.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 6
 lastUpdated: 2026-09-05
 ---

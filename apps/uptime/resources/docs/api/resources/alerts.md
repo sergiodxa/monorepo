@@ -3,7 +3,7 @@ title: Alerts
 description: Create and manage alerts for email, Slack, Discord, PagerDuty, and webhook notifications. Maximum 10 per team.
 section:
   title: API Resources
-  order: 5
+  order: 7
 order: 7
 lastUpdated: 2026-10-24
 ---
