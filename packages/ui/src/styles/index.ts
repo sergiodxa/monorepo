@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export * from "./card-grid.js";
 export * from "./chart-palette.js";
 export * from "./field-stack-layout.js";
 export * from "./floating-surface.js";
@@ -21,3 +22,4 @@ export * from "./panel-chrome.js";
 export * from "./range-thumb-appearance.js";
 export * from "./rtl-aware-gradient-direction.js";
 export * from "./semantic-color-panel.js";
+export * from "./surface-control.js";
