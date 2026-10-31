@@ -397,7 +397,7 @@ function paintLines(
 	let lines: Line[] = [];
 	let continued = false;
 
-	for (let [index, lineTokens] of splitLines(runs).entries()) {
+	for (let [index, lineTokens] of splitLines(runs).slice(0, rawLines.length).entries()) {
 		let prompt = prompts[index] ?? false;
 		let command: boolean = prompt || continued;
 		continued = command && (rawLines[index] ?? "").endsWith("\\");

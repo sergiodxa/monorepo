@@ -93,6 +93,22 @@ describe("CodeBlock", () => {
 		expect(inkLeft(lines[0]!)).toBeCloseTo(inkLeft(lines[1]!), 1);
 	});
 
+	test("draws no empty last line when painted tokens end in a newline", () => {
+		let block = mount(
+			<CodeBlock
+				language="sh"
+				code={"npm add remix\n"}
+				tokens={[
+					{ type: "function", value: "npm" },
+					{ type: "plain", value: " add remix\n" },
+				]}
+				labels={LABELS}
+			/>,
+		);
+
+		expect(block.querySelectorAll("[data-line]")).toHaveLength(1);
+	});
+
 	test("keeps an empty line one line tall", () => {
 		let block = mount(
 			<CodeBlock language="ts" code={"let a = 1;\n\nlet b = 2;"} labels={LABELS} />,
