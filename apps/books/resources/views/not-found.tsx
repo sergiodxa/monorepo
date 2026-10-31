@@ -1,7 +1,6 @@
 /**
- * View for the 404 page. Renders the status and a one-line explanation, matching
- * the plain treatment the site has always given a missing URL: on this four-page
- * site, the footer's links already reach everywhere a visitor might go.
+ * The 404 page: says the address leads nowhere and offers the two places worth going, the
+ * featured book and the homepage, beside the book's cover.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,28 +8,55 @@
 
 import type { Handle } from "remix/component";
 
-import { vstack } from "@sdxc/u/layout";
-import { is, maxIs, p, pbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { weight } from "@sdxc/u/typography";
+import { CtaGroup, Link, LinkButton } from "@sdxc/ui";
+import { FeatureBand } from "@sdxc/ui/patterns";
+import { marketingCtaChrome } from "@sdxc/ui/styles";
+
+import type { BookCopy } from "~/resources/content/books";
 
 namespace NotFoundView {
 	export interface Props {
-		/** The heading, e.g. `"404"`. */
-		title: string;
-		/** The one-line explanation under it. */
-		description: string;
+		/** The featured book's landing. */
+		landing: string;
+		copy: BookCopy;
+		/** The homepage. */
+		home: string;
 	}
 }
 
-/** Renders the 404 page. */
+/**
+ * Renders the page's `<main>` as one split band whose title is the page's `h1`.
+ *
+ * @param handle Runtime handle carrying the links and the book.
+ * @returns The render function producing the page's main content.
+ */
 export default function NotFoundView(handle: Handle<NotFoundView.Props>) {
 	return () => {
-		let { description, title } = handle.props;
+		let { copy, home, landing } = handle.props;
+		let Cover = copy.Cover;
 
 		return (
-			<main mix={[vstack({ gap: 2.5 }), is("100%"), maxIs("64rem"), p(4), pbs(16)]}>
-				<h1 mix={[text("3xl"), weight("light")]}>{title}</h1>
-				<p>{description}</p>
+			<main>
+				<FeatureBand
+					id="not-found"
+					layout="split"
+					level={1}
+					spacing="hero"
+					eyebrow="Error 404"
+					title="This page is not in the book"
+					description="The address may be mistyped, or the page may have moved. The book itself is one click away."
+					media={<Cover />}
+				>
+					<CtaGroup>
+						<LinkButton href={landing} color="brand" mix={[marketingCtaChrome()]}>
+							See the book
+						</LinkButton>
+						<Link href={home} color="neutral" mix={[weight("medium")]}>
+							Back to the homepage
+						</Link>
+					</CtaGroup>
+				</FeatureBand>
 			</main>
 		);
 	};

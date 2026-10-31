@@ -1,15 +1,85 @@
 /*
- * Books overrides for `@sdxc/ui` marketing tokens. Loaded after `theme.css` so
- * the sales page keeps its 64rem column, serif display face, and light weight
- * while still reading the shared spacing and lead recipes.
+ * The books site's art direction, set once over `@sdxc/ui`'s marketing tokens: a printed
+ * page. One serif for display, copy and eyebrows; square corners on every box and control;
+ * edges drawn as ink rules instead of shadows; React Router red spent only on actions and
+ * accents. Loaded after `theme.css`, so these values win over the library's defaults.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
  */
 
 :root {
-	--ui-marketing-measure: 64rem;
-	--ui-marketing-display-weight: 300;
-	--ui-marketing-section-space: 4rem;
-	--ui-marketing-section-space-compact: 3rem;
-	--ui-marketing-section-space-hero: 5rem;
-	--ui-marketing-chapter-size: 2.25rem;
+	/* No webfont: the reader's own old-style serif for everything but code, which stays mono. */
+	--ui-font-serif:
+		"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, Georgia, serif;
+	--ui-font-sans: var(--ui-font-serif);
+	--ui-font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+		monospace;
 	--ui-font-display: var(--ui-font-serif);
+	--ui-marketing-display-weight: 400;
+	--ui-marketing-display-tracking: -0.02em;
+	--ui-marketing-display-max: 4.5rem;
+	--ui-marketing-chapter-tracking: -0.015em;
+	--ui-marketing-chapter-leading: 1.08;
+	--ui-marketing-lead-size: 1.1875rem;
+
+	--ui-marketing-cta-radius: 0;
+	--ui-marketing-cta-weight: 500;
+	--ui-button-radius: 0;
+	--ui-radius-xs: 0;
+	--ui-radius-sm: 0;
+	--ui-radius-md: 0;
+	--ui-radius-lg: 0;
+	--ui-radius-xl: 0;
+	--ui-marketing-radius-surface: 0;
+	--ui-marketing-radius-frame: 0;
+	--ui-marketing-card-radius-outer: 0;
+	--ui-marketing-band-radius: 0;
+	--ui-marketing-plan-radius: 0;
+	--ui-marketing-plan-lift: 0 0 #0000;
+
+	--ui-marketing-eyebrow-font: var(--ui-font-serif);
+	--ui-marketing-eyebrow-weight: 500;
+	--ui-marketing-eyebrow-transform: uppercase;
+	--ui-marketing-eyebrow-tracking: 0.16em;
+	--ui-marketing-eyebrow-color: var(--ui-brand-fg);
+
+	/* Bands are flat paper: a grey tint with no brand glow, one step off the page in dark. */
+	--ui-marketing-band-glow: none;
+	--ui-marketing-band-tint: var(--ui-color-neutral-100);
+	--ui-marketing-band-tint-dark: var(--ui-color-neutral-900);
+
+	/* Rules are ink at 16%, strong enough to read as print; surfaces stay the paper colour. */
+	--ui-marketing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 16%, transparent);
+	--ui-surface-raised: var(--ui-bg);
+	--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
+	--ui-shadow-float: none;
+	--ui-image-outline: var(--ui-marketing-hairline);
+}
+
+/* Dark mode keeps the printed look: paper-white rules at 16% on React Router's ink. */
+.dark {
+	--ui-marketing-hairline: color-mix(in oklch, white 16%, transparent);
+	--ui-surface-raised: var(--ui-bg);
+	--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
+}
+
+@media (prefers-color-scheme: dark) {
+	.system {
+		--ui-marketing-hairline: color-mix(in oklch, white 16%, transparent);
+		--ui-surface-raised: var(--ui-bg);
+		--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
+		--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+		--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
+	}
+}
+
+/* A sticky header covers in-page anchors; every linked band lands clear of it. */
+main [id] {
+	scroll-margin-block-start: 5rem;
 }

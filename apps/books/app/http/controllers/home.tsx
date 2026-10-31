@@ -1,5 +1,5 @@
 /**
- * Homepage controller. Renders the pitch and the early-access subscribe form. Also exports
+ * Homepage controller. Renders the featured book's pitch and the subscribe form. Also exports
  * the render itself, because a failed subscribe reuses it to re-render this page with the
  * error shown inline, keeping the failure response an HTML page with a 400 status.
  *
@@ -12,12 +12,11 @@ import { createAction } from "remix/router";
 import type { AppContext } from "~/app/initializers/router";
 
 import { seo } from "~/app/initializers/seo";
+import { FEATURED_BOOK } from "~/config/books";
+import { BOOK_COPY } from "~/resources/content/books";
 import DocumentLayout from "~/resources/layouts/document";
 import HomeView from "~/resources/views/home";
 import routes from "~/routes/web";
-
-/** The homepage's title, which is also the site's name. */
-const TITLE = "React Router OAuth2 Handbook";
 
 /**
  * Renders the homepage document.
@@ -33,12 +32,14 @@ export function renderHome(
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={TITLE}
+			title={FEATURED_BOOK.title}
 			description={seo.site.description}
 			canonical={seo.canonical(ctx.url)}
 			schema={[seo.schema.website(), seo.schema.organization({ name: "Sergio Xalambrí" })]}
 		>
 			<HomeView
+				title={FEATURED_BOOK.title}
+				copy={BOOK_COPY[FEATURED_BOOK.slug]}
 				subscribeAction={routes.api.subscribe.href()}
 				error={options.error}
 				confirmEmail={options.confirmEmail}
@@ -48,5 +49,5 @@ export function renderHome(
 	);
 }
 
-/** GET / — the handbook's landing page. */
+/** GET / — the newsletter sign-up, which sends a new subscriber on to the featured book. */
 export default createAction(routes.home, (ctx) => renderHome(ctx));

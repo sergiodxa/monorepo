@@ -3,24 +3,22 @@
  * time and rendered with token classes, so the colors have to be a stylesheet — there is no
  * call site to hang a mixin off.
  *
- * The site has no accent color: it is black text on white, inverting to white on black, and
- * a code block borrowing a rainbow theme would be the one thing on the page with a hue. So
- * this theme spends the warm grey scale instead, and separates roles along two axes hue
- * cannot help with:
+ * The page spends React Router red on its actions and nothing else, so a code block borrowing
+ * a rainbow theme would be the loudest thing on it. The theme spends the grey scale instead,
+ * with keywords in the brand ink as the one hue, and separates roles along two axes:
  *
  * - Lightness tier, mirrored per scheme (light runs 500 → 950, dark runs 400 → 50), which
  *   keeps tier ordering identical in both directions.
  * - Weight and face, which is what lets four grey tiers carry a dozen token roles: a
- *   keyword is a bold plain-text tier, a function name a semibold literal tier, and a
+ *   keyword is bold brand ink, a function name a semibold literal tier, and a
  *   comment is the one italic thing in the block.
  *
  * `inserted` and `deleted` are the deliberate exception. They are the only tokens whose
  * meaning *is* a color — a diff rendered in two greys cannot be read at all — so they take
  * the palette's success and danger scales.
  *
- * The scheme switch is a bare `prefers-color-scheme` query rather than the theme layer's
- * class-gated form: this site has no theme toggle and never will, since one would mean
- * shipping its only client-side JavaScript.
+ * The dark tiers follow the reader's `prefers-color-scheme`, and the theme layer's forced
+ * `.dark` class too, so a page rendered dark on purpose sets its code dark as well.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,6 +37,16 @@
 	--book-code-name: var(--ui-color-neutral-800);
 	--book-code-inserted: var(--ui-color-success-700);
 	--book-code-deleted: var(--ui-color-danger-700);
+}
+
+.dark {
+	--book-code-text: var(--ui-color-neutral-50);
+	--book-code-quiet: var(--ui-color-neutral-400);
+	--book-code-punctuation: var(--ui-color-neutral-400);
+	--book-code-literal: var(--ui-color-neutral-300);
+	--book-code-name: var(--ui-color-neutral-200);
+	--book-code-inserted: var(--ui-color-success-400);
+	--book-code-deleted: var(--ui-color-danger-400);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -102,7 +110,7 @@ pre[class*="language-"] > code[class*="language-"] {
 	--highlight-function: var(--book-code-name);
 	--highlight-class-name: var(--book-code-name);
 
-	--highlight-keyword: var(--book-code-text);
+	--highlight-keyword: var(--ui-brand-fg);
 
 	--highlight-inserted: var(--book-code-inserted);
 	--highlight-deleted: var(--book-code-deleted);

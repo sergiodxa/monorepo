@@ -1,7 +1,7 @@
 /**
- * Tests for `GET /release` — the sales page. The three things that cost money if they break
- * are the point: prices derived from the platform's cents, the parity-pricing script's
- * polarity, and the page still rendering when the campaign lookup fails.
+ * Tests for `GET /:book` — a book's landing. The things that cost money if they break are the
+ * point: prices derived from the platform's cents, the parity-pricing script's polarity, the
+ * page still rendering when the campaign lookup fails, and an unknown slug selling nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,10 +26,10 @@ function campaign(id: Discounts): MemoryDiscountSeed {
 }
 
 function load(billing: Billing) {
-	return fetchApp("/release", { billing });
+	return fetchApp("/react-router-oauth2", { billing });
 }
 
-describe("GET /release", () => {
+describe("GET /:book", () => {
 	test("renders both prices as dollars, not as the cents the platform reports", async () => {
 		let response = await load(memoryBilling());
 		let body = await response.text();
@@ -46,15 +46,15 @@ describe("GET /release", () => {
 
 		let body = await load(billing).then((response) => response.text());
 
-		expect(body).toContain("<s>$99</s>");
+		expect(body).toMatch(/<s[^>]*>\$99<\/s>/);
 		expect(body).toContain("$69");
-		expect(body).not.toContain("<s>$49</s>");
+		expect(body).not.toMatch(/<s[^>]*>\$49<\/s>/);
 	});
 
 	test("renders every section anchor the page's own links point at", async () => {
 		let body = await load(memoryBilling()).then((response) => response.text());
 
-		for (let id of ["hero", "description", "sample", "pricing", "author", "faq"]) {
+		for (let id of ["top", "sample", "inside", "flow", "author", "pricing", "faq"]) {
 			expect(body).toContain(`id="${id}"`);
 		}
 	});
@@ -64,8 +64,8 @@ describe("GET /release", () => {
 
 		expect(body).toContain('href="/api/checkout/complete"');
 		expect(body).toContain('href="/api/checkout/essentials"');
-		expect(body).toContain('href="/upgrade"');
-		expect(body).toContain('action="/sample"');
+		expect(body).toContain('href="/react-router-oauth2/upgrade"');
+		expect(body).toContain('action="/react-router-oauth2/sample"');
 	});
 
 	test("loads the parity-pricing script when no early-access campaign is running", async () => {
@@ -115,5 +115,33 @@ describe("GET /release", () => {
 		expect(body).not.toContain(CLIENT_ENTRY_HREF);
 		expect(body).not.toContain('type="importmap"');
 		expect(body).not.toContain('rel="modulepreload"');
+	});
+
+	test("quotes the lowest price a reader can pay today on the buy button", async () => {
+		let billing = memoryBilling({ discounts: [campaign(Discounts.FIRST_WEEK)] });
+
+		let body = await load(billing).then((response) => response.text());
+
+		expect(body).toContain("Buy the book — from $49");
+	});
+
+	test("renders one h1, then h2 bands", async () => {
+		let body = await load(memoryBilling()).then((response) => response.text());
+		let levels = [...body.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]));
+
+		expect(levels.filter((level) => level === 1)).toHaveLength(1);
+		expect(levels[0]).toBe(1);
+		for (let [index, level] of levels.entries()) {
+			if (index > 0) expect(level - (levels[index - 1] ?? 1)).toBeLessThanOrEqual(1);
+		}
+	});
+
+	test("answers an unknown book with the 404 page, before any billing call", async () => {
+		let billing = memoryBilling();
+		billing.fail("catalog.find", "unknown");
+
+		let response = await fetchApp("/a-book-not-in-the-catalogue", { billing });
+
+		expect(response.status).toBe(404);
 	});
 });

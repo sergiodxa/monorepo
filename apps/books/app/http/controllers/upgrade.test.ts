@@ -32,7 +32,7 @@ function withUpgradeDiscount(): MemoryBilling {
 
 /** Submits the upgrade form against a platform. */
 function submit(billing: MemoryBilling, email: string) {
-	return fetchApp("/upgrade", {
+	return fetchApp("/react-router-oauth2/upgrade", {
 		method: "POST",
 		body: new URLSearchParams({ email }),
 		billing,
@@ -41,12 +41,12 @@ function submit(billing: MemoryBilling, email: string) {
 
 describe("GET /upgrade", () => {
 	test("renders the form with its heading and submit label", async () => {
-		let response = await fetchApp("/upgrade", { billing: memoryBilling() });
+		let response = await fetchApp("/react-router-oauth2/upgrade", { billing: memoryBilling() });
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("Upgrade to the Complete Package");
-		expect(body).toContain("Get Upgrade Link");
+		expect(body).toContain("Get my upgrade link");
 	});
 });
 

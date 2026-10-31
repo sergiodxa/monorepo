@@ -20,6 +20,7 @@ import {
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
 import { subscribe } from "~/app/services/subscribe";
+import { FEATURED_BOOK } from "~/config/books";
 import routes from "~/routes/web";
 
 /**
@@ -32,7 +33,7 @@ const BLOCKED_MESSAGE =
 const INVALID_MESSAGE = "Invalid email address. \nPlease try with another email address.";
 const GENERIC_MESSAGE = "Something went wrong, please try again.";
 
-/** POST /api/subscribe — subscribes a visitor and sends them on to the sales page. */
+/** POST /api/subscribe — subscribes a visitor and sends them on to the featured book. */
 export default createAction(routes.api.subscribe, async (ctx) => {
 	let log = ctx.log;
 	let validation = await validate(ctx.formData, SubscribeSchema);
@@ -76,5 +77,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 		return renderHome(ctx, { error: GENERIC_MESSAGE, status: 400 });
 	}
 
-	return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
+	return redirect(routes.book.href({ book: FEATURED_BOOK.slug }), {
+		status: redirect.Status.SeeOther,
+	});
 });

@@ -33,7 +33,7 @@ function epubFile(path: string): string {
 
 describe("GET /sample/download", () => {
 	test("serves the EPUB for a link the unlocked page minted", async () => {
-		let page = await fetchApp("/sample", {
+		let page = await fetchApp("/react-router-oauth2/sample", {
 			method: "POST",
 			body: new URLSearchParams({ email: "reader@example.com" }),
 			newsletter: new MemoryNewsletter(),
@@ -60,7 +60,7 @@ describe("GET /sample/download", () => {
 		let response = await fetchApp(expired);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe("/sample");
+		expect(response.headers.get("location")).toBe("/react-router-oauth2/sample");
 	});
 
 	test("sends a link with an altered expiry or signature back to the form", async () => {
@@ -73,7 +73,7 @@ describe("GET /sample/download", () => {
 		for (let tampered of [later, forged]) {
 			let response = await fetchApp(`${tampered.pathname}${tampered.search}`);
 			expect(response.status).toBe(303);
-			expect(response.headers.get("location")).toBe("/sample");
+			expect(response.headers.get("location")).toBe("/react-router-oauth2/sample");
 		}
 	});
 
@@ -85,7 +85,7 @@ describe("GET /sample/download", () => {
 		let response = await fetchApp(path);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe("/sample");
+		expect(response.headers.get("location")).toBe("/react-router-oauth2/sample");
 	});
 });
 

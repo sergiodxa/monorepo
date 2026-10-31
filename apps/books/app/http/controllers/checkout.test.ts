@@ -167,7 +167,7 @@ describe("GET /api/checkout/:type", () => {
 
 	test("records the campaign the buyer landed from as checkout metadata", async () => {
 		let billing = memoryBilling();
-		let cookie = await landFrom("/release?utm_source=newsletter&utm_campaign=launch");
+		let cookie = await landFrom("/react-router-oauth2?utm_source=newsletter&utm_campaign=launch");
 
 		let response = await fetchApp("/api/checkout/essentials", { billing, headers: { cookie } });
 		let checkout = await openedCheckout(billing, response);
@@ -175,7 +175,7 @@ describe("GET /api/checkout/:type", () => {
 		expect(checkout.providerData.metadata).toMatchObject({
 			first_source: "newsletter",
 			first_campaign: "launch",
-			first_landing: "/release",
+			first_landing: "/react-router-oauth2",
 			last_campaign: "launch",
 		});
 	});

@@ -13,11 +13,11 @@ import { describe, expect, test } from "vitest";
 import { subscribed } from "~/app/test/newsletter";
 import { fetchApp } from "~/app/test/router";
 
-/** The chapter's first heading, which only the unlocked page renders. */
-const CHAPTER_HEADING = "OAuth2 in Simple Terms";
+/** A section heading deep in the chapter, which only the unlocked page renders. */
+const CHAPTER_HEADING = "Well-Known Endpoints";
 
 function submit(newsletter: MemoryNewsletter, email: string, fields: Record<string, string> = {}) {
-	return fetchApp("/sample", {
+	return fetchApp("/react-router-oauth2/sample", {
 		method: "POST",
 		body: new URLSearchParams({ email, ...fields }),
 		newsletter,
@@ -26,13 +26,13 @@ function submit(newsletter: MemoryNewsletter, email: string, fields: Record<stri
 
 describe("GET /sample", () => {
 	test("renders the offer and its email field, not the chapter", async () => {
-		let response = await fetchApp("/sample");
+		let response = await fetchApp("/react-router-oauth2/sample");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain("Get a Free Sample");
-		expect(body).toContain("Read free sample");
-		expect(body).toContain('action="/sample"');
+		expect(body).toContain("Read “OAuth2 in Simple Terms” free");
+		expect(body).toContain("Read the chapter");
+		expect(body).toContain('action="/react-router-oauth2/sample"');
 		expect(body).not.toContain(CHAPTER_HEADING);
 	});
 });
@@ -78,11 +78,11 @@ describe("POST /sample", () => {
 		);
 
 		expect(body).toMatch(/href="\/sample\/download\?expires=\d+&amp;signature=[0-9a-f]{64}"/);
-		expect(body).toContain("Download this chapter as an EPUB");
+		expect(body).toContain("Download the EPUB");
 	});
 
 	test("shows no download link before the address unlocks the chapter", async () => {
-		let body = await fetchApp("/sample").then((response) => response.text());
+		let body = await fetchApp("/react-router-oauth2/sample").then((response) => response.text());
 
 		expect(body).not.toContain("/sample/download");
 	});
@@ -103,7 +103,7 @@ describe("POST /sample", () => {
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Invalid email address");
-		expect(body).toContain("Get a Free Sample");
+		expect(body).toContain("Read “OAuth2 in Simple Terms” free");
 		expect(body).not.toContain(CHAPTER_HEADING);
 		expect(await subscribed(newsletter)).toEqual([]);
 	});

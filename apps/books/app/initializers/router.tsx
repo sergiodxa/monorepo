@@ -110,8 +110,8 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 		lazy(() => import("~/app/http/controllers/home")),
 	);
 	router.map(
-		routes.release,
-		lazy(() => import("~/app/http/controllers/release")),
+		routes.book,
+		lazy(() => import("~/app/http/controllers/book")),
 	);
 	router.map(
 		routes.health,
@@ -152,6 +152,18 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 	router.map(
 		routes.cspReports,
 		lazy(() => import("~/app/http/controllers/csp-reports")),
+	);
+	router.map(
+		routes.legacy.release,
+		lazy(() => import("~/app/http/controllers/legacy").then((it) => it.release)),
+	);
+	router.map(
+		routes.legacy.sample,
+		lazy(() => import("~/app/http/controllers/legacy").then((it) => it.sample)),
+	);
+	router.map(
+		routes.legacy.upgrade,
+		lazy(() => import("~/app/http/controllers/legacy").then((it) => it.upgrade)),
 	);
 
 	return router;

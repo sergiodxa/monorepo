@@ -18,6 +18,7 @@ import { createAction } from "remix/router";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { emailAddress } from "~/app/http/validators/email-address";
 import { findApplicableDiscount } from "~/app/services/discount";
+import { FEATURED_BOOK, findBookSelling } from "~/config/books";
 import { Product } from "~/config/products";
 import routes from "~/routes/web";
 
@@ -76,16 +77,19 @@ export default createAction(routes.api.checkout, async (ctx) => {
 		metadata: toMetadata(ctx.attribution),
 	});
 
+	/** A checkout that cannot open sends the buyer back to the book that sells the package. */
+	let landing = routes.book.href({ book: (findBookSelling(product) ?? FEATURED_BOOK).slug });
+
 	if (isFailure(checkout)) {
 		log.fail(checkout.error, { billing: { provider_code: checkout.error.providerCode } });
-		return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
+		return redirect(landing, { status: redirect.Status.SeeOther });
 	}
 
 	log.set({ checkout: { id: checkout.data.id } });
 
 	if (checkout.data.url === null) {
 		log.warn("checkout.unpayable");
-		return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
+		return redirect(landing, { status: redirect.Status.SeeOther });
 	}
 
 	log.note("checkout.started");

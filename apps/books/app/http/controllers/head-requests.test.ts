@@ -14,8 +14,8 @@ import { fetchApp } from "~/app/test/router";
 
 describe("HEAD requests", () => {
 	test("answers a HEAD with the GET's status and headers and no body", async () => {
-		let get = await fetchApp("/sample");
-		let head = await fetchApp("/sample", { method: "HEAD" });
+		let get = await fetchApp("/react-router-oauth2/sample");
+		let head = await fetchApp("/react-router-oauth2/sample", { method: "HEAD" });
 
 		expect(head.status).toBe(get.status);
 		expect(head.headers.get("content-type")).toBe(get.headers.get("content-type"));

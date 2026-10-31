@@ -5,9 +5,18 @@ covers what is specific to a four-page sales funnel that takes money.
 
 ## What this app is
 
-A landing page, a sales page, a gated sample chapter, an upgrade form, a checkout
-redirect, and a Polar webhook. Its job is to capture emails and take money. A broken
-checkout link or a dropped webhook is lost revenue, not a cosmetic bug.
+The books site: a newsletter sign-up at `/`, and for each book a landing at `/:book`, a gated
+sample chapter at `/:book/sample` and an upgrade form at `/:book/upgrade`, plus a checkout
+redirect and a Polar webhook. Its job is to capture emails and take money. A broken checkout
+link or a dropped webhook is lost revenue, not a cosmetic bug.
+
+## Books
+
+The catalogue is `config/books.ts`, keyed by slug; each book's copy is the matching entry in
+`resources/content/books/`, and its cover a view in `resources/views/books/`. The controllers
+look the `:book` param up and answer 404 for a slug the catalogue does not list, so a second
+book is a record, its copy and its cover, never a new controller or route. `FEATURED_BOOK` is
+where `/` sends a new subscriber and where the single-book URLs redirect.
 
 ## Things that cannot change
 
@@ -26,7 +35,10 @@ breaks something you cannot see from here:
   package by its own slug — `essentials` and `complete` — which is what the webhook
   branches on and what a catalog read is addressed by.
 - **`/`, `/release`, `/sample`, `/upgrade`, and `/og.jpg`** are published in newsletters
-  and social posts already in the wild.
+  and social posts already in the wild. `/release`, `/sample` and `/upgrade` now answer a
+  308 to the same page under `/react-router-oauth2`, keeping the query so campaign links
+  still attribute and a form posted from a cached page still posts; keep those redirects.
+- **`/react-router-oauth2`** and the pages under it are the book's own URLs from now on.
 - **Buttondown subscriber metadata** — `purchase: "complete"` and
   `purchase: "individual"` — drives segmentation inside Buttondown. Keep the exact keys
   and values.
@@ -41,13 +53,13 @@ breaks something you cannot see from here:
   and echoed in a hidden `confirmed` field; resubmitting it unchanged subscribes it as typed.
   The prompt runs before the disposable check, since the blocklist carries typo domains such
   as `gmial.com`, and a kept address on a listed domain is still refused.
-- **The sample chapter is not persisted.** Reloading `/sample` shows the form again, by
+- **The sample chapter is not persisted.** Reloading `/:book/sample` shows the form again, by
   design. Do not "fix" this with a session or a cookie — the app has no session
   middleware, and that is deliberate.
 - **The EPUB download link expires after an hour.** `/sample/download` serves the file only
   for the `expires` and `signature` query the unlocked page minted (an HMAC under
-  `SAMPLE_LINK_SECRET`); anything else is a 303 to `/sample`, where the address mints a fresh
-  link. That link is the whole gate, so keep it out of anything persisted or shared. The EPUB's
+  `SAMPLE_LINK_SECRET`); anything else is a 303 to the featured book's sample page, where
+  the address mints a fresh link. That link is the whole gate, so keep it out of anything persisted or shared. The EPUB's
   identifier stays fixed in `app/services/sample-chapter.ts`; move `SAMPLE_MODIFIED` whenever
   `sample.md` changes.
 - **The webhook only tags customers who are already subscribers.** A purchase from a
@@ -58,7 +70,7 @@ breaks something you cannot see from here:
   this funnel does not sell is logged and acknowledged.
 - **Prices arrive in cents.** They are divided by 100 and formatted with
   `Intl.NumberFormat`; drop either and prices render as `$4900`. A price the platform
-  cannot answer for makes `/release` answer 503, since a page quoting `$0` sells the
+  cannot answer for makes the book's landing answer 503, since a page quoting `$0` sells the
   book for nothing.
 
 ## Conventions

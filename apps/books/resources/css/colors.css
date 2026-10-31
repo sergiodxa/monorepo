@@ -1,50 +1,45 @@
 /*
- * Raw --ui-color-{scale}-{step} palette scales and the two font-family stacks the
- * semantic --ui-{tone}-* tokens are derived from. The theme layer ships no palette of
- * its own, so an app has to declare these eleven-step scales itself.
+ * Raw --ui-color-{scale}-{step} palette scales and the font stacks the semantic --ui-{tone}-*
+ * tokens are derived from. The theme layer ships no palette of its own, so the app declares
+ * every eleven-step scale itself.
  *
- * These are the exact scales the site has always used, carried over value-for-value so
- * the pages render the same after the port: `neutral` is a warm near-achromatic grey
- * (the page is black-on-white and white-on-black, with grey only for borders, muted
- * copy, and the inverted button fill), `danger` is red for the one thing that is ever
- * red — a form error — `success` green, and `warning` amber for completeness, since the
- * theme layer expects all five scales to exist even where a page never reaches for one.
+ * `brand` and `neutral` are React Router's own colours, read from reactrouter.com: its red
+ * (#F44250) sits at step 500, with darker steps for text and the solid buttons that need 4.5:1
+ * under white, and lighter ones for dark mode; `neutral` is its achromatic grey ramp, from white
+ * paper to the #121212 ink it uses in dark mode. `danger` stays red for the one thing that is
+ * ever an error, a form message; `success` and `warning` complete the five scales the theme
+ * expects.
  *
- * The font stacks are the browser-native ones: no webfont is loaded, which is the point on
- * a page whose job is to render immediately. Headings take the serif face, body copy the
- * sans one, and the sample chapter's code the mono one.
+ * The font stacks are set in `marketing.css`, after the theme layer, which declares its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 :root {
-	--ui-color-neutral-50: oklch(98.5% 0.001 106.423);
-	--ui-color-neutral-100: oklch(97% 0.001 106.424);
-	--ui-color-neutral-200: oklch(92.3% 0.003 48.717);
-	--ui-color-neutral-300: oklch(86.9% 0.005 56.366);
-	--ui-color-neutral-400: oklch(70.9% 0.01 56.259);
-	--ui-color-neutral-500: oklch(55.3% 0.013 58.071);
-	--ui-color-neutral-600: oklch(44.4% 0.011 73.639);
-	--ui-color-neutral-700: oklch(37.4% 0.01 67.558);
-	--ui-color-neutral-800: oklch(26.8% 0.007 34.298);
-	--ui-color-neutral-900: oklch(21.6% 0.006 56.043);
-	--ui-color-neutral-950: oklch(14.7% 0.004 49.25);
+	--ui-color-brand-50: oklch(97.5% 0.014 21.5);
+	--ui-color-brand-100: oklch(94% 0.035 21.5);
+	--ui-color-brand-200: oklch(88.5% 0.07 21.5);
+	--ui-color-brand-300: oklch(80% 0.125 21.5);
+	--ui-color-brand-400: oklch(72% 0.175 21.5);
+	--ui-color-brand-500: #f44250;
+	--ui-color-brand-600: oklch(55.5% 0.205 21.5);
+	--ui-color-brand-700: oklch(47.5% 0.18 21.5);
+	--ui-color-brand-800: oklch(39.5% 0.15 21.5);
+	--ui-color-brand-900: oklch(32% 0.115 21.5);
+	--ui-color-brand-950: oklch(23% 0.08 21.5);
 
-	/* The site has no accent color: its brand *is* the black-and-white typography, so
-	the brand scale points at the same warm greys rather than introducing a hue the
-	design never uses. */
-	--ui-color-brand-50: var(--ui-color-neutral-50);
-	--ui-color-brand-100: var(--ui-color-neutral-100);
-	--ui-color-brand-200: var(--ui-color-neutral-200);
-	--ui-color-brand-300: var(--ui-color-neutral-300);
-	--ui-color-brand-400: var(--ui-color-neutral-400);
-	--ui-color-brand-500: var(--ui-color-neutral-500);
-	--ui-color-brand-600: var(--ui-color-neutral-600);
-	--ui-color-brand-700: var(--ui-color-neutral-700);
-	--ui-color-brand-800: var(--ui-color-neutral-800);
-	--ui-color-brand-900: var(--ui-color-neutral-900);
-	--ui-color-brand-950: var(--ui-color-neutral-950);
+	--ui-color-neutral-50: #ffffff;
+	--ui-color-neutral-100: #f7f7f7;
+	--ui-color-neutral-200: #e3e3e3;
+	--ui-color-neutral-300: #c8c8c8;
+	--ui-color-neutral-400: #a4a4a4;
+	--ui-color-neutral-500: #818181;
+	--ui-color-neutral-600: #5e5e5e;
+	--ui-color-neutral-700: #434343;
+	--ui-color-neutral-800: #2b2b2b;
+	--ui-color-neutral-900: #1a1a1a;
+	--ui-color-neutral-950: #0b0b0b;
 
 	--ui-color-danger-50: oklch(97.1% 0.013 17.38);
 	--ui-color-danger-100: oklch(93.6% 0.032 17.717);
@@ -81,15 +76,4 @@
 	--ui-color-warning-800: oklch(47.3% 0.137 46.201);
 	--ui-color-warning-900: oklch(41.4% 0.112 45.904);
 	--ui-color-warning-950: oklch(27.9% 0.077 45.635);
-
-	--ui-font-sans:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial,
-		sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-	--ui-font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-
-	/* Only the sample chapter's code ever uses it, and like the other two it loads nothing:
-	the chapter has to render as fast as the pages selling it. */
-	--ui-font-mono:
-		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-		monospace;
 }

@@ -13,6 +13,7 @@ import { createAction } from "remix/router";
 
 import { CHAPTER_FILE, readSampleEpub } from "~/app/services/sample-chapter";
 import { verifySampleLink } from "~/app/services/sample-link";
+import { FEATURED_BOOK } from "~/config/books";
 import routes from "~/routes/web";
 
 /** The name a browser saves the file under. */
@@ -27,13 +28,17 @@ export const sampleDownload = createAction(routes.sampleDownload, async (ctx) =>
 	let link = await verifySampleLink(ctx.url.searchParams);
 	if (isFailure(link)) {
 		ctx.log.set({ sample: { download: link.error.problem } });
-		return redirect(routes.sample.index.href(), { status: redirect.Status.SeeOther });
+		return redirect(routes.sample.index.href({ book: FEATURED_BOOK.slug }), {
+			status: redirect.Status.SeeOther,
+		});
 	}
 
 	let epub = readSampleEpub();
 	if (isFailure(epub)) {
 		ctx.log.fail(epub.error, { chapter: { file: CHAPTER_FILE } });
-		return redirect(routes.sample.index.href(), { status: redirect.Status.SeeOther });
+		return redirect(routes.sample.index.href({ book: FEATURED_BOOK.slug }), {
+			status: redirect.Status.SeeOther,
+		});
 	}
 
 	ctx.log.set({ sample: { download: "sent" } });

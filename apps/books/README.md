@@ -1,7 +1,8 @@
 # r3-books
 
-Landing page and sales funnel for the _React Router OAuth2 Handbook_: email capture, a
-live-priced release page, a gated sample chapter, an upgrade path, and purchase tagging.
+The books site at books.sergiodxa.com: email capture, and for each book a live-priced landing
+under its own slug, a gated sample chapter, an upgrade path, and purchase tagging. It sells
+the _React Router OAuth2 Handbook_ at `/react-router-oauth2`.
 
 Production URL: https://books.sergiodxa.com (served by the `books` worker until cutover;
 this worker is reachable on its `workers.dev` subdomain in the meantime)
@@ -51,7 +52,10 @@ visitor's browser.
 - **Address screening** on the homepage and sample-chapter forms: addresses on throwaway-inbox
   domains are refused, and a mistyped provider (`gnail.com`) gets a "did you mean" prompt
   that submitting the same address again dismisses.
-- **Live pricing** on the release page, read from Polar products with the currently
+- **A page per book**: every book in `config/books.ts` gets its landing, sample chapter and
+  upgrade page under its slug, written from its copy in `resources/content/books/`. A second
+  book is a new record and its copy, not a new controller.
+- **Live pricing** on each book's landing, read from Polar products with the currently
   applicable launch discount applied.
 - **Gated sample chapter**: an address unlocks the chapter, rendered from Markdown at
   request time and deliberately not persisted across reloads.
@@ -71,21 +75,23 @@ visitor's browser.
 | ------------------- | -------------------------------------------------------- |
 | Buttondown          | Newsletter subscribers and purchase-tier metadata        |
 | Polar               | Products, prices, discounts, checkouts, orders, webhooks |
-| ParityDeals         | Purchasing-power-parity banner on the release page       |
+| ParityDeals         | Purchasing-power-parity banner on a book's landing       |
 | Cloudflare Insights | Page analytics beacon                                    |
 
 ## Routes
 
 | Route                 | Methods | Purpose                                                                           |
 | --------------------- | ------- | --------------------------------------------------------------------------------- |
-| `/`                   | GET     | Landing page with the early-access subscribe form                                 |
-| `/release`            | GET     | Sales page with live prices, packages, FAQ                                        |
-| `/sample`             | GET     | The sample-chapter email form                                                     |
-| `/sample`             | POST    | Subscribes, then renders the sample chapter                                       |
-| `/sample/download`    | GET     | The chapter's EPUB for a signed link; `/sample` otherwise                         |
-| `/upgrade`            | GET     | The upgrade email form                                                            |
-| `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout                       |
-| `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`                                  |
+| `/`                   | GET     | The newsletter sign-up for the featured book                                      |
+| `/:book`              | GET     | A book's landing with live prices, packages, FAQ; 404 for an unknown slug         |
+| `/:book/sample`       | GET     | The book's sample-chapter email form                                              |
+| `/:book/sample`       | POST    | Subscribes, then renders the sample chapter                                       |
+| `/sample/download`    | GET     | The chapter's EPUB for a signed link; the sample form otherwise                   |
+| `/:book/upgrade`      | GET     | The book's upgrade email form                                                     |
+| `/:book/upgrade`      | POST    | Resolves the customer and redirects to the upgrade checkout                       |
+| `/release`            | ANY     | 308 to `/react-router-oauth2`, keeping the query                                  |
+| `/sample`, `/upgrade` | ANY     | 308 to the same page under `/react-router-oauth2`, keeping the query              |
+| `/api/subscribe`      | POST    | Subscribes a visitor and redirects to the featured book                           |
 | `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it; 404s otherwise                       |
 | `/webhooks/polar`     | POST    | Verifies and handles `order.paid`                                                 |
 | `/health`             | GET     | `application/health+json` report on Polar and Buttondown; 503 when either is down |

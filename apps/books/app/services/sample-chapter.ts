@@ -16,7 +16,7 @@ import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
 import { toPlainText } from "@sdxc/markdown/plain";
-import { failure, isFailure } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import chapterSource from "~/resources/content/sample.md?raw";
@@ -44,6 +44,9 @@ export type ChapterError = Markdown.ParseError | Markdown.WalkError | EpubError 
 /** The chapter, parsed and painted, once per isolate; the Workers global scope holds imports only. */
 let chapter: Result<Markdown.Document, Markdown.ParseError | Markdown.WalkError> | undefined;
 
+/** The chapter with its headings anchored and its table of contents, once per isolate. */
+let contents: Result<AnchoredChapter, Markdown.ParseError | Markdown.WalkError> | undefined;
+
 /** The EPUB built from {@link chapter}, once per isolate. */
 let epub: Result<EPUB, ChapterError> | undefined;
 
@@ -65,6 +68,29 @@ export function readChapter(): Result<Markdown.Document, Markdown.ParseError | M
 	return chapter;
 }
 
+/** The chapter with an id on every second- and third-level heading, and the sections they open. */
+export interface AnchoredChapter {
+	document: Markdown.Document;
+	sections: EPUB.Section[];
+}
+
+/**
+ * Reads the chapter with its headings anchored, the form both the reading page and the EPUB
+ * use: the page lists the sections as its table of contents and links each to its heading.
+ *
+ * @returns The anchored document and its nested sections, or the failure that stopped it.
+ */
+export function readAnchoredChapter(): Result<
+	AnchoredChapter,
+	Markdown.ParseError | Markdown.WalkError
+> {
+	if (contents) return contents;
+
+	let document = readChapter();
+	contents = isFailure(document) ? document : success(anchorHeadings(document.data));
+	return contents;
+}
+
 /**
  * Builds the sample as an EPUB, or hands back the one already built in this isolate. Its
  * headings get ids so the table of contents opens at each section, and the cover is the
@@ -75,9 +101,9 @@ export function readChapter(): Result<Markdown.Document, Markdown.ParseError | M
 export function readSampleEpub(): Result<EPUB, ChapterError> {
 	if (epub) return epub;
 
-	let document = readChapter();
-	if (isFailure(document)) {
-		epub = document;
+	let chapterContents = readAnchoredChapter();
+	if (isFailure(chapterContents)) {
+		epub = chapterContents;
 		return epub;
 	}
 
@@ -89,7 +115,7 @@ export function readSampleEpub(): Result<EPUB, ChapterError> {
 		return epub;
 	}
 
-	let { document: anchored, sections } = anchorHeadings(document.data);
+	let { document: anchored, sections } = chapterContents.data;
 	epub = EPUB.build({
 		metadata: {
 			identifier: SAMPLE_IDENTIFIER,

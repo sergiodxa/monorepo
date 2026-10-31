@@ -29,7 +29,7 @@ export const health = new HealthCheck<AppContext>({
 		componentType: "system",
 		timeout: PROVIDER_TIMEOUT_MS,
 		links: { about: "https://status.polar.sh" },
-		affectedEndpoints: ["/release", "/upgrade", "/api/checkout/{type}"],
+		affectedEndpoints: ["/{book}", "/{book}/upgrade", "/api/checkout/{type}"],
 	})
 	.probe(
 		"buttondown",
@@ -41,6 +41,6 @@ export const health = new HealthCheck<AppContext>({
 		{
 			componentType: "system",
 			timeout: PROVIDER_TIMEOUT_MS,
-			affectedEndpoints: ["/sample", "/api/subscribe"],
+			affectedEndpoints: ["/{book}/sample", "/api/subscribe"],
 		},
 	);

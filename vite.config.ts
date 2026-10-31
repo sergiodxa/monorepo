@@ -282,6 +282,17 @@ const SDXC_SITE_BROWSER_PROJECT = browserProject("sdxc-site", {
 	},
 });
 
+const BOOKS_BROWSER_PROJECT = browserProject("books", {
+	root: "apps/books",
+	plugins: [cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>],
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/books/app/test/assets-manifest.ts`,
+		},
+	},
+});
+
 const READER_BROWSER_PROJECT = browserProject("reader", {
 	root: "apps/reader",
 	plugins: [
@@ -483,6 +494,8 @@ export default defineConfig({
 				test: {
 					name: "books",
 					include: ["**/*.test.ts?(x)"],
+					/** `*.browser.test.tsx` belongs to `books-browser`, which runs it in Chromium. */
+					exclude: [...defaultExclude, "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -492,6 +505,7 @@ export default defineConfig({
 					testTimeout: 20_000,
 				},
 			},
+			BOOKS_BROWSER_PROJECT,
 			{
 				root: "apps/sdxc-api",
 				plugins: [cloudflareWorkersStub()],

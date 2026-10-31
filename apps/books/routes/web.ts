@@ -1,6 +1,7 @@
 /**
- * Route table for the books funnel: the four pages, the two form endpoints, the sample's
- * EPUB download, the checkout redirect, and the Polar webhook.
+ * Route table for the books site: the homepage's email capture, each book's landing, free
+ * chapter and upgrade pages under the book's own slug, the sample's EPUB download, the
+ * checkout redirect, the Polar webhook, and the redirects from the single-book URLs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,15 +10,18 @@
 import { form, get, post, route } from "remix/routes";
 
 /**
- * Registers the funnel's pages, form endpoints, checkout redirect, and webhook.
+ * Registers the site's pages, form endpoints, checkout redirect, and webhook. Static paths
+ * outrank the `/:book` patterns, so `/health` or `/sample/download` never reach a book page.
  */
 export default route({
 	home: get("/"),
-	release: get("/release"),
 	health: get("/health"),
 
-	/** GET renders the email form; POST unlocks and renders the sample chapter. */
-	sample: form("/sample"),
+	/** A book's landing, for any slug the catalogue in `config/books.ts` lists. */
+	book: get("/:book"),
+
+	/** GET renders the email form; POST unlocks and renders the book's sample chapter. */
+	sample: form("/:book/sample"),
 
 	/**
 	 * The sample chapter as an EPUB. Reached only through the signed, hour-long link the
@@ -26,7 +30,18 @@ export default route({
 	sampleDownload: get("/sample/download"),
 
 	/** GET renders the email form; POST resolves the customer and redirects to checkout. */
-	upgrade: form("/upgrade"),
+	upgrade: form("/:book/upgrade"),
+
+	/**
+	 * The URLs the site published while it sold one book, in newsletters and social posts
+	 * still in the wild. Each answers any method with a permanent redirect to the same page
+	 * under the book's slug, a 308 so a form posted from a cached page still posts.
+	 */
+	legacy: route({
+		release: "/release",
+		sample: "/sample",
+		upgrade: "/upgrade",
+	}),
 
 	api: route({
 		subscribe: post("/api/subscribe"),

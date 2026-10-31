@@ -67,13 +67,13 @@ describe("POST /api/subscribe", () => {
 		let newsletter = new MemoryNewsletter();
 
 		let cookie = await landFrom(
-			"/sample?utm_source=Newsletter&utm_campaign=Launch&utm_medium=email",
+			"/react-router-oauth2/sample?utm_source=Newsletter&utm_campaign=Launch&utm_medium=email",
 		);
 
 		let response = await submit(newsletter, "reader@example.com", {}, cookie);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe("/release");
+		expect(response.headers.get("location")).toBe("/react-router-oauth2");
 		/**
 		 * The campaign is read from the cookie the landing page set, on a later page than the
 		 * one the visitor arrived on, and has to reach the newsletter, the only place it is stored.
@@ -83,7 +83,7 @@ describe("POST /api/subscribe", () => {
 			source: "newsletter",
 			campaign: "launch",
 			medium: "email",
-			landingPage: "https://books.test/sample",
+			landingPage: "https://books.test/react-router-oauth2/sample",
 		});
 	});
 
@@ -103,7 +103,7 @@ describe("POST /api/subscribe", () => {
 		let response = await submit(newsletter, "reader@example.com", {}, cookie);
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe("/release");
+		expect(response.headers.get("location")).toBe("/react-router-oauth2");
 		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
 		expect(newsletter.attribution("reader@example.com")).toBeNull();
 	});

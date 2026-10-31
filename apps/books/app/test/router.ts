@@ -34,7 +34,7 @@ export interface FetchAppOptions extends RequestInit {
  * @param path - A path or absolute URL to request.
  * @param options - Request init, plus `billing` to bill this request against and `newsletter` to subscribe it to. A non-GET request gets `origin` set to {@link ORIGIN} by default, since cross-origin protection is part of the chain under test.
  * @returns The router's response.
- * @example await fetchApp("/release", { billing: new MemoryBilling({ catalog }) })
+ * @example await fetchApp("/react-router-oauth2", { billing: new MemoryBilling({ catalog }) })
  */
 export async function fetchApp(path: string, options: FetchAppOptions = {}): Promise<Response> {
 	let { billing, newsletter = new MemoryNewsletter(), ...init } = options;

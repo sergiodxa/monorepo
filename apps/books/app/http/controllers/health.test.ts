@@ -87,7 +87,7 @@ describe("GET /health", () => {
 			{
 				status: "fail",
 				output: "HTTP 401",
-				affectedEndpoints: expect.arrayContaining(["/sample"]),
+				affectedEndpoints: expect.arrayContaining(["/{book}/sample"]),
 			},
 		]);
 		expect(report.checks?.["polar:responseTime"]).toMatchObject([{ status: "pass" }]);

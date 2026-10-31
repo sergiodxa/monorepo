@@ -12,10 +12,9 @@ import type { SchemaOrg } from "@sdxc/seo";
 import type { Handle, RemixNode } from "remix/component";
 
 import { Seo } from "@sdxc/seo";
-import { bg, colorScheme, fg } from "@sdxc/u/color";
+import { colorScheme } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
-import { dark } from "@sdxc/u/responsive";
 import { minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
@@ -28,7 +27,6 @@ import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
 import "~/resources/css/marketing.css";
 import "~/resources/css/parity-deals.css";
-import "~/resources/css/prose.css";
 import "@sdxc/highlight/styles.css";
 import "~/resources/css/highlight.css";
 
@@ -42,8 +40,8 @@ const CF_BEACON_TOKEN = "4037e619e61b4e5a894789c3c98da9ab";
 namespace DocumentLayout {
 	export interface Props {
 		/**
-		 * The page's content, rendered inside `<body>`, which centers it as a
-		 * column so each section can cap its own width without a wrapper element.
+		 * The page's content, rendered inside `<body>` as a full-width column: a header,
+		 * the page's `<main>` and a footer, each band capping its own measure.
 		 */
 		children: RemixNode;
 		/**
@@ -75,8 +73,8 @@ namespace DocumentLayout {
 
 /**
  * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. Dark
- * mode is CSS-only, via the `system` class and `colorScheme` mix, and body
- * colors stay pure black-on-white, matching the page's untinted light mode.
+ * mode is CSS-only, via the `system` class and `colorScheme` mix, and the body
+ * paints the theme's paper and ink, so every page follows the palette in both schemes.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
@@ -111,7 +109,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta
 						name="theme-color"
 						media="(prefers-color-scheme: dark)"
-						content="#000000"
+						content="#121212"
 						data-rmx-key="theme-color-dark"
 					/>
 					<link rel="shortcut icon" href="/favicon.ico" data-rmx-key="favicon" />
@@ -139,11 +137,10 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				</head>
 				<body
 					mix={[
-						vstack({ align: "center", justify: "center" }),
+						vstack({ align: "stretch" }),
 						minBs("100dvh"),
 						font("sans"),
-						raw({ backgroundColor: "#ffffff", color: "#000000" }),
-						dark([bg("color.neutral.900"), fg("color.neutral.100")]),
+						raw({ backgroundColor: "var(--ui-bg)", color: "var(--ui-neutral-fg-emphasis)" }),
 					]}
 				>
 					{children}
