@@ -35,14 +35,12 @@ import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
+import ProductMockup, { FEATURE_MOCKUPS } from "~/resources/components/marketing/product-mockups";
 import {
 	AlertsScene,
 	MonitorsScene,
 	StatusPageScene,
 } from "~/resources/components/marketing/product-scenes";
-import ProductScreenshot, {
-	SCREENSHOT_PRELOADS,
-} from "~/resources/components/marketing/product-screenshot";
 import { features } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -171,7 +169,6 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 					...(content.faqs.length > 0 ? [SEO.schema.faq(content.faqs)] : []),
 				],
 			}}
-			preload={SCREENSHOT_PRELOADS}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<LandingHero
@@ -219,7 +216,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 							</CheckList>
 						</div>
 					}
-					media={<ProductScreenshot alt={t("landing.hero.screenshot.alt")} />}
+					media={<ProductMockup area={FEATURE_MOCKUPS[slug] ?? "dashboard"} t={t} />}
 				/>
 
 				{content.trustIndicators ? (

@@ -1,7 +1,7 @@
 /**
  * Small product scenes for marketing cards: monitor rows with their response-time line, an
  * alert going down and recovering, and a status page. Each is drawn from the product's own
- * components and copy over example hosts, so a card shows the product rather than an icon.
+ * components and the product mockups' sample data, so a card matches the hero above it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,20 +15,14 @@ import { Badge } from "@sdxc/ui";
 import { marketingSurface } from "@sdxc/ui/styles";
 
 import { badgeVariant } from "~/resources/components/badge";
+import {
+	SAMPLE_MONITORS,
+	sparklinePoints,
+} from "~/resources/components/marketing/product-mockups/sample-data";
 import Sparkline from "~/resources/views/monitors/sparkline";
 
-/** Example monitors: a host and recent response times in milliseconds, oldest first. */
-const MONITORS = [
-	{
-		host: "api.example.com/health",
-		times: [182, 176, 190, 171, 205, 188, 179, 184, 176, 192, 181, 174],
-	},
-	{ host: "example.com", times: [96, 102, 99, 141, 118, 104, 97, 101, 95, 99, 103, 98] },
-	{
-		host: "app.example.com/login",
-		times: [312, 298, 305, 290, 336, 301, 296, 288, 309, 294, 300, 291],
-	},
-] as const;
+/** The dashboard mockup's healthy monitors, so a card and the hero show the same hosts. */
+const MONITORS = SAMPLE_MONITORS.filter((monitor) => monitor.tone === "up");
 
 /** Days of history each status page service row draws. */
 const SERVICE_DAYS = 30;
@@ -123,12 +117,7 @@ export function MonitorsScene(handle: Handle<MonitorsScene.Props>) {
 								when("& svg", raw({ maxInlineSize: "100%", blockSize: "auto" })),
 							]}
 						>
-							<Sparkline
-								points={monitor.times.map((responseTimeMs, index) => ({
-									timestamp: String(index),
-									responseTimeMs,
-								}))}
-							/>
+							<Sparkline points={sparklinePoints(monitor.times)} />
 						</span>
 					</div>
 				))}

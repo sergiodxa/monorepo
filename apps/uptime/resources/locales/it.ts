@@ -120,9 +120,6 @@ export default {
 				placeholder: "https://esempio.com",
 				submit: "Esegui un controllo",
 			},
-			screenshot: {
-				alt: "Screenshot della dashboard di Uptime: una barra laterale con monitor HTTP, DNS e TCP, cron job, avvisi, manutenzione e pagine di stato; schede di riepilogo con l'uso mensile dei ping, la percentuale di uptime complessiva e l'endpoint più lento; il numero di monitor attivi e non raggiungibili per tipo; e una tabella dei monitor HTTP con grafici dell'andamento della latenza ed etichette di stato",
-			},
 
 			trustIndicators: {
 				freeToStart: "Gratis per iniziare",
@@ -610,6 +607,29 @@ export default {
 			},
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"La dashboard di Uptime: disponibilità del team e numero di monitor HTTP sopra una tabella di monitor, ciascuno con andamento della latenza e stato.",
+			monitor:
+				"Un monitor HTTP in Uptime: disponibilità e tempo di risposta p99, una barra di disponibilità di 90 giorni e un giorno di tempi di risposta da due regioni.",
+			alerts:
+				"Gli avvisi in Uptime: canali PagerDuty, Slack ed email con il loro ambito, sopra la cronologia di un disservizio e del suo ripristino.",
+			statusPage:
+				"Una pagina di stato pubblica: tutti i sistemi operativi, con tre servizi e le loro barre di disponibilità di 90 giorni.",
+			dns: "Un monitor DNS in Uptime: i record tracciati di un dominio, con un record TXT segnalato come modificato, sopra la scadenza del suo certificato.",
+			tcp: "Monitor TCP in Uptime: porte di database, cache e posta con i loro tempi di connessione, sopra i record DNS tracciati di un dominio.",
+			ssl: "Monitoraggio SSL in Uptime: un certificato valido in scadenza tra 64 giorni con il suo emittente, sopra i record DNS tracciati del dominio.",
+			cron: "Monitoraggio dei cron job in Uptime: quattro job con pianificazione e ultimo ping, uno in ritardo, sopra un mese di ping di un backup.",
+			flow: "Un monitor di flusso del browser in Uptime: il 99,6% di esecuzioni riuscite, i quattro passaggi dell'ultima esecuzione su una linea temporale ed esecuzioni ogni 15 minuti.",
+			maintenance:
+				"Finestre di manutenzione in Uptime: tre finestre in arrivo, una ricorrente, e la prossima come la annuncia la pagina di stato.",
+			reports:
+				"Report in Uptime: un mese di tempi di risposta giornalieri e un riepilogo per monitor di disponibilità, latenza e giorni di inattività.",
+			team: "Accesso del team in Uptime: membri con i ruoli proprietario, amministratore e membro, e chiavi API con i loro permessi.",
+			apiKeys:
+				"Chiavi API in Uptime: chiavi per la CI, un agente MCP e una dashboard con i loro permessi e l'ultimo utilizzo, accanto ai membri del team.",
+		},
 		comparison: {
 			tableLabel: "Uptime vs {$competitor}",
 			tableCategoryHeader: "Categoria",

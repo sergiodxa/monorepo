@@ -12,7 +12,7 @@ import type { Translate } from "@sdxc/i18n";
 import { ArrowRightIcon, Icon, TriangleAlertIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, hstack, inlineFlex, items, justify, vstack } from "@sdxc/u/layout";
-import { mbs } from "@sdxc/u/size";
+import { is, maxIs, mbs, mi } from "@sdxc/u/size";
 import { font, text, textAlign, weight } from "@sdxc/u/typography";
 import { Feature, LinkButton, MarketingHeader, MarketingSection, Table } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
@@ -36,6 +36,9 @@ import { monthlyCostForUsage } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
+import ProductMockup, {
+	COMPARISON_MOCKUPS,
+} from "~/resources/components/marketing/product-mockups";
 import { comparisons } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -187,6 +190,11 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 									<CheckRow key={item}>{item}</CheckRow>
 								))}
 							</CheckList>
+						</div>
+					}
+					media={
+						<div mix={[is("full"), maxIs("40rem"), mi("auto")]}>
+							<ProductMockup area={COMPARISON_MOCKUPS[slug] ?? "dashboard"} t={t} />
 						</div>
 					}
 				/>

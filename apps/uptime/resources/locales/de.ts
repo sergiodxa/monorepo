@@ -120,9 +120,6 @@ export default {
 				placeholder: "https://beispiel.de",
 				submit: "Prüfung starten",
 			},
-			screenshot: {
-				alt: "Screenshot des Uptime-Dashboards: eine Seitenleiste mit HTTP-, DNS- und TCP-Monitoren, Cron-Jobs, Benachrichtigungen, Wartung und Statusseiten; Übersichtskarten für monatliche Ping-Nutzung, Gesamt-Uptime-Prozentsatz und den langsamsten Endpunkt; Zählungen aktiver und ausgefallener Monitore pro Typ; und eine Tabelle der HTTP-Monitore mit Latenz-Trendlinien und Status-Badges",
-			},
 
 			trustIndicators: {
 				freeToStart: "Kostenlos starten",
@@ -615,6 +612,29 @@ export default {
 			},
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"Das Uptime-Dashboard: Team-Verfügbarkeit und Anzahl der HTTP-Monitore über einer Monitortabelle, jeweils mit Latenzverlauf und Status.",
+			monitor:
+				"Ein HTTP-Monitor in Uptime: Verfügbarkeit und p99-Antwortzeit, ein 90-Tage-Verfügbarkeitsbalken und ein Tag Antwortzeiten aus zwei Regionen.",
+			alerts:
+				"Alarme in Uptime: PagerDuty-, Slack- und E-Mail-Kanäle mit ihrem Geltungsbereich, über dem Verlauf eines Ausfalls und seiner Wiederherstellung.",
+			statusPage:
+				"Eine öffentliche Statusseite: alle Systeme betriebsbereit, mit drei Diensten und ihren 90-Tage-Verfügbarkeitsbalken.",
+			dns: "Ein DNS-Monitor in Uptime: die überwachten Einträge einer Domain, ein TXT-Eintrag als geändert markiert, über dem Ablauf ihres Zertifikats.",
+			tcp: "TCP-Monitore in Uptime: Datenbank-, Cache- und Mail-Ports mit ihren Verbindungszeiten, über den überwachten DNS-Einträgen einer Domain.",
+			ssl: "SSL-Überwachung in Uptime: ein gültiges Zertifikat, das in 64 Tagen abläuft, mit Aussteller, über den überwachten DNS-Einträgen der Domain.",
+			cron: "Cronjob-Überwachung in Uptime: vier Jobs mit Zeitplan und letztem Ping, einer verspätet, über einem Monat Pings eines Backups.",
+			flow: "Ein Browser-Flow-Monitor in Uptime: 99,6 % erfolgreiche Läufe, die vier Schritte des letzten Laufs auf einer Zeitleiste und Läufe im Abstand von 15 Minuten.",
+			maintenance:
+				"Wartungsfenster in Uptime: drei anstehende Fenster, eines wiederkehrend, und das nächste so, wie die Statusseite es ankündigt.",
+			reports:
+				"Berichte in Uptime: ein Monat täglicher Antwortzeiten und eine Zusammenfassung pro Monitor mit Verfügbarkeit, Latenz und Ausfalltagen.",
+			team: "Teamzugriff in Uptime: Mitglieder mit den Rollen Inhaber, Admin und Mitglied sowie API-Schlüssel mit ihren Berechtigungen.",
+			apiKeys:
+				"API-Schlüssel in Uptime: Schlüssel für CI, einen MCP-Agenten und ein Dashboard mit Berechtigungen und letzter Nutzung, neben den Teammitgliedern.",
+		},
 		comparison: {
 			tableLabel: "Uptime vs. {$competitor}",
 			tableCategoryHeader: "Kategorie",

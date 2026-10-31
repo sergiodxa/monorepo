@@ -84,14 +84,12 @@ import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
+import ProductMockup from "~/resources/components/marketing/product-mockups";
 import {
 	AlertsScene,
 	MonitorsScene,
 	StatusPageScene,
 } from "~/resources/components/marketing/product-scenes";
-import ProductScreenshot, {
-	SCREENSHOT_PRELOADS,
-} from "~/resources/components/marketing/product-screenshot";
 import PricingCalculator from "~/resources/components/pricing-calculator";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -383,7 +381,6 @@ export default createAction(routes.home, async (ctx) => {
 				canonical: SEO.canonical(ctx.url),
 				schema: SEO.schema.website(),
 			}}
-			preload={SCREENSHOT_PRELOADS}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 				<LandingHero
@@ -420,7 +417,7 @@ export default createAction(routes.home, async (ctx) => {
 							</CheckList>
 						</div>
 					}
-					media={<ProductScreenshot alt={t("landing.hero.screenshot.alt")} />}
+					media={<ProductMockup area="dashboard" t={t} />}
 				/>
 
 				<MarketingSection spacing="compact" mix={[viewReveal()]}>

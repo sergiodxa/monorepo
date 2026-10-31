@@ -120,9 +120,6 @@ export default {
 				placeholder: "https://ejemplo.com",
 				submit: "Ejecutar comprobación",
 			},
-			screenshot: {
-				alt: "Captura de pantalla del panel de Uptime: una barra lateral con monitores HTTP, DNS y TCP, cron jobs, alertas, mantenimiento y páginas de estado; tarjetas de resumen con el uso mensual de pings, el porcentaje de uptime general y el endpoint más lento; conteos por tipo de monitores activos y caídos; y una tabla de monitores HTTP con gráficos de tendencia de latencia y etiquetas de estado",
-			},
 
 			trustIndicators: {
 				freeToStart: "Gratis para empezar",
@@ -613,6 +610,29 @@ export default {
 			},
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"El panel de Uptime: disponibilidad del equipo y número de monitores HTTP sobre una tabla de monitores, cada uno con su tendencia de latencia y su estado.",
+			monitor:
+				"Un monitor HTTP en Uptime: su disponibilidad y su tiempo de respuesta p99, una barra de disponibilidad de 90 días y un día de tiempos de respuesta desde dos regiones.",
+			alerts:
+				"Alertas en Uptime: canales de PagerDuty, Slack y correo con su alcance, sobre el historial de una caída y su recuperación.",
+			statusPage:
+				"Una página de estado pública: todos los sistemas operativos, con tres servicios y sus barras de disponibilidad de 90 días.",
+			dns: "Un monitor DNS en Uptime: los registros vigilados de un dominio, con un registro TXT marcado como cambiado, sobre la caducidad de su certificado.",
+			tcp: "Monitores TCP en Uptime: puertos de base de datos, caché y correo con sus tiempos de conexión, sobre los registros DNS vigilados de un dominio.",
+			ssl: "Monitorización SSL en Uptime: un certificado válido que caduca en 64 días con su emisor, sobre los registros DNS vigilados del dominio.",
+			cron: "Monitorización de cron jobs en Uptime: cuatro tareas con sus horarios y último ping, una con retraso, sobre un mes de pings de una copia de seguridad.",
+			flow: "Un monitor de flujo de navegador en Uptime: un 99,6 % de ejecuciones correctas, los cuatro pasos de la última ejecución en una línea de tiempo y ejecuciones cada 15 minutos.",
+			maintenance:
+				"Ventanas de mantenimiento en Uptime: tres ventanas próximas, una recurrente, y la siguiente tal como la anuncia la página de estado.",
+			reports:
+				"Informes en Uptime: un mes de tiempos de respuesta diarios y un resumen por monitor de disponibilidad, latencia y días caídos.",
+			team: "Acceso del equipo en Uptime: miembros con los roles de propietario, administrador y miembro, y claves de API con sus permisos.",
+			apiKeys:
+				"Claves de API en Uptime: claves para CI, un agente MCP y un panel con sus permisos y último uso, junto a los miembros del equipo.",
+		},
 		comparison: {
 			tableLabel: "Uptime vs {$competitor}",
 			tableCategoryHeader: "Categoría",

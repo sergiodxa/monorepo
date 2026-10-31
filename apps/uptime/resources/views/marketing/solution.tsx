@@ -1,5 +1,5 @@
 /**
- * The page `/for/:slug` and `/use-cases/:slug` share: the hero over the dashboard, the
+ * The page `/for/:slug` and `/use-cases/:slug` share: the hero over a product mockup, the
  * page's product figures, linked capability cards, an optional spotlight with a product
  * scene, the steps to start, the FAQ and the closing band, all driven by a content record.
  *
@@ -38,7 +38,6 @@ import {
 	MonitorsScene,
 	StatusPageScene,
 } from "~/resources/components/marketing/product-scenes";
-import ProductScreenshot from "~/resources/components/marketing/product-screenshot";
 import routes from "~/routes/web";
 
 namespace SolutionPageView {
@@ -47,6 +46,8 @@ namespace SolutionPageView {
 		/** Swaps the hero's free-trial link for the signed-in dashboard link. */
 		isSignedIn: boolean;
 		chrome: Chrome;
+		/** The product mockup the hero shows: the area this audience or use case leans on. */
+		media: RemixNode;
 	}
 
 	/** The translated strings and scenes every solution page renders around its content. */
@@ -56,7 +57,6 @@ namespace SolutionPageView {
 		pricingLabel: string;
 		/** The free-trial label, with the trial length read from the pricing module. */
 		tryLabel: string;
-		screenshotAlt: string;
 		learnMoreLabel: string;
 		everythingBadge: string;
 		everythingTitle: string;
@@ -87,7 +87,6 @@ export function buildSolutionPageChrome(t: Translate): SolutionPageView.Chrome {
 		dashboardLabel: t("landing.hero.cta.in"),
 		pricingLabel: t("landing.hero.cta.pricing"),
 		tryLabel: t("landing.hero.cta.try", { days: FREE_TRIAL_DAYS }),
-		screenshotAlt: t("landing.hero.screenshot.alt"),
 		learnMoreLabel: t("landing.features.learnMore"),
 		everythingBadge: t("landing.marketingPage.everythingBadge"),
 		everythingTitle: t("landing.marketingPage.everythingTitle"),
@@ -148,7 +147,7 @@ export function buildSolutionPageChrome(t: Translate): SolutionPageView.Chrome {
  */
 export default function SolutionPageView(handle: Handle<SolutionPageView.Props>) {
 	return () => {
-		let { chrome, content, isSignedIn } = handle.props;
+		let { chrome, content, isSignedIn, media } = handle.props;
 		let { spotlight } = content;
 
 		let faqSplitIndex = Math.ceil(content.faqs.length / 2);
@@ -205,7 +204,7 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 							</CheckList>
 						</div>
 					}
-					media={<ProductScreenshot alt={chrome.screenshotAlt} />}
+					media={media}
 				/>
 
 				{content.trustIndicators ? (

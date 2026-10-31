@@ -120,9 +120,6 @@ export default {
 				placeholder: "https://example.com",
 				submit: "チェックを実行",
 			},
-			screenshot: {
-				alt: "Uptimeダッシュボードのスクリーンショット。サイドバーにはHTTP・DNS・TCPモニター、cronジョブ、アラート、メンテナンス、ステータスページが並び、月間ping使用量・全体のUptime率・最も遅いエンドポイントの概要カード、種類ごとの稼働中および停止中のモニター数、そしてレイテンシ推移のスパークラインとステータスバッジを備えたHTTPモニターの一覧表が表示されています",
-			},
 
 			trustIndicators: {
 				freeToStart: "無料で開始",
@@ -603,6 +600,29 @@ export default {
 			},
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"Uptime のダッシュボード：チームの稼働率と HTTP モニター数、その下にレイテンシの推移とステータスを示すモニター一覧。",
+			monitor:
+				"Uptime の HTTP モニター：稼働率と p99 応答時間、90 日間の稼働バー、2 つのリージョンからの 1 日分の応答時間。",
+			alerts:
+				"Uptime のアラート：対象範囲付きの PagerDuty・Slack・メールのチャンネルと、1 件の障害と復旧の通知履歴。",
+			statusPage:
+				"公開ステータスページ：すべてのシステムが正常に稼働中で、3 つのサービスと 90 日間の稼働バー。",
+			dns: "Uptime の DNS モニター：ドメインの監視対象レコードと変更が検出された TXT レコード、その下に証明書の有効期限。",
+			tcp: "Uptime の TCP モニター：データベース・キャッシュ・メールのポートと接続時間、その下にドメインの監視対象 DNS レコード。",
+			ssl: "Uptime の SSL 監視：発行元付きで 64 日後に期限切れとなる有効な証明書、その下にドメインの監視対象 DNS レコード。",
+			cron: "Uptime の cron ジョブ監視：スケジュールと最終 ping を示す 4 つのジョブ（1 つは遅延）と、バックアップの 1 か月分の ping。",
+			flow: "Uptime のブラウザーフローモニター：成功率 99.6%、最新の実行の 4 ステップのタイムライン、15 分間隔の実行履歴。",
+			maintenance:
+				"Uptime のメンテナンス期間：予定された 3 つの期間（1 つは定期）と、ステータスページでの次回の告知。",
+			reports:
+				"Uptime のレポート：1 か月分の日次応答時間と、モニターごとの稼働率・レイテンシ・ダウン日数のサマリー。",
+			team: "Uptime のチームアクセス：オーナー・管理者・メンバーの各ロールのメンバーと、権限付きの API キー。",
+			apiKeys:
+				"Uptime の API キー：CI・MCP エージェント・ダッシュボード用のキーと権限、最終使用日時、その横にチームメンバー。",
+		},
 		comparison: {
 			tableLabel: "Uptime と {$competitor} の比較",
 			tableCategoryHeader: "項目",

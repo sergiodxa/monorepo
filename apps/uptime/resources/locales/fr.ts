@@ -120,9 +120,6 @@ export default {
 				placeholder: "https://exemple.com",
 				submit: "Lancer un test",
 			},
-			screenshot: {
-				alt: "Capture d'écran du tableau de bord Uptime : une barre latérale listant les moniteurs HTTP, DNS et TCP, les tâches cron, les alertes, la maintenance et les pages de statut ; des cartes de synthèse pour la consommation mensuelle de pings, le pourcentage de disponibilité global et le point de terminaison le plus lent ; le nombre de moniteurs actifs et hors service par type ; et un tableau des moniteurs HTTP avec des courbes de tendance de latence et des badges de statut",
-			},
 
 			trustIndicators: {
 				freeToStart: "Gratuit pour commencer",
@@ -614,6 +611,29 @@ export default {
 			},
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"Le tableau de bord d'Uptime : la disponibilité de l'équipe et le nombre de moniteurs HTTP au-dessus d'un tableau de moniteurs, chacun avec sa tendance de latence et son état.",
+			monitor:
+				"Un moniteur HTTP dans Uptime : sa disponibilité et son temps de réponse p99, une barre de disponibilité sur 90 jours et une journée de temps de réponse depuis deux régions.",
+			alerts:
+				"Les alertes dans Uptime : des canaux PagerDuty, Slack et e-mail avec leur portée, au-dessus de l'historique d'une panne et de son rétablissement.",
+			statusPage:
+				"Une page de statut publique : tous les systèmes opérationnels, avec trois services et leurs barres de disponibilité sur 90 jours.",
+			dns: "Un moniteur DNS dans Uptime : les enregistrements suivis d'un domaine, dont un enregistrement TXT signalé comme modifié, au-dessus de l'expiration de son certificat.",
+			tcp: "Des moniteurs TCP dans Uptime : ports de base de données, de cache et de messagerie avec leurs temps de connexion, au-dessus des enregistrements DNS suivis d'un domaine.",
+			ssl: "La surveillance SSL dans Uptime : un certificat valide qui expire dans 64 jours avec son émetteur, au-dessus des enregistrements DNS suivis du domaine.",
+			cron: "La surveillance des tâches cron dans Uptime : quatre tâches avec leur planification et leur dernier ping, dont une en retard, au-dessus d'un mois de pings d'une sauvegarde.",
+			flow: "Un moniteur de parcours navigateur dans Uptime : 99,6 % d'exécutions réussies, les quatre étapes de la dernière exécution sur une frise et des exécutions toutes les 15 minutes.",
+			maintenance:
+				"Les fenêtres de maintenance dans Uptime : trois fenêtres à venir, dont une récurrente, et la prochaine telle que la page de statut l'annonce.",
+			reports:
+				"Les rapports dans Uptime : un mois de temps de réponse quotidiens et un résumé par moniteur de la disponibilité, de la latence et des jours d'indisponibilité.",
+			team: "L'accès de l'équipe dans Uptime : des membres aux rôles propriétaire, administrateur et membre, et des clés d'API avec leurs autorisations.",
+			apiKeys:
+				"Les clés d'API dans Uptime : des clés pour la CI, un agent MCP et un tableau de bord avec leurs autorisations et leur dernière utilisation, à côté des membres de l'équipe.",
+		},
 		comparison: {
 			tableLabel: "Uptime vs {$competitor}",
 			tableCategoryHeader: "Catégorie",

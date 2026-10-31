@@ -42,6 +42,7 @@ import {
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
+import ProductMockup from "~/resources/components/marketing/product-mockups";
 import { BROWSER_FLOW_EXAMPLES, browserFlowsPage } from "~/resources/content/browser-flows";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -140,18 +141,7 @@ export default createAction(routes.browserFlows, async (ctx) => {
 							</LinkButton>
 						</div>
 					}
-					media={
-						<CodeStage
-							id="browser-flow-examples"
-							variant="code"
-							name="browser-flow-examples"
-							tabs={BROWSER_FLOW_EXAMPLES.map((example) => ({
-								label: example.tab,
-								content: example.source,
-							}))}
-							parts={{ body: [tabSize()] }}
-						/>
-					}
+					media={<ProductMockup area="flow" t={t} />}
 				/>
 
 				<MarketingSection id="examples" mix={[viewReveal()]}>
@@ -162,6 +152,16 @@ export default createAction(routes.browserFlows, async (ctx) => {
 					>
 						{page.examples.title}
 					</MarketingHeader>
+					<CodeStage
+						id="browser-flow-examples"
+						variant="code"
+						name="browser-flow-examples"
+						tabs={BROWSER_FLOW_EXAMPLES.map((example) => ({
+							label: example.tab,
+							content: example.source,
+						}))}
+						parts={{ body: [tabSize()] }}
+					/>
 					<Feature.Grid columns={3}>
 						{BROWSER_FLOW_EXAMPLES.map((example) => (
 							<Feature key={example.key}>

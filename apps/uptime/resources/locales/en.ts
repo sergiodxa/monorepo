@@ -135,9 +135,6 @@ export default {
 				placeholder: "https://example.com",
 				submit: "Run a check",
 			},
-			screenshot: {
-				alt: "Screenshot of the Uptime dashboard: a sidebar listing HTTP, DNS, and TCP monitors, cron jobs, alerts, maintenance, and status pages; summary cards for monthly ping usage, overall uptime percentage, and the slowest endpoint; per-type counts of monitors up and down; and a table of HTTP monitors with latency trend sparklines and status badges",
-			},
 
 			trustIndicators: {
 				freeToStart: "Free to start",
@@ -693,6 +690,29 @@ export default {
 			finalCtaTitle: "Start monitoring your services",
 		},
 
+		/** Text alternatives for the product mockups, one per product area. */
+		mockups: {
+			dashboard:
+				"The Uptime dashboard: team uptime and HTTP monitor count over a table of monitors, each with its latency trend and status.",
+			monitor:
+				"An HTTP monitor in Uptime: its uptime and p99 response time, a 90-day uptime bar, and a day of response times from two regions.",
+			alerts:
+				"Alerts in Uptime: PagerDuty, Slack and email channels with their scope, over the history of one outage and its recovery.",
+			statusPage:
+				"A public status page: all systems operational, with three services and their 90-day uptime bars.",
+			dns: "A DNS monitor in Uptime: a domain's tracked records with one TXT record flagged as changed, over its certificate's expiry.",
+			tcp: "TCP monitors in Uptime: database, cache and mail ports with their connect times, over a domain's tracked DNS records.",
+			ssl: "SSL monitoring in Uptime: a valid certificate expiring in 64 days with its issuer, over the domain's tracked DNS records.",
+			cron: "Cron job monitoring in Uptime: four jobs with their schedules and last pings, one late, over a month of a backup's pings.",
+			flow: "A browser flow monitor in Uptime: a 99.6% pass rate, the latest run's four steps on a timeline, and runs 15 minutes apart.",
+			maintenance:
+				"Maintenance windows in Uptime: three upcoming windows, one recurring, and the next one as the status page announces it.",
+			reports:
+				"Reports in Uptime: a month of daily response times and a per-monitor summary of uptime, latency and days down.",
+			team: "Team access in Uptime: members with owner, admin and member roles, and API keys with their scopes.",
+			apiKeys:
+				"API keys in Uptime: keys for CI, an MCP agent and a dashboard with their scopes and last use, beside the team's members.",
+		},
 		comparison: {
 			tableLabel: "Uptime vs {$competitor}",
 			tableCategoryHeader: "Category",

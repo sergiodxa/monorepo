@@ -160,19 +160,14 @@ describe("GET /", () => {
 		expect(body).toContain(`"@type":"WebSite","name":"Uptime","url":"${SEO.baseUrl}"`);
 	});
 
-	test("renders the hero screenshot with a preloaded variant per color scheme", async () => {
+	test("leads with the dashboard mockup drawn inline, with no screenshot to preload", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body).toContain(
-			'<link rel="preload" href="/screenshot-light.webp" as="image" media="(prefers-color-scheme: light)" />',
-		);
-		expect(body).toContain(
-			'<link rel="preload" href="/screenshot-dark.webp" as="image" media="(prefers-color-scheme: dark)" />',
-		);
-		expect(body).toContain('srcset="/screenshot-dark.webp"');
-		expect(body).toContain('src="/screenshot-light.webp"');
-		expect(body).toContain("Screenshot of the Uptime dashboard");
+		expect(body).toContain('data-slot="product-mockup"');
+		expect(body).toContain('aria-label="The Uptime dashboard: team uptime and HTTP monitor count');
+		expect(body).not.toContain("screenshot-light.webp");
+		expect(body).not.toContain('rel="preload" href="/screenshot');
 	});
 
 	/**
