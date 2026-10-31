@@ -1,6 +1,6 @@
 /**
- * One marketing claim cell — icon, media, title, description, optional link
- * chrome — and an optional {@link Feature.Grid} that lays cells as separate
+ * One marketing claim cell — icon, media, title, description, an optional link
+ * pinned to its foot — and an optional {@link Feature.Grid} that lays cells as separate
  * cards or a hairline mosaic via container queries. Also ships the card-grid,
  * card-media and icon-tile style factories the bento pattern shares.
  *
@@ -10,15 +10,18 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { bg, border, fg } from "@sdxc/u/color";
+import { ArrowRightIcon } from "@sdxc/icons";
+import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { container, hstack, vstack } from "@sdxc/u/layout";
-import { m, mbs } from "@sdxc/u/size";
+import { container, gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
+import { motionSafe } from "@sdxc/u/responsive";
+import { m, pbs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { balance, leading, pretty, text, weight } from "@sdxc/u/typography";
+import { balance, leading, pretty, text, textDecoration, weight } from "@sdxc/u/typography";
 
 import { cardGrid, cardMedia, cardPadding, ICON_TILE_SIDE, iconTile } from "../styles/card-grid.js";
+import { interactiveTransition } from "../styles/interactive-transition.js";
 import { marketingEmphasis } from "../styles/marketing.js";
 
 import { HeadingScope, resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
@@ -83,9 +86,8 @@ export namespace Feature {
 		/** Cell chrome. Defaults to {@link DEFAULT_VARIANT}. */
 		variant?: Variant;
 		/**
-		 * Optional destination for the claim. When set with a trailing action
-		 * child, the cell can surface link chrome; the href itself is left for
-		 * the consumer's {@link LinkButton} or anchor.
+		 * Destination for the claim, exposed as `data-href`; the navigation itself is a
+		 * {@link Feature.Link} inside {@link Feature.Action}, which makes the cell its hit target.
 		 */
 		href?: string;
 		/**
@@ -140,6 +142,17 @@ export namespace Feature {
 	}
 
 	/**
+	 * Props accepted by {@link Feature.Link}. A type alias, since the native anchor props
+	 * resolve through a conditional type an interface cannot extend.
+	 */
+	export type LinkProps = TagProps<"a"> & {
+		/** Where the claim is argued in full; the whole cell navigates there. */
+		href: string;
+		/** The link label, followed by a trailing arrow. */
+		children: RemixNode;
+	};
+
+	/**
 	 * Props accepted by {@link Feature.Grid}.
 	 */
 	export interface GridProps extends TagProps<"div"> {
@@ -184,6 +197,9 @@ export function Feature(handle: Handle<Feature.Props>) {
 					isListed
 						? listCell()
 						: [vstack({ gap: 4, align: "stretch" }), cardPadding("2rem", "1.5rem", "2.5rem")],
+					raw({ position: "relative" }),
+					when('&:hover [data-slot="feature-link"]', textDecoration("underline")),
+					when('&:hover [data-slot="feature-link-arrow"]', motionSafe(raw({ translate: "2px 0" }))),
 					when('&[data-variant="panel"]', [
 						bg("neutral.tint"),
 						border({ color: "neutral", width: 1, style: "solid" }),
@@ -276,6 +292,8 @@ Feature.Description = function FeatureDescription(handle: Handle<Feature.Descrip
 					 * page passes are spaced by their own margin.
 					 */
 					when("& > * + *", raw({ marginBlockStart: "0.5rem" })),
+					/** Lifts inline links above a {@link Feature.Link} stretched over the cell. */
+					when("& a", raw({ position: "relative", zIndex: "1" })),
 					text("base"),
 					leading("relaxed"),
 					pretty(),
@@ -289,7 +307,9 @@ Feature.Description = function FeatureDescription(handle: Handle<Feature.Descrip
 };
 
 /**
- * Trailing action slot for a link or button under the claim body.
+ * Trailing action slot for a link or button under the claim body, pinned to the foot of
+ * the cell so the actions of cells sharing a grid row line up however long each claim's
+ * copy runs.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the action slot.
@@ -298,7 +318,59 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="feature-action" mix={[mbs(2), hstack({ gap: 2 }), mix]} />;
+		return (
+			<div
+				{...rest}
+				data-slot="feature-action"
+				mix={[raw({ marginBlockStart: "auto" }), pbs(2), hstack({ gap: 2 }), mix]}
+			/>
+		);
+	};
+};
+
+/**
+ * Quiet brand-coloured link with a trailing arrow, for a {@link Feature.Action}. The whole
+ * cell is its hit target, and links inside the description stay clickable above it; the
+ * arrow nudges forward on hover unless the visitor asks for reduced motion.
+ *
+ * @param handle Runtime handle carrying the host `<a>`'s props.
+ * @returns The render function producing the link.
+ * @example
+ * <Feature.Action><Feature.Link href="/docs/versioning">{t("versioning.link")}</Feature.Link></Feature.Action>
+ */
+Feature.Link = function FeatureLink(handle: Handle<Feature.LinkProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<a
+				{...rest}
+				data-slot="feature-link"
+				mix={[
+					inlineFlex(),
+					items("center"),
+					gap(1),
+					text("sm"),
+					weight("medium"),
+					fg("brand"),
+					textDecoration("none"),
+					rounded("sm"),
+					interactiveTransition(),
+					raw({ textUnderlineOffset: "0.2em" }),
+					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+					when("&::after", raw({ content: '""', position: "absolute", inset: "0" })),
+					mix,
+				]}
+			>
+				{children}
+				<ArrowRightIcon
+					size={14}
+					aria-hidden="true"
+					data-slot="feature-link-arrow"
+					mix={[motionSafe(raw({ transition: "translate 150ms" }))]}
+				/>
+			</a>
+		);
 	};
 };
 

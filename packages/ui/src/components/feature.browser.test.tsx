@@ -1,7 +1,8 @@
 /**
  * Lays the {@link Feature.Grid} variants out in a real browser: a `list` grid drops the
  * card chrome and sets each icon beside its copy, and a cell's `span` widens it across
- * tracks on a wide grid while a phone keeps one column.
+ * tracks on a wide grid while a phone keeps one column, and linked cells in one row
+ * keep their links on one line with the whole cell as the hit target.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -116,5 +117,74 @@ describe("Feature span", () => {
 		);
 		let [a, b] = cells(narrow);
 		expect(a!.getBoundingClientRect().width).toBe(b!.getBoundingClientRect().width);
+	});
+});
+
+/** A claim cell whose foot links to `href`, with `copy` as its description. */
+function linked(title: string, copy: JSX.Element | string): JSX.Element {
+	return (
+		<Feature key={title} href={`/${title}`}>
+			<Feature.Title>{title}</Feature.Title>
+			<Feature.Description>{copy}</Feature.Description>
+			<Feature.Action>
+				<Feature.Link href={`/${title}`}>Read about {title}</Feature.Link>
+			</Feature.Action>
+		</Feature>
+	);
+}
+
+/** The link at the foot of each cell inside `host`. */
+function links(host: HTMLElement): HTMLElement[] {
+	return [...host.querySelectorAll<HTMLElement>('[data-slot="feature-link"]')];
+}
+
+describe("Feature.Link", () => {
+	test("lines up the links of a row whose descriptions differ in length", () => {
+		let host = mount(
+			<Feature.Grid columns={2}>
+				{[
+					linked("short", "One line."),
+					linked(
+						"long",
+						"A much longer description that wraps across several lines in a cell this narrow, so its copy runs well past the short one beside it and would push a link that follows it straight down the cell.",
+					),
+				]}
+			</Feature.Grid>,
+			720,
+		);
+		let [short, long] = links(host);
+
+		expect(long!.closest('[data-slot="feature"]')!.textContent).toContain("much longer");
+		expect(short!.getBoundingClientRect().bottom).toBe(long!.getBoundingClientRect().bottom);
+	});
+
+	test("makes the whole cell the hit target while description links stay clickable", () => {
+		let host = mount(
+			<Feature.Grid columns={2}>
+				{[
+					linked(
+						"inline",
+						<>
+							See <a href="/elsewhere">elsewhere</a> too.
+						</>,
+					),
+					linked("plain", "Copy."),
+				]}
+			</Feature.Grid>,
+			720,
+		);
+		let [cell] = cells(host);
+		let title = cell!
+			.querySelector<HTMLElement>('[data-slot="feature-title"]')!
+			.getBoundingClientRect();
+		let inline = cell!.querySelector<HTMLElement>('a[href="/elsewhere"]')!;
+		let inlineBox = inline.getBoundingClientRect();
+
+		expect(
+			document.elementFromPoint(title.left + 4, title.top + title.height / 2)?.closest("a"),
+		).toBe(links(host)[0]);
+		expect(
+			document.elementFromPoint(inlineBox.left + 2, inlineBox.top + inlineBox.height / 2),
+		).toBe(inline);
 	});
 });
