@@ -21,7 +21,6 @@ import type { BookLanding as BookLandingTypes, PriceView } from "~/resources/vie
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { seo } from "~/app/initializers/seo";
 import { findApplicableDiscount } from "~/app/services/discount";
-import { readAnchoredChapter } from "~/app/services/sample-chapter";
 import { findBook } from "~/config/books";
 import { OG_IMAGE_URL } from "~/config/constants";
 import { Discounts } from "~/config/products";
@@ -137,17 +136,6 @@ export default createAction(routes.book, async (ctx) => {
 		),
 	};
 
-	/**
-	 * The contents band lists the free chapter's real sections. A chapter that cannot be read
-	 * drops the band and is logged, leaving the rest of the page to sell the book.
-	 */
-	let chapter = book.sample ? readAnchoredChapter() : undefined;
-	if (chapter && isFailure(chapter)) ctx.log.fail(chapter.error, { chapter: { band: "contents" } });
-	let contents =
-		book.sample && chapter && isSuccess(chapter)
-			? { title: book.sample.title, sections: chapter.data.sections }
-			: undefined;
-
 	let canonical = seo.canonical(ctx.url);
 
 	return ctx.render(
@@ -187,7 +175,6 @@ export default createAction(routes.book, async (ctx) => {
 				copy={copy}
 				prices={prices}
 				from={formatCents(Math.min(...payable))}
-				contents={contents}
 				links={links}
 			/>
 			<BookFooter

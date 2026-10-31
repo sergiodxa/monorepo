@@ -157,4 +157,23 @@ describe("GET /:book", () => {
 		expect(body).toContain("Sergio Xalambrí is an Argentinian web developer");
 		expect(body).not.toContain("Hi, I’m Sergio");
 	});
+
+	test("lists the whole book in its contents, with the free chapter's sections badged", async () => {
+		let body = await load(memoryBilling()).then((response) => response.text());
+		let contents = body.slice(body.indexOf('id="contents"'), body.indexOf('id="flow"'));
+
+		for (let title of [
+			"Chapter 1 · OAuth2 in Simple Terms",
+			"Chapter 2 · Tokens in OAuth2",
+			"Chapter 3 · Building the Application",
+			"Appendices",
+			"Refresh Token",
+			"The Client Application",
+			"Comparison Tables",
+		]) {
+			expect(contents).toContain(title);
+		}
+		expect(contents.match(/>Free</g)).toHaveLength(7);
+		expect(contents).toContain("The four roles in every flow");
+	});
 });

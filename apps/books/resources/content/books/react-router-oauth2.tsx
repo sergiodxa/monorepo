@@ -12,6 +12,7 @@ import { AtSignIcon, GlobeIcon } from "@sdxc/icons";
 import type { BookCopy } from "~/resources/content/books";
 
 import { Product } from "~/config/products";
+import { CONTENTS } from "~/resources/content/books/react-router-oauth2-contents";
 import ReactRouterOAuth2Cover from "~/resources/views/books/react-router-oauth2-cover";
 
 /** The handbook's copy, read by every page under `/react-router-oauth2`. */
@@ -63,11 +64,11 @@ export const REACT_ROUTER_OAUTH2: BookCopy = {
 		},
 	},
 	contents: {
-		title: (sections) => `${sections} sections, from the actors to PKCE`,
+		...CONTENTS,
 		description: (
 			<>
-				The free chapter, section by section. Open one to see what it covers; the whole chapter is{" "}
-				<strong>yours for an email</strong>.
+				From what OAuth2 is to a working React Router app. Open a section to see what it covers; the
+				first chapter is <strong>free for an email</strong>.
 			</>
 		),
 	},

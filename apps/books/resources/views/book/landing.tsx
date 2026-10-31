@@ -1,13 +1,12 @@
 /**
  * A book's landing, set as a printed page from `@sdxc/ui` landing patterns: the flat cover
- * beside the promise, the free chapter and its contents, the flow the book teaches played
+ * beside the promise, the free chapter, the full contents, the flow the book teaches played
  * step by step, its code, the author, both packages at live prices, the questions, a last page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EPUB } from "@sdxc/epub";
 import type { Handle, RemixNode } from "remix/component";
 
 import { ChevronDownIcon, KeyRoundIcon } from "@sdxc/icons";
@@ -69,8 +68,6 @@ export namespace BookLanding {
 		prices: Partial<Record<Product, PriceView>>;
 		/** The lowest price a reader can pay today, quoted on the hero's buy button. */
 		from: string;
-		/** The free chapter's title and sections, when it could be read, for the contents band. */
-		contents?: { title: string; sections: readonly EPUB.Section[] };
 		links: Links;
 	}
 }
@@ -188,21 +185,14 @@ function Sample(handle: Handle<{ copy: BookCopy; action: string }>) {
 	};
 }
 
-/** How many subsections a section opens on, or nothing for a section without any. */
-function partsLabel(count: number): string | undefined {
-	if (count === 0) return undefined;
-	return count === 1 ? "1 part" : `${count} parts`;
-}
-
 /**
- * The free chapter's contents, held at the start column beside its sections. Each section
- * opens on the subsections it covers, so a reader sees how far the free chapter goes.
+ * The book's table of contents, its header held at the start column beside the parts.
+ * Every entry opens on what it covers, and the free chapter's entries carry a badge, so a
+ * reader sees how much of the book an email unlocks.
  */
-function Contents(
-	handle: Handle<{ copy: BookCopy; title: string; sections: readonly EPUB.Section[] }>,
-) {
+function Contents(handle: Handle<{ copy: BookCopy }>) {
 	return () => {
-		let { copy, sections, title } = handle.props;
+		let { contents } = handle.props.copy;
 
 		return (
 			<MarketingSection id="contents" ruled>
@@ -226,7 +216,7 @@ function Contents(
 					>
 						<MarketingHeader
 							eyebrow="Contents"
-							description={copy.contents.description}
+							description={contents.description}
 							mix={[
 								combine([
 									raw({ "--ui-marketing-header-end": "0" }),
@@ -238,30 +228,37 @@ function Contents(
 								]),
 							]}
 						>
-							{copy.contents.title(sections.length)}
+							{contents.title}
 						</MarketingHeader>
 						<Curriculum layout="stack">
-							<Curriculum.Part title={title} meta="Free chapter">
-								{sections.map((section, index) => (
-									<Curriculum.Lesson
-										number={String(index + 1).padStart(2, "0")}
-										title={section.title}
-										meta={partsLabel(section.sections?.length ?? 0)}
-									>
-										{section.sections?.length ? (
-											<p mix={[m(0), fg("neutral")]}>
-												{section.sections.map((child) => child.title).join(" · ")}
-											</p>
-										) : undefined}
-									</Curriculum.Lesson>
-								))}
-							</Curriculum.Part>
+							{contents.parts.map((part) => (
+								<Curriculum.Part
+									title={part.title}
+									meta={part.free ? "Free chapter" : sectionsLabel(part.lessons.length)}
+								>
+									{part.lessons.map((lesson) => (
+										<Curriculum.Lesson
+											number={lesson.number}
+											title={lesson.title}
+											badge={part.free ? "Free" : undefined}
+										>
+											<p mix={[m(0), fg("neutral")]}>{lesson.summary}</p>
+										</Curriculum.Lesson>
+									))}
+								</Curriculum.Part>
+							))}
 						</Curriculum>
 					</div>
 				</div>
 			</MarketingSection>
 		);
 	};
+}
+
+/** How many entries a part holds, or nothing for a part that is a single entry. */
+function sectionsLabel(count: number): string | undefined {
+	if (count < 2) return undefined;
+	return `${count} sections`;
 }
 
 /**
@@ -511,7 +508,7 @@ function Questions(handle: Handle<{ copy: BookCopy }>) {
  */
 export default function BookLanding(handle: Handle<BookLanding.Props>) {
 	return () => {
-		let { book, contents, copy, from, links } = handle.props;
+		let { book, copy, from, links } = handle.props;
 		let Cover = copy.Cover;
 		let hasSample = Boolean(links.sample);
 		let note: RemixNode = `${book.pages} pages · PDF and EPUB · one payment, yours to keep`;
@@ -533,7 +530,7 @@ export default function BookLanding(handle: Handle<BookLanding.Props>) {
 					media={<Cover />}
 				/>
 				{links.sample && <Sample copy={copy} action={links.sample} />}
-				{contents && <Contents copy={copy} title={contents.title} sections={contents.sections} />}
+				<Contents copy={copy} />
 				<Flow copy={copy} />
 				<Inside copy={copy} pages={book.pages} />
 				<Author copy={copy} />

@@ -37,6 +37,28 @@ export namespace BookCopy {
 		footnote?: string;
 	}
 
+	/** One entry of the table of contents: its number, title, and what it covers. */
+	export interface ContentsLesson {
+		number: string;
+		title: string;
+		/** One or two lines, shown when a reader opens the entry. */
+		summary: string;
+	}
+
+	/** A chapter, or the appendices, as one part of the table of contents. */
+	export interface ContentsPart {
+		title: string;
+		/** Whether the part is the free chapter, so each entry carries a "Free" badge. */
+		free?: boolean;
+		lessons: readonly ContentsLesson[];
+	}
+
+	/** The whole table of contents, titled by what it counts. */
+	export interface Contents {
+		title: string;
+		parts: readonly ContentsPart[];
+	}
+
 	/** A code sample taken from the book, as one tab of the band's code stage. */
 	export interface Sample {
 		label: string;
@@ -90,8 +112,8 @@ export interface BookCopy {
 	hero: { eyebrow: string; title: RemixNode; description: RemixNode };
 	quote?: BookCopy.Quote;
 	sample: { title: string; description: RemixNode; page: BookCopy.SamplePage };
-	/** The free chapter's contents band; the title counts the sections the chapter has. */
-	contents: { title: (sections: number) => string; description: RemixNode };
+	/** The book's table of contents, with its band's lead. */
+	contents: BookCopy.Contents & { description: RemixNode };
 	flow: {
 		title: string;
 		description: RemixNode;
