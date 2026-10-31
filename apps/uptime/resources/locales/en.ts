@@ -709,6 +709,9 @@ export default {
 				title: "When {$competitor} might be better",
 				description:
 					"We believe in being transparent. Here's when {$competitor} could be the right choice.",
+			tableTitle: "How {$competitor} compares",
+			costLink: "Compare costs",
+			othersTitle: "Compare Uptime with other tools",
 			},
 
 			pricing: {

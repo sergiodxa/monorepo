@@ -611,6 +611,9 @@ export default {
 				title: "{$competitor} のほうが適している場合",
 				description:
 					"私たちは透明性を大切にしています。次のような場合は {$competitor} が適した選択かもしれません。",
+			tableTitle: "{$competitor} との比較",
+			costLink: "コストを比較",
+			othersTitle: "Uptime をほかのツールと比較",
 			},
 
 			pricing: {

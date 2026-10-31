@@ -618,6 +618,9 @@ export default {
 				title: "Quando {$competitor} può essere la scelta migliore",
 				description:
 					"Crediamo nella trasparenza. Ecco i casi in cui {$competitor} potrebbe essere la scelta giusta.",
+			tableTitle: "Come si confronta {$competitor}",
+			costLink: "Confronta i costi",
+			othersTitle: "Confronta Uptime con altri strumenti",
 			},
 
 			pricing: {

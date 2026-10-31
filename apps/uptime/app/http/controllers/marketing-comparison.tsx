@@ -1,7 +1,7 @@
 /**
  * `/vs/:slug` controller. Renders the comparison page for the slug found in
- * `resources/content/marketing.ts`'s `comparisons` record, extending the generic
- * marketing page shape with a comparison table plus the optional honest-take,
+ * `resources/content/marketing.ts`'s `comparisons` record: the head-to-head table, the
+ * reasons to switch, the honest take, the cost comparison and the other comparisons.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,20 +9,17 @@
 
 import type { Translate } from "@sdxc/i18n";
 
-import { CheckIcon, TriangleAlertIcon } from "@sdxc/icons";
-import { bg, border, fg, linearGradient } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
-import { flex, flexWrap, gap, inlineFlex, items, justify, shrink, vstack } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { media } from "@sdxc/u/responsive";
-import { m, maxIs, mbs, p } from "@sdxc/u/size";
-import { font, fontSize, leading, textAlign, weight } from "@sdxc/u/typography";
-import { Heading, MarketingSection, Table } from "@sdxc/ui";
+import { ArrowRightIcon, Icon, TriangleAlertIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, gap, hstack, inlineFlex, items, justify, vstack } from "@sdxc/u/layout";
+import { mbs } from "@sdxc/u/size";
+import { font, text, textAlign, weight } from "@sdxc/u/typography";
+import { Feature, LinkButton, MarketingHeader, MarketingSection, Table } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
 	CheckList,
 	CheckRow,
-	ClosingCta,
 	FaqBand,
 	FeatureBand,
 	LandingHero,
@@ -37,22 +34,13 @@ import { getViewer } from "~/app/http/middleware/auth";
 import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
 import { monthlyCostForUsage } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import MarketingCard from "~/resources/components/marketing/card";
+import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import SectionHeader from "~/resources/components/marketing/section-header";
 import { comparisons } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
-
-/**
- * Narrower measure for prose-shaped comparison sections (honest take, "perfect
- * for" banner, cost table) so a single column of argument stays readable.
- */
-function narrowParts() {
-	return { container: [maxIs("896px")] };
-}
 
 /** Formats a monthly USD price in `locale`, keeping cents only when there are any. */
 function formatMonthlyUsd(locale: string, amount: number): string {
@@ -90,6 +78,14 @@ function savingsFor(row: MarketingContent.PricingScenario, locale: string, t: Tr
 	}
 
 	return row.savingsNote ?? "";
+}
+
+/**
+ * Column count that fills every row of a grid of `count` cells: three when it divides
+ * evenly, otherwise two, so a list of two or four never strands a cell on its last row.
+ */
+function columnsFor(count: number): Feature.Columns {
+	return count % 3 === 0 ? 3 : 2;
 }
 
 /** GET /vs/:slug — a competitor comparison marketing page. */
@@ -130,6 +126,16 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 		faqs,
 	} = content;
 
+	let scenarios = pricingScenarios ?? [];
+
+	/** Every other comparison, in the record's order, so a visitor can move between them. */
+	let OTHER_COMPARISONS = Object.values(comparisons)
+		.filter((page) => page.slug !== slug)
+		.map((page) => ({
+			href: routes.marketing.comparison.href({ slug: page.slug }),
+			label: page.competitor,
+		}));
+
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -152,6 +158,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 				<LandingHero
 					tone="tinted"
 					align="center"
+					entrance
 					eyebrow={badge}
 					eyebrowVariant="pill"
 					title={
@@ -161,46 +168,49 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					}
 					description={description}
 					actions={
-						<AuthCta
-							isSignedIn={isSignedIn}
-							startLabel={chrome.startLabel}
-							dashboardLabel={chrome.dashboardLabel}
-						/>
-					}
-					below={
-						<CheckList orientation="horizontal">
-							{highlights.map((item) => (
-								<CheckRow key={item}>{item}</CheckRow>
-							))}
-						</CheckList>
+						<div mix={[vstack({ gap: 6, align: "center" })]}>
+							<div mix={[inlineFlex(), flexWrap(), items("center"), justify("center"), gap(3)]}>
+								<AuthCta
+									isSignedIn={isSignedIn}
+									startLabel={chrome.startLabel}
+									dashboardLabel={chrome.dashboardLabel}
+									icon={<ArrowRightIcon size={20} strokeWidth={1.5} aria-hidden="true" />}
+								/>
+								{scenarios.length > 0 ? (
+									<LinkButton href="#pricing" color="neutral" variant="outline" size="lg">
+										{t("landing.comparison.costLink")}
+									</LinkButton>
+								) : null}
+							</div>
+							<CheckList orientation="horizontal" mix={[justify("center")]}>
+								{highlights.map((item) => (
+									<CheckRow key={item}>{item}</CheckRow>
+								))}
+							</CheckList>
+						</div>
 					}
 				/>
 
-				<MarketingSection>
-					<SectionHeader
-						title={t("landing.comparison.tableLabel", { competitor })}
-						description={summary}
-					/>
+				<MarketingSection id="compare" mix={[viewReveal()]}>
+					<MarketingHeader description={summary} align="center">
+						{t("landing.comparison.tableTitle", { competitor })}
+					</MarketingHeader>
 
 					<Table.Container>
 						<Table aria-label={t("landing.comparison.tableLabel", { competitor })}>
 							<Table.Header>
 								<Table.Row>
 									<Table.Column>{t("landing.comparison.tableCategoryHeader")}</Table.Column>
-									<Table.Column align="center">
-										{t("landing.comparison.tableProductHeader")}
-									</Table.Column>
-									<Table.Column align="center">{competitor}</Table.Column>
+									<Table.Column>{t("landing.comparison.tableProductHeader")}</Table.Column>
+									<Table.Column>{competitor}</Table.Column>
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
 								{rows.map((row) => (
 									<Table.Row key={row.label}>
-										<Table.Cell mix={[weight(500)]}>{row.label}</Table.Cell>
-										<Table.Cell mix={[textAlign("center"), weight(600), fg("brand")]}>
-											{row.us}
-										</Table.Cell>
-										<Table.Cell mix={[textAlign("center"), fg("neutral")]}>{row.them}</Table.Cell>
+										<Table.Cell mix={[weight(500), fg("neutral.emphasis")]}>{row.label}</Table.Cell>
+										<Table.Cell mix={[weight(600), fg("brand")]}>{row.us}</Table.Cell>
+										<Table.Cell mix={[fg("neutral")]}>{row.them}</Table.Cell>
 									</Table.Row>
 								))}
 							</Table.Body>
@@ -208,162 +218,101 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					</Table.Container>
 				</MarketingSection>
 
-				<FeatureBand
-					layout="grid"
-					columns={3}
-					tone="tinted"
-					title={t("landing.comparison.whyTeamsSwitchTitle")}
-				>
-					{features.map((feature) => (
-						<MarketingCard
-							key={feature.title}
-							title={feature.title}
-							description={feature.description}
-						/>
-					))}
-				</FeatureBand>
+				<MarketingSection tone="tinted" mix={[viewReveal()]}>
+					<MarketingHeader align="center">
+						{t("landing.comparison.whyTeamsSwitchTitle")}
+					</MarketingHeader>
+					<Feature.Grid columns={columnsFor(features.length)}>
+						{features.map((feature) => (
+							<Feature key={feature.title}>
+								{feature.icon ? (
+									<Feature.Icon tone="brand">
+										<Icon name={feature.icon} size={20} strokeWidth={1.5} aria-hidden="true" />
+									</Feature.Icon>
+								) : null}
+								<Feature.Title>{feature.title}</Feature.Title>
+								<Feature.Description>{feature.description}</Feature.Description>
+							</Feature>
+						))}
+					</Feature.Grid>
+				</MarketingSection>
 
 				{honestTake && honestTake.length > 0 ? (
-					<MarketingSection parts={narrowParts()}>
-						<SectionHeader
-							badge={t("landing.comparison.honestTake.badge")}
-							title={t("landing.comparison.honestTake.title", { competitor })}
+					<MarketingSection mix={[viewReveal()]}>
+						<MarketingHeader
+							eyebrow={t("landing.comparison.honestTake.badge")}
 							description={t("landing.comparison.honestTake.description", { competitor })}
-						/>
-
-						<div mix={[vstack({ gap: 6 })]}>
+							align="center"
+						>
+							{t("landing.comparison.honestTake.title", { competitor })}
+						</MarketingHeader>
+						<Feature.Grid variant="list" columns={columnsFor(honestTake.length)}>
 							{honestTake.map((item) => (
-								<div
-									key={item.title}
-									mix={[
-										flex(),
-										gap(4),
-										p(6),
-										rounded("xl"),
-										border({ color: "warning", width: 1 }),
-										bg("warning.tint"),
-									]}
-								>
-									<TriangleAlertIcon size={24} strokeWidth={1.5} mix={[shrink(0), fg("warning")]} />
-									<div>
-										<Heading
-											level={3}
-											mix={[m(0), fontSize("base"), weight(600), fg("neutral.emphasis")]}
-										>
-											{item.title}
-										</Heading>
-										<p mix={[m(0), mbs(2), leading(1.625), fg("neutral")]}>{item.description}</p>
-									</div>
-								</div>
+								<Feature key={item.title}>
+									<Feature.Icon>
+										<TriangleAlertIcon
+											size={20}
+											strokeWidth={1.5}
+											aria-hidden="true"
+											mix={[fg("warning")]}
+										/>
+									</Feature.Icon>
+									<Feature.Title>{item.title}</Feature.Title>
+									<Feature.Description>{item.description}</Feature.Description>
+								</Feature>
 							))}
-						</div>
+						</Feature.Grid>
 					</MarketingSection>
 				) : null}
 
 				{perfectFor ? (
-					<MarketingSection tone="tinted" parts={narrowParts()}>
-						<div
-							mix={[
-								overflow("hidden"),
-								rounded("xl"),
-								shadow("xl"),
-								p(8),
-								textAlign("center"),
-								bg({
-									image: linearGradient(
-										"to bottom right",
-										"var(--ui-brand-bg-solid)",
-										"var(--ui-brand-bg-solid-hover)",
-									),
-								}),
-								fg("brand.onSolid"),
-								media("(min-width: 640px)", p(12)),
-							]}
-						>
-							<Heading level={2} size="chapter" mix={[m(0), fg("brand.onSolid")]}>
-								{perfectFor.title}
-							</Heading>
-
-							<p mix={[m(0, "auto"), mbs(4), maxIs("672px"), fontSize("lg"), leading(1.625)]}>
-								{perfectFor.description}
-							</p>
-
-							{perfectFor.highlights.length > 0 ? (
-								<div mix={[flex(), flexWrap("wrap"), justify("center"), gap(4), mbs(8)]}>
-									{perfectFor.highlights.map((item) => (
-										<span
-											key={item}
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap(2),
-												p(2, 4),
-												rounded("999px"),
-												bg("color-mix(in oklab, currentColor 15%, transparent)"),
-												fontSize("sm"),
-											]}
-										>
-											<CheckIcon size={16} strokeWidth={2} />
-											{item}
-										</span>
-									))}
-								</div>
-							) : null}
-						</div>
+					<MarketingSection tone="tinted" inset spacing="compact" mix={[viewReveal()]}>
+						<MarketingHeader description={perfectFor.description} align="center">
+							{perfectFor.title}
+						</MarketingHeader>
+						{perfectFor.highlights.length > 0 ? (
+							<CheckList orientation="horizontal" mix={[justify("center")]}>
+								{perfectFor.highlights.map((item) => (
+									<CheckRow key={item}>{item}</CheckRow>
+								))}
+							</CheckList>
+						) : null}
 					</MarketingSection>
 				) : null}
 
-				{pricingScenarios && pricingScenarios.length > 0 ? (
-					<MarketingSection parts={narrowParts()}>
-						<SectionHeader
-							badge={t("landing.comparison.pricing.badge")}
-							title={t("landing.comparison.pricing.title")}
+				{scenarios.length > 0 ? (
+					<MarketingSection id="pricing" mix={[viewReveal()]}>
+						<MarketingHeader
+							eyebrow={t("landing.comparison.pricing.badge")}
 							description={t("landing.comparison.pricing.description")}
-						/>
+							align="center"
+						>
+							{t("landing.comparison.pricing.title")}
+						</MarketingHeader>
 
 						<Table.Container>
 							<Table aria-label={t("landing.comparison.pricing.tableLabel", { competitor })}>
 								<Table.Header>
 									<Table.Row>
 										<Table.Column>{t("landing.comparison.pricing.scenarioHeader")}</Table.Column>
-										<Table.Column align="center">{competitor}</Table.Column>
-										<Table.Column align="center">
-											{t("landing.comparison.tableProductHeader")}
-										</Table.Column>
-										<Table.Column align="center">
-											{t("landing.comparison.pricing.savingsHeader")}
-										</Table.Column>
+										<Table.Column>{competitor}</Table.Column>
+										<Table.Column>{t("landing.comparison.tableProductHeader")}</Table.Column>
+										<Table.Column>{t("landing.comparison.pricing.savingsHeader")}</Table.Column>
 									</Table.Row>
 								</Table.Header>
 								<Table.Body>
-									{pricingScenarios.map((row) => (
+									{scenarios.map((row) => (
 										<Table.Row key={row.scenario}>
-											<Table.Cell mix={[weight(500)]}>{row.scenario}</Table.Cell>
-											<Table.Cell
-												mix={[textAlign("center"), font("mono"), fontSize("sm"), fg("neutral")]}
-											>
+											<Table.Cell mix={[weight(500), fg("neutral.emphasis")]}>
+												{row.scenario}
+											</Table.Cell>
+											<Table.Cell mix={[font("mono"), text("sm"), fg("neutral")]}>
 												{row.theirCost}
 											</Table.Cell>
-											<Table.Cell
-												mix={[
-													textAlign("center"),
-													font("mono"),
-													fontSize("sm"),
-													weight(600),
-													fg("brand"),
-												]}
-											>
+											<Table.Cell mix={[font("mono"), text("sm"), weight(600), fg("brand")]}>
 												{ourCostFor(row, ctx.locale)}
 											</Table.Cell>
-											<Table.Cell
-												mix={[
-													textAlign("center"),
-													font("mono"),
-													fontSize("sm"),
-													weight(600),
-													fg("success"),
-												]}
-											>
+											<Table.Cell mix={[font("mono"), text("sm"), weight(600), fg("success")]}>
 												{savingsFor(row, ctx.locale, t)}
 											</Table.Cell>
 										</Table.Row>
@@ -372,7 +321,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							</Table>
 						</Table.Container>
 
-						<p mix={[m(0), mbs(6), textAlign("center"), fontSize("sm"), fg("neutral.muted")]}>
+						<p mix={[mbs(6), textAlign("center"), text("sm"), fg("neutral.muted")]}>
 							{t("landing.comparison.pricing.footnote", { competitor })}
 						</p>
 					</MarketingSection>
@@ -382,6 +331,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					layout="steps"
 					tone="tinted"
 					title={t("landing.comparison.gettingStartedTitle")}
+					mix={[viewReveal()]}
 				>
 					{steps.map((step) => (
 						<StepList.Item key={step.title} title={step.title}>
@@ -390,36 +340,41 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					))}
 				</FeatureBand>
 
-				<FaqBand columns={1} eyebrow={t("landing.faq.badge")} title={t("landing.faq.title")}>
+				<FaqBand
+					columns={1}
+					eyebrow={t("landing.faq.badge")}
+					title={t("landing.faq.title")}
+					mix={[viewReveal()]}
+				>
 					<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
 				</FaqBand>
 
-				<ClosingCta
-					tone="plain"
+				<MarketingSection spacing="compact" mix={[viewReveal()]}>
+					<div mix={[vstack({ gap: 4, align: "center" })]}>
+						<p mix={[text("sm"), textAlign("center")]}>{t("landing.comparison.othersTitle")}</p>
+						<div mix={[hstack({ gap: 3 }), flexWrap(), justify("center")]}>
+							{OTHER_COMPARISONS.map((other) => (
+								<LinkButton
+									key={other.href}
+									href={other.href}
+									prefetch="intent"
+									color="neutral"
+									variant="surface"
+								>
+									{other.label}
+								</LinkButton>
+							))}
+						</div>
+					</div>
+				</MarketingSection>
+
+				<ClosingBand
+					id="start"
+					isSignedIn={isSignedIn}
 					title={t("landing.comparison.finalCtaTitle")}
 					description={t("landing.finalCta.body")}
-					mix={[
-						bg({
-							image: linearGradient(
-								"to right",
-								"var(--ui-brand-bg-solid)",
-								"var(--ui-brand-bg-solid-hover)",
-							),
-						}),
-						fg("brand.onSolid"),
-					]}
-					parts={{
-						title: [fg("brand.onSolid")],
-						description: [fg("brand.onSolid")],
-					}}
-					actions={
-						<AuthCta
-							isSignedIn={isSignedIn}
-							startLabel={chrome.startLabel}
-							dashboardLabel={chrome.dashboardLabel}
-							color="neutral"
-						/>
-					}
+					startLabel={chrome.startLabel}
+					dashboardLabel={chrome.dashboardLabel}
 				/>
 			</MarketingLayout>
 		</DocumentLayout>,

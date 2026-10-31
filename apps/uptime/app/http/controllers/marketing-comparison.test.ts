@@ -193,6 +193,26 @@ describe("GET /vs/:slug", () => {
 		expect(body).not.toContain("Fixture regions");
 	});
 
+	test("lays four reasons to switch out two by two, leaving no card alone on a row", async () => {
+		let response = await getComparison("uptimerobot");
+
+		let body = await response.text();
+		expect(comparisons.uptimerobot!.features).toHaveLength(4);
+		expect(body).toMatch(/data-columns="2" data-variant="cards" data-slot="feature-grid"/);
+		expect(body).not.toMatch(/data-columns="3" data-variant="cards"/);
+	});
+
+	test("links every other comparison and closes on the brand band", async () => {
+		let response = await getComparison("uptimerobot");
+
+		let body = await response.text();
+		expect(body).toContain('href="/vs/pingdom"');
+		expect(body).toContain('href="/vs/healthchecks"');
+		expect(body).toContain('id="start"');
+		expect(body).toContain('data-tone="brand"');
+		expect(body).toContain("Switch to Uptime");
+	});
+
 	test("renders the not-found page for an unknown slug", async () => {
 		let response = await getComparison("does-not-exist");
 
