@@ -723,6 +723,10 @@ export default {
 			wnam: "America del Nord occidentale",
 		},
 		sections: {
+			accountability: {
+				badge: "Responsabilità",
+				title: "Chi c'è dietro i tuoi avvisi",
+			},
 			whoRuns: {
 				title: "Chi lo gestisce",
 				bodyPrefix: "Uptime è sviluppato e gestito da ",

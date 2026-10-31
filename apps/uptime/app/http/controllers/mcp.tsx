@@ -10,8 +10,7 @@
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { ArrowRightIcon } from "@sdxc/icons";
 import { flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
-import { is, maxIs, mi } from "@sdxc/u/size";
-import { LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -29,6 +28,7 @@ import { SEO } from "~/app/initializers/seo";
 import { CopyButton } from "~/resources/components/copy-button";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
+import ProductMockup from "~/resources/components/marketing/product-mockups";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -120,20 +120,22 @@ export default createAction(routes.mcp.index, async (ctx) => {
 					}
 				/>
 
-				<MarketingSection mix={[viewReveal()]}>
-					<MarketingHeader
-						eyebrow={t("mcp.tools.badge")}
-						description={t("mcp.tools.description")}
-						align="center"
-					>
-						{t("mcp.tools.title")}
-					</MarketingHeader>
-					<CheckList mix={[is("full"), mi("auto"), maxIs("720px")]}>
+				<FeatureBand
+					id="tools"
+					layout="split"
+					lean="media"
+					eyebrow={t("mcp.tools.badge")}
+					title={t("mcp.tools.title")}
+					description={t("mcp.tools.description")}
+					media={<ProductMockup area="api-keys" t={t} />}
+					mix={[viewReveal()]}
+				>
+					<CheckList>
 						<CheckRow>{t("mcp.tools.api")}</CheckRow>
 						<CheckRow>{t("mcp.tools.scopes")}</CheckRow>
 						<CheckRow>{t("mcp.tools.remote")}</CheckRow>
 					</CheckList>
-				</MarketingSection>
+				</FeatureBand>
 
 				<FeatureBand
 					id="setup"

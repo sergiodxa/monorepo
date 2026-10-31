@@ -23,6 +23,7 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
+import { elementStyles } from "~/app/test/rendered-styles";
 import { browserFlowsPage } from "~/resources/content/browser-flows";
 import routes from "~/routes/web";
 
@@ -88,5 +89,34 @@ describe("GET /browser-flows", () => {
 		);
 		expect(body).toContain('"@type":"SoftwareApplication"');
 		expect(body).toContain('"@type":"FAQPage"');
+	});
+
+	/**
+	 * The examples band stacks the spec stage over the example cards; the band's own layout puts
+	 * no space between its children, so the cards sat flush against the stage's lower edge.
+	 */
+	test("separates the example cards from the spec stage above them", async () => {
+		let body = await (await getBrowserFlows()).text();
+
+		let styles = elementStyles(body, 'data-slot="feature-grid"', body.indexOf('id="examples"'));
+
+		expect(styles.join("\n")).toContain("margin-block-start");
+	});
+
+	/**
+	 * Step copy is plain prose rendered as text, so Markdown backticks would show literally; the
+	 * DSL keyword stays on the spec lines the diagram beside the steps prints.
+	 */
+	test("shows each step as prose beside a browser run of the sign-in spec", async () => {
+		let body = await (await getBrowserFlows()).text();
+		let band = body.slice(body.indexOf('id="how-it-works"'), body.indexOf('id="faq"'));
+
+		for (let step of browserFlowsPage.steps.list) {
+			expect(step.description).not.toContain("`");
+		}
+		expect(band).toContain(`aria-label="${browserFlowsPage.steps.diagram.name}"`);
+		expect(band).toContain("browser.open");
+		expect(band).toContain("expect browser.heading");
+		expect(band).not.toContain("http.post");
 	});
 });

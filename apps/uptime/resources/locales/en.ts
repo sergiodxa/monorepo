@@ -788,6 +788,10 @@ export default {
 			wnam: "Western North America",
 		},
 		sections: {
+			accountability: {
+				badge: "Accountability",
+				title: "Who stands behind your alerts",
+			},
 			whoRuns: {
 				title: "Who runs it",
 				bodyPrefix: "Uptime is built and operated by ",

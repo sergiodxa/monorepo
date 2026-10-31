@@ -727,6 +727,10 @@ export default {
 			wnam: "Ouest de l'Amérique du Nord",
 		},
 		sections: {
+			accountability: {
+				badge: "Responsabilité",
+				title: "Qui se tient derrière vos alertes",
+			},
 			whoRuns: {
 				title: "Qui l'opère",
 				bodyPrefix: "Uptime est développé et opéré par ",

@@ -82,4 +82,24 @@ describe("GET /mcp", () => {
 		expect(body).toContain("Copy config");
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
+
+	/**
+	 * The tools band shows the key an agent connects with, scoped `mcp`, as drawn product UI;
+	 * it was a bare check list with nothing to look at between the hero and the setup steps.
+	 */
+	test("shows the API keys screen beside the tools the agent gets", async () => {
+		viewer = null;
+		let response = await router.fetch(
+			new Request(`https://uptime.test${routes.mcp.index.href()}`, {
+				headers: { Origin: "https://uptime.test" },
+			}),
+		);
+
+		let body = await response.text();
+		let band = body.slice(body.indexOf('id="tools"'), body.indexOf('id="setup"'));
+
+		expect(band).toContain('role="img"');
+		expect(band).toContain("Agent (MCP)");
+		expect(band).toContain("Every public API capability is a tool");
+	});
 });

@@ -714,6 +714,10 @@ export default {
 			wnam: "北米西部",
 		},
 		sections: {
+			accountability: {
+				badge: "運営体制",
+				title: "アラートの裏にいるのは誰か",
+			},
 			whoRuns: {
 				title: "運営者",
 				bodyPrefix: "Uptime は",

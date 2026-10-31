@@ -727,6 +727,10 @@ export default {
 			wnam: "Westliches Nordamerika",
 		},
 		sections: {
+			accountability: {
+				badge: "Verantwortung",
+				title: "Wer hinter Ihren Alarmen steht",
+			},
 			whoRuns: {
 				title: "Wer es betreibt",
 				bodyPrefix: "Uptime wird gebaut und betrieben von ",

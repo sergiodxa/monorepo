@@ -42,6 +42,7 @@ import {
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
+import FlowDiagram from "~/resources/components/marketing/flow-diagram";
 import ProductMockup from "~/resources/components/marketing/product-mockups";
 import { BROWSER_FLOW_EXAMPLES, browserFlowsPage } from "~/resources/content/browser-flows";
 import DocumentLayout from "~/resources/layouts/document";
@@ -162,7 +163,7 @@ export default createAction(routes.browserFlows, async (ctx) => {
 						}))}
 						parts={{ body: [tabSize()] }}
 					/>
-					<Feature.Grid columns={3}>
+					<Feature.Grid columns={3} mix={[mbs(8)]}>
 						{BROWSER_FLOW_EXAMPLES.map((example) => (
 							<Feature key={example.key}>
 								<Feature.Icon tone="brand">{EXAMPLE_ICONS[example.key]}</Feature.Icon>
@@ -183,14 +184,17 @@ export default createAction(routes.browserFlows, async (ctx) => {
 					</MarketingHeader>
 					<Feature.Grid columns={2}>
 						{[
-							{ column: page.contrast.http, icon: <GlobeIcon size={24} strokeWidth={1.5} /> },
+							{
+								column: page.contrast.http,
+								icon: <GlobeIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
+							},
 							{
 								column: page.contrast.browser,
-								icon: <MousePointerClickIcon size={24} strokeWidth={1.5} />,
+								icon: <MousePointerClickIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 							},
 						].map(({ column, icon }) => (
 							<Feature key={column.title}>
-								<Feature.Icon>{icon}</Feature.Icon>
+								<Feature.Icon tone="brand">{icon}</Feature.Icon>
 								<Feature.Title>{column.title}</Feature.Title>
 								<Feature.Description>
 									<CheckList>
@@ -225,18 +229,38 @@ export default createAction(routes.browserFlows, async (ctx) => {
 				</MarketingSection>
 
 				<FeatureBand
-					layout="steps"
+					id="how-it-works"
+					layout="split"
+					lean="media"
 					tone="tinted"
 					eyebrow={page.steps.badge}
 					title={page.steps.title}
 					description={page.steps.description}
 					mix={[viewReveal()]}
+					media={
+						<FlowDiagram
+							labels={{
+								name: page.steps.diagram.name,
+								pause: t("landing.flows.diagram.pause"),
+								schedule: t("landing.flows.diagram.schedule"),
+								scheduleDetail: t("landing.flows.diagram.scheduleDetail", {
+									minutes: FLOW_INTERVALS_SECONDS[0] / 60,
+								}),
+								steps: [...page.steps.diagram.steps],
+								passed: t("landing.flows.diagram.passed"),
+								alert: t("landing.flows.diagram.alert"),
+							}}
+							code={page.steps.diagram.code}
+						/>
+					}
 				>
-					{page.steps.list.map((step) => (
-						<StepList.Item key={step.title} title={step.title}>
-							{step.description}
-						</StepList.Item>
-					))}
+					<StepList variant="timeline">
+						{page.steps.list.map((step) => (
+							<StepList.Item key={step.title} title={step.title}>
+								{step.description}
+							</StepList.Item>
+						))}
+					</StepList>
 				</FeatureBand>
 
 				<FaqBand

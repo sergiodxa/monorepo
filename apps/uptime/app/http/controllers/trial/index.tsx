@@ -359,22 +359,22 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 
 	let benefits: SellingPoint[] = [
 		{
-			icon: <ClockIcon size={24} strokeWidth={1.5} />,
+			icon: <ClockIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.benefits.list.hourly.title"),
 			description: t("page.trial.benefits.list.hourly.description", { days }),
 		},
 		{
-			icon: <BellIcon size={24} strokeWidth={1.5} />,
+			icon: <BellIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.benefits.list.changes.title"),
 			description: t("page.trial.benefits.list.changes.description"),
 		},
 		{
-			icon: <MailIcon size={24} strokeWidth={1.5} />,
+			icon: <MailIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.benefits.list.digest.title"),
 			description: t("page.trial.benefits.list.digest.description", { days }),
 		},
 		{
-			icon: <CreditCardIcon size={24} strokeWidth={1.5} />,
+			icon: <CreditCardIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.benefits.list.noAccount.title"),
 			description: t("page.trial.benefits.list.noAccount.description"),
 		},
@@ -386,17 +386,17 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 	 */
 	let beyondHttp: SellingPoint[] = [
 		{
-			icon: <NetworkIcon size={24} strokeWidth={1.5} />,
+			icon: <NetworkIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.more.list.tcp.title"),
 			description: t("page.trial.more.list.tcp.description"),
 		},
 		{
-			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
+			icon: <GlobeIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.more.list.dns.title"),
 			description: t("page.trial.more.list.dns.description"),
 		},
 		{
-			icon: <ClockIcon size={24} strokeWidth={1.5} />,
+			icon: <ClockIcon size={24} strokeWidth={1.5} aria-hidden="true" />,
 			title: t("page.trial.more.list.cron.title"),
 			description: t("page.trial.more.list.cron.description"),
 		},
@@ -489,7 +489,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 					<div mix={[vstack({ gap: 3 })]}>
 						<LinkButton href={monitorOffer.createHref} mix={[is("full"), justify("center")]}>
 							{t("page.trial.monitor.create")}
-							<ArrowRightIcon size={18} strokeWidth={1.5} />
+							<ArrowRightIcon size={18} strokeWidth={1.5} aria-hidden="true" />
 						</LinkButton>
 						{monitorOffer.subscribeHref === null ? null : (
 							<LinkButton
@@ -527,7 +527,12 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 					>
 						{expectations.map((item) => (
 							<li key={item} mix={[flex(), items("start"), gap(2)]}>
-								<CheckIcon size={16} strokeWidth={2} mix={[fg("brand"), mbs("2px")]} />
+								<CheckIcon
+									size={16}
+									strokeWidth={2}
+									aria-hidden="true"
+									mix={[fg("brand"), mbs("2px")]}
+								/>
 								<span mix={[wordBreak("break-word")]}>{item}</span>
 							</li>
 						))}
@@ -751,7 +756,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 						<Feature.Grid columns={3}>
 							{beyondHttp.map((point) => (
 								<Feature key={point.title}>
-									<Feature.Icon>{point.icon}</Feature.Icon>
+									<Feature.Icon tone="brand">{point.icon}</Feature.Icon>
 									<Feature.Title>{point.title}</Feature.Title>
 									<Feature.Description>{point.description}</Feature.Description>
 								</Feature>

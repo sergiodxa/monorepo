@@ -152,7 +152,7 @@ export const browserFlowsPage = {
 			{
 				title: "Write the click-through",
 				description:
-					'`use browser`, open the page, fill by role and name, click the button, and assert on the heading or path that means "it worked".',
+					'Open the page, fill fields by role and name, click the button, and assert on the heading or path that means "it worked".',
 			},
 			{
 				title: "Get alerted on the failing step",
@@ -160,6 +160,25 @@ export const browserFlowsPage = {
 					"A broken sign-in or checkout alerts through your existing channels, naming the expectation that failed.",
 			},
 		],
+		/**
+		 * The sign-in example's run as the steps diagram plays it: each caption over the spec
+		 * line from {@link BROWSER_FLOW_EXAMPLES} that performs it.
+		 */
+		diagram: {
+			name: "A browser flow run, step by step",
+			steps: [
+				"Open the sign-in page",
+				"Fill the Email field",
+				"Click Sign in",
+				"Expect the dashboard heading",
+			],
+			code: [
+				'browser.open "…/login"',
+				'browser.fill textbox "Email" with …',
+				'browser.click button "Sign in"',
+				'expect browser.heading "Dashboard"',
+			],
+		},
 	},
 	faqs: [
 		{

@@ -31,6 +31,12 @@ const RESET_AT = 94;
 /** Inline size of a step's status dot; the rail runs through the dots' centres. */
 const DOT = "1.75rem";
 
+/**
+ * Room the schedule row keeps at its end for the pause toggle pinned to the surface's top
+ * corner, so a caption that wraps on a phone stays clear of the button.
+ */
+const PAUSE_CLEARANCE = "2.75rem";
+
 /** Space between rows, which each connector spans to reach the next dot. */
 const ROW_GAP = "1.25rem";
 
@@ -54,6 +60,11 @@ namespace FlowDiagram {
 			passed: string;
 			alert: string;
 		};
+		/**
+		 * The spec line under each step, in run order; the documented HTTP sign-in flow when
+		 * omitted, so a page about another kind of flow shows its own syntax.
+		 */
+		code?: readonly [string, string, string, string];
 	}
 }
 
@@ -63,8 +74,8 @@ namespace FlowDiagram {
  */
 export default function FlowDiagram(handle: Handle<FlowDiagram.Props>) {
 	return () => {
-		let { labels } = handle.props;
-		let outcomeAt = FIRST_STEP_AT + STEP_CODE.length * STEP_GAP;
+		let { labels, code: stepCode = STEP_CODE } = handle.props;
+		let outcomeAt = FIRST_STEP_AT + stepCode.length * STEP_GAP;
 
 		return (
 			<MotionLoop pauseLabel={labels.pause} placement="start-end">
@@ -97,12 +108,21 @@ export default function FlowDiagram(handle: Handle<FlowDiagram.Props>) {
 								<ClockIcon size={14} aria-hidden="true" />
 							</span>
 							<Connector index={-1} />
-							<span mix={[raw({ display: "grid", gap: "0.125rem", minInlineSize: "0" })]}>
+							<span
+								mix={[
+									raw({
+										display: "grid",
+										gap: "0.125rem",
+										minInlineSize: "0",
+										paddingInlineEnd: PAUSE_CLEARANCE,
+									}),
+								]}
+							>
 								<span mix={[caption()]}>{labels.schedule}</span>
 								<span mix={[detail()]}>{labels.scheduleDetail}</span>
 							</span>
 						</li>
-						{STEP_CODE.map((code, index) => (
+						{stepCode.map((code, index) => (
 							<li key={code} mix={[stepRow()]}>
 								<span mix={[dot(), stepDot(index)]}>
 									<CheckIcon
@@ -112,7 +132,7 @@ export default function FlowDiagram(handle: Handle<FlowDiagram.Props>) {
 										mix={[stepCheck(index)]}
 									/>
 								</span>
-								{index < STEP_CODE.length - 1 ? <Connector index={index} /> : null}
+								{index < stepCode.length - 1 ? <Connector index={index} /> : null}
 								<span mix={[raw({ display: "grid", gap: "0.125rem", minInlineSize: "0" })]}>
 									<span mix={[caption()]}>{labels.steps[index]}</span>
 									<code mix={[detail(), raw({ fontFamily: "var(--ui-font-mono)" })]}>{code}</code>

@@ -35,6 +35,7 @@ import { SEO } from "~/app/initializers/seo";
 import { findClaimViolations } from "~/app/services/public-claims";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
+import { elementStyles } from "~/app/test/rendered-styles";
 import routes from "~/routes/web";
 
 import trust from "./trust";
@@ -165,6 +166,41 @@ describe("GET /trust", () => {
 		expect(article).not.toMatch(/\bguaranteed\b/i);
 		expect(article).not.toMatch(/\bwe guarantee\b/i);
 		expect(article).not.toMatch(/\buptime guarantee\b/i);
+	});
+
+	/**
+	 * The accountability cards are `h3`s, so their band needs an `h2` of its own: without one the
+	 * outline jumped from the page's `h1` straight to the cards.
+	 */
+	test("never skips a heading level between the title and the cards", async () => {
+		let response = await getTrust(null);
+
+		let body = await response.text();
+		let main = body.slice(body.indexOf("<main"), body.indexOf("</main>"));
+		let levels = [...main.matchAll(/<h([1-6])[\s>]/g)].map((match) => Number(match[1]));
+
+		expect(levels[0]).toBe(1);
+		for (let index = 1; index < levels.length; index++) {
+			expect(levels[index]! - levels[index - 1]!).toBeLessThanOrEqual(1);
+		}
+	});
+
+	/**
+	 * Nine regions fill a three-column grid exactly. An auto-filled grid fitted four across at a
+	 * desktop width and left the ninth region alone on its own row.
+	 */
+	test("lays the nine regions three to a row on wider screens", async () => {
+		let response = await getTrust(null);
+
+		let body = await response.text();
+		let styles = elementStyles(body, 'data-slot="check-list"', body.indexOf('id="regions"')).join(
+			"\n",
+		);
+
+		expect(styles).toMatch(
+			/@container \(min-width: 40rem\)[\s\S]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/,
+		);
+		expect(styles).not.toContain("auto-fill");
 	});
 
 	test("its copy passes the public-claims guard", () => {

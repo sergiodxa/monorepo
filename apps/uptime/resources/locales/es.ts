@@ -725,6 +725,10 @@ export default {
 			wnam: "América del Norte occidental",
 		},
 		sections: {
+			accountability: {
+				badge: "Responsabilidad",
+				title: "Quién responde por tus alertas",
+			},
 			whoRuns: {
 				title: "Quién lo opera",
 				bodyPrefix: "Uptime está construido y operado por ",

@@ -593,6 +593,27 @@ describe("POST /try", () => {
 	});
 
 	/**
+	 * The selling sections' icons repeat what each card's title says, so a screen reader must
+	 * skip them; every icon tile shares the brand tone the benefits list uses.
+	 */
+	test("keeps the selling sections' icons decorative and in the brand tone", async () => {
+		let { body } = await runTry({ url: "example.com" });
+		let selling = body.slice(
+			body.lastIndexOf("<section", body.indexOf("A check every hour")),
+			body.indexOf("</main>"),
+		);
+
+		let icons = selling.match(/<svg[^>]*>/g) ?? [];
+		expect(icons.length).toBeGreaterThan(0);
+		for (let icon of icons) expect(icon).toContain('aria-hidden="true"');
+		expect(
+			selling
+				.match(/data-slot="feature-icon"[^>]*/g)
+				?.every((tile) => tile.includes('data-tone="brand"')),
+		).toBe(true);
+	});
+
+	/**
 	 * The closing pitch is about carrying on, so what it costs must be on it: the
 	 * price is asserted as `pricing.ts` formats it, alongside the two destinations,
 	 * so a rewrite of the copy cannot drop the price or its links.

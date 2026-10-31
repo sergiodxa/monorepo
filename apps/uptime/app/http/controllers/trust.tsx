@@ -9,6 +9,7 @@
 
 import { ActivityIcon, CodeIcon, UserIcon } from "@sdxc/icons";
 import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
 import { is, maxIs, mbs, mi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Feature, MarketingHeader, MarketingSection, Typeset } from "@sdxc/ui";
@@ -81,10 +82,13 @@ export default createAction(routes.trust, async (ctx) => {
 				/>
 
 				<MarketingSection mix={[viewReveal()]}>
+					<MarketingHeader eyebrow={t("trust.sections.accountability.badge")} align="center">
+						{t("trust.sections.accountability.title")}
+					</MarketingHeader>
 					<Feature.Grid columns={3}>
 						<Feature>
 							<Feature.Icon tone="brand">
-								<UserIcon size={24} strokeWidth={1.5} />
+								<UserIcon size={24} strokeWidth={1.5} aria-hidden="true" />
 							</Feature.Icon>
 							<Feature.Title>{t("trust.sections.whoRuns.title")}</Feature.Title>
 							<Feature.Description>
@@ -102,7 +106,7 @@ export default createAction(routes.trust, async (ctx) => {
 						</Feature>
 						<Feature>
 							<Feature.Icon tone="brand">
-								<CodeIcon size={24} strokeWidth={1.5} />
+								<CodeIcon size={24} strokeWidth={1.5} aria-hidden="true" />
 							</Feature.Icon>
 							<Feature.Title>{t("trust.sections.source.title")}</Feature.Title>
 							<Feature.Description>
@@ -120,7 +124,7 @@ export default createAction(routes.trust, async (ctx) => {
 						</Feature>
 						<Feature>
 							<Feature.Icon tone="brand">
-								<ActivityIcon size={24} strokeWidth={1.5} />
+								<ActivityIcon size={24} strokeWidth={1.5} aria-hidden="true" />
 							</Feature.Icon>
 							<Feature.Title>{t("trust.sections.ownStatus.title")}</Feature.Title>
 							<Feature.Description>
@@ -149,15 +153,16 @@ export default createAction(routes.trust, async (ctx) => {
 							gap(4),
 							is("full"),
 							mi("auto"),
-							maxIs("960px"),
-							gridTemplate({ columns: "repeat(auto-fill, minmax(14rem, 1fr))" }),
+							maxIs("720px"),
+							gridTemplate({ columns: "minmax(0, 1fr)" }),
+							at("40rem", gridTemplate({ columns: "repeat(3, minmax(0, 1fr))" })),
 						]}
 					>
 						{PROBE_REGIONS.map((region) => (
 							<CheckRow key={region}>{t(`trust.regions.${region}`)}</CheckRow>
 						))}
 					</CheckList>
-					<div mix={[vstack({ gap: 4 }), mbs(12), is("full"), mi("auto"), maxIs("65ch")]}>
+					<div mix={[vstack({ gap: 4 }), mbs(12), is("full"), mi("auto"), maxIs("720px")]}>
 						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.hint")}</p>
 						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.timing")}</p>
 					</div>
