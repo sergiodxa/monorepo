@@ -263,6 +263,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
 - `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
 - `DocsPageHeader` — breadcrumb, `<h1>`, lead, `notice`, and a meta row with `updated` (a `<time>`) and `actions`.
+- `PageActions` — "Copy page" split button over a popover menu of `links`; the copy is the island `@sdxc/ui/page-actions`.
 - `NextSteps` — hand-written "Next steps" heading plus 2–4 links, as `cards` or a `list`.
 - `DocsPager` — previous/next whole-card links from `findNeighbours(tree, path, { boundary })` in `@sdxc/ui/utils`.
 - `DocsNav` — docs sidebar from a `DocsTree`: current page marked and scrolled into view, `<details>` groups, optional title `filter`, `footer`; island `@sdxc/ui/docs-nav-tools`.
@@ -334,6 +335,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `commandKeys(model)`            | `Command`                  | Arrow keys over matches; Enter activates the active item's link/button. |
 | `contextMenu(id, options?)`     | `ContextMenu.Trigger`      | Opens popover `id` at the pointer on right-click or the menu key.       |
 | `copyFeedback(copiedLabel)`     | a copy button              | `data-copied` for 2s and the label announced after a copy.              |
+| `copyFromUrl(href, failed?)`    | a copy button              | Fetches `href` and copies its body; dispatches `ui:copy`.               |
 | `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target, minus `data-copy-exclude`.  |
 | `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
 | `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
