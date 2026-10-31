@@ -142,10 +142,12 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain("/docs/concepts/http-monitors.md");
 	});
 
-	test("thanks the reader in place of the form after they answered", async () => {
+	test("thanks the reader under the page header, where the reloaded page opens", async () => {
 		let body = await (await getDocsShow("concepts/http-monitors", "?feedback=sent")).text();
 
-		expect(body).toContain("Thanks — your answer helps us improve this page.");
+		let thanks = body.indexOf("Thanks — your answer helps us improve this page.");
+		expect(thanks).toBeGreaterThan(-1);
+		expect(thanks).toBeLessThan(body.indexOf('id="configuration-options"'));
 		expect(body).not.toContain('action="/docs/feedback"');
 	});
 

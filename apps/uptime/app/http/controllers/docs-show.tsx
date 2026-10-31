@@ -19,10 +19,12 @@ import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import {
+	Alert,
 	DocsFeedback,
 	DocsPageHeader,
 	NextSteps,
@@ -71,8 +73,8 @@ function isProblemType(slug: string): boolean {
 
 /**
  * GET /docs/*slug — an individual documentation page. Falls back to the shared docs
- * description when frontmatter omits one; a `?feedback=sent` query thanks the reader in
- * place of the feedback form after they answered it.
+ * description when frontmatter omits one; a `?feedback=sent` query thanks the reader under
+ * the page header, where the reloaded page opens, and in place of the feedback form.
  */
 export default createAction(routes.docs.show, async (ctx) => {
 	let { slug: requested } = s.parse(s.object({ slug: s.string() }), ctx.params);
@@ -218,6 +220,60 @@ export default createAction(routes.docs.show, async (ctx) => {
 				previous={previous}
 				next={next}
 				section={section}
+				pageEnd={
+					<>
+						<DocsFeedback
+							id="docs-feedback"
+							mix={[raw({ scrollMarginBlockStart: "var(--ui-docs-scroll-margin)" })]}
+							action={routes.docs.feedback.href()}
+							page={activePath}
+							state={feedbackSent ? "sent" : "idle"}
+							labels={{
+								question: t("docs.feedback.question"),
+								yes: t("docs.feedback.yes"),
+								no: t("docs.feedback.no"),
+								note: t("docs.feedback.note"),
+								send: t("docs.feedback.send"),
+								thanks: t("docs.feedback.thanks"),
+							}}
+						/>
+
+						{upNext.length > 0 ? (
+							<NextSteps
+								title={t("docs.next.title")}
+								id="up-next"
+								items={upNext.map((doc) => ({
+									title: doc.frontmatter.title,
+									href: doc.path,
+									description: doc.frontmatter.description,
+								}))}
+							/>
+						) : null}
+
+						<aside
+							aria-labelledby="docs-questions"
+							mix={[
+								vstack({ gap: 2 }),
+								p(5),
+								rounded("lg"),
+								border({ color: "neutral.border", width: 1, style: "solid" }),
+							]}
+						>
+							<h2
+								id="docs-questions"
+								mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
+							>
+								{t("docs.questions.title")}
+							</h2>
+							<p mix={[m(0), text("sm"), fg("neutral")]}>
+								{t("docs.questions.body")}{" "}
+								<a href={supportHref(activePath)} mix={[fg("brand"), weight("medium")]}>
+									{t("docs.questions.link")}
+								</a>
+							</p>
+						</aside>
+					</>
+				}
 			>
 				<article>
 					<DocsPageHeader
@@ -249,6 +305,14 @@ export default createAction(routes.docs.show, async (ctx) => {
 						}
 					/>
 
+					{feedbackSent ? (
+						<Alert color="success" live="polite" mix={[m(0, 0, "2rem", 0)]}>
+							<Alert.Content>
+								<Alert.Description>{t("docs.feedback.thanks")}</Alert.Description>
+							</Alert.Content>
+						</Alert>
+					) : null}
+
 					<Typeset preset="docs">
 						{toRemix(body, {
 							components: docsMarkdownComponents({
@@ -266,57 +330,6 @@ export default createAction(routes.docs.show, async (ctx) => {
 						})}
 					</Typeset>
 				</article>
-
-				<DocsFeedback
-					id="docs-feedback"
-					action={routes.docs.feedback.href()}
-					page={activePath}
-					state={feedbackSent ? "sent" : "idle"}
-					labels={{
-						question: t("docs.feedback.question"),
-						yes: t("docs.feedback.yes"),
-						no: t("docs.feedback.no"),
-						note: t("docs.feedback.note"),
-						send: t("docs.feedback.send"),
-						thanks: t("docs.feedback.thanks"),
-					}}
-				/>
-
-				{upNext.length > 0 ? (
-					<NextSteps
-						title={t("docs.next.title")}
-						id="up-next"
-						items={upNext.map((doc) => ({
-							title: doc.frontmatter.title,
-							href: doc.path,
-							description: doc.frontmatter.description,
-						}))}
-					/>
-				) : null}
-
-				<aside
-					aria-labelledby="docs-questions"
-					mix={[
-						vstack({ gap: 2 }),
-						m("2.5rem", 0, 0, 0),
-						p(5),
-						rounded("lg"),
-						border({ color: "neutral.border", width: 1, style: "solid" }),
-					]}
-				>
-					<h2
-						id="docs-questions"
-						mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}
-					>
-						{t("docs.questions.title")}
-					</h2>
-					<p mix={[m(0), text("sm"), fg("neutral")]}>
-						{t("docs.questions.body")}{" "}
-						<a href={supportHref(activePath)} mix={[fg("brand"), weight("medium")]}>
-							{t("docs.questions.link")}
-						</a>
-					</p>
-				</aside>
 			</DocsLayout>
 		</DocumentLayout>,
 	);

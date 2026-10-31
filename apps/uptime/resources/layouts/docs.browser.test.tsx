@@ -79,7 +79,7 @@ function rectOf(view: RenderResult, selector: string): DOMRect {
 }
 
 /** Mounts the shell around `children` with English labels. */
-function mount(children: RemixNode, measure?: string) {
+function mount(children: RemixNode, measure?: string, pageEnd?: RemixNode) {
 	let { t } = translate("en");
 	mounted = render(
 		<DocsLayout
@@ -90,6 +90,7 @@ function mount(children: RemixNode, measure?: string) {
 			labels={buildDocsLabels(t)}
 			anchors={ANCHORS}
 			measure={measure}
+			pageEnd={pageEnd}
 		>
 			{children}
 		</DocsLayout>,
@@ -171,5 +172,26 @@ describe("DocsLayout", () => {
 		);
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+	});
+
+	test("spaces the page end from the article and its blocks from each other", async () => {
+		await page.viewport(1280, 900);
+		let view = mount(
+			<article id="article">
+				<p>The last paragraph.</p>
+			</article>,
+			undefined,
+			<>
+				<div id="feedback">Was this page helpful?</div>
+				<div id="next">Up next</div>
+			</>,
+		);
+
+		let article = rectOf(view, "#article");
+		let feedback = rectOf(view, "#feedback");
+		let next = rectOf(view, "#next");
+
+		expect(feedback.top - article.bottom).toBeGreaterThanOrEqual(40);
+		expect(next.top - feedback.bottom).toBeGreaterThanOrEqual(32);
 	});
 });

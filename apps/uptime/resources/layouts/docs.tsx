@@ -14,8 +14,8 @@ import type { Handle, RemixNode } from "remix/component";
 import { MailIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { hstack } from "@sdxc/u/layout";
-import { mbe, pbe, pbs } from "@sdxc/u/size";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { mbe, mbs, pbe, pbs } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { DocsNav, DocsPager } from "@sdxc/ui";
@@ -41,6 +41,9 @@ const DOCS_MEASURE = "88rem";
  * actions read as the header's last line instead of the body's first.
  */
 const PAGE_HEADER_GAP = "2.5rem";
+
+/** Room between the article's last block and the page end, a step more than its own gaps. */
+const PAGE_END_GAP = "3rem";
 
 /**
  * The contact form, told which page the reader asks from, so their question arrives with
@@ -84,6 +87,11 @@ namespace DocsLayout {
 		 * @default "48rem"
 		 */
 		measure?: string;
+		/**
+		 * What closes the page after the article (feedback, next steps, a route to support),
+		 * spaced from the article and from each other by one gap.
+		 */
+		pageEnd?: RemixNode;
 		children: RemixNode;
 	}
 }
@@ -130,6 +138,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			next = null,
 			section,
 			measure = "48rem",
+			pageEnd,
 			children,
 		} = handle.props;
 
@@ -188,6 +197,14 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							]}
 						>
 							{children}
+							{pageEnd ? (
+								<div
+									data-slot="docs-page-end"
+									mix={[vstack({ gap: 10, align: "stretch" }), mbs(PAGE_END_GAP)]}
+								>
+									{pageEnd}
+								</div>
+							) : null}
 							<DocsPager previous={previous} next={next} section={section} labels={labels.pager} />
 						</div>
 					</DocsShell>

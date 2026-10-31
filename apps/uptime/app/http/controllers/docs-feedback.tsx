@@ -1,7 +1,7 @@
 /**
- * POST /docs/feedback receives a page's "Was this helpful?" answer and records it on the
- * request's wide log event, then sends the reader back to the page they answered on, which thanks
- * them in place of the form. A submission that fails validation still lands back on docs.
+ * POST /docs/feedback records a page's "Was this helpful?" answer on the request's wide log
+ * event, then sends the reader back to that page, which thanks them under its header where
+ * the reloaded page opens. A submission that fails validation still lands back on the docs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,5 +37,5 @@ export default createAction(routes.docs.feedback, async (ctx) => {
 	}
 
 	ctx.log.set({ docs_feedback: { page, helpful, note: note === "" ? undefined : note } });
-	return redirect(`${page}?feedback=sent#docs-feedback`, { status: redirect.Status.SeeOther });
+	return redirect(`${page}?feedback=sent`, { status: redirect.Status.SeeOther });
 });

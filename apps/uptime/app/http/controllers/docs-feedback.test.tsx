@@ -34,7 +34,7 @@ describe("POST /docs/feedback", () => {
 		let response = await submit({ helpful: "yes", page: "/docs/quickstart", note: "" });
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe("/docs/quickstart?feedback=sent#docs-feedback");
+		expect(response.headers.get("Location")).toBe("/docs/quickstart?feedback=sent");
 	});
 
 	test("sends a page outside the docs to the hub", async () => {
