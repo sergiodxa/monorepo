@@ -10,11 +10,16 @@ import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 import { searchPackages } from "~/app/services/search";
+import { recordSiteEvent } from "~/app/services/site-events";
 import { absoluteUrl } from "~/config/constants";
 
 /** Lists the matching packages, or refuses with a hint toward `list_packages`. */
 export default createTool(toolset.searchPackages, async (ctx) => {
 	let matches = await searchPackages(ctx.input.query, ctx.input.limit);
+	recordSiteEvent({
+		tool: { name: "search_packages" },
+		search: { surface: "search_packages", query: ctx.input.query, results: matches.length },
+	});
 
 	if (matches.length === 0) {
 		throw new ToolError(

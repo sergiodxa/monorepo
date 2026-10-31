@@ -16,6 +16,7 @@ import { withBundleCache } from "~/app/http/caching";
 import { buildSearchIndex } from "~/app/services/search";
 import { matchDocuments, parseSearch } from "~/app/services/search-query";
 import { SearchResults } from "~/app/services/search-results";
+import { recordSiteEvent } from "~/app/services/site-events";
 import { SearchView } from "~/resources/views/search";
 import routes from "~/routes/web";
 
@@ -54,10 +55,15 @@ export default createAction(routes.search, async (ctx) => {
 		return redirect(`${routes.search.href()}?${new URLSearchParams({ q: text })}`);
 	}
 
+	let matches = matchDocuments(await buildSearchIndex(), parsed.data);
+	if (params.data.page === 1) {
+		recordSiteEvent({ search: { surface: "page", query: text, results: matches.length } });
+	}
+
 	let model = SearchResults.results({
 		query: text,
 		parsed: parsed.data,
-		matches: matchDocuments(await buildSearchIndex(), parsed.data),
+		matches,
 		page: params.data.page,
 		perPage: params.data.perPage,
 		url: ctx.url,

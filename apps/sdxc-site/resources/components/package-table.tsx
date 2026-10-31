@@ -42,10 +42,10 @@ export const RANGES = { "30": 30, "90": 90, all: Number.POSITIVE_INFINITY } as c
 export type Range = keyof typeof RANGES;
 
 /** A column the table can be ordered by. */
-export type SortKey = "name" | "week" | "growth" | "month" | "total";
+export type SortKey = "name" | "week" | "growth" | "month" | "total" | "jsdelivr";
 
 /** The columns a header can sort by, in the order they appear. */
-const SORT_KEYS: SortKey[] = ["name", "week", "growth", "month", "total"];
+const SORT_KEYS: SortKey[] = ["name", "week", "growth", "month", "total", "jsdelivr"];
 
 /** What the reader picked, carried through every link so one choice never resets another. */
 export type StatsQuery = {
@@ -66,6 +66,8 @@ export type PackageRow = {
 	growth7: number | null;
 	last30: number;
 	total: number;
+	/** jsDelivr hits over the last 30 days, the browser and CDN use npm leaves out. */
+	jsdelivr30: number;
 	latest: string | null;
 	latestShare: number | null;
 	versions: number;
@@ -96,6 +98,7 @@ export function sortRows(rows: PackageRow[], key: SortKey): PackageRow[] {
 		if (key === "week") return row.last7;
 		if (key === "month") return row.last30;
 		if (key === "total") return row.total;
+		if (key === "jsdelivr") return row.jsdelivr30;
 		return row.growth7 ?? Number.NEGATIVE_INFINITY;
 	};
 
@@ -168,6 +171,9 @@ export const PackageTable = clientEntry(
 								<Table.Column numeric {...sortable.total}>
 									Total
 								</Table.Column>
+								<Table.Column numeric {...sortable.jsdelivr}>
+									jsDelivr, 30 days
+								</Table.Column>
 								<Table.Column>Latest</Table.Column>
 								<Table.Column numeric>On latest</Table.Column>
 								<Table.Column numeric>Versions</Table.Column>
@@ -192,6 +198,7 @@ export const PackageTable = clientEntry(
 									</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.last30)}</Table.Cell>
 									<Table.Cell numeric>{NUMBER_FORMAT.format(row.total)}</Table.Cell>
+									<Table.Cell numeric>{NUMBER_FORMAT.format(row.jsdelivr30)}</Table.Cell>
 									<Table.Cell mix={[nowrap(), text("xs"), fg("neutral.muted")]}>
 										{row.latest ?? "unpublished"}
 									</Table.Cell>

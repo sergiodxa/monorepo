@@ -140,8 +140,9 @@ export default route({
 	 */
 	demo: get("/demo/:slug"),
 	/**
-	 * npm download history for every package, for the maintainer. Linked from nowhere and
-	 * kept out of search engines; its address is the only way in.
+	 * Usage stats for every package, for the maintainer. `.json` answers every snapshot the
+	 * page draws from and `.md` a report of its figures, for an agent to analyse. Linked from
+	 * nowhere and kept out of search engines; the address is the only way in.
 	 */
-	stats: get("/stats"),
+	stats: get("/stats(.:format)"),
 });

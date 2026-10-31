@@ -139,3 +139,87 @@ describe("GET /stats", () => {
 		expect(await cache.read(NPM_STATS_CACHE_KEY)).toMatchObject({ status: "success" });
 	});
 });
+
+describe("GET /stats.json", () => {
+	test("reports every snapshot and each package's figures, out of search engines", async () => {
+		await store([stats("result", 2)]);
+
+		let response = await fetchApp("/stats.json");
+		let body: unknown = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toContain("application/json");
+		expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+		expect(body).toMatchObject({
+			npm: {
+				collection: { last7: 14 },
+				packages: [{ last7: 14, latestShare: 0.75, stats: { directory: "result" } }],
+			},
+		});
+		expect(body).toHaveProperty("adoption");
+		expect(body).toHaveProperty("github");
+		expect(body).toHaveProperty("events");
+	});
+});
+
+describe("GET /stats.md", () => {
+	test("reports the collection and each package as markdown", async () => {
+		await store([stats("result", 2)]);
+
+		let response = await fetchApp("/stats.md");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toContain("text/markdown");
+		expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+		expect(body).toContain("# sdxc stats");
+		expect(body).toContain("- Last 7 days: 14");
+		expect(body).toContain("| @sdxc/result | 14 |");
+	});
+});
+
+describe("GET /stats with another extension", () => {
+	test("answers 404 rather than the page", async () => {
+		await store([stats("result", 2)]);
+
+		expect((await fetchApp("/stats.xml")).status).toBe(404);
+	});
+});
+
+describe("GET /stats.md sections", () => {
+	test("reports stored adoption and marks unread sections as pending", async () => {
+		let { ADOPTION_CACHE_KEY } = await import("~/app/services/adoption");
+		await store([stats("result", 2)]);
+		await cache.write(ADOPTION_CACHE_KEY, {
+			fetchedAt: new Date().toISOString(),
+			packages: [
+				{
+					directory: "result",
+					name: "@sdxc/result",
+					version: "2026.10.13",
+					directDependents: 12,
+					collectionDependents: 9,
+					outsideDependents: 3,
+				},
+			],
+			missing: [],
+			repositories: [
+				{
+					fullName: "ada/app",
+					url: "https://github.com/ada/app",
+					paths: ["package.json"],
+					packages: ["@sdxc/result"],
+				},
+			],
+			repositoriesNote: null,
+		});
+
+		let body = await (await fetchApp("/stats.md")).text();
+
+		expect(body).toContain("## Adoption");
+		expect(body).toContain("| @sdxc/result | 3 | 12 | 9 |");
+		expect(body).toContain("- [ada/app](https://github.com/ada/app): @sdxc/result");
+		expect(body).toContain("## GitHub\n\nNot read yet");
+		expect(body).toContain("## Searches and MCP calls\n\nNothing recorded");
+	});
+});

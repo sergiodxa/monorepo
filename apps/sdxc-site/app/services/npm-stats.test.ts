@@ -15,18 +15,23 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import type { NpmStatsSnapshot, PackageStats } from "~/app/services/npm-stats";
 
 import {
+	appendUpgrade,
 	collectionDaily,
+	collectionJsdelivr,
 	cumulative,
 	currentPackages,
 	daysBetween,
 	fetchPackageStats,
 	growth,
 	historyWindow,
+	median,
 	needsRefresh,
 	NPM_STATS_CACHE_KEY,
 	readNpmStats,
 	refreshNpmStats,
 	rollingAverage,
+	sizeGrowth,
+	sizeHistory,
 	summarizePackage,
 	windowSum,
 } from "~/app/services/npm-stats";
@@ -38,9 +43,20 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** The three npm endpoints, answering for every package with `downloads` per day. */
-function npmHandlers(perDay: (directory: string, day: string) => number) {
+/** The three npm endpoints and jsDelivr, answering for every package with `downloads` per day. */
+function npmHandlers(perDay: (directory: string, day: string) => number, hitsPerDay = 0) {
 	return [
+		http.get("https://data.jsdelivr.com/v1/stats/packages/npm/@sdxc/:directory", () =>
+			HttpResponse.json({
+				hits: {
+					rank: null,
+					total: hitsPerDay * 365,
+					dates: Object.fromEntries(
+						daysBetween("2025-10-30", "2026-10-29").map((day) => [day, hitsPerDay]),
+					),
+				},
+			}),
+		),
 		http.get("https://api.npmjs.org/downloads/range/:range/@sdxc/:directory", ({ params }) => {
 			let [start, end] = String(params.range).split(":");
 			let directory = String(params.directory);
@@ -53,9 +69,16 @@ function npmHandlers(perDay: (directory: string, day: string) => number) {
 		}),
 		http.get("https://registry.npmjs.org/:name", () =>
 			HttpResponse.json({
-				time: { created: "2026-09-04T04:47:18.960Z", "2026.10.13": "2026-10-13T04:54:42.255Z" },
+				time: {
+					created: "2026-09-04T04:47:18.960Z",
+					"2026.9.4": "2026-09-04T04:47:18.960Z",
+					"2026.10.13": "2026-10-13T04:54:42.255Z",
+				},
 				"dist-tags": { latest: "2026.10.13" },
-				versions: { "2026.9.4": {}, "2026.10.13": { dist: { unpackedSize: 42108 } } },
+				versions: {
+					"2026.9.4": { dist: { unpackedSize: 40000 } },
+					"2026.10.13": { dist: { unpackedSize: 42108 } },
+				},
 			}),
 		),
 		http.get("https://api.npmjs.org/versions/:name/last-week", () =>
@@ -114,7 +137,7 @@ describe("historyWindow", () => {
 
 describe("fetchPackageStats", () => {
 	test("aligns downloads with the days and reads the registry facts", async () => {
-		server.use(...npmHandlers((_, day) => (day === "2026-10-02" ? 7 : 0)));
+		server.use(...npmHandlers((_, day) => (day === "2026-10-02" ? 7 : 0), 2));
 
 		let result = await fetchPackageStats("result", ["2026-10-01", "2026-10-02"]);
 
@@ -131,7 +154,44 @@ describe("fetchPackageStats", () => {
 			unpackedSize: 42108,
 			versionDownloads: { "2026.10.13": 75, "2026.9.4": 25 },
 			through: "2026-10-02",
+			jsdelivr: [2, 2],
+			sizes: [
+				{ version: "2026.9.4", publishedAt: "2026-09-04", unpackedSize: 40000 },
+				{ version: "2026.10.13", publishedAt: "2026-10-13", unpackedSize: 42108 },
+			],
+			upgrades: [{ day: "2026-10-02", latest: "2026.10.13", share: 0.75 }],
 		});
+	});
+
+	test("reads the package when jsDelivr fails, keeping the hits it stored before", async () => {
+		server.use(
+			http.get("https://data.jsdelivr.com/*", () => new HttpResponse(null, { status: 500 })),
+			...npmHandlers(() => 1),
+		);
+		let previous = { ...stats("result", [0, 0]), jsdelivr: [4, 6] };
+
+		let result = await fetchPackageStats("result", ["2026-10-01", "2026-10-02"], 1, previous);
+
+		expect(isSuccess(result) && result.data.daily).toEqual([1, 1]);
+		expect(isSuccess(result) && result.data.jsdelivr).toEqual([4, 6]);
+	});
+
+	test("carries the upgrade history forward and replaces a same-day point", async () => {
+		server.use(...npmHandlers(() => 1));
+		let previous = {
+			...stats("result", [0]),
+			upgrades: [
+				{ day: "2026-09-30", latest: "2026.9.4", share: 0.2 },
+				{ day: "2026-10-01", latest: "2026.9.4", share: 0.3 },
+			],
+		};
+
+		let result = await fetchPackageStats("result", ["2026-10-01"], 1, previous);
+
+		expect(isSuccess(result) && result.data.upgrades).toEqual([
+			{ day: "2026-09-30", latest: "2026.9.4", share: 0.2 },
+			{ day: "2026-10-01", latest: "2026.10.13", share: 0.75 },
+		]);
 	});
 
 	test("reads an unpublished package as zeros rather than a failure", async () => {
@@ -143,6 +203,9 @@ describe("fetchPackageStats", () => {
 			daily: [0],
 			latest: null,
 			versions: 0,
+			jsdelivr: [0],
+			sizes: [],
+			upgrades: [],
 		});
 	});
 
@@ -198,6 +261,29 @@ describe("refreshNpmStats", () => {
 		expect(kept?.through).toBe("2026-10-29");
 	});
 
+	test("upgrades a snapshot stored before jsDelivr, sizes and upgrades were read", async () => {
+		server.use(...npmHandlers(() => 1, 3));
+		let cache = new MemoryCache();
+		let days = daysBetween("2026-09-01", "2026-10-29");
+		await cache.write(NPM_STATS_CACHE_KEY, {
+			fetchedAt: "2026-10-30T04:00:00.000Z",
+			days,
+			packages: [
+				stats(
+					"result",
+					days.map(() => 5),
+				),
+			],
+		});
+
+		let outcome = await refreshNpmStats(cache, { now: NOW });
+		let result = outcome.snapshot.packages.find((entry) => entry.directory === "result");
+
+		expect(result?.jsdelivr?.at(-2)).toBe(3);
+		expect(result?.sizes).toHaveLength(2);
+		expect(result?.upgrades).toEqual([{ day: "2026-10-30", latest: "2026.10.13", share: 0.75 }]);
+	});
+
 	test("stops when npm rate-limits it and resumes where it stopped", async () => {
 		let limited = true;
 		server.use(
@@ -243,6 +329,48 @@ describe("currentPackages", () => {
 	});
 });
 
+describe("sizeHistory", () => {
+	test("collapses unchanged sizes but keeps the first and the latest release", () => {
+		let time = {
+			created: "2026-09-01T00:00:00Z",
+			"1.0.0": "2026-09-01T00:00:00Z",
+			"1.0.1": "2026-09-02T00:00:00Z",
+			"1.1.0": "2026-09-03T00:00:00Z",
+			"1.1.1": "2026-09-04T00:00:00Z",
+		};
+		let versions = {
+			"1.1.1": { dist: { unpackedSize: 200 } },
+			"1.0.0": { dist: { unpackedSize: 100 } },
+			"1.0.1": { dist: { unpackedSize: 100 } },
+			"1.1.0": { dist: { unpackedSize: 200 } },
+			"0.0.0-unpublished": {},
+		};
+
+		let sizes = sizeHistory(time, versions);
+
+		expect(sizes.map((point) => point.version)).toEqual(["1.0.0", "1.1.0", "1.1.1"]);
+		expect(sizes[0]?.publishedAt).toBe("2026-09-01");
+		expect(sizeGrowth(sizes)).toBe(1);
+		expect(sizeGrowth(sizes.slice(0, 1))).toBeNull();
+	});
+});
+
+describe("appendUpgrade", () => {
+	test("keeps half a year of points", () => {
+		let history = daysBetween("2026-01-01", "2026-06-30").map((day) => ({
+			day,
+			latest: "1",
+			share: 0.5,
+		}));
+
+		let next = appendUpgrade(history, { day: "2026-07-01", latest: "2", share: 0.1 });
+
+		expect(next).toHaveLength(180);
+		expect(next.at(-1)).toEqual({ day: "2026-07-01", latest: "2", share: 0.1 });
+		expect(appendUpgrade(history, null)).toBe(history);
+	});
+});
+
 describe("summaries", () => {
 	test("compares the last week with the one before", () => {
 		let daily = [...Array.from({ length: 7 }, () => 2), ...Array.from({ length: 7 }, () => 3)];
@@ -250,6 +378,26 @@ describe("summaries", () => {
 
 		expect(summary).toMatchObject({ last7: 21, previous7: 14, total: 35, growth7: 0.5 });
 		expect(summary.latestShare).toBe(0.75);
+		expect(summary).toMatchObject({ jsdelivr30: 0, jsdelivrTotal: 0 });
+	});
+
+	test("totals jsDelivr hits for a package and the collection", () => {
+		let snapshot: NpmStatsSnapshot = {
+			fetchedAt: "",
+			days: ["2026-10-01", "2026-10-02"],
+			packages: [{ ...stats("a", [1, 2]), jsdelivr: [5, 1] }, stats("b", [3, 4])],
+		};
+		expect(collectionJsdelivr(snapshot)).toEqual([5, 1]);
+		expect(summarizePackage(snapshot.packages[0] ?? stats("a", []))).toMatchObject({
+			jsdelivr30: 6,
+			jsdelivrTotal: 6,
+		});
+	});
+
+	test("takes the median of an odd and an even count", () => {
+		expect(median([0.9, 0.1, 0.5])).toBe(0.5);
+		expect(median([1, 0, 0.5, 0.25])).toBe(0.375);
+		expect(median([])).toBeNull();
 	});
 
 	test("reports no growth figure for a package new this week", () => {

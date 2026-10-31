@@ -17,6 +17,7 @@ import { SearchFrameQuerySchema } from "~/app/http/validators/search";
 import { buildSearchIndex } from "~/app/services/search";
 import { matchDocuments, parseSearch } from "~/app/services/search-query";
 import { SearchResults } from "~/app/services/search-results";
+import { recordSiteEvent } from "~/app/services/site-events";
 import { SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
@@ -41,10 +42,12 @@ export default createAction(routes.searchFrame, async (ctx) => {
 	if (isFailure(parsed)) model = SearchResults.invalid(text, parsed.error);
 	else if (parsed.data === null) model = SearchResults.blank();
 	else {
+		let matches = matchDocuments(await buildSearchIndex(), parsed.data);
+		recordSiteEvent({ search: { surface: "dialog", query: text, results: matches.length } });
 		model = SearchResults.suggestions({
 			query: text,
 			parsed: parsed.data,
-			matches: matchDocuments(await buildSearchIndex(), parsed.data),
+			matches,
 			kind: await requestedKind(ctx.url),
 			limit: SUGGESTION_COUNT,
 		});

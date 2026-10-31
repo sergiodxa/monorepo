@@ -10,11 +10,13 @@ import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 import { listPackageGroups } from "~/app/services/packages";
+import { recordSiteEvent } from "~/app/services/site-events";
 import { absoluteUrl } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** Lists the groups, or refuses an unknown group by naming the ones that exist. */
 export default createTool(toolset.listPackages, (ctx) => {
+	recordSiteEvent({ tool: { name: "list_packages" } });
 	let groups = listPackageGroups();
 	let requested = ctx.input.group;
 

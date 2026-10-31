@@ -128,13 +128,20 @@ export default function DownloadChart(handle: Handle<DownloadChart.Props>) {
 	};
 }
 
-namespace Plot {
+export namespace Plot {
 	export interface Props {
 		title: string;
 		label: string;
+		/** The day under each x position, of which the first, middle and last are labelled. */
 		days: string[];
 		/** The value the top of the y axis stands for. */
 		top: number;
+		/**
+		 * How the top of the axis reads.
+		 *
+		 * @default A plain count
+		 */
+		format?: (value: number) => string;
 		children: RemixNode;
 	}
 }
@@ -143,18 +150,23 @@ namespace Plot {
  * One framed plot: its title and peak above, the series in a shared coordinate space, and
  * the first, middle and last day below.
  */
-function Plot(handle: Handle<Plot.Props>) {
+export function Plot(handle: Handle<Plot.Props>) {
 	return () => {
-		let { children, days, label, title, top } = handle.props;
+		let {
+			children,
+			days,
+			format = (value: number) => NUMBER_FORMAT.format(value),
+			label,
+			title,
+			top,
+		} = handle.props;
 		let middle = days[Math.floor(days.length / 2)];
 
 		return (
 			<figure mix={[vstack({ gap: 2, align: "stretch" }), m(0)]}>
 				<figcaption mix={hstack({ gap: 2, align: "center", justify: "between" })}>
 					<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>{title}</span>
-					<span mix={[text("xs"), fg("neutral.muted"), tabularNums()]}>
-						{NUMBER_FORMAT.format(top)}
-					</span>
+					<span mix={[text("xs"), fg("neutral.muted"), tabularNums()]}>{format(top)}</span>
 				</figcaption>
 
 				<Chart

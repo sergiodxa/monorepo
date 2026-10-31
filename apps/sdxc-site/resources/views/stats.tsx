@@ -20,10 +20,11 @@ import type { NpmStatsSnapshot, PackageSummary } from "~/app/services/npm-stats"
 import type { PackageRow, Range, StatsQuery } from "~/resources/components/package-table";
 
 import { formatFileSize } from "~/app/services/file-size";
-import { windowSum } from "~/app/services/npm-stats";
+import { collectionJsdelivr, median, windowSum } from "~/app/services/npm-stats";
 import Change from "~/resources/components/change";
 import DownloadChart, { formatDay } from "~/resources/components/download-chart";
 import PackageTable, { RANGES, statsHref } from "~/resources/components/package-table";
+import PackageTrends from "~/resources/components/package-trends";
 
 /** How counts read across the page. */
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US");
@@ -45,6 +46,7 @@ export function packageRow(summary: PackageSummary): PackageRow {
 		growth7: summary.growth7,
 		last30: summary.last30,
 		total: summary.total,
+		jsdelivr30: summary.jsdelivr30,
 		latest: stats.latest,
 		latestShare: summary.latestShare,
 		versions: stats.versions,
@@ -127,17 +129,21 @@ namespace StatsPage {
 		current: number;
 		/** How many packages are published, which `current` reaches once a refresh catches up. */
 		published: number;
+		/** The sections about the collection beyond npm, drawn between its charts and its table. */
+		sections?: RemixNode;
 	}
 }
 
 /** Renders the whole body under the site header. */
 export default function StatsPage(handle: Handle<StatsPage.Props>) {
 	return () => {
-		let { collection, current, focus, published, query, rows, snapshot } = handle.props;
+		let { collection, current, focus, published, query, rows, sections, snapshot } = handle.props;
 		let length = Math.min(RANGES[query.range], snapshot.days.length);
 		let days = snapshot.days.slice(-length);
 		let series = (focus?.stats.daily ?? collection).slice(-length);
 		let active = rows.filter((row) => row.last7 > 0).length;
+		let hits = collectionJsdelivr(snapshot);
+		let medianShare = median(rows.flatMap((row) => row.latestShare ?? []));
 		let through = snapshot.days.at(-1);
 
 		let collectionSummary = {
@@ -191,12 +197,26 @@ export default function StatsPage(handle: Handle<StatsPage.Props>) {
 						<StatStrip.Item label="Packages downloaded last week">
 							{active} of {rows.length}
 						</StatStrip.Item>
+						<StatStrip.Item label="jsDelivr hits, last 30 days">
+							{NUMBER_FORMAT.format(windowSum(hits, 30))}
+						</StatStrip.Item>
+						<StatStrip.Item label="Median share on the latest version">
+							{medianShare === null ? "—" : SHARE_FORMAT.format(medianShare)}
+						</StatStrip.Item>
 					</Headline>
 				)}
 
 				<DownloadChart label={focus?.stats.name ?? "Every package"} days={days} daily={series} />
 
-				{focus ? <PackageDetails summary={focus} /> : null}
+				{focus ? (
+					<PackageTrends
+						summary={focus}
+						days={days}
+						jsdelivr={(focus.stats.jsdelivr ?? snapshot.days.map(() => 0)).slice(-length)}
+					/>
+				) : null}
+
+				{focus ? <PackageDetails summary={focus} /> : sections}
 
 				<PackageTable rows={rows.map(packageRow)} query={query} />
 			</main>

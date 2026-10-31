@@ -34,6 +34,7 @@ function row(directory: string, last7: number, total: number): PackageRow {
 		growth7: null,
 		last30: last7,
 		total,
+		jsdelivr30: 0,
 		latest: "2026.10.30",
 		latestShare: 1,
 		versions: 1,
@@ -80,6 +81,15 @@ describe("PackageTable", () => {
 		expect(location.pathname + location.search).toBe("/stats?sort=total");
 		expect(total.closest("th")?.getAttribute("aria-sort")).toBe("descending");
 		expect(host.querySelector('a[href="/stats?sort=total&package=zip"]')).not.toBeNull();
+	});
+
+	test("shows each package's jsDelivr hits beside its npm downloads", () => {
+		let host = mount([{ ...row("cache", 1, 1), jsdelivr30: 1234 }]);
+		let headers = Array.from(host.querySelectorAll("th"), (cell) => cell.textContent);
+		let column = headers.indexOf("jsDelivr, 30 days");
+
+		expect(column).toBeGreaterThan(-1);
+		expect(host.querySelectorAll("tbody td")[column]?.textContent).toBe("1,234");
 	});
 
 	test("keeps the header row under the site header while the rows scroll past", async () => {

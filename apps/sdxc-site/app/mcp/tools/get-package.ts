@@ -11,12 +11,14 @@ import { createTool, ToolError } from "@sdxc/mcp/server";
 
 import toolset from "~/app/mcp/tools";
 import { findPackage, listApplicationsUsing, readPackageReadme } from "~/app/services/packages";
+import { recordSiteEvent } from "~/app/services/site-events";
 import { absoluteUrl } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** Reads the package, or refuses an unknown name with where to look instead. */
 export default createTool(toolset.getPackage, async (ctx) => {
 	let name = ctx.input.name.replace(/^@sdxc\//, "");
+	recordSiteEvent({ tool: { name: "get_package", package: name } });
 	let entry = findPackage(name);
 
 	if (entry === null) {
