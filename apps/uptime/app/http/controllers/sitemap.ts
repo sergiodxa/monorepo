@@ -46,6 +46,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 		digestUnsubscribe: false,
 		invite: false,
 		sitemap: false,
+		robots: false,
 		auth: false,
 		logout: false,
 		marketing: {

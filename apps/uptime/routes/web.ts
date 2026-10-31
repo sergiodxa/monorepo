@@ -65,6 +65,8 @@ export default route({
 	digestUnsubscribe: form("/digests/unsubscribe/:token"),
 	invite: get("/invite/:inviteId"),
 	sitemap: get("/sitemap.xml"),
+	/** The crawl rules and AI usage preferences, served as robots.txt. */
+	robots: get("/robots.txt"),
 
 	/** GET = OAuth callback ("index"), POST = starts the OAuth flow ("action"). */
 	auth: form("/auth"),

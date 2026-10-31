@@ -552,6 +552,7 @@
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/rdap": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/robots": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/seo": "workspace:*",
         "@sdxc/server-timing": "workspace:*",

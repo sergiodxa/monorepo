@@ -453,6 +453,10 @@ export function createWebRouter(options: WebRouterOptions) {
 		routes.sitemap,
 		lazy(() => import("~/app/http/controllers/sitemap")),
 	);
+	router.map(
+		routes.robots,
+		lazy(() => import("~/app/http/controllers/robots")),
+	);
 
 	/**
 	 * Each controller bakes its own `requireUser`/`requireTeam` (and, where
