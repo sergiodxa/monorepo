@@ -11,25 +11,22 @@ import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { IntlProvider, Trans } from "@sdxc/i18n/ui";
 import {
-	ActivityIcon,
 	AppWindowIcon,
 	ArrowRightIcon,
-	BellIcon,
-	BotIcon,
+	BoxesIcon,
 	CirclePauseIcon,
 	ClockIcon,
 	CodeIcon,
 	CreditCardIcon,
 	FileTextIcon,
 	GlobeIcon,
+	HeartPulseIcon,
 	LayersIcon,
-	LinkIcon,
-	LockIcon,
-	MessageSquareIcon,
 	RefreshCwIcon,
+	ShoppingCartIcon,
+	TerminalIcon,
 	TimerIcon,
 	UsersIcon,
-	WorkflowIcon,
 } from "@sdxc/icons";
 import { unwrap } from "@sdxc/result";
 import {
@@ -40,7 +37,6 @@ import {
 	hstack,
 	inlineFlex,
 	items,
-	justify,
 	shrink,
 	vstack,
 } from "@sdxc/u/layout";
@@ -81,6 +77,14 @@ import {
 	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
+import {
+	BrowserScene,
+	DnsScene,
+	FlowScene,
+	IntegrationsScene,
+	McpScene,
+	SslScene,
+} from "~/resources/components/marketing/capability-scenes";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
@@ -173,14 +177,12 @@ export default createAction(routes.home, async (ctx) => {
 			title: t("landing.features.list.first.title"),
 			description: t("landing.features.list.first.description"),
 			href: routes.marketing.feature.href({ slug: "monitors" }),
-			icon: <ActivityIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
 			media: <MonitorsScene upLabel={t("statusPage.status.operational")} />,
 		},
 		{
 			title: t("landing.features.list.second.title"),
 			description: t("landing.features.list.second.description"),
 			href: routes.marketing.feature.href({ slug: "alerts" }),
-			icon: <BellIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
 			media: (
 				<AlertsScene
 					down={t("emails.alert.heading", {
@@ -200,44 +202,43 @@ export default createAction(routes.home, async (ctx) => {
 			title: t("landing.features.list.fourth.title"),
 			description: t("landing.features.list.fourth.description"),
 			href: routes.marketing.feature.href({ slug: "status-pages" }),
-			icon: <GlobeIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
 			media: <StatusPageScene banner={t("statusPage.banner.operational")} />,
 		},
 		{
 			title: t("landing.features.list.fifth.title"),
 			description: t("landing.features.list.fifth.description"),
 			href: routes.marketing.feature.href({ slug: "ssl" }),
-			icon: <LockIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <SslScene t={t} />,
 		},
 		{
 			title: t("landing.features.list.sixth.title"),
 			description: t("landing.features.list.sixth.description"),
 			href: routes.marketing.feature.href({ slug: "dns" }),
-			icon: <LinkIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <DnsScene t={t} />,
 		},
 		{
 			title: t("landing.features.list.seventh.title"),
 			description: t("landing.features.list.seventh.description"),
 			href: routes.marketing.feature.href({ slug: "integrations" }),
-			icon: <MessageSquareIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <IntegrationsScene t={t} />,
 		},
 		{
 			title: t("landing.features.list.eighth.title"),
 			description: t("landing.features.list.eighth.description"),
 			href: routes.marketing.feature.href({ slug: "flows" }),
-			icon: <WorkflowIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <FlowScene t={t} />,
 		},
 		{
 			title: t("landing.features.list.ninth.title"),
 			description: t("landing.features.list.ninth.description"),
 			href: routes.browserFlows.href(),
-			icon: <AppWindowIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <BrowserScene />,
 		},
 		{
 			title: t("landing.footer.sections.docs.mcp"),
 			description: t("mcp.meta.description"),
 			href: routes.mcp.index.href(),
-			icon: <BotIcon size={20} strokeWidth={1.5} aria-hidden="true" />,
+			media: <McpScene />,
 		},
 	];
 
@@ -268,13 +269,14 @@ export default createAction(routes.home, async (ctx) => {
 	}));
 
 	let USE_CASE_LINKS = [
-		{ key: "websiteMonitoring", slug: "website-monitoring" },
-		{ key: "apiMonitoring", slug: "api-monitoring" },
-		{ key: "saas", slug: "saas" },
-		{ key: "microservices", slug: "microservices" },
-		{ key: "healthChecks", slug: "healthcheck" },
-		{ key: "ecommerce", slug: "ecommerce" },
+		{ key: "websiteMonitoring", slug: "website-monitoring", Icon: GlobeIcon },
+		{ key: "apiMonitoring", slug: "api-monitoring", Icon: TerminalIcon },
+		{ key: "saas", slug: "saas", Icon: AppWindowIcon },
+		{ key: "microservices", slug: "microservices", Icon: BoxesIcon },
+		{ key: "healthChecks", slug: "healthcheck", Icon: HeartPulseIcon },
+		{ key: "ecommerce", slug: "ecommerce", Icon: ShoppingCartIcon },
 	].map((useCase) => ({
+		icon: <useCase.Icon size={20} strokeWidth={1.5} aria-hidden="true" />,
 		href: routes.marketing.useCase.href({ slug: useCase.slug }),
 		title: t(`landing.useCases.list.${useCase.key}.title`),
 		description: t(`landing.useCases.list.${useCase.key}.description`),
@@ -468,14 +470,13 @@ export default createAction(routes.home, async (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.benefits.badge")}
 						description={t("landing.benefits.description")}
-						align="center"
 					>
 						{t("landing.benefits.title")}
 					</MarketingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{BENEFITS.map((benefit) => (
 							<Feature key={benefit.title}>
-								<Feature.Icon tone="brand">{benefit.icon}</Feature.Icon>
+								<Feature.Icon>{benefit.icon}</Feature.Icon>
 								<Feature.Title>{benefit.title}</Feature.Title>
 								<Feature.Description>{benefit.description}</Feature.Description>
 							</Feature>
@@ -487,18 +488,14 @@ export default createAction(routes.home, async (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.features.badge")}
 						description={t("landing.features.description")}
-						align="center"
+						layout="split"
 					>
 						{t("landing.features.title")}
 					</MarketingHeader>
 					<Feature.Grid columns={3}>
 						{FEATURE_LINKS.map((feature) => (
 							<Feature key={feature.href} href={feature.href}>
-								{"media" in feature ? (
-									<Feature.Media>{feature.media}</Feature.Media>
-								) : (
-									<Feature.Icon>{feature.icon}</Feature.Icon>
-								)}
+								<Feature.Media>{feature.media}</Feature.Media>
 								<Feature.Title>{feature.title}</Feature.Title>
 								<Feature.Description>{feature.description}</Feature.Description>
 								<Feature.Action>
@@ -602,7 +599,6 @@ export default createAction(routes.home, async (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.completeFeatureSet.badge")}
 						description={t("landing.completeFeatureSet.description")}
-						align="center"
 					>
 						{t("landing.completeFeatureSet.title")}
 					</MarketingHeader>
@@ -621,13 +617,14 @@ export default createAction(routes.home, async (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.useCases.badge")}
 						description={t("landing.useCases.description")}
-						align="center"
+						layout="split"
 					>
 						{t("landing.useCases.title")}
 					</MarketingHeader>
 					<Feature.Grid columns={3}>
 						{USE_CASE_LINKS.map((useCase) => (
 							<Feature key={useCase.href} href={useCase.href}>
+								<Feature.Icon>{useCase.icon}</Feature.Icon>
 								<Feature.Title>{useCase.title}</Feature.Title>
 								<Feature.Description>{useCase.description}</Feature.Description>
 								<Feature.Action>
@@ -638,9 +635,9 @@ export default createAction(routes.home, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-					<div mix={[vstack({ gap: 4, align: "center" }), mbs(12)]}>
-						<p mix={[text("sm"), textAlign("center")]}>{t("landing.useCases.tailoredFor")}</p>
-						<div mix={[hstack({ gap: 3 }), flexWrap(), justify("center")]}>
+					<div mix={[vstack({ gap: 4, align: "start" }), mbs(12)]}>
+						<p mix={[text("sm")]}>{t("landing.useCases.tailoredFor")}</p>
+						<div mix={[hstack({ gap: 3 }), flexWrap()]}>
 							{AUDIENCE_LINKS.map((audience) => (
 								<LinkButton
 									key={audience.href}
@@ -660,7 +657,6 @@ export default createAction(routes.home, async (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.pricing.badge")}
 						description={t("landing.pricing.description")}
-						align="center"
 					>
 						{t("landing.pricing.title")}
 					</MarketingHeader>

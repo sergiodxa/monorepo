@@ -35,7 +35,7 @@ const SERVICES: ReadonlyArray<{ name: string; degradedDay?: number }> = [
 ];
 
 /** The scene's surface: a raised panel inset from the card's media edges. */
-function panel() {
+export function scenePanel() {
 	return [
 		marketingSurface(),
 		raw({
@@ -54,7 +54,7 @@ function panel() {
  * cards line up. The slot fades its lower half into the card, so each scene keeps its
  * story in the top of the frame and lets its last rows fall into the fade.
  */
-function frame() {
+export function sceneFrame() {
 	return raw({
 		display: "grid",
 		alignContent: "start",
@@ -66,7 +66,7 @@ function frame() {
 }
 
 /** A host or service name in mono, truncated rather than wrapped. */
-function hostText() {
+export function sceneHost() {
 	return raw({
 		fontFamily: "var(--ui-font-mono)",
 		color: "var(--ui-neutral-fg-emphasis)",
@@ -90,8 +90,8 @@ namespace MonitorsScene {
  */
 export function MonitorsScene(handle: Handle<MonitorsScene.Props>) {
 	return () => (
-		<div aria-hidden="true" mix={[frame()]}>
-			<div mix={[panel()]}>
+		<div aria-hidden="true" mix={[sceneFrame()]}>
+			<div mix={[scenePanel()]}>
 				{MONITORS.map((monitor) => (
 					<div
 						key={monitor.host}
@@ -108,7 +108,7 @@ export function MonitorsScene(handle: Handle<MonitorsScene.Props>) {
 								}),
 							]}
 						>
-							<span mix={[hostText()]}>{monitor.host}</span>
+							<span mix={[sceneHost()]}>{monitor.host}</span>
 							<Badge {...badgeVariant("up")}>{handle.props.upLabel}</Badge>
 						</span>
 						<span
@@ -151,8 +151,8 @@ export function AlertsScene(handle: Handle<AlertsScene.Props>) {
 		];
 
 		return (
-			<div aria-hidden="true" mix={[frame()]}>
-				<div mix={[panel(), raw({ gap: "0" })]}>
+			<div aria-hidden="true" mix={[sceneFrame()]}>
+				<div mix={[scenePanel(), raw({ gap: "0" })]}>
 					{alerts.map((alert, index) => (
 						<div
 							key={alert.tone}
@@ -203,8 +203,8 @@ namespace StatusPageScene {
  */
 export function StatusPageScene(handle: Handle<StatusPageScene.Props>) {
 	return () => (
-		<div aria-hidden="true" mix={[frame()]}>
-			<div mix={[panel()]}>
+		<div aria-hidden="true" mix={[sceneFrame()]}>
+			<div mix={[scenePanel()]}>
 				<span
 					mix={[
 						raw({
@@ -220,7 +220,7 @@ export function StatusPageScene(handle: Handle<StatusPageScene.Props>) {
 				</span>
 				{SERVICES.map((service) => (
 					<div key={service.name} mix={[raw({ display: "grid", gap: "0.375rem" })]}>
-						<span mix={[hostText()]}>{service.name}</span>
+						<span mix={[sceneHost()]}>{service.name}</span>
 						<span mix={[raw({ display: "flex", gap: "2px", blockSize: "1.5rem" })]}>
 							{Array.from({ length: SERVICE_DAYS }, (_, index) => (
 								<span
