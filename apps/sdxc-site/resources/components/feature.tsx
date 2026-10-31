@@ -10,10 +10,20 @@
 import type { Handle } from "remix/component";
 
 import {
+	ArchiveIcon,
 	ArrowRightIcon,
 	BookOpenIcon,
+	CalendarIcon,
+	CalendarOffIcon,
+	ClockIcon,
+	CoinsIcon,
 	CompassIcon,
+	GitBranchIcon,
 	GlobeIcon,
+	HistoryIcon,
+	LockIcon,
+	MailIcon,
+	MessageCircleIcon,
 	PackageIcon,
 	ShieldCheckIcon,
 	ZapIcon,
@@ -21,25 +31,36 @@ import {
 import { hstack } from "@sdxc/u/layout";
 import { Badge, Feature as UiFeature, LinkButton } from "@sdxc/ui";
 
+import type { FeatureIconName } from "~/app/services/content";
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
 import { blocksUseGap } from "~/resources/components/block-flow";
 
 /** The glyphs the content vocabulary allows, keyed by the name a cell writes. */
-const ICONS: Record<string, typeof GlobeIcon> = {
+const ICONS: Record<FeatureIconName, typeof GlobeIcon> = {
 	globe: GlobeIcon,
 	shield: ShieldCheckIcon,
 	package: PackageIcon,
 	zap: ZapIcon,
 	book: BookOpenIcon,
 	compass: CompassIcon,
+	mail: MailIcon,
+	message: MessageCircleIcon,
+	lock: LockIcon,
+	clock: ClockIcon,
+	coins: CoinsIcon,
+	archive: ArchiveIcon,
+	calendar: CalendarIcon,
+	"calendar-off": CalendarOffIcon,
+	"git-branch": GitBranchIcon,
+	history: HistoryIcon,
 };
 
 namespace Feature {
 	export interface Props extends MarkdownProps {
 		title: string;
 		/** Names a glyph from the allowed set; a cell without one reads as a plain claim. */
-		icon?: string;
+		icon?: FeatureIconName;
 		/** The number the claim rests on, drawn beside the title. */
 		metric?: string;
 		/** Where the claim is argued in full, drawn only when both halves are written. */

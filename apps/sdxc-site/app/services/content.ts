@@ -18,6 +18,29 @@ import * as s from "remix/data-schema";
 import { prepareArticle } from "~/app/services/article";
 import { OPTION_GROUP_NAMES } from "~/app/services/option-groups";
 
+/** The glyphs a `feature` cell may name; the renderer draws one for every entry. */
+export const FEATURE_ICON_NAMES = [
+	"globe",
+	"shield",
+	"package",
+	"zap",
+	"book",
+	"compass",
+	"mail",
+	"message",
+	"lock",
+	"clock",
+	"coins",
+	"archive",
+	"calendar",
+	"calendar-off",
+	"git-branch",
+	"history",
+] as const;
+
+/** One glyph name from {@link FEATURE_ICON_NAMES}. */
+export type FeatureIconName = (typeof FEATURE_ICON_NAMES)[number];
+
 /**
  * The whole vocabulary a content file may use. A name absent from here stays raw
  * HTML, which is what keeps an invented tag visible as text rather than silently
@@ -84,7 +107,7 @@ export const TAGS = {
 		content: "blocks",
 		attributes: s.object({
 			title: s.string(),
-			icon: s.optional(s.enum_(["globe", "shield", "package", "zap", "book", "compass"])),
+			icon: s.optional(s.enum_(FEATURE_ICON_NAMES)),
 			metric: s.optional(s.string()),
 			href: s.optional(s.string()),
 			"link-label": s.optional(s.string()),
