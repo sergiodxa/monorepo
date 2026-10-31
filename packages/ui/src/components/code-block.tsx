@@ -221,6 +221,7 @@ export function CodeBlock(handle: Handle<CodeBlock.Props>) {
 				)}
 
 				<pre
+					data-not-typeset=""
 					data-line-numbers={lineNumbers ? "" : undefined}
 					mix={[
 						m(0),

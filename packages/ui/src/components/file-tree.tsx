@@ -186,6 +186,7 @@ function EntryList(handle: Handle<EntryList.Props>) {
 			<ul
 				aria-label={label}
 				data-slot="file-tree-list"
+				data-not-typeset=""
 				mix={[listStyle("none"), m(0), p(0), vstack({ gap: 0.5, align: "start" })]}
 			>
 				{entries.map((entry, index) => (

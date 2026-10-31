@@ -13,6 +13,7 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { CodeBlock } from "./code-block.js";
+import { Typeset } from "./typeset.js";
 
 import "../theme.css";
 
@@ -107,6 +108,20 @@ describe("CodeBlock", () => {
 		);
 
 		expect(block.querySelectorAll("[data-line]")).toHaveLength(1);
+	});
+
+	test("keeps its own code styles inside a Typeset", () => {
+		let plain = mount(<CodeBlock language="ts" code="let a = 1;" labels={LABELS} />);
+		let typeset = mount(
+			<Typeset preset="docs">
+				<CodeBlock language="ts" code="let b = 2;" labels={LABELS} />
+			</Typeset>,
+		);
+		let style = (block: HTMLElement) => getComputedStyle(block.querySelector("pre")!);
+
+		expect(style(typeset).borderTopWidth).toBe(style(plain).borderTopWidth);
+		expect(style(typeset).fontSize).toBe(style(plain).fontSize);
+		expect(style(typeset).paddingInlineStart).toBe(style(plain).paddingInlineStart);
 	});
 
 	test("keeps an empty line one line tall", () => {
