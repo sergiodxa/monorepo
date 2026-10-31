@@ -208,10 +208,14 @@ export function buildMarketingChrome(
 		{ label: t("trust.footerLink"), href: routes.trust.href() },
 	];
 
+	/**
+	 * Four columns, so each keeps a label like "Login Flow Monitoring" on one line beside
+	 * the brand block at laptop widths. Solutions lists the use cases, then the audiences,
+	 * in the order the header's Solutions menu groups them.
+	 */
 	let footerColumns: SiteFooter.Column[] = [
 		{ title: label("features.title"), links: Object.values(featureLinks) },
-		{ title: label("useCases.title"), links: useCaseLinks },
-		{ title: label("solutions.title"), links: audienceLinks },
+		{ title: label("solutions.title"), links: [...useCaseLinks, ...audienceLinks] },
 		{
 			title: label("compare.title"),
 			links: [
