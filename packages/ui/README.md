@@ -292,6 +292,7 @@ chrome on the root catalog stays free of landing weight.
 - `TypedTerminal` — animated terminal: input `lines` typing themselves out, then their output.
 - `DrawnChart` — animated figure: a `metric` counting up over a `bars` or `line` `series` that draws in.
 - `DocsLayout` — docs shell: docked `sidebar` (drawer below `dock`), article `measure`, heading rail from 75rem, sticky bar with menu and `toc`.
+- `DocsHub` — docs home routing by task: `search`, `topics` chips, larger `start` cards, `sections` with counts, `popular`.
 
 **Composition craft**
 

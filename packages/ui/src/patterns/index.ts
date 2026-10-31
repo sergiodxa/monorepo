@@ -17,6 +17,7 @@ export * from "./closing-cta.js";
 export * from "./code-stage.js";
 export * from "./crosshair.js";
 export * from "./curriculum.js";
+export * from "./docs-hub.js";
 export * from "./docs-layout.js";
 export * from "./drawn-chart.js";
 export * from "./event-ticker.js";
