@@ -52,6 +52,7 @@ export * from "./resize-handle.js";
 export * from "./stepper.js";
 export * from "./tab-keys.js";
 export * from "./theme-toggle.js";
+export * from "./toc-spy.js";
 export * from "./track-host-node.js";
 export * from "./treeKeys.js";
 export * from "./validate.js";

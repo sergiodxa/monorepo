@@ -262,6 +262,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
 - `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
 - `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
+- `TableOfContents` — "On this page" `rail` or sticky `bar`: a marker slides over every section on screen and reaches the last; island `@sdxc/ui/table-of-contents`.
 
 ### Patterns (`@sdxc/ui/patterns`)
 
@@ -357,6 +358,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `stepper(options?)`             | `NumberField.Group`        | Press-and-hold repeat on the step buttons.                              |
 | `tabKeys(options?)`             | `Tabs.List`                | Arrow, Home/End tab activation.                                         |
 | `themeToggle(options?)`         | any host                   | `--ui-theme-light`/`-dark`/`-system` commands saved to a cookie.        |
+| `tocSpy()`                      | a `TableOfContents` list   | Sections on screen marked, the marker slid over them, the lead named.   |
 | `treeKeys(model)`               | `Tree`                     | The ARIA tree pattern over a `SelectionModel`.                          |
 | `validate(schema)`              | a form control             | A `remix/data-schema` check through `setCustomValidity()`.              |
 | `viewTransition()`              | a `SharedElement` island   | A View Transition across a same-document reload.                        |

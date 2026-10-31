@@ -116,6 +116,7 @@ export * from "./stat-strip.js";
 export * from "./steps.js";
 export * from "./switch.js";
 export * from "./table.js";
+export * from "./table-of-contents.js";
 export * from "./tabs.js";
 export * from "./tag-group.js";
 export * from "./text.js";
