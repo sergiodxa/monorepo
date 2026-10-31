@@ -12,6 +12,7 @@ import type { Usage } from "~/config/pricing";
 
 import {
 	BASE_PRICE_USD,
+	FLOW_INTERVALS_SECONDS,
 	formatPings,
 	formatUsd,
 	FREE_TRIAL_DAYS,
@@ -21,6 +22,7 @@ import {
 	PRICE_PER_BLOCK_USD,
 	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
+import routes from "~/routes/web";
 
 export namespace MarketingContent {
 	/** One bullet in a feature grid. */
@@ -33,6 +35,29 @@ export namespace MarketingContent {
 		 * with no JSX. A grid whose bullets have no icons renders without the tiles.
 		 */
 		icon?: IconName;
+		/**
+		 * The page that argues this capability in full. A grid links either every card or
+		 * none, so each linked card's call to action lines up with its row.
+		 */
+		href?: string;
+	}
+
+	/** The product scene a {@link Spotlight} shows: real UI drawn with example data. */
+	export type SpotlightScene = "monitors" | "alerts" | "status-page" | "flow";
+
+	/**
+	 * The one capability an audience or use-case page shows rather than lists: a split band
+	 * pairing its argument with a product scene, linking to the page that covers it.
+	 */
+	export interface Spotlight {
+		eyebrow: string;
+		title: string;
+		description: string;
+		/** Checkable product facts, shown as a check list beside the scene. */
+		points: string[];
+		scene: SpotlightScene;
+		href: string;
+		linkLabel: string;
 	}
 
 	/**
@@ -125,6 +150,8 @@ export namespace MarketingContent {
 		 * large. The strip is skipped entirely for a page with nothing to put in it.
 		 */
 		trustIndicators?: [TrustIndicator, TrustIndicator, TrustIndicator, TrustIndicator];
+		/** The capability an audience or use-case page shows with a product scene. */
+		spotlight?: Spotlight;
 	}
 
 	/** `/vs/:slug` comparison page content, extending {@link Page} with a table. */
@@ -143,6 +170,14 @@ export namespace MarketingContent {
 		/** Same-setup cost comparisons, rendered as a table. */
 		pricingScenarios?: PricingScenario[];
 	}
+}
+
+/** The home's pricing calculator, where every price these pages quote is worked out. */
+const PRICING_HREF = `${routes.home.href()}#pricing`;
+
+/** The `/features/:slug` page for `slug`, typed through the route so a renamed route fails here. */
+function featureHref(slug: string): string {
+	return routes.marketing.feature.href({ slug });
 }
 
 const DEFAULT_STEPS: MarketingContent.Step[] = [
@@ -1066,26 +1101,40 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			{ icon: "database", value: "365", label: "Days Retention" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
+		spotlight: {
+			eyebrow: "Monitors",
+			title: "Every project in one list",
+			description:
+				"The portfolio, the side project and the API behind them, each with its status and recent response times at a glance.",
+			points: ["Unlimited monitors", "Checks from 9 regions", "365 days of history"],
+			scene: "monitors",
+			href: featureHref("monitors"),
+			linkLabel: "See monitors",
+		},
 		features: [
 			{
 				title: "Free manual monitoring",
 				description: "Create monitors and trigger pings by hand, forever, at no cost.",
 				icon: "mouse-pointer-click",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Usage-based pricing",
 				description: "Automated checks are billed per-ping, so a small project stays cheap.",
 				icon: "dollar-sign",
+				href: PRICING_HREF,
 			},
 			{
 				title: "One dashboard",
 				description: "See every monitor's status and history in a single, simple view.",
 				icon: "layout-dashboard",
+				href: featureHref("analytics"),
 			},
 			{
 				title: "Alerts that reach you",
 				description: "Email, Slack, Discord, or webhook — wherever you already look.",
 				icon: "bell",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1119,26 +1168,40 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
+		spotlight: {
+			eyebrow: "Alerts",
+			title: "The alert reaches whoever is on call",
+			description:
+				"Email, Slack, Discord or a signed webhook on every failed check, and a second message when the service recovers.",
+			points: ["4 alert channels", "Recovery notifications", "Cooldowns against flapping"],
+			scene: "alerts",
+			href: featureHref("alerts"),
+			linkLabel: "See alerts",
+		},
 		features: [
 			{
 				title: "Grow your team",
 				description: "Invite engineers as you hire, with no per-seat pricing.",
 				icon: "users",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Role-based access",
 				description: "Owners and Admins manage settings; Members focus on monitoring.",
 				icon: "shield",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Status pages",
 				description: "Give customers a public status page as trust becomes a selling point.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 			{
 				title: "API access",
 				description: "Wire monitoring into your deploy pipeline as your infra matures.",
 				icon: "terminal",
+				href: featureHref("api"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1179,42 +1242,58 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			{ icon: "globe", value: "9", label: "Regions" },
 			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
 		],
+		spotlight: {
+			eyebrow: "Status pages",
+			title: "Send the client a link, not an update",
+			description:
+				"Each client gets a status page showing only their monitors, so they check it themselves instead of emailing you.",
+			points: ["Only that client's monitors", "90-day uptime history", "Public or private"],
+			scene: "status-page",
+			href: featureHref("status-pages"),
+			linkLabel: "See status pages",
+		},
 		features: [
 			{
 				title: "Find out before the client does",
 				description:
 					"The call you don't want is the client telling you their site is down. Checks run as often as every minute and the alert goes to you first.",
 				icon: "siren",
+				href: featureHref("alerts"),
 			},
 			{
 				title: "No monitor math",
 				description:
 					"Unlimited monitors and unlimited team members. Add a client, add their staging site, add the whole team — the price doesn't move because you added rows.",
 				icon: "infinity",
+				href: PRICING_HREF,
 			},
 			{
 				title: "Certificates you'd otherwise forget",
 				description:
 					"An expired certificate takes a client's site down as effectively as an outage, on a date nobody has in a calendar. SSL expiry is watched per site and warned on ahead of time.",
 				icon: "shield-check",
+				href: featureHref("ssl"),
 			},
 			{
 				title: "DNS you didn't change",
 				description:
 					"Records get edited at the registrar by someone who isn't you. DNS monitors tell you what changed and when.",
 				icon: "globe",
+				href: featureHref("dns"),
 			},
 			{
 				title: "The jobs nobody watches",
 				description:
 					"Backups, imports, and nightly syncs fail silently. A cron monitor expects a ping on a schedule and tells you when one doesn't arrive.",
 				icon: "timer",
+				href: featureHref("cron-jobs"),
 			},
 			{
 				title: "A status page per client",
 				description:
 					"Point a client at their own status page instead of answering the same question by email. Each one shows only that client's monitors.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 		],
 		steps: [
@@ -1287,22 +1366,26 @@ export const audiences: Record<string, MarketingContent.Page> = {
 				title: "Domain verification",
 				description: "Verify company domains via DNS TXT record for automatic onboarding.",
 				icon: "badge-check",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Auto-provisioning",
 				description:
 					"Anyone signing in with a verified domain's email joins the team automatically.",
 				icon: "user-plus",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Role-based access",
 				description: "Owner, Admin, and Member roles control who can change settings and billing.",
 				icon: "shield",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Full audit trail",
 				description: "Alert history and domain verification records for every action.",
 				icon: "history",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1338,7 +1421,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		trustIndicators: [
 			{ icon: "code", value: "REST", label: "API First" },
 			{ icon: "webhook", value: "HMAC", label: "Signed Webhooks" },
-			{ icon: "layers", value: "No", label: "Lock-in" },
+			{ icon: "bot", value: "MCP", label: "For Agents" },
 			{ icon: "terminal", value: "TCP", label: "& Cron Checks" },
 		],
 		features: [
@@ -1346,21 +1429,25 @@ export const audiences: Record<string, MarketingContent.Page> = {
 				title: "REST API",
 				description: "Manage monitors, alerts, and maintenance windows programmatically.",
 				icon: "code",
+				href: featureHref("api"),
 			},
 			{
 				title: "Signed webhooks",
 				description: "Every webhook alert carries an HMAC signature you can verify.",
 				icon: "webhook",
+				href: featureHref("integrations"),
 			},
 			{
 				title: "TCP & cron monitoring",
 				description: "Watch raw ports and scheduled jobs, not just HTTP endpoints.",
 				icon: "terminal",
+				href: featureHref("cron-jobs"),
 			},
 			{
 				title: "Maintenance windows",
 				description: "Suppress alerts automatically during scheduled deploys.",
 				icon: "calendar-clock",
+				href: featureHref("maintenance"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1393,30 +1480,44 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		],
 		trustIndicators: [
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
-			{ icon: "rocket", value: "<2min", label: "Setup Time" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
 			{ icon: "globe", value: "9", label: "Global Regions" },
 		],
+		spotlight: {
+			eyebrow: "Status pages",
+			title: "Reassure your first users",
+			description:
+				"Put a status page in front of your users the day you launch, so a hiccup reads as handled rather than ignored.",
+			points: ["Custom branding", "90-day uptime history", "Public or private"],
+			scene: "status-page",
+			href: featureHref("status-pages"),
+			linkLabel: "See status pages",
+		},
 		features: [
 			{
 				title: "Fast setup",
 				description: "Create your first monitor and get a result in under a minute.",
 				icon: "rocket",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Transparent pricing",
 				description: "One flat base fee plus a clear per-ping rate — no surprise tiers.",
 				icon: "dollar-sign",
+				href: PRICING_HREF,
 			},
 			{
 				title: "Status pages",
 				description: "Add a status page the moment you have real users to reassure.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 			{
 				title: "Alerts you'll actually see",
 				description: "Email, Slack, or Discord — wherever you already spend your day.",
 				icon: "bell",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1453,26 +1554,44 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "map", value: "9", label: "Regions" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 		],
+		spotlight: {
+			eyebrow: "HTTP monitors",
+			title: "Every page that matters, at a glance",
+			description:
+				"One monitor per URL, each with its current status and recent response times, checked from 9 regions.",
+			points: [
+				"Checks as often as every minute",
+				"Expected status and content",
+				"SSL expiry warnings",
+			],
+			scene: "monitors",
+			href: featureHref("monitors"),
+			linkLabel: "See monitors",
+		},
 		features: [
 			{
 				title: "Global HTTP checks",
 				description: "Confirm your site loads correctly from regions around the world.",
 				icon: "globe",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "SSL monitoring",
 				description: "Get warned before a certificate expires and breaks HTTPS.",
 				icon: "shield-check",
+				href: featureHref("ssl"),
 			},
 			{
 				title: "Content checks",
 				description: "Verify the homepage actually renders, not just that it returns 200.",
 				icon: "search",
+				href: featureHref("content-monitoring"),
 			},
 			{
 				title: "Public status page",
 				description: "Show visitors real-time status when something does go wrong.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1506,26 +1625,40 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "clock", value: "P99", label: "Latency" },
 			{ icon: "shield", value: "Auth", label: "Headers" },
 		],
+		spotlight: {
+			eyebrow: "HTTP monitors",
+			title: "Latency next to status",
+			description:
+				"A slow endpoint shows up in its response times before it shows up as an outage.",
+			points: ["Custom request headers", "Expected status code", "P99 response time"],
+			scene: "monitors",
+			href: featureHref("monitors"),
+			linkLabel: "See monitors",
+		},
 		features: [
 			{
 				title: "Authenticated checks",
 				description: "Add Authorization headers to monitor endpoints behind auth.",
 				icon: "key",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Status code validation",
 				description: "Expect the exact status code your API should return.",
 				icon: "shield-check",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Latency tracking",
 				description: "Watch P99 response time to catch slow-but-not-down degradation.",
 				icon: "gauge",
+				href: featureHref("analytics"),
 			},
 			{
 				title: "Content checks",
 				description: "Verify the response body contains an expected field or value.",
 				icon: "search",
+				href: featureHref("content-monitoring"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1558,30 +1691,48 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
 			{ icon: "calendar", value: "90d", label: "Result history" },
 		],
+		spotlight: {
+			eyebrow: "Flow monitors",
+			title: "Watch a sign-in run, step by step",
+			description:
+				"Each run signs in, checks the token and calls what it authorises; the first failing step is the one the alert names.",
+			points: [
+				`Runs every ${FLOW_INTERVALS_SECONDS[0] / 60} minutes at the fastest`,
+				"JWT signature and expiry checked",
+				"Failure names the line",
+			],
+			scene: "flow",
+			href: featureHref("flows"),
+			linkLabel: "See flow monitors",
+		},
 		features: [
 			{
 				title: "Sign in the way your app does",
 				description:
 					"A form post to a token endpoint, bearer or basic credentials, or a cookie header — whichever your login actually uses.",
 				icon: "key",
+				href: featureHref("flows"),
 			},
 			{
 				title: "Verify the token, not just the response",
 				description:
 					"The returned JWT is checked against your live JWKS: ES256 signature and expiry, past whether a string came back at all.",
 				icon: "shield-check",
+				href: featureHref("flows"),
 			},
 			{
 				title: "Then use it",
 				description:
 					"Call the endpoint the token authorises and assert on what comes back. A 200 on the login page says nothing about the session behind it.",
 				icon: "list-ordered",
+				href: featureHref("flows"),
 			},
 			{
 				title: "A named failure, not a status code",
 				description:
 					"The failing test's title and line number, expected against observed, shown on your own spec with that line marked.",
 				icon: "file-code",
+				href: featureHref("flows"),
 			},
 		],
 		steps: [
@@ -1631,7 +1782,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Monitor scheduled tasks and cron jobs. Get alerts when jobs are late, miss their window, or fail to complete.",
 		highlights: ["Heartbeat pings", "Grace periods", "Healthy/late/missed states"],
 		trustIndicators: [
-			{ icon: "clock", value: "<1min", label: "Detection Time" },
+			{ icon: "radio-tower", value: "1", label: "Line to Report In" },
 			{ icon: "eye", value: "24/7", label: "Monitoring" },
 			{ icon: "shield", value: "365", label: "Days Retention" },
 			{ icon: "circle-check", value: "99.9%", label: "Uptime Target" },
@@ -1641,21 +1792,25 @@ export const useCases: Record<string, MarketingContent.Page> = {
 				title: "Cron-aware scheduling",
 				description: "Uptime parses your cron expression to know exactly when to expect a ping.",
 				icon: "calendar-clock",
+				href: featureHref("cron-jobs"),
 			},
 			{
 				title: "Public ping endpoint",
 				description: "One line in your job reports completion — no API key needed.",
 				icon: "radio-tower",
+				href: featureHref("cron-jobs"),
 			},
 			{
 				title: "Grace periods",
 				description: "Absorb normal timing variance before a job is marked late.",
 				icon: "timer",
+				href: featureHref("cron-jobs"),
 			},
 			{
 				title: "Status pages",
 				description: "Show scheduled job health alongside your other services.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 		],
 		steps: [
@@ -1707,26 +1862,44 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "play", value: "Manual", label: "Trigger" },
 			{ icon: "bell-ring", value: "Recovery", label: "Alerts" },
 		],
+		spotlight: {
+			eyebrow: "Recovery alerts",
+			title: "Hear when it's healthy again",
+			description:
+				"A failing check alerts you, and the next passing one tells you the service is back, so nobody keeps refreshing.",
+			points: [
+				"Down and recovery messages",
+				"Email, Slack, Discord or webhook",
+				"Cooldowns against flapping",
+			],
+			scene: "alerts",
+			href: featureHref("alerts"),
+			linkLabel: "See alerts",
+		},
 		features: [
 			{
 				title: "Dedicated health endpoints",
 				description: "Point a monitor at any `/healthz`-style route.",
 				icon: "heart-pulse",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Flexible intervals",
 				description: "Check as often as every minute, or as rarely as every hour.",
 				icon: "timer",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Manual trigger",
 				description: "Run any health check instantly to verify after a deploy.",
 				icon: "play",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Recovery alerts",
 				description: "Know the moment a service comes back healthy, not just when it fails.",
 				icon: "bell-ring",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1758,29 +1931,47 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "shopping-cart", value: "Checkout", label: "Monitoring" },
 			{ icon: "credit-card", value: "Payment", label: "APIs" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
-			{ icon: "dollar-sign", value: "Revenue", label: "Protected" },
+			{ icon: "shield-check", value: "SSL", label: "Expiry Warnings" },
 		],
+		spotlight: {
+			eyebrow: "Alerts",
+			title: "Hear about checkout before the orders stop",
+			description:
+				"A failing check on the checkout page alerts you straight away, and you hear again the moment it recovers.",
+			points: [
+				"A monitor per revenue page",
+				"Checks as often as every minute",
+				"Recovery notifications",
+			],
+			scene: "alerts",
+			href: featureHref("alerts"),
+			linkLabel: "See alerts",
+		},
 		features: [
 			{
 				title: "Checkout flow monitoring",
 				description:
 					"A flow monitor walks the checkout API in order — cart, totals, payment intent — and names the step that broke.",
 				icon: "shopping-cart",
+				href: featureHref("flows"),
 			},
 			{
 				title: "Content checks",
 				description: "Verify a product page still shows an 'Add to cart' button, not an error.",
 				icon: "search",
+				href: featureHref("content-monitoring"),
 			},
 			{
 				title: "SSL monitoring",
 				description: "An expired certificate on a checkout page is a lost-sale emergency.",
 				icon: "shield-check",
+				href: featureHref("ssl"),
 			},
 			{
 				title: "Public status page",
 				description: "Reassure customers during a rare incident instead of losing their trust.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1810,31 +2001,45 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Comprehensive monitoring for SaaS products: track APIs, dashboards, and background jobs in one platform.",
 		highlights: ["API + web + cron", "Team collaboration", "Status pages for customers"],
 		trustIndicators: [
-			{ icon: "layers", value: "Multi", label: "Endpoint" },
-			{ icon: "users", value: "Customer", label: "Facing" },
+			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
+			{ icon: "layout-template", value: "Public", label: "Status Pages" },
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
-			{ icon: "trending-up", value: "Scales", label: "With You" },
+			{ icon: "globe", value: "9", label: "Regions" },
 		],
+		spotlight: {
+			eyebrow: "Status pages",
+			title: "Reliability your customers can see",
+			description:
+				"A status page shows each service's recent history, so customers check it before they open a ticket.",
+			points: ["Custom branding", "90-day uptime history", "Public or private"],
+			scene: "status-page",
+			href: featureHref("status-pages"),
+			linkLabel: "See status pages",
+		},
 		features: [
 			{
 				title: "Full-stack coverage",
 				description: "Monitor your marketing site, app, API, and background jobs together.",
 				icon: "layers",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "Team collaboration",
 				description: "Invite your whole engineering team with role-based access.",
 				icon: "users",
+				href: featureHref("teams"),
 			},
 			{
 				title: "Customer-facing status page",
 				description: "Turn reliability into a trust signal for your customers.",
 				icon: "layout-template",
+				href: featureHref("status-pages"),
 			},
 			{
 				title: "Alert routing",
 				description: "Route critical API alerts to on-call, and lower-priority ones elsewhere.",
 				icon: "route",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
@@ -1864,30 +2069,48 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		highlights: ["Per-service monitors", "TCP port checks", "DNS change detection"],
 		trustIndicators: [
 			{ icon: "boxes", value: "∞", valueLabel: "Unlimited", label: "Services" },
-			{ icon: "network", value: "Distributed", label: "Architecture" },
-			{ icon: "activity", value: "Per-service", label: "Health" },
-			{ icon: "zap", value: "Fast", label: "Detection" },
+			{ icon: "network", value: "TCP", label: "Port Checks" },
+			{ icon: "globe", value: "DNS", label: "Change Detection" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 		],
+		spotlight: {
+			eyebrow: "Monitors",
+			title: "One row per service",
+			description:
+				"Give each service its own monitor and the failing one is the one that turns red, not the whole system.",
+			points: [
+				"HTTP, TCP and DNS checks",
+				"Independent alerts per service",
+				"Checks from 9 regions",
+			],
+			scene: "monitors",
+			href: featureHref("monitors"),
+			linkLabel: "See monitors",
+		},
 		features: [
 			{
 				title: "One monitor per service",
 				description: "Isolate failures to the exact service that's down.",
 				icon: "boxes",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "TCP port monitoring",
 				description: "Watch raw ports for services that don't speak HTTP.",
 				icon: "network",
+				href: featureHref("monitors"),
 			},
 			{
 				title: "DNS monitoring",
 				description: "Catch service-discovery DNS changes before they misroute traffic.",
 				icon: "globe",
+				href: featureHref("dns"),
 			},
 			{
 				title: "Independent alerting",
 				description: "Scope alerts to a single service instead of the whole system.",
 				icon: "route",
+				href: featureHref("alerts"),
 			},
 		],
 		steps: DEFAULT_STEPS,
