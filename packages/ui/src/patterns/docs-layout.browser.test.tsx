@@ -119,6 +119,17 @@ describe("DocsLayout", () => {
 		expect(shown('[data-slot="docs-sidebar"]')).toBe(true);
 	});
 
+	test("fills its parent's width inside a centred flex parent", async () => {
+		await page.viewport(1920, 900);
+		mountLayout();
+
+		let layout = document.querySelector<HTMLElement>('[data-slot="docs-layout"]')!;
+		let parent = layout.parentElement!;
+		parent.style.cssText = "display: flex; flex-direction: column; align-items: center";
+
+		expect(Math.round(layout.getBoundingClientRect().width)).toBe(parent.clientWidth);
+	});
+
 	test("never scrolls sideways at 320px", async () => {
 		await page.viewport(320, 640);
 		mountLayout();

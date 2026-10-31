@@ -136,6 +136,7 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				data-slot="docs-layout"
 				mix={[
 					raw({
+						inlineSize: "100%",
 						"--docs-sticky-top": stickyTop,
 						"--ui-docs-scroll-margin": outlined
 							? `calc(${stickyTop} + ${BAR_HEIGHT} + 1rem)`
