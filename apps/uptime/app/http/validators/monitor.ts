@@ -11,7 +11,21 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
-const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "afr", "me"] as const;
+/** The probe regions a monitor can run from, which the landing counts as its region figure. */
+export const LOCATION_HINTS = [
+	"wnam",
+	"enam",
+	"sam",
+	"weur",
+	"eeur",
+	"apac",
+	"oc",
+	"afr",
+	"me",
+] as const;
+
+/** The shortest check interval a monitor accepts, which the landing quotes as its floor. */
+export const MIN_INTERVAL_SECONDS = 60;
 
 /**
  * Query parameter the new-monitor page pre-fills its `url` field from, so a URL
@@ -28,7 +42,7 @@ const MONITOR_FIELDS = {
 		s.defaulted(coerce.number().pipe(checks.min(100), checks.max(599)), 200),
 	),
 	interval_seconds: f.field(
-		s.defaulted(coerce.number().pipe(checks.min(60), checks.max(3600)), 600),
+		s.defaulted(coerce.number().pipe(checks.min(MIN_INTERVAL_SECONDS), checks.max(3600)), 600),
 	),
 	location_hint: f.field(s.defaulted(s.enum_(LOCATION_HINTS), "wnam")),
 };

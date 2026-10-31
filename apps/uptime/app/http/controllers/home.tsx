@@ -65,8 +65,11 @@ import {
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { LOCATION_HINTS, MIN_INTERVAL_SECONDS } from "~/app/http/validators/monitor";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { SEO } from "~/app/initializers/seo";
+import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
+import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { trialTurnstileSiteKey } from "~/app/services/trial/guard";
 import {
 	BASE_PRICE_USD,
@@ -157,15 +160,24 @@ export default createAction(routes.home, async (ctx) => {
 	];
 
 	/**
-	 * Each value is a verifiable product spec, so every figure in this strip can be checked
-	 * against real behavior. "1min" is the enforced check-interval floor:
-	 * `interval_seconds` carries a 60-second minimum in validation.
+	 * Each figure is read from the code that enforces it — the monitor kinds a team creates,
+	 * the probe regions and interval floor the monitor form accepts, the ping-history window —
+	 * so the strip changes with the product and never overstates it.
 	 */
 	let PRODUCT_FIGURES = [
-		{ value: "6", label: t("landing.trustIndicators.monitorTypes") },
-		{ value: "9", label: t("landing.trustIndicators.globalRegions") },
-		{ value: "365", label: t("landing.trustIndicators.daysDataRetention") },
-		{ value: "1min", label: t("landing.trustIndicators.minCheckInterval") },
+		{
+			value: String(REPORT_MONITOR_TYPES.length),
+			label: t("landing.trustIndicators.monitorTypes"),
+		},
+		{ value: String(LOCATION_HINTS.length), label: t("landing.trustIndicators.globalRegions") },
+		{
+			value: String(PING_RETENTION_DAYS),
+			label: t("landing.trustIndicators.daysDataRetention"),
+		},
+		{
+			value: `${MIN_INTERVAL_SECONDS / 60}min`,
+			label: t("landing.trustIndicators.minCheckInterval"),
+		},
 	];
 
 	/**

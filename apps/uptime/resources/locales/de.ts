@@ -104,9 +104,9 @@ export default {
 
 		hero: {
 			pill: "Uptime-Überwachung",
-			title: "Überwachen Sie Ihre Dienste {#strong}mit Zuversicht{/strong}",
+			title: "Ein 200 auf der Startseite {#strong}kann eine kaputte Anmeldung verbergen{/strong}",
 			description:
-				"Erhalten Sie sofortige Benachrichtigungen, wenn Ihre Websites und APIs ausfallen. Überwachen Sie Ihre Websites und APIs mit Leichtigkeit.",
+				"Uptime prüft Ihre URLs aus allen Regionen, führt die Anmeldung dahinter nach Zeitplan aus und benachrichtigt Ihr Team, sobald ein Schritt fehlschlägt – und Agenten steuern alles über MCP.",
 
 			cta: {
 				in: "Dashboard öffnen",
@@ -131,8 +131,8 @@ export default {
 		trustIndicators: {
 			monitorTypes: "Monitor-Typen",
 			globalRegions: "Globale Regionen",
-			daysDataRetention: "Tage Datenspeicherung",
-			minCheckInterval: "Min. Prüfintervall",
+			daysDataRetention: "Tage Verlauf",
+			minCheckInterval: "Kürzestes Intervall",
 		},
 
 		/**
@@ -165,9 +165,9 @@ export default {
 		},
 
 		features: {
-			title: "Leistungsstarke Überwachung einfach gemacht",
+			title: "Jeder Ausfall einer Website, geprüft",
 			description:
-				"Alles, was Sie brauchen, um Ihre Dienste reibungslos am Laufen zu halten, ohne unnötige Komplexität.",
+				"Verfügbarkeit, Latenz, Zertifikate, DNS, Cron-Jobs und mehrstufige Flows – mit der Benachrichtigung im Kanal, den Ihr Team schon liest.",
 			badge: "Funktionen",
 			learnMore: "Mehr erfahren",
 
@@ -268,9 +268,10 @@ export default {
 		},
 
 		completeFeatureSet: {
-			badge: "Komplettes Funktionsset",
-			title: "Alles, was Sie für zuverlässige Überwachung brauchen",
-			description: "Erweiterte Funktionen, die die Überwachung mühelos und umfassend machen.",
+			badge: "Ebenfalls enthalten",
+			title: "Benachrichtigungen, die etwas bedeuten",
+			description:
+				"Wartungsfenster, Cooldowns und Inhaltsprüfungen heben die Benachrichtigung für einen echten Ausfall auf.",
 
 			list: {
 				maintenanceWindows: {
@@ -311,9 +312,9 @@ export default {
 
 		useCases: {
 			badge: "Anwendungsfälle",
-			title: "Für jeden Überwachungsbedarf entwickelt",
+			title: "Vom Blog bis zur Service-Flotte",
 			description:
-				"Von einfachen Gesundheitsprüfungen bis hin zu komplexen verteilten Systemen – wir haben Sie abgedeckt.",
+				"Dieselben Checks decken eine Landingpage, eine Zahlungs-API und die Jobs dahinter ab.",
 			learnMore: "Mehr erfahren",
 			tailoredFor: "Maßgeschneiderte Lösungen für:",
 
@@ -362,7 +363,7 @@ export default {
 
 		pricing: {
 			badge: "Preise",
-			title: "Einfache, transparente Preise",
+			title: "Bezahlt pro Ping, nicht pro Monitor",
 			description:
 				"Ein Abonnement, keine Stufen. Zahlen Sie nur für das, was Sie nutzen, mit unserem unkomplizierten Preismodell",
 
@@ -396,7 +397,7 @@ export default {
 			},
 
 			calculator: {
-				title: "Preisrechner",
+				title: "Monatliche Kosten schätzen",
 				description:
 					"Schätzen Sie die monatlichen Ping-Kosten anhand der Monitor-Frequenz. Browser-Flow-Läufe werden separat mit {$flowRunPrice} pro 1.000 abgerechnet.",
 

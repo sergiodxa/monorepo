@@ -104,9 +104,9 @@ export default {
 
 		hero: {
 			pill: "稼働時間監視",
-			title: "安心してサービスを{#strong}監視{/strong}",
+			title: "トップページが 200 でも{#strong}ログインは壊れているかもしれない{/strong}",
 			description:
-				"ウェブサイトやAPIがダウンした時に即座にアラートを受け取れます。簡単にウェブサイトやAPIを監視できます。",
+				"Uptime はすべてのリージョンから URL をチェックし、その先のログインを定期的に実行して、ステップが失敗した瞬間にチームへ通知します。すべての操作は MCP でエージェントからも使えます。",
 
 			cta: {
 				in: "ダッシュボードを開く",
@@ -131,7 +131,7 @@ export default {
 		trustIndicators: {
 			monitorTypes: "モニタータイプ",
 			globalRegions: "グローバルリージョン",
-			daysDataRetention: "日間データ保持",
+			daysDataRetention: "日間の履歴",
 			minCheckInterval: "最短チェック間隔",
 		},
 
@@ -165,9 +165,9 @@ export default {
 		},
 
 		features: {
-			title: "シンプルで強力な監視",
+			title: "サイトが壊れるあらゆる形をチェック",
 			description:
-				"サービスをスムーズに稼働させるために必要なすべてを、不必要な複雑さなしに提供します。",
+				"稼働率、レイテンシ、証明書、DNS、cron ジョブ、複数ステップのフローを監視し、チームが普段見ているチャンネルにアラートを届けます。",
 			badge: "機能",
 			learnMore: "詳細を見る",
 
@@ -268,9 +268,10 @@ export default {
 		},
 
 		completeFeatureSet: {
-			badge: "完全な機能セット",
-			title: "信頼性の高い監視に必要なすべて",
-			description: "監視を簡単かつ包括的にする高度な機能。",
+			badge: "こちらも含まれます",
+			title: "意味のあるアラートだけ",
+			description:
+				"メンテナンスウィンドウ、クールダウン、コンテンツチェックで、アラートは本当の障害のときだけ届きます。",
 
 			list: {
 				maintenanceWindows: {
@@ -307,8 +308,9 @@ export default {
 
 		useCases: {
 			badge: "ユースケース",
-			title: "あらゆる監視ニーズに対応",
-			description: "シンプルなヘルスチェックから複雑な分散システムまで、すべてをカバーします。",
+			title: "ブログから多数のサービスまで",
+			description:
+				"ランディングページも決済 API も、その裏で動くジョブも、同じチェックでカバーします。",
 			learnMore: "詳細を見る",
 			tailoredFor: "対象ソリューション：",
 
@@ -352,7 +354,7 @@ export default {
 
 		pricing: {
 			badge: "料金",
-			title: "シンプルで透明な料金",
+			title: "モニター数ではなく Ping 数で課金",
 			description:
 				"単一のサブスクリプション、階層なし。わかりやすい料金モデルで使った分だけお支払い",
 
@@ -385,7 +387,7 @@ export default {
 			},
 
 			calculator: {
-				title: "料金計算機",
+				title: "月額料金を見積もる",
 				description:
 					"モニター頻度から月間 ping コストを見積もります。ブラウザフローの実行は別途 {$flowRunPrice} / 1,000 で課金されます。",
 

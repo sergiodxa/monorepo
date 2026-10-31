@@ -102,8 +102,8 @@ export default {
 				docs: "Docs",
 
 				cta: {
-					in: "Open Dashboard",
-					out: "Start Monitoring",
+					in: "Open dashboard",
+					out: "Start monitoring",
 				},
 			},
 		},
@@ -119,14 +119,14 @@ export default {
 
 		hero: {
 			pill: "Agent-first uptime",
-			title: "Monitor your services {#strong}with confidence{/strong}",
+			title: "A 200 on the homepage {#strong}can still hide a broken login{/strong}",
 			description:
-				"Instant alerts when sites and APIs go down — and a full MCP surface so agents can operate monitoring the same way the REST API does.",
+				"Uptime checks your URLs from every region, runs the sign-in behind them on a schedule and alerts your team the moment a step breaks — with every control open to agents over MCP.",
 
 			cta: {
-				in: "Open Dashboard",
-				out: "Start Monitoring",
-				pricing: "View Pricing",
+				in: "Open dashboard",
+				out: "Start monitoring",
+				pricing: "View pricing",
 				try: "Monitor a site free for {$days} days",
 			},
 
@@ -144,10 +144,10 @@ export default {
 		},
 
 		trustIndicators: {
-			monitorTypes: "Monitor Types",
-			globalRegions: "Global Regions",
-			daysDataRetention: "Days Data Retention",
-			minCheckInterval: "Min Check Interval",
+			monitorTypes: "Monitor types",
+			globalRegions: "Global regions",
+			daysDataRetention: "Days of history",
+			minCheckInterval: "Shortest interval",
 		},
 
 		/**
@@ -180,9 +180,9 @@ export default {
 		},
 
 		features: {
-			title: "Powerful monitoring made simple",
+			title: "Every way a site breaks, checked",
 			description:
-				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
+				"Uptime, latency, certificates, DNS, cron jobs and multi-step flows, with the alert in the channel your team already reads.",
 			badge: "Features",
 			learnMore: "Learn more",
 
@@ -257,7 +257,7 @@ export default {
 		},
 
 		browserExamples: {
-			badge: "Browser Flows",
+			badge: "Browser flows",
 			title: "See what a real-browser check looks like",
 			description:
 				"A short executable spec drives a live Browser Run session — the same click-through a visitor would take. Three examples teams run on a schedule.",
@@ -283,9 +283,10 @@ export default {
 		},
 
 		completeFeatureSet: {
-			badge: "Complete Feature Set",
-			title: "Everything you need for reliable monitoring",
-			description: "Advanced capabilities that make monitoring effortless and comprehensive.",
+			badge: "Also included",
+			title: "Alerts that mean something",
+			description:
+				"Maintenance windows, cooldowns and content checks save the alert for a real outage.",
 
 			list: {
 				maintenanceWindows: {
@@ -320,10 +321,9 @@ export default {
 		},
 
 		useCases: {
-			badge: "Use Cases",
-			title: "Built for every monitoring need",
-			description:
-				"From simple health checks to complex distributed systems, we've got you covered.",
+			badge: "Use cases",
+			title: "From a blog to a fleet of services",
+			description: "The same checks cover a landing page, a payment API and the jobs behind them.",
 			learnMore: "Learn more",
 			tailoredFor: "Tailored solutions for:",
 
@@ -425,7 +425,7 @@ export default {
 
 		pricing: {
 			badge: "Pricing",
-			title: "Simple, transparent pricing",
+			title: "Priced per ping, not per monitor",
 			description:
 				"One subscription, no tiers. Pay only for what you use with our straightforward pricing model",
 
@@ -457,11 +457,11 @@ export default {
 			},
 
 			calculator: {
-				title: "Pricing Calculator",
+				title: "Estimate your monthly bill",
 				description:
 					"Estimate monthly ping cost from monitor frequency. Browser flow runs bill separately at {$flowRunPrice} per 1,000.",
 
-				add: "Add Monitor",
+				add: "Add monitor",
 
 				monitor: {
 					label: "Monitor frequency",
@@ -622,10 +622,10 @@ export default {
 					analytics: "Analytics",
 					api: "API Access",
 					flowMonitors: "Flow Monitors",
-					browserFlows: "Browser Flows",
+					browserFlows: "Browser flows",
 				},
 				useCases: {
-					title: "Use Cases",
+					title: "Use cases",
 					websiteMonitoring: "Website Monitoring",
 					apiMonitoring: "API Monitoring",
 					saas: "SaaS Applications",

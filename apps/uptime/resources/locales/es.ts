@@ -87,7 +87,7 @@ export default {
 				docs: "Documentación",
 
 				cta: {
-					in: "Abrir Panel de control",
+					in: "Abrir panel de control",
 					out: "Comenzar a monitorear",
 				},
 			},
@@ -104,12 +104,12 @@ export default {
 
 		hero: {
 			pill: "Monitoreo de Uptime",
-			title: "Monitoree sus servicios {#strong}con confianza{/strong}",
+			title: "Un 200 en la portada {#strong}puede ocultar un inicio de sesión roto{/strong}",
 			description:
-				"Reciba alertas instantáneas cuando sus sitios web y APIs dejen de funcionar. Monitoree sus sitios web y APIs con facilidad.",
+				"Uptime comprueba sus URL desde todas las regiones, ejecuta el inicio de sesión que hay detrás según un calendario y avisa a su equipo en cuanto falla un paso, con cada control abierto a agentes por MCP.",
 
 			cta: {
-				in: "Abrir Panel de control",
+				in: "Abrir panel de control",
 				out: "Comenzar a monitorear",
 				pricing: "Ver precios",
 				try: "Monitorea un sitio gratis {$days} días",
@@ -129,9 +129,9 @@ export default {
 		},
 
 		trustIndicators: {
-			monitorTypes: "Tipos de Monitor",
-			globalRegions: "Regiones Globales",
-			daysDataRetention: "Días de Retención",
+			monitorTypes: "Tipos de monitor",
+			globalRegions: "Regiones globales",
+			daysDataRetention: "Días de historial",
 			minCheckInterval: "Intervalo Mínimo",
 		},
 
@@ -165,9 +165,9 @@ export default {
 		},
 
 		features: {
-			title: "Monitoreo potente simplificado",
+			title: "Cada forma en que falla un sitio, comprobada",
 			description:
-				"Todo lo que necesita para mantener sus servicios funcionando sin problemas, sin complejidad innecesaria.",
+				"Disponibilidad, latencia, certificados, DNS, cron jobs y flujos de varios pasos, con la alerta en el canal que su equipo ya lee.",
 			badge: "Funciones",
 			learnMore: "Más información",
 
@@ -268,9 +268,10 @@ export default {
 		},
 
 		completeFeatureSet: {
-			badge: "Conjunto Completo de Funciones",
-			title: "Todo lo que necesita para un monitoreo confiable",
-			description: "Capacidades avanzadas que hacen el monitoreo fácil y completo.",
+			badge: "También incluido",
+			title: "Alertas que significan algo",
+			description:
+				"Las ventanas de mantenimiento, los tiempos de espera y las comprobaciones de contenido reservan la alerta para una caída real.",
 
 			list: {
 				maintenanceWindows: {
@@ -310,10 +311,10 @@ export default {
 		},
 
 		useCases: {
-			badge: "Casos de Uso",
-			title: "Diseñado para cada necesidad de monitoreo",
+			badge: "Casos de uso",
+			title: "De un blog a una flota de servicios",
 			description:
-				"Desde verificaciones de salud simples hasta sistemas distribuidos complejos, lo tenemos cubierto.",
+				"Las mismas comprobaciones cubren una landing, una API de pagos y los trabajos que hay detrás.",
 			learnMore: "Más información",
 			tailoredFor: "Soluciones personalizadas para:",
 
@@ -361,7 +362,7 @@ export default {
 
 		pricing: {
 			badge: "Precios",
-			title: "Precios simples y transparentes",
+			title: "Precio por ping, no por monitor",
 			description:
 				"Una suscripción, sin niveles. Pague solo por lo que usa con nuestro modelo de precios directo",
 
@@ -395,11 +396,11 @@ export default {
 			},
 
 			calculator: {
-				title: "Calculadora de precios",
+				title: "Estime su factura mensual",
 				description:
 					"Estime el costo mensual de pings según la frecuencia. Las ejecuciones de flujos en navegador se facturan aparte a {$flowRunPrice} por cada 1.000.",
 
-				add: "Agregar Monitor",
+				add: "Agregar monitor",
 
 				monitor: {
 					label: "Frecuencia del monitor",

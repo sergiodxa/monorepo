@@ -165,7 +165,7 @@ describe("GET /docs/*slug", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("Start Monitoring");
+		expect(body).toContain("Start monitoring");
 	});
 
 	test("sends every API problem type's URL to the error reference", async () => {

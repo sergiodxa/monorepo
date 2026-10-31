@@ -104,9 +104,9 @@ export default {
 
 		hero: {
 			pill: "Surveillance Uptime",
-			title: "Surveillez vos services {#strong}en toute confiance{/strong}",
+			title: "Un 200 sur la page d'accueil {#strong}peut cacher une connexion cassée{/strong}",
 			description:
-				"Recevez des alertes instantanées lorsque vos sites web et API tombent en panne. Surveillez vos sites web et API facilement.",
+				"Uptime vérifie vos URL depuis toutes les régions, exécute la connexion qui se trouve derrière selon un planning et alerte votre équipe dès qu'une étape échoue, avec chaque commande ouverte aux agents via MCP.",
 
 			cta: {
 				in: "Ouvrir le tableau de bord",
@@ -131,7 +131,7 @@ export default {
 		trustIndicators: {
 			monitorTypes: "Types de moniteur",
 			globalRegions: "Régions mondiales",
-			daysDataRetention: "Jours de rétention des données",
+			daysDataRetention: "Jours d'historique",
 			minCheckInterval: "Intervalle minimum",
 		},
 
@@ -166,9 +166,9 @@ export default {
 		},
 
 		features: {
-			title: "Une surveillance puissante simplifiée",
+			title: "Chaque façon dont un site tombe, vérifiée",
 			description:
-				"Tout ce dont vous avez besoin pour maintenir vos services en fonctionnement, sans complexité inutile.",
+				"Disponibilité, latence, certificats, DNS, tâches cron et flux en plusieurs étapes, avec l'alerte dans le canal que votre équipe lit déjà.",
 			badge: "Fonctionnalités",
 			learnMore: "En savoir plus",
 
@@ -269,9 +269,10 @@ export default {
 		},
 
 		completeFeatureSet: {
-			badge: "Ensemble complet de fonctionnalités",
-			title: "Tout ce dont vous avez besoin pour une surveillance fiable",
-			description: "Des capacités avancées qui rendent la surveillance simple et complète.",
+			badge: "Également inclus",
+			title: "Des alertes qui veulent dire quelque chose",
+			description:
+				"Fenêtres de maintenance, délais de récupération et vérifications de contenu réservent l'alerte aux vraies pannes.",
 
 			list: {
 				maintenanceWindows: {
@@ -311,9 +312,9 @@ export default {
 
 		useCases: {
 			badge: "Cas d'utilisation",
-			title: "Conçu pour tous les besoins de surveillance",
+			title: "D'un blog à une flotte de services",
 			description:
-				"Des simples vérifications de santé aux systèmes distribués complexes, nous avons ce qu'il vous faut.",
+				"Les mêmes vérifications couvrent une page d'accueil, une API de paiement et les tâches qui tournent derrière.",
 			learnMore: "En savoir plus",
 			tailoredFor: "Solutions adaptées pour :",
 
@@ -362,7 +363,7 @@ export default {
 
 		pricing: {
 			badge: "Tarifs",
-			title: "Tarification simple et transparente",
+			title: "Facturé au ping, pas au moniteur",
 			description:
 				"Un seul abonnement, pas de niveaux. Payez uniquement ce que vous utilisez avec notre modèle de tarification simple",
 
@@ -395,7 +396,7 @@ export default {
 			},
 
 			calculator: {
-				title: "Calculateur de tarifs",
+				title: "Estimez votre facture mensuelle",
 				description:
 					"Estimez le coût mensuel des pings selon la fréquence. Les exécutions de flux navigateur sont facturées séparément à {$flowRunPrice} pour 1 000.",
 

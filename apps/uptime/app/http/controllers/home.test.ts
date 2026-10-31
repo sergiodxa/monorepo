@@ -27,8 +27,11 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
+import { LOCATION_HINTS, MIN_INTERVAL_SECONDS } from "~/app/http/validators/monitor";
 import { SEO } from "~/app/initializers/seo";
+import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { findClaimViolations } from "~/app/services/public-claims";
+import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/test/honeypot";
@@ -109,9 +112,64 @@ describe("GET /", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<title>Uptime by Sergio Xalambrí</title>");
-		expect(body).toContain("Monitor your services");
-		expect(body).toContain("with confidence");
-		expect(body).toContain("Start Monitoring");
+		expect(body).toContain("A 200 on the homepage");
+		expect(body).toContain("can still hide a broken login");
+		expect(body).toContain("Start monitoring");
+	});
+
+	/**
+	 * Section titles are claims only this product makes, in sentence case; these are the
+	 * template phrases and Title Case labels the page used to carry.
+	 */
+	test("titles its sections with specific claims in sentence case", async () => {
+		let body = await (await getHome(null)).text();
+
+		for (let generic of [
+			"Monitor your services",
+			"Powerful monitoring made simple",
+			"Everything you need for reliable monitoring",
+			"Built for every monitoring need",
+			"Simple, transparent pricing",
+			"Start Monitoring",
+			"Open Dashboard",
+			"View Pricing",
+			"Complete Feature Set",
+			"Pricing Calculator",
+			"Add Monitor",
+		]) {
+			expect(body).not.toContain(generic);
+		}
+		expect(body).toContain("Every way a site breaks, checked");
+		expect(body).toContain("Priced per ping, not per monitor");
+	});
+
+	/**
+	 * The strip states figures a reader can check, so each one is the value the code
+	 * enforces: the monitor kinds a team creates, the probe regions and interval floor the
+	 * monitor form accepts, and the ping-history window.
+	 */
+	test("reads every product figure from the code that enforces it", async () => {
+		let body = await (await getHome(null)).text();
+		let strip = body.slice(
+			body.indexOf("</header>", body.indexOf("<main")),
+			body.indexOf('id="try"'),
+		);
+
+		for (let figure of [
+			String(REPORT_MONITOR_TYPES.length),
+			String(LOCATION_HINTS.length),
+			String(PING_RETENTION_DAYS),
+			`${MIN_INTERVAL_SECONDS / 60}min`,
+		]) {
+			expect(strip).toContain(`>${figure}<`);
+		}
+
+		let source = readFileSync(new URL("./home.tsx", import.meta.url), "utf8");
+		let figures = source.slice(
+			source.indexOf("let PRODUCT_FIGURES"),
+			source.indexOf("];", source.indexOf("let PRODUCT_FIGURES")),
+		);
+		expect(figures).not.toMatch(/value: "/);
 	});
 
 	test("marks the signed-out CTA form as a document submission", async () => {
@@ -178,7 +236,7 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body).toContain("Monitor Types");
+		expect(body).toContain("Monitor types");
 		expect(body).toContain("365");
 
 		expect(body).not.toContain("99.9%");
@@ -188,7 +246,7 @@ describe("GET /", () => {
 		expect(body).not.toContain("<1s");
 		expect(body).not.toContain("Alert Latency");
 		expect(body).toContain("1min");
-		expect(body).toContain("Min Check Interval");
+		expect(body).toContain("Shortest interval");
 
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
 		expect(body).toContain(`href="${routes.browserFlows.href()}"`);
@@ -307,7 +365,7 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body).toContain("Pricing Calculator");
+		expect(body).toContain("Estimate your monthly bill");
 		expect(body).toContain('type="range"');
 		expect(body).toContain('min="1"');
 		expect(body).toContain('max="60"');
@@ -408,7 +466,7 @@ describe("GET /", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("Open Dashboard");
+		expect(body).toContain("Open dashboard");
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 
