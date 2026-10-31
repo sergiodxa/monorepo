@@ -31,7 +31,8 @@ HTTP monitors are the most common way to track service availability. They send r
 
 Your monitor starts checking immediately. You'll see results appear in the dashboard within your configured interval.
 
-> **Tip**: Use the **Run Now** button to test your monitor immediately after creation.
+> [!TIP]
+> Use the **Run Now** button to test your monitor immediately after creation.
 
 ## Step 2: Set Up an Alert
 

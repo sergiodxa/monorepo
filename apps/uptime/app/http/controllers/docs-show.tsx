@@ -10,22 +10,29 @@
 import { highlight } from "@sdxc/highlight/markdown";
 import { redirect } from "@sdxc/http/response";
 import { Markdown } from "@sdxc/markdown";
+import { headings, tableOfContents } from "@sdxc/markdown/plugin/headings";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
-import { m, mbe } from "@sdxc/u/size";
-import { fontSize } from "@sdxc/u/typography";
+import { m } from "@sdxc/u/size";
+import { font, text } from "@sdxc/u/typography";
+import { Breadcrumbs, Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
+
+import type { DocsTocAnchor } from "~/resources/components/docs-toc";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { expandReference } from "~/app/http/openapi/reference";
 import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
-import { getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
-import DocsLayout from "~/resources/layouts/docs";
+import { findNeighbours, getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
+import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
+import DocsLayout, { buildDocsLabels } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
+import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
 /**
@@ -46,36 +53,13 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let sections = await listDocs();
 	let isSignedIn = getViewer() !== null;
 	let activePath = routes.docs.show.href({ slug });
-
-	let dashboardLabel = ctx.intl.t("docs.header.cta.in");
-	let startLabel = ctx.intl.t("docs.header.cta.out");
-	let sidebarTitle = ctx.intl.t("docs.sidebar.title");
-	let sidebarDescription = ctx.intl.t("docs.sidebar.description");
-	let searchPlaceholder = ctx.intl.t("docs.sidebar.searchPlaceholder");
-	let toggleNavLabel = ctx.intl.t("docs.sidebar.openMenu");
-	let breadcrumbLabel = ctx.intl.t("app.layout.breadcrumbs.label");
+	let chrome = buildMarketingChrome(ctx.intl.t);
+	let labels = buildDocsLabels(ctx.intl.t);
+	let section = sections.find((entry) => entry.docs.some((doc) => doc.path === activePath));
 
 	/**
-	 * Builds the `docs > ... > <segment>` trail, one crumb per URL segment.
-	 * Only the `docs` root links anywhere — intermediate segments group and
-	 * order doc files, so they render as plain text alongside the current one.
-	 */
-	function buildBreadcrumbs() {
-		let pathSegments = activePath.split("/").filter(Boolean);
-
-		return pathSegments.map((segment, index) => {
-			let isRoot = index === 0;
-			return {
-				label: segment.replace(/-/g, " "),
-				href: isRoot ? routes.docs.index.href() : undefined,
-			};
-		});
-	}
-
-	/**
-	 * The 404 page for an unknown slug or an unparseable doc, kept out of the
-	 * search index since a canonical link here would tell crawlers this URL
-	 * is real, indexable content.
+	 * The 404 page for an unknown slug or an unparseable doc, kept out of the search
+	 * index since a canonical link here would tell crawlers this URL is real content.
 	 */
 	let renderNotFound = () => {
 		return ctx.render(
@@ -85,20 +69,19 @@ export default createAction(routes.docs.show, async (ctx) => {
 				locale={ctx.locale}
 			>
 				<DocsLayout
+					isSignedIn={isSignedIn}
+					chrome={chrome}
 					sections={sections}
 					activePath={activePath}
-					breadcrumbs={buildBreadcrumbs()}
-					isSignedIn={isSignedIn}
-					dashboardLabel={dashboardLabel}
-					startLabel={startLabel}
-					sidebarTitle={sidebarTitle}
-					sidebarDescription={sidebarDescription}
-					searchPlaceholder={searchPlaceholder}
-					toggleNavLabel={toggleNavLabel}
-					breadcrumbLabel={breadcrumbLabel}
+					labels={labels}
 				>
-					<h1>{ctx.intl.t("docs.error.notFoundTitle")}</h1>
-					<p>{ctx.intl.t("docs.error.notFoundDescription")}</p>
+					<Typeset preset="docs">
+						<h1>{ctx.intl.t("docs.error.notFoundTitle")}</h1>
+						<p>{ctx.intl.t("docs.error.notFoundDescription")}</p>
+						<p>
+							<a href={routes.docs.index.href()}>{ctx.intl.t("docs.shell.backToIndex")}</a>
+						</p>
+					</Typeset>
 				</DocsLayout>
 			</DocumentLayout>,
 			{ status: 404 },
@@ -137,13 +120,15 @@ export default createAction(routes.docs.show, async (ctx) => {
 	}
 
 	let { document, frontmatter } = parsed.data;
-	let painted = Markdown.walk(document, highlight);
 
 	/**
-	 * Token colors are decoration, so a visitor that gives up costs the page its
-	 * highlighting and keeps its prose, with the line the walk stood on recorded
-	 * for whoever reads the log.
+	 * Every heading gets an id first, so the "On this page" links have targets even when
+	 * the painter below gives up; token colors are decoration, so a painter that fails
+	 * costs the page its highlighting and keeps its prose, with the line it stood on logged.
 	 */
+	let anchored = Markdown.walk(document, headings());
+	let outlined = isFailure(anchored) ? document : anchored.data;
+	let painted = Markdown.walk(outlined, highlight);
 	if (isFailure(painted)) {
 		ctx.log.warn("docs.highlight_failed", {
 			file: docLoader.path,
@@ -152,7 +137,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 		});
 	}
 
-	let body = isFailure(painted) ? document : painted.data;
+	let body = isFailure(painted) ? outlined : painted.data;
+	let anchors = flattenAnchors(tableOfContents(outlined));
+	let { previous, next } = findNeighbours(sections, activePath);
 
 	return ctx.render(
 		<DocumentLayout
@@ -166,34 +153,88 @@ export default createAction(routes.docs.show, async (ctx) => {
 			}}
 		>
 			<DocsLayout
+				isSignedIn={isSignedIn}
+				chrome={chrome}
 				sections={sections}
 				activePath={activePath}
-				breadcrumbs={buildBreadcrumbs()}
-				isSignedIn={isSignedIn}
-				dashboardLabel={dashboardLabel}
-				startLabel={startLabel}
-				sidebarTitle={sidebarTitle}
-				sidebarDescription={sidebarDescription}
-				searchPlaceholder={searchPlaceholder}
-				toggleNavLabel={toggleNavLabel}
-				breadcrumbLabel={breadcrumbLabel}
+				labels={labels}
+				anchors={anchors}
+				previous={previous}
+				next={next}
 			>
 				<article>
-					<header mix={[vstack({ gap: "2px" }), mbe("2rem")]}>
-						<h1 mix={[m("0")]}>{frontmatter.title}</h1>
-						<p mix={[fontSize("xl"), fg("neutral"), m("6px", "0", "0", "0")]}>
+					<header mix={[vstack({ gap: 3 }), m(0, 0, "2.5rem", 0)]}>
+						<Breadcrumbs aria-label={ctx.intl.t("app.layout.breadcrumbs.label")}>
+							<Breadcrumbs.List>
+								<Breadcrumbs.Item>
+									<Breadcrumbs.Link href={routes.docs.index.href()}>
+										{ctx.intl.t("docs.shell.root")}
+									</Breadcrumbs.Link>
+								</Breadcrumbs.Item>
+								{section ? (
+									<Breadcrumbs.Item>
+										<Breadcrumbs.Link mix={[raw({ textDecoration: "none" })]}>
+											{section.title}
+										</Breadcrumbs.Link>
+									</Breadcrumbs.Item>
+								) : null}
+								<Breadcrumbs.Item>
+									<Breadcrumbs.Link aria-current="page">{frontmatter.title}</Breadcrumbs.Link>
+								</Breadcrumbs.Item>
+							</Breadcrumbs.List>
+						</Breadcrumbs>
+
+						<h1
+							mix={[
+								m(0),
+								text("4xl"),
+								font("sans"),
+								fg("neutral.emphasis"),
+								raw({
+									textWrap: "balance",
+									fontWeight: 650,
+									letterSpacing: "-0.02em",
+									lineHeight: 1.1,
+								}),
+							]}
+						>
+							{frontmatter.title}
+						</h1>
+						<p mix={[m(0), text("lg"), fg("neutral"), raw({ textWrap: "pretty" })]}>
 							{frontmatter.description}
 						</p>
 						{frontmatter.lastUpdated && (
-							<p mix={[fontSize("0.8125rem"), fg("neutral.muted"), m("0")]}>
+							<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
 								{ctx.intl.t("docs.lastUpdated", { date: frontmatter.lastUpdated })}
 							</p>
 						)}
 					</header>
 
-					{toRemix(body)}
+					<Typeset preset="docs">
+						{toRemix(body, {
+							components: docsMarkdownComponents({
+								copy: ctx.intl.t("docs.code.copy"),
+								copied: ctx.intl.t("docs.code.copied"),
+								alerts: {
+									note: ctx.intl.t("docs.alerts.note"),
+									tip: ctx.intl.t("docs.alerts.tip"),
+									important: ctx.intl.t("docs.alerts.important"),
+									warning: ctx.intl.t("docs.alerts.warning"),
+									caution: ctx.intl.t("docs.alerts.caution"),
+								},
+							}),
+						})}
+					</Typeset>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,
 	);
 });
+
+/** The table of contents in reading order, one entry per heading, as the rail lists it. */
+function flattenAnchors(entries: ReturnType<typeof tableOfContents>): DocsTocAnchor[] {
+	return entries.flatMap((entry) => [
+		{ id: entry.id, text: entry.text, level: entry.level },
+		...flattenAnchors(entry.children),
+	]);
+}

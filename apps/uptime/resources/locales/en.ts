@@ -6177,5 +6177,42 @@ export default {
 		},
 
 		lastUpdated: "Last updated: {$date}",
+
+		shell: {
+			menu: "Docs menu",
+			noResults: "No pages match your search.",
+			toc: "On this page",
+			root: "Docs",
+			backToIndex: "Back to the documentation",
+		},
+
+		pager: {
+			label: "Previous and next pages",
+			previous: "Previous",
+			next: "Next",
+		},
+
+		code: {
+			copy: "Copy code",
+			copied: "Copied",
+		},
+
+		alerts: {
+			note: "Note",
+			tip: "Tip",
+			important: "Important",
+			warning: "Warning",
+			caution: "Caution",
+		},
+
+		hub: {
+			eyebrow: "Documentation",
+			title: "Uptime documentation",
+			description:
+				"Set up monitors, route alerts to your team, publish status pages and automate all of it through the API.",
+			start: "Start here",
+			topics: "Browse by topic",
+			read: "Read the guide",
+		},
 	},
 };

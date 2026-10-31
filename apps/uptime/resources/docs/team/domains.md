@@ -60,7 +60,8 @@ For example, if you're verifying `company.com`:
 - The **Name** field should be `_uptime-verification` (some providers may require `_uptime-verification.company.com`)
 - The **Value** field should be the full verification string provided by Uptime
 
-> **Note**: Some DNS providers require you to enter the full domain in the name field, while others only want the subdomain portion. Check your provider's documentation if you're unsure.
+> [!NOTE]
+> Some DNS providers require you to enter the full domain in the name field, while others only want the subdomain portion. Check your provider's documentation if you're unsure.
 
 ### Step 3: Wait for DNS Propagation
 
@@ -112,7 +113,8 @@ To remove a domain:
 3. Click the menu icon (three dots)
 4. Select **Remove Domain**
 
-> **Important**: Removing a domain immediately stops auto-provisioning for that email domain. Existing team members are not affected—they remain on the team.
+> [!IMPORTANT]
+> Removing a domain immediately stops auto-provisioning for that email domain. Existing team members are not affected—they remain on the team.
 
 You can optionally remove the TXT verification record from your DNS provider after removing the domain.
 

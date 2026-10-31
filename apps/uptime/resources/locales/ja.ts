@@ -6061,5 +6061,42 @@ export default {
 		},
 
 		lastUpdated: "最終更新: {$date}",
+
+		shell: {
+			menu: "ドキュメント一覧",
+			noResults: "検索に一致するページはありません。",
+			toc: "このページの内容",
+			root: "ドキュメント",
+			backToIndex: "ドキュメントに戻る",
+		},
+
+		pager: {
+			label: "前後のページ",
+			previous: "前へ",
+			next: "次へ",
+		},
+
+		code: {
+			copy: "コードをコピー",
+			copied: "コピーしました",
+		},
+
+		alerts: {
+			note: "注記",
+			tip: "ヒント",
+			important: "重要",
+			warning: "警告",
+			caution: "注意",
+		},
+
+		hub: {
+			eyebrow: "ドキュメント",
+			title: "Uptime ドキュメント",
+			description:
+				"モニターの設定、チームへのアラート配信、ステータスページの公開、そしてそのすべてを API で自動化する方法を説明します。",
+			start: "はじめに",
+			topics: "トピックから探す",
+			read: "ガイドを読む",
+		},
 	},
 };

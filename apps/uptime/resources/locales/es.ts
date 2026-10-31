@@ -6143,5 +6143,42 @@ export default {
 		},
 
 		lastUpdated: "Última actualización: {$date}",
+
+		shell: {
+			menu: "Menú de docs",
+			noResults: "Ninguna página coincide con tu búsqueda.",
+			toc: "En esta página",
+			root: "Docs",
+			backToIndex: "Volver a la documentación",
+		},
+
+		pager: {
+			label: "Páginas anterior y siguiente",
+			previous: "Anterior",
+			next: "Siguiente",
+		},
+
+		code: {
+			copy: "Copiar código",
+			copied: "Copiado",
+		},
+
+		alerts: {
+			note: "Nota",
+			tip: "Consejo",
+			important: "Importante",
+			warning: "Advertencia",
+			caution: "Precaución",
+		},
+
+		hub: {
+			eyebrow: "Documentación",
+			title: "Documentación de Uptime",
+			description:
+				"Configura monitores, envía alertas a tu equipo, publica páginas de estado y automatízalo todo con la API.",
+			start: "Empieza aquí",
+			topics: "Explora por tema",
+			read: "Leer la guía",
+		},
 	},
 };

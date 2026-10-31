@@ -148,6 +148,7 @@ Creating a monitor from the dashboard runs discovery immediately and lands you o
 
 Records you uncheck are **still stored**, switched off. That is deliberate:
 
+> [!NOTE]
 > The record table is the complete set of everything we have ever seen for the domain. The switch says only whether a deviation from that record alerts you.
 
 Without it, a record you declined would be rediscovered as new on the very next check and alert forever.

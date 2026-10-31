@@ -2,7 +2,8 @@
  * Tests `listDocs` and `getDocLoader` against the real Markdown files under
  * `resources/docs/**`: sections come back ordered by `section.order`, docs within a
  * section are ordered by their own `order`, a known slug resolves a loader whose
- * content matches the real file, and an unknown slug resolves to `null`.
+ * content matches the real file, an unknown slug resolves to `null`, and the pager's
+ * neighbours follow the sidebar's order across section boundaries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { getDocLoader, listDocs } from "./docs";
+import { findNeighbours, getDocLoader, listDocs } from "./docs";
 
 describe("listDocs", () => {
 	test("returns non-empty sections", async () => {
@@ -90,5 +91,29 @@ describe("getDocLoader", () => {
 
 	test("returns null for an unknown slug", () => {
 		expect(getDocLoader("not-a-real-slug")).toBeNull();
+	});
+});
+
+describe("findNeighbours", () => {
+	test("walks the sidebar order across a section boundary", async () => {
+		let sections = await listDocs();
+
+		let { previous, next } = findNeighbours(sections, "/docs/quickstart");
+		expect(previous?.path).toBe("/docs/overview");
+		expect(next?.path).toBe("/docs/concepts/monitors");
+	});
+
+	test("leaves an end of the list empty", async () => {
+		let sections = await listDocs();
+
+		expect(findNeighbours(sections, "/docs/overview").previous).toBeNull();
+		let last = sections.at(-1)?.docs.at(-1)?.path ?? "";
+		expect(findNeighbours(sections, last).next).toBeNull();
+	});
+
+	test("returns no neighbours for a path outside the list", async () => {
+		let sections = await listDocs();
+
+		expect(findNeighbours(sections, "/docs/missing")).toEqual({ previous: null, next: null });
 	});
 });

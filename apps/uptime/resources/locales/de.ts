@@ -6184,5 +6184,42 @@ export default {
 		},
 
 		lastUpdated: "Zuletzt aktualisiert: {$date}",
+
+		shell: {
+			menu: "Doku-Menü",
+			noResults: "Keine Seite passt zu deiner Suche.",
+			toc: "Auf dieser Seite",
+			root: "Doku",
+			backToIndex: "Zurück zur Dokumentation",
+		},
+
+		pager: {
+			label: "Vorherige und nächste Seite",
+			previous: "Zurück",
+			next: "Weiter",
+		},
+
+		code: {
+			copy: "Code kopieren",
+			copied: "Kopiert",
+		},
+
+		alerts: {
+			note: "Hinweis",
+			tip: "Tipp",
+			important: "Wichtig",
+			warning: "Warnung",
+			caution: "Vorsicht",
+		},
+
+		hub: {
+			eyebrow: "Dokumentation",
+			title: "Uptime-Dokumentation",
+			description:
+				"Richte Monitore ein, leite Alarme an dein Team weiter, veröffentliche Statusseiten und automatisiere alles über die API.",
+			start: "Hier starten",
+			topics: "Nach Thema stöbern",
+			read: "Anleitung lesen",
+		},
 	},
 };

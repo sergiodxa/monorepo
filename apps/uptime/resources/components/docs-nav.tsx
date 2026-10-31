@@ -1,7 +1,7 @@
 /**
- * Client island: the docs sidebar's search box and navigation list. Typing filters
- * every doc by title into a flat, section-labeled list; clearing it restores the
- * sections grouped by `frontmatter.section.title`.
+ * Client island: the docs sidebar's search box and navigation list. Typing filters every
+ * doc by title into a flat list labelled with each doc's section; clearing it restores the
+ * sections in reading order. It is drawn twice per page, in the docked rail and the drawer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,17 +9,14 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { listStyle, raw } from "@sdxc/u/general";
-import { block } from "@sdxc/u/layout";
+import { fg } from "@sdxc/u/color";
+import { block, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { fontSize, textTransform, tracking, weight } from "@sdxc/u/typography";
-import { NavLink, SearchField } from "@sdxc/ui";
+import { text } from "@sdxc/u/typography";
+import { SearchField, Sidebar } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
-/** One doc link, reduced to the fields the sidebar actually renders. */
+/** One doc link, reduced to the fields the sidebar renders. */
 type DocsNavDoc = { path: string; title: string };
 
 /** One sidebar section: a group heading plus the docs under it. */
@@ -29,55 +26,22 @@ type DocsNavSection = { title: string; docs: DocsNavDoc[] };
 type DocsNavProps = {
 	sections: DocsNavSection[];
 	activePath: string;
+	/** The navigation landmark's accessible name. */
+	label: string;
 	searchPlaceholder: string;
+	/** Shown in place of the list when a search matches no title. */
+	noResults: string;
 };
 
-const NAV_LIST = [listStyle(), m(0), p(0)];
-
 /**
- * `tracking("wide")` (0.025em) reads identically to the literal 0.03em this
- * heading used, so the value promotes to the named scale step. The margin uses
- * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
- */
-const SECTION_TITLE = [
-	fontSize("xs"),
-	weight(700),
-	textTransform("uppercase"),
-	tracking("wide"),
-	fg("neutral.muted"),
-	raw({ margin: "20px 20px 8px" }),
-];
-
-/**
- * A doc nav row: `NavLink` styled with the same tokens `Sidebar.Item` uses for
- * its own rows (row padding, radius, hover/current tint), with `hasBackground`
- * so the row renders as a solid tinted block.
- */
-const NAV_LINK = [
-	block(),
-	p("6px", "20px"),
-	m(0, "8px"),
-	rounded("lg"),
-	fontSize("sm"),
-
-	when("&:hover", bg("neutral.bg-tint-hover")),
-
-	when('&[aria-current]:not([aria-current="false"])', [
-		bg("neutral.bg-tint-hover"),
-		fg("neutral.emphasis"),
-	]),
-];
-
-/**
- * Renders {@link DocsNavProps.sections} grouped by section, or a flat filtered
- * list once the visitor types a search query. The search field's margin uses
- * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
+ * Renders {@link DocsNavProps.sections} grouped by section, or a flat filtered list once
+ * the visitor types a query. Without script the search box is inert and the full list stays.
  */
 export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Handle<DocsNavProps>) {
 	let search = "";
 
 	return () => {
-		let { sections, activePath, searchPlaceholder } = handle.props;
+		let { sections, activePath, label, searchPlaceholder, noResults } = handle.props;
 		let query = search.trim().toLowerCase();
 		let results =
 			query.length > 0
@@ -87,8 +51,8 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 				: null;
 
 		return (
-			<div>
-				<SearchField aria-label={searchPlaceholder} mix={[raw({ margin: "0 20px 8px" })]}>
+			<div mix={[vstack({ gap: 4 })]}>
+				<SearchField aria-label={searchPlaceholder}>
 					<SearchField.Input
 						value={search}
 						placeholder={searchPlaceholder}
@@ -101,47 +65,48 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 					/>
 				</SearchField>
 
-				<nav>
+				<Sidebar.Nav aria-label={label}>
 					{results ? (
-						<ul mix={[NAV_LIST]}>
+						<Sidebar.Menu>
+							{results.length === 0 ? (
+								<li mix={[p(2, 2.5), text("sm"), fg("neutral.muted")]}>{noResults}</li>
+							) : null}
 							{results.map((doc) => (
-								<li key={doc.path}>
-									<NavLink
+								<Sidebar.MenuItem key={doc.path}>
+									<Sidebar.MenuLink
 										href={doc.path}
 										prefetch="intent"
-										hasBackground
-										aria-current={doc.path === activePath ? "page" : undefined}
-										mix={[NAV_LINK]}
+										active={doc.path === activePath}
 									>
-										{doc.title}
-										<span mix={[block(), fontSize("xs"), fg("neutral.muted")]}>{doc.section}</span>
-									</NavLink>
-								</li>
+										<span>
+											{doc.title}
+											<span mix={[block(), text("xs"), fg("neutral.muted")]}>{doc.section}</span>
+										</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
 							))}
-						</ul>
+						</Sidebar.Menu>
 					) : (
 						sections.map((section) => (
-							<div key={section.title}>
-								<p mix={[SECTION_TITLE]}>{section.title}</p>
-								<ul mix={[NAV_LIST]}>
+							<Sidebar.Group key={section.title} mix={[p(0), m(0, 0, 2, 0)]}>
+								<Sidebar.GroupLabel>{section.title}</Sidebar.GroupLabel>
+								<Sidebar.Menu>
 									{section.docs.map((doc) => (
-										<li key={doc.path}>
-											<NavLink
+										<Sidebar.MenuItem key={doc.path}>
+											<Sidebar.MenuLink
 												href={doc.path}
 												prefetch="intent"
-												hasBackground
-												aria-current={doc.path === activePath ? "page" : undefined}
-												mix={[NAV_LINK]}
+												active={doc.path === activePath}
 											>
 												{doc.title}
-											</NavLink>
-										</li>
+											</Sidebar.MenuLink>
+										</Sidebar.MenuItem>
 									))}
-								</ul>
-							</div>
+								</Sidebar.Menu>
+							</Sidebar.Group>
 						))
 					)}
-				</nav>
+				</Sidebar.Nav>
 			</div>
 		);
 	};

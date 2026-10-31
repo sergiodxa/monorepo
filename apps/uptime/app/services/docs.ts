@@ -84,3 +84,26 @@ export function getDocLoader(slug: string) {
 	if (!loader) return null;
 	return { loader, path };
 }
+
+/** One neighbouring doc, reduced to what a pager link draws. */
+export interface DocNeighbour {
+	path: string;
+	title: string;
+}
+
+/**
+ * The docs read just before and just after `path`, in the order the sidebar lists them,
+ * so the pager at a page's foot walks the same sequence a reader sees on the left. A path
+ * outside the list, or at either end of it, gets `null` on that side.
+ */
+export function findNeighbours(
+	sections: DocSection[],
+	path: string,
+): { previous: DocNeighbour | null; next: DocNeighbour | null } {
+	let ordered = sections.flatMap((section) =>
+		section.docs.map((doc) => ({ path: doc.path, title: doc.frontmatter.title })),
+	);
+	let index = ordered.findIndex((doc) => doc.path === path);
+	if (index === -1) return { previous: null, next: null };
+	return { previous: ordered[index - 1] ?? null, next: ordered[index + 1] ?? null };
+}

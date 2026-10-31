@@ -10,7 +10,8 @@ lastUpdated: 2026-09-05
 
 Manage API keys for your team programmatically. Each team can have a maximum of 10 API keys.
 
-> **Important:** The full API key value is only returned once when the key is created. Store it securely immediately, as it cannot be retrieved again.
+> [!IMPORTANT]
+> The full API key value is only returned once when the key is created. Store it securely immediately, as it cannot be retrieved again.
 
 ## GET /api/v1/api-keys
 
@@ -98,7 +99,8 @@ curl -i "https://uptime.sergiodxa.com/api/v1/api-keys?perPage=100" \
 
 Creates a new API key for your team and answers `201 Created`. A key can grant only scopes it holds itself.
 
-> **Warning:** The `key` field in the response contains the full API key value. This is the **only time** the complete key will be shown. Copy and store it in a secure location immediately. If you lose the key, you must delete it and create a new one.
+> [!WARNING]
+> The `key` field in the response contains the full API key value. This is the **only time** the complete key will be shown. Copy and store it in a secure location immediately. If you lose the key, you must delete it and create a new one.
 
 <!-- operation: apiKeysCreate -->
 
@@ -148,7 +150,8 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/api-keys \
 }
 ```
 
-> **Store the `key` value immediately!** It will never be returned again in any API response.
+> [!CAUTION]
+> **Store the `key` value immediately.** It will never be returned again in any API response.
 
 ### Response Fields
 
