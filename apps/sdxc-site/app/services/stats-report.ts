@@ -319,9 +319,7 @@ function eventsMarkdown(events: SiteEventsSnapshot | null): string {
 		"",
 		`Last 30 days, ${events.days[0] ?? "—"} to ${events.days.at(-1) ?? "—"}. The search dialog's keystrokes are collapsed into the query the reader meant.`,
 		"",
-		`- Searches: ${NUMBER_FORMAT.format(searches)} (${Object.entries(events.searches)
-			.map(([surface, count]) => `${surface} ${count}`)
-			.join(", ")})`,
+		`- Searches: ${NUMBER_FORMAT.format(searches)}`,
 		`- Found something: ${NUMBER_FORMAT.format(events.hitCount)}`,
 		`- Found nothing: ${NUMBER_FORMAT.format(events.missCount)}`,
 		`- Left out as injection probes or junk: ${NUMBER_FORMAT.format(events.rejectedCount)} (counted, not shown)`,

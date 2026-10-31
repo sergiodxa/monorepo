@@ -224,3 +224,23 @@ describe("GET /stats.md sections", () => {
 		expect(body).toContain("## Searches and MCP calls\n\nNothing recorded");
 	});
 });
+
+describe("GET /stats.md searches", () => {
+	test("totals searches from the recorded queries, without the older per-surface counter", async () => {
+		let { SITE_EVENTS_KEY_PREFIX } = await import("~/app/services/site-events");
+		await store([stats("result", 2)]);
+		await cache.write(`${SITE_EVENTS_KEY_PREFIX}${new Date().toISOString().slice(0, 10)}`, {
+			searches: { page: 4, dialog: 3 },
+			hits: { opml: { count: 1, surfaces: ["page"] } },
+			misses: { "1')": { count: 2, surfaces: ["page"] } },
+			tools: {},
+			packages: {},
+		});
+
+		let body = await (await fetchApp("/stats.md")).text();
+
+		expect(body).toContain("- Searches: 1\n");
+		expect(body).not.toContain("page 4");
+		expect(body).toContain("- Left out as injection probes or junk: 2");
+	});
+});
