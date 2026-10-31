@@ -66,6 +66,36 @@ const MARKETING_COMPONENTS = new Set([
 	"stat-strip",
 ]);
 
+/**
+ * The components and patterns that build documentation pages, which the tree lists under
+ * Docs so a reader assembling a docs site finds the shell, navigation and blocks together.
+ */
+const DOCS_COMPONENTS = new Set([
+	"anchor-heading",
+	"callout",
+	"code-block",
+	"code-tabs",
+	"code-tabs-sync",
+	"copy-button",
+	"docs-feedback",
+	"docs-hub",
+	"docs-layout",
+	"docs-nav",
+	"docs-nav-tools",
+	"docs-not-found",
+	"docs-page-header",
+	"docs-pager",
+	"file-tree",
+	"install-command",
+	"next-steps",
+	"page-actions",
+	"plan-notice",
+	"props-table",
+	"steps",
+	"table-of-contents",
+	"ui-label",
+]);
+
 /** A directory under `packages/u/src` that holds no family of its own. */
 const NOT_A_FAMILY = new Set(["internal"]);
 
@@ -151,8 +181,9 @@ function buildComponents(): ComponentDocument {
 			let reference = source === null ? null : readComponent(source, slug, shared, module);
 			if (reference === null) throw new Error(`@sdxc/ui: could not read ${module}/${file}`);
 
-			let marketing = module === "patterns" || MARKETING_COMPONENTS.has(slug);
-			entries.push({ name: reference.name, slug, module, marketing });
+			let docs = DOCS_COMPONENTS.has(slug);
+			let marketing = !docs && (module === "patterns" || MARKETING_COMPONENTS.has(slug));
+			entries.push({ name: reference.name, slug, module, marketing, docs });
 			references[slug] = reference;
 		}
 	}

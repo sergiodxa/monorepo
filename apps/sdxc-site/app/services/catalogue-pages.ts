@@ -159,7 +159,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 			title: entry.name,
 			package: "@sdxc/ui",
 			kind: "component",
-			section: entry.marketing ? "Marketing" : "Components",
+			section: catalogueSection(entry),
 			summary: reference?.summary ?? "",
 			params: { component: entry.slug },
 			href: routes.api.component.href({ component: entry.slug }),
@@ -341,4 +341,11 @@ export async function readUiExportMarkdown(subpath: string, slug: string): Promi
 
 	let reference = await readUiExport(subpath, slug);
 	return reference === null ? null : uiExportMarkdown(reference);
+}
+
+/** The tree section a catalogue page sits under, which its pager and search label show. */
+function catalogueSection(entry: { marketing: boolean; docs: boolean }): string {
+	if (entry.docs) return "Docs";
+	if (entry.marketing) return "Marketing";
+	return "Components";
 }

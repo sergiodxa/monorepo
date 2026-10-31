@@ -29,6 +29,8 @@ export interface CatalogueEntry extends ComponentEntry {
 	module: ComponentModule;
 	/** Whether the component builds landing pages, which lists it under Marketing. */
 	marketing: boolean;
+	/** Whether the component builds documentation pages, which lists it under Docs. */
+	docs: boolean;
 }
 
 /** One row of a props table. */

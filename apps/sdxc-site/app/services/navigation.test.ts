@@ -82,12 +82,13 @@ describe("buildComponentsNav", () => {
 			"@sdxc/ui",
 			"Components",
 			"Marketing",
+			"Docs",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(3)?.entries).toContainEqual({
+		expect(tree.sections.at(4)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});
@@ -120,6 +121,22 @@ describe("Marketing group", () => {
 		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
 		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 		expect(components?.entries.map((entry) => entry.title)).toContain("DialogDismiss");
+	});
+});
+
+describe("Docs group", () => {
+	test("lists the docs shell, navigation and content blocks apart from the components", async () => {
+		let tree = await buildComponentsNav();
+		let titles = (section: string) =>
+			tree.sections.find((entry) => entry.title === section)?.entries.map((entry) => entry.title);
+		let docs = titles("Docs") ?? [];
+
+		expect(docs).toEqual(
+			expect.arrayContaining(["DocsLayout", "DocsNav", "TableOfContents", "CodeBlock", "Callout"]),
+		);
+		expect(docs).toHaveLength(23);
+		expect(titles("Marketing")).not.toContain("DocsLayout");
+		expect(titles("Components")).not.toContain("Callout");
 	});
 });
 

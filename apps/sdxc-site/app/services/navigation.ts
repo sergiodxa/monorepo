@@ -125,6 +125,7 @@ export async function buildComponentsNav(): Promise<NavTree> {
 			},
 			{ title: "Components", entries: await listComponentEntries(), groups: [] },
 			{ title: "Marketing", entries: await listMarketingEntries(), groups: [] },
+			{ title: "Docs", entries: await listDocsEntries(), groups: [] },
 			...(await listUiExportGroups()).map((group) => ({ ...group, groups: [] })),
 		],
 	};
@@ -159,7 +160,7 @@ export async function listUtilityGroups(): Promise<NavGroup[]> {
  */
 export async function listComponentEntries(): Promise<NavEntry[]> {
 	let components = await listComponents();
-	return components.filter((entry) => !entry.marketing).map(componentNavEntry);
+	return components.filter((entry) => !entry.marketing && !entry.docs).map(componentNavEntry);
 }
 
 /**
@@ -169,6 +170,15 @@ export async function listComponentEntries(): Promise<NavEntry[]> {
 export async function listMarketingEntries(): Promise<NavEntry[]> {
 	let components = await listComponents();
 	return components.filter((entry) => entry.marketing).map(componentNavEntry);
+}
+
+/**
+ * Every component and pattern that builds a docs page: the shell, its navigation and the
+ * content blocks, apart from the application components so a docs site's kit reads as one.
+ */
+export async function listDocsEntries(): Promise<NavEntry[]> {
+	let components = await listComponents();
+	return components.filter((entry) => entry.docs).map(componentNavEntry);
 }
 
 /** A component's link in the tree, titled with the name it is imported by. */
