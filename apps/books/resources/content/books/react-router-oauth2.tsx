@@ -82,24 +82,37 @@ export const REACT_ROUTER_OAUTH2: BookCopy = {
 		),
 		diagram: {
 			label: "One sign-in with the Authorization Code flow and PKCE",
-			trigger: { title: "The reader clicks “Sign in”", detail: "Your React Router app" },
-			steps: [
+			actors: ["Browser", "Your app", "Authorization Server"],
+			messages: [
+				{ from: 0, to: 1, label: "The reader clicks “Sign in”" },
 				{
-					title: "Derive the challenge",
-					code: "let codeChallenge = await sha256Base64Url(codeVerifier);",
+					from: 1,
+					to: 1,
+					label: "Derive the challenge",
+					code: "sha256Base64Url(codeVerifier)",
 				},
 				{
-					title: "Redirect to the Authorization Server",
-					code: 'authorizeUrl.searchParams.set("code_challenge", codeChallenge);',
+					from: 1,
+					to: 0,
+					label: "Redirect to the Authorization Server",
+					code: "302 /authorize?code_challenge=…",
 				},
-				{ title: "The user signs in and grants access", detail: "On the Authorization Server" },
+				{ from: 0, to: 2, label: "The user signs in and grants access" },
 				{
-					title: "Come back with an authorization code",
-					detail: "The server redirects to your redirect_uri",
+					from: 2,
+					to: 1,
+					label: "Come back with an authorization code",
+					code: "GET /callback?code=…",
 				},
-				{ title: "Exchange the code and the verifier", code: "code_verifier: codeVerifier," },
+				{
+					from: 1,
+					to: 2,
+					label: "Exchange the code and the verifier",
+					code: "code_verifier: codeVerifier,",
+				},
+				{ from: 2, to: 1, label: "Access token issued" },
 			],
-			outcome: "Access token issued",
+			outcome: "Signed in",
 			footnote: "A code_verifier that does not match the challenge is rejected",
 		},
 		guarantees: [

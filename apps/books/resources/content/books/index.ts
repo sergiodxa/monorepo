@@ -21,18 +21,23 @@ export namespace BookCopy {
 		body: string;
 	}
 
-	/** One step of the flow the book teaches: its name, and its line of code or a quieter note. */
-	export interface Step {
-		title: string;
+	/** One message of the flow the book teaches, between two of its actors by index. */
+	export interface Message {
+		from: number;
+		to: number;
+		label: string;
+		/** The chapter's line that sends it, set in mono under the arrow. */
 		code?: string;
-		detail?: string;
 	}
 
-	/** The flow the book teaches, as the diagram plays one run of it. */
+	/**
+	 * The flow the book teaches, as the parties it runs between and the messages one sign-in
+	 * sends, in order. `actors` holds three names: the browser, the reader's app and the server.
+	 */
 	export interface Diagram {
 		label: string;
-		trigger: { title: string; detail?: string };
-		steps: readonly Step[];
+		actors: readonly [string, string, string];
+		messages: readonly Message[];
 		outcome: string;
 		footnote?: string;
 	}

@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { ChevronDownIcon, KeyRoundIcon } from "@sdxc/icons";
+import { ChevronDownIcon, KeyRoundIcon, MonitorIcon, ServerIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { combine, raw } from "@sdxc/u/general";
 import { grid, hstack, vstack } from "@sdxc/u/layout";
@@ -26,9 +26,9 @@ import {
 	Curriculum,
 	FaqBand,
 	FeatureBand,
-	FlowDiagram,
 	LandingHero,
 	PricingBand,
+	SequenceDiagram,
 } from "@sdxc/ui/patterns";
 import { marketingCtaChrome } from "@sdxc/ui/styles";
 
@@ -41,6 +41,13 @@ import EmailForm from "~/resources/views/site/email-form";
 
 /** Name of the container the contents band's two columns query. */
 const CONTENTS_CONTAINER = "book-contents";
+
+/** The glyph over each party of the flow, in the order the copy names them. */
+const ACTOR_ICONS = [
+	<MonitorIcon size={14} aria-hidden="true" />,
+	<ServerIcon size={14} aria-hidden="true" />,
+	<KeyRoundIcon size={14} aria-hidden="true" />,
+];
 
 /** One package's price as the page shows it, already formatted as currency. */
 export interface PriceView {
@@ -262,8 +269,8 @@ function sectionsLabel(count: number): string | undefined {
 }
 
 /**
- * The flow the book teaches, played as one sign-in step by step with the chapter's own code
- * lines, beside what the flow guarantees.
+ * The flow the book teaches, played as one sign-in message by message between the browser,
+ * the app and the server, with the chapter's own code lines, beside what the flow guarantees.
  */
 function Flow(handle: Handle<{ copy: BookCopy }>) {
 	return () => {
@@ -278,11 +285,11 @@ function Flow(handle: Handle<{ copy: BookCopy }>) {
 				title={flow.title}
 				description={flow.description}
 				media={
-					<FlowDiagram
+					<SequenceDiagram
 						aria-label={diagram.label}
 						pauseLabel="Pause the sign-in"
-						trigger={{ icon: <KeyRoundIcon size={14} />, ...diagram.trigger }}
-						steps={diagram.steps}
+						actors={diagram.actors.map((name, index) => ({ name, icon: ACTOR_ICONS[index] }))}
+						messages={diagram.messages}
 						outcome={diagram.outcome}
 						footnote={diagram.footnote}
 					/>
