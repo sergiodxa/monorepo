@@ -54,9 +54,12 @@ export const FEATURE_MOCKUPS: Readonly<Record<string, MockupArea>> = {
 	"content-monitoring": "monitor",
 };
 
-/** The mockup each `/for/:slug` page shows, the area that audience leans on most. */
+/**
+ * The mockup each `/for/:slug` page shows, the area that audience leans on most. A page
+ * with a spotlight shows a different area here, so the two visuals never repeat.
+ */
 export const AUDIENCE_MOCKUPS: Readonly<Record<string, MockupArea>> = {
-	"solo-devs": "dashboard",
+	"solo-devs": "reports",
 	startups: "status-page",
 	agencies: "reports",
 	enterprises: "team",
@@ -64,15 +67,15 @@ export const AUDIENCE_MOCKUPS: Readonly<Record<string, MockupArea>> = {
 	"indie-hackers": "monitor",
 };
 
-/** The mockup each `/use-cases/:slug` page shows. */
+/** The mockup each `/use-cases/:slug` page shows, an area its spotlight leaves out. */
 export const USE_CASE_MOCKUPS: Readonly<Record<string, MockupArea>> = {
-	"website-monitoring": "dashboard",
+	"website-monitoring": "monitor",
 	"api-monitoring": "monitor",
 	"login-flow-monitoring": "flow",
 	"cron-jobs": "cron",
-	healthcheck: "alerts",
+	healthcheck: "monitor",
 	ecommerce: "flow",
-	saas: "status-page",
+	saas: "dashboard",
 	microservices: "tcp",
 };
 
