@@ -29,13 +29,19 @@ export namespace DocBody {
 	}
 }
 
-/** The label each section heading's `#` link is read out with. */
-const ANCHOR_LABEL = "Link to this section";
-
 /** A page section's heading, with the `#` link and the scroll margin the shell expects. */
 export function H2(handle: Handle<{ id: string; children: RemixNode }>) {
 	return () => (
-		<AnchorHeading id={handle.props.id} level={2} linkLabel={ANCHOR_LABEL}>
+		<AnchorHeading id={handle.props.id} level={2} linkLabel="Link to this section">
+			{handle.props.children}
+		</AnchorHeading>
+	);
+}
+
+/** {@link H2} for a page written in Spanish, its `#` link read out in Spanish. */
+export function H2Es(handle: Handle<{ id: string; children: RemixNode }>) {
+	return () => (
+		<AnchorHeading id={handle.props.id} level={2} linkLabel="Enlace a esta sección">
 			{handle.props.children}
 		</AnchorHeading>
 	);

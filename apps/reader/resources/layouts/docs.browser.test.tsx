@@ -16,7 +16,7 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
-import Feeds, { TOC } from "~/resources/docs/pages/feeds";
+import Feeds, { TOC } from "~/resources/docs/pages/en/feeds";
 import DocsLayout from "~/resources/layouts/docs";
 import en from "~/resources/locales/en";
 
@@ -138,7 +138,7 @@ describe("help shell", () => {
 		await page.viewport(1280, 900);
 		mountGuide();
 
-		let support = slot("docs-sidebar").querySelector('a[href^="mailto:"]');
+		let support = slot("docs-sidebar").querySelector('a[href="/support"]');
 
 		expect(support?.textContent).toContain("Contact support");
 	});

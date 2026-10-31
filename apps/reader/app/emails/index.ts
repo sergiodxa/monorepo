@@ -22,4 +22,14 @@ export default emails({
 			unsubscribeUrl: s.nullable(s.string()),
 		}),
 	}),
+	support: email({
+		props: s.object({
+			page: s.string(),
+			topic: s.string(),
+			email: s.string(),
+			name: s.string(),
+			message: s.string(),
+			signedIn: s.boolean(),
+		}),
+	}),
 });

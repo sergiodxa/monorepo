@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 import index from "~/app/http/controllers/docs/index";
 import { createTestRouter, fetchRoute } from "~/app/test/controller";
 import { DOC_PAGES, DOC_SECTIONS, docHref } from "~/resources/docs/registry";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 describe("GET /docs", () => {
@@ -23,9 +24,9 @@ describe("GET /docs", () => {
 
 		expect(response.status).toBe(200);
 		expect(html.indexOf(docHref("getting-started"))).toBeGreaterThan(-1);
-		for (let section of DOC_SECTIONS) {
-			let first = DOC_PAGES.find((page) => page.section === section.key)!;
-			expect(html).toContain(section.title);
+		for (let key of DOC_SECTIONS) {
+			let first = DOC_PAGES.find((page) => page.section === key)!;
+			expect(html).toContain(en.docs.sections[key].title);
 			expect(html).toContain(`href="${docHref(first.slug)}"`);
 		}
 		expect(html.match(/\b(docs|landing)\.[a-z]+\.[a-zA-Z.]+/g)).toBeNull();

@@ -12,7 +12,15 @@ import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import { landingTranslate } from "~/resources/components/marketing/figures";
-import { DOC_PAGES, DOC_SECTIONS, docHref, findDocPage } from "~/resources/docs/registry";
+import {
+	DOC_PAGES,
+	DOC_SECTIONS,
+	docHref,
+	pageLink,
+	pageTitle,
+	sectionDescription,
+	sectionTitle,
+} from "~/resources/docs/registry";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -35,25 +43,19 @@ export default createAction(routes.docs.index, (ctx) => {
 	let t = landingTranslate(ctx.intl, ctx.locale);
 	let path = routes.docs.index.href();
 
-	let start = START_SLUGS.flatMap((slug) => {
-		let page = findDocPage(slug);
-		return page ? [{ title: page.title, href: docHref(slug), description: page.description }] : [];
-	});
+	let start = START_SLUGS.map((slug) => pageLink(t, slug));
 
-	let topics = TOPIC_SLUGS.flatMap((slug) => {
-		let page = findDocPage(slug);
-		return page ? [{ title: page.title, href: docHref(slug) }] : [];
-	});
+	let topics = TOPIC_SLUGS.map((slug) => ({ title: pageTitle(t, slug), href: docHref(slug) }));
 
-	let sections = DOC_SECTIONS.flatMap((section) => {
-		let pages = DOC_PAGES.filter((page) => page.section === section.key);
+	let sections = DOC_SECTIONS.flatMap((key) => {
+		let pages = DOC_PAGES.filter((page) => page.section === key);
 		let first = pages[0];
 		if (!first) return [];
 		return [
 			{
-				title: section.title,
+				title: sectionTitle(t, key),
 				href: docHref(first.slug),
-				description: section.description,
+				description: sectionDescription(t, key),
 				count: pages.length,
 			},
 		];

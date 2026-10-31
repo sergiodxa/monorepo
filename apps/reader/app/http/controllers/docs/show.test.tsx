@@ -12,9 +12,19 @@ import { describe, expect, test } from "vitest";
 import type { AppRouter } from "~/app/test/controller";
 
 import show from "~/app/http/controllers/docs/show";
+import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { createTestRouter, fetchRoute } from "~/app/test/controller";
-import { DOC_PAGES, docHref } from "~/resources/docs/registry";
+import { DOC_PAGES, docHref, loadDocBody } from "~/resources/docs/registry";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
 import routes from "~/routes/web";
+
+/** A message from one of the app's dictionaries, by its dotted key. */
+function messageAt(language: string, path: string): string {
+	let dictionary: unknown = language === "es" ? es : en;
+	for (let key of path.split(".")) dictionary = (dictionary as Record<string, unknown>)[key];
+	return String(dictionary);
+}
 
 /** A router with the help pages mapped and nobody signed in, as a visitor arrives. */
 function createRouter(): AppRouter {
@@ -23,17 +33,40 @@ function createRouter(): AppRouter {
 	return router;
 }
 
+/** Every page body on disk, keyed `<locale>/<slug>`, so a missing translation fails here. */
+const BODIES = import.meta.glob("../../../../resources/docs/pages/*/*.tsx");
+
+/** Requests a help page as a browser asking for `language` would. */
+function fetchIn(router: AppRouter, path: string, language: string): Promise<Response> {
+	return router.fetch(
+		new Request(new URL(path, "https://reader.test"), { headers: { "accept-language": language } }),
+	);
+}
+
+/** Every page in every language the app speaks. */
+const CASES = DOC_PAGES.flatMap((page) =>
+	SUPPORTED_LANGUAGES.map((language) => [page.slug, language] as const),
+);
+
 describe("GET /docs/:slug", () => {
-	test.each(DOC_PAGES.map((page) => page.slug))("renders %s", async (slug) => {
-		let page = DOC_PAGES.find((candidate) => candidate.slug === slug)!;
-		let module = await page.load();
-		let response = await fetchRoute(createRouter(), docHref(slug));
+	test.each(CASES)("renders %s in %s", async (slug, language) => {
+		let module = await loadDocBody(slug, language);
+		let response = await fetchIn(createRouter(), docHref(slug), language);
 		let html = await response.text();
+		let title = messageAt(language, `docs.pages.${slug}.title`);
 
 		expect(response.status).toBe(200);
-		expect(html.replace(/&#x27;|&#39;/g, "'")).toContain(`>${page.title}<`);
-		expect(html.match(/\b(docs|landing)\.[a-z]+\.[a-zA-Z.]+/g)).toBeNull();
+		expect(html).toContain(`lang="${language}"`);
+		expect(html.replace(/&#x27;|&#39;/g, "'")).toContain(`>${title}<`);
+		expect(html.match(/\b(docs|landing)\.[a-z]+\.[a-zA-Z.-]+/g)).toBeNull();
 		for (let item of module.TOC) expect(html).toContain(`id="${item.id}"`);
+	});
+
+	test.each(SUPPORTED_LANGUAGES)("has a %s body for every page", (language) => {
+		let missing = DOC_PAGES.filter(
+			(page) => !Object.keys(BODIES).some((key) => key.endsWith(`/${language}/${page.slug}.tsx`)),
+		);
+		expect(missing.map((page) => page.slug)).toEqual([]);
 	});
 
 	test("says which plan a gated page needs, linked to the plan table", async () => {
@@ -52,6 +85,8 @@ describe("GET /docs/:slug", () => {
 		expect(html).toContain('data-slot="next-steps"');
 		expect(html).toContain(`href="${docHref("import-opml")}"`);
 		expect(html).toContain('id="docs-feedback"');
+		expect(html).toContain('href="/support?from=getting-started"');
+		expect(html).not.toContain("mailto:");
 	});
 
 	test("hands every next step to a page that exists", () => {

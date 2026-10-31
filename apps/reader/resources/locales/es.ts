@@ -962,6 +962,138 @@ export default {
 	docs: {
 		title: "Ayuda de Reader",
 		eyebrow: "Ayuda",
+		sections: {
+			start: {
+				title: "Primeros pasos",
+				description: "Inicia sesión, sigue tus primeros feeds o tráelos desde otro lector.",
+			},
+			read: {
+				title: "Leer",
+				description: "Recorre la cola, cuida cada feed y lee sin usar el ratón.",
+			},
+			keep: {
+				title: "Guardar y organizar",
+				description:
+					"Guarda entradas, etiquétalas, fija feeds, archívalos en carpetas y filtra lo que llega.",
+			},
+			find: {
+				title: "Buscar",
+				description: "Busca en todo lo que sigues, y conserva las búsquedas que repites.",
+			},
+			reach: {
+				title: "Avisos y agentes",
+				description: "Entérate de los feeds que elijas, y deja que un asistente lea tu cola.",
+			},
+			account: {
+				title: "Tu cuenta",
+				description: "Planes y límites, el aspecto de Reader y llevarte todo contigo.",
+			},
+			fix: {
+				title: "Resolver un problema",
+				description:
+					"Un feed que no se sigue o no se actualiza, una búsqueda que falla, un plan que superaste.",
+			},
+		},
+		pages: {
+			"getting-started": {
+				title: "Empezar a leer",
+				description:
+					"Inicia sesión, sigue tu primer feed y lee tu primera entrada, en unos dos minutos.",
+			},
+			"import-opml": {
+				title: "Importar desde otro lector",
+				description:
+					"Exporta un archivo OPML de tu lector anterior y sigue todo lo que contiene de una vez.",
+			},
+			feeds: {
+				title: "Seguir y gestionar feeds",
+				description:
+					"Sigue un sitio, revísalo ahora, elige cuánto duran sus entradas o deja de seguirlo.",
+			},
+			"keyboard-shortcuts": {
+				title: "Atajos de teclado",
+				description: "Cada tecla que Reader atiende mientras lees, y cómo verlas en pantalla.",
+			},
+			saving: {
+				title: "Guardar entradas",
+				description:
+					"Conserva una entrada por encima de cualquier regla que la quitaría, y encuéntrala en Guardados.",
+			},
+			labels: {
+				title: "Etiquetar entradas guardadas",
+				description:
+					"Pon una etiqueta a lo que guardas y lee todo lo que está bajo una etiqueta como una lista.",
+			},
+			pins: {
+				title: "Fijar feeds sobre tu cola",
+				description: "Mantén los feeds que nunca quieres perderte en una franja arriba de Lectura.",
+			},
+			folders: {
+				title: "Agrupar feeds en carpetas",
+				description: "Archiva feeds bajo un nombre y lee la carpeta entera como un solo flujo.",
+			},
+			filters: {
+				title: "Filtrar entradas al llegar",
+				description:
+					"Descarta, marca como leída o destaca una entrada según su título, enlace, resumen o autor.",
+			},
+			search: {
+				title: "Buscar en tus entradas",
+				description:
+					"Encuentra entradas por sus palabras, combínalas con OR y el signo menos, y guarda una búsqueda.",
+			},
+			notifications: {
+				title: "Recibir avisos de entradas nuevas",
+				description: "Elige los feeds que merecen interrumpirte, y cómo y cuándo te enteras.",
+			},
+			agents: {
+				title: "Conectar un asistente de IA",
+				description:
+					"Crea un token y deja que un asistente lea, busque y actúe sobre tu cola mediante MCP.",
+			},
+			plans: {
+				title: "Planes y límites",
+				description: "Lo que Free, Paid y Premium guardan y hacen, y cómo cambiar de plan.",
+			},
+			appearance: {
+				title: "Cambiar el aspecto de Reader",
+				description:
+					"Elige colores claros u oscuros y una letra con o sin serifa para lo que lees.",
+			},
+			export: {
+				title: "Exportar tus datos",
+				description: "Descarga tus suscripciones como OPML, o todo lo que guardas en un ZIP.",
+			},
+			"no-feed-found": {
+				title: "Reader dice que un sitio no tiene feed",
+				description:
+					"Qué probar cuando seguir la dirección de un sitio responde que no publica ningún feed.",
+			},
+			"feed-not-updating": {
+				title: "Un feed dejó de actualizarse",
+				description: "Lee qué encontró su última revisión, revísalo ahora y sabe cuándo esperar.",
+			},
+			"search-missing-post": {
+				title: "La búsqueda no encuentra una entrada que sé que está",
+				description:
+					"Por qué una búsqueda se detiene donde lo hace, y las causas que la hacen fallar.",
+			},
+			"article-not-loading": {
+				title: "El artículo no carga en Reader",
+				description:
+					"Qué significa cada mensaje bajo una entrada, y cómo leer el texto de todos modos.",
+			},
+			"over-plan-limits": {
+				title: "Superé los límites de mi plan",
+				description:
+					"No se borra nada. Qué se pausa, y las dos formas de volver dentro de tu plan.",
+			},
+			reading: {
+				title: "Leer tu cola",
+				description:
+					"Cada entrada de cada feed, lo más reciente primero: fíltrala, márcala como leída y abre una entrada.",
+			},
+		},
 		hub: {
 			title: "¿En qué podemos ayudarte?",
 			lead: "Guías breves de cada parte de Reader, y soluciones para los problemas con los que la gente realmente se encuentra.",
@@ -989,7 +1121,7 @@ export default {
 			premium: "Disponible en el {#link}plan Premium{/link}.",
 			stuck: {
 				title: "¿Sigues atascado?",
-				body: "Escribe a {#link}{$email}{/link} contando qué probaste y qué viste, y te responderá una persona.",
+				body: "{#link}Escríbenos{/link} contando qué probaste y qué viste, y te responderá una persona.",
 			},
 			updated: "Última actualización",
 		},
@@ -1012,6 +1144,47 @@ export default {
 			title: "Esa página de ayuda no está aquí",
 			body: "Puede que se haya movido. Estas son las páginas que más se buscan.",
 			links: "Prueba una de estas",
+		},
+	},
+
+	/** The support form: the one way a reader reaches a person. */
+	support: {
+		title: "Contactar con soporte",
+		description: "Cuéntanos qué probaste y qué viste, y una persona responderá a tu correo.",
+		name: "Nombre (opcional)",
+		email: "Correo electrónico",
+		emailHint: "Las respuestas llegan a esta dirección.",
+		topic: "¿De qué se trata?",
+		topicPlaceholder: "Elige un tema",
+		topics: {
+			question: "Una pregunta",
+			problem: "Algo no funciona",
+			billing: "Mi plan o un pago",
+			idea: "Una idea",
+			other: "Otra cosa",
+		},
+		message: "Mensaje",
+		messagePlaceholder: "¿Qué intentabas hacer y qué pasó en su lugar?",
+		privacy:
+			"No incluyas contraseñas ni datos de tarjeta. Usamos lo que envías solo para responderte.",
+		send: "Enviar",
+		from: "Escribes desde: {$page}",
+		states: {
+			sent: "Enviado. Una persona responderá a la dirección de correo que diste.",
+			another: "Enviar otro mensaje",
+			invalid: "Revisa los campos marcados y envíalo de nuevo.",
+			failed: "No se pudo enviar tu mensaje. Sigue aquí; inténtalo de nuevo en un momento.",
+			rateLimited: "Enviaste varios mensajes en poco tiempo. Espera un minuto y envíalo de nuevo.",
+			resubmit:
+				"Este formulario caducó antes de enviarse. Tu mensaje sigue aquí; envíalo de nuevo.",
+		},
+		errors: {
+			nameLength: "Usa un nombre de hasta 100 caracteres.",
+			emailMissing: "Escribe tu correo electrónico para que podamos responderte.",
+			emailInvalid: "Escribe un correo válido, como nombre@ejemplo.com.",
+			topic: "Elige de qué trata tu mensaje.",
+			messageShort: "Escribe al menos una frase sobre lo que necesitas.",
+			messageLong: "Mantén tu mensaje por debajo de 5000 caracteres.",
 		},
 	},
 

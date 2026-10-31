@@ -19,6 +19,10 @@ mail.map(
 	emails.notification,
 	lazy(() => import("~/app/emails/notification")),
 );
+mail.map(
+	emails.support,
+	lazy(() => import("~/app/emails/support")),
+);
 
 declare module "@sdxc/mail" {
 	/** Types the `t()` every template receives with the keys of the app's dictionaries. */

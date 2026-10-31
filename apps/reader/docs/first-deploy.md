@@ -28,6 +28,8 @@ The account also needs:
   domain.
 - **Email sending verified for the domain `EMAIL_FROM` is on.** Without it the email channel
   stays dark; push and the rest of the app work.
+  The support form at `/support` sends through the same binding to `hello+reader@sergiodxa.com`
+  (`config/support.ts`); until sending works it answers that the message could not be sent.
 
 ## 2. Register the app with its outside services
 
@@ -128,3 +130,5 @@ Every later deploy is this one command.
 - A test checkout in Polar changes the reader's plan, and the webhook delivery shows as
   succeeded in Polar's dashboard.
 - Worker logs show the daily `17 4 * * *` billing reconciliation the morning after.
+- Sending a message from `/support` delivers it to `hello+reader@sergiodxa.com`, and replying
+  answers the sender.

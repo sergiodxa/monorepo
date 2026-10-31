@@ -332,4 +332,9 @@ export default route({
 		/** Records a "Was this helpful?" vote and returns the reader to the page voted on. */
 		feedback: post("/docs/feedback"),
 	},
+	/**
+	 * The support form: `GET` draws it, `POST` mails it to the support inbox. Public, so a
+	 * reader who cannot sign in can still reach a person.
+	 */
+	support: form("/support"),
 });

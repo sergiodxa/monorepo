@@ -18,11 +18,19 @@ import { createAction } from "remix/router";
 
 import type { DocPage } from "~/resources/docs/registry";
 
+import { SUPPORT_FROM_PARAM } from "~/app/http/controllers/support";
 import { isAuthenticated } from "~/app/http/middleware/auth";
-import { SUPPORT_EMAIL } from "~/config/support";
 import { landingTranslate } from "~/resources/components/marketing/figures";
 import { docsFigures } from "~/resources/docs/figures";
-import { DOC_PAGES, docHref, findDocPage, sectionTitle } from "~/resources/docs/registry";
+import {
+	docHref,
+	findDocPage,
+	loadDocBody,
+	pageDescription,
+	pageLink,
+	pageTitle,
+	sectionTitle,
+} from "~/resources/docs/registry";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -39,12 +47,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let page = findDocPage(ctx.params.slug ?? "");
 
 	if (!page) {
-		let links = NOT_FOUND_SLUGS.flatMap((slug) => {
-			let found = findDocPage(slug);
-			return found
-				? [{ title: found.title, href: docHref(slug), description: found.description }]
-				: [];
-		});
+		let links = NOT_FOUND_SLUGS.map((slug) => pageLink(t, slug));
 		let query = searchQueryFromPath(ctx.url.pathname);
 
 		return ctx.render(
@@ -66,7 +69,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 		);
 	}
 
-	let module = await page.load();
+	let module = await loadDocBody(page.slug, ctx.locale);
+	let title = pageTitle(t, page.slug);
+	let description = pageDescription(t, page.slug);
 	let Body = module.default;
 	let path = docHref(page.slug);
 	let sent = ctx.url.searchParams.get(FEEDBACK_SENT_PARAM) === "sent";
@@ -74,8 +79,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${page.title} · ${t("docs.title")}`}
-			description={page.description}
+			title={`${title} · ${t("docs.title")}`}
+			description={description}
 			locale={ctx.locale}
 		>
 			<DocsLayout t={t} isSignedIn={isSignedIn} activePath={path} toc={module.TOC}>
@@ -83,11 +88,11 @@ export default createAction(routes.docs.show, async (ctx) => {
 					crumbsLabel={t("docs.nav.crumbs")}
 					crumbs={[
 						{ label: t("docs.eyebrow"), href: routes.docs.index.href() },
-						{ label: sectionTitle(page.section) },
-						{ label: page.title },
+						{ label: sectionTitle(t, page.section) },
+						{ label: title },
 					]}
-					title={page.title}
-					description={page.description}
+					title={title}
+					description={description}
 					notice={page.plan ? <PlanRequirement intl={ctx.intl} plan={page.plan} /> : undefined}
 					mix={[raw({ marginBlockEnd: "2rem" })]}
 				/>
@@ -99,6 +104,11 @@ export default createAction(routes.docs.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 });
+
+/** The support form, told which help page the reader was on when they gave up. */
+function supportHref(slug: string): string {
+	return `${routes.support.index.href()}?${new URLSearchParams({ [SUPPORT_FROM_PARAM]: slug })}`;
+}
 
 /** The fixed sentence under a gated page's title, its plan names linked to the plan table. */
 function PlanRequirement(handle: Handle<{ intl: I18n; plan: "paid" | "premium" }>) {
@@ -131,12 +141,7 @@ namespace PageEnd {
 function PageEnd(handle: Handle<PageEnd.Props>) {
 	return () => {
 		let { intl, page, path, sent, t } = handle.props;
-		let next = page.next.flatMap((slug) => {
-			let found = DOC_PAGES.find((candidate) => candidate.slug === slug);
-			return found
-				? [{ title: found.title, href: docHref(slug), description: found.description }]
-				: [];
-		});
+		let next = page.next.filter((slug) => findDocPage(slug)).map((slug) => pageLink(t, slug));
 
 		return (
 			<div
@@ -148,8 +153,7 @@ function PageEnd(handle: Handle<PageEnd.Props>) {
 						<Trans
 							intl={intl}
 							i18nKey="docs.page.stuck.body"
-							values={{ email: SUPPORT_EMAIL }}
-							components={{ link: <a href={`mailto:${SUPPORT_EMAIL}`}>{""}</a> }}
+							components={{ link: <a href={supportHref(page.slug)}>{""}</a> }}
 						/>
 					</p>
 				</Callout>

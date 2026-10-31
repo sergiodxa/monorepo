@@ -961,6 +961,132 @@ export default {
 	docs: {
 		title: "Reader help",
 		eyebrow: "Help",
+		sections: {
+			start: {
+				title: "Get started",
+				description: "Sign in, follow your first feeds, or bring them from another reader.",
+			},
+			read: {
+				title: "Read",
+				description: "Work through the queue, look after each feed, and read without the mouse.",
+			},
+			keep: {
+				title: "Keep and organise",
+				description:
+					"Save posts, label them, pin feeds, file them into folders, and filter what arrives.",
+			},
+			find: {
+				title: "Find",
+				description: "Search everything you follow, and keep the searches you repeat.",
+			},
+			reach: {
+				title: "Notifications and agents",
+				description: "Hear about the feeds you pick, and let an assistant read your queue.",
+			},
+			account: {
+				title: "Your account",
+				description: "Plans and limits, how Reader looks, and taking everything with you.",
+			},
+			fix: {
+				title: "Fix a problem",
+				description:
+					"A feed that will not follow or update, a search that misses, a plan you are over.",
+			},
+		},
+		pages: {
+			"getting-started": {
+				title: "Start reading",
+				description:
+					"Sign in, follow your first feed, and read your first post, in about two minutes.",
+			},
+			"import-opml": {
+				title: "Import from another reader",
+				description:
+					"Export an OPML file from your old reader and follow everything in it at once.",
+			},
+			feeds: {
+				title: "Follow and manage feeds",
+				description: "Follow a site, check it now, choose how long its posts stay, or unfollow it.",
+			},
+			"keyboard-shortcuts": {
+				title: "Keyboard shortcuts",
+				description: "Every key Reader answers while you read, and how to see them on screen.",
+			},
+			saving: {
+				title: "Save posts",
+				description:
+					"Keep a post past every rule that would remove it, and find it again on Saved.",
+			},
+			labels: {
+				title: "Label saved posts",
+				description: "Put a label on what you keep, and read everything under one label as a list.",
+			},
+			pins: {
+				title: "Pin feeds above your queue",
+				description: "Keep the feeds you never want to miss in a strip at the top of Reading.",
+			},
+			folders: {
+				title: "Group feeds into folders",
+				description: "File feeds under a name and read the whole folder as one stream.",
+			},
+			filters: {
+				title: "Filter posts as they arrive",
+				description:
+					"Drop, mark read or flag a post by what its title, link, summary or author says.",
+			},
+			search: {
+				title: "Search your posts",
+				description:
+					"Find posts by their words, combine words with OR and minus, and save a search.",
+			},
+			notifications: {
+				title: "Get notified about new posts",
+				description: "Pick the feeds worth interrupting you for, and choose how and when you hear.",
+			},
+			agents: {
+				title: "Connect an AI assistant",
+				description:
+					"Mint a token and let an assistant read, search and act on your queue over MCP.",
+			},
+			plans: {
+				title: "Plans and limits",
+				description: "What Free, Paid and Premium each keep and do, and how to change plans.",
+			},
+			appearance: {
+				title: "Change how Reader looks",
+				description: "Choose light or dark colours and a serif or sans face for what you read.",
+			},
+			export: {
+				title: "Export your data",
+				description: "Download your subscriptions as OPML, or everything you keep as one ZIP.",
+			},
+			"no-feed-found": {
+				title: "Reader says a site has no feed",
+				description:
+					"What to try when following a site's address answers that it publishes no feed.",
+			},
+			"feed-not-updating": {
+				title: "A feed stopped updating",
+				description: "Read what its last check found, check it now, and know when to wait.",
+			},
+			"search-missing-post": {
+				title: "Search can't find a post I know is there",
+				description: "Why a search stops where it does, and the three things that make it miss.",
+			},
+			"article-not-loading": {
+				title: "The article won't load in Reader",
+				description: "What each message under a post means, and how to read the piece anyway.",
+			},
+			"over-plan-limits": {
+				title: "I'm over my plan's limits",
+				description: "Nothing is deleted. What pauses, and the two ways back inside your plan.",
+			},
+			reading: {
+				title: "Read your queue",
+				description:
+					"Every post from every feed, newest first: narrow it, mark it read, and open a post.",
+			},
+		},
 		hub: {
 			title: "How can we help?",
 			lead: "Short guides to every part of Reader, and fixes for the problems people actually run into.",
@@ -989,7 +1115,7 @@ export default {
 			premium: "Available on the {#link}Premium plan{/link}.",
 			stuck: {
 				title: "Still stuck?",
-				body: "Write to {#link}{$email}{/link} with what you tried and what you saw, and a person will answer.",
+				body: "{#link}Write to us{/link} with what you tried and what you saw, and a person will answer.",
 			},
 			updated: "Last updated",
 		},
@@ -1012,6 +1138,46 @@ export default {
 			title: "That help page is not here",
 			body: "It may have moved. These are the pages people look for most.",
 			links: "Try one of these",
+		},
+	},
+
+	/** The support form: the one way a reader reaches a person. */
+	support: {
+		title: "Contact support",
+		description: "Tell us what you tried and what you saw, and a person will reply to your email.",
+		name: "Name (optional)",
+		email: "Email",
+		emailHint: "Replies go to this address.",
+		topic: "What is it about?",
+		topicPlaceholder: "Choose a topic",
+		topics: {
+			question: "A question",
+			problem: "Something is not working",
+			billing: "My plan or a payment",
+			idea: "An idea",
+			other: "Something else",
+		},
+		message: "Message",
+		messagePlaceholder: "What were you trying to do, and what happened instead?",
+		privacy: "Leave out passwords and card details. We use what you send only to answer you.",
+		send: "Send",
+		from: "Writing from: {$page}",
+		states: {
+			sent: "Sent. A person will reply to the email address you gave.",
+			another: "Send another message",
+			invalid: "Check the highlighted fields and send it again.",
+			failed: "Your message could not be sent. It is still here; try again in a moment.",
+			rateLimited:
+				"You have sent several messages in a short time. Wait a minute and send it again.",
+			resubmit: "This form expired before it was sent. Your message is still here; send it again.",
+		},
+		errors: {
+			nameLength: "Use a name of up to 100 characters.",
+			emailMissing: "Enter your email address so we can reply.",
+			emailInvalid: "Enter a valid email address, like name@example.com.",
+			topic: "Choose what your message is about.",
+			messageShort: "Write at least a sentence about what you need.",
+			messageLong: "Keep your message under 5,000 characters.",
 		},
 	},
 

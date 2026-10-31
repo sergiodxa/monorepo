@@ -10,6 +10,8 @@
 import type { RouterContext } from "remix/router";
 
 import featureFlags from "@sdxc/flags/middleware/router";
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -32,6 +34,7 @@ import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import supportDesk from "~/app/http/middleware/support-desk";
 import { assetResolver } from "~/app/initializers/assets";
 import { flags } from "~/app/initializers/flags";
 import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
@@ -421,6 +424,23 @@ export function createWebRouter(options: WebRouterOptions) {
 	router.map(
 		routes.docs.feedback,
 		lazy(() => import("~/app/http/controllers/docs/feedback")),
+	);
+	/**
+	 * The support form, behind honeypot fields and the support desk. The honeypot keys off
+	 * the session secret under its own label, so it needs no secret of its own; a refused
+	 * submission reaches the controller, which answers a filled trap like a success.
+	 */
+	router.map(
+		routes.support,
+		lazy(
+			() => import("~/app/http/controllers/support"),
+			[
+				honeypot(new Honeypot({ secret: `honeypot:${options.cookieSecret}` }), {
+					onFailure: () => null,
+				}),
+				supportDesk(),
+			],
+		),
 	);
 
 	return router;

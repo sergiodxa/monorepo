@@ -17,9 +17,9 @@ import { when } from "@sdxc/u/state";
 import { DocsNav } from "@sdxc/ui";
 import { DocsLayout as Shell } from "@sdxc/ui/patterns";
 
-import { SUPPORT_EMAIL } from "~/config/support";
 import { docHref, docsTree } from "~/resources/docs/registry";
 import MarketingLayout from "~/resources/layouts/marketing";
+import routes from "~/routes/web";
 
 /** The public site header's height, which the sticky docs chrome and jumped-to headings sit below. */
 const HEADER_HEIGHT = "4rem";
@@ -49,7 +49,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					stickyTop={HEADER_HEIGHT}
 					sidebar={
 						<DocsNav
-							tree={docsTree(t("docs.nav.label"))}
+							tree={docsTree(t, t("docs.nav.label"))}
 							activePath={activePath}
 							filter={{
 								label: t("docs.nav.filter"),
@@ -93,7 +93,7 @@ function NavFooter(handle: Handle<{ t: Translate }>) {
 		];
 		return (
 			<div mix={[raw({ display: "grid", gap: "0.125rem" })]}>
-				<a href={`mailto:${SUPPORT_EMAIL}`} mix={link}>
+				<a href={routes.support.index.href()} mix={link}>
 					<LifeBuoyIcon size={16} aria-hidden="true" />
 					{t("docs.nav.support")}
 				</a>

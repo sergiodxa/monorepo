@@ -1,10 +1,10 @@
 /**
- * Where a reader reaches a person. Every help page ends with this address, and the help
- * sidebar pins it at its foot, so it is written once.
+ * Where the support form delivers. The address never appears on a page: readers reach a
+ * person through the form at `/support`, which mails here with the sender as reply-to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 /** The inbox a person answers for help with Reader. */
-export const SUPPORT_EMAIL = "hello@sergiodxa.com";
+export const SUPPORT_INBOX = "hello+reader@sergiodxa.com";

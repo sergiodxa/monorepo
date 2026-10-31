@@ -122,6 +122,7 @@ to exist before the first deploy.
 | `/docs`           | Help hub: where to start, topics and every section         |
 | `/docs/:slug`     | One help page, from `resources/docs/registry.ts`           |
 | `/docs/feedback`  | `POST` records a page's "Was this helpful?" vote           |
+| `/support`        | The support form, mailed to the support inbox              |
 | `/auth`           | `GET` completes the OIDC callback, `POST` starts the flow  |
 | `/logout`         | `GET` confirms, `POST` ends the session                    |
 
