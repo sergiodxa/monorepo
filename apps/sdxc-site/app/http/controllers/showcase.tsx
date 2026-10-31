@@ -7,25 +7,28 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
-import { bg, fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, m, maxIs, mbs, p } from "@sdxc/u/size";
-import { font, leading, nowrap, text, textTransform, tracking, weight } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { is, m, maxIs } from "@sdxc/u/size";
+import { font, leading, text } from "@sdxc/u/typography";
+import { Feature } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { listGuides } from "~/app/services/docs";
+import { readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";
-import Band from "~/resources/components/band";
-import FeatureGrid from "~/resources/components/feature-grid";
-import { DisplayHeadings, ProseHeading } from "~/resources/components/prose";
+import Actions from "~/resources/components/actions";
+import Hero from "~/resources/components/hero";
+import { ProseHeading, ProseParagraph } from "~/resources/components/prose";
+import SectionBlock from "~/resources/components/section-block";
+import { ShowcaseCard, ShowcaseDepth } from "~/resources/components/showcase";
 import SiteHeader from "~/resources/components/site-header";
+import Split, { SplitCopy, SplitMedia } from "~/resources/components/split";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/** Where every application's source is read from. */
+const APPS_SOURCE_HREF = "https://github.com/sergiodxa/monorepo/tree/main/apps";
 
 /** Cardinal words for the curated count, so the prose stays exact as the list grows. */
 const CARDINALS = [
@@ -70,8 +73,7 @@ function showcaseCopy(applications: ReturnType<typeof listShowcase>): {
 export default createAction(routes.showcase, async (ctx) => {
 	let applications = listShowcase();
 	let { description, introduction } = showcaseCopy(applications);
-	let first = (await listGuides()).at(0)?.guides.at(0);
-	let firstGuide = first ? routes.docs.show.href({ slug: first.slug }) : null;
+	let { published } = readPackageFacts();
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -83,146 +85,57 @@ export default createAction(routes.showcase, async (ctx) => {
 			<SiteHeader activePath={routes.showcase.href()} />
 
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
-				<Band tone="grid" spacing="hero" ruled={false}>
-					<DisplayHeadings>
-						<header mix={[vstack({ gap: 6, align: "start" }), maxIs("48rem")]}>
-							<p
-								mix={[
-									m(0),
-									font("mono"),
-									text("xs"),
-									textTransform("uppercase"),
-									tracking("widest"),
-									fg("brand"),
-								]}
-							>
-								[ Showcase ]
-							</p>
+				<Hero>
+					<Split>
+						<SplitCopy>
 							<ProseHeading level={1}>Built on these packages</ProseHeading>
-							<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{introduction}</p>
-						</header>
-					</DisplayHeadings>
-				</Band>
-
-				<Band>
-					<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-						<FeatureGrid columns="2">
-							{applications.map((application) => (
-								<article
-									key={application.directory}
-									mix={[
-										vstack({ gap: 4, align: "stretch" }),
-										bg(),
-										p(8, 6),
-										media("(min-width: 48rem)", p(10, 10)),
-									]}
-								>
-									<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-										<h2
-											mix={[
-												m(0),
-												font("mono"),
-												text("2xl"),
-												weight("medium"),
-												tracking("tight"),
-												nowrap(),
-												fg("neutral.emphasis"),
-											]}
-										>
-											{application.title}
-										</h2>
-										<Badge color="brand">{application.packageCount} packages</Badge>
-										{application.href === null ? <Badge color="neutral">Source only</Badge> : null}
-									</div>
-
-									<p mix={[m(0), text("lg"), leading("snug"), fg("neutral.emphasis")]}>
-										{application.summary}
-									</p>
-									<p mix={[m(0), text("base"), leading("relaxed"), fg("neutral")]}>
-										{application.study}
-									</p>
-
-									<div mix={[hstack({ gap: 3, align: "center" }), flexWrap(), mbs("auto")]}>
-										{application.href ? (
-											<LinkButton href={application.href} rel="noreferrer" size="sm" color="brand">
-												Open it
-												<ArrowUpRightIcon size={14} aria-hidden="true" />
-											</LinkButton>
-										) : null}
-										<LinkButton
-											href={application.sourceHref}
-											rel="noreferrer"
-											variant="outline"
-											color="neutral"
-											size="sm"
-										>
-											Read the source
-											<ArrowUpRightIcon size={14} aria-hidden="true" />
-										</LinkButton>
-									</div>
-								</article>
-							))}
-
-							<article
-								mix={[
-									vstack({ gap: 4, align: "stretch" }),
-									bg(),
-									raw({
-										backgroundImage:
-											"radial-gradient(80% 90% at 100% 0%, color-mix(in oklch, var(--ui-brand-bg-solid) 16%, transparent), transparent 70%)",
-									}),
-									p(8, 6),
-									media("(min-width: 48rem)", p(10, 10)),
-								]}
+							<ProseParagraph>{introduction}</ProseParagraph>
+							<Actions
+								cta-href="#applications"
+								cta-label="See the applications"
+								alt-href={APPS_SOURCE_HREF}
+								alt-label="Read the source"
 							>
-								<h2
-									mix={[
-										m(0),
-										text("2xl"),
-										weight("medium"),
-										tracking("tight"),
-										fg("neutral.emphasis"),
-									]}
-								>
-									Build your own
-								</h2>
-								<p mix={[m(0), text("lg"), leading("snug"), fg("neutral.emphasis")]}>
-									Every application here started with one package and took the next one when it
-									needed it.
-								</p>
-								<p mix={[m(0), text("base"), leading("relaxed"), fg("neutral")]}>
-									The guides open on what the collection is and walk you through your first handler,
-									from install to a Response.
-								</p>
+								{null}
+							</Actions>
+						</SplitCopy>
+						<SplitMedia>
+							<ShowcaseDepth applications={applications} published={published} />
+						</SplitMedia>
+					</Split>
+				</Hero>
 
-								<div mix={[hstack({ gap: 3, align: "center" }), flexWrap(), mbs("auto")]}>
-									{firstGuide ? (
-										<LinkButton href={firstGuide} size="sm" color="brand">
-											Start with the guides
-											<ArrowRightIcon size={14} aria-hidden="true" />
-										</LinkButton>
-									) : null}
-									<LinkButton
-										href={routes.api.index.href()}
-										variant="outline"
-										color="neutral"
-										size="sm"
-									>
-										Browse the API
-										<ArrowRightIcon size={14} aria-hidden="true" />
-									</LinkButton>
-								</div>
-							</article>
-						</FeatureGrid>
+				<SectionBlock
+					id="applications"
+					eyebrow="Applications"
+					title="What each one is worth reading for"
+					tone="tinted"
+				>
+					<Feature.Grid columns={2}>
+						{applications.map((application) => (
+							<ShowcaseCard key={application.directory} application={application} />
+						))}
+					</Feature.Grid>
 
-						<p mix={[m(0), maxIs("48rem"), text("sm"), leading("relaxed"), fg("neutral")]}>
-							Each count is that application&apos;s <code mix={[font("mono")]}>@sdxc/*</code>{" "}
-							dependencies, read from its own <code mix={[font("mono")]}>package.json</code>. Every
-							package&apos;s reference page names which of these install it, read from the same
-							files.
-						</p>
-					</div>
-				</Band>
+					<p mix={[m(0), maxIs("48rem"), text("sm"), leading("relaxed"), fg("neutral")]}>
+						Each count is that application&apos;s <code mix={[font("mono")]}>@sdxc/*</code>{" "}
+						dependencies, read from its own <code mix={[font("mono")]}>package.json</code>. Every
+						package&apos;s reference page names which of these install it, read from the same files.
+					</p>
+				</SectionBlock>
+
+				<SectionBlock id="build" title="Build your own." tone="grid" align="center">
+					<p>Every one of these started with one package. Start yours the same way.</p>
+
+					<Actions
+						cta-href="/docs/getting-started/install-and-pin"
+						cta-label="Install your first package"
+						alt-href={routes.api.index.href()}
+						alt-label="Browse the API"
+					>
+						{null}
+					</Actions>
+				</SectionBlock>
 			</main>
 		</DocumentLayout>,
 	);

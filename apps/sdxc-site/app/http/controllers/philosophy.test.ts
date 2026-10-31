@@ -106,6 +106,27 @@ describe("GET /showcase", () => {
 	});
 });
 
+describe("GET /showcase layout", () => {
+	test("charts every application and links each bar to its card", async () => {
+		let body = await (await fetchApp("/showcase")).text();
+
+		for (let entry of listShowcase()) {
+			expect(body).toContain(`href="#app-${entry.directory}"`);
+			expect(body).toContain(`id="app-${entry.directory}"`);
+		}
+		expect(body).toContain(`against all ${readPackageFacts().published} published packages`);
+	});
+
+	test("closes on where to start instead of a card in the grid", async () => {
+		let body = await (await fetchApp("/showcase")).text();
+		let closing = body.slice(body.indexOf('id="build"'));
+
+		expect(closing).toContain("Build your own.");
+		expect(closing).toContain('href="/docs/getting-started/install-and-pin"');
+		expect(body.slice(0, body.indexOf('id="build"'))).not.toContain("Build your own");
+	});
+});
+
 describe("the sponsors block", () => {
 	test("draws nothing at all while the list cannot be read", async () => {
 		for (let path of ["/philosophy", "/showcase", "/"]) {
