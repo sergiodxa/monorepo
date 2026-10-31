@@ -52,7 +52,7 @@ export const DEFAULT_VELOCITY: Velocity = "evergreen";
  * a reader following one feed would be held to a cap sized for somebody following two hun
  */
 export const TIER_BUDGETS: Record<Tier, number> = {
-	free: 250_000,
+	free: 25_000,
 	paid: 1_500_000,
 	premium: 3_000_000,
 };
@@ -63,7 +63,7 @@ export const TIER_BUDGETS: Record<Tier, number> = {
  * megabytes against a budget measured in gigabytes.
  */
 export const TIER_SAVED_LIMITS: Record<Tier, number> = {
-	free: 1_000,
+	free: 100,
 	paid: 5_000,
 	premium: 25_000,
 };

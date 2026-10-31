@@ -73,6 +73,14 @@ export default function PlansTable(handle: Handle<PlansTable.Props>) {
 				cells: perTier((tier) => count(TIER_LIMITS[tier].saved)),
 			},
 			{
+				label: t("landing.plans.rows.pins"),
+				cells: perTier((tier) => count(TIER_LIMITS[tier].pins)),
+			},
+			{
+				label: t("landing.plans.rows.savedSearches"),
+				cells: perTier((tier) => count(TIER_LIMITS[tier].savedSearches)),
+			},
+			{
 				label: t("landing.plans.rows.search"),
 				cells: perTier((tier) => {
 					let days = TIER_LIMITS[tier].searchWindowDays;

@@ -9,7 +9,7 @@
 
 import { DAY_MS } from "@sdxc/dates/zone";
 
-import { TIER_BUDGETS, TIER_SAVED_LIMITS } from "~/database/schema";
+import { PIN_LIMIT, SAVED_SEARCH_LIMIT, TIER_BUDGETS, TIER_SAVED_LIMITS } from "~/database/schema";
 
 /**
  * The three prices the product sells, ordered from least to most. The `CHECK` constraint
@@ -68,6 +68,10 @@ export interface TierLimits {
 	checkIntervalMs: number | null;
 	/** How far back a search reaches, in days; `null` searches everything stored. */
 	searchWindowDays: number | null;
+	/** Feeds the reader may pin above the queue. */
+	pins: number;
+	/** Searches the reader may keep in the sidebar. */
+	savedSearches: number;
 }
 
 /**
@@ -76,12 +80,14 @@ export interface TierLimits {
  */
 export const TIER_LIMITS: Record<Tier, TierLimits> = {
 	free: {
-		feeds: 50,
+		feeds: 20,
 		saved: TIER_SAVED_LIMITS.free,
 		rules: 0,
 		posts: TIER_BUDGETS.free,
 		checkIntervalMs: null,
-		searchWindowDays: 30,
+		searchWindowDays: 7,
+		pins: 3,
+		savedSearches: 3,
 	},
 	paid: {
 		feeds: 200,
@@ -90,6 +96,8 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 		posts: TIER_BUDGETS.paid,
 		checkIntervalMs: 30 * 60 * 1000,
 		searchWindowDays: null,
+		pins: PIN_LIMIT,
+		savedSearches: SAVED_SEARCH_LIMIT,
 	},
 	premium: {
 		feeds: 500,
@@ -98,6 +106,8 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 		posts: TIER_BUDGETS.premium,
 		checkIntervalMs: 5 * 60 * 1000,
 		searchWindowDays: null,
+		pins: PIN_LIMIT,
+		savedSearches: SAVED_SEARCH_LIMIT,
 	},
 };
 

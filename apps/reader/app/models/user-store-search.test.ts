@@ -366,11 +366,11 @@ describe("readingQueue, searched", () => {
 		let { state: freeState, user: free } = await createReader("free");
 		seedFeed(freeState);
 		seedItems(freeState, [
-			{ id: "recent", publishedAt: NOW - 10 * DAY_MS, title: "beacon here" },
+			{ id: "recent", publishedAt: NOW - 3 * DAY_MS, title: "beacon here" },
 			{ id: "ancient", publishedAt: NOW - 100 * DAY_MS, title: "beacon there" },
 		]);
 
-		expect(limitsOf("free").searchWindowDays).toBe(30);
+		expect(limitsOf("free").searchWindowDays).toBe(7);
 		expect(ids(await free.readingQueue({ readState: "all", query: "beacon" }))).toEqual(["recent"]);
 
 		/** A tier whose window is null searches every stored post, given a step that reaches. */
@@ -379,7 +379,7 @@ describe("readingQueue, searched", () => {
 		let { state, user } = await createReader("paid");
 		seedFeed(state);
 		seedItems(state, [
-			{ id: "recent", publishedAt: NOW - 10 * DAY_MS, title: "beacon here" },
+			{ id: "recent", publishedAt: NOW - 3 * DAY_MS, title: "beacon here" },
 			{ id: "ancient", publishedAt: NOW - 100 * DAY_MS, title: "beacon there" },
 		]);
 
@@ -567,8 +567,8 @@ describe("readingQueue, searched", () => {
 		let span = spanOf(await user.readingQueue({ readState: "all", query: "beacon" }));
 
 		expect(span.stoppedAt).toBe("window");
-		expect(span.windowDays).toBe(30);
-		expect(span.reachedAt).toBe(NOW - 30 * DAY_MS);
+		expect(span.windowDays).toBe(7);
+		expect(span.reachedAt).toBe(NOW - 7 * DAY_MS);
 	});
 
 	test("reports the end of the archive where the oldest stored post was reached", async () => {

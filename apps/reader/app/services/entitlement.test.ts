@@ -42,7 +42,7 @@ describe("the tier table", () => {
 
 	test("the free tier arms no background check and bounds its search", () => {
 		expect(TIER_LIMITS.free.checkIntervalMs).toBeNull();
-		expect(TIER_LIMITS.free.searchWindowDays).toBe(30);
+		expect(TIER_LIMITS.free.searchWindowDays).toBe(7);
 		expect(TIER_LIMITS.paid.searchWindowDays).toBeNull();
 		expect(TIER_LIMITS.premium.searchWindowDays).toBeNull();
 	});

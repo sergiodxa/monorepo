@@ -135,13 +135,18 @@ describe("POST /feeds/import", () => {
 	});
 
 	test("reports what an import followed and what it already followed", async () => {
-		store.importFeeds.mockResolvedValue({ added: 2, alreadyFollowing: 1, failed: [] });
+		store.importFeeds.mockResolvedValue({
+			added: 2,
+			alreadyFollowing: 1,
+			failed: [],
+			overLimit: 0,
+		});
 
 		let response = await postImport(VIEWER, opmlFile(OPML_DOCUMENT));
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(
-			`${SETTINGS_PATH}?imported=done&added=2&following=1&failed=0`,
+			`${SETTINGS_PATH}?imported=done&added=2&following=1&failed=0&overLimit=0`,
 		);
 	});
 
@@ -154,13 +159,14 @@ describe("POST /feeds/import", () => {
 				"https://slow.example/feed.xml",
 				"https://moved.example/feed.xml",
 			],
+			overLimit: 0,
 		});
 
 		let response = await postImport(VIEWER, opmlFile(OPML_DOCUMENT));
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(
-			`${SETTINGS_PATH}?imported=done&added=47&following=0&failed=3`,
+			`${SETTINGS_PATH}?imported=done&added=47&following=0&failed=3&overLimit=0`,
 		);
 	});
 });

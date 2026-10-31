@@ -433,7 +433,7 @@ export default {
 					three: {
 						title: "Guardada en la barra lateral",
 						description:
-							"Guarda hasta {$savedSearchLimit} búsquedas con nombre y ábrelas como una carpeta.",
+							"Guarda hasta {$savedSearchLimit} búsquedas con nombre, {$freeSavedSearches} en Free, y ábrelas como una carpeta.",
 					},
 				},
 				stepsTitle: "Cuatro formas de decir lo que quieres",
@@ -555,7 +555,7 @@ export default {
 					two: {
 						title: "Fijados y feeds tranquilos",
 						description:
-							"Fija hasta {$pinLimit} feeds sobre todo lo demás; los que casi no publican bajan a Tranquilos.",
+							"Fija hasta {$pinLimit} feeds sobre todo lo demás, {$freePins} en Free; los que casi no publican bajan a Tranquilos.",
 					},
 					three: {
 						title: "Guardada significa conservada",
@@ -764,6 +764,8 @@ export default {
 			feeds: "Feeds que sigues",
 			posts: "Entradas conservadas",
 			saved: "Entradas guardadas",
+			pins: "Feeds fijados",
+			savedSearches: "Búsquedas guardadas",
 			search: "La búsqueda alcanza",
 			filters: "Filtros",
 			checks: "Revisiones para notificaciones",
@@ -901,7 +903,7 @@ export default {
 						"La búsqueda lee el título, el resumen y el autor de cada entrada, y dice exactamente hasta dónde miró.",
 					checks: {
 						one: "Frases, OR, y menos o NOT",
-						two: "Guarda hasta 20 búsquedas en la barra lateral",
+						two: "Guarda hasta {$savedSearchLimit} búsquedas en la barra lateral",
 						three: "En Paid y Premium, la búsqueda alcanza todo lo que guardaste",
 					},
 				},

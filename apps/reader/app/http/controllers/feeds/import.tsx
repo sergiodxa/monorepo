@@ -32,6 +32,7 @@ interface Counts {
 	added: number;
 	following: number;
 	failed: number;
+	overLimit: number;
 }
 
 /**
@@ -54,6 +55,7 @@ function toSettings(imported: Imported, counts?: Counts) {
 		query.set("added", String(counts.added));
 		query.set("following", String(counts.following));
 		query.set("failed", String(counts.failed));
+		query.set("overLimit", String(counts.overLimit));
 	}
 
 	return redirect(`${routes.settings.href()}?${query}`, {
@@ -103,6 +105,7 @@ export default createAction(routes.feeds.import, {
 			added: result.added,
 			following: result.alreadyFollowing,
 			failed: result.failed.length,
+			overLimit: result.overLimit,
 		});
 	},
 });

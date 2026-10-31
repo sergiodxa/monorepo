@@ -348,7 +348,7 @@ export default {
 			invalidQuery: "Escribe al menos una palabra que encontrar antes de guardar la búsqueda.",
 			duplicateName: "Ya tienes una búsqueda guardada con ese nombre.",
 			notFound: "Esa búsqueda guardada ya no está ahí.",
-			full: "Tienes {$limit} búsquedas guardadas: olvida una para hacer sitio.",
+			full: "Tienes tantas búsquedas guardadas como permite tu plan. Olvida una para hacer sitio, o cambia a un plan mayor.",
 		},
 	},
 
@@ -393,7 +393,7 @@ export default {
 			remove: "Dejar de fijar",
 			pinned: "Fijado encima de tu lectura.",
 			unpinned: "Quitado de la franja de fijados.",
-			full: "Ya tienes fijados tantos feeds como caben en la franja. Quita uno para fijar otro.",
+			full: "Ya tienes fijados tantos feeds como permite tu plan. Quita uno, o cambia a un plan mayor, para fijar otro.",
 			/** Said on a pinned feed with nothing waiting, which is the point of pinning it. */
 			caughtUp: "Nada nuevo.",
 		},
@@ -457,6 +457,8 @@ export default {
 				tooLarge:
 					"Ese archivo es más grande de lo que esta aplicación lee. Una lista de suscripciones ocupa unos cientos de kilobytes como mucho.",
 				missing: "Elige un archivo OPML para importar.",
+				overLimit:
+					".input {$count :number}\n.match $count\none {{Quedó fuera {$count} más porque tu plan ya sigue tantos feeds como permite. Cambia a un plan mayor para seguirlo.}}\n* {{Quedaron fuera {$count} más porque tu plan ya sigue tantos feeds como permite. Cambia a un plan mayor para seguirlos.}}",
 			},
 		},
 

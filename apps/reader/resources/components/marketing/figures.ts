@@ -17,7 +17,7 @@ import { HISTORY_ENTRY_LIMIT } from "~/app/services/history";
 import { EMAIL_GAP_MS } from "~/app/services/notify";
 import { MAX_SUMMARY_LENGTH } from "~/app/services/refresh";
 import { POLL_FLOOR_MS } from "~/database/feed-schema";
-import { PIN_LIMIT, SAVED_SEARCH_LIMIT, TAG_LIMIT } from "~/database/schema";
+import { TAG_LIMIT } from "~/database/schema";
 import { formatInterval } from "~/resources/components/marketing/scenes";
 
 /**
@@ -31,6 +31,7 @@ export function landingFigures(locale: string): Record<string, string> {
 	return {
 		freeFeeds: count(TIER_LIMITS.free.feeds),
 		freePosts: count(TIER_LIMITS.free.posts),
+		freeSaved: count(TIER_LIMITS.free.saved),
 		premiumPosts: count(TIER_LIMITS.premium.posts),
 		paidRules: count(TIER_LIMITS.paid.rules),
 		freeSearchDays: count(TIER_LIMITS.free.searchWindowDays ?? 0),
@@ -38,9 +39,11 @@ export function landingFigures(locale: string): Record<string, string> {
 		premiumCheck: interval(TIER_LIMITS.premium.checkIntervalMs),
 		pollFloor: formatInterval(POLL_FLOOR_MS),
 		historyPosts: count(HISTORY_ENTRY_LIMIT),
-		pinLimit: count(PIN_LIMIT),
+		freePins: count(TIER_LIMITS.free.pins),
+		pinLimit: count(TIER_LIMITS.paid.pins),
 		tagLimit: count(TAG_LIMIT),
-		savedSearchLimit: count(SAVED_SEARCH_LIMIT),
+		freeSavedSearches: count(TIER_LIMITS.free.savedSearches),
+		savedSearchLimit: count(TIER_LIMITS.paid.savedSearches),
 		summaryChars: count(MAX_SUMMARY_LENGTH),
 		graceDays: count(GRACE_PERIOD_MS / DAY_MS),
 		emailGapHours: count(EMAIL_GAP_MS / (60 * 60 * 1000)),

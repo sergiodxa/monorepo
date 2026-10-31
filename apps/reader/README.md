@@ -92,7 +92,7 @@ to exist before the first deploy.
 - Download all your data in one ZIP: subscriptions as OPML, the posts you kept (with their
   labels) as CSV, and both as JSON
 - Free, Paid and Premium plans, each sized by how many feeds, saved posts and posts in all
-  it keeps: 250,000 posts on Free, 1,500,000 on Paid and 3,000,000 on Premium
+  it keeps: 25,000 posts on Free, 1,500,000 on Paid and 3,000,000 on Premium
 - A failed payment keeps everything for a fortnight, and nothing is ever deleted by a plan
   change: a plan you are over refuses what is new and leaves what is yours where it is
 - A light or dark scheme and a serif or sans reading face, both decided before the page is

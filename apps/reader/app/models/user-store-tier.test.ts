@@ -352,7 +352,7 @@ describe("where a limit is enforced", () => {
 		});
 	});
 
-	test("an import over the cap follows nothing and reports every URL it refused", async () => {
+	test("an import over the cap follows nothing and counts every feed the plan left out", async () => {
 		let { state, user } = await createReader();
 		await user.ensureUser(SUBJECT);
 		seedFeeds(state, TIER_LIMITS.free.feeds);
@@ -364,11 +364,47 @@ describe("where a limit is enforced", () => {
 		]);
 
 		expect(imported.added).toBe(0);
-		expect([...imported.failed].sort()).toEqual([
-			"https://one.example.com/feed.xml",
-			"https://three.example.com/feed.xml",
-			"https://two.example.com/feed.xml",
-		]);
+		expect(imported.overLimit).toBe(3);
+		expect(imported.failed).toEqual([]);
+	});
+
+	test("a Free reader pins as many feeds as Free allows, and is refused the next", async () => {
+		let { state, user } = await createReader();
+		await user.ensureUser(SUBJECT);
+		let feeds = seedFeeds(state, TIER_LIMITS.free.pins + 1);
+
+		for (let feed of feeds.slice(0, TIER_LIMITS.free.pins)) {
+			expect(await user.pinFeed(feed, true)).toMatchObject({ ok: true, pinned: true });
+		}
+
+		expect(await user.pinFeed(feeds.at(-1) ?? "", true)).toEqual({
+			ok: false,
+			reason: "pin-limit",
+			allowed: TIER_LIMITS.free.pins,
+		});
+	});
+
+	test("a Free reader keeps as many searches as Free allows, and is refused the next", async () => {
+		let { user } = await createReader();
+		await user.ensureUser(SUBJECT);
+
+		let save = (order: number) =>
+			user.createSearch({
+				name: `Search ${order}`,
+				query: `term ${order}`,
+				readState: "all",
+				feedId: null,
+			});
+
+		for (let order = 0; order < TIER_LIMITS.free.savedSearches; order++) {
+			expect(await save(order)).toMatchObject({ ok: true });
+		}
+
+		expect(await save(TIER_LIMITS.free.savedSearches)).toEqual({
+			ok: false,
+			reason: "full",
+			limit: TIER_LIMITS.free.savedSearches,
+		});
 	});
 
 	test("a reader over the saved cap keeps every saved post and is refused the next", async () => {

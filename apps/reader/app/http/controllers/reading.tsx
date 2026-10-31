@@ -59,7 +59,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { features } from "~/app/initializers/flags";
 import { userStore } from "~/app/models/user-store";
-import { SAVED_SEARCH_LIMIT, SEARCH_NAME_LENGTH } from "~/database/schema";
+import { SEARCH_NAME_LENGTH } from "~/database/schema";
 import AppLayout, {
 	ActionLabel,
 	AppNavLink,
@@ -241,7 +241,7 @@ function savedSearchNote(intl: I18n, params: URLSearchParams): Note | null {
 		"invalid-query": intl.t("searches.error.invalidQuery"),
 		"duplicate-name": intl.t("searches.error.duplicateName"),
 		"not-found": intl.t("searches.error.notFound"),
-		full: intl.t("searches.error.full", { limit: SAVED_SEARCH_LIMIT }),
+		full: intl.t("searches.error.full"),
 	};
 
 	let message = refusals[outcome];

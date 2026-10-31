@@ -108,7 +108,13 @@ function importNote(
 			sentences.push(ctx.intl.t("feeds.transfer.import.failed", { count: failed }));
 		}
 
-		return { message: sentences.join(" "), color: "success" };
+		/** Left out by the plan rather than by the site, which is the one a reader can change. */
+		let overLimit = importedCount(ctx.url.searchParams, "overLimit");
+		if (overLimit > 0) {
+			sentences.push(ctx.intl.t("feeds.transfer.import.overLimit", { count: overLimit }));
+		}
+
+		return { message: sentences.join(" "), color: overLimit > 0 ? "warning" : "success" };
 	}
 
 	/** A document that holds no subscriptions left the reader where they were, intact. */

@@ -258,7 +258,7 @@ export default {
 			invalidQuery: "Type at least one word to find before saving the search.",
 			duplicateName: "You already have a saved search by that name.",
 			notFound: "That saved search is no longer there.",
-			full: "You have {$limit} saved searches — forget one to make room.",
+			full: "You have as many saved searches as your plan keeps. Forget one to make room, or move up a plan.",
 		},
 	},
 
@@ -302,7 +302,7 @@ export default {
 			remove: "Unpin",
 			pinned: "Pinned above your reading.",
 			unpinned: "Taken off the pinned strip.",
-			full: "You have pinned as many feeds as the strip holds. Unpin one to pin another.",
+			full: "You have pinned as many feeds as your plan allows. Unpin one, or move up a plan, to pin another.",
 			/** Said on a pinned feed with nothing waiting, which is the point of pinning it. */
 			caughtUp: "Nothing new.",
 		},
@@ -366,6 +366,9 @@ export default {
 				tooLarge:
 					"That file is larger than this app will read. A subscription list is a few hundred kilobytes at most.",
 				missing: "Choose an OPML file to import.",
+				/** The feeds the plan's cap left out, said with the way past it. */
+				overLimit:
+					".input {$count :number}\n.match $count\none {{{$count} more was left out because your plan follows as many feeds as it allows. Move up a plan to follow it.}}\n* {{{$count} more were left out because your plan follows as many feeds as it allows. Move up a plan to follow them.}}",
 			},
 		},
 

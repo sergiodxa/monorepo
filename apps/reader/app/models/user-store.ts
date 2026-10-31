@@ -108,7 +108,6 @@ import {
 	QUIET_FROM_HOUR,
 	QUIET_TO_HOUR,
 	RULE_PREVIEW_POSTS,
-	SAVED_SEARCH_LIMIT,
 	SEARCH_NAME_LENGTH,
 	READING_FACES,
 	SEARCH_READ_STATES,
@@ -859,6 +858,8 @@ export namespace UserStore {
 		alreadyFollowing: number;
 		/** Feeds in the document that could not be retrieved, with the URL each one names. */
 		failed: string[];
+		/** Feeds left unfollowed because the plan already follows as many as it allows. */
+		overLimit: number;
 	}
 
 	/** Why a reader's own check of one feed never reached the origin's answer. */
@@ -1440,7 +1441,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param entries - The subscriptions the document listed, each with its folder's name.
 	 */
 	async importFeeds(entries: readonly UserStore.ImportEntry[]): Promise<UserStore.ImportResult> {
-		let result: UserStore.ImportResult = { added: 0, alreadyFollowing: 0, failed: [] };
+		let result: UserStore.ImportResult = {
+			added: 0,
+			alreadyFollowing: 0,
+			failed: [],
+			overLimit: 0,
+		};
 
 		let requested = new Map<string, UserStore.ImportEntry>();
 		for (let entry of entries) {
@@ -1475,6 +1481,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 						await this.fileFeed(followed.feed.id, { folderId: folder.id });
 					}
 				} else if (followed.reason === "already-following") result.alreadyFollowing += 1;
+				else if (followed.reason === "over-limit") result.overLimit += 1;
 				else result.failed.push(entry.feedUrl);
 			} catch {
 				result.failed.push(entry.feedUrl);
@@ -2461,10 +2468,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let checked = await this.#searchDraft(draft);
 		if (!checked.ok) return checked;
 
+		let limit = limitsOf(leasedTier(await this.#settingsRow(), Date.now())).savedSearches;
 		let held = await this.#models.searches.query().count();
-		if (held >= SAVED_SEARCH_LIMIT) {
+		if (held >= limit) {
 			this.#record("job", { event: "user.search.refused", reason: "full", searches: held });
-			return { ok: false, reason: "full", limit: SAVED_SEARCH_LIMIT };
+			return { ok: false, reason: "full", limit };
 		}
 
 		let written = unwrap(
@@ -2937,7 +2945,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		let held = await this.#models.subscriptions.followed().pinned().count();
 
-		if (held >= PIN_LIMIT) return { ok: false, reason: "pin-limit", allowed: PIN_LIMIT };
+		let allowed = limitsOf(leasedTier(await this.#settingsRow(), Date.now())).pins;
+		if (held >= allowed) return { ok: false, reason: "pin-limit", allowed };
 
 		await this.#models.subscriptions.write(feedId, { pinned_at: Date.now() });
 		this.#record("job", { event: "user.feed.pinned", feedId: feed.feed_id, pinned: true });

@@ -61,6 +61,16 @@ describe("GET /settings", () => {
 	 * The cadence is withdrawn rather than hidden, so the page offers nothing to submit it
 	 * with: a field left behind would be a promise the store has no method to keep.
 	 */
+	test("says how many imported feeds the plan left out, and points at a larger plan", async () => {
+		let path = `${routes.settings.href()}?imported=done&added=20&following=0&failed=0&overLimit=5`;
+		let html = await (await fetchRoute(createRouter(VIEWER), path)).text();
+
+		expect(html).toContain("Followed 20 new feeds.");
+		expect(html).toContain(
+			"5 more were left out because your plan follows as many feeds as it allows.",
+		);
+	});
+
 	test("offers no control for choosing a cadence", async () => {
 		let html = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 

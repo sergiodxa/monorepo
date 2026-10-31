@@ -428,7 +428,7 @@ export default {
 					three: {
 						title: "Saved to the sidebar",
 						description:
-							"Keep up to {$savedSearchLimit} searches by name and open them like a folder.",
+							"Keep up to {$savedSearchLimit} searches by name, {$freeSavedSearches} on Free, and open them like a folder.",
 					},
 				},
 				stepsTitle: "Four ways to say what you mean",
@@ -547,7 +547,7 @@ export default {
 					two: {
 						title: "Pins and quiet feeds",
 						description:
-							"Pin up to {$pinLimit} feeds above everything; the ones that rarely post sink to Quiet.",
+							"Pin up to {$pinLimit} feeds above everything, {$freePins} on Free; the ones that rarely post sink to Quiet.",
 					},
 					three: {
 						title: "Saved means kept",
@@ -751,6 +751,8 @@ export default {
 			feeds: "Feeds you follow",
 			posts: "Posts kept",
 			saved: "Saved posts",
+			pins: "Pinned feeds",
+			savedSearches: "Saved searches",
 			search: "Search reaches",
 			filters: "Filters",
 			checks: "Checks for notifications",
@@ -886,7 +888,7 @@ export default {
 						"Search reads the title, summary and author of every post, and says exactly how far back it looked.",
 					checks: {
 						one: "Phrases, OR, and minus or NOT",
-						two: "Save up to 20 searches to the sidebar",
+						two: "Save up to {$savedSearchLimit} searches to the sidebar",
 						three: "On Paid and Premium, search reaches everything you have kept",
 					},
 				},

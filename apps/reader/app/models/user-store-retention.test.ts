@@ -66,12 +66,12 @@ const SUBJECT = "sub-retention";
 const FEED_URL = "https://example.com/feed.xml";
 
 /**
- * What every tier's budget is scaled down by, so an object that would take a quarter of a
- * million rows to fill takes ten. It narrows the number under test and leaves the rule
+ * What every tier's budget is scaled down by, so an object that would take twenty-five
+ * thousand rows to fill takes ten. It narrows the number under test and leaves the rule
  * alone: a sweep reclaims only while over budget, only from feeds over their share, and
  * only what the reader has read, at either figure.
  */
-const SCALE = 1 / 25_000;
+const SCALE = 1 / 2_500;
 
 /** What each tier holds at {@link SCALE}, which is what every count below is read against. */
 const SCALED: Record<Tier, number> = {
