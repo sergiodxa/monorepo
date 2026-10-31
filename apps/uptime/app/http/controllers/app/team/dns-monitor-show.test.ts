@@ -79,12 +79,16 @@ async function seedRecord(
 /**
  * The CSS declarations a rendered element's classes resolve to, read out of the `<style>`
  * tags the renderer emits — `css()` mixins turn into generated class names, so a layout
- * assertion has to compare declarations, since the class name itself changes with the rule.
+ * assertion has to compare declarations. A class's rule may sit inside nested cascade layers.
  */
 function declarationsFor(html: string, classAttribute: string): string {
 	let rules = new Map<string, string>();
-	for (let match of html.matchAll(/<style data-rmx-style="([^"]+)">.*?\{\s*\.\1\s*\{([^}]*)\}/gs)) {
-		rules.set(match[1] ?? "", (rules.get(match[1] ?? "") ?? "") + (match[2] ?? ""));
+	for (let [, name = "", sheet = ""] of html.matchAll(
+		/<style data-rmx-style="([^"]+)">(.*?)<\/style>/gs,
+	)) {
+		for (let [, body = ""] of sheet.matchAll(new RegExp(`\\.${name}\\s*\\{([^}]*)\\}`, "g"))) {
+			rules.set(name, (rules.get(name) ?? "") + body);
+		}
 	}
 
 	return classAttribute
@@ -93,9 +97,12 @@ function declarationsFor(html: string, classAttribute: string): string {
 		.join("");
 }
 
-/** How many elements the page draws in the destructive tone, the signal "something is wrong". */
+/**
+ * How many elements the page draws in the destructive tone, the signal "something is wrong".
+ * Stylesheets are left out, since their selectors name the tone too.
+ */
 function dangerCount(html: string): number {
-	return html.match(/data-color="danger"/g)?.length ?? 0;
+	return html.replace(/<style[^>]*>.*?<\/style>/gs, "").match(/data-color="danger"/g)?.length ?? 0;
 }
 
 /** Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams`/auth state, standing in for the real chain. */
