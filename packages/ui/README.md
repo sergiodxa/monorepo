@@ -262,6 +262,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
 - `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
 - `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
+- `DocsNav` — docs sidebar from a `DocsTree`: current page marked and scrolled into view, `<details>` groups, optional title `filter`, `footer`; island `@sdxc/ui/docs-nav-tools`.
 - `TableOfContents` — "On this page" `rail` or sticky `bar`: a marker slides over every section on screen and reaches the last; island `@sdxc/ui/table-of-contents`.
 
 ### Patterns (`@sdxc/ui/patterns`)
@@ -333,6 +334,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target, minus `data-copy-exclude`.  |
 | `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
 | `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
+| `docsNavTools()`                | an element in `DocsNav`    | The current page scrolled into view; the title filter.                  |
 | `dragReorder(session)`          | `GridList` / `Tree`        | Pointer reordering through a `DragSession`.                             |
 | `dropZone(session)`             | `DropZone`                 | File drag-and-drop through a `DragSession`.                             |
 | `dualRange()`                   | a two-thumb `Slider`       | Thumbs that cannot cross.                                               |

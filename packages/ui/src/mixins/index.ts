@@ -27,6 +27,7 @@ export * from "./copy-feedback.js";
 export * from "./copy-to-clipboard.js";
 export * from "./dialog-dismiss.js";
 export * from "./dismiss.js";
+export * from "./docs-nav-tools.js";
 export * from "./drag-reorder.js";
 export * from "./drop-zone.js";
 export * from "./dual-range.js";
