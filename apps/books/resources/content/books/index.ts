@@ -15,17 +15,26 @@ import type { Product } from "~/config/products";
 import { REACT_ROUTER_OAUTH2 } from "~/resources/content/books/react-router-oauth2";
 
 export namespace BookCopy {
-	/** One claim in the "what's inside" band: an icon, a title and the sentence that sells it. */
+	/** One claim in the "what's inside" band: a title and the sentence that sells it. */
 	export interface Claim {
-		icon: RemixNode;
 		title: string;
-		body: RemixNode;
+		body: string;
 	}
 
-	/** One step of the flow the book teaches, as the timeline beside its code lists it. */
+	/** One step of the flow the book teaches: its name, and its line of code or a quieter note. */
 	export interface Step {
 		title: string;
-		body: RemixNode;
+		code?: string;
+		detail?: string;
+	}
+
+	/** The flow the book teaches, as the diagram plays one run of it. */
+	export interface Diagram {
+		label: string;
+		trigger: { title: string; detail?: string };
+		steps: readonly Step[];
+		outcome: string;
+		footnote?: string;
 	}
 
 	/** A code sample taken from the book, as one tab of the band's code stage. */
@@ -81,11 +90,20 @@ export interface BookCopy {
 	hero: { eyebrow: string; title: RemixNode; description: RemixNode };
 	quote?: BookCopy.Quote;
 	sample: { title: string; description: RemixNode; page: BookCopy.SamplePage };
-	inside: { title: string; description: RemixNode; claims: readonly BookCopy.Claim[] };
+	/** The free chapter's contents band; the title counts the sections the chapter has. */
+	contents: { title: (sections: number) => string; description: RemixNode };
 	flow: {
 		title: string;
 		description: RemixNode;
-		steps: readonly BookCopy.Step[];
+		diagram: BookCopy.Diagram;
+		/** What the flow guarantees, as checked claims beside the diagram. */
+		guarantees: readonly string[];
+	};
+	/** What the book holds; the title counts its pages, and the code is quoted from it. */
+	inside: {
+		title: (pages: number) => string;
+		description: RemixNode;
+		claims: readonly BookCopy.Claim[];
 		samples: readonly BookCopy.Sample[];
 	};
 	author: BookCopy.Author;

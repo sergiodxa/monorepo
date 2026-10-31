@@ -51,6 +51,26 @@ async function mountLanding(scheme: Scheme = "light") {
 				book={BOOK}
 				copy={copy}
 				from="$49"
+				contents={{
+					title: "OAuth2 in Simple Terms",
+					sections: [
+						{ title: "Why OAuth2?", fragment: "a" },
+						{ title: "How OAuth2 Works", fragment: "b" },
+						{
+							title: "Actors in OAuth2",
+							fragment: "c",
+							sections: [
+								{ title: "Resource Owner", fragment: "d" },
+								{ title: "Authorization Server", fragment: "e" },
+							],
+						},
+						{
+							title: "OAuth2 Flows",
+							fragment: "f",
+							sections: [{ title: "Authorization Code Flow with PKCE", fragment: "g" }],
+						},
+					],
+				}}
 				prices={{
 					[Product.Complete]: { price: "$99", discounted: "$69" },
 					[Product.Essentials]: { price: "$49" },

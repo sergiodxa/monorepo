@@ -54,7 +54,7 @@ describe("GET /:book", () => {
 	test("renders every section anchor the page's own links point at", async () => {
 		let body = await load(memoryBilling()).then((response) => response.text());
 
-		for (let id of ["top", "sample", "inside", "flow", "author", "pricing", "faq"]) {
+		for (let id of ["top", "sample", "contents", "flow", "inside", "author", "pricing", "faq"]) {
 			expect(body).toContain(`id="${id}"`);
 		}
 	});

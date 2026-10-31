@@ -7,14 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import {
-	AtSignIcon,
-	BookOpenIcon,
-	FlaskConicalIcon,
-	GlobeIcon,
-	RocketIcon,
-	ShieldCheckIcon,
-} from "@sdxc/icons";
+import { AtSignIcon, GlobeIcon } from "@sdxc/icons";
 
 import type { BookCopy } from "~/resources/content/books";
 
@@ -51,7 +44,7 @@ export const REACT_ROUTER_OAUTH2: BookCopy = {
 		photo: "/alem.png",
 	},
 	sample: {
-		title: "Read a chapter before you buy",
+		title: "Read the first chapter free",
 		description: (
 			<>
 				“OAuth2 in Simple Terms” covers the actors, scopes, well-known endpoints and the{" "}
@@ -69,101 +62,75 @@ export const REACT_ROUTER_OAUTH2: BookCopy = {
 				"OAuth2 was created to solve a common problem: how can applications securely access a user’s data stored in another service?",
 		},
 	},
-	inside: {
-		title: "Everything to ship auth right",
+	contents: {
+		title: (sections) => `${sections} sections, from the actors to PKCE`,
 		description: (
 			<>
-				A concise guide and a working app, written for React Router v7 in framework mode, with{" "}
-				<strong>the why behind every step</strong>.
+				The free chapter, section by section. Open one to see what it covers; the whole chapter is{" "}
+				<strong>yours for an email</strong>.
+			</>
+		),
+	},
+	flow: {
+		title: "Sign in, come back, swap the code",
+		description: (
+			<>
+				The handbook centres on the <strong>Authorization Code flow with PKCE</strong>, the
+				recommended default for web apps. This is one sign-in, with the code from the chapter.
+			</>
+		),
+		diagram: {
+			label: "One sign-in with the Authorization Code flow and PKCE",
+			trigger: { title: "The reader clicks “Sign in”", detail: "Your React Router app" },
+			steps: [
+				{
+					title: "Derive the challenge",
+					code: "let codeChallenge = await sha256Base64Url(codeVerifier);",
+				},
+				{
+					title: "Redirect to the Authorization Server",
+					code: 'authorizeUrl.searchParams.set("code_challenge", codeChallenge);',
+				},
+				{ title: "The user signs in and grants access", detail: "On the Authorization Server" },
+				{
+					title: "Come back with an authorization code",
+					detail: "The server redirects to your redirect_uri",
+				},
+				{ title: "Exchange the code and the verifier", code: "code_verifier: codeVerifier," },
+			],
+			outcome: "Access token issued",
+			footnote: "A code_verifier that does not match the challenge is rejected",
+		},
+		guarantees: [
+			"Your app never sees the user’s password",
+			"An intercepted code is useless without the code_verifier",
+			"Scopes limit what the token can do, and the user can revoke it",
+		],
+	},
+	inside: {
+		title: (pages) => `${pages} pages and an app that runs them`,
+		description: (
+			<>
+				A concise guide for React Router v7 in framework mode, with{" "}
+				<strong>the why behind every step</strong>, and a working app to read beside it.
 			</>
 		),
 		claims: [
 			{
-				icon: <BookOpenIcon />,
-				title: "A 47-page handbook",
-				body: (
-					<>
-						The core concepts of OAuth2 and OpenID Connect: secure auth flows,{" "}
-						<strong>refresh tokens and introspection</strong> endpoints, in a full-stack app.
-					</>
-				),
+				title: "OAuth2 and OpenID Connect",
+				body: "Secure auth flows, refresh tokens and introspection endpoints, in a full-stack app.",
 			},
 			{
-				icon: <FlaskConicalIcon />,
 				title: "A real example application",
-				body: (
-					<>
-						A complete React Router and OAuth2 app, from login screens to token storage, with code
-						you can <strong>run, read and reuse</strong>.
-					</>
-				),
+				body: "From login screens to token storage, with code you can run, read and reuse.",
 			},
 			{
-				icon: <ShieldCheckIcon />,
-				title: "A security-first approach",
-				body: (
-					<>
-						Avoid the common pitfalls, like <strong>insecure token handling</strong> or a wrong
-						client configuration, by learning why each step exists.
-					</>
-				),
+				title: "Security first",
+				body: "Avoid insecure token handling and wrong client configuration by learning why each step exists.",
 			},
 			{
-				icon: <RocketIcon />,
 				title: "Ready for framework mode",
-				body: (
-					<>
-						Patterns that drop into React Router and Remix apps with <strong>no boilerplate</strong>
-						, respecting both developer experience and security.
-					</>
-				),
-			},
-		],
-	},
-	flow: {
-		title: "The flow you will build",
-		description: (
-			<>
-				The book centres on the <strong>Authorization Code flow with PKCE</strong>, the recommended
-				default for web apps. This is the flow, and the code, from the free chapter.
-			</>
-		),
-		steps: [
-			{
-				title: "Create the challenge",
-				body: (
-					<>
-						The client generates a random <code>code_verifier</code> and derives a{" "}
-						<code>code_challenge</code> from it.
-					</>
-				),
-			},
-			{
-				title: "Redirect to sign in",
-				body: (
-					<>
-						The user goes to the Authorization Server along with the <code>code_challenge</code>.
-					</>
-				),
-			},
-			{
-				title: "Grant access",
-				body: <>The user authenticates and grants access to the application.</>,
-			},
-			{
-				title: "Come back with a code",
-				body: (
-					<>The Authorization Server redirects back to the client with an authorization code.</>
-				),
-			},
-			{
-				title: "Exchange it for tokens",
-				body: (
-					<>
-						The client sends the code and the original <code>code_verifier</code>, and gets an
-						access token.
-					</>
-				),
+				body: "Patterns that drop into React Router and Remix apps with no boilerplate.",
 			},
 		],
 		samples: [
@@ -199,7 +166,7 @@ authorizeUrl.searchParams.set("code_challenge_method", "S256");`,
 		],
 	},
 	author: {
-		title: "Written from real-world auth",
+		title: "Written from flows that shipped",
 		bio: (
 			<>
 				Hi, I’m Sergio, a full-stack developer working with TypeScript, React and Rails to build
@@ -221,7 +188,7 @@ authorizeUrl.searchParams.set("code_challenge_method", "S256");`,
 		],
 	},
 	pricing: {
-		title: "Pick your package",
+		title: "The book, or the book and the app",
 		description: (
 			<>
 				One payment, yours to keep. Buying for a team? Write to{" "}
