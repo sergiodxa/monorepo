@@ -96,9 +96,9 @@ jumps. Two or three faces in a hero; four to five stops in a tour.
 
 ## Pacing the devices
 
-Plan the page as a table — band, claim, device, moment — and read the device column top to bottom. No
-device twice in a row, the hero's visual used once, at least one thing that moves (a flow diagram, a
-switcher, a marquee of real logos) somewhere below the fold.
+Plan the page as a table — band, claim, device, moment — and read the device column top to bottom: no
+device twice in a row, and at least one thing that moves (a flow diagram, a switcher, a marquee of real
+logos) somewhere below the fold. @rules/worked-example.md shows the table and the check.
 
 ## Rules
 

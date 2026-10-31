@@ -24,8 +24,7 @@ review of a page that otherwise looked done.
   `viewReveal()` on bands) or shows that something is live. Never decorative spinning or parallax for its
   own sake. Everything is gated on `prefers-reduced-motion`, and the static render shows the finished state.
 - **Colour means something.** Brand marks action and emphasis; status colours mark status.
-- **No filler sections.** No logo wall without real logos, no testimonial band without real quotes, no
-  stats that are words. A shorter honest page beats a longer padded one.
+- **No filler sections.** A shorter honest page beats a longer padded one (@rules/honest-proof.md).
 
 ## Details that make it feel expensive
 
