@@ -124,11 +124,11 @@ export default createAction(routes.api.component, async (ctx) => {
 							<Snippet code={INSTALL} language="bash" />
 							<Snippet code={THEME_IMPORT} language="typescript" />
 							<p mix={[m(0), text("base"), fg("neutral")]}>
-								To edit its source, copy the component into the project instead. The copy lands in{" "}
-								<code mix={[font("mono"), fg("neutral.emphasis")]}>resources/components/ui</code>{" "}
-								and every import of it points at the copy;{" "}
-								<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>Copy UI components</a>{" "}
-								covers diffing and updating it when a release ships.
+								Or{" "}
+								<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
+									copy it into your project
+								</a>{" "}
+								to edit it:
 							</p>
 							<Snippet code={`sdxc ui add ${component}`} language="bash" />
 						</div>
