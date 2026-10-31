@@ -311,6 +311,10 @@ export default createAction(routes.home, (ctx) => {
 							items={[t("landing.plans.notes.grace"), t("landing.plans.notes.nothingDeleted")]}
 						/>
 					</div>
+					<MoreLink
+						href={routes.docs.show.href({ slug: "plans" })}
+						label={t("landing.plans.notes.more")}
+					/>
 				</MarketingSection>
 
 				<MarketingSection tone="tinted" mix={[viewReveal()]}>
@@ -370,6 +374,13 @@ export default createAction(routes.home, (ctx) => {
 					columns={2}
 					eyebrow={t("landing.faq.eyebrow")}
 					title={t("landing.faq.title")}
+					description={
+						<Trans
+							intl={ctx.intl}
+							i18nKey="landing.faq.more"
+							components={{ link: <a href={routes.docs.index.href()}>{""}</a> }}
+						/>
+					}
 				>
 					{[faqs.slice(0, half), faqs.slice(half)].map((column, index) => (
 						<FaqColumn key={index} name="reader-faq" items={column} />

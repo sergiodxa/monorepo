@@ -136,6 +136,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 				columns: [{ title: t("landing.nav.compare.label"), links: comparisonLinks }],
 			},
 			{ label: t("landing.nav.plans"), href: `${routes.home.href()}#plans` },
+			{ label: t("landing.nav.help"), href: routes.docs.index.href() },
 		];
 
 		let action = isSignedIn ? (
@@ -212,12 +213,28 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 						{ title: t("landing.nav.features.label"), links: featureLinks },
 						{ title: t("landing.nav.useCases.label"), links: useCaseLinks },
 						{ title: t("landing.nav.compare.label"), links: comparisonLinks },
+						{ title: t("landing.nav.help"), links: helpLinks(t) },
 					]}
 					legal={<p>{t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}</p>}
 				/>
 			</div>
 		);
 	};
+}
+
+/**
+ * The footer's help column: the hub, the first two tasks, the plan reference and the door
+ * to fixing a problem, which are the pages a visitor deciding whether to sign in reaches for.
+ */
+function helpLinks(t: Translate): SiteFooter.Link[] {
+	let page = (slug: string) => routes.docs.show.href({ slug });
+	return [
+		{ label: t("docs.title"), href: routes.docs.index.href() },
+		{ label: t("docs.footer.start"), href: page("getting-started") },
+		{ label: t("docs.footer.import"), href: page("import-opml") },
+		{ label: t("docs.footer.plans"), href: page("plans") },
+		{ label: t("docs.footer.fix"), href: page("no-feed-found") },
+	];
 }
 
 namespace SignIn {

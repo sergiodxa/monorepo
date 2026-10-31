@@ -21,6 +21,7 @@ export default {
 		signIn: "Sign in",
 		open: "Open your reading",
 		plans: "Plans",
+		help: "Help",
 		descriptions: {
 			freshness: "Each feed fetched as often as it posts",
 			filters: "Drop, mark read or flag as posts arrive",
@@ -767,6 +768,7 @@ export default {
 		notes: {
 			grace: "A failed payment keeps everything for {$graceDays} days",
 			nothingDeleted: "A plan change never deletes anything",
+			more: "Every limit, explained",
 		},
 	},
 
@@ -1256,6 +1258,7 @@ export default {
 	faq: {
 		eyebrow: "FAQ",
 		title: "Before you sign in",
+		more: "More answers in {#link}Reader's help pages{/link}.",
 		anyFeed: {
 			q: "Does it work with any site?",
 			a: "With any site that publishes RSS or Atom. Paste the site's address and Reader finds the feed it advertises.",

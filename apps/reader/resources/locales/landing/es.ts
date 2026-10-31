@@ -35,6 +35,7 @@ export default {
 		signIn: "Iniciar sesión",
 		open: "Abrir tu lectura",
 		plans: "Planes",
+		help: "Ayuda",
 		features: {
 			label: "Funciones",
 			reading: "Lectura",
@@ -780,6 +781,7 @@ export default {
 		notes: {
 			grace: "Un pago fallido conserva todo durante {$graceDays} días",
 			nothingDeleted: "Cambiar de plan nunca borra nada",
+			more: "Cada límite, explicado",
 		},
 	},
 
@@ -1275,6 +1277,7 @@ export default {
 	faq: {
 		eyebrow: "Preguntas frecuentes",
 		title: "Antes de iniciar sesión",
+		more: "Más respuestas en {#link}la ayuda de Reader{/link}.",
 		anyFeed: {
 			q: "¿Funciona con cualquier sitio?",
 			a: "Con cualquier sitio que publique RSS o Atom. Pega la dirección del sitio y Reader encuentra el feed que anuncia.",
