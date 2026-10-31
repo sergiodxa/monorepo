@@ -66,6 +66,25 @@ describe("GET /sponsors", () => {
 		expect(past).toContain("https://avatars.example.test/grace");
 	});
 
+	test("says where a first sponsor will appear while nobody is listed", async () => {
+		let body = await (await fetchApp("/sponsors")).text();
+
+		expect(body).toContain("Public sponsorships are listed here as soon as someone makes one.");
+	});
+
+	test("points from the current list to the past one, which closes with the ways to join", async () => {
+		await store({ current: [sponsor("ada")], past: [sponsor("grace"), sponsor("linus")] });
+
+		let body = await (await fetchApp("/sponsors")).text();
+		let past = body.slice(body.indexOf('id="past"'));
+
+		expect(body).toContain("And 2 past sponsors, below");
+		expect(body).toContain('href="#past"');
+		expect(past).toContain("2 people and teams have funded this work before.");
+		expect(past).toContain('href="https://github.com/sponsors/sergiodxa"');
+		expect(past).toContain('href="https://ko-fi.com/sergiodxa"');
+	});
+
 	test("leaves out the past list while every sponsor is current", async () => {
 		await store({ current: [sponsor("ada")], past: [] });
 

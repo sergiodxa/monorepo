@@ -1,4 +1,5 @@
 <hero>
+<split>
 <split-copy>
 
 # Fund the work behind sdxc
@@ -12,14 +13,20 @@ package maintained.
 <fine-print>One-off instead? Send [$5](https://www.paypal.com/paypalme/sergiodxa/5USD), [$10](https://www.paypal.com/paypalme/sergiodxa/10USD) or [$20](https://www.paypal.com/paypalme/sergiodxa/20USD) through PayPal, or any amount on [Ko-fi](https://ko-fi.com/sergiodxa).</fine-print>
 
 </split-copy>
+<split-media>
+
+<current-sponsors />
+
+</split-media>
+</split>
 </hero>
 
-<section-block id="what-it-pays-for" eyebrow="Where it goes" title="What a sponsorship pays for">
+<section-block id="what-it-pays-for" eyebrow="Where it goes" title="What a sponsorship pays for" tone="tinted">
 
 <feature-grid columns="2">
 <feature title="Maintenance" icon="package">
-Keeping {% $packageCount %} packages current with Remix, Cloudflare Workers and the web platform
-they build on, with each fix published in the next daily release.
+Keeping {% $packageCount %} packages current with the web platform, Cloudflare Workers, Bun, Deno
+and Node, with each fix published in the next daily release.
 </feature>
 
 <feature title="Documentation" icon="book" href="/docs" link-label="Read the guides">
