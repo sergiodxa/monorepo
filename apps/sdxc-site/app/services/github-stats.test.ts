@@ -39,21 +39,38 @@ function point(day: string, count: number, uniques = 1) {
 	return { timestamp: `${day}T00:00:00Z`, count, uniques };
 }
 
-/** Stargazers, search and traffic handlers answering one plausible repository. */
+/** One week in seconds, the step between star-history weeks. */
+const WEEK_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * A star-history week's start in Unix seconds.
+ *
+ * @param sunday The week's first day, as `YYYY-MM-DD`.
+ */
+function weekStart(sunday: string): number {
+	return Date.parse(`${sunday}T00:00:00Z`) / 1000;
+}
+
+/** Star history, search and traffic handlers answering one plausible repository. */
 function githubHandlers(options: { traffic?: number } = {}) {
 	let trafficStatus = options.traffic ?? 200;
 	let refuse = () =>
 		HttpResponse.json({ message: "Must have push access" }, { status: trafficStatus });
 	return [
-		http.get(`${REPO}/stargazers`, ({ request }) => {
+		http.get(`${REPO}/stargazers/history`, ({ request }) => {
 			let page = new URL(request.url).searchParams.get("page");
 			if (page === "1") {
 				return HttpResponse.json(
-					[{ starred_at: "2026-07-23T06:51:18Z" }, { starred_at: "2026-07-23T09:00:00Z" }],
-					{ headers: { link: `<${REPO}/stargazers?page=2>; rel="next"` } },
+					Array.from({ length: 30 }, (_, index) => ({
+						week: weekStart("2026-10-25") - index * WEEK_SECONDS,
+						total: index === 0 ? 1 : 0,
+						days: index === 0 ? [0, 0, 0, 0, 0, 1, 0] : [0, 0, 0, 0, 0, 0, 0],
+					})),
 				);
 			}
-			return HttpResponse.json([{ starred_at: "2026-10-30T12:00:00Z" }]);
+			return HttpResponse.json([
+				{ week: weekStart("2026-03-29"), total: 2, days: [0, 0, 0, 0, 2, 0, 0] },
+			]);
 		}),
 		http.get("https://api.github.com/search/issues", ({ request }) => {
 			let query = new URL(request.url).searchParams.get("q") ?? "";
@@ -165,7 +182,7 @@ describe("refreshGitHubStats", () => {
 		let snapshot = await refreshGitHubStats(cache, "token", NOW);
 
 		expect(snapshot?.stars).toEqual([
-			{ day: "2026-07-23", count: 2 },
+			{ day: "2026-04-02", count: 2 },
 			{ day: "2026-10-30", count: 1 },
 		]);
 		expect(snapshot?.issues).toEqual({
@@ -232,7 +249,7 @@ describe("refreshGitHubStats", () => {
 
 	test("keeps a failed part's previous value", async () => {
 		server.use(
-			http.get(`${REPO}/stargazers`, () => new HttpResponse(null, { status: 502 })),
+			http.get(`${REPO}/stargazers/history`, () => new HttpResponse(null, { status: 502 })),
 			...githubHandlers().slice(1),
 		);
 		let cache = new MemoryCache();

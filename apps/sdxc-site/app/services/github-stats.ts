@@ -34,8 +34,14 @@ const REFRESH_AFTER_MS = 20 * 60 * 60 * 1000;
 /** The most items GitHub answers with in one page. */
 const PAGE_SIZE = 100;
 
-/** The most stargazer pages a refresh reads, which bounds the run at 5,000 stars. */
-const MAX_STAR_PAGES = 50;
+/** The most weeks GitHub's star history answers with in one page. */
+const STAR_WEEKS_PER_PAGE = 30;
+
+/** The most star-history pages GitHub serves, which reaches back about 57 years of weeks. */
+const MAX_STAR_PAGES = 100;
+
+/** One day in seconds, for stepping through a star-history week. */
+const DAY_SECONDS = 24 * 60 * 60;
 
 /** How many open items from other people the snapshot keeps for the table. */
 const OPEN_ITEMS_KEPT = 10;
@@ -130,8 +136,8 @@ export class GitHubRequestError extends Error {
 	}
 }
 
-/** One stargazer, read with the `star+json` media type that adds when they starred. */
-const stargazersSchema = s.array(s.object({ starred_at: s.string() }));
+/** A page of star history: each week's start in Unix seconds and its stars per day from Sunday. */
+const starHistorySchema = s.array(s.object({ week: s.number(), days: s.array(s.number()) }));
 
 /** An issues search answer, of which the count and each item's shown fields are read. */
 const searchSchema = s.object({
@@ -210,7 +216,9 @@ function toDay(timestamp: string): string {
 }
 
 /**
- * Reads every stargazer and counts them per day.
+ * Reads the repository's star history and counts stars per day. GitHub lists individual
+ * stargazers only to admins and collaborators, so the weekly history, which any caller may
+ * read, is the source; it pages backward from this week until a page comes back short.
  *
  * @param token The credential, when the worker has one.
  * @returns Stars per day, oldest first, or why GitHub could not be read.
@@ -219,18 +227,20 @@ export async function fetchStars(token: string | undefined): Promise<Result<Dail
 	let counts = new Map<string, number>();
 	for (let page = 1; page <= MAX_STAR_PAGES; page++) {
 		let answer = await readGitHub(
-			`/repos/${GITHUB_REPOSITORY}/stargazers?per_page=${PAGE_SIZE}&page=${page}`,
+			`/repos/${GITHUB_REPOSITORY}/stargazers/history?per_page=${STAR_WEEKS_PER_PAGE}&page=${page}`,
 			token,
-			"application/vnd.github.star+json",
 		);
 		if (isFailure(answer)) return answer;
-		let parsed = s.parseSafe(stargazersSchema, answer.data.body);
-		if (!parsed.success) return failure(new Error("Unreadable stargazers"));
-		for (let star of parsed.value) {
-			let day = toDay(star.starred_at);
-			counts.set(day, (counts.get(day) ?? 0) + 1);
+		let parsed = s.parseSafe(starHistorySchema, answer.data.body);
+		if (!parsed.success) return failure(new Error("Unreadable star history"));
+		for (let { days, week } of parsed.value) {
+			for (let [offset, count] of days.entries()) {
+				if (count === 0) continue;
+				let day = toDay(new Date((week + offset * DAY_SECONDS) * 1000).toISOString());
+				counts.set(day, (counts.get(day) ?? 0) + count);
+			}
 		}
-		if (!answer.data.link?.includes('rel="next"')) break;
+		if (parsed.value.length < STAR_WEEKS_PER_PAGE) break;
 	}
 	return success(
 		[...counts.entries()]
