@@ -11,7 +11,7 @@ import { waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { StatsQuery } from "~/resources/views/stats";
+import type { StatsQuery } from "~/resources/components/package-table";
 
 import { siteCache } from "~/app/initializers/cache";
 import {
@@ -25,7 +25,7 @@ import {
 import { listPackages } from "~/app/services/packages";
 import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
-import StatsPage, { sortSummaries } from "~/resources/views/stats";
+import StatsPage from "~/resources/views/stats";
 import routes from "~/routes/web";
 
 /** The directive the page carries in its markup and its headers alike. */
@@ -93,7 +93,7 @@ export default createAction(routes.stats, async (ctx) => {
 			<SiteHeader />
 			<StatsPage
 				snapshot={snapshot}
-				rows={sortSummaries(summaries, query.sort)}
+				rows={summaries}
 				collection={collectionDaily(snapshot)}
 				focus={focus}
 				query={query}

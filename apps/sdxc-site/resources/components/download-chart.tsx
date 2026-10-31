@@ -14,7 +14,7 @@ import { opacity } from "@sdxc/u/effects";
 import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
-import { is, m } from "@sdxc/u/size";
+import { m } from "@sdxc/u/size";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { tabularNums, text, weight } from "@sdxc/u/typography";
 import { Chart } from "@sdxc/ui";
@@ -76,7 +76,9 @@ export default function DownloadChart(handle: Handle<DownloadChart.Props>) {
 		let running = cumulative(daily);
 
 		return (
-			<div mix={[grid(), gap(8), media("lg", gridTemplate({ columns: "1fr 1fr" }))]}>
+			<div
+				mix={[grid(), gap(8), media("(min-width: 64rem)", gridTemplate({ columns: "1fr 1fr" }))]}
+			>
 				<Plot
 					title="Downloads per day, line is the 7-day average"
 					label={`${label}: downloads per day`}
@@ -178,39 +180,6 @@ function Plot(handle: Handle<Plot.Props>) {
 					<span>{days.at(-1) ? formatDay(days.at(-1) ?? "") : ""}</span>
 				</div>
 			</figure>
-		);
-	};
-}
-
-namespace Sparkline {
-	export interface Props {
-		/** What the line shows, for assistive technology. */
-		label: string;
-		values: number[];
-	}
-}
-
-/** Renders a small unlabelled line, the shape of a series at a glance in a table row. */
-export function Sparkline(handle: Handle<Sparkline.Props>) {
-	return () => {
-		let { label, values } = handle.props;
-
-		return (
-			<Chart
-				width={96}
-				height={24}
-				xDomain={[0, Math.max(1, values.length - 1)]}
-				yDomain={[0, Math.max(1, ...values)]}
-				aria-label={label}
-				role="img"
-				mix={[is(24), overflow("visible")]}
-			>
-				<Chart.Line
-					color={1}
-					markerCount={0}
-					points={values.map((value, index) => ({ x: index, y: value, label: String(value) }))}
-				/>
-			</Chart>
 		);
 	};
 }

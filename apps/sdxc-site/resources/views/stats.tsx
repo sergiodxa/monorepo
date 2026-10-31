@@ -1,7 +1,8 @@
 /**
  * The npm stats page's body: headline figures for the collection or one package, its
  * download charts over the chosen range, and every package in a sortable table whose rows
- * link to that package's own view. Every control is a link, so the page works without script.
+ * link to that package's own view. Every control is a link, so the page works without script;
+ * the table hydrates to sort in place.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,109 +10,45 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs, mi, p } from "@sdxc/u/size";
-import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
+import { text, weight } from "@sdxc/u/typography";
 import { Link, StatStrip, Table } from "@sdxc/ui";
 
 import type { NpmStatsSnapshot, PackageSummary } from "~/app/services/npm-stats";
+import type { PackageRow, Range, StatsQuery } from "~/resources/components/package-table";
 
 import { formatFileSize } from "~/app/services/file-size";
 import { windowSum } from "~/app/services/npm-stats";
-import DownloadChart, { formatDay, Sparkline } from "~/resources/components/download-chart";
-import routes from "~/routes/web";
+import Change from "~/resources/components/change";
+import DownloadChart, { formatDay } from "~/resources/components/download-chart";
+import PackageTable, { RANGES, statsHref } from "~/resources/components/package-table";
 
 /** How counts read across the page. */
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US");
 
-/** How a change reads: always signed, so a flat week and a small gain look different. */
-const PERCENT_FORMAT = new Intl.NumberFormat("en-US", {
-	style: "percent",
-	maximumFractionDigits: 0,
-	signDisplay: "exceptZero",
-});
-
 /** How a share of installs reads. */
 const SHARE_FORMAT = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 0 });
 
-/** The ranges the charts can cover, by their query value. */
-export const RANGES = { "30": 30, "90": 90, all: Number.POSITIVE_INFINITY } as const;
-
-/** A range the charts cover. */
-export type Range = keyof typeof RANGES;
-
-/** A column the table can be ordered by. */
-export type SortKey = "name" | "week" | "growth" | "month" | "total";
-
-/** What the reader picked, carried through every link so one choice never resets another. */
-export interface StatsQuery {
-	range: Range;
-	sort: SortKey;
-	/** The package directory in focus, or `null` for the whole collection. */
-	package: string | null;
-}
-
 /**
- * The page's URL with `changes` applied over `query`, leaving defaults out so the plain
- * address stays plain.
+ * The figures a table row shows, cut down from a package's summary to what hydrates: the
+ * whole history stays on the server and only the last 30 days travel for the sparkline.
  */
-export function statsHref(query: StatsQuery, changes: Partial<StatsQuery>): string {
-	let next = { ...query, ...changes };
-	let params = new URLSearchParams();
-	if (next.range !== "90") params.set("range", next.range);
-	if (next.sort !== "week") params.set("sort", next.sort);
-	if (next.package !== null) params.set("package", next.package);
-	let search = params.toString();
-	return search ? `${routes.stats.href()}?${search}` : routes.stats.href();
-}
-
-/**
- * Orders the table. Numbers sort largest first, and a package without a comparable week
- * sorts after every one with one, so new packages never crowd the top of "growth".
- */
-export function sortSummaries(rows: PackageSummary[], key: SortKey): PackageSummary[] {
-	let byName = (a: PackageSummary, b: PackageSummary) =>
-		a.stats.directory.localeCompare(b.stats.directory);
-	let value = (row: PackageSummary): number => {
-		if (key === "week") return row.last7;
-		if (key === "month") return row.last30;
-		if (key === "total") return row.total;
-		return row.growth7 ?? Number.NEGATIVE_INFINITY;
-	};
-
-	if (key === "name") return [...rows].sort(byName);
-	return [...rows].sort((a, b) => value(b) - value(a) || byName(a, b));
-}
-
-/** The direction a column sorts in: names read A to Z, figures largest first. */
-function sortDirection(key: SortKey): "ascending" | "descending" {
-	return key === "name" ? "ascending" : "descending";
-}
-
-namespace Change {
-	export interface Props {
-		value: number | null;
-		/** Whether there is anything this period, which tells "new" apart from "nothing". */
-		current: number;
-	}
-}
-
-/** Renders a period-over-period change, coloured by direction. */
-function Change(handle: Handle<Change.Props>) {
-	return () => {
-		let { current, value } = handle.props;
-		if (value === null) {
-			return <span mix={fg("neutral.muted")}>{current > 0 ? "new" : "—"}</span>;
-		}
-
-		let tone = iife(() => {
-			if (value > 0) return "success";
-			if (value < 0) return "danger";
-			return "neutral.muted";
-		});
-		return <span mix={[fg(tone), tabularNums()]}>{PERCENT_FORMAT.format(value)}</span>;
+export function packageRow(summary: PackageSummary): PackageRow {
+	let { stats } = summary;
+	return {
+		directory: stats.directory,
+		name: stats.name,
+		trend: stats.daily.slice(-30),
+		last7: summary.last7,
+		growth7: summary.growth7,
+		last30: summary.last30,
+		total: summary.total,
+		latest: stats.latest,
+		latestShare: summary.latestShare,
+		versions: stats.versions,
+		unpackedSize: stats.unpackedSize,
 	};
 }
 
@@ -261,7 +198,7 @@ export default function StatsPage(handle: Handle<StatsPage.Props>) {
 
 				{focus ? <PackageDetails summary={focus} /> : null}
 
-				<PackageTable rows={rows} query={query} />
+				<PackageTable rows={rows.map(packageRow)} query={query} />
 			</main>
 		);
 	};
@@ -360,86 +297,6 @@ function PackageDetails(handle: Handle<PackageDetails.Props>) {
 					</Table.Container>
 				) : null}
 			</section>
-		);
-	};
-}
-
-namespace PackageTable {
-	export interface Props {
-		rows: PackageSummary[];
-		query: StatsQuery;
-	}
-}
-
-/** Renders every package's figures; each sortable header re-requests the page ordered by it. */
-function PackageTable(handle: Handle<PackageTable.Props>) {
-	return () => {
-		let { query, rows } = handle.props;
-		let sortable = (key: SortKey) => ({
-			href: statsHref(query, { sort: key }),
-			sortDirection: query.sort === key ? sortDirection(key) : undefined,
-		});
-
-		return (
-			<Table.Container>
-				<Table aria-label="Downloads by package">
-					<Table.Header>
-						<Table.Row>
-							<Table.Column {...sortable("name")}>Package</Table.Column>
-							<Table.Column>Last 30 days</Table.Column>
-							<Table.Column numeric {...sortable("week")}>
-								7 days
-							</Table.Column>
-							<Table.Column numeric {...sortable("growth")}>
-								Change
-							</Table.Column>
-							<Table.Column numeric {...sortable("month")}>
-								30 days
-							</Table.Column>
-							<Table.Column numeric {...sortable("total")}>
-								Total
-							</Table.Column>
-							<Table.Column>Latest</Table.Column>
-							<Table.Column numeric>On latest</Table.Column>
-							<Table.Column numeric>Versions</Table.Column>
-							<Table.Column numeric>Size</Table.Column>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{rows.map((row) => (
-							<Table.Row key={row.stats.directory}>
-								<Table.Cell mix={nowrap()}>
-									<Link href={statsHref(query, { package: row.stats.directory })}>
-										{row.stats.directory}
-									</Link>
-								</Table.Cell>
-								<Table.Cell>
-									<Sparkline
-										label={`${row.stats.name}, downloads per day over the last 30 days`}
-										values={row.stats.daily.slice(-30)}
-									/>
-								</Table.Cell>
-								<Table.Cell numeric>{NUMBER_FORMAT.format(row.last7)}</Table.Cell>
-								<Table.Cell numeric>
-									<Change value={row.growth7} current={row.last7} />
-								</Table.Cell>
-								<Table.Cell numeric>{NUMBER_FORMAT.format(row.last30)}</Table.Cell>
-								<Table.Cell numeric>{NUMBER_FORMAT.format(row.total)}</Table.Cell>
-								<Table.Cell mix={[nowrap(), text("xs"), fg("neutral.muted")]}>
-									{row.stats.latest ?? "unpublished"}
-								</Table.Cell>
-								<Table.Cell numeric>
-									{row.latestShare === null ? "—" : SHARE_FORMAT.format(row.latestShare)}
-								</Table.Cell>
-								<Table.Cell numeric>{row.stats.versions}</Table.Cell>
-								<Table.Cell numeric mix={nowrap()}>
-									{row.stats.unpackedSize === null ? "—" : formatFileSize(row.stats.unpackedSize)}
-								</Table.Cell>
-							</Table.Row>
-						))}
-					</Table.Body>
-				</Table>
-			</Table.Container>
 		);
 	};
 }
