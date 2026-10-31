@@ -2,7 +2,8 @@
  * Tests the `/features/:slug` controller: a real slug from `resources/content/marketing.ts`'s
  * `features` record renders that page's content (200) along with its canonical URL and
  * `SoftwareApplication`/`FAQPage` structured data, and an unknown slug renders the same
- * not-found page the router's `defaultHandler` uses (404).
+ * not-found page the router's `defaultHandler` uses (404). Every page's steps sit beside a
+ * mockup, code stage or diagram.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -91,6 +92,18 @@ describe("GET /features/:slug", () => {
 		expect(body).toContain('"@type":"SoftwareApplication"');
 		if (content.faqs.length > 0) expect(body).toContain('"@type":"FAQPage"');
 	});
+
+	test.each(Object.keys(features))(
+		"shows a product visual beside the %s page's steps",
+		async (slug) => {
+			let response = await getFeature(slug);
+
+			let body = await response.text();
+			let band = body.slice(body.indexOf('id="how-it-works"'), body.indexOf('id="faq"'));
+			expect(band).toContain(features[slug]!.steps[0]!.title);
+			expect(band).toMatch(/role="img"|data-variant="code"|<ol[^>]*aria-label=/);
+		},
+	);
 
 	test("renders the not-found page for an unknown slug", async () => {
 		let response = await getFeature("does-not-exist");

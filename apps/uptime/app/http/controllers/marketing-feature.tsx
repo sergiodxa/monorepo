@@ -20,6 +20,7 @@ import {
 	AccentText,
 	CheckList,
 	CheckRow,
+	CodeStage,
 	FaqBand,
 	FeatureBand,
 	LandingHero,
@@ -37,10 +38,12 @@ import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
 import ProductMockup, { FEATURE_MOCKUPS } from "~/resources/components/marketing/product-mockups";
 import {
-	AlertsScene,
-	MonitorsScene,
-	StatusPageScene,
-} from "~/resources/components/marketing/product-scenes";
+	BACKUP_SH,
+	CREATE_MONITOR_SH,
+	CRONTAB,
+	MCP_JSON,
+	ZONE_FILE,
+} from "~/resources/content/code-samples";
 import { features } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -48,34 +51,54 @@ import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * The product scene a feature's "how it works" band shows beside its steps, drawn from the
- * product's own components; a feature with no scene of its own gets the steps alone.
+ * The companion visual a feature's "how it works" band shows beside its steps: the next
+ * part of the product the steps lead into, or the code a reader pastes, so the band never
+ * repeats the hero's mockup.
  *
  * @param slug The feature page's slug.
- * @param t The request's translator, for the scenes' product copy.
- * @returns The scene, or `null` for a feature without one.
+ * @param t The request's translator, for the mockups' and diagram's product copy.
+ * @returns The visual, falling back to the dashboard for a slug with none of its own.
  */
-function featureScene(slug: string, t: Translate): RemixNode | null {
+function featureCompanion(slug: string, t: Translate): RemixNode {
 	switch (slug) {
-		case "monitors":
-			return <MonitorsScene upLabel={t("statusPage.status.operational")} />;
 		case "alerts":
+		case "integrations":
+		case "ssl":
+			return <ProductMockup area="monitor" t={t} />;
+		case "teams":
+			return <ProductMockup area="api-keys" t={t} />;
+		case "maintenance":
+			return <ProductMockup area="status-page" t={t} />;
+		case "content-monitoring":
+			return <ProductMockup area="alerts" t={t} />;
+		case "api":
 			return (
-				<AlertsScene
-					down={t("emails.alert.heading", {
-						monitor: "api.example.com",
-						status: t("emails.alert.status.down"),
-					})}
-					recovered={t("emails.alert.heading", {
-						monitor: "api.example.com",
-						status: t("emails.alert.status.up"),
-					})}
-					downLabel={t("statusPage.status.down")}
-					upLabel={t("statusPage.status.operational")}
+				<CodeStage
+					variant="code"
+					name="uptime-feature-api"
+					tabs={[
+						{ label: "create-monitor.sh", content: CREATE_MONITOR_SH, language: "sh" },
+						{ label: "mcp.json", content: MCP_JSON, language: "json" },
+					]}
 				/>
 			);
-		case "status-pages":
-			return <StatusPageScene banner={t("statusPage.banner.operational")} />;
+		case "cron-jobs":
+			return (
+				<CodeStage
+					variant="code"
+					name="uptime-feature-cron"
+					tabs={[
+						{ label: "crontab", content: CRONTAB, language: "sh" },
+						{ label: "backup.sh", content: BACKUP_SH, language: "sh" },
+					]}
+				/>
+			);
+		case "dns":
+			return (
+				<CodeStage variant="code" title="example.com.zone" lineNumbers>
+					{ZONE_FILE}
+				</CodeStage>
+			);
 		case "flows":
 			return (
 				<FlowDiagram
@@ -98,7 +121,7 @@ function featureScene(slug: string, t: Translate): RemixNode | null {
 				/>
 			);
 		default:
-			return null;
+			return <ProductMockup area="dashboard" t={t} />;
 	}
 }
 
@@ -133,7 +156,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 	}
 
 	let schemaName = content.metaTitle.split("|")[0]?.trim() || content.metaTitle;
-	let scene = featureScene(slug, t);
+	let companion = featureCompanion(slug, t);
 
 	/** Two balanced accordion columns, the longer half first. */
 	let faqSplitIndex = Math.ceil(content.faqs.length / 2);
@@ -254,31 +277,18 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 					</Feature.Grid>
 				</MarketingSection>
 
-				{scene ? (
-					<FeatureBand
-						id="how-it-works"
-						layout="split"
-						lean="media"
-						eyebrow={t("landing.marketingPage.howItWorksBadge")}
-						title={t("landing.marketingPage.howItWorksTitle")}
-						description={t("landing.marketingPage.howItWorksDescription")}
-						media={scene}
-						mix={[viewReveal()]}
-					>
-						<StepList variant="timeline">{steps}</StepList>
-					</FeatureBand>
-				) : (
-					<FeatureBand
-						id="how-it-works"
-						layout="steps"
-						eyebrow={t("landing.marketingPage.howItWorksBadge")}
-						title={t("landing.marketingPage.howItWorksTitle")}
-						description={t("landing.marketingPage.howItWorksDescription")}
-						mix={[viewReveal()]}
-					>
-						{steps}
-					</FeatureBand>
-				)}
+				<FeatureBand
+					id="how-it-works"
+					layout="split"
+					lean="media"
+					eyebrow={t("landing.marketingPage.howItWorksBadge")}
+					title={t("landing.marketingPage.howItWorksTitle")}
+					description={t("landing.marketingPage.howItWorksDescription")}
+					media={companion}
+					mix={[viewReveal()]}
+				>
+					<StepList variant="timeline">{steps}</StepList>
+				</FeatureBand>
 
 				<FaqBand
 					id="faq"
