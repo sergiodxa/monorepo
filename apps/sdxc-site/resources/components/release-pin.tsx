@@ -52,10 +52,10 @@ export default function ReleasePin(handle: Handle<ReleasePin.Props>) {
 					text("sm"),
 					fg("brand"),
 					transition("background-color"),
-					when("&:hover", bg("brand.tint-hover")),
+					when("&:hover", bg("brand.bg-tint-hover")),
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					when("& svg", motionSafe(transition("translate"))),
-					when("&:hover svg", raw({ translate: "0.125rem 0" })),
+					when("& svg", [raw({ flexShrink: "0" }), motionSafe(transition("transform"))]),
+					when("&:hover svg", motionSafe(raw({ transform: "translateX(0.125rem)" }))),
 				]}
 			>
 				<span mix={[weight("medium")]}>Latest release</span>
