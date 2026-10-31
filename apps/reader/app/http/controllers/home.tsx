@@ -248,7 +248,6 @@ export default createAction(routes.home, (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.features.eyebrow")}
 						description={t("landing.features.description")}
-						layout="split"
 					>
 						{t("landing.features.title")}
 					</MarketingHeader>
@@ -318,7 +317,6 @@ export default createAction(routes.home, (ctx) => {
 					<MarketingHeader
 						eyebrow={t("landing.useCases.eyebrow")}
 						description={t("landing.useCases.description")}
-						layout="split"
 					>
 						{t("landing.useCases.title")}
 					</MarketingHeader>

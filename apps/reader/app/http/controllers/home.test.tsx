@@ -42,6 +42,13 @@ describe("GET /", () => {
 		expect(html).toContain(`© ${new Date().getFullYear()} `);
 	});
 
+	test("stacks every section header so its lead starts under its title", async () => {
+		let html = await (await fetchRoute(createRouter(), routes.home.href())).text();
+
+		expect(html).toContain('data-layout="stack"');
+		expect(html).not.toContain('data-layout="split"');
+	});
+
 	test("sends a signed-in reader to their queue", async () => {
 		let response = await fetchRoute(createRouter(VIEWER), routes.home.href());
 
