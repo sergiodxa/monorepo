@@ -432,6 +432,8 @@ handled there — no separate marketing animation system.
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.
 - **Panels** — `semanticColorPanelStyle(color)`, the border, background and text declarations for
   one semantic color.
+- **Docs tree** — `DocsTree` (sections of pages and groups), `flattenDocsTree(tree)`,
+  `findNeighbours(tree, path, { boundary: "section" | "none" })`.
 
 ### Types
 

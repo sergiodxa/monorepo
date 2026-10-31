@@ -15,6 +15,7 @@ export * from "./command-event.js";
 export * from "./css-styles.js";
 export * from "./decorative-icon.js";
 export * from "./disabled-selector.js";
+export * from "./docs-tree.js";
 export * from "./dispatch-change.js";
 export * from "./eyebrow.js";
 export * from "./field-parts.js";
