@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-31
+**Superseded** by [ADR-186](./ADR-186-ui-component-namespaces.md) - 2026-10-31
 
 ## Background
 
