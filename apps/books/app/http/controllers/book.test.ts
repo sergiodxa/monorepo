@@ -144,4 +144,10 @@ describe("GET /:book", () => {
 
 		expect(response.status).toBe(404);
 	});
+
+	test("says nothing about early access, since the book is published", async () => {
+		let body = await load(memoryBilling()).then((response) => response.text());
+
+		expect(body).not.toMatch(/early access|special pricing/i);
+	});
 });

@@ -256,7 +256,7 @@ authorizeUrl.searchParams.set("code_challenge_method", "S256");`,
 		],
 		[
 			"Is purchasing power parity (PPP) pricing available?",
-			"Outside the early access campaign, a banner offers a discount code for The Book when you visit from a country with lower purchasing power. During early access, the Complete Package carries the deepest discount it will ever get, and PPP does not apply to it.",
+			"Yes. When you visit from a country with lower purchasing power, a banner offers a discount code for The Book.",
 		],
 	],
 	closing: {

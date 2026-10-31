@@ -48,7 +48,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 					layout="split"
 					level={1}
 					spacing="hero"
-					eyebrow="Get early access & special pricing"
+					eyebrow="Out now"
 					title={title}
 					description={copy.hero.description}
 					media={<Cover />}

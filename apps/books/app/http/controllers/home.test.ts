@@ -21,7 +21,8 @@ describe("GET /", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/html");
 		expect(body).toContain("React Router OAuth2 Handbook");
-		expect(body).toContain("Get early access &amp; special pricing");
+		expect(body).toContain("Out now");
+		expect(body).not.toMatch(/early access|special pricing/i);
 		expect(body).toContain('action="/api/subscribe"');
 		expect(body).toContain('type="email"');
 		expect(body).toContain("required");
