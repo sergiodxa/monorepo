@@ -50,14 +50,20 @@ function mountLayout(props: Partial<DocsLayout.Props> = {}) {
 			closeLabel="Close menu"
 			{...props}
 		>
-			<h1>Install the CLI</h1>
-			{TOC.map((item) => (
-				<section key={item.id}>
-					<h2 id={item.id}>{item.text}</h2>
-					<p style="block-size: 700px">Body</p>
-				</section>
-			))}
-			<pre>npx some-really-long-command --with-a-flag-that-goes-on-and-on-and-on-past-the-edge</pre>
+			{props.children ?? (
+				<>
+					<h1>Install the CLI</h1>
+					{TOC.map((item) => (
+						<section key={item.id}>
+							<h2 id={item.id}>{item.text}</h2>
+							<p style="block-size: 700px">Body</p>
+						</section>
+					))}
+					<pre>
+						npx some-really-long-command --with-a-flag-that-goes-on-and-on-and-on-past-the-edge
+					</pre>
+				</>
+			)}
 		</DocsLayout>,
 	);
 }
@@ -128,6 +134,33 @@ describe("DocsLayout", () => {
 		parent.style.cssText = "display: flex; flex-direction: column; align-items: center";
 
 		expect(Math.round(layout.getBoundingClientRect().width)).toBe(parent.clientWidth);
+	});
+
+	test("caps running text at the prose measure while code fills the column", async () => {
+		await page.viewport(1440, 900);
+		mountLayout({
+			children: (
+				<>
+					<p id="prose">{"A long paragraph of documentation prose. ".repeat(20)}</p>
+					<pre id="code">{"let wide = true;"}</pre>
+				</>
+			),
+		});
+
+		let article = document.querySelector<HTMLElement>('[data-slot="docs-article"]')!;
+		let prose = document.getElementById("prose")!;
+		let code = document.getElementById("code")!;
+		let probe = document.createElement("span");
+		probe.textContent = "0".repeat(66);
+		probe.style.font = getComputedStyle(prose).font;
+		probe.style.position = "absolute";
+		document.body.appendChild(probe);
+		let sixtySixCh = probe.getBoundingClientRect().width;
+		probe.remove();
+
+		expect(prose.getBoundingClientRect().width).toBeCloseTo(sixtySixCh, 0);
+		expect(code.getBoundingClientRect().width).toBeCloseTo(article.clientWidth, 0);
+		expect(code.getBoundingClientRect().width).toBeGreaterThan(sixtySixCh + 50);
 	});
 
 	test("never scrolls sideways at 320px", async () => {

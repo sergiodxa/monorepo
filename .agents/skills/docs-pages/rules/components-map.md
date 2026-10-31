@@ -50,6 +50,9 @@ Islands the browser entry must map in `PACKAGE_MODULES`: `@sdxc/ui/table-of-cont
 
 - `DocsLayout` sets `--ui-docs-scroll-margin` for the chrome it keeps sticky; pass `stickyTop` for a
   site header drawn around it, and `main={false}` when the app's layout already draws `<main>`.
+- `DocsLayout` caps running text (paragraphs, lists, headings, quotes, callouts, the page header) at
+  `proseMeasure` (66ch) and lets code, images, tables, charts and disclosures fill `measure` (64rem);
+  don't cap a page's prose yourself.
 - `TableOfContents` reads where a section starts from the first heading's `scroll-margin-top`, so the
   marker and a jump agree; `minItems` (2) also decides whether `DocsLayout` draws a rail.
 - `CodeTabs persist="cookie"` stores `ui-code-tabs.<syncKey>`; read it on the server with

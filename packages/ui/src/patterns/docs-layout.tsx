@@ -81,8 +81,17 @@ export namespace DocsLayout {
 		stickyTop?: string;
 		/** @default "lg" */
 		dock?: Dock;
-		/** The article's widest line. @default "48rem" */
+		/**
+		 * The article column's widest extent, which code, images, tables and charts may fill.
+		 * @default "64rem"
+		 */
 		measure?: string;
+		/**
+		 * The widest line of running text: paragraphs, lists, headings, quotes and callouts stop
+		 * here while wider blocks keep growing to `measure`. Readable prose sits at 60–75ch.
+		 * @default "66ch"
+		 */
+		proseMeasure?: string;
 		/** The whole shell's widest extent. @default "88rem" */
 		maxWidth?: string;
 		/**
@@ -122,7 +131,8 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			header,
 			stickyTop = "0px",
 			dock = "lg",
-			measure = "48rem",
+			measure = "64rem",
+			proseMeasure = "66ch",
 			maxWidth = "88rem",
 			main = true,
 			drawerId = "docs-drawer",
@@ -254,11 +264,11 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</div>
 
 						{main ? (
-							<main data-slot="docs-article" mix={articleMixins(measure)}>
+							<main data-slot="docs-article" mix={articleMixins(measure, proseMeasure)}>
 								{children}
 							</main>
 						) : (
-							<div data-slot="docs-article" mix={articleMixins(measure)}>
+							<div data-slot="docs-article" mix={articleMixins(measure, proseMeasure)}>
 								{children}
 							</div>
 						)}
@@ -314,12 +324,24 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 }
 
 /**
- * The article column: a reading measure, long words broken and wide code or tables
- * scrolled inside their own box, and headings that stop clear of the sticky chrome.
+ * Running text in the article that stops at the prose measure. Elements a component draws
+ * (`data-slot`) keep their own width unless listed, so a code block, file tree or props
+ * table inside a list or a step still grows to the column.
  */
-function articleMixins(measure: string) {
+const PROSE_SELECTOR = [
+	"& :where(p, ul, ol, dl, blockquote, h1, h2, h3, h4, h5, h6, hr):not([data-slot])",
+	'& :where([data-slot="anchor-heading"], [data-slot="callout"], [data-slot="docs-page-header"])',
+].join(", ");
+
+/**
+ * The article column: running text at a reading measure while code, images, tables and
+ * charts fill the column, long words broken, wide code or tables scrolled inside their own
+ * box, and headings that stop clear of the sticky chrome.
+ */
+function articleMixins(measure: string, proseMeasure: string) {
 	return [
-		raw({ maxInlineSize: measure }),
+		raw({ maxInlineSize: measure, "--ui-docs-prose-measure": proseMeasure }),
+		when(PROSE_SELECTOR, raw({ maxInlineSize: "var(--ui-docs-prose-measure)" })),
 		overflowWrap("break-word"),
 		pbs("2rem"),
 		pbe("5rem"),
