@@ -11,6 +11,7 @@
 export * from "./accordion.js";
 export * from "./alert.js";
 export * from "./alert-dialog.js";
+export * from "./anchor-heading.js";
 export * from "./aspect-ratio.js";
 export * from "./attachment.js";
 export * from "./avatar.js";
