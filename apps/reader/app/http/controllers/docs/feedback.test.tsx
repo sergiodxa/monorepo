@@ -47,9 +47,7 @@ describe("POST /docs/feedback", () => {
 		});
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(
-			`${docHref("search")}?feedback=sent#docs-feedback`,
-		);
+		expect(response.headers.get("location")).toBe(`${docHref("search")}?feedback=sent`);
 		expect(records).toContainEqual(
 			expect.objectContaining({
 				"feedback.page": "search",

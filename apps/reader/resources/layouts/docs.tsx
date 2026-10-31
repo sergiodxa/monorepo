@@ -84,6 +84,7 @@ function NavFooter(handle: Handle<{ t: Translate }>) {
 				alignItems: "center",
 				gap: "0.5rem",
 				padding: "0.375rem 0.625rem",
+				marginInline: "-0.625rem",
 				borderRadius: "0.375rem",
 				fontSize: "0.875rem",
 				color: "var(--ui-neutral-fg)",
@@ -107,21 +108,25 @@ function NavFooter(handle: Handle<{ t: Translate }>) {
 }
 
 /**
- * Long-reading type for a help page's body: 16px at a relaxed line height, headings clearly
- * larger with room above, tables that scroll inside their own box, and links that read as
- * links. Scoped to direct prose so the scenes and shared blocks keep their own styles.
+ * Long-reading type for a help page's body: 16px at a relaxed line height, one gap between
+ * every block that no component's own margin can cancel, headings clearly larger with room
+ * above, and tables that scroll inside their own box. List rules reach only the page's prose.
  */
 function docsProse() {
 	return [
-		raw({ fontSize: "1rem", lineHeight: "1.7", color: "var(--ui-neutral-fg)" }),
-		when(
-			"& > :where(p, ul, ol, table, figure, aside, [data-slot='steps'], [data-slot='docs-faq'])",
-			raw({ marginBlock: "0 1.25rem" }),
-		),
+		raw({
+			display: "grid",
+			gridTemplateColumns: "minmax(0, 1fr)",
+			rowGap: "1.25rem",
+			fontSize: "1rem",
+			lineHeight: "1.7",
+			color: "var(--ui-neutral-fg)",
+		}),
+		when("& > *", raw({ marginBlock: "0" })),
 		when(
 			"& :where(h2[data-slot='anchor-heading'])",
 			raw({
-				marginBlock: "2.75rem 1rem",
+				marginBlock: "1.5rem 0",
 				fontSize: "1.5rem",
 				lineHeight: "1.25",
 				fontWeight: "600",
@@ -130,10 +135,10 @@ function docsProse() {
 				textWrap: "balance",
 			}),
 		),
-		when("& :where(ul, ol):not([data-slot])", raw({ paddingInlineStart: "1.25rem" })),
-		when("& :where(li) + :where(li)", raw({ marginBlockStart: "0.375rem" })),
+		when("& > :where(ul, ol)", raw({ paddingInlineStart: "1.25rem" })),
+		when("& > :where(ul, ol) > li + li", raw({ marginBlockStart: "0.375rem" })),
 		when(
-			"& :where(p, li, td) a",
+			"& :where(p, td) a, & > :where(ul, ol) > li a",
 			raw({
 				color: "var(--ui-brand-fg)",
 				textDecorationLine: "underline",

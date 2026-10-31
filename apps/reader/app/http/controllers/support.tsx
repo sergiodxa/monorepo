@@ -114,7 +114,7 @@ async function renderPage(ctx: AppContext, model: SupportPage.Model, init?: Resp
 					]}
 					title={t("support.title")}
 					description={t("support.description")}
-					mix={[raw({ marginBlockEnd: "2rem" })]}
+					mix={[raw({ marginBlockEnd: "0.75rem" })]}
 				/>
 				<SupportForm t={t} {...model} honeypot={honeypot} />
 			</DocsLayout>

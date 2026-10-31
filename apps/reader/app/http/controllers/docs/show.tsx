@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 
 import { Trans } from "@sdxc/i18n/ui";
 import { raw } from "@sdxc/u/general";
-import { Callout, DocsFeedback, DocsPageHeader, NextSteps, PlanNotice } from "@sdxc/ui";
+import { Alert, Callout, DocsFeedback, DocsPageHeader, NextSteps, PlanNotice } from "@sdxc/ui";
 import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/patterns";
 import { createAction } from "remix/router";
 
@@ -94,8 +94,16 @@ export default createAction(routes.docs.show, async (ctx) => {
 					title={title}
 					description={description}
 					notice={page.plan ? <PlanRequirement intl={ctx.intl} plan={page.plan} /> : undefined}
-					mix={[raw({ marginBlockEnd: "2rem" })]}
+					mix={[raw({ marginBlockEnd: "0.75rem" })]}
 				/>
+
+				{sent ? (
+					<Alert color="success" live="polite" data-slot="docs-feedback-sent">
+						<Alert.Content>
+							<Alert.Description>{t("docs.feedback.thanks")}</Alert.Description>
+						</Alert.Content>
+					</Alert>
+				) : null}
 
 				<Body t={t} figures={docsFigures(ctx.locale)} locale={ctx.locale} />
 
@@ -144,10 +152,7 @@ function PageEnd(handle: Handle<PageEnd.Props>) {
 		let next = page.next.filter((slug) => findDocPage(slug)).map((slug) => pageLink(t, slug));
 
 		return (
-			<div
-				data-slot="docs-page-end"
-				mix={[raw({ display: "grid", gap: "2.5rem", marginBlockStart: "3.5rem" })]}
-			>
+			<div data-slot="docs-page-end" mix={[raw({ display: "grid", gap: "2.5rem" })]}>
 				<Callout kind="note" label={t("docs.page.stuck.title")}>
 					<p>
 						<Trans

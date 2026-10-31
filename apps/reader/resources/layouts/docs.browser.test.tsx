@@ -11,12 +11,14 @@
 import type { RenderResult } from "remix/component/test";
 
 import { createTranslator } from "@sdxc/i18n";
-import { DocsPageHeader } from "@sdxc/ui";
+import { DocsPageHeader, NextSteps } from "@sdxc/ui";
+import { DocsHub } from "@sdxc/ui/patterns";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
 import Feeds, { TOC } from "~/resources/docs/pages/en/feeds";
+import GettingStarted from "~/resources/docs/pages/en/getting-started";
 import DocsLayout from "~/resources/layouts/docs";
 import en from "~/resources/locales/en";
 
@@ -67,6 +69,54 @@ function mountGuide() {
 			<Feeds t={t} figures={FIGURES} locale="en" />
 		</DocsLayout>,
 	);
+}
+
+/** Mounts the quickstart, whose steps run straight into a tip, ending on its next pages. */
+function mountQuickstart() {
+	let { t } = translate("en");
+	let card = (title: string) => ({
+		title,
+		href: "/docs/x",
+		description: "Every post from every feed, newest first, narrowed and marked.",
+	});
+	mounted = render(
+		<DocsLayout t={t} isSignedIn={false} activePath="/docs/getting-started">
+			<GettingStarted t={t} figures={FIGURES} locale="en" />
+			<NextSteps
+				title="Up next"
+				items={[
+					card("Import from another reader"),
+					card("Read your queue"),
+					card("Keyboard shortcuts"),
+				]}
+			/>
+		</DocsLayout>,
+	);
+}
+
+/** Mounts the hub, whose chips and cards are lists the page's prose rules must leave alone. */
+function mountHub() {
+	let { t } = translate("en");
+	let card = (title: string) => ({ title, href: "/docs/x", description: "One line about it." });
+	mounted = render(
+		<DocsLayout t={t} isSignedIn={false} activePath="/docs">
+			<DocsHub
+				title="How can we help?"
+				start={[card("Start reading"), card("Import from another reader")]}
+				topics={["Read your queue", "Search your posts", "Plans"].map((title) => ({
+					title,
+					href: "/docs/x",
+				}))}
+				sections={[card("Get started"), card("Read"), card("Find"), card("Fix a problem")]}
+				labels={{ start: "Where should I start?", sections: "Browse by topic", topics: "Topics" }}
+			/>
+		</DocsLayout>,
+	);
+}
+
+/** Every element a slot names inside the mounted shell. */
+function slots(name: string): HTMLElement[] {
+	return Array.from(document.querySelectorAll(`[data-slot="${name}"]`)) as HTMLElement[];
 }
 
 /** The element a slot names inside the mounted shell. */
@@ -141,5 +191,73 @@ describe("help shell", () => {
 		let support = slot("docs-sidebar").querySelector('a[href="/support"]');
 
 		expect(support?.textContent).toContain("Contact support");
+	});
+
+	test.each(["docs-hub-topic", "docs-hub-start-card", "docs-hub-section-card"])(
+		"lines up every %s on one row at the same top and height",
+		async (name) => {
+			await page.viewport(1440, 900);
+			mountHub();
+
+			let boxes = slots(name).map((element) => element.getBoundingClientRect());
+			let row = boxes.filter((box) => Math.abs(box.top - boxes[0]!.top) < 8);
+
+			expect(row.length).toBeGreaterThan(1);
+			for (let box of row) {
+				expect(box.top).toBe(boxes[0]!.top);
+				expect(box.height).toBe(boxes[0]!.height);
+			}
+		},
+	);
+
+	test("leaves a full gap between a list of steps and the tip after it", async () => {
+		await page.viewport(1280, 900);
+		mountQuickstart();
+
+		let steps = slot("docs-prose").querySelector('[data-slot="steps"]')!.getBoundingClientRect();
+		let tip = slot("docs-prose").querySelector('[data-slot="callout"]')!.getBoundingClientRect();
+
+		expect(tip.top - steps.bottom).toBeGreaterThanOrEqual(20);
+	});
+
+	test("lines up the next-step cards and leaves their text unlinked-looking", async () => {
+		await page.viewport(1440, 900);
+		mountQuickstart();
+
+		let cards = Array.from(slot("next-steps").querySelectorAll("li"));
+		let tops = cards.map((card) => card.getBoundingClientRect().top);
+		let link = cards[1]!.querySelector("a")!;
+
+		expect(new Set(tops).size).toBe(1);
+		expect(getComputedStyle(link).textDecorationLine).toBe("none");
+	});
+
+	test("starts the sidebar's support links where its page links start", async () => {
+		await page.viewport(1280, 900);
+		mountGuide();
+
+		let sidebar = slot("docs-sidebar");
+		let pageLink = sidebar.querySelector('a[href="/docs/feeds"]')!.getBoundingClientRect();
+		let support = sidebar.querySelector('a[href="/support"]')!.getBoundingClientRect();
+
+		expect(support.left).toBe(pageLink.left);
+	});
+
+	test("keeps two blocks in a row one gap apart, never doubling it", async () => {
+		await page.viewport(1280, 900);
+		let { t } = translate("en");
+		mounted = render(
+			<DocsLayout t={t} isSignedIn={false} activePath="/docs/feeds">
+				<aside data-slot="first">One</aside>
+				<div data-slot="docs-page-end">
+					<aside data-slot="second">Two</aside>
+				</div>
+			</DocsLayout>,
+		);
+
+		let gap =
+			slot("second").getBoundingClientRect().top - slot("first").getBoundingClientRect().bottom;
+
+		expect(gap).toBe(20);
 	});
 });

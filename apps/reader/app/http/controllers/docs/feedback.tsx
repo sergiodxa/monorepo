@@ -1,6 +1,6 @@
 /**
  * Records a "Was this page helpful?" vote on the request's log event and sends the reader back to
- * the page they voted on, which then thanks them in place of the form. It works for
+ * the page they voted on, which thanks them at the top, where the page opens. It works for
  * signed-out readers, so it stores nothing tied to an account.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -49,7 +49,7 @@ export default createAction(routes.docs.feedback, (ctx) => {
 	}
 
 	let query = new URLSearchParams({ [FEEDBACK_SENT_PARAM]: "sent" });
-	return redirect(`${docHref(page.slug)}?${query}#docs-feedback`, {
+	return redirect(`${docHref(page.slug)}?${query}`, {
 		status: redirect.Status.SeeOther,
 	});
 });
