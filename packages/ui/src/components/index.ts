@@ -89,6 +89,7 @@ export * from "./meter.js";
 export * from "./modal.js";
 export * from "./nav-link.js";
 export * from "./navigation-menu.js";
+export * from "./next-steps.js";
 export * from "./number-field.js";
 export * from "./otp-field.js";
 export * from "./overlay-arrow.js";
