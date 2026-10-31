@@ -82,6 +82,21 @@ describe("TypedTerminal", () => {
 		).toBeLessThan(1);
 	});
 
+	/**
+	 * A 2rem disc on the page colour filled most of the 2.5rem bar and sat against its end
+	 * edge, so the toggle is sized and inset for the bar it lives in.
+	 */
+	test("sizes the pause toggle for the title bar, inset like the title", () => {
+		let host = mount();
+		let header = host.querySelector('[data-slot="code-stage-header"]')!.getBoundingClientRect();
+		let title = host.querySelector('[data-slot="code-stage-title"]')!.getBoundingClientRect();
+		let toggle = host.querySelector('[data-slot="pause-toggle"]')!;
+		let box = toggle.getBoundingClientRect();
+		expect(Math.round(box.height)).toBe(24);
+		expect(Math.abs(header.right - box.right - (title.left - header.left))).toBeLessThan(2);
+		expect(getComputedStyle(toggle).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+	});
+
 	test("shows the prompt glyph before input lines only", () => {
 		let host = document.createElement("div");
 		document.body.appendChild(host);
