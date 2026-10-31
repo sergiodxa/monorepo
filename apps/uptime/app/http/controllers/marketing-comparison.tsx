@@ -8,6 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
 
 import { ArrowRightIcon, Icon, TriangleAlertIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -39,6 +40,7 @@ import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import ProductMockup, {
 	COMPARISON_MOCKUPS,
 } from "~/resources/components/marketing/product-mockups";
+import { AlertsScene, MonitorsScene } from "~/resources/components/marketing/product-scenes";
 import { comparisons } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -89,6 +91,32 @@ function savingsFor(row: MarketingContent.PricingScenario, locale: string, t: Tr
  */
 function columnsFor(count: number): Feature.Columns {
 	return count % 3 === 0 ? 3 : 2;
+}
+
+/**
+ * The scene beside the getting-started steps: the monitor list their last step lands on,
+ * or the alert history when the hero already shows the monitors dashboard, so the page
+ * never draws the same screen twice.
+ */
+function stepsScene(slug: string, t: Translate): RemixNode {
+	let upLabel = t("statusPage.status.operational");
+	if ((COMPARISON_MOCKUPS[slug] ?? "dashboard") !== "dashboard") {
+		return <MonitorsScene upLabel={upLabel} />;
+	}
+	return (
+		<AlertsScene
+			down={t("emails.alert.heading", {
+				monitor: "api.example.com",
+				status: t("emails.alert.status.down"),
+			})}
+			recovered={t("emails.alert.heading", {
+				monitor: "api.example.com",
+				status: t("emails.alert.status.up"),
+			})}
+			downLabel={t("statusPage.status.down")}
+			upLabel={upLabel}
+		/>
+	);
 }
 
 /** GET /vs/:slug — a competitor comparison marketing page. */
@@ -200,7 +228,11 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 				/>
 
 				<MarketingSection id="compare" mix={[viewReveal()]}>
-					<MarketingHeader description={summary} align="center">
+					<MarketingHeader
+						eyebrow={t("landing.comparison.tableBadge")}
+						description={summary}
+						align="center"
+					>
 						{t("landing.comparison.tableTitle", { competitor })}
 					</MarketingHeader>
 
@@ -227,10 +259,10 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 				</MarketingSection>
 
 				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader align="center">
+					<MarketingHeader eyebrow={t("landing.comparison.switchBadge")} align="center">
 						{t("landing.comparison.whyTeamsSwitchTitle")}
 					</MarketingHeader>
-					<Feature.Grid columns={columnsFor(features.length)}>
+					<Feature.Grid variant="list" columns={columnsFor(features.length)}>
 						{features.map((feature) => (
 							<Feature key={feature.title}>
 								{feature.icon ? (
@@ -336,16 +368,22 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 				) : null}
 
 				<FeatureBand
-					layout="steps"
+					id="how-it-works"
+					layout="split"
+					lean="media"
 					tone="tinted"
+					eyebrow={t("landing.comparison.stepsBadge")}
 					title={t("landing.comparison.gettingStartedTitle")}
+					media={stepsScene(slug, t)}
 					mix={[viewReveal()]}
 				>
-					{steps.map((step) => (
-						<StepList.Item key={step.title} title={step.title}>
-							{step.description}
-						</StepList.Item>
-					))}
+					<StepList variant="timeline">
+						{steps.map((step) => (
+							<StepList.Item key={step.title} title={step.title}>
+								{step.description}
+							</StepList.Item>
+						))}
+					</StepList>
 				</FeatureBand>
 
 				<FaqBand

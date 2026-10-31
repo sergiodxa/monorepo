@@ -193,13 +193,36 @@ describe("GET /vs/:slug", () => {
 		expect(body).not.toContain("Fixture regions");
 	});
 
-	test("lays four reasons to switch out two by two, leaving no card alone on a row", async () => {
+	test("lists four reasons to switch two by two, leaving none alone on a row", async () => {
 		let response = await getComparison("uptimerobot");
 
 		let body = await response.text();
 		expect(comparisons.uptimerobot!.features).toHaveLength(4);
-		expect(body).toMatch(/data-columns="2" data-variant="cards" data-slot="feature-grid"/);
-		expect(body).not.toMatch(/data-columns="3" data-variant="cards"/);
+		/**
+		 * Icon-and-sentence reasons read as an uncarded list; a card grid around them
+		 * left each card mostly empty.
+		 */
+		expect(body).toMatch(/data-columns="2" data-variant="list" data-slot="feature-grid"/);
+		expect(body).not.toMatch(/data-variant="cards" data-slot="feature-grid"/);
+	});
+
+	test("draws a product scene beside the steps, never the hero's own screen", async () => {
+		let dashboardHero = await (await getComparison("uptimerobot")).text();
+		let flowHero = await (await getComparison("checkly")).text();
+
+		expect(dashboardHero).toContain('id="how-it-works"');
+		expect(dashboardHero).toContain("api.example.com is DOWN");
+		expect(flowHero).toContain('id="how-it-works"');
+		expect(flowHero).not.toContain("api.example.com is DOWN");
+		expect(flowHero).toContain("cdn.example.com");
+	});
+
+	test("labels every band with an eyebrow", async () => {
+		let body = await (await getComparison("uptimerobot")).text();
+
+		for (let eyebrow of ["Side by side", "Why switch", "Get started"]) {
+			expect(body).toContain(`>${eyebrow}<`);
+		}
 	});
 
 	test("links every other comparison and closes on the brand band", async () => {

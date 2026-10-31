@@ -633,6 +633,9 @@ export default {
 			tableTitle: "{$competitor} との比較",
 			costLink: "コストを比較",
 			othersTitle: "Uptime をほかのツールと比較",
+			tableBadge: "機能比較",
+			switchBadge: "乗り換える理由",
+			stepsBadge: "はじめかた",
 
 			honestTake: {
 				badge: "正直な評価",

@@ -640,6 +640,9 @@ export default {
 			tableTitle: "Come si confronta {$competitor}",
 			costLink: "Confronta i costi",
 			othersTitle: "Confronta Uptime con altri strumenti",
+			tableBadge: "Fianco a fianco",
+			switchBadge: "Perché passare",
+			stepsBadge: "Primi passi",
 
 			honestTake: {
 				badge: "Opinione sincera",

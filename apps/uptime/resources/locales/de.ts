@@ -645,6 +645,9 @@ export default {
 			tableTitle: "So schneidet {$competitor} ab",
 			costLink: "Kosten vergleichen",
 			othersTitle: "Uptime mit anderen Tools vergleichen",
+			tableBadge: "Im direkten Vergleich",
+			switchBadge: "Warum wechseln",
+			stepsBadge: "Erste Schritte",
 
 			honestTake: {
 				badge: "Ehrliche Einschätzung",
