@@ -255,3 +255,29 @@ describe("SiteHeader prefetch", () => {
 		for (let link of links) expect(link.dataset.rmxPrefetch, link.href).toBe("intent");
 	});
 });
+
+describe("SiteHeader ids", () => {
+	test("derives the sheet, panel and anchor ids from its id, so every render matches", () => {
+		let markup = () => {
+			let host = document.createElement("div");
+			document.body.appendChild(host);
+			render(
+				<SiteHeader
+					id="site-header"
+					brand={<a href="/">Keel</a>}
+					items={[PRODUCT, { label: "Pricing", href: "/pricing" }]}
+				/>,
+				{ container: host },
+			);
+			let html = host.innerHTML;
+			host.remove();
+			return html;
+		};
+		let first = markup();
+
+		expect(first).toContain('id="site-header-sheet"');
+		expect(first).toContain('id="site-header-panel-0"');
+		expect(first).toContain("--site-header-bar");
+		expect(markup()).toBe(first);
+	});
+});

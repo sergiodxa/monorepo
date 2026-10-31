@@ -130,7 +130,8 @@ export namespace SiteHeader {
 	}
 
 	/**
-	 * Props accepted by {@link SiteHeader}.
+	 * Props accepted by {@link SiteHeader}. An `id` also seeds the ids of the sheet, the
+	 * panels and the bar's anchor, so the same page renders the same markup on every request.
 	 */
 	export interface Props extends TagProps<"header"> {
 		/** The home link with the logo; give it an `aria-label` when the logo is an image. */
@@ -205,8 +206,9 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 		let resolvedItems = items ?? [];
 		let resolvedActions = actions ?? [];
 		let label = navLabel ?? "Main";
-		let sheetId = `${handle.id}-sheet`;
-		let anchor = `--${handle.id}-bar`;
+		let base = rest.id ?? handle.id;
+		let sheetId = `${base}-sheet`;
+		let anchor = `--${base}-bar`;
 		let linkPrefetch = prefetchAttribute(prefetch ?? "none");
 
 		return (
@@ -249,7 +251,7 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 											{isGroup(item) ? (
 												<GroupEntry
 													group={item}
-													panelId={`${handle.id}-panel-${index}`}
+													panelId={`${base}-panel-${index}`}
 													anchor={anchor}
 													floating={isFloating}
 													prefetch={prefetch}
