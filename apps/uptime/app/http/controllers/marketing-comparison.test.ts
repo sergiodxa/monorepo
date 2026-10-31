@@ -217,6 +217,21 @@ describe("GET /vs/:slug", () => {
 		expect(flowHero).toContain("cdn.example.com");
 	});
 
+	test.each(Object.keys(comparisons).filter((slug) => !slug.startsWith("fixture-")))(
+		"argues in the %s page's h1 rather than repeating its eyebrow",
+		async (slug) => {
+			let content = comparisons[slug]!;
+
+			let body = await (await getComparison(slug)).text();
+
+			let heading = body.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
+			let text = heading.replace(/<[^>]+>/g, "").replaceAll("&#x27;", "'");
+			expect(text).toContain(content.highlight);
+			expect(text).not.toContain("Uptime vs");
+			expect(body).toContain(`>${content.badge}<`);
+		},
+	);
+
 	test("labels every band with an eyebrow", async () => {
 		let body = await (await getComparison("uptimerobot")).text();
 

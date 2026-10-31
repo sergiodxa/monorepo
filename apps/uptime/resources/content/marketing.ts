@@ -2180,8 +2180,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and UptimeRobot. See why teams choose transparent usage-based pricing over tiered plans with hidden limits.",
 		badge: "Uptime vs UptimeRobot",
-		title: "Uptime vs",
-		highlight: "UptimeRobot",
+		title: "Pay for checks,",
+		highlight: "not monitor slots",
 		description:
 			"Transparent usage-based pricing instead of tiered plans with hidden monitor and interval limits.",
 		highlights: ["Usage-based pricing", "DNS + TCP + cron monitoring", "365-day retention"],
@@ -2294,8 +2294,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Better Uptime. Discover simpler pricing, powerful features, and why developers are switching.",
 		badge: "Uptime vs Better Uptime",
-		title: "Uptime vs",
-		highlight: "Better Uptime",
+		title: "Monitoring and status pages,",
+		highlight: "without an on-call bill",
 		description:
 			"Simpler, usage-based pricing without an incident-management upsell you may not need.",
 		highlights: ["Usage-based pricing", "No incident-management upsell", "Focused feature set"],
@@ -2409,8 +2409,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Pingdom. Get powerful uptime monitoring without enterprise pricing. See features, pricing, and differences.",
 		badge: "Uptime vs Pingdom",
-		title: "Uptime vs",
-		highlight: "Pingdom",
+		title: "Every monitor type",
+		highlight: "at a small team's price",
 		description: "Powerful monitoring without enterprise-grade pricing for a small team's needs.",
 		highlights: ["Usage-based pricing", "No enterprise contracts", "All monitor types included"],
 		competitor: "Pingdom",
@@ -2523,8 +2523,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and StatusCake. Modern interface, transparent pricing, and all the features you need without the complexity.",
 		badge: "Uptime vs StatusCake",
-		title: "Uptime vs",
-		highlight: "StatusCake",
+		title: "SSL, DNS and cron in one plan,",
+		highlight: "not spread across tiers",
 		description:
 			"A modern interface and transparent pricing without the older, complexity-heavy plan structure.",
 		highlights: ["Usage-based pricing", "Modern dashboard", "Cron job monitoring"],
@@ -2633,8 +2633,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Datadog for uptime monitoring. Get focused monitoring without the complexity of a full observability platform.",
 		badge: "Uptime vs Datadog",
-		title: "Uptime vs",
-		highlight: "Datadog",
+		title: "Watch a few endpoints",
+		highlight: "without adopting a platform",
 		description:
 			"Focused uptime and synthetic monitoring, without adopting a full observability platform just to watch a few endpoints.",
 		highlights: ["Focused scope", "Simple pricing", "Minutes to set up"],
@@ -2752,8 +2752,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Site24x7 for uptime monitoring. Get transparent, usage-based pricing instead of complex tiered plans. See features, pricing, and find out which is right for you.",
 		badge: "Uptime vs Site24x7",
-		title: "Uptime vs",
-		highlight: "Site24x7",
+		title: "One usage-based price,",
+		highlight: "not a plan matrix",
 		description: "Transparent, usage-based pricing instead of a complex tiered-plan matrix.",
 		highlights: ["Usage-based pricing", "Simple setup", "All monitor types included"],
 		competitor: "Site24x7",
@@ -2861,8 +2861,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Checkly side by side. Simple uptime monitoring without the code. See features, pricing, and find out which is right for you.",
 		badge: "Uptime vs Checkly",
-		title: "Uptime vs",
-		highlight: "Checkly",
+		title: "Monitors from a form,",
+		highlight: "not a Playwright repo",
 		description:
 			"No-code monitor setup for teams who want uptime checks without writing and maintaining test scripts.",
 		highlights: ["No code required", "DNS + TCP monitoring", "Usage-based pricing"],
@@ -2983,8 +2983,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Oh Dear for uptime monitoring. Both are developer-focused tools - see how usage-based pricing compares to per-site pricing, and find which is right for you.",
 		badge: "Uptime vs Oh Dear",
-		title: "Uptime vs",
-		highlight: "Oh Dear",
+		title: "Priced by checks,",
+		highlight: "not by site count",
 		description:
 			"Usage-based pricing and framework-agnostic monitoring, compared to per-site pricing tuned for PHP/Laravel apps.",
 		highlights: ["Usage-based pricing", "Framework-agnostic", "Cron job monitoring"],
@@ -3097,8 +3097,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Cronitor. Discover why teams choose Uptime for simpler pricing, DNS/TCP monitoring, and a focused approach without feature bloat.",
 		badge: "Uptime vs Cronitor",
-		title: "Uptime vs",
-		highlight: "Cronitor",
+		title: "Cron, HTTP, DNS and TCP",
+		highlight: "on one usage-based price",
 		description: "Simpler pricing and broader monitor-type coverage in one focused product.",
 		highlights: ["Usage-based pricing", "DNS + TCP monitoring", "Status pages included"],
 		competitor: "Cronitor",
@@ -3206,8 +3206,8 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		metaDescription:
 			"Compare Uptime and Healthchecks.io. See why teams choose Uptime for complete monitoring with HTTP, DNS, TCP, SSL, and cron job monitoring in one platform.",
 		badge: "Uptime vs Healthchecks.io",
-		title: "Uptime vs",
-		highlight: "Healthchecks.io",
+		title: "Your cron jobs,",
+		highlight: "and everything they depend on",
 		description:
 			"One platform for cron jobs and everything else — HTTP, DNS, TCP, and SSL monitoring included.",
 		highlights: ["Cron + HTTP + DNS + TCP + SSL", "Usage-based pricing", "Status pages included"],
