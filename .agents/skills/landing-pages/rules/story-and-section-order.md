@@ -18,17 +18,8 @@ the closest one and change it only for a reason you can name.
 - **The order exposes gaps**: if you cannot fill "how it works" with something visual, the product story is
   not ready yet, and no component will fix that.
 
-## Write the story first
-
-Before any JSX, write down:
-
-1. The promise in one sentence (becomes the `h1`, 6–10 words, sentence case).
-2. The lead: who it is for and the one outcome, with at most one `<strong>` phrase.
-3. Three to six proofs: capabilities, figures, examples. These become bands.
-4. The one action, and its secondary (usually "see pricing" or "read the docs").
-5. The objections a reader has. These become the FAQ, two or three sentences per answer.
-
-Cut any copy that narrates the API or the page itself ("In this section…").
+Write the story first (@rules/copy-with-taste.md); each proof in it becomes a band, and each band gets a
+visual chosen by @rules/choose-the-visual-device.md. The orders below are where those bands go.
 
 ## Orders by page kind
 
@@ -134,7 +125,7 @@ every map covers every record.
 
 ## Rules
 
-1. Write the promise, proofs, action and objections before any JSX.
+1. Write the story before any JSX.
 2. Start from the closest page kind's order; change it only for a stated reason.
 3. Give each product its own order and art direction instead of reusing another page's skeleton.
 4. A family of pages is one template plus typed records keyed by slug.
