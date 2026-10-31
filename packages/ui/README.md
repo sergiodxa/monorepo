@@ -265,6 +265,11 @@ chrome on the root catalog stays free of landing weight.
 - `FaqBand` — header + one or two `Accordion` columns (`columns={1|2}`).
 - `ClosingCta` — inverse/tinted close with title, lead, and actions.
 - `FlowDiagram` — animated run: a `trigger`, `steps` passing along a rail, an `outcome` and `footnote`.
+- `SequenceDiagram` — animated exchange: `actors` on lifelines and `messages` travelling between them in order.
+- `FanOutDiagram` — animated one-to-many: a `source` reaching every one of its `targets` (`direction="in"` for many-to-one).
+- `EventTicker` — animated activity log: `rows` arriving newest first, a status that can flip with `flipTo`.
+- `TypedTerminal` — animated terminal: input `lines` typing themselves out, then their output.
+- `DrawnChart` — animated figure: a `metric` counting up over a `bars` or `line` `series` that draws in.
 
 **Composition craft**
 
