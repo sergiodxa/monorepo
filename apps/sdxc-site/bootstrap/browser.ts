@@ -29,7 +29,12 @@ globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
  * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/ui/code-tabs-sync": () => import("@sdxc/ui/code-tabs-sync"),
+	"@sdxc/ui/copy-button": () => import("@sdxc/ui/copy-button"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
+	"@sdxc/ui/docs-nav-tools": () => import("@sdxc/ui/docs-nav-tools"),
+	"@sdxc/ui/page-actions": () => import("@sdxc/ui/page-actions"),
+	"@sdxc/ui/table-of-contents": () => import("@sdxc/ui/table-of-contents"),
 };
 
 /**
