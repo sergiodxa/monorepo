@@ -16,7 +16,7 @@ import { raw } from "@sdxc/u/general";
 import { hidden, hstack, inlineFlex, insBs, shrink, sticky, vstack } from "@sdxc/u/layout";
 import { overflowY } from "@sdxc/u/overflow";
 import { at, media } from "@sdxc/u/responsive";
-import { maxBs, minIs, pb, pbe, pbs } from "@sdxc/u/size";
+import { maxBs, mi, minIs, pb, pbe, pbs, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { overflowWrap, text, weight } from "@sdxc/u/typography";
@@ -46,6 +46,13 @@ const RAIL_BREAKPOINT = "(min-width: 75rem)";
 
 /** The marketing header's height, which every sticky column below it clears. */
 const HEADER_HEIGHT = "4rem";
+
+/**
+ * Room the docked sidebar keeps beside its contents for a focus ring (3px wide, 2px out),
+ * which its scroll box would otherwise clip; a matching negative margin keeps the
+ * contents lined up with the column.
+ */
+const RING_CLEARANCE = "0.375rem";
 
 /** The sticky bar's height, which a jumped-to heading also clears on a narrow screen. */
 const BAR_HEIGHT = "2.75rem";
@@ -174,6 +181,8 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 										raw({ overscrollBehavior: "contain", scrollbarWidth: "thin" }),
 										pbs("2rem"),
 										pbe("3rem"),
+										pi(RING_CLEARANCE),
+										mi(`-${RING_CLEARANCE}`),
 									]),
 								]}
 							>
