@@ -9,6 +9,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
 import { m, mbe, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -80,7 +81,7 @@ export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
 		}
 
 		let style = [
-			m(0),
+			sectionSpacing(level),
 			fg("neutral.emphasis"),
 			weight(level === 1 ? "bold" : "semibold"),
 			tracking("tight"),
@@ -107,6 +108,21 @@ export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
 			</Tag>
 		);
 	};
+}
+
+/** Room above a heading that follows other content, by level, so a section reads as a break. */
+const SPACE_ABOVE = ["0", "2.75rem", "2.25rem", "1.75rem", "1.5rem", "1.25rem"] as const;
+
+/**
+ * A heading's margins as one rule: none of its own as the first thing in its container, and
+ * room above it everywhere else. Written as one rule so the room never depends on the order
+ * the stylesheet's layers land in.
+ */
+function sectionSpacing(level: number) {
+	return raw({
+		marginBlock: 0,
+		"&:not(:first-child)": { marginBlockStart: SPACE_ABOVE[level - 1] ?? "1.25rem" },
+	});
 }
 
 /**
