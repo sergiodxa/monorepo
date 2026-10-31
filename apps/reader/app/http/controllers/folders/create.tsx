@@ -73,6 +73,11 @@ export default createAction(routes.folders.create, {
 			}
 		}
 
+		/** A plan without folders sends the reader to the page that names the plan that has them. */
+		if (created.reason === "not-entitled" || created.reason === "switched-off") {
+			return redirect(routes.settings.href(), { status: redirect.Status.SeeOther });
+		}
+
 		/** Nothing was named, so nothing happened and the reader is left where they read. */
 		return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
 	},

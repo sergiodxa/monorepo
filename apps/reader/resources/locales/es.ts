@@ -550,6 +550,8 @@ export default {
 		renamed: "Carpeta renombrada.",
 		duplicate: "Ya tienes una carpeta con ese nombre.",
 		invalid: "Una carpeta necesita un nombre.",
+		notEntitled:
+			"Las carpetas son parte de un plan de pago. Las carpetas que tienes se quedan donde están.",
 
 		/** The field both the naming forms type into. */
 		name: {
@@ -776,7 +778,7 @@ export default {
 		cadence: {
 			legend: "Cómo se revisan tus feeds",
 			description:
-				"Cada feed se revisa una vez al día. Para ver uno antes, ábrelo y usa Revisar feed.",
+				"Cada feed se revisa tan seguido como publica: cada {$floor} si publica diez veces al día, a diario si publica poco, y una vez por semana si lleva un mes sin publicar. Para ver uno antes, ábrelo y usa Revisar feed.",
 		},
 		lastRefreshed: "Revisado por última vez el {$date}",
 		neverRefreshed: "Aún sin revisar",

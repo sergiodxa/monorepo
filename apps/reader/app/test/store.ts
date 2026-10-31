@@ -163,6 +163,7 @@ export const FREE_ENTITLEMENT: UserStore.Entitlement = {
 	/** What the free tier's role grants with every switch on: keeping and applying a preview. */
 	can: {
 		posts: { keep: true },
+		folders: { organize: false },
 		tags: { label: false },
 		rules: { write: false, apply: true },
 		articles: { extract: false },

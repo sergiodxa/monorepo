@@ -62,7 +62,11 @@ const policy = definePolicy(abilities, {
 	everyone: [allow(["posts.keep", "rules.apply"], { id: "everyone" })],
 	roles: {
 		free: [],
-		paid: [allow(["tags.label", "rules.write", "articles.extract", "agent"], { id: "tier-paid" })],
+		paid: [
+			allow(["folders.organize", "tags.label", "rules.write", "articles.extract", "agent"], {
+				id: "tier-paid",
+			}),
+		],
 		premium: { inherits: ["paid"], grants: [allow("digests.email", { id: "tier-premium" })] },
 		"agent:read": [allow("agent.connect", { id: "scope-read" })],
 		"agent:write": [allow("agent", { id: "scope-write" })],

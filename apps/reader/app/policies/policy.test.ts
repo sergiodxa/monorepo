@@ -35,6 +35,7 @@ const ALL_ON: Switches = {
 const SOLD_ON: [AnyAbility, readonly string[]][] = [
 	[abilities.posts.keep, ["free", "paid", "premium"]],
 	[abilities.rules.apply, ["free", "paid", "premium"]],
+	[abilities.folders.organize, ["paid", "premium"]],
 	[abilities.tags.label, ["paid", "premium"]],
 	[abilities.rules.write, ["paid", "premium"]],
 	[abilities.articles.extract, ["paid", "premium"]],

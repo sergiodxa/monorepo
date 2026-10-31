@@ -459,6 +459,8 @@ export default {
 		renamed: "Folder renamed.",
 		duplicate: "You already have a folder by that name.",
 		invalid: "A folder needs a name.",
+		/** Said to a reader whose plan carries no folders, which takes none they already have. */
+		notEntitled: "Folders are part of a paid plan. The folders you have stay where they are.",
 
 		/** The field both the naming forms type into. */
 		name: {
@@ -673,14 +675,15 @@ export default {
 		title: "Settings",
 		heading: "Settings",
 		/**
-		 * What the schedule is, rather than a choice of one. Checking a feed more often spends
+		 * What the schedule is, rather than a choice of one: each feed's own publishing rate sets
+		 * it, with the busiest band's interval interpolated. Checking a feed more often spends
 		 * the bandwidth of the site publishing it, and a reader who wants a feed sooner has the
 		 * check they can ask for on the feed's own page, which is what this points them at.
 		 */
 		cadence: {
 			legend: "How your feeds are checked",
 			description:
-				"Every feed is checked once a day. To see one sooner, open it and use Check feed.",
+				"Each feed is checked as often as it publishes: every {$floor} for a feed posting ten times a day, daily for a quiet one, and weekly once it has been silent for a month. To see one sooner, open it and use Check feed.",
 		},
 		lastRefreshed: "Last checked {$date}",
 		neverRefreshed: "Not checked yet",

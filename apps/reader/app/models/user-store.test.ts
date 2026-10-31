@@ -80,13 +80,14 @@ vi.mock("cloudflare:workers", async (importOriginal) => {
  * these tests walk the path the object walks: the flag is read, and what it answers is
  * what the sweep is held to.
  *
- * The readers here are on the free tier, so the figure is served as the fraction of that
- * tier's budget it comes to: the object multiplies the tier's number by what the flag
- * answers, which is the arithmetic the sweep does in production.
+ * The figure is served as the fraction of the reader's tier budget it comes to: the object
+ * multiplies the tier's number by what the flag answers, which is the arithmetic the sweep
+ * does in production.
  *
  * @param posts - What the object may hold before it reclaims, and then refuses.
+ * @param tier - The tier the reader under test is on.
  */
-async function setBudget(posts: number): Promise<void> {
+async function setBudget(posts: number, tier: keyof typeof TIER_BUDGETS = "free"): Promise<void> {
 	await flags.setProvider(
 		new EngineProvider(
 			createEngine({
@@ -94,7 +95,7 @@ async function setBudget(posts: number): Promise<void> {
 					flags: {
 						...FLAG_SET.flags,
 						"reader-budget-scale": {
-							variants: { standard: posts / TIER_BUDGETS.free },
+							variants: { standard: posts / TIER_BUDGETS[tier] },
 							defaultVariant: "standard",
 						},
 					},
@@ -279,6 +280,18 @@ beforeEach(async () => {
 });
 
 /** Builds a reader's object and waits out the boot, the way a first request would. */
+/** A reader on the plan folders are sold under, which every folder test here starts from. */
+async function createFolderReader(): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
+	let reader = await createReader();
+	await reader.user.setTier({
+		entitled: "paid",
+		cancelled: false,
+		readAt: Date.now(),
+		source: "billing",
+	});
+	return reader;
+}
+
 async function createReader(
 	subject = SUBJECT,
 ): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
@@ -1404,8 +1417,21 @@ async function folderNamed(user: UserDO, title: string): Promise<string> {
 }
 
 describe("folders, which are a reading surface before they are filing", () => {
-	test("moves a feed's posts into the folder's timeline, and leaves their read state alone", async () => {
+	test("refuses a Free reader a new folder, and filing into one, but lets a feed out", async () => {
 		let { user } = await createReader();
+		let feed = await follow(user);
+
+		expect(await user.createFolder("Tech")).toEqual({ ok: false, reason: "not-entitled" });
+		expect(await user.fileFeed(feed.id, { title: "Tech" })).toEqual({
+			ok: false,
+			reason: "not-entitled",
+		});
+		expect(await user.listFolders()).toEqual([]);
+		expect(await user.fileFeed(feed.id, null)).toMatchObject({ ok: true, folder: null });
+	});
+
+	test("moves a feed's posts into the folder's timeline, and leaves their read state alone", async () => {
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 
@@ -1425,7 +1451,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("takes a feed back out, and leaves an unfiled feed out of the folder", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 
@@ -1442,7 +1468,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	 * them: the page after a cursor is the page it would have been.
 	 */
 	test("moves no row within the ordering, so a cursor in flight skips nothing", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 
@@ -1462,7 +1488,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	 * can resume from.
 	 */
 	test("mints a folder's cursor over the columns every other timeline mints its own over", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 		await user.fileFeed(feed.id, { folderId });
@@ -1482,7 +1508,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("writes an arriving post into the folder its feed is in, on insert and on edit", async () => {
-		let { user, state } = await createReader();
+		let { user, state } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 		await user.fileFeed(feed.id, { folderId });
@@ -1508,7 +1534,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	 * halfway is corrected by the next poll rather than drifting.
 	 */
 	test("heals a move interrupted between the subscription and its posts", async () => {
-		let { user, state } = await createReader();
+		let { user, state } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 
@@ -1522,7 +1548,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("unfiles a folder's feeds when it is deleted, and deletes no post", async () => {
-		let { user, state } = await createReader();
+		let { user, state } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 		await user.fileFeed(feed.id, { folderId });
@@ -1536,7 +1562,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("renames one row, and refuses a name another folder already reads under", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 		let folderId = await folderNamed(user, "Tech");
 		await user.fileFeed(feed.id, { folderId });
@@ -1558,7 +1584,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 
 	/** Filing by name is an upsert, which is what an import needs to be idempotent. */
 	test("files under a name, making the folder only where the reader has none by it", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let one = await follow(user);
 		let other = await follow(user, "https://other.example.com/feed.xml", [
 			entryAt("x", "Elsewhere", HOUR_MS),
@@ -1576,7 +1602,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("reports a folder the reader does not have, and a feed they do not follow", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let feed = await follow(user);
 
 		expect(await user.fileFeed(feed.id, { folderId: "nope" })).toEqual({
@@ -1592,7 +1618,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	});
 
 	test("carries each feed's folder onto the list the rail is drawn from", async () => {
-		let { user } = await createReader();
+		let { user } = await createFolderReader();
 		let one = await follow(user);
 		await follow(user, "https://other.example.com/feed.xml", [entryAt("x", "Elsewhere", HOUR_MS)]);
 
@@ -1614,7 +1640,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 	 * the reader follows however they have filed them.
 	 */
 	test("changes no retention arithmetic: the share is still the budget over the feeds", async () => {
-		let { user, state } = await createReader();
+		let { user, state } = await createFolderReader();
 		let filed = seedFeed(state, { id: "filed" });
 		let loose = seedFeed(state, { id: "loose" });
 
@@ -1634,7 +1660,7 @@ describe("folders, which are a reading surface before they are filing", () => {
 
 		// Four posts across two feeds, so each feed's share is two and the filed one is over
 		// it by four — which is what comes back, exactly as it would unfiled.
-		await setBudget(4);
+		await setBudget(4, "paid");
 		await user.synchronize();
 
 		expect(storedItems(state, filed)).toEqual(["filed-4", "filed-5"]);

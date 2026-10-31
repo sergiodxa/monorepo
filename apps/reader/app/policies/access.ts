@@ -49,6 +49,7 @@ export type RefusalReason = "not-entitled" | typeof SWITCHED_OFF;
  */
 const NO_CLAIMS: ReaderClaims = {
 	posts: { keep: false },
+	folders: { organize: false },
 	tags: { label: false },
 	rules: { write: false, apply: false },
 	articles: { extract: false },

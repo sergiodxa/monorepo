@@ -47,7 +47,9 @@ import { writePresentation } from "~/app/initializers/cookies";
 import { vapidPublicKey } from "~/app/initializers/vapid";
 import { userStore } from "~/app/models/user-store";
 import { overBy, TIERS, tierRank } from "~/app/services/entitlement";
+import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { READING_FACES, THEMES } from "~/database/schema";
+import { formatInterval } from "~/resources/components/marketing/scenes";
 import { PushRegistration } from "~/resources/components/push-registration";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
@@ -539,7 +541,9 @@ async function settingsPage(
 					{ctx.intl.t("settings.cadence.legend")}
 				</h2>
 
-				<Description>{ctx.intl.t("settings.cadence.description")}</Description>
+				<Description>
+					{ctx.intl.t("settings.cadence.description", { floor: formatInterval(POLL_FLOOR_MS) })}
+				</Description>
 
 				{/**
 				 * When the feeds were last brought up to date is the schedule's own news, so it sits

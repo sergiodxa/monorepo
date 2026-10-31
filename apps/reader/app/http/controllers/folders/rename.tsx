@@ -33,6 +33,9 @@ const RENAME_OUTCOMES: Record<UserStore.FolderFailure, string> = {
 	"invalid-title": "invalid",
 	/** Read by nobody: the page a folder that is gone answers with is its own not-found. */
 	"not-found": "missing",
+	/** Renaming never asks the plan, so neither refusal reaches this page. */
+	"not-entitled": "invalid",
+	"switched-off": "invalid",
 };
 
 /** POST /folders/:folderId — renames one folder. */

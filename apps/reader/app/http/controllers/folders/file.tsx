@@ -38,10 +38,12 @@ const FilingForm = f.object({
 });
 
 /** What each refusal travels back to the feed's page as. */
-const FILING_OUTCOMES: Record<"not-following" | "not-found" | "invalid-title", string> = {
+const FILING_OUTCOMES: Record<UserStore.FileFailure, string> = {
 	"not-following": "missing",
 	"not-found": "gone",
 	"invalid-title": "invalid",
+	"not-entitled": "locked",
+	"switched-off": "locked",
 };
 
 /**

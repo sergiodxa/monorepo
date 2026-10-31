@@ -244,6 +244,7 @@ function folderNote(folder: string | null): Note | null {
 	if (folder === "unfiled") return { key: "folders.file.unfiled", color: "success" };
 	if (folder === "gone") return { key: "folders.file.gone", color: "warning" };
 	if (folder === "invalid") return { key: "folders.invalid", color: "warning" };
+	if (folder === "locked") return { key: "folders.notEntitled", color: "warning" };
 	return null;
 }
 

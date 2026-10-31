@@ -52,7 +52,8 @@ describe("GET /settings", () => {
 
 		expect(response.status).toBe(200);
 		expect(html).toContain("How your feeds are checked");
-		expect(html).toContain("Every feed is checked once a day.");
+		expect(html).toContain("Each feed is checked as often as it publishes: every 15 min");
+		expect(html).not.toContain("once a day.");
 		expect(html).toContain("Check feed");
 	});
 

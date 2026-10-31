@@ -144,6 +144,7 @@ describe("the plan a reader's tier carries", () => {
 
 		expect((await user.entitlement()).can).toEqual({
 			posts: { keep: true },
+			folders: { organize: true },
 			tags: { label: true },
 			rules: { write: true, apply: true },
 			articles: { extract: true },

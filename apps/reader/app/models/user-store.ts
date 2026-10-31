@@ -565,7 +565,9 @@ export namespace UserStore {
 		/** The name held nothing but space, which no rail could draw a row for. */
 		| "invalid-title"
 		/** The reader already has a folder by that name, and two would read alike. */
-		| "duplicate-title";
+		| "duplicate-title"
+		/** The reader's plan carries no folders; the ones they made stay readable. */
+		| RefusalReason;
 
 	export type FolderResult = { ok: true; folder: Folder } | { ok: false; reason: FolderFailure };
 
@@ -576,7 +578,10 @@ export namespace UserStore {
 	 */
 	export type FileResult =
 		| { ok: true; folder: Folder | null; moved: number }
-		| { ok: false; reason: "not-following" | "not-found" | "invalid-title" };
+		| { ok: false; reason: FileFailure };
+
+	/** Why a feed was not filed: it is not followed, the folder is gone, or the plan has none. */
+	export type FileFailure = "not-following" | "not-found" | "invalid-title" | RefusalReason;
 
 	/**
 	 * What deleting a folder did. A folder holds no posts, so `feeds` counts the
@@ -1454,6 +1459,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			return pending;
 		};
 
+		/** A plan without folders still imports every feed, unfiled, and makes no folder. */
+		let filing = (await this.#decide(abilities.folders.organize)).allowed;
+
 		await inParallel([...requested.values()], async (entry) => {
 			try {
 				let followed = await this.followFeed(entry.feedUrl);
@@ -1462,7 +1470,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 					result.added += 1;
 
 					let title = entry.folder?.trim() ?? "";
-					if (title.length > 0) {
+					if (filing && title.length > 0) {
 						let folder = await folderByTitle(title);
 						await this.fileFeed(followed.feed.id, { folderId: folder.id });
 					}
@@ -2040,6 +2048,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param title - What to call it, which no other folder of this reader's may be called.
 	 */
 	async createFolder(title: string): Promise<UserStore.FolderResult> {
+		let organizing = await this.#decide(abilities.folders.organize);
+		if (!organizing.allowed) return { ok: false, reason: refusalReason(organizing) };
+
 		let name = title.trim();
 		if (name.length === 0) return { ok: false, reason: "invalid-title" };
 
@@ -2111,6 +2122,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null || feed.unfollowed_at !== null) {
 			return { ok: false, reason: "not-following" };
+		}
+
+		/** Taking a feed out of a folder stays open on every plan; putting one in does not. */
+		if (target !== null) {
+			let organizing = await this.#decide(abilities.folders.organize);
+			if (!organizing.allowed) return { ok: false, reason: refusalReason(organizing) };
 		}
 
 		let folder: SelectFolder | null = null;

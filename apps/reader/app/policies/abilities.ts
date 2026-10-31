@@ -17,6 +17,9 @@ export default abilities({
 	posts: {
 		keep: ability({ description: "Keep a post on the saved shelf" }),
 	},
+	folders: {
+		organize: ability({ description: "Make folders and file feeds into them" }),
+	},
 	tags: {
 		label: ability({ description: "Make, rename and apply labels on kept posts" }),
 	},
