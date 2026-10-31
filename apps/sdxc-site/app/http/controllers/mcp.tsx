@@ -11,15 +11,17 @@ import type { AnyRequestContext } from "@sdxc/mcp/server";
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import mcp from "~/app/initializers/mcp";
 import { readContent } from "~/app/services/content";
-import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
+import { LANDING_COMPONENTS } from "~/resources/components/landing";
+import SiteHeader from "~/resources/components/site-header";
 import mcpSource from "~/resources/content/mcp.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
-import PageLayout from "~/resources/layouts/page";
 import routes from "~/routes/web";
 
 /** The one-sentence summary a search result and a link preview show. */
@@ -50,14 +52,11 @@ export default createAction(routes.mcp, async (ctx) => {
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
 		>
-			<PageLayout
-				eyebrow="For agents"
-				title="The MCP endpoint"
-				description={DESCRIPTION}
-				activePath={routes.mcp.href()}
-			>
-				{toRemix(content.data, { components: DOCS_COMPONENTS })}
-			</PageLayout>
+			<SiteHeader activePath={routes.mcp.href()} />
+
+			<main mix={[vstack({ align: "center" }), is("100%")]}>
+				{toRemix(content.data, { components: LANDING_COMPONENTS })}
+			</main>
 		</DocumentLayout>,
 	);
 
