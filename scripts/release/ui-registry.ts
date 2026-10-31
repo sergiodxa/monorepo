@@ -34,6 +34,7 @@ const HELPER_FOLDERS: ReadonlySet<string> = new Set([
 	"animations",
 	"behaviors",
 	"mixins",
+	"patterns",
 	"styles",
 	"utils",
 ]);
