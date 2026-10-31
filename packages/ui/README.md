@@ -255,6 +255,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Callout` — static docs aside (`kind`: `note` | `tip` | `warning` | `danger`, translated `label`, optional `title`).
 - `Steps`, `Steps.Item` — numbered procedure with CSS counters and a rail; each `title` is a heading with an optional `id`.
 - `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
+- `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
 
 ### Patterns (`@sdxc/ui/patterns`)
 

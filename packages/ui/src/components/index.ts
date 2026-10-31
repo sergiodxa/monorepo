@@ -121,4 +121,5 @@ export * from "./toolbar.js";
 export * from "./tooltip.js";
 export * from "./tree.js";
 export * from "./typeset.js";
+export * from "./ui-label.js";
 export * from "./youtube-embed.js";
