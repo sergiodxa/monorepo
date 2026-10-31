@@ -8,19 +8,13 @@
  */
 
 import {
-	BellRingIcon,
-	CloudOffIcon,
 	GlobeIcon,
 	KeyRoundIcon,
 	LaptopIcon,
 	LockIcon,
-	MapPinIcon,
-	MicIcon,
 	MonitorIcon,
-	ScanBarcodeIcon,
 	SmartphoneIcon,
 	TabletIcon,
-	UsersIcon,
 	WatchIcon,
 } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -31,6 +25,14 @@ import { font, tabularNums, text, weight } from "@sdxc/u/typography";
 import { MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
 import { Bento, FeatureBand, IconWell, TabbedStage } from "@sdxc/ui/patterns";
 
+import {
+	KidsScene,
+	OfflineScene,
+	PlaceScene,
+	QuietScene,
+	ScanScene,
+	VoiceScene,
+} from "~/resources/views/demos/app/bento-scenes";
 import {
 	CalendarScreen,
 	ChoresScreen,
@@ -100,11 +102,14 @@ export function Tour() {
 	);
 }
 
-/** The six small features, each on its own colour block, keyed by the hue it is tinted with. */
+/**
+ * The six small features, each on its own colour block, keyed by the hue it is tinted with
+ * and led by the app scene that shows it.
+ */
 const DETAILS = [
 	{
 		hue: 292,
-		icon: CloudOffIcon,
+		scene: OfflineScene,
 		title: "Works without signal",
 		body: (
 			<>
@@ -115,7 +120,7 @@ const DETAILS = [
 	},
 	{
 		hue: 92,
-		icon: ScanBarcodeIcon,
+		scene: ScanScene,
 		title: "Scan to restock",
 		body: (
 			<>
@@ -126,7 +131,7 @@ const DETAILS = [
 	},
 	{
 		hue: 235,
-		icon: MicIcon,
+		scene: VoiceScene,
 		title: "Add by voice",
 		body: (
 			<>
@@ -137,7 +142,7 @@ const DETAILS = [
 	},
 	{
 		hue: 15,
-		icon: MapPinIcon,
+		scene: PlaceScene,
 		title: "Reminders by place",
 		body: (
 			<>
@@ -147,7 +152,7 @@ const DETAILS = [
 	},
 	{
 		hue: 160,
-		icon: UsersIcon,
+		scene: KidsScene,
 		title: "Accounts for kids",
 		body: (
 			<>
@@ -157,7 +162,7 @@ const DETAILS = [
 	},
 	{
 		hue: 55,
-		icon: BellRingIcon,
+		scene: QuietScene,
 		title: "Quiet by default",
 		body: (
 			<>
@@ -169,8 +174,9 @@ const DETAILS = [
 ] as const;
 
 /**
- * The small things: six features on pastel colour blocks, one hue each, so the grid reads
- * as playful at a glance while every line on it keeps 4.5:1 against its own fill.
+ * The small things: six features on pastel colour blocks, one hue each, each led by a
+ * same-height app scene, shown at every width, so a row's titles line up and a phone still
+ * sees the app; every line keeps 4.5:1 on its own fill.
  *
  * @returns The render function producing the band.
  */
@@ -185,30 +191,20 @@ export function Details() {
 			</MarketingHeader>
 			<Bento columns={3}>
 				{DETAILS.map((detail) => {
-					let Icon = detail.icon;
+					let Scene = detail.scene;
 					return (
 						<Bento.Cell key={detail.title} mix={[colourBlock(detail.hue)]}>
-							<span
+							<Bento.Media
 								mix={[
 									raw({
-										display: "inline-grid",
-										placeItems: "center",
-										inlineSize: "3rem",
-										blockSize: "3rem",
-										borderRadius: "1rem",
-										color: `oklch(0.42 0.13 ${detail.hue})`,
-										backgroundColor: "oklch(1 0 0 / 0.75)",
+										display: "block",
+										blockSize: "13.5rem",
+										maskImage: "linear-gradient(to bottom, black 78%, transparent)",
 									}),
-									dark(
-										raw({
-											color: `oklch(0.86 0.1 ${detail.hue})`,
-											backgroundColor: "oklch(1 0 0 / 0.08)",
-										}),
-									),
 								]}
 							>
-								<Icon size={22} />
-							</span>
+								<Scene />
+							</Bento.Media>
 							<Bento.Title size="lg">{detail.title}</Bento.Title>
 							<Bento.Body>{detail.body}</Bento.Body>
 						</Bento.Cell>
