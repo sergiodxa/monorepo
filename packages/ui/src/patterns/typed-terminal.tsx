@@ -136,7 +136,9 @@ export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 					<CodeStage
 						variant="terminal"
 						title={title}
-						actions={<PauseToggle label={pauseLabel ?? "Pause the animation"} />}
+						actions={
+							<PauseToggle label={pauseLabel ?? "Pause the animation"} mix={[headerToggle()]} />
+						}
 					>
 						{nodes}
 					</CodeStage>
@@ -382,4 +384,21 @@ function statusInk(status: TypedTerminal.Status | undefined) {
 	}
 	if (status === "muted") return "color-mix(in oklab, currentColor 65%, transparent)";
 	return "inherit";
+}
+
+/**
+ * The pause toggle as title-bar chrome: small enough to leave the bar its breathing room,
+ * ringed and inked in the panel's own colour, and inset from the end as far as the title
+ * is from the start.
+ */
+function headerToggle() {
+	return raw({
+		inlineSize: "1.5rem",
+		blockSize: "1.5rem",
+		marginInlineEnd: "0.5rem",
+		backgroundColor: "transparent",
+		boxShadow: "inset 0 0 0 1px color-mix(in oklab, currentColor 28%, transparent)",
+		color: "inherit",
+		opacity: "0.75",
+	});
 }
