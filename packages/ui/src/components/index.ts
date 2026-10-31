@@ -50,6 +50,7 @@ export * from "./drop-zone.js";
 export * from "./empty.js";
 export * from "./feature.js";
 export * from "./field-error.js";
+export * from "./file-tree.js";
 export * from "./file-trigger.js";
 export * from "./form.js";
 export * from "./grid-list.js";
