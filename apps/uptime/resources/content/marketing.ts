@@ -21,6 +21,8 @@ import {
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
 	PRICE_PER_FLOW_RUN_USD,
+	FLOW_RUN_MAX_REQUESTS,
+	FLOW_RUN_TIMEOUT_MS,
 } from "~/config/pricing";
 import routes from "~/routes/web";
 
@@ -43,7 +45,13 @@ export namespace MarketingContent {
 	}
 
 	/** The product scene a {@link Spotlight} shows: real UI drawn with example data. */
-	export type SpotlightScene = "monitors" | "alerts" | "status-page" | "flow";
+	export type SpotlightScene =
+		| "monitors"
+		| "alerts"
+		| "status-page"
+		| "flow"
+		| "alert-channels"
+		| "maintenance";
 
 	/**
 	 * The one capability an audience or use-case page shows rather than lists: a split band
@@ -1096,7 +1104,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			"Start free, upgrade when ready. Perfect for portfolios, side projects, and agents that keep an eye on them for you.",
 		highlights: ["Free to start", "MCP for agents", "Pay only for automation"],
 		trustIndicators: [
-			{ icon: "code", value: "Free", label: "To Start" },
+			{ icon: "dollar-sign", value: formatUsd(BASE_PRICE_USD), label: "Base Price" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "database", value: "365", label: "Days Retention" },
 			{ icon: "globe", value: "9", label: "Regions" },
@@ -1357,10 +1365,20 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		 */
 		trustIndicators: [
 			{ icon: "shield", value: "99.9%", label: "Uptime Target" },
-			{ icon: "users", value: "Auto", label: "Provisioning" },
-			{ icon: "lock", value: "Verified", label: "Domains" },
+			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
+		spotlight: {
+			eyebrow: "Alerts",
+			title: "Every alert reaches the team that owns it",
+			description:
+				"Route some alerts to the whole team and others to one critical monitor, and keep the history of every down and recovery.",
+			points: ["Email, Slack, Discord and webhooks", "Team or monitor scoped", "Recovery alerts"],
+			scene: "alert-channels",
+			href: featureHref("alerts"),
+			linkLabel: "See alerts",
+		},
 		features: [
 			{
 				title: "Domain verification",
@@ -1414,16 +1432,22 @@ export const audiences: Record<string, MarketingContent.Page> = {
 		description:
 			"API-first design, MCP for agents, and webhook integrations mean Uptime fits into your deploy pipeline instead of asking you to change it.",
 		highlights: ["REST & MCP", "Signed webhooks", "Cron & TCP monitoring"],
-		/**
-		 * "Signed Webhooks" leads this strip because the HMAC contract is a concrete
-		 * claim a DevOps reader can verify directly.
-		 */
 		trustIndicators: [
-			{ icon: "code", value: "REST", label: "API First" },
-			{ icon: "webhook", value: "HMAC", label: "Signed Webhooks" },
-			{ icon: "bot", value: "MCP", label: "For Agents" },
-			{ icon: "terminal", value: "TCP", label: "& Cron Checks" },
+			{ icon: "layers", value: "5", label: "Monitor Types" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
+			{ icon: "globe", value: "9", label: "Regions" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 		],
+		spotlight: {
+			eyebrow: "Maintenance windows",
+			title: "Deploy without paging anyone",
+			description:
+				"Schedule a window before the deploy and alerts stay suppressed for every affected monitor until it ends.",
+			points: ["One-time or recurring", "Team or monitor scoped", "End early anytime"],
+			scene: "maintenance",
+			href: featureHref("maintenance"),
+			linkLabel: "See maintenance windows",
+		},
 		features: [
 			{
 				title: "REST API",
@@ -1549,8 +1573,8 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Monitor website uptime and performance from 9 global regions. Track response times, SSL certificates, and get instant downtime alerts.",
 		highlights: ["9 global regions", "SSL expiry tracking", "Instant alerts"],
 		trustIndicators: [
-			{ icon: "globe", value: "Any", label: "Website" },
-			{ icon: "calendar", value: "365d", label: "Retention" },
+			{ icon: "calendar", value: "90d", label: "Uptime History" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 			{ icon: "map", value: "9", label: "Regions" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 		],
@@ -1620,10 +1644,10 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and let agents manage the monitors over MCP.",
 		highlights: ["Custom headers", "MCP tools", "Latency tracking"],
 		trustIndicators: [
-			{ icon: "code", value: "REST", label: "& GraphQL" },
 			{ icon: "globe", value: "9", label: "Regions" },
-			{ icon: "clock", value: "P99", label: "Latency" },
-			{ icon: "shield", value: "Auth", label: "Headers" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
+			{ icon: "calendar", value: "90d", label: "Uptime History" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 		],
 		spotlight: {
 			eyebrow: "HTTP monitors",
@@ -1686,8 +1710,8 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"A login form posting to a broken session store still leaves the homepage returning 200. A flow monitor signs in, reads the token back, and calls the endpoint it authorises, so the sign-in itself is what gets checked.",
 		highlights: ["Sign-in checked each run", "JWT signature and expiry", "Failure names the step"],
 		trustIndicators: [
-			{ icon: "log-in", value: "Auth", label: "First-class" },
-			{ icon: "key-round", value: "JWT", label: "Verified" },
+			{ icon: "list-ordered", value: String(FLOW_RUN_MAX_REQUESTS), label: "Requests per Run" },
+			{ icon: "timer", value: `${FLOW_RUN_TIMEOUT_MS / 1000}s`, label: "Run Timeout" },
 			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
 			{ icon: "calendar", value: "90d", label: "Result history" },
 		],
@@ -1787,6 +1811,16 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{ icon: "shield", value: "365", label: "Days Retention" },
 			{ icon: "circle-check", value: "99.9%", label: "Uptime Target" },
 		],
+		spotlight: {
+			eyebrow: "Status pages",
+			title: "Show job health beside everything else",
+			description:
+				"A cron monitor sits on your status page next to your sites and APIs, so a missed run is visible to everyone who needs to know.",
+			points: ["Healthy, late and missed states", "90-day uptime history", "Public or private"],
+			scene: "status-page",
+			href: featureHref("status-pages"),
+			linkLabel: "See status pages",
+		},
 		features: [
 			{
 				title: "Cron-aware scheduling",
@@ -1857,10 +1891,10 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		 * HTTP like any other monitor, not a Kubernetes or Docker orchestrator hook.
 		 */
 		trustIndicators: [
-			{ icon: "heart-pulse", value: "/healthz", label: "Endpoints" },
 			{ icon: "timer", value: "1-60m", label: "Intervals" },
-			{ icon: "play", value: "Manual", label: "Trigger" },
-			{ icon: "bell-ring", value: "Recovery", label: "Alerts" },
+			{ icon: "globe", value: "9", label: "Regions" },
+			{ icon: "calendar", value: "90d", label: "Uptime History" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 		],
 		spotlight: {
 			eyebrow: "Recovery alerts",
@@ -1928,10 +1962,14 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			"Protect your online store with uptime monitoring. Track checkout, payments, and product pages to prevent lost sales.",
 		highlights: ["Checkout monitoring", "Content checks", "Instant alerts"],
 		trustIndicators: [
-			{ icon: "shopping-cart", value: "Checkout", label: "Monitoring" },
-			{ icon: "credit-card", value: "Payment", label: "APIs" },
-			{ icon: "clock", value: "1min", label: "Min Interval" },
-			{ icon: "shield-check", value: "SSL", label: "Expiry Warnings" },
+			{ icon: "clock", value: "1min", label: "HTTP Interval" },
+			{
+				icon: "shopping-cart",
+				value: `${FLOW_INTERVALS_SECONDS[0] / 60}m`,
+				label: "Checkout Flow Interval",
+			},
+			{ icon: "globe", value: "9", label: "Regions" },
+			{ icon: "database", value: "365", label: "Days Retention" },
 		],
 		spotlight: {
 			eyebrow: "Alerts",
@@ -2002,7 +2040,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		highlights: ["API + web + cron", "Team collaboration", "Status pages for customers"],
 		trustIndicators: [
 			{ icon: "users", value: "∞", valueLabel: "Unlimited", label: "Team Members" },
-			{ icon: "layout-template", value: "Public", label: "Status Pages" },
+			{ icon: "clock", value: "1min", label: "Min Interval" },
 			{ icon: "shield-check", value: "99.9%", label: "Uptime Target" },
 			{ icon: "globe", value: "9", label: "Regions" },
 		],
@@ -2069,8 +2107,8 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		highlights: ["Per-service monitors", "TCP port checks", "DNS change detection"],
 		trustIndicators: [
 			{ icon: "boxes", value: "∞", valueLabel: "Unlimited", label: "Services" },
-			{ icon: "network", value: "TCP", label: "Port Checks" },
-			{ icon: "globe", value: "DNS", label: "Change Detection" },
+			{ icon: "layers", value: "5", label: "Monitor Types" },
+			{ icon: "globe", value: "9", label: "Regions" },
 			{ icon: "clock", value: "1min", label: "Min Interval" },
 		],
 		spotlight: {

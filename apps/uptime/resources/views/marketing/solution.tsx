@@ -33,6 +33,7 @@ import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
+import ProductMockup from "~/resources/components/marketing/product-mockups";
 import {
 	AlertsScene,
 	MonitorsScene,
@@ -116,6 +117,8 @@ export function buildSolutionPageChrome(t: Translate): SolutionPageView.Chrome {
 				/>
 			),
 			"status-page": <StatusPageScene banner={t("statusPage.banner.operational")} />,
+			"alert-channels": <ProductMockup area="alerts" t={t} />,
+			maintenance: <ProductMockup area="maintenance" t={t} />,
 			flow: (
 				<FlowDiagram
 					labels={{
@@ -142,8 +145,8 @@ export function buildSolutionPageChrome(t: Translate): SolutionPageView.Chrome {
 
 /**
  * Renders a solution page. Bands alternate plain and tinted from the hero down, whether or
- * not the page has a spotlight; a capability grid of six runs three across and any other
- * count two across, so no card sits alone on the last row.
+ * not the page has a spotlight; the capabilities read as an un-carded list, six three
+ * across and any other count two across, so no item sits alone on the last row.
  */
 export default function SolutionPageView(handle: Handle<SolutionPageView.Props>) {
 	return () => {
@@ -209,7 +212,7 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 
 				{content.trustIndicators ? (
 					<MarketingSection spacing="compact" mix={[viewReveal()]}>
-						<StatStrip variant="gap" align="center">
+						<StatStrip size="display" variant="gap" align="center">
 							{content.trustIndicators.map((indicator) => (
 								<StatStrip.Item key={indicator.label} label={indicator.label}>
 									{indicator.valueLabel ? (
@@ -230,11 +233,10 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 					<MarketingHeader
 						eyebrow={chrome.everythingBadge}
 						description={chrome.everythingDescription}
-						align="center"
 					>
 						{chrome.everythingTitle}
 					</MarketingHeader>
-					<Feature.Grid columns={featureColumns}>
+					<Feature.Grid variant="list" columns={featureColumns}>
 						{content.features.map((feature) => (
 							<Feature key={feature.title} href={feature.href}>
 								{feature.icon ? (
