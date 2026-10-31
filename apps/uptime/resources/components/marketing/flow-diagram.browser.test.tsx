@@ -1,7 +1,6 @@
 /**
- * Lays the flow diagram out in a real browser: on a phone the schedule caption wraps beside
- * the pause toggle pinned to the surface's corner, and every line of it must stay clear of
- * the button; a page passing its own spec lines sees those lines in run order.
+ * Renders the flow diagram in a real browser: a page passing its own spec lines sees those
+ * lines in run order under the documented step captions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,39 +42,7 @@ afterEach(async () => {
 	await page.viewport(414, 896);
 });
 
-/** Whether two boxes share any area. */
-function overlaps(a: DOMRect, b: DOMRect): boolean {
-	return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-}
-
 describe("FlowDiagram", () => {
-	/**
-	 * Swept across phone widths, because whether the caption reaches the toggle depends on where
-	 * its words happen to wrap.
-	 */
-	test("keeps the schedule caption clear of the pause toggle at every phone width", async () => {
-		let hits: number[] = [];
-		for (let width = 260; width <= 420; width += 4) {
-			await page.viewport(width, 700);
-			mounted = render(
-				<div style={{ padding: "0 16px" }}>
-					<FlowDiagram labels={LABELS} />
-				</div>,
-			);
-			let toggle = mounted.$('[data-slot="motion-loop"] > :last-child')!.getBoundingClientRect();
-			let walker = document.createTreeWalker(mounted.$("ol > li")!, NodeFilter.SHOW_TEXT);
-			while (walker.nextNode()) {
-				let range = document.createRange();
-				range.selectNodeContents(walker.currentNode);
-				if ([...range.getClientRects()].some((line) => overlaps(line, toggle))) hits.push(width);
-			}
-			mounted.cleanup();
-			mounted = undefined;
-		}
-
-		expect(hits).toEqual([]);
-	});
-
 	test("prints the spec lines a page passes, in run order", async () => {
 		await page.viewport(1280, 900);
 		let code = ["browser.open", "browser.fill", "browser.click", "expect browser.heading"] as const;

@@ -61,9 +61,19 @@ let { intl } = createTranslator({
 
 setIntl(intl);
 
+/**
+ * Islands shipped by packages, keyed by the bare specifier their client entry names. The
+ * renderer writes that specifier as it is, and the browser resolves only URLs, so each one is
+ * imported here where the bundler can resolve it.
+ */
+const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
+};
+
 run({
 	async loadModule(moduleUrl, exportName) {
-		let mod: unknown = await import(moduleUrl);
+		let load = PACKAGE_MODULES[moduleUrl];
+		let mod: unknown = load ? await load() : await import(moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

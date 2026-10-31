@@ -20,7 +20,7 @@ import { maxBs, minIs, pb, pbe, pbs } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { overflowWrap, text, weight } from "@sdxc/u/typography";
-import { Button, Sidebar } from "@sdxc/ui";
+import { Button, DialogDismiss, Sidebar } from "@sdxc/ui";
 import { marketingContainer } from "@sdxc/ui/styles";
 
 import type { DocSection } from "~/app/services/docs";
@@ -30,7 +30,6 @@ import type { DocsTocAnchor } from "~/resources/components/docs-toc";
 import DocsNav from "~/resources/components/docs-nav";
 import DocsPager from "~/resources/components/docs-pager";
 import DocsToc, { TOC_MIN_ANCHORS } from "~/resources/components/docs-toc";
-import { SheetDismiss } from "~/resources/components/marketing/sheet-dismiss";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 
 /** The drawer a narrow screen opens, and the button that opens it, agree on this id. */
@@ -292,7 +291,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							</span>
 						</Sidebar.Header>
 						<Sidebar.Content mix={[vstack({ gap: 0 }), pb("1rem")]}>{nav}</Sidebar.Content>
-						<SheetDismiss />
+						<DialogDismiss />
 					</Sidebar.MobileNav>
 				</MarketingLayout>
 			</div>

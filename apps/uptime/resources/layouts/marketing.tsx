@@ -33,12 +33,12 @@ import { hstack, shrink, vstack } from "@sdxc/u/layout";
 import { bs, is, minBs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
+import { DialogDismiss } from "@sdxc/ui";
 import { SiteFooter, SiteHeader } from "@sdxc/ui/patterns";
 import { marketingContainer } from "@sdxc/ui/styles";
 
 import { BRAND_MARK_PATHS } from "~/config/brand";
 import AuthCta from "~/resources/components/marketing/auth-cta";
-import { SheetDismiss } from "~/resources/components/marketing/sheet-dismiss";
 import routes from "~/routes/web";
 
 /**
@@ -329,7 +329,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 									startLabel={startLabel}
 								/>
 							</div>
-							<SheetDismiss />
+							<DialogDismiss />
 						</>
 					}
 				/>
