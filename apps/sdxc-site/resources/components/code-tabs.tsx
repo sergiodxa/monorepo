@@ -1,7 +1,7 @@
 /**
  * The `code-tabs` and `code-tab` pair: a strip of labels over a set of snippets, with no
- * script involved. Each tab is a label holding its radio input, followed by its panel;
- * the wrapper around the two is `display: contents`, so the labels line up as one strip
+ * script involved. Every panel shares one grid cell, so the strip is as tall as its
+ * tallest snippet whichever tab is checked, and switching never moves the layout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,11 +11,11 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { rounded, transition } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
-import { basis, flex, flexWrap, gap, hidden } from "@sdxc/u/layout";
+import { rounded, transition, visibility } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { flex, flexCol, flexWrap, gap, grid, gridArea, grow } from "@sdxc/u/layout";
 import { minIs, p } from "@sdxc/u/size";
-import { precededBy, when } from "@sdxc/u/state";
+import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
 import type { OptionGroupName } from "~/app/services/option-groups";
@@ -51,6 +51,10 @@ namespace CodeTabScope {
 		name: OptionGroupName | undefined;
 		/** The option a named strip opens on. */
 		selected: string | undefined;
+		/** Which half of the tab this pass renders: its label in the strip, or its panel. */
+		part: "label" | "panel";
+		/** The tab's position in the strip, which pairs its panel with its label. */
+		index: number;
 	}
 
 	export interface Props extends Value {
@@ -64,22 +68,40 @@ namespace CodeTabScope {
  * tag is rendered through.
  */
 function CodeTabScope(handle: Handle<CodeTabScope.Props, CodeTabScope.Value>) {
-	handle.context.set({ name: handle.props.name, selected: handle.props.selected });
-
-	return () => handle.props.children;
+	return () => {
+		let { children, index, name, part, selected } = handle.props;
+		handle.context.set({ index, name, part, selected });
+		return children;
+	};
 }
 
-/** Renders the strip every `code-tab` inside it lays itself into. */
+/**
+ * Renders the strip: every `code-tab` inside it is rendered twice, once for its label in
+ * the wrapping row of labels and once for its panel in the stack beneath, where all
+ * panels share one grid cell and the checked one is the only one shown.
+ */
 export default function CodeTabs(handle: Handle<CodeTabs.Props>) {
 	return () => {
 		let { children, name } = handle.props;
 		let selected = name ? selectedOption(handle.context.get(OptionGroupScope), name) : undefined;
+		let tabs = tabsOf(children);
 
 		return (
-			<form data-option-group={name} mix={[flex(), flexWrap("wrap"), gap(2)]}>
-				<CodeTabScope name={name} selected={selected}>
-					{children}
-				</CodeTabScope>
+			<form data-option-group={name} mix={[grid(), gap(2)]}>
+				<div mix={[flex(), flexWrap("wrap"), gap(2)]}>
+					{tabs.map((tab, index) => (
+						<CodeTabScope key={index} name={name} selected={selected} part="label" index={index}>
+							{tab}
+						</CodeTabScope>
+					))}
+				</div>
+				<div mix={[grid(), minIs(0)]}>
+					{tabs.map((tab, index) => (
+						<CodeTabScope key={index} name={name} selected={selected} part="panel" index={index}>
+							{tab}
+						</CodeTabScope>
+					))}
+				</div>
 				{name ? <OptionGroupSync group={name} /> : null}
 			</form>
 		);
@@ -87,54 +109,73 @@ export default function CodeTabs(handle: Handle<CodeTabs.Props>) {
 }
 
 /**
- * Renders one tab: its label in the strip, holding the control, and its panel below. The
- * control sits inside its label, so the pair needs no id to find each other — an id is
- * only unique within one render, and two strips on a page would otherwise share them.
+ * The tabs a strip's markdown wrote, in order. The whitespace between two tags carries
+ * nothing a reader sees, and dropping it keeps each tab's index its place in the strip.
+ */
+function tabsOf(children: RemixNode): RemixNode[] {
+	if (Array.isArray(children)) return children.flatMap((child: RemixNode) => tabsOf(child));
+	return typeof children === "object" && children !== null ? [children] : [];
+}
+
+/**
+ * Renders one half of a tab, as the strip's pass asks: the label holding the control, or
+ * the panel. The control sits inside its label, so the pair needs no id to find each
+ * other — an id is only unique within one render, and two strips on a page would share
+ * them. A panel stays laid out while hidden, which is what sizes the stack to the
+ * tallest snippet; `visibility: hidden` keeps it out of the accessibility tree and the
+ * tab order, and its last block stretches so every snippet's frame ends at one edge.
  */
 export function CodeTab(handle: Handle<CodeTabs.TabProps>) {
 	return () => {
 		let { children, label, selected } = handle.props;
 		let strip = handle.context.get(CodeTabScope);
 
-		return (
-			<div mix={[raw({ display: "contents" })]}>
-				<label
-					mix={[
-						raw({ order: -1 }),
-						p(1.5, 3),
-						rounded("md"),
-						border({ color: "neutral.border", width: 1, style: "solid" }),
-						bg("neutral.bg-tint"),
-						fg("neutral"),
-						text("sm"),
-						weight("medium"),
-						cursor("pointer"),
-						transition("background-color, border-color, color"),
-						when("&:has(input:checked)", [bg("brand.tint"), fg("brand"), border("brand.border")]),
-						when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
-					]}
-				>
-					<input
-						type="radio"
-						name={RADIO_GROUP}
-						data-option-value={strip?.name ? label : undefined}
-						defaultChecked={strip?.name ? strip.selected === label : selected}
-						mix={[visuallyHidden()]}
-					/>
-					{label}
-				</label>
+		if (strip?.part === "panel") {
+			return (
 				<div
 					mix={[
-						basis("100%"),
-
+						gridArea("1 / 1"),
+						flex(),
+						flexCol(),
 						minIs(0),
-						hidden(),
-						precededBy("label:has(input:checked)", raw({ display: "block" })),
+						visibility("hidden"),
+						when("& > :last-child", grow()),
+						when(
+							`:is(div:has(> label:nth-child(${strip.index + 1}) > input:checked)) + div > &`,
+							visibility("visible"),
+						),
 					]}
 				>
 					{children}
 				</div>
-			</div>
+			);
+		}
+
+		return (
+			<label
+				mix={[
+					p(1.5, 3),
+					rounded("md"),
+					border({ color: "neutral.border", width: 1, style: "solid" }),
+					bg("neutral.bg-tint"),
+					fg("neutral"),
+					text("sm"),
+					weight("medium"),
+					cursor("pointer"),
+					transition("background-color, border-color, color"),
+					when("&:has(input:checked)", [bg("brand.tint"), fg("brand"), border("brand.border")]),
+					when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
+				]}
+			>
+				<input
+					type="radio"
+					name={RADIO_GROUP}
+					data-option-value={strip?.name ? label : undefined}
+					defaultChecked={strip?.name ? strip.selected === label : selected}
+					mix={[visuallyHidden()]}
+				/>
+				{label}
+			</label>
 		);
 	};
 }
