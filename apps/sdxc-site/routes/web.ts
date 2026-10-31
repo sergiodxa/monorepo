@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, post, route } from "remix/routes";
+import { form, get, post, route } from "remix/routes";
 
 /** Registers the site's routes. */
 export default route({
@@ -31,6 +31,11 @@ export default route({
 		index: get("/docs"),
 		/** The changelog reads GitHub, so it is the one page whose content is fetched. */
 		changelog: get("/docs/releases/changelog"),
+		/**
+		 * Where a reader the guides did not help writes to the author: the form, and the post
+		 * that emails it. `?page=` names the page they came from, and `?sent=1` thanks them.
+		 */
+		contact: form("/docs/contact"),
 		/** Captures every remaining segment as one slug, e.g. `conventions/naming`. */
 		show: get("/docs/*slug"),
 	},

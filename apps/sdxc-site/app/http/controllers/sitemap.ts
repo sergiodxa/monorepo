@@ -43,6 +43,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		docs: {
 			index: { priority: PRIORITY.hub, frequency: "weekly" },
 			changelog: false,
+			contact: false,
 			show: sections.flatMap((section) =>
 				section.guides.map((guide) => {
 					let updated = guide.frontmatter.lastUpdated;

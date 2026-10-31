@@ -286,14 +286,30 @@ describe("GET /api/ui/:subpath/:slug", () => {
 });
 
 describe("sidebars", () => {
-	/** The hrefs the docked sidebar links to, which is the first of the two copies drawn. */
+	/**
+	 * The hrefs the docked sidebar's tree links to, which is the first of the two copies drawn;
+	 * the contact link every tree closes with is left out, since it belongs to no tree.
+	 */
 	function sidebarHrefs(body: string): string[] {
 		let rail = body.slice(
 			body.indexOf('data-slot="docs-sidebar"'),
 			body.indexOf('data-slot="docs-content"'),
 		);
-		return [...rail.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? "");
+		return [...rail.matchAll(/href="([^"]+)"/g)]
+			.map((match) => match[1] ?? "")
+			.filter((href) => href !== routes.docs.contact.index.href());
 	}
+
+	test("closes every tree with the contact form's link", async () => {
+		for (let path of ["/docs/getting-started/what-these-are", "/api/result", "/api/ui/theming"]) {
+			let body = await (await fetchApp(path)).text();
+			let rail = body.slice(
+				body.indexOf('data-slot="docs-sidebar"'),
+				body.indexOf('data-slot="docs-content"'),
+			);
+			expect(rail).toContain(`href="${routes.docs.contact.index.href()}"`);
+		}
+	});
 
 	test("draws only guides beside a guide", async () => {
 		let body = await (await fetchApp("/docs/getting-started/what-these-are")).text();

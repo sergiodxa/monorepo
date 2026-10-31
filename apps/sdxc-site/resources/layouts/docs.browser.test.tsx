@@ -1,7 +1,8 @@
 /**
  * Tests the documentation shell against the real layout engine: at every width a reader
  * meets it the page never scrolls sideways, and the page's headings are always one tap away,
- * as a rail beside the prose or as a sticky bar under the header.
+ * as a rail beside the prose or as a sticky bar under the header. The tree's closing contact
+ * link lines up with the page links above it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -225,5 +226,40 @@ describe("DocsLayout", () => {
 		mountComponentPage();
 
 		expect(getComputedStyle(document.documentElement).scrollBehavior).toBe("smooth");
+	});
+
+	test("lines the sidebar's contact link up with the page links above it", async () => {
+		await page.viewport(1280, 900);
+		mountComponentPage();
+
+		let visible = (selector: string) =>
+			([...mounted!.$$(selector)] as HTMLElement[]).find(
+				(element) => element.getBoundingClientRect().width > 0,
+			)!;
+		let link = visible('[data-docs-nav] a[href="/api/ui/bento"]');
+		let contact = visible("[data-docs-contact]");
+		let linkText =
+			link.getBoundingClientRect().left + parseFloat(getComputedStyle(link).paddingLeft);
+
+		expect(contact.querySelector('a[href="/docs/contact"]')).not.toBeNull();
+		expect(contact.getBoundingClientRect().left).toBeCloseTo(linkText, 0);
+	});
+
+	test("shows the feedback thank-you at the top of the page a vote returns to", async () => {
+		await page.viewport(375, 900);
+		mounted = render(
+			<DocsLayout tree={TREE} activePath="/api/ui/bento" feedback={{ sent: true }}>
+				<h1>Bento</h1>
+				<p style={{ blockSize: "200rem" }}>A long page.</p>
+			</DocsLayout>,
+		);
+
+		let notice = mounted.$('[data-slot="callout"]') as HTMLElement;
+
+		expect(notice.textContent).toContain("Thanks for the feedback");
+		expect(notice.getBoundingClientRect().top).toBeLessThan(window.innerHeight);
+		expect(notice.querySelector("a")!.getAttribute("href")).toBe(
+			"/docs/contact?page=%2Fapi%2Fui%2Fbento",
+		);
 	});
 });

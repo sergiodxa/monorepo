@@ -9,11 +9,14 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { relative } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { before, when } from "@sdxc/u/state";
-import { DocsNav, DocsPager } from "@sdxc/ui";
+import { m } from "@sdxc/u/size";
+import { before, hover, when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
+import { Callout, DocsNav, DocsPager } from "@sdxc/ui";
 import { DocsLayout as Shell } from "@sdxc/ui/patterns";
 import { findNeighbours } from "@sdxc/ui/utils";
 
@@ -26,6 +29,7 @@ import AuthorNote from "~/resources/components/author-note";
 import DocsFeedbackBlock from "~/resources/components/docs-feedback-block";
 import SidebarAd from "~/resources/components/sidebar-ad";
 import SiteHeader from "~/resources/components/site-header";
+import routes from "~/routes/web";
 
 /** The site header's height, which the sticky columns and jumped-to headings sit below. */
 const HEADER_HEIGHT = "4rem";
@@ -35,6 +39,12 @@ const HEADER_HEIGHT = "4rem";
  * so a reader of the component catalogue meets a short list rather than every entry.
  */
 const FOLD_THRESHOLD = 40;
+
+/**
+ * Pulls the sidebar's contact line from the footer's 0.625rem gutter onto the page links'
+ * 0.5rem one, so its text starts where theirs does.
+ */
+const CONTACT_ALIGN = "-0.125rem";
 
 namespace DocsLayout {
 	export interface Props {
@@ -56,9 +66,9 @@ namespace DocsLayout {
 }
 
 /**
- * Renders the header, the tree, and the page between them. The pager stays inside the
- * page's own section, so it follows the path a section was written as rather than
- * crossing into an unrelated one.
+ * Renders the header, the tree closed by a link to the contact form, and the page between
+ * them. The pager stays inside the page's own section, so it follows the path a section was
+ * written as rather than crossing into an unrelated one.
  */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
@@ -83,6 +93,25 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							placeholder: "Filter pages",
 							noResults: "No page title matches. Try search instead.",
 						}}
+						footer={
+							<p
+								data-docs-contact=""
+								mix={[
+									m(0),
+									raw({ marginInlineStart: CONTACT_ALIGN }),
+									text("sm"),
+									fg("neutral.muted"),
+								]}
+							>
+								Can’t find it?{" "}
+								<a
+									href={routes.docs.contact.index.href()}
+									mix={[fg("neutral.emphasis"), hover(fg("brand"))]}
+								>
+									Contact us
+								</a>
+							</p>
+						}
 					/>
 				}
 				toc={anchors}
@@ -93,6 +122,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				railFooter={<SidebarAd ad={ad} />}
 			>
 				<div mix={[relative(), raw({ isolation: "isolate" }), gridBackdrop(), smoothJumps()]}>
+					{feedback?.sent ? <FeedbackSent path={activePath} /> : null}
 					{children}
 					{feedback ? (
 						<div mix={[raw({ marginBlockStart: "4rem" })]}>
@@ -111,6 +141,31 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			</Shell>
 		);
 	};
+}
+
+namespace FeedbackSent {
+	export interface Props {
+		/** The page the vote was about, which the contact link carries along. */
+		path: string;
+	}
+}
+
+/**
+ * The thank-you a vote returns to, at the top of the page: the vote reloads the page at its
+ * top, so this is where the reader sees it answered, with the contact form one click away.
+ */
+function FeedbackSent(handle: Handle<FeedbackSent.Props>) {
+	return () => (
+		<Callout kind="tip" label="Feedback sent" mix={[raw({ marginBlockEnd: "1.5rem" })]}>
+			Thanks for the feedback. Have a question it didn’t answer?{" "}
+			<a
+				href={`${routes.docs.contact.index.href()}?${new URLSearchParams({ page: handle.props.path })}`}
+			>
+				Contact us
+			</a>
+			.
+		</Callout>
+	);
 }
 
 /**

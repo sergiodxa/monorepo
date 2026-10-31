@@ -11,9 +11,11 @@
 import type { RouterContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
+import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import mail from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
@@ -29,7 +31,11 @@ import frameTransforms from "~/app/http/middleware/frame-transforms";
 import importMapHash from "~/app/http/middleware/import-map-hash";
 import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
+import { honeypot as contactHoneypot } from "~/app/initializers/honeypot";
 import { logger } from "~/app/initializers/logger";
+import { mail as emailRegistry } from "~/app/initializers/mail";
+import { transport } from "~/app/initializers/mail-transport";
+import { MAIL_FROM } from "~/config/constants";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
@@ -90,6 +96,21 @@ export function createWebRouter() {
 	router.map(
 		routes.docs.changelog,
 		lazy(() => import("~/app/http/controllers/changelog")),
+	);
+	/**
+	 * Mapped ahead of the guide route, whose `*slug` would otherwise read `contact` as a guide.
+	 * The honeypot hands every failure to the controller, which thanks a filled trap without
+	 * sending, and the mailer is built only for this route, the one place the site sends mail.
+	 */
+	router.map(
+		routes.docs.contact,
+		lazy(
+			() => import("~/app/http/controllers/docs-contact"),
+			[
+				honeypot(contactHoneypot, { onFailure: () => null }),
+				mail({ transport, from: MAIL_FROM, mail: emailRegistry }),
+			],
+		),
 	);
 	router.map(
 		routes.docs.show,

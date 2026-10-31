@@ -61,6 +61,14 @@ export default defineConfig({
 			CF_VERSION_METADATA: bindings.versionMetadata(),
 			GITHUB_TOKEN: bindings.secret(),
 			GITHUB_SPONSORS_WEBHOOK_SECRET: bindings.secret(),
+			/**
+			 * Delivers the docs contact form's questions to the author's inbox, from an address
+			 * on `sdxc.dev`, which Cloudflare Email must verify as a sending domain. Local dev
+			 * sends remotely, so a submission there delivers a real email.
+			 */
+			EMAIL: bindings.sendEmail({ dev: { remote: true } }),
+			/** Signs the docs contact form's honeypot token, so a bot replaying an old form fails. */
+			HONEYPOT_SECRET: bindings.secret(),
 		},
 	},
 });

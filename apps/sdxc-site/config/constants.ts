@@ -41,3 +41,9 @@ export const SITE_NAME = "sdxc";
 export function absoluteUrl(path: string): string {
 	return new URL(path, SITE_URL).href;
 }
+
+/** The mailbox the site's email is sent from; `sdxc.dev` must stay a verified sending domain. */
+export const MAIL_FROM = { email: "no-reply@sdxc.dev", name: "sdxc" };
+
+/** Where a docs reader's question lands, and the address the form offers when sending fails. */
+export const CONTACT_INBOX = "hello+sdxc@sergiodxa.com";
