@@ -250,6 +250,10 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `LogoCloud` — adopter marks at `--ui-marketing-logo-height` (`layout`: `row` | `spread` | `grid`, `label`, `muted`).
 - `Feature`, `Feature.Grid` — claim cells in a grid of cards or a hairline mosaic (`variant`).
 
+### Components: docs
+
+- `Callout` — static docs aside (`kind`: `note` | `tip` | `warning` | `danger`, translated `label`, optional `title`).
+
 ### Patterns (`@sdxc/ui/patterns`)
 
 Marketing building blocks and composition craft. Import from `@sdxc/ui/patterns` so product

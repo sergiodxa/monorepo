@@ -19,6 +19,7 @@ export * from "./breadcrumbs.js";
 export * from "./bubble.js";
 export * from "./button.js";
 export * from "./calendar.js";
+export * from "./callout.js";
 export * from "./card.js";
 export * from "./carousel.js";
 export * from "./chart.js";

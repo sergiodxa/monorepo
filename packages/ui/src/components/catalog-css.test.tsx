@@ -26,14 +26,22 @@ const FINGERPRINT = "[object Object]";
 /**
  * Props handed to every probe render. Compound members that read required data
  * off their own props (a chart series, a selectable item's value, highlighted
- * segments, a shortcut's keys) throw before emitting any CSS otherwise, which
- * would quietly shrink the sweep.
+ * segments, a shortcut's keys, a list's items, a tree's nodes, a docs tree) throw before
+ * emitting any CSS otherwise, which would quietly shrink the sweep.
  */
 const PROBE_PROPS = {
 	value: "a",
 	data: [{ label: "a", value: 1, x: 1, y: 1 }],
 	segments: [{ text: "a", match: true }],
 	keys: ["a"],
+	items: [],
+	nodes: [],
+	tree: { label: "a", sections: [] },
+	code: "a",
+	tabs: [],
+	rows: [],
+	packages: [],
+	labels: { copy: "a", copied: "a", name: "a", type: "a", default: "a", required: "a" },
 	children: "probe",
 };
 
