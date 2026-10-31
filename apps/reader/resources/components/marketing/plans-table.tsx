@@ -22,8 +22,12 @@ import { TIERS, TIER_LIMITS } from "~/app/services/entitlement";
 import { formatInterval } from "~/resources/components/marketing/scenes";
 
 /** Which tiers carry each ability the policy grants, in the policy's own order. */
-const ABILITY_TIERS: Record<"articles" | "labels" | "agents" | "email", readonly Tier[]> = {
+const ABILITY_TIERS: Record<
+	"articles" | "folders" | "labels" | "agents" | "email",
+	readonly Tier[]
+> = {
 	articles: ["paid", "premium"],
+	folders: ["paid", "premium"],
 	labels: ["paid", "premium"],
 	agents: ["paid", "premium"],
 	email: ["premium"],
@@ -88,7 +92,7 @@ export default function PlansTable(handle: Handle<PlansTable.Props>) {
 					return interval === null ? no : formatInterval(interval);
 				}),
 			},
-			...(["articles", "labels", "agents", "email"] as const).map((ability) => ({
+			...(["articles", "folders", "labels", "agents", "email"] as const).map((ability) => ({
 				label: t(`landing.plans.rows.${ability}`),
 				cells: perTier((tier) => (ABILITY_TIERS[ability].includes(tier) ? yes : no)),
 			})),

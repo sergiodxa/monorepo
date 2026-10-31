@@ -15,6 +15,20 @@ export default {
 	},
 
 	nav: {
+		descriptions: {
+			freshness: "Cada feed, tan seguido como publica",
+			filters: "Descarta, marca leída o destaca al llegar",
+			articles: "La pieza completa, sin salir",
+			search: "Frases, OR y menos, guardadas en la barra",
+			notifications: "Un aviso por revisión, silencio de noche",
+			organize: "Carpetas, fijados y etiquetas",
+			yourData: "OPML de ida y vuelta, y un ZIP con todo",
+			agents: "Tu asistente lee tu cola por MCP",
+			news: "Feeds activos, plazos cortos, sin ruido",
+			developers: "Destaca versiones, entérate de arreglos",
+			research: "Busca y etiqueta lo que guardas",
+			podcasts: "Episodios junto a los ensayos",
+		},
 		label: "Principal",
 		menu: "Abrir menú",
 		close: "Cerrar menú",
@@ -527,7 +541,7 @@ export default {
 				title: "Agrupa los feeds, {#strong}etiqueta lo que guardas{/strong}",
 				description:
 					"Una carpeta lee sus feeds como un solo flujo. Un feed fijado queda arriba en la barra lateral. Una entrada guardada se queda pase lo que pase con su feed, y una etiqueta dice por qué la guardaste.",
-				plan: "Las etiquetas vienen con los planes Paid y Premium.",
+				plan: "Las carpetas y etiquetas vienen con los planes Paid y Premium; los fijados, con todos.",
 				heroAlt:
 					"La página de Guardadas: dos entradas guardadas, el feed fijado de la barra lateral y carpetas con sus entradas sin leer, y tres etiquetas.",
 				stepsAlt: "La página de Harbor Daily, donde un feed se guarda en una carpeta.",
@@ -754,6 +768,7 @@ export default {
 			filters: "Filtros",
 			checks: "Revisiones para notificaciones",
 			articles: "Artículos aquí mismo",
+			folders: "Carpetas",
 			labels: "Etiquetas",
 			agents: "Agentes (MCP)",
 			email: "Notificaciones por correo",
@@ -1262,7 +1277,7 @@ export default {
 		},
 		free: {
 			q: "¿Qué es gratis?",
-			a: "Seguir {$freeFeeds} feeds, la cola, las carpetas, la búsqueda de los últimos {$freeSearchDays} días, las entradas guardadas y la importación y exportación OPML.",
+			a: "Seguir {$freeFeeds} feeds, la cola, la búsqueda de los últimos {$freeSearchDays} días, las entradas guardadas y la importación y exportación OPML.",
 		},
 		over: {
 			q: "¿Qué pasa si supero mi plan?",

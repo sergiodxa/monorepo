@@ -21,6 +21,20 @@ export default {
 		signIn: "Sign in",
 		open: "Open your reading",
 		plans: "Plans",
+		descriptions: {
+			freshness: "Each feed fetched as often as it posts",
+			filters: "Drop, mark read or flag as posts arrive",
+			articles: "The whole piece, without leaving",
+			search: "Phrases, OR and minus, saved to the sidebar",
+			notifications: "One message per check, quiet at night",
+			organize: "Folders, pins and labels on what you keep",
+			yourData: "OPML in and out, and a ZIP of everything",
+			agents: "Your assistant reads your queue over MCP",
+			news: "Busy feeds, short spans, no churn",
+			developers: "Flag releases, hear about fixes",
+			research: "Search and label what you keep",
+			podcasts: "Episodes beside the essays",
+		},
 		features: {
 			label: "Features",
 			reading: "Reading",
@@ -520,7 +534,7 @@ export default {
 				title: "Group the feeds, {#strong}label what you keep{/strong}",
 				description:
 					"A folder reads its feeds as one stream. A pinned feed sits at the top of the sidebar. A saved post stays whatever happens to its feed, and a label says why you kept it.",
-				plan: "Labels come with the Paid and Premium plans.",
+				plan: "Folders and labels come with the Paid and Premium plans; pins with every plan.",
 				heroAlt:
 					"The Saved page: two kept posts, the sidebar's pinned feed and folders with their unread counts, and three labels.",
 				stepsAlt: "Harbor Daily's own page, where a feed is filed into a folder.",
@@ -741,6 +755,7 @@ export default {
 			filters: "Filters",
 			checks: "Checks for notifications",
 			articles: "Articles in place",
+			folders: "Folders",
 			labels: "Labels",
 			agents: "Agents (MCP)",
 			email: "Email notifications",
@@ -1243,7 +1258,7 @@ export default {
 		},
 		free: {
 			q: "What is free?",
-			a: "Following {$freeFeeds} feeds, the queue, folders, search of the last {$freeSearchDays} days, saved posts and OPML import and export.",
+			a: "Following {$freeFeeds} feeds, the queue, search of the last {$freeSearchDays} days, saved posts and OPML import and export.",
 		},
 		over: {
 			q: "What happens if I go over my plan?",

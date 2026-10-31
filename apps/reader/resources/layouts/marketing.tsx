@@ -104,11 +104,13 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 		let featureLinks = FEATURE_SLUGS.map((slug) => ({
 			label: t(`landing.nav.features.${FEATURE_KEYS[slug]}`),
+			description: t(`landing.nav.descriptions.${FEATURE_KEYS[slug]}`),
 			href: routes.marketing.feature.href({ slug }),
 			icon: FEATURE_ICONS[slug],
 		}));
 		let useCaseLinks = USE_CASE_SLUGS.map((slug) => ({
 			label: t(`landing.nav.useCases.${slug}`),
+			description: t(`landing.nav.descriptions.${slug}`),
 			href: routes.marketing.useCase.href({ slug }),
 			icon: USE_CASE_ICONS[slug],
 		}));
