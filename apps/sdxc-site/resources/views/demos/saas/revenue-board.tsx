@@ -122,7 +122,7 @@ export function RevenueBoard() {
 										p(1, 2.5),
 										raw({ borderRadius: "0.375rem" }),
 										range === "Year"
-											? [bg("neutral.tint-hover"), fg("neutral.emphasis"), weight("medium")]
+											? [bg("neutral.bg-tint-hover"), fg("neutral.emphasis"), weight("medium")]
 											: fg("neutral"),
 									]}
 								>
@@ -308,7 +308,7 @@ function Rail() {
 						p(1.5, 2),
 						raw({ borderRadius: "0.5rem" }),
 						index === 0
-							? [bg("neutral.tint-hover"), fg("neutral.emphasis"), weight("medium")]
+							? [bg("neutral.bg-tint-hover"), fg("neutral.emphasis"), weight("medium")]
 							: fg("neutral"),
 					]}
 				>

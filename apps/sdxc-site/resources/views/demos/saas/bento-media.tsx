@@ -91,7 +91,7 @@ export function PortalScene() {
 					<span
 						mix={[
 							bs("0.5rem"),
-							bg("neutral.tint-hover"),
+							bg("neutral.bg-tint-hover"),
 							raw({ borderRadius: "9999px", overflow: "hidden" }),
 						]}
 					>
