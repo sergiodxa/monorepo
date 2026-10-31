@@ -29,9 +29,10 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 		styleSrc: ["self", "unsafe-inline"],
 		/**
 		 * A publisher's image reaches a reader through the media route or not at all, so a
-		 * tracking pixel that survives the sanitizer still makes no request.
+		 * tracking pixel that survives the sanitizer still makes no request. `data:` admits the
+		 * inline SVG masks the interface draws its check marks with, which fetch nothing.
 		 */
-		imgSrc: ["self"],
+		imgSrc: ["self", "data:"],
 		fontSrc: ["self"],
 		connectSrc: ["self"],
 		/** A browser keeps no push subscription for a page whose manifest it could not read. */
