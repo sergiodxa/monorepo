@@ -10,11 +10,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
-import { raw } from "@sdxc/u/general";
+import { mergeMix, raw } from "@sdxc/u/general";
 import { motionSafe } from "@sdxc/u/responsive";
 
+import { PauseToggle, pausedWhenChecked } from "../utils/pause-toggle.js";
+
 import { CodeStage } from "./code-stage.js";
-import { MotionLoop } from "./motion-loop.js";
 
 /** Time each typed character takes, so every terminal types at the same speed. */
 const CHAR_MS = 35;
@@ -45,9 +46,6 @@ const RESET_AT = 95;
 
 /** Percent of the cycle an output line takes to fade in. */
 const FADE = 1.5;
-
-/** Room the header keeps at its end for the pause toggle pinned to the panel's top corner. */
-const PAUSE_CLEARANCE = "2.75rem";
 
 /** Name of the caret's blink, shared by every terminal since it never depends on content. */
 const BLINK = "ui-typed-terminal-blink";
@@ -90,7 +88,8 @@ export namespace TypedTerminal {
 }
 
 /**
- * Renders the session as one `<pre>` in the terminal panel inside a {@link MotionLoop}.
+ * Renders the session as one `<pre>` in the terminal panel, with its pause toggle in the
+ * panel's title bar, centred against the title.
  * Every line's full text is in the markup from the start, clipped only visually while it
  * types, so screen readers and copy read the whole session and reduced motion shows it done.
  *
@@ -124,7 +123,11 @@ export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 		}
 
 		return (
-			<MotionLoop {...rest} pauseLabel={pauseLabel} placement="start-end" mix={mix}>
+			<div
+				{...rest}
+				data-slot="motion-loop"
+				mix={mergeMix([pausedWhenChecked('[data-slot="typed-terminal"]')], mix)}
+			>
 				<figure
 					aria-label={label}
 					data-slot="typed-terminal"
@@ -133,17 +136,12 @@ export function TypedTerminal(handle: Handle<TypedTerminal.Props>) {
 					<CodeStage
 						variant="terminal"
 						title={title}
-						actions={
-							<span
-								aria-hidden="true"
-								mix={[raw({ flexShrink: "0", inlineSize: PAUSE_CLEARANCE })]}
-							/>
-						}
+						actions={<PauseToggle label={pauseLabel ?? "Pause the animation"} />}
 					>
 						{nodes}
 					</CodeStage>
 				</figure>
-			</MotionLoop>
+			</div>
 		);
 	};
 }

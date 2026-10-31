@@ -402,6 +402,8 @@ function textFade(timing: Timing, index: number) {
 /**
  * An arrow's shaft, drawn out from the sender's side of the track. `forward` arrows point
  * toward the inline end, so the origin flips on right-to-left pages along with the columns.
+ * At the reset it fades out at full length with its head, so a shaft never pulls away
+ * from the arrowhead it ends in.
  */
 function arrowLine(timing: Timing, index: number, forward: boolean) {
 	let name = `ui-sequence-diagram-arrow-${timing.count}-${index}`;
@@ -410,12 +412,12 @@ function arrowLine(timing: Timing, index: number, forward: boolean) {
 
 	return [
 		keyframes(name, {
-			"0%": { transform: "scaleX(0)" },
-			[`${from}%`]: { transform: "scaleX(0)" },
-			[`${to}%`]: { transform: "scaleX(1)" },
-			[`${RESET_AT}%`]: { transform: "scaleX(1)" },
-			[`${RESET_AT + 2}%`]: { transform: "scaleX(0)" },
-			"100%": { transform: "scaleX(0)" },
+			"0%": { transform: "scaleX(0)", opacity: "1" },
+			[`${from}%`]: { transform: "scaleX(0)", opacity: "1" },
+			[`${to}%`]: { transform: "scaleX(1)", opacity: "1" },
+			[`${RESET_AT}%`]: { transform: "scaleX(1)", opacity: "1" },
+			[`${RESET_AT + 2}%`]: { transform: "scaleX(1)", opacity: "0" },
+			"100%": { transform: "scaleX(1)", opacity: "0" },
 		}),
 		raw({
 			position: "absolute",

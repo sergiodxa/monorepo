@@ -71,6 +71,17 @@ describe("TypedTerminal", () => {
 		expect(host.textContent).toContain("sign-in.spec");
 	});
 
+	test("centres the pause toggle inside the title bar", () => {
+		let host = mount();
+		let header = host.querySelector('[data-slot="code-stage-header"]')!.getBoundingClientRect();
+		let toggle = host.querySelector('[data-slot="pause-toggle"]')!.getBoundingClientRect();
+		expect(toggle.top).toBeGreaterThanOrEqual(header.top);
+		expect(toggle.bottom).toBeLessThanOrEqual(header.bottom);
+		expect(
+			Math.abs(toggle.top + toggle.height / 2 - (header.top + header.height / 2)),
+		).toBeLessThan(1);
+	});
+
 	test("shows the prompt glyph before input lines only", () => {
 		let host = document.createElement("div");
 		document.body.appendChild(host);
@@ -129,7 +140,7 @@ describe("TypedTerminal", () => {
 					/>
 				</div>,
 			);
-			let toggle = mounted.$('[data-slot="motion-loop"] > :last-child')!.getBoundingClientRect();
+			let toggle = mounted.$('[data-slot="pause-toggle"]')!.getBoundingClientRect();
 			let walker = document.createTreeWalker(mounted.$("figure")!, NodeFilter.SHOW_TEXT);
 			while (walker.nextNode()) {
 				let range = document.createRange();

@@ -209,6 +209,22 @@ describe("SequenceDiagram", () => {
 		expect(firstShaft(five)).not.toBe(firstShaft(two));
 	});
 
+	/**
+	 * Seeks every animation to a moment inside the reset, when the arrows clear for the next
+	 * loop. A shaft that shrank there while its head still showed read as a broken arrow.
+	 */
+	test("keeps each shaft joined to its head while the loop resets", () => {
+		let host = mount(MESSAGES, 520);
+		for (let animation of document.getAnimations()) animation.currentTime = 9_450;
+		for (let arrow of host.querySelectorAll('[data-slot="sequence-diagram-arrow"]')) {
+			let track = arrow.getBoundingClientRect();
+			let shaft = arrow.querySelector("span")!;
+			let head = arrow.querySelector("svg")!;
+			expect(Math.round(shaft.getBoundingClientRect().width)).toBe(Math.round(track.width));
+			expect(getComputedStyle(shaft).opacity).toBe(getComputedStyle(head).opacity);
+		}
+	});
+
 	test("holds the finished exchange still under reduced motion", async () => {
 		await cdp().send("Emulation.setEmulatedMedia", {
 			features: [{ name: "prefers-reduced-motion", value: "reduce" }],
