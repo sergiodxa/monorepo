@@ -120,8 +120,9 @@ Where something is explained, answered with the heading's own URL.
 
 ## Connecting
 
-Point a client at the endpoint. Most take a URL directly; the ones that read a configuration file
-take this file.
+The endpoint speaks the current MCP revision only. Clients that still open with the older
+handshake connect through [`mcp-bridge`](/docs/operations-and-testing/mcp-bridge), a small stdio
+process from [`@sdxc/mcp`](/api/mcp) that the client starts and that talks to the endpoint for it.
 
 - No credential to issue, rotate or paste
 - No session to keep alive between calls
@@ -137,7 +138,8 @@ take this file.
 {
 	"mcpServers": {
 		"sdxc": {
-			"url": "https://sdxc.dev/mcp"
+			"command": "npx",
+			"args": ["-y", "@sdxc/mcp@latest", "https://sdxc.dev/mcp"]
 		}
 	}
 }
@@ -148,7 +150,7 @@ take this file.
 <code-tab label="Claude Code">
 
 ```bash {% title="Terminal" %}
-claude mcp add --transport http sdxc https://sdxc.dev/mcp
+claude mcp add --transport stdio sdxc -- npx -y @sdxc/mcp@latest https://sdxc.dev/mcp
 ```
 
 </code-tab>

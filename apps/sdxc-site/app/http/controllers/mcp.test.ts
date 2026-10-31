@@ -34,4 +34,15 @@ describe("GET /mcp", () => {
 
 		for (let tool of Object.values(toolset)) expect(body).toContain(tool.name);
 	});
+
+	test("connects every client through mcp-bridge from @sdxc/mcp", async () => {
+		let body = await (await fetchApp("/mcp")).text();
+
+		expect(body).toContain("@sdxc/mcp@latest");
+		expect(body).toContain("mcp-bridge");
+		expect(body).not.toContain("--transport http");
+		expect(body).not.toMatch(
+			/&quot;url&quot;:\s*&quot;https:\/\/sdxc\.dev\/mcp&quot;|"url":\s*"https:\/\/sdxc\.dev\/mcp"/,
+		);
+	});
 });
