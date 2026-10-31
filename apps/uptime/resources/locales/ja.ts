@@ -239,6 +239,23 @@ export default {
 				passed: "実行成功",
 				alert: "失敗したステップはチームに通知されます",
 			},
+
+			runs: {
+				name: "サインインフローの最近の実行（新しい順）",
+				title: "サインインフロー、{$minutes}分ごと",
+				label: "サインインフロー",
+				passed: "{$steps}ステップ・{$seconds}秒",
+				failed: "ステップ{$step}/{$steps}で失敗",
+				running: "ステップ{$step}/{$steps}",
+				recovered: "復旧・{$steps}ステップ・{$seconds}秒",
+				footnote: "チームへのアラートには失敗した行が示されます",
+				statuses: {
+					ok: "成功",
+					warn: "低速",
+					fail: "失敗",
+					pending: "実行中",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -744,6 +761,10 @@ export default {
 	 * `/trust` — how the monitoring works and who runs it.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps}ステップ · {$seconds}秒",
+			nextRun: "次回の実行は{$minutes}分後",
+		},
 		eyebrow: "ブラウザフロー",
 		figures: {
 			fastest: { label: "最短の間隔", value: "{$minutes} 分" },

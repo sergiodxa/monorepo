@@ -161,17 +161,12 @@ export const browserFlowsPage = {
 			},
 		],
 		/**
-		 * The sign-in example's run as the steps diagram plays it: each caption over the spec
-		 * line from {@link BROWSER_FLOW_EXAMPLES} that performs it.
+		 * The sign-in example's run as the terminal beside the steps types it: the spec's file
+		 * name over its lines from {@link BROWSER_FLOW_EXAMPLES}, in run order.
 		 */
 		diagram: {
-			name: "A browser flow run, step by step",
-			steps: [
-				"Open the sign-in page",
-				"Fill the Email field",
-				"Click Sign in",
-				"Expect the dashboard heading",
-			],
+			name: "The sign-in spec and its browser run",
+			file: "sign-in.spec",
 			code: [
 				'browser.open "…/login"',
 				'browser.fill textbox "Email" with …',

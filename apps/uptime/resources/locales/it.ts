@@ -239,6 +239,23 @@ export default {
 				passed: "Esecuzione riuscita",
 				alert: "Un passaggio fallito avvisa il tuo team",
 			},
+
+			runs: {
+				name: "Esecuzioni recenti del flusso di accesso, la più recente in alto",
+				title: "Flusso di accesso, ogni {$minutes} minuti",
+				label: "Flusso di accesso",
+				passed: "{$steps} passaggi in {$seconds} s",
+				failed: "Fallito al passaggio {$step} di {$steps}",
+				running: "Passaggio {$step} di {$steps}",
+				recovered: "Ripristinato · {$steps} passaggi in {$seconds} s",
+				footnote: "L’avviso al tuo team indica la riga che è fallita",
+				statuses: {
+					ok: "Superato",
+					warn: "Lento",
+					fail: "Fallito",
+					pending: "In corso",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -752,6 +769,10 @@ export default {
 	 * `/trust` — come funziona il monitoraggio e chi lo gestisce.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps} passaggi · {$seconds} s",
+			nextRun: "Prossima esecuzione tra {$minutes} min",
+		},
 		eyebrow: "Flussi browser",
 		figures: {
 			fastest: { label: "Intervallo più breve", value: "{$minutes} min" },

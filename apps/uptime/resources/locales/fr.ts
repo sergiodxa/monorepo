@@ -240,6 +240,23 @@ export default {
 				passed: "Exécution réussie",
 				alert: "Une étape en échec alerte votre équipe",
 			},
+
+			runs: {
+				name: "Exécutions récentes du flux de connexion, la plus récente en premier",
+				title: "Flux de connexion, toutes les {$minutes} minutes",
+				label: "Flux de connexion",
+				passed: "{$steps} étapes en {$seconds} s",
+				failed: "Échec à l’étape {$step} sur {$steps}",
+				running: "Étape {$step} sur {$steps}",
+				recovered: "Rétabli · {$steps} étapes en {$seconds} s",
+				footnote: "L’alerte envoyée à votre équipe nomme la ligne en échec",
+				statuses: {
+					ok: "Réussi",
+					warn: "Lent",
+					fail: "Échec",
+					pending: "En cours",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -755,6 +772,10 @@ export default {
 	 * `/trust` — comment fonctionne la surveillance et qui l'opère.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps} étapes · {$seconds} s",
+			nextRun: "Prochaine exécution dans {$minutes} min",
+		},
 		eyebrow: "Flux navigateur",
 		figures: {
 			fastest: { label: "Intervalle le plus court", value: "{$minutes} min" },

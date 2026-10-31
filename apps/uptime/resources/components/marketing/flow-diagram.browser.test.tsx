@@ -1,6 +1,6 @@
 /**
- * Renders the flow diagram in a real browser: a page passing its own spec lines sees those
- * lines in run order under the documented step captions.
+ * Renders the flow diagram in a real browser: every step prints its line of the documented
+ * HTTP sign-in flow, in run order under the step captions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,14 +43,18 @@ afterEach(async () => {
 });
 
 describe("FlowDiagram", () => {
-	test("prints the spec lines a page passes, in run order", async () => {
+	test("prints the documented sign-in flow's spec lines, in run order", async () => {
 		await page.viewport(1280, 900);
-		let code = ["browser.open", "browser.fill", "browser.click", "expect browser.heading"] as const;
-		mounted = render(<FlowDiagram labels={LABELS} code={code} />);
+		mounted = render(<FlowDiagram labels={LABELS} />);
 
 		let printed = [...mounted.container.querySelectorAll("ol code")].map(
 			(line) => line.textContent,
 		);
-		expect(printed).toEqual([...code]);
+		expect(printed).toEqual([
+			'http.post "/api/sessions" form { … }',
+			"session.json.token",
+			'http.get "/v1/account" bearer session.json.token',
+			"expect account.status 200",
+		]);
 	});
 });

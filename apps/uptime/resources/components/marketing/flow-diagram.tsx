@@ -32,11 +32,6 @@ namespace FlowDiagram {
 			passed: string;
 			alert: string;
 		};
-		/**
-		 * The spec line under each step, in run order; the documented HTTP sign-in flow when
-		 * omitted, so a page about another kind of flow shows its own syntax.
-		 */
-		code?: readonly [string, string, string, string];
 	}
 }
 
@@ -46,7 +41,7 @@ namespace FlowDiagram {
  */
 export default function FlowDiagram(handle: Handle<FlowDiagram.Props>) {
 	return () => {
-		let { labels, code = STEP_CODE } = handle.props;
+		let { labels } = handle.props;
 
 		return (
 			<RunDiagram
@@ -57,7 +52,7 @@ export default function FlowDiagram(handle: Handle<FlowDiagram.Props>) {
 					title: labels.schedule,
 					detail: labels.scheduleDetail,
 				}}
-				steps={code.map((line, index) => ({ title: labels.steps[index], code: line }))}
+				steps={STEP_CODE.map((line, index) => ({ title: labels.steps[index], code: line }))}
 				outcome={labels.passed}
 				footnote={
 					<>

@@ -185,6 +185,19 @@ describe("GET /features/:slug", () => {
 		},
 	);
 
+	/**
+	 * The flows page shows runs landing on the fastest schedule with the failing run's spec line,
+	 * so the claim that an alert names its line is shown, not stated.
+	 */
+	test("shows the flows page's runs with the failing spec line", async () => {
+		let response = await getFeature("flows");
+
+		let body = await response.text();
+		let band = body.slice(body.indexOf('id="how-it-works"'), body.indexOf('id="faq"'));
+		expect(band).toContain(`aria-label="${escapeHtml(en.landing.flows.runs.name)}"`);
+		expect(band).toContain("expect account.status 200 → got 401");
+	});
+
 	test("renders the not-found page for an unknown slug", async () => {
 		let response = await getFeature("does-not-exist");
 

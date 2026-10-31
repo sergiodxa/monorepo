@@ -1724,7 +1724,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 		],
 		spotlight: {
 			eyebrow: "Flow monitors",
-			title: "Watch a sign-in run, step by step",
+			title: "Watch every sign-in run land",
 			description:
 				"Each run signs in, checks the token and calls what it authorises; the first failing step is the one the alert names.",
 			points: [

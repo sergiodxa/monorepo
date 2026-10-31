@@ -29,6 +29,7 @@ import {
 	FeatureBand,
 	LandingHero,
 	StepList,
+	TypedTerminal,
 } from "@sdxc/ui/patterns";
 import { createAction } from "remix/router";
 
@@ -42,7 +43,6 @@ import {
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import FlowDiagram from "~/resources/components/marketing/flow-diagram";
 import ProductMockup from "~/resources/components/marketing/product-mockups";
 import { BROWSER_FLOW_EXAMPLES, browserFlowsPage } from "~/resources/content/browser-flows";
 import DocumentLayout from "~/resources/layouts/document";
@@ -238,19 +238,28 @@ export default createAction(routes.browserFlows, async (ctx) => {
 					description={page.steps.description}
 					mix={[viewReveal()]}
 					media={
-						<FlowDiagram
-							labels={{
-								name: page.steps.diagram.name,
-								pause: t("landing.flows.diagram.pause"),
-								schedule: t("landing.flows.diagram.schedule"),
-								scheduleDetail: t("landing.flows.diagram.scheduleDetail", {
-									minutes: FLOW_INTERVALS_SECONDS[0] / 60,
-								}),
-								steps: [...page.steps.diagram.steps],
-								passed: t("landing.flows.diagram.passed"),
-								alert: t("landing.flows.diagram.alert"),
-							}}
-							code={page.steps.diagram.code}
+						<TypedTerminal
+							aria-label={page.steps.diagram.name}
+							pauseLabel={t("landing.flows.diagram.pause")}
+							title={page.steps.diagram.file}
+							lines={[
+								...page.steps.diagram.code.map((text) => ({ kind: "input" as const, text })),
+								{
+									kind: "output",
+									status: "ok",
+									text: t("browserFlows.terminal.passed", {
+										steps: page.steps.diagram.code.length,
+										seconds: 2.1,
+									}),
+								},
+								{
+									kind: "output",
+									status: "muted",
+									text: t("browserFlows.terminal.nextRun", {
+										minutes: FLOW_INTERVALS_SECONDS[0] / 60,
+									}),
+								},
+							]}
 						/>
 					}
 				>

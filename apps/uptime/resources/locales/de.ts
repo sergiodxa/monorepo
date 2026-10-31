@@ -239,6 +239,23 @@ export default {
 				passed: "Lauf erfolgreich",
 				alert: "Ein fehlgeschlagener Schritt alarmiert dein Team",
 			},
+
+			runs: {
+				name: "Letzte Läufe des Anmelde-Flows, neueste zuerst",
+				title: "Anmelde-Flow, alle {$minutes} Minuten",
+				label: "Anmelde-Flow",
+				passed: "{$steps} Schritte in {$seconds} s",
+				failed: "Fehlgeschlagen bei Schritt {$step} von {$steps}",
+				running: "Schritt {$step} von {$steps}",
+				recovered: "Wiederhergestellt · {$steps} Schritte in {$seconds} s",
+				footnote: "Der Alarm an dein Team nennt die Zeile, die fehlgeschlagen ist",
+				statuses: {
+					ok: "Bestanden",
+					warn: "Langsam",
+					fail: "Fehlgeschlagen",
+					pending: "Läuft",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -757,6 +774,10 @@ export default {
 	 * `/trust` — wie die Überwachung funktioniert und wer sie betreibt.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps} Schritte · {$seconds} s",
+			nextRun: "Nächster Lauf in {$minutes} Min.",
+		},
 		eyebrow: "Browser-Flows",
 		figures: {
 			fastest: { label: "Kürzestes Intervall", value: "{$minutes} Min." },

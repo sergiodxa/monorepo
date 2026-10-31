@@ -239,6 +239,23 @@ export default {
 				passed: "Ejecución correcta",
 				alert: "Un paso fallido alerta a tu equipo",
 			},
+
+			runs: {
+				name: "Ejecuciones recientes del flujo de inicio de sesión, la más nueva primero",
+				title: "Flujo de inicio de sesión, cada {$minutes} minutos",
+				label: "Inicio de sesión",
+				passed: "{$steps} pasos en {$seconds} s",
+				failed: "Falló en el paso {$step} de {$steps}",
+				running: "Paso {$step} de {$steps}",
+				recovered: "Recuperado · {$steps} pasos en {$seconds} s",
+				footnote: "La alerta a tu equipo nombra la línea que falló",
+				statuses: {
+					ok: "Correcto",
+					warn: "Lento",
+					fail: "Fallido",
+					pending: "En curso",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -753,6 +770,10 @@ export default {
 	 * `/trust` — cómo funciona el monitoreo y quién lo opera.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps} pasos · {$seconds} s",
+			nextRun: "Próxima ejecución en {$minutes} min",
+		},
 		eyebrow: "Flujos en navegador",
 		figures: {
 			fastest: { label: "Intervalo más corto", value: "{$minutes} min" },

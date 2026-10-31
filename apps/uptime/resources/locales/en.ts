@@ -254,6 +254,23 @@ export default {
 				passed: "Run passed",
 				alert: "A failed step alerts your team",
 			},
+
+			runs: {
+				name: "Recent sign-in flow runs, newest first",
+				title: "Sign-in flow, every {$minutes} minutes",
+				label: "Sign-in flow",
+				passed: "{$steps} steps in {$seconds}s",
+				failed: "Failed at step {$step} of {$steps}",
+				running: "Step {$step} of {$steps}",
+				recovered: "Recovered · {$steps} steps in {$seconds}s",
+				footnote: "The alert to your team names the line that failed",
+				statuses: {
+					ok: "Passed",
+					warn: "Slow",
+					fail: "Failed",
+					pending: "Running",
+				},
+			},
 		},
 
 		browserExamples: {
@@ -815,6 +832,10 @@ export default {
 	 * legal pages' body prose does.
 	 */
 	browserFlows: {
+		terminal: {
+			passed: "✓ {$steps} steps · {$seconds}s",
+			nextRun: "Next run in {$minutes} min",
+		},
 		eyebrow: "Browser flows",
 		figures: {
 			fastest: { label: "Fastest schedule", value: "{$minutes} min" },

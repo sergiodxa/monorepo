@@ -31,12 +31,12 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
-import { FLOW_INTERVALS_SECONDS, FREE_TRIAL_DAYS } from "~/config/pricing";
+import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import { IntegrationsScene, SslScene } from "~/resources/components/marketing/capability-scenes";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
-import FlowDiagram from "~/resources/components/marketing/flow-diagram";
+import FlowRunsTicker from "~/resources/components/marketing/flow-runs-ticker";
 import ProductMockup, { FEATURE_MOCKUPS } from "~/resources/components/marketing/product-mockups";
 import { AlertsScene } from "~/resources/components/marketing/product-scenes";
 import {
@@ -139,26 +139,7 @@ function featureCompanion(slug: string, t: Translate): RemixNode {
 				</CodeStage>
 			);
 		case "flows":
-			return (
-				<FlowDiagram
-					labels={{
-						name: t("landing.flows.diagram.name"),
-						pause: t("landing.flows.diagram.pause"),
-						schedule: t("landing.flows.diagram.schedule"),
-						scheduleDetail: t("landing.flows.diagram.scheduleDetail", {
-							minutes: FLOW_INTERVALS_SECONDS[0] / 60,
-						}),
-						steps: [
-							t("landing.flows.diagram.signIn"),
-							t("landing.flows.diagram.token"),
-							t("landing.flows.diagram.call"),
-							t("landing.flows.diagram.check"),
-						],
-						passed: t("landing.flows.diagram.passed"),
-						alert: t("landing.flows.diagram.alert"),
-					}}
-				/>
-			);
+			return <FlowRunsTicker t={t} />;
 		default:
 			return <ProductMockup area="dashboard" t={t} />;
 	}

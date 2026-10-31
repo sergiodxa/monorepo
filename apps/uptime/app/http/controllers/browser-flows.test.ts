@@ -118,5 +118,7 @@ describe("GET /browser-flows", () => {
 		expect(band).toContain("browser.open");
 		expect(band).toContain("expect browser.heading");
 		expect(band).not.toContain("http.post");
+		expect(band).toContain(browserFlowsPage.steps.diagram.file);
+		expect(band).toContain("Next run in");
 	});
 });
