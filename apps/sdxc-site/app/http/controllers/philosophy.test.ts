@@ -35,6 +35,11 @@ describe("GET /philosophy", () => {
 		expect(body).toContain(`The other ${facts.remixTargeted} bind something to Remix`);
 		expect(body).toContain(`${facts.standalone} of the`);
 		expect(body).toContain(`${facts.frameworkFree} of\nthe ${facts.published}`);
+		expect(body).toMatch(
+			new RegExp(`<h1[^>]*>Six habits, kept for ${facts.published} packages</h1>`),
+		);
+		expect(body).toContain(`Six habits that recur across ${facts.published} packages`);
+		expect(body).not.toContain("sixty");
 		expect(body).not.toContain("$packageCount");
 		expect(body).not.toContain("$remixCount");
 		expect(body).not.toContain("$standaloneCount");

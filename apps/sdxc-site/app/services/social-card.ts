@@ -191,7 +191,7 @@ function homeContent(): SocialCard.HomeContent {
 	return {
 		kind: "home",
 		tagline: "Take one, or take the set.",
-		description: `${counts.packageCount ?? ""} packages for Remix on Cloudflare Workers: Request and Response in, typed values out.`,
+		description: `${counts.packageCount ?? ""} packages built on web standards: Request and Response in, typed values out.`,
 		stats: [
 			stat("packageCount", "packages"),
 			stat("rfcCount", "RFCs followed"),

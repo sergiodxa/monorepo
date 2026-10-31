@@ -77,7 +77,7 @@ describe("socialCardContent", () => {
 		expect(content.kind).toBe("home");
 		if (content.kind !== "home") return;
 		expect(content.tagline).toBe("Take one, or take the set.");
-		expect(content.description).toMatch(/^\d+ packages for Remix on Cloudflare Workers/);
+		expect(content.description).toMatch(/^\d+ packages built on web standards/);
 		expect(content.stats.map((stat) => stat.label)).toContain("packages");
 		for (let stat of content.stats) expect(stat.value).toMatch(/^\d+$/);
 	});

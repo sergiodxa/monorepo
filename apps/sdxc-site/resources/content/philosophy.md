@@ -2,7 +2,7 @@
 <split>
 <split-copy>
 
-# Six habits, kept for sixty packages
+# Six habits, kept for {% $packageCount %} packages
 
 A collection is worth taking as a set only if the next package behaves like the last one. These
 {% $packageCount %} were written one at a time, over a couple of years, and what makes them a

@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/initializers/cache";
+import { contentVariables } from "~/app/services/article";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
@@ -24,9 +25,10 @@ import philosophySource from "~/resources/content/philosophy.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** The one-sentence summary search results and link previews show. */
-const DESCRIPTION =
-	"Six habits that recur across sixty packages, each one argued out in a decision the repository still carries — including the ones that were reversed.";
+/** The one-sentence summary search results and link previews show, quoting the counted total. */
+function describe(packageCount: string): string {
+	return `Six habits that recur across ${packageCount} packages, each one argued out in a decision the repository still carries — including the ones that were reversed.`;
+}
 
 export default createAction(routes.philosophy, async (ctx) => {
 	let content = readContent(philosophySource);
@@ -42,7 +44,7 @@ export default createAction(routes.philosophy, async (ctx) => {
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Philosophy — sdxc"
-			description={DESCRIPTION}
+			description={describe(contentVariables().packageCount ?? "")}
 			canonical={ctx.url.href}
 		>
 			<SiteHeader activePath={routes.philosophy.href()} />
