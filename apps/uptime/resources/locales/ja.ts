@@ -674,6 +674,67 @@ export default {
 			faqTitle: "よくある質問",
 			faqDescription: "監視を始める前によく寄せられる質問をまとめました。",
 			finalCtaTitle: "サービスの監視を始めましょう",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts: "1 回の障害で届く 2 つのアラート：api.example.com のダウンと復旧。",
+				integrations: "1 つのアラートを Slack、PagerDuty、Discord、メール、Webhook に配信。",
+				ssl: "有効期限までのカウントダウン中の 3 つの証明書：2 つは有効、status.example.com はあと 9 日で期限切れ。",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "すべてのリージョンから、毎分",
+					steps: "URL から 1 年分の履歴へ",
+				},
+				alerts: {
+					features: "障害の通知と、復旧の通知",
+					steps: "一度設定すれば、障害を見逃さない",
+				},
+				"status-pages": {
+					features: "問い合わせが来る前に答える",
+					steps: "モニターから公開ページへ",
+				},
+				analytics: {
+					features: "90 日間の稼働率をひと目で",
+					steps: "チェックが走り、履歴がたまる",
+				},
+				teams: {
+					features: "全員が同じ障害を見る",
+					steps: "招待からアラートの共有まで",
+				},
+				api: {
+					features: "ダッシュボードの操作をすべてスクリプトで",
+					steps: "スコープ付きキーから自動化へ",
+				},
+				integrations: {
+					features: "アラートはチームのチャットに届く",
+					steps: "Webhook を貼るだけでアラートが届く",
+				},
+				maintenance: {
+					features: "デプロイは静かに、障害は確実に",
+					steps: "メンテナンス中、アラートは待機する",
+				},
+				flows: {
+					features: "サインインの各ステップを検証",
+					steps: "スペックから失敗した行まで",
+				},
+				dns: {
+					features: "レコードの変更をすべて報告",
+					steps: "ドメインからレコードの差分へ",
+				},
+				ssl: {
+					features: "更新するまで通知が続く",
+					steps: "有効期限から更新まで",
+				},
+				"cron-jobs": {
+					features: "黙ったジョブがアラートになる",
+					steps: "Ping URL から実行漏れの検知まで",
+				},
+				"content-monitoring": {
+					features: "ページが違えば 200 でも失敗",
+					steps: "フレーズから不一致アラートまで",
+				},
+			},
 		},
 	},
 

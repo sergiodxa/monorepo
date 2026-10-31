@@ -686,6 +686,67 @@ export default {
 			faqTitle: "Questions fréquemment posées",
 			faqDescription: "Les questions les plus courantes avant de commencer la surveillance.",
 			finalCtaTitle: "Commencez à surveiller vos services",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts: "Les deux alertes d'une panne : api.example.com en panne, puis rétabli.",
+				integrations: "Une alerte envoyée à Slack, PagerDuty, Discord, par e-mail et à un webhook.",
+				ssl: "Trois certificats en compte à rebours : deux valides, et status.example.com expire dans 9 jours.",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "Chaque région, chaque minute",
+					steps: "D'une URL à un an d'historique",
+				},
+				alerts: {
+					features: "La panne, puis le retour à la normale",
+					steps: "Configurez une fois, soyez prévenu de chaque panne",
+				},
+				"status-pages": {
+					features: "Répondez avant qu'on vous le demande",
+					steps: "De vos moniteurs à une page publique",
+				},
+				analytics: {
+					features: "90 jours de disponibilité d'un coup d'œil",
+					steps: "Les vérifications remplissent l'historique",
+				},
+				teams: {
+					features: "Tout le monde voit la même panne",
+					steps: "D'une invitation à des alertes partagées",
+				},
+				api: {
+					features: "Chaque action du tableau de bord, scriptée",
+					steps: "D'une clé limitée à l'automatisation",
+				},
+				integrations: {
+					features: "Les alertes arrivent dans le chat de l'équipe",
+					steps: "Collez un webhook, recevez l'alerte",
+				},
+				maintenance: {
+					features: "Déploiements silencieux, pannes signalées",
+					steps: "Les alertes attendent la fin de la fenêtre",
+				},
+				flows: {
+					features: "Chaque étape d'une connexion, vérifiée",
+					steps: "D'une spec à la ligne en échec",
+				},
+				dns: {
+					features: "Chaque changement d'enregistrement, signalé",
+					steps: "D'un domaine à un diff d'enregistrements",
+				},
+				ssl: {
+					features: "Des rappels jusqu'au renouvellement",
+					steps: "D'une date d'expiration au renouvellement",
+				},
+				"cron-jobs": {
+					features: "Une tâche silencieuse déclenche une alerte",
+					steps: "D'une URL de ping à l'exécution manquée",
+				},
+				"content-monitoring": {
+					features: "Un 200 avec la mauvaise page échoue",
+					steps: "D'une phrase à l'alerte d'écart",
+				},
+			},
 		},
 	},
 

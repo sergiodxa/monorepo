@@ -688,6 +688,67 @@ export default {
 			faqTitle: "Frequently asked questions",
 			faqDescription: "The questions people ask most before they start monitoring.",
 			finalCtaTitle: "Start monitoring your services",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts: "The two alerts one outage sends: api.example.com down, then back up.",
+				integrations: "One alert delivered to Slack, PagerDuty, Discord, email and a webhook.",
+				ssl: "Three certificates counting down to expiry: two valid, and status.example.com expiring in 9 days.",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "Every region, every minute",
+					steps: "From a URL to a year of history",
+				},
+				alerts: {
+					features: "The outage and the all-clear",
+					steps: "Set it once, hear every outage",
+				},
+				"status-pages": {
+					features: "Answer users before they ask",
+					steps: "From monitors to a public page",
+				},
+				analytics: {
+					features: "90 days of uptime at a glance",
+					steps: "Checks run, the history fills in",
+				},
+				teams: {
+					features: "Everyone sees the same outage",
+					steps: "From an invite to shared alerts",
+				},
+				api: {
+					features: "Every dashboard action, scripted",
+					steps: "From a scoped key to automation",
+				},
+				integrations: {
+					features: "Alerts land where your team talks",
+					steps: "Paste a webhook, get the alert",
+				},
+				maintenance: {
+					features: "Quiet deploys, loud outages",
+					steps: "Alerts wait out the window",
+				},
+				flows: {
+					features: "Each step of a sign-in, checked",
+					steps: "From a spec to the failing line",
+				},
+				dns: {
+					features: "Every record change, reported",
+					steps: "From a domain to a record diff",
+				},
+				ssl: {
+					features: "Reminded until you renew",
+					steps: "From an expiry date to a renewal",
+				},
+				"cron-jobs": {
+					features: "A job that stays silent alerts",
+					steps: "From a ping URL to a missed run",
+				},
+				"content-monitoring": {
+					features: "A 200 with the wrong page fails",
+					steps: "From a phrase to a mismatch alert",
+				},
+			},
 		},
 
 		/** Text alternatives for the product mockups, one per product area. */

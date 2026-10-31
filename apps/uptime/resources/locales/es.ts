@@ -684,6 +684,67 @@ export default {
 			faqTitle: "Preguntas frecuentes",
 			faqDescription: "Las dudas más habituales antes de empezar a monitorear.",
 			finalCtaTitle: "Comience a monitorear sus servicios",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts: "Las dos alertas que envía una caída: api.example.com caído y luego recuperado.",
+				integrations: "Una alerta entregada a Slack, PagerDuty, Discord, correo y un webhook.",
+				ssl: "Tres certificados en cuenta regresiva: dos válidos y status.example.com caduca en 9 días.",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "Cada región, cada minuto",
+					steps: "De una URL a un año de historial",
+				},
+				alerts: {
+					features: "La caída y la recuperación",
+					steps: "Configúrelo una vez, entérese de todo",
+				},
+				"status-pages": {
+					features: "Responda antes de que pregunten",
+					steps: "De sus monitores a una página pública",
+				},
+				analytics: {
+					features: "90 días de disponibilidad de un vistazo",
+					steps: "Las comprobaciones llenan el historial",
+				},
+				teams: {
+					features: "Todos ven la misma caída",
+					steps: "De una invitación a alertas compartidas",
+				},
+				api: {
+					features: "Cada acción del panel, automatizada",
+					steps: "De una clave con alcances a la automatización",
+				},
+				integrations: {
+					features: "Las alertas llegan al chat de su equipo",
+					steps: "Pegue un webhook y reciba la alerta",
+				},
+				maintenance: {
+					features: "Despliegues en silencio, caídas que avisan",
+					steps: "Las alertas esperan a que cierre la ventana",
+				},
+				flows: {
+					features: "Cada paso de un inicio de sesión, comprobado",
+					steps: "De la especificación a la línea que falla",
+				},
+				dns: {
+					features: "Cada cambio de registro, reportado",
+					steps: "De un dominio a la diferencia de registros",
+				},
+				ssl: {
+					features: "Recordatorios hasta que renueve",
+					steps: "De la fecha de caducidad a la renovación",
+				},
+				"cron-jobs": {
+					features: "Un trabajo que calla, alerta",
+					steps: "De una URL de ping a la ejecución perdida",
+				},
+				"content-monitoring": {
+					features: "Un 200 con la página equivocada falla",
+					steps: "De una frase a la alerta de discrepancia",
+				},
+			},
 		},
 	},
 

@@ -150,6 +150,12 @@ export namespace MarketingContent {
 		description: string;
 		highlights: [string, string, string];
 		features: Feature[];
+		/**
+		 * The capability grid's chrome. A page whose capabilities are one short line each
+		 * reads as an un-carded `list`, where raised cards would sit mostly empty.
+		 * @default "cards"
+		 */
+		featureGrid?: "cards" | "list";
 		steps: Step[];
 		faqs: Faq[];
 		/**
@@ -919,6 +925,7 @@ export const features: Record<string, MarketingContent.Page> = {
 		description:
 			"Track SSL certificate expiry and get alerts before they expire, with daily checks and a configurable warning threshold.",
 		highlights: ["Daily checks", "Configurable warning window", "Per-monitor thresholds"],
+		featureGrid: "list",
 		/**
 		 * These figures describe expiry-date tracking only. SSL monitoring compares
 		 * a manually-entered expiry date against today's date, so the copy stays

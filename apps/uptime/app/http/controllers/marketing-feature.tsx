@@ -8,7 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { RemixNode } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { redirect } from "@sdxc/http/response";
 import { ArrowRightIcon, Icon } from "@sdxc/icons";
@@ -33,10 +33,12 @@ import { getViewer } from "~/app/http/middleware/auth";
 import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
 import { FLOW_INTERVALS_SECONDS, FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
+import { IntegrationsScene, SslScene } from "~/resources/components/marketing/capability-scenes";
 import ClosingBand from "~/resources/components/marketing/closing-band";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import FlowDiagram from "~/resources/components/marketing/flow-diagram";
 import ProductMockup, { FEATURE_MOCKUPS } from "~/resources/components/marketing/product-mockups";
+import { AlertsScene } from "~/resources/components/marketing/product-scenes";
 import {
 	BACKUP_SH,
 	CREATE_MONITOR_SH,
@@ -51,9 +53,21 @@ import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * The companion visual a feature's "how it works" band shows beside its steps: the next
- * part of the product the steps lead into, or the code a reader pastes, so the band never
- * repeats the hero's mockup.
+ * A product scene standing alone as a band's visual, named for assistive technology the way
+ * a mockup is, since the scene itself is decorative.
+ */
+function Scene(handle: Handle<{ label: string; children: RemixNode }>) {
+	return () => (
+		<div role="img" aria-label={handle.props.label}>
+			{handle.props.children}
+		</div>
+	);
+}
+
+/**
+ * The companion visual a feature's "how it works" band shows beside its steps: the moment
+ * the steps lead to, the next part of the product, or the code a reader pastes, so the band
+ * never repeats the hero's mockup.
  *
  * @param slug The feature page's slug.
  * @param t The request's translator, for the mockups' and diagram's product copy.
@@ -62,9 +76,34 @@ import routes from "~/routes/web";
 function featureCompanion(slug: string, t: Translate): RemixNode {
 	switch (slug) {
 		case "alerts":
+			return (
+				<Scene label={t("landing.marketingPage.companions.alerts")}>
+					<AlertsScene
+						down={t("emails.alert.heading", {
+							monitor: "api.example.com",
+							status: t("emails.alert.status.down"),
+						})}
+						recovered={t("emails.alert.heading", {
+							monitor: "api.example.com",
+							status: t("emails.alert.status.up"),
+						})}
+						downLabel={t("statusPage.status.down")}
+						upLabel={t("statusPage.status.operational")}
+					/>
+				</Scene>
+			);
 		case "integrations":
+			return (
+				<Scene label={t("landing.marketingPage.companions.integrations")}>
+					<IntegrationsScene t={t} />
+				</Scene>
+			);
 		case "ssl":
-			return <ProductMockup area="monitor" t={t} />;
+			return (
+				<Scene label={t("landing.marketingPage.companions.ssl")}>
+					<SslScene t={t} />
+				</Scene>
+			);
 		case "teams":
 			return <ProductMockup area="api-keys" t={t} />;
 		case "maintenance":
@@ -168,6 +207,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 	 * runs three across, where the grid widens the last row's cards to the full width.
 	 */
 	let featureColumns: 2 | 3 = content.features.length === 4 ? 2 : 3;
+	let featureGrid = content.featureGrid ?? "cards";
 
 	let steps = content.steps.map((step) => (
 		<StepList.Item key={step.title} title={step.title}>
@@ -260,9 +300,9 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 						description={t("landing.marketingPage.everythingDescription")}
 						align="center"
 					>
-						{t("landing.marketingPage.everythingTitle")}
+						{t(`landing.marketingPage.featureBands.${slug}.features`)}
 					</MarketingHeader>
-					<Feature.Grid columns={featureColumns}>
+					<Feature.Grid columns={featureColumns} variant={featureGrid}>
 						{content.features.map((feature) => (
 							<Feature key={feature.title}>
 								{feature.icon ? (
@@ -282,7 +322,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 					layout="split"
 					lean="media"
 					eyebrow={t("landing.marketingPage.howItWorksBadge")}
-					title={t("landing.marketingPage.howItWorksTitle")}
+					title={t(`landing.marketingPage.featureBands.${slug}.steps`)}
 					description={t("landing.marketingPage.howItWorksDescription")}
 					media={companion}
 					mix={[viewReveal()]}

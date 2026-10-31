@@ -682,6 +682,68 @@ export default {
 			faqTitle: "Domande Frequenti",
 			faqDescription: "Le domande più comuni prima di iniziare a monitorare.",
 			finalCtaTitle: "Inizi a monitorare i suoi servizi",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts:
+					"I due avvisi di un guasto: api.example.com non raggiungibile, poi di nuovo attivo.",
+				integrations: "Un avviso consegnato a Slack, PagerDuty, Discord, email e un webhook.",
+				ssl: "Tre certificati verso la scadenza: due validi e status.example.com in scadenza tra 9 giorni.",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "Ogni regione, ogni minuto",
+					steps: "Da un URL a un anno di storico",
+				},
+				alerts: {
+					features: "Il guasto e il ripristino",
+					steps: "Lo configuri una volta, nessun guasto sfugge",
+				},
+				"status-pages": {
+					features: "Risponda prima che glielo chiedano",
+					steps: "Dai monitor a una pagina pubblica",
+				},
+				analytics: {
+					features: "90 giorni di disponibilità a colpo d'occhio",
+					steps: "I controlli riempiono lo storico",
+				},
+				teams: {
+					features: "Tutti vedono lo stesso guasto",
+					steps: "Da un invito ad avvisi condivisi",
+				},
+				api: {
+					features: "Ogni azione della dashboard, via script",
+					steps: "Da una chiave con ambiti all'automazione",
+				},
+				integrations: {
+					features: "Gli avvisi arrivano nella chat del team",
+					steps: "Incolli un webhook, riceva l'avviso",
+				},
+				maintenance: {
+					features: "Deploy silenziosi, guasti segnalati",
+					steps: "Gli avvisi aspettano la fine della finestra",
+				},
+				flows: {
+					features: "Ogni passo di un accesso, verificato",
+					steps: "Da una spec alla riga che fallisce",
+				},
+				dns: {
+					features: "Ogni modifica ai record, segnalata",
+					steps: "Da un dominio al diff dei record",
+				},
+				ssl: {
+					features: "Promemoria fino al rinnovo",
+					steps: "Da una data di scadenza al rinnovo",
+				},
+				"cron-jobs": {
+					features: "Un job che tace fa scattare l'avviso",
+					steps: "Da un URL di ping all'esecuzione mancata",
+				},
+				"content-monitoring": {
+					features: "Un 200 con la pagina sbagliata fallisce",
+					steps: "Da una frase all'avviso di discrepanza",
+				},
+			},
 		},
 	},
 

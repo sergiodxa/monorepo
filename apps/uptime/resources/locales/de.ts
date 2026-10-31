@@ -686,6 +686,69 @@ export default {
 			faqTitle: "Häufig gestellte Fragen",
 			faqDescription: "Die häufigsten Fragen, bevor Sie mit der Überwachung beginnen.",
 			finalCtaTitle: "Überwachen Sie jetzt Ihre Dienste",
+			/** Text alternatives for the scenes a feature page's steps sit beside. */
+			companions: {
+				alerts:
+					"Die zwei Benachrichtigungen eines Ausfalls: api.example.com ausgefallen, dann wieder erreichbar.",
+				integrations:
+					"Eine Benachrichtigung an Slack, PagerDuty, Discord, E-Mail und einen Webhook.",
+				ssl: "Drei Zertifikate im Countdown bis zum Ablauf: zwei gültig, status.example.com läuft in 9 Tagen ab.",
+			},
+			/** Each `/features/:slug` page's own band titles, keyed by slug. */
+			featureBands: {
+				monitors: {
+					features: "Jede Region, jede Minute",
+					steps: "Von der URL zum Jahresverlauf",
+				},
+				alerts: {
+					features: "Der Ausfall und die Entwarnung",
+					steps: "Einmal einrichten, jeden Ausfall erfahren",
+				},
+				"status-pages": {
+					features: "Antworten, bevor jemand fragt",
+					steps: "Von Monitoren zur öffentlichen Seite",
+				},
+				analytics: {
+					features: "90 Tage Verfügbarkeit auf einen Blick",
+					steps: "Checks laufen, der Verlauf füllt sich",
+				},
+				teams: {
+					features: "Alle sehen denselben Ausfall",
+					steps: "Von der Einladung zu geteilten Benachrichtigungen",
+				},
+				api: {
+					features: "Jede Dashboard-Aktion als Skript",
+					steps: "Vom API-Schlüssel zur Automatisierung",
+				},
+				integrations: {
+					features: "Benachrichtigungen landen im Team-Chat",
+					steps: "Webhook einfügen, Benachrichtigung erhalten",
+				},
+				maintenance: {
+					features: "Leise Deployments, laute Ausfälle",
+					steps: "Benachrichtigungen warten das Fenster ab",
+				},
+				flows: {
+					features: "Jeder Schritt einer Anmeldung, geprüft",
+					steps: "Von der Spec zur fehlerhaften Zeile",
+				},
+				dns: {
+					features: "Jede Änderung an Einträgen, gemeldet",
+					steps: "Von der Domain zum Diff der Einträge",
+				},
+				ssl: {
+					features: "Erinnert, bis Sie erneuern",
+					steps: "Vom Ablaufdatum zur Erneuerung",
+				},
+				"cron-jobs": {
+					features: "Ein stiller Job schlägt Alarm",
+					steps: "Von der Ping-URL zum verpassten Lauf",
+				},
+				"content-monitoring": {
+					features: "Ein 200 mit falscher Seite schlägt fehl",
+					steps: "Von einer Phrase zur Abweichungsmeldung",
+				},
+			},
 		},
 	},
 
