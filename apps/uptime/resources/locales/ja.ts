@@ -80,6 +80,46 @@ export default {
 				},
 			},
 
+			descriptions: {
+				features: {
+					monitors: "9 リージョンから HTTP チェック、1〜60 分間隔",
+					dns: "A、MX、TXT などの変更を監視",
+					ssl: "証明書の期限切れ前にアラート",
+					cronJobs: "実行ごとに ping、遅れたらアラート",
+					contentMonitoring: "表示されるべき語、されてはいけない語",
+					flowMonitors: "サインインしてトークンを読み、API を呼ぶ",
+					browserFlows: "実際のブラウザでページを操作",
+					alerts: "ダウンと復旧のアラート、クールダウン付き",
+					integrations: "Slack、Discord、メール、署名付き Webhook",
+					statusPages: "ロゴと履歴入りの公開ページ",
+					maintenance: "アラートを止める計画メンテナンス枠",
+					teams: "メンバー無制限、ロール、ドメイン参加",
+					analytics: "稼働率と P99 レイテンシを 365 日保存",
+					api: "REST でスクリプトからモニターを管理",
+				},
+				docs: {
+					mcp: "エージェントが MCP でモニターを管理",
+				},
+				useCases: {
+					websiteMonitoring: "9 リージョンから応答時間と SSL を確認",
+					apiMonitoring: "エンドポイントごとのステータスとレイテンシ",
+					saas: "API、ダッシュボード、ジョブを一か所で",
+					ecommerce: "売上を失う前に壊れた決済を検知",
+					cronJobs: "ジョブの遅延や未実行をアラート",
+					microservices: "障害が連鎖する前に検知",
+					healthChecks: "任意の間隔でヘルスエンドポイントを確認",
+					loginFlows: "今もサインインできることを確認",
+				},
+				solutions: {
+					indieHackers: "無料で開始、使った分だけ支払い",
+					soloDevs: "個人予算でサイドプロジェクトを監視",
+					startups: "チームと共に伸びる従量課金",
+					agencies: "全クライアントサイトを一つのダッシュボードで",
+					enterprises: "ドメイン認証とロールベースのアクセス",
+					devops: "パイプラインに API、MCP、Webhook",
+				},
+			},
+
 			nav: {
 				pricing: "料金",
 				features: "機能",

@@ -80,6 +80,46 @@ export default {
 				},
 			},
 
+			descriptions: {
+				features: {
+					monitors: "HTTP-Checks aus 9 Regionen, alle 1–60 Min.",
+					dns: "A, MX, TXT und mehr, auf Änderungen geprüft",
+					ssl: "Ein Alarm, bevor ein Zertifikat abläuft",
+					cronJobs: "Ein Ping pro Lauf, ein Alarm bei Verspätung",
+					contentMonitoring: "Wörter, die erscheinen müssen – oder nicht",
+					flowMonitors: "Anmelden, Token lesen, API aufrufen",
+					browserFlows: "Ein echter Browser klickt sich durch",
+					alerts: "Ausfall- und Erholungsalarme mit Cooldown",
+					integrations: "Slack, Discord, E-Mail und signierte Webhooks",
+					statusPages: "Eine öffentliche Seite mit Logo und Verlauf",
+					maintenance: "Geplante Fenster, die Alarme stummschalten",
+					teams: "Unbegrenzte Mitglieder, Rollen, Domain-Beitritt",
+					analytics: "Uptime und P99-Latenz, 365 Tage gespeichert",
+					api: "Monitore per Skript über REST verwalten",
+				},
+				docs: {
+					mcp: "Ihr Agent verwaltet Monitore über MCP",
+				},
+				useCases: {
+					websiteMonitoring: "Antwortzeiten und SSL aus 9 Regionen",
+					apiMonitoring: "Statuscodes und Latenz pro Endpoint",
+					saas: "APIs, Dashboards und Jobs an einem Ort",
+					ecommerce: "Defekten Checkout vor Umsatzverlust erkennen",
+					cronJobs: "Ein Alarm, wenn ein Job zu spät oder nie läuft",
+					microservices: "Einen Fehler erkennen, bevor er sich ausbreitet",
+					healthChecks: "Health-Endpoints in Ihrem eigenen Intervall",
+					loginFlows: "Der Beweis, dass die Anmeldung funktioniert",
+				},
+				solutions: {
+					indieHackers: "Kostenlos starten, nur Genutztes zahlen",
+					soloDevs: "Nebenprojekte überwacht, mit kleinem Budget",
+					startups: "Nutzungspreise, die mit dem Team wachsen",
+					agencies: "Jede Kundenseite in einem Dashboard",
+					enterprises: "Verifizierte Domains und Rollenrechte",
+					devops: "API, MCP und Webhooks für Ihre Pipeline",
+				},
+			},
+
 			nav: {
 				pricing: "Preise",
 				features: "Funktionen",

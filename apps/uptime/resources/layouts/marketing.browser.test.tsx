@@ -1,7 +1,8 @@
 /**
  * Lays the marketing chrome out in a real browser: at laptop and desktop widths every
  * footer link keeps its label on one line beside the brand block, the footer stays inside
- * the viewport on a phone, and the phone sheet closes when one of its links is followed.
+ * the viewport on a phone, every mega-panel item sets a description beside its icon, and
+ * the phone sheet closes when one of its links is followed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,6 +69,26 @@ function wrappedLinks(container: Element): string[] {
 		.map((link) => link.textContent?.trim() ?? "");
 }
 
+/**
+ * Opens `panel` and reads each item's description and whether its text column starts past
+ * the icon tile; an item without a tile counts as beside it. Measured open, since a closed
+ * popover has no layout.
+ */
+function panelItems(panel: HTMLElement) {
+	panel.showPopover();
+	let items = [...panel.querySelectorAll("li a")].map((link) => {
+		let text = link.lastElementChild!;
+		let tile = link.firstElementChild === text ? null : link.firstElementChild;
+		return {
+			label: text.firstElementChild?.textContent?.trim(),
+			description: text.children[1]?.textContent?.trim(),
+			beside: tile ? text.getBoundingClientRect().left >= tile.getBoundingClientRect().right : true,
+		};
+	});
+	panel.hidePopover();
+	return items;
+}
+
 describe("MarketingLayout", () => {
 	test.each([1280, 1440])("keeps every footer link on one line at %ipx", async (width) => {
 		await page.viewport(width, 900);
@@ -75,6 +96,19 @@ describe("MarketingLayout", () => {
 
 		expect(wrappedLinks(container)).toEqual([]);
 	});
+
+	test.each([1280, 1440])(
+		"sets a description beside every mega-panel item's icon tile at %ipx",
+		async (width) => {
+			await page.viewport(width, 900);
+			let { container } = mountLayout();
+			let panels = [...container.querySelectorAll<HTMLElement>('[data-slot="site-header-panel"]')];
+			let items = panels.flatMap(panelItems);
+
+			expect(items).toHaveLength(29);
+			expect(items.filter((item) => !item.description || !item.beside)).toEqual([]);
+		},
+	);
 
 	test("lists the use cases and audiences together under Solutions", () => {
 		let { container } = mountLayout();

@@ -80,6 +80,46 @@ export default {
 				},
 			},
 
+			descriptions: {
+				features: {
+					monitors: "Vérifs HTTP depuis 9 régions, toutes les 1–60 min",
+					dns: "A, MX, TXT et plus, surveillés en continu",
+					ssl: "Une alerte avant l’expiration d’un certificat",
+					cronJobs: "Un ping par exécution, une alerte en cas de retard",
+					contentMonitoring: "Des mots qui doivent, ou non, apparaître",
+					flowMonitors: "Se connecter, lire le jeton, appeler l’API",
+					browserFlows: "Un vrai navigateur parcourt la page",
+					alerts: "Alertes de panne et de retour, avec délai",
+					integrations: "Slack, Discord, e-mail et webhooks signés",
+					statusPages: "Une page publique avec logo et historique",
+					maintenance: "Des fenêtres planifiées qui coupent les alertes",
+					teams: "Membres illimités, rôles, adhésion par domaine",
+					analytics: "Disponibilité et latence P99, gardées 365 jours",
+					api: "Gérez vos moniteurs par script via REST",
+				},
+				docs: {
+					mcp: "Votre agent gère les moniteurs via MCP",
+				},
+				useCases: {
+					websiteMonitoring: "Temps de réponse et SSL depuis 9 régions",
+					apiMonitoring: "Codes de statut et latence par endpoint",
+					saas: "API, tableaux de bord et jobs au même endroit",
+					ecommerce: "Repérez un paiement cassé avant de perdre des ventes",
+					cronJobs: "Une alerte quand un job est en retard ou absent",
+					microservices: "Repérez une panne avant qu’elle ne se propage",
+					healthChecks: "Endpoints de santé à votre propre intervalle",
+					loginFlows: "La preuve qu’on peut encore se connecter",
+				},
+				solutions: {
+					indieHackers: "Démarrez gratuitement, payez à l’usage",
+					soloDevs: "Projets perso surveillés à petit budget",
+					startups: "Un prix à l’usage qui suit l’équipe",
+					agencies: "Chaque site client dans un seul tableau de bord",
+					enterprises: "Domaines vérifiés et accès par rôles",
+					devops: "API, MCP et webhooks pour votre pipeline",
+				},
+			},
+
 			nav: {
 				pricing: "Tarifs",
 				features: "Fonctionnalités",

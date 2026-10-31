@@ -80,6 +80,46 @@ export default {
 				},
 			},
 
+			descriptions: {
+				features: {
+					monitors: "Controlli HTTP da 9 regioni, ogni 1–60 min",
+					dns: "A, MX, TXT e altri, controllati per modifiche",
+					ssl: "Un avviso prima che un certificato scada",
+					cronJobs: "Un ping per esecuzione, un avviso se tarda",
+					contentMonitoring: "Parole che devono, o non devono, comparire",
+					flowMonitors: "Accedi, leggi il token, chiama l’API",
+					browserFlows: "Un vero browser naviga la pagina",
+					alerts: "Avvisi di guasto e ripristino, con pausa",
+					integrations: "Slack, Discord, email e webhook firmati",
+					statusPages: "Una pagina pubblica con logo e storico",
+					maintenance: "Finestre pianificate che silenziano gli avvisi",
+					teams: "Membri illimitati, ruoli, accesso per dominio",
+					analytics: "Uptime e latenza P99, conservati 365 giorni",
+					api: "Gestisci i monitor da script via REST",
+				},
+				docs: {
+					mcp: "Il tuo agente gestisce i monitor via MCP",
+				},
+				useCases: {
+					websiteMonitoring: "Tempi di risposta e SSL da 9 regioni",
+					apiMonitoring: "Codici di stato e latenza per endpoint",
+					saas: "API, dashboard e job in un unico posto",
+					ecommerce: "Scopri un checkout rotto prima di perdere vendite",
+					cronJobs: "Un avviso quando un job è in ritardo o salta",
+					microservices: "Individua un guasto prima che si propaghi",
+					healthChecks: "Endpoint di salute con il tuo intervallo",
+					loginFlows: "La prova che si può ancora accedere",
+				},
+				solutions: {
+					indieHackers: "Inizia gratis, paga solo ciò che usi",
+					soloDevs: "Progetti personali con un budget da solo",
+					startups: "Prezzi a consumo che crescono col team",
+					agencies: "Ogni sito cliente in un’unica dashboard",
+					enterprises: "Domini verificati e accesso per ruoli",
+					devops: "API, MCP e webhook per la tua pipeline",
+				},
+			},
+
 			nav: {
 				pricing: "Prezzi",
 				features: "Funzionalità",

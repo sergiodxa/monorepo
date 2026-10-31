@@ -101,45 +101,54 @@ export function buildMarketingChrome(
 	let audience = (slug: string) => routes.marketing.audience.href({ slug });
 	let comparison = (slug: string) => routes.marketing.comparison.href({ slug });
 	let label = (key: string) => t(`landing.footer.sections.${key}`);
+	/**
+	 * Pairs a footer label with its one-line header description, so every mega-panel item
+	 * sets a second line beside its icon tile and the footer reuses the same label and href.
+	 */
+	let entry = (key: string, href: string): SiteHeader.Link => ({
+		label: label(key),
+		href,
+		description: t(`landing.header.descriptions.${key}`),
+	});
 
 	let featureLinks = {
-		monitors: { label: label("features.monitors"), href: feature("monitors") },
-		alerts: { label: label("features.alerts"), href: feature("alerts") },
-		statusPages: { label: label("features.statusPages"), href: feature("status-pages") },
-		ssl: { label: label("features.ssl"), href: feature("ssl") },
-		dns: { label: label("features.dns"), href: feature("dns") },
-		cronJobs: { label: label("features.cronJobs"), href: feature("cron-jobs") },
-		content: { label: label("features.contentMonitoring"), href: feature("content-monitoring") },
-		maintenance: { label: label("features.maintenance"), href: feature("maintenance") },
-		integrations: { label: label("features.integrations"), href: feature("integrations") },
-		teams: { label: label("features.teams"), href: feature("teams") },
-		analytics: { label: label("features.analytics"), href: feature("analytics") },
-		api: { label: label("features.api"), href: feature("api") },
-		flows: { label: label("features.flowMonitors"), href: feature("flows") },
-		browserFlows: { label: label("features.browserFlows"), href: routes.browserFlows.href() },
+		monitors: entry("features.monitors", feature("monitors")),
+		alerts: entry("features.alerts", feature("alerts")),
+		statusPages: entry("features.statusPages", feature("status-pages")),
+		ssl: entry("features.ssl", feature("ssl")),
+		dns: entry("features.dns", feature("dns")),
+		cronJobs: entry("features.cronJobs", feature("cron-jobs")),
+		content: entry("features.contentMonitoring", feature("content-monitoring")),
+		maintenance: entry("features.maintenance", feature("maintenance")),
+		integrations: entry("features.integrations", feature("integrations")),
+		teams: entry("features.teams", feature("teams")),
+		analytics: entry("features.analytics", feature("analytics")),
+		api: entry("features.api", feature("api")),
+		flows: entry("features.flowMonitors", feature("flows")),
+		browserFlows: entry("features.browserFlows", routes.browserFlows.href()),
 	};
 
-	let useCaseLinks: SiteFooter.Link[] = [
-		{ label: label("useCases.websiteMonitoring"), href: useCase("website-monitoring") },
-		{ label: label("useCases.apiMonitoring"), href: useCase("api-monitoring") },
-		{ label: label("useCases.saas"), href: useCase("saas") },
-		{ label: label("useCases.ecommerce"), href: useCase("ecommerce") },
-		{ label: label("useCases.cronJobs"), href: useCase("cron-jobs") },
-		{ label: label("useCases.microservices"), href: useCase("microservices") },
-		{ label: label("useCases.healthChecks"), href: useCase("healthcheck") },
-		{ label: label("useCases.loginFlows"), href: useCase("login-flow-monitoring") },
+	let useCaseLinks: SiteHeader.Link[] = [
+		entry("useCases.websiteMonitoring", useCase("website-monitoring")),
+		entry("useCases.apiMonitoring", useCase("api-monitoring")),
+		entry("useCases.saas", useCase("saas")),
+		entry("useCases.ecommerce", useCase("ecommerce")),
+		entry("useCases.cronJobs", useCase("cron-jobs")),
+		entry("useCases.microservices", useCase("microservices")),
+		entry("useCases.healthChecks", useCase("healthcheck")),
+		entry("useCases.loginFlows", useCase("login-flow-monitoring")),
 	];
 
-	let audienceLinks: SiteFooter.Link[] = [
-		{ label: label("solutions.indieHackers"), href: audience("indie-hackers") },
-		{ label: label("solutions.soloDevs"), href: audience("solo-devs") },
-		{ label: label("solutions.startups"), href: audience("startups") },
-		{ label: label("solutions.agencies"), href: audience("agencies") },
-		{ label: label("solutions.enterprises"), href: audience("enterprises") },
-		{ label: label("solutions.devops"), href: audience("devops") },
+	let audienceLinks: SiteHeader.Link[] = [
+		entry("solutions.indieHackers", audience("indie-hackers")),
+		entry("solutions.soloDevs", audience("solo-devs")),
+		entry("solutions.startups", audience("startups")),
+		entry("solutions.agencies", audience("agencies")),
+		entry("solutions.enterprises", audience("enterprises")),
+		entry("solutions.devops", audience("devops")),
 	];
 
-	let mcpLink = { label: label("docs.mcp"), href: routes.mcp.index.href() };
+	let mcpLink = entry("docs.mcp", routes.mcp.index.href());
 
 	let headerItems: SiteHeader.Item[] = [
 		{

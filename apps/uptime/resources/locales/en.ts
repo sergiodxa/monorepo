@@ -95,6 +95,46 @@ export default {
 				},
 			},
 
+			descriptions: {
+				features: {
+					monitors: "HTTP checks from 9 regions, every 1–60 min",
+					dns: "A, MX, TXT and more, watched for changes",
+					ssl: "An alert before a certificate expires",
+					cronJobs: "A ping per run, an alert when one is late",
+					contentMonitoring: "Words that must, or must not, appear",
+					flowMonitors: "Sign in, read the token, call the API",
+					browserFlows: "A real browser clicks through the page",
+					alerts: "Down and recovery alerts, with cooldowns",
+					integrations: "Slack, Discord, email and signed webhooks",
+					statusPages: "A public page with your logo and history",
+					maintenance: "Planned windows that silence alerts",
+					teams: "Unlimited members, roles, domain sign-up",
+					analytics: "Uptime and P99 latency, kept 365 days",
+					api: "Manage monitors from scripts over REST",
+				},
+				docs: {
+					mcp: "Your agent manages monitors over MCP",
+				},
+				useCases: {
+					websiteMonitoring: "Latency and SSL, checked from 9 regions",
+					apiMonitoring: "Status codes and latency per endpoint",
+					saas: "APIs, dashboards and jobs in one place",
+					ecommerce: "Catch a broken checkout before lost sales",
+					cronJobs: "An alert when a job runs late or not at all",
+					microservices: "Catch a failure before it cascades",
+					healthChecks: "Health endpoints on your own interval",
+					loginFlows: "Proof that people can still sign in",
+				},
+				solutions: {
+					indieHackers: "Start free, pay only for what you use",
+					soloDevs: "Side projects watched on a solo budget",
+					startups: "Usage pricing that grows with the team",
+					agencies: "Every client site in one dashboard",
+					enterprises: "Verified domains and role-based access",
+					devops: "API, MCP and webhooks for your pipeline",
+				},
+			},
+
 			nav: {
 				features: "Features",
 				compare: "Compare",
