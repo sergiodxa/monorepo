@@ -106,12 +106,17 @@ describe("Marketing group", () => {
 				"LandingHero",
 				"FaqBand",
 				"FlowDiagram",
+				"SequenceDiagram",
+				"FanOutDiagram",
+				"EventTicker",
+				"TypedTerminal",
+				"DrawnChart",
 				"MarketingSection",
 				"SiteHeader",
 				"SiteFooter",
 			]),
 		);
-		expect(titles).toHaveLength(38);
+		expect(titles).toHaveLength(43);
 		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
 		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
 		expect(components?.entries.map((entry) => entry.title)).toContain("DialogDismiss");
