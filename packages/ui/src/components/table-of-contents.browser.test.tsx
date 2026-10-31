@@ -151,6 +151,57 @@ describe("TableOfContents", () => {
 	});
 });
 
+/**
+ * Replaces the article the way a client-side navigation does: new heading elements under
+ * the same ids, the list kept in place with one link pointing somewhere new.
+ */
+function navigate() {
+	let article = document.querySelector("article")!;
+	article.innerHTML = ITEMS.map(
+		(item, index) =>
+			`<section><h2 id="${index === 1 ? "renamed" : item.id}" style="margin: 0">${item.text}</h2><p style="margin: 0; block-size: 600px">New body</p></section>`,
+	).join("");
+	for (let link of document.querySelectorAll<HTMLAnchorElement>(
+		'[data-toc] a[href="#section-2"]',
+	)) {
+		link.setAttribute("href", "#renamed");
+		link.textContent = "Renamed";
+	}
+}
+
+describe("TableOfContents after a client-side navigation", () => {
+	test("marks the new page's sections and keeps the marker drawn", async () => {
+		mountPage();
+		document.getElementById("section-4")!.scrollIntoView();
+		await settle();
+		expect(marks().lead).toBe("Section 4");
+
+		navigate();
+		document.getElementById("renamed")!.scrollIntoView();
+		await settle();
+		expect(marks().lead).toBe("Renamed");
+		let marker = document.querySelector<HTMLElement>("[data-toc-marker]")!;
+		expect(Number.parseFloat(marker.style.getPropertyValue("--toc-marker-size"))).toBeGreaterThan(
+			0,
+		);
+	});
+
+	test("refills the bar's ring and names the new page's section", async () => {
+		mountPage("bar");
+		scrollTo(0, document.documentElement.scrollHeight);
+		await settle();
+		let bar = document.querySelector<HTMLDetailsElement>('[data-toc="bar"]')!;
+		let atBottom = Number(bar.style.getPropertyValue("--toc-progress"));
+		expect(atBottom).toBeGreaterThan(0.5);
+
+		navigate();
+		scrollTo(0, 0);
+		await settle();
+		expect(Number(bar.style.getPropertyValue("--toc-progress"))).toBeLessThan(atBottom);
+		expect(bar.querySelector("[data-toc-reading]")!.textContent).toBe("Section 1");
+	});
+});
+
 describe("sectionsInView", () => {
 	test("counts a section whose heading has scrolled past while its body fills the screen", () => {
 		expect(sectionsInView([-500, 900], { top: 0, bottom: 800 }, false)).toEqual([0]);

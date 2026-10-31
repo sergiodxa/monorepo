@@ -53,29 +53,47 @@ export const tocSpy: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
 	});
 });
 
-/** Starts following the page for `host` until `signal` aborts. */
+/**
+ * Starts following the page for `host` until `signal` aborts. The sections are read again on
+ * every recount, so a client-side navigation that keeps this list (new links, or new headings
+ * under the same ids) is followed from its first scroll, and a page with none yet still arms.
+ */
 function watch(host: HTMLElement, signal: AbortSignal) {
 	let view = host.ownerDocument.defaultView;
 	if (!view) return;
-	let sections = collectSections(host);
-	if (sections.length === 0) return;
 
 	let frame = 0;
 
-	/** One recount per frame, however many scroll events the frame delivers. */
+	/** One recount per frame, however many events the frame delivers. */
 	function schedule() {
 		view?.cancelAnimationFrame(frame);
-		frame = view?.requestAnimationFrame(() => update(host, sections)) ?? 0;
+		frame = view?.requestAnimationFrame(() => update(host)) ?? 0;
 	}
 
 	view.addEventListener("scroll", schedule, { passive: true, signal });
 	view.addEventListener("resize", schedule, { passive: true, signal });
 	view.addEventListener("hashchange", schedule, { signal });
+	view.navigation?.addEventListener("navigatesuccess", schedule, { signal });
 	host.closest("details")?.addEventListener("toggle", schedule, { signal });
 	host.addEventListener("click", (click) => closeOnJump(host, click), { signal });
-	signal.addEventListener("abort", () => view?.cancelAnimationFrame(frame), { once: true });
 
-	update(host, sections);
+	let links = new MutationObserver(schedule);
+	links.observe(host, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ["href"],
+	});
+	signal.addEventListener(
+		"abort",
+		() => {
+			view?.cancelAnimationFrame(frame);
+			links.disconnect();
+		},
+		{ once: true },
+	);
+
+	update(host);
 	host.dataset.tocReady = "";
 }
 
@@ -110,12 +128,12 @@ export function sectionsInView(
 	return visible;
 }
 
-/** Recomputes which sections are on screen and moves the marks to match. */
-function update(host: HTMLElement, sections: Section[]) {
-	let doc = host.ownerDocument;
-	let root = doc.documentElement;
-	let first = sections[0]!.heading;
-	let top = Number.parseFloat(getComputedStyle(first).scrollMarginTop) || 0;
+/** Reads the list's sections afresh, works out which are on screen and moves the marks to match. */
+function update(host: HTMLElement) {
+	let sections = collectSections(host);
+	let root = host.ownerDocument.documentElement;
+	let first = sections[0]?.heading;
+	let top = first ? Number.parseFloat(getComputedStyle(first).scrollMarginTop) || 0 : 0;
 	let starts = sections.map((section) => section.heading.getBoundingClientRect().top);
 	let atBottom =
 		root.scrollHeight > root.clientHeight &&
@@ -123,6 +141,9 @@ function update(host: HTMLElement, sections: Section[]) {
 	let visible = sectionsInView(starts, { top, bottom: root.clientHeight }, atBottom);
 	let lead = visible[0];
 
+	for (let link of host.querySelectorAll<HTMLAnchorElement>("a[data-active]")) {
+		if (!sections.some((section) => section.link === link)) link.removeAttribute("data-active");
+	}
 	for (let [index, section] of sections.entries()) {
 		if (index === lead) section.link.dataset.active = "lead";
 		else if (visible.includes(index)) section.link.dataset.active = "";
