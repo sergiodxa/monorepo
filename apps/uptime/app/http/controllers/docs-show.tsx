@@ -18,7 +18,7 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
-import { Breadcrumbs, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -30,6 +30,7 @@ import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
 import { findNeighbours, getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
 import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
+import DocsTrail from "~/resources/components/docs-trail";
 import DocsLayout, { buildDocsLabels } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -164,25 +165,12 @@ export default createAction(routes.docs.show, async (ctx) => {
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 }), m(0, 0, "2.5rem", 0)]}>
-						<Breadcrumbs aria-label={ctx.intl.t("app.layout.breadcrumbs.label")}>
-							<Breadcrumbs.List>
-								<Breadcrumbs.Item>
-									<Breadcrumbs.Link href={routes.docs.index.href()}>
-										{ctx.intl.t("docs.shell.root")}
-									</Breadcrumbs.Link>
-								</Breadcrumbs.Item>
-								{section ? (
-									<Breadcrumbs.Item>
-										<Breadcrumbs.Link mix={[raw({ textDecoration: "none" })]}>
-											{section.title}
-										</Breadcrumbs.Link>
-									</Breadcrumbs.Item>
-								) : null}
-								<Breadcrumbs.Item>
-									<Breadcrumbs.Link aria-current="page">{frontmatter.title}</Breadcrumbs.Link>
-								</Breadcrumbs.Item>
-							</Breadcrumbs.List>
-						</Breadcrumbs>
+						<DocsTrail
+							label={ctx.intl.t("app.layout.breadcrumbs.label")}
+							root={{ label: ctx.intl.t("docs.shell.root"), href: routes.docs.index.href() }}
+							section={section?.title}
+							page={frontmatter.title}
+						/>
 
 						<h1
 							mix={[

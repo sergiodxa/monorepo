@@ -47,6 +47,12 @@ export const TOC_MIN_ANCHORS = 2;
 /** The shallowest depth the list offers, which every indent is measured from. */
 const BASE_LEVEL = 2;
 
+/**
+ * Width below which the bar names only "On this page": beside the menu button there is
+ * room for a letter or two of the section, which reads as noise rather than a name.
+ */
+const NARROW_BAR = "(max-width: 22.4375rem)";
+
 /** How far one extra heading depth sets an item in, in rem. */
 const INDENT_STEP = 0.75;
 
@@ -90,19 +96,46 @@ export const DocsToc = clientEntry(import.meta.url, function DocsToc(handle: Han
 			return current ? [current.id] : [];
 		}
 
+		/**
+		 * Whether the page cannot scroll further. The closing sections of a short tail never
+		 * reach the band, so a reader at the bottom is credited with the last one on screen.
+		 */
+		function atBottom(): boolean {
+			let root = node.ownerDocument.documentElement;
+			return (
+				root.scrollHeight > root.clientHeight &&
+				root.scrollTop + root.clientHeight >= root.scrollHeight - 2
+			);
+		}
+
+		/**
+		 * Marks the section being read. It runs on every band crossing and again once a scroll
+		 * settles, since a jump (an anchor, the End key, a restored position) can carry every
+		 * heading past the band without one crossing it.
+		 */
+		function mark() {
+			let reading = anchors.map((anchor) => anchor.id).filter((id) => inBand.has(id));
+			if (reading.length === 0) reading = lastPassed();
+			if (atBottom()) {
+				let lastOnScreen = [...anchors].reverse().find((anchor) => {
+					let heading = headings.get(anchor.id);
+					return heading !== undefined && heading.getBoundingClientRect().top < innerHeight;
+				});
+				if (lastOnScreen) reading = [lastOnScreen.id];
+			}
+			if (reading.join(" ") === marked.join(" ")) return;
+
+			marked = reading;
+			void handle.update();
+		}
+
 		let observer = new IntersectionObserver(
 			(entries) => {
 				for (let entry of entries) {
 					if (entry.isIntersecting) inBand.add(entry.target.id);
 					else inBand.delete(entry.target.id);
 				}
-
-				let reading = anchors.map((anchor) => anchor.id).filter((id) => inBand.has(id));
-				if (reading.length === 0) reading = lastPassed();
-				if (reading.join(" ") === marked.join(" ")) return;
-
-				marked = reading;
-				void handle.update();
+				mark();
 			},
 			{ rootMargin: READING_BAND },
 		);
@@ -114,7 +147,25 @@ export const DocsToc = clientEntry(import.meta.url, function DocsToc(handle: Han
 			observer.observe(heading);
 		}
 
-		signal.addEventListener("abort", () => observer.disconnect(), { once: true });
+		/** One pending recount per frame, however many scroll events the frame delivers. */
+		let frame = 0;
+		addEventListener(
+			"scroll",
+			() => {
+				cancelAnimationFrame(frame);
+				frame = requestAnimationFrame(mark);
+			},
+			{ passive: true, signal },
+		);
+
+		signal.addEventListener(
+			"abort",
+			() => {
+				observer.disconnect();
+				cancelAnimationFrame(frame);
+			},
+			{ once: true },
+		);
 	});
 
 	/** Closes the bar once a reader follows one of its links, so the section is not hidden under it. */
@@ -155,7 +206,7 @@ export const DocsToc = clientEntry(import.meta.url, function DocsToc(handle: Han
 								mix={[
 									relative(),
 									block(),
-									truncate(),
+									raw({ textWrap: "pretty" }),
 									text("sm"),
 									fg("neutral"),
 									p(1.5, 0),
@@ -209,7 +260,14 @@ export const DocsToc = clientEntry(import.meta.url, function DocsToc(handle: Han
 					>
 						<ListIcon size={14} aria-hidden="true" mix={[shrink(0)]} />
 						<span mix={[shrink(0), fg("neutral.emphasis"), weight("medium")]}>{label}</span>
-						{reading ? <span mix={[minIs(0), truncate()]}>{reading.text}</span> : null}
+						{reading ? (
+							<span
+								data-slot="docs-toc-reading"
+								mix={[minIs(0), truncate(), media(NARROW_BAR, hidden())]}
+							>
+								{reading.text}
+							</span>
+						) : null}
 						<ChevronDownIcon
 							size={16}
 							aria-hidden="true"

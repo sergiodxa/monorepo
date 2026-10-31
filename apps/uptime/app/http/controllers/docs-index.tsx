@@ -7,20 +7,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ArrowRightIcon } from "@sdxc/icons";
-import { bg, border, fg, outline } from "@sdxc/u/color";
-import { rounded, transition } from "@sdxc/u/effects";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { listStyle, raw } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
+import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
+import { hover } from "@sdxc/u/state";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { SEO } from "~/app/initializers/seo";
 import { listDocs } from "~/app/services/docs";
+import DocsStartCard from "~/resources/components/docs-start-card";
 import DocsLayout, { buildDocsLabels } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -92,41 +92,14 @@ export default createAction(routes.docs.index, async (ctx) => {
 						]}
 					>
 						{featured.map((doc) => (
-							<a
+							<DocsStartCard
 								key={doc.path}
 								href={doc.path}
-								data-rmx-prefetch="intent"
-								mix={[
-									vstack({ gap: 2 }),
-									p(5),
-									rounded("lg"),
-									border({ color: "neutral.border", width: 1, style: "solid" }),
-									bg("neutral.bg-tint"),
-									transition("border-color"),
-									hover(border("brand.border")),
-									when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-								]}
-							>
-								<span mix={[text("xs"), font("mono"), fg("neutral.muted")]}>
-									{doc.frontmatter.section.title}
-								</span>
-								<span mix={[text("base"), weight("semibold"), fg("neutral.emphasis")]}>
-									{doc.frontmatter.title}
-								</span>
-								<span mix={[text("sm"), fg("neutral")]}>{doc.frontmatter.description}</span>
-								<span
-									mix={[
-										hstack({ gap: 1, align: "center" }),
-										m("0.25rem", 0, 0, 0),
-										text("sm"),
-										weight("medium"),
-										fg("brand"),
-									]}
-								>
-									{ctx.intl.t("docs.hub.read")}
-									<ArrowRightIcon size={14} aria-hidden="true" />
-								</span>
-							</a>
+								section={doc.frontmatter.section.title}
+								title={doc.frontmatter.title}
+								description={doc.frontmatter.description}
+								cta={ctx.intl.t("docs.hub.read")}
+							/>
 						))}
 					</div>
 				</section>

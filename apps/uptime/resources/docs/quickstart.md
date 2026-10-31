@@ -8,12 +8,12 @@ order: 2
 lastUpdated: 2026-02-14
 ---
 
-Before you begin, you'll need an Uptime account and a publicly accessible URL to monitor (website, API endpoint, or health check route).
-
-## Step 1: Create Your First HTTP Monitor
+Before you begin, you'll need:
 
 - An Uptime account (sign up at the homepage if you don't have one)
 - A publicly accessible URL to monitor (website, API endpoint, or health check route)
+
+## Step 1: Create Your First HTTP Monitor
 
 HTTP monitors are the most common way to track service availability. They send requests to your URL and verify the response.
 

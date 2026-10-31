@@ -22,9 +22,19 @@ import {
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { hstack, inlineFlex, shrink, vstack } from "@sdxc/u/layout";
+import {
+	absolute,
+	hstack,
+	inlineFlex,
+	insBs,
+	insIe,
+	relative,
+	shrink,
+	vstack,
+} from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
-import { bs, m, mb, minIs, p, pi } from "@sdxc/u/size";
+import { bs, m, mb, minIs, p, pi, pie } from "@sdxc/u/size";
+import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { font, text, textTransform, tracking, truncate, weight } from "@sdxc/u/typography";
 import { semanticColorPanel } from "@sdxc/ui/styles";
@@ -124,7 +134,8 @@ export function docsMarkdownComponents(
 	/**
 	 * Draws one fenced block as a card: a header naming the file or language with the copy
 	 * button at its end, over code that scrolls sideways inside the card so a long line
-	 * never widens the page.
+	 * never widens the page. A fence naming neither draws no header, and the copy button
+	 * sits in the card's corner with the code's lines kept clear of it.
 	 */
 	function DocsCode(handle: Handle<CodeProps>) {
 		return () => {
@@ -133,11 +144,13 @@ export function docsMarkdownComponents(
 			let codeId = stableId("code", content);
 			let runs = Array.isArray(tokens) ? tokens.filter(isToken) : [];
 			let Glyph = SHELL_LANGUAGES.has(language) && !path && !title ? TerminalIcon : FileCodeIcon;
+			let copy = <DocsCopyButton target={codeId} label={labels.copy} copiedLabel={labels.copied} />;
 
 			return (
 				<figure
 					data-slot="docs-code"
 					mix={[
+						relative(),
 						m("1.5rem", 0),
 						rounded("lg"),
 						border({ color: "neutral.border", width: 1, style: "solid" }),
@@ -145,28 +158,38 @@ export function docsMarkdownComponents(
 						raw({ overflow: "hidden" }),
 					]}
 				>
-					<figcaption
-						mix={[
-							hstack({ gap: 2, align: "center", justify: "between" }),
-							bs("2.5rem"),
-							pi(4, 1.5),
-							borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
-						]}
-					>
-						<span mix={[hstack({ gap: 2, align: "center" }), minIs(0), fg("neutral")]}>
-							<span mix={[inlineFlex(), shrink(0)]}>
-								<Glyph size={14} aria-hidden="true" />
+					{heading ? (
+						<figcaption
+							mix={[
+								hstack({ gap: 2, align: "center", justify: "between" }),
+								bs("2.5rem"),
+								pi(4, 1.5),
+								borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
+							]}
+						>
+							<span mix={[hstack({ gap: 2, align: "center" }), minIs(0), fg("neutral")]}>
+								<span mix={[inlineFlex(), shrink(0)]}>
+									<Glyph size={14} aria-hidden="true" />
+								</span>
+								<span mix={[minIs(0), truncate(), font("mono"), text("xs")]}>{heading}</span>
 							</span>
-							<span mix={[minIs(0), truncate(), font("mono"), text("xs")]}>{heading}</span>
+							{copy}
+						</figcaption>
+					) : (
+						<span
+							data-slot="docs-code-copy"
+							mix={[absolute(), insBs("1rem"), insIe("0.375rem"), z(1)]}
+						>
+							{copy}
 						</span>
-						<DocsCopyButton target={codeId} label={labels.copy} copiedLabel={labels.copied} />
-					</figcaption>
+					)}
 
 					<pre
 						className={`language-${language}`}
 						style={{ border: 0, borderRadius: 0, margin: 0, background: "transparent" }}
 						mix={[
 							p(4),
+							heading ? [] : pie("3rem"),
 							overflowX("auto"),
 							raw({ overscrollBehaviorInline: "contain" }),
 							font("mono"),
