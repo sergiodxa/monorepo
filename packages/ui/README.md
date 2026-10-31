@@ -173,6 +173,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 
 - `Dialog`, `AlertDialog` — modals on `<dialog>`; the alert variant ignores light dismiss.
 - `Modal`, `Drawer`, `Sheet` — `Dialog` presets: pop-in, edge-docked, and a fixed side column.
+- `DialogDismiss` — island closing its dialog on a backdrop press or a followed link; load `@sdxc/ui/dialog-dismiss` in the browser entry.
 - `Confirm` — a complete confirmation dialog; with `form` its confirm button submits a real form.
 - `Popover`, `Tooltip`, `HoverCard` — an anchored popover, a label shown on hover or focus of the
   preceding sibling, and a detail panel shown on hover or focus within.
@@ -263,6 +264,7 @@ chrome on the root catalog stays free of landing weight.
 - `TestimonialBand`, `TestimonialBand.Quote` — quote cards in masonry columns.
 - `FaqBand` — header + one or two `Accordion` columns (`columns={1|2}`).
 - `ClosingCta` — inverse/tinted close with title, lead, and actions.
+- `FlowDiagram` — animated run: a `trigger`, `steps` passing along a rail, an `outcome` and `footnote`.
 
 **Composition craft**
 
@@ -308,6 +310,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `commandKeys(model)`            | `Command`                  | Arrow keys over matches; Enter activates the active item's link/button. |
 | `contextMenu(id, options?)`     | `ContextMenu.Trigger`      | Opens popover `id` at the pointer on right-click or the menu key.       |
 | `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target.                             |
+| `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
 | `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
 | `dragReorder(session)`          | `GridList` / `Tree`        | Pointer reordering through a `DragSession`.                             |
 | `dropZone(session)`             | `DropZone`                 | File drag-and-drop through a `DragSession`.                             |

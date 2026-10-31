@@ -19,6 +19,7 @@ export * from "./crosshair.js";
 export * from "./curriculum.js";
 export * from "./faq-band.js";
 export * from "./feature-band.js";
+export * from "./flow-diagram.js";
 export * from "./icon-well.js";
 export * from "./install-tabs.js";
 export * from "./landing-hero.js";

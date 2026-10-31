@@ -23,6 +23,7 @@ export * from "./command-filter.js";
 export * from "./command-keys.js";
 export * from "./context-menu.js";
 export * from "./copy-to-clipboard.js";
+export * from "./dialog-dismiss.js";
 export * from "./dismiss.js";
 export * from "./drag-reorder.js";
 export * from "./drop-zone.js";

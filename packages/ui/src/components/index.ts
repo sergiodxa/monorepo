@@ -40,6 +40,7 @@ export * from "./date-field.js";
 export * from "./date-picker.js";
 export * from "./date-range-picker.js";
 export * from "./description.js";
+export * from "./dialog-dismiss.js";
 export * from "./dialog.js";
 export * from "./disclosure.js";
 export * from "./drawer.js";
