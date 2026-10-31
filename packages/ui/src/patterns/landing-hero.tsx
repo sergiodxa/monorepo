@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { opacity } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { absolute, inset, relative, self, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
@@ -395,7 +395,7 @@ export function LandingHero(handle: Handle<LandingHero.Props>) {
 				spacing={resolvedSpacing}
 				align={isCenter ? "center" : "start"}
 				level={resolvedLevel}
-				mix={[isBackground ? relative() : [], mix]}
+				mix={mergeMix(isBackground ? relative() : [], mix)}
 			>
 				{body}
 			</MarketingSection>

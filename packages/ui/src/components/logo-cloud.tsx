@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw, var as varUtility } from "@sdxc/u/general";
+import { combine, raw, var as varUtility, mergeMix } from "@sdxc/u/general";
 import { container, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -122,12 +122,14 @@ export function LogoCloud(handle: Handle<LogoCloud.Props>) {
 				data-layout={resolvedLayout}
 				data-muted={muted ? "true" : undefined}
 				data-slot="logo-cloud"
-				mix={[
-					container(CONTAINER),
-					vstack({ gap: 0, align: isGrid ? "stretch" : "center" }),
-					raw({ inlineSize: "100%" }),
+				mix={mergeMix(
+					[
+						container(CONTAINER),
+						vstack({ gap: 0, align: isGrid ? "stretch" : "center" }),
+						raw({ inlineSize: "100%" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{label ? (
 					<p

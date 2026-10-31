@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, outline, outlineStyle } from "@sdxc/u/color";
 import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";
-import { cursor, pointerEvents, pseudoContent, raw } from "@sdxc/u/general";
+import { cursor, pointerEvents, pseudoContent, raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	appearance,
@@ -160,68 +160,70 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 				{...rest}
 				data-slot="color-wheel"
 				style={resolvedStyle}
-				mix={[
-					relative(),
-					/**
-					 * Each shape sizes itself under a selector excluding the other: a bare `is("full")`
-					 * compiles into its own cascade layer, which can land after the circular rule and
-					 * stretch the wheel into an ellipse.
-					 */
-					when('&:not([data-shape="circular"])', [block(), is("full"), minIs("10rem")]),
-					when(
-						'&[data-shape="circular"]',
-						when("&:has(> input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
-					),
-					when('&[data-shape="circular"]', [
-						inlineBlock(),
-						is("var(--ui-color-wheel-size, 12rem)"),
-						bs("var(--ui-color-wheel-size, 12rem)"),
-						minIs("0"),
+				mix={mergeMix(
+					[
+						relative(),
 						/**
-						 * A wheel holds its one measure on both axes; as a flex item it would shrink on the
-						 * inline axis alone when the row runs short, and a circle squeezed on one axis is an ellipse.
+						 * Each shape sizes itself under a selector excluding the other: a bare `is("full")`
+						 * compiles into its own cascade layer, which can land after the circular rule and
+						 * stretch the wheel into an ellipse.
 						 */
-						shrink(),
-						rounded("full"),
-						bg({ image: WHEEL_CONIC_GRADIENT }),
-						mask(RING_MASK),
-
-						when("&::after", [
-							absolute(),
-							is("var(--ui-color-wheel-thumb-size, 1.25rem)"),
-							bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
-							mbs("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
-							mis("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
+						when('&:not([data-shape="circular"])', [block(), is("full"), minIs("10rem")]),
+						when(
+							'&[data-shape="circular"]',
+							when("&:has(> input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
+						),
+						when('&[data-shape="circular"]', [
+							inlineBlock(),
+							is("var(--ui-color-wheel-size, 12rem)"),
+							bs("var(--ui-color-wheel-size, 12rem)"),
+							minIs("0"),
+							/**
+							 * A wheel holds its one measure on both axes; as a flex item it would shrink on the
+							 * inline axis alone when the row runs short, and a circle squeezed on one axis is an ellipse.
+							 */
+							shrink(),
 							rounded("full"),
-							border({
-								width: "var(--ui-color-wheel-thumb-border-width, 2px)",
-								style: "solid",
-								color: "var(--ui-color-wheel-value, var(--ui-brand-bg-solid))",
-							}),
-							bg("neutral.tint"),
-							transition("transform"),
-							insBs("50%"),
-							insIs("50%"),
-							shadow("base"),
-							pointerEvents(),
-							pseudoContent('""'),
-							raw({
-								transform:
-									"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
-							}),
+							bg({ image: WHEEL_CONIC_GRADIENT }),
+							mask(RING_MASK),
+
+							when("&::after", [
+								absolute(),
+								is("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+								bs("var(--ui-color-wheel-thumb-size, 1.25rem)"),
+								mbs("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
+								mis("calc(var(--ui-color-wheel-thumb-size, 1.25rem) / -2)"),
+								rounded("full"),
+								border({
+									width: "var(--ui-color-wheel-thumb-border-width, 2px)",
+									style: "solid",
+									color: "var(--ui-color-wheel-value, var(--ui-brand-bg-solid))",
+								}),
+								bg("neutral.tint"),
+								transition("transform"),
+								insBs("50%"),
+								insIs("50%"),
+								shadow("base"),
+								pointerEvents(),
+								pseudoContent('""'),
+								raw({
+									transform:
+										"rotate(calc(var(--ui-color-wheel-hue, 0) * 1deg)) translateY(calc(var(--ui-color-wheel-size, 12rem) / -2 + var(--ui-color-wheel-thumb-size, 1.25rem) / 2))",
+								}),
+							]),
+
+							when("&:has(> input:disabled)", [
+								opacity(50),
+								when("&::after", [border("neutral"), raw({ boxShadow: "none" })]),
+							]),
+
+							when("& > input", [absolute(), inset("0"), is("full"), bs("full"), opacity(0)]),
+
+							media("(prefers-reduced-motion: reduce)", when("&::after", transitionDuration("0s"))),
 						]),
-
-						when("&:has(> input:disabled)", [
-							opacity(50),
-							when("&::after", [border("neutral"), raw({ boxShadow: "none" })]),
-						]),
-
-						when("& > input", [absolute(), inset("0"), is("full"), bs("full"), opacity(0)]),
-
-						media("(prefers-reduced-motion: reduce)", when("&::after", transitionDuration("0s"))),
-					]),
+					],
 					mix,
-				]}
+				)}
 			>
 				<input
 					type="range"

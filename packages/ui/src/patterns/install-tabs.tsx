@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { basis, flex, flexWrap, gap, hidden, items, justify } from "@sdxc/u/layout";
 import { overflow, overflowX } from "@sdxc/u/overflow";
 import { minIs, p } from "@sdxc/u/size";
@@ -97,15 +97,17 @@ export function InstallTabs(handle: Handle<InstallTabs.Props, InstallTabs.Contex
 				{...rest}
 				data-slot="install-tabs"
 				data-name={name}
-				mix={[
-					flex(),
-					flexWrap("wrap"),
-					overflow("hidden"),
-					rounded("lg"),
-					border({ color: "neutral", width: 1, style: "solid" }),
-					bg(),
+				mix={mergeMix(
+					[
+						flex(),
+						flexWrap("wrap"),
+						overflow("hidden"),
+						rounded("lg"),
+						border({ color: "neutral", width: 1, style: "solid" }),
+						bg(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -132,7 +134,7 @@ InstallTabs.Option = function InstallTabsOption(handle: Handle<InstallTabs.Optio
 				{...rest}
 				data-slot="install-tabs-option"
 				data-value={value}
-				mix={[raw({ display: "contents" }), mix]}
+				mix={mergeMix(raw({ display: "contents" }), mix)}
 			>
 				<input
 					type="radio"

@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { container, self, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m, mi } from "@sdxc/u/size";
@@ -230,22 +230,24 @@ export function MarketingHeader(handle: Handle<MarketingHeader.Props>) {
 				{...rest}
 				data-align={resolvedAlign}
 				data-layout={isSplit ? "split" : "stack"}
-				mix={[
-					isSplit ? [container(CONTAINER), raw({ inlineSize: "100%" })] : [],
-					action
-						? raw({
-								display: "flex",
-								flexWrap: "wrap",
-								alignItems: "flex-end",
-								justifyContent: "space-between",
-								columnGap: "2rem",
-								rowGap: "1.5rem",
-							})
-						: vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
-					isCenter ? [textAlign("center"), mi("auto")] : [],
-					raw({ marginBlockEnd: HEADER_SPACE }),
+				mix={mergeMix(
+					[
+						isSplit ? [container(CONTAINER), raw({ inlineSize: "100%" })] : [],
+						action
+							? raw({
+									display: "flex",
+									flexWrap: "wrap",
+									alignItems: "flex-end",
+									justifyContent: "space-between",
+									columnGap: "2rem",
+									rowGap: "1.5rem",
+								})
+							: vstack({ align: isCenter ? "center" : "stretch", gap: 0 }),
+						isCenter ? [textAlign("center"), mi("auto")] : [],
+						raw({ marginBlockEnd: HEADER_SPACE }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{content}
 				{action ? (

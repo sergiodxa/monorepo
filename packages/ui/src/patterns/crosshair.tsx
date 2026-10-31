@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 
 /** Mark size {@link Crosshair} draws when `size` is omitted. */
 const DEFAULT_SIZE: Crosshair.Size = "md";
@@ -78,7 +78,7 @@ export function Crosshair(handle: Handle<Crosshair.Props>) {
 				data-slot="crosshair"
 				data-corner={resolvedCorner}
 				data-size={resolvedSize}
-				mix={[
+				mix={mergeMix(
 					raw({
 						position: "absolute",
 						display: "block",
@@ -93,7 +93,7 @@ export function Crosshair(handle: Handle<Crosshair.Props>) {
 						background: `linear-gradient(${INK}, ${INK}) center / 100% 1px no-repeat, linear-gradient(${INK}, ${INK}) center / 1px 100% no-repeat`,
 					}),
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

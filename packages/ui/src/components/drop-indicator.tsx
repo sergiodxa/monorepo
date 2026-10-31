@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -72,21 +73,23 @@ export function DropIndicator(handle: Handle<DropIndicator.Props>) {
 			<div
 				{...rest}
 				data-drop-target={resolvedIsDropTarget ? "" : undefined}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					is("full"),
-					bs("0.125rem"),
-					rounded("full"),
-					transition("background-color", { duration: 150 }),
-					/**
-					 * The resting bar paints nothing while keeping its place, so only the targeted gap reads
-					 * as marked and the list never reflows when one lights up. The states use exclusive
-					 * selectors because each entry compiles into its own cascade layer, landing in any order.
-					 */
-					when("&:not([data-drop-target])", bg("transparent")),
-					when("&[data-drop-target]", bg("brand.solid")),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						is("full"),
+						bs("0.125rem"),
+						rounded("full"),
+						transition("background-color", { duration: 150 }),
+						/**
+						 * The resting bar paints nothing while keeping its place, so only the targeted gap reads
+						 * as marked and the list never reflows when one lights up. The states use exclusive
+						 * selectors because each entry compiles into its own cascade layer, landing in any order.
+						 */
+						when("&:not([data-drop-target])", bg("transparent")),
+						when("&[data-drop-target]", bg("brand.solid")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

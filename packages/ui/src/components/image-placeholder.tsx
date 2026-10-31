@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { ringShadow, rounded, visibility } from "@sdxc/u/effects";
-import { userSelect } from "@sdxc/u/general";
+import { userSelect, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	center,
@@ -155,41 +155,43 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 				data-slot="image-placeholder"
 				data-size={resolvedSize}
 				data-shape={resolvedShape}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					relative(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					bg("neutral.bg-tint-hover"),
-					fg("neutral.emphasis"),
-					shrink(),
-					userSelect(),
-					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					text("sm"),
-					data("size", "sm", [
-						is("var(--ui-image-placeholder-size-sm, 2rem)"),
-						bs("var(--ui-image-placeholder-size-sm, 2rem)"),
-						text("xs"),
-					]),
-					data("size", "lg", [
-						is("var(--ui-image-placeholder-size-lg, 3rem)"),
-						bs("var(--ui-image-placeholder-size-lg, 3rem)"),
-						text("base"),
-					]),
-					data("shape", "circle", [
-						rounded("full"),
-						when('& > [data-slot="image"]', rounded("full")),
-						when('& > [data-slot="fallback"]', rounded("full")),
-					]),
-					data("shape", "square", [
-						rounded("lg"),
-						when('& > [data-slot="image"]', rounded("lg")),
-						when('& > [data-slot="fallback"]', rounded("lg")),
-					]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						bg("neutral.bg-tint-hover"),
+						fg("neutral.emphasis"),
+						shrink(),
+						userSelect(),
+						is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						text("sm"),
+						data("size", "sm", [
+							is("var(--ui-image-placeholder-size-sm, 2rem)"),
+							bs("var(--ui-image-placeholder-size-sm, 2rem)"),
+							text("xs"),
+						]),
+						data("size", "lg", [
+							is("var(--ui-image-placeholder-size-lg, 3rem)"),
+							bs("var(--ui-image-placeholder-size-lg, 3rem)"),
+							text("base"),
+						]),
+						data("shape", "circle", [
+							rounded("full"),
+							when('& > [data-slot="image"]', rounded("full")),
+							when('& > [data-slot="fallback"]', rounded("full")),
+						]),
+						data("shape", "square", [
+							rounded("lg"),
+							when('& > [data-slot="image"]', rounded("lg")),
+							when('& > [data-slot="fallback"]', rounded("lg")),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>
@@ -217,16 +219,18 @@ ImagePlaceholder.Image = function ImagePlaceholderImage(
 			<img
 				{...rest}
 				data-slot="image"
-				mix={[
-					absolute(),
-					is("full"),
-					bs("full"),
-					fit("cover"),
-					inset(0, 0, 0, 0),
-					overflow("hidden"),
-					outline({ color: IMAGE_OUTLINE, width: 1, offset: -1 }),
+				mix={mergeMix(
+					[
+						absolute(),
+						is("full"),
+						bs("full"),
+						fit("cover"),
+						inset(0, 0, 0, 0),
+						overflow("hidden"),
+						outline({ color: IMAGE_OUTLINE, width: 1, offset: -1 }),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -252,23 +256,25 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 			<span
 				{...rest}
 				data-slot="fallback"
-				mix={[
-					/**
-					 * Both layers fill the host and this one follows the image, so it hides while an unbroken
-					 * image is present and takes over once the image fails. It hides through `visibility`,
-					 * which no other rule here sets, so declaration order keeps it hidden.
-					 */
-					precededBy('img[data-slot="image"]:not([data-image-error])', visibility("hidden")),
-					absolute(),
-					center(),
-					weight("medium"),
-					bg("neutral.bg-tint-pressed"),
-					fg("neutral"),
-					inset(0, 0, 0, 0),
-					overflow("hidden"),
-					textTransform("uppercase"),
+				mix={mergeMix(
+					[
+						/**
+						 * Both layers fill the host and this one follows the image, so it hides while an unbroken
+						 * image is present and takes over once the image fails. It hides through `visibility`,
+						 * which no other rule here sets, so declaration order keeps it hidden.
+						 */
+						precededBy('img[data-slot="image"]:not([data-image-error])', visibility("hidden")),
+						absolute(),
+						center(),
+						weight("medium"),
+						bg("neutral.bg-tint-pressed"),
+						fg("neutral"),
+						inset(0, 0, 0, 0),
+						overflow("hidden"),
+						textTransform("uppercase"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>
@@ -296,17 +302,19 @@ ImagePlaceholder.Badge = function ImagePlaceholderBadge(
 			<span
 				{...rest}
 				data-slot="badge"
-				mix={[
-					absolute(),
-					is(3),
-					bs(3),
-					rounded("full"),
-					border({ color: "neutral.tint", width: 2 }),
-					bg("neutral.strong"),
-					insBe("0"),
-					insIe("0"),
+				mix={mergeMix(
+					[
+						absolute(),
+						is(3),
+						bs(3),
+						rounded("full"),
+						border({ color: "neutral.tint", width: 2 }),
+						bg("neutral.strong"),
+						insBe("0"),
+						insIe("0"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -336,12 +344,14 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					flex(),
-					when("& > * + *", mis(-3)),
-					when('& > [data-slot="image-placeholder"]', ringShadow("neutral.tint")),
+				mix={mergeMix(
+					[
+						flex(),
+						when("& > * + *", mis(-3)),
+						when('& > [data-slot="image-placeholder"]', ringShadow("neutral.tint")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -371,26 +381,28 @@ ImagePlaceholder.GroupCount = function ImagePlaceholderGroupCount(
 				{...rest}
 				data-slot="group-count"
 				data-shape={resolvedShape}
-				mix={[
-					relative(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					overflow("hidden"),
-					weight("medium"),
-					bg("neutral.bg-tint-hover"),
-					fg("neutral"),
-					when('&[data-shape="circle"]', rounded("full")),
-					when('&[data-shape="square"]', rounded("lg")),
-					shrink(),
-					userSelect(),
-					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					text("sm"),
-					tabularNums(),
-					ringShadow("neutral.tint"),
+				mix={mergeMix(
+					[
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						overflow("hidden"),
+						weight("medium"),
+						bg("neutral.bg-tint-hover"),
+						fg("neutral"),
+						when('&[data-shape="circle"]', rounded("full")),
+						when('&[data-shape="square"]', rounded("lg")),
+						shrink(),
+						userSelect(),
+						is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						text("sm"),
+						tabularNums(),
+						ringShadow("neutral.tint"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>

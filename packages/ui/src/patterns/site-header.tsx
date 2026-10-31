@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ChevronDownIcon, MenuIcon, XIcon } from "@sdxc/icons";
 import { keyframes } from "@sdxc/u/animation";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at, dark, motionSafe, startingStyle, supports } from "@sdxc/u/responsive";
 import { hover, when } from "@sdxc/u/state";
@@ -216,18 +216,20 @@ export function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				{...rest}
 				data-slot="site-header"
 				data-variant={resolvedVariant}
-				mix={[
-					container(CONTAINER),
-					raw({
-						position: "sticky",
-						insetBlockStart: "0",
-						zIndex: "30",
-						inlineSize: "100%",
-						paddingInline: isFloating ? FLOAT_GAP : "0",
-						paddingBlockStart: isFloating ? FLOAT_GAP : "0",
-					}),
+				mix={mergeMix(
+					[
+						container(CONTAINER),
+						raw({
+							position: "sticky",
+							insetBlockStart: "0",
+							zIndex: "30",
+							inlineSize: "100%",
+							paddingInline: isFloating ? FLOAT_GAP : "0",
+							paddingBlockStart: isFloating ? FLOAT_GAP : "0",
+						}),
+					],
 					mix,
-				]}
+				)}
 			>
 				<div
 					data-slot="site-header-bar"

@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { iife } from "@sdxc/iife";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import {
 	basis,
 	block,
@@ -224,23 +224,25 @@ export function Attachment(handle: Handle<Attachment.Props>) {
 				data-slot="attachment"
 				data-state={resolvedState}
 				aria-busy={isBusy ? "true" : undefined}
-				mix={[
-					relative(),
-					rounded("lg"),
-					border({ width: 1 }),
-					border("neutral"),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					p(3),
-					transition("border-color, background-color"),
-					container(CONTAINER_NAME),
-					when('&[data-state="error"]', [
-						border("danger"),
-						bg("danger.tint"),
-						fg("danger.emphasis"),
-					]),
+				mix={mergeMix(
+					[
+						relative(),
+						rounded("lg"),
+						border({ width: 1 }),
+						border("neutral"),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						p(3),
+						transition("border-color, background-color"),
+						container(CONTAINER_NAME),
+						when('&[data-state="error"]', [
+							border("danger"),
+							bg("danger.tint"),
+							fg("danger.emphasis"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				<div
 					data-slot="body"
@@ -276,22 +278,24 @@ Attachment.Media = function AttachmentMedia(handle: Handle<Attachment.MediaProps
 			<div
 				{...rest}
 				data-slot="media"
-				mix={[
-					flex(),
-					shrink(0),
-					items("center"),
-					justify("center"),
-					overflow(),
-					is(10),
-					bs(10),
-					rounded("md"),
-					bg("neutral.bg-tint-hover"),
-					fg("neutral"),
-					when("& > svg", [is(5), bs(5)]),
-					when("& > img", [is("full"), bs("full"), fit("cover")]),
-					when(NARROW_CONTAINER_QUERY, [is("full"), bs("auto"), aspect(4, 3), rounded("lg")]),
+				mix={mergeMix(
+					[
+						flex(),
+						shrink(0),
+						items("center"),
+						justify("center"),
+						overflow(),
+						is(10),
+						bs(10),
+						rounded("md"),
+						bg("neutral.bg-tint-hover"),
+						fg("neutral"),
+						when("& > svg", [is(5), bs(5)]),
+						when("& > img", [is("full"), bs("full"), fit("cover")]),
+						when(NARROW_CONTAINER_QUERY, [is("full"), bs("auto"), aspect(4, 3), rounded("lg")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -320,15 +324,17 @@ Attachment.Content = function AttachmentContent(handle: Handle<Attachment.Conten
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					vstack({ gap: 0.5 }),
-					minIs(0),
-					grow(),
-					shrink(1),
-					basis("0%"),
-					when(NARROW_CONTAINER_QUERY, textAlign("center")),
+				mix={mergeMix(
+					[
+						vstack({ gap: 0.5 }),
+						minIs(0),
+						grow(),
+						shrink(1),
+						basis("0%"),
+						when(NARROW_CONTAINER_QUERY, textAlign("center")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -357,18 +363,20 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 				{...rest}
 				data-slot="title"
 				data-state={state}
-				mix={[
-					weight("semibold"),
-					truncate(),
-					text("sm"),
-					/**
-					 * The loop settles visible, because this host carries the file's name: a gated
-					 * loop rests hidden outside its gate, which suits an element that exists only
-					 * as a loading cue and would leave every finished upload unnamed.
-					 */
-					shimmer({ when: TITLE_SHIMMER_WHEN, outsideGate: "visible" }),
+				mix={mergeMix(
+					[
+						weight("semibold"),
+						truncate(),
+						text("sm"),
+						/**
+						 * The loop settles visible, because this host carries the file's name: a gated
+						 * loop rests hidden outside its gate, which suits an element that exists only
+						 * as a loading cue and would leave every finished upload unnamed.
+						 */
+						shimmer({ when: TITLE_SHIMMER_WHEN, outsideGate: "visible" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</p>
@@ -395,7 +403,11 @@ Attachment.Description = function AttachmentDescription(
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[truncate(), fg("neutral.muted"), text("xs"), mix]}>
+			<p
+				{...rest}
+				data-slot="description"
+				mix={mergeMix([truncate(), fg("neutral.muted"), text("xs")], mix)}
+			>
 				{children}
 			</p>
 		);
@@ -420,7 +432,11 @@ Attachment.Actions = function AttachmentActions(handle: Handle<Attachment.Action
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="actions" mix={[flex(), shrink(0), items("center"), gap(1), mix]}>
+			<div
+				{...rest}
+				data-slot="actions"
+				mix={mergeMix([flex(), shrink(0), items("center"), gap(1)], mix)}
+			>
 				{children}
 			</div>
 		);
@@ -454,7 +470,7 @@ Attachment.Action = function AttachmentAction(handle: Handle<Attachment.ActionPr
 				size={size ?? DEFAULT_ACTION_SIZE}
 				{...rest}
 				data-slot="action"
-				mix={[shrink(0), mix]}
+				mix={mergeMix(shrink(0), mix)}
 			/>
 		);
 	};
@@ -510,15 +526,17 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 				role={resolvedRole}
 				tabIndex={resolvedTabIndex}
 				data-slot="trigger"
-				mix={[
-					attrs({ href, commandfor, command, target }),
-					relative(),
-					block(),
-					rounded("inherit"),
-					when("&[role]:hover", bg("neutral.bg-tint-hover")),
-					when("&[role]:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+				mix={mergeMix(
+					[
+						attrs({ href, commandfor, command, target }),
+						relative(),
+						block(),
+						rounded("inherit"),
+						when("&[role]:hover", bg("neutral.bg-tint-hover")),
+						when("&[role]:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -548,22 +566,24 @@ Attachment.Group = function AttachmentGroup(handle: Handle<Attachment.GroupProps
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					attrs({ tabIndex: DEFAULT_GROUP_TAB_INDEX }),
-					flex(),
-					gap(3),
-					overflowX("auto"),
-					raw({
-						overscrollBehaviorInline: "contain",
-						scrollSnapType: "inline mandatory",
-						scrollPaddingInline: "0.75rem",
-						scrollBehavior: "auto",
-					}),
-					when("& > *", [shrink(0), raw({ scrollSnapAlign: "start" })]),
-					media("(prefers-reduced-motion: no-preference)", raw({ scrollBehavior: "smooth" })),
-					scrollFade({ axis: "inline", size: GROUP_SCROLL_FADE_SIZE }),
+				mix={mergeMix(
+					[
+						attrs({ tabIndex: DEFAULT_GROUP_TAB_INDEX }),
+						flex(),
+						gap(3),
+						overflowX("auto"),
+						raw({
+							overscrollBehaviorInline: "contain",
+							scrollSnapType: "inline mandatory",
+							scrollPaddingInline: "0.75rem",
+							scrollBehavior: "auto",
+						}),
+						when("& > *", [shrink(0), raw({ scrollSnapAlign: "start" })]),
+						media("(prefers-reduced-motion: no-preference)", raw({ scrollBehavior: "smooth" })),
+						scrollFade({ axis: "inline", size: GROUP_SCROLL_FADE_SIZE }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

@@ -12,6 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap } from "@sdxc/u/layout";
 
 import { Alert } from "./alert.js";
@@ -170,7 +171,7 @@ export function Form(handle: Handle<Form.Props, Form.Context>) {
 		});
 
 		return (
-			<form {...rest} mix={[flex(), flexCol(), gap(4), mix]}>
+			<form {...rest} mix={mergeMix([flex(), flexCol(), gap(4)], mix)}>
 				{formIssues.length > 0 && (
 					<Alert color="danger" data-slot="form-issues">
 						<Alert.Description>

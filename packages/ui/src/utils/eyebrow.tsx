@@ -10,6 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ArrowRightIcon } from "@sdxc/icons";
+import { mergeMix } from "@sdxc/u/general";
 
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
 
@@ -62,7 +63,7 @@ export function Eyebrow(handle: Handle<Eyebrow.Props>) {
 					href={href}
 					data-slot={resolvedSlot}
 					data-variant={variant}
-					mix={[eyebrow(), mix as TagProps<"a">["mix"]]}
+					mix={mergeMix(eyebrow(), mix as TagProps<"a">["mix"])}
 				>
 					{content}
 				</a>
@@ -70,7 +71,7 @@ export function Eyebrow(handle: Handle<Eyebrow.Props>) {
 		}
 
 		return (
-			<span data-slot={resolvedSlot} data-variant={variant} mix={[eyebrow(), mix]}>
+			<span data-slot={resolvedSlot} data-variant={variant} mix={mergeMix(eyebrow(), mix)}>
 				{content}
 			</span>
 		);

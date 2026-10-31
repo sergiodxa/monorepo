@@ -11,7 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
-import { var as varUtility, raw } from "@sdxc/u/general";
+import { var as varUtility, raw, mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { is } from "@sdxc/u/size";
@@ -64,13 +64,15 @@ export function AspectRatio(handle: Handle<AspectRatio.Props>) {
 			<div
 				{...rest}
 				style={resolvedStyle}
-				mix={[
-					block(),
-					is("full"),
-					overflow(),
-					raw({ aspectRatio: varUtility("ui-aspect-ratio", "1") }),
+				mix={mergeMix(
+					[
+						block(),
+						is("full"),
+						overflow(),
+						raw({ aspectRatio: varUtility("ui-aspect-ratio", "1") }),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

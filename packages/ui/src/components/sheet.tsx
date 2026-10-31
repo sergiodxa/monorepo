@@ -14,7 +14,7 @@ import type { Handle } from "remix/component";
 
 import { borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { vars, willChange } from "@sdxc/u/general";
+import { vars, willChange, mergeMix } from "@sdxc/u/general";
 import {
 	fixed,
 	flex,
@@ -119,52 +119,54 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 			<Dialog
 				{...rest}
 				data-side={resolvedSide}
-				mix={[
-					fixed(),
-					m(0),
-					rounded("none"),
-					maxBs("none"),
-					maxIs("none"),
-					is("min(90vw, var(--ui-sheet-size, 24rem))"),
-					insBs("0"),
-					insBe("0"),
-					enterExit({
-						translate: "var(--ui-sheet-enter-offset)",
-						duration: durations.slow,
-						easing: easings.decelerate,
-						exit: { translate: "var(--ui-sheet-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
-						exitDuration: durations.fast,
-						exitEasing: easings.accelerate,
-					}),
-					willChange("translate"),
-					data("side", "right", [
-						borderEdge("left", { width: 1, color: "neutral" }),
-						vars({
-							"ui-sheet-enter-offset": "100% 0",
-							"ui-sheet-exit-offset": `${EXIT_DISTANCE} 0`,
+				mix={mergeMix(
+					[
+						fixed(),
+						m(0),
+						rounded("none"),
+						maxBs("none"),
+						maxIs("none"),
+						is("min(90vw, var(--ui-sheet-size, 24rem))"),
+						insBs("0"),
+						insBe("0"),
+						enterExit({
+							translate: "var(--ui-sheet-enter-offset)",
+							duration: durations.slow,
+							easing: easings.decelerate,
+							exit: { translate: "var(--ui-sheet-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
+							exitDuration: durations.fast,
+							exitEasing: easings.accelerate,
 						}),
-						insRight("0"),
-						insLeft("auto"),
-						paddingLeft("1.5rem"),
-						paddingRight("calc(1.5rem + env(safe-area-inset-right, 0px))"),
-					]),
+						willChange("translate"),
+						data("side", "right", [
+							borderEdge("left", { width: 1, color: "neutral" }),
+							vars({
+								"ui-sheet-enter-offset": "100% 0",
+								"ui-sheet-exit-offset": `${EXIT_DISTANCE} 0`,
+							}),
+							insRight("0"),
+							insLeft("auto"),
+							paddingLeft("1.5rem"),
+							paddingRight("calc(1.5rem + env(safe-area-inset-right, 0px))"),
+						]),
 
-					data("side", "left", [
-						borderEdge("right", { width: 1, color: "neutral" }),
-						vars({
-							"ui-sheet-enter-offset": "-100% 0",
-							"ui-sheet-exit-offset": `-${EXIT_DISTANCE} 0`,
-						}),
-						insLeft("0"),
-						insRight("auto"),
-						paddingRight("1.5rem"),
-						paddingLeft("calc(1.5rem + env(safe-area-inset-left, 0px))"),
-					]),
-					gap("1rem"),
-					pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
-					pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),
+						data("side", "left", [
+							borderEdge("right", { width: 1, color: "neutral" }),
+							vars({
+								"ui-sheet-enter-offset": "-100% 0",
+								"ui-sheet-exit-offset": `-${EXIT_DISTANCE} 0`,
+							}),
+							insLeft("0"),
+							insRight("auto"),
+							paddingRight("1.5rem"),
+							paddingLeft("calc(1.5rem + env(safe-area-inset-left, 0px))"),
+						]),
+						gap("1rem"),
+						pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
+						pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -187,7 +189,7 @@ Sheet.Header = function SheetHeader(handle: Handle<Sheet.HeaderProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="header" mix={[vstack({ gap: "0.25rem" }), mix]} />;
+		return <div {...rest} data-slot="header" mix={mergeMix(vstack({ gap: "0.25rem" }), mix)} />;
 	};
 };
 
@@ -218,7 +220,11 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[fontSize("sm"), fg("neutral"), pretty(), mix]}>
+			<p
+				{...rest}
+				data-slot="description"
+				mix={mergeMix([fontSize("sm"), fg("neutral"), pretty()], mix)}
+			>
 				{rest.children}
 			</p>
 		);
@@ -246,7 +252,7 @@ Sheet.Footer = function SheetFooter(handle: Handle<Sheet.FooterProps>) {
 			<div
 				{...rest}
 				data-slot="footer"
-				mix={[mbs("auto"), flex(), items("center"), justify("end"), gap("0.5rem"), mix]}
+				mix={mergeMix([mbs("auto"), flex(), items("center"), justify("end"), gap("0.5rem")], mix)}
 			/>
 		);
 	};

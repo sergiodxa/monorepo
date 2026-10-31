@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
-import { combine, cursor, pseudoContent, raw } from "@sdxc/u/general";
+import { combine, cursor, pseudoContent, raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	center,
@@ -174,13 +174,15 @@ export function TabbedStage(handle: Handle<TabbedStage.Props, TabbedStage.Contex
 					data-slot="tabbed-stage"
 					data-name={name}
 					data-orientation={resolvedOrientation}
-					mix={[
-						flex(),
-						flexWrap("wrap"),
-						justify("center"),
-						raw({ rowGap: PILL_ROW_GAP, columnGap: PILL_GAP }),
+					mix={mergeMix(
+						[
+							flex(),
+							flexWrap("wrap"),
+							justify("center"),
+							raw({ rowGap: PILL_ROW_GAP, columnGap: PILL_GAP }),
+						],
 						mix,
-					]}
+					)}
 				>
 					{children}
 				</div>
@@ -197,7 +199,7 @@ export function TabbedStage(handle: Handle<TabbedStage.Props, TabbedStage.Contex
 					data-slot="tabbed-stage"
 					data-name={name}
 					data-orientation={resolvedOrientation}
-					mix={[
+					mix={mergeMix(
 						combine([
 							raw({
 								display: "grid",
@@ -217,7 +219,7 @@ export function TabbedStage(handle: Handle<TabbedStage.Props, TabbedStage.Contex
 							),
 						]),
 						mix,
-					]}
+					)}
 				>
 					{children}
 				</div>
@@ -371,7 +373,7 @@ TabbedStage.Item = function TabbedStageItem(handle: Handle<TabbedStage.ItemProps
 				{...rest}
 				data-slot="tabbed-stage-item"
 				data-value={value}
-				mix={[raw({ display: "contents" }), mix]}
+				mix={mergeMix(raw({ display: "contents" }), mix)}
 			>
 				<input
 					type="radio"

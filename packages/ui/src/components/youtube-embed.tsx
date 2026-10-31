@@ -11,6 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { aspect, is } from "@sdxc/u/size";
 
@@ -69,7 +70,7 @@ export function YouTubeEmbed(handle: Handle<YouTubeEmbed.Props>) {
 				referrerpolicy="strict-origin-when-cross-origin"
 				allow={ALLOWED_FEATURES}
 				allowFullScreen
-				mix={[block(), is("full"), aspect("video"), border("none"), rounded("lg"), mix]}
+				mix={mergeMix([block(), is("full"), aspect("video"), border("none"), rounded("lg")], mix)}
 			/>
 		);
 	};

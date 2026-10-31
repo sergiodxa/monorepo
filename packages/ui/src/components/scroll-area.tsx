@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { relative } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -81,7 +81,9 @@ export function ScrollArea(handle: Handle<ScrollArea.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="scroll-area" mix={[panelChrome(), relative(), mix]} />;
+		return (
+			<div {...rest} data-slot="scroll-area" mix={mergeMix([panelChrome(), relative()], mix)} />
+		);
 	};
 }
 
@@ -111,35 +113,41 @@ ScrollArea.Viewport = function ScrollAreaViewport(handle: Handle<ScrollArea.View
 				{...rest}
 				data-orientation={resolvedOrientation}
 				data-slot="viewport"
-				mix={[
-					attrs({ tabIndex: DEFAULT_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					is("full"),
-					bs("full"),
-					raw({
-						scrollBehavior: "smooth",
-						scrollbarWidth: "thin",
-						scrollbarGutter: "stable",
-					}),
-					data("orientation", "vertical", raw({ overflowBlock: "auto", overflowInline: "hidden" })),
-					data(
-						"orientation",
-						"horizontal",
-						raw({ overflowInline: "auto", overflowBlock: "hidden" }),
-					),
-					data("orientation", "both", overflow("auto")),
-					when("&::-webkit-scrollbar", raw({ width: "0.75rem", height: "0.75rem" })),
-					when("&::-webkit-scrollbar-track", bg("transparent")),
-					when("&::-webkit-scrollbar-thumb", [
-						rounded("full"),
-						bg("neutral.border"),
-						border({ color: "transparent", width: "3px" }),
-						raw({ backgroundClip: "content-box" }),
-						hover(bg("neutral.strong")),
-					]),
-					media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
+				mix={mergeMix(
+					[
+						attrs({ tabIndex: DEFAULT_TAB_INDEX }),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						is("full"),
+						bs("full"),
+						raw({
+							scrollBehavior: "smooth",
+							scrollbarWidth: "thin",
+							scrollbarGutter: "stable",
+						}),
+						data(
+							"orientation",
+							"vertical",
+							raw({ overflowBlock: "auto", overflowInline: "hidden" }),
+						),
+						data(
+							"orientation",
+							"horizontal",
+							raw({ overflowInline: "auto", overflowBlock: "hidden" }),
+						),
+						data("orientation", "both", overflow("auto")),
+						when("&::-webkit-scrollbar", raw({ width: "0.75rem", height: "0.75rem" })),
+						when("&::-webkit-scrollbar-track", bg("transparent")),
+						when("&::-webkit-scrollbar-thumb", [
+							rounded("full"),
+							bg("neutral.border"),
+							border({ color: "transparent", width: "3px" }),
+							raw({ backgroundClip: "content-box" }),
+							hover(bg("neutral.strong")),
+						]),
+						media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

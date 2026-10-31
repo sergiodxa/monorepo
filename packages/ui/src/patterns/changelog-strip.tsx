@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg, outline } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { focusVisible, when } from "@sdxc/u/state";
@@ -190,7 +190,7 @@ export function ChangelogStrip(handle: Handle<ChangelogStrip.Props>) {
 			<div
 				{...rest}
 				data-slot="changelog-strip"
-				mix={[container(STRIP_CONTAINER), raw({ minInlineSize: "0" }), mix]}
+				mix={mergeMix([container(STRIP_CONTAINER), raw({ minInlineSize: "0" })], mix)}
 			>
 				{header}
 				<ol
@@ -280,7 +280,7 @@ ChangelogStrip.Entry = function ChangelogStripEntry(handle: Handle<ChangelogStri
 			<li
 				{...rest}
 				data-slot="changelog-strip-entry"
-				mix={[
+				mix={mergeMix(
 					combine([
 						raw({
 							position: "relative",
@@ -308,7 +308,7 @@ ChangelogStrip.Entry = function ChangelogStripEntry(handle: Handle<ChangelogStri
 						),
 					]),
 					mix,
-				]}
+				)}
 			>
 				{href ? (
 					<a

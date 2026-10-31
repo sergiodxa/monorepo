@@ -11,6 +11,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { spacer, hstack } from "@sdxc/u/layout";
 import { minIs } from "@sdxc/u/size";
 
@@ -201,7 +202,7 @@ export function ColorField(handle: Handle<ColorField.Props>) {
 		let resolvedSwatchValue = value ?? defaultValue ?? DEFAULT_SWATCH_VALUE;
 
 		return (
-			<div {...rest} data-slot="color-field" mix={[fieldStackLayout(), mix]}>
+			<div {...rest} data-slot="color-field" mix={mergeMix(fieldStackLayout(), mix)}>
 				<Label htmlFor={handle.id} mix={parts?.label}>
 					{label}
 				</Label>

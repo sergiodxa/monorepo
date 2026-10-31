@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, outlineStyle } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { cursor, pseudoContent } from "@sdxc/u/general";
+import { cursor, pseudoContent, mergeMix } from "@sdxc/u/general";
 import { absolute, appearance, insBe, insBs, inset, relative, vstack } from "@sdxc/u/layout";
 import { bs, is, m, minIs } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
@@ -197,16 +197,18 @@ export function ColorSlider(handle: Handle<ColorSlider.Props, ColorSlider.Contex
 			<div
 				data-channel={channel}
 				{...rest}
-				mix={[
-					vstack({ gap: 2 }),
-					is("full"),
-					/**
-					 * The slider takes the width it is given, so a narrow panel keeps the track inside it
-					 * instead of overflowing with the track running off the edge.
-					 */
-					minIs(0),
+				mix={mergeMix(
+					[
+						vstack({ gap: 2 }),
+						is("full"),
+						/**
+						 * The slider takes the width it is given, so a narrow panel keeps the track inside it
+						 * instead of overflowing with the track running off the edge.
+						 */
+						minIs(0),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -238,31 +240,33 @@ ColorSlider.Track = function ColorSliderTrack(handle: Handle<ColorSlider.TrackPr
 			<div
 				{...rest}
 				style={resolvedStyle}
-				mix={[
-					rtlAwareGradientDirection(TRACK_DIRECTION_PROPERTY),
-					relative(),
-					is("full"),
-					bs("var(--ui-color-slider-thumb-size, 1.25rem)"),
-					rounded("full"),
-					when("&::before", [
-						absolute(),
-						inset("0"),
-						rounded("inherit"),
-						bg({
-							image:
-								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
-							size: "var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
-						}),
-						pseudoContent('""'),
-					]),
-					when("&::after", [absolute(), inset("0"), rounded("inherit"), pseudoContent('""')]),
+				mix={mergeMix(
+					[
+						rtlAwareGradientDirection(TRACK_DIRECTION_PROPERTY),
+						relative(),
+						is("full"),
+						bs("var(--ui-color-slider-thumb-size, 1.25rem)"),
+						rounded("full"),
+						when("&::before", [
+							absolute(),
+							inset("0"),
+							rounded("inherit"),
+							bg({
+								image:
+									"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
+								size: "var(--ui-color-slider-checker-size, 0.625rem) var(--ui-color-slider-checker-size, 0.625rem)",
+							}),
+							pseudoContent('""'),
+						]),
+						when("&::after", [absolute(), inset("0"), rounded("inherit"), pseudoContent('""')]),
 
-					when('[data-channel="hue"] &::after', bg({ image: HUE_GRADIENT })),
-					when('[data-channel="saturation"] &::after', bg({ image: SATURATION_GRADIENT })),
-					when('[data-channel="lightness"] &::after', bg({ image: LIGHTNESS_GRADIENT })),
-					when('[data-channel="alpha"] &::after', bg({ image: ALPHA_GRADIENT })),
+						when('[data-channel="hue"] &::after', bg({ image: HUE_GRADIENT })),
+						when('[data-channel="saturation"] &::after', bg({ image: SATURATION_GRADIENT })),
+						when('[data-channel="lightness"] &::after', bg({ image: LIGHTNESS_GRADIENT })),
+						when('[data-channel="alpha"] &::after', bg({ image: ALPHA_GRADIENT })),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -296,40 +300,42 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 				max={max ?? context.max}
 				step={resolvedStep}
 				defaultValue={resolvedValue}
-				mix={[
-					rangeThumbAppearance(
-						"--ui-color-slider-thumb-size",
-						"--ui-color-slider-thumb-border-width",
-					),
-					absolute(),
-					z(10),
-					appearance(),
-					cursor("pointer"),
-					when("&:disabled", cursor("not-allowed")),
-					inset("0"),
-					/**
-					 * The native input reaches past the track's block axis to a full pointer target,
-					 * centred so the thumb stays on the visible gradient.
-					 */
-					insBs(THUMB_HIT_INSET),
-					insBe(THUMB_HIT_INSET),
-					m("0"),
-					bg("transparent"),
-					outlineStyle("none"),
+				mix={mergeMix(
+					[
+						rangeThumbAppearance(
+							"--ui-color-slider-thumb-size",
+							"--ui-color-slider-thumb-border-width",
+						),
+						absolute(),
+						z(10),
+						appearance(),
+						cursor("pointer"),
+						when("&:disabled", cursor("not-allowed")),
+						inset("0"),
+						/**
+						 * The native input reaches past the track's block axis to a full pointer target,
+						 * centred so the thumb stays on the visible gradient.
+						 */
+						insBs(THUMB_HIT_INSET),
+						insBe(THUMB_HIT_INSET),
+						m("0"),
+						bg("transparent"),
+						outlineStyle("none"),
 
-					when("&::-webkit-slider-runnable-track", [
-						bs("full"),
-						bg("transparent"),
-						appearance("none", { moz: false }),
-					]),
-					when("&::-moz-range-track", [
-						bs("full"),
-						bg("transparent"),
-						border({ style: "none" }),
-						appearance("none", { webkit: false, moz: false }),
-					]),
+						when("&::-webkit-slider-runnable-track", [
+							bs("full"),
+							bg("transparent"),
+							appearance("none", { moz: false }),
+						]),
+						when("&::-moz-range-track", [
+							bs("full"),
+							bg("transparent"),
+							border({ style: "none" }),
+							appearance("none", { webkit: false, moz: false }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -351,6 +357,6 @@ ColorSlider.Output = function ColorSliderOutput(handle: Handle<ColorSlider.Outpu
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <output {...rest} mix={[outputCaptionText(), mix]} />;
+		return <output {...rest} mix={mergeMix(outputCaptionText(), mix)} />;
 	};
 };

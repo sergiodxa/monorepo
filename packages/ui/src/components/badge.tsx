@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
-import { userSelect } from "@sdxc/u/general";
+import { userSelect, mergeMix } from "@sdxc/u/general";
 import { gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
@@ -93,63 +93,69 @@ export function Badge(handle: Handle<Badge.Props>) {
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				{...rest}
-				mix={[
-					inlineFlex(),
-					items("center"),
-					gap(1),
-					rounded("full"),
-					border({ width: 1 }),
-					pi(2.5),
-					pb(0.5),
-					leading(1),
-					weight("semibold"),
-					tabularNums(),
-					nowrap(),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					fontSize("xs"),
-					userSelect(),
-					data("variant", "default", [
-						data("color", "brand", [bg("brand.solid"), fg("brand.onSolid"), border("brand.solid")]),
-						data("color", "neutral", [
-							bg("neutral.solid"),
-							fg("neutral.onSolid"),
-							border("neutral.solid"),
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						gap(1),
+						rounded("full"),
+						border({ width: 1 }),
+						pi(2.5),
+						pb(0.5),
+						leading(1),
+						weight("semibold"),
+						tabularNums(),
+						nowrap(),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						fontSize("xs"),
+						userSelect(),
+						data("variant", "default", [
+							data("color", "brand", [
+								bg("brand.solid"),
+								fg("brand.onSolid"),
+								border("brand.solid"),
+							]),
+							data("color", "neutral", [
+								bg("neutral.solid"),
+								fg("neutral.onSolid"),
+								border("neutral.solid"),
+							]),
+							data("color", "success", [
+								bg("success.solid"),
+								fg("success.onSolid"),
+								border("success.solid"),
+							]),
+							data("color", "warning", [
+								bg("warning.solid"),
+								fg("warning.onSolid"),
+								border("warning.solid"),
+							]),
+							data("color", "danger", [
+								bg("danger.solid"),
+								fg("danger.onSolid"),
+								border("danger.solid"),
+							]),
 						]),
-						data("color", "success", [
-							bg("success.solid"),
-							fg("success.onSolid"),
-							border("success.solid"),
+						data("variant", "secondary", [
+							data("color", "brand", [bg("brand.tint"), fg("brand"), border("brand")]),
+							data("color", "neutral", [bg("neutral.tint"), fg("neutral"), border("neutral")]),
+							data("color", "success", [bg("success.tint"), fg("success"), border("success")]),
+							data("color", "warning", [bg("warning.tint"), fg("warning"), border("warning")]),
+							data("color", "danger", [bg("danger.tint"), fg("danger"), border("danger")]),
 						]),
-						data("color", "warning", [
-							bg("warning.solid"),
-							fg("warning.onSolid"),
-							border("warning.solid"),
+						data("variant", "outline", [
+							bg("transparent"),
+							data("color", "brand", [border("brand.strong"), fg("brand")]),
+							data("color", "neutral", [border("neutral"), fg("neutral")]),
+							data("color", "success", [border("success.strong"), fg("success")]),
+							data("color", "warning", [border("warning.strong"), fg("warning")]),
+							data("color", "danger", [border("danger.strong"), fg("danger")]),
 						]),
-						data("color", "danger", [
-							bg("danger.solid"),
-							fg("danger.onSolid"),
-							border("danger.solid"),
-						]),
-					]),
-					data("variant", "secondary", [
-						data("color", "brand", [bg("brand.tint"), fg("brand"), border("brand")]),
-						data("color", "neutral", [bg("neutral.tint"), fg("neutral"), border("neutral")]),
-						data("color", "success", [bg("success.tint"), fg("success"), border("success")]),
-						data("color", "warning", [bg("warning.tint"), fg("warning"), border("warning")]),
-						data("color", "danger", [bg("danger.tint"), fg("danger"), border("danger")]),
-					]),
-					data("variant", "outline", [
-						bg("transparent"),
-						data("color", "brand", [border("brand.strong"), fg("brand")]),
-						data("color", "neutral", [border("neutral"), fg("neutral")]),
-						data("color", "success", [border("success.strong"), fg("success")]),
-						data("color", "warning", [border("warning.strong"), fg("warning")]),
-						data("color", "danger", [border("danger.strong"), fg("danger")]),
-					]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -172,13 +178,15 @@ Badge.Icon = function BadgeIcon(handle: Handle<Badge.IconProps>) {
 		return (
 			<span
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					inlineFlex(),
-					shrink(0),
-					when("& > svg", [is(3), bs(3), shrink(0), fg("currentColor")]),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
+						inlineFlex(),
+						shrink(0),
+						when("& > svg", [is(3), bs(3), shrink(0), fg("currentColor")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -197,6 +205,6 @@ Badge.Text = function BadgeText(handle: Handle<Badge.TextProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[leading(1), mix]} />;
+		return <span {...rest} mix={mergeMix(leading(1), mix)} />;
 	};
 };

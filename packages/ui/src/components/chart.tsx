@@ -25,7 +25,7 @@ import {
 	vectorEffect,
 } from "@sdxc/u/color";
 import { opacity, rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";
-import { cursor, pointerEvents, raw, userSelect } from "@sdxc/u/general";
+import { cursor, pointerEvents, raw, userSelect, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	block,
@@ -157,14 +157,10 @@ function ChartLegend(handle: Handle<Chart.LegendProps>) {
 			<div
 				data-slot="legend"
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_LEGEND_ROLE }),
-					flex(),
-					flexWrap(),
-					items("center"),
-					gap(4),
+				mix={mergeMix(
+					[attrs({ role: DEFAULT_LEGEND_ROLE }), flex(), flexWrap(), items("center"), gap(4)],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -227,7 +223,7 @@ function ChartLegendItem(handle: Handle<Chart.LegendItemProps>) {
 					type="checkbox"
 					defaultChecked={resolvedChecked}
 					{...rest}
-					mix={[visuallyHidden(), mix]}
+					mix={mergeMix(visuallyHidden(), mix)}
 				/>
 				{children}
 			</label>
@@ -670,7 +666,7 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[legendToggle(), block(), is("full"), bs("auto"), mix]}
+				mix={mergeMix([legendToggle(), block(), is("full"), bs("auto")], mix)}
 			/>
 		);
 	};
@@ -756,7 +752,7 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 		let markerIndices = computeMarkerIndices(points, context.xDomain, resolvedMarkerCount);
 
 		return (
-			<g data-color={String(resolvedColor)} {...rest} mix={[chartPalette("color"), mix]}>
+			<g data-color={String(resolvedColor)} {...rest} mix={mergeMix(chartPalette("color"), mix)}>
 				<path
 					d={d}
 					mix={[
@@ -802,39 +798,41 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 			<div
 				data-slot="tooltip"
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_TOOLTIP_ARIA_HIDDEN }),
-					absolute(),
-					flex(),
-					items("center"),
-					rounded("md"),
-					pi(2),
-					fg("neutral.onSolid"),
-					bg("neutral.solid"),
-					shadow("md"),
-					z(10),
-					gap(1.5),
-					pb(1.5),
-					nowrap(),
-					tabularNums(),
-					opacity(0),
-					transition("opacity, scale", { duration: durations.fast, easing: easings.standard }),
-					when("&[data-open]", [opacity(100), scaleProperty(1)]),
-					media("(prefers-reduced-motion: reduce)", [
-						scaleProperty("none"),
-						raw({ transitionProperty: "opacity" }),
-					]),
-					raw({
-						left: "var(--ui-chart-tooltip-x, 0px)",
-						top: "var(--ui-chart-tooltip-y, 0px)",
-						fontSize: "0.8125rem",
-					}),
-					translateProperty("-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))"),
-					leading(1.2),
-					pointerEvents(),
-					scaleProperty(0.95),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_TOOLTIP_ARIA_HIDDEN }),
+						absolute(),
+						flex(),
+						items("center"),
+						rounded("md"),
+						pi(2),
+						fg("neutral.onSolid"),
+						bg("neutral.solid"),
+						shadow("md"),
+						z(10),
+						gap(1.5),
+						pb(1.5),
+						nowrap(),
+						tabularNums(),
+						opacity(0),
+						transition("opacity, scale", { duration: durations.fast, easing: easings.standard }),
+						when("&[data-open]", [opacity(100), scaleProperty(1)]),
+						media("(prefers-reduced-motion: reduce)", [
+							scaleProperty("none"),
+							raw({ transitionProperty: "opacity" }),
+						]),
+						raw({
+							left: "var(--ui-chart-tooltip-x, 0px)",
+							top: "var(--ui-chart-tooltip-y, 0px)",
+							fontSize: "0.8125rem",
+						}),
+						translateProperty("-50% calc(-100% - var(--ui-chart-tooltip-gap, 0.5rem))"),
+						leading(1.2),
+						pointerEvents(),
+						scaleProperty(0.95),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -860,15 +858,10 @@ ChartTooltip.Swatch = function ChartTooltipSwatch(handle: Handle<Chart.Tooltip.S
 				{...rest}
 				data-slot="swatch"
 				data-color={String(resolvedColor)}
-				mix={[
-					chartPalette("backgroundColor"),
-					inlineBlock(),
-					is(2),
-					bs(2),
-					rounded("full"),
-					shrink(),
+				mix={mergeMix(
+					[chartPalette("backgroundColor"), inlineBlock(), is(2), bs(2), rounded("full"), shrink()],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -888,7 +881,7 @@ ChartTooltip.Label = function ChartTooltipLabel(handle: Handle<Chart.Tooltip.Lab
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} data-slot="label" mix={[opacity(75), mix]} />;
+		return <span {...rest} data-slot="label" mix={mergeMix(opacity(75), mix)} />;
 	};
 };
 
@@ -906,7 +899,9 @@ ChartTooltip.Value = function ChartTooltipValue(handle: Handle<Chart.Tooltip.Val
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} data-slot="value" mix={[weight("semibold"), tabularNums(), mix]} />;
+		return (
+			<span {...rest} data-slot="value" mix={mergeMix([weight("semibold"), tabularNums()], mix)} />
+		);
 	};
 };
 
@@ -953,7 +948,7 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 		let markerIndices = computeMarkerIndices(points, context.xDomain, resolvedMarkerCount);
 
 		return (
-			<g data-color={String(resolvedColor)} {...rest} mix={[chartPalette("color"), mix]}>
+			<g data-color={String(resolvedColor)} {...rest} mix={mergeMix(chartPalette("color"), mix)}>
 				<path
 					d={d}
 					mix={[
@@ -1020,7 +1015,10 @@ Chart.Pie = function ChartPie(handle: Handle<Chart.PieProps>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto"), mix]}
+				mix={mergeMix(
+					[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto")],
+					mix,
+				)}
 			>
 				{slices.map((slice, index) => {
 					let datum = data[index];
@@ -1143,7 +1141,10 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto"), mix]}
+				mix={mergeMix(
+					[chartPalette("fill", " "), legendToggle(), block(), is("full"), bs("auto")],
+					mix,
+				)}
 			>
 				<g mix={[attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN })]}>
 					{gridlineValues.map((value) => (

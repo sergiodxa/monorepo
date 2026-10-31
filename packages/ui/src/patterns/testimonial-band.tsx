@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { container, grid, hstack, items, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
@@ -228,20 +228,22 @@ TestimonialBand.Quote = function TestimonialBandQuote(handle: Handle<Testimonial
 				{...rest}
 				data-slot="testimonial-quote"
 				data-variant={isFeatured ? "featured" : "card"}
-				mix={[
-					vstack({ gap: 6, align: "stretch" }),
-					isFeatured
-						? [
-								marketingBandTone("inverse"),
-								raw({
-									margin: "0",
-									padding: "clamp(1.5rem, 1rem + 2cqi, 3rem)",
-									borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
-								}),
-							]
-						: [marketingSurface(), raw({ margin: "0", padding: "1.5rem" })],
+				mix={mergeMix(
+					[
+						vstack({ gap: 6, align: "stretch" }),
+						isFeatured
+							? [
+									marketingBandTone("inverse"),
+									raw({
+										margin: "0",
+										padding: "clamp(1.5rem, 1rem + 2cqi, 3rem)",
+										borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
+									}),
+								]
+							: [marketingSurface(), raw({ margin: "0", padding: "1.5rem" })],
+					],
 					mix,
-				]}
+				)}
 			>
 				{logo ? (
 					<div

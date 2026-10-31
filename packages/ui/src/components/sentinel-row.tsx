@@ -12,6 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, items, justify } from "@sdxc/u/layout";
 import { pb } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
@@ -33,15 +34,17 @@ export function SentinelRow(handle: Handle<TagProps<"div">>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					flex(),
-					items("center"),
-					justify("center"),
-					text("sm"),
-					pb("0.5rem"),
-					fg("neutral.muted"),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						justify("center"),
+						text("sm"),
+						pb("0.5rem"),
+						fg("neutral.muted"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

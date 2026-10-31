@@ -11,6 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { bs, is } from "@sdxc/u/size";
 import { attrs } from "remix/component";
 
@@ -54,14 +55,16 @@ export function Skeleton(handle: Handle<Skeleton.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					bs("var(--ui-skeleton-block-size, 1rem)"),
-					is("full"),
-					rounded("md"),
-					bg("neutral.border"),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						bs("var(--ui-skeleton-block-size, 1rem)"),
+						is("full"),
+						rounded("md"),
+						bg("neutral.border"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

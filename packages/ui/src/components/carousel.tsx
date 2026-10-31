@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { outline } from "@sdxc/u/color";
-import { raw, vars } from "@sdxc/u/general";
+import { raw, vars, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, grow, items, justify, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, minIs, pi } from "@sdxc/u/size";
@@ -159,17 +159,19 @@ export function Carousel(handle: Handle<Carousel.Props>) {
 			<section
 				{...rest}
 				data-slot="carousel"
-				mix={[
-					flex(),
-					flexCol(),
-					gap(3),
-					vars({
-						"ui-carousel-gap": "1rem",
-						"ui-carousel-slide-size": "18rem",
-						"ui-carousel-padding": "0px",
-					}),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						gap(3),
+						vars({
+							"ui-carousel-gap": "1rem",
+							"ui-carousel-slide-size": "18rem",
+							"ui-carousel-padding": "0px",
+						}),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -195,20 +197,22 @@ Carousel.Viewport = function CarouselViewport(handle: Handle<Carousel.ViewportPr
 			<div
 				{...rest}
 				data-slot="viewport"
-				mix={[
-					attrs({ role: DEFAULT_VIEWPORT_ROLE, tabIndex: DEFAULT_VIEWPORT_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					raw({
-						overflowInline: "auto",
-						overflowBlock: "hidden",
-						scrollBehavior: "smooth",
-						scrollSnapType: "inline mandatory",
-						scrollPaddingInline: "var(--ui-carousel-padding, 0px)",
-						"-webkit-overflow-scrolling": "touch",
-					}),
-					media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_VIEWPORT_ROLE, tabIndex: DEFAULT_VIEWPORT_TAB_INDEX }),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						raw({
+							overflowInline: "auto",
+							overflowBlock: "hidden",
+							scrollBehavior: "smooth",
+							scrollSnapType: "inline mandatory",
+							scrollPaddingInline: "var(--ui-carousel-padding, 0px)",
+							"-webkit-overflow-scrolling": "touch",
+						}),
+						media("(prefers-reduced-motion: reduce)", raw({ scrollBehavior: "auto" })),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -235,12 +239,10 @@ Carousel.Track = function CarouselTrack(handle: Handle<Carousel.TrackProps>) {
 			<div
 				{...rest}
 				data-slot="track"
-				mix={[
-					flex(),
-					gap("var(--ui-carousel-gap, 1rem)"),
-					pi("var(--ui-carousel-padding, 0px)"),
+				mix={mergeMix(
+					[flex(), gap("var(--ui-carousel-gap, 1rem)"), pi("var(--ui-carousel-padding, 0px)")],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -264,21 +266,23 @@ Carousel.Slide = function CarouselSlide(handle: Handle<Carousel.SlideProps>) {
 			<div
 				{...rest}
 				data-slot="slide"
-				mix={[
-					attrs({ role: DEFAULT_SLIDE_ROLE }),
-					grow(0),
-					shrink(0),
-					/**
-					 * The slide snaps to the viewport's start edge and leaves the scroll free to pass it:
-					 * `scroll-snap-stop: always` clamps programmatic scrolls too, so every dot would move
-					 * one slide and none would reach the slide it names.
-					 */
-					raw({
-						flexBasis: "var(--ui-carousel-slide-size, 18rem)",
-						scrollSnapAlign: "start",
-					}),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_SLIDE_ROLE }),
+						grow(0),
+						shrink(0),
+						/**
+						 * The slide snaps to the viewport's start edge and leaves the scroll free to pass it:
+						 * `scroll-snap-stop: always` clamps programmatic scrolls too, so every dot would move
+						 * one slide and none would reach the slide it names.
+						 */
+						raw({
+							flexBasis: "var(--ui-carousel-slide-size, 18rem)",
+							scrollSnapAlign: "start",
+						}),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -304,7 +308,7 @@ Carousel.Controls = function CarouselControls(handle: Handle<Carousel.ControlsPr
 			<div
 				{...rest}
 				data-slot="controls"
-				mix={[flex(), items("center"), gap(2), justify("end"), mix]}
+				mix={mergeMix([flex(), items("center"), gap(2), justify("end")], mix)}
 			/>
 		);
 	};
@@ -337,7 +341,7 @@ Carousel.Previous = function CarouselPrevious(handle: Handle<Carousel.PreviousPr
 				size={resolvedSize}
 				command={resolvedCommand}
 				data-slot="previous"
-				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
+				mix={mergeMix([minIs(0), when("& > svg", [is(4), bs(4)])], mix)}
 			>
 				{children ?? <ChevronLeftIcon />}
 			</Button>
@@ -372,7 +376,7 @@ Carousel.Next = function CarouselNext(handle: Handle<Carousel.NextProps>) {
 				size={resolvedSize}
 				command={resolvedCommand}
 				data-slot="next"
-				mix={[minIs(0), when("& > svg", [is(4), bs(4)]), mix]}
+				mix={mergeMix([minIs(0), when("& > svg", [is(4), bs(4)])], mix)}
 			>
 				{children ?? <ChevronRightIcon />}
 			</Button>

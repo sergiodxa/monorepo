@@ -17,7 +17,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { SearchIcon, XIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { pointerEvents } from "@sdxc/u/general";
+import { pointerEvents, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	appearance,
@@ -108,7 +108,7 @@ export function SearchField(handle: Handle<SearchField.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <search {...rest} data-slot="search-field" mix={[fieldStackLayout(), mix]} />;
+		return <search {...rest} data-slot="search-field" mix={mergeMix(fieldStackLayout(), mix)} />;
 	};
 }
 
@@ -142,16 +142,18 @@ SearchField.Input = function SearchFieldInput(handle: Handle<SearchField.InputPr
 				<Input
 					type="search"
 					{...rest}
-					mix={[
-						pis("2.25rem"),
-						/**
-						 * {@link SearchField.Clear} draws the clear affordance, so the one the user agent draws
-						 * inside a search input holding a value is hidden to keep the two from stacking.
-						 */
-						when("&::-webkit-search-cancel-button", [appearance("none"), hidden()]),
-						when("&::-webkit-search-decoration", [appearance("none"), hidden()]),
+					mix={mergeMix(
+						[
+							pis("2.25rem"),
+							/**
+							 * {@link SearchField.Clear} draws the clear affordance, so the one the user agent draws
+							 * inside a search input holding a value is hidden to keep the two from stacking.
+							 */
+							when("&::-webkit-search-cancel-button", [appearance("none"), hidden()]),
+							when("&::-webkit-search-decoration", [appearance("none"), hidden()]),
+						],
 						mix,
-					]}
+					)}
 				/>
 			</div>
 		);
@@ -179,16 +181,18 @@ SearchField.Control = function SearchFieldControl(handle: Handle<SearchField.Con
 			<div
 				{...rest}
 				data-slot="control"
-				mix={[
-					relative(),
-					flex(),
-					items("center"),
-					/**
-					 * The input spans the row, so the field keeps the width its container offers.
-					 */
-					when('& > [data-slot="input-wrapper"]', grow()),
+				mix={mergeMix(
+					[
+						relative(),
+						flex(),
+						items("center"),
+						/**
+						 * The input spans the row, so the field keeps the width its container offers.
+						 */
+						when('& > [data-slot="input-wrapper"]', grow()),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -219,23 +223,25 @@ SearchField.Clear = function SearchFieldClear(handle: Handle<SearchField.ClearPr
 				size="sm"
 				command={SEARCH_FIELD_CLEAR_COMMAND}
 				data-slot="clear"
-				mix={[
-					clearField(),
-					/**
-					 * A round, icon-sized target centred on the field, so its hover tint reads as a
-					 * disc beside the text, and its glyph sits as far from the trailing edge as the
-					 * search glyph sits from the leading one.
-					 */
-					is(7),
-					bs(7),
-					p(0),
-					rounded("full"),
-					absolute(),
-					insIe("0.375rem"),
-					insBs("50%"),
-					translateY("-50%"),
+				mix={mergeMix(
+					[
+						clearField(),
+						/**
+						 * A round, icon-sized target centred on the field, so its hover tint reads as a
+						 * disc beside the text, and its glyph sits as far from the trailing edge as the
+						 * search glyph sits from the leading one.
+						 */
+						is(7),
+						bs(7),
+						p(0),
+						rounded("full"),
+						absolute(),
+						insIe("0.375rem"),
+						insBs("50%"),
+						translateY("-50%"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children ?? <XIcon size={16} />}
 			</Button>

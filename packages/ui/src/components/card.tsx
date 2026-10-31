@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { border } from "@sdxc/u/color";
 import { opacity, rounded, shadow } from "@sdxc/u/effects";
-import { vars } from "@sdxc/u/general";
+import { vars, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { p, pbe, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -106,15 +106,17 @@ export function Card(handle: Handle<Card.Props>) {
 			<section
 				data-color={resolvedColor}
 				{...rest}
-				mix={[
-					semanticColorPanel(),
-					rounded("lg"),
-					border({ width: 1 }),
-					when('&[data-color="neutral"]', border("transparent")),
-					shadow("sm"),
-					vars({ "ui-box-shadow-ring": SHADOW_RING }),
+				mix={mergeMix(
+					[
+						semanticColorPanel(),
+						rounded("lg"),
+						border({ width: 1 }),
+						when('&[data-color="neutral"]', border("transparent")),
+						shadow("sm"),
+						vars({ "ui-box-shadow-ring": SHADOW_RING }),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -136,7 +138,7 @@ Card.Header = function CardHeader(handle: Handle<Card.HeaderProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <header {...rest} mix={[flex(), flexCol(), p(6, 6), gap("0.375rem"), mix]} />;
+		return <header {...rest} mix={mergeMix([flex(), flexCol(), p(6, 6), gap("0.375rem")], mix)} />;
 	};
 };
 
@@ -160,7 +162,10 @@ Card.Title = function CardTitle(handle: Handle<Card.TitleProps>) {
 			<Tag
 				{...rest}
 				data-heading-level={resolved}
-				mix={[fontSize("2xl"), leading(1), weight("semibold"), tracking("tight"), balance(), mix]}
+				mix={mergeMix(
+					[fontSize("2xl"), leading(1), weight("semibold"), tracking("tight"), balance()],
+					mix,
+				)}
 			>
 				{rest.children}
 			</Tag>
@@ -181,7 +186,7 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <p {...rest} mix={[fontSize("sm"), opacity(70), pretty(), mix]} />;
+		return <p {...rest} mix={mergeMix([fontSize("sm"), opacity(70), pretty()], mix)} />;
 	};
 };
 
@@ -202,18 +207,20 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					/**
-					 * The body leaves the gap above it to a header, and takes it back when it opens the card,
-					 * so a card of content alone still clears its own top edge.
-					 */
-					pbs(0),
-					when("&:first-child", pbs(6)),
-					pbe(6),
-					pi(6),
-					pretty(),
+				mix={mergeMix(
+					[
+						/**
+						 * The body leaves the gap above it to a header, and takes it back when it opens the card,
+						 * so a card of content alone still clears its own top edge.
+						 */
+						pbs(0),
+						when("&:first-child", pbs(6)),
+						pbe(6),
+						pi(6),
+						pretty(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -235,6 +242,8 @@ Card.Footer = function CardFooter(handle: Handle<Card.FooterProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <footer {...rest} mix={[flex(), items("center"), pbs(0), pbe(6), pi(6), mix]} />;
+		return (
+			<footer {...rest} mix={mergeMix([flex(), items("center"), pbs(0), pbe(6), pi(6)], mix)} />
+		);
 	};
 };

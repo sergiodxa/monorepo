@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { colorMix, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw, var as varUtility } from "@sdxc/u/general";
+import { cursor, raw, var as varUtility, mergeMix } from "@sdxc/u/general";
 import { data, when } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 
@@ -86,82 +86,84 @@ export function Link(handle: Handle<Link.Props>) {
 					data-color={resolvedColor}
 					data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 					{...rest}
-					mix={[
-						when("&:focus-visible", [
-							outline({ color: "brand.ring", offset: 2 }),
-							data("color", "neutral", outline("neutral.ring")),
-							data("color", "success", outline("success.ring")),
-							data("color", "warning", outline("warning.ring")),
-							data("color", "danger", outline("danger.ring")),
-						]),
-						interactiveTransition(),
-						rounded("sm"),
-						data("color", "brand", fg("brand")),
-						data("color", "neutral", fg("neutral")),
-						data("color", "success", fg("success")),
-						data("color", "danger", fg("danger")),
-						data("color", "warning", fg("warning")),
-						when('&[aria-disabled="true"]', opacity(50)),
-						textDecoration("underline"),
-						cursor("pointer"),
-						data("color", "brand", [
-							/**
-							 * `color-mix()`'s color argument needs the raw CSS variable
-							 * (`var(--ui-brand-fg)`), so the property stays `raw()` while
-							 * the literal string becomes a builder call.
-							 */
-							raw({
-								textDecorationColor: colorMix(
-									"srgb",
-									{ color: varUtility("ui-brand-fg"), weight: 60 },
-									"transparent",
-								),
-							}),
-							when("&:hover", raw({ textDecorationColor: varUtility("ui-brand-fg") })),
-						]),
-						data("color", "neutral", [
-							raw({
-								textDecorationColor: colorMix(
-									"srgb",
-									{ color: varUtility("ui-neutral-fg"), weight: 50 },
-									"transparent",
-								),
-							}),
-							when("&:hover", raw({ textDecorationColor: varUtility("ui-neutral-fg") })),
-						]),
-						data("color", "success", [
-							raw({
-								textDecorationColor: colorMix(
-									"srgb",
-									{ color: varUtility("ui-success-fg"), weight: 60 },
-									"transparent",
-								),
-							}),
-							when("&:hover", raw({ textDecorationColor: varUtility("ui-success-fg") })),
-						]),
-						data("color", "danger", [
-							raw({
-								textDecorationColor: colorMix(
-									"srgb",
-									{ color: varUtility("ui-danger-fg"), weight: 60 },
-									"transparent",
-								),
-							}),
-							when("&:hover", raw({ textDecorationColor: varUtility("ui-danger-fg") })),
-						]),
-						data("color", "warning", [
-							raw({
-								textDecorationColor: colorMix(
-									"srgb",
-									{ color: varUtility("ui-warning-fg"), weight: 60 },
-									"transparent",
-								),
-							}),
-							when("&:hover", raw({ textDecorationColor: varUtility("ui-warning-fg") })),
-						]),
-						when('&[aria-disabled="true"]', [cursor("not-allowed"), textDecoration("none")]),
+					mix={mergeMix(
+						[
+							when("&:focus-visible", [
+								outline({ color: "brand.ring", offset: 2 }),
+								data("color", "neutral", outline("neutral.ring")),
+								data("color", "success", outline("success.ring")),
+								data("color", "warning", outline("warning.ring")),
+								data("color", "danger", outline("danger.ring")),
+							]),
+							interactiveTransition(),
+							rounded("sm"),
+							data("color", "brand", fg("brand")),
+							data("color", "neutral", fg("neutral")),
+							data("color", "success", fg("success")),
+							data("color", "danger", fg("danger")),
+							data("color", "warning", fg("warning")),
+							when('&[aria-disabled="true"]', opacity(50)),
+							textDecoration("underline"),
+							cursor("pointer"),
+							data("color", "brand", [
+								/**
+								 * `color-mix()`'s color argument needs the raw CSS variable
+								 * (`var(--ui-brand-fg)`), so the property stays `raw()` while
+								 * the literal string becomes a builder call.
+								 */
+								raw({
+									textDecorationColor: colorMix(
+										"srgb",
+										{ color: varUtility("ui-brand-fg"), weight: 60 },
+										"transparent",
+									),
+								}),
+								when("&:hover", raw({ textDecorationColor: varUtility("ui-brand-fg") })),
+							]),
+							data("color", "neutral", [
+								raw({
+									textDecorationColor: colorMix(
+										"srgb",
+										{ color: varUtility("ui-neutral-fg"), weight: 50 },
+										"transparent",
+									),
+								}),
+								when("&:hover", raw({ textDecorationColor: varUtility("ui-neutral-fg") })),
+							]),
+							data("color", "success", [
+								raw({
+									textDecorationColor: colorMix(
+										"srgb",
+										{ color: varUtility("ui-success-fg"), weight: 60 },
+										"transparent",
+									),
+								}),
+								when("&:hover", raw({ textDecorationColor: varUtility("ui-success-fg") })),
+							]),
+							data("color", "danger", [
+								raw({
+									textDecorationColor: colorMix(
+										"srgb",
+										{ color: varUtility("ui-danger-fg"), weight: 60 },
+										"transparent",
+									),
+								}),
+								when("&:hover", raw({ textDecorationColor: varUtility("ui-danger-fg") })),
+							]),
+							data("color", "warning", [
+								raw({
+									textDecorationColor: colorMix(
+										"srgb",
+										{ color: varUtility("ui-warning-fg"), weight: 60 },
+										"transparent",
+									),
+								}),
+								when("&:hover", raw({ textDecorationColor: varUtility("ui-warning-fg") })),
+							]),
+							when('&[aria-disabled="true"]', [cursor("not-allowed"), textDecoration("none")]),
+						],
 						mix,
-					]}
+					)}
 				/>
 				{rendersPrefetchHint(resolvedPrefetch, rest.href) && (
 					<link rel="prefetch" href={rest.href} />

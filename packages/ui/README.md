@@ -664,8 +664,10 @@ import { floatingSurface } from "@sdxc/ui/styles";
 </div>;
 ```
 
-To change a declaration the component already sets, override its `--ui-*` variable (as above), use
-`style`, or write the rule in a cascade layer declared after `rmx`. When `parts` is not enough,
+A `@sdxc/u` utility in `mix` overrides the component's own utility for the same property:
+`<Text mix={text("xs")}>` renders extra-small text. To change a declaration the component sets
+another way, override its `--ui-*` variable (as above), use `style`, or write the rule in a cascade
+layer declared after `rmx`. When `parts` is not enough,
 compose the underlying pieces (`Label`, `Input`, `Description`, `FieldError`) directly.
 
 ## Pattern: A Chart With A Legend

@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
@@ -140,7 +140,7 @@ export function Bento(handle: Handle<Bento.Props>) {
 				data-slot="bento"
 				data-columns={String(resolvedColumns)}
 				data-variant={resolvedVariant}
-				mix={[container(CONTAINER_NAME), mix]}
+				mix={mergeMix(container(CONTAINER_NAME), mix)}
 			>
 				<HeadingScope>
 					<div
@@ -177,7 +177,10 @@ Bento.Cell = function BentoCell(handle: Handle<Bento.CellProps>) {
 			<div
 				{...rest}
 				data-slot="bento-cell"
-				mix={[cellTracks(), cardPadding("1.5rem", "1.5rem", "2.5rem", CONTAINER_NAME), mix]}
+				mix={mergeMix(
+					[cellTracks(), cardPadding("1.5rem", "1.5rem", "2.5rem", CONTAINER_NAME)],
+					mix,
+				)}
 			/>
 		);
 	};
@@ -215,7 +218,7 @@ Bento.Media = function BentoMedia(handle: Handle<Bento.MediaProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="bento-media" mix={[cardMedia(), mix]} />;
+		return <div {...rest} data-slot="bento-media" mix={mergeMix(cardMedia(), mix)} />;
 	};
 };
 
@@ -239,19 +242,21 @@ Bento.Title = function BentoTitle(handle: Handle<Bento.TitleProps>) {
 				data-slot="bento-title"
 				data-heading-level={resolved}
 				data-size={resolvedSize}
-				mix={[
-					m(0),
-					resolvedSize === "lg"
-						? [
-								combine([text("xl"), at("md", CONTAINER_NAME, text("2xl"))]),
-								tracking("tight"),
-								weight("medium"),
-							]
-						: [text("base"), weight("semibold")],
-					balance(),
-					fg("neutral.emphasis"),
+				mix={mergeMix(
+					[
+						m(0),
+						resolvedSize === "lg"
+							? [
+									combine([text("xl"), at("md", CONTAINER_NAME, text("2xl"))]),
+									tracking("tight"),
+									weight("medium"),
+								]
+							: [text("base"), weight("semibold")],
+						balance(),
+						fg("neutral.emphasis"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -271,7 +276,10 @@ Bento.Body = function BentoBody(handle: Handle<Bento.BodyProps>) {
 			<div
 				{...rest}
 				data-slot="bento-body"
-				mix={[text("sm"), leading("relaxed"), pretty(), fg("neutral"), marketingEmphasis(), mix]}
+				mix={mergeMix(
+					[text("sm"), leading("relaxed"), pretty(), fg("neutral"), marketingEmphasis()],
+					mix,
+				)}
 			/>
 		);
 	};

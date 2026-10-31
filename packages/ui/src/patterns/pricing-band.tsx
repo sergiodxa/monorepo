@@ -11,7 +11,7 @@ import type { UtilityMixin } from "@sdxc/u";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container, flexWrap, gap, grid, hstack, items, vstack } from "@sdxc/u/layout";
 import { at, dark } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -267,7 +267,7 @@ PricingBand.Plan = function PricingBandPlan(handle: Handle<PricingBand.PlanProps
 				{...rest}
 				data-slot="pricing-plan"
 				data-featured={isFeatured ? "true" : undefined}
-				mix={[vstack({ gap: 6, align: "stretch" }), planSurface(isFeatured), mix]}
+				mix={mergeMix([vstack({ gap: 6, align: "stretch" }), planSurface(isFeatured)], mix)}
 			>
 				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 					<div mix={[hstack({ gap: 3, justify: "between" }), items("center"), flexWrap()]}>

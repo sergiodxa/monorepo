@@ -13,6 +13,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 
 import { mergeStyle } from "../utils/merge-style.js";
@@ -80,7 +81,7 @@ export function SharedElement(handle: Handle<SharedElement.Props>) {
 		return (
 			<>
 				<style>{CROSS_DOCUMENT_TRANSITION_STYLESHEET}</style>
-				<div {...rest} id={id} style={resolvedStyle} mix={[block(), mix]} />
+				<div {...rest} id={id} style={resolvedStyle} mix={mergeMix(block(), mix)} />
 			</>
 		);
 	};

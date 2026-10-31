@@ -14,6 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
 import { minBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -99,25 +100,27 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 			<label
 				{...rest}
 				data-slot="zone"
-				mix={[
-					when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
-					flex(),
-					flexCol(),
-					items("center"),
-					justify("center"),
-					gap(2),
-					minBs("6rem"),
-					rounded("lg"),
-					border({ color: "neutral", width: "2px", style: "dashed" }),
-					pi(6),
-					pb(6),
-					textAlign("center"),
-					bg("neutral.tint"),
-					fg("neutral"),
-					when("&[data-drop-target]", [border("brand.ring"), bg("brand.tint")]),
-					interactiveTransition(),
+				mix={mergeMix(
+					[
+						when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
+						flex(),
+						flexCol(),
+						items("center"),
+						justify("center"),
+						gap(2),
+						minBs("6rem"),
+						rounded("lg"),
+						border({ color: "neutral", width: "2px", style: "dashed" }),
+						pi(6),
+						pb(6),
+						textAlign("center"),
+						bg("neutral.tint"),
+						fg("neutral"),
+						when("&[data-drop-target]", [border("brand.ring"), bg("brand.tint")]),
+						interactiveTransition(),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 				<input

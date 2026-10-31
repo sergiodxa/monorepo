@@ -22,7 +22,7 @@ import {
 	transition,
 	transitionBehavior,
 } from "@sdxc/u/effects";
-import { raw, vars } from "@sdxc/u/general";
+import { raw, vars, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -173,66 +173,68 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 				{...rest}
 				id={id}
 				data-slot="dialog"
-				mix={[
-					/**
-					 * Establishes the containing block {@link Dialog.Close} pins itself to while
-					 * the panel sits in the page's flow, which a dialog opened through its `open`
-					 * attribute alone does.
-					 */
-					relative(),
-					/**
-					 * Measures a modal panel against the viewport, so it stays centered on screen
-					 * however far the page behind it is scrolled: the top layer resolves any other
-					 * positioning scheme against the document's own coordinates.
-					 */
-					when("&:modal", fixed()),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					rounded("lg"),
-					is("full"),
-					/**
-					 * Wide enough for the form a dialog usually carries, so a field, its help text and a row
-					 * of actions read as one column. A consumer with less to say narrows it through `mix`.
-					 */
-					maxIs("32rem"),
-					maxBs("90vh"),
-					gap(6),
-					p(6),
-					overflow("auto"),
-					/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
-					when("&[open]", flex()),
-					flexCol(),
-					container(CONTAINER_NAME, "inline-size"),
-					when("&::backdrop", [
-						bg("rgb(0 0 0 / 0.5)"),
-						transitionBehavior("allow-discrete"),
-						opacity(0),
-						transition("opacity, display, overlay", {
-							duration: durations.normal,
-							easing: easings.standard,
-						}),
-					]),
-					when("&[open]::backdrop", opacity(100)),
-					supports(
-						"(backdrop-filter: blur(0))",
-						media(
-							"(prefers-reduced-transparency: no-preference)",
-							when("&::backdrop", [backdropBlur("md"), backdropSaturate(1.4)]),
+				mix={mergeMix(
+					[
+						/**
+						 * Establishes the containing block {@link Dialog.Close} pins itself to while
+						 * the panel sits in the page's flow, which a dialog opened through its `open`
+						 * attribute alone does.
+						 */
+						relative(),
+						/**
+						 * Measures a modal panel against the viewport, so it stays centered on screen
+						 * however far the page behind it is scrolled: the top layer resolves any other
+						 * positioning scheme against the document's own coordinates.
+						 */
+						when("&:modal", fixed()),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						rounded("lg"),
+						is("full"),
+						/**
+						 * Wide enough for the form a dialog usually carries, so a field, its help text and a row
+						 * of actions read as one column. A consumer with less to say narrows it through `mix`.
+						 */
+						maxIs("32rem"),
+						maxBs("90vh"),
+						gap(6),
+						p(6),
+						overflow("auto"),
+						/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
+						when("&[open]", flex()),
+						flexCol(),
+						container(CONTAINER_NAME, "inline-size"),
+						when("&::backdrop", [
+							bg("rgb(0 0 0 / 0.5)"),
+							transitionBehavior("allow-discrete"),
+							opacity(0),
+							transition("opacity, display, overlay", {
+								duration: durations.normal,
+								easing: easings.standard,
+							}),
+						]),
+						when("&[open]::backdrop", opacity(100)),
+						supports(
+							"(backdrop-filter: blur(0))",
+							media(
+								"(prefers-reduced-transparency: no-preference)",
+								when("&::backdrop", [backdropBlur("md"), backdropSaturate(1.4)]),
+							),
 						),
-					),
-					startingStyle(when("&[open]::backdrop", opacity(0))),
-					outline("none"),
-					/**
-					 * The panel's edge is a ring shadow that takes on the tone behind it, over a
-					 * transparent border that forced-colors mode still paints as a line.
-					 */
-					border({ color: "transparent", width: 1 }),
-					shadow("xl"),
-					vars({ "ui-box-shadow-ring": SHADOW_RING }),
-					/** `overscrollBehavior` has no matching utility. */
-					raw({ overscrollBehavior: "contain" }),
+						startingStyle(when("&[open]::backdrop", opacity(0))),
+						outline("none"),
+						/**
+						 * The panel's edge is a ring shadow that takes on the tone behind it, over a
+						 * transparent border that forced-colors mode still paints as a line.
+						 */
+						border({ color: "transparent", width: 1 }),
+						shadow("xl"),
+						vars({ "ui-box-shadow-ring": SHADOW_RING }),
+						/** `overscrollBehavior` has no matching utility. */
+						raw({ overscrollBehavior: "contain" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</dialog>
@@ -261,14 +263,16 @@ Dialog.Header = function DialogHeader(handle: Handle<Dialog.HeaderProps>) {
 			<div
 				{...rest}
 				data-slot="header"
-				mix={[
-					flex(),
-					flexCol(),
-					gap(1.5),
-					textAlign("center"),
-					at(COMFORTABLE_WIDTH, CONTAINER_NAME, textAlign("start")),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						gap(1.5),
+						textAlign("center"),
+						at(COMFORTABLE_WIDTH, CONTAINER_NAME, textAlign("start")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -294,15 +298,17 @@ Dialog.Title = function DialogTitle(handle: Handle<Dialog.TitleProps>) {
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[
-					fg("neutral.emphasis"),
-					weight("semibold"),
-					tracking("tight"),
-					fontSize("lg"),
-					leading(1),
-					balance(),
+				mix={mergeMix(
+					[
+						fg("neutral.emphasis"),
+						weight("semibold"),
+						tracking("tight"),
+						fontSize("lg"),
+						leading(1),
+						balance(),
+					],
 					mix,
-				]}
+				)}
 			>
 				{rest.children}
 			</Tag>
@@ -328,7 +334,7 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[fg("neutral.muted"), fontSize("sm"), pretty(), mix]}
+				mix={mergeMix([fg("neutral.muted"), fontSize("sm"), pretty()], mix)}
 			>
 				{rest.children}
 			</p>
@@ -357,13 +363,15 @@ Dialog.Footer = function DialogFooter(handle: Handle<Dialog.FooterProps>) {
 			<div
 				{...rest}
 				data-slot="footer"
-				mix={[
-					flex(),
-					gap(2),
-					flexColReverse(),
-					at(COMFORTABLE_WIDTH, CONTAINER_NAME, [flexRow(), justify("end")]),
+				mix={mergeMix(
+					[
+						flex(),
+						gap(2),
+						flexColReverse(),
+						at(COMFORTABLE_WIDTH, CONTAINER_NAME, [flexRow(), justify("end")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -394,7 +402,7 @@ Dialog.Close = function DialogClose(handle: Handle<Dialog.CloseProps>) {
 				commandfor={commandfor}
 				command={resolvedCommand}
 				data-slot="close"
-				mix={[absolute(), inset(4, 4, "auto", "auto"), mix]}
+				mix={mergeMix([absolute(), inset(4, 4, "auto", "auto")], mix)}
 			>
 				<XIcon size={16} />
 			</Button>

@@ -12,6 +12,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { inlineFlex, items, justify } from "@sdxc/u/layout";
 import { bs, minIs, mis, pi } from "@sdxc/u/size";
 import { leading, tabularNums, text } from "@sdxc/u/typography";
@@ -45,31 +46,33 @@ export function Keyboard(handle: Handle<Keyboard.Props>) {
 		return (
 			<kbd
 				{...rest}
-				mix={[
-					mis("auto"),
-					/**
-					 * The cap centers its glyph as an inline box, so a key sits inside the sentence
-					 * naming it; `center()` composes `flex()` and would put the key on a line of its own.
-					 */
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					/**
-					 * A cap keeps its height and a minimum width whatever it holds, so a single
-					 * letter and a two-glyph chord sit on the same line as each other.
-					 */
-					bs("1.25rem"),
-					minIs("1.25rem"),
-					pi(1.5),
-					rounded("sm"),
-					bg("neutral.tint"),
-					border({ color: "neutral", width: 1 }),
-					fg("neutral"),
-					text("xs"),
-					leading("none"),
-					tabularNums(),
+				mix={mergeMix(
+					[
+						mis("auto"),
+						/**
+						 * The cap centers its glyph as an inline box, so a key sits inside the sentence
+						 * naming it; `center()` composes `flex()` and would put the key on a line of its own.
+						 */
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						/**
+						 * A cap keeps its height and a minimum width whatever it holds, so a single
+						 * letter and a two-glyph chord sit on the same line as each other.
+						 */
+						bs("1.25rem"),
+						minIs("1.25rem"),
+						pi(1.5),
+						rounded("sm"),
+						bg("neutral.tint"),
+						border({ color: "neutral", width: 1 }),
+						fg("neutral"),
+						text("xs"),
+						leading("none"),
+						tabularNums(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

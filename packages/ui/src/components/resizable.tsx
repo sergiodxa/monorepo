@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, pseudoContent, touchAction, userSelect } from "@sdxc/u/general";
+import { cursor, pseudoContent, touchAction, userSelect, mergeMix } from "@sdxc/u/general";
 import {
 	basis,
 	flex,
@@ -143,18 +143,20 @@ export function Resizable(handle: Handle<Resizable.Props, Resizable.Context>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					flex(),
-					flexRow(),
-					is("full"),
-					overflow("hidden"),
-					when('&[data-orientation="vertical"]', flexCol()),
-					when('&[aria-disabled="true"]', opacity(70)),
-					rounded("lg"),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.tint"),
+				mix={mergeMix(
+					[
+						flex(),
+						flexRow(),
+						is("full"),
+						overflow("hidden"),
+						when('&[data-orientation="vertical"]', flexCol()),
+						when('&[aria-disabled="true"]', opacity(70)),
+						rounded("lg"),
+						border({ color: "neutral", width: 1 }),
+						bg("neutral.tint"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -191,23 +193,25 @@ Resizable.Panel = function ResizablePanel(handle: Handle<Resizable.PanelProps>) 
 				data-max-size={maxSize}
 				{...rest}
 				style={resolvedStyle}
-				mix={[
-					grow(),
-					shrink(1),
-					basis("var(--ui-resizable-panel-size, 0%)"),
-					minBs(0),
-					minIs(0),
-					data("orientation", "horizontal", [
-						minIs("var(--ui-resizable-panel-min-size, 0%)"),
-						maxIs("var(--ui-resizable-panel-max-size, 100%)"),
-					]),
-					data("orientation", "vertical", [
-						minBs("var(--ui-resizable-panel-min-size, 0%)"),
-						maxBs("var(--ui-resizable-panel-max-size, 100%)"),
-					]),
-					overflow("auto"),
+				mix={mergeMix(
+					[
+						grow(),
+						shrink(1),
+						basis("var(--ui-resizable-panel-size, 0%)"),
+						minBs(0),
+						minIs(0),
+						data("orientation", "horizontal", [
+							minIs("var(--ui-resizable-panel-min-size, 0%)"),
+							maxIs("var(--ui-resizable-panel-max-size, 100%)"),
+						]),
+						data("orientation", "vertical", [
+							minBs("var(--ui-resizable-panel-min-size, 0%)"),
+							maxBs("var(--ui-resizable-panel-max-size, 100%)"),
+						]),
+						overflow("auto"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -241,37 +245,39 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 				data-orientation={context.orientation}
 				aria-orientation={context.orientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_HANDLE_ROLE, tabIndex: DEFAULT_HANDLE_TAB_INDEX }),
-					relative(),
-					flex(),
-					grow(0),
-					shrink(0),
-					basis("var(--ui-resizable-handle-size, 0.75rem)"),
-					items("center"),
-					justify("center"),
-					bg("transparent"),
-					userSelect(),
-					touchAction(),
-					outlineStyle("none"),
-					when('&[data-orientation="horizontal"]', cursor("col-resize")),
-					when('&[data-orientation="vertical"]', cursor("row-resize")),
-					before(pseudoContent('""')),
-					data("orientation", "horizontal", before([bs("2.5rem"), is("0.125rem")])),
-					data("orientation", "vertical", before([bs("0.125rem"), is("2.5rem")])),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
-					fg("neutral.muted"),
-					when("&::before", [rounded("full"), bg("neutral.border")]),
-					hover(when("&::before", bg("neutral.strong"))),
-					when("&[data-resizing]::before", bg("brand.solid")),
-					focusVisible(outline({ color: "brand.ring" })),
-					/**
-					 * The handle's thin axis grows to `--ui-target-size` through an invisible box
-					 * over the panels' edges, leaving the layout and the drawn line unchanged.
-					 */
-					hitArea(),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_HANDLE_ROLE, tabIndex: DEFAULT_HANDLE_TAB_INDEX }),
+						relative(),
+						flex(),
+						grow(0),
+						shrink(0),
+						basis("var(--ui-resizable-handle-size, 0.75rem)"),
+						items("center"),
+						justify("center"),
+						bg("transparent"),
+						userSelect(),
+						touchAction(),
+						outlineStyle("none"),
+						when('&[data-orientation="horizontal"]', cursor("col-resize")),
+						when('&[data-orientation="vertical"]', cursor("row-resize")),
+						before(pseudoContent('""')),
+						data("orientation", "horizontal", before([bs("2.5rem"), is("0.125rem")])),
+						data("orientation", "vertical", before([bs("0.125rem"), is("2.5rem")])),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
+						fg("neutral.muted"),
+						when("&::before", [rounded("full"), bg("neutral.border")]),
+						hover(when("&::before", bg("neutral.strong"))),
+						when("&[data-resizing]::before", bg("brand.solid")),
+						focusVisible(outline({ color: "brand.ring" })),
+						/**
+						 * The handle's thin axis grows to `--ui-target-size` through an invisible box
+						 * over the panels' edges, leaving the layout and the drawn line unchanged.
+						 */
+						hitArea(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

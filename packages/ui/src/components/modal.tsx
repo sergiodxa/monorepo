@@ -11,6 +11,8 @@
 
 import type { Handle } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
+
 import { durations, easings } from "../animations/tokens.js";
 import { enterExit } from "../animations/transitions.js";
 
@@ -83,7 +85,7 @@ export function Modal(handle: Handle<Modal.Props>) {
 		return (
 			<Dialog
 				{...rest}
-				mix={[
+				mix={mergeMix(
 					enterExit({
 						opacity: 0,
 						scale: PANEL_ENTRY_SCALE,
@@ -93,7 +95,7 @@ export function Modal(handle: Handle<Modal.Props>) {
 						exitDuration: durations.fast,
 					}),
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

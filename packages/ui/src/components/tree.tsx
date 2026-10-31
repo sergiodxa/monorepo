@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { ChevronRightIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
-import { cursor, listStyle, raw } from "@sdxc/u/general";
+import { cursor, listStyle, raw, mergeMix } from "@sdxc/u/general";
 import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@sdxc/u/layout";
 import { clip } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -175,17 +175,19 @@ export function Tree(handle: Handle<Tree.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					panelChrome(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					vstack(),
-					pb(1),
-					pi(1),
-					outline("none"),
-					when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						panelChrome(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						vstack(),
+						pb(1),
+						pi(1),
+						outline("none"),
+						when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -231,28 +233,30 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 				{...rest}
 				id={id}
 				data-rmx-key={id}
-				mix={[
-					attrs({ role: DEFAULT_ITEM_ROLE }),
-					interpolateSize(),
-					detailsContent([
-						clip(),
-						raw({
-							transitionProperty: "block-size, content-visibility",
-							transitionBehavior: "allow-discrete",
-						}),
-						transitionDuration("200ms"),
-					]),
-					/**
-					 * Collapsed and expanded sizes are written under selectors that never
-					 * match at once, so the reveal holds whichever order the cascade puts
-					 * the pair in.
-					 */
-					when("&:not([open])::details-content", bs(0)),
-					when("&[open]::details-content", bs("auto")),
-					when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
-					media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ITEM_ROLE }),
+						interpolateSize(),
+						detailsContent([
+							clip(),
+							raw({
+								transitionProperty: "block-size, content-visibility",
+								transitionBehavior: "allow-discrete",
+							}),
+							transitionDuration("200ms"),
+						]),
+						/**
+						 * Collapsed and expanded sizes are written under selectors that never
+						 * match at once, so the reveal holds whichever order the cascade puts
+						 * the pair in.
+						 */
+						when("&:not([open])::details-content", bs(0)),
+						when("&[open]::details-content", bs("auto")),
+						when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
+						media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</details>
@@ -287,44 +291,46 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 		return (
 			<summary
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					attrs({ role: DEFAULT_CONTENT_ROLE, "aria-level": depth + 1 }),
-					hstack({ gap: 2, align: "center" }),
-					rounded("md"),
-					pb(1.5),
-					pie(3),
-					fg("neutral.emphasis"),
-					cursor("default"),
-					listStyle(),
-					/**
-					 * The two indents are written under selectors that never match at once, so
-					 * a row keeps its own whichever order the cascade puts the pair in.
-					 */
-					when(
-						`&:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"])`,
-						raw({
-							paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
-						}),
-					),
-					when(
-						`&:not(:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]))`,
-						raw({
-							paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem) + ${LEAF_GUTTER})`,
-						}),
-					),
-					outline("none"),
-					text("sm"),
-					when("&::-webkit-details-marker", hidden()),
-					when("&::marker", raw({ content: '""' })),
-					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
-					when("&:hover", bg("neutral.bg-tint-hover")),
-					when("&:active", bg("neutral.bg-tint-pressed")),
-					when("&:focus", bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', bg("brand.tint")),
-					when('&[aria-disabled="true"]', opacity(50)),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_CONTENT_ROLE, "aria-level": depth + 1 }),
+						hstack({ gap: 2, align: "center" }),
+						rounded("md"),
+						pb(1.5),
+						pie(3),
+						fg("neutral.emphasis"),
+						cursor("default"),
+						listStyle(),
+						/**
+						 * The two indents are written under selectors that never match at once, so
+						 * a row keeps its own whichever order the cascade puts the pair in.
+						 */
+						when(
+							`&:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"])`,
+							raw({
+								paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
+							}),
+						),
+						when(
+							`&:not(:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]))`,
+							raw({
+								paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem) + ${LEAF_GUTTER})`,
+							}),
+						),
+						outline("none"),
+						text("sm"),
+						when("&::-webkit-details-marker", hidden()),
+						when("&::marker", raw({ content: '""' })),
+						media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+						when("&:hover", bg("neutral.bg-tint-hover")),
+						when("&:active", bg("neutral.bg-tint-pressed")),
+						when("&:focus", bg("neutral.bg-tint-hover")),
+						when('&[aria-selected="true"]', bg("brand.tint")),
+						when('&[aria-disabled="true"]', opacity(50)),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</summary>
@@ -367,18 +373,20 @@ Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonPr
 		return (
 			<span
 				{...rest}
-				mix={[
-					attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT, "aria-hidden": "true" }),
-					center(),
-					is(5),
-					bs(5),
-					rounded("sm"),
-					fg("neutral.muted"),
-					transition("transform, background-color"),
-					shrink(),
-					media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+				mix={mergeMix(
+					[
+						attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT, "aria-hidden": "true" }),
+						center(),
+						is(5),
+						bs(5),
+						rounded("sm"),
+						fg("neutral.muted"),
+						transition("transform, background-color"),
+						shrink(),
+						media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children ?? <ChevronRightIcon size={16} />}
 			</span>

@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { opacity, transition, transitionDuration, visibility } from "@sdxc/u/effects";
-import { pointerEvents, raw } from "@sdxc/u/general";
+import { pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	contents,
@@ -111,35 +111,37 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 			<span
 				data-slot="hover-card"
 				{...rest}
-				mix={[
-					relative(),
-					inlineBlock(),
-					media(
-						"(hover: hover)",
-						when('&:hover [data-slot="hover-card-content"]', [
+				mix={mergeMix(
+					[
+						relative(),
+						inlineBlock(),
+						media(
+							"(hover: hover)",
+							when('&:hover [data-slot="hover-card-content"]', [
+								opacity(100),
+								visibility(),
+								/**
+								 * An open card is something the reader reaches into, so it takes the pointer.
+								 * `!important` settles it: each mix entry gets its own cascade sublayer, and the resting
+								 * state's own rule may land in a later one.
+								 */
+								raw({
+									pointerEvents: "auto !important",
+									transitionDelay: "var(--ui-hover-card-open-delay, 0.4s)",
+								}),
+							]),
+						),
+						when('&:focus-within [data-slot="hover-card-content"]', [
 							opacity(100),
 							visibility(),
-							/**
-							 * An open card is something the reader reaches into, so it takes the pointer.
-							 * `!important` settles it: each mix entry gets its own cascade sublayer, and the resting
-							 * state's own rule may land in a later one.
-							 */
 							raw({
 								pointerEvents: "auto !important",
-								transitionDelay: "var(--ui-hover-card-open-delay, 0.4s)",
+								transitionDelay: "0s",
 							}),
 						]),
-					),
-					when('&:focus-within [data-slot="hover-card-content"]', [
-						opacity(100),
-						visibility(),
-						raw({
-							pointerEvents: "auto !important",
-							transitionDelay: "0s",
-						}),
-					]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>
@@ -164,7 +166,7 @@ HoverCard.Trigger = function HoverCardTrigger(handle: Handle<HoverCard.TriggerPr
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<span data-slot="hover-card-trigger" {...rest} mix={[contents(), mix]}>
+			<span data-slot="hover-card-trigger" {...rest} mix={mergeMix(contents(), mix)}>
 				{children}
 			</span>
 		);
@@ -198,104 +200,106 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 				data-slot="hover-card-content"
 				data-placement={resolvedPlacement}
 				{...rest}
-				mix={[
-					floatingSurface(),
-					absolute(),
-					p(4),
-					fg("neutral.emphasis"),
-					is("18rem"),
-					text("sm"),
-					opacity(0),
-					transition("opacity, visibility, pointer-events"),
-					visibility("hidden"),
-					pointerEvents(),
-					raw({
-						zIndex: "var(--ui-hover-card-z, 50)",
-						transitionBehavior: "allow-discrete",
-						transitionDelay: "var(--ui-hover-card-close-delay, 0.2s)",
-					}),
-
-					when('&[data-placement^="bottom"]', [
-						mbs("var(--ui-popover-offset, 0.5rem)"),
-						insBs("100%"),
-					]),
-					when('&[data-placement^="top"]', [
-						mbe("var(--ui-popover-offset, 0.5rem)"),
-						insBe("100%"),
-					]),
-					when('&[data-placement^="left"]', [
-						marginRight("var(--ui-popover-offset, 0.5rem)"),
-						raw({ right: "100%" }),
-					]),
-					when('&[data-placement^="right"]', [
-						marginLeft("var(--ui-popover-offset, 0.5rem)"),
-						raw({ left: "100%" }),
-					]),
-
-					/**
-					 * The card rests off its trigger's edge, and a pointer travelling between the
-					 * two crosses that space, so the card's own hit area reaches back across it
-					 * and the pair reads as one surface for as long as the pointer is on either.
-					 */
-					when("&::before", raw({ content: '""', position: "absolute" })),
-					when(
-						'&[data-placement^="bottom"]::before',
+				mix={mergeMix(
+					[
+						floatingSurface(),
+						absolute(),
+						p(4),
+						fg("neutral.emphasis"),
+						is("18rem"),
+						text("sm"),
+						opacity(0),
+						transition("opacity, visibility, pointer-events"),
+						visibility("hidden"),
+						pointerEvents(),
 						raw({
-							insetBlockEnd: "100%",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-							blockSize: "var(--ui-popover-offset, 0.5rem)",
+							zIndex: "var(--ui-hover-card-z, 50)",
+							transitionBehavior: "allow-discrete",
+							transitionDelay: "var(--ui-hover-card-close-delay, 0.2s)",
 						}),
-					),
-					when(
-						'&[data-placement^="top"]::before',
-						raw({
-							insetBlockStart: "100%",
-							insetInlineStart: "0",
-							insetInlineEnd: "0",
-							blockSize: "var(--ui-popover-offset, 0.5rem)",
-						}),
-					),
-					when(
-						'&[data-placement^="left"]::before',
-						raw({
-							left: "100%",
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							inlineSize: "var(--ui-popover-offset, 0.5rem)",
-						}),
-					),
-					when(
-						'&[data-placement^="right"]::before',
-						raw({
-							right: "100%",
-							insetBlockStart: "0",
-							insetBlockEnd: "0",
-							inlineSize: "var(--ui-popover-offset, 0.5rem)",
-						}),
-					),
 
-					when('&[data-placement="bottom"], &[data-placement="top"]', [
-						mi("auto"),
-						insIs("0"),
-						insIe("0"),
-					]),
-					when('&[data-placement="bottom-start"], &[data-placement="top-start"]', insIs("0")),
-					when('&[data-placement="bottom-end"], &[data-placement="top-end"]', insIe("0")),
-					when('&[data-placement="left"], &[data-placement="right"]', [
-						mb("auto"),
-						insBs("0"),
-						insBe("0"),
-					]),
-					when('&[data-placement="left-start"], &[data-placement="right-start"]', insBs("0")),
-					when('&[data-placement="left-end"], &[data-placement="right-end"]', insBe("0")),
+						when('&[data-placement^="bottom"]', [
+							mbs("var(--ui-popover-offset, 0.5rem)"),
+							insBs("100%"),
+						]),
+						when('&[data-placement^="top"]', [
+							mbe("var(--ui-popover-offset, 0.5rem)"),
+							insBe("100%"),
+						]),
+						when('&[data-placement^="left"]', [
+							marginRight("var(--ui-popover-offset, 0.5rem)"),
+							raw({ right: "100%" }),
+						]),
+						when('&[data-placement^="right"]', [
+							marginLeft("var(--ui-popover-offset, 0.5rem)"),
+							raw({ left: "100%" }),
+						]),
 
-					media("(prefers-reduced-motion: reduce)", [
-						transitionDuration("0s"),
-						raw({ transitionDelay: "0s" }),
-					]),
+						/**
+						 * The card rests off its trigger's edge, and a pointer travelling between the
+						 * two crosses that space, so the card's own hit area reaches back across it
+						 * and the pair reads as one surface for as long as the pointer is on either.
+						 */
+						when("&::before", raw({ content: '""', position: "absolute" })),
+						when(
+							'&[data-placement^="bottom"]::before',
+							raw({
+								insetBlockEnd: "100%",
+								insetInlineStart: "0",
+								insetInlineEnd: "0",
+								blockSize: "var(--ui-popover-offset, 0.5rem)",
+							}),
+						),
+						when(
+							'&[data-placement^="top"]::before',
+							raw({
+								insetBlockStart: "100%",
+								insetInlineStart: "0",
+								insetInlineEnd: "0",
+								blockSize: "var(--ui-popover-offset, 0.5rem)",
+							}),
+						),
+						when(
+							'&[data-placement^="left"]::before',
+							raw({
+								left: "100%",
+								insetBlockStart: "0",
+								insetBlockEnd: "0",
+								inlineSize: "var(--ui-popover-offset, 0.5rem)",
+							}),
+						),
+						when(
+							'&[data-placement^="right"]::before',
+							raw({
+								right: "100%",
+								insetBlockStart: "0",
+								insetBlockEnd: "0",
+								inlineSize: "var(--ui-popover-offset, 0.5rem)",
+							}),
+						),
+
+						when('&[data-placement="bottom"], &[data-placement="top"]', [
+							mi("auto"),
+							insIs("0"),
+							insIe("0"),
+						]),
+						when('&[data-placement="bottom-start"], &[data-placement="top-start"]', insIs("0")),
+						when('&[data-placement="bottom-end"], &[data-placement="top-end"]', insIe("0")),
+						when('&[data-placement="left"], &[data-placement="right"]', [
+							mb("auto"),
+							insBs("0"),
+							insBe("0"),
+						]),
+						when('&[data-placement="left-start"], &[data-placement="right-start"]', insBs("0")),
+						when('&[data-placement="left-end"], &[data-placement="right-end"]', insBe("0")),
+
+						media("(prefers-reduced-motion: reduce)", [
+							transitionDuration("0s"),
+							raw({ transitionDelay: "0s" }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw, userSelect } from "@sdxc/u/general";
+import { raw, userSelect, mergeMix } from "@sdxc/u/general";
 import { absolute, inlineFlex, inset, items, justify, relative, shrink } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is } from "@sdxc/u/size";
@@ -98,48 +98,50 @@ export function ColorSwatch(handle: Handle<ColorSwatch.Props>) {
 				data-shape={resolvedShape}
 				data-size={resolvedSize}
 				style={resolvedStyle}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					relative(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					overflow("hidden"),
-					border({ width: 1, color: "neutral" }),
-					is("var(--ui-color-swatch-size-md, 1.75rem)"),
-					bs("var(--ui-color-swatch-size-md, 1.75rem)"),
-					rounded("md"),
-					data("size", "sm", [
-						is("var(--ui-color-swatch-size-sm, 1.25rem)"),
-						bs("var(--ui-color-swatch-size-sm, 1.25rem)"),
-					]),
-					data("size", "lg", [
-						is("var(--ui-color-swatch-size-lg, 2.5rem)"),
-						bs("var(--ui-color-swatch-size-lg, 2.5rem)"),
-					]),
-					data("shape", "circle", rounded("full")),
-					shrink(),
-					verticalAlign("middle"),
-					userSelect(),
-					data("shape", "square", rounded("none")),
-					before([
-						absolute(),
-						inset(0),
-						bg({
-							image:
-								"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
-							size: "var(--ui-color-swatch-checker-size, 0.625rem) var(--ui-color-swatch-checker-size, 0.625rem)",
-						}),
-						raw({ content: '""' }),
-					]),
-					after([
-						absolute(),
-						inset(0),
-						bg("var(--ui-color-swatch-value, transparent)"),
-						raw({ content: '""' }),
-					]),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						overflow("hidden"),
+						border({ width: 1, color: "neutral" }),
+						is("var(--ui-color-swatch-size-md, 1.75rem)"),
+						bs("var(--ui-color-swatch-size-md, 1.75rem)"),
+						rounded("md"),
+						data("size", "sm", [
+							is("var(--ui-color-swatch-size-sm, 1.25rem)"),
+							bs("var(--ui-color-swatch-size-sm, 1.25rem)"),
+						]),
+						data("size", "lg", [
+							is("var(--ui-color-swatch-size-lg, 2.5rem)"),
+							bs("var(--ui-color-swatch-size-lg, 2.5rem)"),
+						]),
+						data("shape", "circle", rounded("full")),
+						shrink(),
+						verticalAlign("middle"),
+						userSelect(),
+						data("shape", "square", rounded("none")),
+						before([
+							absolute(),
+							inset(0),
+							bg({
+								image:
+									"repeating-conic-gradient(var(--ui-neutral-border) 0% 25%, var(--ui-neutral-bg-tint) 0% 50%)",
+								size: "var(--ui-color-swatch-checker-size, 0.625rem) var(--ui-color-swatch-checker-size, 0.625rem)",
+							}),
+							raw({ content: '""' }),
+						]),
+						after([
+							absolute(),
+							inset(0),
+							bg("var(--ui-color-swatch-value, transparent)"),
+							raw({ content: '""' }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

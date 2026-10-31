@@ -11,6 +11,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { bs, is, minBs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -60,20 +61,22 @@ export function Separator(handle: Handle<Separator.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
-					when('&[aria-orientation="horizontal"]', [
-						bs("var(--ui-separator-thickness, 1px)"),
-						is("100%"),
-					]),
-					when('&[aria-orientation="vertical"]', [
-						bs("100%"),
-						minBs("var(--ui-separator-min-size, 1rem)"),
-						is("var(--ui-separator-thickness, 1px)"),
-					]),
-					bg("neutral.border"),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
+						when('&[aria-orientation="horizontal"]', [
+							bs("var(--ui-separator-thickness, 1px)"),
+							is("100%"),
+						]),
+						when('&[aria-orientation="vertical"]', [
+							bs("100%"),
+							minBs("var(--ui-separator-min-size, 1rem)"),
+							is("var(--ui-separator-thickness, 1px)"),
+						]),
+						bg("neutral.border"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

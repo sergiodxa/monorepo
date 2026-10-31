@@ -15,6 +15,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { roundedCorner } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, gap, items } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -393,45 +394,47 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 		return (
 			<Calendar.Cell
 				{...rest}
-				mix={[
-					/**
-					 * A day is the range's opening, its closing, both at once, or one of the days
-					 * between. The four are written under selectors that match one apiece, so each
-					 * day keeps its own shape however the cascade orders the set.
-					 */
-					when("&[data-selection-start]:not([data-selection-end])", [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-						roundedCorner("start-end", "none"),
-						roundedCorner("end-end", "none"),
-					]),
-					when("&[data-selection-end]:not([data-selection-start])", [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-						roundedCorner("start-start", "none"),
-						roundedCorner("end-start", "none"),
-					]),
-					/**
-					 * A range of one day opens and closes on itself, so it reads as a single day.
-					 */
-					when("&[data-selection-start][data-selection-end]", [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-					]),
-					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
+				mix={mergeMix(
+					[
 						/**
-						 * The days between carry the range across the row, so the band reads as one
-						 * run at a glance while the two ends stay the strongest thing in the month.
+						 * A day is the range's opening, its closing, both at once, or one of the days
+						 * between. The four are written under selectors that match one apiece, so each
+						 * day keeps its own shape however the cascade orders the set.
 						 */
-						bg("brand.bg-tint-hover"),
-						fg("brand.emphasis"),
-						roundedCorner("start-start", "none"),
-						roundedCorner("start-end", "none"),
-						roundedCorner("end-start", "none"),
-						roundedCorner("end-end", "none"),
-					]),
+						when("&[data-selection-start]:not([data-selection-end])", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							roundedCorner("start-end", "none"),
+							roundedCorner("end-end", "none"),
+						]),
+						when("&[data-selection-end]:not([data-selection-start])", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+							roundedCorner("start-start", "none"),
+							roundedCorner("end-start", "none"),
+						]),
+						/**
+						 * A range of one day opens and closes on itself, so it reads as a single day.
+						 */
+						when("&[data-selection-start][data-selection-end]", [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+						]),
+						when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
+							/**
+							 * The days between carry the range across the row, so the band reads as one
+							 * run at a glance while the two ends stay the strongest thing in the month.
+							 */
+							bg("brand.bg-tint-hover"),
+							fg("brand.emphasis"),
+							roundedCorner("start-start", "none"),
+							roundedCorner("start-end", "none"),
+							roundedCorner("end-start", "none"),
+							roundedCorner("end-end", "none"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

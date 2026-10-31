@@ -16,7 +16,7 @@ import type { Handle, Props as ElementProps } from "remix/component";
 import { XIcon } from "@sdxc/icons";
 import { bg, fg, outline, outlineColor } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, listStyle, vars } from "@sdxc/u/general";
+import { cursor, listStyle, vars, mergeMix } from "@sdxc/u/general";
 import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { bs, is, m, mie, p, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
@@ -124,7 +124,7 @@ export function TagGroup(handle: Handle<TagGroup.Props>) {
 			<div
 				{...rest}
 				data-slot="tag-group"
-				mix={[attrs({ role: DEFAULT_ROLE }), vstack({ gap: 1 }), mix]}
+				mix={mergeMix([attrs({ role: DEFAULT_ROLE }), vstack({ gap: 1 })], mix)}
 			/>
 		);
 	};
@@ -151,7 +151,7 @@ TagGroup.List = function TagGroupList(handle: Handle<TagGroup.ListProps>) {
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[flex(), flexWrap("wrap"), gap(2), m(0), p(0), listStyle(), mix]}
+				mix={mergeMix([flex(), flexWrap("wrap"), gap(2), m(0), p(0), listStyle()], mix)}
 			/>
 		);
 	};
@@ -183,34 +183,36 @@ TagGroup.Tag = function TagGroupTag(handle: Handle<TagGroup.TagProps>) {
 				data-color={resolvedColor}
 				data-size={resolvedSize}
 				data-slot="tag"
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						data("color", "neutral", outline("neutral.ring")),
-						data("color", "success", outline("success.ring")),
-						data("color", "warning", outline("warning.ring")),
-						data("color", "danger", outline("danger.ring")),
-					]),
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					gap(1),
-					rounded("full"),
-					pi(3),
-					pb(1),
-					data("size", "sm", [pi(2), pb(0.5)]),
-					data("color", "brand", [bg("brand.tint"), fg("brand")]),
-					data("color", "success", [bg("success.tint"), fg("success")]),
-					data("color", "warning", [bg("warning.tint"), fg("warning")]),
-					data("color", "danger", [bg("danger.tint"), fg("danger")]),
-					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(600)]),
-					when('&[aria-disabled="true"]', opacity(50)),
-					cursor("default"),
-					text("sm"),
-					data("size", "sm", text("xs")),
-					data("color", "neutral", [bg("neutral.bg-tint-hover"), fg("neutral")]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							data("color", "neutral", outline("neutral.ring")),
+							data("color", "success", outline("success.ring")),
+							data("color", "warning", outline("warning.ring")),
+							data("color", "danger", outline("danger.ring")),
+						]),
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						gap(1),
+						rounded("full"),
+						pi(3),
+						pb(1),
+						data("size", "sm", [pi(2), pb(0.5)]),
+						data("color", "brand", [bg("brand.tint"), fg("brand")]),
+						data("color", "success", [bg("success.tint"), fg("success")]),
+						data("color", "warning", [bg("warning.tint"), fg("warning")]),
+						data("color", "danger", [bg("danger.tint"), fg("danger")]),
+						when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(600)]),
+						when('&[aria-disabled="true"]', opacity(50)),
+						cursor("default"),
+						text("sm"),
+						data("size", "sm", text("xs")),
+						data("color", "neutral", [bg("neutral.bg-tint-hover"), fg("neutral")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -245,33 +247,35 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 				type="submit"
 				variant="ghost"
 				data-slot="remove"
-				mix={[
-					/**
-					 * The control shrinks through Button's own icon-only measure, so it sits inside
-					 * the pill's line instead of stretching the tag to a full button row, while
-					 * Button's own hit area keeps its pointer target at `--ui-target-size`.
-					 */
-					vars({ "ui-button-icon-size-md": REMOVE_SIZE }),
-					mie(-1),
-					when('&[data-slot="remove"] > svg', [is(3), bs(3)]),
-					fg("currentColor"),
-					hover(bg("brand.bg-tint-hover")),
-					when('[data-color="neutral"] &:hover', bg("neutral.bg-tint-hover")),
-					when('[data-color="success"] &:hover', bg("success.bg-tint-hover")),
-					when('[data-color="danger"] &:hover', bg("danger.bg-tint-hover")),
-					when('[data-color="warning"] &:hover', bg("warning.bg-tint-hover")),
-					active(bg("brand.bg-tint-pressed")),
-					when('[data-color="neutral"] &:active', bg("neutral.bg-tint-pressed")),
-					when('[data-color="success"] &:active', bg("success.bg-tint-pressed")),
-					when('[data-color="danger"] &:active', bg("danger.bg-tint-pressed")),
-					when('[data-color="warning"] &:active', bg("warning.bg-tint-pressed")),
-					when("&:focus-visible", outlineColor("brand")),
-					when('[data-color="neutral"] &:focus-visible', outlineColor("neutral")),
-					when('[data-color="success"] &:focus-visible', outlineColor("success")),
-					when('[data-color="danger"] &:focus-visible', outlineColor("danger")),
-					when('[data-color="warning"] &:focus-visible', outlineColor("warning")),
+				mix={mergeMix(
+					[
+						/**
+						 * The control shrinks through Button's own icon-only measure, so it sits inside
+						 * the pill's line instead of stretching the tag to a full button row, while
+						 * Button's own hit area keeps its pointer target at `--ui-target-size`.
+						 */
+						vars({ "ui-button-icon-size-md": REMOVE_SIZE }),
+						mie(-1),
+						when('&[data-slot="remove"] > svg', [is(3), bs(3)]),
+						fg("currentColor"),
+						hover(bg("brand.bg-tint-hover")),
+						when('[data-color="neutral"] &:hover', bg("neutral.bg-tint-hover")),
+						when('[data-color="success"] &:hover', bg("success.bg-tint-hover")),
+						when('[data-color="danger"] &:hover', bg("danger.bg-tint-hover")),
+						when('[data-color="warning"] &:hover', bg("warning.bg-tint-hover")),
+						active(bg("brand.bg-tint-pressed")),
+						when('[data-color="neutral"] &:active', bg("neutral.bg-tint-pressed")),
+						when('[data-color="success"] &:active', bg("success.bg-tint-pressed")),
+						when('[data-color="danger"] &:active', bg("danger.bg-tint-pressed")),
+						when('[data-color="warning"] &:active', bg("warning.bg-tint-pressed")),
+						when("&:focus-visible", outlineColor("brand")),
+						when('[data-color="neutral"] &:focus-visible', outlineColor("neutral")),
+						when('[data-color="success"] &:focus-visible', outlineColor("success")),
+						when('[data-color="danger"] &:focus-visible', outlineColor("danger")),
+						when('[data-color="warning"] &:focus-visible', outlineColor("warning")),
+					],
 					mix,
-				]}
+				)}
 			>
 				<XIcon size={12} />
 			</Button>

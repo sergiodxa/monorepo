@@ -10,6 +10,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { pb } from "@sdxc/u/size";
 
 /**
@@ -42,6 +43,6 @@ export function Section(handle: Handle<Section.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <section {...rest} mix={[pb("0.25rem"), mix]} />;
+		return <section {...rest} mix={mergeMix(pb("0.25rem"), mix)} />;
 	};
 }

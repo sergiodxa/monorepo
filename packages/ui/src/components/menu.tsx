@@ -20,7 +20,7 @@ import type {
 
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { flex, gap, items, shrink } from "@sdxc/u/layout";
 import { bs, is, minIs, mb, pb, pi } from "@sdxc/u/size";
 import { active, disabled, focusVisible, hover, when } from "@sdxc/u/state";
@@ -142,7 +142,10 @@ export function Menu(handle: Handle<Menu.Props>) {
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), surfaceInset(), outline("none"), mix]}
+				mix={mergeMix(
+					[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), surfaceInset(), outline("none")],
+					mix,
+				)}
 			>
 				{children}
 			</Popover>
@@ -174,41 +177,43 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 			"Menu.Item: a row with no visible text needs an `aria-label` describing it — assistive technology has no accessible name to announce otherwise.",
 		);
 
-		let itemMix = [
-			interactiveTransition(),
-			attrs({ role: DEFAULT_ITEM_ROLE }),
-			flex(),
-			is("full"),
-			items("center"),
-			gap(2),
-			/**
-			 * A glyph in a row reads beside the row's own text, so it is sized against that text
-			 * and holds that size while a long label wraps.
-			 */
-			when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
-			rounded("md"),
-			pi(3),
-			pb(2),
-			fg("neutral.emphasis"),
-			hover(bg("neutral.bg-tint-hover")),
-			active(bg("neutral.bg-tint-pressed")),
-			when("&:focus", bg("brand.tint")),
-			when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-			when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(500)]),
-			disabled([opacity(50), cursor("not-allowed")]),
-			when("&[data-danger]", [
-				fg("danger"),
-				hover(bg("danger.tint")),
-				active(bg("danger.bg-tint-pressed")),
-				when("&:focus", bg("danger.tint")),
-				focusVisible(outline("danger.ring")),
-			]),
-			cursor("default"),
-			textDecoration("none"),
-			text("sm"),
-			textAlign("start"),
+		let itemMix = mergeMix(
+			[
+				interactiveTransition(),
+				attrs({ role: DEFAULT_ITEM_ROLE }),
+				flex(),
+				is("full"),
+				items("center"),
+				gap(2),
+				/**
+				 * A glyph in a row reads beside the row's own text, so it is sized against that text
+				 * and holds that size while a long label wraps.
+				 */
+				when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
+				rounded("md"),
+				pi(3),
+				pb(2),
+				fg("neutral.emphasis"),
+				hover(bg("neutral.bg-tint-hover")),
+				active(bg("neutral.bg-tint-pressed")),
+				when("&:focus", bg("brand.tint")),
+				when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+				when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid"), weight(500)]),
+				disabled([opacity(50), cursor("not-allowed")]),
+				when("&[data-danger]", [
+					fg("danger"),
+					hover(bg("danger.tint")),
+					active(bg("danger.bg-tint-pressed")),
+					when("&:focus", bg("danger.tint")),
+					focusVisible(outline("danger.ring")),
+				]),
+				cursor("default"),
+				textDecoration("none"),
+				text("sm"),
+				textAlign("start"),
+			],
 			mix,
-		];
+		);
 
 		if (href) {
 			/**
@@ -261,6 +266,6 @@ Menu.Separator = function MenuSeparator(handle: Handle<Menu.SeparatorProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Separator {...rest} mix={[mb(1), mix]} />;
+		return <Separator {...rest} mix={mergeMix(mb(1), mix)} />;
 	};
 };

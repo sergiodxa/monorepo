@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, visibility } from "@sdxc/u/effects";
-import { cursor, raw, userSelect } from "@sdxc/u/general";
+import { cursor, raw, userSelect, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	flex,
@@ -182,227 +182,232 @@ export function Button(handle: Handle<Button.Props>) {
 				data-glyph-start={edges.start || undefined}
 				data-glyph-end={edges.end || undefined}
 				disabled={resolvedDisabled}
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						when('&[data-color="neutral"]', outline("neutral.ring")),
-						when('&[data-color="success"]', outline("success.ring")),
-						when('&[data-color="warning"]', outline("warning.ring")),
-						when('&[data-color="danger"]', outline("danger.ring")),
-					]),
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					gap(2),
-					/**
-					 * A glyph is measured against the label it sits beside rather than against
-					 * whatever an icon set draws at, so the row keeps the height its text and
-					 * padding ask for. It never shrinks either: squeeze the row and the default
-					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
-					 * icon reads as a rendering fault.
-					 */
-					when("& > svg", [shrink(), is(4), bs(4)]),
-					raw({
-						borderRadius: "var(--ui-button-radius, var(--ui-radius-md, 0.375rem))",
-						fontWeight: "var(--ui-button-weight, 500)",
-					}),
-					cursor("default"),
-					/** A small control reaches `--ui-target-size` however a consumer positions it. */
-					hitArea({ anchor: "flex-center" }),
-					userSelect(),
-
-					pi(4),
-					pb(2),
-					text("sm"),
-					/**
-					 * Every variant carries the same border width, colored to match its own
-					 * fill (transparent for ghost), so solid and ghost render the exact
-					 * footprint outline does.
-					 */
-					border({ width: 1, noStyleDefault: true }),
-
-					/**
-					 * The row measure is stated rather than left to fall out of the padding and
-					 * the border, so the control lines up with a field of the same size when a
-					 * Group fuses the two, and still grows when a long label wraps.
-					 */
-					minBs("2.5rem"),
-
-					when('&[data-size="sm"]', [
-						pi(3),
-						pb(1.5),
-						text("xs"),
-						minBs("2rem"),
-						when("& > svg", [is(3), bs(3)]),
-					]),
-					when('&[data-size="lg"]', [
-						pi(5),
-						pb(2.5),
-						text("base"),
-						minBs("3rem"),
-						when("& > svg", [is(5), bs(5)]),
-					]),
-
-					/**
-					 * A glyph beside a label carries its own side bearing, so the padding on that
-					 * side drops one step and the glyph and the words read as evenly inset.
-					 */
-					when("&[data-glyph-start]:has(> svg:first-child)", [
-						pis(3),
-						when('&[data-size="sm"]', pis(2)),
-						when('&[data-size="lg"]', pis(4)),
-					]),
-					when("&[data-glyph-end]:has(> svg:last-child)", [
-						pie(3),
-						when('&[data-size="sm"]', pie(2)),
-						when('&[data-size="lg"]', pie(4)),
-					]),
-
-					/**
-					 * A button holding a glyph and nothing else is a target for that glyph alone, so
-					 * it takes a round footprint as tall as the row it would otherwise fill. The
-					 * measure is a custom property per size, since a box sized by its own content on
-					 * both axes has no ratio to resolve against, and an app or a composing part can
-					 * resize it without touching the rule.
-					 */
-					when("&[data-icon-only]", [
-						p(0),
-						is(ICON_ONLY_SIZE_MD),
-						bs(ICON_ONLY_SIZE_MD),
-						minBs(ICON_ONLY_SIZE_MD),
-						shrink(),
-						raw({ "--ui-button-radius": "9999px" }),
-					]),
-					when('&[data-size="sm"][data-icon-only]', [
-						is(ICON_ONLY_SIZE_SM),
-						bs(ICON_ONLY_SIZE_SM),
-						minBs(ICON_ONLY_SIZE_SM),
-					]),
-					when('&[data-size="lg"][data-icon-only]', [
-						is(ICON_ONLY_SIZE_LG),
-						bs(ICON_ONLY_SIZE_LG),
-						minBs(ICON_ONLY_SIZE_LG),
-					]),
-
-					when('&[data-variant="solid"]', [
-						when('&[data-color="brand"]', [
-							bg("brand.solid"),
-							border("brand.solid"),
-							fg("brand.onSolid"),
-							when("&:hover", [bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
-							when("&:active", [bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							when('&[data-color="neutral"]', outline("neutral.ring")),
+							when('&[data-color="success"]', outline("success.ring")),
+							when('&[data-color="warning"]', outline("warning.ring")),
+							when('&[data-color="danger"]', outline("danger.ring")),
 						]),
-						when('&[data-color="neutral"]', [
-							bg("neutral.solid"),
-							border("neutral.solid"),
-							fg("neutral.onSolid"),
-							when("&:hover", [bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
-							when("&:active", [
-								bg("neutral.bg-solid-pressed"),
-								border("neutral.bg-solid-pressed"),
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						gap(2),
+						/**
+						 * A glyph is measured against the label it sits beside rather than against
+						 * whatever an icon set draws at, so the row keeps the height its text and
+						 * padding ask for. It never shrinks either: squeeze the row and the default
+						 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
+						 * icon reads as a rendering fault.
+						 */
+						when("& > svg", [shrink(), is(4), bs(4)]),
+						raw({
+							borderRadius: "var(--ui-button-radius, var(--ui-radius-md, 0.375rem))",
+							fontWeight: "var(--ui-button-weight, 500)",
+						}),
+						cursor("default"),
+						/** A small control reaches `--ui-target-size` however a consumer positions it. */
+						hitArea({ anchor: "flex-center" }),
+						userSelect(),
+
+						pi(4),
+						pb(2),
+						text("sm"),
+						/**
+						 * Every variant carries the same border width, colored to match its own
+						 * fill (transparent for ghost), so solid and ghost render the exact
+						 * footprint outline does.
+						 */
+						border({ width: 1, noStyleDefault: true }),
+
+						/**
+						 * The row measure is stated rather than left to fall out of the padding and
+						 * the border, so the control lines up with a field of the same size when a
+						 * Group fuses the two, and still grows when a long label wraps.
+						 */
+						minBs("2.5rem"),
+
+						when('&[data-size="sm"]', [
+							pi(3),
+							pb(1.5),
+							text("xs"),
+							minBs("2rem"),
+							when("& > svg", [is(3), bs(3)]),
+						]),
+						when('&[data-size="lg"]', [
+							pi(5),
+							pb(2.5),
+							text("base"),
+							minBs("3rem"),
+							when("& > svg", [is(5), bs(5)]),
+						]),
+
+						/**
+						 * A glyph beside a label carries its own side bearing, so the padding on that
+						 * side drops one step and the glyph and the words read as evenly inset.
+						 */
+						when("&[data-glyph-start]:has(> svg:first-child)", [
+							pis(3),
+							when('&[data-size="sm"]', pis(2)),
+							when('&[data-size="lg"]', pis(4)),
+						]),
+						when("&[data-glyph-end]:has(> svg:last-child)", [
+							pie(3),
+							when('&[data-size="sm"]', pie(2)),
+							when('&[data-size="lg"]', pie(4)),
+						]),
+
+						/**
+						 * A button holding a glyph and nothing else is a target for that glyph alone, so
+						 * it takes a round footprint as tall as the row it would otherwise fill. The
+						 * measure is a custom property per size, since a box sized by its own content on
+						 * both axes has no ratio to resolve against, and an app or a composing part can
+						 * resize it without touching the rule.
+						 */
+						when("&[data-icon-only]", [
+							p(0),
+							is(ICON_ONLY_SIZE_MD),
+							bs(ICON_ONLY_SIZE_MD),
+							minBs(ICON_ONLY_SIZE_MD),
+							shrink(),
+							raw({ "--ui-button-radius": "9999px" }),
+						]),
+						when('&[data-size="sm"][data-icon-only]', [
+							is(ICON_ONLY_SIZE_SM),
+							bs(ICON_ONLY_SIZE_SM),
+							minBs(ICON_ONLY_SIZE_SM),
+						]),
+						when('&[data-size="lg"][data-icon-only]', [
+							is(ICON_ONLY_SIZE_LG),
+							bs(ICON_ONLY_SIZE_LG),
+							minBs(ICON_ONLY_SIZE_LG),
+						]),
+
+						when('&[data-variant="solid"]', [
+							when('&[data-color="brand"]', [
+								bg("brand.solid"),
+								border("brand.solid"),
+								fg("brand.onSolid"),
+								when("&:hover", [bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
+								when("&:active", [bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
+							]),
+							when('&[data-color="neutral"]', [
+								bg("neutral.solid"),
+								border("neutral.solid"),
+								fg("neutral.onSolid"),
+								when("&:hover", [bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
+								when("&:active", [
+									bg("neutral.bg-solid-pressed"),
+									border("neutral.bg-solid-pressed"),
+								]),
+							]),
+							when('&[data-color="success"]', [
+								bg("success.solid"),
+								border("success.solid"),
+								fg("success.onSolid"),
+								when("&:hover", [bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
+								when("&:active", [
+									bg("success.bg-solid-pressed"),
+									border("success.bg-solid-pressed"),
+								]),
+							]),
+							when('&[data-color="warning"]', [
+								bg("warning.solid"),
+								border("warning.solid"),
+								fg("warning.onSolid"),
+								when("&:hover", [bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
+								when("&:active", [
+									bg("warning.bg-solid-pressed"),
+									border("warning.bg-solid-pressed"),
+								]),
+							]),
+							when('&[data-color="danger"]', [
+								bg("danger.solid"),
+								border("danger.solid"),
+								fg("danger.onSolid"),
+								when("&:hover", [bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
+								when("&:active", [
+									bg("danger.bg-solid-pressed"),
+									border("danger.bg-solid-pressed"),
+								]),
 							]),
 						]),
-						when('&[data-color="success"]', [
-							bg("success.solid"),
-							border("success.solid"),
-							fg("success.onSolid"),
-							when("&:hover", [bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
-							when("&:active", [
-								bg("success.bg-solid-pressed"),
-								border("success.bg-solid-pressed"),
+
+						when('&[data-variant="outline"]', [
+							bg("transparent"),
+							when('&[data-color="brand"]', [
+								border("brand"),
+								fg("brand"),
+								when("&:hover", [bg("brand.tint"), border("brand.border-hover")]),
+								when("&:active", bg("brand.bg-tint-hover")),
+							]),
+							when('&[data-color="neutral"]', [
+								border("neutral"),
+								fg("neutral.emphasis"),
+								when("&:hover", [bg("neutral.tint"), border("neutral.border-hover")]),
+								when("&:active", bg("neutral.bg-tint-hover")),
+							]),
+							when('&[data-color="success"]', [
+								border("success"),
+								fg("success"),
+								when("&:hover", [bg("success.tint"), border("success.border-hover")]),
+								when("&:active", bg("success.bg-tint-hover")),
+							]),
+							when('&[data-color="warning"]', [
+								border("warning"),
+								fg("warning"),
+								when("&:hover", [bg("warning.tint"), border("warning.border-hover")]),
+								when("&:active", bg("warning.bg-tint-hover")),
+							]),
+							when('&[data-color="danger"]', [
+								border("danger"),
+								fg("danger"),
+								when("&:hover", [bg("danger.tint"), border("danger.border-hover")]),
+								when("&:active", bg("danger.bg-tint-hover")),
 							]),
 						]),
-						when('&[data-color="warning"]', [
-							bg("warning.solid"),
-							border("warning.solid"),
-							fg("warning.onSolid"),
-							when("&:hover", [bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
-							when("&:active", [
-								bg("warning.bg-solid-pressed"),
-								border("warning.bg-solid-pressed"),
+
+						when('&[data-variant="ghost"]', [
+							bg("transparent"),
+							border("transparent"),
+							when('&[data-color="brand"]', [
+								fg("brand"),
+								when("&:hover", bg("brand.tint")),
+								when("&:active", bg("brand.bg-tint-hover")),
+							]),
+							when('&[data-color="neutral"]', [
+								fg("neutral.emphasis"),
+								when("&:hover", bg("neutral.bg-tint-hover")),
+								when("&:active", bg("neutral.bg-tint-pressed")),
+							]),
+							when('&[data-color="success"]', [
+								fg("success"),
+								when("&:hover", bg("success.tint")),
+								when("&:active", bg("success.bg-tint-hover")),
+							]),
+							when('&[data-color="warning"]', [
+								fg("warning"),
+								when("&:hover", bg("warning.tint")),
+								when("&:active", bg("warning.bg-tint-hover")),
+							]),
+							when('&[data-color="danger"]', [
+								fg("danger"),
+								when("&:hover", bg("danger.tint")),
+								when("&:active", bg("danger.bg-tint-hover")),
 							]),
 						]),
-						when('&[data-color="danger"]', [
-							bg("danger.solid"),
-							border("danger.solid"),
-							fg("danger.onSolid"),
-							when("&:hover", [bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
-							when("&:active", [bg("danger.bg-solid-pressed"), border("danger.bg-solid-pressed")]),
-						]),
-					]),
 
-					when('&[data-variant="outline"]', [
-						bg("transparent"),
-						when('&[data-color="brand"]', [
-							border("brand"),
-							fg("brand"),
-							when("&:hover", [bg("brand.tint"), border("brand.border-hover")]),
-							when("&:active", bg("brand.bg-tint-hover")),
-						]),
-						when('&[data-color="neutral"]', [
-							border("neutral"),
-							fg("neutral.emphasis"),
-							when("&:hover", [bg("neutral.tint"), border("neutral.border-hover")]),
-							when("&:active", bg("neutral.bg-tint-hover")),
-						]),
-						when('&[data-color="success"]', [
-							border("success"),
-							fg("success"),
-							when("&:hover", [bg("success.tint"), border("success.border-hover")]),
-							when("&:active", bg("success.bg-tint-hover")),
-						]),
-						when('&[data-color="warning"]', [
-							border("warning"),
-							fg("warning"),
-							when("&:hover", [bg("warning.tint"), border("warning.border-hover")]),
-							when("&:active", bg("warning.bg-tint-hover")),
-						]),
-						when('&[data-color="danger"]', [
-							border("danger"),
-							fg("danger"),
-							when("&:hover", [bg("danger.tint"), border("danger.border-hover")]),
-							when("&:active", bg("danger.bg-tint-hover")),
-						]),
-					]),
+						when('&[data-variant="surface"]', [surfaceControl()]),
 
-					when('&[data-variant="ghost"]', [
-						bg("transparent"),
-						border("transparent"),
-						when('&[data-color="brand"]', [
-							fg("brand"),
-							when("&:hover", bg("brand.tint")),
-							when("&:active", bg("brand.bg-tint-hover")),
-						]),
-						when('&[data-color="neutral"]', [
-							fg("neutral.emphasis"),
-							when("&:hover", bg("neutral.bg-tint-hover")),
-							when("&:active", bg("neutral.bg-tint-pressed")),
-						]),
-						when('&[data-color="success"]', [
-							fg("success"),
-							when("&:hover", bg("success.tint")),
-							when("&:active", bg("success.bg-tint-hover")),
-						]),
-						when('&[data-color="warning"]', [
-							fg("warning"),
-							when("&:hover", bg("warning.tint")),
-							when("&:active", bg("warning.bg-tint-hover")),
-						]),
-						when('&[data-color="danger"]', [
-							fg("danger"),
-							when("&:hover", bg("danger.tint")),
-							when("&:active", bg("danger.bg-tint-hover")),
-						]),
-					]),
+						when("&:disabled:not([data-pending])", [cursor("not-allowed"), opacity(50)]),
 
-					when('&[data-variant="surface"]', [surfaceControl()]),
-
-					when("&:disabled:not([data-pending])", [cursor("not-allowed"), opacity(50)]),
-
-					when("&[data-pending]", [relative(), cursor("wait")]),
+						when("&[data-pending]", [relative(), cursor("wait")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{isPending ? (
 					<>

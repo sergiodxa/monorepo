@@ -9,6 +9,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
+
 import type { Feature } from "../components/feature.js";
 
 import { ICON_TILE_SIDE, iconTile } from "../styles/card-grid.js";
@@ -77,7 +79,7 @@ export function IconWell(handle: Handle<IconWell.Props>) {
 				data-slot="icon-well"
 				data-size={resolvedSize}
 				data-tone={resolvedTone}
-				mix={[iconTile(resolvedTone, SIDE_BY_SIZE[resolvedSize]), mix]}
+				mix={mergeMix(iconTile(resolvedTone, SIDE_BY_SIZE[resolvedSize]), mix)}
 			/>
 		);
 	};

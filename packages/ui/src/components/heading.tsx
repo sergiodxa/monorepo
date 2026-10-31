@@ -17,6 +17,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { balance, fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
 import { displayHeading } from "../styles/marketing.js";
@@ -92,21 +93,23 @@ export function Heading(handle: Handle<Heading.Props>) {
 				{...rest}
 				data-heading-level={resolved}
 				data-size={resolvedSize}
-				mix={[
-					resolvedSize === "display" ? displayHeading(1) : [],
-					resolvedSize === "chapter" ? displayHeading(2) : [],
-					isMarketing
-						? []
-						: [
-								weight("semibold"),
-								tracking("tight"),
-								fg("neutral.emphasis"),
-								fontSize("lg"),
-								leading("none"),
-								balance(),
-							],
+				mix={mergeMix(
+					[
+						resolvedSize === "display" ? displayHeading(1) : [],
+						resolvedSize === "chapter" ? displayHeading(2) : [],
+						isMarketing
+							? []
+							: [
+									weight("semibold"),
+									tracking("tight"),
+									fg("neutral.emphasis"),
+									fontSize("lg"),
+									leading("none"),
+									balance(),
+								],
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

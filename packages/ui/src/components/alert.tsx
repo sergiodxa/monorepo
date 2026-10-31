@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } from "@sdxc/u/layout";
 import { bs, is, mbe, minIs, p, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -165,19 +166,21 @@ export function Alert(handle: Handle<Alert.Props>) {
 				aria-live={ariaLive}
 				data-color={color}
 				data-slot="alert"
-				mix={[
-					attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
-					semanticColorPanel(),
-					relative(),
-					vstack({ align: "start" }),
-					is("full"),
-					gap(3),
-					rounded("lg"),
-					border({ width: 1 }),
-					p(4),
-					when('&:has(> [data-slot="icon"])', pis(10)),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
+						semanticColorPanel(),
+						relative(),
+						vstack({ align: "start" }),
+						is("full"),
+						gap(3),
+						rounded("lg"),
+						border({ width: 1 }),
+						p(4),
+						when('&:has(> [data-slot="icon"])', pis(10)),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -201,14 +204,16 @@ Alert.Icon = function AlertIcon(handle: Handle<Alert.IconProps>) {
 			<div
 				{...rest}
 				data-slot="icon"
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					absolute(),
-					inset(4, "auto", "auto", 4),
-					when("& > svg", [is(4), bs(4)]),
-					fg("currentcolor"),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
+						absolute(),
+						inset(4, "auto", "auto", 4),
+						when("& > svg", [is(4), bs(4)]),
+						fg("currentcolor"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -232,7 +237,7 @@ Alert.Content = function AlertContent(handle: Handle<Alert.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[vstack({ gap: 1 }), minIs(0), grow(), shrink(1), basis("0%"), mix]}
+				mix={mergeMix([vstack({ gap: 1 }), minIs(0), grow(), shrink(1), basis("0%")], mix)}
 			>
 				{children}
 			</div>
@@ -259,15 +264,10 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 				{...rest}
 				data-heading-level={resolved}
 				data-slot="title"
-				mix={[
-					mbe(1),
-					weight("medium"),
-					leading(1),
-					tracking("tight"),
-					fontSize("sm"),
-					balance(),
+				mix={mergeMix(
+					[mbe(1), weight("medium"), leading(1), tracking("tight"), fontSize("sm"), balance()],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</Tag>
@@ -291,14 +291,16 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[
-					leading("relaxed"),
-					when("& p", leading("relaxed")),
-					pretty(),
-					fontSize("sm"),
-					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+				mix={mergeMix(
+					[
+						leading("relaxed"),
+						when("& p", leading("relaxed")),
+						pretty(),
+						fontSize("sm"),
+						fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</p>
@@ -319,7 +321,7 @@ Alert.Action = function AlertAction(handle: Handle<Alert.ActionProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="action" mix={[shrink(), self("start"), mix]}>
+			<div {...rest} data-slot="action" mix={mergeMix([shrink(), self("start")], mix)}>
 				{children}
 			</div>
 		);

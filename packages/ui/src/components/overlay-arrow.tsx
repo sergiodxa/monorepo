@@ -12,7 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fill } from "@sdxc/u/color";
-import { calc, pointerEvents, var as varUtility } from "@sdxc/u/general";
+import { calc, pointerEvents, var as varUtility, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	flex,
@@ -106,54 +106,56 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 			<div
 				data-placement={resolvedPlacement}
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					absolute(),
-					/**
-					 * The host spans the whole edge it attaches to, so centring the glyph inside it
-					 * is what puts the point under the trigger the surface is anchored to.
-					 */
-					flex(),
-					items("center"),
-					justify("center"),
-					fill("neutral.tint"),
-					pointerEvents(),
-					when('&[data-placement^="bottom"]', [
-						mi("auto"),
-						rotate(180),
-						insBs(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
-						insIs("0"),
-						insIe("0"),
-					]),
-					when('&[data-placement^="top"]', [
-						mi("auto"),
-						insBe(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
-						insIs("0"),
-						insIe("0"),
-					]),
-					/**
-					 * A side placement sits past the surface's own inline edge, where the space
-					 * left to grow into is none, so the glyph is sized from its own content the
-					 * way the block placements are sized from theirs.
-					 */
-					when('&[data-placement^="left"]', [
-						mb("auto"),
-						rotate(-90),
-						insLeft("100%"),
-						insBs("0"),
-						insBe("0"),
-						is("max-content"),
-					]),
-					when('&[data-placement^="right"]', [
-						mb("auto"),
-						rotate(90),
-						insRight("100%"),
-						insBs("0"),
-						insBe("0"),
-						is("max-content"),
-					]),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						absolute(),
+						/**
+						 * The host spans the whole edge it attaches to, so centring the glyph inside it
+						 * is what puts the point under the trigger the surface is anchored to.
+						 */
+						flex(),
+						items("center"),
+						justify("center"),
+						fill("neutral.tint"),
+						pointerEvents(),
+						when('&[data-placement^="bottom"]', [
+							mi("auto"),
+							rotate(180),
+							insBs(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
+							insIs("0"),
+							insIe("0"),
+						]),
+						when('&[data-placement^="top"]', [
+							mi("auto"),
+							insBe(calc(`${varUtility("ui-overlay-arrow-offset", "0.5rem")} * -1`)),
+							insIs("0"),
+							insIe("0"),
+						]),
+						/**
+						 * A side placement sits past the surface's own inline edge, where the space
+						 * left to grow into is none, so the glyph is sized from its own content the
+						 * way the block placements are sized from theirs.
+						 */
+						when('&[data-placement^="left"]', [
+							mb("auto"),
+							rotate(-90),
+							insLeft("100%"),
+							insBs("0"),
+							insBe("0"),
+							is("max-content"),
+						]),
+						when('&[data-placement^="right"]', [
+							mb("auto"),
+							rotate(90),
+							insRight("100%"),
+							insBs("0"),
+							insBe("0"),
+							is("max-content"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

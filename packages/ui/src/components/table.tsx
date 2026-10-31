@@ -43,6 +43,7 @@ import {
 	weight,
 	when,
 } from "@sdxc/u";
+import { mergeMix } from "@sdxc/u/general";
 import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
@@ -221,7 +222,7 @@ export function Table(handle: Handle<Table.Props>) {
 			<table
 				{...rest}
 				data-slot="table"
-				mix={[is("100%"), raw({ borderCollapse: "collapse" }), fontSize("sm"), mix]}
+				mix={mergeMix([is("100%"), raw({ borderCollapse: "collapse" }), fontSize("sm")], mix)}
 			/>
 		);
 	};
@@ -247,7 +248,7 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 			<div
 				{...rest}
 				data-slot="container"
-				mix={[relative(), is("100%"), overflow("auto"), container(CONTAINER_NAME), mix]}
+				mix={mergeMix([relative(), is("100%"), overflow("auto"), container(CONTAINER_NAME)], mix)}
 			/>
 		);
 	};
@@ -274,7 +275,7 @@ Table.Header = function TableHeader(handle: Handle<Table.HeaderProps>) {
 			<thead
 				{...rest}
 				data-slot="header"
-				mix={[borderEdge("block-end", { color: "neutral", width: 1 }), mix]}
+				mix={mergeMix(borderEdge("block-end", { color: "neutral", width: 1 }), mix)}
 			/>
 		);
 	};
@@ -304,14 +305,16 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 			<tbody
 				{...rest}
 				data-slot="body"
-				mix={[
-					virtualize("auto var(--ui-table-body-intrinsic-size, 32rem)"),
-					when(
-						"& > :not([hidden]) ~ :not([hidden])",
-						borderEdge("block-start", { color: "neutral", width: 1 }),
-					),
+				mix={mergeMix(
+					[
+						virtualize("auto var(--ui-table-body-intrinsic-size, 32rem)"),
+						when(
+							"& > :not([hidden]) ~ :not([hidden])",
+							borderEdge("block-start", { color: "neutral", width: 1 }),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -345,18 +348,20 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 				data-numeric={numeric ? "" : undefined}
 				aria-sort={href ? (sortDirection ?? "none") : undefined}
 				data-slot="column"
-				mix={[
-					attrs({ scope: "col" }),
-					href ? undefined : [pi("1rem"), pb("0.75rem")],
-					textAlign("start"),
-					weight(500),
-					fg("neutral"),
-					when('&[data-align="center"]', textAlign("center")),
-					when('&[data-align="end"]', textAlign("end")),
-					when("&[aria-sort]", when("&:hover", bg("neutral.tint"))),
-					when("&[aria-sort]", [cursor("pointer"), userSelect()]),
+				mix={mergeMix(
+					[
+						attrs({ scope: "col" }),
+						href ? undefined : [pi("1rem"), pb("0.75rem")],
+						textAlign("start"),
+						weight(500),
+						fg("neutral"),
+						when('&[data-align="center"]', textAlign("center")),
+						when('&[data-align="end"]', textAlign("end")),
+						when("&[aria-sort]", when("&:hover", bg("neutral.tint"))),
+						when("&[aria-sort]", [cursor("pointer"), userSelect()]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{href ? (
 					<a
@@ -412,12 +417,14 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 			<tr
 				{...rest}
 				data-slot="row"
-				mix={[
-					interactiveTransition(),
-					hover(bg("neutral.tint")),
-					when('&[aria-selected="true"]', bg("brand.tint")),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						hover(bg("neutral.tint")),
+						when('&[aria-selected="true"]', bg("brand.tint")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -443,13 +450,15 @@ Table.Cell = function TableCell(handle: Handle<Table.CellProps>) {
 				{...rest}
 				data-numeric={numeric ? "" : undefined}
 				data-slot="cell"
-				mix={[
-					pi("1rem"),
-					pb("0.75rem"),
-					fg("neutral.emphasis"),
-					when("&[data-numeric]", [tabularNums(), textAlign("end")]),
+				mix={mergeMix(
+					[
+						pi("1rem"),
+						pb("0.75rem"),
+						fg("neutral.emphasis"),
+						when("&[data-numeric]", [tabularNums(), textAlign("end")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

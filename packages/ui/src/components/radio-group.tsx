@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded, transition } from "@sdxc/u/effects";
-import { cursor, pseudoContent } from "@sdxc/u/general";
+import { cursor, pseudoContent, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, flexRow, gap, items, justify, relative, shrink } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { after, precededBy, when } from "@sdxc/u/state";
@@ -139,15 +139,17 @@ export function RadioGroup(handle: Handle<RadioGroup.Props, RadioGroup.Context>)
 				data-orientation={resolvedOrientation}
 				aria-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					flex(),
-					flexCol(),
-					when('&[data-orientation="horizontal"]', flexRow()),
-					gap("0.5rem"),
-					when('&[data-orientation="horizontal"]', gap("1rem")),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						flex(),
+						flexCol(),
+						when('&[data-orientation="horizontal"]', flexRow()),
+						gap("0.5rem"),
+						when('&[data-orientation="horizontal"]', gap("1rem")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -187,16 +189,18 @@ RadioGroup.Radio = function RadioGroupRadio(handle: Handle<RadioGroup.RadioProps
 		return (
 			<label
 				{...rest}
-				mix={[
-					flex(),
-					cursor("default"),
-					items("center"),
-					text("sm"),
-					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
-					gap("0.5rem"),
-					fg("neutral.emphasis"),
+				mix={mergeMix(
+					[
+						flex(),
+						cursor("default"),
+						items("center"),
+						text("sm"),
+						when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
+						gap("0.5rem"),
+						fg("neutral.emphasis"),
+					],
 					mix,
-				]}
+				)}
 			>
 				<input
 					type="radio"

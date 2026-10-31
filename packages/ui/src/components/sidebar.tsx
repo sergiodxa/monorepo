@@ -25,7 +25,7 @@ import {
 	transitionDuration,
 	transitionProperty,
 } from "@sdxc/u/effects";
-import { cursor, pseudoContent, userSelect, willChange } from "@sdxc/u/general";
+import { cursor, pseudoContent, userSelect, willChange, mergeMix } from "@sdxc/u/general";
 import { var as varUtility } from "@sdxc/u/general/var";
 import {
 	absolute,
@@ -457,88 +457,90 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 				data-variant={resolvedVariant}
 				data-collapsible={resolvedCollapsible}
 				data-side={resolvedSide}
-				mix={[
-					relative(),
-					flex(),
-					flexCol(),
-					shrink(),
-					bs("full"),
-					is(varUtility("sidebar-width", "16rem")),
-					willChange("transform"),
-					data("side", "left", [
-						borderEdge("right", { width: 1, style: "solid", color: "neutral" }),
-						safeAreaPadding("left"),
-					]),
-					data("side", "right", [
-						borderEdge("left", { width: 1, style: "solid", color: "neutral" }),
-						safeAreaPadding("right"),
-					]),
-					data("variant", "floating", [
-						m("0.5rem"),
-						shadow("lg"),
-						supports(
-							"(backdrop-filter: blur(0))",
-							media("(prefers-reduced-transparency: no-preference)", [
-								border(
-									colorMix(
-										"oklab",
-										{ color: "var(--ui-neutral-border)", weight: 80 },
-										"transparent",
+				mix={mergeMix(
+					[
+						relative(),
+						flex(),
+						flexCol(),
+						shrink(),
+						bs("full"),
+						is(varUtility("sidebar-width", "16rem")),
+						willChange("transform"),
+						data("side", "left", [
+							borderEdge("right", { width: 1, style: "solid", color: "neutral" }),
+							safeAreaPadding("left"),
+						]),
+						data("side", "right", [
+							borderEdge("left", { width: 1, style: "solid", color: "neutral" }),
+							safeAreaPadding("right"),
+						]),
+						data("variant", "floating", [
+							m("0.5rem"),
+							shadow("lg"),
+							supports(
+								"(backdrop-filter: blur(0))",
+								media("(prefers-reduced-transparency: no-preference)", [
+									border(
+										colorMix(
+											"oklab",
+											{ color: "var(--ui-neutral-border)", weight: 80 },
+											"transparent",
+										),
 									),
-								),
-								bg(
-									colorMix(
-										"oklab",
-										{ color: "var(--ui-neutral-bg-tint)", weight: 95 },
-										"transparent",
+									bg(
+										colorMix(
+											"oklab",
+											{ color: "var(--ui-neutral-bg-tint)", weight: 95 },
+											"transparent",
+										),
 									),
-								),
-								backdropBlur("md"),
-								backdropSaturate(1.4),
-							]),
+									backdropBlur("md"),
+									backdropSaturate(1.4),
+								]),
+							),
+						]),
+						data("variant", "inset", shadow("base")),
+						when(
+							`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`,
+							when('&[data-collapsible="icon"], &[data-collapsible="offcanvas"]', hidden()),
 						),
-					]),
-					data("variant", "inset", shadow("base")),
-					when(
-						`@container ${PROVIDER_CONTAINER_NAME} (max-width: 47.9375rem)`,
-						when('&[data-collapsible="icon"], &[data-collapsible="offcanvas"]', hidden()),
-					),
-					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					transition("inline-size, transform", {
-						duration: durations.normal,
-						easing: easings.standard,
-					}),
-					data("variant", "floating", [rounded("xl"), border({ color: "neutral", width: 1 })]),
-					data("variant", "inset", [rounded("xl"), border({ color: "neutral", width: 1 })]),
-					when(`[data-slot="provider"]:has(${TOGGLE_CHECKED_SELECTOR}) &`, [
-						when('&[data-collapsible="icon"]', [
-							is(varUtility("sidebar-width-icon", "3rem")),
-							when("[data-sidebar-collapsed-hide]", visuallyHidden()),
-							when('[data-slot="group-label"]', visuallyHidden()),
-							when('[data-slot="menu-badge"]', hidden()),
-							when('[data-slot="menu-sub"]', hidden()),
-							when('[data-slot="menu-button"], [data-slot="menu-link"]', [
-								justify("center"),
-								pi("0"),
+						media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						transition("inline-size, transform", {
+							duration: durations.normal,
+							easing: easings.standard,
+						}),
+						data("variant", "floating", [rounded("xl"), border({ color: "neutral", width: 1 })]),
+						data("variant", "inset", [rounded("xl"), border({ color: "neutral", width: 1 })]),
+						when(`[data-slot="provider"]:has(${TOGGLE_CHECKED_SELECTOR}) &`, [
+							when('&[data-collapsible="icon"]', [
+								is(varUtility("sidebar-width-icon", "3rem")),
+								when("[data-sidebar-collapsed-hide]", visuallyHidden()),
+								when('[data-slot="group-label"]', visuallyHidden()),
+								when('[data-slot="menu-badge"]', hidden()),
+								when('[data-slot="menu-sub"]', hidden()),
+								when('[data-slot="menu-button"], [data-slot="menu-link"]', [
+									justify("center"),
+									pi("0"),
+								]),
+							]),
+							when('&[data-collapsible="offcanvas"][data-side="left"]', [
+								translateX("-100%"),
+								is("0"),
+								overflow("hidden"),
+								border({ width: "0", noStyleDefault: true }),
+							]),
+							when('&[data-collapsible="offcanvas"][data-side="right"]', [
+								translateX("100%"),
+								is("0"),
+								overflow("hidden"),
+								border({ width: "0", noStyleDefault: true }),
 							]),
 						]),
-						when('&[data-collapsible="offcanvas"][data-side="left"]', [
-							translateX("-100%"),
-							is("0"),
-							overflow("hidden"),
-							border({ width: "0", noStyleDefault: true }),
-						]),
-						when('&[data-collapsible="offcanvas"][data-side="right"]', [
-							translateX("100%"),
-							is("0"),
-							overflow("hidden"),
-							border({ width: "0", noStyleDefault: true }),
-						]),
-					]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -580,14 +582,16 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 			<div
 				{...rest}
 				data-slot="provider"
-				mix={[
-					flex(),
-					items("stretch"),
-					minBs("100dvh"),
-					is("full"),
-					container(PROVIDER_CONTAINER_NAME),
+				mix={mergeMix(
+					[
+						flex(),
+						items("stretch"),
+						minBs("100dvh"),
+						is("full"),
+						container(PROVIDER_CONTAINER_NAME),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -620,46 +624,48 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 				{...rest}
 				data-slot="mobile-nav"
 				data-side={resolvedSide}
-				mix={[
-					/**
-					 * A press outside closes the drawer, the way a drawer is dismissed on a phone: a modal
-					 * dialog otherwise closes only on Escape, which a touch device lacks. A consumer
-					 * holding the drawer open passes its own `closedby`.
-					 */
-					attrs({ closedby: "any" }),
-					fixed(),
-					insBs("0"),
-					insBe("0"),
-					m("0"),
-					rounded("none"),
-					p("0"),
-					maxBs("none"),
-					bs("full"),
-					is(varUtility("sidebar-width-mobile", "18rem")),
-					maxIs("90vw"),
-					/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
-					when("&[open]", flex()),
-					flexCol(),
-					overflow("hidden"),
-					willChange("transform"),
-					transitionBehavior("allow-discrete"),
-					data("side", "left", [insLeft("0"), safeAreaPadding("left"), translateX("-100%")]),
-					when('&[data-side="left"][open]', translateX("0")),
-					data("side", "right", [insRight("0"), safeAreaPadding("right"), translateX("100%")]),
-					when('&[data-side="right"][open]', translateX("0")),
-					when("@starting-style", [
-						when('&[data-side="left"][open]', translateX("-100%")),
-						when('&[data-side="right"][open]', translateX("100%")),
-					]),
-					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
-					pbs("env(safe-area-inset-top, 0px)"),
-					pbe("env(safe-area-inset-bottom, 0px)"),
-					transition("transform, display, overlay", {
-						duration: durations.slow,
-						easing: easings.decelerate,
-					}),
+				mix={mergeMix(
+					[
+						/**
+						 * A press outside closes the drawer, the way a drawer is dismissed on a phone: a modal
+						 * dialog otherwise closes only on Escape, which a touch device lacks. A consumer
+						 * holding the drawer open passes its own `closedby`.
+						 */
+						attrs({ closedby: "any" }),
+						fixed(),
+						insBs("0"),
+						insBe("0"),
+						m("0"),
+						rounded("none"),
+						p("0"),
+						maxBs("none"),
+						bs("full"),
+						is(varUtility("sidebar-width-mobile", "18rem")),
+						maxIs("90vw"),
+						/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
+						when("&[open]", flex()),
+						flexCol(),
+						overflow("hidden"),
+						willChange("transform"),
+						transitionBehavior("allow-discrete"),
+						data("side", "left", [insLeft("0"), safeAreaPadding("left"), translateX("-100%")]),
+						when('&[data-side="left"][open]', translateX("0")),
+						data("side", "right", [insRight("0"), safeAreaPadding("right"), translateX("100%")]),
+						when('&[data-side="right"][open]', translateX("0")),
+						when("@starting-style", [
+							when('&[data-side="left"][open]', translateX("-100%")),
+							when('&[data-side="right"][open]', translateX("100%")),
+						]),
+						media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
+						pbs("env(safe-area-inset-top, 0px)"),
+						pbe("env(safe-area-inset-bottom, 0px)"),
+						transition("transform, display, overlay", {
+							duration: durations.slow,
+							easing: easings.decelerate,
+						}),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -685,32 +691,34 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 			<header
 				{...rest}
 				data-slot="header"
-				mix={[
-					/**
-					 * The slot paints the rail's background, so content scrolling behind a row held
-					 * against the viewport stays hidden; inheriting it matches whichever surface hosts
-					 * the row, the docked rail or the drawer.
-					 */
-					bg("inherit"),
-					flex(),
-					bs("4rem"),
-					shrink(),
-					items("center"),
-					borderEdge("block-end", {
-						width: 1,
-						style: "solid",
-						color: colorMix(
-							"oklab",
-							{ color: "var(--ui-neutral-border)", weight: 80 },
-							"transparent",
-						),
-					}),
-					gap("0.5rem"),
-					pi("1rem"),
-					pbs("calc(0.5rem + env(safe-area-inset-top, 0px))"),
-					pbe("0.5rem"),
+				mix={mergeMix(
+					[
+						/**
+						 * The slot paints the rail's background, so content scrolling behind a row held
+						 * against the viewport stays hidden; inheriting it matches whichever surface hosts
+						 * the row, the docked rail or the drawer.
+						 */
+						bg("inherit"),
+						flex(),
+						bs("4rem"),
+						shrink(),
+						items("center"),
+						borderEdge("block-end", {
+							width: 1,
+							style: "solid",
+							color: colorMix(
+								"oklab",
+								{ color: "var(--ui-neutral-border)", weight: 80 },
+								"transparent",
+							),
+						}),
+						gap("0.5rem"),
+						pi("1rem"),
+						pbs("calc(0.5rem + env(safe-area-inset-top, 0px))"),
+						pbe("0.5rem"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -739,17 +747,19 @@ Sidebar.Content = function SidebarContent(handle: Handle<Sidebar.ContentProps>) 
 			<ScrollArea.Viewport
 				{...rest}
 				data-slot="content"
-				mix={[
-					flex(),
-					flexCol(),
-					grow(),
-					minBs("0"),
-					bs("auto"),
-					gap("1rem"),
-					pi("0.5rem"),
-					pb("1rem"),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						grow(),
+						minBs("0"),
+						bs("auto"),
+						gap("1rem"),
+						pi("0.5rem"),
+						pb("1rem"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -775,26 +785,28 @@ Sidebar.Footer = function SidebarFooter(handle: Handle<Sidebar.FooterProps>) {
 			<footer
 				{...rest}
 				data-slot="footer"
-				mix={[
-					bg("inherit"),
-					flex(),
-					shrink(),
-					items("center"),
-					borderEdge("block-start", {
-						width: 1,
-						style: "solid",
-						color: colorMix(
-							"oklab",
-							{ color: "var(--ui-neutral-border)", weight: 80 },
-							"transparent",
-						),
-					}),
-					gap("0.5rem"),
-					pi("0.5rem"),
-					pbs("1rem"),
-					pbe("calc(1rem + env(safe-area-inset-bottom, 0px))"),
+				mix={mergeMix(
+					[
+						bg("inherit"),
+						flex(),
+						shrink(),
+						items("center"),
+						borderEdge("block-start", {
+							width: 1,
+							style: "solid",
+							color: colorMix(
+								"oklab",
+								{ color: "var(--ui-neutral-border)", weight: 80 },
+								"transparent",
+							),
+						}),
+						gap("0.5rem"),
+						pi("0.5rem"),
+						pbs("1rem"),
+						pbe("calc(1rem + env(safe-area-inset-bottom, 0px))"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -817,7 +829,7 @@ Sidebar.Nav = function SidebarNav(handle: Handle<Sidebar.NavProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <nav {...rest} data-slot="nav" mix={[vstack({ gap: "0.25rem" }), mix]} />;
+		return <nav {...rest} data-slot="nav" mix={mergeMix(vstack({ gap: "0.25rem" }), mix)} />;
 	};
 };
 
@@ -851,77 +863,79 @@ Sidebar.Item = function SidebarItem(handle: Handle<Sidebar.ItemProps>) {
 				aria-current={resolvedAriaCurrent}
 				data-slot="item"
 				data-color={resolvedColor}
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						data("color", "neutral", outline("neutral.ring")),
-						data("color", "success", outline("success.ring")),
-						data("color", "warning", outline("warning.ring")),
-						data("color", "danger", outline("danger.ring")),
-					]),
-					flex(),
-					minBs("2.25rem"),
-					items("center"),
-					fontSize("sm"),
-					weight(500),
-					textDecoration("none"),
-					when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
-					when("&:active", scaleProperty(0.98)),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
-					gap("0.75rem"),
-					rounded("lg"),
-					pi("0.5rem"),
-					pb("0.5rem"),
-					fg("neutral"),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					when("&:hover", [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					when("& > svg, & > [data-slot='icon']", fg("neutral.muted")),
-					when('&[aria-current]:not([aria-current="false"])', [
-						bg("neutral.bg-tint-hover"),
-						fg("neutral.emphasis"),
-						when("& > svg, & > [data-slot='icon']", fg("neutral.emphasis")),
-					]),
-					data(
-						"color",
-						"brand",
-						when('&[aria-current]:not([aria-current="false"])', [
-							bg("brand.tint"),
-							fg("brand"),
-							when("& > svg, & > [data-slot='icon']", fg("brand")),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							data("color", "neutral", outline("neutral.ring")),
+							data("color", "success", outline("success.ring")),
+							data("color", "warning", outline("warning.ring")),
+							data("color", "danger", outline("danger.ring")),
 						]),
-					),
-					data(
-						"color",
-						"success",
+						flex(),
+						minBs("2.25rem"),
+						items("center"),
+						fontSize("sm"),
+						weight(500),
+						textDecoration("none"),
+						when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
+						when("&:active", scaleProperty(0.98)),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
+						gap("0.75rem"),
+						rounded("lg"),
+						pi("0.5rem"),
+						pb("0.5rem"),
+						fg("neutral"),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						when("&:hover", [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						when("& > svg, & > [data-slot='icon']", fg("neutral.muted")),
 						when('&[aria-current]:not([aria-current="false"])', [
-							bg("success.tint"),
-							fg("success"),
-							when("& > svg, & > [data-slot='icon']", fg("success")),
+							bg("neutral.bg-tint-hover"),
+							fg("neutral.emphasis"),
+							when("& > svg, & > [data-slot='icon']", fg("neutral.emphasis")),
 						]),
-					),
-					data(
-						"color",
-						"warning",
-						when('&[aria-current]:not([aria-current="false"])', [
-							bg("warning.tint"),
-							fg("warning"),
-							when("& > svg, & > [data-slot='icon']", fg("warning")),
-						]),
-					),
-					data(
-						"color",
-						"danger",
-						when('&[aria-current]:not([aria-current="false"])', [
-							bg("danger.tint"),
-							fg("danger"),
-							when("& > svg, & > [data-slot='icon']", fg("danger")),
-						]),
-					),
-					when("&:active", bg("neutral.bg-tint-pressed")),
+						data(
+							"color",
+							"brand",
+							when('&[aria-current]:not([aria-current="false"])', [
+								bg("brand.tint"),
+								fg("brand"),
+								when("& > svg, & > [data-slot='icon']", fg("brand")),
+							]),
+						),
+						data(
+							"color",
+							"success",
+							when('&[aria-current]:not([aria-current="false"])', [
+								bg("success.tint"),
+								fg("success"),
+								when("& > svg, & > [data-slot='icon']", fg("success")),
+							]),
+						),
+						data(
+							"color",
+							"warning",
+							when('&[aria-current]:not([aria-current="false"])', [
+								bg("warning.tint"),
+								fg("warning"),
+								when("& > svg, & > [data-slot='icon']", fg("warning")),
+							]),
+						),
+						data(
+							"color",
+							"danger",
+							when('&[aria-current]:not([aria-current="false"])', [
+								bg("danger.tint"),
+								fg("danger"),
+								when("& > svg, & > [data-slot='icon']", fg("danger")),
+							]),
+						),
+						when("&:active", bg("neutral.bg-tint-pressed")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -950,25 +964,27 @@ Sidebar.Group = function SidebarGroup(handle: Handle<Sidebar.GroupProps>) {
 			<section
 				{...rest}
 				data-slot="group"
-				mix={[
-					flex(),
-					flexCol(),
-					when("& + &", [
-						mbs("0.5rem"),
-						borderEdge("block-start", {
-							width: 1,
-							style: "solid",
-							color: colorMix(
-								"oklab",
-								{ color: "var(--ui-neutral-border)", weight: 60 },
-								"transparent",
-							),
-						}),
-					]),
-					gap("0.25rem"),
-					when("& + &", pbs("1rem")),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						when("& + &", [
+							mbs("0.5rem"),
+							borderEdge("block-start", {
+								width: 1,
+								style: "solid",
+								color: colorMix(
+									"oklab",
+									{ color: "var(--ui-neutral-border)", weight: 60 },
+									"transparent",
+								),
+							}),
+						]),
+						gap("0.25rem"),
+						when("& + &", pbs("1rem")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -992,21 +1008,23 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 			<div
 				{...rest}
 				data-slot="group-label"
-				mix={[
-					flex(),
-					items("center"),
-					justify("between"),
-					mbe("0.25rem"),
-					weight(600),
-					fontSize("xs"),
-					textTransform("uppercase"),
-					tracking("wider"),
-					userSelect(),
-					pi("0.5rem"),
-					pb("0.375rem"),
-					fg("neutral.muted"),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						justify("between"),
+						mbe("0.25rem"),
+						weight(600),
+						fontSize("xs"),
+						textTransform("uppercase"),
+						tracking("wider"),
+						userSelect(),
+						pi("0.5rem"),
+						pb("0.375rem"),
+						fg("neutral.muted"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1042,24 +1060,26 @@ Sidebar.GroupAction = function SidebarGroupAction(handle: Handle<Sidebar.GroupAc
 				type="button"
 				{...rest}
 				data-slot="group-action"
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					relative(),
-					inlineFlex(),
-					is("1.25rem"),
-					bs("1.25rem"),
-					hitArea(),
-					items("center"),
-					justify("center"),
-					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					rounded("sm"),
-					fg("neutral.muted"),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral")]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						relative(),
+						inlineFlex(),
+						is("1.25rem"),
+						bs("1.25rem"),
+						hitArea(),
+						items("center"),
+						justify("center"),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+						rounded("sm"),
+						fg("neutral.muted"),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>
@@ -1082,7 +1102,9 @@ Sidebar.GroupContent = function SidebarGroupContent(handle: Handle<Sidebar.Group
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="group-content" mix={[vstack({ gap: "0.125rem" }), mix]} />;
+		return (
+			<div {...rest} data-slot="group-content" mix={mergeMix(vstack({ gap: "0.125rem" }), mix)} />
+		);
 	};
 };
 
@@ -1107,7 +1129,7 @@ Sidebar.Menu = function SidebarMenu(handle: Handle<Sidebar.MenuProps>) {
 			<ul
 				{...rest}
 				data-slot="menu"
-				mix={[is("full"), minIs("0"), vstack({ gap: "0.125rem" }), mix]}
+				mix={mergeMix([is("full"), minIs("0"), vstack({ gap: "0.125rem" })], mix)}
 			/>
 		);
 	};
@@ -1136,22 +1158,24 @@ Sidebar.MenuItem = function SidebarMenuItem(handle: Handle<Sidebar.MenuItemProps
 			<li
 				{...rest}
 				data-slot="menu-item"
-				mix={[
-					relative(),
-					flex(),
-					/**
-					 * A plain row centres what it holds and a row carrying a sub-menu stacks, putting the
-					 * nested list under it at full width. The selectors never match at once, so the layout
-					 * holds whichever order the cascade puts the pair in.
-					 */
-					when('&:not(:has([data-slot="menu-sub"]))', items("center")),
-					when('&:has([data-slot="menu-sub"])', [flexCol(), items("stretch")]),
-					when(
-						"&:hover [data-slot='menu-action'], &:focus-within [data-slot='menu-action']",
-						opacity(100),
-					),
+				mix={mergeMix(
+					[
+						relative(),
+						flex(),
+						/**
+						 * A plain row centres what it holds and a row carrying a sub-menu stacks, putting the
+						 * nested list under it at full width. The selectors never match at once, so the layout
+						 * holds whichever order the cascade puts the pair in.
+						 */
+						when('&:not(:has([data-slot="menu-sub"]))', items("center")),
+						when('&:has([data-slot="menu-sub"])', [flexCol(), items("stretch")]),
+						when(
+							"&:hover [data-slot='menu-action'], &:focus-within [data-slot='menu-action']",
+							opacity(100),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1182,11 +1206,13 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 				data-slot="menu-button"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					...menuRowMixins(),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						...menuRowMixins(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1222,11 +1248,13 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 				data-slot="menu-link"
 				data-size={resolvedSize}
 				data-active={active || undefined}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					...menuRowMixins(),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						...menuRowMixins(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 
@@ -1338,30 +1366,32 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 				{...rest}
 				data-slot="menu-action"
 				data-show-on-hover={resolvedShowOnHover ? undefined : "false"}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					absolute(),
-					insIe("0.375rem"),
-					insBs("50%"),
-					translateProperty("0 -50%"),
-					inlineFlex(),
-					is("1.5rem"),
-					bs("1.5rem"),
-					hitArea(),
-					items("center"),
-					justify("center"),
-					opacity(0),
-					focusVisible(opacity(100)),
-					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					data("show-on-hover", "false", opacity(100)),
-					rounded("md"),
-					fg("neutral.muted"),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					hover([bg("neutral.bg-tint-pressed"), fg("neutral")]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						absolute(),
+						insIe("0.375rem"),
+						insBs("50%"),
+						translateProperty("0 -50%"),
+						inlineFlex(),
+						is("1.5rem"),
+						bs("1.5rem"),
+						hitArea(),
+						items("center"),
+						justify("center"),
+						opacity(0),
+						focusVisible(opacity(100)),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+						data("show-on-hover", "false", opacity(100)),
+						rounded("md"),
+						fg("neutral.muted"),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						hover([bg("neutral.bg-tint-pressed"), fg("neutral")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>
@@ -1390,19 +1420,21 @@ Sidebar.MenuBadge = function SidebarMenuBadge(handle: Handle<Sidebar.MenuBadgePr
 			<span
 				{...rest}
 				data-slot="menu-badge"
-				mix={[
-					mis("auto"),
-					shrink(),
-					fontSize("xs"),
-					weight(600),
-					tabularNums(),
-					rounded("md"),
-					pi("0.375rem"),
-					pb("0.125rem"),
-					bg("neutral.bg-tint-hover"),
-					fg("neutral"),
+				mix={mergeMix(
+					[
+						mis("auto"),
+						shrink(),
+						fontSize("xs"),
+						weight(600),
+						tabularNums(),
+						rounded("md"),
+						pi("0.375rem"),
+						pb("0.125rem"),
+						bg("neutral.bg-tint-hover"),
+						fg("neutral"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1429,15 +1461,10 @@ Sidebar.MenuSkeleton = function SidebarMenuSkeleton(handle: Handle<Sidebar.MenuS
 			<div
 				{...rest}
 				data-slot="menu-skeleton"
-				mix={[
-					flex(),
-					items("center"),
-					bs("2.25rem"),
-					gap("0.75rem"),
-					pi("0.5rem"),
-					rounded("lg"),
+				mix={mergeMix(
+					[flex(), items("center"), bs("2.25rem"), gap("0.75rem"), pi("0.5rem"), rounded("lg")],
 					mix,
-				]}
+				)}
 			>
 				{resolvedShowIcon && (
 					<span
@@ -1478,17 +1505,19 @@ Sidebar.MenuSub = function SidebarMenuSub(handle: Handle<Sidebar.MenuSubProps>) 
 			<ul
 				{...rest}
 				data-slot="menu-sub"
-				mix={[
-					relative(),
-					mis("1rem"),
-					flex(),
-					flexCol(),
-					borderEdge("inline-start", { width: 1, style: "solid" }),
-					pis("0.625rem"),
-					gap("0.125rem"),
-					border("neutral"),
+				mix={mergeMix(
+					[
+						relative(),
+						mis("1rem"),
+						flex(),
+						flexCol(),
+						borderEdge("inline-start", { width: 1, style: "solid" }),
+						pis("0.625rem"),
+						gap("0.125rem"),
+						border("neutral"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1508,7 +1537,9 @@ Sidebar.MenuSubItem = function SidebarMenuSubItem(handle: Handle<Sidebar.MenuSub
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <li {...rest} data-slot="menu-sub-item" mix={[flex(), items("center"), mix]} />;
+		return (
+			<li {...rest} data-slot="menu-sub-item" mix={mergeMix([flex(), items("center")], mix)} />
+		);
 	};
 };
 
@@ -1532,11 +1563,13 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
 				{...rest}
 				data-slot="menu-sub-button"
 				data-active={active || undefined}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					...menuSubRowMixins(),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						...menuSubRowMixins(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1565,11 +1598,13 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 				aria-current={resolvedAriaCurrent}
 				data-slot="menu-sub-link"
 				data-active={active || undefined}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					...menuSubRowMixins(),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						...menuSubRowMixins(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 
@@ -1639,34 +1674,36 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 			<label
 				{...rest}
 				data-slot="rail"
-				mix={[
-					attrs({ "aria-hidden": "true" }),
-					absolute(),
-					insBs("0"),
-					insBe("0"),
-					is("1rem"),
-					z(20),
-					hidden(),
-					cursor("col-resize"),
-					when('[data-side="left"] &', insRight("-1rem")),
-					when('[data-side="right"] &', insLeft("-1rem")),
-					after([
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": "true" }),
 						absolute(),
-						is("2px"),
-						bg("transparent"),
 						insBs("0"),
 						insBe("0"),
-						insIs("50%"),
-						translateProperty("-50% 0"),
-						pseudoContent('""'),
-						transitionProperty("background-color"),
-						transitionDuration("150ms"),
-					]),
-					when(WIDE_SHELL_QUERY, [flex(), items("center"), justify("center")]),
-					hover(after(bg("neutral.border"))),
-					when("&:active", after(bg("brand.ring"))),
+						is("1rem"),
+						z(20),
+						hidden(),
+						cursor("col-resize"),
+						when('[data-side="left"] &', insRight("-1rem")),
+						when('[data-side="right"] &', insLeft("-1rem")),
+						after([
+							absolute(),
+							is("2px"),
+							bg("transparent"),
+							insBs("0"),
+							insBe("0"),
+							insIs("50%"),
+							translateProperty("-50% 0"),
+							pseudoContent('""'),
+							transitionProperty("background-color"),
+							transitionDuration("150ms"),
+						]),
+						when(WIDE_SHELL_QUERY, [flex(), items("center"), justify("center")]),
+						hover(after(bg("neutral.border"))),
+						when("&:active", after(bg("brand.ring"))),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1712,7 +1749,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 				]}
 			>
 				<PanelLeftIcon />
-				<input type="checkbox" {...rest} data-slot="toggle" mix={[visuallyHidden(), mix]} />
+				<input type="checkbox" {...rest} data-slot="toggle" mix={mergeMix(visuallyHidden(), mix)} />
 			</label>
 		);
 	};
@@ -1739,17 +1776,19 @@ Sidebar.Inset = function SidebarInset(handle: Handle<Sidebar.InsetProps>) {
 			<ScrollArea.Viewport
 				{...rest}
 				data-slot="inset"
-				mix={[
-					flex(),
-					flexCol(),
-					grow(),
-					minIs("0"),
-					minBs("0"),
-					bs("auto"),
-					container(INSET_CONTAINER_NAME),
-					bg("neutral.tint"),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						grow(),
+						minIs("0"),
+						minBs("0"),
+						bs("auto"),
+						container(INSET_CONTAINER_NAME),
+						bg("neutral.tint"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -1771,6 +1810,6 @@ Sidebar.Separator = function SidebarSeparator(handle: Handle<Sidebar.SeparatorPr
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Separator {...rest} data-slot="separator" mix={[m("0.5rem"), mix]} />;
+		return <Separator {...rest} data-slot="separator" mix={mergeMix(m("0.5rem"), mix)} />;
 	};
 };

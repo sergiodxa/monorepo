@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bs, fg, inlineFlex, is, items, justify, when } from "@sdxc/u";
+import { mergeMix } from "@sdxc/u/general";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
@@ -80,31 +81,33 @@ export function Spinner(handle: Handle<Spinner.Props>) {
 				data-color={resolvedColor}
 				data-size={resolvedSize}
 				{...rest}
-				mix={[
-					inlineFlex(),
-					items("center"),
-					justify("center"),
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						justify("center"),
 
-					when('&[data-color="brand"]', fg("brand")),
-					when('&[data-color="neutral"]', fg("neutral")),
-					when('&[data-color="success"]', fg("success")),
-					when('&[data-color="warning"]', fg("warning")),
-					when('&[data-color="danger"]', fg("danger")),
+						when('&[data-color="brand"]', fg("brand")),
+						when('&[data-color="neutral"]', fg("neutral")),
+						when('&[data-color="success"]', fg("success")),
+						when('&[data-color="warning"]', fg("warning")),
+						when('&[data-color="danger"]', fg("danger")),
 
-					when("& svg", [
-						is("var(--ui-spinner-icon-size-md, 1.25rem)"),
-						bs("var(--ui-spinner-icon-size-md, 1.25rem)"),
-					]),
-					when('&[data-size="sm"] svg', [
-						is("var(--ui-spinner-icon-size-sm, 1rem)"),
-						bs("var(--ui-spinner-icon-size-sm, 1rem)"),
-					]),
-					when('&[data-size="lg"] svg', [
-						is("var(--ui-spinner-icon-size-lg, 1.75rem)"),
-						bs("var(--ui-spinner-icon-size-lg, 1.75rem)"),
-					]),
+						when("& svg", [
+							is("var(--ui-spinner-icon-size-md, 1.25rem)"),
+							bs("var(--ui-spinner-icon-size-md, 1.25rem)"),
+						]),
+						when('&[data-size="sm"] svg', [
+							is("var(--ui-spinner-icon-size-sm, 1rem)"),
+							bs("var(--ui-spinner-icon-size-sm, 1rem)"),
+						]),
+						when('&[data-size="lg"] svg', [
+							is("var(--ui-spinner-icon-size-lg, 1.75rem)"),
+							bs("var(--ui-spinner-icon-size-lg, 1.75rem)"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				<LoaderCircleIcon />
 			</div>

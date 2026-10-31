@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { focusVisible, hover, invalid, when } from "@sdxc/u/state";
@@ -76,43 +76,45 @@ export function Input(handle: Handle<Input.Props>) {
 			<input
 				{...rest}
 				data-color={resolvedColor}
-				mix={[
-					interactiveTransition(),
-					block(),
-					is("full"),
-					bs(10),
-					rounded("md"),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					pi(3),
-					pb(2),
-					when("&::placeholder", fg("neutral.muted")),
-					hover(border("neutral.border-hover")),
-					/**
-					 * Focus draws a ring standing off the field, as every button here does, and the border
-					 * steps only to its hover weight: a strong border flush with the ring reads as the field
-					 * changing shape.
-					 */
-					when("&:focus", border("neutral.border-hover")),
-					/**
-					 * Pointer focus drops the platform outline and keyboard focus keeps the ring below. The
-					 * selectors exclude each other because `outline: none` is a shorthand, and from a later
-					 * cascade layer it resets the ring's color, width and style at once.
-					 */
-					when("&:focus:not(:focus-visible)", outline("none")),
-					focusVisible([
-						border("neutral.border-hover"),
-						outline({ color: "brand.ring", offset: 2 }),
-						when('&[data-color="success"]', outline("success.ring")),
-						when('&[data-color="warning"]', outline("warning.ring")),
-						when('&[data-color="danger"]', outline("danger.ring")),
-					]),
-					invalid([border("danger"), outline({ color: "danger.ring", offset: 2 })]),
-					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
-					text("sm"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						block(),
+						is("full"),
+						bs(10),
+						rounded("md"),
+						border({ color: "neutral", width: 1 }),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						pi(3),
+						pb(2),
+						when("&::placeholder", fg("neutral.muted")),
+						hover(border("neutral.border-hover")),
+						/**
+						 * Focus draws a ring standing off the field, as every button here does, and the border
+						 * steps only to its hover weight: a strong border flush with the ring reads as the field
+						 * changing shape.
+						 */
+						when("&:focus", border("neutral.border-hover")),
+						/**
+						 * Pointer focus drops the platform outline and keyboard focus keeps the ring below. The
+						 * selectors exclude each other because `outline: none` is a shorthand, and from a later
+						 * cascade layer it resets the ring's color, width and style at once.
+						 */
+						when("&:focus:not(:focus-visible)", outline("none")),
+						focusVisible([
+							border("neutral.border-hover"),
+							outline({ color: "brand.ring", offset: 2 }),
+							when('&[data-color="success"]', outline("success.ring")),
+							when('&[data-color="warning"]', outline("warning.ring")),
+							when('&[data-color="danger"]', outline("danger.ring")),
+						]),
+						invalid([border("danger"), outline({ color: "danger.ring", offset: 2 })]),
+						when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
+						text("sm"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

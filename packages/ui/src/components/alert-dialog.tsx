@@ -12,6 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, gap, justify, vstack } from "@sdxc/u/layout";
 import { mbs } from "@sdxc/u/size";
 import { balance, pretty, text, weight } from "@sdxc/u/typography";
@@ -162,7 +163,7 @@ AlertDialog.Header = function AlertDialogHeader(handle: Handle<AlertDialog.Heade
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="header" mix={[vstack({ gap: 2 }), mix]} />;
+		return <div {...rest} data-slot="header" mix={mergeMix(vstack({ gap: 2 }), mix)} />;
 	};
 };
 
@@ -186,7 +187,7 @@ AlertDialog.Title = function AlertDialogTitle(handle: Handle<AlertDialog.TitlePr
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[fg("neutral.emphasis"), weight("semibold"), text("lg"), balance(), mix]}
+				mix={mergeMix([fg("neutral.emphasis"), weight("semibold"), text("lg"), balance()], mix)}
 			>
 				{rest.children}
 			</Tag>
@@ -211,7 +212,11 @@ AlertDialog.Description = function AlertDialogDescription(
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[fg("neutral.muted"), text("sm"), pretty(), mix]}>
+			<p
+				{...rest}
+				data-slot="description"
+				mix={mergeMix([fg("neutral.muted"), text("sm"), pretty()], mix)}
+			>
 				{rest.children}
 			</p>
 		);
@@ -235,7 +240,13 @@ AlertDialog.Footer = function AlertDialogFooter(handle: Handle<AlertDialog.Foote
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="footer" mix={[gap(2), mbs(6), flex(), justify("end"), mix]} />;
+		return (
+			<div
+				{...rest}
+				data-slot="footer"
+				mix={mergeMix([gap(2), mbs(6), flex(), justify("end")], mix)}
+			/>
+		);
 	};
 };
 

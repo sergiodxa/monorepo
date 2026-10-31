@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { hstack, shrink, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is, maxBs, pb, pi } from "@sdxc/u/size";
@@ -104,14 +104,16 @@ export function Command(handle: Handle<Command.Props>) {
 			<div
 				{...rest}
 				data-slot="command"
-				mix={[
-					floatingSurface(),
-					raw({ borderRadius: concentricRadius(surfacePadding(1)) }),
-					vstack(),
-					overflow("hidden"),
-					fg("neutral.emphasis"),
+				mix={mergeMix(
+					[
+						floatingSurface(),
+						raw({ borderRadius: concentricRadius(surfacePadding(1)) }),
+						vstack(),
+						overflow("hidden"),
+						fg("neutral.emphasis"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -141,19 +143,21 @@ Command.Input = function CommandInput(handle: Handle<Command.InputProps>) {
 					{...rest}
 					data-slot="input"
 					data-command-input
-					mix={[
-						is("full"),
-						bs("3.5rem"),
-						pi(3),
-						fg("neutral.emphasis"),
-						when("&::placeholder", fg("neutral.muted")),
-						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-						bg("transparent"),
-						text("sm"),
-						outlineStyle("none"),
+					mix={mergeMix(
+						[
+							is("full"),
+							bs("3.5rem"),
+							pi(3),
+							fg("neutral.emphasis"),
+							when("&::placeholder", fg("neutral.muted")),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+							when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+							bg("transparent"),
+							text("sm"),
+							outlineStyle("none"),
+						],
 						mix,
-					]}
+					)}
 				/>
 			</div>
 		);
@@ -181,19 +185,21 @@ Command.List = function CommandList(handle: Handle<Command.ListProps>) {
 			<div
 				{...rest}
 				data-slot="list"
-				mix={[
-					attrs({ role: DEFAULT_LIST_ROLE }),
-					maxBs("18rem"),
-					overflow("auto"),
-					pi(surfacePadding(1)),
-					/**
-					 * The list spends its block padding only while a row is visible, so a filter hiding every
-					 * row leaves the empty-state message centered.
-					 */
-					when('&:has([data-slot="item"]:not([hidden]))', pb(2)),
-					outlineStyle("none"),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_LIST_ROLE }),
+						maxBs("18rem"),
+						overflow("auto"),
+						pi(surfacePadding(1)),
+						/**
+						 * The list spends its block padding only while a row is visible, so a filter hiding every
+						 * row leaves the empty-state message centered.
+						 */
+						when('&:has([data-slot="item"]:not([hidden]))', pb(2)),
+						outlineStyle("none"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -228,36 +234,38 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 				{...rest}
 				data-slot="item"
 				data-value={value}
-				mix={[
-					interactiveTransition(),
-					attrs({ role: DEFAULT_ITEM_ROLE }),
-					hstack({ gap: 2, align: "center" }),
-					/**
-					 * A glyph anywhere in the row is sized against the row's text and holds that size when the
-					 * row runs short; the default `flex-shrink: 1` would squeeze each glyph by its own row's
-					 * overrun and leave the column of glyphs ragged.
-					 */
-					when("& svg", [shrink(), is(4), bs(4)]),
-					cursor("default"),
-					rounded("md"),
-					pi(2),
-					pb(2),
-					fg("neutral.emphasis"),
-					/**
-					 * The active row is a cursor tinted far enough off the surface to find at a glance, while
-					 * its text keeps reading as text. Pointer and cursor states use mutually exclusive selectors,
-					 * so the row under the pointer stays marked active whichever order the layers land in.
-					 */
-					when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
-					when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
-					when('&:focus:not([aria-selected="true"])', bg("brand.bg-tint-hover")),
-					when('&[aria-selected="true"]', [bg("brand.bg-tint-hover"), fg("neutral.emphasis")]),
-					when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
-					when('&[aria-disabled="true"]', opacity(50)),
-					text("sm"),
-					outlineStyle("none"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_ITEM_ROLE }),
+						hstack({ gap: 2, align: "center" }),
+						/**
+						 * A glyph anywhere in the row is sized against the row's text and holds that size when the
+						 * row runs short; the default `flex-shrink: 1` would squeeze each glyph by its own row's
+						 * overrun and leave the column of glyphs ragged.
+						 */
+						when("& svg", [shrink(), is(4), bs(4)]),
+						cursor("default"),
+						rounded("md"),
+						pi(2),
+						pb(2),
+						fg("neutral.emphasis"),
+						/**
+						 * The active row is a cursor tinted far enough off the surface to find at a glance, while
+						 * its text keeps reading as text. Pointer and cursor states use mutually exclusive selectors,
+						 * so the row under the pointer stays marked active whichever order the layers land in.
+						 */
+						when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+						when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
+						when('&:focus:not([aria-selected="true"])', bg("brand.bg-tint-hover")),
+						when('&[aria-selected="true"]', [bg("brand.bg-tint-hover"), fg("neutral.emphasis")]),
+						when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
+						when('&[aria-disabled="true"]', opacity(50)),
+						text("sm"),
+						outlineStyle("none"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -284,7 +292,7 @@ Command.Empty = function CommandEmpty(handle: Handle<Command.EmptyProps>) {
 				{...rest}
 				data-slot="empty"
 				data-command-empty
-				mix={[pi(3), pb(6), textAlign("center"), fg("neutral.muted"), text("sm"), mix]}
+				mix={mergeMix([pi(3), pb(6), textAlign("center"), fg("neutral.muted"), text("sm")], mix)}
 			/>
 		);
 	};

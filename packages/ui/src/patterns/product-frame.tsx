@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { container, gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { atMax } from "@sdxc/u/responsive";
@@ -201,14 +201,16 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 				data-slot="product-frame"
 				data-variant={resolvedVariant}
 				data-shadow={shadow}
-				mix={[
-					vstack({ gap: 0, align: "stretch" }),
-					overflow("hidden"),
-					raw({
-						backgroundColor: SURFACE,
-						borderRadius: isDevice ? "16% / 8%" : FRAME_RADIUS,
-						boxShadow: edge,
-					}),
+				mix={mergeMix(
+					[
+						vstack({ gap: 0, align: "stretch" }),
+						overflow("hidden"),
+						raw({
+							backgroundColor: SURFACE,
+							borderRadius: isDevice ? "16% / 8%" : FRAME_RADIUS,
+							boxShadow: edge,
+						}),
+					],
 					isStaged
 						? [
 								raw({
@@ -220,7 +222,7 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 								parts?.frame,
 							]
 						: mix,
-				]}
+				)}
 			>
 				{showChrome ? (
 					<div
@@ -320,25 +322,27 @@ export function ProductFrame(handle: Handle<ProductFrame.Props>) {
 				{...rest}
 				data-slot="product-frame-stage"
 				data-stage={resolvedStage}
-				mix={[
-					raw({
-						/**
-						 * Ink at 4% sits one step off whatever band holds the stage, light or dark,
-						 * where the tint token matches a light page exactly.
-						 */
-						backgroundColor: "color-mix(in oklch, var(--ui-neutral-fg-emphasis) 4%, transparent)",
-						boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
-						position: "relative",
-						isolation: "isolate",
-						overflow: "hidden",
-						borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
-						paddingInline: "clamp(1rem, 4cqi, 4rem)",
-						paddingBlock: "clamp(1rem, 3cqi, 3rem)",
-						backgroundImage: isBackdrop && !backdrop ? BACKDROP_GLOW : "none",
-					}),
-					atMax(STAGE_COMPACT_BELOW, raw({ padding: "0.75rem" })),
+				mix={mergeMix(
+					[
+						raw({
+							/**
+							 * Ink at 4% sits one step off whatever band holds the stage, light or dark,
+							 * where the tint token matches a light page exactly.
+							 */
+							backgroundColor: "color-mix(in oklch, var(--ui-neutral-fg-emphasis) 4%, transparent)",
+							boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
+							position: "relative",
+							isolation: "isolate",
+							overflow: "hidden",
+							borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
+							paddingInline: "clamp(1rem, 4cqi, 4rem)",
+							paddingBlock: "clamp(1rem, 3cqi, 3rem)",
+							backgroundImage: isBackdrop && !backdrop ? BACKDROP_GLOW : "none",
+						}),
+						atMax(STAGE_COMPACT_BELOW, raw({ padding: "0.75rem" })),
+					],
 					mix,
-				]}
+				)}
 			>
 				{isBackdrop && backdrop ? (
 					<div

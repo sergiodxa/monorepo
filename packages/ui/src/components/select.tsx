@@ -22,7 +22,7 @@ import {
 	transitionBehavior,
 	transitionDuration,
 } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import {
 	appearance,
 	basis,
@@ -159,96 +159,98 @@ export function Select(handle: Handle<Select.Props>) {
 			);
 		}
 
-		let fieldMix = [
-			flex(),
-			items("center"),
-			justify("between"),
-			cursor("default"),
-			text("sm"),
-			/**
-			 * Focus draws a ring standing off the field and the border steps only to its hover weight,
-			 * so the field keeps its shape. The pointer and keyboard selectors exclude each other because
-			 * `outline: none` is a shorthand that, from a later layer, resets the whole ring.
-			 */
-			when("&:focus:not(:focus-visible)", outline("none")),
-			when("&:focus-visible", [
-				border("neutral.border-hover"),
-				outline({ color: "brand.ring", offset: 2 }),
-				data("color", "success", outline("success.ring")),
-				data("color", "warning", outline("warning.ring")),
-				data("color", "danger", outline("danger.ring")),
-			]),
-			when('&[aria-invalid="true"], &:user-invalid', [
-				outlineWidth("2px"),
-				outlineStyle("solid"),
-				raw({ outlineOffset: "2px" }),
-			]),
-			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+		let fieldMix = mergeMix(
+			[
+				flex(),
+				items("center"),
+				justify("between"),
+				cursor("default"),
+				text("sm"),
+				/**
+				 * Focus draws a ring standing off the field and the border steps only to its hover weight,
+				 * so the field keeps its shape. The pointer and keyboard selectors exclude each other because
+				 * `outline: none` is a shorthand that, from a later layer, resets the whole ring.
+				 */
+				when("&:focus:not(:focus-visible)", outline("none")),
+				when("&:focus-visible", [
+					border("neutral.border-hover"),
+					outline({ color: "brand.ring", offset: 2 }),
+					data("color", "success", outline("success.ring")),
+					data("color", "warning", outline("warning.ring")),
+					data("color", "danger", outline("danger.ring")),
+				]),
+				when('&[aria-invalid="true"], &:user-invalid', [
+					outlineWidth("2px"),
+					outlineStyle("solid"),
+					raw({ outlineOffset: "2px" }),
+				]),
+				when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
-			when("&::picker(select)", [
-				floatingSurface(),
-				surfaceInset(),
-				m(0),
-				inset("auto"),
-				maxBs("15rem"),
-				overflow("auto"),
-				outline("none"),
-				opacity(0),
-				transition("opacity, display, overlay", { duration: durations.fast }),
-				transitionBehavior("allow-discrete"),
-			]),
-			when("&:open::picker(select)", opacity(100)),
-			startingStyle(when("&:open::picker(select)", opacity(0))),
-			media(
-				"(prefers-reduced-motion: reduce)",
-				when("&::picker(select)", transitionDuration("0s")),
-			),
-			raw({
-				"&:open": {
-					'& [data-slot="icon"]': {
-						transform: "rotate(180deg)",
+				when("&::picker(select)", [
+					floatingSurface(),
+					surfaceInset(),
+					m(0),
+					inset("auto"),
+					maxBs("15rem"),
+					overflow("auto"),
+					outline("none"),
+					opacity(0),
+					transition("opacity, display, overlay", { duration: durations.fast }),
+					transitionBehavior("allow-discrete"),
+				]),
+				when("&:open::picker(select)", opacity(100)),
+				startingStyle(when("&:open::picker(select)", opacity(0))),
+				media(
+					"(prefers-reduced-motion: reduce)",
+					when("&::picker(select)", transitionDuration("0s")),
+				),
+				raw({
+					"&:open": {
+						'& [data-slot="icon"]': {
+							transform: "rotate(180deg)",
+						},
 					},
-				},
-				"&:has(option:checked:disabled)": {
-					"& selectedcontent": {
+					"&:has(option:checked:disabled)": {
+						"& selectedcontent": {
+							color: "var(--ui-neutral-fg-muted)",
+						},
+					},
+				}),
+				gap("0.5rem"),
+				is("full"),
+				bs("2.5rem"),
+				rounded("md"),
+				border({ color: "neutral", width: 1 }),
+				bg("neutral.tint"),
+				fg("neutral.emphasis"),
+				pi("0.75rem"),
+				pb("0.5rem"),
+				appearance("base-select"),
+				transition(
+					"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+				),
+				hover(border("neutral.border-hover")),
+				when("&:focus", border("neutral.border-hover")),
+				when('&[aria-invalid="true"], &:user-invalid', [
+					border("danger"),
+					outline({ color: "danger.ring", offset: 2 }),
+				]),
+				when("&:disabled", bg("neutral.bg-tint-hover")),
+				raw({
+					"&::picker(select)": {
+						borderRadius: "var(--ui-radius-lg, 0.5rem)",
+						borderWidth: "1px",
+						borderStyle: "solid",
+						borderColor: "var(--ui-neutral-border)",
+						backgroundColor: "var(--ui-neutral-bg-tint)",
+					},
+					"&::picker-icon": {
 						color: "var(--ui-neutral-fg-muted)",
 					},
-				},
-			}),
-			gap("0.5rem"),
-			is("full"),
-			bs("2.5rem"),
-			rounded("md"),
-			border({ color: "neutral", width: 1 }),
-			bg("neutral.tint"),
-			fg("neutral.emphasis"),
-			pi("0.75rem"),
-			pb("0.5rem"),
-			appearance("base-select"),
-			transition(
-				"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-			),
-			hover(border("neutral.border-hover")),
-			when("&:focus", border("neutral.border-hover")),
-			when('&[aria-invalid="true"], &:user-invalid', [
-				border("danger"),
-				outline({ color: "danger.ring", offset: 2 }),
-			]),
-			when("&:disabled", bg("neutral.bg-tint-hover")),
-			raw({
-				"&::picker(select)": {
-					borderRadius: "var(--ui-radius-lg, 0.5rem)",
-					borderWidth: "1px",
-					borderStyle: "solid",
-					borderColor: "var(--ui-neutral-border)",
-					backgroundColor: "var(--ui-neutral-bg-tint)",
-				},
-				"&::picker-icon": {
-					color: "var(--ui-neutral-fg-muted)",
-				},
-			}),
+				}),
+			],
 			mix,
-		] as unknown as Select.Props["mix"];
+		) as Select.Props["mix"];
 
 		return (
 			<select multiple={multiple} size={size} data-color={resolvedColor} {...rest} mix={fieldMix} />
@@ -278,23 +280,25 @@ Select.Trigger = function SelectTrigger(handle: Handle<Select.TriggerProps>) {
 			<button
 				type={type ?? DEFAULT_TRIGGER_TYPE}
 				{...rest}
-				mix={[
-					flex(),
-					items("center"),
-					justify("between"),
-					gap("0.5rem"),
-					is("full"),
-					bs("full"),
-					m(0),
-					p(0),
-					border({ width: 0, style: "none" }),
-					bg("transparent"),
-					fg("inherit"),
-					raw({ font: "inherit" }),
-					textAlign("start"),
-					cursor("inherit"),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						justify("between"),
+						gap("0.5rem"),
+						is("full"),
+						bs("full"),
+						m(0),
+						p(0),
+						border({ width: 0, style: "none" }),
+						bg("transparent"),
+						fg("inherit"),
+						raw({ font: "inherit" }),
+						textAlign("start"),
+						cursor("inherit"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children ?? (
 					<>
@@ -339,15 +343,10 @@ Select.Value = function SelectValue(handle: Handle<Select.ValueProps>) {
 		return (
 			<selectedcontent
 				{...rest}
-				mix={[
-					mirrorSelectedOption(),
-					grow(),
-					shrink(1),
-					basis("0%"),
-					truncate(),
-					textAlign("start"),
+				mix={mergeMix(
+					[mirrorSelectedOption(), grow(), shrink(1), basis("0%"), truncate(), textAlign("start")],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -372,25 +371,27 @@ Select.Option = function SelectOption(handle: Handle<Select.OptionProps>) {
 		return (
 			<option
 				{...rest}
-				mix={[
-					cursor("default"),
-					pi("0.75rem"),
-					pb("0.5rem"),
-					text("sm"),
-					outline("none"),
-					when("&:disabled", opacity(50)),
-					when("&::checkmark", fg("currentColor")),
-					rounded("md"),
-					fg("neutral.emphasis"),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					when("&:hover", bg("neutral.bg-tint-hover")),
-					when("&:active", bg("neutral.bg-tint-pressed")),
-					when("&:focus", bg("brand.tint")),
-					when("&:checked", [bg("brand.solid"), fg("brand.onSolid")]),
+				mix={mergeMix(
+					[
+						cursor("default"),
+						pi("0.75rem"),
+						pb("0.5rem"),
+						text("sm"),
+						outline("none"),
+						when("&:disabled", opacity(50)),
+						when("&::checkmark", fg("currentColor")),
+						rounded("md"),
+						fg("neutral.emphasis"),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						when("&:hover", bg("neutral.bg-tint-hover")),
+						when("&:active", bg("neutral.bg-tint-pressed")),
+						when("&:focus", bg("brand.tint")),
+						when("&:checked", [bg("brand.solid"), fg("brand.onSolid")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -422,12 +423,14 @@ Select.Group = function SelectGroup(handle: Handle<Select.GroupProps>) {
 		return (
 			<optgroup
 				{...rest}
-				mix={[
-					when("&:not(:first-child)", borderEdge("block-start", { width: 1 })),
-					pb("0.25rem"),
-					when("&:not(:first-child)", border("neutral")),
+				mix={mergeMix(
+					[
+						when("&:not(:first-child)", borderEdge("block-start", { width: 1 })),
+						pb("0.25rem"),
+						when("&:not(:first-child)", border("neutral")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

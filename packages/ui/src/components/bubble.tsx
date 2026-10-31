@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw, vars } from "@sdxc/u/general";
+import { raw, vars, mergeMix } from "@sdxc/u/general";
 import { block, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { maxIs, mie, mis, pb, pbe, pi, width } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
@@ -134,42 +134,48 @@ export function Bubble(handle: Handle<Bubble.Props>) {
 				data-slot="bubble"
 				data-variant={resolvedVariant}
 				data-align={resolvedAlign}
-				mix={[
-					block(),
-					rounded("xl"),
-					border({ width: 1 }),
-					border("transparent"),
-
-					when(FRAMED, [width("fit-content"), maxIs("80%")]),
-					when(`${FRAMED}[data-align="start"]`, mie("auto")),
-					when(`${FRAMED}[data-align="end"]`, mis("auto")),
-
-					data("align", "start", [
-						raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
-						vars({ "ui-bubble-reactions-justify": "flex-start" }),
-					]),
-					data("align", "end", [
-						raw({ borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)" }),
-						vars({ "ui-bubble-reactions-justify": "flex-end" }),
-					]),
-
-					data("variant", "default", [bg("brand.solid"), fg("brand.onSolid")]),
-					data("variant", "secondary", [bg("neutral.solid"), fg("neutral.onSolid")]),
-					data("variant", "muted", [bg("neutral.tint"), fg("neutral.emphasis"), border("neutral")]),
-					data("variant", "tinted", [bg("brand.tint"), fg("brand.emphasis"), border("brand")]),
-					data("variant", "outline", [
-						fg("neutral.emphasis"),
-						border("neutral.strong"),
-						bg("transparent"),
-					]),
-					data("variant", "ghost", [
-						fg("neutral.emphasis"),
-						bg("transparent"),
+				mix={mergeMix(
+					[
+						block(),
+						rounded("xl"),
+						border({ width: 1 }),
 						border("transparent"),
-					]),
-					data("variant", "destructive", [bg("danger.solid"), fg("danger.onSolid")]),
+
+						when(FRAMED, [width("fit-content"), maxIs("80%")]),
+						when(`${FRAMED}[data-align="start"]`, mie("auto")),
+						when(`${FRAMED}[data-align="end"]`, mis("auto")),
+
+						data("align", "start", [
+							raw({ borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)" }),
+							vars({ "ui-bubble-reactions-justify": "flex-start" }),
+						]),
+						data("align", "end", [
+							raw({ borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)" }),
+							vars({ "ui-bubble-reactions-justify": "flex-end" }),
+						]),
+
+						data("variant", "default", [bg("brand.solid"), fg("brand.onSolid")]),
+						data("variant", "secondary", [bg("neutral.solid"), fg("neutral.onSolid")]),
+						data("variant", "muted", [
+							bg("neutral.tint"),
+							fg("neutral.emphasis"),
+							border("neutral"),
+						]),
+						data("variant", "tinted", [bg("brand.tint"), fg("brand.emphasis"), border("brand")]),
+						data("variant", "outline", [
+							fg("neutral.emphasis"),
+							border("neutral.strong"),
+							bg("transparent"),
+						]),
+						data("variant", "ghost", [
+							fg("neutral.emphasis"),
+							bg("transparent"),
+							border("transparent"),
+						]),
+						data("variant", "destructive", [bg("danger.solid"), fg("danger.onSolid")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -213,18 +219,20 @@ Bubble.Content = function BubbleContent(handle: Handle<Bubble.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					pb(2.5),
-					pi(3.5),
-					raw({
-						fontSize: "0.9375rem",
-						lineHeight: "1.5",
-						overflowWrap: "break-word",
-					}),
-					wordBreak("break-word"),
-					pretty(),
+				mix={mergeMix(
+					[
+						pb(2.5),
+						pi(3.5),
+						raw({
+							fontSize: "0.9375rem",
+							lineHeight: "1.5",
+							overflowWrap: "break-word",
+						}),
+						wordBreak("break-word"),
+						pretty(),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -269,22 +277,24 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 			<div
 				{...rest}
 				data-slot="reactions"
-				mix={[
-					attrs({ role: DEFAULT_REACTIONS_ROLE }),
-					flex(),
-					flexWrap("wrap"),
-					items("center"),
-					gap(1),
-					/**
-					 * The row sits on the line the turn's own text sits on and clears the frame's lower
-					 * edge, inset to match the content beside it, so the reactions stay clear of the
-					 * message's last line.
-					 */
-					pi(3.5),
-					pbe(2.5),
-					raw({ justifyContent: "var(--ui-bubble-reactions-justify, flex-start)" }),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_REACTIONS_ROLE }),
+						flex(),
+						flexWrap("wrap"),
+						items("center"),
+						gap(1),
+						/**
+						 * The row sits on the line the turn's own text sits on and clears the frame's lower
+						 * edge, inset to match the content beside it, so the reactions stay clear of the
+						 * message's last line.
+						 */
+						pi(3.5),
+						pbe(2.5),
+						raw({ justifyContent: "var(--ui-bubble-reactions-justify, flex-start)" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -313,22 +323,24 @@ Bubble.Group = function BubbleGroup(handle: Handle<Bubble.GroupProps>) {
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					vstack({ gap: 0.5 }),
-					when('& > [data-slot="bubble"]:not(:first-child)', [
-						raw({
-							borderStartStartRadius: "var(--ui-radius-xs, 0.125rem)",
-							borderStartEndRadius: "var(--ui-radius-xs, 0.125rem)",
-						}),
-					]),
-					when('& > [data-slot="bubble"]:not(:last-child)', [
-						raw({
-							borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)",
-							borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)",
-						}),
-					]),
+				mix={mergeMix(
+					[
+						vstack({ gap: 0.5 }),
+						when('& > [data-slot="bubble"]:not(:first-child)', [
+							raw({
+								borderStartStartRadius: "var(--ui-radius-xs, 0.125rem)",
+								borderStartEndRadius: "var(--ui-radius-xs, 0.125rem)",
+							}),
+						]),
+						when('& > [data-slot="bubble"]:not(:last-child)', [
+							raw({
+								borderEndStartRadius: "var(--ui-radius-xs, 0.125rem)",
+								borderEndEndRadius: "var(--ui-radius-xs, 0.125rem)",
+							}),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

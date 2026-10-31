@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { border } from "@sdxc/u/color";
 import { rounded, shadow } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -187,13 +187,15 @@ export function MessageScroller(handle: Handle<MessageScroller.Props>) {
 			<div
 				{...rest}
 				data-slot="message-scroller"
-				mix={[
-					rounded("lg"),
-					border({ color: "neutral", width: 1 }),
-					relative(),
-					container(CONTAINER_NAME),
+				mix={mergeMix(
+					[
+						rounded("lg"),
+						border({ color: "neutral", width: 1 }),
+						relative(),
+						container(CONTAINER_NAME),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -245,15 +247,17 @@ MessageScroller.Content = function MessageScrollerContent(
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					attrs({ role: DEFAULT_CONTENT_ROLE, "aria-relevant": DEFAULT_CONTENT_ARIA_RELEVANT }),
-					flex(),
-					flexCol(),
-					gap(4),
-					pb(4),
-					pi(4),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_CONTENT_ROLE, "aria-relevant": DEFAULT_CONTENT_ARIA_RELEVANT }),
+						flex(),
+						flexCol(),
+						gap(4),
+						pb(4),
+						pi(4),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -289,12 +293,12 @@ MessageScroller.Item = function MessageScrollerItem(handle: Handle<MessageScroll
 				data-slot="item"
 				data-message-id={messageId}
 				data-scroll-anchor={scrollAnchor || undefined}
-				mix={[
+				mix={mergeMix(
 					raw({
 						scrollMarginBlockStart: "var(--ui-message-scroller-anchor-offset, 0px)",
 					}),
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -329,26 +333,28 @@ MessageScroller.Button = function MessageScrollerButton(
 				size={size ?? DEFAULT_BUTTON_SIZE}
 				hidden={hidden ?? DEFAULT_BUTTON_HIDDEN}
 				data-slot="jump-button"
-				mix={[
-					z(1),
-					absolute(),
-					inset("auto", "auto", "1rem", "50%"),
-					/**
-					 * The control floats over the log, so it carries an opaque surface of its own to stay
-					 * legible. `!important` settles it: each mix entry gets its own cascade sublayer, and
-					 * the variant's own fill may land in a later one.
-					 */
-					raw({ backgroundColor: "var(--ui-bg, Canvas) !important" }),
-					shadow("md"),
-					translateProperty("-50% 0"),
-					when(BUTTON_NARROW_QUERY, [
-						justify("center"),
-						insIs("1rem"),
-						insIe("1rem"),
-						translateProperty("0 0"),
-					]),
+				mix={mergeMix(
+					[
+						z(1),
+						absolute(),
+						inset("auto", "auto", "1rem", "50%"),
+						/**
+						 * The control floats over the log, so it carries an opaque surface of its own to stay
+						 * legible. `!important` settles it: each mix entry gets its own cascade sublayer, and
+						 * the variant's own fill may land in a later one.
+						 */
+						raw({ backgroundColor: "var(--ui-bg, Canvas) !important" }),
+						shadow("md"),
+						translateProperty("-50% 0"),
+						when(BUTTON_NARROW_QUERY, [
+							justify("center"),
+							insIs("1rem"),
+							insIe("1rem"),
+							translateProperty("0 0"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

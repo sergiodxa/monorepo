@@ -13,6 +13,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -138,21 +139,23 @@ export function Message(handle: Handle<Message.Props>) {
 			<article
 				{...rest}
 				data-slot="message"
-				mix={[
-					relative(),
-					grid(),
-					gap("var(--ui-message-row-gap, 0.25rem)", "var(--ui-message-gap, 0.75rem)"),
-					container(CONTAINER_NAME),
-					gridTemplate({
-						columns: "auto 1fr",
-						areas: `"avatar header" "avatar content" ". footer"`,
-					}),
-					when('& > [data-slot="avatar"]', [gridArea("avatar"), self("end")]),
-					when('& > [data-slot="header"]', gridArea("header")),
-					when('& > [data-slot="content"]', gridArea("content")),
-					when('& > [data-slot="footer"]', gridArea("footer")),
+				mix={mergeMix(
+					[
+						relative(),
+						grid(),
+						gap("var(--ui-message-row-gap, 0.25rem)", "var(--ui-message-gap, 0.75rem)"),
+						container(CONTAINER_NAME),
+						gridTemplate({
+							columns: "auto 1fr",
+							areas: `"avatar header" "avatar content" ". footer"`,
+						}),
+						when('& > [data-slot="avatar"]', [gridArea("avatar"), self("end")]),
+						when('& > [data-slot="header"]', gridArea("header")),
+						when('& > [data-slot="content"]', gridArea("content")),
+						when('& > [data-slot="footer"]', gridArea("footer")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</article>
@@ -180,7 +183,7 @@ Message.Avatar = function MessageAvatar(handle: Handle<Message.AvatarProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="avatar" mix={[flex(), mix]}>
+			<div {...rest} data-slot="avatar" mix={mergeMix(flex(), mix)}>
 				{children}
 			</div>
 		);
@@ -208,16 +211,18 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 			<header
 				{...rest}
 				data-slot="header"
-				mix={[
-					flex(),
-					flexWrap("wrap"),
-					items("baseline"),
-					gap("0.125rem", "0.5rem"),
-					when("& > :first-child", [fontSize("sm"), weight("semibold"), fg("neutral.emphasis")]),
-					when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted"), tabularNums()]),
-					at("26rem", CONTAINER_NAME, [flexWrap("nowrap"), justify("between")]),
+				mix={mergeMix(
+					[
+						flex(),
+						flexWrap("wrap"),
+						items("baseline"),
+						gap("0.125rem", "0.5rem"),
+						when("& > :first-child", [fontSize("sm"), weight("semibold"), fg("neutral.emphasis")]),
+						when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted"), tabularNums()]),
+						at("26rem", CONTAINER_NAME, [flexWrap("nowrap"), justify("between")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</header>
@@ -245,12 +250,14 @@ Message.Content = function MessageContent(handle: Handle<Message.ContentProps>) 
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[
-					vstack({ gap: "0.375rem" }),
-					minIs("0"),
-					maxIs("var(--ui-message-content-max-size, 36rem)"),
+				mix={mergeMix(
+					[
+						vstack({ gap: "0.375rem" }),
+						minIs("0"),
+						maxIs("var(--ui-message-content-max-size, 36rem)"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -285,7 +292,11 @@ Message.Footer = function MessageFooter(handle: Handle<Message.FooterProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<footer {...rest} data-slot="footer" mix={[hstack({ align: "center", gap: "0.25rem" }), mix]}>
+			<footer
+				{...rest}
+				data-slot="footer"
+				mix={mergeMix(hstack({ align: "center", gap: "0.25rem" }), mix)}
+			>
 				{children}
 			</footer>
 		);
@@ -324,7 +335,7 @@ Message.Group = function MessageGroup(handle: Handle<Message.GroupProps>) {
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[vstack({ gap: "var(--ui-message-group-gap, 0.125rem)" }), mix]}
+				mix={mergeMix(vstack({ gap: "var(--ui-message-group-gap, 0.125rem)" }), mix)}
 			>
 				{children}
 			</div>

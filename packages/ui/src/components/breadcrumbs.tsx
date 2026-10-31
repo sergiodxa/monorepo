@@ -14,7 +14,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { listStyle, pseudoContent } from "@sdxc/u/general";
+import { listStyle, pseudoContent, mergeMix } from "@sdxc/u/general";
 import { flex, items } from "@sdxc/u/layout";
 import { m, mb, mis, p, pb, pi } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
@@ -103,7 +103,7 @@ export function Breadcrumbs(handle: Handle<Breadcrumbs.Props>) {
 			'Breadcrumbs: needs an "aria-label" or "aria-labelledby" identifying this navigation landmark for assistive technology.',
 		);
 
-		return <nav {...rest} data-slot="breadcrumbs" mix={[flex(), items("center"), mix]} />;
+		return <nav {...rest} data-slot="breadcrumbs" mix={mergeMix([flex(), items("center")], mix)} />;
 	};
 }
 
@@ -129,7 +129,7 @@ Breadcrumbs.List = function BreadcrumbsList(handle: Handle<Breadcrumbs.ListProps
 			<ol
 				{...rest}
 				data-slot="list"
-				mix={[flex(), items("center"), m(0), p(0), listStyle(), mix]}
+				mix={mergeMix([flex(), items("center"), m(0), p(0), listStyle()], mix)}
 			/>
 		);
 	};
@@ -155,16 +155,18 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
 			<li
 				{...rest}
 				data-slot="item"
-				mix={[
-					flex(),
-					items("center"),
-					when("&:not(:last-child)::after", [
-						fg("neutral.muted"),
-						fontSize("sm"),
-						pseudoContent('"›"'),
-					]),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						when("&:not(:last-child)::after", [
+							fg("neutral.muted"),
+							fontSize("sm"),
+							pseudoContent('"›"'),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -197,27 +199,29 @@ Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps
 				prefetch={prefetch ?? DEFAULT_PREFETCH}
 				{...rest}
 				data-slot="link"
-				mix={[
-					fontSize("sm"),
-					/**
-					 * The space around each separator lives in the link's own padding, so the
-					 * whole gap is clickable; the block padding reaches a 24px target and its
-					 * negative margin keeps the row at the text's height. The trail's first link
-					 * pulls back by its padding so the trail stays flush with its container.
-					 */
-					pi(2),
-					pb(0.5),
-					mb(-0.5),
-					when('[data-slot="item"]:first-child > &', mis(-2)),
-					textDecoration("none"),
-					hover(textDecoration("none")),
-					data("color", "neutral", [fg("neutral.muted"), hover(fg("neutral"))]),
-					when('&[aria-current]:not([aria-current="false"])', [
-						weight("medium"),
-						fg("neutral.emphasis"),
-					]),
+				mix={mergeMix(
+					[
+						fontSize("sm"),
+						/**
+						 * The space around each separator lives in the link's own padding, so the
+						 * whole gap is clickable; the block padding reaches a 24px target and its
+						 * negative margin keeps the row at the text's height. The trail's first link
+						 * pulls back by its padding so the trail stays flush with its container.
+						 */
+						pi(2),
+						pb(0.5),
+						mb(-0.5),
+						when('[data-slot="item"]:first-child > &', mis(-2)),
+						textDecoration("none"),
+						hover(textDecoration("none")),
+						data("color", "neutral", [fg("neutral.muted"), hover(fg("neutral"))]),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight("medium"),
+							fg("neutral.emphasis"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

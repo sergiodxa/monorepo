@@ -14,6 +14,7 @@ import type { Handle } from "remix/component";
 
 import { bg, fg, fill } from "@sdxc/u/color";
 import { opacity, rounded, shadow, transition, transitionBehavior } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { media, startingStyle } from "@sdxc/u/responsive";
 import { pb, pi } from "@sdxc/u/size";
@@ -104,36 +105,38 @@ export function Tooltip(handle: Handle<Tooltip.Props>) {
 				popover="hint"
 				role="tooltip"
 				placement={resolvedPlacement}
-				mix={[
-					rounded("md"),
-					pi(2),
-					pb(1),
-					shadow("md"),
-					bg("neutral.solid"),
-					fg("neutral.onSolid"),
-					opacity(0),
-					transition("opacity, scale, display, overlay", {
-						duration: durations.fast,
-						easing: easings.standard,
-					}),
-					text("sm"),
-					scaleProperty("0.95"),
-					transitionBehavior("allow-discrete"),
-					when(ENTERED_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
-					startingStyle(when(ENTERED_SELECTOR, [opacity(0), scaleProperty("0.95")])),
-					media("(hover: hover)", [
-						when(HOVERED_TRIGGER_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
-						startingStyle(when(HOVERED_TRIGGER_SELECTOR, [opacity(0), scaleProperty("0.95")])),
-					]),
-					media("(prefers-reduced-motion: reduce)", [
-						transition("opacity, display, overlay", {
+				mix={mergeMix(
+					[
+						rounded("md"),
+						pi(2),
+						pb(1),
+						shadow("md"),
+						bg("neutral.solid"),
+						fg("neutral.onSolid"),
+						opacity(0),
+						transition("opacity, scale, display, overlay", {
 							duration: durations.fast,
 							easing: easings.standard,
 						}),
-						scaleProperty("none"),
-					]),
+						text("sm"),
+						scaleProperty("0.95"),
+						transitionBehavior("allow-discrete"),
+						when(ENTERED_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
+						startingStyle(when(ENTERED_SELECTOR, [opacity(0), scaleProperty("0.95")])),
+						media("(hover: hover)", [
+							when(HOVERED_TRIGGER_SELECTOR, [block(), opacity(100), scaleProperty("none")]),
+							startingStyle(when(HOVERED_TRIGGER_SELECTOR, [opacity(0), scaleProperty("0.95")])),
+						]),
+						media("(prefers-reduced-motion: reduce)", [
+							transition("opacity, display, overlay", {
+								duration: durations.fast,
+								easing: easings.standard,
+							}),
+							scaleProperty("none"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 				{resolvedShowArrow && (

@@ -14,6 +14,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { tabularNums } from "@sdxc/u/typography";
 
 import type { FieldPartsProps } from "../utils/field-parts.js";
@@ -158,7 +159,7 @@ export function TimeField(handle: Handle<TimeField.Props>) {
 			});
 
 		return (
-			<div {...rest} data-slot="time-field" mix={[fieldStackLayout(), mix]}>
+			<div {...rest} data-slot="time-field" mix={mergeMix(fieldStackLayout(), mix)}>
 				<Label htmlFor={handle.id} mix={parts?.label}>
 					{label}
 				</Label>

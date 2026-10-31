@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { motionSafe } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
@@ -76,11 +76,13 @@ export function Marquee(handle: Handle<Marquee.Props>) {
 			<div
 				{...rest}
 				data-slot="marquee"
-				mix={[
-					raw({ display: "flex", alignItems: "center", gap: "1rem", inlineSize: "100%" }),
-					pausedWhenChecked('[data-slot="marquee-viewport"]'),
+				mix={mergeMix(
+					[
+						raw({ display: "flex", alignItems: "center", gap: "1rem", inlineSize: "100%" }),
+						pausedWhenChecked('[data-slot="marquee-viewport"]'),
+					],
 					mix,
-				]}
+				)}
 			>
 				<div data-slot="marquee-viewport" mix={[viewport()]}>
 					<div data-slot="marquee-track" mix={[track(seconds)]}>

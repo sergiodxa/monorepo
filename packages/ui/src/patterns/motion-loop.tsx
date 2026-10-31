@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 
 import { PauseToggle, pausedWhenChecked } from "../utils/pause-toggle.js";
 
@@ -65,13 +65,15 @@ export function MotionLoop(handle: Handle<MotionLoop.Props>) {
 				{...rest}
 				data-slot="motion-loop"
 				data-placement={resolvedPlacement}
-				mix={[
-					isInline
-						? raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })
-						: raw({ position: "relative" }),
-					pausedWhenChecked('[data-slot="motion-loop-content"]'),
+				mix={mergeMix(
+					[
+						isInline
+							? raw({ display: "inline-flex", alignItems: "center", gap: "0.75rem" })
+							: raw({ position: "relative" }),
+						pausedWhenChecked('[data-slot="motion-loop-content"]'),
+					],
 					mix,
-				]}
+				)}
 			>
 				<div data-slot="motion-loop-content">{children}</div>
 				<PauseToggle

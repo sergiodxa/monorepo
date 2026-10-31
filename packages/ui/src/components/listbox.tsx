@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { flex, gap, items } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { maxBs, pb, pi } from "@sdxc/u/size";
@@ -152,14 +152,16 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: resolvedMultiple ? "group" : "radiogroup" }),
-					maxBs(60),
-					overflow("auto"),
-					surfaceInset(),
-					outline("none"),
+				mix={mergeMix(
+					[
+						attrs({ role: resolvedMultiple ? "group" : "radiogroup" }),
+						maxBs(60),
+						overflow("auto"),
+						surfaceInset(),
+						outline("none"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -206,36 +208,38 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 		return (
 			<label
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					flex(),
-					items("center"),
-					gap(2),
-					rounded("md"),
-					pi(3),
-					pb(2),
-					fg("neutral.emphasis"),
-					hover(bg("neutral.bg-tint-hover")),
-					active(bg("neutral.bg-tint-pressed")),
-					when("&:has(input:focus)", bg("brand.bg-tint-pressed")),
-					/**
-					 * The row the keyboard is on is where the next Enter lands, so it is shown before it is
-					 * chosen. The tint stops at the selected row, which keeps its stronger fill while walked past.
-					 */
-					when('&[data-highlighted="true"]:not(:has(input:checked)):not([aria-selected="true"])', [
-						bg("brand.bg-tint-pressed"),
-						fg("brand.emphasis"),
-					]),
-					when('&:has(input:checked), &[aria-selected="true"]', [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-					]),
-					when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
-					cursor("default"),
-					text("sm"),
-					outline("none"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						flex(),
+						items("center"),
+						gap(2),
+						rounded("md"),
+						pi(3),
+						pb(2),
+						fg("neutral.emphasis"),
+						hover(bg("neutral.bg-tint-hover")),
+						active(bg("neutral.bg-tint-pressed")),
+						when("&:has(input:focus)", bg("brand.bg-tint-pressed")),
+						/**
+						 * The row the keyboard is on is where the next Enter lands, so it is shown before it is
+						 * chosen. The tint stops at the selected row, which keeps its stronger fill while walked past.
+						 */
+						when(
+							'&[data-highlighted="true"]:not(:has(input:checked)):not([aria-selected="true"])',
+							[bg("brand.bg-tint-pressed"), fg("brand.emphasis")],
+						),
+						when('&:has(input:checked), &[aria-selected="true"]', [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+						]),
+						when('&:has(input:disabled), &[aria-disabled="true"]', opacity(50)),
+						cursor("default"),
+						text("sm"),
+						outline("none"),
+					],
 					mix,
-				]}
+				)}
 			>
 				<input
 					type={type}

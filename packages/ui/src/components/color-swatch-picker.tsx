@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { border, outline } from "@sdxc/u/color";
 import { opacity, ringShadow, transition } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { flexWrap, hstack, inlineFlex, relative } from "@sdxc/u/layout";
 import { precededBy, when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -133,7 +133,10 @@ export function ColorSwatchPicker(
 		handle.context.set({ name: resolvedName });
 
 		return (
-			<div {...rest} mix={[attrs({ role: DEFAULT_ROLE }), hstack({ gap: 2 }), flexWrap(), mix]} />
+			<div
+				{...rest}
+				mix={mergeMix([attrs({ role: DEFAULT_ROLE }), hstack({ gap: 2 }), flexWrap()], mix)}
+			/>
 		);
 	};
 }
@@ -176,14 +179,16 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 		return (
 			<label
 				{...rest}
-				mix={[
-					relative(),
-					inlineFlex(),
-					hitArea(),
-					cursor("default"),
-					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
+				mix={mergeMix(
+					[
+						relative(),
+						inlineFlex(),
+						hitArea(),
+						cursor("default"),
+						when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
+					],
 					mix,
-				]}
+				)}
 			>
 				<input
 					type="radio"

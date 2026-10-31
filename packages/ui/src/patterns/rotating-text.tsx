@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { keyframes } from "@sdxc/u/animation";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { motionSafe } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
@@ -68,7 +68,7 @@ export function RotatingText(handle: Handle<RotatingText.Props>) {
 		let spoken = label ?? words.filter((word) => typeof word === "string").join(", ");
 
 		return (
-			<span {...rest} data-slot="rotating-text" mix={[host(), mix]}>
+			<span {...rest} data-slot="rotating-text" mix={mergeMix(host(), mix)}>
 				{spoken ? <span mix={[visuallyHidden()]}>{spoken}</span> : null}
 				<span aria-hidden={spoken ? "true" : undefined} mix={[stack(count, hold, passes)]}>
 					{words.map((word, index) => (

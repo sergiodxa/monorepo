@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { outline } from "@sdxc/u/color";
 import { opacity, rounded, transition } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { hstack, inlineFlex, items, justify, relative, shrink, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, p } from "@sdxc/u/size";
@@ -221,7 +221,7 @@ export function ColorPicker(handle: Handle<ColorPicker.Props>) {
 		}
 
 		return (
-			<div {...rest} data-slot="color-picker" mix={[vstack({ gap: 1 }), mix]}>
+			<div {...rest} data-slot="color-picker" mix={mergeMix(vstack({ gap: 1 }), mix)}>
 				{children}
 			</div>
 		);
@@ -254,15 +254,17 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					/**
-					 * Focus is shown by the control that holds it, the way `Group` shows it: a ring
-					 * around the row says the group is focused without saying whether the field or
-					 * the preview has it, and it stacks with the ring that control draws for itself.
-					 */
-					hstack({ gap: 2, align: "center" }),
+				mix={mergeMix(
+					[
+						/**
+						 * Focus is shown by the control that holds it, the way `Group` shows it: a ring
+						 * around the row says the group is focused without saying whether the field or
+						 * the preview has it, and it stacks with the ring that control draws for itself.
+						 */
+						hstack({ gap: 2, align: "center" }),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -300,36 +302,38 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 				{...rest}
 				data-slot="trigger"
 				data-shape={resolvedShape}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					relative(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					is("var(--ui-color-picker-trigger-size, 2.25rem)"),
-					bs("var(--ui-color-picker-trigger-size, 2.25rem)"),
-					rounded("md"),
-					cursor("pointer"),
-					transition("box-shadow"),
-					when('&[data-shape="circle"]', rounded("full")),
-					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					p(0),
-					shrink(),
-					when('&[data-shape="square"]', rounded("none")),
-					/**
-					 * The swatch grows through the size variable it reads itself: a size passed down as
-					 * `mix` compiles into its own cascade layer, which can land before the swatch's own
-					 * and leave the preview at its default size in a corner of the button.
-					 */
-					raw({ "--ui-color-swatch-size-md": "100%" }),
-					/**
-					 * Hover steps the preview's edge one shade darker, so the edge the swatch already
-					 * draws stays the only one and the border reads once.
-					 */
-					when("&:hover", raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border-hover)" })),
-					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						is("var(--ui-color-picker-trigger-size, 2.25rem)"),
+						bs("var(--ui-color-picker-trigger-size, 2.25rem)"),
+						rounded("md"),
+						cursor("pointer"),
+						transition("box-shadow"),
+						when('&[data-shape="circle"]', rounded("full")),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+						p(0),
+						shrink(),
+						when('&[data-shape="square"]', rounded("none")),
+						/**
+						 * The swatch grows through the size variable it reads itself: a size passed down as
+						 * `mix` compiles into its own cascade layer, which can land before the swatch's own
+						 * and leave the preview at its default size in a corner of the button.
+						 */
+						raw({ "--ui-color-swatch-size-md": "100%" }),
+						/**
+						 * Hover steps the preview's edge one shade darker, so the edge the swatch already
+						 * draws stays the only one and the border reads once.
+						 */
+						when("&:hover", raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border-hover)" })),
+						media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),
+					],
 					mix,
-				]}
+				)}
 			>
 				<ColorSwatch value={value} shape={resolvedShape} />
 			</button>
@@ -372,13 +376,15 @@ ColorPicker.Dialog = function ColorPickerDialog(handle: Handle<ColorPicker.Dialo
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[
-					attrs({ role: DEFAULT_DIALOG_ROLE }),
-					vstack({ gap: 4 }),
-					p(4),
-					raw({ outline: "none" }),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_DIALOG_ROLE }),
+						vstack({ gap: 4 }),
+						p(4),
+						raw({ outline: "none" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</Popover>

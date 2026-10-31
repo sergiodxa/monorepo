@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { keyframes } from "@sdxc/u/animation";
 import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { block, container } from "@sdxc/u/layout";
 import { overflow, overflowBlock, overflowInline } from "@sdxc/u/overflow";
 import { at } from "@sdxc/u/responsive";
@@ -176,280 +176,281 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 				{...rest}
 				data-preset={resolvedPreset}
 				data-slot="typeset"
-				mix={[
-					fg("neutral.emphasis"),
-					container(CONTAINER_NAME),
-					keyframes(TABLE_FADE_KEYFRAMES_NAME, TABLE_FADE_KEYFRAMES),
-					raw({
-						fontSize: TYPESET_SIZE,
-						lineHeight: "var(--ui-typeset-leading, 1.75)",
-
-						'&[data-preset="docs"]': {
-							"--ui-typeset-size": PRESET_BODY_SIZE.docs,
-							"--ui-typeset-leading": "1.75",
-							"--ui-typeset-flow": "1.25em",
-						},
-						'&[data-preset="chat"]': {
-							"--ui-typeset-size": PRESET_BODY_SIZE.chat,
-							"--ui-typeset-leading": "1.5",
-							"--ui-typeset-flow": "0.75em",
-						},
-						'&[data-preset="reading"]': {
-							"--ui-typeset-size": PRESET_BODY_SIZE.reading,
-							"--ui-typeset-leading": "1.8",
-							"--ui-typeset-flow": "1.5em",
-						},
-					}),
-					when(
-						prose("& > * + *"),
-						raw({
-							marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
-						}),
-					),
-					when(
-						prose("& :where(blockquote, li) > * + *"),
-						raw({
-							marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
-						}),
-					),
-					when(
-						prose("& :where(h1)"),
-						raw({
-							fontSize: `calc(${TYPESET_SIZE} * 2)`,
-						}),
-					),
-					when(
-						prose("& :where(h2)"),
-						raw({
-							fontSize: `calc(${TYPESET_SIZE} * 1.5)`,
-						}),
-					),
-					when(
-						prose("& :where(h3)"),
-						raw({
-							fontSize: `calc(${TYPESET_SIZE} * 1.25)`,
-						}),
-					),
-					when(
-						prose("& :where(h4)"),
-						raw({
-							fontSize: `calc(${TYPESET_SIZE} * 1.125)`,
-						}),
-					),
-					when(
-						prose("& :where(h5)"),
+				mix={mergeMix(
+					[
+						fg("neutral.emphasis"),
+						container(CONTAINER_NAME),
+						keyframes(TABLE_FADE_KEYFRAMES_NAME, TABLE_FADE_KEYFRAMES),
 						raw({
 							fontSize: TYPESET_SIZE,
-						}),
-					),
-					when(
-						prose("& :where(h6)"),
-						raw({
-							fontSize: `calc(${TYPESET_SIZE} * 0.875)`,
-						}),
-					),
-					when(
-						prose("& :where(ul)"),
-						raw({
-							listStyleType: "disc",
-						}),
-					),
-					when(
-						prose("& :where(ol)"),
-						raw({
-							listStyleType: "decimal",
-						}),
-					),
-					when(
-						prose("& :where(ul, ol) :where(ul)"),
-						raw({
-							listStyleType: "circle",
-						}),
-					),
-					when(
-						prose("& :where(blockquote)"),
-						raw({
-							fontStyle: "italic",
-						}),
-					),
-					when(
-						prose("& :where(a)"),
-						raw({
-							textUnderlineOffset: "0.15em",
-						}),
-					),
-					when(
-						prose("& :where(a):hover"),
-						raw({
-							textDecorationThickness: "2px",
-						}),
-					),
-					when(
-						prose("& :where(em, i)"),
-						raw({
-							fontStyle: "italic",
-						}),
-					),
-					when(
-						prose("& :where(code)"),
-						raw({
-							fontSize: "0.875em",
-						}),
-					),
-					when(
-						prose("& :where(pre)"),
-						raw({
-							fontSize: "0.875em",
-						}),
-					),
-					when(
-						prose("& :where(pre code)"),
-						raw({
-							padding: "0",
-							fontSize: "1em",
-						}),
-					),
-					when(
-						prose("& :where(table)"),
-						raw({
-							borderCollapse: "collapse",
-							fontSize: "0.875em",
-							scrollbarWidth: "thin",
-							scrollbarGutter: "stable",
+							lineHeight: "var(--ui-typeset-leading, 1.75)",
 
-							[TABLE_FADE_DIRECTION_PROPERTY]: "right",
-							maskImage: "none",
-							"-webkit-mask-image": "none",
+							'&[data-preset="docs"]': {
+								"--ui-typeset-size": PRESET_BODY_SIZE.docs,
+								"--ui-typeset-leading": "1.75",
+								"--ui-typeset-flow": "1.25em",
+							},
+							'&[data-preset="chat"]': {
+								"--ui-typeset-size": PRESET_BODY_SIZE.chat,
+								"--ui-typeset-leading": "1.5",
+								"--ui-typeset-flow": "0.75em",
+							},
+							'&[data-preset="reading"]': {
+								"--ui-typeset-size": PRESET_BODY_SIZE.reading,
+								"--ui-typeset-leading": "1.8",
+								"--ui-typeset-flow": "1.5em",
+							},
+						}),
+						when(
+							prose("& > * + *"),
+							raw({
+								marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
+							}),
+						),
+						when(
+							prose("& :where(blockquote, li) > * + *"),
+							raw({
+								marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
+							}),
+						),
+						when(
+							prose("& :where(h1)"),
+							raw({
+								fontSize: `calc(${TYPESET_SIZE} * 2)`,
+							}),
+						),
+						when(
+							prose("& :where(h2)"),
+							raw({
+								fontSize: `calc(${TYPESET_SIZE} * 1.5)`,
+							}),
+						),
+						when(
+							prose("& :where(h3)"),
+							raw({
+								fontSize: `calc(${TYPESET_SIZE} * 1.25)`,
+							}),
+						),
+						when(
+							prose("& :where(h4)"),
+							raw({
+								fontSize: `calc(${TYPESET_SIZE} * 1.125)`,
+							}),
+						),
+						when(
+							prose("& :where(h5)"),
+							raw({
+								fontSize: TYPESET_SIZE,
+							}),
+						),
+						when(
+							prose("& :where(h6)"),
+							raw({
+								fontSize: `calc(${TYPESET_SIZE} * 0.875)`,
+							}),
+						),
+						when(
+							prose("& :where(ul)"),
+							raw({
+								listStyleType: "disc",
+							}),
+						),
+						when(
+							prose("& :where(ol)"),
+							raw({
+								listStyleType: "decimal",
+							}),
+						),
+						when(
+							prose("& :where(ul, ol) :where(ul)"),
+							raw({
+								listStyleType: "circle",
+							}),
+						),
+						when(
+							prose("& :where(blockquote)"),
+							raw({
+								fontStyle: "italic",
+							}),
+						),
+						when(
+							prose("& :where(a)"),
+							raw({
+								textUnderlineOffset: "0.15em",
+							}),
+						),
+						when(
+							prose("& :where(a):hover"),
+							raw({
+								textDecorationThickness: "2px",
+							}),
+						),
+						when(
+							prose("& :where(em, i)"),
+							raw({
+								fontStyle: "italic",
+							}),
+						),
+						when(
+							prose("& :where(code)"),
+							raw({
+								fontSize: "0.875em",
+							}),
+						),
+						when(
+							prose("& :where(pre)"),
+							raw({
+								fontSize: "0.875em",
+							}),
+						),
+						when(
+							prose("& :where(pre code)"),
+							raw({
+								padding: "0",
+								fontSize: "1em",
+							}),
+						),
+						when(
+							prose("& :where(table)"),
+							raw({
+								borderCollapse: "collapse",
+								fontSize: "0.875em",
+								scrollbarWidth: "thin",
+								scrollbarGutter: "stable",
 
-							"&:dir(rtl)": {
-								[TABLE_FADE_DIRECTION_PROPERTY]: "left",
-							},
+								[TABLE_FADE_DIRECTION_PROPERTY]: "right",
+								maskImage: "none",
+								"-webkit-mask-image": "none",
 
-							"&::-webkit-scrollbar": {
-								width: "0.75rem",
-								height: "0.75rem",
-							},
-							"&::-webkit-scrollbar-track": {
-								backgroundColor: "transparent",
-							},
-							"&::-webkit-scrollbar-thumb": {
-								borderRadius: "var(--ui-radius-full, 9999px)",
-								backgroundColor: "var(--ui-neutral-border)",
-								borderWidth: "3px",
-								borderStyle: "solid",
-								borderColor: "transparent",
-								backgroundClip: "content-box",
-							},
-							"&::-webkit-scrollbar-thumb:hover": {
-								backgroundColor: "var(--ui-neutral-border-strong)",
-							},
-
-							"@supports (animation-timeline: scroll())": {
-								animationName: TABLE_FADE_KEYFRAMES_NAME,
-								animationDuration: "auto",
-								animationTimingFunction: easings.linear,
-								animationFillMode: "both",
-								animationTimeline: "scroll(self inline)",
-								"@media (prefers-reduced-motion: reduce)": {
-									animationName: "none",
-									maskImage: TABLE_FADE_SETTLED_MASK,
-									"-webkit-mask-image": TABLE_FADE_SETTLED_MASK,
+								"&:dir(rtl)": {
+									[TABLE_FADE_DIRECTION_PROPERTY]: "left",
 								},
-							},
-						}),
-					),
 
-					at("30rem", CONTAINER_NAME, [
-						when(prose("& :where(th, td)"), raw({ paddingInline: "1em" })),
-						when(prose("& :where(pre)"), raw({ paddingInline: "1.25em" })),
-					]),
+								"&::-webkit-scrollbar": {
+									width: "0.75rem",
+									height: "0.75rem",
+								},
+								"&::-webkit-scrollbar-track": {
+									backgroundColor: "transparent",
+								},
+								"&::-webkit-scrollbar-thumb": {
+									borderRadius: "var(--ui-radius-full, 9999px)",
+									backgroundColor: "var(--ui-neutral-border)",
+									borderWidth: "3px",
+									borderStyle: "solid",
+									borderColor: "transparent",
+									backgroundClip: "content-box",
+								},
+								"&::-webkit-scrollbar-thumb:hover": {
+									backgroundColor: "var(--ui-neutral-border-strong)",
+								},
 
-					when(prose("& :where(pre)"), leading(1.6)),
+								"@supports (animation-timeline: scroll())": {
+									animationName: TABLE_FADE_KEYFRAMES_NAME,
+									animationDuration: "auto",
+									animationTimingFunction: easings.linear,
+									animationFillMode: "both",
+									animationTimeline: "scroll(self inline)",
+									"@media (prefers-reduced-motion: reduce)": {
+										animationName: "none",
+										maskImage: TABLE_FADE_SETTLED_MASK,
+										"-webkit-mask-image": TABLE_FADE_SETTLED_MASK,
+									},
+								},
+							}),
+						),
 
-					when(prose("& :where(h1, h2, h3, h4, h5, h6)"), [
-						weight("semibold"),
-						leading(1.25),
-						tracking("tight"),
-						fg("neutral.emphasis"),
-						balance(),
-					]),
-					when(prose("& :where(h6)"), fg("neutral")),
+						at("30rem", CONTAINER_NAME, [
+							when(prose("& :where(th, td)"), raw({ paddingInline: "1em" })),
+							when(prose("& :where(pre)"), raw({ paddingInline: "1.25em" })),
+						]),
 
-					when(prose("& :where(p, li, blockquote, dd)"), pretty()),
+						when(prose("& :where(pre)"), leading(1.6)),
 
-					when(prose("& :where(ul, ol)"), pis("1.5em")),
-					when(prose("& :where(li)::marker"), fg("neutral.muted")),
+						when(prose("& :where(h1, h2, h3, h4, h5, h6)"), [
+							weight("semibold"),
+							leading(1.25),
+							tracking("tight"),
+							fg("neutral.emphasis"),
+							balance(),
+						]),
+						when(prose("& :where(h6)"), fg("neutral")),
 
-					when(prose("& :where(blockquote)"), [
-						pis("1em"),
-						fg("neutral"),
-						borderEdge("inline-start", { color: "neutral", width: "0.25em" }),
-					]),
+						when(prose("& :where(p, li, blockquote, dd)"), pretty()),
 
-					when(
-						prose("& :where(hr)"),
-						borderEdge("block-start", { color: "neutral", width: "1px" }),
-					),
+						when(prose("& :where(ul, ol)"), pis("1.5em")),
+						when(prose("& :where(li)::marker"), fg("neutral.muted")),
 
-					when(prose("& :where(a)"), [fg("brand"), textDecoration("underline")]),
-					when(prose("& :where(a):focus-visible"), [
-						outline({ color: "brand.ring", offset: 2 }),
-						rounded("xs"),
-					]),
+						when(prose("& :where(blockquote)"), [
+							pis("1em"),
+							fg("neutral"),
+							borderEdge("inline-start", { color: "neutral", width: "0.25em" }),
+						]),
 
-					when(prose("& :where(strong, b)"), [weight("semibold"), fg("neutral.emphasis")]),
+						when(
+							prose("& :where(hr)"),
+							borderEdge("block-start", { color: "neutral", width: "1px" }),
+						),
 
-					when(prose("& :where(code)"), [
-						rounded("sm"),
-						bg("neutral.tint"),
-						fg("neutral.emphasis"),
-						pi("0.3em"),
-						pb("0.15em"),
-					]),
-					when(prose("& :where(pre)"), [
-						rounded("md"),
-						border({ color: "neutral.border", width: 1 }),
-						bg("neutral.tint"),
-						fg("neutral.emphasis"),
-						pi("1em"),
-						pb("0.875em"),
-						overflowInline("auto"),
-						overflowBlock("hidden"),
-						raw({
-							overscrollBehaviorInline: "contain",
-							overscrollBehaviorX: "contain",
-						}),
-					]),
-					/**
-					 * A fenced block's `code` is an inline box, so the chip padding above would
-					 * apply at the start of the box alone and indent the block's first line
-					 * past every line under it. The block's own padding is the `pre`'s.
-					 */
-					when(prose("& :where(pre code)"), [
-						bg("transparent"),
-						fg("inherit"),
-						rounded("none"),
-						pi(0),
-						pb(0),
-					]),
+						when(prose("& :where(a)"), [fg("brand"), textDecoration("underline")]),
+						when(prose("& :where(a):focus-visible"), [
+							outline({ color: "brand.ring", offset: 2 }),
+							rounded("xs"),
+						]),
 
-					when(prose("& :where(table)"), [
-						block(),
-						is("max(100%, max-content)"),
-						maxIs("full"),
-						overflow("auto"),
-					]),
-					when(prose("& :where(th, td):not([align])"), textAlign("start")),
-					when(prose("& :where(th)"), [weight("semibold"), fg("neutral.emphasis")]),
-					when(prose("& :where(th, td)"), [
-						tabularNums(),
-						pi("0.75em"),
-						pb("0.5em"),
-						borderEdge("block-end", { color: "neutral", width: "1px" }),
-					]),
+						when(prose("& :where(strong, b)"), [weight("semibold"), fg("neutral.emphasis")]),
 
+						when(prose("& :where(code)"), [
+							rounded("sm"),
+							bg("neutral.tint"),
+							fg("neutral.emphasis"),
+							pi("0.3em"),
+							pb("0.15em"),
+						]),
+						when(prose("& :where(pre)"), [
+							rounded("md"),
+							border({ color: "neutral.border", width: 1 }),
+							bg("neutral.tint"),
+							fg("neutral.emphasis"),
+							pi("1em"),
+							pb("0.875em"),
+							overflowInline("auto"),
+							overflowBlock("hidden"),
+							raw({
+								overscrollBehaviorInline: "contain",
+								overscrollBehaviorX: "contain",
+							}),
+						]),
+						/**
+						 * A fenced block's `code` is an inline box, so the chip padding above would
+						 * apply at the start of the box alone and indent the block's first line
+						 * past every line under it. The block's own padding is the `pre`'s.
+						 */
+						when(prose("& :where(pre code)"), [
+							bg("transparent"),
+							fg("inherit"),
+							rounded("none"),
+							pi(0),
+							pb(0),
+						]),
+
+						when(prose("& :where(table)"), [
+							block(),
+							is("max(100%, max-content)"),
+							maxIs("full"),
+							overflow("auto"),
+						]),
+						when(prose("& :where(th, td):not([align])"), textAlign("start")),
+						when(prose("& :where(th)"), [weight("semibold"), fg("neutral.emphasis")]),
+						when(prose("& :where(th, td)"), [
+							tabularNums(),
+							pi("0.75em"),
+							pb("0.5em"),
+							borderEdge("block-end", { color: "neutral", width: "1px" }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

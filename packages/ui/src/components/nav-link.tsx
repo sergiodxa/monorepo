@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { colorMix, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { data, hover, when } from "@sdxc/u/state";
 import { textDecoration, weight } from "@sdxc/u/typography";
 
@@ -98,67 +98,69 @@ export function NavLink(handle: Handle<NavLink.Props>) {
 					data-color={resolvedColor}
 					data-has-background={hasBackground || undefined}
 					data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
-					mix={[
-						interactiveTransition(),
-						rounded("sm"),
-						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-						cursor("pointer"),
-						textDecoration("underline"),
-						raw({
-							textDecorationColor: colorMix(
-								"oklab",
-								{ color: "currentcolor", weight: 60 },
-								"transparent",
+					mix={mergeMix(
+						[
+							interactiveTransition(),
+							rounded("sm"),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+							cursor("pointer"),
+							textDecoration("underline"),
+							raw({
+								textDecorationColor: colorMix(
+									"oklab",
+									{ color: "currentcolor", weight: 60 },
+									"transparent",
+								),
+								textUnderlineOffset: "4px",
+							}),
+							hover(raw({ textDecorationColor: "currentcolor" })),
+							data("color", "brand", [
+								fg("brand"),
+								when('&[aria-current]:not([aria-current="false"])', [
+									weight(500),
+									fg("brand.emphasis"),
+								]),
+							]),
+							data("color", "neutral", [
+								fg("neutral"),
+								when('&[aria-current]:not([aria-current="false"])', [
+									weight(500),
+									fg("neutral.emphasis"),
+								]),
+							]),
+							data("color", "success", [
+								fg("success"),
+								when('&[aria-current]:not([aria-current="false"])', [
+									weight(500),
+									fg("success.emphasis"),
+								]),
+							]),
+							data("color", "warning", [
+								fg("warning"),
+								when('&[aria-current]:not([aria-current="false"])', [
+									weight(500),
+									fg("warning.emphasis"),
+								]),
+							]),
+							data("color", "danger", [
+								fg("danger"),
+								when('&[aria-current]:not([aria-current="false"])', [
+									weight(500),
+									fg("danger.emphasis"),
+								]),
+							]),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
+							]),
+							data("has-background", textDecoration("none")),
+							when(
+								'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
+								textDecoration("none"),
 							),
-							textUnderlineOffset: "4px",
-						}),
-						hover(raw({ textDecorationColor: "currentcolor" })),
-						data("color", "brand", [
-							fg("brand"),
-							when('&[aria-current]:not([aria-current="false"])', [
-								weight(500),
-								fg("brand.emphasis"),
-							]),
-						]),
-						data("color", "neutral", [
-							fg("neutral"),
-							when('&[aria-current]:not([aria-current="false"])', [
-								weight(500),
-								fg("neutral.emphasis"),
-							]),
-						]),
-						data("color", "success", [
-							fg("success"),
-							when('&[aria-current]:not([aria-current="false"])', [
-								weight(500),
-								fg("success.emphasis"),
-							]),
-						]),
-						data("color", "warning", [
-							fg("warning"),
-							when('&[aria-current]:not([aria-current="false"])', [
-								weight(500),
-								fg("warning.emphasis"),
-							]),
-						]),
-						data("color", "danger", [
-							fg("danger"),
-							when('&[aria-current]:not([aria-current="false"])', [
-								weight(500),
-								fg("danger.emphasis"),
-							]),
-						]),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
-						]),
-						data("has-background", textDecoration("none")),
-						when(
-							'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
-							textDecoration("none"),
-						),
+						],
 						mix,
-					]}
+					)}
 				/>
 				{rendersPrefetchHint(resolvedPrefetch, rest.href) && (
 					<link rel="prefetch" href={rest.href} />

@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { pseudoContent } from "@sdxc/u/general";
+import { pseudoContent, mergeMix } from "@sdxc/u/general";
 import { basis, center, gap, grow, inlineFlex, items, shrink } from "@sdxc/u/layout";
 import { bs, is, minIs, pb, pi } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
@@ -129,63 +129,65 @@ export function Marker(handle: Handle<Marker.Props>) {
 				data-variant={resolvedVariant}
 				data-color={resolvedColor}
 				{...rest}
-				mix={[
-					resolvedVariant === "separator"
-						? attrs({
-								role: DEFAULT_SEPARATOR_ROLE,
-								"aria-orientation": DEFAULT_SEPARATOR_ORIENTATION,
-							})
-						: undefined,
-					center(),
-					is("full"),
-					weight("medium"),
-					data("color", "brand", fg("brand.muted")),
-					data("color", "neutral", fg("neutral.muted")),
-					data("color", "success", fg("success.muted")),
-					data("color", "warning", fg("warning.muted")),
-					data("color", "danger", fg("danger.muted")),
-					data("variant", "border", [
-						rounded("md"),
-						border({ width: 1 }),
-						pb(2),
-						pi(3.5),
-						data("color", "brand", [border("brand"), bg("brand.tint"), fg("brand.emphasis")]),
-						data("color", "neutral", [
-							border("neutral"),
-							bg("neutral.tint"),
-							fg("neutral.emphasis"),
+				mix={mergeMix(
+					[
+						resolvedVariant === "separator"
+							? attrs({
+									role: DEFAULT_SEPARATOR_ROLE,
+									"aria-orientation": DEFAULT_SEPARATOR_ORIENTATION,
+								})
+							: undefined,
+						center(),
+						is("full"),
+						weight("medium"),
+						data("color", "brand", fg("brand.muted")),
+						data("color", "neutral", fg("neutral.muted")),
+						data("color", "success", fg("success.muted")),
+						data("color", "warning", fg("warning.muted")),
+						data("color", "danger", fg("danger.muted")),
+						data("variant", "border", [
+							rounded("md"),
+							border({ width: 1 }),
+							pb(2),
+							pi(3.5),
+							data("color", "brand", [border("brand"), bg("brand.tint"), fg("brand.emphasis")]),
+							data("color", "neutral", [
+								border("neutral"),
+								bg("neutral.tint"),
+								fg("neutral.emphasis"),
+							]),
+							data("color", "success", [
+								border("success"),
+								bg("success.tint"),
+								fg("success.emphasis"),
+							]),
+							data("color", "warning", [
+								border("warning"),
+								bg("warning.tint"),
+								fg("warning.emphasis"),
+							]),
+							data("color", "danger", [border("danger"), bg("danger.tint"), fg("danger.emphasis")]),
 						]),
-						data("color", "success", [
-							border("success"),
-							bg("success.tint"),
-							fg("success.emphasis"),
-						]),
-						data("color", "warning", [
-							border("warning"),
-							bg("warning.tint"),
-							fg("warning.emphasis"),
-						]),
-						data("color", "danger", [border("danger"), bg("danger.tint"), fg("danger.emphasis")]),
-					]),
-					gap("var(--ui-marker-gap, 0.375rem)"),
-					pb("0.375rem"),
-					fontSize("0.8125rem"),
-					leading("calc(1.25 / 0.8125)"),
-					data(
-						"variant",
-						"separator",
-						when("&::before, &::after", [
-							pseudoContent('""'),
-							grow(),
-							shrink(1),
-							basis("0%"),
-							minIs("1.5rem"),
-							bs("var(--ui-separator-thickness, 1px)"),
-							bg("neutral.border"),
-						]),
-					),
+						gap("var(--ui-marker-gap, 0.375rem)"),
+						pb("0.375rem"),
+						fontSize("0.8125rem"),
+						leading("calc(1.25 / 0.8125)"),
+						data(
+							"variant",
+							"separator",
+							when("&::before, &::after", [
+								pseudoContent('""'),
+								grow(),
+								shrink(1),
+								basis("0%"),
+								minIs("1.5rem"),
+								bs("var(--ui-separator-thickness, 1px)"),
+								bg("neutral.border"),
+							]),
+						),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -214,15 +216,17 @@ Marker.Icon = function MarkerIcon(handle: Handle<Marker.IconProps>) {
 		return (
 			<span
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					inlineFlex(),
-					shrink(),
-					items("center"),
-					fg("currentcolor"),
-					when("& > svg", [is("1em"), bs("1em")]),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
+						inlineFlex(),
+						shrink(),
+						items("center"),
+						fg("currentcolor"),
+						when("& > svg", [is("1em"), bs("1em")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>
@@ -246,6 +250,6 @@ Marker.Content = function MarkerContent(handle: Handle<Marker.ContentProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[minIs(0), mix]} />;
+		return <span {...rest} mix={mergeMix(minIs(0), mix)} />;
 	};
 };

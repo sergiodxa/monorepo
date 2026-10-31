@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 
@@ -85,7 +85,7 @@ export function Rails(handle: Handle<Rails.Props>) {
 				data-slot="rails"
 				data-ruled={ruled ? "true" : undefined}
 				data-marks={marks ?? "none"}
-				mix={[container(RAILS_CONTAINER), raw({ inlineSize: "100%" }), mix]}
+				mix={mergeMix([container(RAILS_CONTAINER), raw({ inlineSize: "100%" })], mix)}
 			>
 				<div
 					data-slot="rails-column"

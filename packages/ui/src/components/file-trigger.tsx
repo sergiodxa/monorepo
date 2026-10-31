@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, userSelect } from "@sdxc/u/general";
+import { cursor, userSelect, mergeMix } from "@sdxc/u/general";
 import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
 import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
@@ -281,7 +281,10 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 				<input
 					type="file"
 					{...rest}
-					mix={[acceptDirectory && attrs({ webkitdirectory: true }), visuallyHidden(), mix]}
+					mix={mergeMix(
+						[acceptDirectory && attrs({ webkitdirectory: true }), visuallyHidden()],
+						mix,
+					)}
 				/>
 			</label>
 		);

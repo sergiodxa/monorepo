@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
-import { cursor, userSelect } from "@sdxc/u/general";
+import { cursor, userSelect, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, inlineFlex, items, justify, gap, shrink } from "@sdxc/u/layout";
 import { bs, is, minBs, pi, pb, pie, pis } from "@sdxc/u/size";
 import { when, hover, active, data } from "@sdxc/u/state";
@@ -142,190 +142,192 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 				data-size={resolvedSize}
 				data-glyph-start={edges.start || undefined}
 				data-glyph-end={edges.end || undefined}
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						when('&[data-color="neutral"]', outline("neutral.ring")),
-						when('&[data-color="success"]', outline("success.ring")),
-						when('&[data-color="warning"]', outline("warning.ring")),
-						when('&[data-color="danger"]', outline("danger.ring")),
-					]),
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					gap("0.5rem"),
-					/**
-					 * A glyph is sized against the label beside it and holds that size, so the row keeps the
-					 * height its text and padding ask for; the default `flex-shrink: 1` would squash the glyph
-					 * ahead of the words.
-					 */
-					when("& > svg", [shrink(), is(4), bs(4)]),
-					rounded("md"),
-					weight(500),
-					cursor("default"),
-					/** A small control reaches `--ui-target-size` however a consumer positions it. */
-					hitArea({ anchor: "flex-center" }),
-					userSelect(),
-					pi("1rem"),
-					pb("0.5rem"),
-					/**
-					 * The row measure is stated, so the control lines up with a field of the same size when
-					 * a Group fuses the two, and still grows when a long label wraps.
-					 */
-					minBs("2.5rem"),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							when('&[data-color="neutral"]', outline("neutral.ring")),
+							when('&[data-color="success"]', outline("success.ring")),
+							when('&[data-color="warning"]', outline("warning.ring")),
+							when('&[data-color="danger"]', outline("danger.ring")),
+						]),
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						gap("0.5rem"),
+						/**
+						 * A glyph is sized against the label beside it and holds that size, so the row keeps the
+						 * height its text and padding ask for; the default `flex-shrink: 1` would squash the glyph
+						 * ahead of the words.
+						 */
+						when("& > svg", [shrink(), is(4), bs(4)]),
+						rounded("md"),
+						weight(500),
+						cursor("default"),
+						/** A small control reaches `--ui-target-size` however a consumer positions it. */
+						hitArea({ anchor: "flex-center" }),
+						userSelect(),
+						pi("1rem"),
+						pb("0.5rem"),
+						/**
+						 * The row measure is stated, so the control lines up with a field of the same size when
+						 * a Group fuses the two, and still grows when a long label wraps.
+						 */
+						minBs("2.5rem"),
 
-					when('&[data-size="sm"]', [
-						pi("0.75rem"),
-						pb("0.375rem"),
-						minBs("2rem"),
-						when("& > svg", [is(3), bs(3)]),
-					]),
-					when('&[data-size="lg"]', [
-						pi("1.25rem"),
-						pb("0.625rem"),
-						minBs("3rem"),
-						when("& > svg", [is(5), bs(5)]),
-					]),
-					/**
-					 * A glyph beside a label carries its own side bearing, so the padding on that
-					 * side drops one step and the glyph and the words read as evenly inset.
-					 */
-					when("&[data-glyph-start]:has(> svg:first-child)", [
-						pis("0.75rem"),
-						when('&[data-size="sm"]', pis("0.5rem")),
-						when('&[data-size="lg"]', pis("1rem")),
-					]),
-					when("&[data-glyph-end]:has(> svg:last-child)", [
-						pie("0.75rem"),
-						when('&[data-size="sm"]', pie("0.5rem")),
-						when('&[data-size="lg"]', pie("1rem")),
-					]),
-					text("sm"),
-					data("size", "sm", text("xs")),
-					data("size", "lg", text("base")),
-					when('&[data-variant="solid"]', [
-						when('&[data-color="brand"]', [
-							bg("brand.bg-solid"),
-							fg("brand.fg-on-solid"),
-							hover(bg("brand.bg-solid-hover")),
-							active(bg("brand.bg-solid-pressed")),
+						when('&[data-size="sm"]', [
+							pi("0.75rem"),
+							pb("0.375rem"),
+							minBs("2rem"),
+							when("& > svg", [is(3), bs(3)]),
 						]),
-						when('&[data-color="neutral"]', [
-							bg("neutral.bg-solid"),
-							fg("neutral.fg-on-solid"),
-							hover(bg("neutral.bg-solid-hover")),
-							active(bg("neutral.bg-solid-pressed")),
+						when('&[data-size="lg"]', [
+							pi("1.25rem"),
+							pb("0.625rem"),
+							minBs("3rem"),
+							when("& > svg", [is(5), bs(5)]),
 						]),
-						when('&[data-color="success"]', [
-							bg("success.bg-solid"),
-							fg("success.fg-on-solid"),
-							hover(bg("success.bg-solid-hover")),
-							active(bg("success.bg-solid-pressed")),
+						/**
+						 * A glyph beside a label carries its own side bearing, so the padding on that
+						 * side drops one step and the glyph and the words read as evenly inset.
+						 */
+						when("&[data-glyph-start]:has(> svg:first-child)", [
+							pis("0.75rem"),
+							when('&[data-size="sm"]', pis("0.5rem")),
+							when('&[data-size="lg"]', pis("1rem")),
 						]),
-						when('&[data-color="warning"]', [
-							bg("warning.bg-solid"),
-							fg("warning.fg-on-solid"),
-							hover(bg("warning.bg-solid-hover")),
-							active(bg("warning.bg-solid-pressed")),
+						when("&[data-glyph-end]:has(> svg:last-child)", [
+							pie("0.75rem"),
+							when('&[data-size="sm"]', pie("0.5rem")),
+							when('&[data-size="lg"]', pie("1rem")),
 						]),
-						when('&[data-color="danger"]', [
-							bg("danger.bg-solid"),
-							fg("danger.fg-on-solid"),
-							hover(bg("danger.bg-solid-hover")),
-							active(bg("danger.bg-solid-pressed")),
+						text("sm"),
+						data("size", "sm", text("xs")),
+						data("size", "lg", text("base")),
+						when('&[data-variant="solid"]', [
+							when('&[data-color="brand"]', [
+								bg("brand.bg-solid"),
+								fg("brand.fg-on-solid"),
+								hover(bg("brand.bg-solid-hover")),
+								active(bg("brand.bg-solid-pressed")),
+							]),
+							when('&[data-color="neutral"]', [
+								bg("neutral.bg-solid"),
+								fg("neutral.fg-on-solid"),
+								hover(bg("neutral.bg-solid-hover")),
+								active(bg("neutral.bg-solid-pressed")),
+							]),
+							when('&[data-color="success"]', [
+								bg("success.bg-solid"),
+								fg("success.fg-on-solid"),
+								hover(bg("success.bg-solid-hover")),
+								active(bg("success.bg-solid-pressed")),
+							]),
+							when('&[data-color="warning"]', [
+								bg("warning.bg-solid"),
+								fg("warning.fg-on-solid"),
+								hover(bg("warning.bg-solid-hover")),
+								active(bg("warning.bg-solid-pressed")),
+							]),
+							when('&[data-color="danger"]', [
+								bg("danger.bg-solid"),
+								fg("danger.fg-on-solid"),
+								hover(bg("danger.bg-solid-hover")),
+								active(bg("danger.bg-solid-pressed")),
+							]),
 						]),
-					]),
-					when('&[data-variant="outline"]', [
-						border({ width: 1, noStyleDefault: true }),
-						bg("transparent"),
-					]),
-					when('&[data-variant="ghost"]', bg("transparent")),
-					when('&[data-variant="outline"]', [
-						when('&[data-color="brand"]', [
-							border("brand.border"),
-							fg("brand.fg"),
-							hover([bg("brand.bg-tint"), border("brand.border-hover")]),
-							active(bg("brand.bg-tint-hover")),
+						when('&[data-variant="outline"]', [
+							border({ width: 1, noStyleDefault: true }),
+							bg("transparent"),
 						]),
-						when('&[data-color="neutral"]', [
-							border("neutral.border"),
-							fg("neutral.fg"),
-							hover([bg("neutral.bg-tint"), border("neutral.border-hover")]),
-							active(bg("neutral.bg-tint-hover")),
+						when('&[data-variant="ghost"]', bg("transparent")),
+						when('&[data-variant="outline"]', [
+							when('&[data-color="brand"]', [
+								border("brand.border"),
+								fg("brand.fg"),
+								hover([bg("brand.bg-tint"), border("brand.border-hover")]),
+								active(bg("brand.bg-tint-hover")),
+							]),
+							when('&[data-color="neutral"]', [
+								border("neutral.border"),
+								fg("neutral.fg"),
+								hover([bg("neutral.bg-tint"), border("neutral.border-hover")]),
+								active(bg("neutral.bg-tint-hover")),
+							]),
+							when('&[data-color="success"]', [
+								border("success.border"),
+								fg("success.fg"),
+								hover([bg("success.bg-tint"), border("success.border-hover")]),
+								active(bg("success.bg-tint-hover")),
+							]),
+							when('&[data-color="danger"]', [
+								border("danger.border"),
+								fg("danger.fg"),
+								hover([bg("danger.bg-tint"), border("danger.border-hover")]),
+								active(bg("danger.bg-tint-hover")),
+							]),
+							when('&[data-color="warning"]', [
+								border("warning.border"),
+								fg("warning.fg"),
+								hover([bg("warning.bg-tint"), border("warning.border-hover")]),
+								active(bg("warning.bg-tint-hover")),
+							]),
 						]),
-						when('&[data-color="success"]', [
-							border("success.border"),
-							fg("success.fg"),
-							hover([bg("success.bg-tint"), border("success.border-hover")]),
-							active(bg("success.bg-tint-hover")),
+						when('&[data-variant="ghost"]', [
+							when('&[data-color="brand"]', [
+								fg("brand.fg"),
+								hover(bg("brand.bg-tint")),
+								active(bg("brand.bg-tint-hover")),
+							]),
+							when('&[data-color="neutral"]', [
+								fg("neutral.fg"),
+								hover(bg("neutral.bg-tint-hover")),
+								active(bg("neutral.bg-tint-pressed")),
+							]),
+							when('&[data-color="success"]', [
+								fg("success.fg"),
+								hover(bg("success.bg-tint")),
+								active(bg("success.bg-tint-hover")),
+							]),
+							when('&[data-color="danger"]', [
+								fg("danger.fg"),
+								hover(bg("danger.bg-tint")),
+								active(bg("danger.bg-tint-hover")),
+							]),
+							when('&[data-color="warning"]', [
+								fg("warning.fg"),
+								hover(bg("warning.bg-tint")),
+								active(bg("warning.bg-tint-hover")),
+							]),
 						]),
-						when('&[data-color="danger"]', [
-							border("danger.border"),
-							fg("danger.fg"),
-							hover([bg("danger.bg-tint"), border("danger.border-hover")]),
-							active(bg("danger.bg-tint-hover")),
+						when('&[aria-pressed="true"]', [
+							when(
+								'&[data-variant="outline"][data-color="brand"], &[data-variant="ghost"][data-color="brand"]',
+								bg("brand.bg-tint"),
+							),
+							when(
+								'&[data-variant="outline"][data-color="neutral"], &[data-variant="ghost"][data-color="neutral"]',
+								bg("neutral.bg-tint-pressed"),
+							),
+							when(
+								'&[data-variant="outline"][data-color="success"], &[data-variant="ghost"][data-color="success"]',
+								bg("success.bg-tint"),
+							),
+							when(
+								'&[data-variant="outline"][data-color="danger"], &[data-variant="ghost"][data-color="danger"]',
+								bg("danger.bg-tint"),
+							),
+							when(
+								'&[data-variant="outline"][data-color="warning"], &[data-variant="ghost"][data-color="warning"]',
+								bg("warning.bg-tint"),
+							),
 						]),
-						when('&[data-color="warning"]', [
-							border("warning.border"),
-							fg("warning.fg"),
-							hover([bg("warning.bg-tint"), border("warning.border-hover")]),
-							active(bg("warning.bg-tint-hover")),
-						]),
-					]),
-					when('&[data-variant="ghost"]', [
-						when('&[data-color="brand"]', [
-							fg("brand.fg"),
-							hover(bg("brand.bg-tint")),
-							active(bg("brand.bg-tint-hover")),
-						]),
-						when('&[data-color="neutral"]', [
-							fg("neutral.fg"),
-							hover(bg("neutral.bg-tint-hover")),
-							active(bg("neutral.bg-tint-pressed")),
-						]),
-						when('&[data-color="success"]', [
-							fg("success.fg"),
-							hover(bg("success.bg-tint")),
-							active(bg("success.bg-tint-hover")),
-						]),
-						when('&[data-color="danger"]', [
-							fg("danger.fg"),
-							hover(bg("danger.bg-tint")),
-							active(bg("danger.bg-tint-hover")),
-						]),
-						when('&[data-color="warning"]', [
-							fg("warning.fg"),
-							hover(bg("warning.bg-tint")),
-							active(bg("warning.bg-tint-hover")),
-						]),
-					]),
-					when('&[aria-pressed="true"]', [
-						when(
-							'&[data-variant="outline"][data-color="brand"], &[data-variant="ghost"][data-color="brand"]',
-							bg("brand.bg-tint"),
-						),
-						when(
-							'&[data-variant="outline"][data-color="neutral"], &[data-variant="ghost"][data-color="neutral"]',
-							bg("neutral.bg-tint-pressed"),
-						),
-						when(
-							'&[data-variant="outline"][data-color="success"], &[data-variant="ghost"][data-color="success"]',
-							bg("success.bg-tint"),
-						),
-						when(
-							'&[data-variant="outline"][data-color="danger"], &[data-variant="ghost"][data-color="danger"]',
-							bg("danger.bg-tint"),
-						),
-						when(
-							'&[data-variant="outline"][data-color="warning"], &[data-variant="ghost"][data-color="warning"]',
-							bg("warning.bg-tint"),
-						),
-					]),
-					when("&:disabled", opacity(50)),
-					when("&:disabled", cursor("not-allowed")),
+						when("&:disabled", opacity(50)),
+						when("&:disabled", cursor("not-allowed")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>
@@ -389,14 +391,16 @@ export function ToggleButtonGroup(handle: Handle<ToggleButtonGroup.Props>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_GROUP_ROLE }),
-					flex(),
-					items("center"),
-					gap("0.25rem"),
-					when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_GROUP_ROLE }),
+						flex(),
+						items("center"),
+						gap("0.25rem"),
+						when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

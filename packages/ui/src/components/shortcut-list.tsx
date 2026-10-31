@@ -10,6 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { contents, flex, gap, grid, gridTemplate, items, justify } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { pretty, text, weight } from "@sdxc/u/typography";
@@ -62,7 +63,10 @@ export function ShortcutList(handle: Handle<ShortcutList.Props>) {
 			<dl
 				{...rest}
 				data-slot="shortcut-list"
-				mix={[m(0), grid(), gap(2, 4), items("center"), gridTemplate({ columns: "1fr auto" }), mix]}
+				mix={mergeMix(
+					[m(0), grid(), gap(2, 4), items("center"), gridTemplate({ columns: "1fr auto" })],
+					mix,
+				)}
 			>
 				{children}
 			</dl>
@@ -84,7 +88,7 @@ ShortcutList.Item = function ShortcutListItem(handle: Handle<ShortcutList.ItemPr
 		let { children, keys, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="shortcut" mix={[contents(), mix]}>
+			<div {...rest} data-slot="shortcut" mix={mergeMix(contents(), mix)}>
 				<dt mix={[text("sm"), fg("neutral"), pretty()]}>{children}</dt>
 				<dd mix={[m(0), flex(), gap(1), items("center"), justify("end")]}>
 					{keys.map((key, index) => (

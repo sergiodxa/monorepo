@@ -14,6 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { outlineColor } from "@sdxc/u/color";
 import { roundedCorner } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, items } from "@sdxc/u/layout";
 import { mis } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
@@ -66,33 +67,35 @@ export function Group(handle: Handle<Group.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					flex(),
-					items("center"),
-					/**
-					 * The controls compose into one shape, so the cluster keeps the rounding on
-					 * its own outer corners and the seam where two of them meet is drawn once; the
-					 * last control before a trailing `<link rel="prefetch">` hint keeps its corners.
-					 */
-					when("& > *:not(:first-child)", [
-						roundedCorner("start-start", "none"),
-						roundedCorner("end-start", "none"),
-						mis("-1px"),
-					]),
-					when("& > *:has(~ :not(link))", [
-						roundedCorner("start-end", "none"),
-						roundedCorner("end-end", "none"),
-					]),
-					/**
-					 * Focus shows on the control holding it, naming which control has it where a ring
-					 * around the cluster names only the group. That control is raised so its ring
-					 * crosses the seam it shares with a neighbour.
-					 */
-					when("& > *:focus-visible", z(1)),
-					when('&[aria-invalid="true"] > *:focus-visible', outlineColor("danger")),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						flex(),
+						items("center"),
+						/**
+						 * The controls compose into one shape, so the cluster keeps the rounding on
+						 * its own outer corners and the seam where two of them meet is drawn once; the
+						 * last control before a trailing `<link rel="prefetch">` hint keeps its corners.
+						 */
+						when("& > *:not(:first-child)", [
+							roundedCorner("start-start", "none"),
+							roundedCorner("end-start", "none"),
+							mis("-1px"),
+						]),
+						when("& > *:has(~ :not(link))", [
+							roundedCorner("start-end", "none"),
+							roundedCorner("end-end", "none"),
+						]),
+						/**
+						 * Focus shows on the control holding it, naming which control has it where a ring
+						 * around the cluster names only the group. That control is raised so its ring
+						 * crosses the seam it shares with a neighbour.
+						 */
+						when("& > *:focus-visible", z(1)),
+						when('&[aria-invalid="true"] > *:focus-visible', outlineColor("danger")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

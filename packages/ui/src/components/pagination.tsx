@@ -15,7 +15,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, listStyle, pointerEvents } from "@sdxc/u/general";
+import { cursor, listStyle, pointerEvents, mergeMix } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items, justify } from "@sdxc/u/layout";
 import { bs, m, minIs, p, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
@@ -109,7 +109,7 @@ export function Pagination(handle: Handle<Pagination.Props>) {
 			'Pagination: needs an "aria-label" or "aria-labelledby" identifying which set of results it paginates for assistive technology.',
 		);
 
-		return <nav {...rest} data-slot="pagination" mix={[flex(), items("center"), mix]} />;
+		return <nav {...rest} data-slot="pagination" mix={mergeMix([flex(), items("center")], mix)} />;
 	};
 }
 
@@ -138,7 +138,7 @@ Pagination.List = function PaginationList(handle: Handle<Pagination.ListProps>) 
 			<ul
 				{...rest}
 				data-slot="list"
-				mix={[flex(), items("center"), gap("0.25rem"), m("0"), p("0"), listStyle(), mix]}
+				mix={mergeMix([flex(), items("center"), gap("0.25rem"), m("0"), p("0"), listStyle()], mix)}
 			/>
 		);
 	};
@@ -160,7 +160,7 @@ Pagination.Item = function PaginationItem(handle: Handle<Pagination.ItemProps>) 
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <li {...rest} data-slot="item" mix={[flex(), items("center"), mix]} />;
+		return <li {...rest} data-slot="item" mix={mergeMix([flex(), items("center")], mix)} />;
 	};
 };
 
@@ -188,30 +188,32 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
 				data-slot="link"
-				mix={[
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					bs("var(--ui-pagination-control-size, 2.25rem)"),
-					minIs("var(--ui-pagination-control-size, 2.25rem)"),
-					rounded("md"),
-					pi("0.75rem"),
-					weight(500),
-					fg("neutral"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					when('&[aria-current]:not([aria-current="false"])', [
-						bg("brand.solid"),
-						fg("brand.onSolid"),
-					]),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					when('&[aria-disabled="true"]', opacity(50)),
-					text("sm"),
-					tabularNums(),
-					textDecoration("none"),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						bs("var(--ui-pagination-control-size, 2.25rem)"),
+						minIs("var(--ui-pagination-control-size, 2.25rem)"),
+						rounded("md"),
+						pi("0.75rem"),
+						weight(500),
+						fg("neutral"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("brand.solid"),
+							fg("brand.onSolid"),
+						]),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						when('&[aria-disabled="true"]', opacity(50)),
+						text("sm"),
+						tabularNums(),
+						textDecoration("none"),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 
@@ -259,26 +261,28 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 				type={resolvedType}
 				{...rest}
 				data-slot="button"
-				mix={[
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					bs("var(--ui-pagination-control-size, 2.25rem)"),
-					minIs("var(--ui-pagination-control-size, 2.25rem)"),
-					rounded("md"),
-					pi("0.75rem"),
-					weight(500),
-					fg("neutral"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					active(bg("neutral.bg-tint-pressed")),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					when("&:disabled", opacity(50)),
-					text("sm"),
-					tabularNums(),
-					when("&:disabled", cursor("not-allowed")),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						bs("var(--ui-pagination-control-size, 2.25rem)"),
+						minIs("var(--ui-pagination-control-size, 2.25rem)"),
+						rounded("md"),
+						pi("0.75rem"),
+						weight(500),
+						fg("neutral"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						active(bg("neutral.bg-tint-pressed")),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						when("&:disabled", opacity(50)),
+						text("sm"),
+						tabularNums(),
+						when("&:disabled", cursor("not-allowed")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>

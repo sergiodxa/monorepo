@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { justify, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, pb, pbe, pi } from "@sdxc/u/size";
@@ -108,11 +108,10 @@ export function Accordion(handle: Handle<Accordion.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					is("full"),
-					borderEdge("block-start", { color: "neutral", width: 1, style: "solid" }),
+				mix={mergeMix(
+					[is("full"), borderEdge("block-start", { color: "neutral", width: 1, style: "solid" })],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -156,15 +155,17 @@ Accordion.Item = function AccordionItem(handle: Handle<Accordion.ItemProps>) {
 		return (
 			<Disclosure
 				{...rest}
-				mix={[
-					rounded("none"),
-					borderEdge("inline-start", { width: "0", noStyleDefault: true }),
-					borderEdge("inline-end", { width: "0", noStyleDefault: true }),
-					borderEdge("block-start", { width: "0", noStyleDefault: true }),
-					open(when('& summary [data-slot="icon"]', rotate(180))),
-					when('&:has(> summary[aria-disabled="true"])', opacity(50)),
+				mix={mergeMix(
+					[
+						rounded("none"),
+						borderEdge("inline-start", { width: "0", noStyleDefault: true }),
+						borderEdge("inline-end", { width: "0", noStyleDefault: true }),
+						borderEdge("block-start", { width: "0", noStyleDefault: true }),
+						open(when('& summary [data-slot="icon"]', rotate(180))),
+						when('&:has(> summary[aria-disabled="true"])', opacity(50)),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -195,29 +196,31 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 		return (
 			<Disclosure.Trigger
 				{...rest}
-				mix={[
-					justify("between"),
-					pb(4),
-					pi(0),
-					rounded("sm"),
-					/**
-					 * The row runs flush to the column edge, so the focus ring is drawn inside it
-					 * where an outer offset would be clipped by the band.
-					 */
-					when("&:focus-visible", raw({ outlineOffset: "-2px" })),
-					hover([bg("transparent"), textDecoration("underline")]),
-					when('& [data-slot="icon"]', [
-						is(4),
-						bs(4),
-						shrink(),
-						transition("transform", { duration: "200ms" }),
-					]),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						when('& [data-slot="icon"]', transitionDuration("0s")),
-					),
+				mix={mergeMix(
+					[
+						justify("between"),
+						pb(4),
+						pi(0),
+						rounded("sm"),
+						/**
+						 * The row runs flush to the column edge, so the focus ring is drawn inside it
+						 * where an outer offset would be clipped by the band.
+						 */
+						when("&:focus-visible", raw({ outlineOffset: "-2px" })),
+						hover([bg("transparent"), textDecoration("underline")]),
+						when('& [data-slot="icon"]', [
+							is(4),
+							bs(4),
+							shrink(),
+							transition("transform", { duration: "200ms" }),
+						]),
+						media(
+							"(prefers-reduced-motion: reduce)",
+							when('& [data-slot="icon"]', transitionDuration("0s")),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -240,7 +243,10 @@ Accordion.Content = function AccordionContent(handle: Handle<Accordion.ContentPr
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<Disclosure.Panel {...rest} mix={[pi(0), pbe(4), fg("neutral"), text("sm"), pretty(), mix]} />
+			<Disclosure.Panel
+				{...rest}
+				mix={mergeMix([pi(0), pbe(4), fg("neutral"), text("sm"), pretty()], mix)}
+			/>
 		);
 	};
 };

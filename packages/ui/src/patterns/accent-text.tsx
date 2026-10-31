@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { forcedColors } from "@sdxc/u/responsive";
 import { before } from "@sdxc/u/state";
 
@@ -112,7 +112,7 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 					{...rest}
 					data-slot="accent-text"
 					data-variant="swash"
-					mix={[raw({ color: ACCENT, position: "relative", whiteSpace: "nowrap" }), mix]}
+					mix={mergeMix(raw({ color: ACCENT, position: "relative", whiteSpace: "nowrap" }), mix)}
 				>
 					<svg
 						aria-hidden="true"
@@ -144,25 +144,29 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 					{...rest}
 					data-slot="accent-text"
 					data-variant={resolvedVariant}
-					mix={[
-						raw(spanVariant),
-						resolvedVariant === "chip"
-							? before(
-									raw({
-										content: '""',
-										inlineSize: "0.3em",
-										blockSize: "0.3em",
-										flexShrink: "0",
-										borderRadius: "9999px",
-										backgroundColor: "currentColor",
-									}),
-								)
-							: [],
-						resolvedVariant === "sheen"
-							? forcedColors(raw({ backgroundImage: "none", WebkitTextFillColor: "currentColor" }))
-							: [],
+					mix={mergeMix(
+						[
+							raw(spanVariant),
+							resolvedVariant === "chip"
+								? before(
+										raw({
+											content: '""',
+											inlineSize: "0.3em",
+											blockSize: "0.3em",
+											flexShrink: "0",
+											borderRadius: "9999px",
+											backgroundColor: "currentColor",
+										}),
+									)
+								: [],
+							resolvedVariant === "sheen"
+								? forcedColors(
+										raw({ backgroundImage: "none", WebkitTextFillColor: "currentColor" }),
+									)
+								: [],
+						],
 						mix,
-					]}
+					)}
 				>
 					{children}
 				</span>
@@ -175,7 +179,7 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 					{...rest}
 					data-slot="accent-text"
 					data-variant="highlight"
-					mix={[
+					mix={mergeMix(
 						raw({
 							backgroundImage: `linear-gradient(transparent 60%, ${MARKER} 60%)`,
 							paddingInline: "0.06em",
@@ -183,7 +187,7 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 							WebkitBoxDecorationBreak: "clone",
 						}),
 						mix,
-					]}
+					)}
 				>
 					{children}
 				</span>
@@ -195,7 +199,7 @@ export function AccentText(handle: Handle<AccentText.Props>) {
 				{...rest}
 				data-slot="accent-text"
 				data-variant="color"
-				mix={[raw({ color: ACCENT }), mix]}
+				mix={mergeMix(raw({ color: ACCENT }), mix)}
 			>
 				{children}
 			</span>

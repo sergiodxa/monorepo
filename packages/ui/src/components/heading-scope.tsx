@@ -11,6 +11,7 @@
 
 import type { Handle, Props as TagProps } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { contents } from "@sdxc/u/layout";
 
 /**
@@ -136,6 +137,6 @@ export function HeadingScope(handle: Handle<HeadingScope.Props, HeadingScope.Con
 
 		handle.context.set({ level: resolved });
 
-		return <div {...rest} data-heading-level={resolved} mix={[contents(), mix]} />;
+		return <div {...rest} data-heading-level={resolved} mix={mergeMix(contents(), mix)} />;
 	};
 }

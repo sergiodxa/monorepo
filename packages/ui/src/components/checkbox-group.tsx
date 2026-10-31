@@ -12,6 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { flexRow, gap, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -88,13 +89,15 @@ export function CheckboxGroup(handle: Handle<CheckboxGroup.Props>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					vstack({ gap: 2 }),
-					when('&[data-orientation="horizontal"]', [flexRow(), gap(4)]),
-					when('&[aria-invalid="true"]', fg("danger")),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						vstack({ gap: 2 }),
+						when('&[data-orientation="horizontal"]', [flexRow(), gap(4)]),
+						when('&[aria-invalid="true"]', fg("danger")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

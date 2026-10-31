@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import {
 	basis,
 	borderCollapse,
@@ -234,7 +234,7 @@ export function Calendar(handle: Handle<Calendar.Props>) {
 			<div
 				{...rest}
 				data-slot="calendar"
-				mix={[inlineBlock(), rounded("lg"), p(3), bg("neutral.tint"), mix]}
+				mix={mergeMix([inlineBlock(), rounded("lg"), p(3), bg("neutral.tint")], mix)}
 			>
 				{children ?? (
 					<Input
@@ -281,7 +281,7 @@ Calendar.Header = function CalendarHeader(handle: Handle<Calendar.HeaderProps>) 
 			<header
 				{...rest}
 				data-slot="header"
-				mix={[flex(), items("center"), justify("between"), mbe(4), mix]}
+				mix={mergeMix([flex(), items("center"), justify("between"), mbe(4)], mix)}
 			/>
 		);
 	};
@@ -314,24 +314,26 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 				type={type ?? DEFAULT_NAV_BUTTON_TYPE}
 				{...rest}
 				data-slot="previous-button"
-				mix={[
-					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					flex(),
-					items("center"),
-					justify("center"),
-					relative(),
-					is(8),
-					bs(8),
-					hitArea(),
-					rounded("full"),
-					fg("neutral"),
-					hover(bg("neutral.bg-tint-hover")),
-					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					when("& svg", [is(4), bs(4)]),
-					when("&:dir(rtl) svg", scaleX(-1)),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						flex(),
+						items("center"),
+						justify("center"),
+						relative(),
+						is(8),
+						bs(8),
+						hitArea(),
+						rounded("full"),
+						fg("neutral"),
+						hover(bg("neutral.bg-tint-hover")),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+						when("& svg", [is(4), bs(4)]),
+						when("&:dir(rtl) svg", scaleX(-1)),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children ?? <ChevronLeftIcon />}
 			</button>
@@ -364,24 +366,26 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 				type={type ?? DEFAULT_NAV_BUTTON_TYPE}
 				{...rest}
 				data-slot="next-button"
-				mix={[
-					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					flex(),
-					items("center"),
-					justify("center"),
-					relative(),
-					is(8),
-					bs(8),
-					hitArea(),
-					rounded("full"),
-					fg("neutral"),
-					hover(bg("neutral.bg-tint-hover")),
-					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
-					when("& svg", [is(4), bs(4)]),
-					when("&:dir(rtl) svg", scaleX(-1)),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						flex(),
+						items("center"),
+						justify("center"),
+						relative(),
+						is(8),
+						bs(8),
+						hitArea(),
+						rounded("full"),
+						fg("neutral"),
+						hover(bg("neutral.bg-tint-hover")),
+						when("&:disabled", [cursor("not-allowed"), opacity(50)]),
+						when("& svg", [is(4), bs(4)]),
+						when("&:dir(rtl) svg", scaleX(-1)),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children ?? <ChevronRightIcon />}
 			</button>
@@ -407,16 +411,18 @@ Calendar.Heading = function CalendarHeading(handle: Handle<Calendar.HeadingProps
 			<Heading
 				{...rest}
 				data-slot="heading"
-				mix={[
-					grow(),
-					shrink(1),
-					basis("0%"),
-					textAlign("center"),
-					weight("semibold"),
-					fg("neutral.emphasis"),
-					text("sm"),
+				mix={mergeMix(
+					[
+						grow(),
+						shrink(1),
+						basis("0%"),
+						textAlign("center"),
+						weight("semibold"),
+						fg("neutral.emphasis"),
+						text("sm"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -448,7 +454,7 @@ Calendar.Grid = function CalendarGrid(handle: Handle<Calendar.GridProps>) {
 			<table
 				{...rest}
 				data-slot="grid"
-				mix={[borderCollapse("separate"), borderSpacing("0.25rem"), mix]}
+				mix={mergeMix([borderCollapse("separate"), borderSpacing("0.25rem")], mix)}
 			/>
 		);
 	};
@@ -512,14 +518,10 @@ Calendar.HeaderCell = function CalendarHeaderCell(handle: Handle<Calendar.Header
 			<th
 				{...rest}
 				data-slot="header-cell"
-				mix={[
-					attrs({ scope: "col" }),
-					pbe(2),
-					weight("medium"),
-					fg("neutral.muted"),
-					text("xs"),
+				mix={mergeMix(
+					[attrs({ scope: "col" }), pbe(2), weight("medium"), fg("neutral.muted"), text("xs")],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -568,32 +570,34 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 			<td
 				{...rest}
 				data-slot="cell"
-				mix={[
-					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					/**
-					 * Table alignment centres the day while the cell stays a table cell in its row; a row
-					 * laid out as a flex box turns its cells into blocks, where `align-content` centres the
-					 * day. Each declaration answers one of the two cases.
-					 */
-					textAlign("center"),
-					verticalAlign("middle"),
-					raw({ alignContent: "center" }),
-					is(9),
-					bs(9),
-					cursor("default"),
-					rounded("full"),
-					fg("neutral.emphasis"),
-					text("sm"),
-					tabularNums(),
-					hover(bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),
-					when("&[data-unavailable]", [fg("neutral.muted"), textDecoration("line-through")]),
-					when("&[data-outside-month]", fg("neutral.muted")),
-					when('&[aria-invalid="true"]', [bg("danger.solid"), fg("danger.onSolid")]),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						/**
+						 * Table alignment centres the day while the cell stays a table cell in its row; a row
+						 * laid out as a flex box turns its cells into blocks, where `align-content` centres the
+						 * day. Each declaration answers one of the two cases.
+						 */
+						textAlign("center"),
+						verticalAlign("middle"),
+						raw({ alignContent: "center" }),
+						is(9),
+						bs(9),
+						cursor("default"),
+						rounded("full"),
+						fg("neutral.emphasis"),
+						text("sm"),
+						tabularNums(),
+						hover(bg("neutral.bg-tint-hover")),
+						when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),
+						when("&[data-unavailable]", [fg("neutral.muted"), textDecoration("line-through")]),
+						when("&[data-outside-month]", fg("neutral.muted")),
+						when('&[aria-invalid="true"]', [bg("danger.solid"), fg("danger.onSolid")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

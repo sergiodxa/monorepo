@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { outline } from "@sdxc/u/color";
 import { transition } from "@sdxc/u/effects";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { noScrollbar } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 
@@ -119,10 +119,10 @@ export function SegmentedStage(handle: Handle<SegmentedStage.Props>) {
 				data-slot="segmented-stage"
 				data-name={name}
 				data-align={isStart ? "start" : "center"}
-				mix={[
+				mix={mergeMix(
 					raw({ display: "flex", flexDirection: "column", gap: "1.5rem", minInlineSize: "0" }),
 					mix,
-				]}
+				)}
 			>
 				<div
 					data-slot="segmented-stage-scroller"

@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container, vstack } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
@@ -136,12 +136,14 @@ export function SponsorWall(handle: Handle<SponsorWall.Props>) {
 			<div
 				{...rest}
 				data-slot="sponsor-wall"
-				mix={[
-					container(CONTAINER),
-					vstack({ gap: 14, align: "stretch" }),
-					raw({ inlineSize: "100%" }),
+				mix={mergeMix(
+					[
+						container(CONTAINER),
+						vstack({ gap: 14, align: "stretch" }),
+						raw({ inlineSize: "100%" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				<HeadingScope>{children}</HeadingScope>
 				{actions ? (
@@ -266,7 +268,7 @@ SponsorWall.Tier = function SponsorWallTier(handle: Handle<SponsorWall.TierProps
 				{...rest}
 				data-slot="sponsor-wall-tier"
 				data-size={resolvedSize}
-				mix={[vstack({ gap: 4, align: "stretch" }), mix]}
+				mix={mergeMix(vstack({ gap: 4, align: "stretch" }), mix)}
 			>
 				<Tag data-slot="sponsor-wall-label" data-variant="mono" mix={tierLabel()}>
 					{label}
@@ -301,7 +303,7 @@ SponsorWall.Individuals = function SponsorWallIndividuals(
 			<div
 				{...rest}
 				data-slot="sponsor-wall-individuals"
-				mix={[vstack({ gap: 6, align: "stretch" }), mix]}
+				mix={mergeMix(vstack({ gap: 6, align: "stretch" }), mix)}
 			>
 				{label ? (
 					<Tag data-slot="sponsor-wall-label" data-variant="mono" mix={tierLabel()}>
@@ -410,7 +412,7 @@ SponsorWall.Person = function SponsorWallPerson(handle: Handle<SponsorWall.Perso
 					aria-label={name}
 					title={name}
 					data-size={resolvedSize}
-					mix={[personCircle(PERSON_SIZES[resolvedSize]), mix]}
+					mix={mergeMix(personCircle(PERSON_SIZES[resolvedSize]), mix)}
 				>
 					{src ? (
 						<img src={src} alt="" loading="lazy" />

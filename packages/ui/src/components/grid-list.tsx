@@ -17,7 +17,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { GripVerticalIcon } from "@sdxc/icons";
 import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -187,16 +187,18 @@ export function GridList(handle: Handle<GridList.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					panelChrome(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					pb(2),
-					pi(2),
-					outline("none"),
-					container(CONTAINER_NAME),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						panelChrome(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						pb(2),
+						pi(2),
+						outline("none"),
+						container(CONTAINER_NAME),
+					],
 					mix,
-				]}
+				)}
 			>
 				<div
 					data-slot="list"
@@ -246,37 +248,39 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 				{...rest}
 				id={id}
 				data-rmx-key={id}
-				mix={[
-					interactiveTransition(),
-					attrs({ role: DEFAULT_ITEM_ROLE, tabIndex: DEFAULT_ITEM_TAB_INDEX }),
-					flex(),
-					items("center"),
-					gap(2),
-					/**
-					 * A leading glyph is sized against the row's text and holds that size when the row runs
-					 * short; the default `flex-shrink: 1` would squeeze each glyph by its own row's overrun
-					 * and leave the column of glyphs ragged.
-					 */
-					when("& > svg", [shrink(), is(4), bs(4)]),
-					rounded("md"),
-					pb(2),
-					pi(2),
-					fg("neutral.emphasis"),
-					/**
-					 * A selected row is tinted far enough off the surface to read at a glance; the plain tint
-					 * matches the list's background. Pointer and selection states use mutually exclusive
-					 * selectors, so a hovered row stays visibly selected whichever order the layers land in.
-					 */
-					when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
-					when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
-					when('&:focus:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
-					when('&[aria-selected="true"]', bg("brand.bg-tint-hover")),
-					when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
-					when('&[aria-disabled="true"]', opacity(50)),
-					cursor("default"),
-					outline("none"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_ITEM_ROLE, tabIndex: DEFAULT_ITEM_TAB_INDEX }),
+						flex(),
+						items("center"),
+						gap(2),
+						/**
+						 * A leading glyph is sized against the row's text and holds that size when the row runs
+						 * short; the default `flex-shrink: 1` would squeeze each glyph by its own row's overrun
+						 * and leave the column of glyphs ragged.
+						 */
+						when("& > svg", [shrink(), is(4), bs(4)]),
+						rounded("md"),
+						pb(2),
+						pi(2),
+						fg("neutral.emphasis"),
+						/**
+						 * A selected row is tinted far enough off the surface to read at a glance; the plain tint
+						 * matches the list's background. Pointer and selection states use mutually exclusive
+						 * selectors, so a hovered row stays visibly selected whichever order the layers land in.
+						 */
+						when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+						when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
+						when('&:focus:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
+						when('&[aria-selected="true"]', bg("brand.bg-tint-hover")),
+						when('&[aria-selected="true"]:hover', bg("brand.bg-tint-pressed")),
+						when('&[aria-disabled="true"]', opacity(50)),
+						cursor("default"),
+						outline("none"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -302,18 +306,20 @@ GridList.Section = function GridListSection(handle: Handle<GridList.SectionProps
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_SECTION_ROLE }),
-					flex(),
-					flexCol(),
-					gap(1),
-					not(":first-child", [
-						mbs(2),
-						pbs(2),
-						borderEdge("block-start", { color: "neutral", width: 1 }),
-					]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_SECTION_ROLE }),
+						flex(),
+						flexCol(),
+						gap(1),
+						not(":first-child", [
+							mbs(2),
+							pbs(2),
+							borderEdge("block-start", { color: "neutral", width: 1 }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -336,16 +342,18 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 		return (
 			<header
 				{...rest}
-				mix={[
-					pb(1),
-					pi(2),
-					weight("semibold"),
-					tracking("wider"),
-					fg("neutral.muted"),
-					text("xs"),
-					textTransform("uppercase"),
+				mix={mergeMix(
+					[
+						pb(1),
+						pi(2),
+						weight("semibold"),
+						tracking("wider"),
+						fg("neutral.muted"),
+						text("xs"),
+						textTransform("uppercase"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -384,15 +392,20 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 			<button
 				type="button"
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_DRAG_HANDLE_ROLE, "data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER }),
-					relative(),
-					hitArea(),
-					fg("neutral.muted"),
-					cursor("grab"),
-					active(cursor("grabbing")),
+				mix={mergeMix(
+					[
+						attrs({
+							role: DEFAULT_DRAG_HANDLE_ROLE,
+							"data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER,
+						}),
+						relative(),
+						hitArea(),
+						fg("neutral.muted"),
+						cursor("grab"),
+						active(cursor("grabbing")),
+					],
 					mix,
-				]}
+				)}
 			>
 				<GripVerticalIcon size={16} />
 			</button>

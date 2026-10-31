@@ -14,6 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, flexWrap, gap, items, justify } from "@sdxc/u/layout";
 import { bs, is, mbs, p } from "@sdxc/u/size";
 import {
@@ -126,19 +127,21 @@ export function Empty(handle: Handle<Empty.Props>) {
 				{...rest}
 				data-color={color}
 				data-slot="empty"
-				mix={[
-					semanticColorPanel(),
-					flex(),
-					flexCol(),
-					is("full"),
-					items("center"),
-					gap(3),
-					rounded("xl"),
-					border({ width: "1px", style: "dashed" }),
-					p(8),
-					textAlign("center"),
+				mix={mergeMix(
+					[
+						semanticColorPanel(),
+						flex(),
+						flexCol(),
+						is("full"),
+						items("center"),
+						gap(3),
+						rounded("xl"),
+						border({ width: "1px", style: "dashed" }),
+						p(8),
+						textAlign("center"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -162,20 +165,22 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 			<div
 				{...rest}
 				data-slot="icon"
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
-					flex(),
-					bs("3rem"),
-					is("3rem"),
-					items("center"),
-					justify("center"),
-					rounded("full"),
-					border({ width: "1px", style: "solid" }),
-					fg("currentcolor"),
-					border(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent")),
-					bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent")),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
+						flex(),
+						bs("3rem"),
+						is("3rem"),
+						items("center"),
+						justify("center"),
+						rounded("full"),
+						border({ width: "1px", style: "solid" }),
+						fg("currentcolor"),
+						border(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent")),
+						bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -201,14 +206,10 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[
-					weight("semibold"),
-					tracking("tight"),
-					fontSize("base"),
-					leading("snug"),
-					balance(),
+				mix={mergeMix(
+					[weight("semibold"), tracking("tight"), fontSize("base"), leading("snug"), balance()],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</Tag>
@@ -232,13 +233,15 @@ Empty.Description = function EmptyDescription(handle: Handle<Empty.DescriptionPr
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[
-					fontSize("sm"),
-					leading("relaxed"),
-					pretty(),
-					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+				mix={mergeMix(
+					[
+						fontSize("sm"),
+						leading("relaxed"),
+						pretty(),
+						fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</p>
@@ -263,19 +266,21 @@ Empty.Action = function EmptyAction(handle: Handle<Empty.ActionProps>) {
 			<div
 				{...rest}
 				data-slot="action"
-				mix={[
-					/**
-					 * The slot lays out however many actions the state offers as a centered row that
-					 * wraps, since two buttons side by side outgrow a narrow panel.
-					 */
-					flex(),
-					flexWrap(),
-					items("center"),
-					justify("center"),
-					gap(2),
-					mbs(1),
+				mix={mergeMix(
+					[
+						/**
+						 * The slot lays out however many actions the state offers as a centered row that
+						 * wraps, since two buttons side by side outgrow a narrow panel.
+						 */
+						flex(),
+						flexWrap(),
+						items("center"),
+						justify("center"),
+						gap(2),
+						mbs(1),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

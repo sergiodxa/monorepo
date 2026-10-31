@@ -14,7 +14,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import {
 	basis,
 	center,
@@ -136,21 +136,23 @@ export function Item(handle: Handle<Item.Props>) {
 			<div
 				{...rest}
 				data-slot="item"
-				mix={[
-					flex(),
-					items("center"),
-					gap("var(--ui-item-gap, 0.75rem)"),
-					pb("var(--ui-item-padding-block, 0.625rem)"),
-					pi("var(--ui-item-padding-inline, 0.75rem)"),
-					container(CONTAINER_NAME),
-					/**
-					 * The row wraps at every width, and {@link Item.Actions} claiming a full line once the
-					 * row is narrow decides when it does; a query on this row's own container can only
-					 * restyle its descendants, never the row itself.
-					 */
-					flexWrap("wrap"),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						gap("var(--ui-item-gap, 0.75rem)"),
+						pb("var(--ui-item-padding-block, 0.625rem)"),
+						pi("var(--ui-item-padding-inline, 0.75rem)"),
+						container(CONTAINER_NAME),
+						/**
+						 * The row wraps at every width, and {@link Item.Actions} claiming a full line once the
+						 * row is narrow decides when it does; a query on this row's own container can only
+						 * restyle its descendants, never the row itself.
+						 */
+						flexWrap("wrap"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -183,15 +185,17 @@ Item.Media = function ItemMedia(handle: Handle<Item.MediaProps>) {
 			<div
 				{...rest}
 				data-slot="media"
-				mix={[
-					center(),
-					fg("neutral"),
-					when("& > svg", [is(5), bs(5)]),
-					shrink(),
-					is("var(--ui-item-media-size, 2rem)"),
-					bs("var(--ui-item-media-size, 2rem)"),
+				mix={mergeMix(
+					[
+						center(),
+						fg("neutral"),
+						when("& > svg", [is(5), bs(5)]),
+						shrink(),
+						is("var(--ui-item-media-size, 2rem)"),
+						bs("var(--ui-item-media-size, 2rem)"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -220,7 +224,7 @@ Item.Content = function ItemContent(handle: Handle<Item.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[flex(), flexCol(), minIs(0), gap(0.5), grow(), shrink(1), basis("0%"), mix]}
+				mix={mergeMix([flex(), flexCol(), minIs(0), gap(0.5), grow(), shrink(1), basis("0%")], mix)}
 			>
 				{children}
 			</div>
@@ -246,7 +250,7 @@ Item.Title = function ItemTitle(handle: Handle<Item.TitleProps>) {
 			<div
 				{...rest}
 				data-slot="title"
-				mix={[weight("medium"), fg("neutral.emphasis"), truncate(), text("sm"), mix]}
+				mix={mergeMix([weight("medium"), fg("neutral.emphasis"), truncate(), text("sm")], mix)}
 			>
 				{children}
 			</div>
@@ -272,13 +276,10 @@ Item.Description = function ItemDescription(handle: Handle<Item.DescriptionProps
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[
-					fg("neutral.muted"),
-					truncate(),
-					fontSize("0.8125rem"),
-					leading("calc(1.125 / 0.8125)"),
+				mix={mergeMix(
+					[fg("neutral.muted"), truncate(), fontSize("0.8125rem"), leading("calc(1.125 / 0.8125)")],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</p>
@@ -307,22 +308,24 @@ Item.Actions = function ItemActions(handle: Handle<Item.ActionsProps>) {
 			<div
 				{...rest}
 				data-slot="actions"
-				mix={[
-					flex(),
-					items("center"),
-					mis("auto"),
-					shrink(),
-					gap("var(--ui-item-actions-gap, 0.5rem)"),
-					atMax(NARROW_CONTAINER_SIZE, CONTAINER_NAME, [
-						basis("100%"),
-						raw({
-							justifyContent: "flex-end",
-							marginInlineStart:
-								"calc(var(--ui-item-media-size, 2rem) + var(--ui-item-gap, 0.75rem))",
-						}),
-					]),
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
+						mis("auto"),
+						shrink(),
+						gap("var(--ui-item-actions-gap, 0.5rem)"),
+						atMax(NARROW_CONTAINER_SIZE, CONTAINER_NAME, [
+							basis("100%"),
+							raw({
+								justifyContent: "flex-end",
+								marginInlineStart:
+									"calc(var(--ui-item-media-size, 2rem) + var(--ui-item-gap, 0.75rem))",
+							}),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

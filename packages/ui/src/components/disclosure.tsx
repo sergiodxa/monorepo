@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
 import { opacity, roundedCorner, rounded, transition, transitionDuration } from "@sdxc/u/effects";
-import { cursor, listStyle, pointerEvents, raw } from "@sdxc/u/general";
+import { cursor, listStyle, pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, hidden, interpolateSize, items, shrink } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -108,32 +108,34 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 		return (
 			<details
 				{...rest}
-				mix={[
-					panelChrome(),
-					interpolateSize(),
-					detailsContent([
-						overflow("clip"),
-						bs(0),
-						raw({
-							transitionProperty: "block-size, content-visibility",
-							transitionBehavior: "allow-discrete",
-						}),
-						transitionDuration("200ms"),
-					]),
-					when("&[open]::details-content", bs("auto")),
-					/**
-					 * The glyph a trigger carries as `data-slot="icon"` turns over while the section
-					 * is open, the same rule `Accordion` states: the section owns the turn because
-					 * only it knows it is open, and the trigger owns which glyph turns.
-					 */
-					open(when('& summary [data-slot="icon"]', rotate(180))),
-					when('& summary [data-slot="icon"]', transition("transform", { duration: 200 })),
-					media("(prefers-reduced-motion: reduce)", [
-						detailsContent(transitionDuration("0s")),
-						when('& summary [data-slot="icon"]', transitionDuration("0s")),
-					]),
+				mix={mergeMix(
+					[
+						panelChrome(),
+						interpolateSize(),
+						detailsContent([
+							overflow("clip"),
+							bs(0),
+							raw({
+								transitionProperty: "block-size, content-visibility",
+								transitionBehavior: "allow-discrete",
+							}),
+							transitionDuration("200ms"),
+						]),
+						when("&[open]::details-content", bs("auto")),
+						/**
+						 * The glyph a trigger carries as `data-slot="icon"` turns over while the section
+						 * is open, the same rule `Accordion` states: the section owns the turn because
+						 * only it knows it is open, and the trigger owns which glyph turns.
+						 */
+						open(when('& summary [data-slot="icon"]', rotate(180))),
+						when('& summary [data-slot="icon"]', transition("transform", { duration: 200 })),
+						media("(prefers-reduced-motion: reduce)", [
+							detailsContent(transitionDuration("0s")),
+							when('& summary [data-slot="icon"]', transitionDuration("0s")),
+						]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</details>
@@ -160,7 +162,7 @@ Disclosure.Header = function DisclosureHeader(handle: Handle<Disclosure.HeaderPr
 		let Tag = TAG_BY_LEVEL[resolved];
 
 		return (
-			<Tag {...rest} data-heading-level={resolved} mix={[m(0), balance(), mix]}>
+			<Tag {...rest} data-heading-level={resolved} mix={mergeMix([m(0), balance()], mix)}>
 				{children}
 			</Tag>
 		);
@@ -196,36 +198,38 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 			<summary
 				{...rest}
 				tabIndex={disabled ? -1 : rest.tabIndex}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					flex(),
-					is("full"),
-					items("center"),
-					gap(2),
-					rounded("lg"),
-					pb(3),
-					pi(3),
-					textAlign("start"),
-					balance(),
-					weight("medium"),
-					fg("neutral.emphasis"),
-					hover(bg("neutral.tint")),
-					when('&[aria-disabled="true"]', [opacity(50), pointerEvents("none")]),
-					cursor("pointer"),
-					listStyle(),
-					when("&::-webkit-details-marker", hidden()),
-					when("&::marker", raw({ content: '""' })),
-					/**
-					 * The indicator is sized against the label beside it, whatever an icon set draws at,
-					 * and holds that size when a long label squeezes the row.
-					 */
-					when('& [data-slot="icon"]', [is(4), bs(4), shrink()]),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
-					),
-					when('&[aria-disabled="true"]', cursor("not-allowed")),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						flex(),
+						is("full"),
+						items("center"),
+						gap(2),
+						rounded("lg"),
+						pb(3),
+						pi(3),
+						textAlign("start"),
+						balance(),
+						weight("medium"),
+						fg("neutral.emphasis"),
+						hover(bg("neutral.tint")),
+						when('&[aria-disabled="true"]', [opacity(50), pointerEvents("none")]),
+						cursor("pointer"),
+						listStyle(),
+						when("&::-webkit-details-marker", hidden()),
+						when("&::marker", raw({ content: '""' })),
+						/**
+						 * The indicator is sized against the label beside it, whatever an icon set draws at,
+						 * and holds that size when a long label squeezes the row.
+						 */
+						when('& [data-slot="icon"]', [is(4), bs(4), shrink()]),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",
+						),
+						when('&[aria-disabled="true"]', cursor("not-allowed")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</summary>
@@ -252,17 +256,19 @@ Disclosure.Panel = function DisclosurePanel(handle: Handle<Disclosure.PanelProps
 		return (
 			<div
 				{...rest}
-				mix={[
-					overflow(),
-					/**
-					 * The panel is inset to the line the trigger's label sits on, so the section reads as
-					 * one block; the block-start stays open because the trigger's own padding already
-					 * separates the two.
-					 */
-					pi(3),
-					pbe(3),
+				mix={mergeMix(
+					[
+						overflow(),
+						/**
+						 * The panel is inset to the line the trigger's label sits on, so the section reads as
+						 * one block; the block-start stays open because the trigger's own padding already
+						 * separates the two.
+						 */
+						pi(3),
+						pbe(3),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -300,26 +306,28 @@ Disclosure.Group = function DisclosureGroup(handle: Handle<Disclosure.GroupProps
 		return (
 			<div
 				{...rest}
-				mix={[
-					flex(),
-					flexCol(),
-					when("& > details", [
-						rounded("none"),
-						borderEdge("inline-start", { width: "0", noStyleDefault: true }),
-						borderEdge("inline-end", { width: "0", noStyleDefault: true }),
-						borderEdge("block-start", { width: "0", noStyleDefault: true }),
-						when("&:first-child", [
-							roundedCorner("start-start", "lg"),
-							roundedCorner("start-end", "lg"),
-							borderEdge("block-start", { width: 1, noStyleDefault: true }),
+				mix={mergeMix(
+					[
+						flex(),
+						flexCol(),
+						when("& > details", [
+							rounded("none"),
+							borderEdge("inline-start", { width: "0", noStyleDefault: true }),
+							borderEdge("inline-end", { width: "0", noStyleDefault: true }),
+							borderEdge("block-start", { width: "0", noStyleDefault: true }),
+							when("&:first-child", [
+								roundedCorner("start-start", "lg"),
+								roundedCorner("start-end", "lg"),
+								borderEdge("block-start", { width: 1, noStyleDefault: true }),
+							]),
+							when("&:last-child", [
+								roundedCorner("end-start", "lg"),
+								roundedCorner("end-end", "lg"),
+							]),
 						]),
-						when("&:last-child", [
-							roundedCorner("end-start", "lg"),
-							roundedCorner("end-end", "lg"),
-						]),
-					]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

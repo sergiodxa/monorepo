@@ -14,6 +14,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { borderEdge, fg, outline } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { mis, pb, pi, pie } from "@sdxc/u/size";
 import { not } from "@sdxc/u/state";
 import { tabularNums, text, weight } from "@sdxc/u/typography";
@@ -132,7 +133,7 @@ ContextMenu.Trigger = function ContextMenuTrigger(handle: Handle<ContextMenu.Tri
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} mix={[outline("none"), mix]}>
+			<div {...rest} mix={mergeMix(outline("none"), mix)}>
 				{children}
 			</div>
 		);
@@ -172,7 +173,10 @@ ContextMenu.Group = function ContextMenuGroup(handle: Handle<ContextMenu.GroupPr
 		return (
 			<Section
 				{...rest}
-				mix={[not(":first-child", borderEdge("block-start", { color: "neutral", width: 1 })), mix]}
+				mix={mergeMix(
+					not(":first-child", borderEdge("block-start", { color: "neutral", width: 1 })),
+					mix,
+				)}
 			/>
 		);
 	};
@@ -195,7 +199,7 @@ ContextMenu.Label = function ContextMenuLabel(handle: Handle<ContextMenu.LabelPr
 		return (
 			<header
 				{...rest}
-				mix={[pi(2), pb(1), weight("semibold"), fg("neutral.muted"), text("xs"), mix]}
+				mix={mergeMix([pi(2), pb(1), weight("semibold"), fg("neutral.muted"), text("xs")], mix)}
 			>
 				{children}
 			</header>
@@ -235,7 +239,7 @@ ContextMenu.SubTrigger = function ContextMenuSubTrigger(handle: Handle<ContextMe
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Menu.Item {...rest} mix={[pie(8), mix]} />;
+		return <Menu.Item {...rest} mix={[pie(8), ...(mix ?? [])]} />;
 	};
 };
 
@@ -313,7 +317,10 @@ ContextMenu.Shortcut = function ContextMenuShortcut(handle: Handle<ContextMenu.S
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<span {...rest} mix={[mis("auto"), fg("neutral.muted"), text("xs"), tabularNums(), mix]}>
+			<span
+				{...rest}
+				mix={mergeMix([mis("auto"), fg("neutral.muted"), text("xs"), tabularNums()], mix)}
+			>
 				{children}
 			</span>
 		);

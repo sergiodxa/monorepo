@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { tokenize } from "@sdxc/highlight";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { border, fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
 import { m } from "@sdxc/u/size";
@@ -212,13 +212,15 @@ export function CodeStage(handle: Handle<CodeStage.Props>) {
 				{...rest}
 				data-slot="code-stage"
 				data-variant={resolvedVariant}
-				mix={[
-					vstack({ gap: 0, align: "stretch" }),
-					raw({ minInlineSize: 0, maxInlineSize: "100%", blockSize: "fit-content" }),
-					hostSurface(resolvedVariant),
-					single?.lineCount ? raw(gutterProperty(single.lineCount)) : [],
+				mix={mergeMix(
+					[
+						vstack({ gap: 0, align: "stretch" }),
+						raw({ minInlineSize: 0, maxInlineSize: "100%", blockSize: "fit-content" }),
+						hostSurface(resolvedVariant),
+						single?.lineCount ? raw(gutterProperty(single.lineCount)) : [],
+					],
 					mix,
-				]}
+				)}
 			>
 				{showHeader ? (
 					<div
@@ -461,15 +463,17 @@ function CodeBody(handle: Handle<CodeBodyProps>) {
 			<pre
 				{...rest}
 				data-line-numbers={numbered ? "true" : undefined}
-				mix={[
-					m(0),
-					raw({ paddingBlock: "1rem", paddingInline: `${INSET} 1rem`, minInlineSize: 0 }),
-					font("mono"),
-					overflowX("auto"),
-					bodySurface(variant),
-					numbered ? gutterRules(variant) : [],
+				mix={mergeMix(
+					[
+						m(0),
+						raw({ paddingBlock: "1rem", paddingInline: `${INSET} 1rem`, minInlineSize: 0 }),
+						font("mono"),
+						overflowX("auto"),
+						bodySurface(variant),
+						numbered ? gutterRules(variant) : [],
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</pre>

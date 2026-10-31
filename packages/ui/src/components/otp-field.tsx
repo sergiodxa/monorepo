@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { tabularNums, text, textAlign, weight } from "@sdxc/u/typography";
 
 import { Input } from "./input.js";
@@ -98,7 +99,7 @@ export function OtpField(handle: Handle<OtpField.Props>) {
 				autoComplete={resolvedAutoComplete}
 				maxLength={resolvedLength}
 				data-slot="otp-field"
-				mix={[textAlign("center"), weight(500), tabularNums(), text("base"), mix]}
+				mix={mergeMix([textAlign("center"), weight(500), tabularNums(), text("base")], mix)}
 			/>
 		);
 	};

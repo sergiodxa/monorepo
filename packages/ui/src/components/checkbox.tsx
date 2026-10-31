@@ -14,7 +14,7 @@ import { CheckIcon, MinusIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { block, center, hidden, hstack, relative, shrink } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -166,7 +166,7 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 					<CheckIcon />
 					<MinusIcon />
 				</span>
-				<input type="checkbox" {...rest} mix={[visuallyHidden(), mix]} />
+				<input type="checkbox" {...rest} mix={mergeMix(visuallyHidden(), mix)} />
 				{children}
 			</label>
 		);

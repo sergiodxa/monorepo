@@ -17,6 +17,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { ChevronDownIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { center, hstack, relative, spacer, vstack } from "@sdxc/u/layout";
 import { bs, is, mis, pie } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -91,7 +92,7 @@ export function ComboBox(handle: Handle<ComboBox.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="combobox" mix={[vstack({ gap: 1 }), mix]} />;
+		return <div {...rest} data-slot="combobox" mix={mergeMix(vstack({ gap: 1 }), mix)} />;
 	};
 }
 
@@ -112,7 +113,9 @@ ComboBox.Group = function ComboBoxGroup(handle: Handle<ComboBox.GroupProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="combobox-group" mix={[hstack({ align: "center" }), mix]} />;
+		return (
+			<div {...rest} data-slot="combobox-group" mix={mergeMix(hstack({ align: "center" }), mix)} />
+		);
 	};
 };
 
@@ -132,7 +135,7 @@ ComboBox.Input = function ComboBoxInput(handle: Handle<ComboBox.InputProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <Input {...rest} mix={[spacer(), pie(9), mix]} />;
+		return <Input {...rest} mix={mergeMix([spacer(), pie(9)], mix)} />;
 	};
 };
 
@@ -160,21 +163,23 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 			<button
 				type={type ?? DEFAULT_BUTTON_TYPE}
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					center(),
-					relative(),
-					hitArea(),
-					is("1.75rem"),
-					bs("1.75rem"),
-					rounded("sm"),
-					fg("neutral"),
-					when("& svg", [is("1rem"), bs("1rem")]),
-					when("&:hover", bg("neutral.bg-tint-hover")),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
-					mis("-2rem"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						center(),
+						relative(),
+						hitArea(),
+						is("1.75rem"),
+						bs("1.75rem"),
+						rounded("sm"),
+						fg("neutral"),
+						when("& svg", [is("1rem"), bs("1rem")]),
+						when("&:hover", bg("neutral.bg-tint-hover")),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 0 })),
+						mis("-2rem"),
+					],
 					mix,
-				]}
+				)}
 			>
 				<ChevronDownIcon />
 			</button>

@@ -12,6 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { pretty, text } from "@sdxc/u/typography";
 
 /**
@@ -40,6 +41,6 @@ export function Text(handle: Handle<Text.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[fg("neutral"), text("sm"), pretty(), mix]} />;
+		return <span {...rest} mix={mergeMix([fg("neutral"), text("sm"), pretty()], mix)} />;
 	};
 }

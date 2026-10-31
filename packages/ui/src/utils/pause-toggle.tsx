@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { PauseIcon, PlayIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { media } from "@sdxc/u/responsive";
 import { hover, when } from "@sdxc/u/state";
 
@@ -40,7 +40,7 @@ export function PauseToggle(handle: Handle<PauseToggle.Props>) {
 		let { label, mix, ...rest } = handle.props;
 
 		return (
-			<label {...rest} data-slot="pause-toggle" mix={[toggle(), mix]}>
+			<label {...rest} data-slot="pause-toggle" mix={mergeMix(toggle(), mix)}>
 				<input type="checkbox" aria-label={label} mix={[visuallyHidden()]} />
 				<PauseIcon aria-hidden="true" data-glyph="pause" />
 				<PlayIcon aria-hidden="true" data-glyph="play" />

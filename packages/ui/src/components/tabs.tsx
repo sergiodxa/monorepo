@@ -17,7 +17,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, transition } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	basis,
@@ -174,7 +174,7 @@ export function Tabs(handle: Handle<Tabs.Props, Tabs.Context>) {
 			<div
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[vstack(), data("orientation", "vertical", flexRow()), mix]}
+				mix={mergeMix([vstack(), data("orientation", "vertical", flexRow())], mix)}
 			/>
 		);
 	};
@@ -252,40 +252,45 @@ Tabs.List = function TabsList(handle: Handle<Tabs.ListProps>) {
 				data-orientation={context.orientation}
 				aria-orientation={context.orientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_LIST_ROLE }),
-					relative(),
-					hstack({ gap: LIST_GAP }),
-					borderEdge("block-end", { color: "neutral", width: 1 }),
-					after([
-						absolute(),
-						is("var(--ui-tab-indicator-inline-size, 0px)"),
-						bs("0.125rem"),
-						transition("inset-inline-start, inset-block-start, inline-size, block-size, opacity", {
-							duration: "200ms",
-							easing: "ease-out",
-						}),
-						insIs("var(--ui-tab-indicator-inline-start, 0px)"),
-						insBe("-0.0625rem"),
-						bg("var(--ui-brand-fg)"),
-						raw({
-							content: '""',
-							opacity: "var(--ui-tab-indicator-opacity, 0)",
-						}),
-					]),
-					data("orientation", "vertical", [
-						flexCol(),
-						borderEdge("block-end", { width: "0" }),
-						borderEdge("inline-end", { color: "neutral", width: 1 }),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_LIST_ROLE }),
+						relative(),
+						hstack({ gap: LIST_GAP }),
+						borderEdge("block-end", { color: "neutral", width: 1 }),
 						after([
-							inset("var(--ui-tab-indicator-block-start, 0px)", "0", "auto", "auto"),
-							is("0.125rem"),
-							bs("var(--ui-tab-indicator-block-size, 0px)"),
+							absolute(),
+							is("var(--ui-tab-indicator-inline-size, 0px)"),
+							bs("0.125rem"),
+							transition(
+								"inset-inline-start, inset-block-start, inline-size, block-size, opacity",
+								{
+									duration: "200ms",
+									easing: "ease-out",
+								},
+							),
+							insIs("var(--ui-tab-indicator-inline-start, 0px)"),
+							insBe("-0.0625rem"),
+							bg("var(--ui-brand-fg)"),
+							raw({
+								content: '""',
+								opacity: "var(--ui-tab-indicator-opacity, 0)",
+							}),
 						]),
-					]),
-					indicatorMix,
+						data("orientation", "vertical", [
+							flexCol(),
+							borderEdge("block-end", { width: "0" }),
+							borderEdge("inline-end", { color: "neutral", width: 1 }),
+							after([
+								inset("var(--ui-tab-indicator-block-start, 0px)", "0", "auto", "auto"),
+								is("0.125rem"),
+								bs("var(--ui-tab-indicator-block-size, 0px)"),
+							]),
+						]),
+						indicatorMix,
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -314,30 +319,32 @@ Tabs.Tab = function TabsTab(handle: Handle<Tabs.TabProps>) {
 			<a
 				data-orientation={context.orientation}
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					attrs({ role: DEFAULT_TAB_ROLE }),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					pi(4),
-					pb(2),
-					weight(500),
-					fg("neutral"),
-					when("&:hover", fg("neutral.emphasis")),
-					when('&[aria-selected="true"]', fg("brand")),
-					when('&[aria-disabled="true"]', opacity(50)),
-					mbe("-0.0625rem"),
-					cursor("default"),
-					text("sm"),
-					borderEdge("block-end", { color: "transparent", width: 2 }),
-					when('&[aria-disabled="true"]', cursor("not-allowed")),
-					data("orientation", "vertical", [
-						mbe("0"),
-						mie("-0.0625rem"),
-						borderEdge("block-end", { width: "0" }),
-						borderEdge("inline-end", { color: "transparent", width: 2 }),
-					]),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_TAB_ROLE }),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						pi(4),
+						pb(2),
+						weight(500),
+						fg("neutral"),
+						when("&:hover", fg("neutral.emphasis")),
+						when('&[aria-selected="true"]', fg("brand")),
+						when('&[aria-disabled="true"]', opacity(50)),
+						mbe("-0.0625rem"),
+						cursor("default"),
+						text("sm"),
+						borderEdge("block-end", { color: "transparent", width: 2 }),
+						when('&[aria-disabled="true"]', cursor("not-allowed")),
+						data("orientation", "vertical", [
+							mbe("0"),
+							mie("-0.0625rem"),
+							borderEdge("block-end", { width: "0" }),
+							borderEdge("inline-end", { color: "transparent", width: 2 }),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -359,7 +366,7 @@ Tabs.Panels = function TabsPanels(handle: Handle<Tabs.PanelsProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[grow(), shrink(1), basis("0%"), mix]} />;
+		return <div {...rest} mix={mergeMix([grow(), shrink(1), basis("0%")], mix)} />;
 	};
 };
 
@@ -380,14 +387,16 @@ Tabs.Panel = function TabsPanel(handle: Handle<Tabs.PanelProps>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_PANEL_ROLE, tabIndex: DEFAULT_PANEL_TAB_INDEX }),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					pb(4),
-					pi(4),
-					outlineStyle("none"),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_PANEL_ROLE, tabIndex: DEFAULT_PANEL_TAB_INDEX }),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						pb(4),
+						pi(4),
+						outlineStyle("none"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

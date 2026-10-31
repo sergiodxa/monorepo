@@ -12,6 +12,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { attrs } from "remix/component";
 
@@ -181,7 +182,7 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
 				<div
 					{...rest}
 					data-slot="fields"
-					mix={[attrs({ role: "group" }), flex(), gap(2), items("start"), mix]}
+					mix={mergeMix([attrs({ role: "group" }), flex(), gap(2), items("start")], mix)}
 				>
 					<DateField
 						color={color}
@@ -222,7 +223,7 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
 		}
 
 		return (
-			<div {...rest} data-slot="date-range-picker" mix={[flex(), flexCol(), gap(1), mix]}>
+			<div {...rest} data-slot="date-range-picker" mix={mergeMix([flex(), flexCol(), gap(1)], mix)}>
 				{children}
 			</div>
 		);

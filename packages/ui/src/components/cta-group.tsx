@@ -10,7 +10,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { atMax } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -85,20 +85,22 @@ export function CtaGroup(handle: Handle<CtaGroup.Props, CtaGroup.Context>) {
 				data-slot="cta-group"
 				data-size={resolvedSize}
 				data-stack={stack === "phone" ? "phone" : undefined}
-				mix={[
-					inlineFlex(),
-					items("center"),
-					flexWrap(),
-					gap(3),
-					stack === "phone"
-						? atMax("md", [
-								raw({ display: "flex", flexDirection: "column", alignItems: "stretch" }),
-								raw({ inlineSize: "100%" }),
-								when("& > *", raw({ inlineSize: "100%" })),
-							])
-						: [],
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						flexWrap(),
+						gap(3),
+						stack === "phone"
+							? atMax("md", [
+									raw({ display: "flex", flexDirection: "column", alignItems: "stretch" }),
+									raw({ inlineSize: "100%" }),
+									when("& > *", raw({ inlineSize: "100%" })),
+								])
+							: [],
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

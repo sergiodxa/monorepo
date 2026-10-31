@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container, gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { p, width } from "@sdxc/u/size";
@@ -123,7 +123,7 @@ export function StatStrip(handle: Handle<StatStrip.Props, StatStrip.Context>) {
 				data-align={resolvedAlign}
 				data-size={resolvedSize}
 				data-slot="stat-strip"
-				mix={[container("ui-marketing-stat-strip"), width("full"), mix]}
+				mix={mergeMix([container("ui-marketing-stat-strip"), width("full")], mix)}
 			>
 				<div
 					mix={[
@@ -200,7 +200,7 @@ StatStrip.Item = function StatStripItem(handle: Handle<StatStrip.ItemProps>) {
 			<div
 				{...rest}
 				data-slot="stat-strip-item"
-				mix={[vstack({ gap: isDisplay ? 2 : 1, align }), textAlign(align), mix]}
+				mix={mergeMix([vstack({ gap: isDisplay ? 2 : 1, align }), textAlign(align)], mix)}
 			>
 				<span
 					data-slot="stat-strip-figure"

@@ -13,7 +13,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { inset, positionArea, positionTryFallbacks } from "@sdxc/u/layout";
 import { m, marginLeft, marginRight, mbe, mbs } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
@@ -103,39 +103,41 @@ export function Popover(handle: Handle<Popover.Props>) {
 				popover={resolvedMode}
 				data-placement={resolvedPlacement}
 				{...rest}
-				mix={[
-					floatingSurface(),
-					m("0"),
-					inset("auto"),
-					when('&[data-placement^="top"]', mbe("var(--ui-popover-offset, 0.5rem)")),
-					when('&[data-placement^="bottom"]', mbs("var(--ui-popover-offset, 0.5rem)")),
-					when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
-					when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
-					positionTryFallbacks("flip-block", "flip-inline", "flip-block flip-inline"),
-					/**
-					 * A corner placement aligns one pair of edges and grows away from it, so the surface
-					 * occupies the anchor's own track and spans the one beyond it, flush with the anchor's edge.
-					 */
-					data("placement", "top", positionArea("top")),
-					data("placement", "top-start", positionArea("top span-right")),
-					data("placement", "top-end", positionArea("top span-left")),
-					data("placement", "bottom", positionArea("bottom")),
-					data("placement", "bottom-start", positionArea("bottom span-right")),
-					data("placement", "bottom-end", positionArea("bottom span-left")),
-					data("placement", "left", positionArea("left")),
-					data("placement", "left-start", positionArea("left span-bottom")),
-					data("placement", "left-end", positionArea("left span-top")),
-					data("placement", "right", positionArea("right")),
-					data("placement", "right-start", positionArea("right span-bottom")),
-					data("placement", "right-end", positionArea("right span-top")),
-					/**
-					 * Layout parts on this surface set `display` and beat the UA's closed `display: none`, so
-					 * the closed state is important to outrank a consumer's later sublayer. A `"hint"` surface
-					 * reveals itself from CSS state on its trigger, so it keeps its own hidden state.
-					 */
-					when('&:not(:popover-open):not([popover="hint"])', raw({ display: "none !important" })),
+				mix={mergeMix(
+					[
+						floatingSurface(),
+						m("0"),
+						inset("auto"),
+						when('&[data-placement^="top"]', mbe("var(--ui-popover-offset, 0.5rem)")),
+						when('&[data-placement^="bottom"]', mbs("var(--ui-popover-offset, 0.5rem)")),
+						when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
+						when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
+						positionTryFallbacks("flip-block", "flip-inline", "flip-block flip-inline"),
+						/**
+						 * A corner placement aligns one pair of edges and grows away from it, so the surface
+						 * occupies the anchor's own track and spans the one beyond it, flush with the anchor's edge.
+						 */
+						data("placement", "top", positionArea("top")),
+						data("placement", "top-start", positionArea("top span-right")),
+						data("placement", "top-end", positionArea("top span-left")),
+						data("placement", "bottom", positionArea("bottom")),
+						data("placement", "bottom-start", positionArea("bottom span-right")),
+						data("placement", "bottom-end", positionArea("bottom span-left")),
+						data("placement", "left", positionArea("left")),
+						data("placement", "left-start", positionArea("left span-bottom")),
+						data("placement", "left-end", positionArea("left span-top")),
+						data("placement", "right", positionArea("right")),
+						data("placement", "right-start", positionArea("right span-bottom")),
+						data("placement", "right-end", positionArea("right span-top")),
+						/**
+						 * Layout parts on this surface set `display` and beat the UA's closed `display: none`, so
+						 * the closed state is important to outrank a consumer's later sublayer. A `"hint"` surface
+						 * reveals itself from CSS state on its trigger, so it keeps its own hidden state.
+						 */
+						when('&:not(:popover-open):not([popover="hint"])', raw({ display: "none !important" })),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

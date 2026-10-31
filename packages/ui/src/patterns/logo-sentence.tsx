@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -52,7 +52,7 @@ export function LogoSentence(handle: Handle<LogoSentence.Props>) {
 
 		return (
 			<div mix={[container(CONTAINER), raw({ inlineSize: "100%" })]}>
-				<p {...rest} data-slot="logo-sentence" mix={[sentence(), mix]}>
+				<p {...rest} data-slot="logo-sentence" mix={mergeMix(sentence(), mix)}>
 					{children}
 				</p>
 			</div>

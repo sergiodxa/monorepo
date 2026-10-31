@@ -13,7 +13,7 @@
 import type { Handle } from "remix/component";
 
 import { rounded } from "@sdxc/u/effects";
-import { vars, willChange } from "@sdxc/u/general";
+import { vars, willChange, mergeMix } from "@sdxc/u/general";
 import { fixed, insBe, insBs, insIe, insIs, insLeft, insRight } from "@sdxc/u/layout";
 import { bs, is, m, maxBs, maxIs } from "@sdxc/u/size";
 import { data } from "@sdxc/u/state";
@@ -110,87 +110,88 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 			<Dialog
 				{...rest}
 				data-placement={resolvedPlacement}
-				mix={[
-					fixed(),
-					m(0),
-					rounded("none"),
-					enterExit({
-						translate: "var(--ui-drawer-enter-offset)",
-						duration: durations.slow,
-						easing: easings.decelerate,
-						exit: { translate: "var(--ui-drawer-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
-						exitDuration: durations.fast,
-						exitEasing: easings.accelerate,
-					}),
-					willChange("translate"),
-
-					/**
-					 * Each placement frees the far edge so the dialog's centring lets go, gives its docked
-					 * edge a depth, and fills the other axis, since a `<dialog>` sizes to its content on both
-					 * axes even with opposite insets pinned.
-					 */
-					data("placement", "top", [
-						insBs("0"),
-						insBe("auto"),
-						insIs("0"),
-						insIe("0"),
-						bs("24rem"),
-						maxBs("90vh"),
-						is("full"),
-						maxIs("none"),
-						vars({
-							"ui-drawer-enter-offset": "0 -100%",
-							"ui-drawer-exit-offset": `0 -${EXIT_DISTANCE}`,
+				mix={mergeMix(
+					[
+						fixed(),
+						m(0),
+						rounded("none"),
+						enterExit({
+							translate: "var(--ui-drawer-enter-offset)",
+							duration: durations.slow,
+							easing: easings.decelerate,
+							exit: { translate: "var(--ui-drawer-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
+							exitDuration: durations.fast,
+							exitEasing: easings.accelerate,
 						}),
-					]),
+						willChange("translate"),
 
-					data("placement", "bottom", [
-						insBe("0"),
-						insBs("auto"),
-						insIs("0"),
-						insIe("0"),
-						bs("24rem"),
-						maxBs("90vh"),
-						is("full"),
-						maxIs("none"),
-						vars({
-							"ui-drawer-enter-offset": "0 100%",
-							"ui-drawer-exit-offset": `0 ${EXIT_DISTANCE}`,
-						}),
-					]),
+						/**
+						 * Each placement frees the far edge so the dialog's centring lets go, gives its docked
+						 * edge a depth, and fills the other axis, since a `<dialog>` sizes to its content on both
+						 * axes even with opposite insets pinned.
+						 */
+						data("placement", "top", [
+							insBs("0"),
+							insBe("auto"),
+							insIs("0"),
+							insIe("0"),
+							bs("24rem"),
+							maxBs("90vh"),
+							is("full"),
+							maxIs("none"),
+							vars({
+								"ui-drawer-enter-offset": "0 -100%",
+								"ui-drawer-exit-offset": `0 -${EXIT_DISTANCE}`,
+							}),
+						]),
 
-					data("placement", "left", [
-						insBs("0"),
-						insBe("0"),
-						insLeft("0"),
-						insRight("auto"),
-						is("22rem"),
-						maxIs("90vw"),
-						bs("full"),
-						maxBs("none"),
-						vars({
-							"ui-drawer-enter-offset": "-100% 0",
-							"ui-drawer-exit-offset": `-${EXIT_DISTANCE} 0`,
-						}),
-					]),
+						data("placement", "bottom", [
+							insBe("0"),
+							insBs("auto"),
+							insIs("0"),
+							insIe("0"),
+							bs("24rem"),
+							maxBs("90vh"),
+							is("full"),
+							maxIs("none"),
+							vars({
+								"ui-drawer-enter-offset": "0 100%",
+								"ui-drawer-exit-offset": `0 ${EXIT_DISTANCE}`,
+							}),
+						]),
 
-					data("placement", "right", [
-						insBs("0"),
-						insBe("0"),
-						insRight("0"),
-						insLeft("auto"),
-						is("22rem"),
-						maxIs("90vw"),
-						bs("full"),
-						maxBs("none"),
-						vars({
-							"ui-drawer-enter-offset": "100% 0",
-							"ui-drawer-exit-offset": `${EXIT_DISTANCE} 0`,
-						}),
-					]),
+						data("placement", "left", [
+							insBs("0"),
+							insBe("0"),
+							insLeft("0"),
+							insRight("auto"),
+							is("22rem"),
+							maxIs("90vw"),
+							bs("full"),
+							maxBs("none"),
+							vars({
+								"ui-drawer-enter-offset": "-100% 0",
+								"ui-drawer-exit-offset": `-${EXIT_DISTANCE} 0`,
+							}),
+						]),
 
+						data("placement", "right", [
+							insBs("0"),
+							insBe("0"),
+							insRight("0"),
+							insLeft("auto"),
+							is("22rem"),
+							maxIs("90vw"),
+							bs("full"),
+							maxBs("none"),
+							vars({
+								"ui-drawer-enter-offset": "100% 0",
+								"ui-drawer-exit-offset": `${EXIT_DISTANCE} 0`,
+							}),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

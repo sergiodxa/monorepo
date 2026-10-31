@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { appearance, block, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -98,7 +98,7 @@ export function Meter(handle: Handle<Meter.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[vstack({ gap: "0.25rem" }), mix]} />;
+		return <div {...rest} mix={mergeMix(vstack({ gap: "0.25rem" }), mix)} />;
 	};
 }
 
@@ -140,50 +140,52 @@ Meter.Indicator = function MeterIndicator(handle: Handle<Meter.IndicatorProps>) 
 				data-color={resolvedColor}
 				max={resolvedMax}
 				{...rest}
-				mix={[
-					appearance(),
-					is("full"),
-					bs("var(--ui-meter-track-block-size, 0.5rem)"),
-					m("0"),
-					p("0"),
-					overflow("hidden"),
-					rounded("full"),
-					bg("neutral.border"),
-					block(),
-					border("none"),
-					when("&::-webkit-meter-bar", [bg("neutral.border"), rounded("full")]),
-					FILL_SELECTORS.map((selector) => when(selector, [rounded("full"), transition("all")])),
-					data(
-						"color",
-						"brand",
-						FILL_SELECTORS.map((selector) => when(selector, bg("brand.solid"))),
-					),
-					data(
-						"color",
-						"neutral",
-						FILL_SELECTORS.map((selector) => when(selector, bg("neutral.solid"))),
-					),
-					data(
-						"color",
-						"success",
-						FILL_SELECTORS.map((selector) => when(selector, bg("success.solid"))),
-					),
-					data(
-						"color",
-						"warning",
-						FILL_SELECTORS.map((selector) => when(selector, bg("warning.solid"))),
-					),
-					data(
-						"color",
-						"danger",
-						FILL_SELECTORS.map((selector) => when(selector, bg("danger.solid"))),
-					),
-					media(
-						"(prefers-reduced-motion: reduce)",
-						FILL_SELECTORS.map((selector) => when(selector, raw({ transitionDuration: "0s" }))),
-					),
+				mix={mergeMix(
+					[
+						appearance(),
+						is("full"),
+						bs("var(--ui-meter-track-block-size, 0.5rem)"),
+						m("0"),
+						p("0"),
+						overflow("hidden"),
+						rounded("full"),
+						bg("neutral.border"),
+						block(),
+						border("none"),
+						when("&::-webkit-meter-bar", [bg("neutral.border"), rounded("full")]),
+						FILL_SELECTORS.map((selector) => when(selector, [rounded("full"), transition("all")])),
+						data(
+							"color",
+							"brand",
+							FILL_SELECTORS.map((selector) => when(selector, bg("brand.solid"))),
+						),
+						data(
+							"color",
+							"neutral",
+							FILL_SELECTORS.map((selector) => when(selector, bg("neutral.solid"))),
+						),
+						data(
+							"color",
+							"success",
+							FILL_SELECTORS.map((selector) => when(selector, bg("success.solid"))),
+						),
+						data(
+							"color",
+							"warning",
+							FILL_SELECTORS.map((selector) => when(selector, bg("warning.solid"))),
+						),
+						data(
+							"color",
+							"danger",
+							FILL_SELECTORS.map((selector) => when(selector, bg("danger.solid"))),
+						),
+						media(
+							"(prefers-reduced-motion: reduce)",
+							FILL_SELECTORS.map((selector) => when(selector, raw({ transitionDuration: "0s" }))),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -203,6 +205,6 @@ Meter.ValueLabel = function MeterValueLabel(handle: Handle<Meter.ValueLabelProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[text("sm"), tabularNums(), fg("neutral"), mix]} />;
+		return <span {...rest} mix={mergeMix([text("sm"), tabularNums(), fg("neutral")], mix)} />;
 	};
 };

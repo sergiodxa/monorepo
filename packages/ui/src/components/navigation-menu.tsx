@@ -20,7 +20,7 @@ import {
 	transitionBehavior,
 	transitionProperty,
 } from "@sdxc/u/effects";
-import { cursor, raw, userSelect } from "@sdxc/u/general";
+import { cursor, raw, userSelect, mergeMix } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -259,7 +259,7 @@ export function NavigationMenu(handle: Handle<NavigationMenu.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <nav {...rest} mix={[relative(), mix]} />;
+		return <nav {...rest} mix={mergeMix(relative(), mix)} />;
 	};
 }
 
@@ -292,14 +292,16 @@ NavigationMenu.List = function NavigationMenuList(handle: Handle<NavigationMenu.
 			<ul
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_LIST_ROLE }),
-					flex(),
-					items("center"),
-					gap(1),
-					when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_LIST_ROLE }),
+						flex(),
+						items("center"),
+						gap(1),
+						when('&[data-orientation="vertical"]', [flexCol(), items("start")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -331,7 +333,7 @@ NavigationMenu.Item = function NavigationMenuItem(
 
 		handle.context.set({ contentId: handle.id });
 
-		return <li {...rest} mix={[relative(), flex(), items("center"), mix]} />;
+		return <li {...rest} mix={mergeMix([relative(), flex(), items("center")], mix)} />;
 	};
 };
 
@@ -363,24 +365,26 @@ NavigationMenu.Trigger = function NavigationMenuTrigger(
 				commandfor={resolvedCommandfor}
 				command={resolvedCommand}
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					inlineFlex(),
-					items("center"),
-					gap(2),
-					rounded("md"),
-					pi(3),
-					pb(2),
-					weight("medium"),
-					fg("neutral"),
-					disabled(opacity(50)),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					when('&[aria-expanded="true"]', [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					disabled(cursor("not-allowed")),
-					text("sm"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						inlineFlex(),
+						items("center"),
+						gap(2),
+						rounded("md"),
+						pi(3),
+						pb(2),
+						weight("medium"),
+						fg("neutral"),
+						disabled(opacity(50)),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						when('&[aria-expanded="true"]', [bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						disabled(cursor("not-allowed")),
+						text("sm"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -427,31 +431,33 @@ NavigationMenu.Content = function NavigationMenuContent(
 				placement={resolvedPlacement}
 				data-size={resolvedSize}
 				{...rest}
-				mix={[
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					is("max-content"),
-					minIs("11rem"),
-					surfaceInset({ scale: 2 }),
-					z(50),
-					opacity(0),
-					when('& [data-slot="link"]', [is("full"), justify("start")]),
-					when('&[data-size="wide"]', [is("28rem"), maxIs("calc(100vw - 2rem)")]),
-					container(CONTAINER_NAME),
-					transition("opacity, scale, display, overlay", {
-						duration: durations.fast,
-						easing: easings.standard,
-					}),
-					outlineStyle("none"),
-					scaleProperty("0.95"),
-					transitionBehavior("allow-discrete"),
-					when("&:popover-open", [opacity(100), scaleProperty("none")]),
-					startingStyle(when("&:popover-open", [opacity(0), scaleProperty("0.95")])),
-					media("(prefers-reduced-motion: reduce)", [
-						scaleProperty("none"),
-						transitionProperty("opacity, display, overlay"),
-					]),
+				mix={mergeMix(
+					[
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						is("max-content"),
+						minIs("11rem"),
+						surfaceInset({ scale: 2 }),
+						z(50),
+						opacity(0),
+						when('& [data-slot="link"]', [is("full"), justify("start")]),
+						when('&[data-size="wide"]', [is("28rem"), maxIs("calc(100vw - 2rem)")]),
+						container(CONTAINER_NAME),
+						transition("opacity, scale, display, overlay", {
+							duration: durations.fast,
+							easing: easings.standard,
+						}),
+						outlineStyle("none"),
+						scaleProperty("0.95"),
+						transitionBehavior("allow-discrete"),
+						when("&:popover-open", [opacity(100), scaleProperty("none")]),
+						startingStyle(when("&:popover-open", [opacity(0), scaleProperty("0.95")])),
+						media("(prefers-reduced-motion: reduce)", [
+							scaleProperty("none"),
+							transitionProperty("opacity, display, overlay"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -483,29 +489,31 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 				data-slot="link"
 				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					inlineFlex(),
-					items("center"),
-					gap(2),
-					rounded("md"),
-					pi(3),
-					pb(2),
-					leading(1),
-					weight("medium"),
-					fg("neutral"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					when('&[aria-current]:not([aria-current="false"])', [
-						bg("neutral.bg-tint-hover"),
-						fg("neutral.emphasis"),
-					]),
-					when('&[aria-disabled="true"]', [opacity(50), cursor("not-allowed")]),
-					userSelect(),
-					textDecoration("none"),
-					fontSize("sm"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						inlineFlex(),
+						items("center"),
+						gap(2),
+						rounded("md"),
+						pi(3),
+						pb(2),
+						leading(1),
+						weight("medium"),
+						fg("neutral"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						when('&[aria-current]:not([aria-current="false"])', [
+							bg("neutral.bg-tint-hover"),
+							fg("neutral.emphasis"),
+						]),
+						when('&[aria-disabled="true"]', [opacity(50), cursor("not-allowed")]),
+						userSelect(),
+						textDecoration("none"),
+						fontSize("sm"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 
@@ -539,28 +547,30 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 		return (
 			<div
 				{...rest}
-				mix={[
-					floatingSurface(),
-					raw({ borderRadius: concentricRadius(surfacePadding(2)) }),
-					relative(),
-					mbs(2),
-					overflow(),
-					is("var(--ui-navigation-menu-viewport-inline-size, auto)"),
-					bs("var(--ui-navigation-menu-viewport-block-size, auto)"),
-					opacity(0),
-					transition("inline-size, block-size, opacity, scale", {
-						duration: durations.normal,
-						easing: easings.decelerate,
-					}),
-					scaleProperty("0.95"),
-					data("visible", [opacity(100), scaleProperty("none")]),
-					startingStyle(data("visible", [opacity(0), scaleProperty("0.95")])),
-					media("(prefers-reduced-motion: reduce)", [
-						scaleProperty("none"),
-						transitionProperty("inline-size, block-size, opacity"),
-					]),
+				mix={mergeMix(
+					[
+						floatingSurface(),
+						raw({ borderRadius: concentricRadius(surfacePadding(2)) }),
+						relative(),
+						mbs(2),
+						overflow(),
+						is("var(--ui-navigation-menu-viewport-inline-size, auto)"),
+						bs("var(--ui-navigation-menu-viewport-block-size, auto)"),
+						opacity(0),
+						transition("inline-size, block-size, opacity, scale", {
+							duration: durations.normal,
+							easing: easings.decelerate,
+						}),
+						scaleProperty("0.95"),
+						data("visible", [opacity(100), scaleProperty("none")]),
+						startingStyle(data("visible", [opacity(0), scaleProperty("0.95")])),
+						media("(prefers-reduced-motion: reduce)", [
+							scaleProperty("none"),
+							transitionProperty("inline-size, block-size, opacity"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -585,7 +595,7 @@ NavigationMenu.ContentList = function NavigationMenuContentList(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[grid(), gap(1), mix]} />;
+		return <div {...rest} mix={mergeMix([grid(), gap(1)], mix)} />;
 	};
 };
 
@@ -617,12 +627,14 @@ NavigationMenu.ContentGrid = function NavigationMenuContentGrid(
 		return (
 			<div
 				{...rest}
-				mix={[
-					grid(),
-					gap(4),
-					at("40rem", CONTAINER_NAME, gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" })),
+				mix={mergeMix(
+					[
+						grid(),
+						gap(4),
+						at("40rem", CONTAINER_NAME, gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" })),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -646,6 +658,6 @@ NavigationMenu.ContentColumn = function NavigationMenuContentColumn(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[grid(), gap(1), mix]} />;
+		return <div {...rest} mix={mergeMix([grid(), gap(1)], mix)} />;
 	};
 };

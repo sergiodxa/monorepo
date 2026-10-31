@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { appearance, block, flex, flexCol, gap } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -66,7 +67,7 @@ export function ProgressBar(handle: Handle<ProgressBar.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} mix={[flex(), flexCol(), gap("0.25rem"), mix]} />;
+		return <div {...rest} mix={mergeMix([flex(), flexCol(), gap("0.25rem")], mix)} />;
 	};
 }
 
@@ -96,30 +97,32 @@ ProgressBar.Indicator = function ProgressBarIndicator(handle: Handle<ProgressBar
 			<progress
 				max={resolvedMax}
 				{...rest}
-				mix={[
-					appearance(),
-					block(),
-					is("full"),
-					bs("var(--ui-progress-bar-block-size, 0.5rem)"),
-					m("0"),
-					p("0"),
-					overflow("hidden"),
-					rounded("full"),
-					bg("neutral.border"),
-					when("&::-webkit-progress-bar", [bg("neutral.border"), rounded("full")]),
-					when("&::-webkit-progress-value", [
-						bg("brand.solid"),
+				mix={mergeMix(
+					[
+						appearance(),
+						block(),
+						is("full"),
+						bs("var(--ui-progress-bar-block-size, 0.5rem)"),
+						m("0"),
+						p("0"),
+						overflow("hidden"),
 						rounded("full"),
-						transition("all"),
-					]),
-					when("&::-moz-progress-bar", [bg("brand.solid"), rounded("full"), transition("all")]),
-					border("none"),
-					media("(prefers-reduced-motion: reduce)", [
-						when("&::-webkit-progress-value", transitionDuration("0s")),
-						when("&::-moz-progress-bar", transitionDuration("0s")),
-					]),
+						bg("neutral.border"),
+						when("&::-webkit-progress-bar", [bg("neutral.border"), rounded("full")]),
+						when("&::-webkit-progress-value", [
+							bg("brand.solid"),
+							rounded("full"),
+							transition("all"),
+						]),
+						when("&::-moz-progress-bar", [bg("brand.solid"), rounded("full"), transition("all")]),
+						border("none"),
+						media("(prefers-reduced-motion: reduce)", [
+							when("&::-webkit-progress-value", transitionDuration("0s")),
+							when("&::-moz-progress-bar", transitionDuration("0s")),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -141,6 +144,6 @@ ProgressBar.ValueLabel = function ProgressBarValueLabel(
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[fg("neutral"), text("sm"), tabularNums(), mix]} />;
+		return <span {...rest} mix={mergeMix([fg("neutral"), text("sm"), tabularNums()], mix)} />;
 	};
 };

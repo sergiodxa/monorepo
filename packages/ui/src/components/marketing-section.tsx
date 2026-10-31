@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { borderEdge } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { container, relative, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { is, maxIs, mi, pi } from "@sdxc/u/size";
@@ -190,22 +190,24 @@ export function MarketingSection(handle: Handle<MarketingSection.Props, Marketin
 				data-variant={resolvedVariant}
 				data-flush={isFlushFrame ? "true" : undefined}
 				data-inset={inset ? String(inset) : undefined}
-				mix={[
-					container("ui-marketing-section"),
-					relative(),
-					vstack({ align: "center" }),
-					is(inset ? INSET_INLINE_SIZE : "100%"),
-					raw({ isolation: "isolate", overflowX: "clip" }),
-					marketingBandTone(resolvedTone),
-					inset ? insetPanel(inset) : [],
-					/**
-					 * Framed bands keep block padding on the measured column so the
-					 * dashed rails share that box and run the full band height.
-					 */
-					isFrame ? [] : marketingSectionSpace(resolvedSpacing),
-					ruled ? marketingHairline() : [],
+				mix={mergeMix(
+					[
+						container("ui-marketing-section"),
+						relative(),
+						vstack({ align: "center" }),
+						is(inset ? INSET_INLINE_SIZE : "100%"),
+						raw({ isolation: "isolate", overflowX: "clip" }),
+						marketingBandTone(resolvedTone),
+						inset ? insetPanel(inset) : [],
+						/**
+						 * Framed bands keep block padding on the measured column so the
+						 * dashed rails share that box and run the full band height.
+						 */
+						isFrame ? [] : marketingSectionSpace(resolvedSpacing),
+						ruled ? marketingHairline() : [],
+					],
 					mix,
-				]}
+				)}
 			>
 				<HeadingScope level={resolvedLevel}>
 					<div

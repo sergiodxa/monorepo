@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { MinusIcon, PlusIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg, outline, outlineWidth } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { active, focusVisible, hover, invalid, when } from "@sdxc/u/state";
@@ -129,7 +129,7 @@ export function NumberField(handle: Handle<NumberField.Props>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="number-field" mix={[fieldStackLayout(), mix]} />;
+		return <div {...rest} data-slot="number-field" mix={mergeMix(fieldStackLayout(), mix)} />;
 	};
 }
 
@@ -155,27 +155,29 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					inlineFlex(),
-					items("stretch"),
-					is("full"),
-					rounded("md"),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.tint"),
-					fg("neutral.emphasis"),
-					hover(border("neutral.border-hover")),
-					/**
-					 * The wrapper wears the focus of whichever part holds it as a ring standing off the
-					 * field, as every button here does; the border steps only to its hover weight, since a
-					 * darkened border flush with the ring reads as one thick slab.
-					 */
-					when("&:focus-within", [
-						outline({ color: "brand.ring", offset: 2 }),
-						border("neutral.border-hover"),
-					]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						inlineFlex(),
+						items("stretch"),
+						is("full"),
+						rounded("md"),
+						border({ color: "neutral", width: 1 }),
+						bg("neutral.tint"),
+						fg("neutral.emphasis"),
+						hover(border("neutral.border-hover")),
+						/**
+						 * The wrapper wears the focus of whichever part holds it as a ring standing off the
+						 * field, as every button here does; the border steps only to its hover weight, since a
+						 * darkened border flush with the ring reads as one thick slab.
+						 */
+						when("&:focus-within", [
+							outline({ color: "brand.ring", offset: 2 }),
+							border("neutral.border-hover"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -201,29 +203,31 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 			<Input
 				type="number"
 				{...rest}
-				mix={[
-					textAlign("center"),
-					tabularNums(),
-					rounded("none"),
-					grow(),
-					shrink(1),
-					basis("0%"),
-					border({ width: "0", noStyleDefault: true }),
-					raw({
-						"-moz-appearance": "textfield",
+				mix={mergeMix(
+					[
+						textAlign("center"),
+						tabularNums(),
+						rounded("none"),
+						grow(),
+						shrink(1),
+						basis("0%"),
+						border({ width: "0", noStyleDefault: true }),
+						raw({
+							"-moz-appearance": "textfield",
 
-						"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
-							"-webkit-appearance": "none",
-							margin: "0",
-						},
-					}),
-					bg("transparent"),
-					fg("inherit"),
-					when("&:disabled", bg("transparent")),
-					focusVisible(outlineWidth("0")),
-					invalid([outlineWidth("0"), fg("danger")]),
+							"&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
+								"-webkit-appearance": "none",
+								margin: "0",
+							},
+						}),
+						bg("transparent"),
+						fg("inherit"),
+						when("&:disabled", bg("transparent")),
+						focusVisible(outlineWidth("0")),
+						invalid([outlineWidth("0"), fg("danger")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -258,7 +262,7 @@ NumberField.DecrementButton = function NumberFieldDecrementButton(
 				type={type ?? DEFAULT_BUTTON_TYPE}
 				{...rest}
 				data-slot="decrement"
-				mix={[stepperButtonMix("end"), mix]}
+				mix={mergeMix(stepperButtonMix("end"), mix)}
 			>
 				<MinusIcon />
 			</button>
@@ -295,7 +299,7 @@ NumberField.IncrementButton = function NumberFieldIncrementButton(
 				type={type ?? DEFAULT_BUTTON_TYPE}
 				{...rest}
 				data-slot="increment"
-				mix={[stepperButtonMix("start"), mix]}
+				mix={mergeMix(stepperButtonMix("start"), mix)}
 			>
 				<PlusIcon />
 			</button>

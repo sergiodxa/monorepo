@@ -13,6 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { visibility } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
@@ -66,16 +67,18 @@ export function SelectionIndicator(handle: Handle<SelectionIndicator.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
-					is("var(--ui-selection-indicator-size, 1rem)"),
-					bs("var(--ui-selection-indicator-size, 1rem)"),
-					fg("currentColor"),
-					visibility("hidden"),
-					when('&[aria-selected="true"]', visibility()),
-					when('&[aria-current]:not([aria-current="false"])', visibility()),
+				mix={mergeMix(
+					[
+						attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
+						is("var(--ui-selection-indicator-size, 1rem)"),
+						bs("var(--ui-selection-indicator-size, 1rem)"),
+						fg("currentColor"),
+						visibility("hidden"),
+						when('&[aria-selected="true"]', visibility()),
+						when('&[aria-current]:not([aria-current="false"])', visibility()),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

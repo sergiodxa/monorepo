@@ -11,7 +11,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container, gap, grid, gridTemplate, items, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { minIs } from "@sdxc/u/size";
@@ -103,7 +103,7 @@ export function Split(handle: Handle<Split.Props>) {
 				{...rest}
 				data-lean={resolvedLean}
 				data-slot="split"
-				mix={[container("ui-marketing-split"), mix]}
+				mix={mergeMix(container("ui-marketing-split"), mix)}
 			>
 				<div
 					mix={[
@@ -147,49 +147,51 @@ Split.Copy = function SplitCopy(handle: Handle<Split.CopyProps>) {
 				{...rest}
 				data-slot="split-copy"
 				data-checks={checks ? "true" : undefined}
-				mix={[
-					vstack({ gap: 6, align: "stretch" }),
-					text("lg"),
-					leading("relaxed"),
-					fg("neutral"),
-					checks
-						? [
-								when(
-									"& ul",
-									raw({
-										listStyle: "none",
-										padding: "0",
-										margin: "0",
-										display: "grid",
-										gap: "0.625rem",
-									}),
-								),
-								when(
-									"& li",
-									raw({
-										position: "relative",
-										paddingInlineStart: "1.75rem",
-										fontSize: "1rem",
-									}),
-								),
-								when(
-									"& li::before",
-									raw({
-										content: '""',
-										position: "absolute",
-										insetInlineStart: "0",
-										insetBlockStart: "0.3em",
-										inlineSize: "1rem",
-										blockSize: "1rem",
-										backgroundColor: "var(--ui-brand-fg)",
-										mask: CHECK_MASK,
-										WebkitMask: CHECK_MASK,
-									}),
-								),
-							]
-						: [],
+				mix={mergeMix(
+					[
+						vstack({ gap: 6, align: "stretch" }),
+						text("lg"),
+						leading("relaxed"),
+						fg("neutral"),
+						checks
+							? [
+									when(
+										"& ul",
+										raw({
+											listStyle: "none",
+											padding: "0",
+											margin: "0",
+											display: "grid",
+											gap: "0.625rem",
+										}),
+									),
+									when(
+										"& li",
+										raw({
+											position: "relative",
+											paddingInlineStart: "1.75rem",
+											fontSize: "1rem",
+										}),
+									),
+									when(
+										"& li::before",
+										raw({
+											content: '""',
+											position: "absolute",
+											insetInlineStart: "0",
+											insetBlockStart: "0.3em",
+											inlineSize: "1rem",
+											blockSize: "1rem",
+											backgroundColor: "var(--ui-brand-fg)",
+											mask: CHECK_MASK,
+											WebkitMask: CHECK_MASK,
+										}),
+									),
+								]
+							: [],
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -216,23 +218,25 @@ Split.Media = function SplitMedia(handle: Handle<Split.MediaProps>) {
 				{...rest}
 				data-slot="split-media"
 				data-bleed={bleed}
-				mix={[
-					vstack({ gap: 4, align: "stretch" }),
-					minIs(0),
-					text("base"),
-					when("& pre", raw({ maxBlockSize: "22rem", overflowY: "auto" })),
-					bleed === "end"
-						? at(
-								"lg",
-								"ui-marketing-split",
-								when(
-									"& > *",
-									raw({ inlineSize: "max(100%, 60rem)", maxInlineSize: "none", flexShrink: "0" }),
-								),
-							)
-						: [],
+				mix={mergeMix(
+					[
+						vstack({ gap: 4, align: "stretch" }),
+						minIs(0),
+						text("base"),
+						when("& pre", raw({ maxBlockSize: "22rem", overflowY: "auto" })),
+						bleed === "end"
+							? at(
+									"lg",
+									"ui-marketing-split",
+									when(
+										"& > *",
+										raw({ inlineSize: "max(100%, 60rem)", maxInlineSize: "none", flexShrink: "0" }),
+									),
+								)
+							: [],
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

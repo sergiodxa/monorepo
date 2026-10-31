@@ -12,6 +12,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { pb, pi } from "@sdxc/u/size";
 import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 
@@ -43,16 +44,18 @@ export function Header(handle: Handle<Header.Props>) {
 		return (
 			<header
 				{...rest}
-				mix={[
-					pi(3),
-					pb(1.5),
-					weight("semibold"),
-					tracking("wider"),
-					fg("neutral.muted"),
-					text("xs"),
-					textTransform("uppercase"),
+				mix={mergeMix(
+					[
+						pi(3),
+						pb(1.5),
+						weight("semibold"),
+						tracking("wider"),
+						fg("neutral.muted"),
+						text("xs"),
+						textTransform("uppercase"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

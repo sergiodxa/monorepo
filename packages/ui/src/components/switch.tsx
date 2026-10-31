@@ -37,6 +37,7 @@ import {
 	transitionDuration,
 	when,
 } from "@sdxc/u";
+import { mergeMix } from "@sdxc/u/general";
 import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
@@ -96,52 +97,54 @@ export function Switch(handle: Handle<Switch.Props>) {
 				type="checkbox"
 				// oxlint-disable-next-line jsx-a11y/role-has-required-aria-props -- The host is a native checkbox, so its own checkedness supplies the switch's checked state; see the note above for why authoring one would be worse than omitting it.
 				role="switch"
-				mix={[
-					attrs({ switch: DEFAULT_SWITCH_ATTRIBUTE }),
-					appearance(),
-					relative(),
-					inlineBlock(),
-					m("0"),
-					is("var(--ui-switch-track-inline-size, 2.75rem)"),
-					bs("var(--ui-switch-track-block-size, 1.5rem)"),
-					rounded("full"),
-					bg("neutral.border"),
-					before([
-						absolute(),
-						is("var(--ui-switch-thumb-size, 1.25rem)"),
-						bs("var(--ui-switch-thumb-size, 1.25rem)"),
+				mix={mergeMix(
+					[
+						attrs({ switch: DEFAULT_SWITCH_ATTRIBUTE }),
+						appearance(),
+						relative(),
+						inlineBlock(),
+						m("0"),
+						is("var(--ui-switch-track-inline-size, 2.75rem)"),
+						bs("var(--ui-switch-track-block-size, 1.5rem)"),
 						rounded("full"),
-						bg("brand.onSolid"),
-						transition("inset-inline-start, scale", { duration: 150 }),
-					]),
-					when("&:checked", bg("brand.solid")),
-					when("&:active", bg("neutral.strong")),
-					when("&:checked:active", bg("brand.bg-solid-hover")),
-					focusVisible(outline({ color: "brand.ring", offset: 2 })),
-					when("&:disabled", opacity(50)),
-					cursor("pointer"),
-					shrink(0),
-					transition("background-color", { duration: durations.fast, easing: easings.standard }),
-					when("&:disabled", cursor("not-allowed")),
-					verticalAlign("middle"),
-					before([
-						pseudoContent('""'),
-						insBs("var(--ui-switch-thumb-inset, 0.125rem)"),
-						insIs("var(--ui-switch-thumb-inset, 0.125rem)"),
-						shadow("base"),
-					]),
-					when(
-						"&:checked",
-						before(
-							insIs(
-								"calc(var(--ui-switch-track-inline-size, 2.75rem) - var(--ui-switch-thumb-size, 1.25rem) - var(--ui-switch-thumb-inset, 0.125rem))",
+						bg("neutral.border"),
+						before([
+							absolute(),
+							is("var(--ui-switch-thumb-size, 1.25rem)"),
+							bs("var(--ui-switch-thumb-size, 1.25rem)"),
+							rounded("full"),
+							bg("brand.onSolid"),
+							transition("inset-inline-start, scale", { duration: 150 }),
+						]),
+						when("&:checked", bg("brand.solid")),
+						when("&:active", bg("neutral.strong")),
+						when("&:checked:active", bg("brand.bg-solid-hover")),
+						focusVisible(outline({ color: "brand.ring", offset: 2 })),
+						when("&:disabled", opacity(50)),
+						cursor("pointer"),
+						shrink(0),
+						transition("background-color", { duration: durations.fast, easing: easings.standard }),
+						when("&:disabled", cursor("not-allowed")),
+						verticalAlign("middle"),
+						before([
+							pseudoContent('""'),
+							insBs("var(--ui-switch-thumb-inset, 0.125rem)"),
+							insIs("var(--ui-switch-thumb-inset, 0.125rem)"),
+							shadow("base"),
+						]),
+						when(
+							"&:checked",
+							before(
+								insIs(
+									"calc(var(--ui-switch-track-inline-size, 2.75rem) - var(--ui-switch-thumb-size, 1.25rem) - var(--ui-switch-thumb-inset, 0.125rem))",
+								),
 							),
 						),
-					),
-					when("&:active", before(scaleProperty("0.95"))),
-					media("(prefers-reduced-motion: reduce)", before(transitionDuration("0s"))),
+						when("&:active", before(scaleProperty("0.95"))),
+						media("(prefers-reduced-motion: reduce)", before(transitionDuration("0s"))),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 

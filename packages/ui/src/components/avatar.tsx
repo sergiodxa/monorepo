@@ -13,7 +13,7 @@ import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { combine, raw, userSelect } from "@sdxc/u/general";
+import { combine, raw, userSelect, mergeMix } from "@sdxc/u/general";
 import { flex, inlineFlex, items, justify, relative, shrink } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is } from "@sdxc/u/size";
@@ -157,7 +157,7 @@ function AvatarGroup(handle: Handle<Avatar.GroupProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<div {...rest} data-slot="group" mix={[flex(), groupStack(), mix]}>
+			<div {...rest} data-slot="group" mix={mergeMix([flex(), groupStack()], mix)}>
 				{children}
 			</div>
 		);
@@ -197,24 +197,26 @@ function AvatarGroupCount(handle: Handle<Avatar.GroupCountProps>) {
 				{...rest}
 				data-slot="group-count"
 				data-shape="circle"
-				mix={[
-					relative(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					overflow("hidden"),
-					weight("medium"),
-					bg("neutral.bg-tint-hover"),
-					fg("neutral"),
-					rounded("full"),
-					shrink(),
-					userSelect(),
-					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
-					text("sm"),
-					tabularNums(),
+				mix={mergeMix(
+					[
+						relative(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						overflow("hidden"),
+						weight("medium"),
+						bg("neutral.bg-tint-hover"),
+						fg("neutral"),
+						rounded("full"),
+						shrink(),
+						userSelect(),
+						is("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
+						text("sm"),
+						tabularNums(),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</span>

@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { data, when } from "@sdxc/u/state";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
@@ -66,25 +66,27 @@ export function Highlight(handle: Handle<Highlight.Props>) {
 			<span
 				data-color={color ?? DEFAULT_COLOR}
 				{...rest}
-				mix={[
-					when("& > mark", [
-						fg("inherit"),
-						rounded("sm"),
-						raw({
-							fontWeight: "inherit",
-							paddingInline: "0.1em",
-							marginInline: "-0.1em",
-							boxDecorationBreak: "clone",
-							WebkitBoxDecorationBreak: "clone",
-						}),
-					]),
-					data("color", "brand", when("& > mark", bg("brand.tint"))),
-					data("color", "neutral", when("& > mark", bg("neutral.tint"))),
-					data("color", "success", when("& > mark", bg("success.tint"))),
-					data("color", "warning", when("& > mark", bg("warning.tint"))),
-					data("color", "danger", when("& > mark", bg("danger.tint"))),
+				mix={mergeMix(
+					[
+						when("& > mark", [
+							fg("inherit"),
+							rounded("sm"),
+							raw({
+								fontWeight: "inherit",
+								paddingInline: "0.1em",
+								marginInline: "-0.1em",
+								boxDecorationBreak: "clone",
+								WebkitBoxDecorationBreak: "clone",
+							}),
+						]),
+						data("color", "brand", when("& > mark", bg("brand.tint"))),
+						data("color", "neutral", when("& > mark", bg("neutral.tint"))),
+						data("color", "success", when("& > mark", bg("success.tint"))),
+						data("color", "warning", when("& > mark", bg("warning.tint"))),
+						data("color", "danger", when("& > mark", bg("danger.tint"))),
+					],
 					mix,
-				]}
+				)}
 			>
 				{segments.map((segment) => (segment.match ? <mark>{segment.text}</mark> : segment.text))}
 			</span>

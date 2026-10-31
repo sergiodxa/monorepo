@@ -46,6 +46,7 @@ import {
 	when,
 	z,
 } from "@sdxc/u";
+import { mergeMix } from "@sdxc/u/general";
 
 import { outputCaptionText } from "../styles/output-caption-text.js";
 import { rangeThumbAppearance } from "../styles/range-thumb-appearance.js";
@@ -180,12 +181,14 @@ export function Slider(handle: Handle<Slider.Props, Slider.Context>) {
 				data-slot="slider"
 				data-orientation={resolvedOrientation}
 				{...rest}
-				mix={[
-					vstack({ gap: "0.5rem" }),
-					when('&[data-orientation="horizontal"]', [is("100%"), minIs("10rem")]),
-					when('&[data-orientation="vertical"]', [bs("10rem"), items("center")]),
+				mix={mergeMix(
+					[
+						vstack({ gap: "0.5rem" }),
+						when('&[data-orientation="horizontal"]', [is("100%"), minIs("10rem")]),
+						when('&[data-orientation="vertical"]', [bs("10rem"), items("center")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -214,53 +217,55 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 			<div
 				{...rest}
 				style={resolvedStyle}
-				mix={[
-					relative(),
-					when('[data-orientation="horizontal"] &', [
-						is("100%"),
-						bs("var(--ui-slider-thumb-size, 1.25rem)"),
-					]),
-					when('[data-slot="slider"][data-orientation="vertical"] &', [
-						is("var(--ui-slider-thumb-size, 1.25rem)"),
-						minBs("0"),
-					]),
-					before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
-					after([absolute(), rounded("full"), bg("brand.solid"), pseudoContent('""')]),
-					when('[data-slot="slider"][data-orientation="vertical"] &', [
-						grow(),
-						shrink(1),
-						basis("0%"),
-					]),
-					when('[data-orientation="horizontal"] &::before', [
-						bs("var(--ui-slider-track-thickness, 0.5rem)"),
-						insIs("0"),
-						insIe("0"),
-						insBs("50%"),
-						translateY("-50%"),
-					]),
-					when('[data-orientation="horizontal"] &::after', [
-						bs("var(--ui-slider-track-thickness, 0.5rem)"),
-						is("var(--ui-slider-fill, 0%)"),
-						insIs("0"),
-						insBs("50%"),
-						translateY("-50%"),
-					]),
-					when('[data-slot="slider"][data-orientation="vertical"] &::before', [
-						is("var(--ui-slider-track-thickness, 0.5rem)"),
-						bs("100%"),
-						insBs("0"),
-						insIs("50%"),
-						translateX("-50%"),
-					]),
-					when('[data-slot="slider"][data-orientation="vertical"] &::after', [
-						is("var(--ui-slider-track-thickness, 0.5rem)"),
-						bs("var(--ui-slider-fill, 0%)"),
-						insBe("0"),
-						insIs("50%"),
-						translateX("-50%"),
-					]),
+				mix={mergeMix(
+					[
+						relative(),
+						when('[data-orientation="horizontal"] &', [
+							is("100%"),
+							bs("var(--ui-slider-thumb-size, 1.25rem)"),
+						]),
+						when('[data-slot="slider"][data-orientation="vertical"] &', [
+							is("var(--ui-slider-thumb-size, 1.25rem)"),
+							minBs("0"),
+						]),
+						before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
+						after([absolute(), rounded("full"), bg("brand.solid"), pseudoContent('""')]),
+						when('[data-slot="slider"][data-orientation="vertical"] &', [
+							grow(),
+							shrink(1),
+							basis("0%"),
+						]),
+						when('[data-orientation="horizontal"] &::before', [
+							bs("var(--ui-slider-track-thickness, 0.5rem)"),
+							insIs("0"),
+							insIe("0"),
+							insBs("50%"),
+							translateY("-50%"),
+						]),
+						when('[data-orientation="horizontal"] &::after', [
+							bs("var(--ui-slider-track-thickness, 0.5rem)"),
+							is("var(--ui-slider-fill, 0%)"),
+							insIs("0"),
+							insBs("50%"),
+							translateY("-50%"),
+						]),
+						when('[data-slot="slider"][data-orientation="vertical"] &::before', [
+							is("var(--ui-slider-track-thickness, 0.5rem)"),
+							bs("100%"),
+							insBs("0"),
+							insIs("50%"),
+							translateX("-50%"),
+						]),
+						when('[data-slot="slider"][data-orientation="vertical"] &::after', [
+							is("var(--ui-slider-track-thickness, 0.5rem)"),
+							bs("var(--ui-slider-fill, 0%)"),
+							insBe("0"),
+							insIs("50%"),
+							translateX("-50%"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -295,37 +300,39 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 				step={resolvedStep}
 				defaultValue={resolvedValue}
 				aria-orientation={context.orientation === "vertical" ? "vertical" : undefined}
-				mix={[
-					rangeThumbAppearance("--ui-slider-thumb-size", "--ui-slider-thumb-border-width"),
-					absolute(),
-					inset("0"),
-					/**
-					 * The native input reaches past the track across its thin axis to a full pointer
-					 * target, centred so the thumb stays on the visible rail. Its block axis is that
-					 * thin axis in both orientations, since a vertical input runs `vertical-lr`.
-					 */
-					insBs(THUMB_HIT_INSET),
-					insBe(THUMB_HIT_INSET),
-					z(10),
-					m("0"),
-					appearance(),
-					bg("transparent"),
-					cursor("pointer"),
-					when("&:disabled", cursor("not-allowed")),
-					outlineStyle("none"),
-					when("&::-webkit-slider-runnable-track", [appearance(), bs("100%"), bg("transparent")]),
-					when("&::-moz-range-track", [
+				mix={mergeMix(
+					[
+						rangeThumbAppearance("--ui-slider-thumb-size", "--ui-slider-thumb-border-width"),
+						absolute(),
+						inset("0"),
+						/**
+						 * The native input reaches past the track across its thin axis to a full pointer
+						 * target, centred so the thumb stays on the visible rail. Its block axis is that
+						 * thin axis in both orientations, since a vertical input runs `vertical-lr`.
+						 */
+						insBs(THUMB_HIT_INSET),
+						insBe(THUMB_HIT_INSET),
+						z(10),
+						m("0"),
 						appearance(),
-						bs("100%"),
 						bg("transparent"),
-						border({ style: "none" }),
-					]),
-					when(
-						'[data-slot="slider"][data-orientation="vertical"] &',
-						raw({ writingMode: "vertical-lr", direction: "rtl" }),
-					),
+						cursor("pointer"),
+						when("&:disabled", cursor("not-allowed")),
+						outlineStyle("none"),
+						when("&::-webkit-slider-runnable-track", [appearance(), bs("100%"), bg("transparent")]),
+						when("&::-moz-range-track", [
+							appearance(),
+							bs("100%"),
+							bg("transparent"),
+							border({ style: "none" }),
+						]),
+						when(
+							'[data-slot="slider"][data-orientation="vertical"] &',
+							raw({ writingMode: "vertical-lr", direction: "rtl" }),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -350,7 +357,7 @@ Slider.Output = function SliderOutput(handle: Handle<Slider.OutputProps>) {
 			<output
 				{...rest}
 				htmlFor={htmlFor ?? context.thumbId}
-				mix={[outputCaptionText(), tabularNums(), mix]}
+				mix={mergeMix([outputCaptionText(), tabularNums()], mix)}
 			/>
 		);
 	};

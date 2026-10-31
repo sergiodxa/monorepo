@@ -9,7 +9,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { leading, text } from "@sdxc/u/typography";
@@ -82,13 +82,15 @@ export function CheckList(handle: Handle<CheckList.Props>) {
 				{...rest}
 				data-slot="check-list"
 				data-orientation={resolvedOrientation}
-				mix={[
-					raw({ listStyle: "none", padding: "0", margin: "0" }),
-					isHorizontal
-						? [inlineFlex(), flexWrap(), items("center"), gap(4)]
-						: [vstack({ gap: 2.5, align: "stretch" })],
+				mix={mergeMix(
+					[
+						raw({ listStyle: "none", padding: "0", margin: "0" }),
+						isHorizontal
+							? [inlineFlex(), flexWrap(), items("center"), gap(4)]
+							: [vstack({ gap: 2.5, align: "stretch" })],
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -111,30 +113,32 @@ export function CheckRow(handle: Handle<CheckRow.Props>) {
 			<li
 				{...rest}
 				data-slot="check-row"
-				mix={[
-					raw({
-						position: "relative",
-						paddingInlineStart: "1.75rem",
-					}),
-					text("base"),
-					leading("snug"),
-					fg("neutral"),
-					when(
-						"&::before",
+				mix={mergeMix(
+					[
 						raw({
-							content: '""',
-							position: "absolute",
-							insetInlineStart: "0",
-							insetBlockStart: "0.3em",
-							inlineSize: "1rem",
-							blockSize: "1rem",
-							backgroundColor: "var(--ui-brand-fg)",
-							mask: CHECK_MASK,
-							WebkitMask: CHECK_MASK,
+							position: "relative",
+							paddingInlineStart: "1.75rem",
 						}),
-					),
+						text("base"),
+						leading("snug"),
+						fg("neutral"),
+						when(
+							"&::before",
+							raw({
+								content: '""',
+								position: "absolute",
+								insetInlineStart: "0",
+								insetBlockStart: "0.3em",
+								inlineSize: "1rem",
+								blockSize: "1rem",
+								backgroundColor: "var(--ui-brand-fg)",
+								mask: CHECK_MASK,
+								WebkitMask: CHECK_MASK,
+							}),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

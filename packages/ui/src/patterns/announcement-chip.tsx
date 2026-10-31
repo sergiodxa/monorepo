@@ -9,7 +9,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 
 import type { MarketingEyebrowVariant } from "../styles/marketing.js";
 
@@ -79,7 +79,7 @@ export function AnnouncementChip(handle: Handle<AnnouncementChip.Props>) {
 				href={href}
 				slot="announcement-chip"
 				variant={resolvedVariant}
-				mix={[resolvedVariant === "special" ? raw(SPECIAL_STYLES) : [], mix]}
+				mix={mergeMix(resolvedVariant === "special" ? raw(SPECIAL_STYLES) : [], mix)}
 			>
 				{children}
 			</Eyebrow>

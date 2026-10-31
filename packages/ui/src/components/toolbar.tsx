@@ -12,6 +12,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { mergeMix } from "@sdxc/u/general";
 import { flexCol, hstack, items } from "@sdxc/u/layout";
 import { pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -75,17 +76,19 @@ export function Toolbar(handle: Handle<Toolbar.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
-					hstack({ gap: 2, align: "center" }),
-					rounded("lg"),
-					border({ color: "neutral.border", width: 1 }),
-					bg("neutral.tint"),
-					pb(2),
-					pi(2),
-					when('&[aria-orientation="vertical"]', [flexCol(), items("start")]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE, "aria-orientation": DEFAULT_ORIENTATION }),
+						hstack({ gap: 2, align: "center" }),
+						rounded("lg"),
+						border({ color: "neutral.border", width: 1 }),
+						bg("neutral.tint"),
+						pb(2),
+						pi(2),
+						when('&[aria-orientation="vertical"]', [flexCol(), items("start")]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

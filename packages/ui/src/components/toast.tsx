@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { XIcon } from "@sdxc/icons";
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@sdxc/u/effects";
-import { pointerEvents, raw } from "@sdxc/u/general";
+import { pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import {
 	absolute,
 	basis,
@@ -260,81 +260,83 @@ export function Toast(handle: Handle<Toast.Props>) {
 				aria-live={ariaLive}
 				data-color={color}
 				data-slot="toast"
-				mix={[
-					attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
-					relative(),
-					flex(),
-					is("full"),
-					gap("0.75rem"),
-					rounded("lg"),
-					border("neutral"),
-					fg("neutral.fg-emphasis"),
-					pb("1rem"),
-					pi("1rem"),
-					when('&:has(> [data-slot="close"])', pie("2.5rem")),
-					when('&[data-color="brand"]', [border("brand"), fg("brand.fg-emphasis")]),
-					when('&[data-color="neutral"]', [border("neutral"), fg("neutral.fg-emphasis")]),
-					when('&[data-color="success"]', [border("success"), fg("success.fg-emphasis")]),
-					when('&[data-color="warning"]', [border("warning"), fg("warning.fg-emphasis")]),
-					when('&[data-color="danger"]', [border("danger"), fg("danger.fg-emphasis")]),
-					border({ width: 1 }),
-					shadow("lg"),
-					items("start"),
-					pointerEvents("auto"),
-					raw({
-						"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
-						backgroundColor: "var(--ui-toast-bg)",
-					}),
-					data(
-						"color",
-						"brand",
-						raw({
-							"--ui-toast-bg": "var(--ui-brand-bg-tint)",
-							backgroundColor: "var(--ui-toast-bg)",
-						}),
-					),
-					data(
-						"color",
-						"neutral",
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE, "aria-atomic": DEFAULT_ARIA_ATOMIC }),
+						relative(),
+						flex(),
+						is("full"),
+						gap("0.75rem"),
+						rounded("lg"),
+						border("neutral"),
+						fg("neutral.fg-emphasis"),
+						pb("1rem"),
+						pi("1rem"),
+						when('&:has(> [data-slot="close"])', pie("2.5rem")),
+						when('&[data-color="brand"]', [border("brand"), fg("brand.fg-emphasis")]),
+						when('&[data-color="neutral"]', [border("neutral"), fg("neutral.fg-emphasis")]),
+						when('&[data-color="success"]', [border("success"), fg("success.fg-emphasis")]),
+						when('&[data-color="warning"]', [border("warning"), fg("warning.fg-emphasis")]),
+						when('&[data-color="danger"]', [border("danger"), fg("danger.fg-emphasis")]),
+						border({ width: 1 }),
+						shadow("lg"),
+						items("start"),
+						pointerEvents("auto"),
 						raw({
 							"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
 							backgroundColor: "var(--ui-toast-bg)",
 						}),
-					),
-					data(
-						"color",
-						"success",
-						raw({
-							"--ui-toast-bg": "var(--ui-success-bg-tint)",
-							backgroundColor: "var(--ui-toast-bg)",
-						}),
-					),
-					data(
-						"color",
-						"warning",
-						raw({
-							"--ui-toast-bg": "var(--ui-warning-bg-tint)",
-							backgroundColor: "var(--ui-toast-bg)",
-						}),
-					),
-					data(
-						"color",
-						"danger",
-						raw({
-							"--ui-toast-bg": "var(--ui-danger-bg-tint)",
-							backgroundColor: "var(--ui-toast-bg)",
-						}),
-					),
-					supports(
-						"(backdrop-filter: blur(0))",
-						media("(prefers-reduced-transparency: no-preference)", [
-							bg(colorMix("oklab", { color: "var(--ui-toast-bg)", weight: 85 }, "transparent")),
-							backdropBlur("md"),
-							backdropSaturate(1.4),
-						]),
-					),
+						data(
+							"color",
+							"brand",
+							raw({
+								"--ui-toast-bg": "var(--ui-brand-bg-tint)",
+								backgroundColor: "var(--ui-toast-bg)",
+							}),
+						),
+						data(
+							"color",
+							"neutral",
+							raw({
+								"--ui-toast-bg": "var(--ui-neutral-bg-tint)",
+								backgroundColor: "var(--ui-toast-bg)",
+							}),
+						),
+						data(
+							"color",
+							"success",
+							raw({
+								"--ui-toast-bg": "var(--ui-success-bg-tint)",
+								backgroundColor: "var(--ui-toast-bg)",
+							}),
+						),
+						data(
+							"color",
+							"warning",
+							raw({
+								"--ui-toast-bg": "var(--ui-warning-bg-tint)",
+								backgroundColor: "var(--ui-toast-bg)",
+							}),
+						),
+						data(
+							"color",
+							"danger",
+							raw({
+								"--ui-toast-bg": "var(--ui-danger-bg-tint)",
+								backgroundColor: "var(--ui-toast-bg)",
+							}),
+						),
+						supports(
+							"(backdrop-filter: blur(0))",
+							media("(prefers-reduced-transparency: no-preference)", [
+								bg(colorMix("oklab", { color: "var(--ui-toast-bg)", weight: 85 }, "transparent")),
+								backdropBlur("md"),
+								backdropSaturate(1.4),
+							]),
+						),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>
@@ -358,7 +360,10 @@ Toast.Icon = function ToastIcon(handle: Handle<Toast.IconProps>) {
 			<div
 				{...rest}
 				data-slot="icon"
-				mix={[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle(), mix]}
+				mix={mergeMix(
+					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle()],
+					mix,
+				)}
 			>
 				{children}
 			</div>
@@ -382,7 +387,10 @@ Toast.Loader = function ToastLoader(handle: Handle<Toast.LoaderProps>) {
 			<div
 				{...rest}
 				data-slot="loader"
-				mix={[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle(), mix]}
+				mix={mergeMix(
+					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle()],
+					mix,
+				)}
 			>
 				{children}
 			</div>
@@ -406,7 +414,10 @@ Toast.Content = function ToastContent(handle: Handle<Toast.ContentProps>) {
 			<div
 				{...rest}
 				data-slot="content"
-				mix={[flex(), flexCol(), gap("0.25rem"), minIs(0), grow(), shrink(1), basis("0%"), mix]}
+				mix={mergeMix(
+					[flex(), flexCol(), gap("0.25rem"), minIs(0), grow(), shrink(1), basis("0%")],
+					mix,
+				)}
 			>
 				{children}
 			</div>
@@ -430,7 +441,7 @@ Toast.Title = function ToastTitle(handle: Handle<Toast.TitleProps>) {
 			<h3
 				{...rest}
 				data-slot="title"
-				mix={[weight(500), leading(1), fontSize("sm"), balance(), mix]}
+				mix={mergeMix([weight(500), leading(1), fontSize("sm"), balance()], mix)}
 			>
 				{children}
 			</h3>
@@ -454,12 +465,14 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 			<p
 				{...rest}
 				data-slot="description"
-				mix={[
-					fontSize("sm"),
-					pretty(),
-					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+				mix={mergeMix(
+					[
+						fontSize("sm"),
+						pretty(),
+						fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</p>
@@ -487,26 +500,28 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 				type={resolvedType}
 				{...rest}
 				data-slot="action"
-				mix={[
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					rounded("md"),
-					border({ width: 1 }),
-					pi("0.75rem"),
-					pb("0.25rem"),
-					weight(500),
-					shrink(),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-					),
-					fg("currentcolor"),
-					border(colorMix("oklab", { color: "currentcolor", weight: 30 }, "transparent")),
-					fontSize("xs"),
-					hover(bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent"))),
-					active(bg(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent"))),
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						rounded("md"),
+						border({ width: 1 }),
+						pi("0.75rem"),
+						pb("0.25rem"),
+						weight(500),
+						shrink(),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+						),
+						fg("currentcolor"),
+						border(colorMix("oklab", { color: "currentcolor", weight: 30 }, "transparent")),
+						fontSize("xs"),
+						hover(bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent"))),
+						active(bg(colorMix("oklab", { color: "currentcolor", weight: 20 }, "transparent"))),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>
@@ -534,25 +549,27 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 				type={resolvedType}
 				{...rest}
 				data-slot="cancel"
-				mix={[
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					rounded("md"),
-					border({ color: "neutral", width: 1 }),
-					pi("0.75rem"),
-					pb("0.25rem"),
-					weight(500),
-					fg("neutral.fg"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
-					active(bg("neutral.bg-tint-pressed")),
-					shrink(),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-					),
-					fontSize("xs"),
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						rounded("md"),
+						border({ color: "neutral", width: 1 }),
+						pi("0.75rem"),
+						pb("0.25rem"),
+						weight(500),
+						fg("neutral.fg"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
+						active(bg("neutral.bg-tint-pressed")),
+						shrink(),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+						),
+						fontSize("xs"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>
@@ -579,24 +596,26 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 				type="button"
 				{...rest}
 				data-slot="close"
-				mix={[
-					absolute(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					is("1.5rem"),
-					bs("1.5rem"),
-					rounded("md"),
-					fg("neutral.fg-muted"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
-					transition(
-						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
-					),
-					insBs("0.5rem"),
-					insIe("0.5rem"),
-					hitArea(),
+				mix={mergeMix(
+					[
+						absolute(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						is("1.5rem"),
+						bs("1.5rem"),
+						rounded("md"),
+						fg("neutral.fg-muted"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
+						transition(
+							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
+						),
+						insBs("0.5rem"),
+						insIe("0.5rem"),
+						hitArea(),
+					],
 					mix,
-				]}
+				)}
 			>
 				<XIcon size={16} />
 			</button>
@@ -645,25 +664,27 @@ Toast.Region = function ToastRegion(handle: Handle<Toast.RegionProps>) {
 				{...rest}
 				data-placement={resolvedPlacement}
 				data-slot="region"
-				mix={[
-					attrs({ role: DEFAULT_REGION_ROLE }),
-					fixed(),
-					flex(),
-					flexCol(),
-					gap("0.75rem"),
-					is("full"),
-					maxIs("24rem"),
-					pb("1rem"),
-					pi("1rem"),
-					pointerEvents(),
-					raw({ zIndex: "var(--ui-toast-z, 50)" }),
-					when('&[data-placement^="top"]', insBs("0")),
-					when('&[data-placement^="bottom"]', insBe("0")),
-					when('&[data-placement$="start"]', insIs("0")),
-					when('&[data-placement$="end"]', insIe("0")),
-					when('&[data-placement$="center"]', [insIs("50%"), translateX("-50%")]),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_REGION_ROLE }),
+						fixed(),
+						flex(),
+						flexCol(),
+						gap("0.75rem"),
+						is("full"),
+						maxIs("24rem"),
+						pb("1rem"),
+						pi("1rem"),
+						pointerEvents(),
+						raw({ zIndex: "var(--ui-toast-z, 50)" }),
+						when('&[data-placement^="top"]', insBs("0")),
+						when('&[data-placement^="bottom"]', insBe("0")),
+						when('&[data-placement$="start"]', insIs("0")),
+						when('&[data-placement$="end"]', insIe("0")),
+						when('&[data-placement$="center"]', [insIs("50%"), translateX("-50%")]),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</div>

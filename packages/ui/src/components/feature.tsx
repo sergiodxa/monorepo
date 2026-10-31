@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { ArrowRightIcon } from "@sdxc/icons";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { container, gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { motionSafe } from "@sdxc/u/responsive";
 import { m, pbs } from "@sdxc/u/size";
@@ -193,20 +193,25 @@ export function Feature(handle: Handle<Feature.Props>) {
 				data-href={href || undefined}
 				data-span={span ? String(span) : undefined}
 				data-slot="feature"
-				mix={[
-					isListed
-						? listCell()
-						: [vstack({ gap: 4, align: "stretch" }), cardPadding("2rem", "1.5rem", "2.5rem")],
-					raw({ position: "relative" }),
-					when('&:hover [data-slot="feature-link"]', textDecoration("underline")),
-					when('&:hover [data-slot="feature-link-arrow"]', motionSafe(raw({ translate: "2px 0" }))),
-					when('&[data-variant="panel"]', [
-						bg("neutral.tint"),
-						border({ color: "neutral", width: 1, style: "solid" }),
-						rounded("xl"),
-					]),
+				mix={mergeMix(
+					[
+						isListed
+							? listCell()
+							: [vstack({ gap: 4, align: "stretch" }), cardPadding("2rem", "1.5rem", "2.5rem")],
+						raw({ position: "relative" }),
+						when('&:hover [data-slot="feature-link"]', textDecoration("underline")),
+						when(
+							'&:hover [data-slot="feature-link-arrow"]',
+							motionSafe(raw({ translate: "2px 0" })),
+						),
+						when('&[data-variant="panel"]', [
+							bg("neutral.tint"),
+							border({ color: "neutral", width: 1, style: "solid" }),
+							rounded("xl"),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -228,7 +233,7 @@ Feature.Icon = function FeatureIcon(handle: Handle<Feature.IconProps>) {
 				{...rest}
 				data-slot="feature-icon"
 				data-tone={resolvedTone}
-				mix={[iconTile(resolvedTone, ICON_TILE_SIDE), mix]}
+				mix={mergeMix(iconTile(resolvedTone, ICON_TILE_SIDE), mix)}
 			/>
 		);
 	};
@@ -245,7 +250,7 @@ Feature.Media = function FeatureMedia(handle: Handle<Feature.MediaProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <div {...rest} data-slot="feature-media" mix={[cardMedia(), mix]} />;
+		return <div {...rest} data-slot="feature-media" mix={mergeMix(cardMedia(), mix)} />;
 	};
 };
 
@@ -266,7 +271,10 @@ Feature.Title = function FeatureTitle(handle: Handle<Feature.TitleProps>) {
 				{...rest}
 				data-slot="feature-title"
 				data-heading-level={resolved}
-				mix={[m(0), text("base"), balance(), weight("semibold"), fg("neutral.emphasis"), mix]}
+				mix={mergeMix(
+					[m(0), text("base"), balance(), weight("semibold"), fg("neutral.emphasis")],
+					mix,
+				)}
 			/>
 		);
 	};
@@ -286,21 +294,23 @@ Feature.Description = function FeatureDescription(handle: Handle<Feature.Descrip
 			<div
 				{...rest}
 				data-slot="feature-description"
-				mix={[
-					/**
-					 * Block flow, so an inline `<strong>` stays inside its sentence; paragraphs a
-					 * page passes are spaced by their own margin.
-					 */
-					when("& > * + *", raw({ marginBlockStart: "0.5rem" })),
-					/** Lifts inline links above a {@link Feature.Link} stretched over the cell. */
-					when("& a", raw({ position: "relative", zIndex: "1" })),
-					text("base"),
-					leading("relaxed"),
-					pretty(),
-					fg("neutral"),
-					marketingEmphasis(),
+				mix={mergeMix(
+					[
+						/**
+						 * Block flow, so an inline `<strong>` stays inside its sentence; paragraphs a
+						 * page passes are spaced by their own margin.
+						 */
+						when("& > * + *", raw({ marginBlockStart: "0.5rem" })),
+						/** Lifts inline links above a {@link Feature.Link} stretched over the cell. */
+						when("& a", raw({ position: "relative", zIndex: "1" })),
+						text("base"),
+						leading("relaxed"),
+						pretty(),
+						fg("neutral"),
+						marketingEmphasis(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -322,7 +332,7 @@ Feature.Action = function FeatureAction(handle: Handle<Feature.ActionProps>) {
 			<div
 				{...rest}
 				data-slot="feature-action"
-				mix={[raw({ marginBlockStart: "auto" }), pbs(2), hstack({ gap: 2 }), mix]}
+				mix={mergeMix([raw({ marginBlockStart: "auto" }), pbs(2), hstack({ gap: 2 })], mix)}
 			/>
 		);
 	};
@@ -346,21 +356,23 @@ Feature.Link = function FeatureLink(handle: Handle<Feature.LinkProps>) {
 			<a
 				{...rest}
 				data-slot="feature-link"
-				mix={[
-					inlineFlex(),
-					items("center"),
-					gap(1),
-					text("sm"),
-					weight("medium"),
-					fg("brand"),
-					textDecoration("none"),
-					rounded("sm"),
-					interactiveTransition(),
-					raw({ textUnderlineOffset: "0.2em" }),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					when("&::after", raw({ content: '""', position: "absolute", inset: "0" })),
+				mix={mergeMix(
+					[
+						inlineFlex(),
+						items("center"),
+						gap(1),
+						text("sm"),
+						weight("medium"),
+						fg("brand"),
+						textDecoration("none"),
+						rounded("sm"),
+						interactiveTransition(),
+						raw({ textUnderlineOffset: "0.2em" }),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						when("&::after", raw({ content: '""', position: "absolute", inset: "0" })),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 				<ArrowRightIcon
@@ -404,7 +416,7 @@ Feature.Grid = function FeatureGrid(handle: Handle<Feature.GridProps, Feature.Gr
 				data-columns={String(resolvedColumns)}
 				data-variant={resolvedVariant}
 				data-slot="feature-grid"
-				mix={[container("ui-marketing-feature-grid"), mix]}
+				mix={mergeMix(container("ui-marketing-feature-grid"), mix)}
 			>
 				<HeadingScope>
 					<div

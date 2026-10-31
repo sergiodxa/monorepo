@@ -11,6 +11,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { fontSize, leading, weight } from "@sdxc/u/typography";
 
 /**
@@ -47,7 +48,10 @@ export function Label(handle: Handle<Label.Props>) {
 		return (
 			<label
 				{...rest}
-				mix={[weight("medium"), fg("neutral.emphasis"), fontSize("sm"), leading("none"), mix]}
+				mix={mergeMix(
+					[weight("medium"), fg("neutral.emphasis"), fontSize("sm"), leading("none")],
+					mix,
+				)}
 			/>
 		);
 	};

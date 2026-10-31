@@ -15,6 +15,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
+import { mergeMix } from "@sdxc/u/general";
 import { pretty, text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
@@ -59,14 +60,16 @@ export function FieldError(handle: Handle<FieldError.Props>) {
 			<span
 				id={id ?? handle.id}
 				{...rest}
-				mix={[
-					attrs({ "data-field-error": DEFAULT_FIELD_ERROR_ATTRIBUTE }),
-					fg("danger"),
-					weight("medium"),
-					text("sm"),
-					pretty(),
+				mix={mergeMix(
+					[
+						attrs({ "data-field-error": DEFAULT_FIELD_ERROR_ATTRIBUTE }),
+						fg("danger"),
+						weight("medium"),
+						text("sm"),
+						pretty(),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

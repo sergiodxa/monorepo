@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { border, bg, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
+import { cursor, raw, mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { is, bs, minBs, pi, pb } from "@sdxc/u/size";
 import { when, hover, invalid } from "@sdxc/u/state";
@@ -75,51 +75,53 @@ export function TextArea(handle: Handle<TextArea.Props>) {
 			<textarea
 				{...rest}
 				data-color={resolvedColor}
-				mix={[
-					interactiveTransition(),
-					block(),
-					is("full"),
-					bs("auto"),
-					minBs("6rem"),
-					rounded("md"),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.bg-tint"),
-					fg("neutral.fg-emphasis"),
-					pi("0.75rem"),
-					pb("0.5rem"),
-					when("&::placeholder", fg("neutral.fg-muted")),
-					hover(border("neutral.border-strong")),
-					when("&:focus", border("neutral.border-strong")),
-					when("&:focus-visible", [
-						outline({ color: "neutral.ring", offset: 0 }),
-						border("neutral.border-strong"),
-						when('&[data-color="brand"]', [
-							border("brand.border-strong"),
-							outline({ color: "brand.ring", offset: 0 }),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						block(),
+						is("full"),
+						bs("auto"),
+						minBs("6rem"),
+						rounded("md"),
+						border({ color: "neutral", width: 1 }),
+						bg("neutral.bg-tint"),
+						fg("neutral.fg-emphasis"),
+						pi("0.75rem"),
+						pb("0.5rem"),
+						when("&::placeholder", fg("neutral.fg-muted")),
+						hover(border("neutral.border-strong")),
+						when("&:focus", border("neutral.border-strong")),
+						when("&:focus-visible", [
+							outline({ color: "neutral.ring", offset: 0 }),
+							border("neutral.border-strong"),
+							when('&[data-color="brand"]', [
+								border("brand.border-strong"),
+								outline({ color: "brand.ring", offset: 0 }),
+							]),
+							when('&[data-color="success"]', [
+								border("success.border-strong"),
+								outline({ color: "success.ring", offset: 0 }),
+							]),
+							when('&[data-color="warning"]', [
+								border("warning.border-strong"),
+								outline({ color: "warning.ring", offset: 0 }),
+							]),
+							when('&[data-color="danger"]', [
+								border("danger.border-strong"),
+								outline({ color: "danger.ring", offset: 0 }),
+							]),
 						]),
-						when('&[data-color="success"]', [
-							border("success.border-strong"),
-							outline({ color: "success.ring", offset: 0 }),
-						]),
-						when('&[data-color="warning"]', [
-							border("warning.border-strong"),
-							outline({ color: "warning.ring", offset: 0 }),
-						]),
-						when('&[data-color="danger"]', [
-							border("danger.border-strong"),
-							outline({ color: "danger.ring", offset: 0 }),
-						]),
-					]),
-					invalid([outline({ color: "danger.ring", offset: 0 }), border("danger.border-strong")]),
-					when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
-					text("sm"),
-					raw({
-						resize: "block",
-						fieldSizing: "content",
-					}),
-					when("&:focus", outline("none")),
+						invalid([outline({ color: "danger.ring", offset: 0 }), border("danger.border-strong")]),
+						when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
+						text("sm"),
+						raw({
+							resize: "block",
+							fieldSizing: "content",
+						}),
+						when("&:focus", outline("none")),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

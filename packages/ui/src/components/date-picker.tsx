@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { outline } from "@sdxc/u/color";
 import { roundedCorner } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { mis } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
@@ -164,7 +164,7 @@ export function DatePicker(handle: Handle<DatePicker.Props>) {
 		}
 
 		return (
-			<div {...rest} data-slot="date-picker" mix={[flex(), flexCol(), gap(1), mix]}>
+			<div {...rest} data-slot="date-picker" mix={mergeMix([flex(), flexCol(), gap(1)], mix)}>
 				{children}
 			</div>
 		);
@@ -192,47 +192,49 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 			<div
 				{...rest}
 				data-slot="group"
-				mix={[
-					flex(),
-					items("center"),
-					/**
-					 * The fields compose into one control, so the pair keeps the rounding on its own
-					 * outer corners and the seam the two share is drawn once.
-					 */
-					when("& > *:not(:first-child)", [
-						roundedCorner("start-start", "none"),
-						roundedCorner("end-start", "none"),
-						mis("-1px"),
-					]),
-					when("& > *:not(:last-child)", [
-						roundedCorner("start-end", "none"),
-						roundedCorner("end-end", "none"),
-					]),
-					/**
-					 * Focus shows on the field holding it, naming which date has it where a ring around
-					 * the pair names only the group. That field is raised so its ring crosses the seam.
-					 */
-					when("& > *:focus-visible", z(1)),
-					/**
-					 * Validity belongs to the pair, since a range is one value and half of one makes it
-					 * invalid: one ring is drawn around the group and each field's own ring is released,
-					 * so the seam shows one field needing attention.
-					 */
-					when(
-						'&:has(> :user-invalid), &:has(> [aria-invalid="true"])',
-						outline({ color: "danger.ring", offset: 2 }),
-					),
-					when(
-						'& > :user-invalid:not(:focus-visible), & > [aria-invalid="true"]:not(:focus-visible)',
+				mix={mergeMix(
+					[
+						flex(),
+						items("center"),
 						/**
-						 * Important so it reaches across to the cascade layer where `Input` states the field's
-						 * invalid ring. The selector excludes `:focus-visible`, so a field being filled in still
-						 * shows its own focus ring.
+						 * The fields compose into one control, so the pair keeps the rounding on its own
+						 * outer corners and the seam the two share is drawn once.
 						 */
-						raw({ outline: "none !important" }),
-					),
+						when("& > *:not(:first-child)", [
+							roundedCorner("start-start", "none"),
+							roundedCorner("end-start", "none"),
+							mis("-1px"),
+						]),
+						when("& > *:not(:last-child)", [
+							roundedCorner("start-end", "none"),
+							roundedCorner("end-end", "none"),
+						]),
+						/**
+						 * Focus shows on the field holding it, naming which date has it where a ring around
+						 * the pair names only the group. That field is raised so its ring crosses the seam.
+						 */
+						when("& > *:focus-visible", z(1)),
+						/**
+						 * Validity belongs to the pair, since a range is one value and half of one makes it
+						 * invalid: one ring is drawn around the group and each field's own ring is released,
+						 * so the seam shows one field needing attention.
+						 */
+						when(
+							'&:has(> :user-invalid), &:has(> [aria-invalid="true"])',
+							outline({ color: "danger.ring", offset: 2 }),
+						),
+						when(
+							'& > :user-invalid:not(:focus-visible), & > [aria-invalid="true"]:not(:focus-visible)',
+							/**
+							 * Important so it reaches across to the cascade layer where `Input` states the field's
+							 * invalid ring. The selector excludes `:focus-visible`, so a field being filled in still
+							 * shows its own focus ring.
+							 */
+							raw({ outline: "none !important" }),
+						),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

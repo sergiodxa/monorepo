@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, linearGradient, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, ringShadow, rounded, transition, transitionDuration } from "@sdxc/u/effects";
-import { cursor, pointerEvents, raw } from "@sdxc/u/general";
+import { cursor, pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import { absolute, appearance, inlineBlock, inset, relative } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
@@ -155,21 +155,23 @@ export function ColorArea(handle: Handle<ColorArea.Props, ColorArea.Context>) {
 				data-slot="area"
 				{...rest}
 				style={resolvedStyle}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					relative(),
-					inlineBlock(),
-					is("var(--ui-color-area-size, 16rem)"),
-					bs("var(--ui-color-area-size, 16rem)"),
-					rounded("md"),
-					border({ width: 1, color: "neutral" }),
-					overflow(),
-					bg({
-						image: `${linearGradient("to top", "black", "transparent")}, ${linearGradient("to right", "white", "transparent")}`,
-					}),
-					bg("hsl(var(--ui-color-area-hue, 0) 100% 50%)"),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						relative(),
+						inlineBlock(),
+						is("var(--ui-color-area-size, 16rem)"),
+						bs("var(--ui-color-area-size, 16rem)"),
+						rounded("md"),
+						border({ width: 1, color: "neutral" }),
+						overflow(),
+						bg({
+							image: `${linearGradient("to top", "black", "transparent")}, ${linearGradient("to right", "white", "transparent")}`,
+						}),
+						bg("hsl(var(--ui-color-area-hue, 0) 100% 50%)"),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -208,79 +210,81 @@ ColorArea.SaturationThumb = function ColorAreaSaturationThumb(
 				max={max ?? DEFAULT_MAX}
 				step={resolvedStep}
 				defaultValue={resolvedValue}
-				mix={[
-					absolute(),
-					z(10),
-					is("full"),
-					bs("full"),
-
-					when("&::-webkit-slider-thumb", [
-						rounded("full"),
-						border({ width: 2, color: "neutral.tint" }),
-						bg("neutral.tint"),
-						cursor("pointer"),
-						transition("scale"),
-					]),
-					when("&::-moz-range-thumb", [
-						rounded("full"),
-						border({ width: 2, color: "neutral.tint" }),
-						bg("neutral.tint"),
-						cursor("pointer"),
-						transition("scale"),
-					]),
-					when(
-						"&:focus-visible::-webkit-slider-thumb",
-						outline({ color: "brand.ring", offset: 2 }),
-					),
-					when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
-					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
-					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
-
-					inset("0"),
-					m("0"),
-					bg("transparent"),
-					appearance("none", { moz: false }),
-					raw({ direction: "ltr" }),
-					pointerEvents(),
-					outlineStyle("none"),
-
-					when("&::-webkit-slider-runnable-track", [
+				mix={mergeMix(
+					[
+						absolute(),
+						z(10),
 						is("full"),
 						bs("full"),
+
+						when("&::-webkit-slider-thumb", [
+							rounded("full"),
+							border({ width: 2, color: "neutral.tint" }),
+							bg("neutral.tint"),
+							cursor("pointer"),
+							transition("scale"),
+						]),
+						when("&::-moz-range-thumb", [
+							rounded("full"),
+							border({ width: 2, color: "neutral.tint" }),
+							bg("neutral.tint"),
+							cursor("pointer"),
+							transition("scale"),
+						]),
+						when(
+							"&:focus-visible::-webkit-slider-thumb",
+							outline({ color: "brand.ring", offset: 2 }),
+						),
+						when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
+						when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
+						when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
+
+						inset("0"),
+						m("0"),
 						bg("transparent"),
 						appearance("none", { moz: false }),
-					]),
-					when("&::-moz-range-track", [
-						is("full"),
-						bs("full"),
-						bg("transparent"),
-						appearance("none", { webkit: false, moz: false }),
-						border({ style: "none" }),
-					]),
+						raw({ direction: "ltr" }),
+						pointerEvents(),
+						outlineStyle("none"),
 
-					when("&::-webkit-slider-thumb", [
-						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
-						bs("var(--ui-color-area-size, 16rem)"),
-						appearance("none", { moz: false }),
-						pointerEvents("auto"),
-						ringShadow("rgb(0 0 0 / 0.4)", 1),
-					]),
-					when("&::-moz-range-thumb", [
-						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
-						bs("var(--ui-color-area-size, 16rem)"),
-						pointerEvents("auto"),
-						ringShadow("rgb(0 0 0 / 0.4)", 1),
-					]),
+						when("&::-webkit-slider-runnable-track", [
+							is("full"),
+							bs("full"),
+							bg("transparent"),
+							appearance("none", { moz: false }),
+						]),
+						when("&::-moz-range-track", [
+							is("full"),
+							bs("full"),
+							bg("transparent"),
+							appearance("none", { webkit: false, moz: false }),
+							border({ style: "none" }),
+						]),
 
-					when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
-					when("&:active::-moz-range-thumb", scaleProperty(1.2)),
+						when("&::-webkit-slider-thumb", [
+							is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
+							bs("var(--ui-color-area-size, 16rem)"),
+							appearance("none", { moz: false }),
+							pointerEvents("auto"),
+							ringShadow("rgb(0 0 0 / 0.4)", 1),
+						]),
+						when("&::-moz-range-thumb", [
+							is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
+							bs("var(--ui-color-area-size, 16rem)"),
+							pointerEvents("auto"),
+							ringShadow("rgb(0 0 0 / 0.4)", 1),
+						]),
 
-					media("(prefers-reduced-motion: reduce)", [
-						when("&::-webkit-slider-thumb", transitionDuration("0s")),
-						when("&::-moz-range-thumb", transitionDuration("0s")),
-					]),
+						when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
+						when("&:active::-moz-range-thumb", scaleProperty(1.2)),
+
+						media("(prefers-reduced-motion: reduce)", [
+							when("&::-webkit-slider-thumb", transitionDuration("0s")),
+							when("&::-moz-range-thumb", transitionDuration("0s")),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -318,79 +322,81 @@ ColorArea.ValueThumb = function ColorAreaValueThumb(handle: Handle<ColorArea.Val
 				step={resolvedStep}
 				defaultValue={resolvedValue}
 				aria-orientation="vertical"
-				mix={[
-					absolute(),
-					z(10),
-					is("full"),
-					bs("full"),
-
-					when("&::-webkit-slider-thumb", [
-						rounded("full"),
-						border({ width: 2, color: "neutral.tint" }),
-						bg("neutral.tint"),
-						cursor("pointer"),
-						transition("scale"),
-					]),
-					when("&::-moz-range-thumb", [
-						rounded("full"),
-						border({ width: 2, color: "neutral.tint" }),
-						bg("neutral.tint"),
-						cursor("pointer"),
-						transition("scale"),
-					]),
-					when(
-						"&:focus-visible::-webkit-slider-thumb",
-						outline({ color: "brand.ring", offset: 2 }),
-					),
-					when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
-					when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
-					when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
-
-					inset("0"),
-					m("0"),
-					bg("transparent"),
-					appearance("none", { moz: false }),
-					raw({ writingMode: "vertical-lr", direction: "rtl" }),
-					pointerEvents(),
-					outlineStyle("none"),
-
-					when("&::-webkit-slider-runnable-track", [
+				mix={mergeMix(
+					[
+						absolute(),
+						z(10),
 						is("full"),
 						bs("full"),
+
+						when("&::-webkit-slider-thumb", [
+							rounded("full"),
+							border({ width: 2, color: "neutral.tint" }),
+							bg("neutral.tint"),
+							cursor("pointer"),
+							transition("scale"),
+						]),
+						when("&::-moz-range-thumb", [
+							rounded("full"),
+							border({ width: 2, color: "neutral.tint" }),
+							bg("neutral.tint"),
+							cursor("pointer"),
+							transition("scale"),
+						]),
+						when(
+							"&:focus-visible::-webkit-slider-thumb",
+							outline({ color: "brand.ring", offset: 2 }),
+						),
+						when("&:focus-visible::-moz-range-thumb", outline({ color: "brand.ring", offset: 2 })),
+						when("&:disabled::-webkit-slider-thumb", [cursor("not-allowed"), opacity(50)]),
+						when("&:disabled::-moz-range-thumb", [cursor("not-allowed"), opacity(50)]),
+
+						inset("0"),
+						m("0"),
 						bg("transparent"),
 						appearance("none", { moz: false }),
-					]),
-					when("&::-moz-range-track", [
-						is("full"),
-						bs("full"),
-						bg("transparent"),
-						appearance("none", { webkit: false, moz: false }),
-						border({ style: "none" }),
-					]),
+						raw({ writingMode: "vertical-lr", direction: "rtl" }),
+						pointerEvents(),
+						outlineStyle("none"),
 
-					when("&::-webkit-slider-thumb", [
-						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
-						bs("var(--ui-color-area-size, 16rem)"),
-						appearance("none", { moz: false }),
-						pointerEvents("auto"),
-						ringShadow("rgb(0 0 0 / 0.4)", 1),
-					]),
-					when("&::-moz-range-thumb", [
-						is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
-						bs("var(--ui-color-area-size, 16rem)"),
-						pointerEvents("auto"),
-						ringShadow("rgb(0 0 0 / 0.4)", 1),
-					]),
+						when("&::-webkit-slider-runnable-track", [
+							is("full"),
+							bs("full"),
+							bg("transparent"),
+							appearance("none", { moz: false }),
+						]),
+						when("&::-moz-range-track", [
+							is("full"),
+							bs("full"),
+							bg("transparent"),
+							appearance("none", { webkit: false, moz: false }),
+							border({ style: "none" }),
+						]),
 
-					when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
-					when("&:active::-moz-range-thumb", scaleProperty(1.2)),
+						when("&::-webkit-slider-thumb", [
+							is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
+							bs("var(--ui-color-area-size, 16rem)"),
+							appearance("none", { moz: false }),
+							pointerEvents("auto"),
+							ringShadow("rgb(0 0 0 / 0.4)", 1),
+						]),
+						when("&::-moz-range-thumb", [
+							is("var(--ui-color-area-thumb-thickness, 0.1875rem)"),
+							bs("var(--ui-color-area-size, 16rem)"),
+							pointerEvents("auto"),
+							ringShadow("rgb(0 0 0 / 0.4)", 1),
+						]),
 
-					media("(prefers-reduced-motion: reduce)", [
-						when("&::-webkit-slider-thumb", transitionDuration("0s")),
-						when("&::-moz-range-thumb", transitionDuration("0s")),
-					]),
+						when("&:active::-webkit-slider-thumb", scaleProperty(1.2)),
+						when("&:active::-moz-range-thumb", scaleProperty(1.2)),
+
+						media("(prefers-reduced-motion: reduce)", [
+							when("&::-webkit-slider-thumb", transitionDuration("0s")),
+							when("&::-moz-range-thumb", transitionDuration("0s")),
+						]),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};

@@ -11,7 +11,14 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { combine, counterIncrement, counterReset, pseudoContent, raw } from "@sdxc/u/general";
+import {
+	combine,
+	counterIncrement,
+	counterReset,
+	pseudoContent,
+	raw,
+	mergeMix,
+} from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -122,33 +129,35 @@ export function StepList(handle: Handle<StepList.Props, StepList.Context>) {
 						{...rest}
 						data-slot="step-list"
 						data-variant={resolvedVariant}
-						mix={[
-							counterReset("ui-marketing-step"),
-							raw({ listStyle: "none", padding: "0", margin: "0" }),
-							grid(),
-							resolvedVariant === "timeline"
-								? [gap(0), gridTemplate({ columns: "minmax(0, 1fr)" })]
-								: [
-										gap(8),
-										/**
-										 * Every step shares one row from the `xl` container, whatever the count,
-										 * so connectors run step to step and no row is left short.
-										 */
-										combine([
-											gridTemplate({ columns: "minmax(0, 1fr)" }),
-											at(
-												"xl",
-												LIST_CONTAINER,
-												raw({
-													gridTemplateColumns: "none",
-													gridAutoFlow: "column",
-													gridAutoColumns: "minmax(0, 1fr)",
-												}),
-											),
-										]),
-									],
+						mix={mergeMix(
+							[
+								counterReset("ui-marketing-step"),
+								raw({ listStyle: "none", padding: "0", margin: "0" }),
+								grid(),
+								resolvedVariant === "timeline"
+									? [gap(0), gridTemplate({ columns: "minmax(0, 1fr)" })]
+									: [
+											gap(8),
+											/**
+											 * Every step shares one row from the `xl` container, whatever the count,
+											 * so connectors run step to step and no row is left short.
+											 */
+											combine([
+												gridTemplate({ columns: "minmax(0, 1fr)" }),
+												at(
+													"xl",
+													LIST_CONTAINER,
+													raw({
+														gridTemplateColumns: "none",
+														gridAutoFlow: "column",
+														gridAutoColumns: "minmax(0, 1fr)",
+													}),
+												),
+											]),
+										],
+							],
 							mix,
-						]}
+						)}
 					>
 						{children}
 					</ol>
@@ -259,7 +268,7 @@ StepList.Item = function StepListItem(handle: Handle<StepList.ItemProps>) {
 
 		if (context?.variant !== "timeline") {
 			return (
-				<li {...rest} data-slot="step-list-item" mix={[numberedStep(), mix]}>
+				<li {...rest} data-slot="step-list-item" mix={mergeMix(numberedStep(), mix)}>
 					<Tag
 						data-slot="step-list-title"
 						data-heading-level={resolved}
@@ -314,7 +323,7 @@ StepList.Item = function StepListItem(handle: Handle<StepList.ItemProps>) {
 				{...rest}
 				data-slot="step-list-item"
 				data-has-media={media ? "true" : undefined}
-				mix={[timelineStep(hasMeta), mix]}
+				mix={mergeMix(timelineStep(hasMeta), mix)}
 			>
 				{media ? (
 					<div

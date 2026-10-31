@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw, userSelect } from "@sdxc/u/general";
+import { cursor, raw, userSelect, mergeMix } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { p, pb, pi } from "@sdxc/u/size";
 import { active, disabled, hover, when } from "@sdxc/u/state";
@@ -108,17 +108,19 @@ export function Menubar(handle: Handle<Menubar.Props>) {
 		return (
 			<div
 				{...rest}
-				mix={[
-					attrs({ role: DEFAULT_ROLE }),
-					flex(),
-					items("center"),
-					gap("0.125rem"),
-					raw({ borderRadius: concentricRadius(surfacePadding(1), radius("sm")) }),
-					border({ color: "neutral", width: 1 }),
-					bg("neutral.tint"),
-					p(surfacePadding(1)),
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						flex(),
+						items("center"),
+						gap("0.125rem"),
+						raw({ borderRadius: concentricRadius(surfacePadding(1), radius("sm")) }),
+						border({ color: "neutral", width: 1 }),
+						bg("neutral.tint"),
+						p(surfacePadding(1)),
+					],
 					mix,
-				]}
+				)}
 			/>
 		);
 	};
@@ -155,27 +157,29 @@ Menubar.Trigger = function MenubarTrigger(handle: Handle<Menubar.TriggerProps>) 
 				type={resolvedType}
 				command={resolvedCommand}
 				{...rest}
-				mix={[
-					interactiveTransition(),
-					attrs({ role: DEFAULT_TRIGGER_ROLE, "aria-haspopup": "menu" }),
-					inlineFlex(),
-					items("center"),
-					gap(2),
-					rounded("sm"),
-					pi(3),
-					pb("0.375rem"),
-					fg("neutral"),
-					hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-					active(bg("neutral.bg-tint-pressed")),
-					when('&[aria-expanded="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					disabled([opacity(50), cursor("not-allowed")]),
-					cursor("default"),
-					weight(500),
-					userSelect(),
-					text("sm"),
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_TRIGGER_ROLE, "aria-haspopup": "menu" }),
+						inlineFlex(),
+						items("center"),
+						gap(2),
+						rounded("sm"),
+						pi(3),
+						pb("0.375rem"),
+						fg("neutral"),
+						hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
+						active(bg("neutral.bg-tint-pressed")),
+						when('&[aria-expanded="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						disabled([opacity(50), cursor("not-allowed")]),
+						cursor("default"),
+						weight(500),
+						userSelect(),
+						text("sm"),
+					],
 					mix,
-				]}
+				)}
 			>
 				{children}
 			</button>

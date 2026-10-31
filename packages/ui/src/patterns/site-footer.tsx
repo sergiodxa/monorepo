@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -165,16 +165,18 @@ export function SiteFooter(handle: Handle<SiteFooter.Props>) {
 				{...rest}
 				data-slot="site-footer"
 				data-columns={columns.length}
-				mix={[
-					container(CONTAINER),
-					raw({
-						inlineSize: "100%",
-						paddingBlockStart:
-							"var(--ui-site-footer-space, clamp(3rem, 2.32rem + 2.91cqi, 4.5rem))",
-					}),
-					ruled === false ? [] : marketingHairline(),
+				mix={mergeMix(
+					[
+						container(CONTAINER),
+						raw({
+							inlineSize: "100%",
+							paddingBlockStart:
+								"var(--ui-site-footer-space, clamp(3rem, 2.32rem + 2.91cqi, 4.5rem))",
+						}),
+						ruled === false ? [] : marketingHairline(),
+					],
 					mix,
-				]}
+				)}
 			>
 				<LabelTag mix={[visuallyHidden()]}>{label ?? DEFAULT_LABEL}</LabelTag>
 				<HeadingScope level={Math.min(resolvedLevel + 1, 6) as HeadingLevel}>

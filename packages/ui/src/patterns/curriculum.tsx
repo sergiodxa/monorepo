@@ -10,7 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ChevronRightIcon } from "@sdxc/icons";
-import { combine, raw } from "@sdxc/u/general";
+import { combine, raw, mergeMix } from "@sdxc/u/general";
 import { container, vstack } from "@sdxc/u/layout";
 import { at, motionSafe } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
@@ -118,12 +118,14 @@ export function Curriculum(handle: Handle<Curriculum.Props>) {
 				{...rest}
 				data-slot="curriculum"
 				data-layout={resolvedLayout}
-				mix={[
-					container(CONTAINER),
-					vstack({ gap: 10, align: "stretch" }),
-					raw({ inlineSize: "100%" }),
+				mix={mergeMix(
+					[
+						container(CONTAINER),
+						vstack({ gap: 10, align: "stretch" }),
+						raw({ inlineSize: "100%" }),
+					],
 					mix,
-				]}
+				)}
 			>
 				{summary ? <div data-slot="curriculum-summary">{summary}</div> : null}
 				<HeadingScope>
@@ -180,7 +182,7 @@ Curriculum.Part = function CurriculumPart(handle: Handle<Curriculum.PartProps>) 
 			<section
 				{...rest}
 				data-slot="curriculum-part"
-				mix={[vstack({ gap: 4, align: "stretch" }), raw({ minInlineSize: "0" }), mix]}
+				mix={mergeMix([vstack({ gap: 4, align: "stretch" }), raw({ minInlineSize: "0" })], mix)}
 			>
 				<header mix={[vstack({ gap: 1, align: "start" })]}>
 					<Tag

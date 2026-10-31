@@ -13,6 +13,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { mergeMix } from "@sdxc/u/general";
+
 import type { FieldPartsProps } from "../utils/field-parts.js";
 
 import { fieldStackLayout } from "../styles/field-stack-layout.js";
@@ -172,7 +174,7 @@ export function TextField(handle: Handle<TextField.Props>) {
 			});
 
 		return (
-			<div {...rest} data-slot="text-field" mix={[fieldStackLayout(), mix]}>
+			<div {...rest} data-slot="text-field" mix={mergeMix(fieldStackLayout(), mix)}>
 				<Label htmlFor={handle.id} mix={parts?.label}>
 					{label}
 				</Label>
