@@ -258,6 +258,9 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
 - `PlanNotice` — the one-sentence plan or role box under a help page's title.
 - `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
+- `CodeTabs` — radio tabs over code; `syncKey` switches every set together and `persist` (`cookie` | `local`) remembers it.
+- `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
+- `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
 
 ### Patterns (`@sdxc/ui/patterns`)
 
@@ -316,6 +319,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `channelSync()`                 | a `ColorSlider` group      | Sibling channel gradients that follow each other.                       |
 | `chartTooltip()`                | a chart series             | `Chart.Tooltip` filled from the nearest point to pointer or focus.      |
 | `clearField()`                  | `SearchField` clear button | Empties its `commandfor` input.                                         |
+| `codeTabsSync(key, persist)`    | an element in `CodeTabs`   | Every set sharing `key` switches together; the choice is remembered.    |
 | `colorAreaDrag()`               | `ColorArea`                | A 2D drag across the paired thumbs.                                     |
 | `colorPreview()`                | `ColorField`               | The swatch updated as the typed value parses.                           |
 | `colorWheelDrag()`              | `ColorWheel`               | An angular drag around the ring.                                        |

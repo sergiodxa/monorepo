@@ -14,6 +14,7 @@ export * from "./calendar-keys.js";
 export * from "./carousel-controls.js";
 export * from "./chart-tooltip.js";
 export * from "./clear-field.js";
+export * from "./code-tabs-sync.js";
 export * from "./color-area-drag.js";
 export * from "./color-channel-sync.js";
 export * from "./color-preview.js";
