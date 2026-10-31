@@ -17,7 +17,7 @@ describe("listUtilityFamilies", () => {
 		let names = families.flatMap((family) => family.utilities.map((utility) => utility.name));
 
 		expect(families).toHaveLength(13);
-		expect(names).toHaveLength(297);
+		expect(names).toHaveLength(298);
 		expect(new Set(names).size).toBe(names.length);
 	});
 });
