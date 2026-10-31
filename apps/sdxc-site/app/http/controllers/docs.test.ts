@@ -266,6 +266,16 @@ describe("sidebars", () => {
 		for (let href of component) expect(href).toMatch(/^\/api\/ui(\/|$)/);
 		expect(mixin).toEqual(component);
 	});
+
+	test("offers a component's copy command beside its install line, linked to the copy guide", async () => {
+		let body = await (await fetchApp("/api/ui/dialog")).text();
+		let text = body.replace(/<[^>]+>/g, "");
+
+		expect(text).toContain("npm add @sdxc/ui remix");
+		expect(text).toContain("sdxc ui add dialog");
+		expect(body).toContain('href="/docs/sdxc/copy-ui-components"');
+		expect((await renderGuide("sdxc/copy-ui-components")).status).toBe(200);
+	});
 });
 
 describe("GET /docs/packages/*path", () => {

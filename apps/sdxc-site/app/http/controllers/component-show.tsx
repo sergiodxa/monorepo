@@ -53,6 +53,9 @@ const INSTALL = `npm add @sdxc/ui remix`;
 /** The stylesheet an app imports once, which every component reads its colors from. */
 const THEME_IMPORT = `import "@sdxc/ui/theme.css";`;
 
+/** The guide to owning a copy of a component, which `sdxc ui add` starts. */
+const COPY_GUIDE_SLUG = "sdxc/copy-ui-components";
+
 export default createAction(routes.api.component, async (ctx) => {
 	let { component } = s.parse(s.object({ component: s.string() }), ctx.params);
 	let tree = await buildComponentsNav();
@@ -120,6 +123,14 @@ export default createAction(routes.api.component, async (ctx) => {
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 							<Snippet code={INSTALL} language="bash" />
 							<Snippet code={THEME_IMPORT} language="typescript" />
+							<p mix={[m(0), text("base"), fg("neutral")]}>
+								To edit its source, copy the component into the project instead. The copy lands in{" "}
+								<code mix={[font("mono"), fg("neutral.emphasis")]}>resources/components/ui</code>{" "}
+								and every import of it points at the copy;{" "}
+								<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>Copy UI components</a>{" "}
+								covers diffing and updating it when a release ships.
+							</p>
+							<Snippet code={`sdxc ui add ${component}`} language="bash" />
 						</div>
 					</ReferenceSection>
 
