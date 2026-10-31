@@ -43,6 +43,41 @@ Files: `apps/uptime/resources/components/marketing/{product-scenes,capability-sc
 A moment has a before and after, a status change, or a cause and its effect. "A list of settings" is not a
 moment; "the setting flipped and the chart reacted" is.
 
+### Weak and strong scenes for the same claim
+
+| Claim | Weak scene | Strong scene |
+| --- | --- | --- |
+| Certificate monitoring, "how it works" | the generic monitor screen: uptime bars and a latency chart (what `/features/ssl` shows today) | one certificate counting down past the 14-day warning, the alert it sent, and "Renewed · 90 days" after |
+| Webhooks | a webhook icon on a card | Keel's delivery log: `invoice.finalized 200 84 ms`, four deliveries aligned in one subgrid |
+| Works offline | a cloud with a slash through it | Rooftree's list with two ticks greyed and "Offline · 2 to sync" |
+| Runs anywhere | four runtime logos | the same handler in four tabs where only the last lines change |
+
+The weak column is what you reach for first, because it illustrates the noun. The strong column shows the
+claim happening. If your scene would still make sense with the card title deleted, it is decoration.
+
+### A text-only band and its visual version
+
+```tsx
+// Weak: four icon cards, one sentence each, mostly empty at 1280
+<Feature.Grid columns={2}>
+	<Feature>
+		<Feature.Icon><ClockIcon aria-hidden="true" /></Feature.Icon>
+		<Feature.Title>Expiry tracking</Feature.Title>
+		<Feature.Description>Store your certificate's expiry date and issuer.</Feature.Description>
+	</Feature>
+	{/* … three more like it */}
+</Feature.Grid>
+
+// Strong: the facts become a list beside one scene that shows them working together
+<FeatureBand layout="split" lean="media" title="Know a month before it expires" media={<CertificateCountdown />}>
+	<ul>
+		<li>Issuer and expiry read on every check</li>
+		<li>Warnings at the thresholds you choose</li>
+		<li>Repeats until you renew</li>
+	</ul>
+</FeatureBand>
+```
+
 ## Realism
 
 - **Specific data**: `api.example.com · 182 ms`, `€49.00 / EUR`, `Oct 28`, `TLS expires in 9 days`. Round
@@ -93,6 +128,9 @@ screen whose text must stay legible may reflow through container queries instead
 A card scene is a cropped fragment, not a scaled screen: one fixed-height frame (18rem in Uptime's
 `sceneFrame()`), the story at the top, the lower rows falling into the media fade so the scene suggests it
 continues. Every card in a grid gets a scene, or none do.
+
+Card and bento scenes are hidden below the `md` container, so on a phone the hero and the split bands
+carry the whole visual story. Put the claim a phone reader must see in one of those, never only in a card.
 
 ## Never twice
 

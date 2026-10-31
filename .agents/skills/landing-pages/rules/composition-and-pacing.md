@@ -33,8 +33,10 @@ and a rhythm that alternates density, tone and device.
 - **Frame consistently.** Pick one framing system and use it throughout: technical pages pin corners with
   `Crosshair` and run `Rails` down the page; editorial pages rule hairlines; consumer pages float tinted
   stages. Mixing systems looks undecided.
-- **Balance a split.** A short checklist beside a tall code stage leaves a hole: move the header into
-  `Split.Copy` beside the stage, shorten the code, or centre the band.
+- **Balance a split.** The two columns should end near the same line. Keel's metering chapter at 1280 is
+  the mild case: ten lines of code beside a header, a lead and three checks, so the code stage stops above
+  the copy. The fix is in the content, not the layout: lengthen the code to the real call with its error
+  handling, cut a check, or move the header above the split so the copy column is only the lead and checks.
 
 ## Across the page
 
@@ -42,9 +44,12 @@ and a rhythm that alternates density, tone and device.
   sentence, one action, centred, on brand or inverse ground.
 - **Alternate density.** A dense band (bento, feature cards, a table) followed by an airy one (a split with
   one visual, a statement band, figures).
-- **Alternate tone.** Plain and tinted bands take turns; one or two emphasis bands (brand, inverse,
-  gradient, or an inset band floating with rounded corners) mark the turns in the story.
-- **Alternate device.** Never two code splits, two card grids or two splits on the same side in a row.
+- **Alternate tone, or commit to none.** Plain and tinted bands take turns (Uptime, Keel), or every band
+  is the same paper and hairlines carry the rhythm (the book demo); a half-alternating page looks like a
+  missed band. With alternation, one or two emphasis bands (brand, inverse, gradient, or an inset band
+  floating with rounded corners) mark the turns in the story.
+- **Alternate device** (@rules/choose-the-visual-device.md): never two code splits or two card grids in a
+  row. Splits may keep their media on one side; the device inside them is what has to change.
 - **Breathe.** A centred statement band (a thesis in one sentence) between dense chapters gives the reader
   a rest and states what the page believes.
 - **Put proof early.** Figures or real logos right after the hero, before any feature explanation.

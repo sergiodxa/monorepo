@@ -36,6 +36,19 @@ decision, not a component lookup: match it to what the reader needs to see.
 | What shipped lately | dated entries | `ChangelogStrip`, the hero `release` pin | Keel changelog |
 | Who made it | a person, a portrait, a signature | `AuthorBand` | book demo |
 
+## One claim, three devices
+
+"Flow monitors sign in to your app every 15 minutes and alert on the step that broke":
+
+- **Weak**: a feature card with a clock icon and that sentence. The reader takes it on trust.
+- **Better**: the flow monitor's screen with its runs listed 15 minutes apart. It proves the product
+  exists, but a list of runs shows a result, not the mechanism.
+- **Strong**: `FlowDiagram` playing the run step by step, each step with its spec line, settling on
+  "Run passed" with "A failed step alerts your team" under it. The claim is a process, so the device moves.
+
+Uptime uses both of the last two on `/browser-flows`: the screen in the hero, the diagram beside the
+steps, so neither repeats.
+
 ## Animated flow diagrams
 
 Use `FlowDiagram` whenever something happens without the user: a scheduled check, a webhook pipeline, a
