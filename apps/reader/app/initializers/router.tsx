@@ -410,6 +410,18 @@ export function createWebRouter(options: WebRouterOptions) {
 		routes.marketing.comparison,
 		lazy(() => import("~/app/http/controllers/marketing/comparison")),
 	);
+	router.map(
+		routes.docs.index,
+		lazy(() => import("~/app/http/controllers/docs/index")),
+	);
+	router.map(
+		routes.docs.show,
+		lazy(() => import("~/app/http/controllers/docs/show")),
+	);
+	router.map(
+		routes.docs.feedback,
+		lazy(() => import("~/app/http/controllers/docs/feedback")),
+	);
 
 	return router;
 }

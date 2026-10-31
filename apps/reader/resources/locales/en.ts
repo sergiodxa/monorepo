@@ -957,6 +957,64 @@ export default {
 		retry: "Reload",
 	},
 
+	/** The help pages: their chrome, the hub's routing, and the furniture every page ends with. */
+	docs: {
+		title: "Reader help",
+		eyebrow: "Help",
+		hub: {
+			title: "How can we help?",
+			lead: "Short guides to every part of Reader, and fixes for the problems people actually run into.",
+			start: "Where should I start?",
+			sections: "Browse by topic",
+			topics: "Common questions",
+			guides:
+				".input {$count :number}\n.match $count\none {{{$count} guide}}\n* {{{$count} guides}}",
+		},
+		nav: {
+			label: "Help pages",
+			filter: "Filter pages",
+			filterPlaceholder: "Filter pages",
+			noResults: "No page title matches. Try a shorter word.",
+			menu: "Menu",
+			close: "Close menu",
+			toc: "On this page",
+			crumbs: "Breadcrumb",
+			support: "Contact support",
+			plans: "Compare plans",
+		},
+		page: {
+			anchor: "Link to this section",
+			next: "Up next",
+			paid: "Available on the {#link}Paid and Premium plans{/link}.",
+			premium: "Available on the {#link}Premium plan{/link}.",
+			stuck: {
+				title: "Still stuck?",
+				body: "Write to {#link}{$email}{/link} with what you tried and what you saw, and a person will answer.",
+			},
+			updated: "Last updated",
+		},
+		feedback: {
+			question: "Was this page helpful?",
+			yes: "Yes",
+			no: "No",
+			note: "What were you looking for? (optional)",
+			send: "Send",
+			thanks: "Thanks. Every answer is read.",
+		},
+		footer: {
+			start: "Start reading",
+			import: "Bring your feeds",
+			plans: "Plans and limits",
+			fix: "Fix a problem",
+		},
+		notFound: {
+			eyebrow: "404",
+			title: "That help page is not here",
+			body: "It may have moved. These are the pages people look for most.",
+			links: "Try one of these",
+		},
+	},
+
 	notFound: {
 		title: "Page not found",
 		description: "The page you asked for does not exist.",

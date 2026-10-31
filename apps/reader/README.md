@@ -119,6 +119,9 @@ to exist before the first deploy.
 | `/features/:slug` | One feature's page, for each slug in `config/marketing.ts` |
 | `/for/:slug`      | One way of reading: news, developers, research, podcasts   |
 | `/vs/:slug`       | Comparison with Feedly, Inoreader, Feedbin or NewsBlur     |
+| `/docs`           | Help hub: where to start, topics and every section         |
+| `/docs/:slug`     | One help page, from `resources/docs/registry.ts`           |
+| `/docs/feedback`  | `POST` records a page's "Was this helpful?" vote           |
 | `/auth`           | `GET` completes the OIDC callback, `POST` starts the flow  |
 | `/logout`         | `GET` confirms, `POST` ends the session                    |
 

@@ -958,6 +958,63 @@ export default {
 		retry: "Recargar",
 	},
 
+	/** The help pages: their chrome, the hub's routing, and the furniture every page ends with. */
+	docs: {
+		title: "Ayuda de Reader",
+		eyebrow: "Ayuda",
+		hub: {
+			title: "¿En qué podemos ayudarte?",
+			lead: "Guías breves de cada parte de Reader, y soluciones para los problemas con los que la gente realmente se encuentra.",
+			start: "¿Por dónde empiezo?",
+			sections: "Explorar por tema",
+			topics: "Preguntas frecuentes",
+			guides: ".input {$count :number}\n.match $count\none {{{$count} guía}}\n* {{{$count} guías}}",
+		},
+		nav: {
+			label: "Páginas de ayuda",
+			filter: "Filtrar páginas",
+			filterPlaceholder: "Filtrar páginas",
+			noResults: "Ningún título coincide. Prueba con una palabra más corta.",
+			menu: "Menú",
+			close: "Cerrar menú",
+			toc: "En esta página",
+			crumbs: "Ruta de navegación",
+			support: "Contactar con soporte",
+			plans: "Comparar planes",
+		},
+		page: {
+			anchor: "Enlace a esta sección",
+			next: "Siguiente",
+			paid: "Disponible en los {#link}planes Paid y Premium{/link}.",
+			premium: "Disponible en el {#link}plan Premium{/link}.",
+			stuck: {
+				title: "¿Sigues atascado?",
+				body: "Escribe a {#link}{$email}{/link} contando qué probaste y qué viste, y te responderá una persona.",
+			},
+			updated: "Última actualización",
+		},
+		feedback: {
+			question: "¿Te sirvió esta página?",
+			yes: "Sí",
+			no: "No",
+			note: "¿Qué estabas buscando? (opcional)",
+			send: "Enviar",
+			thanks: "Gracias. Leemos cada respuesta.",
+		},
+		footer: {
+			start: "Empezar a leer",
+			import: "Trae tus feeds",
+			plans: "Planes y límites",
+			fix: "Resolver un problema",
+		},
+		notFound: {
+			eyebrow: "404",
+			title: "Esa página de ayuda no está aquí",
+			body: "Puede que se haya movido. Estas son las páginas que más se buscan.",
+			links: "Prueba una de estas",
+		},
+	},
+
 	notFound: {
 		title: "Página no encontrada",
 		description: "La página que buscas no existe.",

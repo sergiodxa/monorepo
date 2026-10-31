@@ -64,6 +64,8 @@ setIntl(intl);
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
+	"@sdxc/ui/docs-nav-tools": () => import("@sdxc/ui/docs-nav-tools"),
+	"@sdxc/ui/table-of-contents": () => import("@sdxc/ui/table-of-contents"),
 };
 
 let runtime = run({

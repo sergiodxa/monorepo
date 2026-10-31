@@ -321,4 +321,15 @@ export default route({
 		useCase: get("/for/:slug"),
 		comparison: get("/vs/:slug"),
 	},
+	/**
+	 * The help pages, public like the marketing pages so a reader stuck before signing in
+	 * finds them. Each page's slug comes from `resources/docs/registry.ts`, and the vote at
+	 * the foot of a page posts beside them.
+	 */
+	docs: {
+		index: get("/docs"),
+		show: get("/docs/:slug"),
+		/** Records a "Was this helpful?" vote and returns the reader to the page voted on. */
+		feedback: post("/docs/feedback"),
+	},
 });
