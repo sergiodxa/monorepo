@@ -312,4 +312,13 @@ export default route({
 	 * monitor signs in as nobody, and names each dependency rather than any reader's data.
 	 */
 	health: get("/health"),
+	/**
+	 * The public pages beside the home: one per feature, one per way of reading, and one per
+	 * reader the product is compared with. `config/marketing.ts` lists the slugs each answers.
+	 */
+	marketing: {
+		feature: get("/features/:slug"),
+		useCase: get("/for/:slug"),
+		comparison: get("/vs/:slug"),
+	},
 });

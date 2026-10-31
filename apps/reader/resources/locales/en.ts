@@ -7,90 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import landing from "~/resources/locales/landing/en";
+
 export default {
 	app: {
 		name: "Reader",
 	},
 
-	landing: {
-		meta: {
-			title: "Reader",
-			description:
-				"Follow any site that publishes RSS or Atom and read everything it writes in one place, newest first.",
-		},
-
-		hero: {
-			eyebrow: "Reader",
-			title: "Read the web on your own terms",
-			description:
-				"Follow any site that publishes RSS or Atom and read everything it writes in one queue. No algorithm decides the order, and nothing you read is sold on.",
-			cta: "Sign in to start reading",
-			checks: {
-				queue: "One queue, newest first",
-				private: "Nothing you read is sold on",
-				openWeb: "Any RSS or Atom feed",
-			},
-			frame: {
-				title: "Reader",
-				url: "reading",
-			},
-			media: {
-				alt: "A framed reading queue with unread marks, post titles, feed names, and times.",
-				chrome: "Reading",
-				rows: {
-					one: {
-						title: "A new essay from a site you follow",
-						source: "A weblog",
-						time: "12m",
-					},
-					two: {
-						title: "This week's notes arrived overnight",
-						source: "A newsletter",
-						time: "2h",
-					},
-					three: {
-						title: "Episode notes for last night's show",
-						source: "A podcast",
-						time: "Yesterday",
-					},
-					four: {
-						title: "Release notes you already opened",
-						source: "A project feed",
-						time: "2d",
-					},
-				},
-			},
-		},
-
-		features: {
-			badge: "Why Reader",
-			title: "A quiet queue for the open web",
-			description:
-				"Follow feeds, read in order, and keep what you follow private — without an algorithm or a tracking pitch.",
-			queue: {
-				title: "One queue, in order",
-				description:
-					"Every post from every feed you follow, newest first. No algorithm reorders it and nothing is promoted into it.",
-			},
-			private: {
-				title: "Nobody watches you read",
-				description:
-					"What you follow and what you have read is yours. There is no tracking, no advertising, and nothing to sell on.",
-			},
-			openWeb: {
-				title: "Built on the open web",
-				description:
-					"Any URL that publishes RSS or Atom works. No platform has to agree, and nothing is locked behind an API key.",
-			},
-		},
-
-		closing: {
-			title: "Start with your own queue",
-			description:
-				"Sign in, follow a feed, and read newest first — nothing else decides the order.",
-			cta: "Sign in to start reading",
-		},
-	},
+	landing,
 
 	auth: {
 		error: {

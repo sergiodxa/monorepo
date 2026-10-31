@@ -113,11 +113,14 @@ to exist before the first deploy.
 
 ### Public
 
-| Route     | Description                                               |
-| --------- | --------------------------------------------------------- |
-| `/`       | Landing page; a signed-in visitor is sent to `/reading`   |
-| `/auth`   | `GET` completes the OIDC callback, `POST` starts the flow |
-| `/logout` | `GET` confirms, `POST` ends the session                   |
+| Route             | Description                                                |
+| ----------------- | ---------------------------------------------------------- |
+| `/`               | Landing page; a signed-in visitor is sent to `/reading`    |
+| `/features/:slug` | One feature's page, for each slug in `config/marketing.ts` |
+| `/for/:slug`      | One way of reading: news, developers, research, podcasts   |
+| `/vs/:slug`       | Comparison with Feedly, Inoreader, Feedbin or NewsBlur     |
+| `/auth`           | `GET` completes the OIDC callback, `POST` starts the flow  |
+| `/logout`         | `GET` confirms, `POST` ends the session                    |
 
 ### Signed in
 

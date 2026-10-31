@@ -398,6 +398,18 @@ export function createWebRouter(options: WebRouterOptions) {
 		routes.health,
 		lazy(() => import("~/app/http/controllers/health")),
 	);
+	router.map(
+		routes.marketing.feature,
+		lazy(() => import("~/app/http/controllers/marketing/feature")),
+	);
+	router.map(
+		routes.marketing.useCase,
+		lazy(() => import("~/app/http/controllers/marketing/use-case")),
+	);
+	router.map(
+		routes.marketing.comparison,
+		lazy(() => import("~/app/http/controllers/marketing/comparison")),
+	);
 
 	return router;
 }

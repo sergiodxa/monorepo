@@ -7,90 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import landing from "~/resources/locales/landing/es";
+
 export default {
 	app: {
 		name: "Reader",
 	},
 
-	landing: {
-		meta: {
-			title: "Reader",
-			description:
-				"Sigue cualquier sitio que publique RSS o Atom y lee todo lo que escribe en un solo lugar, de lo más reciente a lo más antiguo.",
-		},
-
-		hero: {
-			eyebrow: "Reader",
-			title: "Lee la web en tus propios términos",
-			description:
-				"Sigue cualquier sitio que publique RSS o Atom y lee todo lo que escribe en una sola cola. Ningún algoritmo decide el orden, y nada de lo que lees se vende.",
-			cta: "Inicia sesión para empezar a leer",
-			checks: {
-				queue: "Una cola, de lo más reciente",
-				private: "Nada de lo que lees se vende",
-				openWeb: "Cualquier feed RSS o Atom",
-			},
-			frame: {
-				title: "Reader",
-				url: "reading",
-			},
-			media: {
-				alt: "Una cola de lectura enmarcada con marcas de no leído, títulos, nombres de feeds y horas.",
-				chrome: "Lectura",
-				rows: {
-					one: {
-						title: "Un nuevo ensayo de un sitio que sigues",
-						source: "Un blog",
-						time: "12m",
-					},
-					two: {
-						title: "Las notas de esta semana llegaron de madrugada",
-						source: "Un boletín",
-						time: "2h",
-					},
-					three: {
-						title: "Notas del episodio de anoche",
-						source: "Un pódcast",
-						time: "Ayer",
-					},
-					four: {
-						title: "Notas de la versión que ya abriste",
-						source: "Un feed de proyecto",
-						time: "2d",
-					},
-				},
-			},
-		},
-
-		features: {
-			badge: "Por qué Reader",
-			title: "Una cola tranquila para la web abierta",
-			description:
-				"Sigue feeds, lee en orden y mantén lo que sigues en privado — sin algoritmo ni discurso de rastreo.",
-			queue: {
-				title: "Una cola, en orden",
-				description:
-					"Todas las entradas de todos los feeds que sigues, de la más reciente a la más antigua. Ningún algoritmo las reordena ni cuela nada entre ellas.",
-			},
-			private: {
-				title: "Nadie mira lo que lees",
-				description:
-					"Lo que sigues y lo que has leído es tuyo. No hay rastreo, no hay publicidad y no hay nada que vender.",
-			},
-			openWeb: {
-				title: "Construido sobre la web abierta",
-				description:
-					"Funciona con cualquier URL que publique RSS o Atom. Ninguna plataforma tiene que dar permiso, y nada queda detrás de una clave de API.",
-			},
-		},
-
-		closing: {
-			title: "Empieza con tu propia cola",
-			description:
-				"Inicia sesión, sigue un feed y lee de lo más reciente — nada más decide el orden.",
-			cta: "Inicia sesión para empezar a leer",
-		},
-	},
+	landing,
 
 	auth: {
 		error: {
