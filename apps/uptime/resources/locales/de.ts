@@ -56,6 +56,25 @@ export default {
 		header: {
 			title: "Uptime",
 
+			menu: {
+				label: "Hauptnavigation",
+				open: "Menü öffnen",
+				close: "Menü schließen",
+			},
+
+			groups: {
+				features: {
+					checks: "Prüfungen",
+					respond: "Reagieren",
+					platform: "Plattform",
+				},
+				solutions: {
+					label: "Lösungen",
+					useCases: "Nach Anwendungsfall",
+					audiences: "Nach Team",
+				},
+			},
+
 			nav: {
 				pricing: "Preise",
 				features: "Funktionen",
@@ -196,6 +215,27 @@ export default {
 					description:
 						"Öffnen Sie eine Live-Seite, füllen Sie Felder aus, klicken Sie auf Schaltflächen und prüfen Sie, was Besucher sehen, nachdem JavaScript gelaufen ist. Erkennen Sie Login- und Checkout-Fehler, die eine HTTP-Prüfung übersehen würde.",
 				},
+			},
+		},
+
+		flows: {
+			badge: "Flow-Monitore",
+			title: "Prüfe den ganzen Ablauf, nicht nur eine URL",
+			description:
+				"Ein Flow-Monitor führt nach Zeitplan eine kurze ausführbare Spezifikation aus: anmelden, das Token lesen, den damit freigegebenen Endpunkt aufrufen und jede Antwort prüfen. Über HTTP oder in einem echten Browser.",
+			link: "So funktionieren Flow-Monitore",
+
+			diagram: {
+				name: "Ein Flow-Monitor-Lauf, Schritt für Schritt",
+				pause: "Animation anhalten",
+				schedule: "Der Zeitplan startet einen Lauf",
+				scheduleDetail: "Bis zu alle {$minutes} Minuten",
+				signIn: "Anmelden",
+				token: "Token lesen",
+				call: "Freigegebenen Endpunkt aufrufen",
+				check: "Antwort prüfen",
+				passed: "Lauf erfolgreich",
+				alert: "Ein fehlgeschlagener Schritt alarmiert dein Team",
 			},
 		},
 

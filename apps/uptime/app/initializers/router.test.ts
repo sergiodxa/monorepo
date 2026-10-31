@@ -178,6 +178,7 @@ describe("public page caching", () => {
 	/**
 	 * A prefetch marks itself `X-Remix-Frame: true` and the navigation after it does not, so
 	 * the stored copy is reusable only when both get the same page under the same policy.
+	 * The CSP nonce and each client island's hydration marker are minted per response.
 	 */
 	test("answers a link prefetch with the page and policy the navigation gets", async () => {
 		viewer = null;
@@ -188,8 +189,15 @@ describe("public page caching", () => {
 
 		expect(prefetch.headers.get("Cache-Control")).toBe(navigation.headers.get("Cache-Control"));
 		expect(prefetch.headers.get("Vary")).toBe(navigation.headers.get("Vary"));
-		let withoutNonce = (html: string) => html.replace(/nonce="[^"]*"/g, 'nonce=""');
-		expect(withoutNonce(await prefetch.text())).toBe(withoutNonce(await navigation.text()));
+		let withoutPerResponse = (html: string) => {
+			let islands = [...html.matchAll(/<!-- rmx:h:([^ ]+) -->/g)].map((match) => match[1] ?? "");
+			return islands
+				.reduce((page, id, index) => page.replaceAll(id, `island-${index}`), html)
+				.replace(/nonce="[^"]*"/g, 'nonce=""');
+		};
+		expect(withoutPerResponse(await prefetch.text())).toBe(
+			withoutPerResponse(await navigation.text()),
+		);
 	});
 
 	test("leaves an unknown marketing slug's 404 uncached", async () => {

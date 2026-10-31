@@ -56,6 +56,25 @@ export default {
 		header: {
 			title: "Uptime",
 
+			menu: {
+				label: "Principale",
+				open: "Ouvrir le menu",
+				close: "Fermer le menu",
+			},
+
+			groups: {
+				features: {
+					checks: "Vérifications",
+					respond: "Réagir",
+					platform: "Plateforme",
+				},
+				solutions: {
+					label: "Solutions",
+					useCases: "Par cas d’usage",
+					audiences: "Par équipe",
+				},
+			},
+
 			nav: {
 				pricing: "Tarifs",
 				features: "Fonctionnalités",
@@ -197,6 +216,27 @@ export default {
 					description:
 						"Ouvrez une page en direct, remplissez des champs, cliquez sur des boutons et vérifiez ce que voient les visiteurs après l'exécution de JavaScript. Détectez les pannes de connexion et de paiement qu'une vérification HTTP manquerait.",
 				},
+			},
+		},
+
+		flows: {
+			badge: "Moniteurs de parcours",
+			title: "Vérifiez tout le parcours, pas une seule URL",
+			description:
+				"Un moniteur de parcours exécute une courte spécification selon un calendrier : se connecter, lire le jeton, appeler l’endpoint qu’il autorise et vérifier chaque réponse. Par HTTP ou dans un vrai navigateur.",
+			link: "Comment fonctionnent les moniteurs de parcours",
+
+			diagram: {
+				name: "Une exécution de moniteur de parcours, étape par étape",
+				pause: "Mettre l’animation en pause",
+				schedule: "Le calendrier lance une exécution",
+				scheduleDetail: "Jusqu’à toutes les {$minutes} minutes",
+				signIn: "Se connecter",
+				token: "Lire le jeton",
+				call: "Appeler l’endpoint autorisé",
+				check: "Vérifier la réponse",
+				passed: "Exécution réussie",
+				alert: "Une étape en échec alerte votre équipe",
 			},
 		},
 

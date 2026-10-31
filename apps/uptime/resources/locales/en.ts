@@ -79,6 +79,25 @@ export default {
 		header: {
 			title: "Uptime",
 
+			menu: {
+				label: "Main",
+				open: "Open menu",
+				close: "Close menu",
+			},
+
+			groups: {
+				features: {
+					checks: "Checks",
+					respond: "Respond",
+					platform: "Platform",
+				},
+				solutions: {
+					label: "Solutions",
+					useCases: "By use case",
+					audiences: "By team",
+				},
+			},
+
 			nav: {
 				features: "Features",
 				compare: "Compare",
@@ -219,6 +238,27 @@ export default {
 					description:
 						"Open a live page, fill fields, click buttons, and assert on what visitors see after JavaScript runs. Catch login and checkout breaks an HTTP check would miss.",
 				},
+			},
+		},
+
+		flows: {
+			badge: "Flow monitors",
+			title: "Check the whole journey, not one URL",
+			description:
+				"A flow monitor runs a short executable spec on a schedule: sign in, read the token, call the endpoint it authorises, and assert on every response. Run it over HTTP, or in a real browser.",
+			link: "How flow monitors work",
+
+			diagram: {
+				name: "A flow monitor run, step by step",
+				pause: "Pause the animation",
+				schedule: "The schedule starts a run",
+				scheduleDetail: "As often as every {$minutes} minutes",
+				signIn: "Sign in",
+				token: "Read the token",
+				call: "Call the endpoint it authorises",
+				check: "Check what comes back",
+				passed: "Run passed",
+				alert: "A failed step alerts your team",
 			},
 		},
 

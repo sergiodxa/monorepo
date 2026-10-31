@@ -56,6 +56,25 @@ export default {
 		header: {
 			title: "Uptime",
 
+			menu: {
+				label: "メイン",
+				open: "メニューを開く",
+				close: "メニューを閉じる",
+			},
+
+			groups: {
+				features: {
+					checks: "チェック",
+					respond: "対応",
+					platform: "プラットフォーム",
+				},
+				solutions: {
+					label: "ソリューション",
+					useCases: "ユースケース別",
+					audiences: "チーム別",
+				},
+			},
+
 			nav: {
 				pricing: "料金",
 				features: "機能",
@@ -196,6 +215,27 @@ export default {
 					description:
 						"ライブページを開き、フィールドに入力し、ボタンをクリックし、JavaScript 実行後に訪問者が見る内容を検証します。HTTP チェックでは見逃すログインやチェックアウトの障害を検知します。",
 				},
+			},
+		},
+
+		flows: {
+			badge: "フローモニター",
+			title: "URL ひとつではなく、一連の流れ全体をチェック",
+			description:
+				"フローモニターは短い実行可能なスペックをスケジュールどおりに実行します。サインインし、トークンを読み取り、そのトークンで許可されたエンドポイントを呼び出し、すべてのレスポンスを検証します。HTTP でも実ブラウザでも実行できます。",
+			link: "フローモニターの仕組み",
+
+			diagram: {
+				name: "フローモニターの実行をステップごとに表示",
+				pause: "アニメーションを一時停止",
+				schedule: "スケジュールが実行を開始",
+				scheduleDetail: "最短 {$minutes} 分ごと",
+				signIn: "サインイン",
+				token: "トークンを読み取る",
+				call: "許可されたエンドポイントを呼び出す",
+				check: "返ってきた内容を確認",
+				passed: "実行成功",
+				alert: "失敗したステップはチームに通知されます",
 			},
 		},
 

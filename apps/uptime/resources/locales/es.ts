@@ -56,6 +56,25 @@ export default {
 		header: {
 			title: "Uptime",
 
+			menu: {
+				label: "Principal",
+				open: "Abrir menú",
+				close: "Cerrar menú",
+			},
+
+			groups: {
+				features: {
+					checks: "Comprobaciones",
+					respond: "Respuesta",
+					platform: "Plataforma",
+				},
+				solutions: {
+					label: "Soluciones",
+					useCases: "Por caso de uso",
+					audiences: "Por equipo",
+				},
+			},
+
 			nav: {
 				pricing: "Precios",
 				features: "Funciones",
@@ -196,6 +215,27 @@ export default {
 					description:
 						"Abra una página en vivo, complete campos, haga clic en botones y compruebe lo que ven los visitantes después de que JavaScript se ejecute. Detecte fallos de login y checkout que una comprobación HTTP no vería.",
 				},
+			},
+		},
+
+		flows: {
+			badge: "Monitores de flujo",
+			title: "Comprueba el recorrido completo, no una sola URL",
+			description:
+				"Un monitor de flujo ejecuta una especificación breve según una programación: inicia sesión, lee el token, llama al endpoint que autoriza y verifica cada respuesta. Ejecútalo por HTTP o en un navegador real.",
+			link: "Cómo funcionan los monitores de flujo",
+
+			diagram: {
+				name: "Una ejecución de un monitor de flujo, paso a paso",
+				pause: "Pausar la animación",
+				schedule: "La programación inicia una ejecución",
+				scheduleDetail: "Hasta cada {$minutes} minutos",
+				signIn: "Iniciar sesión",
+				token: "Leer el token",
+				call: "Llamar al endpoint que autoriza",
+				check: "Comprobar lo que responde",
+				passed: "Ejecución correcta",
+				alert: "Un paso fallido alerta a tu equipo",
 			},
 		},
 

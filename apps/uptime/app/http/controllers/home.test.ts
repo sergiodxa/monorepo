@@ -32,7 +32,13 @@ import { findClaimViolations } from "~/app/services/public-claims";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/test/honeypot";
-import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/config/pricing";
+import {
+	BASE_PRICE_USD,
+	FLOW_INTERVALS_SECONDS,
+	formatPings,
+	formatUsd,
+	INCLUDED_PINGS,
+} from "~/config/pricing";
 import routes from "~/routes/web";
 
 /**
@@ -194,9 +200,6 @@ describe("GET /", () => {
 		expect(body).toContain("Learn more");
 
 		expect(body).toContain("Test in a real browser");
-		expect(body).toContain('id="browser-flows"');
-		expect(body).toContain("use browser");
-		expect(body).toContain("signing in lands on the dashboard");
 
 		expect(body).toContain("Maintenance Windows");
 		expect(body).toContain("Cron Job Monitoring");
@@ -208,22 +211,38 @@ describe("GET /", () => {
 	});
 
 	/**
-	 * Three audience pills carry the row, chosen over all six `/for/:slug` pages
+	 * Three audience links carry the row, chosen over all six `/for/:slug` pages
 	 * so the ones the product fits best keep more prominence than the ones it fits
-	 * least. Every page still links from the footer and the sitemap.
+	 * least. Every page still links from the header menu, the footer and the sitemap.
 	 */
 	test("gives three audiences the prominent row and leaves the rest to the chrome", async () => {
 		let response = await getHome(null);
 		let body = await response.text();
+		let main = body.slice(body.indexOf("<main"), body.indexOf("</main>"));
 
 		for (let slug of ["agencies", "solo-devs", "startups"]) {
-			expect(body).toContain(`href="${routes.marketing.audience.href({ slug })}"`);
+			expect(main).toContain(`href="${routes.marketing.audience.href({ slug })}"`);
 		}
 
 		for (let slug of ["indie-hackers", "enterprises", "devops"]) {
-			let href = `href="${routes.marketing.audience.href({ slug })}"`;
-			expect(body.split(href)).toHaveLength(2);
+			expect(main).not.toContain(`href="${routes.marketing.audience.href({ slug })}"`);
+			expect(body).toContain(`href="${routes.marketing.audience.href({ slug })}"`);
 		}
+	});
+
+	/**
+	 * The flows band explains a run with the documented sign-in flow, and its schedule
+	 * line quotes the shortest interval `config/pricing.ts` offers a flow monitor.
+	 */
+	test("walks through a flow monitor run with the real shortest interval", async () => {
+		let body = await (await getHome(null)).text();
+
+		expect(body).toContain('id="flows"');
+		expect(body).toContain("Check the whole journey, not one URL");
+		expect(body).toContain("session.json.token");
+		expect(body).toContain(`As often as every ${FLOW_INTERVALS_SECONDS[0] / 60} minutes`);
+		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "flows" })}"`);
+		expect(body).toContain(`href="${routes.browserFlows.href()}"`);
 	});
 
 	/**
@@ -306,7 +325,8 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body.match(/<details/g)).toHaveLength(21);
+		let main = body.slice(body.indexOf("<main"), body.indexOf("</main>"));
+		expect(main.match(/<details/g)).toHaveLength(21);
 		expect(body).toContain("How does Uptime monitor my services?");
 		expect(body).toContain("From which regions can I monitor my services?");
 		expect(body).toContain("Can I monitor a login or a checkout flow?");
