@@ -1229,6 +1229,46 @@ describe("declaring and mapping", () => {
 		);
 	});
 
+	test("maps on the router a typed createRouter builds, over an initializer that only imports the contract", async () => {
+		let root = await sitemapProject();
+		await rm(join(root, "app/initializers/router.ts"));
+		await writeFile(
+			join(root, "app/initializers/auth.ts"),
+			'import routes from "~/routes/web";\n\nexport let callback = routes.home;\n',
+		);
+		await writeFile(
+			join(root, "app/initializers/router.tsx"),
+			[
+				'import { lazy } from "@sdxc/lazy-route";',
+				'import { createRouter } from "remix/router";',
+				"",
+				'import routes from "~/routes/web";',
+				"",
+				"export function createWebRouter() {",
+				"\tlet web = createRouter<AppContext>({ middleware: [] });",
+				'\tweb.map(routes.home, lazy(() => import("~/app/http/controllers/home")));',
+				"\treturn web;",
+				"}",
+				"",
+			].join("\n"),
+		);
+
+		let result = await invoke(
+			["controller", "robots", "--path", "/robots.txt", "--no-test", "--no-spec"],
+			root,
+			{ exec: UNFORMATTED },
+		);
+
+		expect(result.stdout).not.toContain("by hand");
+		expect(await readFile(join(root, "app/initializers/router.tsx"), "utf8")).toContain(
+			'\tweb.map(routes.home, lazy(() => import("~/app/http/controllers/home")));\n\tweb.map(routes.robots, lazy(() => import("~/app/http/controllers/robots")));\n',
+		);
+		expect(await readFile(join(root, "app/initializers/auth.ts"), "utf8")).not.toContain("robots");
+		expect(await readFile(join(root, "app/http/controllers/sitemap.ts"), "utf8")).toContain(
+			"\trobots: false,\n",
+		);
+	});
+
 	test("decides a new page in the sitemap: an empty list for params, and none in an excluded group", async () => {
 		let root = await sitemapProject();
 

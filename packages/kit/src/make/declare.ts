@@ -17,6 +17,7 @@ import type { ModuleReference } from "@sdxc/codemod";
 import type { Result } from "@sdxc/result";
 
 import { addElement, addProperty, findModuleReferences, insertAfterLast } from "@sdxc/codemod";
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { Name } from "./names.js";
@@ -314,13 +315,18 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 }
 
 /**
- * The sitemap decision a new page starts with: listed, or an empty list of pages when its pattern
- * has required params, so it is in the sitemap until the developer changes it. A `form` route
- * decides its page under `index`.
+ * The sitemap decision a new page starts with: listed, an empty list of pages when its pattern
+ * has required params, or left out when its last segment names a file (`/robots.txt`), which
+ * serves a document a crawler reads by name. A `form` route decides its page under `index`.
  */
 function sitemapDecision(helper: string, pattern: string): string {
-	let required = /[:*][A-Za-z_$]/.test(pattern.replace(/\([^)]*\)/g, ""));
-	let page = required ? "[]" : "true";
+	let path = pattern.replace(/\([^)]*\)/g, "");
+	let required = /[:*][A-Za-z_$]/.test(path);
+	let file = /\.[A-Za-z0-9]+$/.test(path);
+	let page = iife(() => {
+		if (file) return "false";
+		return required ? "[]" : "true";
+	});
 	return helper === "form" ? `{ index: ${page} }` : page;
 }
 
@@ -1028,9 +1034,9 @@ function mapAfter(
 }
 
 /**
- * The initializer in `app/initializers/` that imports `module` and calls `factory`, else the
- * first that imports it, else (unless `importing` is required) one that calls `factory`; `null`
- * when none does. Test files are skipped.
+ * The initializer in `app/initializers/` that imports `module` and calls `factory`, else one that
+ * maps `module`'s entries, else the first that imports it, else (unless `importing` is required)
+ * one that calls `factory`; `null` when none does. Test files are skipped.
  */
 async function findInitializer(
 	root: string,
@@ -1049,14 +1055,17 @@ async function findInitializer(
 	}
 	let aliased = await declaresAlias(root);
 	for (let file of files) file.aliased = aliased;
-	let calling = factory === null ? null : new RegExp(`\\b${factory}\\(`);
+	let calling = factory === null ? null : new RegExp(`\\b${callOf(factory)}`);
 	let importers = files.filter((file) =>
 		file.references.some(
 			(reference) =>
 				reference.kind === "import" && resolvesTo(reference.specifier, file.path, module),
 		),
 	);
-	let found = importers.find((file) => calling?.test(file.source) ?? true) ?? importers[0];
+	let found =
+		importers.find((file) => calling?.test(file.source) ?? true) ??
+		importers.find((file) => mapsFrom(file, module)) ??
+		importers[0];
 	if (found !== undefined) return found;
 	if (calling === null || importing === "required") return null;
 	return files.find((file) => calling.test(file.source)) ?? null;
@@ -1082,10 +1091,24 @@ async function readSource(root: string, path: string): Promise<Result<SourceFile
 
 /** The variable the instance `factory` creates is bound to, such as `dispatcher` or `router`. */
 function instanceOf(file: SourceFile, factory: string): string {
-	let match = new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${factory}\\(`).exec(
-		file.source,
-	);
+	let match = new RegExp(
+		`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${callOf(factory)}`,
+	).exec(file.source);
 	return match?.[1] ?? INSTANCE_NAMES[factory] ?? "dispatcher";
+}
+
+/**
+ * The pattern of a call to `factory`, with or without type arguments, so a typed
+ * `createRouter<AppContext>(…)` is found like a plain `createRouter(…)`.
+ */
+function callOf(factory: string): string {
+	return `${factory}\\s*(?:<[^()]*>)?\\s*\\(`;
+}
+
+/** Whether `file` passes an entry of `module`'s default export to a `.map(…)` call. */
+function mapsFrom(file: SourceFile, module: string): boolean {
+	let local = defaultLocal(file, module);
+	return local !== null && new RegExp(`\\.map\\(\\s*${local}\\.`).test(file.source);
 }
 
 /** The local name `file` binds the default export of `module` to, or `null`. */
