@@ -71,8 +71,8 @@ export namespace MarketingContent {
 		value: string;
 		/**
 		 * What {@link TrustIndicator.value} says out loud, for the figures that are a symbol
-		 * rather than something readable (`"∞"`). Passed straight through to the strip, which
-		 * announces this instead of the glyph — see `resources/components/marketing/trust-indicators.tsx`.
+		 * rather than something readable (`"∞"`). The stat strip announces this instead of
+		 * the glyph, which it hides from assistive technology.
 		 */
 		valueLabel?: string;
 		label: string;
