@@ -69,6 +69,14 @@ describe("GET /", () => {
 		expect(body).not.toContain("$packageCount");
 	});
 
+	test("keeps the stats band to four figures, so it fills one row without crowding", async () => {
+		let body = await (await fetchApp("/")).text();
+
+		expect(body).toContain("styling utilities in @sdxc/u");
+		expect(body).not.toContain("packages that need no framework");
+		expect(body).not.toContain("apps running on them");
+	});
+
 	test("lists every published package", async () => {
 		let body = await (await fetchApp("/")).text();
 

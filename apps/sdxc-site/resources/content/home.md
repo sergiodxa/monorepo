@@ -27,8 +27,6 @@ Take one, or take the set. There are {% $packageCount %} of them, built on `fetc
 <stat label="RFCs the packages follow">{% $rfcCount %}</stat>
 <stat label="components in @sdxc/ui">{% $componentCount %}</stat>
 <stat label="styling utilities in @sdxc/u">{% $utilityCount %}</stat>
-<stat label="packages that need no framework">{% $frameworkFreeCount %}</stat>
-<stat label="apps running on them">{% $applicationCount %}</stat>
 </stats>
 
 <section-block id="thesis" title="Everything between the Request and the Response." align="center">
