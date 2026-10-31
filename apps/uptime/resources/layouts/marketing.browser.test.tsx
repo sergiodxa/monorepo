@@ -1,7 +1,7 @@
 /**
  * Lays the marketing chrome out in a real browser: at laptop and desktop widths every
- * footer link keeps its label on one line beside the brand block, and the footer stays
- * inside the viewport on a phone.
+ * footer link keeps its label on one line beside the brand block, the footer stays inside
+ * the viewport on a phone, and the phone sheet closes when one of its links is followed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,6 +47,15 @@ function mountLayout() {
 	return mounted;
 }
 
+/**
+ * Clicks `link` the way a visitor's press reaches it, with navigation cancelled once the
+ * click has bubbled past the sheet, so the page under test stays loaded.
+ */
+function press(link: Element, init: MouseEventInit = {}) {
+	document.addEventListener("click", (event) => event.preventDefault(), { once: true });
+	link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ...init }));
+}
+
 /** Footer column links whose label breaks onto a second line. */
 function wrappedLinks(container: Element): string[] {
 	return [...container.querySelectorAll('[data-slot="site-footer-column"] a')]
@@ -86,5 +95,19 @@ describe("MarketingLayout", () => {
 		});
 
 		expect(wide.map((element) => element.outerHTML.slice(0, 80))).toEqual([]);
+	});
+
+	test("closes the phone sheet when a link in it is followed, and not on a modified click", async () => {
+		await page.viewport(375, 812);
+		let { container } = mountLayout();
+		let sheet = container.querySelector<HTMLDialogElement>('[data-slot="site-header-sheet"]')!;
+		let link = sheet.querySelector('[data-slot="site-header-sheet-nav"] a[href]')!;
+
+		sheet.showModal();
+		press(link, { metaKey: true });
+		expect(sheet.open).toBe(true);
+
+		press(link);
+		expect(sheet.open).toBe(false);
 	});
 });
