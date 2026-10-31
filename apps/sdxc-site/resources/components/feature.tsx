@@ -1,7 +1,7 @@
 /**
  * The `feature` tag: one cell of a claim grid, carrying a title, an optional glyph, an
  * optional number that backs the claim up, and an optional link to where it is argued in
- * full. Thin adapter over {@link Feature} that keeps the markdown attribute vocabulary.
+ * full that makes the whole cell clickable. Thin adapter over {@link Feature}.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,6 @@ import type { Handle } from "remix/component";
 
 import {
 	ArchiveIcon,
-	ArrowRightIcon,
 	BookOpenIcon,
 	CalendarIcon,
 	CalendarOffIcon,
@@ -29,7 +28,7 @@ import {
 	ZapIcon,
 } from "@sdxc/icons";
 import { hstack } from "@sdxc/u/layout";
-import { Badge, Feature as UiFeature, LinkButton } from "@sdxc/ui";
+import { Badge, Feature as UiFeature } from "@sdxc/ui";
 
 import type { FeatureIconName } from "~/app/services/content";
 import type { MarkdownProps } from "~/resources/components/markdown-props";
@@ -93,10 +92,7 @@ export default function Feature(handle: Handle<Feature.Props>) {
 
 				{href && linkLabel ? (
 					<UiFeature.Action>
-						<LinkButton href={href} size="sm" color="neutral" variant="outline">
-							{linkLabel}
-							<ArrowRightIcon size={14} aria-hidden="true" />
-						</LinkButton>
+						<UiFeature.Link href={href}>{linkLabel}</UiFeature.Link>
 					</UiFeature.Action>
 				) : null}
 			</UiFeature>
