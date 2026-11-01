@@ -96,6 +96,33 @@ parseDkimRecord("v=DKIM1; k=rsa; p=MIGfMA0GCSq…");
 parseDmarcReport(xml); // an RFC 9990 aggregate report, already decompressed
 ```
 
+### Audit a whole domain
+
+```typescript
+import { checkEmailAuth } from "@sdxc/email-auth";
+
+let report = await checkEmailAuth("example.com", { dkimSelectors: ["google"] });
+report.ok; // false when any policy is missing, invalid or unreadable
+report.results; // [{ policy: "dmarc", verdict: "pass", summary: "p=reject", problems: [] }, …]
+```
+
+## Command line
+
+```sh
+bunx @sdxc/email-auth check example.com
+```
+
+`check` grades DMARC, SPF, MTA-STS (with its policy file and MX coverage), TLS-RPT, BIMI and
+DKIM for each `--selector`. It exits 0 when every policy holds, 1 when one is missing, invalid
+or unreadable, and 2 on a usage error.
+
+```sh
+sdxc-email-auth check example.com --selector google --selector s1
+sdxc-email-auth check example.com --skip bimi,tls-rpt --json
+```
+
+`sdxc-email-auth check --help` lists every flag.
+
 ## API
 
 ### DMARC
@@ -137,6 +164,8 @@ parseDmarcReport(xml); // an RFC 9990 aggregate report, already decompressed
 - `parseTlsRptRecord(text)`, `discoverTlsRpt(domain, options?)`.
 - `parseDkimRecord(text)`, `lookupDkimKey(domain, selector, options?)`: DKIM1 key records
   (RFC 6376). DKIM2 (draft-ietf-dkim-dkim2-spec) is being tracked and not parsed yet.
+- `checkEmailAuth(domain, options?)`: every policy above graded `pass`, `warn`, `fail` or
+  `error`, with `dkimSelectors`, `bimiSelector` and `skip`; `EMAIL_AUTH_POLICIES` lists them.
 - `RecordParseError`: every parser's failure, with the `protocol` it was read as.
   `PolicyFetchError`: a policy file fetch that failed, with the step in `reason`.
 

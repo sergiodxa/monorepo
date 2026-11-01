@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Parse and evaluate a domain's email-authentication DNS policies: DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM",
 	"license": "MIT",
+	"bin": {
+		"sdxc-email-auth": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,12 +14,14 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/ip": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/xml": "workspace:*"
+		"@sdxc/xml": "workspace:*",
+		"remix": "3.1.0"
 	},
 	"devDependencies": {
 		"@sdxc/zone-file": "workspace:*"

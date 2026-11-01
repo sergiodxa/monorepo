@@ -8,6 +8,7 @@
  */
 
 export type { BIMI } from "./bimi.js";
+export type { EmailAuthCheck } from "./check.js";
 export type { DKIM } from "./dkim.js";
 export type { DMARC } from "./dmarc.js";
 export type { DMARCReport } from "./dmarc-report.js";
@@ -20,6 +21,7 @@ export type { SPF } from "./spf/record.js";
 export type { TLSRPT } from "./tls-rpt.js";
 
 export { bimiDmarcShortfalls, discoverBimi, isBimiRecord, parseBimiRecord } from "./bimi.js";
+export { checkEmailAuth, EMAIL_AUTH_POLICIES } from "./check.js";
 export { lookupDkimKey, parseDkimRecord } from "./dkim.js";
 export {
 	appliedDmarcPolicy,
