@@ -37,6 +37,7 @@ import { CommandPalette } from "@sdxc/ui/app/command-palette";
 
 import type { ViewIcon } from "~/resources/views/demo-apps/relay/views";
 
+import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { CONTACTS, CONVERSATIONS, findContact } from "~/resources/views/demo-apps/relay/data";
 import { HELP_ID, RelayKeyboardHelp } from "~/resources/views/demo-apps/relay/keyboard-help";
 import {
@@ -325,15 +326,40 @@ export function RelayShell(handle: Handle<RelayShell.Props>) {
 				indicator="fill"
 				sheetBelow="64rem"
 				workspace={
-					<AppShell.Identity avatar={<RelayMark />} name="Relay" detail="Fernway support" />
+					<>
+						<AppShell.Identity
+							avatar={<RelayMark />}
+							name="Relay"
+							detail="Fernway support"
+							commandfor="relay-workspace-menu"
+							command="toggle-popover"
+						/>
+						<WorkspaceMenu
+							id="relay-workspace-menu"
+							label="Switch workspace"
+							current={{ name: "Fernway support", href: href() }}
+							others={["Fernway sales", "Fernway partners"]}
+						/>
+					</>
 				}
 				nav={<RelayNav current={current} />}
 				footer={
-					<AppShell.Identity
-						avatar={<Initials letters="NH" />}
-						name="Noor Haddad"
-						detail="noor@fernway.app"
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials letters="NH" />}
+							name="Noor Haddad"
+							detail="noor@fernway.app"
+							commandfor="relay-user-menu"
+							command="toggle-popover"
+						/>
+						<UserMenu
+							id="relay-user-menu"
+							label="Account"
+							profileHref={href("settings/signature")}
+							settingsHref={href("settings")}
+							helpId={HELP_ID}
+						/>
+					</>
 				}
 				topbar={
 					<>

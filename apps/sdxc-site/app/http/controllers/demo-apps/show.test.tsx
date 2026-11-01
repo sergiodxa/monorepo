@@ -74,6 +74,20 @@ describe("GET /demo/apps/:app", () => {
 		expect(body).toMatch(/<meta name="robots" content="noindex, nofollow"/);
 	});
 
+	test.each(apps)(
+		"$slug's workspace and user rows open real menus, with Sign out back to the gallery",
+		async ({ slug }) => {
+			let body = await (await fetchApp(demoAppHref(slug)())).text();
+			let targets = [...body.matchAll(/<button\b[^>]*aria-haspopup="menu"[^>]*>/g)].map(
+				([tag]) => /commandfor="([^"]+)"/.exec(tag)?.[1],
+			);
+
+			expect(targets).toEqual([`${slug}-workspace-menu`, `${slug}-user-menu`]);
+			for (let id of targets) expect(body).toContain(`id="${id}"`);
+			expect(body).toMatch(/href="\/demo"[^>]*>Sign out</);
+		},
+	);
+
 	test("an unknown app answers the site's 404", async () => {
 		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
 	});

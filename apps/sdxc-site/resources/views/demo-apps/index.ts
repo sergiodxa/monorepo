@@ -17,6 +17,20 @@ import routes from "~/routes/web";
 /** The query parameter a form's redirect carries, naming the toast the screen shows once. */
 export const DEMO_APP_TOAST_PARAM = "toast";
 
+/**
+ * Splits a `toast` parameter into the app's toast key and the redirect's one-time suffix
+ * (`archived-2041.9f3a1c2e`), so a reload of the same address keeps one toast id and shows
+ * nothing new, while each post mints a new one.
+ *
+ * @param value The parameter as the address carries it.
+ * @returns The key the app declares, and the id the toast takes on the page.
+ */
+export function readToastParam(value: string): { key: string; id: string } {
+	let dot = value.lastIndexOf(".");
+	let key = dot === -1 ? value : value.slice(0, dot);
+	return { key, id: `demo-toast-${value}` };
+}
+
 /** What a screen reads from the request it renders for. */
 export interface DemoAppRequest {
 	/** The screen's path under the app, such as `services/checkout-api`; `""` on the home screen. */

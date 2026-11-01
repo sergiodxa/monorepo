@@ -24,10 +24,12 @@ import { hstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, truncate, weight } from "@sdxc/u/typography";
 import { AppShell } from "@sdxc/ui/app/app-shell";
+import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
 import type { Author } from "~/resources/views/demo-apps/inkwell/data";
 
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
+import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { AUTHORS, POSTS, PUBLICATION } from "~/resources/views/demo-apps/inkwell/data";
 
 /** The demo's folder name, which every address and island id under it starts from. */
@@ -38,6 +40,28 @@ export const href = demoAppHref(SLUG);
 
 /** The address a form on one of Inkwell's screens posts to. */
 export const action = demoAppActionHref(SLUG);
+
+/** The keyboard help sheet's id, which the user menu's shortcuts item opens. */
+const HELP_ID = "inkwell-keys";
+
+/** The keyboard help sheet's strings. */
+const HELP_LABELS: KeyboardHelp.Labels = {
+	title: "Keyboard shortcuts",
+	close: "Close",
+	or: "or",
+	open: "Show keyboard shortcuts",
+	general: "General",
+	other: "More",
+};
+
+/** The keys the editor and lists answer, beside the ones a page declares with `data-shortcut`. */
+const HELP_GROUPS: KeyboardHelp.Group[] = [
+	{
+		title: "Editor",
+		shortcuts: [{ keys: "mod+s", label: "Save post" }],
+	},
+	{ title: "General", shortcuts: [{ keys: "?", label: "Show keyboard shortcuts" }] },
+];
 
 /** The nav row a screen marks current; `null` for a screen outside the nav, such as the 404. */
 export type NavKey = "home" | "posts" | "drafts" | "scheduled" | "pages" | "media" | "settings";
@@ -187,11 +211,21 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 				labels={SHELL_LABELS}
 				collapsed={collapsed}
 				workspace={
-					<AppShell.Identity
-						avatar={mark(24)}
-						name={PUBLICATION.name}
-						detail="Inkwell · Quarterly"
-					/>
+					<>
+						<AppShell.Identity
+							avatar={mark(24)}
+							name={PUBLICATION.name}
+							detail="Inkwell · Quarterly"
+							commandfor="inkwell-workspace-menu"
+							command="toggle-popover"
+						/>
+						<WorkspaceMenu
+							id="inkwell-workspace-menu"
+							label="Switch publication"
+							current={{ name: PUBLICATION.name, href: href() }}
+							others={["Lantern Review Archive", "Field Notes Weekly"]}
+						/>
+					</>
 				}
 				nav={
 					<>
@@ -252,11 +286,22 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 					</>
 				}
 				footer={
-					<AppShell.Identity
-						avatar={<Initials author={editor} size="md" />}
-						name={editor.name}
-						detail={editor.role}
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials author={editor} size="md" />}
+							name={editor.name}
+							detail={editor.role}
+							commandfor="inkwell-user-menu"
+							command="toggle-popover"
+						/>
+						<UserMenu
+							id="inkwell-user-menu"
+							label="Account"
+							profileHref={href("settings/team")}
+							settingsHref={href("settings")}
+							helpId={HELP_ID}
+						/>
+					</>
 				}
 				topbar={
 					<>
@@ -278,6 +323,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 				}
 			>
 				{children}
+				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</AppShell>
 		);
 	};

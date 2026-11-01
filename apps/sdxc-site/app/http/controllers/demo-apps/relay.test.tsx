@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
@@ -56,7 +57,9 @@ describe("Relay triage", () => {
 		let response = await post("inbox/2045", { intent: "archive" });
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(`${href("inbox/2044")}?toast=archived-2045`);
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
+			`${href("inbox/2044")}?toast=archived-2045`,
+		);
 
 		let body = await html("inbox/2044?toast=archived-2045");
 		expect(body).toContain("Conversation archived");
@@ -67,26 +70,34 @@ describe("Relay triage", () => {
 
 	test("archiving the last conversation of a view returns to the one above it", async () => {
 		let response = await post("bugs/2045", { intent: "archive" });
-		expect(response.headers.get("Location")).toBe(`${href("bugs/2046")}?toast=archived-2045`);
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
+			`${href("bugs/2046")}?toast=archived-2045`,
+		);
 	});
 
 	test("Undo moves the conversation back to the inbox", async () => {
 		let response = await post("inbox/2045", { intent: "unarchive" });
-		expect(response.headers.get("Location")).toBe(`${href("inbox/2045")}?toast=restored`);
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
+			`${href("inbox/2045")}?toast=restored`,
+		);
 	});
 
 	test("a reply comes back as sent, and an empty one comes back quietly", async () => {
 		let sent = await post("mine/2043", { intent: "reply", body: "Section 4 is attached." });
 		let empty = await post("mine/2043", { intent: "reply", body: "   " });
 
-		expect(sent.headers.get("Location")).toBe(`${href("mine/2043")}?toast=reply-sent`);
-		expect(empty.headers.get("Location")).toBe(href("mine/2043"));
+		expect(withoutToastNonce(sent.headers.get("Location"))).toBe(
+			`${href("mine/2043")}?toast=reply-sent`,
+		);
+		expect(withoutToastNonce(empty.headers.get("Location"))).toBe(href("mine/2043"));
 		expect(await html("mine/2043?toast=reply-sent")).toContain("Reply sent");
 	});
 
 	test("assigning names the teammate in the toast", async () => {
 		let response = await post("inbox/2048", { intent: "assign-mei" });
-		expect(response.headers.get("Location")).toBe(`${href("inbox/2048")}?toast=assigned-mei`);
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
+			`${href("inbox/2048")}?toast=assigned-mei`,
+		);
 		expect(await html("inbox/2048?toast=assigned-mei")).toContain("Assigned to Mei");
 	});
 
@@ -94,8 +105,8 @@ describe("Relay triage", () => {
 		let starred = await post("starred/2046", { intent: "star", starred: "false" });
 		let read = await post("inbox/2046", { intent: "read", read: "false" });
 
-		expect(starred.headers.get("Location")).toBe(href("starred/2046"));
-		expect(read.headers.get("Location")).toBe(href("inbox/2046"));
+		expect(withoutToastNonce(starred.headers.get("Location"))).toBe(href("starred/2046"));
+		expect(withoutToastNonce(read.headers.get("Location"))).toBe(href("inbox/2046"));
 	});
 
 	test("an unknown action or conversation is rejected", async () => {
@@ -115,10 +126,16 @@ describe("Relay settings", () => {
 		let off = await post("settings/assignment", { section: "auto-reply" });
 		let signature = await post("settings/signature", { section: "signature", signature: "Noor" });
 
-		expect(rules.headers.get("Location")).toBe(`${href("settings/assignment")}?toast=rules-saved`);
-		expect(on.headers.get("Location")).toBe(`${href("settings/assignment")}?toast=auto-reply-on`);
-		expect(off.headers.get("Location")).toBe(`${href("settings/assignment")}?toast=auto-reply-off`);
-		expect(signature.headers.get("Location")).toBe(
+		expect(withoutToastNonce(rules.headers.get("Location"))).toBe(
+			`${href("settings/assignment")}?toast=rules-saved`,
+		);
+		expect(withoutToastNonce(on.headers.get("Location"))).toBe(
+			`${href("settings/assignment")}?toast=auto-reply-on`,
+		);
+		expect(withoutToastNonce(off.headers.get("Location"))).toBe(
+			`${href("settings/assignment")}?toast=auto-reply-off`,
+		);
+		expect(withoutToastNonce(signature.headers.get("Location"))).toBe(
 			`${href("settings/signature")}?toast=signature-saved`,
 		);
 	});

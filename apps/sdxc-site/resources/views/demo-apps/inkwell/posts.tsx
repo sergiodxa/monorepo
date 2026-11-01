@@ -342,31 +342,10 @@ function PostsTable(handle: Handle<PostsTableProps>) {
 												local
 												mix={[wideOnly]}
 											/>
-											<Table.Actions>
-												<LinkButton
-													href={href(`posts/${post.id}`)}
-													variant="ghost"
-													color="neutral"
-													size="sm"
-												>
-													Edit
-												</LinkButton>
-												<LinkButton
-													href={quickHref(post)}
-													variant="ghost"
-													color="neutral"
-													size="sm"
-												>
-													Quick edit
-												</LinkButton>
-												<LinkButton
-													href={href(`posts/${post.id}/preview`)}
-													variant="ghost"
-													color="neutral"
-													size="sm"
-												>
-													View
-												</LinkButton>
+											<Table.Actions overflowLabel={`More actions for ${post.title}`}>
+												<Table.Action href={href(`posts/${post.id}`)}>Edit</Table.Action>
+												<Table.Action href={quickHref(post)}>Quick edit</Table.Action>
+												<Table.Action href={href(`posts/${post.id}/preview`)}>View</Table.Action>
 											</Table.Actions>
 										</Table.Row>
 									);

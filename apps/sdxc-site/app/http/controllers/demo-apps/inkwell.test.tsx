@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
@@ -112,7 +113,9 @@ describe("Inkwell forms", () => {
 		]);
 
 		expect(result.status).toBe(303);
-		expect(result.location).toBe(`${href("posts")}?status=draft&toast=posts-published`);
+		expect(withoutToastNonce(result.location)).toBe(
+			`${href("posts")}?status=draft&toast=posts-published`,
+		);
 	});
 
 	test("bulk delete offers Undo in its toast", async () => {
@@ -122,7 +125,7 @@ describe("Inkwell forms", () => {
 		]);
 		let body = await (await fetchApp(result.location!)).text();
 
-		expect(result.location).toBe(`${href("posts")}?toast=posts-deleted`);
+		expect(withoutToastNonce(result.location)).toBe(`${href("posts")}?toast=posts-deleted`);
 		expect(body).toContain("Posts deleted");
 		expect(body).toContain("Undo");
 	});
@@ -139,13 +142,17 @@ describe("Inkwell forms", () => {
 			["title", "On slow reading"],
 		]);
 
-		expect(result.location).toBe(`${href("posts/on-slow-reading")}?toast=post-published`);
+		expect(withoutToastNonce(result.location)).toBe(
+			`${href("posts/on-slow-reading")}?toast=post-published`,
+		);
 	});
 
 	test("⌘S on a live post updates it", async () => {
 		let result = await post("posts/the-letterpress-year", [["title", "The letterpress year"]]);
 
-		expect(result.location).toBe(`${href("posts/the-letterpress-year")}?toast=post-updated`);
+		expect(withoutToastNonce(result.location)).toBe(
+			`${href("posts/the-letterpress-year")}?toast=post-updated`,
+		);
 	});
 
 	test("an empty title answers the editor again with everything typed and the issue", async () => {
@@ -202,7 +209,9 @@ describe("Inkwell forms", () => {
 			["back", "?tag=Notebook"],
 		]);
 
-		expect(result.location).toBe(`${href("posts")}?tag=Notebook&toast=post-updated`);
+		expect(withoutToastNonce(result.location)).toBe(
+			`${href("posts")}?tag=Notebook&toast=post-updated`,
+		);
 	});
 
 	test("an unknown post or file is rejected", async () => {
@@ -216,22 +225,24 @@ describe("Inkwell forms", () => {
 			["back", "list"],
 		]);
 
-		expect(result.location).toBe(
+		expect(withoutToastNonce(result.location)).toBe(
 			`${href("media")}?item=tide-pool&view=list&toast=attachment-saved`,
 		);
 	});
 
 	test("settings sections save with one toast", async () => {
-		expect((await post("settings/publishing", [["feedCount", "20"]])).location).toBe(
-			`${href("settings/publishing")}?toast=settings-saved`,
-		);
 		expect(
-			(
-				await post("settings/team", [
-					["email", "ana@example.com"],
-					["role", "editor"],
-				])
-			).location,
+			withoutToastNonce((await post("settings/publishing", [["feedCount", "20"]])).location),
+		).toBe(`${href("settings/publishing")}?toast=settings-saved`);
+		expect(
+			withoutToastNonce(
+				(
+					await post("settings/team", [
+						["email", "ana@example.com"],
+						["role", "editor"],
+					])
+				).location,
+			),
 		).toBe(`${href("settings/team")}?toast=invite-sent`);
 	});
 });

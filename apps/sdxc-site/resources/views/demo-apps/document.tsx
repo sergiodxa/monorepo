@@ -12,7 +12,6 @@ import type { Toast } from "@sdxc/ui/app";
 import type { Handle } from "remix/component";
 
 import { Toasts } from "@sdxc/ui/app/toasts";
-import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { DemoApp, DemoAppScreen } from "~/resources/views/demo-apps";
 
@@ -30,21 +29,22 @@ namespace DemoAppDocument {
 		assets: DocumentAssets;
 		app: DemoApp;
 		screen: DemoAppScreen;
-		/** A key of the app's toasts to show once; any other value shows nothing. */
-		toast: string | null;
+		/** The toast to show once, by the app's key and its id on the page; an unknown key shows nothing. */
+		toast: { key: string; id: string } | null;
 	}
 }
 
 /**
- * Renders one screen of a demo app. The toast region is keyed by a fresh id whenever it holds
- * a toast, so a form answered in place by the client runtime mounts a new region and shows it.
+ * Renders one screen of a demo app. The toast's id comes from its address, so the region shows
+ * each post's toast once, and a reload of the same address adds none.
  */
 export default function DemoAppDocument(handle: Handle<DemoAppDocument.Props>) {
 	return () => {
 		let { app, assets, screen, toast } = handle.props;
 		let message =
-			toast !== null && Object.hasOwn(app.toasts, toast) ? app.toasts[toast] : undefined;
-		let flashes: Toast.Flash[] = message === undefined ? [] : [{ ...message, id: generateUUID() }];
+			toast !== null && Object.hasOwn(app.toasts, toast.key) ? app.toasts[toast.key] : undefined;
+		let flashes: Toast.Flash[] =
+			message === undefined || toast === null ? [] : [{ ...message, id: toast.id }];
 
 		return (
 			<DocumentLayout
@@ -56,7 +56,7 @@ export default function DemoAppDocument(handle: Handle<DemoAppDocument.Props>) {
 			>
 				<DemoTheme brand={app.theme.brand} neutral={app.theme.neutral} tokens={app.theme.tokens}>
 					{screen.body}
-					<Toasts key={flashes[0]?.id ?? "toasts"} labels={TOAST_LABELS} initial={flashes} />
+					<Toasts labels={TOAST_LABELS} initial={flashes} />
 				</DemoTheme>
 			</DocumentLayout>
 		);

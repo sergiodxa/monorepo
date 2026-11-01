@@ -25,11 +25,43 @@ import { raw } from "@sdxc/u/general";
 import { font, text, weight } from "@sdxc/u/typography";
 import { Banner, LinkButton } from "@sdxc/ui";
 import { AppShell, readAppShellCookie } from "@sdxc/ui/app/app-shell";
+import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
 import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
+import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
+
 import { href, INCIDENTS, SERVICES } from "./data";
 import { COPY, SHELL } from "./labels";
+
+/** The keyboard help sheet's id, which the user menu's shortcuts item opens. */
+const HELP_ID = "pulse-keys";
+
+/** The keyboard help sheet's strings. */
+const HELP_LABELS: KeyboardHelp.Labels = {
+	title: "Keyboard shortcuts",
+	close: "Close",
+	or: "or",
+	open: "Show keyboard shortcuts",
+	general: "General",
+	other: "More",
+};
+
+/** The keys the services list answers, beside the ones a page declares with `data-shortcut`. */
+const HELP_GROUPS: KeyboardHelp.Group[] = [
+	{
+		title: "Services",
+		shortcuts: [
+			{ keys: ["j", "arrowdown"], label: "Next service" },
+			{ keys: ["k", "arrowup"], label: "Previous service" },
+			{ keys: "enter", label: "Open service" },
+			{ keys: "space", label: "Peek at service" },
+			{ keys: "x", label: "Select service" },
+			{ keys: "/", label: "Search services" },
+		],
+	},
+	{ title: "General", shortcuts: [{ keys: "?", label: "Show keyboard shortcuts" }] },
+];
 
 /** The destinations the main nav names; `null` on a screen none of them owns. */
 export type PulseSection = "overview" | "services" | "deployments" | "incidents" | "status-pages";
@@ -178,12 +210,21 @@ export default function PulseShell(handle: Handle<PulseShell.Props>) {
 				labels={SHELL}
 				collapsed={readAppShellCookie(request.cookie)}
 				workspace={
-					<AppShell.Identity
-						avatar={<Initials letters="NW" tone="brand" />}
-						name={COPY.workspace}
-						detail={COPY.plan}
-						chevron
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials letters="NW" tone="brand" />}
+							name={COPY.workspace}
+							detail={COPY.plan}
+							commandfor="pulse-workspace-menu"
+							command="toggle-popover"
+						/>
+						<WorkspaceMenu
+							id="pulse-workspace-menu"
+							label="Switch workspace"
+							current={{ name: COPY.workspace, href: href() }}
+							others={["Northwind staging", "Harbor Labs"]}
+						/>
+					</>
 				}
 				nav={
 					settings === undefined ? (
@@ -193,11 +234,22 @@ export default function PulseShell(handle: Handle<PulseShell.Props>) {
 					)
 				}
 				footer={
-					<AppShell.Identity
-						avatar={<Initials letters="PR" tone="neutral" />}
-						name={COPY.user}
-						detail={COPY.email}
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials letters="PR" tone="neutral" />}
+							name={COPY.user}
+							detail={COPY.email}
+							commandfor="pulse-user-menu"
+							command="toggle-popover"
+						/>
+						<UserMenu
+							id="pulse-user-menu"
+							label="Account"
+							profileHref={href("settings/notifications")}
+							settingsHref={href("settings")}
+							helpId={HELP_ID}
+						/>
+					</>
 				}
 				topbar={
 					<span mix={[text("sm"), weight("semibold"), font("mono"), fg("neutral.emphasis")]}>
@@ -225,6 +277,7 @@ export default function PulseShell(handle: Handle<PulseShell.Props>) {
 				}
 			>
 				{children}
+				<KeyboardHelp id={HELP_ID} labels={HELP_LABELS} groups={HELP_GROUPS} />
 			</AppShell>
 		);
 	};

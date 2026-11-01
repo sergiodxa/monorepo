@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
 import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
 
@@ -81,7 +82,7 @@ describe("Pulse forms", () => {
 		});
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
 			`${href("services")}?status=down&toast=services-paused`,
 		);
 	});
@@ -96,14 +97,30 @@ describe("Pulse forms", () => {
 		let response = await post("services/checkout-api/delete", {});
 		let location = response.headers.get("Location")!;
 
-		expect(location).toBe(`${href("services")}?toast=service-deleted`);
+		expect(withoutToastNonce(location)).toBe(`${href("services")}?toast=service-deleted`);
 		expect(await (await fetchApp(location)).text()).toContain("Undo");
+	});
+
+	test("each post's toast shows once, and a reload of its address adds no second one", async () => {
+		let first = (await post("services/checkout-api/delete", {})).headers.get("Location")!;
+		let second = (await post("services/checkout-api/delete", {})).headers.get("Location")!;
+		let ids = async (location: string) =>
+			[
+				...(await (await fetchApp(location)).text()).matchAll(
+					/data-slot="toast-item"[^>]*id="([^"]+)"|id="([^"]+)"[^>]*data-slot="toast-item"/g,
+				),
+			].map((match) => match[1] ?? match[2]);
+
+		expect(first).not.toBe(second);
+		expect(await ids(first)).toHaveLength(1);
+		expect(await ids(first)).toEqual(await ids(first));
+		expect(await ids(first)).not.toEqual(await ids(second));
 	});
 
 	test("a row action never follows a `next` outside the services list", async () => {
 		let response = await post("services/checkout-api/pause", { next: "settings" });
 
-		expect(response.headers.get("Location")).toBe(
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
 			`${href("services/checkout-api")}?toast=service-paused`,
 		);
 	});
@@ -116,14 +133,18 @@ describe("Pulse forms", () => {
 		let wrong = await post("settings/delete", { confirmation: "north" });
 		let right = await post("settings/delete", { confirmation: "northwind" });
 
-		expect(wrong.headers.get("Location")).toBe(`${href("settings")}?toast=not-deleted`);
-		expect(right.headers.get("Location")).toBe(`${href()}?toast=workspace-deleted`);
+		expect(withoutToastNonce(wrong.headers.get("Location"))).toBe(
+			`${href("settings")}?toast=not-deleted`,
+		);
+		expect(withoutToastNonce(right.headers.get("Location"))).toBe(
+			`${href()}?toast=workspace-deleted`,
+		);
 	});
 
 	test("an invalid escalation email comes back as not saved", async () => {
 		let response = await post("settings/escalation", { email: "nope", after: "15" });
 
-		expect(response.headers.get("Location")).toBe(
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
 			`${href("settings/notifications")}?toast=not-saved`,
 		);
 	});
@@ -135,7 +156,7 @@ describe("Pulse forms", () => {
 			timeoutMs: "10000",
 		});
 
-		expect(response.headers.get("Location")).toBe(
+		expect(withoutToastNonce(response.headers.get("Location"))).toBe(
 			`${href("services/auth-service")}?tab=settings&toast=service-saved`,
 		);
 	});

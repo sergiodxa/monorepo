@@ -11,7 +11,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { DEMO_APP_TOAST_PARAM, findDemoApp } from "~/resources/views/demo-apps";
+import { DEMO_APP_TOAST_PARAM, findDemoApp, readToastParam } from "~/resources/views/demo-apps";
 import DemoAppDocument from "~/resources/views/demo-apps/document";
 import routes from "~/routes/web";
 
@@ -20,27 +20,24 @@ const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
 
 /**
  * Renders the screen the path names, or the app's own 404 screen. An unknown app answers the
- * site's 404. A `toast` parameter naming one of the app's toasts shows it once; any other
- * value is ignored, so the address can never put words on the page.
+ * site's 404. A `toast` parameter naming one of the app's toasts shows it once, and a reload
+ * of the same address shows nothing new; any other value is ignored, so the address can never
+ * put words on the page. The app reads the parameter as its bare key.
  */
 export default createAction(routes.demoApps.show, async (ctx) => {
 	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
 	let app = await findDemoApp(slug);
 	if (app === null) return defaultHandler(ctx);
 
-	let screen = await app.render({
-		page,
-		url: ctx.url,
-		cookie: ctx.request.headers.get("Cookie"),
-	});
+	let param = ctx.url.searchParams.get(DEMO_APP_TOAST_PARAM);
+	let toast = param === null ? null : readToastParam(param);
+	let url = new URL(ctx.url);
+	if (toast !== null) url.searchParams.set(DEMO_APP_TOAST_PARAM, toast.key);
+
+	let screen = await app.render({ page, url, cookie: ctx.request.headers.get("Cookie") });
 
 	return ctx.render(
-		<DemoAppDocument
-			assets={ctx.assets}
-			app={app}
-			screen={screen}
-			toast={ctx.url.searchParams.get(DEMO_APP_TOAST_PARAM)}
-		/>,
+		<DemoAppDocument assets={ctx.assets} app={app} screen={screen} toast={toast} />,
 		{ status: screen.status ?? 200 },
 	);
 });

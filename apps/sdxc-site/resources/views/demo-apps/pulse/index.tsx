@@ -70,7 +70,6 @@ const TOKENS = {
 	"--ui-app-inset-radius": "0.375rem",
 	"--ui-app-sidebar-width": "14.5rem",
 	"--ui-app-nav-row-size": "1.875rem",
-	"--ui-chart-band-opacity": "0.14",
 	"--ui-chart-1": "var(--ui-brand-fg)",
 } as const;
 

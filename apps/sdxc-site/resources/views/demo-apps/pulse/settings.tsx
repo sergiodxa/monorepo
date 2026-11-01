@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { LockIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { minIs } from "@sdxc/u/size";
-import { HeadingScope, Input, Select, Switch } from "@sdxc/ui";
+import { Group, HeadingScope, Input, Select, Switch } from "@sdxc/ui";
 import { DangerZone } from "@sdxc/ui/app/danger-zone";
 import { Empty } from "@sdxc/ui/app/empty";
 import { PageHeader } from "@sdxc/ui/app/page-header";
@@ -53,7 +53,19 @@ function General() {
 						description={copy.slugHint}
 						htmlFor="pulse-settings-slug"
 					>
-						<Input id="pulse-settings-slug" name="slug" defaultValue={WORKSPACE_SLUG} required />
+						<Group>
+							<Group.Text id="pulse-settings-slug-prefix" htmlFor="pulse-settings-slug">
+								{copy.slugPrefix}
+							</Group.Text>
+							<Input
+								id="pulse-settings-slug"
+								name="slug"
+								defaultValue={WORKSPACE_SLUG}
+								aria-label={copy.slug}
+								aria-describedby="pulse-settings-slug-prefix"
+								required
+							/>
+						</Group>
 					</SettingsSection.Row>
 					<SettingsSection.Row label={copy.timezone} htmlFor="pulse-settings-timezone">
 						<Select id="pulse-settings-timezone" name="timezone">
