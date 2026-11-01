@@ -17,7 +17,8 @@ import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
-import { pageToaster, Toast, TOAST_UNDO_DURATION, Toasts } from "./toast.js";
+import { pageToaster, Toast, TOAST_UNDO_DURATION } from "./toast.js";
+import { Toasts } from "./toasts.js";
 
 import "../reset.css";
 
@@ -45,6 +46,7 @@ afterEach(async () => {
 	app?.dispose();
 	app = undefined;
 	pageToaster().dispose();
+	pageToaster("preview").dispose();
 	document.body.replaceChildren();
 	await cdp().send("Emulation.setEmulatedMedia", { features: [] });
 });
@@ -256,5 +258,22 @@ describe("Toasts actions", () => {
 		expect(items()).toEqual([item]);
 		expect(item.querySelector('[data-slot="loader"]')).toBeNull();
 		expect(item.querySelector('[data-slot="toast"]')?.getAttribute("data-color")).toBe("success");
+	});
+
+	test("keeps a named queue in its own region", async () => {
+		mounted = render(
+			<>
+				<Toasts labels={LABELS} />
+				<Toasts labels={{ ...LABELS, region: "Preview notifications" }} queue="preview" />
+			</>,
+		);
+		await vi.waitFor(() => expect(document.querySelectorAll('[role="region"]')).toHaveLength(2));
+
+		pageToaster("preview").add({ title: "Status page published" });
+
+		let named = page.getByRole("region", { name: "Preview notifications" }).element();
+		await vi.waitFor(() => expect(named.textContent).toContain("Status page published"));
+		expect(items()).toHaveLength(1);
+		expect(pageToaster().size).toBe(0);
 	});
 });

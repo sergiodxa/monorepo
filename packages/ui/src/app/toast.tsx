@@ -1,22 +1,15 @@
 /**
  * A transient notification panel reporting the outcome of an action, in one of
- * five semantic tones, plus the region that stacks them and the `Toasts` island
- * that draws one queue for server flash toasts and client toasts alike.
+ * five semantic tones, plus the region that stacks them and the page queue the
+ * `Toasts` island draws, shared by server flash toasts and client toasts alike.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import {
-	CircleAlertIcon,
-	CircleCheckIcon,
-	InfoIcon,
-	LoaderCircleIcon,
-	TriangleAlertIcon,
-	XIcon,
-} from "@sdxc/icons";
+import { XIcon } from "@sdxc/icons";
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@sdxc/u/effects";
 import { pointerEvents, raw, mergeMix } from "@sdxc/u/general";
@@ -43,14 +36,12 @@ import { is, bs, maxIs, minIs, pb, pi, pie } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { translateX } from "@sdxc/u/transform";
 import { balance, fontSize, leading, pretty, weight } from "@sdxc/u/typography";
-import { attrs, clientEntry, on } from "remix/component";
+import { attrs } from "remix/component";
 
-import { spin } from "../animations/keyframes.js";
 import { hitArea } from "../styles/hit-area.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 import { Toaster } from "./behaviors/toaster.js";
-import { toastStack } from "./mixins/toast-stack.js";
 import { graphicHostStyle } from "./styles/graphic-host.js";
 import { toastStackStyle } from "./styles/toast-stack.js";
 
@@ -115,8 +106,11 @@ const DEFAULT_STACK: Toast.Stack = "peek";
  */
 export const TOAST_UNDO_DURATION = 8000;
 
-/** One queue per document, so every island on a page raises toasts into the same stack. */
-const PAGE_TOASTERS = new WeakMap<Document, Toaster<Toast.Message>>();
+/** One queue per document and name, so every island on a page raises toasts into the same stack. */
+const PAGE_TOASTERS = new WeakMap<Document, Map<string, Toaster<Toast.Message>>>();
+
+/** Name of the queue {@link pageToaster} and {@link Toasts} share when none is given. */
+const DEFAULT_QUEUE = "page";
 
 /**
  * `role` applied to {@link Toast.Region} through {@link attrs} unless a
@@ -806,7 +800,6 @@ Toast.Region = function ToastRegion(handle: Handle<Toast.RegionProps>) {
 						when('&[data-placement$="end"]', insIe("0")),
 						when('&[data-placement$="center"]', [insIs("50%"), translateX("-50%")]),
 						toastStackStyle(max),
-						toastStack(),
 					],
 					mix,
 				)}
@@ -822,258 +815,26 @@ Toast.Region = function ToastRegion(handle: Handle<Toast.RegionProps>) {
  * raised anywhere lands in the one {@link Toasts} stack. On the server each
  * call returns a fresh queue, keeping one request's toasts out of another's.
  *
+ * @param queue Name of the queue, matching {@link Toasts.Props.queue}. Default: `"page"`.
  * @returns The queue {@link Toasts} draws.
  * @example
  * pageToaster().add({ color: "success", title: "Monitor saved" });
  * @example
  * pageToaster().promise(save(), { loading: { title: "Saving monitor", loading: true }, success: { title: "Monitor saved", color: "success" }, error: { title: "Couldn't save monitor. Try again.", color: "danger" } });
  */
-export function pageToaster(): Toaster<Toast.Message> {
+export function pageToaster(queue: string = DEFAULT_QUEUE): Toaster<Toast.Message> {
 	if (typeof document === "undefined") return new Toaster<Toast.Message>();
 
-	let toaster = PAGE_TOASTERS.get(document);
+	let queues = PAGE_TOASTERS.get(document);
+	if (!queues) {
+		queues = new Map();
+		PAGE_TOASTERS.set(document, queues);
+	}
+
+	let toaster = queues.get(queue);
 	if (!toaster) {
 		toaster = new Toaster<Toast.Message>();
-		PAGE_TOASTERS.set(document, toaster);
+		queues.set(queue, toaster);
 	}
 	return toaster;
-}
-
-/** Prop types for {@link Toasts}. */
-export namespace Toasts {
-	/** Props accepted by {@link Toasts}. */
-	export interface Props {
-		/** Strings the region and its close buttons announce. */
-		labels: Toast.Labels;
-		/** Toasts the server rendered from a session flash; hydration adopts each element and starts its timer. */
-		initial?: Toast.Flash[];
-		/** Corner of the viewport. Default: `"bottom-end"`. */
-		placement?: Toast.Placement;
-		/** Most toasts shown at once. Default: `3`. */
-		max?: number;
-		/** Peek stack or plain list. Default: `"peek"`. */
-		stack?: Toast.Stack;
-	}
-
-	/** Props of one drawn toast inside {@link Toasts}. */
-	export interface ItemProps {
-		/** Queue id, also the base of the element id the close button targets. */
-		id: string;
-		/** What the toast says and offers. */
-		message: Toast.Message;
-		/** Strings the close button announces. */
-		labels: Toast.Labels;
-		/** Removes the toast from the queue once the user closes it or acts on it. */
-		onDismiss: () => void;
-	}
-}
-
-/**
- * The app's one toast stack: server flash toasts and {@link pageToaster} toasts share a
- * region, timing, pause on hover or focus, and close; a flash toast shows and closes
- * without JavaScript. Reach for it last, after an inline message or a banner.
- *
- * @example
- * <Toasts labels={{ region: t("toasts.region"), dismiss: t("toasts.dismiss") }} initial={flash ? [flash] : []} />
- */
-export const Toasts: EntryComponent<Toasts.Props> = clientEntry(
-	"@sdxc/ui/app/toast#Toasts",
-	function Toasts(handle: Handle<Toasts.Props>) {
-		let toaster = pageToaster();
-		let adopted = false;
-		let pointerInside = false;
-		let focusInside = false;
-
-		/** Holds every timer while the pointer or focus is on the stack, so a fanned-out list stays readable. */
-		function hold(): void {
-			if (pointerInside || focusInside) toaster.pause();
-			else toaster.resume();
-		}
-
-		handle.queueTask(() => {
-			toaster.addEventListener("change", () => void handle.update(), { signal: handle.signal });
-
-			for (let flash of handle.props.initial ?? []) {
-				if (toaster.get(flash.id)) continue;
-				toaster.add(flash, { id: flash.id, duration: flash.duration });
-			}
-
-			adopted = true;
-			void handle.update();
-		});
-
-		return () => {
-			let { labels, initial = [], placement, max, stack } = handle.props;
-			let items = adopted
-				? toaster.toasts.map((toast) => ({ id: toast.id, message: toast.data }))
-				: initial.map((flash) => ({ id: flash.id, message: flash as Toast.Message }));
-
-			return (
-				<Toast.Region
-					aria-label={labels.region}
-					placement={placement}
-					max={max}
-					stack={stack}
-					mix={[
-						on<HTMLDivElement, "pointerenter">("pointerenter", () => {
-							pointerInside = true;
-							hold();
-						}),
-						on<HTMLDivElement, "pointerleave">("pointerleave", () => {
-							pointerInside = false;
-							hold();
-						}),
-						on<HTMLDivElement, "focusin">("focusin", () => {
-							focusInside = true;
-							hold();
-						}),
-						on<HTMLDivElement, "focusout">("focusout", (event) => {
-							let next = event.relatedTarget;
-							focusInside = next instanceof Node && event.currentTarget.contains(next);
-							hold();
-						}),
-					]}
-				>
-					{items.map((item) => (
-						<ToastItem
-							key={item.id}
-							id={item.id}
-							message={item.message}
-							labels={labels}
-							onDismiss={() => void toaster.dismiss(item.id)}
-						/>
-					))}
-				</Toast.Region>
-			);
-		};
-	},
-);
-
-/**
- * Draws one queued {@link Toast.Message} inside an open, non-modal `<dialog>`,
- * whose close button uses the native `close` command, so a server-rendered
- * toast closes without JavaScript and the queue hears the same `close` event.
- *
- * @param handle Runtime handle carrying {@link Toasts.ItemProps}.
- * @returns The render function producing the toast's markup.
- */
-function ToastItem(handle: Handle<Toasts.ItemProps>) {
-	return () => {
-		let { id, message, labels, onDismiss } = handle.props;
-		let domId = `toast-${id}`;
-		let color = message.color ?? DEFAULT_COLOR;
-
-		return (
-			<dialog
-				open
-				id={domId}
-				aria-labelledby={`${domId}-title`}
-				data-slot="toast-item"
-				mix={[
-					on<HTMLDialogElement, "close">("close", onDismiss),
-					raw({
-						position: "relative",
-						inset: "auto",
-						inlineSize: "100%",
-						margin: "0",
-						padding: "0",
-						border: "0",
-						background: "transparent",
-						color: "inherit",
-					}),
-				]}
-			>
-				<Toast
-					color={color}
-					live={color === "danger" ? "assertive" : "polite"}
-					aria-busy={message.loading ? "true" : undefined}
-				>
-					{message.loading ? (
-						<Toast.Loader mix={[spin()]}>
-							<LoaderCircleIcon size={16} />
-						</Toast.Loader>
-					) : (
-						<Toast.Icon>
-							<ToastColorIcon color={color} />
-						</Toast.Icon>
-					)}
-					<Toast.Content>
-						<Toast.Title id={`${domId}-title`}>{message.title}</Toast.Title>
-						{message.description ? (
-							<Toast.Description>{message.description}</Toast.Description>
-						) : null}
-					</Toast.Content>
-					{message.action ? (
-						<ToastItemAction action={message.action} onDismiss={onDismiss} />
-					) : null}
-					<Toast.Close aria-label={labels.dismiss} commandfor={domId} command="close" />
-				</Toast>
-			</dialog>
-		);
-	};
-}
-
-/**
- * Picks the icon a tone carries, so a success, warning and failure read apart
- * at a glance before the title is read.
- *
- * @param handle Runtime handle carrying the toast's tone.
- * @returns The render function producing the icon.
- */
-function ToastColorIcon(handle: Handle<{ color: Toast.Color }>) {
-	return () => {
-		let { color } = handle.props;
-		if (color === "success") return <CircleCheckIcon size={16} />;
-		if (color === "danger") return <CircleAlertIcon size={16} />;
-		if (color === "warning") return <TriangleAlertIcon size={16} />;
-		return <InfoIcon size={16} />;
-	};
-}
-
-/**
- * Draws a {@link Toast.MessageAction}: a submit button inside its form when it
- * names one, so it works from server HTML, otherwise a button that runs
- * `onAction` and takes the toast away.
- *
- * @param handle Runtime handle carrying the action and the dismiss callback.
- * @returns The render function producing the action's markup.
- */
-function ToastItemAction(handle: Handle<{ action: Toast.MessageAction; onDismiss: () => void }>) {
-	return () => {
-		let { action, onDismiss } = handle.props;
-		let form = action.form;
-
-		if (form) {
-			return (
-				<form
-					method={form.method ?? "post"}
-					action={form.action}
-					mix={[raw({ display: "contents" })]}
-				>
-					{Object.entries(form.fields ?? {}).map(([name, value]) => (
-						<input key={name} type="hidden" name={name} value={value} />
-					))}
-					<Toast.Action
-						type="submit"
-						mix={[on<HTMLButtonElement, "click">("click", () => action.onAction?.())]}
-					>
-						{action.label}
-					</Toast.Action>
-				</form>
-			);
-		}
-
-		return (
-			<Toast.Action
-				mix={[
-					on<HTMLButtonElement, "click">("click", () => {
-						action.onAction?.();
-						onDismiss();
-					}),
-				]}
-			>
-				{action.label}
-			</Toast.Action>
-		);
-	};
 }
