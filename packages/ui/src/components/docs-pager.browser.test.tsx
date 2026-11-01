@@ -1,6 +1,6 @@
 /**
  * Lays the docs pager out in a real browser: the whole card is the link, an absent side
- * draws nothing, a lone next card keeps to its own column, the section shows only on a
+ * draws nothing and a lone card fills the row, the section shows only on a
  * crossing, the arrow nudges on hover except under reduced motion, and 320px never overflows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -71,17 +71,21 @@ describe("DocsPager", () => {
 		expect(host.querySelector("nav")?.getAttribute("aria-label")).toBe("Pagination");
 	});
 
-	test("hides an absent side and keeps a lone next card in the second column", () => {
-		let host = mount(<DocsPager previous={null} next={NEXT} labels={LABELS} />);
-		let [only] = cards(host);
-		let nav = host.querySelector("nav")!;
+	for (let [side, props] of [
+		["previous", { previous: PREVIOUS, next: null }],
+		["next", { previous: null, next: NEXT }],
+	] as const) {
+		test(`renders a lone ${side} card alone, filling the row with no empty column`, () => {
+			let host = mount(<DocsPager {...props} labels={LABELS} />);
+			let nav = host.querySelector("nav")!.getBoundingClientRect();
+			let grid = host.querySelector("nav > div")!;
 
-		expect(cards(host)).toHaveLength(1);
-		expect(only?.getAttribute("rel")).toBe("next");
-		expect(only!.getBoundingClientRect().left).toBeGreaterThan(
-			nav.getBoundingClientRect().left + 100,
-		);
-	});
+			expect(cards(host)).toHaveLength(1);
+			expect(grid.children).toHaveLength(1);
+			expect(getComputedStyle(grid).gridTemplateColumns.split(" ")).toHaveLength(1);
+			expect(cards(host)[0]!.getBoundingClientRect().width).toBeCloseTo(nav.width, 0);
+		});
+	}
 
 	test("renders nothing with neither neighbour", () => {
 		let host = mount(<DocsPager labels={LABELS} />);

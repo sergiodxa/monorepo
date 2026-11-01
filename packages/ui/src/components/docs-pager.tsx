@@ -14,14 +14,14 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
 import { mergeMix } from "@sdxc/u/general";
 import { raw } from "@sdxc/u/general";
-import { container, gap, grid, gridColumn, hstack, vstack } from "@sdxc/u/layout";
-import { at, motionSafe } from "@sdxc/u/responsive";
+import { container, gap, grid, hstack, vstack } from "@sdxc/u/layout";
+import { motionSafe } from "@sdxc/u/responsive";
 import { is, minIs, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
 import { overflowWrap, text, textAlign, weight } from "@sdxc/u/typography";
 
-/** Container the pager measures; at 36rem of its own width the two cards sit side by side. */
+/** Container the pager measures; at 36rem of its own width a pair of cards sits side by side. */
 const PAGER_CONTAINER = "ui-docs-pager";
 
 /** Selector for a card's arrow, which hover and focus nudge toward the destination. */
@@ -59,7 +59,7 @@ export namespace DocsPager {
 
 /**
  * Renders the pair of neighbours, or nothing when the page has neither. A card with no
- * partner keeps to its own side, and the pair stacks when the pager is under 36rem wide.
+ * partner fills the row on its own, and the pair stacks when the pager is under 36rem wide.
  *
  * @param handle Runtime handle carrying the pager's props.
  * @returns The render function producing the pager's markup.
@@ -70,6 +70,7 @@ export function DocsPager(handle: Handle<DocsPager.Props>) {
 	return () => {
 		let { previous, next, section, labels, mix, ...rest } = handle.props;
 		if (!previous && !next) return null;
+		let paired = Boolean(previous && next);
 
 		return (
 			<nav
@@ -89,7 +90,7 @@ export function DocsPager(handle: Handle<DocsPager.Props>) {
 						raw({
 							gridTemplateColumns: "minmax(0, 1fr)",
 							[`@container ${PAGER_CONTAINER} (min-width: 36rem)`]: {
-								gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+								gridTemplateColumns: paired ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)",
 							},
 						}),
 					]}
@@ -122,8 +123,8 @@ namespace DocsPagerCard {
 
 /**
  * One neighbour as a single `<a>`, so every pixel of the card follows the link. The
- * previous card reads from the start edge and the next from the end edge, which keeps a
- * lone next card in the second column.
+ * previous card reads from the start edge and the next from the end edge, so each points
+ * the way it goes.
  */
 function DocsPagerCard(handle: Handle<DocsPagerCard.Props>) {
 	return () => {
@@ -163,7 +164,6 @@ function DocsPagerCard(handle: Handle<DocsPagerCard.Props>) {
 							when(ARROW, translateProperty(isNext ? "2px 0" : "-2px 0")),
 						),
 					),
-					isNext ? at("md", PAGER_CONTAINER, gridColumn("2")) : [],
 				]}
 			>
 				<span mix={[hstack({ gap: 1.5, align: "center" }), text("xs"), fg("neutral.muted")]}>
