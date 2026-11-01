@@ -1,10 +1,8 @@
 /**
- * A placeholder for a product section that currently has nothing to show — a
- * dashed-bordered panel that composes an icon, a title, a description, and
- * an action into one empty-state layout. Landing claim cells belong on
- * {@link Feature} instead; {@link Empty} stays for in-app zero-data states.
- * The compound parts let a consumer include only the pieces a given empty
- * state needs.
+ * A placeholder for a product section that has nothing to show, typed by why:
+ * first run, no results, all cleared, no permission, or an error. The `kind`
+ * picks the icon, tone and frame; every word stays a prop, and a compact size
+ * fits inside a card or a table body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,15 +10,25 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import {
+	CheckCheckIcon,
+	CircleAlertIcon,
+	InboxIcon,
+	LockKeyholeIcon,
+	SearchXIcon,
+} from "@sdxc/icons";
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { mergeMix } from "@sdxc/u/general";
+import { mergeMix, raw, userSelect } from "@sdxc/u/general";
 import { flex, flexCol, flexWrap, gap, items, justify } from "@sdxc/u/layout";
-import { bs, is, mbs, p } from "@sdxc/u/size";
+import { is, mbs, p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import {
 	balance,
+	font,
 	fontSize,
 	leading,
+	overflowWrap,
 	pretty,
 	textAlign,
 	tracking,
@@ -41,6 +49,18 @@ import { DEFAULT_ICON_ARIA_HIDDEN } from "../utils/decorative-icon.js";
 const DEFAULT_COLOR = "neutral";
 
 /**
+ * Tone each {@link Empty.Kind} takes unless `color` says otherwise: a cleared
+ * queue reads as done, an error as a failure, the rest stay quiet.
+ */
+const COLOR_BY_KIND: Record<Empty.Kind, Empty.Color> = {
+	"first-run": "neutral",
+	"no-results": "neutral",
+	cleared: "success",
+	permission: "neutral",
+	error: "danger",
+};
+
+/**
  * Prop types for {@link Empty} and its compound parts.
  */
 export namespace Empty {
@@ -52,11 +72,30 @@ export namespace Empty {
 	export type Color = SemanticColor;
 
 	/**
+	 * Why the section is empty: `first-run` (welcome, one create action), `no-results`
+	 * (quote the query, offer Clear filters), `cleared` ("All caught up"), `permission`
+	 * (name who grants access), `error` (Retry and the request id).
+	 */
+	export type Kind = "first-run" | "no-results" | "cleared" | "permission" | "error";
+
+	/** `"compact"` tightens the panel to sit inside a card or a table body. */
+	export type Size = "default" | "compact";
+
+	/**
 	 * Props accepted by {@link Empty}.
 	 */
 	export interface Props extends TagProps<"div"> {
-		/** Semantic tone of the panel. Default: `"neutral"`. */
+		/** Semantic tone of the panel. Default: the kind's tone, else `"neutral"`. */
 		color?: Color;
+		/** Why it is empty; draws that cause's icon, tone and frame. */
+		kind?: Kind;
+		/**
+		 * Icon a `kind` draws in place of its default, or `null` for none. Leave
+		 * it unset and pass {@link Empty.Icon} yourself when `kind` is unset.
+		 */
+		icon?: RemixNode;
+		/** Default: `"default"`. */
+		size?: Size;
 		/** The panel's compound parts: {@link Empty.Icon}, {@link Empty.Title}, {@link Empty.Description}, {@link Empty.Action}, or any other content. */
 		children: RemixNode;
 	}
@@ -94,37 +133,63 @@ export namespace Empty {
 		/** Call-to-action content, typically a button or link. */
 		children: RemixNode;
 	}
+
+	/**
+	 * Props accepted by {@link Empty.Query}.
+	 */
+	export interface QueryProps extends TagProps<"q"> {
+		/** The search text or filter the reader typed, verbatim. */
+		children: RemixNode;
+	}
+
+	/**
+	 * Props accepted by {@link Empty.RequestId}.
+	 */
+	export interface RequestIdProps extends TagProps<"p"> {
+		/** Visible label before the id, such as "Request ID". */
+		label: string;
+		/** The id support needs to find the failed request. */
+		children: RemixNode;
+	}
 }
 
 /**
- * Renders the empty-state panel: a dashed-bordered column tinted to the
- * color role in {@link Empty.Props.color}. Its compound parts inherit that
- * color through `currentcolor`.
+ * Renders the empty-state panel, a column tinted to its color role. A `kind`
+ * leads with its own icon and frame: a dashed outline for a first run, no
+ * frame for no results or a cleared list, a solid one for permission or error.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the panel's markup.
  * @example
- * <Empty>
- * 	<Empty.Icon><InboxIcon /></Empty.Icon>
- * 	<Empty.Title>{t("inbox.empty.title")}</Empty.Title>
- * 	<Empty.Description>{t("inbox.empty.description")}</Empty.Description>
- * 	<Empty.Action>
- * 		<Button>{t("inbox.empty.action")}</Button>
- * 	</Empty.Action>
+ * <Empty kind="first-run">
+ * 	<Empty.Title>{t("monitors.empty.title")}</Empty.Title>
+ * 	<Empty.Description>{t("monitors.empty.description")}</Empty.Description>
+ * 	<Empty.Action><Button>{t("monitors.empty.create")}</Button></Empty.Action>
  * </Empty>
  * @example
- * <Empty color="danger">
- * 	<Empty.Title>{t("errors.notFound.title")}</Empty.Title>
+ * <Empty kind="no-results" size="compact">
+ * 	<Empty.Title>{t("search.none")}</Empty.Title>
+ * 	<Empty.Description>{t("search.noMatch")} <Empty.Query>{query}</Empty.Query></Empty.Description>
+ * 	<Empty.Action><Button href="?">{t("filters.clear")}</Button></Empty.Action>
+ * </Empty>
+ * @example
+ * <Empty kind="error">
+ * 	<Empty.Title>{t("errors.load")}</Empty.Title>
+ * 	<Empty.RequestId label={t("errors.requestId")}>{requestId}</Empty.RequestId>
  * </Empty>
  */
 export function Empty(handle: Handle<Empty.Props>) {
 	return () => {
-		let { color = DEFAULT_COLOR, children, mix, ...rest } = handle.props;
+		let { color, kind, icon, size = "default", children, mix, ...rest } = handle.props;
+		let resolvedColor = color ?? (kind ? COLOR_BY_KIND[kind] : DEFAULT_COLOR);
+		let leading = kind && icon !== null ? (icon ?? <EmptyKindIcon kind={kind} />) : null;
 
 		return (
 			<div
 				{...rest}
-				data-color={color}
+				data-color={resolvedColor}
+				data-kind={kind}
+				data-size={size}
 				data-slot="empty"
 				mix={mergeMix(
 					[
@@ -138,13 +203,46 @@ export function Empty(handle: Handle<Empty.Props>) {
 						border({ width: "1px", style: "dashed" }),
 						p(8),
 						textAlign("center"),
+						when(
+							'&[data-kind="no-results"], &[data-kind="cleared"]',
+							raw({ borderColor: "transparent", backgroundColor: "transparent" }),
+						),
+						when('&[data-kind="permission"], &[data-kind="error"]', raw({ borderStyle: "solid" })),
+						when('&[data-size="compact"]', [
+							p(4),
+							gap(2),
+							rounded("lg"),
+							raw({
+								"--ui-empty-icon-size": "2rem",
+								"--ui-empty-title-size": "var(--ui-text-sm, 0.875rem)",
+							}),
+						]),
 					],
 					mix,
 				)}
 			>
+				{leading ? <Empty.Icon>{leading}</Empty.Icon> : null}
 				{children}
 			</div>
 		);
+	};
+}
+
+/**
+ * Draws the icon that names an {@link Empty.Kind} at a glance, so the cause
+ * reads before the title does.
+ *
+ * @param handle Runtime handle carrying the kind.
+ * @returns The render function producing the icon.
+ */
+function EmptyKindIcon(handle: Handle<{ kind: Empty.Kind }>) {
+	return () => {
+		let { kind } = handle.props;
+		if (kind === "no-results") return <SearchXIcon size={20} />;
+		if (kind === "cleared") return <CheckCheckIcon size={20} />;
+		if (kind === "permission") return <LockKeyholeIcon size={20} />;
+		if (kind === "error") return <CircleAlertIcon size={20} />;
+		return <InboxIcon size={20} />;
 	};
 }
 
@@ -168,8 +266,10 @@ Empty.Icon = function EmptyIcon(handle: Handle<Empty.IconProps>) {
 					[
 						attrs({ "aria-hidden": DEFAULT_ICON_ARIA_HIDDEN }),
 						flex(),
-						bs("3rem"),
-						is("3rem"),
+						raw({
+							blockSize: "var(--ui-empty-icon-size, 3rem)",
+							inlineSize: "var(--ui-empty-icon-size, 3rem)",
+						}),
 						items("center"),
 						justify("center"),
 						rounded("full"),
@@ -206,7 +306,13 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 				{...rest}
 				data-slot="title"
 				mix={mergeMix(
-					[weight("semibold"), tracking("tight"), fontSize("base"), leading("snug"), balance()],
+					[
+						weight("semibold"),
+						tracking("tight"),
+						raw({ fontSize: "var(--ui-empty-title-size, var(--ui-text-base, 1rem))" }),
+						leading("snug"),
+						balance(),
+					],
 					mix,
 				)}
 			>
@@ -283,6 +389,76 @@ Empty.Action = function EmptyAction(handle: Handle<Empty.ActionProps>) {
 			>
 				{children}
 			</div>
+		);
+	};
+};
+
+/**
+ * Renders the reader's query inside a `no-results` description as a native
+ * `<q>`, so the browser adds the locale's own quotation marks around it and
+ * the reader sees exactly what to change.
+ *
+ * @param handle Runtime handle carrying the host `<q>`'s props.
+ * @returns The render function producing the quotation's markup.
+ * @example
+ * <Empty.Description>No monitors match <Empty.Query>{query}</Empty.Query>.</Empty.Description>
+ */
+Empty.Query = function EmptyQuery(handle: Handle<Empty.QueryProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<q
+				{...rest}
+				data-slot="query"
+				mix={mergeMix([weight("medium"), fg("currentcolor"), overflowWrap("anywhere")], mix)}
+			>
+				{children}
+			</q>
+		);
+	};
+};
+
+/**
+ * Renders an `error` state's request id under a label, in monospace that
+ * selects whole on one click, so the reader can copy it into a support
+ * message without a script.
+ *
+ * @param handle Runtime handle carrying the host `<p>`'s props.
+ * @returns The render function producing the request id's markup.
+ * @example
+ * <Empty.RequestId label={t("errors.requestId")}>{requestId}</Empty.RequestId>
+ */
+Empty.RequestId = function EmptyRequestId(handle: Handle<Empty.RequestIdProps>) {
+	return () => {
+		let { label, children, mix, ...rest } = handle.props;
+
+		return (
+			<p
+				{...rest}
+				data-slot="request-id"
+				mix={mergeMix(
+					[
+						fontSize("xs"),
+						fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
+						overflowWrap("anywhere"),
+					],
+					mix,
+				)}
+			>
+				{label}{" "}
+				<code
+					mix={[
+						font("mono"),
+						userSelect("all"),
+						rounded("sm"),
+						raw({ paddingInline: "0.25rem" }),
+						bg(colorMix("oklab", { color: "currentcolor", weight: 10 }, "transparent")),
+					]}
+				>
+					{children}
+				</code>
+			</p>
 		);
 	};
 };
