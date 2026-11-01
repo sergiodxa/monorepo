@@ -33,9 +33,11 @@ describe("listUiExports", () => {
 			"CalendarModel",
 			"DragSession",
 			"FilterModel",
+			"RefreshSchedule",
 			"ResizeSession",
 			"ScrollFollowModel",
 			"SelectionModel",
+			"ShortcutRegistry",
 			"Toaster",
 		]);
 	});

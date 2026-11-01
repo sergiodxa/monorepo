@@ -56,6 +56,8 @@ const MONITORS = [
 /** What the preview registry reads: the source to show, and the markup to draw. */
 export default {
 	code: CODE,
+	flush: true,
+	viewports: true,
 	render: () => (
 		<div
 			mix={[
