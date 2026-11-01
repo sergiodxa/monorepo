@@ -504,12 +504,13 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 							data-slot="app-shell-main"
 							mix={[
 								raw({
+									"--ui-app-gutter": "var(--ui-app-content-padding, 1rem)",
 									display: "block",
 									minInlineSize: "0",
-									padding: "var(--ui-app-content-padding, 1rem)",
+									padding: "var(--ui-app-gutter)",
 									outline: "none",
 								}),
-								media(DOCKED, raw({ padding: "var(--ui-app-content-padding, 1.5rem)" })),
+								media(DOCKED, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
 							]}
 						>
 							{children}
