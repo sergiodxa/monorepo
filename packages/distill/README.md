@@ -81,6 +81,8 @@ A landing page or a video page has no article but still has a headline and a sum
 bunx @sdxc/distill extract https://example.com/post
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg distill …` runs the same command line, using the version your project installs.
+
 `extract` prints the article from a URL, a saved page or stdin as sanitized HTML, readable text
 (`--format text`, headed by the title and byline) or every field (`--json`). It exits 1 when the
 page has no article or the site refused or ran out of time.
