@@ -32,12 +32,64 @@ const PREVIOUS = CURRENT.map((point) => ({
 }));
 
 /** Mounts `node` in a host 480 pixels wide, matching the chart's coordinate space. */
-function mount(node: JSX.Element): HTMLElement {
+function mount(node: JSX.Element, width = 480): HTMLElement {
 	let host = document.createElement("div");
-	host.style.width = "480px";
+	host.style.width = `${width}px`;
+	for (let [name, value] of Object.entries(ROLES)) host.style.setProperty(name, value);
 	document.body.appendChild(host);
 	render(node, { container: host });
 	return host;
+}
+
+/**
+ * Light-mode role colours set on every host as plain sRGB, so contrast is computed from known
+ * values whatever the theme resolves them to.
+ */
+const ROLES = {
+	"--ui-danger-fg": "rgb(220 38 38)",
+	"--ui-danger-bg-tint": "rgb(254 242 242)",
+	"--ui-danger-fg-emphasis": "rgb(127 29 29)",
+	"--ui-danger-border": "rgb(254 202 202)",
+	"--ui-neutral-fg-muted": "rgb(113 113 122)",
+	"--ui-neutral-bg-tint": "rgb(250 250 250)",
+	"--ui-neutral-fg-emphasis": "rgb(24 24 27)",
+	"--ui-neutral-border": "rgb(228 228 231)",
+};
+
+/** A band's label tag. */
+function label(band: Element): SVGTextElement | null {
+	return band.querySelector<SVGTextElement>('[data-slot="chart-band-label"]');
+}
+
+/** A computed colour's sRGB channels and alpha, each 0 to 1. */
+function channels(color: string): [number, number, number, number] {
+	let numbers = color.match(/[\d.]+/g)!.map(Number);
+	if (color.startsWith("color(")) {
+		let [r = 0, g = 0, b = 0, a = 1] = numbers;
+		return [r, g, b, a];
+	}
+	let [r = 0, g = 0, b = 0, a = 1] = numbers;
+	return [r / 255, g / 255, b / 255, a];
+}
+
+/** WCAG relative luminance of an opaque sRGB colour. */
+function luminance(color: string): number {
+	let [r, g, b] = channels(color).map((value) =>
+		value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+	);
+	return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+
+/** WCAG contrast ratio between two opaque colours. */
+function contrast(a: string, b: string): number {
+	let [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (light! + 0.05) / (dark! + 0.05);
+}
+
+/** How opaque a band's shading paints: its fill colour's alpha times its `fill-opacity`. */
+function shading(rect: SVGRectElement): number {
+	let style = getComputedStyle(rect);
+	return channels(style.fill)[3] * Number(style.fillOpacity);
 }
 
 beforeEach(async () => {
@@ -98,8 +150,7 @@ describe("Chart annotations", () => {
 		expect(box.left - svg.left).toBeCloseTo(120, 0);
 		expect(box.width).toBeCloseTo(120, 0);
 		expect(box.height).toBeCloseTo(svg.height, 0);
-		expect(Number(getComputedStyle(rect).fillOpacity)).toBeCloseTo(0.1, 2);
-		expect(band.querySelector("text")?.textContent).toBe("Incident #42");
+		expect(label(band)?.textContent?.trim()).toBe("Incident #42");
 		expect(getComputedStyle(band).pointerEvents).toBe("none");
 	});
 
@@ -170,9 +221,110 @@ describe("Chart annotations", () => {
 			barPattern.outerHTML.replace(barPattern.id, ""),
 		);
 		expect(rect.getBoundingClientRect().width).toBeCloseTo(120, 0);
-		expect(hatched!.querySelector("text")?.textContent).toBe("No data");
+		expect(label(hatched!)?.textContent?.trim()).toBe("No data");
 		expect(host.querySelectorAll("pattern")).toHaveLength(1);
 		expect(filled!.querySelector("rect")!.getAttribute("fill")).toBeNull();
+	});
+});
+
+describe("Chart.Band", () => {
+	test("shades its range lightly, a little stronger in dark mode", () => {
+		let light = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+			</Chart>,
+		);
+		let dark = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+			</Chart>,
+		);
+		dark.style.colorScheme = "dark";
+		let lightShade = shading(light.querySelector("rect")!);
+		let darkShade = shading(dark.querySelector("rect")!);
+
+		expect(lightShade).toBeGreaterThanOrEqual(0.06);
+		expect(lightShade).toBeLessThanOrEqual(0.1);
+		expect(darkShade).toBeLessThanOrEqual(0.12);
+		expect(darkShade).toBeGreaterThan(lightShade);
+	});
+
+	test("marks a closed range with a dashed rule at each edge", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+			</Chart>,
+		);
+		let start = host.querySelector<SVGLineElement>('[data-edge="start"]')!;
+		let end = host.querySelector<SVGLineElement>('[data-edge="end"]')!;
+
+		expect(start.getAttribute("x1")).toBe("120");
+		expect(start.getAttribute("y2")).toBe("200");
+		expect(getComputedStyle(start).strokeDasharray).not.toBe("none");
+		expect(getComputedStyle(start).strokeWidth).toBe("1px");
+		expect(end.getAttribute("x1")).toBe("240");
+		expect(getComputedStyle(end).strokeDasharray).not.toBe("none");
+	});
+
+	test("leaves the end rule off a range still running at the end of the axis", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={9} to={12} label="INC-482 Investigating" />
+			</Chart>,
+		);
+
+		expect(host.querySelector('[data-edge="start"]')).not.toBeNull();
+		expect(host.querySelector('[data-edge="end"]')).toBeNull();
+	});
+
+	test("sets its label in a tag readable against the tag background", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+				<Chart.Band from={8} to={9} label="No data" variant="hatched" />
+			</Chart>,
+		);
+
+		for (let band of host.querySelectorAll('[data-slot="chart-band"]')) {
+			let text = label(band)!;
+			let filter = document.getElementById(text.getAttribute("filter")!.slice(5, -1))!;
+			let tint = filter.querySelector("feFlood")!;
+			let background = getComputedStyle(tint).floodColor;
+			let box = text.getBBox();
+
+			expect(channels(background)[3]).toBe(1);
+			expect(contrast(getComputedStyle(text).fill, background)).toBeGreaterThanOrEqual(4.5);
+			expect(box.width).toBeGreaterThan(text.getComputedTextLength() * 0.99);
+		}
+	});
+
+	test("keeps its label the same size however wide the chart renders", () => {
+		let chart = (
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+			</Chart>
+		);
+		let narrow = label(mount(chart, 480))!.getBoundingClientRect();
+		let wide = label(mount(chart, 960))!.getBoundingClientRect();
+
+		expect(narrow.height).toBeGreaterThan(8);
+		expect(wide.height).toBeCloseTo(narrow.height, 0);
+		expect(wide.width).toBeCloseTo(narrow.width, 0);
+	});
+
+	test("draws the series over the band", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="Incident #42" />
+				<Chart.Line points={CURRENT} />
+			</Chart>,
+		);
+		let band = host.querySelector('[data-slot="chart-band"]')!;
+		let path = host.querySelector("path")!;
+
+		expect(band.compareDocumentPosition(path) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(getComputedStyle(path).strokeOpacity).toBe("1");
+		expect(getComputedStyle(path).opacity).toBe("1");
 	});
 });
 

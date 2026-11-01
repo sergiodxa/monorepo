@@ -573,7 +573,10 @@ export namespace Chart {
 		from: number;
 		/** Where the range ends, on the same scale as `from`. */
 		to: number;
-		/** Text set at the band's top start ("Incident #42", "Deploy"), also its accessible name. */
+		/**
+		 * Text set in a tag at the band's top start ("Incident #42", "Deploy"), also its accessible
+		 * name. The tag renders at the same size however wide the chart is drawn.
+		 */
 		label?: string;
 		/**
 		 * `"hatched"` draws the range with the hatch {@link Chart.Bar} uses for a `null` value, so a
@@ -583,7 +586,7 @@ export namespace Chart {
 		 */
 		variant?: "fill" | "hatched";
 		/**
-		 * Colour of the label and, for `variant="fill"`, the shading.
+		 * Colour of the edge rules, the label tag and, for `variant="fill"`, the shading.
 		 *
 		 * @default "danger" ("neutral" when `variant` is "hatched")
 		 */
@@ -719,7 +722,16 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 				viewBox={`0 0 ${width} ${height}`}
 				preserveAspectRatio="xMidYMid meet"
 				{...rest}
-				mix={mergeMix([legendToggle(), block(), is("full"), bs("auto")], mix)}
+				mix={mergeMix(
+					[
+						legendToggle(),
+						block(),
+						is("full"),
+						bs("auto"),
+						raw({ container: "ui-chart / inline-size", aspectRatio: `${width} / ${height}` }),
+					],
+					mix,
+				)}
 			/>
 		);
 	};
@@ -1152,9 +1164,127 @@ Chart.Threshold = function ChartThreshold(handle: Handle<Chart.ThresholdProps>) 
 };
 
 /**
- * Shades a stretch of the x axis, such as an incident or a deploy, or hatches one with no
- * data, across the full plot height with `label` at its top start. Render it inside
- * {@link Chart} before the series, so the lines draw over it.
+ * Shading for a `variant="fill"` band: the tone at `--ui-chart-band-opacity` in a light colour
+ * scheme and `--ui-chart-band-opacity-dark` in a dark one, light enough that the series over
+ * it keep their full contrast.
+ */
+const BAND_FILL = [
+	"light-dark(",
+	"color-mix(in srgb, currentColor calc(var(--ui-chart-band-opacity, 0.08) * 100%), transparent),",
+	"color-mix(in srgb, currentColor calc(var(--ui-chart-band-opacity-dark, 0.12) * 100%), transparent)",
+	")",
+].join(" ");
+
+/**
+ * The band label's font size in the chart's own units: the annotation size divided by how much
+ * the chart root draws its coordinate space scaled (its container width over `width`), so the
+ * label renders at the annotation size whatever width the chart is drawn at.
+ */
+function bandLabelSize(width: number): string {
+	return `calc(var(--ui-chart-annotation-size, 11px) / tan(atan2(100cqi, ${width}px)))`;
+}
+
+/**
+ * The background and ink of a band's label tag for each {@link Chart.Tone}, published on the
+ * band for its tag to read: the tone's tint deepened with a little of the tone, so the tag
+ * stands out from the band, under the tone's emphasis text at 4.5:1 or more in either scheme.
+ */
+function bandLabelTone() {
+	let tones = [
+		["brand", "--ui-brand-fg"],
+		["neutral", "--ui-neutral-fg-muted"],
+		["success", "--ui-success-fg"],
+		["warning", "--ui-warning-fg"],
+	] as const;
+
+	return raw<SVGGElement>({
+		"--chart-band-label-bg":
+			"color-mix(in srgb, var(--ui-danger-fg) 16%, var(--ui-danger-bg-tint))",
+		"--chart-band-label-fg": "var(--ui-danger-fg-emphasis)",
+		...Object.fromEntries(
+			tones.map(([tone, ink]) => [
+				`&[data-tone="${tone}"]`,
+				{
+					"--chart-band-label-bg": `color-mix(in srgb, var(${ink}) 16%, var(--ui-${tone}-bg-tint))`,
+					"--chart-band-label-fg": `var(--ui-${tone}-fg-emphasis)`,
+				},
+			]),
+		),
+	});
+}
+
+/**
+ * A band's label tag: the label set over a tint filling exactly its text box, which a filter
+ * paints behind the glyphs so the tag fits the label at any length. An en space on each side
+ * widens that box into the tag's padding.
+ *
+ * @param id The tint filter's id, unique on the page.
+ * @param label The text the tag shows.
+ * @param x Where the band starts in the chart's coordinate space.
+ * @param width The chart's coordinate width, which the tag's size is counter-scaled against.
+ */
+function renderBandLabel(id: string, label: string, x: number, width: number): RemixNode {
+	return (
+		<>
+			<defs>
+				<filter id={id} x={0} y={0} width={1} height={1}>
+					<feFlood mix={raw({ floodColor: "var(--chart-band-label-bg, Canvas)" })} />
+					<feMerge>
+						<feMergeNode />
+						<feMergeNode in="SourceGraphic" />
+					</feMerge>
+				</filter>
+			</defs>
+			<text
+				data-slot="chart-band-label"
+				aria-hidden="true"
+				x={x}
+				y={0}
+				dx="0.25em"
+				dy="1.4em"
+				filter={`url(#${id})`}
+				mix={[
+					fill("var(--chart-band-label-fg, CanvasText)"),
+					weight("medium"),
+					raw({ fontSize: bandLabelSize(width), whiteSpace: "pre" }),
+				]}
+			>
+				{`\u2002${label}\u2002`}
+			</text>
+		</>
+	);
+}
+
+/**
+ * A dashed rule across the plot's full height marking one edge of a band.
+ *
+ * @param edge Which edge the rule marks, written to `data-edge`.
+ * @param x The edge's position in the chart's coordinate space.
+ * @param height The plot's height, which the rule spans.
+ */
+function renderBandEdge(edge: "start" | "end", x: number, height: number): RemixNode {
+	return (
+		<line
+			data-slot="chart-band-edge"
+			data-edge={edge}
+			x1={x}
+			x2={x}
+			y1={0}
+			y2={height}
+			mix={[
+				stroke("currentColor"),
+				strokeWidth("var(--ui-chart-band-edge-width, 1px)"),
+				vectorEffect("non-scaling-stroke"),
+				raw({ strokeDasharray: "var(--ui-chart-band-edge-dash, 4 3)" }),
+			]}
+		/>
+	);
+}
+
+/**
+ * Marks a stretch of the x axis (an incident, a deploy, or hatched, a gap with no data): a light
+ * shade, a dashed rule at each edge inside the axis, `label` tagged at its top start. A range running
+ * to the end of `xDomain` reads as ongoing, with no end rule. Render it before the series it marks.
  *
  * @param handle Runtime handle carrying the host `<g>`'s props.
  * @returns The render function producing the band's markup.
@@ -1172,17 +1302,18 @@ Chart.Band = function ChartBand(handle: Handle<Chart.BandProps>) {
 		let end = Math.max(x(from), x(to));
 		let hatched = variant === "hatched";
 		let hatchId = `${handle.id}-no-data`;
+		let resolvedTone = tone ?? (hatched ? "neutral" : "danger");
 
 		return (
 			<g
 				data-slot="chart-band"
 				data-variant={hatched ? "hatched" : undefined}
-				data-tone={tone ?? (hatched ? "neutral" : "danger")}
+				data-tone={resolvedTone}
 				role={label ? "img" : undefined}
 				aria-label={label}
 				aria-hidden={label ? undefined : "true"}
 				{...rest}
-				mix={mergeMix(toneColor(), mix)}
+				mix={mergeMix([toneColor(), bandLabelTone()], mix)}
 			>
 				{hatched ? renderNoDataPattern(hatchId) : null}
 				<rect
@@ -1191,22 +1322,13 @@ Chart.Band = function ChartBand(handle: Handle<Chart.BandProps>) {
 					width={Math.max(end - start, 1)}
 					height={context.height}
 					fill={hatched ? `url(#${hatchId})` : undefined}
-					mix={
-						hatched
-							? undefined
-							: [fill("currentColor"), fillOpacity("var(--ui-chart-band-opacity, 0.1)")]
-					}
+					mix={hatched ? undefined : raw({ fill: BAND_FILL })}
 				/>
-				{label ? (
-					<text
-						aria-hidden="true"
-						x={start + 4}
-						y={12}
-						mix={[fill("currentColor"), raw({ fontSize: "var(--ui-chart-annotation-size, 11px)" })]}
-					>
-						{label}
-					</text>
-				) : null}
+				{start > 0 ? renderBandEdge("start", start, context.height) : null}
+				{end < context.width ? renderBandEdge("end", end, context.height) : null}
+				{label
+					? renderBandLabel(`${handle.id}-label`, label, Math.max(start, 0), context.width)
+					: null}
 			</g>
 		);
 	};
