@@ -10,7 +10,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
-import { ChevronRightIcon } from "@sdxc/icons";
+import { ChevronDownIcon, ChevronRightIcon } from "@sdxc/icons";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -18,16 +18,17 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { divide } from "@sdxc/u/overflow";
 import { m, p } from "@sdxc/u/size";
 import { tabularNums, text, weight } from "@sdxc/u/typography";
-import { Button, Confirm, LinkButton } from "@sdxc/ui";
+import { Button, Confirm, Menu } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app/empty";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 import { StatCard } from "@sdxc/ui/app/stat-card";
 import { HeadingScope } from "@sdxc/ui/heading-scope";
+import { menuKeys } from "@sdxc/ui/mixins";
 
 import type { CMSToast } from "~/app/http/toast";
 
 import { readCMSShell } from "~/app/http/middleware/cms-shell";
-import { CMSLayout } from "~/resources/layouts/cms";
+import { CMS_CREATE, CMSLayout } from "~/resources/layouts/cms";
 import { QuickBookmarkForm } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";
 
@@ -100,6 +101,41 @@ function Panel(handle: Handle<PanelProps>) {
 	};
 }
 
+/** The New menu's popover id, which its button toggles. */
+const NEW_MENU_ID = "dashboard-new-menu";
+
+/**
+ * The dashboard's one primary action: a menu of everything the CMS creates, writing first,
+ * so starting any kind of post is one click from the overview.
+ */
+function NewMenu() {
+	return () => (
+		<>
+			<Button
+				type="button"
+				color="brand"
+				size="sm"
+				commandfor={NEW_MENU_ID}
+				command="toggle-popover"
+				aria-haspopup="menu"
+			>
+				New
+				<ChevronDownIcon size={16} aria-hidden="true" />
+			</Button>
+			<Menu id={NEW_MENU_ID} placement="bottom-end" aria-label="Create" mix={[menuKeys()]}>
+				{CMS_CREATE.map((item, index) => (
+					<>
+						{index > 0 && CMS_CREATE[index - 1]?.group !== item.group ? <Menu.Separator /> : null}
+						<Menu.Item key={item.href} href={item.href}>
+							{item.kind}
+						</Menu.Item>
+					</>
+				))}
+			</Menu>
+		</>
+	);
+}
+
 /** Props accepted by {@link QueueRow}. */
 interface QueueRowProps {
 	href: string;
@@ -166,11 +202,7 @@ export function CMSDashboardView() {
 					<PageHeader
 						title="Dashboard"
 						description="What's on the site and what's waiting on you."
-						primaryAction={
-							<LinkButton href={routes.cms.articles.new.href()} color="brand" size="sm">
-								New article
-							</LinkButton>
-						}
+						primaryAction={<NewMenu />}
 					/>
 					<StatCard.Group variant="cards" aria-label="Posts on the site">
 						<StatCard href={routes.cms.articles.index.href()}>

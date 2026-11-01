@@ -27,7 +27,7 @@ import {
 	StickyNoteIcon,
 } from "@sdxc/icons";
 import { grow, hstack, justify } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
+import { bs, is, m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { Avatar, Button, Menu } from "@sdxc/ui";
 import { AppShell, readAppShellCookie } from "@sdxc/ui/app/app-shell";
@@ -117,16 +117,35 @@ const WRITE: Destination[] = [
 	{ href: routes.cms.tils.index.href(), label: "TILs", icon: <LightbulbIcon />, shortcut: "g l" },
 ];
 
-/** What a "New …" command in the palette creates, beside the list it lands on. */
-const CREATE = [
-	{ href: routes.cms.articles.new.href(), label: "New article" },
-	{ href: routes.cms.tutorials.new.href(), label: "New tutorial" },
-	{ href: routes.cms.notes.new.href(), label: "New note" },
-	{ href: routes.cms.tils.new.href(), label: "New TIL" },
-	{ href: routes.cms.bookmarks.new.href(), label: "New bookmark" },
-	{ href: routes.cms.glossary.new.href(), label: "New glossary term" },
-	{ href: routes.cms.topics.new.href(), label: "New topic" },
-	{ href: routes.cms.redirects.new.href(), label: "New redirect" },
+/**
+ * Everything the CMS creates, in the palette's Create group and the dashboard's New menu:
+ * `label` names the command, `kind` names the item inside a "New" menu, and `group` splits
+ * writing from the library and the site.
+ */
+export const CMS_CREATE = [
+	{ href: routes.cms.articles.new.href(), label: "New article", kind: "Article", group: "write" },
+	{
+		href: routes.cms.tutorials.new.href(),
+		label: "New tutorial",
+		kind: "Tutorial",
+		group: "write",
+	},
+	{ href: routes.cms.notes.new.href(), label: "New note", kind: "Note", group: "write" },
+	{ href: routes.cms.tils.new.href(), label: "New TIL", kind: "TIL", group: "write" },
+	{
+		href: routes.cms.bookmarks.new.href(),
+		label: "New bookmark",
+		kind: "Bookmark",
+		group: "library",
+	},
+	{
+		href: routes.cms.glossary.new.href(),
+		label: "New glossary term",
+		kind: "Glossary term",
+		group: "library",
+	},
+	{ href: routes.cms.topics.new.href(), label: "New topic", kind: "Topic", group: "library" },
+	{ href: routes.cms.redirects.new.href(), label: "New redirect", kind: "Redirect", group: "site" },
 ] as const;
 
 /**
@@ -239,7 +258,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 					workspace={
 						<AppShell.Identity
 							avatar={
-								<Avatar>
+								<Avatar mix={[is("1.5rem"), bs("1.5rem")]}>
 									<Avatar.Image src={routes.wellKnown.avatar.href()} alt="" />
 									<Avatar.Fallback>SX</Avatar.Fallback>
 								</Avatar>
@@ -263,7 +282,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 							<>
 								<AppShell.Identity
 									avatar={
-										<Avatar>
+										<Avatar mix={[is("1.5rem"), bs("1.5rem")]}>
 											<Avatar.Image src={user.avatar} alt="" />
 											<Avatar.Fallback>{user.display_name.slice(0, 2)}</Avatar.Fallback>
 										</Avatar>
@@ -338,7 +357,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 							/>
 						</CommandPalette.Group>
 						<CommandPalette.Group heading="Create">
-							{CREATE.map((item) => (
+							{CMS_CREATE.map((item) => (
 								<CommandPalette.Item
 									key={item.href}
 									id={`create:${item.href}`}
