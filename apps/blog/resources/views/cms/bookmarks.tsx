@@ -205,14 +205,11 @@ function BookmarkStatusCell(handle: Handle<{ item: CMSBookmarksIndexView.Item }>
 		let { item } = handle.props;
 		let status = statusOf(item);
 		return (
-			<Table.StatusCell color={status.color}>
+			<Table.StatusCell
+				color={status.color}
+				detail={item.httpStatus === null ? undefined : String(item.httpStatus)}
+			>
 				{status.label}
-				{item.httpStatus === null ? null : (
-					<span mix={[fg("neutral.muted"), raw({ fontVariantNumeric: "tabular-nums" })]}>
-						{" "}
-						· {String(item.httpStatus)}
-					</span>
-				)}
 			</Table.StatusCell>
 		);
 	};

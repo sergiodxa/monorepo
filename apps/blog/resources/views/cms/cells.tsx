@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { font, text, truncate, whiteSpace } from "@sdxc/u/typography";
+import { font, text, truncate } from "@sdxc/u/typography";
 import { Table } from "@sdxc/ui/app/table";
 
 /** Props accepted by {@link DateCell}. */
@@ -34,7 +34,6 @@ export function DateCell(handle: Handle<DateCellProps>) {
 				locale="en-US"
 				local
 				mix={[
-					whiteSpace("nowrap"),
 					hideNarrow
 						? raw({ "@container ui-app-content (max-width: 40rem)": { display: "none" } })
 						: undefined,
