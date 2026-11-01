@@ -93,6 +93,21 @@ verb, errors end with what to do next.
 4. **Use it like a user** at six widths, both themes, keyboard only, then write the browser tests
    (@rules/verify-like-a-user.md).
 
+## Worked examples
+
+Three demo apps on sdxc.dev assemble the kit into whole products, each with its own art direction
+set through theme tokens alone. Open the one closest to the screen you are building, then read its
+source in `apps/sdxc-site/resources/views/demo-apps/<slug>/`:
+
+- **Pulse** (`/demo/apps/pulse`): an ops dashboard — overview, a filtered services list with a
+  peek sheet and bulk bar, a service detail, incidents and settings.
+- **Inkwell** (`/demo/apps/inkwell`): a CMS — posts with count tabs and quick edit, the editor and
+  its save model, media and settings.
+- **Relay** (`/demo/apps/relay`): an inbox and light CRM — `sidebar | list | detail` on one screen,
+  contacts, reports and settings.
+
+All three are listed on the gallery at `/demo`.
+
 ## The bar
 
 Put the screen beside the reference for its kind (Linear or GitHub for lists, Polar or Catalyst for
