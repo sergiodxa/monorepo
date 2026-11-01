@@ -128,6 +128,8 @@ A key made with GnuPG works as is: `gpg --armor --export-secret-keys <fingerprin
 bunx @sdxc/openpgp --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg openpgp …` runs the same command line, using the version your project installs.
+
 ```sh
 sdxc-openpgp keygen --user-id "Security <security@example.com>" --public-out public.asc > private.asc
 sdxc-openpgp sign security.txt --key-file private.asc > security.txt.signed   # cleartext signed message
