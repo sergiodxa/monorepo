@@ -114,7 +114,9 @@ const SIGNATURE_BEGIN = "-----BEGIN PGP SIGNATURE-----";
  * @param line - One line of text.
  */
 function trimLine(line: string): string {
-	return line.replace(/[ \t]+$/, "");
+	let end = line.length;
+	while (end > 0 && (line[end - 1] === " " || line[end - 1] === "\t")) end--;
+	return line.slice(0, end);
 }
 
 /**

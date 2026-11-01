@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { unwrap } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { SIGNATURE_TYPE } from "./algorithms.js";
@@ -102,6 +102,13 @@ describe("passphrase protection", () => {
 });
 
 describe("cleartext signatures", () => {
+	test("reads a line with 100 000 tabs before its last character in linear time", () => {
+		let started = performance.now();
+		let parts = readCleartext(`x${"\t".repeat(100_000)}y\n`);
+		expect(isFailure(parts) && parts.error.code).toBe("no-signature");
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
 	test("dash-escapes, drops trailing whitespace and verifies", async () => {
 		let key = unwrap(await generateKey({ userId: "Security <security@example.com>" }));
 		let signed = unwrap(await signCleartext(TEXT, key));
