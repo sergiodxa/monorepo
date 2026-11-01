@@ -1,31 +1,31 @@
 /**
- * A tabular data display built on the native `<table>` element, with column
- * headers that become sort links and a trailing row that becomes a
- * "load more" link — both driven entirely by URLs a consumer computes, so the
- * sorted or paginated result renders back from the server with no client
- * state to track.
+ * A tabular data display built on the native `<table>`: URL-driven sort headers and a
+ * "load more" row, a sticky header, two row densities, a selection column, row actions, a
+ * whole-row link, a pinned first column, typed cells and empty, error and refetching states.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@sdxc/icons";
 import {
 	bg,
-	borderEdge,
 	center,
 	container,
 	cursor,
 	fg,
 	flex,
+	font,
 	fontSize,
 	gap,
+	hidden,
 	hover,
 	is,
 	items,
 	justify,
+	keyframes,
 	opacity,
 	outline,
 	overflow,
@@ -38,16 +38,25 @@ import {
 	tabularNums,
 	textAlign,
 	textDecoration,
+	truncate,
 	userSelect,
 	virtualize,
 	weight,
 	when,
 } from "@sdxc/u";
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { mergeMix } from "@sdxc/u/general";
-import { attrs } from "remix/component";
+import { attrs, clientEntry } from "remix/component";
 
+import type { SemanticColor } from "../utils/semantic-color.js";
+
+import { Checkbox } from "../components/checkbox.js";
+import { RelativeTime } from "../components/relative-time.js";
+import { StatusDot } from "../components/status-dot.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
+
+import { tableSelection } from "./mixins/table-selection.js";
 
 /**
  * Named container {@link Table.Container} declares on its own host, so a
@@ -71,6 +80,27 @@ const DEFAULT_NUMERIC_ALIGN: Table.Align = "end";
  */
 const JUSTIFY_BY_ALIGN = { start: "start", center: "center", end: "end" } as const;
 
+/** Row block size for each density; compact leaves the variable to an app-wide setting. */
+const ROW_BLOCK_SIZE = "var(--ui-table-row-block-size, 2.5rem)";
+
+/** Surface behind sticky headers and pinned cells, which must be opaque to cover what scrolls under them. */
+const TABLE_BG = "var(--ui-table-bg, var(--ui-bg, Canvas))";
+
+/** Edge shadow a pinned first column casts once the table scrolls sideways. */
+const PIN_SHADOW_KEYFRAMES = "ui-table-pin-shadow";
+
+/** Characters an id cell keeps visible after the ellipsis, where ids differ most. */
+const DEFAULT_ID_TAIL = 4;
+
+/** Upper bound a data bar's value is measured against when `max` is omitted: a proportion. */
+const DEFAULT_BAR_MAX = 1;
+
+/** What a typed cell shows for a value that is unknown or missing. */
+const EMPTY_VALUE = "—";
+
+/** Interactive elements that sit above a whole-row link, so they keep their own clicks. */
+const ROW_CONTROLS = ':is(a, button, label, select, textarea, summary, [role="button"])';
+
 /**
  * Prop types for {@link Table} and its compound parts.
  */
@@ -89,10 +119,22 @@ export namespace Table {
 	 */
 	export type SortDirection = "ascending" | "descending";
 
+	/** Row height: `compact` is 2.5rem for scanning, `comfortable` 3.5rem for two-line rows. */
+	export type Density = "compact" | "comfortable";
+
 	/**
-	 * Every native `<table>` attribute, unchanged, plus the `mix` passthrough.
+	 * Every native `<table>` attribute plus layout switches. Set `aria-busy="true"` while
+	 * refetching: the body dims in place so the old rows stay readable until new ones land.
 	 */
-	export interface Props extends TagProps<"table"> {}
+	export interface Props extends TagProps<"table"> {
+		/** Row height, exposed as `data-density` and `--ui-table-row-block-size`. */
+		density?: Density;
+		/**
+		 * Keeps the first column in view while the table scrolls sideways in its container,
+		 * with an edge shadow that appears once anything has scrolled beneath it.
+		 */
+		pinFirstColumn?: boolean;
+	}
 
 	/**
 	 * Every native `<div>` attribute, unchanged, plus the `mix` passthrough.
@@ -144,8 +186,8 @@ export namespace Table {
 
 	/**
 	 * Every native `<tr>` attribute, unchanged, plus the `mix` passthrough.
-	 * Set `aria-selected="true"` directly to mark a row selected — the row's
-	 * own selection tint rides that native attribute.
+	 * A row whose selection checkbox is checked, or that carries `aria-selected="true"`,
+	 * is tinted as selected.
 	 */
 	export interface RowProps extends TagProps<"tr"> {}
 
@@ -158,6 +200,130 @@ export namespace Table {
 		 * tabular widths and align to the end, so digits line up down the column.
 		 */
 		numeric?: boolean;
+	}
+
+	/** Header cell for the selection column. */
+	export interface SelectAllProps extends Omit<TagProps<"th">, "children"> {
+		/** Accessible name of the select-all checkbox, such as "Select all monitors". */
+		label: string;
+		/** Whether every row starts selected. */
+		checked?: boolean;
+	}
+
+	/** Body cell holding one row's selection checkbox. */
+	export interface SelectProps extends Omit<TagProps<"td">, "children"> {
+		/** The row's key, submitted as the checkbox's value. */
+		value: string;
+		/** Accessible name, such as "Select api.example.com". */
+		label: string;
+		/** Field name the checked keys submit under. */
+		name?: string;
+		/** Id of a `<form>` elsewhere on the page the checkbox submits with, such as a bulk-action form. */
+		form?: string;
+		/** Whether the row starts selected. */
+		checked?: boolean;
+		/** Keeps the row out of the selection and out of select-all. */
+		disabled?: boolean;
+	}
+
+	/** Header cell over the row actions, holding a visually hidden name for the column. */
+	export interface ActionsColumnProps extends Omit<TagProps<"th">, "children"> {
+		/** The column's name for assistive technology, such as "Actions". */
+		label: string;
+	}
+
+	/**
+	 * Body cell holding a row's actions. Put the one most used action first and any
+	 * destructive one last.
+	 */
+	export interface ActionsProps extends TagProps<"td"> {}
+
+	/** A link that makes its whole row the target; every other control in the row keeps its own click. */
+	export type RowLinkProps = TagProps<"a"> & {
+		/** The record's page. */
+		href: string;
+	};
+
+	/** Shared props of the typed cells: every native `<td>` attribute but children. */
+	export interface TypedCellProps extends Omit<TagProps<"td">, "children"> {}
+
+	/** A number formatted through `Intl.NumberFormat` and aligned for comparison. */
+	export interface NumberCellProps extends TypedCellProps {
+		/** The value; `null` or `undefined` renders `—`. */
+		value: number | null | undefined;
+		/** BCP 47 locale. Defaults to the runtime's. */
+		locale?: string;
+		/** Formatting, such as `{ style: "unit", unit: "millisecond" }` or `{ style: "percent" }`. */
+		format?: Intl.NumberFormatOptions;
+	}
+
+	/** An amount with its currency code muted after it, the form that reads across currencies. */
+	export interface CurrencyCellProps extends TypedCellProps {
+		/** The amount in major units (12.8 for $12.80); `null` or `undefined` renders `—`. */
+		value: number | null | undefined;
+		/** ISO 4217 code, such as `"USD"`. */
+		currency: string;
+		/** BCP 47 locale. Defaults to the runtime's. */
+		locale?: string;
+	}
+
+	/** An identifier set in mono and truncated in the middle, keeping the end where ids differ. */
+	export interface IdCellProps extends TypedCellProps {
+		/** The full id, kept whole in the text and the title; `null` or `undefined` renders `—`. */
+		value: string | null | undefined;
+		/** Characters kept after the ellipsis. Defaults to {@link DEFAULT_ID_TAIL}. */
+		tail?: number;
+	}
+
+	/** A moment shown through `RelativeTime`: relative within a week, a date after it. */
+	export interface DateCellProps extends TypedCellProps {
+		/** The moment; `null` or `undefined` renders `—`. */
+		date: Date | string | number | null | undefined;
+		/** Reference moment, so the server renders deterministically. */
+		now?: Date | string | number;
+		/** BCP 47 locale. */
+		locale?: string;
+		/** IANA zone the server formats in. Defaults to UTC. */
+		timeZone?: string;
+		/** Rewrites the time in the viewer's zone through the `RelativeTimeLocal` island. */
+		local?: boolean;
+	}
+
+	/** A state shown as a `StatusDot` and its label. */
+	export interface StatusCellProps extends Omit<TagProps<"td">, "color"> {
+		/** Semantic role of the state. */
+		color?: SemanticColor;
+		/** Marks a state still in progress, so its dot pulses. */
+		pulse?: boolean;
+		/** The state's name; omit it and the cell renders `—`. */
+		children?: RemixNode;
+	}
+
+	/** A number over a bar sized to its share of `max`, for comparing rows without a chart. */
+	export interface BarCellProps extends TypedCellProps {
+		/** The value; `null` or `undefined` renders `—`. */
+		value: number | null | undefined;
+		/** The value a full bar stands for. Defaults to {@link DEFAULT_BAR_MAX}. */
+		max?: number;
+		/** BCP 47 locale for the figure. */
+		locale?: string;
+		/** Formatting for the figure. */
+		format?: Intl.NumberFormatOptions;
+		/** The bar's role colour. Defaults to `neutral`. */
+		color?: SemanticColor;
+	}
+
+	/** Any content shown when a table has no rows, rendered beside the table rather than in it. */
+	export interface EmptyProps extends TagProps<"div"> {}
+
+	/** A failure shown in place of the body, with a slot for Retry. */
+	export interface ErrorProps extends TagProps<"tbody"> {
+		/** Number of columns the table renders, so the message spans the full row width. */
+		colSpan: number;
+		/** What went wrong. */
+		children: RemixNode;
+		/** A Retry control, such as a link back to the same URL. */
+		action?: RemixNode;
 	}
 
 	/**
@@ -189,29 +355,22 @@ export namespace Table {
 }
 
 /**
- * Renders the table's `<table>` host: a full-width, border-collapsed grid
- * with a small base font size, ready to hold {@link Table.Header} and
- * {@link Table.Body}. Dev mode warns when it lacks an accessible name.
+ * Renders the `<table>` host: full width, border-collapsed, small text. `density` sets the row
+ * height, `pinFirstColumn` keeps the first column in view with a scroll-driven edge shadow,
+ * and `aria-busy="true"` dims the body while it refetches. Dev mode warns without a name.
  *
  * @param handle Runtime handle carrying the host `<table>`'s props.
  * @returns The render function producing the table's markup.
  * @example
- * <Table aria-label={t("subjects.title")}>
- * 	<Table.Header>
- * 		<Table.Row>
- * 			<Table.Column>{t("subjects.name")}</Table.Column>
- * 		</Table.Row>
- * 	</Table.Header>
- * 	<Table.Body>
- * 		<Table.Row>
- * 			<Table.Cell>{subject.name}</Table.Cell>
- * 		</Table.Row>
- * 	</Table.Body>
+ * <Table aria-label={t("monitors.title")} density="comfortable" pinFirstColumn>
+ * 	<Table.Header>…</Table.Header>
+ * 	<Table.Body>…</Table.Body>
  * </Table>
+ * @example <Table aria-label={t("monitors.title")} aria-busy={refreshing ? "true" : undefined}>…</Table>
  */
 export function Table(handle: Handle<Table.Props>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { density, pinFirstColumn, mix, ...rest } = handle.props;
 
 		warnIfNoAccessibleLabel(
 			handle.props,
@@ -222,16 +381,63 @@ export function Table(handle: Handle<Table.Props>) {
 			<table
 				{...rest}
 				data-slot="table"
-				mix={mergeMix([is("100%"), raw({ borderCollapse: "collapse" }), fontSize("sm")], mix)}
+				data-density={density}
+				data-pin-first={pinFirstColumn ? "" : undefined}
+				mix={mergeMix(
+					[
+						is("100%"),
+						fontSize("sm"),
+						keyframes(PIN_SHADOW_KEYFRAMES, { from: { opacity: 0 }, to: { opacity: 1 } }),
+						raw({
+							borderCollapse: "collapse",
+							'&[data-density="compact"]': { "--ui-table-row-block-size": "2.5rem" },
+							'&[data-density="comfortable"]': { "--ui-table-row-block-size": "3.5rem" },
+							"& > tbody": { transition: "opacity 200ms ease-out" },
+							'&[aria-busy="true"] > tbody': { opacity: 0.5 },
+							"@media (prefers-reduced-motion: reduce)": { "& > tbody": { transition: "none" } },
+							"&[data-pin-first] > tbody > tr > :first-child": {
+								position: "sticky",
+								insetInlineStart: 0,
+								zIndex: 1,
+								backgroundColor: TABLE_BG,
+								backgroundImage:
+									"linear-gradient(var(--ui-table-row-tint, transparent), var(--ui-table-row-tint, transparent))",
+							},
+							"&[data-pin-first] > * > tr > :first-child::after": {
+								content: '""',
+								position: "absolute",
+								insetBlock: 0,
+								insetInlineStart: "100%",
+								inlineSize: "0.75rem",
+								pointerEvents: "none",
+								opacity: 0,
+								backgroundImage:
+									"linear-gradient(to var(--ui-table-pin-shadow-direction, right), color-mix(in oklab, var(--ui-fg, CanvasText) 14%, transparent), transparent)",
+							},
+							"&[data-pin-first]:dir(rtl)": { "--ui-table-pin-shadow-direction": "left" },
+							"@supports (animation-timeline: scroll())": {
+								"&[data-pin-first] > * > tr > :first-child::after": {
+									animationName: PIN_SHADOW_KEYFRAMES,
+									animationDuration: "auto",
+									animationTimingFunction: "linear",
+									animationFillMode: "both",
+									animationTimeline: "scroll(nearest inline)",
+									animationRange: "0 1rem",
+								},
+							},
+						}),
+					],
+					mix,
+				)}
 			/>
 		);
 	};
 }
 
 /**
- * Renders an optional wrapper around {@link Table}: a relatively positioned
- * `<div>` that scrolls its own inline axis when the table grows wider than
- * the available space, and declares the `ui-table` named container.
+ * Renders the scrolling wrapper around {@link Table}: the table scrolls sideways inside it
+ * instead of widening the page, and the header sticks to its top edge once it scrolls. Give it
+ * a `max-block-size` to scroll rows inside it; the `ui-table` container is declared here.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the wrapper's markup.
@@ -255,8 +461,9 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 };
 
 /**
- * Renders the table's `<thead>` host: a plain wrapper for the header
- * {@link Table.Row}, separated from {@link Table.Body} by a block-end border.
+ * Renders the `<thead>` host, whose header cells stick at `--ui-app-sticky-top` (below an app's
+ * own sticky bar) over an opaque surface, ruled from the body by an inset line that stays with
+ * them as they stick.
  *
  * @param handle Runtime handle carrying the host `<thead>`'s props.
  * @returns The render function producing the header section's markup.
@@ -275,7 +482,19 @@ Table.Header = function TableHeader(handle: Handle<Table.HeaderProps>) {
 			<thead
 				{...rest}
 				data-slot="header"
-				mix={mergeMix(borderEdge("block-end", { color: "neutral", width: 1 }), mix)}
+				mix={mergeMix(
+					raw({
+						"& > tr > th": {
+							position: "sticky",
+							insetBlockStart: "var(--ui-app-sticky-top, 0px)",
+							zIndex: 2,
+							backgroundColor: TABLE_BG,
+							boxShadow: "inset 0 -1px 0 var(--ui-neutral-border)",
+						},
+						"[data-pin-first] > & > tr > th:first-child": { insetInlineStart: 0, zIndex: 3 },
+					}),
+					mix,
+				)}
 			/>
 		);
 	};
@@ -308,10 +527,11 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 				mix={mergeMix(
 					[
 						virtualize("auto var(--ui-table-body-intrinsic-size, 32rem)"),
-						when(
-							"& > :not([hidden]) ~ :not([hidden])",
-							borderEdge("block-start", { color: "neutral", width: 1 }),
-						),
+						raw({
+							"& > :not([hidden]) ~ :not([hidden])": {
+								borderBlockStart: "1px solid var(--ui-neutral-border)",
+							},
+						}),
 					],
 					mix,
 				)}
@@ -351,13 +571,19 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 				mix={mergeMix(
 					[
 						attrs({ scope: "col" }),
-						href ? undefined : [pi("1rem"), pb("0.75rem")],
+						href ? undefined : [pi("1rem"), pb("0.25rem")],
 						textAlign("start"),
 						weight(500),
 						fg("neutral"),
+						raw({ whiteSpace: "nowrap" }),
 						when('&[data-align="center"]', textAlign("center")),
 						when('&[data-align="end"]', textAlign("end")),
-						when("&[aria-sort]", when("&:hover", bg("neutral.tint"))),
+						when(
+							"&[aria-sort]:hover",
+							bg({
+								image: "linear-gradient(var(--ui-neutral-bg-tint), var(--ui-neutral-bg-tint))",
+							}),
+						),
 						when("&[aria-sort]", [cursor("pointer"), userSelect()]),
 					],
 					mix,
@@ -371,7 +597,7 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 							flex(),
 							justify(JUSTIFY_BY_ALIGN[resolvedAlign]),
 							pi("1rem"),
-							pb("0.75rem"),
+							pb("0.25rem"),
 							items("center"),
 							gap("0.25rem"),
 							fg("inherit"),
@@ -394,9 +620,9 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 };
 
 /**
- * Renders a native `<tr>` host: transitions its background smoothly, tints
- * it on hover, and tints it more strongly when it carries
- * `aria-selected="true"`, set directly since selection state is native.
+ * Renders a native `<tr>` host at the density's block size. It tints on hover and when
+ * selected, through a checked selection checkbox or `aria-selected="true"`; a row holding a
+ * {@link Table.RowLink} positions itself so the link covers it, with its other controls above.
  *
  * @param handle Runtime handle carrying the host `<tr>`'s props.
  * @returns The render function producing the row's markup.
@@ -420,8 +646,20 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 				mix={mergeMix(
 					[
 						interactiveTransition(),
-						hover(bg("neutral.tint")),
-						when('&[aria-selected="true"]', bg("brand.tint")),
+						raw({
+							blockSize: ROW_BLOCK_SIZE,
+							backgroundColor: "var(--ui-table-row-tint, transparent)",
+							":is(thead) > &": { blockSize: "var(--ui-table-header-block-size, 2.5rem)" },
+							":is(tbody) > &:hover": { "--ui-table-row-tint": "var(--ui-neutral-bg-tint)" },
+							'&[aria-selected="true"], &:has([data-selection-item]:checked)': {
+								"--ui-table-row-tint": "var(--ui-brand-bg-tint)",
+							},
+							'&:has([data-slot="row-link"])': { position: "relative" },
+							[`&:has([data-slot="row-link"]) ${ROW_CONTROLS}:not([data-slot="row-link"])`]: {
+								position: "relative",
+								zIndex: 1,
+							},
+						}),
 					],
 					mix,
 				)}
@@ -453,13 +691,495 @@ Table.Cell = function TableCell(handle: Handle<Table.CellProps>) {
 				mix={mergeMix(
 					[
 						pi("1rem"),
-						pb("0.75rem"),
+						pb("0.25rem"),
 						fg("neutral.emphasis"),
 						when("&[data-numeric]", [tabularNums(), textAlign("end")]),
 					],
 					mix,
 				)}
 			/>
+		);
+	};
+};
+
+/**
+ * Client island the select-all header carries: a hidden marker whose mixin keeps the table's
+ * selection checkboxes in step. Loads from `@sdxc/ui/app/table#TableSelection` once the app's
+ * browser entry maps it; until then every row checkbox still works on its own.
+ */
+export const TableSelection: EntryComponent<Record<never, never>> = clientEntry(
+	"@sdxc/ui/app/table#TableSelection",
+	function TableSelection() {
+		return () => <span mix={[hidden(), tableSelection()]} />;
+	},
+);
+
+/**
+ * Renders the selection column's header: a select-all checkbox marked `data-selection-all`,
+ * and the {@link TableSelection} island that makes it check every row, show indeterminate
+ * while some are, and lets shift-click check a range.
+ *
+ * @param handle Runtime handle carrying the host `<th>`'s props.
+ * @returns The render function producing the header cell.
+ * @example <Table.SelectAll label={t("monitors.selectAll")} />
+ */
+Table.SelectAll = function TableSelectAll(handle: Handle<Table.SelectAllProps>) {
+	return () => {
+		let { label, checked, mix, ...rest } = handle.props;
+
+		return (
+			<th
+				{...rest}
+				data-slot="selection-column"
+				mix={mergeMix([attrs({ scope: "col" }), is("1%"), pi("1rem"), pb("0.25rem")], mix)}
+			>
+				<Checkbox aria-label={label} checked={checked} data-selection-all="" />
+				<TableSelection />
+			</th>
+		);
+	};
+};
+
+/**
+ * Renders one row's selection checkbox, marked `data-selection-item` with the row's key as its
+ * value, so it submits with a form and any selection bar can count it.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.Select name="monitor" value={monitor.id} label={t("monitors.select", { name: monitor.name })} form="bulk" />
+ */
+Table.Select = function TableSelect(handle: Handle<Table.SelectProps>) {
+	return () => {
+		let { value, label, name, form, checked, disabled, mix, ...rest } = handle.props;
+
+		return (
+			<td
+				{...rest}
+				data-slot="selection-cell"
+				mix={mergeMix([is("1%"), pi("1rem"), pb("0.25rem")], mix)}
+			>
+				<Checkbox
+					aria-label={label}
+					name={name}
+					value={value}
+					form={form}
+					checked={checked}
+					disabled={disabled}
+					data-selection-item=""
+				/>
+			</td>
+		);
+	};
+};
+
+/**
+ * Renders the header over the row actions with its name visually hidden, since the buttons
+ * beneath name themselves.
+ *
+ * @param handle Runtime handle carrying the host `<th>`'s props.
+ * @returns The render function producing the header cell.
+ * @example <Table.ActionsColumn label={t("monitors.actions")} />
+ */
+Table.ActionsColumn = function TableActionsColumn(handle: Handle<Table.ActionsColumnProps>) {
+	return () => {
+		let { label, mix, ...rest } = handle.props;
+
+		return (
+			<th
+				{...rest}
+				data-slot="actions-column"
+				mix={mergeMix([attrs({ scope: "col" }), is("1%")], mix)}
+			>
+				<span mix={[visuallyHidden()]}>{label}</span>
+			</th>
+		);
+	};
+};
+
+/**
+ * Renders a row's actions, end-aligned. Where the pointer can hover they stay hidden until the
+ * row is hovered, focused within, selected or has a menu open; on touch they always show.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example
+ * <Table.Actions>
+ * 	<Button size="sm" variant="ghost">{t("monitors.pause")}</Button>
+ * 	<Button size="sm" variant="ghost" color="danger">{t("monitors.delete")}</Button>
+ * </Table.Actions>
+ */
+Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<td
+				{...rest}
+				data-slot="row-actions"
+				mix={mergeMix(
+					[
+						is("1%"),
+						pi("0.5rem"),
+						pb("0.25rem"),
+						raw({
+							transition: "opacity 150ms ease-out",
+							"@media (hover: hover)": {
+								opacity: 0,
+								':is(tr:hover, tr:focus-within, tr[aria-selected="true"], tr:has(:popover-open)) > &':
+									{ opacity: 1 },
+							},
+							"@media (prefers-reduced-motion: reduce)": { transition: "none" },
+						}),
+					],
+					mix,
+				)}
+			>
+				<div mix={[flex(), items("center"), justify("end"), gap("0.25rem")]}>{children}</div>
+			</td>
+		);
+	};
+};
+
+/**
+ * Renders the link to a row's record, usually the name in the first cell; its hit area covers
+ * the whole row, and its focus ring outlines the row. In a pinned first column the target
+ * stays within that cell, since the pinned cell anchors the link's overlay.
+ *
+ * @param handle Runtime handle carrying the host `<a>`'s props.
+ * @returns The render function producing the link.
+ * @example <Table.Cell><Table.RowLink href={href("monitors.show", { id })}>{monitor.name}</Table.RowLink></Table.Cell>
+ */
+Table.RowLink = function TableRowLink(handle: Handle<Table.RowLinkProps>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+
+		return (
+			<a
+				{...rest}
+				data-slot="row-link"
+				mix={mergeMix(
+					[
+						fg("inherit"),
+						weight(500),
+						textDecoration("none"),
+						hover(textDecoration("underline")),
+						raw({
+							outline: "none",
+							"&::after": { content: '""', position: "absolute", inset: 0 },
+							"&:focus-visible::after": {
+								outline: "2px solid var(--ui-brand-ring)",
+								outlineOffset: "-2px",
+							},
+						}),
+					],
+					mix,
+				)}
+			/>
+		);
+	};
+};
+
+/**
+ * Draws `—` muted, the one mark for an unknown value, so a blank never reads as zero.
+ *
+ * @returns The render function producing the dash.
+ */
+function EmptyValue() {
+	return () => (
+		<span data-slot="empty-value" mix={[fg("neutral.muted")]}>
+			{EMPTY_VALUE}
+		</span>
+	);
+}
+
+/**
+ * Renders a number through `Intl.NumberFormat`, end-aligned in tabular figures.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.NumberCell value={monitor.p95} locale={locale} format={{ style: "unit", unit: "millisecond" }} />
+ * @example <Table.NumberCell value={monitor.uptime} locale={locale} format={{ style: "percent", maximumFractionDigits: 2 }} />
+ */
+Table.NumberCell = function TableNumberCell(handle: Handle<Table.NumberCellProps>) {
+	return () => {
+		let { value, locale, format, ...rest } = handle.props;
+
+		return (
+			<Table.Cell {...rest} numeric data-type="number">
+				{value === null || value === undefined ? (
+					<EmptyValue />
+				) : (
+					new Intl.NumberFormat(locale, format).format(value)
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders an amount in its currency's symbol with the ISO code muted after it ("€123.00 EUR"),
+ * end-aligned in tabular figures so amounts in mixed currencies still line up.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.CurrencyCell value={payment.amount / 100} currency={payment.currency} locale={locale} />
+ */
+Table.CurrencyCell = function TableCurrencyCell(handle: Handle<Table.CurrencyCellProps>) {
+	return () => {
+		let { value, currency, locale, ...rest } = handle.props;
+
+		return (
+			<Table.Cell {...rest} numeric data-type="currency">
+				{value === null || value === undefined ? (
+					<EmptyValue />
+				) : (
+					<span mix={[raw({ whiteSpace: "nowrap" })]}>
+						{new Intl.NumberFormat(locale, {
+							style: "currency",
+							currency,
+							currencyDisplay: "narrowSymbol",
+						}).format(value)}
+						<span
+							data-slot="currency-code"
+							mix={[fg("neutral.muted"), raw({ marginInlineStart: "0.375em" })]}
+						>
+							{currency.toUpperCase()}
+						</span>
+					</span>
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders an id in mono, ellipsised in the middle so its last characters stay visible. The
+ * whole id stays in the text, so it reads aloud, copies and searches whole, and in the title.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.IdCell value={payment.id} />
+ */
+Table.IdCell = function TableIdCell(handle: Handle<Table.IdCellProps>) {
+	return () => {
+		let { value, tail, ...rest } = handle.props;
+		let keep = Math.max(0, tail ?? DEFAULT_ID_TAIL);
+
+		return (
+			<Table.Cell {...rest} data-type="id">
+				{value === null || value === undefined || value === "" ? (
+					<EmptyValue />
+				) : (
+					<span
+						data-slot="id"
+						title={value}
+						mix={[
+							flex(),
+							font("mono"),
+							fontSize("xs"),
+							fg("neutral"),
+							raw({ maxInlineSize: "var(--ui-table-id-max-inline-size, 14ch)" }),
+						]}
+					>
+						<span mix={[truncate(), raw({ minInlineSize: 0 })]}>
+							{value.length > keep ? value.slice(0, value.length - keep) : value}
+						</span>
+						{value.length > keep && keep > 0 ? (
+							<span mix={[shrink(0), raw({ whiteSpace: "pre" })]}>{value.slice(-keep)}</span>
+						) : null}
+					</span>
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders a moment through `RelativeTime`: "2m ago" within a week, a date after it, the exact
+ * local and UTC time in its title.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.DateCell date={monitor.checkedAt} now={requestTime} locale={locale} local />
+ */
+Table.DateCell = function TableDateCell(handle: Handle<Table.DateCellProps>) {
+	return () => {
+		let { date, now, locale, timeZone, local, ...rest } = handle.props;
+
+		return (
+			<Table.Cell {...rest} data-type="date">
+				{date === null || date === undefined ? (
+					<EmptyValue />
+				) : (
+					<RelativeTime
+						date={date}
+						now={now}
+						locale={locale}
+						timeZone={timeZone}
+						local={local}
+						mix={[fg("neutral"), raw({ whiteSpace: "nowrap" })]}
+					/>
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders a state as a `StatusDot` and its label.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.StatusCell color="success">{t("monitor.up")}</Table.StatusCell>
+ */
+Table.StatusCell = function TableStatusCell(handle: Handle<Table.StatusCellProps>) {
+	return () => {
+		let { color, pulse, children, ...rest } = handle.props;
+		let empty = children === null || children === undefined || children === false;
+
+		return (
+			<Table.Cell {...rest} data-type="status">
+				{empty ? (
+					<EmptyValue />
+				) : (
+					<StatusDot color={color} pulse={pulse}>
+						{children}
+					</StatusDot>
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders a figure over a bar sized to `value / max`, so the column reads as a bar chart
+ * while every figure stays exact. The bar is decorative; the figure carries the value.
+ *
+ * @param handle Runtime handle carrying the host `<td>`'s props.
+ * @returns The render function producing the cell.
+ * @example <Table.BarCell value={route.requests} max={busiest} locale={locale} />
+ */
+Table.BarCell = function TableBarCell(handle: Handle<Table.BarCellProps>) {
+	return () => {
+		let { value, max, locale, format, color, ...rest } = handle.props;
+		let share =
+			value === null || value === undefined
+				? 0
+				: Math.min(1, Math.max(0, value / (max ?? DEFAULT_BAR_MAX)));
+
+		return (
+			<Table.Cell {...rest} numeric data-type="bar">
+				{value === null || value === undefined ? (
+					<EmptyValue />
+				) : (
+					<span
+						data-slot="bar"
+						data-color={color ?? "neutral"}
+						mix={[
+							relative(),
+							flex(),
+							justify("end"),
+							raw({
+								isolation: "isolate",
+								paddingInline: "0.375rem",
+								minInlineSize: "var(--ui-table-bar-min-inline-size, 6rem)",
+							}),
+						]}
+					>
+						<span
+							aria-hidden="true"
+							data-slot="bar-fill"
+							mix={[
+								raw({
+									position: "absolute",
+									insetBlock: "-0.125rem",
+									insetInlineStart: 0,
+									inlineSize: `${(share * 100).toFixed(2)}%`,
+									zIndex: -1,
+									borderRadius: "var(--ui-radius-sm, 0.25rem)",
+									backgroundColor: "var(--ui-neutral-bg-tint)",
+									'[data-color="brand"] > &': { backgroundColor: "var(--ui-brand-bg-tint)" },
+									'[data-color="success"] > &': { backgroundColor: "var(--ui-success-bg-tint)" },
+									'[data-color="warning"] > &': { backgroundColor: "var(--ui-warning-bg-tint)" },
+									'[data-color="danger"] > &': { backgroundColor: "var(--ui-danger-bg-tint)" },
+								}),
+							]}
+						/>
+						{new Intl.NumberFormat(locale, format).format(value)}
+					</span>
+				)}
+			</Table.Cell>
+		);
+	};
+};
+
+/**
+ * Renders what a table with no rows shows: any content, laid out beneath the table's header
+ * and outside the `<table>`, so the column names stay as context for what is missing.
+ *
+ * @param handle Runtime handle carrying the host `<div>`'s props.
+ * @returns The render function producing the slot.
+ * @example
+ * <Table.Container>
+ * 	<Table aria-label={t("monitors.title")}><Table.Header>…</Table.Header></Table>
+ * 	<Table.Empty><Empty>…</Empty></Table.Empty>
+ * </Table.Container>
+ */
+Table.Empty = function TableEmpty(handle: Handle<Table.EmptyProps>) {
+	return () => {
+		let { mix, ...rest } = handle.props;
+
+		return (
+			<div
+				{...rest}
+				data-slot="table-empty"
+				mix={mergeMix([raw({ paddingBlock: "2.5rem", paddingInline: "1rem" })], mix)}
+			/>
+		);
+	};
+};
+
+/**
+ * Renders a failure in place of {@link Table.Body}: the message and a Retry slot centred
+ * across every column, announced as an alert, so the header and the page around it stay put.
+ *
+ * @param handle Runtime handle carrying the host `<tbody>`'s props.
+ * @returns The render function producing the body.
+ * @example
+ * <Table.Error colSpan={6} action={<LinkButton href={currentUrl}>{t("retry")}</LinkButton>}>
+ * 	{t("monitors.loadFailed")}
+ * </Table.Error>
+ */
+Table.Error = function TableError(handle: Handle<Table.ErrorProps>) {
+	return () => {
+		let { colSpan, children, action, mix, ...rest } = handle.props;
+
+		return (
+			<tbody {...rest} data-slot="error" mix={[mix]}>
+				<tr>
+					<td colSpan={colSpan} mix={[p("0")]}>
+						<div
+							role="alert"
+							mix={[
+								flex(),
+								items("center"),
+								justify("center"),
+								gap("0.75rem"),
+								fg("neutral"),
+								raw({
+									flexWrap: "wrap",
+									paddingBlock: "2rem",
+									paddingInline: "1rem",
+									textAlign: "center",
+								}),
+							]}
+						>
+							<span>{children}</span>
+							{action}
+						</div>
+					</td>
+				</tr>
+			</tbody>
 		);
 	};
 };
