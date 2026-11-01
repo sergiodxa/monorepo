@@ -27,7 +27,8 @@ For any component `<name>` (kebab-case):
 3. **Live catalogue**: `https://sdxc.dev/api/ui/<name>`, with previews in
    `apps/sdxc-site/resources/components/previews/<name>.tsx` and `previews/<name>/*.tsx`.
 4. **Real use**: grep the demos and Uptime (`rg "<FeatureBand" apps/sdxc-site/resources/views/demos apps/uptime`).
-5. **Overviews**: sdxc.dev `/api/ui/landing-patterns`, `/api/ui/landing-foundations`, `/api/ui/theming`,
+5. **Overviews**: sdxc.dev `/api/ui/landing-foundations` (what the namespace is for, its shared
+   ideas and every `--ui-landing-*` variable), `/api/ui/theming`, the demo gallery at `/demo`,
    and the guide `apps/sdxc-site/resources/docs/building-remix-apps/landing-pages.md`.
 
 ## Which piece for which section

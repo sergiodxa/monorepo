@@ -17,10 +17,9 @@ package once two sites need it, not in one app.
 2. Guarantees: `<name>.browser.test.tsx` beside it.
 3. Live catalogue: `https://sdxc.dev/api/ui/<name>` (listed under **Docs** in the catalogue sidebar).
 4. Real use: `rg "<Name" apps/sdxc-site apps/uptime apps/reader`.
-5. Overviews: sdxc.dev `/api/ui/docs-foundations` (shell measures, tokens, reading type, mixins),
-   `/api/ui/docs-components` (every component by job, with live previews) and
-   `/api/ui/docs-patterns` (shell, hub, reference page, task page and 404, each linked to a demo
-   docs page under `/demo/docs/{driftwood,lattice,tempo,parcelo}`).
+5. Overviews: sdxc.dev `/api/ui/docs-foundations` (what the namespace is for, its shared ideas
+   and every variable it reads) and the demo gallery at `/demo`, which links each docs demo
+   under `/demo/docs/{driftwood,lattice,tempo,parcelo}`.
 
 ## The docs kit
 
