@@ -108,7 +108,7 @@ export function DocsFeedback(handle: Handle<DocsFeedback.Props>) {
 							mix={[
 								flex(),
 								items("center"),
-								gap(2, 3),
+								gap(4, 3),
 								raw({ flexWrap: "wrap" }),
 								m(0),
 								p(0),

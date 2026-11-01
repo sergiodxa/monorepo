@@ -114,6 +114,18 @@ describe("DocsFeedback", () => {
 		expect(Number.parseFloat(getComputedStyle(legend).fontSize)).toBeLessThanOrEqual(16);
 	});
 
+	test("leaves room between the question and the votes once they wrap", () => {
+		let host = mount(
+			<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />,
+			200,
+		);
+		let question = host.querySelector("legend")!.getBoundingClientRect();
+		let vote = choice(host, "yes").getBoundingClientRect();
+
+		expect(vote.top).toBeGreaterThan(question.bottom);
+		expect(vote.top - question.bottom).toBeGreaterThanOrEqual(16);
+	});
+
 	test("fits a 320px viewport with the note open", async () => {
 		await page.viewport(320, 640);
 		let host = mount(
