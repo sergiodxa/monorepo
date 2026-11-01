@@ -2,6 +2,7 @@
  * The "Display" popover beside a list: layout, grouping, ordering, density and the visible
  * properties, each a field of one GET form, so the URL holds the view and a link shares it.
  * "Set as default" posts the same fields to an endpoint that stores them for the reader.
+ * Inline, it draws the fields alone, for a menu that already has a trigger.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -114,6 +115,11 @@ export namespace ViewOptions {
 		properties?: Properties;
 		/** Where "Set as default" posts the fields; omitted hides the button. */
 		setDefault?: { action: string };
+		/**
+		 * Draws the form in place, without its own trigger and popover, for a menu that holds
+		 * it among other view controls, such as a filter bar's `options`.
+		 */
+		inline?: boolean;
 		labels: Labels;
 	}
 }
@@ -147,6 +153,7 @@ export function ViewOptions(handle: Handle<ViewOptions.Props>) {
 			density,
 			properties,
 			setDefault,
+			inline,
 			labels,
 			mix,
 			...rest
@@ -166,6 +173,85 @@ export function ViewOptions(handle: Handle<ViewOptions.Props>) {
 			density ? names.density : null,
 			properties ? names.properties : null,
 		].filter((name): name is string => name !== null);
+		let form = (
+			<form
+				method="get"
+				action={action}
+				aria-label={inline ? labels.trigger : undefined}
+				mix={[vstack({ gap: 3 })]}
+			>
+				{carriedParams(url, owned).map(([name, value]) => (
+					<input type="hidden" name={name} value={value} />
+				))}
+				{layout ? (
+					<Segmented
+						name={names.layout}
+						label={labels.layout}
+						field={layout}
+						value={chosen(url, names.layout, layout)}
+					/>
+				) : null}
+				{grouping ? (
+					<SelectRow
+						id={`${id}-grouping`}
+						name={names.grouping}
+						label={labels.grouping}
+						field={grouping}
+						value={chosen(url, names.grouping, grouping)}
+					/>
+				) : null}
+				{ordering ? (
+					<SelectRow
+						id={`${id}-ordering`}
+						name={names.ordering}
+						label={labels.ordering}
+						field={ordering}
+						value={chosen(url, names.ordering, ordering)}
+					/>
+				) : null}
+				{density ? (
+					<Segmented
+						name={names.density}
+						label={labels.density}
+						field={density}
+						value={chosen(url, names.density, density)}
+					/>
+				) : null}
+				{properties ? (
+					<PropertyChips
+						name={names.properties}
+						label={labels.properties}
+						field={properties}
+						selected={shownProperties(url, names.properties, properties)}
+					/>
+				) : null}
+				<div mix={[flex(), items("center"), justify("end"), gap(2)]}>
+					{setDefault ? (
+						<Button
+							type="submit"
+							variant="ghost"
+							size="sm"
+							formMethod="post"
+							formAction={setDefault.action}
+							data-slot="view-options-default"
+						>
+							{labels.setDefault}
+						</Button>
+					) : null}
+					<Button type="submit" size="sm" color="brand" data-slot="view-options-apply">
+						{labels.apply}
+					</Button>
+				</div>
+			</form>
+		);
+
+		if (inline) {
+			return (
+				<div {...rest} data-slot="view-options" data-inline="" mix={mergeMix([minIs(0)], mix)}>
+					{form}
+				</div>
+			);
+		}
 
 		return (
 			<div {...rest} data-slot="view-options" mix={mergeMix([inlineBlock()], mix)}>
@@ -187,70 +273,7 @@ export function ViewOptions(handle: Handle<ViewOptions.Props>) {
 					aria-label={labels.trigger}
 					mix={[p(3), is("18rem"), maxIs("calc(100vw - 2rem)")]}
 				>
-					<form method="get" action={action} mix={[vstack({ gap: 3 })]}>
-						{carriedParams(url, owned).map(([name, value]) => (
-							<input type="hidden" name={name} value={value} />
-						))}
-						{layout ? (
-							<Segmented
-								name={names.layout}
-								label={labels.layout}
-								field={layout}
-								value={chosen(url, names.layout, layout)}
-							/>
-						) : null}
-						{grouping ? (
-							<SelectRow
-								id={`${id}-grouping`}
-								name={names.grouping}
-								label={labels.grouping}
-								field={grouping}
-								value={chosen(url, names.grouping, grouping)}
-							/>
-						) : null}
-						{ordering ? (
-							<SelectRow
-								id={`${id}-ordering`}
-								name={names.ordering}
-								label={labels.ordering}
-								field={ordering}
-								value={chosen(url, names.ordering, ordering)}
-							/>
-						) : null}
-						{density ? (
-							<Segmented
-								name={names.density}
-								label={labels.density}
-								field={density}
-								value={chosen(url, names.density, density)}
-							/>
-						) : null}
-						{properties ? (
-							<PropertyChips
-								name={names.properties}
-								label={labels.properties}
-								field={properties}
-								selected={shownProperties(url, names.properties, properties)}
-							/>
-						) : null}
-						<div mix={[flex(), items("center"), justify("end"), gap(2)]}>
-							{setDefault ? (
-								<Button
-									type="submit"
-									variant="ghost"
-									size="sm"
-									formMethod="post"
-									formAction={setDefault.action}
-									data-slot="view-options-default"
-								>
-									{labels.setDefault}
-								</Button>
-							) : null}
-							<Button type="submit" size="sm" color="brand" data-slot="view-options-apply">
-								{labels.apply}
-							</Button>
-						</div>
-					</form>
+					{form}
 				</Popover>
 			</div>
 		);
