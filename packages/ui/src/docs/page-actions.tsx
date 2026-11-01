@@ -154,14 +154,14 @@ export function PageActions(handle: Handle<PageActions.Props>) {
 
 /**
  * Client island: the main half of {@link PageActions}, loaded from the bare
- * `@sdxc/ui/page-actions` specifier. It copies `href`'s body, swaps its glyph and label to
+ * `@sdxc/ui/docs/page-actions` specifier. It copies `href`'s body, swaps its glyph and label to
  * the copied state for two seconds and announces it; before hydration it is inert.
  *
  * @example
  * <PageActionsCopy href="/docs/install.md" copy="Copy page" copied="Copied" failed="Could not copy" />
  */
 export const PageActionsCopy: EntryComponent<PageActions.CopyProps> = clientEntry(
-	"@sdxc/ui/page-actions#PageActionsCopy",
+	"@sdxc/ui/docs/page-actions#PageActionsCopy",
 	function PageActionsCopy(handle) {
 		return () => {
 			let { copied, copy, failed, href, joined = false } = handle.props;

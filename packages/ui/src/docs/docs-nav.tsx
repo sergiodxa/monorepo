@@ -61,7 +61,7 @@ export namespace DocsNav {
 /**
  * Renders the tree in reading order. A group whose `href` is set links its own page from
  * its summary, and every group is a native `<details>`, so folding needs no script. Load
- * `@sdxc/ui/docs-nav-tools` in the browser entry for the scroll-to-current and the filter.
+ * `@sdxc/ui/docs/docs-nav-tools` in the browser entry for the scroll-to-current and the filter.
  *
  * @example
  * <DocsNav tree={tree} activePath={url.pathname} />

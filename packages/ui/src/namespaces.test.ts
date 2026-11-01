@@ -80,4 +80,19 @@ describe("@sdxc/ui namespaces", () => {
 		);
 		expect(offenders.map((file) => relative(SRC, file))).toEqual([]);
 	});
+
+	test("every island declares the specifier its file is imported by", () => {
+		let wrong: string[] = [];
+		for (let folder of ["components", ...NAMESPACES]) {
+			for (let file of modulesIn(folder)) {
+				let source = readFileSync(file, "utf8");
+				let id = /clientEntry\(\s*"([^"#]+)#/.exec(source)?.[1];
+				if (id === undefined) continue;
+				let name = relative(join(SRC, folder), file).replace(/\.tsx$/, "");
+				let expected = folder === "components" ? `@sdxc/ui/${name}` : `@sdxc/ui/${folder}/${name}`;
+				if (id !== expected) wrong.push(`${relative(SRC, file)}: ${id} (expected ${expected})`);
+			}
+		}
+		expect(wrong).toEqual([]);
+	});
 });

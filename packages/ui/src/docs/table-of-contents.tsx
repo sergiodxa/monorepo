@@ -69,7 +69,7 @@ export namespace TableOfContents {
 
 /**
  * Renders the in-page navigation, or nothing when the page has fewer than `minItems`
- * headings. Load `@sdxc/ui/table-of-contents` in the browser entry. Headings that the
+ * headings. Load `@sdxc/ui/docs/table-of-contents` in the browser entry. Headings that the
  * page's layout gives a `scroll-margin-top` set the line a section is read from.
  *
  * @example
@@ -78,7 +78,7 @@ export namespace TableOfContents {
  * <TableOfContents items={anchors} label="On this page" layout="bar" />
  */
 export const TableOfContents: EntryComponent<TableOfContents.Props> = clientEntry(
-	"@sdxc/ui/table-of-contents#TableOfContents",
+	"@sdxc/ui/docs/table-of-contents#TableOfContents",
 	function TableOfContents(handle: Handle<TableOfContents.Props>) {
 		return () => {
 			let { items, label, layout = "rail", minItems = TOC_MIN_ITEMS } = handle.props;

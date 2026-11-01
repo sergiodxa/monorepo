@@ -113,7 +113,7 @@ export namespace DocsLayout {
 
 /**
  * Renders the three columns and their narrow-screen fallbacks. Load
- * `@sdxc/ui/table-of-contents` and `@sdxc/ui/dialog-dismiss` in the browser entry. Headings
+ * `@sdxc/ui/docs/table-of-contents` and `@sdxc/ui/dialog-dismiss` in the browser entry. Headings
  * with an `id` in the article get a `scroll-margin-top` that clears the sticky chrome, and
  * `--ui-docs-scroll-margin` carries the same offset for anything else jumped to.
  *

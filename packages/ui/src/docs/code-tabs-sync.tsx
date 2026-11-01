@@ -29,11 +29,11 @@ export type CodeTabsSyncProps = {
 
 /**
  * Renders a hidden marker carrying {@link codeTabsSync}. `CodeTabs` renders it whenever it
- * has a `syncKey`; the island loads from the bare `@sdxc/ui/code-tabs-sync` specifier,
+ * has a `syncKey`; the island loads from the bare `@sdxc/ui/docs/code-tabs-sync` specifier,
  * which the app's browser entry maps to a dynamic import.
  */
 export const CodeTabsSync: EntryComponent<CodeTabsSyncProps> = clientEntry(
-	"@sdxc/ui/code-tabs-sync#CodeTabsSync",
+	"@sdxc/ui/docs/code-tabs-sync#CodeTabsSync",
 	function CodeTabsSync(handle) {
 		return () => (
 			<span mix={[hidden(), codeTabsSync(handle.props.syncKey, handle.props.persist)]} />

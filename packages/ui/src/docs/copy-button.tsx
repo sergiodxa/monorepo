@@ -37,7 +37,7 @@ export type CopyButtonProps = {
 };
 
 /**
- * Renders the button. The island loads from the bare `@sdxc/ui/copy-button` specifier,
+ * Renders the button. The island loads from the bare `@sdxc/ui/docs/copy-button` specifier,
  * which the app's browser entry maps to a dynamic import; until then the button is inert
  * and the code beside it stays selectable.
  *
@@ -46,7 +46,7 @@ export type CopyButtonProps = {
  * <CopyButton target="install" label={t("code.copy")} copiedLabel={t("code.copied")} />
  */
 export const CopyButton: EntryComponent<CopyButtonProps> = clientEntry(
-	"@sdxc/ui/copy-button#CopyButton",
+	"@sdxc/ui/docs/copy-button#CopyButton",
 	function CopyButton(handle) {
 		return () => {
 			let { copiedLabel, label, target } = handle.props;

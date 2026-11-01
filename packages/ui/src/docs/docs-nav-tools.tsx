@@ -26,10 +26,10 @@ export namespace DocsNavTools {
 
 /**
  * Renders the filter field, hidden until it loads, inside the nav it enhances. `DocsNav`
- * places it; load `@sdxc/ui/docs-nav-tools` in the browser entry.
+ * places it; load `@sdxc/ui/docs/docs-nav-tools` in the browser entry.
  */
 export const DocsNavTools: EntryComponent<DocsNavTools.Props> = clientEntry(
-	"@sdxc/ui/docs-nav-tools#DocsNavTools",
+	"@sdxc/ui/docs/docs-nav-tools#DocsNavTools",
 	function DocsNavTools(handle: Handle<DocsNavTools.Props>) {
 		return () => {
 			let { filter } = handle.props;
