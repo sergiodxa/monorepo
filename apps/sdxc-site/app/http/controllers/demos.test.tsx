@@ -79,7 +79,12 @@ describe("GET /demo", () => {
 		for (let [tag] of miniatures) expect(tag).toContain('aria-hidden="true"');
 		expect(body.indexOf('href="/demo/saas"')).toBeLessThan(body.indexOf('href="/demo/book"'));
 		expect(body.indexOf('href="/demo/book"')).toBeLessThan(body.indexOf('href="/demo/app"'));
-		expect(body).toMatch(/data-span="2"[^]*?href="\/demo\/saas"/);
+	});
+
+	test("gives every card the same size, so the grid rounds its own outer corners", async () => {
+		let body = await (await fetchApp("/demo")).text();
+
+		expect(body).not.toMatch(/<[a-z][^<>]*\sdata-span="/);
 	});
 
 	test("introduces the demos with the counts it lists and a link to their source", async () => {

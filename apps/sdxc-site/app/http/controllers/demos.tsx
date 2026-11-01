@@ -40,7 +40,7 @@ const DEMOS_SOURCE_HREF =
 const DEMO_ROBOTS = "noindex, nofollow";
 
 /**
- * The flagship landings, in the order the bento leads with them; the first takes a whole row.
+ * The flagship landings, in the order the gallery leads with them.
  * A demo missing from the list follows them in slug order.
  */
 const FLAGSHIP_LANDINGS = ["saas", "book"];
@@ -75,11 +75,10 @@ export default createAction(routes.demos, async (ctx) => {
 				</Hero>
 
 				<SectionBlock id="landings" title="Landing pages" tone="tinted">
-					<Feature.Grid columns={2}>
-						{landings.map((demo, index) => (
+					<Feature.Grid columns={3}>
+						{landings.map((demo) => (
 							<DemoCard
 								key={demo.slug}
-								span={index === 0 ? 2 : undefined}
 								thumbnail={demo.thumbnail()}
 								href={routes.demo.href({ slug: demo.slug })}
 								name={demo.title.split(" — ")[0] ?? demo.title}
@@ -127,8 +126,6 @@ namespace DemoCard {
 		artDirection: string;
 		/** The demo in miniature, drawn in its own art direction above the card's text. */
 		thumbnail: RemixNode;
-		/** How many tracks the card takes in the bento, for a flagship demo. */
-		span?: 2;
 	}
 }
 
@@ -138,10 +135,9 @@ namespace DemoCard {
  */
 function DemoCard(handle: Handle<DemoCard.Props>) {
 	return () => {
-		let { artDirection, href, kind, name, span, tagline, thumbnail } = handle.props;
+		let { artDirection, href, kind, name, tagline, thumbnail } = handle.props;
 		return (
 			<Feature
-				span={span}
 				mix={[
 					raw({ transition: "background-color 150ms" }),
 					when(
