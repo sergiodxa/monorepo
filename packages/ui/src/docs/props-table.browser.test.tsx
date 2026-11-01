@@ -12,6 +12,8 @@ import type { RemixNode } from "remix/component";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { Typeset } from "../components/typeset.js";
+
 import { PropsTable } from "./props-table.js";
 
 import "../theme.css";
@@ -137,5 +139,28 @@ describe("PropsTable", () => {
 		expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
 		expect(box.getBoundingClientRect().width).toBeLessThanOrEqual(320);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+	});
+
+	test("lines labels up across a stacked card, the type as wide as every other value", () => {
+		let box = mount(<PropsTable rows={ROWS} labels={LABELS} />, 480);
+		let row = box.querySelector<HTMLElement>("table > tbody > tr[data-row]")!;
+		let type = row.querySelector<HTMLElement>('[data-cell="type"]')!.getBoundingClientRect();
+		let required = row
+			.querySelector<HTMLElement>('[data-cell="required"]')!
+			.getBoundingClientRect();
+		expect(Math.abs(type.width - required.width)).toBeLessThan(1);
+	});
+
+	test("keeps Typeset's prose table rules off its own table", () => {
+		let box = mount(
+			<Typeset preset="docs">
+				<PropsTable rows={ROWS} labels={LABELS} />
+			</Typeset>,
+		);
+		let plain = mount(<PropsTable rows={ROWS} labels={LABELS} />);
+		let cell = (root: HTMLElement) =>
+			getComputedStyle(root.querySelector<HTMLElement>('[data-cell="type"]')!);
+		expect(cell(box).paddingInlineStart).toBe(cell(plain).paddingInlineStart);
+		expect(cell(box).borderInlineStartWidth).toBe(cell(plain).borderInlineStartWidth);
 	});
 });

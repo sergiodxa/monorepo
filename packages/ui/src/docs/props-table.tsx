@@ -128,7 +128,7 @@ function RowsTable(handle: Handle<RowsTableProps>) {
 		];
 
 		return (
-			<table aria-label={label} mix={[text("sm"), tableRules(nested)]}>
+			<table aria-label={label} data-not-typeset="" mix={[text("sm"), tableRules(nested)]}>
 				<thead mix={nested ? [visuallyHidden()] : []}>
 					<tr>
 						{columns.map((column) => (
@@ -206,6 +206,8 @@ function tableRules(nested: boolean) {
 			paddingInline: 0,
 		},
 		"& > tbody > tr > td[data-label]": {
+			minInlineSize: 0,
+			maxInlineSize: "none",
 			display: "grid",
 			gridTemplateColumns: "minmax(5.5rem, 30%) minmax(0, 1fr)",
 			columnGap: "0.75rem",
