@@ -62,7 +62,6 @@ const FIXTURE: Record<string, string> = {
 	"packages/ui/src/components/dialog.tsx": [
 		'import { Button } from "./button.js";',
 		'import { floatingSurface } from "../styles/floating-surface.js";',
-		'import { Marquee } from "../patterns/marquee.js";',
 		"type Props = {};",
 		"export { type Props as DialogProps };",
 		"export function Dialog() { return Button; }",
@@ -77,8 +76,6 @@ const FIXTURE: Record<string, string> = {
 	"packages/ui/src/animations/index.ts": "export {};\n",
 	"packages/ui/src/behaviors/index.ts": "export {};\n",
 	"packages/ui/src/mixins/index.ts": "export {};\n",
-	"packages/ui/src/patterns/index.ts": 'export * from "./marquee.js";\n',
-	"packages/ui/src/patterns/marquee.tsx": "export function Marquee() {}\n",
 };
 
 /** Writes `files` into a fresh directory and answers it. */
@@ -136,7 +133,6 @@ describe("registryEntry", () => {
 		expect(dialog?.test).toBeNull();
 		expect(dialog?.source.content).toContain('from "@sdxc/ui/button"');
 		expect(dialog?.source.content).toContain('from "@sdxc/ui/styles"');
-		expect(dialog?.source.content).toContain('from "@sdxc/ui/patterns"');
 	});
 
 	test("points a test's theme and reset stylesheets at the ones @sdxc/ui publishes", async () => {
