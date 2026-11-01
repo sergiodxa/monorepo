@@ -245,7 +245,16 @@ const APP: Foundations = {
 					default: "1px, 6 4",
 					controls: "A Chart.Threshold line.",
 				},
-				{ name: "--ui-chart-band-opacity", default: "0.1", controls: "Fill of a Chart.Band." },
+				{
+					name: "--ui-chart-band-opacity, --ui-chart-band-opacity-dark",
+					default: "0.08, 0.12",
+					controls: "Fill of a Chart.Band in a light and a dark colour scheme.",
+				},
+				{
+					name: "--ui-chart-band-edge-width, --ui-chart-band-edge-dash",
+					default: "1px, 4 3",
+					controls: "The dashed rules at a Chart.Band's edges.",
+				},
 			],
 		},
 		{
