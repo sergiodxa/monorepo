@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-31
+**Implemented** - 2026-10-31
 
 ## Background
 
@@ -230,13 +230,15 @@ codes for CI and agents.
 
 ## Current Progress
 
-- [ ] Phase 1: Convention
-- [ ] Phase 2: First wave
-  - [ ] `jwt`
-  - [ ] `crypto`
-  - [ ] `web-push`
-  - [ ] `diagram`
-  - [ ] `qr`
-  - [ ] `email-auth`
-  - [ ] `openapi`
-- [ ] Phase 3: Translation check
+- [x] Phase 1: Convention (`AGENTS.md` rule, `test/package-bins.test.ts`)
+- [x] Phase 2: First wave: `jwt`, `crypto`, `web-push`, `diagram`, `qr`, `email-auth`, `openapi`
+- [x] Phase 3: Translation check (`sdxc doctor --only translations`)
+- [x] Later candidates shipped alongside: `cron`, `distill`, `doh`, `email-address`, `font`,
+      `html`, `http-signatures`, `icalendar`, `ip`, `jscalendar`, `jscontact`, `jsdoc`,
+      `json-canonical`, `json-patch`, `jsonpath`, `merge-patch`, `openpgp`, `rdap`, `robots`,
+      `security-headers`, `semver`, `sitemap`, `typeid`, `user-agent`, `uuid`, `webmention`,
+      `well-known`, `zone-file`
+- [x] Guides: "Use a package from the terminal" on sdxc.dev, and a terminal section in each
+      package's guide
+- [ ] `jsonc`
+- [ ] Format converters: `yaml`, `csv`, `jsonl`, `opml`, `feed`
