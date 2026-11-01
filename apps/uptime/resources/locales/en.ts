@@ -1329,6 +1329,16 @@ export default {
 		},
 
 		layout: {
+			keys: {
+				group: "List",
+				next: "Next row",
+				previous: "Previous row",
+				open: "Open row",
+				toggle: "Select row",
+				search: "Search the list",
+				selected: "Row selected",
+				deselected: "Row deselected",
+			},
 			shell: {
 				nav: "Main",
 				skip: "Skip to content",
@@ -2412,7 +2422,7 @@ export default {
 					open: "Open quick check",
 				},
 				result: {
-					/** Names the toast region a finished check is reported in. */
+					/** Names the output beside the bar a finished check is reported in. */
 					label: "Check result",
 					noResponse: "No response",
 					status: {
@@ -2526,7 +2536,29 @@ export default {
 			panel: {
 				tabsLabel: "Monitor type",
 				tabPanelLabel: "{$tab} monitors",
-				refresh: "Refresh",
+				autoRefresh: {
+					trigger: "Auto-refresh",
+					updated: "Updated",
+					off: "Off",
+				},
+				columns: {
+					responseTime: "Response time",
+					lastChecked: "Last checked",
+					lastPing: "Last ping",
+				},
+				dnsStatus: {
+					ok: "OK",
+					changed: "Changed",
+					error: "Error",
+				},
+				/** Names one row's response-time sparkline for assistive tech. */
+				latencyTrend: "Response time trend for {$name}",
+			},
+
+			/** Names the two rows of stat cards for assistive tech. */
+			groups: {
+				summary: "Usage and uptime",
+				counts: "Monitors by type",
 			},
 
 			error: {
@@ -2880,6 +2912,16 @@ export default {
 			},
 			ownerOnly: "Only the team owner can view and manage billing for this team.",
 			unavailable: "Billing is temporarily unavailable. Please try again in a few minutes.",
+			retry: "Try again",
+
+			banner: {
+				region: "Billing",
+				owner:
+					"Your last payment didn't go through, so monitoring is paused. Update your payment method to resume checks.",
+				member:
+					"The team owner's last payment didn't go through, so monitoring is paused. Ask them to update the payment method.",
+				cta: "Update payment method",
+			},
 		},
 
 		members: {
@@ -3262,7 +3304,27 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Check the highlighted fields and try again.",
+					name: "Give the alert a name of up to 255 characters.",
+					scope: "Pick a scope from the list. The monitor this one named is gone.",
+					strategy: "Pick a channel from the list.",
+					cooldownMinutes: "Enter a whole number of minutes from 0 to 1440.",
+					emailTo: "Enter the email address to send alerts to.",
+					webhookUrl: "Enter the full URL of your endpoint, starting with https://.",
+					slackWebhookUrl: "Enter a Slack incoming webhook URL, on hooks.slack.com.",
+					discordWebhookUrl: "Enter a Discord webhook URL, on discord.com/api/webhooks.",
+					pagerdutyRoutingKey: "Enter the integration key from your PagerDuty service.",
+				},
+
 				cta: "Create Alert",
+			},
+
+			toasts: {
+				created: "Alert “{$name}” created",
+				updated: "Alert “{$name}” saved",
+				deleted: "Alert “{$name}” deleted",
 			},
 
 			table: {
@@ -3419,8 +3481,23 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Check the highlighted fields and try again.",
+					name: "Give the page an internal name of up to 255 characters.",
+					slug: "Use up to 63 lowercase letters, numbers and hyphens, such as “acme-status”.",
+					slugTaken: "Another status page already uses this slug. Pick a different one.",
+					title: "Give the page a public title of up to 255 characters.",
+				},
+
 				cta: "Create Status Page",
 				ctaUpdate: "Save Changes",
+			},
+
+			toasts: {
+				created: "Status page “{$name}” created",
+				updated: "Status page “{$name}” saved",
+				deleted: "Status page “{$name}” deleted",
 			},
 		},
 
@@ -3452,6 +3529,7 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Edit Status Page",
+				named: "Edit {$name}",
 			},
 			form: {
 				sections: {
@@ -3533,6 +3611,61 @@ export default {
 			},
 		},
 
+		httpMonitorsList: {
+			filters: {
+				toolbar: "Filter monitors",
+				tabs: "Monitor views",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				status: "Status",
+				search: {
+					label: "Search monitors",
+					placeholder: "Search by name or URL…",
+				},
+			},
+			noResults: {
+				title: "No monitors match",
+				description: "Try another search, or clear the filters to see every monitor.",
+			},
+		},
+
+		monitorDetail: {
+			more: "More actions",
+			statsLabel: "Monitor stats",
+			history: {
+				title: "Last 90 days",
+				label: "Uptime, last 90 days",
+				period: "{$percentage}% · {$successful} of {$total} checks",
+				noData: "No checks",
+			},
+			properties: {
+				title: "Configuration",
+				url: "URL",
+				interval: "Checks",
+				intervalValue: "Every {$minutes} min",
+				expectedStatus: "Expected status",
+				region: "Region",
+				noRegion: "Default region",
+				lastResponse: "Last response",
+				lastChecked: "Last checked",
+			},
+		},
+
+		monitorForm: {
+			errors: {
+				name: "Enter a name, up to 255 characters.",
+				url: "Enter a full URL, starting with http:// or https://.",
+				expectedStatus: "Pick an HTTP status code between 100 and 599.",
+				interval: "Pick an interval between 1 and 60 minutes.",
+				region: "Pick a region from the list.",
+				importUrls: "Paste at least one URL, one per line, up to {$limit}.",
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "HTTP Monitors",
@@ -3579,6 +3712,34 @@ export default {
 		},
 
 		dnsMonitors: {
+			filters: {
+				toolbar: "Filter DNS monitors",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				search: "Search DNS monitors",
+				searchPlaceholder: "Search by name or domain",
+				status: "Status",
+			},
+
+			noResults: {
+				title: "No DNS monitors match",
+				description: "Try a different search, or clear the filters to see every monitor.",
+			},
+
+			form: {
+				issues: {
+					summary: "Some fields need fixing. Everything you typed is still here.",
+					name: "Enter a name of up to 255 characters.",
+					domain: "Enter a domain name of up to 255 characters, such as example.com.",
+					interval: "Choose one of the listed intervals.",
+					registrationWarningDays: "Enter a number of days from 1 to 365.",
+				},
+			},
+
 			header: {
 				title: "DNS Monitors",
 
@@ -3780,6 +3941,13 @@ export default {
 		},
 
 		dnsMonitorDetail: {
+			overflow: {
+				label: "More actions",
+				review: "Review records",
+			},
+
+			configuration: "Configuration",
+
 			header: {
 				title: 'DNS Monitor "{$name}"',
 
@@ -4119,6 +4287,13 @@ export default {
 					deleteMaintenance: "Are you sure you want to delete '{$name}'?",
 				},
 			},
+
+			toasts: {
+				created: "Maintenance “{$name}” scheduled",
+				updated: "Maintenance “{$name}” saved",
+				deleted: "Maintenance “{$name}” deleted",
+				ended: "Maintenance “{$name}” ended",
+			},
 		},
 
 		createMaintenance: {
@@ -4293,6 +4468,16 @@ export default {
 							"daily:HH:MM-HH:MM, weekly:<day>:HH:MM-HH:MM, or monthly:<day-of-month>:HH:MM-HH:MM, in UTC.",
 					},
 				},
+
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Check the highlighted fields and try again.",
+					name: "Give the window a name of up to 255 characters.",
+					scope: "Pick a scope from the list. The monitor this one named is gone.",
+					startsAt: "Enter the date and time the window starts, in UTC.",
+					endsAt: "Enter the date and time the window ends, in UTC.",
+					endsBeforeStart: "End the window after it starts.",
+				},
 			},
 		},
 
@@ -4391,6 +4576,24 @@ export default {
 		alertHistory: {
 			header: {
 				title: "Alert History",
+				description: "The latest {$limit} deliveries, newest first.",
+			},
+
+			filters: {
+				toolbar: "Filter alert history",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				event: "Event",
+				status: "Delivery",
+			},
+
+			noResults: {
+				title: "No deliveries match these filters",
+				description: "Remove a filter to see more of the history.",
 			},
 
 			breadcrumbs: {
@@ -4569,6 +4772,7 @@ export default {
 		editAlert: {
 			header: {
 				title: "Edit Alert",
+				named: "Edit {$name}",
 			},
 
 			form: {
@@ -4911,6 +5115,12 @@ export default {
 				title: "Account",
 			},
 
+			nav: "Account sections",
+
+			deleteConfirm: {
+				title: "Delete your account?",
+			},
+
 			form: {
 				actions: {
 					cancel: "Cancel",
@@ -5125,6 +5335,22 @@ export default {
 		settings: {
 			header: {
 				title: "Team Settings",
+			},
+
+			nav: "Team settings",
+
+			invite: {
+				title: "Invite a teammate",
+				description: "They get an email with a link to join this team.",
+			},
+
+			fieldErrors: {
+				name: "Enter a team name.",
+			},
+
+			deleteConfirm: {
+				title: "Delete {$name}?",
+				label: 'Type "{$name}" to confirm',
 			},
 
 			alert: {
@@ -5359,7 +5585,7 @@ export default {
 		flowMonitorDetail: {
 			header: {
 				breadcrumb: { flowMonitors: "Flow Monitors" },
-				action: { edit: "Edit" },
+				action: { edit: "Edit", more: "More actions" },
 			},
 
 			info: {
@@ -5367,6 +5593,8 @@ export default {
 				interval: "Runs every",
 				lastChecked: "Last checked",
 				enabled: "Enabled",
+				monitoring: "Monitoring",
+				active: "Active",
 			},
 
 			stats: {
@@ -5414,6 +5642,42 @@ export default {
 				description:
 					"A flow monitor runs several requests in order and checks what comes back — sign in, read the token, call the endpoint it authorises. It answers the question a single request cannot.",
 				cta: "Create your first flow monitor",
+			},
+
+			filters: {
+				toolbar: "Filter flow monitors",
+				tabs: "Flow monitor views",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				status: "Status",
+				search: {
+					label: "Search flow monitors",
+					placeholder: "Search by name…",
+				},
+			},
+
+			noResults: {
+				title: "No flow monitors match",
+				description: "Try another name, or clear the filters to see every flow monitor.",
+			},
+
+			form: {
+				errors: {
+					name: "Enter a name of up to 255 characters.",
+					source: "Write the flow, in up to 20,000 characters.",
+					interval: "Choose how often the flow runs.",
+					generic: "Check the flow monitor's details and try again.",
+				},
+			},
+
+			toast: {
+				created: "Flow monitor {$name} created",
+				updated: "{$name} updated",
+				deleted: "{$name} deleted",
 			},
 
 			table: {
@@ -5569,6 +5833,35 @@ export default {
 			},
 		},
 		tcpMonitors: {
+			filters: {
+				toolbar: "Filter TCP monitors",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				search: "Search TCP monitors",
+				searchPlaceholder: "Search by name or host",
+				status: "Status",
+			},
+
+			noResults: {
+				title: "No TCP monitors match",
+				description: "Try a different search, or clear the filters to see every monitor.",
+			},
+
+			form: {
+				issues: {
+					summary: "Some fields need fixing. Everything you typed is still here.",
+					name: "Enter a name of up to 255 characters.",
+					host: "Enter a host name or IP address of up to 255 characters.",
+					port: "Enter a port from 1 to 65535.",
+					interval: "Enter an interval from 60 to 86400 seconds.",
+					timeout: "Enter a timeout from 100 to 60000 milliseconds.",
+				},
+			},
+
 			header: {
 				title: "TCP Monitors",
 				action: {
@@ -5753,6 +6046,10 @@ export default {
 		},
 
 		tcpMonitorDetail: {
+			overflow: {
+				label: "More actions",
+			},
+
 			header: {
 				breadcrumb: {
 					tcpMonitors: "TCP Monitors",
@@ -5818,6 +6115,16 @@ export default {
 				action: {
 					create: "Create API Key",
 				},
+			},
+
+			list: {
+				created: "Created",
+				deleteTitle: "Delete API key?",
+			},
+
+			fieldErrors: {
+				name: "Enter a name for the key.",
+				scopes: "Select at least one permission.",
 			},
 
 			docsLink: {
@@ -6004,6 +6311,37 @@ export default {
 				cta: "Create Cron Job",
 			},
 
+			filters: {
+				toolbar: "Filter cron jobs",
+				tabs: "Cron job views",
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+				status: "Status",
+				search: {
+					label: "Search cron jobs",
+					placeholder: "Search by name…",
+				},
+			},
+
+			noResults: {
+				title: "No cron jobs match",
+				description: "Try another name, or clear the filters to see every cron job.",
+			},
+
+			form: {
+				errors: {
+					name: "Enter a name of up to 255 characters.",
+					description: "Check the description and try again.",
+					cronExpression: "Enter a cron expression, such as 0 * * * *.",
+					timezone: "Choose a timezone from the list.",
+					gracePeriod: "Set a grace period between 60 and 86,400 seconds.",
+				},
+			},
+
 			table: {
 				label: "Cron Job Monitors",
 				columns: {
@@ -6023,6 +6361,7 @@ export default {
 				disabled: "Disabled",
 				actions: {
 					edit: "Edit",
+					editNamed: "Edit {$name}",
 					delete: "Delete",
 					confirmation: {
 						delete: "Are you sure you want to delete {$name}?",
@@ -6205,6 +6544,7 @@ export default {
 				action: {
 					edit: "Edit",
 					delete: "Delete",
+					more: "More actions",
 				},
 			},
 
@@ -6224,6 +6564,17 @@ export default {
 				gracePeriod: "Grace Period",
 				gracePeriodValue: "{$duration} grace",
 				description: "Description",
+				expression: "Expression",
+				alertOnLate: "Alert on late",
+				monitoring: "Monitoring",
+				on: "On",
+				off: "Off",
+				active: "Active",
+				paused: "Paused",
+			},
+
+			history: {
+				label: "Ping history, last 90 days",
 			},
 
 			stats: {

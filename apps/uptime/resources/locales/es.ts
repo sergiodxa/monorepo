@@ -1278,6 +1278,16 @@ export default {
 		},
 
 		layout: {
+			keys: {
+				group: "Lista",
+				next: "Fila siguiente",
+				previous: "Fila anterior",
+				open: "Abrir fila",
+				toggle: "Seleccionar fila",
+				search: "Buscar en la lista",
+				selected: "Fila seleccionada",
+				deselected: "Fila deseleccionada",
+			},
 			shell: {
 				nav: "Principal",
 				skip: "Saltar al contenido",
@@ -2465,7 +2475,27 @@ export default {
 			panel: {
 				tabsLabel: "Tipo de monitor",
 				tabPanelLabel: "Monitores de {$tab}",
-				refresh: "Actualizar",
+				autoRefresh: {
+					trigger: "Actualización automática",
+					updated: "Actualizado",
+					off: "Desactivada",
+				},
+				columns: {
+					responseTime: "Tiempo de respuesta",
+					lastChecked: "Última comprobación",
+					lastPing: "Último ping",
+				},
+				dnsStatus: {
+					ok: "OK",
+					changed: "Cambiado",
+					error: "Error",
+				},
+				latencyTrend: "Tendencia del tiempo de respuesta de {$name}",
+			},
+
+			groups: {
+				summary: "Uso y disponibilidad",
+				counts: "Monitores por tipo",
 			},
 
 			error: {
@@ -2825,6 +2855,16 @@ export default {
 				"Solo el propietario del equipo puede ver y gestionar la facturación de este equipo.",
 			unavailable:
 				"La facturación no está disponible temporalmente. Vuelve a intentarlo en unos minutos.",
+			retry: "Reintentar",
+
+			banner: {
+				region: "Facturación",
+				owner:
+					"Tu último pago no se completó, así que la monitorización está en pausa. Actualiza tu método de pago para reanudar las comprobaciones.",
+				member:
+					"El último pago del propietario del equipo no se completó, así que la monitorización está en pausa. Pídele que actualice el método de pago.",
+				cta: "Actualizar método de pago",
+			},
 		},
 
 		members: {
@@ -3213,7 +3253,28 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Revisa los campos marcados e inténtalo de nuevo.",
+					name: "Ponle a la alerta un nombre de hasta 255 caracteres.",
+					scope: "Elige un alcance de la lista. El monitor que indicaba ya no existe.",
+					strategy: "Elige un canal de la lista.",
+					cooldownMinutes: "Introduce un número entero de minutos entre 0 y 1440.",
+					emailTo: "Introduce la dirección de correo a la que enviar las alertas.",
+					webhookUrl: "Introduce la URL completa de tu endpoint, empezando por https://.",
+					slackWebhookUrl: "Introduce una URL de webhook entrante de Slack, en hooks.slack.com.",
+					discordWebhookUrl:
+						"Introduce una URL de webhook de Discord, en discord.com/api/webhooks.",
+					pagerdutyRoutingKey: "Introduce la clave de integración de tu servicio de PagerDuty.",
+				},
+
 				cta: "Crear Alerta",
+			},
+
+			toasts: {
+				created: "Alerta «{$name}» creada",
+				updated: "Alerta «{$name}» guardada",
+				deleted: "Alerta «{$name}» eliminada",
 			},
 
 			table: {
@@ -3368,8 +3429,23 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Revisa los campos marcados e inténtalo de nuevo.",
+					name: "Ponle a la página un nombre interno de hasta 255 caracteres.",
+					slug: "Usa hasta 63 letras minúsculas, números y guiones, como «acme-status».",
+					slugTaken: "Otra página de estado ya usa este slug. Elige uno distinto.",
+					title: "Ponle a la página un título público de hasta 255 caracteres.",
+				},
+
 				cta: "Crear Página de estado",
 				ctaUpdate: "Guardar cambios",
+			},
+
+			toasts: {
+				created: "Página de estado «{$name}» creada",
+				updated: "Página de estado «{$name}» guardada",
+				deleted: "Página de estado «{$name}» eliminada",
 			},
 		},
 
@@ -3400,6 +3476,7 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "Editar Página de estado",
+				named: "Editar {$name}",
 			},
 			form: {
 				sections: {
@@ -3483,6 +3560,61 @@ export default {
 			},
 		},
 
+		httpMonitorsList: {
+			filters: {
+				toolbar: "Filtrar monitores",
+				tabs: "Vistas de monitores",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es alguno de",
+				clear: "Quitar filtros",
+				remove: "Quitar {$field}: {$values}",
+				status: "Estado",
+				search: {
+					label: "Buscar monitores",
+					placeholder: "Buscar por nombre o URL…",
+				},
+			},
+			noResults: {
+				title: "Ningún monitor coincide",
+				description: "Pruebe otra búsqueda o quite los filtros para ver todos los monitores.",
+			},
+		},
+
+		monitorDetail: {
+			more: "Más acciones",
+			statsLabel: "Estadísticas del monitor",
+			history: {
+				title: "Últimos 90 días",
+				label: "Disponibilidad, últimos 90 días",
+				period: "{$percentage}% · {$successful} de {$total} comprobaciones",
+				noData: "Sin comprobaciones",
+			},
+			properties: {
+				title: "Configuración",
+				url: "URL",
+				interval: "Comprobaciones",
+				intervalValue: "Cada {$minutes} min",
+				expectedStatus: "Estado esperado",
+				region: "Región",
+				noRegion: "Región predeterminada",
+				lastResponse: "Última respuesta",
+				lastChecked: "Última comprobación",
+			},
+		},
+
+		monitorForm: {
+			errors: {
+				name: "Escriba un nombre de hasta 255 caracteres.",
+				url: "Escriba una URL completa, que empiece por http:// o https://.",
+				expectedStatus: "Elija un código de estado HTTP entre 100 y 599.",
+				interval: "Elija un intervalo de entre 1 y 60 minutos.",
+				region: "Elija una región de la lista.",
+				importUrls: "Pegue al menos una URL, una por línea, hasta {$limit}.",
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "Monitores HTTP",
@@ -3529,6 +3661,34 @@ export default {
 		},
 
 		dnsMonitors: {
+			filters: {
+				toolbar: "Filtrar monitores DNS",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es uno de",
+				clear: "Borrar filtros",
+				remove: "Quitar {$field}: {$values}",
+				search: "Buscar monitores DNS",
+				searchPlaceholder: "Buscar por nombre o dominio",
+				status: "Estado",
+			},
+
+			noResults: {
+				title: "Ningún monitor DNS coincide",
+				description: "Prueba otra búsqueda o borra los filtros para ver todos los monitores.",
+			},
+
+			form: {
+				issues: {
+					summary: "Algunos campos necesitan corrección. Todo lo que escribiste sigue aquí.",
+					name: "Escribe un nombre de hasta 255 caracteres.",
+					domain: "Escribe un nombre de dominio de hasta 255 caracteres, como example.com.",
+					interval: "Elige uno de los intervalos de la lista.",
+					registrationWarningDays: "Escribe un número de días entre 1 y 365.",
+				},
+			},
+
 			header: {
 				title: "Monitores DNS",
 
@@ -3736,6 +3896,13 @@ export default {
 		},
 
 		dnsMonitorDetail: {
+			overflow: {
+				label: "Más acciones",
+				review: "Revisar registros",
+			},
+
+			configuration: "Configuración",
+
 			header: {
 				title: 'Monitor DNS "{$name}"',
 
@@ -4079,6 +4246,13 @@ export default {
 					deleteMaintenance: "¿Está seguro de que desea eliminar '{$name}'?",
 				},
 			},
+
+			toasts: {
+				created: "Mantenimiento «{$name}» programado",
+				updated: "Mantenimiento «{$name}» guardado",
+				deleted: "Mantenimiento «{$name}» eliminado",
+				ended: "Mantenimiento «{$name}» finalizado",
+			},
 		},
 
 		createMaintenance: {
@@ -4255,6 +4429,16 @@ export default {
 							"daily:HH:MM-HH:MM, weekly:<día>:HH:MM-HH:MM, o monthly:<día-del-mes>:HH:MM-HH:MM, en UTC.",
 					},
 				},
+
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "Revisa los campos marcados e inténtalo de nuevo.",
+					name: "Ponle a la ventana un nombre de hasta 255 caracteres.",
+					scope: "Elige un alcance de la lista. El monitor que indicaba ya no existe.",
+					startsAt: "Introduce la fecha y hora de inicio de la ventana, en UTC.",
+					endsAt: "Introduce la fecha y hora de fin de la ventana, en UTC.",
+					endsBeforeStart: "Haz que la ventana termine después de empezar.",
+				},
 			},
 		},
 
@@ -4354,6 +4538,24 @@ export default {
 		alertHistory: {
 			header: {
 				title: "Historial de alertas",
+				description: "Los últimos {$limit} envíos, del más reciente al más antiguo.",
+			},
+
+			filters: {
+				toolbar: "Filtrar el historial de alertas",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es cualquiera de",
+				clear: "Quitar filtros",
+				remove: "Quitar {$field}: {$values}",
+				event: "Evento",
+				status: "Envío",
+			},
+
+			noResults: {
+				title: "Ningún envío coincide con estos filtros",
+				description: "Quita un filtro para ver más del historial.",
 			},
 
 			breadcrumbs: {
@@ -4528,6 +4730,7 @@ export default {
 		editAlert: {
 			header: {
 				title: "Editar Alerta",
+				named: "Editar {$name}",
 			},
 
 			form: {
@@ -4876,6 +5079,12 @@ export default {
 				title: "Cuenta",
 			},
 
+			nav: "Secciones de la cuenta",
+
+			deleteConfirm: {
+				title: "¿Eliminar tu cuenta?",
+			},
+
 			form: {
 				actions: {
 					cancel: "Cancelar",
@@ -5090,6 +5299,22 @@ export default {
 		settings: {
 			header: {
 				title: "Configuración del Equipo",
+			},
+
+			nav: "Configuración del equipo",
+
+			invite: {
+				title: "Invitar a un compañero",
+				description: "Recibirá un correo con un enlace para unirse a este equipo.",
+			},
+
+			fieldErrors: {
+				name: "Escribe un nombre para el equipo.",
+			},
+
+			deleteConfirm: {
+				title: "¿Eliminar {$name}?",
+				label: 'Escribe "{$name}" para confirmar',
 			},
 
 			alert: {
@@ -5326,7 +5551,7 @@ export default {
 		flowMonitorDetail: {
 			header: {
 				breadcrumb: { flowMonitors: "Monitores de flujo" },
-				action: { edit: "Editar" },
+				action: { edit: "Editar", more: "Más acciones" },
 			},
 
 			info: {
@@ -5334,6 +5559,8 @@ export default {
 				interval: "Se ejecuta cada",
 				lastChecked: "Última verificación",
 				enabled: "Habilitado",
+				monitoring: "Monitoreo",
+				active: "Activo",
 			},
 
 			stats: {
@@ -5374,6 +5601,43 @@ export default {
 				description:
 					"Un monitor de flujo ejecuta varias solicitudes en orden y comprueba lo que devuelven: inicia sesión, lee el token y llama al endpoint que ese token autoriza. Responde la pregunta que una sola solicitud no puede hacer.",
 				cta: "Cree su primer monitor de flujo",
+			},
+
+			filters: {
+				toolbar: "Filtrar monitores de flujo",
+				tabs: "Vistas de monitores de flujo",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es alguno de",
+				clear: "Quitar filtros",
+				remove: "Quitar {$field}: {$values}",
+				status: "Estado",
+				search: {
+					label: "Buscar monitores de flujo",
+					placeholder: "Buscar por nombre…",
+				},
+			},
+
+			noResults: {
+				title: "Ningún monitor de flujo coincide",
+				description:
+					"Pruebe con otro nombre o quite los filtros para ver todos los monitores de flujo.",
+			},
+
+			form: {
+				errors: {
+					name: "Escriba un nombre de hasta 255 caracteres.",
+					source: "Escriba el flujo, en un máximo de 20.000 caracteres.",
+					interval: "Elija con qué frecuencia se ejecuta el flujo.",
+					generic: "Revise los datos del monitor de flujo e inténtelo de nuevo.",
+				},
+			},
+
+			toast: {
+				created: "Monitor de flujo {$name} creado",
+				updated: "{$name} actualizado",
+				deleted: "{$name} eliminado",
 			},
 
 			table: {
@@ -5533,6 +5797,35 @@ export default {
 			},
 		},
 		tcpMonitors: {
+			filters: {
+				toolbar: "Filtrar monitores TCP",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es uno de",
+				clear: "Borrar filtros",
+				remove: "Quitar {$field}: {$values}",
+				search: "Buscar monitores TCP",
+				searchPlaceholder: "Buscar por nombre o host",
+				status: "Estado",
+			},
+
+			noResults: {
+				title: "Ningún monitor TCP coincide",
+				description: "Prueba otra búsqueda o borra los filtros para ver todos los monitores.",
+			},
+
+			form: {
+				issues: {
+					summary: "Algunos campos necesitan corrección. Todo lo que escribiste sigue aquí.",
+					name: "Escribe un nombre de hasta 255 caracteres.",
+					host: "Escribe un nombre de host o una dirección IP de hasta 255 caracteres.",
+					port: "Escribe un puerto entre 1 y 65535.",
+					interval: "Escribe un intervalo entre 60 y 86400 segundos.",
+					timeout: "Escribe un tiempo de espera entre 100 y 60000 milisegundos.",
+				},
+			},
+
 			header: {
 				title: "Monitores TCP",
 				action: {
@@ -5720,6 +6013,10 @@ export default {
 		},
 
 		tcpMonitorDetail: {
+			overflow: {
+				label: "Más acciones",
+			},
+
 			header: {
 				breadcrumb: {
 					tcpMonitors: "Monitores TCP",
@@ -5786,6 +6083,16 @@ export default {
 				action: {
 					create: "Crear clave API",
 				},
+			},
+
+			list: {
+				created: "Creada",
+				deleteTitle: "¿Eliminar la clave API?",
+			},
+
+			fieldErrors: {
+				name: "Escribe un nombre para la clave.",
+				scopes: "Selecciona al menos un permiso.",
 			},
 
 			docsLink: {
@@ -5973,6 +6280,37 @@ export default {
 				cta: "Crear Cron Job",
 			},
 
+			filters: {
+				toolbar: "Filtrar cron jobs",
+				tabs: "Vistas de cron jobs",
+				filters: "Filtros",
+				apply: "Aplicar",
+				is: "es",
+				isAnyOf: "es alguno de",
+				clear: "Quitar filtros",
+				remove: "Quitar {$field}: {$values}",
+				status: "Estado",
+				search: {
+					label: "Buscar cron jobs",
+					placeholder: "Buscar por nombre…",
+				},
+			},
+
+			noResults: {
+				title: "Ningún cron job coincide",
+				description: "Pruebe con otro nombre o quite los filtros para ver todos los cron jobs.",
+			},
+
+			form: {
+				errors: {
+					name: "Escriba un nombre de hasta 255 caracteres.",
+					description: "Revise la descripción e inténtelo de nuevo.",
+					cronExpression: "Escriba una expresión cron, como 0 * * * *.",
+					timezone: "Elija una zona horaria de la lista.",
+					gracePeriod: "Indique un período de gracia de entre 60 y 86.400 segundos.",
+				},
+			},
+
 			table: {
 				label: "Monitores de Cron Job",
 				columns: {
@@ -5992,6 +6330,7 @@ export default {
 				disabled: "Deshabilitado",
 				actions: {
 					edit: "Editar",
+					editNamed: "Editar {$name}",
 					delete: "Eliminar",
 					confirmation: {
 						delete: "¿Está seguro de que desea eliminar {$name}?",
@@ -6178,6 +6517,7 @@ export default {
 				action: {
 					edit: "Editar",
 					delete: "Eliminar",
+					more: "Más acciones",
 				},
 			},
 
@@ -6197,6 +6537,17 @@ export default {
 				gracePeriod: "Período de Gracia",
 				gracePeriodValue: "{$duration} de gracia",
 				description: "Descripción",
+				expression: "Expresión",
+				alertOnLate: "Alertar si llega tarde",
+				monitoring: "Monitoreo",
+				on: "Activada",
+				off: "Desactivada",
+				active: "Activo",
+				paused: "En pausa",
+			},
+
+			history: {
+				label: "Historial de pings, últimos 90 días",
 			},
 
 			stats: {

@@ -33,7 +33,9 @@ import { PageHeader } from "@sdxc/ui/app/page-header";
 import { Toasts } from "@sdxc/ui/app/toasts";
 import { menuKeys } from "@sdxc/ui/mixins";
 import { generateUUID } from "@sdxc/uuid/v4";
+import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
+import { Session } from "remix/session";
 
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { teamLogoUrl } from "~/app/services/team-logo";
@@ -72,10 +74,28 @@ namespace AppShell {
 		banner?: RemixNode;
 		/** Draws the sidebar as the icon rail; read from its cookie on the request when unset. */
 		collapsed?: boolean;
-		/** The session flash from the action that redirected here, shown as one toast. */
+		/**
+		 * The session flash from the action that redirected here, shown as one toast; read from the
+		 * request's session when a screen passes none.
+		 */
 		toast?: { intent: "success" | "error"; message: string };
 		children: RemixNode;
 	}
+}
+
+/** The `toast` flash every action sets before it redirects to a signed-in screen. */
+const TOAST_FLASH = s.object({
+	intent: s.enum_(["success", "error"]),
+	message: s.string(),
+});
+
+/**
+ * Reads the request's `toast` flash, which the session drops once this request ends; a flash of any other shape reads as none,
+ * since the session arrives from a cookie.
+ */
+function sessionFlash(): AppShell.Props["toast"] {
+	let parsed = s.parseSafe(TOAST_FLASH, getContext().get(Session)?.get("toast"));
+	return parsed.success ? parsed.value : undefined;
 }
 
 /** One sidebar destination. */
@@ -214,12 +234,13 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			));
 
 		let teamLogo = <Logo src={teamLogoUrl(team.logo)} name={team.name} />;
-		let flash = toast
+		let flashed = toast ?? sessionFlash();
+		let flash = flashed
 			? [
 					{
 						id: generateUUID(),
-						color: toast.intent === "success" ? ("success" as const) : ("danger" as const),
-						title: toast.message,
+						color: flashed.intent === "success" ? ("success" as const) : ("danger" as const),
+						title: flashed.message,
 					},
 				]
 			: [];

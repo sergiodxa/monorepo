@@ -1252,6 +1252,16 @@ export default {
 		},
 
 		layout: {
+			keys: {
+				group: "リスト",
+				next: "次の行",
+				previous: "前の行",
+				open: "行を開く",
+				toggle: "行を選択",
+				search: "リストを検索",
+				selected: "行を選択しました",
+				deselected: "行の選択を解除しました",
+			},
 			shell: {
 				nav: "メイン",
 				skip: "コンテンツへスキップ",
@@ -2435,7 +2445,27 @@ export default {
 			panel: {
 				tabsLabel: "モニタータイプ",
 				tabPanelLabel: "{$tab}モニター",
-				refresh: "更新",
+				autoRefresh: {
+					trigger: "自動更新",
+					updated: "更新",
+					off: "オフ",
+				},
+				columns: {
+					responseTime: "応答時間",
+					lastChecked: "最終チェック",
+					lastPing: "最終ping",
+				},
+				dnsStatus: {
+					ok: "OK",
+					changed: "変更あり",
+					error: "エラー",
+				},
+				latencyTrend: "{$name}の応答時間の推移",
+			},
+
+			groups: {
+				summary: "使用量と稼働率",
+				counts: "種類別のモニター",
 			},
 
 			error: {
@@ -2785,6 +2815,16 @@ export default {
 			},
 			ownerOnly: "このチームの請求情報を閲覧・管理できるのはチームオーナーのみです。",
 			unavailable: "請求機能は一時的にご利用いただけません。数分後にもう一度お試しください。",
+			retry: "再試行",
+
+			banner: {
+				region: "請求",
+				owner:
+					"前回のお支払いが完了しなかったため、監視は一時停止しています。チェックを再開するには支払い方法を更新してください。",
+				member:
+					"チームオーナーの前回のお支払いが完了しなかったため、監視は一時停止しています。オーナーに支払い方法の更新を依頼してください。",
+				cta: "支払い方法を更新",
+			},
 		},
 
 		members: {
@@ -3167,7 +3207,27 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "強調表示された項目を確認して、もう一度お試しください。",
+					name: "アラート名を255文字以内で入力してください。",
+					scope: "リストから範囲を選んでください。指定されていたモニターは削除されています。",
+					strategy: "リストからチャネルを選んでください。",
+					cooldownMinutes: "0〜1440の整数で分数を入力してください。",
+					emailTo: "アラートの送信先メールアドレスを入力してください。",
+					webhookUrl: "https:// から始まるエンドポイントの完全なURLを入力してください。",
+					slackWebhookUrl: "hooks.slack.com のSlack Incoming Webhook URLを入力してください。",
+					discordWebhookUrl: "discord.com/api/webhooks のDiscord Webhook URLを入力してください。",
+					pagerdutyRoutingKey: "PagerDutyサービスのインテグレーションキーを入力してください。",
+				},
+
 				cta: "アラートを作成",
+			},
+
+			toasts: {
+				created: "アラート「{$name}」を作成しました",
+				updated: "アラート「{$name}」を保存しました",
+				deleted: "アラート「{$name}」を削除しました",
 			},
 
 			table: {
@@ -3322,8 +3382,24 @@ export default {
 					},
 				},
 
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "強調表示された項目を確認して、もう一度お試しください。",
+					name: "内部名を255文字以内で入力してください。",
+					slug: "小文字の英字・数字・ハイフンを63文字以内で使ってください（例:「acme-status」）。",
+					slugTaken:
+						"このスラッグは別のステータスページで使われています。別のものを選んでください。",
+					title: "公開タイトルを255文字以内で入力してください。",
+				},
+
 				cta: "ステータスページを作成",
 				ctaUpdate: "変更を保存",
+			},
+
+			toasts: {
+				created: "ステータスページ「{$name}」を作成しました",
+				updated: "ステータスページ「{$name}」を保存しました",
+				deleted: "ステータスページ「{$name}」を削除しました",
 			},
 		},
 
@@ -3354,6 +3430,7 @@ export default {
 		editStatusPage: {
 			header: {
 				title: "ステータスページを編集",
+				named: "{$name}を編集",
 			},
 			form: {
 				sections: {
@@ -3435,6 +3512,62 @@ export default {
 			},
 		},
 
+		httpMonitorsList: {
+			filters: {
+				toolbar: "モニターを絞り込む",
+				tabs: "モニターの表示",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次と一致",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}: {$values} を外す",
+				status: "ステータス",
+				search: {
+					label: "モニターを検索",
+					placeholder: "名前または URL で検索…",
+				},
+			},
+			noResults: {
+				title: "一致するモニターはありません",
+				description:
+					"別の語句で検索するか、フィルターをクリアしてすべてのモニターを表示してください。",
+			},
+		},
+
+		monitorDetail: {
+			more: "その他の操作",
+			statsLabel: "モニターの統計",
+			history: {
+				title: "過去 90 日間",
+				label: "稼働率、過去 90 日間",
+				period: "{$percentage}% · {$total} 回中 {$successful} 回成功",
+				noData: "チェックなし",
+			},
+			properties: {
+				title: "設定",
+				url: "URL",
+				interval: "チェック",
+				intervalValue: "{$minutes} 分ごと",
+				expectedStatus: "期待するステータス",
+				region: "リージョン",
+				noRegion: "既定のリージョン",
+				lastResponse: "最後の応答",
+				lastChecked: "最終チェック",
+			},
+		},
+
+		monitorForm: {
+			errors: {
+				name: "255 文字以内で名前を入力してください。",
+				url: "http:// または https:// で始まる完全な URL を入力してください。",
+				expectedStatus: "100 から 599 までの HTTP ステータスコードを選んでください。",
+				interval: "1 分から 60 分までの間隔を選んでください。",
+				region: "一覧からリージョンを選んでください。",
+				importUrls: "1 行に 1 つずつ、{$limit} 件までの URL を貼り付けてください。",
+			},
+		},
+
 		httpMonitors: {
 			header: {
 				title: "HTTPモニター",
@@ -3481,6 +3614,35 @@ export default {
 		},
 
 		dnsMonitors: {
+			filters: {
+				toolbar: "DNSモニターを絞り込む",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次の値",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}: {$values} を解除",
+				search: "DNSモニターを検索",
+				searchPlaceholder: "名前またはドメインで検索",
+				status: "ステータス",
+			},
+
+			noResults: {
+				title: "一致するDNSモニターはありません",
+				description:
+					"別のキーワードで検索するか、フィルターをクリアしてすべてのモニターを表示してください。",
+			},
+
+			form: {
+				issues: {
+					summary: "修正が必要な項目があります。入力した内容はそのまま残っています。",
+					name: "255文字以内で名前を入力してください。",
+					domain: "255文字以内でドメイン名を入力してください（例: example.com）。",
+					interval: "一覧から間隔を選択してください。",
+					registrationWarningDays: "1から365までの日数を入力してください。",
+				},
+			},
+
 			header: {
 				title: "DNSモニター",
 
@@ -3683,6 +3845,13 @@ export default {
 		},
 
 		dnsMonitorDetail: {
+			overflow: {
+				label: "その他の操作",
+				review: "レコードを確認",
+			},
+
+			configuration: "設定",
+
 			header: {
 				title: "DNSモニター「{$name}」",
 
@@ -4024,6 +4193,13 @@ export default {
 					deleteMaintenance: "「{$name}」を削除してもよろしいですか？",
 				},
 			},
+
+			toasts: {
+				created: "メンテナンス「{$name}」を予定しました",
+				updated: "メンテナンス「{$name}」を保存しました",
+				deleted: "メンテナンス「{$name}」を削除しました",
+				ended: "メンテナンス「{$name}」を終了しました",
+			},
 		},
 
 		createMaintenance: {
@@ -4199,6 +4375,16 @@ export default {
 							"daily:HH:MM-HH:MM、weekly:<曜日>:HH:MM-HH:MM、または monthly:<日>:HH:MM-HH:MM（UTC）。",
 					},
 				},
+
+				/** Shown beside the field a refused save needs fixed, saying what to enter instead. */
+				issues: {
+					generic: "強調表示された項目を確認して、もう一度お試しください。",
+					name: "ウィンドウ名を255文字以内で入力してください。",
+					scope: "リストから範囲を選んでください。指定されていたモニターは削除されています。",
+					startsAt: "ウィンドウの開始日時をUTCで入力してください。",
+					endsAt: "ウィンドウの終了日時をUTCで入力してください。",
+					endsBeforeStart: "終了日時は開始日時より後にしてください。",
+				},
 			},
 		},
 
@@ -4297,6 +4483,24 @@ export default {
 		alertHistory: {
 			header: {
 				title: "アラート履歴",
+				description: "直近{$limit}件の送信を新しい順に表示しています。",
+			},
+
+			filters: {
+				toolbar: "アラート履歴を絞り込む",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次と一致",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}の条件を削除: {$values}",
+				event: "イベント",
+				status: "送信",
+			},
+
+			noResults: {
+				title: "条件に一致する送信はありません",
+				description: "フィルターを外すと、さらに履歴が表示されます。",
 			},
 
 			breadcrumbs: {
@@ -4470,6 +4674,7 @@ export default {
 		editAlert: {
 			header: {
 				title: "アラートを編集",
+				named: "{$name}を編集",
 			},
 
 			form: {
@@ -4816,6 +5021,12 @@ export default {
 				title: "アカウント",
 			},
 
+			nav: "アカウントのセクション",
+
+			deleteConfirm: {
+				title: "アカウントを削除しますか?",
+			},
+
 			form: {
 				actions: {
 					cancel: "キャンセル",
@@ -5027,6 +5238,22 @@ export default {
 		settings: {
 			header: {
 				title: "チーム設定",
+			},
+
+			nav: "チーム設定",
+
+			invite: {
+				title: "メンバーを招待",
+				description: "このチームに参加するためのリンクがメールで届きます。",
+			},
+
+			fieldErrors: {
+				name: "チーム名を入力してください。",
+			},
+
+			deleteConfirm: {
+				title: "{$name} を削除しますか?",
+				label: "確認のため「{$name}」と入力してください",
 			},
 
 			alert: {
@@ -5258,7 +5485,7 @@ export default {
 		flowMonitorDetail: {
 			header: {
 				breadcrumb: { flowMonitors: "フローモニター" },
-				action: { edit: "編集" },
+				action: { edit: "編集", more: "その他の操作" },
 			},
 
 			info: {
@@ -5266,6 +5493,8 @@ export default {
 				interval: "実行間隔",
 				lastChecked: "最終チェック",
 				enabled: "有効",
+				monitoring: "監視",
+				active: "有効",
 			},
 
 			stats: {
@@ -5306,6 +5535,43 @@ export default {
 				description:
 					"フローモニターは複数のリクエストを順番に実行し、返ってきた内容を検証します。ログインしてトークンを読み取り、そのトークンで認可されたエンドポイントを呼び出す——単一のリクエストでは答えられない問いに答えます。",
 				cta: "最初のフローモニターを作成",
+			},
+
+			filters: {
+				toolbar: "フローモニターを絞り込む",
+				tabs: "フローモニターの表示",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次と一致",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}を解除: {$values}",
+				status: "ステータス",
+				search: {
+					label: "フローモニターを検索",
+					placeholder: "名前で検索…",
+				},
+			},
+
+			noResults: {
+				title: "一致するフローモニターはありません",
+				description:
+					"別の名前で検索するか、フィルターをクリアしてすべてのフローモニターを表示してください。",
+			},
+
+			form: {
+				errors: {
+					name: "255文字以内で名前を入力してください。",
+					source: "フローを20,000文字以内で記述してください。",
+					interval: "フローの実行間隔を選択してください。",
+					generic: "フローモニターの内容を確認して、もう一度お試しください。",
+				},
+			},
+
+			toast: {
+				created: "フローモニター「{$name}」を作成しました",
+				updated: "{$name}を更新しました",
+				deleted: "{$name}を削除しました",
 			},
 
 			table: {
@@ -5462,6 +5728,36 @@ export default {
 			},
 		},
 		tcpMonitors: {
+			filters: {
+				toolbar: "TCPモニターを絞り込む",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次の値",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}: {$values} を解除",
+				search: "TCPモニターを検索",
+				searchPlaceholder: "名前またはホストで検索",
+				status: "ステータス",
+			},
+
+			noResults: {
+				title: "一致するTCPモニターはありません",
+				description:
+					"別のキーワードで検索するか、フィルターをクリアしてすべてのモニターを表示してください。",
+			},
+
+			form: {
+				issues: {
+					summary: "修正が必要な項目があります。入力した内容はそのまま残っています。",
+					name: "255文字以内で名前を入力してください。",
+					host: "255文字以内でホスト名またはIPアドレスを入力してください。",
+					port: "1から65535までのポート番号を入力してください。",
+					interval: "60から86400秒までの間隔を入力してください。",
+					timeout: "100から60000ミリ秒までのタイムアウトを入力してください。",
+				},
+			},
+
 			header: {
 				title: "TCPモニター",
 				action: {
@@ -5647,6 +5943,10 @@ export default {
 		},
 
 		tcpMonitorDetail: {
+			overflow: {
+				label: "その他の操作",
+			},
+
 			header: {
 				breadcrumb: {
 					tcpMonitors: "TCPモニター",
@@ -5712,6 +6012,16 @@ export default {
 				action: {
 					create: "APIキーを作成",
 				},
+			},
+
+			list: {
+				created: "作成日",
+				deleteTitle: "APIキーを削除しますか?",
+			},
+
+			fieldErrors: {
+				name: "キーの名前を入力してください。",
+				scopes: "権限を1つ以上選択してください。",
 			},
 
 			docsLink: {
@@ -5897,6 +6207,38 @@ export default {
 				cta: "Cronジョブを作成",
 			},
 
+			filters: {
+				toolbar: "Cronジョブを絞り込む",
+				tabs: "Cronジョブの表示",
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次と一致",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}を解除: {$values}",
+				status: "ステータス",
+				search: {
+					label: "Cronジョブを検索",
+					placeholder: "名前で検索…",
+				},
+			},
+
+			noResults: {
+				title: "一致するCronジョブはありません",
+				description:
+					"別の名前で検索するか、フィルターをクリアしてすべてのCronジョブを表示してください。",
+			},
+
+			form: {
+				errors: {
+					name: "255文字以内で名前を入力してください。",
+					description: "説明を確認して、もう一度お試しください。",
+					cronExpression: "0 * * * * のようなcron式を入力してください。",
+					timezone: "一覧からタイムゾーンを選択してください。",
+					gracePeriod: "猶予期間は60〜86,400秒の範囲で設定してください。",
+				},
+			},
+
 			table: {
 				label: "Cronジョブモニター",
 				columns: {
@@ -5916,6 +6258,7 @@ export default {
 				disabled: "無効",
 				actions: {
 					edit: "編集",
+					editNamed: "{$name}を編集",
 					delete: "削除",
 					confirmation: {
 						delete: "{$name}を削除してもよろしいですか？",
@@ -6096,6 +6439,7 @@ export default {
 				action: {
 					edit: "編集",
 					delete: "削除",
+					more: "その他の操作",
 				},
 			},
 
@@ -6115,6 +6459,17 @@ export default {
 				gracePeriod: "猶予期間",
 				gracePeriodValue: "猶予 {$duration}",
 				description: "説明",
+				expression: "cron式",
+				alertOnLate: "遅延時に通知",
+				monitoring: "監視",
+				on: "オン",
+				off: "オフ",
+				active: "有効",
+				paused: "一時停止中",
+			},
+
+			history: {
+				label: "Pingの履歴（過去90日間）",
 			},
 
 			stats: {
