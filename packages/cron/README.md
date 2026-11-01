@@ -70,6 +70,21 @@ schedule.expectedBy(lastRun, { timeZone: "UTC", grace: "5 minutes" }); // 2026-0
 schedule.isDue(lastRun, { now: new Date(), timeZone: "UTC", grace: "5 minutes" }); // boolean
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/cron --help
+```
+
+Quote the expression so the shell leaves `*` alone; pass `-` or nothing to read it from stdin.
+Every command takes `--json`.
+
+```sh
+bunx @sdxc/cron next "0 9 * * MON-FRI" --tz America/New_York -n 3   # upcoming runs
+bunx @sdxc/cron describe "0 9 * * 1-5"   # Every Monday, … and Friday at 09:00
+bunx @sdxc/cron validate "0 25 * * *"    # exits 1: out-of-range in the hour field
+```
+
 ## API
 
 ### `Schedule.parse(expression: string): Result<Schedule, InvalidCronExpression>`

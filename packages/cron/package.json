@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Cron schedules with zone-aware occurrences and descriptors",
 	"license": "MIT",
+	"bin": {
+		"sdxc-cron": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,6 +14,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/iife": "workspace:*",
