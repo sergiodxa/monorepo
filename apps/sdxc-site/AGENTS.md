@@ -133,11 +133,13 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   A build hashes every file, so a hand-written `/assets/...` URL names a file the next build
   renames. A stylesheet joins by a side-effect
   `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
-- **Keep only islands in the browser entry.** `bootstrap/browser.ts` globs
-  `resources/components/previews/` and names each other `clientEntry()` module; a new island
-  elsewhere is one more line there, and `bootstrap/browser.test.ts` fails until it is added.
-  A layout or view in the client bundle compiles the document's stylesheets a second time,
-  and every page would link both copies.
+- **Keep only islands in the browser entry.** An app island is identified by
+  `clientEntry(import.meta.url, …)`, which the build rewrites into an id the renderer maps to
+  the island's own chunk, so an island anywhere under `app/` or `resources/` needs no line in
+  `bootstrap/browser.ts`; `bootstrap/browser.test.ts` fails on any other first argument. The
+  entry's `PACKAGE_MODULES` maps only the islands packages ship, by their bare specifier. A
+  layout or view in the client bundle compiles the document's stylesheets a second time, and
+  every page would link both copies.
 
 ## Reference files
 
