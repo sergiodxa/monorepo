@@ -715,10 +715,18 @@ function mediaEnclosureOf(entry: Feed.Item): Feed.Enclosure | undefined {
  * gives those posts a line to read under their title.
  */
 function summaryOf(entry: Feed.Item): string | null {
-	if (entry.summary !== undefined) return shortened(entry.summary);
+	if (entry.summary !== undefined) return visibleText(entry.summary) ?? shortened(entry.summary);
 	if (entry.contentHtml === undefined) return null;
+	return visibleText(entry.contentHtml);
+}
 
-	let parsed = HTML.parse(entry.contentHtml);
+/**
+ * The words a reader sees in `html`, shortened to a summary, or `null` when it holds none or
+ * does not parse. A summary is printed as text, so markup a publisher wrote into one is read
+ * down to its words here rather than shown as tags.
+ */
+function visibleText(html: string): string | null {
+	let parsed = HTML.parse(html);
 	if (isFailure(parsed)) return null;
 
 	let text = parsed.data.text;

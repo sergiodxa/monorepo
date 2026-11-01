@@ -602,6 +602,23 @@ describe("pollFeed", () => {
 		expect((await loadItem("g1")).summary).toBe("The publisher's own words.");
 	});
 
+	test("reads the text out of a summary the publisher wrote as markup", async () => {
+		await storeFeed();
+		serve([
+			{
+				guid: "g1",
+				description: cdata(
+					'<p><strong><a href="https://example.com">Release:</a></strong> notes &amp; fixes</p>',
+				),
+				content: cdata("<p>A body far longer than the summary beside it.</p>"),
+			},
+		]);
+
+		await pollFeed(db, { now: NOW });
+
+		expect((await loadItem("g1")).summary).toBe("Release: notes & fixes");
+	});
+
 	test("stores no line at all for an entry carrying neither a summary nor a body", async () => {
 		await storeFeed();
 		server.use(
