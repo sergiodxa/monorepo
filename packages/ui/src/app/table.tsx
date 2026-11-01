@@ -26,6 +26,7 @@ import {
 	items,
 	justify,
 	keyframes,
+	nowrap,
 	opacity,
 	outline,
 	overflow,
@@ -1201,7 +1202,7 @@ Table.IdCell = function TableIdCell(handle: Handle<Table.IdCellProps>) {
 
 /**
  * Renders a moment through `RelativeTime`: "2m ago" within a week, a date after it, the exact
- * local and UTC time in its title.
+ * local and UTC time in its title. The cell holds one line in every density.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell.
@@ -1209,10 +1210,10 @@ Table.IdCell = function TableIdCell(handle: Handle<Table.IdCellProps>) {
  */
 Table.DateCell = function TableDateCell(handle: Handle<Table.DateCellProps>) {
 	return () => {
-		let { date, now, locale, timeZone, local, ...rest } = handle.props;
+		let { date, now, locale, timeZone, local, mix, ...rest } = handle.props;
 
 		return (
-			<Table.Cell {...rest} data-type="date">
+			<Table.Cell {...rest} data-type="date" mix={[nowrap(), mix]}>
 				{date === null || date === undefined ? (
 					<EmptyValue />
 				) : (

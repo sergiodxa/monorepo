@@ -9,6 +9,7 @@
  */
 
 import type {} from "@vitest/browser-playwright";
+import type { Handle } from "remix/component";
 
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -597,11 +598,50 @@ const POSTS: Post[] = Array.from({ length: 4 }, (_, index) => ({
 const ACTIONS = ["Edit", "Quick edit", "View"];
 
 /**
+ * One post's actions cell: plain ghost link buttons with `links`, else `Table.Action`s that fold
+ * into a menu named "More actions".
+ */
+function PostActions(handle: Handle<{ id: string; labels: string[]; links?: boolean }>) {
+	return () => {
+		let { id, labels, links } = handle.props;
+		if (links) {
+			return (
+				<Table.Actions>
+					{labels.map((label) => (
+						<LinkButton
+							key={label}
+							href={`#${id}/${label}`}
+							variant="ghost"
+							color="neutral"
+							size="sm"
+						>
+							{label}
+						</LinkButton>
+					))}
+				</Table.Actions>
+			);
+		}
+		return (
+			<Table.Actions overflowLabel="More actions">
+				{labels.map((label) => (
+					<Table.Action key={label} href={`#${id}/${label}`}>
+						{label}
+					</Table.Action>
+				))}
+			</Table.Actions>
+		);
+	};
+}
+
+/**
  * A comfortable posts table whose title and excerpt compete with the actions for width. With
  * `links`, the actions are plain ghost link buttons; otherwise they are `Table.Action`s that
  * fold into a menu named "More actions".
  */
-function posts(options: { links?: boolean } = {}): JSX.Element {
+function posts(
+	options: { links?: boolean; actions?: string[]; noActions?: boolean; date?: boolean } = {},
+): JSX.Element {
+	let actions = options.actions ?? ACTIONS;
 	return (
 		<Table.Container>
 			<Table aria-label="Posts" density="comfortable">
@@ -611,7 +651,8 @@ function posts(options: { links?: boolean } = {}): JSX.Element {
 						<Table.Column>Title</Table.Column>
 						<Table.Column>Excerpt</Table.Column>
 						<Table.Column>Status</Table.Column>
-						<Table.ActionsColumn label="Actions" />
+						{options.date ? <Table.Column>Published</Table.Column> : null}
+						{options.noActions ? null : <Table.ActionsColumn label="Actions" />}
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -623,28 +664,16 @@ function posts(options: { links?: boolean } = {}): JSX.Element {
 							</Table.Cell>
 							<Table.Cell>{post.excerpt}</Table.Cell>
 							<Table.StatusCell color="success">Published</Table.StatusCell>
-							{options.links ? (
-								<Table.Actions>
-									{ACTIONS.map((label) => (
-										<LinkButton
-											key={label}
-											href={`#${post.id}/${label}`}
-											variant="ghost"
-											color="neutral"
-											size="sm"
-										>
-											{label}
-										</LinkButton>
-									))}
-								</Table.Actions>
-							) : (
-								<Table.Actions overflowLabel="More actions">
-									{ACTIONS.map((label) => (
-										<Table.Action key={label} href={`#${post.id}/${label}`}>
-											{label}
-										</Table.Action>
-									))}
-								</Table.Actions>
+							{options.date ? (
+								<Table.DateCell
+									date="2026-12-01T12:00:00Z"
+									now="2026-12-20T12:00:00Z"
+									locale="en-US"
+									local
+								/>
+							) : null}
+							{options.noActions ? null : (
+								<PostActions id={post.id} labels={actions} links={options.links} />
 							)}
 						</Table.Row>
 					))}
@@ -663,14 +692,14 @@ function lineBoxes(element: Element): number {
 }
 
 /** Asserts every action label in `host` sits on one line and its cell hugs the actions. */
-function expectOneLineActions(host: HTMLElement): void {
+function expectOneLineActions(host: HTMLElement, labels: string[] = ACTIONS): void {
 	let cells = [...host.querySelectorAll<HTMLElement>('tbody [data-slot="row-actions"]')];
 	expect(cells).toHaveLength(POSTS.length);
 	for (let cell of cells) {
 		let actions = [...cell.querySelectorAll<HTMLElement>("a")].filter(
 			(action) => action.getClientRects().length > 0,
 		);
-		expect(actions.map((action) => action.textContent)).toEqual(ACTIONS);
+		expect(actions.map((action) => action.textContent)).toEqual(labels);
 		for (let action of actions) expect(lineBoxes(action)).toBe(1);
 		let first = actions[0]!.getBoundingClientRect();
 		let last = actions.at(-1)!.getBoundingClientRect();
@@ -738,5 +767,17 @@ describe("Table row actions", () => {
 		mount(posts(), 375);
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+	});
+});
+
+describe("Table dates", () => {
+	test("keeps a comfortable date cell on one line when long titles squeeze it", async () => {
+		await page.viewport(1024, 768);
+		let host = mount(posts({ date: true, noActions: true }), 1024);
+
+		for (let time of host.querySelectorAll("tbody time")) {
+			expect(time.textContent).toBe("Dec 1, 2026");
+			expect(lineBoxes(time)).toBe(1);
+		}
 	});
 });
