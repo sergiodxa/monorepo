@@ -1,8 +1,8 @@
 /**
  * Draws the chart's annotations in a real browser: a comparison series dashed and muted, a
  * threshold line at its value with its label, an annotation band across its range, and a
- * period with no data hatched at full height instead of drawn as zero, and a line or area
- * broken at a gap in its data.
+ * period with no data hatched at full height instead of drawn as zero, on a bar, a band, and a
+ * gap in a line or area.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -139,6 +139,40 @@ describe("Chart annotations", () => {
 			/>,
 		);
 		expect(host.querySelector("pattern")).toBeNull();
+	});
+
+	test("hatches a no-data band with the pattern a bar with no data uses", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Band from={3} to={6} label="No data" variant="hatched" />
+				<Chart.Band from={8} to={9} label="Incident #42" />
+			</Chart>,
+		);
+		let [hatched, filled] = host.querySelectorAll<SVGGElement>('[data-slot="chart-band"]');
+		let rect = hatched!.querySelector("rect")!;
+		let pattern = host.querySelector("pattern")!;
+
+		expect(hatched!.getAttribute("data-variant")).toBe("hatched");
+		expect(rect.getAttribute("fill")).toBe(`url(#${pattern.id})`);
+		let bar = mount(
+			<Chart.Bar
+				width={480}
+				height={200}
+				domain={[0, 100]}
+				aria-label="Revenue"
+				series={["revenue"]}
+				data={[{ category: "Jan", values: { revenue: { value: null, label: "Jan: no data" } } }]}
+			/>,
+		);
+		let barPattern = bar.querySelector("pattern")!;
+
+		expect(pattern.outerHTML.replace(pattern.id, "")).toBe(
+			barPattern.outerHTML.replace(barPattern.id, ""),
+		);
+		expect(rect.getBoundingClientRect().width).toBeCloseTo(120, 0);
+		expect(hatched!.querySelector("text")?.textContent).toBe("No data");
+		expect(host.querySelectorAll("pattern")).toHaveLength(1);
+		expect(filled!.querySelector("rect")!.getAttribute("fill")).toBeNull();
 	});
 });
 

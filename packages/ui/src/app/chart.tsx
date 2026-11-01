@@ -575,7 +575,18 @@ export namespace Chart {
 		to: number;
 		/** Text set at the band's top start ("Incident #42", "Deploy"), also its accessible name. */
 		label?: string;
-		/** @default "danger" */
+		/**
+		 * `"hatched"` draws the range with the hatch {@link Chart.Bar} uses for a `null` value, so a
+		 * stretch with no data (an outage window nothing was recorded for) reads as unknown.
+		 *
+		 * @default "fill"
+		 */
+		variant?: "fill" | "hatched";
+		/**
+		 * Colour of the label and, for `variant="fill"`, the shading.
+		 *
+		 * @default "danger" ("neutral" when `variant` is "hatched")
+		 */
 		tone?: Tone;
 	}
 
@@ -726,6 +737,34 @@ function scalePoints(
 	y: (value: number) => number,
 ): (Point | null)[] {
 	return points.map((point) => (point.y === null ? null : { x: x(point.x), y: y(point.y) }));
+}
+
+/**
+ * The hatch every no-data mark fills with — a {@link Chart.Bar} with a `null` value and a
+ * hatched {@link Chart.Band} — so "unknown" reads the same wherever a chart shows it.
+ *
+ * @param id The pattern's id, unique on the page, which the hatched shape fills with as `url(#id)`.
+ */
+function renderNoDataPattern(id: string): RemixNode {
+	return (
+		<defs>
+			<pattern
+				id={id}
+				width={6}
+				height={6}
+				patternUnits="userSpaceOnUse"
+				patternTransform="rotate(45)"
+			>
+				<line
+					x1={0}
+					y1={0}
+					x2={0}
+					y2={6}
+					mix={[stroke("var(--ui-neutral-border, GrayText)"), strokeWidth("2")]}
+				/>
+			</pattern>
+		</defs>
+	);
 }
 
 /**
@@ -1113,39 +1152,50 @@ Chart.Threshold = function ChartThreshold(handle: Handle<Chart.ThresholdProps>) 
 };
 
 /**
- * Shades a stretch of the x axis, such as an incident or a deploy, across the full plot
- * height with `label` at its top start. Render it inside {@link Chart} before the series, so
- * the lines draw over it.
+ * Shades a stretch of the x axis, such as an incident or a deploy, or hatches one with no
+ * data, across the full plot height with `label` at its top start. Render it inside
+ * {@link Chart} before the series, so the lines draw over it.
  *
  * @param handle Runtime handle carrying the host `<g>`'s props.
  * @returns The render function producing the band's markup.
  * @example
  * <Chart.Band from={incident.start} to={incident.end} label={t("chart.incident", { id: 42 })} />
+ * @example
+ * <Chart.Band from={outage.start} to={outage.end} label={t("chart.noData")} variant="hatched" />
  */
 Chart.Band = function ChartBand(handle: Handle<Chart.BandProps>) {
 	return () => {
-		let { from, to, label, tone, mix, ...rest } = handle.props;
+		let { from, to, label, variant, tone, mix, ...rest } = handle.props;
 		let context = handle.context.get(Chart);
 		let x = linearScale(context.xDomain, [0, context.width]);
 		let start = Math.min(x(from), x(to));
 		let end = Math.max(x(from), x(to));
+		let hatched = variant === "hatched";
+		let hatchId = `${handle.id}-no-data`;
 
 		return (
 			<g
 				data-slot="chart-band"
-				data-tone={tone ?? "danger"}
+				data-variant={hatched ? "hatched" : undefined}
+				data-tone={tone ?? (hatched ? "neutral" : "danger")}
 				role={label ? "img" : undefined}
 				aria-label={label}
 				aria-hidden={label ? undefined : "true"}
 				{...rest}
 				mix={mergeMix(toneColor(), mix)}
 			>
+				{hatched ? renderNoDataPattern(hatchId) : null}
 				<rect
 					x={start}
 					y={0}
 					width={Math.max(end - start, 1)}
 					height={context.height}
-					mix={[fill("currentColor"), fillOpacity("var(--ui-chart-band-opacity, 0.1)")]}
+					fill={hatched ? `url(#${hatchId})` : undefined}
+					mix={
+						hatched
+							? undefined
+							: [fill("currentColor"), fillOpacity("var(--ui-chart-band-opacity, 0.1)")]
+					}
 				/>
 				{label ? (
 					<text
@@ -1342,25 +1392,7 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 					mix,
 				)}
 			>
-				{hasEmpty ? (
-					<defs>
-						<pattern
-							id={hatchId}
-							width={6}
-							height={6}
-							patternUnits="userSpaceOnUse"
-							patternTransform="rotate(45)"
-						>
-							<line
-								x1={0}
-								y1={0}
-								x2={0}
-								y2={6}
-								mix={[stroke("var(--ui-neutral-border, GrayText)"), strokeWidth("2")]}
-							/>
-						</pattern>
-					</defs>
-				) : null}
+				{hasEmpty ? renderNoDataPattern(hatchId) : null}
 				<g mix={[attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN })]}>
 					{gridlineValues.map((value) => (
 						<line
