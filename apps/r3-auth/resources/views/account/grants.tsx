@@ -12,7 +12,8 @@ import { fg } from "@sdxc/u/color";
 import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
 import { maxIs } from "@sdxc/u/size";
 import { nowrap, text, weight } from "@sdxc/u/typography";
-import { AlertDialog, Button, Card, Empty, Form, Logo, Table, Text } from "@sdxc/ui";
+import { AlertDialog, Button, Card, Form, Logo, Text } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 
 import type { GrantRow } from "~/app/http/view-models/account-grant";
 

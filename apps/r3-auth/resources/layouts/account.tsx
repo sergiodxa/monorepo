@@ -18,16 +18,8 @@ import { bs, m, maxIs, mbe, mi, p, pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import {
-	Breadcrumbs,
-	Button,
-	Form,
-	Heading,
-	HeadingScope,
-	LinkButton,
-	NavLink,
-	Toolbar,
-} from "@sdxc/ui";
+import { Breadcrumbs, Button, Form, Heading, HeadingScope, LinkButton, NavLink } from "@sdxc/ui";
+import { Toolbar } from "@sdxc/ui/app";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

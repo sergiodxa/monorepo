@@ -18,16 +18,8 @@ import { is, m, maxIs, mbs, mis, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import {
-	Breadcrumbs,
-	Button,
-	Form,
-	Heading,
-	HeadingScope,
-	LinkButton,
-	NavLink,
-	Toolbar,
-} from "@sdxc/ui";
+import { Breadcrumbs, Button, Form, Heading, HeadingScope, LinkButton, NavLink } from "@sdxc/ui";
+import { Toolbar } from "@sdxc/ui/app";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

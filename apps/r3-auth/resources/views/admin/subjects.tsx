@@ -13,7 +13,8 @@ import type { Handle } from "remix/component";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";
 import { weight } from "@sdxc/u/typography";
-import { Avatar, Badge, Description, Empty, Link, LinkButton, Table, Text } from "@sdxc/ui";
+import { Avatar, Badge, Description, Link, LinkButton, Text } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

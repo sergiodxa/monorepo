@@ -12,7 +12,8 @@ import type { Handle } from "remix/component";
 import { flex, gap, items } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";
 import { font, weight } from "@sdxc/u/typography";
-import { Description, Empty, Link, LinkButton, Table } from "@sdxc/ui";
+import { Description, Link, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

@@ -11,7 +11,8 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { flex, flexCol, gap, justify } from "@sdxc/u/layout";
 import { nowrap, text } from "@sdxc/u/typography";
-import { AlertDialog, Badge, Button, Card, Empty, Form, Table, Text } from "@sdxc/ui";
+import { AlertDialog, Badge, Button, Card, Form, Text } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 
 import type { SessionRow } from "~/app/http/view-models/account-session";
 
