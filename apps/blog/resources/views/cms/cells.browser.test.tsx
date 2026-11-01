@@ -1,6 +1,6 @@
 /**
  * Tests the CMS table cells in a real browser: squeezed into a narrow table, a date stays on
- * one line and a long path ends inside its own cell instead of running over the next one.
+ * one line in whatever form it was stored, and a long path ends inside its own cell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,6 +51,39 @@ describe("DateCell", () => {
 		if (!time) throw new Error("The cell rendered no time");
 
 		expect(time.getClientRects()).toHaveLength(1);
+	});
+});
+
+describe("DateCell's stored forms", () => {
+	test.each([
+		["epoch seconds", 1_600_000_000],
+		["digits", "1600000000000"],
+	])("reads a date stored as %s", (_, date) => {
+		mounted = render(
+			<table>
+				<tbody>
+					<tr>
+						<DateCell date={date} />
+					</tr>
+				</tbody>
+			</table>,
+		);
+
+		expect(mounted.$("time")?.getAttribute("datetime")).toBe("2020-09-13T12:26:40.000Z");
+	});
+
+	test("draws an unreadable date as a dash", () => {
+		mounted = render(
+			<table>
+				<tbody>
+					<tr>
+						<DateCell date="not a date" />
+					</tr>
+				</tbody>
+			</table>,
+		);
+
+		expect(mounted.$("time")).toBeNull();
 	});
 });
 

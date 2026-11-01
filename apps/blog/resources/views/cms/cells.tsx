@@ -14,10 +14,15 @@ import { raw } from "@sdxc/u/general";
 import { font, text, truncate } from "@sdxc/u/typography";
 import { Table } from "@sdxc/ui/app/table";
 
+import { parseTimestamp } from "~/app/models/post-values";
+
 /** Props accepted by {@link DateCell}. */
 interface DateCellProps {
-	/** The moment, or an ISO string; `null` renders `—`. */
-	date: Date | string | null;
+	/**
+	 * The moment in any form a stored timestamp takes: a `Date`, ISO or SQL text, or epoch
+	 * seconds or milliseconds as a number or digits. `null` or an unreadable value renders `—`.
+	 */
+	date: Date | string | number | null | undefined;
 	/** Hides the cell in a content area 40rem wide or narrower, as the column's header does. */
 	hideNarrow?: boolean;
 }
@@ -28,9 +33,10 @@ interface DateCellProps {
 export function DateCell(handle: Handle<DateCellProps>) {
 	return () => {
 		let { date, hideNarrow } = handle.props;
+		let time = date instanceof Date ? date.getTime() : parseTimestamp(date);
 		return (
 			<Table.DateCell
-				date={date === null ? null : new Date(date)}
+				date={Number.isNaN(time) ? null : new Date(time)}
 				locale="en-US"
 				local
 				mix={[

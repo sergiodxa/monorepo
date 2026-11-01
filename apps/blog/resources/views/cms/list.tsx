@@ -19,6 +19,7 @@ import { Table } from "@sdxc/ui/app/table";
 import { HeadingScope } from "@sdxc/ui/heading-scope";
 
 import { currentRequest } from "~/app/http/current-request";
+import { parseTimestamp } from "~/app/models/post-values";
 
 /** Rows one page of a CMS list shows. */
 export const PAGE_SIZE = 50;
@@ -62,29 +63,46 @@ export function readListQuery(): ListQuery {
  * @param q The trimmed search text.
  * @param fields The row's searchable text.
  */
-export function matchesSearch(q: string, ...fields: Array<string | null | undefined>): boolean {
+export function matchesSearch(
+	q: string,
+	...fields: Array<string | number | null | undefined>
+): boolean {
 	if (q === "") return true;
 	let needle = q.toLowerCase();
-	return fields.some((field) => field?.toLowerCase().includes(needle));
+	return fields.some((field) => field != null && String(field).toLowerCase().includes(needle));
 }
 
-/** How a row is read for sorting: its title, and its date as an ISO string or `null`. */
+/**
+ * How a row is read for sorting: its title, and its date in any form a stored timestamp takes
+ * (ISO or SQL text, or epoch seconds or milliseconds as a number or digits), or `null`.
+ */
 export interface SortKeys<T> {
-	title: (row: T) => string;
-	date: (row: T) => string | null;
+	title: (row: T) => string | null | undefined;
+	date: (row: T) => string | number | null | undefined;
+}
+
+/** A row's date as epoch milliseconds for comparing, an unreadable one counting as the oldest. */
+function sortTime(value: string | number | null | undefined): number {
+	let time = parseTimestamp(value);
+	return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }
 
 /**
  * Orders rows by the list's sort param: `""` is newest first, `"date"` oldest first and
- * `"title"` A–Z. A row without a date sorts as the oldest.
+ * `"title"` A–Z. A row whose date is missing or unreadable sorts as the oldest.
  *
  * @param rows The rows the filters kept.
  * @param sort The list's sort param.
  * @param keys How to read a row's title and date.
  */
 export function sortRows<T>(rows: T[], sort: string, keys: SortKeys<T>): T[] {
-	let byDate = (a: T, b: T) => (keys.date(a) ?? "").localeCompare(keys.date(b) ?? "");
-	if (sort === "title") return [...rows].sort((a, b) => keys.title(a).localeCompare(keys.title(b)));
+	let byDate = (a: T, b: T) => {
+		let difference = sortTime(keys.date(a)) - sortTime(keys.date(b));
+		return Number.isNaN(difference) ? 0 : difference;
+	};
+	let byTitle = (a: T, b: T) =>
+		String(keys.title(a) ?? "").localeCompare(String(keys.title(b) ?? ""));
+	if (sort === "title") return [...rows].sort(byTitle);
 	if (sort === "date") return [...rows].sort(byDate);
 	return [...rows].sort((a, b) => byDate(b, a));
 }
