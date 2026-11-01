@@ -91,6 +91,8 @@ bunx @sdxc/webmention send https://example.org/reply https://example.com/post # 
 bunx @sdxc/webmention verify https://example.org/reply https://example.com/post --json
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg webmention …` runs the same command line, using the version your project installs.
+
 Every command fetches under the same bounds as the library and takes `--user-agent` and `--json`. It exits 0 when done, 1 when the target has no endpoint, the endpoint refused, the source does not link or a fetch failed, and 2 for a URL it cannot parse.
 
 ## API
