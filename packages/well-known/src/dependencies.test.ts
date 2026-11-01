@@ -28,6 +28,16 @@ const ALLOWED = new Set([
 const PEER_MODULES = new Set(["response.ts", "middleware.ts"]);
 
 /**
+ * Whether a module belongs to the `sdxc-well-known` command line, which also loads `@sdxc/cli`
+ * and stays outside every document subpath's import graph.
+ *
+ * @param file - A module path relative to this directory.
+ */
+function isCommandLine(file: string): boolean {
+	return file === "cli.ts" || file.startsWith("cli-");
+}
+
+/**
  * The bare package a specifier names, or `null` for a relative import.
  *
  * @param specifier - An import specifier.
@@ -52,7 +62,7 @@ function sourceModules(directory: string): string[] {
 describe("document subpaths", () => {
 	let root = import.meta.dirname;
 
-	test.each(sourceModules(root).filter((file) => !PEER_MODULES.has(file)))(
+	test.each(sourceModules(root).filter((file) => !PEER_MODULES.has(file) && !isCommandLine(file)))(
 		"%s imports only the allowed packages",
 		(file) => {
 			let references = unwrap(findModuleReferences(file, readFileSync(join(root, file), "utf8")));

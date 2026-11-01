@@ -102,6 +102,34 @@ let router = createRouter({
 `wellKnown` answers the names it lists with the media type, a cache policy, an `ETag`, CORS where
 the specification requires it and a 304 for a current copy; every other path reaches your routes.
 
+## Command line
+
+```sh
+bunx @sdxc/well-known --help
+```
+
+Check a site's security.txt, or a file before you deploy it; it exits 1 when a required field is
+missing, a line is malformed or `Expires` has passed:
+
+```sh
+bunx @sdxc/well-known security-txt check https://example.com
+bunx @sdxc/well-known security-txt check public/.well-known/security.txt --json
+```
+
+Fetch, validate and print a document; OAuth and OpenID Connect metadata must name the URL you
+pass as their issuer, and NodeInfo follows its links to the newest schema:
+
+```sh
+bunx @sdxc/well-known fetch https://auth.example.com openid-configuration
+bunx @sdxc/well-known fetch https://example.com webfinger --resource acct:me@example.com
+bunx @sdxc/well-known fetch https://example.com jwks.json --json
+```
+
+`fetch` reads `webfinger`, `nodeinfo`, `oauth-authorization-server`, `openid-configuration`,
+`oauth-protected-resource`, `jwks.json`, `passkey-endpoints`, `api-catalog` and
+`http-message-signatures-directory`. Exit codes are 0 valid, 1 problems found, 2 usage or an
+unreadable file or origin.
+
 ## API
 
 ### `@sdxc/well-known`

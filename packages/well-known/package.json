@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more",
 	"license": "MIT",
+	"bin": {
+		"sdxc-well-known": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -26,6 +29,7 @@
 	},
 	"dependencies": {
 		"@remix-run/data-schema": "^1.0.0",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
 		"@sdxc/openpgp": "workspace:*",
