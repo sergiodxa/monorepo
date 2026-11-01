@@ -98,7 +98,10 @@ export function formatLocalDateTime(
 	let text = `${pad(parts.year, 4)}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`;
 	let millisecond = parts.millisecond ?? 0;
 	if (millisecond === 0) return text;
-	return `${text}.${pad(millisecond, 3).replace(/0+$/, "")}`;
+	let fraction = pad(millisecond, 3);
+	let end = fraction.length;
+	while (end > 0 && fraction[end - 1] === "0") end--;
+	return `${text}.${fraction.slice(0, end)}`;
 }
 
 /**
