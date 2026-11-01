@@ -20,12 +20,27 @@ import {
 	requestURL,
 } from "../pkg/resolve.js";
 
+/**
+ * Tokens that ask `sdxc pkg` itself for help when they come first; after a package name they
+ * belong to that package's command line.
+ */
+const HELP_FLAGS = new Set(["--help", "-h", "help"]);
+
 /** The packages with a command line, one per line with what each does, for a bare `sdxc pkg`. */
 function listing(): string {
 	let names = Object.keys(PACKAGE_COMMAND_LINES);
 	let width = Math.max(...names.map((name) => name.length));
 	let rows = names.map((name) => `  ${name.padEnd(width)}  ${PACKAGE_COMMAND_LINES[name]}`);
-	return `Usage: sdxc pkg <name> [command] [options]\n\nPackages with a command line:\n${rows.join("\n")}\n`;
+	return [
+		"Usage: sdxc pkg <name> [command] [options]",
+		"",
+		"Run an @sdxc package's command line, from the project's copy or downloaded with bunx or npx.",
+		"Everything after <name> goes to the package; `sdxc pkg <name> --help` shows its commands.",
+		"",
+		"Packages with a command line:",
+		...rows,
+		"",
+	].join("\n");
 }
 
 /**
@@ -37,7 +52,7 @@ export default createCommand(SDXC_COMMANDS.pkg, {
 	/** Runs the named package's command line with its output on the terminal. */
 	async handler(ctx) {
 		let [input, ...args] = ctx.arguments.args;
-		if (input === undefined) {
+		if (input === undefined || HELP_FLAGS.has(input)) {
 			ctx.stdout(listing());
 			return success();
 		}

@@ -50,6 +50,25 @@ describe("sdxc pkg", () => {
 		expect(run.stdout).toMatch(/\n {2}uuid +generate and validate UUIDs\n/);
 	});
 
+	test.each(["--help", "-h", "help"])("answers %s before a name with the listing", async (flag) => {
+		let run = await invoke(createSDXC(), ["pkg", flag], { cwd: await folder({}) });
+
+		expect(run.code).toBe(0);
+		expect(run.exec).toEqual([]);
+		expect(run.stdout).toContain("Usage: sdxc pkg <name>");
+		expect(run.stdout).toContain("`sdxc pkg <name> --help` shows its commands");
+	});
+
+	test("passes --help after a name to the package", async () => {
+		let run = await invoke(createSDXC(), ["pkg", "qr", "--help"], {
+			cwd: await folder({}),
+			env: { PATH: await folder({}) },
+			exec: { "npx --yes --package @sdxc/qr sdxc-qr --help": { code: 0 } },
+		});
+
+		expect(run.code).toBe(0);
+	});
+
 	test("runs a project's installed copy under Bun with every token after the name", async () => {
 		let root = await folder({
 			"node_modules/@sdxc/uuid/package.json": JSON.stringify({
