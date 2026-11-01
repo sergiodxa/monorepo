@@ -58,7 +58,12 @@ export async function seedReader(): Promise<number> {
 	 * Granted rather than bought, so the platform's reconciliation leaves it in place and
 	 * folders, labels, pins and saved searches are all on screen.
 	 */
-	await store.setTier({ entitled: "premium", cancelled: false, readAt: Date.now(), source: "grant" });
+	await store.setTier({
+		entitled: "premium",
+		cancelled: false,
+		readAt: Date.now(),
+		source: "grant",
+	});
 
 	let followed: Array<{ feedId: string; folder: string | null }> = [];
 	for (let feed of SEED_FEEDS) {
@@ -85,7 +90,12 @@ export async function seedReader(): Promise<number> {
 		for (let item of kept.slice(0, 2)) await store.tagItem(item.id, { name: SEED_TAG });
 	}
 
-	await store.createSearch({ name: "Cloudflare", query: "cloudflare", readState: "all", feedId: null });
+	await store.createSearch({
+		name: "Cloudflare",
+		query: "cloudflare",
+		readState: "all",
+		feedId: null,
+	});
 
 	return followed.length;
 }
