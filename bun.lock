@@ -1565,8 +1565,13 @@
     "packages/jsonc": {
       "name": "@sdxc/jsonc",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jsonc": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/jsonl": {

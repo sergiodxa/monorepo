@@ -92,6 +92,28 @@ async function loadConfig(path: string) {
 }
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/jsonc --help
+```
+
+`sdxc pkg jsonc …` runs it too.
+
+`check` reads a JSONC file (or stdin, when the file is `-` or absent) and prints each parse error as `file:line:column: reason`, exiting 1 on any; `--json` prints `{ valid, errors }` instead.
+
+```sh
+bunx @sdxc/jsonc check tsconfig.json
+```
+
+`strip` prints the document as plain JSON with every line and column where it was; `--indent <n>` reformats the value with `n` spaces, or on one line with `0`.
+
+```sh
+bunx @sdxc/jsonc strip wrangler.jsonc --indent 2 > wrangler.json
+```
+
+Text that is not JSONC makes `strip` exit 2 with its position.
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,

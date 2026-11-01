@@ -268,5 +268,5 @@ codes for CI and agents.
 - [x] Guides: "Use a package from the terminal" on sdxc.dev, and a terminal section in each
       package's guide
 - [x] `sdxc pkg`, with typo suggestions and request links
-- [ ] `jsonc`
+- [x] `jsonc`
 - [ ] Format converters: `yaml`, `csv`, `jsonl`, `opml`, `feed`
