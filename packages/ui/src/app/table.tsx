@@ -115,6 +115,37 @@ const EMPTY_VALUE = "—";
  */
 const ACTIONS_OVERFLOW_QUERY = "@container ui-table (max-width: 40rem)";
 
+/**
+ * How far the overlay of hover-revealed {@link Table.Actions} fades in ahead of its own box, and
+ * how long that fade is: text of the last visible cell running under the overlay fades out
+ * across it, reaching full cover only where the first action's label starts.
+ */
+const ACTIONS_FADE_LEAD = "1rem";
+
+/** Length of the overlay's leading fade, from fully clear to the row's opaque surface. */
+const ACTIONS_FADE_LENGTH = "2rem";
+
+/**
+ * Hover and press fills for ghost controls in the actions overlay, mixed from each color's own
+ * foreground so they read as a step on the row's tint in light and dark. They paint as a
+ * background image, which no control style sets, so they show over whatever fill the control
+ * keeps; controls inside a dialog or popover a row action opens keep their own.
+ */
+const ACTIONS_HOVER_FILLS = Object.fromEntries(
+	(["brand", "neutral", "success", "warning", "danger"] as const).flatMap((color) => {
+		let fg = color === "neutral" ? "var(--ui-neutral-fg-emphasis)" : `var(--ui-${color}-fg)`;
+		let control = `& :is(a, button)[data-variant="ghost"][data-color="${color}"]:not(:is(dialog, [popover]) *)`;
+		let fill = (share: number) => {
+			let tone = `color-mix(in srgb, ${fg} ${share}%, transparent)`;
+			return { backgroundImage: `linear-gradient(${tone}, ${tone})` };
+		};
+		return [
+			[`${control}:hover`, fill(10)],
+			[`${control}:active`, fill(16)],
+		];
+	}),
+);
+
 /** Interactive elements that sit above a whole-row link, so they keep their own clicks. */
 const ROW_CONTROLS = ':is(a, button, label, select, textarea, summary, [role="button"])';
 
@@ -902,7 +933,7 @@ function TableActionsMenu(handle: Handle<{ children?: RemixNode }, { menu: true 
 
 /**
  * Renders a row's actions on one line. Where the pointer can hover they reserve no width: hidden
- * until the row is hovered, focused within, selected or has a menu open, they then show over the
+ * until the row is hovered, focused within, selected or has a menu open, they then fade in over the
  * row's end on its tint. On touch they show in a cell as wide as they are. With `overflowLabel`,
  * a `ui-table` container 40rem wide or narrower shows a ⋯ button opening a menu of them instead.
  *
@@ -961,8 +992,22 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 								insetInlineEnd: 0,
 								zIndex: 1,
 								paddingInline: "0.5rem",
-								backgroundColor: TABLE_BG,
-								backgroundImage: ROW_TINT_IMAGE,
+								"&::before": {
+									content: '""',
+									position: "absolute",
+									insetBlock: 0,
+									insetInlineStart: `calc(-1 * ${ACTIONS_FADE_LEAD})`,
+									insetInlineEnd: 0,
+									zIndex: -1,
+									pointerEvents: "none",
+									backgroundColor: TABLE_BG,
+									backgroundImage: ROW_TINT_IMAGE,
+									maskImage: `linear-gradient(to right, transparent, black ${ACTIONS_FADE_LENGTH})`,
+								},
+								"&:dir(rtl)::before": {
+									maskImage: `linear-gradient(to left, transparent, black ${ACTIONS_FADE_LENGTH})`,
+								},
+								...ACTIONS_HOVER_FILLS,
 							},
 						}),
 						overflowLabel ? raw({ [ACTIONS_OVERFLOW_QUERY]: { display: "none" } }) : undefined,

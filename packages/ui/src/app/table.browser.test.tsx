@@ -817,7 +817,7 @@ describe("Table hover-revealed row actions", () => {
 		expect(
 			new Set(actions.map((action) => Math.round(action.getBoundingClientRect().top))).size,
 		).toBe(1);
-		expect(getComputedStyle(inline).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(inline, "::before").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 	});
 
 	test("stay inline and take their width where the pointer cannot hover", async () => {
@@ -835,6 +835,161 @@ describe("Table hover-revealed row actions", () => {
 			expect(getComputedStyle(cell).opacity).toBe("1");
 		}
 	});
+});
+
+/** Labels of the overlay's three actions: two ghost links and a danger `Table.Action`. */
+const OVERLAY_ACTIONS = ["View", "Post on X", "Delete"];
+
+/**
+ * A four-column articles table whose last data cell is a "Published" status, with the three
+ * actions an articles list carries: ghost link buttons and a danger `Table.Action`.
+ */
+function articles(): JSX.Element {
+	return (
+		<Table.Container>
+			<Table aria-label="Articles" density="comfortable">
+				<Table.Header>
+					<Table.Row>
+						<Table.Column>Title</Table.Column>
+						<Table.Column>Author</Table.Column>
+						<Table.Column>Status</Table.Column>
+						<Table.ActionsColumn label="Actions" />
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{POSTS.map((post) => (
+						<Table.Row key={post.id}>
+							<Table.Cell>
+								<Table.RowLink href={`#${post.id}`}>{post.title}</Table.RowLink>
+							</Table.Cell>
+							<Table.Cell>Sergio</Table.Cell>
+							<Table.StatusCell color="success">Published</Table.StatusCell>
+							<Table.Actions>
+								<LinkButton href={`#${post.id}/view`} variant="ghost" color="neutral" size="sm">
+									{OVERLAY_ACTIONS[0]}
+								</LinkButton>
+								<LinkButton href={`#${post.id}/share`} variant="ghost" color="neutral" size="sm">
+									{OVERLAY_ACTIONS[1]}
+								</LinkButton>
+								<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
+							</Table.Actions>
+						</Table.Row>
+					))}
+				</Table.Body>
+			</Table>
+		</Table.Container>
+	);
+}
+
+/**
+ * Where the overlay of row actions turns fully opaque: its own box when it paints its own
+ * background, else the end of the soft edge its `::before` fades in through a mask.
+ */
+function opaqueStart(inline: HTMLElement): number {
+	let box = inline.getBoundingClientRect();
+	if (rgba(getComputedStyle(inline).backgroundColor)[3] > 0) return box.left;
+	let edge = getComputedStyle(inline, "::before");
+	let stops = [...edge.maskImage.matchAll(/(-?[\d.]+)px/g)].map((match) => Number(match[1]));
+	return box.left + (Number.parseFloat(edge.left) || 0) + (stops.at(-1) ?? 0);
+}
+
+/** `css` resolved to sRGB channels 0–255 and an alpha 0–1, through a canvas. */
+function rgba(css: string): [number, number, number, number] {
+	let context = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+	context.canvas.width = context.canvas.height = 1;
+	context.fillStyle = "rgba(0, 0, 0, 0)";
+	context.fillStyle = css;
+	context.fillRect(0, 0, 1, 1);
+	let [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+	return [r!, g!, b!, a! / 255];
+}
+
+/**
+ * Largest channel difference between `element`'s fill laid over the opaque `base` and `base`
+ * itself: its background colour, then the first colour of a background-image gradient.
+ */
+function step(element: HTMLElement, base: string): number {
+	let style = getComputedStyle(element);
+	let image = /(rgba?\([^)]*\)|color\([^)]*\))/.exec(style.backgroundImage)?.[1];
+	let under = rgba(base);
+	let painted = [style.backgroundColor, image ?? "rgba(0, 0, 0, 0)"].reduce(
+		(surface, layer) => {
+			let [r, g, b, a] = rgba(layer);
+			return [r, g, b].map((channel, index) => channel * a + surface[index]! * (1 - a));
+		},
+		under.slice(0, 3),
+	);
+	return Math.max(...painted.map((channel, index) => Math.abs(channel - under[index]!)));
+}
+
+/** Theme colours a light and a dark page give the row surface and its ghost actions. */
+const THEMES = {
+	light: {
+		"--ui-bg": "rgb(255, 255, 255)",
+		"--ui-neutral-bg-tint": "rgb(250, 250, 250)",
+		"--ui-neutral-bg-tint-hover": "rgb(245, 245, 245)",
+		"--ui-neutral-bg-tint-pressed": "rgb(229, 229, 229)",
+		"--ui-neutral-fg-emphasis": "rgb(23, 23, 23)",
+		"--ui-danger-bg-tint": "rgb(254, 242, 242)",
+		"--ui-danger-bg-tint-hover": "rgb(254, 226, 226)",
+		"--ui-danger-fg": "rgb(220, 38, 38)",
+	},
+	dark: {
+		"--ui-bg": "rgb(10, 10, 10)",
+		"--ui-neutral-bg-tint": "rgb(16, 16, 16)",
+		"--ui-neutral-bg-tint-hover": "rgb(23, 23, 23)",
+		"--ui-neutral-bg-tint-pressed": "rgb(38, 38, 38)",
+		"--ui-neutral-fg-emphasis": "rgb(245, 245, 245)",
+		"--ui-danger-bg-tint": "rgb(69, 10, 10)",
+		"--ui-danger-bg-tint-hover": "rgb(127, 29, 29)",
+		"--ui-danger-fg": "rgb(248, 113, 113)",
+	},
+};
+
+/** Smallest channel step a hovered action's background must take off the row's tint to read. */
+const VISIBLE_STEP = 12;
+
+describe("Table row actions overlay", () => {
+	test("fades in ahead of the last cell instead of slicing its text", async () => {
+		let host = mount(articles(), 900);
+		let row = host.querySelector<HTMLElement>("tbody tr")!;
+		let inline = row.querySelector<HTMLElement>('[data-slot="row-actions-inline"]')!;
+		let status = row.querySelector<HTMLElement>('[data-type="status"]')!;
+		let label = status.querySelector<HTMLElement>('[data-slot="status-dot-label"]')!;
+
+		await userEvent.hover(row.querySelector('[data-slot="row-link"]')!);
+		await expect.poll(() => getComputedStyle(inline.parentElement!).opacity).toBe("1");
+
+		status.style.textAlign = "end";
+		status.style.paddingInlineEnd = `${row.getBoundingClientRect().right - inline.getBoundingClientRect().left - 6}px`;
+
+		let range = document.createRange();
+		range.selectNodeContents(label);
+		let overshoot = range.getBoundingClientRect().right - inline.getBoundingClientRect().left - 6;
+		status.style.paddingInlineEnd = `${Number.parseFloat(status.style.paddingInlineEnd) + overshoot}px`;
+		let textEnd = range.getBoundingClientRect().right;
+		expect(textEnd).toBeGreaterThan(inline.getBoundingClientRect().left);
+		expect(textEnd).toBeLessThanOrEqual(opaqueStart(inline));
+		expect(getComputedStyle(inline, "::before").maskImage).toContain("gradient");
+		expect(getComputedStyle(inline, "::before").pointerEvents).toBe("none");
+	});
+
+	for (let [theme, colors] of Object.entries(THEMES)) {
+		test(`gives each action a hover step that reads on the row's ${theme} tint`, async () => {
+			let host = mount(articles(), 900);
+			for (let [name, value] of Object.entries(colors)) host.style.setProperty(name, value);
+			let row = host.querySelector<HTMLElement>("tbody tr")!;
+			let actions = [...row.querySelectorAll<HTMLElement>('[data-slot="row-actions-inline"] > *')];
+			expect(actions.map((action) => action.textContent)).toEqual(OVERLAY_ACTIONS);
+
+			for (let action of actions) {
+				await userEvent.hover(action);
+				await expect.poll(() => rgba(getComputedStyle(row).backgroundColor)[3]).toBe(1);
+				let tint = getComputedStyle(row).backgroundColor;
+				await expect.poll(() => step(action, tint)).toBeGreaterThanOrEqual(VISIBLE_STEP);
+			}
+		});
+	}
 });
 
 describe("Table dates and statuses", () => {
