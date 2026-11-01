@@ -1,26 +1,23 @@
 /**
  * Account page controller. Requires `requireUser` + `requireTeam`. The URL's `:team`
  * selects which shell wraps the page; the settings inside apply to the viewer across
- * every team they belong to.
+ * every team they belong to, laid out as a settings area with in-page sections.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { formatDate } from "@sdxc/dates";
-import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { bg, border, borderEdge, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { boxSizing, hstack, shrink, vstack } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { media } from "@sdxc/u/responsive";
-import { is, m, maxIs, mi, p } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
-import { font, fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
-import { AlertDialog, Button, Description, Select, Switch } from "@sdxc/ui";
-import { Empty, Table } from "@sdxc/ui/app";
+import { PlusIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { m, minIs, p, pis } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { fontSize, pretty, textDecoration, weight } from "@sdxc/u/typography";
+import { Button, Confirm, Dialog, Select, Switch, TextField } from "@sdxc/ui";
+import { DangerZone, Empty, SettingsLayout, SettingsSection, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
+import { Session } from "remix/session";
 
 import type { OptionalEmail } from "~/database/schema";
 
@@ -30,72 +27,31 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { wantsEmail } from "~/app/models/user-preferences";
 import { planAccountErasure } from "~/app/services/account-erasure";
+import { hasBillingProblem } from "~/app/services/billing-problem";
 import { optionalEmails, supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
-import Field from "~/resources/components/field";
-import RowMenu, { menuItem, menuItemDanger } from "~/resources/components/row-menu";
-import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
+import BillingBanner from "~/resources/components/billing-banner";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/**
- * Viewport from which a section's card is allowed to bleed past its column: below it, the
- * same 24px bleed the shell pads by would overflow and scroll sideways, so the card stays
- * flush until the shell's own breakpoint gives it room.
- */
-const CARD_BLEED_FROM = "(min-width: 768px)";
+/** The phrase that unlocks account deletion, which the request-deletion action checks again. */
+const DELETE_PHRASE = "DELETE";
 
-/**
- * The bordered card each section on this page is built around, pulled out by the 24px of
- * inline padding its own rows carry so the copy inside lines up with the section heading
- * above it rather than sitting 24px to the right.
- */
-function settingsCard() {
-	return [
-		rounded("12px"),
-		border({ color: "neutral", width: 1 }),
-		overflow(),
-		media(CARD_BLEED_FROM, mi("-24px")),
-	];
+/** The flash an account action left for this page, shown as one toast. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
+
+/** DOM id of one email's switch, which its row's label points at. */
+function emailSwitchId(email: OptionalEmail) {
+	return `email-${email}`;
 }
 
 /** DOM id of one email's description, wired to its switch through `aria-describedby`. */
 function emailDescriptionId(email: OptionalEmail) {
 	return `email-${email}-description`;
-}
-
-/**
- * The bordered card the delete section is built around: the same geometry as
- * {@link settingsCard}, in the danger colour that marks it as the page's destructive
- * section.
- */
-function dangerCard() {
-	return [
-		rounded("12px"),
-		border({ color: "danger", width: 1 }),
-		overflow(),
-		media(CARD_BLEED_FROM, mi("-24px")),
-	];
-}
-
-/**
- * The typed-confirmation field. `pattern="DELETE"` gates the submit button natively with
- * no client JS involved; the action enforces the same word again since the authoritative
- * check happens server-side.
- */
-function confirmationInput() {
-	return [
-		is("full"),
-		boxSizing("border-box"),
-		p("8px", "12px"),
-		rounded("6px"),
-		border({ color: "neutral", width: 1 }),
-		fontSize("0.875rem"),
-		font("inherit"),
-		bg("neutral.tint"),
-		fg("inherit"),
-	];
 }
 
 /** GET /app/:team/account — the signed-in user's account settings. */
@@ -105,14 +61,31 @@ export default createAction(routes.app.team.account, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let [memberships, preferences, plan, queuedDeletion] = await Promise.all([
+		let [memberships, preferences, plan, queuedDeletion, billingProblem] = await Promise.all([
 			ctx.models.teams.listWithRoleForSubject(viewer.id),
 			ctx.models.userPreferences.findBy({ subject_id: viewer.id }),
 			planAccountErasure(ctx.models, viewer.id),
 			ctx.models.accountDeletions.findBy({ subject_id: viewer.id }),
+			hasBillingProblem(ctx.models, ctx.team.owner_id),
 		]);
 
+		let t = ctx.intl.t;
 		let preferredLanguage = preferences?.preferred_language ?? null;
+		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
+		let cancelLabel = t("page.account.form.actions.cancel");
+		let saveLabel = t("page.account.language.form.cta");
+
+		let ownedTeamLines =
+			plan.ownedTeams.length === 0
+				? [t("page.account.deleteAccount.card.noOwnedTeams")]
+				: plan.ownedTeams.map((team) =>
+						team.otherMemberCount === 0
+							? t("page.account.deleteAccount.card.ownedTeamAlone", { name: team.name })
+							: t("page.account.deleteAccount.card.ownedTeam", {
+									name: team.name,
+									count: team.otherMemberCount,
+								}),
+					);
 
 		return ctx.render(
 			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Account`}>
@@ -123,43 +96,53 @@ export default createAction(routes.app.team.account, {
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
-					heading={ctx.intl.t("page.account.header.title")}
+					heading={t("page.account.header.title")}
+					toast={toast}
+					banner={
+						billingProblem ? (
+							<BillingBanner
+								intl={ctx.intl}
+								teamSlug={ctx.team.slug}
+								isOwner={viewer.id === ctx.team.owner_id}
+							/>
+						) : undefined
+					}
 				>
-					<div mix={[vstack({ gap: "48px" })]}>
-						<section
+					<SettingsLayout
+						sections={[
+							{
+								items: [
+									{ href: "#profile", label: t("page.account.profile.title") },
+									{ href: "#language", label: t("page.account.language.title") },
+									{ href: `#${EMAIL_PREFERENCES_ANCHOR}`, label: t("page.account.emails.title") },
+									{ href: "#teams", label: t("page.account.teams.title") },
+									{ href: "#data", label: t("page.account.dataExport.title") },
+									{ href: "#delete-account", label: t("page.account.deleteAccount.title") },
+								],
+							},
+						]}
+						labels={{ nav: t("page.account.nav"), back: t("page.account.header.title") }}
+					>
+						<SettingsSection
 							id="profile"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+							save="instant"
+							title={t("page.account.profile.title")}
+							description={t("page.account.profile.description")}
+							labels={{ save: saveLabel }}
 						>
-							<div mix={[vstack({ gap: "4px" })]}>
-								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.intl.t("page.account.profile.title")}
-								</h2>
-								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.account.profile.description")}
-								</p>
-							</div>
-
-							<div mix={settingsCard()}>
-								<div
-									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
-								>
-									<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-										{ctx.intl.t("page.account.profile.card.title")}
-									</h3>
-									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.account.profile.card.description")}
-									</p>
-								</div>
-
-								<div mix={[p("24px"), hstack({ align: "center", gap: "16px" })]}>
-									<Avatar src={viewer.avatar || null} name={viewer.name} size={48} />
-									<div>
-										<div mix={[weight(600)]}>{viewer.name}</div>
+							<SettingsSection.Row
+								label={t("page.account.profile.card.title")}
+								description={t("page.account.profile.card.description")}
+							>
+								<div mix={[hstack({ gap: 3, align: "center" })]}>
+									<Avatar src={viewer.avatar || null} name={viewer.name} size={40} />
+									<div mix={[vstack({ gap: 0, align: "start" }), minIs(0)]}>
+										<span mix={[weight("medium")]}>{viewer.name}</span>
 										<a
 											href={`mailto:${viewer.email}`}
 											mix={[
-												fontSize("0.8125rem"),
-												fg("brand"),
+												fontSize("sm"),
+												fg("neutral.muted"),
 												textDecoration("none"),
 												hover(textDecoration("underline")),
 											]}
@@ -168,603 +151,310 @@ export default createAction(routes.app.team.account, {
 										</a>
 									</div>
 								</div>
-							</div>
-						</section>
+							</SettingsSection.Row>
+						</SettingsSection>
 
-						<section
+						<SettingsSection
 							id="language"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+							title={t("page.account.language.title")}
+							description={t("page.account.language.description")}
+							form={{ action: routes.accountActions.updateLanguage.href() }}
+							labels={{ save: saveLabel }}
 						>
-							<div mix={[vstack({ gap: "4px" })]}>
-								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.intl.t("page.account.language.title")}
-								</h2>
-								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.account.language.description")}
-								</p>
-							</div>
+							<SettingsSection.Row
+								label={t("page.account.language.form.fields.language.label")}
+								description={t("page.account.language.form.fields.language.description")}
+								htmlFor="account-language"
+							>
+								<Select
+									id="account-language"
+									name="language"
+									/**
+									 * `<select>` has no `defaultValue` attribute, so the saved preference is marked
+									 * `selected` on its own `<option>` instead — spelling it on the host would
+									 * render as inert markup and leave "Automatic" showing.
+									 */
+								>
+									<Select.Option value="auto" selected={preferredLanguage === null}>
+										{t("page.account.language.form.fields.language.options.auto")}
+									</Select.Option>
+									{supportedLanguages.map((code) => (
+										<Select.Option key={code} value={code} selected={code === preferredLanguage}>
+											{t(`page.account.language.form.fields.language.options.${code}`)}
+										</Select.Option>
+									))}
+								</Select>
+							</SettingsSection.Row>
+						</SettingsSection>
 
-							<div mix={settingsCard()}>
-								<form method="post" action={routes.accountActions.updateLanguage.href()}>
-									<div
-										mix={[
-											p("20px", "24px"),
-											borderEdge("block-end", { color: "neutral", width: 1 }),
-										]}
-									>
-										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.intl.t("page.account.language.card.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.account.language.card.description")}
-										</p>
-									</div>
-
-									<div mix={[p("24px"), vstack({ gap: SETTINGS_FIELD_GAP })]}>
-										<Field
-											label={ctx.intl.t("page.account.language.form.fields.language.label")}
-											description={ctx.intl.t(
-												"page.account.language.form.fields.language.description",
-											)}
-										>
-											<Select
-												name="language"
-												/**
-												 * `<select>` has no `defaultValue` attribute, so the saved preference is marked
-												 * `selected` on its own `<option>` instead — spelling it on the host would
-												 * render as inert markup and leave "Automatic" showing.
-												 */
-											>
-												<Select.Option value="auto" selected={preferredLanguage === null}>
-													{ctx.intl.t("page.account.language.form.fields.language.options.auto")}
-												</Select.Option>
-												{supportedLanguages.map((code) => (
-													<Select.Option
-														key={code}
-														value={code}
-														selected={code === preferredLanguage}
-													>
-														{ctx.intl.t(
-															`page.account.language.form.fields.language.options.${code}`,
-														)}
-													</Select.Option>
-												))}
-											</Select>
-										</Field>
-									</div>
-
-									<div
-										mix={[
-											p("16px", "24px"),
-											borderEdge("block-start", { color: "neutral", width: 1 }),
-											hstack({ justify: "end", gap: "8px" }),
-										]}
-									>
-										<Button type="reset" variant="outline">
-											{ctx.intl.t("page.account.form.actions.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.account.language.form.cta")}</Button>
-									</div>
-								</form>
-							</div>
-						</section>
-
-						<section
+						<SettingsSection
 							id={EMAIL_PREFERENCES_ANCHOR}
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+							save="instant"
+							title={t("page.account.emails.title")}
+							description={t("page.account.emails.card.description")}
+							form={{ action: routes.accountActions.updateEmails.href() }}
+							labels={{ save: t("page.account.emails.form.cta") }}
 						>
-							<div mix={[vstack({ gap: "4px" })]}>
-								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.intl.t("page.account.emails.title")}
-								</h2>
-								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.account.emails.description")}
-								</p>
-							</div>
+							{optionalEmails.map((email) => (
+								<SettingsSection.Row
+									key={email}
+									layout="inline-switch"
+									label={t(`page.account.emails.list.${email}.name`)}
+									description={t(`page.account.emails.list.${email}.description`)}
+									htmlFor={emailSwitchId(email)}
+									descriptionId={emailDescriptionId(email)}
+								>
+									<Switch
+										id={emailSwitchId(email)}
+										name="emails"
+										value={email}
+										/**
+										 * Checked means subscribed; every switch defaults to checked because the
+										 * stored preference lists only the emails a member turned off, so an absent
+										 * email means they still want it.
+										 */
+										defaultChecked={wantsEmail(preferences, email)}
+										aria-describedby={emailDescriptionId(email)}
+									/>
+								</SettingsSection.Row>
+							))}
+						</SettingsSection>
 
-							<div mix={settingsCard()}>
-								<form method="post" action={routes.accountActions.updateEmails.href()}>
-									<div
-										mix={[
-											p("20px", "24px"),
-											borderEdge("block-end", { color: "neutral", width: 1 }),
-										]}
-									>
-										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.intl.t("page.account.emails.card.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.account.emails.card.description")}
-										</p>
-									</div>
-
-									<div mix={[p("24px"), vstack({ gap: "20px" })]}>
-										{optionalEmails.map((email) => (
-											<div key={email} mix={[vstack({ gap: "4px" })]}>
-												<Switch
-													name="emails"
-													value={email}
-													/**
-													 * Checked means subscribed; every switch defaults to checked because the
-													 * stored preference lists only the emails a member turned off, so an absent
-													 * email means they still want it.
-													 */
-													defaultChecked={wantsEmail(preferences, email)}
-													aria-describedby={emailDescriptionId(email)}
-												>
-													{ctx.intl.t(`page.account.emails.list.${email}.name`)}
-												</Switch>
-												<Description
-													/**
-													 * Sits flush with the switch rather than indented under its label: a
-													 * switch's track is 2.75rem wide, so an indent sized for a checkbox's label
-													 * lands under neither the track nor the text.
-													 */
-													id={emailDescriptionId(email)}
-												>
-													{ctx.intl.t(`page.account.emails.list.${email}.description`)}
-												</Description>
-											</div>
-										))}
-									</div>
-
-									<div
-										mix={[
-											p("16px", "24px"),
-											borderEdge("block-start", { color: "neutral", width: 1 }),
-											hstack({ justify: "end", gap: "8px" }),
-										]}
-									>
-										<Button type="reset" variant="outline">
-											{ctx.intl.t("page.account.form.actions.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.account.emails.form.cta")}</Button>
-									</div>
-								</form>
-							</div>
-						</section>
-
-						<section
+						<SettingsSection
 							id="teams"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
+							save="instant"
+							title={t("page.account.teams.title")}
+							description={t("page.account.teams.description")}
+							labels={{ save: saveLabel }}
 						>
-							<div mix={[hstack({ align: "start", justify: "between", gap: "16px" })]}>
-								<div mix={[vstack({ gap: "4px" })]}>
-									<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-										{ctx.intl.t("page.account.teams.title")}
-									</h2>
-									<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.account.teams.description")}
-									</p>
-								</div>
+							<SettingsSection.Row
+								layout="inline-switch"
+								label={t("page.account.teams.table.label")}
+								description={t("page.account.teams.table.description")}
+							>
 								<Button
 									type="button"
+									size="sm"
+									variant="outline"
 									commandfor="create-team"
 									command="show-modal"
-									mix={[shrink(0)]}
 								>
 									<PlusIcon size={16} strokeWidth={1.5} />
-									<span>{ctx.intl.t("page.account.teams.actions.createTeam")}</span>
+									<span>{t("page.account.teams.actions.createTeam")}</span>
 								</Button>
-							</div>
+							</SettingsSection.Row>
 
-							<dialog
-								id="create-team"
-								mix={[
-									is("full"),
-									maxIs("min(440px, calc(100vw - 32px))"),
-									p("24px"),
-									boxSizing("border-box"),
-									rounded("8px"),
-									border({ color: "neutral", width: 1 }),
-									bg("neutral.tint"),
-									fg("neutral.emphasis"),
-									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
-								]}
+							{memberships.length === 0 ? (
+								<Empty kind="first-run" size="compact">
+									<Empty.Title>{t("page.account.teams.empty.title")}</Empty.Title>
+									<Empty.Description>{t("page.account.teams.empty.description")}</Empty.Description>
+								</Empty>
+							) : (
+								<Table.Container>
+									<Table aria-label={t("page.account.teams.table.label")}>
+										<Table.Header>
+											<Table.Row>
+												<Table.Column>{t("page.account.teams.table.columns.team")}</Table.Column>
+												<Table.Column>{t("page.account.teams.table.columns.role")}</Table.Column>
+												<Table.ActionsColumn
+													label={t("page.account.teams.table.columns.actions")}
+												/>
+											</Table.Row>
+										</Table.Header>
+										<Table.Body>
+											{memberships.map(({ team, role, isOwner }) => {
+												let canLeave = !isOwner && role === "member";
+												let leaveDialogId = `leave-team-${team.id}`;
+
+												return (
+													<Table.Row key={team.id}>
+														<Table.Cell>
+															<Table.RowLink
+																href={routes.app.team.dashboard.index.href({ team: team.slug })}
+															>
+																{team.name}
+															</Table.RowLink>
+														</Table.Cell>
+														<Table.Cell>
+															{t(`page.account.teams.table.role.${isOwner ? "owner" : role}`)}
+														</Table.Cell>
+														<Table.Actions>
+															{canLeave && (
+																<>
+																	<Button
+																		type="button"
+																		size="sm"
+																		variant="ghost"
+																		color="danger"
+																		commandfor={leaveDialogId}
+																		command="show-modal"
+																	>
+																		{t("page.account.teams.table.actions.leave")}
+																	</Button>
+																	<Confirm
+																		id={leaveDialogId}
+																		title={t("page.account.teams.table.confirmation.leaveTeam", {
+																			name: team.name,
+																		})}
+																		confirmLabel={t("page.account.teams.table.actions.leave")}
+																		cancelLabel={cancelLabel}
+																		form={{
+																			action: routes.accountActions.leaveTeam.href(),
+																			fields: (
+																				<input type="hidden" name="team_id" value={team.id} />
+																			),
+																		}}
+																	/>
+																</>
+															)}
+														</Table.Actions>
+													</Table.Row>
+												);
+											})}
+										</Table.Body>
+									</Table>
+								</Table.Container>
+							)}
+						</SettingsSection>
+
+						<Dialog id="create-team" aria-labelledby="create-team-title">
+							<form
+								method="post"
+								action={routes.accountActions.createTeam.href()}
+								mix={[vstack({ gap: 5, align: "stretch" })]}
 							>
-								<h3>{ctx.intl.t("page.createTeam.header.title")}</h3>
-								<form
-									method="post"
-									action={routes.accountActions.createTeam.href()}
-									mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}
-								>
-									<Field label={ctx.intl.t("page.createTeam.form.fields.name.label")}>
-										<input
-											type="text"
-											name="name"
-											required
-											placeholder={ctx.intl.t("page.createTeam.form.fields.name.placeholder")}
-											mix={[
-												p("8px", "12px"),
-												rounded("6px"),
-												border({ color: "neutral", width: 1 }),
-												fontSize("0.875rem"),
-												font("inherit"),
-												bg("neutral.tint"),
-												fg("inherit"),
-											]}
-										/>
-									</Field>
-									<div mix={[hstack({ gap: "8px", justify: "end" })]}>
-										<Button
-											type="button"
-											variant="outline"
-											commandfor="create-team"
-											command="close"
-										>
-											{ctx.intl.t("page.createTeam.form.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.createTeam.form.cta")}</Button>
-									</div>
-								</form>
-							</dialog>
+								<Dialog.Header>
+									<Dialog.Title id="create-team-title">
+										{t("page.createTeam.header.title")}
+									</Dialog.Title>
+								</Dialog.Header>
+								<TextField
+									label={t("page.createTeam.form.fields.name.label")}
+									type="text"
+									name="name"
+									required
+									placeholder={t("page.createTeam.form.fields.name.placeholder")}
+								/>
+								<Dialog.Footer>
+									<Button type="button" variant="outline" commandfor="create-team" command="close">
+										{t("page.createTeam.form.cancel")}
+									</Button>
+									<Button type="submit">{t("page.createTeam.form.cta")}</Button>
+								</Dialog.Footer>
+							</form>
+						</Dialog>
 
-							<div mix={settingsCard()}>
-								<div
-									mix={[p("20px", "24px"), borderEdge("block-end", { color: "neutral", width: 1 })]}
-								>
-									<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-										{ctx.intl.t("page.account.teams.table.label")}
-									</h3>
-									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.account.teams.table.description")}
+						<SettingsSection
+							id="data"
+							title={t("page.account.dataExport.title")}
+							description={t("page.account.dataExport.description")}
+							form={{
+								/**
+								 * Uses POST so cross-origin protections apply: safe methods like GET carry
+								 * none, and this action returns the viewer's entire account export.
+								 */
+								action: routes.accountActions.exportData.href(),
+							}}
+							labels={{ save: t("page.account.dataExport.form.cta") }}
+						>
+							<SettingsSection.Row
+								layout="stacked"
+								label={t("page.account.dataExport.card.title")}
+								description={t("page.account.dataExport.card.description")}
+							>
+								<div mix={[vstack({ gap: 2, align: "stretch" }), fontSize("sm")]}>
+									<p mix={[m(0), pretty()]}>{t("page.account.dataExport.card.includes")}</p>
+									<p mix={[m(0), fg("neutral.muted"), pretty()]}>
+										{t("page.account.dataExport.card.excludes")}
 									</p>
 								</div>
+							</SettingsSection.Row>
+						</SettingsSection>
 
-								{memberships.length === 0 ? (
-									<div mix={[p("24px")]}>
-										<Empty>
-											<Empty.Description>
-												{ctx.intl.t("page.account.teams.empty.description")}
-											</Empty.Description>
-										</Empty>
-									</div>
-								) : (
-									<Table.Container>
-										<Table aria-label={ctx.intl.t("page.account.teams.table.label")}>
-											<Table.Header>
-												<Table.Row>
-													<Table.Column>
-														{ctx.intl.t("page.account.teams.table.columns.team")}
-													</Table.Column>
-													<Table.Column align="end">
-														{ctx.intl.t("page.account.teams.table.columns.role")}
-													</Table.Column>
-													<Table.Column align="center">
-														<span mix={[visuallyHidden()]}>
-															{ctx.intl.t("page.account.teams.table.columns.actions")}
-														</span>
-													</Table.Column>
-												</Table.Row>
-											</Table.Header>
-											<Table.Body>
-												{memberships.map(({ team, role, isOwner }) => {
-													let canLeave = !isOwner && role === "member";
-													let leaveDialogId = `leave-team-${team.id}`;
-													let leaveDialogTitleId = `${leaveDialogId}-title`;
-
-													return (
-														<Table.Row key={team.id}>
-															<Table.Cell>
-																<a
-																	href={routes.app.team.dashboard.index.href({ team: team.slug })}
-																	mix={[
-																		fg("brand"),
-																		textDecoration("none"),
-																		hover(textDecoration("underline")),
-																	]}
-																>
-																	{team.name}
-																</a>
-															</Table.Cell>
-															<Table.Cell mix={[textAlign("end")]}>
-																{ctx.intl.t(
-																	`page.account.teams.table.role.${isOwner ? "owner" : role}`,
-																)}
-															</Table.Cell>
-															<Table.Cell mix={[textAlign("center")]}>
-																{canLeave && (
-																	<>
-																		<RowMenu
-																			id={`team-menu-${team.id}`}
-																			label={ctx.intl.t("page.account.teams.table.actions.menu")}
-																		>
-																			<button
-																				type="button"
-																				commandfor={leaveDialogId}
-																				command="show-modal"
-																				mix={[menuItem, menuItemDanger]}
-																			>
-																				<LogOutIcon size={16} strokeWidth={1.5} />
-																				<span>
-																					{ctx.intl.t("page.account.teams.table.actions.leave")}
-																				</span>
-																			</button>
-																		</RowMenu>
-
-																		<AlertDialog
-																			id={leaveDialogId}
-																			aria-labelledby={leaveDialogTitleId}
-																		>
-																			<AlertDialog.Header>
-																				<AlertDialog.Title id={leaveDialogTitleId}>
-																					{ctx.intl.t(
-																						"page.account.teams.table.confirmation.leaveTeam",
-																						{ name: team.name },
-																					)}
-																				</AlertDialog.Title>
-																			</AlertDialog.Header>
-																			<form
-																				method="post"
-																				action={routes.accountActions.leaveTeam.href()}
-																			>
-																				<input type="hidden" name="team_id" value={team.id} />
-																				<AlertDialog.Footer>
-																					<AlertDialog.Cancel commandfor={leaveDialogId}>
-																						{ctx.intl.t("page.account.form.actions.cancel")}
-																					</AlertDialog.Cancel>
-																					<AlertDialog.Action
-																						type="submit"
-																						commandfor={leaveDialogId}
-																					>
-																						{ctx.intl.t("page.account.teams.table.actions.leave")}
-																					</AlertDialog.Action>
-																				</AlertDialog.Footer>
-																			</form>
-																		</AlertDialog>
-																	</>
-																)}
-															</Table.Cell>
-														</Table.Row>
-													);
-												})}
-											</Table.Body>
-										</Table>
-									</Table.Container>
-								)}
-							</div>
-						</section>
-
-						<section
-							id="data"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
-						>
-							<div mix={[vstack({ gap: "4px" })]}>
-								<h2 mix={[m(0), fontSize("1.25rem"), weight(600)]}>
-									{ctx.intl.t("page.account.dataExport.title")}
-								</h2>
-								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.account.dataExport.description")}
-								</p>
-							</div>
-
-							<div mix={settingsCard()}>
-								<form
-									method="post"
-									/**
-									 * Uses POST so cross-origin protections apply: safe methods like GET carry
-									 * none, and this action returns the viewer's entire account export.
-									 */
-									action={routes.accountActions.exportData.href()}
+						{queuedDeletion ? (
+							<SettingsSection
+								id="delete-account"
+								title={t("page.account.deleteAccount.title")}
+								description={t("page.account.deleteAccount.description")}
+								form={{
+									action: routes.accountActions.cancelDeletion.href(),
+									fields: <input type="hidden" name="_method" value="DELETE" />,
+								}}
+								labels={{ save: t("page.account.deleteAccount.queued.cta") }}
+							>
+								<SettingsSection.Row
+									layout="stacked"
+									label={t("page.account.deleteAccount.queued.title")}
+									description={t("page.account.deleteAccount.queued.requestedAt", {
+										date: formatDate(new Date(queuedDeletion.requested_at), {
+											locale: ctx.locale,
+											timeZone: "UTC",
+										}),
+									})}
 								>
-									<div
-										mix={[
-											p("20px", "24px"),
-											borderEdge("block-end", { color: "neutral", width: 1 }),
-										]}
-									>
-										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600)]}>
-											{ctx.intl.t("page.account.dataExport.card.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.account.dataExport.card.description")}
-										</p>
-									</div>
-
-									<div mix={[p("24px"), vstack({ gap: "12px" })]}>
-										<p mix={[m(0), fontSize("0.875rem")]}>
-											{ctx.intl.t("page.account.dataExport.card.includes")}
-										</p>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.account.dataExport.card.excludes")}
-										</p>
-									</div>
-
-									<div
-										mix={[
-											p("16px", "24px"),
-											borderEdge("block-start", { color: "neutral", width: 1 }),
-											hstack({ justify: "end" }),
-										]}
-									>
-										<Button type="submit">
-											<DownloadIcon size={16} strokeWidth={1.5} />
-											<span>{ctx.intl.t("page.account.dataExport.form.cta")}</span>
-										</Button>
-									</div>
-								</form>
-							</div>
-						</section>
-
-						<section
-							id="delete-account"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: "24px" })]}
-						>
-							<div mix={[vstack({ gap: "4px" })]}>
-								<h2 mix={[m(0), fontSize("1.25rem"), weight(600), fg("danger")]}>
-									{ctx.intl.t("page.account.deleteAccount.title")}
-								</h2>
-								<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.account.deleteAccount.description")}
-								</p>
-							</div>
-
-							{queuedDeletion ? (
-								/**
-								 * Replaces the form rather than sitting above it: offering the confirmation
-								 * again to somebody already queued would suggest the first request failed,
-								 * when the only remaining action is the button below.
-								 */
-								<div mix={dangerCard()}>
-									<div
-										mix={[
-											p("20px", "24px"),
-											borderEdge("block-end", { color: "danger", width: 1 }),
-										]}
-									>
-										<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
-											{ctx.intl.t("page.account.deleteAccount.queued.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.account.deleteAccount.queued.requestedAt", {
-												date: formatDate(new Date(queuedDeletion.requested_at), {
-													locale: ctx.locale,
-													timeZone: "UTC",
-												}),
-											})}
-										</p>
-									</div>
-
-									<div mix={[p("24px")]}>
-										<p mix={[m(0), fontSize("0.875rem")]}>
-											{ctx.intl.t("page.account.deleteAccount.queued.description")}
-										</p>
-									</div>
-
-									<form method="post" action={routes.accountActions.cancelDeletion.href()}>
-										<input type="hidden" name="_method" value="DELETE" />
-										<div
-											mix={[
-												p("16px", "24px"),
-												borderEdge("block-start", { color: "danger", width: 1 }),
-												hstack({ justify: "end" }),
-											]}
-										>
-											<Button type="submit" variant="outline">
-												{ctx.intl.t("page.account.deleteAccount.queued.cta")}
-											</Button>
-										</div>
-									</form>
+									<p mix={[m(0), fontSize("sm"), pretty()]}>
+										{t("page.account.deleteAccount.queued.description")}
+									</p>
+								</SettingsSection.Row>
+							</SettingsSection>
+						) : (
+							<DangerZone
+								id="delete-account"
+								title={t("page.account.deleteAccount.title")}
+								description={t("page.account.deleteAccount.description")}
+							>
+								<DangerZone.Action
+									id="request-account-deletion"
+									title={t("page.account.deleteAccount.card.title")}
+									description={t("page.account.deleteAccount.card.whatHappens")}
+									consequences={[
+										...(plan.ownedTeams.length === 0
+											? []
+											: [t("page.account.deleteAccount.card.ownedTeamsIntro")]),
+										...ownedTeamLines,
+										...(plan.othersLosingAccess > 0
+											? [
+													<strong mix={[fg("danger")]}>
+														{t("page.account.deleteAccount.card.othersWarning", {
+															count: plan.othersLosingAccess,
+														})}
+													</strong>,
+												]
+											: []),
+									]}
+									buttonLabel={t("page.account.deleteAccount.card.cta")}
+									confirm={{
+										title: t("page.account.deleteConfirm.title"),
+										description: t("page.account.deleteAccount.card.description"),
+										confirmLabel: t("page.account.deleteAccount.card.cta"),
+										cancelLabel,
+										typeToConfirm: {
+											value: DELETE_PHRASE,
+											label: t("page.account.deleteAccount.card.confirmation.label"),
+											name: "confirmation",
+										},
+										form: { action: routes.accountActions.requestDeletion.href() },
+									}}
+								/>
+								<div
+									mix={[
+										p(4),
+										vstack({ gap: 1, align: "stretch" }),
+										fontSize("sm"),
+										fg("neutral.muted"),
+									]}
+								>
+									<p mix={[m(0)]}>{t("page.account.deleteAccount.card.retained.intro")}</p>
+									<ul mix={[m(0), pis(5)]}>
+										<li>{t("page.account.deleteAccount.card.retained.billing")}</li>
+										<li>{t("page.account.deleteAccount.card.retained.analytics")}</li>
+										<li>{t("page.account.deleteAccount.card.retained.logs")}</li>
+										<li>{t("page.account.deleteAccount.card.retained.identity")}</li>
+									</ul>
 								</div>
-							) : (
-								<div mix={dangerCard()}>
-									<form method="post" action={routes.accountActions.requestDeletion.href()}>
-										<div
-											mix={[
-												p("20px", "24px"),
-												borderEdge("block-end", { color: "danger", width: 1 }),
-											]}
-										>
-											<h3 mix={[m(0, 0, "4px", 0), fontSize("1rem"), weight(600), fg("danger")]}>
-												{ctx.intl.t("page.account.deleteAccount.card.title")}
-											</h3>
-											<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{ctx.intl.t("page.account.deleteAccount.card.description")}
-											</p>
-										</div>
-
-										<div mix={[p("24px"), vstack({ gap: "16px" })]}>
-											<p mix={[m(0), fontSize("0.875rem")]}>
-												{ctx.intl.t("page.account.deleteAccount.card.whatHappens")}
-											</p>
-
-											{plan.ownedTeams.length === 0 ? (
-												<p mix={[m(0), fontSize("0.875rem"), fg("neutral.muted")]}>
-													{ctx.intl.t("page.account.deleteAccount.card.noOwnedTeams")}
-												</p>
-											) : (
-												<div mix={[vstack({ gap: "8px" })]}>
-													<p mix={[m(0), fontSize("0.875rem")]}>
-														{ctx.intl.t("page.account.deleteAccount.card.ownedTeamsIntro")}
-													</p>
-													<ul mix={[m(0), p(0, 0, 0, "20px"), fontSize("0.875rem")]}>
-														{plan.ownedTeams.map((team) => (
-															<li key={team.id}>
-																{team.otherMemberCount === 0
-																	? ctx.intl.t("page.account.deleteAccount.card.ownedTeamAlone", {
-																			name: team.name,
-																		})
-																	: ctx.intl.t("page.account.deleteAccount.card.ownedTeam", {
-																			name: team.name,
-																			count: team.otherMemberCount,
-																		})}
-															</li>
-														))}
-													</ul>
-												</div>
-											)}
-
-											{plan.othersLosingAccess > 0 && (
-												<p
-													/**
-													 * Called out separately in the danger colour: it names a consequence for
-													 * other people, while the rest of this section covers the account
-													 * holder's own data.
-													 */
-													mix={[m(0), fontSize("0.875rem"), weight(600), fg("danger")]}
-												>
-													{ctx.intl.t("page.account.deleteAccount.card.othersWarning", {
-														count: plan.othersLosingAccess,
-													})}
-												</p>
-											)}
-
-											<div mix={[vstack({ gap: "4px" })]}>
-												<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-													{ctx.intl.t("page.account.deleteAccount.card.retained.intro")}
-												</p>
-												<ul
-													mix={[
-														m(0),
-														p(0, 0, 0, "20px"),
-														fontSize("0.8125rem"),
-														fg("neutral.muted"),
-													]}
-												>
-													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.billing")}</li>
-													<li>
-														{ctx.intl.t("page.account.deleteAccount.card.retained.analytics")}
-													</li>
-													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.logs")}</li>
-													<li>{ctx.intl.t("page.account.deleteAccount.card.retained.identity")}</li>
-												</ul>
-											</div>
-
-											<Field
-												label={ctx.intl.t("page.account.deleteAccount.card.confirmation.label")}
-											>
-												<input
-													type="text"
-													name="confirmation"
-													required
-													autocomplete="off"
-													pattern="DELETE"
-													title={ctx.intl.t("page.account.deleteAccount.card.confirmation.label")}
-													placeholder={ctx.intl.t(
-														"page.account.deleteAccount.card.confirmation.placeholder",
-													)}
-													mix={confirmationInput()}
-												/>
-											</Field>
-										</div>
-
-										<div
-											mix={[
-												p("16px", "24px"),
-												borderEdge("block-start", { color: "danger", width: 1 }),
-												hstack({ justify: "end" }),
-											]}
-										>
-											<Button type="submit" color="danger">
-												<Trash2Icon size={16} strokeWidth={1.5} />
-												<span>{ctx.intl.t("page.account.deleteAccount.card.cta")}</span>
-											</Button>
-										</div>
-									</form>
-								</div>
-							)}
-						</section>
-					</div>
+							</DangerZone>
+						)}
+					</SettingsLayout>
 				</AppShell>
 			</DocumentLayout>,
 		);

@@ -14,20 +14,40 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import { renderNewApiKeyForm } from "~/app/http/controllers/app/team/api-key-new";
 import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/api-key";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import routes from "~/routes/web";
 
-/** POST /actions/:team/create-api-key */
+/**
+ * POST /actions/:team/create-api-key. A rejected submission renders the new key form again with
+ * a 400, keeping the typed name, the date and every checked scope beside the field's error.
+ */
 export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateApiKeySchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", { intent: "error", message: "Please check the API key details." });
-		return redirect(routes.app.team.apiKeys.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
-		});
+		let rejected = new Set(result.error.issues.map((issue) => issue.path?.at(0)));
+		let name = ctx.formData.get("name");
+		let expiresAt = ctx.formData.get("expires_at");
+		let scopes = ctx.formData
+			.getAll("scopes")
+			.filter((scope): scope is string => typeof scope === "string");
+		return renderNewApiKeyForm(
+			{
+				values: {
+					name: typeof name === "string" ? name : "",
+					expires_at: typeof expiresAt === "string" ? expiresAt : "",
+					scopes,
+				},
+				issues: {
+					name: rejected.has("name"),
+					scopes: rejected.has("scopes") || scopes.length === 0,
+				},
+			},
+			{ status: 400 },
+		);
 	}
 
 	let count = await ctx.models.apiKeys.inTeam(ctx.team.id).count();

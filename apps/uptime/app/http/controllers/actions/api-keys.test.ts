@@ -1,35 +1,74 @@
 /**
  * Tests the API-key create/delete actions: a successful create generates and stores
  * a hashed key (capped per team) and redirects to the list; a successful delete
- * removes the key; validation failure and the team-scoped not-found guard leave the
- * `api_keys` table untouched.
+ * removes the key; a rejected create renders the form again with what was submitted, and
+ * validation failure and the team-scoped not-found guard leave the `api_keys` table untouched.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+import type { Middleware, RequestContext } from "remix/router";
+
 import { database } from "@sdxc/database-middleware";
+import { createTranslator } from "@sdxc/i18n";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
-import { createRouter, type Middleware } from "remix/router";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { apiKeys, memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 let { createApiKey, deleteApiKey } = await import("./api-keys");
 let { MAX_API_KEYS_PER_TEAM } = await import("~/app/models/api-keys");
 
-/** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/**
+ * Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`,
+ * plus the viewer and translator a rejected create needs to render the form again.
+ */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
 	return (ctx, next) => {
-		(ctx as unknown as { team: SelectTeam }).team = team;
-		(ctx as unknown as { membership: SelectMembership }).membership = membership;
+		ctx.team = team;
+		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.locale = "en";
+		ctx.intl = intl;
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -56,7 +95,14 @@ async function postApiKeyAction(
 	body: Record<string, string | string[]>,
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(db), models(), formData()],
+		middleware: [
+			asyncContext(),
+			database(db),
+			models(),
+			formData(),
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
@@ -129,7 +175,7 @@ describe("POST /actions/:team/create-api-key", () => {
 		expect(created?.key_prefix).toHaveLength(15);
 	});
 
-	test("rejects a blank name and redirects to the new-key form without creating a row", async () => {
+	test("renders the form again with the typed values when the name is blank, creating no row", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -140,17 +186,21 @@ describe("POST /actions/:team/create-api-key", () => {
 			team,
 			membership,
 			db,
-			{ name: "", scopes: ["monitors:read"], expires_at: "" },
+			{ name: "", scopes: ["monitors:read", "reports:read"], expires_at: "2030-01-31" },
 		);
+		let body = await response.text();
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.apiKeys.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		expect(body).toContain(en.page.apiKeys.fieldErrors.name);
+		expect(body).not.toContain(en.page.apiKeys.fieldErrors.scopes);
+		expect(body.match(/<input[^>]*value="monitors:read"[^>]*>/)?.[0]).toMatch(/\schecked\b/);
+		expect(body.match(/<input[^>]*value="reports:read"[^>]*>/)?.[0]).toMatch(/\schecked\b/);
+		expect(body.match(/<input[^>]*value="monitors:write"[^>]*>/)?.[0]).not.toMatch(/\schecked\b/);
+		expect(body).toContain(`value="2030-01-31"`);
 		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(0);
 	});
 
-	test("rejects a request with no scopes selected, making no DB mutation", async () => {
+	test("keeps the typed name and flags the scopes when none is selected, making no DB mutation", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -163,8 +213,12 @@ describe("POST /actions/:team/create-api-key", () => {
 			db,
 			{ name: "No scopes", scopes: [], expires_at: "" },
 		);
+		let body = await response.text();
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(400);
+		expect(body.match(/<input[^>]*name="name"[^>]*>/)?.[0]).toContain(`value="No scopes"`);
+		expect(body).toContain(en.page.apiKeys.fieldErrors.scopes);
+		expect(body).toContain(`aria-describedby="api-key-scopes-error"`);
 		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(0);
 	});
 

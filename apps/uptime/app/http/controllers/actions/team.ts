@@ -13,34 +13,43 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
+import { renderTeamSettings } from "~/app/http/controllers/app/team/settings";
+import { Admin } from "~/app/http/middleware/admin";
 import {
 	ChangeRoleSchema,
 	DeleteTeamSchema,
 	RemoveMemberSchema,
 	UpdateTeamSchema,
 } from "~/app/http/validators/team";
+import { createManagementClient } from "~/app/initializers/management-client";
 import abilities from "~/app/policies/abilities";
 import { cancelSubscriptions } from "~/app/services/customer";
 import routes from "~/routes/web";
 
 /**
- * POST /actions/:team/update-team. A rejected logo flashes the submitted text under
- * {@link TEAM_LOGO_ERROR}, so the settings page shows it back with the field's error.
+ * POST /actions/:team/update-team. A rejected submission renders the settings page again with
+ * a 400, the submitted text in both fields and the error beside each rejected one, so nothing
+ * typed is lost.
  */
 export const updateTeam = createAction(routes.teamAdminActions.team.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTeamSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		if (result.error.issues.some((issue) => issue.path?.at(0) === "logo")) {
-			let logo = ctx.formData.get("logo");
-			session?.flash(TEAM_LOGO_ERROR, typeof logo === "string" ? logo : "");
-		}
-		session?.flash("toast", { intent: "error", message: "Please check the team details." });
-		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
-		});
+		let rejected = new Set(result.error.issues.map((issue) => issue.path?.at(0)));
+		let name = ctx.formData.get("name");
+		let logo = ctx.formData.get("logo");
+		if (!ctx.has(Admin)) ctx.set(Admin, createManagementClient(), { property: "admin" });
+		return renderTeamSettings(
+			{
+				values: {
+					name: typeof name === "string" ? name : "",
+					logo: typeof logo === "string" ? logo : "",
+				},
+				issues: { name: rejected.has("name"), logo: rejected.has("logo") },
+			},
+			{ status: 400 },
+		);
 	}
 
 	let { name, logo } = result.data;
@@ -52,7 +61,10 @@ export const updateTeam = createAction(routes.teamAdminActions.team.update, asyn
 	});
 });
 
-/** DELETE /actions/:team/delete-team — the router admits any admin, and only the owner deletes. */
+/**
+ * DELETE /actions/:team/delete-team — the router admits any admin, and only the owner deletes,
+ * after typing the team's exact name.
+ */
 export const deleteTeam = createAction(routes.teamAdminActions.team.delete, async (ctx) => {
 	await ctx.access.load(abilities.team.delete);
 	if (!ctx.access.can(abilities.team.delete)) {
@@ -60,8 +72,8 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 	}
 
 	let result = await validate(ctx.formData, DeleteTeamSchema);
-	if (isFailure(result)) {
-		return badRequest('Type "DELETE" to confirm.');
+	if (isFailure(result) || result.data.confirmation !== ctx.team.name) {
+		return badRequest("Type the team's name to confirm.");
 	}
 
 	/**

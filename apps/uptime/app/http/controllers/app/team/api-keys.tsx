@@ -8,15 +8,13 @@
  */
 
 import { requireAbility } from "@sdxc/authz/middleware/router";
-import { formatDate, formatDateTime } from "@sdxc/dates";
 import { IntlProvider } from "@sdxc/i18n/ui";
-import { KeyIcon, PlusIcon } from "@sdxc/icons";
-import { border } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { pb, pi } from "@sdxc/u/size";
-import { textAlign } from "@sdxc/u/typography";
-import { Badge, Button, LinkButton } from "@sdxc/ui";
+import { PlusIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, hstack } from "@sdxc/u/layout";
+import { mbe } from "@sdxc/u/size";
+import { font, wordBreak } from "@sdxc/u/typography";
+import { Alert, Badge, Button, Confirm, LinkButton } from "@sdxc/ui";
 import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
@@ -25,8 +23,10 @@ import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import abilities from "~/app/policies/abilities";
-import { badgeVariant } from "~/resources/components/badge";
+import { hasBillingProblem } from "~/app/services/billing-problem";
+import BillingBanner from "~/resources/components/billing-banner";
 import CopyButton from "~/resources/components/copy-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -37,10 +37,17 @@ interface NewApiKey {
 	key: string;
 }
 
+/** The flash an API key action left for this page, shown as one toast. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
+
 /**
  * GET /app/:team/api-keys — the team's API keys list. CopyButton sits inside
  * an IntlProvider because its clientEntry island also renders server-side,
- * where intl(handle) needs an IntlProvider ancestor to resolve.
+ * where intl(handle) needs an IntlProvider ancestor to resolve. Creating a key is offered
+ * only while the team is under its key limit.
  */
 export default createAction(routes.app.team.apiKeys.index, {
 	middleware: [requireUser, requireTeam, teamAccess, requireAbility(abilities.apiKeys.read)],
@@ -48,8 +55,18 @@ export default createAction(routes.app.team.apiKeys.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let apiKeys = await ctx.models.apiKeys.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
-		let newApiKey = ctx.get(Session)?.get("newApiKey") as NewApiKey | undefined;
+		let [apiKeys, billingProblem] = await Promise.all([
+			ctx.models.apiKeys.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			hasBillingProblem(ctx.models, ctx.team.owner_id),
+		]);
+		let session = ctx.get(Session);
+		let newApiKey = session?.get("newApiKey") as NewApiKey | undefined;
+		let toast = session?.get("toast") as Toast | undefined;
+
+		let t = ctx.intl.t;
+		let now = Date.now();
+		let newKeyHref = routes.app.team.apiKeys.new.href({ team: ctx.team.slug });
+		let canCreate = apiKeys.length < MAX_API_KEYS_PER_TEAM;
 
 		return ctx.render(
 			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · API keys`}>
@@ -60,134 +77,156 @@ export default createAction(routes.app.team.apiKeys.index, {
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
-					heading={ctx.intl.t("page.apiKeys.header.title")}
-					actions={
-						apiKeys.length < 10 && (
-							<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
+					heading={t("page.apiKeys.header.title")}
+					toast={toast}
+					banner={
+						billingProblem ? (
+							<BillingBanner
+								intl={ctx.intl}
+								teamSlug={ctx.team.slug}
+								isOwner={viewer.id === ctx.team.owner_id}
+							/>
+						) : undefined
+					}
+					primaryAction={
+						canCreate && apiKeys.length > 0 ? (
+							<LinkButton href={newKeyHref}>
 								<PlusIcon size={16} strokeWidth={1.5} />
-								{ctx.intl.t("page.apiKeys.header.action.create")}
+								{t("page.apiKeys.header.action.create")}
 							</LinkButton>
-						)
+						) : undefined
 					}
 				>
-					<div>
-						{newApiKey && (
-							<div
-								mix={[
-									vstack({ gap: "12px", align: "center" }),
-									textAlign("center"),
-									pb("64px"),
-									pi("32px"),
-									border({ width: 1, style: "dashed", color: "neutral" }),
-									rounded("12px"),
-								]}
-							>
-								<p>{ctx.intl.t("page.apiKeys.newKey.title", { name: newApiKey.name })}</p>
-								<p>{ctx.intl.t("page.apiKeys.newKey.description")}</p>
-								<div mix={[hstack({ gap: "12px", align: "center" })]}>
-									<code>{newApiKey.key}</code>
+					{newApiKey && (
+						<Alert color="success" mix={[mbe(6)]}>
+							<Alert.Content>
+								<Alert.Title>
+									{t("page.apiKeys.newKey.title", { name: newApiKey.name })}
+								</Alert.Title>
+								<Alert.Description>{t("page.apiKeys.newKey.description")}</Alert.Description>
+								<div mix={[hstack({ gap: 3, align: "center" })]}>
+									<code mix={[font("mono"), wordBreak("break-all")]}>{newApiKey.key}</code>
 									<IntlProvider intl={ctx.intl}>
-										<CopyButton
-											value={newApiKey.key}
-											label={ctx.intl.t("page.apiKeys.newKey.copyLabel")}
-										/>
+										<CopyButton value={newApiKey.key} label={t("page.apiKeys.newKey.copyLabel")} />
 									</IntlProvider>
 								</div>
-							</div>
-						)}
+							</Alert.Content>
+						</Alert>
+					)}
 
-						{apiKeys.length === 0 ? (
-							<Empty>
-								<Empty.Icon>
-									<KeyIcon size={24} strokeWidth={1.5} />
-								</Empty.Icon>
-								<Empty.Title>{ctx.intl.t("page.apiKeys.empty.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.intl.t("page.apiKeys.empty.description")}
-								</Empty.Description>
-								<Empty.Action>
-									<LinkButton href={routes.app.team.apiKeys.new.href({ team: ctx.team.slug })}>
-										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.intl.t("page.apiKeys.empty.cta")}
-									</LinkButton>
-								</Empty.Action>
-							</Empty>
-						) : (
-							<Table.Container>
-								<Table aria-label={ctx.intl.t("page.apiKeys.table.label")}>
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.name")}</Table.Column>
-											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.prefix")}</Table.Column>
-											<Table.Column>{ctx.intl.t("page.apiKeys.table.columns.scopes")}</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.apiKeys.table.columns.lastUsed")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.apiKeys.table.columns.expires")}
-											</Table.Column>
-											<Table.Column></Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{apiKeys.map((apiKey) => {
-											let isExpired = apiKey.expires_at !== null && apiKey.expires_at < Date.now();
+					{apiKeys.length === 0 ? (
+						<Empty kind="first-run">
+							<Empty.Title>{t("page.apiKeys.empty.title")}</Empty.Title>
+							<Empty.Description>{t("page.apiKeys.empty.description")}</Empty.Description>
+							<Empty.Action>
+								<LinkButton href={newKeyHref}>
+									<PlusIcon size={16} strokeWidth={1.5} />
+									{t("page.apiKeys.empty.cta")}
+								</LinkButton>
+							</Empty.Action>
+						</Empty>
+					) : (
+						<Table.Container>
+							<Table aria-label={t("page.apiKeys.table.label")}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>{t("page.apiKeys.table.columns.name")}</Table.Column>
+										<Table.Column>{t("page.apiKeys.table.columns.prefix")}</Table.Column>
+										<Table.Column>{t("page.apiKeys.table.columns.scopes")}</Table.Column>
+										<Table.Column>{t("page.apiKeys.list.created")}</Table.Column>
+										<Table.Column>{t("page.apiKeys.table.columns.lastUsed")}</Table.Column>
+										<Table.Column>{t("page.apiKeys.table.columns.expires")}</Table.Column>
+										<Table.ActionsColumn label={t("page.apiKeys.table.columns.actions")} />
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{apiKeys.map((apiKey) => {
+										let isExpired = apiKey.expires_at !== null && apiKey.expires_at < now;
+										let deleteDialogId = `delete-api-key-${apiKey.id}`;
 
-											return (
-												<Table.Row key={apiKey.id}>
-													<Table.Cell>{apiKey.name}</Table.Cell>
-													<Table.Cell>
-														<code>{apiKey.key_prefix}...</code>
-													</Table.Cell>
-													<Table.Cell>
+										return (
+											<Table.Row key={apiKey.id}>
+												<Table.Cell mix={[fg("neutral.emphasis")]}>{apiKey.name}</Table.Cell>
+												<Table.IdCell value={apiKey.key_prefix} />
+												<Table.Cell>
+													<div mix={[hstack({ gap: 1 }), flexWrap()]}>
 														{apiKey.scopes.map((scope) => (
-															<Badge key={scope} {...badgeVariant("neutral")}>
+															<Badge key={scope} color="neutral" variant="outline">
 																{scope}
 															</Badge>
 														))}
+													</div>
+												</Table.Cell>
+												<Table.DateCell
+													date={apiKey.created_at}
+													now={now}
+													locale={ctx.locale}
+													local
+												/>
+												{apiKey.last_used_at ? (
+													<Table.DateCell
+														date={apiKey.last_used_at}
+														now={now}
+														locale={ctx.locale}
+														local
+													/>
+												) : (
+													<Table.Cell mix={[fg("neutral.muted")]}>
+														{t("page.apiKeys.table.lastUsed.never")}
 													</Table.Cell>
-													<Table.Cell>
-														{apiKey.last_used_at
-															? formatDateTime(new Date(apiKey.last_used_at), {
-																	locale: ctx.locale,
-																	timeZone: "UTC",
-																})
-															: ctx.intl.t("page.apiKeys.table.lastUsed.never")}
+												)}
+												{apiKey.expires_at ? (
+													<Table.DateCell
+														date={apiKey.expires_at}
+														now={now}
+														locale={ctx.locale}
+														local
+														mix={isExpired ? [fg("danger")] : undefined}
+													/>
+												) : (
+													<Table.Cell mix={[fg("neutral.muted")]}>
+														{t("page.apiKeys.table.expires.never")}
 													</Table.Cell>
-													<Table.Cell>
-														{apiKey.expires_at ? (
-															<Badge {...badgeVariant(isExpired ? "down" : "neutral")}>
-																{formatDate(new Date(apiKey.expires_at), {
-																	locale: ctx.locale,
-																	timeZone: "UTC",
-																})}
-															</Badge>
-														) : (
-															ctx.intl.t("page.apiKeys.table.expires.never")
-														)}
-													</Table.Cell>
-													<Table.Cell>
-														<form
-															method="post"
-															action={routes.teamAdminActions.apiKey.delete.href({
+												)}
+												<Table.Actions>
+													<Button
+														type="button"
+														size="sm"
+														variant="ghost"
+														color="danger"
+														commandfor={deleteDialogId}
+														command="show-modal"
+													>
+														{t("page.apiKeys.table.actions.delete")}
+													</Button>
+													<Confirm
+														id={deleteDialogId}
+														title={t("page.apiKeys.list.deleteTitle")}
+														description={t("page.apiKeys.table.confirmation.delete", {
+															name: apiKey.name,
+														})}
+														confirmLabel={t("page.apiKeys.table.actions.delete")}
+														cancelLabel={t("page.apiKeys.form.actions.cancel")}
+														form={{
+															action: routes.teamAdminActions.apiKey.delete.href({
 																team: ctx.team.slug,
-															})}
-														>
-															<input type="hidden" name="_method" value="DELETE" />
-															<input type="hidden" name="api_key_id" value={apiKey.id} />
-															<Button type="submit" color="danger">
-																{ctx.intl.t("page.apiKeys.table.actions.delete")}
-															</Button>
-														</form>
-													</Table.Cell>
-												</Table.Row>
-											);
-										})}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
-					</div>
+															}),
+															fields: (
+																<>
+																	<input type="hidden" name="_method" value="DELETE" />
+																	<input type="hidden" name="api_key_id" value={apiKey.id} />
+																</>
+															),
+														}}
+													/>
+												</Table.Actions>
+											</Table.Row>
+										);
+									})}
+								</Table.Body>
+							</Table>
+						</Table.Container>
+					)}
 				</AppShell>
 			</DocumentLayout>,
 		);

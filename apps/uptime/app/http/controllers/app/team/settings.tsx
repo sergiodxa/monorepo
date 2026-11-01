@@ -1,16 +1,20 @@
 /**
  * Team settings page controller, gated behind `requireUser`, `requireTeam`, and
- * `requireAbility(abilities.team.update)`.
+ * `requireAbility(abilities.team.update)`. One route laid out as a settings area: a section nav
+ * of in-page anchors beside the team's profile, members, invites, domains, billing and danger zone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle, RemixNode } from "remix/component";
+
 import { requireAbility } from "@sdxc/authz/middleware/router";
-import { addDays, formatDate, formatRelative } from "@sdxc/dates";
+import { addDays } from "@sdxc/dates";
 import { Trans } from "@sdxc/i18n/ui";
 import {
 	BadgeMinusIcon,
+	EllipsisIcon,
 	ExternalLinkIcon,
 	HandshakeIcon,
 	RefreshCcwIcon,
@@ -18,37 +22,15 @@ import {
 	UserMinusIcon,
 	UserPlusIcon,
 } from "@sdxc/icons";
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { bg, border, borderEdge, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { pointerEvents, pseudoContent, raw } from "@sdxc/u/general";
-import {
-	absolute,
-	basis,
-	boxSizing,
-	grow,
-	hstack,
-	insBottom,
-	insRight,
-	insTop,
-	shrink,
-	vstack,
-} from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { media } from "@sdxc/u/responsive";
-import { is, maxIs, mi, minIs, p, m, width } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
-import {
-	font,
-	fontSize,
-	nowrap,
-	textAlign,
-	textDecoration,
-	weight,
-	wordBreak,
-} from "@sdxc/u/typography";
-import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
-import { Empty, Table } from "@sdxc/ui/app";
+import { fg } from "@sdxc/u/color";
+import { grow, hstack, vstack } from "@sdxc/u/layout";
+import { m, minIs } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
+import { Button, Confirm, Dialog, FieldError, Input, LinkButton, Menu, TextField } from "@sdxc/ui";
+import { DangerZone, Empty, SettingsLayout, SettingsSection, Table } from "@sdxc/ui/app";
+import { menuKeys } from "@sdxc/ui/mixins";
+import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -59,416 +41,295 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createManagementClient } from "~/app/initializers/management-client";
 import abilities from "~/app/policies/abilities";
+import { hasBillingProblem } from "~/app/services/billing-problem";
 import { resolveSubjects } from "~/app/services/subjects";
 import { teamLogoUrl } from "~/app/services/team-logo";
 import Avatar from "~/resources/components/avatar";
-import Field from "~/resources/components/field";
-import RowMenu, { menuItem, menuItemDanger, menuSeparator } from "~/resources/components/row-menu";
-import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
+import BillingBanner from "~/resources/components/billing-banner";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 const INVITE_EXPIRATION_DAYS = 7;
 
-/**
- * Session flash key carrying the logo text the update-team action rejected, read once by
- * this page to refill the field and show its error beside it.
- */
-export const TEAM_LOGO_ERROR = "teamLogoError";
-
 /** DOM id of the logo field's error, referenced by the input's `aria-describedby`. */
 const LOGO_ERROR_ID = "team-logo-error";
 
+/** DOM id of the name field's error, referenced by the input's `aria-describedby`. */
+const NAME_ERROR_ID = "team-name-error";
+
 /**
- * How long an invite has left, worded for `locale`, or `isExpired: true` once its
- * {@link INVITE_EXPIRATION_DAYS} have passed so the row shows the expired label instead.
+ * What the update-team action submitted and which fields it rejected, so a failed save renders
+ * the page again with every character the person typed and the error beside its field.
  */
-function describeInviteExpiration(
-	createdAt: number,
-	locale: string,
-): { text: string; isExpired: boolean } {
-	let expiresAt = addDays(new Date(createdAt), INVITE_EXPIRATION_DAYS);
-	if (expiresAt.getTime() <= Date.now()) return { text: "", isExpired: true };
-	return { text: formatRelative(expiresAt, { locale }), isExpired: false };
+export interface TeamProfileSubmission {
+	values: { name: string; logo: string };
+	issues: { name?: boolean; logo?: boolean };
+}
+
+/** The flash a team action left for this page, shown as one toast. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
+
+/** When an invite stops working: {@link INVITE_EXPIRATION_DAYS} after it was sent. */
+function inviteExpiresAt(createdAt: number): Date {
+	return addDays(new Date(createdAt), INVITE_EXPIRATION_DAYS);
 }
 
 /**
- * Viewport from which a section's card is allowed to bleed past its column.
+ * Renders the team settings page for the current request. The page itself calls it with no
+ * submission; the update-team action calls it with the rejected one and a 400, so the form
+ * keeps its input. The members table needs `ctx.admin` to name each member.
  *
- * `AppShell` pads its content area by 20px below this width and 48px above it, so a
- * card bleeding 6 spacing units past that padding has room only above the threshold.
+ * @param submission - The rejected profile form, refilled with its values and issues.
+ * @param init - Response options, such as the 400 a rejected submission answers with.
+ * @returns The rendered page.
  */
-const CARD_BLEED_FROM = "(min-width: 768px)";
+export async function renderTeamSettings(
+	submission?: TeamProfileSubmission,
+	init?: ResponseInit,
+): Promise<Response> {
+	let ctx = getContext();
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
 
-/**
- * The bordered card each section on this page is built around.
- *
- * Pulled out by exactly the inline padding its own rows carry (`p(5, 6)`), so the
- * card's edge lines up with the section heading above it.
- */
-function settingsCard(tone: "neutral" | "danger" = "neutral") {
-	return [
-		rounded("xl"),
-		border({ color: tone, width: 1 }),
-		overflow(),
-		media(CARD_BLEED_FROM, mi(-6)),
+	let [members, pendingInvites, domains, billingProblem] = await Promise.all([
+		ctx.models.memberships.inTeam(ctx.team.id).all(),
+		ctx.models.invites.inTeam(ctx.team.id).pending().orderBy("created_at", "desc").all(),
+		ctx.models.teamDomains.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+		hasBillingProblem(ctx.models, ctx.team.owner_id),
+	]);
+
+	let subjectsById = await resolveSubjects(
+		ctx.admin,
+		members.map((member) => member.subject_id),
+	);
+
+	let t = ctx.intl.t;
+	let team = ctx.team;
+	let teamParams = { team: team.slug };
+	let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
+	let viewerIsOwner = viewer.id === team.owner_id;
+	let hasPendingDomainVerification = domains.some((domain) => domain.verified_at === null);
+	let now = Date.now();
+	let logoError = submission?.issues.logo === true;
+	let nameError = submission?.issues.name === true;
+	let cancelLabel = t("page.settings.form.actions.cancel");
+
+	let navItems = [
+		{ href: "#general", label: t("page.settings.sections.general.title") },
+		{ href: "#members", label: t("page.settings.members.title") },
+		{ href: "#invites", label: t("page.settings.members.invitedTable.label") },
+		{ href: "#domains", label: t("page.settings.domains.title") },
+		...(viewerIsOwner
+			? [
+					{ href: "#billing", label: t("page.settings.billing.title") },
+					{ href: "#danger", label: t("page.settings.danger.title") },
+				]
+			: []),
 	];
-}
 
-/** Shared visual style for every text/url input across this page's forms. */
-function textInput() {
-	return [
-		p(2, 3),
-		rounded("md"),
-		border({ color: "neutral", width: 1 }),
-		fontSize("sm"),
-		font("inherit"),
-		bg("neutral.tint"),
-		fg("inherit"),
-	];
-}
-
-/**
- * GET /app/:team/settings — team settings: general, members, domains, billing, danger zone.
- *
- * The transfer-ownership menu item stays disabled until a transfer action exists. Field's
- * own trailing margin spaces the danger-zone confirmation input from the footer below.
- */
-export default createAction(routes.app.team.settings, {
-	middleware: [
-		requireUser,
-		requireTeam,
-		teamAccess,
-		requireAbility(abilities.team.update),
-		admin(createManagementClient),
-	],
-	handler: async (ctx) => {
-		let viewer = getViewer();
-		if (!viewer) throw new Error("requireUser must run before this handler");
-
-		let [members, pendingInvites, domains] = await Promise.all([
-			ctx.models.memberships.inTeam(ctx.team.id).all(),
-			ctx.models.invites.inTeam(ctx.team.id).pending().orderBy("created_at", "desc").all(),
-			ctx.models.teamDomains.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-		]);
-
-		let subjectsById = await resolveSubjects(
-			ctx.admin,
-			members.map((member) => member.subject_id),
-		);
-
-		let team = ctx.team;
-		let rejectedLogo = ctx.get(Session)?.get(TEAM_LOGO_ERROR);
-		let logoError = typeof rejectedLogo === "string";
-		let viewerIsOwner = viewer.id === team.owner_id;
-		let hasPendingDomainVerification = domains.some((domain) => domain.verified_at === null);
-
-		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Settings`}>
-				<AppShell
-					team={ctx.team}
-					currentPath={ctx.url.pathname}
-					teams={ctx.teams}
-					viewer={viewer}
-					isAdmin={ctx.membership.role === "admin"}
-					intl={ctx.intl}
-					heading={ctx.intl.t("page.settings.header.title")}
+	return ctx.render(
+		<DocumentLayout assets={ctx.assets} title={`${team.name} · Settings`}>
+			<AppShell
+				team={team}
+				currentPath={ctx.url.pathname}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+				intl={ctx.intl}
+				heading={t("page.settings.header.title")}
+				toast={toast}
+				banner={
+					billingProblem ? (
+						<BillingBanner intl={ctx.intl} teamSlug={team.slug} isOwner={viewerIsOwner} />
+					) : undefined
+				}
+			>
+				<SettingsLayout
+					sections={[{ items: navItems }]}
+					labels={{ nav: t("page.settings.nav"), back: t("page.settings.header.title") }}
 				>
-					<div mix={[vstack({ gap: 12 })]}>
-						<section
-							id="general"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
+					<SettingsSection
+						id="general"
+						title={t("page.settings.sections.general.title")}
+						description={t("page.settings.sections.general.description")}
+						form={{ action: routes.teamAdminActions.team.update.href(teamParams) }}
+						labels={{ save: t("page.settings.form.actions.save") }}
+					>
+						<SettingsSection.Row
+							label={t("page.settings.form.fields.logo.label")}
+							description={t("page.settings.form.fields.logo.description")}
+							htmlFor="team-logo"
 						>
-							<div mix={[vstack({ gap: 1 })]}>
-								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-									{ctx.intl.t("page.settings.sections.general.title")}
-								</h2>
-								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.settings.sections.general.description")}
-								</p>
-							</div>
-
-							<div mix={settingsCard()}>
-								<form
-									method="post"
-									action={routes.teamAdminActions.team.update.href({ team: team.slug })}
-								>
-									<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
-										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.intl.t("page.settings.form.card.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.settings.form.card.description")}
-										</p>
-									</div>
-
-									<div mix={[p(6), vstack({ gap: SETTINGS_FIELD_GAP })]}>
-										<Field
-											label={ctx.intl.t("page.settings.form.fields.logo.label")}
-											description={ctx.intl.t("page.settings.form.fields.logo.description")}
-											error={
-												logoError ? ctx.intl.t("page.settings.form.fields.logo.error") : undefined
-											}
-											errorId={LOGO_ERROR_ID}
-										>
-											<div mix={[hstack({ gap: 4, align: "center" })]}>
-												<Avatar src={teamLogoUrl(team.logo)} name={team.name} size={48} />
-												<input
-													type="url"
-													name="logo"
-													defaultValue={logoError ? rejectedLogo : (team.logo ?? "")}
-													placeholder={ctx.intl.t("page.settings.form.fields.logo.placeholder")}
-													aria-invalid={logoError ? "true" : undefined}
-													aria-describedby={logoError ? LOGO_ERROR_ID : undefined}
-													mix={[textInput(), grow(), shrink(1), basis("0%")]}
-												/>
-											</div>
-										</Field>
-
-										<Field
-											label={ctx.intl.t("page.settings.form.fields.name.label")}
-											description={ctx.intl.t("page.settings.form.fields.name.description")}
-										>
-											<input
-												type="text"
-												name="name"
-												required
-												defaultValue={team.name}
-												placeholder={ctx.intl.t("page.settings.form.fields.name.placeholder")}
-												mix={[textInput()]}
-											/>
-										</Field>
-									</div>
-
-									<div
-										mix={[
-											p(4, 6),
-											borderEdge("block-start", { color: "neutral", width: 1 }),
-											hstack({ gap: 2, justify: "end" }),
-										]}
-									>
-										<Button type="reset" variant="outline">
-											{ctx.intl.t("page.settings.form.actions.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.settings.form.actions.save")}</Button>
-									</div>
-								</form>
-							</div>
-						</section>
-
-						<section
-							id="members"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
-						>
-							<div mix={[hstack({ gap: 4, align: "start", justify: "between" })]}>
-								<div mix={[vstack({ gap: 1 })]}>
-									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-										{ctx.intl.t("page.settings.members.title")}
-									</h2>
-									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.members.description")}
-									</p>
+							<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+								<div mix={[hstack({ gap: 3, align: "center" })]}>
+									<Avatar src={teamLogoUrl(team.logo)} name={team.name} size={36} />
+									<Input
+										id="team-logo"
+										type="url"
+										name="logo"
+										defaultValue={submission ? submission.values.logo : (team.logo ?? "")}
+										placeholder={t("page.settings.form.fields.logo.placeholder")}
+										aria-invalid={logoError ? "true" : undefined}
+										aria-describedby={logoError ? LOGO_ERROR_ID : undefined}
+										mix={[grow(), minIs(0)]}
+									/>
 								</div>
-								<Button
-									type="button"
-									variant="outline"
-									commandfor="invite-member"
-									command="show-modal"
-									mix={[shrink()]}
-								>
-									<UserPlusIcon size={16} strokeWidth={1.5} />
-									<span>{ctx.intl.t("page.settings.members.actions.invite")}</span>
-								</Button>
+								{logoError && (
+									<FieldError id={LOGO_ERROR_ID}>
+										{t("page.settings.form.fields.logo.error")}
+									</FieldError>
+								)}
 							</div>
+						</SettingsSection.Row>
 
-							<dialog
-								id="invite-member"
-								mix={[
-									is("full"),
-									maxIs("min(440px, calc(100vw - 32px))"),
-									p(6),
-									boxSizing("border-box"),
-									rounded("lg"),
-									border({ color: "neutral", width: 1 }),
-									bg("neutral.tint"),
-									fg("neutral.emphasis"),
-									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
-								]}
+						<SettingsSection.Row
+							label={t("page.settings.form.fields.name.label")}
+							description={t("page.settings.form.fields.name.description")}
+							htmlFor="team-name"
+						>
+							<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+								<Input
+									id="team-name"
+									type="text"
+									name="name"
+									required
+									defaultValue={submission ? submission.values.name : team.name}
+									placeholder={t("page.settings.form.fields.name.placeholder")}
+									aria-invalid={nameError ? "true" : undefined}
+									aria-describedby={nameError ? NAME_ERROR_ID : undefined}
+								/>
+								{nameError && (
+									<FieldError id={NAME_ERROR_ID}>{t("page.settings.fieldErrors.name")}</FieldError>
+								)}
+							</div>
+						</SettingsSection.Row>
+					</SettingsSection>
+
+					<SettingsSection
+						id="members"
+						save="instant"
+						title={t("page.settings.members.title")}
+						description={t("page.settings.members.description")}
+						labels={{ save: t("page.settings.form.actions.save") }}
+					>
+						<SettingsSection.Row
+							layout="inline-switch"
+							label={t("page.settings.invite.title")}
+							description={t("page.settings.invite.description")}
+						>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								commandfor="invite-member"
+								command="show-modal"
 							>
-								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
-									{ctx.intl.t("page.invite.header.title")}
-								</h3>
-								<form
-									method="post"
-									action={routes.teamAdminActions.invite.create.href({ team: team.slug })}
-									mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}
-								>
-									<Field label={ctx.intl.t("page.invite.form.fields.email.label")}>
-										<input
-											type="email"
-											name="email"
-											required
-											placeholder={ctx.intl.t("page.invite.form.fields.email.placeholder")}
-											mix={[textInput()]}
-										/>
-									</Field>
-									<div mix={[hstack({ gap: 2, justify: "end" })]}>
-										<Button
-											type="button"
-											variant="outline"
-											commandfor="invite-member"
-											command="close"
-										>
-											{ctx.intl.t("page.invite.form.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.invite.form.cta")}</Button>
-									</div>
-								</form>
-							</dialog>
+								<UserPlusIcon size={16} strokeWidth={1.5} />
+								<span>{t("page.settings.members.actions.invite")}</span>
+							</Button>
+						</SettingsSection.Row>
 
-							<div mix={settingsCard()}>
-								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
-									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-										{ctx.intl.t("page.settings.members.table.label")}
-									</h3>
-									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.members.table.description")}
-									</p>
-								</div>
+						<Table.Container>
+							<Table aria-label={t("page.settings.members.table.label")}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>{t("page.settings.members.table.columns.name")}</Table.Column>
+										<Table.Column>{t("page.settings.members.table.columns.role")}</Table.Column>
+										<Table.ActionsColumn label={t("page.settings.members.table.columns.actions")} />
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{members.map((member) => {
+										let subject = subjectsById.get(member.subject_id);
+										let memberIsOwner = member.subject_id === team.owner_id;
+										let nextRole = member.role === "admin" ? "member" : "admin";
+										let displayName = subject?.displayName ?? member.subject_id;
+										let removeDialogId = `remove-member-${member.id}`;
 
-								<Table.Container>
-									<Table aria-label={ctx.intl.t("page.settings.members.table.label")}>
-										<Table.Header>
-											<Table.Row>
-												<Table.Column>
-													{ctx.intl.t("page.settings.members.table.columns.name")}
-												</Table.Column>
-												<Table.Column align="end">
-													{ctx.intl.t("page.settings.members.table.columns.role")}
-												</Table.Column>
-												<Table.Column align="center">
-													<span mix={[visuallyHidden()]}>
-														{ctx.intl.t("page.settings.members.table.columns.actions")}
-													</span>
-												</Table.Column>
-											</Table.Row>
-										</Table.Header>
-										<Table.Body>
-											{members.map((member) => {
-												let subject = subjectsById.get(member.subject_id);
-												let memberIsOwner = member.subject_id === team.owner_id;
-												let nextRole = member.role === "admin" ? "member" : "admin";
-												let displayName = subject?.displayName ?? member.subject_id;
-												let removeDialogId = `remove-member-${member.id}`;
-												let removeDialogTitleId = `${removeDialogId}-title`;
-
-												return (
-													<Table.Row key={member.id}>
-														<Table.Cell>
-															<div mix={[hstack({ gap: 3, align: "center" })]}>
-																<Avatar
-																	src={subject?.avatar || null}
-																	name={displayName}
-																	size={40}
-																/>
-																<div mix={[vstack({ gap: 0.5 })]}>
-																	<span mix={[weight("semibold")]}>{displayName}</span>
-																	{subject && (
-																		<a
-																			href={`mailto:${subject.emailAddress}`}
-																			mix={[
-																				fontSize("0.8125rem"),
-																				fg("neutral.muted"),
-																				textDecoration("none"),
-																				hover(textDecoration("underline")),
-																			]}
-																		>
-																			{subject.emailAddress}
-																		</a>
-																	)}
-																</div>
-															</div>
-														</Table.Cell>
-														<Table.Cell mix={[textAlign("end")]}>
-															{ctx.intl.t(
-																`page.settings.members.table.role.${memberIsOwner ? "owner" : member.role}`,
+										return (
+											<Table.Row key={member.id}>
+												<Table.Cell>
+													<div mix={[hstack({ gap: 3, align: "center" })]}>
+														<Avatar src={subject?.avatar || null} name={displayName} size={32} />
+														<div mix={[vstack({ gap: 0, align: "start" }), minIs(0)]}>
+															<span mix={[weight("medium")]}>{displayName}</span>
+															{subject && (
+																<a
+																	href={`mailto:${subject.emailAddress}`}
+																	mix={[
+																		fontSize("xs"),
+																		fg("neutral.muted"),
+																		textDecoration("none"),
+																		hover(textDecoration("underline")),
+																	]}
+																>
+																	{subject.emailAddress}
+																</a>
 															)}
-														</Table.Cell>
-														<Table.Cell mix={[textAlign("center")]}>
-															{!memberIsOwner && (
-																<>
-																	<RowMenu
-																		id={`member-menu-${member.id}`}
-																		label={ctx.intl.t("page.settings.members.table.actions.menu")}
-																	>
-																		<form
-																			method="post"
-																			action={routes.teamAdminActions.member.changeRole.href({
-																				team: team.slug,
-																			})}
-																		>
-																			<input
-																				type="hidden"
-																				name="subject_id"
-																				value={member.subject_id}
-																			/>
-																			<input type="hidden" name="role" value={nextRole} />
-																			<button type="submit" mix={[menuItem]}>
-																				<UserCogIcon size={16} strokeWidth={1.5} />
-																				<span>
-																					{ctx.intl.t(
-																						`page.settings.members.table.actions.changeRole.${member.role}`,
-																					)}
-																				</span>
-																			</button>
-																		</form>
+														</div>
+													</div>
+												</Table.Cell>
+												<Table.Cell>
+													{t(
+														`page.settings.members.table.role.${memberIsOwner ? "owner" : member.role}`,
+													)}
+												</Table.Cell>
+												<Table.Actions>
+													{!memberIsOwner && (
+														<>
+															<RowActions
+																id={`member-menu-${member.id}`}
+																label={t("page.settings.members.table.actions.menu")}
+															>
+																<form
+																	method="post"
+																	action={routes.teamAdminActions.member.changeRole.href(
+																		teamParams,
+																	)}
+																>
+																	<input
+																		type="hidden"
+																		name="subject_id"
+																		value={member.subject_id}
+																	/>
+																	<input type="hidden" name="role" value={nextRole} />
+																	<Menu.Item type="submit">
+																		<UserCogIcon size={16} strokeWidth={1.5} />
+																		<span>
+																			{t(
+																				`page.settings.members.table.actions.changeRole.${member.role}`,
+																			)}
+																		</span>
+																	</Menu.Item>
+																</form>
+																{viewerIsOwner && member.role === "admin" && (
+																	<Menu.Item disabled>
+																		<HandshakeIcon size={16} strokeWidth={1.5} />
+																		<span>{t("page.settings.members.table.actions.transfer")}</span>
+																	</Menu.Item>
+																)}
+																<Menu.Separator />
+																<Menu.Item danger commandfor={removeDialogId} command="show-modal">
+																	<UserMinusIcon size={16} strokeWidth={1.5} />
+																	<span>{t("page.settings.members.table.actions.remove")}</span>
+																</Menu.Item>
+															</RowActions>
 
-																		<button
-																			type="button"
-																			commandfor={removeDialogId}
-																			command="show-modal"
-																			mix={[menuItem, menuItemDanger]}
-																		>
-																			<UserMinusIcon size={16} strokeWidth={1.5} />
-																			<span>
-																				{ctx.intl.t("page.settings.members.table.actions.remove")}
-																			</span>
-																		</button>
-
-																		{viewerIsOwner && member.role === "admin" && (
-																			<>
-																				<hr mix={[menuSeparator]} />
-																				<button type="button" disabled mix={[menuItem]}>
-																					<HandshakeIcon size={16} strokeWidth={1.5} />
-																					<span>
-																						{ctx.intl.t(
-																							"page.settings.members.table.actions.transfer",
-																						)}
-																					</span>
-																				</button>
-																			</>
-																		)}
-																	</RowMenu>
-
-																	<AlertDialog
-																		id={removeDialogId}
-																		aria-labelledby={removeDialogTitleId}
-																	>
-																		<AlertDialog.Header>
-																			<AlertDialog.Title id={removeDialogTitleId}>
-																				{ctx.intl.t(
-																					"page.settings.members.table.confirmation.removeMember",
-																					{ name: displayName },
-																				)}
-																			</AlertDialog.Title>
-																		</AlertDialog.Header>
-																		<form
-																			method="post"
-																			action={routes.teamAdminActions.member.remove.href({
-																				team: team.slug,
-																			})}
-																		>
+															<Confirm
+																id={removeDialogId}
+																title={t("page.settings.members.table.confirmation.removeMember", {
+																	name: displayName,
+																})}
+																confirmLabel={t("page.settings.members.table.actions.remove")}
+																cancelLabel={cancelLabel}
+																form={{
+																	action: routes.teamAdminActions.member.remove.href(teamParams),
+																	fields: (
+																		<>
 																			<input type="hidden" name="_method" value="DELETE" />
 																			<input
 																				type="hidden"
@@ -480,425 +341,276 @@ export default createAction(routes.app.team.settings, {
 																				name="email"
 																				value={subject?.emailAddress ?? ""}
 																			/>
-																			<AlertDialog.Footer>
-																				<AlertDialog.Cancel commandfor={removeDialogId}>
-																					{ctx.intl.t("page.settings.form.actions.cancel")}
-																				</AlertDialog.Cancel>
-																				<AlertDialog.Action
-																					type="submit"
-																					commandfor={removeDialogId}
-																				>
-																					{ctx.intl.t("page.settings.members.table.actions.remove")}
-																				</AlertDialog.Action>
-																			</AlertDialog.Footer>
-																		</form>
-																	</AlertDialog>
-																</>
-															)}
+																		</>
+																	),
+																}}
+															/>
+														</>
+													)}
+												</Table.Actions>
+											</Table.Row>
+										);
+									})}
+								</Table.Body>
+							</Table>
+						</Table.Container>
+					</SettingsSection>
+
+					<Dialog id="invite-member" aria-labelledby="invite-member-title">
+						<form
+							method="post"
+							action={routes.teamAdminActions.invite.create.href(teamParams)}
+							mix={[vstack({ gap: 5, align: "stretch" })]}
+						>
+							<Dialog.Header>
+								<Dialog.Title id="invite-member-title">
+									{t("page.invite.header.title")}
+								</Dialog.Title>
+							</Dialog.Header>
+							<TextField
+								label={t("page.invite.form.fields.email.label")}
+								type="email"
+								name="email"
+								required
+								placeholder={t("page.invite.form.fields.email.placeholder")}
+							/>
+							<Dialog.Footer>
+								<Button type="button" variant="outline" commandfor="invite-member" command="close">
+									{t("page.invite.form.cancel")}
+								</Button>
+								<Button type="submit">{t("page.invite.form.cta")}</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog>
+
+					<SettingsSection
+						id="invites"
+						save="instant"
+						title={t("page.settings.members.invitedTable.label")}
+						description={t("page.settings.members.invitedTable.description")}
+						labels={{ save: t("page.settings.form.actions.save") }}
+					>
+						{pendingInvites.length === 0 ? (
+							<Empty size="compact">
+								<Empty.Description>
+									{t("page.settings.members.invitedTable.empty.description")}
+								</Empty.Description>
+							</Empty>
+						) : (
+							<Table.Container>
+								<Table aria-label={t("page.settings.members.invitedTable.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{t("page.settings.members.invitedTable.columns.email")}
+											</Table.Column>
+											<Table.Column>
+												{t("page.settings.members.invitedTable.columns.expires")}
+											</Table.Column>
+											<Table.ActionsColumn
+												label={t("page.settings.members.invitedTable.columns.actions")}
+											/>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
+										{pendingInvites.map((invite) => {
+											let expiresAt = inviteExpiresAt(invite.created_at);
+											let revokeDialogId = `revoke-invite-${invite.id}`;
+
+											return (
+												<Table.Row key={invite.id}>
+													<Table.Cell>{invite.email}</Table.Cell>
+													{expiresAt.getTime() <= now ? (
+														<Table.Cell mix={[fg("danger")]}>
+															{t("page.settings.members.invitedTable.expires.expired")}
 														</Table.Cell>
-													</Table.Row>
-												);
-											})}
-										</Table.Body>
-									</Table>
-								</Table.Container>
-							</div>
-
-							<div mix={settingsCard()}>
-								<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
-									<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-										{ctx.intl.t("page.settings.members.invitedTable.label")}
-									</h3>
-									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.members.invitedTable.description")}
-									</p>
-								</div>
-
-								{pendingInvites.length === 0 ? (
-									<div mix={[p(6)]}>
-										<Empty>
-											<Empty.Description>
-												{ctx.intl.t("page.settings.members.invitedTable.empty.description")}
-											</Empty.Description>
-										</Empty>
-									</div>
-								) : (
-									<Table.Container>
-										<Table aria-label={ctx.intl.t("page.settings.members.invitedTable.label")}>
-											<Table.Header>
-												<Table.Row>
-													<Table.Column>
-														{ctx.intl.t("page.settings.members.invitedTable.columns.email")}
-													</Table.Column>
-													<Table.Column align="end">
-														{ctx.intl.t("page.settings.members.invitedTable.columns.expires")}
-													</Table.Column>
-													<Table.Column align="center">
-														<span mix={[visuallyHidden()]}>
-															{ctx.intl.t("page.settings.members.invitedTable.columns.actions")}
-														</span>
-													</Table.Column>
-												</Table.Row>
-											</Table.Header>
-											<Table.Body>
-												{pendingInvites.map((invite) => {
-													let expiration = describeInviteExpiration(invite.created_at, ctx.locale);
-													let revokeDialogId = `revoke-invite-${invite.id}`;
-													let revokeDialogTitleId = `${revokeDialogId}-title`;
-
-													return (
-														<Table.Row key={invite.id}>
-															<Table.Cell>{invite.email}</Table.Cell>
-															<Table.Cell mix={[textAlign("end")]}>
-																{expiration.isExpired ? (
-																	<span mix={[fg("danger")]}>
-																		{ctx.intl.t(
-																			"page.settings.members.invitedTable.expires.expired",
-																		)}
-																	</span>
-																) : (
-																	<span>{expiration.text}</span>
-																)}
-															</Table.Cell>
-															<Table.Cell mix={[textAlign("center")]}>
-																<RowMenu
-																	id={`invite-menu-${invite.id}`}
-																	label={ctx.intl.t(
-																		"page.settings.members.invitedTable.actions.menu",
-																	)}
-																>
-																	<button
-																		type="button"
-																		commandfor={revokeDialogId}
-																		command="show-modal"
-																		mix={[menuItem, menuItemDanger]}
-																	>
-																		<UserMinusIcon size={16} strokeWidth={1.5} />
-																		<span>
-																			{ctx.intl.t(
-																				"page.settings.members.invitedTable.actions.revoke",
-																			)}
-																		</span>
-																	</button>
-																</RowMenu>
-
-																<AlertDialog
-																	id={revokeDialogId}
-																	aria-labelledby={revokeDialogTitleId}
-																>
-																	<AlertDialog.Header>
-																		<AlertDialog.Title id={revokeDialogTitleId}>
-																			{ctx.intl.t(
-																				"page.settings.members.invitedTable.confirmation.revokeInvite",
-																				{ email: invite.email },
-																			)}
-																		</AlertDialog.Title>
-																	</AlertDialog.Header>
-																	<form
-																		method="post"
-																		action={routes.teamAdminActions.invite.revoke.href({
-																			team: team.slug,
-																		})}
-																	>
+													) : (
+														<Table.DateCell date={expiresAt} now={now} locale={ctx.locale} local />
+													)}
+													<Table.Actions>
+														<Button
+															type="button"
+															size="sm"
+															variant="ghost"
+															color="danger"
+															commandfor={revokeDialogId}
+															command="show-modal"
+														>
+															{t("page.settings.members.invitedTable.actions.revoke")}
+														</Button>
+														<Confirm
+															id={revokeDialogId}
+															title={t(
+																"page.settings.members.invitedTable.confirmation.revokeInvite",
+																{ email: invite.email },
+															)}
+															confirmLabel={t("page.settings.members.invitedTable.actions.revoke")}
+															cancelLabel={cancelLabel}
+															form={{
+																action: routes.teamAdminActions.invite.revoke.href(teamParams),
+																fields: (
+																	<>
 																		<input type="hidden" name="_method" value="DELETE" />
 																		<input type="hidden" name="invite_id" value={invite.id} />
-																		<AlertDialog.Footer>
-																			<AlertDialog.Cancel commandfor={revokeDialogId}>
-																				{ctx.intl.t("page.settings.form.actions.cancel")}
-																			</AlertDialog.Cancel>
-																			<AlertDialog.Action type="submit" commandfor={revokeDialogId}>
-																				{ctx.intl.t(
-																					"page.settings.members.invitedTable.actions.revoke",
-																				)}
-																			</AlertDialog.Action>
-																		</AlertDialog.Footer>
-																	</form>
-																</AlertDialog>
-															</Table.Cell>
-														</Table.Row>
-													);
-												})}
-											</Table.Body>
-										</Table>
-									</Table.Container>
-								)}
-							</div>
-						</section>
-
-						<section
-							id="domains"
-							mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
-						>
-							<div mix={[vstack({ gap: 1 })]}>
-								<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-									{ctx.intl.t("page.settings.domains.title")}
-								</h2>
-								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-									{ctx.intl.t("page.settings.domains.description")}
-								</p>
-							</div>
-
-							<dialog
-								id="add-domain"
-								mix={[
-									is("full"),
-									maxIs("min(440px, calc(100vw - 32px))"),
-									p(6),
-									boxSizing("border-box"),
-									rounded("lg"),
-									border({ color: "neutral", width: 1 }),
-									bg("neutral.tint"),
-									fg("neutral.emphasis"),
-									when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
-								]}
-							>
-								<h3 mix={[m(0, 0, 4, 0), fontSize("base"), weight("semibold")]}>
-									{ctx.intl.t("page.settings.domains.form.title")}
-								</h3>
-								<form
-									method="post"
-									action={routes.teamAdminActions.domain.add.href({ team: team.slug })}
-								>
-									<Field
-										label={ctx.intl.t("page.settings.domains.form.fields.hostname.label")}
-										description={ctx.intl.t(
-											"page.settings.domains.form.fields.hostname.description",
-											{ team: team.name },
-										)}
-									>
-										<input
-											type="text"
-											name="hostname"
-											required
-											placeholder={ctx.intl.t(
-												"page.settings.domains.form.fields.hostname.placeholder",
-											)}
-											mix={[textInput()]}
-										/>
-									</Field>
-									<div mix={[hstack({ gap: 2, justify: "end" })]}>
-										<Button type="button" variant="outline" commandfor="add-domain" command="close">
-											{ctx.intl.t("page.settings.form.actions.cancel")}
-										</Button>
-										<Button type="submit">{ctx.intl.t("page.settings.domains.form.cta")}</Button>
-									</div>
-								</form>
-							</dialog>
-
-							<div mix={settingsCard()}>
-								<div
-									mix={[
-										p(5, 6),
-										borderEdge("block-end", { color: "neutral", width: 1 }),
-										hstack({ gap: 4, align: "center", justify: "between" }),
-									]}
-								>
-									<div>
-										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.intl.t("page.settings.domains.table.label")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.settings.domains.table.description")}
-										</p>
-									</div>
-									<Button
-										type="button"
-										variant="outline"
-										commandfor="add-domain"
-										command="show-modal"
-										mix={[shrink()]}
-									>
-										<span>{ctx.intl.t("page.settings.domains.actions.addDomain")}</span>
-									</Button>
-								</div>
-
-								{domains.length === 0 ? (
-									<div mix={[p(6)]}>
-										<Empty>
-											<Empty.Description>
-												{ctx.intl.t("page.settings.domains.table.empty.description")}
-											</Empty.Description>
-										</Empty>
-									</div>
-								) : (
-									<Table.Container
-										mix={[
-											when("&::after", [
-												pseudoContent('""'),
-												absolute(),
-												insTop(0),
-												insRight(0),
-												insBottom(0),
-												width("24px"),
-												pointerEvents(),
-												raw({ boxShadow: "inset -16px 0 12px -12px rgba(0, 0, 0, 0.18)" }),
-												media(
-													"(prefers-color-scheme: dark)",
-													raw({ boxShadow: "inset -16px 0 12px -12px rgba(0, 0, 0, 0.6)" }),
-												),
-											]),
-										]}
-									>
-										<Table aria-label={ctx.intl.t("page.settings.domains.table.label")}>
-											<Table.Header>
-												<Table.Row>
-													<Table.Column mix={[nowrap(), minIs("200px")]}>
-														{ctx.intl.t("page.settings.domains.table.columns.hostname")}
-													</Table.Column>
-													<Table.Column align="end">
-														<span mix={hasPendingDomainVerification ? [] : [visuallyHidden()]}>
-															{ctx.intl.t("page.settings.domains.table.columns.id")}
-														</span>
-													</Table.Column>
-													<Table.Column align="end">
-														{ctx.intl.t("page.settings.domains.table.columns.verifiedAt")}
-													</Table.Column>
-													<Table.Column align="center">
-														<span mix={[visuallyHidden()]}>
-															{ctx.intl.t("page.settings.domains.table.columns.actions")}
-														</span>
-													</Table.Column>
+																	</>
+																),
+															}}
+														/>
+													</Table.Actions>
 												</Table.Row>
-											</Table.Header>
-											<Table.Body>
-												{domains.map((domain) => {
-													let removeDialogId = `remove-domain-${domain.id}`;
-													let removeDialogTitleId = `${removeDialogId}-title`;
+											);
+										})}
+									</Table.Body>
+								</Table>
+							</Table.Container>
+						)}
+					</SettingsSection>
 
-													return (
-														<Table.Row key={domain.id}>
-															<Table.Cell mix={[nowrap()]}>{domain.hostname}</Table.Cell>
-															<Table.Cell
-																mix={[
-																	textAlign("end"),
-																	font("inherit"),
-																	wordBreak("break-all"),
-																	fontSize("xs"),
-																	maxIs("140px"),
-																]}
-															>
-																{domain.verified_at === null ? `ping_${domain.id}` : null}
-															</Table.Cell>
-															<Table.Cell mix={[textAlign("end")]}>
-																{domain.verified_at !== null
-																	? formatDate(new Date(domain.verified_at), {
-																			locale: ctx.locale,
-																			timeZone: "UTC",
-																		})
-																	: ctx.intl.t("page.settings.domains.table.verifiedAt.pending")}
-															</Table.Cell>
-															<Table.Cell mix={[textAlign("center")]}>
-																<RowMenu
-																	id={`domain-menu-${domain.id}`}
-																	label={ctx.intl.t("page.settings.domains.table.actions.menu")}
-																>
-																	{domain.verified_at === null && (
-																		<form
-																			method="post"
-																			action={routes.teamAdminActions.domain.retryVerification.href(
-																				{
-																					team: team.slug,
-																				},
-																			)}
-																		>
-																			<input type="hidden" name="domain_id" value={domain.id} />
-																			<button type="submit" mix={[menuItem]}>
-																				<RefreshCcwIcon size={16} strokeWidth={1.5} />
-																				<span>
-																					{ctx.intl.t(
-																						"page.settings.domains.table.actions.retryVerification",
-																					)}
-																				</span>
-																			</button>
-																		</form>
-																	)}
+					<SettingsSection
+						id="domains"
+						save="instant"
+						title={t("page.settings.domains.title")}
+						description={t("page.settings.domains.description")}
+						labels={{ save: t("page.settings.form.actions.save") }}
+					>
+						<SettingsSection.Row
+							layout="inline-switch"
+							label={t("page.settings.domains.table.label")}
+							description={t("page.settings.domains.table.description")}
+						>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								commandfor="add-domain"
+								command="show-modal"
+							>
+								{t("page.settings.domains.actions.addDomain")}
+							</Button>
+						</SettingsSection.Row>
 
-																	<button
-																		type="button"
-																		commandfor={removeDialogId}
-																		command="show-modal"
-																		mix={[menuItem, menuItemDanger]}
-																	>
-																		<BadgeMinusIcon size={16} strokeWidth={1.5} />
-																		<span>
-																			{ctx.intl.t("page.settings.domains.table.actions.remove")}
-																		</span>
-																	</button>
-																</RowMenu>
+						{domains.length === 0 ? (
+							<Empty size="compact">
+								<Empty.Description>
+									{t("page.settings.domains.table.empty.description")}
+								</Empty.Description>
+							</Empty>
+						) : (
+							<Table.Container>
+								<Table aria-label={t("page.settings.domains.table.label")}>
+									<Table.Header>
+										<Table.Row>
+											<Table.Column>
+												{t("page.settings.domains.table.columns.hostname")}
+											</Table.Column>
+											<Table.Column>{t("page.settings.domains.table.columns.id")}</Table.Column>
+											<Table.Column>
+												{t("page.settings.domains.table.columns.verifiedAt")}
+											</Table.Column>
+											<Table.ActionsColumn
+												label={t("page.settings.domains.table.columns.actions")}
+											/>
+										</Table.Row>
+									</Table.Header>
+									<Table.Body>
+										{domains.map((domain) => {
+											let removeDialogId = `remove-domain-${domain.id}`;
+											let isPending = domain.verified_at === null;
 
-																<AlertDialog
-																	id={removeDialogId}
-																	aria-labelledby={removeDialogTitleId}
-																>
-																	<AlertDialog.Header>
-																		<AlertDialog.Title id={removeDialogTitleId}>
-																			{ctx.intl.t(
-																				"page.settings.domains.table.confirmation.removeDomain",
-																				{ hostname: domain.hostname },
-																			)}
-																		</AlertDialog.Title>
-																	</AlertDialog.Header>
+											return (
+												<Table.Row key={domain.id}>
+													<Table.Cell mix={[weight("medium")]}>{domain.hostname}</Table.Cell>
+													<Table.IdCell value={isPending ? `ping_${domain.id}` : null} />
+													{domain.verified_at === null ? (
+														<Table.Cell mix={[fg("neutral.muted")]}>
+															{t("page.settings.domains.table.verifiedAt.pending")}
+														</Table.Cell>
+													) : (
+														<Table.DateCell
+															date={domain.verified_at}
+															now={now}
+															locale={ctx.locale}
+															local
+														/>
+													)}
+													<Table.Actions>
+														<RowActions
+															id={`domain-menu-${domain.id}`}
+															label={t("page.settings.domains.table.actions.menu")}
+														>
+															{isPending && (
+																<>
 																	<form
 																		method="post"
-																		action={routes.teamAdminActions.domain.remove.href({
-																			team: team.slug,
-																		})}
+																		action={routes.teamAdminActions.domain.retryVerification.href(
+																			teamParams,
+																		)}
 																	>
+																		<input type="hidden" name="domain_id" value={domain.id} />
+																		<Menu.Item type="submit">
+																			<RefreshCcwIcon size={16} strokeWidth={1.5} />
+																			<span>
+																				{t("page.settings.domains.table.actions.retryVerification")}
+																			</span>
+																		</Menu.Item>
+																	</form>
+																	<Menu.Separator />
+																</>
+															)}
+															<Menu.Item danger commandfor={removeDialogId} command="show-modal">
+																<BadgeMinusIcon size={16} strokeWidth={1.5} />
+																<span>{t("page.settings.domains.table.actions.remove")}</span>
+															</Menu.Item>
+														</RowActions>
+
+														<Confirm
+															id={removeDialogId}
+															title={t("page.settings.domains.table.confirmation.removeDomain", {
+																hostname: domain.hostname,
+															})}
+															confirmLabel={t("page.settings.domains.table.actions.remove")}
+															cancelLabel={cancelLabel}
+															form={{
+																action: routes.teamAdminActions.domain.remove.href(teamParams),
+																fields: (
+																	<>
 																		<input type="hidden" name="_method" value="DELETE" />
 																		<input type="hidden" name="domain_id" value={domain.id} />
-																		<AlertDialog.Footer>
-																			<AlertDialog.Cancel commandfor={removeDialogId}>
-																				{ctx.intl.t("page.settings.form.actions.cancel")}
-																			</AlertDialog.Cancel>
-																			<AlertDialog.Action type="submit" commandfor={removeDialogId}>
-																				{ctx.intl.t("page.settings.domains.table.actions.remove")}
-																			</AlertDialog.Action>
-																		</AlertDialog.Footer>
-																	</form>
-																</AlertDialog>
-															</Table.Cell>
-														</Table.Row>
-													);
-												})}
-											</Table.Body>
-										</Table>
-									</Table.Container>
-								)}
-							</div>
+																	</>
+																),
+															}}
+														/>
+													</Table.Actions>
+												</Table.Row>
+											);
+										})}
+									</Table.Body>
+								</Table>
+							</Table.Container>
+						)}
 
-							{hasPendingDomainVerification && (
-								<aside
-									mix={[
-										vstack({ gap: 2 }),
-										rounded("xl"),
-										border({ color: "neutral", width: 1 }),
-										p(4),
-										fontSize("sm"),
-									]}
-								>
-									<h3 mix={[m(0), fontSize("1.0625rem"), weight("semibold")]}>
-										{ctx.intl.t("page.settings.domains.instructions.title")}
-									</h3>
-									<p mix={[m(0)]}>{ctx.intl.t("page.settings.domains.instructions.description")}</p>
-									<dl mix={[m(1, 0), vstack({ gap: 2 })]}>
+						{hasPendingDomainVerification && (
+							<SettingsSection.Row
+								layout="stacked"
+								label={t("page.settings.domains.instructions.title")}
+								description={t("page.settings.domains.instructions.description")}
+							>
+								<div mix={[vstack({ gap: 3, align: "stretch" }), fontSize("sm")]}>
+									<dl mix={[m(0), vstack({ gap: 1, align: "stretch" })]}>
 										<div mix={[hstack({ gap: 2 })]}>
-											<dt mix={[weight("semibold")]}>
-												{ctx.intl.t("page.settings.domains.instructions.record.name.label")}
+											<dt mix={[weight("medium")]}>
+												{t("page.settings.domains.instructions.record.name.label")}
 											</dt>
 											<dd mix={[m(0)]}>
-												<code>
-													{ctx.intl.t("page.settings.domains.instructions.record.name.value")}
-												</code>
+												<code>{t("page.settings.domains.instructions.record.name.value")}</code>
 											</dd>
 										</div>
 										<div mix={[hstack({ gap: 2 })]}>
-											<dt mix={[weight("semibold")]}>
-												{ctx.intl.t("page.settings.domains.instructions.record.content.label")}
+											<dt mix={[weight("medium")]}>
+												{t("page.settings.domains.instructions.record.content.label")}
 											</dt>
 											<dd mix={[m(0)]}>
-												<code>
-													{ctx.intl.t("page.settings.domains.instructions.record.content.value")}
-												</code>
+												<code>{t("page.settings.domains.instructions.record.content.value")}</code>
 											</dd>
 										</div>
 									</dl>
@@ -909,131 +621,151 @@ export default createAction(routes.app.team.settings, {
 											components={{ code: <code /> }}
 										/>
 									</p>
-									<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.domains.instructions.disclaimer")}
-									</p>
-								</aside>
-							)}
-						</section>
-
-						{viewerIsOwner && (
-							<section
-								id="billing"
-								mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
-							>
-								<div mix={[vstack({ gap: 1 })]}>
-									<h2 mix={[m(0), fontSize("xl"), weight("semibold")]}>
-										{ctx.intl.t("page.settings.billing.title")}
-									</h2>
-									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.billing.description")}
+									<p mix={[m(0), fg("neutral.muted")]}>
+										{t("page.settings.domains.instructions.disclaimer")}
 									</p>
 								</div>
-
-								<div mix={settingsCard()}>
-									<div mix={[p(5, 6), borderEdge("block-end", { color: "neutral", width: 1 })]}>
-										<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold")]}>
-											{ctx.intl.t("page.settings.billing.card.title")}
-										</h3>
-										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.settings.billing.card.description")}
-										</p>
-									</div>
-
-									<div mix={[p(6)]}>
-										<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-											{ctx.intl.t("page.settings.billing.card.notice")}
-										</p>
-									</div>
-
-									<div
-										mix={[
-											p(4, 6),
-											borderEdge("block-start", { color: "neutral", width: 1 }),
-											hstack({ justify: "end" }),
-										]}
-									>
-										<LinkButton
-											href={routes.app.team.checkout.href({ team: team.slug })}
-											data-rmx-document=""
-										>
-											<span>{ctx.intl.t("page.settings.billing.card.cta")}</span>
-											<ExternalLinkIcon size={16} strokeWidth={1.5} />
-										</LinkButton>
-									</div>
-								</div>
-							</section>
+							</SettingsSection.Row>
 						)}
+					</SettingsSection>
 
-						{viewerIsOwner && (
-							<section
-								id="danger"
-								mix={[is("full"), maxIs("640px"), mi("auto"), vstack({ gap: 6 })]}
+					<Dialog id="add-domain" aria-labelledby="add-domain-title">
+						<form
+							method="post"
+							action={routes.teamAdminActions.domain.add.href(teamParams)}
+							mix={[vstack({ gap: 5, align: "stretch" })]}
+						>
+							<Dialog.Header>
+								<Dialog.Title id="add-domain-title">
+									{t("page.settings.domains.form.title")}
+								</Dialog.Title>
+							</Dialog.Header>
+							<TextField
+								label={t("page.settings.domains.form.fields.hostname.label")}
+								description={t("page.settings.domains.form.fields.hostname.description", {
+									team: team.name,
+								})}
+								type="text"
+								name="hostname"
+								required
+								placeholder={t("page.settings.domains.form.fields.hostname.placeholder")}
+							/>
+							<Dialog.Footer>
+								<Button type="button" variant="outline" commandfor="add-domain" command="close">
+									{cancelLabel}
+								</Button>
+								<Button type="submit">{t("page.settings.domains.form.cta")}</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog>
+
+					{viewerIsOwner && (
+						<SettingsSection
+							id="billing"
+							save="instant"
+							title={t("page.settings.billing.title")}
+							description={t("page.settings.billing.description")}
+							labels={{ save: t("page.settings.form.actions.save") }}
+						>
+							<SettingsSection.Row
+								label={t("page.settings.billing.card.title")}
+								description={t("page.settings.billing.card.notice")}
 							>
-								<div mix={[vstack({ gap: 1 })]}>
-									<h2 mix={[m(0), fontSize("xl"), weight("semibold"), fg("danger")]}>
-										{ctx.intl.t("page.settings.danger.title")}
-									</h2>
-									<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
-										{ctx.intl.t("page.settings.danger.description")}
-									</p>
-								</div>
+								<LinkButton
+									href={routes.app.team.checkout.href(teamParams)}
+									data-rmx-document=""
+									size="sm"
+									variant="outline"
+								>
+									<span>{t("page.settings.billing.card.cta")}</span>
+									<ExternalLinkIcon size={16} strokeWidth={1.5} />
+								</LinkButton>
+							</SettingsSection.Row>
+						</SettingsSection>
+					)}
 
-								<div mix={settingsCard("danger")}>
-									<form
-										method="post"
-										action={routes.teamAdminActions.team.delete.href({ team: team.slug })}
-									>
-										<input type="hidden" name="_method" value="DELETE" />
+					{viewerIsOwner && (
+						<DangerZone
+							id="danger"
+							title={t("page.settings.danger.title")}
+							description={t("page.settings.danger.description")}
+						>
+							<DangerZone.Action
+								id="delete-team"
+								title={t("page.settings.danger.card.title")}
+								description={t("page.settings.danger.card.description")}
+								consequences={[t("page.settings.danger.card.warning")]}
+								buttonLabel={t("page.settings.danger.card.cta")}
+								confirm={{
+									title: t("page.settings.deleteConfirm.title", { name: team.name }),
+									description: t("page.settings.danger.card.description"),
+									confirmLabel: t("page.settings.danger.card.cta"),
+									cancelLabel,
+									typeToConfirm: {
+										value: team.name,
+										label: t("page.settings.deleteConfirm.label", { name: team.name }),
+										name: "confirmation",
+									},
+									form: {
+										action: routes.teamAdminActions.team.delete.href(teamParams),
+										fields: <input type="hidden" name="_method" value="DELETE" />,
+									},
+								}}
+							/>
+						</DangerZone>
+					)}
+				</SettingsLayout>
+			</AppShell>
+		</DocumentLayout>,
+		init,
+	);
+}
 
-										<div mix={[p(5, 6), borderEdge("block-end", { color: "danger", width: 1 })]}>
-											<h3 mix={[m(0, 0, 1, 0), fontSize("base"), weight("semibold"), fg("danger")]}>
-												{ctx.intl.t("page.settings.danger.card.title")}
-											</h3>
-											<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-												{ctx.intl.t("page.settings.danger.card.description")}
-											</p>
-										</div>
+namespace RowActions {
+	export interface Props {
+		/** The menu's DOM id, which its trigger opens through `commandfor`. */
+		id: string;
+		/** Names both the trigger and the menu, such as "Actions Menu". */
+		label: string;
+		children: RemixNode;
+	}
+}
 
-										<div mix={[p(6, 6, 0, 6), vstack({ gap: 4 })]}>
-											<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-												{ctx.intl.t("page.settings.danger.card.warning")}
-											</p>
-
-											<Field label={ctx.intl.t("page.settings.danger.card.confirmation.label")}>
-												<input
-													type="text"
-													name="confirmation"
-													required
-													autocomplete="off"
-													pattern="DELETE"
-													title={ctx.intl.t("page.settings.danger.card.confirmation.label")}
-													placeholder={ctx.intl.t(
-														"page.settings.danger.card.confirmation.placeholder",
-													)}
-													mix={[textInput()]}
-												/>
-											</Field>
-										</div>
-
-										<div
-											mix={[
-												p(4, 6),
-												borderEdge("block-start", { color: "danger", width: 1 }),
-												hstack({ justify: "end" }),
-											]}
-										>
-											<Button type="submit" color="danger">
-												{ctx.intl.t("page.settings.danger.card.cta")}
-											</Button>
-										</div>
-									</form>
-								</div>
-							</section>
-						)}
-					</div>
-				</AppShell>
-			</DocumentLayout>,
+/**
+ * A row's kebab trigger and the menu it opens, for a row with more than one action. The menu
+ * is a popover, so the row's actions stay shown while it is open.
+ */
+function RowActions(handle: Handle<RowActions.Props>) {
+	return () => {
+		let { id, label, children } = handle.props;
+		return (
+			<>
+				<Button
+					type="button"
+					size="sm"
+					variant="ghost"
+					commandfor={id}
+					command="toggle-popover"
+					aria-label={label}
+				>
+					<EllipsisIcon size={16} strokeWidth={1.5} />
+				</Button>
+				<Menu id={id} placement="bottom-end" aria-label={label} mix={[menuKeys()]}>
+					{children}
+				</Menu>
+			</>
 		);
-	},
+	};
+}
+
+/** GET /app/:team/settings — the team's settings area. */
+export default createAction(routes.app.team.settings, {
+	middleware: [
+		requireUser,
+		requireTeam,
+		teamAccess,
+		requireAbility(abilities.team.update),
+		admin(createManagementClient),
+	],
+	handler: () => renderTeamSettings(),
 });

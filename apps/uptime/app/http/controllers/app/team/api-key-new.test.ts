@@ -155,16 +155,19 @@ describe("api-key-new form controller", () => {
 			/@media \(min-width: 1024px\)\s*\{[^{]*\{\s*grid-template-columns:\s*repeat\(2, 1fr\);/,
 		);
 		expect(twoColumns).not.toBeNull();
-		expect(body).toContain("max-inline-size: 880px");
 	});
 
-	test("spaces the card's fields from the card alone, never twice", async () => {
+	test("submits every field through one form with a single Create button", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await get(db, team, membership)).text();
 
-		expect(body.match(/gap: 28px;/g)).toEqual(["gap: 28px;"]);
-		expect(body).not.toContain("margin-block-end: 28px");
-		expect(body).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
+		let action = routes.teamAdminActions.apiKey.create.href({ team: team.slug });
+		let form = body.slice(body.indexOf(`action="${action}"`));
+		form = form.slice(0, form.indexOf("</form>"));
+		expect(form).toContain('name="name"');
+		expect(form).toContain('name="expires_at"');
+		expect(form).toContain('name="scopes"');
+		expect(body.split(">Create API Key<").length - 1).toBe(1);
 	});
 });

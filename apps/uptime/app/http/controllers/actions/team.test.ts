@@ -12,34 +12,43 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import billing from "@sdxc/billing/middleware";
 import { database } from "@sdxc/database-middleware";
+import { createTranslator } from "@sdxc/i18n";
 import { log } from "@sdxc/logger/middleware";
-import { unwrap } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
-import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test, vi } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
 import { teamAccess } from "~/app/http/middleware/access";
+import { admin } from "~/app/http/middleware/admin";
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The delete action's own logging is noise here; the assertions read the response. */
@@ -56,20 +65,81 @@ let { changeRole, deleteTeam, removeMember, updateTeam } = await import("./team"
 let sessionCookie = createCookie("uptime-test-session", { secrets: ["test-secret"] });
 let sessionStorage = createMemorySessionStorage();
 
-/** Reads what `response` flashed under `key`, the way the next page request would. */
-async function readFlash(response: Response, key: string): Promise<unknown> {
-	let router = createRouter({ middleware: [session(sessionCookie, sessionStorage)] });
-	let flashed: unknown;
-	router.get("/read", (ctx) => {
-		flashed = ctx.get(Session)?.get(key);
-		return new Response(null, { status: 204 });
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
+	};
+}
+
+/**
+ * Posts the update-team form through a router carrying everything the settings page needs
+ * to render, since a rejected submission answers with that page rather than a redirect. The
+ * management client knows no subject, so members render by their raw id.
+ */
+async function sendUpdate(
+	db: Database,
+	team: SelectTeam,
+	membership: SelectMembership,
+	params: Record<string, string>,
+): Promise<Response> {
+	let fakeAdmin = {
+		fetchSubjectById: vi.fn(async (subjectId: string) =>
+			failure(new SubjectNotFoundError(subjectId)),
+		),
+	} as unknown as ManagementClient;
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
+
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			database(db),
+			models(),
+			admin(() => fakeAdmin),
+			session(sessionCookie, sessionStorage),
+			formData() as Middleware,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
-	let cookie = response.headers
-		.getSetCookie()
-		.map((value) => value.split(";")[0])
-		.join("; ");
-	await router.fetch(new Request("https://uptime.test/read", { headers: { Cookie: cookie } }));
-	return flashed;
+	router.map(routes.teamAdminActions.team.update, {
+		middleware: [
+			(ctx, next) => {
+				ctx.teams = [team];
+				ctx.locale = "en";
+				ctx.intl = intl;
+				ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+				return next();
+			},
+			seedTeam(team, membership),
+		],
+		handler: updateTeam as RequestHandler<any>,
+	});
+
+	return router.fetch(
+		new Request(
+			new URL(routes.teamAdminActions.team.update.href({ team: team.slug }), "https://uptime.test"),
+			{
+				method: "POST",
+				headers: { "content-type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams(params).toString(),
+			},
+		),
+	);
 }
 
 /** Creates an in-memory database seeded with an owner and one additional member. */
@@ -183,50 +253,45 @@ describe("updateTeam", () => {
 		expect(updated?.logo).toBe("https://example.com/logo.png");
 	});
 
-	test("redirects back without mutating when the name is blank", async () => {
+	test("renders the settings page again with the typed values when the name is blank", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let platform = createTestBilling();
 
-		let response = await send(
-			db,
-			team,
-			ownerMembership,
-			platform,
-			routes.teamAdminActions.team.update,
-			updateTeam as RequestHandler<any>,
-			"POST",
-			{ name: "" },
-		);
+		let response = await sendUpdate(db, team, ownerMembership, {
+			name: "",
+			logo: "https://example.com/typed.png",
+		});
+		let body = await response.text();
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.settings.href({ team: team.slug }),
+		expect(response.status).toBe(400);
+		let nameInput = body.match(/<input[^>]*name="name"[^>]*>/)?.[0];
+		expect(nameInput).toContain(`aria-invalid="true"`);
+		expect(nameInput).toContain(`aria-describedby="team-name-error"`);
+		expect(body).toContain(en.page.settings.fieldErrors.name);
+		expect(body.match(/<input[^>]*name="logo"[^>]*>/)?.[0]).toContain(
+			`value="https://example.com/typed.png"`,
 		);
 
 		let unchanged = await db.findOne(teams, { where: { id: team.id } });
 		expect(unchanged?.name).toBe("Acme");
 	});
 
-	test("rejects a logo that is not a URL and flashes it back for the field's error", async () => {
+	test("rejects a logo that is not a URL and keeps it in the field beside its error", async () => {
 		let { db, team, ownerMembership } = await createFixture();
-		let platform = createTestBilling();
 
-		let response = await send(
-			db,
-			team,
-			ownerMembership,
-			platform,
-			routes.teamAdminActions.team.update,
-			updateTeam as RequestHandler<any>,
-			"POST",
-			{ name: "Acme Renamed", logo: "acme-logo" },
-		);
+		let response = await sendUpdate(db, team, ownerMembership, {
+			name: "Acme Renamed",
+			logo: "acme-logo",
+		});
+		let body = await response.text();
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.settings.href({ team: team.slug }),
-		);
-		expect(await readFlash(response, TEAM_LOGO_ERROR)).toBe("acme-logo");
+		expect(response.status).toBe(400);
+		let logoInput = body.match(/<input[^>]*name="logo"[^>]*>/)?.[0];
+		expect(logoInput).toContain(`value="acme-logo"`);
+		expect(logoInput).toContain(`aria-invalid="true"`);
+		expect(logoInput).toContain(`aria-describedby="team-logo-error"`);
+		expect(body).toContain(`id="team-logo-error"`);
+		expect(body).toContain(en.page.settings.form.fields.logo.error);
+		expect(body.match(/<input[^>]*name="name"[^>]*>/)?.[0]).toContain(`value="Acme Renamed"`);
 
 		let unchanged = await db.findOne(teams, { where: { id: team.id } });
 		expect(unchanged?.name).toBe("Acme");
@@ -250,7 +315,6 @@ describe("updateTeam", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(await readFlash(response, TEAM_LOGO_ERROR)).toBeUndefined();
 
 		let updated = await db.findOne(teams, { where: { id: team.id } });
 		expect(updated?.logo).toBeNull();
@@ -271,7 +335,7 @@ describe("deleteTeam", () => {
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
-			{ confirmation: "DELETE" },
+			{ confirmation: "Acme" },
 		);
 
 		expect(response.status).toBe(400);
@@ -280,7 +344,7 @@ describe("deleteTeam", () => {
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 	});
 
-	test("rejects an incorrect confirmation without deleting the team", async () => {
+	test("rejects a confirmation that is not the team's exact name without deleting the team", async () => {
 		let { db, team, ownerMembership } = await createFixture();
 		let platform = createTestBilling();
 
@@ -292,11 +356,11 @@ describe("deleteTeam", () => {
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
-			{ confirmation: "delete" },
+			{ confirmation: "acme" },
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain('Type "DELETE"');
+		expect(await response.text()).toContain("to confirm");
 		expect(await db.findOne(teams, { where: { id: team.id } })).not.toBeNull();
 	});
 
@@ -313,7 +377,7 @@ describe("deleteTeam", () => {
 			routes.teamAdminActions.team.delete,
 			deleteTeam as RequestHandler<any>,
 			"DELETE",
-			{ confirmation: "DELETE" },
+			{ confirmation: "Acme" },
 		);
 
 		expect(response.status).toBe(303);

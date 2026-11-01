@@ -26,7 +26,6 @@ import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
-import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test, vi } from "vitest";
 
@@ -38,7 +37,7 @@ import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
 import { bindModels, recordJobs } from "~/app/test/models";
-import { memberships, teams } from "~/database/schema";
+import { memberships, subscriptions, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
@@ -102,13 +101,8 @@ async function createFixture() {
 	return { db, team, ownerMembership };
 }
 
-/** Renders the settings page, after an earlier request flashed `rejectedLogo` when given. */
-async function renderSettings(
-	db: Database,
-	team: SelectTeam,
-	membership: SelectMembership,
-	rejectedLogo?: string,
-) {
+/** Renders the settings page for `membership`'s viewer. */
+async function renderSettings(db: Database, team: SelectTeam, membership: SelectMembership) {
 	let fakeAdmin = {
 		fetchSubjectById: vi.fn(async (subjectId: string) =>
 			failure(new SubjectNotFoundError(subjectId)),
@@ -126,29 +120,31 @@ async function renderSettings(
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});
-	router.post("/flash", (ctx) => {
-		ctx.get(Session)?.flash(settingsModule.TEAM_LOGO_ERROR, rejectedLogo);
-		return new Response(null, { status: 204 });
-	});
 	router.map(routes.app.team.settings, {
 		middleware: [seedTeam(team, membership)],
 		handler: (settingsModule.default as { handler: RequestHandler<any> }).handler,
 	});
 
-	let cookie = "";
-	if (rejectedLogo !== undefined) {
-		let flashed = await router.fetch(new Request("https://uptime.test/flash", { method: "POST" }));
-		cookie = flashed.headers
-			.getSetCookie()
-			.map((value) => value.split(";")[0])
-			.join("; ");
-	}
-
-	let request = new Request(
-		new URL(routes.app.team.settings.href({ team: team.slug }), "https://uptime.test"),
-		cookie ? { headers: { Cookie: cookie } } : undefined,
+	return router.fetch(
+		new Request(new URL(routes.app.team.settings.href({ team: team.slug }), "https://uptime.test")),
 	);
-	return router.fetch(request);
+}
+
+/** Records one monitoring subscription for the team's owner in `status`. */
+async function recordSubscription(db: Database, ownerId: string, status: string) {
+	let now = Date.now();
+	await db.create(subscriptions, {
+		id: generateUUID(),
+		created_at: now,
+		updated_at: now,
+		external_customer_id: ownerId,
+		billing_subscription_id: generateUUID(),
+		billing_product_slug: "monitoring",
+		status,
+		current_period_end: null,
+		revoked_at: null,
+		billing_read_at: now,
+	});
 }
 
 describe("settings page", () => {
@@ -161,20 +157,6 @@ describe("settings page", () => {
 		expect(response.status).toBe(200);
 		expect(body).toContain(en.page.settings.header.title);
 		expect(body).toContain(`value="Acme"`);
-	});
-
-	test("refills a rejected logo and shows the field's error beside it", async () => {
-		let { db, team, ownerMembership } = await createFixture();
-
-		let response = await renderSettings(db, team, ownerMembership, "acme-logo");
-		let body = await response.text();
-
-		let input = body.match(/<input[^>]*name="logo"[^>]*>/)?.[0];
-		expect(input).toContain(`value="acme-logo"`);
-		expect(input).toContain(`aria-invalid="true"`);
-		expect(input).toContain(`aria-describedby="team-logo-error"`);
-		expect(body).toContain(`id="team-logo-error"`);
-		expect(body).toContain(en.page.settings.form.fields.logo.error);
 	});
 
 	test("shows no logo error on a plain visit", async () => {
@@ -300,5 +282,35 @@ describe("settings page", () => {
 		expect(body).toContain(en.page.settings.domains.table.columns.hostname);
 		expect(body).toContain(domain.hostname);
 		expect(body).not.toContain(en.page.settings.domains.table.empty.description);
+	});
+	test("asks for the team's exact name before deleting it", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+
+		let body = await (await renderSettings(db, team, ownerMembership)).text();
+
+		let confirmation = body.match(/<input[^>]*name="confirmation"[^>]*>/)?.[0];
+		expect(confirmation).toContain(`pattern="Acme"`);
+		expect(body).toContain(
+			`action="${routes.teamAdminActions.team.delete.href({ team: team.slug })}"`,
+		);
+	});
+
+	test("shows the billing banner with the fix to the owner while the subscription is past due", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+		await recordSubscription(db, team.owner_id, "past_due");
+
+		let body = await (await renderSettings(db, team, ownerMembership)).text();
+
+		expect(body).toContain(en.page.billing.banner.owner);
+		expect(body).toContain(en.page.billing.banner.cta);
+	});
+
+	test("shows no billing banner while the subscription is active", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+		await recordSubscription(db, team.owner_id, "active");
+
+		let body = await (await renderSettings(db, team, ownerMembership)).text();
+
+		expect(body).not.toContain(en.page.billing.banner.owner);
 	});
 });

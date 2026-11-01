@@ -7,16 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import { border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { pb, pi } from "@sdxc/u/size";
-import { fontSize, textAlign } from "@sdxc/u/typography";
+import { LinkButton } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -31,42 +25,11 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-namespace BillingNotice {
-	export interface Props {
-		/** What the page has to say, already translated. */
-		message: string;
-	}
-}
-
 /**
- * The billing page with nothing to redirect to. It is the page's only rendered state, since
- * an owner with a working platform is redirected away before anything renders.
+ * Why the page rendered instead of redirecting: the viewer is not the owner, or the billing
+ * platform opened no hosted page, which a retry may fix.
  */
-function BillingNotice(handle: Handle<BillingNotice.Props>) {
-	return () => (
-		<div
-			mix={[
-				vstack({ gap: "12px", align: "center" }),
-				textAlign("center"),
-				pb("64px"),
-				pi("32px"),
-				border({ width: 1, style: "dashed", color: "oklch(0.83 0.011 250)" }),
-				rounded("12px"),
-				media("(prefers-color-scheme: dark)", border("oklch(0.42 0.012 250)")),
-			]}
-		>
-			<p
-				mix={[
-					fontSize("0.8125rem"),
-					fg("oklch(0.62 0.014 250)"),
-					media("(prefers-color-scheme: dark)", fg("oklch(0.73 0.013 250)")),
-				]}
-			>
-				{handle.props.message}
-			</p>
-		</div>
-	);
-}
+type BillingNoticeKind = "permission" | "error";
 
 /**
  * GET /app/:team/checkout — redirects the owner to platform-hosted billing. Subscription
@@ -81,7 +44,7 @@ export default createAction(routes.app.team.checkout, {
 
 		await ctx.access.load(abilities.billing.manage);
 		if (!ctx.access.can(abilities.billing.manage)) {
-			return notice(ctx.intl.t("page.billing.ownerOnly"), viewer);
+			return notice("permission", ctx.intl.t("page.billing.ownerOnly"), viewer);
 		}
 
 		let hasActiveSubscription = await ctx.models.subscriptions.isActive(ctx.team.owner_id);
@@ -98,17 +61,17 @@ export default createAction(routes.app.team.checkout, {
 				subscribed: hasActiveSubscription,
 			});
 
-			return notice(ctx.intl.t("page.billing.unavailable"), viewer);
+			return notice("error", ctx.intl.t("page.billing.unavailable"), viewer);
 		}
 
 		return redirect(opened.data, { status: redirect.Status.SeeOther });
 
 		/**
-		 * Renders the page in place, which is what every non-redirecting outcome answers with.
-		 * The viewer is a parameter because the guard above narrows it at the call, not inside
-		 * this closure.
+		 * Renders the page in place, which is what every non-redirecting outcome answers with: an
+		 * empty state typed by its cause, with a retry for a platform failure. The viewer is a
+		 * parameter because the guard above narrows it at the call, not inside this closure.
 		 */
-		function notice(message: string, signedIn: Viewer) {
+		function notice(kind: BillingNoticeKind, message: string, signedIn: Viewer) {
 			return ctx.render(
 				<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Billing`}>
 					<AppShell
@@ -120,7 +83,20 @@ export default createAction(routes.app.team.checkout, {
 						intl={ctx.intl}
 						heading={ctx.intl.t("page.billing.header.title")}
 					>
-						<BillingNotice message={message} />
+						<Empty kind={kind}>
+							<Empty.Description>{message}</Empty.Description>
+							{kind === "error" && (
+								<Empty.Action>
+									<LinkButton
+										href={routes.app.team.checkout.href({ team: ctx.team.slug })}
+										data-rmx-document=""
+										variant="outline"
+									>
+										{ctx.intl.t("page.billing.retry")}
+									</LinkButton>
+								</Empty.Action>
+							)}
+						</Empty>
 					</AppShell>
 				</DocumentLayout>,
 			);

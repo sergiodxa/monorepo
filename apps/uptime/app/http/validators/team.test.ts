@@ -94,16 +94,10 @@ describe("UpdateTeamSchema", () => {
 });
 
 describe("DeleteTeamSchema", () => {
-	test("accepts the exact literal confirmation 'DELETE'", () => {
+	test("accepts any typed confirmation, which the action compares against the team's name", () => {
 		let formData = new FormData();
-		formData.set("confirmation", "DELETE");
+		formData.set("confirmation", "Acme");
 		expect(s.parseSafe(DeleteTeamSchema, formData).success).toBe(true);
-	});
-
-	test("rejects a lowercase confirmation", () => {
-		let formData = new FormData();
-		formData.set("confirmation", "delete");
-		expect(s.parseSafe(DeleteTeamSchema, formData).success).toBe(false);
 	});
 
 	test("rejects a missing confirmation field", () => {

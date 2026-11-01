@@ -30,8 +30,11 @@ export const UpdateTeamSchema = f.object({
 
 export type UpdateTeamValues = s.InferOutput<typeof UpdateTeamSchema>;
 
-/** Validates the `delete-team` action form body: a typed "DELETE" confirmation. */
-export const DeleteTeamSchema = f.object({ confirmation: f.field(s.literal("DELETE")) });
+/**
+ * Validates the `delete-team` action form body: the typed confirmation, which the action
+ * compares against the team's name.
+ */
+export const DeleteTeamSchema = f.object({ confirmation: f.field(s.string()) });
 
 /** Validates the `remove-member` action form body. */
 export const RemoveMemberSchema = f.object({
