@@ -39,12 +39,13 @@ interface InboxProps {
 	active?: SplitView.Pane;
 	layout?: SplitView.Layout;
 	sidebar?: boolean;
+	keys?: "page" | "view";
 }
 
 /** An inbox: folders | conversations | conversation. */
 function Inbox(handle: { props: InboxProps }) {
 	return () => {
-		let { selected, active, layout, sidebar = true } = handle.props;
+		let { selected, active, layout, sidebar = true, keys } = handle.props;
 
 		return (
 			<SplitView
@@ -79,6 +80,7 @@ function Inbox(handle: { props: InboxProps }) {
 				active={active}
 				backHref="#inbox"
 				layout={layout}
+				keys={keys}
 				labels={LABELS}
 			/>
 		);
@@ -314,5 +316,16 @@ describe("SplitView", () => {
 		await userEvent.keyboard("k");
 		expect(location.hash).toBe("#sel-19");
 		expect(list.scrollTop).toBe(scrolled);
+	});
+
+	test("answers j and k only from inside the view when scoped to it", async () => {
+		mount({ selected: 3, keys: "view" });
+
+		await userEvent.keyboard("j");
+		expect(location.hash).toBe("");
+
+		pane("list").querySelector<HTMLAnchorElement>('[aria-current="page"]')!.focus();
+		await userEvent.keyboard("j");
+		expect(location.hash).toBe("#sel-4");
 	});
 });

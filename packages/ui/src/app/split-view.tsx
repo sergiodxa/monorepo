@@ -21,6 +21,7 @@ import { clientEntry } from "remix/component";
 
 import { hitArea } from "../styles/hit-area.js";
 
+import type { SplitViewKeyScope } from "./mixins/split-view.js";
 import type { SplitViewLayout, SplitViewPane } from "./utils/split-view-layout.js";
 
 import { ResizeSession } from "./behaviors/resize-session.js";
@@ -39,6 +40,9 @@ export {
 
 /** Container the view names; every pane's layout answers its width. */
 const CONTAINER = "ui-split-view" as const;
+
+/** Where j/k answer when `keys` is left unset. */
+const DEFAULT_KEY_SCOPE: SplitViewKeyScope = "page";
 
 /** Below this container width the sidebar is a sheet. */
 const SHEET_QUERY = `@container ${CONTAINER} (width < 64rem)` as const;
@@ -103,6 +107,12 @@ export namespace SplitView {
 		 * @default "ui-split-view"
 		 */
 		cookie?: string;
+		/**
+		 * Where j/k answer: `"page"` anywhere, `"view"` only while focus is inside the view.
+		 *
+		 * @default "page"
+		 */
+		keys?: SplitViewKeyScope;
 		labels: Labels;
 	}
 }
@@ -260,6 +270,8 @@ export type SplitViewKeysProps = {
 	listId: string;
 	/** The sidebar pane's id, when the view has one. */
 	sidebarId?: string;
+	/** Where j/k answer. */
+	keys?: SplitViewKeyScope;
 };
 
 /**
@@ -272,7 +284,10 @@ export type SplitViewKeysProps = {
 export const SplitViewKeys: EntryComponent<SplitViewKeysProps> = clientEntry(
 	"@sdxc/ui/app/split-view#SplitViewKeys",
 	function SplitViewKeys(handle) {
-		return () => <span hidden mix={[splitViewKeys(handle.props.listId, handle.props.sidebarId)]} />;
+		return () => {
+			let { listId, sidebarId, keys } = handle.props;
+			return <span hidden mix={[splitViewKeys(listId, sidebarId, keys ?? DEFAULT_KEY_SCOPE)]} />;
+		};
 	},
 );
 
@@ -310,6 +325,7 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 			backHref,
 			layout,
 			cookie,
+			keys,
 			labels,
 			mix,
 			...rest
@@ -446,7 +462,11 @@ export function SplitView(handle: Handle<SplitView.Props>) {
 						)}
 					</Resizable.Panel>
 				</Resizable>
-				<SplitViewKeys listId={ids.list} sidebarId={sidebar ? ids.sidebar : undefined} />
+				<SplitViewKeys
+					listId={ids.list}
+					sidebarId={sidebar ? ids.sidebar : undefined}
+					keys={keys}
+				/>
 			</div>
 		);
 	};

@@ -22,6 +22,12 @@ import { serializeSplitViewLayout } from "../utils/split-view-layout.js";
 
 import { ResizableLayoutChangeEvent } from "./resize-handle.js";
 
+/**
+ * Where a split view's j/k answer: `"page"` anywhere in the document, `"view"` only while
+ * focus is inside the view, for a view shown on a page whose own keys come first.
+ */
+export type SplitViewKeyScope = "page" | "view";
+
 /** Attribute an app puts on each list link j/k steps through, in list order. */
 export const SPLIT_VIEW_ITEM_ATTRIBUTE = "data-split-view-item";
 
@@ -274,52 +280,62 @@ function step(list: HTMLElement, offset: number): boolean {
  *
  * @param listId The list pane's id.
  * @param sidebarId The sidebar pane's id, when the view has one.
+ * @param scope `"page"` answers j/k anywhere; `"view"` only while focus is inside the view.
  * @returns A mixin descriptor for the view's key marker.
- * @example <span hidden mix={[splitViewKeys("inbox-list", "inbox-sidebar")]} />
+ * @example <span hidden mix={[splitViewKeys("inbox-list", "inbox-sidebar", "page")]} />
  */
-export const splitViewKeys: MixinFactory<HTMLElement, [listId: string, sidebarId?: string]> =
-	createMixin<HTMLElement, [listId: string, sidebarId?: string]>((handle) => {
-		let ids = { list: "", sidebar: "" };
+export const splitViewKeys: MixinFactory<
+	HTMLElement,
+	[listId: string, sidebarId: string | undefined, scope: SplitViewKeyScope]
+> = createMixin<
+	HTMLElement,
+	[listId: string, sidebarId: string | undefined, scope: SplitViewKeyScope]
+>((handle) => {
+	let ids = { list: "", sidebar: "" };
+	let current: SplitViewKeyScope = "page";
 
-		handle.addEventListener("insert", (event) => {
-			let document = event.node.ownerDocument;
-			let list = document.getElementById(ids.list);
-			if (!list) return;
+	handle.addEventListener("insert", (event) => {
+		let document = event.node.ownerDocument;
+		let list = document.getElementById(ids.list);
+		if (!list) return;
 
+		try {
+			let saved = sessionStorage.getItem(scrollKey(list));
+			if (saved !== null) list.scrollTop = Number(saved);
+		} catch {}
+		let save = () => {
 			try {
-				let saved = sessionStorage.getItem(scrollKey(list));
-				if (saved !== null) list.scrollTop = Number(saved);
+				sessionStorage.setItem(scrollKey(list), String(list.scrollTop));
 			} catch {}
-			let save = () => {
-				try {
-					sessionStorage.setItem(scrollKey(list), String(list.scrollTop));
-				} catch {}
-			};
-			list.addEventListener("scroll", save, { signal: handle.signal, passive: true });
-
-			document.addEventListener(
-				"keydown",
-				(keystroke) => {
-					if (isClaimedKeystroke(keystroke)) return;
-					let offset = matchesKeyCombo(keystroke, "j") ? 1 : 0;
-					if (matchesKeyCombo(keystroke, "k")) offset = -1;
-					if (offset !== 0 && step(list, offset)) keystroke.preventDefault();
-				},
-				{ signal: handle.signal },
-			);
-
-			let sidebar = ids.sidebar ? document.getElementById(ids.sidebar) : null;
-			sidebar?.addEventListener(
-				"click",
-				(click) => {
-					let target = click.target instanceof Element ? click.target : null;
-					if (target?.closest("a[href]") && sidebar.matches(":popover-open")) sidebar.hidePopover();
-				},
-				{ signal: handle.signal },
-			);
-		});
-
-		return (listId, sidebarId) => {
-			ids = { list: listId, sidebar: sidebarId ?? "" };
 		};
+		list.addEventListener("scroll", save, { signal: handle.signal, passive: true });
+
+		document.addEventListener(
+			"keydown",
+			(keystroke) => {
+				if (isClaimedKeystroke(keystroke)) return;
+				let target = keystroke.target instanceof Element ? keystroke.target : null;
+				if (current === "view" && !(target && rootOf(target) === rootOf(list))) return;
+				let offset = matchesKeyCombo(keystroke, "j") ? 1 : 0;
+				if (matchesKeyCombo(keystroke, "k")) offset = -1;
+				if (offset !== 0 && step(list, offset)) keystroke.preventDefault();
+			},
+			{ signal: handle.signal },
+		);
+
+		let sidebar = ids.sidebar ? document.getElementById(ids.sidebar) : null;
+		sidebar?.addEventListener(
+			"click",
+			(click) => {
+				let target = click.target instanceof Element ? click.target : null;
+				if (target?.closest("a[href]") && sidebar.matches(":popover-open")) sidebar.hidePopover();
+			},
+			{ signal: handle.signal },
+		);
 	});
+
+	return (listId, sidebarId, scope) => {
+		ids = { list: listId, sidebar: sidebarId ?? "" };
+		current = scope;
+	};
+});
