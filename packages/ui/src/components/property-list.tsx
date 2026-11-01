@@ -125,6 +125,7 @@ export function PropertyList(handle: Handle<PropertyList.Props, PropertyList.Con
 				mix={mergeMix(
 					[
 						m(0),
+						is("100%"),
 						container(PROPERTY_LIST_CONTAINER),
 						text("sm"),
 						resolved === "tiles"

@@ -65,6 +65,13 @@ afterEach(() => {
 });
 
 describe("PropertyList", () => {
+	test("fills a flex row it sits in, though it measures its own width", () => {
+		let host = mount(<Monitor />);
+		host.style.display = "flex";
+
+		expect(host.querySelector("dl")!.getBoundingClientRect().width).toBeCloseTo(480, 0);
+	});
+
 	test("pairs each label and value in a description list", () => {
 		let host = mount(<Monitor />);
 		let list = host.querySelector("dl")!;

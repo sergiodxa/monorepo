@@ -130,6 +130,7 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 					[
 						raw({
 							display: "block",
+							inlineSize: "100%",
 							minInlineSize: "0",
 							containerType: sticky ? "inline-size scroll-state" : "inline-size",
 							containerName: CONTAINER,

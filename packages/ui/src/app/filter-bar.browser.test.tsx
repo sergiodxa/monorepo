@@ -111,6 +111,14 @@ afterEach(() => {
 });
 
 describe("FilterBar", () => {
+	test("fills a flex row it sits in, though it measures its own width", () => {
+		let host = mount("/monitors");
+		host.style.display = "flex";
+		let bar = host.querySelector<HTMLElement>('[data-slot="filter-bar"]')!;
+
+		expect(bar.getBoundingClientRect().width).toBeCloseTo(1024, 0);
+	});
+
 	test("renders the tabs as links, the current one marked, with formatted counts", () => {
 		let host = mount("/monitors?state=active");
 		let links = [...host.querySelectorAll<HTMLAnchorElement>('[data-slot="filter-bar-tabs"] a')];

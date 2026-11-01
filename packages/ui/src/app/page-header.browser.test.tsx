@@ -71,6 +71,17 @@ async function frames() {
 }
 
 describe("PageHeader", () => {
+	test("fills a flex row it sits in, though it measures its own width", () => {
+		mounted = render(
+			<div style="display: flex; inline-size: 40rem">
+				<PageHeader title="api.acme.dev" />
+			</div>,
+		);
+		let header = document.querySelector<HTMLElement>('[data-slot="page-header"]')!;
+
+		expect(header.getBoundingClientRect().width).toBeCloseTo(640, 0);
+	});
+
 	test("draws the overflow, then secondary actions, then the primary action last", () => {
 		mountHeader("60rem");
 		let buttons = [...document.querySelectorAll('[data-slot="page-header-actions"] button')];

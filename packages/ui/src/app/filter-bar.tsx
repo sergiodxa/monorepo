@@ -235,7 +235,10 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 			<div
 				{...rest}
 				data-slot="filter-bar"
-				mix={mergeMix([container(CONTAINER), vstack({ gap: 2 }), minIs(0), text("sm")], mix)}
+				mix={mergeMix(
+					[container(CONTAINER), is("100%"), vstack({ gap: 2 }), minIs(0), text("sm")],
+					mix,
+				)}
 			>
 				<form id={formId} method="get" action={action} hidden>
 					{carriedParams(url, filterNames).map(([name, value]) => (
