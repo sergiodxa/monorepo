@@ -142,6 +142,34 @@ describe("Table layout", () => {
 		expect(host.querySelector("thead tr")!.getBoundingClientRect().height).toBeCloseTo(40, 0);
 	});
 
+	test("keeps every compact row one line tall, even with a long value", () => {
+		let host = mount(
+			<Table.Container>
+				<Table aria-label="Regions">
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>Region</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						<Table.Row>
+							<Table.Cell>Frankfurt</Table.Cell>
+						</Table.Row>
+						<Table.Row>
+							<Table.Cell>Northern Virginia, United States of America</Table.Cell>
+						</Table.Row>
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+			160,
+		);
+		let [short, long] = [...host.querySelectorAll("tbody tr")].map(
+			(row) => row.getBoundingClientRect().height,
+		);
+
+		expect(long).toBeCloseTo(short!, 0);
+	});
+
 	test("tints a body row on hover", async () => {
 		let host = mount(monitors());
 		let row = host.querySelector<HTMLElement>("tbody tr")!;

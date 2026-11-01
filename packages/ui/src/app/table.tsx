@@ -392,6 +392,11 @@ export function Table(handle: Handle<Table.Props>) {
 							borderCollapse: "collapse",
 							'&[data-density="compact"]': { "--ui-table-row-block-size": "2.5rem" },
 							'&[data-density="comfortable"]': { "--ui-table-row-block-size": "3.5rem" },
+							/**
+							 * Compact rows keep one line per cell, so every row stays the same height and a
+							 * long value widens its column, scrolling the table inside its container.
+							 */
+							'&:not([data-density="comfortable"]) > * > tr > *': { whiteSpace: "nowrap" },
 							"& > tbody": { transition: "opacity 200ms ease-out" },
 							'&[aria-busy="true"] > tbody': { opacity: 0.5 },
 							"@media (prefers-reduced-motion: reduce)": { "& > tbody": { transition: "none" } },
