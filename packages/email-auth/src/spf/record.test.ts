@@ -11,6 +11,12 @@ import { describe, expect, test } from "vitest";
 import { isDomainSpec, isSpfRecord, parseSpfRecord } from "./record.js";
 
 describe("parseSpfRecord", () => {
+	test("rejects a 100 000-character mechanism name ending in a line feed in linear time", () => {
+		let started = performance.now();
+		expect(isFailure(parseSpfRecord(`v=spf1 ${"a".repeat(100_000)}\n`))).toBe(true);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
 	test("reads Appendix A.1's records", () => {
 		let record = unwrap(parseSpfRecord("v=spf1 mx/30 mx:example.org/30 -all"));
 		expect(record.mechanisms).toEqual([
@@ -84,6 +90,17 @@ describe("isSpfRecord", () => {
 });
 
 describe("isDomainSpec", () => {
+	test("rejects a 100 000-character top label in linear time", () => {
+		let started = performance.now();
+		expect(isDomainSpec(`example.${"a".repeat(100_000)}-`)).toBe(false);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
+	test("reads a hyphenated top label", () => {
+		expect(isDomainSpec("example.xn--p1ai")).toBe(true);
+		expect(isDomainSpec("example.a-")).toBe(false);
+	});
+
 	test.each([
 		["example.com", true],
 		["example.com.", true],

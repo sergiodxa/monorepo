@@ -161,9 +161,10 @@ export function parseMtaStsPolicy(text: string): Result<MTASTS.Policy, RecordPar
 
 	for (let line of text.split(/\r?\n/)) {
 		if (line.trim() === "") continue;
-		let match = /^([A-Za-z0-9][A-Za-z0-9_.-]{0,31}):[ \t]*(.*?)[ \t]*$/.exec(line);
+		let match = /^([A-Za-z0-9][A-Za-z0-9_.-]{0,31}):(.*)$/.exec(line);
 		if (!match) return invalid("mta-sts-policy", `\`${line}\` is not a \`key: value\` line`);
-		let [, key = "", value = ""] = match;
+		let key = match[1] ?? "";
+		let value = trimSpacesAndTabs(match[2] ?? "");
 		if (key === "mx") {
 			if (!MX_PATTERN.test(value)) {
 				return invalid("mta-sts-policy", `\`${value}\` is not an MX pattern`);
@@ -319,4 +320,13 @@ function invalid(
 	message: string,
 ): Result<never, RecordParseError> {
 	return failure(new RecordParseError(protocol, message));
+}
+
+/** A policy value with the spaces and tabs around it removed, in one pass from each end. */
+function trimSpacesAndTabs(text: string): string {
+	let start = 0;
+	let end = text.length;
+	while (start < end && (text[start] === " " || text[start] === "\t")) start++;
+	while (end > start && (text[end - 1] === " " || text[end - 1] === "\t")) end--;
+	return text.slice(start, end);
 }

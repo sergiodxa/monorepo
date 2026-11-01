@@ -56,6 +56,13 @@ describe("parseMtaStsRecord", () => {
 });
 
 describe("parseMtaStsPolicy", () => {
+	test("rejects a line of 20 000 tabs and a stray CR in linear time", () => {
+		let started = performance.now();
+		let policy = parseMtaStsPolicy(`mode:${"\t".repeat(20_000)}\r`);
+		expect(isFailure(policy)).toBe(true);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
 	test("reads RFC 8461 §3.2's example policy", () => {
 		expect(unwrap(parseMtaStsPolicy(RFC8461_POLICY))).toMatchObject({
 			mode: "enforce",

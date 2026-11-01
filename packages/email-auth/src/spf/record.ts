@@ -16,9 +16,6 @@ import { RecordParseError } from "../errors.js";
 
 import { parseMacroString } from "./macro.js";
 
-/** RFC 7208 §12's `toplabel`: letters and digits with a letter, or an LDH label with a hyphen. */
-const TOP_LABEL = /^(?:[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*|[A-Za-z0-9]+-[A-Za-z0-9-]*[A-Za-z0-9])$/;
-
 /** RFC 7208 §12's `ip4-network`: a dotted quad without leading zeros. */
 const IP4_NETWORK =
 	/^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
@@ -154,7 +151,16 @@ export function isDomainSpec(spec: string): boolean {
 	if (last !== undefined && typeof last !== "string" && last.kind === "macro") return true;
 	let trimmed = spec.endsWith(".") ? spec.slice(0, -1) : spec;
 	let dot = trimmed.lastIndexOf(".");
-	return dot !== -1 && TOP_LABEL.test(trimmed.slice(dot + 1));
+	return dot !== -1 && isTopLabel(trimmed.slice(dot + 1));
+}
+
+/**
+ * RFC 7208 §12's `toplabel`: letters and digits with a letter, or an LDH label with a hyphen
+ * that starts and ends in a letter or digit. Each check is one linear scan of the label.
+ */
+function isTopLabel(label: string): boolean {
+	if (/^[A-Za-z0-9]+$/.test(label)) return /[A-Za-z]/.test(label);
+	return /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(label) && /[A-Za-z0-9]$/.test(label);
 }
 
 /** Records a modifier on `record`; `redirect` and `exp` may each appear once. */
@@ -178,11 +184,11 @@ function addModifier(
 
 /** Parses one directive: an optional qualifier, then a known mechanism. */
 function parseMechanism(term: string): Result<SPF.Mechanism, RecordParseError> {
-	let match = /^([+\-~?]?)([A-Za-z0-9]+)(.*)$/.exec(term);
+	let match = /^([+\-~?]?)([A-Za-z0-9]+)/.exec(term);
 	if (!match) return invalid(`\`${term}\` is not a mechanism or modifier`);
 	let qualifier = (match[1] || DEFAULT_QUALIFIER) as SPF.Qualifier;
 	let name = (match[2] ?? "").toLowerCase();
-	let rest = match[3] ?? "";
+	let rest = term.slice(match[0].length);
 	let base = { qualifier, term };
 
 	switch (name) {
