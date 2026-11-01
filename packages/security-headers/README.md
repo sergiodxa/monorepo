@@ -132,6 +132,8 @@ csp?.directives.frameSrc; // ["https://challenges.example.com"]
 bunx @sdxc/security-headers --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg security-headers …` runs the same command line, using the version your project installs.
+
 Fetch a page and grade Content-Security-Policy, Strict-Transport-Security,
 X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy and
 Cross-Origin-Opener-Policy as `ok`, `missing` or `weak`, with the reason for each weakness. A
