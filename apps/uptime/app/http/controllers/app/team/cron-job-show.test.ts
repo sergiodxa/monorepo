@@ -169,8 +169,9 @@ describe("cronJobShow", () => {
 		let body = await response.text();
 
 		expect(body).toContain("Missed");
-		expect(body.indexOf("Missed")).toBeLessThan(body.indexOf("<main"));
-		expect(body.lastIndexOf("Missed")).toBeLessThan(body.indexOf("<main"));
+		let headerEnd = body.indexOf("</header>", body.indexOf('data-slot="page-header"'));
+		expect(body.indexOf("Missed")).toBeLessThan(headerEnd);
+		expect(body.lastIndexOf("Missed")).toBeLessThan(headerEnd);
 	});
 
 	test("folds timezone and grace period into the schedule card as a worded duration", async () => {

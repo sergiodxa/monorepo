@@ -1291,10 +1291,17 @@ export default {
 		},
 
 		layout: {
+			shell: {
+				nav: "Principal",
+				skip: "Aller au contenu",
+				menu: "Ouvrir la navigation",
+				close: "Fermer la navigation",
+				collapse: "Réduire la barre latérale",
+				groups: { monitors: "Moniteurs", respond: "Réagir", team: "Équipe" },
+			},
 			sidebar: {
 				teamPicker: { label: "Sélectionner une équipe" },
 				userMenu: { label: "Menu utilisateur" },
-				toggle: "Afficher ou masquer la navigation",
 
 				navigation: {
 					items: {

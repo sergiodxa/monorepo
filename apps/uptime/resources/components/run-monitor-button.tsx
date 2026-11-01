@@ -15,13 +15,9 @@ import { PlayIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { m } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
-import { Toast } from "@sdxc/ui/app";
+import { pageToaster, Toast } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
-
-import type { AppToast } from "~/resources/components/app-toaster";
-
-import { showToast } from "~/resources/components/app-toaster";
 
 /**
  * Every named `Frame` on the monitor detail page whose content a completed check can
@@ -125,7 +121,7 @@ export function transitionToast(
 	name: string,
 	previous: string | null,
 	current: "up" | "down" | "degraded" | null,
-): AppToast | undefined {
+): Toast.Message | undefined {
 	if (current === null || current === previous) return undefined;
 
 	let color = iife((): Toast.Color => {
@@ -184,7 +180,7 @@ export const RunMonitorButton = clientEntry(
 								let run = s.parse(PlayResponseSchema, await response.json());
 
 								if (!run.queued) {
-									showToast({
+									pageToaster().add({
 										title: t("page.monitor.run.toast.notQueued.title"),
 										description: t("page.monitor.run.toast.notQueued.description"),
 										color: "danger",
@@ -202,7 +198,7 @@ export const RunMonitorButton = clientEntry(
 								await Promise.all(frames.map((frame) => frame.reload()));
 
 								let toast = transitionToast(t, handle.props.name, run.status, status);
-								if (toast) showToast(toast);
+								if (toast) pageToaster().add(toast);
 							} catch {
 								/** A failed run already shows in the page, so this stays silent rather than risking a wrong toast. */
 							} finally {

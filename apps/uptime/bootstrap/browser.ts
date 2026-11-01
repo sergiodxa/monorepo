@@ -67,6 +67,22 @@ setIntl(intl);
  * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
+	"@sdxc/ui/app/auto-refresh": () => import("@sdxc/ui/app/auto-refresh"),
+	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
+	"@sdxc/ui/app/detail-sheet": () => import("@sdxc/ui/app/detail-sheet"),
+	"@sdxc/ui/app/filter-bar": () => import("@sdxc/ui/app/filter-bar"),
+	"@sdxc/ui/app/keyboard-help": () => import("@sdxc/ui/app/keyboard-help"),
+	"@sdxc/ui/app/optimistic-toggle": () => import("@sdxc/ui/app/optimistic-toggle"),
+	"@sdxc/ui/app/save-bar": () => import("@sdxc/ui/app/save-bar"),
+	"@sdxc/ui/app/save-status": () => import("@sdxc/ui/app/save-status"),
+	"@sdxc/ui/app/selection-bar": () => import("@sdxc/ui/app/selection-bar"),
+	"@sdxc/ui/app/settings-section": () => import("@sdxc/ui/app/settings-section"),
+	"@sdxc/ui/app/split-view": () => import("@sdxc/ui/app/split-view"),
+	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
+	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
+	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
+	"@sdxc/ui/relative-time": () => import("@sdxc/ui/relative-time"),
 	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
 	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),

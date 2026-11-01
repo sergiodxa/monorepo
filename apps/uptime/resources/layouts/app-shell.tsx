@@ -1,20 +1,20 @@
 /**
- * Signed-in app shell: a sidebar (team switcher, nav, admin group, user menu) and
- * a header sit around the content every `/app/:team/*` page composes here.
+ * Signed-in app shell: the sidebar (team switcher, nav by task, the person at the foot), the
+ * screen's page header and the one toast stack, around what every `/app/:team/*` page composes.
+ * The sidebar's collapsed state comes from its cookie, so the first paint is the width it was left.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Handle, RemixNode } from "remix/component";
-import type { getContext } from "remix/middleware/async-context";
+import type { getContext as GetContext } from "remix/middleware/async-context";
 
 import {
 	ActivityIcon,
 	BellIcon,
 	BookOpenIcon,
 	CheckIcon,
-	ChevronsUpDownIcon,
 	ClockIcon,
 	FileSpreadsheetIcon,
 	FileTextIcon,
@@ -22,277 +22,24 @@ import {
 	KeyIcon,
 	MonitorCogIcon,
 	NetworkIcon,
-	PanelLeftIcon,
 	SettingsIcon,
 	WorkflowIcon,
 	WrenchIcon,
 } from "@sdxc/icons";
-import { bg, border, borderEdge, fg } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
-import { combine, cursor, listStyle, raw } from "@sdxc/u/general";
-import {
-	basis,
-	fixed,
-	flex,
-	flexCol,
-	gap,
-	grid,
-	gridArea,
-	grow,
-	hidden,
-	inlineFlex,
-	insBottom,
-	insLeft,
-	insTop,
-	items,
-	justify,
-	shrink,
-} from "@sdxc/u/layout";
-import { boxSizing } from "@sdxc/u/layout";
-import { overflow, overflowY } from "@sdxc/u/overflow";
-import { media } from "@sdxc/u/responsive";
-import { bs, height, is, m, maxBs, mbs, minBs, minIs, p, pi } from "@sdxc/u/size";
-import { hover, when } from "@sdxc/u/state";
-import { fontSize, textAlign, truncate, weight } from "@sdxc/u/typography";
-import { Breadcrumbs, Menu, Sidebar } from "@sdxc/ui";
+import { truncate } from "@sdxc/u/typography";
+import { Menu } from "@sdxc/ui";
+import { AppShell as Shell, readAppShellCookie } from "@sdxc/ui/app/app-shell";
+import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Toasts } from "@sdxc/ui/app/toasts";
 import { menuKeys } from "@sdxc/ui/mixins";
+import { generateUUID } from "@sdxc/uuid/v4";
+import { getContext } from "remix/middleware/async-context";
 
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { teamLogoUrl } from "~/app/services/team-logo";
-import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
-import FlashToast from "~/resources/components/flash-toast";
 import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
-
-/**
- * The page shell: a plain flex column below 768px, where the sidebar
- * `<nav>` is either closed or an off-canvas overlay; at ≥768px it becomes
- * the two-column, three-row grid described in the file docblock.
- */
-const page = combine([
-	flex(),
-	flexCol(),
-	height("100vh"),
-	overflow(),
-	media("(min-width: 768px)", [
-		grid(),
-		raw({
-			gridTemplateColumns: "256px 1fr",
-			gridTemplateRows: "auto 1fr auto",
-			gridTemplateAreas: `"teampicker header" "nav content" "usermenu content"`,
-		}),
-	]),
-]);
-
-/** Horizontal group of inline items (nav toggle + breadcrumb, action buttons). */
-const row = combine([flex(), items("center"), gap(3), minIs(0)]);
-
-/**
- * The hamburger button that opens the sidebar on mobile via the native Command
- * Invoker API (`commandfor`/`command="toggle-popover"`). Hidden at ≥768px, where the
- * sidebar is always visible and a toggle would be redundant.
- */
-const sidebarToggle = combine([
-	inlineFlex(),
-	items("center"),
-	justify("center"),
-	is("32px"),
-	bs("32px"),
-	p(0),
-	rounded(),
-	border("none"),
-	bg("transparent"),
-	fg("inherit"),
-	cursor("pointer"),
-	shrink(),
-	hover(bg("neutral.bg-tint-hover")),
-	media("(min-width: 768px)", hidden()),
-]);
-
-/**
- * The header cell: nav toggle + breadcrumb on the left, quick actions on the right.
- * `height` (with `boxSizing: border-box`, so padding/border count toward it) is fixed
- * at 64px so pages that pass no `actions` don't render a shorter header row.
- */
-const header = combine([
-	flex(),
-	items("center"),
-	justify("between"),
-	gap(4),
-	bs("64px"),
-	boxSizing("border-box"),
-	pi(5),
-	borderEdge("bottom", { color: "neutral", width: 1 }),
-	shrink(),
-	media("(min-width: 768px)", gridArea("header")),
-]);
-
-/**
- * The breadcrumb trail above the heading, truncated to one line like the
- * heading below it. Without truncation, a wrapping trail grows taller
- * instead of narrower, pushing three lines into a header fixed at 64px.
- */
-const breadcrumbTrail = combine([truncate(), minIs(0)]);
-
-/** The current page/section name, replacing what used to be each page's own `<h1>`. */
-const breadcrumbText = combine([
-	truncate(),
-	fontSize("0.9375rem"),
-	weight(600),
-	fg("neutral.emphasis"),
-]);
-
-/**
- * Wraps the small `Breadcrumbs` trail and the bold {@link breadcrumbText} heading in
- * a single column so both sit stacked, vertically centered within the fixed-height
- * {@link header} row.
- */
-const headingColumn = combine([flex(), flexCol(), justify("center"), gap("2px"), minIs(0)]);
-
-/**
- * The sidebar's popover drawer: a native, full-height overlay below 768px
- * that becomes `display: contents` at ≥768px (see the file docblock); the
- * `!important`s beat the UA stylesheet's default `display: none`.
- */
-const sidebarNav = combine([
-	fixed(),
-	insTop(0),
-	insLeft(0),
-	insBottom(0),
-	m(0),
-	/**
-	 * The UA popover stylesheet applies `height: fit-content` to every `[popover]`
-	 * element regardless of open state — left unset, that beats this element's
-	 * intended full-height drawer size below 768px.
-	 */
-	bs("full"),
-	boxSizing("border-box"),
-	hidden(),
-	flexCol(),
-	overflow(),
-	is("min(80vw, 288px)"),
-	maxBs("100vh"),
-	p(0),
-	border("none"),
-	borderEdge("right", { color: "neutral", width: 1 }),
-	bg("neutral.tint"),
-	shadow("lg"),
-	when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
-	when("&:popover-open", raw({ display: "flex !important" })),
-	media("(min-width: 768px)", raw({ display: "contents !important" })),
-]);
-
-/**
- * Top sidebar cell: the team picker, sharing row 1 with `header` at ≥768px
- * so the grid's `align-items: stretch` gives both the same height, with a
- * right border continuing the divider below it.
- */
-const teamPickerCell = combine([
-	flex(),
-	items("center"),
-	p("10px", "12px"),
-	shrink(),
-	media("(min-width: 768px)", [
-		gridArea("teampicker"),
-		p(0, 4),
-		borderEdge("bottom", { color: "neutral", width: 1 }),
-		borderEdge("right", { color: "neutral", width: 1 }),
-	]),
-]);
-
-/**
- * Middle sidebar cell: the primary + admin-only nav lists. Independently scrollable
- * (`overflow-y: auto`, `minHeight: 0`) so a long nav list never pushes the user menu
- * below the sidebar's own scroll instead of staying pinned to the bottom.
- */
-const navCell = combine([
-	flex(),
-	flexCol(),
-	gap(3),
-	grow(),
-	shrink(1),
-	basis("0%"),
-	minBs(0),
-	overflowY("auto"),
-	p(4, 3),
-	media("(min-width: 768px)", [
-		gridArea("nav"),
-		borderEdge("right", { color: "neutral", width: 1 }),
-	]),
-]);
-
-/** Bottom sidebar cell: the user menu. */
-const userMenuCell = combine([
-	p(4),
-	borderEdge("top", { color: "neutral", width: 1 }),
-	shrink(),
-	media("(min-width: 768px)", [
-		gridArea("usermenu"),
-		p(4),
-		borderEdge("top", { color: "neutral", width: 1 }),
-		borderEdge("right", { color: "neutral", width: 1 }),
-	]),
-]);
-
-/**
- * Plain (non-interactive) row for the team picker when the viewer has
- * one team. `minWidth: 0` lets {@link truncatedLabel}'s ellipsis kick in
- * instead of the row growing past its intended width.
- */
-const teamPickerRow = combine([flex(), items("center"), gap(2), minIs(0), is("full")]);
-
-/**
- * Interactive team/user-menu trigger, opened via the `commandfor`/
- * `command="toggle-popover"` relationship that also gives `Menu` its
- * implicit CSS anchor; `width: 100%` keeps it flush with the cell's padding.
- */
-const menuTriggerButton = combine([
-	flex(),
-	items("center"),
-	gap(2),
-	is("full"),
-	minIs(0),
-	p("6px", "8px"),
-	border("none"),
-	rounded("lg"),
-	bg("transparent"),
-	raw({ font: "inherit" }),
-	textAlign("left"),
-	cursor("pointer"),
-	fg("inherit"),
-	hover(bg("neutral.bg-tint-hover")),
-]);
-
-/** Truncated name/label text next to a logo/avatar in the team picker and user menu. */
-const truncatedLabel = combine([
-	grow(),
-	shrink(1),
-	basis("0%"),
-	minIs(0),
-	truncate(),
-	fontSize("0.875rem"),
-	weight(500),
-	fg("neutral.emphasis"),
-]);
-
-/**
- * The "switch" affordance icon at the end of the team-picker/user-menu
- * triggers, explicitly colored to match {@link truncatedLabel} since
- * `currentColor` won't inherit between sibling elements.
- */
-const menuChevronIcon = combine([shrink(), fg("neutral.emphasis")]);
-
-/** A nav-list `<ul>` (used for both the primary and admin-only groups). */
-const navList = combine([listStyle(), m(0), p(0), flex(), flexCol(), gap(1)]);
-
-/** The page's main content area (grid area "content", spanning both content-side rows at ≥768px). */
-const main = combine([
-	minIs(0),
-	p(5),
-	overflow("auto"),
-	media("(min-width: 768px)", [gridArea("content"), p(12)]),
-]);
 
 namespace AppShell {
 	export interface Props {
@@ -300,37 +47,48 @@ namespace AppShell {
 		teams: Array<{ id: string; slug: string; name: string; logo: string | null }>;
 		viewer: { name: string; email: string; avatar: string };
 		isAdmin: boolean;
-		/**
-		 * The request's translator, used to read every string the shell
-		 * owns under `app.layout.*`. Required, so a missing instance is caught
-		 * at compile time and every render uses the caller's real translations.
-		 */
-		intl: ReturnType<typeof getContext>["intl"];
-		/** Bold page title, shown in the header in place of a per-page `<h1>`. */
+		intl: ReturnType<typeof GetContext>["intl"];
+		/** The screen's title, drawn as the page header's heading and the trail's last step. */
 		heading: string;
-		/**
-		 * Small trail of parent pages shown above {@link AppShell.Props.heading}.
-		 * Omit it (or pass an empty array) to render no trail, e.g. on the
-		 * dashboard. A segment with no `href` renders as plain text.
-		 */
+		/** The trail from the dashboard down to, and excluding, this screen. */
 		breadcrumbs?: Array<{ label: string; href?: string }>;
-		/**
-		 * The current request's URL path (e.g. `ctx.url.pathname`), compared
-		 * against each nav item's `href` to mark the active link. Optional: nav
-		 * links render with no active state until a page's controller passes it.
-		 */
+		/** The request path, which marks the nav row for this screen and its children. */
 		currentPath?: string;
-		/** Page-specific quick actions (e.g. "Create monitor"), shown at the end of the header. */
+		/** Secondary actions, drawn before {@link AppShell.Props.primaryAction}. */
 		actions?: RemixNode;
+		/** The screen's one primary action, drawn last in the header. */
+		primaryAction?: RemixNode;
+		/** An overflow menu's trigger and menu, drawn before the secondary actions. */
+		overflow?: RemixNode;
+		/** One line under the title. */
+		description?: RemixNode;
+		/** A badge after the title, such as a monitor's status. */
+		status?: RemixNode;
+		/** Views of one record, each a URL. */
+		tabs?: PageHeader.Tab[];
+		/** The tabs landmark's name, required whenever {@link AppShell.Props.tabs} is set. */
+		tabsLabel?: string;
+		/** A notice above the screen that needs resolving, such as a billing problem. */
+		banner?: RemixNode;
+		/** Draws the sidebar as the icon rail; read from its cookie on the request when unset. */
+		collapsed?: boolean;
+		/** The session flash from the action that redirected here, shown as one toast. */
 		toast?: { intent: "success" | "error"; message: string };
 		children: RemixNode;
 	}
 }
 
+/** One sidebar destination. */
+interface NavItem {
+	href: string;
+	label: string;
+	icon: RemixNode;
+	target?: "_blank";
+}
+
 /**
- * Renders the sidebar (team picker, primary nav, admin-only nav, user
- * menu) plus header and main content area around `children`, and mounts
- * `AppToaster` so any island can call `showToast()` without its own region.
+ * Renders the signed-in frame and the screen's header. A screen passes its title, trail and
+ * actions here instead of drawing its own header, so every screen reads the same way.
  */
 export default function AppShell(handle: Handle<AppShell.Props>) {
 	return () => {
@@ -344,247 +102,229 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			breadcrumbs,
 			currentPath,
 			actions,
+			primaryAction,
+			overflow,
+			description,
+			status,
+			tabs,
+			tabsLabel,
+			banner,
 			toast,
 			children,
 		} = handle.props;
 
 		let t = withPrefix(intl.t, "app.layout");
+		let collapsed =
+			handle.props.collapsed ?? readAppShellCookie(getContext().request.headers.get("Cookie"));
 		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
+		let teamParams = { team: team.slug };
 
-		/**
-		 * A nav item is active on an exact match, or (except the dashboard) when
-		 * `currentPath` is nested under it, so "HTTP Monitors" stays highlighted
-		 * on a monitor's own detail page; the dashboard link is never a parent.
-		 */
-		function isNavItemActive(href: string): boolean {
+		/** A row is current on its own page and stays marked on the pages under it. */
+		function isCurrent(href: string): boolean {
 			if (currentPath === undefined) return false;
 			if (currentPath === href) return true;
 			return href !== dashboardHref && currentPath.startsWith(`${href}/`);
 		}
 
-		let primaryNavItems: Array<{ href: string; label: string; icon: RemixNode }> = [
+		let monitorItems: NavItem[] = [
 			{
-				href: dashboardHref,
-				label: t("sidebar.navigation.items.dashboard"),
-				icon: <ActivityIcon size={16} strokeWidth={1.5} />,
-			},
-			{
-				href: routes.app.team.monitors.index.href({ team: team.slug }),
+				href: routes.app.team.monitors.index.href(teamParams),
 				label: t("sidebar.navigation.items.httpMonitors"),
-				icon: <MonitorCogIcon size={16} strokeWidth={1.5} />,
+				icon: <MonitorCogIcon />,
 			},
 			{
-				href: routes.app.team.dnsMonitors.index.href({ team: team.slug }),
+				href: routes.app.team.dnsMonitors.index.href(teamParams),
 				label: t("sidebar.navigation.items.dnsMonitors"),
-				icon: <GlobeIcon size={16} strokeWidth={1.5} />,
+				icon: <GlobeIcon />,
 			},
 			{
-				href: routes.app.team.tcpMonitors.index.href({ team: team.slug }),
+				href: routes.app.team.tcpMonitors.index.href(teamParams),
 				label: t("sidebar.navigation.items.tcpMonitors"),
-				icon: <NetworkIcon size={16} strokeWidth={1.5} />,
+				icon: <NetworkIcon />,
 			},
 			{
-				href: routes.app.team.flowMonitors.index.href({ team: team.slug }),
+				href: routes.app.team.flowMonitors.index.href(teamParams),
 				label: t("sidebar.navigation.items.flowMonitors"),
-				icon: <WorkflowIcon size={16} strokeWidth={1.5} />,
+				icon: <WorkflowIcon />,
 			},
 			{
-				href: routes.app.team.cronJobs.index.href({ team: team.slug }),
+				href: routes.app.team.cronJobs.index.href(teamParams),
 				label: t("sidebar.navigation.items.cronJobs"),
-				icon: <ClockIcon size={16} strokeWidth={1.5} />,
-			},
-			{
-				href: routes.app.team.alerts.index.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.alerts"),
-				icon: <BellIcon size={16} strokeWidth={1.5} />,
-			},
-			{
-				href: routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.maintenance"),
-				icon: <WrenchIcon size={16} strokeWidth={1.5} />,
-			},
-			{
-				href: routes.app.team.statusPages.index.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.statusPages"),
-				icon: <FileTextIcon size={16} strokeWidth={1.5} />,
-			},
-			{
-				href: routes.app.team.reports.index.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.reports"),
-				icon: <FileSpreadsheetIcon size={16} strokeWidth={1.5} />,
+				icon: <ClockIcon />,
 			},
 		];
 
-		let adminNavItems: Array<{
-			href: string;
-			label: string;
-			icon: RemixNode;
-			target?: "_blank";
-		}> = [
+		let respondItems: NavItem[] = [
 			{
-				href: routes.docs.index.href(),
-				label: t("sidebar.navigation.items.docs"),
-				target: "_blank",
-				icon: <BookOpenIcon size={16} strokeWidth={1.5} />,
+				href: routes.app.team.alerts.index.href(teamParams),
+				label: t("sidebar.navigation.items.alerts"),
+				icon: <BellIcon />,
 			},
 			{
-				href: routes.app.team.apiKeys.index.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.apiKeys"),
-				icon: <KeyIcon size={16} strokeWidth={1.5} />,
+				href: routes.app.team.maintenanceWindows.index.href(teamParams),
+				label: t("sidebar.navigation.items.maintenance"),
+				icon: <WrenchIcon />,
 			},
 			{
-				href: routes.app.team.settings.href({ team: team.slug }),
-				label: t("sidebar.navigation.items.settings"),
-				icon: <SettingsIcon size={16} strokeWidth={1.5} />,
+				href: routes.app.team.statusPages.index.href(teamParams),
+				label: t("sidebar.navigation.items.statusPages"),
+				icon: <FileTextIcon />,
+			},
+			{
+				href: routes.app.team.reports.index.href(teamParams),
+				label: t("sidebar.navigation.items.reports"),
+				icon: <FileSpreadsheetIcon />,
 			},
 		];
+
+		let teamItems: NavItem[] = isAdmin
+			? [
+					{
+						href: routes.app.team.apiKeys.index.href(teamParams),
+						label: t("sidebar.navigation.items.apiKeys"),
+						icon: <KeyIcon />,
+					},
+					{
+						href: routes.app.team.settings.href(teamParams),
+						label: t("sidebar.navigation.items.settings"),
+						icon: <SettingsIcon />,
+					},
+				]
+			: [];
+
+		teamItems.push({
+			href: routes.docs.index.href(),
+			label: t("sidebar.navigation.items.docs"),
+			icon: <BookOpenIcon />,
+			target: "_blank",
+		});
+
+		/** Draws a group's rows, opening an external destination in a new tab. */
+		let items = (list: NavItem[]) =>
+			list.map((item) => (
+				<Shell.Item
+					key={item.href}
+					href={item.href}
+					label={item.label}
+					icon={item.icon}
+					current={isCurrent(item.href)}
+					target={item.target}
+					rel={item.target ? "noreferrer" : undefined}
+				/>
+			));
+
+		let teamLogo = <Logo src={teamLogoUrl(team.logo)} name={team.name} />;
+		let flash = toast
+			? [
+					{
+						id: generateUUID(),
+						color: toast.intent === "success" ? ("success" as const) : ("danger" as const),
+						title: toast.message,
+					},
+				]
+			: [];
 
 		return (
-			<div mix={[page]}>
-				<nav id="app-sidebar" popover="auto" mix={[sidebarNav]}>
-					<div mix={[teamPickerCell]}>
-						{teams.length <= 1 ? (
-							<div mix={[teamPickerRow]}>
-								<Logo src={teamLogoUrl(team.logo)} name={team.name} />
-								<span mix={[truncatedLabel]}>{team.name}</span>
-							</div>
-						) : (
-							<>
-								<button
-									type="button"
-									commandfor="team-picker-menu"
-									command="toggle-popover"
-									aria-label={t("sidebar.teamPicker.label")}
-									mix={[menuTriggerButton]}
-								>
-									<Logo src={teamLogoUrl(team.logo)} name={team.name} />
-									<span mix={[truncatedLabel]}>{team.name}</span>
-									<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
-								</button>
-								<Menu
-									id="team-picker-menu"
-									aria-label={t("sidebar.teamPicker.label")}
-									mix={[menuKeys()]}
-								>
-									{teams.map((t) => (
-										<Menu.Item
-											key={t.id}
-											href={routes.app.team.dashboard.index.href({ team: t.slug })}
-										>
-											<Logo src={teamLogoUrl(t.logo)} name={t.name} />
-											<span mix={[truncatedLabel]}>{t.name}</span>
-											{t.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
-										</Menu.Item>
-									))}
-								</Menu>
-							</>
-						)}
-					</div>
-
-					<div mix={[navCell]}>
-						<ul mix={[navList]}>
-							{primaryNavItems.map((item) => (
-								<li key={item.href}>
-									<Sidebar.Item href={item.href} current={isNavItemActive(item.href)}>
-										{item.icon}
-										<span>{item.label}</span>
-									</Sidebar.Item>
-								</li>
-							))}
-						</ul>
-
-						{isAdmin && (
-							<ul mix={[navList, mbs("auto")]}>
-								{adminNavItems.map((item) => (
-									<li key={item.href}>
-										<Sidebar.Item
-											href={item.href}
-											target={item.target}
-											rel={item.target ? "noreferrer" : undefined}
-											current={isNavItemActive(item.href)}
-										>
-											{item.icon}
-											<span>{item.label}</span>
-										</Sidebar.Item>
-									</li>
+			<Shell
+				labels={{
+					nav: t("shell.nav"),
+					skip: t("shell.skip"),
+					menu: t("shell.menu"),
+					close: t("shell.close"),
+					collapse: t("shell.collapse"),
+				}}
+				collapsed={collapsed}
+				banner={banner}
+				workspace={
+					teams.length <= 1 ? (
+						<Shell.Identity avatar={teamLogo} name={team.name} chevron={false} disabled />
+					) : (
+						<>
+							<Shell.Identity
+								avatar={teamLogo}
+								name={team.name}
+								commandfor="team-picker-menu"
+								command="toggle-popover"
+								aria-label={t("sidebar.teamPicker.label")}
+							/>
+							<Menu
+								id="team-picker-menu"
+								aria-label={t("sidebar.teamPicker.label")}
+								mix={[menuKeys()]}
+							>
+								{teams.map((other) => (
+									<Menu.Item
+										key={other.id}
+										href={routes.app.team.dashboard.index.href({ team: other.slug })}
+									>
+										<Logo src={teamLogoUrl(other.logo)} name={other.name} />
+										<span mix={[truncate()]}>{other.name}</span>
+										{other.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
+									</Menu.Item>
 								))}
-							</ul>
-						)}
-					</div>
-
-					<div mix={[userMenuCell]}>
-						<button
-							type="button"
+							</Menu>
+						</>
+					)
+				}
+				nav={
+					<>
+						<Shell.Group>
+							<Shell.Item
+								href={dashboardHref}
+								label={t("sidebar.navigation.items.dashboard")}
+								icon={<ActivityIcon />}
+								current={isCurrent(dashboardHref)}
+							/>
+						</Shell.Group>
+						<Shell.Group title={t("shell.groups.monitors")}>{items(monitorItems)}</Shell.Group>
+						<Shell.Group title={t("shell.groups.respond")}>{items(respondItems)}</Shell.Group>
+						<Shell.Group title={t("shell.groups.team")}>{items(teamItems)}</Shell.Group>
+					</>
+				}
+				footer={
+					<>
+						<Shell.Identity
+							avatar={<Avatar src={viewer.avatar || null} name={viewer.name} />}
+							name={viewer.name}
+							detail={viewer.email}
 							commandfor="user-menu"
 							command="toggle-popover"
 							aria-label={t("sidebar.userMenu.label")}
-							mix={[menuTriggerButton]}
-						>
-							<Avatar src={viewer.avatar || null} name={viewer.name} />
-							<span mix={[truncatedLabel]}>{viewer.name}</span>
-							<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
-						</button>
+						/>
 						<Menu
 							id="user-menu"
 							placement="top-start"
 							aria-label={t("sidebar.userMenu.label")}
 							mix={[menuKeys()]}
 						>
-							<Menu.Item href={routes.app.team.account.href({ team: team.slug })}>
+							<Menu.Item href={routes.app.team.account.href(teamParams)}>
 								{t("sidebar.account.title")}
 							</Menu.Item>
 							<Menu.Item href={routes.logout.index.href()}>
 								{t("sidebar.account.signOut")}
 							</Menu.Item>
 						</Menu>
-					</div>
-				</nav>
-
-				<div mix={[header]}>
-					<div mix={[row]}>
-						<button
-							type="button"
-							commandfor="app-sidebar"
-							command="toggle-popover"
-							aria-label={t("sidebar.toggle")}
-							mix={[sidebarToggle]}
-						>
-							<PanelLeftIcon size={18} strokeWidth={1.5} />
-						</button>
-						<div mix={[headingColumn]}>
-							{breadcrumbs && breadcrumbs.length > 0 && (
-								<Breadcrumbs aria-label={t("breadcrumbs.label")} mix={[breadcrumbTrail]}>
-									<Breadcrumbs.List>
-										{breadcrumbs.map((crumb, index) => (
-											<Breadcrumbs.Item key={`${crumb.label}-${index}`}>
-												{crumb.href ? (
-													<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
-												) : (
-													<span>{crumb.label}</span>
-												)}
-											</Breadcrumbs.Item>
-										))}
-									</Breadcrumbs.List>
-								</Breadcrumbs>
-							)}
-							<span mix={[breadcrumbText]}>{heading}</span>
-						</div>
-					</div>
-					{actions && <div mix={[row]}>{actions}</div>}
-				</div>
-
-				<main mix={[main]}>{children}</main>
-
-				{toast && (
-					<FlashToast
-						color={toast.intent === "success" ? "success" : "danger"}
-						label={t("toasts.region")}
-						description={toast.message}
-					/>
-				)}
-
-				<AppToaster />
-			</div>
+					</>
+				}
+			>
+				<PageHeader
+					title={heading}
+					crumbs={breadcrumbs?.length ? [...breadcrumbs, { label: heading }] : undefined}
+					crumbsLabel={t("breadcrumbs.label")}
+					description={description}
+					status={status}
+					overflow={overflow}
+					actions={actions}
+					primaryAction={primaryAction}
+					tabs={tabs}
+					tabsLabel={tabsLabel}
+				/>
+				{children}
+				<Toasts
+					labels={{ region: t("toasts.region"), dismiss: t("toasts.dismiss") }}
+					initial={flash}
+				/>
+			</Shell>
 		);
 	};
 }

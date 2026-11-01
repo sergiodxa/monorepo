@@ -30,6 +30,7 @@ function render(locale: "en" | "de") {
 			teams={[{ id: "team-1", slug: "acme", name: "Acme", logo: null }]}
 			viewer={{ name: "Ada", email: "ada@acme.test", avatar: "" }}
 			isAdmin
+			collapsed={false}
 			intl={createI18n({ locale, fallbackLanguage: "en", resources: RESOURCES })}
 			heading="Dashboard"
 			breadcrumbs={[{ label: "Monitors" }]}
@@ -64,7 +65,8 @@ describe("AppShell", () => {
 	test("translates the landmark and menu labels a screen reader announces", async () => {
 		let html = await render("de");
 
-		expect(html).toContain(`aria-label="${de.app.layout.sidebar.toggle}"`);
+		expect(html).toContain(`aria-label="${de.app.layout.shell.menu}"`);
+		expect(html).toContain(`aria-label="${de.app.layout.shell.nav}"`);
 		expect(html).toContain(`aria-label="${de.app.layout.breadcrumbs.label}"`);
 		expect(html).toContain(`aria-label="${de.app.layout.sidebar.userMenu.label}"`);
 		expect(html).toContain(de.app.layout.sidebar.account.signOut);

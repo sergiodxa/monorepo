@@ -14,12 +14,9 @@ import { intl } from "@sdxc/i18n/ui";
 import { PlayIcon } from "@sdxc/icons";
 import { m } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
+import { pageToaster, Toast } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
-
-import type { AppToast } from "~/resources/components/app-toaster";
-
-import { showToast } from "~/resources/components/app-toaster";
 
 /**
  * The action's JSON answer: one flat shape rather than a union of "refused"
@@ -62,7 +59,7 @@ type RunFlowButtonProps = {
  * warns about the monitor's own ability to run, distinct from an outage of
  * the thing it watches, and its `detail` names the reason why.
  */
-export function runToast(t: Translate, name: string, run: RunResponse): AppToast {
+export function runToast(t: Translate, name: string, run: RunResponse): Toast.Message {
 	if (run.status === null) {
 		return {
 			title: t("page.flowMonitors.run.toast.refused", { name }),
@@ -138,7 +135,7 @@ export const RunFlowButton = clientEntry(
 								if (!response.ok) return;
 
 								let run = s.parse(RunResponseSchema, await response.json());
-								showToast(runToast(t, handle.props.name, run));
+								pageToaster().add(runToast(t, handle.props.name, run));
 								if (run.status !== null) await handle.frames.get(FLOW_RESULTS_FRAME)?.reload();
 							} catch {
 								/** A failed request has no outcome to report, so this stays silent rather than risking a wrong toast. */

@@ -1329,10 +1329,17 @@ export default {
 		},
 
 		layout: {
+			shell: {
+				nav: "Main",
+				skip: "Skip to content",
+				menu: "Open navigation",
+				close: "Close navigation",
+				collapse: "Collapse sidebar",
+				groups: { monitors: "Monitors", respond: "Respond", team: "Team" },
+			},
 			sidebar: {
 				teamPicker: { label: "Select Team" },
 				userMenu: { label: "User Menu" },
-				toggle: "Toggle navigation",
 
 				navigation: {
 					items: {

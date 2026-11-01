@@ -176,8 +176,9 @@ describe("app/team/dashboard", () => {
 		let panel = markers.get("dashboard-panel");
 
 		expect(quickPing).toBeGreaterThan(-1);
-		expect(quickPing).toBeLessThan(body.indexOf("<main"));
-		expect(usage).toBeGreaterThan(body.indexOf("<main"));
+		let headerEnd = body.indexOf("</header>", body.indexOf('data-slot="page-header"'));
+		expect(quickPing).toBeLessThan(headerEnd);
+		expect(usage).toBeGreaterThan(headerEnd);
 
 		expect(cron).toBeGreaterThan(usage!);
 		expect(panel).toBeGreaterThan(cron!);

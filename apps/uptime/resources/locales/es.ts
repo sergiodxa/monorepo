@@ -1278,10 +1278,17 @@ export default {
 		},
 
 		layout: {
+			shell: {
+				nav: "Principal",
+				skip: "Saltar al contenido",
+				menu: "Abrir navegación",
+				close: "Cerrar navegación",
+				collapse: "Contraer barra lateral",
+				groups: { monitors: "Monitores", respond: "Responder", team: "Equipo" },
+			},
 			sidebar: {
 				teamPicker: { label: "Seleccionar Equipo" },
 				userMenu: { label: "Menú de usuario" },
-				toggle: "Mostrar u ocultar la navegación",
 
 				navigation: {
 					items: {

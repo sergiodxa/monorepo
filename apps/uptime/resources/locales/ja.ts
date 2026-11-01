@@ -1252,10 +1252,17 @@ export default {
 		},
 
 		layout: {
+			shell: {
+				nav: "メイン",
+				skip: "コンテンツへスキップ",
+				menu: "ナビゲーションを開く",
+				close: "ナビゲーションを閉じる",
+				collapse: "サイドバーを折りたたむ",
+				groups: { monitors: "モニター", respond: "対応", team: "チーム" },
+			},
 			sidebar: {
 				teamPicker: { label: "チームを選択" },
 				userMenu: { label: "ユーザーメニュー" },
-				toggle: "ナビゲーションの表示を切り替えます",
 
 				navigation: {
 					items: {

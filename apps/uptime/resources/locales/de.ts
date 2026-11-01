@@ -1284,10 +1284,17 @@ export default {
 		},
 
 		layout: {
+			shell: {
+				nav: "Hauptnavigation",
+				skip: "Zum Inhalt springen",
+				menu: "Navigation öffnen",
+				close: "Navigation schließen",
+				collapse: "Seitenleiste einklappen",
+				groups: { monitors: "Monitore", respond: "Reagieren", team: "Team" },
+			},
 			sidebar: {
 				teamPicker: { label: "Team auswählen" },
 				userMenu: { label: "Benutzermenü" },
-				toggle: "Navigation ein- oder ausblenden",
 
 				navigation: {
 					items: {
