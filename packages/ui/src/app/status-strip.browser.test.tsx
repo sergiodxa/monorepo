@@ -1,7 +1,7 @@
 /**
  * Lays the status strip out in a real browser: 90 bars fit a 320px card without overflow,
- * a period with no data is hatched rather than drawn empty, and a bar's tooltip shows on
- * keyboard focus, aligned so it stays inside the strip near either end.
+ * a period with no data is hatched rather than drawn empty, the bars are one Tab stop the
+ * arrows move through, and the focused bar's tooltip stays inside the strip near either end.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -104,35 +104,97 @@ describe("StatusStrip", () => {
 		expect(getComputedStyle(down).backgroundColor).toBe(getComputedStyle(probe).backgroundColor);
 	});
 
-	test("names each bar by its date and value and groups them under the label", async () => {
+	test("names each bar by its date and value inside a toolbar named by the label", async () => {
 		mount(<StatusStrip label="Uptime, last 90 days" periods={DAYS} />, 640);
 
 		await expect
-			.element(page.getByRole("group", { name: "Uptime, last 90 days" }))
+			.element(page.getByRole("toolbar", { name: "Uptime, last 90 days" }))
 			.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "Day 42, 100%" })).toBeInTheDocument();
 	});
 
-	test("shows a bar's tooltip on keyboard focus, kept inside the strip at the edges", async () => {
+	test("is one Tab stop, landing on the newest bar", async () => {
+		let host = mount(
+			<div>
+				<button type="button">Before</button>
+				<StatusStrip label="Uptime" periods={DAYS} />
+				<button type="button">After</button>
+			</div>,
+			640,
+		);
+		let [before, after] = [...host.querySelectorAll<HTMLButtonElement>(":scope > div > button")];
+		let last = bars(host).at(-1)!;
+
+		expect(bars(host).filter((bar) => bar.tabIndex === 0)).toEqual([last]);
+		before!.focus();
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(last);
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(after);
+		await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+		expect(document.activeElement).toBe(last);
+	});
+
+	test("moves between bars with the arrows, Home and End, and the Tab stop follows", async () => {
+		let host = mount(<StatusStrip label="Uptime" periods={DAYS} />, 640);
+		let all = bars(host);
+		let stop = () => all.filter((bar) => bar.tabIndex === 0);
+
+		all.at(-1)!.focus();
+		await userEvent.keyboard("{ArrowLeft}");
+		expect(document.activeElement).toBe(all[88]);
+		expect(stop()).toEqual([all[88]]);
+		await userEvent.keyboard("{Home}");
+		expect(document.activeElement).toBe(all[0]);
+		await userEvent.keyboard("{ArrowLeft}");
+		expect(document.activeElement).toBe(all[0]);
+		await userEvent.keyboard("{ArrowRight}");
+		expect(document.activeElement).toBe(all[1]);
+		await userEvent.keyboard("{End}");
+		expect(document.activeElement).toBe(all[89]);
+		await userEvent.keyboard("{ArrowRight}");
+		expect(document.activeElement).toBe(all[89]);
+		expect(stop()).toEqual([all[89]]);
+	});
+
+	test("flips the arrows in a right-to-left strip", async () => {
+		let host = mount(
+			<div dir="rtl">
+				<StatusStrip label="Uptime" periods={DAYS} />
+			</div>,
+			640,
+		);
+		let all = bars(host);
+
+		all.at(-1)!.focus();
+		await userEvent.keyboard("{ArrowRight}");
+		expect(document.activeElement).toBe(all[88]);
+		await userEvent.keyboard("{ArrowLeft}");
+		expect(document.activeElement).toBe(all[89]);
+	});
+
+	test("shows the focused bar's tooltip, kept inside the strip at the edges", async () => {
 		let host = mount(<StatusStrip label="Uptime" periods={DAYS} />, 320);
 		let first = bars(host)[0]!;
-		let tooltip = first.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
-
-		expect(getComputedStyle(tooltip).display).toBe("none");
-		await userEvent.keyboard("{Tab}");
-		expect(document.activeElement).toBe(first);
-		await expect.poll(() => getComputedStyle(tooltip).display).toBe("flex");
-		expect(tooltip.textContent).toBe("Day 1No data");
-		let strip = host.querySelector('[data-slot="status-strip"]')!.getBoundingClientRect();
-		expect(tooltip.getBoundingClientRect().left).toBeGreaterThanOrEqual(strip.left - 0.5);
-
 		let last = bars(host).at(-1)!;
-		last.focus();
+		let tooltip = first.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
 		let lastTip = last.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
+		let strip = host.querySelector('[data-slot="status-strip"]')!.getBoundingClientRect();
+
+		expect(getComputedStyle(lastTip).display).toBe("none");
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(last);
 		await expect.poll(() => getComputedStyle(lastTip).display).toBe("flex");
 		expect(lastTip.getBoundingClientRect().right).toBeLessThanOrEqual(strip.right + 0.5);
 		expect(lastTip.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 			last.getBoundingClientRect().top,
 		);
+
+		await userEvent.keyboard("{Home}");
+		expect(document.activeElement).toBe(first);
+		await expect.poll(() => getComputedStyle(tooltip).display).toBe("flex");
+		expect(getComputedStyle(lastTip).display).toBe("none");
+		expect(tooltip.textContent).toBe("Day 1No data");
+		expect(tooltip.getBoundingClientRect().left).toBeGreaterThanOrEqual(strip.left - 0.5);
 	});
 });

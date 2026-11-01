@@ -1,13 +1,14 @@
 /**
  * A row of per-period bars, such as 90 days of uptime: each bar is tinted by its status,
  * hatched where nothing was recorded, and shows its date and value on hover or focus, with a
- * caption naming the window and the summary figure. Bars thin out to fit any container.
+ * caption naming the window and the summary figure. Bars thin out to fit any container, and
+ * form one Tab stop that ←/→, Home and End move through once its island hydrates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded, shadow } from "@sdxc/u/effects";
@@ -17,6 +18,9 @@ import { bs, minIs, p, pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
+import { clientEntry } from "remix/component";
+
+import { statusStripKeys } from "./mixins/status-strip-keys.js";
 
 /** Container the strip measures, so its bars tighten in a narrow card rather than a narrow page. */
 const STRIP_CONTAINER = "ui-status-strip";
@@ -57,7 +61,7 @@ export namespace StatusStrip {
 	/** Props accepted by {@link StatusStrip}. */
 	export interface Props extends Omit<TagProps<"div">, "children"> {
 		periods: readonly Period[];
-		/** Accessible name of the bar group ("Uptime, last 90 days"). */
+		/** Accessible name of the bars' toolbar ("Uptime, last 90 days"). */
 		label: string;
 		/** The summary figure set in the middle of the caption ("99.95% uptime"). */
 		summary?: RemixNode;
@@ -84,9 +88,9 @@ function tooltipAlign(index: number, count: number): "start" | "center" | "end" 
 }
 
 /**
- * Renders one bar per period as a button named by its label and value, inside a group named by
- * `label`, then the caption. A bar's tooltip shows on hover and keyboard focus with no script;
- * bars share the row equally and the gap narrows below 30rem, so the row never overflows.
+ * Renders one bar per period as a button named by its label and value, inside a toolbar named by
+ * `label`, then the caption. The newest bar is the strip's one Tab stop, and {@link StatusStripKeys}
+ * moves it with the arrows; a bar's tooltip shows on hover and keyboard focus with no script.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -114,7 +118,7 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 				)}
 			>
 				<div
-					role="group"
+					role="toolbar"
 					aria-label={label}
 					data-slot="status-strip-bars"
 					mix={[
@@ -141,7 +145,7 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 							<button
 								key={index}
 								type="button"
-
+								tabIndex={index === periods.length - 1 ? 0 : -1}
 								aria-label={name}
 								data-slot="status-strip-bar"
 								data-status={period.status}
@@ -222,6 +226,7 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 						);
 					})}
 				</div>
+				<StatusStripKeys />
 				{hasCaption ? (
 					<div
 						data-slot="status-strip-caption"
@@ -249,6 +254,18 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 		);
 	};
 }
+
+/**
+ * Client island behind {@link StatusStrip}'s keyboard navigation: a hidden marker whose
+ * `statusStripKeys()` walks the strip it sits in. Loads from `@sdxc/ui/app/status-strip#StatusStripKeys`
+ * once the app's browser entry maps it; until then the newest bar stays the strip's one Tab stop.
+ */
+export const StatusStripKeys: EntryComponent<Record<never, never>> = clientEntry(
+	"@sdxc/ui/app/status-strip#StatusStripKeys",
+	function StatusStripKeys() {
+		return () => <span hidden data-slot="status-strip-keys" mix={[statusStripKeys()]} />;
+	},
+);
 
 /** The hairline filling the caption between its words, so the summary sits centred in the window. */
 function StatusStripRule() {

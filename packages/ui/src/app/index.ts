@@ -52,6 +52,7 @@ export * from "./mixins/save-shortcut.js";
 export * from "./mixins/save-status-sync.js";
 export * from "./mixins/selection-bar-sync.js";
 export * from "./mixins/split-view.js";
+export * from "./mixins/status-strip-keys.js";
 export * from "./mixins/submit-on-change.js";
 export * from "./mixins/table-selection.js";
 export * from "./mixins/toast-queue.js";
