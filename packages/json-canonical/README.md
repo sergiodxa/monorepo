@@ -90,6 +90,8 @@ async function verify(body: string, signature: ArrayBuffer, key: CryptoKey): Pro
 bunx @sdxc/json-canonical --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg json-canonical …` runs the same command line, using the version your project installs.
+
 `canonicalize` prints a JSON file's canonical bytes (or stdin's, when the file is `-` or absent) with no trailing newline; `--newline` adds one.
 
 ```sh
