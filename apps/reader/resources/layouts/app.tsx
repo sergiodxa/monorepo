@@ -714,13 +714,13 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 							<span mix={[raw({ marginInlineStart: "auto" })]} />
 							{/**
 							 * The way into the palette for a pointer, advertising the key that opens it from
-							 * anywhere. A phone has the sidebar sheet for the same trip, so it stays wide only.
+							 * anywhere. A narrower screen keeps the top bar for the search box, and ⌘K still opens it there.
 							 */}
 							<CommandPalette.Trigger
 								for={FEED_PALETTE_ID}
 								mix={[
 									hidden(),
-									media("(min-width: 48rem)", raw({ display: "inline-flex" })),
+									media("(min-width: 64rem)", raw({ display: "inline-flex" })),
 									raw({ inlineSize: "auto" }),
 								]}
 							>
