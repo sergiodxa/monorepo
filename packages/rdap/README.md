@@ -71,6 +71,8 @@ Thin registries such as `.com` and `.net` link to the registrar's own RDAP serve
 bunx @sdxc/rdap --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg rdap …` runs the same command line, using the version your project installs.
+
 Print a domain's expiry, status, registrar, contacts and nameservers; `--related` also asks the registrar's server, and `--json` prints the domain model:
 
 ```sh
