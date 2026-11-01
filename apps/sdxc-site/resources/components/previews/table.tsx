@@ -1,13 +1,13 @@
 /**
  * Live preview for `Table`: an uptime dashboard's monitors list with a selection column, the
  * monitor name linking its whole row, a status dot, typed number cells for response time and
- * uptime, a relative "last checked" time and row actions that wait for hover.
+ * uptime, a relative "last checked" time and row actions that wait for hover and fold into a
+ * menu in a narrow table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button } from "@sdxc/ui";
 import { Table } from "@sdxc/ui/app/table";
 
 /** One monitor as the list shows it. */
@@ -115,9 +115,9 @@ const CODE = `<Table.Container>
 						format={{ style: "percent", minimumFractionDigits: 2 }}
 					/>
 					<Table.DateCell date={monitor.checkedAt} now={requestTime} locale="en" />
-					<Table.Actions>
-						<Button size="sm" variant="ghost">Pause</Button>
-						<Button size="sm" variant="ghost" color="danger">Delete</Button>
+					<Table.Actions overflowLabel="More actions">
+						<Table.Action>Pause</Table.Action>
+						<Table.Action danger>Delete</Table.Action>
 					</Table.Actions>
 				</Table.Row>
 			))}
@@ -167,13 +167,9 @@ export default {
 								format={{ style: "percent", minimumFractionDigits: 2 }}
 							/>
 							<Table.DateCell date={monitor.checkedAt} now={NOW} locale="en" />
-							<Table.Actions>
-								<Button size="sm" variant="ghost">
-									Pause
-								</Button>
-								<Button size="sm" variant="ghost" color="danger">
-									Delete
-								</Button>
+							<Table.Actions overflowLabel="More actions">
+								<Table.Action>Pause</Table.Action>
+								<Table.Action danger>Delete</Table.Action>
 							</Table.Actions>
 						</Table.Row>
 					))}
