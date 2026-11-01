@@ -21,16 +21,22 @@ import { tabularNums, text, truncate, weight } from "@sdxc/u/typography";
 
 import { Button } from "../components/button.js";
 
+import type { AppShellSheetBelow } from "./mixins/app-shell-controls.js";
+
 import { AppShellToggle } from "./app-shell-toggle.js";
+import { appShellQueries } from "./mixins/app-shell-controls.js";
 import { APP_SHELL_COOKIE } from "./utils/app-shell-cookie.js";
 
 export { APP_SHELL_COOKIE, readAppShellCookie } from "./utils/app-shell-cookie.js";
 
-/** Width from which the sidebar docks beside the content; narrower, it is a sheet. */
+/**
+ * Width from which the rail styles of groups and rows apply: the narrowest a shell docks at.
+ * A wider `sheetBelow` keeps them off its sheet, which the rail rules exclude as a popover.
+ */
 const DOCKED = "(min-width: 48rem)";
 
-/** Every width under {@link DOCKED}, where the sheet and its menu button take over. */
-const SHEET = "(max-width: 47.9375rem)";
+/** Where the sidebar becomes a sheet when `sheetBelow` is omitted. */
+const DEFAULT_SHEET_BELOW: AppShell.SheetBelow = "48rem";
 
 /** The shell while its collapse checkbox is checked, which is the server-rendered preference. */
 const COLLAPSED = '[data-slot="app-shell"]:has([data-app-shell-collapse]:checked)';
@@ -48,7 +54,7 @@ const RAIL_STATE = ':is([data-peek="false"], :not(:hover):not(:has(:focus-visibl
 const PEEK_STATE = '[data-peek="true"]:is(:hover, :has(:focus-visible))';
 
 /** The collapsed sidebar while it stays a rail, for rules on the parts inside it. */
-const RAIL_SIDEBAR = `${COLLAPSED} [data-slot="app-shell-sidebar"]${RAIL_STATE}`;
+const RAIL_SIDEBAR = `${COLLAPSED} [data-slot="app-shell-sidebar"]:not(:popover-open)${RAIL_STATE}`;
 
 /** The sidebar's width as a column, and as an overlay while it peeks. */
 const SIDEBAR_WIDTH = "var(--ui-app-sidebar-width, 16rem)";
@@ -90,6 +96,9 @@ export namespace AppShell {
 	/** How the current row is marked: a soft fill, or a 2px pill on its leading edge. */
 	export type Indicator = "fill" | "pill";
 
+	/** The width under which the sidebar is a sheet behind the menu button. */
+	export type SheetBelow = AppShellSheetBelow;
+
 	/** The tone of a row's count; a solid tone reads as "needs you", `neutral` as a tally. */
 	export type CountTone = "neutral" | "brand" | "success" | "warning" | "danger";
 
@@ -121,6 +130,11 @@ export namespace AppShell {
 		id?: string;
 		/** The collapse cookie's name, for an app with two shells. @default APP_SHELL_COOKIE */
 		cookieName?: string;
+		/**
+		 * The width under which the sidebar is a sheet, for a screen whose own panes need the
+		 * room, such as a three-pane split view at 1024px. @default "48rem"
+		 */
+		sheetBelow?: SheetBelow;
 	}
 
 	/** Props accepted by {@link AppShell.Group}. */
@@ -171,8 +185,8 @@ export namespace AppShell {
 }
 
 /**
- * Renders the shell. The sidebar is one `<aside popover="auto">`: a grid column from 48rem, the
- * icon rail while `collapsed`, and a sheet the top bar's menu button opens below 48rem. Load
+ * Renders the shell. The sidebar is one `<aside popover="auto">`: a grid column from `sheetBelow`,
+ * the icon rail while `collapsed`, and a sheet the top bar's menu button opens below it. Load
  * `@sdxc/ui/app/app-shell-toggle` in the browser entry for the cookie, ⌘B and Esc-back.
  *
  * @param handle Runtime handle carrying the shell's props.
@@ -197,7 +211,9 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 			indicator = DEFAULT_INDICATOR,
 			id = DEFAULT_ID,
 			cookieName = APP_SHELL_COOKIE,
+			sheetBelow = DEFAULT_SHEET_BELOW,
 		} = handle.props;
+		let { docked, sheet } = appShellQueries(sheetBelow);
 		let sidebarId = `${id}-sidebar`;
 		let mainId = `${id}-main`;
 
@@ -208,7 +224,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 				mix={[
 					raw({ display: "flex", flexDirection: "column", minBlockSize: "100dvh" }),
 					bg(),
-					media(DOCKED, [
+					media(docked, [
 						raw({ blockSize: "100dvh", minBlockSize: "0", overflow: "hidden" }),
 						bg("neutral.tint"),
 					]),
@@ -247,7 +263,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 					data-slot="app-shell-frame"
 					mix={[
 						raw({ display: "flex", flexDirection: "column", flex: "1 0 auto" }),
-						media(DOCKED, [
+						media(docked, [
 							raw({
 								display: "grid",
 								flex: "1 1 0%",
@@ -271,7 +287,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 						data-peek={peek ? "true" : "false"}
 						mix={[
 							raw({ flexDirection: "column", boxSizing: "border-box", color: "inherit" }),
-							media(SHEET, [
+							media(sheet, [
 								raw({
 									translate: "-100%",
 									transition: `translate 250ms cubic-bezier(0.2, 0, 0, 1), display 250ms allow-discrete, overlay 250ms allow-discrete`,
@@ -305,7 +321,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									}),
 								),
 							]),
-							media(DOCKED, [
+							media(docked, [
 								raw({
 									display: "flex",
 									position: "relative",
@@ -355,7 +371,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									boxSizing: "border-box",
 									flexShrink: "0",
 								}),
-								media(DOCKED, raw({ marginBlockStart: "var(--ui-app-inset-gap, 0.5rem)" })),
+								media(docked, raw({ marginBlockStart: "var(--ui-app-inset-gap, 0.5rem)" })),
 							]}
 						>
 							<div mix={[raw({ flex: "1 1 0%", minInlineSize: "0" })]}>{workspace}</div>
@@ -434,7 +450,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 								"--ui-app-sticky-top": "var(--ui-app-header-height, 3.5rem)",
 							}),
 							bg(),
-							media(DOCKED, [
+							media(docked, [
 								raw({
 									marginBlock: "var(--ui-app-inset-gap, 0.5rem)",
 									marginInlineEnd: "var(--ui-app-inset-gap, 0.5rem)",
@@ -467,14 +483,14 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									borderBlockEnd: "1px solid var(--ui-neutral-border)",
 								}),
 								bg(),
-								media(DOCKED, raw({ paddingInline: "1rem" })),
+								media(docked, raw({ paddingInline: "1rem" })),
 							]}
 						>
 							<span
 								data-slot="app-shell-menu"
 								mix={[
-									media(SHEET, raw({ display: "inline-flex" })),
-									media(DOCKED, raw({ display: "none" })),
+									media(sheet, raw({ display: "inline-flex" })),
+									media(docked, raw({ display: "none" })),
 								]}
 							>
 								<Button
@@ -493,6 +509,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 								label={labels.collapse}
 								cookieName={cookieName}
 								sidebarId={sidebarId}
+								sheetBelow={sheetBelow}
 							/>
 							<div
 								data-slot="app-shell-topbar-content"
@@ -522,7 +539,7 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									padding: "var(--ui-app-gutter)",
 									outline: "none",
 								}),
-								media(DOCKED, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
+								media(docked, raw({ "--ui-app-gutter": "var(--ui-app-content-padding, 1.5rem)" })),
 							]}
 						>
 							{children}

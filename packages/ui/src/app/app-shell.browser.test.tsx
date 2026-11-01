@@ -1,6 +1,6 @@
 /**
  * Tests for {@link AppShell} in a real browser: the one sidebar as a column, a rail and a sheet
- * at both sides of 48rem, the collapse toggle and ⌘B writing the cookie, rail tooltips and peek,
+ * at both sides of 48rem and of a 64rem `sheetBelow`, the collapse toggle and ⌘B writing the cookie, rail tooltips and peek,
  * the inset content card, the skip link and landmarks, and no sideways scroll at 320px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -212,6 +212,60 @@ describe("AppShell", () => {
 		await userEvent.keyboard("{Meta>}b{/Meta}");
 		expect(sidebar().matches(":popover-open")).toBe(true);
 		expect(toggle().checked).toBe(false);
+	});
+
+	test("with sheetBelow 64rem, 1023px is a sheet and 1024px docks the sidebar", async () => {
+		await reduceMotion();
+		await page.viewport(1023, 800);
+		mountShell({ sheetBelow: "64rem", collapsed: true });
+
+		expect(sidebar().checkVisibility()).toBe(false);
+		expect(menuButton().checkVisibility()).toBe(true);
+		expect(toggle().closest("label")!.checkVisibility()).toBe(false);
+
+		menuButton().click();
+		expect(sidebar().matches(":popover-open")).toBe(true);
+		expect(Math.round(sidebar().getBoundingClientRect().width)).toBe(288);
+		let label = link("Monitors").querySelector<HTMLElement>("[data-app-shell-label]")!;
+		expect(getComputedStyle(label).opacity).toBe("1");
+		let count = link("Monitors").querySelector<HTMLElement>('[data-slot="app-shell-count"]')!;
+		expect(Math.round(count.getBoundingClientRect().width)).toBeGreaterThan(8);
+
+		await page.viewport(1024, 800);
+		await frames();
+		expect(sidebar().matches(":popover-open")).toBe(false);
+		expect(sidebar().checkVisibility()).toBe(true);
+		expect(Math.round(sidebar().getBoundingClientRect().width)).toBe(52);
+		expect(menuButton().checkVisibility()).toBe(false);
+		expect(toggle().closest("label")!.checkVisibility()).toBe(true);
+	});
+
+	test("with sheetBelow 64rem, ⌘B opens the sheet at 1023px and flips the rail at 1024px", async () => {
+		await page.viewport(1023, 800);
+		mountShell({ sheetBelow: "64rem" });
+		await userEvent.keyboard("{Meta>}b{/Meta}");
+		expect(sidebar().matches(":popover-open")).toBe(true);
+		expect(toggle().checked).toBe(false);
+		sidebar().hidePopover();
+
+		await page.viewport(1024, 800);
+		await frames();
+		await userEvent.keyboard("{Meta>}b{/Meta}");
+		expect(sidebar().matches(":popover-open")).toBe(false);
+		expect(toggle().checked).toBe(true);
+	});
+
+	test("the default sheetBelow 48rem docks at 768px and is a sheet at 767px", async () => {
+		await reduceMotion();
+		await page.viewport(768, 800);
+		mountShell({ sheetBelow: "48rem" });
+		expect(sidebar().checkVisibility()).toBe(true);
+		expect(menuButton().checkVisibility()).toBe(false);
+
+		await page.viewport(767, 800);
+		await frames();
+		expect(sidebar().checkVisibility()).toBe(false);
+		expect(menuButton().checkVisibility()).toBe(true);
 	});
 
 	test("rail rows keep their names and show a tooltip only in the rail", async () => {

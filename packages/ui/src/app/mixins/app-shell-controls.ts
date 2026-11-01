@@ -18,11 +18,30 @@ import { writeCookie } from "../../utils/write-cookie.js";
 /** The shortcut that collapses and expands the sidebar, or opens the sheet on a phone. */
 export const APP_SHELL_SHORTCUT = "mod+b";
 
-/** Width from which the sidebar is docked; narrower, it is the sheet. */
-const DOCKED_QUERY = "(min-width: 48rem)";
+/** Where the sidebar becomes a sheet when `sheetBelow` is omitted. */
+const DEFAULT_SHEET_BELOW: AppShellSheetBelow = "48rem";
 
 /** Where a ⌘B is the editor's bold and an Esc belongs to the field. */
 const EDITING_SELECTOR = 'textarea, [contenteditable]:not([contenteditable="false"])';
+
+/** The width under which an app shell's sidebar is a sheet behind the menu button. */
+export type AppShellSheetBelow = "48rem" | "64rem";
+
+/**
+ * The media queries on either side of `sheetBelow`, docked from it and a sheet under it, which
+ * the shell's styles, its toggle and these controls all read so they switch at the same width.
+ *
+ * @param sheetBelow The width under which the sidebar is a sheet.
+ * @returns The docked and sheet media queries.
+ * @example appShellQueries("64rem").docked // "(min-width: 64rem)"
+ */
+export function appShellQueries(sheetBelow: AppShellSheetBelow): {
+	docked: string;
+	sheet: string;
+} {
+	let rem = Number.parseFloat(sheetBelow);
+	return { docked: `(min-width: ${rem}rem)`, sheet: `(max-width: ${rem - 0.0625}rem)` };
+}
 
 /** Options for {@link appShellControls}. */
 export interface AppShellControlsOptions {
@@ -30,12 +49,14 @@ export interface AppShellControlsOptions {
 	cookieName: string;
 	/** The sidebar element's id, which is also the sheet's popover. */
 	sidebarId: string;
+	/** @default "48rem" */
+	sheetBelow?: AppShellSheetBelow;
 }
 
 /**
  * Wires the shell around the checkbox it is mixed onto until the checkbox leaves the page.
  * ⌘B (Ctrl+B elsewhere) flips the checkbox while the sidebar is docked and opens or closes the
- * sheet below 48rem; it stays the editor's bold inside a text area or rich editor.
+ * sheet below `sheetBelow`; it stays the editor's bold inside a text area or rich editor.
  *
  * @example
  * <input type="checkbox" data-app-shell-collapse mix={[appShellControls({ cookieName, sidebarId })]} />
@@ -112,7 +133,8 @@ function enhance(
 		{ signal },
 	);
 
-	let docked = doc.defaultView?.matchMedia(DOCKED_QUERY);
+	let sheetBelow = readOptions()?.sheetBelow ?? DEFAULT_SHEET_BELOW;
+	let docked = doc.defaultView?.matchMedia(appShellQueries(sheetBelow).docked);
 	docked?.addEventListener(
 		"change",
 		() => {

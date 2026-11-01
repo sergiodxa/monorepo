@@ -22,7 +22,12 @@ import { clientEntry } from "remix/component";
 
 import { hitArea } from "../styles/hit-area.js";
 
-import { appShellControls } from "./mixins/app-shell-controls.js";
+import type { AppShellSheetBelow } from "./mixins/app-shell-controls.js";
+
+import { appShellControls, appShellQueries } from "./mixins/app-shell-controls.js";
+
+/** Where the toggle hides for the sheet when `sheetBelow` is omitted. */
+const DEFAULT_SHEET_BELOW: AppShellSheetBelow = "48rem";
 
 /** Prop types for {@link AppShellToggle}. */
 export namespace AppShellToggle {
@@ -36,25 +41,34 @@ export namespace AppShellToggle {
 		cookieName: string;
 		/** The sidebar's id, which the sheet opens and closes by. */
 		sidebarId: string;
+		/** The width under which the sidebar is a sheet and the toggle hides. @default "48rem" */
+		sheetBelow?: AppShellSheetBelow;
 	};
 }
 
 /**
- * Renders the toggle the shell's top bar shows from 48rem. `AppShell` places it; load
+ * Renders the toggle the shell's top bar shows from `sheetBelow`. `AppShell` places it; load
  * `@sdxc/ui/app/app-shell-toggle` in the browser entry so the cookie, ⌘B and Esc work.
  */
 export const AppShellToggle: EntryComponent<AppShellToggle.Props> = clientEntry(
 	"@sdxc/ui/app/app-shell-toggle#AppShellToggle",
 	function AppShellToggle(handle: Handle<AppShellToggle.Props>) {
 		return () => {
-			let { collapsed, label, cookieName, sidebarId } = handle.props;
+			let {
+				collapsed,
+				label,
+				cookieName,
+				sidebarId,
+				sheetBelow = DEFAULT_SHEET_BELOW,
+			} = handle.props;
+			let { docked, sheet } = appShellQueries(sheetBelow);
 			return (
 				<label
 					data-slot="app-shell-toggle"
 					mix={[
 						relative(),
-						media("(min-width: 48rem)", raw({ display: "inline-flex" })),
-						media("(max-width: 47.9375rem)", raw({ display: "none" })),
+						media(docked, raw({ display: "inline-flex" })),
+						media(sheet, raw({ display: "none" })),
 						items("center"),
 						justify("center"),
 						shrink(0),
@@ -77,7 +91,7 @@ export const AppShellToggle: EntryComponent<AppShellToggle.Props> = clientEntry(
 						defaultChecked={collapsed}
 						aria-label={label}
 						aria-keyshortcuts="Meta+B Control+B"
-						mix={[visuallyHidden(), appShellControls({ cookieName, sidebarId })]}
+						mix={[visuallyHidden(), appShellControls({ cookieName, sidebarId, sheetBelow })]}
 					/>
 				</label>
 			);
