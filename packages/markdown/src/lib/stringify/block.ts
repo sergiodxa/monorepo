@@ -185,8 +185,8 @@ function writeTable(node: Markdown.Table): string {
 		widths.push(width);
 	}
 
-	let lines = [writeRow(rows[0] ?? [], widths), writeDelimiterRow(node.align, widths)];
-	for (let row of rows.slice(1)) lines.push(writeRow(row, widths));
+	let lines = [writeRow(rows[0] ?? [], widths, node.align), writeDelimiterRow(node.align, widths)];
+	for (let row of rows.slice(1)) lines.push(writeRow(row, widths, node.align));
 
 	return lines.join("\n");
 }
@@ -197,13 +197,32 @@ function writeStandaloneRow(node: Markdown.TableRow): string {
 	return writeRow(
 		cells,
 		cells.map((cell) => Math.max(MIN_COLUMN, cell.length)),
+		[],
 	);
 }
 
 /** One row, every cell padded to its column's width and fenced on both sides. */
-function writeRow(cells: string[], widths: number[]): string {
-	let padded = widths.map((width, index) => (cells[index] ?? "").padEnd(width));
+function writeRow(
+	cells: string[],
+	widths: number[],
+	align: Array<"left" | "center" | "right" | null>,
+): string {
+	let padded = widths.map((width, index) =>
+		padCell(cells[index] ?? "", width, align[index] ?? null),
+	);
 	return `| ${padded.join(" | ")} |`;
+}
+
+/**
+ * Pads a cell toward its column's alignment, the way the repository's formatter
+ * does: a right column pads in front, a centered one splits the spaces with the
+ * odd one after the text, and every other column pads after it.
+ */
+function padCell(cell: string, width: number, align: "left" | "center" | "right" | null): string {
+	if (align === "right") return cell.padStart(width);
+	if (align !== "center") return cell.padEnd(width);
+	let before = Math.floor((width - cell.length) / 2);
+	return `${" ".repeat(before)}${cell}`.padEnd(width);
 }
 
 /** The delimiter row, whose colons are where a column's alignment is written down. */

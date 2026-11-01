@@ -353,7 +353,7 @@ describe("stringifyDocument", () => {
 					}),
 				),
 			).toBe(
-				"| Plan | Monitors | Price |\n| :--- | :------: | ----: |\n| Free | 5        | 0     |\n",
+				"| Plan | Monitors | Price |\n| :--- | :------: | ----: |\n| Free |    5     |     0 |\n",
 			);
 		});
 

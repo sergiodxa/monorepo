@@ -391,7 +391,21 @@ describe("stringifyBlocks", () => {
 					children: [row(true, "a", "b", "c", "d")],
 					position: position(),
 				}),
-			).toBe("| a   | b   | c   | d   |\n| :-- | :-: | --: | --- |");
+			).toBe("| a   |  b  |   c | d   |\n| :-- | :-: | --: | --- |");
+		});
+
+		test("pads each cell toward its column's alignment, the way the formatter does", () => {
+			expect(
+				write({
+					type: "table",
+					align: ["left", "center", "right"],
+					attributes: {},
+					children: [row(true, "Action", "Member", "Owner"), row(false, "Run", "No", "Yes")],
+					position: position(),
+				}),
+			).toBe(
+				"| Action | Member | Owner |\n| :----- | :----: | ----: |\n| Run    |   No   |   Yes |",
+			);
 		});
 
 		test("pads a row that runs short of the column count", () => {
