@@ -1,7 +1,8 @@
 /**
  * Live preview for `SettingsSection`: an uptime app's monitor defaults, typed inputs that
  * save explicitly from the section's own footer, beside its notifications, switches that
- * save the moment they flip. One section never mixes the two.
+ * save the moment they flip, and its members, a table that saves nothing with "Invite member"
+ * beside the title. One section never mixes the two ways of saving.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,8 +10,16 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Input, Select, Switch } from "@sdxc/ui";
+import { Button, Input, Select, Switch } from "@sdxc/ui";
 import { SettingsSection } from "@sdxc/ui/app/settings-section";
+import { Table } from "@sdxc/ui/app/table";
+
+/** The team's members as the Members section lists them. */
+const MEMBERS = [
+	{ email: "ada@acme.dev", role: "Owner" },
+	{ email: "grace@acme.dev", role: "Admin" },
+	{ email: "linus@acme.dev", role: "Member" },
+];
 
 /** The source the page shows, matching the markup below apart from element ids. */
 const CODE = `<SettingsSection
@@ -54,6 +63,32 @@ const CODE = `<SettingsSection
 	>
 		<Switch name="weeklyReport" aria-labelledby="weekly" aria-describedby="weekly-help" />
 	</SettingsSection.Row>
+</SettingsSection>
+
+<SettingsSection
+	title="Members"
+	description="People who can see and edit this team's monitors."
+	save="none"
+	actions={<Button size="sm" variant="outline">Invite member</Button>}
+>
+	<Table.Container>
+		<Table aria-label="Members">
+			<Table.Header>
+				<Table.Row>
+					<Table.Column>Email</Table.Column>
+					<Table.Column>Role</Table.Column>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{MEMBERS.map((member) => (
+					<Table.Row key={member.email}>
+						<Table.Cell>{member.email}</Table.Cell>
+						<Table.Cell>{member.role}</Table.Cell>
+					</Table.Row>
+				))}
+			</Table.Body>
+		</Table>
+	</Table.Container>
 </SettingsSection>`;
 
 /** What the preview registry reads: the source to show, and the markup to draw. */
@@ -130,6 +165,36 @@ export default {
 						aria-describedby="preview-settings-weekly-help"
 					/>
 				</SettingsSection.Row>
+			</SettingsSection>
+
+			<SettingsSection
+				title="Members"
+				description="People who can see and edit this team's monitors."
+				save="none"
+				actions={
+					<Button type="button" size="sm" variant="outline">
+						Invite member
+					</Button>
+				}
+			>
+				<Table.Container>
+					<Table aria-label="Members">
+						<Table.Header>
+							<Table.Row>
+								<Table.Column>Email</Table.Column>
+								<Table.Column>Role</Table.Column>
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{MEMBERS.map((member) => (
+								<Table.Row key={member.email}>
+									<Table.Cell>{member.email}</Table.Cell>
+									<Table.Cell>{member.role}</Table.Cell>
+								</Table.Row>
+							))}
+						</Table.Body>
+					</Table>
+				</Table.Container>
 			</SettingsSection>
 		</div>
 	),
