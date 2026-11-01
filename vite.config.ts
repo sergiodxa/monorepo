@@ -56,6 +56,16 @@ function browserProject(
 		},
 		/** Serves MSW's `mockServiceWorker.js` from the page's root scope, where `setupWorker` registers it. */
 		publicDir: `${import.meta.dirname}/test/browser-public`,
+		/**
+		 * The dependency scan compiles JSX with its own settings, blind to the tsconfig's
+		 * `jsxImportSource`; naming the runtime here lets a cold run pre-bundle every dependency
+		 * up front, so Vite never reloads the page mid-run and drops a test's `vi.doMock`.
+		 */
+		optimizeDeps: {
+			rolldownOptions: {
+				transform: { jsx: { runtime: "automatic", importSource: "remix/component" } },
+			},
+		},
 		test: {
 			name: `${name}-browser`,
 			include,
