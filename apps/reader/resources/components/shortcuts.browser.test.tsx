@@ -13,9 +13,9 @@
  */
 
 import type { Handle } from "remix/component";
-import type { Mock } from "vitest";
 
 import { Sidebar } from "@sdxc/ui";
+import { shortcutRegistry } from "@sdxc/ui/app";
 import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { run } from "remix/component";
@@ -23,10 +23,10 @@ import { renderToStream } from "remix/component/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 
+import type { Shortcuts } from "~/resources/components/shortcuts";
 import type { Timeline } from "~/resources/views/timeline";
 
 import ShortcutsIsland, {
-	pressShortcutsButton,
 	SHORTCUTS_PANEL_ID,
 	watchKeys,
 	watchRowMarks,
@@ -63,6 +63,30 @@ const COPY: Timeline.Copy = {
 	end: "That is everything",
 };
 
+/** The copy the keys and their sheet print, in the shape the chrome hands the island. */
+const SHORTCUTS_COPY: Shortcuts.Copy = {
+	open: "Keyboard shortcuts",
+	description: "Press a key while reading.",
+	close: "Close",
+	or: "or",
+	noUnread: "No unread posts below",
+	groups: { reading: "Reading", feeds: "Feeds", general: "General", other: "More" },
+	keys: {
+		nextPost: "Next post",
+		previousPost: "Previous post",
+		nextUnread: "Next unread post",
+		openPost: "Open the post",
+		markRead: "Mark as read or unread",
+		savePost: "Save the post",
+		checkFeeds: "Check every feed",
+		nextFeed: "Next feed",
+		previousFeed: "Previous feed",
+		search: "Search your posts",
+		goTo: "Go to a feed or folder",
+		help: "Show these shortcuts",
+	},
+};
+
 /** One post, with whichever of its states the assertion is about. */
 function entry(id: string, overrides: Partial<Timeline.Entry> = {}): Timeline.Entry {
 	return {
@@ -88,12 +112,17 @@ async function html(node: ReturnType<typeof TimelineView>): Promise<string> {
 	return await new Response(renderToStream(node as never)).text();
 }
 
-/** One page of the list, exactly as a controller renders it. */
-async function page(ids: string[]): Promise<string> {
+/**
+ * One page of the list, exactly as a controller renders it.
+ *
+ * @param ids - The posts on the page, in order.
+ * @param read - The posts among them already read.
+ */
+async function page(ids: string[], read: string[] = []): Promise<string> {
 	return await html(
 		(
 			<TimelineView
-				entries={ids.map((id) => entry(id))}
+				entries={ids.map((id) => entry(id, { isRead: read.includes(id) }))}
 				copy={COPY}
 				returnTo="/reading"
 				cursors={{ next: null, prev: null }}
@@ -131,13 +160,36 @@ function Chrome(handle: Handle<{ current: string }>) {
 					<button type="submit">Check every feed</button>
 				</form>
 			</header>
-
-			<button type="button" commandfor={SHORTCUTS_PANEL_ID} command="show-modal">
-				Keyboard shortcuts
-			</button>
-			<dialog id={SHORTCUTS_PANEL_ID}>Shortcuts</dialog>
 		</div>
 	);
+}
+
+/** The island as the worker sends it, with the copy the chrome hands it. */
+async function island(): Promise<string> {
+	return await html(
+		(
+			<ShortcutsIsland
+				copy={SHORTCUTS_COPY}
+				searchFieldId={SIDEBAR_SEARCH_FIELD_ID}
+				sidebarId={SIDEBAR_ID}
+			/>
+		) as never,
+	);
+}
+
+/**
+ * What the open sheet shows: each group's heading, and each row's label beside the caps
+ * of its keys run together.
+ */
+function sheet(): { title: string; rows: [string, string][] }[] {
+	let panel = document.querySelector<HTMLDialogElement>(`dialog#${SHORTCUTS_PANEL_ID}`)!;
+	return Array.from(panel.querySelectorAll('[data-slot="keyboard-help-group"]'), (group) => ({
+		title: group.querySelector("h3")?.textContent ?? "",
+		rows: Array.from(group.querySelectorAll('[data-slot="shortcut"]'), (row) => [
+			row.querySelector("dt")?.textContent ?? "",
+			Array.from(row.querySelectorAll("kbd"), (cap) => cap.textContent).join(""),
+		]),
+	}));
 }
 
 /** Every module the runtime is asked to load while these pages hydrate. */
@@ -148,9 +200,12 @@ const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
 	"/resources/components/shortcuts.tsx": () => import("~/resources/components/shortcuts"),
 };
 
+/** The runtime the last {@link hydrate} started, disposed after each test with its islands. */
+let runtime: ReturnType<typeof run> | null = null;
+
 /** Brings the page's own islands up, so a row's marks behave as they do in a browser. */
 async function hydrate(): Promise<void> {
-	let runtime = run({
+	runtime = run({
 		async loadModule(moduleUrl, exportName) {
 			let load = CLIENT_MODULES[new URL(moduleUrl, "http://localhost").pathname];
 			if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
@@ -196,9 +251,6 @@ async function press(key: string, modifier?: "Control" | "Alt" | "Meta"): Promis
 	await userEvent.keyboard(modifier ? `{${modifier}>}${key}{/${modifier}}` : key);
 }
 
-/** What the panel's own button was told, so an assertion can say it was pressed. */
-let openedPanel: Mock<() => void>;
-
 /** What the live region was told, so an assertion can say what a reader heard. */
 let announced: string[];
 
@@ -216,7 +268,6 @@ beforeAll(async () => {
 afterAll(() => worker.stop());
 
 beforeEach(() => {
-	openedPanel = vi.fn();
 	announced = [];
 	bindings = new AbortController();
 
@@ -224,10 +275,7 @@ beforeEach(() => {
 		{
 			searchFieldId: SIDEBAR_SEARCH_FIELD_ID,
 			sidebarId: SIDEBAR_ID,
-			openPanel: () => {
-				openedPanel();
-				pressShortcutsButton();
-			},
+			copy: SHORTCUTS_COPY,
 			announce: (text) => announced.push(text),
 		},
 		bindings.signal,
@@ -237,6 +285,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	runtime?.dispose();
+	runtime = null;
 	bindings.abort();
 	worker.resetHandlers();
 	document.body.innerHTML = "";
@@ -469,9 +519,9 @@ describe("the controls a key presses", () => {
 		expect(document.activeElement?.id).toBe(SIDEBAR_SEARCH_FIELD_ID);
 	});
 
-	test("`?` presses the panel's own button, and the row that was current still is", async () => {
-		document.body.innerHTML =
-			(await page(["a"])) + (await html((<Chrome current="/reading" />) as never));
+	test("`?` opens the generated sheet, and the row that was current still is once it closes", async () => {
+		document.body.innerHTML = (await page(["a"])) + (await island());
+		await hydrate();
 
 		let panel = document.querySelector<HTMLDialogElement>(`dialog#${SHORTCUTS_PANEL_ID}`)!;
 
@@ -480,12 +530,88 @@ describe("the controls a key presses", () => {
 
 		await press("?");
 
-		expect(openedPanel).toHaveBeenCalledOnce();
 		expect(panel.open).toBe(true);
 
-		panel.close();
+		await press("{Escape}");
+
+		expect(panel.open).toBe(false);
+		expect(current()).toBe(row);
+	});
+});
+
+describe("what the live region hears", () => {
+	test("marks hydrating over the worker's rows say nothing, so a key's outcome is heard at once", async () => {
+		document.body.innerHTML = await page(["a", "b", "c"], ["b"]);
+		await hydrate();
+
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(announced).toEqual([]);
+
+		rows()[2]!.focus();
+		await press("n");
+
+		expect(announced).toEqual([SHORTCUTS_COPY.noUnread]);
+	});
+});
+
+describe("`n`, the next unread post", () => {
+	test("skips read rows below the current one and focuses the first unread", async () => {
+		document.body.innerHTML = await page(["a", "b", "c", "d"], ["b", "c"]);
+		await hydrate();
+
+		rows()[0]!.focus();
+		await press("n");
+
+		expect(current()).toBe(rows()[3]);
+	});
+
+	test("passes over the current row even while it is unread", async () => {
+		document.body.innerHTML = await page(["a", "b"]);
+		await hydrate();
+
+		rows()[0]!.focus();
+		await press("n");
+
+		expect(current()).toBe(rows()[1]);
+	});
+
+	test("counts a row marked read a moment ago as read", async () => {
+		document.body.innerHTML = await page(["a", "b", "c"]);
+		await hydrate();
+
+		rows()[1]!.focus();
+		await press("m");
+
+		await vi.waitFor(() => {
+			let mark = rows()[1]!.querySelector('form[action$="/read"] button')!;
+			expect(mark.getAttribute("aria-label")).toBe(COPY.markUnread);
+		});
+
+		rows()[0]!.focus();
+		await press("n");
+
+		expect(current()).toBe(rows()[2]);
+	});
+
+	test("with nothing focused, starts from the first row at or below the top of the viewport", async () => {
+		document.body.innerHTML = await page(["a", "b", "c", "d"], ["c"]);
+		placeRows([-200, -80, 30, 300]);
+
+		await press("n");
+
+		expect(current()).toBe(rows()[3]);
+	});
+
+	test("with no unread post below, stays on the row and says so", async () => {
+		document.body.innerHTML = await page(["a", "b"], ["b"]);
+
+		let row = rows()[0]!;
+		row.focus();
+
+		await press("n");
 
 		expect(current()).toBe(row);
+		expect(announced).toEqual([SHORTCUTS_COPY.noUnread]);
 	});
 });
 
@@ -544,37 +670,8 @@ describe("when the bindings stand down", () => {
 });
 
 describe("the way a reader finds out the keys exist", () => {
-	test("renders nothing on the server, and a button carrying the key that opens the panel once it runs", async () => {
-		let copy = {
-			open: "Keyboard shortcuts",
-			description: "Press a key while reading.",
-			close: "Close",
-			keys: {
-				nextPost: "Next post",
-				previousPost: "Previous post",
-				openPost: "Open the post",
-				markRead: "Mark as read or unread",
-				savePost: "Save the post",
-				checkFeeds: "Check every feed",
-				nextFeed: "Next feed",
-				previousFeed: "Previous feed",
-				search: "Search your posts",
-				goTo: "Go to a feed or folder",
-				help: "Show these shortcuts",
-			},
-		};
-
-		let markup = await html(
-			(
-				<ShortcutsIsland
-					copy={copy}
-					searchFieldId={SIDEBAR_SEARCH_FIELD_ID}
-					sidebarId={SIDEBAR_ID}
-				/>
-			) as never,
-		);
-
-		document.body.innerHTML = markup;
+	test("renders nothing on the server, and a button carrying the key that opens the sheet once it runs", async () => {
+		document.body.innerHTML = await island();
 
 		/** The worker sends the host and nothing in it: with no script, nothing here applies. */
 		expect(document.querySelector("button")).toBeNull();
@@ -585,15 +682,89 @@ describe("the way a reader finds out the keys exist", () => {
 		let button = document.querySelector<HTMLButtonElement>(
 			`button[commandfor="${SHORTCUTS_PANEL_ID}"]`,
 		);
-		expect(button?.getAttribute("aria-label")).toBe(copy.open);
+		expect(button?.getAttribute("aria-label")).toBe(SHORTCUTS_COPY.open);
 		expect(button?.getAttribute("command")).toBe("show-modal");
 		expect(button?.querySelector("kbd")?.textContent).toBe("?");
 
-		let panel = document.querySelector<HTMLDialogElement>(`dialog#${SHORTCUTS_PANEL_ID}`);
-		expect(panel?.textContent).toContain(copy.keys.nextPost);
-		expect(panel?.textContent).toContain(copy.keys.help);
-
 		expect(document.querySelector('[aria-live="polite"]')).not.toBeNull();
+	});
+
+	test("the sheet lists every key the island registered, under its group, read from the registry", async () => {
+		document.body.innerHTML = await island();
+		await hydrate();
+
+		await press("?");
+
+		let { groups, keys } = SHORTCUTS_COPY;
+		expect(sheet()).toEqual([
+			{
+				title: groups.reading,
+				rows: [
+					[keys.nextPost, "J"],
+					[keys.previousPost, "K"],
+					[keys.nextUnread, "N"],
+					[keys.openPost, "O"],
+					[keys.markRead, "M"],
+					[keys.savePost, "S"],
+				],
+			},
+			{
+				title: groups.feeds,
+				rows: [
+					[keys.nextFeed, "⇧J"],
+					[keys.previousFeed, "⇧K"],
+					[keys.checkFeeds, "R"],
+				],
+			},
+			{
+				title: groups.general,
+				rows: [
+					[keys.goTo, expect.stringMatching(/^(⌘|Ctrl)K$/)],
+					[keys.search, "/"],
+					[keys.help, "?"],
+				],
+			},
+		]);
+	});
+
+	test("a key registered after the sheet is drawn joins it, and the palette's ⌘K lists once", async () => {
+		document.body.innerHTML = await island();
+		await hydrate();
+
+		let later = new AbortController();
+		let registry = shortcutRegistry(document);
+		registry.register({
+			keys: "mod+k",
+			label: SHORTCUTS_COPY.keys.goTo,
+			run: () => true,
+			signal: later.signal,
+		});
+		registry.register({ keys: "g s", label: "Go to Saved", run: () => true, signal: later.signal });
+
+		await press("?");
+
+		let listed = sheet().flatMap((group) => group.rows.map(([label]) => label));
+		expect(listed.filter((label) => label === SHORTCUTS_COPY.keys.goTo)).toHaveLength(1);
+		expect(sheet().at(-1)).toEqual({
+			title: SHORTCUTS_COPY.groups.other,
+			rows: [["Go to Saved", "GS"]],
+		});
+
+		later.abort();
+	});
+
+	test("the island binds no ⌘K of its own, leaving the key to the palette", async () => {
+		document.body.innerHTML = (await page(["a"])) + (await island());
+		await hydrate();
+
+		let row = rows()[0]!;
+		row.focus();
+
+		let event = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
+		row.dispatchEvent(event);
+
+		expect(event.defaultPrevented).toBe(false);
+		expect(current()).toBe(row);
 	});
 });
 

@@ -1,31 +1,28 @@
 /**
- * Client island: the keys a reader works their queue with, the panel that tells them those
- * keys exist, and the live region that says what a key just did.
+ * Client island: the keys a reader works their queue with, registered in the page's one
+ * shortcut registry so the `?` sheet lists them, and the live region that says what a key
+ * just did.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Keymap } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
 
 import { KeyboardIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { flex, items, shrink } from "@sdxc/u/layout";
-import { m, mbs } from "@sdxc/u/size";
-import { Button, Keyboard, Modal } from "@sdxc/ui";
-import { ShortcutList } from "@sdxc/ui/app";
+import { m } from "@sdxc/u/size";
+import { Button, Keyboard } from "@sdxc/ui";
+import { shortcutRegistry } from "@sdxc/ui/app";
+import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import { Announcer } from "@sdxc/ui/behaviors";
-import { bindKeymap } from "@sdxc/ui/mixins";
 import { clientEntry, ref } from "remix/component";
 
 import routes from "~/routes/web";
 
-/** The `id` the panel listing every binding answers to, which its button names. */
+/** The `id` the sheet listing every key answers to, which its button names. */
 export const SHORTCUTS_PANEL_ID = "keyboard-shortcuts";
-
-/** Ties the panel to the heading naming it. */
-const SHORTCUTS_TITLE_ID = "keyboard-shortcuts-title";
 
 /**
  * A post's row, marked so a page at any depth of frame is read the same way. Document
@@ -51,11 +48,24 @@ const POST_TITLE = "a[data-post-title]";
 const READ_FORM = 'form[action$="/read"]';
 const SAVE_FORM = 'form[action$="/save"]';
 
+/**
+ * The field a row's read form submits its next state under. It asks for `true` while the
+ * post is unread, since pressing the form then reads it, and the form rewrites it as the mark
+ * flips, so it says the row's state as of the last press.
+ */
+const UNREAD_FIELD = `${READ_FORM} input[name="read"][value="true"]`;
+
 /** The sidebar's own navigation lists, whose links `J` and `K` walk in document order. */
 const SIDEBAR_NAV_LINK = "nav a[href]";
 
 /** The control that is the page the reader is standing on, which `J` and `K` count from. */
 const CURRENT_LINK = '[aria-current="page"]';
+
+/**
+ * The palette's own key. The palette arrives with the sidebar's feeds and registers it then,
+ * under the same label, so the sheet lists it once whether or not that frame has landed.
+ */
+const PALETTE_KEY = "mod+k";
 
 /**
  * How long a message stands in the live region before the next one replaces it. Long
@@ -69,12 +79,13 @@ const ICON_SIZE = 16;
 
 export namespace Shortcuts {
 	/**
-	 * Declared as a `type` to satisfy the serializable-props constraint a client entry's
-	 * props are checked against.
+	 * What each key does, as the sheet lists it. Declared as a `type` to satisfy the
+	 * serializable-props constraint a client entry's props are checked against.
 	 */
 	export type Keys = {
 		nextPost: string;
 		previousPost: string;
+		nextUnread: string;
 		openPost: string;
 		markRead: string;
 		savePost: string;
@@ -82,19 +93,31 @@ export namespace Shortcuts {
 		nextFeed: string;
 		previousFeed: string;
 		search: string;
-		/** The ⌘K palette, which jumps to any feed or folder by name. */
+		/** The ⌘K palette's own label, which the palette registers its key under. */
 		goTo: string;
 		help: string;
 	};
 
-	/**
-	 * Declared as a `type` for the reason {@link Keys} is.
-	 */
+	/** The sheet's headings. Declared as a `type` for the reason {@link Keys} is. */
+	export type Groups = {
+		reading: string;
+		feeds: string;
+		general: string;
+		/** Where a key registered without a group lists. */
+		other: string;
+	};
+
+	/** Declared as a `type` for the reason {@link Keys} is. */
 	export type Copy = {
-		/** Names the button the panel opens from, and the panel itself. */
+		/** Names the button the sheet opens from, and the sheet itself. */
 		open: string;
 		description: string;
 		close: string;
+		/** Joins two keys that do the same thing. */
+		or: string;
+		/** Said when `n` finds no unread post below the current one. */
+		noUnread: string;
+		groups: Groups;
 		keys: Keys;
 	};
 
@@ -111,11 +134,9 @@ export namespace Shortcuts {
 	export interface Targets {
 		searchFieldId: string;
 		sidebarId: string;
-		/** The element holding the panel, inside which the keys keep answering. */
-		scope?: Element;
-		/** Presses the control that opens the panel listing every binding. */
-		openPanel(): void;
-		/** Says what a control now carries, for a reader who cannot see it change. */
+		/** The labels and headings every key registers under. */
+		copy: Pick<Copy, "keys" | "groups" | "noUnread">;
+		/** Says what a key did, for a reader who cannot see it change. */
 		announce(text: string): void;
 	}
 }
@@ -153,7 +174,7 @@ function rowInView(direction: 1 | -1): HTMLElement | null {
 /**
  * Focuses the row one step from the current one, and the row already on screen when there
  * is no current one. Focusing scrolls the row into view, which is the crossing the frames
- * below and above the rows are already watching for, so the keyboard pages the list throug
+ * below and above the rows are already watching for, so the keyboard pages the list through.
  *
  * @param direction - `1` for the next row, `-1` for the previous one.
  */
@@ -174,6 +195,25 @@ function moveRow(direction: 1 | -1): void {
 	}
 
 	all[index + direction]?.focus();
+}
+
+/**
+ * Focuses the first unread row below the current one, or at or below the top of the screen
+ * when nothing is focused, and says so out loud when the list holds none further down.
+ *
+ * @param announce - Says one line in the live region.
+ * @param none - What it says when there is no unread post left below.
+ */
+function nextUnread(announce: (text: string) => void, none: string): void {
+	let all = rows();
+	let current = currentRow();
+	let index = current === null ? -1 : all.indexOf(current);
+	let start = index === -1 ? Math.max(0, all.indexOf(rowInView(1) as HTMLElement)) : index + 1;
+
+	let unread = all.slice(start).find((row) => row.querySelector(UNREAD_FIELD) !== null);
+
+	if (unread) unread.focus();
+	else announce(none);
 }
 
 /**
@@ -234,53 +274,45 @@ function checkFeeds(): void {
 }
 
 /**
- * Presses the control that opens the panel listing every binding. The button rather than
- * the panel: the button carries the invoker the platform opens the dialog with, so the
- * key and the pointer go through one control, and the browser's own focus restoration
- */
-export function pressShortcutsButton(): void {
-	document.querySelector<HTMLButtonElement>(`button[commandfor="${SHORTCUTS_PANEL_ID}"]`)?.click();
-}
-
-/**
- * The binding each key names. Every one of them presses a control the document already
- * holds, so nothing here resolves a frame by name or navigates: a typo or a race in a
- * frame's name would otherwise reach for the whole page.
+ * Registers every key in the page's shortcut registry, which quiets them while a field is
+ * typed in or a dialog is open. Each presses a control the document holds and resolves no
+ * frame by name, where a typo or a race would reach for the whole page.
  *
- * @param targets - What the bindings reach for beyond the document.
- * @returns Each key mapped to what pressing it does.
- */
-function bindings(targets: Shortcuts.Targets): Keymap.Bindings {
-	return {
-		j: () => moveRow(1),
-		k: () => moveRow(-1),
-		o: () => openPost(),
-		m: () => submitRowForm(READ_FORM),
-		s: () => submitRowForm(SAVE_FORM),
-		r: () => checkFeeds(),
-		J: () => moveFeed(targets.sidebarId, 1),
-		K: () => moveFeed(targets.sidebarId, -1),
-		"/": () => focusSearch(targets.searchFieldId),
-		"?": () => targets.openPanel(),
-	};
-}
-
-/**
- * Binds every key on the document, standing down for a chord the browser or the system
- * owns, a key handled nearer the event, a field being typed in, and a dialog other than
- * the panel inside {@link Shortcuts.Targets.scope}.
- *
- * @param targets - What the bindings reach for beyond the document.
- * @param signal - Takes the bindings off the document when the island goes.
+ * @param targets - What the keys reach for beyond the document, and what they list as.
+ * @param signal - Takes the keys out of the registry when the island goes.
  */
 export function watchKeys(targets: Shortcuts.Targets, signal: AbortSignal): void {
-	bindKeymap(document, bindings(targets), { signal, scope: targets.scope });
+	let { keys, groups, noUnread } = targets.copy;
+	let registry = shortcutRegistry(document);
+
+	let bindings: [string, string, string, () => void][] = [
+		["j", keys.nextPost, groups.reading, () => moveRow(1)],
+		["k", keys.previousPost, groups.reading, () => moveRow(-1)],
+		[
+			"n",
+			keys.nextUnread,
+			groups.reading,
+			() => nextUnread((text) => targets.announce(text), noUnread),
+		],
+		["o", keys.openPost, groups.reading, openPost],
+		["m", keys.markRead, groups.reading, () => submitRowForm(READ_FORM)],
+		["s", keys.savePost, groups.reading, () => submitRowForm(SAVE_FORM)],
+		["J", keys.nextFeed, groups.feeds, () => moveFeed(targets.sidebarId, 1)],
+		["K", keys.previousFeed, groups.feeds, () => moveFeed(targets.sidebarId, -1)],
+		["r", keys.checkFeeds, groups.feeds, checkFeeds],
+		["/", keys.search, groups.general, () => focusSearch(targets.searchFieldId)],
+	];
+
+	for (let [combo, label, group, run] of bindings) {
+		registry.register({ keys: combo, label, group, run, signal });
+	}
 }
 
 /**
  * Says a row's mark out loud as it changes. Marking read and keeping a post both rewrite
  * the name of a control the reader is not focused on — focus is on the row — and a name
- * that changes under nobody reaches nobody, so the new name is read into the live region
+ * that changes under nobody reaches nobody, so the new name is read into the live region.
+ * A name written again unchanged, as every mark does when it hydrates, says nothing.
  *
  * @param announce - Says one line in the live region.
  * @param signal - Stops watching when the island goes.
@@ -293,7 +325,7 @@ export function watchRowMarks(announce: (text: string) => void, signal: AbortSig
 			if (target.closest(POST_ROW) === null) continue;
 
 			let label = target.getAttribute("aria-label");
-			if (label !== null) announce(label);
+			if (label !== null && label !== record.oldValue) announce(label);
 		}
 	});
 
@@ -301,6 +333,7 @@ export function watchRowMarks(announce: (text: string) => void, signal: AbortSig
 		subtree: true,
 		attributes: true,
 		attributeFilter: ["aria-label"],
+		attributeOldValue: true,
 	});
 
 	signal.addEventListener("abort", () => observer.disconnect(), { once: true });
@@ -310,9 +343,9 @@ export const Shortcuts = clientEntry(
 	import.meta.url,
 	function Shortcuts(handle: Handle<Shortcuts.Props>) {
 		/**
-		 * Whether this is running in a browser. The bindings and the button that advertises
-		 * them are both worth nothing without one, so the server sends an empty host and the
-		 * first mount fills it.
+		 * Whether this is running in a browser. The keys, the button that advertises them and
+		 * the sheet listing them are all worth nothing without one, so the server sends an
+		 * empty host and the first mount fills it.
 		 */
 		let hasMounted = false;
 
@@ -323,15 +356,14 @@ export const Shortcuts = clientEntry(
 		 */
 		let announcer = new Announcer({ hold: ANNOUNCE_HOLD_MS });
 
-		let mount = ref((node, signal) => {
+		let mount = ref((_node, signal) => {
 			hasMounted = true;
 
 			watchKeys(
 				{
 					searchFieldId: handle.props.searchFieldId,
 					sidebarId: handle.props.sidebarId,
-					scope: node,
-					openPanel: pressShortcutsButton,
+					copy: handle.props.copy,
 					announce: (text) => announcer.announce(text),
 				},
 				signal,
@@ -349,25 +381,11 @@ export const Shortcuts = clientEntry(
 
 			if (!hasMounted) return <div mix={[mount]} />;
 
-			let listed: [string, string][] = [
-				["j", copy.keys.nextPost],
-				["k", copy.keys.previousPost],
-				["o", copy.keys.openPost],
-				["m", copy.keys.markRead],
-				["s", copy.keys.savePost],
-				["r", copy.keys.checkFeeds],
-				["J", copy.keys.nextFeed],
-				["K", copy.keys.previousFeed],
-				["/", copy.keys.search],
-				["⌘ K", copy.keys.goTo],
-				["?", copy.keys.help],
-			];
-
 			return (
 				<div mix={[mount, shrink(), flex(), items("center")]}>
 					{/**
 					 * Where a reader finds out there are shortcuts, and where they learn the key that
-					 * opens the list of them: the hint on the button is the binding it answers to.
+					 * opens the list of them: the hint on the button is the key it answers to.
 					 */}
 					<Button
 						type="button"
@@ -384,26 +402,31 @@ export const Shortcuts = clientEntry(
 					</Button>
 
 					{/**
-					 * A native `<dialog>` opened modally, chosen for what closing it does: Escape
-					 * dismisses it and the browser puts focus back on exactly the element that had
-					 * it, which here is the row the reader was on.
+					 * The sheet `?` opens, listing whatever the page's registry holds. The groups
+					 * fix the order headings appear in; the palette's key is named up front since
+					 * the palette registers it only once the sidebar's feeds arrive.
 					 */}
-					<Modal id={SHORTCUTS_PANEL_ID} aria-labelledby={SHORTCUTS_TITLE_ID}>
-						<Modal.Close commandfor={SHORTCUTS_PANEL_ID} aria-label={copy.close} />
-
-						<Modal.Header>
-							<Modal.Title id={SHORTCUTS_TITLE_ID}>{copy.open}</Modal.Title>
-							<Modal.Description>{copy.description}</Modal.Description>
-						</Modal.Header>
-
-						<ShortcutList mix={[mbs(3)]}>
-							{listed.map(([keyName, label]) => (
-								<ShortcutList.Item key={keyName} keys={[keyName]}>
-									{label}
-								</ShortcutList.Item>
-							))}
-						</ShortcutList>
-					</Modal>
+					<KeyboardHelp
+						id={SHORTCUTS_PANEL_ID}
+						shortcut="?"
+						labels={{
+							title: copy.open,
+							description: copy.description,
+							close: copy.close,
+							or: copy.or,
+							open: copy.keys.help,
+							general: copy.groups.general,
+							other: copy.groups.other,
+						}}
+						groups={[
+							{ title: copy.groups.reading, shortcuts: [] },
+							{ title: copy.groups.feeds, shortcuts: [] },
+							{
+								title: copy.groups.general,
+								shortcuts: [{ keys: PALETTE_KEY, label: copy.keys.goTo }],
+							},
+						]}
+					/>
 
 					{/**
 					 * What a key just did, for a reader who cannot see the mark it moved. Polite, so
