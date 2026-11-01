@@ -11,7 +11,7 @@ import type {} from "@vitest/browser-playwright";
 import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, onTestFinished, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import {
@@ -316,6 +316,24 @@ describe("SplitView", () => {
 		await userEvent.keyboard("k");
 		expect(location.hash).toBe("#sel-19");
 		expect(list.scrollTop).toBe(scrolled);
+	});
+
+	test("puts the highlight back on the open item when the next one fails to load", async () => {
+		mount({ selected: 20 });
+		let list = pane("list");
+		let marked = () => [...list.querySelectorAll("[aria-current]")].map((item) => item.textContent);
+		let controller = new AbortController();
+		onTestFinished(() => controller.abort());
+		navigation.addEventListener(
+			"navigate",
+			(event) => event.intercept({ handler: () => Promise.reject(new Error("Offline")) }),
+			{ signal: controller.signal },
+		);
+
+		await userEvent.keyboard("j");
+		await userEvent.keyboard("j");
+
+		await expect.poll(marked).toEqual(["Conversation 20"]);
 	});
 
 	test("answers j and k only from inside the view when scoped to it", async () => {

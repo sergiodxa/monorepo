@@ -10,6 +10,7 @@
 
 import type { MixinFactory } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { createElement, createMixin, on } from "remix/component";
 
 import type { SplitViewPane } from "../utils/split-view-layout.js";
@@ -253,24 +254,65 @@ function scrollKey(list: HTMLElement): string {
 	return `ui-split-view:${list.id}:${list.ownerDocument.location.pathname}`;
 }
 
-/** Steps the selection to the item `offset` away from the current one and follows it. */
-function step(list: HTMLElement, offset: number): boolean {
+/**
+ * A j/k press: the item it marked current ahead of its page, and the item and value the
+ * page's markup had marked before the first press of a run.
+ */
+interface Step {
+	to: HTMLAnchorElement;
+	origin: { item: HTMLAnchorElement; value: string } | undefined;
+}
+
+/**
+ * Marks the item `offset` away from the current one as current and follows it. The mark is
+ * ahead of the page: the next render's markup takes it over, and when the navigation fails
+ * the mark returns to the item the page's markup had marked.
+ *
+ * @param list The list pane.
+ * @param offset How many items to move, negative for up.
+ * @param last The previous press, whose mark may still be ahead of its page.
+ * @param latest Whether `step` is still the latest press, read when its navigation fails.
+ * @returns The press just made, or `undefined` when there was nowhere to go.
+ */
+function step(
+	list: HTMLElement,
+	offset: number,
+	last: Step | undefined,
+	latest: (step: Step) => boolean,
+): Step | undefined {
 	let items = [
 		...list.querySelectorAll<HTMLAnchorElement>(`a[href][${SPLIT_VIEW_ITEM_ATTRIBUTE}]`),
 	];
-	if (items.length === 0) return false;
+	if (items.length === 0) return undefined;
 	let current = items.findIndex((item) => {
 		let value = item.getAttribute("aria-current");
 		return value !== null && value !== "false";
 	});
 	let next = items[current === -1 ? 0 : Math.min(Math.max(current + offset, 0), items.length - 1)];
-	if (!next || next === items[current]) return false;
+	if (!next || next === items[current]) return undefined;
 
-	items[current]?.removeAttribute("aria-current");
+	let marked = items[current];
+	let origin = iife(() => {
+		if (last?.origin && last.to === marked) return last.origin;
+		let value = marked?.getAttribute("aria-current");
+		return marked && value ? { item: marked, value } : undefined;
+	});
+	let made: Step = { to: next, origin };
+	marked?.removeAttribute("aria-current");
 	next.setAttribute("aria-current", "page");
 	next.scrollIntoView({ block: "nearest" });
 	next.click();
-	return true;
+	list.ownerDocument.defaultView?.navigation?.transition?.finished.then(
+		() => {
+			made.origin = undefined;
+		},
+		() => {
+			if (!latest(made) || next.getAttribute("aria-current") !== "page") return;
+			next.removeAttribute("aria-current");
+			origin?.item.setAttribute("aria-current", origin.value);
+		},
+	);
+	return made;
 }
 
 /**
@@ -293,6 +335,7 @@ export const splitViewKeys: MixinFactory<
 >((handle) => {
 	let ids = { list: "", sidebar: "" };
 	let current: SplitViewKeyScope = "page";
+	let last: Step | undefined;
 
 	handle.addEventListener("insert", (event) => {
 		let document = event.node.ownerDocument;
@@ -318,7 +361,11 @@ export const splitViewKeys: MixinFactory<
 				if (current === "view" && !(target && rootOf(target) === rootOf(list))) return;
 				let offset = matchesKeyCombo(keystroke, "j") ? 1 : 0;
 				if (matchesKeyCombo(keystroke, "k")) offset = -1;
-				if (offset !== 0 && step(list, offset)) keystroke.preventDefault();
+				if (offset === 0) return;
+				let made = step(list, offset, last, (press) => press === last);
+				if (!made) return;
+				last = made;
+				keystroke.preventDefault();
 			},
 			{ signal: handle.signal },
 		);
