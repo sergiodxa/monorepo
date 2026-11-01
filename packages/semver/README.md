@@ -50,6 +50,22 @@ if (isFailure(result)) {
 }
 ```
 
+## Command line
+
+`sdxc-semver` runs the same checks from a terminal or a script, with no install step:
+
+```sh
+bunx @sdxc/semver --help
+```
+
+`valid` prints a version without its `v` or build metadata and exits 1 when it is not one; `compare` prints `-1`, `0` or `1`; `sort` reads its arguments, or one version per line on stdin, and prints them oldest first. `--json` prints a machine-readable result, and input that is not a version exits 2.
+
+```sh
+bunx @sdxc/semver valid v1.2.3-rc.1 --json
+bunx @sdxc/semver compare 1.0.0-rc.1 1.0.0
+git tag | bunx @sdxc/semver sort --reverse
+```
+
 ## API
 
 ### `parse(text: string): Result<SemVer, InvalidSemVerError>`
