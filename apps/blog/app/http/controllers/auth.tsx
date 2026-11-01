@@ -17,6 +17,7 @@ import { isAuthenticated, login, logout } from "~/app/http/middleware/auth";
 import { parseReturnPath, requestedReturnPath } from "~/app/http/return-path";
 import { relyingParty } from "~/app/initializers/relying-party";
 import { UnverifiedEmailError } from "~/app/models/users";
+import { isDevLoginEnabled } from "~/app/services/dev-login";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
 import routes from "~/routes/web";
@@ -89,7 +90,10 @@ export let loginController = createController(routes.auth.login, {
 		 * they actually sign in.
 		 */
 		async index(ctx) {
-			return ctx.render(LoginView, { next: await requestedReturnPath(ctx.url) });
+			return ctx.render(LoginView, {
+				next: await requestedReturnPath(ctx.url),
+				devLogin: isDevLoginEnabled(ctx.url),
+			});
 		},
 
 		/**

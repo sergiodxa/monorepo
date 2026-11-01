@@ -51,6 +51,7 @@ import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
+import requireDevLogin from "~/app/http/middleware/require-dev-login";
 import session from "~/app/http/middleware/session";
 import socialCards from "~/app/http/middleware/social-cards";
 import supportDesk from "~/app/http/middleware/support-desk";
@@ -556,6 +557,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	router.map(
 		routes.robots,
 		lazy(() => import("~/app/http/controllers/robots")),
+	);
+	router.map(
+		routes.devLogin,
+		lazy(() => import("~/app/http/controllers/dev-login"), [requireDevLogin]),
 	);
 
 	return router;

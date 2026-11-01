@@ -30,6 +30,8 @@ export namespace LoginView {
 		error?: string;
 		/** The page the login returns to, carried on the form's action as `next`. */
 		next?: string | null;
+		/** Whether this run serves the development login, which the screen then links to. */
+		devLogin?: boolean;
 	}
 }
 
@@ -74,6 +76,12 @@ export function LoginView() {
 						Continue with Auth
 					</Button>
 				</Form>
+
+				{model.devLogin && (
+					<a href={routes.devLogin.index.href()} mix={[text("sm"), fg("neutral")]}>
+						Use the development login
+					</a>
+				)}
 			</main>
 		</BlogLayout>
 	);

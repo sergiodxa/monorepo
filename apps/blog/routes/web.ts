@@ -169,4 +169,9 @@ export default route({
 	cspReports: post("/reports/csp"),
 	/** The crawl rules and AI usage preferences, served as robots.txt. */
 	robots: get("/robots.txt"),
+	/**
+	 * Signs a local run in as the seeded admin. Its guard answers 404 unless `DEV_LOGIN=true`
+	 * and the request is on a loopback host, so production never serves it.
+	 */
+	devLogin: form("/dev/login"),
 });

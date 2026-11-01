@@ -96,6 +96,7 @@ export default createAction(
 			jsonFeed: false,
 			cms: false,
 			robots: false,
+			devLogin: false,
 		});
 
 		return xml(sitemap.toString());

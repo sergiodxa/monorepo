@@ -18,6 +18,11 @@ In a fresh clone, copy `.env.example` to `.dev.vars` first. `bun dev` serves the
 http://localhost:3000. Run `sdxc run typegen` again whenever you change a binding in
 `wrangler.jsonc`.
 
+To sign in to the CMS without the auth provider, add `DEV_LOGIN=true` to `.dev.vars` and open
+`/dev/login` on localhost. Its button signs you in as Dev Admin, and the first sign-in writes
+sample posts, bookmarks, glossary terms, topics, redirects and Webmentions. The route answers 404
+without the flag or on any other host.
+
 ## Everyday commands
 
 ```sh
