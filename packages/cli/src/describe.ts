@@ -11,6 +11,7 @@ import type { FlagKind, FlagSpec } from "./flag.js";
 import type { Entry } from "./tree.js";
 
 import { groupSpec, isGroup } from "./command.js";
+import { exampleLine } from "./help.js";
 
 /** One argument of a command, in the order the command line takes them. */
 export interface ArgumentDescription {
@@ -109,7 +110,9 @@ export function describeEntry(entry: Entry, program: DescribeProgram): CommandDe
 			...(spec.hasDefault ? { default: spec.default } : {}),
 		})),
 		flags,
-		examples: isGroup(node) ? [] : node.examples.map((example) => `${programName} ${example}`),
+		examples: isGroup(node)
+			? []
+			: node.examples.map((example) => exampleLine(programName, example)),
 		commands,
 	};
 }

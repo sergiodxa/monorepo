@@ -82,10 +82,26 @@ export function renderHelp(entry: Entry, program: HelpProgram, style: Style): st
 
 	if (!isGroup(node) && node.examples.length > 0) {
 		let program = entry.title.split(" ")[0] as string;
-		let lines = node.examples.map((example) => `  ${program} ${example}`);
+		let lines = node.examples.map((example) => `  ${exampleLine(program, example)}`);
 		sections.push(`${style.bold("Examples:")}\n${lines.join("\n")}`);
 	}
 	return `${sections.join("\n\n")}\n`;
+}
+
+/**
+ * An example as a shell user types it. The program goes before the command after the last
+ * pipe, so `cat a.json | hash` reads `cat a.json | prog hash`, and an example that already names
+ * the program there is printed as written.
+ *
+ * @example exampleLine("prog", "hash a.json") // "prog hash a.json"
+ * @example exampleLine("prog", "cat a.json | hash") // "cat a.json | prog hash"
+ */
+export function exampleLine(program: string, example: string): string {
+	let pipe = example.lastIndexOf("| ");
+	let before = pipe === -1 ? "" : example.slice(0, pipe + 2);
+	let command = pipe === -1 ? example : example.slice(pipe + 2);
+	if (command === program || command.startsWith(`${program} `)) return example;
+	return `${before}${program} ${command}`;
 }
 
 /** A titled section of aligned rows, flag and command names styled. */
