@@ -77,6 +77,8 @@ if (isFailure(patch)) return mergePatchProblem(patch.error); // 415 or 400
 bunx @sdxc/merge-patch --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg merge-patch …` runs the same command line, using the version your project installs.
+
 ```sh
 bunx @sdxc/merge-patch apply patch.json article.json   # the merged document
 bunx @sdxc/merge-patch diff before.json after.json      # the merge patch between them
