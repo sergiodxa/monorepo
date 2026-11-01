@@ -1,6 +1,6 @@
 /**
- * Live preview for `AppShell`: an uptime monitoring app with a workspace switcher, its nav
- * grouped by task with two monitors down, a settings group and the user at the foot. On a
+ * Live preview for `AppShell`: an uptime monitoring app with a workspace switcher menu, its nav
+ * grouped by task with two monitors down, a settings group and the account menu at the foot. On a
  * phone frame the same sidebar opens as a sheet from the top bar's menu button.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -22,7 +22,7 @@ import {
 import { bg, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { text, weight } from "@sdxc/u/typography";
-import { Badge, Button } from "@sdxc/ui";
+import { Badge, Button, Menu } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 
@@ -114,19 +114,36 @@ export function OpsShell(handle: Handle<OpsShellProps>) {
 				collapsed={collapsed}
 				peek={peek}
 				workspace={
-					<AppShell.Identity
-						avatar={<Initials letters="AO" tone="brand" />}
-						name="Acme Ops"
-						detail="Pro plan"
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials letters="AO" tone="brand" />}
+							name="Acme Ops"
+							detail="Pro plan"
+							commandfor={`${id}-workspace`}
+							command="toggle-popover"
+						/>
+						<Menu id={`${id}-workspace`} aria-label="Workspace">
+							<Menu.Item href="#workspaces">Switch workspace</Menu.Item>
+							<Menu.Item href="#workspace-settings">Workspace settings</Menu.Item>
+						</Menu>
+					</>
 				}
 				nav={nav ?? <OpsNav />}
 				footer={
-					<AppShell.Identity
-						avatar={<Initials letters="AL" tone="neutral" />}
-						name="Ada Lovelace"
-						detail="ada@acme.dev"
-					/>
+					<>
+						<AppShell.Identity
+							avatar={<Initials letters="AL" tone="neutral" />}
+							name="Ada Lovelace"
+							detail="ada@acme.dev"
+							commandfor={`${id}-account`}
+							command="toggle-popover"
+						/>
+						<Menu id={`${id}-account`} placement="top-start" aria-label="Account">
+							<Menu.Item href="#profile">Account settings</Menu.Item>
+							<Menu.Separator />
+							<Menu.Item danger>Sign out</Menu.Item>
+						</Menu>
+					</>
 				}
 				topbar={<span mix={[text("sm"), fg("neutral.muted")]}>Acme Ops / Monitors</span>}
 			>
@@ -161,7 +178,16 @@ export function OpsShell(handle: Handle<OpsShellProps>) {
 const CODE = `<AppShell
 	labels={labels}
 	collapsed={readAppShellCookie(request.headers.get("Cookie"))}
-	workspace={<AppShell.Identity avatar={<Logo />} name="Acme Ops" detail="Pro plan" />}
+	workspace={
+		<>
+			<AppShell.Identity avatar={<Logo />} name="Acme Ops" detail="Pro plan"
+				commandfor="workspace-menu" command="toggle-popover" />
+			<Menu id="workspace-menu" aria-label="Workspace">
+				<Menu.Item href="/workspaces">Switch workspace</Menu.Item>
+				<Menu.Item href="/settings">Workspace settings</Menu.Item>
+			</Menu>
+		</>
+	}
 	nav={
 		<>
 			<AppShell.Group>
@@ -176,7 +202,17 @@ const CODE = `<AppShell
 			</AppShell.Group>
 		</>
 	}
-	footer={<AppShell.Identity avatar={<Avatar />} name="Ada Lovelace" detail="ada@acme.dev" />}
+	footer={
+		<>
+			<AppShell.Identity avatar={<Avatar />} name="Ada Lovelace" detail="ada@acme.dev"
+				commandfor="account-menu" command="toggle-popover" />
+			<Menu id="account-menu" placement="top-start" aria-label="Account">
+				<Menu.Item href="/settings/profile">Account settings</Menu.Item>
+				<Menu.Separator />
+				<Menu.Item danger>Sign out</Menu.Item>
+			</Menu>
+		</>
+	}
 	topbar={<Breadcrumbs>…</Breadcrumbs>}
 >
 	<PageHeader title="Monitors" primaryAction={<Button>New monitor</Button>} />
