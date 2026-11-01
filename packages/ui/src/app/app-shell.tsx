@@ -56,6 +56,18 @@ const SIDEBAR_WIDTH = "var(--ui-app-sidebar-width, 16rem)";
 /** The collapsed rail's width. */
 const RAIL_WIDTH = "var(--ui-app-rail-width, 3.25rem)";
 
+/** Whether the rail opens over the content on hover or focus when `peek` is omitted. */
+const DEFAULT_PEEK = true;
+
+/** How the current row is marked when `indicator` is omitted. */
+const DEFAULT_INDICATOR: AppShell.Indicator = "fill";
+
+/** Prefix for the sidebar's and main's ids when `id` is omitted. */
+const DEFAULT_ID = "app-shell";
+
+/** The tone of a row's count when `countTone` is omitted. */
+const DEFAULT_COUNT_TONE: AppShell.CountTone = "neutral";
+
 /** Motion for width and fade changes; reduced motion drops it. */
 const EASE = "200ms cubic-bezier(0.2, 0, 0, 1)";
 
@@ -181,9 +193,9 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 			topbar,
 			banner,
 			children,
-			peek = true,
-			indicator = "fill",
-			id = "app-shell",
+			peek = DEFAULT_PEEK,
+			indicator = DEFAULT_INDICATOR,
+			id = DEFAULT_ID,
 			cookieName = APP_SHELL_COOKIE,
 		} = handle.props;
 		let sidebarId = `${id}-sidebar`;
@@ -619,7 +631,7 @@ AppShell.Item = function AppShellItem(handle: Handle<AppShell.ItemProps>) {
 			label,
 			count,
 			countLabel,
-			countTone = "neutral",
+			countTone = DEFAULT_COUNT_TONE,
 			unread = false,
 			current = false,
 			active = false,

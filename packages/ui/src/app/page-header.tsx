@@ -29,6 +29,9 @@ const NARROW = `@container ${CONTAINER} (max-width: 39.9375rem)`;
 /** The sticky header once it is held at the top while motion is welcome, which is when it compacts. */
 const STUCK = `@container ${CONTAINER} scroll-state(stuck: top)`;
 
+/** Whether the header sticks and compacts when `sticky` is omitted. */
+const DEFAULT_STICKY = false;
+
 /** Motion for the compacting rows; reduced motion keeps the header full size. */
 const EASE = "200ms cubic-bezier(0.2, 0, 0, 1)";
 
@@ -111,7 +114,7 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 			overflow,
 			tabs = [],
 			tabsLabel,
-			sticky = false,
+			sticky = DEFAULT_STICKY,
 			mix,
 			...rest
 		} = handle.props;
