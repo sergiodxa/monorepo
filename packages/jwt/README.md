@@ -512,6 +512,8 @@ test("a signed token verifies against the published set", async () => {
 bunx @sdxc/jwt --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg jwt …` runs the same command line, using the version your project installs.
+
 ```sh
 sdxc-jwt keygen --alg ES256 > key.json                    # a key pair as JSON (--format pem for PEM)
 sdxc-jwt jwks --key-file key.json > jwks.json             # its public key set
