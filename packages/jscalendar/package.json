@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read, validate and write RFC 8984 JSCalendar events, tasks and groups, expand their recurrences, and convert them to and from iCalendar",
 	"license": "MIT",
+	"bin": {
+		"sdxc-jscalendar": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -13,6 +16,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/icalendar": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",

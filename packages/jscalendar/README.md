@@ -90,6 +90,26 @@ let group = fromICalendar(unwrap(parseICalendar(icsText)).calendar);
 let icsAgain = stringify(unwrap(toICalendar(group)));
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/jscalendar --help
+```
+
+Each command reads a path, or stdin when the path is `-` or left out. Exit codes: `0` done, `1`
+problems found, `2` usage or unreadable input.
+
+```sh
+# JSCalendar to iCalendar, or iCalendar to a JSCalendar Group; the input format is detected
+bunx @sdxc/jscalendar convert event.json --to icalendar > event.ics
+
+# Occurrences inside a window, one tab-separated line each, or --json
+bunx @sdxc/jscalendar expand calendar.ics --from 2026-11-01 --until 2026-12-01 --time-zone Europe/Madrid
+
+# Every RFC 8984 problem at its property path, exiting 1 when there is any
+bunx @sdxc/jscalendar validate group.json --json
+```
+
 ## API
 
 ### `@sdxc/jscalendar`
