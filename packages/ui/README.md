@@ -282,7 +282,7 @@ one the page uses in the browser entry.
 - `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
 - `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
 - `PlanNotice` — the one-sentence plan or role box under a help page's title.
-- `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
+- `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts. Tokens read the `--highlight-*` properties of `@sdxc/highlight/styles.css` when the page loads it, and a built-in palette in the page's `color-scheme` otherwise.
 - `CodeTabs` — radio tabs over code; `syncKey` switches every set together and `persist` (`cookie` | `local`) remembers it.
 - `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
 - `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
