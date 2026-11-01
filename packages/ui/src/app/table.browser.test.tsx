@@ -842,9 +842,10 @@ const OVERLAY_ACTIONS = ["View", "Post on X", "Delete"];
 
 /**
  * A four-column articles table whose last data cell is a "Published" status, with the three
- * actions an articles list carries: ghost link buttons and a danger `Table.Action`.
+ * actions an articles list carries: ghost link buttons and a danger `Table.Action`, or with
+ * `actions`, three `Table.Action`s under an `overflowLabel`.
  */
-function articles(): JSX.Element {
+function articles(options: { actions?: boolean } = {}): JSX.Element {
 	return (
 		<Table.Container>
 			<Table aria-label="Articles" density="comfortable">
@@ -864,15 +865,23 @@ function articles(): JSX.Element {
 							</Table.Cell>
 							<Table.Cell>Sergio</Table.Cell>
 							<Table.StatusCell color="success">Published</Table.StatusCell>
-							<Table.Actions>
-								<LinkButton href={`#${post.id}/view`} variant="ghost" color="neutral" size="sm">
-									{OVERLAY_ACTIONS[0]}
-								</LinkButton>
-								<LinkButton href={`#${post.id}/share`} variant="ghost" color="neutral" size="sm">
-									{OVERLAY_ACTIONS[1]}
-								</LinkButton>
-								<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
-							</Table.Actions>
+							{options.actions ? (
+								<Table.Actions overflowLabel={`More actions for ${post.title}`}>
+									<Table.Action href={`#${post.id}/view`}>{OVERLAY_ACTIONS[0]}</Table.Action>
+									<Table.Action href={`#${post.id}/share`}>{OVERLAY_ACTIONS[1]}</Table.Action>
+									<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
+								</Table.Actions>
+							) : (
+								<Table.Actions>
+									<LinkButton href={`#${post.id}/view`} variant="ghost" color="neutral" size="sm">
+										{OVERLAY_ACTIONS[0]}
+									</LinkButton>
+									<LinkButton href={`#${post.id}/share`} variant="ghost" color="neutral" size="sm">
+										{OVERLAY_ACTIONS[1]}
+									</LinkButton>
+									<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
+								</Table.Actions>
+							)}
 						</Table.Row>
 					))}
 				</Table.Body>
@@ -987,6 +996,128 @@ describe("Table row actions overlay", () => {
 				await expect.poll(() => rgba(getComputedStyle(row).backgroundColor)[3]).toBe(1);
 				let tint = getComputedStyle(row).backgroundColor;
 				await expect.poll(() => step(action, tint)).toBeGreaterThanOrEqual(VISIBLE_STEP);
+			}
+		});
+	}
+});
+
+/** Turns on touch input, so the page matches `(hover: none)` and `(pointer: coarse)`. */
+async function touch(): Promise<void> {
+	await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+}
+
+/** The controls inside `root` that lay out a box. */
+function shown(root: Element): HTMLElement[] {
+	return [...root.querySelectorAll<HTMLElement>("a, button")].filter(
+		(control) => control.getClientRects().length > 0,
+	);
+}
+
+/** Accessible name `control` takes from `aria-label`, else from the elements `aria-labelledby` names. */
+function accessibleName(control: HTMLElement): string {
+	let label = control.getAttribute("aria-label");
+	if (label) return label;
+	let ids = control.getAttribute("aria-labelledby")?.split(/\s+/) ?? [];
+	return ids
+		.map((id) => document.getElementById(id)?.textContent ?? "")
+		.join(" ")
+		.trim();
+}
+
+/** Whether two boxes share any area. */
+function intersects(a: DOMRect, b: DOMRect): boolean {
+	return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+}
+
+describe("Table row actions on touch and phones", () => {
+	for (let actions of [false, true]) {
+		let kind = actions ? "Table.Action" : "LinkButton";
+		test(`shows one 44px menu button without hover on a 375px touch screen, holding every ${kind} action`, async () => {
+			await touch();
+			await page.viewport(375, 812);
+			let host = mount(articles({ actions }), 375);
+			let cell = host.querySelector<HTMLElement>('tbody [data-slot="row-actions"]')!;
+
+			expect(matchMedia("(hover: none)").matches).toBe(true);
+			expect(getComputedStyle(cell).opacity).toBe("1");
+			let visible = shown(cell);
+			expect(visible).toHaveLength(1);
+			let more = visible[0]!;
+			expect(accessibleName(more)).not.toBe("");
+			let box = more.getBoundingClientRect();
+			expect(box.width).toBeGreaterThanOrEqual(44);
+			expect(box.height).toBeGreaterThanOrEqual(44);
+
+			await userEvent.click(more);
+			let menu = document.getElementById(more.getAttribute("commandfor")!)!;
+			await expect.poll(() => menu.matches(":popover-open")).toBe(true);
+			let items = shown(menu);
+			expect(items.map((item) => item.textContent)).toEqual(OVERLAY_ACTIONS);
+			let danger = '[data-danger], [data-color="danger"]';
+			expect(items.map((item) => item.matches(danger))).toEqual([false, false, true]);
+			for (let item of items) expect(lineBoxes(item)).toBe(1);
+		});
+	}
+
+	test("shows no menu button in a row with no actions", async () => {
+		await touch();
+		await page.viewport(375, 812);
+		let host = mount(
+			<Table.Container>
+				<Table aria-label="Teams">
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>Team</Table.Column>
+							<Table.ActionsColumn label="Actions" />
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						<Table.Row>
+							<Table.Cell>Owners</Table.Cell>
+							<Table.Actions>{false}</Table.Actions>
+						</Table.Row>
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+			375,
+		);
+
+		expect(shown(host.querySelector('tbody [data-slot="row-actions"]')!)).toHaveLength(0);
+	});
+
+	test("shows the actions when the keyboard tabs into the row on a hover device", async () => {
+		let host = mount(articles(), 900);
+		let row = host.querySelector<HTMLElement>("tbody tr")!;
+		let cell = row.querySelector<HTMLElement>('[data-slot="row-actions"]')!;
+
+		expect(matchMedia("(hover: hover)").matches).toBe(true);
+		expect(getComputedStyle(cell).opacity).toBe("0");
+		await userEvent.tab();
+		expect(row.contains(document.activeElement)).toBe(true);
+		await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
+		expect(shown(cell).map((action) => action.textContent)).toEqual(OVERLAY_ACTIONS);
+	});
+
+	for (let input of ["mouse", "touch"]) {
+		test(`never lays the actions over the title or status on a 375px ${input} screen`, async () => {
+			if (input === "touch") await touch();
+			await page.viewport(375, 812);
+			let host = mount(articles(), 375);
+
+			for (let row of host.querySelectorAll<HTMLElement>("tbody tr")) {
+				row.querySelector<HTMLElement>('[data-slot="row-link"]')!.focus();
+				let cell = row.querySelector<HTMLElement>('[data-slot="row-actions"]')!;
+				await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
+				let title = row.children[0]!.getBoundingClientRect();
+				let status = row.querySelector('[data-type="status"]')!.getBoundingClientRect();
+				let parts = [cell, ...cell.querySelectorAll<HTMLElement>("*")].filter(
+					(part) => part.getClientRects().length > 0 && !part.closest(":popover-open, dialog"),
+				);
+				for (let part of parts) {
+					let box = part.getBoundingClientRect();
+					expect(intersects(box, title)).toBe(false);
+					expect(intersects(box, status)).toBe(false);
+				}
 			}
 		});
 	}

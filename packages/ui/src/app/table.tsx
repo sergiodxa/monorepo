@@ -57,6 +57,7 @@ import { LinkButton } from "../components/link-button.js";
 import { Menu } from "../components/menu.js";
 import { RelativeTime } from "../components/relative-time.js";
 import { StatusDot } from "../components/status-dot.js";
+import { floatingSurface, SURFACE_PADDING } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
@@ -110,10 +111,26 @@ const DEFAULT_BAR_MAX = 1;
 const EMPTY_VALUE = "—";
 
 /**
- * Width of the `ui-table` container at or below which {@link Table.Actions} given an
- * `overflowLabel` shows one menu button in place of its inline actions.
+ * Width of the `ui-table` container at or below which {@link Table.Actions} shows one menu
+ * button in place of its inline actions, so a phone's narrow columns keep their own space.
  */
 const ACTIONS_OVERFLOW_QUERY = "@container ui-table (max-width: 40rem)";
+
+/**
+ * Pointers precise enough to hover a row, where {@link Table.Actions} hide until wanted and
+ * reveal over the row's end; a coarse pointer gets them in place even when it reports hover.
+ */
+const FINE_HOVER_QUERY = "@media (hover: hover) and (pointer: fine)";
+
+/** Size of the ⋯ button, a fingertip's target under a coarse pointer. */
+const MENU_BUTTON_SIZE = {
+	minInlineSize: "var(--ui-target-size, 1.5rem)",
+	minBlockSize: "var(--ui-target-size, 1.5rem)",
+	"@media (pointer: coarse)": {
+		minInlineSize: "var(--ui-target-size, 2.75rem)",
+		minBlockSize: "var(--ui-target-size, 2.75rem)",
+	},
+};
 
 /**
  * How far the overlay of hover-revealed {@link Table.Actions} fades in ahead of its own box, and
@@ -134,7 +151,7 @@ const ACTIONS_FADE_LENGTH = "2rem";
 const ACTIONS_HOVER_FILLS = Object.fromEntries(
 	(["brand", "neutral", "success", "warning", "danger"] as const).flatMap((color) => {
 		let fg = color === "neutral" ? "var(--ui-neutral-fg-emphasis)" : `var(--ui-${color}-fg)`;
-		let control = `& :is(a, button)[data-variant="ghost"][data-color="${color}"]:not(:is(dialog, [popover]) *)`;
+		let control = `& :is(a, button)[data-variant="ghost"][data-color="${color}"]:not(:is(dialog, [popover]:not([data-slot="row-actions-inline"])) *)`;
 		let fill = (share: number) => {
 			let tone = `color-mix(in srgb, ${fg} ${share}%, transparent)`;
 			return { backgroundImage: `linear-gradient(${tone}, ${tone})` };
@@ -148,6 +165,14 @@ const ACTIONS_HOVER_FILLS = Object.fromEntries(
 
 /** Interactive elements that sit above a whole-row link, so they keep their own clicks. */
 const ROW_CONTROLS = ':is(a, button, label, select, textarea, summary, [role="button"])';
+
+/**
+ * What {@link Table} shares with its parts: the id of the actions column's name, which each
+ * row's ⋯ button takes as its own name when the row gives none.
+ */
+interface TableContext {
+	actionsLabelId: string;
+}
 
 /**
  * Prop types for {@link Table} and its compound parts.
@@ -293,7 +318,8 @@ export namespace Table {
 	export interface ActionsProps extends TagProps<"td"> {
 		/**
 		 * Name of the menu button that stands in for the actions in a narrow table, such as
-		 * "More actions". Set it to fold {@link Table.Action} children into that menu.
+		 * "More actions", which then lists {@link Table.Action} children as menu rows. Without
+		 * it, the button takes {@link Table.ActionsColumn}'s `label` and opens the actions as they are.
 		 */
 		overflowLabel?: string;
 	}
@@ -440,7 +466,9 @@ export namespace Table {
  * </Table>
  * @example <Table aria-label={t("monitors.title")} aria-busy={refreshing ? "true" : undefined}>…</Table>
  */
-export function Table(handle: Handle<Table.Props>) {
+export function Table(handle: Handle<Table.Props, TableContext>) {
+	handle.context.set({ actionsLabelId: `${handle.id}-actions` });
+
 	return () => {
 		let { density, pinFirstColumn, mix, ...rest } = handle.props;
 
@@ -906,6 +934,7 @@ Table.Select = function TableSelect(handle: Handle<Table.SelectProps>) {
 Table.ActionsColumn = function TableActionsColumn(handle: Handle<Table.ActionsColumnProps>) {
 	return () => {
 		let { label, mix, ...rest } = handle.props;
+		let table = handle.context.get(Table);
 
 		return (
 			<th
@@ -913,7 +942,9 @@ Table.ActionsColumn = function TableActionsColumn(handle: Handle<Table.ActionsCo
 				data-slot="actions-column"
 				mix={mergeMix([attrs({ scope: "col" }), is("1%")], mix)}
 			>
-				<span mix={[visuallyHidden()]}>{label}</span>
+				<span id={table?.actionsLabelId} mix={[visuallyHidden()]}>
+					{label}
+				</span>
 			</th>
 		);
 	};
@@ -932,10 +963,10 @@ function TableActionsMenu(handle: Handle<{ children?: RemixNode }, { menu: true 
 }
 
 /**
- * Renders a row's actions on one line. Where the pointer can hover they reserve no width: hidden
- * until the row is hovered, focused within, selected or has a menu open, they then fade in over the
- * row's end on its tint. On touch they show in a cell as wide as they are. With `overflowLabel`,
- * a `ui-table` container 40rem wide or narrower shows a ⋯ button opening a menu of them instead.
+ * Renders a row's actions on one line. Under a fine hovering pointer they reserve no width: hidden
+ * until the row is hovered, focused within, selected or has a menu open, they fade in over the
+ * row's end on its tint. Under a coarse pointer they show in a cell as wide as they are. In a
+ * `ui-table` container 40rem wide or narrower, one ⋯ button in their place opens them in a menu.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell.
@@ -953,6 +984,14 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 	return () => {
 		let { overflowLabel, children, mix, ...rest } = handle.props;
 		let menuId = `${handle.id}-menu`;
+		let panelId = `${handle.id}-actions`;
+		/**
+		 * Without an `overflowLabel`, the inline actions are themselves the popover the ⋯ button
+		 * opens, named by the actions column; a row with neither name keeps its actions in place.
+		 */
+		let labelledBy = overflowLabel ? undefined : handle.context.get(Table)?.actionsLabelId;
+		let panel = Boolean(labelledBy);
+		let folds = Boolean(overflowLabel) || panel;
 
 		return (
 			<td
@@ -966,12 +1005,13 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 						raw({
 							whiteSpace: "nowrap",
 							transition: "opacity 150ms ease-out",
-							"@media (hover: hover)": {
+							[FINE_HOVER_QUERY]: {
 								paddingInline: 0,
 								opacity: 0,
 								':is(tr:hover, tr:focus-within, tr[aria-selected="true"], tr:has(:popover-open)) > &':
 									{ opacity: 1 },
 							},
+							[ACTIONS_OVERFLOW_QUERY]: { paddingInline: "0.5rem", opacity: 1 },
 							"@media (prefers-reduced-motion: reduce)": { transition: "none" },
 						}),
 					],
@@ -979,14 +1019,28 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 				)}
 			>
 				<div
+					id={panel ? panelId : undefined}
+					popover={panel ? "auto" : undefined}
 					data-slot="row-actions-inline"
 					mix={[
-						flex(),
-						items("center"),
-						justify("end"),
-						gap("0.25rem"),
 						raw({
-							"@media (hover: hover)": {
+							position: "static",
+							inset: "auto",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "end",
+							gap: "0.25rem",
+							padding: 0,
+							"&:not(:popover-open)": {
+								margin: 0,
+								border: 0,
+								overflow: "visible",
+								color: "inherit",
+								backgroundColor: "transparent",
+								inlineSize: "auto",
+								blockSize: "auto",
+							},
+							[FINE_HOVER_QUERY]: {
 								position: "absolute",
 								insetBlock: 0,
 								insetInlineEnd: 0,
@@ -1009,42 +1063,73 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 								},
 								...ACTIONS_HOVER_FILLS,
 							},
+							[ACTIONS_OVERFLOW_QUERY]: {
+								position: "static",
+								paddingInline: 0,
+								"&::before": { content: "none" },
+								...(folds ? { "&:not(:popover-open)": { display: "none" } } : {}),
+							},
+							/**
+							 * Opened from the ⋯ button, the actions stack as a menu's rows under it, each
+							 * keeping its own control and tone.
+							 */
+							"&:popover-open": {
+								position: "fixed",
+								inset: "auto",
+								margin: 0,
+								marginBlockStart: "var(--ui-popover-offset, 0.5rem)",
+								positionArea: "bottom span-left",
+								positionTryFallbacks: "flip-block, flip-inline, flip-block flip-inline",
+								flexDirection: "column",
+								alignItems: "stretch",
+								gap: "0.125rem",
+								padding: SURFACE_PADDING,
+								minInlineSize: "10rem",
+								"&::before": { content: "none" },
+								"& > :is(a, button)": { justifyContent: "start" },
+							},
 						}),
-						overflowLabel ? raw({ [ACTIONS_OVERFLOW_QUERY]: { display: "none" } }) : undefined,
+						when("&:popover-open", floatingSurface()),
 					]}
 				>
 					{children}
 				</div>
-				{overflowLabel ? (
-					<>
-						<div
-							data-slot="row-actions-overflow"
-							mix={[
-								justify("end"),
-								raw({
-									display: "none",
-									[ACTIONS_OVERFLOW_QUERY]: { display: "flex" },
-									"@media (hover: hover)": { paddingInline: "0.5rem" },
-								}),
-							]}
+				{folds ? (
+					<div
+						data-slot="row-actions-overflow"
+						mix={[
+							justify("end"),
+							raw({
+								display: "none",
+								[ACTIONS_OVERFLOW_QUERY]: {
+									display: "flex",
+									':is(td):not(:has(> [data-slot="row-actions-inline"] > *)) > &': {
+										display: "none",
+									},
+								},
+							}),
+						]}
+					>
+						<Button
+							size="sm"
+							variant="ghost"
+							color="neutral"
+							commandfor={overflowLabel ? menuId : panelId}
+							command="toggle-popover"
+							aria-label={overflowLabel}
+							aria-labelledby={labelledBy}
+							mix={[raw(MENU_BUTTON_SIZE)]}
 						>
-							<Button
-								size="sm"
-								variant="ghost"
-								color="neutral"
-								commandfor={menuId}
-								command="toggle-popover"
-								aria-label={overflowLabel}
-							>
-								<EllipsisIcon size={16} />
-							</Button>
-						</div>
-						<TableActionsMenu>
-							<Menu id={menuId} placement="bottom-end" aria-label={overflowLabel}>
-								{children}
-							</Menu>
-						</TableActionsMenu>
-					</>
+							<EllipsisIcon size={16} />
+						</Button>
+					</div>
+				) : null}
+				{overflowLabel ? (
+					<TableActionsMenu>
+						<Menu id={menuId} placement="bottom-end" aria-label={overflowLabel}>
+							{children}
+						</Menu>
+					</TableActionsMenu>
 				) : null}
 			</td>
 		);
