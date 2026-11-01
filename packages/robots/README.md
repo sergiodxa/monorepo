@@ -120,6 +120,8 @@ stringifyDirectives({ botName: "examplebot", nosnippet: true }); // "examplebot:
 bunx @sdxc/robots --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg robots …` runs the same command line, using the version your project installs.
+
 `check` fetches the origin's robots.txt (or reads `--robots <file>`) and says whether an agent may
 fetch a URL and which rule decides it; it exits 1 when the URL is disallowed.
 
