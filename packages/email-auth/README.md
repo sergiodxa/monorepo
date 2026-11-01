@@ -112,6 +112,8 @@ report.results; // [{ policy: "dmarc", verdict: "pass", summary: "p=reject", pro
 bunx @sdxc/email-auth check example.com
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg email-auth …` runs the same command line, using the version your project installs.
+
 `check` grades DMARC, SPF, MTA-STS (with its policy file and MX coverage), TLS-RPT, BIMI and
 DKIM for each `--selector`. It exits 0 when every policy holds, 1 when one is missing, invalid
 or unreadable, and 2 on a usage error.
