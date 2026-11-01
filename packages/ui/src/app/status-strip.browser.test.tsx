@@ -15,6 +15,7 @@ import { page, userEvent } from "vitest/browser";
 
 import { StatusStrip } from "./status-strip.js";
 
+import "../reset.css";
 import "../theme.css";
 
 /** Ninety days, oldest first: mostly up, one outage, one degraded day, a week before monitoring began. */

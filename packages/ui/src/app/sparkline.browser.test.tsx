@@ -15,6 +15,7 @@ import { page } from "vitest/browser";
 
 import { Sparkline } from "./sparkline.js";
 
+import "../reset.css";
 import "../theme.css";
 
 const LATENCY = [180, 176, 190, 210, 205, 230, 262];

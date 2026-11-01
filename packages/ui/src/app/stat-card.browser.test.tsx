@@ -1,0 +1,204 @@
+/**
+ * Lays stat cards out in a real browser: the value's size and tabular figures, a delta toned
+ * by meaning, a skeleton exactly as tall as the card it replaces, group columns that follow
+ * the container, ruled columns, and link tabs reachable by keyboard with the current one marked.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type {} from "@vitest/browser-playwright";
+
+import { render } from "remix/component/test";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { page, userEvent } from "vitest/browser";
+
+import { StatCard } from "./stat-card.js";
+
+import "../reset.css";
+import "../theme.css";
+
+/** Mounts `node` in a host `width` pixels wide and returns the host. */
+function mount(node: JSX.Element, width = 960): HTMLElement {
+	let host = document.createElement("div");
+	host.style.width = `${width}px`;
+	document.body.appendChild(host);
+	render(node, { container: host });
+	return host;
+}
+
+/** A complete card for p95 latency, where a rise is bad. */
+function Latency() {
+	return () => (
+		<StatCard>
+			<StatCard.Label>p95 latency</StatCard.Label>
+			<StatCard.Value>182 ms</StatCard.Value>
+			<StatCard.Delta trend="up" invert trendLabel="Increased by" comparison="vs last week">
+				+12 ms
+			</StatCard.Delta>
+			<StatCard.Footer>Slowest in eu-west</StatCard.Footer>
+		</StatCard>
+	);
+}
+
+/** Four cards for a group, the first linking as the current tab when `tabs` is set. */
+function Four(handle: { props: { variant?: StatCard.Variant } }) {
+	return () => {
+		let tabs = handle.props.variant === "tabs";
+		let metrics = ["Uptime", "p95 latency", "Error rate", "Open incidents"];
+		return (
+			<StatCard.Group variant={handle.props.variant} aria-label="Overview">
+				{metrics.map((metric, index) => (
+					<StatCard
+						key={metric}
+						href={tabs ? `?metric=${index}` : undefined}
+						current={tabs ? index === 0 : undefined}
+					>
+						<StatCard.Label>{metric}</StatCard.Label>
+						<StatCard.Value>{index}</StatCard.Value>
+					</StatCard>
+				))}
+			</StatCard.Group>
+		);
+	};
+}
+
+/** Distinct column offsets the group's cards start at. */
+function columns(host: HTMLElement): number {
+	let cards = host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]');
+	return new Set([...cards].map((card) => Math.round(card.getBoundingClientRect().left))).size;
+}
+
+/** Resolves `variable` to a colour through a probe element. */
+function colour(host: HTMLElement, variable: string): string {
+	let probe = document.createElement("span");
+	probe.style.color = `var(${variable})`;
+	host.appendChild(probe);
+	return getComputedStyle(probe).color;
+}
+
+beforeEach(async () => {
+	await page.viewport(1280, 800);
+});
+
+afterEach(() => {
+	document.body.replaceChildren();
+});
+
+describe("StatCard", () => {
+	test("sets the value at 30px semibold in tabular figures", () => {
+		let host = mount(<Latency />, 320);
+		let value = getComputedStyle(host.querySelector('[data-slot="stat-card-value"]')!);
+
+		expect(value.fontSize).toBe("30px");
+		expect(value.fontWeight).toBe("600");
+		expect(value.fontVariantNumeric).toBe("tabular-nums");
+	});
+
+	test("sets the value at 24px in ruled columns", () => {
+		let host = mount(<Four variant="ruled" />);
+		let value = getComputedStyle(host.querySelector('[data-slot="stat-card-value"]')!);
+		let card = getComputedStyle(host.querySelector('[data-slot="stat-card"]')!);
+
+		expect(value.fontSize).toBe("24px");
+		expect(card.borderBlockStartWidth).toBe("1px");
+		expect(card.borderInlineStartWidth).toBe("0px");
+	});
+
+	test("tones a rise as bad when the number should fall, and speaks the trend", async () => {
+		let host = mount(
+			<div>
+				<Latency />
+				<StatCard>
+					<StatCard.Label>Uptime</StatCard.Label>
+					<StatCard.Value>99.98%</StatCard.Value>
+					<StatCard.Delta trend="up">+0.02%</StatCard.Delta>
+				</StatCard>
+			</div>,
+		);
+		let [inverted, plain] = host.querySelectorAll<HTMLElement>(
+			'[data-slot="stat-card-delta-pill"]',
+		);
+
+		expect(inverted!.dataset.tone).toBe("danger");
+		expect(getComputedStyle(inverted!).color).toBe(colour(host, "--ui-danger-fg"));
+		expect(plain!.dataset.tone).toBe("success");
+		expect(getComputedStyle(plain!).color).toBe(colour(host, "--ui-success-fg"));
+		expect(inverted!.textContent).toBe("Increased by+12 ms");
+		expect(inverted!.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+	});
+
+	test("sets the delta at the end of the label's line in a card", () => {
+		let host = mount(<Latency />, 480);
+		let label = host.querySelector('[data-slot="stat-card-label"]')!.getBoundingClientRect();
+		let delta = host.querySelector('[data-slot="stat-card-delta"]')!.getBoundingClientRect();
+		let card = host.querySelector('[data-slot="stat-card"]')!.getBoundingClientRect();
+
+		expect(Math.abs(delta.top + delta.height / 2 - (label.top + label.height / 2))).toBeLessThan(2);
+		expect(delta.right).toBeCloseTo(card.right - 21, 0);
+	});
+
+	for (let width of [320, 960]) {
+		test(`keeps a skeleton exactly as tall as the card at ${width}px`, () => {
+			let host = mount(
+				<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+					<Latency />
+					<StatCard.Skeleton />
+				</div>,
+				width,
+			);
+			let [card, skeleton] = host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]');
+
+			expect(skeleton!.getAttribute("aria-hidden")).toBe("true");
+			expect(skeleton!.getBoundingClientRect().height).toBeCloseTo(
+				card!.getBoundingClientRect().height,
+				0,
+			);
+		});
+	}
+
+	for (let [width, count] of [
+		[320, 1],
+		[600, 2],
+		[1100, 4],
+	] as const) {
+		test(`lays a group out in ${count} column(s) in a ${width}px container`, () => {
+			let host = mount(<Four />, width);
+			let group = host.querySelector<HTMLElement>('[data-slot="stat-group"]')!;
+
+			expect(columns(host)).toBe(count);
+			expect(group.scrollWidth).toBeLessThanOrEqual(width);
+		});
+	}
+
+	test("makes tab cards links reachable by Tab, marking the current metric", async () => {
+		let host = mount(<Four variant="tabs" />);
+		let links = [...host.querySelectorAll<HTMLAnchorElement>("a[data-slot='stat-card']")];
+
+		expect(links).toHaveLength(4);
+		expect(links[0]!.getAttribute("aria-current")).toBe("true");
+		expect(links[1]!.hasAttribute("aria-current")).toBe(false);
+		await expect.element(page.getByRole("group", { name: "Overview" })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole("link", { name: "Error rate 2" }))
+			.toHaveAttribute("href", "?metric=2");
+
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(links[0]);
+		await userEvent.keyboard("{Tab}");
+		expect(document.activeElement).toBe(links[1]);
+		expect(getComputedStyle(links[1]!).outlineStyle).toBe("solid");
+		expect(getComputedStyle(links[0]!).boxShadow).toContain("inset");
+	});
+
+	test("divides tab cards with rules and no doubled edge at the strip's border", () => {
+		let host = mount(<Four variant="tabs" />, 1100);
+		let group = host
+			.querySelector<HTMLElement>('[data-slot="stat-group"]')!
+			.getBoundingClientRect();
+		let last = [...host.querySelectorAll<HTMLElement>("a")].at(-1)!.getBoundingClientRect();
+
+		expect(last.right).toBeGreaterThan(group.right - 1);
+		expect(last.bottom).toBeGreaterThan(group.bottom - 1);
+	});
+});
