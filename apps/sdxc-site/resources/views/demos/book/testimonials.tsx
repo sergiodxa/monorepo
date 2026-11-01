@@ -8,7 +8,7 @@
 
 import type { RemixNode } from "remix/component";
 
-import { TestimonialBand } from "@sdxc/ui/patterns";
+import { TestimonialBand } from "@sdxc/ui/landing";
 
 /** One review: the quote, its reader and their job. */
 interface Review {

@@ -9,7 +9,8 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is, pis } from "@sdxc/u/size";
-import { Empty, Heading, HeadingScope, Text } from "@sdxc/ui";
+import { Heading, HeadingScope, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */

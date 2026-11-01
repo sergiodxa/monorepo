@@ -9,7 +9,7 @@
 
 import type { Handle, RemixElement, RemixNode } from "remix/component";
 
-import { Callout, CodeBlock, CodeTabs, FileTree, InstallCommand } from "@sdxc/ui";
+import { Callout, CodeBlock, CodeTabs, FileTree, InstallCommand } from "@sdxc/ui/docs";
 
 import type { RememberedTabKey } from "~/app/services/remembered-tabs";
 import type { MarkdownProps } from "~/resources/components/markdown-props";

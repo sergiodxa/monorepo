@@ -28,7 +28,7 @@ const HERO_DISPLAY_SIZE = "clamp(2.5rem, 1.6rem + 3cqi, 4rem)";
 export default function Hero(handle: Handle<MarkdownProps>) {
 	return () => (
 		<Band tone="grid" spacing="hero" ruled={false}>
-			<div mix={[raw({ "--ui-marketing-display-size": HERO_DISPLAY_SIZE })]}>
+			<div mix={[raw({ "--ui-landing-display-size": HERO_DISPLAY_SIZE })]}>
 				<DisplayHeadings>{handle.props.children}</DisplayHeadings>
 			</div>
 		</Band>

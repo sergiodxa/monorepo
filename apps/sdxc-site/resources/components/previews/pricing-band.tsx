@@ -8,7 +8,7 @@
  */
 
 import { Badge, HeadingScope, LinkButton } from "@sdxc/ui";
-import { CheckRow, PricingBand } from "@sdxc/ui/patterns";
+import { CheckRow, PricingBand } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<PricingBand

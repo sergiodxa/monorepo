@@ -6,11 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -20,15 +21,15 @@ import type { PropsTable } from "~/app/services/components";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import landingComponentsPage from "~/app/http/controllers/ui-landing-components";
+import landingFoundationsPage from "~/app/http/controllers/ui-landing-foundations";
 import landingPatternsPage from "~/app/http/controllers/ui-landing-patterns";
-import marketingComponentsPage from "~/app/http/controllers/ui-marketing-components";
-import marketingFoundationsPage from "~/app/http/controllers/ui-marketing-foundations";
 import themingPage from "~/app/http/controllers/ui-theming";
 import { adsDayTag } from "~/app/services/ads";
 import {
 	LANDING_PATTERNS_SLUG,
-	MARKETING_COMPONENTS_SLUG,
-	MARKETING_FOUNDATIONS_SLUG,
+	LANDING_COMPONENTS_SLUG,
+	LANDING_FOUNDATIONS_SLUG,
 	THEMING_SLUG,
 	CATALOGUE_SOURCE_BASE,
 } from "~/app/services/catalogue-pages";
@@ -55,16 +56,36 @@ const INSTALL = `npm add @sdxc/ui remix`;
 /** The stylesheet an app imports once, which every component reads its colors from. */
 const THEME_IMPORT = `import "@sdxc/ui/theme.css";`;
 
-/** The guide to owning a copy of a component, which `sdxc ui add` starts. */
+/**
+ * The guide to owning a copy of a component, which `sdxc ui add` starts. The command copies
+ * the general components; a namespace's components install with the package.
+ */
 const COPY_GUIDE_SLUG = "sdxc/copy-ui-components";
+
+/**
+ * Catalogue slugs that moved when the landing kit took its name, answered with a permanent
+ * redirect so links and search results to the old pages keep landing on the right one.
+ */
+const MOVED_SLUGS: Record<string, string> = {
+	"marketing-foundations": LANDING_FOUNDATIONS_SLUG,
+	"marketing-components": LANDING_COMPONENTS_SLUG,
+	"marketing-section": "landing-section",
+	"marketing-header": "landing-header",
+};
 
 export default createAction(routes.api.component, async (ctx) => {
 	let { component } = s.parse(s.object({ component: s.string() }), ctx.params);
+	let moved = MOVED_SLUGS[component];
+	if (moved) {
+		return redirect(routes.api.component.href({ component: moved }), {
+			status: redirect.Status.Permanent,
+		});
+	}
 	let tree = await buildComponentsNav();
 
 	if (component === THEMING_SLUG) return await themingPage(ctx, tree);
-	if (component === MARKETING_FOUNDATIONS_SLUG) return await marketingFoundationsPage(ctx, tree);
-	if (component === MARKETING_COMPONENTS_SLUG) return await marketingComponentsPage(ctx, tree);
+	if (component === LANDING_FOUNDATIONS_SLUG) return await landingFoundationsPage(ctx, tree);
+	if (component === LANDING_COMPONENTS_SLUG) return await landingComponentsPage(ctx, tree);
 	if (component === LANDING_PATTERNS_SLUG) return await landingPatternsPage(ctx, tree);
 
 	let reference = await readComponent(component);
@@ -130,19 +151,23 @@ export default createAction(routes.api.component, async (ctx) => {
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 							<CodeBlock labels={CODE_LABELS} code={INSTALL} language="bash" title="Terminal" />
 							<CodeBlock labels={CODE_LABELS} code={THEME_IMPORT} language="typescript" />
-							<p mix={[m(0), text("base"), fg("neutral")]}>
-								Or{" "}
-								<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
-									copy it into your project
-								</a>{" "}
-								to edit it:
-							</p>
-							<CodeBlock
-								labels={CODE_LABELS}
-								code={`sdxc ui add ${component}`}
-								language="bash"
-								title="Terminal"
-							/>
+							{reference.module === "components" ? (
+								<>
+									<p mix={[m(0), text("base"), fg("neutral")]}>
+										Or{" "}
+										<a href={routes.docs.show.href({ slug: COPY_GUIDE_SLUG })}>
+											copy it into your project
+										</a>{" "}
+										to edit it:
+									</p>
+									<CodeBlock
+										labels={CODE_LABELS}
+										code={`sdxc ui add ${component}`}
+										language="bash"
+										title="Terminal"
+									/>
+								</>
+							) : null}
 						</div>
 					</ReferenceSection>
 

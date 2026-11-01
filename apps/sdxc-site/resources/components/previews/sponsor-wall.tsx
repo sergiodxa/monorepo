@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
-import { SponsorWall } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { LinkButton } from "@sdxc/ui";
+import { LandingHeader, LandingSection, SponsorWall } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { WordmarkProps } from "~/resources/components/demo-media";
 
@@ -62,13 +62,13 @@ const BACKERS: readonly SponsorWall.PersonProps[] = [
 ];
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<MarketingSection>
-	<MarketingHeader eyebrow="Partners" align="center" description="…">
+const CODE = `<LandingSection>
+	<LandingHeader eyebrow="Partners" align="center" description="…">
 		Built with the support of these teams
-	</MarketingHeader>
+	</LandingHeader>
 	<SponsorWall
 		actions={
-			<LinkButton href="/sponsor" color="brand" mix={[marketingCtaChrome()]}>
+			<LinkButton href="/sponsor" color="brand" mix={[landingCtaChrome()]}>
 				Become a sponsor
 			</LinkButton>
 		}
@@ -85,24 +85,24 @@ const CODE = `<MarketingSection>
 			…
 		</SponsorWall.Individuals>
 	</SponsorWall>
-</MarketingSection>`;
+</LandingSection>`;
 
 /** What the preview registry reads: the source to show, and the band to draw. */
 export default {
 	code: CODE,
 	viewports: true,
 	render: () => (
-		<MarketingSection>
-			<MarketingHeader
+		<LandingSection>
+			<LandingHeader
 				eyebrow="Partners"
 				align="center"
 				description="Keel is free and open source. These companies and people pay for the time it takes to keep it that way."
 			>
 				Built with the support of these teams
-			</MarketingHeader>
+			</LandingHeader>
 			<SponsorWall
 				actions={
-					<LinkButton href="/examples/sponsor" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="/examples/sponsor" color="brand" mix={[landingCtaChrome()]}>
 						Become a sponsor
 					</LinkButton>
 				}
@@ -132,6 +132,6 @@ export default {
 					))}
 				</SponsorWall.Individuals>
 			</SponsorWall>
-		</MarketingSection>
+		</LandingSection>
 	),
 };

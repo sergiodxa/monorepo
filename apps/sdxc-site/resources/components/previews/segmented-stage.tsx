@@ -8,8 +8,8 @@
  */
 
 import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
-import { CodeStage, LandingHero, ProductFrame, SegmentedStage } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { CodeStage, LandingHero, ProductFrame, SegmentedStage } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import { IncidentCard, StatusBoard } from "~/resources/components/demo-media";
 
@@ -60,10 +60,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Start free
 						</Button>
-						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 							See pricing
 						</LinkButton>
 					</>

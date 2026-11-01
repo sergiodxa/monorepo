@@ -18,7 +18,7 @@ import { motionSafe } from "@sdxc/u/responsive";
 import { hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { Keyboard } from "@sdxc/ui";
-import { DocsHub } from "@sdxc/ui/patterns";
+import { DocsHub } from "@sdxc/ui/docs";
 import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { createAction } from "remix/router";

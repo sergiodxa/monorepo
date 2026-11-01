@@ -19,7 +19,7 @@ import { is, m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, text, weight } from "@sdxc/u/typography";
 import { Avatar, LinkButton } from "@sdxc/ui";
-import { SponsorWall } from "@sdxc/ui/patterns";
+import { SponsorWall } from "@sdxc/ui/landing";
 
 import type { Sponsor, SponsorRoster } from "~/app/services/sponsors";
 import type { MarkdownProps } from "~/resources/components/markdown-props";
@@ -31,8 +31,8 @@ import SectionBlock from "~/resources/components/section-block";
 /** The GitHub Sponsors profile the sponsorships are taken through. */
 const SPONSOR_PROFILE_HREF = `https://github.com/sponsors/${SPONSORED_LOGIN}`;
 
-/** The ruling between roster rows, the hairline every marketing surface uses. */
-const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
+/** The ruling between roster rows, the hairline every landing surface uses. */
+const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
 
 /** How many empty seats the window draws while nobody sponsors the work publicly. */
 const EMPTY_SEATS = 5;

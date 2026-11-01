@@ -1,5 +1,5 @@
 /**
- * The cards a marketing docs page lists the demo landings with: each demo's own title and
+ * The cards a landing docs page lists the demo landings with: each demo's own title and
  * description, opening the whole page in a new tab, so a reader can see the components
  * assembled into a real product page and come back to the reference.
  *
@@ -52,7 +52,7 @@ export default function DemoLandingLinks(handle: Handle<DemoLandingLinks.Props>)
 							raw({
 								blockSize: "100%",
 								textDecoration: "none",
-								borderRadius: "var(--ui-marketing-radius-surface, 1rem)",
+								borderRadius: "var(--ui-landing-radius-surface, 1rem)",
 								backgroundColor: "var(--ui-surface-raised, var(--ui-bg))",
 								boxShadow: "var(--ui-shadow-surface, 0 0 0 1px var(--ui-neutral-border))",
 								transition: "box-shadow 150ms",

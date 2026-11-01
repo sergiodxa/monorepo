@@ -11,7 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { is, m, maxIs } from "@sdxc/u/size";
 import { font, leading, text } from "@sdxc/u/typography";
-import { Feature } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";

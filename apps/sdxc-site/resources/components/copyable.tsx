@@ -14,7 +14,7 @@ import { rounded } from "@sdxc/u/effects";
 import { hstack, items } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
-import { CopyButton } from "@sdxc/ui";
+import { CopyButton } from "@sdxc/ui/docs";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

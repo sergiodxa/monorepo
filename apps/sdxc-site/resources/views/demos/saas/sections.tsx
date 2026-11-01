@@ -20,17 +20,7 @@ import {
 import { raw } from "@sdxc/u/general";
 import { hstack } from "@sdxc/u/layout";
 import { font, text } from "@sdxc/u/typography";
-import {
-	Accordion,
-	Badge,
-	Feature,
-	HeadingScope,
-	LinkButton,
-	LogoCloud,
-	MarketingHeader,
-	Split,
-	StatStrip,
-} from "@sdxc/ui";
+import { Accordion, Badge, HeadingScope, LinkButton } from "@sdxc/ui";
 import {
 	Bento,
 	ChangelogStrip,
@@ -40,16 +30,21 @@ import {
 	CodeStage,
 	Crosshair,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LogoCloud,
 	PricingBand,
 	ProductFrame,
 	Rails,
 	SegmentedStage,
+	Split,
+	StatStrip,
 	TabbedStage,
 	TestimonialBand,
-} from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+} from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import {
 	CurrencyScene,
@@ -231,10 +226,10 @@ export function HeroSection() {
 			}
 			actions={
 				<>
-					<LinkButton href="#start" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#start" color="brand" mix={[landingCtaChrome()]}>
 						Start free
 					</LinkButton>
-					<LinkButton href="#product" variant="surface" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#product" variant="surface" mix={[landingCtaChrome()]}>
 						Read the quickstart
 					</LinkButton>
 				</>
@@ -294,8 +289,8 @@ export function MeteringChapter() {
 			<HeadingScope level={2}>
 				<Split>
 					<Split.Copy>
-						<MarketingHeader
-							mix={[raw({ "--ui-marketing-header-end": "2rem" })]}
+						<LandingHeader
+							mix={[raw({ "--ui-landing-header-end": "2rem" })]}
 							eyebrow="01 / Metering"
 							description={
 								<>
@@ -306,7 +301,7 @@ export function MeteringChapter() {
 							}
 						>
 							Send events, Keel does the math
-						</MarketingHeader>
+						</LandingHeader>
 						<CheckList>
 							<CheckRow>Idempotency keys drop retried events</CheckRow>
 							<CheckRow>Count, sum, max or unique per meter</CheckRow>
@@ -420,7 +415,7 @@ export function PlatformChapter() {
 	return () => (
 		<Rails id="platform" ruled marks="corners">
 			<HeadingScope level={2}>
-				<MarketingHeader
+				<LandingHeader
 					layout="split"
 					eyebrow="03 / Platform"
 					description={
@@ -431,7 +426,7 @@ export function PlatformChapter() {
 					}
 				>
 					Everything after the meter
-				</MarketingHeader>
+				</LandingHeader>
 				<Bento columns={3}>
 					<Bento.Cell>
 						<Bento.Media>
@@ -499,7 +494,7 @@ export function SecurityChapter() {
 	return () => (
 		<Rails id="security" ruled marks="corners">
 			<HeadingScope level={2}>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="04 / Security"
 					description={
 						<>
@@ -509,7 +504,7 @@ export function SecurityChapter() {
 					}
 				>
 					Built to pass your audit
-				</MarketingHeader>
+				</LandingHeader>
 				<Feature.Grid variant="list" columns={3}>
 					<Feature>
 						<Feature.Icon>
@@ -792,10 +787,10 @@ export function ClosingBand() {
 			description="Send your first event in ten minutes and invoice real customers when you are ready. Starter is free until you bill $10k a month."
 			actions={
 				<>
-					<LinkButton href="#top" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#top" color="brand" mix={[landingCtaChrome()]}>
 						Start free
 					</LinkButton>
-					<LinkButton href="#faq" variant="surface" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#faq" variant="surface" mix={[landingCtaChrome()]}>
 						Talk to sales
 					</LinkButton>
 				</>

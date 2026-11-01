@@ -8,8 +8,7 @@
 
 import { raw } from "@sdxc/u/general";
 import { nowrap } from "@sdxc/u/typography";
-import { MarketingSection } from "@sdxc/ui";
-import { LogoSentence } from "@sdxc/ui/patterns";
+import { LandingSection, LogoSentence } from "@sdxc/ui/landing";
 
 import { SERIF } from "~/resources/views/demos/book/type";
 
@@ -78,7 +77,7 @@ export default function BookPress() {
 		let [proof, baseline, margin] = MASTHEADS.map(mastheadMark);
 
 		return (
-			<MarketingSection id="press" spacing="compact" ruled aria-label="Press">
+			<LandingSection id="press" spacing="compact" ruled aria-label="Press">
 				<LogoSentence>
 					Reviewed in{" "}
 					<span mix={[nowrap()]}>
@@ -92,7 +91,7 @@ export default function BookPress() {
 					</span>{" "}
 					and taught in forty design schools.
 				</LogoSentence>
-			</MarketingSection>
+			</LandingSection>
 		);
 	};
 }

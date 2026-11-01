@@ -15,8 +15,8 @@ import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Button, Link, TextField } from "@sdxc/ui";
-import { FeatureBand } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { FeatureBand } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import BookSamplePage from "~/resources/views/demos/book/sample-page";
 
@@ -61,7 +61,7 @@ export default function BookSample() {
 							required
 							mix={[raw({ flex: "1" })]}
 						/>
-						<Button type="submit" color="brand" mix={[marketingCtaChrome()]}>
+						<Button type="submit" color="brand" mix={[landingCtaChrome()]}>
 							Send me chapter 2
 						</Button>
 					</div>

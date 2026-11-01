@@ -22,8 +22,15 @@ import { combine, raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { at, dark } from "@sdxc/u/responsive";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
-import { MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
-import { Bento, FeatureBand, IconWell, TabbedStage } from "@sdxc/ui/patterns";
+import {
+	Bento,
+	FeatureBand,
+	IconWell,
+	LandingHeader,
+	LandingSection,
+	StatStrip,
+	TabbedStage,
+} from "@sdxc/ui/landing";
 
 import {
 	KidsScene,
@@ -182,13 +189,13 @@ const DETAILS = [
  */
 export function Details() {
 	return () => (
-		<MarketingSection id="small-things">
-			<MarketingHeader
+		<LandingSection id="small-things">
+			<LandingHeader
 				eyebrow="The small things"
 				description="The features families asked for once they had used Rooftree for a month."
 			>
 				Built for the aisle, not the desk
-			</MarketingHeader>
+			</LandingHeader>
 			<Bento columns={3}>
 				{DETAILS.map((detail) => {
 					let Scene = detail.scene;
@@ -211,7 +218,7 @@ export function Details() {
 					);
 				})}
 			</Bento>
-		</MarketingSection>
+		</LandingSection>
 	);
 }
 
@@ -317,7 +324,7 @@ function HouseholdKey() {
 								hstack({ gap: 3, align: "center" }),
 								raw({
 									paddingBlock: "0.75rem",
-									borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+									borderBlockStart: "1px solid var(--ui-landing-hairline)",
 								}),
 							]}
 						>
@@ -363,8 +370,8 @@ const PLATFORMS = [
  */
 export function Platforms() {
 	return () => (
-		<MarketingSection id="platforms" align="center">
-			<MarketingHeader
+		<LandingSection id="platforms" align="center">
+			<LandingHeader
 				align="center"
 				eyebrow="Everywhere you are"
 				description={
@@ -375,7 +382,7 @@ export function Platforms() {
 				}
 			>
 				Mixed phones, one household
-			</MarketingHeader>
+			</LandingHeader>
 			<div mix={[vstack({ gap: 12, align: "stretch" }), raw({ inlineSize: "100%" })]}>
 				<ul
 					mix={[
@@ -405,7 +412,7 @@ export function Platforms() {
 										paddingBlock: "1.75rem",
 										paddingInline: "1rem",
 										textAlign: "center",
-										borderRadius: "var(--ui-marketing-radius-surface, 1.5rem)",
+										borderRadius: "var(--ui-landing-radius-surface, 1.5rem)",
 										backgroundColor: "var(--ui-surface-raised)",
 										boxShadow: "var(--ui-shadow-surface)",
 									}),
@@ -431,6 +438,6 @@ export function Platforms() {
 					<StatStrip.Item label="Median sync between phones">0.4s</StatStrip.Item>
 				</StatStrip>
 			</div>
-		</MarketingSection>
+		</LandingSection>
 	);
 }

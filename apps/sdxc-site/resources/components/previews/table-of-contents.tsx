@@ -12,7 +12,7 @@ import { raw } from "@sdxc/u/general";
 import { hstack, insBs, sticky, vstack } from "@sdxc/u/layout";
 import { is, m, maxIs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { TableOfContents } from "@sdxc/ui";
+import { TableOfContents } from "@sdxc/ui/docs";
 
 /** The guide's headings, the shape a page's Markdown hands the list. */
 const ITEMS: TableOfContents.Item[] = [

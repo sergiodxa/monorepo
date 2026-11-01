@@ -84,20 +84,20 @@ const SEGMENT_MEANING: Record<string, string> = {
 	"shadow-ring": "Ring plus lift an elevated surface draws in place of a solid border",
 	"shadow-ring-hover": "That ring while the pointer is over the surface",
 	"image-outline": "Inset hairline that holds an image's edge against a same-tone background",
-	"marketing-measure": "Max content width of a marketing column",
-	"marketing-gutter": "Inline padding at the narrowest marketing container step",
-	"marketing-section-space": "Block padding for a normal marketing band",
-	"marketing-section-space-compact": "Block padding for a compact marketing band",
-	"marketing-section-space-hero": "Block padding for a hero marketing band",
-	"marketing-display-tracking": "Letter-spacing for marketing display headlines",
-	"marketing-display-weight": "Font weight for marketing display headlines",
-	"marketing-display-leading": "Line-height for marketing display headlines",
-	"marketing-lead-measure": "Max width of supporting lead copy under a headline",
-	"marketing-lead-size": "Font size of supporting lead copy",
-	"marketing-chapter-size": "Font size of a marketing section H2",
-	"marketing-logo-height": "Forced height of a logo-cloud mark",
-	"marketing-header-height": "Sticky marketing header target height",
-	"marketing-cta-radius": "Corner radius language for brand CTAs on landings",
+	"landing-measure": "Max content width of a landing column",
+	"landing-gutter": "Inline padding at the narrowest landing container step",
+	"landing-section-space": "Block padding for a normal landing band",
+	"landing-section-space-compact": "Block padding for a compact landing band",
+	"landing-section-space-hero": "Block padding for a hero landing band",
+	"landing-display-tracking": "Letter-spacing for landing display headlines",
+	"landing-display-weight": "Font weight for landing display headlines",
+	"landing-display-leading": "Line-height for landing display headlines",
+	"landing-lead-measure": "Max width of supporting lead copy under a headline",
+	"landing-lead-size": "Font size of supporting lead copy",
+	"landing-chapter-size": "Font size of a landing section H2",
+	"landing-logo-height": "Forced height of a logo-cloud mark",
+	"landing-header-height": "Sticky landing header target height",
+	"landing-cta-radius": "Corner radius language for brand CTAs on landings",
 };
 
 /**
@@ -124,7 +124,7 @@ const GROUP_INTROS: Record<string, string> = {
 	"font stacks": "The three families, resolved to system faces.",
 	"container scale": "The named widths a container query compares against.",
 	chart: "The categorical sequence a multi-series chart walks in order.",
-	marketing: "Layout and display tokens for landing bands, overridden per brand.",
+	landing: "Layout and display tokens for landing bands, overridden per brand.",
 };
 
 /** The order the theme page reads its bands in. */
@@ -137,7 +137,7 @@ const GROUP_ORDER = [
 	"font stacks",
 	"container scale",
 	"chart",
-	"marketing",
+	"landing",
 ];
 
 /**
@@ -700,7 +700,7 @@ function readBlock(source: string, selector: string): ThemeDeclaration[] {
 /** Which band a token with no tone belongs to, read from the family its name starts with. */
 function groupOf(segment: string): string {
 	if (segment.startsWith("chart-")) return "chart";
-	if (segment.startsWith("marketing-")) return "marketing";
+	if (segment.startsWith("landing-")) return "landing";
 	if (segment.startsWith("text-")) return "type scale";
 	if (segment.startsWith("font-")) return "font stacks";
 	if (segment.startsWith("container-")) return "container scale";

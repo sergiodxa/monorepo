@@ -12,7 +12,7 @@ import {
 	DOCS_FEEDBACK_NOTE_FIELD,
 	DOCS_FEEDBACK_PAGE_FIELD,
 	DOCS_FEEDBACK_VOTE_FIELD,
-} from "@sdxc/ui";
+} from "@sdxc/ui/docs";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { maxLength } from "remix/data-schema/checks";

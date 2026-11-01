@@ -16,7 +16,7 @@ import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 import { Badge, HeadingScope } from "@sdxc/ui";
-import { FeatureBand, ProductFrame, StepList, TabbedStage } from "@sdxc/ui/patterns";
+import { FeatureBand, ProductFrame, StepList, TabbedStage } from "@sdxc/ui/landing";
 
 /** One row a framed panel lists: a name, a mono detail line and a status badge. */
 interface Row {
@@ -135,7 +135,7 @@ function Panel(handle: Handle<PanelProps>) {
 						mix={[
 							hstack({ gap: 3, align: "center", justify: "between" }),
 							p(3.5, 5),
-							when("& + &", raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" })),
+							when("& + &", raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" })),
 						]}
 					>
 						<span mix={[vstack({ gap: 0.5, align: "start" })]}>

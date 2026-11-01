@@ -14,10 +14,10 @@ import { raw } from "@sdxc/u/general";
 import { container, hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
-/** The ruling between the header, body and footer, the hairline every marketing surface uses. */
-const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
+/** The ruling between the header, body and footer, the hairline every landing surface uses. */
+const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
 
 /** The size container a panel's body queries, so its layout follows the window rather than the page. */
 export const FRAMED_PANEL_CONTAINER = "framed-panel";
@@ -50,7 +50,7 @@ export default function FramedPanel(handle: Handle<FramedPanel.Props>) {
 				mix={[
 					raw({
 						padding: "0.25rem",
-						borderRadius: "calc(var(--ui-marketing-radius-frame, 0.75rem) + 0.25rem)",
+						borderRadius: "calc(var(--ui-landing-radius-frame, 0.75rem) + 0.25rem)",
 						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 7%, transparent)",
 						boxShadow:
 							"inset 0 0 0 1px color-mix(in oklch, var(--ui-brand-bg-solid) 12%, transparent)",
@@ -60,10 +60,10 @@ export default function FramedPanel(handle: Handle<FramedPanel.Props>) {
 			>
 				<div
 					mix={[
-						marketingSurface(),
+						landingSurface(),
 						container(FRAMED_PANEL_CONTAINER),
 						vstack({ align: "stretch" }),
-						raw({ borderRadius: "var(--ui-marketing-radius-frame, 0.75rem)", overflow: "hidden" }),
+						raw({ borderRadius: "var(--ui-landing-radius-frame, 0.75rem)", overflow: "hidden" }),
 					]}
 				>
 					<div

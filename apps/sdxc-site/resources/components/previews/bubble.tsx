@@ -12,7 +12,8 @@ import { rounded } from "@sdxc/u/effects";
 import { gap, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minBs, pi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Bubble, ToggleButton } from "@sdxc/ui";
+import { ToggleButton } from "@sdxc/ui";
+import { Bubble } from "@sdxc/ui/chat";
 import { pressToggle } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 

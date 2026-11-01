@@ -15,9 +15,8 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Button, DropZone, Empty, Header, Item } from "@sdxc/ui";
-import { DragSession } from "@sdxc/ui/behaviors";
-import { dropZone } from "@sdxc/ui/mixins";
+import { Button, Header, Item } from "@sdxc/ui";
+import { DragSession, DropZone, dropZone, Empty } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 
 import { formatFileSize } from "~/app/services/file-size";

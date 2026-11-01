@@ -14,7 +14,8 @@ import { media } from "@sdxc/u/responsive";
 import { m, mbe, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { balance, leading, text, textDecoration, tracking, weight } from "@sdxc/u/typography";
-import { AnchorHeading, TAG_BY_LEVEL } from "@sdxc/ui";
+import { TAG_BY_LEVEL } from "@sdxc/ui";
+import { AnchorHeading } from "@sdxc/ui/docs";
 import { displayHeading } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";

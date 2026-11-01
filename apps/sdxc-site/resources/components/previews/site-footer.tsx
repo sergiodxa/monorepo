@@ -11,7 +11,7 @@ import { MailIcon, MessagesSquareIcon, RssIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
 import { Button, HeadingScope, Input } from "@sdxc/ui";
-import { SiteFooter } from "@sdxc/ui/patterns";
+import { SiteFooter } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<SiteFooter

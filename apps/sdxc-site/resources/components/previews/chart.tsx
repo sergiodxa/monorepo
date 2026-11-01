@@ -11,7 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { basis, grow, hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { text, textAlign, weight } from "@sdxc/u/typography";
-import { Chart } from "@sdxc/ui";
+import { Chart } from "@sdxc/ui/app";
 import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 

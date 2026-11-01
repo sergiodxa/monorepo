@@ -11,7 +11,8 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { text, weight } from "@sdxc/u/typography";
-import { StatStrip, Table } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
+import { StatStrip } from "@sdxc/ui/landing";
 
 import type { QueryCount, SearchSurface, SiteEventsSnapshot } from "~/app/services/site-events";
 

@@ -13,7 +13,8 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
-import { DocsPageHeader, InstallCommand, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
+import { DocsPageHeader, InstallCommand } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -29,8 +30,7 @@ import { listGuidesAbout } from "~/app/services/docs";
 import {
 	buildPackageNav,
 	CATALOGUE_PACKAGES,
-	listComponentEntries,
-	listMarketingEntries,
+	listComponentGroups,
 	listUiExportGroups,
 	listUtilityGroups,
 } from "~/app/services/navigation";
@@ -213,21 +213,20 @@ async function readCatalogue(name: string) {
 			entries: [
 				{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
 				{
-					title: "Marketing foundations",
-					href: routes.api.component.href({ component: "marketing-foundations" }),
+					title: "Landing foundations",
+					href: routes.api.component.href({ component: "landing-foundations" }),
 				},
 				{
-					title: "Marketing components",
-					href: routes.api.component.href({ component: "marketing-components" }),
+					title: "Landing components",
+					href: routes.api.component.href({ component: "landing-components" }),
 				},
 				{
 					title: "Landing patterns",
 					href: routes.api.component.href({ component: "landing-patterns" }),
 				},
-				...(await listComponentEntries()),
 			],
 		},
-		{ title: "Marketing", entries: await listMarketingEntries() },
+		...(await listComponentGroups()),
 		...(await listUiExportGroups()),
 	];
 }

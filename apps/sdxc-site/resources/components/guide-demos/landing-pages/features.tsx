@@ -8,8 +8,7 @@
  */
 
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
-import { Feature } from "@sdxc/ui";
-import { FeatureBand, ProductFrame, StepList } from "@sdxc/ui/patterns";
+import { Feature, FeatureBand, ProductFrame, StepList } from "@sdxc/ui/landing";
 
 import { IncidentCard } from "~/resources/components/demo-media";
 

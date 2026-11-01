@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { overflow } from "@sdxc/u/overflow";
 import { is } from "@sdxc/u/size";
-import { Chart } from "@sdxc/ui";
+import { Chart } from "@sdxc/ui/app";
 
 namespace Sparkline {
 	export interface Props {

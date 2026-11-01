@@ -29,12 +29,12 @@ globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
  * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
-	"@sdxc/ui/code-tabs-sync": () => import("@sdxc/ui/code-tabs-sync"),
-	"@sdxc/ui/copy-button": () => import("@sdxc/ui/copy-button"),
+	"@sdxc/ui/docs/code-tabs-sync": () => import("@sdxc/ui/docs/code-tabs-sync"),
+	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 	"@sdxc/ui/dialog-dismiss": () => import("@sdxc/ui/dialog-dismiss"),
-	"@sdxc/ui/docs-nav-tools": () => import("@sdxc/ui/docs-nav-tools"),
-	"@sdxc/ui/page-actions": () => import("@sdxc/ui/page-actions"),
-	"@sdxc/ui/table-of-contents": () => import("@sdxc/ui/table-of-contents"),
+	"@sdxc/ui/docs/docs-nav-tools": () => import("@sdxc/ui/docs/docs-nav-tools"),
+	"@sdxc/ui/docs/page-actions": () => import("@sdxc/ui/docs/page-actions"),
+	"@sdxc/ui/docs/table-of-contents": () => import("@sdxc/ui/docs/table-of-contents"),
 };
 
 /**

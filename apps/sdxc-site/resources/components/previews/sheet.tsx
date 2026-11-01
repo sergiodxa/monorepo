@@ -13,7 +13,8 @@ import { Trash2Icon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Badge, Button, Empty, Keyboard, Separator, Sheet, Text } from "@sdxc/ui";
+import { Badge, Button, Keyboard, Separator, Sheet, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { hotkey } from "@sdxc/ui/mixins";
 import { clientEntry, css, on } from "remix/component";
 

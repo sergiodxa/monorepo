@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { DocsFeedback } from "@sdxc/ui";
+import { DocsFeedback } from "@sdxc/ui/docs";
 
 /** Every string both states show. */
 const LABELS: DocsFeedback.Labels = {

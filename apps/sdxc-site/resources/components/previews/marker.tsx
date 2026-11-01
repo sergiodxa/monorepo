@@ -10,8 +10,9 @@
 import { CheckIcon, TriangleAlertIcon, UserPlusIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Marker, Spinner } from "@sdxc/ui";
+import { Spinner } from "@sdxc/ui";
 import { textShimmer } from "@sdxc/ui/animations";
+import { Marker } from "@sdxc/ui/chat";
 import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */

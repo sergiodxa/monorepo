@@ -20,6 +20,8 @@ export interface UiExportEntry {
 	subpath: UiSubpath;
 	/** The name in kebab case, which is the last segment of its URL. */
 	slug: string;
+	/** The namespace that ships it, for a helper only that namespace's components use. */
+	namespace?: string;
 }
 
 /** A method of a behavior class, as one row of its methods table. */
@@ -56,6 +58,8 @@ export interface UiExportReference {
 	name: string;
 	subpath: UiSubpath;
 	slug: string;
+	/** The namespace that ships it, for a helper only that namespace's components use. */
+	namespace?: string;
 	/** The file under the subpath that declares it, without its extension. */
 	module: string;
 	/**
@@ -99,4 +103,12 @@ async function readDocument(): Promise<UiExportDocument> {
 	let load = Object.values(documents)[0];
 	if (!load) throw new Error("The @sdxc/ui exports document is missing from the bundle");
 	return await load();
+}
+
+/**
+ * The specifier a reader imports a helper from: its namespace when only that namespace's
+ * components use it, its subpath otherwise.
+ */
+export function uiExportImportPath(reference: { subpath: UiSubpath; namespace?: string }): string {
+	return `@sdxc/ui/${reference.namespace ?? reference.subpath}`;
 }

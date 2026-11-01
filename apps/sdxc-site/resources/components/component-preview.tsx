@@ -17,7 +17,8 @@ import { clip, overflowX } from "@sdxc/u/overflow";
 import { at, atMax } from "@sdxc/u/responsive";
 import { is, minBs, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { CodeBlock, Disclosure } from "@sdxc/ui";
+import { Disclosure } from "@sdxc/ui";
+import { CodeBlock } from "@sdxc/ui/docs";
 
 import { CODE_LABELS } from "~/resources/components/docs-labels";
 

@@ -10,7 +10,7 @@ import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { CodeBlock, CodeTabs } from "@sdxc/ui";
+import { CodeBlock, CodeTabs } from "@sdxc/ui/docs";
 
 /** The copy strings every block carries. */
 const LABELS = { copy: "Copy code", copied: "Copied" };

@@ -16,8 +16,8 @@ import {
 	Trash2Icon,
 } from "@sdxc/icons";
 import { is, maxIs } from "@sdxc/u/size";
-import { Attachment, Dialog } from "@sdxc/ui";
-import { attachmentTrigger } from "@sdxc/ui/mixins";
+import { Dialog } from "@sdxc/ui";
+import { Attachment, attachmentTrigger } from "@sdxc/ui/chat";
 import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */

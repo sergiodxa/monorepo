@@ -7,7 +7,7 @@
  */
 
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
-import { AnnouncementChip } from "@sdxc/ui/patterns";
+import { AnnouncementChip } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<AnnouncementChip href="/examples/changelog/custom-domains">

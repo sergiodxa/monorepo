@@ -1,7 +1,7 @@
 /**
  * The `section-block` tag: one band of the landing page, optionally opened by a short
- * mono label and a display-size title. Built on {@link MarketingSection} (via Band) and
- * {@link MarketingHeader} so section chrome shares the marketing vocabulary.
+ * mono label and a display-size title. Built on {@link LandingSection} (via Band) and
+ * {@link LandingHeader} so section chrome shares the landing vocabulary.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,8 +15,9 @@ import { vstack } from "@sdxc/u/layout";
 import { m, maxIs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { balance, font, text, textTransform, tracking } from "@sdxc/u/typography";
-import { HeadingScope, MarketingHeader } from "@sdxc/ui";
-import { marketingLead } from "@sdxc/ui/styles";
+import { HeadingScope } from "@sdxc/ui";
+import { LandingHeader } from "@sdxc/ui/landing";
+import { landingLead } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -46,17 +47,17 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 		if (title) {
 			header = (
 				<HeadingScope level={2}>
-					<MarketingHeader
+					<LandingHeader
 						eyebrow={eyebrow ? `[ ${eyebrow} ]` : undefined}
 						eyebrowVariant="mono"
 						align={align}
 						mix={[maxIs("52rem")]}
 						parts={{
-							eyebrow: [raw({ "--ui-marketing-eyebrow-color": "var(--ui-brand-fg)" })],
+							eyebrow: [raw({ "--ui-landing-eyebrow-color": "var(--ui-brand-fg)" })],
 						}}
 					>
 						{title}
-					</MarketingHeader>
+					</LandingHeader>
 				</HeadingScope>
 			);
 		} else if (eyebrow) {
@@ -100,7 +101,7 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 
 										align === "center"
 											? [
-													marketingLead(),
+													landingLead(),
 													balance(),
 
 													when('& [data-slot="actions"]', raw({ justifyContent: "center" })),

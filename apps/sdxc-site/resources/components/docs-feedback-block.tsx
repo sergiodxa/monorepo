@@ -13,7 +13,7 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { DocsFeedback } from "@sdxc/ui";
+import { DocsFeedback } from "@sdxc/ui/docs";
 
 import routes from "~/routes/web";
 

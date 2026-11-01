@@ -7,7 +7,7 @@
  */
 
 import { m } from "@sdxc/u/size";
-import { UiLabel } from "@sdxc/ui";
+import { UiLabel } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<p>

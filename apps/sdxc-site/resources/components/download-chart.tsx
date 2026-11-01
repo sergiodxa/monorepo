@@ -17,7 +17,7 @@ import { media } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { tabularNums, text, weight } from "@sdxc/u/typography";
-import { Chart } from "@sdxc/ui";
+import { Chart } from "@sdxc/ui/app";
 
 import { cumulative, rollingAverage } from "~/app/services/npm-stats";
 

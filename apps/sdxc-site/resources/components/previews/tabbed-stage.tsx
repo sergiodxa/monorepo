@@ -15,7 +15,7 @@ import { is, m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, weight } from "@sdxc/u/typography";
 import { Badge } from "@sdxc/ui";
-import { CodeStage, ProductFrame, TabbedStage } from "@sdxc/ui/patterns";
+import { CodeStage, ProductFrame, TabbedStage } from "@sdxc/ui/landing";
 
 /** Monitors the dashboard panel lists, with the state their probes report. */
 const MONITORS = [
@@ -76,7 +76,7 @@ function MonitorList() {
 						mix={[
 							hstack({ gap: 3, align: "center", justify: "between" }),
 							p(3.5, 5),
-							when("& + &", raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" })),
+							when("& + &", raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" })),
 						]}
 					>
 						<span mix={[vstack({ gap: 0.5, align: "start" })]}>

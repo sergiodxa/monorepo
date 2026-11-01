@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { InstallCommand } from "@sdxc/ui";
+import type { InstallCommand } from "@sdxc/ui/docs";
 
-import { readCodeTabsCookie } from "@sdxc/ui/mixins";
+import { readCodeTabsCookie } from "@sdxc/ui/docs";
 
 /** The sync key every install line and package-manager strip on the site shares. */
 export const PACKAGE_MANAGER_KEY = "package-manager";

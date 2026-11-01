@@ -17,7 +17,7 @@ import {
 } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Feature } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 
 /** The claims both grids draw, as icon, title and body. */
 const CLAIMS = [

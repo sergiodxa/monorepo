@@ -14,8 +14,8 @@ import { raw } from "@sdxc/u/general";
 import { hstack } from "@sdxc/u/layout";
 import { is, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { MotionLoop } from "@sdxc/ui/patterns";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { MotionLoop } from "@sdxc/ui/landing";
+import { landingSurface } from "@sdxc/ui/styles";
 import { css } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
@@ -32,7 +32,7 @@ export default {
 	render: () => (
 		<MotionLoop
 			pauseLabel="Pause the pipeline animation"
-			mix={[is("full"), marketingSurface(), rounded("xl"), p(8)]}
+			mix={[is("full"), landingSurface(), rounded("xl"), p(8)]}
 		>
 			<div
 				mix={[hstack({ gap: 4, align: "center", justify: "center" }), raw({ flexWrap: "wrap" })]}
@@ -46,7 +46,7 @@ export default {
 								text("sm"),
 								weight("medium"),
 								fg("neutral.emphasis"),
-								raw({ boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)" }),
+								raw({ boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)" }),
 							]}
 						>
 							{step}
@@ -59,7 +59,7 @@ export default {
 										position: "relative",
 										inlineSize: "3rem",
 										blockSize: "1px",
-										backgroundColor: "var(--ui-marketing-hairline)",
+										backgroundColor: "var(--ui-landing-hairline)",
 									}),
 									keyframes("preview-pipeline-pulse", {
 										from: { insetInlineStart: "0" },

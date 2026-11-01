@@ -14,7 +14,9 @@ import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs, mi, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Link, StatStrip, Table } from "@sdxc/ui";
+import { Link } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
+import { StatStrip } from "@sdxc/ui/landing";
 
 import type { NpmStatsSnapshot, PackageSummary } from "~/app/services/npm-stats";
 import type { PackageRow, Range, StatsQuery } from "~/resources/components/package-table";

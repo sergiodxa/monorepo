@@ -230,7 +230,7 @@ export function RevenueBoard() {
 										gridColumn: "1 / -1",
 										gridTemplateColumns: "subgrid",
 										alignItems: "center",
-										borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+										borderBlockStart: "1px solid var(--ui-landing-hairline)",
 									}),
 									p(2.5, 4),
 								]}
@@ -277,7 +277,7 @@ function Rail() {
 				showFrom("lg", BOARD, "flex"),
 				raw({ flexDirection: "column", gap: "0.25rem" }),
 				p(4, 3),
-				raw({ borderInlineEnd: "1px solid var(--ui-marketing-hairline)" }),
+				raw({ borderInlineEnd: "1px solid var(--ui-landing-hairline)" }),
 			]}
 		>
 			<span
@@ -390,7 +390,7 @@ function RevenueChart() {
 							x2={CHART.width}
 							y1={CHART.height * line}
 							y2={CHART.height * line}
-							stroke="var(--ui-marketing-hairline)"
+							stroke="var(--ui-landing-hairline)"
 							stroke-dasharray="3 5"
 						/>
 					))}

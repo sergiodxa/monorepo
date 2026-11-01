@@ -8,7 +8,7 @@
 
 import { raw } from "@sdxc/u/general";
 import { whiteSpace } from "@sdxc/u/typography";
-import { LogoSentence } from "@sdxc/ui/patterns";
+import { LogoSentence } from "@sdxc/ui/landing";
 
 import { Wordmark } from "~/resources/components/demo-media";
 

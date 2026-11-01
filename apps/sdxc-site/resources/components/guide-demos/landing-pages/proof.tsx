@@ -6,8 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LogoCloud, StatStrip } from "@sdxc/ui";
-import { ProofStrip } from "@sdxc/ui/patterns";
+import { LogoCloud, ProofStrip, StatStrip } from "@sdxc/ui/landing";
 
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 

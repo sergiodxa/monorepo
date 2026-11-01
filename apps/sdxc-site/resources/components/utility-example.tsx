@@ -14,7 +14,7 @@ import { rounded } from "@sdxc/u/effects";
 import { vstack } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
 import { is, minBs, p } from "@sdxc/u/size";
-import { CodeBlock } from "@sdxc/ui";
+import { CodeBlock } from "@sdxc/ui/docs";
 
 import { CODE_LABELS } from "~/resources/components/docs-labels";
 

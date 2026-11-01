@@ -14,7 +14,9 @@ import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Chart, Link, StatStrip, Table } from "@sdxc/ui";
+import { Link } from "@sdxc/ui";
+import { Chart, Table } from "@sdxc/ui/app";
+import { StatStrip } from "@sdxc/ui/landing";
 
 import type { GitHubStatsSnapshot, TrafficDay, TrafficSource } from "~/app/services/github-stats";
 

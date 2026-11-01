@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { InstallCommand } from "@sdxc/ui";
+import { InstallCommand } from "@sdxc/ui/docs";
 
 /** The copy strings every block carries. */
 const LABELS = { copy: "Copy code", copied: "Copied" };

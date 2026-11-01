@@ -15,9 +15,8 @@ import { cursor, touchAction, userSelect } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Badge, DropIndicator, Header, Item } from "@sdxc/ui";
-import { DragSession } from "@sdxc/ui/behaviors";
-import { dragReorder } from "@sdxc/ui/mixins";
+import { Badge, Header, Item } from "@sdxc/ui";
+import { dragReorder, DragSession, DropIndicator } from "@sdxc/ui/app";
 import { clientEntry, on, ref } from "remix/component";
 
 import { reorder } from "~/app/services/reorder-list";

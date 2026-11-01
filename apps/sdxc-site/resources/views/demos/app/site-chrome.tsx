@@ -13,7 +13,7 @@ import { vstack } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { leading, text } from "@sdxc/u/typography";
 import { DialogDismiss } from "@sdxc/ui";
-import { SiteFooter as Footer, SiteHeader as Header } from "@sdxc/ui/patterns";
+import { SiteFooter as Footer, SiteHeader as Header } from "@sdxc/ui/landing";
 
 import { Wordmark } from "~/resources/views/demos/app/brand";
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";

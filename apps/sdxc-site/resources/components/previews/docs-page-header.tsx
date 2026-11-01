@@ -9,7 +9,7 @@
 import { fg } from "@sdxc/u/color";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { DocsPageHeader, PageActions } from "@sdxc/ui";
+import { DocsPageHeader, PageActions } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<DocsPageHeader

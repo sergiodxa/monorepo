@@ -9,7 +9,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { CodeStage } from "@sdxc/ui/patterns";
+import { CodeStage } from "@sdxc/ui/landing";
 
 /** The snippet the slab numbers, one string so each line gets its own counter. */
 const SNIPPET = `import { createMonitor } from "@beacon/sdk";

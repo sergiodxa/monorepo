@@ -17,10 +17,9 @@ import { clip } from "@sdxc/u/overflow";
 import { bs, is, m, minBs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, textAlign, weight } from "@sdxc/u/typography";
-import { Bubble, Button, Heading, HeadingScope, Input, MessageScroller, Text } from "@sdxc/ui";
+import { Button, Heading, HeadingScope, Input, Text } from "@sdxc/ui";
 import { scrollFade } from "@sdxc/ui/animations";
-import { ScrollFollowModel } from "@sdxc/ui/behaviors";
-import { messageFollow } from "@sdxc/ui/mixins";
+import { Bubble, messageFollow, MessageScroller, ScrollFollowModel } from "@sdxc/ui/chat";
 import { clientEntry, on } from "remix/component";
 
 /** One exchange the Send button plays, so every press adds a question and its answer. */

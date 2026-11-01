@@ -13,7 +13,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
-import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -27,7 +27,7 @@ import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
-import { readUiExport } from "~/app/services/ui-exports";
+import { readUiExport, uiExportImportPath } from "~/app/services/ui-exports";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
@@ -60,7 +60,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 	if (reference === null) return notFound(ctx, tree);
 
 	let { symbol, companions } = reference;
-	let module = `@sdxc/ui/${reference.subpath}`;
+	let module = uiExportImportPath(reference);
 	let markdownHref = routes.markdown.uiExport.href({ subpath: reference.subpath, slug });
 	/** A description of one sentence is already the headline, so it is not printed twice. */
 	let usage =

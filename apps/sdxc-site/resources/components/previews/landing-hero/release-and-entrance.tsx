@@ -7,8 +7,8 @@
  */
 
 import { Button, LinkButton } from "@sdxc/ui";
-import { LandingHero } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { LandingHero } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<LandingHero
@@ -17,8 +17,8 @@ const CODE = `<LandingHero
 	description="Routing, data, sessions and jobs, with nothing to wire together."
 	actions={
 		<>
-			<Button color="brand" mix={[marketingCtaChrome()]}>Get started</Button>
-			<LinkButton href="/docs" variant="surface" mix={[marketingCtaChrome()]}>Read the docs</LinkButton>
+			<Button color="brand" mix={[landingCtaChrome()]}>Get started</Button>
+			<LinkButton href="/docs" variant="surface" mix={[landingCtaChrome()]}>Read the docs</LinkButton>
 		</>
 	}
 	release={<a href="/changelog/8-1">v8.1 — released Oct 28, 2026 →</a>}
@@ -36,10 +36,10 @@ export default {
 			description="Routing, data, sessions and jobs, with nothing to wire together."
 			actions={
 				<>
-					<Button color="brand" mix={[marketingCtaChrome()]}>
+					<Button color="brand" mix={[landingCtaChrome()]}>
 						Get started
 					</Button>
-					<LinkButton href="#docs" variant="surface" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#docs" variant="surface" mix={[landingCtaChrome()]}>
 						Read the docs
 					</LinkButton>
 				</>

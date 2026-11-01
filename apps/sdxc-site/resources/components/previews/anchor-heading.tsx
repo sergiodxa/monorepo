@@ -7,7 +7,8 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { AnchorHeading, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
+import { AnchorHeading } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Typeset preset="docs">

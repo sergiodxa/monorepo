@@ -13,7 +13,7 @@ import { HeartIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { is } from "@sdxc/u/size";
 import { LinkButton } from "@sdxc/ui";
-import { SponsorWall } from "@sdxc/ui/patterns";
+import { SponsorWall } from "@sdxc/ui/landing";
 
 import type { Sponsor } from "~/app/services/sponsors";
 import type { MarkdownProps } from "~/resources/components/markdown-props";

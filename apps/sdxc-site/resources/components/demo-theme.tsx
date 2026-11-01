@@ -1,5 +1,5 @@
 /**
- * Re-themes one demo landing: its own brand and neutral palettes, faces and marketing
+ * Re-themes one demo landing: its own brand and neutral palettes, faces and landing
  * tokens, applied to a wrapper so the page shows how far the tokens alone take a brand
  * without touching the site around it.
  *

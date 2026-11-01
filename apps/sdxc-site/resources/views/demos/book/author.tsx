@@ -11,7 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { AuthorBand } from "@sdxc/ui/patterns";
+import { AuthorBand } from "@sdxc/ui/landing";
 
 import { SERIF } from "~/resources/views/demos/book/type";
 
@@ -42,7 +42,7 @@ function Portrait() {
 					x2="300"
 					y1={16 + index * 16}
 					y2={16 + index * 16}
-					stroke="var(--ui-marketing-hairline)"
+					stroke="var(--ui-landing-hairline)"
 				/>
 			))}
 			<circle cx="216" cy="118" r="86" fill="var(--ui-brand-bg-solid)" opacity="0.9" />
@@ -118,12 +118,12 @@ export default function BookAuthor() {
 					mix={[
 						m(0),
 						p(0),
-						raw({ listStyle: "none", borderBlockStart: "1px solid var(--ui-marketing-hairline)" }),
+						raw({ listStyle: "none", borderBlockStart: "1px solid var(--ui-landing-hairline)" }),
 						when(
 							"& > li",
 							raw({
 								paddingBlock: "0.75rem",
-								borderBlockEnd: "1px solid var(--ui-marketing-hairline)",
+								borderBlockEnd: "1px solid var(--ui-landing-hairline)",
 							}),
 						),
 						fg("neutral"),

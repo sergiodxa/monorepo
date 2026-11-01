@@ -1,5 +1,5 @@
 /**
- * `GET /api/ui/marketing-components` — Phase 1 marketing primitives with live
+ * `GET /api/ui/landing-components` — Phase 1 marketing primitives with live
  * demos: bands, headers, CTA clusters, splits, stats, logo clouds, and features.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,23 +11,19 @@ import { fg } from "@sdxc/u/color";
 import { container, relative, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
+import { Button, CtaGroup, HeadingScope, LinkButton } from "@sdxc/ui";
+import { viewReveal } from "@sdxc/ui/animations";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import {
-	Button,
-	CodeBlock,
-	CtaGroup,
-	DocsPageHeader,
 	Feature,
-	HeadingScope,
-	LinkButton,
+	LandingHeader,
+	LandingSection,
 	LogoCloud,
-	MarketingHeader,
-	MarketingSection,
+	ProductFrame,
 	Split,
 	StatStrip,
-} from "@sdxc/ui";
-import { viewReveal } from "@sdxc/ui/animations";
-import { ProductFrame } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+} from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";
@@ -36,10 +32,10 @@ import type { NavTree } from "~/app/services/navigation";
 import { withBundleCache } from "~/app/http/caching";
 import { adsDayTag } from "~/app/services/ads";
 import {
-	MARKETING_COMPONENTS_SUMMARY,
-	MARKETING_COMPONENTS_TITLE,
+	LANDING_COMPONENTS_SUMMARY,
+	LANDING_COMPONENTS_TITLE,
 } from "~/app/services/catalogue-markdown";
-import { MARKETING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
+import { LANDING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
 import DemoLandingLinks from "~/resources/components/demo-landing-links";
 import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
@@ -59,23 +55,23 @@ const EYEBROW_DEMOS = [
 	["soft", "Alerting", "Page the right person, once"],
 	["pill", "New", "Multi-region checks on every plan"],
 	["numbered", "Incidents", "Every incident writes its own timeline"],
-] as const satisfies readonly (readonly [MarketingHeader.EyebrowVariant, string, string])[];
+] as const satisfies readonly (readonly [LandingHeader.EyebrowVariant, string, string])[];
 
 /**
- * Renders the marketing components overview page.
+ * Renders the landing components overview page.
  *
  * @param ctx - The request being answered.
  * @param tree - The `@sdxc/ui` tree, so the shell around the page still navigates.
  * @returns The rendered page, with the cache policy every generated page carries.
  */
-export default async function marketingComponentsPage(ctx: AppContext, tree: NavTree) {
-	let markdownHref = routes.markdown.component.href({ component: MARKETING_COMPONENTS_SLUG });
-	let activePath = routes.api.component.href({ component: MARKETING_COMPONENTS_SLUG });
+export default async function landingComponentsPage(ctx: AppContext, tree: NavTree) {
+	let markdownHref = routes.markdown.component.href({ component: LANDING_COMPONENTS_SLUG });
+	let activePath = routes.api.component.href({ component: LANDING_COMPONENTS_SLUG });
 
 	let anchors: Anchor[] = [
 		{ id: "demos", text: "Demo landings", level: 2 },
-		{ id: "section", text: "MarketingSection", level: 2 },
-		{ id: "header", text: "MarketingHeader", level: 2 },
+		{ id: "section", text: "LandingSection", level: 2 },
+		{ id: "header", text: "LandingHeader", level: 2 },
 		{ id: "cta", text: "CtaGroup", level: 2 },
 		{ id: "split", text: "Split", level: 2 },
 		{ id: "stats", text: "StatStrip", level: 2 },
@@ -86,8 +82,8 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${MARKETING_COMPONENTS_TITLE} — @sdxc/ui`}
-			description={MARKETING_COMPONENTS_SUMMARY}
+			title={`${LANDING_COMPONENTS_TITLE} — @sdxc/ui`}
+			description={LANDING_COMPONENTS_SUMMARY}
 			canonical={ctx.url.href}
 			siteFooter={false}
 		>
@@ -103,12 +99,12 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 							crumbs={[
 								{ label: "API", href: routes.api.index.href() },
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-								{ label: MARKETING_COMPONENTS_TITLE },
+								{ label: LANDING_COMPONENTS_TITLE },
 							]}
-							title={MARKETING_COMPONENTS_TITLE}
+							title={LANDING_COMPONENTS_TITLE}
 							description={
 								<>
-									Landing primitives built on the marketing foundations. Copy stays on the page —
+									Landing primitives built on the landing foundations. Copy stays on the page —
 									every string below is a demo prop. Listbox <code>Section</code> remains for menus.
 								</>
 							}
@@ -116,7 +112,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 								<PageActions
 									markdownHref={markdownHref}
 									markdownUrl={absoluteUrl(markdownHref)}
-									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/components/marketing-section.tsx`}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/landing/landing-section.tsx`}
 								/>
 							}
 						/>
@@ -139,13 +135,13 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 
 						<ReferenceSection
 							id="section"
-							title="MarketingSection"
+							title="LandingSection"
 							lead='Tones plain, tinted, grid, inverse, brand and gradient; spacing compact, normal, hero and cta; an optional hairline and framed column. inset floats the band as a rounded panel ("top" / "bottom" join two). Pair with viewReveal() for scroll entry.'
 						>
 							<HeadingScope>
 								<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-									<MarketingSection tone="tinted" spacing="compact" inset mix={[viewReveal()]}>
-										<MarketingHeader
+									<LandingSection tone="tinted" spacing="compact" inset mix={[viewReveal()]}>
+										<LandingHeader
 											eyebrow="Status pages"
 											description={
 												<>
@@ -156,49 +152,49 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 											mix={[m(0)]}
 										>
 											Tell customers before they ask
-										</MarketingHeader>
-									</MarketingSection>
-									<MarketingSection
+										</LandingHeader>
+									</LandingSection>
+									<LandingSection
 										tone="brand"
 										spacing="compact"
 										align="center"
 										inset
 										mix={[viewReveal()]}
 									>
-										<MarketingHeader
+										<LandingHeader
 											align="center"
 											description="Six regions, thirty-second checks and a public status page on the free plan."
 											mix={[m(0)]}
 										>
 											Five monitors free, forever
-										</MarketingHeader>
-									</MarketingSection>
+										</LandingHeader>
+									</LandingSection>
 								</div>
 							</HeadingScope>
 							<CodeBlock
 								labels={CODE_LABELS}
-								code={`<MarketingSection tone="tinted" spacing="compact" inset>
-	<MarketingHeader eyebrow={t("badge")} description={t("lead")}>
+								code={`<LandingSection tone="tinted" spacing="compact" inset>
+	<LandingHeader eyebrow={t("badge")} description={t("lead")}>
 		{t("title")}
-	</MarketingHeader>
-</MarketingSection>
+	</LandingHeader>
+</LandingSection>
 
-<MarketingSection tone="brand" spacing="cta" align="center" inset>
+<LandingSection tone="brand" spacing="cta" align="center" inset>
 	…
-</MarketingSection>`}
+</LandingSection>`}
 								language="tsx"
 							/>
 						</ReferenceSection>
 
 						<ReferenceSection
 							id="header"
-							title="MarketingHeader"
-							lead="Eyebrow looks: mono (default), quiet, soft, pill and numbered, with eyebrowHref for a linked eyebrow and eyebrowIndex for a numbered one. Title uses chapter display size; lead uses marketingLead(), with <strong> drawn in the heading ink."
+							title="LandingHeader"
+							lead="Eyebrow looks: mono (default), quiet, soft, pill and numbered, with eyebrowHref for a linked eyebrow and eyebrowIndex for a numbered one. Title uses chapter display size; lead uses landingLead(), with <strong> drawn in the heading ink."
 						>
 							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
 								{EYEBROW_DEMOS.map(([variant, label, title]) => (
 									<HeadingScope key={variant}>
-										<MarketingHeader
+										<LandingHeader
 											eyebrow={label}
 											eyebrowVariant={variant}
 											eyebrowHref={variant === "quiet" ? "/examples/changelog" : undefined}
@@ -212,7 +208,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 											mix={[m(0)]}
 										>
 											{title}
-										</MarketingHeader>
+										</LandingHeader>
 									</HeadingScope>
 								))}
 							</div>
@@ -221,13 +217,13 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 						<ReferenceSection
 							id="cta"
 							title="CtaGroup"
-							lead='Primary + surface secondary. The group hands its size to every action without one: md (40px) by default for hero and closing rows, sm (32px) for nav. stack="phone" stacks the actions full width on a phone-width container. marketingCtaChrome() sets the CTA radius through --ui-button-radius and adds a soft edge.'
+							lead='Primary + surface secondary. The group hands its size to every action without one: md (40px) by default for hero and closing rows, sm (32px) for nav. stack="phone" stacks the actions full width on a phone-width container. landingCtaChrome() sets the CTA radius through --ui-button-radius and adds a soft edge.'
 						>
 							<CtaGroup stack="phone">
-								<Button color="brand" mix={[marketingCtaChrome()]}>
+								<Button color="brand" mix={[landingCtaChrome()]}>
 									Start monitoring free
 								</Button>
-								<LinkButton href="/api/ui" variant="surface" mix={[marketingCtaChrome()]}>
+								<LinkButton href="/api/ui" variant="surface" mix={[landingCtaChrome()]}>
 									Read the docs
 								</LinkButton>
 							</CtaGroup>

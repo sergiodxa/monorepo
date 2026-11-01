@@ -8,8 +8,8 @@
  */
 
 import { Button, LinkButton } from "@sdxc/ui";
-import { ClosingCta, LandingHero, ProductFrame } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { ClosingCta, LandingHero, ProductFrame } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import { StatusBoard } from "~/resources/components/demo-media";
 import faq from "~/resources/components/guide-demos/landing-pages/faq";
@@ -34,10 +34,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Start free
 						</Button>
-						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 							See pricing
 						</LinkButton>
 					</>
@@ -59,10 +59,10 @@ export default {
 				description="Five monitors and a status page, free for as long as you need them."
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Create an account
 						</Button>
-						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 							Talk to us
 						</LinkButton>
 					</>

@@ -1,5 +1,5 @@
 /**
- * Live preview for `MarketingHeader`: the default mono eyebrow over a chapter title and a
+ * Live preview for `LandingHeader`: the default mono eyebrow over a chapter title and a
  * lead, then the other eyebrow looks — a linked quiet pill, a soft pill, the brand pill
  * centered, and a numbered chapter — each opening the band it would head.
  *
@@ -9,10 +9,11 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is, m, maxIs } from "@sdxc/u/size";
-import { HeadingScope, MarketingHeader } from "@sdxc/ui";
+import { HeadingScope } from "@sdxc/ui";
+import { LandingHeader } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<MarketingHeader
+const CODE = `<LandingHeader
 	eyebrow="Monitoring"
 	description={
 		<>
@@ -22,33 +23,33 @@ const CODE = `<MarketingHeader
 	}
 >
 	Know it is down before your users do
-</MarketingHeader>
+</LandingHeader>
 
-<MarketingHeader
+<LandingHeader
 	eyebrow="Status pages now support custom domains"
 	eyebrowVariant="quiet"
 	eyebrowHref="/examples/changelog/custom-domains"
 	description="Point status.yourcompany.com at the page and we issue the certificate."
 >
 	Your status page, on your domain
-</MarketingHeader>
+</LandingHeader>
 
-<MarketingHeader eyebrow="Alerting" eyebrowVariant="soft" description="…">
+<LandingHeader eyebrow="Alerting" eyebrowVariant="soft" description="…">
 	Page the right person, once
-</MarketingHeader>
+</LandingHeader>
 
-<MarketingHeader eyebrow="New" eyebrowVariant="pill" align="center" description="…">
+<LandingHeader eyebrow="New" eyebrowVariant="pill" align="center" description="…">
 	Multi-region checks on every plan
-</MarketingHeader>
+</LandingHeader>
 
-<MarketingHeader
+<LandingHeader
 	eyebrow="Incidents"
 	eyebrowVariant="numbered"
 	eyebrowIndex="02"
 	description="…"
 >
 	Every incident writes its own timeline
-</MarketingHeader>`;
+</LandingHeader>`;
 
 /** What the preview registry reads: the source to show, and the headers to draw. */
 export default {
@@ -56,7 +57,7 @@ export default {
 	render: () => (
 		<div mix={[is("full"), maxIs("44rem"), vstack({ gap: 12, align: "stretch" })]}>
 			<HeadingScope>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="Monitoring"
 					description={
 						<>
@@ -67,10 +68,10 @@ export default {
 					mix={[m(0)]}
 				>
 					Know it is down before your users do
-				</MarketingHeader>
+				</LandingHeader>
 			</HeadingScope>
 			<HeadingScope>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="Status pages now support custom domains"
 					eyebrowVariant="quiet"
 					eyebrowHref="/examples/changelog/custom-domains"
@@ -78,20 +79,20 @@ export default {
 					mix={[m(0)]}
 				>
 					Your status page, on your domain
-				</MarketingHeader>
+				</LandingHeader>
 			</HeadingScope>
 			<HeadingScope>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="Alerting"
 					eyebrowVariant="soft"
 					description="Escalation policies follow the on-call rotation, so one failure pages one person."
 					mix={[m(0)]}
 				>
 					Page the right person, once
-				</MarketingHeader>
+				</LandingHeader>
 			</HeadingScope>
 			<HeadingScope>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="New"
 					eyebrowVariant="pill"
 					align="center"
@@ -99,10 +100,10 @@ export default {
 					mix={[m(0)]}
 				>
 					Multi-region checks on every plan
-				</MarketingHeader>
+				</LandingHeader>
 			</HeadingScope>
 			<HeadingScope>
-				<MarketingHeader
+				<LandingHeader
 					eyebrow="Incidents"
 					eyebrowVariant="numbered"
 					eyebrowIndex="02"
@@ -110,7 +111,7 @@ export default {
 					mix={[m(0)]}
 				>
 					Every incident writes its own timeline
-				</MarketingHeader>
+				</LandingHeader>
 			</HeadingScope>
 		</div>
 	),

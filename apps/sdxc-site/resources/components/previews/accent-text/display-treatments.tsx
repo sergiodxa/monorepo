@@ -7,7 +7,7 @@
  */
 
 import { vstack } from "@sdxc/u/layout";
-import { AccentText } from "@sdxc/ui/patterns";
+import { AccentText } from "@sdxc/ui/landing";
 import { displayHeading } from "@sdxc/ui/styles";
 
 /** The source the page shows, matching the markup below. */

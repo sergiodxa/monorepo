@@ -62,7 +62,7 @@ export function StatusBoard() {
 					p(3, 5),
 					bg("warning.tint"),
 					fg("warning.emphasis"),
-					raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
+					raw({ borderBlockEnd: "1px solid var(--ui-landing-hairline)" }),
 				]}
 			>
 				<Badge color="warning">Monitoring</Badge>
@@ -72,7 +72,7 @@ export function StatusBoard() {
 				mix={[
 					hstack({ gap: 5, align: "center" }),
 					p(0, 5),
-					raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
+					raw({ borderBlockEnd: "1px solid var(--ui-landing-hairline)" }),
 				]}
 			>
 				{TABS.map((tab, index) => (
@@ -97,7 +97,7 @@ export function StatusBoard() {
 					mix={[
 						vstack({ gap: 2, align: "stretch" }),
 						p(4, 5),
-						raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
+						raw({ borderBlockEnd: "1px solid var(--ui-landing-hairline)" }),
 					]}
 				>
 					<span mix={[hstack({ gap: 3, align: "center", justify: "between" })]}>

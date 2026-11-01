@@ -14,9 +14,8 @@ import { fg } from "@sdxc/u/color";
 import { basis, grow, hstack, shrink, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, truncate, weight } from "@sdxc/u/typography";
-import { Badge, Button, GridList } from "@sdxc/ui";
-import { SelectionModel } from "@sdxc/ui/behaviors";
-import { gridListKeys } from "@sdxc/ui/mixins";
+import { Badge, Button } from "@sdxc/ui";
+import { GridList, gridListKeys, SelectionModel } from "@sdxc/ui/app";
 import { clientEntry, ref } from "remix/component";
 
 /** The thread rows the list holds, grouped the way an inbox groups by arrival. */

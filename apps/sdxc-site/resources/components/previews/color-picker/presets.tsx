@@ -10,7 +10,8 @@
 import type { Handle } from "remix/component";
 
 import { font } from "@sdxc/u/typography";
-import { ColorPicker, ColorSwatchPicker, Input, Label } from "@sdxc/ui";
+import { Input, Label } from "@sdxc/ui";
+import { ColorPicker, ColorSwatchPicker } from "@sdxc/ui/color";
 import { parseColor } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 

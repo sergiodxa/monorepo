@@ -12,8 +12,8 @@ import { raw } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { text, weight } from "@sdxc/u/typography";
-import { HeadingScope, MarketingHeader, MarketingSection } from "@sdxc/ui";
-import { Rails } from "@sdxc/ui/patterns";
+import { HeadingScope } from "@sdxc/ui";
+import { LandingHeader, LandingSection, Rails } from "@sdxc/ui/landing";
 
 /** What the feature row inside the rails lists. */
 const FEATURES = [
@@ -26,9 +26,9 @@ const FEATURES = [
 ] as const;
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<MarketingSection>
-	<MarketingHeader eyebrow="Platform">Built like infrastructure</MarketingHeader>
-</MarketingSection>
+const CODE = `<LandingSection>
+	<LandingHeader eyebrow="Platform">Built like infrastructure</LandingHeader>
+</LandingSection>
 <Rails ruled marks="corners">
 	<FeatureRow />
 </Rails>
@@ -42,14 +42,14 @@ export default {
 	viewports: true,
 	render: () => (
 		<HeadingScope>
-			<MarketingSection>
-				<MarketingHeader
+			<LandingSection>
+				<LandingHeader
 					eyebrow="Platform"
 					description="Rails frame the column, marks pin its corners."
 				>
 					Built like infrastructure
-				</MarketingHeader>
-			</MarketingSection>
+				</LandingHeader>
+			</LandingSection>
 			<Rails ruled marks="corners">
 				<div mix={[container("preview-rails-row")]}>
 					<ul

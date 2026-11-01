@@ -9,8 +9,9 @@
 
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
-import { Card, Skeleton } from "@sdxc/ui";
+import { Card } from "@sdxc/ui";
 import { pulse } from "@sdxc/ui/animations";
+import { Skeleton } from "@sdxc/ui/app";
 import { clientEntry, css } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */

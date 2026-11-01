@@ -7,7 +7,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { DocsPager } from "@sdxc/ui";
+import { DocsPager } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let { previous, next } = findNeighbours(tree, "/docs/monitors/http");

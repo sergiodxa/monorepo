@@ -8,7 +8,7 @@
 
 import { BellRingIcon, GaugeIcon, ZapIcon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
-import { IconWell } from "@sdxc/ui/patterns";
+import { IconWell } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 4 })]}>

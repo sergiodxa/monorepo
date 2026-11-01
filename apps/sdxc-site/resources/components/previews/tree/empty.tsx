@@ -8,7 +8,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { Tree } from "@sdxc/ui";
+import { Tree } from "@sdxc/ui/app";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<Tree aria-label="Files" data-empty>

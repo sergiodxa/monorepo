@@ -9,8 +9,15 @@
 
 import type { Handle } from "remix/component";
 
-import { Link, MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
-import { CheckList, CheckRow, Curriculum } from "@sdxc/ui/patterns";
+import { Link } from "@sdxc/ui";
+import {
+	CheckList,
+	CheckRow,
+	Curriculum,
+	LandingHeader,
+	LandingSection,
+	StatStrip,
+} from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Curriculum
@@ -177,21 +184,19 @@ export default {
 	viewports: true,
 	render: () => (
 		<>
-			<MarketingSection>
-				<MarketingHeader
+			<LandingSection>
+				<LandingHeader
 					eyebrow="What's inside"
 					description="Three parts, read in order or dipped into."
 				>
 					Twelve chapters from the glyph to the shipped page
-				</MarketingHeader>
+				</LandingHeader>
 				<Contents layout="columns" />
-			</MarketingSection>
-			<MarketingSection tone="tinted">
-				<MarketingHeader eyebrow="Stacked">
-					The same course, one part under the other
-				</MarketingHeader>
+			</LandingSection>
+			<LandingSection tone="tinted">
+				<LandingHeader eyebrow="Stacked">The same course, one part under the other</LandingHeader>
 				<Contents layout="stack" />
-			</MarketingSection>
+			</LandingSection>
 		</>
 	),
 };

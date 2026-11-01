@@ -7,14 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DocsTree } from "@sdxc/ui/utils";
+import type { DocsTree } from "@sdxc/ui/docs";
 
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { DocsNav } from "@sdxc/ui";
-import { DocsLayout } from "@sdxc/ui/patterns";
+import { DocsLayout, DocsNav } from "@sdxc/ui/docs";
 
 /** The sidebar the shell draws docked and in the drawer. */
 const TREE: DocsTree = {

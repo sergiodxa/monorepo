@@ -34,18 +34,18 @@ export default function BookPaper(handle: Handle<BookPaper.Props>) {
 			mix={[
 				raw({
 					display: "contents",
-					"--ui-marketing-hairline":
+					"--ui-landing-hairline":
 						"color-mix(in oklch, var(--ui-neutral-fg-emphasis) 16%, transparent)",
 					"--ui-surface-raised": "var(--ui-bg)",
-					"--ui-shadow-surface": "0 0 0 1px var(--ui-marketing-hairline)",
-					"--ui-shadow-stage": "0 0 0 1px var(--ui-marketing-hairline)",
+					"--ui-shadow-surface": "0 0 0 1px var(--ui-landing-hairline)",
+					"--ui-shadow-stage": "0 0 0 1px var(--ui-landing-hairline)",
 				}),
 				dark(
 					raw({
-						"--ui-marketing-hairline": "color-mix(in oklch, white 16%, transparent)",
+						"--ui-landing-hairline": "color-mix(in oklch, white 16%, transparent)",
 						"--ui-surface-raised": "var(--ui-bg)",
-						"--ui-shadow-surface": "0 0 0 1px var(--ui-marketing-hairline)",
-						"--ui-shadow-stage": "0 0 0 1px var(--ui-marketing-hairline)",
+						"--ui-shadow-surface": "0 0 0 1px var(--ui-landing-hairline)",
+						"--ui-shadow-stage": "0 0 0 1px var(--ui-landing-hairline)",
 					}),
 				),
 				when("& [id]", raw({ scrollMarginBlockStart: "5rem" })),

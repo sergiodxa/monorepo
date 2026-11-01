@@ -15,7 +15,7 @@ import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
 import { Badge } from "@sdxc/ui";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 /** The meters a workspace defines: name, the event it counts, the aggregation and the month's count. */
 const METER_ROWS = [
@@ -55,7 +55,7 @@ const OUTCOME_COLOR = { Failed: "danger", Sent: "neutral", Paid: "success" } as 
 
 /** A hairline between stacked rows, drawn on every row after the first. */
 function rowRule() {
-	return when("& + &", raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" }));
+	return when("& + &", raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" }));
 }
 
 /** The named container the meters screen reads, so its columns follow the frame's width. */
@@ -168,7 +168,7 @@ export function PricePanel() {
 					mix={[
 						hstack({ gap: 3, align: "center", justify: "between" }),
 						p(3.5, 5),
-						raw({ borderBlockEnd: "1px solid var(--ui-marketing-hairline)" }),
+						raw({ borderBlockEnd: "1px solid var(--ui-landing-hairline)" }),
 					]}
 				>
 					<span mix={[fg("neutral")]}>
@@ -202,7 +202,7 @@ export function PricePanel() {
 						hstack({ gap: 3, align: "center", justify: "between" }),
 						p(3.5, 5),
 						bg("brand.tint"),
-						raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" }),
+						raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" }),
 					]}
 				>
 					<span mix={[weight("medium"), fg("brand.emphasis")]}>Usage this month</span>

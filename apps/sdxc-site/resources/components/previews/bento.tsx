@@ -10,7 +10,7 @@
 import { fg } from "@sdxc/u/color";
 import { is } from "@sdxc/u/size";
 import { HeadingScope } from "@sdxc/ui";
-import { Bento } from "@sdxc/ui/patterns";
+import { Bento } from "@sdxc/ui/landing";
 
 /** Days in the availability strip, one bar per day. */
 const DAYS = Array.from({ length: 45 }, (_, day) => day);

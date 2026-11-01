@@ -22,7 +22,7 @@ import { raw } from "@sdxc/u/general";
 import { absolute, hstack, relative, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { leading, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 /** The bezel ink, the same near-black in both schemes, like the hardware. */
 const BEZEL = "oklch(0.17 0.004 70)";
@@ -145,10 +145,10 @@ export function Phone(handle: Handle<Phone.Props>) {
 					raw({
 						paddingBlock: "clamp(1.5rem, 5cqi, 3rem)",
 						paddingInline: "clamp(1rem, 6cqi, 4rem)",
-						borderRadius: "var(--ui-marketing-radius-frame, 1.5rem)",
+						borderRadius: "var(--ui-landing-radius-frame, 1.5rem)",
 						backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 7%, var(--ui-bg))",
 						backgroundImage: STAGE_GLOW,
-						boxShadow: "inset 0 0 0 1px var(--ui-marketing-hairline)",
+						boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
 					}),
 				]}
 			>
@@ -225,7 +225,7 @@ function TabBar(handle: Handle<{ tab: Phone.Props["tab"] }>) {
 					flexShrink: "0",
 					paddingBlock: "0.5rem 0.375rem",
 					backgroundColor: "var(--ui-surface-raised)",
-					borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+					borderBlockStart: "1px solid var(--ui-landing-hairline)",
 				}),
 			]}
 		>

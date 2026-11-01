@@ -8,7 +8,7 @@
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { Accordion } from "@sdxc/ui";
-import { FaqBand } from "@sdxc/ui/patterns";
+import { FaqBand } from "@sdxc/ui/landing";
 
 /** Each question and its answer, in the order the band lists them. */
 const QUESTIONS = [

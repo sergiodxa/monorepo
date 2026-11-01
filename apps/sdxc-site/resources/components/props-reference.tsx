@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { PropsTable } from "@sdxc/ui";
+import { PropsTable } from "@sdxc/ui/docs";
 
 import type { PropRow } from "~/app/services/components";
 

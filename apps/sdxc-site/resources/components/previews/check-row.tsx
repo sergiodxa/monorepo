@@ -7,7 +7,7 @@
  */
 
 import { vstack } from "@sdxc/u/layout";
-import { CheckList, CheckRow } from "@sdxc/ui/patterns";
+import { CheckList, CheckRow } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 6, align: "start" })]}>

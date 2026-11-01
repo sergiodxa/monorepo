@@ -20,8 +20,9 @@ import { rounded } from "@sdxc/u/effects";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { ContextMenu, Item } from "@sdxc/ui";
-import { contextMenu, menuKeys } from "@sdxc/ui/mixins";
+import { Item } from "@sdxc/ui";
+import { ContextMenu, contextMenu } from "@sdxc/ui/app";
+import { menuKeys } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */

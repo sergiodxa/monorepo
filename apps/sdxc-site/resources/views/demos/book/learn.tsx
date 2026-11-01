@@ -16,8 +16,7 @@ import {
 	RulerIcon,
 	TypeIcon,
 } from "@sdxc/icons";
-import { Feature } from "@sdxc/ui";
-import { FeatureBand } from "@sdxc/ui/patterns";
+import { Feature, FeatureBand } from "@sdxc/ui/landing";
 
 /** One skill: its icon, its title and the sentence that sells it. */
 interface Skill {

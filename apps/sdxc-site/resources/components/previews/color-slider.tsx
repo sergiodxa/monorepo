@@ -12,8 +12,8 @@ import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { ColorSlider, ColorSwatch, Label } from "@sdxc/ui";
-import { channelSync } from "@sdxc/ui/mixins";
+import { Label } from "@sdxc/ui";
+import { channelSync, ColorSlider, ColorSwatch } from "@sdxc/ui/color";
 import { formatHsl, hslToRgb } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 

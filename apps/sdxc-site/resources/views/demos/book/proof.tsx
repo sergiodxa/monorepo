@@ -14,7 +14,7 @@ import { at } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, pretty, text, weight } from "@sdxc/u/typography";
-import { MarketingSection, StatStrip } from "@sdxc/ui";
+import { LandingSection, StatStrip } from "@sdxc/ui/landing";
 
 /** Each blurb: the line, who wrote it, and what they do. */
 const BLURBS = [
@@ -65,13 +65,13 @@ function blurbColumns() {
 		when(
 			"& > * + *",
 			combine([
-				raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" }),
+				raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" }),
 				at(
 					"lg",
 					CONTAINER_NAME,
 					raw({
 						borderBlockStart: "0",
-						borderInlineStart: "1px solid var(--ui-marketing-hairline)",
+						borderInlineStart: "1px solid var(--ui-landing-hairline)",
 					}),
 				),
 			]),
@@ -87,7 +87,7 @@ function blurbColumns() {
  */
 export default function BookProof() {
 	return () => (
-		<MarketingSection id="praise" spacing="compact" ruled aria-label="Praise for The Measure">
+		<LandingSection id="praise" spacing="compact" ruled aria-label="Praise for The Measure">
 			<StatStrip variant="ruled" size="display" align="start">
 				<StatStrip.Item label="Readers since the first edition">18,400</StatStrip.Item>
 				<StatStrip.Item label="Average from 1,260 reviews">4.9</StatStrip.Item>
@@ -97,7 +97,7 @@ export default function BookProof() {
 			<div
 				mix={[
 					container(CONTAINER_NAME),
-					raw({ borderBlockStart: "1px solid var(--ui-marketing-hairline)" }),
+					raw({ borderBlockStart: "1px solid var(--ui-landing-hairline)" }),
 				]}
 			>
 				<div mix={[blurbColumns()]}>
@@ -122,6 +122,6 @@ export default function BookProof() {
 					))}
 				</div>
 			</div>
-		</MarketingSection>
+		</LandingSection>
 	);
 }

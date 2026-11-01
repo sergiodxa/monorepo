@@ -1,6 +1,6 @@
 ---
 title: Build a landing page
-description: Assemble a marketing page from @sdxc/ui's landing patterns, give it your brand through tokens, and drop to the primitives when a band needs its own shape.
+description: Assemble a landing page from @sdxc/ui's landing patterns, give it your brand through tokens, and drop to the primitives when a band needs its own shape.
 section:
     title: Building Remix apps
     order: 4
@@ -8,8 +8,8 @@ order: 10
 lastUpdated: 2026-10-30
 outcomes:
     - "How to stack a landing from hero, proof, feature, FAQ and closing bands"
-    - "How to give the bands your brand through the marketing tokens"
-    - "How to build a band of your own from the marketing primitives"
+    - "How to give the bands your brand through the landing tokens"
+    - "How to build a band of your own from the landing primitives"
 ---
 
 A landing page is a stack of full-width bands: a hero, a strip of proof, a few feature bands,
@@ -28,11 +28,11 @@ sets those up; this guide starts from a page that already renders `@sdxc/ui` com
 
 ## Three layers
 
-| Layer       | Import from         | What it gives you                                                                                                            |
-| ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Patterns    | `@sdxc/ui/patterns` | Whole bands: `LandingHero`, `ProofStrip`, `FeatureBand`, `PricingBand`, `TestimonialBand`, `FaqBand`, `ClosingCta`           |
-| Primitives  | `@sdxc/ui`          | The parts bands are made of: `MarketingSection`, `MarketingHeader`, `Split`, `StatStrip`, `LogoCloud`, `Feature`, `CtaGroup` |
-| Foundations | `@sdxc/ui/styles`   | Tokens and style factories: `marketingCtaChrome()`, `marketingBandTone()`, and the `--ui-marketing-*` variables              |
+| Layer       | Import from        | What it gives you                                                                                                        |
+| ----------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Patterns    | `@sdxc/ui/landing` | Whole bands: `LandingHero`, `ProofStrip`, `FeatureBand`, `PricingBand`, `TestimonialBand`, `FaqBand`, `ClosingCta`       |
+| Primitives  | `@sdxc/ui`         | The parts bands are made of: `LandingSection`, `LandingHeader`, `Split`, `StatStrip`, `LogoCloud`, `Feature`, `CtaGroup` |
+| Foundations | `@sdxc/ui/styles`  | Tokens and style factories: `landingCtaChrome()`, `landingBandTone()`, and the `--ui-landing-*` variables                |
 
 Reach for a pattern first. When none fits, build the band from primitives, as the last
 section shows.
@@ -45,8 +45,8 @@ scope placed by hand.
 
 ```tsx {% title="resources/components/landing.tsx" %}
 import { Button, LinkButton } from "@sdxc/ui";
-import { ClosingCta, LandingHero } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { ClosingCta, LandingHero } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import { Faq } from "~/resources/components/landing/faq";
 import { Features } from "~/resources/components/landing/features";
@@ -70,13 +70,13 @@ export function Landing() {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Start free
 						</Button>
 						<LinkButton
 							href="/pricing"
 							variant="surface"
-							mix={[marketingCtaChrome()]}
+							mix={[landingCtaChrome()]}
 						>
 							See pricing
 						</LinkButton>
@@ -95,13 +95,13 @@ export function Landing() {
 				description="Five monitors and a status page, free for as long as you need them."
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Create an account
 						</Button>
 						<LinkButton
 							href="/contact"
 							variant="surface"
-							mix={[marketingCtaChrome()]}
+							mix={[landingCtaChrome()]}
 						>
 							Talk to us
 						</LinkButton>
@@ -115,8 +115,8 @@ export function Landing() {
 
 Render `<Landing />` from the page's controller inside your document layout, like any other
 page. Nothing on it hydrates: the FAQ is `<details>`, and tabbed bands switch with radio
-inputs and CSS. Actions take the 40px marketing size from the `CtaGroup` the hero puts them
-in, and `marketingCtaChrome()` gives both the brand's corner radius and a tactile edge; the
+inputs and CSS. Actions take the 40px landing size from the `CtaGroup` the hero puts them
+in, and `landingCtaChrome()` gives both the brand's corner radius and a tactile edge; the
 `surface` variant is a secondary that still reads as a button beside a solid primary.
 
 Here is that page, live. Switch between Desktop and Phone to see each band rearrange itself
@@ -140,7 +140,7 @@ Frame the product with `ProductFrame` so it reads as the product rather than as 
 image. `stage="panel"` sets the frame on a tinted panel, the way a product shot is staged:
 
 ```tsx {% title="resources/components/landing/hero-shot.tsx" %}
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 export function HeroShot() {
 	return () => (
@@ -164,8 +164,7 @@ brand band, and `CodeStage variant="slab"` frames a code sample when the product
 both:
 
 ```tsx {% title="resources/components/landing/proof.tsx" %}
-import { LogoCloud, StatStrip } from "@sdxc/ui";
-import { ProofStrip } from "@sdxc/ui/patterns";
+import { LogoCloud, StatStrip, ProofStrip } from "@sdxc/ui/landing";
 
 export function Proof() {
 	return () => (
@@ -211,8 +210,7 @@ The proof band: five muted wordmarks spread across the measure over three figure
 
 ```tsx {% title="resources/components/landing/features.tsx" %}
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
-import { Feature } from "@sdxc/ui";
-import { FeatureBand, ProductFrame, StepList } from "@sdxc/ui/patterns";
+import { Feature, FeatureBand, ProductFrame, StepList } from "@sdxc/ui/landing";
 
 export function Features() {
 	return () => (
@@ -316,7 +314,7 @@ narrow screen:
 ```tsx {% title="resources/components/landing/faq.tsx" %}
 import { ChevronDownIcon } from "@sdxc/icons";
 import { Accordion } from "@sdxc/ui";
-import { FaqBand } from "@sdxc/ui/patterns";
+import { FaqBand } from "@sdxc/ui/landing";
 
 const QUESTIONS = [
 	[
@@ -370,7 +368,7 @@ width and repeats full width at the foot of the sheet. Panels and the sheet open
 Popover API and `<dialog>`, so they work before any script loads.
 
 ```tsx {% title="resources/components/landing/header.tsx" %}
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 export function Header() {
 	return () => (
@@ -431,23 +429,23 @@ So the bands on one page don't all share a shape, most of them come in more than
 - `LogoCloud` takes `layout="tiles"`, `"ruled"` or `"marquee"`.
 - `Feature.Grid` takes `variant="list"` for claims without cards, and a `Feature` takes
   `span={2}` to widen it.
-- `MarketingHeader` takes `layout="split"`, `tone="statement"`, a `subtitle` or an `action`.
+- `LandingHeader` takes `layout="split"`, `tone="statement"`, a `subtitle` or an `action`.
 - `TestimonialBand` takes a `featured` quote and `layout="carousel"`.
 - `AccentText` takes `variant="sheen"`, `"pill"` or `"chip"`.
 - `LandingHero` takes a `release` pin and an `entrance`.
 
 ## Your brand
 
-The bands read their measure, spacing, type and CTA shape from `--ui-marketing-*` variables
+The bands read their measure, spacing, type and CTA shape from `--ui-landing-*` variables
 that `@sdxc/ui/theme.css` declares. Override them after the theme, in the same stylesheet as
 your palette:
 
 ```css {% title="resources/css/marketing.css" %}
 :root {
-	--ui-marketing-measure: 76rem;
-	--ui-marketing-cta-radius: 9999px;
-	--ui-marketing-display-max: 6rem;
-	--ui-marketing-lead-weight: 500;
+	--ui-landing-measure: 76rem;
+	--ui-landing-cta-radius: 9999px;
+	--ui-landing-display-max: 6rem;
+	--ui-landing-lead-weight: 500;
 	--ui-font-display: "Inter Display", var(--ui-font-sans);
 }
 ```
@@ -456,34 +454,35 @@ That gives a wider column, pill-shaped calls to action, a larger top step for th
 headline, heavier leads, and a display face for headlines. Sizes and band spacing are fluid in
 the width of the band, so a phone gets the tight end of each without a breakpoint of yours.
 Colors stay on your palette's `brand` and `neutral` scales, so the landing and the app share
-them. [Marketing foundations](/api/ui/marketing-foundations) lists every token.
+them. [Landing foundations](/api/ui/landing-foundations) lists every token.
 
 ## A band of your own
 
-When no pattern fits, build the band from the primitives the patterns use. `MarketingSection`
-paints the band and centers its column; `MarketingHeader` gives it a title; `Split`, `Bento`
+When no pattern fits, build the band from the primitives the patterns use. `LandingSection`
+paints the band and centers its column; `LandingHeader` gives it a title; `Split`, `Bento`
 or anything else fills it:
 
 ```tsx {% title="resources/components/landing/pricing-teaser.tsx" %}
+import { CtaGroup, LinkButton } from "@sdxc/ui";
 import {
-	CtaGroup,
-	LinkButton,
-	MarketingHeader,
-	MarketingSection,
+	CheckList,
+	CheckRow,
+	CodeStage,
+	LandingHeader,
+	LandingSection,
 	Split,
-} from "@sdxc/ui";
+} from "@sdxc/ui/landing";
 import { viewReveal } from "@sdxc/ui/animations";
-import { CheckList, CheckRow, CodeStage } from "@sdxc/ui/patterns";
 
 export function PricingTeaser() {
 	return () => (
-		<MarketingSection tone="tinted" ruled mix={[viewReveal()]}>
-			<MarketingHeader
+		<LandingSection tone="tinted" ruled mix={[viewReveal()]}>
+			<LandingHeader
 				eyebrow="Pricing"
 				description="One price per monitor, billed monthly."
 			>
 				Pay for what you watch
-			</MarketingHeader>
+			</LandingHeader>
 			<Split lean="copy">
 				<Split.Copy>
 					<CheckList>
@@ -502,7 +501,7 @@ export function PricingTeaser() {
 					</CodeStage>
 				</Split.Media>
 			</Split>
-		</MarketingSection>
+		</LandingSection>
 	);
 }
 ```
@@ -546,7 +545,7 @@ test("opens with one h1 and never skips a heading level", async () => {
 - The demo landings — a [SaaS](/demo/saas), an [app](/demo/app) and a [book](/demo/book) built
   only from these bands, each with its own palette and type.
 - [Landing patterns](/api/ui/landing-patterns) — every pattern assembled into one page.
-- The Marketing group in the [`@sdxc/ui`](/api/ui) catalogue — a live demo and the full props
+- The Landing group in the [`@sdxc/ui`](/api/ui) catalogue — a live demo and the full props
   of each band and primitive.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — replace the literal
   copy above with messages, since every string is already a prop.

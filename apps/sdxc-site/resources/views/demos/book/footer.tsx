@@ -15,8 +15,8 @@ import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Button, Heading, TextField } from "@sdxc/ui";
-import { SiteFooter } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { SiteFooter } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import BookLogo from "~/resources/views/demos/book/logo";
 import { SERIF } from "~/resources/views/demos/book/type";
@@ -89,7 +89,7 @@ function Letters() {
 						required
 						mix={[raw({ flex: "1" })]}
 					/>
-					<Button type="submit" color="neutral" mix={[marketingCtaChrome()]}>
+					<Button type="submit" color="neutral" mix={[landingCtaChrome()]}>
 						Subscribe
 					</Button>
 				</div>

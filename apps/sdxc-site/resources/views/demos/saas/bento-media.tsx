@@ -13,7 +13,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, p } from "@sdxc/u/size";
 import { font, tabularNums, text, weight } from "@sdxc/u/typography";
 import { Badge, Button } from "@sdxc/ui";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
 /** Tax rates the tax scene lists: jurisdiction and rate. Eight fill two rows of four. */
 const TAX_RATES = [
@@ -70,7 +70,7 @@ export function PortalScene() {
 		<div mix={[p(6, 6, 0, 6), raw({ display: "grid", placeItems: "end center" })]}>
 			<div
 				mix={[
-					marketingSurface(),
+					landingSurface(),
 					vstack({ gap: 3, align: "stretch" }),
 					p(4),
 					is("min(100%, 20rem)"),
@@ -171,7 +171,7 @@ export function TaxScene() {
 export function CurrencyScene() {
 	return () => (
 		<div mix={[p(6, 6, 0, 6), raw({ display: "grid", alignContent: "end" })]}>
-			<div mix={[marketingSurface(), vstack({ gap: 0, align: "stretch" }), text("sm")]}>
+			<div mix={[landingSurface(), vstack({ gap: 0, align: "stretch" }), text("sm")]}>
 				{CURRENCIES.map(([code, amount], index) => (
 					<span
 						key={code}
@@ -179,7 +179,7 @@ export function CurrencyScene() {
 							hstack({ gap: 3, align: "center", justify: "between" }),
 							p(2.5, 4),
 							raw({
-								borderBlockStart: index === 0 ? "none" : "1px solid var(--ui-marketing-hairline)",
+								borderBlockStart: index === 0 ? "none" : "1px solid var(--ui-landing-hairline)",
 							}),
 						]}
 					>
@@ -203,7 +203,7 @@ export function WebhookScene() {
 		<div mix={[p(6, 6, 0, 6), raw({ display: "grid", alignContent: "end" })]}>
 			<div
 				mix={[
-					marketingSurface(),
+					landingSurface(),
 					raw({ display: "grid", gridTemplateColumns: "minmax(max-content, 1fr) auto auto" }),
 					font("mono"),
 					text("xs"),
@@ -219,7 +219,7 @@ export function WebhookScene() {
 								gridTemplateColumns: "subgrid",
 								columnGap: "0.75rem",
 								alignItems: "center",
-								borderBlockStart: index === 0 ? "none" : "1px solid var(--ui-marketing-hairline)",
+								borderBlockStart: index === 0 ? "none" : "1px solid var(--ui-landing-hairline)",
 							}),
 							p(2.5, 4),
 						]}

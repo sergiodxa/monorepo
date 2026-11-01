@@ -13,7 +13,7 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 /** The monitors the framed status list shows, with the token each status dot paints. */
 const MONITORS = [

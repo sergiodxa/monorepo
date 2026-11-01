@@ -8,7 +8,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { Skeleton } from "@sdxc/ui";
+import { Skeleton } from "@sdxc/ui/app";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[is("16rem")]}>

@@ -8,7 +8,8 @@
 
 import { BellRingIcon, GaugeIcon, GlobeIcon } from "@sdxc/icons";
 import { is } from "@sdxc/u/size";
-import { Feature, HeadingScope } from "@sdxc/ui";
+import { HeadingScope } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Feature.Grid columns={3}>

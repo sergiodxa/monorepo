@@ -12,8 +12,8 @@ import type { Handle } from "remix/component";
 import { CircleAlertIcon, CircleCheckIcon, InfoIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { hstack } from "@sdxc/u/layout";
-import { Button, Toast } from "@sdxc/ui";
-import { Toaster } from "@sdxc/ui/behaviors";
+import { Button } from "@sdxc/ui";
+import { Toast, Toaster } from "@sdxc/ui/app";
 import { dismiss, whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 

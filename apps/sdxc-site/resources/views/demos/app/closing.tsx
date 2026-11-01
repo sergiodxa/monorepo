@@ -11,8 +11,8 @@ import type { Handle } from "remix/component";
 import { ChevronDownIcon, MonitorIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { Accordion, LinkButton } from "@sdxc/ui";
-import { CheckRow, ClosingCta, FaqBand, PricingBand, TestimonialBand } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { CheckRow, ClosingCta, FaqBand, PricingBand, TestimonialBand } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";
 
@@ -231,7 +231,7 @@ export function Pricing() {
 					</>
 				}
 				action={
-					<LinkButton href="#download" variant="surface" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#download" variant="surface" mix={[landingCtaChrome()]}>
 						Download free
 					</LinkButton>
 				}
@@ -253,7 +253,7 @@ export function Pricing() {
 					</>
 				}
 				action={
-					<LinkButton href="#download" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#download" color="brand" mix={[landingCtaChrome()]}>
 						Try Plus free for 30 days
 					</LinkButton>
 				}
@@ -327,7 +327,7 @@ export function Download() {
 			description="Download it, invite the household with a link, and the next shop is already shared."
 			actions={
 				<StoreBadges align="center">
-					<LinkButton href="#platforms" variant="surface" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#platforms" variant="surface" mix={[landingCtaChrome()]}>
 						<MonitorIcon size={16} /> Mac & Windows
 					</LinkButton>
 				</StoreBadges>

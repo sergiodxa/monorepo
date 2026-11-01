@@ -8,7 +8,7 @@
  */
 
 import { FileIcon, RotateCwIcon } from "@sdxc/icons";
-import { Attachment } from "@sdxc/ui";
+import { Attachment } from "@sdxc/ui/chat";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Attachment state="error">

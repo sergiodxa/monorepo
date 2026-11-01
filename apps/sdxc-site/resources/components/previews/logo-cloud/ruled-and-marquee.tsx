@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { LogoCloud } from "@sdxc/ui";
+import { LogoCloud } from "@sdxc/ui/landing";
 
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 

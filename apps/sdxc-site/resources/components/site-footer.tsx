@@ -16,7 +16,7 @@ import { media } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, text, tracking, weight } from "@sdxc/u/typography";
-import { SiteFooter as UiSiteFooter } from "@sdxc/ui/patterns";
+import { SiteFooter as UiSiteFooter } from "@sdxc/ui/landing";
 
 import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/config/constants";
 import routes from "~/routes/web";

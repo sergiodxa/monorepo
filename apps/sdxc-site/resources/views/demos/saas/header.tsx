@@ -9,7 +9,7 @@
 
 import { fg } from "@sdxc/u/color";
 import { DialogDismiss } from "@sdxc/ui";
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 import { KeelLogo } from "~/resources/views/demos/saas/marks";
 

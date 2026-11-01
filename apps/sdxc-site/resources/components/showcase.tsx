@@ -16,14 +16,15 @@ import { hstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, leading, text, weight } from "@sdxc/u/typography";
-import { Badge, Feature, LinkButton } from "@sdxc/ui";
+import { Badge, LinkButton } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 
 import type { ShowcaseEntry } from "~/app/services/showcase";
 
 import FramedPanel from "~/resources/components/framed-panel";
 
-/** The ruling between chart rows, the hairline every marketing surface uses. */
-const HAIRLINE = "var(--ui-marketing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
+/** The ruling between chart rows, the hairline every landing surface uses. */
+const HAIRLINE = "var(--ui-landing-hairline, color-mix(in oklch, CanvasText 8%, transparent))";
 
 namespace ShowcaseDepth {
 	export interface Props {

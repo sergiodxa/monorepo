@@ -11,7 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, nowrap, text, weight } from "@sdxc/u/typography";
-import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";

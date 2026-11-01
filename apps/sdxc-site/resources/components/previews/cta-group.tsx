@@ -1,6 +1,6 @@
 /**
  * Live preview for `CtaGroup`: a hero's brand primary and surface secondary at the group's
- * 40px default, both carrying `marketingCtaChrome()`, then a compact nav row and a pair
+ * 40px default, both carrying `landingCtaChrome()`, then a compact nav row and a pair
  * that stacks full width on a phone-width container.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,15 +11,15 @@ import { ArrowRightIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Button, CtaGroup, LinkButton } from "@sdxc/ui";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<CtaGroup>
-	<Button color="brand" mix={[marketingCtaChrome()]}>
+	<Button color="brand" mix={[landingCtaChrome()]}>
 		Start monitoring free
 		<ArrowRightIcon />
 	</Button>
-	<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+	<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 		Compare plans
 	</LinkButton>
 </CtaGroup>
@@ -30,8 +30,8 @@ const CODE = `<CtaGroup>
 </CtaGroup>
 
 <CtaGroup stack="phone">
-	<Button color="brand" mix={[marketingCtaChrome()]}>Create a status page</Button>
-	<LinkButton href="/examples/status" variant="surface" mix={[marketingCtaChrome()]}>
+	<Button color="brand" mix={[landingCtaChrome()]}>Create a status page</Button>
+	<LinkButton href="/examples/status" variant="surface" mix={[landingCtaChrome()]}>
 		See an example
 	</LinkButton>
 </CtaGroup>`;
@@ -42,11 +42,11 @@ export default {
 	render: () => (
 		<div mix={[is("full"), vstack({ gap: 8, align: "start" })]}>
 			<CtaGroup>
-				<Button color="brand" mix={[marketingCtaChrome()]}>
+				<Button color="brand" mix={[landingCtaChrome()]}>
 					Start monitoring free
 					<ArrowRightIcon />
 				</Button>
-				<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+				<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 					Compare plans
 				</LinkButton>
 			</CtaGroup>
@@ -59,10 +59,10 @@ export default {
 				</LinkButton>
 			</CtaGroup>
 			<CtaGroup stack="phone">
-				<Button color="brand" mix={[marketingCtaChrome()]}>
+				<Button color="brand" mix={[landingCtaChrome()]}>
 					Create a status page
 				</Button>
-				<LinkButton href="/examples/status" variant="surface" mix={[marketingCtaChrome()]}>
+				<LinkButton href="/examples/status" variant="surface" mix={[landingCtaChrome()]}>
 					See an example
 				</LinkButton>
 			</CtaGroup>

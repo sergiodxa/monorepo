@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { PageActions as SharedPageActions } from "@sdxc/ui";
+import { PageActions as SharedPageActions } from "@sdxc/ui/docs";
 
 import { buildOpenLinks } from "~/app/services/open-links";
 

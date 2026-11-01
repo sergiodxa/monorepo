@@ -62,9 +62,9 @@ export function StoreBadge(handle: Handle<StoreBadge.Props>) {
 					interactiveTransition(),
 					raw({
 						gap: "0.625rem",
-						blockSize: "var(--ui-marketing-cta-height, 3rem)",
+						blockSize: "var(--ui-landing-cta-height, 3rem)",
 						paddingInline: "1.125rem 1.5rem",
-						borderRadius: "var(--ui-marketing-cta-radius, 0.75rem)",
+						borderRadius: "var(--ui-landing-cta-radius, 0.75rem)",
 						backgroundColor: "oklch(0.2 0.02 290)",
 						color: "white",
 						textDecoration: "none",

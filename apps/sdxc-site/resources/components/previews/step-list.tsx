@@ -10,7 +10,7 @@
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { HeadingScope } from "@sdxc/ui";
-import { StepList } from "@sdxc/ui/patterns";
+import { StepList } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<StepList>

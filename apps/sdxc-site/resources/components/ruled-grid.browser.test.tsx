@@ -17,12 +17,7 @@ import "~/resources/css/colors.css";
 import "@sdxc/ui/theme.css";
 
 /** Names as long as the longest the catalogues list, which overflowed two-column rows. */
-const NAMES = [
-	"marketingFoundationsTokens",
-	"ui/marketing-foundations",
-	"Badge",
-	"AnnouncementChip",
-];
+const NAMES = ["landingFoundationsTokens", "ui/landing-foundations", "Badge", "AnnouncementChip"];
 
 /** Column widths a catalogue gets between a small phone and a tablet with the tree docked. */
 const WIDTHS = [280, 335, 374, 560, 580];

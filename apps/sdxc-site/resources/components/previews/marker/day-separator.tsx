@@ -8,7 +8,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { Marker } from "@sdxc/ui";
+import { Marker } from "@sdxc/ui/chat";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[is("26rem")]}>

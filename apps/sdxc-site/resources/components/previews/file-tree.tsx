@@ -7,7 +7,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { FileTree } from "@sdxc/ui";
+import { FileTree } from "@sdxc/ui/docs";
 
 /** The tree both the source and the markup draw. */
 const NODES: FileTree.Entry[] = [

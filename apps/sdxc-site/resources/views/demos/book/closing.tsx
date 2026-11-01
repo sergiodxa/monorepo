@@ -8,8 +8,8 @@
 
 import { weight } from "@sdxc/u/typography";
 import { Link, LinkButton } from "@sdxc/ui";
-import { ClosingCta } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { ClosingCta } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 /**
  * Renders the closing statement on the plain paper with the buy button and an underlined
@@ -27,7 +27,7 @@ export default function BookClosing() {
 			description="Start with the free chapter, or get the whole book and every lesson today."
 			actions={
 				<>
-					<LinkButton href="#pricing" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#pricing" color="brand" mix={[landingCtaChrome()]}>
 						Buy the book — $39
 					</LinkButton>
 					<Link href="#sample" color="neutral" mix={[weight("medium")]}>

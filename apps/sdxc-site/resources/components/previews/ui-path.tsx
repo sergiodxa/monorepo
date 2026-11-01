@@ -7,7 +7,7 @@
  */
 
 import { m } from "@sdxc/u/size";
-import { UiPath } from "@sdxc/ui";
+import { UiPath } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<p>

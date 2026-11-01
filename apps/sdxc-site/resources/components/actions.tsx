@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
 import { CtaGroup, LinkButton } from "@sdxc/ui";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -46,7 +46,7 @@ export default function Actions(handle: Handle<Actions.Props>) {
 					href={props["cta-href"]}
 					color={isMain ? "brand" : "neutral"}
 					variant={isMain ? "solid" : "outline"}
-					mix={[isMain ? marketingCtaChrome() : []]}
+					mix={[isMain ? landingCtaChrome() : []]}
 				>
 					{props["cta-label"]}
 					<Arrow href={props["cta-href"]} />
@@ -57,7 +57,7 @@ export default function Actions(handle: Handle<Actions.Props>) {
 						href={props["alt-href"]}
 						color="neutral"
 						variant={isMain ? "surface" : "outline"}
-						mix={[isMain ? marketingCtaChrome() : []]}
+						mix={[isMain ? landingCtaChrome() : []]}
 					>
 						{props["alt-label"]}
 						{isExternal(props["alt-href"] ?? "") ? <Arrow href={props["alt-href"] ?? ""} /> : null}

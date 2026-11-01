@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DocsTree } from "@sdxc/ui/utils";
+import type { DocsTree } from "@sdxc/ui/docs";
 
 /** One destination, titled the way both the sidebar and the pager name it. */
 export interface NavEntry {

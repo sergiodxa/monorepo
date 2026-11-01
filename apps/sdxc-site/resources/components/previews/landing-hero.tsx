@@ -11,9 +11,9 @@ import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { is } from "@sdxc/u/size";
-import { Button, HeadingScope, LinkButton, LogoCloud } from "@sdxc/ui";
-import { LandingHero, ProductFrame } from "@sdxc/ui/patterns";
-import { marketingCtaChrome, marketingSlowSpin } from "@sdxc/ui/styles";
+import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
+import { LandingHero, LogoCloud, ProductFrame } from "@sdxc/ui/landing";
+import { landingCtaChrome, landingSlowSpin } from "@sdxc/ui/styles";
 
 import { StatusBoard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 
@@ -33,8 +33,8 @@ const CODE = `<LandingHero
 	}
 	actions={
 		<>
-			<Button color="brand" mix={[marketingCtaChrome()]}>Start free</Button>
-			<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+			<Button color="brand" mix={[landingCtaChrome()]}>Start free</Button>
+			<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 				See pricing
 			</LinkButton>
 		</>
@@ -56,13 +56,13 @@ const CODE = `<LandingHero
 	title="Every outage, explained in one page"
 	description="…"
 	actions={…}
-	backdrop={<svg mix={[marketingSlowSpin()]}>{rings}</svg>}
+	backdrop={<svg mix={[landingSlowSpin()]}>{rings}</svg>}
 	media={…}
 />`;
 
 /**
  * Concentric hairline rings for the product-led hero's backdrop; the hero hides them from
- * assistive technology and `marketingSlowSpin()` stops their turn under reduced motion.
+ * assistive technology and `landingSlowSpin()` stops their turn under reduced motion.
  *
  * @param _handle Runtime handle; the rings take no props.
  * @returns The render function producing the rings.
@@ -74,7 +74,7 @@ function Rings(_handle: Handle<Record<string, never>>) {
 			fill="none"
 			stroke="currentColor"
 			stroke-width="0.15"
-			mix={[is("full"), fg("neutral.muted"), marketingSlowSpin()]}
+			mix={[is("full"), fg("neutral.muted"), landingSlowSpin()]}
 		>
 			{RINGS.map((radius) => (
 				<circle key={radius} cx="50" cy="50" r={radius} stroke-dasharray="0.6 1.2" />
@@ -101,10 +101,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Start free
 						</Button>
-						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 							See pricing
 						</LinkButton>
 					</>
@@ -137,10 +137,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Publish a status page
 						</Button>
-						<LinkButton href="/examples/status" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/status" variant="surface" mix={[landingCtaChrome()]}>
 							See a live one
 						</LinkButton>
 					</>

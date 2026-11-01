@@ -12,7 +12,7 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { font, leading, text, tracking, weight } from "@sdxc/u/typography";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
 /**
  * Renders the page square-on on a ruled paper surface. The measure rule and the paragraph
@@ -26,7 +26,7 @@ export default function BookSamplePage() {
 		<article
 			aria-label="The first page of chapter 2, The measure"
 			mix={[
-				marketingSurface(),
+				landingSurface(),
 				p(8),
 				vstack({ gap: 6, align: "stretch" }),
 				raw({ maxInlineSize: "30rem", marginInline: "auto" }),

@@ -9,7 +9,8 @@
 
 import type { Handle } from "remix/component";
 
-import { Button, Toast } from "@sdxc/ui";
+import { Button } from "@sdxc/ui";
+import { Toast } from "@sdxc/ui/app";
 import { dismiss } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 

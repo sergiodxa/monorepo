@@ -9,7 +9,7 @@
 
 import { fg } from "@sdxc/u/color";
 import { is } from "@sdxc/u/size";
-import { Marquee } from "@sdxc/ui/patterns";
+import { Marquee } from "@sdxc/ui/landing";
 
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PageActions } from "@sdxc/ui";
+import { PageActions } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<PageActions

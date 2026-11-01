@@ -79,7 +79,8 @@ import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { vstack } from "@sdxc/u/layout";
-import { Button, Input, Modal, ShortcutList } from "@sdxc/ui";
+import { Button, Input, Modal } from "@sdxc/ui";
+import { ShortcutList } from "@sdxc/ui/app";
 import { Announcer } from "@sdxc/ui/behaviors";
 import { keymap } from "@sdxc/ui/mixins";
 import { keyComboGlyphs } from "@sdxc/ui/utils";

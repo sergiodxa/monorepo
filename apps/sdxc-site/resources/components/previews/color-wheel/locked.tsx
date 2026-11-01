@@ -12,8 +12,8 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { font, text } from "@sdxc/u/typography";
-import { ColorWheel, Label, Switch } from "@sdxc/ui";
-import { colorWheelDrag } from "@sdxc/ui/mixins";
+import { Label, Switch } from "@sdxc/ui";
+import { ColorWheel, colorWheelDrag } from "@sdxc/ui/color";
 import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below. */

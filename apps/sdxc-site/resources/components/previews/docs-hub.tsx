@@ -9,7 +9,7 @@
 
 import { is } from "@sdxc/u/size";
 import { HeadingScope, SearchField } from "@sdxc/ui";
-import { DocsHub } from "@sdxc/ui/patterns";
+import { DocsHub } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<DocsHub

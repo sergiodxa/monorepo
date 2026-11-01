@@ -12,8 +12,8 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { Badge, Split } from "@sdxc/ui";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { Badge } from "@sdxc/ui";
+import { ProductFrame, Split } from "@sdxc/ui/landing";
 
 /** The incident timeline the framed media lists, oldest first. */
 const TIMELINE = [

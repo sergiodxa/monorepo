@@ -12,8 +12,8 @@ import { raw } from "@sdxc/u/general";
 import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Link, LinkButton } from "@sdxc/ui";
-import { LandingHero } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { LandingHero } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import BookCover from "~/resources/views/demos/book/cover";
 
@@ -46,7 +46,7 @@ export default function BookHero() {
 			}
 			actions={
 				<>
-					<LinkButton href="#pricing" color="brand" mix={[marketingCtaChrome()]}>
+					<LinkButton href="#pricing" color="brand" mix={[landingCtaChrome()]}>
 						Buy the book — $39
 					</LinkButton>
 					<Link href="#sample" color="neutral" mix={[weight("medium")]}>
@@ -63,7 +63,7 @@ export default function BookHero() {
 						fg("neutral"),
 						raw({
 							paddingBlockStart: "1rem",
-							borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+							borderBlockStart: "1px solid var(--ui-landing-hairline)",
 							fontVariantNumeric: "oldstyle-nums",
 						}),
 					]}

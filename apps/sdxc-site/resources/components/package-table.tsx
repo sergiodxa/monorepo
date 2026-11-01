@@ -16,7 +16,8 @@ import { media } from "@sdxc/u/responsive";
 import { is } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { nowrap, text } from "@sdxc/u/typography";
-import { Link, Table } from "@sdxc/ui";
+import { Link } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 
 import { formatFileSize } from "~/app/services/file-size";
@@ -28,7 +29,7 @@ import routes from "~/routes/web";
  * Where the header row pins: just under the site header, which is itself sticky, so the
  * column titles stay visible below it. The extra pixel is the site header's bottom border.
  */
-const HEADER_OFFSET = "calc(var(--ui-marketing-header-height) + 1px)";
+const HEADER_OFFSET = "calc(var(--ui-landing-header-height) + 1px)";
 
 /** How counts read in the table. */
 const NUMBER_FORMAT = new Intl.NumberFormat("en-US");

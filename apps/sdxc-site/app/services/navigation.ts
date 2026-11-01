@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CatalogueEntry } from "~/app/services/components";
-import type { NavEntry, NavGroup, NavTree } from "~/app/services/navigation-tree";
+import type { CatalogueEntry, ComponentModule } from "~/app/services/components";
+import type { NavEntry, NavGroup, NavSection, NavTree } from "~/app/services/navigation-tree";
 
 import { listComponents } from "~/app/services/components";
 import { listGuides } from "~/app/services/docs";
@@ -109,12 +109,12 @@ export async function buildComponentsNav(): Promise<NavTree> {
 					{ title: "Overview", href: routes.api.show.href({ name: "ui" }) },
 					{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
 					{
-						title: "Marketing foundations",
-						href: routes.api.component.href({ component: "marketing-foundations" }),
+						title: "Landing foundations",
+						href: routes.api.component.href({ component: "landing-foundations" }),
 					},
 					{
-						title: "Marketing components",
-						href: routes.api.component.href({ component: "marketing-components" }),
+						title: "Landing components",
+						href: routes.api.component.href({ component: "landing-components" }),
 					},
 					{
 						title: "Landing patterns",
@@ -123,9 +123,7 @@ export async function buildComponentsNav(): Promise<NavTree> {
 				],
 				groups: [],
 			},
-			{ title: "Components", entries: await listComponentEntries(), groups: [] },
-			{ title: "Marketing", entries: await listMarketingEntries(), groups: [] },
-			{ title: "Docs", entries: await listDocsEntries(), groups: [] },
+			...(await listComponentGroups()),
 			...(await listUiExportGroups()).map((group) => ({ ...group, groups: [] })),
 		],
 	};
@@ -154,31 +152,32 @@ export async function listUtilityGroups(): Promise<NavGroup[]> {
 	}));
 }
 
-/**
- * Every application component as one list. The names are already alphabetical and share a
- * flat namespace, so a reader scans them the way they would scan an index.
- */
-export async function listComponentEntries(): Promise<NavEntry[]> {
-	let components = await listComponents();
-	return components.filter((entry) => !entry.marketing && !entry.docs).map(componentNavEntry);
-}
+/** How the tree titles each folder of components, in the order it lists them. */
+const COMPONENT_GROUPS: Array<{ module: ComponentModule; title: string }> = [
+	{ module: "components", title: "Components" },
+	{ module: "landing", title: "Landing" },
+	{ module: "docs", title: "Docs" },
+	{ module: "chat", title: "Chat" },
+	{ module: "color", title: "Color" },
+	{ module: "app", title: "App" },
+];
 
 /**
- * Every component and pattern that builds a landing page, apart from the application
- * components so a reader assembling a marketing page finds its whole kit in one place.
+ * One section per `@sdxc/ui` namespace, the general components first, so a reader
+ * assembling a landing, a docs site or a dashboard finds that kit in one list.
  */
-export async function listMarketingEntries(): Promise<NavEntry[]> {
+export async function listComponentGroups(): Promise<NavSection[]> {
 	let components = await listComponents();
-	return components.filter((entry) => entry.marketing).map(componentNavEntry);
+	return COMPONENT_GROUPS.map(({ module, title }) => ({
+		title,
+		entries: components.filter((entry) => entry.module === module).map(componentNavEntry),
+		groups: [],
+	}));
 }
 
-/**
- * Every component and pattern that builds a docs page: the shell, its navigation and the
- * content blocks, apart from the application components so a docs site's kit reads as one.
- */
-export async function listDocsEntries(): Promise<NavEntry[]> {
-	let components = await listComponents();
-	return components.filter((entry) => entry.docs).map(componentNavEntry);
+/** The title the tree gives a folder of components, which its pages are filed under. */
+export function componentGroupTitle(module: ComponentModule): string {
+	return COMPONENT_GROUPS.find((group) => group.module === module)?.title ?? "Components";
 }
 
 /** A component's link in the tree, titled with the name it is imported by. */

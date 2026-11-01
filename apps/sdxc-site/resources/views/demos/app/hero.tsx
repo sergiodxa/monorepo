@@ -16,8 +16,7 @@ import { combine, raw } from "@sdxc/u/general";
 import { container, hstack, vstack } from "@sdxc/u/layout";
 import { at, dark, motionSafe } from "@sdxc/u/responsive";
 import { leading, text, weight } from "@sdxc/u/typography";
-import { LogoCloud } from "@sdxc/ui";
-import { AccentText, LandingHero, MotionLoop } from "@sdxc/ui/patterns";
+import { AccentText, LandingHero, LogoCloud, MotionLoop } from "@sdxc/ui/landing";
 
 import { Masthead, MASTHEADS } from "~/resources/views/demos/app/brand";
 import { Initials } from "~/resources/views/demos/app/phone";
@@ -139,7 +138,7 @@ function PhoneStage() {
 						overflow: "hidden",
 						blockSize: "calc(var(--phone) * 1.5 + clamp(2.5rem, 7cqi, 4.5rem))",
 						paddingBlockStart: "clamp(2.5rem, 7cqi, 4.5rem)",
-						borderRadius: "var(--ui-marketing-band-radius, 2rem)",
+						borderRadius: "var(--ui-landing-band-radius, 2rem)",
 						backgroundColor: "oklch(0.9 0.13 92)",
 						backgroundImage: [
 							"radial-gradient(circle at 50% 62%, oklch(1 0 0 / 0.55) 0 calc(var(--phone) * 0.78), transparent calc(var(--phone) * 0.78 + 1px))",

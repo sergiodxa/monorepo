@@ -8,8 +8,8 @@
  */
 
 import { Button, HeadingScope, LinkButton } from "@sdxc/ui";
-import { ClosingCta } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { ClosingCta } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<ClosingCta
@@ -21,8 +21,8 @@ const CODE = `<ClosingCta
 	}
 	actions={
 		<>
-			<Button color="brand" mix={[marketingCtaChrome()]}>Create an account</Button>
-			<LinkButton href="/examples/sales" variant="surface" mix={[marketingCtaChrome()]}>
+			<Button color="brand" mix={[landingCtaChrome()]}>Create an account</Button>
+			<LinkButton href="/examples/sales" variant="surface" mix={[landingCtaChrome()]}>
 				Talk to us
 			</LinkButton>
 		</>
@@ -53,10 +53,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="brand" mix={[marketingCtaChrome()]}>
+						<Button color="brand" mix={[landingCtaChrome()]}>
 							Create an account
 						</Button>
-						<LinkButton href="/examples/sales" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/sales" variant="surface" mix={[landingCtaChrome()]}>
 							Talk to us
 						</LinkButton>
 					</>
@@ -74,10 +74,10 @@ export default {
 				}
 				actions={
 					<>
-						<Button color="neutral" mix={[marketingCtaChrome()]}>
+						<Button color="neutral" mix={[landingCtaChrome()]}>
 							Start monitoring
 						</Button>
-						<LinkButton href="/examples/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+						<LinkButton href="/examples/pricing" variant="surface" mix={[landingCtaChrome()]}>
 							Compare plans
 						</LinkButton>
 					</>

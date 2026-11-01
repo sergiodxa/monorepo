@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { PropsTable as PropsTableTypes } from "@sdxc/ui";
+import type { PropsTable as PropsTableTypes } from "@sdxc/ui/docs";
 
 import { is } from "@sdxc/u/size";
-import { PropsTable } from "@sdxc/ui";
+import { PropsTable } from "@sdxc/ui/docs";
 
 /** Every string the table prints. */
 const LABELS: PropsTableTypes.Labels = {

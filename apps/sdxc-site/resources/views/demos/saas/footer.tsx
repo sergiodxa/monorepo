@@ -11,7 +11,7 @@ import { ActivityIcon, BookOpenIcon, RssIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, text } from "@sdxc/u/typography";
-import { SiteFooter } from "@sdxc/ui/patterns";
+import { SiteFooter } from "@sdxc/ui/landing";
 
 import { KeelLogo } from "~/resources/views/demos/saas/marks";
 

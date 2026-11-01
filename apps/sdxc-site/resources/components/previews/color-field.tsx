@@ -9,8 +9,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
-import { ColorField } from "@sdxc/ui";
-import { colorPreview } from "@sdxc/ui/mixins";
+import { ColorField, colorPreview } from "@sdxc/ui/color";
 import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */

@@ -1,6 +1,6 @@
 /**
  * Live example for a `Heading` at marketing chapter size — the section H2
- * scale from `--ui-marketing-chapter-size`, fluid from 28px on a phone to 48px wide.
+ * scale from `--ui-landing-chapter-size`, fluid from 28px on a phone to 48px wide.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

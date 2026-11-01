@@ -8,7 +8,8 @@
  */
 
 import { BoldIcon, ItalicIcon, UnderlineIcon } from "@sdxc/icons";
-import { Button, Toolbar } from "@sdxc/ui";
+import { Button } from "@sdxc/ui";
+import { Toolbar } from "@sdxc/ui/app";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Toolbar aria-label="Text style" aria-orientation="vertical">

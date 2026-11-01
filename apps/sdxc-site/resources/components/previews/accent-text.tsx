@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { Heading, HeadingScope } from "@sdxc/ui";
-import { AccentText } from "@sdxc/ui/patterns";
+import { AccentText } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Heading size="display">

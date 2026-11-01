@@ -13,7 +13,8 @@ import { fg } from "@sdxc/u/color";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { maxIs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { ColorSwatch, ColorSwatchPicker, Description, Label } from "@sdxc/ui";
+import { Description, Label } from "@sdxc/ui";
+import { ColorSwatch, ColorSwatchPicker } from "@sdxc/ui/color";
 import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 

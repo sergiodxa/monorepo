@@ -1,5 +1,5 @@
 /**
- * `GET /api/ui/landing-patterns` — every `@sdxc/ui/patterns` band assembled into one
+ * `GET /api/ui/landing-patterns` — every `@sdxc/ui/landing` band assembled into one
  * believable uptime-monitoring landing, followed by the smaller craft pieces and a usage
  * snippet, so a reader judges the patterns by a finished page.
  *
@@ -12,21 +12,9 @@ import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { container, relative, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
-import {
-	Accordion,
-	Badge,
-	Button,
-	CodeBlock,
-	DocsPageHeader,
-	Feature,
-	HeadingScope,
-	LinkButton,
-	LogoCloud,
-	MarketingHeader,
-	MarketingSection,
-	StatStrip,
-} from "@sdxc/ui";
+import { Accordion, Badge, Button, HeadingScope, LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import {
 	AccentText,
 	Bento,
@@ -35,16 +23,21 @@ import {
 	ClosingCta,
 	CodeStage,
 	FaqBand,
+	Feature,
 	FeatureBand,
 	InstallTabs,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
+	LogoCloud,
 	PricingBand,
 	ProductFrame,
 	ProofStrip,
+	StatStrip,
 	TabbedStage,
 	TestimonialBand,
-} from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+} from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";
@@ -100,17 +93,7 @@ const ALERT_PAYLOAD = `{
 }`;
 
 /** The source the usage section prints, matching the bands the assembled page draws. */
-const USAGE_CODE = `import { Button, LinkButton } from "@sdxc/ui";
-import {
-	ClosingCta,
-	FaqBand,
-	FeatureBand,
-	LandingHero,
-	ProductFrame,
-	ProofStrip,
-} from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
-
+const USAGE_CODE = `
 <main>
 	<LandingHero
 		eyebrow={t("hero.eyebrow")}
@@ -119,8 +102,8 @@ import { marketingCtaChrome } from "@sdxc/ui/styles";
 		description={t("hero.lead")}
 		actions={
 			<>
-				<Button color="brand" mix={[marketingCtaChrome()]}>{t("hero.cta")}</Button>
-				<LinkButton href="/pricing" variant="surface" mix={[marketingCtaChrome()]}>
+				<Button color="brand" mix={[landingCtaChrome()]}>{t("hero.cta")}</Button>
+				<LinkButton href="/pricing" variant="surface" mix={[landingCtaChrome()]}>
 					{t("hero.pricing")}
 				</LinkButton>
 			</>
@@ -197,7 +180,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 								<PageActions
 									markdownHref={markdownHref}
 									markdownUrl={absoluteUrl(markdownHref)}
-									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/patterns/landing-hero.tsx`}
+									sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/landing/landing-hero.tsx`}
 								/>
 							}
 						/>
@@ -221,7 +204,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 						<ReferenceSection
 							id="page"
 							title="Assembled page"
-							lead="A sample uptime product, top to bottom: LandingHero, ProofStrip, FeatureBand as split, grid and stage, Bento in a MarketingSection, PricingBand, TestimonialBand, FaqBand and ClosingCta."
+							lead="A sample uptime product, top to bottom: LandingHero, ProofStrip, FeatureBand as split, grid and stage, Bento in a LandingSection, PricingBand, TestimonialBand, FaqBand and ClosingCta."
 						>
 							<div
 								mix={[rounded("xl"), border({ color: "neutral", width: 1 }), overflow("hidden")]}
@@ -243,13 +226,13 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 										}
 										actions={
 											<>
-												<Button color="brand" mix={[marketingCtaChrome()]}>
+												<Button color="brand" mix={[landingCtaChrome()]}>
 													Start monitoring free
 												</Button>
 												<LinkButton
 													href="/examples/pricing"
 													variant="surface"
-													mix={[marketingCtaChrome()]}
+													mix={[landingCtaChrome()]}
 												>
 													See pricing
 												</LinkButton>
@@ -389,13 +372,13 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 										</TabbedStage.Item>
 									</FeatureBand>
 
-									<MarketingSection mix={[viewReveal()]}>
-										<MarketingHeader
+									<LandingSection mix={[viewReveal()]}>
+										<LandingHeader
 											eyebrow="Platform"
 											description="Monitors, incidents and status pages share one timeline, so nobody copies an update between tools."
 										>
 											One place for uptime
-										</MarketingHeader>
+										</LandingHeader>
 										<Bento columns={3}>
 											<Bento.Cell>
 												<Bento.Media>
@@ -439,7 +422,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 												</Bento.Body>
 											</Bento.Cell>
 										</Bento>
-									</MarketingSection>
+									</LandingSection>
 
 									<PricingBand
 										tone="tinted"
@@ -613,13 +596,13 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 										description="Five monitors and a public status page, free for as long as you need them."
 										actions={
 											<>
-												<Button color="brand" mix={[marketingCtaChrome()]}>
+												<Button color="brand" mix={[landingCtaChrome()]}>
 													Create an account
 												</Button>
 												<LinkButton
 													href="/examples/pricing"
 													variant="surface"
-													mix={[marketingCtaChrome()]}
+													mix={[landingCtaChrome()]}
 												>
 													Talk to us
 												</LinkButton>

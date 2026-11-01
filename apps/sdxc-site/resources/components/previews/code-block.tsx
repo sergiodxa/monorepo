@@ -9,7 +9,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { CodeBlock } from "@sdxc/ui";
+import { CodeBlock } from "@sdxc/ui/docs";
 
 /** The file the first block shows. */
 const CONFIG = `import { defineConfig } from "vite";

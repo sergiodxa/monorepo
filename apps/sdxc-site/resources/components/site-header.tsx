@@ -19,7 +19,7 @@ import { is, m, maxBs, maxIs, minBs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { Dialog, DialogDismiss } from "@sdxc/ui";
-import { SiteHeader as UiSiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader as UiSiteHeader } from "@sdxc/ui/landing";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { Frame } from "remix/component";
 
@@ -106,7 +106,7 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				mix={[
 					docs
 						? [
-								raw({ "--site-header-gutter": "1rem", "--ui-marketing-measure": "88rem" }),
+								raw({ "--site-header-gutter": "1rem", "--ui-landing-measure": "88rem" }),
 								media("(min-width: 48rem)", raw({ "--site-header-gutter": "1.5rem" })),
 								media("(min-width: 64rem)", raw({ "--site-header-gutter": "2rem" })),
 							]

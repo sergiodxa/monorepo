@@ -10,7 +10,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
-import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";

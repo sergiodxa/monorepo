@@ -12,7 +12,8 @@ import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
-import { Callout, DocsPageHeader, Separator, Typeset } from "@sdxc/ui";
+import { Separator, Typeset } from "@sdxc/ui";
+import { Callout, DocsPageHeader } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import type { Anchor } from "~/app/services/article";

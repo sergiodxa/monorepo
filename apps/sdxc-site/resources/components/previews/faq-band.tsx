@@ -9,7 +9,7 @@
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { Accordion, HeadingScope } from "@sdxc/ui";
-import { FaqBand } from "@sdxc/ui/patterns";
+import { FaqBand } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<FaqBand title="Questions" columns={2}>

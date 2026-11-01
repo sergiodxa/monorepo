@@ -7,7 +7,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { InstallTabs } from "@sdxc/ui/patterns";
+import { InstallTabs } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<InstallTabs name="preview-install" aria-label="Package manager">

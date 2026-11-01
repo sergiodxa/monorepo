@@ -8,7 +8,7 @@
  */
 
 import { fg } from "@sdxc/u/color";
-import { RotatingText } from "@sdxc/ui/patterns";
+import { RotatingText } from "@sdxc/ui/landing";
 import { displayHeading } from "@sdxc/ui/styles";
 
 /** The source the page shows, matching the markup below. */

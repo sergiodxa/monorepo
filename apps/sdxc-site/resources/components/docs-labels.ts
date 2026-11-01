@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CodeBlock, PropsTable } from "@sdxc/ui";
+import type { CodeBlock, PropsTable } from "@sdxc/ui/docs";
 
 /** The copy button every code block carries. */
 export const CODE_LABELS: CodeBlock.Labels = { copy: "Copy code", copied: "Copied" };

@@ -7,7 +7,7 @@
  */
 
 import { is, m } from "@sdxc/u/size";
-import { DocsFooter } from "@sdxc/ui";
+import { DocsFooter } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<DocsLayout

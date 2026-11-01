@@ -12,7 +12,8 @@ import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { DocsPageHeader, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
+import { DocsPageHeader } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Bubble, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
+import { Bubble } from "@sdxc/ui/chat";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Bubble variant="ghost" align="start">

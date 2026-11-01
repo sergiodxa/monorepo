@@ -7,7 +7,7 @@
  */
 
 import { raw } from "@sdxc/u/general";
-import { EventTicker } from "@sdxc/ui/patterns";
+import { EventTicker } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<EventTicker

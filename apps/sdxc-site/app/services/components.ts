@@ -20,17 +20,13 @@ export interface ComponentEntry {
 
 /**
  * The `@sdxc/ui` folder a component's module lives in, which decides the subpath it is
- * imported from: `components` from `@sdxc/ui`, `patterns` from `@sdxc/ui/patterns`.
+ * imported from: `components` from `@sdxc/ui`, a namespace from `@sdxc/ui/<namespace>`.
  */
-export type ComponentModule = "components" | "patterns";
+export type ComponentModule = "components" | "landing" | "docs" | "chat" | "color" | "app";
 
 /** One catalogue page as the tree lists it, sorted into the group it belongs to. */
 export interface CatalogueEntry extends ComponentEntry {
 	module: ComponentModule;
-	/** Whether the component builds landing pages, which lists it under Marketing. */
-	marketing: boolean;
-	/** Whether the component builds documentation pages, which lists it under Docs. */
-	docs: boolean;
 }
 
 /** One row of a props table. */
@@ -99,7 +95,7 @@ export async function listComponents(): Promise<CatalogueEntry[]> {
 
 /** The specifier a reader imports a component from, which follows the folder it lives in. */
 export function importPath(module: ComponentModule): string {
-	return module === "patterns" ? "@sdxc/ui/patterns" : "@sdxc/ui";
+	return module === "components" ? "@sdxc/ui" : `@sdxc/ui/${module}`;
 }
 
 /**

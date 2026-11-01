@@ -11,8 +11,7 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { font, text, weight } from "@sdxc/u/typography";
-import { ColorArea, ColorSwatch } from "@sdxc/ui";
-import { colorAreaDrag } from "@sdxc/ui/mixins";
+import { ColorArea, colorAreaDrag, ColorSwatch } from "@sdxc/ui/color";
 import { formatHex, hsvToRgb } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 

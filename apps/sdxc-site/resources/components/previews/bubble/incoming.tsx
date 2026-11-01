@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Bubble } from "@sdxc/ui";
+import { Bubble } from "@sdxc/ui/chat";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Bubble variant="muted" align="start">

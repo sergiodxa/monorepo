@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DocsTree } from "@sdxc/ui/utils";
+import type { DocsTree } from "@sdxc/ui/docs";
 
 import { fg } from "@sdxc/u/color";
 import { is, maxIs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { DocsNav } from "@sdxc/ui";
+import { DocsNav } from "@sdxc/ui/docs";
 
 /** Three sections the way a monitoring product's help docs route a reader. */
 const TREE: DocsTree = {

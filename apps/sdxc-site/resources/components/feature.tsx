@@ -28,7 +28,8 @@ import {
 	ZapIcon,
 } from "@sdxc/icons";
 import { hstack } from "@sdxc/u/layout";
-import { Badge, Feature as UiFeature } from "@sdxc/ui";
+import { Badge } from "@sdxc/ui";
+import { Feature as UiFeature } from "@sdxc/ui/landing";
 
 import type { FeatureIconName } from "~/app/services/content";
 import type { MarkdownProps } from "~/resources/components/markdown-props";

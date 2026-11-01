@@ -8,7 +8,7 @@
  */
 
 import { maxIs } from "@sdxc/u/size";
-import { ColorSlider } from "@sdxc/ui";
+import { ColorSlider } from "@sdxc/ui/color";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<ColorSlider channel="alpha" min={0} max={1} defaultValue={1} mix={[maxIs("20rem")]}>

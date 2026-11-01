@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { HeadingScope, MarketingSection } from "@sdxc/ui";
-import { ChangelogStrip } from "@sdxc/ui/patterns";
+import { HeadingScope } from "@sdxc/ui";
+import { ChangelogStrip, LandingSection } from "@sdxc/ui/landing";
 
 /** Releases the strip lists, newest first. */
 const RELEASES = [
@@ -43,7 +43,7 @@ const RELEASES = [
 ] as const;
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<MarketingSection>
+const CODE = `<LandingSection>
 	<ChangelogStrip title="Changelog" action={<a href="/changelog">View all →</a>}>
 		<ChangelogStrip.Entry
 			dateTime="2026-10-28"
@@ -55,7 +55,7 @@ const CODE = `<MarketingSection>
 		</ChangelogStrip.Entry>
 		{/* …three more entries */}
 	</ChangelogStrip>
-</MarketingSection>`;
+</LandingSection>`;
 
 /** What the preview registry reads: the source to show, and the band to draw. */
 export default {
@@ -63,7 +63,7 @@ export default {
 	viewports: true,
 	render: () => (
 		<HeadingScope>
-			<MarketingSection>
+			<LandingSection>
 				<ChangelogStrip title="Changelog" action={<a href="/examples/changelog">View all →</a>}>
 					{RELEASES.map((release) => (
 						<ChangelogStrip.Entry
@@ -77,7 +77,7 @@ export default {
 						</ChangelogStrip.Entry>
 					))}
 				</ChangelogStrip>
-			</MarketingSection>
+			</LandingSection>
 		</HeadingScope>
 	),
 };

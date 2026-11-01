@@ -1,8 +1,8 @@
 /**
  * One horizontal band of the landing page, drawn inside the page's frame: a rule across
  * the full width on top, dashed rails down both sides of the content column, and a small
- * marker where they meet. Thin adapter over {@link MarketingSection} so markdown tags and
- * page layouts keep a stable `Band` name while sharing marketing tokens with other apps.
+ * marker where they meet. Thin adapter over {@link LandingSection} so markdown tags and
+ * page layouts keep a stable `Band` name while sharing landing tokens with other apps.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { text } from "@sdxc/u/typography";
-import { MarketingSection } from "@sdxc/ui";
+import { LandingSection } from "@sdxc/ui/landing";
 
 namespace Band {
 	/** What sits behind the band: nothing, a brand glow from one corner, or a faded grid. */
@@ -20,7 +20,7 @@ namespace Band {
 	/**
 	 * How much room the band leaves around its content. `"none"` zeroes block padding for
 	 * strips (stats) that carry their own cell padding; `"normal"` and `"hero"` map onto
-	 * the shared marketing section-space steps.
+	 * the shared landing section-space steps.
 	 */
 	export type Spacing = "none" | "normal" | "hero";
 
@@ -47,7 +47,7 @@ export default function Band(handle: Handle<Band.Props>) {
 			spacing = "normal",
 			tone = "plain",
 		} = handle.props;
-		let sectionSpacing: MarketingSection.Spacing = "normal";
+		let sectionSpacing: LandingSection.Spacing = "normal";
 		let isFlush = false;
 
 		if (spacing === "none") {
@@ -58,7 +58,7 @@ export default function Band(handle: Handle<Band.Props>) {
 		}
 
 		return (
-			<MarketingSection
+			<LandingSection
 				id={id}
 				tone={tone}
 				align={align}
@@ -69,7 +69,7 @@ export default function Band(handle: Handle<Band.Props>) {
 				mix={[text("base")]}
 			>
 				{children}
-			</MarketingSection>
+			</LandingSection>
 		);
 	};
 }

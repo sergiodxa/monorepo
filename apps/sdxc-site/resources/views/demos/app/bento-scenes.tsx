@@ -419,7 +419,7 @@ function StreetMap() {
 		>
 			<path
 				d="M0 38 H200 M120 0 V60 M20 0 L70 60"
-				stroke="var(--ui-marketing-hairline, currentColor)"
+				stroke="var(--ui-landing-hairline, currentColor)"
 				stroke-width="7"
 				fill="none"
 			/>

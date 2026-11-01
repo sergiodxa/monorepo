@@ -7,7 +7,7 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { PlanNotice } from "@sdxc/ui";
+import { PlanNotice } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<PlanNotice>

@@ -13,8 +13,7 @@ import { container, grid } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { MarketingHeader, MarketingSection } from "@sdxc/ui";
-import { Curriculum } from "@sdxc/ui/patterns";
+import { Curriculum, LandingHeader, LandingSection } from "@sdxc/ui/landing";
 
 /** One chapter: its title, a line on what it covers, its pages and its video lessons. */
 interface Chapter {
@@ -159,7 +158,7 @@ export default function BookContents() {
 		let page = FRONT_MATTER;
 
 		return (
-			<MarketingSection id="contents" ruled>
+			<LandingSection id="contents" ruled>
 				<div mix={[container(CONTAINER_NAME)]}>
 					<div
 						mix={[
@@ -178,7 +177,7 @@ export default function BookContents() {
 							]),
 						]}
 					>
-						<MarketingHeader
+						<LandingHeader
 							eyebrow="Contents"
 							description={
 								<>
@@ -188,13 +187,13 @@ export default function BookContents() {
 							}
 							mix={[
 								combine([
-									raw({ "--ui-marketing-header-end": "0" }),
+									raw({ "--ui-landing-header-end": "0" }),
 									at("lg", CONTAINER_NAME, raw({ position: "sticky", insetBlockStart: "6rem" })),
 								]),
 							]}
 						>
 							Three parts, fourteen chapters
-						</MarketingHeader>
+						</LandingHeader>
 						<Curriculum layout="stack">
 							{PARTS.map((part) => (
 								<Curriculum.Part
@@ -226,7 +225,7 @@ export default function BookContents() {
 						</Curriculum>
 					</div>
 				</div>
-			</MarketingSection>
+			</LandingSection>
 		);
 	};
 }

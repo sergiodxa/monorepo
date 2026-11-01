@@ -16,9 +16,14 @@ import { media } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { before, hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import { Callout, DocsFooter, DocsNav, DocsPager } from "@sdxc/ui";
-import { DocsLayout as Shell } from "@sdxc/ui/patterns";
-import { findNeighbours } from "@sdxc/ui/utils";
+import {
+	Callout,
+	DocsFooter,
+	DocsLayout as Shell,
+	DocsNav,
+	DocsPager,
+	findNeighbours,
+} from "@sdxc/ui/docs";
 
 import type { Anchor } from "~/app/services/article";
 import type { NavTree } from "~/app/services/navigation-tree";

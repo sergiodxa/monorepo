@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Callout } from "@sdxc/ui";
+import { Callout } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Callout kind="warning" label="Warning">

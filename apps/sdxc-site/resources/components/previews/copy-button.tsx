@@ -7,7 +7,8 @@
  */
 
 import { hstack } from "@sdxc/u/layout";
-import { CopyButton, Input } from "@sdxc/ui";
+import { Input } from "@sdxc/ui";
+import { CopyButton } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Input id="api-key" readOnly value="up_test_4f9c2a7e1b" aria-label="API key" />

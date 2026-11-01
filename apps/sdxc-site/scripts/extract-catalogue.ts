@@ -49,53 +49,17 @@ const OUTPUT = join(APP, "resources", "generated");
  */
 const SHARED_TYPE_MODULES = ["semantic-color.ts", "placement.ts"];
 
-/** The `@sdxc/ui` folders whose modules each publish one component page. */
-const COMPONENT_MODULES: ComponentModule[] = ["components", "patterns"];
+/**
+ * The `@sdxc/ui` namespaces, each a folder of components plus the mixins, behaviors,
+ * styles and animations only they use, which the site files under those subpaths.
+ */
+const NAMESPACES = ["landing", "docs", "chat", "color", "app"] as const;
 
 /**
- * The components under `components/` that exist to build landing pages, which the tree
- * lists under Marketing beside every pattern rather than among the application components.
+ * The `@sdxc/ui` folders whose modules each publish one component page: the general
+ * components, then each namespace in the order the tree lists them.
  */
-const MARKETING_COMPONENTS = new Set([
-	"cta-group",
-	"feature",
-	"logo-cloud",
-	"marketing-header",
-	"marketing-section",
-	"split",
-	"stat-strip",
-]);
-
-/**
- * The components and patterns that build documentation pages, which the tree lists under
- * Docs so a reader assembling a docs site finds the shell, navigation and blocks together.
- */
-const DOCS_COMPONENTS = new Set([
-	"anchor-heading",
-	"callout",
-	"code-block",
-	"code-tabs",
-	"code-tabs-sync",
-	"copy-button",
-	"docs-feedback",
-	"docs-footer",
-	"docs-hub",
-	"docs-layout",
-	"docs-nav",
-	"docs-nav-tools",
-	"docs-not-found",
-	"docs-page-header",
-	"docs-pager",
-	"file-tree",
-	"install-command",
-	"next-steps",
-	"page-actions",
-	"plan-notice",
-	"props-table",
-	"steps",
-	"table-of-contents",
-	"ui-label",
-]);
+const COMPONENT_MODULES: ComponentModule[] = ["components", ...NAMESPACES];
 
 /** A directory under `packages/u/src` that holds no family of its own. */
 const NOT_A_FAMILY = new Set(["internal"]);
@@ -158,9 +122,9 @@ function buildUtilities(): UtilityDocument {
 }
 
 /**
- * Every component and landing pattern, alphabetically, which is the order the tree lists
- * them in. Both folders share one URL space, so a pattern named like a component fails
- * the run rather than hiding one of the two pages.
+ * Every component of every namespace, alphabetically, which is the order the tree lists
+ * them in. The folders share one URL space, so two modules with one name fail the run
+ * rather than hiding one of the two pages.
  */
 function buildComponents(): ComponentDocument {
 	let shared = SHARED_TYPE_MODULES.flatMap((name) => {
@@ -182,9 +146,7 @@ function buildComponents(): ComponentDocument {
 			let reference = source === null ? null : readComponent(source, slug, shared, module);
 			if (reference === null) throw new Error(`@sdxc/ui: could not read ${module}/${file}`);
 
-			let docs = DOCS_COMPONENTS.has(slug);
-			let marketing = !docs && (module === "patterns" || MARKETING_COMPONENTS.has(slug));
-			entries.push({ name: reference.name, slug, module, marketing, docs });
+			entries.push({ name: reference.name, slug, module });
 			references[slug] = reference;
 		}
 	}
@@ -222,11 +184,30 @@ function buildUiExports(): UiExportDocument {
 			pages.push(...modulePages);
 		}
 
+		for (let namespace of NAMESPACES) {
+			let folder = join(PACKAGES, "ui", "src", namespace);
+			let namespaceBarrel = read(join(folder, "index.ts")) ?? "";
+			let modules = new RegExp(`^export \\* from "\\./${subpath}/([^"]+)\\.js";$`, "gm");
+			for (let match of namespaceBarrel.matchAll(modules)) {
+				let file = `${subpath}/${match[1]}.ts`;
+				let source = read(join(folder, file));
+				let modulePages =
+					source === null ? null : readUiModule(source, subpath, match[1] as string, shared);
+				if (modulePages === null) throw new Error(`@sdxc/ui: could not read ${namespace}/${file}`);
+				pages.push(...modulePages.map((page) => ({ ...page, namespace })));
+			}
+		}
+
 		for (let page of pages.sort((a, b) => a.name.localeCompare(b.name))) {
 			let key = `${subpath}/${page.slug}`;
 			if (document.references[key]) throw new Error(`@sdxc/ui: two exports answer ${key}`);
 			document.references[key] = page;
-			document.entries[subpath].push({ name: page.name, subpath, slug: page.slug });
+			document.entries[subpath].push({
+				name: page.name,
+				subpath,
+				slug: page.slug,
+				namespace: page.namespace,
+			});
 		}
 	}
 
@@ -238,7 +219,6 @@ function buildUiExports(): UiExportDocument {
  * ones a component reaches through a shared style module it imports.
  */
 function buildTheme(): ThemeReference {
-	let root = join(PACKAGES, "ui", "src", "components");
 	let stylesheets = [
 		join(PACKAGES, "u", "src", "theme.css"),
 		join(PACKAGES, "ui", "src", "theme.css"),
@@ -246,9 +226,12 @@ function buildTheme(): ThemeReference {
 		.map((path) => read(path))
 		.filter((source): source is string => source !== null);
 
-	let sources = componentFiles(root).flatMap((file) => {
-		let source = read(join(root, file));
-		return source === null || componentName(source) === null ? [] : [source];
+	let sources = COMPONENT_MODULES.flatMap((module) => {
+		let root = join(PACKAGES, "ui", "src", module);
+		return componentFiles(root).flatMap((file) => {
+			let source = read(join(root, file));
+			return source === null || componentName(source) === null ? [] : [source];
+		});
 	});
 
 	let stylesRoot = join(PACKAGES, "ui", "src", "styles");

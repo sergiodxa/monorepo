@@ -8,7 +8,7 @@
  */
 
 import { HeadingScope } from "@sdxc/ui";
-import { TestimonialBand } from "@sdxc/ui/patterns";
+import { TestimonialBand } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<TestimonialBand

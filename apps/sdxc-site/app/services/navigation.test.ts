@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { findNeighbours } from "@sdxc/ui/utils";
+import { findNeighbours } from "@sdxc/ui/docs";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -68,8 +68,8 @@ describe("buildComponentsNav", () => {
 		expect(flat.slice(0, 5)).toEqual([
 			{ title: "Overview", href: "/api/ui" },
 			{ title: "Theming", href: "/api/ui/theming" },
-			{ title: "Marketing foundations", href: "/api/ui/marketing-foundations" },
-			{ title: "Marketing components", href: "/api/ui/marketing-components" },
+			{ title: "Landing foundations", href: "/api/ui/landing-foundations" },
+			{ title: "Landing components", href: "/api/ui/landing-components" },
 			{ title: "Landing patterns", href: "/api/ui/landing-patterns" },
 		]);
 		expect(flat.length).toBeGreaterThan(5);
@@ -82,61 +82,46 @@ describe("buildComponentsNav", () => {
 		expect(tree.sections.map((section) => section.title)).toEqual([
 			"@sdxc/ui",
 			"Components",
-			"Marketing",
+			"Landing",
 			"Docs",
+			"Chat",
+			"Color",
+			"App",
 			"Mixins",
 			"Behaviors",
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(4)?.entries).toContainEqual({
+		expect(tree.sections.at(7)?.entries).toContainEqual({
 			title: "hotkey",
 			href: "/api/ui/mixins/hotkey",
 		});
 	});
 });
 
-describe("Marketing group", () => {
-	test("lists every landing pattern and marketing primitive apart from the components", async () => {
-		let tree = await buildComponentsNav();
-		let components = tree.sections.find((section) => section.title === "Components");
-		let marketing = tree.sections.find((section) => section.title === "Marketing");
-		let titles = marketing?.entries.map((entry) => entry.title) ?? [];
-
-		expect(titles).toEqual(
-			expect.arrayContaining([
-				"LandingHero",
-				"FaqBand",
-				"FlowDiagram",
-				"SequenceDiagram",
-				"FanOutDiagram",
-				"EventTicker",
-				"TypedTerminal",
-				"DrawnChart",
-				"MarketingSection",
-				"SiteHeader",
-				"SiteFooter",
-			]),
-		);
-		expect(titles).toHaveLength(43);
-		expect(components?.entries.map((entry) => entry.title)).not.toContain("MarketingSection");
-		expect(components?.entries.map((entry) => entry.title)).toContain("Accordion");
-		expect(components?.entries.map((entry) => entry.title)).toContain("DialogDismiss");
-	});
-});
-
-describe("Docs group", () => {
-	test("lists the docs shell, navigation and content blocks apart from the components", async () => {
+describe("namespace groups", () => {
+	test("lists each namespace's components apart from the general ones", async () => {
 		let tree = await buildComponentsNav();
 		let titles = (section: string) =>
-			tree.sections.find((entry) => entry.title === section)?.entries.map((entry) => entry.title);
-		let docs = titles("Docs") ?? [];
+			tree.sections.find((entry) => entry.title === section)?.entries.map((entry) => entry.title) ??
+			[];
 
-		expect(docs).toEqual(
+		expect(titles("Landing")).toEqual(
+			expect.arrayContaining(["LandingHero", "FlowDiagram", "LandingSection", "SiteHeader"]),
+		);
+		expect(titles("Docs")).toEqual(
 			expect.arrayContaining(["DocsLayout", "DocsNav", "TableOfContents", "CodeBlock", "Callout"]),
 		);
-		expect(docs).toHaveLength(24);
-		expect(titles("Marketing")).not.toContain("DocsLayout");
+		expect(titles("Chat")).toEqual(expect.arrayContaining(["Message", "MessageScroller"]));
+		expect(titles("Color")).toEqual(expect.arrayContaining(["ColorPicker", "ColorWheel"]));
+		expect(titles("App")).toEqual(expect.arrayContaining(["Chart", "Table", "Toast"]));
+		expect(
+			["Landing", "Docs", "Chat", "Color", "App"].map((section) => titles(section).length),
+		).toEqual([42, 24, 5, 7, 15]);
+		expect(titles("Components")).toEqual(
+			expect.arrayContaining(["Accordion", "CtaGroup", "DialogDismiss", "Sidebar"]),
+		);
+		expect(titles("Components")).not.toContain("LandingSection");
 		expect(titles("Components")).not.toContain("Callout");
 	});
 });

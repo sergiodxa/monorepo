@@ -14,6 +14,7 @@ import type { UtilityReference } from "~/app/services/utilities";
 import type { UtilityExampleSource } from "~/app/services/utility-examples";
 
 import { importPath } from "~/app/services/components";
+import { uiExportImportPath } from "~/app/services/ui-exports";
 import {
 	atWidth,
 	customValue,
@@ -30,26 +31,26 @@ export const THEMING_TITLE = "Theming";
 export const THEMING_SUMMARY =
 	"Every theme variable the catalogue reads, and the two schemes that answer them.";
 
-/** The marketing foundations page's heading. */
-export const MARKETING_FOUNDATIONS_TITLE = "Marketing foundations";
+/** The landing foundations page's heading. */
+export const LANDING_FOUNDATIONS_TITLE = "Landing foundations";
 
-/** What the marketing foundations page is, in the one line a listing shows. */
-export const MARKETING_FOUNDATIONS_SUMMARY =
+/** What the landing foundations page is, in the one line a listing shows. */
+export const LANDING_FOUNDATIONS_SUMMARY =
 	"Layout tokens and style factories for landing bands: measure, tones, spacing, and display type.";
 
-/** The marketing components page's heading. */
-export const MARKETING_COMPONENTS_TITLE = "Marketing components";
+/** The landing components page's heading. */
+export const LANDING_COMPONENTS_TITLE = "Landing components";
 
-/** What the marketing components page is, in the one line a listing shows. */
-export const MARKETING_COMPONENTS_SUMMARY =
-	"Landing primitives: MarketingSection, MarketingHeader, CtaGroup, Split, StatStrip, LogoCloud, and Feature.";
+/** What the landing components page is, in the one line a listing shows. */
+export const LANDING_COMPONENTS_SUMMARY =
+	"Landing primitives: LandingSection, LandingHeader, CtaGroup, Split, StatStrip, LogoCloud, and Feature.";
 
 /** The landing patterns page's heading. */
 export const LANDING_PATTERNS_TITLE = "Landing patterns";
 
 /** What the landing patterns page is, in the one line a listing shows. */
 export const LANDING_PATTERNS_SUMMARY =
-	"Building blocks and composition craft from @sdxc/ui/patterns: Hero, Proof, FeatureBand, Faq, ClosingCta.";
+	"Building blocks and composition craft from @sdxc/ui/landing: Hero, Proof, FeatureBand, Faq, ClosingCta.";
 
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
@@ -200,7 +201,7 @@ export function componentMarkdown(reference: ComponentReference): string {
  */
 export function uiExportMarkdown(reference: UiExportReference): string {
 	let { companions, symbol } = reference;
-	let module = `@sdxc/ui/${reference.subpath}`;
+	let module = uiExportImportPath(reference);
 	let blocks = [
 		`# ${reference.name}`,
 		`> ${oneLine(reference.summary)}`,

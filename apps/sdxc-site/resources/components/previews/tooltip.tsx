@@ -10,7 +10,8 @@
 import { ArchiveIcon, StarIcon, Trash2Icon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { anchorName, hstack, positionAnchor } from "@sdxc/u/layout";
-import { Button, Toolbar, Tooltip } from "@sdxc/ui";
+import { Button, Tooltip } from "@sdxc/ui";
+import { Toolbar } from "@sdxc/ui/app";
 import { clientEntry } from "remix/component";
 
 /** The icon-only actions the row offers, each with the hint that names it. */

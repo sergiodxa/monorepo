@@ -10,13 +10,13 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, hstack } from "@sdxc/u/layout";
 import { font, text } from "@sdxc/u/typography";
-import { Crosshair } from "@sdxc/ui/patterns";
+import { Crosshair } from "@sdxc/ui/landing";
 
 /** Corners every panel marks. */
 const CORNERS: Crosshair.Corner[] = ["start-start", "start-end", "end-start", "end-end"];
 
 /** The source the page shows, matching the markup below. */
-const CODE = `<div mix={[raw({ position: "relative", border: "1px solid var(--ui-marketing-hairline)" })]}>
+const CODE = `<div mix={[raw({ position: "relative", border: "1px solid var(--ui-landing-hairline)" })]}>
 	<Crosshair corner="start-start" />
 	<Crosshair corner="start-end" />
 	<Crosshair corner="end-start" />
@@ -41,7 +41,7 @@ export default {
 							placeItems: "center",
 							inlineSize: "14rem",
 							blockSize: "8rem",
-							border: "1px solid var(--ui-marketing-hairline)",
+							border: "1px solid var(--ui-landing-hairline)",
 						}),
 						font("mono"),
 						text("xs"),

@@ -8,7 +8,7 @@
  */
 
 import { DialogDismiss } from "@sdxc/ui";
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 import BookLogo from "~/resources/views/demos/book/logo";
 

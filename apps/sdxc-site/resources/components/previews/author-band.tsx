@@ -8,7 +8,7 @@
  */
 
 import { GlobeIcon, MailIcon, RssIcon } from "@sdxc/icons";
-import { AuthorBand, CheckList, CheckRow } from "@sdxc/ui/patterns";
+import { AuthorBand, CheckList, CheckRow } from "@sdxc/ui/landing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<AuthorBand

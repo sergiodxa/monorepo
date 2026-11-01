@@ -10,7 +10,7 @@
 import { raw } from "@sdxc/u/general";
 import { hstack } from "@sdxc/u/layout";
 import { Button, SearchField } from "@sdxc/ui";
-import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/patterns";
+import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/docs";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { NavTree } from "~/app/services/navigation";

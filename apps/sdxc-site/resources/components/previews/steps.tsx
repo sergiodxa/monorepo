@@ -7,7 +7,8 @@
  */
 
 import { is } from "@sdxc/u/size";
-import { HeadingScope, Steps } from "@sdxc/ui";
+import { HeadingScope } from "@sdxc/ui";
+import { Steps } from "@sdxc/ui/docs";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Steps>

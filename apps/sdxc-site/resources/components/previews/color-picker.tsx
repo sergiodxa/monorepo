@@ -6,24 +6,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColorChannelChangeEvent } from "@sdxc/ui/mixins";
+import type { ColorChannelChangeEvent } from "@sdxc/ui/color";
 import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { basis, grow, hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, minIs } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
+import { Input, Label, Separator } from "@sdxc/ui";
 import {
+	channelSync,
 	ColorArea,
+	colorAreaDrag,
 	ColorPicker,
 	ColorSlider,
 	ColorSwatchPicker,
 	ColorWheel,
-	Input,
-	Label,
-	Separator,
-} from "@sdxc/ui";
-import { channelSync, colorAreaDrag, colorWheelDrag } from "@sdxc/ui/mixins";
+	colorWheelDrag,
+} from "@sdxc/ui/color";
 import { formatHex, hsvToRgb, parseColor, rgbToHsv } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 

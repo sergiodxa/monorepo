@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SiteHeader as SiteHeaderType } from "@sdxc/ui/patterns";
+import type { SiteHeader as SiteHeaderType } from "@sdxc/ui/landing";
 
 import {
 	BellRingIcon,
@@ -20,7 +20,7 @@ import {
 import { fg } from "@sdxc/u/color";
 import { hstack } from "@sdxc/u/layout";
 import { text, tracking, weight } from "@sdxc/u/typography";
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 /** The Product group: three titled columns and a closing link, the shape a mega panel suits. */
 const PRODUCT: SiteHeaderType.Group = {

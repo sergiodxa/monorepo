@@ -18,7 +18,8 @@ import {
 	Trash2Icon,
 	UnderlineIcon,
 } from "@sdxc/icons";
-import { Button, Menu, Select, Separator, ToggleButton, Toolbar } from "@sdxc/ui";
+import { Button, Menu, Select, Separator, ToggleButton } from "@sdxc/ui";
+import { Toolbar } from "@sdxc/ui/app";
 import { menuKeys, pressToggle } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 

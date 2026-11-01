@@ -11,10 +11,10 @@ import {
 	componentMarkdown,
 	LANDING_PATTERNS_SUMMARY,
 	LANDING_PATTERNS_TITLE,
-	MARKETING_COMPONENTS_SUMMARY,
-	MARKETING_COMPONENTS_TITLE,
-	MARKETING_FOUNDATIONS_SUMMARY,
-	MARKETING_FOUNDATIONS_TITLE,
+	LANDING_COMPONENTS_SUMMARY,
+	LANDING_COMPONENTS_TITLE,
+	LANDING_FOUNDATIONS_SUMMARY,
+	LANDING_FOUNDATIONS_TITLE,
 	THEMING_SUMMARY,
 	THEMING_TITLE,
 	themeMarkdown,
@@ -22,6 +22,7 @@ import {
 	utilityMarkdown,
 } from "~/app/services/catalogue-markdown";
 import { listComponents, readComponent } from "~/app/services/components";
+import { componentGroupTitle } from "~/app/services/navigation";
 import { readTheme } from "~/app/services/theming";
 import { listUiExports, readUiExport } from "~/app/services/ui-exports";
 import { isUiSubpath, UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
@@ -35,11 +36,11 @@ export const CATALOGUE_SOURCE_BASE = "https://github.com/sergiodxa/monorepo/blob
 /** The one segment under the component tree that is a page rather than a component. */
 export const THEMING_SLUG = "theming";
 
-/** The marketing foundations overview under the same component tree. */
-export const MARKETING_FOUNDATIONS_SLUG = "marketing-foundations";
+/** The landing foundations overview under the same component tree. */
+export const LANDING_FOUNDATIONS_SLUG = "landing-foundations";
 
-/** The marketing components overview under the same component tree. */
-export const MARKETING_COMPONENTS_SLUG = "marketing-components";
+/** The landing components overview under the same component tree. */
+export const LANDING_COMPONENTS_SLUG = "landing-components";
 
 /** The landing patterns overview under the same component tree. */
 export const LANDING_PATTERNS_SLUG = "landing-patterns";
@@ -121,25 +122,25 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 	});
 
 	pages.push({
-		title: MARKETING_FOUNDATIONS_TITLE,
+		title: LANDING_FOUNDATIONS_TITLE,
 		package: "@sdxc/ui",
 		kind: "component",
 		section: "Components",
-		summary: MARKETING_FOUNDATIONS_SUMMARY,
-		params: { component: MARKETING_FOUNDATIONS_SLUG },
-		href: routes.api.component.href({ component: MARKETING_FOUNDATIONS_SLUG }),
-		markdownHref: routes.markdown.component.href({ component: MARKETING_FOUNDATIONS_SLUG }),
+		summary: LANDING_FOUNDATIONS_SUMMARY,
+		params: { component: LANDING_FOUNDATIONS_SLUG },
+		href: routes.api.component.href({ component: LANDING_FOUNDATIONS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: LANDING_FOUNDATIONS_SLUG }),
 	});
 
 	pages.push({
-		title: MARKETING_COMPONENTS_TITLE,
+		title: LANDING_COMPONENTS_TITLE,
 		package: "@sdxc/ui",
 		kind: "component",
 		section: "Components",
-		summary: MARKETING_COMPONENTS_SUMMARY,
-		params: { component: MARKETING_COMPONENTS_SLUG },
-		href: routes.api.component.href({ component: MARKETING_COMPONENTS_SLUG }),
-		markdownHref: routes.markdown.component.href({ component: MARKETING_COMPONENTS_SLUG }),
+		summary: LANDING_COMPONENTS_SUMMARY,
+		params: { component: LANDING_COMPONENTS_SLUG },
+		href: routes.api.component.href({ component: LANDING_COMPONENTS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: LANDING_COMPONENTS_SLUG }),
 	});
 
 	pages.push({
@@ -159,7 +160,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 			title: entry.name,
 			package: "@sdxc/ui",
 			kind: "component",
-			section: catalogueSection(entry),
+			section: componentGroupTitle(entry.module),
 			summary: reference?.summary ?? "",
 			params: { component: entry.slug },
 			href: routes.api.component.href({ component: entry.slug }),
@@ -207,8 +208,8 @@ export async function readUtilityMarkdown(utility: string): Promise<string | nul
  */
 export async function readComponentMarkdown(component: string): Promise<string | null> {
 	if (component === THEMING_SLUG) return themeMarkdown(await readTheme());
-	if (component === MARKETING_FOUNDATIONS_SLUG) return marketingFoundationsMarkdown();
-	if (component === MARKETING_COMPONENTS_SLUG) return marketingComponentsMarkdown();
+	if (component === LANDING_FOUNDATIONS_SLUG) return landingFoundationsMarkdown();
+	if (component === LANDING_COMPONENTS_SLUG) return landingComponentsMarkdown();
 	if (component === LANDING_PATTERNS_SLUG) return landingPatternsMarkdown();
 
 	let reference = await readComponent(component);
@@ -216,13 +217,13 @@ export async function readComponentMarkdown(component: string): Promise<string |
 }
 
 /**
- * The markdown twin of the marketing foundations overview: tokens, factories,
+ * The markdown twin of the landing foundations overview: tokens, factories,
  * and the motion recipe, matching what the HTML page demonstrates.
  */
-function marketingFoundationsMarkdown(): string {
+function landingFoundationsMarkdown(): string {
 	return [
-		`# ${MARKETING_FOUNDATIONS_TITLE}`,
-		`> ${MARKETING_FOUNDATIONS_SUMMARY}`,
+		`# ${LANDING_FOUNDATIONS_TITLE}`,
+		`> ${LANDING_FOUNDATIONS_SUMMARY}`,
 		"",
 		"Import the factories from `@sdxc/ui/styles` and the tokens from `@sdxc/ui/theme.css`.",
 		"",
@@ -230,67 +231,67 @@ function marketingFoundationsMarkdown(): string {
 		"",
 		"| Token | Default |",
 		"| --- | --- |",
-		"| `--ui-marketing-measure` | `72rem` |",
-		"| `--ui-marketing-gutter` | `1rem` (steps to 1.5rem / 2rem via container) |",
-		"| `--ui-marketing-section-space` | `6rem` |",
-		"| `--ui-marketing-section-space-compact` | `4rem` |",
-		"| `--ui-marketing-section-space-hero` | `8rem` |",
-		"| `--ui-marketing-display-tracking` | `-0.04em` |",
-		"| `--ui-marketing-display-weight` | `500` |",
-		"| `--ui-marketing-display-leading` | `1` |",
-		"| `--ui-marketing-lead-measure` | `40rem` |",
-		"| `--ui-marketing-lead-size` | `1.125rem` |",
-		"| `--ui-marketing-chapter-size` | `2.75rem` |",
-		"| `--ui-marketing-logo-height` | `1.75rem` (`2.25rem` from `lg`) |",
-		"| `--ui-marketing-header-height` | `4rem` |",
-		"| `--ui-marketing-cta-radius` | `0.5rem` |",
+		"| `--ui-landing-measure` | `72rem` |",
+		"| `--ui-landing-gutter` | `1rem` (steps to 1.5rem / 2rem via container) |",
+		"| `--ui-landing-section-space` | `6rem` |",
+		"| `--ui-landing-section-space-compact` | `4rem` |",
+		"| `--ui-landing-section-space-hero` | `8rem` |",
+		"| `--ui-landing-display-tracking` | `-0.04em` |",
+		"| `--ui-landing-display-weight` | `500` |",
+		"| `--ui-landing-display-leading` | `1` |",
+		"| `--ui-landing-lead-measure` | `40rem` |",
+		"| `--ui-landing-lead-size` | `1.125rem` |",
+		"| `--ui-landing-chapter-size` | `2.75rem` |",
+		"| `--ui-landing-logo-height` | `1.75rem` (`2.25rem` from `lg`) |",
+		"| `--ui-landing-header-height` | `4rem` |",
+		"| `--ui-landing-cta-radius` | `0.5rem` |",
 		"| `--ui-font-display` | `var(--ui-font-sans)` |",
 		"",
 		"## Factories",
 		"",
-		"- `marketingContainer()`",
-		'- `marketingSectionSpace("hero" | "normal" | "compact" | "cta")`',
-		'- `marketingBandTone("plain" | "tinted" | "grid" | "inverse" | "brand" | "gradient")`',
+		"- `landingContainer()`",
+		'- `landingSectionSpace("hero" | "normal" | "compact" | "cta")`',
+		'- `landingBandTone("plain" | "tinted" | "grid" | "inverse" | "brand" | "gradient")`',
 		"- `displayHeading(1 | 2 | 3)`",
-		"- `marketingLead()`",
-		"- `marketingHairline()`",
+		"- `landingLead()`",
+		"- `landingHairline()`",
 		"- `logoCloudMark()`",
 		"",
 		"## Motion",
 		"",
 		"Apply `viewReveal()` from `@sdxc/ui/animations` on band hosts. Reduced-motion is handled there.",
 		"",
-		"Listbox `Section` remains for menus; landing pages compose `MarketingSection` and the other marketing primitives documented under Marketing components.",
+		"Listbox `Section` remains for menus; landing pages compose `LandingSection` and the other landing primitives documented under Landing components.",
 		"",
 	].join("\n");
 }
 
 /**
- * The markdown twin of the marketing components overview: the Phase 1
+ * The markdown twin of the landing components overview: the Phase 1
  * primitives and how they compose, matching what the HTML page demonstrates.
  */
-function marketingComponentsMarkdown(): string {
+function landingComponentsMarkdown(): string {
 	return [
-		`# ${MARKETING_COMPONENTS_TITLE}`,
-		`> ${MARKETING_COMPONENTS_SUMMARY}`,
+		`# ${LANDING_COMPONENTS_TITLE}`,
+		`> ${LANDING_COMPONENTS_SUMMARY}`,
 		"",
 		"Import from `@sdxc/ui`. Style factories and tokens stay on `@sdxc/ui/styles` and `@sdxc/ui/theme.css`.",
 		"",
 		"## Primitives",
 		"",
-		"- `MarketingSection` — band host (`tone`: plain | tinted | grid | inverse | brand | gradient; `spacing`: compact | normal | hero | cta; `align`, `ruled`, `variant`, `inset`: true | top | bottom)",
-		"- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: mono | quiet | soft | pill | numbered; `eyebrowHref`, `eyebrowIndex`)",
+		"- `LandingSection` — band host (`tone`: plain | tinted | grid | inverse | brand | gradient; `spacing`: compact | normal | hero | cta; `align`, `ruled`, `variant`, `inset`: true | top | bottom)",
+		"- `LandingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: mono | quiet | soft | pill | numbered; `eyebrowHref`, `eyebrowIndex`)",
 		'- `CtaGroup` — wrapping primary/secondary actions; `size` (default `md`, 40px) reaches every action without its own, `stack="phone"` stacks them on a phone',
 		"- `Split` / `Split.Copy` / `Split.Media` — two-column band content",
 		"- `StatStrip` / `StatStrip.Item` — numeric proof strip, one row from the `lg` container",
-		"- `LogoCloud` — adopter marks at `--ui-marketing-logo-height` (`layout`: row | spread | grid; `label`, `muted`)",
+		"- `LogoCloud` — adopter marks at `--ui-landing-logo-height` (`layout`: row | spread | grid; `label`, `muted`)",
 		"- `Feature` / `Feature.Grid` — claim cells and hairline grid",
 		"",
 		"## Pairing notes",
 		"",
-		'- Hero and closing CTAs: the group\'s `md` default (40px), a `variant="surface"` secondary, `marketingCtaChrome()` on both',
+		'- Hero and closing CTAs: the group\'s `md` default (40px), a `variant="surface"` secondary, `landingCtaChrome()` on both',
 		'- Nav CTAs: `size="sm"` (~32px)',
-		'- `Heading size="display" | "chapter"` for marketing type without a header wrapper',
+		'- `Heading size="display" | "chapter"` for landing type without a header wrapper',
 		"- Product empty states stay on `Empty` / `Card`; landing claims use `Feature`",
 		"",
 	].join("\n");
@@ -298,14 +299,14 @@ function marketingComponentsMarkdown(): string {
 
 /**
  * The markdown twin of the landing patterns overview: building blocks and
- * composition craft from `@sdxc/ui/patterns`.
+ * composition craft from `@sdxc/ui/landing`.
  */
 function landingPatternsMarkdown(): string {
 	return [
 		`# ${LANDING_PATTERNS_TITLE}`,
 		`> ${LANDING_PATTERNS_SUMMARY}`,
 		"",
-		"Import from `@sdxc/ui/patterns`. Primitives stay on `@sdxc/ui`.",
+		"Import from `@sdxc/ui/landing`. Primitives stay on `@sdxc/ui`.",
 		"",
 		"## Building blocks",
 		"",
@@ -341,11 +342,4 @@ export async function readUiExportMarkdown(subpath: string, slug: string): Promi
 
 	let reference = await readUiExport(subpath, slug);
 	return reference === null ? null : uiExportMarkdown(reference);
-}
-
-/** The tree section a catalogue page sits under, which its pager and search label show. */
-function catalogueSection(entry: { marketing: boolean; docs: boolean }): string {
-	if (entry.docs) return "Docs";
-	if (entry.marketing) return "Marketing";
-	return "Components";
 }

@@ -10,7 +10,8 @@
 import { CopyIcon, ReplyIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Avatar, Bubble, Button, Message } from "@sdxc/ui";
+import { Avatar, Button } from "@sdxc/ui";
+import { Bubble, Message } from "@sdxc/ui/chat";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 

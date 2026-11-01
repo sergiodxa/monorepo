@@ -12,7 +12,7 @@ import { rounded } from "@sdxc/u/effects";
 import { absolute, insBs, insIs, relative, vstack } from "@sdxc/u/layout";
 import { is, pb, pi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { DropIndicator } from "@sdxc/ui";
+import { DropIndicator } from "@sdxc/ui/app";
 
 /** The tasks in the list, in their current order. */
 const TASKS = [

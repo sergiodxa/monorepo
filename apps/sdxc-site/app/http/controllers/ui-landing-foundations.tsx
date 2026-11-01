@@ -1,5 +1,5 @@
 /**
- * `GET /api/ui/marketing-foundations` — marketing layout tokens, band tones,
+ * `GET /api/ui/landing-foundations` — marketing layout tokens, band tones,
  * section spacing, and the style factories that read them, with live demos.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -12,16 +12,16 @@ import { container, flexWrap, gap, items, relative, vstack } from "@sdxc/u/layou
 import { m } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, nowrap, text, weight } from "@sdxc/u/typography";
-import { CodeBlock, DocsPageHeader } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
+import { CodeBlock, DocsPageHeader } from "@sdxc/ui/docs";
 import {
 	displayHeading,
+	landingBandTone,
+	landingContainer,
+	landingHairline,
+	landingLead,
+	landingSectionSpace,
 	logoCloudMark,
-	marketingBandTone,
-	marketingContainer,
-	marketingHairline,
-	marketingLead,
-	marketingSectionSpace,
 } from "@sdxc/ui/styles";
 
 import type { AppContext } from "~/app/initializers/router";
@@ -31,10 +31,10 @@ import type { NavTree } from "~/app/services/navigation";
 import { withBundleCache } from "~/app/http/caching";
 import { adsDayTag } from "~/app/services/ads";
 import {
-	MARKETING_FOUNDATIONS_SUMMARY,
-	MARKETING_FOUNDATIONS_TITLE,
+	LANDING_FOUNDATIONS_SUMMARY,
+	LANDING_FOUNDATIONS_TITLE,
 } from "~/app/services/catalogue-markdown";
-import { MARKETING_FOUNDATIONS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
+import { LANDING_FOUNDATIONS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
 import { Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
@@ -48,31 +48,25 @@ import routes from "~/routes/web";
 
 /** Every marketing token the foundations page tables, with what it controls. */
 const MARKETING_TOKENS = [
-	["--ui-marketing-measure", "Max content width of a marketing column (default 72rem)"],
-	[
-		"--ui-marketing-gutter",
-		"Inline padding at the narrowest container step (1rem → 1.5rem → 2rem)",
-	],
-	["--ui-marketing-section-space", "Block padding for a normal band (5rem → 7.5rem)"],
-	["--ui-marketing-section-space-compact", "Block padding for a compact band (3rem → 4.5rem)"],
-	["--ui-marketing-section-space-hero", "Block padding for a hero band (3.5rem → 8rem)"],
-	["--ui-marketing-section-space-cta", "Block padding for a closing band (5rem → 7rem)"],
-	["--ui-marketing-display-tracking", "Letter-spacing for display headlines (−0.035em)"],
-	["--ui-marketing-display-weight", "Font weight for display headlines (500)"],
-	["--ui-marketing-display-leading", "Line-height for display headlines (1)"],
-	["--ui-marketing-lead-measure", "Max width of supporting lead copy (40rem)"],
-	["--ui-marketing-lead-size", "Font size of supporting lead copy (1.125rem)"],
-	["--ui-marketing-chapter-size", "Font size of a marketing section H2 (1.75rem → 3rem)"],
-	["--ui-marketing-logo-height", "Height of a logo-cloud mark (1.75rem; 2.25rem from lg)"],
-	["--ui-marketing-header-height", "Sticky marketing header target (4rem)"],
-	[
-		"--ui-marketing-cta-radius",
-		"Corner radius language for brand CTAs (0.5rem; override per brand)",
-	],
-	["--ui-marketing-radius-surface", "Corner radius of a raised marketing surface (1rem)"],
-	["--ui-marketing-band-radius", "Corner radius of an inset band (2rem)"],
-	["--ui-marketing-band-gradient", "Fill a gradient band paints; the page supplies it"],
-	["--ui-marketing-hairline", "Rule ink between cells and bands (6% ink, 10% white in dark)"],
+	["--ui-landing-measure", "Max content width of a marketing column (default 72rem)"],
+	["--ui-landing-gutter", "Inline padding at the narrowest container step (1rem → 1.5rem → 2rem)"],
+	["--ui-landing-section-space", "Block padding for a normal band (5rem → 7.5rem)"],
+	["--ui-landing-section-space-compact", "Block padding for a compact band (3rem → 4.5rem)"],
+	["--ui-landing-section-space-hero", "Block padding for a hero band (3.5rem → 8rem)"],
+	["--ui-landing-section-space-cta", "Block padding for a closing band (5rem → 7rem)"],
+	["--ui-landing-display-tracking", "Letter-spacing for display headlines (−0.035em)"],
+	["--ui-landing-display-weight", "Font weight for display headlines (500)"],
+	["--ui-landing-display-leading", "Line-height for display headlines (1)"],
+	["--ui-landing-lead-measure", "Max width of supporting lead copy (40rem)"],
+	["--ui-landing-lead-size", "Font size of supporting lead copy (1.125rem)"],
+	["--ui-landing-chapter-size", "Font size of a marketing section H2 (1.75rem → 3rem)"],
+	["--ui-landing-logo-height", "Height of a logo-cloud mark (1.75rem; 2.25rem from lg)"],
+	["--ui-landing-header-height", "Sticky marketing header target (4rem)"],
+	["--ui-landing-cta-radius", "Corner radius language for brand CTAs (0.5rem; override per brand)"],
+	["--ui-landing-radius-surface", "Corner radius of a raised marketing surface (1rem)"],
+	["--ui-landing-band-radius", "Corner radius of an inset band (2rem)"],
+	["--ui-landing-band-gradient", "Fill a gradient band paints; the page supplies it"],
+	["--ui-landing-hairline", "Rule ink between cells and bands (6% ink, 10% white in dark)"],
 	["--ui-font-display", "Optional display family; falls back to the body face"],
 ] as const;
 
@@ -83,7 +77,7 @@ const TONES = [
 	["grid", "A hairline grid fading out from the corner, behind a hero."],
 	["inverse", "An inverted solid for the closing call to action."],
 	["brand", "The brand solid, with every neutral token re-pointed at its foreground."],
-	["gradient", "Whatever --ui-marketing-band-gradient holds, supplied by the page."],
+	["gradient", "Whatever --ui-landing-band-gradient holds, supplied by the page."],
 ] as const;
 
 /** The gradient the `gradient` tone demo supplies, built from the brand and neutral tints. */
@@ -94,15 +88,15 @@ const DEMO_GRADIENT =
 const SPACINGS = ["compact", "normal", "hero", "cta"] as const;
 
 /**
- * Renders the marketing foundations page.
+ * Renders the landing foundations page.
  *
  * @param ctx - The request being answered.
  * @param tree - The `@sdxc/ui` tree, so the shell around the page still navigates.
  * @returns The rendered page, with the cache policy every generated page carries.
  */
-export default async function marketingFoundationsPage(ctx: AppContext, tree: NavTree) {
-	let markdownHref = routes.markdown.component.href({ component: MARKETING_FOUNDATIONS_SLUG });
-	let activePath = routes.api.component.href({ component: MARKETING_FOUNDATIONS_SLUG });
+export default async function landingFoundationsPage(ctx: AppContext, tree: NavTree) {
+	let markdownHref = routes.markdown.component.href({ component: LANDING_FOUNDATIONS_SLUG });
+	let activePath = routes.api.component.href({ component: LANDING_FOUNDATIONS_SLUG });
 
 	let anchors: Anchor[] = [
 		{ id: "tokens", text: "Tokens", level: 2 },
@@ -116,8 +110,8 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${MARKETING_FOUNDATIONS_TITLE} — @sdxc/ui`}
-			description={MARKETING_FOUNDATIONS_SUMMARY}
+			title={`${LANDING_FOUNDATIONS_TITLE} — @sdxc/ui`}
+			description={LANDING_FOUNDATIONS_SUMMARY}
 			canonical={ctx.url.href}
 			siteFooter={false}
 		>
@@ -133,17 +127,17 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 							crumbs={[
 								{ label: "API", href: routes.api.index.href() },
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-								{ label: MARKETING_FOUNDATIONS_TITLE },
+								{ label: LANDING_FOUNDATIONS_TITLE },
 							]}
-							title={MARKETING_FOUNDATIONS_TITLE}
+							title={LANDING_FOUNDATIONS_TITLE}
 							description={
 								<>
 									Layout tokens and style factories for landing bands. Override the tokens per
 									brand; compose the factories into section hosts. Listbox <code>Section</code>{" "}
-									stays for menus — landing bands use <code>MarketingSection</code> and the other
+									stays for menus — landing bands use <code>LandingSection</code> and the other
 									primitives on{" "}
-									<a href={routes.api.component.href({ component: "marketing-components" })}>
-										Marketing components
+									<a href={routes.api.component.href({ component: "landing-components" })}>
+										Landing components
 									</a>
 									.
 								</>
@@ -178,44 +172,40 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 							code={`import "@sdxc/ui/theme.css";
 
 :root {
-	--ui-marketing-measure: 72rem; /* or 76rem for a wider frame */
-	--ui-marketing-cta-radius: 9999px; /* pill CTAs */
+	--ui-landing-measure: 72rem; /* or 76rem for a wider frame */
+	--ui-landing-cta-radius: 9999px; /* pill CTAs */
 }`}
 							language="css"
 						/>
 					</ReferenceSection>
 
 					<div
-						mix={[
-							container("ui-marketing-docs"),
-							relative(),
-							vstack({ gap: 10, align: "stretch" }),
-						]}
+						mix={[container("ui-landing-docs"), relative(), vstack({ gap: 10, align: "stretch" })]}
 					>
 						<ReferenceSection
 							id="tones"
 							title="Band tones"
-							lead="marketingBandTone() paints the band host. Pair it with marketingSectionSpace() and marketingContainer() on the inner column."
+							lead="landingBandTone() paints the band host. Pair it with landingSectionSpace() and landingContainer() on the inner column."
 						>
 							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 								{TONES.map(([tone, line]) => (
 									<section
 										key={tone}
 										mix={[
-											marketingBandTone(tone),
-											marketingSectionSpace("compact"),
+											landingBandTone(tone),
+											landingSectionSpace("compact"),
 											viewReveal(),
 											border({ color: "neutral", width: 1 }),
 											tone === "gradient"
-												? raw({ "--ui-marketing-band-gradient": DEMO_GRADIENT })
+												? raw({ "--ui-landing-band-gradient": DEMO_GRADIENT })
 												: [],
 										]}
 									>
-										<div mix={[marketingContainer(), vstack({ gap: 2, align: "stretch" })]}>
+										<div mix={[landingContainer(), vstack({ gap: 2, align: "stretch" })]}>
 											<span
 												mix={[font("mono"), text("sm"), weight("medium"), fg("neutral.emphasis")]}
 											>
-												marketingBandTone("{tone}")
+												landingBandTone("{tone}")
 											</span>
 											<p mix={[m(0), text("sm"), fg("neutral")]}>{line}</p>
 										</div>
@@ -234,16 +224,16 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 									<section
 										key={spacing}
 										mix={[
-											marketingBandTone("tinted"),
-											marketingSectionSpace(spacing),
+											landingBandTone("tinted"),
+											landingSectionSpace(spacing),
 											border({ color: "neutral", width: 1 }),
 										]}
 									>
-										<div mix={[marketingContainer()]}>
+										<div mix={[landingContainer()]}>
 											<span
 												mix={[font("mono"), text("sm"), weight("medium"), fg("neutral.emphasis")]}
 											>
-												marketingSectionSpace("{spacing}")
+												landingSectionSpace("{spacing}")
 											</span>
 										</div>
 									</section>
@@ -254,19 +244,19 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 						<ReferenceSection
 							id="type"
 							title="Display type"
-							lead="displayHeading() for H1/H2, marketingLead() for the support line, marketingHairline() for rules, logoCloudMark() for adopter marks."
+							lead="displayHeading() for H1/H2, landingLead() for the support line, landingHairline() for rules, logoCloudMark() for adopter marks."
 						>
 							<section
 								mix={[
-									marketingBandTone("plain"),
-									marketingSectionSpace("normal"),
-									marketingHairline(),
+									landingBandTone("plain"),
+									landingSectionSpace("normal"),
+									landingHairline(),
 									border({ color: "neutral", width: 1 }),
 								]}
 							>
-								<div mix={[marketingContainer(), vstack({ gap: 4, align: "stretch" })]}>
+								<div mix={[landingContainer(), vstack({ gap: 4, align: "stretch" })]}>
 									<h1 mix={[displayHeading(1)]}>Know it is down before your users do</h1>
-									<p mix={[marketingLead()]}>
+									<p mix={[landingLead()]}>
 										Checks from six regions, alerts that only fire when{" "}
 										<strong>two regions agree</strong>, and a status page your customers trust.
 									</p>
@@ -304,10 +294,8 @@ export default async function marketingFoundationsPage(ctx: AppContext, tree: Na
 					>
 						<CodeBlock
 							labels={CODE_LABELS}
-							code={`import { viewReveal } from "@sdxc/ui/animations";
-import { marketingBandTone, marketingSectionSpace } from "@sdxc/ui/styles";
-
-<section mix={[marketingBandTone("grid"), marketingSectionSpace(), viewReveal()]}>
+							code={`
+<section mix={[landingBandTone("grid"), landingSectionSpace(), viewReveal()]}>
 	{/* … */}
 </section>`}
 							language="tsx"
@@ -321,8 +309,8 @@ import { marketingBandTone, marketingSectionSpace } from "@sdxc/ui/styles";
 					>
 						<p mix={[m(0), text("sm"), fg("neutral")]}>
 							Factories live under <code>@sdxc/ui/styles</code>. The listbox <code>Section</code>{" "}
-							component remains for menus; landing pages compose <code>MarketingSection</code> and
-							the other marketing primitives documented under Marketing components.
+							component remains for menus; landing pages compose <code>LandingSection</code> and the
+							other landing primitives documented under Landing components.
 						</p>
 					</ReferenceSection>
 				</article>

@@ -8,7 +8,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { NextSteps } from "@sdxc/ui";
+import { NextSteps } from "@sdxc/ui/docs";
 
 /** The three destinations both variants list. */
 const ITEMS: NextSteps.Item[] = [

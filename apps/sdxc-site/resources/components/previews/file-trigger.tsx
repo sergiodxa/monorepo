@@ -12,7 +12,8 @@ import type { Handle } from "remix/component";
 import { FolderIcon, UploadIcon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Button, Description, FileTrigger, Header, Item, Separator } from "@sdxc/ui";
+import { Button, Description, Header, Item, Separator } from "@sdxc/ui";
+import { FileTrigger } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 
 import { formatFileSize } from "~/app/services/file-size";

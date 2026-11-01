@@ -9,7 +9,7 @@
 
 import { is } from "@sdxc/u/size";
 import { HeadingScope, SearchField } from "@sdxc/ui";
-import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/patterns";
+import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/docs";
 
 /** The address the preview pretends matched nothing. */
 const MISSING_PATH = "/docs/guides/web-hooks";

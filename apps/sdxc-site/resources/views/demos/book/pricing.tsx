@@ -8,7 +8,7 @@
  */
 
 import { Badge, Link } from "@sdxc/ui";
-import { CheckRow, PricingBand } from "@sdxc/ui/patterns";
+import { CheckRow, PricingBand } from "@sdxc/ui/landing";
 
 import CheckoutButton from "~/resources/views/demos/book/checkout-button";
 

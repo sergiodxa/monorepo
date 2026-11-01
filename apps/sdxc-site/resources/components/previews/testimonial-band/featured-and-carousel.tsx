@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { TestimonialBand } from "@sdxc/ui/patterns";
+import { TestimonialBand } from "@sdxc/ui/landing";
 
 import { Wordmark } from "~/resources/components/demo-media";
 

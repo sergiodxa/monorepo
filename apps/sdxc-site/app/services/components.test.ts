@@ -24,8 +24,8 @@ describe("listComponents", () => {
 	test("reads the landing patterns beside the components, imported from their own subpath", async () => {
 		let hero = await readComponent("landing-hero");
 
-		expect(hero?.module).toBe("patterns");
-		expect(importPath("patterns")).toBe("@sdxc/ui/patterns");
+		expect(hero?.module).toBe("landing");
+		expect(importPath("landing")).toBe("@sdxc/ui/landing");
 		expect((await readComponent("badge"))?.module).toBe("components");
 		expect(importPath("components")).toBe("@sdxc/ui");
 	});

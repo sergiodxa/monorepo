@@ -15,7 +15,7 @@ describe("demo landing links", () => {
 		expect(listDemoSlugs()).toEqual(expect.arrayContaining(["app", "book", "saas"]));
 	});
 
-	test.each(["/api/ui/marketing-components", "/api/ui/landing-patterns"])(
+	test.each(["/api/ui/landing-components", "/api/ui/landing-patterns"])(
 		"%s links every demo, and each one answers",
 		async (page) => {
 			let body = await (await fetchApp(page)).text();

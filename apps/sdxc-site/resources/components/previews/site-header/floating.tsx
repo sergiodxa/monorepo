@@ -8,7 +8,7 @@
  */
 
 import { fg } from "@sdxc/u/color";
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 import { BeaconLogo } from "~/resources/components/previews/site-header";
 

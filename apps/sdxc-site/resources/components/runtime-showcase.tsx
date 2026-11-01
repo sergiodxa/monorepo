@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { CodeStage } from "@sdxc/ui/patterns";
+import { CodeStage } from "@sdxc/ui/landing";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 
@@ -60,7 +60,7 @@ export default function RuntimeShowcase(_handle: Handle<MarkdownProps>) {
 			mix={[
 				raw({
 					padding: "0.25rem",
-					borderRadius: "calc(var(--ui-marketing-radius-frame, 0.75rem) + 0.25rem)",
+					borderRadius: "calc(var(--ui-landing-radius-frame, 0.75rem) + 0.25rem)",
 					backgroundColor: "color-mix(in oklch, var(--ui-brand-bg-solid) 7%, transparent)",
 					boxShadow:
 						"inset 0 0 0 1px color-mix(in oklch, var(--ui-brand-bg-solid) 12%, transparent)",
