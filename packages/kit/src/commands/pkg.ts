@@ -17,6 +17,7 @@ import {
 	lookupPackage,
 	onPath,
 	packageCommand,
+	projectRelease,
 	requestURL,
 } from "../pkg/resolve.js";
 
@@ -72,7 +73,8 @@ export default createCommand(SDXC_COMMANDS.pkg, {
 		}
 		let binary = await installedBinary(ctx.cwd, found.name);
 		let bun = await onPath("bun", ctx.env.PATH);
-		let ran = await ctx.exec(packageCommand(found.name, args, binary, bun), {
+		let release = binary === null ? await projectRelease(ctx.cwd) : null;
+		let ran = await ctx.exec(packageCommand(found.name, args, binary, bun, release), {
 			cwd: ctx.cwd,
 			stdio: "inherit",
 		});

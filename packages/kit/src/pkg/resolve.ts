@@ -11,7 +11,10 @@ import { readFile, stat } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
 
 import { closest } from "@sdxc/cli";
-import { isSuccess, wrap } from "@sdxc/result";
+import { isFailure, isSuccess, wrap } from "@sdxc/result";
+
+import { findProjectRoot } from "../project.js";
+import { currentRelease, readManifest } from "../upgrade/project.js";
 
 import { PACKAGE_COMMAND_LINES, PACKAGES_WITHOUT_COMMAND_LINES } from "./catalog.js";
 
@@ -111,13 +114,36 @@ export async function installedBinary(cwd: string, name: string): Promise<string
 	}
 }
 
-/** Whether an executable named `program` is in one of `path`'s directories. */
-export async function onPath(program: string, path: string | undefined): Promise<boolean> {
+/**
+ * Whether an executable named `program` is in one of `path`'s directories. On Windows the file
+ * carries an extension, so `bun.exe` and `bun.cmd` count as `bun` there.
+ *
+ * @param platform - The operating system, as `process.platform` names it
+ */
+export async function onPath(
+	program: string,
+	path: string | undefined,
+	platform: NodeJS.Platform = process.platform,
+): Promise<boolean> {
+	let names = platform === "win32" ? [`${program}.exe`, `${program}.cmd`, program] : [program];
 	for (let dir of (path ?? "").split(delimiter)) {
-		if (dir === "" || !isSuccess(await wrap(() => stat(join(dir, program))))) continue;
-		return true;
+		if (dir === "") continue;
+		for (let name of names) {
+			if (isSuccess(await wrap(() => stat(join(dir, name))))) return true;
+		}
 	}
 	return false;
+}
+
+/**
+ * The release the project around `cwd` pins its `@sdxc` packages to, or `null` outside a
+ * project or in one that pins none, so a downloaded command line matches the project's code.
+ */
+export async function projectRelease(cwd: string): Promise<string | null> {
+	let root = await findProjectRoot(cwd);
+	if (isFailure(root)) return null;
+	let manifest = await readManifest(root.data);
+	return isFailure(manifest) ? null : currentRelease(manifest.data.manifest);
 }
 
 /**
@@ -125,17 +151,22 @@ export async function onPath(program: string, path: string | undefined): Promise
  * Bun is on `PATH` and under Node otherwise, or the published package through `bunx --bun`,
  * falling back to `npx`. Bun runs an installed binary that is still TypeScript source.
  *
+ * A download takes the package's newest version at `release`, since a daily release republishes
+ * only the packages that changed, or the newest version when `release` is `null`.
+ *
  * @param binary - The installed binary, from `installedBinary`, or `null` to download it
  * @param bun - Whether `bun` is on `PATH`
+ * @param release - The project's release, from `projectRelease`
  */
 export function packageCommand(
 	name: string,
 	args: readonly string[],
 	binary: string | null,
 	bun: boolean,
+	release: string | null = null,
 ): string[] {
 	if (binary !== null) return [bun ? "bun" : "node", binary, ...args];
-	let specifier = `@sdxc/${name}`;
+	let specifier = release === null ? `@sdxc/${name}` : `@sdxc/${name}@<=${release}`;
 	let program = `sdxc-${name}`;
 	if (bun) return ["bunx", "--bun", "--package", specifier, program, ...args];
 	return ["npx", "--yes", "--package", specifier, program, ...args];

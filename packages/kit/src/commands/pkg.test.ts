@@ -126,6 +126,26 @@ describe("sdxc pkg", () => {
 		expect(withoutBun.code).toBe(0);
 	});
 
+	test("downloads the version at the project's release when it pins one", async () => {
+		let cwd = await folder({
+			"package.json": JSON.stringify({
+				name: "app",
+				dependencies: { "@sdxc/http": "2026.10.25", "@sdxc/result": "2026.10.13" },
+			}),
+		});
+
+		let run = await invoke(createSDXC(), ["pkg", "qr", "encode", "hi"], {
+			cwd,
+			env: { PATH: await folder({}) },
+			exec: {
+				'npx --yes --package "@sdxc/qr@<=2026.10.25" sdxc-qr encode hi': { code: 0 },
+			},
+		});
+
+		expect(run.stderr).toBe("");
+		expect(run.code).toBe(0);
+	});
+
 	test("hands the package's exit code back", async () => {
 		let run = await invoke(createSDXC(), ["pkg", "email-auth", "check", "example.com"], {
 			cwd: await folder({}),
