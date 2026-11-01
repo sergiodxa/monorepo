@@ -1,7 +1,8 @@
 /**
  * Live preview for `DangerZone`: the end of a team's settings, with a transfer and a
  * deletion. Deleting the team is the big irreversible one, so its confirm asks for the
- * team's name; the transfer opens on Cancel.
+ * team's name and its button sits under the consequences; the short transfer keeps its
+ * button at the row's end and opens on Cancel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,7 @@ const CODE = `<DangerZone title="Danger zone">
 		title="Transfer ownership"
 		description="Make another admin the owner of Acme Ops. You stay on as an admin."
 		buttonLabel="Transfer…"
+		actionPlacement="end"
 		confirm={{
 			title: "Transfer Acme Ops?",
 			description: "Ana Ruiz becomes the owner and takes over billing.",
@@ -56,6 +58,7 @@ export default {
 				title="Transfer ownership"
 				description="Make another admin the owner of Acme Ops. You stay on as an admin."
 				buttonLabel="Transfer…"
+				actionPlacement="end"
 				confirm={{
 					title: "Transfer Acme Ops?",
 					description: "Ana Ruiz becomes the owner and takes over billing.",
