@@ -1,6 +1,6 @@
 /**
- * Tests that the catalogue leads readers to every demo landing and every demo docs site, each
- * of which answers, so a demo added as a folder is listed and reachable without editing a page.
+ * Tests that the namespace component pages lead readers to every demo landing and every demo
+ * docs site, each of which answers, so a demo added as a folder is listed and reachable without editing a page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,7 @@ describe("demo landing links", () => {
 		expect(listDemoSlugs()).toEqual(expect.arrayContaining(["app", "book", "saas"]));
 	});
 
-	test.each(["/api/ui/landing-components", "/api/ui/landing-patterns"])(
+	test.each(["/api/ui/landing-section", "/api/ui/landing-hero"])(
 		"%s links every demo, and each one answers",
 		async (page) => {
 			let body = await (await fetchApp(page)).text();
@@ -40,19 +40,28 @@ describe("demo landing links", () => {
 		]);
 	});
 
-	test.each([
-		"/api/ui/docs-layout",
-		"/api/ui/docs-nav",
-		"/api/ui/docs-components",
-		"/api/ui/docs-patterns",
-		"/docs/content-and-feeds/reference-docs",
-	])("%s links every demo docs site, and each one answers", async (page) => {
-		let body = await (await fetchApp(page)).text();
+	test.each(["/api/ui/docs-layout", "/api/ui/docs-nav"])(
+		"%s links every demo docs site, and each one answers",
+		async (page) => {
+			let body = await (await fetchApp(page)).text();
 
-		for (let slug of listDemoDocsSlugs()) {
-			let href = demoDocsHref(slug)();
-			expect(body).toContain(`href="${href}"`);
-			expect((await fetchApp(href)).status).toBe(200);
-		}
+			for (let slug of listDemoDocsSlugs()) {
+				let href = demoDocsHref(slug)();
+				expect(body).toContain(`href="${href}"`);
+				expect((await fetchApp(href)).status).toBe(200);
+			}
+		},
+	);
+
+	test.each([
+		"/api/ui/landing-foundations",
+		"/api/ui/docs-foundations",
+		"/api/ui/landing-section",
+		"/api/ui/docs-layout",
+		"/docs/building-remix-apps/landing-pages",
+		"/docs/recipes/documentation-site",
+		"/docs/content-and-feeds/reference-docs",
+	])("%s links the demo gallery", async (page) => {
+		expect(await (await fetchApp(page)).text()).toContain('href="/demo"');
 	});
 });

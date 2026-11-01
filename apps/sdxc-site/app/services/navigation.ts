@@ -15,6 +15,7 @@ import { listPackageGroups } from "~/app/services/packages";
 import { listUiExports } from "~/app/services/ui-exports";
 import { UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import { listUtilityFamilies } from "~/app/services/utilities";
+import { foundationsFor } from "~/resources/content/foundations";
 import routes from "~/routes/web";
 
 /** The section the changelog is read under, which the guides beside it already declare. */
@@ -108,30 +109,6 @@ export async function buildComponentsNav(): Promise<NavTree> {
 				entries: [
 					{ title: "Overview", href: routes.api.show.href({ name: "ui" }) },
 					{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
-					{
-						title: "Landing foundations",
-						href: routes.api.component.href({ component: "landing-foundations" }),
-					},
-					{
-						title: "Landing components",
-						href: routes.api.component.href({ component: "landing-components" }),
-					},
-					{
-						title: "Landing patterns",
-						href: routes.api.component.href({ component: "landing-patterns" }),
-					},
-					{
-						title: "Docs foundations",
-						href: routes.api.component.href({ component: "docs-foundations" }),
-					},
-					{
-						title: "Docs components",
-						href: routes.api.component.href({ component: "docs-components" }),
-					},
-					{
-						title: "Docs patterns",
-						href: routes.api.component.href({ component: "docs-patterns" }),
-					},
 				],
 				groups: [],
 			},
@@ -176,15 +153,25 @@ const COMPONENT_GROUPS: Array<{ module: ComponentModule; title: string }> = [
 
 /**
  * One section per `@sdxc/ui` namespace, the general components first, so a reader
- * assembling a landing, a docs site or a dashboard finds that kit in one list.
+ * assembling a landing, a docs site or a dashboard finds that kit in one list. Each opens
+ * on its Foundations page, the intro a reader meets before any one component.
  */
 export async function listComponentGroups(): Promise<NavSection[]> {
 	let components = await listComponents();
-	return COMPONENT_GROUPS.map(({ module, title }) => ({
-		title,
-		entries: components.filter((entry) => entry.module === module).map(componentNavEntry),
-		groups: [],
-	}));
+	return COMPONENT_GROUPS.map(({ module, title }) => {
+		let foundations = foundationsFor(module);
+		return {
+			title,
+			entries: [
+				{
+					title: "Foundations",
+					href: routes.api.component.href({ component: foundations.slug }),
+				},
+				...components.filter((entry) => entry.module === module).map(componentNavEntry),
+			],
+			groups: [],
+		};
+	});
 }
 
 /** The title the tree gives a folder of components, which its pages are filed under. */

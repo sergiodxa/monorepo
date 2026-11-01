@@ -542,9 +542,8 @@ test("opens with one h1 and never skips a heading level", async () => {
 
 ## Where to go next
 
-- The demo landings — a [SaaS](/demo/saas), an [app](/demo/app) and a [book](/demo/book) built
-  only from these bands, each with its own palette and type.
-- [Landing patterns](/api/ui/landing-patterns) — every pattern assembled into one page.
+- The [demo gallery](/demo) — a SaaS, an app and a book landing built only from these bands,
+  each with its own palette and type.
 - The Landing group in the [`@sdxc/ui`](/api/ui) catalogue — a live demo and the full props
   of each band and primitive.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — replace the literal

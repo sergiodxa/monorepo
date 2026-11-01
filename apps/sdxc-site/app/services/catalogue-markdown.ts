@@ -12,6 +12,7 @@ import type { ThemeDeclaration, ThemeReference } from "~/app/services/theming";
 import type { UiExportReference, UiSymbol } from "~/app/services/ui-exports";
 import type { UtilityReference } from "~/app/services/utilities";
 import type { UtilityExampleSource } from "~/app/services/utility-examples";
+import type { Foundations } from "~/resources/content/foundations";
 
 import { importPath } from "~/app/services/components";
 import { uiExportImportPath } from "~/app/services/ui-exports";
@@ -31,47 +32,46 @@ export const THEMING_TITLE = "Theming";
 export const THEMING_SUMMARY =
 	"Every theme variable the catalogue reads, and the two schemes that answer them.";
 
-/** The landing foundations page's heading. */
-export const LANDING_FOUNDATIONS_TITLE = "Landing foundations";
+/**
+ * A namespace's Foundations page as Markdown: the intro, when to reach for it, the shared
+ * ideas and one table per group of variables, matching what the HTML page draws.
+ */
+export function foundationsMarkdown(foundations: Foundations): string {
+	let lines = [
+		`# ${foundations.title}`,
+		`> ${foundations.summary}`,
+		"",
+		...foundations.intro.flatMap((paragraph) => [paragraph, ""]),
+		`Import the components from \`${foundations.importPath}\` and the theme once from \`@sdxc/ui/theme.css\`.`,
+		"",
+		"## When to reach for it",
+		"",
+		...foundations.reachFor.map((line) => `- ${line}`),
+		"",
+		"## Shared ideas",
+		"",
+		...foundations.ideas.map((idea) => `- **${idea.title}.** ${idea.body}`),
+		"",
+		"## CSS variables",
+		"",
+		`Every custom property the namespace reads or declares. ${foundations.roles} The roles are documented on Theming.`,
+		"",
+	];
 
-/** What the landing foundations page is, in the one line a listing shows. */
-export const LANDING_FOUNDATIONS_SUMMARY =
-	"Layout tokens and style factories for landing bands: measure, tones, spacing, and display type.";
+	for (let group of foundations.variables) {
+		lines.push(`### ${group.title}`, "");
+		if (group.lead) lines.push(group.lead, "");
+		lines.push("| Variable | Default | What it controls |", "| --- | --- | --- |");
+		for (let variable of group.variables) {
+			lines.push(
+				`| \`${variable.name}\` | \`${variable.default.replaceAll("|", "\\|")}\` | ${variable.controls} |`,
+			);
+		}
+		lines.push("");
+	}
 
-/** The landing components page's heading. */
-export const LANDING_COMPONENTS_TITLE = "Landing components";
-
-/** What the landing components page is, in the one line a listing shows. */
-export const LANDING_COMPONENTS_SUMMARY =
-	"Landing primitives: LandingSection, LandingHeader, CtaGroup, Split, StatStrip, LogoCloud, and Feature.";
-
-/** The landing patterns page's heading. */
-export const LANDING_PATTERNS_TITLE = "Landing patterns";
-
-/** What the landing patterns page is, in the one line a listing shows. */
-export const LANDING_PATTERNS_SUMMARY =
-	"Building blocks and composition craft from @sdxc/ui/landing: Hero, Proof, FeatureBand, Faq, ClosingCta.";
-
-/** The docs foundations page's heading. */
-export const DOCS_FOUNDATIONS_TITLE = "Docs foundations";
-
-/** What the docs foundations page is, in the one line a listing shows. */
-export const DOCS_FOUNDATIONS_SUMMARY =
-	"The measures, tokens, reading type and mixins every @sdxc/ui/docs page is built on.";
-
-/** The docs components page's heading. */
-export const DOCS_COMPONENTS_TITLE = "Docs components";
-
-/** What the docs components page is, in the one line a listing shows. */
-export const DOCS_COMPONENTS_SUMMARY =
-	"Every @sdxc/ui/docs component by job: the shell and navigation, page furniture, content blocks and code.";
-
-/** The docs patterns page's heading. */
-export const DOCS_PATTERNS_TITLE = "Docs patterns";
-
-/** What the docs patterns page is, in the one line a listing shows. */
-export const DOCS_PATTERNS_SUMMARY =
-	"How the docs components compose into whole pages: the shell, the hub, a reference page, a task page and the 404.";
+	return lines.join("\n");
+}
 
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.

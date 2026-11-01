@@ -21,24 +21,10 @@ import type { PropsTable } from "~/app/services/components";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import docsComponentsPage from "~/app/http/controllers/ui-docs-components";
-import docsFoundationsPage from "~/app/http/controllers/ui-docs-foundations";
-import docsPatternsPage from "~/app/http/controllers/ui-docs-patterns";
-import landingComponentsPage from "~/app/http/controllers/ui-landing-components";
-import landingFoundationsPage from "~/app/http/controllers/ui-landing-foundations";
-import landingPatternsPage from "~/app/http/controllers/ui-landing-patterns";
+import foundationsPage from "~/app/http/controllers/ui-foundations";
 import themingPage from "~/app/http/controllers/ui-theming";
 import { adsDayTag } from "~/app/services/ads";
-import {
-	DOCS_COMPONENTS_SLUG,
-	DOCS_FOUNDATIONS_SLUG,
-	DOCS_PATTERNS_SLUG,
-	LANDING_PATTERNS_SLUG,
-	LANDING_COMPONENTS_SLUG,
-	LANDING_FOUNDATIONS_SLUG,
-	THEMING_SLUG,
-	CATALOGUE_SOURCE_BASE,
-} from "~/app/services/catalogue-pages";
+import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { importPath, readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
@@ -53,9 +39,11 @@ import PropsReference from "~/resources/components/props-reference";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
+import { findFoundations } from "~/resources/content/foundations";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { demoDocsLinks } from "~/resources/views/demo-docs";
+import { demoLandingLinks } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The install line every component page carries: `@sdxc/ui` brings the components, `remix` renders them. */
@@ -75,8 +63,7 @@ const COPY_GUIDE_SLUG = "sdxc/copy-ui-components";
  * redirect so links and search results to the old pages keep landing on the right one.
  */
 const MOVED_SLUGS: Record<string, string> = {
-	"marketing-foundations": LANDING_FOUNDATIONS_SLUG,
-	"marketing-components": LANDING_COMPONENTS_SLUG,
+	"marketing-foundations": "landing-foundations",
 	"marketing-section": "landing-section",
 	"marketing-header": "landing-header",
 };
@@ -92,12 +79,8 @@ export default createAction(routes.api.component, async (ctx) => {
 	let tree = await buildComponentsNav();
 
 	if (component === THEMING_SLUG) return await themingPage(ctx, tree);
-	if (component === LANDING_FOUNDATIONS_SLUG) return await landingFoundationsPage(ctx, tree);
-	if (component === LANDING_COMPONENTS_SLUG) return await landingComponentsPage(ctx, tree);
-	if (component === LANDING_PATTERNS_SLUG) return await landingPatternsPage(ctx, tree);
-	if (component === DOCS_FOUNDATIONS_SLUG) return await docsFoundationsPage(ctx, tree);
-	if (component === DOCS_COMPONENTS_SLUG) return await docsComponentsPage(ctx, tree);
-	if (component === DOCS_PATTERNS_SLUG) return await docsPatternsPage(ctx, tree);
+	let foundations = findFoundations(component);
+	if (foundations !== null) return await foundationsPage(ctx, tree, foundations);
 
 	let reference = await readComponent(component);
 	if (reference === null) return notFound(ctx, tree);
@@ -108,10 +91,13 @@ export default createAction(routes.api.component, async (ctx) => {
 	let examples = liveExamples.length > 0 ? [] : reference.examples.slice(preview === null ? 0 : 1);
 	let hasExamples = liveExamples.length > 0 || examples.length > 0;
 
-	let demos = reference.module === "docs" ? await demoDocsLinks() : [];
+	let demos: Array<{ href: string; title: string; description: string; eyebrow?: string }> = [];
+	if (reference.module === "docs") demos = await demoDocsLinks();
+	if (reference.module === "landing") demos = await demoLandingLinks();
+	let demosTitle = reference.module === "docs" ? "Demo docs sites" : "Demo landings";
 
 	let anchors: Anchor[] = [
-		demos.length > 0 ? { id: "demos", text: "Demo docs sites", level: 2 } : null,
+		demos.length > 0 ? { id: "demos", text: demosTitle, level: 2 } : null,
 		{ id: "installation", text: "Installation", level: 2 },
 		{ id: "usage", text: "Usage", level: 2 },
 		reference.parts.length > 0 ? { id: "composition", text: "Composition", level: 2 } : null,
@@ -160,10 +146,14 @@ export default createAction(routes.api.component, async (ctx) => {
 					{demos.length > 0 ? (
 						<ReferenceSection
 							id="demos"
-							title="Demo docs sites"
-							lead="Whole docs sites built only from the docs kit and the general components, each documenting an invented product with its own palette and type. They open in a new tab."
+							title={demosTitle}
+							lead="Whole pages built only from @sdxc/ui, each for an invented product with its own palette and type. They open in a new tab."
 						>
 							<DemoLinks links={demos} />
+							<p mix={[m(0), text("sm"), fg("neutral")]}>
+								Every demo, landings and docs sites alike, is listed in the{" "}
+								<a href={routes.demos.href()}>demo gallery</a>.
+							</p>
 						</ReferenceSection>
 					) : null}
 

@@ -209,34 +209,8 @@ async function readCatalogue(name: string) {
 	if (name === "u") return await listUtilityGroups();
 	return [
 		{
-			title: "Components",
-			entries: [
-				{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
-				{
-					title: "Landing foundations",
-					href: routes.api.component.href({ component: "landing-foundations" }),
-				},
-				{
-					title: "Landing components",
-					href: routes.api.component.href({ component: "landing-components" }),
-				},
-				{
-					title: "Landing patterns",
-					href: routes.api.component.href({ component: "landing-patterns" }),
-				},
-				{
-					title: "Docs foundations",
-					href: routes.api.component.href({ component: "docs-foundations" }),
-				},
-				{
-					title: "Docs components",
-					href: routes.api.component.href({ component: "docs-components" }),
-				},
-				{
-					title: "Docs patterns",
-					href: routes.api.component.href({ component: "docs-patterns" }),
-				},
-			],
+			title: "@sdxc/ui",
+			entries: [{ title: "Theming", href: routes.api.component.href({ component: "theming" }) }],
 		},
 		...(await listComponentGroups()),
 		...(await listUiExportGroups()),

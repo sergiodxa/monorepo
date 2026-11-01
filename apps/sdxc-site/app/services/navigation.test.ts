@@ -62,21 +62,31 @@ describe("buildUtilitiesNav", () => {
 });
 
 describe("buildComponentsNav", () => {
-	test("holds only @sdxc/ui, with theming ahead of the components", async () => {
-		let flat = flattenNav(await buildComponentsNav());
+	test("holds only @sdxc/ui, opening on the overview and theming alone", async () => {
+		let tree = await buildComponentsNav();
+		let flat = flattenNav(tree);
 
-		expect(flat.slice(0, 8)).toEqual([
+		expect(tree.sections.at(0)?.entries).toEqual([
 			{ title: "Overview", href: "/api/ui" },
 			{ title: "Theming", href: "/api/ui/theming" },
-			{ title: "Landing foundations", href: "/api/ui/landing-foundations" },
-			{ title: "Landing components", href: "/api/ui/landing-components" },
-			{ title: "Landing patterns", href: "/api/ui/landing-patterns" },
-			{ title: "Docs foundations", href: "/api/ui/docs-foundations" },
-			{ title: "Docs components", href: "/api/ui/docs-components" },
-			{ title: "Docs patterns", href: "/api/ui/docs-patterns" },
 		]);
 		expect(flat.length).toBeGreaterThan(8);
 		for (let entry of flat.slice(1)) expect(entry.href).toMatch(/^\/api\/ui\//);
+	});
+
+	test.each([
+		["Components", "/api/ui/foundations"],
+		["Landing", "/api/ui/landing-foundations"],
+		["Docs", "/api/ui/docs-foundations"],
+		["Chat", "/api/ui/chat-foundations"],
+		["Color", "/api/ui/color-foundations"],
+		["App", "/api/ui/app-foundations"],
+	])("opens the %s group on its Foundations page", async (group, href) => {
+		let tree = await buildComponentsNav();
+		let section = tree.sections.find((entry) => entry.title === group);
+
+		expect(section?.entries.at(0)).toEqual({ title: "Foundations", href });
+		expect(section?.entries.filter((entry) => entry.title === "Foundations")).toHaveLength(1);
 	});
 
 	test("follows the components with each subpath they are built from", async () => {
@@ -119,7 +129,9 @@ describe("namespace groups", () => {
 		expect(titles("Color")).toEqual(expect.arrayContaining(["ColorPicker", "ColorWheel"]));
 		expect(titles("App")).toEqual(expect.arrayContaining(["Chart", "Table", "Toast"]));
 		expect(
-			["Landing", "Docs", "Chat", "Color", "App"].map((section) => titles(section).length),
+			["Landing", "Docs", "Chat", "Color", "App"].map(
+				(section) => titles(section).filter((title) => title !== "Foundations").length,
+			),
 		).toEqual([42, 24, 5, 7, 15]);
 		expect(titles("Components")).toEqual(
 			expect.arrayContaining(["Accordion", "CtaGroup", "DialogDismiss", "Sidebar"]),
