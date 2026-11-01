@@ -1,0 +1,123 @@
+/**
+ * `GET /demo/docs/:site(/*page)` — a complete sample docs site built from `@sdxc/ui/docs`:
+ * its hub at the root, its pages, a search page and a 404 that searches. Marked `noindex,
+ * nofollow`, since each site documents an invented product rather than sdxc.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { RemixNode } from "remix/component";
+
+import { readCodeTabsCookie, searchQueryFromPath } from "@sdxc/ui/docs";
+import * as s from "remix/data-schema";
+import { createAction } from "remix/router";
+
+import defaultHandler from "~/app/http/controllers/default-handler";
+import { searchDemoDocs } from "~/app/services/demo-docs-search";
+import DocumentLayout from "~/resources/layouts/document";
+import { demoDocsHref, findDemoDocsSite } from "~/resources/views/demo-docs";
+import { DemoDocsHome, DemoDocsMissing, DemoDocsSearch } from "~/resources/views/demo-docs/pages";
+import {
+	DemoDocsArticle,
+	DemoDocsShell,
+	FEEDBACK_SENT_PARAM,
+	SEARCH_PAGE,
+} from "~/resources/views/demo-docs/shell";
+import routes from "~/routes/web";
+
+/** The directive every demo carries, which keeps it out of results and its links unfollowed. */
+const DEMO_ROBOTS = "noindex, nofollow";
+
+/** The params a request carries; `page` is absent on the hub. */
+const PARAMS = s.object({ site: s.string(), page: s.optional(s.string()) });
+
+/**
+ * Renders the hub, a page, the search page or the site's own 404. An unknown site answers
+ * the site's 404; an unknown page inside a known site answers `404` in the site's own shell,
+ * with its search pre-filled from the address.
+ */
+export default createAction(routes.demoDocs.show, async (ctx) => {
+	let { page: path, site: slug } = s.parse(PARAMS, ctx.params);
+	let site = await findDemoDocsSite(slug);
+	if (site === null) return defaultHandler(ctx);
+
+	let href = demoDocsHref(slug);
+	let cookie = ctx.request.headers.get("Cookie");
+	let render = (options: { title: string; body: RemixNode; status?: number }) =>
+		ctx.render(
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${options.title} — ${site.name} Docs`}
+				description={site.description}
+				robots={DEMO_ROBOTS}
+				siteFooter={false}
+			>
+				{options.body}
+			</DocumentLayout>,
+			{ status: options.status ?? 200 },
+		);
+
+	if (path === undefined) {
+		return render({
+			title: "Documentation",
+			body: (
+				<DemoDocsShell site={site} slug={slug} activePath={href()}>
+					<DemoDocsHome site={site} slug={slug} />
+				</DemoDocsShell>
+			),
+		});
+	}
+
+	if (path === SEARCH_PAGE) {
+		let query = ctx.url.searchParams.get("q") ?? "";
+		return render({
+			title: query.trim() === "" ? "Search" : `Search: ${query.trim()}`,
+			body: (
+				<DemoDocsShell site={site} slug={slug} activePath={href(SEARCH_PAGE)} query={query}>
+					<DemoDocsSearch
+						site={site}
+						slug={slug}
+						query={query}
+						results={searchDemoDocs(site, slug, query)}
+					/>
+				</DemoDocsShell>
+			),
+		});
+	}
+
+	let page = Object.hasOwn(site.pages, path) ? site.pages[path] : undefined;
+	if (page === undefined) {
+		return render({
+			title: "Page not found",
+			status: 404,
+			body: (
+				<DemoDocsShell site={site} slug={slug} activePath={ctx.url.pathname}>
+					<DemoDocsMissing
+						site={site}
+						slug={slug}
+						path={ctx.url.pathname}
+						query={searchQueryFromPath(ctx.url.pathname)}
+					/>
+				</DemoDocsShell>
+			),
+		});
+	}
+
+	return render({
+		title: page.title,
+		body: (
+			<DemoDocsShell
+				site={site}
+				slug={slug}
+				activePath={href(path)}
+				toc={page.toc}
+				feedback={{ sent: ctx.url.searchParams.has(FEEDBACK_SENT_PARAM) }}
+			>
+				<DemoDocsArticle site={site} slug={slug} path={path} page={page}>
+					{page.render({ tab: (syncKey) => readCodeTabsCookie(cookie, syncKey) })}
+				</DemoDocsArticle>
+			</DemoDocsShell>
+		),
+	});
+});

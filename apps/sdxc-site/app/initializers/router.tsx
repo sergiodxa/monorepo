@@ -280,6 +280,18 @@ export function createWebRouter() {
 		routes.stats,
 		lazy(() => import("~/app/http/controllers/stats")),
 	);
+	router.map(
+		routes.demoDocs.show,
+		lazy(() => import("~/app/http/controllers/demo-docs/show")),
+	);
+	router.map(
+		routes.demoDocs.markdown,
+		lazy(() => import("~/app/http/controllers/demo-docs/markdown")),
+	);
+	router.map(
+		routes.demoDocs.feedback,
+		lazy(() => import("~/app/http/controllers/demo-docs/feedback")),
+	);
 
 	return router;
 }

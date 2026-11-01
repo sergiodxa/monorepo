@@ -155,4 +155,16 @@ export default route({
 	 * nowhere and kept out of search engines; the address is the only way in.
 	 */
 	stats: get("/stats(.:format)"),
+	/**
+	 * A complete sample docs site built from `@sdxc/ui/docs`, several pages deep, kept out of
+	 * search engines like the landing demos: each one documents an invented product.
+	 */
+	demoDocs: {
+		/** The site's hub without `page`, one of its pages with it, and its search at `search`. */
+		show: get("/demo/docs/:site(/*page)"),
+		/** A page's Markdown twin, which the page's "Copy page" button copies. */
+		markdown: get("/demo/docs/:site/*page.md"),
+		/** Where a page's "Was this helpful?" form posts; it answers by thanking the reader. */
+		feedback: post("/demo/docs/:site/feedback"),
+	},
 });
