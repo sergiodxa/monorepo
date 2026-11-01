@@ -1,7 +1,7 @@
 /**
  * The top of an app screen in one order: where it sits (a breadcrumb, or a parent link on a
- * narrow pane), the `<h1>` with its status, a one-line description, the actions with the primary
- * one last, and an optional row of tabs. The sticky variant compacts once it is stuck.
+ * narrow pane), the `<h1>` with its status and one-line description, the actions with the
+ * primary one last, and an optional row of tabs. The sticky variant compacts once stuck.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -91,9 +91,9 @@ export namespace PageHeader {
 }
 
 /**
- * Renders the header. Titles and descriptions wrap inside the pane, actions wrap below the title
- * on a narrow pane, and tabs scroll sideways inside their own row. A sticky header spans the
- * shell's gutter (`--ui-app-gutter`) so content never shows beside it as it scrolls under.
+ * Renders the header. From 40rem the actions end the title's row, the description under both;
+ * narrower, they sit beside the title when they fit and after the description otherwise. A
+ * sticky header spans the shell's gutter (`--ui-app-gutter`) so content never shows beside it.
  *
  * @param handle Runtime handle carrying the header's props.
  * @returns The render function producing the header's markup.
@@ -243,58 +243,106 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 					<div
 						data-slot="page-header-main"
 						mix={[
-							raw({
-								display: "flex",
-								flexWrap: "wrap",
-								alignItems: "center",
-								columnGap: "1rem",
-								rowGap: "0.75rem",
-							}),
-						]}
-					>
-						<div
-							data-slot="page-header-title-row"
-							mix={[
+							when(
+								NARROW,
 								raw({
 									display: "flex",
 									flexWrap: "wrap",
-									alignItems: "center",
-									gap: "0.5rem",
-									flex: "1 1 16rem",
-									minInlineSize: "0",
+									alignItems: "flex-start",
+									columnGap: "1rem",
+									rowGap: "0.75rem",
 								}),
+							),
+							when(
+								WIDE,
+								raw({
+									display: "grid",
+									gridTemplateColumns: "minmax(0, 1fr) auto",
+									gridTemplateAreas: description
+										? '"title actions" "description description"'
+										: '"title actions"',
+									alignItems: "center",
+									columnGap: "1rem",
+									rowGap: "0.5rem",
+								}),
+							),
+						]}
+					>
+						<div
+							data-slot="page-header-heading"
+							mix={[
+								when(
+									NARROW,
+									raw({
+										display: "flex",
+										flexDirection: "column",
+										gap: "0.5rem",
+										flex: "1 1 16rem",
+										minInlineSize: "0",
+									}),
+								),
+								when(WIDE, raw({ display: "contents" })),
 							]}
 						>
-							<h1
-								data-slot="page-header-title"
+							<div
+								data-slot="page-header-title-row"
 								mix={[
 									raw({
-										margin: "0",
+										display: "flex",
+										flexWrap: "wrap",
+										alignItems: "center",
+										gap: "0.5rem",
+										gridArea: "title",
 										minInlineSize: "0",
-										fontSize: "1.25rem",
-										lineHeight: "1.25",
-										letterSpacing: "-0.01em",
-										textWrap: "balance",
-										transition: `font-size ${EASE}`,
 									}),
-									weight("semibold"),
-									fg("neutral.emphasis"),
-									when(WIDE, raw({ fontSize: "1.5rem" })),
-									sticky
-										? when(
-												"@media (prefers-reduced-motion: no-preference)",
-												when(STUCK, raw({ fontSize: "1rem" })),
-											)
-										: [],
-									when("@media (prefers-reduced-motion: reduce)", raw({ transition: "none" })),
 								]}
 							>
-								{title}
-							</h1>
-							{status ? (
-								<span data-slot="page-header-status" mix={[raw({ display: "inline-flex" })]}>
-									{status}
-								</span>
+								<h1
+									data-slot="page-header-title"
+									mix={[
+										raw({
+											margin: "0",
+											minInlineSize: "0",
+											fontSize: "1.25rem",
+											lineHeight: "1.25",
+											letterSpacing: "-0.01em",
+											textWrap: "balance",
+											transition: `font-size ${EASE}`,
+										}),
+										weight("semibold"),
+										fg("neutral.emphasis"),
+										when(WIDE, raw({ fontSize: "1.5rem" })),
+										sticky
+											? when(
+													"@media (prefers-reduced-motion: no-preference)",
+													when(STUCK, raw({ fontSize: "1rem" })),
+												)
+											: [],
+										when("@media (prefers-reduced-motion: reduce)", raw({ transition: "none" })),
+									]}
+								>
+									{title}
+								</h1>
+								{status ? (
+									<span data-slot="page-header-status" mix={[raw({ display: "inline-flex" })]}>
+										{status}
+									</span>
+								) : null}
+							</div>
+
+							{description ? (
+								<Fold sticky={sticky} mix={[raw({ gridArea: "description", minInlineSize: "0" })]}>
+									<p
+										data-slot="page-header-description"
+										mix={[
+											raw({ margin: "0", maxInlineSize: "75ch" }),
+											text("sm"),
+											fg("neutral.muted"),
+										]}
+									>
+										{description}
+									</p>
+								</Fold>
 							) : null}
 						</div>
 
@@ -306,7 +354,9 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 										display: "flex",
 										flexWrap: "wrap",
 										alignItems: "center",
+										justifyContent: "flex-end",
 										gap: "0.5rem",
+										gridArea: "actions",
 										marginInlineStart: "auto",
 										maxInlineSize: "100%",
 									}),
@@ -330,17 +380,6 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 							</div>
 						) : null}
 					</div>
-
-					{description ? (
-						<Fold sticky={sticky}>
-							<p
-								data-slot="page-header-description"
-								mix={[raw({ margin: "0", maxInlineSize: "75ch" }), text("sm"), fg("neutral.muted")]}
-							>
-								{description}
-							</p>
-						</Fold>
-					) : null}
 
 					{tabs.length > 0 ? (
 						<nav
@@ -440,6 +479,8 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 interface FoldProps {
 	/** Whether the header is the sticky variant, the only one that folds the row away. */
 	sticky: boolean;
+	/** Places the row in the layout around it, such as a grid area. */
+	mix?: TagProps<"div">["mix"];
 	children?: RemixNode;
 }
 
@@ -449,23 +490,32 @@ interface FoldProps {
  */
 function Fold(handle: Handle<FoldProps>) {
 	return () => {
-		let { sticky, children } = handle.props;
-		if (!sticky) return <div data-slot="page-header-fold">{children}</div>;
+		let { sticky, mix, children } = handle.props;
+		if (!sticky) {
+			return (
+				<div data-slot="page-header-fold" mix={mix}>
+					{children}
+				</div>
+			);
+		}
 		return (
 			<div
 				data-slot="page-header-fold"
-				mix={[
-					raw({
-						display: "grid",
-						gridTemplateRows: "1fr",
-						transition: `grid-template-rows ${EASE}, opacity ${EASE}`,
-					}),
-					when(
-						"@media (prefers-reduced-motion: no-preference)",
-						when(STUCK, raw({ gridTemplateRows: "0fr", opacity: "0", visibility: "hidden" })),
-					),
-					when("@media (prefers-reduced-motion: reduce)", raw({ transition: "none" })),
-				]}
+				mix={mergeMix(
+					[
+						raw({
+							display: "grid",
+							gridTemplateRows: "1fr",
+							transition: `grid-template-rows ${EASE}, opacity ${EASE}`,
+						}),
+						when(
+							"@media (prefers-reduced-motion: no-preference)",
+							when(STUCK, raw({ gridTemplateRows: "0fr", opacity: "0", visibility: "hidden" })),
+						),
+						when("@media (prefers-reduced-motion: reduce)", raw({ transition: "none" })),
+					],
+					mix,
+				)}
 			>
 				<div mix={[raw({ minBlockSize: "0", overflow: "clip", overflowClipMargin: "4px" })]}>
 					{children}

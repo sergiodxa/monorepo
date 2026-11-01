@@ -1,7 +1,7 @@
 /**
- * Tests for {@link PageHeader} in a real browser: actions in reading order with the primary one
- * last, the trail on a wide pane and the parent link only on a narrow one, tabs marking the
- * current view, the sticky variant compacting once stuck, and clean wrapping at 320px.
+ * Tests for {@link PageHeader} in a real browser: actions on the title's row with the primary
+ * one last, the description kept under the title at any width, the trail or parent link
+ * by width, tabs marking the current view, the sticky variant compacting, and wrapping at 320px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,6 +92,52 @@ describe("PageHeader", () => {
 		let header = document.querySelector('[data-slot="page-header"]')!.getBoundingClientRect();
 		expect(Math.round(header.right - edit!.right)).toBe(0);
 	});
+
+	test("keeps the actions at the end of the title's row, the description under both", async () => {
+		await page.viewport(1280, 800);
+		mountHeader("100%", { tabs: [] });
+		let header = document.querySelector('[data-slot="page-header"]')!.getBoundingClientRect();
+		let title = document.querySelector("h1")!.getBoundingClientRect();
+		let actions = document
+			.querySelector('[data-slot="page-header-actions"]')!
+			.getBoundingClientRect();
+		let description = document
+			.querySelector('[data-slot="page-header-description"]')!
+			.getBoundingClientRect();
+		expect(
+			Math.abs(actions.top + actions.height / 2 - (title.top + title.height / 2)),
+		).toBeLessThan(4);
+		expect(Math.round(header.right - actions.right)).toBe(0);
+		expect(description.top).toBeGreaterThanOrEqual(Math.max(title.bottom, actions.bottom) - 1);
+	});
+
+	for (let width of [320, 360, 480]) {
+		test(`never sets the primary action between the title and the description at ${width}px`, () => {
+			mountHeader(`${width}px`, {
+				title: "Articles",
+				description: "Everything published on the blog, newest first.",
+				actions: undefined,
+				overflow: undefined,
+				primaryAction: (
+					<button type="button" style="padding: 0.5rem 1rem">
+						New article
+					</button>
+				),
+				tabs: [],
+			});
+			let title = document.querySelector("h1")!.getBoundingClientRect();
+			let description = document
+				.querySelector('[data-slot="page-header-description"]')!
+				.getBoundingClientRect();
+			let action = document
+				.querySelector('[data-slot="page-header-primary"] button')!
+				.getBoundingClientRect();
+			let besideTitle = action.top < title.bottom && action.bottom > title.top;
+			let afterDescription = action.top >= description.bottom;
+			expect(besideTitle || afterDescription).toBe(true);
+			expect(description.top).toBeLessThan(title.bottom + 16);
+		});
+	}
 
 	test("shows the trail on a wide pane and the parent link only on a narrow one", () => {
 		mountHeader("60rem");
