@@ -84,6 +84,26 @@ async function verify(body: string, signature: ArrayBuffer, key: CryptoKey): Pro
 }
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/json-canonical --help
+```
+
+`canonicalize` prints a JSON file's canonical bytes (or stdin's, when the file is `-` or absent) with no trailing newline; `--newline` adds one.
+
+```sh
+bunx @sdxc/json-canonical canonicalize payload.json
+```
+
+`hash` prints the digest of those bytes in hex, or unpadded base64url with `--base64url`; `--alg` takes `sha-256` (the default), `sha-384` or `sha-512`.
+
+```sh
+bunx @sdxc/json-canonical hash payload.json --alg sha-512 --base64url
+```
+
+Text that is not JSON exits 2, and JSON outside I-JSON exits 1 naming its JSON Pointer.
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published,

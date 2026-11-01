@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "RFC 8785 JSON Canonicalization Scheme: one byte-exact serialization for hashing and signing JSON",
 	"license": "MIT",
+	"bin": {
+		"sdxc-json-canonical": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,7 +14,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"remix": "3.1.0"
 	}
 }
