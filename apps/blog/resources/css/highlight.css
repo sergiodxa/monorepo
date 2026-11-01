@@ -250,3 +250,11 @@ pre[class*="language-"] > code[class*="language-"] {
 	background-color: color-mix(in oklab, var(--ui-neutral-fg) 14%, transparent);
 	border-inline-start-color: var(--ui-neutral-fg-emphasis);
 }
+
+/*
+ * A code card with no header draws no copy button: floating over the code, the button
+ * covers the end of the first line and any added or removed mark on it.
+ */
+[data-slot="code-block"]:not(:has(> figcaption)) [data-slot="copy-button"] {
+	display: none;
+}

@@ -14,6 +14,8 @@ import { describe, expect, test } from "vitest";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { CodeFence } from "~/resources/components/code-fence";
 
+import "~/resources/css/highlight.css";
+
 /** The article body as the post page renders it, mounted so layout and styles apply. */
 function renderArticle(content: string): HTMLElement {
 	let page = PostViewModel.page(
@@ -94,7 +96,7 @@ describe("CodeFence", () => {
 		expect(body.querySelector(".token.inserted")).not.toBeNull();
 	});
 
-	test("heads a fence with no language as Text, keeping the copy button off its lines", () => {
+	test("draws a fence with no language headerless and without a copy button", () => {
 		let body = renderArticle(
 			[
 				"``` {% add={[2]} remove={[1]} %}",
@@ -103,9 +105,10 @@ describe("CodeFence", () => {
 				"```",
 			].join("\n"),
 		);
+		let button = body.querySelector('[data-slot="copy-button"]');
 
 		expect(marks(body)).toEqual(["remove", "add"]);
-		expect(body.querySelector("figcaption")?.textContent).toContain("Text");
-		expect(body.querySelector("figcaption [data-slot='copy-button']")).not.toBeNull();
+		expect(body.querySelector("figcaption")).toBeNull();
+		expect(button && getComputedStyle(button).display).toBe("none");
 	});
 });
