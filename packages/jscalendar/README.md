@@ -96,6 +96,8 @@ let icsAgain = stringify(unwrap(toICalendar(group)));
 bunx @sdxc/jscalendar --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg jscalendar …` runs the same command line, using the version your project installs.
+
 Each command reads a path, or stdin when the path is `-` or left out. Exit codes: `0` done, `1`
 problems found, `2` usage or unreadable input.
 
