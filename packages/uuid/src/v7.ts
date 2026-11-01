@@ -54,6 +54,20 @@ export function generateUUID(): UUID {
 }
 
 /**
+ * The Unix millisecond timestamp a version 7 UUID starts with: the moment it was generated.
+ * The first 48 bits carry it for v7 only, so check `getVersion` first for a UUID of
+ * unknown origin.
+ *
+ * @param id - A version 7 UUID
+ * @returns Milliseconds since the Unix epoch.
+ * @example
+ * new Date(getTimestamp(generateUUID())); // now
+ */
+export function getTimestamp(id: UUID): number {
+	return Number.parseInt(id.slice(0, 8) + id.slice(9, 13), 16);
+}
+
+/**
  * Moves the clock to `now`, or past the last timestamp when `now` is not later than it.
  * A new millisecond seeds the counter randomly below its midpoint, leaving at least 2048
  * increments; exhausting them moves the timestamp one millisecond ahead, as RFC 9562 allows.

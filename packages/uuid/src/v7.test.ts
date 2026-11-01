@@ -5,7 +5,9 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { isUUID } from "./index.js";
+import { getTimestamp } from "./v7.js";
+
+import { assertUUID, isUUID } from "./index.js";
 
 /** Loads a fresh copy of the module, so each test starts from an unset clock. */
 async function load() {
@@ -98,5 +100,24 @@ describe("generateUUID", () => {
 
 		expect(first < second).toBe(true);
 		expect(timestampOf(second)).toBe(1_000_000_000_000);
+	});
+});
+
+describe(getTimestamp.name, () => {
+	test("reads the millisecond a value was generated in", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_123);
+		let generateUUID = await load();
+		let id = generateUUID();
+		vi.useRealTimers();
+
+		expect(getTimestamp(id)).toBe(1_700_000_000_123);
+	});
+
+	test("reads the first 48 bits of a fixed value", () => {
+		let id = "019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e";
+		assertUUID(id);
+
+		expect(getTimestamp(id)).toBe(0x019a6f3e5c21);
 	});
 });

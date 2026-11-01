@@ -30,4 +30,17 @@ export function assertUUID(value: string): asserts value is UUID {
 	}
 }
 
+/**
+ * The version a UUID declares in its 13th hex digit, so a caller can tell a time-ordered v7
+ * from a random v4 before reading any version-specific field.
+ *
+ * @param id - A validated UUID
+ * @returns The version number, 0 to 15.
+ * @example
+ * getVersion(generateUUID()); // 7, from "@sdxc/uuid/v7"
+ */
+export function getVersion(id: UUID): number {
+	return Number.parseInt(id[14]!, 16);
+}
+
 export { InvalidUUIDFormatError, InvalidUUIDLengthError, InvalidUUIDTypeError };

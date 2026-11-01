@@ -79,6 +79,22 @@ try {
 }
 ```
 
+## Command line
+
+`sdxc-uuid` generates and checks UUIDs from a terminal or a script, with no install step:
+
+```sh
+bunx @sdxc/uuid --help
+```
+
+`validate` reads the UUID from its argument, or stdin when it is `-` or absent, prints its version and, for v7, its creation time, and exits 1 when the value is invalid. `--json` prints the result as data.
+
+```sh
+bunx @sdxc/uuid v4 -n 5
+bunx @sdxc/uuid v7 -n 1000 > ids.txt
+bunx @sdxc/uuid validate 019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e --json
+```
+
 ## API
 
 ### `isUUID(value: string): value is UUID`
@@ -91,12 +107,20 @@ Accepts exactly the values `assertUUID` accepts.
 Narrows the value to `UUID`, or throws `InvalidUUIDTypeError` for a non-string,
 `InvalidUUIDLengthError` for a length other than 36, and `InvalidUUIDFormatError` otherwise.
 
+### `getVersion(id: UUID): number`
+
+Returns the version the UUID declares, such as `4` or `7`.
+
 ### `generateUUID(): UUID` from `@sdxc/uuid/v7`
 
 Returns a version 7 UUID ([RFC 9562](https://www.rfc-editor.org/rfc/rfc9562)): a 48-bit
 millisecond timestamp, a 12-bit counter and 62 random bits. Each value sorts after the previous
 one from the same process, including within one millisecond. Anyone holding the value can read
 its creation time.
+
+### `getTimestamp(id: UUID): number` from `@sdxc/uuid/v7`
+
+Returns the Unix millisecond timestamp a v7 UUID was generated at.
 
 ### `generateUUID(): UUID` from `@sdxc/uuid/v4`
 

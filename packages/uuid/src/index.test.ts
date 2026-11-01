@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 
 import {
 	assertUUID,
+	getVersion,
 	InvalidUUIDFormatError,
 	InvalidUUIDLengthError,
 	InvalidUUIDTypeError,
@@ -51,5 +52,17 @@ describe(assertUUID.name, () => {
 	test("throws a type error for non-string values", () => {
 		expect(() => assertUUID(null as never)).toThrow(InvalidUUIDTypeError);
 		expect(() => assertUUID(null as never)).toThrow("Expected a string, got object");
+	});
+});
+
+describe(getVersion.name, () => {
+	test("reads the version digit", () => {
+		let v4 = "550e8400-e29b-41d4-a716-446655440000";
+		let v7 = "019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e";
+		assertUUID(v4);
+		assertUUID(v7);
+
+		expect(getVersion(v4)).toBe(4);
+		expect(getVersion(v7)).toBe(7);
 	});
 });
