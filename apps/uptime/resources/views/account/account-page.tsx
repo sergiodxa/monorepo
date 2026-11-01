@@ -12,11 +12,12 @@ import type { Handle } from "remix/component";
 import { formatDate } from "@sdxc/dates";
 import { PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
+import { listStyle } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
-import { m, minIs, p, pis } from "@sdxc/u/size";
+import { m, maxIs, minIs, p, pis } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, pretty, textDecoration, weight } from "@sdxc/u/typography";
-import { Button, Confirm, Dialog, Select, Switch, TextField } from "@sdxc/ui";
+import { Alert, Button, Confirm, Dialog, Select, Switch, TextField } from "@sdxc/ui";
 import { DangerZone, Empty, SettingsLayout, SettingsSection, Table } from "@sdxc/ui/app";
 import { getContext } from "remix/middleware/async-context";
 
@@ -411,22 +412,43 @@ export default function AccountPage(handle: Handle<AccountPage.Props>) {
 								<DangerZone.Action
 									id="request-account-deletion"
 									title={t("page.account.deleteAccount.card.title")}
-									description={t("page.account.deleteAccount.card.whatHappens")}
-									consequences={[
-										...(plan.ownedTeams.length === 0
-											? []
-											: [t("page.account.deleteAccount.card.ownedTeamsIntro")]),
-										...ownedTeamLines,
-										...(plan.othersLosingAccess > 0
-											? [
-													<strong mix={[fg("danger")]}>
-														{t("page.account.deleteAccount.card.othersWarning", {
-															count: plan.othersLosingAccess,
-														})}
-													</strong>,
-												]
-											: []),
-									]}
+									description={
+										<div
+											mix={[vstack({ gap: 3, align: "stretch" }), maxIs("65ch"), fontSize("sm")]}
+										>
+											<p mix={[m(0)]}>{t("page.account.deleteAccount.card.whatHappens")}</p>
+											{plan.ownedTeams.length > 0 ? (
+												<div mix={[vstack({ gap: 1, align: "stretch" })]}>
+													<p mix={[m(0)]}>{t("page.account.deleteAccount.card.ownedTeamsIntro")}</p>
+													<ul
+														mix={[
+															m(0),
+															pis(5),
+															listStyle("disc"),
+															vstack({ gap: 1, align: "stretch" }),
+														]}
+													>
+														{ownedTeamLines.map((line) => (
+															<li key={line}>{line}</li>
+														))}
+													</ul>
+												</div>
+											) : (
+												<p mix={[m(0)]}>{ownedTeamLines[0]}</p>
+											)}
+											{plan.othersLosingAccess > 0 ? (
+												<Alert color="danger">
+													<Alert.Content>
+														<Alert.Description>
+															{t("page.account.deleteAccount.card.othersWarning", {
+																count: plan.othersLosingAccess,
+															})}
+														</Alert.Description>
+													</Alert.Content>
+												</Alert>
+											) : null}
+										</div>
+									}
 									buttonLabel={t("page.account.deleteAccount.card.cta")}
 									confirm={{
 										title: t("page.account.deleteConfirm.title"),
@@ -450,7 +472,7 @@ export default function AccountPage(handle: Handle<AccountPage.Props>) {
 									]}
 								>
 									<p mix={[m(0)]}>{t("page.account.deleteAccount.card.retained.intro")}</p>
-									<ul mix={[m(0), pis(5)]}>
+									<ul mix={[m(0), pis(5), listStyle("disc"), vstack({ gap: 1, align: "stretch" })]}>
 										<li>{t("page.account.deleteAccount.card.retained.billing")}</li>
 										<li>{t("page.account.deleteAccount.card.retained.analytics")}</li>
 										<li>{t("page.account.deleteAccount.card.retained.logs")}</li>

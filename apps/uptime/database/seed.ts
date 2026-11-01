@@ -21,6 +21,9 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
+/** The subject of the seeded team's second member, who never signs in. */
+const DEV_TEAMMATE_ID = "dev-teammate";
+
 /** Days of daily stats each monitor gets, matching the uptime bar's window. */
 const HISTORY_DAYS = 90;
 
@@ -89,6 +92,23 @@ export default defineSeed(registry, {
 				name: DEV_TEAM.name,
 				slug: DEV_TEAM.slug,
 				logo: null,
+			}),
+		);
+	},
+
+	/**
+	 * A second member, so the team the development login owns has someone who loses access when
+	 * its owner deletes their account, which the account page warns about.
+	 */
+	async teammate({ models }) {
+		let team = await devTeam(models);
+		if (await models.memberships.findFor(team.id, DEV_TEAMMATE_ID)) return;
+		unwrap(
+			await models.memberships.create({
+				id: generateUUID(),
+				team_id: team.id,
+				subject_id: DEV_TEAMMATE_ID,
+				role: "member",
 			}),
 		);
 	},
