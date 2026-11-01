@@ -10,7 +10,8 @@ import { redirect } from "@sdxc/http/response";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
-import { Alert, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
+import { Alert, HeadingScope, LinkButton } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import { chrome } from "~/app/http/controllers/chrome";

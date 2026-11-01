@@ -21,7 +21,7 @@ import {
 	TriangleAlertIcon,
 } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
 import { POLL_BANDS, POLL_DORMANT_MS } from "~/database/feed-schema";
 import { HAIRLINE } from "~/resources/components/marketing/reader-window";
@@ -46,7 +46,7 @@ export function sceneFrame() {
 /** A raised panel in the scene, the surface the app groups content on. */
 export function scenePanel() {
 	return [
-		marketingSurface(),
+		landingSurface(),
 		raw({
 			display: "grid",
 			gap: "0.625rem",

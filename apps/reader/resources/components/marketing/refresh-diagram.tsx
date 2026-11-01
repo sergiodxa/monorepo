@@ -11,7 +11,7 @@ import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { ClockIcon, UsersIcon } from "@sdxc/icons";
-import { FanOutDiagram } from "@sdxc/ui/patterns";
+import { FanOutDiagram } from "@sdxc/ui/landing";
 
 import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { SAMPLE_FEEDS } from "~/resources/components/marketing/sample-data";

@@ -26,7 +26,7 @@ import {
 import { raw } from "@sdxc/u/general";
 import { container } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 import type { SamplePost } from "~/resources/components/marketing/sample-data";
 
@@ -37,7 +37,7 @@ import {
 } from "~/resources/components/marketing/sample-data";
 
 /** A hairline in the marketing palette, the same line the frame's chrome draws. */
-export const HAIRLINE = "1px solid var(--ui-marketing-hairline, var(--ui-neutral-border))";
+export const HAIRLINE = "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))";
 
 /**
  * The narrowest width the window lays out at. Below it a phone's media slot scales the

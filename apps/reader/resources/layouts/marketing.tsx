@@ -28,8 +28,8 @@ import {
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Button, DialogDismiss, LinkButton } from "@sdxc/ui";
-import { SiteFooter, SiteHeader } from "@sdxc/ui/patterns";
-import { marketingContainer } from "@sdxc/ui/styles";
+import { SiteFooter, SiteHeader } from "@sdxc/ui/landing";
+import { landingContainer } from "@sdxc/ui/styles";
 
 import type { FeatureSlug, UseCaseSlug } from "~/config/marketing";
 
@@ -43,24 +43,24 @@ import routes from "~/routes/web";
  */
 const MARKETING_TOKENS = {
 	"--ui-font-display": "var(--ui-font-serif)",
-	"--ui-marketing-display-weight": "400",
-	"--ui-marketing-display-tracking": "-0.02em",
-	"--ui-marketing-chapter-tracking": "-0.015em",
-	"--ui-marketing-chapter-leading": "1.1",
-	"--ui-marketing-eyebrow-font": "var(--ui-font-mono)",
-	"--ui-marketing-eyebrow-weight": "500",
-	"--ui-marketing-eyebrow-transform": "uppercase",
-	"--ui-marketing-eyebrow-tracking": "0.12em",
-	"--ui-marketing-eyebrow-color": "var(--ui-brand-fg)",
-	"--ui-marketing-cta-radius": "0.375rem",
+	"--ui-landing-display-weight": "400",
+	"--ui-landing-display-tracking": "-0.02em",
+	"--ui-landing-chapter-tracking": "-0.015em",
+	"--ui-landing-chapter-leading": "1.1",
+	"--ui-landing-eyebrow-font": "var(--ui-font-mono)",
+	"--ui-landing-eyebrow-weight": "500",
+	"--ui-landing-eyebrow-transform": "uppercase",
+	"--ui-landing-eyebrow-tracking": "0.12em",
+	"--ui-landing-eyebrow-color": "var(--ui-brand-fg)",
+	"--ui-landing-cta-radius": "0.375rem",
 	"--ui-button-radius": "0.375rem",
-	"--ui-marketing-radius-surface": "0.5rem",
-	"--ui-marketing-radius-frame": "0.625rem",
-	"--ui-marketing-card-radius-outer": "0.625rem",
-	"--ui-marketing-card-radius-inner": "0.375rem",
-	"--ui-marketing-band-radius": "0.75rem",
-	"--ui-marketing-plan-radius": "0.625rem",
-	"--ui-marketing-plan-lift": "0 0 #0000",
+	"--ui-landing-radius-surface": "0.5rem",
+	"--ui-landing-radius-frame": "0.625rem",
+	"--ui-landing-card-radius-outer": "0.625rem",
+	"--ui-landing-card-radius-inner": "0.375rem",
+	"--ui-landing-band-radius": "0.75rem",
+	"--ui-landing-plan-radius": "0.625rem",
+	"--ui-landing-plan-lift": "0 0 #0000",
 	"--ui-shadow-float": "none",
 } as const;
 
@@ -180,14 +180,14 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							<div
 								data-slot="marketing-sheet-cta"
 								mix={[
-									marketingContainer(),
+									landingContainer(),
 									raw({
 										display: "grid",
 										boxSizing: "border-box",
 										inlineSize: "100%",
 										paddingBlockStart: "1rem",
 										paddingBlockEnd: "max(1rem, env(safe-area-inset-bottom))",
-										borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+										borderBlockStart: "1px solid var(--ui-landing-hairline)",
 									}),
 									when(
 										"& :is(form, a, button)",

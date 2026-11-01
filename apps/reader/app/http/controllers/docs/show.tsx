@@ -12,8 +12,16 @@ import type { Handle } from "remix/component";
 
 import { Trans } from "@sdxc/i18n/ui";
 import { raw } from "@sdxc/u/general";
-import { Alert, Callout, DocsFeedback, DocsPageHeader, NextSteps, PlanNotice } from "@sdxc/ui";
-import { DocsNotFound, searchQueryFromPath } from "@sdxc/ui/patterns";
+import { Alert } from "@sdxc/ui";
+import {
+	Callout,
+	DocsFeedback,
+	DocsNotFound,
+	DocsPageHeader,
+	NextSteps,
+	PlanNotice,
+	searchQueryFromPath,
+} from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import type { DocPage } from "~/resources/docs/registry";

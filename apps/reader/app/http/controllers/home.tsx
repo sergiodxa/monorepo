@@ -11,16 +11,20 @@ import { redirect } from "@sdxc/http/response";
 import { Trans } from "@sdxc/i18n/ui";
 import { EyeOffIcon, FileClockIcon, LinkIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
 	ClosingCta,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
 	SegmentedStage,
-} from "@sdxc/ui/patterns";
+	StatStrip,
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
@@ -179,7 +183,7 @@ export default createAction(routes.home, (ctx) => {
 					}
 				/>
 
-				<MarketingSection spacing="compact" ruled mix={[viewReveal()]}>
+				<LandingSection spacing="compact" ruled mix={[viewReveal()]}>
 					<StatStrip size="display" variant="gap" align="center">
 						{figures.map((item) => (
 							<StatStrip.Item key={item.label} label={item.label}>
@@ -187,7 +191,7 @@ export default createAction(routes.home, (ctx) => {
 							</StatStrip.Item>
 						))}
 					</StatStrip>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					id="how"
@@ -244,13 +248,13 @@ export default createAction(routes.home, (ctx) => {
 					/>
 				</FeatureBand>
 
-				<MarketingSection id="features" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="features" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.features.eyebrow")}
 						description={t("landing.features.description")}
 					>
 						{t("landing.features.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={3}>
 						{CARD_FEATURES.map((slug) => {
 							let key = FEATURE_KEYS[slug];
@@ -274,16 +278,16 @@ export default createAction(routes.home, (ctx) => {
 							);
 						})}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection tone="inverse" inset mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection tone="inverse" inset mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.privacy.eyebrow")}
 						description={t("landing.privacy.description")}
 						align="center"
 					>
 						{t("landing.privacy.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{PRIVACY_FACTS.map((fact) => (
 							<Feature key={fact.key}>
@@ -295,15 +299,15 @@ export default createAction(routes.home, (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="plans" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="plans" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.plans.eyebrow")}
 						description={t("landing.plans.description")}
 					>
 						{t("landing.plans.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<PlansTable t={t} locale={ctx.locale} />
 					<div mix={[raw({ marginBlockStart: "1.5rem" })]}>
 						<Checks
@@ -315,15 +319,15 @@ export default createAction(routes.home, (ctx) => {
 						href={routes.docs.show.href({ slug: "plans" })}
 						label={t("landing.plans.notes.more")}
 					/>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.useCases.eyebrow")}
 						description={t("landing.useCases.description")}
 					>
 						{t("landing.useCases.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={2}>
 						{USE_CASE_SLUGS.map((slug) => {
 							let href = routes.marketing.useCase.href({ slug });
@@ -367,7 +371,7 @@ export default createAction(routes.home, (ctx) => {
 							</LinkButton>
 						))}
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				<FaqBand
 					id="faq"

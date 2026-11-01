@@ -15,7 +15,8 @@ import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { maxIs, mbs } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
+import { HeadingScope, LinkButton, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

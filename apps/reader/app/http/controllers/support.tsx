@@ -18,17 +18,8 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import {
-	Alert,
-	Button,
-	DocsPageHeader,
-	FieldError,
-	Form,
-	Label,
-	Select,
-	TextArea,
-	TextField,
-} from "@sdxc/ui";
+import { Alert, Button, FieldError, Form, Label, Select, TextArea, TextField } from "@sdxc/ui";
+import { DocsPageHeader } from "@sdxc/ui/docs";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 

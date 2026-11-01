@@ -8,16 +8,19 @@
  */
 
 import { Trans } from "@sdxc/i18n/ui";
-import { Feature, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
 	ClosingCta,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
@@ -102,10 +105,10 @@ export default createAction(routes.marketing.feature, (ctx) => {
 					media={FEATURE_HEROES[slug](t)}
 				/>
 
-				<MarketingSection ruled mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.features.factsEyebrow")}>
+				<LandingSection ruled mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.features.factsEyebrow")}>
 						{t(page("factsTitle"))}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{TRIPLE.map((item) => (
 							<Feature key={item}>
@@ -114,7 +117,7 @@ export default createAction(routes.marketing.feature, (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					id="how-it-works"
@@ -133,10 +136,10 @@ export default createAction(routes.marketing.feature, (ctx) => {
 					</StepList>
 				</FeatureBand>
 
-				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.features.eyebrow")}>
+				<LandingSection tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.features.eyebrow")}>
 						{t("landing.features.relatedTitle")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={3}>
 						{related.map((other) => {
 							let otherKey = FEATURE_KEYS[other];
@@ -160,7 +163,7 @@ export default createAction(routes.marketing.feature, (ctx) => {
 							);
 						})}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FaqBand
 					id="faq"

@@ -16,7 +16,8 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, minIs, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { Accordion, AnchorHeading } from "@sdxc/ui";
+import { Accordion } from "@sdxc/ui";
+import { AnchorHeading } from "@sdxc/ui/docs";
 
 export namespace DocBody {
 	export interface Props {

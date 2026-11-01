@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TableOfContents } from "@sdxc/ui";
+import type { TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
-import { UiLabel } from "@sdxc/ui";
+import { UiLabel } from "@sdxc/ui/docs";
 
 import type { DocBody } from "~/resources/docs/blocks";
 

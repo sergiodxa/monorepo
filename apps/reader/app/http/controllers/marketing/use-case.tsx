@@ -8,9 +8,18 @@
  */
 
 import { Trans } from "@sdxc/i18n/ui";
-import { Feature, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
-import { AccentText, ClosingCta, FaqBand, FeatureBand, LandingHero } from "@sdxc/ui/patterns";
+import {
+	AccentText,
+	ClosingCta,
+	FaqBand,
+	Feature,
+	FeatureBand,
+	LandingHeader,
+	LandingHero,
+	LandingSection,
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
@@ -77,10 +86,10 @@ export default createAction(routes.marketing.useCase, (ctx) => {
 					}
 				/>
 
-				<MarketingSection ruled mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.useCases.capabilitiesEyebrow")}>
+				<LandingSection ruled mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.useCases.capabilitiesEyebrow")}>
 						{t(page("capabilitiesTitle"))}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{content.features.map((feature) => {
 							let key = FEATURE_KEYS[feature];
@@ -100,7 +109,7 @@ export default createAction(routes.marketing.useCase, (ctx) => {
 							);
 						})}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					layout="split"

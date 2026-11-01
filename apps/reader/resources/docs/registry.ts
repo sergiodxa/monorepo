@@ -8,8 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { TableOfContents } from "@sdxc/ui";
-import type { DocsTree } from "@sdxc/ui/utils";
+import type { DocsTree, TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
 import type { DocBody } from "~/resources/docs/blocks";

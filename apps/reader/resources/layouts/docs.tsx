@@ -8,14 +8,13 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { TableOfContents } from "@sdxc/ui";
+import type { TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
 import { LifeBuoyIcon, TableIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
-import { DocsFooter, DocsNav } from "@sdxc/ui";
-import { DocsLayout as Shell } from "@sdxc/ui/patterns";
+import { DocsFooter, DocsLayout as Shell, DocsNav } from "@sdxc/ui/docs";
 
 import { docHref, docsTree } from "~/resources/docs/registry";
 import MarketingLayout from "~/resources/layouts/marketing";

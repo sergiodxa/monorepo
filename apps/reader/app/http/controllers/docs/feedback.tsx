@@ -12,7 +12,7 @@ import {
 	DOCS_FEEDBACK_NOTE_FIELD,
 	DOCS_FEEDBACK_PAGE_FIELD,
 	DOCS_FEEDBACK_VOTE_FIELD,
-} from "@sdxc/ui";
+} from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";

@@ -11,8 +11,7 @@
 import type { RenderResult } from "remix/component/test";
 
 import { createTranslator } from "@sdxc/i18n";
-import { DocsPageHeader, NextSteps } from "@sdxc/ui";
-import { DocsHub } from "@sdxc/ui/patterns";
+import { DocsHub, DocsPageHeader, NextSteps } from "@sdxc/ui/docs";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";

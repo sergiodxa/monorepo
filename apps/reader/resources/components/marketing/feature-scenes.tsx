@@ -11,7 +11,7 @@ import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
-import { CodeStage, DrawnChart } from "@sdxc/ui/patterns";
+import { CodeStage, DrawnChart } from "@sdxc/ui/landing";
 
 import type { FeatureSlug } from "~/config/marketing";
 

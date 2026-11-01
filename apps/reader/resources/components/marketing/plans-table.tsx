@@ -14,7 +14,7 @@ import { CheckIcon, MinusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { weight } from "@sdxc/u/typography";
-import { Table } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import type { Tier } from "~/app/services/entitlement";
 

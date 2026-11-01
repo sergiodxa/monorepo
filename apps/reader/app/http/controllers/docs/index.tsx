@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DocsHub } from "@sdxc/ui/patterns";
+import { DocsHub } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";

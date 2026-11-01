@@ -12,16 +12,20 @@ import { TriangleAlertIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { weight } from "@sdxc/u/typography";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, Table } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
+import { Table } from "@sdxc/ui/app";
 import {
 	AccentText,
 	ClosingCta,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import type { ComparisonSlug } from "~/config/marketing";
@@ -130,13 +134,13 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 					}
 				/>
 
-				<MarketingSection id="table" ruled mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="table" ruled mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.compare.tableEyebrow")}
 						description={t("landing.compare.checked")}
 					>
 						{t(page("tableTitle"))}
-					</MarketingHeader>
+					</LandingHeader>
 					<Table.Container>
 						<Table aria-label={t("landing.compare.tableLabel", { competitor })}>
 							<Table.Header>
@@ -157,12 +161,12 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 							</Table.Body>
 						</Table>
 					</Table.Container>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.compare.reasonsEyebrow")}>
+				<LandingSection mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.compare.reasonsEyebrow")}>
 						{t(page("reasonsTitle"))}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{(["one", "two", "three"] as const).map((item) => (
 							<Feature key={item}>
@@ -171,12 +175,12 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection tone="tinted" inset mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.compare.winsEyebrow")}>
+				<LandingSection tone="tinted" inset mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.compare.winsEyebrow")}>
 						{t("landing.compare.winsTitle", { competitor })}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{(["one", "two", "three"] as const).map((item) => (
 							<Feature key={item}>
@@ -190,7 +194,7 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					layout="split"
@@ -221,7 +225,7 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 					<FaqColumn name="compare-faq" items={faqs.slice(1)} />
 				</FaqBand>
 
-				<MarketingSection spacing="compact">
+				<LandingSection spacing="compact">
 					<div
 						mix={[raw({ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.75rem" })]}
 					>
@@ -239,7 +243,7 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 							</LinkButton>
 						))}
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				<ClosingCta
 					tone="brand"

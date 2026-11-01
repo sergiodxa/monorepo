@@ -28,17 +28,8 @@ import { raw } from "@sdxc/u/general";
 import { boxSizing, flex, flexWrap, gap, items, justify, vstack } from "@sdxc/u/layout";
 import { bs, maxIs, minIs, p, pb } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import {
-	Alert,
-	Badge,
-	Button,
-	Confirm,
-	Empty,
-	HeadingScope,
-	LinkButton,
-	Menu,
-	Text,
-} from "@sdxc/ui";
+import { Alert, Badge, Button, Confirm, HeadingScope, LinkButton, Menu, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";

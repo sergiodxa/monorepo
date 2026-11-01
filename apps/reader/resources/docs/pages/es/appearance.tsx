@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TableOfContents } from "@sdxc/ui";
+import type { TableOfContents } from "@sdxc/ui/docs";
 import type { Handle } from "remix/component";
 
-import { Steps, UiLabel, UiPath } from "@sdxc/ui";
+import { Steps, UiLabel, UiPath } from "@sdxc/ui/docs";
 
 import type { DocBody } from "~/resources/docs/blocks";
 
