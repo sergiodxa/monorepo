@@ -22,6 +22,7 @@
 		"@sdxc/link-header": "workspace:*",
 		"@sdxc/microformats": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/result": "workspace:*",
+		"remix": "3.1.0"
 	}
 }
