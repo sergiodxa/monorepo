@@ -89,10 +89,12 @@ if (import.meta.main) process.exit(await cli.run(process.argv.slice(2)));
 
 Conventions every command follows:
 
-- **Bin name `sdxc-<package>`.** Short names like `jwt`, `qr`, `cron` and `yaml` are already
-  claimed by other npm packages' bins, and a global install would shadow or be shadowed by them.
-  `bunx @sdxc/jwt decode …` and `npx @sdxc/jwt …` resolve the package's only bin regardless of
-  its name. `sdxc`, `spec` and `mcp-bridge` keep their current names.
+- **Bin name `sdxc-<package>`.** A plain package name can collide: `semver` and `uuid` are
+  already the bins of widely installed packages, and npm links an indirect dependency's bins
+  into a project's `node_modules/.bin` too, so a script calling `semver` could run either. The
+  prefix keeps every global install and project script unambiguous, and nobody needs to type
+  it: `sdxc pkg <name>` and `npx @sdxc/<name>` reach it by package. `sdxc`, `spec` and
+  `mcp-bridge` keep their current names.
 - **Node shebang.** The entry starts `#!/usr/bin/env node`, so the published bin runs under
   `npx` as well as `bunx`; handlers use Web APIs plus `node:fs` / `node:process` only.
 - **Filter behavior.** Input comes from a path argument or stdin when the argument is `-` or
@@ -108,6 +110,30 @@ Conventions every command follows:
   stranger-chosen URL, with the same deadline and body bounds as the library.
 - **Documentation.** The package README gets a short "Command line" section with the install
   line and one example per command; `--help` generated from the contract is the full reference.
+
+### Run them through `sdxc pkg`
+
+`sdxc pkg <name> [command] [options]` runs a package's command line with every token after the
+name passed through untouched, so one global `sdxc` reaches all of them without installing any:
+
+- **Resolution.** The kit looks for `@sdxc/<name>` in a `node_modules` at or above the working
+  directory, then in the workspace that contains it (so this repository runs its checked-out
+  source), and runs that binary under Bun when Bun is on `PATH`, Node otherwise. With neither,
+  it downloads the published package through `bunx --bun --package @sdxc/<name> sdxc-<name>`,
+  or `npx --yes --package …` without Bun. `bunx` and `npx` alone skip a workspace's own
+  packages and need the binary named, which is why the kit resolves the local copy itself.
+- **A known list.** `packages/kit/src/pkg/catalog.ts` names every package with a command line,
+  with what it does for `sdxc pkg`'s listing, and every published package without one;
+  `test/package-bins.test.ts` holds it to `packages/*`.
+- **Typos.** An unknown name never runs. It exits 2 with the closest name that has a command
+  line, as `closest()` from `@sdxc/cli` picks it, and the suggestion repeats the arguments:
+  ``Did you mean `sdxc pkg uuid v4 -n 3`?``. `@sdxc/<name>` and `sdxc-<name>` resolve too.
+- **Requests.** A package without a command line exits 2 with a link to a new discussion in
+  the repository's Ideas category, titled with the package only, so nothing else typed leaves
+  the machine. `.github/DISCUSSION_TEMPLATE/ideas.yml` asks what it would be used for, an
+  example command and the expected output; votes on the discussion show demand.
+- **No prefix clash.** `pkg` keeps package names apart from the kit's own commands:
+  `sdxc diagram` draws a project's architecture and `sdxc pkg diagram` runs `@sdxc/diagram`.
 
 ### First wave
 
@@ -200,9 +226,10 @@ Add the locale check to `sdxc doctor`.
 
 `sdxc jwt decode`, `sdxc qr encode` and so on, all inside `@sdxc/kit`.
 
-**Rejected because**: the kit would depend on every package that has a command, so installing
-the scaffolding tool pulls in fonts, PDF, PGP and the rest; and a tool like `sdxc-jwt` is useful
-in projects that never use the kit.
+**Rejected as a dependency because**: the kit would depend on every package that has a
+command, so installing the scaffolding tool pulls in fonts, PDF, PGP and the rest; and a tool
+like `sdxc-jwt` is useful in projects that never use the kit. Adopted as a launcher instead:
+`sdxc pkg <name>` resolves and runs each package at the moment it is called.
 
 ### 2. A separate `@sdxc/tools` umbrella of command lines
 
@@ -240,5 +267,6 @@ codes for CI and agents.
       `well-known`, `zone-file`
 - [x] Guides: "Use a package from the terminal" on sdxc.dev, and a terminal section in each
       package's guide
+- [x] `sdxc pkg`, with typo suggestions and request links
 - [ ] `jsonc`
 - [ ] Format converters: `yaml`, `csv`, `jsonl`, `opml`, `feed`
