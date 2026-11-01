@@ -63,7 +63,7 @@ export namespace LinkButton {
 	/**
 	 * Size variant controlling the link's padding and font size.
 	 * Inside a {@link CtaGroup} an omitted size takes the group's, so a hero row
-	 * sizes every action at once; `"md"` is the 40px marketing CTA.
+	 * sizes every action at once; `"md"` is the 40px landing CTA.
 	 */
 	export type Size = "sm" | "md" | "lg";
 

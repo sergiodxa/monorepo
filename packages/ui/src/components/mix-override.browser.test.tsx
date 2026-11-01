@@ -14,7 +14,8 @@ import { text } from "@sdxc/u/typography";
 import { render } from "remix/component/test";
 import { describe, expect, test } from "vitest";
 
-import { ContextMenu } from "./context-menu.js";
+import { ContextMenu } from "../app/context-menu.js";
+
 import { ScrollArea } from "./scroll-area.js";
 import { Text } from "./text.js";
 

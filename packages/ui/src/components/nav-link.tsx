@@ -3,7 +3,7 @@
  * role and underlined to read as a link among surrounding prose. Its
  * current-page state comes straight from `aria-current` set on the host
  * server-side, rendering the emphasized, non-underlined treatment directly
- * from that attribute. Marketing sticky headers usually mix `text("sm")`
+ * from that attribute. Landing sticky headers usually mix `text("sm")`
  * (~13–15px) and a quiet hover so the bar stays dense beside the brand.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

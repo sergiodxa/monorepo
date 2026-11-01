@@ -1,0 +1,394 @@
+/**
+ * A hierarchical list of nodes built from nested `<details>` and `<summary>`
+ * elements, so a branch's expand/collapse state, keyboard toggling, and
+ * content hiding all come from the platform rather than tracked state.
+ * {@link Tree.Item} nests further {@link Tree.Item} nodes directly inside
+ * itself to describe a subtree, {@link Tree.ItemContent} renders each node's
+ * always-visible row, and {@link Tree.LoadMoreItem} holds a trailing loading
+ * placeholder exactly like a row list's own.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+
+import { ChevronRightIcon } from "@sdxc/icons";
+import { bg, fg, outline } from "@sdxc/u/color";
+import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import { cursor, listStyle, raw, mergeMix } from "@sdxc/u/general";
+import { center, hidden, hstack, interpolateSize, shrink, vstack } from "@sdxc/u/layout";
+import { clip } from "@sdxc/u/overflow";
+import { media } from "@sdxc/u/responsive";
+import { bs, is, pb, pie, pi } from "@sdxc/u/size";
+import { detailsContent, when } from "@sdxc/u/state";
+import { rotate } from "@sdxc/u/transform";
+import { text } from "@sdxc/u/typography";
+import { attrs } from "remix/component";
+
+import { SentinelRow } from "../components/sentinel-row.js";
+import { interactiveTransition } from "../styles/interactive-transition.js";
+import { panelChrome } from "../styles/panel-chrome.js";
+import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
+
+/** `role="tree"` applied to {@link Tree} through {@link attrs} unless a consumer supplies its own `role`. */
+const DEFAULT_ROLE = "tree";
+
+/**
+ * `role="group"` applied to {@link Tree.Item} through {@link attrs} unless a
+ * consumer supplies its own `role` — the only role a native `<details>`
+ * accepts, and a fitting one since each item's own `<details>` groups its nodes.
+ */
+const DEFAULT_ITEM_ROLE = "group";
+
+/** `role="treeitem"` applied to {@link Tree.ItemContent} through {@link attrs} unless a consumer supplies its own `role`. */
+const DEFAULT_CONTENT_ROLE = "treeitem";
+
+/**
+ * Nesting depth {@link Tree.Item} falls back to when nothing wraps it in
+ * another {@link Tree.Item} at all, so a root-level node's row renders with
+ * no extra indentation and an `aria-level` of `1`.
+ */
+const DEFAULT_DEPTH = 0;
+
+/**
+ * Marker {@link Tree.ExpandButton} always carries as its `data-slot`
+ * attribute, applied through {@link attrs} unless a consumer supplies its
+ * own value, letting {@link Tree.Item}'s styling target just this chevron.
+ */
+const DEFAULT_EXPAND_BUTTON_SLOT = "expand-button";
+
+/**
+ * Inline space a row with no {@link Tree.ExpandButton} keeps where the chevron would
+ * sit — the chevron's own width plus the row's gap — so a leaf's icon lines up under
+ * the icons of the branches around it instead of under their chevrons.
+ */
+const LEAF_GUTTER = "calc(var(--ui-spacing, 0.25rem) * 7)";
+
+/**
+ * Prop and context types for {@link Tree} and its compound parts.
+ */
+export namespace Tree {
+	/** Value each {@link Tree.Item} provides to the nodes nested inside it. */
+	export interface ItemContext {
+		/** Nesting depth this item occupies, `0` for a node rendered directly inside {@link Tree}. */
+		depth: number;
+	}
+
+	/**
+	 * Props accepted by {@link Tree}.
+	 */
+	export interface Props extends TagProps<"div"> {
+		/** {@link Tree.Item} and {@link Tree.LoadMoreItem} nodes to render. */
+		children: RemixNode;
+	}
+
+	/**
+	 * Props accepted by {@link Tree.Item}. Every native `<details>` attribute
+	 * still applies, so `open` sets a branch's initial and current expanded
+	 * state declaratively, exactly as on any native `<details>` element.
+	 */
+	export interface ItemProps extends TagProps<"details"> {
+		/**
+		 * Stable identifier for this node, mirrored onto the rendered element's
+		 * own `id` and a `data-rmx-key` attribute so a paired selection, navigation, or
+		 * reorder behavior can correlate the node with its own tracked state.
+		 */
+		id: string;
+		/** The node's {@link Tree.ItemContent} row, followed by zero or more nested {@link Tree.Item} nodes describing its subtree. */
+		children: RemixNode;
+	}
+
+	/**
+	 * Props accepted by {@link Tree.ItemContent}.
+	 */
+	export interface ItemContentProps extends TagProps<"summary"> {}
+
+	/**
+	 * Props accepted by {@link Tree.LoadMoreItem}.
+	 */
+	export interface LoadMoreItemProps extends TagProps<"div"> {}
+
+	/**
+	 * Props accepted by {@link Tree.ExpandButton}: every native `<span>` attribute.
+	 *
+	 * No accessible name is asked for, because the chevron names nothing: the row it
+	 * sits in is a `<summary>`, which announces the branch and its expanded state on
+	 * its own, and a second name beside it would be read out twice.
+	 */
+	export interface ExpandButtonProps extends TagProps<"span"> {}
+}
+
+/**
+ * Reads the nesting depth published by the nearest ancestor {@link Tree.Item},
+ * resolving to `undefined` when the lookup finds no ancestor item at all.
+ *
+ * @param handle Runtime handle of the component performing the lookup.
+ * @returns The nearest ancestor item's depth, or `undefined` where nothing wraps the caller.
+ * @example
+ * let ambient = readAmbientDepth(handle); // 1, nested one level inside a Tree.Item holding depth 1
+ */
+function readAmbientDepth(handle: Handle<unknown, any>): number | undefined {
+	try {
+		let ambient = handle.context.get(TreeItem) as Tree.ItemContext | undefined;
+
+		return ambient?.depth;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Renders the tree's root host: a bordered `<div>` carrying `role="tree"`,
+ * stacking {@link Tree.Item} nodes in block flow, with `data-empty`
+ * centering a fallback message; an unlabeled tree logs a dev `console.warn`.
+ *
+ * @param handle Runtime handle carrying the host `<div>`'s props.
+ * @returns The render function producing the tree's markup.
+ * @example
+ * <Tree aria-label={t("files.title")}>
+ * 	<Tree.Item id="src">
+ * 		<Tree.ItemContent>
+ * 			<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 			{t("files.folder", { name: "src" })}
+ * 		</Tree.ItemContent>
+ * 		<Tree.Item id="src-index">
+ * 			<Tree.ItemContent>{t("files.file", { name: "index.ts" })}</Tree.ItemContent>
+ * 		</Tree.Item>
+ * 	</Tree.Item>
+ * </Tree>
+ * @example
+ * <Tree aria-label={t("files.title")} data-empty>
+ * 	{t("files.empty")}
+ * </Tree>
+ */
+export function Tree(handle: Handle<Tree.Props>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		warnIfNoAccessibleLabel(
+			handle.props,
+			'Tree: needs an "aria-label" or "aria-labelledby" describing its contents for assistive technology.',
+		);
+
+		return (
+			<div
+				{...rest}
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ROLE }),
+						panelChrome(),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						vstack(),
+						pb(1),
+						pi(1),
+						outline("none"),
+						when("&[data-empty]", [center(), pb(8), fg("neutral.muted")]),
+					],
+					mix,
+				)}
+			>
+				{children}
+			</div>
+		);
+	};
+}
+
+/**
+ * Renders a node as a native `<details>`, so a subtree's reveal and `[open]`
+ * state come from the platform. Nest {@link Tree.ItemContent} first as the
+ * row, then nested {@link Tree.Item} children; reveal animates via `::details-content`.
+ *
+ * @param handle Runtime handle carrying the host `<details>`'s props and providing {@link Tree.ItemContext} to nodes nested inside it.
+ * @returns The render function producing the node's markup.
+ * @example
+ * <Tree.Item id="src">
+ * 	<Tree.ItemContent>
+ * 		<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 		{t("files.folder", { name: "src" })}
+ * 	</Tree.ItemContent>
+ * 	<Tree.Item id="src-index">
+ * 		<Tree.ItemContent>{t("files.file", { name: "index.ts" })}</Tree.ItemContent>
+ * 	</Tree.Item>
+ * </Tree.Item>
+ * @example
+ * <Tree.Item id="src" open>
+ * 	<Tree.ItemContent>
+ * 		<Tree.ExpandButton aria-label={t("files.collapse")} />
+ * 		{t("files.folder", { name: "src" })}
+ * 	</Tree.ItemContent>
+ * </Tree.Item>
+ */
+function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
+	return () => {
+		let { id, children, mix, ...rest } = handle.props;
+		let ambient = readAmbientDepth(handle);
+		let depth = ambient === undefined ? DEFAULT_DEPTH : ambient + 1;
+
+		handle.context.set({ depth });
+
+		return (
+			<details
+				{...rest}
+				id={id}
+				data-rmx-key={id}
+				mix={mergeMix(
+					[
+						attrs({ role: DEFAULT_ITEM_ROLE }),
+						interpolateSize(),
+						detailsContent([
+							clip(),
+							raw({
+								transitionProperty: "block-size, content-visibility",
+								transitionBehavior: "allow-discrete",
+							}),
+							transitionDuration("200ms"),
+						]),
+						/**
+						 * Collapsed and expanded sizes are written under selectors that never
+						 * match at once, so the reveal holds whichever order the cascade puts
+						 * the pair in.
+						 */
+						when("&:not([open])::details-content", bs(0)),
+						when("&[open]::details-content", bs("auto")),
+						when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
+						media("(prefers-reduced-motion: reduce)", detailsContent(transitionDuration("0s"))),
+					],
+					mix,
+				)}
+			>
+				{children}
+			</details>
+		);
+	};
+}
+
+Tree.Item = TreeItem;
+
+/**
+ * Renders {@link Tree.ItemContentProps.children} inside a native
+ * `<summary>` — the enclosing {@link Tree.Item}'s always-visible row —
+ * indented from its ambient depth, with `aria-selected`/`aria-disabled` styling.
+ *
+ * @param handle Runtime handle carrying the host `<summary>`'s props.
+ * @returns The render function producing the row's markup.
+ * @example
+ * <Tree.ItemContent>
+ * 	<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 	{t("files.folder", { name: "src" })}
+ * </Tree.ItemContent>
+ * @example
+ * <Tree.ItemContent aria-selected="true">
+ * 	{t("files.file", { name: "index.ts" })}
+ * </Tree.ItemContent>
+ */
+Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+		let depth = readAmbientDepth(handle) ?? DEFAULT_DEPTH;
+
+		return (
+			<summary
+				{...rest}
+				mix={mergeMix(
+					[
+						interactiveTransition(),
+						attrs({ role: DEFAULT_CONTENT_ROLE, "aria-level": depth + 1 }),
+						hstack({ gap: 2, align: "center" }),
+						rounded("md"),
+						pb(1.5),
+						pie(3),
+						fg("neutral.emphasis"),
+						cursor("default"),
+						listStyle(),
+						/**
+						 * The two indents are written under selectors that never match at once, so
+						 * a row keeps its own whichever order the cascade puts the pair in.
+						 */
+						when(
+							`&:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"])`,
+							raw({
+								paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem))`,
+							}),
+						),
+						when(
+							`&:not(:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]))`,
+							raw({
+								paddingInlineStart: `calc(0.5rem + ${depth} * var(--ui-tree-indent, 1.25rem) + ${LEAF_GUTTER})`,
+							}),
+						),
+						outline("none"),
+						text("sm"),
+						when("&::-webkit-details-marker", hidden()),
+						when("&::marker", raw({ content: '""' })),
+						media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+						when("&:hover", bg("neutral.bg-tint-hover")),
+						when("&:active", bg("neutral.bg-tint-pressed")),
+						when("&:focus", bg("neutral.bg-tint-hover")),
+						when('&[aria-selected="true"]', bg("brand.tint")),
+						when('&[aria-disabled="true"]', opacity(50)),
+					],
+					mix,
+				)}
+			>
+				{children}
+			</summary>
+		);
+	};
+};
+
+/**
+ * Renders a decorative sentinel node: a `<div>` styled as centered, muted
+ * small text sized to match {@link Tree.ItemContent}'s vertical rhythm,
+ * ready to hold whatever loading indicator a paired enhancement supplies.
+ *
+ * @param handle Runtime handle carrying the host `<div>`'s props.
+ * @returns The render function producing the sentinel node's markup.
+ * @example
+ * <Tree.LoadMoreItem>{t("files.loadingMore")}</Tree.LoadMoreItem>
+ */
+Tree.LoadMoreItem = SentinelRow;
+
+/**
+ * Renders the chevron a node's row shows for a subtree, rotated 90 degrees
+ * while the enclosing {@link Tree.Item}'s `<details>` carries `[open]`.
+ *
+ * It is decoration, not a control: the row it sits in is a `<summary>`, which is already
+ * the thing that opens the branch, and a button nested inside one takes the activation
+ * for itself — the chevron would be the one place on the row that did not expand it.
+ *
+ * @param handle Runtime handle carrying the host `<span>`'s props.
+ * @returns The render function producing the chevron's markup.
+ * @example
+ * <Tree.ItemContent>
+ * 	<Tree.ExpandButton aria-label={t("files.expand")} />
+ * 	{t("files.folder", { name: "src" })}
+ * </Tree.ItemContent>
+ */
+Tree.ExpandButton = function TreeExpandButton(handle: Handle<Tree.ExpandButtonProps>) {
+	return () => {
+		let { children, mix, ...rest } = handle.props;
+
+		return (
+			<span
+				{...rest}
+				mix={mergeMix(
+					[
+						attrs({ "data-slot": DEFAULT_EXPAND_BUTTON_SLOT, "aria-hidden": "true" }),
+						center(),
+						is(5),
+						bs(5),
+						rounded("sm"),
+						fg("neutral.muted"),
+						transition("transform, background-color"),
+						shrink(),
+						media("(prefers-reduced-motion: reduce)", transitionDuration("0s")),
+					],
+					mix,
+				)}
+			>
+				{children ?? <ChevronRightIcon size={16} />}
+			</span>
+		);
+	};
+};

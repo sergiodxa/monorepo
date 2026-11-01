@@ -52,8 +52,8 @@ export namespace Accordion {
 /**
  * Renders the list's root host: a plain `<div>` that stacks
  * {@link Accordion.Item} sections in normal block flow under one top rule, each
- * drawing the divider below it, so the list reads as one group. A marketing FAQ
- * lays two of these in a container-query grid under a {@link MarketingHeader},
+ * drawing the divider below it, so the list reads as one group. A landing FAQ
+ * lays two of these in a container-query grid under a {@link LandingHeader},
  * sharing one `name` across columns so only one item opens at a time.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.

@@ -136,7 +136,7 @@ export namespace Carousel {
  * 	</Carousel.Controls>
  * </Carousel>
  * @example
- * // Marketing browser-flow strip: widen `--ui-carousel-slide-size` for product
+ * // Landing browser-flow strip: widen `--ui-carousel-slide-size` for product
  * // frames and keep Previous/Next on `size="sm"` so controls stay quiet.
  * <Carousel
  * 	aria-label={t("flows.label")}

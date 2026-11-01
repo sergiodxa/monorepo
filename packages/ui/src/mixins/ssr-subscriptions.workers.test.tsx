@@ -12,25 +12,25 @@ import type { Handle, RemixNode } from "remix/component";
 import { renderToStream } from "remix/component/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { DragSession } from "../app/behaviors/drag-session.js";
+import { ResizeSession } from "../app/behaviors/resize-session.js";
+import { SelectionModel } from "../app/behaviors/selection-model.js";
+import { dragReorder } from "../app/mixins/drag-reorder.js";
+import { dropZone } from "../app/mixins/drop-zone.js";
+import { gridListKeys } from "../app/mixins/grid-list-keys.js";
+import { resizeHandle } from "../app/mixins/resize-handle.js";
+import { treeKeys } from "../app/mixins/tree-keys.js";
 import { CalendarModel } from "../behaviors/calendar-model.js";
-import { DragSession } from "../behaviors/drag-session.js";
 import { FilterModel } from "../behaviors/filter-model.js";
-import { ResizeSession } from "../behaviors/resize-session.js";
-import { ScrollFollowModel } from "../behaviors/scroll-follow-model.js";
-import { SelectionModel } from "../behaviors/selection-model.js";
+import { ScrollFollowModel } from "../chat/behaviors/scroll-follow-model.js";
+import { messageFollow } from "../chat/mixins/message-follow.js";
 
 import { calendarKeys } from "./calendar-keys.js";
 import { commandFilter } from "./command-filter.js";
 import { commandKeys } from "./command-keys.js";
-import { dragReorder } from "./drag-reorder.js";
-import { dropZone } from "./drop-zone.js";
 import { frameRefresh } from "./frame-refresh.js";
 import { frameSubmit } from "./frame-submit.js";
-import { gridListKeys } from "./grid-list-keys.js";
-import { messageFollow } from "./message-follow.js";
 import { rangePreview } from "./range-preview.js";
-import { resizeHandle } from "./resize-handle.js";
-import { treeKeys } from "./treeKeys.js";
 import { viewTransition } from "./view-transition.js";
 import { whileLive } from "./while-live.js";
 

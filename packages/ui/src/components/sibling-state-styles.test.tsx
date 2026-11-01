@@ -12,7 +12,8 @@
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import { ColorSwatchPicker } from "./color-swatch-picker.js";
+import { ColorSwatchPicker } from "../color/color-swatch-picker.js";
+
 import { RadioGroup } from "./radio-group.js";
 import { Tooltip } from "./tooltip.js";
 

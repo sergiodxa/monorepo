@@ -7,15 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./chart-marker-indices.js";
-export * from "./chart-path.js";
-export * from "./chart-scale.js";
 export * from "./color-math.js";
 export * from "./command-event.js";
 export * from "./css-styles.js";
 export * from "./decorative-icon.js";
 export * from "./disabled-selector.js";
-export * from "./docs-tree.js";
 export * from "./dispatch-change.js";
 export * from "./eyebrow.js";
 export * from "./field-parts.js";
@@ -23,7 +19,6 @@ export * from "./full-turn-radians.js";
 export * from "./geometry.js";
 export * from "./glyph-edges.js";
 export * from "./has-accessible-text.js";
-export * from "./hue-spectrum.js";
 export * from "./is-new-primary-press.js";
 export * from "./key-combo.js";
 export * from "./keyboard-nav.js";
@@ -36,6 +31,5 @@ export * from "./resolve-field-wiring.js";
 export * from "./resolve-fill-percent.js";
 export * from "./round-precision.js";
 export * from "./semantic-color.js";
-export * from "./semantic-color-panel.js";
 export * from "./warn-if-no-accessible-name.js";
 export * from "./write-cookie.js";

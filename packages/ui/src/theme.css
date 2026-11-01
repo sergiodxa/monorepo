@@ -30,7 +30,7 @@
  *   visible against a background of the same tone.
  * - `--ui-surface-raised` and the `--ui-shadow-surface` / `-stage` / `-control`
  *   edges a frame, card or CTA sits on, lifted a step above the page in dark.
- * - `--ui-marketing-*` layout and display tokens (measure, gutter, fluid
+ * - `--ui-landing-*` layout and display tokens (measure, gutter, fluid
  *   section space steps, display and chapter type, lead, logo height, header
  *   space, CTA radius and weight, surface radius, hairline) plus
  *   `--ui-font-display` for landing bands. Apps override per brand; brand
@@ -110,37 +110,37 @@
 		inset 0 0 0 1px rgb(0 0 0 / 0.06);
 
 	/*
-	 * Marketing layout: measure, gutters, band spacing, and display type for
+	 * Landing layout: measure, gutters, band spacing, and display type for
 	 * landing bands. Sizes and spacing are fluid in the band's container width
 	 * (`cqi`), so a phone gets the tight end and a desktop band the generous one.
 	 * Apps override per brand; 72rem matches a 1152px content column.
 	 */
-	--ui-marketing-measure: 72rem;
-	--ui-marketing-gutter: 1rem;
-	--ui-marketing-section-space: clamp(5rem, 3.86rem + 4.85cqi, 7.5rem);
-	--ui-marketing-section-space-compact: clamp(3rem, 2.32rem + 2.91cqi, 4.5rem);
-	--ui-marketing-section-space-hero: clamp(3.5rem, 1.45rem + 8.73cqi, 8rem);
-	--ui-marketing-section-space-cta: clamp(5rem, 4.09rem + 3.88cqi, 7rem);
-	--ui-marketing-header-space: clamp(2.5rem, 1.82rem + 2.91cqi, 4rem);
-	--ui-marketing-display-tracking: -0.035em;
-	--ui-marketing-display-weight: 500;
-	--ui-marketing-display-max: 4.5rem;
-	--ui-marketing-chapter-size: clamp(1.75rem, 1.18rem + 2.42cqi, 3rem);
-	--ui-marketing-chapter-leading: 1.1;
-	--ui-marketing-chapter-tracking: -0.025em;
-	--ui-marketing-lead-measure: 40rem;
-	--ui-marketing-lead-size: 1.125rem;
-	--ui-marketing-lead-leading: 2rem;
-	--ui-marketing-lead-weight: 400;
-	--ui-marketing-hero-lead-size: clamp(1.0625rem, 0.98rem + 0.4cqi, 1.25rem);
-	--ui-marketing-hero-lead-leading: 1.55;
-	--ui-marketing-logo-height: 1.75rem;
-	--ui-marketing-logo-height-lg: 2.25rem;
-	--ui-marketing-header-height: 4rem;
-	--ui-marketing-cta-radius: 0.5rem;
-	--ui-marketing-cta-weight: 600;
-	--ui-marketing-radius-surface: 1rem;
-	--ui-marketing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 6%, transparent);
+	--ui-landing-measure: 72rem;
+	--ui-landing-gutter: 1rem;
+	--ui-landing-section-space: clamp(5rem, 3.86rem + 4.85cqi, 7.5rem);
+	--ui-landing-section-space-compact: clamp(3rem, 2.32rem + 2.91cqi, 4.5rem);
+	--ui-landing-section-space-hero: clamp(3.5rem, 1.45rem + 8.73cqi, 8rem);
+	--ui-landing-section-space-cta: clamp(5rem, 4.09rem + 3.88cqi, 7rem);
+	--ui-landing-header-space: clamp(2.5rem, 1.82rem + 2.91cqi, 4rem);
+	--ui-landing-display-tracking: -0.035em;
+	--ui-landing-display-weight: 500;
+	--ui-landing-display-max: 4.5rem;
+	--ui-landing-chapter-size: clamp(1.75rem, 1.18rem + 2.42cqi, 3rem);
+	--ui-landing-chapter-leading: 1.1;
+	--ui-landing-chapter-tracking: -0.025em;
+	--ui-landing-lead-measure: 40rem;
+	--ui-landing-lead-size: 1.125rem;
+	--ui-landing-lead-leading: 2rem;
+	--ui-landing-lead-weight: 400;
+	--ui-landing-hero-lead-size: clamp(1.0625rem, 0.98rem + 0.4cqi, 1.25rem);
+	--ui-landing-hero-lead-leading: 1.55;
+	--ui-landing-logo-height: 1.75rem;
+	--ui-landing-logo-height-lg: 2.25rem;
+	--ui-landing-header-height: 4rem;
+	--ui-landing-cta-radius: 0.5rem;
+	--ui-landing-cta-weight: 600;
+	--ui-landing-radius-surface: 1rem;
+	--ui-landing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 6%, transparent);
 	--ui-font-display: var(--ui-font-sans);
 }
 
@@ -252,7 +252,7 @@
 }
 
 /*
- * Dark surfaces and marketing lines, declared on the root alone: they inherit, so an
+ * Dark surfaces and landing lines, declared on the root alone: they inherit, so an
  * inverse or brand band that re-points them on its own element reaches its children.
  */
 .dark {
@@ -269,7 +269,7 @@
 	--ui-shadow-control:
 		0 1px 3px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04),
 		inset 0 0 0 1px rgb(255 255 255 / 0.08);
-	--ui-marketing-hairline: color-mix(in oklch, white 10%, transparent);
+	--ui-landing-hairline: color-mix(in oklch, white 10%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -287,7 +287,7 @@
 		--ui-shadow-control:
 			0 1px 3px rgb(0 0 0 / 0.2), inset 0 1px 0 rgb(255 255 255 / 0.04),
 			inset 0 0 0 1px rgb(255 255 255 / 0.08);
-		--ui-marketing-hairline: color-mix(in oklch, white 10%, transparent);
+		--ui-landing-hairline: color-mix(in oklch, white 10%, transparent);
 	}
 }
 
@@ -309,6 +309,6 @@
 		--ui-shadow-ring: 0 0 0 1px var(--ui-neutral-border-strong);
 		--ui-shadow-ring-hover: 0 0 0 1px var(--ui-neutral-border-strong);
 		--ui-shadow-surface: 0 0 0 1px var(--ui-neutral-border-strong);
-		--ui-marketing-hairline: var(--ui-neutral-border-strong);
+		--ui-landing-hairline: var(--ui-neutral-border-strong);
 	}
 }

@@ -12,9 +12,10 @@ import type { RemixNode } from "remix/component";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
+import { Empty } from "../app/empty.js";
+
 import { Alert } from "./alert.js";
 import { Description } from "./description.js";
-import { Empty } from "./empty.js";
 import { FieldError } from "./field-error.js";
 import { Heading } from "./heading.js";
 import { Keyboard } from "./keyboard.js";

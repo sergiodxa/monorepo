@@ -1,5 +1,5 @@
 /**
- * A horizontal cluster of primary and secondary marketing actions that wraps
+ * A horizontal cluster of primary and secondary landing actions that wraps
  * onto a second row when the container is narrow. Children are the page's own
  * {@link Button} / {@link LinkButton} instances, and an action that names no
  * size of its own takes the group's, so a hero row sizes every CTA at once.
@@ -15,7 +15,7 @@ import { flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { atMax } from "@sdxc/u/responsive";
 import { when } from "@sdxc/u/state";
 
-/** Size the group hands its actions when `size` is omitted: the 40px marketing CTA. */
+/** Size the group hands its actions when `size` is omitted: the 40px landing CTA. */
 const DEFAULT_SIZE: CtaGroup.Size = "md";
 
 /**
@@ -57,8 +57,8 @@ export namespace CtaGroup {
 /**
  * Lays action children in a wrapping inline-flex row with a compact gap so a
  * primary and secondary CTA read as one cluster, and publishes its size to them.
- * Radius stays on the buttons; override `--ui-marketing-cta-radius` per brand for
- * pill vs soft-rect corners through `marketingCtaChrome()`.
+ * Radius stays on the buttons; override `--ui-landing-cta-radius` per brand for
+ * pill vs soft-rect corners through `landingCtaChrome()`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the group's markup.

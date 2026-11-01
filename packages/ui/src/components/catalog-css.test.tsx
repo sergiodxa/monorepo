@@ -15,7 +15,14 @@ import { jsx } from "remix/component/jsx-runtime";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import * as catalog from "./index.js";
+/**
+ * Every component module of the package: the general components and each namespace's,
+ * read from their files so the helpers a namespace barrel also forwards stay out.
+ */
+const MODULES = import.meta.glob<Record<string, unknown>>(
+	["./*.tsx", "../{landing,docs,chat,color,app}/*.tsx", "!./*.test.tsx", "!../*/*.test.tsx"],
+	{ eager: true },
+);
 
 /**
  * The fingerprint every instance of this bug class leaves in the stylesheet:
@@ -42,6 +49,24 @@ const PROBE_PROPS = {
 	rows: [],
 	packages: [],
 	labels: { copy: "a", copied: "a", name: "a", type: "a", default: "a", required: "a" },
+	"aria-label": "a",
+	series: [],
+	source: { title: "a" },
+	targets: [],
+	trigger: { title: "a" },
+	steps: [],
+	outcome: "a",
+	words: ["a"],
+	actors: [],
+	messages: [],
+	columns: [],
+	lines: [],
+	start: [],
+	sections: [],
+	links: [],
+	path: "/a",
+	name: "a",
+	href: "/a",
 	children: "probe",
 };
 
@@ -71,6 +96,7 @@ async function styleOf(element: unknown): Promise<string | null> {
 }
 
 describe("component catalog CSS", () => {
+	let catalog = Object.assign({}, ...Object.values(MODULES)) as Record<string, unknown>;
 	let roots = Object.entries(catalog).filter(([name, value]) => isComponent(name, value));
 
 	test("exports a catalog large enough for this sweep to mean anything", () => {
@@ -78,7 +104,9 @@ describe("component catalog CSS", () => {
 	});
 
 	for (let [name, root] of roots) {
-		let members = Object.entries(root).filter(([key, value]) => isComponent(key, value));
+		let members = Object.entries(root as Record<string, unknown>).filter(([key, value]) =>
+			isComponent(key, value),
+		);
 
 		test(`${name} emits no stringified style block`, async () => {
 			let css = await styleOf(jsx(root as never, { ...PROBE_PROPS }));

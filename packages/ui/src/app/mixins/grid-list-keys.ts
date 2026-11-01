@@ -1,0 +1,308 @@
+/**
+ * Adapts the WAI-ARIA grid pattern onto a GridList's rows and action
+ * cells: one roving focus position moves with the arrow and Home/End keys
+ * or a click, and Space, Shift and a click drive selection through a
+ * `SelectionModel` instance.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { createElement, createMixin, on } from "remix/component";
+
+import type { SelectionModel } from "../behaviors/selection-model.js";
+
+import { whileLive } from "../../mixins/while-live.js";
+import { DISABLED_SELECTOR } from "../../utils/disabled-selector.js";
+
+/**
+ * Attribute every GridList row exposes its {@link SelectionModel.Key} on;
+ * `gridListKeys()` correlates a row with the key `SelectionModel` tracks its
+ * selection under, and writes `aria-selected` back as the model changes.
+ */
+export const GRIDLIST_ROW_KEY_ATTRIBUTE = "data-rmx-key";
+
+/** Selector matching a GridList row, by the same attribute contract {@link GRIDLIST_ROW_KEY_ATTRIBUTE} documents. */
+const ROW_SELECTOR = `[${GRIDLIST_ROW_KEY_ATTRIBUTE}]`;
+
+/** Selector matching one of a row's individually focusable action cells. */
+const CELL_SELECTOR = '[role="gridcell"]';
+
+/**
+ * Where a keydown event originated within the grid: the row it came from,
+ * and — when it came from one of that row's action cells rather than the
+ * row itself — that cell's index among the row's cells.
+ */
+interface Position {
+	/** Index of the origin row within the grid's current row list. */
+	rowIndex: number;
+	/** Index of the origin cell within its row's cells, or `null` when the row itself was the origin. */
+	cellIndex: number | null;
+}
+
+/**
+ * Collects the grid's enabled rows beneath `host`, in document order.
+ * Queried fresh on every keystroke and focus change so navigation stays
+ * correct as rows are added, removed, or toggled disabled.
+ */
+function queryRows(host: HTMLElement): HTMLElement[] {
+	let candidates = host.querySelectorAll<HTMLElement>(ROW_SELECTOR);
+	return Array.from(candidates).filter((row) => !row.matches(DISABLED_SELECTOR));
+}
+
+/**
+ * Collects `row`'s enabled action cells, in document order.
+ */
+function queryCells(row: HTMLElement): HTMLElement[] {
+	let candidates = row.querySelectorAll<HTMLElement>(CELL_SELECTOR);
+	return Array.from(candidates).filter((cell) => !cell.matches(DISABLED_SELECTOR));
+}
+
+/**
+ * Reads the raw {@link GRIDLIST_ROW_KEY_ATTRIBUTE} value off `row`, ahead of
+ * resolving it back to the `SelectionModel.Key` it names.
+ */
+function rowKeyOf(row: HTMLElement): string {
+	return row.getAttribute(GRIDLIST_ROW_KEY_ATTRIBUTE) ?? "";
+}
+
+/**
+ * Resolves a row's raw {@link GRIDLIST_ROW_KEY_ATTRIBUTE} string back to the
+ * `SelectionModel.Key` it names, matching by string equality so a model
+ * tracking numeric keys still correlates with the string-only DOM attribute.
+ *
+ * @returns The matching key, or the raw string itself when it matches no
+ * known key — for example, before the consumer has called `SelectionModel.setKeys`.
+ */
+function resolveKey(model: SelectionModel, raw: string): SelectionModel.Key {
+	for (let key of model.keys) {
+		if (String(key) === raw) return key;
+	}
+
+	return raw;
+}
+
+/**
+ * Locates where a keydown or focus event originated within the grid: which
+ * row, and — when it came from one of that row's action cells rather than
+ * the row itself — which cell.
+ *
+ * @returns The origin position, or `null` when `target` isn't inside any of `rows`.
+ */
+function locate(rows: readonly HTMLElement[], target: EventTarget | null): Position | null {
+	if (!(target instanceof Element)) return null;
+
+	let row = target.closest<HTMLElement>(ROW_SELECTOR);
+	if (row === null) return null;
+
+	let rowIndex = rows.indexOf(row);
+	if (rowIndex === -1) return null;
+
+	if (target === row) return { rowIndex, cellIndex: null };
+
+	let cell = target.closest<HTMLElement>(CELL_SELECTOR);
+	if (cell === null || cell.closest(ROW_SELECTOR) !== row) return { rowIndex, cellIndex: null };
+
+	let cellIndex = queryCells(row).indexOf(cell);
+	return { rowIndex, cellIndex: cellIndex === -1 ? null : cellIndex };
+}
+
+/**
+ * Resolves a {@link Position} back to the actual row or cell element it
+ * names, so a raw event target several levels deep (an icon inside an
+ * action button) still maps onto one of the grid's real roving-focus stops.
+ */
+function stopAt(rows: readonly HTMLElement[], position: Position): HTMLElement {
+	let row = rows[position.rowIndex]!;
+	if (position.cellIndex === null) return row;
+
+	return queryCells(row)[position.cellIndex] ?? row;
+}
+
+/**
+ * Every element the grid's roving tabindex currently spans: each row plus
+ * its own action cells.
+ */
+function allStops(rows: readonly HTMLElement[]): HTMLElement[] {
+	let stops: HTMLElement[] = [];
+	for (let row of rows) stops.push(row, ...queryCells(row));
+	return stops;
+}
+
+/**
+ * Assigns roving tabindex across the whole grid: `active` becomes the sole
+ * Tab-reachable stop (`tabIndex = 0`) and every other row and cell drops out
+ * of Tab order (`tabIndex = -1`).
+ */
+function setRovingTabindex(rows: readonly HTMLElement[], active: HTMLElement): void {
+	for (let stop of allStops(rows)) stop.tabIndex = stop === active ? 0 : -1;
+}
+
+/**
+ * Moves roving tabindex and real DOM focus onto `target`, then scrolls it
+ * into view — necessary for a grid tall enough to scroll, or rendered with
+ * `content-visibility: auto`.
+ */
+function focusElement(rows: readonly HTMLElement[], target: HTMLElement): void {
+	setRovingTabindex(rows, target);
+	target.focus();
+	target.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+/**
+ * Mirrors `model`'s selected keys onto every row beneath `host` as
+ * `aria-selected`, using {@link GRIDLIST_ROW_KEY_ATTRIBUTE} to correlate each
+ * row with the key `model` tracks it under.
+ */
+function syncSelection(host: HTMLElement, model: SelectionModel): void {
+	for (let row of host.querySelectorAll<HTMLElement>(ROW_SELECTOR)) {
+		let key = resolveKey(model, rowKeyOf(row));
+		row.setAttribute("aria-selected", String(model.isSelected(key)));
+	}
+}
+
+/**
+ * Adds ARIA grid keyboard and pointer navigation to a GridList's rows and
+ * action cells, driving a `SelectionModel` from both and mirroring its
+ * `"change"` events back onto the rows as `aria-selected`.
+ *
+ * @param model Behavior class instance owning the grid's selected keys.
+ * @example
+ * let model = new SelectionModel({ keys: rows.map((row) => row.id) });
+ * <div role="grid" mix={[gridListKeys(model)]}>
+ *   {rows.map((row) => (
+ *     <div key={row.id} role="row" data-rmx-key={row.id} tabIndex={-1}>
+ *       {row.label}
+ *       <button role="gridcell" tabIndex={-1}>Remove</button>
+ *     </div>
+ *   ))}
+ * </div>
+ */
+export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((handle) => {
+	let hostNode: HTMLElement | undefined;
+	let follow = whileLive(handle, (model: SelectionModel, signal) => {
+		model.addEventListener(
+			"change",
+			() => {
+				if (hostNode !== undefined) syncSelection(hostNode, model);
+			},
+			{ signal },
+		);
+	});
+
+	handle.addEventListener("insert", (event) => {
+		hostNode = event.node;
+
+		let rows = queryRows(hostNode);
+		if (rows.length > 0) setRovingTabindex(rows, rows[0]!);
+	});
+	handle.addEventListener("remove", () => {
+		hostNode = undefined;
+	});
+
+	return (model) => {
+		follow(model);
+
+		return createElement(handle.element, {
+			mix: [
+				on<HTMLElement, "focusin">("focusin", (event) => {
+					if (hostNode === undefined) return;
+
+					let rows = queryRows(hostNode);
+					let position = locate(rows, event.target);
+					if (position === null) return;
+
+					setRovingTabindex(rows, stopAt(rows, position));
+				}),
+				/** A shift-click spans rows, so the grid keeps that gesture for selection. */
+				on<HTMLElement, "pointerdown">("pointerdown", (event) => {
+					if (event.shiftKey) event.preventDefault();
+				}),
+				/**
+				 * Selection belongs to the row: a click inside an action cell moves focus there and
+				 * leaves the rest to that cell's own action.
+				 */
+				on<HTMLElement, "click">("click", (event) => {
+					if (hostNode === undefined) return;
+
+					let rows = queryRows(hostNode);
+					let position = locate(rows, event.target);
+					if (position === null) return;
+
+					focusElement(rows, stopAt(rows, position));
+
+					if (position.cellIndex !== null) return;
+
+					let key = resolveKey(model, rowKeyOf(rows[position.rowIndex]!));
+					if (event.shiftKey) model.selectRange(key);
+					else model.toggle(key);
+				}),
+				on<HTMLElement, "keydown">("keydown", (event) => {
+					if (hostNode === undefined) return;
+
+					let rows = queryRows(hostNode);
+					if (rows.length === 0) return;
+
+					let position = locate(rows, event.target);
+					if (position === null) return;
+
+					let { rowIndex, cellIndex } = position;
+					let row = rows[rowIndex]!;
+
+					switch (event.key) {
+						case "ArrowDown": {
+							let next = rows[rowIndex + 1];
+							if (!next) return;
+							event.preventDefault();
+							focusElement(rows, next);
+							if (event.shiftKey) model.selectRange(resolveKey(model, rowKeyOf(next)));
+							return;
+						}
+						case "ArrowUp": {
+							let previous = rows[rowIndex - 1];
+							if (!previous) return;
+							event.preventDefault();
+							focusElement(rows, previous);
+							if (event.shiftKey) model.selectRange(resolveKey(model, rowKeyOf(previous)));
+							return;
+						}
+						case "ArrowRight": {
+							let cells = queryCells(row);
+							if (cells.length === 0) return;
+							event.preventDefault();
+							let nextIndex = cellIndex === null ? 0 : Math.min(cellIndex + 1, cells.length - 1);
+							focusElement(rows, cells[nextIndex]!);
+							return;
+						}
+						case "ArrowLeft": {
+							if (cellIndex === null) return;
+							event.preventDefault();
+							let cells = queryCells(row);
+							let destination = cellIndex === 0 ? row : cells[cellIndex - 1];
+							if (destination) focusElement(rows, destination);
+							return;
+						}
+						case "Home":
+							event.preventDefault();
+							focusElement(rows, rows[0]!);
+							return;
+						case "End":
+							event.preventDefault();
+							focusElement(rows, rows[rows.length - 1]!);
+							return;
+						case " ":
+							if (cellIndex !== null) return;
+							event.preventDefault();
+							model.toggle(resolveKey(model, rowKeyOf(row)));
+							return;
+						case "a":
+						case "A":
+							if (!(event.ctrlKey || event.metaKey)) return;
+							event.preventDefault();
+							model.selectAll();
+					}
+				}),
+			],
+		});
+	};
+});

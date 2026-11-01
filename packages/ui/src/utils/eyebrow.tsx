@@ -1,5 +1,5 @@
 /**
- * The label above a marketing headline, shared by band headers, the hero and the
+ * The label above a landing headline, shared by band headers, the hero and the
  * announcement chip so every label on a page draws from one set of looks. Given an
  * `href` it renders a link with a trailing arrow that nudges on hover.
  *
@@ -12,9 +12,9 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { ArrowRightIcon } from "@sdxc/icons";
 import { mergeMix } from "@sdxc/u/general";
 
-import type { MarketingEyebrowVariant } from "../styles/marketing.js";
+import type { LandingEyebrowVariant } from "../styles/landing.js";
 
-import { eyebrow } from "../styles/marketing.js";
+import { eyebrow } from "../styles/landing.js";
 
 /**
  * Prop types for {@link Eyebrow}.
@@ -25,7 +25,7 @@ export namespace Eyebrow {
 	 */
 	export interface Props {
 		/** Which look the label draws. */
-		variant: MarketingEyebrowVariant | "special";
+		variant: LandingEyebrowVariant | "special";
 		/** Turns the label into a link with a trailing arrow. */
 		href?: string;
 		/** Index a `numbered` label leads with, such as `"01"`. */

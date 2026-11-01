@@ -19,10 +19,10 @@ import { describe, expect, test } from "vitest";
 import type { AriaViolation } from "../../../../test/aria-tokens.js";
 
 import { findAriaViolations } from "../../../../test/aria-tokens.js";
+import { Skeleton } from "../app/skeleton.js";
+import { Attachment } from "../chat/attachment.js";
 
-import { Attachment } from "./attachment.js";
 import { Checkbox } from "./checkbox.js";
-import { Skeleton } from "./skeleton.js";
 import { TextField } from "./text-field.js";
 import { ToggleButton } from "./toggle-button.js";
 

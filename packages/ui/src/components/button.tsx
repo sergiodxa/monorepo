@@ -82,7 +82,7 @@ export namespace Button {
 	/**
 	 * Size variant controlling the button's padding and font size.
 	 * Inside a {@link CtaGroup} an omitted size takes the group's, so a hero row
-	 * sizes every action at once; `"md"` is the 40px marketing CTA.
+	 * sizes every action at once; `"md"` is the 40px landing CTA.
 	 */
 	export type Size = "sm" | "md" | "lg";
 
@@ -148,7 +148,7 @@ function holdsOnlyAGlyph(children: RemixNode): boolean {
  * @example
  * <Button type="submit" isPending={isSubmitting}>{t("actions.save")}</Button>
  * @example
- * <Button size="lg" color="brand" mix={[marketingCtaChrome()]}>{t("hero.cta")}</Button>
+ * <Button size="lg" color="brand" mix={[landingCtaChrome()]}>{t("hero.cta")}</Button>
  */
 export function Button(handle: Handle<Button.Props>) {
 	return () => {

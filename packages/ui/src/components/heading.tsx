@@ -7,7 +7,7 @@
  * Choosing a level changes only the document outline the element contributes to
  * assistive technology; its rendered size stays fixed, so nesting sections
  * correctly never requires a visual trade-off. Pass `size="display"` or
- * `size="chapter"` for marketing headlines that read the `--ui-marketing-*`
+ * `size="chapter"` for landing headlines that read the `--ui-landing-*`
  * display tokens (light weight, tight tracking, near-1.0 leading).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -20,7 +20,7 @@ import { fg } from "@sdxc/u/color";
 import { mergeMix } from "@sdxc/u/general";
 import { balance, fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
-import { displayHeading } from "../styles/marketing.js";
+import { displayHeading } from "../styles/landing.js";
 
 import type { HeadingLevel } from "./heading-scope.js";
 
@@ -41,7 +41,7 @@ export namespace Heading {
 
 	/**
 	 * Visual size recipe: the catalog default, a page H1 display scale, or a
-	 * section chapter (~40–48px) from the marketing tokens.
+	 * section chapter (~40–48px) from the landing tokens.
 	 */
 	export type Size = "default" | "display" | "chapter";
 
@@ -57,7 +57,7 @@ export namespace Heading {
 		 */
 		level?: Level;
 		/**
-		 * Visual size recipe. Defaults to {@link DEFAULT_SIZE}. Marketing
+		 * Visual size recipe. Defaults to {@link DEFAULT_SIZE}. Landing
 		 * pages reach for `"display"` (H1) or `"chapter"` (section H2); app
 		 * chrome keeps `"default"`.
 		 */
@@ -68,7 +68,7 @@ export namespace Heading {
 /**
  * Renders its children inside the native heading element matching `level`.
  * The default size is semibold, tight-tracked emphasis at `lg`; `"display"`
- * and `"chapter"` swap in {@link displayHeading} so large marketing titles
+ * and `"chapter"` swap in {@link displayHeading} so large landing titles
  * stay light-weighted.
  *
  * @param handle Runtime handle carrying the host heading element's props.
@@ -86,7 +86,7 @@ export function Heading(handle: Handle<Heading.Props>) {
 		let resolved = resolveHeadingLevel(handle, level);
 		let resolvedSize = size ?? DEFAULT_SIZE;
 		let Tag = TAG_BY_LEVEL[resolved];
-		let isMarketing = resolvedSize === "display" || resolvedSize === "chapter";
+		let isLanding = resolvedSize === "display" || resolvedSize === "chapter";
 
 		return (
 			<Tag
@@ -97,7 +97,7 @@ export function Heading(handle: Handle<Heading.Props>) {
 					[
 						resolvedSize === "display" ? displayHeading(1) : [],
 						resolvedSize === "chapter" ? displayHeading(2) : [],
-						isMarketing
+						isLanding
 							? []
 							: [
 									weight("semibold"),

@@ -118,18 +118,26 @@ A page that sticks to baseline behavior ships no library JavaScript at all.
 
 ## API
 
-| Import                | Contains                                                            |
-| --------------------- | ------------------------------------------------------------------- |
-| `@sdxc/ui`            | Every component and its compound parts.                             |
-| `@sdxc/ui/<name>`     | One component, by its file name: `@sdxc/ui/youtube-embed`.          |
-| `@sdxc/ui/mixins`     | Opt-in DOM behaviors applied through `mix`.                         |
-| `@sdxc/ui/behaviors`  | Headless state classes built on `TypedEventTarget`.                 |
-| `@sdxc/ui/animations` | CSS-only motion factories and the `durations`/`easings` tokens.     |
-| `@sdxc/ui/styles`     | Style recipes composed inside a `mix` array.                        |
-| `@sdxc/ui/utils`      | Framework-free color, chart, geometry, key and DOM helpers; types.  |
-| `@sdxc/ui/reset.css`  | The base reset in `@layer base`.                                    |
-| `@sdxc/ui/theme.css`  | The `--ui-*` semantic variables and the `--ui-chart-1`…`8` palette. |
+| Import                 | Contains                                                            |
+| ---------------------- | ------------------------------------------------------------------- |
+| `@sdxc/ui`             | The general components, usable on any page, and their parts.        |
+| `@sdxc/ui/<name>`      | One general component, by its file name: `@sdxc/ui/youtube-embed`.  |
+| `@sdxc/ui/landing`     | Landing bands, composition craft and animated visuals.              |
+| `@sdxc/ui/docs`        | The docs shell, navigation and content blocks.                      |
+| `@sdxc/ui/chat`        | The message log, turns, bubbles, markers and attachments.           |
+| `@sdxc/ui/color`       | Colour fields, pickers, sliders, swatches, area and wheel.          |
+| `@sdxc/ui/app`         | Dashboard and workspace components: charts, tables, lists, toasts.  |
+| `@sdxc/ui/<ns>/<name>` | One namespace component, by its file name: `@sdxc/ui/docs/steps`.   |
+| `@sdxc/ui/mixins`      | Opt-in DOM behaviors applied through `mix`.                         |
+| `@sdxc/ui/behaviors`   | Headless state classes built on `TypedEventTarget`.                 |
+| `@sdxc/ui/animations`  | CSS-only motion factories and the `durations`/`easings` tokens.     |
+| `@sdxc/ui/styles`      | Style recipes composed inside a `mix` array.                        |
+| `@sdxc/ui/utils`       | Framework-free color, chart, geometry, key and DOM helpers; types.  |
+| `@sdxc/ui/reset.css`   | The base reset in `@layer base`.                                    |
+| `@sdxc/ui/theme.css`   | The `--ui-*` semantic variables and the `--ui-chart-1`…`8` palette. |
 
+A namespace builds on the general components and never on another namespace, and exports the
+mixins, behaviors and styles only its components use; the shared helper subpaths hold the rest.
 Every export carries JSDoc, so the editor shows each full signature.
 
 ### Component contract
@@ -166,8 +174,6 @@ Every export carries JSDoc, so the editor shows each full signature.
   and `<progress>` (indeterminate when `value` is unset).
 - `Select`, `ComboBox`, `SearchField` — a native `<select>` with customizable-select styling, a
   text input with a `<datalist>`, and a `<search>` landmark.
-- `FileTrigger`, `DropZone` — a button opening the file picker, and a drop target, both over a
-  native file input.
 
 ### Components: overlays and menus
 
@@ -177,104 +183,63 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Confirm` — a complete confirmation dialog; with `form` its confirm button submits a real form.
 - `Popover`, `Tooltip`, `HoverCard` — an anchored popover, a label shown on hover or focus of the
   preceding sibling, and a detail panel shown on hover or focus within.
-- `Menu`, `Menubar`, `ContextMenu`, `NavigationMenu` — popover menus, a row of menu triggers, a
-  pointer-positioned menu, and a row of navigation panels.
+- `Menu`, `NavigationMenu` — popover menus, and a row of navigation panels.
 - `Command` — a searchable list of actions with `.Input`, `.List`, `.Item` and `.Empty`.
 - `OverlayArrow` — a pointer from a floating surface back to its trigger.
 
-### Components: navigation and data
+### Components: navigation and lists
 
 - `Button` — `color`, `variant`, `size`, and `isPending` to show a spinner at the same size.
+- `CtaGroup` — a wrapping row of actions; its `size` reaches every `Button` and `LinkButton` in it,
+  and `stack="phone"` stacks them on a phone.
 - `Link`, `NavLink`, `LinkButton` — an inline anchor, a navigation link, and a link styled as a
   button.
 - `Tabs` — tabs driven by routing: the `.Tab` pointing at the current page is selected.
 - `Breadcrumbs`, `Pagination`, `Sidebar` — a trail of parents, a pager landmark, and an app shell
   rail whose collapse rides a checkbox's `:checked`.
 - `Disclosure`, `Accordion` — `<details>` sections, alone or stacked.
-- `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link.
-- `GridList`, `Tree`, `ListBox` — an interactive row list, nested `<details>`, and selectable rows.
-- `SelectionIndicator`, `DropIndicator`, `SentinelRow` — a selection marker, a drop-position bar,
-  and a muted row holding a loading or "load more" control.
+- `ListBox` — selectable rows sharing one native grouping name.
+- `SelectionIndicator`, `SentinelRow` — a selection marker, and a muted row holding a loading or
+  "load more" control.
 
 ### Components: feedback
 
-- `Alert`, `Toast` — an inline status panel, and a notification stacked by `Toast.Region`.
+- `Alert` — an inline status panel.
 - `Badge`, `TagGroup` — a status pill, and a labeled set of removable pills.
-- `Skeleton`, `Spinner`, `Empty` — a loading block, a busy indicator, and an empty-state panel.
-
-### Components: color
-
-- `ColorSwatch`, `ColorSwatchPicker` — a color preview, and preset colors as native radios.
-- `ColorArea`, `ColorWheel`, `ColorSlider` — saturation/brightness, hue, and single-channel pickers
-  built from range inputs.
-- `ColorField`, `ColorPicker` — a color text field with a live swatch, and that field with a
-  popover (`ColorPicker.Dialog`) hosting any of the pickers above.
-
-### Components: charts and conversation
-
-- `Chart` — an SVG coordinate space (`width`, `height`, `xDomain`, `yDomain`) for `.Line` and
-  `.Area` series, plus standalone `.Bar` and `.Pie`, a `.Legend`, and the `.Tooltip` surface that
-  `chartTooltip()` drives; every point is a labeled, focusable marker.
-- `MessageScroller` — a `role="log"` frame with `.Viewport`, `.Content`, `.Item` and a
-  jump-to-latest `.Button`.
-- `Message`, `Bubble`, `Marker`, `Attachment` — a turn, its framed content, an inline event between
-  turns, and an attached-file card.
+- `Spinner` — a busy indicator.
 
 ### Components: layout and content
 
-- `Card`, `Item`, `Group`, `Section`, `Separator`, `Toolbar` — panels, rows, groupings and dividers.
-  Prefer `Feature` over `Card`/`Empty` for marketing claim cells.
+- `Card`, `Item`, `Group`, `Section`, `Separator` — panels, rows, groupings and dividers. Prefer
+  `Feature` from `@sdxc/ui/landing` over `Card` for landing claim cells.
 - `ImagePlaceholder`, `Avatar`, `Logo` — an image with fallback, and its round and rounded-square
   presets.
-- `AspectRatio`, `Resizable`, `ScrollArea`, `Carousel` — a ratio lock, split panes, a scroll region,
-  and a scroll-snap slide set.
+- `AspectRatio`, `ScrollArea`, `Carousel` — a ratio lock, a scroll region, and a scroll-snap slide
+  set.
 - `YouTubeEmbed` — a lazy-loaded 16:9 YouTube player (`videoId`, `start?`, `title`) served from
   `www.youtube-nocookie.com`, which the page's `frame-src` has to allow.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted copy, a section label, a `<kbd>`, and typography
   for rendered markup. `Typeset` sets the body at 18px (`docs`), 20px (`reading`) or 15px (`chat`).
-- `ShortcutList` — a `<dl>` pairing actions with key caps.
 - `Highlight` — `{ text, match }` segments rendered with each match in a `<mark>`.
 - `HeadingScope`, `Heading` — a heading-depth scope, and the `<h1>`–`<h6>` that reads it.
-  `Heading` accepts `size="display" | "chapter"` for marketing type recipes.
+  `Heading` accepts `size="display" | "chapter"` for landing type recipes.
 - `SharedElement` — a host with a stable view-transition name across page loads.
 - `Calendar`, `RangeCalendar`, `DatePicker`, `DateRangePicker` — month grids for a day or a range,
   and popover pickers around them; `Calendar` without children renders `<input type="date">`.
 
-### Components: marketing
+### Landing (`@sdxc/ui/landing`)
 
-- `MarketingSection` — landing band (`tone` incl. `brand` | `gradient`, `spacing`, `align`, `ruled`, `inset`, `variant="frame"`).
-- `MarketingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: `mono` | `quiet` | `soft` | `pill` | `numbered`).
-- `CtaGroup` — wrapping primary/secondary actions; `size` (40px `md` default) reaches every action, `stack="phone"`.
+Landing bands, composition craft and animated visuals. Every piece imports from
+`@sdxc/ui/landing`, or on its own as `@sdxc/ui/landing/<name>`.
+
+**Bands and primitives**
+
+- `LandingSection` — landing band (`tone` incl. `brand` | `gradient`, `spacing`, `align`, `ruled`, `inset`, `variant="frame"`).
+- `LandingHeader` — eyebrow + chapter title + lead (`eyebrowVariant`: `mono` | `quiet` | `soft` | `pill` | `numbered`).
 - `Split`, `Split.Copy`, `Split.Media` — two-column band content (`lean`, optional `checks`).
 - `StatStrip`, `StatStrip.Item` — numeric proof strip (`ruled` | `gap`).
-- `LogoCloud` — adopter marks at `--ui-marketing-logo-height` (`layout`: `row` | `spread` | `grid`, `label`, `muted`).
+- `LogoCloud` — adopter marks at `--ui-landing-logo-height` (`layout`: `row` | `spread` | `grid`, `label`, `muted`).
 - `Feature`, `Feature.Grid` — claim cells in a grid of cards or a hairline mosaic (`variant`).
-
-### Components: docs
-
-- `Callout` — static docs aside (`kind`: `note` | `tip` | `warning` | `danger`, translated `label`, optional `title`).
-- `Steps`, `Steps.Item` — numbered procedure with CSS counters and a rail; each `title` is a heading with an optional `id`.
-- `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
-- `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
-- `PlanNotice` — the one-sentence plan or role box under a help page's title.
-- `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
-- `CodeTabs` — radio tabs over code; `syncKey` switches every set together and `persist` (`cookie` | `local`) remembers it.
-- `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
-- `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
-- `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`).
-- `DocsPageHeader` — breadcrumb, `<h1>`, lead, `notice`, and a meta row with `updated` (a `<time>`) and `actions`.
-- `PageActions` — "Copy page" split button over a popover menu of `links`; the copy is the island `@sdxc/ui/page-actions`.
-- `AnchorHeading` — heading with an `id`, a `#` link on hover and focus, `--ui-docs-scroll-margin`, a `:target` flash.
-- `NextSteps` — hand-written "Next steps" heading plus 2–4 links, as `cards` or a `list`.
-- `DocsFeedback` — "Was this helpful?" form posting `helpful`, `page` and `note` without JavaScript; `state="sent"` thanks.
-- `DocsPager` — previous/next whole-card links from `findNeighbours(tree, path, { boundary })` in `@sdxc/ui/utils`.
-- `DocsNav` — docs sidebar from a `DocsTree`: current page marked and scrolled into view, `<details>` groups, optional title `filter`, `footer`; island `@sdxc/ui/docs-nav-tools`.
-- `TableOfContents` — "On this page" `rail` or sticky `bar`: a marker slides over every section on screen and reaches the last; island `@sdxc/ui/table-of-contents`.
-
-### Patterns (`@sdxc/ui/patterns`)
-
-Marketing building blocks and composition craft. Import from `@sdxc/ui/patterns` so product
-chrome on the root catalog stays free of landing weight.
 
 **Building blocks**
 
@@ -291,9 +256,6 @@ chrome on the root catalog stays free of landing weight.
 - `EventTicker` — animated activity log: `rows` arriving newest first, a status that can flip with `flipTo`.
 - `TypedTerminal` — animated terminal: input `lines` typing themselves out, then their output.
 - `DrawnChart` — animated figure: a `metric` counting up over a `bars` or `line` `series` that draws in.
-- `DocsLayout` — docs shell: docked `sidebar` (drawer below `dock`), article `measure`, heading rail from 75rem, sticky bar with menu and `toc`.
-- `DocsHub` — docs home routing by task: `search`, `topics` chips, larger `start` cards, `sections` with counts, `popular`.
-- `DocsNotFound` — docs 404 body: the missing `path`, a `search` pre-filled by `searchQueryFromPath(path)`, start `links`.
 
 **Composition craft**
 
@@ -302,10 +264,116 @@ chrome on the root catalog stays free of landing weight.
 - `InstallTabs`, `InstallTabs.Option` — radio dialect strip (no JS).
 - `TabbedStage`, `TabbedStage.Item` — tabs or a vertical rail controlling a media panel (no JS).
 - `CheckList`, `CheckRow` — checked claims (`orientation`: `stacked` | `horizontal`).
-- `IconWell` — marketing glyph tile (`tone`: `quiet` | `brand`; `sm` | `md` | `lg`).
+- `IconWell` — landing glyph tile (`tone`: `quiet` | `brand`; `sm` | `md` | `lg`).
 - `Bento`, `Bento.Cell`, `Bento.Media` — cards or a hairline mosaic in equal columns.
 - `StepList`, `StepList.Item` — numbered steps or a `timeline`.
 - `AnnouncementChip`, `AccentText` — announcement label; marked phrase inside a headline (`color` | `swash` | `highlight`).
+
+### Docs (`@sdxc/ui/docs`)
+
+The docs shell, navigation and content blocks. Islands load as `@sdxc/ui/docs/<name>`; map each
+one the page uses in the browser entry.
+
+- `DocsLayout` — docs shell: docked `sidebar` (drawer below `dock`), article `measure`, heading rail from 75rem, sticky bar with menu and `toc`.
+- `DocsHub` — docs home routing by task: `search`, `topics` chips, larger `start` cards, `sections` with counts, `popular`.
+- `DocsNotFound` — docs 404 body: the missing `path`, a `search` pre-filled by `searchQueryFromPath(path)`, start `links`.
+- `Callout` — static docs aside (`kind`: `note` | `tip` | `warning` | `danger`, translated `label`, optional `title`).
+- `Steps`, `Steps.Item` — numbered procedure with CSS counters and a rail; each `title` is a heading with an optional `id`.
+- `FileTree` — project layout from `nodes`: `<details>` directories, per-type file icons, `highlight` pill, `comment`, `"…"`.
+- `UiLabel`, `UiPath` — a product control's name as a sans chip, and a click path of chips joined by `→`.
+- `PlanNotice` — the one-sentence plan or role box under a help page's title.
+- `CodeBlock` — titled code card: file icon by extension or "Terminal", `highlight`/`add`/`remove` lines, `lineNumbers`, copy without prompts.
+- `CodeTabs` — radio tabs over code; `syncKey` switches every set together and `persist` (`cookie` | `local`) remembers it.
+- `InstallCommand` — `packages` (and `dev`) spelled for npm, pnpm, yarn and bun in `CodeTabs` synced on `package-manager`.
+- `PropsTable` — name/type/default/required/description `rows`; `children` expand in place, rows stack below 36rem.
+- `CopyButton`, `CodeTabsSync` — the islands the above hydrate (`@sdxc/ui/docs/copy-button`, `@sdxc/ui/docs/code-tabs-sync`).
+- `DocsPageHeader` — breadcrumb, `<h1>`, lead, `notice`, and a meta row with `updated` (a `<time>`) and `actions`.
+- `PageActions` — "Copy page" split button over a popover menu of `links`; the copy is the island `@sdxc/ui/docs/page-actions`.
+- `AnchorHeading` — heading with an `id`, a `#` link on hover and focus, `--ui-docs-scroll-margin`, a `:target` flash.
+- `NextSteps` — hand-written "Next steps" heading plus 2–4 links, as `cards` or a `list`.
+- `DocsFeedback` — "Was this helpful?" form posting `helpful`, `page` and `note` without JavaScript; `state="sent"` thanks.
+- `DocsPager` — previous/next whole-card links from `findNeighbours(tree, path, { boundary })`.
+- `DocsNav` — docs sidebar from a `DocsTree`: current page marked and scrolled into view, `<details>` groups, optional title `filter`, `footer`; island `@sdxc/ui/docs/docs-nav-tools`.
+- `TableOfContents` — "On this page" `rail` or sticky `bar`: a marker slides over every section on screen and reaches the last; island `@sdxc/ui/docs/table-of-contents`.
+- `DocsTree`, `flattenDocsTree(tree)`, `findNeighbours(tree, path, { boundary: "section" | "none" })` —
+  the sidebar's data, walked in reading order by the pager.
+
+| Helper                       | Host                     | Adds                                                                  |
+| ---------------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `tocSpy()`                   | a `TableOfContents` list | Sections on screen marked, the marker slid over them, the lead named. |
+| `docsNavTools()`             | an element in `DocsNav`  | The current page scrolled into view; the title filter.                |
+| `codeTabsSync(key, persist)` | an element in `CodeTabs` | Every set sharing `key` switches together; the choice is remembered.  |
+| `copyFeedback(copiedLabel)`  | a copy button            | `data-copied` for 2s and the label announced after a copy.            |
+| `copyFromUrl(href, failed?)` | a copy button            | Fetches `href` and copies its body; dispatches `ui:copy`.             |
+
+### Chat (`@sdxc/ui/chat`)
+
+- `MessageScroller` — a `role="log"` frame with `.Viewport`, `.Content`, `.Item` and a
+  jump-to-latest `.Button`.
+- `Message`, `Bubble`, `Marker`, `Attachment` — a turn, its framed content, an inline event between
+  turns, and an attached-file card.
+- `ScrollFollowModel({ pinned? })` — whether the log follows the live edge, visible messages, and
+  pending scroll requests.
+
+| Helper                 | Host                       | Adds                                             |
+| ---------------------- | -------------------------- | ------------------------------------------------ |
+| `messageFollow(model)` | `MessageScroller.Viewport` | Follows new turns through a `ScrollFollowModel`. |
+| `attachmentTrigger()`  | `Attachment.Trigger`       | The whole card as one activation target.         |
+
+### Color (`@sdxc/ui/color`)
+
+- `ColorSwatch`, `ColorSwatchPicker` — a color preview, and preset colors as native radios.
+- `ColorArea`, `ColorWheel`, `ColorSlider` — saturation/brightness, hue, and single-channel pickers
+  built from range inputs.
+- `ColorField`, `ColorPicker` — a color text field with a live swatch, and that field with a
+  popover (`ColorPicker.Dialog`) hosting any of the pickers above.
+- `rtlAwareGradientDirection(propertyName)` and `HUE_GRADIENT_STOPS` — the gradient direction and
+  hue stops the sliders and wheel paint.
+
+| Helper             | Host         | Adds                                          |
+| ------------------ | ------------ | --------------------------------------------- |
+| `colorAreaDrag()`  | `ColorArea`  | A 2D drag across the paired thumbs.           |
+| `colorPreview()`   | `ColorField` | The swatch updated as the typed value parses. |
+| `colorWheelDrag()` | `ColorWheel` | An angular drag around the ring.              |
+
+### App (`@sdxc/ui/app`)
+
+Dashboard and workspace components.
+
+- `Chart` — an SVG coordinate space (`width`, `height`, `xDomain`, `yDomain`) for `.Line` and
+  `.Area` series, plus standalone `.Bar` and `.Pie`, a `.Legend`, and the `.Tooltip` surface that
+  `chartTooltip()` drives; every point is a labeled, focusable marker. Its scales and paths are
+  `linearScale`, `bandScale`, `ticks`, `linePath`, `areaPath`, `arcPath`, `pieAngles` and
+  `computeMarkerIndices`; `chartPalette()` and `legendToggle()` style its series.
+- `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link.
+- `GridList`, `Tree` — an interactive row list, and nested `<details>`.
+- `DropIndicator` — the bar marking where a dragged row will land.
+- `Toast` — a notification stacked by `Toast.Region`, queued by a `Toaster`.
+- `Skeleton`, `Empty` — a loading block, and an empty-state panel.
+- `Toolbar`, `Menubar`, `ContextMenu` — a row of controls, a row of menu triggers, and a
+  pointer-positioned menu.
+- `Resizable` — split panes.
+- `ShortcutList` — a `<dl>` pairing actions with key caps.
+- `FileTrigger`, `DropZone` — a button opening the file picker, and a drop target, both over a
+  native file input.
+- `DragSession<Data>()` — the dragged `source`, the `target` under the pointer with its
+  `"before" | "after" | "on"` position, and `drop()`.
+- `ResizeSession()` — panel sizes during a resize, cascading into neighbors at their limits.
+- `SelectionModel({ mode?, keys?, selectedKeys? })` — `toggle`, `selectRange`, `selectAll` over a
+  key set.
+- `Toaster<Data>({ defaultDuration? })` — `add(data, options?)`, `toasts`, `dismiss(id)`,
+  `pause`/`resume`, with each toast's timer owned by the queue.
+
+| Helper                        | Host                  | Adds                                                               |
+| ----------------------------- | --------------------- | ------------------------------------------------------------------ |
+| `chartTooltip()`              | a chart series        | `Chart.Tooltip` filled from the nearest point to pointer or focus. |
+| `contextMenu(id, options?)`   | `ContextMenu.Trigger` | Opens popover `id` at the pointer on right-click or the menu key.  |
+| `dragReorder(session)`        | `GridList` / `Tree`   | Pointer reordering through a `DragSession`.                        |
+| `dropZone(session)`           | `DropZone`            | File drag-and-drop through a `DragSession`.                        |
+| `gridListKeys(model)`         | `GridList`            | The ARIA grid keyboard pattern over a `SelectionModel`.            |
+| `menubarKeys(options?)`       | `Menubar`             | The ARIA menubar pattern, handing off into each open `Menu`.       |
+| `resizeHandle(axis, session)` | `Resizable.Handle`    | Pointer resizing through a `ResizeSession`.                        |
+| `treeKeys(model)`             | `Tree`                | The ARIA tree pattern over a `SelectionModel`.                     |
 
 ### Component helpers
 
@@ -325,32 +393,19 @@ Each mixin module documents why it needs JavaScript and what still works without
 | ------------------------------- | -------------------------- | ----------------------------------------------------------------------- |
 | `activeDescendantKeys()`        | a combobox input           | Arrows over its `aria-controls` options; Enter follows the chosen link. |
 | `ariaChecked()`                 | checkbox, switch or radio  | `aria-checked` kept in step with the live control.                      |
-| `attachmentTrigger()`           | `Attachment.Trigger`       | The whole card as one activation target.                                |
 | `calendarKeys(model)`           | `Calendar.Grid`            | Arrow/Page/Home/End navigation over a `CalendarModel`.                  |
 | `carouselControls()`            | `Carousel.Viewport`        | `--ui-prev`, `--ui-next` and `--ui-goto` commands.                      |
 | `channelSync()`                 | a `ColorSlider` group      | Sibling channel gradients that follow each other.                       |
-| `chartTooltip()`                | a chart series             | `Chart.Tooltip` filled from the nearest point to pointer or focus.      |
 | `clearField()`                  | `SearchField` clear button | Empties its `commandfor` input.                                         |
-| `codeTabsSync(key, persist)`    | an element in `CodeTabs`   | Every set sharing `key` switches together; the choice is remembered.    |
-| `colorAreaDrag()`               | `ColorArea`                | A 2D drag across the paired thumbs.                                     |
-| `colorPreview()`                | `ColorField`               | The swatch updated as the typed value parses.                           |
-| `colorWheelDrag()`              | `ColorWheel`               | An angular drag around the ring.                                        |
 | `comboboxFilter()`              | `ComboBox.Input`           | As-you-type narrowing.                                                  |
 | `commandFilter(model)`          | `Command`                  | Items hidden by a `FilterModel` query.                                  |
 | `commandKeys(model)`            | `Command`                  | Arrow keys over matches; Enter activates the active item's link/button. |
-| `contextMenu(id, options?)`     | `ContextMenu.Trigger`      | Opens popover `id` at the pointer on right-click or the menu key.       |
-| `copyFeedback(copiedLabel)`     | a copy button              | `data-copied` for 2s and the label announced after a copy.              |
-| `copyFromUrl(href, failed?)`    | a copy button              | Fetches `href` and copies its body; dispatches `ui:copy`.               |
 | `copyToClipboard()`             | a button                   | Copies the text of its `commandfor` target, minus `data-copy-exclude`.  |
 | `dialogDismiss()`               | an element in a `<dialog>` | Closes the dialog on a backdrop press or a followed link.               |
 | `dismiss(options?)`             | an alert or toast          | Auto-dismiss countdown paused on hover, plus a `--ui-dismiss` command.  |
-| `docsNavTools()`                | an element in `DocsNav`    | The current page scrolled into view; the title filter.                  |
-| `dragReorder(session)`          | `GridList` / `Tree`        | Pointer reordering through a `DragSession`.                             |
-| `dropZone(session)`             | `DropZone`                 | File drag-and-drop through a `DragSession`.                             |
 | `dualRange()`                   | a two-thumb `Slider`       | Thumbs that cannot cross.                                               |
 | `frameRefresh(options)`         | any host in a frame        | Its frame reloaded on a schedule or an event, resting while hidden.     |
 | `frameSubmit(options?)`         | a `<form>` in a frame      | The form posted through its frame, answered in place in one request.    |
-| `gridListKeys(model)`           | `GridList`                 | The ARIA grid keyboard pattern over a `SelectionModel`.                 |
 | `headingLevelFallback(options)` | an island's `HeadingScope` | Reports the page's heading depth to `onLevel` once on attach.           |
 | `hotkey(combo)`                 | a `<dialog>`/`[popover]`   | A document-wide shortcut toggling its host.                             |
 | `imageFallback()`               | an `Avatar`/`Logo` image   | Shows the fallback when the image fails, cached images included.        |
@@ -359,19 +414,14 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `listboxKeys()`                 | `ListBox`                  | Arrow, Home/End and typeahead navigation.                               |
 | `longPress(options?)`           | any element                | Fires after a pointer holds still for `duration`.                       |
 | `menuKeys(options?)`            | `Menu`                     | The ARIA menu pattern: roving focus, arrows, typeahead.                 |
-| `menubarKeys(options?)`         | `Menubar`                  | The ARIA menubar pattern, handing off into each open `Menu`.            |
-| `messageFollow(model)`          | `MessageScroller.Viewport` | Follows new turns through a `ScrollFollowModel`.                        |
 | `mirrorSelectedOption()`        | a `<selectedcontent>`      | Keeps the customizable select's trigger showing the chosen option.      |
 | `otpSlots()`                    | an `OtpField` group        | Focus moving across slots, and pasted codes split.                      |
 | `persist(key)`                  | `Sidebar`                  | The collapsed state saved to a cookie, plus a `--ui-toggle` command.    |
 | `pressToggle()`                 | `ToggleButton`             | Flips `aria-pressed` on click.                                          |
 | `rangePreview(model)`           | `RangeCalendar.Grid`       | Hover and focus preview of the pending range.                           |
-| `resizeHandle(axis, session)`   | `Resizable.Handle`         | Pointer resizing through a `ResizeSession`.                             |
 | `stepper(options?)`             | `NumberField.Group`        | Press-and-hold repeat on the step buttons.                              |
 | `tabKeys(options?)`             | `Tabs.List`                | Arrow, Home/End tab activation.                                         |
 | `themeToggle(options?)`         | any host                   | `--ui-theme-light`/`-dark`/`-system` commands saved to a cookie.        |
-| `tocSpy()`                      | a `TableOfContents` list   | Sections on screen marked, the marker slid over them, the lead named.   |
-| `treeKeys(model)`               | `Tree`                     | The ARIA tree pattern over a `SelectionModel`.                          |
 | `validate(schema)`              | a form control             | A `remix/data-schema` check through `setCustomValidity()`.              |
 | `viewTransition()`              | a `SharedElement` island   | A View Transition across a same-document reload.                        |
 
@@ -401,16 +451,7 @@ DOM-free state that dispatches `change`; an island subscribes and re-renders.
 - `Announcer({ hold? })` — an `aria-live` queue: `announce(text, priority?)`, `current`, `next()`.
 - `CalendarModel({ focusedDate?, min?, max?, isDateDisabled? })` — the focused day, visible month,
   and an in-progress range (`beginRange`, `completeRange`).
-- `DragSession<Data>()` — the dragged `source`, the `target` under the pointer with its
-  `"before" | "after" | "on"` position, and `drop()`.
 - `FilterModel({ options?, query?, match? })` — query, `matches`, and the active match.
-- `ResizeSession()` — panel sizes during a resize, cascading into neighbors at their limits.
-- `ScrollFollowModel({ pinned? })` — whether the log follows the live edge, visible messages, and
-  pending scroll requests.
-- `SelectionModel({ mode?, keys?, selectedKeys? })` — `toggle`, `selectRange`, `selectAll` over a
-  key set.
-- `Toaster<Data>({ defaultDuration? })` — `add(data, options?)`, `toasts`, `dismiss(id)`,
-  `pause`/`resume`, with each toast's timer owned by the queue.
 
 ### Animations
 
@@ -430,24 +471,20 @@ opacity fade under reduced motion.
 
 Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `panelChrome()`,
 `semanticColorPanel()`, `interactiveTransition()`, `fieldStackLayout()`, `outputCaptionText()`,
-`graphicHostStyle()`, `rangeThumbAppearance(sizeVar, borderWidthVar)`,
-`rtlAwareGradientDirection(propertyName)`, `chartPalette(property, combinator?)` (one of
-`CHART_COLOR_SLOT_COUNT` chart colors from `data-color`) and `legendToggle()`.
+`rangeThumbAppearance(sizeVar, borderWidthVar)`.
 
-Marketing / landing recipes (same entry): `marketingContainer()`,
-`marketingSectionSpace("hero" | "normal" | "compact")`,
-`marketingBandTone("plain" | "tinted" | "grid" | "inverse")`, `displayHeading(1 | 2 | 3)`,
-`marketingLead()`, `marketingHairline()`, `logoCloudMark()`, `marketingCtaChrome()`. They read
-the `--ui-marketing-*` tokens and optional `--ui-font-display` from `theme.css`. Apply
+Landing recipes (same entry), shared because general components use them too: `landingContainer()`,
+`landingSectionSpace("hero" | "normal" | "compact")`,
+`landingBandTone("plain" | "tinted" | "grid" | "inverse")`, `displayHeading(1 | 2 | 3)`,
+`landingLead()`, `landingHairline()`, `logoCloudMark()`, `landingCtaChrome()`. They read
+the `--ui-landing-*` tokens and optional `--ui-font-display` from `theme.css`. Apply
 `viewReveal()` from `@sdxc/ui/animations` on band hosts for scroll entry; reduced-motion is
-handled there — no separate marketing animation system.
+handled there — no separate landing animation system.
 
 ### Utilities
 
 - **Color** — `parseColor(input): RGBAColor | null`, `formatHex`, `formatRgb`, `formatHsl`,
   `rgbToHsl`, `hslToRgb`, `rgbToHsv`, `hsvToRgb`, `clampChannel`, `roundChannel`.
-- **Charts** — `linearScale(domain, range)`, `bandScale(domain, range)`, `ticks(domain, count)`,
-  `linePath`, `areaPath`, `arcPath`, `pieAngles`, `computeMarkerIndices`, `HUE_GRADIENT_STOPS`.
 - **Geometry** — `normalizedPointerPosition`, `angleFromCenter`, `angleToHue`, `hueToAngle`,
   `resolveFillPercent`, `FULL_TURN_RADIANS`.
 - **Keys** — `parseKeyCombo`, `matchesKeyCombo(event, combo)`, `keyComboGlyphs(combo, apple)`,
@@ -459,10 +496,6 @@ handled there — no separate marketing animation system.
   `DISABLED_SELECTOR`, `DEFAULT_ICON_ARIA_HIDDEN`, `ONE_YEAR_SECONDS`.
 - **Accessibility checks** — `warnIfNoAccessibleName(props, children, message)` and
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.
-- **Panels** — `semanticColorPanelStyle(color)`, the border, background and text declarations for
-  one semantic color.
-- **Docs tree** — `DocsTree` (sections of pages and groups), `flattenDocsTree(tree)`,
-  `findNeighbours(tree, path, { boundary: "section" | "none" })`.
 
 ### Types
 
@@ -549,8 +582,7 @@ import type { Handle } from "remix/component";
 
 import { clientEntry } from "remix/component";
 
-import { Toast } from "@sdxc/ui";
-import { Toaster } from "@sdxc/ui/behaviors";
+import { Toast, Toaster } from "@sdxc/ui/app";
 import { whileLive } from "@sdxc/ui/mixins";
 
 export let Toasts = clientEntry("/components/toasts.tsx#Toasts", function Toasts(handle: Handle) {
@@ -630,7 +662,8 @@ import type { Handle } from "remix/component";
 
 import { clientEntry } from "remix/component";
 
-import { Button, Modal, ShortcutList } from "@sdxc/ui";
+import { Button, Modal } from "@sdxc/ui";
+import { ShortcutList } from "@sdxc/ui/app";
 import { Announcer } from "@sdxc/ui/behaviors";
 import { keymap, whileLive } from "@sdxc/ui/mixins";
 import { keyComboGlyphs } from "@sdxc/ui/utils";
@@ -716,7 +749,7 @@ import type { Handle } from "remix/component";
 
 import { css } from "remix/component";
 
-import { Chart } from "@sdxc/ui";
+import { Chart } from "@sdxc/ui/app";
 
 interface Point {
 	x: number;
@@ -763,9 +796,7 @@ import type { Handle } from "remix/component";
 
 import { clientEntry, css } from "remix/component";
 
-import { Bubble, Message, MessageScroller } from "@sdxc/ui";
-import { ScrollFollowModel } from "@sdxc/ui/behaviors";
-import { messageFollow } from "@sdxc/ui/mixins";
+import { Bubble, Message, MessageScroller, ScrollFollowModel, messageFollow } from "@sdxc/ui/chat";
 
 interface Turn {
 	id: string;

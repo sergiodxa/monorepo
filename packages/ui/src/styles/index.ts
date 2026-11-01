@@ -8,18 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export * from "./card-grid.js";
-export * from "./chart-palette.js";
 export * from "./field-stack-layout.js";
 export * from "./floating-surface.js";
-export * from "./graphic-host.js";
 export * from "./hit-area.js";
 export * from "./interactive-transition.js";
-export * from "./legend-toggle.js";
-export * from "./marketing.js";
+export * from "./landing.js";
 export * from "./output-caption-text.js";
 export * from "./panel-chrome.js";
 export * from "./range-thumb-appearance.js";
-export * from "./rtl-aware-gradient-direction.js";
 export * from "./semantic-color-panel.js";
 export * from "./surface-control.js";

@@ -1,5 +1,5 @@
 /**
- * Covers {@link Heading} default and marketing display size recipes.
+ * Covers {@link Heading} default and landing display size recipes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +19,7 @@ describe("Heading", () => {
 		expect(html).toContain("font-weight: 600");
 	});
 
-	test("applies display and chapter marketing recipes", async () => {
+	test("applies display and chapter landing recipes", async () => {
 		let display = await renderToString(<Heading size="display">Hero</Heading>);
 		let chapter = await renderToString(
 			<Heading size="chapter" level={2}>
@@ -28,8 +28,8 @@ describe("Heading", () => {
 		);
 
 		expect(display).toContain('data-size="display"');
-		expect(display).toContain("var(--ui-marketing-display-weight");
+		expect(display).toContain("var(--ui-landing-display-weight");
 		expect(chapter).toContain('data-size="chapter"');
-		expect(chapter).toContain("var(--ui-marketing-chapter-size");
+		expect(chapter).toContain("var(--ui-landing-chapter-size");
 	});
 });
