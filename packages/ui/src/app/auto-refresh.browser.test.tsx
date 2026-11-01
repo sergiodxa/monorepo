@@ -127,6 +127,41 @@ describe("AutoRefresh", () => {
 		expect(status.querySelector("time")?.textContent).toBe("10:00:00 AM");
 	});
 
+	test("draws the intervals alone as a row of links for a menu, marking the choice", () => {
+		let host = mount("/runs?status=failed&refresh=30", { show: "choices" });
+		let links = [
+			...host.querySelectorAll<HTMLAnchorElement>('[data-slot="auto-refresh-choices"] a'),
+		];
+
+		expect(host.querySelector('[data-slot="auto-refresh-trigger"]')).toBeNull();
+		expect(host.querySelector('[data-slot="auto-refresh-status"]')).toBeNull();
+		expect(
+			host.querySelector('[data-slot="auto-refresh-choices"]')?.getAttribute("aria-label"),
+		).toBe("Auto-refresh");
+		expect(links.map((link) => link.textContent)).toEqual(["Off", "10s", "30s", "1m", "5m"]);
+		expect(links[1]?.getAttribute("href")).toBe("/runs?status=failed&refresh=10");
+		expect(links.map((link) => link.getAttribute("aria-current"))).toEqual([
+			null,
+			null,
+			"true",
+			null,
+			null,
+		]);
+	});
+
+	test("draws the time alone for a status slot", () => {
+		let host = mount("/runs?refresh=30", { show: "status" });
+
+		expect(host.querySelector('[data-slot="auto-refresh-trigger"]')).toBeNull();
+		expect(host.querySelector('[data-slot="auto-refresh-choices"]')).toBeNull();
+		expect(host.querySelector('[data-slot="auto-refresh-status"]')?.textContent).toBe(
+			"Updated 10:00:00 AM",
+		);
+		expect(host.querySelector('[data-slot="auto-refresh"]')?.getAttribute("data-interval")).toBe(
+			"30",
+		);
+	});
+
 	test("keeps the template around the time after each reload", async () => {
 		vi.useFakeTimers({ now: REFRESHED });
 		let host = mount("/runs", {
