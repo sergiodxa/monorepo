@@ -8,11 +8,16 @@
  */
 
 import type {} from "@vitest/browser-playwright";
+import type { AppRuntime } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
+import { run } from "remix/component";
+import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+
+import { HeadingScope } from "../components/heading-scope.js";
 
 import { shortcutRegistry } from "./behaviors/shortcuts.js";
 import { KeyboardHelp } from "./keyboard-help.js";
@@ -30,6 +35,7 @@ const LABELS: KeyboardHelp.Labels = {
 };
 
 let mounted: RenderResult | undefined;
+let app: AppRuntime | undefined;
 let controller: AbortController;
 
 beforeEach(async () => {
@@ -41,6 +47,8 @@ afterEach(() => {
 	controller.abort();
 	mounted?.cleanup();
 	mounted = undefined;
+	app?.dispose();
+	app = undefined;
 	document.body.replaceChildren();
 });
 
@@ -77,7 +85,7 @@ function mount(): HTMLDialogElement {
 /** Each group's title with its rows, as a reader sees them. */
 function listed(dialog: HTMLDialogElement): [string, string[]][] {
 	return [...dialog.querySelectorAll('[data-slot="keyboard-help-group"]')].map((group) => [
-		group.querySelector("h3")?.textContent ?? "",
+		group.querySelector("h1, h2, h3, h4, h5, h6")?.textContent ?? "",
 		[...group.querySelectorAll("dt")].map((row) => row.textContent ?? ""),
 	]);
 }
@@ -156,6 +164,83 @@ describe("KeyboardHelp", () => {
 
 		expect(second!.top).toBeGreaterThan(first!.bottom);
 		expect(dialog.getBoundingClientRect().right).toBeLessThanOrEqual(375);
+	});
+
+	test("titles itself an h2 with h3 groups by default, under any heading scope", () => {
+		mounted = render(
+			<HeadingScope level={4}>
+				<KeyboardHelp
+					id="keys"
+					labels={LABELS}
+					groups={[{ title: "Lists", shortcuts: [{ keys: "j", label: "Next" }] }]}
+				/>
+			</HeadingScope>,
+		);
+		let dialog = document.getElementById("keys")!;
+
+		expect(dialog.querySelector('[data-slot="title"]')?.tagName).toBe("H2");
+		expect(dialog.querySelector('[data-slot="keyboard-help-group"] > :first-child')?.tagName).toBe(
+			"H3",
+		);
+	});
+
+	test("titles itself at the level it is given, its groups one below", () => {
+		mounted = render(
+			<KeyboardHelp
+				id="keys"
+				level={4}
+				labels={LABELS}
+				groups={[{ title: "Lists", shortcuts: [{ keys: "j", label: "Next" }] }]}
+			/>,
+		);
+		let dialog = document.getElementById("keys")!;
+
+		expect(dialog.querySelector('[data-slot="title"]')?.tagName).toBe("H4");
+		expect(dialog.querySelector('[data-slot="keyboard-help-group"] > :first-child')?.tagName).toBe(
+			"H5",
+		);
+	});
+
+	test("hydrates inside a heading scope without touching the server DOM beside it", async () => {
+		document.body.innerHTML = await renderToString(
+			<div>
+				<nav data-shortcut-group="Navigation">
+					<a href="#monitors" data-shortcut="g m">
+						Go to Monitors
+					</a>
+				</nav>
+				<HeadingScope level={2}>
+					<KeyboardHelp
+						id="keys"
+						level={3}
+						labels={LABELS}
+						groups={[{ title: "Lists", shortcuts: [{ keys: "j", label: "Next" }] }]}
+					/>
+				</HeadingScope>
+				<p data-slot="palette-text">Search conversations</p>
+			</div>,
+		);
+		let nav = document.querySelector("nav")!;
+		let text = document.querySelector('[data-slot="palette-text"]')!;
+		let title = document.querySelector('[data-slot="title"]')!;
+		expect(title.tagName).toBe("H3");
+
+		let errors = vi.spyOn(console, "error").mockImplementation(() => {});
+		app = run({ loadModule: () => KeyboardHelp });
+		await app.ready();
+		let mismatches = errors.mock.calls.filter((call) => String(call[0]).includes("mismatch"));
+		errors.mockRestore();
+		expect(mismatches).toEqual([]);
+		let dialog = document.getElementById("keys") as HTMLDialogElement;
+		await userEvent.keyboard("?");
+		await expect.poll(() => listed(dialog).at(-1)?.[0]).toBe("Navigation");
+
+		expect(nav.isConnected).toBe(true);
+		expect(nav.textContent).toBe("Go to Monitors");
+		expect(text.isConnected).toBe(true);
+		expect(text.textContent).toBe("Search conversations");
+		expect(document.querySelector('[data-slot="title"]')).toBe(title);
+		expect(title.tagName).toBe("H3");
 	});
 
 	test("merges registry rows into the server's groups once each", () => {

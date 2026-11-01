@@ -15,6 +15,9 @@ import { m, maxIs, mbs } from "@sdxc/u/size";
 import { pretty, text, weight } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
 
+import type { HeadingLevel } from "../components/heading-scope.js";
+
+import { HeadingScope, TAG_BY_LEVEL } from "../components/heading-scope.js";
 import { Keyboard } from "../components/keyboard.js";
 import { Modal } from "../components/modal.js";
 
@@ -27,6 +30,9 @@ import { mergeShortcutGroups } from "./utils/shortcut-groups.js";
 
 /** The key that opens the sheet when none is given. */
 const DEFAULT_SHORTCUT = "?";
+
+/** A dialog opens over a page that already has its `<h1>`, so its title sits one below. */
+const DEFAULT_LEVEL: HeadingLevel = 2;
 
 /**
  * Types for {@link KeyboardHelp}. Declared as `type`s, since the props cross into the
@@ -69,6 +75,11 @@ export namespace KeyboardHelp {
 		groups?: Group[];
 		/** The key that opens the sheet. @default "?" */
 		shortcut?: string;
+		/**
+		 * The title's heading level, its groups one below. The sheet reads no ambient heading
+		 * scope, so server and browser render the same tags. @default 2
+		 */
+		level?: HeadingLevel;
 	};
 }
 
@@ -94,7 +105,8 @@ export const KeyboardHelp: EntryComponent<KeyboardHelp.Props> = clientEntry(
 		};
 
 		return () => {
-			let { id, labels, groups, shortcut } = handle.props;
+			let { id, labels, groups, shortcut, level = DEFAULT_LEVEL } = handle.props;
+			let GroupTitle = TAG_BY_LEVEL[Math.min(level + 1, 6) as HeadingLevel];
 			let titleId = `${id}-title`;
 			let shown = mergeShortcutGroups(groups ?? [], entries, labels.other);
 
@@ -116,7 +128,9 @@ export const KeyboardHelp: EntryComponent<KeyboardHelp.Props> = clientEntry(
 				>
 					<Modal.Close commandfor={id} aria-label={labels.close} />
 					<Modal.Header>
-						<Modal.Title id={titleId}>{labels.title}</Modal.Title>
+						<HeadingScope level={level}>
+							<Modal.Title id={titleId}>{labels.title}</Modal.Title>
+						</HeadingScope>
 						{labels.description ? (
 							<Modal.Description>{labels.description}</Modal.Description>
 						) : null}
@@ -132,9 +146,9 @@ export const KeyboardHelp: EntryComponent<KeyboardHelp.Props> = clientEntry(
 					>
 						{shown.map((group) => (
 							<section key={group.title} data-slot="keyboard-help-group">
-								<h3 mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
+								<GroupTitle mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
 									{group.title}
-								</h3>
+								</GroupTitle>
 								<ShortcutList mix={[m(0), mbs(3)]}>
 									{group.shortcuts.map((row) => (
 										<div
