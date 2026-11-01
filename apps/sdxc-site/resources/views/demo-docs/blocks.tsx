@@ -121,6 +121,7 @@ namespace Aside {
 		kind: Callout.Kind;
 		/** A specific heading in place of the kind's name. */
 		title?: string;
+		/** One paragraph of inline content, set as a single paragraph so inline code stays in its line. */
 		children: RemixNode;
 	}
 }
@@ -131,7 +132,7 @@ export function Aside(handle: Handle<Aside.Props>) {
 		let { children, kind, title } = handle.props;
 		return (
 			<Callout kind={kind} label={CALLOUT_LABELS[kind]} title={title}>
-				{children}
+				<p>{children}</p>
 			</Callout>
 		);
 	};

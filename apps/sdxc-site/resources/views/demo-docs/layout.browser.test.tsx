@@ -16,6 +16,7 @@ import { page } from "vitest/browser";
 import type { DemoDocsSite } from "~/resources/views/demo-docs";
 
 import { demoDocsHref } from "~/resources/views/demo-docs";
+import { Aside } from "~/resources/views/demo-docs/blocks";
 import { DemoDocsHome } from "~/resources/views/demo-docs/pages";
 import { DemoDocsArticle, DemoDocsShell } from "~/resources/views/demo-docs/shell";
 
@@ -64,6 +65,22 @@ function isShown(slot: string): boolean {
 describe("docs demo layout", () => {
 	test("finds every demo folder", () => {
 		expect(SITES.length).toBeGreaterThan(0);
+	});
+
+	test("an aside keeps inline code on the line of the words around it", async () => {
+		await page.viewport(1280, 900);
+		mounted = render(
+			<Aside kind="tip">
+				Add <code>--open</code> to open the URL.
+			</Aside>,
+		);
+		let code = mounted.container.querySelector("code")!;
+		let paragraph = code.closest("p")!;
+
+		expect(code.getBoundingClientRect().left).toBeGreaterThan(
+			paragraph.getBoundingClientRect().left,
+		);
+		expect(paragraph.getClientRects().length).toBe(1);
 	});
 
 	describe.each(SITES)("$slug", ({ site, slug }) => {
