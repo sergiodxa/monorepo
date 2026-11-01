@@ -77,6 +77,8 @@ function didYouMean(address: EmailAddress) {
 bunx @sdxc/email-address check jane@example.com
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg email-address …` runs the same command line, using the version your project installs.
+
 `check` normalizes the address, flags a disposable domain and looks up the domain's mail
 servers. With `-` or no address it reads one per line from stdin. It exits 0 when every address
 passes, 1 when one is invalid, disposable or cannot receive mail, and 2 on a usage error.
