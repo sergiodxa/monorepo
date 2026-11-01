@@ -71,6 +71,22 @@ function didYouMean(address: EmailAddress) {
 }
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/email-address check jane@example.com
+```
+
+`check` normalizes the address, flags a disposable domain and looks up the domain's mail
+servers. With `-` or no address it reads one per line from stdin. It exits 0 when every address
+passes, 1 when one is invalid, disposable or cannot receive mail, and 2 on a usage error.
+
+```sh
+sdxc-email-address check < signups.txt --skip-mx --json
+```
+
+`sdxc-email-address check --help` lists every flag.
+
 ## API
 
 ### `@sdxc/email-address`

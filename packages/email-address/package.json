@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Email address parsing, normalization, disposable-domain and mail-server checks",
 	"license": "MIT",
+	"bin": {
+		"sdxc-email-address": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -16,6 +19,7 @@
 		"update-disposable-domains": "bun run scripts/update-disposable-domains.ts"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
