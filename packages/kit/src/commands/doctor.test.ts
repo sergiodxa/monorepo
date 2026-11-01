@@ -165,6 +165,7 @@ describe("sdxc doctor", () => {
 				"skip  routes           No routes/ folder in the project",
 				"skip  models           No app/models/index.ts in the project",
 				"skip  emails           No app/emails/index.ts in the project",
+				"skip  translations     No locale bundles in resources/locales",
 				"skip  jsdoc            No app source to read for comments",
 				"skip  complexity       No app source to measure complexity",
 				"skip  module-size      No app source to measure module size",
@@ -207,6 +208,7 @@ describe("sdxc doctor", () => {
 				"skip  routes           No routes/ folder in the project",
 				"skip  models           No app/models/index.ts in the project",
 				"skip  emails           No app/emails/index.ts in the project",
+				"skip  translations     No locale bundles in resources/locales",
 				"skip  jsdoc            No app source to read for comments",
 				"skip  complexity       No app source to measure complexity",
 				"skip  module-size      No app source to measure module size",
@@ -272,6 +274,7 @@ describe("sdxc doctor", () => {
 			["routes", "skip"],
 			["models", "skip"],
 			["emails", "skip"],
+			["translations", "skip"],
 			["jsdoc", "skip"],
 			["complexity", "skip"],
 			["module-size", "skip"],
@@ -324,6 +327,7 @@ describe("sdxc doctor", () => {
 			["routes", "skip"],
 			["models", "skip"],
 			["emails", "skip"],
+			["translations", "skip"],
 			["jsdoc", "skip"],
 			["complexity", "skip"],
 			["module-size", "skip"],
@@ -406,6 +410,7 @@ describe("sdxc doctor with project checks", () => {
 				"skip  routes           No routes/ folder in the project",
 				"skip  models           No app/models/index.ts in the project",
 				"skip  emails           No app/emails/index.ts in the project",
+				"skip  translations     No locale bundles in resources/locales",
 				"skip  jsdoc            No app source to read for comments",
 				"skip  complexity       No app source to measure complexity",
 				"skip  module-size      No app source to measure module size",
@@ -489,7 +494,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,local-const,constant-names,stack-imports,process-env,fetch-param,logger,test-ratio,crap,mutation,ui",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,translations,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,local-const,constant-names,stack-imports,process-env,fetch-param,logger,test-ratio,crap,mutation,ui",
 		]);
 
 		expect(result.code).toBe(1);
@@ -549,7 +554,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, local-const, constant-names, stack-imports, process-env, fetch-param, logger, test-ratio, crap, mutation, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, translations, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, local-const, constant-names, stack-imports, process-env, fetch-param, logger, test-ratio, crap, mutation, ui, readme",
 		);
 	});
 });

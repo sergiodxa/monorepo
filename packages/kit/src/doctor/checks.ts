@@ -36,6 +36,7 @@ import { resultThrowsCheck } from "./result-throws.js";
 import { routesCheck } from "./routes.js";
 import { stackImportsCheck } from "./stack-imports.js";
 import { testRatioCheck } from "./test-ratio.js";
+import { translationsCheck } from "./translations.js";
 import { typegenCheck } from "./typegen.js";
 import { uiCheck } from "./ui.js";
 
@@ -55,6 +56,7 @@ export const CHECKS: readonly Check[] = [
 	routesCheck,
 	modelsCheck,
 	emailsCheck,
+	translationsCheck,
 	jsdocCheck,
 	complexityCheck,
 	moduleSizeCheck,

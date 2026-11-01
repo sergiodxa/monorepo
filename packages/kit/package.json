@@ -25,6 +25,7 @@
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/semver": "workspace:*",
 		"oxc-parser": "^0.154.0"
