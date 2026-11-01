@@ -52,7 +52,7 @@ import SaveToggle from "~/resources/components/save-toggle";
 import { POST_ROW_ATTRIBUTE } from "~/resources/components/shortcuts";
 import { BAND_FIELD_HEIGHT, listBleed, listRowGutter } from "~/resources/layouts/app-page";
 import OutboundMark from "~/resources/views/outbound-mark";
-import TagStrip from "~/resources/views/tag-chips";
+import TagStrip, { AddLabel } from "~/resources/views/tag-chips";
 import routes from "~/routes/web";
 
 /**
@@ -583,14 +583,8 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 									 * only on the lists whose posts are kept by definition, so no row of a
 									 * river carries a strip — or the read behind one.
 									 */}
-									{tagging && entry.applyTagAction && (
-										<TagStrip
-											chips={entry.tags ?? []}
-											applyAction={entry.applyTagAction}
-											returnTo={returnTo}
-											optionsId={tagging.optionsId}
-											copy={tagging.copy}
-										/>
+									{tagging && (
+										<TagStrip chips={entry.tags ?? []} returnTo={returnTo} copy={tagging.copy} />
 									)}
 								</div>
 
@@ -599,6 +593,16 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								 * a post through the queue, and this one takes it out of everything that empties
 								 * the queue.
 								 */}
+								{/** Labelling a kept post sits beside the mark that kept it. */}
+								{tagging && entry.applyTagAction && (
+									<AddLabel
+										applyAction={entry.applyTagAction}
+										returnTo={returnTo}
+										optionsId={tagging.optionsId}
+										copy={tagging.copy}
+									/>
+								)}
+
 								{saving && (
 									<SaveToggle
 										action={routes.items.save.href({ itemId: entry.id })}
