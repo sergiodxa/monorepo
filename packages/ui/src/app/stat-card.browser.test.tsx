@@ -1,7 +1,7 @@
 /**
  * Lays stat cards out in a real browser: the value's size and tabular figures, a delta toned
- * by meaning, a skeleton exactly as tall as the card it replaces, group columns that follow
- * the container, ruled columns, and link tabs reachable by keyboard with the current one marked.
+ * by meaning, a skeleton as tall as its card, group columns that follow the container (two
+ * compact ones on a phone), ruled columns, and link tabs reachable by keyboard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -158,7 +158,8 @@ describe("StatCard", () => {
 	}
 
 	for (let [width, count] of [
-		[320, 1],
+		[272, 1],
+		[320, 2],
 		[600, 2],
 		[1100, 4],
 	] as const) {
@@ -170,6 +171,47 @@ describe("StatCard", () => {
 			expect(group.scrollWidth).toBeLessThanOrEqual(width);
 		});
 	}
+
+	test("sets four full cards as two compact rows of two in a 375px container", () => {
+		let host = mount(
+			<StatCard.Group aria-label="Overview">
+				<Latency />
+				<Latency />
+				<Latency />
+				<Latency />
+			</StatCard.Group>,
+			375,
+		);
+		let group = host.querySelector<HTMLElement>('[data-slot="stat-group"]')!;
+		let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+		let rows = new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top)));
+		let value = getComputedStyle(host.querySelector('[data-slot="stat-card-value"]')!);
+
+		expect(columns(host)).toBe(2);
+		expect(rows.size).toBe(2);
+		expect(group.scrollWidth).toBeLessThanOrEqual(375);
+		for (let card of cards) expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+		expect(Number.parseFloat(value.fontSize)).toBeLessThan(30);
+	});
+
+	test("sets four full cards in one row at 1280px", () => {
+		let host = mount(
+			<StatCard.Group aria-label="Overview">
+				<Latency />
+				<Latency />
+				<Latency />
+				<Latency />
+			</StatCard.Group>,
+			1280,
+		);
+		let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+		let rows = new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top)));
+		let value = getComputedStyle(host.querySelector('[data-slot="stat-card-value"]')!);
+
+		expect(columns(host)).toBe(4);
+		expect(rows.size).toBe(1);
+		expect(value.fontSize).toBe("30px");
+	});
 
 	test("makes tab cards links reachable by Tab, marking the current metric", async () => {
 		let host = mount(<Four variant="tabs" />);

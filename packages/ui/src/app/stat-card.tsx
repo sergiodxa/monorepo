@@ -22,6 +22,12 @@ import { nowrap, tabularNums, text, verticalAlign, weight } from "@sdxc/u/typogr
 /** Container a group measures, so its columns follow the pane it sits in. */
 const GROUP_CONTAINER = "ui-stat-group";
 
+/**
+ * A group from 18rem up to 28rem wide: two columns of compact cards, so a phone shows four
+ * stats in two rows. Narrower than 18rem, a group keeps one column of full-size cards.
+ */
+const COMPACT = `@container ${GROUP_CONTAINER} (min-width: 18rem) and (max-width: 27.9375rem)`;
+
 /** Column count a group lays out at full width when `columns` is omitted. */
 const DEFAULT_COLUMNS = 4;
 
@@ -60,7 +66,7 @@ export namespace StatCard {
 	export interface GroupProps extends TagProps<"div"> {
 		/** @default {@link DEFAULT_VARIANT} */
 		variant?: Variant;
-		/** Columns at full width; a narrower container shows at most two, then one. */
+		/** Columns at full width; a narrower container shows at most two, compact, then one. */
 		columns?: number;
 	}
 
@@ -108,7 +114,7 @@ function deltaTone(trend: StatCard.Trend, invert: boolean): "success" | "danger"
 
 /**
  * Places the delta at the end of the label's line in a card, and on its own line under the
- * value in ruled columns and tabs. One rule holds every case, so the variant always wins.
+ * value in ruled columns, tabs and compact cards, where it wraps before it overflows.
  *
  * @returns The placement mixin shared by the delta and its skeleton.
  */
@@ -120,6 +126,14 @@ function deltaPlacement() {
 			order: 3,
 			gridColumn: "1 / -1",
 			justifySelf: "start",
+		},
+		[COMPACT]: {
+			"[data-stat-split] > * > &": {
+				order: 3,
+				gridColumn: "1 / -1",
+				justifySelf: "start",
+				flexWrap: "wrap",
+			},
 		},
 	});
 }
@@ -186,6 +200,11 @@ export function StatCard(handle: Handle<StatCard.Props>) {
 				},
 				"&:focus-visible": { outline: "2px solid var(--ui-brand-ring, Highlight)" },
 				"@media (prefers-reduced-motion: reduce)": { transition: "none" },
+				[COMPACT]: {
+					'[data-stat-split]:not([data-stat-group="ruled"]) > &': {
+						padding: "var(--ui-stat-card-padding, 0.875rem)",
+					},
+				},
 			}),
 		];
 
@@ -212,8 +231,8 @@ export function StatCard(handle: Handle<StatCard.Props>) {
 }
 
 /**
- * Lays stats out by the width of their container: one column, two from 28rem, and `columns`
- * from 52rem. `cards` boxes each stat, `ruled` sets them as columns under a 1px rule, and
+ * Lays stats out by the width of their container: one column, two compact ones from 18rem,
+ * two full-size from 28rem, and `columns` from 52rem. `cards` boxes each stat, `ruled` sets them as columns under a 1px rule, and
  * `tabs` joins link cards into one divided strip, the current one underlined.
  *
  * @param handle Runtime handle carrying the group's props.
@@ -256,6 +275,7 @@ StatCard.Group = function StatCardGroup(handle: Handle<StatCard.GroupProps>) {
 			>
 				<div
 					data-stat-group={resolvedVariant}
+					data-stat-split={middle > 1 ? "" : undefined}
 					mix={[
 						grid(),
 						/**
@@ -269,7 +289,7 @@ StatCard.Group = function StatCardGroup(handle: Handle<StatCard.GroupProps>) {
 							rowGap: resolvedVariant === "ruled" ? "1.5rem" : undefined,
 							marginInlineEnd: tabs ? "-1px" : undefined,
 							marginBlockEnd: tabs ? "-1px" : undefined,
-							[`@container ${GROUP_CONTAINER} (min-width: 28rem)`]: {
+							[`@container ${GROUP_CONTAINER} (min-width: 18rem)`]: {
 								gridTemplateColumns: `repeat(${middle}, minmax(0, 1fr))`,
 							},
 							[`@container ${GROUP_CONTAINER} (min-width: 52rem)`]: {
@@ -315,9 +335,9 @@ StatCard.Label = function StatCardLabel(handle: Handle<TagProps<"div">>) {
 };
 
 /**
- * Renders the number at `--ui-stat-value-size` (30px in a card, 24px in ruled columns),
- * semibold in tabular figures, so values in a row line up and a live update never shifts
- * its width. Pass `—` for an unknown value.
+ * Renders the number at `--ui-stat-value-size` (30px in a card, 24px in ruled columns, 22px in
+ * a compact group), semibold in tabular figures, so values in a row line up and a live update
+ * never shifts its width. Pass `—` for an unknown value.
  *
  * @param handle Runtime handle carrying the value's props.
  * @returns The render function producing the value's markup.
@@ -344,6 +364,9 @@ StatCard.Value = function StatCardValue(handle: Handle<TagProps<"div">>) {
 							letterSpacing: "-0.01em",
 							'[data-stat-group="ruled"] > * > &': {
 								fontSize: "var(--ui-stat-value-size, 1.5rem)",
+							},
+							[COMPACT]: {
+								"[data-stat-split] > * > &": { fontSize: "var(--ui-stat-value-size, 1.375rem)" },
 							},
 						}),
 					],
