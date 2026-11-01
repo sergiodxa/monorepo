@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read a served page: fetch or parse HTML, then query it by role and accessible name",
 	"license": "MIT",
+	"bin": {
+		"sdxc-html": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,8 +15,15 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"linkedom": "^0.18.14"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
 	}
 }

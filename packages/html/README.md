@@ -90,6 +90,24 @@ form.data.query({ role: "button", name: "Pay" });
 form.data.queryAll({ role: "checkbox" }).length; // 3
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/html query https://example.com/pricing --role button --name "Sign in"
+```
+
+`query` lists the elements with a role, narrowed by `--name` to one accessible name, and exits 1
+when nothing matches, naming what the page carries under that role, so it works as a smoke check
+in CI. The page comes from a URL, a file, or stdin; `--json` prints the matches with their text,
+value and attributes.
+
+```sh
+bunx @sdxc/html outline page.html
+```
+
+`outline` lists the page's landmarks and headings in document order, headings indented by level;
+`--json` prints them as data. An unreadable page exits 2. `bunx @sdxc/html --help` lists every flag.
+
 ## API
 
 ### `HTML.parse(source: string): Result<HTML, HTMLParseError>`
