@@ -27,7 +27,7 @@ import {
 	StickyNoteIcon,
 } from "@sdxc/icons";
 import { grow, hstack, justify } from "@sdxc/u/layout";
-import { bs, is, m } from "@sdxc/u/size";
+import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { Avatar, Button, Menu } from "@sdxc/ui";
 import { AppShell, readAppShellCookie } from "@sdxc/ui/app/app-shell";
@@ -258,7 +258,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 					workspace={
 						<AppShell.Identity
 							avatar={
-								<Avatar mix={[is("1.5rem"), bs("1.5rem")]}>
+								<Avatar>
 									<Avatar.Image src={routes.wellKnown.avatar.href()} alt="" />
 									<Avatar.Fallback>SX</Avatar.Fallback>
 								</Avatar>
@@ -282,7 +282,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 							<>
 								<AppShell.Identity
 									avatar={
-										<Avatar mix={[is("1.5rem"), bs("1.5rem")]}>
+										<Avatar>
 											<Avatar.Image src={user.avatar} alt="" />
 											<Avatar.Fallback>{user.display_name.slice(0, 2)}</Avatar.Fallback>
 										</Avatar>
