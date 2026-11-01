@@ -52,6 +52,13 @@ export default {
 		settings: "Settings",
 		account: "Your account",
 		logout: "Sign out",
+		/** Jumps past the sidebar to the page's own content, for a keyboard. */
+		skip: "Skip to your posts",
+		closeSidebar: "Close feeds and search",
+		/** The rail toggle; checked means the sidebar is drawn as icons only. */
+		collapse: "Collapse sidebar",
+		help: "Help",
+		folders: "Folders",
 	},
 
 	/** The box the sidebar searches every followed feed's posts from. */

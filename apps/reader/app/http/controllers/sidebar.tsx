@@ -126,6 +126,7 @@ export default createAction(routes.sidebar.feeds, {
 				currentPath={currentPath}
 				label={ctx.intl.t("nav.feeds")}
 				listLabel={ctx.intl.t("nav.subscriptions")}
+				foldersLabel={ctx.intl.t("nav.folders")}
 				folders={folders.map((folder) => ({
 					id: folder.id,
 					title: folder.title,

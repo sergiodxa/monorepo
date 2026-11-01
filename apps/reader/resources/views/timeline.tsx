@@ -107,15 +107,16 @@ const ROW_SCROLL_MARGIN = `calc(${BAND_FIELD_HEIGHT} + 2rem)`;
 
 /**
  * What a row's words are coloured by, which is the one thing that changes as a post is read.
- * A title still to read takes the brand colour, so a screenful reads as a list of things to
- * open and the loudest rows are the ones still wanting the reader.
+ * A title still to read is set in the strongest ink at a heavier weight and a read one
+ * settles to body copy, so the loudest rows are the ones still wanting the reader while the
+ * mark at the head of each row carries the brand colour.
  */
 function readState() {
 	return css({
 		[`& [${ROW_WORDS}]`]: { color: "var(--ui-neutral-fg-emphasis)" },
-		[`& [${ROW_TITLE}]`]: { color: "var(--ui-brand-fg)" },
+		[`& [${ROW_TITLE}]`]: { color: "var(--ui-neutral-fg-emphasis)", fontWeight: "600" },
 		[`&[${ROW_READ}] [${ROW_WORDS}]`]: { color: "var(--ui-neutral-fg)" },
-		[`&[${ROW_READ}] [${ROW_TITLE}]`]: { color: "var(--ui-neutral-fg)" },
+		[`&[${ROW_READ}] [${ROW_TITLE}]`]: { color: "var(--ui-neutral-fg)", fontWeight: "400" },
 	});
 }
 

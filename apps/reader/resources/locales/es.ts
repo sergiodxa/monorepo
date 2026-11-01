@@ -142,6 +142,13 @@ export default {
 		settings: "Preferencias",
 		account: "Tu cuenta",
 		logout: "Cerrar sesión",
+		/** Jumps past the sidebar to the page's own content, for a keyboard. */
+		skip: "Saltar a tus entradas",
+		closeSidebar: "Cerrar feeds y búsqueda",
+		/** The rail toggle; checked means the sidebar is drawn as icons only. */
+		collapse: "Contraer la barra lateral",
+		help: "Ayuda",
+		folders: "Carpetas",
 	},
 
 	/** The box the sidebar searches every followed feed's posts from. */

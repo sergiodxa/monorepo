@@ -38,6 +38,7 @@ const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.tsx"]);
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
+	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
 };
 
 let store = createUserStoreDouble();
@@ -95,6 +96,12 @@ function readsAs(html: string): string {
 beforeEach(() => {
 	store = createUserStoreDouble();
 });
+
+/** The page header's read-state tabs alone, so a link elsewhere on the page never answers for one. */
+function tabsOf(body: string): string {
+	let start = body.indexOf('data-slot="page-header-tabs"');
+	return start === -1 ? "" : body.slice(start, body.indexOf("</nav>", start));
+}
 
 describe("what a flag takes off the queue", () => {
 	afterEach(() => restoreFlags());
@@ -498,12 +505,13 @@ describe("filtering the queue", () => {
 		queued({ next: null, prev: null });
 
 		let body = await (await get(`${routes.reading.index.href()}?show=unread`)).text();
+		let tabs = tabsOf(body);
 
-		expect(body).toMatch(/<a href="\/reading\?show=unread" aria-current="page"/);
-		expect(body).toContain('<a href="/reading" data-color');
-		expect(body).toContain('<a href="/reading?show=read" data-color');
+		expect(tabs).toMatch(/<a href="\/reading\?show=unread" aria-current="page"/);
+		expect(tabs).toMatch(/<a href="\/reading" class=/);
+		expect(tabs).toMatch(/<a href="\/reading\?show=read" class=/);
 		/** Exactly one filter is the view being read, and one section is the page it is on. */
-		expect(body.match(/aria-current="page"/g)).toHaveLength(2);
+		expect(body.match(/<a [^>]*aria-current="page"/g)).toHaveLength(2);
 	});
 
 	test("carries the filter through the links that page the queue", async () => {
@@ -525,8 +533,8 @@ describe("filtering the queue", () => {
 		let body = await (await get(`${routes.reading.index.href()}?show=read`)).text();
 
 		expect(body).toContain("Nothing read yet");
-		expect(body).toContain('<a href="/reading" data-color');
-		expect(body).toContain('<a href="/reading?show=unread" data-color');
+		expect(tabsOf(body)).toMatch(/<a href="\/reading" class=/);
+		expect(tabsOf(body)).toMatch(/<a href="\/reading\?show=unread" class=/);
 	});
 });
 
@@ -577,11 +585,12 @@ describe("paging into a frame", () => {
 
 		/**
 		 * The page defers its next page, carries both of a row's marks, and wears the chrome's
-		 * own keys, so it mounts all four.
+		 * own keys and its sidebar's collapse switch, so it mounts all five.
 		 */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
 				"@sdxc/lazy-frame/ui",
+				"@sdxc/ui/app/app-shell-toggle",
 				"/assets/resources/components/read-toggle.js",
 				"/assets/resources/components/save-toggle.js",
 				"/assets/resources/components/shortcuts.js",
@@ -924,7 +933,7 @@ describe("searching the queue", () => {
 		expect(body).toContain('name="q"');
 		expect(body).toContain('value="remix"');
 		/** The box is keyed on the page it was drawn for, so a stale query never survives. */
-		expect(body).toContain('data-rmx-key="sidebar-search:/reading?remix"');
+		expect(body).toContain('data-rmx-key="app-search:/reading?remix"');
 	});
 
 	test("submits the box to the queue itself, which is now the only list of posts", async () => {

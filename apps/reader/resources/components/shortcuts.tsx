@@ -52,7 +52,7 @@ const READ_FORM = 'form[action$="/read"]';
 const SAVE_FORM = 'form[action$="/save"]';
 
 /** The sidebar's own navigation lists, whose links `J` and `K` walk in document order. */
-const SIDEBAR_NAV_LINK = 'nav[data-slot="nav"] a[href]';
+const SIDEBAR_NAV_LINK = "nav a[href]";
 
 /** The control that is the page the reader is standing on, which `J` and `K` count from. */
 const CURRENT_LINK = '[aria-current="page"]';

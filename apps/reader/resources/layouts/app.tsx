@@ -1,7 +1,7 @@
 /**
- * The chrome every signed-in page wears: the sidebar a reader searches and navigates from,
- * the header carrying the page's own name and whatever acts on it, and the column the
- * page's content sits in. It exists so each page describes only what it shows.
+ * The chrome every signed-in page wears: the app shell whose sidebar a reader navigates their
+ * feeds from, the top bar they search from, and the page header carrying the page's own name
+ * and whatever acts on it. It exists so each page describes only what it shows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,65 +12,24 @@ import type { Handle, RemixNode } from "remix/component";
 
 import {
 	BookmarkIcon,
-	ChevronsUpDownIcon,
+	LifeBuoyIcon,
 	FolderIcon,
 	InboxIcon,
 	LogOutIcon,
-	MoonIcon,
-	PanelLeftIcon,
-	PinIcon,
 	RssIcon,
 	SearchIcon,
 	SettingsIcon,
 } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { bg, border, borderEdge, fg, translucent } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
-import { cursor, raw } from "@sdxc/u/general";
-import {
-	basis,
-	fixed,
-	flex,
-	flexCol,
-	flexWrap,
-	gap,
-	grid,
-	grow,
-	hidden,
-	inline,
-	inlineFlex,
-	insBe,
-	insBs,
-	insIe,
-	insIs,
-	items,
-	justify,
-	self,
-	shrink,
-	sticky,
-	vstack,
-} from "@sdxc/u/layout";
-import { boxSizing } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
+import { raw } from "@sdxc/u/general";
+import { hidden, inline } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import {
-	bleed,
-	bs,
-	is,
-	m,
-	maxBs,
-	maxIs,
-	minBs,
-	minIs,
-	p,
-	pb,
-	pi,
-	safeAreaPadding,
-} from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
-import { hover, when } from "@sdxc/u/state";
-import { tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
-import { Avatar, Heading, Logo, Menu, NavLink, Sidebar } from "@sdxc/ui";
+import { p } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { textDecoration } from "@sdxc/u/typography";
+import { Avatar, Logo, Menu, SearchField } from "@sdxc/ui";
+import { AppShell } from "@sdxc/ui/app/app-shell";
+import { PageHeader } from "@sdxc/ui/app/page-header";
 import { Frame } from "remix/component";
 
 import type { Shortcuts } from "~/resources/components/shortcuts";
@@ -83,165 +42,68 @@ import routes from "~/routes/web";
 
 /**
  * Width of the measure prose and fields are read at. The page itself fills the pane the
- * sidebar leaves it, since a list of rows is scanned down rather than read across and
- * the sidebar already spends the width a cap used to.
+ * sidebar leaves it, since a list of rows is scanned down rather than read across.
  */
 export const PAGE_COLUMN = "48rem";
 
 /**
- * Gutter the page keeps from the edges of the pane it is read in, which the header and the
- * content below it both take, so the two sit on one vertical line on every surface.
+ * The `id` the shell is drawn under. The sidebar takes `${id}-sidebar`, which is the
+ * {@link SIDEBAR_ID} the keys that walk the rail's links look it up by.
  */
-const PAGE_GUTTER = 6;
+const SHELL_ID = "app";
+
+/** The `id` the sidebar answers to, which the keys that walk its feeds look it up by. */
+export const SIDEBAR_ID = `${SHELL_ID}-sidebar`;
+
+/** Names the search field the `/` key puts the caret in from anywhere on the page. */
+export const SIDEBAR_SEARCH_FIELD_ID = "app-search";
 
 /**
- * Where the sidebar stands as a rail down the side of the page. Its own width is what the
- * boundary is set by: below it a rail would spend a third of a narrow screen, so the same
- * three bands become a drawer the reader opens over the page and the page keeps the who
- */
-const SIDEBAR_RAIL = "(min-width: 64rem)";
-
-/** Width the rail takes out of the screen, leaving the rest of it as the page's own pane. */
-const RAIL_WIDTH = "16rem";
-
-/** Width the same bands take as a drawer, held inside the narrowest screen they open over. */
-const DRAWER_WIDTH = "min(85vw, 18rem)";
-
-/**
- * Where the header's row has the width for an action to say in words what its mark says,
- * and for the page's own name to still be read beside it.
- */
-const WIDE_HEADER = "(min-width: 45rem)";
-
-/**
- * Edge of the glyphs the chrome is drawn with, which is the size the marks on a post's row
- * and the one on its title already wear.
- */
-const ICON_SIZE = 16;
-
-/**
- * Ties the sidebar's search box to the label naming it, and names the field the `/` key
- * puts the caret in from anywhere on the page.
- */
-export const SIDEBAR_SEARCH_FIELD_ID = "sidebar-search";
-
-/**
- * The parameter a search travels in, which the sidebar's box submits under and the reading
+ * The parameter a search travels in, which the top bar's box submits under and the reading
  * queue reads its query back out of. It is named here, where the box that sends it lives,
- * and the page that answers reads it from here, so one search has one name.
+ * so one search has one name.
  */
 export const SEARCH_PARAM = "q";
 
-/**
- * Height of a field standing in the app's top band: the sidebar's search box, and whatever
- * a page puts among its own actions.
- */
-export const BAND_FIELD_HEIGHT = "2.25rem";
-
-/** Space the band keeps above and below whatever stands in it. */
-const BAND_PADDING = "0.625rem";
-
-/** Weight of the rule closing the band, which both halves draw and both count inside. */
-const BAND_RULE_WIDTH = 1;
-
-/**
- * Height of the app's top band, which the sidebar's own header and the page's header both
- * draw. The two sit side by side across the top of the screen, so one height is what puts
- * their lower rules on one line and makes the divider read as a single rule across the who
- */
-const BAND_HEIGHT = `calc(${BAND_FIELD_HEIGHT} + ${BAND_PADDING} * 2 + ${BAND_RULE_WIDTH}px)`;
-
-/**
- * The rule under the band, drawn once here so the sidebar's half and the page's half are
- * the same colour and weight, and counted inside {@link BAND_HEIGHT} on both, so the two
- * meet as one line across the width of the screen.
- */
-function bandRule() {
-	return borderEdge("block-end", { color: "neutral.border", width: BAND_RULE_WIDTH });
-}
+/** Height of a field standing among a page header's actions, matching its small buttons. */
+export const BAND_FIELD_HEIGHT = "2rem";
 
 /** The `id` the viewer's own menu answers to, which its trigger names in `commandfor`. */
 const USER_MENU_ID = "user-menu";
 
-/**
- * The `id` the sidebar answers to, which the header's trigger names in `commandfor` and
- * which the keys that walk the rail's own links look the rail up by.
- */
-export const SIDEBAR_ID = "app-sidebar";
+/** Edge of the glyphs the chrome is drawn with, which is the size a nav row's icon slot holds. */
+const ICON_SIZE = 16;
+
+/** Where an action has the width to say in words what its mark says. */
+const WIDE_HEADER = "(min-width: 45rem)";
 
 /**
- * Edge of every mark down the sidebar's first column: the glyphs naming the two places,
- * and the picture standing for each feed.
- */
-const RAIL_MARK_SIZE = "1.25rem";
-
-/** The initials a feed's mark falls back to, sized to sit inside {@link RAIL_MARK_SIZE}. */
-const RAIL_MARK_TEXT = "0.5rem";
-
-/** Inline padding a sidebar row keeps from the sidebar's own edges. */
-const ROW_PADDING = "0.75rem";
-
-/** Space between a sidebar row's mark and the name beside it. */
-const ROW_GAP = "0.75rem";
-
-/**
- * One row of the sidebar's navigation: its mark in the first column at the size every
- * other mark is drawn at, and its name in the second.
- *
- * @param slot - The `data-slot` the row's own component stamps on itself.
- */
-function railRow(slot: string) {
-	return [
-		when(`&[data-slot="${slot}"]`, [pi(ROW_PADDING), gap(ROW_GAP)]),
-		when(`&[data-slot="${slot}"] > svg`, [is(RAIL_MARK_SIZE), bs(RAIL_MARK_SIZE), shrink()]),
-	];
-}
-
-/** The same first-column size, carried by a mark the sidebar draws as a picture. */
-function railMark() {
-	return [
-		when('&[data-slot="image-placeholder"]', [
-			is(RAIL_MARK_SIZE),
-			bs(RAIL_MARK_SIZE),
-			raw({ fontSize: RAIL_MARK_TEXT }),
-		]),
-	];
-}
-
-/**
- * Runs a list out to the edges of the page's pane, taking back the gutter the page keeps
- * around everything else.
+ * Runs a list out to the edges of the page's pane, taking back the gutter the shell keeps
+ * around everything else, so a row's hover and rule reach both edges.
  */
 export function listBleed() {
-	return bleed(PAGE_GUTTER);
+	return raw({ marginInline: "calc(-1 * var(--ui-app-gutter, 1rem))" });
 }
 
 /**
- * The inline padding a row of a bled list carries, which is the page's own gutter now spent
- * inside the row rather than around the list.
+ * The inline padding a row of a bled list carries, which is the shell's own gutter now spent
+ * inside the row, so the row's text stays on the page header's vertical line.
  */
 export function listRowGutter() {
-	return pi(PAGE_GUTTER);
+	return raw({ paddingInline: "var(--ui-app-gutter, 1rem)" });
 }
 
 /**
  * The size a note on the page is drawn at: padded in proportion to the line or two of news
- * it carries rather than to the paragraph a panel is built for, so a sentence about a sweep
- * sits among rows of posts at the weight of a remark rather than of a section.
+ * it carries, so a sentence about a sweep sits among rows of posts as a remark.
  */
 export function pageNote() {
-	/**
-	 * Carried on the note's own slot rather than bare: the component sets this padding
-	 * itself, and two rules of equal weight are settled by which was written to the
-	 * stylesheet last, which is not something a caller can see.
-	 */
-	return [when('&[data-slot="alert"]', [p(2, 3), gap(2), rounded("md")])];
+	return [when('&[data-slot="alert"]', [p(2, 3), raw({ gap: "0.5rem", borderRadius: "0.5rem" })])];
 }
 
 /**
  * The letters something with no picture is drawn with: the first of its first word and the
- * first of its last, which is what tells one name from another at the size a mark is read
- * at. It stands in for the viewer's own face and for a feed the publisher gave no picture.
+ * first of its last, which tells one name from another at the size a mark is read at.
  *
  * @param name - The name to reduce, which an absent one leaves empty.
  */
@@ -271,18 +133,24 @@ export namespace AppLayout {
 		label: string;
 		reading: string;
 		/**
-		 * Names the list of posts the reader asked to keep, or `null` where keeping is
-		 * turned off — which is what takes the row out of the sidebar rather than a second
-		 * question asked here.
+		 * Names the list of posts the reader asked to keep, or `null` where keeping is turned
+		 * off, which takes the row out of the sidebar.
 		 */
 		saved: string | null;
-		/** Names the sidebar's search box, which carries no visible label of its own. */
+		/** Names the top bar's search box, which carries no visible label of its own. */
 		searchLabel: string;
-		/** What the sidebar's empty search box says it is for. */
+		/** What the empty search box says it is for. */
 		searchPlaceholder: string;
 		/** Names the control a narrow screen opens the sidebar from. */
 		openSidebar: string;
+		/** Names the control the open sidebar sheet closes from. */
+		closeSidebar: string;
+		/** The skip link's text. */
+		skip: string;
+		/** Names the switch that draws the sidebar as a rail of icons. */
+		collapse: string;
 		settings: string;
+		help: string;
 		/** Names the trigger the viewer's own menu opens from, and the menu it opens. */
 		account: string;
 		logout: string;
@@ -305,16 +173,24 @@ export namespace AppLayout {
 		heading: string;
 		/** Where that name leads, for a page whose subject has a home of its own. */
 		headingLink?: HeadingLink;
+		/** One line under the heading, saying what the page holds. */
+		description?: RemixNode;
+		/** The page this one sits under, linked above the heading. */
+		parent?: PageHeader.Parent;
+		/** Views of the page, each one a URL, drawn as tabs under the heading. */
+		tabs?: PageHeader.Tab[];
+		/** Names the tabs for anyone listening. */
+		tabsLabel?: string;
+		/** The one action the page is for, drawn last in the header. */
+		primaryAction?: RemixNode;
 		/**
 		 * Controls acting on what the header names, laid out in a row at the end of its line.
-		 * Each one says in a mark what it says in words on a screen with the room for both,
-		 * and on a screen without the room for the row they wrap beneath the page's name.
+		 * Each one says in a mark what it says in words on a screen with the room for both.
 		 */
 		actions?: RemixNode;
 		/**
-		 * The path being read, which is what marks the one thing in the chrome the reader is
-		 * standing on: the queue, one of the feeds under the Feeds heading, or the account
-		 * menu's own entry. A path naming none of them lights none of them.
+		 * The path being read, which marks the one thing in the chrome the reader is standing
+		 * on. A path naming none of them lights none of them.
 		 */
 		currentPath: string;
 		/** The request's detected language, set as `<html lang>`. */
@@ -326,54 +202,29 @@ export namespace AppLayout {
 		 */
 		shortcuts: Shortcuts.Copy;
 		viewer: Viewer;
+		/** Draws the sidebar as a rail of icons, as the reader last left it. */
+		collapsed: boolean;
 		/**
-		 * Where the sidebar's feed band is fetched from, which is an address rather than the
-		 * list itself: the band is drawn by the server on its own, into the frame below, so
-		 * that what it says can be redrawn without the page around it.
+		 * Whether the page header is drawn. A page that sets its own `h1` in its content,
+		 * as an article does in its reading column, turns it off.
+		 * @default true
+		 */
+		header?: boolean;
+		/**
+		 * Where the sidebar's feeds are fetched from. The band is drawn by the server on its
+		 * own, into a frame, so its counts can be redrawn without the page around it.
 		 */
 		sidebarFeedsSrc: string;
-		/** What the reader last searched for, put back into the sidebar's box. */
+		/** What the reader last searched for, put back into the search box. */
 		searchQuery: string;
 		children: RemixNode;
 	}
 }
 
 /**
- * One link in a row of them, which is what a page's own filters are. The one being read
- * wears the app's strongest foreground and the rest settle to body copy, which is the pair
- * of shades an unread post and a read one already differ by on every other surface.
- */
-export function AppNavLink(
-	handle: Handle<{ href: string; label: string; icon?: RemixNode; isCurrent: boolean }>,
-) {
-	return () => {
-		let { href, icon, label, isCurrent } = handle.props;
-
-		return (
-			<NavLink
-				href={href}
-				aria-current={isCurrent ? "page" : undefined}
-				mix={[
-					inlineFlex(),
-					items("center"),
-					gap(1),
-					text("sm"),
-					weight("medium"),
-					textDecoration("none"),
-					hover(textDecoration({ line: "underline", thickness: 1, offset: 4 })),
-				]}
-			>
-				{icon}
-				{label}
-			</NavLink>
-		);
-	};
-}
-
-/**
- * The words beside an action's mark, carried wherever the header's row has the width for
- * both. On a narrower screen the mark stands alone and the name the control itself holds is
- * what a screen reader announces and a pointer rests on, which is how a post's row says the
+ * The words beside an action's mark, carried wherever the header has the width for both. On
+ * a narrower screen the mark stands alone, and the name the control holds is what a screen
+ * reader announces.
  */
 export function ActionLabel(handle: Handle<{ children: RemixNode }>) {
 	return () => <span mix={[hidden(), media(WIDE_HEADER, inline())]}>{handle.props.children}</span>;
@@ -389,34 +240,29 @@ export namespace SidebarFeeds {
 		 */
 		imageUrl: string | null;
 		title: string;
-		/** How many posts are waiting, shown as the number itself beside the name. */
+		/** How many posts are waiting. */
 		unreadCount: number;
-		/**
-		 * That count said in full for a screen reader, or `null` for a feed with nothing
-		 * waiting — which is a row that carries no count at all.
-		 */
+		/** That count said in full for a screen reader, or `null` for a feed with nothing waiting. */
 		unreadLabel: string | null;
 	}
 
 	/** A band of the rail that is a heading and the feeds under it, and leads nowhere. */
 	export interface Group {
-		/** The word heading the band. */
 		label: string;
 		feeds: Feed[];
-		/** What the feeds beneath it add up to, which is the only place this number is from. */
+		/** What the feeds beneath it add up to. */
 		unreadCount: number;
 		/** That sum said in full for a screen reader, or `null` for a band with nothing waiting. */
 		unreadLabel: string | null;
 	}
 
 	/**
-	 * One folder as the rail draws it: a heading that is itself the way into the folder's
-	 * own stream, and the feeds filed there beneath it.
+	 * One folder as the rail draws it: a row that is itself the way into the folder's own
+	 * stream, and the feeds filed there beneath it.
 	 */
 	export interface Folder {
 		id: string;
 		title: string;
-		/** Where the folder's own stream is read, which its heading leads to. */
 		href: string;
 		feeds: Feed[];
 		/** What the feeds beneath it add up to, which is the only place this number is from. */
@@ -427,8 +273,7 @@ export namespace SidebarFeeds {
 
 	/**
 	 * One kept query as the rail draws it: a name, and the queue's own address under the
-	 * narrowing it holds. It carries no count, because a number beside each one is a scan
-	 * per entry on every page of the app, paid by readers who are not searching.
+	 * narrowing it holds. It carries no count, which would cost a scan per entry on every page.
 	 */
 	export interface Search {
 		id: string;
@@ -437,27 +282,24 @@ export namespace SidebarFeeds {
 	}
 
 	export interface Props {
-		/** The queries the reader kept, drawn as addresses of the queue itself. */
 		searches: Search[];
-		/** The word heading the kept queries. */
 		searchesLabel: string;
 		/** The feeds the reader has filed nowhere, drawn below the folders. */
 		feeds: Feed[];
-		/** The reader's folders, each drawn as a heading over the feeds filed in it. */
 		folders: Folder[];
+		/** Names the band of folders. */
+		foldersLabel: string;
 		/**
-		 * The feeds the reader pinned, drawn first under a heading of their own. A pin is
-		 * their own answer about a subscription, so it is drawn where they put it and no
-		 * derived grouping moves it.
+		 * The feeds the reader pinned, drawn first under a heading of their own. A pin is their
+		 * own answer about a subscription, so no derived grouping moves it.
 		 */
 		pinned: Group | null;
 		/**
-		 * The feeds nobody grouped and that publish almost nothing, drawn last. It keeps a
-		 * monthly newsletter from being buried by a feed that publishes hourly, and it is
-		 * derived from the measured rate rather than from anything the reader was asked.
+		 * The feeds nobody grouped and that publish almost nothing, drawn last, so a monthly
+		 * newsletter is never buried by a feed that publishes hourly.
 		 */
 		quiet: Group | null;
-		/** The word heading the band, which names the reader's own subscriptions. */
+		/** The word heading the reader's own subscriptions. */
 		label: string;
 		/** Names the list of feeds under that heading, for anyone listening to it. */
 		listLabel: string;
@@ -467,115 +309,52 @@ export namespace SidebarFeeds {
 }
 
 /**
- * One followed feed as a row of the rail, wherever it is drawn: under a folder's name or
- * under the heading that gathers the ones a reader has filed nowhere.
+ * A feed's mark sized to the nav row's icon slot, drawn at full strength: it is the
+ * publisher's own picture, which an eye finds a known publication by before reading the name.
  */
-function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boolean }>) {
-	return () => {
-		let { feed, isCurrent } = handle.props;
+function feedIcon(feed: SidebarFeeds.Feed) {
+	return (
+		<Logo
+			size="sm"
+			mix={[
+				raw({ inlineSize: "1rem", blockSize: "1rem", fontSize: "0.4375rem" }),
+				when('&[data-slot="image-placeholder"]', raw({ fontSize: "0.4375rem" })),
+			]}
+		>
+			{feed.imageUrl ? (
+				<Logo.Image src={feed.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+			) : null}
+			<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
+		</Logo>
+	);
+}
 
-		return (
-			<Sidebar.Item
-				href={routes.feed.href({ feed: feed.id })}
-				current={isCurrent}
-				mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
-			>
-				{/**
-				 * The mark the publisher puts on their own feed, which is what an eye finds a
-				 * known publication by before it reads the name.
-				 */}
-				<Logo size="sm" mix={railMark()}>
-					{feed.imageUrl ? (
-						<Logo.Image
-							src={feed.imageUrl}
-							alt={feed.title}
-							loading="lazy"
-							referrerPolicy="no-referrer"
-						/>
-					) : null}
-					<Logo.Fallback>{initials(feed.title)}</Logo.Fallback>
-				</Logo>
-
-				<span mix={[grow(), minIs(0), truncate()]}>{feed.title}</span>
-
-				{/**
-				 * The number alone beside the name, which is what a column of them is read by;
-				 * the phrase it stands for is said in full for anyone listening rather than
-				 * looking. A feed with nothing waiting carries neither.
-				 */}
-				{feed.unreadLabel && (
-					<>
-						<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-							{feed.unreadCount}
-						</span>
-						<span mix={[visuallyHidden()]}>{feed.unreadLabel}</span>
-					</>
-				)}
-			</Sidebar.Item>
-		);
-	};
+/** Restores a publisher's mark to full strength inside the row's otherwise muted icon slot. */
+function fullStrengthIcon() {
+	return when('& > [data-slot="app-shell-icon"]', raw({ opacity: "1" }));
 }
 
 /**
- * One band of the rail: a heading naming what it gathers, and the feeds under it. It leads
- * nowhere, and nothing is lost by that — the whole of the list it names is the rows
- * directly beneath it — which leaves one thing in the sidebar lit at a time, the feed
+ * One followed feed as a row of the rail, wherever it is drawn. Bold while posts wait, with
+ * their count beside the name, which is the unread grammar every row of the rail speaks.
  */
-function SidebarBand(
-	handle: Handle<{
-		group: SidebarFeeds.Group;
-		icon: RemixNode;
-		listLabel: string;
-		currentPath: string;
-	}>,
+function SidebarFeedRow(
+	handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boolean; nested?: boolean }>,
 ) {
 	return () => {
-		let { currentPath, group, icon, listLabel } = handle.props;
+		let { feed, isCurrent, nested = false } = handle.props;
 
 		return (
-			<Sidebar.Group>
-				<Sidebar.GroupLabel
-					mix={[
-						railRow("group-label"),
-						when('&[data-slot="group-label"]', [
-							pb("0.5rem"),
-							minBs("2.25rem"),
-							justify("start"),
-							text("sm"),
-							weight("medium"),
-							fg("neutral"),
-							raw({ textTransform: "none", letterSpacing: "normal" }),
-						]),
-					]}
-				>
-					{icon}
-					<span mix={[minIs(0), truncate()]}>{group.label}</span>
-
-					{/**
-					 * What the feeds beneath it add up to, said as the number for an eye and in
-					 * full for anyone listening, so an arriving post is visible without the band
-					 * being read row by row.
-					 */}
-					{group.unreadLabel && (
-						<>
-							<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-								{group.unreadCount}
-							</span>
-							<span mix={[visuallyHidden()]}>{group.unreadLabel}</span>
-						</>
-					)}
-				</Sidebar.GroupLabel>
-
-				<Sidebar.Nav aria-label={listLabel}>
-					{group.feeds.map((feed) => (
-						<SidebarFeedRow
-							key={feed.id}
-							feed={feed}
-							isCurrent={currentPath === routes.feed.href({ feed: feed.id })}
-						/>
-					))}
-				</Sidebar.Nav>
-			</Sidebar.Group>
+			<AppShell.Item
+				href={routes.feed.href({ feed: feed.id })}
+				label={feed.title}
+				icon={feedIcon(feed)}
+				count={feed.unreadCount}
+				countLabel={feed.unreadLabel ?? undefined}
+				unread={feed.unreadCount > 0}
+				current={isCurrent}
+				mix={[fullStrengthIcon(), nested ? raw({ paddingInlineStart: "1.75rem" }) : null]}
+			/>
 		);
 	};
 }
@@ -587,12 +366,33 @@ function SidebarBand(
  */
 export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 	return () => {
-		let { currentPath, feeds, folders, label, listLabel, pinned, quiet, searches, searchesLabel } =
-			handle.props;
+		let {
+			currentPath,
+			feeds,
+			folders,
+			foldersLabel,
+			label,
+			pinned,
+			quiet,
+			searches,
+			searchesLabel,
+		} = handle.props;
 
 		/** Read from the path the band was asked for, since it is drawn apart from the page. */
 		function isCurrent(href: string): boolean {
 			return currentPath === href;
+		}
+
+		/** A feed's row, lit when the page is that feed's own. */
+		function row(feed: SidebarFeeds.Feed, nested = false) {
+			return (
+				<SidebarFeedRow
+					key={feed.id}
+					feed={feed}
+					nested={nested}
+					isCurrent={isCurrent(routes.feed.href({ feed: feed.id }))}
+				/>
+			);
 		}
 
 		/** A reader following nothing is shown no heading for it, and no empty list under one. */
@@ -610,418 +410,231 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 			<>
 				{/**
 				 * The queries the reader kept, above their feeds: each one is an address of the
-				 * queue under a narrowing they wrote, so it belongs beside the queue rather than
-				 * among the publications it reads from.
+				 * queue under a narrowing they wrote, so it belongs beside the queue.
 				 */}
 				{searches.length > 0 && (
-					<Sidebar.Group>
-						<Sidebar.GroupLabel
-							mix={[
-								railRow("group-label"),
-								when('&[data-slot="group-label"]', [
-									pb("0.5rem"),
-									minBs("2.25rem"),
-									justify("start"),
-									text("sm"),
-									weight("medium"),
-									fg("neutral"),
-									raw({ textTransform: "none", letterSpacing: "normal" }),
-								]),
-							]}
-						>
-							<SearchIcon size={ICON_SIZE} />
-							<span mix={[minIs(0), truncate()]}>{searchesLabel}</span>
-						</Sidebar.GroupLabel>
+					<AppShell.Group title={searchesLabel}>
+						{searches.map((search) => (
+							<AppShell.Item
+								key={search.id}
+								href={search.href}
+								label={search.label}
+								icon={<SearchIcon size={ICON_SIZE} />}
+								current={isCurrent(search.href)}
+							/>
+						))}
+					</AppShell.Group>
+				)}
 
-						<Sidebar.Nav aria-label={searchesLabel}>
-							{searches.map((search) => (
-								<Sidebar.Item
-									key={search.id}
-									href={search.href}
-									current={isCurrent(search.href)}
-									mix={[railRow("item"), text("xs"), fg("neutral.muted")]}
-								>
-									<span mix={[grow(), minIs(0), truncate()]}>{search.label}</span>
-								</Sidebar.Item>
-							))}
-						</Sidebar.Nav>
-					</Sidebar.Group>
+				{/** What the reader said they never want to miss, first, because that is what saying it was for. */}
+				{pinned && (
+					<AppShell.Group title={pinned.label}>
+						{pinned.feeds.map((feed) => row(feed))}
+					</AppShell.Group>
 				)}
 
 				{/**
-				 * What the reader said they never want to miss, first, because that is what
-				 * saying it was for.
+				 * Each folder is a row that leads to its own stream, with the feeds filed there
+				 * indented beneath it, so the rail keeps its two levels and no more.
 				 */}
-				{pinned && (
-					<SidebarBand
-						group={pinned}
-						icon={<PinIcon size={ICON_SIZE} />}
-						listLabel={pinned.label}
-						currentPath={currentPath}
-					/>
+				{folders.length > 0 && (
+					<AppShell.Group title={foldersLabel}>
+						{folders.flatMap((folder) => [
+							<AppShell.Item
+								key={folder.id}
+								href={folder.href}
+								label={folder.title}
+								icon={<FolderIcon size={ICON_SIZE} />}
+								count={folder.unreadCount}
+								countLabel={folder.unreadLabel ?? undefined}
+								unread={folder.unreadCount > 0}
+								current={isCurrent(folder.href)}
+							/>,
+							...folder.feeds.map((feed) => row(feed, true)),
+						])}
+					</AppShell.Group>
 				)}
-
-				{folders.map((folder) => (
-					<Sidebar.Group key={folder.id}>
-						{/**
-						 * The folder's name, and the way into reading it as one stream. It is a row rather
-						 * than a plain heading because a folder is somewhere a reader goes, and it wears
-						 * the weight the Feeds heading below wears so the two read as the peers they are.
-						 */}
-						<Sidebar.Item
-							href={folder.href}
-							current={isCurrent(folder.href)}
-							mix={[railRow("item"), text("sm"), weight("medium"), fg("neutral")]}
-						>
-							<FolderIcon size={ICON_SIZE} />
-
-							<span mix={[grow(), minIs(0), truncate()]}>{folder.title}</span>
-
-							{/**
-							 * What the feeds beneath it add up to, said as the number for an eye and
-							 * in full for anyone listening. It is the sum of the rows under it and
-							 * nothing else, so a heading can never disagree with them.
-							 */}
-							{folder.unreadLabel && (
-								<>
-									<span aria-hidden="true" mix={[shrink(), tabularNums()]}>
-										{folder.unreadCount}
-									</span>
-									<span mix={[visuallyHidden()]}>{folder.unreadLabel}</span>
-								</>
-							)}
-						</Sidebar.Item>
-
-						<Sidebar.Nav aria-label={folder.title}>
-							{folder.feeds.map((feed) => (
-								<SidebarFeedRow
-									key={feed.id}
-									feed={feed}
-									isCurrent={isCurrent(routes.feed.href({ feed: feed.id }))}
-								/>
-							))}
-						</Sidebar.Nav>
-					</Sidebar.Group>
-				))}
 
 				{feeds.length > 0 && (
-					<Sidebar.Group>
-						{/**
-						 * The reader's own subscriptions, headed by the word naming them. It is drawn as a
-						 * peer of the queue above — the same mark, the same column, the same casing as its
-						 * own word — rather than as a category divider, because that is what it is: the
-						 */}
-						<Sidebar.GroupLabel
-							mix={[
-								railRow("group-label"),
-								when('&[data-slot="group-label"]', [
-									pb("0.5rem"),
-									minBs("2.25rem"),
-									justify("start"),
-									text("sm"),
-									weight("medium"),
-									fg("neutral"),
-									raw({ textTransform: "none", letterSpacing: "normal" }),
-								]),
-							]}
-						>
-							{/** The mark a site puts on its own feed, which is what these rows are. */}
-							<RssIcon size={ICON_SIZE} />
-							<span mix={[minIs(0), truncate()]}>{label}</span>
-						</Sidebar.GroupLabel>
-
-						<Sidebar.Nav aria-label={listLabel}>
-							{feeds.map((feed) => (
-								<SidebarFeedRow
-									key={feed.id}
-									feed={feed}
-									isCurrent={isCurrent(routes.feed.href({ feed: feed.id }))}
-								/>
-							))}
-						</Sidebar.Nav>
-					</Sidebar.Group>
+					<AppShell.Group title={label} aria-label={handle.props.listLabel}>
+						{feeds.map((feed) => row(feed))}
+					</AppShell.Group>
 				)}
 
 				{/**
-				 * Last, holding the feeds nobody grouped and nothing published. No post moves
-				 * with them: this is a way of drawing the rail, and a quiet feed's posts sit in
-				 * the queue where their date puts them.
+				 * Last, holding the feeds nobody grouped and nothing published. No post moves with
+				 * them: a quiet feed's posts sit in the queue where their date puts them.
 				 */}
 				{quiet && (
-					<SidebarBand
-						group={quiet}
-						icon={<MoonIcon size={ICON_SIZE} />}
-						listLabel={quiet.label}
-						currentPath={currentPath}
-					/>
+					<AppShell.Group title={quiet.label}>
+						{quiet.feeds.map((feed) => row(feed))}
+					</AppShell.Group>
 				)}
 			</>
 		);
 	};
 }
 
-/** Renders the sidebar, the header and the page around a signed-in page's content. */
+/**
+ * The app's name at the head of the sidebar, in the serif the product is set in, which a
+ * rail keeps as the mark alone.
+ */
+function Brand(handle: Handle<{ label: string }>) {
+	return () => (
+		<a
+			href={routes.reading.index.href()}
+			mix={[
+				raw({
+					display: "flex",
+					alignItems: "center",
+					gap: "0.5rem",
+					blockSize: "2rem",
+					paddingInline: "0.375rem",
+					fontFamily: "var(--ui-font-serif)",
+					fontSize: "1.125rem",
+					color: "var(--ui-neutral-fg-emphasis)",
+					textDecoration: "none",
+					whiteSpace: "nowrap",
+				}),
+			]}
+		>
+			<span
+				aria-hidden="true"
+				mix={[
+					raw({
+						display: "inline-grid",
+						placeItems: "center",
+						flexShrink: "0",
+						inlineSize: "1.5rem",
+						blockSize: "1.5rem",
+						borderRadius: "0.375rem",
+						backgroundColor: "var(--ui-brand-bg-solid)",
+						color: "var(--ui-brand-fg-on-solid)",
+					}),
+				]}
+			>
+				<RssIcon size={14} />
+			</span>
+			<span data-app-shell-label="">{handle.props.label}</span>
+		</a>
+	);
+}
+
+/** Renders the shell, the top bar and the page header around a signed-in page's content. */
 export default function AppLayout(handle: Handle<AppLayout.Props>) {
 	return () => {
 		let {
 			actions,
 			assets,
 			children,
+			collapsed,
 			currentPath,
+			description,
 			documentTitle,
+			header = true,
 			heading,
 			headingLink,
 			locale,
 			nav,
+			parent,
+			primaryAction,
 			searchQuery,
 			shortcuts,
 			sidebarFeedsSrc,
+			tabs,
+			tabsLabel,
 			viewer,
 		} = handle.props;
 
-		/**
-		 * One thing in the chrome is the place being read, and it is whichever link leads
-		 * exactly where the reader already is.
-		 */
+		/** One thing in the chrome is the place being read: the link leading exactly there. */
 		function isCurrent(href: string): boolean {
 			return currentPath === href;
 		}
 
+		let title = headingLink ? (
+			/**
+			 * The page's own name carries its subject off to the site behind it, so the obvious
+			 * words are the ones worth clicking. It keeps the heading's colour.
+			 */
+			<a
+				href={headingLink.href}
+				target="_blank"
+				rel="noopener noreferrer"
+				title={headingLink.label}
+				mix={[
+					raw({ display: "inline-flex", alignItems: "center", gap: "0.5rem", minInlineSize: "0" }),
+					raw({ color: "inherit" }),
+					textDecoration("none"),
+					when("&:hover", textDecoration("underline")),
+				]}
+			>
+				<span>{heading}</span>
+				<span mix={[visuallyHidden()]}>{headingLink.label}</span>
+				<OutboundMark />
+			</a>
+		) : (
+			heading
+		);
+
 		return (
 			<DocumentLayout assets={assets} title={documentTitle} locale={locale}>
-				{/**
-				 * Two columns from the width the rail earns, and one below it, where the sidebar
-				 * has left the flow to wait behind its own trigger.
-				 */}
-				<div
-					mix={[media(SIDEBAR_RAIL, [grid(), raw({ gridTemplateColumns: `${RAIL_WIDTH} 1fr` })])]}
-				>
-					{/**
-					 * The three bands, in the two shapes they take. Below the rail's width they are a
-					 * drawer the browser opens over the page and dismisses on its own, which is what
-					 * lets a page shipping almost no script carry one.
-					 */}
-					<aside
-						id={SIDEBAR_ID}
-						popover="auto"
-						mix={[
-							hidden(),
-							flexCol(),
-							fixed(),
-							insBs(0),
-							insBe(0),
-							insIs(0),
-							insIe("auto"),
-							z(30),
-							m(0),
-							p(0),
-							is(DRAWER_WIDTH),
-							maxIs("none"),
-							bs("full"),
-							maxBs("none"),
-							boxSizing("border-box"),
-							/** The bands hold the edges; the slack between them is the middle one's to scroll. */
-							overflow("hidden"),
-							border("none"),
-							borderEdge("inline-end", { color: "neutral.border", width: 1 }),
-							bg("neutral.tint"),
-							shadow("lg"),
-							safeAreaPadding("left"),
-							when("&::backdrop", bg("rgba(0, 0, 0, 0.4)")),
-							when("&:popover-open", raw({ display: "flex !important" })),
-							media(SIDEBAR_RAIL, [
-								/**
-								 * Beating the rule above rather than the browser's: a reader who opened the
-								 * drawer and then widened their window leaves that more specific rule
-								 * matching, and the rail is what this width draws either way.
-								 */
-								raw({ display: "flex !important" }),
-								sticky(),
-								insBs(0),
-								insBe("auto"),
-								insIs("auto"),
-								self("start"),
-								is("auto"),
-								bs("100dvh"),
-								translucent(),
-								shadow("none"),
-							]),
-						]}
-					>
-						{/**
-						 * Searching starts where the reader's eye already is, so the sidebar opens with
-						 * the box rather than with a link to a page holding one.
-						 */}
-						<Sidebar.Header
-							mix={[bs(BAND_HEIGHT), pb(BAND_PADDING), pi(3), items("center"), bandRule()]}
-						>
-							<form method="get" action={routes.reading.index.href()} mix={[flex(), is("full")]}>
-								<label htmlFor={SIDEBAR_SEARCH_FIELD_ID} mix={[visuallyHidden()]}>
-									{nav.searchLabel}
-								</label>
-								<input
-									/**
-									 * Keyed by the page it was drawn for, so moving between pages replaces the field
-									 * rather than patching it.
-									 */
-									data-rmx-key={`${SIDEBAR_SEARCH_FIELD_ID}:${currentPath}?${searchQuery}`}
-									id={SIDEBAR_SEARCH_FIELD_ID}
-									type="search"
-									name={SEARCH_PARAM}
-									placeholder={nav.searchPlaceholder}
-									defaultValue={searchQuery}
-									autoComplete="off"
-									mix={[
-										is("full"),
-										minIs(0),
-										bs(BAND_FIELD_HEIGHT),
-										boxSizing("border-box"),
-										p(0, 3),
-										rounded("lg"),
-										border({ color: "neutral.border", width: 1 }),
-										bg("neutral.bg"),
-										fg("neutral.emphasis"),
-										raw({ font: "inherit", fontSize: "0.875rem" }),
-									]}
-								/>
-							</form>
-						</Sidebar.Header>
-
-						{/**
-						 * The band that grows: the queue, then every feed the reader follows under the
-						 * heading naming them. It scrolls on its own once those outrun the sidebar, so a
-						 * long subscription list runs past the bottom of this rather than pushing the menu
-						 */}
-						<Sidebar.Content>
-							<Sidebar.Nav aria-label={nav.label}>
-								<Sidebar.Item
+				<AppShell
+					id={SHELL_ID}
+					collapsed={collapsed}
+					labels={{
+						nav: nav.label,
+						skip: nav.skip,
+						menu: nav.openSidebar,
+						close: nav.closeSidebar,
+						collapse: nav.collapse,
+					}}
+					workspace={<Brand label="Reader" />}
+					nav={
+						<>
+							<AppShell.Group>
+								<AppShell.Item
 									href={routes.reading.index.href()}
+									label={nav.reading}
+									icon={<InboxIcon size={ICON_SIZE} />}
 									current={isCurrent(routes.reading.index.href())}
-									mix={railRow("item")}
-								>
-									{/** Everything every followed feed has published, waiting to be worked through. */}
-									<InboxIcon size={ICON_SIZE} />
-									<span mix={[minIs(0), truncate()]}>{nav.reading}</span>
-								</Sidebar.Item>
-
-								{/**
-								 * Under the queue, since a post reaches this list from that one: it is the same
-								 * posts, kept rather than worked through, and the one list here nothing prunes.
-								 */}
+								/>
 								{nav.saved && (
-									<Sidebar.Item
+									<AppShell.Item
 										href={routes.saved.href()}
+										label={nav.saved}
+										icon={<BookmarkIcon size={ICON_SIZE} />}
 										current={isCurrent(routes.saved.href())}
-										mix={railRow("item")}
-									>
-										{/** The mark a row is kept with, worn by the list of everything kept. */}
-										<BookmarkIcon size={ICON_SIZE} />
-										<span mix={[minIs(0), truncate()]}>{nav.saved}</span>
-									</Sidebar.Item>
+									/>
 								)}
-							</Sidebar.Nav>
+							</AppShell.Group>
 
 							{/**
 							 * The feeds themselves, drawn by the server into this band and redrawn into it
-							 * alone. What they say changes as the reader reads — a post opened here moves a
-							 * count in the sidebar — and the page they read it on is several fetched pages
+							 * alone, since a post opened on the page moves a count here.
 							 */}
-							<Frame name={SIDEBAR_FEEDS_FRAME} src={sidebarFeedsSrc} />
-						</Sidebar.Content>
-
-						{/**
-						 * The viewer, with what belongs to their account behind their own face: the
-						 * preferences and the way out, which are about who is signed in rather than about
-						 * where to read.
-						 */}
-						<Sidebar.Footer mix={[p(3)]}>
-							{/**
-							 * The reader's own menu, and beside it the way into the keys. A shortcut
-							 * nobody can discover is a shortcut nobody uses, so the list of them has a
-							 * control on screen as well as a key that opens it.
-							 */}
-							<div mix={[flex(), items("center"), gap(1), minIs(0)]}>
-								<button
-									type="button"
-									commandfor={USER_MENU_ID}
-									command="toggle-popover"
-									aria-label={nav.account}
-									title={nav.account}
-									mix={[
-										flex(),
-										items("center"),
-										gap(2),
-										minIs(0),
-										is("full"),
-										p(2),
-										pi(3),
-										border("none"),
-										rounded("lg"),
-										bg("transparent"),
-										fg("inherit"),
-										raw({ font: "inherit" }),
-										cursor("pointer"),
-										hover(bg("neutral.bg-tint-hover")),
-									]}
-								>
+							<div mix={[raw({ display: "contents" })]}>
+								<Frame name={SIDEBAR_FEEDS_FRAME} src={sidebarFeedsSrc} />
+							</div>
+						</>
+					}
+					footer={
+						<>
+							<AppShell.Identity
+								avatar={
 									<Avatar size="sm">
 										{viewer.avatar ? <Avatar.Image src={viewer.avatar} alt="" /> : null}
 										<Avatar.Fallback>{initials(viewer.name)}</Avatar.Fallback>
 									</Avatar>
-
-									<span
-										mix={[
-											grow(),
-											basis("0%"),
-											minIs(0),
-											truncate(),
-											text("sm"),
-											weight("medium"),
-											fg("neutral.emphasis"),
-											raw({ textAlign: "start" }),
-										]}
-									>
-										{viewer.name}
-									</span>
-
-									<ChevronsUpDownIcon size={ICON_SIZE} mix={[shrink()]} />
-								</button>
-
-								<ShortcutsIsland
-									copy={shortcuts}
-									searchFieldId={SIDEBAR_SEARCH_FIELD_ID}
-									sidebarId={SIDEBAR_ID}
-								/>
-							</div>
-
-							{/**
-							 * Opening upward from a trigger that sits at the foot of the sidebar in either
-							 * shape, so the menu lands over the page rather than off the bottom of it.
-							 */}
-							<Menu
-								id={USER_MENU_ID}
-								placement="top-start"
+								}
+								name={viewer.name}
+								detail={viewer.email}
+								commandfor={USER_MENU_ID}
+								command="toggle-popover"
 								aria-label={nav.account}
-								mix={[minIs("14rem")]}
-							>
-								{/**
-								 * Whose account this is, which the trigger says in a name and a face. The address
-								 * is what tells two accounts of one person apart, and this is the one place the
-								 * app has to show it. Both lines name their own foreground.
-								 */}
-								<div mix={[vstack({ gap: 0 }), p(2, 3), minIs(0)]}>
-									<span mix={[truncate(), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-										{viewer.name}
-									</span>
-									<span mix={[truncate(), text("xs"), fg("neutral.muted")]}>{viewer.email}</span>
-								</div>
+							/>
 
-								<Menu.Separator />
-
-								{/**
-								 * The preferences live here rather than in the sidebar's navigation because they
-								 * are about the account rather than about somewhere to read.
-								 */}
+							{/** Opening upward from the foot of the sidebar, so it lands over the page. */}
+							<Menu id={USER_MENU_ID} placement="top-start" aria-label={nav.account}>
 								<Menu.Item
 									href={routes.settings.href()}
 									aria-current={isCurrent(routes.settings.href()) ? "page" : undefined}
@@ -1029,137 +642,69 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 									<SettingsIcon size={ICON_SIZE} />
 									{nav.settings}
 								</Menu.Item>
-
+								<Menu.Item href={routes.docs.index.href()}>
+									<LifeBuoyIcon size={ICON_SIZE} />
+									{nav.help}
+								</Menu.Item>
+								<Menu.Separator />
 								<Menu.Item href={routes.logout.index.href()}>
 									<LogOutIcon size={ICON_SIZE} />
 									{nav.logout}
 								</Menu.Item>
 							</Menu>
-						</Sidebar.Footer>
-					</aside>
-
-					<div mix={[minIs(0)]}>
-						{/**
-						 * The band spans the page's pane so its rule does, and the row inside it keeps
-						 * the same gutter the content below does, so the two sit on one vertical line.
-						 */}
-						<header mix={[sticky(), insBs(0), z(10), translucent(), bg("neutral.tint")]}>
+						</>
+					}
+					topbar={
+						<>
 							{/**
-							 * One row wherever the width allows one, and its least height is what every page
-							 * draws, so the page below starts on the same line from surface to surface.
+							 * Searching starts from the bar every page shares, so a reader can look for a
+							 * post from wherever they are standing.
 							 */}
-							<div
-								mix={[
-									pi(PAGE_GUTTER),
-									pb(BAND_PADDING),
-									minBs(BAND_HEIGHT),
-									boxSizing("border-box"),
-									/**
-									 * The rule rides on the row rather than on the band around it, so both
-									 * halves of the app's top band measure the same thing: the height the
-									 * band is set to, with the rule counted inside it.
-									 */
-									bandRule(),
-									flex(),
-									flexWrap("wrap"),
-									items("center"),
-									gap(3),
-									media(WIDE_HEADER, gap(4)),
-								]}
+							<form
+								method="get"
+								action={routes.reading.index.href()}
+								mix={[raw({ flex: "1 1 auto", minInlineSize: "0", maxInlineSize: "28rem" })]}
 							>
-								{/**
-								 * The way to the sidebar on a screen that keeps it behind one, sitting before
-								 * the page's name the way the sidebar itself sits before the page.
-								 */}
-								<button
-									type="button"
-									commandfor={SIDEBAR_ID}
-									command="toggle-popover"
-									aria-label={nav.openSidebar}
-									title={nav.openSidebar}
-									mix={[
-										inlineFlex(),
-										items("center"),
-										justify("center"),
-										shrink(),
-										p(2),
-										border("none"),
-										rounded("md"),
-										bg("transparent"),
-										fg("neutral.muted"),
-										cursor("pointer"),
-										hover([bg("neutral.bg-tint-hover"), fg("neutral.emphasis")]),
-										media(SIDEBAR_RAIL, hidden()),
-									]}
-								>
-									<PanelLeftIcon size={ICON_SIZE} />
-								</button>
-
-								<Heading
-									level={1}
-									mix={[grow(), minIs(0), flex(), items("center"), text("lg"), weight("semibold")]}
-								>
-									{headingLink ? (
+								<SearchField aria-label={nav.searchLabel}>
+									<SearchField.Input
 										/**
-										 * The page's own name is what carries its subject off to the site behind
-										 * it, so the obvious words are the ones worth clicking. It keeps the
-										 * heading's color, so it reads as the page's name rather than as a link.
+										 * Keyed by the page it was drawn for, so moving between pages replaces
+										 * the field rather than patching it.
 										 */
-										<a
-											href={headingLink.href}
-											target="_blank"
-											rel="noopener noreferrer"
-											title={headingLink.label}
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap(2),
-												minIs(0),
-												fg("neutral.emphasis"),
-												textDecoration("none"),
-												hover(textDecoration("underline")),
-											]}
-										>
-											{/**
-											 * The name gives way to an ellipsis inside its own span, leaving the
-											 * mark beside it whole: what the mark says about where the link goes
-											 * holds however little of the name is left.
-											 */}
-											<span mix={[minIs(0), truncate()]}>{heading}</span>
-											<span mix={[visuallyHidden()]}>{headingLink.label}</span>
-											<OutboundMark mix={[shrink()]} />
-										</a>
-									) : (
-										<span mix={[minIs(0), truncate()]}>{heading}</span>
-									)}
-								</Heading>
-
-								{actions && (
-									/**
-									 * Allowed to be narrower than the controls it holds, so a row too small
-									 * for them wraps them onto a line of their own rather than running them
-									 * off the side of the page.
-									 */
-									<div
-										mix={[
-											flex(),
-											items("center"),
-											flexWrap("wrap"),
-											justify("end"),
-											gap(2),
-											minIs(0),
-										]}
-									>
-										{actions}
-									</div>
-								)}
-							</div>
-						</header>
-
-						{/** The page's own content, filling the pane the sidebar leaves it. */}
-						<main mix={[vstack({ gap: 6 }), p(PAGE_GUTTER)]}>{children}</main>
+										data-rmx-key={`${SIDEBAR_SEARCH_FIELD_ID}:${currentPath}?${searchQuery}`}
+										id={SIDEBAR_SEARCH_FIELD_ID}
+										name={SEARCH_PARAM}
+										placeholder={nav.searchPlaceholder}
+										defaultValue={searchQuery}
+										autoComplete="off"
+										aria-keyshortcuts="/"
+									/>
+								</SearchField>
+							</form>
+							<span mix={[raw({ marginInlineStart: "auto" })]} />
+							<ShortcutsIsland
+								copy={shortcuts}
+								searchFieldId={SIDEBAR_SEARCH_FIELD_ID}
+								sidebarId={SIDEBAR_ID}
+							/>
+						</>
+					}
+				>
+					<div mix={[raw({ display: "flex", flexDirection: "column", gap: "1.5rem" })]}>
+						{header && (
+							<PageHeader
+								title={title}
+								parent={parent}
+								description={description}
+								tabs={tabs}
+								tabsLabel={tabsLabel}
+								actions={actions}
+								primaryAction={primaryAction}
+							/>
+						)}
+						{children}
 					</div>
-				</div>
+				</AppShell>
 			</DocumentLayout>
 		);
 	};

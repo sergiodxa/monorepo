@@ -15,6 +15,7 @@ import type { Renderer } from "remix/middleware/render";
 import { redirect } from "@sdxc/http/response";
 import { UnprocessableEntity } from "@sdxc/http/status-code";
 import { BookmarkIcon, CheckCheckIcon, RefreshCwIcon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
@@ -63,7 +64,6 @@ import { userStore } from "~/app/models/user-store";
 import { SEARCH_NAME_LENGTH } from "~/database/schema";
 import AppLayout, {
 	ActionLabel,
-	AppNavLink,
 	BAND_FIELD_HEIGHT,
 	pageNote,
 	SEARCH_PARAM,
@@ -481,6 +481,16 @@ export async function renderReadingQueue(
 
 	let empty = isRefusedQuery ? refusedCopy(ctx.intl) : emptyCopy(ctx.intl, view);
 
+	/**
+	 * Why the list is empty, which picks the empty state's mark: a search that matched
+	 * nothing, a queue worked all the way through, or a list of read posts with none in it.
+	 */
+	let emptyKind = iife((): "no-results" | "cleared" | undefined => {
+		if (hasQuery) return "no-results";
+		if (view.readState === "read") return undefined;
+		return "cleared";
+	});
+
 	/** The narrowing alone, which is where the newest page of it lives. */
 	let here = queueUrl(view);
 
@@ -571,6 +581,7 @@ export async function renderReadingQueue(
 		intl: ctx.intl,
 		locale: ctx.locale,
 		url: new URL(here, ctx.url),
+		request: ctx.request,
 	});
 
 	/**
@@ -597,27 +608,16 @@ export async function renderReadingQueue(
 			assets={ctx.assets}
 			documentTitle={heading}
 			heading={heading}
-			/**
-			 * On the queue's own line, acting on what the heading names and staying in reach
-			 * however far down the list a reader has read.
-			 */
+			/** The read states, each one the queue's own address, with the words carried across. */
+			tabs={READ_STATES.map((state) => ({
+				href: queueUrl({ ...view, readState: state }),
+				label: filterLabel(ctx.intl, state),
+				current: state === view.readState,
+			}))}
+			tabsLabel={ctx.intl.t("reading.filter.label")}
+			/** On the queue's own line, acting on what the heading names. */
 			actions={
 				<>
-					<nav
-						aria-label={ctx.intl.t("reading.filter.label")}
-						mix={[flex(), items("center"), gap(3)]}
-					>
-						{READ_STATES.map((state) => (
-							<AppNavLink
-								key={state}
-								/** The words carry across a filter, so narrowing one never drops the other. */
-								href={queueUrl({ ...view, readState: state })}
-								label={filterLabel(ctx.intl, state)}
-								isCurrent={state === view.readState}
-							/>
-						))}
-					</nav>
-
 					{/**
 					 * A `POST` rather than a link: a sweep retrieves every origin the reader follows,
 					 * and a prefetcher or a mail scanner walks links of its own accord.
@@ -739,7 +739,11 @@ export async function renderReadingQueue(
 								</Button>
 							</form>
 						))}
-
+				</>
+			}
+			/** Following another feed is what the queue grows by, so it is the page's one primary action. */
+			primaryAction={
+				<>
 					{/**
 					 * Following another feed belongs beside the list its posts will join, and needs
 					 * one field to do it. The return key sends it, the way the sidebar's search box is
@@ -922,12 +926,12 @@ export async function renderReadingQueue(
 					/** Level 2, since the layout's own page heading is the document's only `h1`. */
 					<HeadingScope level={2}>
 						{hasFeeds ? (
-							<Empty>
+							<Empty kind={emptyKind}>
 								<Empty.Title>{empty.title}</Empty.Title>
 								<Empty.Description>{empty.description}</Empty.Description>
 							</Empty>
 						) : (
-							<Empty>
+							<Empty kind="first-run">
 								<Empty.Title>{ctx.intl.t("reading.noFeeds.title")}</Empty.Title>
 								<Empty.Description>{ctx.intl.t("reading.noFeeds.description")}</Empty.Description>
 							</Empty>

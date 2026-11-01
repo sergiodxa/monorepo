@@ -11,6 +11,7 @@ import type { I18n } from "@sdxc/i18n";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure } from "@sdxc/result";
+import { readAppShellCookie } from "@sdxc/ui/app/app-shell";
 import { env, waitUntil } from "cloudflare:workers";
 
 import type { UserStore } from "~/app/models/user-store";
@@ -48,6 +49,8 @@ export interface ChromeContext {
 	url: URL;
 	/** The request's language, which orders the rail's feeds by their names. */
 	locale: string;
+	/** The request, whose cookie says whether the sidebar was left collapsed. */
+	request: Request;
 }
 
 /**
@@ -354,6 +357,7 @@ export async function chrome(ctx: ChromeContext): Promise<{
 	sidebarFeedsSrc: string;
 	currentPath: string;
 	searchQuery: string;
+	collapsed: boolean;
 }> {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before a page renders its chrome");
@@ -376,6 +380,10 @@ export async function chrome(ctx: ChromeContext): Promise<{
 			searchLabel: ctx.intl.t("search.label"),
 			searchPlaceholder: ctx.intl.t("search.placeholder"),
 			openSidebar: ctx.intl.t("nav.openSidebar"),
+			closeSidebar: ctx.intl.t("nav.closeSidebar"),
+			skip: ctx.intl.t("nav.skip"),
+			collapse: ctx.intl.t("nav.collapse"),
+			help: ctx.intl.t("nav.help"),
 			settings: ctx.intl.t("nav.settings"),
 			account: ctx.intl.t("nav.account"),
 			logout: ctx.intl.t("nav.logout"),
@@ -403,5 +411,7 @@ export async function chrome(ctx: ChromeContext): Promise<{
 		},
 		viewer: { name: viewer.name, email: viewer.email, avatar: viewer.avatar },
 		sidebarFeedsSrc: sidebarFeedsSrc(ctx.url.pathname),
+		/** Read on the server, so the first paint draws the sidebar at the width it was left. */
+		collapsed: readAppShellCookie(ctx.request.headers.get("Cookie")),
 	};
 }
