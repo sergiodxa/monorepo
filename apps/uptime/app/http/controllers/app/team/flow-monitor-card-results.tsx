@@ -9,35 +9,33 @@
 
 import type { Handle } from "remix/component";
 
-import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@sdxc/u/layout";
+import { grid, gridTemplate, sticky, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { m, mbe, p, pb, pie, pis } from "@sdxc/u/size";
-import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
-import { Badge } from "@sdxc/ui";
-import { Empty, Table } from "@sdxc/ui/app";
+import { font, fontSize, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
+import { Link } from "@sdxc/ui";
+import { Empty, StatCard, Table } from "@sdxc/ui/app";
 import { Fragment } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { BadgeTone } from "~/resources/components/badge";
-
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { badgeVariant } from "~/resources/components/badge";
-import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
 /** `error` is `neutral` because this app could not find out. */
-const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
-	up: "up",
-	down: "down",
+const STATUS_COLOR: Record<string, NonNullable<Table.StatusCellProps["color"]>> = {
+	up: "success",
+	down: "danger",
 	error: "neutral",
 };
+
+/** Durations read as milliseconds in the viewer's locale ("1,240 ms"). */
+const MILLISECONDS: Intl.NumberFormatOptions = { style: "unit", unit: "millisecond" };
 
 /** GET /app/:team/flows/:monitorId/cards/results — a flow's run-derived stats, source and runs. */
 export default createAction(routes.app.team.flowMonitors.cards.results, {
@@ -72,24 +70,34 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 				: null;
 
 		return ctx.render(
-			<Fragment>
-				<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-					<StatCard
-						label={ctx.intl.t("page.flowMonitorDetail.stats.passRate.label")}
-						value={passRate === null ? "—" : `${passRate}%`}
-					/>
-					<StatCard
-						label={ctx.intl.t("page.flowMonitorDetail.stats.avgDuration.label")}
-						value={avgDuration === null ? "—" : `${avgDuration}ms`}
-					/>
-					<StatCard
-						label={ctx.intl.t("page.flowMonitorDetail.stats.totalRuns.label")}
-						value={totalRuns}
-					/>
-				</div>
+			<div mix={[vstack({ gap: 8, align: "stretch" })]}>
+				<StatCard.Group columns={3}>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.flowMonitorDetail.stats.passRate.label")}
+						</StatCard.Label>
+						<StatCard.Value>{passRate === null ? "—" : `${passRate}%`}</StatCard.Value>
+					</StatCard>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.flowMonitorDetail.stats.avgDuration.label")}
+						</StatCard.Label>
+						<StatCard.Value>
+							{avgDuration === null
+								? "—"
+								: new Intl.NumberFormat(ctx.locale, MILLISECONDS).format(avgDuration)}
+						</StatCard.Value>
+					</StatCard>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.flowMonitorDetail.stats.totalRuns.label")}
+						</StatCard.Label>
+						<StatCard.Value>{totalRuns}</StatCard.Value>
+					</StatCard>
+				</StatCard.Group>
 
 				{last !== undefined && (last.failure_detail ?? last.error_message) !== null && (
-					<section mix={[mbe("24px")]}>
+					<section>
 						<h2>{ctx.intl.t("page.flowMonitorDetail.failure.title")}</h2>
 						{last.failed_test !== null && (
 							<p mix={[m(0), mbe("8px"), fontSize("sm"), weight(600)]}>
@@ -117,7 +125,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 					</section>
 				)}
 
-				<section mix={[mbe("24px")]}>
+				<section>
 					<h2>{ctx.intl.t("page.flowMonitorDetail.source.title")}</h2>
 					<SourceListing source={monitor.source} failedAtLine={last?.failed_at_line ?? null} />
 				</section>
@@ -125,7 +133,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 				<section>
 					<h2>{ctx.intl.t("page.flowMonitorDetail.results.title")}</h2>
 					{results.length === 0 ? (
-						<Empty>
+						<Empty size="compact">
 							<Empty.Description>
 								{ctx.intl.t("page.flowMonitorDetail.results.empty")}
 							</Empty.Description>
@@ -141,13 +149,13 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 										<Table.Column>
 											{ctx.intl.t("page.flowMonitorDetail.results.columns.status")}
 										</Table.Column>
-										<Table.Column>
+										<Table.Column numeric>
 											{ctx.intl.t("page.flowMonitorDetail.results.columns.tests")}
 										</Table.Column>
-										<Table.Column>
+										<Table.Column numeric>
 											{ctx.intl.t("page.flowMonitorDetail.results.columns.requests")}
 										</Table.Column>
-										<Table.Column>
+										<Table.Column numeric>
 											{ctx.intl.t("page.flowMonitorDetail.results.columns.duration")}
 										</Table.Column>
 										<Table.Column>
@@ -158,35 +166,24 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 								<Table.Body>
 									{results.map((result) => (
 										<Table.Row key={result.id}>
-											<Table.Cell>
-												<time
-													datetime={new Date(result.checked_at).toISOString()}
-													title={formatDateTime(new Date(result.checked_at), {
-														locale: ctx.locale,
-														timeZone: "UTC",
-													})}
-													mix={[nowrap()]}
-												>
-													{formatRelative(new Date(result.checked_at), { locale: ctx.locale })}
-												</time>
-											</Table.Cell>
-											<Table.Cell>
-												<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-													{ctx.intl.t(`page.flowMonitors.table.status.${result.status}`)}
-												</Badge>
-											</Table.Cell>
-											<Table.Cell>
+											<Table.DateCell date={result.checked_at} locale={ctx.locale} local />
+											<Table.StatusCell color={STATUS_COLOR[result.status] ?? "neutral"}>
+												{ctx.intl.t(`page.flowMonitors.table.status.${result.status}`)}
+											</Table.StatusCell>
+											<Table.Cell numeric>
 												{result.tests_passed}/{result.tests_total}
 											</Table.Cell>
-											<Table.Cell>{result.requests_made}</Table.Cell>
-											<Table.Cell>
-												{result.duration_ms === null ? "—" : `${result.duration_ms}ms`}
-											</Table.Cell>
+											<Table.NumberCell value={result.requests_made} locale={ctx.locale} />
+											<Table.NumberCell
+												value={result.duration_ms}
+												locale={ctx.locale}
+												format={MILLISECONDS}
+											/>
 											<Table.Cell>
 												{result.trace_key === null ? (
 													"—"
 												) : (
-													<a
+													<Link
 														href={routes.app.team.flowMonitors.trace.href({
 															team: ctx.team.slug,
 															monitorId: monitor.id,
@@ -194,7 +191,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 														})}
 													>
 														{ctx.intl.t("page.flowMonitorDetail.trace.download")}
-													</a>
+													</Link>
 												)}
 											</Table.Cell>
 										</Table.Row>
@@ -204,7 +201,7 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 						</Table.Container>
 					)}
 				</section>
-			</Fragment>,
+			</div>,
 		);
 	},
 });

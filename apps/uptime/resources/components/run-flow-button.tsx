@@ -147,7 +147,7 @@ export const RunFlowButton = clientEntry(
 					]}
 				>
 					<input type="hidden" name="monitor_id" value={handle.props.monitorId} />
-					<Button type="submit" color="neutral" isPending={pending} disabled={pending}>
+					<Button type="submit" isPending={pending} disabled={pending}>
 						<PlayIcon size={16} strokeWidth={1.5} />
 						{t("page.flowMonitors.run.cta")}
 					</Button>

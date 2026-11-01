@@ -161,8 +161,9 @@ describe("flowMonitors", () => {
 		await seedMonitor(db, team.id, { name: "Misconfigured", last_status: "error" });
 
 		let body = await (await send(db, team, membership)).text();
-		expect(body).toContain("Cannot run");
-		expect(body).not.toContain("Failing");
+		let rows = body.slice(body.indexOf("<tbody"), body.indexOf("</tbody>"));
+		expect(rows).toContain("Cannot run");
+		expect(rows).not.toContain("Failing");
 	});
 
 	test("another team's monitors are not listed", async () => {

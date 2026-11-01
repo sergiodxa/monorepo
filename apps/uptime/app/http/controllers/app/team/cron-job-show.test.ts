@@ -25,6 +25,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -91,6 +92,7 @@ async function send(
 	router.map(routes.app.team.cronJobs.show, {
 		middleware: [
 			seedTeam(team, membership),
+			teamAccess,
 			i18n,
 			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -280,7 +282,7 @@ describe("cronJobShow", () => {
 				grace_period_seconds: 900,
 				status: "healthy",
 				last_ping_at: Date.now() - 2 * 60 * 1000,
-				next_expected_at: Date.now() + 4 * 60 * 60 * 1000,
+				next_expected_at: Date.now() + 4 * 60 * 60 * 1000 + 30_000,
 				enabled_at: Date.now(),
 			},
 			{ touch: true, returnRow: true },
@@ -289,9 +291,11 @@ describe("cronJobShow", () => {
 		let response = await send(db, team, membership, monitor.id);
 		let body = await response.text();
 
-		expect(body).toContain("2 minutes ago");
-		expect(body).toContain("in 4 hours");
-		expect(body).toMatch(/<span title="[^"]+">2 minutes ago<\/span>/);
+		let relative = new Intl.RelativeTimeFormat("en", { style: "narrow", numeric: "auto" });
+		let twoMinutesAgo = relative.format(-2, "minute");
+		expect(body).toContain(twoMinutesAgo);
+		expect(body).toContain(relative.format(4, "hour"));
+		expect(body).toMatch(new RegExp(`<time [^>]*title="[^"]+"[^>]*>${twoMinutesAgo}</time>`));
 		expect(body).not.toMatch(/\d{1,2}\/\d{1,2}\/\d{4}, \d/);
 	});
 });

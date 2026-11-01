@@ -86,6 +86,7 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
+	search = "",
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.cronJobs.index, {
@@ -99,7 +100,10 @@ async function send(
 	});
 
 	let request = new Request(
-		new URL(routes.app.team.cronJobs.index.href({ team: team.slug }), "https://uptime.test"),
+		new URL(
+			`${routes.app.team.cronJobs.index.href({ team: team.slug })}${search}`,
+			"https://uptime.test",
+		),
 	);
 
 	return router.fetch(request);
@@ -163,5 +167,40 @@ describe("cronJobs", () => {
 		let body = await response.text();
 		expect(body).toContain("Paused Job");
 		expect(body).toContain("Disabled");
+	});
+
+	test("narrows the list by name and status from the URL, and says when nothing matches", async () => {
+		let { db, team, membership } = await createFixture();
+		let models = bindModels(db);
+		for (let [name, status] of [
+			["Nightly Backup", "healthy"],
+			["Hourly Sync", "missed"],
+			["Weekly Report", "missed"],
+		] as const) {
+			unwrap(
+				await models.cronJobMonitors.create({
+					id: generateUUID(),
+					team_id: team.id,
+					name,
+					cron_expression: "0 * * * *",
+					timezone: "UTC",
+					status,
+					enabled_at: Date.now(),
+				}),
+			);
+		}
+
+		let missed = await (await send(db, team, membership, "?status=missed")).text();
+		expect(missed).toContain("Hourly Sync");
+		expect(missed).toContain("Weekly Report");
+		expect(missed).not.toContain("Nightly Backup");
+
+		let searched = await (await send(db, team, membership, "?status=missed&q=weekly")).text();
+		expect(searched).toContain("Weekly Report");
+		expect(searched).not.toContain("Hourly Sync");
+
+		let none = await (await send(db, team, membership, "?q=nothing")).text();
+		expect(none).toContain("No cron jobs match");
+		expect(none).not.toContain("No cron jobs yet");
 	});
 });

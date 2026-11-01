@@ -7,28 +7,27 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
-import { PencilIcon } from "@sdxc/icons";
-import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { mbe } from "@sdxc/u/size";
-import { nowrap } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+import { PencilIcon, TrashIcon } from "@sdxc/icons";
+import { vstack } from "@sdxc/u/layout";
+import { AlertDialog, Badge, Button, LinkButton, Menu, PropertyList, RelativeTime } from "@sdxc/ui";
+import { StatCard } from "@sdxc/ui/app";
 import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import { badgeVariant } from "~/resources/components/badge";
+import RowMenu from "~/resources/components/row-menu";
 import RunFlowButton, { FLOW_RESULTS_FRAME } from "~/resources/components/run-flow-button";
-import StatCard from "~/resources/components/stat-card";
-import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -40,13 +39,16 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	error: "neutral",
 };
 
+/** Stable id for the delete confirmation, which the overflow menu's Delete opens. */
+const DELETE_DIALOG_ID = "delete-flow-monitor";
+
 /**
- * GET /app/:team/flows/:monitorId — a flow monitor's detail page. The run
- * button hydrates as an island under a request-scoped `IntlProvider`, so
- * i18n state never leaks across concurrent requests in the Workers isolate.
+ * GET /app/:team/flows/:monitorId — a flow monitor's detail page. The run button hydrates as
+ * an island under a request-scoped `IntlProvider`, so i18n state never leaks across concurrent
+ * requests in the Workers isolate; the run-derived stats stream in through their own frame.
  */
 export default createAction(routes.app.team.flowMonitors.show, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -57,6 +59,11 @@ export default createAction(routes.app.team.flowMonitors.show, {
 			.where({ id: monitorId })
 			.first();
 		if (!monitor) return notFound("Not Found");
+
+		await ctx.access.load(abilities.flowMonitors.delete);
+		let canDelete = ctx.access.can(abilities.flowMonitors.delete);
+
+		let t = withPrefix(ctx.intl.t, "page.flowMonitorDetail");
 
 		return ctx.render(
 			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
@@ -74,82 +81,66 @@ export default createAction(routes.app.team.flowMonitors.show, {
 							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
 						},
 						{
-							label: ctx.intl.t("page.flowMonitorDetail.header.breadcrumb.flowMonitors"),
+							label: t("header.breadcrumb.flowMonitors"),
 							href: routes.app.team.flowMonitors.index.href({ team: ctx.team.slug }),
 						},
 					]}
+					status={
+						<Badge {...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}>
+							{ctx.intl.t(`page.flowMonitors.table.status.${monitor.last_status ?? "pending"}`)}
+						</Badge>
+					}
+					overflow={
+						canDelete ? (
+							<RowMenu id="flow-monitor-overflow" label={t("header.action.more")}>
+								<Menu.Item danger commandfor={DELETE_DIALOG_ID} command="show-modal">
+									<TrashIcon size={16} strokeWidth={1.5} />
+									{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+								</Menu.Item>
+							</RowMenu>
+						) : undefined
+					}
 					actions={
-						<div mix={[flex(), items("center"), gap("12px"), nowrap()]}>
-							<IntlProvider intl={ctx.intl}>
-								<RunFlowButton
-									action={routes.actions.monitor.flow.check.href({ team: ctx.team.slug })}
-									monitorId={monitor.id}
-									name={monitor.name}
-								/>
-							</IntlProvider>
-							<div mix={[hidden(), media("(min-width: 640px)", flex())]}>
-								<LinkButton
-									href={routes.app.team.flowMonitors.edit.href({
-										team: ctx.team.slug,
-										monitorId: monitor.id,
-									})}
-								>
-									<PencilIcon size={16} strokeWidth={1.5} />
-									{ctx.intl.t("page.flowMonitorDetail.header.action.edit")}
-								</LinkButton>
-							</div>
-						</div>
+						<LinkButton
+							variant="outline"
+							color="neutral"
+							href={routes.app.team.flowMonitors.edit.href({
+								team: ctx.team.slug,
+								monitorId: monitor.id,
+							})}
+						>
+							<PencilIcon size={16} strokeWidth={1.5} />
+							{t("header.action.edit")}
+						</LinkButton>
+					}
+					primaryAction={
+						<IntlProvider intl={ctx.intl}>
+							<RunFlowButton
+								action={routes.actions.monitor.flow.check.href({ team: ctx.team.slug })}
+								monitorId={monitor.id}
+								name={monitor.name}
+							/>
+						</IntlProvider>
 					}
 				>
-					<div>
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-							<StatCard
-								label={ctx.intl.t("page.flowMonitorDetail.info.status")}
-								value={
-									<Badge
-										{...badgeVariant(STATUS_BADGE_TONE[monitor.last_status ?? ""] ?? "neutral")}
-									>
-										{ctx.intl.t(
-											`page.flowMonitors.table.status.${monitor.last_status ?? "pending"}`,
-										)}
-									</Badge>
-								}
-							/>
-							<StatCard
-								label={ctx.intl.t("page.flowMonitorDetail.info.interval")}
-								value={ctx.intl.t(
+					<div mix={[vstack({ gap: 8, align: "stretch" })]}>
+						<PropertyList>
+							<PropertyList.Item label={t("info.interval")}>
+								{ctx.intl.t(
 									`page.createFlowMonitor.form.fields.interval.options.${monitor.interval_seconds}`,
 								)}
-							/>
-							<StatCard
-								label={ctx.intl.t("page.flowMonitorDetail.info.lastChecked")}
-								value={
-									monitor.last_checked_at === null ? (
-										"—"
-									) : (
-										<time
-											datetime={new Date(monitor.last_checked_at).toISOString()}
-											title={formatDateTime(new Date(monitor.last_checked_at), {
-												locale: ctx.locale,
-												timeZone: "UTC",
-											})}
-										>
-											{formatRelative(new Date(monitor.last_checked_at), { locale: ctx.locale })}
-										</time>
-									)
-								}
-							/>
-							{!monitor.is_enabled && (
-								<StatCard
-									label={ctx.intl.t("page.flowMonitorDetail.info.enabled")}
-									value={
-										<Badge {...badgeVariant("neutral")}>
-											{ctx.intl.t("page.flowMonitors.table.status.disabled")}
-										</Badge>
-									}
-								/>
-							)}
-						</div>
+							</PropertyList.Item>
+							<PropertyList.Item label={t("info.lastChecked")}>
+								{monitor.last_checked_at === null ? null : (
+									<RelativeTime date={monitor.last_checked_at} locale={ctx.locale} local />
+								)}
+							</PropertyList.Item>
+							<PropertyList.Item label={t("info.monitoring")}>
+								{monitor.is_enabled
+									? t("info.active")
+									: ctx.intl.t("page.flowMonitors.table.status.disabled")}
+							</PropertyList.Item>
+						</PropertyList>
 
 						<Frame
 							name={FLOW_RESULTS_FRAME}
@@ -158,12 +149,48 @@ export default createAction(routes.app.team.flowMonitors.show, {
 								monitorId: monitor.id,
 							})}
 							fallback={
-								<div mix={[flex(), flexWrap(), gap("16px")]}>
-									<StatCardSkeleton count={3} />
-								</div>
+								<StatCard.Group columns={3}>
+									<StatCard.Skeleton delta={false} />
+									<StatCard.Skeleton delta={false} />
+									<StatCard.Skeleton delta={false} />
+								</StatCard.Group>
 							}
 						/>
 					</div>
+
+					{canDelete ? (
+						<AlertDialog
+							id={DELETE_DIALOG_ID}
+							aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+							aria-describedby={`${DELETE_DIALOG_ID}-description`}
+						>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+									{ctx.intl.t("page.flowMonitors.table.actions.confirmation.delete", {
+										name: monitor.name,
+									})}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+									{ctx.intl.t("page.editFlowMonitor.danger.description")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
+							<form
+								method="post"
+								action={routes.actions.monitor.flow.delete.href({ team: ctx.team.slug })}
+							>
+								<input type="hidden" name="_method" value="DELETE" />
+								<input type="hidden" name="monitor_id" value={monitor.id} />
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
+										{ctx.intl.t("page.editFlowMonitor.form.cancel")}
+									</AlertDialog.Cancel>
+									<Button type="submit" color="danger">
+										{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+									</Button>
+								</AlertDialog.Footer>
+							</form>
+						</AlertDialog>
+					) : null}
 				</AppShell>
 			</DocumentLayout>,
 		);

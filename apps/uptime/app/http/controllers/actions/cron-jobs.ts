@@ -1,11 +1,15 @@
 /**
- * Form actions for cron-job monitor create/update/delete. Each follows the validate →
- * mutate → flash → redirect pattern: on validation failure the visitor is sent back to
- * the form with an error toast, translated and — for a rejected cron expression — naming
+ * Form actions for cron-job monitor create/update/delete. A save that fails validation renders
+ * its form again with what was typed and a translated issue beside each field — a rejected cron
+ * expression names what is wrong with it — while a save that succeeds flashes and redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Translate } from "@sdxc/i18n";
+import type { Form } from "@sdxc/ui";
+import type { ValidationError } from "@sdxc/validate";
 
 import { Schedule } from "@sdxc/cron";
 import { redirect } from "@sdxc/http/response";
@@ -16,6 +20,10 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { CronJobFormValues } from "~/resources/views/cron-jobs/form";
+
+import { renderEditCronJobPage } from "~/app/http/controllers/app/team/cron-job-edit";
+import { renderNewCronJobPage } from "~/app/http/controllers/app/team/cron-job-new";
 import {
 	CreateCronJobSchema,
 	CronJobIdSchema,
@@ -23,23 +31,85 @@ import {
 } from "~/app/http/validators/cron-job";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { invalidCronMessage } from "~/app/services/cron-text";
+import { DEFAULT_TIMEZONE } from "~/config/timezones";
 import routes from "~/routes/web";
 
 /**
- * POST /actions/:team/create-cron-job. Normalizes `cron_expression` before storing,
- * so one schedule always has a single spelling in the database and logs.
+ * The `page.cronJobs.form.errors.*` message for each field the schema checks. The grace period
+ * has no inline slot in its stepper, so its issue renders at the top of the form instead.
+ */
+const FIELD_ERRORS: Record<string, string> = {
+	name: "name",
+	description: "description",
+	cron_expression: "cronExpression",
+	timezone: "timezone",
+	grace_period_seconds: "gracePeriod",
+};
+
+/** Fields whose issue shows beside the field; every other issue shows above the form. */
+const INLINE_FIELDS = new Set(["name", "description", "cron_expression", "timezone"]);
+
+/**
+ * What was submitted, in the shape the form reads, so a rejected submit renders every field
+ * as typed. An unchecked switch submits nothing, which reads as off.
+ */
+function submittedValues(formData: FormData): CronJobFormValues {
+	let text = (name: string) => {
+		let value = formData.get(name);
+		return typeof value === "string" ? value : "";
+	};
+
+	return {
+		name: text("name"),
+		description: text("description"),
+		cron_expression: text("cron_expression"),
+		grace_period_seconds: Number(text("grace_period_seconds")) || 300,
+		timezone: text("timezone") || DEFAULT_TIMEZONE,
+		alert_on_late: text("alert_on_late") === "true",
+		is_enabled: text("is_enabled") === "true",
+	};
+}
+
+/**
+ * The schema's issues as one translated message per field, in the order they were found.
+ * Falls back to the generic message when no issue names a known field, so a refusal always
+ * says something.
+ */
+function formIssues(
+	issues: ValidationError["issues"],
+	t: Translate,
+	generic: string,
+): Form.Issue[] {
+	let fields = new Set<string>();
+	for (let issue of issues) {
+		let segment = issue.path?.[0];
+		let name = typeof segment === "object" ? String(segment.key) : String(segment);
+		if (name in FIELD_ERRORS) fields.add(name);
+	}
+	if (fields.size === 0) return [{ message: generic }];
+
+	return [...fields].map((name) => {
+		let message = t(`page.cronJobs.form.errors.${FIELD_ERRORS[name]}`);
+		return INLINE_FIELDS.has(name) ? { message, path: [name] } : { message };
+	});
+}
+
+/**
+ * POST /actions/:team/create-cron-job. Normalizes `cron_expression` before storing, so one
+ * schedule always has a single spelling; a rejected submit answers 400 with the form as typed.
  */
 export const createCronJob = createAction(routes.actions.cronJob.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: ctx.intl.t("actions.createCronJob.errors.generic"),
-		});
-		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
+		return renderNewCronJobPage({
+			values: submittedValues(ctx.formData),
+			issues: formIssues(
+				result.error.issues,
+				ctx.intl.t,
+				ctx.intl.t("actions.createCronJob.errors.generic"),
+			),
 		});
 	}
 
@@ -47,12 +117,11 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 
 	let schedule = Schedule.parse(values.cron_expression);
 	if (isFailure(schedule)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: invalidCronMessage(schedule.error, ctx.intl.t),
-		});
-		return redirect(routes.app.team.cronJobs.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
+		return renderNewCronJobPage({
+			values: submittedValues(ctx.formData),
+			issues: [
+				{ message: invalidCronMessage(schedule.error, ctx.intl.t), path: ["cron_expression"] },
+			],
 		});
 	}
 
@@ -77,14 +146,31 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 });
 
 /**
- * POST /actions/:team/update-cron-job. Compares the normalized cron expression so a
- * re-saved schedule under a different spelling still registers as unchanged.
+ * POST /actions/:team/update-cron-job. Compares the normalized cron expression so a re-saved
+ * schedule under another spelling registers as unchanged; a rejected submit answers 400 with
+ * the form as typed, or redirects back when the monitor it names is not the team's.
  */
 export const updateCronJob = createAction(routes.actions.cronJob.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
+		let monitorId = ctx.formData.get("monitor_id");
+		let monitor =
+			typeof monitorId === "string"
+				? await ctx.models.cronJobMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first()
+				: null;
+		if (monitor) {
+			return renderEditCronJobPage(monitor, {
+				values: submittedValues(ctx.formData),
+				issues: formIssues(
+					result.error.issues,
+					ctx.intl.t,
+					ctx.intl.t("actions.updateCronJob.errors.generic"),
+				),
+			});
+		}
+
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.intl.t("actions.updateCronJob.errors.generic"),
@@ -106,14 +192,12 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 
 	let schedule = Schedule.parse(values.cron_expression);
 	if (isFailure(schedule)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: invalidCronMessage(schedule.error, ctx.intl.t),
+		return renderEditCronJobPage(existing, {
+			values: submittedValues(ctx.formData),
+			issues: [
+				{ message: invalidCronMessage(schedule.error, ctx.intl.t), path: ["cron_expression"] },
+			],
 		});
-		return redirect(
-			routes.app.team.cronJobs.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
-			{ status: redirect.Status.SeeOther },
-		);
 	}
 
 	let cronExpression = schedule.data.toString();

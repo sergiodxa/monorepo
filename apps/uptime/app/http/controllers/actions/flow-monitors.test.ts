@@ -10,8 +10,9 @@
  */
 
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
@@ -22,11 +23,15 @@ import mail from "@sdxc/mail/middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
@@ -35,6 +40,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	flowMonitorResults,
 	flowMonitors,
@@ -135,12 +141,34 @@ async function createFixture(options: { verified?: boolean } = {}) {
 	return { db, team, membership };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`. */
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer in
+ * place of `requireUser`/`requireTeam`, since a refused save renders the signed-in form page.
+ */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
+
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return teamAccess(ctx, next);
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -165,6 +193,8 @@ async function send(
 			formData() as Middleware,
 			i18n,
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM, mail: emailRegistry }),
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
@@ -201,7 +231,7 @@ describe("createFlowMonitor", () => {
 		);
 	});
 
-	test("refuses a source reaching a domain the team has not verified, and stores nothing", async () => {
+	test("refuses a source reaching a domain the team has not verified, keeping the form as typed", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(
@@ -223,7 +253,11 @@ describe("createFlowMonitor", () => {
 			},
 		);
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain("Somebody else");
+		expect(body).toContain("victim.invalid.test");
+		expect(body).toContain("which no verified domain on this team covers");
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 
@@ -243,10 +277,10 @@ describe("createFlowMonitor", () => {
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 
-	test("refuses an interval that is not on the list", async () => {
+	test("refuses an interval that is not on the list, naming the field and keeping the input", async () => {
 		let { db, team, membership } = await createFixture();
 
-		await send(
+		let response = await send(
 			db,
 			team,
 			membership,
@@ -256,6 +290,11 @@ describe("createFlowMonitor", () => {
 			{ name: "Too often", source: flowWith(1), interval_seconds: "60" },
 		);
 
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Too often"');
+		expect(body).toContain("walks the flow");
+		expect(body).toContain("Choose how often the flow runs.");
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 });
@@ -299,7 +338,7 @@ describe("updateFlowMonitor", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		await send(
+		let response = await send(
 			db,
 			team,
 			membership,
@@ -314,6 +353,8 @@ describe("updateFlowMonitor", () => {
 			},
 		);
 
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("https://victim.invalid.test/x");
 		let unchanged = await db.findOne(flowMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.source).toBe(flowWith(1));
 	});

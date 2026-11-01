@@ -1,11 +1,15 @@
 /**
- * Form actions for flow monitor create/update/delete, each following validate → mutate →
- * flash → redirect. A flow's source is checked against the team's verified domains before
+ * Form actions for flow monitor create/update/delete. A refused save renders its form again
+ * with what was typed and an issue beside each field; a successful one flashes and redirects. A flow's source is checked against the team's verified domains before
  * storage, using the same `inspectFlowSource` the sweep applies, so form and sweep share one
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Translate } from "@sdxc/i18n";
+import type { Form } from "@sdxc/ui";
+import type { ValidationError } from "@sdxc/validate";
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
@@ -16,6 +20,10 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FlowMonitorFormValues } from "~/resources/views/flow-monitors/form";
+
+import { renderEditFlowMonitorPage } from "~/app/http/controllers/app/team/flow-monitor-edit";
+import { renderNewFlowMonitorPage } from "~/app/http/controllers/app/team/flow-monitor-new";
 import {
 	CreateFlowMonitorSchema,
 	FlowMonitorIdSchema,
@@ -25,27 +33,72 @@ import abilities from "~/app/policies/abilities";
 import { writePingResult } from "~/app/services/analytics";
 import { planFlowBilling, settleFlowBilling } from "~/app/services/flow-billing";
 import { inspectFlowSource, runFlowCheck } from "~/app/services/flow-check";
+import { DEFAULT_FLOW_INTERVAL_SECONDS } from "~/config/pricing";
 import routes from "~/routes/web";
 
-/** POST /actions/:team/create-flow-monitor */
+/** The `page.flowMonitors.form.errors.*` message for each field the schema checks. */
+const FIELD_ERRORS: Record<string, string> = {
+	name: "name",
+	source: "source",
+	interval_seconds: "interval",
+};
+
+/**
+ * What was submitted, in the shape the form reads, so a refused submit renders every field as
+ * typed. An unchecked switch submits nothing, which reads as off.
+ */
+function submittedValues(formData: FormData): FlowMonitorFormValues {
+	let text = (name: string) => {
+		let value = formData.get(name);
+		return typeof value === "string" ? value : "";
+	};
+
+	return {
+		name: text("name"),
+		source: text("source"),
+		interval_seconds: Number(text("interval_seconds")) || DEFAULT_FLOW_INTERVAL_SECONDS,
+		is_enabled: text("is_enabled") === "true",
+	};
+}
+
+/**
+ * The schema's issues as one translated message per field, in the order they were found,
+ * falling back to a form-level message when none names a known field.
+ */
+function formIssues(issues: ValidationError["issues"], t: Translate): Form.Issue[] {
+	let fields = new Set<string>();
+	for (let issue of issues) {
+		let segment = issue.path?.[0];
+		let name = typeof segment === "object" ? String(segment.key) : String(segment);
+		if (name in FIELD_ERRORS) fields.add(name);
+	}
+	if (fields.size === 0) return [{ message: t("page.flowMonitors.form.errors.generic") }];
+
+	return [...fields].map((name) => ({
+		message: t(`page.flowMonitors.form.errors.${FIELD_ERRORS[name]}`),
+		path: [name],
+	}));
+}
+
+/** POST /actions/:team/create-flow-monitor; a refused submit answers 400 with the form as typed. */
 export const createFlowMonitor = createAction(routes.actions.monitor.flow.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateFlowMonitorSchema);
 	let session = ctx.get(Session);
-	let newHref = routes.app.team.flowMonitors.new.href({ team: ctx.team.slug });
 
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: "Please check the flow monitor details and try again.",
+		return renderNewFlowMonitorPage({
+			values: submittedValues(ctx.formData),
+			issues: formIssues(result.error.issues, ctx.intl.t),
 		});
-		return redirect(newHref, { status: redirect.Status.SeeOther });
 	}
 
 	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(result.data.source, verifiedDomains);
 	if (!inspection.ok) {
-		session?.flash("toast", { intent: "error", message: inspection.message });
-		return redirect(newHref, { status: redirect.Status.SeeOther });
+		return renderNewFlowMonitorPage({
+			values: submittedValues(ctx.formData),
+			issues: [{ message: inspection.message, path: ["source"] }],
+		});
 	}
 
 	let monitor = unwrap(
@@ -60,7 +113,7 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 
 	session?.flash("toast", {
 		intent: "success",
-		message: `Flow monitor "${monitor.name}" created.`,
+		message: ctx.intl.t("page.flowMonitors.toast.created", { name: monitor.name }),
 	});
 	return redirect(
 		routes.app.team.flowMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
@@ -68,15 +121,30 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 	);
 });
 
-/** POST /actions/:team/update-flow-monitor */
+/**
+ * POST /actions/:team/update-flow-monitor; a refused submit answers 400 with the form as typed,
+ * or redirects back when the monitor it names is not the team's.
+ */
 export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateFlowMonitorSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
+		let monitorId = ctx.formData.get("monitor_id");
+		let monitor =
+			typeof monitorId === "string"
+				? await ctx.models.flowMonitors.inTeam(ctx.team.id).find(monitorId)
+				: null;
+		if (monitor) {
+			return renderEditFlowMonitorPage(monitor, {
+				values: submittedValues(ctx.formData),
+				issues: formIssues(result.error.issues, ctx.intl.t),
+			});
+		}
+
 		session?.flash("toast", {
 			intent: "error",
-			message: "Please check the flow monitor details and try again.",
+			message: ctx.intl.t("page.flowMonitors.form.errors.generic"),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
@@ -93,16 +161,14 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		team: ctx.team.slug,
 		monitorId: monitor_id,
 	});
-	let editHref = routes.app.team.flowMonitors.edit.href({
-		team: ctx.team.slug,
-		monitorId: monitor_id,
-	});
 
 	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(values.source, verifiedDomains);
 	if (!inspection.ok) {
-		session?.flash("toast", { intent: "error", message: inspection.message });
-		return redirect(editHref, { status: redirect.Status.SeeOther });
+		return renderEditFlowMonitorPage(existing, {
+			values: submittedValues(ctx.formData),
+			issues: [{ message: inspection.message, path: ["source"] }],
+		});
 	}
 
 	unwrap(
@@ -112,7 +178,10 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		}),
 	);
 
-	session?.flash("toast", { intent: "success", message: "Flow monitor updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("page.flowMonitors.toast.updated", { name: values.name }),
+	});
 	return redirect(showHref, { status: redirect.Status.SeeOther });
 });
 
@@ -133,7 +202,7 @@ export const deleteFlowMonitor = createAction(routes.actions.monitor.flow.delete
 
 	session?.flash("toast", {
 		intent: "success",
-		message: `Flow monitor "${existing.name}" deleted.`,
+		message: ctx.intl.t("page.flowMonitors.toast.deleted", { name: existing.name }),
 	});
 	return redirect(listHref, { status: redirect.Status.SeeOther });
 });

@@ -218,7 +218,8 @@ describe("flowMonitorCardResults", () => {
 		await seedResult(db, monitor.id, { checked_at: now, duration_ms: 222 });
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
-		expect(body.indexOf("222ms")).toBeLessThan(body.indexOf("111ms"));
+		expect(body.indexOf("222 ms")).toBeGreaterThan(-1);
+		expect(body.indexOf("222 ms")).toBeLessThan(body.indexOf("111 ms"));
 	});
 
 	test("404s on another team's monitor", async () => {

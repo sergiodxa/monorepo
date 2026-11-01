@@ -1,36 +1,67 @@
 /**
- * Tests the cron-job monitor create/update/delete actions: a successful create or
- * update schedules `next_expected_at` from a valid cron expression and redirects to
- * the monitor; an invalid cron expression is rejected before any write; validation
- * failure and the team-scoped not-found guard leave `cron_job_monitors` untouched.
+ * Tests the cron-job monitor create/update/delete actions: a successful create or update
+ * schedules `next_expected_at` and redirects to the monitor; a refused save renders its form
+ * again with what was typed and the issue, before any write; the team-scoped not-found guard
+ * leaves `cron_job_monitors` untouched.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+import type { Middleware, RequestContext } from "remix/router";
+
 import { database } from "@sdxc/database-middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
-import { createRouter, type Middleware } from "remix/router";
+import { renderWith } from "remix/middleware/render";
+import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { createCronJob, updateCronJob, deleteCronJob } = await import("./cron-jobs");
 
-/** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
+/**
+ * Installs `ctx.team`/`ctx.membership`/`ctx.teams`, the signed-in viewer and `ctx.access`,
+ * standing in for `requireUser`/`requireTeam`, since a refused save renders the form page.
+ */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
+
 	return (ctx, next) => {
-		(ctx as unknown as { team: SelectTeam }).team = team;
-		(ctx as unknown as { membership: SelectMembership }).membership = membership;
-		return next();
+		ctx.team = team;
+		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+		return teamAccess(ctx, next);
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -49,7 +80,15 @@ async function postCronJobAction(
 	headers: Record<string, string> = {},
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(db), models(), formData(), i18n],
+		middleware: [
+			asyncContext(),
+			database(db),
+			models(),
+			formData(),
+			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
@@ -151,7 +190,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 		expect(created?.cron_expression).toBe("0 0 * * *");
 	});
 
-	test("rejects a blank name and redirects to the new-cron-job form without creating a row", async () => {
+	test("rejects a blank name, rendering the form as typed without creating a row", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -162,13 +201,14 @@ describe("POST /actions/:team/create-cron-job", () => {
 			team,
 			membership,
 			db,
-			cronJobBody({ name: "" }),
+			cronJobBody({ name: "", cron_expression: "15 3 * * *", grace_period_seconds: "900" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobs.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain("Enter a name of up to 255 characters.");
+		expect(body).toContain('value="15 3 * * *"');
+		expect(body).toContain('value="900"');
 		expect(await db.count(cronJobMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
 
@@ -186,10 +226,10 @@ describe("POST /actions/:team/create-cron-job", () => {
 			cronJobBody({ cron_expression: "not a cron expression" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobs.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Nightly backup"');
+		expect(body).toContain('value="not a cron expression"');
 		expect(await db.count(cronJobMonitors, { where: { team_id: team.id } })).toBe(0);
 	});
 });
@@ -275,7 +315,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 		expect(unchanged?.name).toBe("Someone else's");
 	});
 
-	test("rejects an invalid cron expression and redirects to the edit page without mutating the monitor", async () => {
+	test("rejects an invalid cron expression, rendering the edit form as typed without mutating the monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -311,15 +351,15 @@ describe("POST /actions/:team/update-cron-job", () => {
 			}),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.cronJobs.edit.href({ team: team.slug, monitorId: monitor.id }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Should not stick"');
+		expect(body).toContain('value="not a cron expression"');
 		let unchanged = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.name).toBe("Original");
 	});
 
-	test("rejects a blank name and redirects to the Referer without mutating the monitor", async () => {
+	test("rejects a blank name, rendering the edit form with the issue without mutating the monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -348,14 +388,35 @@ describe("POST /actions/:team/update-cron-job", () => {
 			team,
 			membership,
 			db,
-			cronJobBody({ monitor_id: monitor.id, name: "" }),
+			cronJobBody({ monitor_id: monitor.id, name: "", cron_expression: "*/5 * * * *" }),
+			{ Referer: "https://uptime.test/back" },
+		);
+
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain("Enter a name of up to 255 characters.");
+		expect(body).toContain('value="*/5 * * * *"');
+		let unchanged = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
+		expect(unchanged?.name).toBe("Original");
+	});
+
+	test("rejects a save naming another team's monitor by redirecting to the Referer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postCronJobAction(
+			updateCronJob,
+			routes.actions.cronJob.update,
+			team,
+			membership,
+			db,
+			cronJobBody({ monitor_id: generateUUID(), name: "" }),
 			{ Referer: "https://uptime.test/back" },
 		);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("https://uptime.test/back");
-		let unchanged = await db.findOne(cronJobMonitors, { where: { id: monitor.id } });
-		expect(unchanged?.name).toBe("Original");
 	});
 });
 
