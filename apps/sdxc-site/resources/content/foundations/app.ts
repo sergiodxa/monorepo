@@ -144,6 +144,11 @@ const APP: Foundations = {
 					default: "0.75rem",
 					controls: "Corners of the content card.",
 				},
+				{
+					name: "--ui-app-inset-shadow",
+					default: "0 1px 3px rgb(0 0 0 / 0.04)",
+					controls: "The soft lift under the content card; its border is the card's only edge.",
+				},
 				{ name: "--ui-app-nav-row-size", default: "2rem", controls: "Height of a nav row." },
 				{ name: "--ui-app-header-height", default: "3.5rem", controls: "The shell's top bar." },
 				{
