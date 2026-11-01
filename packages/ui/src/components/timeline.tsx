@@ -21,6 +21,9 @@ import { leading, text, weight } from "@sdxc/u/typography";
 /** The side of the square each event's icon sits centred in; the rail runs through its middle. */
 const ICON_BOX = "var(--ui-timeline-icon-box, 1.5rem)";
 
+/** Tone an event's icon takes when `tone` is left unset. */
+const DEFAULT_TONE: Timeline.Tone = "neutral";
+
 /**
  * Prop types for {@link Timeline} and its compound parts.
  */
@@ -35,7 +38,7 @@ export namespace Timeline {
 	export interface EventProps extends Omit<TagProps<"li">, "children"> {
 		/** A 16px glyph naming the kind of event, decorative beside the line's words. */
 		icon: RemixNode;
-		/** @default "neutral" */
+		/** @default {@link DEFAULT_TONE} */
 		tone?: Tone;
 		/** A small avatar of the actor, shown before the name. */
 		avatar?: RemixNode;
@@ -139,7 +142,7 @@ export function Timeline(handle: Handle<Timeline.Props>) {
 Timeline.Event = function TimelineEvent(handle: Handle<Timeline.EventProps>) {
 	return () => {
 		let { icon, tone, avatar, actor, time, body, children, mix, ...rest } = handle.props;
-		let resolvedTone = tone ?? "neutral";
+		let resolvedTone = tone ?? DEFAULT_TONE;
 
 		return (
 			<li

@@ -24,6 +24,9 @@ import { Popover } from "./popover.js";
 /** Container the list names, so its rows stack against the list's own width. */
 const PROPERTY_LIST_CONTAINER = "ui-property-list";
 
+/** Layout a list takes when `variant` is left unset. */
+const DEFAULT_VARIANT: PropertyList.Variant = "rows";
+
 /** Shown for a value the caller leaves empty and names no empty text for. */
 const DEFAULT_EMPTY = "—";
 
@@ -44,7 +47,7 @@ export namespace PropertyList {
 
 	/** Every native `<dl>` attribute, plus the layout variant. */
 	export interface Props extends TagProps<"dl"> {
-		/** @default "rows" */
+		/** @default {@link DEFAULT_VARIANT} */
 		variant?: Variant;
 	}
 
@@ -111,7 +114,7 @@ function isEmptyValue(node: RemixNode | undefined): boolean {
 export function PropertyList(handle: Handle<PropertyList.Props, PropertyList.Context>) {
 	return () => {
 		let { variant, mix, ...rest } = handle.props;
-		let resolved = variant ?? "rows";
+		let resolved = variant ?? DEFAULT_VARIANT;
 		handle.context.set({ variant: resolved });
 
 		return (
