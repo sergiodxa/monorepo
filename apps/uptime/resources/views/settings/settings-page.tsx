@@ -664,6 +664,7 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 								description={t("page.settings.billing.description")}
 							>
 								<SettingsSection.Row
+									layout="action"
 									label={t("page.settings.billing.card.title")}
 									description={t("page.settings.billing.card.notice")}
 								>

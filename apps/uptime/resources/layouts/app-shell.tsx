@@ -324,7 +324,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				}
 				workspace={
 					teams.length <= 1 ? (
-						<Shell.Identity avatar={teamLogo} name={team.name} chevron={false} disabled />
+						<Shell.Identity avatar={teamLogo} name={team.name} />
 					) : (
 						<>
 							<Shell.Identity

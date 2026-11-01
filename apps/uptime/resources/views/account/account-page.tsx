@@ -226,7 +226,7 @@ export default function AccountPage(handle: Handle<AccountPage.Props>) {
 							labels={{ save: saveLabel }}
 						>
 							<SettingsSection.Row
-								layout="inline-switch"
+								layout="action"
 								label={t("page.account.teams.table.label")}
 								description={t("page.account.teams.table.description")}
 							>
