@@ -1,7 +1,8 @@
 /**
  * The browser half of the command palette: filters the server-rendered commands by title and
  * keywords, moves the active row, opens nested pages, fills Recent, and binds the palette's
- * toggle key and every command's own key in the page's shortcut registry.
+ * toggle key and every command's own key. Why JS: filtering, active-descendant movement and
+ * page stacks need script. No-JS baseline: a trigger opens the dialog and every command works.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

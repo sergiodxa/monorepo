@@ -2,6 +2,8 @@
  * Keyboard row navigation for a list or table: `j`/`k` and the arrows move one roving focus
  * stop through the rows, Enter or `o` opens a row, `x` toggles its selection checkbox, Space
  * can ask for a peek, and `/` jumps to the page's search field.
+ * Why JS: HTML has no keystroke-to-row wiring or roving focus. No-JS baseline: every row's
+ * link and checkbox stay reachable by Tab and the pointer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,8 +28,31 @@ export const ROW_NAVIGATION_PRIMARY_SELECTOR = "[data-row-primary], a[href]";
 /** Attribute every row the mixin has indexed carries, which its focus ring is drawn on. */
 export const ROW_NAVIGATION_ATTRIBUTE = "data-row-navigation";
 
-/** Event a row dispatches when Space asks to peek at it, bubbling with the row as `detail.row`. */
-export const ROW_PEEK_EVENT = "row-peek";
+/** Event a row dispatches when Space asks to peek at it. */
+export const ROW_PEEK_EVENT = "ui:row-peek" as const;
+
+declare global {
+	interface HTMLElementEventMap {
+		[ROW_PEEK_EVENT]: RowPeekEvent;
+	}
+}
+
+/**
+ * Dispatched, bubbling, on the focused row when Space asks to peek at it, so a page opens the
+ * row's detail beside the list while focus stays on the row.
+ */
+export class RowPeekEvent extends Event {
+	/** The row asked about. */
+	readonly row: HTMLElement;
+
+	/**
+	 * @param row The row asked about.
+	 */
+	constructor(row: HTMLElement) {
+		super(ROW_PEEK_EVENT, { bubbles: true });
+		this.row = row;
+	}
+}
 
 /** The selection checkbox the selection column renders in each row. */
 const SELECTION_ITEM_SELECTOR = "input[type='checkbox'][data-selection-item]";
@@ -60,16 +85,11 @@ export namespace RowNavigation {
 		primary?: string;
 		/** The `id` of the search field `/` focuses; omitted, `/` stays unbound. */
 		search?: string;
-		/** Binds Space to dispatch {@link ROW_PEEK_EVENT} on the focused row. @default false */
+		/** Binds Space to dispatch {@link RowPeekEvent} on the focused row. @default false */
 		peek?: boolean;
 		labels?: Labels;
 		/** Says what `x` did, for a reader who cannot see the checkbox change. */
 		announcer?: Announcer;
-	}
-
-	/** `detail` of {@link ROW_PEEK_EVENT}. */
-	export interface PeekDetail {
-		row: HTMLElement;
 	}
 }
 
@@ -219,12 +239,7 @@ export const rowNavigation: MixinFactory<HTMLElement, [options?: RowNavigation.O
 					run: () => {
 						let row = rowItself();
 						if (row === null) return false;
-						row.dispatchEvent(
-							new CustomEvent<RowNavigation.PeekDetail>(ROW_PEEK_EVENT, {
-								bubbles: true,
-								detail: { row },
-							}),
-						);
+						row.dispatchEvent(new RowPeekEvent(row));
 						return true;
 					},
 					signal,

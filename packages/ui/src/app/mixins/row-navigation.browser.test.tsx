@@ -143,9 +143,7 @@ describe("rowNavigation", () => {
 	test("dispatches a peek for the focused row on Space", async () => {
 		let host = mount();
 		let peeked: HTMLElement[] = [];
-		host.addEventListener(ROW_PEEK_EVENT, (event) => {
-			peeked.push((event as CustomEvent<{ row: HTMLElement }>).detail.row);
-		});
+		host.addEventListener(ROW_PEEK_EVENT, (event) => void peeked.push(event.row));
 
 		await userEvent.keyboard("j ");
 		expect(peeked).toEqual([rows(host)[0]]);

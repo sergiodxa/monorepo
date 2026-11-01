@@ -1,7 +1,8 @@
 /**
  * The browser half of the keyboard help sheet: binds the key that opens the sheet, and reads
  * the page's shortcut registry whenever it changes or the sheet opens, so the sheet lists the
- * shortcuts the page has right now.
+ * shortcuts the page has right now. Why JS: a key opening a dialog needs a listener. No-JS
+ * baseline: a `commandfor` button opens the sheet with the server-rendered groups.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
