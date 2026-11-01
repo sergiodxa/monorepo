@@ -8,6 +8,7 @@
  */
 
 import type {} from "@vitest/browser-playwright";
+import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -62,11 +63,14 @@ function Monitors(handle: { props: { search: string } }) {
 	};
 }
 
+/** Every render of the running test, unmounted after it so no key listener outlives it. */
+let mounted: RenderResult[] = [];
+
 /** Renders the page for `search`. */
 function mount(search: string): HTMLElement {
 	let host = document.createElement("div");
 	document.body.appendChild(host);
-	render(<Monitors search={search} />, { container: host });
+	mounted.push(render(<Monitors search={search} />, { container: host }));
 	return host;
 }
 
@@ -80,6 +84,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+	for (let result of mounted) result.cleanup();
+	mounted = [];
 	document.body.replaceChildren();
 	history.replaceState(null, "", location.pathname + location.search);
 });
@@ -175,15 +181,17 @@ describe("DetailSheet", () => {
 	test("disables the previous link at the first record", () => {
 		let host = document.createElement("div");
 		document.body.appendChild(host);
-		render(
-			<DetailSheet
-				id="first"
-				title="First"
-				closeHref="#list"
-				position={{ index: 1, total: 2, previousHref: null, nextHref: "#m-2" }}
-				labels={LABELS}
-			/>,
-			{ container: host },
+		mounted.push(
+			render(
+				<DetailSheet
+					id="first"
+					title="First"
+					closeHref="#list"
+					position={{ index: 1, total: 2, previousHref: null, nextHref: "#m-2" }}
+					labels={LABELS}
+				/>,
+				{ container: host },
+			),
 		);
 		let previous = link(host, "previous");
 
