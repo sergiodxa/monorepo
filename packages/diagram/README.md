@@ -74,6 +74,26 @@ import { toRemix } from "@sdxc/markdown/remix";
 <article>{toRemix(walked.data, { components: { diagram: DiagramTag } })}</article>;
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/diagram --help
+```
+
+Draw a diagram as SVG, from a file or stdin, to stdout or a file. Source outside the supported
+syntax exits 2 with `file:line:column reason`.
+
+```sh
+bunx @sdxc/diagram render flow.mmd --output flow.svg
+```
+
+Check a diagram without drawing it; unsupported syntax exits 1, and `--json` prints
+`{ valid, reason, line, column }`.
+
+```sh
+bunx @sdxc/diagram check flow.mmd --json
+```
+
 ## API
 
 ### `toSVG(source: string, options?: DiagramOptions): Result<string, DiagramError>`
