@@ -95,6 +95,12 @@ namespace MarketingLayout {
 		 * @default true
 		 */
 		siteFooter?: boolean;
+		/**
+		 * Whether the header offers the development sign-in beside the real one, which only a
+		 * local machine with the switch on answers.
+		 * @default false
+		 */
+		devLogin?: boolean;
 		children: RemixNode;
 	}
 }
@@ -106,7 +112,7 @@ namespace MarketingLayout {
  */
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
-		let { children, isSignedIn, siteFooter = true, t } = handle.props;
+		let { children, devLogin = false, isSignedIn, siteFooter = true, t } = handle.props;
 
 		let featureLinks = FEATURE_SLUGS.map((slug) => ({
 			label: t(`landing.nav.features.${FEATURE_KEYS[slug]}`),
@@ -150,7 +156,18 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 				{t("landing.nav.open")}
 			</LinkButton>
 		) : (
-			<SignIn label={t("landing.nav.signIn")} size="sm" />
+			<>
+				{/**
+				 * Beside the real sign-in only on a local machine with the switch on, as the way
+				 * into the signed-in app without the identity provider.
+				 */}
+				{devLogin && (
+					<LinkButton href={routes.devLogin.index.href()} size="sm" variant="ghost">
+						{t("auth.dev.link")}
+					</LinkButton>
+				)}
+				<SignIn label={t("landing.nav.signIn")} size="sm" />
+			</>
 		);
 
 		return (

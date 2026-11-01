@@ -337,4 +337,10 @@ export default route({
 	 * reader who cannot sign in can still reach a person.
 	 */
 	support: form("/support"),
+
+	/**
+	 * GET = the development sign-in page, POST = signs in as the seed reader. It answers 404
+	 * unless the local `DEV_LOGIN` switch is on and the request is for this machine.
+	 */
+	devLogin: form("/dev/login"),
 });

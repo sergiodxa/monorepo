@@ -28,6 +28,7 @@ import {
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { devLoginEnabled } from "~/app/services/dev-login";
 import { TIER_LIMITS } from "~/app/services/entitlement";
 import { HISTORY_ENTRY_LIMIT } from "~/app/services/history";
 import { COMPARISON_SLUGS, FEATURE_KEYS, USE_CASE_SLUGS } from "~/config/marketing";
@@ -105,7 +106,7 @@ export default createAction(routes.home, (ctx) => {
 			description={t("landing.meta.description")}
 			locale={ctx.locale}
 		>
-			<MarketingLayout t={t} isSignedIn={false}>
+			<MarketingLayout t={t} isSignedIn={false} devLogin={devLoginEnabled(ctx.url)}>
 				<LandingHero
 					entrance
 					mediaPlacement="below"

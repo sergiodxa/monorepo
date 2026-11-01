@@ -442,6 +442,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			],
 		),
 	);
+	router.map(routes.devLogin, lazy(() => import("~/app/http/controllers/dev-login")));
 
 	return router;
 }

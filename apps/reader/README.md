@@ -17,6 +17,25 @@ bun dev
 The development server answers at http://localhost:3006. Run `sdxc run typegen` again
 whenever you change a binding in `wrangler.jsonc`.
 
+### Sign in locally
+
+Signing in normally goes through auth.sergiodxa.com. To use the signed-in app without it,
+add this line to `.dev.vars` and restart `bun dev`:
+
+```sh
+DEV_LOGIN=true
+```
+
+The home page's header then shows **Development sign-in** beside **Sign in**, which leads to
+http://localhost:3006/dev/login. Its button signs you in as the seed reader in
+`database/seed.ts` (Ada Lovelace, `ada@reader.localhost`, on Premium). The first time, it
+follows a set of real feeds, files them into folders, pins one, reads and saves some posts,
+labels two and keeps a search. Later sign-ins leave that library as it is.
+
+The route exists only when `DEV_LOGIN` is `true` and the request's host is `localhost`,
+`127.0.0.1`, `[::1]` or a `.localhost` name. Otherwise it answers 404. Keep the switch in
+`.dev.vars` only, never in `.env.example` or a deployed Worker's configuration.
+
 ## Everyday commands
 
 ```sh

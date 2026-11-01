@@ -23,6 +23,13 @@ export default {
 				"El proveedor de identidad respondió sin un ID token, así que nadie inició sesión.",
 			generic: "Algo salió mal al iniciar tu sesión. Inténtalo de nuevo.",
 		},
+		dev: {
+			title: "Inicio de sesión de desarrollo",
+			description:
+				"Inicia sesión como {$name} ({$email}), un lector de prueba que sigue feeds reales. El primer inicio descarga esos feeds, así que tarda unos segundos.",
+			cta: "Iniciar sesión como el lector de prueba",
+			link: "Inicio de sesión de desarrollo",
+		},
 	},
 
 	logout: {

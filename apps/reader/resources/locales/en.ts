@@ -23,6 +23,13 @@ export default {
 				"The identity provider answered without an ID token, so nobody was signed in.",
 			generic: "Something went wrong while signing you in. Try again.",
 		},
+		dev: {
+			title: "Development sign-in",
+			description:
+				"Signs you in as {$name} ({$email}), a seeded reader who follows real feeds. The first sign-in fetches those feeds, so it takes a few seconds.",
+			cta: "Sign in as the seed reader",
+			link: "Development sign-in",
+		},
 	},
 
 	logout: {
