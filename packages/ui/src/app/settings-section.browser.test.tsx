@@ -1,7 +1,8 @@
 /**
  * Lays settings sections out in a real browser: a split row puts its control beside the
  * label in a wide card and under it in a narrow one, an inline switch stays inline, and
- * only an explicit section ends in a Save footer.
+ * only an explicit section ends in a Save footer, a list section saves nothing, and header
+ * actions share the title's row until the container is too narrow for both.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +14,7 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 
+import { Button } from "../components/button.js";
 import { Input } from "../components/input.js";
 import { Switch } from "../components/switch.js";
 
@@ -38,7 +40,7 @@ function rowParts(host: HTMLElement): { text: DOMRect; control: DOMRect } {
 }
 
 /** A monitor-defaults section with one split row. */
-function monitorDefaults(save: SettingsSection.Save) {
+function monitorDefaults(save: "explicit" | "instant") {
 	return (
 		<SettingsSection
 			title="Monitor defaults"
@@ -234,7 +236,76 @@ describe("SettingsSection", () => {
 		await userEvent.keyboard("{Meta>}s{/Meta}");
 		expect(submits()).toEqual({ "/settings/monitors": 1 });
 	});
+
+	test("renders a list section with no form, footer, Save or instant-save island", () => {
+		let host = mount(
+			<SettingsSection title="Members" save="none">
+				<ul>
+					<li>Ada</li>
+				</ul>
+			</SettingsSection>,
+		);
+
+		expect(host.querySelector("section")?.dataset.save).toBe("none");
+		expect(host.querySelector("form")).toBeNull();
+		expect(host.querySelector('[data-slot="settings-footer"]')).toBeNull();
+		expect(host.querySelector("noscript")).toBeNull();
+		expect(host.querySelector('[data-slot="settings-instant-save"]')).toBeNull();
+		expect(host.querySelector('[data-slot="settings-card"] li')?.textContent).toBe("Ada");
+	});
+
+	for (let heading of ["above", "beside"] as const) {
+		test(`puts actions on the title row at its end in a wide container (heading ${heading})`, () => {
+			let host = mount(membersSection(heading), 960);
+			let { title, actions, row } = headerParts(host);
+
+			expect(Math.abs(actions.top - title.top)).toBeLessThan(8);
+			expect(actions.left).toBeGreaterThanOrEqual(title.right);
+			expect(Math.abs(row.right - actions.right)).toBeLessThan(2);
+		});
+
+		test(`wraps actions under the title in a narrow container (heading ${heading})`, () => {
+			let host = mount(membersSection(heading, "Team members and their roles"), 320);
+			let { title, actions } = headerParts(host);
+
+			expect(actions.top).toBeGreaterThanOrEqual(title.bottom);
+			expect(host.querySelector("section")!.scrollWidth).toBeLessThanOrEqual(320);
+			expect(actions.right).toBeLessThanOrEqual(host.getBoundingClientRect().right);
+		});
+	}
 });
+
+/** A list-only members section with an "Invite member" header action. */
+function membersSection(heading: "above" | "beside", title = "Members") {
+	return (
+		<SettingsSection
+			title={title}
+			description="People with access to this team."
+			heading={heading}
+			save="none"
+			actions={
+				<Button type="button" size="sm" variant="outline">
+					Invite member
+				</Button>
+			}
+		>
+			<ul>
+				<li>Ada</li>
+			</ul>
+		</SettingsSection>
+	);
+}
+
+/** The title, the actions slot and the title row of the section in `host`. */
+function headerParts(host: HTMLElement): { title: DOMRect; actions: DOMRect; row: DOMRect } {
+	let actions = host.querySelector('[data-slot="settings-actions"]');
+	expect(actions).not.toBeNull();
+	return {
+		title: host.querySelector("h2")!.getBoundingClientRect(),
+		actions: actions!.getBoundingClientRect(),
+		row: actions!.parentElement!.getBoundingClientRect(),
+	};
+}
 
 /** Counts the submissions of every form in `host`, keyed by action, holding each one back. */
 function countSubmits(host: HTMLElement): () => Record<string, number> {

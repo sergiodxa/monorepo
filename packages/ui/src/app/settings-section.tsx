@@ -1,7 +1,7 @@
 /**
  * One group of settings: a title and description beside or above a bordered card of
  * 1px-ruled rows. A section saves one way only: `"explicit"` for typed inputs, with its own
- * primary Save at the bottom start, or `"instant"` for switches, which save as they change.
+ * primary Save at the bottom start, `"instant"` for switches, or `"none"` for a table or list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,9 +51,10 @@ export namespace SettingsSection {
 	/**
 	 * How the section's changes persist. Typed inputs save explicitly, so a half-typed
 	 * value never applies; switches save the moment they flip. Mixing them in one section
-	 * leaves a person unsure what is saved, so a section picks one.
+	 * leaves a person unsure what is saved, so a section picks one; a section holding a table
+	 * or list whose rows act on their own saves nothing.
 	 */
-	export type Save = "explicit" | "instant";
+	export type Save = "explicit" | "instant" | "none";
 
 	/** Where a row's label sits against its control. */
 	export type RowLayout = "split" | "stacked" | "inline-switch";
@@ -77,24 +78,44 @@ export namespace SettingsSection {
 		save: string;
 	}
 
-	/** Props accepted by {@link SettingsSection}. */
-	export interface Props extends Omit<TagProps<"section">, "title"> {
+	/** Props every section accepts, whatever it saves. */
+	export interface BaseProps extends Omit<TagProps<"section">, "title"> {
 		title: RemixNode;
 		description?: RemixNode;
-		/** @default "explicit" */
-		save?: Save;
-		/** The form the card becomes; omit for a section whose controls submit on their own. */
-		form?: FormProps;
+		/**
+		 * Controls on the title's row, at its end, that wrap under the title when the
+		 * container is too narrow for both: an "Invite member" or "Add domain" button.
+		 */
+		actions?: RemixNode;
 		/**
 		 * Puts the heading in a column beside the card on a wide container.
 		 *
 		 * @default "above"
 		 */
 		heading?: "above" | "beside";
+	}
+
+	/** A section that saves its controls, explicitly or as they change. */
+	export interface SavingProps extends BaseProps {
+		/** @default "explicit" */
+		save?: "explicit" | "instant";
+		/** The form the card becomes; omit for a section whose controls submit on their own. */
+		form?: FormProps;
 		/** Content after the Save button in an explicit section's footer, such as a `SaveStatus`. */
 		footer?: RemixNode;
 		labels: Labels;
 	}
+
+	/** A section holding a table or list: its card is a plain container with no Save. */
+	export interface ListProps extends BaseProps {
+		save: "none";
+		form?: never;
+		footer?: never;
+		labels?: never;
+	}
+
+	/** Props accepted by {@link SettingsSection}. */
+	export type Props = SavingProps | ListProps;
 
 	/** Props accepted by {@link SettingsSection.Row}. */
 	export interface RowProps extends TagProps<"div"> {
@@ -120,8 +141,8 @@ export namespace SettingsSection {
 
 /**
  * Renders the section. The card is a `<form>` when `form` is set; an explicit section ends
- * in a footer holding its own Save, which ⌘S presses while focus is in the section, and an
- * instant one submits whenever a control changes.
+ * in a footer holding its own Save, which ⌘S presses while focus is in the section, an
+ * instant one submits whenever a control changes, and a `"none"` one is a plain card.
  *
  * @param handle Runtime handle carrying the section's props.
  * @returns The render function producing the section's markup.
@@ -135,21 +156,28 @@ export namespace SettingsSection {
  * 		<Switch name="emailOnDown" aria-labelledby="down-label" />
  * 	</SettingsSection.Row>
  * </SettingsSection>
+ * @example
+ * <SettingsSection title="Members" save="none" actions={<Button commandfor="invite" command="show-modal">Invite member</Button>}>
+ * 	<Table.Container>…</Table.Container>
+ * </SettingsSection>
  */
 export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 	return () => {
+		let props = handle.props;
+		let saveLabel = props.save === "none" ? null : props.labels.save;
 		let {
 			title,
 			description,
+			actions,
 			save: saveProp,
 			form,
 			heading: headingProp,
 			footer,
-			labels,
+			labels: _labels,
 			children,
 			mix,
 			...rest
-		} = handle.props;
+		} = props;
 		let save = saveProp ?? DEFAULT_SAVE;
 		let heading = headingProp ?? DEFAULT_HEADING;
 		let titleId = `${handle.id}-title`;
@@ -182,7 +210,7 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 				]}
 			>
 				<Button type="submit" color="brand" variant="solid" size="sm">
-					{labels.save}
+					{saveLabel}
 				</Button>
 				{footer}
 			</footer>
@@ -191,23 +219,24 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 		 * An instant section saves through script, so a browser running none gets the Save
 		 * button an explicit section shows.
 		 */
-		let instantSave = isExplicit ? null : (
-			<>
-				<noscript>
-					<div
-						mix={[
-							p(3, 4),
-							borderEdge("block-start", { color: "neutral", width: 1, style: "solid" }),
-						]}
-					>
-						<Button type="submit" color="brand" variant="solid" size="sm">
-							{labels.save}
-						</Button>
-					</div>
-				</noscript>
-				<SettingsInstantSave />
-			</>
-		);
+		let instantSave =
+			save !== "instant" ? null : (
+				<>
+					<noscript>
+						<div
+							mix={[
+								p(3, 4),
+								borderEdge("block-start", { color: "neutral", width: 1, style: "solid" }),
+							]}
+						>
+							<Button type="submit" color="brand" variant="solid" size="sm">
+								{saveLabel}
+							</Button>
+						</div>
+					</noscript>
+					<SettingsInstantSave />
+				</>
+			);
 
 		return (
 			<section
@@ -235,12 +264,40 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 					]}
 				>
 					<header mix={[vstack({ gap: 1, align: "stretch" }), minIs(0)]}>
-						<h2
-							id={titleId}
-							mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis"), balance()]}
+						<div
+							data-slot="settings-title-row"
+							mix={[
+								hstack({ gap: 2, align: "center" }),
+								raw({ flexWrap: "wrap", columnGap: "1rem" }),
+							]}
 						>
-							{title}
-						</h2>
+							<h2
+								id={titleId}
+								mix={[
+									m(0),
+									raw({ flex: "1 1 auto" }),
+									minIs(0),
+									text("base"),
+									weight("semibold"),
+									fg("neutral.emphasis"),
+									balance(),
+								]}
+							>
+								{title}
+							</h2>
+							{actions ? (
+								<div
+									data-slot="settings-actions"
+									mix={[
+										hstack({ gap: 2, align: "center" }),
+										raw({ flexWrap: "wrap", flex: "0 1 auto" }),
+										minIs(0),
+									]}
+								>
+									{actions}
+								</div>
+							) : null}
+						</div>
 						{description ? (
 							<p mix={[m(0), text("sm"), fg("neutral.muted"), pretty()]}>{description}</p>
 						) : null}
