@@ -81,6 +81,8 @@ if (!verdict.allowed) verdict.reason; // "not-authorized", "forbidden", "lookup-
 bunx @sdxc/doh lookup example.com --type MX
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg doh …` runs the same command line, using the version your project installs.
+
 `lookup` prints a dig-style answer section, or the typed answer with `--json`, and exits 1 on
 NXDOMAIN, an empty answer or a resolver error. `--resolver` takes `cloudflare`, `google` or a DoH
 URL, and `--wire` speaks RFC 8484. `bunx @sdxc/doh --help` lists every flag.
