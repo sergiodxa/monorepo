@@ -42,9 +42,16 @@ import ReferenceTable from "~/resources/components/reference-table";
 import { findFoundations } from "~/resources/content/foundations";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
+import { demoAppLinks } from "~/resources/views/demo-apps";
 import { demoDocsLinks } from "~/resources/views/demo-docs";
 import { demoLandingLinks } from "~/resources/views/demos";
 import routes from "~/routes/web";
+
+/** The heading over a namespace's demo links, where it is not "Demo landings". */
+const DEMOS_TITLES: Partial<Record<string, string>> = {
+	docs: "Demo docs sites",
+	app: "Demo apps",
+};
 
 /** The install line every component page carries: `@sdxc/ui` brings the components, `remix` renders them. */
 const INSTALL = `npm add @sdxc/ui remix`;
@@ -94,7 +101,8 @@ export default createAction(routes.api.component, async (ctx) => {
 	let demos: Array<{ href: string; title: string; description: string; eyebrow?: string }> = [];
 	if (reference.module === "docs") demos = await demoDocsLinks();
 	if (reference.module === "landing") demos = await demoLandingLinks();
-	let demosTitle = reference.module === "docs" ? "Demo docs sites" : "Demo landings";
+	if (reference.module === "app") demos = await demoAppLinks();
+	let demosTitle = DEMOS_TITLES[reference.module] ?? "Demo landings";
 
 	let anchors: Anchor[] = [
 		demos.length > 0 ? { id: "demos", text: demosTitle, level: 2 } : null,

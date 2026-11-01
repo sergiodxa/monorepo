@@ -172,4 +172,14 @@ export default route({
 		/** Where a page's "Was this helpful?" form posts; it answers by thanking the reader. */
 		feedback: post("/demo/docs/:site/feedback"),
 	},
+	/**
+	 * A complete sample app built from `@sdxc/ui/app`, several screens deep and kept out of
+	 * search engines like the other demos: each one runs an invented product on fixture data.
+	 */
+	demoApps: {
+		/** The app's home without `page`, one of its screens with it. */
+		show: get("/demo/apps/:app(/*page)"),
+		/** Where a screen's forms post; it keeps nothing and answers by sending the visitor back. */
+		action: post("/demo/apps/:app/*page"),
+	},
 });

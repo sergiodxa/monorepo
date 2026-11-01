@@ -296,6 +296,14 @@ export function createWebRouter() {
 		routes.demoDocs.feedback,
 		lazy(() => import("~/app/http/controllers/demo-docs/feedback")),
 	);
+	router.map(
+		routes.demoApps.show,
+		lazy(() => import("~/app/http/controllers/demo-apps/show")),
+	);
+	router.map(
+		routes.demoApps.action,
+		lazy(() => import("~/app/http/controllers/demo-apps/action")),
+	);
 
 	return router;
 }

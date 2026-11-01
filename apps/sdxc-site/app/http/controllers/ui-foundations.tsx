@@ -37,7 +37,7 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** The namespaces whose demos the gallery lists, so their intro points readers at them. */
-const DEMOED_MODULES = new Set<Foundations["module"]>(["landing", "docs"]);
+const DEMOED_MODULES = new Set<Foundations["module"]>(["landing", "docs", "app"]);
 
 /**
  * Renders one namespace's Foundations page.

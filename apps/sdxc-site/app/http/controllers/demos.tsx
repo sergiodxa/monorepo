@@ -1,6 +1,6 @@
 /**
- * `GET /demo` — the gallery of every demo: each sample landing and each sample docs site
- * built from `@sdxc/ui`, with what it is and the art direction it commits to. Marked
+ * `GET /demo` — the gallery of every demo: each sample landing, docs site and app built from
+ * `@sdxc/ui`, with what it is and the art direction it commits to. Marked
  * `noindex, nofollow` like the demos, since every one of them invents its product.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -22,11 +22,13 @@ import { createAction } from "remix/router";
 import type { DemoSummary } from "~/resources/views/demos";
 
 import { withBundleCache } from "~/app/http/caching";
+import DemoMiniature from "~/resources/components/demo-miniature";
 import Hero from "~/resources/components/hero";
 import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
 import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
+import { demoAppHref, findDemoApp, listDemoAppSlugs } from "~/resources/views/demo-apps";
 import { demoDocsHref, findDemoDocsSite, listDemoDocsSlugs } from "~/resources/views/demo-docs";
 import DocsThumbnail from "~/resources/views/demo-docs/thumbnail";
 import { listDemoLandings } from "~/resources/views/demos";
@@ -46,16 +48,17 @@ const DEMO_ROBOTS = "noindex, nofollow";
 const FLAGSHIP_LANDINGS = ["saas", "book"];
 
 export default createAction(routes.demos, async (ctx) => {
-	let [landings, docsSites] = await Promise.all([
+	let [landings, docsSites, apps] = await Promise.all([
 		listDemoLandings().then((demos) => [...demos].sort(byFlagship)),
 		Promise.all(listDemoDocsSlugs().map(findDemoDocsSite)),
+		Promise.all(listDemoAppSlugs().map(async (slug) => ({ slug, app: await findDemoApp(slug) }))),
 	]);
 
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Demos — sdxc"
-			description="Every sample landing and docs site built from @sdxc/ui, each for an invented product with its own art direction."
+			description="Every sample landing, docs site and app built from @sdxc/ui, each for an invented product with its own art direction."
 			canonical={ctx.url.href}
 			robots={DEMO_ROBOTS}
 		>
@@ -66,9 +69,9 @@ export default createAction(routes.demos, async (ctx) => {
 					<div mix={[vstack({ gap: 6, align: "start" }), maxIs("40rem")]}>
 						<ProseHeading level={1}>Demos</ProseHeading>
 						<ProseParagraph>
-							{landings.length} landing pages and {docsSites.length} documentation sites for
-							invented products, each built from the same @sdxc/ui components with its own look set
-							through theme tokens. Visit one, then read{" "}
+							{landings.length} landing pages, {docsSites.length} documentation sites and{" "}
+							{apps.length} apps for invented products, each built from the same @sdxc/ui components
+							with its own look set through theme tokens. Visit one, then read{" "}
 							<ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to copy what you need.
 						</ProseParagraph>
 					</div>
@@ -102,6 +105,32 @@ export default createAction(routes.demos, async (ctx) => {
 									tagline={site.tagline}
 									artDirection={site.artDirection}
 									thumbnail={<DocsThumbnail site={site} />}
+								/>
+							),
+						)}
+					</Feature.Grid>
+				</SectionBlock>
+
+				<SectionBlock id="apps" title="Apps" tone="tinted">
+					<Feature.Grid columns={3}>
+						{apps.map(({ app, slug }) =>
+							app === null ? null : (
+								<DemoCard
+									key={slug}
+									href={demoAppHref(slug)()}
+									name={app.name}
+									kind={app.kind}
+									tagline={app.tagline}
+									artDirection={app.artDirection}
+									thumbnail={
+										<DemoMiniature
+											brand={app.theme.brand}
+											neutral={app.theme.neutral}
+											tokens={app.theme.tokens}
+										>
+											{app.thumbnail()}
+										</DemoMiniature>
+									}
 								/>
 							),
 						)}

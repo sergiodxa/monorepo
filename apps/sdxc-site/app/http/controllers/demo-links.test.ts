@@ -1,6 +1,6 @@
 /**
- * Tests that the namespace component pages lead readers to every demo landing and every demo
- * docs site, each of which answers, so a demo added as a folder is listed and reachable without editing a page.
+ * Tests that the namespace component pages lead readers to every demo landing, demo docs site
+ * and demo app, each of which answers, so a demo added as a folder is listed and reachable without editing a page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
+import { demoAppHref, listDemoAppSlugs } from "~/resources/views/demo-apps";
 import { demoDocsHref, listDemoDocsSites, listDemoDocsSlugs } from "~/resources/views/demo-docs";
 import { listDemoSlugs } from "~/resources/views/demos";
 
@@ -53,7 +54,21 @@ describe("demo landing links", () => {
 		},
 	);
 
+	test.each(["/api/ui/app-shell", "/api/ui/split-view"])(
+		"%s links every demo app, and each one answers",
+		async (page) => {
+			let body = await (await fetchApp(page)).text();
+
+			for (let slug of listDemoAppSlugs()) {
+				let href = demoAppHref(slug)();
+				expect(body).toContain(`href="${href}"`);
+				expect((await fetchApp(href)).status).toBe(200);
+			}
+		},
+	);
+
 	test.each([
+		"/api/ui/app-foundations",
 		"/api/ui/landing-foundations",
 		"/api/ui/docs-foundations",
 		"/api/ui/landing-section",

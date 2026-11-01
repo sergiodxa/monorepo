@@ -1,6 +1,6 @@
 /**
- * Tests `GET /demo` through the real router: the gallery lists every demo landing and every
- * demo docs site the registries discover, each link answers, and the page stays out of search.
+ * Tests `GET /demo` through the real router: the gallery lists every demo landing, demo docs
+ * site and demo app the registries discover, each link answers, and the page stays out of search.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,6 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
+import { demoAppHref, listDemoApps, listDemoAppSlugs } from "~/resources/views/demo-apps";
 import { demoDocsHref, listDemoDocsSites, listDemoDocsSlugs } from "~/resources/views/demo-docs";
 import { listDemoLandings } from "~/resources/views/demos";
 
@@ -47,6 +48,24 @@ describe("GET /demo", () => {
 		}
 	});
 
+	test("lists every demo app with its kind, tagline and art direction, each link answering", async () => {
+		let body = await (await fetchApp("/demo")).text();
+		let apps = await listDemoApps();
+
+		expect(apps.map((app) => app.slug)).toEqual(
+			expect.arrayContaining(["inkwell", "pulse", "relay"]),
+		);
+		expect(body).toContain('id="apps"');
+		for (let app of apps) {
+			let href = demoAppHref(app.slug)();
+			expect(body).toContain(`href="${href}"`);
+			expect(body).toContain(app.kind);
+			expect(body).toContain(escape(app.tagline));
+			expect(body).toContain(escape(app.artDirection));
+			expect((await fetchApp(href)).status).toBe(200);
+		}
+	});
+
 	test("makes each card one link, named by the demo alone", async () => {
 		let body = await (await fetchApp("/demo")).text();
 		let demos = [
@@ -58,6 +77,7 @@ describe("GET /demo", () => {
 				href: demoDocsHref(site.slug)(),
 				name: site.name,
 			})),
+			...(await listDemoApps()).map((app) => ({ href: demoAppHref(app.slug)(), name: app.name })),
 		];
 		let links = [...body.matchAll(/<a\b[^>]*data-slot="demo-link"[^>]*>([^<]*)<\/a>/g)];
 
@@ -72,7 +92,10 @@ describe("GET /demo", () => {
 
 	test("draws every card's miniature hidden from assistive tech, leading with the flagship", async () => {
 		let body = await (await fetchApp("/demo")).text();
-		let count = (await listDemoLandings()).length + (await listDemoDocsSites()).length;
+		let count =
+			(await listDemoLandings()).length +
+			(await listDemoDocsSites()).length +
+			listDemoAppSlugs().length;
 		let miniatures = [...body.matchAll(/<div\b[^>]*data-slot="demo-miniature"[^>]*>/g)];
 
 		expect(miniatures).toHaveLength(count);
@@ -93,7 +116,7 @@ describe("GET /demo", () => {
 
 		expect(body).toMatch(
 			new RegExp(
-				`${landings.length}(<!-- -->)?\\s+landing pages and ${listDemoDocsSlugs().length} documentation sites`,
+				`${landings.length}(<!-- -->)?\\s+landing pages, ${listDemoDocsSlugs().length}(<!-- -->)?\\s+documentation sites and(<!-- -->)?\\s+${listDemoAppSlugs().length}(<!-- -->)?\\s+apps`,
 			),
 		);
 		expect(body).toContain(

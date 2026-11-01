@@ -1,0 +1,112 @@
+/**
+ * Tests `/demo/apps/:app(/*page)` through the real router over every demo app: each screen a
+ * visitor can click to answers `noindex` with one `h1`, a missing screen answers the app's own
+ * 404, a toast shows only when the app names it, and a form post can only send the visitor back.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { fetchApp } from "~/app/test/router";
+import {
+	DEMO_APP_TOAST_PARAM,
+	demoAppActionHref,
+	demoAppHref,
+	findDemoApp,
+	listDemoAppSlugs,
+} from "~/resources/views/demo-apps";
+
+/** Every demo's slug with its app, loaded once for the table-driven tests below. */
+let apps = await Promise.all(
+	listDemoAppSlugs().map(async (slug) => ({ slug, app: (await findDemoApp(slug))! })),
+);
+
+/** Counts the `<h1>` elements a rendered page holds. */
+function countH1(body: string): number {
+	return [...body.matchAll(/<h1[\s>]/g)].length;
+}
+
+describe("GET /demo/apps/:app", () => {
+	test("the catalogue holds a dashboard, a CMS and an inbox", () => {
+		expect(listDemoAppSlugs()).toEqual(expect.arrayContaining(["inkwell", "pulse", "relay"]));
+	});
+
+	test.each(apps)(
+		"every $slug screen answers with one h1 and stays out of search",
+		async ({ slug, app }) => {
+			expect(app.screens).toContain("");
+			for (let screen of app.screens) {
+				let response = await fetchApp(demoAppHref(slug)(screen));
+				let body = await response.text();
+
+				expect(response.status, screen).toBe(200);
+				expect(body, screen).toMatch(/<meta name="robots" content="noindex, nofollow"/);
+				expect(countH1(body), screen).toBe(1);
+				expect(body, screen).not.toContain("[object Object]");
+			}
+		},
+	);
+
+	test.each(apps)("every $slug link inside the app answers", async ({ slug, app }) => {
+		let root = demoAppHref(slug)();
+		let links = new Set<string>();
+		for (let screen of app.screens) {
+			let body = await (await fetchApp(demoAppHref(slug)(screen))).text();
+			for (let [, href] of body.matchAll(/href="([^"#]+)/g)) {
+				let path = href!.replaceAll("&amp;", "&");
+				if (path === root || path.startsWith(`${root}/`) || path.startsWith(`${root}?`)) {
+					links.add(path);
+				}
+			}
+		}
+
+		for (let link of links) expect((await fetchApp(link)).status, link).toBe(200);
+	});
+
+	test.each(apps)("a missing $slug screen answers the app's own 404", async ({ slug }) => {
+		let response = await fetchApp(demoAppHref(slug)("no-such-screen/at-all"));
+		let body = await response.text();
+
+		expect(response.status).toBe(404);
+		expect(countH1(body)).toBe(1);
+		expect(body).toMatch(/<meta name="robots" content="noindex, nofollow"/);
+	});
+
+	test("an unknown app answers the site's 404", async () => {
+		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
+	});
+
+	test.each(apps)("$slug shows a toast only when it names one", async ({ slug, app }) => {
+		let [key, toast] = Object.entries(app.toasts)[0]!;
+		let shown = await (
+			await fetchApp(`${demoAppHref(slug)()}?${DEMO_APP_TOAST_PARAM}=${key}`)
+		).text();
+		let unknown = await (
+			await fetchApp(`${demoAppHref(slug)()}?${DEMO_APP_TOAST_PARAM}=%3Cb%3Ehi%3C%2Fb%3E`)
+		).text();
+
+		expect(shown).toContain(toast.title!);
+		expect(unknown).not.toContain("hi</b>");
+		expect(unknown).not.toContain("&lt;b&gt;hi");
+	});
+});
+
+describe("POST /demo/apps/:app/*page", () => {
+	test("an unknown app answers 404", async () => {
+		let response = await fetchApp("/demo/apps/no-such-app/anything", {
+			method: "POST",
+			body: new URLSearchParams({ name: "x" }),
+		});
+		expect(response.status).toBe(404);
+	});
+
+	test.each(apps)("$slug rejects a post it cannot read", async ({ slug }) => {
+		let response = await fetchApp(demoAppActionHref(slug)("no-such-form"), {
+			method: "POST",
+			body: new URLSearchParams(),
+		});
+		expect(response.status).toBe(400);
+	});
+});
