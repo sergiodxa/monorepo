@@ -313,6 +313,29 @@ describe("Table typed cells", () => {
 		expect(host.querySelector("time")?.textContent).toBe("2m ago");
 		expect(host.querySelector('[data-slot="status-dot"]')?.textContent).toBe("Up");
 	});
+
+	test("counts a local date cell from its now, in the viewer's zone", async () => {
+		await cdp().send("Emulation.setTimezoneOverride", { timezoneId: "Asia/Tokyo" });
+		let host = mount(
+			<Table aria-label="Checks">
+				<Table.Body>
+					<Table.Row>
+						<Table.DateCell
+							date="2020-03-01T02:00:00Z"
+							now="2020-03-01T04:00:00Z"
+							locale="en"
+							local
+						/>
+					</Table.Row>
+				</Table.Body>
+			</Table>,
+		);
+		let time = host.querySelector("time")!;
+
+		await expect.poll(() => time.title.split("\n")[0]).toBe("Mar 1, 2020, 11:00:00 AM GMT+9");
+		expect(time.textContent).toBe("2h ago");
+		await cdp().send("Emulation.setTimezoneOverride", { timezoneId: "" });
+	});
 });
 
 describe("Table selection", () => {

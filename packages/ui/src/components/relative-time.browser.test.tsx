@@ -103,6 +103,22 @@ describe("RelativeTimeLocal", () => {
 		expect(time.dateTime).toBe("2020-03-01T02:00:00.000Z");
 	});
 
+	test("counts from the given now while formatting in the viewer's zone", async () => {
+		await cdp().send("Emulation.setTimezoneOverride", { timezoneId: "America/Lima" });
+		let past = mount(
+			<RelativeTimeLocal date="2020-03-01T02:00:00Z" now="2020-03-01T04:00:00Z" locale="en" />,
+		);
+
+		await expect.poll(() => past.title.split("\n")[0]).toBe("Feb 29, 2020, 9:00:00 PM GMT-5");
+		expect(past.textContent).toBe("2h ago");
+
+		let future = mount(
+			<RelativeTime date="2020-03-01T06:00:00Z" now="2020-03-01T04:00:00Z" locale="en" local />,
+		);
+		await expect.poll(() => future.title.split("\n")[0]).toBe("Mar 1, 2020, 1:00:00 AM GMT-5");
+		expect(future.textContent).toBe("in 2h");
+	});
+
 	test("is what RelativeTime renders with local", async () => {
 		await cdp().send("Emulation.setTimezoneOverride", { timezoneId: "Asia/Tokyo" });
 		let time = mount(<RelativeTime date="2020-03-01T20:00:00Z" locale="en" local />);

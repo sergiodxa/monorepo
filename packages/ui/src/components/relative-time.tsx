@@ -41,9 +41,9 @@ export namespace RelativeTime {
 		/** IANA zone the server formats in. Defaults to UTC. */
 		timeZone?: string;
 		/**
-		 * Hydrates the {@link RelativeTimeLocal} island, which rewrites the text and title in
-		 * the viewer's zone against their clock. Needs `@sdxc/ui/relative-time#RelativeTimeLocal`
-		 * in the app's browser entry.
+		 * Hydrates the {@link RelativeTimeLocal} island, which rewrites the date and title in the
+		 * viewer's zone and locale, counting from `now` when given and their clock otherwise.
+		 * Needs `@sdxc/ui/relative-time#RelativeTimeLocal` in the app's browser entry.
 		 */
 		local?: boolean;
 	}
@@ -52,7 +52,7 @@ export namespace RelativeTime {
 	export type LocalProps = {
 		/** The moment, as an ISO 8601 string or epoch milliseconds. */
 		date: string | number;
-		/** The reference moment the server rendered against. */
+		/** The reference moment the text counts from; unset counts from the viewer's clock. */
 		now?: string | number;
 		/** BCP 47 locale for the text and the title. */
 		locale?: string;
@@ -115,8 +115,8 @@ function serializable(value: RelativeTime.DateInput): string | number {
 
 /**
  * Client island behind {@link RelativeTime}'s `local` prop: the same `<time>` the server renders,
- * rewritten in the viewer's zone on hydration. Until the island loads the server's text stands,
- * so the moment is always readable.
+ * rewritten in the viewer's zone on hydration, still counting from `now` when one is given.
+ * Until the island loads the server's text stands, so the moment is always readable.
  *
  * @example <RelativeTimeLocal date="2026-10-30T14:00:00Z" locale="en" />
  */
@@ -133,7 +133,7 @@ export const RelativeTimeLocal: EntryComponent<RelativeTime.LocalProps> = client
 					title={formatted.title || undefined}
 					dateTime={formatted.dateTime || undefined}
 					data-slot="relative-time"
-					mix={[tabularNums(), viewerTime(locale)]}
+					mix={[tabularNums(), viewerTime(locale, now)]}
 				>
 					{formatted.text}
 				</time>
