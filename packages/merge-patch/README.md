@@ -71,6 +71,20 @@ let patch = await readMergePatch(request);
 if (isFailure(patch)) return mergePatchProblem(patch.error); // 415 or 400
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/merge-patch --help
+```
+
+```sh
+bunx @sdxc/merge-patch apply patch.json article.json   # the merged document
+bunx @sdxc/merge-patch diff before.json after.json      # the merge patch between them
+```
+
+Either input can be `-` for stdin, and `--compact` prints one line. `diff` exits 1 when the
+second document sets a member to `null`, and both exit 2 on input that is not JSON.
+
 ## API
 
 ### `@sdxc/merge-patch`
