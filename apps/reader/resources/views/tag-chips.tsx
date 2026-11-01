@@ -1,7 +1,7 @@
 /**
- * The labels on one kept post, and the field that puts another on it. Both surfaces that
- * draw labels print the same strip beneath a post's title — the list of everything kept,
- * and the list of what is kept under one label — so the markup lives here and each
+ * The labels on one kept post, and the way to put another on it. Both surfaces that draw
+ * labels print the same strip beneath a post's title, so the markup lives here. The field
+ * for a new label waits behind a small disclosure, so a list of kept posts reads as posts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,12 +9,15 @@
 
 import type { Handle } from "remix/component";
 
+import { PlusIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
 import { flex, flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { bs, is, maxIs, mbs, minIs, p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
 import { text, textDecoration } from "@sdxc/u/typography";
+import { TagGroup } from "@sdxc/ui";
 import { attrs } from "remix/component";
 
 /** Height of the strip's own controls, which keeps a chip a chip rather than a button. */
@@ -38,7 +41,7 @@ export namespace TagChips {
 	export interface Copy {
 		/** Names the strip for anyone listening to it. */
 		legend: string;
-		/** The field that puts another label on the post. */
+		/** The disclosure, and the field it opens, that put another label on the post. */
 		add: string;
 		placeholder: string;
 		/** Takes one label off, said with the label's own name. */
@@ -58,109 +61,106 @@ export namespace TagChips {
 	}
 }
 
-/** What a chip and the two controls beside it are drawn with. */
-function chipShell() {
-	return [
-		inlineFlex(),
-		items("center"),
-		gap(1),
-		bs(CHIP_HEIGHT),
-		p(0, 2),
-		rounded("full"),
-		border({ color: "neutral.border", width: 1 }),
-		bg("neutral.bg"),
-		fg("neutral.muted"),
-		text("xs"),
-	];
-}
-
-/**
- * The labels on one post, each a way into the list of everything kept under it, and the
- * field that adds another.
- */
+/** Renders a post's labels as a group of tags, then the disclosure that adds one. */
 export default function TagChips(handle: Handle<TagChips.Props>) {
 	return () => {
 		let { applyAction, chips, copy, optionsId, returnTo } = handle.props;
 
 		return (
-			<div aria-label={copy.legend} mix={[flex(), flexWrap(), items("center"), gap(2), mbs(1)]}>
-				{chips.map((chip) => (
-					<span key={chip.id} mix={chipShell()}>
-						<a href={chip.href} mix={[fg("neutral"), textDecoration("none")]}>
-							{chip.name}
-						</a>
+			<div mix={[flex(), flexWrap(), items("center"), gap(2), mbs(1)]}>
+				{chips.length > 0 && (
+					<TagGroup aria-label={copy.legend}>
+						<TagGroup.List>
+							{chips.map((chip) => (
+								<TagGroup.Tag key={chip.id} size="sm">
+									<a href={chip.href} mix={[raw({ color: "inherit" }), textDecoration("none")]}>
+										{chip.name}
+									</a>
 
-						{/**
-						 * Taking a label off is a submission rather than a link, since a prefetcher
-						 * walks links of its own accord. The form posts `_method`, since a browser
-						 * sends `GET` and `POST` alone and the override reads the `DELETE` back out.
-						 */}
-						<form
-							method="post"
-							action={chip.removeAction}
-							mix={[attrs({ "data-rmx-document": "" }), inlineFlex()]}
-						>
-							<input type="hidden" name="_method" value="DELETE" />
-							<input type="hidden" name="returnTo" value={returnTo} />
-
-							<button
-								type="submit"
-								aria-label={`${copy.remove} ${chip.name}`}
-								title={`${copy.remove} ${chip.name}`}
-								mix={[
-									inlineFlex(),
-									items("center"),
-									border("none"),
-									bg("transparent"),
-									fg("neutral.muted"),
-									p(0),
-									raw({ cursor: "pointer", font: "inherit", lineHeight: "1" }),
-								]}
-							>
-								×
-							</button>
-						</form>
-					</span>
-				))}
+									{/**
+									 * A form per label, so taking one off works without script. A browser
+									 * form sends `GET` and `POST` alone, so `_method` carries the `DELETE`.
+									 */}
+									<form
+										method="post"
+										action={chip.removeAction}
+										mix={[attrs({ "data-rmx-document": "" }), inlineFlex()]}
+									>
+										<input type="hidden" name="_method" value="DELETE" />
+										<input type="hidden" name="returnTo" value={returnTo} />
+										<TagGroup.Remove
+											aria-label={`${copy.remove} ${chip.name}`}
+											title={`${copy.remove} ${chip.name}`}
+										/>
+									</form>
+								</TagGroup.Tag>
+							))}
+						</TagGroup.List>
+					</TagGroup>
+				)}
 
 				{/**
-				 * One field and the return key, the way every other one-field control in this app
-				 * is sent. It offers the names already in use so a second spelling of one label is
-				 * something a reader has to go out of their way to type.
+				 * Closed until asked for, so a list of kept posts is not a column of empty fields.
+				 * A disclosure rather than a script, so it opens with any browser.
 				 */}
-				<form
-					method="post"
-					action={applyAction}
-					mix={[attrs({ "data-rmx-document": "" }), inlineFlex(), items("center")]}
-				>
-					<input type="hidden" name="returnTo" value={returnTo} />
-
-					{/**
-					 * Named by its own label rather than by a word beside it: the strip is a row of
-					 * chips, and a visible caption on it would be the loudest thing under a title.
-					 */}
-					<input
-						type="text"
-						name="name"
-						list={optionsId}
-						required
+				<details mix={[inlineFlex(), items("center")]}>
+					<summary
 						aria-label={copy.add}
-						placeholder={copy.placeholder}
+						title={copy.add}
 						mix={[
-							is(FIELD_WIDTH),
-							maxIs("100%"),
-							minIs(0),
+							inlineFlex(),
+							items("center"),
+							gap(1),
 							bs(CHIP_HEIGHT),
 							p(0, 2),
 							rounded("full"),
 							border({ color: "neutral.border", width: 1 }),
-							bg("neutral.bg"),
-							fg("neutral.emphasis"),
 							text("xs"),
-							raw({ font: "inherit", fontSize: "0.75rem" }),
+							fg("neutral.muted"),
+							cursor("pointer"),
+							listStyle(),
+							when("&::-webkit-details-marker", raw({ display: "none" })),
+							hover([fg("neutral.emphasis"), bg("neutral.bg-tint-hover")]),
 						]}
-					/>
-				</form>
+					>
+						<PlusIcon size={12} aria-hidden="true" />
+					</summary>
+
+					<form
+						method="post"
+						action={applyAction}
+						mix={[
+							attrs({ "data-rmx-document": "" }),
+							inlineFlex(),
+							items("center"),
+							raw({ marginInlineStart: "0.5rem" }),
+						]}
+					>
+						<input type="hidden" name="returnTo" value={returnTo} />
+
+						{/** Labels already in use are offered as it is typed, so a second spelling takes effort. */}
+						<input
+							type="text"
+							name="name"
+							list={optionsId}
+							required
+							aria-label={copy.add}
+							placeholder={copy.placeholder}
+							mix={[
+								is(FIELD_WIDTH),
+								maxIs("100%"),
+								minIs(0),
+								bs(CHIP_HEIGHT),
+								p(0, 2),
+								rounded("full"),
+								border({ color: "neutral.border", width: 1 }),
+								bg("neutral.bg"),
+								fg("neutral.emphasis"),
+								raw({ font: "inherit", fontSize: "0.75rem" }),
+							]}
+						/>
+					</form>
+				</details>
 			</div>
 		);
 	};
