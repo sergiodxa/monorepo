@@ -48,8 +48,9 @@ model of saving, not from a toast after every click.
   when the description runs a line or two; put it under the text (`actionPlacement="below"`) when
   the description is longer or holds a list or warning. Phones always stack it under the text.
 - A section nav on the start side; on phones the nav is the parent page and each section its own route.
-- The danger zone is its own section with a danger border. Each action lists its consequences;
-  type-the-name confirmation only for big, irreversible actions.
+- The danger zone is its own section with a danger border. Each action lists its consequences, with
+  its button under them (`DangerZone.Action`'s default); `actionPlacement="end"` only for a short row
+  with no list. Type-the-name confirmation only for big, irreversible actions.
 
 ## Optimistic toggles
 
