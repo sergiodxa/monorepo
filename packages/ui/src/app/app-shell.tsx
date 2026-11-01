@@ -174,7 +174,10 @@ export namespace AppShell {
 
 	/** Props accepted by {@link AppShell.Identity}. */
 	export interface IdentityProps extends Omit<TagProps<"button">, "children"> {
-		/** A 24px avatar or logo; it stays visible in the rail. */
+		/**
+		 * An avatar or logo, drawn whole at 24px whatever its own size: a root `Avatar` at any
+		 * `size` fills the slot and an `<img>` covers it. It stays visible in the rail.
+		 */
 		avatar: RemixNode;
 		name: string;
 		/** A second line, such as a plan or an email. */
@@ -831,7 +834,12 @@ AppShell.Identity = function AppShellIdentity(handle: Handle<AppShell.IdentityPr
 							justifyContent: "center",
 							overflow: "hidden",
 							borderRadius: "0.375rem",
+							"--ui-image-placeholder-size-sm": "1.5rem",
+							"--ui-image-placeholder-size-md": "1.5rem",
+							"--ui-image-placeholder-size-lg": "1.5rem",
 						}),
+						when("& > *", raw({ maxInlineSize: "100%", maxBlockSize: "100%" })),
+						when("& > img", raw({ inlineSize: "100%", blockSize: "100%", objectFit: "cover" })),
 					]}
 				>
 					{avatar}

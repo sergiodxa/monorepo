@@ -10,10 +10,12 @@
 import type {} from "@vitest/browser-playwright";
 import type { RenderResult } from "remix/component/test";
 
+import { bs, is } from "@sdxc/u/size";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
+import { Avatar } from "../components/avatar.js";
 import { Menu } from "../components/menu.js";
 
 import { APP_SHELL_COOKIE, AppShell, readAppShellCookie } from "./app-shell.js";
@@ -42,6 +44,48 @@ const LABELS: AppShell.Labels = {
 /** A square standing in for an icon, so rows have a 16px glyph to measure. */
 function Glyph() {
 	return () => <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" />;
+}
+
+/** A 64px picture, larger than any avatar slot, so a crop would show in its rendered box. */
+const PICTURE = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="teal"/></svg>')}`;
+
+/** Every kind of avatar an identity is handed: root Avatars at each size, one resized by a mix, a raw image. */
+const AVATARS = [
+	<Avatar size="sm">
+		<Avatar.Image src={PICTURE} alt="" />
+		<Avatar.Fallback>AL</Avatar.Fallback>
+	</Avatar>,
+	<Avatar>
+		<Avatar.Image src={PICTURE} alt="" />
+		<Avatar.Fallback>AL</Avatar.Fallback>
+	</Avatar>,
+	<Avatar mix={[is("1.5rem"), bs("1.5rem")]}>
+		<Avatar.Image src={PICTURE} alt="" />
+		<Avatar.Fallback>AL</Avatar.Fallback>
+	</Avatar>,
+	<img src={PICTURE} alt="" width="32" height="32" />,
+];
+
+/**
+ * Asserts the identity's avatar slot holds its picture whole: the slot is 24px square, every
+ * box inside it fits within it, and the picture is as wide as it is tall.
+ */
+function expectWholeAvatar(row: HTMLElement) {
+	let slot = row.querySelector<HTMLElement>(":scope > span")!;
+	let box = slot.getBoundingClientRect();
+	expect([box.width, box.height]).toEqual([24, 24]);
+	for (let inner of slot.querySelectorAll<HTMLElement>("*")) {
+		let rect = inner.getBoundingClientRect();
+		if (rect.width === 0) continue;
+		expect(rect.left).toBeGreaterThanOrEqual(box.left - 0.5);
+		expect(rect.top).toBeGreaterThanOrEqual(box.top - 0.5);
+		expect(rect.right).toBeLessThanOrEqual(box.right + 0.5);
+		expect(rect.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
+	}
+	let picture = slot.querySelector<HTMLImageElement>("img")!;
+	let rect = picture.getBoundingClientRect();
+	expect(rect.width).toBe(rect.height);
+	expect(rect.width).toBeGreaterThan(20);
 }
 
 /** Mounts a small ops app's shell at the current viewport. */
@@ -363,6 +407,39 @@ describe("AppShell", () => {
 		await userEvent.click(identity("header"));
 		expect(menu.matches(":popover-open")).toBe(true);
 		expect(menu.textContent).toContain("Switch workspace");
+	});
+
+	test("an identity's avatar renders whole: a root Avatar at any size and a raw 32px image", async () => {
+		await reduceMotion();
+		await page.viewport(1280, 800);
+		for (let collapsed of [false, true]) {
+			for (let avatar of AVATARS) {
+				mountShell({
+					collapsed,
+					footer: <AppShell.Identity avatar={avatar} name="Ada Lovelace" />,
+				});
+				await frames();
+				expectWholeAvatar(identity("footer"));
+				mounted?.cleanup();
+				mounted = undefined;
+			}
+		}
+	});
+
+	test("an identity's avatar keeps its size in a row too narrow for the name", async () => {
+		mounted = render(
+			<div style="inline-size: 40px">
+				<AppShell.Identity
+					avatar={<img src={PICTURE} alt="" width="32" height="32" />}
+					name="A name far wider than the row it sits in"
+				/>
+			</div>,
+		);
+		await frames();
+		let slot = document.querySelector<HTMLElement>('[data-slot="app-shell-identity"] > span')!;
+		expect(slot.getBoundingClientRect().width).toBe(24);
+		expect(slot.getBoundingClientRect().height).toBe(24);
+		expectWholeAvatar(document.querySelector<HTMLElement>('[data-slot="app-shell-identity"]')!);
 	});
 
 	test("insets the content card on the tinted frame", async () => {
