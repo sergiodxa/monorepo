@@ -9,13 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { ArrowUpRightIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
+import { fg, outline } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, m, maxIs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { leading, text } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+import { Badge } from "@sdxc/ui";
 import { Feature } from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
@@ -105,28 +105,48 @@ namespace DemoCard {
 }
 
 /**
- * One demo's card: its name and kind, a few words on the invented product and on the art
- * direction it commits to, and a link that opens it.
+ * One demo's card, which as a whole opens the demo: the name is the link, stretched over
+ * the card, so a screen reader announces the name alone while any press on the card follows it.
  */
 function DemoCard(handle: Handle<DemoCard.Props>) {
 	return () => {
 		let { artDirection, href, kind, name, tagline } = handle.props;
 		return (
-			<Feature>
+			<Feature
+				mix={[
+					raw({ transition: "background-color 150ms" }),
+					when(
+						"&:has([data-slot='demo-link']:hover)",
+						raw({
+							backgroundColor:
+								"color-mix(in oklch, var(--ui-surface-raised, Canvas), var(--ui-brand-bg-solid) 6%)",
+						}),
+					),
+					when(
+						"&:has([data-slot='demo-link']:focus-visible)",
+						outline({ color: "brand.ring", width: 2, offset: 2 }),
+					),
+				]}
+			>
 				<div mix={[hstack({ gap: 2, align: "center" }), raw({ flexWrap: "wrap" })]}>
-					<Feature.Title>{name}</Feature.Title>
+					<Feature.Title>
+						<a
+							href={href}
+							data-slot="demo-link"
+							mix={[
+								raw({ color: "inherit", textDecoration: "none", outline: "none" }),
+								when("&::after", raw({ content: '""', position: "absolute", inset: "0" })),
+							]}
+						>
+							{name}
+						</a>
+					</Feature.Title>
 					<Badge color="brand">{kind}</Badge>
 				</div>
-				<Feature.Description mix={[raw({ flexGrow: 1 })]}>
+				<Feature.Description>
 					<p mix={[m(0), fg("neutral.emphasis"), leading("snug")]}>{tagline}</p>
 					<p mix={[m(0), text("sm")]}>{artDirection}</p>
 				</Feature.Description>
-				<Feature.Action>
-					<LinkButton href={href} size="sm" color="neutral" variant="outline">
-						Open {name}
-						<ArrowUpRightIcon size={14} aria-hidden="true" />
-					</LinkButton>
-				</Feature.Action>
 			</Feature>
 		);
 	};

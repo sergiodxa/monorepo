@@ -47,6 +47,29 @@ describe("GET /demo", () => {
 		}
 	});
 
+	test("makes each card one link, named by the demo alone", async () => {
+		let body = await (await fetchApp("/demo")).text();
+		let demos = [
+			...(await listDemoLandings()).map((demo) => ({
+				href: `/demo/${demo.slug}`,
+				name: demo.title.split(" — ")[0] ?? demo.title,
+			})),
+			...(await listDemoDocsSites()).map((site) => ({
+				href: demoDocsHref(site.slug)(),
+				name: site.name,
+			})),
+		];
+		let links = [...body.matchAll(/<a\b[^>]*data-slot="demo-link"[^>]*>([^<]*)<\/a>/g)];
+
+		expect(links).toHaveLength(demos.length);
+		for (let demo of demos) {
+			let link = links.find((match) => match[0].includes(`href="${demo.href}"`));
+			expect(link?.[1]).toBe(escape(demo.name));
+			expect(body.split(`href="${demo.href}"`)).toHaveLength(2);
+		}
+		expect(body).not.toContain(">Open ");
+	});
+
 	test("carries one h1 and tells search engines to leave it out", async () => {
 		let body = await (await fetchApp("/demo")).text();
 
