@@ -421,11 +421,19 @@ export default createAction(routes.post, {
 
 							{mayExtract && held === null && (
 								<LazyFrame src={articleSrc(feedId, item.id)} rootMargin={ARTICLE_REACH}>
-									<div mix={[vstack(), gap(4)]}>
-										{excerpt}
-										<Text mix={[text("sm"), fg("neutral.muted")]}>
+									{/**
+									 * Styled inline: what stands in the frame travels into the browser as the
+									 * island's props, where a `mix` cannot follow it.
+									 */}
+									<div style="display: flex; flex-direction: column; gap: 1rem;">
+										{item.summary && (
+											<p style="margin: 0; font-family: var(--ui-font-reading, inherit); font-size: 1.125rem; line-height: 1.7; color: var(--ui-neutral-fg);">
+												{item.summary}
+											</p>
+										)}
+										<p style="margin: 0; font-size: 0.875rem; color: var(--ui-neutral-fg-muted);">
 											{ctx.intl.t("post.article.pending")}
-										</Text>
+										</p>
 									</div>
 								</LazyFrame>
 							)}

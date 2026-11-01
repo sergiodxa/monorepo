@@ -272,6 +272,23 @@ describe("GET /reading/:feed/:item", () => {
 		expect(body).toContain(`${PATH}?frame=article`);
 		expect(read).not.toHaveBeenCalled();
 	});
+
+	/**
+	 * What stands in the frame reaches the browser as the island's serialized props, where a
+	 * `mix` fails hydration and the frame never fetches the article it waits for.
+	 */
+	test("hands the article frame a fallback the browser can hydrate", async () => {
+		store.openPost.mockResolvedValue(opened());
+
+		let body = await (await get(PATH)).text();
+		/** The island's entry in the hydration data, up to the next island or the end of it. */
+		let start = body.indexOf('"exportName":"LazyFrame"');
+		let next = body.indexOf('"exportName":', start + 1);
+		let props = body.slice(start, next === -1 ? body.indexOf("</script>", start) : next);
+
+		expect(props).toContain("Fetching the article");
+		expect(props).not.toContain('"mix"');
+	});
 });
 
 describe("when the page could not be read", () => {
