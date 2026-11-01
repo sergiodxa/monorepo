@@ -13,7 +13,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { opacity, rounded } from "@sdxc/u/effects";
+import { opacity, rounded, roundedCorner } from "@sdxc/u/effects";
 import { cursor, mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
@@ -24,6 +24,12 @@ import { interactiveTransition } from "../styles/interactive-transition.js";
 
 /** Semantic color role {@link Input} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Input.Color = "neutral";
+
+/** An input joined to a `Group.Text` addon, whose group draws the field's focus and invalid rings. */
+const BESIDE_ADDON = ':is([data-slot="group-text"] ~ *, :has(~ [data-slot="group-text"]))';
+
+/** An input standing on its own, drawing its focus and invalid rings itself. */
+const STANDALONE = `:not(${BESIDE_ADDON})`;
 
 /**
  * Prop types for {@link Input}.
@@ -83,6 +89,18 @@ export function Input(handle: Handle<Input.Props>) {
 						is("full"),
 						bs(10),
 						rounded("md"),
+						/**
+						 * Beside a `Group.Text` addon the input squares the side it shares with it, so the
+						 * pair keeps one rounded outline.
+						 */
+						when('[data-slot="group-text"] ~ &', [
+							roundedCorner("start-start", "none"),
+							roundedCorner("end-start", "none"),
+						]),
+						when('&:has(~ [data-slot="group-text"])', [
+							roundedCorner("start-end", "none"),
+							roundedCorner("end-end", "none"),
+						]),
 						border({ color: "neutral", width: 1 }),
 						bg("neutral.tint"),
 						fg("neutral.emphasis"),
@@ -102,14 +120,19 @@ export function Input(handle: Handle<Input.Props>) {
 						 * cascade layer it resets the ring's color, width and style at once.
 						 */
 						when("&:focus:not(:focus-visible)", outline("none")),
-						focusVisible([
-							border("neutral.border-hover"),
+						focusVisible(border("neutral.border-hover")),
+						when(`&:focus-visible${STANDALONE}`, [
 							outline({ color: "brand.ring", offset: 2 }),
 							when('&[data-color="success"]', outline("success.ring")),
 							when('&[data-color="warning"]', outline("warning.ring")),
 							when('&[data-color="danger"]', outline("danger.ring")),
 						]),
-						invalid([border("danger"), outline({ color: "danger.ring", offset: 2 })]),
+						when(`&:focus${BESIDE_ADDON}`, outline("none")),
+						invalid(border("danger")),
+						when(
+							`&:is(:user-invalid, [aria-invalid="true"])${STANDALONE}`,
+							outline({ color: "danger.ring", offset: 2 }),
+						),
 						when("&:disabled", [opacity(50), bg("neutral.bg-tint-hover"), cursor("not-allowed")]),
 						text("sm"),
 					],

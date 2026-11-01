@@ -23,6 +23,7 @@ import { resolveFieldWiring } from "../utils/resolve-field-wiring.js";
 import { Description } from "./description.js";
 import { FieldError } from "./field-error.js";
 import { resolveFieldIssue } from "./form.js";
+import { Group } from "./group.js";
 import { Input } from "./input.js";
 import { Label } from "./label.js";
 
@@ -50,14 +51,19 @@ export namespace TextField {
 	 * Per-part styling for the elements this convenience wrapper composes in
 	 * one call, layered after each part's own built-in styling.
 	 */
-	export type PartsProps = FieldPartsProps;
+	export interface PartsProps extends FieldPartsProps {
+		/** Styling for the row joining the control to its addons, rendered only with a `prefix` or `suffix`. */
+		group?: TagProps<"div">["mix"];
+		prefix?: TagProps<"label">["mix"];
+		suffix?: TagProps<"label">["mix"];
+	}
 
 	/**
 	 * Props accepted by {@link TextField}. `mix` styles the root element
 	 * grouping the field's parts; style the composed label, control,
 	 * description, and error individually through `parts` instead.
 	 */
-	export interface Props extends Omit<TagProps<"div">, "children"> {
+	export interface Props extends Omit<TagProps<"div">, "children" | "prefix"> {
 		/** Semantic color role for the control's focus ring. Defaults to `"neutral"` when omitted. */
 		color?: Color;
 		/**
@@ -72,6 +78,14 @@ export namespace TextField {
 		 * render no description.
 		 */
 		description?: RemixNode;
+		/**
+		 * Static text joined to the control's leading edge as one field — a currency, a
+		 * domain. It describes the control through `aria-describedby`, stays out of its
+		 * name, and focuses the control when clicked.
+		 */
+		prefix?: RemixNode;
+		/** Static text joined to the control's trailing edge as one field — a unit, a domain suffix. */
+		suffix?: RemixNode;
 		/**
 		 * Validation message rendered through {@link FieldError} beneath the
 		 * control, marking `aria-invalid` unless set explicitly. Falls back to
@@ -130,6 +144,8 @@ export namespace TextField {
  * 	description={t("form.password.hint")}
  * />
  * @example
+ * <TextField label={t("settings.slug.label")} name="slug" prefix="pulse.dev/" />
+ * @example
  * <TextField
  * 	label={t("form.username.label")}
  * 	name="username"
@@ -143,6 +159,8 @@ export function TextField(handle: Handle<TextField.Props>) {
 			color,
 			label,
 			description,
+			prefix,
+			suffix,
 			errorMessage: errorMessageProp,
 			autoFocus,
 			type,
@@ -172,33 +190,60 @@ export function TextField(handle: Handle<TextField.Props>) {
 				description,
 				ariaInvalid: ariaInvalidProp,
 			});
+		let hasAddon = Boolean(prefix || suffix);
+		let labelId = hasAddon ? `${handle.id}-label` : undefined;
+		let prefixId = prefix ? `${handle.id}-prefix` : undefined;
+		let suffixId = suffix ? `${handle.id}-suffix` : undefined;
+		let controlDescribedBy =
+			[prefixId, suffixId, describedBy].filter(Boolean).join(" ") || undefined;
+
+		let control = (
+			<Input
+				id={handle.id}
+				type={resolvedType as never}
+				name={name}
+				value={value}
+				defaultValue={defaultValue}
+				placeholder={placeholder}
+				required={required}
+				disabled={disabled}
+				readOnly={readOnly}
+				autoComplete={autoComplete}
+				pattern={pattern}
+				minLength={minLength}
+				maxLength={maxLength}
+				// oxlint-disable-next-line jsx-a11y/no-autofocus -- Not a focus grab on page load: this only ever resolves true for the first field an enclosing Form reports as invalid, so a failed submit lands the user on the problem instead of leaving them to hunt for it.
+				autoFocus={resolvedAutoFocus}
+				aria-invalid={resolvedInvalid}
+				aria-labelledby={labelId}
+				aria-describedby={controlDescribedBy}
+				color={resolvedColor}
+				mix={parts?.input}
+			/>
+		);
 
 		return (
 			<div {...rest} data-slot="text-field" mix={mergeMix(fieldStackLayout(), mix)}>
-				<Label htmlFor={handle.id} mix={parts?.label}>
+				<Label id={labelId} htmlFor={handle.id} mix={parts?.label}>
 					{label}
 				</Label>
-				<Input
-					id={handle.id}
-					type={resolvedType as never}
-					name={name}
-					value={value}
-					defaultValue={defaultValue}
-					placeholder={placeholder}
-					required={required}
-					disabled={disabled}
-					readOnly={readOnly}
-					autoComplete={autoComplete}
-					pattern={pattern}
-					minLength={minLength}
-					maxLength={maxLength}
-					// oxlint-disable-next-line jsx-a11y/no-autofocus -- Not a focus grab on page load: this only ever resolves true for the first field an enclosing Form reports as invalid, so a failed submit lands the user on the problem instead of leaving them to hunt for it.
-					autoFocus={resolvedAutoFocus}
-					aria-invalid={resolvedInvalid}
-					aria-describedby={describedBy}
-					color={resolvedColor}
-					mix={parts?.input}
-				/>
+				{hasAddon ? (
+					<Group role="presentation" mix={parts?.group}>
+						{prefix ? (
+							<Group.Text id={prefixId} htmlFor={handle.id} mix={parts?.prefix}>
+								{prefix}
+							</Group.Text>
+						) : null}
+						{control}
+						{suffix ? (
+							<Group.Text id={suffixId} htmlFor={handle.id} mix={parts?.suffix}>
+								{suffix}
+							</Group.Text>
+						) : null}
+					</Group>
+				) : (
+					control
+				)}
 				{description ? (
 					<Description id={descriptionId} mix={parts?.description}>
 						{description}
