@@ -14,8 +14,8 @@ import type { Handle, Props as TagProps } from "remix/component";
 import type { RemixNode } from "remix/component";
 
 import { bg, border, fg, outline, outlineColor } from "@sdxc/u/color";
-import { opacity, rounded, roundedCorner } from "@sdxc/u/effects";
-import { cursor, mergeMix } from "@sdxc/u/general";
+import { opacity, rounded } from "@sdxc/u/effects";
+import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { flex, grow, items, shrink } from "@sdxc/u/layout";
 import { bs, minIs, mis, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
@@ -95,16 +95,23 @@ export function Group(handle: Handle<Group.Props>) {
 						 * The controls compose into one shape, so the cluster keeps the rounding on
 						 * its own outer corners and the seam where two of them meet is drawn once; the
 						 * last control before a trailing `<link rel="prefetch">` hint keeps its corners.
+						 * The square corners are `!important` so they hold over every child's own
+						 * rounding, whichever reached the page first.
 						 */
 						when("& > *:not(:first-child)", [
-							roundedCorner("start-start", "none"),
-							roundedCorner("end-start", "none"),
+							raw({
+								borderStartStartRadius: "0 !important",
+								borderEndStartRadius: "0 !important",
+							}),
 							mis("-1px"),
 						]),
-						when("& > *:has(~ :not(link))", [
-							roundedCorner("start-end", "none"),
-							roundedCorner("end-end", "none"),
-						]),
+						when(
+							"& > *:has(~ :not(link))",
+							raw({
+								borderStartEndRadius: "0 !important",
+								borderEndEndRadius: "0 !important",
+							}),
+						),
 						/**
 						 * Focus shows on the control holding it, naming which control has it where a ring
 						 * around the cluster names only the group. That control is raised so its ring
@@ -177,18 +184,6 @@ Group.Text = function GroupText(handle: Handle<Group.TextProps>) {
 						bs(10),
 						pi(3),
 						rounded("md"),
-						/**
-						 * The addon keeps the rounding on the field's outer edge only, so the side it
-						 * shares with the control is square under the one border they draw together.
-						 */
-						when("&:not(:first-child)", [
-							roundedCorner("start-start", "none"),
-							roundedCorner("end-start", "none"),
-						]),
-						when("&:has(~ :not(link))", [
-							roundedCorner("start-end", "none"),
-							roundedCorner("end-end", "none"),
-						]),
 						border({ color: "neutral", width: 1 }),
 						bg("neutral.tint"),
 						fg("neutral.muted"),

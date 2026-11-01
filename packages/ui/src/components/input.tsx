@@ -13,7 +13,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { opacity, rounded, roundedCorner } from "@sdxc/u/effects";
+import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix } from "@sdxc/u/general";
 import { block } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
@@ -89,18 +89,6 @@ export function Input(handle: Handle<Input.Props>) {
 						is("full"),
 						bs(10),
 						rounded("md"),
-						/**
-						 * Beside a `Group.Text` addon the input squares the side it shares with it, so the
-						 * pair keeps one rounded outline.
-						 */
-						when('[data-slot="group-text"] ~ &', [
-							roundedCorner("start-start", "none"),
-							roundedCorner("end-start", "none"),
-						]),
-						when('&:has(~ [data-slot="group-text"])', [
-							roundedCorner("start-end", "none"),
-							roundedCorner("end-end", "none"),
-						]),
 						border({ color: "neutral", width: 1 }),
 						bg("neutral.tint"),
 						fg("neutral.emphasis"),
