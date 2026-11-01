@@ -60,6 +60,20 @@ if (isSuccess(range) && isSuccess(ip)) range.data.contains(ip.data); // true
 IP.Range.parse("10.0.0.1/8"); // failure: IP.Error { code: "host-bits-set" }
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/ip classify 192.168.1.10
+```
+
+`classify` prints the address's version, canonical form, classification, whether it is public, and the IPv4 an IPv4-mapped, NAT64 or 6to4 address carries. With no address, or `-`, it reads stdin; `--json` prints the same as an object.
+
+```sh
+bunx @sdxc/ip contains 10.0.0.0/8 10.1.2.3
+```
+
+`contains` exits 0 when the range holds the address and 1 when it does not. Both commands exit 2 for text that is not an address or a range. `bunx @sdxc/ip --help` lists every flag.
+
 ## API
 
 ### `IP.parse(text: string): Result<IP, IP.Error>`
