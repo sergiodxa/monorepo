@@ -9,6 +9,7 @@
 export type { HashName, SigningAlgorithm } from "./algorithms.js";
 export type { ArmorOptions, Armored, ArmorType } from "./armor.js";
 export type { OpenPgpErrorCode } from "./errors.js";
+export type { KeyDetails, KeyInspection, SignatureDetails } from "./inspect.js";
 export type { KeyPacket, Protection, PublicMaterial, SecretKeyPacket } from "./key-packet.js";
 export type {
 	AttributeEntry,
@@ -33,6 +34,7 @@ export type { KeyStatus, KeyVerification } from "./validity.js";
 
 export { armor, crc24, dearmor } from "./armor.js";
 export { OpenPgpError } from "./errors.js";
+export { inspectKey, readSignatures } from "./inspect.js";
 export { generateKey, PrivateKey, PublicKey, readPrivateKey, readPublicKey } from "./keys.js";
 export { readPackets, writePacket } from "./packets.js";
 export {

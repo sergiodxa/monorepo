@@ -88,6 +88,10 @@ Splits a cleartext signed message into `text`, `hashes` and binary `signature` w
 
 Checks every self-signature and answers the primary key's status (`revoked`, `expires`, `canSign`, `bound`), each User ID's certification and each subkey's binding.
 
+### `inspectKey(key)` / `readSignatures(input)`
+
+`inspectKey` reports a key's algorithm, creation, expiry and status for the primary key and each subkey, each User ID's certification, and whether it holds secret material. `readSignatures` reads the issuer, algorithm, hash and creation time of each signature in a cleartext message or a detached signature without verifying them, so a failed check can name the key it needed.
+
 ### `armor(type, data, options?)` / `dearmor(text)` / `crc24(data)`
 
 ASCII armor for `"message"`, `"public-key"`, `"private-key"` and `"signature"`. The CRC24 footer is written only with `checksum: true`, and is reported but never refused when read.
@@ -117,6 +121,23 @@ return new Response(signed && isSuccess(signed) ? signed.data : body, {
 ```
 
 A key made with GnuPG works as is: `gpg --armor --export-secret-keys <fingerprint>`.
+
+## Command line
+
+```sh
+bunx @sdxc/openpgp --help
+```
+
+```sh
+sdxc-openpgp keygen --user-id "Security <security@example.com>" --public-out public.asc > private.asc
+sdxc-openpgp sign security.txt --key-file private.asc > security.txt.signed   # cleartext signed message
+sdxc-openpgp sign release.tar.gz --detach --key-env PGP_KEY > release.tar.gz.asc
+sdxc-openpgp verify security.txt.signed --key-file public.asc
+sdxc-openpgp verify release.tar.gz --signature release.tar.gz.asc --key-file public.asc --json
+sdxc-openpgp inspect public.asc                                                 # fingerprint, User IDs, algorithms, expiry
+```
+
+Files come from a path or stdin, private keys from `--key-file` or `--key-env`, and passphrases from `--passphrase-file` or `--passphrase-env`. `verify` and `inspect` take `--json`. `verify` exits 1 on a bad, missing or unknown signature, naming the issuer's Key ID and fingerprint, and 2 when its input or key cannot be read.
 
 ## Versioning
 
