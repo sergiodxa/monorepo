@@ -12,9 +12,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { XIcon } from "@sdxc/icons";
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { backdropBlur, backdropSaturate, rounded, shadow, transition } from "@sdxc/u/effects";
-import { pointerEvents, raw, mergeMix } from "@sdxc/u/general";
+import { combine, pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import {
-	absolute,
 	basis,
 	fixed,
 	flex,
@@ -32,7 +31,7 @@ import {
 	shrink,
 } from "@sdxc/u/layout";
 import { media, supports } from "@sdxc/u/responsive";
-import { is, bs, maxIs, minIs, pb, pi, pie } from "@sdxc/u/size";
+import { is, bs, maxIs, mb, mie, minIs, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { translateX } from "@sdxc/u/transform";
 import { balance, fontSize, leading, pretty, weight } from "@sdxc/u/typography";
@@ -42,7 +41,6 @@ import { hitArea } from "../styles/hit-area.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 import { Toaster } from "./behaviors/toaster.js";
-import { graphicHostStyle } from "./styles/graphic-host.js";
 import { toastStackStyle } from "./styles/toast-stack.js";
 
 /**
@@ -85,6 +83,21 @@ const DEFAULT_GRAPHIC_ARIA_HIDDEN = "true";
  * actions run; pass `type="submit"` for a form control.
  */
 const DEFAULT_BUTTON_TYPE: NonNullable<Toast.ActionProps["type"]> = "button";
+
+/**
+ * Block size of a toast's first line of text, the centre line its icon,
+ * action and close button sit on; an app overrides `--ui-toast-line`.
+ */
+const LINE = "var(--ui-toast-line, 1.25rem)";
+
+/** Block size of a toast's action, cancel and close buttons. */
+const CONTROL = "1.5rem";
+
+/**
+ * Block margin that centres a {@link CONTROL}-tall button on the first line
+ * while letting it overhang that line evenly, so it never pushes the text down.
+ */
+const CONTROL_MARGIN = `calc((${LINE} - ${CONTROL}) / 2)`;
 
 /**
  * Corner {@link Toast.Region} renders in when `placement` is left unset.
@@ -381,7 +394,6 @@ export function Toast(handle: Handle<Toast.Props>) {
 						fg("neutral.fg-emphasis"),
 						pb("1rem"),
 						pi("1rem"),
-						when('&:has(> [data-slot="close"])', pie("2.5rem")),
 						when('&[data-color="brand"]', [border("brand"), fg("brand.fg-emphasis")]),
 						when('&[data-color="neutral"]', [border("neutral"), fg("neutral.fg-emphasis")]),
 						when('&[data-color="success"]', [border("success"), fg("success.fg-emphasis")]),
@@ -454,6 +466,16 @@ export function Toast(handle: Handle<Toast.Props>) {
 }
 
 /**
+ * Lays out {@link Toast.Icon} and {@link Toast.Loader} identically, centring
+ * the graphic on the toast's first line so swapping them never moves it.
+ *
+ * @returns A mixin ready for the graphic slot's `mix` prop.
+ */
+function graphicSlotStyle() {
+	return combine([shrink(), inlineFlex(), items("center"), bs(LINE), fg("currentcolor")]);
+}
+
+/**
  * Renders {@link Toast.IconProps.children} as the toast's leading icon,
  * hidden from assistive technology since the toast's color and text already
  * carry its meaning; swap in {@link Toast.Loader} while pending.
@@ -470,7 +492,7 @@ Toast.Icon = function ToastIcon(handle: Handle<Toast.IconProps>) {
 				{...rest}
 				data-slot="icon"
 				mix={mergeMix(
-					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle()],
+					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicSlotStyle()],
 					mix,
 				)}
 			>
@@ -497,7 +519,7 @@ Toast.Loader = function ToastLoader(handle: Handle<Toast.LoaderProps>) {
 				{...rest}
 				data-slot="loader"
 				mix={mergeMix(
-					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicHostStyle()],
+					[attrs({ "aria-hidden": DEFAULT_GRAPHIC_ARIA_HIDDEN }), graphicSlotStyle()],
 					mix,
 				)}
 			>
@@ -550,7 +572,7 @@ Toast.Title = function ToastTitle(handle: Handle<Toast.TitleProps>) {
 			<h3
 				{...rest}
 				data-slot="title"
-				mix={mergeMix([weight(500), leading(1), fontSize("sm"), balance()], mix)}
+				mix={mergeMix([weight(500), leading(LINE), fontSize("sm"), balance()], mix)}
 			>
 				{children}
 			</h3>
@@ -577,6 +599,7 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 				mix={mergeMix(
 					[
 						fontSize("sm"),
+						leading(LINE),
 						pretty(),
 						fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					],
@@ -617,7 +640,9 @@ Toast.Action = function ToastAction(handle: Handle<Toast.ActionProps>) {
 						rounded("md"),
 						border({ width: 1 }),
 						pi("0.75rem"),
-						pb("0.25rem"),
+						bs(CONTROL),
+						mb(CONTROL_MARGIN),
+						leading(1),
 						weight(500),
 						shrink(),
 						transition(
@@ -666,7 +691,9 @@ Toast.Cancel = function ToastCancel(handle: Handle<Toast.CancelProps>) {
 						rounded("md"),
 						border({ color: "neutral", width: 1 }),
 						pi("0.75rem"),
-						pb("0.25rem"),
+						bs(CONTROL),
+						mb(CONTROL_MARGIN),
+						leading(1),
 						weight(500),
 						fg("neutral.fg"),
 						hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
@@ -707,20 +734,22 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 				data-slot="close"
 				mix={mergeMix(
 					[
-						absolute(),
+						relative(),
 						inlineFlex(),
 						items("center"),
 						justify("center"),
-						is("1.5rem"),
-						bs("1.5rem"),
+						shrink(),
+						is(CONTROL),
+						bs(CONTROL),
+						mb(CONTROL_MARGIN),
+						mie("-0.5rem"),
+						raw({ order: "1" }),
 						rounded("md"),
 						fg("neutral.fg-muted"),
 						hover([bg("neutral.bg-tint-hover"), fg("neutral.fg-emphasis")]),
 						transition(
 							"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter",
 						),
-						insBs("0.5rem"),
-						insIe("0.5rem"),
 						hitArea(),
 					],
 					mix,
