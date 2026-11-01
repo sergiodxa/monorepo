@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { BookmarkCheckIcon, BookmarkIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
-import { flex, shrink } from "@sdxc/u/layout";
+import { flex, gap, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
@@ -48,6 +48,11 @@ export type SaveToggleProps = {
 	failed: string;
 	/** What it says instead when the save was refused for want of room. */
 	full: string;
+	/**
+	 * Prints the control's name beside its mark, for a page with the room to say it, such as
+	 * a post's own page, where the mark stands alone among words rather than in a list.
+	 */
+	showLabel?: boolean;
 };
 
 /**
@@ -155,9 +160,8 @@ export const SaveToggle = clientEntry(
 						aria-label={label}
 						title={label}
 						mix={[
-							pi(0),
+							handle.props.showLabel ? [pi(2), gap(1.5)] : [pi(0), is(TOGGLE_SIZE)],
 							pb(0),
-							is(TOGGLE_SIZE),
 							bs(TOGGLE_SIZE),
 							/**
 							 * The glyph is what carries the state — an empty bookmark against a ticked one
@@ -168,6 +172,7 @@ export const SaveToggle = clientEntry(
 						]}
 					>
 						<SaveMark isSaved={isSaved} />
+						{handle.props.showLabel && <span>{label}</span>}
 					</Button>
 				</form>
 			);

@@ -352,6 +352,7 @@ export default createAction(routes.post, {
 								unsave={ctx.intl.t("timeline.unsave")}
 								failed={ctx.intl.t("timeline.saveFailed")}
 								full={ctx.intl.t("timeline.saveFull")}
+								showLabel
 							/>
 
 							{item.url && (

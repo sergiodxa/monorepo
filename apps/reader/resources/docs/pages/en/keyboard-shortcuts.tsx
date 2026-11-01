@@ -26,6 +26,7 @@ export const TOC: TableOfContents.Item[] = [
 const KEYS: [RemixNode, string][] = [
 	[<Kbd>j</Kbd>, "Next post"],
 	[<Kbd>k</Kbd>, "Previous post"],
+	[<Kbd>n</Kbd>, "Next unread post"],
 	[<Kbd>o</Kbd>, "Open the post"],
 	[<Kbd>m</Kbd>, "Mark as read or unread"],
 	[<Kbd>s</Kbd>, "Save the post, or stop saving it"],
