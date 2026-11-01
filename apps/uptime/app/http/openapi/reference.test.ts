@@ -14,7 +14,11 @@ import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
-import { expandReference, referencedOperations } from "~/app/http/openapi/reference";
+import {
+	expandReference,
+	operationReferences,
+	referencedOperations,
+} from "~/app/http/openapi/reference";
 
 /** The API reference's Markdown sources, which the docs site bundles. */
 const API_DOCS = join(import.meta.dirname, "../../../resources/docs/api");
@@ -90,5 +94,32 @@ describe("the API reference pages", () => {
 
 		expect(operations.filter((name) => !named.includes(name))).toEqual([]);
 		expect(named.filter((name, index) => named.indexOf(name) !== index)).toEqual([]);
+	});
+});
+
+describe("operationReferences", () => {
+	test("lists a request body's fields with their type, default, range and requirement", () => {
+		let create = operationReferences().get("monitorsCreate");
+		let interval = create?.request?.find((row) => row.name === "intervalSeconds");
+
+		expect(create?.auth).toEqual({ kind: "scopes", scopes: ["monitors:write"] });
+		expect(create?.request?.find((row) => row.name === "name")?.required).toBe(true);
+		expect(interval).toMatchObject({ type: "number", default: "60", required: false });
+		expect(interval?.description).toContain("60–3600");
+	});
+
+	test("nests a referenced object's fields under the field that lists it", () => {
+		let index = operationReferences().get("monitorsIndex");
+		let data = index?.responses[0]?.fields.find((row) => row.name === "data");
+		let monitors = data?.children?.find((row) => row.name === "monitors");
+
+		expect(monitors?.type).toBe("Monitor[]");
+		expect(monitors?.children?.map((row) => row.name)).toContain("intervalSeconds");
+	});
+
+	test("names each variant of a union body by the value that tells it apart", () => {
+		let create = operationReferences().get("alertsCreate");
+
+		expect(create?.request?.map((row) => row.name)).toContain("strategy: email");
 	});
 });

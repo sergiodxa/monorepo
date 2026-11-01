@@ -36,6 +36,9 @@ const HEADER_HEIGHT = "4rem";
  */
 const DOCS_MEASURE = "88rem";
 
+/** The shell's width on a wide page, room for two columns beside the sidebar and the rail. */
+const WIDE_MEASURE = "104rem";
+
 /**
  * Room between a page's header and what follows it, so the updated date and the page
  * actions read as the header's last line instead of the body's first.
@@ -92,6 +95,11 @@ namespace DocsLayout {
 		 * spaced from the article and from each other by one gap.
 		 */
 		pageEnd?: RemixNode;
+		/**
+		 * Widens the shell for a page whose blocks sit side by side (the API reference's
+		 * prose beside its code), while running text keeps its reading measure.
+		 */
+		wide?: boolean;
 		children: RemixNode;
 	}
 }
@@ -139,6 +147,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			section,
 			measure = "48rem",
 			pageEnd,
+			wide = false,
 			children,
 		} = handle.props;
 
@@ -166,7 +175,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		);
 
 		return (
-			<div mix={[raw({ "--ui-marketing-measure": DOCS_MEASURE })]}>
+			<div mix={[raw({ "--ui-marketing-measure": wide ? WIDE_MEASURE : DOCS_MEASURE })]}>
 				<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 					<DocsShell
 						sidebar={sidebar}
@@ -176,8 +185,8 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						drawerLabel={labels.nav}
 						closeLabel={labels.close}
 						stickyTop={HEADER_HEIGHT}
-						maxWidth={DOCS_MEASURE}
-						measure={measure}
+						maxWidth={wide ? WIDE_MEASURE : DOCS_MEASURE}
+						measure={wide ? "none" : measure}
 						main={false}
 					>
 						<div

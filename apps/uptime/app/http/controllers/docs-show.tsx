@@ -32,22 +32,28 @@ import {
 	PlanNotice,
 	Typeset,
 } from "@sdxc/ui";
+import { readCodeTabsCookie } from "@sdxc/ui/mixins";
 import { DocsNotFound } from "@sdxc/ui/patterns";
 import { findNeighbours } from "@sdxc/ui/utils";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { expandReference } from "~/app/http/openapi/reference";
+import { expandReference, operationReferences } from "~/app/http/openapi/reference";
 import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
 import { findDoc, getDocLoader, listDocs, MARKDOWN_OPTIONS, toDocsTree } from "~/app/services/docs";
+import { endpointSections } from "~/app/services/docs-api";
+import { apiReferenceComponents } from "~/resources/components/docs-api-reference";
 import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
 import DocsSearchForm from "~/resources/components/docs-search-form";
 import DocsLayout, { buildDocsLabels, supportHref } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
+
+/** The slug prefix of the API resource pages, which lay each endpoint out in two columns. */
+const API_RESOURCES = "api/resources/";
 
 /** The suffix that asks for a page's Markdown source instead of its HTML. */
 const MARKDOWN_SUFFIX = ".md";
@@ -149,7 +155,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 	 * OpenAPI document renders into it. A placeholder naming no operation is logged and
 	 * the page renders its prose alone, since the rest of the page still holds.
 	 */
-	let expanded = expandReference(source);
+	let reference = slug.startsWith(API_RESOURCES);
+	let expanded = expandReference(source, twin || !reference ? "markdown" : "tags");
 	if (isFailure(expanded)) {
 		ctx.log.warn("docs.reference_failed", {
 			file: docLoader.path,
@@ -192,8 +199,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 		});
 	}
 
-	let body = isFailure(painted) ? outlined : painted.data;
-	let anchors = outlineOf(outlined);
+	let paintedBody = isFailure(painted) ? outlined : painted.data;
+	let body = reference ? endpointSections(paintedBody) : paintedBody;
+	let anchors = outlineOf(outlined).filter((item) => !reference || item.level === 2);
 	let section = frontmatter.section.title;
 	let { previous, next } = findNeighbours(tree, activePath, { boundary: "section" });
 	let upNext = (frontmatter.next ?? []).flatMap((path) => findDoc(sections, path) ?? []);
@@ -220,6 +228,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 				previous={previous}
 				next={next}
 				section={section}
+				wide={reference}
 				pageEnd={
 					<>
 						<DocsFeedback
@@ -315,18 +324,30 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 					<Typeset preset="docs">
 						{toRemix(body, {
-							components: docsMarkdownComponents({
-								copy: t("docs.code.copy"),
-								copied: t("docs.code.copied"),
-								alerts: {
-									note: t("docs.alerts.note"),
-									tip: t("docs.alerts.tip"),
-									important: t("docs.alerts.important"),
-									warning: t("docs.alerts.warning"),
-									caution: t("docs.alerts.caution"),
-								},
-								t,
-							}),
+							components: {
+								...docsMarkdownComponents({
+									copy: t("docs.code.copy"),
+									copied: t("docs.code.copied"),
+									alerts: {
+										note: t("docs.alerts.note"),
+										tip: t("docs.alerts.tip"),
+										important: t("docs.alerts.important"),
+										warning: t("docs.alerts.warning"),
+										caution: t("docs.alerts.caution"),
+									},
+									t,
+								}),
+								...(reference
+									? apiReferenceComponents({
+											t,
+											operations: operationReferences(),
+											language: readCodeTabsCookie(
+												ctx.request.headers.get("Cookie"),
+												"api-language",
+											),
+										})
+									: {}),
+							},
 						})}
 					</Typeset>
 				</article>

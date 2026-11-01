@@ -122,13 +122,32 @@ describe("GET /docs/*slug", () => {
 		expect(body).toContain('class="token ');
 	});
 
-	test("renders an API page's scopes, errors and schemas from the OpenAPI document", async () => {
+	test("lays each API endpoint out as prose beside its request and response", async () => {
 		let body = await (await getDocsShow("api/resources/http-monitors")).text();
 
 		expect(body).not.toContain("<!-- operation:");
+		expect(body).toContain('data-slot="api-endpoint"');
+		expect(body).toContain('data-slot="api-endpoint-code"');
+		expect(body).toMatch(/data-slot="api-endpoint-path"[\s\S]*?POST[\s\S]*?\/api\/v1\/monitors/);
 		expect(body).toContain("Required scope:");
 		expect(body).toContain("idempotency-key-reused");
-		expect(body).toContain("Response Schema");
+		expect(body).toContain("Response fields (200)");
+		expect(body).toContain("JavaScript");
+		expect(body).not.toContain("Response Schema");
+	});
+
+	test("lists only the endpoints in an API page's outline", async () => {
+		let body = await (await getDocsShow("api/resources/http-monitors")).text();
+
+		expect(body).toContain('href="#list-monitors"');
+		expect(body).not.toContain('href="#query-parameters"');
+	});
+
+	test("keeps the generated schemas in an API page's Markdown twin", async () => {
+		let body = await (await getDocsShow("api/resources/http-monitors.md")).text();
+
+		expect(body).toContain("**Required scope:** `monitors:read`");
+		expect(body).toContain("### Response Schema");
 	});
 
 	test("closes every page with feedback, a route to support and a copy-page action", async () => {

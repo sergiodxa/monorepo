@@ -34,8 +34,8 @@ export type DocFrontmatter = s.InferOutput<typeof frontmatterSchema>;
 
 /**
  * The tags a doc may write beyond Markdown: a numbered procedure, the product's own
- * controls as chips, keys, an inline product mockup, and a list of questions. Each
- * `step` carries its own `id`, so the "On this page" rail links it like a heading.
+ * controls as chips, keys, an inline product mockup, a list of questions, and the API
+ * reference's operation placeholder. Each `step` carries its own `id` for the rail.
  */
 const DOC_TAGS = {
 	steps: {},
@@ -49,6 +49,7 @@ const DOC_TAGS = {
 	},
 	faq: {},
 	question: { attributes: s.object({ title: s.string() }) },
+	operation: { content: "none", attributes: s.object({ name: s.string() }) },
 } satisfies Markdown.Options["tags"];
 
 /**
