@@ -75,23 +75,34 @@ export const Toasts: EntryComponent<Toasts.Props> = clientEntry(
 	function Toasts(handle: Handle<Toasts.Props>) {
 		let toaster = pageToaster(handle.props.queue);
 		let adopted = false;
+		let seen = new Set<string>();
 
 		whileLive(handle, (queue: Toaster<Toast.Message>, signal) => {
 			queue.addEventListener("change", () => void handle.update(), { signal });
 		})(toaster);
 
-		handle.queueTask(() => {
+		/**
+		 * Queues every flash not seen before, so one a later render brings (a page the client
+		 * runtime fetched after a form post) shows too, and a dismissed one never comes back.
+		 */
+		function adopt() {
 			for (let flash of handle.props.initial ?? []) {
+				if (seen.has(flash.id)) continue;
+				seen.add(flash.id);
 				if (toaster.get(flash.id)) continue;
 				toaster.add(flash, { id: flash.id, duration: flash.duration });
 			}
+		}
 
+		handle.queueTask(() => {
+			adopt();
 			adopted = true;
 			void handle.update();
 		});
 
 		return () => {
 			let { labels, initial = [], placement, max, stack } = handle.props;
+			if (adopted && initial.some((flash) => !seen.has(flash.id))) handle.queueTask(adopt);
 			let items = adopted
 				? toaster.toasts.map((toast) => ({ id: toast.id, message: toast.data }))
 				: initial.map((flash) => ({ id: flash.id, message: flash as Toast.Message }));

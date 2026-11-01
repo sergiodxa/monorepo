@@ -8,7 +8,7 @@
  */
 
 import type {} from "@vitest/browser-playwright";
-import type { AppRuntime } from "remix/component";
+import type { AppRuntime, Handle } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { run } from "remix/component";
@@ -132,6 +132,30 @@ describe("Toasts flash toasts", () => {
 
 		await vi.waitFor(() => expect(items()).toHaveLength(0));
 		expect(pageToaster().size).toBe(0);
+	});
+
+	test("show when a later render brings a new one, and a dismissed one stays gone", async () => {
+		let flashes: Toast.Flash[] = [];
+		let host: Handle | undefined;
+		/** Re-renders the region with whatever flashes the test sets, as a fetched page would. */
+		function Host(handle: Handle) {
+			host = handle;
+			return () => <Toasts labels={LABELS} initial={flashes} />;
+		}
+		mounted = render(<Host />);
+		await vi.waitFor(() => expect(document.querySelector('[data-slot="region"]')).not.toBeNull());
+		expect(items()).toHaveLength(0);
+
+		flashes = [{ ...FLASH, id: "flash-after-post", duration: null }];
+		await host?.update();
+		await vi.waitFor(() => expect(items()).toHaveLength(1));
+		expect(items()[0]?.textContent).toContain("Monitor deleted");
+
+		await userEvent.click(page.getByRole("button", { name: "Dismiss" }));
+		await vi.waitFor(() => expect(items()).toHaveLength(0));
+		await host?.update();
+		await sleep(50);
+		expect(items()).toHaveLength(0);
 	});
 });
 
