@@ -43,7 +43,9 @@ function record(event: SubmitEvent) {
 	let form = event.target as HTMLFormElement;
 	let data = new FormData(form, event.submitter);
 	submitted.push(
-		new URLSearchParams([...data].map(([key, value]) => [key, String(value)])).toString(),
+		new URLSearchParams(
+			[...data].map(([key, value]) => [key, typeof value === "string" ? value : value.name]),
+		).toString(),
 	);
 }
 
