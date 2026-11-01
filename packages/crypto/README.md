@@ -72,6 +72,8 @@ let plaintext = unwrap(await open(key, sealed));
 bunx @sdxc/crypto --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg crypto …` runs the same command line, using the version your project installs.
+
 Input is a file path, or stdin when the path is `-` or absent. Keys, TOTP secrets and passwords come from a file, stdin or a named environment variable, never the command line. `--json` prints a machine-readable result; a failed `--verify` or `scrypt verify` exits 1, and bad usage or unreadable input exits 2.
 
 ```sh
