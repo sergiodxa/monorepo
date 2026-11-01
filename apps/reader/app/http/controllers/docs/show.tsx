@@ -12,7 +12,6 @@ import type { Handle } from "remix/component";
 
 import { Trans } from "@sdxc/i18n/ui";
 import { raw } from "@sdxc/u/general";
-import { Alert } from "@sdxc/ui";
 import {
 	Callout,
 	DocsFeedback,
@@ -99,6 +98,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 				footer={
 					<DocsFeedback
 						id="docs-feedback"
+						resetScroll="manual"
 						action={routes.docs.feedback.href()}
 						page={path}
 						state={sent ? "sent" : "idle"}
@@ -125,14 +125,6 @@ export default createAction(routes.docs.show, async (ctx) => {
 					notice={page.plan ? <PlanRequirement intl={ctx.intl} plan={page.plan} /> : undefined}
 					mix={[raw({ marginBlockEnd: "0.75rem" })]}
 				/>
-
-				{sent ? (
-					<Alert color="success" live="polite" data-slot="docs-feedback-sent">
-						<Alert.Content>
-							<Alert.Description>{t("docs.feedback.thanks")}</Alert.Description>
-						</Alert.Content>
-					</Alert>
-				) : null}
 
 				<Body t={t} figures={docsFigures(ctx.locale)} locale={ctx.locale} />
 

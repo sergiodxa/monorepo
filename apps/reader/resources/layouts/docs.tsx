@@ -99,7 +99,6 @@ function NavFooter(handle: Handle<{ t: Translate }>) {
 				alignItems: "center",
 				gap: "0.5rem",
 				padding: "0.375rem 0.625rem",
-				marginInline: "-0.625rem",
 				borderRadius: "0.375rem",
 				fontSize: "0.875rem",
 				color: "var(--ui-neutral-fg)",

@@ -85,6 +85,7 @@ describe("GET /docs/:slug", () => {
 		expect(html).toContain('data-slot="next-steps"');
 		expect(html).toContain(`href="${docHref("import-opml")}"`);
 		expect(html).toContain('id="docs-feedback"');
+		expect(html).toContain('data-rmx-reset-scroll="manual"');
 		expect(html).toContain('href="/support?from=getting-started"');
 		expect(html).not.toContain("mailto:");
 	});
@@ -101,7 +102,6 @@ describe("GET /docs/:slug", () => {
 		let html = await response.text();
 
 		expect(html).toContain('data-state="sent"');
-		expect(html.indexOf('data-slot="docs-feedback-sent"')).toBeLessThan(html.indexOf("<h2"));
 	});
 
 	test("answers a slug nobody wrote with the help 404 and suggestions", async () => {

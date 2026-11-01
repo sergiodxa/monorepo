@@ -1,6 +1,7 @@
 /**
  * Records a "Was this page helpful?" vote on the request's log event and sends the reader back to
- * the page they voted on, which thanks them at the top, where the page opens. It works for
+ * the page they voted on, thanked where they voted: the page keeps its scroll, and a plain
+ * document load jumps to the thanks. It works for
  * signed-out readers, so it stores nothing tied to an account.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -49,7 +50,7 @@ export default createAction(routes.docs.feedback, (ctx) => {
 	}
 
 	let query = new URLSearchParams({ [FEEDBACK_SENT_PARAM]: "sent" });
-	return redirect(`${docHref(page.slug)}?${query}`, {
+	return redirect(`${docHref(page.slug)}?${query}#docs-feedback`, {
 		status: redirect.Status.SeeOther,
 	});
 });
