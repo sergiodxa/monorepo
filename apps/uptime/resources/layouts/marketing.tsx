@@ -75,6 +75,12 @@ namespace MarketingLayout {
 		tagline: string;
 		/** Fully formatted copyright line (`landing.footer.copyright`, year already interpolated). */
 		copyrightLine: string;
+		/**
+		 * Whether the site footer closes the page; the docs turn it off and draw a compact
+		 * footer beside their sidebar instead.
+		 * @default true
+		 */
+		siteFooter?: boolean;
 		children: RemixNode;
 	}
 }
@@ -287,6 +293,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 			legalLinks,
 			tagline,
 			copyrightLine,
+			siteFooter = true,
 			children,
 		} = handle.props;
 
@@ -345,22 +352,24 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 				<main mix={[raw({ flexGrow: "1" })]}>{children}</main>
 
-				<SiteFooter
-					prefetch="intent"
-					brand={<BrandLink label={brandLabel} />}
-					tagline={tagline}
-					columns={footerColumns}
-					legal={
-						<>
-							<p>{copyrightLine}</p>
-							{legalLinks.map((link) => (
-								<a key={link.href} href={link.href} data-rmx-prefetch="intent">
-									{link.label}
-								</a>
-							))}
-						</>
-					}
-				/>
+				{siteFooter ? (
+					<SiteFooter
+						prefetch="intent"
+						brand={<BrandLink label={brandLabel} />}
+						tagline={tagline}
+						columns={footerColumns}
+						legal={
+							<>
+								<p>{copyrightLine}</p>
+								{legalLinks.map((link) => (
+									<a key={link.href} href={link.href} data-rmx-prefetch="intent">
+										{link.label}
+									</a>
+								))}
+							</>
+						}
+					/>
+				) : null}
 			</div>
 		);
 	};

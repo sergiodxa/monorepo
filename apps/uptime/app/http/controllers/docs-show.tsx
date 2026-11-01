@@ -229,24 +229,25 @@ export default createAction(routes.docs.show, async (ctx) => {
 				next={next}
 				section={section}
 				wide={reference}
+				footer={
+					<DocsFeedback
+						id="docs-feedback"
+						mix={[raw({ scrollMarginBlockStart: "var(--ui-docs-scroll-margin)" })]}
+						action={routes.docs.feedback.href()}
+						page={activePath}
+						state={feedbackSent ? "sent" : "idle"}
+						labels={{
+							question: t("docs.feedback.question"),
+							yes: t("docs.feedback.yes"),
+							no: t("docs.feedback.no"),
+							note: t("docs.feedback.note"),
+							send: t("docs.feedback.send"),
+							thanks: t("docs.feedback.thanks"),
+						}}
+					/>
+				}
 				pageEnd={
 					<>
-						<DocsFeedback
-							id="docs-feedback"
-							mix={[raw({ scrollMarginBlockStart: "var(--ui-docs-scroll-margin)" })]}
-							action={routes.docs.feedback.href()}
-							page={activePath}
-							state={feedbackSent ? "sent" : "idle"}
-							labels={{
-								question: t("docs.feedback.question"),
-								yes: t("docs.feedback.yes"),
-								no: t("docs.feedback.no"),
-								note: t("docs.feedback.note"),
-								send: t("docs.feedback.send"),
-								thanks: t("docs.feedback.thanks"),
-							}}
-						/>
-
 						{upNext.length > 0 ? (
 							<NextSteps
 								title={t("docs.next.title")}

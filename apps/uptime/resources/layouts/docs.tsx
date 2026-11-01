@@ -1,7 +1,7 @@
 /**
- * The shell every `/docs` page composes into, inside the marketing header and footer: the
- * guides by section on the left with support at their foot, the page in the middle closed
- * by its neighbours, and its own headings on the right; a narrow screen folds both sides.
+ * The shell every `/docs` page composes into, under the marketing header: the guides pinned
+ * on the left with support at their foot, the page closed by its neighbours, its headings on
+ * the right, and a compact footer beside the guides; a narrow screen folds both sides.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,10 +15,10 @@ import { MailIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
-import { mbe, mbs, pbe, pbs } from "@sdxc/u/size";
+import { mbe, mbs, pbs } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { DocsNav, DocsPager } from "@sdxc/ui";
+import { DocsFooter, DocsNav, DocsPager } from "@sdxc/ui";
 import { DocsLayout as DocsShell } from "@sdxc/ui/patterns";
 
 import type { DocSection } from "~/app/services/docs";
@@ -27,8 +27,8 @@ import { toDocsTree } from "~/app/services/docs";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
-/** The marketing header's height, which every sticky column and jumped-to heading clears. */
-const HEADER_HEIGHT = "4rem";
+/** The marketing header: its 4rem bar and 1px rule, which every sticky column clears. */
+const HEADER_HEIGHT = "calc(4rem + 1px)";
 
 /**
  * How wide the shell (and the header and footer it shares a measure with) may grow:
@@ -81,6 +81,8 @@ namespace DocsLayout {
 		/** The link pinned at the sidebar's foot. */
 		support: string;
 		pager: { nav: string; previous: string; next: string };
+		/** The landmark name of the footer's legal links ("Legal"). */
+		legal: string;
 	}
 
 	export interface Props {
@@ -102,6 +104,11 @@ namespace DocsLayout {
 		 * spaced from the article, from each other and from the pager under them by one gap.
 		 */
 		pageEnd?: RemixNode;
+		/**
+		 * The page's closing pieces, such as feedback, drawn in the footer beside the sidebar
+		 * above the legal links.
+		 */
+		footer?: RemixNode;
 		/**
 		 * Widens the shell for a page whose blocks sit side by side (the API reference's
 		 * prose beside its code). Every page hands the shell the same settings and a wide
@@ -134,6 +141,7 @@ export function buildDocsLabels(t: Translate): DocsLayout.Labels {
 			previous: t("docs.pager.previous"),
 			next: t("docs.pager.next"),
 		},
+		legal: t("landing.footer.sections.legal.title"),
 	};
 }
 
@@ -155,6 +163,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			next = null,
 			section,
 			pageEnd,
+			footer,
 			wide = false,
 			children,
 		} = handle.props;
@@ -197,7 +206,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						: [],
 				]}
 			>
-				<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
+				<MarketingLayout isSignedIn={isSignedIn} {...chrome} siteFooter={false}>
 					<DocsShell
 						sidebar={sidebar}
 						toc={anchors}
@@ -209,12 +218,20 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						maxWidth={DOCS_MEASURE}
 						measure={ARTICLE_MEASURE}
 						main={false}
+						footer={
+							<DocsFooter
+								legal={chrome.copyrightLine}
+								links={chrome.legalLinks}
+								linksLabel={labels.legal}
+							>
+								{footer}
+							</DocsFooter>
+						}
 					>
 						<div
 							data-slot="docs-page"
 							mix={[
 								pbs("2rem"),
-								pbe("5rem"),
 								when('& [data-slot="docs-page-header"]', mbe(PAGE_HEADER_GAP)),
 								when('& [data-slot="typeset"] > table', mbe(TABLE_GAP)),
 								when(
