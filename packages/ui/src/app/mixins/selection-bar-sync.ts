@@ -1,7 +1,7 @@
 /**
- * Keeps a selection bar in step with the rows it acts on: it counts the checked
- * `[data-selection-item]` boxes in a target region, morphs the bar between pagination and
- * bulk actions, announces the count, and owns Escape and the action keys while rows are picked.
+ * Why JS: counting checked rows elsewhere on the page, announcing the count and the Escape and
+ * action keys need script. No-JS baseline: the bar shows pagination and its page links; rows
+ * stay checkable and their form submits as usual.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

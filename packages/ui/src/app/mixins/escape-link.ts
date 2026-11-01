@@ -1,7 +1,7 @@
 /**
- * Follows a link when Escape is pressed anywhere on the page, the way "Clear filters [Esc]"
- * resets a list. It listens last: a selection, an open dialog or popover, or a text field
- * each takes Escape first, and the link follows only when none of them did.
+ * Why JS: a page-wide Escape shortcut needs a key listener. No-JS baseline: the host is a
+ * plain link that clears the filters when clicked. It listens last, so a selection, an open
+ * dialog or popover, or a text field each takes Escape first.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
