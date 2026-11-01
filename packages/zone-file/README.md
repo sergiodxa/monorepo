@@ -95,6 +95,23 @@ formatRecordData({ type: "MX", preference: 10, exchange: "mail.example.com" });
 // "10 mail.example.com."
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/zone-file --help
+```
+
+Each command reads a path, or stdin when it is `-` or absent. `--origin` (default the root) and
+`--ttl` (seconds) set the defaults a file without `$ORIGIN` or `$TTL` reads with, and `$INCLUDE`
+paths resolve beside the zone file. Exit codes: `0` done, `1` the zone has entries that could
+not be read, `2` usage or unreadable input.
+
+```sh
+bunx @sdxc/zone-file validate example.com.zone --origin example.com          # file:line: message (reason)
+bunx @sdxc/zone-file parse example.com.zone --origin example.com --json      # { origin, records, rejected }
+bunx @sdxc/zone-file format records.json --relative > example.com.zone      # JSON records or a zone file in
+```
+
 ## API
 
 ### `parse(text: string, options: ParseOptions): Result<Zone, ZoneFileError>`
