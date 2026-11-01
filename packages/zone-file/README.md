@@ -101,6 +101,8 @@ formatRecordData({ type: "MX", preference: 10, exchange: "mail.example.com" });
 bunx @sdxc/zone-file --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg zone-file …` runs the same command line, using the version your project installs.
+
 Each command reads a path, or stdin when it is `-` or absent. `--origin` (default the root) and
 `--ttl` (seconds) set the defaults a file without `$ORIGIN` or `$TTL` reads with, and `$INCLUDE`
 paths resolve beside the zone file. Exit codes: `0` done, `1` the zone has entries that could
