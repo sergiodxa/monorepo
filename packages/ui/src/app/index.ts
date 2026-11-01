@@ -86,5 +86,6 @@ export * from "./utils/chart-scale.js";
 export * from "./utils/edited-time.js";
 export * from "./utils/key-target.js";
 export * from "./utils/search-params.js";
+export * from "./utils/shortcut-groups.js";
 export * from "./utils/split-view-layout.js";
 export * from "./view-options.js";

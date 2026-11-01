@@ -15,7 +15,8 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { shortcutRegistry } from "./behaviors/shortcuts.js";
-import { KeyboardHelp, mergeShortcutGroups } from "./keyboard-help.js";
+import { KeyboardHelp } from "./keyboard-help.js";
+import { mergeShortcutGroups } from "./utils/shortcut-groups.js";
 
 import "../reset.css";
 
