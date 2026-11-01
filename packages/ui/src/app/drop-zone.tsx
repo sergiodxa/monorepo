@@ -12,9 +12,10 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { mergeMix } from "@sdxc/u/general";
+import { cursor, mergeMix } from "@sdxc/u/general";
 import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
 import { minBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -67,7 +68,8 @@ export namespace DropZone {
 
 /**
  * Renders a native `<input type="file">` wrapped in a `<label>` styled as a
- * dashed, centered drop surface; a paired drag-and-drop mixin toggles the
+ * dashed, centered drop surface, children stacked top to bottom; the input stays visually hidden
+ * and focusable, so the whole surface is the control; a paired drag-and-drop mixin toggles the
  * `data-drop-target` attribute this surface's styling reacts to.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
@@ -114,6 +116,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 						pi(6),
 						pb(6),
 						textAlign("center"),
+						cursor("pointer"),
 						bg("neutral.tint"),
 						fg("neutral"),
 						when("&[data-drop-target]", [border("brand.ring"), bg("brand.tint")]),
@@ -131,7 +134,7 @@ export function DropZone(handle: Handle<DropZone.Props>) {
 					capture={capture}
 					required={required}
 					disabled={disabled}
-					mix={parts?.input}
+					mix={mergeMix([visuallyHidden()], parts?.input)}
 				/>
 			</label>
 		);
