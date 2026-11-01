@@ -79,7 +79,8 @@ viewport query.
 (`--ui-{tone}-bg-tint`, `--ui-{tone}-fg`, `--ui-{tone}-border`, ...) onto a palette the app
 defines as `--ui-color-{name}-{50..950}`, and sets the spacing, container, font and text-size
 scales. Add the `dark` class to an ancestor such as `<html>` for dark mode, or `system` to follow
-`prefers-color-scheme`.
+`prefers-color-scheme`. Each class also sets `color-scheme` (`dark`, `light dark`), so
+`light-dark()` colours and native controls under it match the tokens.
 
 Color utilities take a tone with a suffix (`"brand.tint"`, `"brand.solid"`, `"neutral.muted"`,
 `"brand.emphasis"`, `"brand.onSolid"`, `"neutral.strong"`), a bare tone where the utility has a

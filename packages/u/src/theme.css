@@ -22,6 +22,8 @@
  * Dark Mode:
  * - Add .dark to an ancestor (typically <html>) for forced dark mode.
  * - Add .system to an ancestor for system preference (prefers-color-scheme).
+ * - Each class also sets `color-scheme`, so light-dark(), scrollbars and form
+ *   controls under it pick the same scheme as the tokens.
  *
  * High Contrast:
  * - Under `prefers-contrast: more`, every tone's subtle `border` is promoted
@@ -125,6 +127,15 @@
 	--ui-text-7xl: 4.5rem;
 	--ui-text-8xl: 6rem;
 	--ui-text-9xl: 8rem;
+}
+
+/* The scheme light-dark() and native controls resolve against, inherited from the class */
+.dark {
+	color-scheme: dark;
+}
+
+.system {
+	color-scheme: light dark;
 }
 
 /* Forced dark mode */
