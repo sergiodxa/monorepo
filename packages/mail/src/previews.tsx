@@ -27,7 +27,8 @@ import {
 	weight,
 	whiteSpace,
 } from "@sdxc/u/typography";
-import { Avatar, Badge, Empty, Heading, Item, Link, LinkButton, Text } from "@sdxc/ui";
+import { Avatar, Badge, Heading, Item, Link, LinkButton, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { renderToString } from "remix/component/server";
 
 import type { Mail } from "./mail.js";
