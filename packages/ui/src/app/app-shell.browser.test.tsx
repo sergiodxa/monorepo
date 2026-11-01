@@ -184,6 +184,26 @@ async function reduceMotion() {
 }
 
 describe("AppShell", () => {
+	test("edges the content card with one line, not a border plus an inset ring", async () => {
+		await page.viewport(1280, 800);
+		document.documentElement.style.setProperty(
+			"--ui-shadow-control",
+			"0 1px 3px rgb(0 0 0 / 0.04), inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 0 0 1px rgb(0 0 0 / 0.06)",
+		);
+		document.documentElement.style.setProperty("--ui-neutral-border", "rgb(228, 228, 231)");
+		mountShell();
+		let card = document.querySelector<HTMLElement>('[data-slot="app-shell-content"]')!;
+		let style = getComputedStyle(card);
+		let rings = style.boxShadow
+			.split(/,(?![^(]*\))/)
+			.filter((layer) => /inset/.test(layer) && /0px 0px 0px 1px/.test(layer));
+
+		expect(style.borderTopWidth).toBe("1px");
+		expect(rings).toEqual([]);
+		document.documentElement.style.removeProperty("--ui-shadow-control");
+		document.documentElement.style.removeProperty("--ui-neutral-border");
+	});
+
 	test("reads the collapse cookie from a Cookie header", () => {
 		expect(readAppShellCookie(`theme=dark; ${APP_SHELL_COOKIE}=true`)).toBe(true);
 		expect(readAppShellCookie(`${APP_SHELL_COOKIE}=false`)).toBe(false);

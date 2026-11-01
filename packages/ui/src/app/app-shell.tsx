@@ -459,7 +459,11 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 									marginInlineEnd: "var(--ui-app-inset-gap, 0.5rem)",
 									borderRadius: "var(--ui-app-inset-radius, 0.75rem)",
 									border: "1px solid var(--ui-neutral-border)",
-									boxShadow: "var(--ui-shadow-control)",
+									/**
+									 * The border is the card's one edge; the shadow only lifts it off the frame,
+									 * so it carries no ring of its own.
+									 */
+									boxShadow: "var(--ui-app-inset-shadow, 0 1px 3px rgb(0 0 0 / 0.04))",
 									overflowY: "auto",
 									overflowX: "hidden",
 									minBlockSize: "0",
