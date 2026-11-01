@@ -84,6 +84,21 @@ let sent = await push.send(subscription, JSON.stringify({ title: "Deploy finishe
 if (isFailure(sent) && sent.error.code === "gone") await deleteSubscription(subscription.endpoint);
 ```
 
+## Command line
+
+`sdxc-web-push` generates a VAPID key pair and sends a test notification. `--help` on any command lists every flag.
+
+```sh
+bunx @sdxc/web-push vapid keygen          # VAPID_PUBLIC_KEY=… and VAPID_PRIVATE_KEY=… lines
+bunx @sdxc/web-push vapid keygen --json > vapid.json
+```
+
+```sh
+bunx @sdxc/web-push send subscription.json --subject mailto:ops@example.com --keys-file vapid.json
+```
+
+`send` reads the subscription from a path or stdin, and the keys from `--keys-file` or the `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` environment variables. It exits 0 when delivered, 1 when the push service refused it, and 2 for unreadable or invalid input; `--json` prints the outcome with its error code.
+
 ## API
 
 ### `new WebPush(options: WebPushOptions)`

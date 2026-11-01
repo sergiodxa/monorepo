@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Web Push from Workers: RFC 8291 encryption, VAPID signing, subscription checks and a browser subscribe helper",
 	"license": "MIT",
+	"bin": {
+		"sdxc-web-push": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,6 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
