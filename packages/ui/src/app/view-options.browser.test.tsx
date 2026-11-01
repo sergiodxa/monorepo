@@ -12,9 +12,12 @@ import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { cdp, page, userEvent } from "vitest/browser";
 
 import { ViewOptions } from "./view-options.js";
+
+import "../reset.css";
+import "../theme.css";
 
 const LABELS: ViewOptions.Labels = {
 	trigger: "Display",
@@ -26,6 +29,23 @@ const LABELS: ViewOptions.Labels = {
 	apply: "Apply",
 	setDefault: "Set as default",
 };
+
+/** A cool neutral ramp, as an app's stylesheet sets the palette the theme's roles read. */
+const PALETTE: Record<string, string> = Object.fromEntries(
+	Object.entries({
+		50: 0.985,
+		100: 0.965,
+		200: 0.915,
+		300: 0.84,
+		400: 0.73,
+		500: 0.62,
+		600: 0.52,
+		700: 0.42,
+		800: 0.32,
+		900: 0.235,
+		950: 0.155,
+	}).map(([step, l]) => [`--ui-color-neutral-${step}`, `oklch(${l} 0.012 275)`]),
+);
 
 let mounted: RenderResult | undefined;
 
@@ -89,14 +109,35 @@ function sent(form: HTMLFormElement, submitter?: HTMLElement): [string, string][
 	]);
 }
 
+/** WCAG contrast between two opaque CSS colors, read back as painted from a canvas. */
+function contrast(one: string, other: string): number {
+	let [a, z] = [one, other].map((color) => {
+		let canvas = document.createElement("canvas");
+		canvas.width = 1;
+		canvas.height = 1;
+		let context = canvas.getContext("2d")!;
+		context.fillStyle = color;
+		context.fillRect(0, 0, 1, 1);
+		let [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].map((channel) => {
+			let c = channel / 255;
+			return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+		});
+		return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+	});
+	return (Math.max(a!, z!) + 0.05) / (Math.min(a!, z!) + 0.05);
+}
+
 beforeEach(async () => {
 	await page.viewport(1024, 768);
 });
 
-afterEach(() => {
+afterEach(async () => {
 	mounted?.cleanup();
 	mounted = undefined;
 	document.body.replaceChildren();
+	document.documentElement.classList.remove("system");
+	for (let name of Object.keys(PALETTE)) document.documentElement.style.removeProperty(name);
+	await cdp().send("Emulation.setEmulatedMedia", { features: [] });
 });
 
 describe("ViewOptions", () => {
@@ -162,6 +203,33 @@ describe("ViewOptions", () => {
 		expect(region.closest("label")!.matches(":has(input:checked)")).toBe(true);
 	});
 
+	for (let mode of ["light", "dark"] as const) {
+		test(`draws the chosen layout apart from the track and the rest in ${mode}`, async () => {
+			for (let [name, value] of Object.entries(PALETTE)) {
+				document.documentElement.style.setProperty(name, value);
+			}
+			document.documentElement.classList.add("system");
+			await cdp().send("Emulation.setEmulatedMedia", {
+				features: [{ name: "prefers-color-scheme", value: mode }],
+			});
+			let form = mount("/monitors?layout=grid");
+			let chosen = form.querySelector('input[value="grid"]')!.closest("label")!;
+			let track = getComputedStyle(chosen.parentElement!).backgroundColor;
+			let selected = getComputedStyle(chosen);
+			let resting = getComputedStyle(form.querySelector('input[value="list"]')!.closest("label")!);
+			let drawn = selected.borderTopStyle !== "none" && parseFloat(selected.borderTopWidth) > 0;
+
+			expect(
+				Math.max(
+					contrast(selected.backgroundColor, track),
+					drawn ? contrast(selected.borderTopColor, track) : 1,
+				),
+			).toBeGreaterThanOrEqual(3);
+			expect(selected.backgroundColor).not.toBe(resting.backgroundColor);
+			expect(Number(selected.fontWeight)).toBeGreaterThan(Number(resting.fontWeight));
+		});
+	}
+
 	test("posts the same fields to the default endpoint from Set as default", () => {
 		let form = mount("/monitors?layout=grid");
 		let button = form.querySelector<HTMLButtonElement>('[data-slot="view-options-default"]')!;
@@ -170,6 +238,35 @@ describe("ViewOptions", () => {
 		expect(button.formMethod).toBe("post");
 		expect(button.getAttribute("formaction")).toBe("/settings/views/monitors");
 		expect(new URLSearchParams(sent(form, button)).get("layout")).toBe("grid");
+	});
+
+	test("draws the fields in place when inline, for a menu that has its own trigger", () => {
+		mounted = render(
+			<ViewOptions
+				id="inline-view"
+				url="/monitors?status=down&density=comfortable"
+				inline
+				density={{
+					defaultValue: "compact",
+					options: [
+						{ value: "compact", label: "Compact" },
+						{ value: "comfortable", label: "Comfortable" },
+					],
+				}}
+				labels={LABELS}
+			/>,
+		);
+		let host = mounted.container;
+		let form = host.querySelector<HTMLFormElement>('[data-slot="view-options"] > form')!;
+
+		expect(host.querySelector('[data-slot="view-options-trigger"]')).toBeNull();
+		expect(document.getElementById("inline-view-popover")).toBeNull();
+		expect(form.getBoundingClientRect().height).toBeGreaterThan(0);
+		expect(form.getAttribute("aria-label")).toBe("Display");
+		expect(sent(form)).toEqual([
+			["status", "down"],
+			["density", "comfortable"],
+		]);
 	});
 
 	test("fits a 320px viewport", async () => {

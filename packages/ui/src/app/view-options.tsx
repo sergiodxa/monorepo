@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { SlidersHorizontalIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { rounded, shadow } from "@sdxc/u/effects";
+import { rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix } from "@sdxc/u/general";
 import {
 	flex,
@@ -33,6 +33,7 @@ import { Button } from "../components/button.js";
 import { Popover } from "../components/popover.js";
 import { Select } from "../components/select.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { segmentedItem, segmentedTrack } from "../styles/segmented-control.js";
 
 import { carriedParams, paramValues } from "./utils/search-params.js";
 
@@ -324,16 +325,7 @@ function Segmented(handle: Handle<SegmentedProps>) {
 				<span aria-hidden="true" mix={[text("sm"), fg("neutral"), nowrap()]}>
 					{label}
 				</span>
-				<span
-					mix={[
-						inlineFlex(),
-						p(0.5),
-						gap(0.5),
-						rounded("md"),
-						bg("neutral.bg-tint-hover"),
-						minIs(0),
-					]}
-				>
+				<span mix={[segmentedTrack(), minIs(0)]}>
 					{field.options.map((option) => (
 						<label
 							title={option.label}
@@ -345,14 +337,13 @@ function Segmented(handle: Handle<SegmentedProps>) {
 								gap(1.5),
 								bs(7),
 								pi(2),
-								rounded("sm"),
 								text("sm"),
-								fg("neutral"),
 								cursor("pointer"),
 								nowrap(),
-								hover(fg("neutral.emphasis")),
-								has("input:checked", [bg("neutral.tint"), fg("neutral.emphasis"), shadow("sm")]),
-								has("input:focus-visible", outline({ color: "brand.ring", offset: 1 })),
+								segmentedItem({
+									selected: "&:has(input:checked)",
+									focused: "&:has(input:focus-visible)",
+								}),
 								when("& > svg", shrink(0)),
 							]}
 						>
