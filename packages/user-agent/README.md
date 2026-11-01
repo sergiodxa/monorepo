@@ -71,6 +71,8 @@ bunx @sdxc/user-agent parse "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS
 # Safari 17.4	WebKit 605.1.15	iOS 17.4	mobile Apple iPhone
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg user-agent …` runs the same command line, using the version your project installs.
+
 `parse` prints the browser, engine, operating system and device as tab-separated columns, with
 `-` for a part the string does not reveal. With no argument it reads one string per line of
 stdin, so a log's User-Agent column pipes through it; `--json` prints one object per string.
