@@ -132,6 +132,8 @@ let text = stringify({
 bunx @sdxc/icalendar --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg icalendar …` runs the same command line, using the version your project installs.
+
 ```sh
 sdxc-icalendar validate team.ics
 sdxc-icalendar expand team.ics --from 2026-11-01 --until 2026-12-01 --time-zone Europe/Madrid
