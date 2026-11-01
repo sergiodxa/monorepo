@@ -19,7 +19,7 @@ holding a form. It lays them out with [`@sdxc/u`](/api/u) mixins, adds glyphs fr
 rest of the page works with no client JavaScript at all.
 
 ```bash
-npm add @pitlane/assets @sdxc/assets-middleware @sdxc/icons @sdxc/u @sdxc/ui remix
+npm add @pitlane/assets @sdxc/assets-middleware @sdxc/highlight @sdxc/icons @sdxc/u @sdxc/ui remix
 ```
 
 ## The stylesheets
@@ -69,6 +69,17 @@ export default function DocumentLayout(handle: Handle<Props>) {
 		</html>
 	);
 }
+```
+
+The `system` class follows the reader's light or dark setting and sets `color-scheme` to match;
+use `dark` to force dark, or no class for light.
+
+A page that shows highlighted code also imports the highlighter's stylesheet, after the theme, so
+code from Markdown and [`CodeBlock`](/api/ui) share one palette that follows the same scheme:
+
+```tsx {% title="resources/layouts/document.tsx" %}
+import "@sdxc/ui/theme.css";
+import "@sdxc/highlight/styles.css";
 ```
 
 A build renames those files whenever their contents change, so the document links the names

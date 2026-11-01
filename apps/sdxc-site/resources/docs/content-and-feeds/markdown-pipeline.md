@@ -273,12 +273,20 @@ export default createAction(routes.posts.show, async (ctx) => {
 ```
 
 A tag with no component renders only its children, so `video` shows nothing until you register
-one. The highlighted code needs the highlighter's stylesheet, imported from your document layout
-after the theme, with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
+one.
 
-```tsx {% title="resources/components/document.tsx" %}
+### Color the highlighted code
+
+The walk labels each run of code with a class; the highlighter's stylesheet colors those classes.
+Import it from your document layout after the theme, with the
+[rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
+
+```tsx {% title="resources/layouts/document.tsx" %}
 import "@sdxc/highlight/styles.css";
 ```
+
+It picks its light or dark palette from the page's `color-scheme`, which the theme's `system` and
+`dark` classes on `<html>` set for you. Without the import, code renders as plain text.
 
 ## HTML and plain text for everything else
 

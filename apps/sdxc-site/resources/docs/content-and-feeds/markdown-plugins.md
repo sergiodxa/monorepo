@@ -57,6 +57,8 @@ export function preparePost(document: Markdown.Document) {
 Embeds go first, so a pasted video URL becomes a tag before anything reads it as a link.
 Headings take their ids before typography curls the quotes in their text, so an id is the slug
 of what the author typed.
+`highlight` only labels the code; [import its stylesheet](/docs/content-and-feeds/markdown-pipeline#color-the-highlighted-code)
+from your document layout to color it.
 
 > [!WARNING]
 > Merge visitors with `Markdown.compose`. An object spread keeps only the last handler for each
