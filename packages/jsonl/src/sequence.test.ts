@@ -237,6 +237,12 @@ describe("readSequence", () => {
 });
 
 describe("parseSequence", () => {
+	test("trims a record with 100 000 tabs inside it in linear time", () => {
+		let started = performance.now();
+		expect(unwrap(parseSequence(`\x1e[${"\t".repeat(100_000)}]\n`))).toEqual([[]]);
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
+
 	test("reads every value, skipping empty records", () => {
 		expect(unwrap(parseSequence('\x1e{"a":1}\n\x1e\x1e[2]\n\x1e"x"'))).toEqual([
 			{ a: 1 },

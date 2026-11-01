@@ -204,7 +204,11 @@ function isEmpty(text: string): boolean {
  * `null` with no whitespace after it: its end cannot be told from a cut-off write.
  */
 function checkRecord(text: string, number: number): Result<SequenceRecord, JSONSeqError> {
-	let trimmed = text.replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, "");
+	let start = 0;
+	let end = text.length;
+	while (start < end && isWhitespace(text[start])) start++;
+	while (end > start && isWhitespace(text[end - 1])) end--;
+	let trimmed = text.slice(start, end);
 	if (SCALAR_STARTS.includes(trimmed.charAt(0)) && !isWhitespace(text.at(-1))) {
 		return failure(
 			new JSONSeqError("truncated", "Record may be truncated: no whitespace after it", number),
