@@ -19,6 +19,7 @@ import { bleed, m, mi, minIs, p } from "@sdxc/u/size";
 import { overflowWrap, tabSize, text } from "@sdxc/u/typography";
 import { Heading, Link, Typeset } from "@sdxc/ui";
 
+import { CodeFence } from "~/resources/components/code-fence";
 import { BlogLayout } from "~/resources/layouts/blog";
 
 /**
@@ -83,7 +84,7 @@ export function MarkdownPageView() {
 					]}
 				>
 					<Typeset preset="reading">
-						{toRemix(model.document, { components: { diagram: DiagramTag } })}
+						{toRemix(model.document, { components: { code: CodeFence, diagram: DiagramTag } })}
 					</Typeset>
 				</article>
 			</main>

@@ -36,6 +36,7 @@ import { discussIntent } from "~/app/services/share";
 import { socialCardVersion } from "~/app/services/social-card";
 import { permalink } from "~/app/services/webmention";
 import { PROFILE } from "~/config/profile";
+import { CodeFence } from "~/resources/components/code-fence";
 import { YouTubeTag } from "~/resources/components/youtube-tag";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -294,7 +295,7 @@ export function PostView() {
 							{model.post.document ? (
 								<Typeset preset="reading">
 									{toRemix(model.post.document, {
-										components: { diagram: DiagramTag, youtube: YouTubeTag },
+										components: { code: CodeFence, diagram: DiagramTag, youtube: YouTubeTag },
 									})}
 								</Typeset>
 							) : (

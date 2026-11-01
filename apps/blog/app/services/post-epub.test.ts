@@ -120,6 +120,19 @@ describe("postEpub", () => {
 		expect(chapter).toContain('class="token keyword"');
 	});
 
+	test("keeps every line of a fence whose annotation marks added and removed lines", () => {
+		let source = "```ts {% add={[2]} remove={[1]} %}\nlet a = 1;\nlet b = 2;\n```\n";
+		let chapter = file(postEpub(input({ document: document(source) })), "EPUB/text/post.xhtml");
+
+		expect(chapter).toContain('<pre class="md-code language-typescript"');
+		expect(chapter).toContain(
+			'<span class="token keyword">let</span> a <span class="token operator">=',
+		);
+		expect(chapter).toContain(
+			'<span class="token keyword">let</span> b <span class="token operator">=',
+		);
+	});
+
 	test("uses the permalink as the identifier and the last edit as modified", () => {
 		let opf = file(postEpub(input()), "EPUB/package.opf");
 

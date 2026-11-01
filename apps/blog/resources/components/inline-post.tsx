@@ -18,6 +18,8 @@ import { m, minIs } from "@sdxc/u/size";
 import { overflowWrap, text, weight } from "@sdxc/u/typography";
 import { Typeset } from "@sdxc/ui";
 
+import { CodeFence } from "~/resources/components/code-fence";
+
 /**
  * Prop types for {@link InlinePost}.
  */
@@ -41,7 +43,11 @@ export function InlinePost(handle: Handle<InlinePost.Props>) {
 						{title}
 					</p>
 				) : null}
-				{document ? <Typeset mix={[mf("e-content")]}>{toRemix(document)}</Typeset> : null}
+				{document ? (
+					<Typeset mix={[mf("e-content")]}>
+						{toRemix(document, { components: { code: CodeFence } })}
+					</Typeset>
+				) : null}
 			</div>
 		);
 	};
