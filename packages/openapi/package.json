@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Build, serve and check OpenAPI 3.1 documents from typed operations",
 	"license": "MIT",
+	"bin": {
+		"sdxc-openapi": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -14,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",

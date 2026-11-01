@@ -33,9 +33,21 @@ export class OpenAPIBuildError extends Error {
 	}
 }
 
-/** Why text could not be read as an OpenAPI 3.1 document. */
+/** Why text could not be read as an OpenAPI 3.1 document, pointing at the member at fault. */
 export class OpenAPIParseError extends Error {
 	override name = "OpenAPIParseError";
+	/** A JSON Pointer into the document; `""`, the whole document, for text that is not JSON or YAML. */
+	readonly pointer: string;
+
+	/**
+	 * @param message - What made the text unreadable.
+	 * @param pointer - Where in the document the failure sits.
+	 * @param options - Native error options, carrying a JSON or YAML syntax error as `cause`.
+	 */
+	constructor(message: string, pointer: string, options?: ErrorOptions) {
+		super(message, options);
+		this.pointer = pointer;
+	}
 }
 
 /** Why a document could not be written in the requested format. */

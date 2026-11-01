@@ -66,6 +66,31 @@ describe("parse", () => {
 		]);
 	});
 
+	test("a failure points at the member at fault", () => {
+		let pointers = [
+			'{"openapi":"3.0.3","info":{"title":"T","version":"1"}}',
+			'{"openapi":"3.1.1"}',
+			'{"openapi":"3.1.1","info":{"version":"1"}}',
+			'{"openapi":"3.1.1","info":{"title":"T","version":1}}',
+			'{"openapi":"3.1.1","info":{"title":"T","version":"1"},"tags":{}}',
+			"[]",
+			"{",
+		].map((text) => {
+			let result = parse(text);
+			return isFailure(result) ? result.error.pointer : null;
+		});
+
+		expect(pointers).toEqual([
+			"/openapi",
+			"/info",
+			"/info/title",
+			"/info/version",
+			"/tags",
+			"",
+			"",
+		]);
+	});
+
 	test("malformed JSON is a failure naming JSON", () => {
 		let result = parse("{");
 		expect(isFailure(result) && result.error.message.startsWith("Invalid JSON")).toBe(true);

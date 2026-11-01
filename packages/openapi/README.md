@@ -119,6 +119,20 @@ router.patch(ROUTES.books.update, async ({ request, params }) => {
 Answering with the catalog's builders sends exactly the problem `type` and extensions the
 document declares for the operation.
 
+## Command line
+
+`sdxc-openapi check` reads a JSON or YAML OpenAPI 3.1 document from a file, an `http(s)` URL or
+stdin, prints each finding at its JSON Pointer and exits 1 on any (2 when the input cannot be
+read). `--json` prints `{ valid, openapi, title, version, findings }`.
+
+```sh
+bunx @sdxc/openapi check openapi.json
+bunx @sdxc/openapi check https://api.example.com/api/v1/openapi.json --json
+bunx @sdxc/openapi check - < openapi.yaml
+```
+
+`bunx @sdxc/openapi --help` lists every flag.
+
 ## API
 
 ### `@sdxc/openapi`
@@ -172,7 +186,8 @@ Starts a document; nothing is assembled until `build()`. `options` takes:
 #### `parse(text): Result<OpenAPI.Document, OpenAPIParseError>`
 
 Reads JSON (text starting with `{`) or YAML, and checks `openapi: 3.1.x`, `info.title`,
-`info.version` and the top-level shape.
+`info.version` and the top-level shape. A failure's `pointer` is a JSON Pointer to the member at
+fault, `""` for text that is not JSON or YAML.
 
 #### `stringify(document, options?): Result<string, OpenAPIStringifyError>`
 

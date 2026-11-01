@@ -54,23 +54,26 @@ export function parse(text: string): Result<OpenAPI.Document, OpenAPIParseError>
 	if (value.status === "failure") return value;
 
 	let document = value.data;
-	if (!isRecord(document)) return parseFailure("An OpenAPI document is an object");
+	if (!isRecord(document)) return parseFailure("An OpenAPI document is an object", "");
 	if (typeof document.openapi !== "string" || !/^3\.1\.\d+$/.test(document.openapi)) {
-		return parseFailure(`Expected openapi 3.1.x, found ${JSON.stringify(document.openapi)}`);
+		return parseFailure(
+			`Expected openapi 3.1.x, found ${JSON.stringify(document.openapi)}`,
+			"/openapi",
+		);
 	}
 
-	let info = document.info;
-	if (!isRecord(info) || typeof info.title !== "string" || typeof info.version !== "string") {
-		return parseFailure("info must be an object with a string title and version");
+	let infoFault = infoPointer(document.info);
+	if (infoFault !== null) {
+		return parseFailure("info must be an object with a string title and version", infoFault);
 	}
 	for (let key of ["paths", "components", "webhooks"]) {
 		if (document[key] !== undefined && !isRecord(document[key])) {
-			return parseFailure(`${key} must be an object`);
+			return parseFailure(`${key} must be an object`, `/${key}`);
 		}
 	}
 	for (let key of ["servers", "security", "tags"]) {
 		if (document[key] !== undefined && !Array.isArray(document[key])) {
-			return parseFailure(`${key} must be an array`);
+			return parseFailure(`${key} must be an array`, `/${key}`);
 		}
 	}
 	return success(document as unknown as OpenAPI.Document);
@@ -111,16 +114,26 @@ function readValue(text: string): Result<unknown, OpenAPIParseError> {
 			return success(JSON.parse(text));
 		} catch (error) {
 			let message = error instanceof Error ? error.message : String(error);
-			return failure(new OpenAPIParseError(`Invalid JSON: ${message}`, { cause: error }));
+			return failure(new OpenAPIParseError(`Invalid JSON: ${message}`, "", { cause: error }));
 		}
 	}
 	let parsed = yaml.parse(text);
 	if (parsed.status === "failure") {
 		return failure(
-			new OpenAPIParseError(`Invalid YAML: ${parsed.error.message}`, { cause: parsed.error }),
+			new OpenAPIParseError(`Invalid YAML: ${parsed.error.message}`, "", {
+				cause: parsed.error,
+			}),
 		);
 	}
 	return success(parsed.data);
+}
+
+/** Where `info` falls short of an object with a string title and version; `null` for a well-formed one. */
+function infoPointer(info: unknown): string | null {
+	if (!isRecord(info)) return "/info";
+	if (typeof info.title !== "string") return "/info/title";
+	if (typeof info.version !== "string") return "/info/version";
+	return null;
 }
 
 /** Whether a value is a plain JSON object. */
@@ -128,7 +141,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** A failed read. */
-function parseFailure(message: string): Result<never, OpenAPIParseError> {
-	return failure(new OpenAPIParseError(message));
+/** A failed read of the member at `pointer`. */
+function parseFailure(message: string, pointer: string): Result<never, OpenAPIParseError> {
+	return failure(new OpenAPIParseError(message, pointer));
 }
