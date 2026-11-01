@@ -40,7 +40,7 @@ const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
 const PHONE_QUERY = "(max-width: 29.9375rem)";
 
 /** A destination the header can mark as the page being read. */
-type Destination = "docs" | "api" | "utilities" | "components";
+type Destination = "docs" | "api" | "utilities" | "components" | "demos";
 
 namespace SiteHeader {
 	export interface Props {
@@ -94,6 +94,7 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 						href: routes.api.show.href({ name: "ui" }),
 						current: current === "components",
 					},
+					{ label: "Demos", href: routes.demos.href(), current: current === "demos" },
 					{ label: "GitHub", href: REPOSITORY_HREF },
 				]}
 				tools={<SiteSearch activePath={activePath} searchQuery={searchQuery} />}
@@ -225,6 +226,7 @@ function currentDestination(path: string): Destination | null {
 	if (isWithin(path, routes.api.show.href({ name: "ui" }))) return "components";
 	if (isWithin(path, routes.docs.index.href())) return "docs";
 	if (isWithin(path, routes.api.index.href())) return "api";
+	if (isWithin(path, routes.demos.href())) return "demos";
 	return null;
 }
 

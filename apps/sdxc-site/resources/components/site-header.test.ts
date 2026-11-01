@@ -35,7 +35,14 @@ describe("SiteHeader", () => {
 		let rows = Array.from(sheet?.querySelectorAll("nav a") ?? [], (link) => link.textContent);
 
 		expect(button?.getAttribute("command")).toBe("show-modal");
-		expect(rows).toEqual(["Docs", "API", "Utilities", "Components", "GitHub"]);
+		expect(rows).toEqual(["Docs", "API", "Utilities", "Components", "Demos", "GitHub"]);
+	});
+
+	test("marks Demos as the current destination on the demo gallery", async () => {
+		let page = unwrap(parseDocument(await (await fetchApp("/demo")).text()));
+		let current = page.querySelector('header nav a[aria-current="page"]');
+
+		expect(current?.textContent).toBe("Demos");
 	});
 
 	test("hydrates the island that closes the sheet once a link in it is followed", async () => {
