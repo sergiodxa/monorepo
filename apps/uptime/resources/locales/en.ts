@@ -673,7 +673,7 @@ export default {
 					dns: "DNS Monitoring",
 					cronJobs: "Cron Job Monitoring",
 					contentMonitoring: "Content Monitoring",
-					maintenance: "Maintenance Windows",
+					maintenance: "Maintenance",
 					integrations: "Integrations",
 					teams: "Teams",
 					analytics: "Analytics",
@@ -690,7 +690,7 @@ export default {
 					cronJobs: "Cron Job Monitoring",
 					microservices: "Microservices",
 					healthChecks: "Health Checks",
-					loginFlows: "Login Flow Monitoring",
+					loginFlows: "Login Monitoring",
 				},
 				solutions: {
 					title: "Solutions",

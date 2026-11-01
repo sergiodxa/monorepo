@@ -254,7 +254,7 @@ describe("GET /", () => {
 
 		expect(body).toContain("Test in a real browser");
 
-		expect(body).toContain("Maintenance Windows");
+		expect(body).toContain(">Maintenance<");
 		expect(body).toContain("Cron Job Monitoring");
 
 		expect(body).toContain(

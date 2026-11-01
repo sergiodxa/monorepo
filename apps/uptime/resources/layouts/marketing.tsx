@@ -224,7 +224,7 @@ export function buildMarketingChrome(
 	];
 
 	/**
-	 * Four columns, so each keeps a label like "Login Flow Monitoring" on one line beside
+	 * Four columns, so each keeps its longest label, "Cron Job Monitoring", on one line beside
 	 * the brand block at laptop widths. Solutions lists the use cases, then the audiences,
 	 * in the order the header's Solutions menu groups them.
 	 */
