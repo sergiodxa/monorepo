@@ -43,7 +43,7 @@ const COMMAND_LOGGER = createLogger({
  * each job is printed to stderr as one JSON line naming it and its payload, for the operator to
  * enqueue or ignore.
  */
-const commandJobs: JobEnqueuer = {
+export const commandJobs: JobEnqueuer = {
 	async enqueue(job, ...input) {
 		process.stderr.write(`${JSON.stringify({ unsent: job.name, input: input[0] })}\n`);
 	},
@@ -92,6 +92,10 @@ cli.map(
 cli.map(
 	commandset.db.migrate,
 	lazy(() => import("~/app/commands/db/migrate")),
+);
+cli.map(
+	commandset.db.seed,
+	lazy(() => import("~/app/commands/db/seed")),
 );
 cli.map(
 	commandset.deploy,

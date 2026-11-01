@@ -72,6 +72,11 @@ export default route({
 	auth: form("/auth"),
 	/** GET = confirmation page ("index"), POST = destroys the session ("action"). */
 	logout: form("/logout"),
+	/**
+	 * Local-only sign-in as the seeded user: GET shows the button, POST writes the session.
+	 * Answers 404 unless the Worker runs with `DEV_LOGIN=true` on a loopback host.
+	 */
+	devLogin: form("/dev/login"),
 
 	/**
 	 * Public marketing pages. Each leaf takes a `:slug` param resolved against a

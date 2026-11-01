@@ -79,6 +79,28 @@ bun dev
 Run `sdxc run typegen` again whenever you change a binding in `wrangler.jsonc` or a secret in
 `.dev.vars`.
 
+## Sign in locally
+
+Every account signs in through auth.sergiodxa.com, which a local run can't reach. To see the
+signed-in app locally, seed the database and turn on the development login:
+
+```sh
+sdxc run db seed                     # once, on a freshly migrated database
+echo 'DEV_LOGIN=true' >> .dev.vars   # then restart bun dev
+```
+
+The home page then links **Dev login** (`/dev/login`), whose button signs you in as Dev User
+(`dev@uptime.localhost`, subject `dev-user`). That user is an admin of the Acme team, which has
+three HTTP monitors, a DNS, TCP and flow monitor, two cron jobs, ninety days of history, an alert
+with past incidents, a maintenance window and a status page. `config/dev-user.ts` names the user
+and team, and `database/seed.ts` writes the rows. `db seed` adds monitors each time it runs, so
+seed once.
+
+The login answers only when `DEV_LOGIN=true` and the request's host is `localhost`,
+`127.0.0.1`, `[::1]` or a `*.localhost` name. Anywhere else `/dev/login` is a 404 and the link is
+gone. Set the flag only in `.dev.vars`, never in `.env.example`, `wrangler.jsonc` or a deployed
+secret.
+
 ## Everyday commands
 
 ```sh
@@ -90,6 +112,7 @@ sdxc make command <group/name>     # then: sdxc run <group> <name>
 
 sdxc run about                     # the app's name, its @sdxc/cli and remix versions
 sdxc run db console                # SQL prompt over the local database
+sdxc run db seed                   # writes database/seed.ts into the local database
 sdxc run emails preview <name>     # print an email from its preview(); /_emails in bun dev
 ```
 

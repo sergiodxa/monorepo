@@ -31,6 +31,10 @@ export default commands({
 			},
 			examples: ["db migrate", "db migrate --remote", "db migrate --remote --pending"],
 		}),
+		seed: command({
+			description: "Write the rows in database/seed.ts into the local database",
+			examples: ["db seed"],
+		}),
 	}),
 	emails: commands({
 		preview: command({

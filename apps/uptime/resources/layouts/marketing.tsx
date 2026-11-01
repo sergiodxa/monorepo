@@ -81,6 +81,11 @@ namespace MarketingLayout {
 		 * @default true
 		 */
 		siteFooter?: boolean;
+		/**
+		 * The local development login, linked beside the signed-out CTA. A controller sets it
+		 * only where the login answers, so a deployed page never carries the link.
+		 */
+		devLogin?: { href: string; label: string };
 		children: RemixNode;
 	}
 }
@@ -294,6 +299,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 			tagline,
 			copyrightLine,
 			siteFooter = true,
+			devLogin,
 			children,
 		} = handle.props;
 
@@ -312,12 +318,19 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 					brand={<BrandLink label={brandLabel} />}
 					items={headerItems}
 					tools={
-						<AuthCta
-							isSignedIn={isSignedIn}
-							dashboardLabel={dashboardLabel}
-							startLabel={startLabel}
-							size="sm"
-						/>
+						<>
+							{devLogin && !isSignedIn ? (
+								<a href={devLogin.href} mix={[text("sm"), fg("neutral.muted"), shrink(0)]}>
+									{devLogin.label}
+								</a>
+							) : null}
+							<AuthCta
+								isSignedIn={isSignedIn}
+								dashboardLabel={dashboardLabel}
+								startLabel={startLabel}
+								size="sm"
+							/>
+						</>
 					}
 					sheet={
 						<>

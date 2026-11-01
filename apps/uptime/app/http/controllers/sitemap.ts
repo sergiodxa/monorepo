@@ -79,6 +79,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 		},
 		app: false,
 		api: false,
+		devLogin: false,
 	});
 
 	return xml(sitemap.toString(), {

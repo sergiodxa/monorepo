@@ -4504,6 +4504,13 @@ export default {
 			title: "ログアウトしてもよろしいですか？",
 			cta: "ログアウト",
 		},
+		devLogin: {
+			title: "開発用サインイン",
+			description:
+				"IDプロバイダーを使わず、シードユーザー {$email} としてサインインします。ローカル実行でのみ応答します。",
+			cta: "{$name} としてサインイン",
+			link: "開発用ログイン",
+		},
 
 		trial: {
 			/**

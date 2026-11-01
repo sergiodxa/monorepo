@@ -4563,6 +4563,13 @@ export default {
 			title: "¿Está seguro de que desea cerrar sesión?",
 			cta: "Cerrar sesión",
 		},
+		devLogin: {
+			title: "Inicio de sesión de desarrollo",
+			description:
+				"Inicia sesión como el usuario de prueba {$email} sin el proveedor de identidad. Solo responde en una ejecución local.",
+			cta: "Iniciar sesión como {$name}",
+			link: "Acceso de desarrollo",
+		},
 
 		trial: {
 			/**

@@ -65,6 +65,7 @@ import { LOCATION_HINTS, MIN_INTERVAL_SECONDS } from "~/app/http/validators/moni
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { SEO } from "~/app/initializers/seo";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
+import { isDevLoginEnabled } from "~/app/services/dev-login";
 import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { trialTurnstileSiteKey } from "~/app/services/trial/guard";
 import {
@@ -148,6 +149,10 @@ export default createAction(routes.home, async (ctx) => {
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.intl.t);
 	let t = ctx.intl.t;
+	/** Signed-out visitors land here from every guarded page, so the local login is linked here. */
+	let devLogin = isDevLoginEnabled(ctx.url)
+		? { href: routes.devLogin.index.href(), label: t("page.devLogin.link") }
+		: undefined;
 
 	let HERO_TRUST_INDICATORS = [
 		t("landing.hero.trustIndicators.freeToStart"),
@@ -392,7 +397,7 @@ export default createAction(routes.home, async (ctx) => {
 				schema: SEO.schema.website(),
 			}}
 		>
-			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
+			<MarketingLayout isSignedIn={isSignedIn} devLogin={devLogin} {...chrome}>
 				<LandingHero
 					tone="tinted"
 					mediaPlacement="end"

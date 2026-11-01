@@ -47,6 +47,7 @@ import mcpAccess from "~/app/http/middleware/mcp-access";
 import models from "~/app/http/middleware/models";
 import publicPageCache from "~/app/http/middleware/public-page-cache";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import { requireDevLogin } from "~/app/http/middleware/require-dev-login";
 import requireMcpScope from "~/app/http/middleware/require-mcp-scope";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -336,6 +337,14 @@ export function createWebRouter(options: WebRouterOptions) {
 	router.map(
 		routes.logout,
 		lazy(() => import("~/app/http/controllers/logout")),
+	);
+	/**
+	 * Local-only sign-in as the seeded user; its guard answers 404 unless `DEV_LOGIN=true` and
+	 * the request is on a loopback host, before the controller loads.
+	 */
+	router.map(
+		routes.devLogin,
+		lazy(() => import("~/app/http/controllers/dev-login"), [requireDevLogin]),
 	);
 	router.map(
 		routes.statusPage,

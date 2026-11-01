@@ -4583,6 +4583,13 @@ export default {
 			title: "Êtes-vous sûr de vouloir vous déconnecter ?",
 			cta: "Déconnexion",
 		},
+		devLogin: {
+			title: "Connexion de développement",
+			description:
+				"Vous connecte en tant qu’utilisateur de test {$email} sans le fournisseur d’identité. Elle ne répond qu’en exécution locale.",
+			cta: "Se connecter en tant que {$name}",
+			link: "Connexion dev",
+		},
 
 		trial: {
 			/**

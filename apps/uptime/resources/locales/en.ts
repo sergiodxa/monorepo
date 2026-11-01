@@ -4602,6 +4602,13 @@ export default {
 			title: "Are you sure you want to logout?",
 			cta: "Logout",
 		},
+		devLogin: {
+			title: "Development sign-in",
+			description:
+				"Signs you in as the seeded user {$email} without the identity provider. It answers only on a local run.",
+			cta: "Sign in as {$name}",
+			link: "Dev login",
+		},
 
 		trial: {
 			/**

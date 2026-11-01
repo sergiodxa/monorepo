@@ -4564,6 +4564,13 @@ export default {
 			title: "È sicuro di voler effettuare il logout?",
 			cta: "Logout",
 		},
+		devLogin: {
+			title: "Accesso di sviluppo",
+			description:
+				"Ti fa accedere come utente di prova {$email} senza il provider di identità. Risponde solo in un’esecuzione locale.",
+			cta: "Accedi come {$name}",
+			link: "Accesso dev",
+		},
 
 		trial: {
 			/**

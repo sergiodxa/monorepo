@@ -4584,6 +4584,13 @@ export default {
 			title: "Sind Sie sicher, dass Sie sich abmelden möchten?",
 			cta: "Abmelden",
 		},
+		devLogin: {
+			title: "Entwicklungs-Anmeldung",
+			description:
+				"Meldet Sie ohne Identitätsanbieter als Testbenutzer {$email} an. Sie antwortet nur bei einem lokalen Lauf.",
+			cta: "Als {$name} anmelden",
+			link: "Dev-Anmeldung",
+		},
 
 		trial: {
 			/**
