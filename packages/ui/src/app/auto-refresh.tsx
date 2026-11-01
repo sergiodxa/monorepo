@@ -35,6 +35,9 @@ const DEFAULT_OPTIONS: AutoRefresh.Option[] = [];
 /** The URL read when `url` is unset: a page with nothing chosen. */
 const DEFAULT_URL = "/";
 
+/** The placeholder in `labels.updated` that the refreshed-at time replaces. */
+const TIME_SLOT = "{time}";
+
 /** Prop types for {@link AutoRefresh} and {@link AutoRefreshStatus}. */
 export namespace AutoRefresh {
 	/** An interval the menu offers. */
@@ -49,7 +52,10 @@ export namespace AutoRefresh {
 	export interface Labels {
 		/** The trigger's lead and the menu's name, such as "Auto-refresh". */
 		trigger: string;
-		/** Before the last-fetched time, such as "Updated". */
+		/**
+		 * The status line, with `{time}` where the last-fetched time goes, such as
+		 * "Updated {time}" or "{time} — last fetch"; text without `{time}` leads the time.
+		 */
 		updated: string;
 	}
 
@@ -85,7 +91,7 @@ export namespace AutoRefresh {
 		/** Milliseconds between reloads; 0 never reloads. */
 		every: number;
 		frame?: string;
-		/** The lead before the time. */
+		/** The status template; `{time}` marks where the time sits, else the text leads it. */
 		label: string;
 		/** ISO timestamp of the content on screen. */
 		refreshedAt: string;
@@ -108,7 +114,7 @@ export namespace AutoRefresh {
  * 	frame="monitor-list"
  * 	refreshedAt={new Date()}
  * 	options={[{ value: 0, label: "Off" }, { value: 30, label: "30s" }, { value: 60, label: "1m" }]}
- * 	labels={{ trigger: "Auto-refresh", updated: "Updated" }}
+ * 	labels={{ trigger: "Auto-refresh", updated: "Updated {time}" }}
  * />
  */
 export function AutoRefresh(handle: Handle<AutoRefresh.Props>) {
@@ -191,7 +197,7 @@ export function AutoRefresh(handle: Handle<AutoRefresh.Props>) {
  * or the page, every `every` milliseconds while the tab is visible, and rewrites the time after
  * each reload. Load `@sdxc/ui/app/auto-refresh` in the browser entry.
  *
- * @example <AutoRefreshStatus every={30_000} label="Updated" refreshedAt={iso} text="10:42:07" />
+ * @example <AutoRefreshStatus every={30_000} label="Updated {time}" refreshedAt={iso} text="10:42:07" />
  */
 export const AutoRefreshStatus: EntryComponent<AutoRefresh.StatusProps> = clientEntry(
 	"@sdxc/ui/app/auto-refresh#AutoRefreshStatus",
@@ -205,14 +211,31 @@ export const AutoRefreshStatus: EntryComponent<AutoRefresh.StatusProps> = client
 
 		return () => {
 			let { every, label, refreshedAt, text: written, locale } = handle.props;
+			let [before, after] = aroundTime(label);
 			return (
 				<span data-slot="auto-refresh-status" mix={[fg("neutral.muted"), nowrap(), tabularNums()]}>
-					{label}{" "}
+					{before}
 					<time dateTime={refreshedAt} mix={[autoRefresh({ every, reload, locale })]}>
 						{written}
 					</time>
+					{after}
 				</span>
 			);
 		};
 	},
 );
+
+/**
+ * Splits the status template at its first `{time}` into the text before and after the time, so
+ * a translation can put the time anywhere; a template without `{time}` reads "<text> <time>",
+ * and an unset one shows the time alone.
+ *
+ * @param label The `labels.updated` template.
+ * @returns The text before the time and the text after it.
+ */
+function aroundTime(label: string | undefined): [before: string, after: string] {
+	if (label === undefined) return ["", ""];
+	let at = label.indexOf(TIME_SLOT);
+	if (at === -1) return [`${label} `, ""];
+	return [label.slice(0, at), label.slice(at + TIME_SLOT.length)];
+}

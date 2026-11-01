@@ -116,6 +116,30 @@ describe("AutoRefresh", () => {
 		);
 		expect(time.dateTime).toBe("2026-11-01T10:00:00.000Z");
 	});
+
+	test("places the time where the updated template's {time} sits", () => {
+		let host = mount("/runs", {
+			labels: { trigger: "Auto-refresh", updated: "Actualizado a las {time} (UTC)" },
+		});
+		let status = host.querySelector('[data-slot="auto-refresh-status"]')!;
+
+		expect(status.textContent).toBe("Actualizado a las 10:00:00 AM (UTC)");
+		expect(status.querySelector("time")?.textContent).toBe("10:00:00 AM");
+	});
+
+	test("keeps the template around the time after each reload", async () => {
+		vi.useFakeTimers({ now: REFRESHED });
+		let host = mount("/runs", {
+			value: 10,
+			frame: "runs",
+			labels: { trigger: "Auto-refresh", updated: "{time} — last fetch" },
+		});
+		let status = host.querySelector('[data-slot="auto-refresh-status"]')!;
+
+		await vi.advanceTimersByTimeAsync(10_000);
+		expect(status.querySelector("time")?.dateTime).toBe("2026-11-01T10:00:10.000Z");
+		expect(status.textContent).toMatch(/^\S.* — last fetch$/);
+	});
 });
 
 describe(autoRefresh.name, () => {
