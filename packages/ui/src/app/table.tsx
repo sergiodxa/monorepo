@@ -280,7 +280,10 @@ export namespace Table {
 	export interface IdCellProps extends TypedCellProps {
 		/** The full id, kept whole in the text and the title; `null` or `undefined` renders `—`. */
 		value: string | null | undefined;
-		/** Characters kept after the ellipsis. Defaults to {@link DEFAULT_ID_TAIL}. */
+		/**
+		 * Characters kept after the ellipsis, always whole: the cell outgrows
+		 * `--ui-table-id-max-inline-size` as far as they need. Defaults to {@link DEFAULT_ID_TAIL}.
+		 */
 		tail?: number;
 	}
 
@@ -1022,6 +1025,7 @@ Table.IdCell = function TableIdCell(handle: Handle<Table.IdCellProps>) {
 	return () => {
 		let { value, tail, ...rest } = handle.props;
 		let keep = Math.max(0, tail ?? DEFAULT_ID_TAIL);
+		let kept = value && value.length > keep ? keep : 0;
 
 		return (
 			<Table.Cell {...rest} data-type="id">
@@ -1036,10 +1040,16 @@ Table.IdCell = function TableIdCell(handle: Handle<Table.IdCellProps>) {
 							font("mono"),
 							fontSize("xs"),
 							fg("neutral"),
-							raw({ maxInlineSize: "var(--ui-table-id-max-inline-size, 14ch)" }),
+							/**
+							 * The cap yields to the tail plus one character for the head's ellipsis,
+							 * so a long tail stays whole and the head truncates first.
+							 */
+							raw({
+								maxInlineSize: `max(var(--ui-table-id-max-inline-size, 14ch), ${kept + 1}ch)`,
+							}),
 						]}
 					>
-						<span mix={[truncate(), raw({ minInlineSize: 0 })]}>
+						<span mix={[truncate(), raw({ minInlineSize: kept > 0 ? "1ch" : 0 })]}>
 							{value.length > keep ? value.slice(0, value.length - keep) : value}
 						</span>
 						{value.length > keep && keep > 0 ? (

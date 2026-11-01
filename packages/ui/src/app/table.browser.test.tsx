@@ -278,6 +278,34 @@ describe("Table typed cells", () => {
 		);
 	});
 
+	test("keeps a tail wider than the maximum whole, growing only as far as it needs", () => {
+		let id = "contact_ada.lovelace@analytical-engine.example";
+		let host = mount(
+			<Table aria-label="Contacts">
+				<Table.Body>
+					<Table.Row>
+						<Table.IdCell value={id} tail={20} />
+					</Table.Row>
+				</Table.Body>
+			</Table>,
+		);
+		let wrapper = host.querySelector<HTMLElement>('[data-slot="id"]')!;
+		let [head, tail] = [...wrapper.children] as HTMLElement[];
+		let ch = tail!.getBoundingClientRect().width / 20;
+
+		expect(tail!.textContent).toBe(id.slice(-20));
+		expect(tail!.scrollWidth).toBeLessThanOrEqual(tail!.clientWidth);
+		expect(tail!.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+			wrapper.getBoundingClientRect().left - 0.5,
+		);
+		expect(tail!.getBoundingClientRect().right).toBeLessThanOrEqual(
+			wrapper.getBoundingClientRect().right + 0.5,
+		);
+		expect(head!.getBoundingClientRect().width).toBeGreaterThan(0);
+		expect(head!.scrollWidth).toBeGreaterThan(head!.clientWidth);
+		expect(wrapper.getBoundingClientRect().width).toBeLessThanOrEqual(22 * ch);
+	});
+
 	test("sizes a data bar to its share of the maximum", () => {
 		let host = mount(
 			<Table aria-label="Routes">
