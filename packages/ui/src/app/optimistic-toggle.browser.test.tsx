@@ -14,9 +14,7 @@ import { setupWorker } from "msw/browser";
 import { render } from "remix/component/test";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { OptimisticToggleDetail } from "./optimistic-toggle.js";
-
-import { OPTIMISTIC_TOGGLE_EVENT, OptimisticToggle } from "./optimistic-toggle.js";
+import { OptimisticToggle } from "./optimistic-toggle.js";
 
 const WORKER = setupWorker();
 
@@ -82,7 +80,7 @@ describe("OptimisticToggle", () => {
 		let data = Object.fromEntries(new FormData(form));
 		expect(data).toEqual({ csrf: "t0ken", returnTo: "/inbox", starred: "true" });
 		expect(button(form).getAttribute("aria-pressed")).toBe("false");
-		expect(button(form).textContent).toBe("Star");
+		expect(button(form).innerText).toBe("Star");
 	});
 
 	test("flips before the server answers and posts in the background", async () => {
@@ -104,9 +102,9 @@ describe("OptimisticToggle", () => {
 	test("puts itself back and says Failed in place when the server refuses", async () => {
 		answer(500);
 		let form = await mount(true);
-		let events: Array<OptimisticToggleDetail> = [];
-		form.addEventListener(OPTIMISTIC_TOGGLE_EVENT, (event) =>
-			events.push((event as CustomEvent<OptimisticToggleDetail>).detail),
+		let events: Array<{ pressed: boolean; failed: boolean }> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) =>
+			events.push({ pressed: event.pressed, failed: event.failed }),
 		);
 
 		button(form).click();

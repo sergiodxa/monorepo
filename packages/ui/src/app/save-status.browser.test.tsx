@@ -14,12 +14,9 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import type { SaveStatusProps } from "./save-status.js";
 
-import {
-	formatEditedTime,
-	SAVE_STATUS_RETRY_EVENT,
-	SaveStatus,
-	setSaveStatus,
-} from "./save-status.js";
+import { setSaveStatus } from "./mixins/save-status-sync.js";
+import { SaveStatus } from "./save-status.js";
+import { formatEditedTime } from "./utils/edited-time.js";
 
 const LABELS: SaveStatusProps["labels"] = {
 	saving: "Saving…",
@@ -92,6 +89,7 @@ describe("SaveStatus", () => {
 		await wait(250);
 		expect(announced(element)).toBe("");
 		let edited = element.querySelector("time")!;
+		expect(edited.hidden).toBe(false);
 		expect(edited.textContent).toMatch(/^Edited /);
 		expect(edited.closest('[role="status"]')).toBeNull();
 		expect(Date.parse(edited.dateTime)).not.toBeNaN();
@@ -102,14 +100,14 @@ describe("SaveStatus", () => {
 
 		expect(announced(element)).toBe("Saved");
 		await wait(250);
-		expect(element.querySelector("time")).not.toBeNull();
+		expect(element.querySelector("time")!.hidden).toBe(false);
 	});
 
 	test("shows a failure in the danger tone with a Retry that reports itself", async () => {
 		document.body.style.setProperty("--ui-danger-fg", "rgb(200, 30, 30)");
 		let element = await mount({ holdMs: 0 });
 		let retried = 0;
-		document.addEventListener(SAVE_STATUS_RETRY_EVENT, () => retried++);
+		document.addEventListener("ui:save-status-retry", () => retried++);
 
 		setSaveStatus(element, "failed");
 		await wait(20);

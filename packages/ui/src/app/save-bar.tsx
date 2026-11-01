@@ -18,10 +18,12 @@ import { minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
 import { text, weight } from "@sdxc/u/typography";
-import { clientEntry, on, ref } from "remix/component";
+import { clientEntry } from "remix/component";
 
 import { Button } from "../components/button.js";
 import { Keyboard } from "../components/keyboard.js";
+
+import { saveBarSync } from "./mixins/save-bar-sync.js";
 
 /**
  * Props {@link SaveBar} serializes into the page for hydration, which is why they are a
@@ -41,21 +43,6 @@ export type SaveBarProps = {
 };
 
 /**
- * Reads a form's current values as one string, so two moments compare in one step. A
- * file contributes its name and size, which is what changes when another is picked.
- *
- * @param form The form to read.
- * @returns The form's entries, serialized in document order.
- */
-function snapshot(form: HTMLFormElement): string {
-	let entries: Array<[string, string]> = [];
-	for (let [name, value] of new FormData(form)) {
-		entries.push([name, typeof value === "string" ? value : `${value.name}:${value.size}`]);
-	}
-	return JSON.stringify(entries);
-}
-
-/**
  * Renders the bar, hidden until the watched form changes. Place it as the form's last
  * child so it sticks to the bottom of the viewport while the form scrolls; the form keeps
  * its own Save, which is what a browser without script uses.
@@ -69,72 +56,15 @@ function snapshot(form: HTMLFormElement): string {
 export const SaveBar: EntryComponent<SaveBarProps> = clientEntry(
 	"@sdxc/ui/app/save-bar#SaveBar",
 	function SaveBar(handle) {
-		let isDirty = false;
-		let target: HTMLFormElement | null = null;
-
-		/** Asks before the page unloads with unsaved changes; attached only while dirty. */
-		function guard(event: BeforeUnloadEvent) {
-			event.preventDefault();
-		}
-
-		/** Records whether the form differs from its baseline, attaching the leave guard to match. */
-		function setDirty(next: boolean) {
-			if (next === isDirty) return;
-			isDirty = next;
-			if (next) globalThis.addEventListener("beforeunload", guard);
-			else globalThis.removeEventListener("beforeunload", guard);
-			void handle.update();
-		}
-
-		let watch = ref((node, signal) => {
-			let id = handle.props.form;
-			let form = id
-				? (node.ownerDocument.getElementById(id) as HTMLFormElement | null)
-				: node.closest("form");
-			if (!form) return;
-			target = form;
-			let baseline = snapshot(form);
-
-			/** Compares the form with how it loaded. */
-			function compare() {
-				if (form) setDirty(snapshot(form) !== baseline);
-			}
-
-			form.addEventListener("input", compare, { signal });
-			form.addEventListener("change", compare, { signal });
-			form.addEventListener("reset", () => setTimeout(compare), { signal });
-			form.addEventListener(
-				"submit",
-				() => {
-					if (form) baseline = snapshot(form);
-					setDirty(false);
-				},
-				{ signal },
-			);
-			node.ownerDocument.addEventListener(
-				"keydown",
-				(event) => {
-					if (event.key.toLowerCase() !== "s" || !(event.metaKey || event.ctrlKey)) return;
-					event.preventDefault();
-					if (isDirty) form?.requestSubmit();
-				},
-				{ signal },
-			);
-			signal.addEventListener("abort", () => {
-				globalThis.removeEventListener("beforeunload", guard);
-				target = null;
-			});
-		});
-
 		return () => {
 			let { form, labels } = handle.props;
 
 			return (
 				<div
 					data-slot="save-bar"
-					hidden={!isDirty}
+					hidden
 					mix={[
-						watch,
+						saveBarSync({ form, message: labels.message }),
 						sticky(),
 						hstack({ gap: 3, align: "center" }),
 						raw({ insetBlockEnd: "1rem", flexWrap: "wrap", zIndex: 10 }),
@@ -159,16 +89,8 @@ export const SaveBar: EntryComponent<SaveBarProps> = clientEntry(
 							weight("medium"),
 							fg("neutral.emphasis"),
 						]}
-					>
-						{isDirty ? labels.message : ""}
-					</p>
-					<Button
-						type="button"
-						variant="ghost"
-						color="neutral"
-						size="sm"
-						mix={[on("click", () => target?.reset())]}
-					>
+					></p>
+					<Button type="reset" form={form} variant="ghost" color="neutral" size="sm">
 						{labels.discard}
 					</Button>
 					<Button type="submit" form={form} size="sm">

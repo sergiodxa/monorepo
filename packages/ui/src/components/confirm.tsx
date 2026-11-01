@@ -13,7 +13,9 @@
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { flex, flexCol, gap, vstack } from "@sdxc/u/layout";
-import { clientEntry, ref } from "remix/component";
+import { clientEntry } from "remix/component";
+
+import { confirmPhrase } from "../mixins/confirm-phrase.js";
 
 import type { Button } from "./button.js";
 
@@ -33,9 +35,6 @@ const DEFAULT_METHOD: NonNullable<Confirm.FormProps["method"]> = "post";
  * without this the header and footer would lose their spacing.
  */
 const PANEL_GAP = 6;
-
-/** Attribute marking the confirming control, which a type-to-confirm field enables on a match. */
-const ACTION_ATTRIBUTE = "data-confirm-action";
 
 /** Characters a `pattern` (compiled with the `v` flag) reads as syntax, escaped to match literally. */
 const PATTERN_SYNTAX = /[\\^$.*+?()[\]{}|/]/g;
@@ -302,28 +301,6 @@ function escapePattern(value: string): string {
 export const ConfirmPhrase: EntryComponent<ConfirmPhraseProps> = clientEntry(
 	"@sdxc/ui/confirm#ConfirmPhrase",
 	function ConfirmPhrase(handle) {
-		let lock = ref((node, signal) => {
-			let input = node as HTMLInputElement;
-			let dialog = input.closest("dialog");
-			let action = dialog?.querySelector<HTMLButtonElement>(`[${ACTION_ATTRIBUTE}]`);
-
-			/** Enables the confirming control exactly while the field holds the phrase. */
-			function sync() {
-				if (action) action.disabled = input.value !== handle.props.value;
-			}
-
-			sync();
-			input.addEventListener("input", sync, { signal });
-			dialog?.addEventListener(
-				"close",
-				() => {
-					input.value = "";
-					sync();
-				},
-				{ signal },
-			);
-		});
-
 		return () => {
 			let { id, label, name, value } = handle.props;
 
@@ -339,7 +316,7 @@ export const ConfirmPhrase: EntryComponent<ConfirmPhraseProps> = clientEntry(
 						autocomplete="off"
 						spellcheck={false}
 						pattern={escapePattern(value)}
-						mix={[lock]}
+						mix={[confirmPhrase(value)]}
 					/>
 				</div>
 			);

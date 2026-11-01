@@ -34,7 +34,7 @@ function mount(width: number, page: "index" | "section" = "section"): HTMLElemen
 	host.style.width = `${width}px`;
 	document.body.appendChild(host);
 	render(
-		<SettingsLayout nav={NAV} page={page} backHref="/settings" labels={LABELS}>
+		<SettingsLayout sections={NAV} page={page} backHref="/settings" labels={LABELS}>
 			<h1>Monitor defaults</h1>
 		</SettingsLayout>,
 		{ container: host },

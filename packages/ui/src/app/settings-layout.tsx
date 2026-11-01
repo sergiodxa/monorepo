@@ -24,6 +24,9 @@ const LAYOUT_CONTAINER = "ui-settings-layout";
 /** Width at which the nav and the content sit side by side. */
 const WIDE = `@container ${LAYOUT_CONTAINER} (min-width: 48rem)`;
 
+/** Which route the layout renders for when `page` is omitted. */
+const DEFAULT_PAGE: NonNullable<SettingsLayout.Props["page"]> = "section";
+
 /** Width below which only one of the two columns shows. */
 const NARROW = `@container ${LAYOUT_CONTAINER} (max-width: 47.999rem)`;
 
@@ -55,7 +58,8 @@ export namespace SettingsLayout {
 
 	/** Props accepted by {@link SettingsLayout}. */
 	export interface Props extends TagProps<"div"> {
-		nav: ReadonlyArray<Group>;
+		/** The nav's groups of sections. */
+		sections: ReadonlyArray<Group>;
 		/**
 		 * Which route renders the layout. `"index"` is the settings root, which a narrow
 		 * container shows as the nav alone; `"section"` shows a section's content.
@@ -78,7 +82,7 @@ export namespace SettingsLayout {
  * @returns The render function producing the layout's markup.
  * @example
  * <SettingsLayout
- * 	nav={[{ items: [{ href: "/settings/general", label: "General", current: true }, { href: "/settings/billing", label: "Billing" }] }]}
+ * 	sections={[{ items: [{ href: "/settings/general", label: "General", current: true }, { href: "/settings/billing", label: "Billing" }] }]}
  * 	backHref="/settings"
  * 	labels={{ nav: "Settings", back: "Settings" }}
  * >
@@ -87,7 +91,8 @@ export namespace SettingsLayout {
  */
 export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 	return () => {
-		let { nav, page = "section", backHref, labels, children, mix, ...rest } = handle.props;
+		let { sections, page: pageProp, backHref, labels, children, mix, ...rest } = handle.props;
+		let page = pageProp ?? DEFAULT_PAGE;
 		let isIndex = page === "index";
 
 		return (
@@ -127,7 +132,7 @@ export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 							}),
 						]}
 					>
-						{nav.map((group) => (
+						{sections.map((group) => (
 							<SettingsNavGroup group={group} />
 						))}
 					</nav>

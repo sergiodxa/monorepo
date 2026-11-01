@@ -10,24 +10,14 @@
 import type { EntryComponent, RemixNode } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { gap, inlineFlex, items } from "@sdxc/u/layout";
+import { gap, hidden, inlineFlex, items } from "@sdxc/u/layout";
+import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import { clientEntry, on } from "remix/component";
+import { clientEntry } from "remix/component";
 
 import { Button } from "../components/button.js";
 
-/** Event the form dispatches, bubbling, whenever the toggle's state changes. */
-export const OPTIMISTIC_TOGGLE_EVENT = "ui-optimistic-toggle";
-
-/** Header a background post carries, so the server can answer without a redirect. */
-export const OPTIMISTIC_TOGGLE_HEADER = "x-optimistic-toggle";
-
-/** What {@link OPTIMISTIC_TOGGLE_EVENT} carries. */
-export interface OptimisticToggleDetail {
-	pressed: boolean;
-	/** Whether the server refused the last change, which put the toggle back. */
-	failed: boolean;
-}
+import { optimisticToggleSync, toneOf } from "./mixins/optimistic-toggle-sync.js";
 
 /**
  * Props {@link OptimisticToggle} serializes into the page for hydration, which is why they
@@ -48,27 +38,15 @@ export type OptimisticToggleProps = {
 		/** Shown beside the control when the server refused the change. */
 		failed: string;
 	};
-	/** What the button shows while on, such as a filled star; defaults to `labels.label`. */
+	/** What the button shows while on, such as a filled star; the label text when omitted. */
 	pressedContent?: RemixNode;
-	/** What the button shows while off, such as an outlined star; defaults to `labels.label`. */
+	/** What the button shows while off, such as an outlined star; the label text when omitted. */
 	unpressedContent?: RemixNode;
 };
 
 /**
- * Picks the button's tone: danger after a refusal, brand while on, neutral while off.
- *
- * @param pressed Whether the toggle is on.
- * @param failed Whether the last change was refused.
- * @returns The semantic color role for the button.
- */
-function toneOf(pressed: boolean, failed: boolean): Button.Color {
-	if (failed) return "danger";
-	return pressed ? "brand" : "neutral";
-}
-
-/**
- * Renders the form and its toggle button. The latest press wins: an answer to an earlier
- * press that arrives after a newer one changes nothing.
+ * Renders the form and its toggle button, with both states' content in the markup so a
+ * flip is a change of `data-pressed` on the form.
  *
  * @example
  * <OptimisticToggle action={`/posts/${post.id}/star`} name="starred" pressed={post.starred}
@@ -78,50 +56,10 @@ function toneOf(pressed: boolean, failed: boolean): Button.Color {
 export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEntry(
 	"@sdxc/ui/app/optimistic-toggle#OptimisticToggle",
 	function OptimisticToggle(handle) {
-		let pressed = handle.props.pressed;
-		let failed = false;
-		let latest = 0;
-		let form: HTMLFormElement | null = null;
-
-		/** Shows `next` and tells the page, so a row can restyle with it. */
-		function show(next: boolean, hasFailed: boolean) {
-			pressed = next;
-			failed = hasFailed;
-			form?.dispatchEvent(
-				new CustomEvent<OptimisticToggleDetail>(OPTIMISTIC_TOGGLE_EVENT, {
-					bubbles: true,
-					detail: { pressed: next, failed: hasFailed },
-				}),
-			);
-			void handle.update();
-		}
-
-		/** Flips at once, posts the form as it stood, and puts the toggle back if the post fails. */
-		async function toggle(event: SubmitEvent) {
-			event.preventDefault();
-			form = event.currentTarget as HTMLFormElement;
-			let body = new FormData(form);
-			let previous = pressed;
-			let token = ++latest;
-
-			show(!previous, false);
-
-			let ok = await fetch(handle.props.action, {
-				method: "POST",
-				credentials: "same-origin",
-				headers: { [OPTIMISTIC_TOGGLE_HEADER]: "1" },
-				body,
-			}).then(
-				(response) => response.ok,
-				() => false,
-			);
-
-			if (!ok && token === latest) show(previous, true);
-		}
-
 		return () => {
-			let { action, name, fields, labels, pressedContent, unpressedContent } = handle.props;
-			let content = pressed ? pressedContent : unpressedContent;
+			let { action, name, pressed, fields, labels, pressedContent, unpressedContent } =
+				handle.props;
+			let hasContent = pressedContent !== undefined || unpressedContent !== undefined;
 
 			return (
 				<form
@@ -129,32 +67,32 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 					action={action}
 					data-slot="optimistic-toggle"
 					data-pressed={pressed ? "" : undefined}
-					data-failed={failed ? "" : undefined}
 					mix={[
+						optimisticToggleSync({ failed: labels.failed }),
 						inlineFlex(),
 						items("center"),
 						gap(1.5),
-						on<HTMLFormElement, "submit">("submit", toggle),
+						when('&[data-pressed] [data-toggle-content="off"]', hidden()),
+						when('&:not([data-pressed]) [data-toggle-content="on"]', hidden()),
 					]}
 				>
 					{Object.entries(fields ?? {}).map(([field, value]) => (
 						<input type="hidden" name={field} value={value} />
 					))}
-					<input type="hidden" name={name} value={pressed ? "false" : "true"} />
+					<input type="hidden" name={name} value={pressed ? "false" : "true"} data-toggle-next="" />
 					<Button
 						type="submit"
 						size="sm"
 						variant="ghost"
-						color={toneOf(pressed, failed)}
+						color={toneOf(pressed, false)}
 						aria-pressed={pressed ? "true" : "false"}
-						aria-label={content ? labels.label : undefined}
+						aria-label={hasContent ? labels.label : undefined}
 						title={labels.label}
 					>
-						{content ?? labels.label}
+						<span data-toggle-content="on">{pressedContent ?? labels.label}</span>
+						<span data-toggle-content="off">{unpressedContent ?? labels.label}</span>
 					</Button>
-					<span role="status" mix={[text("xs"), fg("danger")]}>
-						{failed ? labels.failed : ""}
-					</span>
+					<span role="status" mix={[text("xs"), fg("danger")]} />
 				</form>
 			);
 		};

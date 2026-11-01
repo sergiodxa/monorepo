@@ -16,9 +16,11 @@ import { container, hstack, vstack } from "@sdxc/u/layout";
 import { divide, overflow } from "@sdxc/u/overflow";
 import { m, minIs, p } from "@sdxc/u/size";
 import { balance, pretty, text, weight } from "@sdxc/u/typography";
-import { clientEntry, ref } from "remix/component";
+import { clientEntry } from "remix/component";
 
 import { Button } from "../components/button.js";
+
+import { submitOnChange } from "./mixins/submit-on-change.js";
 
 /** Container the card measures, so a row stacks in a narrow pane as well as on a phone. */
 const CARD_CONTAINER = "ui-settings-card";
@@ -31,6 +33,15 @@ const SPLIT_MIN = "32rem";
 
 /** HTTP method a section's form falls back to, since saving changes state. */
 const DEFAULT_METHOD = "post";
+
+/** How a section saves when `save` is omitted. */
+const DEFAULT_SAVE: SettingsSection.Save = "explicit";
+
+/** Where the heading sits when `heading` is omitted. */
+const DEFAULT_HEADING: NonNullable<SettingsSection.Props["heading"]> = "above";
+
+/** How a row lays out when `layout` is omitted. */
+const DEFAULT_ROW_LAYOUT: SettingsSection.RowLayout = "split";
 
 /**
  * Prop types for {@link SettingsSection} and {@link SettingsSection.Row}.
@@ -128,15 +139,17 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 		let {
 			title,
 			description,
-			save = "explicit",
+			save: saveProp,
 			form,
-			heading = "above",
+			heading: headingProp,
 			footer,
 			labels,
 			children,
 			mix,
 			...rest
 		} = handle.props;
+		let save = saveProp ?? DEFAULT_SAVE;
+		let heading = headingProp ?? DEFAULT_HEADING;
 		let titleId = `${handle.id}-title`;
 		let isExplicit = save === "explicit";
 		let cardMix = [
@@ -274,11 +287,12 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 			htmlFor,
 			labelId,
 			descriptionId,
-			layout = "split",
+			layout: layoutProp,
 			children,
 			mix,
 			...rest
 		} = handle.props;
+		let layout = layoutProp ?? DEFAULT_ROW_LAYOUT;
 		let labelMix = [text("sm"), weight("medium"), fg("neutral.emphasis")];
 
 		return (
@@ -332,9 +346,8 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 };
 
 /**
- * Client island: what makes an instant section save as it changes. It submits the
- * enclosing form whenever a control in it changes, through `requestSubmit` so the app's
- * own submit handling (a frame, a fetch) takes the request.
+ * Client island: what makes an instant section save as it changes, attaching
+ * `submitOnChange()` to the enclosing form so every flipped control submits it.
  *
  * @example
  * <form method="post"><Switch name="weekly" /><SettingsInstantSave /></form>
@@ -342,11 +355,6 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 export const SettingsInstantSave: EntryComponent<{}> = clientEntry(
 	"@sdxc/ui/app/settings-section#SettingsInstantSave",
 	function SettingsInstantSave() {
-		let watch = ref((node, signal) => {
-			let form = node.closest("form");
-			form?.addEventListener("change", () => form.requestSubmit(), { signal });
-		});
-
-		return () => <span hidden data-slot="settings-instant-save" mix={[watch]} />;
+		return () => <span hidden data-slot="settings-instant-save" mix={[submitOnChange()]} />;
 	},
 );
