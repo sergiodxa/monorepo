@@ -54,6 +54,9 @@ import {
 	setParamHref,
 } from "./utils/search-params.js";
 
+/** The URL read when `url` is unset: a page with nothing applied. */
+const DEFAULT_URL = "/";
+
 /** Search parameter the search field writes when `search.name` is unset. */
 const DEFAULT_SEARCH_PARAM = "q";
 
@@ -152,8 +155,12 @@ export namespace FilterBar {
 	export interface Props extends Omit<TagProps<"div">, "children" | "id"> {
 		/** Prefix for the form and popover ids; unique on the page. */
 		id: string;
-		/** The page's current URL, where every applied value is read from. */
-		url: URL | string;
+		/**
+		 * The page's current URL, where every applied value is read from.
+		 *
+		 * @default "/", a page with no parameters
+		 */
+		url?: URL | string;
 		/** Where the form submits. Defaults to the current path. */
 		action?: string;
 		tabs?: Tab[];
@@ -200,7 +207,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 	return () => {
 		let {
 			id,
-			url,
+			url = DEFAULT_URL,
 			action,
 			tabs,
 			facets = [],

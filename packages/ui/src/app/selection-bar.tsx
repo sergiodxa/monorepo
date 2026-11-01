@@ -44,6 +44,9 @@ import { interactiveTransition } from "../styles/interactive-transition.js";
 
 import { selectionBarSync } from "./mixins/selection-bar-sync.js";
 
+/** The actions a bar shows when `actions` is unset: none, leaving the count and clear button. */
+const DEFAULT_ACTIONS: SelectionBar.Action[] = [];
+
 /** Distance the bar keeps from the bottom of its scroll container. */
 const OFFSET = "var(--ui-selection-bar-offset, 1rem)";
 
@@ -102,7 +105,8 @@ export namespace SelectionBar {
 		form?: string;
 		/** Range and page links shown while nothing is selected; omitted hides the idle bar. */
 		pagination?: Pagination;
-		actions: Action[];
+		/** The bulk actions, in order; put a destructive one last. */
+		actions?: Action[];
 		/** Locale for the count. Defaults to the runtime's. */
 		locale?: string;
 		labels: Labels;
@@ -135,7 +139,16 @@ export namespace SelectionBar {
  */
 export function SelectionBar(handle: Handle<SelectionBar.Props>) {
 	return () => {
-		let { target, form, pagination, actions, locale, labels, mix, ...rest } = handle.props;
+		let {
+			target,
+			form,
+			pagination,
+			actions = DEFAULT_ACTIONS,
+			locale,
+			labels,
+			mix,
+			...rest
+		} = handle.props;
 		let formId = form ?? target;
 		let layer = [
 			flex(),
