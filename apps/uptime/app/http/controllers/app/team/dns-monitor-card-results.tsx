@@ -8,16 +8,18 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
-import { flex, flexWrap, gap } from "@sdxc/u/layout";
+import { StatCard } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
-/** GET /app/:team/dns/:monitorId/cards/results — the monitor's result-derived stats, fragment-only. */
+/**
+ * GET /app/:team/dns/:monitorId/cards/results — the monitor's result-derived stats,
+ * fragment-only. A success rate with no checks behind it reads as a dash rather than 0%.
+ */
 export default createAction(routes.app.team.dnsMonitors.cards.results, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
@@ -33,16 +35,20 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 		let successRate = totalChecks > 0 ? Math.round((okChecks / totalChecks) * 100) : null;
 
 		return ctx.render(
-			<div mix={[flex(), flexWrap(), gap("16px")]}>
-				<StatCard
-					label={ctx.intl.t("page.dnsMonitorDetail.stats.successRate.label")}
-					value={successRate === null ? "—" : `${successRate}%`}
-				/>
-				<StatCard
-					label={ctx.intl.t("page.dnsMonitorDetail.stats.totalChecks.label")}
-					value={totalChecks}
-				/>
-			</div>,
+			<StatCard.Group columns={2}>
+				<StatCard>
+					<StatCard.Label>
+						{ctx.intl.t("page.dnsMonitorDetail.stats.successRate.label")}
+					</StatCard.Label>
+					<StatCard.Value>{successRate === null ? "—" : `${successRate}%`}</StatCard.Value>
+				</StatCard>
+				<StatCard>
+					<StatCard.Label>
+						{ctx.intl.t("page.dnsMonitorDetail.stats.totalChecks.label")}
+					</StatCard.Label>
+					<StatCard.Value>{totalChecks}</StatCard.Value>
+				</StatCard>
+			</StatCard.Group>,
 		);
 	},
 });

@@ -7,28 +7,28 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime } from "@sdxc/dates";
+import type { SemanticColor } from "@sdxc/ui/utils";
+
 import { notFound } from "@sdxc/http/response/html";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
-import { fontSize } from "@sdxc/u/typography";
-import { Badge } from "@sdxc/ui";
+import { m } from "@sdxc/u/size";
+import { fontSize, overflowWrap, weight } from "@sdxc/u/typography";
 import { Empty, Table } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { SelectDnsMonitorResult } from "~/database/schema";
-import type { BadgeTone } from "~/resources/components/badge";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { badgeVariant } from "~/resources/components/badge";
 import routes from "~/routes/web";
 
-const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
-	ok: "up",
-	changed: "degraded",
-	error: "down",
+/** The dot color each sweep outcome is drawn in. */
+const STATUS_COLOR: Record<string, SemanticColor> = {
+	ok: "success",
+	changed: "warning",
+	error: "danger",
 };
 
 /**
@@ -55,11 +55,15 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 
 		let results = await ctx.models.dnsMonitorResults.recent(monitor.id);
 
+		let now = Date.now();
+
 		return ctx.render(
-			<section>
-				<h2>{ctx.intl.t("page.dnsMonitorDetail.results.title")}</h2>
+			<section mix={[vstack({ gap: 3 })]}>
+				<h2 mix={[m(0), fontSize("md"), weight("semibold")]}>
+					{ctx.intl.t("page.dnsMonitorDetail.results.title")}
+				</h2>
 				{results.length === 0 ? (
-					<Empty>
+					<Empty size="compact">
 						<Empty.Description>
 							{ctx.intl.t("page.dnsMonitorDetail.results.empty")}
 						</Empty.Description>
@@ -78,7 +82,7 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 									<Table.Column>
 										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.findings")}
 									</Table.Column>
-									<Table.Column>
+									<Table.Column numeric>
 										{ctx.intl.t("page.dnsMonitorDetail.results.table.columns.responseTime")}
 									</Table.Column>
 								</Table.Row>
@@ -86,21 +90,16 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 							<Table.Body>
 								{results.map((result) => (
 									<Table.Row key={result.id}>
-										<Table.Cell>
-											{formatDateTime(new Date(result.checked_at), {
-												locale: ctx.locale,
-												timeZone: "UTC",
-											})}
-										</Table.Cell>
-										<Table.Cell>
-											<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-												{result.status}
-											</Badge>
-										</Table.Cell>
+										<Table.DateCell date={result.checked_at} now={now} locale={ctx.locale} local />
+										<Table.StatusCell color={STATUS_COLOR[result.status] ?? "neutral"}>
+											{ctx.intl.t(`page.dnsMonitorDetail.records.state.${result.status}`)}
+										</Table.StatusCell>
 										<Table.Cell>
 											<div mix={[vstack({ gap: 1 })]}>
 												{result.error_message ? (
-													<code>{result.error_message}</code>
+													<code mix={[fontSize("sm"), overflowWrap("anywhere")]}>
+														{result.error_message}
+													</code>
 												) : (
 													findings(result) !== 0 && (
 														<span>
@@ -125,9 +124,11 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 													ctx.intl.t("page.dnsMonitorDetail.results.noFindings")}
 											</div>
 										</Table.Cell>
-										<Table.Cell>
-											{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
-										</Table.Cell>
+										<Table.NumberCell
+											value={result.response_time_ms}
+											locale={ctx.locale}
+											format={{ style: "unit", unit: "millisecond", unitDisplay: "short" }}
+										/>
 									</Table.Row>
 								))}
 							</Table.Body>

@@ -11,14 +11,12 @@ import type { Handle } from "remix/component";
 import type { getContext as getContextType } from "remix/middleware/async-context";
 
 import { notFound } from "@sdxc/http/response/html";
-import { IntlProvider } from "@sdxc/i18n/ui";
-import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { block, hstack, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { maxBs, maxIs } from "@sdxc/u/size";
 import { fontSize, overflowWrap } from "@sdxc/u/typography";
-import { Alert, Button, Checkbox, Description, LinkButton } from "@sdxc/ui";
+import { Alert, Button, Description, LinkButton } from "@sdxc/ui";
 import { Table } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -32,7 +30,6 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { withPrefix } from "~/app/services/prefixed-translate";
-import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
@@ -99,17 +96,14 @@ function RecordGroupSection(handle: Handle<RecordGroupSection.Props>) {
 							</Description>
 						)}
 
-						<IntlProvider intl={intl}>
-							<CheckboxGroupSelectAll groupId={groupId} />
-						</IntlProvider>
-
 						<Table.Container>
 							<Table id={groupId} aria-label={t(`groups.${kind}.title`)}>
 								<Table.Header>
 									<Table.Row>
-										<Table.Column>
-											<span mix={[visuallyHidden()]}>{t("table.columns.watched")}</span>
-										</Table.Column>
+										<Table.SelectAll
+											label={t("table.columns.watched")}
+											checked={records.every((record) => record.is_enabled)}
+										/>
 										<Table.Column>{t("table.columns.name")}</Table.Column>
 										<Table.Column>{t("table.columns.type")}</Table.Column>
 										<Table.Column>{t("table.columns.value")}</Table.Column>
@@ -118,17 +112,15 @@ function RecordGroupSection(handle: Handle<RecordGroupSection.Props>) {
 								<Table.Body>
 									{records.map((record) => (
 										<Table.Row key={record.id}>
-											<Table.Cell>
-												<Checkbox
-													name="record_ids"
-													value={record.id}
-													defaultChecked={record.is_enabled}
-													aria-label={t("table.watchRecord", {
-														name: record.name,
-														type: record.record_type,
-													})}
-												/>
-											</Table.Cell>
+											<Table.Select
+												name="record_ids"
+												value={record.id}
+												checked={record.is_enabled}
+												label={t("table.watchRecord", {
+													name: record.name,
+													type: record.record_type,
+												})}
+											/>
 											<Table.Cell>
 												<code mix={[overflowWrap("anywhere")]}>{record.name}</code>
 											</Table.Cell>

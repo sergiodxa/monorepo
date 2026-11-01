@@ -21,18 +21,25 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { teamAccess } from "~/app/http/middleware/access";
+import i18n from "~/app/http/middleware/i18n";
+import { assetResolver } from "~/app/initializers/assets";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -125,11 +132,23 @@ async function createFixture() {
 	return { db, team, membership };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`. */
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer in
+ * place of `requireUser`/`requireTeam`, so a refused form can draw its page again.
+ */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
+
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return teamAccess(ctx, next);
 	};
 }
@@ -154,7 +173,10 @@ async function send(
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM, mail: emailRegistry }),
 		],
 	});
-	router.map(route, { middleware: [seedTeam(team, membership)], handler });
+	router.map(route, {
+		middleware: [seedTeam(team, membership), i18n, testAssets(), render({ assets: assetResolver })],
+		handler,
+	});
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
 		method,
@@ -189,7 +211,7 @@ describe("createTcpMonitor", () => {
 		);
 	});
 
-	test("redirects back to the form without creating a monitor when the port is invalid", async () => {
+	test("draws the form again with what was typed and the port to fix, creating nothing", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(
@@ -202,10 +224,16 @@ describe("createTcpMonitor", () => {
 			{ name: "Redis", host: "redis.internal", port: "999999" },
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.tcpMonitors.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(422);
+		expect(response.headers.get("Location")).toBeNull();
+
+		let body = await response.text();
+		expect(body).toContain('value="Redis"');
+		expect(body).toContain('value="redis.internal"');
+		expect(body).toContain('value="999999"');
+		expect(body).toContain(en.page.tcpMonitors.form.issues.summary);
+		expect(body).toContain(en.page.tcpMonitors.form.issues.port);
+		expect(body).not.toContain(en.page.tcpMonitors.form.issues.host);
 
 		let matching = await db.findMany(tcpMonitors, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
@@ -245,6 +273,42 @@ describe("updateTcpMonitor", () => {
 		let updated = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
 		expect(updated?.name).toBe("Renamed");
 		expect(updated?.host).toBe("new.internal");
+	});
+
+	test("draws the edit form again with what was typed when the name is blank, changing nothing", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			tcpMonitors,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Original",
+				host: "old.internal",
+				port: 22,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.update,
+			updateTcpMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id, name: "", host: "typed.internal", port: "2222" },
+		);
+
+		expect(response.status).toBe(422);
+
+		let body = await response.text();
+		expect(body).toContain('value="typed.internal"');
+		expect(body).toContain('value="2222"');
+		expect(body).toContain(en.page.tcpMonitors.form.issues.name);
+
+		let unchanged = await db.findOne(tcpMonitors, { where: { id: monitor.id } });
+		expect(unchanged?.name).toBe("Original");
+		expect(unchanged?.host).toBe("old.internal");
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {

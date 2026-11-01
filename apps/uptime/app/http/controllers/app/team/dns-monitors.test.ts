@@ -30,6 +30,7 @@ import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
 import { bindModels } from "~/app/test/models";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitors")).default as { handler: RequestHandler<any> };
@@ -85,6 +86,7 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
+	search = "",
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.dnsMonitors.index, {
@@ -98,7 +100,10 @@ async function send(
 	});
 
 	let request = new Request(
-		new URL(routes.app.team.dnsMonitors.index.href({ team: team.slug }), "https://uptime.test"),
+		new URL(
+			`${routes.app.team.dnsMonitors.index.href({ team: team.slug })}${search}`,
+			"https://uptime.test",
+		),
 	);
 
 	return router.fetch(request);
@@ -219,5 +224,45 @@ describe("dnsMonitors", () => {
 
 		expect(body).toContain("2 of 3 watched");
 		expect(body).toContain("None yet");
+	});
+	/**
+	 * The search and status filters narrow the rows already loaded for the team, and a filter
+	 * that matches nothing says so with a way back to every monitor.
+	 */
+	test("narrows the list by search and status, and offers to clear a filter that matches nothing", async () => {
+		let { db, team, membership } = await createFixture();
+		let models = bindModels(db);
+		let kept = unwrap(
+			await models.dnsMonitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Marketing site",
+				domain: "acme-launch.dev",
+				last_status: "error",
+			}),
+		);
+		let dropped = unwrap(
+			await models.dnsMonitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Production DNS",
+				domain: "example.com",
+			}),
+		);
+		let showHref = (monitorId: string) =>
+			routes.app.team.dnsMonitors.show.href({ team: team.slug, monitorId });
+
+		let searched = await (await send(db, team, membership, "?q=LAUNCH")).text();
+		expect(searched).toContain(showHref(kept.id));
+		expect(searched).not.toContain(showHref(dropped.id));
+
+		let byStatus = await (await send(db, team, membership, "?status=error")).text();
+		expect(byStatus).toContain(showHref(kept.id));
+		expect(byStatus).not.toContain(showHref(dropped.id));
+
+		let nothing = await (await send(db, team, membership, "?status=changed")).text();
+		expect(nothing).toContain(en.page.dnsMonitors.noResults.title);
+		expect(nothing).not.toContain(showHref(kept.id));
+		expect(nothing).not.toContain(en.page.dnsMonitors.empty.title);
 	});
 });

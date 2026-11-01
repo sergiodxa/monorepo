@@ -2,36 +2,45 @@
  * TCP monitor detail page results fragment controller. GET
  * /app/:team/tcp/:monitorId/cards/results — loads the monitor's recent check results
  * once and renders both what is derived from them (uptime rate, average response time,
+ * total checks) and the check log itself, so the page never queries the results twice.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime } from "@sdxc/dates";
+import type { SemanticColor } from "@sdxc/ui/utils";
+
 import { notFound } from "@sdxc/http/response/html";
-import { flex, flexWrap, gap } from "@sdxc/u/layout";
-import { mbe } from "@sdxc/u/size";
-import { Badge } from "@sdxc/ui";
-import { Empty, Table } from "@sdxc/ui/app";
-import { Fragment } from "remix/component";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { fontSize, overflowWrap, weight } from "@sdxc/u/typography";
+import { Empty, StatCard, Table } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { BadgeTone } from "~/resources/components/badge";
-
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { badgeVariant } from "~/resources/components/badge";
-import StatCard from "~/resources/components/stat-card";
 import routes from "~/routes/web";
 
-const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
-	up: "up",
-	timeout: "degraded",
-	down: "down",
+/** The dot color each check outcome is drawn in. */
+const STATUS_COLOR: Record<string, SemanticColor> = {
+	up: "success",
+	timeout: "warning",
+	down: "danger",
 };
 
-/** GET /app/:team/tcp/:monitorId/cards/results — the monitor's result-derived stats and result table, fragment-only. */
+/** Formats a millisecond figure with its unit in the reader's locale. */
+const MILLISECONDS: Intl.NumberFormatOptions = {
+	style: "unit",
+	unit: "millisecond",
+	unitDisplay: "short",
+};
+
+/**
+ * GET /app/:team/tcp/:monitorId/cards/results — the monitor's result-derived stats and
+ * result table, fragment-only. A figure with no checks behind it reads as a dash, never as
+ * a zero that would claim the port was down or instant.
+ */
 export default createAction(routes.app.team.tcpMonitors.cards.results, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
@@ -53,28 +62,40 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 							timedResults.length,
 					)
 				: null;
+		let numbers = new Intl.NumberFormat(ctx.locale, MILLISECONDS);
+		let now = Date.now();
 
 		return ctx.render(
-			<Fragment>
-				<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-					<StatCard
-						label={ctx.intl.t("page.tcpMonitorDetail.stats.uptime.label")}
-						value={uptimePercent === null ? "—" : `${uptimePercent}%`}
-					/>
-					<StatCard
-						label={ctx.intl.t("page.tcpMonitorDetail.stats.avgResponseTime.label")}
-						value={avgResponseTime === null ? "—" : `${avgResponseTime}ms`}
-					/>
-					<StatCard
-						label={ctx.intl.t("page.tcpMonitorDetail.stats.totalChecks.label")}
-						value={totalChecks}
-					/>
-				</div>
+			<div mix={[vstack({ gap: 6 })]}>
+				<StatCard.Group aria-label={ctx.intl.t("page.tcpMonitorDetail.results.title")}>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.tcpMonitorDetail.stats.uptime.label")}
+						</StatCard.Label>
+						<StatCard.Value>{uptimePercent === null ? "—" : `${uptimePercent}%`}</StatCard.Value>
+					</StatCard>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.tcpMonitorDetail.stats.avgResponseTime.label")}
+						</StatCard.Label>
+						<StatCard.Value>
+							{avgResponseTime === null ? "—" : numbers.format(avgResponseTime)}
+						</StatCard.Value>
+					</StatCard>
+					<StatCard>
+						<StatCard.Label>
+							{ctx.intl.t("page.tcpMonitorDetail.stats.totalChecks.label")}
+						</StatCard.Label>
+						<StatCard.Value>{totalChecks}</StatCard.Value>
+					</StatCard>
+				</StatCard.Group>
 
-				<section>
-					<h2>{ctx.intl.t("page.tcpMonitorDetail.results.title")}</h2>
+				<section mix={[vstack({ gap: 3 })]}>
+					<h2 mix={[m(0), fontSize("md"), weight("semibold")]}>
+						{ctx.intl.t("page.tcpMonitorDetail.results.title")}
+					</h2>
 					{results.length === 0 ? (
-						<Empty>
+						<Empty size="compact">
 							<Empty.Description>
 								{ctx.intl.t("page.tcpMonitorDetail.results.empty")}
 							</Empty.Description>
@@ -90,7 +111,7 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 										<Table.Column>
 											{ctx.intl.t("page.tcpMonitorDetail.results.columns.status")}
 										</Table.Column>
-										<Table.Column>
+										<Table.Column numeric>
 											{ctx.intl.t("page.tcpMonitorDetail.results.columns.responseTime")}
 										</Table.Column>
 										<Table.Column>
@@ -101,21 +122,29 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 								<Table.Body>
 									{results.map((result) => (
 										<Table.Row key={result.id}>
+											<Table.DateCell
+												date={result.checked_at}
+												now={now}
+												locale={ctx.locale}
+												local
+											/>
+											<Table.StatusCell color={STATUS_COLOR[result.status] ?? "neutral"}>
+												{ctx.intl.t(`page.tcpMonitors.table.status.${result.status}`)}
+											</Table.StatusCell>
+											<Table.NumberCell
+												value={result.response_time_ms}
+												locale={ctx.locale}
+												format={MILLISECONDS}
+											/>
 											<Table.Cell>
-												{formatDateTime(new Date(result.checked_at), {
-													locale: ctx.locale,
-													timeZone: "UTC",
-												})}
+												{result.error_message === null ? (
+													"—"
+												) : (
+													<code mix={[fontSize("sm"), overflowWrap("anywhere")]}>
+														{result.error_message}
+													</code>
+												)}
 											</Table.Cell>
-											<Table.Cell>
-												<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
-													{ctx.intl.t(`page.tcpMonitors.table.status.${result.status}`)}
-												</Badge>
-											</Table.Cell>
-											<Table.Cell>
-												{result.response_time_ms === null ? "—" : `${result.response_time_ms}ms`}
-											</Table.Cell>
-											<Table.Cell>{result.error_message ?? "—"}</Table.Cell>
 										</Table.Row>
 									))}
 								</Table.Body>
@@ -123,7 +152,7 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 						</Table.Container>
 					)}
 				</section>
-			</Fragment>,
+			</div>,
 		);
 	},
 });

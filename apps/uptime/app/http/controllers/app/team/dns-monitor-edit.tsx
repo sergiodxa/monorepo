@@ -7,47 +7,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { fontSize } from "@sdxc/u/typography";
-import { AlertDialog, Button, Description, LinkButton, TextArea } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { teamAccess } from "~/app/http/middleware/access";
-import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import abilities from "~/app/policies/abilities";
-import Field from "~/resources/components/field";
-import FormPage from "~/resources/components/form-page";
-import SettingsSection from "~/resources/components/settings-section";
-import StepperField from "~/resources/components/stepper-field";
-import AppShell from "~/resources/layouts/app-shell";
-import DocumentLayout from "~/resources/layouts/document";
-import DnsMonitorFormFields from "~/resources/views/dns-monitors/form";
+import EditDnsMonitorPage from "~/resources/views/dns-monitors/edit-page";
 import routes from "~/routes/web";
 
-/** `id` shared between the danger-zone trigger and its confirmation `AlertDialog`. */
-const DELETE_DIALOG_ID = "delete-dns-monitor";
-
-/** `id` linking the warning-window input to its label and its step buttons. */
-const REGISTRATION_WARNING_DAYS_INPUT_ID = "dns-monitor-registration-warning-days";
-
 /**
- * GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form; importing a
- * zone file re-runs discovery over its names while keeping whatever a
- * visitor already decided about each already-tracked record.
+ * GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form. The danger zone renders
+ * only for a member allowed to delete monitors.
  */
 export default createAction(routes.app.team.dnsMonitors.edit, {
 	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
-		let viewer = getViewer();
-		if (!viewer) throw new Error("requireUser must run before this handler");
-
 		await ctx.access.load(abilities.dnsMonitors.delete);
 		let canDelete = ctx.access.can(abilities.dnsMonitors.delete);
 
@@ -55,191 +32,6 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
 		if (!monitor) return notFound("Not Found");
 
-		let showHref = routes.app.team.dnsMonitors.show.href({
-			team: ctx.team.slug,
-			monitorId: monitor.id,
-		});
-
-		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${monitor.name}`}>
-				<AppShell
-					team={ctx.team}
-					currentPath={ctx.url.pathname}
-					teams={ctx.teams}
-					viewer={viewer}
-					isAdmin={ctx.membership.role === "admin"}
-					intl={ctx.intl}
-					heading={ctx.intl.t("page.editDnsMonitor.header.title")}
-					breadcrumbs={[
-						{
-							label: ctx.intl.t("app.layout.sidebar.navigation.items.dnsMonitors"),
-							href: routes.app.team.dnsMonitors.index.href({ team: ctx.team.slug }),
-						},
-						{ label: monitor.name, href: showHref },
-					]}
-				>
-					<FormPage>
-						<div mix={[vstack({ gap: 12 })]}>
-							<form
-								method="post"
-								action={routes.actions.monitor.dns.update.href({ team: ctx.team.slug })}
-							>
-								<input type="hidden" name="monitor_id" value={monitor.id} />
-
-								<SettingsSection
-									id="basics"
-									title={ctx.intl.t("page.editDnsMonitor.form.sections.basics.title")}
-									description={ctx.intl.t("page.editDnsMonitor.form.sections.basics.description")}
-								>
-									<SettingsSection.Card>
-										<SettingsSection.Body>
-											<DnsMonitorFormFields
-												monitor={monitor}
-												intl={ctx.intl}
-												page="editDnsMonitor"
-											/>
-											<StepperField
-												id={REGISTRATION_WARNING_DAYS_INPUT_ID}
-												name="registration_warning_days"
-												label={ctx.intl.t(
-													"page.editDnsMonitor.form.fields.registrationWarningDays.label",
-												)}
-												description={ctx.intl.t(
-													"page.editDnsMonitor.form.fields.registrationWarningDays.description",
-												)}
-												decrementLabel={ctx.intl.t(
-													"page.editDnsMonitor.form.fields.registrationWarningDays.decrement",
-												)}
-												incrementLabel={ctx.intl.t(
-													"page.editDnsMonitor.form.fields.registrationWarningDays.increment",
-												)}
-												min={1}
-												max={365}
-												defaultValue={monitor.registration_warning_days}
-											/>
-										</SettingsSection.Body>
-										<SettingsSection.Footer>
-											<LinkButton variant="outline" href={showHref}>
-												{ctx.intl.t("page.editDnsMonitor.form.cancel")}
-											</LinkButton>
-											<Button type="submit">{ctx.intl.t("page.editDnsMonitor.form.cta")}</Button>
-										</SettingsSection.Footer>
-									</SettingsSection.Card>
-								</SettingsSection>
-							</form>
-
-							<form
-								method="post"
-								action={routes.actions.monitor.dns.importZoneFile.href({ team: ctx.team.slug })}
-							>
-								<input type="hidden" name="monitor_id" value={monitor.id} />
-
-								<SettingsSection
-									id="zone-file"
-									title={ctx.intl.t("page.editDnsMonitor.zoneFileImport.title")}
-									description={ctx.intl.t("page.editDnsMonitor.zoneFileImport.description")}
-								>
-									<SettingsSection.Card>
-										<SettingsSection.Body>
-											<Field
-												label={ctx.intl.t("page.editDnsMonitor.form.fields.zoneFile.label")}
-												description={ctx.intl.t(
-													"page.editDnsMonitor.form.fields.zoneFile.description",
-												)}
-											>
-												<TextArea
-													name="zone_file"
-													required
-													placeholder={ctx.intl.t(
-														"page.editDnsMonitor.form.fields.zoneFile.placeholder",
-													)}
-												/>
-											</Field>
-
-											<Description>
-												{monitor.zone_file_imported_at === null
-													? ctx.intl.t("page.editDnsMonitor.zoneFileImport.neverImported")
-													: ctx.intl.t("page.editDnsMonitor.zoneFileImport.lastImported", {
-															date: formatDateTime(new Date(monitor.zone_file_imported_at), {
-																locale: ctx.locale,
-																timeZone: "UTC",
-															}),
-														})}
-											</Description>
-										</SettingsSection.Body>
-										<SettingsSection.Footer>
-											<Button type="submit">
-												{ctx.intl.t("page.editDnsMonitor.zoneFileImport.cta")}
-											</Button>
-										</SettingsSection.Footer>
-									</SettingsSection.Card>
-								</SettingsSection>
-							</form>
-
-							{canDelete ? (
-								<>
-									<SettingsSection
-										id="danger"
-										tone="danger"
-										title={ctx.intl.t("page.editDnsMonitor.dangerZone.title")}
-										description={ctx.intl.t("page.editDnsMonitor.dangerZone.description")}
-									>
-										<SettingsSection.Card tone="danger">
-											<SettingsSection.Body>
-												<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-													{ctx.intl.t("page.editDnsMonitor.dangerZone.warning")}
-												</p>
-											</SettingsSection.Body>
-											<SettingsSection.Footer tone="danger">
-												<Button
-													type="button"
-													color="danger"
-													commandfor={DELETE_DIALOG_ID}
-													command="show-modal"
-												>
-													{ctx.intl.t("page.editDnsMonitor.dangerZone.deleteMonitor")}
-												</Button>
-											</SettingsSection.Footer>
-										</SettingsSection.Card>
-									</SettingsSection>
-
-									<AlertDialog
-										id={DELETE_DIALOG_ID}
-										aria-labelledby={`${DELETE_DIALOG_ID}-title`}
-										aria-describedby={`${DELETE_DIALOG_ID}-description`}
-									>
-										<AlertDialog.Header>
-											<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-												{ctx.intl.t("page.dnsMonitors.table.confirmation.delete", {
-													name: monitor.name,
-												})}
-											</AlertDialog.Title>
-											<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-												{ctx.intl.t("page.editDnsMonitor.dangerZone.deleteDescription")}
-											</AlertDialog.Description>
-										</AlertDialog.Header>
-										<form
-											method="post"
-											action={routes.actions.monitor.dns.delete.href({ team: ctx.team.slug })}
-										>
-											<input type="hidden" name="_method" value="DELETE" />
-											<input type="hidden" name="monitor_id" value={monitor.id} />
-											<AlertDialog.Footer>
-												<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-													{ctx.intl.t("page.editDnsMonitor.form.cancel")}
-												</AlertDialog.Cancel>
-												<Button type="submit" color="danger">
-													{ctx.intl.t("page.dnsMonitors.table.actions.delete")}
-												</Button>
-											</AlertDialog.Footer>
-										</form>
-									</AlertDialog>
-								</>
-							) : null}
-						</div>
-					</FormPage>
-				</AppShell>
-			</DocumentLayout>,
-		);
+		return ctx.render(<EditDnsMonitorPage monitor={monitor} canDelete={canDelete} />);
 	},
 });

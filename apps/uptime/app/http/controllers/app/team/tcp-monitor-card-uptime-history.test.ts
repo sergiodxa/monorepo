@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { formatDate } from "@sdxc/dates";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
@@ -104,7 +105,7 @@ async function send(
 }
 
 describe("tcp-monitor-card-uptime-history", () => {
-	test("renders the uptime bar from the monitor's recent daily stats", async () => {
+	test("draws the monitor's recent daily stats as a status strip, with the days it has no data for hatched", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			tcpMonitors,
@@ -137,7 +138,11 @@ describe("tcp-monitor-card-uptime-history", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain(`${today}: up (10/10)`);
+		let label = formatDate(new Date(`${today}T00:00:00Z`), { locale: "en", timeZone: "UTC" });
+		expect(body).toContain(`aria-label="${label}, 100% uptime"`);
+		let markup = body.replace(/<style[^>]*>.*?<\/style>/gs, "");
+		expect([...markup.matchAll(/data-status="up"/g)]).toHaveLength(1);
+		expect(markup).toContain('data-status="no-data"');
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

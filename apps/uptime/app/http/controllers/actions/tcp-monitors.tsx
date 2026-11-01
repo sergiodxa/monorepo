@@ -1,10 +1,13 @@
 /**
  * Form actions for TCP monitor create/update/delete/manual-check, each following the
- * validate → mutate → flash → redirect pattern.
+ * validate → mutate → flash → redirect pattern. A refused create or update instead draws its
+ * form again with the submitted values and the fields to fix, answering 422.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { ValidationError } from "@sdxc/validate";
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
@@ -15,6 +18,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
+import type { TcpMonitorField, TcpMonitorSubmission } from "~/resources/views/tcp-monitors/form";
 
 import {
 	CreateTcpMonitorSchema,
@@ -26,7 +30,40 @@ import { notifyTcpResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
 import { checkTcpConnection } from "~/app/services/tcp-check";
+import EditTcpMonitorPage from "~/resources/views/tcp-monitors/edit-page";
+import NewTcpMonitorPage from "~/resources/views/tcp-monitors/new-page";
 import routes from "~/routes/web";
+
+/** Every field the TCP monitor form posts, in the order it draws them. */
+const FORM_FIELDS: readonly TcpMonitorField[] = [
+	"name",
+	"host",
+	"port",
+	"interval_seconds",
+	"timeout_ms",
+];
+
+/**
+ * What a refused form carried, read back for the form to draw again: each field as typed, the
+ * switch as it was left, and the fields the schema named in its issues.
+ */
+function submissionOf(formData: FormData, error: ValidationError): TcpMonitorSubmission {
+	let named = new Set(
+		error.issues.map((issue) => {
+			let [segment] = issue.path ?? [];
+			return String(typeof segment === "object" ? segment.key : segment);
+		}),
+	);
+	let values: TcpMonitorSubmission["values"] = {
+		is_enabled: formData.has("is_enabled"),
+	};
+	for (let field of FORM_FIELDS) {
+		let value = formData.get(field);
+		if (typeof value === "string") values[field] = value;
+	}
+
+	return { values, invalid: FORM_FIELDS.filter((field) => named.has(field)) };
+}
 
 /** POST /actions/:team/create-tcp-monitor */
 export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, async (ctx) => {
@@ -34,12 +71,8 @@ export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, 
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: "Please check the TCP monitor details and try again.",
-		});
-		return redirect(routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
+		return ctx.render(<NewTcpMonitorPage submission={submissionOf(ctx.formData, result.error)} />, {
+			status: 422,
 		});
 	}
 
@@ -60,14 +93,21 @@ export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, 
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: "Please check the TCP monitor details and try again.",
-		});
-		return redirect(
-			ctx.request.headers.get("Referer") ??
-				routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
-			{ status: redirect.Status.SeeOther },
+		let monitorId = ctx.formData.get("monitor_id");
+		let monitor =
+			typeof monitorId === "string"
+				? await ctx.models.tcpMonitors.inTeam(ctx.team.id).find(monitorId)
+				: null;
+		if (!monitor) return notFound("Not Found");
+
+		await ctx.access.load(abilities.tcpMonitors.delete);
+		return ctx.render(
+			<EditTcpMonitorPage
+				monitor={monitor}
+				canDelete={ctx.access.can(abilities.tcpMonitors.delete)}
+				submission={submissionOf(ctx.formData, result.error)}
+			/>,
+			{ status: 422 },
 		);
 	}
 

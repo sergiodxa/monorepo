@@ -25,6 +25,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -95,6 +96,7 @@ async function send(
 	router.map(routes.app.team.tcpMonitors.show, {
 		middleware: [
 			seedTeam(team, membership),
+			teamAccess,
 			i18n,
 			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,

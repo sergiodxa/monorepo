@@ -59,23 +59,6 @@ let cardUptimeHistory = (await import("./dns-monitor-card-uptime-history"))
 const BASE_URL = "https://uptime.test";
 
 /**
- * The CSS declarations a rendered element's classes resolve to, read out of the `<style>`
- * tags the renderer emits — `css()` mixins turn into generated class names, so a layout
- * assertion has to compare declarations, since the class name itself changes with the rule.
- */
-function declarationsFor(html: string, classAttribute: string): string {
-	let rules = new Map<string, string>();
-	for (let match of html.matchAll(/<style data-rmx-style="([^"]+)">.*?\{\s*\.\1\s*\{([^}]*)\}/gs)) {
-		rules.set(match[1] ?? "", (rules.get(match[1] ?? "") ?? "") + (match[2] ?? ""));
-	}
-
-	return classAttribute
-		.split(/\s+/)
-		.map((name) => rules.get(name) ?? "")
-		.join("");
-}
-
-/**
  * Every frame placeholder in the document that no template ever answered — the client keeps
  * showing its fallback until a closed `<template>` of the same id arrives, so only a closed
  * tag counts: a fragment that died mid-body leaves its template unterminated.
@@ -294,7 +277,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.successRate.label);
 		expect(body).toContain(en.page.dnsMonitorDetail.stats.totalChecks.label);
 		expect(body).toContain(en.page.dnsMonitorDetail.results.title);
-		expect(body).toContain("42ms");
+		expect(body).toContain("42 ms");
 		expect(body).not.toContain("Avg. Response Time");
 		expect(body).toContain("2 queries did not answer");
 	});
@@ -373,29 +356,27 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 	});
 
 	/**
-	 * `StatCardSkeleton` renders bare cards so several frames can share one row a caller lays
-	 * out. This page's frames stand alone, so each fallback opens its own row — the shape every
-	 * fragment here actually resolves to once it streams in.
+	 * Each fallback is a busy stat group, the same row every fragment here lays its own
+	 * content in, so the placeholder holds the place the fragment streams into.
 	 */
-	test("opens each frame's fallback with a row, so the placeholder cards are not flush", async () => {
+	test("opens each frame's fallback with a busy stat group, so the placeholder holds the fragment's row", async () => {
 		let harness = await createHarness();
 
 		let body = await (await harness.visit()).text();
 
-		let fallbacks = [...body.matchAll(/<!-- rmx:f:[^>]*-->\s*<div class="([^"]*)"/g)];
+		let fallbacks = [...body.matchAll(/<!-- rmx:f:[^>]*-->\s*<div([^>]*)>/g)];
 		expect(fallbacks).toHaveLength(3);
 
 		for (let fallback of fallbacks) {
-			let declarations = declarationsFor(body, fallback[1] ?? "");
-			expect(declarations).toContain("display: flex");
-			expect(declarations).toContain("gap: 16px");
+			expect(fallback[1]).toContain('data-slot="stat-group"');
+			expect(fallback[1]).toContain('aria-busy="true"');
 		}
 	});
 
 	/**
 	 * A fallback of the wrong height moves the page when the frame swaps out, so the number of
-	 * placeholder cards has to equal the fragment's own: two, since the summary now totals
-	 * success rate and total checks, each drawn as `Card`'s tinted `<section>`.
+	 * placeholder cards has to equal the fragment's own: two, since the summary totals success
+	 * rate and total checks.
 	 */
 	test("holds exactly as many placeholder cards as the summary resolves to", async () => {
 		let harness = await createHarness();
@@ -405,7 +386,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		let [summary, uptimeHistory] = frameOffsets(body);
 		let fallback = body.slice(summary, uptimeHistory);
 
-		expect([...fallback.matchAll(/<section data-color=/g)]).toHaveLength(2);
+		expect([...fallback.matchAll(/data-skeleton=""/g)]).toHaveLength(2);
 	});
 
 	/**

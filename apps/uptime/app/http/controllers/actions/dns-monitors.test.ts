@@ -22,19 +22,25 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { createRouter, type Middleware } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { DnsRecordType } from "~/app/models/dns-monitor-records";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
+import { assetResolver } from "~/app/initializers/assets";
 import { mail as emailRegistry } from "~/app/initializers/mail";
+import { MAX_ZONE_FILE_BYTES } from "~/app/services/zone-file";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	dnsMonitorRecords,
 	dnsMonitorResults,
@@ -42,6 +48,7 @@ import {
 	memberships,
 	teams,
 } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -170,11 +177,23 @@ async function ingestedEvents() {
 	);
 }
 
-/** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
+/**
+ * Installs `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer directly, standing
+ * in for `requireUser`/`requireTeam`, so a refused form can draw its page again.
+ */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
+	let viewer: Viewer = {
+		id: membership.subject_id,
+		name: "Test Viewer",
+		email: "viewer@example.com",
+		avatar: "",
+	};
+
 	return (ctx, next) => {
-		(ctx as unknown as { team: SelectTeam }).team = team;
-		(ctx as unknown as { membership: SelectMembership }).membership = membership;
+		ctx.team = team;
+		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return teamAccess(ctx, next);
 	};
 }
@@ -204,8 +223,16 @@ async function postDnsMonitorAction(
 	 * differently-shaped routes while keeping type-checking everywhere else.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		/** `i18n` because the toasts and the cap message are locale keys. */
-		middleware: [teamContextMiddleware(team, membership), i18n],
+		/**
+		 * `i18n` because the toasts and the cap message are locale keys, and the document
+		 * chain because a refused form is drawn again.
+		 */
+		middleware: [
+			teamContextMiddleware(team, membership),
+			i18n,
+			testAssets(),
+			render({ assets: assetResolver }),
+		],
 		handler: action,
 	});
 
@@ -406,7 +433,7 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 	});
 
 	/** The sweep is the expensive half of a create, run only once validation accepts the form. */
-	test("rejects a blank name and redirects to the new-monitor form without creating a row", async () => {
+	test("draws the form again with what was typed and the name to fix, creating no row", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -417,13 +444,42 @@ describe("POST /actions/:team/create-dns-monitor", () => {
 			team,
 			membership,
 			db,
-			dnsMonitorBody({ name: "" }),
+			dnsMonitorBody({ name: "", zone_file: "www 300 IN A 192.0.2.1" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.dnsMonitors.new.href({ team: team.slug }),
+		expect(response.status).toBe(422);
+		expect(response.headers.get("Location")).toBeNull();
+
+		let body = await response.text();
+		expect(body).toContain(en.page.dnsMonitors.form.issues.summary);
+		expect(body).toContain(en.page.dnsMonitors.form.issues.name);
+		expect(body).not.toContain(en.page.dnsMonitors.form.issues.domain);
+		expect(body).toContain("www 300 IN A 192.0.2.1</textarea>");
+		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(0);
+		expect(queries).toBe(0);
+	});
+
+	test("keeps an oversized paste in the form and says why it was refused, creating no row", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let paste = `; ${"x".repeat(MAX_ZONE_FILE_BYTES)}`;
+
+		let response = await postDnsMonitorAction(
+			createDnsMonitor,
+			routes.actions.monitor.dns.create,
+			team,
+			membership,
+			db,
+			dnsMonitorBody({ name: "Production DNS", zone_file: paste }),
 		);
+
+		expect(response.status).toBe(422);
+
+		let body = await response.text();
+		expect(body).toContain('value="Production DNS"');
+		expect(body).toContain(`${paste}</textarea>`);
+		expect(body).toContain("A zone file must be");
 		expect(await db.count(dnsMonitors, { where: { team_id: team.id } })).toBe(0);
 		expect(queries).toBe(0);
 	});
@@ -545,7 +601,7 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 		expect(unchanged?.name).toBe("Someone else's");
 	});
 
-	test("rejects a blank name and redirects to the Referer without mutating the monitor", async () => {
+	test("draws the edit form again with what was typed when the name is blank, changing nothing", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -557,12 +613,14 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 			team,
 			membership,
 			db,
-			dnsMonitorBody({ monitor_id: monitor.id, name: "" }),
-			{ Referer: "https://uptime.test/back" },
+			dnsMonitorBody({ monitor_id: monitor.id, name: "", domain: "typed.example" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe("https://uptime.test/back");
+		expect(response.status).toBe(422);
+
+		let body = await response.text();
+		expect(body).toContain('value="typed.example"');
+		expect(body).toContain(en.page.dnsMonitors.form.issues.name);
 		let unchanged = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.name).toBe("Original");
 	});
@@ -1205,7 +1263,7 @@ describe("POST /actions/:team/import-dns-monitor-zone-file", () => {
 		expect(await db.count(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } })).toBe(0);
 	});
 
-	test("rejects an empty paste without importing anything", async () => {
+	test("rejects an empty paste without importing anything, and asks for the file again", async () => {
 		stubResolver();
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
@@ -1221,7 +1279,8 @@ describe("POST /actions/:team/import-dns-monitor-zone-file", () => {
 			{ monitor_id: monitor.id, zone_file: "" },
 		);
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(422);
+		expect(await response.text()).toContain(en.actions.importDnsMonitorZoneFile.errors.generic);
 		expect(queries).toBe(0);
 		expect(await db.count(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } })).toBe(0);
 	});

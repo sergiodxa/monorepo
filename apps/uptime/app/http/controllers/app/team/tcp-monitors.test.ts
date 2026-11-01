@@ -30,6 +30,7 @@ import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
 import { bindModels } from "~/app/test/models";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./tcp-monitors")).default as { handler: RequestHandler<any> };
@@ -85,6 +86,7 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
+	search = "",
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.tcpMonitors.index, {
@@ -98,7 +100,10 @@ async function send(
 	});
 
 	let request = new Request(
-		new URL(routes.app.team.tcpMonitors.index.href({ team: team.slug }), "https://uptime.test"),
+		new URL(
+			`${routes.app.team.tcpMonitors.index.href({ team: team.slug })}${search}`,
+			"https://uptime.test",
+		),
 	);
 
 	return router.fetch(request);
@@ -137,5 +142,47 @@ describe("tcpMonitors", () => {
 		expect(body).toContain("Database");
 		expect(body).toContain("db.example.com");
 		expect(body).toContain("Pending");
+	});
+	/**
+	 * The search and status filters narrow the rows already loaded for the team, and a filter
+	 * that matches nothing says so with a way back to every monitor.
+	 */
+	test("narrows the list by search and status, and offers to clear a filter that matches nothing", async () => {
+		let { db, team, membership } = await createFixture();
+		let models = bindModels(db);
+		let kept = unwrap(
+			await models.tcpMonitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Cache",
+				host: "redis.internal",
+				port: 6379,
+				last_status: "down",
+			}),
+		);
+		let dropped = unwrap(
+			await models.tcpMonitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Database",
+				host: "db.example.com",
+				port: 5432,
+			}),
+		);
+		let showHref = (monitorId: string) =>
+			routes.app.team.tcpMonitors.show.href({ team: team.slug, monitorId });
+
+		let searched = await (await send(db, team, membership, "?q=REDIS")).text();
+		expect(searched).toContain(showHref(kept.id));
+		expect(searched).not.toContain(showHref(dropped.id));
+
+		let byStatus = await (await send(db, team, membership, "?status=down")).text();
+		expect(byStatus).toContain(showHref(kept.id));
+		expect(byStatus).not.toContain(showHref(dropped.id));
+
+		let nothing = await (await send(db, team, membership, "?status=timeout")).text();
+		expect(nothing).toContain(en.page.tcpMonitors.noResults.title);
+		expect(nothing).not.toContain(showHref(kept.id));
+		expect(nothing).not.toContain(en.page.tcpMonitors.empty.title);
 	});
 });
