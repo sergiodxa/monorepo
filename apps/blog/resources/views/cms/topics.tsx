@@ -25,9 +25,9 @@ import {
 	Link,
 	LinkButton,
 	Modal,
-	Table,
 	TextArea,
 } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

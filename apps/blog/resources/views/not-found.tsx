@@ -11,7 +11,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 
 import { maxIs, pbs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Empty } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 
 import { BlogLayout } from "~/resources/layouts/blog";
 

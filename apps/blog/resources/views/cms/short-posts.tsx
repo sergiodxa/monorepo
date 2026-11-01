@@ -24,8 +24,8 @@ import {
 	Link,
 	LinkButton,
 	Modal,
-	Table,
 } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import type { ShortPostViewModel } from "~/app/http/view-models/cms/short-posts";
 

@@ -24,9 +24,9 @@ import {
 	Link,
 	LinkButton,
 	Modal,
-	Table,
 	TextArea,
 } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import { TeaserField } from "~/resources/components/teaser-field";
 import { CMSLayout } from "~/resources/layouts/cms";

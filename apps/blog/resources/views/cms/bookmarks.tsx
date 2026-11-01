@@ -17,6 +17,7 @@ import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { is, m, mis, p } from "@sdxc/u/size";
 import { truncate, weight } from "@sdxc/u/typography";
 import {
+	Badge,
 	Button,
 	Card,
 	Form,
@@ -26,10 +27,9 @@ import {
 	Link,
 	LinkButton,
 	Modal,
-	Table,
 	TextArea,
-	Badge,
 } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

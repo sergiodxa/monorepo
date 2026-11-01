@@ -26,7 +26,7 @@ keepDocumentNavigations();
  * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
-	"@sdxc/ui/copy-button": () => import("@sdxc/ui/copy-button"),
+	"@sdxc/ui/docs/copy-button": () => import("@sdxc/ui/docs/copy-button"),
 };
 
 run({

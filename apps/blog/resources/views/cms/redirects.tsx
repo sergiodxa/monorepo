@@ -14,7 +14,8 @@ import { rounded } from "@sdxc/u/effects";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
-import { Button, Heading, Input, LinkButton, Modal, Select, Table, Text } from "@sdxc/ui";
+import { Button, Heading, Input, LinkButton, Modal, Select, Text } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";

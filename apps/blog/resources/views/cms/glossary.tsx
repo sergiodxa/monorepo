@@ -12,18 +12,8 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
-import {
-	Button,
-	Card,
-	Form,
-	Heading,
-	Input,
-	Label,
-	LinkButton,
-	Modal,
-	Table,
-	TextArea,
-} from "@sdxc/ui";
+import { Button, Card, Form, Heading, Input, Label, LinkButton, Modal, TextArea } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
