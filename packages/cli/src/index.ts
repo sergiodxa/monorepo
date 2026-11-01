@@ -98,6 +98,7 @@ export {
 export { ExecError, spawnExec } from "./exec.js";
 export { flag } from "./flag.js";
 export { createCommand } from "./handler.js";
+export { closest } from "./suggest.js";
 export { lazy } from "./lazy.js";
 export { prompt } from "./prompt.js";
 export { createStyle } from "./style.js";

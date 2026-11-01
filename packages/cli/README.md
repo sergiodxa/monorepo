@@ -226,6 +226,7 @@ Runs a command without a terminal and answers `{ code, stdout, stderr, exec }`. 
 
 - `spawnExec`: the default `exec`, over `node:child_process`.
 - `createStyle(enabled)`: the colours `ctx.style` uses, for output outside a handler.
+- `closest(input, candidates)`: the candidate a mistyped name most likely meant, or `undefined`, as the "did you mean" hints for commands and flags pick it.
 - Types: `CommandMiddleware<Effect>` (a middleware publishing `Effect`'s `property`), `Task`, `RunIO`, `Exec`, `ExecOptions`, `ExecOutput`, `HandlerContext`, `ChainContext` (the context a helper shared by several commands takes), `ArgumentsOf`, `FlagsOf`.
 
 ## Patterns
