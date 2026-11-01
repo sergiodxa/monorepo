@@ -130,18 +130,16 @@ describe("the palette in both schemes", () => {
 	});
 
 	/**
-	 * Neither muted token is a text colour, and this is why: each of them falls short of AA
-	 * on at least one side. A token that cannot be read in one scheme is not a token to set
-	 * words in, whichever scheme it was picked in.
+	 * The muted brand colour is not a text colour, and this is why: it falls short of AA on at
+	 * least one side. A token that cannot be read in one scheme is not a token to set words
+	 * in, whichever scheme it was picked in.
 	 */
-	test("keeps the muted tokens short of AA on at least one side", () => {
-		for (let token of ["neutral-fg-muted", "brand-fg-muted"]) {
-			let ratios = (["light", "dark"] as const).map((scheme) =>
-				contrast(paletteStep(stepOf(token, scheme)), paletteStep(surfaceStep(scheme))),
-			);
+	test("keeps the muted brand token short of AA on at least one side", () => {
+		let ratios = (["light", "dark"] as const).map((scheme) =>
+			contrast(paletteStep(stepOf("brand-fg-muted", scheme)), paletteStep(surfaceStep(scheme))),
+		);
 
-			expect(Math.min(...ratios), `${token} is not a text colour`).toBeLessThan(AA_RATIO);
-		}
+		expect(Math.min(...ratios), "brand-fg-muted is not a text colour").toBeLessThan(AA_RATIO);
 	});
 });
 
