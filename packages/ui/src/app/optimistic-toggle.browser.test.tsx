@@ -232,6 +232,58 @@ describe("OptimisticToggle", () => {
 		expect(statuses).toEqual([null, 204]);
 	});
 
+	test("names the control by the pressed label while on", async () => {
+		answer(204, 100);
+		let form = await mount(false, {
+			label: "Mark as read",
+			pressed: "Mark as unread",
+			failed: "Failed",
+		});
+		expect(button(form).title).toBe("Mark as read");
+		expect(button(form).innerText).toBe("Mark as read");
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 30));
+
+		expect(button(form).title).toBe("Mark as unread");
+		expect(button(form).innerText).toBe("Mark as unread");
+		expect(button(form).getAttribute("aria-pressed")).toBe("true");
+	});
+
+	test("renders the pressed label when the server says it is on", async () => {
+		let form = await mount(true, { label: "Save", pressed: "Unsave", failed: "Failed" });
+
+		expect(button(form).title).toBe("Unsave");
+		expect(button(form).innerText).toBe("Unsave");
+	});
+
+	test("puts the accessible name back with the state on a refusal", async () => {
+		answer(500, 150);
+		let mounted = render(
+			<OptimisticToggle
+				action="/posts/42/star"
+				name="starred"
+				pressed={false}
+				labels={{ label: "Star", pressed: "Unstar", failed: "Failed" }}
+				pressedContent="★"
+				unpressedContent="☆"
+			/>,
+		);
+		cleanups.push(mounted.cleanup);
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		let form = mounted.container.querySelector("form")!;
+		expect(button(form).getAttribute("aria-label")).toBe("Star");
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		expect(button(form).getAttribute("aria-label")).toBe("Unstar");
+		expect(button(form).title).toBe("Unstar");
+
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		expect(button(form).getAttribute("aria-label")).toBe("Star");
+		expect(button(form).title).toBe("Star");
+	});
+
 	test("clears the failure on the next press", async () => {
 		answer(500);
 		let form = await mount(false);

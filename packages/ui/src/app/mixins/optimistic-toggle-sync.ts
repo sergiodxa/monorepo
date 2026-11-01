@@ -31,6 +31,10 @@ export namespace OptimisticToggleSync {
 		failed: string;
 		/** What it says instead for a refusal with one of these statuses, such as a full shelf's 507. */
 		refused?: Record<number, string>;
+		/** The button's title and, when it has one, `aria-label` while off; left as rendered when omitted. */
+		label?: string;
+		/** The button's title and `aria-label` while on; `label` when omitted. */
+		pressedLabel?: string;
 	}
 
 	/** Where a press stands, as {@link OptimisticToggleEvent} reports it. */
@@ -72,7 +76,7 @@ export class OptimisticToggleEvent extends Event {
 
 /**
  * Applied to the toggle's `<form>`: on submit it flips `data-pressed`, the button's
- * `aria-pressed` and tone, and the hidden next-state field, then posts the form as it stood.
+ * `aria-pressed`, tone and name, and the hidden next-state field, then posts the form as it stood.
  * A refused post flips it back, sets `data-failed` and writes the `refused` copy for its status,
  * or `failed`, into the live region.
  * The newest press wins over a slow answer to an older one, and only its answer is reported.
@@ -128,6 +132,7 @@ function connect(
 		if (button) {
 			button.setAttribute("aria-pressed", pressed ? "true" : "false");
 			button.dataset.color = toneOf(pressed, failed);
+			name(button, pressed, read());
 		}
 		if (status) status.textContent = failed ? refusal(read(), outcome.status ?? null) : "";
 		form.dispatchEvent(new OptimisticToggleEvent(pressed, outcome));
@@ -159,6 +164,25 @@ function connect(
 		},
 		{ signal },
 	);
+}
+
+/**
+ * Renames `button` for its state, so its title and accessible name follow a flip; a button
+ * named by its content keeps its content as the name, with no `aria-label` added.
+ *
+ * @param button The toggle's button.
+ * @param pressed Whether the toggle is on.
+ * @param options The toggle's latest options.
+ */
+function name(
+	button: HTMLButtonElement,
+	pressed: boolean,
+	options: OptimisticToggleSync.Options | undefined,
+): void {
+	if (options?.label === undefined) return;
+	let label = pressed ? (options.pressedLabel ?? options.label) : options.label;
+	button.title = label;
+	if (button.hasAttribute("aria-label")) button.setAttribute("aria-label", label);
 }
 
 /**

@@ -34,8 +34,10 @@ export type OptimisticToggleProps = {
 	/** Hidden fields submitted with it: a CSRF token, the page to return to. */
 	fields?: Record<string, string>;
 	labels: {
-		/** The control's name in both states, such as "Star"; `aria-pressed` carries the state. */
+		/** The control's name, such as "Star"; `aria-pressed` carries the state. */
 		label: string;
+		/** Its name while on, such as "Mark as unread", when that reads better than `label`. */
+		pressed?: string;
 		/** Shown beside the control when the server refused the change. */
 		failed: string;
 		/** Shown instead of `failed` for a refusal with one of these HTTP statuses, such as 507. */
@@ -63,6 +65,8 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 			let { action, name, pressed, fields, labels, pressedContent, unpressedContent } =
 				handle.props;
 			let hasContent = pressedContent !== undefined || unpressedContent !== undefined;
+			let pressedLabel = labels.pressed ?? labels.label;
+			let currentLabel = pressed ? pressedLabel : labels.label;
 
 			return (
 				<form
@@ -71,7 +75,12 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 					data-slot="optimistic-toggle"
 					data-pressed={pressed ? "" : undefined}
 					mix={[
-						optimisticToggleSync({ failed: labels.failed, refused: labels.refused }),
+						optimisticToggleSync({
+							failed: labels.failed,
+							refused: labels.refused,
+							label: labels.label,
+							pressedLabel,
+						}),
 						inlineFlex(),
 						items("center"),
 						gap(1.5),
@@ -89,10 +98,10 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 						variant="ghost"
 						color={toneOf(pressed, false)}
 						aria-pressed={pressed ? "true" : "false"}
-						aria-label={hasContent ? labels.label : undefined}
-						title={labels.label}
+						aria-label={hasContent ? currentLabel : undefined}
+						title={currentLabel}
 					>
-						<span data-toggle-content="on">{pressedContent ?? labels.label}</span>
+						<span data-toggle-content="on">{pressedContent ?? pressedLabel}</span>
 						<span data-toggle-content="off">{unpressedContent ?? labels.label}</span>
 					</Button>
 					<span role="status" mix={[text("xs"), fg("danger")]} />
