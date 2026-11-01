@@ -66,6 +66,8 @@ IP.Range.parse("10.0.0.1/8"); // failure: IP.Error { code: "host-bits-set" }
 bunx @sdxc/ip classify 192.168.1.10
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg ip …` runs the same command line, using the version your project installs.
+
 `classify` prints the address's version, canonical form, classification, whether it is public, and the IPv4 an IPv4-mapped, NAT64 or 6to4 address carries. With no address, or `-`, it reads stdin; `--json` prints the same as an object.
 
 ```sh
