@@ -16,12 +16,13 @@ import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { container, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minIs, mis, p, pi } from "@sdxc/u/size";
 import { focusVisible } from "@sdxc/u/state";
-import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
+import { nowrap, tabularNums, text } from "@sdxc/u/typography";
 
 import { Button } from "../components/button.js";
 import { DateRangePicker } from "../components/date-range-picker.js";
 import { Keyboard } from "../components/keyboard.js";
 import { Popover } from "../components/popover.js";
+import { segmentedItem, segmentedTrack } from "../styles/segmented-control.js";
 
 /** Container the picker measures; below {@link WIDE_WIDTH} of its own width it becomes a select. */
 const PICKER_CONTAINER = "ui-range-picker";
@@ -156,34 +157,14 @@ export function RangePicker(handle: Handle<RangePicker.Props>) {
 		let segment = [
 			inlineFlex(),
 			items("center"),
-			bs("1.75rem"),
+			bs("100%"),
 			pi(2.5),
-			rounded("sm"),
 			text("sm"),
-			weight("medium"),
 			nowrap(),
 			tabularNums(),
 			cursor("default"),
-			/**
-			 * Every state of a segment lives in one rule, so the pressed state always wins over
-			 * the resting one whatever order the stylesheet layers land in.
-			 */
-			raw({
-				gap: "0.375rem",
-				border: "none",
-				backgroundColor: "transparent",
-				color: "var(--ui-neutral-fg-muted, inherit)",
-				"&:hover": { color: "var(--ui-neutral-fg, inherit)" },
-				'&[aria-pressed="true"]': {
-					backgroundColor: "var(--ui-bg, Canvas)",
-					color: "var(--ui-neutral-fg, inherit)",
-					boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.08)",
-				},
-				"&:focus-visible": {
-					outline: "2px solid var(--ui-brand-ring, Highlight)",
-					outlineOffset: "-2px",
-				},
-			}),
+			raw({ gap: "0.375rem" }),
+			segmentedItem(),
 		];
 
 		return (
@@ -226,20 +207,7 @@ export function RangePicker(handle: Handle<RangePicker.Props>) {
 					]}
 				>
 					<HiddenParams params={params} />
-					<div
-						role="group"
-						aria-label={labels.group}
-						mix={[
-							inlineFlex(),
-							items("center"),
-							raw({ gap: "0.125rem" }),
-							bs("2rem"),
-							p(0.5),
-							rounded("md"),
-							bg("neutral.tint"),
-							border({ color: "neutral", width: 1, style: "solid" }),
-						]}
-					>
+					<div role="group" aria-label={labels.group} mix={[segmentedTrack(), bs("2rem")]}>
 						{presets.map((preset) => (
 							<button
 								key={preset.value}

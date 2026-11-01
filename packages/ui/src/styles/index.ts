@@ -16,5 +16,6 @@ export * from "./landing.js";
 export * from "./output-caption-text.js";
 export * from "./panel-chrome.js";
 export * from "./range-thumb-appearance.js";
+export * from "./segmented-control.js";
 export * from "./semantic-color-panel.js";
 export * from "./surface-control.js";

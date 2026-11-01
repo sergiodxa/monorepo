@@ -9,9 +9,10 @@
 
 import type {} from "@vitest/browser-playwright";
 
+import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { cdp, page, userEvent } from "vitest/browser";
 
 import { rangePickerKeys } from "./mixins/range-picker-keys.js";
 import { PageHeader } from "./page-header.js";
@@ -34,6 +35,23 @@ const LABELS: RangePicker.Labels = {
 	start: "From",
 	end: "To",
 };
+
+/** A cool neutral ramp, as an app's stylesheet sets the palette the theme's roles read. */
+const PALETTE: Record<string, string> = Object.fromEntries(
+	Object.entries({
+		50: 0.985,
+		100: 0.965,
+		200: 0.915,
+		300: 0.84,
+		400: 0.73,
+		500: 0.62,
+		600: 0.52,
+		700: 0.42,
+		800: 0.32,
+		900: 0.235,
+		950: 0.155,
+	}).map(([step, l]) => [`--ui-color-neutral-${step}`, `oklch(${l} 0.012 275)`]),
+);
 
 /** Query strings of every submission the picker made, in order. */
 let submitted: string[] = [];
@@ -93,6 +111,40 @@ function mountInRow(width: number, row: "page-header" | "flex"): HTMLElement {
 	return host;
 }
 
+/** The sRGB channels a CSS color paints as, read back from a one-pixel canvas. */
+function rgb(color: string): [number, number, number] {
+	let canvas = document.createElement("canvas");
+	canvas.width = 1;
+	canvas.height = 1;
+	let context = canvas.getContext("2d")!;
+	context.fillStyle = color;
+	context.fillRect(0, 0, 1, 1);
+	let [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+	return [r!, g!, b!];
+}
+
+/** WCAG relative luminance of a CSS color. */
+function luminance(color: string): number {
+	let [r, g, b] = rgb(color).map((channel) => {
+		let c = channel / 255;
+		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+	});
+	return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+
+/** WCAG contrast between two opaque CSS colors. */
+function contrast(one: string, other: string): number {
+	let [a, z] = [luminance(one), luminance(other)];
+	return (Math.max(a, z) + 0.05) / (Math.min(a, z) + 0.05);
+}
+
+/** Emulates the system color scheme, which a `.system` host follows. */
+async function scheme(value: "light" | "dark") {
+	await cdp().send("Emulation.setEmulatedMedia", {
+		features: [{ name: "prefers-color-scheme", value }],
+	});
+}
+
 /** Whether `element` takes up space on the page. */
 function shown(element: Element | null): boolean {
 	return element instanceof HTMLElement && element.checkVisibility();
@@ -104,9 +156,11 @@ beforeEach(async () => {
 	document.addEventListener("submit", record);
 });
 
-afterEach(() => {
+afterEach(async () => {
 	document.removeEventListener("submit", record);
 	document.body.replaceChildren();
+	for (let name of Object.keys(PALETTE)) document.documentElement.style.removeProperty(name);
+	await cdp().send("Emulation.setEmulatedMedia", { features: [] });
 });
 
 describe("RangePicker", () => {
@@ -122,6 +176,53 @@ describe("RangePicker", () => {
 		await expect
 			.element(page.getByRole("button", { name: "Last 24 hours" }))
 			.toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("marks the range from the URL as pressed in the server-rendered markup", async () => {
+		let html = await renderToString(<RangePicker value="7d" presets={PRESETS} labels={LABELS} />);
+		let markup = new DOMParser().parseFromString(html, "text/html");
+		let pressed = markup.querySelectorAll('[role="group"] button[aria-pressed="true"]');
+
+		expect([...pressed].map((button) => button.getAttribute("value"))).toEqual(["7d"]);
+		expect(markup.querySelectorAll('[role="group"] button[aria-pressed="false"]')).toHaveLength(3);
+	});
+
+	for (let mode of ["light", "dark"] as const) {
+		test(`draws the pressed segment apart from the track and the rest in ${mode}`, async () => {
+			for (let [name, value] of Object.entries(PALETTE)) {
+				document.documentElement.style.setProperty(name, value);
+			}
+			await scheme(mode);
+			let host = mount(640);
+			host.className = "system";
+			let track = getComputedStyle(host.querySelector('[role="group"]')!).backgroundColor;
+			let selected = getComputedStyle(host.querySelector('button[value="7d"]')!);
+			let resting = getComputedStyle(host.querySelector('button[value="24h"]')!);
+			let drawn = selected.borderTopStyle !== "none" && parseFloat(selected.borderTopWidth) > 0;
+			let step = Math.max(
+				contrast(selected.backgroundColor, track),
+				drawn ? contrast(selected.borderTopColor, track) : 1,
+			);
+
+			expect(step).toBeGreaterThanOrEqual(3);
+			expect(selected.backgroundColor).not.toBe(resting.backgroundColor);
+			expect(selected.borderTopColor).not.toBe(resting.borderTopColor);
+			expect(Number(selected.fontWeight)).toBeGreaterThan(Number(resting.fontWeight));
+			expect(selected.color).not.toBe(resting.color);
+		});
+	}
+
+	test("draws a hover on a resting segment that differs from the pressed one", async () => {
+		let host = mount(640);
+		let selected = getComputedStyle(host.querySelector('button[value="7d"]')!);
+		let resting = host.querySelector<HTMLButtonElement>('button[value="24h"]')!;
+		let before = getComputedStyle(resting).backgroundColor;
+
+		await userEvent.hover(resting);
+		let hovered = getComputedStyle(resting);
+		expect(hovered.backgroundColor).not.toBe(before);
+		expect(hovered.backgroundColor).not.toBe(selected.backgroundColor);
+		expect(hovered.borderTopColor).not.toBe(selected.borderTopColor);
 	});
 
 	test("shows each preset's letter key as a hint and announces it", () => {
