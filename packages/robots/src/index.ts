@@ -8,7 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export { contentUsage, crawlDelay, isAllowed, productToken, robotsUrl } from "./lib/evaluate.js";
+export {
+	contentUsage,
+	crawlDelay,
+	isAllowed,
+	matchingRule,
+	productToken,
+	robotsUrl,
+} from "./lib/evaluate.js";
 export { parse } from "./lib/parse.js";
 export { stringify } from "./lib/stringify.js";
 

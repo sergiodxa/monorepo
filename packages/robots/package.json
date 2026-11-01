@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read, write and evaluate robots.txt and robots directives",
 	"license": "MIT",
+	"bin": {
+		"sdxc-robots": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -14,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*"
 	},

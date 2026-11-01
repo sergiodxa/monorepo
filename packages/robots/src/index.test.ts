@@ -12,7 +12,15 @@ import { GOOGLE_CASES } from "./fixtures/google-robotstxt.js";
 
 import type { Robots } from "./index.js";
 
-import { crawlDelay, isAllowed, parse, productToken, robotsUrl, stringify } from "./index.js";
+import {
+	crawlDelay,
+	isAllowed,
+	matchingRule,
+	parse,
+	productToken,
+	robotsUrl,
+	stringify,
+} from "./index.js";
 
 /** RFC 9309 §5.1, verbatim. */
 const RFC_SIMPLE = `User-Agent: *
@@ -188,6 +196,40 @@ describe("matching", () => {
 
 		expect(isAllowed(document, "AnyBot", `https://example.com/${"a".repeat(5_000)}`)).toBe(true);
 		expect(performance.now() - started).toBeLessThan(1_000);
+	});
+});
+
+describe(matchingRule, () => {
+	let document = parse(
+		"User-agent: *\nDisallow: /private/\nAllow: /private/press/\nAllow: /tie\nDisallow: /tie\n\nUser-agent: ExampleBot\nDisallow: /\n",
+	);
+
+	test("answers the longest matching rule as written", () => {
+		expect(matchingRule(document, "AnyBot", "https://example.com/private/report")).toEqual({
+			allow: false,
+			pattern: "/private/",
+		});
+		expect(matchingRule(document, "AnyBot", "/private/press/launch")).toEqual({
+			allow: true,
+			pattern: "/private/press/",
+		});
+	});
+
+	test("lets Allow win a tie whatever order the file wrote them in", () => {
+		expect(matchingRule(document, "AnyBot", "/tie")).toEqual({ allow: true, pattern: "/tie" });
+	});
+
+	test("reads only the groups naming the agent", () => {
+		expect(matchingRule(document, "ExampleBot/1.0", "/public")).toEqual({
+			allow: false,
+			pattern: "/",
+		});
+	});
+
+	test("answers null for an unmatched path, /robots.txt and text that is not a URL", () => {
+		expect(matchingRule(document, "AnyBot", "/public")).toBeNull();
+		expect(matchingRule(document, "ExampleBot", "/robots.txt")).toBeNull();
+		expect(matchingRule(document, "AnyBot", "not a url")).toBeNull();
 	});
 });
 

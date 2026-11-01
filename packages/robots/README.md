@@ -114,6 +114,27 @@ stringifyDirectives({ noindex: true }, { explicit: true }); // "noindex, follow"
 stringifyDirectives({ botName: "examplebot", nosnippet: true }); // "examplebot: nosnippet"
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/robots --help
+```
+
+`check` fetches the origin's robots.txt (or reads `--robots <file>`) and says whether an agent may
+fetch a URL and which rule decides it; it exits 1 when the URL is disallowed.
+
+```sh
+bunx @sdxc/robots check https://example.com/private/report --agent ExampleBot
+bunx @sdxc/robots check /admin --robots public/robots.txt --json
+```
+
+`parse` prints a file, stdin or an origin's robots.txt normalized, or its groups, rules and
+sitemaps with `--json`.
+
+```sh
+bunx @sdxc/robots parse https://example.com --json
+```
+
 ## API
 
 ### `@sdxc/robots`
@@ -142,6 +163,11 @@ is normalized in both pattern and path before matching.
 The agent's preferences for a URL: the longest matching `Content-Usage` pattern decides (no
 pattern counts as `/`), and rules tied at that length combine most-restrictive-first. `{}` when no
 rule matches, `null` when the URL is disallowed.
+
+#### `matchingRule(robots: Robots.Document, userAgent: string, url: string | URL): Robots.Rule | null`
+
+The rule that decides `isAllowed`, as written; `null` for an unmatched path, `/robots.txt` and
+text that is not a URL or path.
 
 #### `crawlDelay(robots: Robots.Document, userAgent: string): number | undefined`
 

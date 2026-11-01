@@ -44,7 +44,37 @@ export function isAllowed(robots: Robots.Document, userAgent: string, url: strin
 	if (path === null) return false;
 	if (path === ROBOTS_PATH) return true;
 
-	let decision: { allow: boolean; length: number } | null = null;
+	let rule = decidingRule(robots, userAgent, path);
+	return rule === null || rule.allow;
+}
+
+/**
+ * The rule that decides whether an agent may fetch a URL, as the file wrote it, so a report can
+ * say why. `null` means no rule decides: `/robots.txt` itself, a path no rule matches, or text
+ * that is neither a URL nor a path, which {@link isAllowed} refuses.
+ *
+ * @param robots - The parsed file.
+ * @param userAgent - The crawler's identification string; only its product token is compared.
+ * @param url - An absolute URL, or a path starting with `/`.
+ * @example matchingRule(document, "ExampleBot", "/private/x") // { allow: false, pattern: "/private/" }
+ */
+export function matchingRule(
+	robots: Robots.Document,
+	userAgent: string,
+	url: string | URL,
+): Robots.Rule | null {
+	let path = pathToMatch(url);
+	if (path === null || path === ROBOTS_PATH) return null;
+	return decidingRule(robots, userAgent, path);
+}
+
+/** The longest rule matching a normalized path across the agent's groups, `Allow` winning a tie. */
+function decidingRule(
+	robots: Robots.Document,
+	userAgent: string,
+	path: string,
+): Robots.Rule | null {
+	let decision: { rule: Robots.Rule; length: number } | null = null;
 
 	for (let group of applicableGroups(robots, userAgent)) {
 		for (let rule of group.rules) {
@@ -54,12 +84,14 @@ export function isAllowed(robots: Robots.Document, userAgent: string, url: strin
 			if (!matches(pattern, path)) continue;
 
 			let length = pattern.body.length + (pattern.anchored ? 1 : 0);
-			if (decision === null || length > decision.length) decision = { allow: rule.allow, length };
-			else if (length === decision.length && rule.allow) decision.allow = true;
+			if (decision === null || length > decision.length) decision = { rule, length };
+			else if (length === decision.length && rule.allow && !decision.rule.allow) {
+				decision = { rule, length };
+			}
 		}
 	}
 
-	return decision === null || decision.allow;
+	return decision?.rule ?? null;
 }
 
 /**
