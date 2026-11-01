@@ -10,13 +10,16 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { mbe } from "@sdxc/u/size";
-import { CodeBlock } from "@sdxc/ui";
+import { CodeBlock } from "@sdxc/ui/docs";
 
 /** The copy button's strings; the blog's pages are English. */
 const CODE_LABELS: CodeBlock.Labels = { copy: "Copy code", copied: "Copied" };
 
 /** Languages whose fences are commands typed at a prompt, which read as a terminal. */
 const SHELL_LANGUAGES = new Set(["bash", "sh", "shell", "zsh", "console"]);
+
+/** Languages that name plain text, whose header reads "Text" like a fence with no language. */
+const PLAIN_LANGUAGES = new Set(["plain", "plaintext", "text", "txt"]);
 
 /** Props `toRemix` passes a fence: the code node's fields, then whatever its annotation wrote. */
 export interface CodeFenceProps {
@@ -49,7 +52,7 @@ export function CodeFence(handle: Handle<CodeFenceProps>) {
 				code={content}
 				language={language}
 				tokens={tokenList(tokens)}
-				title={stringOf(path) ?? stringOf(title) ?? shellTitle(language)}
+				title={stringOf(path) ?? stringOf(title) ?? shellTitle(language) ?? plainTitle(language)}
 				highlight={lineList(highlight)}
 				add={lineList(add)}
 				remove={lineList(remove)}
@@ -63,6 +66,14 @@ export function CodeFence(handle: Handle<CodeFenceProps>) {
 /** "Terminal" for an untitled shell fence, so the header names where the lines are typed. */
 function shellTitle(language: string | undefined): string | undefined {
 	return language && SHELL_LANGUAGES.has(language.toLowerCase()) ? "Terminal" : undefined;
+}
+
+/**
+ * "Text" for a fence that names no language, so every block draws a header and its copy
+ * button sits there, clear of the first line and any mark on it.
+ */
+function plainTitle(language: string | undefined): string | undefined {
+	return !language || PLAIN_LANGUAGES.has(language.toLowerCase()) ? "Text" : undefined;
 }
 
 /** A string attribute, or nothing for any other value. */

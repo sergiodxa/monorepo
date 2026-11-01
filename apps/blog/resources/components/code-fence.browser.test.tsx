@@ -93,4 +93,19 @@ describe("CodeFence", () => {
 		expect(body.querySelector(".token.deleted")).not.toBeNull();
 		expect(body.querySelector(".token.inserted")).not.toBeNull();
 	});
+
+	test("heads a fence with no language as Text, keeping the copy button off its lines", () => {
+		let body = renderArticle(
+			[
+				"``` {% add={[2]} remove={[1]} %}",
+				"routes/dashboard.tsx",
+				"routes/dashboard/route.tsx",
+				"```",
+			].join("\n"),
+		);
+
+		expect(marks(body)).toEqual(["remove", "add"]);
+		expect(body.querySelector("figcaption")?.textContent).toContain("Text");
+		expect(body.querySelector("figcaption [data-slot='copy-button']")).not.toBeNull();
+	});
 });
