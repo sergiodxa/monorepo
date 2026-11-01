@@ -69,6 +69,8 @@ property cannot carry travels in `JSPROP`, so a Card converted to vCard and back
 bunx @sdxc/jscontact --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg jscontact …` runs the same command line, using the version your project installs.
+
 `convert` reads JSContact, vCard or jCard (detected, or named with `--from`) from a file or stdin
 and writes the format `--to` names:
 
