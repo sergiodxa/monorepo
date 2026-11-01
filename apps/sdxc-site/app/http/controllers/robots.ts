@@ -30,7 +30,7 @@ export default createAction(routes.robots, () => {
 				userAgents: ["*"],
 				rules: [
 					{ allow: true, pattern: "/" },
-					{ allow: false, pattern: "/demo/" },
+					{ allow: false, pattern: "/demo" },
 				],
 				contentUsage: [{ preferences: USAGE_PREFERENCES }],
 			},

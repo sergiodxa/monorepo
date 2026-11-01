@@ -106,6 +106,9 @@ const TOKENS = {
  */
 export default {
 	title: "Keel — Usage-based billing for API companies",
+	kind: "SaaS landing",
+	tagline: "Usage-based billing for API companies.",
+	artDirection: "Slate, sea green, hairlines and mono.",
 	description:
 		"Keel meters every event your product emits, prices it on any plan and sends the invoice on the first of the month.",
 	render: () => (

@@ -14,6 +14,9 @@ import type { DemoLanding } from "~/resources/views/demos";
 const FIXTURE: DemoLanding = {
 	title: "Fixture Co",
 	description: "A demo standing in for a real one.",
+	kind: "Fixture landing",
+	tagline: "A stand-in demo.",
+	artDirection: "Plain and quiet.",
 	render: () => <main id="fixture-demo">Fixture landing</main>,
 };
 
@@ -57,10 +60,10 @@ describe("findDemoLanding", () => {
 });
 
 describe("demo discoverability", () => {
-	test("robots.txt disallows every demo", async () => {
+	test("robots.txt disallows the gallery and every demo", async () => {
 		let body = await (await fetchApp("/robots.txt")).text();
 
-		expect(body).toMatch(/^Disallow: \/demo\/$/m);
+		expect(body).toMatch(/^Disallow: \/demo$/m);
 	});
 
 	test.each(["/sitemap.xml", "/llms.txt", "/search.json"])("%s names no demo", async (path) => {

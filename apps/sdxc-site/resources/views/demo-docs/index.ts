@@ -45,6 +45,10 @@ export interface DemoDocsSite {
 	name: string;
 	/** Which kind of docs the demo shows ("Content docs"), for the cards that link to it. */
 	kind: string;
+	/** A few words on what the invented product is, for the gallery card. */
+	tagline: string;
+	/** A few words on the palette, type and shapes the site commits to, for the gallery card. */
+	artDirection: string;
 	/** One sentence for the meta description and the card linking to the demo. */
 	description: string;
 	/** The product's mark, drawn before its name in the header. */
@@ -71,6 +75,8 @@ export interface DemoDocsSummary {
 	name: string;
 	kind: string;
 	description: string;
+	tagline: string;
+	artDirection: string;
 }
 
 /**
@@ -114,7 +120,14 @@ export async function listDemoDocsSites(): Promise<DemoDocsSummary[]> {
 			let site = await findDemoDocsSite(slug);
 			return site === null
 				? null
-				: { slug, name: site.name, kind: site.kind, description: site.description };
+				: {
+						slug,
+						name: site.name,
+						kind: site.kind,
+						description: site.description,
+						tagline: site.tagline,
+						artDirection: site.artDirection,
+					};
 		}),
 	);
 	return sites.filter((site): site is DemoDocsSummary => site !== null);

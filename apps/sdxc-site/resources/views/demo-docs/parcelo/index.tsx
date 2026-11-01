@@ -80,6 +80,8 @@ function mark() {
 export default {
 	name: "Parcelo",
 	kind: "API reference",
+	tagline: "Reference for a shipping-label API.",
+	artDirection: "Slate, indigo and method pills.",
 	description:
 		"The HTTP API reference for Parcelo, a shipping-label API: resources, endpoints with request and response fields, and examples in three languages.",
 	mark,

@@ -17,6 +17,12 @@ export interface DemoLanding {
 	title: string;
 	/** One sentence for the meta description. */
 	description: string;
+	/** Which kind of landing the demo shows ("SaaS landing"), for the gallery card. */
+	kind: string;
+	/** A few words on what the invented product is, for the gallery card. */
+	tagline: string;
+	/** A few words on the palette, type and shapes the page commits to, for the gallery card. */
+	artDirection: string;
 	/** The page, from its own header to its own footer. */
 	render: () => RemixNode;
 }
@@ -50,11 +56,14 @@ export function listDemoSlugs(): string[] {
 		.sort();
 }
 
-/** One demo as a docs page links to it: its slug and the title and description it declares. */
+/** One demo as a page links to it: its slug and what its module declares about itself. */
 export interface DemoSummary {
 	slug: string;
 	title: string;
 	description: string;
+	kind: string;
+	tagline: string;
+	artDirection: string;
 }
 
 /**
@@ -67,7 +76,9 @@ export async function listDemoLandings(): Promise<DemoSummary[]> {
 	let demos = await Promise.all(
 		listDemoSlugs().map(async (slug) => {
 			let demo = await findDemoLanding(slug);
-			return demo === null ? null : { slug, title: demo.title, description: demo.description };
+			if (demo === null) return null;
+			let { title, description, kind, tagline, artDirection } = demo;
+			return { slug, title, description, kind, tagline, artDirection };
 		}),
 	);
 	return demos.filter((demo): demo is DemoSummary => demo !== null);

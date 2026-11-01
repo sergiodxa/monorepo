@@ -82,6 +82,8 @@ function mark() {
 export default {
 	name: "Driftwood",
 	kind: "Content docs",
+	tagline: "Guides for a static-site deploy CLI.",
+	artDirection: "Stone, terracotta and serif headings.",
 	description:
 		"Guides for Driftwood, a command line that deploys static sites: a tutorial, how-to guides and concept pages.",
 	mark,

@@ -80,6 +80,8 @@ function mark() {
 export default {
 	name: "Tempo",
 	kind: "Utilities docs",
+	tagline: "Reference for a CSS utility library.",
+	artDirection: "Cool neutrals, teal and mono headings.",
 	description:
 		"Reference for Tempo, an invented library of CSS utilities: every spacing, colour, layout, type and effect utility drawn beside its call and the CSS it emits.",
 	mark,

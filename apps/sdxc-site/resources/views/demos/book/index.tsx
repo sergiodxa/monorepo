@@ -99,6 +99,9 @@ const TOKENS = {
 /** The book landing, from its own header to its own footer. */
 export default {
 	title: "The Measure — Web typography, set by hand",
+	kind: "Book landing",
+	tagline: "A web typography book and course.",
+	artDirection: "Ivory paper, ink, one red, a serif.",
 	description:
 		"A book and video course on web typography for designers and engineers: measure, rhythm, scale and fonts, with CSS for every chapter.",
 	render: () => (

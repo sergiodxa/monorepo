@@ -97,6 +97,8 @@ function mark() {
 export default {
 	name: "Lattice",
 	kind: "Component docs",
+	tagline: "Docs for a component library.",
+	artDirection: "Monochrome, violet and small radii.",
 	description:
 		"Docs for Lattice UI, a component library: an index of components, each with live previews, props and accessibility notes.",
 	mark,

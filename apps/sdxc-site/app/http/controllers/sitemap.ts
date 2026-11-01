@@ -89,6 +89,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		health: false,
 		schemas: false,
 		robots: false,
+		demos: false,
 		demo: false,
 		stats: false,
 		demoDocs: false,

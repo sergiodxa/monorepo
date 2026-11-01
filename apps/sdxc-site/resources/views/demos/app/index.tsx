@@ -93,6 +93,9 @@ const TOKENS = {
 /** What `/demo/app` serves: Rooftree's head metadata and its whole page. */
 export default {
 	title: "Rooftree — the shared list for everyone under your roof",
+	kind: "App landing",
+	tagline: "A shared list app for a household.",
+	artDirection: "Grape and sunshine, rounded and playful.",
 	description:
 		"Rooftree keeps a household's groceries, chores, calendar and meals on one encrypted list that syncs across iPhone, Android, Mac and Windows.",
 	render: () => (

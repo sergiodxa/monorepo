@@ -145,6 +145,11 @@ export default route({
 	/** The crawl rules and AI usage preferences, served as robots.txt. */
 	robots: get("/robots.txt"),
 	/**
+	 * Every demo landing and demo docs site on one page, kept out of search engines like the
+	 * demos it lists.
+	 */
+	demos: get("/demo"),
+	/**
 	 * A complete sample landing built from `@sdxc/ui`'s landing parts, kept out of search
 	 * engines: each one invents its product, so none of it is a page about sdxc.
 	 */
