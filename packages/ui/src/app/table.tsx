@@ -1,7 +1,7 @@
 /**
  * A tabular data display built on the native `<table>`: URL-driven sort headers and a
- * "load more" row, a sticky header, two row densities, a selection column, row actions, a
- * whole-row link, a pinned first column, typed cells and empty, error and refetching states.
+ * "load more" row, a sticky header, two row densities, a selection column, one-line row actions
+ * that fold into a menu, a whole-row link, a pinned first column, typed cells and states.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@sdxc/icons";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, EllipsisIcon } from "@sdxc/icons";
 import {
 	bg,
 	center,
@@ -50,7 +50,10 @@ import { attrs, clientEntry } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
+import { Button } from "../components/button.js";
 import { Checkbox } from "../components/checkbox.js";
+import { LinkButton } from "../components/link-button.js";
+import { Menu } from "../components/menu.js";
 import { RelativeTime } from "../components/relative-time.js";
 import { StatusDot } from "../components/status-dot.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
@@ -100,6 +103,12 @@ const DEFAULT_BAR_MAX = 1;
 
 /** What a typed cell shows for a value that is unknown or missing. */
 const EMPTY_VALUE = "—";
+
+/**
+ * Width of the `ui-table` container at or below which {@link Table.Actions} given an
+ * `overflowLabel` shows one menu button in place of its inline actions.
+ */
+const ACTIONS_OVERFLOW_QUERY = "@container ui-table (max-width: 40rem)";
 
 /** Interactive elements that sit above a whole-row link, so they keep their own clicks. */
 const ROW_CONTROLS = ':is(a, button, label, select, textarea, summary, [role="button"])';
@@ -245,7 +254,20 @@ export namespace Table {
 	 * Body cell holding a row's actions. Put the one most used action first and any
 	 * destructive one last.
 	 */
-	export interface ActionsProps extends TagProps<"td"> {}
+	export interface ActionsProps extends TagProps<"td"> {
+		/**
+		 * Name of the menu button that stands in for the actions in a narrow table, such as
+		 * "More actions". Set it to fold {@link Table.Action} children into that menu.
+		 */
+		overflowLabel?: string;
+	}
+
+	/**
+	 * One row action: a link when `href` is set, else a `<button>`, drawn as a small ghost
+	 * button in the row and as a menu row in the overflow menu. `danger` tones it for a
+	 * destructive action.
+	 */
+	export interface ActionProps extends Menu.ItemProps {}
 
 	/** A link that makes its whole row the target; every other control in the row keeps its own click. */
 	export type RowLinkProps = TagProps<"a"> & {
@@ -858,20 +880,40 @@ Table.ActionsColumn = function TableActionsColumn(handle: Handle<Table.ActionsCo
 };
 
 /**
- * Renders a row's actions, end-aligned. Where the pointer can hover they stay hidden until the
- * row is hovered, focused within, selected or has a menu open; on touch they always show.
+ * Marks the actions it wraps as the overflow menu's copy, so each {@link Table.Action} inside
+ * renders as a menu row.
+ *
+ * @param handle Runtime handle carrying the menu's actions.
+ * @returns The render function passing the actions through.
+ */
+function TableActionsMenu(handle: Handle<{ children?: RemixNode }, { menu: true }>) {
+	handle.context.set({ menu: true });
+	return () => handle.props.children;
+}
+
+/**
+ * Renders a row's actions, end-aligned on one line in a cell as wide as they are, so the
+ * flexible columns give way first. With `overflowLabel`, a `ui-table` container 40rem wide or
+ * narrower shows a ⋯ button opening a native popover menu of the same actions instead. Where the
+ * pointer can hover they stay hidden until the row is hovered, focused within, selected or has a
+ * menu open; on touch they always show.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell.
  * @example
+ * <Table.Actions overflowLabel={t("posts.moreActions")}>
+ * 	<Table.Action href={editUrl}>{t("posts.edit")}</Table.Action>
+ * 	<Table.Action danger commandfor="confirm-delete" command="show-modal">{t("posts.delete")}</Table.Action>
+ * </Table.Actions>
+ * @example
  * <Table.Actions>
  * 	<Button size="sm" variant="ghost">{t("monitors.pause")}</Button>
- * 	<Button size="sm" variant="ghost" color="danger">{t("monitors.delete")}</Button>
  * </Table.Actions>
  */
 Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 	return () => {
-		let { children, mix, ...rest } = handle.props;
+		let { overflowLabel, children, mix, ...rest } = handle.props;
+		let menuId = `${handle.id}-menu`;
 
 		return (
 			<td
@@ -883,6 +925,7 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 						pi("0.5rem"),
 						pb("0.25rem"),
 						raw({
+							whiteSpace: "nowrap",
 							transition: "opacity 150ms ease-out",
 							"@media (hover: hover)": {
 								opacity: 0,
@@ -895,8 +938,102 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 					mix,
 				)}
 			>
-				<div mix={[flex(), items("center"), justify("end"), gap("0.25rem")]}>{children}</div>
+				<div
+					data-slot="row-actions-inline"
+					mix={[
+						flex(),
+						items("center"),
+						justify("end"),
+						gap("0.25rem"),
+						overflowLabel ? raw({ [ACTIONS_OVERFLOW_QUERY]: { display: "none" } }) : undefined,
+					]}
+				>
+					{children}
+				</div>
+				{overflowLabel ? (
+					<>
+						<div
+							data-slot="row-actions-overflow"
+							mix={[
+								justify("end"),
+								raw({ display: "none", [ACTIONS_OVERFLOW_QUERY]: { display: "flex" } }),
+							]}
+						>
+							<Button
+								size="sm"
+								variant="ghost"
+								color="neutral"
+								commandfor={menuId}
+								command="toggle-popover"
+								aria-label={overflowLabel}
+							>
+								<EllipsisIcon size={16} />
+							</Button>
+						</div>
+						<TableActionsMenu>
+							<Menu id={menuId} placement="bottom-end" aria-label={overflowLabel}>
+								{children}
+							</Menu>
+						</TableActionsMenu>
+					</>
+				) : null}
 			</td>
+		);
+	};
+};
+
+/**
+ * Renders one row action as a small neutral ghost button, or a danger one with `danger`; inside
+ * the overflow menu of {@link Table.Actions} it renders as a menu row instead, so an app writes
+ * each action once and both forms carry it.
+ *
+ * @param handle Runtime handle carrying the host `<a>`/`<button>`'s props.
+ * @returns The render function producing the action.
+ * @example <Table.Action href={href("posts.edit", { id })}>{t("posts.edit")}</Table.Action>
+ * @example <Table.Action danger commandfor="confirm-delete" command="show-modal">{t("posts.delete")}</Table.Action>
+ */
+Table.Action = function TableAction(handle: Handle<Table.ActionProps>) {
+	return () => {
+		let inMenu = handle.context.get(TableActionsMenu) as { menu: true } | undefined;
+		if (inMenu) return <Menu.Item {...handle.props} />;
+
+		let { href, target, rel, danger, mix, ...rest } = handle.props;
+		let color: SemanticColor = danger ? "danger" : "neutral";
+
+		if (href) {
+			/**
+			 * `rest`'s fields (aria-*, data-*, id, event props, …) are all valid on an `<a>` too;
+			 * `type` and `role` are left to the link.
+			 */
+			let { type: _type, ...anchorRest } = rest as unknown as Omit<
+				TagProps<"a">,
+				"href" | "target" | "rel" | "role"
+			> & {
+				type?: string;
+			};
+			return (
+				<LinkButton
+					{...anchorRest}
+					href={href}
+					target={target}
+					rel={rel}
+					size="sm"
+					variant="ghost"
+					color={color}
+					mix={mix as TagProps<"a">["mix"]}
+				/>
+			);
+		}
+
+		return (
+			<Button
+				type="button"
+				{...rest}
+				size="sm"
+				variant="ghost"
+				color={color}
+				mix={mix as TagProps<"button">["mix"]}
+			/>
 		);
 	};
 };

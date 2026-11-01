@@ -1,7 +1,8 @@
 /**
  * Lays tables out in a real browser: a sticky header, both densities, aligned typed cells,
  * select-all and shift-click ranges, row actions revealed by hover except on touch, a
- * whole-row link, a pinned first column whose shadow waits for a scroll, and the states.
+ * whole-row link, a pinned first column whose shadow waits for a scroll, the states, and row
+ * actions that hold one line at every width and fold into a menu in a narrow container.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +13,8 @@ import type {} from "@vitest/browser-playwright";
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
+
+import { LinkButton } from "../components/link-button.js";
 
 import { Table } from "./table.js";
 
@@ -573,5 +576,167 @@ describe("Table states", () => {
 		expect(table.getAttribute("aria-busy")).toBe("true");
 		await expect.poll(() => getComputedStyle(body).opacity).toBe("0.5");
 		expect(body.children).toHaveLength(MONITORS.length);
+	});
+});
+
+/** A post with a title long enough to squeeze every other column. */
+interface Post {
+	id: string;
+	title: string;
+	excerpt: string;
+}
+
+const POSTS: Post[] = Array.from({ length: 4 }, (_, index) => ({
+	id: `post_${index}`,
+	title: `Designing a publishing workflow that survives a newsroom deadline, part ${index + 1}`,
+	excerpt:
+		"How a small editorial team drafts, reviews, schedules and corrects stories without stepping on each other.",
+}));
+
+/** Labels of the three row actions every post carries. */
+const ACTIONS = ["Edit", "Quick edit", "View"];
+
+/**
+ * A comfortable posts table whose title and excerpt compete with the actions for width. With
+ * `links`, the actions are plain ghost link buttons; otherwise they are `Table.Action`s that
+ * fold into a menu named "More actions".
+ */
+function posts(options: { links?: boolean } = {}): JSX.Element {
+	return (
+		<Table.Container>
+			<Table aria-label="Posts" density="comfortable">
+				<Table.Header>
+					<Table.Row>
+						<Table.SelectAll label="Select all posts" />
+						<Table.Column>Title</Table.Column>
+						<Table.Column>Excerpt</Table.Column>
+						<Table.Column>Status</Table.Column>
+						<Table.ActionsColumn label="Actions" />
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{POSTS.map((post) => (
+						<Table.Row key={post.id}>
+							<Table.Select name="post" value={post.id} label={`Select ${post.title}`} />
+							<Table.Cell>
+								<Table.RowLink href={`#${post.id}`}>{post.title}</Table.RowLink>
+							</Table.Cell>
+							<Table.Cell>{post.excerpt}</Table.Cell>
+							<Table.StatusCell color="success">Published</Table.StatusCell>
+							{options.links ? (
+								<Table.Actions>
+									{ACTIONS.map((label) => (
+										<LinkButton
+											key={label}
+											href={`#${post.id}/${label}`}
+											variant="ghost"
+											color="neutral"
+											size="sm"
+										>
+											{label}
+										</LinkButton>
+									))}
+								</Table.Actions>
+							) : (
+								<Table.Actions overflowLabel="More actions">
+									{ACTIONS.map((label) => (
+										<Table.Action key={label} href={`#${post.id}/${label}`}>
+											{label}
+										</Table.Action>
+									))}
+								</Table.Actions>
+							)}
+						</Table.Row>
+					))}
+				</Table.Body>
+			</Table>
+		</Table.Container>
+	);
+}
+
+/** Number of line boxes the text of `element` lays out in. */
+function lineBoxes(element: Element): number {
+	let range = document.createRange();
+	range.selectNodeContents(element);
+	let tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+	return tops.size;
+}
+
+/** Asserts every action label in `host` sits on one line and its cell hugs the actions. */
+function expectOneLineActions(host: HTMLElement): void {
+	let cells = [...host.querySelectorAll<HTMLElement>('tbody [data-slot="row-actions"]')];
+	expect(cells).toHaveLength(POSTS.length);
+	for (let cell of cells) {
+		let actions = [...cell.querySelectorAll<HTMLElement>("a")].filter(
+			(action) => action.getClientRects().length > 0,
+		);
+		expect(actions.map((action) => action.textContent)).toEqual(ACTIONS);
+		for (let action of actions) expect(lineBoxes(action)).toBe(1);
+		let first = actions[0]!.getBoundingClientRect();
+		let last = actions.at(-1)!.getBoundingClientRect();
+		let style = getComputedStyle(cell);
+		let padding = parseFloat(style.paddingInlineStart) + parseFloat(style.paddingInlineEnd);
+		expect(cell.getBoundingClientRect().width).toBeLessThanOrEqual(
+			last.right - first.left + padding + 1,
+		);
+	}
+}
+
+describe("Table row actions", () => {
+	for (let width of [768, 1440]) {
+		test(`keeps ghost link actions on one line in a ${width}px table`, async () => {
+			await page.viewport(width, 900);
+			expectOneLineActions(mount(posts({ links: true }), width));
+		});
+
+		test(`shows Table.Action actions inline on one line in a ${width}px table`, async () => {
+			await page.viewport(width, 900);
+			let host = mount(posts(), width);
+
+			expectOneLineActions(host);
+			let more = host.querySelector<HTMLElement>('button[aria-label="More actions"]')!;
+			expect(more.getClientRects()).toHaveLength(0);
+		});
+	}
+
+	test("folds the actions into one menu button in a 480px container", async () => {
+		await page.viewport(1024, 768);
+		let host = mount(posts(), 480);
+		let cell = host.querySelector<HTMLElement>('tbody [data-slot="row-actions"]')!;
+		let visible = [...cell.querySelectorAll<HTMLElement>("a, button")].filter(
+			(control) => control.getClientRects().length > 0,
+		);
+
+		expect(visible).toHaveLength(1);
+		let more = visible[0]!;
+		expect(more.getAttribute("aria-label")).toBe("More actions");
+		expect(lineBoxes(more)).toBeLessThanOrEqual(1);
+
+		await userEvent.click(more);
+		let menu = document.getElementById(more.getAttribute("commandfor")!)!;
+		await expect.poll(() => menu.matches(":popover-open")).toBe(true);
+		let items = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+		expect(items.map((item) => item.textContent)).toEqual(ACTIONS);
+		expect(items.map((item) => item.getAttribute("href"))).toEqual(
+			ACTIONS.map((label) => `#post_0/${label}`),
+		);
+		for (let item of items) expect(lineBoxes(item)).toBe(1);
+	});
+
+	test("gives every row its own menu", () => {
+		let host = mount(posts(), 480);
+		let targets = [...host.querySelectorAll('button[aria-label="More actions"]')].map((more) =>
+			more.getAttribute("commandfor"),
+		);
+
+		expect(new Set(targets).size).toBe(POSTS.length);
+		for (let target of targets) expect(document.getElementById(target!)).not.toBeNull();
+	});
+
+	test("never widens a 375px page", async () => {
+		await page.viewport(375, 812);
+		mount(posts(), 375);
+
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
 	});
 });
