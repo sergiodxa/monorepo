@@ -72,7 +72,7 @@ export const SaveBar: EntryComponent<SaveBarProps> = clientEntry(
 						p(2, 2, 2, 4),
 						rounded("lg"),
 						border({ color: "neutral", width: 1 }),
-						bg("neutral.surface"),
+						bg(),
 						shadow("lg"),
 						text("sm"),
 						when("&[hidden]", hidden()),

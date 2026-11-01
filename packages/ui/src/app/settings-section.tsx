@@ -207,7 +207,7 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 			minIs(0),
 			rounded("lg"),
 			border({ color: "neutral", width: 1 }),
-			bg("neutral.surface"),
+			bg(),
 			overflow("hidden"),
 		];
 		let rows = (

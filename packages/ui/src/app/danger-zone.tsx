@@ -113,7 +113,7 @@ export function DangerZone(handle: Handle<DangerZone.Props>) {
 						vstack({ gap: 0, align: "stretch" }),
 						rounded("lg"),
 						border({ color: "danger", width: 1 }),
-						bg("neutral.surface"),
+						bg(),
 						overflow("hidden"),
 						divide("block", "danger"),
 					]}

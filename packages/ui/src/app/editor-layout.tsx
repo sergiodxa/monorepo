@@ -114,7 +114,7 @@ export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 							minBlockSize: "var(--ui-app-header-height, 3.5rem)",
 						}),
 						p(2, 3),
-						bg("neutral.surface"),
+						bg(),
 						borderEdge("block-end", { color: "neutral", width: 1, style: "solid" }),
 					]}
 				>
@@ -216,7 +216,7 @@ export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 							data-slot="editor-sidebar"
 							mix={[
 								minIs(0),
-								bg("neutral.surface"),
+								bg(),
 								fg("neutral.emphasis"),
 								raw({
 									[NARROW]: {
