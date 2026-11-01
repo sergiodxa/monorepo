@@ -66,20 +66,10 @@ export default createAction(routes.demos, async (ctx) => {
 					<div mix={[vstack({ gap: 6, align: "start" }), maxIs("40rem")]}>
 						<ProseHeading level={1}>Demos</ProseHeading>
 						<ProseParagraph>
-							Whole sites built from @sdxc/ui, each for an invented product: {landings.length}{" "}
-							landing pages and {docsSites.length} documentation sites, every one composed from the
-							same components a real app imports.
-						</ProseParagraph>
-						<ProseParagraph>
-							Each commits to its own art direction, set once through theme tokens: a precise
-							developer tool, a quiet editorial book, a warm consumer app, and docs sites from
-							product help to an API reference. The components stay the same; the palette, type,
-							corners and motion change.
-						</ProseParagraph>
-						<ProseParagraph>
-							Visit one to see how the bands, product mockups and animated diagrams fit together on
-							a full page, then read <ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to
-							copy what you need. The products, names and figures are made up.
+							{landings.length} landing pages and {docsSites.length} documentation sites for
+							invented products, each built from the same @sdxc/ui components with its own look set
+							through theme tokens. Visit one, then read{" "}
+							<ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to copy what you need.
 						</ProseParagraph>
 					</div>
 				</Hero>
