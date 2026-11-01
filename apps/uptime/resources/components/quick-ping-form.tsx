@@ -48,7 +48,7 @@ const HELP_ID = "quick-ping-help";
 type QuickPingFormProps = {
 	/** Where the form posts; the team-scoped `run-ping` action. */
 	action: string;
-	/** Kept after a check so the field still names the target the toast is about. */
+	/** Kept after a check so the field still names the target the result beside it is about. */
 	url?: string;
 	/** Wraps the input to give it an accessible name that holds regardless of how the caption is styled. */
 	label: string;

@@ -1,7 +1,6 @@
 /**
  * Tests the dashboard's quick-check fragment, `GET /app/:team/dashboard/quick-ping`,
- * which renders the header's URL bar alone, or beside a toast built from a stored
- * check result. The session middleware and its storage are real here, with the
+ * which renders the header's URL bar alone, or followed by the stored check result. The session middleware and its storage are real here, with the
  * cookie carried between requests, so a stored result renders exactly once. The
  * `cloudflare:workers` mock exists only so the action's module graph resolves.
  *
@@ -127,17 +126,6 @@ async function storeRefusal(error: QuickPingError): Promise<string> {
 	return setCookie.split(";")[0] ?? "";
 }
 
-/**
- * The name of the animation the response's toast fades under, read out of the emitted
- * stylesheet. It is the only observable in server-rendered HTML for "this is a different
- * animation from the last one", which is what the browser needs in order to play it.
- */
-function fadeName(body: string): string {
-	let match = body.match(/animation-name:\s*(uptime-toast-fade[\w-]*)/);
-	expect(match).not.toBeNull();
-	return match?.[1] ?? "";
-}
-
 /** Requests the fragment, optionally carrying a session cookie back with it. */
 async function render(
 	db: Database,
@@ -227,11 +215,10 @@ describe("dashboard-quick-ping", () => {
 	});
 
 	/**
-	 * The header's fixed 64px row has no line to draw an answer on, so the answer gets
-	 * its own region after the form; the field and button keep the order they submit
-	 * in and stay put when a check comes back.
+	 * The answer lands right after the button that asked for it, where the eye already is;
+	 * the field and button keep the order they submit in and stay put when a check comes back.
 	 */
-	test("reports the answer as a toast beside the bar rather than a line inside it", async () => {
+	test("reports the answer in an output right after the bar", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await render(db, team, membership, await storeResult(upResult()))).text();
@@ -243,7 +230,10 @@ describe("dashboard-quick-ping", () => {
 		expect(field).toBeGreaterThan(-1);
 		expect(submit).toBeGreaterThan(field);
 		expect(status).toBeGreaterThan(submit);
-		expect(body).toContain(`aria-label="${en.page.dashboard.quickPing.result.label}"`);
+		expect(body).toMatch(
+			new RegExp(`<output[^>]*aria-label="${en.page.dashboard.quickPing.result.label}"`),
+		);
+		expect(body).toContain('data-color="success"');
 	});
 
 	/**
@@ -309,42 +299,17 @@ describe("dashboard-quick-ping", () => {
 		expect(body).toContain(en.page.dashboard.quickPing.action.submit);
 	});
 
-	/**
-	 * The frame swap patches the toast already on screen, and replaying a finished
-	 * animation on the same element plays nothing — held at `opacity: 0` by the first
-	 * one's fill mode until the second answer gets an animation name of its own.
-	 */
-	test("fades each answer under an animation of its own, so a second one still plays", async () => {
+	test("reports a refusal in the danger tone where a result would have been", async () => {
 		let { db, team, membership } = await createFixture();
+		let refusal: QuickPingError = { kind: "error", id: generateUUID(), code: "invalidUrl" };
 
-		let first = await (await render(db, team, membership, await storeResult(upResult()))).text();
-		let second = await (await render(db, team, membership, await storeResult(upResult()))).text();
+		let body = await (await render(db, team, membership, await storeRefusal(refusal))).text();
 
-		let firstFade = fadeName(first);
-		let secondFade = fadeName(second);
-		expect(firstFade).not.toBe(secondFade);
-		expect(first).toContain(`@keyframes ${firstFade}`);
-		expect(second).toContain(`@keyframes ${secondFade}`);
-	});
-
-	/**
-	 * Two identical refusals produce the same code, copy, colour, and markup, so
-	 * nothing in their wording could tell them apart — only the animation name
-	 * distinguishes them.
-	 */
-	test("distinguishes two identical refusals, which nothing in their wording could", async () => {
-		let { db, team, membership } = await createFixture();
-		let refusal = (): QuickPingError => ({
-			kind: "error",
-			id: generateUUID(),
-			code: "invalidUrl",
-		});
-
-		let first = await (await render(db, team, membership, await storeRefusal(refusal()))).text();
-		let second = await (await render(db, team, membership, await storeRefusal(refusal()))).text();
-
-		expect(first).toContain(en.page.dashboard.quickPing.error.invalidUrl);
-		expect(fadeName(first)).not.toBe(fadeName(second));
+		expect(body).toContain(en.page.dashboard.quickPing.error.invalidUrl);
+		expect(body).toContain('data-color="danger"');
+		expect(body.indexOf(en.page.dashboard.quickPing.error.invalidUrl)).toBeGreaterThan(
+			body.indexOf(`>${en.page.dashboard.quickPing.action.submit}<`),
+		);
 	});
 
 	/**

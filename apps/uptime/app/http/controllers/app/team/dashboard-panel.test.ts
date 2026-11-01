@@ -125,6 +125,7 @@ async function fetchPanel(
 	team: SelectTeam,
 	membership: SelectMembership,
 	type: string,
+	search = "",
 ): Promise<Response> {
 	let router = createRouter({
 		middleware: [
@@ -141,7 +142,7 @@ async function fetchPanel(
 
 	let request = new Request(
 		new URL(
-			routes.app.team.dashboard.panel.href({ team: team.slug, type: type as never }),
+			`${routes.app.team.dashboard.panel.href({ team: team.slug, type: type as never })}${search}`,
 			"https://uptime.test",
 		),
 	);
@@ -200,22 +201,36 @@ describe("app/team/dashboard-panel", () => {
 		expect(body).toContain(en.page.dashboard.empty.cta);
 	});
 
-	test("renders a refresh link targeting the dashboard panel frame", async () => {
+	/**
+	 * Each interval is a link to the dashboard page itself, so a choice works before the
+	 * runtime loads and survives a reload, and the timer reloads the panel's own frame.
+	 */
+	test("offers auto-refresh intervals that lead back to the dashboard with the tab kept", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await fetchPanel(db, team, membership, "http");
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		let refreshLink = body.match(
-			/<a[^>]*data-rmx-src="[^"]*\/panel\/http\?refresh=[^"]*"[^>]*>/,
-		)?.[0];
-		expect(refreshLink).toBeDefined();
-		expect(refreshLink).toContain('data-rmx-target="dashboard-panel"');
-		expect(refreshLink).toContain(
-			`href="${routes.app.team.dashboard.index.href({ team: team.slug })}?tab=http"`,
-		);
-		expect(body).toContain(en.page.dashboard.panel.refresh);
+		let dashboard = routes.app.team.dashboard.index.href({ team: team.slug });
+		expect(body).toContain(en.page.dashboard.panel.autoRefresh.trigger);
+		expect(body).toContain(`href="${dashboard}?tab=http&amp;refresh=30"`);
+		expect(body).toContain(`href="${dashboard}?tab=http"`);
+		expect(body).toContain('"frame":"dashboard-panel"');
+	});
+
+	test("carries the chosen interval into every tab, and ignores one the menu never offers", async () => {
+		let { db, team, membership } = await createFixture();
+		let panel = (type: "dns" | "http") =>
+			routes.app.team.dashboard.panel.href({ team: team.slug, type });
+
+		let chosen = await (await fetchPanel(db, team, membership, "http", "?refresh=60")).text();
+		expect(chosen).toContain(`data-rmx-src="${panel("dns")}?refresh=60"`);
+		expect(chosen).toContain('"every":60000');
+
+		let unknown = await (await fetchPanel(db, team, membership, "http", "?refresh=1")).text();
+		expect(unknown).toContain(`data-rmx-src="${panel("dns")}"`);
+		expect(unknown).toContain('"every":0');
 	});
 
 	test("dns tab renders the empty state when the team has no DNS monitors", async () => {

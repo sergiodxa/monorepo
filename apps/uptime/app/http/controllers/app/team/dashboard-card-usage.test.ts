@@ -195,8 +195,8 @@ describe("dashboard-card-usage", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain("Error");
-		expect(body).toContain("-");
+		expect(body).toContain("Monthly Pings Usage");
+		expect(body).toContain("—");
 		expect(body).toContain("Failed to load data");
 	});
 });

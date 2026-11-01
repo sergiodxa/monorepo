@@ -1,17 +1,17 @@
 /**
  * Team dashboard controller. Resolves the monitor-type tab from `?tab=`, falling back to
- * the persisted cookie then "http", and persists the choice back to the cookie.
+ * the persisted cookie then "http", and persists the choice back to the cookie. Every card
+ * and the panel stream in through their own frames behind skeletons of the same shape.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { iife } from "@sdxc/iife";
-import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
+import { flex, flexCol, gap, hidden, items } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { mbe } from "@sdxc/u/size";
 import { pulse } from "@sdxc/ui/animations";
-import { Empty, Skeleton } from "@sdxc/ui/app";
+import { Skeleton, StatCard, Table } from "@sdxc/ui/app";
 import { Frame } from "remix/component";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
@@ -19,16 +19,19 @@ import { Session } from "remix/session";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
+import { panelSrc, refreshInterval } from "~/app/http/controllers/app/team/dashboard-panel";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { dashboardTab as dashboardTabCookie } from "~/app/initializers/cookies";
-import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 const DASHBOARD_TABS: readonly DashboardTab[] = ["http", "dns", "tcp", "cron-jobs"];
+
+/** The monitor types counted in the second row of cards, in the order they read. */
+const COUNT_RESOURCES = ["http", "dns", "tcp", "flow", "cron-jobs"] as const;
 
 function isDashboardTab(value: string | null): value is DashboardTab {
 	return value !== null && (DASHBOARD_TABS as readonly string[]).includes(value);
@@ -39,7 +42,10 @@ interface Toast {
 	message: string;
 }
 
-/** GET /app/:team/dashboard — the team's dashboard shell. */
+/**
+ * GET /app/:team/dashboard — the team's overview. The `refresh` interval in the URL reaches
+ * the panel's frame, so an interval chosen there survives a reload and a tab switch.
+ */
 export default createAction(routes.app.team.dashboard.index, {
 	middleware: [requireUser, requireTeam],
 	handler: async () => {
@@ -54,6 +60,7 @@ export default createAction(routes.app.team.dashboard.index, {
 			if (isDashboardTab(cookieTab)) return cookieTab;
 			return "http";
 		});
+		let refresh = refreshInterval(ctx.url.searchParams.get("refresh"));
 
 		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
 
@@ -91,77 +98,57 @@ export default createAction(routes.app.team.dashboard.index, {
 					}
 					toast={toast}
 				>
-					<div>
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("16px")]}>
+					<div mix={[flex(), flexCol(), gap("24px")]}>
+						<StatCard.Group columns={3} aria-label={ctx.intl.t("page.dashboard.groups.summary")}>
 							<Frame
 								name="dashboard-card-usage"
 								src={routes.app.team.dashboard.cards.usage.href({ team: ctx.team.slug })}
-								fallback={<StatCardSkeleton count={1} />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 							<Frame
 								name="dashboard-card-uptime"
 								src={routes.app.team.dashboard.cards.uptime.href({ team: ctx.team.slug })}
-								fallback={<StatCardSkeleton count={1} />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 							<Frame
 								name="dashboard-card-slowest-endpoint"
 								src={routes.app.team.dashboard.cards.slowestEndpoint.href({
 									team: ctx.team.slug,
 								})}
-								fallback={<StatCardSkeleton count={1} />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
-						</div>
+						</StatCard.Group>
 
-						<div mix={[flex(), flexWrap(), gap("16px"), mbe("24px")]}>
-							<Frame
-								name="dashboard-card-count-http"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "http",
-								})}
-								fallback={<StatCardSkeleton count={1} badges />}
-							/>
-							<Frame
-								name="dashboard-card-count-dns"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "dns",
-								})}
-								fallback={<StatCardSkeleton count={1} badges />}
-							/>
-							<Frame
-								name="dashboard-card-count-tcp"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "tcp",
-								})}
-								fallback={<StatCardSkeleton count={1} badges />}
-							/>
-							<Frame
-								name="dashboard-card-count-flow"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "flow",
-								})}
-								fallback={<StatCardSkeleton count={1} badges />}
-							/>
-							<Frame
-								name="dashboard-card-count-cron-jobs"
-								src={routes.app.team.dashboard.cards.count.href({
-									team: ctx.team.slug,
-									resource: "cron-jobs",
-								})}
-								fallback={<StatCardSkeleton count={1} badges />}
-							/>
-						</div>
+						<StatCard.Group
+							columns={COUNT_RESOURCES.length}
+							aria-label={ctx.intl.t("page.dashboard.groups.counts")}
+						>
+							{COUNT_RESOURCES.map((resource) => (
+								<Frame
+									key={resource}
+									name={`dashboard-card-count-${resource}`}
+									src={routes.app.team.dashboard.cards.count.href({
+										team: ctx.team.slug,
+										resource,
+									})}
+									fallback={<StatCard.Skeleton delta={false} />}
+								/>
+							))}
+						</StatCard.Group>
 
 						<Frame
 							name="dashboard-panel"
-							src={routes.app.team.dashboard.panel.href({ team: ctx.team.slug, type: tab })}
+							src={panelSrc(ctx.team.slug, tab, refresh)}
 							fallback={
-								<Empty>
-									<Empty.Description>{ctx.intl.t("page.dashboard.loading")}</Empty.Description>
-								</Empty>
+								<Table.Container>
+									<Table>
+										<Skeleton.Table
+											rows={5}
+											columns={5}
+											label={ctx.intl.t("page.dashboard.loading")}
+										/>
+									</Table>
+								</Table.Container>
 							}
 						/>
 					</div>

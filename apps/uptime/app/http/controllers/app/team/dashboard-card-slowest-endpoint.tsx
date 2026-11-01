@@ -1,7 +1,7 @@
 /**
  * Dashboard "Slowest Endpoint" stat-card fragment controller. GET
  * /app/:team/dashboard/cards/slowest-endpoint — loads the team's HTTP monitors (to
- * name the slowest one) and its Analytics Engine summaries, and renders `StatCard`
+ * name the slowest one) and its Analytics Engine summaries, and renders one `StatCard`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,17 +9,19 @@
 
 import { Trans } from "@sdxc/i18n/ui";
 import { isFailure } from "@sdxc/result";
-import { Empty } from "@sdxc/ui/app";
+import { StatCard } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
-/** GET /app/:team/dashboard/cards/slowest-endpoint — the slowest-endpoint stat card, fragment-only. */
+/**
+ * GET /app/:team/dashboard/cards/slowest-endpoint — the slowest-endpoint stat card,
+ * fragment-only. An unreachable analytics store keeps the card's shape with the reason in
+ * its footer.
+ */
 export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
@@ -30,11 +32,15 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 
 		if (isFailure(summaries)) {
 			return ctx.render(
-				<Empty>
-					<Empty.Description>
+				<StatCard>
+					<StatCard.Label>
+						{ctx.intl.t("page.dashboard.stats.slowestEndpoint.label.noData")}
+					</StatCard.Label>
+					<StatCard.Value>—</StatCard.Value>
+					<StatCard.Footer role="status">
 						{ctx.intl.t("page.dashboard.error.analytics.message")}
-					</Empty.Description>
-				</Empty>,
+					</StatCard.Footer>
+				</StatCard>,
 			);
 		}
 
@@ -53,9 +59,9 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 			null;
 
 		return ctx.render(
-			<StatCard
-				label={
-					slowestMonitorName ? (
+			<StatCard>
+				<StatCard.Label>
+					{slowestMonitorName ? (
 						<Trans
 							intl={ctx.intl}
 							i18nKey="page.dashboard.stats.slowestEndpoint.label.default"
@@ -64,17 +70,17 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 						/>
 					) : (
 						ctx.intl.t("page.dashboard.stats.slowestEndpoint.label.noData")
-					)
-				}
-				value={
-					<>
-						{slowestResponseMs === null
-							? ctx.intl.t("page.dashboard.stats.slowestEndpoint.value.noData")
-							: `${slowestResponseMs}ms`}
-						<Subtitle>{ctx.intl.t("page.dashboard.stats.slowestEndpoint.description")}</Subtitle>
-					</>
-				}
-			/>,
+					)}
+				</StatCard.Label>
+				<StatCard.Value>
+					{slowestResponseMs === null
+						? ctx.intl.t("page.dashboard.stats.slowestEndpoint.value.noData")
+						: `${slowestResponseMs}ms`}
+				</StatCard.Value>
+				<StatCard.Footer>
+					{ctx.intl.t("page.dashboard.stats.slowestEndpoint.description")}
+				</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });

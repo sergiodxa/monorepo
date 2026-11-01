@@ -1,20 +1,19 @@
 /**
  * Dashboard "Monthly Pings Usage" stat-card fragment controller. GET
  * /app/:team/dashboard/cards/usage — loads just the team's ping usage, with no
- * document shell, so the dashboard's usage `Frame` can swap it in over its skeleton
+ * document shell, so the dashboard's usage `Frame` swaps it in over its skeleton.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { StatCard } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { UptimeModels } from "~/app/models";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
@@ -38,42 +37,40 @@ async function getPingUsage(
 	};
 }
 
-/** GET /app/:team/dashboard/cards/usage — the ping-usage stat card, fragment-only. */
+/**
+ * GET /app/:team/dashboard/cards/usage — the ping-usage stat card, fragment-only. With both
+ * queries failed the card keeps its label and shape, with `—` and the reason in its footer.
+ */
 export default createAction(routes.app.team.dashboard.cards.usage, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
 		let { consumed, usage } = await getPingUsage(ctx.models, ctx.team);
+		let number = new Intl.NumberFormat(ctx.locale);
 
 		if (consumed === null && usage === null) {
 			return ctx.render(
-				<StatCard
-					label={ctx.intl.t("page.dashboard.error.card.label")}
-					value={
-						<>
-							{ctx.intl.t("page.dashboard.error.card.value")}
-							<Subtitle>{ctx.intl.t("page.dashboard.error.card.description")}</Subtitle>
-						</>
-					}
-				/>,
+				<StatCard>
+					<StatCard.Label>{ctx.intl.t("page.dashboard.stats.monitors.label")}</StatCard.Label>
+					<StatCard.Value>—</StatCard.Value>
+					<StatCard.Footer role="status">
+						{ctx.intl.t("page.dashboard.error.card.description")}
+					</StatCard.Footer>
+				</StatCard>,
 			);
 		}
 
 		return ctx.render(
-			<StatCard
-				label={ctx.intl.t("page.dashboard.stats.monitors.label")}
-				value={
-					<>
-						{consumed === null ? "—" : consumed.toLocaleString()}
-						<Subtitle>
-							{usage === null
-								? ctx.intl.t("page.dashboard.stats.monitors.unavailable")
-								: ctx.intl.t("page.dashboard.stats.monitors.description", {
-										estimated: usage.toLocaleString(),
-									})}
-						</Subtitle>
-					</>
-				}
-			/>,
+			<StatCard>
+				<StatCard.Label>{ctx.intl.t("page.dashboard.stats.monitors.label")}</StatCard.Label>
+				<StatCard.Value>{consumed === null ? "—" : number.format(consumed)}</StatCard.Value>
+				<StatCard.Footer>
+					{usage === null
+						? ctx.intl.t("page.dashboard.stats.monitors.unavailable")
+						: ctx.intl.t("page.dashboard.stats.monitors.description", {
+								estimated: number.format(usage),
+							})}
+				</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });
