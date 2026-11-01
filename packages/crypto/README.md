@@ -64,6 +64,25 @@ let sealed = unwrap(await seal(key, "refresh-token")); // "v1.<iv>.<ciphertext>"
 let plaintext = unwrap(await open(key, sealed));
 ```
 
+## Command line
+
+`sdxc-crypto` runs the same operations from a terminal or a script, with no install step:
+
+```sh
+bunx @sdxc/crypto --help
+```
+
+Input is a file path, or stdin when the path is `-` or absent. Keys, TOTP secrets and passwords come from a file, stdin or a named environment variable, never the command line. `--json` prints a machine-readable result; a failed `--verify` or `scrypt verify` exits 1, and bad usage or unreadable input exits 2.
+
+```sh
+bunx @sdxc/crypto token --no-newline | cf workers secrets update API_KEY
+bunx @sdxc/crypto hash release.tar.gz --alg sha512
+bunx @sdxc/crypto hmac body.json --key-env WEBHOOK_SECRET --verify "$SIGNATURE"
+bunx @sdxc/crypto totp --secret-file totp.txt
+bunx @sdxc/crypto scrypt hash < password.txt
+bunx @sdxc/crypto scrypt verify '$scrypt$ln=15,r=8,p=3$…$…' < password.txt
+```
+
 ## API
 
 ### Encoding
