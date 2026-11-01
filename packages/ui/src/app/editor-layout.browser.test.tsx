@@ -17,6 +17,8 @@ import { Button } from "../components/button.js";
 
 import { EditorLayout } from "./editor-layout.js";
 
+import "../theme.css";
+
 /** Mounts a post editor filling the page and returns its root. */
 function mount(): HTMLElement {
 	let mounted = render(
@@ -81,6 +83,41 @@ describe("EditorLayout", () => {
 
 		expect(Math.round(bar.getBoundingClientRect().top)).toBe(0);
 		globalThis.scrollTo(0, 0);
+	});
+
+	test("runs the sidebar's border the editor area's full height beside a long article", async () => {
+		await page.viewport(1280, 800);
+		document.documentElement.style.setProperty("--ui-color-neutral-200", "#e5e5e5");
+		let mounted = render(
+			<EditorLayout
+				title="A long article"
+				sidebar={<p>Status: Draft</p>}
+				labels={{ settings: "Settings", closeSettings: "Close settings", sidebar: "Post settings" }}
+			>
+				<p>{"A quiet editor keeps the writing in front. ".repeat(600)}</p>
+			</EditorLayout>,
+		);
+		let root = mounted.container;
+		let sidebar = root.querySelector<HTMLElement>('[data-slot="editor-sidebar"]')!;
+		let area = root.querySelector<HTMLElement>('[data-slot="editor-main"]')!.parentElement!;
+		let edged = [sidebar, ...sidebar.querySelectorAll<HTMLElement>("*")].find(
+			(element) => getComputedStyle(element).borderInlineStartWidth === "1px",
+		)!;
+
+		expect(area.getBoundingClientRect().height).toBeGreaterThan(3000);
+		expect(
+			Math.abs(edged.getBoundingClientRect().height - area.getBoundingClientRect().height),
+		).toBeLessThanOrEqual(1);
+
+		globalThis.scrollTo(0, 2000);
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		let status = sidebar.querySelector("p:not([id])")!.getBoundingClientRect();
+		let bar = root.querySelector<HTMLElement>('[data-slot="editor-bar"]')!.getBoundingClientRect();
+
+		expect(status.top).toBeGreaterThanOrEqual(bar.bottom);
+		expect(status.bottom).toBeLessThanOrEqual(800);
+		globalThis.scrollTo(0, 0);
+		document.documentElement.style.removeProperty("--ui-color-neutral-200");
 	});
 
 	test("hides the sidebar behind Settings at 375px and opens it as a full-screen sheet", async () => {

@@ -233,16 +233,13 @@ export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 									},
 									[WIDE]: {
 										display: "block",
-										position: "sticky",
-										insetBlockStart:
-											"calc(var(--ui-app-sticky-top, 0px) + var(--ui-app-header-height, 3.5rem))",
-										alignSelf: "start",
+										position: "static",
+										alignSelf: "stretch",
 										inset: "auto",
 										inlineSize: "auto",
 										blockSize: "auto",
-										maxBlockSize:
-											"calc(100dvh - var(--ui-app-sticky-top, 0px) - var(--ui-app-header-height, 3.5rem))",
-										overflowY: "auto",
+										maxBlockSize: "none",
+										overflow: "visible",
 										margin: 0,
 										padding: 0,
 										border: 0,
@@ -254,30 +251,46 @@ export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 							]}
 						>
 							<div
-								data-slot="editor-sidebar-header"
+								data-slot="editor-sidebar-body"
 								mix={[
-									hstack({ gap: 2, align: "center", justify: "between" }),
-									p(2, 2, 2, 4),
-									borderEdge("block-end", { color: "neutral", width: 1, style: "solid" }),
-									raw({ [WIDE]: { display: "none" } }),
+									raw({
+										[WIDE]: {
+											position: "sticky",
+											insetBlockStart:
+												"calc(var(--ui-app-sticky-top, 0px) + var(--ui-app-header-height, 3.5rem))",
+											maxBlockSize:
+												"calc(100dvh - var(--ui-app-sticky-top, 0px) - var(--ui-app-header-height, 3.5rem))",
+											overflowY: "auto",
+										},
+									}),
 								]}
 							>
-								<p id={sheetTitleId} mix={[m(0), text("sm"), weight("semibold")]}>
-									{labels.sidebar}
-								</p>
-								<Button
-									type="button"
-									popovertarget={sidebarId}
-									popovertargetaction="hide"
-									variant="ghost"
-									color="neutral"
-									size="sm"
-									aria-label={labels.closeSettings}
+								<div
+									data-slot="editor-sidebar-header"
+									mix={[
+										hstack({ gap: 2, align: "center", justify: "between" }),
+										p(2, 2, 2, 4),
+										borderEdge("block-end", { color: "neutral", width: 1, style: "solid" }),
+										raw({ [WIDE]: { display: "none" } }),
+									]}
 								>
-									<XIcon size={16} aria-hidden="true" />
-								</Button>
+									<p id={sheetTitleId} mix={[m(0), text("sm"), weight("semibold")]}>
+										{labels.sidebar}
+									</p>
+									<Button
+										type="button"
+										popovertarget={sidebarId}
+										popovertargetaction="hide"
+										variant="ghost"
+										color="neutral"
+										size="sm"
+										aria-label={labels.closeSettings}
+									>
+										<XIcon size={16} aria-hidden="true" />
+									</Button>
+								</div>
+								<div mix={[vstack({ gap: 4, align: "stretch" }), p(4)]}>{sidebar}</div>
 							</div>
-							<div mix={[vstack({ gap: 4, align: "stretch" }), p(4)]}>{sidebar}</div>
 						</aside>
 					) : null}
 				</div>
