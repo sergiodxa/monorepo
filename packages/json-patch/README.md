@@ -64,6 +64,8 @@ if (isFailure(patch)) return new Response(patch.error.message, { status: 400 });
 bunx @sdxc/json-patch --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg json-patch …` runs the same command line, using the version your project installs.
+
 `apply` prints the patched document and exits 1 naming the operation whose path or `test`
 failed, `diff` prints the patch between two documents, and `validate` exits 1 when a file is not
 a patch. A `-` or missing document argument reads stdin.
