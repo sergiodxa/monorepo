@@ -54,6 +54,7 @@ const FILTER_LABELS: FilterBar.Labels = {
 	isAnyOf: "is any of",
 	clear: "Clear filters",
 	remove: (field, values) => `Remove ${field}: ${values}`,
+	options: "View",
 };
 
 /** The quick-edit sheet's strings. */

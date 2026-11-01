@@ -7,6 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { IncidentStatus } from "./data";
+
+import { INCIDENTS, NOW } from "./data";
+
 /** The metrics the overview's tabs switch between. */
 export type MetricId = "uptime" | "latency" | "errors" | "incidents";
 
@@ -52,8 +56,11 @@ export interface MetricSeries {
 	/** `null` where the collector recorded nothing. */
 	current: (number | null)[];
 	previous: number[];
-	/** The bucket range the open incident covers. */
+	/** The bucket range the open incident covers, from the bucket it started in to now. */
 	incident: readonly [number, number];
+	/** The open incident the band marks, which its label names with its status. */
+	incidentId: string;
+	incidentStatus: IncidentStatus;
 	/** The bucket range no data arrived for. */
 	gap: readonly [number, number];
 	/** The value axis, from zero or a floor up to a ceiling that clears every value. */
@@ -82,9 +89,20 @@ const DOMAINS: Record<MetricId, readonly [number, number]> = {
 };
 
 /**
+ * How far toward its peak a metric sits in each bucket of an open incident: a spike in the
+ * bucket it broke, then a noisy plateau with a dip every few buckets where a mitigation
+ * briefly helped, as a live incident reads on a real dashboard.
+ */
+function incidentShape(offset: number): number {
+	if (offset === 0) return 1;
+	if (offset % 3 === 2) return 0.42 + wobble(offset, 7) * 0.06;
+	return 0.74 + wobble(offset, 3) * 0.1;
+}
+
+/**
  * Builds a metric's series over a range: calm buckets that wobble around the baseline, the
- * open incident rising to its peak over the last few buckets, and a stretch two thirds of
- * the way back where the collector was down.
+ * open incident spiking in the bucket it started and holding high since, and a stretch a
+ * third of the way back where the collector was down.
  *
  * @param metric The metric the selected tab names.
  * @param range The range the picker names.
@@ -93,7 +111,10 @@ const DOMAINS: Record<MetricId, readonly [number, number]> = {
 export function metricSeries(metric: MetricId, range: RangeId): MetricSeries {
 	let { count } = RANGE_BUCKETS[range];
 	let { base, spread, peak } = BASELINES[metric];
-	let incident = [count - 4, count - 1] as const;
+	let { hours } = RANGE_BUCKETS[range];
+	let open = INCIDENTS[0]!;
+	let since = (Date.parse(NOW) - Date.parse(open.startedAt)) / 3_600_000;
+	let incident = [Math.max(0, count - 1 - Math.floor(since / hours)), count - 1] as const;
 	let gapStart = Math.round(count * 0.3);
 	let gap = [gapStart, gapStart + Math.max(1, Math.round(count * 0.08))] as const;
 	let round = (value: number) =>
@@ -103,14 +124,21 @@ export function metricSeries(metric: MetricId, range: RangeId): MetricSeries {
 	let previous: number[] = [];
 	for (let index = 0; index < count; index++) {
 		let calm = base + wobble(index, 1) * spread;
-		let rise =
-			index >= incident[0] ? (index - incident[0] + 1) / (incident[1] - incident[0] + 1) : 0;
+		let rise = index >= incident[0] ? incidentShape(index - incident[0]) : 0;
 		let value = calm + (peak - calm) * rise;
 		current.push(index >= gap[0] && index <= gap[1] ? null : round(value));
 		previous.push(round(base + wobble(index, 4) * spread * 0.8));
 	}
 
-	return { current, previous, incident, gap, domain: DOMAINS[metric] };
+	return {
+		current,
+		previous,
+		incident,
+		incidentId: open.id,
+		incidentStatus: open.status,
+		gap,
+		domain: DOMAINS[metric],
+	};
 }
 
 /**

@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { PauseIcon, PlayIcon, Trash2Icon } from "@sdxc/icons";
-import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { vstack } from "@sdxc/u/layout";
 import { minIs } from "@sdxc/u/size";
 import { HeadingScope, LinkButton, StatusDot } from "@sdxc/ui";
 import { clearFiltersHref, paramValues, setParamHref } from "@sdxc/ui/app";
@@ -222,6 +222,20 @@ export default function Services(handle: Handle<Services.Props>) {
 			SERVICES.filter((service) => matches(service, query, skip));
 		let tabHref = (show: Show) => setParamHref(url, "show", show === "all" ? null : show);
 		let refresh = Number(url.searchParams.get("refresh") ?? "30");
+		let autoRefresh = {
+			id: "pulse-services-refresh",
+			url,
+			value: Number.isFinite(refresh) ? refresh : 30,
+			defaultValue: 30,
+			options: [
+				{ value: 0, label: COPY.refresh.off },
+				{ value: 30, label: COPY.refresh.every(30) },
+				{ value: 60, label: COPY.refresh.every(60) },
+			],
+			refreshedAt: new Date(NOW),
+			locale: LOCALE,
+			labels: { trigger: COPY.refresh.trigger, updated: COPY.refresh.updated },
+		};
 
 		return (
 			<div mix={[vstack({ gap: 4, align: "stretch" }), minIs(0)]}>
@@ -282,11 +296,12 @@ export default function Services(handle: Handle<Services.Props>) {
 								label: COPY.filters.sortOptions[id],
 							})),
 						}}
-						view={
-							<div mix={[hstack({ gap: 2, align: "center" }), flexWrap("wrap")]}>
+						options={
+							<>
 								<ViewOptions
 									id="pulse-services-view"
 									url={url}
+									inline
 									density={{
 										defaultValue: "compact",
 										options: [
@@ -296,22 +311,10 @@ export default function Services(handle: Handle<Services.Props>) {
 									}}
 									labels={VIEW_LABELS}
 								/>
-								<AutoRefresh
-									id="pulse-services-refresh"
-									url={url}
-									value={Number.isFinite(refresh) ? refresh : 30}
-									defaultValue={30}
-									options={[
-										{ value: 0, label: COPY.refresh.off },
-										{ value: 30, label: COPY.refresh.every(30) },
-										{ value: 60, label: COPY.refresh.every(60) },
-									]}
-									refreshedAt={new Date(NOW)}
-									locale={LOCALE}
-									labels={{ trigger: COPY.refresh.trigger, updated: COPY.refresh.updated }}
-								/>
-							</div>
+								<AutoRefresh {...autoRefresh} show="choices" />
+							</>
 						}
+						status={<AutoRefresh {...autoRefresh} show="status" />}
 						collapse
 						labels={FILTER_LABELS}
 					/>

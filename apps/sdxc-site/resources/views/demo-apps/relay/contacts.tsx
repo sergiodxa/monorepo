@@ -442,10 +442,11 @@ function ContactsToolbar(handle: Handle<{ url: URL; query: ContactQuery }>) {
 					},
 				]}
 				sort={{ label: "Sort by", options: [...SORTS], defaultValue: DEFAULT_SORT }}
-				view={
+				options={
 					<ViewOptions
 						id="relay-contacts-view"
 						url={url}
+						inline
 						density={{
 							defaultValue: DEFAULT_DENSITY,
 							options: [

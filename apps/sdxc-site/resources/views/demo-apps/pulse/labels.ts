@@ -103,7 +103,7 @@ export const COPY = {
 		legendCurrent: "This period",
 		legendPrevious: "Previous period",
 		noData: "No data",
-		incidentBand: "INC-482",
+		incidentBand: (id: string, status: string) => `${id} · ${status.toLowerCase()}`,
 		chartStart: (range: string) => `${range} ago`,
 		chartEnd: "Now",
 		attention: "Needs attention",
@@ -355,6 +355,7 @@ export const COPY = {
 		back: "Go to overview",
 	},
 	filters: {
+		options: "View",
 		toolbar: "Filter services",
 		tabs: "Service states",
 		filters: "Filters",
@@ -393,6 +394,7 @@ export const FILTER_LABELS: FilterBar.Labels = {
 	isAnyOf: COPY.filters.isAnyOf,
 	clear: COPY.filters.clear,
 	remove: COPY.filters.remove,
+	options: COPY.filters.options,
 };
 
 /** The display menu's strings. */

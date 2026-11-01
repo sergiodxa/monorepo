@@ -358,7 +358,7 @@ export const INCIDENTS: readonly Incident[] = [
 		service: "checkout-api",
 		status: "investigating",
 		severity: "SEV1",
-		startedAt: "2026-11-01T11:41:00Z",
+		startedAt: "2026-11-01T05:41:00Z",
 		resolvedAt: null,
 		commander: "Priya Raman",
 	},

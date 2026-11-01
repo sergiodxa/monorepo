@@ -28,7 +28,7 @@ import type { DemoAppRequest } from "~/resources/views/demo-apps";
 import type { MetricId, MetricSeries, RangeId } from "./metrics";
 
 import { href, LOCALE, NOW, SERVICES } from "./data";
-import { COPY, RANGE_LABELS, STATUS, TREND } from "./labels";
+import { COPY, INCIDENT_STATUS, RANGE_LABELS, STATUS, TREND } from "./labels";
 import {
 	DEFAULT_RANGE,
 	METRIC_IDS,
@@ -77,7 +77,7 @@ function formatChange(metric: MetricId, change: number): string {
 
 /** The sentence under each stat, which says what moved the number. */
 const FOOTERS: Record<MetricId, string> = {
-	uptime: "checkout-api has been down since 11:41.",
+	uptime: "checkout-api has been down since 05:41.",
 	latency: "payments-webhooks is 4× its usual p95.",
 	errors: "41% of checkout requests fail.",
 	incidents: "One SEV1, one SEV2 and one SEV3.",
@@ -141,7 +141,10 @@ function MetricChart(handle: Handle<MetricChart.Props>) {
 				<Chart.Band
 					from={series.incident[0] - 0.5}
 					to={series.incident[1]}
-					label={COPY.overview.incidentBand}
+					label={COPY.overview.incidentBand(
+						series.incidentId,
+						INCIDENT_STATUS[series.incidentStatus].label,
+					)}
 					tone="danger"
 				/>
 				<Chart.Line
