@@ -174,3 +174,21 @@ export namespace SecurityHeaders {
 		url: URL;
 	}
 }
+
+/**
+ * The verdict `audit` reaches for each security header a response sends or leaves out.
+ */
+export namespace Audit {
+	/** `missing` and `weak` are the problems; `ok` holds up against the checks the audit runs. */
+	export type Status = "ok" | "missing" | "weak";
+
+	/** One header's verdict, with the reasons behind a `weak` (and context for an `ok`). */
+	export interface Finding {
+		/** The lowercase header name. */
+		header: string;
+		status: Status;
+		/** The value the response sent, `null` when it sent none. */
+		value: string | null;
+		notes: string[];
+	}
+}

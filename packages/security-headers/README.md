@@ -126,6 +126,28 @@ let [csp] = unwrap(parse("default-src 'self'; frame-src https://challenges.examp
 csp?.directives.frameSrc; // ["https://challenges.example.com"]
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/security-headers --help
+```
+
+Fetch a page and grade Content-Security-Policy, Strict-Transport-Security,
+X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy and
+Cross-Origin-Opener-Policy as `ok`, `missing` or `weak`, with the reason for each weakness. A
+missing or weak header exits 1; `--json` prints `{ url, status, passed, findings }`.
+
+```sh
+bunx @sdxc/security-headers audit https://example.com --json
+```
+
+Read a Content-Security-Policy value, from the argument or stdin, into its directives; a value
+outside the CSP grammar exits 2 with its position.
+
+```sh
+bunx @sdxc/security-headers csp parse "default-src 'self'; script-src 'self' 'nonce-abc'" --json
+```
+
 ## API
 
 ### `@sdxc/security-headers`
@@ -213,6 +235,21 @@ become `null`.
 
 The failure for an unsupported media type, a body that is not JSON, or a legacy report naming no
 directive.
+
+### `@sdxc/security-headers/audit`
+
+#### `audit(headers: Headers, url: URL): Audit.Finding[]`
+
+One `{ header, status, value, notes }` per security header, `status` being `ok`, `missing` or
+`weak`. CSP is weak when every enforced policy leaves scripts unrestricted, allows
+`'unsafe-inline'` without a nonce or hash, `'unsafe-eval'`, any-host script sources, or plugins;
+HSTS when `max-age` is under 180 days or `url` is `http:`. `frame-ancestors` stands in for
+X-Frame-Options.
+
+```typescript
+let findings = audit(response.headers, new URL(response.url));
+findings.filter((finding) => finding.status !== "ok");
+```
 
 ### `@sdxc/security-headers/middleware`
 
