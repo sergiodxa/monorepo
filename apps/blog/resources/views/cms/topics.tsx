@@ -22,6 +22,7 @@ import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { Table } from "@sdxc/ui/app/table";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import { TextCell } from "~/resources/views/cms/cells";
 import {
 	DeleteAction,
 	FILTER_LABELS,
@@ -187,18 +188,12 @@ export function CMSTopicsIndexView() {
 													<Table.StatusCell color={item.builtIn ? "neutral" : "brand"}>
 														{item.builtIn ? "Kind" : "Yours"}
 													</Table.StatusCell>
-													<Table.Cell
-														mix={[
-															secondary(),
-															font("mono"),
-															text("xs"),
-															fg("neutral.muted"),
-															truncate(),
-															raw({ maxInlineSize: "20rem" }),
-														]}
-													>
-														{item.query}
-													</Table.Cell>
+													<TextCell
+														value={item.query}
+														maxInlineSize="20rem"
+														hideBelow="40rem"
+														mono
+													/>
 													<Table.Actions>
 														<LinkButton href={item.href} variant="ghost" color="neutral" size="sm">
 															Edit

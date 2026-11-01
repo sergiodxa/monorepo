@@ -22,6 +22,7 @@ import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { Table } from "@sdxc/ui/app/table";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import { TextCell } from "~/resources/views/cms/cells";
 import {
 	DeleteAction,
 	FILTER_LABELS,
@@ -183,16 +184,11 @@ export function CMSGlossaryIndexView() {
 															</span>
 														</span>
 													</Table.Cell>
-													<Table.Cell
-														mix={[
-															secondary(),
-															fg("neutral.muted"),
-															truncate(),
-															raw({ maxInlineSize: "28rem" }),
-														]}
-													>
-														{item.definition}
-													</Table.Cell>
+													<TextCell
+														value={item.definition}
+														maxInlineSize="28rem"
+														hideBelow="40rem"
+													/>
 													<Table.Actions>
 														<LinkButton href={item.href} variant="ghost" color="neutral" size="sm">
 															Edit

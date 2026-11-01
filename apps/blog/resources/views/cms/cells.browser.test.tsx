@@ -12,7 +12,7 @@ import { Table } from "@sdxc/ui/app/table";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { DateCell, PathCell } from "~/resources/views/cms/cells";
+import { DateCell, PathCell, TextCell } from "~/resources/views/cms/cells";
 
 /** The table the current test mounted, unmounted after it. */
 let mounted: RenderResult | undefined;
@@ -149,6 +149,38 @@ describe("PathCell", () => {
 
 		expect(link.getBoundingClientRect().right).toBeLessThanOrEqual(
 			post.getBoundingClientRect().right,
+		);
+	});
+});
+
+describe("TextCell", () => {
+	test("cuts a long tag list at its cell's edge", () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "480px";
+		document.body.appendChild(host);
+		mounted = render(
+			<Table.Container>
+				<Table aria-label="Tutorials" density="comfortable">
+					<Table.Body>
+						<Table.Row>
+							<TextCell
+								value="remix@3.0.0, @sdxc/mcp@2026.10.9, @sdxc/json-schema@2026.10.6"
+								maxInlineSize="14rem"
+							/>
+							<Table.Cell>Published</Table.Cell>
+						</Table.Row>
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+			{ container: host },
+		);
+
+		let [tags] = mounted.$$("td");
+		let line = tags?.querySelector("span");
+		if (!tags || !line) throw new Error("The cell rendered no text");
+
+		expect(line.getBoundingClientRect().right).toBeLessThanOrEqual(
+			tags.getBoundingClientRect().right,
 		);
 	});
 });

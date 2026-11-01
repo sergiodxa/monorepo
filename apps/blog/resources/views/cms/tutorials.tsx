@@ -23,7 +23,7 @@ import { Table } from "@sdxc/ui/app/table";
 
 import { TeaserField } from "~/resources/components/teaser-field";
 import { CMSLayout } from "~/resources/layouts/cms";
-import { DateCell } from "~/resources/views/cms/cells";
+import { DateCell, TextCell } from "~/resources/views/cms/cells";
 import {
 	editorStatus,
 	isScheduled,
@@ -228,18 +228,7 @@ export function CMSTutorialsIndexView() {
 															</span>
 														</span>
 													</Table.Cell>
-													<Table.Cell
-														mix={[
-															text("sm"),
-															fg("neutral.muted"),
-															raw({
-																maxInlineSize: "14rem",
-																"@container ui-app-content (max-width: 48rem)": { display: "none" },
-															}),
-														]}
-													>
-														<span mix={[truncate()]}>{item.tags || "—"}</span>
-													</Table.Cell>
+													<TextCell value={item.tags} maxInlineSize="14rem" hideBelow="48rem" />
 													<Table.StatusCell color={item.preview ? "warning" : "success"}>
 														{item.preview ? "Scheduled" : "Published"}
 													</Table.StatusCell>

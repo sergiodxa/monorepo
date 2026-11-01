@@ -97,3 +97,48 @@ export function PathCell(handle: Handle<PathCellProps>) {
 		);
 	};
 }
+
+/** Props accepted by {@link TextCell}. */
+interface TextCellProps {
+	/** The cell's text; empty or `null` renders `—`. */
+	value: string | null;
+	/** The widest the column grows, as a CSS length. */
+	maxInlineSize: string;
+	/** Hides the cell in a content area this wide or narrower, as the column's header does. */
+	hideBelow?: "40rem" | "48rem";
+	/** Sets the text in small monospace, for code such as a search query. */
+	mono?: boolean;
+}
+
+/** The container queries a {@link TextCell} hides under, one per width it takes. */
+const HIDE_BELOW = {
+	"40rem": { "@container ui-app-content (max-width: 40rem)": { display: "none" } },
+	"48rem": { "@container ui-app-content (max-width: 48rem)": { display: "none" } },
+} as const;
+
+/** Secondary text, such as a row's tags, on one muted line cut with an ellipsis at the cell's edge. */
+export function TextCell(handle: Handle<TextCellProps>) {
+	return () => {
+		let { value, maxInlineSize, hideBelow, mono } = handle.props;
+		return (
+			<Table.Cell
+				mix={[
+					raw({ maxInlineSize }),
+					hideBelow === undefined ? undefined : raw(HIDE_BELOW[hideBelow]),
+				]}
+			>
+				<span
+					title={value || undefined}
+					mix={[
+						raw({ display: "block" }),
+						mono ? [font("mono"), text("xs")] : text("sm"),
+						fg("neutral.muted"),
+						truncate(),
+					]}
+				>
+					{value || "—"}
+				</span>
+			</Table.Cell>
+		);
+	};
+}
