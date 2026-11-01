@@ -243,6 +243,43 @@ describe("KeyboardHelp", () => {
 		expect(title.tagName).toBe("H3");
 	});
 
+	test("lists keys a palette item and a data-shortcut element share once, under the first label", async () => {
+		shortcutRegistry(document).register({
+			keys: "g c",
+			label: "Contacts",
+			group: "Palette",
+			run: () => {},
+			signal: controller.signal,
+		});
+		mounted = render(
+			<div>
+				<nav data-shortcut-group="Navigation">
+					<a href="#contacts" data-shortcut="g c" data-shortcut-label="Go to Contacts">
+						Contacts
+					</a>
+					<a href="#inbox" data-shortcut="g i" data-shortcut-label="Go to Inbox">
+						Inbox
+					</a>
+				</nav>
+				<KeyboardHelp
+					id="keys"
+					labels={LABELS}
+					groups={[{ title: "Inbox", shortcuts: [{ keys: "g i", label: "Inbox" }] }]}
+				/>
+			</div>,
+		);
+		let dialog = document.getElementById("keys") as HTMLDialogElement;
+		await userEvent.keyboard("?");
+
+		await expect
+			.poll(() => listed(dialog))
+			.toEqual([
+				["Inbox", ["Inbox"]],
+				["Palette", ["Contacts"]],
+				["General", ["Show keyboard shortcuts"]],
+			]);
+	});
+
 	test("merges registry rows into the server's groups once each", () => {
 		expect(
 			mergeShortcutGroups(
@@ -263,6 +300,23 @@ describe("KeyboardHelp", () => {
 				],
 			},
 			{ title: "More", shortcuts: [{ keys: ["?"], label: "Help" }] },
+		]);
+	});
+
+	test("keeps the first label a shortcut's keys were listed under", () => {
+		expect(
+			mergeShortcutGroups(
+				[{ title: "Lists", shortcuts: [{ keys: ["j", "arrowdown"], label: "Next" }] }],
+				[
+					{ keys: ["arrowdown", "j"], label: "Next conversation", group: "Lists" },
+					{ keys: ["g  c"], label: "Contacts", group: "Palette" },
+					{ keys: ["g c"], label: "Go to Contacts", group: "Navigation" },
+				],
+				"More",
+			),
+		).toEqual([
+			{ title: "Lists", shortcuts: [{ keys: ["j", "arrowdown"], label: "Next" }] },
+			{ title: "Palette", shortcuts: [{ keys: ["g  c"], label: "Contacts" }] },
 		]);
 	});
 });
