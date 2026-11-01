@@ -85,6 +85,10 @@ for the dialog's results.
 
 ## Where to go next
 
+- [Docs patterns](/api/ui/docs-patterns) — lay the pages out with `@sdxc/ui/docs`: the shell,
+  the hub, reference and task pages and a 404 that searches, with the pieces on
+  [Docs components](/api/ui/docs-components) and the measures on
+  [Docs foundations](/api/ui/docs-foundations).
 - [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — check every
   page's links and headings in CI.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — list every

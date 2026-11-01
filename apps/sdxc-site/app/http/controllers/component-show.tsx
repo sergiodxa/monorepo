@@ -21,12 +21,18 @@ import type { PropsTable } from "~/app/services/components";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import docsComponentsPage from "~/app/http/controllers/ui-docs-components";
+import docsFoundationsPage from "~/app/http/controllers/ui-docs-foundations";
+import docsPatternsPage from "~/app/http/controllers/ui-docs-patterns";
 import landingComponentsPage from "~/app/http/controllers/ui-landing-components";
 import landingFoundationsPage from "~/app/http/controllers/ui-landing-foundations";
 import landingPatternsPage from "~/app/http/controllers/ui-landing-patterns";
 import themingPage from "~/app/http/controllers/ui-theming";
 import { adsDayTag } from "~/app/services/ads";
 import {
+	DOCS_COMPONENTS_SLUG,
+	DOCS_FOUNDATIONS_SLUG,
+	DOCS_PATTERNS_SLUG,
 	LANDING_PATTERNS_SLUG,
 	LANDING_COMPONENTS_SLUG,
 	LANDING_FOUNDATIONS_SLUG,
@@ -89,6 +95,9 @@ export default createAction(routes.api.component, async (ctx) => {
 	if (component === LANDING_FOUNDATIONS_SLUG) return await landingFoundationsPage(ctx, tree);
 	if (component === LANDING_COMPONENTS_SLUG) return await landingComponentsPage(ctx, tree);
 	if (component === LANDING_PATTERNS_SLUG) return await landingPatternsPage(ctx, tree);
+	if (component === DOCS_FOUNDATIONS_SLUG) return await docsFoundationsPage(ctx, tree);
+	if (component === DOCS_COMPONENTS_SLUG) return await docsComponentsPage(ctx, tree);
+	if (component === DOCS_PATTERNS_SLUG) return await docsPatternsPage(ctx, tree);
 
 	let reference = await readComponent(component);
 	if (reference === null) return notFound(ctx, tree);

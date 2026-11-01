@@ -52,6 +52,27 @@ export const LANDING_PATTERNS_TITLE = "Landing patterns";
 export const LANDING_PATTERNS_SUMMARY =
 	"Building blocks and composition craft from @sdxc/ui/landing: Hero, Proof, FeatureBand, Faq, ClosingCta.";
 
+/** The docs foundations page's heading. */
+export const DOCS_FOUNDATIONS_TITLE = "Docs foundations";
+
+/** What the docs foundations page is, in the one line a listing shows. */
+export const DOCS_FOUNDATIONS_SUMMARY =
+	"The measures, tokens, reading type and mixins every @sdxc/ui/docs page is built on.";
+
+/** The docs components page's heading. */
+export const DOCS_COMPONENTS_TITLE = "Docs components";
+
+/** What the docs components page is, in the one line a listing shows. */
+export const DOCS_COMPONENTS_SUMMARY =
+	"Every @sdxc/ui/docs component by job: the shell and navigation, page furniture, content blocks and code.";
+
+/** The docs patterns page's heading. */
+export const DOCS_PATTERNS_TITLE = "Docs patterns";
+
+/** What the docs patterns page is, in the one line a listing shows. */
+export const DOCS_PATTERNS_SUMMARY =
+	"How the docs components compose into whole pages: the shell, the hub, a reference page, a task page and the 404.";
+
 /**
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
  *

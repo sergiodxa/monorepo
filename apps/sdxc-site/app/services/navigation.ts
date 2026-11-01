@@ -120,6 +120,18 @@ export async function buildComponentsNav(): Promise<NavTree> {
 						title: "Landing patterns",
 						href: routes.api.component.href({ component: "landing-patterns" }),
 					},
+					{
+						title: "Docs foundations",
+						href: routes.api.component.href({ component: "docs-foundations" }),
+					},
+					{
+						title: "Docs components",
+						href: routes.api.component.href({ component: "docs-components" }),
+					},
+					{
+						title: "Docs patterns",
+						href: routes.api.component.href({ component: "docs-patterns" }),
+					},
 				],
 				groups: [],
 			},

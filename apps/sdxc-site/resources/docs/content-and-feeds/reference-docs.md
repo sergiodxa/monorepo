@@ -310,6 +310,8 @@ shares.
 - The demo docs sites — [content docs](/demo/docs/driftwood), [component docs](/demo/docs/lattice),
   [utilities](/demo/docs/tempo) and an [API reference](/demo/docs/parcelo), each built from
   `@sdxc/ui/docs` — to see what a reference page can look like once it is rendered.
+- [Docs patterns](/api/ui/docs-patterns) — the reference page, task page, hub, shell and 404
+  sketched from the `@sdxc/ui/docs` components, each linked to a demo page that ships it.
 - [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — render the
   descriptions and highlight the examples.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — list

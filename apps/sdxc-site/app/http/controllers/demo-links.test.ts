@@ -40,16 +40,19 @@ describe("demo landing links", () => {
 		]);
 	});
 
-	test.each(["/api/ui/docs-layout", "/api/ui/docs-nav", "/docs/content-and-feeds/reference-docs"])(
-		"%s links every demo docs site, and each one answers",
-		async (page) => {
-			let body = await (await fetchApp(page)).text();
+	test.each([
+		"/api/ui/docs-layout",
+		"/api/ui/docs-nav",
+		"/api/ui/docs-components",
+		"/api/ui/docs-patterns",
+		"/docs/content-and-feeds/reference-docs",
+	])("%s links every demo docs site, and each one answers", async (page) => {
+		let body = await (await fetchApp(page)).text();
 
-			for (let slug of listDemoDocsSlugs()) {
-				let href = demoDocsHref(slug)();
-				expect(body).toContain(`href="${href}"`);
-				expect((await fetchApp(href)).status).toBe(200);
-			}
-		},
-	);
+		for (let slug of listDemoDocsSlugs()) {
+			let href = demoDocsHref(slug)();
+			expect(body).toContain(`href="${href}"`);
+			expect((await fetchApp(href)).status).toBe(200);
+		}
+	});
 });

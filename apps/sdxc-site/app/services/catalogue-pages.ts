@@ -9,6 +9,12 @@
 
 import {
 	componentMarkdown,
+	DOCS_COMPONENTS_SUMMARY,
+	DOCS_COMPONENTS_TITLE,
+	DOCS_FOUNDATIONS_SUMMARY,
+	DOCS_FOUNDATIONS_TITLE,
+	DOCS_PATTERNS_SUMMARY,
+	DOCS_PATTERNS_TITLE,
 	LANDING_PATTERNS_SUMMARY,
 	LANDING_PATTERNS_TITLE,
 	LANDING_COMPONENTS_SUMMARY,
@@ -44,6 +50,15 @@ export const LANDING_COMPONENTS_SLUG = "landing-components";
 
 /** The landing patterns overview under the same component tree. */
 export const LANDING_PATTERNS_SLUG = "landing-patterns";
+
+/** The docs foundations overview under the same component tree. */
+export const DOCS_FOUNDATIONS_SLUG = "docs-foundations";
+
+/** The docs components overview under the same component tree. */
+export const DOCS_COMPONENTS_SLUG = "docs-components";
+
+/** The docs patterns overview under the same component tree. */
+export const DOCS_PATTERNS_SLUG = "docs-patterns";
 
 /** One reference page of a catalogue, as a listing or an index names it. */
 /** What every catalogue page carries, whichever tree it lives in. */
@@ -154,6 +169,39 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 		markdownHref: routes.markdown.component.href({ component: LANDING_PATTERNS_SLUG }),
 	});
 
+	pages.push({
+		title: DOCS_FOUNDATIONS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: DOCS_FOUNDATIONS_SUMMARY,
+		params: { component: DOCS_FOUNDATIONS_SLUG },
+		href: routes.api.component.href({ component: DOCS_FOUNDATIONS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: DOCS_FOUNDATIONS_SLUG }),
+	});
+
+	pages.push({
+		title: DOCS_COMPONENTS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: DOCS_COMPONENTS_SUMMARY,
+		params: { component: DOCS_COMPONENTS_SLUG },
+		href: routes.api.component.href({ component: DOCS_COMPONENTS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: DOCS_COMPONENTS_SLUG }),
+	});
+
+	pages.push({
+		title: DOCS_PATTERNS_TITLE,
+		package: "@sdxc/ui",
+		kind: "component",
+		section: "Components",
+		summary: DOCS_PATTERNS_SUMMARY,
+		params: { component: DOCS_PATTERNS_SLUG },
+		href: routes.api.component.href({ component: DOCS_PATTERNS_SLUG }),
+		markdownHref: routes.markdown.component.href({ component: DOCS_PATTERNS_SLUG }),
+	});
+
 	for (let entry of await listComponents()) {
 		let reference = await readComponent(entry.slug);
 		pages.push({
@@ -211,6 +259,9 @@ export async function readComponentMarkdown(component: string): Promise<string |
 	if (component === LANDING_FOUNDATIONS_SLUG) return landingFoundationsMarkdown();
 	if (component === LANDING_COMPONENTS_SLUG) return landingComponentsMarkdown();
 	if (component === LANDING_PATTERNS_SLUG) return landingPatternsMarkdown();
+	if (component === DOCS_FOUNDATIONS_SLUG) return docsFoundationsMarkdown();
+	if (component === DOCS_COMPONENTS_SLUG) return docsComponentsMarkdown();
+	if (component === DOCS_PATTERNS_SLUG) return docsPatternsMarkdown();
 
 	let reference = await readComponent(component);
 	return reference === null ? null : componentMarkdown(reference);
@@ -326,6 +377,149 @@ function landingPatternsMarkdown(): string {
 		"## Assembled page",
 		"",
 		"Hero → Proof → FeatureBand × N → Faq → ClosingCta. Copy is always props.",
+		"",
+	].join("\n");
+}
+
+/**
+ * The markdown twin of the docs foundations overview: the shell's measures, the tokens,
+ * the reading type and the mixins, matching what the HTML page tables.
+ */
+function docsFoundationsMarkdown(): string {
+	return [
+		`# ${DOCS_FOUNDATIONS_TITLE}`,
+		`> ${DOCS_FOUNDATIONS_SUMMARY}`,
+		"",
+		"Import the components, mixins and tree helpers from `@sdxc/ui/docs`, and `Typeset` from `@sdxc/ui`.",
+		"",
+		"## Shell measures",
+		"",
+		"| `DocsLayout` prop | Default | What it bounds |",
+		"| --- | --- | --- |",
+		"| `measure` | `64rem` | Widest the article column grows; code, tables and images fill it |",
+		"| `proseMeasure` | `66ch` | Widest line of running text |",
+		"| `maxWidth` | `88rem` | Widest the three columns together grow |",
+		'| `dock` | `"lg"` | Width the sidebar docks from (md 48rem, lg 64rem); narrower, it is a drawer |',
+		'| `stickyTop` | `"0px"` | Height of the site header above the shell |',
+		"| `tocMinItems` | `2` | Fewest headings that draw the rail |",
+		"",
+		"## Tokens",
+		"",
+		"| Token | What it controls |",
+		"| --- | --- |",
+		"| `--ui-docs-prose-measure` | Set by `DocsLayout` from `proseMeasure`; running text stops at it |",
+		"| `--ui-docs-scroll-margin` | Set by `DocsLayout` from `stickyTop`; every jumped-to heading clears it (5rem outside the shell) |",
+		"| `--ui-typeset-size` | Body size; the docs preset writes `1.125rem` |",
+		"| `--ui-typeset-leading` | Line height; the docs preset writes `1.75` |",
+		"| `--ui-typeset-flow` | Space between blocks; the docs preset writes `1.25em` |",
+		"",
+		"## Reading type",
+		"",
+		'Wrap rendered prose in `<Typeset preset="docs">`. A component inside it opts out with `data-not-typeset` on its own elements.',
+		"",
+		"## Mixins",
+		"",
+		"- `tocSpy` — slides the rail's marker to every section in view and marks the last",
+		"- `docsNavTools` — opens the sidebar at the current page and filters it",
+		"- `codeTabsSync` — keeps every tab set sharing a key on the reader's choice",
+		"- `copyFromUrl` — copies a page's Markdown twin, fetched on the first click",
+		"- `copyFeedback` — swaps a copy button's icon and label for a moment",
+		"",
+		"## The docs tree",
+		"",
+		"One `DocsTree` feeds `DocsNav`, `DocsPager` (through `findNeighbours`) and search (through `flattenDocsTree`).",
+		"",
+		"## Motion",
+		"",
+		"Motion marks a change of state only, runs 150–300ms with an ease-out, and stops under reduced motion.",
+		"",
+	].join("\n");
+}
+
+/**
+ * The markdown twin of the docs components overview: every component under the part
+ * of a page it builds, matching the groups the HTML page draws.
+ */
+function docsComponentsMarkdown(): string {
+	return [
+		`# ${DOCS_COMPONENTS_TITLE}`,
+		`> ${DOCS_COMPONENTS_SUMMARY}`,
+		"",
+		"Import from `@sdxc/ui/docs`, or one module at a time from `@sdxc/ui/docs/<name>`.",
+		"",
+		"## Shell and navigation",
+		"",
+		"- `DocsLayout` — sidebar, article, heading rail and phone drawer",
+		"- `DocsNav` — the sidebar drawn from a `DocsTree`",
+		"- `DocsNavTools` — opens the sidebar at the current page, filters it",
+		"- `TableOfContents` — On this page, with a marker that follows",
+		"- `DocsHub` — the docs home, routing a reader by task",
+		"- `DocsNotFound` — a 404 inside the shell that searches for you",
+		"- `DocsFooter` — the compact footer over the article and rail",
+		"",
+		"## Page furniture",
+		"",
+		"- `DocsPageHeader` — breadcrumb, title, lead, plan and updated date",
+		"- `PageActions` — copy page as Markdown, open it in an assistant",
+		"- `AnchorHeading` — a heading with its own # link",
+		"- `NextSteps` — two to four hand-picked places to go next",
+		"- `DocsPager` — previous and next, each a whole-card link",
+		"- `DocsFeedback` — was this helpful? as a plain form",
+		"",
+		"## Content blocks",
+		"",
+		"- `Steps` — a numbered procedure whose titles are headings",
+		"- `Callout` — a note, tip, warning or danger, used rarely",
+		"- `FileTree` — a project layout that folds without script",
+		"- `PropsTable` — props, options or fields, nested ones expanding",
+		"- `UiLabel` / `UiPath` — a control's name, and the path of clicks to it",
+		"- `PlanNotice` — which plan or role a feature needs",
+		"",
+		"## Code",
+		"",
+		"- `CodeBlock` — titled code with marked lines and a copy button",
+		"- `CodeTabs` — tabs over code mirroring a reader's choice",
+		"- `CodeTabsSync` — keeps every tab set on the same choice",
+		"- `CopyButton` — the copy button a code block carries",
+		"- `InstallCommand` — install lines in every package manager",
+		"",
+		"## Islands",
+		"",
+		"Map `@sdxc/ui/docs/table-of-contents`, `@sdxc/ui/docs/docs-nav-tools`, `@sdxc/ui/docs/copy-button`, `@sdxc/ui/docs/code-tabs-sync`, `@sdxc/ui/docs/page-actions` and `@sdxc/ui/dialog-dismiss` in the browser entry; everything else is server HTML.",
+		"",
+	].join("\n");
+}
+
+/**
+ * The markdown twin of the docs patterns overview: the five pages a docs site is made
+ * of, each with the demo docs pages that ship it.
+ */
+function docsPatternsMarkdown(): string {
+	return [
+		`# ${DOCS_PATTERNS_TITLE}`,
+		`> ${DOCS_PATTERNS_SUMMARY}`,
+		"",
+		"Demo docs sites: [Driftwood](/demo/docs/driftwood) (content), [Lattice](/demo/docs/lattice) (components), [Tempo](/demo/docs/tempo) (utilities), [Parcelo](/demo/docs/parcelo) (API reference).",
+		"",
+		"## Layout shell",
+		"",
+		"`DocsLayout` with a `DocsNav` sidebar (and `DocsNavTools`), the page's headings in the rail, and `DocsFooter` across the article and rail. See [Driftwood: Custom domains](/demo/docs/driftwood/guides/custom-domains).",
+		"",
+		"## Hub",
+		"",
+		"`DocsHub`: search, topic chips, a Start here path, sections with page counts, the most-read articles. See [Driftwood](/demo/docs/driftwood) and [Parcelo](/demo/docs/parcelo).",
+		"",
+		"## Reference page",
+		"",
+		"`DocsPageHeader` (mono title), a usage block or `CodeTabs`, `AnchorHeading`s over a `PropsTable` and examples, `DocsPager`. See [Parcelo: Create a shipment](/demo/docs/parcelo/shipments/create), and [Lattice: Button](/demo/docs/lattice/components/button).",
+		"",
+		"## Task page",
+		"",
+		"`DocsPageHeader` with a `PlanNotice`, `Steps` with copyable code and `UiPath`s, one `Callout`, `NextSteps`. See [Driftwood: Quickstart](/demo/docs/driftwood/start/quickstart) and [Driftwood: Custom domains](/demo/docs/driftwood/guides/custom-domains).",
+		"",
+		"## 404",
+		"",
+		"`DocsNotFound` inside the shell, its search pre-filled with `searchQueryFromPath(path)`. See [a missing Driftwood page](/demo/docs/driftwood/guides/time-travel).",
 		"",
 	].join("\n");
 }
