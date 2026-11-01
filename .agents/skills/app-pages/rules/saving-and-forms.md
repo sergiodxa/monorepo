@@ -41,6 +41,12 @@ model of saving, not from a toast after every click.
 - Grouped sections: a title and description, then a bordered card of 1px-ruled rows, then the
   section's own footer with Save. Rows are split (label and help at the start, control at the end) and
   stack on phones.
+- A row whose control holds a value (an input, a select, a switch) is an input row: the label and
+  control share the row in two columns. A row whose control is a button that acts at once ("Open
+  billing portal", "Export data") is an action row (`layout="action"`): the text takes the row's
+  width and the button keeps its own. Put the button at the row's end, centred on the title line,
+  when the description runs a line or two; put it under the text (`actionPlacement="below"`) when
+  the description is longer or holds a list or warning. Phones always stack it under the text.
 - A section nav on the start side; on phones the nav is the parent page and each section its own route.
 - The danger zone is its own section with a danger border. Each action lists its consequences;
   type-the-name confirmation only for big, irreversible actions.
