@@ -169,8 +169,10 @@ describe("help shell", () => {
 		mountGuide();
 
 		window.scrollTo(0, 1500);
+		let header = document.querySelector<HTMLElement>("#site-header")!;
 
-		await expect.poll(() => slot("docs-bar").getBoundingClientRect().top).toBe(64);
+		await expect.poll(() => slot("docs-bar").getBoundingClientRect().top).toBe(65);
+		expect(header.getBoundingClientRect().bottom).toBe(65);
 	});
 
 	test("draws the heading rail only where there is room beside the prose", async () => {

@@ -83,7 +83,28 @@ export default createAction(routes.docs.show, async (ctx) => {
 			description={description}
 			locale={ctx.locale}
 		>
-			<DocsLayout t={t} isSignedIn={isSignedIn} activePath={path} toc={module.TOC}>
+			<DocsLayout
+				t={t}
+				isSignedIn={isSignedIn}
+				activePath={path}
+				toc={module.TOC}
+				footer={
+					<DocsFeedback
+						id="docs-feedback"
+						action={routes.docs.feedback.href()}
+						page={path}
+						state={sent ? "sent" : "idle"}
+						labels={{
+							question: t("docs.feedback.question"),
+							yes: t("docs.feedback.yes"),
+							no: t("docs.feedback.no"),
+							note: t("docs.feedback.note"),
+							send: t("docs.feedback.send"),
+							thanks: t("docs.feedback.thanks"),
+						}}
+					/>
+				}
+			>
 				<DocsPageHeader
 					crumbsLabel={t("docs.nav.crumbs")}
 					crumbs={[
@@ -107,7 +128,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 				<Body t={t} figures={docsFigures(ctx.locale)} locale={ctx.locale} />
 
-				<PageEnd t={t} intl={ctx.intl} page={page} path={path} sent={sent} />
+				<PageEnd t={t} intl={ctx.intl} page={page} />
 			</DocsLayout>
 		</DocumentLayout>,
 	);
@@ -136,19 +157,16 @@ namespace PageEnd {
 		t: Translate;
 		intl: I18n;
 		page: DocPage;
-		path: string;
-		/** Whether the reader just voted, which swaps the form for its thanks. */
-		sent: boolean;
 	}
 }
 
 /**
- * Where every help page ends: a person to write to, the hand-picked pages that follow from
- * this one, then the vote, so the last thing on the page is a way forward.
+ * Where every help page's article ends: a person to write to, then the hand-picked pages
+ * that follow from this one, so the last thing in the article is a way forward.
  */
 function PageEnd(handle: Handle<PageEnd.Props>) {
 	return () => {
-		let { intl, page, path, sent, t } = handle.props;
+		let { intl, page, t } = handle.props;
 		let next = page.next.filter((slug) => findDocPage(slug)).map((slug) => pageLink(t, slug));
 
 		return (
@@ -166,21 +184,6 @@ function PageEnd(handle: Handle<PageEnd.Props>) {
 				{next.length > 0 ? (
 					<NextSteps id="up-next" level={2} title={t("docs.page.next")} items={next} />
 				) : null}
-
-				<DocsFeedback
-					id="docs-feedback"
-					action={routes.docs.feedback.href()}
-					page={path}
-					state={sent ? "sent" : "idle"}
-					labels={{
-						question: t("docs.feedback.question"),
-						yes: t("docs.feedback.yes"),
-						no: t("docs.feedback.no"),
-						note: t("docs.feedback.note"),
-						send: t("docs.feedback.send"),
-						thanks: t("docs.feedback.thanks"),
-					}}
-				/>
 			</div>
 		);
 	};

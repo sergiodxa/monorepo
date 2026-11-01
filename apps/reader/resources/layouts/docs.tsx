@@ -1,7 +1,7 @@
 /**
- * The shell every help page composes into: the public site's header and footer around the
- * shared docs layout, with the help tree on the left opened at the page being read, the
- * page's own headings on the right, and type set for reading.
+ * The shell every help page composes into: the public site's header over the shared docs
+ * layout, with the help tree pinned on the left opened at the page being read, the page's
+ * own headings on the right, type set for reading, and a compact footer beside the tree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,15 +14,15 @@ import type { Handle, RemixNode } from "remix/component";
 import { LifeBuoyIcon, TableIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
-import { DocsNav } from "@sdxc/ui";
+import { DocsFooter, DocsNav } from "@sdxc/ui";
 import { DocsLayout as Shell } from "@sdxc/ui/patterns";
 
 import { docHref, docsTree } from "~/resources/docs/registry";
 import MarketingLayout from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
-/** The public site header's height, which the sticky docs chrome and jumped-to headings sit below. */
-const HEADER_HEIGHT = "4rem";
+/** The site header: its 4rem bar and 1px rule, which the sticky docs chrome sits below. */
+const HEADER_HEIGHT = "calc(4rem + 1px)";
 
 namespace DocsLayout {
 	export interface Props {
@@ -32,6 +32,8 @@ namespace DocsLayout {
 		activePath: string;
 		/** The page's own headings; a page with fewer than two draws no rail. */
 		toc?: TableOfContents.Item[];
+		/** The page's closing pieces drawn in its footer above the site links, such as feedback. */
+		footer?: RemixNode;
 		children: RemixNode;
 	}
 }
@@ -39,10 +41,10 @@ namespace DocsLayout {
 /** Renders the site chrome, the help tree and the page between them. */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
-		let { activePath, children, isSignedIn, t, toc = [] } = handle.props;
+		let { activePath, children, footer, isSignedIn, t, toc = [] } = handle.props;
 
 		return (
-			<MarketingLayout t={t} isSignedIn={isSignedIn}>
+			<MarketingLayout t={t} isSignedIn={isSignedIn} siteFooter={false}>
 				<Shell
 					main={false}
 					dock="md"
@@ -64,6 +66,20 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					menuLabel={t("docs.nav.menu")}
 					drawerLabel={t("docs.nav.label")}
 					closeLabel={t("docs.nav.close")}
+					footer={
+						<DocsFooter
+							legal={t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}
+							links={[
+								{ label: t("app.name"), href: routes.home.href() },
+								{ label: t("docs.title"), href: routes.docs.index.href() },
+								{ label: t("docs.footer.plans"), href: docHref("plans") },
+								{ label: t("docs.nav.support"), href: routes.support.index.href() },
+							]}
+							linksLabel={t("landing.footer.label")}
+						>
+							{footer}
+						</DocsFooter>
+					}
 				>
 					<div data-slot="docs-prose" mix={[docsProse()]}>
 						{children}

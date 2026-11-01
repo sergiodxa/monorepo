@@ -89,6 +89,12 @@ namespace MarketingLayout {
 		t: Translate;
 		/** Whether the visitor is signed in, which turns the sign-in into a way back to reading. */
 		isSignedIn: boolean;
+		/**
+		 * Whether the site footer closes the page; a page drawing its own compact footer, as
+		 * the help pages do beside their sidebar, turns it off.
+		 * @default true
+		 */
+		siteFooter?: boolean;
 		children: RemixNode;
 	}
 }
@@ -100,7 +106,7 @@ namespace MarketingLayout {
  */
 export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 	return () => {
-		let { children, isSignedIn, t } = handle.props;
+		let { children, isSignedIn, siteFooter = true, t } = handle.props;
 
 		let featureLinks = FEATURE_SLUGS.map((slug) => ({
 			label: t(`landing.nav.features.${FEATURE_KEYS[slug]}`),
@@ -204,19 +210,23 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 
 				<main mix={[raw({ flexGrow: "1" })]}>{children}</main>
 
-				<SiteFooter
-					prefetch="intent"
-					label={t("landing.footer.label")}
-					brand={<BrandLink label={t("app.name")} />}
-					tagline={t("landing.footer.tagline")}
-					columns={[
-						{ title: t("landing.nav.features.label"), links: featureLinks },
-						{ title: t("landing.nav.useCases.label"), links: useCaseLinks },
-						{ title: t("landing.nav.compare.label"), links: comparisonLinks },
-						{ title: t("landing.nav.help"), links: helpLinks(t) },
-					]}
-					legal={<p>{t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}</p>}
-				/>
+				{siteFooter ? (
+					<SiteFooter
+						prefetch="intent"
+						label={t("landing.footer.label")}
+						brand={<BrandLink label={t("app.name")} />}
+						tagline={t("landing.footer.tagline")}
+						columns={[
+							{ title: t("landing.nav.features.label"), links: featureLinks },
+							{ title: t("landing.nav.useCases.label"), links: useCaseLinks },
+							{ title: t("landing.nav.compare.label"), links: comparisonLinks },
+							{ title: t("landing.nav.help"), links: helpLinks(t) },
+						]}
+						legal={
+							<p>{t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}</p>
+						}
+					/>
+				) : null}
 			</div>
 		);
 	};
