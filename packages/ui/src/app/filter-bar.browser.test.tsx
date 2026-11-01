@@ -179,6 +179,12 @@ describe("FilterBar", () => {
 		expect(sent).toHaveLength(0);
 	});
 
+	test("names the search input after the bar, so a list's / key can focus it", () => {
+		let host = mount("/monitors");
+
+		expect(host.querySelector('input[type="search"]')?.id).toBe("monitors-search");
+	});
+
 	test("submits the search on Enter through the form's default button", async () => {
 		let host = mount("/monitors?status=down");
 		let sent = captureSubmits(host);

@@ -103,7 +103,10 @@ export namespace FilterBar {
 		icon?: RemixNode;
 	}
 
-	/** The search field. */
+	/**
+	 * The search field. Its input's id is `<bar id>-search`, so a list's `/` key can focus it
+	 * (`<Table.Keys search="monitors-search" />`).
+	 */
 	export interface Search {
 		/** Search parameter it writes. @default "q" */
 		name?: string;
@@ -314,6 +317,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 						{search ? (
 							<SearchField aria-label={search.label} mix={[grow(), basis("10rem"), minIs(0)]}>
 								<SearchField.Input
+									id={`${id}-search`}
 									name={searchName}
 									form={formId}
 									defaultValue={query}
