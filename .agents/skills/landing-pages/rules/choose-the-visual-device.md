@@ -67,7 +67,7 @@ reduced motion.
 
 ```tsx
 import { BellIcon, ClockIcon } from "@sdxc/icons";
-import { FlowDiagram } from "@sdxc/ui/patterns";
+import { FlowDiagram } from "@sdxc/ui/landing";
 
 <FlowDiagram
 	aria-label="A flow monitor run"
@@ -111,7 +111,7 @@ motion, take every string as a prop and need an `aria-label`. Feed each one real
   bar that matters. For a figure the product measures: check intervals by how often a feed posts.
 
 ```tsx
-import { FanOutDiagram } from "@sdxc/ui/patterns";
+import { FanOutDiagram } from "@sdxc/ui/landing";
 
 <FanOutDiagram
 	aria-label="One fetch fills every follower's queue"

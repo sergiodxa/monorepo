@@ -40,7 +40,7 @@ Every layout or colour fix gets a regression test that fails on the old code (sw
 watch it fail). Name layout tests `*.browser.test.tsx` so they measure the real DOM in Chromium.
 
 - **Outline**: one `h1`, first, no skipped levels (the guide's "Test the outline";
-  `packages/ui/src/patterns/outline.test.tsx`).
+  `packages/ui/src/landing/outline.test.tsx`).
 - **Phone sheet**: a plain click on a sheet link closes it; a meta-click keeps it open
   (`apps/uptime/resources/layouts/marketing.browser.test.tsx`).
 - **No overflow at 320**: the stat strip (`apps/uptime/resources/views/marketing/solution.browser.test.tsx`)

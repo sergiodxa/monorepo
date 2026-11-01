@@ -6,8 +6,8 @@ tags: [components, patterns, reference, sdxc-ui]
 
 # Components Map
 
-Build every band from `@sdxc/ui/patterns` and `@sdxc/ui` before writing a custom one. When a section needs
-something the library lacks, build it in the app from `MarketingSection` plus `@sdxc/u` mixins, and propose
+Build every band from `@sdxc/ui/landing` and `@sdxc/ui` before writing a custom one. When a section needs
+something the library lacks, build it in the app from `LandingSection` plus `@sdxc/u` mixins, and propose
 upstreaming it only once a second page needs it.
 
 ## Why
@@ -20,21 +20,23 @@ upstreaming it only once a second page needs it.
 
 For any component `<name>` (kebab-case):
 
-1. **Source and JSDoc**: `packages/ui/src/patterns/<name>.tsx` or `packages/ui/src/components/<name>.tsx`.
+1. **Source and JSDoc**: `packages/ui/src/landing/<name>.tsx`, or `packages/ui/src/components/<name>.tsx`
+   for a general component.
    Props types live on the namespace (`LandingHero.Props`).
 2. **Behaviour guarantees**: `<name>.browser.test.tsx` and `<name>.test.tsx` beside it.
 3. **Live catalogue**: `https://sdxc.dev/api/ui/<name>`, with previews in
    `apps/sdxc-site/resources/components/previews/<name>.tsx` and `previews/<name>/*.tsx`.
 4. **Real use**: grep the demos and Uptime (`rg "<FeatureBand" apps/sdxc-site/resources/views/demos apps/uptime`).
-5. **Overviews**: sdxc.dev `/api/ui/landing-patterns`, `/api/ui/marketing-foundations`, `/api/ui/theming`,
+5. **Overviews**: sdxc.dev `/api/ui/landing-patterns`, `/api/ui/landing-foundations`, `/api/ui/theming`,
    and the guide `apps/sdxc-site/resources/docs/building-remix-apps/landing-pages.md`.
 
 ## Which piece for which section
 
-**Entry points**: bands, `CheckList` and `CheckRow` come from `@sdxc/ui/patterns`; primitives (`MarketingSection`, `MarketingHeader`,
-`Feature`, `StatStrip`, `LogoCloud`, `Split`, `CtaGroup`, `LinkButton`, `Accordion`, `DialogDismiss`) from
-`@sdxc/ui`; `marketingCtaChrome()`, `marketingSurface()`, `eyebrow()`, `themeScope()` from
-`@sdxc/ui/styles`; `viewReveal()` from `@sdxc/ui/animations`.
+**Entry points**: bands, band primitives (`LandingSection`, `LandingHeader`, `Feature`, `StatStrip`,
+`LogoCloud`, `Split`), `CheckList` and `CheckRow` come from `@sdxc/ui/landing`; general components
+(`CtaGroup`, `LinkButton`, `Accordion`, `DialogDismiss`) from `@sdxc/ui`; `landingCtaChrome()`,
+`landingSurface()`, `eyebrow()`, `themeScope()` from `@sdxc/ui/styles`; `viewReveal()` from
+`@sdxc/ui/animations`.
 
 | Section | Use | Key props and notes |
 | --- | --- | --- |
@@ -42,7 +44,7 @@ For any component `<name>` (kebab-case):
 | Hero | `LandingHero` | `title` (renders the `h1`), `eyebrow`/`eyebrowVariant`, `description`, `actions`, `note`, `proof`, `media`, `mediaPlacement` (`below`/`end`/`background`), `release`, `below`, `entrance`, `tone`, `align` |
 | Title highlight | `AccentText` | inside `title`; `variant` `color`/`swash`/`highlight`/`sheen`/`pill`/`chip` |
 | Proof strip | `ProofStrip`, `StatStrip`, `LogoCloud`, `LogoSentence` | logos only if real; `StatStrip size="display" variant="gap"` with four items |
-| Plain band | `MarketingSection` + `MarketingHeader` | `tone`, `spacing`, `inset`, `ruled`; header `eyebrow`, `description`, `layout="split"`, `action` |
+| Plain band | `LandingSection` + `LandingHeader` | `tone`, `spacing`, `inset`, `ruled`; header `eyebrow`, `description`, `layout="split"`, `action` |
 | Feature cards | `Feature.Grid` + `Feature` | `columns` (2 or 3; four across is `Bento columns={4}`), `variant` `cards`/`list`/`mosaic`; parts `.Icon`, `.Media`, `.Title`, `.Description`, `.Action` + `.Link`; `span` for wide cells |
 | Split | `FeatureBand layout="split"` or `Split` | `lean="media"`, `media`; a `<ul>` child renders as checked claims |
 | Steps | `StepList` | `variant="timeline"` inside a split; `StepList.Item title media` |
@@ -74,18 +76,18 @@ For any component `<name>` (kebab-case):
 ```tsx
 import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
 
-<MarketingSection tone="tinted" mix={[viewReveal()]}>
-	<MarketingHeader eyebrow="Regions" description="…">Checked from nine regions</MarketingHeader>
+<LandingSection tone="tinted" mix={[viewReveal()]}>
+	<LandingHeader eyebrow="Regions" description="…">Checked from nine regions</LandingHeader>
 	<div mix={[grid(), gridTemplate({ columns: repeat(3, 1) }), gap(4)]}>…</div>
-</MarketingSection>
+</LandingSection>
 ```
 
-`MarketingSection` gives the container, spacing, tone and heading level; fill it with `@sdxc/u` mixins.
+`LandingSection` gives the container, spacing, tone and heading level; fill it with `@sdxc/u` mixins.
 Prefer `@sdxc/ui` components over raw mixins, and `@sdxc/u` utilities over `raw({...})`.
 
 ## Rules
 
-1. Reach for a pattern first; build a custom band on `MarketingSection` only when none fits.
+1. Reach for a pattern first; build a custom band on `LandingSection` only when none fits.
 2. Read a component's source JSDoc and browser tests before using an unfamiliar prop.
 3. Check the live catalogue page for working examples.
-4. Patterns are imports from `@sdxc/ui/patterns`; only `components/` can be copied with `sdxc ui add`.
+4. Patterns are imports from `@sdxc/ui/landing`; only `components/` can be copied with `sdxc ui add`.

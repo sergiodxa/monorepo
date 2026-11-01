@@ -12,7 +12,8 @@ package once two sites need it, not in one app.
 
 ## Where to learn a component
 
-1. Source and JSDoc: `packages/ui/src/{components,patterns}/<name>.tsx`; props on the namespace.
+1. Source and JSDoc: `packages/ui/src/docs/<name>.tsx` (general pieces in `src/components/`); props on
+   the namespace.
 2. Guarantees: `<name>.browser.test.tsx` beside it.
 3. Live catalogue: `https://sdxc.dev/api/ui/<name>` (listed under **Docs** in the catalogue sidebar).
 4. Real use: `rg "<Name" apps/sdxc-site apps/uptime apps/reader`.
@@ -21,31 +22,31 @@ package once two sites need it, not in one app.
 
 | Need | Use | Import |
 | --- | --- | --- |
-| The page shell: sidebar pinned header-to-viewport-foot, article measure, heading rail, footer slot, phone drawer and sticky bar | `DocsLayout` | `@sdxc/ui/patterns` |
-| Compact page footer over the article and rail: byline, feedback, edit link, one row of legal and site links | `DocsFooter` (into `DocsLayout footer`) | `@sdxc/ui` |
-| Sidebar: sections, folding groups, badges, current page scrolled into view, title filter, support footer | `DocsNav` (data: `DocsTree`) | `@sdxc/ui`, `@sdxc/ui/utils` |
-| "On this page" rail or phone bar with a sliding marker that reaches the last section | `TableOfContents` | `@sdxc/ui` |
-| Breadcrumb, h1, lead, plan notice, updated date, actions | `DocsPageHeader` | `@sdxc/ui` |
-| "Copy page" split button and Open-in menu | `PageActions` | `@sdxc/ui` |
-| Heading with `#` link, scroll margin, target flash | `AnchorHeading` | `@sdxc/ui` |
-| Hand-written next steps | `NextSteps` | `@sdxc/ui` |
-| Previous / next | `DocsPager` + `findNeighbours(tree, path, { boundary })` | `@sdxc/ui`, `@sdxc/ui/utils` |
-| "Was this helpful?" | `DocsFeedback` | `@sdxc/ui` |
-| Titled code with marked lines and copy | `CodeBlock` | `@sdxc/ui` |
-| Synced, remembered tabs over code | `CodeTabs`; install lines: `InstallCommand` | `@sdxc/ui` |
-| Note, tip, warning, danger | `Callout` | `@sdxc/ui` |
-| Numbered procedure | `Steps`, `Steps.Item` | `@sdxc/ui` |
-| Project layout | `FileTree` | `@sdxc/ui` |
-| Options and API fields, nested fields expanding | `PropsTable` | `@sdxc/ui` |
-| A control's name, a click path, a plan requirement (product docs) | `UiLabel`, `UiPath`, `PlanNotice` | `@sdxc/ui` |
-| Docs home routing by task | `DocsHub` | `@sdxc/ui/patterns` |
-| Docs 404 that searches | `DocsNotFound` + `searchQueryFromPath(path)` | `@sdxc/ui/patterns` |
+| The page shell: sidebar pinned header-to-viewport-foot, article measure, heading rail, footer slot, phone drawer and sticky bar | `DocsLayout` | `@sdxc/ui/docs` |
+| Compact page footer over the article and rail: byline, feedback, edit link, one row of legal and site links | `DocsFooter` (into `DocsLayout footer`) | `@sdxc/ui/docs` |
+| Sidebar: sections, folding groups, badges, current page scrolled into view, title filter, support footer | `DocsNav` (data: `DocsTree`) | `@sdxc/ui/docs` |
+| "On this page" rail or phone bar with a sliding marker that reaches the last section | `TableOfContents` | `@sdxc/ui/docs` |
+| Breadcrumb, h1, lead, plan notice, updated date, actions | `DocsPageHeader` | `@sdxc/ui/docs` |
+| "Copy page" split button and Open-in menu | `PageActions` | `@sdxc/ui/docs` |
+| Heading with `#` link, scroll margin, target flash | `AnchorHeading` | `@sdxc/ui/docs` |
+| Hand-written next steps | `NextSteps` | `@sdxc/ui/docs` |
+| Previous / next | `DocsPager` + `findNeighbours(tree, path, { boundary })` | `@sdxc/ui/docs` |
+| "Was this helpful?" | `DocsFeedback` | `@sdxc/ui/docs` |
+| Titled code with marked lines and copy | `CodeBlock` | `@sdxc/ui/docs` |
+| Synced, remembered tabs over code | `CodeTabs`; install lines: `InstallCommand` | `@sdxc/ui/docs` |
+| Note, tip, warning, danger | `Callout` | `@sdxc/ui/docs` |
+| Numbered procedure | `Steps`, `Steps.Item` | `@sdxc/ui/docs` |
+| Project layout | `FileTree` | `@sdxc/ui/docs` |
+| Options and API fields, nested fields expanding | `PropsTable` | `@sdxc/ui/docs` |
+| A control's name, a click path, a plan requirement (product docs) | `UiLabel`, `UiPath`, `PlanNotice` | `@sdxc/ui/docs` |
+| Docs home routing by task | `DocsHub` | `@sdxc/ui/docs` |
+| Docs 404 that searches | `DocsNotFound` + `searchQueryFromPath(path)` | `@sdxc/ui/docs` |
 | Keys | `Keyboard`, one per key (it draws its children as one cap) | `@sdxc/ui` |
 | Search match tint | `Highlight` | `@sdxc/ui` |
 
-Islands the browser entry must map in `PACKAGE_MODULES`: `@sdxc/ui/table-of-contents`,
-`@sdxc/ui/docs-nav-tools`, `@sdxc/ui/copy-button`, `@sdxc/ui/code-tabs-sync`,
-`@sdxc/ui/page-actions`, `@sdxc/ui/dialog-dismiss`. Everything else is server HTML.
+Islands the browser entry must map in `PACKAGE_MODULES`: `@sdxc/ui/docs/table-of-contents`,
+`@sdxc/ui/docs/docs-nav-tools`, `@sdxc/ui/docs/copy-button`, `@sdxc/ui/docs/code-tabs-sync`,
+`@sdxc/ui/docs/page-actions`, `@sdxc/ui/dialog-dismiss`. Everything else is server HTML.
 
 ## Contracts worth knowing
 

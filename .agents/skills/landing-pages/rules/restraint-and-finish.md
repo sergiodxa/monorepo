@@ -31,8 +31,8 @@ review of a page that otherwise looked done.
 
 - **Figures**: tabular numerals, amounts right-aligned, columns aligned across rows with one grid and
   `subgrid`.
-- **Radii**: inner corners smaller than outer ones (`--ui-marketing-card-radius-inner` vs `-outer`).
-- **Lines**: hairlines (`--ui-marketing-hairline`) instead of opaque borders.
+- **Radii**: inner corners smaller than outer ones (`--ui-landing-card-radius-inner` vs `-outer`).
+- **Lines**: hairlines (`--ui-landing-hairline`) instead of opaque borders.
 - **Text**: card titles `text-wrap: balance`, notes `pretty`, no one-word widows in headings, an 11px floor
   inside mockups.
 - **Small signs of life**: a release pin under the hero CTAs, a status dot, a titled code block with a copy
@@ -47,8 +47,8 @@ place them. Every band has an eyebrow in one style.
 items in 2 columns. Change the content count before reaching for a layout trick. Stat strips carry four
 figures. Cards in a row share a height and a title baseline.
 
-**CTAs**: one primary action, repeated in header, hero and close; one shape (`--ui-marketing-cta-radius`)
-for every button through `marketingCtaChrome()`; secondaries are `variant="surface"` or an arrow link,
+**CTAs**: one primary action, repeated in header, hero and close; one shape (`--ui-landing-cta-radius`)
+for every button through `landingCtaChrome()`; secondaries are `variant="surface"` or an arrow link,
 never grey; card actions pinned to the foot with `Feature.Action` + `Feature.Link`; full width at 375.
 
 **Hover**: changes colour, never size, padding or border; arrows nudge 2px by `transform`. Hover fills are

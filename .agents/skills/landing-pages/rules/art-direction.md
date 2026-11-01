@@ -44,15 +44,15 @@ Never style components one by one; set the direction on the page root.
 const TOKENS = {
 	"--ui-font-display": SERIF,
 	"--ui-font-sans": SERIF,
-	"--ui-marketing-display-weight": "400",
-	"--ui-marketing-display-tracking": "-0.02em",
-	"--ui-marketing-cta-radius": "0",
+	"--ui-landing-display-weight": "400",
+	"--ui-landing-display-tracking": "-0.02em",
+	"--ui-landing-cta-radius": "0",
 	"--ui-button-radius": "0",
-	"--ui-marketing-radius-surface": "0",
-	"--ui-marketing-card-radius-outer": "0",
-	"--ui-marketing-plan-lift": "0 0 #0000",
+	"--ui-landing-radius-surface": "0",
+	"--ui-landing-card-radius-outer": "0",
+	"--ui-landing-plan-lift": "0 0 #0000",
 	"--ui-shadow-float": "none",
-	"--ui-marketing-eyebrow-font": SERIF,
+	"--ui-landing-eyebrow-font": SERIF,
 } as const;
 
 <DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>…</DemoTheme>
@@ -66,11 +66,11 @@ fonts) declares the ones with a page-wide default; the rest are hooks a componen
 `var(--x, fallback)`, so they do nothing until you set them. Grep `packages/ui/src` for a name to see what
 reads it.
 
-- **Declared in theme.css**: `--ui-font-display`, `--ui-marketing-display-*` (including `-display-max`),
+- **Declared in theme.css**: `--ui-font-display`, `--ui-landing-display-*` (including `-display-max`),
   `-chapter-*`, `-lead-*`, `-hero-lead-*`, `-cta-radius`, `-cta-weight`, `-radius-surface`, `-hairline`,
   `-measure`, `-gutter`, `-section-space*`, `-header-space`, `-header-height`, `-logo-height`;
   `--ui-shadow-surface/-stage/-control/-ring/-ring-hover`; `--ui-surface-raised`. `--ui-font-sans/-mono` come from `@sdxc/u`'s theme.
-- **Hooks**: `--ui-button-radius`, `--ui-marketing-radius-frame`, `-card-radius-outer/-inner`,
+- **Hooks**: `--ui-button-radius`, `--ui-landing-radius-frame`, `-card-radius-outer/-inner`,
   `-band-radius`, `-plan-radius`, `-plan-lift`, `-band-tint`, `-band-glow`, `-brand-band`,
   `-band-gradient`, `-eyebrow-color/-font/-weight/-transform/-tracking`, `-accent-color`, and
   `--ui-shadow-float`.
@@ -96,7 +96,7 @@ sets the eyebrow tokens there).
 ## Rules
 
 1. Name the direction in two or three words before building, and pick the closest reference.
-2. Set it once through palette and `--ui-marketing-*` tokens; never restyle components one by one.
+2. Set it once through palette and `--ui-landing-*` tokens; never restyle components one by one.
 3. Read a brand's real colours from its live site; never guess.
 4. Use one accent colour, for meaning; keep status colours distinct from it.
 5. Review dark mode as a separate design pass.

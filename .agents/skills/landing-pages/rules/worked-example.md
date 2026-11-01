@@ -99,11 +99,11 @@ but quieter, with fewer emphasis bands.
 
 ```ts
 const TOKENS = {
-	"--ui-marketing-display-weight": "600",
-	"--ui-marketing-display-tracking": "-0.03em",
-	"--ui-marketing-eyebrow-font": "var(--ui-font-mono)",
-	"--ui-marketing-eyebrow-transform": "uppercase",
-	"--ui-marketing-cta-radius": "0.5rem",
+	"--ui-landing-display-weight": "600",
+	"--ui-landing-display-tracking": "-0.03em",
+	"--ui-landing-eyebrow-font": "var(--ui-font-mono)",
+	"--ui-landing-eyebrow-transform": "uppercase",
+	"--ui-landing-cta-radius": "0.5rem",
 	"--ui-button-radius": "0.5rem",
 };
 ```

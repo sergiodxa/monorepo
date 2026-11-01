@@ -86,7 +86,7 @@ last updated, a 404 that searches.
 
 1. **Study** the reference for what you're building and note the moment to match.
 2. **Plan the page**: its kind, its title as a task or name, its sections as questions, its next steps.
-3. **Build** from `@sdxc/ui`; build missing pieces in the package, not the app, once two sites need them.
+3. **Build** from `@sdxc/ui/docs` and the general `@sdxc/ui`; build missing pieces in the package, not the app, once two sites need them.
 4. **Use it like a reader** at six widths in both themes, then turn each fix into a browser test
    (@rules/verify-like-a-reader.md).
 

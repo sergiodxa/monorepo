@@ -58,7 +58,7 @@ render for `landing.` text.
 ## Heading levels in custom wrappers
 
 Only sections publish a heading level. Titles inside `Rails` or a plain `div` fall back to `h1` unless the
-wrapper sits in `HeadingScope level={2}`. Never wrap a `MarketingSection` in a `HeadingScope`.
+wrapper sits in `HeadingScope level={2}`. Never wrap a `LandingSection` in a `HeadingScope`.
 
 ## Overflow at 320px
 
