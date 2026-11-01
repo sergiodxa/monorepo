@@ -9,7 +9,8 @@ import { FileTextIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
-import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";

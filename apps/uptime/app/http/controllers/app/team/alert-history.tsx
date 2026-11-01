@@ -11,7 +11,8 @@ import { formatDateTime } from "@sdxc/dates";
 import { BellIcon, HistoryIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { fontSize } from "@sdxc/u/typography";
-import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";

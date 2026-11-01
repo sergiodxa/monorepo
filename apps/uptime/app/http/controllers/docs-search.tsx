@@ -16,7 +16,8 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Badge, DocsPageHeader, Highlight, NextSteps } from "@sdxc/ui";
+import { Badge, Highlight } from "@sdxc/ui";
+import { DocsPageHeader, NextSteps } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import type { DocKind } from "~/app/services/docs";

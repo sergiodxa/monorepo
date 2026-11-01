@@ -18,7 +18,8 @@ import { media } from "@sdxc/u/responsive";
 import { is, m, maxIs, mi, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { font, fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
-import { AlertDialog, Button, Description, Empty, Select, Switch, Table } from "@sdxc/ui";
+import { AlertDialog, Button, Description, Select, Switch } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { OptionalEmail } from "~/database/schema";

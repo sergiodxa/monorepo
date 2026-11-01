@@ -34,8 +34,8 @@ import { bs, is, minBs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
 import { DialogDismiss } from "@sdxc/ui";
-import { SiteFooter, SiteHeader } from "@sdxc/ui/patterns";
-import { marketingContainer } from "@sdxc/ui/styles";
+import { SiteFooter, SiteHeader } from "@sdxc/ui/landing";
+import { landingContainer } from "@sdxc/ui/styles";
 
 import { BRAND_MARK_PATHS } from "~/config/brand";
 import AuthCta from "~/resources/components/marketing/auth-cta";
@@ -47,11 +47,11 @@ import routes from "~/routes/web";
  * the shared marketing defaults for everything else. Pages inside the layout inherit these.
  */
 const MARKETING_TOKENS = {
-	"--ui-marketing-eyebrow-font": "var(--ui-font-mono)",
-	"--ui-marketing-eyebrow-weight": "500",
-	"--ui-marketing-eyebrow-transform": "uppercase",
-	"--ui-marketing-eyebrow-tracking": "0.08em",
-	"--ui-marketing-eyebrow-color": "var(--ui-brand-fg)",
+	"--ui-landing-eyebrow-font": "var(--ui-font-mono)",
+	"--ui-landing-eyebrow-weight": "500",
+	"--ui-landing-eyebrow-transform": "uppercase",
+	"--ui-landing-eyebrow-tracking": "0.08em",
+	"--ui-landing-eyebrow-color": "var(--ui-brand-fg)",
 } as const;
 
 namespace MarketingLayout {
@@ -324,14 +324,14 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							<div
 								data-slot="marketing-sheet-cta"
 								mix={[
-									marketingContainer(),
+									landingContainer(),
 									raw({
 										display: "grid",
 										boxSizing: "border-box",
 										inlineSize: "100%",
 										paddingBlockStart: "1rem",
 										paddingBlockEnd: "max(1rem, env(safe-area-inset-bottom))",
-										borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+										borderBlockStart: "1px solid var(--ui-landing-hairline)",
 									}),
 									when(
 										"& :is(form, a, button)",

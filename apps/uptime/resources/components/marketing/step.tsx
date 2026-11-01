@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { StepList } from "@sdxc/ui/patterns";
+import { StepList } from "@sdxc/ui/landing";
 
 namespace MarketingStep {
 	export interface Props {

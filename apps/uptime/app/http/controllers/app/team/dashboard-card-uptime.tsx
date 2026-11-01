@@ -8,7 +8,7 @@
  */
 
 import { isFailure } from "@sdxc/result";
-import { Empty } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 

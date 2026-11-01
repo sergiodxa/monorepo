@@ -14,7 +14,8 @@ import { intl } from "@sdxc/i18n/ui";
 import { PlayIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { m } from "@sdxc/u/size";
-import { Button, Toast } from "@sdxc/ui";
+import { Button } from "@sdxc/ui";
+import { Toast } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
 

@@ -46,18 +46,15 @@ import {
 	Card,
 	Checkbox,
 	Description,
-	Feature,
 	FieldError,
 	Heading,
 	HeadingScope,
 	LinkButton,
-	MarketingHeader,
-	MarketingSection,
 	Text,
 	TextField,
 } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
-import { ClosingCta } from "@sdxc/ui/patterns";
+import { ClosingCta, Feature, LandingHeader, LandingSection } from "@sdxc/ui/landing";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
@@ -585,14 +582,14 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 			}}
 		>
 			<MarketingLayout isSignedIn={getViewer() !== null} {...chrome}>
-				<MarketingSection tone="tinted" spacing="compact" level={1} mix={[...firstScreen]}>
+				<LandingSection tone="tinted" spacing="compact" level={1} mix={[...firstScreen]}>
 					<div mix={[is("full"), mi("auto"), maxIs("720px")]}>
-						<MarketingHeader
+						<LandingHeader
 							align="center"
 							description={probe === undefined ? t("page.trial.intro", { days }) : undefined}
 						>
 							{t("page.trial.heading", { days })}
-						</MarketingHeader>
+						</LandingHeader>
 
 						{probe !== undefined ? null : (
 							<Card mix={[mbs(8)]}>
@@ -726,16 +723,16 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 							</p>
 						)}
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				{probe === undefined || monitorOffer !== undefined ? null : (
-					<MarketingSection mix={[viewReveal()]}>
-						<MarketingHeader
+					<LandingSection mix={[viewReveal()]}>
+						<LandingHeader
 							align="center"
 							description={t("page.trial.benefits.description", { days })}
 						>
 							{t("page.trial.benefits.title")}
-						</MarketingHeader>
+						</LandingHeader>
 						<Feature.Grid variant="list" columns={2}>
 							{benefits.map((point) => (
 								<Feature key={point.title}>
@@ -745,14 +742,14 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 								</Feature>
 							))}
 						</Feature.Grid>
-					</MarketingSection>
+					</LandingSection>
 				)}
 
 				{probe === undefined ? null : (
-					<MarketingSection tone="tinted" mix={[viewReveal()]}>
-						<MarketingHeader align="center" description={t("page.trial.more.description")}>
+					<LandingSection tone="tinted" mix={[viewReveal()]}>
+						<LandingHeader align="center" description={t("page.trial.more.description")}>
 							{t("page.trial.more.title")}
-						</MarketingHeader>
+						</LandingHeader>
 						<Feature.Grid columns={3}>
 							{beyondHttp.map((point) => (
 								<Feature key={point.title}>
@@ -762,7 +759,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 								</Feature>
 							))}
 						</Feature.Grid>
-					</MarketingSection>
+					</LandingSection>
 				)}
 
 				{probe === undefined ? null : (

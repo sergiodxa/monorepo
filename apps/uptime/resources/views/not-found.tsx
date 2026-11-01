@@ -14,7 +14,7 @@ import { flex, flexCol } from "@sdxc/u/layout";
 import { m, maxIs, minBs } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
-import { Empty } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 
 import routes from "~/routes/web";
 

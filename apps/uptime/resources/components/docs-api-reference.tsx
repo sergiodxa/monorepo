@@ -19,7 +19,8 @@ import { at } from "@sdxc/u/responsive";
 import { m, minIs, p, pbs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
-import { CodeBlock, CodeTabs, CopyButton, Disclosure, PropsTable } from "@sdxc/ui";
+import { Disclosure } from "@sdxc/ui";
+import { CodeBlock, CodeTabs, CopyButton, PropsTable } from "@sdxc/ui/docs";
 
 import type { FieldRow, OperationReference } from "~/app/http/openapi/reference";
 import type { HandFieldRow } from "~/app/services/docs-api";

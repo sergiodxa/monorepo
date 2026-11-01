@@ -10,7 +10,7 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
-import { EventTicker } from "@sdxc/ui/patterns";
+import { EventTicker } from "@sdxc/ui/landing";
 
 import { FLOW_INTERVALS_SECONDS } from "~/config/pricing";
 

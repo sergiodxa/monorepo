@@ -10,7 +10,7 @@
 import type { Translate } from "@sdxc/i18n";
 
 import { raw } from "@sdxc/u/general";
-import { DocsHub } from "@sdxc/ui/patterns";
+import { DocsHub } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import type { DocSection } from "~/app/services/docs";

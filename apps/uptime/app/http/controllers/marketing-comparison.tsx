@@ -15,17 +15,21 @@ import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, hstack, inlineFlex, items, justify, vstack } from "@sdxc/u/layout";
 import { is, maxIs, mbs, mi } from "@sdxc/u/size";
 import { font, text, textAlign, weight } from "@sdxc/u/typography";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, Table } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
+import { Table } from "@sdxc/ui/app";
 import {
 	AccentText,
 	CheckList,
 	CheckRow,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -227,14 +231,14 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					}
 				/>
 
-				<MarketingSection id="compare" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="compare" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.comparison.tableBadge")}
 						description={summary}
 						align="center"
 					>
 						{t("landing.comparison.tableTitle", { competitor })}
-					</MarketingHeader>
+					</LandingHeader>
 
 					<Table.Container>
 						<Table aria-label={t("landing.comparison.tableLabel", { competitor })}>
@@ -256,12 +260,12 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							</Table.Body>
 						</Table>
 					</Table.Container>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("landing.comparison.switchBadge")} align="center">
+				<LandingSection tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("landing.comparison.switchBadge")} align="center">
 						{t("landing.comparison.whyTeamsSwitchTitle")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={columnsFor(features.length)}>
 						{features.map((feature) => (
 							<Feature key={feature.title}>
@@ -275,17 +279,17 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				{honestTake && honestTake.length > 0 ? (
-					<MarketingSection mix={[viewReveal()]}>
-						<MarketingHeader
+					<LandingSection mix={[viewReveal()]}>
+						<LandingHeader
 							eyebrow={t("landing.comparison.honestTake.badge")}
 							description={t("landing.comparison.honestTake.description", { competitor })}
 							align="center"
 						>
 							{t("landing.comparison.honestTake.title", { competitor })}
-						</MarketingHeader>
+						</LandingHeader>
 						<Feature.Grid variant="list" columns={columnsFor(honestTake.length)}>
 							{honestTake.map((item) => (
 								<Feature key={item.title}>
@@ -302,14 +306,14 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 								</Feature>
 							))}
 						</Feature.Grid>
-					</MarketingSection>
+					</LandingSection>
 				) : null}
 
 				{perfectFor ? (
-					<MarketingSection tone="tinted" inset spacing="compact" mix={[viewReveal()]}>
-						<MarketingHeader description={perfectFor.description} align="center">
+					<LandingSection tone="tinted" inset spacing="compact" mix={[viewReveal()]}>
+						<LandingHeader description={perfectFor.description} align="center">
 							{perfectFor.title}
-						</MarketingHeader>
+						</LandingHeader>
 						{perfectFor.highlights.length > 0 ? (
 							<CheckList orientation="horizontal" mix={[justify("center")]}>
 								{perfectFor.highlights.map((item) => (
@@ -317,18 +321,18 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 								))}
 							</CheckList>
 						) : null}
-					</MarketingSection>
+					</LandingSection>
 				) : null}
 
 				{scenarios.length > 0 ? (
-					<MarketingSection id="pricing" mix={[viewReveal()]}>
-						<MarketingHeader
+					<LandingSection id="pricing" mix={[viewReveal()]}>
+						<LandingHeader
 							eyebrow={t("landing.comparison.pricing.badge")}
 							description={t("landing.comparison.pricing.description")}
 							align="center"
 						>
 							{t("landing.comparison.pricing.title")}
-						</MarketingHeader>
+						</LandingHeader>
 
 						<Table.Container>
 							<Table aria-label={t("landing.comparison.pricing.tableLabel", { competitor })}>
@@ -364,7 +368,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 						<p mix={[mbs(6), textAlign("center"), text("sm"), fg("neutral.muted")]}>
 							{t("landing.comparison.pricing.footnote", { competitor })}
 						</p>
-					</MarketingSection>
+					</LandingSection>
 				) : null}
 
 				<FeatureBand
@@ -395,7 +399,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 					<FaqAccordion items={faqs.map((faq) => ({ ...faq }))} />
 				</FaqBand>
 
-				<MarketingSection spacing="compact" mix={[viewReveal()]}>
+				<LandingSection spacing="compact" mix={[viewReveal()]}>
 					<div mix={[vstack({ gap: 4, align: "center" })]}>
 						<p mix={[text("sm"), textAlign("center")]}>{t("landing.comparison.othersTitle")}</p>
 						<div mix={[hstack({ gap: 3 }), flexWrap(), justify("center")]}>
@@ -412,7 +416,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 							))}
 						</div>
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				<ClosingBand
 					id="start"

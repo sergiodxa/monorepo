@@ -132,7 +132,7 @@ function LatencyChart() {
 							x2={CHART.width}
 							y1={CHART.height * line}
 							y2={CHART.height * line}
-							stroke="var(--ui-marketing-hairline, var(--ui-neutral-border))"
+							stroke="var(--ui-landing-hairline, var(--ui-neutral-border))"
 							stroke-dasharray="3 5"
 						/>
 					))}

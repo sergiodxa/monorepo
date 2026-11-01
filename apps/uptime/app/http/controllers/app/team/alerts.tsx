@@ -11,7 +11,8 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textDecoration } from "@sdxc/u/typography";
-import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { SelectAlert } from "~/database/schema";

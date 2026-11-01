@@ -9,7 +9,7 @@
 
 import { Trans } from "@sdxc/i18n/ui";
 import { isFailure } from "@sdxc/result";
-import { Empty } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";

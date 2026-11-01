@@ -10,7 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { ArrowRightIcon } from "@sdxc/icons";
-import { ClosingCta } from "@sdxc/ui/patterns";
+import { ClosingCta } from "@sdxc/ui/landing";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
 

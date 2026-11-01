@@ -10,7 +10,7 @@
 import type { RenderResult } from "remix/component/test";
 
 import { createTranslator } from "@sdxc/i18n";
-import { Feature } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";

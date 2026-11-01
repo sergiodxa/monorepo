@@ -47,7 +47,8 @@ import {
 	weight,
 	wordBreak,
 } from "@sdxc/u/typography";
-import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
+import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 

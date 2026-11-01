@@ -12,7 +12,8 @@ import type { Handle, RemixNode } from "remix/component";
 import { hstack } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Feature, HeadingScope } from "@sdxc/ui";
+import { HeadingScope } from "@sdxc/ui";
+import { Feature } from "@sdxc/ui/landing";
 
 namespace MarketingFeatureRow {
 	export interface Props {

@@ -43,15 +43,7 @@ import {
 import { media } from "@sdxc/u/responsive";
 import { bs, is, mbs, mi, maxIs } from "@sdxc/u/size";
 import { nowrap, text, textAlign } from "@sdxc/u/typography";
-import {
-	Button,
-	Feature,
-	LinkButton,
-	MarketingHeader,
-	MarketingSection,
-	StatStrip,
-	TextField,
-} from "@sdxc/ui";
+import { Button, LinkButton, TextField } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -59,9 +51,13 @@ import {
 	CheckRow,
 	CodeStage,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
-} from "@sdxc/ui/patterns";
+	LandingSection,
+	StatStrip,
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -434,7 +430,7 @@ export default createAction(routes.home, async (ctx) => {
 					media={<ProductMockup area="dashboard" t={t} />}
 				/>
 
-				<MarketingSection spacing="compact" mix={[viewReveal()]}>
+				<LandingSection spacing="compact" mix={[viewReveal()]}>
 					<StatStrip size="display" variant="gap" align="center">
 						{PRODUCT_FIGURES.map((figure) => (
 							<StatStrip.Item key={figure.label} label={figure.label}>
@@ -442,12 +438,12 @@ export default createAction(routes.home, async (ctx) => {
 							</StatStrip.Item>
 						))}
 					</StatStrip>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="try" spacing="compact" tone="tinted" inset mix={[viewReveal()]}>
-					<MarketingHeader description={t("landing.try.description")} align="center">
+				<LandingSection id="try" spacing="compact" tone="tinted" inset mix={[viewReveal()]}>
+					<LandingHeader description={t("landing.try.description")} align="center">
 						{t("landing.try.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<form
 						method="post"
 						action={routes.trial.check.action.href()}
@@ -476,15 +472,15 @@ export default createAction(routes.home, async (ctx) => {
 							{t("landing.try.submit")}
 						</Button>
 					</form>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="benefits" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="benefits" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.benefits.badge")}
 						description={t("landing.benefits.description")}
 					>
 						{t("landing.benefits.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{BENEFITS.map((benefit) => (
 							<Feature key={benefit.title}>
@@ -494,16 +490,16 @@ export default createAction(routes.home, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="features" tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="features" tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.features.badge")}
 						description={t("landing.features.description")}
 						layout="split"
 					>
 						{t("landing.features.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={3}>
 						{FEATURE_LINKS.map((feature) => (
 							<Feature key={feature.href} href={feature.href}>
@@ -518,7 +514,7 @@ export default createAction(routes.home, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					id="agents"
@@ -607,13 +603,13 @@ export default createAction(routes.home, async (ctx) => {
 					</div>
 				</FeatureBand>
 
-				<MarketingSection mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.completeFeatureSet.badge")}
 						description={t("landing.completeFeatureSet.description")}
 					>
 						{t("landing.completeFeatureSet.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={3}>
 						{CAPABILITIES.map((capability) => (
 							<Feature key={capability.title}>
@@ -623,16 +619,16 @@ export default createAction(routes.home, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="use-cases" tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="use-cases" tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.useCases.badge")}
 						description={t("landing.useCases.description")}
 						layout="split"
 					>
 						{t("landing.useCases.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={3}>
 						{USE_CASE_LINKS.map((useCase) => (
 							<Feature key={useCase.href} href={useCase.href}>
@@ -663,19 +659,19 @@ export default createAction(routes.home, async (ctx) => {
 							))}
 						</div>
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="pricing" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="pricing" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.pricing.badge")}
 						description={t("landing.pricing.description")}
 					>
 						{t("landing.pricing.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<IntlProvider intl={ctx.intl}>
 						<PricingCalculator initialFrequencies={[10]} />
 					</IntlProvider>
-				</MarketingSection>
+				</LandingSection>
 
 				<FaqBand
 					id="faq"

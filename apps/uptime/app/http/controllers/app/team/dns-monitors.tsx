@@ -15,7 +15,8 @@ import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textDecoration } from "@sdxc/u/typography";
-import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { getTableName } from "remix/data-table";
 import { createAction } from "remix/router";
 

@@ -15,7 +15,8 @@ import { ChevronDownIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Accordion, Callout, CodeBlock, Keyboard, Steps, UiLabel, UiPath } from "@sdxc/ui";
+import { Accordion, Keyboard } from "@sdxc/ui";
+import { Callout, CodeBlock, Steps, UiLabel, UiPath } from "@sdxc/ui/docs";
 
 import type { MockupArea } from "~/resources/components/marketing/product-mockups";
 

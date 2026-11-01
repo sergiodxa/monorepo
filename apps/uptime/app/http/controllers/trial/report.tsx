@@ -20,8 +20,8 @@ import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, m, maxIs, mi, minIs, pi } from "@sdxc/u/size";
 import { fontSize, weight, wordBreak } from "@sdxc/u/typography";
-import { Card, LinkButton, MarketingHeader, MarketingSection, Text } from "@sdxc/ui";
-import { ClosingCta } from "@sdxc/ui/patterns";
+import { Card, LinkButton, Text } from "@sdxc/ui";
+import { ClosingCta, LandingHeader, LandingSection } from "@sdxc/ui/landing";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -307,9 +307,9 @@ export default createAction(routes.trial.report, async (ctx) => {
 			}}
 		>
 			<MarketingLayout isSignedIn={false} {...chrome}>
-				<MarketingSection tone="tinted" spacing="compact" level={1}>
+				<LandingSection tone="tinted" spacing="compact" level={1}>
 					<div mix={[is("full"), mi("auto"), maxIs("720px")]}>
-						<MarketingHeader
+						<LandingHeader
 							eyebrow={t("page.trial.report.eyebrow", { days: TRIAL_WATCH_DURATION_DAYS })}
 							description={t("page.trial.report.period", {
 								start: formatDate(new Date(period.from), { locale, timeZone: REPORT_ZONE }),
@@ -319,11 +319,11 @@ export default createAction(routes.trial.report, async (ctx) => {
 							parts={{ title: [wordBreak("break-all")] }}
 						>
 							{watch.url}
-						</MarketingHeader>
+						</LandingHeader>
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection spacing="compact">
+				<LandingSection spacing="compact">
 					<div mix={[is("full"), mi("auto"), maxIs("720px"), vstack({ gap: 6 })]}>
 						<Card>
 							<Card.Header>
@@ -381,7 +381,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 							</Card>
 						)}
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				<ClosingCta
 					tone="brand"

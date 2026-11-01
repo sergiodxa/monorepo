@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { BellIcon, ClockIcon } from "@sdxc/icons";
-import { FlowDiagram as RunDiagram } from "@sdxc/ui/patterns";
+import { FlowDiagram as RunDiagram } from "@sdxc/ui/landing";
 
 /** The lines of the documented sign-in flow each step shows, in run order. */
 const STEP_CODE = [

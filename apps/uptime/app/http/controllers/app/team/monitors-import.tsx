@@ -9,7 +9,8 @@
 
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
-import { Button, Table, TextArea } from "@sdxc/ui";
+import { Button, TextArea } from "@sdxc/ui";
+import { Table } from "@sdxc/ui/app";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";

@@ -29,7 +29,8 @@ import { dark } from "@sdxc/u/responsive";
 import { m, maxIs, mbe, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration, weight } from "@sdxc/u/typography";
-import { Badge, Empty } from "@sdxc/ui";
+import { Badge } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

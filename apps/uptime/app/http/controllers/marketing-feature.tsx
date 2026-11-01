@@ -14,7 +14,7 @@ import { redirect } from "@sdxc/http/response";
 import { ArrowRightIcon, Icon } from "@sdxc/icons";
 import { flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -22,10 +22,14 @@ import {
 	CheckRow,
 	CodeStage,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
+	StatStrip,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -264,7 +268,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 				/>
 
 				{content.trustIndicators ? (
-					<MarketingSection spacing="compact" mix={[viewReveal()]}>
+					<LandingSection spacing="compact" mix={[viewReveal()]}>
 						<StatStrip size="display" variant="gap" align="center">
 							{content.trustIndicators.map((indicator) => (
 								<StatStrip.Item key={indicator.label} label={indicator.label}>
@@ -272,17 +276,17 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 								</StatStrip.Item>
 							))}
 						</StatStrip>
-					</MarketingSection>
+					</LandingSection>
 				) : null}
 
-				<MarketingSection id="features" tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="features" tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={t("landing.marketingPage.everythingBadge")}
 						description={t("landing.marketingPage.everythingDescription")}
 						align="center"
 					>
 						{t(`landing.marketingPage.featureBands.${slug}.features`)}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={featureColumns} variant={featureGrid}>
 						{content.features.map((feature) => (
 							<Feature key={feature.title}>
@@ -296,7 +300,7 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					id="how-it-works"

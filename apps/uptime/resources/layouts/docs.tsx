@@ -8,7 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { TableOfContents } from "@sdxc/ui";
+import type { TableOfContents } from "@sdxc/ui/docs";
 import type { Handle, RemixNode } from "remix/component";
 
 import { MailIcon } from "@sdxc/icons";
@@ -18,8 +18,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { mbe, mbs, pbs } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { DocsFooter, DocsNav, DocsPager } from "@sdxc/ui";
-import { DocsLayout as DocsShell } from "@sdxc/ui/patterns";
+import { DocsFooter, DocsLayout as DocsShell, DocsNav, DocsPager } from "@sdxc/ui/docs";
 
 import type { DocSection } from "~/app/services/docs";
 
@@ -194,7 +193,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		return (
 			<div
 				mix={[
-					raw({ "--ui-marketing-measure": wide ? WIDE_MEASURE : DOCS_MEASURE }),
+					raw({ "--ui-landing-measure": wide ? WIDE_MEASURE : DOCS_MEASURE }),
 					wide
 						? [
 								when(

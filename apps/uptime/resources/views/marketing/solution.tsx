@@ -14,17 +14,21 @@ import { ArrowRightIcon, Icon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
 	CheckList,
 	CheckRow,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
+	StatStrip,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
@@ -192,7 +196,7 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 				/>
 
 				{content.trustIndicators ? (
-					<MarketingSection spacing="compact" mix={[viewReveal()]}>
+					<LandingSection spacing="compact" mix={[viewReveal()]}>
 						<StatStrip size="display" variant="gap" align="center">
 							{content.trustIndicators.map((indicator) => (
 								<StatStrip.Item key={indicator.label} label={indicator.label}>
@@ -207,16 +211,16 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 								</StatStrip.Item>
 							))}
 						</StatStrip>
-					</MarketingSection>
+					</LandingSection>
 				) : null}
 
-				<MarketingSection id="capabilities" tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="capabilities" tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={chrome.everythingBadge}
 						description={chrome.everythingDescription}
 					>
 						{chrome.everythingTitle}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid variant="list" columns={featureColumns}>
 						{content.features.map((feature) => (
 							<Feature key={feature.title} href={feature.href}>
@@ -237,7 +241,7 @@ export default function SolutionPageView(handle: Handle<SolutionPageView.Props>)
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
 				{spotlight ? (
 					<FeatureBand

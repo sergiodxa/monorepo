@@ -13,8 +13,9 @@ import { rounded } from "@sdxc/u/effects";
 import { basis, flex, flexCol, gap, grow, items, shrink } from "@sdxc/u/layout";
 import { bs } from "@sdxc/u/size";
 import { fontSize, leading, text } from "@sdxc/u/typography";
-import { Card, Skeleton } from "@sdxc/ui";
+import { Card } from "@sdxc/ui";
 import { pulse } from "@sdxc/ui/animations";
+import { Skeleton } from "@sdxc/ui/app";
 
 namespace SkeletonLine {
 	export interface Props {

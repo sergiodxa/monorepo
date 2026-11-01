@@ -146,7 +146,7 @@ function Figure(handle: Handle<{ label: string; value: string }>) {
 					minInlineSize: "0",
 					padding: "0.625rem 0.75rem",
 					borderRadius: "0.5rem",
-					border: "1px solid var(--ui-marketing-hairline, var(--ui-neutral-border))",
+					border: "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))",
 				}),
 			]}
 		>

@@ -8,7 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { TableOfContents } from "@sdxc/ui";
+import type { TableOfContents } from "@sdxc/ui/docs";
 
 import { highlight } from "@sdxc/highlight/markdown";
 import { redirect } from "@sdxc/http/response";
@@ -23,18 +23,17 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
+import { Alert, Typeset } from "@sdxc/ui";
 import {
-	Alert,
 	DocsFeedback,
+	DocsNotFound,
 	DocsPageHeader,
+	findNeighbours,
 	NextSteps,
 	PageActions,
 	PlanNotice,
-	Typeset,
-} from "@sdxc/ui";
-import { readCodeTabsCookie } from "@sdxc/ui/mixins";
-import { DocsNotFound } from "@sdxc/ui/patterns";
-import { findNeighbours } from "@sdxc/ui/utils";
+	readCodeTabsCookie,
+} from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

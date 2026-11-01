@@ -9,8 +9,7 @@
 import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
-import { Toast } from "@sdxc/ui";
-import { Toaster } from "@sdxc/ui/behaviors";
+import { Toast, Toaster } from "@sdxc/ui/app";
 import { clientEntry, on } from "remix/component";
 
 /**

@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { Badge } from "@sdxc/ui";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
 import { badgeVariant } from "~/resources/components/badge";
 import {
@@ -37,7 +37,7 @@ const SERVICES: ReadonlyArray<{ name: string; degradedDay?: number }> = [
 /** The scene's surface: a raised panel inset from the card's media edges. */
 export function scenePanel() {
 	return [
-		marketingSurface(),
+		landingSurface(),
 		raw({
 			display: "grid",
 			gap: "0.75rem",
@@ -164,7 +164,7 @@ export function AlertsScene(handle: Handle<AlertsScene.Props>) {
 									borderBlockStart:
 										index === 0
 											? "none"
-											: "1px solid var(--ui-marketing-hairline, var(--ui-neutral-border))",
+											: "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))",
 								}),
 							]}
 						>

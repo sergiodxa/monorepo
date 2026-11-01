@@ -18,7 +18,7 @@ import {
 import { flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { maxIs, mbs, mi } from "@sdxc/u/size";
 import { tabSize, text, textAlign } from "@sdxc/u/typography";
-import { Feature, LinkButton, MarketingHeader, MarketingSection, StatStrip } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
 import {
 	AccentText,
@@ -26,11 +26,15 @@ import {
 	CheckRow,
 	CodeStage,
 	FaqBand,
+	Feature,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
+	StatStrip,
 	StepList,
 	TypedTerminal,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -145,14 +149,14 @@ export default createAction(routes.browserFlows, async (ctx) => {
 					media={<ProductMockup area="flow" t={t} />}
 				/>
 
-				<MarketingSection id="examples" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="examples" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={page.examples.badge}
 						description={page.examples.description}
 						align="center"
 					>
 						{page.examples.title}
-					</MarketingHeader>
+					</LandingHeader>
 					<CodeStage
 						id="browser-flow-examples"
 						variant="code"
@@ -172,16 +176,16 @@ export default createAction(routes.browserFlows, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={page.contrast.badge}
 						description={page.contrast.description}
 						align="center"
 					>
 						{page.contrast.title}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={2}>
 						{[
 							{
@@ -206,16 +210,16 @@ export default createAction(routes.browserFlows, async (ctx) => {
 							</Feature>
 						))}
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="pricing" mix={[viewReveal()]}>
-					<MarketingHeader
+				<LandingSection id="pricing" mix={[viewReveal()]}>
+					<LandingHeader
 						eyebrow={page.pricing.badge}
 						description={page.pricing.description}
 						align="center"
 					>
 						{page.pricing.title}
-					</MarketingHeader>
+					</LandingHeader>
 					<StatStrip size="display" variant="gap" align="center">
 						{figures.map((figure) => (
 							<StatStrip.Item key={figure.label} label={figure.label}>
@@ -226,7 +230,7 @@ export default createAction(routes.browserFlows, async (ctx) => {
 					<p mix={[mbs(8), mi("auto"), maxIs("60ch"), text("sm"), textAlign("center")]}>
 						{page.pricing.note}
 					</p>
-				</MarketingSection>
+				</LandingSection>
 
 				<FeatureBand
 					id="how-it-works"

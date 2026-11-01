@@ -12,9 +12,16 @@ import { gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { is, maxIs, mbs, mi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Feature, MarketingHeader, MarketingSection, Typeset } from "@sdxc/ui";
+import { Typeset } from "@sdxc/ui";
 import { viewReveal } from "@sdxc/ui/animations";
-import { CheckList, CheckRow, LandingHero } from "@sdxc/ui/patterns";
+import {
+	CheckList,
+	CheckRow,
+	Feature,
+	LandingHeader,
+	LandingHero,
+	LandingSection,
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -81,10 +88,10 @@ export default createAction(routes.trust, async (ctx) => {
 					description={t("trust.intro")}
 				/>
 
-				<MarketingSection mix={[viewReveal()]}>
-					<MarketingHeader eyebrow={t("trust.sections.accountability.badge")} align="center">
+				<LandingSection mix={[viewReveal()]}>
+					<LandingHeader eyebrow={t("trust.sections.accountability.badge")} align="center">
 						{t("trust.sections.accountability.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<Feature.Grid columns={3}>
 						<Feature>
 							<Feature.Icon tone="brand">
@@ -141,12 +148,12 @@ export default createAction(routes.trust, async (ctx) => {
 							</Feature.Description>
 						</Feature>
 					</Feature.Grid>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection id="regions" tone="tinted" mix={[viewReveal()]}>
-					<MarketingHeader description={t("trust.sections.whereChecksRun.intro")} align="center">
+				<LandingSection id="regions" tone="tinted" mix={[viewReveal()]}>
+					<LandingHeader description={t("trust.sections.whereChecksRun.intro")} align="center">
 						{t("trust.sections.whereChecksRun.title")}
-					</MarketingHeader>
+					</LandingHeader>
 					<CheckList
 						mix={[
 							grid(),
@@ -166,9 +173,9 @@ export default createAction(routes.trust, async (ctx) => {
 						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.hint")}</p>
 						<p mix={[text("sm")]}>{t("trust.sections.whereChecksRun.timing")}</p>
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection mix={[viewReveal()]}>
+				<LandingSection mix={[viewReveal()]}>
 					<article mix={[is("full"), mi("auto"), maxIs("720px")]}>
 						<Typeset preset="reading">
 							<h2>{t("trust.sections.incidents.title")}</h2>
@@ -257,7 +264,7 @@ export default createAction(routes.trust, async (ctx) => {
 							</p>
 						</Typeset>
 					</article>
-				</MarketingSection>
+				</LandingSection>
 
 				<ClosingBand
 					id="start"

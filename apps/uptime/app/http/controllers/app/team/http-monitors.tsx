@@ -13,7 +13,8 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
 import { textDecoration, weight } from "@sdxc/u/typography";
-import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@sdxc/ui";
+import { AlertDialog, Badge, Button, LinkButton, Menu } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { Fragment } from "remix/component";
 import { createAction } from "remix/router";
 

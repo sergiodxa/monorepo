@@ -29,7 +29,7 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is, p } from "@sdxc/u/size";
 import { text, truncate, weight } from "@sdxc/u/typography";
-import { ProductFrame } from "@sdxc/ui/patterns";
+import { ProductFrame } from "@sdxc/ui/landing";
 
 /**
  * The narrowest width a mockup lays out at. A media slot narrower than this, a phone's,
@@ -57,7 +57,7 @@ const RAIL = {
 export type RailItem = keyof typeof RAIL;
 
 /** A hairline in the marketing palette, the same line the frame's chrome draws. */
-export const HAIRLINE = "1px solid var(--ui-marketing-hairline, var(--ui-neutral-border))";
+export const HAIRLINE = "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))";
 
 namespace MockupWindow {
 	export interface Props {

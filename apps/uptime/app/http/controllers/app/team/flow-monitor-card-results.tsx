@@ -18,7 +18,8 @@ import { flex, flexWrap, gap, grid, gridTemplate, sticky } from "@sdxc/u/layout"
 import { overflow } from "@sdxc/u/overflow";
 import { m, mbe, p, pb, pie, pis } from "@sdxc/u/size";
 import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
-import { Badge, Empty, Table } from "@sdxc/ui";
+import { Badge } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { Fragment } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";

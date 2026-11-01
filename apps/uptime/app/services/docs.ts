@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DocsTree } from "@sdxc/ui/utils";
+import type { DocsTree } from "@sdxc/ui/docs";
 
 import { Markdown } from "@sdxc/markdown";
 import { isSuccess } from "@sdxc/result";

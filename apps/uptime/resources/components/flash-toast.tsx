@@ -10,8 +10,8 @@
 import type { Handle } from "remix/component";
 
 import { animation } from "@sdxc/u/animation";
-import { Toast } from "@sdxc/ui";
 import { easings } from "@sdxc/ui/animations";
+import { Toast } from "@sdxc/ui/app";
 
 /**
  * Total time, in ms, the toast stays visible before it fades, long enough for

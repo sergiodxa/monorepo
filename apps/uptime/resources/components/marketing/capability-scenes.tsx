@@ -93,7 +93,7 @@ function sceneRow() {
 		gap: "0.5rem",
 		minInlineSize: "0",
 		paddingBlock: "0.625rem",
-		borderBlockStart: "1px solid var(--ui-marketing-hairline, var(--ui-neutral-border))",
+		borderBlockStart: "1px solid var(--ui-landing-hairline, var(--ui-neutral-border))",
 	});
 }
 

@@ -20,7 +20,7 @@ import {
 	FeatureBand,
 	LandingHero,
 	StepList,
-} from "@sdxc/ui/patterns";
+} from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";

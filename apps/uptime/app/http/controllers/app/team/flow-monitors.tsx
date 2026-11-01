@@ -14,7 +14,8 @@ import { fg } from "@sdxc/u/color";
 import { flex, items } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
 import { nowrap, textDecoration } from "@sdxc/u/typography";
-import { AlertDialog, Badge, Button, Empty, LinkButton, Menu, Table } from "@sdxc/ui";
+import { AlertDialog, Badge, Button, LinkButton, Menu } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";

@@ -12,7 +12,8 @@ import { notFound } from "@sdxc/http/response/html";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { fontSize } from "@sdxc/u/typography";
-import { Badge, Empty, Table } from "@sdxc/ui";
+import { Badge } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

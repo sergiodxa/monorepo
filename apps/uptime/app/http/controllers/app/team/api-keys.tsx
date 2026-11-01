@@ -16,7 +16,8 @@ import { rounded } from "@sdxc/u/effects";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { pb, pi } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
-import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, Button, LinkButton } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 

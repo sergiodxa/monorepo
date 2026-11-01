@@ -16,7 +16,8 @@ import { absolute, flex, insBe, insBs, insIe, items, justify, relative } from "@
 import { is, mbe } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
-import { Badge, Empty, LinkButton, Table, Tabs } from "@sdxc/ui";
+import { Badge, LinkButton, Tabs } from "@sdxc/ui";
+import { Empty, Table } from "@sdxc/ui/app";
 import { link } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
