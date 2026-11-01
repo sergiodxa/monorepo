@@ -8,7 +8,7 @@
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
-import { demoDocsHref, listDemoDocsSites } from "~/resources/views/demo-docs";
+import { demoDocsHref, listDemoDocsSites, listDemoDocsSlugs } from "~/resources/views/demo-docs";
 import { listDemoLandings } from "~/resources/views/demos";
 
 describe("GET /demo", () => {
@@ -80,6 +80,20 @@ describe("GET /demo", () => {
 		expect(body.indexOf('href="/demo/saas"')).toBeLessThan(body.indexOf('href="/demo/book"'));
 		expect(body.indexOf('href="/demo/book"')).toBeLessThan(body.indexOf('href="/demo/app"'));
 		expect(body).toMatch(/data-span="2"[^]*?href="\/demo\/saas"/);
+	});
+
+	test("introduces the demos with the counts it lists and a link to their source", async () => {
+		let body = await (await fetchApp("/demo")).text();
+		let landings = await listDemoLandings();
+
+		expect(body).toMatch(
+			new RegExp(
+				`${landings.length}(<!-- -->)?\\s+landing pages and ${listDemoDocsSlugs().length} documentation sites`,
+			),
+		);
+		expect(body).toContain(
+			'href="https://github.com/sergiodxa/monorepo/tree/main/apps/sdxc-site/resources/views"',
+		);
 	});
 
 	test("carries one h1 and tells search engines to leave it out", async () => {

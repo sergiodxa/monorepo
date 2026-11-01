@@ -23,7 +23,7 @@ import type { DemoSummary } from "~/resources/views/demos";
 
 import { withBundleCache } from "~/app/http/caching";
 import Hero from "~/resources/components/hero";
-import { ProseHeading, ProseParagraph } from "~/resources/components/prose";
+import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
 import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
@@ -31,6 +31,10 @@ import { demoDocsHref, findDemoDocsSite, listDemoDocsSlugs } from "~/resources/v
 import DocsThumbnail from "~/resources/views/demo-docs/thumbnail";
 import { listDemoLandings } from "~/resources/views/demos";
 import routes from "~/routes/web";
+
+/** Where the demos' source lives, for a reader who wants to copy one. */
+const DEMOS_SOURCE_HREF =
+	"https://github.com/sergiodxa/monorepo/tree/main/apps/sdxc-site/resources/views";
 
 /** The directive the gallery shares with every demo it lists. */
 const DEMO_ROBOTS = "noindex, nofollow";
@@ -62,7 +66,20 @@ export default createAction(routes.demos, async (ctx) => {
 					<div mix={[vstack({ gap: 6, align: "start" }), maxIs("40rem")]}>
 						<ProseHeading level={1}>Demos</ProseHeading>
 						<ProseParagraph>
-							Whole sites built from @sdxc/ui, each for an invented product.
+							Whole sites built from @sdxc/ui, each for an invented product: {landings.length}{" "}
+							landing pages and {docsSites.length} documentation sites, every one composed from the
+							same components a real app imports.
+						</ProseParagraph>
+						<ProseParagraph>
+							Each commits to its own art direction, set once through theme tokens: a precise
+							developer tool, a quiet editorial book, a warm consumer app, and docs sites from
+							product help to an API reference. The components stay the same; the palette, type,
+							corners and motion change.
+						</ProseParagraph>
+						<ProseParagraph>
+							Visit one to see how the bands, product mockups and animated diagrams fit together on
+							a full page, then read <ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to
+							copy what you need. The products, names and figures are made up.
 						</ProseParagraph>
 					</div>
 				</Hero>
