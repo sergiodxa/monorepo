@@ -120,4 +120,35 @@ describe("PathCell", () => {
 			from.getBoundingClientRect().right,
 		);
 	});
+
+	test("cuts a long linked path at its cell's edge", () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "320px";
+		document.body.appendChild(host);
+		mounted = render(
+			<Table.Container>
+				<Table aria-label="Webmentions" density="comfortable">
+					<Table.Body>
+						<Table.Row>
+							<PathCell
+								path="/tutorials/add-an-mcp-server-to-a-remix-v3-app"
+								href="https://sergiodxa.com/tutorials/add-an-mcp-server-to-a-remix-v3-app"
+								maxInlineSize="10rem"
+							/>
+							<Table.Cell>Oct 12, 2026</Table.Cell>
+						</Table.Row>
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+			{ container: host },
+		);
+
+		let [post] = mounted.$$("td");
+		let link = post?.querySelector("a");
+		if (!post || !link) throw new Error("The cell rendered no link");
+
+		expect(link.getBoundingClientRect().right).toBeLessThanOrEqual(
+			post.getBoundingClientRect().right,
+		);
+	});
 });

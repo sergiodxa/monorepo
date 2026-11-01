@@ -12,6 +12,7 @@ import type { Handle } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { font, text, truncate } from "@sdxc/u/typography";
+import { Link } from "@sdxc/ui";
 import { Table } from "@sdxc/ui/app/table";
 
 import { parseTimestamp } from "~/app/models/post-values";
@@ -57,26 +58,41 @@ interface PathCellProps {
 	maxInlineSize: string;
 	/** Draws the path muted, for the secondary path in a row. */
 	muted?: boolean;
+	/** Makes the path a link to this address. */
+	href?: string;
+	/** Hides the cell in a content area 40rem wide or narrower, as the column's header does. */
+	hideNarrow?: boolean;
 }
 
-/** A path in monospace, cut with an ellipsis at the cell's edge so it never runs into the next. */
+/** A path in monospace, or a link to it, cut with an ellipsis at the cell's edge so it never runs into the next. */
 export function PathCell(handle: Handle<PathCellProps>) {
 	return () => {
-		let { path, maxInlineSize, muted } = handle.props;
+		let { path, maxInlineSize, muted, href, hideNarrow } = handle.props;
+		let pathMix = [
+			raw({ display: "block" }),
+			font("mono"),
+			text("sm"),
+			muted ? fg("neutral.muted") : undefined,
+			truncate(),
+		];
 		return (
-			<Table.Cell mix={[raw({ maxInlineSize })]}>
-				<span
-					title={path}
-					mix={[
-						raw({ display: "block" }),
-						font("mono"),
-						text("sm"),
-						muted ? fg("neutral.muted") : undefined,
-						truncate(),
-					]}
-				>
-					{path}
-				</span>
+			<Table.Cell
+				mix={[
+					raw({ maxInlineSize }),
+					hideNarrow
+						? raw({ "@container ui-app-content (max-width: 40rem)": { display: "none" } })
+						: undefined,
+				]}
+			>
+				{href === undefined ? (
+					<span title={path} mix={pathMix}>
+						{path}
+					</span>
+				) : (
+					<Link href={href} title={href} mix={pathMix}>
+						{path}
+					</Link>
+				)}
 			</Table.Cell>
 		);
 	};

@@ -14,7 +14,7 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { lineClamp, text, truncate, weight } from "@sdxc/u/typography";
-import { Badge, Button, Link } from "@sdxc/ui";
+import { Badge, Button } from "@sdxc/ui";
 import { setParamHref } from "@sdxc/ui/app";
 import { Empty } from "@sdxc/ui/app/empty";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
@@ -24,7 +24,7 @@ import { Table } from "@sdxc/ui/app/table";
 import { HeadingScope } from "@sdxc/ui/heading-scope";
 
 import { CMSLayout } from "~/resources/layouts/cms";
-import { DateCell } from "~/resources/views/cms/cells";
+import { DateCell, PathCell } from "~/resources/views/cms/cells";
 import {
 	FILTER_LABELS,
 	ListEmpty,
@@ -318,20 +318,12 @@ export function CMSWebmentionsView() {
 																{item.kind}
 															</Badge>
 														</Table.Cell>
-														<Table.Cell
-															mix={[
-																raw({
-																	maxInlineSize: "16rem",
-																	"@container ui-app-content (max-width: 40rem)": {
-																		display: "none",
-																	},
-																}),
-															]}
-														>
-															<Link href={item.target} mix={[text("sm"), truncate()]}>
-																{postPath(item.target)}
-															</Link>
-														</Table.Cell>
+														<PathCell
+															path={postPath(item.target)}
+															href={item.target}
+															maxInlineSize="16rem"
+															hideNarrow
+														/>
 														<DateCell date={item.updatedAt} hideNarrow />
 														<Table.Cell>
 															<span mix={[hstack({ gap: 1, align: "center" })]}>
