@@ -366,7 +366,7 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 						raw({
 							display: "grid",
 							gap: "0.5rem 1.5rem",
-							alignItems: layout === "inline-switch" ? "center" : "start",
+							alignItems: rowAlign(layout, Boolean(description)),
 							gridTemplateColumns:
 								layout === "inline-switch" ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
 							...(layout === "split"
@@ -404,6 +404,17 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 		);
 	};
 };
+
+/**
+ * Where a row's label meets its control: a lone label centres on the control's text line,
+ * while a label carrying a description keeps its top on the control's top so the help reads
+ * down from it. An inline switch centres on the whole text block.
+ */
+function rowAlign(layout: SettingsSection.RowLayout, hasDescription: boolean): "center" | "start" {
+	if (layout === "inline-switch") return "center";
+	if (layout === "split" && !hasDescription) return "center";
+	return "start";
+}
 
 /**
  * Client island: what makes an instant section save as it changes, attaching

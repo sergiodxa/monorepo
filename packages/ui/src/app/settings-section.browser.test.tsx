@@ -79,6 +79,29 @@ describe("SettingsSection", () => {
 		expect(Math.abs(control.left - text.left)).toBeLessThan(2);
 	});
 
+	test("centres a split row's label on its control when the row has no description", () => {
+		let host = mount(
+			<SettingsSection title="General" labels={{ save: "Save" }}>
+				<SettingsSection.Row label="Name" htmlFor="name">
+					<Input id="name" name="name" />
+				</SettingsSection.Row>
+			</SettingsSection>,
+			720,
+		);
+		let label = host.querySelector("label")!.getBoundingClientRect();
+		let { control } = rowParts(host);
+
+		expect(Math.abs(centre(label) - centre(control))).toBeLessThan(1);
+	});
+
+	test("keeps a split row's label at its control's top when the row has a description", () => {
+		let host = mount(monitorDefaults("explicit"), 720);
+		let label = host.querySelector("label")!.getBoundingClientRect();
+		let { control } = rowParts(host);
+
+		expect(Math.abs(label.top - control.top)).toBeLessThan(1);
+	});
+
 	test("keeps an inline switch at the end of its row in a narrow card", () => {
 		let host = mount(
 			<SettingsSection title="Notifications" save="instant" labels={{ save: "Save" }}>
@@ -274,6 +297,11 @@ describe("SettingsSection", () => {
 		});
 	}
 });
+
+/** The vertical centre of `box`. */
+function centre(box: DOMRect): number {
+	return box.top + box.height / 2;
+}
 
 /** A list-only members section with an "Invite member" header action. */
 function membersSection(heading: "above" | "beside", title = "Members") {
