@@ -65,6 +65,26 @@ let looked = await rdap.domain("example.com", { related: true });
 
 Thin registries such as `.com` and `.net` link to the registrar's own RDAP server. With `related: true` the client follows that link and fills the registrar fields the registry left empty; the registry's dates and statuses stand.
 
+## Command line
+
+```sh
+bunx @sdxc/rdap --help
+```
+
+Print a domain's expiry, status, registrar, contacts and nameservers; `--related` also asks the registrar's server, and `--json` prints the domain model:
+
+```sh
+bunx @sdxc/rdap lookup example.com
+```
+
+Exit 1 when a domain expires inside a window, or its registry publishes no expiry, for a cron job or CI step:
+
+```sh
+bunx @sdxc/rdap expires example.com --within "30 days"
+```
+
+Both exit 2 for a name that is no domain and 1 when the lookup fails, printing the `RDAPError` code.
+
 ## API
 
 ### `new RDAP(options: RDAP.Options)`
