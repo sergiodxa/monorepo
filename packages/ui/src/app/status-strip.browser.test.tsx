@@ -74,6 +74,22 @@ describe("StatusStrip", () => {
 		});
 	}
 
+	test("keeps long tooltips from widening a phone-width page until a bar is shown", async () => {
+		await page.viewport(320, 640);
+		let periods = DAYS.map((day) => ({
+			...day,
+			value: "99.93% uptime · 1,438 of 1,440 checks passed",
+		}));
+		let host = mount(<StatusStrip label="Uptime" periods={periods} />, 288);
+
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+
+		bars(host)[60]!.focus();
+		let tooltip = bars(host)[60]!.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
+		expect(getComputedStyle(tooltip).display).toBe("flex");
+		expect(tooltip.getBoundingClientRect().width).toBeLessThanOrEqual(288);
+	});
+
 	test("hatches a period with no data and tints the others by status", () => {
 		let host = mount(<StatusStrip label="Uptime" periods={DAYS} />, 640);
 		let [empty] = bars(host);
@@ -102,10 +118,10 @@ describe("StatusStrip", () => {
 		let first = bars(host)[0]!;
 		let tooltip = first.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
 
-		expect(getComputedStyle(tooltip).visibility).toBe("hidden");
+		expect(getComputedStyle(tooltip).display).toBe("none");
 		await userEvent.keyboard("{Tab}");
 		expect(document.activeElement).toBe(first);
-		await expect.poll(() => getComputedStyle(tooltip).visibility).toBe("visible");
+		await expect.poll(() => getComputedStyle(tooltip).display).toBe("flex");
 		expect(tooltip.textContent).toBe("Day 1No data");
 		let strip = host.querySelector('[data-slot="status-strip"]')!.getBoundingClientRect();
 		expect(tooltip.getBoundingClientRect().left).toBeGreaterThanOrEqual(strip.left - 0.5);
@@ -113,7 +129,7 @@ describe("StatusStrip", () => {
 		let last = bars(host).at(-1)!;
 		last.focus();
 		let lastTip = last.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
-		await expect.poll(() => getComputedStyle(lastTip).visibility).toBe("visible");
+		await expect.poll(() => getComputedStyle(lastTip).display).toBe("flex");
 		expect(lastTip.getBoundingClientRect().right).toBeLessThanOrEqual(strip.right + 0.5);
 		expect(lastTip.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 			last.getBoundingClientRect().top,

@@ -182,7 +182,6 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 									data-slot="status-strip-tooltip"
 									mix={[
 										absolute(),
-										hstack({ gap: 1.5, align: "center" }),
 										pi(2),
 										pb(1),
 										rounded("md"),
@@ -191,20 +190,27 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 										shadow("md"),
 										z(10),
 										text("xs"),
-										nowrap(),
 										tabularNums(),
 										pointerEvents(),
 										/**
-										 * Visibility and alignment read the bar's state from one rule, so the shown
-										 * state always beats the hidden one whatever order the layers land in.
+										 * Display and alignment read the bar's state from one rule, so the shown state
+										 * always beats the hidden one whatever order the layers land in. A hidden
+										 * tooltip takes no box at all, so the bars at the edges never widen a page, and
+										 * a shown one wraps inside the strip's width.
 										 */
 										raw({
-											visibility: "hidden",
+											display: "none",
+											alignItems: "center",
+											columnGap: "0.375rem",
+											flexWrap: "wrap",
+											inlineSize: "max-content",
+											maxInlineSize: "100cqi",
+											boxSizing: "border-box",
 											insetBlockEnd: "calc(100% + var(--ui-status-strip-tooltip-gap, 0.375rem))",
 											'[data-align="start"] > &': { insetInlineStart: "0" },
 											'[data-align="end"] > &': { insetInlineEnd: "0" },
 											'[data-align="center"] > &': { insetInlineStart: "50%", translate: "-50% 0" },
-											":is(:hover, :focus-visible) > &": { visibility: "visible" },
+											":is(:hover, :focus-visible) > &": { display: "flex" },
 										}),
 										parts?.tooltip,
 									]}
