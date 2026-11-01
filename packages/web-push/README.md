@@ -93,6 +93,8 @@ bunx @sdxc/web-push vapid keygen          # VAPID_PUBLIC_KEY=… and VAPID_PRIVA
 bunx @sdxc/web-push vapid keygen --json > vapid.json
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg web-push …` runs the same command line, using the version your project installs.
+
 ```sh
 bunx @sdxc/web-push send subscription.json --subject mailto:ops@example.com --keys-file vapid.json
 ```
