@@ -86,6 +86,8 @@ bunx @sdxc/typeid parse user_01h455vb4pex5vsknk084sn02q --json
 bunx @sdxc/typeid encode user 01890a5d-ac96-774b-bcce-b302099a8057
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg typeid …` runs the same command line, using the version your project installs.
+
 `parse` prints the prefix, suffix, UUID and, for a UUIDv7, the creation time; it exits 1 with the reason when the TypeID is invalid. A prefix or UUID that breaks the rules exits 2.
 
 ## API
