@@ -117,6 +117,11 @@ export const QuickPingForm = clientEntry(
 								border: "none",
 								borderRadius: "0",
 								boxShadow: "none",
+								/**
+								 * Undoes the UA's `[popover] { overflow: auto }`, which as a row would clip the
+								 * focused field's ring on every side but the one facing the button.
+								 */
+								overflow: "visible",
 							}),
 							items("center"),
 						]),

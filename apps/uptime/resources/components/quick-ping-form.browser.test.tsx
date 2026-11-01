@@ -77,6 +77,16 @@ describe("QuickPingForm", () => {
 		expect(input.getBoundingClientRect().width).toBeGreaterThanOrEqual(240);
 	});
 
+	test("lets the focused URL field's ring show on every side of the header bar", async () => {
+		await page.viewport(1024, 768);
+		let form = await mount();
+		let input = form.querySelector<HTMLInputElement>("input[name=url]")!;
+		input.focus();
+
+		let style = getComputedStyle(form);
+		expect([style.overflowX, style.overflowY]).toEqual(["visible", "visible"]);
+	});
+
 	test("posts the check through the bar's frame in one request", async () => {
 		let form = await mount();
 		(form.querySelector("input[name=url]") as HTMLInputElement).value = "https://example.com";
