@@ -65,6 +65,8 @@ Layout maps one code point to one glyph: no ligatures, no GPOS mark positioning,
 bunx @sdxc/font --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg font …` runs the same command line, using the version your project installs.
+
 `inspect` prints each font's names, metrics, glyph count, embedding permission, variable axes and color tables; `--json` prints them as data. It reads `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc` and `.dfont`, from a path or stdin.
 
 ```sh
