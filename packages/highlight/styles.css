@@ -8,45 +8,33 @@
  * theme wants to spend on a role. Both are set alongside this file, not in it.
  *
  * The defaults below make the stylesheet usable on its own, and follow the
- * light and dark GitHub palettes. A consumer with a palette of its own declares
- * the same properties after loading this file and overrides whichever roles it
- * has an opinion about; the rest keep working.
+ * light and dark GitHub palettes through light-dark(), so each block paints in
+ * the `color-scheme` of the element it sits in: a page forced light reads the
+ * light palette on a dark-mode system. A consumer with a palette of its own
+ * declares the same properties after loading this file and overrides whichever
+ * roles it has an opinion about; the rest keep working.
  */
 :root {
-	--highlight-text: #24292f;
-	--highlight-comment: #6a737d;
-	--highlight-keyword: #cf222e;
-	--highlight-string: #032f62;
-	--highlight-number: #005cc5;
+	--highlight-text: light-dark(#24292f, #e6edf3);
+	--highlight-comment: light-dark(#6a737d, #8b949e);
+	--highlight-keyword: light-dark(#cf222e, #ff7b72);
+	--highlight-string: light-dark(#032f62, #a5d6ff);
+	--highlight-number: light-dark(#005cc5, #79c0ff);
 	--highlight-boolean: var(--highlight-number);
 	--highlight-constant: var(--highlight-number);
 	--highlight-property: var(--highlight-number);
 	--highlight-tag: var(--highlight-number);
-	--highlight-function: #6f42c1;
+	--highlight-function: light-dark(#6f42c1, #d2a8ff);
 	--highlight-class-name: var(--highlight-function);
 	--highlight-builtin: var(--highlight-string);
 	--highlight-attr-name: var(--highlight-string);
 	--highlight-attr-value: var(--highlight-string);
-	--highlight-regex: #bc4c00;
+	--highlight-regex: light-dark(#bc4c00, #ffa657);
 	--highlight-variable: var(--highlight-regex);
 	--highlight-operator: var(--highlight-keyword);
 	--highlight-punctuation: var(--highlight-text);
-	--highlight-inserted: #116329;
-	--highlight-deleted: #b31d28;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--highlight-text: #e6edf3;
-		--highlight-comment: #8b949e;
-		--highlight-keyword: #ff7b72;
-		--highlight-string: #a5d6ff;
-		--highlight-number: #79c0ff;
-		--highlight-function: #d2a8ff;
-		--highlight-regex: #ffa657;
-		--highlight-inserted: #7ee787;
-		--highlight-deleted: #ffa198;
-	}
+	--highlight-inserted: light-dark(#116329, #7ee787);
+	--highlight-deleted: light-dark(#b31d28, #ffa198);
 }
 
 code[class*="language-"],

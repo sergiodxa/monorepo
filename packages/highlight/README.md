@@ -18,6 +18,29 @@ from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 
 ## Usage
 
+### Load the stylesheet
+
+Tokens carry classes, not colours: `@sdxc/highlight/styles.css` paints them. Load it once per
+page, from the document layout, after any theme stylesheet whose `--highlight-*` properties
+should win:
+
+```tsx
+import "@sdxc/highlight/styles.css";
+```
+
+Or from your own CSS:
+
+```css
+@import "@sdxc/highlight/styles.css";
+```
+
+The defaults switch between a light and a dark palette by `color-scheme`, so declare the schemes
+your page supports on `<html>`; a page that declares none reads the light palette.
+
+```html
+<html style="color-scheme: light dark"></html>
+```
+
 ### Tokenize source
 
 ```typescript
@@ -149,7 +172,8 @@ alongside other handlers.
 ### `@sdxc/highlight/styles.css`
 
 One rule per token type, each reading a `--highlight-<type>` custom property, plus
-`--highlight-text` for the block. It sets colour only and ships light and dark defaults.
+`--highlight-text` for the block. It sets colour only and ships light and dark defaults as
+`light-dark()` pairs, resolved in the `color-scheme` of each block's element.
 
 ### Types
 
