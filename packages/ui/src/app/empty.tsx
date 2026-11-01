@@ -78,7 +78,7 @@ export namespace Empty {
 	 */
 	export type Kind = "first-run" | "no-results" | "cleared" | "permission" | "error";
 
-	/** `"compact"` tightens the panel to sit inside a card or a table body. */
+	/** `"compact"` tightens the panel and drops its frame, so it sits flush inside a card or a table body. */
 	export type Size = "default" | "compact";
 
 	/**
@@ -208,11 +208,17 @@ export function Empty(handle: Handle<Empty.Props>) {
 							raw({ borderColor: "transparent", backgroundColor: "transparent" }),
 						),
 						when('&[data-kind="permission"], &[data-kind="error"]', raw({ borderStyle: "solid" })),
+						/**
+						 * The card around a compact state is its frame, so the state draws none of its own:
+						 * the icon carries the tone and the copy sits flush with the card's edges.
+						 */
 						when('&[data-size="compact"]', [
 							p(4),
 							gap(2),
-							rounded("lg"),
 							raw({
+								borderColor: "transparent",
+								backgroundColor: "transparent",
+								borderRadius: "0",
 								"--ui-empty-icon-size": "2rem",
 								"--ui-empty-title-size": "var(--ui-text-sm, 0.875rem)",
 							}),

@@ -152,6 +152,23 @@ describe("Empty compact size", () => {
 		);
 	});
 
+	for (let kind of ["first-run", "permission", "error"] as const) {
+		test(`draws no frame or fill of its own inside a card, for ${kind}`, () => {
+			let panel = mount(
+				<Empty kind={kind} size="compact" style="--ui-danger-bg-tint: rgb(250, 220, 220)">
+					<Empty.Title>Couldn't load comments</Empty.Title>
+				</Empty>,
+			);
+			let style = getComputedStyle(panel);
+
+			expect(style.borderTopWidth === "0px" || style.borderTopColor === "rgba(0, 0, 0, 0)").toBe(
+				true,
+			);
+			expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+			expect(style.borderTopLeftRadius).toBe("0px");
+		});
+	}
+
 	test("fits a 320px column without overflowing", () => {
 		let panel = mount(
 			<Empty kind="error" size="compact">
