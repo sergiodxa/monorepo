@@ -9,7 +9,8 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { font, fontSize, whiteSpace } from "@sdxc/u/typography";
-import { Card, Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Card, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import { outbox } from "~/app/initializers/mail";

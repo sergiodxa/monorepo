@@ -12,7 +12,8 @@ import type { Handle } from "remix/component";
 
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { fontSize } from "@sdxc/u/typography";
-import { Button, Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Button, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 
 import type { Posting } from "~/database/schema";
 

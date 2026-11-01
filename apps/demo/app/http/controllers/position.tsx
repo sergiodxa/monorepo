@@ -11,7 +11,8 @@ import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { fontSize } from "@sdxc/u/typography";
-import { Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

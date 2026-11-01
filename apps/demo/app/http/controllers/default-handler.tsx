@@ -9,7 +9,8 @@
 
 import type { RequestContext } from "remix/router";
 
-import { Empty, LinkButton } from "@sdxc/ui";
+import { LinkButton } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
