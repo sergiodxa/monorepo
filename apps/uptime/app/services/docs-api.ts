@@ -141,8 +141,8 @@ export function endpointSections(document: Markdown.Document): Markdown.Document
 
 /**
  * One endpoint's block. Its method and path become an `endpoint-path` chip under the
- * heading, the operation's scope line stays where the page wrote it, and its errors and
- * schemas close the prose column; each request example becomes a `request` tag.
+ * heading, and each request example a `request` tag. The code column takes an example's
+ * lead-in and its fences; prose after the fences returns to the prose column.
  */
 function endpointOf(section: Markdown.Block[]): Markdown.Block {
 	let [heading, ...rest] = section;
@@ -151,6 +151,7 @@ function endpointOf(section: Markdown.Block[]): Markdown.Block {
 	let code: Markdown.Block[] = [];
 	let operation: string | null = null;
 	let inCode = false;
+	let fenced = false;
 	let lastHeading: string | null = null;
 	let hasRequestTable = false;
 
@@ -159,6 +160,7 @@ function endpointOf(section: Markdown.Block[]): Markdown.Block {
 			let title = toPlainText(node);
 			lastHeading = title;
 			inCode = CODE_HEADING.test(title);
+			fenced = false;
 			if (inCode) {
 				if (!REQUEST_HEADING.test(title)) {
 					code.push(tag("code-label", { text: title }, [], node.position));
@@ -166,6 +168,8 @@ function endpointOf(section: Markdown.Block[]): Markdown.Block {
 				continue;
 			}
 		}
+
+		if (inCode && fenced && node.type !== "code") inCode = false;
 
 		let endpoint =
 			node.type === "code" && isPlain(node.language)
@@ -193,6 +197,8 @@ function endpointOf(section: Markdown.Block[]): Markdown.Block {
 			main.push(node);
 			continue;
 		}
+
+		if (inCode && node.type === "code") fenced = true;
 
 		if (inCode && node.type === "code" && node.language && SHELL_LANGUAGES.has(node.language)) {
 			let fetch = curlToFetch(node.content);

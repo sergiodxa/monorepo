@@ -1,7 +1,7 @@
 /**
  * Lays an API endpoint out in a real browser: prose and code side by side in a wide block,
- * the code following the prose in a narrow one, and the code column held in view under
- * the sticky chrome while a long prose column scrolls past.
+ * the code following the prose in a narrow one and shown in full, and fields listed one
+ * compact row each.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -98,19 +98,7 @@ describe("API endpoint layout", () => {
 		expect(code.width).toBeLessThanOrEqual(380);
 	});
 
-	test("keeps the code in view under the sticky chrome while long prose scrolls", async () => {
-		await page.viewport(1440, 900);
-		let view = mountEndpoint(1100, 3000);
-		window.scrollTo(0, 1200);
-		await new Promise(requestAnimationFrame);
-
-		let code = rectOf(view, '[data-slot="api-endpoint-code"]');
-
-		expect(code.top).toBeGreaterThanOrEqual(SCROLL_MARGIN - 1);
-		expect(code.top).toBeLessThan(SCROLL_MARGIN + 2);
-	});
-
-	test("lines a field card's labels and values up from row to row", async () => {
+	test("sets a field's name, type and required tag on one line in a narrow column", async () => {
 		await page.viewport(414, 896);
 		let { t } = translate("en");
 		let Fields = apiReferenceComponents({ t, operations: new Map() }).fields as unknown as (
@@ -121,32 +109,25 @@ describe("API endpoint layout", () => {
 				<Typeset preset="docs">
 					<Fields
 						rows={[
-							{
-								name: "perPage",
-								type: "integer",
-								required: false,
-								description: "Results per page",
-							},
+							{ name: "perPage", type: "integer", required: true, description: "Results per page" },
 						]}
 					/>
 				</Typeset>
 			</div>,
 		);
 
-		let type = mounted.$('td[data-cell="type"]');
-		let required = mounted.$('td[data-cell="required"]');
-		if (!type || !required) throw new Error("No stacked cells");
+		let field = mounted.$('[data-slot="api-field"]');
+		let name = field?.querySelector("code");
+		let line = name?.parentElement;
+		if (!field || !name || !line) throw new Error("No field");
+		let [, type, required] = [...line.children].map((child) => child.getBoundingClientRect());
 
-		expect(type.getBoundingClientRect().width).toBeCloseTo(
-			required.getBoundingClientRect().width,
-			0,
-		);
-		expect(getComputedStyle(type).gridTemplateColumns).toBe(
-			getComputedStyle(required).gridTemplateColumns,
-		);
+		expect(Math.abs((type?.bottom ?? 0) - name.getBoundingClientRect().bottom)).toBeLessThan(4);
+		expect(Math.abs((required?.bottom ?? 0) - name.getBoundingClientRect().bottom)).toBeLessThan(4);
+		expect(field.getBoundingClientRect().height).toBeLessThan(80);
 	});
 
-	test("keeps a response its own height under a long request in the pinned column", async () => {
+	test("shows a long request and its response in full, with no scroll inside the column", async () => {
 		await page.viewport(1440, 600);
 		let { t } = translate("en");
 		let parts = apiReferenceComponents({ t, operations: new Map() });
@@ -169,6 +150,10 @@ describe("API endpoint layout", () => {
 			</div>,
 		);
 
+		let column = mounted.$('[data-slot="api-endpoint-code"]');
+		if (!column) throw new Error("No code column");
+
 		expect(rectOf(mounted, "#response").height).toBeGreaterThanOrEqual(299);
+		expect(column.scrollHeight).toBeLessThanOrEqual(column.clientHeight);
 	});
 });

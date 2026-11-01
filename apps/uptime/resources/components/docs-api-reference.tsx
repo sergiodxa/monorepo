@@ -13,24 +13,17 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
-import { container, hstack, sticky, vstack } from "@sdxc/u/layout";
+import { listStyle, raw } from "@sdxc/u/general";
+import { container, hstack, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
-import { m, minIs, p, pbs } from "@sdxc/u/size";
+import { m, minIs, p, pb, pbs, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { Disclosure } from "@sdxc/ui";
-import { CodeBlock, CodeTabs, CopyButton, PropsTable } from "@sdxc/ui/docs";
+import { CodeBlock, CodeTabs, CopyButton } from "@sdxc/ui/docs";
 
-import type { FieldRow, OperationReference } from "~/app/http/openapi/reference";
+import type { OperationReference } from "~/app/http/openapi/reference";
 import type { HandFieldRow } from "~/app/services/docs-api";
-
-/**
- * Lifts the type cell's wide-table width cap, so in a card every cell spans the card and
- * the labels and values line up from row to row. Marked important to outrank the table's
- * own layer.
- */
-const STACKED_CELLS = when("& td[data-label]", raw({ maxInlineSize: "none !important" }));
 
 /** The container name an endpoint lays its columns out against. */
 const ENDPOINT_CONTAINER = "api-endpoint";
@@ -109,13 +102,127 @@ function inlineCode(value: string): RemixNode {
 		.map((part, index) => (index % 2 === 1 ? <code key={index}>{part}</code> : part));
 }
 
-/** Rows as the props table draws them, with backticked values as code. */
-function tableRows(rows: readonly FieldRow[]): PropsTable.Row[] {
-	return rows.map((row) => ({
-		...row,
-		description: row.description ? inlineCode(row.description) : undefined,
-		children: row.children ? tableRows(row.children) : undefined,
-	}));
+/** One field as the field list draws it, from the OpenAPI document or a page's own table. */
+interface ListRow {
+	name: string;
+	type: string;
+	required?: boolean;
+	default?: string;
+	description?: string;
+	children?: readonly ListRow[];
+}
+
+/** What the field list labels: the required tag, the default, and its nested-fields toggle. */
+interface FieldListLabels {
+	required: string;
+	default: string;
+	showChildren: string;
+}
+
+namespace FieldList {
+	export interface Props {
+		rows: readonly ListRow[];
+		labels: FieldListLabels;
+	}
+}
+
+/**
+ * Lists fields the way an API reference reads: the name, its type and a required tag on
+ * one line, the description under them, and nested fields opening in place beneath a
+ * rule, so a narrow column holds every field in one compact row.
+ */
+function FieldList(handle: Handle<FieldList.Props>) {
+	return () => {
+		let { rows, labels } = handle.props;
+		return (
+			<ul
+				data-slot="api-fields"
+				data-not-typeset=""
+				mix={[
+					m("0.75rem", 0, "1.25rem", 0),
+					p(0),
+					listStyle("none"),
+					borderEdge("block-start", { color: "neutral.border", width: 1, style: "solid" }),
+					when(
+						"& code",
+						raw({
+							fontSize: "0.92em",
+							paddingInline: "0.3em",
+							borderRadius: "0.25rem",
+							background: "var(--ui-neutral-bg-tint)",
+						}),
+					),
+				]}
+			>
+				{rows.map((row) => (
+					<li
+						key={row.name}
+						data-slot="api-field"
+						mix={[
+							vstack({ gap: 1, align: "stretch" }),
+							pb(3),
+							borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
+						]}
+					>
+						<div
+							mix={[
+								hstack({ gap: 2, align: "baseline" }),
+								raw({ flexWrap: "wrap", rowGap: "0.25rem" }),
+							]}
+						>
+							<code
+								mix={[
+									font("mono"),
+									text("sm"),
+									weight("semibold"),
+									fg("neutral.emphasis"),
+									raw({ background: "transparent", paddingInline: 0 }),
+								]}
+							>
+								{row.name}
+							</code>
+							<span mix={[font("mono"), text("xs"), fg("neutral.muted")]}>{row.type}</span>
+							{row.required ? (
+								<span mix={[text("xs"), weight("medium"), fg("warning")]}>{labels.required}</span>
+							) : null}
+							{row.default !== undefined ? (
+								<span mix={[text("xs"), fg("neutral.muted")]}>
+									{labels.default} <code>{row.default}</code>
+								</span>
+							) : null}
+						</div>
+						{row.description ? (
+							<p mix={[m(0), text("sm"), fg("neutral"), raw({ lineHeight: 1.6 })]}>
+								{inlineCode(row.description)}
+							</p>
+						) : null}
+						{row.children && row.children.length > 0 ? (
+							<details mix={[m("0.25rem", 0, 0, 0)]}>
+								<summary
+									mix={[text("sm"), weight("medium"), fg("brand"), raw({ cursor: "pointer" })]}
+								>
+									{labels.showChildren}
+								</summary>
+								<div
+									mix={[
+										pis("0.875rem"),
+										m("0.5rem", 0, 0, "0.25rem"),
+										borderEdge("inline-start", {
+											color: "neutral.border",
+											width: 1,
+											style: "solid",
+										}),
+									]}
+								>
+									<FieldList rows={row.children} labels={labels} />
+								</div>
+							</details>
+						) : null}
+					</li>
+				))}
+			</ul>
+		);
+	};
 }
 
 /**
@@ -128,16 +235,10 @@ export function apiReferenceComponents(
 	labels: ApiReferenceLabels,
 ): NonNullable<RemixOptions["components"]> {
 	let { t, operations } = labels;
-	let propsLabels: PropsTable.Labels = {
-		name: t("docs.api.fields.name"),
-		type: t("docs.api.fields.type"),
-		default: t("docs.api.fields.default"),
+	let fieldLabels: FieldListLabels = {
 		required: t("docs.api.fields.required"),
-		description: t("docs.api.fields.description"),
-		yes: t("docs.api.fields.yes"),
-		no: t("docs.api.fields.no"),
+		default: t("docs.api.fields.default"),
 		showChildren: t("docs.api.fields.showChildren"),
-		hideChildren: t("docs.api.fields.hideChildren"),
 	};
 
 	/**
@@ -192,11 +293,7 @@ export function apiReferenceComponents(
 		);
 	}
 
-	/**
-	 * The code column, held in view under the sticky header while the prose beside it scrolls.
-	 * Its blocks keep their own height and the column scrolls, so a response never shrinks
-	 * to a sliver beside a long request.
-	 */
+	/** The code column: the request and its response, each at its full height. */
 	function EndpointCode(handle: Handle<{ children?: RemixNode }>) {
 		return () => (
 			<div
@@ -204,17 +301,7 @@ export function apiReferenceComponents(
 				mix={[
 					vstack({ gap: 3, align: "stretch" }),
 					minIs(0),
-					at(TWO_COLUMNS, ENDPOINT_CONTAINER, [
-						sticky(),
-						raw({
-							insetBlockStart: "var(--ui-docs-scroll-margin)",
-							maxBlockSize: "calc(100dvh - var(--ui-docs-scroll-margin) - 1rem)",
-							overflowY: "auto",
-							overscrollBehavior: "contain",
-						}),
-					]),
 					when("& > *", raw({ flexShrink: 0 })),
-					when("& pre", raw({ maxBlockSize: "28rem" })),
 				]}
 			>
 				{handle.props.children}
@@ -356,13 +443,7 @@ export function apiReferenceComponents(
 						<Disclosure>
 							<Disclosure.Trigger>{t("docs.api.requestFields")}</Disclosure.Trigger>
 							<Disclosure.Panel>
-								<PropsTable
-									data-not-typeset=""
-									mix={STACKED_CELLS}
-									rows={tableRows(reference.request)}
-									labels={propsLabels}
-									aria-label={t("docs.api.requestFields")}
-								/>
+								<FieldList rows={reference.request} labels={fieldLabels} />
 							</Disclosure.Panel>
 						</Disclosure>
 					) : null}
@@ -373,13 +454,7 @@ export function apiReferenceComponents(
 									{t("docs.api.responseFields", { status: response.status })}
 								</Disclosure.Trigger>
 								<Disclosure.Panel>
-									<PropsTable
-										data-not-typeset=""
-										mix={STACKED_CELLS}
-										rows={tableRows(response.fields)}
-										labels={propsLabels}
-										aria-label={t("docs.api.responseFields", { status: response.status })}
-									/>
+									<FieldList rows={response.fields} labels={fieldLabels} />
 								</Disclosure.Panel>
 							</Disclosure>
 						) : null,
@@ -422,24 +497,9 @@ export function apiReferenceComponents(
 		};
 	}
 
-	/**
-	 * A hand-written fields table drawn as a props table, which stacks into one card per
-	 * field in a narrow column so every description stays readable.
-	 */
+	/** A page's own fields or parameters table, drawn as the compact field list. */
 	function Fields(handle: Handle<{ rows: HandFieldRow[]; children?: RemixNode }>) {
-		return () => (
-			<PropsTable
-				data-not-typeset=""
-				mix={STACKED_CELLS}
-				rows={handle.props.rows.map((row) => ({
-					name: row.name,
-					type: row.type,
-					required: row.required,
-					description: row.description ? inlineCode(row.description) : undefined,
-				}))}
-				labels={propsLabels}
-			/>
-		);
+		return () => <FieldList rows={handle.props.rows} labels={fieldLabels} />;
 	}
 
 	return {

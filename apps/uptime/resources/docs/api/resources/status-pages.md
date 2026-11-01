@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 7
 order: 8
-lastUpdated: 2026-09-05
+lastUpdated: 2026-10-31
 ---
 
 Status pages provide a public-facing view of your service health. Associate monitors and cron jobs to display their status to your users.
@@ -66,7 +66,7 @@ curl "https://uptime.sergiodxa.com/api/v1/status-pages?perPage=25" \
 }
 ```
 
-Fetch a single status page to see the monitors and cron jobs attached to it.
+The list leaves out each page's monitors and cron jobs; [fetch a single status page](#get-apiv1status-pagesid) to see them.
 
 The cursors for this page arrive in `meta.pagination`:
 

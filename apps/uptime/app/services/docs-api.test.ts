@@ -90,6 +90,19 @@ describe("endpointSections", () => {
 		expect(names(code)).toEqual(["request", "code-label", "code"]);
 	});
 
+	test("sends prose after a response back to the prose column", () => {
+		let source = `${SECTION}\n\nThe cursors arrive in \`meta\`:\n\n| Field | Type | Description |\n| --- | --- | --- |\n| \`next\` | string | Cursor |`;
+		let document = endpointSections(page(source));
+		let endpoint = document.children.find(
+			(node) => node.type === "tag" && node.name === "endpoint",
+		);
+		let [main, code] =
+			endpoint && "children" in endpoint ? (endpoint.children as Markdown.Node[]) : [];
+
+		expect(names(code)).toEqual(["request", "code-label", "code"]);
+		expect(names(main).slice(-3)).toEqual(["paragraph", "fields", "operation-details"]);
+	});
+
 	test("leaves a section that documents no operation as prose", () => {
 		let document = endpointSections(page("## Rules\n\nSome rules.\n\n### Response\n\nText."));
 		expect(names(document)).toEqual(["heading", "paragraph", "heading", "paragraph"]);
