@@ -58,6 +58,22 @@ let patch = parse(await request.text());
 if (isFailure(patch)) return new Response(patch.error.message, { status: 400 });
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/json-patch --help
+```
+
+`apply` prints the patched document and exits 1 naming the operation whose path or `test`
+failed, `diff` prints the patch between two documents, and `validate` exits 1 when a file is not
+a patch. A `-` or missing document argument reads stdin.
+
+```sh
+bunx @sdxc/json-patch apply patch.json article.json > patched.json
+bunx @sdxc/json-patch diff before.json after.json --compact
+bunx @sdxc/json-patch validate patch.json --json
+```
+
 ## API
 
 ### `apply(document: JSONValue, patch: readonly Operation[]): Result<JSONValue, JsonPatchError>`

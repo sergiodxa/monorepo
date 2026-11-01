@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Apply, validate and diff RFC 6902 JSON Patch documents",
 	"license": "MIT",
+	"bin": {
+		"sdxc-json-patch": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,6 +14,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
