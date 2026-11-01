@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read JSDoc out of JavaScript and TypeScript source text into a JSON documentation model",
 	"license": "MIT",
+	"bin": {
+		"sdxc-jsdoc": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,7 +14,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@sdxc/result": "workspace:*"
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"

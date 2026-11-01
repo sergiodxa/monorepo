@@ -108,6 +108,18 @@ let project: DocProject = { schema: SCHEMA_VERSION, name: "math", version: "1.4.
 let json = JSON.stringify(project);
 ```
 
+## Command line
+
+`sdxc-jsdoc extract` writes that same `DocProject` from files and directories, named after the
+`package.json` in the current directory:
+
+```sh
+bunx @sdxc/jsdoc extract src --output docs.json
+```
+
+A file that does not parse is listed as `path:line:column message` and exits 1 without output;
+`--keep-going` extracts the rest. `bunx @sdxc/jsdoc --help` lists every flag.
+
 ## API
 
 ### `extract(source: string, options?: ExtractOptions): Result<DocModule, ExtractError>`
