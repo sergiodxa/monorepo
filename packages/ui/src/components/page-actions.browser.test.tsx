@@ -93,6 +93,24 @@ afterEach(() => {
 	document.body.replaceChildren();
 });
 
+describe("PageActions buttons", () => {
+	test("draw as one filled shape, rounded on the group's outer corners", () => {
+		let host = mount(<PageActions markdownHref="/docs/install.md" labels={LABELS} links={LINKS} />);
+		let copy = getComputedStyle(copyButton(host));
+		let trigger = getComputedStyle(
+			host.querySelector<HTMLButtonElement>('[data-slot="page-actions-trigger"]')!,
+		);
+
+		expect(copy.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+		expect(trigger.backgroundColor).toBe(copy.backgroundColor);
+		expect(copy.borderStartStartRadius).not.toBe("0px");
+		expect(copy.borderStartEndRadius).toBe("0px");
+		expect(trigger.borderStartStartRadius).toBe("0px");
+		expect(trigger.borderStartEndRadius).toBe(copy.borderStartStartRadius);
+		expect(trigger.borderEndEndRadius).toBe(copy.borderEndStartRadius);
+	});
+});
+
 describe("PageActions menu", () => {
 	test("opens the menu from the chevron through popovertarget, with no script of its own", async () => {
 		let host = mount(<PageActions markdownHref="/docs/install.md" labels={LABELS} links={LINKS} />);

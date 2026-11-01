@@ -13,7 +13,7 @@ import { CheckIcon, ChevronDownIcon, CopyIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { mergeMix, raw } from "@sdxc/u/general";
-import { shrink, vstack } from "@sdxc/u/layout";
+import { inlineFlex, shrink, vstack } from "@sdxc/u/layout";
 import { maxIs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
@@ -27,6 +27,9 @@ import { Menu } from "./menu.js";
 
 /** Id the menu and its trigger share when `menuId` is omitted; one page carries one menu. */
 const DEFAULT_MENU_ID = "page-actions-menu";
+
+/** The corner radius every button draws, which the split button keeps on its outer corners. */
+const RADIUS = "var(--ui-radius-md, 0.375rem)";
 
 /**
  * Prop types for {@link PageActions}.
@@ -72,6 +75,8 @@ export namespace PageActions {
 	 * `SerializableProps` rejects an interface.
 	 */
 	export type CopyProps = {
+		/** Whether the chevron follows, so the copy button squares the corners they share. */
+		joined?: boolean;
 		href: string;
 		copy: string;
 		copied: string;
@@ -94,26 +99,30 @@ export function PageActions(handle: Handle<PageActions.Props>) {
 		let id = menuId ?? DEFAULT_MENU_ID;
 
 		return (
-			<Group {...rest} data-slot="page-actions" mix={mergeMix([], mix)}>
-				<PageActionsCopy
-					href={markdownHref}
-					copy={labels.copy}
-					copied={labels.copied}
-					failed={labels.failed}
-				/>
-				{links.length > 0 ? (
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						color="neutral"
-						popovertarget={id}
-						aria-label={labels.more}
-						data-slot="page-actions-trigger"
-					>
-						<ChevronDownIcon size={16} aria-hidden="true" />
-					</Button>
-				) : null}
+			<div {...rest} data-slot="page-actions" mix={mergeMix([inlineFlex()], mix)}>
+				<Group data-slot="page-actions-group">
+					<PageActionsCopy
+						href={markdownHref}
+						copy={labels.copy}
+						copied={labels.copied}
+						failed={labels.failed}
+						joined={links.length > 0}
+					/>
+					{links.length > 0 ? (
+						<Button
+							type="button"
+							size="sm"
+							variant="surface"
+							color="neutral"
+							popovertarget={id}
+							aria-label={labels.more}
+							data-slot="page-actions-trigger"
+							mix={[splitCorners("end")]}
+						>
+							<ChevronDownIcon size={16} aria-hidden="true" />
+						</Button>
+					) : null}
+				</Group>
 				{links.length > 0 ? (
 					<Menu
 						id={id}
@@ -138,7 +147,7 @@ export function PageActions(handle: Handle<PageActions.Props>) {
 						))}
 					</Menu>
 				) : null}
-			</Group>
+			</div>
 		);
 	};
 }
@@ -155,17 +164,18 @@ export const PageActionsCopy: EntryComponent<PageActions.CopyProps> = clientEntr
 	"@sdxc/ui/page-actions#PageActionsCopy",
 	function PageActionsCopy(handle) {
 		return () => {
-			let { copied, copy, failed, href } = handle.props;
+			let { copied, copy, failed, href, joined = false } = handle.props;
 
 			return (
 				<Button
 					type="button"
 					size="sm"
-					variant="outline"
+					variant="surface"
 					color="neutral"
 					data-slot="page-actions-copy"
 					mix={[
 						shrink(0),
+						joined ? splitCorners("start") : [],
 						/**
 						 * Each state's glyph and label are drawn together and swapped in one rule, so
 						 * the copied state always wins whatever order the stylesheet layers land in.
@@ -194,3 +204,19 @@ export const PageActionsCopy: EntryComponent<PageActions.CopyProps> = clientEntr
 		};
 	},
 );
+
+/**
+ * Rounds one half of the split button on its outer corners only, through the radius
+ * variable `Button` draws from, so the two halves read as one shape whatever order the
+ * stylesheet layers land in; right-to-left text mirrors which corners are outer.
+ *
+ * @param half Which half this button is, in reading order.
+ */
+function splitCorners(half: "start" | "end") {
+	let left = `${RADIUS} 0 0 ${RADIUS}`;
+	let right = `0 ${RADIUS} ${RADIUS} 0`;
+	return raw({
+		"--ui-button-radius": half === "start" ? left : right,
+		"&:dir(rtl)": { "--ui-button-radius": half === "start" ? right : left },
+	});
+}
