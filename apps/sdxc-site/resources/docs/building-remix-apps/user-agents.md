@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 16
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to parse the `User-Agent` header once per request and read it as `ctx.userAgent`"
     - "How to ask platform questions such as `isTouch()` from any view without passing the context"
@@ -221,9 +221,9 @@ Read the User-Agent column of an access log to see which systems your visitors r
 order the download buttons:
 
 ```bash
-npx @sdxc/user-agent parse "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15"
-cut -f5 access.log | npx @sdxc/user-agent parse
-npx @sdxc/user-agent parse --json < user-agents.txt
+sdxc pkg user-agent parse "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15"
+cut -f5 access.log | sdxc pkg user-agent parse
+sdxc pkg user-agent parse --json < user-agents.txt
 ```
 
 `parse` prints browser, engine, operating system and device tab-separated, one line per string,

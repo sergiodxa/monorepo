@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 6
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"
     - "How to publish a JWKS and verify tokens by issuer and audience"
@@ -341,12 +341,12 @@ When a token turns up in a bug report, or you want a key pair before the R2 buck
 `@sdxc/jwt` does the same work from a terminal:
 
 ```bash
-npx @sdxc/jwt decode < token.txt
-npx @sdxc/jwt verify < token.txt \
+sdxc pkg jwt decode < token.txt
+sdxc pkg jwt verify < token.txt \
   --jwks https://app.example.com/.well-known/jwks.json \
   --iss https://app.example.com --aud https://reports.example.com
-npx @sdxc/jwt keygen > key.json
-echo '{"sub":"user-123","exp":"15m"}' | npx @sdxc/jwt sign --key-file key.json
+sdxc pkg jwt keygen > key.json
+echo '{"sub":"user-123","exp":"15m"}' | sdxc pkg jwt sign --key-file key.json
 ```
 
 `decode` prints the header and claims as they are, unverified; `verify` checks the signature,

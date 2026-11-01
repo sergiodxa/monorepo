@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 3
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to make a create safe to retry with an `Idempotency-Key`"
     - "How to accept partial updates as JSON Merge Patch"
@@ -362,8 +362,8 @@ test("a patch removing an optional member clears it", () => {
 Write the merge patch for a manual edit, or preview what one does to a book, from JSON files:
 
 ```bash
-npx @sdxc/merge-patch diff book.json edited.json > patch.json
-npx @sdxc/merge-patch apply patch.json book.json
+sdxc pkg merge-patch diff book.json edited.json > patch.json
+sdxc pkg merge-patch apply patch.json book.json
 ```
 
 `diff` exits `1` when the edited document sets a member to `null`, a change only a

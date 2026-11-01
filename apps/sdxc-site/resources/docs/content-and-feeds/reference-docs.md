@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 6
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to read the JSDoc in your TypeScript source at build time with `@sdxc/jsdoc`"
     - "How to write the records as JSON and serve a page per public symbol"
@@ -296,9 +296,9 @@ Extract the JSON straight from the terminal to see the records a build step read
 a reference site that lives in another project:
 
 ```bash
-npx @sdxc/jsdoc extract src --output docs.json
-npx @sdxc/jsdoc extract src/index.ts --include-internal
-npx @sdxc/jsdoc extract src --keep-going --output docs.json
+sdxc pkg jsdoc extract src --output docs.json
+sdxc pkg jsdoc extract src/index.ts --include-internal
+sdxc pkg jsdoc extract src --keep-going --output docs.json
 ```
 
 A file that does not parse exits `1` and writes nothing; `--keep-going` writes the rest and
@@ -307,11 +307,11 @@ shares.
 
 ## Where to go next
 
-- The demo docs sites — [content docs](/demo/docs/driftwood), [component docs](/demo/docs/lattice),
-  [utilities](/demo/docs/tempo) and an [API reference](/demo/docs/parcelo), each built from
-  `@sdxc/ui/docs` — to see what a reference page can look like once it is rendered.
-- [Docs patterns](/api/ui/docs-patterns) — the reference page, task page, hub, shell and 404
-  sketched from the `@sdxc/ui/docs` components, each linked to a demo page that ships it.
+- The demo docs sites in the [demo gallery](/demo) — content docs, component docs, utilities
+  and an API reference, each built from `@sdxc/ui/docs` — to see what a reference page can
+  look like once it is rendered.
+- [Docs foundations](/api/ui/docs-foundations) — the shell, reading type and variables the
+  `@sdxc/ui/docs` components share.
 - [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — render the
   descriptions and highlight the examples.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — list

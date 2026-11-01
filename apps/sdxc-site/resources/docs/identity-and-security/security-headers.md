@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 5
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
     - "How to use nonces or hashes for the scripts you render"
@@ -292,9 +292,9 @@ a secure request.
 After a deploy, grade the headers a page really sends and check the `security.txt` beside them:
 
 ```bash
-npx @sdxc/security-headers audit https://example.com
-npx @sdxc/security-headers csp parse < policy.txt
-npx @sdxc/well-known security-txt check https://example.com
+sdxc pkg security-headers audit https://example.com
+sdxc pkg security-headers csp parse < policy.txt
+sdxc pkg well-known security-txt check https://example.com
 ```
 
 `audit` exits `1` when any header is missing or weak, and `security-txt check` exits `1` on a

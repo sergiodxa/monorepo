@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 37
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to build a JSContact Card with `@sdxc/jscontact` and serve it as a vCard download"
     - "How to import uploaded vCard and jCard contacts as JSContact Cards"
@@ -217,9 +217,9 @@ Convert a vCard someone sent you to see the Card the import route stores, and va
 before you ship it as a fixture:
 
 ```bash
-npx @sdxc/jscontact convert ada.vcf --to jscontact > ada.json
-npx @sdxc/jscontact convert ada.json --to vcard
-npx @sdxc/jscontact validate ada.json --json
+sdxc pkg jscontact convert ada.vcf --to jscontact > ada.json
+sdxc pkg jscontact convert ada.json --to vcard
+sdxc pkg jscontact validate ada.json --json
 ```
 
 `convert` detects the input format, and `--from` names it for an ambiguous file; `validate`

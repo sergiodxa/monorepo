@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 16
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to look up a domain's expiry, status and registrar over RDAP with `@sdxc/rdap`"
     - "How to decide what a lookup result means"
@@ -330,9 +330,9 @@ Look a domain up by hand when an alert fires, or fail a CI job when one of your 
 close to lapsing:
 
 ```bash
-npx @sdxc/rdap lookup example.com
-npx @sdxc/rdap lookup example.com --related --json
-npx @sdxc/rdap expires example.com --within '30 days'
+sdxc pkg rdap lookup example.com
+sdxc pkg rdap lookup example.com --related --json
+sdxc pkg rdap expires example.com --within '30 days'
 ```
 
 `--related` also asks the registrar's server, for the fields a thin registry leaves out.

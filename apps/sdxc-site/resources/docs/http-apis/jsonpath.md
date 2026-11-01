@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 9
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to select values from a fetched JSON document with `@sdxc/jsonpath`"
     - "How to accept a client's JSONPath query and answer an invalid one with its offset"
@@ -246,9 +246,9 @@ client as an example query:
 
 ```bash
 curl -s https://api.github.com/repos/remix-run/remix/releases > releases.json
-npx @sdxc/jsonpath query '$[?@.draft == false].tag_name' releases.json
-npx @sdxc/jsonpath query '$..assets[*].name' releases.json --paths
-npx @sdxc/jsonpath query '$[0].tag_name' releases.json --first
+sdxc pkg jsonpath query '$[?@.draft == false].tag_name' releases.json
+sdxc pkg jsonpath query '$..assets[*].name' releases.json --paths
+sdxc pkg jsonpath query '$[0].tag_name' releases.json --first
 ```
 
 `--paths` prints the normalized path of each match, the location a redaction turns into a patch

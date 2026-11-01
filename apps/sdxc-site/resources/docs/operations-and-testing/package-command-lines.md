@@ -1,32 +1,52 @@
 ---
 title: Use a package from the terminal
-description: Run a package's own command line with npx to decode a token, check a domain, render a diagram or convert a contact card, and script it with --json and exit codes.
+description: Run a package's own command line with sdxc pkg to decode a token, check a domain, render a diagram or convert a contact card, and script it with --json and exit codes.
 section:
     title: Operations & testing
     order: 9
 order: 8.5
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
-    - "How to run a package's command line with npx or bunx, without installing it"
+    - "How to run any package's command line with `sdxc pkg`, without installing the package"
     - "How every package command line reads input, prints reports and exits, so scripts and CI can rely on it"
     - "Which packages ship a command line and what each one does"
 ---
 
 Many packages do work you also want at a terminal: generating a key pair, decoding a token
 someone pasted into a ticket, checking a domain's mail records before a launch. Those packages
-ship a small command line beside the library, named `sdxc-<package>`, that calls the same
-functions your app does. This guide runs one, scripts it, and lists every package that has one.
+ship a small command line beside the library that calls the same functions your app does, and
+the `sdxc` command runs any of them. This guide runs one, scripts it, and lists every package
+that has one.
 
-## Run one without installing it
+## Run one with sdxc pkg
 
-npx downloads the package on first use and runs its command line:
+Install `sdxc` once, as [The sdxc command](/docs/getting-started/the-sdxc-command) shows:
 
 ```bash
-npx @sdxc/jwt decode eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIxMjMifQ.c2ln
+npm add -g @sdxc/kit
 ```
 
-`bunx @sdxc/jwt …` works the same way. In a project that already depends on the package, the
-`sdxc-jwt` binary is on the path of your `package.json` scripts.
+`sdxc pkg` followed by a package's name runs that package's command line, with everything
+after the name passed to it as typed:
+
+```bash
+sdxc pkg jwt decode eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIxMjMifQ.c2ln
+```
+
+Inside a project that installs `@sdxc/jwt`, it runs that version. Anywhere else it downloads
+the published package with `bunx`, or with `npx` when Bun is missing, so nothing needs
+installing first. `sdxc pkg` alone lists every package with a command line.
+
+A mistyped name runs nothing and suggests the closest match, arguments included:
+
+```text
+No @sdxc package command line is named "uiid". Did you mean `sdxc pkg uuid v4 -n 3`?
+```
+
+> [!TIP]
+> A package without a command line yet answers with a link to request one. The request opens
+> in the project's discussions with the package name as its title, and says what you'd use it
+> for, so the most wanted command lines get built first.
 
 ## Script it with --json and exit codes
 
@@ -48,50 +68,50 @@ others:
 Exit code `1` makes a check usable in CI as it is:
 
 ```bash
-npx @sdxc/email-auth check example.com --json > email-auth.json
+sdxc pkg email-auth check example.com --json > email-auth.json
 ```
 
 The step fails when a policy is missing, and the JSON report is there to read.
 
 ## Find the command line you need
 
-| Package                                           | Command                 | What it does                                                            |
-| ------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------- |
-| [`@sdxc/cron`](/api/cron)                         | `sdxc-cron`             | Next occurrences of a schedule, a plain-English description, validation |
-| [`@sdxc/crypto`](/api/crypto)                     | `sdxc-crypto`           | Random tokens, hashes, HMACs, TOTP codes, scrypt password hashes        |
-| [`@sdxc/diagram`](/api/diagram)                   | `sdxc-diagram`          | Render a Mermaid file to SVG, or check it                               |
-| [`@sdxc/distill`](/api/distill)                   | `sdxc-distill`          | Extract the article from a web page                                     |
-| [`@sdxc/doh`](/api/doh)                           | `sdxc-doh`              | DNS lookups over HTTPS                                                  |
-| [`@sdxc/email-address`](/api/email-address)       | `sdxc-email-address`    | Check addresses for syntax, disposable domains and mail servers         |
-| [`@sdxc/email-auth`](/api/email-auth)             | `sdxc-email-auth`       | Check a domain's DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM            |
-| [`@sdxc/font`](/api/font)                         | `sdxc-font`             | Inspect a font, or subset it to the characters a page uses              |
-| [`@sdxc/html`](/api/html)                         | `sdxc-html`             | Query a page by role and accessible name, or print its outline          |
-| [`@sdxc/http-signatures`](/api/http-signatures)   | `sdxc-http-signatures`  | Sign a request, or verify a signed one                                  |
-| [`@sdxc/icalendar`](/api/icalendar)               | `sdxc-icalendar`        | Validate a calendar, expand its recurrences, try out an RRULE           |
-| [`@sdxc/ip`](/api/ip)                             | `sdxc-ip`               | Classify an address, check whether a range contains it                  |
-| [`@sdxc/jscalendar`](/api/jscalendar)             | `sdxc-jscalendar`       | Convert to and from iCalendar, expand recurrences, validate             |
-| [`@sdxc/jscontact`](/api/jscontact)               | `sdxc-jscontact`        | Convert between vCard, jCard and JSContact, validate                    |
-| [`@sdxc/jsdoc`](/api/jsdoc)                       | `sdxc-jsdoc`            | Extract JSDoc from source files into a documentation model              |
-| [`@sdxc/json-canonical`](/api/json-canonical)     | `sdxc-json-canonical`   | Canonicalize JSON, hash the canonical form                              |
-| [`@sdxc/json-patch`](/api/json-patch)             | `sdxc-json-patch`       | Apply, diff and validate JSON Patch documents                           |
-| [`@sdxc/jsonpath`](/api/jsonpath)                 | `sdxc-jsonpath`         | Query JSON with JSONPath                                                |
-| [`@sdxc/jwt`](/api/jwt)                           | `sdxc-jwt`              | Decode, verify and sign tokens, generate signing keys                   |
-| [`@sdxc/merge-patch`](/api/merge-patch)           | `sdxc-merge-patch`      | Apply and diff JSON Merge Patch documents                               |
-| [`@sdxc/openapi`](/api/openapi)                   | `sdxc-openapi`          | Check an OpenAPI document                                               |
-| [`@sdxc/openpgp`](/api/openpgp)                   | `sdxc-openpgp`          | Generate keys, sign, verify, inspect a key                              |
-| [`@sdxc/qr`](/api/qr)                             | `sdxc-qr`               | Encode text as a QR code, to SVG or PNG                                 |
-| [`@sdxc/rdap`](/api/rdap)                         | `sdxc-rdap`             | Look up a domain's registration, fail when it expires soon              |
-| [`@sdxc/robots`](/api/robots)                     | `sdxc-robots`           | Check a URL against robots.txt, parse a robots.txt                      |
-| [`@sdxc/security-headers`](/api/security-headers) | `sdxc-security-headers` | Audit a page's security headers, parse a CSP                            |
-| [`@sdxc/semver`](/api/semver)                     | `sdxc-semver`           | Validate, compare and sort versions                                     |
-| [`@sdxc/sitemap`](/api/sitemap)                   | `sdxc-sitemap`          | List and validate a sitemap's URLs                                      |
-| [`@sdxc/typeid`](/api/typeid)                     | `sdxc-typeid`           | Generate, parse and encode TypeIDs                                      |
-| [`@sdxc/user-agent`](/api/user-agent)             | `sdxc-user-agent`       | Parse User-Agent strings, one per line from a log                       |
-| [`@sdxc/uuid`](/api/uuid)                         | `sdxc-uuid`             | Generate v4 and v7 UUIDs, validate one                                  |
-| [`@sdxc/web-push`](/api/web-push)                 | `sdxc-web-push`         | Generate VAPID keys, send a test notification                           |
-| [`@sdxc/webmention`](/api/webmention)             | `sdxc-webmention`       | Discover an endpoint, send and verify Webmentions                       |
-| [`@sdxc/well-known`](/api/well-known)             | `sdxc-well-known`       | Check a security.txt, fetch and validate well-known documents           |
-| [`@sdxc/zone-file`](/api/zone-file)               | `sdxc-zone-file`        | Validate, parse and format DNS zone files                               |
+| Package                                           | Command                     | What it does                                                            |
+| ------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| [`@sdxc/cron`](/api/cron)                         | `sdxc pkg cron`             | Next occurrences of a schedule, a plain-English description, validation |
+| [`@sdxc/crypto`](/api/crypto)                     | `sdxc pkg crypto`           | Random tokens, hashes, HMACs, TOTP codes, scrypt password hashes        |
+| [`@sdxc/diagram`](/api/diagram)                   | `sdxc pkg diagram`          | Render a Mermaid file to SVG, or check it                               |
+| [`@sdxc/distill`](/api/distill)                   | `sdxc pkg distill`          | Extract the article from a web page                                     |
+| [`@sdxc/doh`](/api/doh)                           | `sdxc pkg doh`              | DNS lookups over HTTPS                                                  |
+| [`@sdxc/email-address`](/api/email-address)       | `sdxc pkg email-address`    | Check addresses for syntax, disposable domains and mail servers         |
+| [`@sdxc/email-auth`](/api/email-auth)             | `sdxc pkg email-auth`       | Check a domain's DMARC, SPF, MTA-STS, TLS-RPT, BIMI and DKIM            |
+| [`@sdxc/font`](/api/font)                         | `sdxc pkg font`             | Inspect a font, or subset it to the characters a page uses              |
+| [`@sdxc/html`](/api/html)                         | `sdxc pkg html`             | Query a page by role and accessible name, or print its outline          |
+| [`@sdxc/http-signatures`](/api/http-signatures)   | `sdxc pkg http-signatures`  | Sign a request, or verify a signed one                                  |
+| [`@sdxc/icalendar`](/api/icalendar)               | `sdxc pkg icalendar`        | Validate a calendar, expand its recurrences, try out an RRULE           |
+| [`@sdxc/ip`](/api/ip)                             | `sdxc pkg ip`               | Classify an address, check whether a range contains it                  |
+| [`@sdxc/jscalendar`](/api/jscalendar)             | `sdxc pkg jscalendar`       | Convert to and from iCalendar, expand recurrences, validate             |
+| [`@sdxc/jscontact`](/api/jscontact)               | `sdxc pkg jscontact`        | Convert between vCard, jCard and JSContact, validate                    |
+| [`@sdxc/jsdoc`](/api/jsdoc)                       | `sdxc pkg jsdoc`            | Extract JSDoc from source files into a documentation model              |
+| [`@sdxc/json-canonical`](/api/json-canonical)     | `sdxc pkg json-canonical`   | Canonicalize JSON, hash the canonical form                              |
+| [`@sdxc/json-patch`](/api/json-patch)             | `sdxc pkg json-patch`       | Apply, diff and validate JSON Patch documents                           |
+| [`@sdxc/jsonpath`](/api/jsonpath)                 | `sdxc pkg jsonpath`         | Query JSON with JSONPath                                                |
+| [`@sdxc/jwt`](/api/jwt)                           | `sdxc pkg jwt`              | Decode, verify and sign tokens, generate signing keys                   |
+| [`@sdxc/merge-patch`](/api/merge-patch)           | `sdxc pkg merge-patch`      | Apply and diff JSON Merge Patch documents                               |
+| [`@sdxc/openapi`](/api/openapi)                   | `sdxc pkg openapi`          | Check an OpenAPI document                                               |
+| [`@sdxc/openpgp`](/api/openpgp)                   | `sdxc pkg openpgp`          | Generate keys, sign, verify, inspect a key                              |
+| [`@sdxc/qr`](/api/qr)                             | `sdxc pkg qr`               | Encode text as a QR code, to SVG or PNG                                 |
+| [`@sdxc/rdap`](/api/rdap)                         | `sdxc pkg rdap`             | Look up a domain's registration, fail when it expires soon              |
+| [`@sdxc/robots`](/api/robots)                     | `sdxc pkg robots`           | Check a URL against robots.txt, parse a robots.txt                      |
+| [`@sdxc/security-headers`](/api/security-headers) | `sdxc pkg security-headers` | Audit a page's security headers, parse a CSP                            |
+| [`@sdxc/semver`](/api/semver)                     | `sdxc pkg semver`           | Validate, compare and sort versions                                     |
+| [`@sdxc/sitemap`](/api/sitemap)                   | `sdxc pkg sitemap`          | List and validate a sitemap's URLs                                      |
+| [`@sdxc/typeid`](/api/typeid)                     | `sdxc pkg typeid`           | Generate, parse and encode TypeIDs                                      |
+| [`@sdxc/user-agent`](/api/user-agent)             | `sdxc pkg user-agent`       | Parse User-Agent strings, one per line from a log                       |
+| [`@sdxc/uuid`](/api/uuid)                         | `sdxc pkg uuid`             | Generate v4 and v7 UUIDs, validate one                                  |
+| [`@sdxc/web-push`](/api/web-push)                 | `sdxc pkg web-push`         | Generate VAPID keys, send a test notification                           |
+| [`@sdxc/webmention`](/api/webmention)             | `sdxc pkg webmention`       | Discover an endpoint, send and verify Webmentions                       |
+| [`@sdxc/well-known`](/api/well-known)             | `sdxc pkg well-known`       | Check a security.txt, fetch and validate well-known documents           |
+| [`@sdxc/zone-file`](/api/zone-file)               | `sdxc pkg zone-file`        | Validate, parse and format DNS zone files                               |
 
 The guide for each package shows its command line where it helps, and `--help` lists the rest.
 

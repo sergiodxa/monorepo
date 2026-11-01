@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 9
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to encode a link at the error correction level its surface needs with `@sdxc/qr`"
     - "How to render a QR code inline with `remix/component` and keep it inside its layout"
@@ -225,9 +225,9 @@ Print a code for a poster or a test run straight from the terminal, at the same 
 levels the services pick:
 
 ```bash
-npx @sdxc/qr encode "https://example.com/check-in/abc123" --level Q > check-in.svg
-npx @sdxc/qr encode --level H --png --output badge.png "https://example.com/b/ada"
-echo "https://example.com/b/ada" | npx @sdxc/qr encode --max-version 6 --output badge.svg
+sdxc pkg qr encode "https://example.com/check-in/abc123" --level Q > check-in.svg
+sdxc pkg qr encode --level H --png --output badge.png "https://example.com/b/ada"
+echo "https://example.com/b/ada" | sdxc pkg qr encode --max-version 6 --output badge.svg
 ```
 
 `--png` writes a PNG file and needs `--output`; `--max-version` fails a link longer than the

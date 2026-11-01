@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 5
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to fetch a saved link under bounds in a job and pull out its article with `@sdxc/distill`"
     - "How to keep a plain-text excerpt of the page"
@@ -266,10 +266,10 @@ When a saved link comes out empty, run the same extraction and markup reads by h
 what the job saw:
 
 ```bash
-npx @sdxc/distill extract https://blog.com/edge-reads --format text
-npx @sdxc/distill extract page.html --url https://blog.com/edge-reads --json
-npx @sdxc/html outline https://blog.com/edge-reads
-npx @sdxc/html query https://blog.com/edge-reads --role heading --json
+sdxc pkg distill extract https://blog.com/edge-reads --format text
+sdxc pkg distill extract page.html --url https://blog.com/edge-reads --json
+sdxc pkg html outline https://blog.com/edge-reads
+sdxc pkg html query https://blog.com/edge-reads --role heading --json
 ```
 
 `extract` exits 1 when the page has no article or the site refused or ran out of time, which

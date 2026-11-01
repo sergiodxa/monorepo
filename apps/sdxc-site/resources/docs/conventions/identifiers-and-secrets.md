@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 3
 order: 5
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "When a value gets a time-ordered UUIDv7, a random UUIDv4 or a token from `randomToken`"
     - "Why a UUID is an identifier and never a secret"
@@ -168,10 +168,10 @@ For a fixture, a seed row or an id someone pasted into a ticket, `@sdxc/uuid` an
 `@sdxc/crypto` mint and check each kind of value from a terminal:
 
 ```bash
-npx @sdxc/uuid v7 -n 5
-npx @sdxc/uuid v4
-npx @sdxc/uuid validate 019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e
-npx @sdxc/crypto token --prefix sk
+sdxc pkg uuid v7 -n 5
+sdxc pkg uuid v4
+sdxc pkg uuid validate 019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e
+sdxc pkg crypto token --prefix sk
 ```
 
 `validate` prints the version, and the creation time for a v7, and exits `1` for anything

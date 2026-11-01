@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 15
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to make an OpenPGP signing key GnuPG can verify against"
     - "How to serve a cleartext-signed `security.txt` and sign files with detached signatures"
@@ -278,11 +278,11 @@ test("security.txt verifies against the published key", async () => {
 for the times you sign by hand:
 
 ```bash
-npx @sdxc/openpgp keygen --key-version 4 --user-id 'Security <security@example.com>' \
+sdxc pkg openpgp keygen --key-version 4 --user-id 'Security <security@example.com>' \
   --public-out public.asc > signing.key
-npx @sdxc/openpgp inspect public.asc
-npx @sdxc/openpgp sign release.tar.gz --detach --key-file signing.key > release.tar.gz.asc
-npx @sdxc/openpgp verify blocklist.json --signature blocklist.json.asc --key-file vendor.asc
+sdxc pkg openpgp inspect public.asc
+sdxc pkg openpgp sign release.tar.gz --detach --key-file signing.key > release.tar.gz.asc
+sdxc pkg openpgp verify blocklist.json --signature blocklist.json.asc --key-file vendor.asc
 ```
 
 `--key-version 4` writes the key GnuPG 2.2 reads. `verify` exits `1` when the signature is bad

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 4
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"
     - "How to describe a weekly series in a time zone and offer a single event as a download"
@@ -313,9 +313,9 @@ Validate your published feed, list a window of its sessions, or try out a rule b
 into the series:
 
 ```bash
-curl -s https://example.com/events.ics | npx @sdxc/icalendar validate
-npx @sdxc/icalendar expand meetup.ics --from 2026-03-01 --until 2026-05-01 --tz Europe/Madrid
-npx @sdxc/icalendar rrule "FREQ=WEEKLY;BYDAY=TH" --start 2026-01-08T19:00 --tz Europe/Madrid -n 5
+curl -s https://example.com/events.ics | sdxc pkg icalendar validate
+sdxc pkg icalendar expand meetup.ics --from 2026-03-01 --until 2026-05-01 --tz Europe/Madrid
+sdxc pkg icalendar rrule "FREQ=WEEKLY;BYDAY=TH" --start 2026-01-08T19:00 --tz Europe/Madrid -n 5
 ```
 
 `validate` exits `1` on a problem, which makes it a CI step against a deployed feed, and `--tz`

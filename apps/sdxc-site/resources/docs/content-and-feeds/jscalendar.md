@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 36
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to validate JSCalendar events and tasks from a request with `@sdxc/jscalendar`"
     - "How to expand recurring events into an agenda and edit one occurrence with a PatchObject"
@@ -334,10 +334,10 @@ Check an event, list its occurrences in a window, or turn it into an `.ics` file
 terminal, with the same rules the agenda uses:
 
 ```bash
-npx @sdxc/jscalendar validate standup.json
-npx @sdxc/jscalendar expand standup.json --from 2026-03-22 --until 2026-04-06 --time-zone Europe/Madrid
-npx @sdxc/jscalendar convert standup.json --to icalendar > standup.ics
-npx @sdxc/jscalendar convert calendar.ics --to jscalendar > group.json
+sdxc pkg jscalendar validate standup.json
+sdxc pkg jscalendar expand standup.json --from 2026-03-22 --until 2026-04-06 --time-zone Europe/Madrid
+sdxc pkg jscalendar convert standup.json --to icalendar > standup.ics
+sdxc pkg jscalendar convert calendar.ics --to jscalendar > group.json
 ```
 
 `--time-zone` sets the zone floating times are read in, so the expansion matches what a reader

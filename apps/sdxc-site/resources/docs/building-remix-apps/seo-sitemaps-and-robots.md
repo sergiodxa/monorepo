@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 5
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to give every page one canonical URL and structured data"
     - "How to serve `sitemap.xml` and `robots.txt` from routes"
@@ -301,10 +301,10 @@ test("security.txt is at least 30 days from expiring", () => {
 Check what your deployed routes serve, or a robots.txt file before it ships:
 
 ```bash
-npx @sdxc/robots check https://example.com/account --agent Googlebot
-npx @sdxc/robots check /account --robots public/robots.txt
-npx @sdxc/sitemap validate https://example.com/sitemap.xml
-npx @sdxc/sitemap list https://example.com/sitemap.xml
+sdxc pkg robots check https://example.com/account --agent Googlebot
+sdxc pkg robots check /account --robots public/robots.txt
+sdxc pkg sitemap validate https://example.com/sitemap.xml
+sdxc pkg sitemap list https://example.com/sitemap.xml
 ```
 
 `robots check` exits `1` when the URL is disallowed and `sitemap validate` exits `1` when it

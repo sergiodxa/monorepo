@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 12
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to read the caller's address once per request and decide what `null` means"
     - "How to key a rate limit on the client's network and admit only your own networks"
@@ -295,9 +295,9 @@ When an address in a log needs explaining, or you want to confirm an office rang
 adding it to `OFFICE_NETWORKS`, `@sdxc/ip` answers from a terminal:
 
 ```bash
-npx @sdxc/ip classify 10.0.0.1
-npx @sdxc/ip contains 203.0.113.0/24 203.0.113.40
-npx @sdxc/ip contains 2001:db8:42::/48 2001:db8:42::9 --json
+sdxc pkg ip classify 10.0.0.1
+sdxc pkg ip contains 203.0.113.0/24 203.0.113.40
+sdxc pkg ip contains 2001:db8:42::/48 2001:db8:42::9 --json
 ```
 
 `classify` prints the version, canonical form and IANA special-purpose class, such as `private`.

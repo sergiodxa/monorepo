@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 2
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to swap your schema import so `@sdxc/openapi` can read the same schemas"
     - "How to declare operations and build and serve an OpenAPI 3.1 document"
@@ -262,8 +262,8 @@ Check the document the deployed Worker serves, or a copy you exported, before yo
 client generator:
 
 ```bash
-npx @sdxc/openapi check https://books.example.com/api/openapi.json
-npx @sdxc/openapi check openapi.yaml --json
+sdxc pkg openapi check https://books.example.com/api/openapi.json
+sdxc pkg openapi check openapi.yaml --json
 ```
 
 `check` prints each finding at its JSON Pointer and exits `1` on any, so it works as a CI step

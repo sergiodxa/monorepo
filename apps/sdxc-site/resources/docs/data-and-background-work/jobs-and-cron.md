@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 4
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to declare jobs once and write handlers with `@sdxc/jobs`"
     - "How to enqueue from a request and run on Cloudflare Queues and cron triggers"
@@ -333,9 +333,9 @@ Check an expression before it goes into `job({ cron })`, or replay a user's sche
 time zone when they ask why a report ran when it did:
 
 ```bash
-npx @sdxc/cron describe "0 9 * * MON-FRI"
-npx @sdxc/cron next "0 9 * * MON-FRI" --tz America/New_York -n 3
-npx @sdxc/cron validate "0 25 * * *"
+sdxc pkg cron describe "0 9 * * MON-FRI"
+sdxc pkg cron next "0 9 * * MON-FRI" --tz America/New_York -n 3
+sdxc pkg cron validate "0 25 * * *"
 ```
 
 `validate` exits `1` and points at the field and position at fault, as the form does. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines)

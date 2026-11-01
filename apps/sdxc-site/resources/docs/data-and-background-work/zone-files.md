@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 15
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
     - "How to compare the records with live DNS"
@@ -275,9 +275,9 @@ Check a zone file a customer sent before it reaches the import form, normalize i
 record with live DNS:
 
 ```bash
-npx @sdxc/zone-file validate example.com.zone --origin example.com
-npx @sdxc/zone-file format example.com.zone --origin example.com --relative
-npx @sdxc/doh lookup www.example.com --type CNAME
+sdxc pkg zone-file validate example.com.zone --origin example.com
+sdxc pkg zone-file format example.com.zone --origin example.com --relative
+sdxc pkg doh lookup www.example.com --type CNAME
 ```
 
 `validate` lists every entry it could not use with its line and exits `1` when there is any;

@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 14
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"
     - "How to verify signatures with a freshness window and replay checks"
@@ -496,10 +496,10 @@ To try a partner's endpoint by hand, or to see why a request it sent fails verif
 `@sdxc/http-signatures` signs and verifies from a terminal:
 
 ```bash
-npx @sdxc/http-signatures sign POST https://partner.example.com/orders \
+sdxc pkg http-signatures sign POST https://partner.example.com/orders \
   -H content-type:application/json --body-file order.json \
   --key-file signing.pem --key-id https://api.example.com/keys/1 --curl
-npx @sdxc/http-signatures verify request.http --key-file partner.pub.pem --max-age "5 minutes"
+sdxc pkg http-signatures verify request.http --key-file partner.pub.pem --max-age "5 minutes"
 ```
 
 `--curl` prints a curl command that sends the signed request, and `--scheme draft-cavage` signs

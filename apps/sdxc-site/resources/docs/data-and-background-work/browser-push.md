@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 14
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"
     - "How to send an encrypted notification from a Worker, directly or through messaging"
@@ -311,8 +311,8 @@ Generate the sender's keys, and send one test notification to a browser you subs
 from a terminal:
 
 ```bash
-npx @sdxc/web-push vapid keygen --json > vapid.json
-npx @sdxc/web-push send subscription.json --subject mailto:ops@example.com --keys-file vapid.json
+sdxc pkg web-push vapid keygen --json > vapid.json
+sdxc pkg web-push send subscription.json --subject mailto:ops@example.com --keys-file vapid.json
 ```
 
 `subscription.json` is one stored subscription row's JSON. Without `--keys-file`, `send` reads the

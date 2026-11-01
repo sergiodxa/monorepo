@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 20
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to check a customer's DMARC policy, SPF lookups and DKIM key before you send from their domain"
     - "How to serve an MTA-STS policy and its TLS-RPT record for your own domain"
@@ -371,8 +371,8 @@ Run the same check by hand while a customer fixes their records, or in CI before
 starts sending:
 
 ```bash
-npx @sdxc/email-auth check example.com --selector mailer
-npx @sdxc/email-auth check example.com --selector mailer --skip bimi --json
+sdxc pkg email-auth check example.com --selector mailer
+sdxc pkg email-auth check example.com --selector mailer --skip bimi --json
 ```
 
 Repeat `--selector` for each DKIM key the domain signs with. The command exits `1` when a checked

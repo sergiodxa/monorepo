@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 11
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "Why `JSON.stringify` is the wrong input for a hash or a signature"
     - "How to hash and deduplicate JSON with `@sdxc/json-canonical`"
@@ -167,9 +167,9 @@ Recompute a stored hash, or see the exact bytes a signature covers, from a docum
 you:
 
 ```bash
-npx @sdxc/json-canonical canonicalize payload.json
-npx @sdxc/json-canonical hash payload.json
-npx @sdxc/json-canonical hash payload.json --alg sha-512 --base64url
+sdxc pkg json-canonical canonicalize payload.json
+sdxc pkg json-canonical hash payload.json
+sdxc pkg json-canonical hash payload.json --alg sha-512 --base64url
 ```
 
 `hash` prints the SHA-256 of the canonical bytes in lowercase hex, the digest `contentHash`

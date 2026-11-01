@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 3
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to mark posts up with microformats using `@sdxc/microformats`"
     - "How to receive, verify and send Webmentions from background jobs"
@@ -490,9 +490,9 @@ Before relying on the job, check by hand that a site you reply to takes Webmenti
 and confirm your reply links where the receiver expects:
 
 ```bash
-npx @sdxc/webmention discover https://other.com/posts/1
-npx @sdxc/webmention verify https://example.com/posts/agreed https://other.com/posts/1
-npx @sdxc/webmention send https://example.com/posts/agreed https://other.com/posts/1 --json
+sdxc pkg webmention discover https://other.com/posts/1
+sdxc pkg webmention verify https://example.com/posts/agreed https://other.com/posts/1
+sdxc pkg webmention send https://example.com/posts/agreed https://other.com/posts/1 --json
 ```
 
 `discover` exits 1 when the target advertises no endpoint, `send` when it has none or the

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 31
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"
     - "How to find the diagrams in markdown and draw them in a route"
@@ -168,9 +168,9 @@ Draft a diagram at the terminal before it goes into a post, and check every diag
 with the same parser the route uses:
 
 ```bash
-npx @sdxc/diagram render flow.mmd --output flow.svg
-npx @sdxc/diagram check flow.mmd
-npx @sdxc/diagram check flow.mmd --json
+sdxc pkg diagram render flow.mmd --output flow.svg
+sdxc pkg diagram check flow.mmd
+sdxc pkg diagram check flow.mmd --json
 ```
 
 `check` exits `1` when a diagram uses syntax outside the supported subset, and `--json` adds

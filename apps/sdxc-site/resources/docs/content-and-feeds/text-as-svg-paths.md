@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 34
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to measure text with a font's real metrics using `@sdxc/font`"
     - "How to shorten text to fit a width and turn glyphs into SVG path data"
@@ -393,8 +393,8 @@ Inspect a font before you bundle it, to read the metrics the badge layout relies
 glyph count, its embedding permission and the axes a variable font offers:
 
 ```bash
-npx @sdxc/font inspect inter-regular.ttf
-npx @sdxc/font inspect inter-variable.ttf --json
+sdxc pkg font inspect inter-regular.ttf
+sdxc pkg font inspect inter-variable.ttf --json
 ```
 
 `--json` prints the same report for a script to read, such as one that checks a font's

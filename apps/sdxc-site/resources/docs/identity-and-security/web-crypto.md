@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 7
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to pick the Web Crypto primitive by what happens to the value next"
     - "How to build reset links from hashed tokens and store passwords with scrypt"
@@ -285,11 +285,11 @@ test("opens what it sealed", async () => {
 terminal. Paste the token it prints when `cf workers secrets update` asks for the value:
 
 ```bash
-npx @sdxc/crypto token
+sdxc pkg crypto token
 bunx cf workers secrets update LINK_SECRET
-npx @sdxc/crypto scrypt hash < password.txt
-npx @sdxc/crypto scrypt verify '$scrypt$ln=15,r=8,p=3$…$…' < password.txt
-npx @sdxc/crypto hmac payload.json --key-env LINK_SECRET
+sdxc pkg crypto scrypt hash < password.txt
+sdxc pkg crypto scrypt verify '$scrypt$ln=15,r=8,p=3$…$…' < password.txt
+sdxc pkg crypto hmac payload.json --key-env LINK_SECRET
 ```
 
 Passwords arrive on stdin and HMAC keys from `--key-file` or `--key-env`, so neither lands in

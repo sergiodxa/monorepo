@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 8
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-01
 outcomes:
     - "How to apply an `application/json-patch+json` body to a resource, all or nothing"
     - "How to answer a malformed, unresolvable or failed-test patch with 400, 422 or 409"
@@ -261,9 +261,9 @@ Build the patch a client would send for an edit, and try it on a copy of the boo
 files:
 
 ```bash
-npx @sdxc/json-patch diff book.json edited.json > patch.json
-npx @sdxc/json-patch validate patch.json
-npx @sdxc/json-patch apply patch.json book.json
+sdxc pkg json-patch diff book.json edited.json > patch.json
+sdxc pkg json-patch validate patch.json
+sdxc pkg json-patch apply patch.json book.json
 ```
 
 `apply` exits `1` when an operation's path does not resolve or a `test` fails, the same cases the
