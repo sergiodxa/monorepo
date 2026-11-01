@@ -61,6 +61,7 @@ export default {
 					toolbar: "Filter issues",
 					tabs: "Issue states",
 					filters: "Filters",
+					options: "View",
 					apply: "Apply",
 					is: "is",
 					isAnyOf: "is any of",
