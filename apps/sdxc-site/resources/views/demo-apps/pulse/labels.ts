@@ -291,7 +291,6 @@ export const COPY = {
 	},
 	settings: {
 		title: "Settings",
-		nav: "Settings",
 		back: "Settings",
 		general: {
 			title: "General",
@@ -378,7 +377,7 @@ export const COPY = {
 	},
 	refresh: {
 		trigger: "Auto-refresh",
-		updated: "Updated",
+		updated: "Updated {time}",
 		off: "Off",
 		every: (seconds: number) => `${seconds}s`,
 	},
@@ -439,6 +438,5 @@ export const RANGE_LABELS: RangePicker.Labels = {
 
 /** The settings nav's strings. */
 export const SETTINGS_LABELS: SettingsLayout.Labels = {
-	nav: COPY.settings.nav,
 	back: COPY.settings.back,
 };

@@ -118,6 +118,7 @@ export function EditorScreen(handle: Handle<EditorScreenProps>) {
 
 		return (
 			<EditorLayout
+				form={FORM_ID}
 				back={{ href: href(listPage), label: kind === "page" ? "Pages" : "Posts" }}
 				title={post?.title ?? `New ${noun}`}
 				status={

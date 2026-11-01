@@ -95,14 +95,6 @@ function OverviewTab(handle: Handle<{ service: Service }>) {
 		let yesterday = service.latency.map((_, index) =>
 			Math.round(calm * (0.94 + Math.sin(index * 1.3) * 0.05)),
 		);
-		let runs: { x: number; y: number; label: string }[][] = [[]];
-		service.latency.forEach((value, x) => {
-			if (value === null) {
-				if (runs.at(-1)!.length > 0) runs.push([]);
-				return;
-			}
-			runs.at(-1)!.push({ x, y: value, label: `${16 - x} hours ago: ${value} ms` });
-		});
 		let ceiling = Math.max(TARGET_MS * 1.5, ...service.latency.map((value) => value ?? 0)) * 1.1;
 
 		return (
@@ -138,11 +130,13 @@ function OverviewTab(handle: Handle<{ service: Service }>) {
 								}))}
 								comparison
 							/>
-							{runs
-								.filter((run) => run.length > 0)
-								.map((points) => (
-									<Chart.Line key={points[0]!.x} points={points} />
-								))}
+							<Chart.Line
+								points={service.latency.map((y, x) => ({
+									x,
+									y,
+									label: y === null ? COPY.overview.noData : `${16 - x} hours ago: ${y} ms`,
+								}))}
+							/>
 							<Chart.Threshold y={TARGET_MS} label={COPY.service.threshold} tone="warning" />
 						</Chart>
 					</Panel>

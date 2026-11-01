@@ -42,9 +42,6 @@ import { COUNT, MILLISECONDS, Panel, PERCENT, StateLinks } from "./parts";
 /** The chart's drawing box; the SVG scales to its column from this ratio. */
 const CHART_SIZE = { width: 960, height: 260 } as const;
 
-/** The id of the hatch the no-data stretch fills with, unique on the page. */
-const HATCH_ID = "pulse-overview-no-data";
-
 /** The region states a visitor can preview from the overview's footer. */
 type OverviewState = "live" | "loading" | "error";
 
@@ -95,25 +92,6 @@ namespace MetricChart {
 }
 
 /**
- * Splits a series at its gaps, so a line stops where data stopped instead of bridging the
- * stretch nobody measured.
- */
-function segments(values: readonly (number | null)[], name: string) {
-	let runs: { x: number; y: number; label: string }[][] = [];
-	let run: { x: number; y: number; label: string }[] = [];
-	values.forEach((value, index) => {
-		if (value === null) {
-			if (run.length > 0) runs.push(run);
-			run = [];
-			return;
-		}
-		run.push({ x: index, y: value, label: `${name}, bucket ${index + 1}: ${value}` });
-	});
-	if (run.length > 0) runs.push(run);
-	return runs;
-}
-
-/**
  * The overview's chart: bars for incident counts, lines for the rates, each with the previous
  * period dashed behind it, the open incident shaded red and the outage hatched as unknown.
  */
@@ -154,42 +132,11 @@ function MetricChart(handle: Handle<MetricChart.Props>) {
 				yDomain={series.domain}
 				aria-label={label}
 			>
-				<defs>
-					<pattern
-						id={HATCH_ID}
-						width="8"
-						height="8"
-						patternUnits="userSpaceOnUse"
-						patternTransform="rotate(45)"
-					>
-						<line
-							x1="0"
-							y1="0"
-							x2="0"
-							y2="8"
-							mix={[
-								raw({
-									stroke: "var(--ui-neutral-fg-muted)",
-									strokeWidth: "2",
-									strokeOpacity: "0.5",
-								}),
-							]}
-						/>
-					</pattern>
-				</defs>
 				<Chart.Band
 					from={series.gap[0] - 0.5}
 					to={series.gap[1] + 0.5}
 					label={COPY.overview.noData}
-					tone="neutral"
-				/>
-				<rect
-					aria-hidden="true"
-					x={((series.gap[0] - 0.5) / last) * CHART_SIZE.width}
-					y={16}
-					width={((series.gap[1] - series.gap[0] + 1) / last) * CHART_SIZE.width}
-					height={CHART_SIZE.height - 16}
-					fill={`url(#${HATCH_ID})`}
+					variant="hatched"
 				/>
 				<Chart.Band
 					from={series.incident[0] - 0.5}
@@ -205,9 +152,16 @@ function MetricChart(handle: Handle<MetricChart.Props>) {
 					}))}
 					comparison
 				/>
-				{segments(series.current, COPY.overview.legendCurrent).map((points) => (
-					<Chart.Line key={points[0]?.x} points={points} />
-				))}
+				<Chart.Line
+					points={series.current.map((y, x) => ({
+						x,
+						y,
+						label:
+							y === null
+								? COPY.overview.noData
+								: `${COPY.overview.legendCurrent}, bucket ${x + 1}: ${y}`,
+					}))}
+				/>
 			</Chart>
 		);
 	};
@@ -256,7 +210,6 @@ export default function Overview(handle: Handle<Overview.Props>) {
 								description: COPY.range.presets[id].description,
 							}))}
 							labels={RANGE_LABELS}
-							mix={[raw({ inlineSize: "24rem", maxInlineSize: "100%" })]}
 						/>
 					}
 				/>

@@ -14,7 +14,6 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hidden, hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
 import { text, truncate, weight } from "@sdxc/u/typography";
 import { Badge, Button, Label, LinkButton, Select, TextField } from "@sdxc/ui";
 import { clearFiltersHref, setParamHref } from "@sdxc/ui/app";
@@ -165,18 +164,6 @@ export function PostsScreen(handle: Handle<PostsScreenProps>) {
 					collapse
 					locale="en-US"
 					labels={FILTER_LABELS}
-					mix={[
-						when(
-							'& [data-slot="filter-bar-tabs"]',
-							raw({
-								flexShrink: "1",
-								minInlineSize: "0",
-								maxInlineSize: "100%",
-								overflowX: "auto",
-								scrollbarWidth: "none",
-							}),
-						),
-					]}
 				/>
 				{rows.length === 0 ? (
 					<Table.Empty>
@@ -290,7 +277,7 @@ function PostsTable(handle: Handle<PostsTableProps>) {
 									return (
 										<Table.Row
 											key={post.id}
-											aria-selected={post.id === quickId ? "true" : undefined}
+											aria-current={post.id === quickId ? "true" : undefined}
 										>
 											<Table.Select
 												name="post"

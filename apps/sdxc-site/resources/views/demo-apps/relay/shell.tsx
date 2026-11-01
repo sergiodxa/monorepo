@@ -323,6 +323,7 @@ export function RelayShell(handle: Handle<RelayShell.Props>) {
 				collapsed={collapsed}
 				cookieName={SHELL_COOKIE}
 				indicator="fill"
+				sheetBelow="64rem"
 				workspace={
 					<AppShell.Identity avatar={<RelayMark />} name="Relay" detail="Fernway support" />
 				}

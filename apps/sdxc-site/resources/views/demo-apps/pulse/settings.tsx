@@ -205,29 +205,7 @@ export default function Settings(handle: Handle<Settings.Props>) {
 		return (
 			<div mix={[vstack({ gap: 5, align: "stretch" }), minIs(0)]}>
 				<PageHeader title={copy.title} description={copy.description} />
-				<SettingsLayout
-					sections={[
-						{
-							label: COPY.nav.workspace,
-							items: [
-								{ href: href("settings"), label: COPY.nav.general, current: section === "general" },
-								{
-									href: href("settings/notifications"),
-									label: COPY.nav.notifications,
-									current: section === "notifications",
-								},
-								{
-									href: href("settings/billing"),
-									label: COPY.nav.billing,
-									current: section === "billing",
-								},
-							],
-						},
-					]}
-					page="section"
-					backHref={href("settings")}
-					labels={SETTINGS_LABELS}
-				>
+				<SettingsLayout backHref={href("settings")} labels={SETTINGS_LABELS}>
 					<HeadingScope level={2}>
 						{section === "general" ? <General /> : null}
 						{section === "notifications" ? <Notifications /> : null}
