@@ -37,6 +37,11 @@ Inside a project that installs `@sdxc/jwt`, it runs that version. Anywhere else 
 the published package with `bunx`, or with `npx` when Bun is missing, so nothing needs
 installing first. `sdxc pkg` alone lists every package with a command line.
 
+A project that pins its `@sdxc` packages to a release gets the command line from that same
+release. In a project on `2026.10.25`, `sdxc pkg jwt` runs the newest `@sdxc/jwt` published
+on or before that date, so the command line decodes and signs tokens the way your app's code
+does. Outside a project, or in one that pins no `@sdxc` package, it runs the newest version.
+
 A mistyped name runs nothing and suggests the closest match, arguments included:
 
 ```text

@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 10
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-01
 outcomes:
     - "How to parse JSONC with comments and trailing commas"
     - "How to point a mistake at its line and column and validate the shape"
@@ -184,6 +184,23 @@ test("points a mistake at its line and column", async () => {
 	);
 });
 ```
+
+## Run it from the terminal
+
+`sdxc pkg jsonc` checks the same file before a deploy reads it, which suits a CI step, and
+prints it as plain JSON for a tool that only reads JSON:
+
+```bash
+sdxc pkg jsonc check deploy.jsonc
+sdxc pkg jsonc check deploy.jsonc --json
+sdxc pkg jsonc strip deploy.jsonc --indent 2 > deploy.json
+```
+
+`check` prints the same `file:line:column` the loader reports and exits 1 on a mistake.
+`strip` without `--indent` keeps every line and column where it was, and exits 2 on text that
+is not JSONC, so its output is always valid JSON. See
+[Use a package from the terminal](/docs/operations-and-testing/package-command-lines) for the
+conventions every package command line shares.
 
 ## Where to go next
 
