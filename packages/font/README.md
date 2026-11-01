@@ -59,6 +59,24 @@ Layout maps one code point to one glyph: no ligatures, no GPOS mark positioning,
 - `@sdxc/font/woff2` — `parseWoff2(bytes)`, `decodeWoff2(bytes)`.
 - `@sdxc/font/subset` — `subset(font, glyphs)` for CFF fonts and variable font instances.
 
+## Command line
+
+```sh
+bunx @sdxc/font --help
+```
+
+`inspect` prints each font's names, metrics, glyph count, embedding permission, variable axes and color tables; `--json` prints them as data. It reads `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc` and `.dfont`, from a path or stdin.
+
+```sh
+bunx @sdxc/font inspect Inter.woff2 --json
+```
+
+`subset` writes a font holding only the glyphs a text draws, addressed by glyph id as a PDF embeds them (it maps no characters). `--instance` fixes a variable font first, `--name` picks a collection's font, and `--json` prints the glyph id each character landed on.
+
+```sh
+bunx @sdxc/font subset Mada-VF.ttf --text "Invoice 42" --instance wght=700 -o invoice.ttf --json
+```
+
 ## Pattern: Wrap a paragraph to a width
 
 ```typescript

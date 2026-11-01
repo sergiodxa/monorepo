@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Font reader: metrics, outlines, layout, shaping, variable fonts, color glyphs, subsetting",
 	"license": "MIT",
+	"bin": {
+		"sdxc-font": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -16,6 +19,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
 }
