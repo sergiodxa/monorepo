@@ -117,6 +117,8 @@ let json = JSON.stringify(project);
 bunx @sdxc/jsdoc extract src --output docs.json
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg jsdoc …` runs the same command line, using the version your project installs.
+
 A file that does not parse is listed as `path:line:column message` and exits 1 without output;
 `--keep-going` extracts the rest. `bunx @sdxc/jsdoc --help` lists every flag.
 
