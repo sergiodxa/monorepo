@@ -62,6 +62,8 @@ the compliance suite expects. A pattern that is not an I-Regexp makes the functi
 bunx @sdxc/jsonpath query '$.store.book[?@.price < 10].title' store.json
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg jsonpath …` runs the same command line, using the version your project installs.
+
 `query` prints the matched values as a JSON array, reading the document from a file or from
 stdin. `--paths` prints normalized paths instead, `--first` prints the first match alone, and
 `--fail-empty` exits 1 when nothing matches. An invalid expression exits 2 and points at the
