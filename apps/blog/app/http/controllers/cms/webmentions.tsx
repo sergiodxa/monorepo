@@ -13,7 +13,9 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { BlogModels } from "~/app/models";
+import type { WebmentionStatus } from "~/app/models/webmentions";
 
+import { flashToast } from "~/app/http/toast";
 import {
 	WebmentionDecisionSchema,
 	WebmentionQueueSchema,
@@ -41,6 +43,17 @@ async function postTag(
 	return post.meta.slug ? TAGS.post(path, post.meta.slug) : null;
 }
 
+/** The queues the moderation tabs count, in the order they show. */
+const QUEUES: WebmentionStatus[] = ["pending", "approved", "rejected"];
+
+/** What the toast after each decision says, echoing the button the moderator pressed. */
+const DECISION_TOASTS = {
+	approve: "Mention approved",
+	reject: "Mention rejected",
+	allow: "Domain trusted",
+	block: "Domain blocked",
+} as const;
+
 /**
  * Moderation screens. Reads answer with HTML; a decision answers See Other back to the
  * queue it was made from, so a reload never repeats it.
@@ -51,7 +64,8 @@ export default createController(routes.cms.webmentions, {
 
 	actions: {
 		/**
-		 * Lists one queue, pending by default, with the post each mention is about.
+		 * Lists one queue, pending by default, with the post each mention is about and how many
+		 * mentions every queue holds, which the tabs count.
 		 *
 		 * @param ctx Request context carrying the query string and the database.
 		 * @returns The moderation page.
@@ -59,7 +73,15 @@ export default createController(routes.cms.webmentions, {
 		index: async (ctx) => {
 			let query = await validate(ctx.url.searchParams, WebmentionQueueSchema);
 			let status = isFailure(query) ? "pending" : query.data.status;
-			let rows = await ctx.models.webmentions.findByStatus(status);
+			let [rows, totals] = await Promise.all([
+				ctx.models.webmentions.findByStatus(status),
+				Promise.all(
+					QUEUES.map((queue) => ctx.models.webmentions.query().where({ status: queue }).count()),
+				),
+			]);
+			let counts = Object.fromEntries(
+				QUEUES.map((queue, index) => [queue, totals[index] ?? 0]),
+			) as CMSWebmentionsView.Counts;
 
 			let items: Array<CMSWebmentionsView.Item> = rows.map((row) => ({
 				id: row.id,
@@ -73,7 +95,7 @@ export default createController(routes.cms.webmentions, {
 				action: routes.cms.webmentions.update.href({ id: row.id }),
 			}));
 
-			return ctx.render(CMSWebmentionsView, { status, items });
+			return ctx.render(CMSWebmentionsView, { status, counts, items });
 		},
 
 		/**
@@ -111,6 +133,8 @@ export default createController(routes.cms.webmentions, {
 						affected.add(postId);
 					break;
 			}
+
+			flashToast(DECISION_TOASTS[form.data.decision]);
 
 			let tags = await Promise.all([...affected].map((postId) => postTag(ctx.models, postId)));
 			let live = tags.filter((tag) => tag !== null);

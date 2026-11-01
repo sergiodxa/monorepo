@@ -12,6 +12,7 @@ import { succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import { flashToast } from "~/app/http/toast";
 import { RedirectSchema } from "~/app/http/validators/cms/redirect";
 import { Redirect } from "~/app/models/redirect";
 import { createRedirectsService } from "~/app/services/redirects";
@@ -68,6 +69,7 @@ export default createController(routes.cms.redirects, {
 			}
 
 			await createRedirectsService().upsert({ from, to, status });
+			flashToast("Redirect created");
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
@@ -84,20 +86,22 @@ export default createController(routes.cms.redirects, {
 				return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 
 			await createRedirectsService().destroy(from);
+			flashToast("Redirect deleted");
 			return redirect(routes.cms.redirects.index.href(), { status: redirect.Status.SeeOther });
 		},
 
 		/**
-		 * The live KV redirect count is informational and helps operators gauge namespace usage
+		 * The live redirect count is informational and helps operators gauge namespace usage
 		 * while creating rules.
 		 *
-		 * @returns SSR HTML view model for the CMS "New Redirect" page.
+		 * @returns SSR HTML view model for the CMS "New redirect" page.
 		 */
 		new: async (ctx) => {
 			let redirects = await createRedirectsService().findAll();
+			let count = redirects.length === 1 ? "1 redirect" : `${String(redirects.length)} redirects`;
 			return ctx.render(CMSRedirectsNewView, {
-				title: "New Redirect",
-				description: `Current redirect count in KV: ${redirects.length}.`,
+				title: "New redirect",
+				description: `Send an old path to a new address. The site has ${count} so far.`,
 				action: routes.cms.redirects.index.href(),
 			});
 		},

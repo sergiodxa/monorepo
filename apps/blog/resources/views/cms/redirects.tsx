@@ -1,7 +1,7 @@
 /**
- * Views for managing redirect rules in the CMS. `CMSRedirectsIndexView` renders a
- * table of from/to/status rules with modal-confirmed delete actions, and
- * `CMSRedirectsNewView` renders the form to create a redirect with a status-code
+ * Views for managing redirect rules in the CMS. `CMSRedirectsIndexView` lists every rule as
+ * from → to with its status code, under code tabs and a search over both paths, each with a
+ * confirmed delete; `CMSRedirectsNewView` is the form that creates one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,15 +9,28 @@
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { textAlign } from "@sdxc/u/typography";
-import { Button, Heading, Input, LinkButton, Modal, Select, Text } from "@sdxc/ui";
-import { Table } from "@sdxc/ui/app";
+import { fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { font, text, truncate } from "@sdxc/u/typography";
+import { Badge, Input, LinkButton, Select } from "@sdxc/ui";
+import { FilterBar } from "@sdxc/ui/app/filter-bar";
+import { PageHeader } from "@sdxc/ui/app/page-header";
+import { SelectionBar } from "@sdxc/ui/app/selection-bar";
+import { SettingsSection } from "@sdxc/ui/app/settings-section";
+import { Table } from "@sdxc/ui/app/table";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import {
+	DeleteAction,
+	FILTER_LABELS,
+	ListEmpty,
+	matchesSearch,
+	PAGINATION_LABELS,
+	pageOf,
+	readListQuery,
+	statusTab,
+} from "~/resources/views/cms/list";
 import routes from "~/routes/web";
 
 /**
@@ -56,104 +69,161 @@ export namespace CMSRedirectsNewView {
 	}
 }
 
+/** The filter bar's id, whose search field `/` focuses. */
+const FILTER_ID = "redirects-filters";
+
+/** Every status code a redirect can answer with, and the word that says what it means. */
+const STATUS_CODES: Array<{ code: number; label: string }> = [
+	{ code: 301, label: "Permanent" },
+	{ code: 302, label: "Temporary" },
+	{ code: 307, label: "Temporary, method kept" },
+	{ code: 308, label: "Permanent, method kept" },
+];
+
 /**
- * Builds the redirects listing page with delete actions.
+ * The meaning of a status code, or an empty string for a code the form never writes.
+ *
+ * @param code The redirect's HTTP status.
+ */
+function statusLabel(code: number): string {
+	return STATUS_CODES.find((entry) => entry.code === code)?.label ?? "";
+}
+
+/**
+ * Lists every redirect under code tabs and a search over both paths, kept in the address so a
+ * filtered list is a link. Each row deletes its rule after a confirmation naming the path.
  */
 export function CMSRedirectsIndexView() {
 	return ({ model, assets }: { model: CMSRedirectsIndexView.Props; assets: DocumentAssets }) => {
-		let { items } = model;
+		let query = readListQuery();
+		let searched = model.items.filter((item) => matchesSearch(query.q, item.from, item.to));
+		let withCode = (code: string) =>
+			searched.filter((item) => code === "all" || String(item.status) === code);
+		let page = pageOf(withCode(query.status), query);
+		let newRedirect = (
+			<LinkButton href={routes.cms.redirects.new.href()} color="brand" size="sm">
+				New redirect
+			</LinkButton>
+		);
 
 		return (
 			<CMSLayout assets={assets} title="Redirects" activePath={routes.cms.redirects.index.href()}>
-				<main mix={[grid(), gap(4)]}>
-					<section
-						mix={[p(4), rounded("lg"), border({ width: 1, color: "neutral" }), bg("neutral.tint")]}
-					>
-						<div mix={[hstack({ justify: "between", align: "center" })]}>
-							<Heading level={2}>Redirects</Heading>
-							<LinkButton href={routes.cms.redirects.new.href()} color="brand">
-								New Redirect
-							</LinkButton>
-						</div>
-					</section>
-					<section
-						mix={[p(4), rounded("lg"), border({ width: 1, color: "neutral" }), bg("neutral.tint")]}
-					>
-						{items.length === 0 ? (
-							<p mix={[m(0), fg("neutral")]}>No redirects found in KV yet.</p>
-						) : (
-							<Table.Container>
-								<Table aria-label="Redirects">
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>From</Table.Column>
-											<Table.Column>To</Table.Column>
-											<Table.Column align="center">Status</Table.Column>
-											<Table.Column align="end">Actions</Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{items.map((item, index) => {
-											let dialogId = `delete-redirect-${String(index)}`;
-											return (
+				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<PageHeader
+						title="Redirects"
+						description="Old paths and the addresses they now send readers to."
+						primaryAction={newRedirect}
+					/>
+					<FilterBar
+						id={FILTER_ID}
+						url={query.url}
+						tabs={[
+							statusTab(query, "all", "All", withCode("all").length),
+							...STATUS_CODES.map(({ code }) =>
+								statusTab(query, String(code), String(code), withCode(String(code)).length),
+							),
+						]}
+						search={{ label: "Search redirects", placeholder: "Search by path…" }}
+						locale="en-US"
+						labels={FILTER_LABELS}
+					/>
+					{page.rows.length === 0 ? (
+						<ListEmpty
+							query={query}
+							noun="redirects"
+							firstRun={model.items.length === 0}
+							action={newRedirect}
+						/>
+					) : (
+						<>
+							<div id="redirects-table">
+								<Table.Container>
+									<Table aria-label="Redirects" density="comfortable">
+										<Table.Header>
+											<Table.Row>
+												<Table.Column>From</Table.Column>
+												<Table.Column>To</Table.Column>
+												<Table.Column>Status</Table.Column>
+												<Table.ActionsColumn label="Actions" />
+											</Table.Row>
+										</Table.Header>
+										<Table.Body>
+											{page.rows.map((item) => (
 												<Table.Row key={item.from}>
-													<Table.Cell>{item.from}</Table.Cell>
-													<Table.Cell mix={[fg("neutral")]}>{item.to}</Table.Cell>
-													<Table.Cell mix={[textAlign("center"), fg("neutral")]}>
-														{String(item.status)}
+													<Table.Cell mix={[raw({ maxInlineSize: "min(24rem, 35cqi)" })]}>
+														<span mix={[font("mono"), text("sm"), truncate()]} title={item.from}>
+															{item.from}
+														</span>
 													</Table.Cell>
-													<Table.Cell mix={[textAlign("end")]}>
-														<Button
-															type="button"
-															commandfor={dialogId}
-															command="show-modal"
-															color="danger"
-															variant="outline"
+													<Table.Cell mix={[raw({ maxInlineSize: "min(28rem, 35cqi)" })]}>
+														<span
+															mix={[font("mono"), text("sm"), fg("neutral.muted"), truncate()]}
+															title={item.to}
+														>
+															{item.to}
+														</span>
+													</Table.Cell>
+													<Table.Cell>
+														<span mix={[hstack({ gap: 2, align: "center" })]}>
+															<Badge color="neutral" variant="secondary">
+																{String(item.status)}
+															</Badge>
+															<span
+																mix={[
+																	text("sm"),
+																	fg("neutral.muted"),
+																	raw({
+																		"@container ui-app-content (max-width: 40rem)": {
+																			display: "none",
+																		},
+																	}),
+																]}
+															>
+																{statusLabel(item.status)}
+															</span>
+														</span>
+													</Table.Cell>
+													<Table.Actions>
+														<LinkButton
+															href={item.from}
+															target="_blank"
+															rel="noopener"
+															variant="ghost"
+															color="neutral"
 															size="sm"
 														>
-															Delete
-														</Button>
-
-														<Modal id={dialogId}>
-															<form method="post" action={item.deleteAction} mix={[grid(), gap(3)]}>
-																<input type="hidden" name="_method" value="DELETE" />
-																<Modal.Description mix={[m(0)]}>
-																	Delete redirect <strong>{item.from}</strong>? This action cannot
-																	be undone.
-																</Modal.Description>
-																<Modal.Footer>
-																	<Button type="submit" color="danger">
-																		Confirm delete
-																	</Button>
-																	<Button
-																		type="button"
-																		commandfor={dialogId}
-																		command="close"
-																		color="neutral"
-																		variant="outline"
-																	>
-																		Cancel
-																	</Button>
-																</Modal.Footer>
-															</form>
-														</Modal>
-													</Table.Cell>
+															Try redirect
+														</LinkButton>
+														<DeleteAction
+															id={`redirect-${encodeURIComponent(item.from)}`}
+															name={item.from}
+															noun="redirect"
+															action={item.deleteAction}
+														/>
+													</Table.Actions>
 												</Table.Row>
-											);
-										})}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
-					</section>
-				</main>
+											))}
+										</Table.Body>
+									</Table>
+								</Table.Container>
+							</div>
+							<SelectionBar
+								target="redirects-table"
+								pagination={page.pagination}
+								locale="en-US"
+								labels={PAGINATION_LABELS}
+							/>
+						</>
+					)}
+				</div>
 			</CMSLayout>
 		);
 	};
 }
 
 /**
- * Builds the form page for creating a redirect.
+ * The form that creates a redirect: the path readers arrive at, where they are sent, and the
+ * status code that tells browsers and crawlers whether the move is permanent.
  */
 export function CMSRedirectsNewView() {
 	return ({ model, assets }: { model: CMSRedirectsNewView.Props; assets: DocumentAssets }) => {
@@ -161,58 +231,47 @@ export function CMSRedirectsNewView() {
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.redirects.index.href()}>
-				<main>
-					<section
-						mix={[
-							grid(),
-							gap(3),
-							p(4),
-							rounded("lg"),
-							border({ width: 1, color: "neutral" }),
-							bg("neutral.tint"),
+				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<PageHeader
+						title={title}
+						description={description}
+						crumbs={[
+							{ label: "Redirects", href: routes.cms.redirects.index.href() },
+							{ label: title },
 						]}
+						crumbsLabel="Breadcrumb"
+					/>
+					<SettingsSection
+						title="Redirect"
+						description="A request for the old path answers with the status code and the new address."
+						form={{ action }}
+						labels={{ save: "Create redirect" }}
 					>
-						<Heading level={2}>{title}</Heading>
-						<p mix={[m(0), fg("neutral")]}>{description}</p>
-
-						<form method="post" action={action} mix={[grid(), gap(3)]}>
-							<label mix={[grid(), gap(1)]}>
-								<Text>From</Text>
-								<Input name="from" aria-label="From" required />
-							</label>
-
-							<label mix={[grid(), gap(1)]}>
-								<Text>To</Text>
-								<Input name="to" aria-label="To" required />
-							</label>
-
-							<label mix={[grid(), gap(1)]}>
-								<Text>Status</Text>
-								<Select name="status">
-									<Select.Option value="301">301 Permanent</Select.Option>
-									<Select.Option value="302" selected>
-										302 Temporary
+						<SettingsSection.Row
+							label="From"
+							description="The old path on this site, such as /old-post."
+							htmlFor="redirect-from"
+						>
+							<Input id="redirect-from" name="from" required />
+						</SettingsSection.Row>
+						<SettingsSection.Row
+							label="To"
+							description="A path on this site or a full URL."
+							htmlFor="redirect-to"
+						>
+							<Input id="redirect-to" name="to" required />
+						</SettingsSection.Row>
+						<SettingsSection.Row label="Status" htmlFor="redirect-status">
+							<Select id="redirect-status" name="status">
+								{STATUS_CODES.map(({ code, label }) => (
+									<Select.Option key={code} value={String(code)} selected={code === 302}>
+										{`${String(code)} ${label}`}
 									</Select.Option>
-									<Select.Option value="307">307 Temporary (Method Preserved)</Select.Option>
-									<Select.Option value="308">308 Permanent (Method Preserved)</Select.Option>
-								</Select>
-							</label>
-
-							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
-								<Button type="submit" color="brand">
-									Create Redirect
-								</Button>
-								<LinkButton
-									href={routes.cms.redirects.index.href()}
-									color="brand"
-									variant="outline"
-								>
-									Back to list
-								</LinkButton>
-							</div>
-						</form>
-					</section>
-				</main>
+								))}
+							</Select>
+						</SettingsSection.Row>
+					</SettingsSection>
+				</div>
 			</CMSLayout>
 		);
 	};
