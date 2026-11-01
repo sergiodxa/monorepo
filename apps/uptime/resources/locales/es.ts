@@ -5395,11 +5395,6 @@ export default {
 
 			nav: "Configuración del equipo",
 
-			invite: {
-				title: "Invitar a un compañero",
-				description: "Recibirá un correo con un enlace para unirse a este equipo.",
-			},
-
 			fieldErrors: {
 				name: "Escribe un nombre para el equipo.",
 			},
@@ -5530,8 +5525,6 @@ export default {
 
 				table: {
 					label: "Dominios verificados",
-					description:
-						"Dominios que se pueden usar para el aprovisionamiento automático de miembros del equipo.",
 
 					columns: {
 						hostname: "Nombre de host",

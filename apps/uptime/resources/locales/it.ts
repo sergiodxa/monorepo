@@ -5398,11 +5398,6 @@ export default {
 
 			nav: "Impostazioni del team",
 
-			invite: {
-				title: "Invita un collega",
-				description: "Riceverà un'email con un link per unirsi a questo team.",
-			},
-
 			fieldErrors: {
 				name: "Inserisci un nome per il team.",
 			},
@@ -5534,8 +5529,6 @@ export default {
 
 				table: {
 					label: "Domini Verificati",
-					description:
-						"Domini che possono essere utilizzati per il provisioning automatico dei membri del team.",
 
 					columns: {
 						hostname: "Hostname",

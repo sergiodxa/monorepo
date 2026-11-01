@@ -182,16 +182,10 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 
 						<SettingsSection
 							id="members"
-							save="instant"
+							save="none"
 							title={t("page.settings.members.title")}
 							description={t("page.settings.members.description")}
-							labels={{ save: t("page.settings.form.actions.save") }}
-						>
-							<SettingsSection.Row
-								layout="inline-switch"
-								label={t("page.settings.invite.title")}
-								description={t("page.settings.invite.description")}
-							>
+							actions={
 								<Button
 									type="button"
 									size="sm"
@@ -202,8 +196,8 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 									<UserPlusIcon size={16} strokeWidth={1.5} />
 									<span>{t("page.settings.members.actions.invite")}</span>
 								</Button>
-							</SettingsSection.Row>
-
+							}
+						>
 							<Table.Container>
 								<Table aria-label={t("page.settings.members.table.label")}>
 									<Table.Header>
@@ -378,10 +372,9 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 
 						<SettingsSection
 							id="invites"
-							save="instant"
+							save="none"
 							title={t("page.settings.members.invitedTable.label")}
 							description={t("page.settings.members.invitedTable.description")}
-							labels={{ save: t("page.settings.form.actions.save") }}
 						>
 							{pendingInvites.length === 0 ? (
 								<Empty size="compact">
@@ -468,16 +461,10 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 
 						<SettingsSection
 							id="domains"
-							save="instant"
+							save="none"
 							title={t("page.settings.domains.title")}
 							description={t("page.settings.domains.description")}
-							labels={{ save: t("page.settings.form.actions.save") }}
-						>
-							<SettingsSection.Row
-								layout="inline-switch"
-								label={t("page.settings.domains.table.label")}
-								description={t("page.settings.domains.table.description")}
-							>
+							actions={
 								<Button
 									type="button"
 									size="sm"
@@ -487,8 +474,8 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 								>
 									{t("page.settings.domains.actions.addDomain")}
 								</Button>
-							</SettingsSection.Row>
-
+							}
+						>
 							{domains.length === 0 ? (
 								<Empty size="compact">
 									<Empty.Description>
@@ -672,10 +659,9 @@ export default function TeamSettingsPage(handle: Handle<TeamSettingsPage.Props>)
 						{viewerIsOwner && (
 							<SettingsSection
 								id="billing"
-								save="instant"
+								save="none"
 								title={t("page.settings.billing.title")}
 								description={t("page.settings.billing.description")}
-								labels={{ save: t("page.settings.form.actions.save") }}
 							>
 								<SettingsSection.Row
 									label={t("page.settings.billing.card.title")}

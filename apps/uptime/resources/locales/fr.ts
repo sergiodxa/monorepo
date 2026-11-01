@@ -5422,11 +5422,6 @@ export default {
 
 			nav: "Paramètres de l'équipe",
 
-			invite: {
-				title: "Inviter un coéquipier",
-				description: "Il recevra un e-mail avec un lien pour rejoindre cette équipe.",
-			},
-
 			fieldErrors: {
 				name: "Saisissez un nom d'équipe.",
 			},
@@ -5558,8 +5553,6 @@ export default {
 
 				table: {
 					label: "Domaines vérifiés",
-					description:
-						"Domaines pouvant être utilisés pour l'approvisionnement automatique des membres de l'équipe.",
 
 					columns: {
 						hostname: "Nom d'hôte",

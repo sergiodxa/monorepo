@@ -5427,11 +5427,6 @@ export default {
 
 			nav: "Team settings",
 
-			invite: {
-				title: "Invite a teammate",
-				description: "They get an email with a link to join this team.",
-			},
-
 			fieldErrors: {
 				name: "Enter a team name.",
 			},
@@ -5562,7 +5557,6 @@ export default {
 
 				table: {
 					label: "Verified Domains",
-					description: "Domains that can be used for auto-provisioning team members.",
 
 					columns: {
 						hostname: "Hostname",

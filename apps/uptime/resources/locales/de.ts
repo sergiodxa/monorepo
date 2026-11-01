@@ -5426,11 +5426,6 @@ export default {
 
 			nav: "Team-Einstellungen",
 
-			invite: {
-				title: "Teammitglied einladen",
-				description: "Die Person erhält eine E-Mail mit einem Link, um diesem Team beizutreten.",
-			},
-
 			fieldErrors: {
 				name: "Gib einen Teamnamen ein.",
 			},
@@ -5564,8 +5559,6 @@ export default {
 
 				table: {
 					label: "Verifizierte Domains",
-					description:
-						"Domains, die für die automatische Bereitstellung von Team-Mitgliedern verwendet werden können.",
 
 					columns: {
 						hostname: "Hostname",

@@ -5335,11 +5335,6 @@ export default {
 
 			nav: "チーム設定",
 
-			invite: {
-				title: "メンバーを招待",
-				description: "このチームに参加するためのリンクがメールで届きます。",
-			},
-
 			fieldErrors: {
 				name: "チーム名を入力してください。",
 			},
@@ -5470,7 +5465,6 @@ export default {
 
 				table: {
 					label: "確認済みドメイン",
-					description: "チームメンバーの自動プロビジョニングに使用できるドメイン。",
 
 					columns: {
 						hostname: "ホスト名",
