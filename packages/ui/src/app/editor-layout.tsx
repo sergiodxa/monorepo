@@ -20,6 +20,8 @@ import { text, truncate, weight } from "@sdxc/u/typography";
 
 import { Button } from "../components/button.js";
 
+import { SaveShortcut } from "./save-bar.js";
+
 /** Container the layout measures, so the sheet follows the editor's own width. */
 const LAYOUT_CONTAINER = "ui-editor-layout";
 
@@ -57,6 +59,11 @@ export namespace EditorLayout {
 		primary?: RemixNode;
 		/** The document's properties: status, slug, author, tags. */
 		sidebar?: RemixNode;
+		/**
+		 * The `id` of the document's form, which ⌘S/Ctrl+S submits while focus is in it or in no
+		 * other form, saving the way the form's own submit does.
+		 */
+		form?: string;
 		labels: Labels;
 	}
 }
@@ -76,6 +83,7 @@ export namespace EditorLayout {
  * 	preview={<LinkButton href={previewUrl} variant="ghost" size="sm">Preview</LinkButton>}
  * 	primary={<Button size="sm" disabled={!hasChanges}>Publish</Button>}
  * 	sidebar={<PropertyList>…</PropertyList>}
+ * 	form="post-form"
  * 	labels={{ settings: "Settings", closeSettings: "Close settings", sidebar: "Post settings" }}
  * >
  * 	<PostBody />
@@ -83,7 +91,7 @@ export namespace EditorLayout {
  */
 export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 	return () => {
-		let { back, title, status, preview, primary, sidebar, labels, children, mix, ...rest } =
+		let { back, title, status, preview, primary, sidebar, form, labels, children, mix, ...rest } =
 			handle.props;
 		let sidebarId = `${handle.id}-sidebar`;
 		let sheetTitleId = `${handle.id}-sidebar-title`;
@@ -170,6 +178,7 @@ export function EditorLayout(handle: Handle<EditorLayout.Props>) {
 						) : null}
 						{preview}
 						{primary}
+						{form ? <SaveShortcut form={form} /> : null}
 					</div>
 				</header>
 

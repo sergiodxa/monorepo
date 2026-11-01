@@ -48,6 +48,7 @@ export * from "./mixins/range-picker-keys.js";
 export * from "./mixins/resize-handle.js";
 export * from "./mixins/row-navigation.js";
 export * from "./mixins/save-bar-sync.js";
+export * from "./mixins/save-shortcut.js";
 export * from "./mixins/save-status-sync.js";
 export * from "./mixins/selection-bar-sync.js";
 export * from "./mixins/split-view.js";

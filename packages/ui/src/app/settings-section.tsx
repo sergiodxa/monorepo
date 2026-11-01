@@ -21,6 +21,7 @@ import { clientEntry } from "remix/component";
 import { Button } from "../components/button.js";
 
 import { submitOnChange } from "./mixins/submit-on-change.js";
+import { SaveShortcut } from "./save-bar.js";
 
 /** Container the card measures, so a row stacks in a narrow pane as well as on a phone. */
 const CARD_CONTAINER = "ui-settings-card";
@@ -119,7 +120,8 @@ export namespace SettingsSection {
 
 /**
  * Renders the section. The card is a `<form>` when `form` is set; an explicit section ends
- * in a footer holding its own Save, and an instant one submits whenever a control changes.
+ * in a footer holding its own Save, which ⌘S presses while focus is in the section, and an
+ * instant one submits whenever a control changes.
  *
  * @param handle Runtime handle carrying the section's props.
  * @returns The render function producing the section's markup.
@@ -254,6 +256,7 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 							{form.fields}
 							{rows}
 							{saveFooter}
+							{isExplicit ? <SaveShortcut /> : null}
 							{instantSave}
 						</form>
 					) : (

@@ -24,6 +24,7 @@ import { Button } from "../components/button.js";
 import { Keyboard } from "../components/keyboard.js";
 
 import { saveBarSync } from "./mixins/save-bar-sync.js";
+import { saveShortcut } from "./mixins/save-shortcut.js";
 
 /**
  * Props {@link SaveBar} serializes into the page for hydration, which is why they are a
@@ -100,5 +101,31 @@ export const SaveBar: EntryComponent<SaveBarProps> = clientEntry(
 				</div>
 			);
 		};
+	},
+);
+
+/**
+ * Props {@link SaveShortcut} serializes into the page for hydration, which is why they are a
+ * `type`: `SerializableProps` rejects an interface.
+ */
+export type SaveShortcutProps = {
+	/** The `id` of the form ⌘S submits; omit when the island sits inside that form. */
+	form?: string;
+};
+
+/**
+ * Client island binding ⌘S/Ctrl+S to a form's primary save: the form holding focus submits, or
+ * the only bound form when focus is in none, and a `SaveBar` on the same form steps aside so
+ * one keystroke submits once. An explicit `SettingsSection` and `EditorLayout` render it.
+ *
+ * @example
+ * <form method="post"><Input name="name" /><Button type="submit">Save</Button><SaveShortcut /></form>
+ */
+export const SaveShortcut: EntryComponent<SaveShortcutProps> = clientEntry(
+	"@sdxc/ui/app/save-bar#SaveShortcut",
+	function SaveShortcut(handle) {
+		return () => (
+			<span hidden data-slot="save-shortcut" mix={[saveShortcut({ form: handle.props.form })]} />
+		);
 	},
 );

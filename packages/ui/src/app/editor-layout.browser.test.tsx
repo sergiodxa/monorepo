@@ -120,4 +120,43 @@ describe("EditorLayout", () => {
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 	});
+
+	test("⌘S submits the document's form while the body is focused", async () => {
+		let mounted = render(
+			<EditorLayout
+				title="Draft"
+				form="post-form"
+				primary={
+					<Button type="submit" form="post-form" size="sm">
+						Publish
+					</Button>
+				}
+				labels={{ settings: "Settings", closeSettings: "Close settings", sidebar: "Post settings" }}
+			>
+				<form id="post-form" method="post" action="/posts/1">
+					<textarea name="body" aria-label="Body" />
+				</form>
+				<form method="post" action="/posts/1/comments">
+					<input name="comment" aria-label="Comment" />
+				</form>
+			</EditorLayout>,
+		);
+		let counts = { post: 0, comment: 0 };
+		for (let form of mounted.container.querySelectorAll("form")) {
+			form.addEventListener("submit", (event) => {
+				event.preventDefault();
+				counts[form.id === "post-form" ? "post" : "comment"]++;
+			});
+		}
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+
+		mounted.container.querySelector("textarea")!.focus();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(counts).toEqual({ post: 1, comment: 0 });
+
+		mounted.container.querySelector("input")!.focus();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(counts).toEqual({ post: 1, comment: 0 });
+		mounted.cleanup();
+	});
 });

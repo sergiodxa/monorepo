@@ -11,10 +11,12 @@ import type {} from "@vitest/browser-playwright";
 
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import { Input } from "../components/input.js";
 import { Switch } from "../components/switch.js";
 
+import { SaveBar } from "./save-bar.js";
 import { SettingsSection } from "./settings-section.js";
 
 /** Mounts `node` in a host `width` pixels wide and returns the host. */
@@ -160,4 +162,104 @@ describe("SettingsSection", () => {
 			"Monitor defaults",
 		);
 	});
+
+	test("⌘S submits the explicit section holding focus, and only that one", async () => {
+		let host = mount(
+			<div>
+				<SettingsSection
+					title="Workspace"
+					form={{ action: "/settings/workspace" }}
+					labels={{ save: "Save" }}
+				>
+					<SettingsSection.Row label="Name" htmlFor="name">
+						<Input id="name" name="name" />
+					</SettingsSection.Row>
+				</SettingsSection>
+				<SettingsSection
+					title="Escalation"
+					form={{ action: "/settings/escalation" }}
+					labels={{ save: "Save" }}
+				>
+					<SettingsSection.Row label="Email" htmlFor="email">
+						<Input id="email" name="email" />
+					</SettingsSection.Row>
+				</SettingsSection>
+			</div>,
+		);
+		let submits = countSubmits(host);
+		let saveDialog = watchDefault();
+		await frame();
+
+		document.getElementById("email")!.focus();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(submits()).toEqual({ "/settings/workspace": 0, "/settings/escalation": 1 });
+		expect(saveDialog()).toBe(false);
+
+		document.getElementById("name")!.focus();
+		await userEvent.keyboard("{Control>}s{/Control}");
+		expect(submits()).toEqual({ "/settings/workspace": 1, "/settings/escalation": 1 });
+
+		(document.activeElement as HTMLElement).blur();
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(submits()).toEqual({ "/settings/workspace": 1, "/settings/escalation": 1 });
+		expect(saveDialog()).toBe(false);
+	});
+
+	test("⌘S submits the only explicit section on the page without focus in it", async () => {
+		let host = mount(monitorDefaults("explicit"));
+		let submits = countSubmits(host);
+		await frame();
+
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(submits()).toEqual({ "/settings/monitors": 1 });
+	});
+
+	test("⌘S submits a section with a save bar once", async () => {
+		let host = mount(
+			<SettingsSection
+				title="Monitor defaults"
+				form={{ action: "/settings/monitors" }}
+				labels={{ save: "Save" }}
+			>
+				<SettingsSection.Row label="Alert email" htmlFor="alert-email">
+					<Input id="alert-email" name="alertEmail" />
+				</SettingsSection.Row>
+				<SaveBar labels={{ message: "Unsaved changes", discard: "Discard", save: "Save" }} />
+			</SettingsSection>,
+		);
+		let submits = countSubmits(host);
+		await frame();
+
+		await userEvent.type(document.getElementById("alert-email")!, "x");
+		await userEvent.keyboard("{Meta>}s{/Meta}");
+		expect(submits()).toEqual({ "/settings/monitors": 1 });
+	});
 });
+
+/** Counts the submissions of every form in `host`, keyed by action, holding each one back. */
+function countSubmits(host: HTMLElement): () => Record<string, number> {
+	let counts: Record<string, number> = {};
+	for (let form of host.querySelectorAll("form")) {
+		let action = form.getAttribute("action")!;
+		counts[action] = 0;
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			counts[action]!++;
+		});
+	}
+	return () => ({ ...counts });
+}
+
+/** Reports whether the last keystroke reached the window with its default action still due. */
+function watchDefault(): () => boolean {
+	let due = false;
+	globalThis.addEventListener("keydown", (event) => {
+		due = !event.defaultPrevented;
+	});
+	return () => due;
+}
+
+/** Lets the islands mount. */
+function frame(): Promise<void> {
+	return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}

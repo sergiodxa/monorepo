@@ -11,6 +11,8 @@ import type { MixinFactory } from "remix/component";
 
 import { createMixin } from "remix/component";
 
+import { bindSaveShortcut } from "./save-shortcut.js";
+
 /** Types for {@link saveBarSync}. */
 export namespace SaveBarSync {
 	/** Configuration for {@link saveBarSync}. */
@@ -24,8 +26,8 @@ export namespace SaveBarSync {
 
 /**
  * Applied to the bar (`[data-slot="save-bar"]`): unhides it while the form's values differ
- * from their baseline, which a submission moves to the submitted values. Its
- * `[role="status"]` child announces `message` as the bar appears.
+ * from their baseline, which a submission moves to the submitted values, and ⌘S saves them
+ * unless the form's own primary save answers it. `[role="status"]` announces `message`.
  *
  * @example <div hidden mix={[saveBarSync({ message: "Unsaved changes" })]}>…</div>
  */
@@ -118,14 +120,15 @@ function connect(bar: HTMLElement, options: SaveBarSync.Options, signal: AbortSi
 		},
 		{ signal },
 	);
-	doc.addEventListener(
-		"keydown",
-		(event) => {
-			if (event.key.toLowerCase() !== "s" || !(event.metaKey || event.ctrlKey)) return;
-			event.preventDefault();
-			if (dirty) form.requestSubmit();
+	bindSaveShortcut(
+		{
+			form,
+			fallback: true,
+			save: () => {
+				if (dirty) form.requestSubmit();
+			},
 		},
-		{ signal },
+		signal,
 	);
 	signal.addEventListener("abort", () => view?.removeEventListener("beforeunload", guard));
 }
