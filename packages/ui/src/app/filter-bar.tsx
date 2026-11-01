@@ -104,10 +104,12 @@ export namespace FilterBar {
 	}
 
 	/**
-	 * The search field. Its input's id is `<bar id>-search`, so a list's `/` key can focus it
-	 * (`<Table.Keys search="monitors-search" />`).
+	 * The search field. Its input's id is `search.id`, or `<bar id>-search` when unset, so a
+	 * list's `/` key can focus it (`<Table.Keys search="monitors-search" />`).
 	 */
 	export interface Search {
+		/** The input's id, for `rowNavigation({ search })` or a label. @default `${id}-search` */
+		id?: string;
 		/** Search parameter it writes. @default "q" */
 		name?: string;
 		/** Accessible name; the field shows no visible label. */
@@ -317,7 +319,7 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 						{search ? (
 							<SearchField aria-label={search.label} mix={[grow(), basis("10rem"), minIs(0)]}>
 								<SearchField.Input
-									id={`${id}-search`}
+									id={search.id ?? `${id}-search`}
 									name={searchName}
 									form={formId}
 									defaultValue={query}

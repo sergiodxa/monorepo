@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { FilterBar } from "./filter-bar.js";
+import { rowNavigation } from "./mixins/row-navigation.js";
 
 const LABELS: FilterBar.Labels = {
 	toolbar: "Filter monitors",
@@ -183,6 +184,40 @@ describe("FilterBar", () => {
 		let host = mount("/monitors");
 
 		expect(host.querySelector('input[type="search"]')?.id).toBe("monitors-search");
+	});
+
+	test("takes the search input's id from search.id when set", () => {
+		let host = mount("/monitors", 1024, {
+			search: { id: "monitor-search", label: "Search monitors" },
+		});
+
+		expect(host.querySelector('input[type="search"]')?.id).toBe("monitor-search");
+	});
+
+	test("lets a list's rowNavigation focus the search input on /", async () => {
+		let host = mount("/monitors");
+		let list = document.createElement("div");
+		document.body.appendChild(list);
+		mounted.push(
+			render(
+				<ul
+					mix={[
+						rowNavigation({
+							search: "monitors-search",
+							labels: { group: "Monitors", next: "Next", previous: "Previous" },
+						}),
+					]}
+				>
+					<li>
+						<a href="#api">api.pulse.dev</a>
+					</li>
+				</ul>,
+				{ container: list },
+			),
+		);
+		await userEvent.keyboard("/");
+
+		expect(document.activeElement).toBe(host.querySelector('input[type="search"]'));
 	});
 
 	test("submits the search on Enter through the form's default button", async () => {
