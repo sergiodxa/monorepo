@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 6
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-01
 outcomes:
     - "How to mint prefixed record IDs and keep UUIDs typed below the edge"
     - "How to derive a title, slug and summary and show dates in the viewer's zone"
@@ -315,6 +315,24 @@ test("tells a post id from an author id", () => {
 	expect(TypeID.isValid(authorId(generateUUID()).toString(), "post")).toBe(false);
 });
 ```
+
+## Run it from the terminal
+
+When a post id turns up in a log line, or you are deciding where to set `MINIMUM_CLIENT`,
+`@sdxc/typeid` and `@sdxc/semver` answer from a terminal:
+
+```bash
+sdxc pkg typeid new post -n 3
+sdxc pkg typeid parse post_01h455vb4pex5vsknk084sn02q
+sdxc pkg semver compare 2.10.0 2.4.0
+sdxc pkg semver sort --reverse < client-versions.txt
+```
+
+`parse` prints the prefix, the UUID to look up in the database and, for a UUIDv7, when the id
+was minted. `compare` prints `-1`, `0` or `1`, and `sort` reads one version per line from stdin
+when you name none; both exit `2` when an entry is not a version, so a script stops on a header
+reading `nightly`. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines)
+covers what every package command line shares.
 
 ## Where to go next
 

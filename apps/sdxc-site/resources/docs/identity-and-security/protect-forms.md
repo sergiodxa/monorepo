@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 4
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-01
 outcomes:
     - "How to stack a honeypot, a CAPTCHA and a per-address budget on a form"
     - "How to score spam and check the address and password on sign-up"
@@ -134,6 +134,7 @@ import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import type { AppContext } from "~/app/initializers/router";
+
 import { SignUpPage } from "~/resources/views/sign-up";
 import routes from "~/routes/web";
 
@@ -295,9 +296,9 @@ import { createAction } from "remix/router";
 
 import { checkYourEmail } from "~/app/http/controllers/sign-up/bots";
 import { renderSignUp } from "~/app/http/controllers/sign-up/render";
+import { createAccount } from "~/app/services/accounts";
 import { passwordMessage } from "~/app/services/password-message";
 import { checkSignUpEmail } from "~/app/services/sign-up-email";
-import { createAccount } from "~/app/services/accounts";
 import routes from "~/routes/web";
 
 const SIGN_UP = s.object({
@@ -390,6 +391,23 @@ test("refuses a submission whose challenge fails", async () => {
 
 `testCaptcha()` queues one `rejected` answer, so the second test reaches the challenge and is
 refused there, and the controller never loads.
+
+## Run it from the terminal
+
+Before you turn `checkSignUpEmail` on, `@sdxc/email-address` runs the same checks over the
+addresses already in your users table, so you see who it would have turned away:
+
+```bash
+sdxc pkg email-address check jane@example.com
+sdxc pkg email-address check < signups.txt --skip-mx
+sdxc pkg email-address check < signups.txt --json > signups-report.json
+```
+
+Without an address, `check` reads one per line from stdin and exits `1` when any of them is
+invalid, disposable or on a domain with no mail server. `--skip-mx` leaves out the DNS lookup, so
+a long list runs offline in seconds. [Use a package from the
+terminal](/docs/operations-and-testing/package-command-lines) covers what every package command
+line shares.
 
 ## Where to go next
 
