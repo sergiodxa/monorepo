@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 
 import { HeadingScope } from "../components/heading-scope.js";
+import { Typeset } from "../components/typeset.js";
 
 import { NextSteps } from "./next-steps.js";
 
@@ -94,5 +95,20 @@ describe("NextSteps", () => {
 		mount(<NextSteps title="Next steps" items={ITEMS} variant="list" />, 288);
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+	});
+
+	test("keeps Typeset's link and list rules off its cards inside prose", () => {
+		let host = mount(
+			<Typeset preset="docs">
+				<p>Intro</p>
+				<NextSteps title="Next steps" items={ITEMS} />
+			</Typeset>,
+		);
+		let link = host.querySelector<HTMLElement>('[data-slot="next-steps-link"]')!;
+		let second = host.querySelectorAll<HTMLElement>('[data-slot="next-steps-list"] > li')[1]!;
+		let root = host.querySelector<HTMLElement>('[data-slot="next-steps"]')!;
+		expect(getComputedStyle(link).textDecorationLine).toBe("none");
+		expect(getComputedStyle(second).marginBlockStart).toBe("0px");
+		expect(Number.parseFloat(getComputedStyle(root).marginBlockStart)).toBeGreaterThan(0);
 	});
 });

@@ -238,7 +238,10 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 					) : null}
 					{topics && topics.length > 0 ? (
 						<nav data-slot="docs-hub-topics" aria-label={labels.topics}>
-							<ul mix={[hstack({ gap: 2 }), flexWrap("wrap"), m(0), p(0), listStyle("none")]}>
+							<ul
+								data-not-typeset=""
+								mix={[hstack({ gap: 2 }), flexWrap("wrap"), m(0), p(0), listStyle("none")]}
+							>
 								{topics.map((topic) => (
 									<li key={topic.href}>
 										<a
@@ -274,7 +277,7 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 				{start.length > 0 ? (
 					<section data-slot="docs-hub-start" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<BlockTag mix={blockHeading}>{labels.start}</BlockTag>
-						<ul mix={[fillGrid("20rem"), m(0), p(0), listStyle("none")]}>
+						<ul data-not-typeset="" mix={[fillGrid("20rem"), m(0), p(0), listStyle("none")]}>
 							{start.map((item) => (
 								<li key={item.href} mix={[grid()]}>
 									<a
@@ -328,7 +331,7 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 				{sections.length > 0 ? (
 					<section data-slot="docs-hub-sections" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<BlockTag mix={blockHeading}>{labels.sections}</BlockTag>
-						<ul mix={[fillGrid("15rem"), m(0), p(0), listStyle("none")]}>
+						<ul data-not-typeset="" mix={[fillGrid("15rem"), m(0), p(0), listStyle("none")]}>
 							{sections.map((section) => {
 								let countText =
 									section.countLabel ??
@@ -380,7 +383,10 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 				{popular && popular.length > 0 ? (
 					<section data-slot="docs-hub-popular" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						{labels.popular ? <BlockTag mix={blockHeading}>{labels.popular}</BlockTag> : null}
-						<ul mix={[fillGrid("15rem", "fill"), m(0), p(0), listStyle("none")]}>
+						<ul
+							data-not-typeset=""
+							mix={[fillGrid("15rem", "fill"), m(0), p(0), listStyle("none")]}
+						>
 							{popular.map((item) => (
 								<li key={item.href} mix={[grid()]}>
 									<a

@@ -18,7 +18,7 @@ import { motionSafe } from "@sdxc/u/responsive";
 import { m, minIs, p, pb } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
-import { leading, overflowWrap, pretty, text, weight } from "@sdxc/u/typography";
+import { leading, overflowWrap, pretty, text, textDecoration, weight } from "@sdxc/u/typography";
 
 import type { HeadingLevel } from "../components/heading-scope.js";
 
@@ -95,6 +95,7 @@ export function NextSteps(handle: Handle<NextSteps.Props>) {
 				</Tag>
 				<ul
 					data-slot="next-steps-list"
+					data-not-typeset=""
 					mix={[
 						m(0),
 						p(0),
@@ -152,6 +153,7 @@ function NextStepsLink(handle: Handle<NextStepsLink.Props>) {
 				mix={[
 					vstack({ gap: 1, align: "stretch" }),
 					overflowWrap("anywhere"),
+					textDecoration("none"),
 					cards
 						? [
 								p(4),

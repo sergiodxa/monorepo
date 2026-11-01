@@ -19,7 +19,7 @@ import { motionSafe } from "@sdxc/u/responsive";
 import { is, minIs, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
-import { overflowWrap, text, textAlign, weight } from "@sdxc/u/typography";
+import { overflowWrap, text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 
 /** Container the pager measures; at 36rem of its own width a pair of cards sits side by side. */
 const PAGER_CONTAINER = "ui-docs-pager";
@@ -155,6 +155,7 @@ function DocsPagerCard(handle: Handle<DocsPagerCard.Props>) {
 					border({ color: "neutral.border", width: 1, style: "solid" }),
 					textAlign(isNext ? "end" : "start"),
 					overflowWrap("anywhere"),
+					textDecoration("none"),
 					transition("border-color, background-color"),
 					hover([border("brand.border"), bg("neutral.bg-tint")]),
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
