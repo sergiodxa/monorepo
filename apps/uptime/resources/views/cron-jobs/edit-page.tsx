@@ -144,7 +144,7 @@ export default function EditCronJobPage(handle: Handle<EditCronJobPage.Props>) {
 									>
 										<AlertDialog.Header>
 											<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-												{t("danger.delete.confirmTitle")}
+												{ctx.intl.t("app.confirm.deleteCronJob.title", { name: monitor.name })}
 											</AlertDialog.Title>
 											<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
 												{t("danger.delete.confirmDescription")}
@@ -161,7 +161,7 @@ export default function EditCronJobPage(handle: Handle<EditCronJobPage.Props>) {
 													{t("form.cancel")}
 												</AlertDialog.Cancel>
 												<Button type="submit" color="danger">
-													{t("danger.delete.confirm")}
+													{ctx.intl.t("app.confirm.deleteMonitor.action")}
 												</Button>
 											</AlertDialog.Footer>
 										</form>

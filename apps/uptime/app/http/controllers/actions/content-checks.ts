@@ -31,7 +31,7 @@ export const createContentCheck = createAction(
 		if (isFailure(result)) {
 			session?.flash("toast", {
 				intent: "error",
-				message: "Please check the content check and try again.",
+				message: ctx.intl.t("actions.createContentCheck.errors.invalid"),
 			});
 			return redirect(routes.app.team.dashboard.index.href({ team: ctx.team.slug }), {
 				status: redirect.Status.SeeOther,
@@ -45,7 +45,11 @@ export const createContentCheck = createAction(
 
 		let existingCount = await ctx.models.contentChecks.ofMonitor(monitor_id).count();
 		if (existingCount >= MAX_CONTENT_CHECKS_PER_MONITOR) {
-			return unprocessableEntity("A monitor supports at most 10 content checks.");
+			return unprocessableEntity(
+				ctx.intl.t("actions.createContentCheck.errors.limitExceeded", {
+					limit: MAX_CONTENT_CHECKS_PER_MONITOR,
+				}),
+			);
 		}
 
 		unwrap(
@@ -58,7 +62,10 @@ export const createContentCheck = createAction(
 			}),
 		);
 
-		session?.flash("toast", { intent: "success", message: "Content check added." });
+		session?.flash("toast", {
+			intent: "success",
+			message: ctx.intl.t("actions.createContentCheck.success", { value }),
+		});
 		return redirect(
 			routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 			{
@@ -90,7 +97,10 @@ export const deleteContentCheck = createAction(
 
 		unwrap(await ctx.models.contentChecks.delete(check.id));
 
-		ctx.get(Session)?.flash("toast", { intent: "success", message: "Content check removed." });
+		ctx.get(Session)?.flash("toast", {
+			intent: "success",
+			message: ctx.intl.t("actions.deleteContentCheck.success", { value: check.value }),
+		});
 		return redirect(
 			routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 			{

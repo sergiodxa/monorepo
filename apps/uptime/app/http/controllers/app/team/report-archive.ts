@@ -57,7 +57,7 @@ export default createAction(routes.app.team.reports.archive, {
 		for (let added of [summary, daily]) {
 			if (isFailure(added)) {
 				ctx.log.fail(added.error, { report: { archive: added.error.code } });
-				return new Response("The report archive could not be assembled.", { status: 500 });
+				return new Response(ctx.intl.t("actions.downloadReports.errors.archive"), { status: 500 });
 			}
 		}
 

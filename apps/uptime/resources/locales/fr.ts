@@ -1285,6 +1285,52 @@ export default {
 	},
 
 	app: {
+		/** A signed-in page's document title reads "Team · Page", so a tab names its team first. */
+		titles: {
+			dashboard: "{$team} · Tableau de bord",
+			httpMonitors: "{$team} · Moniteurs HTTP",
+			dnsMonitors: "{$team} · Moniteurs DNS",
+			tcpMonitors: "{$team} · Moniteurs TCP",
+			apiKeys: "{$team} · Clés API",
+			billing: "{$team} · Facturation",
+			record: "{$team} · {$name}",
+		},
+
+		/**
+		 * A destructive confirmation names the record it removes, and its button repeats the
+		 * verb of the control that opened it.
+		 */
+		confirm: {
+			deleteMonitor: {
+				title: "Supprimer le moniteur « {$name} » ?",
+				action: "Supprimer le moniteur",
+			},
+			deleteDnsMonitor: { title: "Supprimer le moniteur DNS « {$name} » ?" },
+			deleteTcpMonitor: { title: "Supprimer le moniteur TCP « {$name} » ?" },
+			deleteCronJob: { title: "Supprimer le cron job « {$name} » ?" },
+			deleteFlowMonitor: {
+				title: "Supprimer le moniteur de flux « {$name} » ?",
+				action: "Supprimer le moniteur de flux",
+			},
+			deleteAlert: { title: "Supprimer l'alerte « {$name} » ?" },
+			deleteMaintenance: { title: "Supprimer la fenêtre de maintenance « {$name} » ?" },
+			deleteStatusPage: {
+				title: "Supprimer la page de statut « {$name} » ?",
+				action: "Supprimer la page de statut",
+			},
+			deleteApiKey: {
+				title: "Supprimer la clé API « {$name} » ?",
+				description:
+					"Tout ce qui utilise encore cette clé perd l'accès immédiatement. Cette action est irréversible.",
+			},
+			deleteContentCheck: {
+				title: "Supprimer la vérification de contenu « {$value} » ?",
+				description:
+					"Le moniteur cesse de rechercher ceci dans ses réponses. Cette action est irréversible.",
+				action: "Supprimer la vérification",
+			},
+		},
+
 		meta: {
 			title: "Uptime par Sergio Xalambrí",
 			description: "Surveillance de disponibilité simple et fiable pour les développeurs",
@@ -1534,7 +1580,6 @@ export default {
 			yes: "Oui",
 			no: "Non",
 			delete: "Supprimer",
-			deleteConfirmTitle: "Supprimer cette vérification de contenu ?",
 		},
 
 		types: {
@@ -2415,6 +2460,47 @@ export default {
 				forbidden: "Vous n'êtes pas autorisé à supprimer ce cron job.",
 			},
 			success: "Le cron job '{$name}' a été supprimé.",
+		},
+
+		updateEmails: {
+			errors: { invalid: "Choisissez les e-mails que vous souhaitez recevoir et réessayez." },
+			success: "Préférences d'e-mail enregistrées",
+		},
+
+		cancelAccountDeletion: { success: "Suppression du compte annulée" },
+
+		createContentCheck: {
+			errors: {
+				invalid: "Vérifiez le type et la valeur de la vérification de contenu, puis réessayez.",
+				limitExceeded:
+					"Un moniteur peut avoir jusqu'à {$limit} vérifications de contenu. Supprimez-en une pour en ajouter une autre.",
+			},
+			success: "Vérification de contenu « {$value} » ajoutée",
+		},
+
+		deleteContentCheck: { success: "Vérification de contenu « {$value} » supprimée" },
+
+		saveSsl: {
+			errors: { invalid: "Vérifiez les paramètres SSL et réessayez." },
+			success: "Paramètres SSL de « {$name} » enregistrés",
+		},
+
+		checkTcpMonitor: { success: "« {$name} » vérifié" },
+
+		runFlowMonitor: { success: "« {$name} » exécuté : {$passed} tests réussis sur {$total}" },
+
+		/** Why a flow's source was refused, shown under the source field it came from. */
+		flowSource: {
+			unverifiedHosts:
+				"Ce flux atteint {$hosts}, qu'aucun domaine vérifié de cette équipe ne couvre. Vérifiez ce domaine dans les paramètres de l'équipe, ou dirigez le flux vers un domaine vérifié.",
+			noHosts:
+				"Ce flux ne nomme aucun hôte. Écrivez dans la spécification chaque URL qu'il demande, afin qu'elle puisse être comparée aux domaines vérifiés de l'équipe.",
+		},
+
+		downloadReports: {
+			errors: {
+				archive: "L'archive des rapports n'a pas pu être créée. Réessayez dans un instant.",
+			},
 		},
 	},
 
@@ -3448,11 +3534,6 @@ export default {
 					menu: "Menu d'actions",
 					view: "Voir la page",
 					edit: "Modifier la page",
-					delete: "Supprimer la page",
-				},
-
-				confirmation: {
-					delete: "Êtes-vous sûr de vouloir supprimer la page de statut {$name} ?",
 				},
 			},
 
@@ -3574,7 +3655,6 @@ export default {
 				title: "Zone de danger",
 				description: "Les actions de cette section sont irréversibles.",
 				warning: "Supprimer cette page de statut met définitivement son URL publique hors ligne.",
-				deleteDescription: "Cette action est irréversible.",
 			},
 		},
 
@@ -3721,7 +3801,6 @@ export default {
 					unknown: "Inconnu",
 				},
 				confirmation: {
-					delete: "Êtes-vous sûr de vouloir supprimer le moniteur {$name} ?",
 					deleteDescription:
 						"Cela supprime également ses vérifications de contenu et son historique de résultats. Cette action est irréversible.",
 				},
@@ -3790,10 +3869,6 @@ export default {
 					check: "Vérifier maintenant",
 					edit: "Modifier",
 					delete: "Supprimer",
-				},
-
-				confirmation: {
-					delete: "Êtes-vous sûr de vouloir supprimer le moniteur DNS {$name} ?",
 				},
 			},
 		},
@@ -4445,9 +4520,6 @@ export default {
 				warning: "La suppression de cette fenêtre de maintenance est irréversible.",
 				delete: {
 					trigger: "Supprimer la fenêtre de maintenance",
-					confirmTitle: "Supprimer cette fenêtre de maintenance ?",
-					confirmDescription: "Cette action est irréversible.",
-					confirm: "Supprimer",
 				},
 			},
 		},
@@ -4818,9 +4890,6 @@ export default {
 					"Supprimer cette alerte arrête toutes les notifications qu'elle envoie. Cette action est irréversible.",
 				delete: {
 					trigger: "Supprimer l'alerte",
-					confirmTitle: "Supprimer cette alerte ?",
-					confirmDescription: "Cette action est irréversible.",
-					confirm: "Supprimer",
 				},
 			},
 		},
@@ -5716,10 +5785,6 @@ export default {
 					view: "Voir",
 					edit: "Modifier",
 					delete: "Supprimer",
-					confirmation: {
-						delete:
-							"Êtes-vous sûr de vouloir supprimer le moniteur de flux {$name} ? Cette action est irréversible.",
-					},
 				},
 			},
 
@@ -5919,9 +5984,6 @@ export default {
 				actions: {
 					edit: "Modifier",
 					delete: "Supprimer",
-					confirmation: {
-						delete: "Êtes-vous sûr de vouloir supprimer {$name} ?",
-					},
 				},
 			},
 		},
@@ -6133,7 +6195,6 @@ export default {
 
 			list: {
 				created: "Créée",
-				deleteTitle: "Supprimer la clé API ?",
 			},
 
 			fieldErrors: {
@@ -6287,11 +6348,6 @@ export default {
 				actions: {
 					menu: "Menu d'actions",
 					delete: "Supprimer la clé",
-				},
-
-				confirmation: {
-					delete:
-						"Êtes-vous sûr de vouloir supprimer la clé API '{$name}' ? Cette action est irréversible.",
 				},
 			},
 
@@ -6546,10 +6602,8 @@ export default {
 					"Supprimer ce cron job efface définitivement son historique de pings et ses alertes.",
 				delete: {
 					trigger: "Supprimer le moniteur",
-					confirmTitle: "Supprimer ce moniteur de cron job ?",
 					confirmDescription:
 						"Cela supprime également son historique de pings. Cette action est irréversible.",
-					confirm: "Supprimer",
 				},
 			},
 		},

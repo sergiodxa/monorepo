@@ -274,6 +274,29 @@ describe("POST /actions/leave-team", () => {
 		expect(membership).toBeNull();
 	});
 
+	test("toasts the team it left by name, in the viewer's language", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		let team = await createTeamRow(db);
+		await createMembershipRow(db, team.id, viewer.id, "member");
+		let session = createFakeSession();
+
+		await postAccountAction(
+			leaveTeam,
+			routes.accountActions.leaveTeam,
+			viewer,
+			db,
+			{ team_id: team.id },
+			{},
+			{ session },
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: `You have left ${team.name}.`,
+		});
+	});
+
 	test("404s when the viewer has no membership on the given team, without redirecting", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
@@ -297,7 +320,7 @@ describe("POST /actions/leave-team", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("The team owner can't leave the team.");
+		expect(await response.text()).toContain(en.actions.leaveTeam.errors.ownerCannotLeave);
 
 		let membership = await db.findOne(memberships, {
 			where: { team_id: team.id, subject_id: viewer.id },
@@ -316,7 +339,7 @@ describe("POST /actions/leave-team", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("Admins must be demoted");
+		expect(await response.text()).toContain(en.actions.leaveTeam.errors.adminCannotLeave);
 
 		let membership = await db.findOne(memberships, {
 			where: { team_id: team.id, subject_id: viewer.id },
@@ -449,7 +472,7 @@ describe("POST /actions/update-emails", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("Invalid email preferences.");
+		expect(await response.text()).toContain(en.actions.updateEmails.errors.invalid);
 		expect(await db.count(userPreferences, { where: { subject_id: viewer.id } })).toBe(0);
 	});
 });
@@ -511,7 +534,7 @@ describe("POST /actions/update-language", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("Invalid language.");
+		expect(await response.text()).toContain(en.actions.updateLanguage.errors.generic);
 		expect(await db.count(userPreferences, { where: { subject_id: viewer.id } })).toBe(0);
 	});
 });
@@ -601,7 +624,7 @@ describe("POST /actions/request-account-deletion", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain('Type "DELETE" to confirm.');
+		expect(await response.text()).toContain(en.page.account.deleteAccount.card.confirmation.label);
 		expect(await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id })).toBeNull();
 		expect(session.destroy).not.toHaveBeenCalled();
 	});
@@ -641,6 +664,28 @@ describe("DELETE /actions/cancel-account-deletion", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("https://uptime.test/app/acme/account");
 		expect(await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id })).toBeNull();
+	});
+
+	test("toasts the cancellation in the viewer's language", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		await bindModels(db).accountDeletions.enqueue(viewer.id, viewer.email);
+		let session = createFakeSession();
+
+		await postAccountAction(
+			cancelDeletion,
+			routes.accountActions.cancelDeletion,
+			viewer,
+			db,
+			{},
+			{},
+			{ method: "DELETE", session },
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: en.actions.cancelAccountDeletion.success,
+		});
 	});
 
 	test("cancels only the viewer's own request, never somebody else's", async () => {

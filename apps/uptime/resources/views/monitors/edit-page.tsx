@@ -81,6 +81,7 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 										{contentChecks.map((check) => {
 											let dialogId = `delete-content-check-${check.id}`;
 											let titleId = `${dialogId}-title`;
+											let descriptionId = `${dialogId}-description`;
 
 											return (
 												<Table.Row key={check.id}>
@@ -108,11 +109,20 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 															{intl.t("contentMonitoring.item.delete")}
 														</Button>
 
-														<AlertDialog id={dialogId} aria-labelledby={titleId}>
+														<AlertDialog
+															id={dialogId}
+															aria-labelledby={titleId}
+															aria-describedby={descriptionId}
+														>
 															<AlertDialog.Header>
 																<AlertDialog.Title id={titleId}>
-																	{intl.t("contentMonitoring.item.deleteConfirmTitle")}
+																	{intl.t("app.confirm.deleteContentCheck.title", {
+																		value: check.value,
+																	})}
 																</AlertDialog.Title>
+																<AlertDialog.Description id={descriptionId}>
+																	{intl.t("app.confirm.deleteContentCheck.description")}
+																</AlertDialog.Description>
 															</AlertDialog.Header>
 															<form method="post" action={deleteAction}>
 																<input type="hidden" name="_method" value="DELETE" />
@@ -123,7 +133,7 @@ function ContentChecksSection(handle: Handle<ContentChecksSection.Props>) {
 																		{intl.t("contentMonitoring.form.cancel")}
 																	</AlertDialog.Cancel>
 																	<Button type="submit" color="danger">
-																		{intl.t("contentMonitoring.item.delete")}
+																		{intl.t("app.confirm.deleteContentCheck.action")}
 																	</Button>
 																</AlertDialog.Footer>
 															</form>
@@ -469,7 +479,7 @@ export default function EditMonitorPage(handle: Handle<EditMonitorPage.Props>) {
 									>
 										<AlertDialog.Header>
 											<AlertDialog.Title id={deleteMonitorTitleId}>
-												{ctx.intl.t("page.httpMonitors.table.confirmation.delete", {
+												{ctx.intl.t("app.confirm.deleteMonitor.title", {
 													name: monitor.name,
 												})}
 											</AlertDialog.Title>
@@ -488,7 +498,7 @@ export default function EditMonitorPage(handle: Handle<EditMonitorPage.Props>) {
 													{ctx.intl.t("page.editMonitor.form.cancel")}
 												</AlertDialog.Cancel>
 												<Button type="submit" color="danger">
-													{ctx.intl.t("page.httpMonitors.table.actions.delete")}
+													{ctx.intl.t("app.confirm.deleteMonitor.action")}
 												</Button>
 											</AlertDialog.Footer>
 										</form>

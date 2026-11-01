@@ -238,7 +238,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																>
 																	<AlertDialog.Header>
 																		<AlertDialog.Title id={titleId}>
-																			{t("table.actions.confirmation.delete", {
+																			{ctx.intl.t("app.confirm.deleteFlowMonitor.title", {
 																				name: monitor.name,
 																			})}
 																		</AlertDialog.Title>
@@ -259,7 +259,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																				{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 																			</AlertDialog.Cancel>
 																			<Button type="submit" color="danger">
-																				{t("table.actions.delete")}
+																				{ctx.intl.t("app.confirm.deleteFlowMonitor.action")}
 																			</Button>
 																		</AlertDialog.Footer>
 																	</form>

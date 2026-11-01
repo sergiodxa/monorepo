@@ -86,7 +86,10 @@ export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, 
 		await ctx.models.tcpMonitors.create({ team_id: ctx.team.id, ...result.data }),
 	);
 
-	session?.flash("toast", { intent: "success", message: `TCP monitor "${monitor.name}" created.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.createTcpMonitor.success", { name: monitor.name }),
+	});
 	return redirect(
 		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
@@ -123,7 +126,10 @@ export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, 
 
 	unwrap(await ctx.models.tcpMonitors.update(monitor_id, values));
 
-	session?.flash("toast", { intent: "success", message: "TCP monitor updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.updateTcpMonitor.success", { name: values.name }),
+	});
 	return redirect(
 		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{ status: redirect.Status.SeeOther },
@@ -148,7 +154,7 @@ export const deleteTcpMonitor = createAction(routes.actions.monitor.tcp.delete, 
 
 	session?.flash("toast", {
 		intent: "success",
-		message: `TCP monitor "${existing.name}" deleted.`,
+		message: ctx.intl.t("actions.deleteTcpMonitor.success", { name: existing.name }),
 	});
 	return redirect(routes.app.team.tcpMonitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
@@ -231,7 +237,10 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 		checkResult,
 	);
 
-	session?.flash("toast", { intent: "success", message: `Checked "${monitor.name}".` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.checkTcpMonitor.success", { name: monitor.name }),
+	});
 	return redirect(
 		routes.app.team.tcpMonitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },

@@ -187,7 +187,9 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 
 	let existingCount = await ctx.models.alerts.inTeam(ctx.team.id).count();
 	if (existingCount >= MAX_ALERTS_PER_TEAM) {
-		return unprocessableEntity(`A team supports at most ${MAX_ALERTS_PER_TEAM} alerts.`);
+		return unprocessableEntity(
+			ctx.intl.t("actions.createAlert.errors.limitExceeded", { limit: MAX_ALERTS_PER_TEAM }),
+		);
 	}
 
 	let alert = unwrap(

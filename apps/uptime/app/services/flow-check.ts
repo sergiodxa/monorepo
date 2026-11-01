@@ -286,7 +286,13 @@ export type FlowSourceInspection =
 	  }
 	| {
 			ok: false;
-			/** Why it cannot run, phrased for whoever wrote the spec. */
+			/**
+			 * Which rule refused it, for a caller that words the refusal in the reader's language:
+			 * `invalid` when the spec does not parse, `unverified` when it reaches a host in
+			 * `refused`, `noHosts` when it names no host at all.
+			 */
+			reason: "invalid" | "unverified" | "noHosts";
+			/** Why it cannot run, in English, phrased for whoever wrote the spec. */
 			message: string;
 			/** Which of its hosts no verified domain covers; empty for the other reasons. */
 			refused: string[];
@@ -306,7 +312,9 @@ export function inspectFlowSource(
 	verifiedDomains: readonly string[],
 ): FlowSourceInspection {
 	let loaded = loadSources([{ path: SOURCE_PATH, text: source }]);
-	if (isFailure(loaded)) return { ok: false, message: loaded.error.message, refused: [] };
+	if (isFailure(loaded)) {
+		return { ok: false, reason: "invalid", message: loaded.error.message, refused: [] };
+	}
 
 	let resolved = resolveAllowedHosts(specHosts(source), verifiedDomains);
 
@@ -317,6 +325,7 @@ export function inspectFlowSource(
 	if (resolved.refused.length > 0) {
 		return {
 			ok: false,
+			reason: "unverified",
 			message: `This flow reaches ${resolved.refused.join(", ")}, which no verified domain on this team covers. A flow monitor can only drive a domain the team has verified.`,
 			refused: resolved.refused,
 		};
@@ -330,6 +339,7 @@ export function inspectFlowSource(
 	if (resolved.allowed === "") {
 		return {
 			ok: false,
+			reason: "noHosts",
 			message:
 				"This flow names no host to reach. Every URL it requests has to be written in the spec, so it can be checked against the team's verified domains.",
 			refused: [],

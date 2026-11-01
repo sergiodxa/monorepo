@@ -96,7 +96,10 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 			ctx.intl.t(`page.tcpMonitors.table.status.${status}`);
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · TCP monitors`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.tcpMonitors", { team: ctx.team.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

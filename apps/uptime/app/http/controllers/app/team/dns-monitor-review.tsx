@@ -216,7 +216,10 @@ export default createAction(routes.app.team.dnsMonitors.review, {
 		let t = withPrefix(ctx.intl.t, "page.dnsMonitorReview");
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

@@ -1323,6 +1323,47 @@ export default {
 	},
 
 	app: {
+		/** A signed-in page's document title reads "Team · Page", so a tab names its team first. */
+		titles: {
+			dashboard: "{$team} · Dashboard",
+			httpMonitors: "{$team} · HTTP monitors",
+			dnsMonitors: "{$team} · DNS monitors",
+			tcpMonitors: "{$team} · TCP monitors",
+			apiKeys: "{$team} · API keys",
+			billing: "{$team} · Billing",
+			record: "{$team} · {$name}",
+		},
+
+		/**
+		 * A destructive confirmation names the record it removes, and its button repeats the
+		 * verb of the control that opened it.
+		 */
+		confirm: {
+			deleteMonitor: { title: "Delete the monitor “{$name}”?", action: "Delete monitor" },
+			deleteDnsMonitor: { title: "Delete the DNS monitor “{$name}”?" },
+			deleteTcpMonitor: { title: "Delete the TCP monitor “{$name}”?" },
+			deleteCronJob: { title: "Delete the cron job “{$name}”?" },
+			deleteFlowMonitor: {
+				title: "Delete the flow monitor “{$name}”?",
+				action: "Delete flow monitor",
+			},
+			deleteAlert: { title: "Delete the alert “{$name}”?" },
+			deleteMaintenance: { title: "Delete the maintenance window “{$name}”?" },
+			deleteStatusPage: {
+				title: "Delete the status page “{$name}”?",
+				action: "Delete status page",
+			},
+			deleteApiKey: {
+				title: "Delete the API key “{$name}”?",
+				description: "Anything still using this key loses access at once. This can't be undone.",
+			},
+			deleteContentCheck: {
+				title: "Delete the content check “{$value}”?",
+				description: "The monitor stops checking its responses for this. This can't be undone.",
+				action: "Delete content check",
+			},
+		},
+
 		meta: {
 			title: "Uptime by Sergio Xalambrí",
 			description: "Simple & reliable uptime monitoring for developers",
@@ -1571,7 +1612,6 @@ export default {
 			yes: "Yes",
 			no: "No",
 			delete: "Delete",
-			deleteConfirmTitle: "Delete this content check?",
 		},
 
 		types: {
@@ -2451,6 +2491,45 @@ export default {
 				forbidden: "You are not allowed to delete this cron job.",
 			},
 			success: "{$name} cron job was deleted.",
+		},
+
+		updateEmails: {
+			errors: { invalid: "Choose which emails you want and try again." },
+			success: "Email preferences saved",
+		},
+
+		cancelAccountDeletion: { success: "Account deletion cancelled" },
+
+		createContentCheck: {
+			errors: {
+				invalid: "Check the content check's type and value, then try again.",
+				limitExceeded:
+					"A monitor can have up to {$limit} content checks. Delete one to add another.",
+			},
+			success: "Content check “{$value}” added",
+		},
+
+		deleteContentCheck: { success: "Content check “{$value}” deleted" },
+
+		saveSsl: {
+			errors: { invalid: "Check the SSL settings and try again." },
+			success: "SSL settings for “{$name}” saved",
+		},
+
+		checkTcpMonitor: { success: "Checked “{$name}”" },
+
+		runFlowMonitor: { success: "Ran “{$name}”: {$passed} of {$total} tests passed" },
+
+		/** Why a flow's source was refused, shown under the source field it came from. */
+		flowSource: {
+			unverifiedHosts:
+				"This flow reaches {$hosts}, which no verified domain on this team covers. Verify that domain in team settings, or point the flow at one that is verified.",
+			noHosts:
+				"This flow names no host to reach. Write every URL it requests in the spec, so it can be checked against the team's verified domains.",
+		},
+
+		downloadReports: {
+			errors: { archive: "The report archive could not be assembled. Try again in a moment." },
 		},
 	},
 
@@ -3480,11 +3559,6 @@ export default {
 					menu: "Actions Menu",
 					view: "View Page",
 					edit: "Edit Page",
-					delete: "Delete Page",
-				},
-
-				confirmation: {
-					delete: "Are you sure you want to delete the status page {$name}?",
 				},
 			},
 
@@ -3604,7 +3678,6 @@ export default {
 				title: "Danger zone",
 				description: "Actions here cannot be undone.",
 				warning: "Deleting this status page takes its public URL offline for good.",
-				deleteDescription: "This can't be undone.",
 			},
 		},
 
@@ -3750,7 +3823,6 @@ export default {
 					unknown: "Unknown",
 				},
 				confirmation: {
-					delete: "Are you sure you want to delete the monitor {$name}?",
 					deleteDescription:
 						"This also deletes its content checks and check-result history. This can't be undone.",
 				},
@@ -3818,10 +3890,6 @@ export default {
 					check: "Check Now",
 					edit: "Edit",
 					delete: "Delete",
-				},
-
-				confirmation: {
-					delete: "Are you sure you want to delete the DNS monitor {$name}?",
 				},
 			},
 		},
@@ -4462,9 +4530,6 @@ export default {
 				warning: "Deleting this maintenance window can't be undone.",
 				delete: {
 					trigger: "Delete maintenance window",
-					confirmTitle: "Delete this maintenance window?",
-					confirmDescription: "This can't be undone.",
-					confirm: "Delete",
 				},
 			},
 		},
@@ -4836,9 +4901,6 @@ export default {
 				warning: "Deleting this alert stops all notifications it sends. This can't be undone.",
 				delete: {
 					trigger: "Delete alert",
-					confirmTitle: "Delete this alert?",
-					confirmDescription: "This can't be undone.",
-					confirm: "Delete",
 				},
 			},
 		},
@@ -5729,10 +5791,6 @@ export default {
 					view: "View",
 					edit: "Edit",
 					delete: "Delete",
-					confirmation: {
-						delete:
-							"Are you sure you want to delete the flow monitor {$name}? This action cannot be undone.",
-					},
 				},
 			},
 
@@ -5930,9 +5988,6 @@ export default {
 				actions: {
 					edit: "Edit",
 					delete: "Delete",
-					confirmation: {
-						delete: "Are you sure you want to delete {$name}?",
-					},
 				},
 			},
 		},
@@ -6141,7 +6196,6 @@ export default {
 
 			list: {
 				created: "Created",
-				deleteTitle: "Delete API key?",
 			},
 
 			fieldErrors: {
@@ -6290,11 +6344,6 @@ export default {
 				actions: {
 					menu: "Actions Menu",
 					delete: "Delete Key",
-				},
-
-				confirmation: {
-					delete:
-						"Are you sure you want to delete the API key '{$name}'? This action cannot be undone.",
 				},
 			},
 
@@ -6545,9 +6594,7 @@ export default {
 				warning: "Deleting this cron job removes its ping history and alerts for good.",
 				delete: {
 					trigger: "Delete monitor",
-					confirmTitle: "Delete this cron job monitor?",
 					confirmDescription: "This also deletes its ping history. This can't be undone.",
-					confirm: "Delete",
 				},
 			},
 		},

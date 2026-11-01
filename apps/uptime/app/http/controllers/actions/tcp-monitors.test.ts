@@ -13,6 +13,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
+import type { Session as SessionType } from "remix/session";
 
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
@@ -25,6 +26,7 @@ import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
+import { Session } from "remix/session";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -136,7 +138,16 @@ async function createFixture() {
  * Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer in
  * place of `requireUser`/`requireTeam`, so a refused form can draw its page again.
  */
-function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
+/** A session recording the toasts an action flashes, installed only by the tests that read them. */
+function createFakeSession() {
+	return { flash: vi.fn(() => {}) };
+}
+
+function seedTeam(
+	team: SelectTeam,
+	membership: SelectMembership,
+	session?: ReturnType<typeof createFakeSession>,
+): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
 		name: "Test Viewer",
@@ -149,6 +160,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+		if (session) ctx.set(Session, session as unknown as SessionType);
 		return teamAccess(ctx, next);
 	};
 }
@@ -162,6 +174,7 @@ async function send(
 	handler: RequestHandler<any>,
 	method: string,
 	params: Record<string, string>,
+	session?: ReturnType<typeof createFakeSession>,
 ): Promise<Response> {
 	let router = createRouter({
 		middleware: [
@@ -174,7 +187,12 @@ async function send(
 		],
 	});
 	router.map(route, {
-		middleware: [seedTeam(team, membership), i18n, testAssets(), render({ assets: assetResolver })],
+		middleware: [
+			seedTeam(team, membership, session),
+			i18n,
+			testAssets(),
+			render({ assets: assetResolver }),
+		],
 		handler,
 	});
 
@@ -369,6 +387,32 @@ describe("deleteTcpMonitor", () => {
 		expect(await db.findOne(tcpMonitors, { where: { id: monitor.id } })).toBeNull();
 		let results = await db.findMany(tcpMonitorResults, { where: { tcp_monitor_id: monitor.id } });
 		expect(results).toHaveLength(0);
+	});
+
+	test("toasts the deleted monitor by name, in the viewer's language", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			tcpMonitors,
+			{ id: generateUUID(), team_id: team.id, name: "Database", host: "db.internal", port: 5432 },
+			{ touch: true, returnRow: true },
+		);
+		let session = createFakeSession();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.tcp.delete,
+			deleteTcpMonitor as RequestHandler<any>,
+			"DELETE",
+			{ monitor_id: monitor.id },
+			session,
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: "Database TCP monitor was deleted.",
+		});
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {

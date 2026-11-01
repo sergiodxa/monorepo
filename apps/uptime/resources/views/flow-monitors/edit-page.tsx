@@ -161,7 +161,7 @@ export default function EditFlowMonitorPage(handle: Handle<EditFlowMonitorPage.P
 									>
 										<AlertDialog.Header>
 											<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-												{ctx.intl.t("page.flowMonitors.table.actions.confirmation.delete", {
+												{ctx.intl.t("app.confirm.deleteFlowMonitor.title", {
 													name: monitor.name,
 												})}
 											</AlertDialog.Title>
@@ -180,7 +180,7 @@ export default function EditFlowMonitorPage(handle: Handle<EditFlowMonitorPage.P
 													{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 												</AlertDialog.Cancel>
 												<Button type="submit" color="danger">
-													{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+													{ctx.intl.t("app.confirm.deleteFlowMonitor.action")}
 												</Button>
 											</AlertDialog.Footer>
 										</form>

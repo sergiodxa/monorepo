@@ -28,7 +28,7 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 	if (isFailure(result)) {
 		session?.flash("toast", {
 			intent: "error",
-			message: "Please check the SSL settings and try again.",
+			message: ctx.intl.t("actions.saveSsl.errors.invalid"),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??
@@ -75,7 +75,10 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 		waitUntil(ctx.jobs.enqueue(jobs.checkCertificate, { monitorId: monitor_id }));
 	}
 
-	session?.flash("toast", { intent: "success", message: "SSL settings saved." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.saveSsl.success", { name: existing.name }),
+	});
 	return redirect(
 		routes.app.team.monitors.edit.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{

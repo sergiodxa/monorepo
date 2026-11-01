@@ -10,21 +10,25 @@
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
+import type { Session as SessionType } from "remix/session";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
+import { createTranslator } from "@sdxc/i18n";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
+import { Session } from "remix/session";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The only message this action enqueues: a log lookup for one monitor. */
@@ -81,11 +85,32 @@ async function createFixture() {
 	return { db, team, membership, monitor };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`. */
-function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
+/** The translator the app's language middleware would provide, for the action's toasts. */
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/** A session recording the toasts the action flashes, installed only by the tests that read them. */
+function createFakeSession() {
+	return { flash: vi.fn(() => {}) };
+}
+
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`, plus the
+ * translator and, when given, the session the action flashes its toast into.
+ */
+function seedTeam(
+	team: SelectTeam,
+	membership: SelectMembership,
+	session?: ReturnType<typeof createFakeSession>,
+): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.intl = intl;
+		if (session) ctx.set(Session, session as unknown as SessionType);
 		return next();
 	};
 }
@@ -96,6 +121,7 @@ async function send(
 	team: SelectTeam,
 	membership: SelectMembership,
 	params: Record<string, string>,
+	session?: ReturnType<typeof createFakeSession>,
 ): Promise<Response> {
 	let router = createRouter({
 		middleware: [
@@ -107,7 +133,7 @@ async function send(
 		],
 	});
 	router.map(routes.actions.monitor.http.updateSsl, {
-		middleware: [seedTeam(team, membership)],
+		middleware: [seedTeam(team, membership, session)],
 		handler: updateSsl as RequestHandler<any>,
 	});
 
@@ -149,6 +175,24 @@ describe("updateSsl", () => {
 		expect(updated?.ssl_expiry_source).toBe("manual");
 		expect(updated?.ssl_last_checked_at).not.toBeNull();
 		expect(queue.sent).toEqual([]);
+	});
+
+	test("toasts the saved settings naming the monitor, in the viewer's language", async () => {
+		let { db, team, membership, monitor } = await createFixture();
+		let session = createFakeSession();
+
+		await send(
+			db,
+			team,
+			membership,
+			{ monitor_id: monitor.id, ssl_monitoring_enabled: "false", ssl_expiry_warning_days: "30" },
+			session,
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: "SSL settings for “Homepage” saved",
+		});
 	});
 
 	test("reads the expiry from the logs when no date is typed, and queues a lookup", async () => {

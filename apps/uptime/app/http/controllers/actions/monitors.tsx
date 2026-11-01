@@ -143,7 +143,10 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 		});
 	}
 
-	session?.flash("toast", { intent: "success", message: `Monitor "${monitor.name}" created.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.createMonitor.success", { name: monitor.name }),
+	});
 	return redirect(
 		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor.id }),
 		{ status: redirect.Status.SeeOther },
@@ -185,7 +188,10 @@ export const updateMonitor = createAction(routes.actions.monitor.http.update, as
 
 	unwrap(await ctx.models.monitors.update(monitor_id, changes));
 
-	session?.flash("toast", { intent: "success", message: "Monitor updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.updateMonitor.success", { name: changes.name }),
+	});
 	return redirect(
 		routes.app.team.monitors.show.href({ team: ctx.team.slug, monitorId: monitor_id }),
 		{
@@ -210,7 +216,10 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 
 	unwrap(await ctx.models.monitors.delete(existing.id));
 
-	session?.flash("toast", { intent: "success", message: `Monitor "${existing.name}" deleted.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.deleteMonitor.success", { name: existing.name }),
+	});
 	return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});

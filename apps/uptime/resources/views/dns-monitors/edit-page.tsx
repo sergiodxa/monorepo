@@ -244,11 +244,11 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 										description={ctx.intl.t("page.editDnsMonitor.dangerZone.warning")}
 										buttonLabel={ctx.intl.t("page.editDnsMonitor.dangerZone.deleteMonitor")}
 										confirm={{
-											title: ctx.intl.t("page.dnsMonitors.table.confirmation.delete", {
+											title: ctx.intl.t("app.confirm.deleteDnsMonitor.title", {
 												name: monitor.name,
 											}),
 											description: ctx.intl.t("page.editDnsMonitor.dangerZone.deleteDescription"),
-											confirmLabel: ctx.intl.t("page.dnsMonitors.table.actions.delete"),
+											confirmLabel: ctx.intl.t("app.confirm.deleteMonitor.action"),
 											cancelLabel: ctx.intl.t("page.editDnsMonitor.form.cancel"),
 											form: {
 												action: routes.actions.monitor.dns.delete.href({ team: ctx.team.slug }),

@@ -225,10 +225,10 @@ export default function EditAlertPage(handle: Handle<EditAlertPage.Props>) {
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={DELETE_ALERT_TITLE_ID}>
-										{ctx.intl.t("page.editAlert.danger.delete.confirmTitle")}
+										{ctx.intl.t("app.confirm.deleteAlert.title", { name: alert.name })}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={DELETE_ALERT_DESCRIPTION_ID}>
-										{ctx.intl.t("page.editAlert.danger.delete.confirmDescription")}
+										{ctx.intl.t("page.editAlert.danger.warning")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -242,7 +242,7 @@ export default function EditAlertPage(handle: Handle<EditAlertPage.Props>) {
 											{ctx.intl.t("page.editAlert.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.intl.t("page.editAlert.danger.delete.confirm")}
+											{ctx.intl.t("page.editAlert.danger.delete.trigger")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

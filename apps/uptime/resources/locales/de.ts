@@ -1278,6 +1278,49 @@ export default {
 	},
 
 	app: {
+		/** A signed-in page's document title reads "Team · Page", so a tab names its team first. */
+		titles: {
+			dashboard: "{$team} · Dashboard",
+			httpMonitors: "{$team} · HTTP-Monitore",
+			dnsMonitors: "{$team} · DNS-Monitore",
+			tcpMonitors: "{$team} · TCP-Monitore",
+			apiKeys: "{$team} · API-Schlüssel",
+			billing: "{$team} · Abrechnung",
+			record: "{$team} · {$name}",
+		},
+
+		/**
+		 * A destructive confirmation names the record it removes, and its button repeats the
+		 * verb of the control that opened it.
+		 */
+		confirm: {
+			deleteMonitor: { title: "Monitor „{$name}“ löschen?", action: "Monitor löschen" },
+			deleteDnsMonitor: { title: "DNS-Monitor „{$name}“ löschen?" },
+			deleteTcpMonitor: { title: "TCP-Monitor „{$name}“ löschen?" },
+			deleteCronJob: { title: "Cron Job „{$name}“ löschen?" },
+			deleteFlowMonitor: {
+				title: "Flow-Monitor „{$name}“ löschen?",
+				action: "Flow-Monitor löschen",
+			},
+			deleteAlert: { title: "Benachrichtigung „{$name}“ löschen?" },
+			deleteMaintenance: { title: "Wartungsfenster „{$name}“ löschen?" },
+			deleteStatusPage: {
+				title: "Statusseite „{$name}“ löschen?",
+				action: "Statusseite löschen",
+			},
+			deleteApiKey: {
+				title: "API-Schlüssel „{$name}“ löschen?",
+				description:
+					"Alles, was diesen Schlüssel noch nutzt, verliert sofort den Zugriff. Dies kann nicht rückgängig gemacht werden.",
+			},
+			deleteContentCheck: {
+				title: "Inhaltsprüfung „{$value}“ löschen?",
+				description:
+					"Der Monitor prüft seine Antworten nicht mehr darauf. Dies kann nicht rückgängig gemacht werden.",
+				action: "Inhaltsprüfung löschen",
+			},
+		},
+
 		meta: {
 			title: "Uptime von Sergio Xalambrí",
 			description: "Einfache und zuverlässige Uptime-Überwachung für Entwickler",
@@ -1527,7 +1570,6 @@ export default {
 			yes: "Ja",
 			no: "Nein",
 			delete: "Löschen",
-			deleteConfirmTitle: "Diese Inhaltsprüfung löschen?",
 		},
 
 		types: {
@@ -2411,6 +2453,51 @@ export default {
 				forbidden: "Sie sind nicht berechtigt, diesen Cron Job zu löschen.",
 			},
 			success: "Cron Job '{$name}' wurde gelöscht.",
+		},
+
+		updateEmails: {
+			errors: {
+				invalid:
+					"Wählen Sie aus, welche E-Mails Sie erhalten möchten, und versuchen Sie es erneut.",
+			},
+			success: "E-Mail-Einstellungen gespeichert",
+		},
+
+		cancelAccountDeletion: { success: "Kontolöschung abgebrochen" },
+
+		createContentCheck: {
+			errors: {
+				invalid: "Prüfen Sie Typ und Wert der Inhaltsprüfung und versuchen Sie es erneut.",
+				limitExceeded:
+					"Ein Monitor kann bis zu {$limit} Inhaltsprüfungen haben. Löschen Sie eine, um eine weitere hinzuzufügen.",
+			},
+			success: "Inhaltsprüfung „{$value}“ hinzugefügt",
+		},
+
+		deleteContentCheck: { success: "Inhaltsprüfung „{$value}“ gelöscht" },
+
+		saveSsl: {
+			errors: { invalid: "Prüfen Sie die SSL-Einstellungen und versuchen Sie es erneut." },
+			success: "SSL-Einstellungen für „{$name}“ gespeichert",
+		},
+
+		checkTcpMonitor: { success: "„{$name}“ geprüft" },
+
+		runFlowMonitor: { success: "„{$name}“ ausgeführt: {$passed} von {$total} Tests bestanden" },
+
+		/** Why a flow's source was refused, shown under the source field it came from. */
+		flowSource: {
+			unverifiedHosts:
+				"Dieser Flow erreicht {$hosts}, was keine verifizierte Domain dieses Teams abdeckt. Verifizieren Sie die Domain in den Team-Einstellungen oder richten Sie den Flow auf eine verifizierte Domain aus.",
+			noHosts:
+				"Dieser Flow nennt keinen Host. Schreiben Sie jede URL, die er abruft, in die Spezifikation, damit sie mit den verifizierten Domains des Teams abgeglichen werden kann.",
+		},
+
+		downloadReports: {
+			errors: {
+				archive:
+					"Das Berichtsarchiv konnte nicht erstellt werden. Versuchen Sie es gleich noch einmal.",
+			},
 		},
 	},
 
@@ -3447,11 +3534,6 @@ export default {
 					menu: "Aktionsmenü",
 					view: "Seite anzeigen",
 					edit: "Seite bearbeiten",
-					delete: "Seite löschen",
-				},
-
-				confirmation: {
-					delete: "Sind Sie sicher, dass Sie die Statusseite {$name} löschen möchten?",
 				},
 			},
 
@@ -3572,7 +3654,6 @@ export default {
 				title: "Gefahrenzone",
 				description: "Aktionen in diesem Bereich können nicht rückgängig gemacht werden.",
 				warning: "Wenn Sie diese Statusseite löschen, ist ihre öffentliche URL endgültig offline.",
-				deleteDescription: "Dies kann nicht rückgängig gemacht werden.",
 			},
 		},
 
@@ -3721,7 +3802,6 @@ export default {
 					unknown: "Unbekannt",
 				},
 				confirmation: {
-					delete: "Sind Sie sicher, dass Sie den Monitor {$name} löschen möchten?",
 					deleteDescription:
 						"Dadurch werden auch die Inhaltsprüfungen und der Prüfergebnisverlauf gelöscht. Dies kann nicht rückgängig gemacht werden.",
 				},
@@ -3792,10 +3872,6 @@ export default {
 					check: "Jetzt prüfen",
 					edit: "Bearbeiten",
 					delete: "Löschen",
-				},
-
-				confirmation: {
-					delete: "Sind Sie sicher, dass Sie den DNS-Monitor {$name} löschen möchten?",
 				},
 			},
 		},
@@ -4446,9 +4522,6 @@ export default {
 				warning: "Das Löschen dieses Wartungsfensters kann nicht rückgängig gemacht werden.",
 				delete: {
 					trigger: "Wartungsfenster löschen",
-					confirmTitle: "Dieses Wartungsfenster löschen?",
-					confirmDescription: "Dies kann nicht rückgängig gemacht werden.",
-					confirm: "Löschen",
 				},
 			},
 		},
@@ -4821,9 +4894,6 @@ export default {
 					"Wenn Sie diese Benachrichtigung löschen, werden alle Meldungen gestoppt, die sie sendet. Dies kann nicht rückgängig gemacht werden.",
 				delete: {
 					trigger: "Benachrichtigung löschen",
-					confirmTitle: "Diese Benachrichtigung löschen?",
-					confirmDescription: "Dies kann nicht rückgängig gemacht werden.",
-					confirm: "Löschen",
 				},
 			},
 		},
@@ -5721,10 +5791,6 @@ export default {
 					view: "Ansehen",
 					edit: "Bearbeiten",
 					delete: "Löschen",
-					confirmation: {
-						delete:
-							"Soll der Flow-Monitor {$name} wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden.",
-					},
 				},
 			},
 
@@ -5929,9 +5995,6 @@ export default {
 				actions: {
 					edit: "Bearbeiten",
 					delete: "Löschen",
-					confirmation: {
-						delete: "Sind Sie sicher, dass Sie {$name} löschen möchten?",
-					},
 				},
 			},
 		},
@@ -6147,7 +6210,6 @@ export default {
 
 			list: {
 				created: "Erstellt",
-				deleteTitle: "API-Schlüssel löschen?",
 			},
 
 			fieldErrors: {
@@ -6300,11 +6362,6 @@ export default {
 				actions: {
 					menu: "Aktionsmenü",
 					delete: "Schlüssel löschen",
-				},
-
-				confirmation: {
-					delete:
-						"Sind Sie sicher, dass Sie den API-Schlüssel '{$name}' löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
 				},
 			},
 
@@ -6565,10 +6622,8 @@ export default {
 					"Wenn Sie diesen Cron Job löschen, werden sein Ping-Verlauf und seine Benachrichtigungen endgültig entfernt.",
 				delete: {
 					trigger: "Monitor löschen",
-					confirmTitle: "Diesen Cron-Job-Monitor löschen?",
 					confirmDescription:
 						"Dies löscht auch dessen Ping-Verlauf. Dies kann nicht rückgängig gemacht werden.",
-					confirm: "Löschen",
 				},
 			},
 		},

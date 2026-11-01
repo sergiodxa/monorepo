@@ -21,6 +21,7 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { FlowSourceInspection } from "~/app/services/flow-check";
 import type { SelectFlowMonitor } from "~/database/schema";
 
 import {
@@ -62,6 +63,24 @@ function formIssues(issues: ValidationError["issues"], t: Translate): Form.Issue
 	}));
 }
 
+/**
+ * The refusal shown under the source field, in the reader's language. A spec that does not
+ * parse keeps the parser's own message, since it quotes the line and token at fault.
+ */
+function flowSourceIssue(
+	t: Translate,
+	inspection: Extract<FlowSourceInspection, { ok: false }>,
+): string {
+	switch (inspection.reason) {
+		case "invalid":
+			return inspection.message;
+		case "unverified":
+			return t("actions.flowSource.unverifiedHosts", { hosts: inspection.refused.join(", ") });
+		case "noHosts":
+			return t("actions.flowSource.noHosts");
+	}
+}
+
 /** POST /actions/:team/create-flow-monitor; a refused submit answers 422 with the form as typed. */
 export const createFlowMonitor = createAction(routes.actions.monitor.flow.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateFlowMonitorSchema);
@@ -86,7 +105,7 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 	if (!inspection.ok) {
 		return sendBack({
 			values: ctx.formData,
-			issues: [{ message: inspection.message, path: ["source"] }],
+			issues: [{ message: flowSourceIssue(ctx.intl.t, inspection), path: ["source"] }],
 		});
 	}
 
@@ -174,7 +193,7 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 	if (!inspection.ok) {
 		return sendBack(existing, {
 			values: ctx.formData,
-			issues: [{ message: inspection.message, path: ["source"] }],
+			issues: [{ message: flowSourceIssue(ctx.intl.t, inspection), path: ["source"] }],
 		});
 	}
 
@@ -315,7 +334,11 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	session?.flash("toast", {
 		intent: checkResult.status === "up" ? "success" : "error",
-		message: `Ran "${monitor.name}": ${checkResult.testsPassed}/${checkResult.testsTotal} passed.`,
+		message: ctx.intl.t("actions.runFlowMonitor.success", {
+			name: monitor.name,
+			passed: checkResult.testsPassed,
+			total: checkResult.testsTotal,
+		}),
 	});
 	return redirect(showHref, { status: redirect.Status.SeeOther });
 });

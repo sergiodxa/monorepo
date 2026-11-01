@@ -69,7 +69,10 @@ export default createAction(routes.app.team.dashboard.index, {
 		headers.set("Set-Cookie", await dashboardTabCookie.serialize(tab));
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Dashboard`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.dashboard", { team: ctx.team.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

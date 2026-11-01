@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
+import type { Session as SessionType } from "remix/session";
 
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
@@ -31,6 +32,7 @@ import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
+import { Session } from "remix/session";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -102,7 +104,16 @@ async function createFixture() {
 }
 
 /** Middleware that seeds `ctx.team`/`ctx.membership`/auth state, standing in for the real chain. */
-function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
+/** A session recording the toasts an action flashes, installed only by the tests that read them. */
+function createFakeSession() {
+	return { flash: vi.fn(() => {}) };
+}
+
+function seedTeam(
+	team: SelectTeam,
+	membership: SelectMembership,
+	session?: ReturnType<typeof createFakeSession>,
+): Middleware {
 	let viewer: Viewer = {
 		id: membership.subject_id,
 		name: "Test Viewer",
@@ -115,6 +126,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.membership = membership;
 		ctx.teams = [team];
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
+		if (session) ctx.set(Session, session as unknown as SessionType);
 		return teamAccess(ctx, next);
 	};
 }
@@ -139,6 +151,7 @@ async function send(
 	method: string,
 	params: Record<string, string>,
 	records: Record<string, unknown>[] = [],
+	session?: ReturnType<typeof createFakeSession>,
 ): Promise<Response> {
 	let router = createRouter({
 		middleware: [
@@ -153,7 +166,7 @@ async function send(
 	});
 	router.map(route, {
 		middleware: [
-			seedTeam(team, membership),
+			seedTeam(team, membership, session),
 			i18n,
 			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -367,6 +380,43 @@ describe("deleteMonitor", () => {
 		);
 
 		expect(await db.findOne(monitors, { where: { id: monitor.id } })).toBeNull();
+	});
+
+	test("toasts the deleted monitor by name, in the viewer's language", async () => {
+		let { db, team } = await createFixture();
+		let membership = await db.create(
+			memberships,
+			{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Checkout API",
+				url: "https://example.com",
+			}),
+		);
+		let session = createFakeSession();
+
+		await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.delete,
+			deleteMonitor as RequestHandler<any>,
+			"DELETE",
+			{ monitor_id: monitor.id },
+			[],
+			session,
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: "Checkout API monitor was deleted.",
+		});
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {

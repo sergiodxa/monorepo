@@ -68,7 +68,10 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 		let endpoint = `${monitor.host}:${monitor.port}`;
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -225,11 +228,11 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 						<Confirm
 							id={DELETE_DIALOG_ID}
 							color="danger"
-							title={ctx.intl.t("page.tcpMonitors.table.actions.confirmation.delete", {
+							title={ctx.intl.t("app.confirm.deleteTcpMonitor.title", {
 								name: monitor.name,
 							})}
 							description={ctx.intl.t("page.editTcpMonitor.danger.description")}
-							confirmLabel={ctx.intl.t("page.tcpMonitors.table.actions.delete")}
+							confirmLabel={ctx.intl.t("app.confirm.deleteMonitor.action")}
 							cancelLabel={ctx.intl.t("page.editTcpMonitor.form.cancel")}
 							form={{
 								action: routes.actions.monitor.tcp.delete.href({ team: ctx.team.slug }),

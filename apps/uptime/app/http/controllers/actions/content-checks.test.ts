@@ -9,19 +9,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Session as SessionType } from "remix/session";
+
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
+import { createTranslator } from "@sdxc/i18n";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
+import { Session } from "remix/session";
 import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitorContentChecks, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -35,11 +40,32 @@ let { default: models } = await import("~/app/http/middleware/models");
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
 let { bindModels } = await import("~/app/test/models");
 
-/** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
-function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
+/** The translator the app's language middleware would provide, for the actions' copy. */
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/** A session recording the toasts an action flashes. */
+function createFakeSession() {
+	return { flash: vi.fn(() => {}) };
+}
+
+/**
+ * Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`,
+ * plus the translator and, when given, the session the actions flash their toasts into.
+ */
+function teamContextMiddleware(
+	team: SelectTeam,
+	membership: SelectMembership,
+	session?: ReturnType<typeof createFakeSession>,
+): Middleware {
 	return (ctx, next) => {
 		(ctx as unknown as { team: SelectTeam }).team = team;
 		(ctx as unknown as { membership: SelectMembership }).membership = membership;
+		ctx.intl = intl;
+		if (session) ctx.set(Session, session as unknown as SessionType);
 		return next();
 	};
 }
@@ -52,6 +78,7 @@ async function postContentCheckAction(
 	membership: SelectMembership,
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string>,
+	session?: ReturnType<typeof createFakeSession>,
 ) {
 	let router = createRouter({
 		middleware: [asyncContext(), database(db), models(), formData()],
@@ -61,7 +88,7 @@ async function postContentCheckAction(
 	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		middleware: [teamContextMiddleware(team, membership)],
+		middleware: [teamContextMiddleware(team, membership, session)],
 		handler: action,
 	});
 
@@ -228,6 +255,9 @@ describe("POST /actions/:team/create-content-check", () => {
 		);
 
 		expect(response.status).toBe(422);
+		expect(await response.text()).toContain(
+			"A monitor can have up to 10 content checks. Delete one to add another.",
+		);
 		expect(await db.count(monitorContentChecks, { where: { monitor_id: monitor.id } })).toBe(10);
 	});
 });
@@ -263,6 +293,39 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 			routes.app.team.monitors.edit.href({ team: team.slug, monitorId: monitor.id }),
 		);
 		expect(await db.findOne(monitorContentChecks, { where: { id: check.id } })).toBeNull();
+	});
+
+	test("toasts the deleted check by its value, in the viewer's language", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		let check = unwrap(
+			await bindModels(db).contentChecks.create({
+				id: generateUUID(),
+				monitor_id: monitor.id,
+				type: "contains",
+				value: "Welcome back",
+				case_sensitive: false,
+				is_enabled: true,
+			}),
+		);
+		let session = createFakeSession();
+
+		await postContentCheckAction(
+			deleteContentCheck,
+			routes.actions.monitor.http.deleteContentCheck,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id, content_check_id: check.id },
+			session,
+		);
+
+		expect(session.flash).toHaveBeenCalledWith("toast", {
+			intent: "success",
+			message: "Content check “Welcome back” deleted",
+		});
 	});
 
 	test("404s when the monitor doesn't belong to the team, without deleting the check", async () => {

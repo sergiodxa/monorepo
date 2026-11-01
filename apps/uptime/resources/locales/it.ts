@@ -1278,6 +1278,49 @@ export default {
 	},
 
 	app: {
+		/** A signed-in page's document title reads "Team · Page", so a tab names its team first. */
+		titles: {
+			dashboard: "{$team} · Dashboard",
+			httpMonitors: "{$team} · Monitor HTTP",
+			dnsMonitors: "{$team} · Monitor DNS",
+			tcpMonitors: "{$team} · Monitor TCP",
+			apiKeys: "{$team} · Chiavi API",
+			billing: "{$team} · Fatturazione",
+			record: "{$team} · {$name}",
+		},
+
+		/**
+		 * A destructive confirmation names the record it removes, and its button repeats the
+		 * verb of the control that opened it.
+		 */
+		confirm: {
+			deleteMonitor: { title: "Eliminare il monitor «{$name}»?", action: "Elimina monitor" },
+			deleteDnsMonitor: { title: "Eliminare il monitor DNS «{$name}»?" },
+			deleteTcpMonitor: { title: "Eliminare il monitor TCP «{$name}»?" },
+			deleteCronJob: { title: "Eliminare il cron job «{$name}»?" },
+			deleteFlowMonitor: {
+				title: "Eliminare il monitor di flusso «{$name}»?",
+				action: "Elimina monitor di flusso",
+			},
+			deleteAlert: { title: "Eliminare l'avviso «{$name}»?" },
+			deleteMaintenance: { title: "Eliminare la finestra di manutenzione «{$name}»?" },
+			deleteStatusPage: {
+				title: "Eliminare la pagina di stato «{$name}»?",
+				action: "Elimina pagina di stato",
+			},
+			deleteApiKey: {
+				title: "Eliminare la chiave API «{$name}»?",
+				description:
+					"Tutto ciò che usa ancora questa chiave perde subito l'accesso. L'operazione non può essere annullata.",
+			},
+			deleteContentCheck: {
+				title: "Eliminare il controllo del contenuto «{$value}»?",
+				description:
+					"Il monitor smette di cercarlo nelle sue risposte. L'operazione non può essere annullata.",
+				action: "Elimina controllo",
+			},
+		},
+
 		meta: {
 			title: "Uptime di Sergio Xalambrí",
 			description: "Monitoraggio uptime semplice e affidabile per sviluppatori",
@@ -1527,7 +1570,6 @@ export default {
 			yes: "Sì",
 			no: "No",
 			delete: "Elimina",
-			deleteConfirmTitle: "Eliminare questo controllo dei contenuti?",
 		},
 
 		types: {
@@ -2404,6 +2446,47 @@ export default {
 				forbidden: "Non Le è consentito eliminare questo cron job.",
 			},
 			success: "Il cron job '{$name}' è stato eliminato.",
+		},
+
+		updateEmails: {
+			errors: { invalid: "Scegli quali email vuoi ricevere e riprova." },
+			success: "Preferenze email salvate",
+		},
+
+		cancelAccountDeletion: { success: "Eliminazione dell'account annullata" },
+
+		createContentCheck: {
+			errors: {
+				invalid: "Controlla il tipo e il valore del controllo del contenuto, poi riprova.",
+				limitExceeded:
+					"Un monitor può avere fino a {$limit} controlli del contenuto. Eliminane uno per aggiungerne un altro.",
+			},
+			success: "Controllo del contenuto «{$value}» aggiunto",
+		},
+
+		deleteContentCheck: { success: "Controllo del contenuto «{$value}» eliminato" },
+
+		saveSsl: {
+			errors: { invalid: "Controlla le impostazioni SSL e riprova." },
+			success: "Impostazioni SSL di «{$name}» salvate",
+		},
+
+		checkTcpMonitor: { success: "«{$name}» controllato" },
+
+		runFlowMonitor: { success: "«{$name}» eseguito: {$passed} test superati su {$total}" },
+
+		/** Why a flow's source was refused, shown under the source field it came from. */
+		flowSource: {
+			unverifiedHosts:
+				"Questo flusso raggiunge {$hosts}, che nessun dominio verificato di questo team copre. Verifica il dominio nelle impostazioni del team, oppure indirizza il flusso verso un dominio verificato.",
+			noHosts:
+				"Questo flusso non indica alcun host. Scrivi nella specifica ogni URL che richiede, così da poterlo confrontare con i domini verificati del team.",
+		},
+
+		downloadReports: {
+			errors: {
+				archive: "Non è stato possibile creare l'archivio dei report. Riprova tra un momento.",
+			},
 		},
 	},
 
@@ -3435,11 +3518,6 @@ export default {
 					menu: "Menu Azioni",
 					view: "Visualizza Pagina",
 					edit: "Modifica Pagina",
-					delete: "Elimina Pagina",
-				},
-
-				confirmation: {
-					delete: "È sicuro di voler eliminare la pagina di stato {$name}?",
 				},
 			},
 
@@ -3559,7 +3637,6 @@ export default {
 				title: "Zona pericolosa",
 				description: "Le azioni in questa sezione non possono essere annullate.",
 				warning: "Eliminando questa pagina di stato, il suo URL pubblico resta offline per sempre.",
-				deleteDescription: "Questa azione non può essere annullata.",
 			},
 		},
 
@@ -3705,7 +3782,6 @@ export default {
 					unknown: "Sconosciuto",
 				},
 				confirmation: {
-					delete: "Sei sicuro di voler eliminare il monitor {$name}?",
 					deleteDescription:
 						"Questo eliminerà anche i controlli sui contenuti e la cronologia dei risultati. Questa azione non può essere annullata.",
 				},
@@ -3773,10 +3849,6 @@ export default {
 					check: "Controlla Ora",
 					edit: "Modifica",
 					delete: "Elimina",
-				},
-
-				confirmation: {
-					delete: "È sicuro di voler eliminare il monitor DNS {$name}?",
 				},
 			},
 		},
@@ -4423,9 +4495,6 @@ export default {
 				warning: "L'eliminazione di questa finestra di manutenzione non può essere annullata.",
 				delete: {
 					trigger: "Elimina finestra di manutenzione",
-					confirmTitle: "Eliminare questa finestra di manutenzione?",
-					confirmDescription: "Questa azione non può essere annullata.",
-					confirm: "Elimina",
 				},
 			},
 		},
@@ -4797,9 +4866,6 @@ export default {
 					"Eliminando questo avviso si interrompono tutte le notifiche che invia. Questa azione non può essere annullata.",
 				delete: {
 					trigger: "Elimina avviso",
-					confirmTitle: "Eliminare questo avviso?",
-					confirmDescription: "Questa azione non può essere annullata.",
-					confirm: "Elimina",
 				},
 			},
 		},
@@ -5694,10 +5760,6 @@ export default {
 					view: "Vedi",
 					edit: "Modifica",
 					delete: "Elimina",
-					confirmation: {
-						delete:
-							"Vuoi davvero eliminare il monitor di flusso {$name}? L'azione non può essere annullata.",
-					},
 				},
 			},
 
@@ -5896,9 +5958,6 @@ export default {
 				actions: {
 					edit: "Modifica",
 					delete: "Elimina",
-					confirmation: {
-						delete: "È sicuro di voler eliminare {$name}?",
-					},
 				},
 			},
 		},
@@ -6110,7 +6169,6 @@ export default {
 
 			list: {
 				created: "Creata",
-				deleteTitle: "Eliminare la chiave API?",
 			},
 
 			fieldErrors: {
@@ -6261,11 +6319,6 @@ export default {
 				actions: {
 					menu: "Menu Azioni",
 					delete: "Elimina Chiave",
-				},
-
-				confirmation: {
-					delete:
-						"È sicuro di voler eliminare la chiave API '{$name}'? Questa azione non può essere annullata.",
 				},
 			},
 
@@ -6519,10 +6572,8 @@ export default {
 					"Eliminando questo cron job si rimuovono definitivamente la cronologia dei ping e i suoi avvisi.",
 				delete: {
 					trigger: "Elimina monitor",
-					confirmTitle: "Eliminare questo monitor di cron job?",
 					confirmDescription:
 						"Questo elimina anche la cronologia dei ping. Questa azione non può essere annullata.",
-					confirm: "Elimina",
 				},
 			},
 		},

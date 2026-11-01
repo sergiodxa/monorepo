@@ -160,7 +160,10 @@ export default createAction(routes.app.team.cronJobs.show, {
 		});
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -359,7 +362,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 						>
 							<AlertDialog.Header>
 								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-									{ctx.intl.t("page.editCronJob.danger.delete.confirmTitle")}
+									{ctx.intl.t("app.confirm.deleteCronJob.title", { name: monitor.name })}
 								</AlertDialog.Title>
 								<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
 									{ctx.intl.t("page.editCronJob.danger.delete.confirmDescription")}
@@ -376,7 +379,7 @@ export default createAction(routes.app.team.cronJobs.show, {
 										{ctx.intl.t("page.editCronJob.form.cancel")}
 									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
-										{ctx.intl.t("page.editCronJob.danger.delete.confirm")}
+										{ctx.intl.t("app.confirm.deleteMonitor.action")}
 									</Button>
 								</AlertDialog.Footer>
 							</form>

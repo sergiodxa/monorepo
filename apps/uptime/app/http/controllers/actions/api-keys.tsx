@@ -53,7 +53,9 @@ export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, 
 
 	let count = await ctx.models.apiKeys.inTeam(ctx.team.id).count();
 	if (count >= MAX_API_KEYS_PER_TEAM) {
-		return badRequest(`A team can have at most ${MAX_API_KEYS_PER_TEAM} API keys.`);
+		return badRequest(
+			ctx.intl.t("actions.createApiKey.errors.limitExceeded", { limit: MAX_API_KEYS_PER_TEAM }),
+		);
 	}
 
 	let { name, scopes, expires_at } = result.data;
@@ -86,7 +88,10 @@ export const deleteApiKey = createAction(routes.teamAdminActions.apiKey.delete, 
 
 	unwrap(await ctx.models.apiKeys.delete(apiKey.id));
 
-	session?.flash("toast", { intent: "success", message: `API key "${apiKey.name}" deleted.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.deleteApiKey.success", { name: apiKey.name }),
+	});
 	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});

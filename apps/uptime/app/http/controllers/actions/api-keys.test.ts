@@ -254,6 +254,9 @@ describe("POST /actions/:team/create-api-key", () => {
 		);
 
 		expect(response.status).toBe(400);
+		expect(await response.text()).toContain(
+			`You have reached the limit of ${MAX_API_KEYS_PER_TEAM} API keys in this team.`,
+		);
 		expect(await db.count(apiKeys, { where: { team_id: team.id } })).toBe(MAX_API_KEYS_PER_TEAM);
 	});
 });

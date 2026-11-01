@@ -317,10 +317,10 @@ export default function EditMaintenanceWindowPage(handle: Handle<EditMaintenance
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.intl.t("page.editMaintenance.danger.delete.confirmTitle")}
+										{ctx.intl.t("app.confirm.deleteMaintenance.title", { name: window.name })}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.intl.t("page.editMaintenance.danger.delete.confirmDescription")}
+										{ctx.intl.t("page.editMaintenance.danger.warning")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								<form
@@ -334,7 +334,7 @@ export default function EditMaintenanceWindowPage(handle: Handle<EditMaintenance
 											{ctx.intl.t("page.editMaintenance.form.cancel")}
 										</AlertDialog.Cancel>
 										<AlertDialog.Action commandfor={DELETE_DIALOG_ID} type="submit">
-											{ctx.intl.t("page.editMaintenance.danger.delete.confirm")}
+											{ctx.intl.t("page.editMaintenance.danger.delete.trigger")}
 										</AlertDialog.Action>
 									</AlertDialog.Footer>
 								</form>

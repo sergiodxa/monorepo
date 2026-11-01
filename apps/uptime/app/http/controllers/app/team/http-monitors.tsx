@@ -103,7 +103,10 @@ export default createAction(routes.app.team.monitors.index, {
 		let newHref = routes.app.team.monitors.new.href({ team: ctx.team.slug });
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · HTTP monitors`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.httpMonitors", { team: ctx.team.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -311,7 +314,7 @@ export default createAction(routes.app.team.monitors.index, {
 																	>
 																		<AlertDialog.Header>
 																			<AlertDialog.Title id={titleId}>
-																				{t("page.httpMonitors.table.confirmation.delete", {
+																				{t("app.confirm.deleteMonitor.title", {
 																					name: monitor.name,
 																				})}
 																			</AlertDialog.Title>
@@ -337,7 +340,7 @@ export default createAction(routes.app.team.monitors.index, {
 																					{t("page.editMonitor.form.cancel")}
 																				</AlertDialog.Cancel>
 																				<Button type="submit" color="danger">
-																					{t("page.httpMonitors.table.actions.delete")}
+																					{t("app.confirm.deleteMonitor.action")}
 																				</Button>
 																			</AlertDialog.Footer>
 																		</form>

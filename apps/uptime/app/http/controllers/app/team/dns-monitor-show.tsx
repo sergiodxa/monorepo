@@ -125,7 +125,10 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 			);
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -461,11 +464,11 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 						<Confirm
 							id={DELETE_DIALOG_ID}
 							color="danger"
-							title={ctx.intl.t("page.dnsMonitors.table.confirmation.delete", {
+							title={ctx.intl.t("app.confirm.deleteDnsMonitor.title", {
 								name: monitor.name,
 							})}
 							description={ctx.intl.t("page.editDnsMonitor.dangerZone.deleteDescription")}
-							confirmLabel={ctx.intl.t("page.dnsMonitors.table.actions.delete")}
+							confirmLabel={ctx.intl.t("app.confirm.deleteMonitor.action")}
 							cancelLabel={ctx.intl.t("page.editDnsMonitor.form.cancel")}
 							form={{
 								action: routes.actions.monitor.dns.delete.href({ team: ctx.team.slug }),

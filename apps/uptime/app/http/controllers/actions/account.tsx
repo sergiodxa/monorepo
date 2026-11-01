@@ -96,15 +96,18 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 		member: { role: membership.role, isOwner: team.owner_id === viewer.id },
 	});
 	if (!decision.allowed && decision.cause === "denied" && decision.reason === "owner") {
-		return badRequest("The team owner can't leave the team.");
+		return badRequest(ctx.intl.t("actions.leaveTeam.errors.ownerCannotLeave"));
 	}
 	if (!decision.allowed) {
-		return badRequest("Admins must be demoted to a member before leaving.");
+		return badRequest(ctx.intl.t("actions.leaveTeam.errors.adminCannotLeave"));
 	}
 
 	await ctx.models.memberships.remove(result.data.team_id, viewer.id);
 
-	session?.flash("toast", { intent: "success", message: `Left "${team.name}".` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.leaveTeam.success", { team: team.name }),
+	});
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 });
 
@@ -118,7 +121,7 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
 	let result = await validate(ctx.formData, UpdateEmailsSchema);
-	if (isFailure(result)) return badRequest("Invalid email preferences.");
+	if (isFailure(result)) return badRequest(ctx.intl.t("actions.updateEmails.errors.invalid"));
 
 	let wanted = new Set(result.data.emails);
 	let unsubscribed = optionalEmails.filter((email) => !wanted.has(email));
@@ -126,7 +129,10 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 	unwrap(await ctx.models.userPreferences.setUnsubscribedEmails(viewer.id, unsubscribed));
 
 	let session = ctx.get(Session);
-	session?.flash("toast", { intent: "success", message: "Email preferences saved." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.updateEmails.success"),
+	});
 
 	return redirect(ctx.request.headers.get("Referer") ?? routes.home.href(), {
 		status: redirect.Status.SeeOther,
@@ -169,7 +175,7 @@ export const requestDeletion = createAction(routes.accountActions.requestDeletio
 
 	let result = await validate(ctx.formData, RequestAccountDeletionSchema);
 	if (isFailure(result)) {
-		return badRequest('Type "DELETE" to confirm.');
+		return badRequest(ctx.intl.t("page.account.deleteAccount.card.confirmation.label"));
 	}
 
 	await ctx.models.accountDeletions.enqueue(viewer.id, viewer.email);
@@ -191,7 +197,10 @@ export const cancelDeletion = createAction(routes.accountActions.cancelDeletion,
 	await ctx.models.accountDeletions.remove(viewer.id);
 
 	let session = ctx.get(Session);
-	session?.flash("toast", { intent: "success", message: "Account deletion cancelled." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.cancelAccountDeletion.success"),
+	});
 
 	return redirect(ctx.request.headers.get("Referer") ?? routes.home.href(), {
 		status: redirect.Status.SeeOther,
@@ -205,7 +214,7 @@ export const updateLanguage = createAction(routes.accountActions.updateLanguage,
 
 	let result = await validate(ctx.formData, UpdateLanguageSchema);
 	if (isFailure(result)) {
-		return badRequest("Invalid language.");
+		return badRequest(ctx.intl.t("actions.updateLanguage.errors.generic"));
 	}
 
 	unwrap(await ctx.models.userPreferences.setLanguage(viewer.id, result.data.language));

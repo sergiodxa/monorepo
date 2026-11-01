@@ -377,7 +377,7 @@ export default function EditStatusPagePage(handle: Handle<EditStatusPagePage.Pro
 											commandfor={DELETE_DIALOG_ID}
 											command="show-modal"
 										>
-											{ctx.intl.t("page.statusPages.table.actions.delete")}
+											{ctx.intl.t("app.confirm.deleteStatusPage.action")}
 										</Button>
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
@@ -390,12 +390,12 @@ export default function EditStatusPagePage(handle: Handle<EditStatusPagePage.Pro
 							>
 								<AlertDialog.Header>
 									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.intl.t("page.statusPages.table.confirmation.delete", {
+										{ctx.intl.t("app.confirm.deleteStatusPage.title", {
 											name: page.name,
 										})}
 									</AlertDialog.Title>
 									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.intl.t("page.editStatusPage.dangerZone.deleteDescription")}
+										{ctx.intl.t("page.editStatusPage.dangerZone.warning")}
 									</AlertDialog.Description>
 								</AlertDialog.Header>
 								{/**
@@ -414,7 +414,7 @@ export default function EditStatusPagePage(handle: Handle<EditStatusPagePage.Pro
 											{ctx.intl.t("page.editMonitor.form.cancel")}
 										</AlertDialog.Cancel>
 										<Button type="submit" color="danger">
-											{ctx.intl.t("page.statusPages.table.actions.delete")}
+											{ctx.intl.t("app.confirm.deleteStatusPage.action")}
 										</Button>
 									</AlertDialog.Footer>
 								</form>

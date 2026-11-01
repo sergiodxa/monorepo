@@ -258,6 +258,7 @@ describe("createFlowMonitor", () => {
 		expect(body).toContain("Somebody else");
 		expect(body).toContain("victim.invalid.test");
 		expect(body).toContain("which no verified domain on this team covers");
+		expect(body).toContain("Verify that domain in team settings");
 		expect(await db.findOne(flowMonitors, { where: { team_id: team.id } })).toBeNull();
 	});
 

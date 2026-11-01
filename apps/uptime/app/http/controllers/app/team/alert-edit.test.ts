@@ -148,6 +148,29 @@ describe("alertEdit", () => {
 		expect(body).toContain(`value="${alert.id}"`);
 	});
 
+	test("names the alert in its delete confirmation, confirmed with the trigger's own verb", async () => {
+		let { db, team, membership } = await createFixture();
+		let alert = await db.create(
+			alerts,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "Checkout down",
+				notify_on_recovery: true,
+				cooldown_minutes: 30,
+				config: WEBHOOK_CONFIG,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, alert.id)).text();
+
+		expect(body).toContain("Delete the alert “Checkout down”?");
+		expect(body).toContain("Deleting this alert stops all notifications it sends.");
+		expect(body).not.toContain("Delete this alert?");
+	});
+
 	test("reflects the stored recovery-notification decision in the switch", async () => {
 		let { db, team, membership } = await createFixture();
 

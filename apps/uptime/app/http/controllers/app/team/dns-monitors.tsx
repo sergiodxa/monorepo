@@ -147,7 +147,10 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 				: ctx.intl.t(`page.dnsMonitorDetail.records.state.${status}`);
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · DNS monitors`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.dnsMonitors", { team: ctx.team.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

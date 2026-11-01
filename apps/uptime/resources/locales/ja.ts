@@ -1246,6 +1246,48 @@ export default {
 	},
 
 	app: {
+		/** A signed-in page's document title reads "Team · Page", so a tab names its team first. */
+		titles: {
+			dashboard: "{$team} · ダッシュボード",
+			httpMonitors: "{$team} · HTTPモニター",
+			dnsMonitors: "{$team} · DNSモニター",
+			tcpMonitors: "{$team} · TCPモニター",
+			apiKeys: "{$team} · APIキー",
+			billing: "{$team} · 請求",
+			record: "{$team} · {$name}",
+		},
+
+		/**
+		 * A destructive confirmation names the record it removes, and its button repeats the
+		 * verb of the control that opened it.
+		 */
+		confirm: {
+			deleteMonitor: { title: "モニター「{$name}」を削除しますか？", action: "モニターを削除" },
+			deleteDnsMonitor: { title: "DNSモニター「{$name}」を削除しますか？" },
+			deleteTcpMonitor: { title: "TCPモニター「{$name}」を削除しますか？" },
+			deleteCronJob: { title: "Cronジョブ「{$name}」を削除しますか？" },
+			deleteFlowMonitor: {
+				title: "フローモニター「{$name}」を削除しますか？",
+				action: "フローモニターを削除",
+			},
+			deleteAlert: { title: "アラート「{$name}」を削除しますか？" },
+			deleteMaintenance: { title: "メンテナンス期間「{$name}」を削除しますか？" },
+			deleteStatusPage: {
+				title: "ステータスページ「{$name}」を削除しますか？",
+				action: "ステータスページを削除",
+			},
+			deleteApiKey: {
+				title: "APIキー「{$name}」を削除しますか？",
+				description:
+					"このキーを使っているものはすぐにアクセスできなくなります。元に戻すことはできません。",
+			},
+			deleteContentCheck: {
+				title: "コンテンツチェック「{$value}」を削除しますか？",
+				description: "モニターはレスポンス内でこれを確認しなくなります。元に戻すことはできません。",
+				action: "コンテンツチェックを削除",
+			},
+		},
+
 		meta: {
 			title: "Uptime by Sergio Xalambrí",
 			description: "開発者向けのシンプルで信頼性の高いUptime監視",
@@ -1495,7 +1537,6 @@ export default {
 			yes: "はい",
 			no: "いいえ",
 			delete: "削除",
-			deleteConfirmTitle: "このコンテンツチェックを削除しますか？",
 		},
 
 		types: {
@@ -2365,6 +2406,48 @@ export default {
 				forbidden: "このCronジョブを削除する権限がありません。",
 			},
 			success: "Cronジョブ「{$name}」が削除されました。",
+		},
+
+		updateEmails: {
+			errors: { invalid: "受け取るメールを選んで、もう一度お試しください。" },
+			success: "メール設定を保存しました",
+		},
+
+		cancelAccountDeletion: { success: "アカウントの削除をキャンセルしました" },
+
+		createContentCheck: {
+			errors: {
+				invalid: "コンテンツチェックの種類と値を確認して、もう一度お試しください。",
+				limitExceeded:
+					"1つのモニターに追加できるコンテンツチェックは{$limit}件までです。追加するには1件削除してください。",
+			},
+			success: "コンテンツチェック「{$value}」を追加しました",
+		},
+
+		deleteContentCheck: { success: "コンテンツチェック「{$value}」を削除しました" },
+
+		saveSsl: {
+			errors: { invalid: "SSL設定を確認して、もう一度お試しください。" },
+			success: "「{$name}」のSSL設定を保存しました",
+		},
+
+		checkTcpMonitor: { success: "「{$name}」をチェックしました" },
+
+		runFlowMonitor: { success: "「{$name}」を実行しました：{$total}件中{$passed}件のテストに合格" },
+
+		/** Why a flow's source was refused, shown under the source field it came from. */
+		flowSource: {
+			unverifiedHosts:
+				"このフローは{$hosts}にアクセスしますが、このチームの検証済みドメインはどれもそれを含みません。チーム設定でそのドメインを検証するか、検証済みのドメインにフローを向けてください。",
+			noHosts:
+				"このフローにはアクセス先のホストがありません。チームの検証済みドメインと照合できるよう、リクエストするすべてのURLをスペックに記述してください。",
+		},
+
+		downloadReports: {
+			errors: {
+				archive:
+					"レポートのアーカイブを作成できませんでした。しばらくしてからもう一度お試しください。",
+			},
 		},
 	},
 
@@ -3381,11 +3464,6 @@ export default {
 					menu: "アクションメニュー",
 					view: "ページを表示",
 					edit: "ページを編集",
-					delete: "ページを削除",
-				},
-
-				confirmation: {
-					delete: "ステータスページ{$name}を削除してもよろしいですか？",
 				},
 			},
 
@@ -3506,7 +3584,6 @@ export default {
 				title: "危険な操作",
 				description: "ここでの操作は元に戻せません。",
 				warning: "このステータスページを削除すると、公開 URL は二度と使えなくなります。",
-				deleteDescription: "この操作は元に戻せません。",
 			},
 		},
 
@@ -3653,7 +3730,6 @@ export default {
 					unknown: "不明",
 				},
 				confirmation: {
-					delete: "モニター {$name} を削除してもよろしいですか？",
 					deleteDescription:
 						"コンテンツチェックとチェック結果の履歴も削除されます。この操作は元に戻せません。",
 				},
@@ -3722,10 +3798,6 @@ export default {
 					check: "今すぐチェック",
 					edit: "編集",
 					delete: "削除",
-				},
-
-				confirmation: {
-					delete: "DNSモニター{$name}を削除してもよろしいですか？",
 				},
 			},
 		},
@@ -4370,9 +4442,6 @@ export default {
 				warning: "このメンテナンス期間の削除は元に戻せません。",
 				delete: {
 					trigger: "メンテナンスウィンドウを削除",
-					confirmTitle: "このメンテナンスウィンドウを削除しますか？",
-					confirmDescription: "この操作は元に戻せません。",
-					confirm: "削除",
 				},
 			},
 		},
@@ -4740,9 +4809,6 @@ export default {
 					"このアラートを削除すると、送信されるすべての通知が停止します。この操作は元に戻せません。",
 				delete: {
 					trigger: "アラートを削除",
-					confirmTitle: "このアラートを削除しますか？",
-					confirmDescription: "この操作は元に戻せません。",
-					confirm: "削除",
 				},
 			},
 		},
@@ -5624,9 +5690,6 @@ export default {
 					view: "表示",
 					edit: "編集",
 					delete: "削除",
-					confirmation: {
-						delete: "フローモニター{$name}を削除してもよろしいですか？この操作は取り消せません。",
-					},
 				},
 			},
 
@@ -5828,9 +5891,6 @@ export default {
 				actions: {
 					edit: "編集",
 					delete: "削除",
-					confirmation: {
-						delete: "{$name}を削除してもよろしいですか？",
-					},
 				},
 			},
 		},
@@ -6039,7 +6099,6 @@ export default {
 
 			list: {
 				created: "作成日",
-				deleteTitle: "APIキーを削除しますか?",
 			},
 
 			fieldErrors: {
@@ -6187,10 +6246,6 @@ export default {
 				actions: {
 					menu: "アクションメニュー",
 					delete: "キーを削除",
-				},
-
-				confirmation: {
-					delete: "APIキー「{$name}」を削除してもよろしいですか？この操作は取り消せません。",
 				},
 			},
 
@@ -6441,9 +6496,7 @@ export default {
 				warning: "この Cron ジョブを削除すると、ping の履歴とアラートが完全に失われます。",
 				delete: {
 					trigger: "モニターを削除",
-					confirmTitle: "このCronジョブモニターを削除しますか？",
 					confirmDescription: "Ping履歴も削除されます。この操作は元に戻せません。",
-					confirm: "削除",
 				},
 			},
 		},

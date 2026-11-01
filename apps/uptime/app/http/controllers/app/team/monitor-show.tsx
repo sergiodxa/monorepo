@@ -99,7 +99,10 @@ export default createAction(routes.app.team.monitors.show, {
 		let status = cachedStatus(monitor);
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -304,7 +307,7 @@ function DeleteMonitorDialog(handle: Handle<DeleteMonitorDialog.Props>) {
 			<AlertDialog id={DELETE_DIALOG_ID} aria-labelledby={titleId} aria-describedby={descriptionId}>
 				<AlertDialog.Header>
 					<AlertDialog.Title id={titleId}>
-						{intl.t("page.httpMonitors.table.confirmation.delete", { name: monitor.name })}
+						{intl.t("app.confirm.deleteMonitor.title", { name: monitor.name })}
 					</AlertDialog.Title>
 					<AlertDialog.Description id={descriptionId}>
 						{intl.t("page.httpMonitors.table.confirmation.deleteDescription")}
@@ -318,7 +321,7 @@ function DeleteMonitorDialog(handle: Handle<DeleteMonitorDialog.Props>) {
 							{intl.t("page.editMonitor.form.cancel")}
 						</AlertDialog.Cancel>
 						<Button type="submit" color="danger">
-							{intl.t("page.httpMonitors.table.actions.delete")}
+							{intl.t("app.confirm.deleteMonitor.action")}
 						</Button>
 					</AlertDialog.Footer>
 				</form>

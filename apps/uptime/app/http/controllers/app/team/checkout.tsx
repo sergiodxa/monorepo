@@ -74,7 +74,10 @@ export default createAction(routes.app.team.checkout, {
 		 */
 		function notice(kind: BillingNoticeKind, message: string, signedIn: Viewer) {
 			return ctx.render(
-				<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Billing`}>
+				<DocumentLayout
+					assets={ctx.assets}
+					title={ctx.intl.t("app.titles.billing", { team: ctx.team.name })}
+				>
 					<AppShell
 						team={ctx.team}
 						currentPath={ctx.url.pathname}

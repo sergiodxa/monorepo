@@ -475,6 +475,9 @@ describe("POST /actions/:team/create-alert", () => {
 		);
 
 		expect(response.status).toBe(422);
+		expect(await response.text()).toContain(
+			`You have reached the limit of ${MAX_ALERTS_PER_TEAM} alerts in this team.`,
+		);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(MAX_ALERTS_PER_TEAM);
 	});
 });

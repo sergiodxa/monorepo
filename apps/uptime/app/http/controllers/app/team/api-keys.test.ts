@@ -145,4 +145,29 @@ describe("api-keys list controller", () => {
 		expect(body).toContain("uptime_abcd1234");
 		expect(body).toContain("Never");
 	});
+
+	test("titles the page with the team and names the key its delete confirmation removes", async () => {
+		let { db, team, membership } = await createFixture();
+
+		await db.create(
+			apiKeys,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Deploy bot",
+				key_hash: "hash456",
+				key_prefix: "uptime_efgh5678",
+				scopes: ["monitors:read"],
+				expires_at: null,
+				last_used_at: null,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await get(db, team, membership)).text();
+
+		expect(body).toContain(`<title>${team.name} · API keys</title>`);
+		expect(body).toContain("Delete the API key “Deploy bot”?");
+		expect(body).toContain("Anything still using this key loses access at once.");
+	});
 });

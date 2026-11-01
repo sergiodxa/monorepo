@@ -127,11 +127,11 @@ export default function EditTcpMonitorPage(handle: Handle<EditTcpMonitorPage.Pro
 										description={ctx.intl.t("page.editTcpMonitor.danger.warning")}
 										buttonLabel={ctx.intl.t("page.editTcpMonitor.danger.cta")}
 										confirm={{
-											title: ctx.intl.t("page.tcpMonitors.table.actions.confirmation.delete", {
+											title: ctx.intl.t("app.confirm.deleteTcpMonitor.title", {
 												name: monitor.name,
 											}),
 											description: ctx.intl.t("page.editTcpMonitor.danger.description"),
-											confirmLabel: ctx.intl.t("page.tcpMonitors.table.actions.delete"),
+											confirmLabel: ctx.intl.t("app.confirm.deleteMonitor.action"),
 											cancelLabel: ctx.intl.t("page.editTcpMonitor.form.cancel"),
 											form: {
 												action: routes.actions.monitor.tcp.delete.href({ team: ctx.team.slug }),

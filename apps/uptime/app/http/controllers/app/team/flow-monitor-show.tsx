@@ -67,7 +67,10 @@ export default createAction(routes.app.team.flowMonitors.show, {
 		let t = withPrefix(ctx.intl.t, "page.flowMonitorDetail");
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.record", { team: ctx.team.name, name: monitor.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -167,7 +170,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 						>
 							<AlertDialog.Header>
 								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-									{ctx.intl.t("page.flowMonitors.table.actions.confirmation.delete", {
+									{ctx.intl.t("app.confirm.deleteFlowMonitor.title", {
 										name: monitor.name,
 									})}
 								</AlertDialog.Title>
@@ -186,7 +189,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 										{ctx.intl.t("page.editFlowMonitor.form.cancel")}
 									</AlertDialog.Cancel>
 									<Button type="submit" color="danger">
-										{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+										{ctx.intl.t("app.confirm.deleteFlowMonitor.action")}
 									</Button>
 								</AlertDialog.Footer>
 							</form>

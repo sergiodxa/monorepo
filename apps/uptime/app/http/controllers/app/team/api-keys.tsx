@@ -71,7 +71,10 @@ export default createAction(routes.app.team.apiKeys.index, {
 		let canCreate = apiKeys.length < MAX_API_KEYS_PER_TEAM;
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · API keys`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("app.titles.apiKeys", { team: ctx.team.name })}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -194,10 +197,8 @@ export default createAction(routes.app.team.apiKeys.index, {
 													</Button>
 													<Confirm
 														id={deleteDialogId}
-														title={t("page.apiKeys.list.deleteTitle")}
-														description={t("page.apiKeys.table.confirmation.delete", {
-															name: apiKey.name,
-														})}
+														title={t("app.confirm.deleteApiKey.title", { name: apiKey.name })}
+														description={t("app.confirm.deleteApiKey.description")}
 														confirmLabel={t("page.apiKeys.table.actions.delete")}
 														cancelLabel={t("page.apiKeys.form.actions.cancel")}
 														form={{
