@@ -15,6 +15,7 @@ import { createController } from "remix/router";
 import type { Til } from "~/app/models/tils";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { TilSchema } from "~/app/http/validators/cms/short-post";
 import { ShortPostViewModel } from "~/app/http/view-models/cms/short-posts";
 import { TAGS } from "~/app/initializers/cache";
@@ -103,6 +104,7 @@ export default createController(routes.cms.tils, {
 				changedAt: new Date().toISOString(),
 			});
 
+			flashToast("TIL created");
 			return redirect(routes.cms.tils.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
 
@@ -173,6 +175,7 @@ export default createController(routes.cms.tils, {
 				changedAt: new Date().toISOString(),
 			});
 			ctx.cache.purgeLater(TAGS.post("til", til.meta.slug));
+			flashToast("TIL saved");
 
 			return redirect(routes.cms.tils.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
@@ -197,6 +200,7 @@ export default createController(routes.cms.tils, {
 				});
 			}
 			if (til) ctx.cache.purgeLater(TAGS.post("til", til.meta.slug));
+			if (destroyed) flashToast("TIL deleted");
 
 			return toList();
 		},

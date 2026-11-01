@@ -13,6 +13,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { NoteSchema } from "~/app/http/validators/cms/short-post";
 import { ShortPostViewModel } from "~/app/http/view-models/cms/short-posts";
 import { TAGS } from "~/app/initializers/cache";
@@ -97,6 +98,7 @@ export default createController(routes.cms.notes, {
 				changedAt: new Date().toISOString(),
 			});
 
+			flashToast("Note created");
 			return redirect(routes.cms.notes.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
 
@@ -172,6 +174,7 @@ export default createController(routes.cms.notes, {
 				changedAt: new Date().toISOString(),
 			});
 			ctx.cache.purgeLater(TAGS.post("notes", note.meta.slug));
+			flashToast("Note saved");
 
 			return redirect(routes.cms.notes.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
@@ -196,6 +199,7 @@ export default createController(routes.cms.notes, {
 				});
 			}
 			if (note) ctx.cache.purgeLater(TAGS.post("notes", note.meta.slug));
+			if (destroyed) flashToast("Note deleted");
 
 			return toList();
 		},

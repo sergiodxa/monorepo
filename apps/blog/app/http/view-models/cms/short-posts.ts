@@ -54,6 +54,10 @@ export namespace ShortPostViewModel {
 		/** The author's "Post on X" link, prefilled with the post's share text. */
 		shareHref: string;
 		preview: boolean;
+		/** When it went or goes live; `null` for a post published on save. */
+		publishedAt: string | null;
+		/** The post's slug, which is the last segment of its permalink. */
+		slug: string;
 		tags: string;
 		href: string;
 		deleteAction: string;
@@ -109,6 +113,8 @@ export class ShortPostViewModel {
 			publicHref: routes.post.href({ postType: POST_KINDS[kind].topic, postSlug: item.slug }),
 			shareHref: this.shareHref(kind, item),
 			preview: !isPublishedAt(item.published_at),
+			publishedAt: item.published_at,
+			slug: item.slug,
 			tags: (item.tags ?? []).join(", "),
 			href: cms.edit.href({ id: item.id }),
 			deleteAction: cms.destroy.href({ id: item.id }),

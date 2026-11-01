@@ -13,6 +13,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { TutorialSchema } from "~/app/http/validators/cms/tutorial";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import { TAGS } from "~/app/initializers/cache";
@@ -48,6 +49,7 @@ export default createController(routes.cms.tutorials, {
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
 				preview: !isPublishedAt(tutorial.published_at),
+				publishedAt: tutorial.published_at,
 				teaser: tutorial.meta.teaser ?? undefined,
 				excerpt: tutorial.meta.excerpt ?? undefined,
 				tags: tutorialTags(tutorial.meta.tags),
@@ -104,6 +106,7 @@ export default createController(routes.cms.tutorials, {
 				changedAt: new Date().toISOString(),
 			});
 
+			flashToast("Tutorial created");
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -133,6 +136,7 @@ export default createController(routes.cms.tutorials, {
 			}
 
 			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
+			if (destroyed) flashToast("Tutorial deleted");
 
 			return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 		},
@@ -232,6 +236,7 @@ export default createController(routes.cms.tutorials, {
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);
 			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("tutorials", slug)));
+			flashToast("Tutorial saved");
 
 			return redirect(routes.cms.tutorials.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},

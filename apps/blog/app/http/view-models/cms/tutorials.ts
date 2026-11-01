@@ -2,6 +2,7 @@
  * View model for the CMS tutorial screens. It maps repository records into index rows,
  * edit-form state, new-form defaults, and not-found fallbacks, and normalizes submitted
  * form values into repository input, including tag CSV/array parsing and ISO publish-date
+ * parsing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,6 +31,8 @@ export namespace TutorialViewModel {
 		title: string;
 		slug: string;
 		preview: boolean;
+		/** When it went or goes live; `null` for a tutorial published on save. */
+		publishedAt: string | null;
 		tags?: string | Array<string>;
 		teaser?: string;
 		excerpt?: string;
@@ -119,6 +122,8 @@ export class TutorialViewModel {
 			publicHref: routes.post.href({ postType: "tutorials", postSlug: tutorial.slug }),
 			shareHref: this.shareHref(tutorial),
 			preview: tutorial.preview,
+			slug: tutorial.slug,
+			publishedAt: tutorial.publishedAt,
 			tags: this.parseTags(tutorial.tags).join(", "),
 			href: routes.cms.tutorials.edit.href({ id: tutorial.id }),
 			deleteAction: routes.cms.tutorials.destroy.href({ id: tutorial.id }),

@@ -1,6 +1,6 @@
 /**
- * Covers the tutorial edit page's subtitle: an edit links the saved post's public URL so the
- * author can open it in one click, while the new-tutorial form shows its description alone.
+ * Covers the tutorial editor's public link: an edit links the saved post's public URL in full so
+ * the author can open it in one click, while the new-tutorial form has no URL to link yet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +25,7 @@ async function renderForm(model: CMSTutorialsActionView.Props) {
 	return await response.text();
 }
 
-describe("the tutorial form's subtitle", () => {
+describe("the tutorial editor's public link", () => {
 	test("an edit links the tutorial's public URL", async () => {
 		let html = await renderForm(
 			TutorialViewModel.edit({
@@ -40,7 +40,7 @@ describe("the tutorial form's subtitle", () => {
 	test("a new tutorial has no public URL to link", async () => {
 		let html = await renderForm(TutorialViewModel.new({}));
 
-		expect(html).toContain("Write a new tutorial");
+		expect(html).toContain("New tutorial");
 		expect(html).not.toContain(`href="/tutorials/`);
 	});
 });

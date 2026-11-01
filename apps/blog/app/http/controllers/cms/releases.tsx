@@ -15,6 +15,7 @@ import { createController } from "remix/router";
 import type { Release } from "~/app/models/releases";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { ReleaseSchema } from "~/app/http/validators/cms/release";
 import { TAGS } from "~/app/initializers/cache";
 import jobs from "~/app/jobs";
@@ -60,6 +61,7 @@ export default createController(routes.cms.releases, {
 				title: release.meta.title,
 				slug: release.meta.slug,
 				preview: !isPublishedAt(release.published_at),
+				publishedAt: release.published_at,
 				publicHref: routes.post.href({ postType: "releases", postSlug: release.meta.slug }),
 				shareHref: shareHref(release),
 				href: routes.cms.releases.edit.href({ id: release.id }),
@@ -84,8 +86,11 @@ export default createController(routes.cms.releases, {
 			return ctx.render(CMSReleasesEditView, {
 				title: `Edit ${release.meta.slug}`,
 				description: "Editing the releases post at",
+				slug: release.meta.slug,
 				publicHref: routes.post.href({ postType: "releases", postSlug: release.meta.slug }),
 				action: routes.cms.releases.update.href({ id: release.id }),
+				deleteAction: routes.cms.releases.destroy.href({ id: release.id }),
+				preview: !isPublishedAt(release.published_at),
 				shareHref: shareHref(release),
 				values: { title: release.meta.title, content: release.meta.content },
 			});
@@ -123,6 +128,7 @@ export default createController(routes.cms.releases, {
 				changedAt: new Date().toISOString(),
 			});
 			ctx.cache.purgeLater(TAGS.post("releases", release.meta.slug));
+			flashToast("Release saved");
 
 			return redirect(routes.cms.releases.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
@@ -139,7 +145,8 @@ export default createController(routes.cms.releases, {
 				return redirect(routes.cms.releases.index.href(), { status: redirect.Status.SeeOther });
 
 			let release = await ctx.models.releases.find(id);
-			if (await ctx.models.releases.tombstone(id)) {
+			let destroyed = await ctx.models.releases.tombstone(id);
+			if (destroyed) {
 				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 				await ctx.jobs.enqueue(jobs.activityPub.publish, {
 					postId: id,
@@ -147,6 +154,7 @@ export default createController(routes.cms.releases, {
 				});
 			}
 			if (release) ctx.cache.purgeLater(TAGS.post("releases", release.meta.slug));
+			if (destroyed) flashToast("Release deleted");
 
 			return redirect(routes.cms.releases.index.href(), { status: redirect.Status.SeeOther });
 		},
