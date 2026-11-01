@@ -1,23 +1,23 @@
 /**
- * The agent section of the settings page: what the Model Context Protocol endpoint is, the
+ * The agent sections of the settings page: what the Model Context Protocol endpoint is, the
  * tokens this reader minted for it, and the two forms that mint and revoke one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge, fg } from "@sdxc/u/color";
-import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, mbs, pbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Alert, Button, Description, Input, Label, Select, Text } from "@sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { p } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Alert, Button, Input, Select, Text } from "@sdxc/ui";
+import { SettingsSection } from "@sdxc/ui/app/settings-section";
 
 import type { AppContext } from "~/app/initializers/router";
 import type { UserStore } from "~/app/models/user-store";
 
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { AGENT_SCOPES } from "~/database/schema";
-import { PAGE_COLUMN } from "~/resources/layouts/app";
+import { SETTINGS_ANCHORS, SettingsNote } from "~/resources/components/settings-area";
 import routes from "~/routes/web";
 
 /** The query parameter the settings page reads the outcome of a token action out of. */
@@ -100,7 +100,8 @@ function stateOf(ctx: AppContext, token: UserStore.AgentToken, now: number): str
 }
 
 /**
- * The agent section of the settings page.
+ * The agent sections of the settings page: the tokens this reader holds, then the form that
+ * mints another as a section of its own, since it saves explicitly and the list does not.
  *
  * A reader whose plan does not carry this is told so in a sentence rather than shown an
  * empty list, because the person reading it is the person who might pay for it.
@@ -118,61 +119,44 @@ export default function tokensSection(
 	let note = tokenNote(ctx);
 
 	return (
-		<section
-			mix={[
-				vstack({ gap: 3 }),
-				maxIs(PAGE_COLUMN),
-				pbs(6),
-				borderEdge("block-start", { color: "neutral.border", width: 1 }),
-			]}
-		>
-			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.intl.t("agent.legend")}
-			</h2>
-
-			<Description>{ctx.intl.t("agent.description")}</Description>
-
-			<Text mix={[text("xs"), fg("neutral.muted")]}>
-				{ctx.intl.t("agent.endpoint", { url: routes.mcp.index.href() })}
-			</Text>
-
-			{note && (
-				<Alert color={note.color}>
-					<Alert.Content>
+		<>
+			<SettingsSection
+				id={SETTINGS_ANCHORS.agents}
+				title={ctx.intl.t("agent.legend")}
+				description={`${ctx.intl.t("agent.description")} ${ctx.intl.t("agent.endpoint", { url: routes.mcp.index.href() })}`}
+				save="instant"
+				labels={{ save: ctx.intl.t("agent.mint.submit") }}
+			>
+				{note && (
+					<SettingsNote color={note.color}>
 						<Alert.Description>{note.message}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
+					</SettingsNote>
+				)}
 
-			{!entitled && (
-				<Alert color="warning">
-					<Alert.Content>
+				{!entitled && (
+					<SettingsNote color="warning">
 						<Alert.Description>{ctx.intl.t("agent.locked")}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
+					</SettingsNote>
+				)}
 
-			{tokens.length === 0 ? (
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("agent.tokens.none")}</Text>
-			) : (
-				<ul mix={[m(0), vstack({ gap: 2 })]}>
-					{tokens.map((token) => (
-						<li key={token.id} mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
-							<Text mix={[text("sm")]}>{token.name}</Text>
-
-							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.intl.t(`agent.scopes.${token.scope}`)}
-							</Text>
-
-							<Text mix={[text("xs"), fg("neutral.muted")]}>{stateOf(ctx, token, now)}</Text>
-
-							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.intl.t("agent.tokens.expires", {
+				{tokens.length === 0 ? (
+					<div mix={[p(4)]}>
+						<Text mix={[text("sm"), fg("neutral.muted")]}>{ctx.intl.t("agent.tokens.none")}</Text>
+					</div>
+				) : (
+					tokens.map((token) => (
+						<SettingsSection.Row
+							key={token.id}
+							layout="inline-switch"
+							label={token.name}
+							description={[
+								ctx.intl.t(`agent.scopes.${token.scope}`),
+								stateOf(ctx, token, now),
+								ctx.intl.t("agent.tokens.expires", {
 									date: exactDate(token.expiresAt, ctx.locale),
-								})}
-							</Text>
-
+								}),
+							].join(" · ")}
+						>
 							{isLive(token, now) && (
 								/**
 								 * A method override rather than a `DELETE` a form cannot send, which is how
@@ -181,25 +165,25 @@ export default function tokensSection(
 								<form method="post" action={routes.tokens.revoke.href({ tokenId: token.id })}>
 									<input type="hidden" name="_method" value="DELETE" />
 
-									<Button type="submit" color="neutral" variant="outline">
+									<Button type="submit" size="sm" color="neutral" variant="outline">
 										{ctx.intl.t("agent.tokens.revoke")}
 									</Button>
 								</form>
 							)}
-						</li>
-					))}
-				</ul>
-			)}
+						</SettingsSection.Row>
+					))
+				)}
+			</SettingsSection>
 
 			{entitled && (
-				<form
-					method="post"
-					action={routes.tokens.create.href()}
-					mix={[vstack({ gap: 3, align: "start" }), mbs(2), maxIs(PAGE_COLUMN)]}
+				<SettingsSection
+					id="new-token"
+					title={ctx.intl.t("agent.mint.legend")}
+					save="explicit"
+					form={{ action: routes.tokens.create.href() }}
+					labels={{ save: ctx.intl.t("agent.mint.submit") }}
 				>
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={NAME_ID}>{ctx.intl.t("agent.mint.name")}</Label>
-
+					<SettingsSection.Row label={ctx.intl.t("agent.mint.name")} htmlFor={NAME_ID}>
 						<Input
 							id={NAME_ID}
 							name={NAME_FIELD}
@@ -207,11 +191,13 @@ export default function tokensSection(
 							maxLength={TOKEN_NAME_MAX}
 							placeholder={ctx.intl.t("agent.mint.placeholder")}
 						/>
-					</div>
+					</SettingsSection.Row>
 
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={SCOPE_ID}>{ctx.intl.t("agent.mint.scope")}</Label>
-
+					<SettingsSection.Row
+						label={ctx.intl.t("agent.mint.scope")}
+						description={ctx.intl.t("agent.mint.scopeHint")}
+						htmlFor={SCOPE_ID}
+					>
 						<Select id={SCOPE_ID} name={SCOPE_FIELD}>
 							{AGENT_SCOPES.map((scope) => (
 								<Select.Option key={scope} value={scope} selected={scope === "read"}>
@@ -219,13 +205,9 @@ export default function tokensSection(
 								</Select.Option>
 							))}
 						</Select>
-
-						<Description>{ctx.intl.t("agent.mint.scopeHint")}</Description>
-					</div>
-
-					<Button type="submit">{ctx.intl.t("agent.mint.submit")}</Button>
-				</form>
+					</SettingsSection.Row>
+				</SettingsSection>
 			)}
-		</section>
+		</>
 	);
 }

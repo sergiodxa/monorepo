@@ -7,11 +7,14 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { borderEdge, fg } from "@sdxc/u/color";
+import { bg, fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, minIs, pbs } from "@sdxc/u/size";
+import { divide } from "@sdxc/u/overflow";
+import { m, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
-import { Alert, Button, Description, Input, Label, Select, Text } from "@sdxc/ui";
+import { Alert, Button, Description, Input, Select, Text } from "@sdxc/ui";
+import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
+import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
@@ -25,7 +28,8 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
 import { RULE_ACTIONS, RULE_FIELDS, RULE_VALUE_LENGTH } from "~/database/schema";
-import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
+import { SettingsNote, settingsNav } from "~/resources/components/settings-area";
+import AppLayout from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
 
@@ -236,256 +240,253 @@ async function rulesView(
 			locale={ctx.locale}
 			{...await chrome(ctx)}
 		>
-			<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-				<Description>{ctx.intl.t("rules.description")}</Description>
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("rules.summaryCaveat")}</Text>
-
-				{!entitled && (
-					<Alert color="warning">
-						<Alert.Content>
-							<Alert.Description>{ctx.intl.t("rules.notEntitled")}</Alert.Description>
-						</Alert.Content>
-					</Alert>
-				)}
-			</section>
-
-			{outcome && (
-				<Alert color={outcome.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
-					<Alert.Content>
-						<Alert.Description>{outcome.message}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
-
-			{/**
-			 * The rules themselves, each read back as the sentence it is, with the two numbers
-			 * that say whether it is doing anything. A rule that has never matched is the most
-			 * common real failure, so it says so rather than printing a zero.
-			 */}
-			<section
-				mix={[
-					vstack({ gap: 3 }),
-					maxIs(PAGE_COLUMN),
-					pbs(6),
-					borderEdge("block-start", { color: "neutral.border", width: 1 }),
-				]}
+			<SettingsLayout
+				{...settingsNav(ctx.intl, "filters")}
+				page="section"
+				backHref={routes.settings.href()}
 			>
-				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("rules.heading")}
-				</h2>
+				<section mix={[vstack({ gap: 3, align: "stretch" })]}>
+					<Description>{ctx.intl.t("rules.description")}</Description>
+					<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("rules.summaryCaveat")}</Text>
 
-				{held.length === 0 && <Text mix={[text("sm")]}>{ctx.intl.t("rules.empty")}</Text>}
-
-				{held.map((rule) => {
-					let read = sentenceFor(ctx, rule, feeds);
-
-					return (
-						<div
-							key={rule.id}
-							mix={[
-								vstack({ gap: 1 }),
-								pbs(3),
-								borderEdge("block-start", { color: "neutral.border", width: 1 }),
-							]}
-						>
-							<Text mix={[text("sm"), weight("medium")]}>{read.sentence}</Text>
-							<Text mix={[text("xs"), fg("neutral.muted")]}>{read.scope}</Text>
-
-							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{rule.matches === 0
-									? ctx.intl.t("rules.neverMatched")
-									: ctx.intl.t("rules.matched", { count: rule.matches })}{" "}
-								{rule.lastMatchedAt !== null &&
-									ctx.intl.t("rules.lastMatched", {
-										date: exactDate(rule.lastMatchedAt, ctx.locale),
-									})}
-							</Text>
-
-							<form method="post" action={routes.rule.delete.href({ ruleId: rule.id })}>
-								{/** A browser form sends `GET` and `POST`, so the verb travels in the body. */}
-								<input type="hidden" name="_method" value="DELETE" />
-
-								<Button type="submit" color="neutral" variant="outline">
-									{ctx.intl.t("rules.form.delete")}
-								</Button>
-							</form>
-						</div>
-					);
-				})}
-			</section>
-
-			{/**
-			 * One form, used twice: `GET` previews the candidate against the newest posts and
-			 * `POST` writes it. Both carry the same four fields, so what a reader previewed is
-			 * exactly what they save.
-			 */}
-			<section
-				mix={[
-					vstack({ gap: 3 }),
-					maxIs(PAGE_COLUMN),
-					pbs(6),
-					borderEdge("block-start", { color: "neutral.border", width: 1 }),
-				]}
-			>
-				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("rules.form.legend")}
-				</h2>
-
-				<form method="get" action={routes.rules.index.href()} mix={[vstack({ gap: 3 })]}>
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={FIELD_ID}>{ctx.intl.t("rules.fields.legend")}</Label>
-
-						<Select id={FIELD_ID} name={FIELD_FIELD}>
-							{RULE_FIELDS.map((offered) => (
-								<Select.Option
-									key={offered}
-									value={offered}
-									selected={candidate?.field === offered}
-								>
-									{ctx.intl.t(`rules.fields.${offered}`)}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={VALUE_ID}>{ctx.intl.t("rules.form.value")}</Label>
-
-						<Input
-							id={VALUE_ID}
-							name={VALUE_FIELD}
-							required
-							maxLength={RULE_VALUE_LENGTH}
-							value={candidate?.value ?? ""}
-							placeholder={ctx.intl.t("rules.form.valuePlaceholder")}
-							mix={[minIs("16rem")]}
-						/>
-					</div>
-
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={ACTION_ID}>{ctx.intl.t("rules.actions.legend")}</Label>
-
-						<Select id={ACTION_ID} name={ACTION_FIELD}>
-							{RULE_ACTIONS.map((offered) => (
-								<Select.Option
-									key={offered}
-									value={offered}
-									selected={candidate?.action === offered}
-								>
-									{ctx.intl.t(`rules.actions.${offered}`)}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={FEED_ID}>{ctx.intl.t("rules.form.feed")}</Label>
-
-						<Select id={FEED_ID} name={FEED_FIELD}>
-							<Select.Option value="" selected={candidate?.feedId == null}>
-								{ctx.intl.t("rules.form.allFeeds")}
-							</Select.Option>
-
-							{feeds.map((feed) => (
-								<Select.Option
-									key={feed.id}
-									value={feed.id}
-									selected={candidate?.feedId === feed.id}
-								>
-									{feed.title}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-
-					<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
-						<Button type="submit" color="neutral" variant="outline">
-							{ctx.intl.t("rules.preview.submit")}
-						</Button>
-
-						{/**
-						 * The same fields, sent to this page's own `POST` rather than to its `GET`,
-						 * which is what makes previewing and saving one form with two buttons.
-						 */}
-						<Button type="submit" formMethod="post" formAction={routes.rules.action.href()}>
-							{ctx.intl.t("rules.form.submit")}
-						</Button>
-					</div>
-				</form>
-			</section>
-
-			{/**
-			 * What the candidate would have caught, read-only: a list of posts the reader can
-			 * still see, which is also the answer to "why is this rule not working".
-			 */}
-			{preview !== null && preview.ok && (
-				<section
-					mix={[
-						vstack({ gap: 3 }),
-						pbs(6),
-						borderEdge("block-start", { color: "neutral.border", width: 1 }),
-					]}
-				>
-					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-					<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-						{ctx.intl.t("rules.preview.legend")}
-					</h2>
-
-					{preview.matched === 0 ? (
-						<Text mix={[text("sm")]}>
-							{ctx.intl.t("rules.preview.none", { scanned: preview.scanned })}
-						</Text>
-					) : (
-						<Text mix={[text("sm")]}>
-							{ctx.intl.t("rules.preview.result", {
-								count: preview.matched,
-								scanned: preview.scanned,
-							})}
-						</Text>
-					)}
-
-					{/**
-					 * A term every post of a feed carries leaves the subscription synchronizing into
-					 * an empty timeline, and no freshness check ever calls it stale, so it is said
-					 * here while the reader is still looking at what it would do.
-					 */}
-					{preview.scanned > 0 && preview.matched === preview.scanned && (
+					{!entitled && (
 						<Alert color="warning">
 							<Alert.Content>
-								<Alert.Description>{ctx.intl.t("rules.preview.everything")}</Alert.Description>
+								<Alert.Description>{ctx.intl.t("rules.notEntitled")}</Alert.Description>
 							</Alert.Content>
 						</Alert>
 					)}
-
-					{preview.matched > 0 && candidate !== null && (
-						<form
-							method="post"
-							action={routes.rule.apply.href()}
-							mix={[flex(), gap(2), items("center"), grow()]}
-						>
-							<input type="hidden" name={FIELD_FIELD} value={candidate.field} />
-							<input type="hidden" name={VALUE_FIELD} value={candidate.value} />
-							<input type="hidden" name={ACTION_FIELD} value={candidate.action} />
-							<input type="hidden" name={FEED_FIELD} value={candidate.feedId ?? ""} />
-
-							<Button type="submit" color="neutral" variant="outline">
-								{ctx.intl.t("rules.preview.apply", { count: preview.matched })}
-							</Button>
-						</form>
-					)}
-
-					{previewed.length > 0 && (
-						<Timeline
-							entries={previewed}
-							copy={timelineCopy(ctx.intl)}
-							returnTo={`${ctx.url.pathname}${ctx.url.search}`}
-							cursors={{ next: null, prev: null }}
-						/>
-					)}
 				</section>
-			)}
+
+				{/**
+				 * The rules themselves, each read back as the sentence it is, with the two numbers
+				 * that say whether it is doing anything. A rule that has never matched is the most
+				 * common real failure, so it says so rather than printing a zero.
+				 */}
+				<SettingsSection
+					id="filters"
+					title={ctx.intl.t("rules.yours")}
+					save="instant"
+					labels={{ save: ctx.intl.t("rules.form.update") }}
+				>
+					{outcome && (
+						<SettingsNote color={outcome.color}>
+							<Alert.Description>{outcome.message}</Alert.Description>
+						</SettingsNote>
+					)}
+
+					{held.length === 0 && (
+						<div mix={[p(4)]}>
+							<Text mix={[text("sm"), fg("neutral.muted")]}>{ctx.intl.t("rules.empty")}</Text>
+						</div>
+					)}
+
+					{held.map((rule) => {
+						let read = sentenceFor(ctx, rule, feeds);
+						let matched =
+							rule.matches === 0
+								? ctx.intl.t("rules.neverMatched")
+								: ctx.intl.t("rules.matched", { count: rule.matches });
+						let last =
+							rule.lastMatchedAt === null
+								? null
+								: ctx.intl.t("rules.lastMatched", {
+										date: exactDate(rule.lastMatchedAt, ctx.locale),
+									});
+
+						return (
+							<SettingsSection.Row
+								key={rule.id}
+								layout="inline-switch"
+								label={read.sentence}
+								description={[read.scope, matched, last]
+									.filter((part) => part !== null)
+									.join(" · ")}
+							>
+								<form method="post" action={routes.rule.delete.href({ ruleId: rule.id })}>
+									{/** A browser form sends `GET` and `POST`, so the verb travels in the body. */}
+									<input type="hidden" name="_method" value="DELETE" />
+
+									<Button type="submit" size="sm" color="neutral" variant="outline">
+										{ctx.intl.t("rules.form.delete")}
+									</Button>
+								</form>
+							</SettingsSection.Row>
+						);
+					})}
+				</SettingsSection>
+
+				{/**
+				 * One form, used twice: `GET` previews the candidate against the newest posts and
+				 * `POST` writes it. Both carry the same four fields, so what a reader previewed is
+				 * exactly what they save, and the card's footer holds both buttons.
+				 */}
+				<SettingsSection
+					id="add-filter"
+					title={ctx.intl.t("rules.form.legend")}
+					save="instant"
+					labels={{ save: ctx.intl.t("rules.form.submit") }}
+				>
+					<form
+						method="get"
+						action={routes.rules.index.href()}
+						mix={[vstack({ gap: 0, align: "stretch" }), divide("block", "neutral")]}
+					>
+						<SettingsSection.Row label={ctx.intl.t("rules.fields.legend")} htmlFor={FIELD_ID}>
+							<Select id={FIELD_ID} name={FIELD_FIELD}>
+								{RULE_FIELDS.map((offered) => (
+									<Select.Option
+										key={offered}
+										value={offered}
+										selected={candidate?.field === offered}
+									>
+										{ctx.intl.t(`rules.fields.${offered}`)}
+									</Select.Option>
+								))}
+							</Select>
+						</SettingsSection.Row>
+
+						<SettingsSection.Row label={ctx.intl.t("rules.form.value")} htmlFor={VALUE_ID}>
+							<Input
+								id={VALUE_ID}
+								name={VALUE_FIELD}
+								required
+								maxLength={RULE_VALUE_LENGTH}
+								value={candidate?.value ?? ""}
+								placeholder={ctx.intl.t("rules.form.valuePlaceholder")}
+							/>
+						</SettingsSection.Row>
+
+						<SettingsSection.Row label={ctx.intl.t("rules.actions.legend")} htmlFor={ACTION_ID}>
+							<Select id={ACTION_ID} name={ACTION_FIELD}>
+								{RULE_ACTIONS.map((offered) => (
+									<Select.Option
+										key={offered}
+										value={offered}
+										selected={candidate?.action === offered}
+									>
+										{ctx.intl.t(`rules.actions.${offered}`)}
+									</Select.Option>
+								))}
+							</Select>
+						</SettingsSection.Row>
+
+						<SettingsSection.Row label={ctx.intl.t("rules.form.feed")} htmlFor={FEED_ID}>
+							<Select id={FEED_ID} name={FEED_FIELD}>
+								<Select.Option value="" selected={candidate?.feedId == null}>
+									{ctx.intl.t("rules.form.allFeeds")}
+								</Select.Option>
+
+								{feeds.map((feed) => (
+									<Select.Option
+										key={feed.id}
+										value={feed.id}
+										selected={candidate?.feedId === feed.id}
+									>
+										{feed.title}
+									</Select.Option>
+								))}
+							</Select>
+						</SettingsSection.Row>
+
+						<div
+							mix={[
+								flex(),
+								flexWrap("wrap"),
+								gap(3),
+								items("center"),
+								p(3, 4),
+								bg("neutral.bg-tint"),
+							]}
+						>
+							{/**
+							 * First in the form, so Enter in the text field previews the candidate.
+							 */}
+							<Button type="submit" size="sm" color="neutral" variant="outline">
+								{ctx.intl.t("rules.preview.submit")}
+							</Button>
+
+							{/**
+							 * The same fields, sent to this page's own `POST` rather than to its `GET`,
+							 * which is what makes previewing and saving one form with two buttons.
+							 */}
+							<Button
+								type="submit"
+								size="sm"
+								formMethod="post"
+								formAction={routes.rules.action.href()}
+							>
+								{ctx.intl.t("rules.form.submit")}
+							</Button>
+						</div>
+					</form>
+				</SettingsSection>
+
+				{/**
+				 * What the candidate would have caught, read-only: a list of posts the reader can
+				 * still see, which is also the answer to "why is this rule not working".
+				 */}
+				{preview !== null && preview.ok && (
+					<section mix={[vstack({ gap: 3, align: "stretch" })]}>
+						{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
+						<h2 mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}>
+							{ctx.intl.t("rules.preview.legend")}
+						</h2>
+
+						{preview.matched === 0 ? (
+							<Text mix={[text("sm")]}>
+								{ctx.intl.t("rules.preview.none", { scanned: preview.scanned })}
+							</Text>
+						) : (
+							<Text mix={[text("sm")]}>
+								{ctx.intl.t("rules.preview.result", {
+									count: preview.matched,
+									scanned: preview.scanned,
+								})}
+							</Text>
+						)}
+
+						{/**
+						 * A term every post of a feed carries leaves the subscription synchronizing into
+						 * an empty timeline, and no freshness check ever calls it stale, so it is said
+						 * here while the reader is still looking at what it would do.
+						 */}
+						{preview.scanned > 0 && preview.matched === preview.scanned && (
+							<Alert color="warning">
+								<Alert.Content>
+									<Alert.Description>{ctx.intl.t("rules.preview.everything")}</Alert.Description>
+								</Alert.Content>
+							</Alert>
+						)}
+
+						{preview.matched > 0 && candidate !== null && (
+							<form
+								method="post"
+								action={routes.rule.apply.href()}
+								mix={[flex(), gap(2), items("center"), grow()]}
+							>
+								<input type="hidden" name={FIELD_FIELD} value={candidate.field} />
+								<input type="hidden" name={VALUE_FIELD} value={candidate.value} />
+								<input type="hidden" name={ACTION_FIELD} value={candidate.action} />
+								<input type="hidden" name={FEED_FIELD} value={candidate.feedId ?? ""} />
+
+								<Button type="submit" color="neutral" variant="outline">
+									{ctx.intl.t("rules.preview.apply", { count: preview.matched })}
+								</Button>
+							</form>
+						)}
+
+						{previewed.length > 0 && (
+							<Timeline
+								entries={previewed}
+								copy={timelineCopy(ctx.intl)}
+								returnTo={`${ctx.url.pathname}${ctx.url.search}`}
+								cursors={{ next: null, prev: null }}
+							/>
+						)}
+					</section>
+				)}
+			</SettingsLayout>
 		</AppLayout>,
 	);
 }

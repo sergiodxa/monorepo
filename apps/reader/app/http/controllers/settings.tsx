@@ -9,14 +9,16 @@
 
 import { redirect } from "@sdxc/http/response";
 import { iife } from "@sdxc/iife";
-import { bg, border, borderEdge, fg } from "@sdxc/u/color";
+import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, mbs, mie, pb, pbs, pi } from "@sdxc/u/size";
+import { maxIs, mie, p, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Alert, Button, Checkbox, Description, Label, LinkButton, Select, Text } from "@sdxc/ui";
+import { Alert, Button, Checkbox, LinkButton, Select, Text } from "@sdxc/ui";
+import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
+import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { createAction } from "remix/router";
 
 import type { Presentation } from "~/app/initializers/cookies";
@@ -51,7 +53,8 @@ import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { READING_FACES, THEMES } from "~/database/schema";
 import { formatInterval } from "~/resources/components/marketing/scenes";
 import { PushRegistration } from "~/resources/components/push-registration";
-import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
+import { SETTINGS_ANCHORS, SettingsNote, settingsNav } from "~/resources/components/settings-area";
+import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** Ties the import field to the label naming it. */
@@ -65,6 +68,12 @@ const IMPORT_DESCRIPTION_ID = "settings-import-description";
  * and the media types a reader's own export is served as.
  */
 const IMPORT_ACCEPT = ".opml,.xml,application/xml,text/xml";
+
+/** The tone an outcome note is drawn in, matching how much it cost the reader. */
+interface Note {
+	message: string;
+	color: "success" | "warning" | "danger";
+}
 
 /**
  * One count off an import's redirect, which reads as zero for a parameter that is absent
@@ -85,9 +94,7 @@ function importedCount(params: URLSearchParams, name: string): number {
  *
  * @param ctx - The request's dictionary and the query it arrived with.
  */
-function importNote(
-	ctx: AppContext,
-): { message: string; color: "success" | "warning" | "danger" } | null {
+function importNote(ctx: AppContext): Note | null {
 	let imported = ctx.url.searchParams.get(IMPORTED_PARAM);
 
 	if (imported === "done") {
@@ -157,81 +164,14 @@ const THEME_ID = "settings-theme";
 /** Ties the reading-face picker to its own label, beside the scheme. */
 const FACE_ID = "settings-face";
 
-/**
- * How the reader's pages are painted, and the face the words they came here to read are
- * set in. A real form that posts and reloads, so a browser running no script changes
- * both.
- *
- * @param ctx - The request being answered, whose query says whether a submission landed.
- * @param current - What is stored for this reader, or what the cookie says before a sign-in has written a row.
- */
-function appearanceSection(ctx: AppContext, current: Presentation) {
-	let saved = ctx.url.searchParams.get(APPEARANCE_PARAM) === "saved";
+/** Ties the push switch to the row naming it. */
+const PUSH_ID = "settings-push";
 
-	return (
-		<section
-			mix={[
-				vstack({ gap: 3 }),
-				maxIs(PAGE_COLUMN),
-				pbs(6),
-				borderEdge("block-start", { color: "neutral.border", width: 1 }),
-			]}
-		>
-			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.intl.t("settings.appearance.legend")}
-			</h2>
+/** Ties the email switch to the row naming it. */
+const EMAIL_ID = "settings-email";
 
-			<Description>{ctx.intl.t("settings.appearance.description")}</Description>
-
-			{saved && (
-				<Alert color="success">
-					<Alert.Content>
-						<Alert.Description>{ctx.intl.t("settings.appearance.saved")}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
-
-			<form
-				method="post"
-				action={routes.appearance.href()}
-				mix={[vstack({ gap: 3, align: "start" })]}
-			>
-				<div mix={[flex(), flexWrap("wrap"), gap(3), items("center")]}>
-					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={THEME_ID}>{ctx.intl.t("settings.appearance.theme.label")}</Label>
-
-						<Select id={THEME_ID} name={THEME_FIELD}>
-							{THEMES.map((name) => (
-								<Select.Option key={name} value={name} selected={name === current.theme}>
-									{ctx.intl.t(`settings.appearance.theme.names.${name}`)}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-
-					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={FACE_ID}>{ctx.intl.t("settings.appearance.face.label")}</Label>
-
-						<Select id={FACE_ID} name={FACE_FIELD}>
-							{READING_FACES.map((name) => (
-								<Select.Option key={name} value={name} selected={name === current.face}>
-									{ctx.intl.t(`settings.appearance.face.names.${name}`)}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-				</div>
-
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.intl.t("settings.appearance.face.hint")}
-				</Text>
-
-				<Button type="submit">{ctx.intl.t("settings.appearance.save")}</Button>
-			</form>
-		</section>
-	);
-}
+/** Ties the quiet-hours switch to the row naming it. */
+const QUIET_ENABLED_ID = "settings-quiet-enabled";
 
 /** Ties the quiet-hours selects to the switch above them. */
 const QUIET_FROM_ID = "settings-quiet-from";
@@ -243,42 +183,214 @@ const QUIET_TO_ID = "settings-quiet-to";
 const HOURS = Array.from({ length: 24 }, (_unused, hour) => hour);
 
 /**
- * The copy and tone for whatever a notification submission left in the query, or `null`
- * for an ordinary view of the page.
+ * Draws a note inside the card of the section it is about, or nothing for no note.
  *
- * @param ctx - The request's dictionary and the query it arrived with.
+ * @param note - The outcome to say, if any.
  */
-function notificationNote(
-	ctx: AppContext,
-): { message: string; color: "success" | "warning" | "danger" } | null {
-	let params = ctx.url.searchParams;
+function noteBlock(note: Note | null) {
+	if (note === null) return null;
 
-	if (params.get(CHANNELS_PARAM) === "saved") {
-		return { message: ctx.intl.t("notifications.channels.saved"), color: "success" };
-	}
-
-	/** The plan and the switch disagreed, so the page says so rather than drawing nothing. */
-	if (params.get(CHANNELS_PARAM) === "not-entitled") {
-		return { message: ctx.intl.t("notifications.channels.notEntitled"), color: "warning" };
-	}
-
-	if (params.get(QUIET_PARAM) === "saved") {
-		return { message: ctx.intl.t("notifications.quiet.saved"), color: "success" };
-	}
-
-	if (params.get(FORGET_PARAM) === "forgotten") {
-		return { message: ctx.intl.t("notifications.devices.forgotten"), color: "success" };
-	}
-
-	if (params.get(FORGET_PARAM) === "missing") {
-		return { message: ctx.intl.t("notifications.devices.missing"), color: "warning" };
-	}
-
-	return null;
+	return (
+		<SettingsNote color={note.color}>
+			<Alert.Description>{note.message}</Alert.Description>
+		</SettingsNote>
+	);
 }
 
 /**
- * How the reader is reached, when they are left alone, and which browsers are registered.
+ * What the reader is on, what it allows, and where they stand against it. It leads the
+ * page because it is the one section whose numbers can be refusing something right now.
+ *
+ * @param ctx - The request being answered.
+ * @param entitlement - What their plan allows, and where they stand against it.
+ */
+function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
+	return (
+		<SettingsSection
+			id={SETTINGS_ANCHORS.plan}
+			title={ctx.intl.t("settings.plan.legend")}
+			description={[
+				ctx.intl.t("settings.plan.current", {
+					plan: ctx.intl.t(`settings.plan.names.${entitlement.tier}`),
+				}),
+				ctx.intl.t("settings.plan.allowance", {
+					feeds: entitlement.limits.feeds,
+					saved: entitlement.limits.saved,
+					posts: entitlement.limits.posts,
+				}),
+				ctx.intl.t("settings.plan.history"),
+				ctx.intl.t("settings.plan.includes"),
+			].join(" ")}
+			save="instant"
+			labels={{ save: ctx.intl.t("settings.appearance.save") }}
+		>
+			{/**
+			 * A failed card, said on the day it fails and not acted on. Nothing has changed,
+			 * and the way out is the platform's own page rather than anything on this one.
+			 */}
+			{entitlement.graceUntil !== null && (
+				<SettingsNote color="warning">
+					<Alert.Description>{ctx.intl.t("settings.plan.lapsed")}</Alert.Description>
+				</SettingsNote>
+			)}
+
+			{/**
+			 * Every limit the reader is over, one sentence each, each naming the two ways out
+			 * and neither of them a deletion this app would perform. There is no countdown,
+			 * because nothing is going to be deleted.
+			 */}
+			{entitlement.over.length > 0 && (
+				<SettingsNote color="warning">
+					<Alert.Description>{ctx.intl.t("settings.plan.over.description")}</Alert.Description>
+
+					{entitlement.over.map((refusal) => (
+						<Alert.Description key={refusal.limit}>
+							{ctx.intl.t(`settings.plan.over.${refusal.limit}`, {
+								count: overBy(refusal),
+							})}
+						</Alert.Description>
+					))}
+				</SettingsNote>
+			)}
+
+			<SettingsSection.Row
+				label={ctx.intl.t("settings.plan.usageLabel")}
+				description={ctx.intl.t("settings.plan.usage", {
+					feeds: entitlement.feeds,
+					saved: entitlement.saved,
+				})}
+			>
+				<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
+					{upgradesFrom(entitlement.tier).map((offered) => (
+						<form
+							key={offered}
+							method="post"
+							action={routes.billing.checkout.href({ plan: offered })}
+						>
+							<Button type="submit" size="sm">
+								{ctx.intl.t("settings.plan.upgrade", {
+									plan: ctx.intl.t(`settings.plan.names.${offered}`),
+								})}
+							</Button>
+						</form>
+					))}
+
+					{/**
+					 * Offered only to a reader the platform holds a record for, since there is no
+					 * page to open for somebody who has never bought anything.
+					 */}
+					{entitlement.tier !== "free" && (
+						<form method="post" action={routes.billing.portal.href()}>
+							<Button type="submit" size="sm" color="neutral" variant="outline">
+								{ctx.intl.t("settings.plan.manage")}
+							</Button>
+						</form>
+					)}
+				</div>
+			</SettingsSection.Row>
+		</SettingsSection>
+	);
+}
+
+/**
+ * How the reader's pages are painted, and the face the words they came here to read are
+ * set in. A real form that posts and reloads, so a browser running no script changes
+ * both; "Saved." is quiet text beside the button, where the reader just pressed.
+ *
+ * @param ctx - The request being answered, whose query says whether a submission landed.
+ * @param current - What is stored for this reader, or what the cookie says before a sign-in has written a row.
+ */
+function appearanceSection(ctx: AppContext, current: Presentation) {
+	let saved = ctx.url.searchParams.get(APPEARANCE_PARAM) === "saved";
+
+	return (
+		<SettingsSection
+			id={SETTINGS_ANCHORS.appearance}
+			title={ctx.intl.t("settings.appearance.legend")}
+			description={ctx.intl.t("settings.appearance.description")}
+			save="explicit"
+			form={{ action: routes.appearance.href() }}
+			labels={{ save: ctx.intl.t("settings.appearance.save") }}
+			footer={
+				saved ? (
+					<Text role="status" mix={[text("sm"), fg("success")]}>
+						{ctx.intl.t("settings.appearance.saved")}
+					</Text>
+				) : null
+			}
+		>
+			<SettingsSection.Row label={ctx.intl.t("settings.appearance.theme.label")} htmlFor={THEME_ID}>
+				<Select id={THEME_ID} name={THEME_FIELD}>
+					{THEMES.map((name) => (
+						<Select.Option key={name} value={name} selected={name === current.theme}>
+							{ctx.intl.t(`settings.appearance.theme.names.${name}`)}
+						</Select.Option>
+					))}
+				</Select>
+			</SettingsSection.Row>
+
+			<SettingsSection.Row
+				label={ctx.intl.t("settings.appearance.face.label")}
+				description={ctx.intl.t("settings.appearance.face.hint")}
+				htmlFor={FACE_ID}
+			>
+				<Select id={FACE_ID} name={FACE_FIELD}>
+					{READING_FACES.map((name) => (
+						<Select.Option key={name} value={name} selected={name === current.face}>
+							{ctx.intl.t(`settings.appearance.face.names.${name}`)}
+						</Select.Option>
+					))}
+				</Select>
+			</SettingsSection.Row>
+		</SettingsSection>
+	);
+}
+
+/**
+ * The copy and tone for whatever a notification submission left in the query, filed under
+ * the section the submission came from, so each outcome is read beside its own form.
+ *
+ * @param ctx - The request's dictionary and the query it arrived with.
+ */
+function notificationNotes(ctx: AppContext): {
+	channels: Note | null;
+	quiet: Note | null;
+	devices: Note | null;
+} {
+	let params = ctx.url.searchParams;
+
+	let channels = iife((): Note | null => {
+		if (params.get(CHANNELS_PARAM) === "saved") {
+			return { message: ctx.intl.t("notifications.channels.saved"), color: "success" };
+		}
+		/** The plan and the switch disagreed, so the page says so rather than drawing nothing. */
+		if (params.get(CHANNELS_PARAM) === "not-entitled") {
+			return { message: ctx.intl.t("notifications.channels.notEntitled"), color: "warning" };
+		}
+		return null;
+	});
+
+	let quiet: Note | null =
+		params.get(QUIET_PARAM) === "saved"
+			? { message: ctx.intl.t("notifications.quiet.saved"), color: "success" }
+			: null;
+
+	let devices = iife((): Note | null => {
+		if (params.get(FORGET_PARAM) === "forgotten") {
+			return { message: ctx.intl.t("notifications.devices.forgotten"), color: "success" };
+		}
+		if (params.get(FORGET_PARAM) === "missing") {
+			return { message: ctx.intl.t("notifications.devices.missing"), color: "warning" };
+		}
+		return null;
+	});
+
+	return { channels, quiet, devices };
+}
+
+/**
+ * How the reader is reached, when they are left alone, and which browsers are registered:
+ * three sections, one per form, each saving on its own.
  *
  * A reader with feeds picked and no channel on is the one failure this surface exists to
  * prevent, so it is said here rather than left to an event nobody reads.
@@ -286,8 +398,8 @@ function notificationNote(
  * @param ctx - The request being answered.
  * @param notifications - What the reader's own object holds about all of this.
  */
-function notificationsSection(ctx: AppContext, notifications: UserStore.Notifications) {
-	let note = notificationNote(ctx);
+function notificationsSections(ctx: AppContext, notifications: UserStore.Notifications) {
+	let notes = notificationNotes(ctx);
 	let emailHint = iife(() => {
 		if (!notifications.emailAllowed) return ctx.intl.t("notifications.channels.emailLocked");
 		if (notifications.address)
@@ -296,187 +408,276 @@ function notificationsSection(ctx: AppContext, notifications: UserStore.Notifica
 			});
 		return ctx.intl.t("notifications.channels.emailUnknown");
 	});
+	let hourOptions = (selected: number) =>
+		HOURS.map((hour) => (
+			<Select.Option key={hour} value={String(hour)} selected={hour === selected}>
+				{ctx.intl.t("notifications.quiet.hour", { hour })}
+			</Select.Option>
+		));
 
 	return (
-		<section
-			mix={[
-				vstack({ gap: 3 }),
-				maxIs(PAGE_COLUMN),
-				pbs(6),
-				borderEdge("block-start", { color: "neutral.border", width: 1 }),
-			]}
-		>
-			{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-			<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.intl.t("notifications.legend")}
-			</h2>
+		<>
+			<SettingsSection
+				id={SETTINGS_ANCHORS.notifications}
+				title={ctx.intl.t("notifications.legend")}
+				description={ctx.intl.t("notifications.description")}
+				save="explicit"
+				form={{ action: routes.notifications.channels.href() }}
+				labels={{ save: ctx.intl.t("notifications.channels.save") }}
+			>
+				{noteBlock(notes.channels)}
 
-			<Description>{ctx.intl.t("notifications.description")}</Description>
+				{notifications.feeds === 0 && (
+					<div mix={[p(4)]}>
+						<Text mix={[text("sm"), fg("neutral.muted")]}>
+							{ctx.intl.t("notifications.noFeeds")}
+						</Text>
+					</div>
+				)}
 
-			{note && (
-				<Alert color={note.color}>
-					<Alert.Content>
-						<Alert.Description>{note.message}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
-
-			{notifications.feeds === 0 && (
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("notifications.noFeeds")}</Text>
-			)}
-
-			{/**
-			 * A reader can end up with feeds picked and nothing to be reached on, believing they
-			 * configured something. The object's own event finds them; this is what prevents it.
-			 */}
-			{notifications.feeds > 0 && !notifications.push && !notifications.email && (
-				<Alert color="warning">
-					<Alert.Content>
+				{/**
+				 * A reader can end up with feeds picked and nothing to be reached on, believing they
+				 * configured something. The object's own event finds them; this is what prevents it.
+				 */}
+				{notifications.feeds > 0 && !notifications.push && !notifications.email && (
+					<SettingsNote color="warning">
 						<Alert.Description>{ctx.intl.t("notifications.noChannel")}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
+					</SettingsNote>
+				)}
 
-			<form
-				method="post"
-				action={routes.notifications.channels.href()}
-				mix={[vstack({ gap: 2, align: "start" })]}
-			>
-				<Checkbox name={PUSH_FIELD} defaultChecked={notifications.push}>
-					{ctx.intl.t("notifications.channels.push")}
-				</Checkbox>
-
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.intl.t("notifications.channels.pushHint")}
-				</Text>
-
-				<Checkbox
-					name={EMAIL_FIELD}
-					defaultChecked={notifications.email}
-					disabled={!notifications.emailAllowed}
+				<SettingsSection.Row
+					layout="inline-switch"
+					label={ctx.intl.t("notifications.channels.push")}
+					description={ctx.intl.t("notifications.channels.pushHint")}
+					htmlFor={PUSH_ID}
 				>
-					{ctx.intl.t("notifications.channels.email")}
-				</Checkbox>
+					<Checkbox id={PUSH_ID} name={PUSH_FIELD} defaultChecked={notifications.push} />
+				</SettingsSection.Row>
 
-				<Text mix={[text("xs"), fg("neutral.muted")]}>{emailHint}</Text>
+				<SettingsSection.Row
+					layout="inline-switch"
+					label={ctx.intl.t("notifications.channels.email")}
+					description={emailHint}
+					htmlFor={EMAIL_ID}
+				>
+					<Checkbox
+						id={EMAIL_ID}
+						name={EMAIL_FIELD}
+						defaultChecked={notifications.email}
+						disabled={!notifications.emailAllowed}
+					/>
+				</SettingsSection.Row>
+			</SettingsSection>
 
-				<Button type="submit">{ctx.intl.t("notifications.channels.save")}</Button>
-			</form>
-
-			<h3 mix={[m(0), mbs(2), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.intl.t("notifications.quiet.legend")}
-			</h3>
-
-			<Description>{ctx.intl.t("notifications.quiet.description")}</Description>
-
-			<form
-				method="post"
-				action={routes.notifications.quietHours.href()}
-				mix={[vstack({ gap: 2, align: "start" })]}
+			<SettingsSection
+				id="quiet-hours"
+				title={ctx.intl.t("notifications.quiet.legend")}
+				description={ctx.intl.t("notifications.quiet.description")}
+				save="explicit"
+				form={{ action: routes.notifications.quietHours.href() }}
+				labels={{ save: ctx.intl.t("notifications.quiet.save") }}
+				footer={
+					<Text mix={[text("xs"), fg("neutral.muted")]}>
+						{ctx.intl.t("notifications.quiet.zone", { zone: notifications.timeZone })}
+					</Text>
+				}
 			>
-				<Checkbox name={QUIET_ENABLED_FIELD} defaultChecked={notifications.quietHours}>
-					{ctx.intl.t("notifications.quiet.enabled")}
-				</Checkbox>
+				{noteBlock(notes.quiet)}
 
-				<div mix={[flex(), flexWrap("wrap"), gap(3), items("center")]}>
-					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={QUIET_FROM_ID}>{ctx.intl.t("notifications.quiet.from")}</Label>
+				<SettingsSection.Row
+					layout="inline-switch"
+					label={ctx.intl.t("notifications.quiet.enabled")}
+					htmlFor={QUIET_ENABLED_ID}
+				>
+					<Checkbox
+						id={QUIET_ENABLED_ID}
+						name={QUIET_ENABLED_FIELD}
+						defaultChecked={notifications.quietHours}
+					/>
+				</SettingsSection.Row>
 
-						<Select id={QUIET_FROM_ID} name={QUIET_FROM_FIELD}>
-							{HOURS.map((hour) => (
-								<Select.Option
-									key={hour}
-									value={String(hour)}
-									selected={hour === notifications.quietFrom}
-								>
-									{ctx.intl.t("notifications.quiet.hour", { hour })}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
+				<SettingsSection.Row label={ctx.intl.t("notifications.quiet.from")} htmlFor={QUIET_FROM_ID}>
+					<Select id={QUIET_FROM_ID} name={QUIET_FROM_FIELD}>
+						{hourOptions(notifications.quietFrom)}
+					</Select>
+				</SettingsSection.Row>
 
-					<div mix={[vstack({ gap: 1, align: "start" })]}>
-						<Label htmlFor={QUIET_TO_ID}>{ctx.intl.t("notifications.quiet.to")}</Label>
+				<SettingsSection.Row label={ctx.intl.t("notifications.quiet.to")} htmlFor={QUIET_TO_ID}>
+					<Select id={QUIET_TO_ID} name={QUIET_TO_FIELD}>
+						{hourOptions(notifications.quietTo)}
+					</Select>
+				</SettingsSection.Row>
+			</SettingsSection>
 
-						<Select id={QUIET_TO_ID} name={QUIET_TO_FIELD}>
-							{HOURS.map((hour) => (
-								<Select.Option
-									key={hour}
-									value={String(hour)}
-									selected={hour === notifications.quietTo}
-								>
-									{ctx.intl.t("notifications.quiet.hour", { hour })}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-				</div>
+			<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+				<SettingsSection
+					id="devices"
+					title={ctx.intl.t("notifications.devices.legend")}
+					description={ctx.intl.t("notifications.devices.description")}
+					save="instant"
+					labels={{ save: ctx.intl.t("notifications.channels.save") }}
+				>
+					{noteBlock(notes.devices)}
 
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.intl.t("notifications.quiet.zone", { zone: notifications.timeZone })}
-				</Text>
-
-				<Button type="submit">{ctx.intl.t("notifications.quiet.save")}</Button>
-			</form>
-
-			<h3 mix={[m(0), mbs(2), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-				{ctx.intl.t("notifications.devices.legend")}
-			</h3>
-
-			<Description>{ctx.intl.t("notifications.devices.description")}</Description>
-
-			{notifications.devices.length === 0 ? (
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.intl.t("notifications.devices.none")}
-				</Text>
-			) : (
-				<ul mix={[m(0), vstack({ gap: 2 })]}>
-					{notifications.devices.map((device) => (
-						<li key={device.id} mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
-							<Text mix={[text("sm")]}>{device.userAgent ?? device.service}</Text>
-
-							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{device.lastDeliveredAt === null
-									? ctx.intl.t("notifications.devices.never")
-									: ctx.intl.t("notifications.devices.delivered", {
-											date: shortDate(device.lastDeliveredAt, ctx.locale, Date.now()),
-										})}
+					{notifications.devices.length === 0 ? (
+						<div mix={[p(4)]}>
+							<Text mix={[text("sm"), fg("neutral.muted")]}>
+								{ctx.intl.t("notifications.devices.none")}
 							</Text>
-
-							{/**
-							 * A method override rather than a `DELETE` a form cannot send, which is how
-							 * every other revocation on this app's surface reaches its route.
-							 */}
-							<form
-								method="post"
-								action={routes.notifications.forget.href({ deviceId: device.id })}
+						</div>
+					) : (
+						notifications.devices.map((device) => (
+							<SettingsSection.Row
+								key={device.id}
+								layout="inline-switch"
+								label={device.userAgent ?? device.service}
+								description={
+									device.lastDeliveredAt === null
+										? ctx.intl.t("notifications.devices.never")
+										: ctx.intl.t("notifications.devices.delivered", {
+												date: shortDate(device.lastDeliveredAt, ctx.locale, Date.now()),
+											})
+								}
 							>
-								<input type="hidden" name="_method" value="DELETE" />
+								{/**
+								 * A method override rather than a `DELETE` a form cannot send, which is how
+								 * every other revocation on this app's surface reaches its route.
+								 */}
+								<form
+									method="post"
+									action={routes.notifications.forget.href({ deviceId: device.id })}
+								>
+									<input type="hidden" name="_method" value="DELETE" />
 
-								<Button type="submit" color="neutral" variant="outline">
-									{ctx.intl.t("notifications.devices.forget")}
-								</Button>
-							</form>
-						</li>
-					))}
-				</ul>
-			)}
+									<Button type="submit" size="sm" color="neutral" variant="outline">
+										{ctx.intl.t("notifications.devices.forget")}
+									</Button>
+								</form>
+							</SettingsSection.Row>
+						))
+					)}
+				</SettingsSection>
 
-			{/**
-			 * The zone and the endpoint are both things only a browser knows, so this is where
-			 * they are asked for. It draws only the button that asks for permission, and a
-			 * browser running no script never sees it and never registers a device.
-			 */}
-			<PushRegistration
-				worker="/sw.js"
-				devices={routes.notifications.devices.href()}
-				timeZone={routes.notifications.timeZone.href()}
-				vapidPublicKey={vapidPublicKey() ?? ""}
-				storedTimeZone={notifications.timeZone}
-				enabled={notifications.push}
-				allow={ctx.intl.t("notifications.devices.allow")}
-			/>
-		</section>
+				{/**
+				 * The zone and the endpoint are both things only a browser knows, so this is where
+				 * they are asked for. It draws only the button that asks for permission, and a
+				 * browser running no script never sees it and never registers a device.
+				 */}
+				<PushRegistration
+					worker="/sw.js"
+					devices={routes.notifications.devices.href()}
+					timeZone={routes.notifications.timeZone.href()}
+					vapidPublicKey={vapidPublicKey() ?? ""}
+					storedTimeZone={notifications.timeZone}
+					enabled={notifications.push}
+					allow={ctx.intl.t("notifications.devices.allow")}
+				/>
+			</div>
+		</>
+	);
+}
+
+/**
+ * Taking the subscription list out and bringing another one in are the same errand read
+ * in two directions, so they share a section, with the import's outcome at its top.
+ *
+ * @param ctx - The request being answered, whose query says what an import made of the document it was handed.
+ */
+function transferSection(ctx: AppContext) {
+	return (
+		<SettingsSection
+			id={SETTINGS_ANCHORS.data}
+			title={ctx.intl.t("feeds.transfer.legend")}
+			save="instant"
+			labels={{ save: ctx.intl.t("feeds.transfer.import.submit") }}
+		>
+			{noteBlock(importNote(ctx))}
+
+			<SettingsSection.Row label={ctx.intl.t("settings.data.export")}>
+				{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
+				 * control that hands a reader a file. */}
+				<div mix={[flex(), flexWrap("wrap"), gap(2)]}>
+					<LinkButton
+						href={routes.feeds.export.href()}
+						color="neutral"
+						variant="outline"
+						size="sm"
+						data-rmx-document=""
+					>
+						{ctx.intl.t("feeds.transfer.export")}
+					</LinkButton>
+					<LinkButton
+						href={routes.dataExport.href()}
+						color="neutral"
+						variant="outline"
+						size="sm"
+						title={ctx.intl.t("feeds.transfer.exportAllDescription")}
+						data-rmx-document=""
+					>
+						{ctx.intl.t("feeds.transfer.exportAll")}
+					</LinkButton>
+				</div>
+			</SettingsSection.Row>
+
+			<SettingsSection.Row
+				label={ctx.intl.t("feeds.transfer.import.label")}
+				description={ctx.intl.t("feeds.transfer.import.description")}
+				descriptionId={IMPORT_DESCRIPTION_ID}
+				htmlFor={IMPORT_FILE_ID}
+			>
+				{/**
+				 * `multipart/form-data` is the encoding that carries a file's bytes along with the
+				 * field naming it; url-encoding sends the name the reader picked it under and leaves
+				 * the document itself on their disk.
+				 */}
+				<form
+					method="post"
+					action={routes.feeds.import.href()}
+					encType="multipart/form-data"
+					mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}
+				>
+					{/**
+					 * A native file input rather than a styled trigger. The trigger hides the input
+					 * behind a button-like label, so nothing on the page says which file was chosen —
+					 * and without script there is nothing to say it with.
+					 */}
+					<input
+						id={IMPORT_FILE_ID}
+						type="file"
+						name={FILE_FIELD}
+						accept={IMPORT_ACCEPT}
+						aria-describedby={IMPORT_DESCRIPTION_ID}
+						mix={[
+							maxIs("100%"),
+							text("sm"),
+							fg("neutral.muted"),
+							cursor("pointer"),
+							/**
+							 * The platform draws this control, and only its button half can be restyled —
+							 * which is the half worth restyling.
+							 */
+							when("&::file-selector-button", [
+								mie(3),
+								pi(3),
+								pb(1),
+								rounded("md"),
+								border({ color: "neutral.strong", width: 1 }),
+								bg("transparent"),
+								fg("neutral"),
+								text("sm"),
+								weight("medium"),
+								cursor("pointer"),
+							]),
+							when("&:hover::file-selector-button", bg("neutral.tint")),
+						]}
+					/>
+
+					<Button type="submit" size="sm">
+						{ctx.intl.t("feeds.transfer.import.submit")}
+					</Button>
+				</form>
+			</SettingsSection.Row>
+		</SettingsSection>
 	);
 }
 
@@ -496,12 +697,10 @@ async function settingsPage(
 	notifications: UserStore.Notifications,
 	tokens: UserStore.AgentToken[],
 ) {
-	let transfer = importNote(ctx);
-
 	/**
 	 * The row wins. This page and the sign-in callback are the two places both are read, so
 	 * this is where a cookie that has drifted — cleared, or written before a choice made on
-	 * another machine — is put back to what is stored, on a response that would otherwise
+	 * another machine — is put back to what is stored.
 	 */
 	let current = settings?.presentation ?? ctx.presentation;
 
@@ -537,275 +736,68 @@ async function settingsPage(
 			{...await chrome(ctx)}
 		>
 			{/**
-			 * What the app does on the reader's behalf, said in the place they would have come
-			 * looking for a switch. The sentence points at the check they can ask for on a feed's
-			 * own page, which is the whole of what is left to act on here.
+			 * Every section is on this one page, so the nav's links are anchors into it and a
+			 * phone, which hides the nav on a section page, scrolls through them all instead.
 			 */}
-			<section mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
-				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("settings.cadence.legend")}
-				</h2>
+			<SettingsLayout {...settingsNav(ctx.intl, null)} page="section">
+				{planSection(ctx, entitlement)}
 
-				<Description>
-					{ctx.intl.t("settings.cadence.description", { floor: formatInterval(POLL_FLOOR_MS) })}
-				</Description>
+				{appearanceSection(ctx, current)}
+
+				{notificationsSections(ctx, notifications)}
 
 				{/**
-				 * When the feeds were last brought up to date is the schedule's own news, so it sits
-				 * under the sentence describing it, quiet as the dates down the side of a list of
-				 * posts.
+				 * What the app does on the reader's behalf, said in the place they would have come
+				 * looking for a switch. The sentence points at the check they can ask for on a
+				 * feed's own page, which is the whole of what is left to act on here.
 				 */}
-				<Text mix={[text("xs"), fg("neutral.muted")]} title={lastRefreshed.exact}>
-					{lastRefreshed.short}
-				</Text>
-			</section>
-
-			{appearanceSection(ctx, current)}
-
-			{/**
-			 * What the reader is on, what it allows, and where they stand against it. It sits
-			 * above the transfers because it is the one section on this page whose numbers can
-			 * be refusing something right now.
-			 */}
-			<section
-				mix={[
-					vstack({ gap: 3 }),
-					maxIs(PAGE_COLUMN),
-					pbs(6),
-					borderEdge("block-start", { color: "neutral.border", width: 1 }),
-				]}
-			>
-				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("settings.plan.legend")}
-				</h2>
-
-				<Description>
-					{ctx.intl.t("settings.plan.current", {
-						plan: ctx.intl.t(`settings.plan.names.${entitlement.tier}`),
-					})}{" "}
-					{ctx.intl.t("settings.plan.allowance", {
-						feeds: entitlement.limits.feeds,
-						saved: entitlement.limits.saved,
-						posts: entitlement.limits.posts,
-					})}{" "}
-					{ctx.intl.t("settings.plan.history")} {ctx.intl.t("settings.plan.includes")}
-				</Description>
-
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{ctx.intl.t("settings.plan.usage", {
-						feeds: entitlement.feeds,
-						saved: entitlement.saved,
+				<SettingsSection
+					id={SETTINGS_ANCHORS.cadence}
+					title={ctx.intl.t("settings.cadence.legend")}
+					description={ctx.intl.t("settings.cadence.description", {
+						floor: formatInterval(POLL_FLOOR_MS),
 					})}
-				</Text>
-
-				{/**
-				 * A failed card, said on the day it fails and not acted on. Nothing has changed,
-				 * and the way out is the platform's own page rather than anything on this one.
-				 */}
-				{entitlement.graceUntil !== null && (
-					<Alert color="warning">
-						<Alert.Content>
-							<Alert.Description>{ctx.intl.t("settings.plan.lapsed")}</Alert.Description>
-						</Alert.Content>
-					</Alert>
-				)}
-
-				{/**
-				 * Every limit the reader is over, one sentence each, each naming the two ways out
-				 * and neither of them a deletion this app would perform. There is no countdown,
-				 * because nothing is going to be deleted.
-				 */}
-				{entitlement.over.length > 0 && (
-					<Alert color="warning">
-						<Alert.Content>
-							<Alert.Description>{ctx.intl.t("settings.plan.over.description")}</Alert.Description>
-
-							{entitlement.over.map((refusal) => (
-								<Alert.Description key={refusal.limit}>
-									{ctx.intl.t(`settings.plan.over.${refusal.limit}`, {
-										count: overBy(refusal),
-									})}
-								</Alert.Description>
-							))}
-						</Alert.Content>
-					</Alert>
-				)}
-
-				<div mix={[flex(), flexWrap("wrap"), gap(2), items("center")]}>
-					{upgradesFrom(entitlement.tier).map((offered) => (
-						<form
-							key={offered}
-							method="post"
-							action={routes.billing.checkout.href({ plan: offered })}
-						>
-							<Button type="submit">
-								{ctx.intl.t("settings.plan.upgrade", {
-									plan: ctx.intl.t(`settings.plan.names.${offered}`),
-								})}
-							</Button>
-						</form>
-					))}
-
-					{/**
-					 * Offered only to a reader the platform holds a record for, since there is no
-					 * page to open for somebody who has never bought anything.
-					 */}
-					{entitlement.tier !== "free" && (
-						<form method="post" action={routes.billing.portal.href()}>
-							<Button type="submit" color="neutral" variant="outline">
-								{ctx.intl.t("settings.plan.manage")}
-							</Button>
-						</form>
-					)}
-				</div>
-			</section>
-
-			{/**
-			 * Where a reader goes to decide what happens to a post as it arrives. It sits on
-			 * this page because it is configured once and read back later, which is what every
-			 * other section here is.
-			 */}
-			<section
-				mix={[
-					vstack({ gap: 3 }),
-					maxIs(PAGE_COLUMN),
-					pbs(6),
-					borderEdge("block-start", { color: "neutral.border", width: 1 }),
-				]}
-			>
-				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("rules.heading")}
-				</h2>
-
-				<Description>{ctx.intl.t("rules.description")}</Description>
-
-				<div mix={[flex()]}>
-					<LinkButton href={routes.rules.index.href()} color="neutral" variant="outline">
-						{ctx.intl.t("rules.title")}
-					</LinkButton>
-				</div>
-			</section>
-
-			{notificationsSection(ctx, notifications)}
-
-			{tokensSection(ctx, tokens, entitlement.can.agent.connect)}
-
-			{transfer && (
-				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>
-					<Alert.Content>
-						<Alert.Description>{transfer.message}</Alert.Description>
-					</Alert.Content>
-				</Alert>
-			)}
-
-			{/**
-			 * Taking the subscription list out and bringing another one in are the same errand read
-			 * in two directions, so they share a section.
-			 */}
-			<section
-				mix={[
-					vstack({ gap: 4 }),
-					pbs(6),
-					borderEdge("block-start", { color: "neutral.border", width: 1 }),
-				]}
-			>
-				{/**
-				 * Level 2, since the layout's own page heading is the document's only `h1`. It is set
-				 * as the legend above it is, so the two sections are named in the same voice.
-				 */}
-				<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-					{ctx.intl.t("feeds.transfer.legend")}
-				</h2>
-
-				{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
-				 * control that hands a reader a file. */}
-				<div mix={[flex(), flexWrap("wrap"), gap(2)]}>
-					<LinkButton
-						href={routes.feeds.export.href()}
-						color="neutral"
-						variant="outline"
-						data-rmx-document=""
-					>
-						{ctx.intl.t("feeds.transfer.export")}
-					</LinkButton>
-					<LinkButton
-						href={routes.dataExport.href()}
-						color="neutral"
-						variant="outline"
-						title={ctx.intl.t("feeds.transfer.exportAllDescription")}
-						data-rmx-document=""
-					>
-						{ctx.intl.t("feeds.transfer.exportAll")}
-					</LinkButton>
-				</div>
-
-				{/**
-				 * `multipart/form-data` is the encoding that carries a file's bytes along with the
-				 * field naming it; url-encoding sends the name the reader picked it under and leaves
-				 * the document itself on their disk.
-				 */}
-				<form
-					method="post"
-					action={routes.feeds.import.href()}
-					encType="multipart/form-data"
-					mix={[vstack({ gap: 3, align: "start" }), mbs(2), maxIs(PAGE_COLUMN)]}
+					save="instant"
+					labels={{ save: ctx.intl.t("settings.appearance.save") }}
 				>
-					{/** Ahead of the controls, so it is read before a file is chosen rather than
-					 * after. */}
-					<Description id={IMPORT_DESCRIPTION_ID}>
-						{ctx.intl.t("feeds.transfer.import.description")}
-					</Description>
+					{/**
+					 * When the feeds were last brought up to date is the schedule's own news, so it
+					 * is the section's one row, with the exact date in the tooltip behind it.
+					 */}
+					<SettingsSection.Row
+						layout="stacked"
+						label={<span title={lastRefreshed.exact}>{lastRefreshed.short}</span>}
+					/>
+				</SettingsSection>
 
-					<div mix={[vstack({ gap: 2, align: "start" }), maxIs("100%")]}>
-						<Label htmlFor={IMPORT_FILE_ID}>{ctx.intl.t("feeds.transfer.import.label")}</Label>
-
-						{/** The picker and the submit on one line, wrapping onto two where a phone
-						 * has room for one control at a time. */}
-						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2), maxIs("100%")]}>
-							{/**
-							 * A native file input rather than a styled trigger. The trigger hides the input
-							 * behind a button-like label, so nothing on the page says which file was chosen —
-							 * and without script there is nothing to say it with.
-							 */}
-							<input
-								id={IMPORT_FILE_ID}
-								type="file"
-								name={FILE_FIELD}
-								accept={IMPORT_ACCEPT}
-								aria-describedby={IMPORT_DESCRIPTION_ID}
-								mix={[
-									maxIs("100%"),
-									text("sm"),
-									fg("neutral.muted"),
-									cursor("pointer"),
-									/**
-									 * The platform draws this control, and only its button half can be restyled —
-									 * which is the half worth restyling.
-									 */
-									when("&::file-selector-button", [
-										mie(3),
-										pi(4),
-										pb(2),
-										rounded("md"),
-										border({ color: "neutral.strong", width: 2 }),
-										bg("transparent"),
-										fg("neutral"),
-										text("sm"),
-										weight("medium"),
-										cursor("pointer"),
-									]),
-									when("&:hover::file-selector-button", bg("neutral.tint")),
-								]}
-							/>
-
-							<Button type="submit">{ctx.intl.t("feeds.transfer.import.submit")}</Button>
-						</div>
+				{/**
+				 * Where a reader goes to decide what happens to a post as it arrives. It sits in
+				 * this area because it is configured once and read back later, which is what every
+				 * other section here is.
+				 */}
+				<SettingsSection
+					id={SETTINGS_ANCHORS.filters}
+					title={ctx.intl.t("rules.heading")}
+					description={ctx.intl.t("rules.description")}
+					save="instant"
+					labels={{ save: ctx.intl.t("settings.appearance.save") }}
+				>
+					<div mix={[p(4)]}>
+						<LinkButton
+							href={routes.rules.index.href()}
+							color="neutral"
+							variant="outline"
+							size="sm"
+						>
+							{ctx.intl.t("rules.title")}
+						</LinkButton>
 					</div>
-				</form>
-			</section>
+				</SettingsSection>
+
+				{tokensSection(ctx, tokens, entitlement.can.agent.connect)}
+
+				{transferSection(ctx)}
+			</SettingsLayout>
 		</AppLayout>,
 		correction && { headers: correction },
 	);

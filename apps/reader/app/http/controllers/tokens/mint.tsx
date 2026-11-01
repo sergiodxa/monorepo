@@ -11,8 +11,9 @@ import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, gap, items, vstack } from "@sdxc/u/layout";
 import { m, maxIs, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { overflowWrap, text, weight } from "@sdxc/u/typography";
 import { Alert, Description, LinkButton, Text } from "@sdxc/ui";
+import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -23,7 +24,8 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { mintAgentToken } from "~/app/mcp/token";
 import { userStore } from "~/app/models/user-store";
-import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
+import { settingsNav } from "~/resources/components/settings-area";
+import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** The name and the scope, both defaulted so an absent field is refused by the store. */
@@ -74,41 +76,48 @@ export default createAction(routes.tokens.create, {
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
-				<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-					<Description>{ctx.intl.t("agent.minted.description")}</Description>
+				<SettingsLayout
+					{...settingsNav(ctx.intl, "agents")}
+					page="section"
+					backHref={routes.settings.href()}
+				>
+					<section mix={[vstack({ gap: 3 })]}>
+						<Description>{ctx.intl.t("agent.minted.description")}</Description>
 
-					<Alert color="warning">
-						<Alert.Content>
-							<Alert.Description>{ctx.intl.t("agent.minted.once")}</Alert.Description>
-						</Alert.Content>
-					</Alert>
+						<Alert color="warning">
+							<Alert.Content>
+								<Alert.Description>{ctx.intl.t("agent.minted.once")}</Alert.Description>
+							</Alert.Content>
+						</Alert>
 
-					{/**
-					 * The value itself, selectable as one run of text. There is no copy button,
-					 * because a button that copies needs script and the value has to be reachable
-					 * without it.
-					 */}
-					<Text
-						mix={[
-							m(0),
-							p(3),
-							rounded("md"),
-							bg("neutral.tint"),
-							fg("neutral.emphasis"),
-							text("sm"),
-							weight("medium"),
-							maxIs("100%"),
-						]}
-					>
-						<code>{minted.token}</code>
-					</Text>
+						{/**
+						 * The value itself, selectable as one run of text. There is no copy button,
+						 * because a button that copies needs script and the value has to be reachable
+						 * without it.
+						 */}
+						<Text
+							mix={[
+								m(0),
+								p(3),
+								rounded("md"),
+								bg("neutral.tint"),
+								fg("neutral.emphasis"),
+								text("sm"),
+								weight("medium"),
+								maxIs("100%"),
+								overflowWrap("anywhere"),
+							]}
+						>
+							<code>{minted.token}</code>
+						</Text>
 
-					<div mix={[flex(), gap(2), items("center")]}>
-						<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
-							{ctx.intl.t("agent.minted.back")}
-						</LinkButton>
-					</div>
-				</section>
+						<div mix={[flex(), gap(2), items("center")]}>
+							<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
+								{ctx.intl.t("agent.minted.back")}
+							</LinkButton>
+						</div>
+					</section>
+				</SettingsLayout>
 			</AppLayout>,
 		);
 	},

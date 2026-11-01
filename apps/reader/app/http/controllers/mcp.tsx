@@ -10,13 +10,15 @@ import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, p, pbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { overflowWrap, text, weight } from "@sdxc/u/typography";
 import { Description, LinkButton, Text } from "@sdxc/ui";
+import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import { createAction } from "remix/router";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import requireUser from "~/app/http/middleware/require-user";
-import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
+import { settingsNav } from "~/resources/components/settings-area";
+import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** The three things the page says about connecting, each one sentence in the dictionary. */
@@ -36,58 +38,64 @@ export default createAction(routes.mcp.index, {
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
-				<section mix={[vstack({ gap: 3 }), maxIs(PAGE_COLUMN)]}>
-					<Description>{ctx.intl.t("agent.page.description")}</Description>
+				<SettingsLayout
+					{...settingsNav(ctx.intl, "agents")}
+					page="section"
+					backHref={routes.settings.href()}
+				>
+					<section mix={[vstack({ gap: 3 })]}>
+						<Description>{ctx.intl.t("agent.page.description")}</Description>
 
-					<Text
+						<Text
+							mix={[
+								m(0),
+								p(3),
+								rounded("md"),
+								bg("neutral.tint"),
+								fg("neutral.emphasis"),
+								text("sm"),
+								weight("medium"),
+								maxIs("100%"),
+								overflowWrap("anywhere"),
+							]}
+						>
+							<code>{endpoint}</code>
+						</Text>
+
+						<ol mix={[m(0), vstack({ gap: 2 })]}>
+							{STEPS.map((step) => (
+								<li key={step} mix={[text("sm"), fg("neutral")]}>
+									{ctx.intl.t(`agent.page.steps.${step}`)}
+								</li>
+							))}
+						</ol>
+					</section>
+
+					{/**
+					 * The limit stated where somebody meets it, rather than discovered as a hang: a
+					 * client that can only start an OAuth flow finds nothing here to start one with.
+					 */}
+					<section
 						mix={[
-							m(0),
-							p(3),
-							rounded("md"),
-							bg("neutral.tint"),
-							fg("neutral.emphasis"),
-							text("sm"),
-							weight("medium"),
-							maxIs("100%"),
+							vstack({ gap: 3 }),
+							pbs(6),
+							borderEdge("block-start", { color: "neutral.border", width: 1 }),
 						]}
 					>
-						<code>{endpoint}</code>
-					</Text>
+						{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
+						<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+							{ctx.intl.t("agent.page.clients.legend")}
+						</h2>
 
-					<ol mix={[m(0), vstack({ gap: 2 })]}>
-						{STEPS.map((step) => (
-							<li key={step} mix={[text("sm"), fg("neutral")]}>
-								{ctx.intl.t(`agent.page.steps.${step}`)}
-							</li>
-						))}
-					</ol>
-				</section>
+						<Description>{ctx.intl.t("agent.page.clients.description")}</Description>
 
-				{/**
-				 * The limit stated where somebody meets it, rather than discovered as a hang: a
-				 * client that can only start an OAuth flow finds nothing here to start one with.
-				 */}
-				<section
-					mix={[
-						vstack({ gap: 3 }),
-						maxIs(PAGE_COLUMN),
-						pbs(6),
-						borderEdge("block-start", { color: "neutral.border", width: 1 }),
-					]}
-				>
-					{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
-					<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-						{ctx.intl.t("agent.page.clients.legend")}
-					</h2>
-
-					<Description>{ctx.intl.t("agent.page.clients.description")}</Description>
-
-					<div>
-						<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
-							{ctx.intl.t("agent.page.clients.tokens")}
-						</LinkButton>
-					</div>
-				</section>
+						<div>
+							<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
+								{ctx.intl.t("agent.page.clients.tokens")}
+							</LinkButton>
+						</div>
+					</section>
+				</SettingsLayout>
 			</AppLayout>,
 		);
 	},
