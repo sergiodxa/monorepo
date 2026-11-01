@@ -38,7 +38,11 @@ export namespace DocsNav {
 		 * It appears once the page's script loads.
 		 */
 		filter?: { label: string; placeholder: string; noResults: string };
-		/** Drawn under the tree, such as "Contact support" or a status link. */
+		/**
+		 * Drawn under the tree, such as "Contact support" or a status link, flush with the
+		 * nav's edge; give its links the rows' inline padding (or render them as
+		 * `Sidebar.MenuLink`s) to line their text up with the pages above.
+		 */
 		footer?: RemixNode;
 		/**
 		 * Folds every group except the ones holding the current page, for a tree whose
@@ -111,7 +115,7 @@ export function DocsNav(handle: Handle<DocsNav.Props>) {
 						</p>
 					) : null}
 				</Sidebar.Nav>
-				{footer ? <div mix={[pi("0.625rem")]}>{footer}</div> : null}
+				{footer ? <div data-docs-nav-footer="">{footer}</div> : null}
 			</div>
 		);
 	};

@@ -159,4 +159,17 @@ describe("DocsNav", () => {
 			);
 		expect(wide).toEqual([]);
 	});
+
+	test("draws the footer flush with the nav's edge, so self-padded links line up with the rows", () => {
+		mountNav({
+			footer: (
+				<a href="/support" style="display: block; padding-inline: 0.625rem">
+					Contact support
+				</a>
+			),
+		});
+		let footer = document.querySelector<HTMLElement>("[data-docs-nav-footer] a")!;
+		let row = document.querySelector<HTMLElement>('[data-docs-nav] nav a[href="/docs/guide-1"]')!;
+		expect(footer.getBoundingClientRect().left).toBeCloseTo(row.getBoundingClientRect().left, 0);
+	});
 });
