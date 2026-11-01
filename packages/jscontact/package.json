@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read, validate and write RFC 9553 JSContact Cards, and convert them to and from vCard and jCard",
 	"license": "MIT",
+	"bin": {
+		"sdxc-jscontact": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,6 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/json-pointer": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	},

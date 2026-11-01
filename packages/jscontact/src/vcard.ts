@@ -7,9 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export type { ContactFormat } from "./lib/format.js";
 export type { JCard, JCardProperty, VCard, VCardProperty, VCardValue } from "./lib/vcard/model.js";
 
 export { VCardParseError } from "./lib/errors.js";
+export { detectFormat } from "./lib/format.js";
 export { fromVCard } from "./lib/vcard/from-vcard.js";
 export { readJCard, writeJCard } from "./lib/vcard/model.js";
 export { parseVCard, stringifyVCard } from "./lib/vcard/text.js";

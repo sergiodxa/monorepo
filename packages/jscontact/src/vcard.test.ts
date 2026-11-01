@@ -19,7 +19,15 @@ import {
 	BASIC_CARD,
 } from "./fixtures/rfc9553.js";
 import { VCARD_TO_JSCONTACT } from "./fixtures/rfc9555.js";
-import { fromVCard, parseVCard, readJCard, stringifyVCard, toVCard, writeJCard } from "./vcard.js";
+import {
+	detectFormat,
+	fromVCard,
+	parseVCard,
+	readJCard,
+	stringifyVCard,
+	toVCard,
+	writeJCard,
+} from "./vcard.js";
 
 import type { JSContact } from "./index.js";
 
@@ -225,5 +233,29 @@ describe("toVCard", () => {
 		);
 		expect(text).toContain('JSPROP;JSPTR="example.com:foo":{"bar":1234}');
 		expect(text).toContain("FN:");
+	});
+});
+
+describe("detectFormat", () => {
+	test("reads vCard text by its BEGIN line, after a byte order mark and blank lines", () => {
+		expect(detectFormat(AUTHOR_VCARD)).toBe("vcard");
+		expect(detectFormat("\uFEFF\r\nbegin:vcard\r\nEND:VCARD")).toBe("vcard");
+	});
+
+	test("reads one jCard, or a list of them", () => {
+		expect(detectFormat(JSON.stringify(AUTHOR_JCARD))).toBe("jcard");
+		expect(detectFormat(JSON.stringify([AUTHOR_JCARD, AUTHOR_JCARD]))).toBe("jcard");
+	});
+
+	test("reads a JSON object, or a list of them, as Cards", () => {
+		expect(detectFormat(JSON.stringify(BASIC_CARD))).toBe("jscontact");
+		expect(detectFormat(JSON.stringify([BASIC_CARD, {}]))).toBe("jscontact");
+	});
+
+	test("answers null for anything else", () => {
+		expect(detectFormat("Joe User")).toBeNull();
+		expect(detectFormat("[]")).toBeNull();
+		expect(detectFormat('"vcard"')).toBeNull();
+		expect(detectFormat(JSON.stringify([BASIC_CARD, AUTHOR_JCARD]))).toBeNull();
 	});
 });

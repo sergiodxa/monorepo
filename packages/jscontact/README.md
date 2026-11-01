@@ -63,6 +63,26 @@ property carrying its key in `PROP-ID`, localizations become `LANGUAGE` alternat
 `ALTID`, and a vCard property with no counterpart is kept in `vCardProps`. Anything a vCard
 property cannot carry travels in `JSPROP`, so a Card converted to vCard and back is unchanged.
 
+## Command line
+
+```sh
+bunx @sdxc/jscontact --help
+```
+
+`convert` reads JSContact, vCard or jCard (detected, or named with `--from`) from a file or stdin
+and writes the format `--to` names:
+
+```sh
+bunx @sdxc/jscontact convert contact.vcf --to jscontact
+```
+
+`validate` checks Cards against RFC 9553, printing every problem and exiting 1 when one is
+invalid; `--json` prints `{ valid, issues }`:
+
+```sh
+bunx @sdxc/jscontact validate card.json
+```
+
 ## API
 
 ### `parse(source: unknown): Result<JSContact.Card, JSContactParseError>`
@@ -93,6 +113,8 @@ The Id alphabet, and the single valid spelling of a UTCDateTime.
 - `readJCard(json)` and `writeJCard(card)` read and write RFC 7095 jCard. A malformed jCard
   property is skipped rather than failing the card.
 - `fromVCard(card)` and `toVCard(card)` convert between that card and a JSContact Card.
+- `detectFormat(text)` answers `"jscontact"`, `"vcard"` or `"jcard"` from the text alone, or
+  `null`.
 - `VCARD_MEDIA_TYPE` and `JCARD_MEDIA_TYPE` are `text/vcard;charset=utf-8` and
   `application/vcard+json`, ready for a `Content-Type` header.
 
