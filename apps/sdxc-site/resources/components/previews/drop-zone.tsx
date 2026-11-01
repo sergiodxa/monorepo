@@ -10,7 +10,6 @@
 import type { Handle } from "remix/component";
 
 import { ImageIcon, XIcon } from "@sdxc/icons";
-import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
@@ -37,7 +36,6 @@ function queueFiles(files: readonly File[]) {
 	multiple
 	// The native input stays in the accessibility tree and the tab order; the
 	// dashed label is what a person sees, and it draws the focus ring for both.
-	parts={{ input: [visuallyHidden()] }}
 	mix={[
 		dropZone(session),
 		on<HTMLLabelElement, "ui:drop-files">("ui:drop-files", (event) => queueFiles(event.files)),
@@ -104,7 +102,6 @@ export const DropZonePreview = clientEntry(
 					accept="image/png, image/jpeg, image/webp"
 					multiple
 
-					parts={{ input: [visuallyHidden()] }}
 					mix={[
 						dropZone(session),
 						on<HTMLLabelElement, "ui:drop-files">("ui:drop-files", (event) =>

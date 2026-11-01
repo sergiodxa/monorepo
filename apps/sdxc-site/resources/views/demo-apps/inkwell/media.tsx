@@ -10,7 +10,6 @@
 import type { Handle } from "remix/component";
 
 import { LayoutGridIcon, ListIcon, UploadIcon } from "@sdxc/icons";
-import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -186,27 +185,11 @@ export function MediaScreen(handle: Handle<MediaScreenProps>) {
 					method="post"
 					action={action("media")}
 					enctype="multipart/form-data"
-					mix={[vstack({ gap: 2, align: "stretch" })]}
+					mix={[vstack({ gap: 3, align: "stretch" })]}
 				>
-					<DropZone
-						name="files"
-						accept="image/png, image/jpeg, image/webp"
-						multiple
-						parts={{ input: [visuallyHidden()] }}
-						mix={[
-							hstack({ gap: 3, align: "center" }),
-							rounded("lg"),
-							raw({
-								padding: "1rem 1.25rem",
-								border: "1.5px dashed var(--ui-neutral-border-strong, var(--ui-neutral-border))",
-								backgroundColor: "var(--ui-neutral-bg-tint)",
-								cursor: "pointer",
-								flexWrap: "wrap",
-							}),
-						]}
-					>
+					<DropZone name="files" accept="image/png, image/jpeg, image/webp" multiple>
 						<UploadIcon size={20} aria-hidden="true" />
-						<span mix={[vstack({ gap: 0, align: "stretch" }), raw({ flex: "1 1 12rem" })]}>
+						<span mix={[vstack({ gap: 0.5, align: "center" })]}>
 							<span mix={[weight("semibold"), fg("neutral.emphasis")]}>
 								Drop images here, or click to choose
 							</span>
