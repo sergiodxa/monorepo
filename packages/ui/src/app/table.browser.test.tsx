@@ -409,6 +409,41 @@ describe("Table rows", () => {
 	});
 });
 
+describe("Table keys", () => {
+	test("walks a server-rendered table's rows with j and k from a marker in its container", async () => {
+		let host = mount(
+			<Table.Container>
+				<Table.Keys labels={{ group: "Monitors", next: "Next", previous: "Previous" }} />
+				<Table aria-label="Monitors">
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>Name</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{MONITORS.map((monitor) => (
+							<Table.Row key={monitor.id}>
+								<Table.Cell>
+									<Table.RowLink href={`#${monitor.id}`}>{monitor.name}</Table.RowLink>
+								</Table.Cell>
+							</Table.Row>
+						))}
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+		);
+		let rows = [...host.querySelectorAll<HTMLElement>("tbody tr")];
+
+		await userEvent.keyboard("j");
+		expect(document.activeElement).toBe(rows[0]);
+		await userEvent.keyboard("j");
+		expect(document.activeElement).toBe(rows[1]);
+		await userEvent.keyboard("k");
+		expect(document.activeElement).toBe(rows[0]);
+		expect(getComputedStyle(rows[0]!).outlineStyle).toBe("solid");
+	});
+});
+
 describe("Table pinned first column", () => {
 	test("keeps the first column in place and casts its shadow only once scrolled", async () => {
 		await page.viewport(320, 640);

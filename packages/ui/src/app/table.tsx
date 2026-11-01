@@ -56,6 +56,9 @@ import { StatusDot } from "../components/status-dot.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
+import type { RowNavigation } from "./mixins/row-navigation.js";
+
+import { ROW_NAVIGATION_ATTRIBUTE, rowNavigation } from "./mixins/row-navigation.js";
 import { tableSelection } from "./mixins/table-selection.js";
 
 /**
@@ -201,6 +204,12 @@ export namespace Table {
 		 */
 		numeric?: boolean;
 	}
+
+	/**
+	 * Props accepted by {@link Table.Keys}: the row-navigation options a server can send, so
+	 * everything but the announcer, which lives in the browser.
+	 */
+	export type KeysProps = Omit<RowNavigation.Options, "announcer" | "within">;
 
 	/** Header cell for the selection column. */
 	export interface SelectAllProps extends Omit<TagProps<"th">, "children"> {
@@ -467,6 +476,10 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 						overflow("auto"),
 						container(CONTAINER_NAME),
 						raw({ "--ui-app-sticky-top": "0px" }),
+						when(
+							`& [${ROW_NAVIGATION_ATTRIBUTE}]:focus-visible`,
+							outline({ color: "brand.ring", width: 2, offset: -2 }),
+						),
 					],
 					mix,
 				)}
@@ -728,6 +741,36 @@ export const TableSelection: EntryComponent<Record<never, never>> = clientEntry(
 		return () => <span mix={[hidden(), tableSelection()]} />;
 	},
 );
+
+/** Selector for the box {@link TableKeys} walks: the table's container, or the table itself. */
+const TABLE_KEYS_SCOPE = '[data-slot="container"], table';
+
+/**
+ * Client island behind {@link Table.Keys}: a hidden marker whose `rowNavigation()` walks the
+ * rows of the container it sits in. Loads from `@sdxc/ui/app/table#TableKeys` once the app's
+ * browser entry maps it; until then every row link and checkbox stays reachable by Tab.
+ */
+export const TableKeys: EntryComponent<Table.KeysProps> = clientEntry(
+	"@sdxc/ui/app/table#TableKeys",
+	function TableKeys(handle: Handle<Table.KeysProps>) {
+		return () => (
+			<span mix={[hidden(), rowNavigation({ ...handle.props, within: TABLE_KEYS_SCOPE })]} />
+		);
+	},
+);
+
+/**
+ * Turns on keyboard row navigation for a server-rendered table: `j`/`k` and the arrows move
+ * through the rows with an inset ring, Enter or `o` opens the row's link, `x` toggles its
+ * checkbox and `/` focuses the search field. Place it inside `Table.Container`, beside the table.
+ *
+ * @param handle Runtime handle carrying the keys' options.
+ * @returns The render function producing the island.
+ * @example <Table.Container><Table.Keys search="q" labels={{ group: t("keys.list"), next: t("keys.next") }} /><Table>…</Table></Table.Container>
+ */
+Table.Keys = function TableKeysPart(handle: Handle<Table.KeysProps>) {
+	return () => <TableKeys {...handle.props} />;
+};
 
 /**
  * Renders the selection column's header: a select-all checkbox marked `data-selection-all`,

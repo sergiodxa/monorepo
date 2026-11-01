@@ -81,6 +81,11 @@ export namespace RowNavigation {
 	export interface Options {
 		/** Rows to walk, matched inside the host. @default ROW_NAVIGATION_ROW_SELECTOR */
 		rows?: string;
+		/**
+		 * The nearest ancestor matching this selector becomes the host whose rows are walked, for
+		 * a mixin carried by a marker element inside the list rather than the list itself.
+		 */
+		within?: string;
 		/** The control Enter and `o` press inside a row. @default ROW_NAVIGATION_PRIMARY_SELECTOR */
 		primary?: string;
 		/** The `id` of the search field `/` focuses; omitted, `/` stays unbound. */
@@ -139,7 +144,10 @@ export const rowNavigation: MixinFactory<HTMLElement, [options?: RowNavigation.O
 		let options: RowNavigation.Options = {};
 
 		handle.addEventListener("insert", (event) => {
-			let host = event.node;
+			let host: HTMLElement =
+				options.within === undefined
+					? event.node
+					: (event.node.parentElement?.closest<HTMLElement>(options.within) ?? event.node);
 			let registry = shortcutRegistry(host.ownerDocument);
 			let signal = handle.signal;
 			let rows = () => queryRows(host, options.rows ?? ROW_NAVIGATION_ROW_SELECTOR);
