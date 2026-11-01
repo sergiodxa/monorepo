@@ -81,6 +81,18 @@ for (let target of plan(current, await sentTargets(post.url)).targets) {
 }
 ```
 
+## Command line
+
+`sdxc-webmention` discovers an endpoint, sends a mention and checks a source links to its target. `--help` on any command lists every flag.
+
+```sh
+bunx @sdxc/webmention discover https://example.com/post                       # the endpoint
+bunx @sdxc/webmention send https://example.org/reply https://example.com/post # Sent to …: 202
+bunx @sdxc/webmention verify https://example.org/reply https://example.com/post --json
+```
+
+Every command fetches under the same bounds as the library and takes `--user-agent` and `--json`. It exits 0 when done, 1 when the target has no endpoint, the endpoint refused, the source does not link or a fetch failed, and 2 for a URL it cannot parse.
+
 ## API
 
 ### `@sdxc/webmention`

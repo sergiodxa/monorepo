@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Receive, verify, discover and send Webmentions",
 	"license": "MIT",
+	"bin": {
+		"sdxc-webmention": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -14,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
 		"@sdxc/microformats": "workspace:*",
