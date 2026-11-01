@@ -94,6 +94,7 @@ The step fails when a policy is missing, and the JSON report is there to read.
 | [`@sdxc/jsdoc`](/api/jsdoc)                       | `sdxc pkg jsdoc`            | Extract JSDoc from source files into a documentation model              |
 | [`@sdxc/json-canonical`](/api/json-canonical)     | `sdxc pkg json-canonical`   | Canonicalize JSON, hash the canonical form                              |
 | [`@sdxc/json-patch`](/api/json-patch)             | `sdxc pkg json-patch`       | Apply, diff and validate JSON Patch documents                           |
+| [`@sdxc/jsonc`](/api/jsonc)                       | `sdxc pkg jsonc`            | Check JSON with comments, strip it to plain JSON                        |
 | [`@sdxc/jsonpath`](/api/jsonpath)                 | `sdxc pkg jsonpath`         | Query JSON with JSONPath                                                |
 | [`@sdxc/jwt`](/api/jwt)                           | `sdxc pkg jwt`              | Decode, verify and sign tokens, generate signing keys                   |
 | [`@sdxc/merge-patch`](/api/merge-patch)           | `sdxc pkg merge-patch`      | Apply and diff JSON Merge Patch documents                               |
