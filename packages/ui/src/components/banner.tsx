@@ -109,7 +109,7 @@ export function Banner(handle: Handle<Banner.Props>) {
 						minIs(0),
 						pb("0.5rem"),
 						pi("1rem"),
-						raw({ borderWidth: "0 0 1px", borderStyle: "solid" }),
+						raw({ borderWidth: "0", borderBlockEndWidth: "1px", borderStyle: "solid" }),
 						fontSize("sm"),
 					],
 					mix,
