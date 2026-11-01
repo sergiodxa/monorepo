@@ -373,4 +373,84 @@ describe(Toaster.name, () => {
 
 		expect(changeCount).toBe(1);
 	});
+
+	test("a toast added during a queue-wide pause waits for the resume", () => {
+		let toaster = new Toaster();
+
+		toaster.pause();
+		let id = toaster.add("Monitor deleted", { duration: 1000 });
+		expect(toaster.get(id)?.paused).toBe(true);
+
+		advance(5000);
+		expect(toaster.get(id)).toBeDefined();
+
+		toaster.resume();
+		advance(1000);
+		expect(toaster.get(id)).toBeUndefined();
+	});
+
+	test("promise holds one loading toast, then patches success onto the same id", async () => {
+		let toaster = new Toaster<{ title: string }>({ defaultDuration: 2000 });
+		let { promise, resolve } = Promise.withResolvers<string>();
+
+		let id = toaster.promise(promise, {
+			loading: { title: "Saving monitor" },
+			success: (name) => ({ title: `${name} saved` }),
+			error: { title: "Couldn't save monitor. Try again." },
+		});
+
+		expect(toaster.get(id)).toMatchObject({ data: { title: "Saving monitor" }, duration: null });
+		advance(60_000);
+		expect(toaster.size).toBe(1);
+
+		resolve("Checkout");
+		await promise;
+
+		expect(toaster.size).toBe(1);
+		expect(toaster.get(id)).toMatchObject({ data: { title: "Checkout saved" }, duration: 2000 });
+
+		advance(2000);
+		expect(toaster.get(id)).toBeUndefined();
+	});
+
+	test("promise patches the error payload in place and handles the rejection", async () => {
+		let toaster = new Toaster<{ title: string }>();
+		let { promise, reject } = Promise.withResolvers<void>();
+
+		let id = toaster.promise(
+			promise,
+			{
+				loading: { title: "Saving monitor" },
+				success: { title: "Monitor saved" },
+				error: (reason) => ({ title: String(reason) }),
+			},
+			{ duration: 8000 },
+		);
+
+		reject("Couldn't save monitor. Try again.");
+		await promise.catch(() => undefined);
+
+		expect(toaster.toasts).toHaveLength(1);
+		expect(toaster.get(id)).toMatchObject({
+			data: { title: "Couldn't save monitor. Try again." },
+			duration: 8000,
+		});
+	});
+
+	test("promise leaves a toast the user dismissed while loading gone", async () => {
+		let toaster = new Toaster<{ title: string }>();
+		let { promise, resolve } = Promise.withResolvers<void>();
+
+		let id = toaster.promise(promise, {
+			loading: { title: "Saving monitor" },
+			success: { title: "Monitor saved" },
+			error: { title: "Couldn't save monitor. Try again." },
+		});
+		toaster.dismiss(id);
+
+		resolve();
+		await promise;
+
+		expect(toaster.size).toBe(0);
+	});
 });

@@ -60,6 +60,22 @@ export namespace Toaster {
 		duration?: number | null;
 	}
 
+	/**
+	 * The three payloads {@link Toaster.promise} shows over one promise's life.
+	 * `success` and `error` may derive their payload from the settled value.
+	 *
+	 * @template Data Payload the island renders.
+	 * @template Value What the promise resolves to.
+	 */
+	export interface PromiseStates<Data, Value> {
+		/** Shown at once and held, with no timer, until the promise settles. */
+		loading: Data;
+		/** Replaces {@link PromiseStates.loading} in place once the promise resolves. */
+		success: Data | ((value: Value) => Data);
+		/** Replaces {@link PromiseStates.loading} in place once the promise rejects. */
+		error: Data | ((reason: unknown) => Data);
+	}
+
 	/** Construction options accepted by {@link Toaster}. */
 	export interface Init {
 		/** Auto-dismiss delay, in milliseconds, used when {@link Toaster.AddOptions.duration} is omitted. Defaults to 5000. */
@@ -91,6 +107,15 @@ interface Entry<Data> {
 	timer: ReturnType<typeof setTimeout> | null;
 }
 
+/**
+ * Resolves one {@link Toaster.PromiseStates} entry against the settled value,
+ * calling it when it is a function so a payload can name what the work produced.
+ */
+function resolveState<Data, Input>(state: Data | ((input: Input) => Data), input: Input): Data {
+	if (typeof state === "function") return (state as (input: Input) => Data)(input);
+	return state;
+}
+
 function toPublicToast<Data>(entry: Entry<Data>): Toaster.Toast<Data> {
 	return {
 		id: entry.id,
@@ -112,6 +137,8 @@ function toPublicToast<Data>(entry: Entry<Data>): Toaster.Toast<Data> {
 export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	#toasts = new Map<string, Entry<Data>>();
 	#defaultDuration: number;
+	/** Set by a queue-wide {@link Toaster.pause}, so a toast arriving under the pointer waits too. */
+	#paused = false;
 
 	/**
 	 * @param init Construction options; see {@link Toaster.Init}.
@@ -168,12 +195,12 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 			duration,
 			createdAt: now,
 			remaining: duration ?? 0,
-			startedAt: duration === null ? null : now,
+			startedAt: duration === null || this.#paused ? null : now,
 			timer: null,
 		};
 
 		this.#toasts.set(id, entry);
-		if (duration !== null) this.#schedule(entry, duration);
+		if (entry.startedAt !== null) this.#schedule(entry, entry.remaining);
 
 		this.dispatchEvent(new Event("toast"));
 		dispatchChange(this);
@@ -216,6 +243,40 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	}
 
 	/**
+	 * Shows one toast for a promise's whole life: `loading` with no timer, then
+	 * `success` or `error` patched onto the same toast, whose timer starts from
+	 * `options.duration` (or the default) once it settles.
+	 *
+	 * @param promise Work the toast reports on; its rejection is handled here.
+	 * @param states Payloads for the pending, fulfilled and rejected states.
+	 * @param options Id and the settled toast's duration.
+	 * @returns The id of the one toast that tracks the promise.
+	 * @example
+	 * toaster.promise(saveMonitor(), { loading: { title: "Saving monitor" }, success: { title: "Monitor saved" }, error: { title: "Couldn't save monitor. Try again." } })
+	 */
+	promise<Value>(
+		promise: Promise<Value>,
+		states: Toaster.PromiseStates<Data, Value>,
+		options: Toaster.AddOptions = {},
+	): string {
+		let id = this.add(states.loading, { id: options.id, duration: null });
+		let duration = options.duration === undefined ? this.#defaultDuration : options.duration;
+
+		promise.then(
+			(value) => {
+				let data = resolveState(states.success, value);
+				this.#settle(id, data, duration);
+			},
+			(reason: unknown) => {
+				let data = resolveState(states.error, reason);
+				this.#settle(id, data, duration);
+			},
+		);
+
+		return id;
+	}
+
+	/**
 	 * Removes one queued toast by id and clears its timer.
 	 *
 	 * @param id Id returned by {@link Toaster.add}.
@@ -243,8 +304,9 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 
 	/**
 	 * Pauses the auto-dismiss timer for one toast, or every toast when `id` is
-	 * omitted, recording how much time was left on each. Dispatches `"change"`
-	 * only when at least one running timer paused.
+	 * omitted, recording how much time was left on each; a queue-wide pause also
+	 * holds toasts added before the matching resume. Dispatches `"change"` only
+	 * when at least one running timer paused.
 	 *
 	 * @param id Toast to pause, or every toast when omitted.
 	 */
@@ -252,6 +314,7 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 		let changed = false;
 
 		if (id === undefined) {
+			this.#paused = true;
 			for (let entry of this.#toasts.values()) changed = this.#pauseEntry(entry) || changed;
 		} else {
 			let entry = this.#toasts.get(id);
@@ -272,6 +335,7 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 		let changed = false;
 
 		if (id === undefined) {
+			this.#paused = false;
 			for (let entry of this.#toasts.values()) changed = this.#resumeEntry(entry) || changed;
 		} else {
 			let entry = this.#toasts.get(id);
@@ -288,6 +352,27 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	dispose(): void {
 		for (let entry of this.#toasts.values()) this.#clearTimer(entry);
 		this.#toasts.clear();
+	}
+
+	/**
+	 * Patches a settled promise toast and starts its timer, keeping it paused
+	 * when the queue is paused (the pointer rests on the stack); a toast the
+	 * user already dismissed stays gone.
+	 */
+	#settle(id: string, data: Data, duration: number | null): void {
+		let entry = this.#toasts.get(id);
+		if (!entry) return;
+
+		entry.data = data;
+		entry.duration = duration;
+		entry.remaining = duration ?? 0;
+		entry.startedAt = null;
+		if (duration !== null && !this.#paused) {
+			entry.startedAt = Date.now();
+			this.#schedule(entry, duration);
+		}
+
+		dispatchChange(this);
 	}
 
 	/** Pauses one entry's timer, recording the time left. Returns `true` when it was running and is now paused. */
