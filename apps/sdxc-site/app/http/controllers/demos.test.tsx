@@ -70,6 +70,18 @@ describe("GET /demo", () => {
 		expect(body).not.toContain(">Open ");
 	});
 
+	test("draws every card's miniature hidden from assistive tech, leading with the flagship", async () => {
+		let body = await (await fetchApp("/demo")).text();
+		let count = (await listDemoLandings()).length + (await listDemoDocsSites()).length;
+		let miniatures = [...body.matchAll(/<div\b[^>]*data-slot="demo-miniature"[^>]*>/g)];
+
+		expect(miniatures).toHaveLength(count);
+		for (let [tag] of miniatures) expect(tag).toContain('aria-hidden="true"');
+		expect(body.indexOf('href="/demo/saas"')).toBeLessThan(body.indexOf('href="/demo/book"'));
+		expect(body.indexOf('href="/demo/book"')).toBeLessThan(body.indexOf('href="/demo/app"'));
+		expect(body).toMatch(/data-span="2"[^]*?href="\/demo\/saas"/);
+	});
+
 	test("carries one h1 and tells search engines to leave it out", async () => {
 		let body = await (await fetchApp("/demo")).text();
 

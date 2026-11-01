@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { fg, outline } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
@@ -19,21 +19,33 @@ import { Badge } from "@sdxc/ui";
 import { Feature } from "@sdxc/ui/landing";
 import { createAction } from "remix/router";
 
+import type { DemoSummary } from "~/resources/views/demos";
+
 import { withBundleCache } from "~/app/http/caching";
 import Hero from "~/resources/components/hero";
 import { ProseHeading, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
 import SiteHeader from "~/resources/components/site-header";
 import DocumentLayout from "~/resources/layouts/document";
-import { demoDocsHref, listDemoDocsSites } from "~/resources/views/demo-docs";
+import { demoDocsHref, findDemoDocsSite, listDemoDocsSlugs } from "~/resources/views/demo-docs";
+import DocsThumbnail from "~/resources/views/demo-docs/thumbnail";
 import { listDemoLandings } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The directive the gallery shares with every demo it lists. */
 const DEMO_ROBOTS = "noindex, nofollow";
 
+/**
+ * The flagship landings, in the order the bento leads with them; the first takes a whole row.
+ * A demo missing from the list follows them in slug order.
+ */
+const FLAGSHIP_LANDINGS = ["saas", "book"];
+
 export default createAction(routes.demos, async (ctx) => {
-	let [landings, docsSites] = await Promise.all([listDemoLandings(), listDemoDocsSites()]);
+	let [landings, docsSites] = await Promise.all([
+		listDemoLandings().then((demos) => [...demos].sort(byFlagship)),
+		Promise.all(listDemoDocsSlugs().map(findDemoDocsSite)),
+	]);
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -56,10 +68,12 @@ export default createAction(routes.demos, async (ctx) => {
 				</Hero>
 
 				<SectionBlock id="landings" title="Landing pages" tone="tinted">
-					<Feature.Grid columns={3}>
-						{landings.map((demo) => (
+					<Feature.Grid columns={2}>
+						{landings.map((demo, index) => (
 							<DemoCard
 								key={demo.slug}
+								span={index === 0 ? 2 : undefined}
+								thumbnail={demo.thumbnail()}
 								href={routes.demo.href({ slug: demo.slug })}
 								name={demo.title.split(" — ")[0] ?? demo.title}
 								kind={demo.kind}
@@ -72,16 +86,19 @@ export default createAction(routes.demos, async (ctx) => {
 
 				<SectionBlock id="docs" title="Docs sites">
 					<Feature.Grid columns={2}>
-						{docsSites.map((site) => (
-							<DemoCard
-								key={site.slug}
-								href={demoDocsHref(site.slug)()}
-								name={site.name}
-								kind={site.kind}
-								tagline={site.tagline}
-								artDirection={site.artDirection}
-							/>
-						))}
+						{docsSites.map((site, index) =>
+							site === null ? null : (
+								<DemoCard
+									key={site.name}
+									href={demoDocsHref(listDemoDocsSlugs()[index] ?? "")()}
+									name={site.name}
+									kind={site.kind}
+									tagline={site.tagline}
+									artDirection={site.artDirection}
+									thumbnail={<DocsThumbnail site={site} />}
+								/>
+							),
+						)}
 					</Feature.Grid>
 				</SectionBlock>
 			</main>
@@ -101,18 +118,23 @@ namespace DemoCard {
 		tagline: string;
 		/** The palette, type and shapes it commits to, in a few words. */
 		artDirection: string;
+		/** The demo in miniature, drawn in its own art direction above the card's text. */
+		thumbnail: RemixNode;
+		/** How many tracks the card takes in the bento, for a flagship demo. */
+		span?: 2;
 	}
 }
 
 /**
- * One demo's card, which as a whole opens the demo: the name is the link, stretched over
- * the card, so a screen reader announces the name alone while any press on the card follows it.
+ * One demo's card, which as a whole opens the demo: its miniature on top, then the name as
+ * the link, stretched over the card, so a screen reader announces the name alone.
  */
 function DemoCard(handle: Handle<DemoCard.Props>) {
 	return () => {
-		let { artDirection, href, kind, name, tagline } = handle.props;
+		let { artDirection, href, kind, name, span, tagline, thumbnail } = handle.props;
 		return (
 			<Feature
+				span={span}
 				mix={[
 					raw({ transition: "background-color 150ms" }),
 					when(
@@ -128,6 +150,7 @@ function DemoCard(handle: Handle<DemoCard.Props>) {
 					),
 				]}
 			>
+				{thumbnail}
 				<div mix={[hstack({ gap: 2, align: "center" }), raw({ flexWrap: "wrap" })]}>
 					<Feature.Title>
 						<a
@@ -150,4 +173,13 @@ function DemoCard(handle: Handle<DemoCard.Props>) {
 			</Feature>
 		);
 	};
+}
+
+/** Orders the flagship landings first, in {@link FLAGSHIP_LANDINGS} order, then the rest by slug. */
+function byFlagship(a: DemoSummary, b: DemoSummary): number {
+	let rank = (demo: DemoSummary) => {
+		let index = FLAGSHIP_LANDINGS.indexOf(demo.slug);
+		return index === -1 ? FLAGSHIP_LANDINGS.length : index;
+	};
+	return rank(a) - rank(b) || a.slug.localeCompare(b.slug);
 }

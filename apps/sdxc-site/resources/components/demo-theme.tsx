@@ -30,15 +30,19 @@ export type PaletteScale = readonly [
 	string,
 ];
 
+/** A demo's palettes and tokens, which its page and its gallery miniature are themed from. */
+export interface DemoPalette {
+	/** The brand scale, eleven `oklch()` values from 50 to 950. */
+	brand: PaletteScale;
+	/** The neutral scale, eleven values from 50 to 950; the site's neutrals when omitted. */
+	neutral?: PaletteScale;
+	/** Custom properties set last, over the palettes: faces, CTA radius, display max. */
+	tokens?: Record<`--${string}`, string>;
+}
+
 namespace DemoTheme {
 	/** A demo's palettes and tokens; the wrapper re-declares the semantic tokens over them. */
-	export interface Props {
-		/** The brand scale, eleven `oklch()` values from 50 to 950. */
-		brand: PaletteScale;
-		/** The neutral scale, eleven values from 50 to 950; the site's neutrals when omitted. */
-		neutral?: PaletteScale;
-		/** Custom properties set last, over the palettes: faces, CTA radius, display max. */
-		tokens?: Record<`--${string}`, string>;
+	export interface Props extends DemoPalette {
 		children: RemixNode;
 	}
 }
@@ -78,6 +82,32 @@ function paletteTokens(tone: "brand" | "neutral", scale: PaletteScale): Record<s
 }
 
 /**
+ * The custom properties a demo's palettes and tokens declare: both scales, the semantic
+ * roles over them, and the demo's own tokens last, so anything themed by them draws in the
+ * demo's art direction.
+ *
+ * @param theme The demo's palettes and tokens.
+ * @returns The properties to set on the element that scopes the demo.
+ */
+export function demoThemeTokens(theme: DemoPalette): Record<string, string> {
+	let { brand, neutral, tokens } = theme;
+	let neutralTokens = neutral
+		? {
+				...paletteTokens("neutral", neutral),
+				...semanticTokens("neutral"),
+				"--ui-bg": "var(--ui-neutral-bg-tint)",
+				"--ui-fg": "var(--ui-neutral-fg-emphasis)",
+			}
+		: {};
+	return {
+		...paletteTokens("brand", brand),
+		...semanticTokens("brand"),
+		...neutralTokens,
+		...tokens,
+	};
+}
+
+/**
  * Wraps a demo in its palettes and tokens and paints the page background from them, so
  * the demo fills the window as its own site would.
  *
@@ -86,15 +116,7 @@ function paletteTokens(tone: "brand" | "neutral", scale: PaletteScale): Record<s
  */
 export default function DemoTheme(handle: Handle<DemoTheme.Props>) {
 	return () => {
-		let { brand, children, neutral, tokens } = handle.props;
-		let neutralTokens = neutral
-			? {
-					...paletteTokens("neutral", neutral),
-					...semanticTokens("neutral"),
-					"--ui-bg": "var(--ui-neutral-bg-tint)",
-					"--ui-fg": "var(--ui-neutral-fg-emphasis)",
-				}
-			: {};
+		let { children } = handle.props;
 
 		return (
 			<div
@@ -102,10 +124,7 @@ export default function DemoTheme(handle: Handle<DemoTheme.Props>) {
 				mix={[
 					themeScope(),
 					raw({
-						...paletteTokens("brand", brand),
-						...semanticTokens("brand"),
-						...neutralTokens,
-						...tokens,
+						...demoThemeTokens(handle.props),
 						inlineSize: "100%",
 						minBlockSize: "100dvh",
 						backgroundColor: "var(--ui-bg)",

@@ -23,6 +23,8 @@ export interface DemoLanding {
 	tagline: string;
 	/** A few words on the palette, type and shapes the page commits to, for the gallery card. */
 	artDirection: string;
+	/** A small scene of the page in its own art direction, for the gallery card. */
+	thumbnail: () => RemixNode;
 	/** The page, from its own header to its own footer. */
 	render: () => RemixNode;
 }
@@ -64,6 +66,7 @@ export interface DemoSummary {
 	kind: string;
 	tagline: string;
 	artDirection: string;
+	thumbnail: () => RemixNode;
 }
 
 /**
@@ -77,8 +80,8 @@ export async function listDemoLandings(): Promise<DemoSummary[]> {
 		listDemoSlugs().map(async (slug) => {
 			let demo = await findDemoLanding(slug);
 			if (demo === null) return null;
-			let { title, description, kind, tagline, artDirection } = demo;
-			return { slug, title, description, kind, tagline, artDirection };
+			let { title, description, kind, tagline, artDirection, thumbnail } = demo;
+			return { slug, title, description, kind, tagline, artDirection, thumbnail };
 		}),
 	);
 	return demos.filter((demo): demo is DemoSummary => demo !== null);

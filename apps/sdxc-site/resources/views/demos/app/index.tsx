@@ -13,11 +13,13 @@ import { HeadingScope } from "@sdxc/ui";
 
 import type { DemoLanding } from "~/resources/views/demos";
 
+import DemoMiniature from "~/resources/components/demo-miniature";
 import DemoTheme from "~/resources/components/demo-theme";
 import { Download, Pricing, Questions, Stories } from "~/resources/views/demos/app/closing";
 import { Details, Platforms, Privacy, Tour } from "~/resources/views/demos/app/features";
 import { Hero } from "~/resources/views/demos/app/hero";
 import { SiteFooter, SiteHeader } from "~/resources/views/demos/app/site-chrome";
+import RooftreeThumbnail from "~/resources/views/demos/app/thumbnail";
 
 /** Rooftree's grape: a violet that stays saturated from the tint to the ink. */
 const GRAPE = [
@@ -98,6 +100,11 @@ export default {
 	artDirection: "Grape and sunshine, rounded and playful.",
 	description:
 		"Rooftree keeps a household's groceries, chores, calendar and meals on one encrypted list that syncs across iPhone, Android, Mac and Windows.",
+	thumbnail: () => (
+		<DemoMiniature brand={GRAPE} neutral={LAVENDER_GREY} tokens={TOKENS}>
+			<RooftreeThumbnail />
+		</DemoMiniature>
+	),
 	render: () => (
 		<DemoTheme brand={GRAPE} neutral={LAVENDER_GREY} tokens={TOKENS}>
 			<SiteHeader />

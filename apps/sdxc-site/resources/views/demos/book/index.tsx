@@ -10,6 +10,7 @@
 import type { PaletteScale } from "~/resources/components/demo-theme";
 import type { DemoLanding } from "~/resources/views/demos";
 
+import DemoMiniature from "~/resources/components/demo-miniature";
 import DemoTheme from "~/resources/components/demo-theme";
 import BookAuthor from "~/resources/views/demos/book/author";
 import BookClosing from "~/resources/views/demos/book/closing";
@@ -25,6 +26,7 @@ import BookPricing from "~/resources/views/demos/book/pricing";
 import BookProof from "~/resources/views/demos/book/proof";
 import BookSample from "~/resources/views/demos/book/sample";
 import BookTestimonials from "~/resources/views/demos/book/testimonials";
+import BookThumbnail from "~/resources/views/demos/book/thumbnail";
 import { SERIF } from "~/resources/views/demos/book/type";
 
 /** A printer's red ink, the one colour the page spends, deepest around the 600 step. */
@@ -104,6 +106,11 @@ export default {
 	artDirection: "Ivory paper, ink, one red, a serif.",
 	description:
 		"A book and video course on web typography for designers and engineers: measure, rhythm, scale and fonts, with CSS for every chapter.",
+	thumbnail: () => (
+		<DemoMiniature brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
+			<BookThumbnail />
+		</DemoMiniature>
+	),
 	render: () => (
 		<DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
 			<BookPaper>

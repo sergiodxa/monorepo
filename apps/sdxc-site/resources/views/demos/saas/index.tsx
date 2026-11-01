@@ -12,6 +12,7 @@ import { when } from "@sdxc/u/state";
 
 import type { DemoLanding } from "~/resources/views/demos";
 
+import DemoMiniature from "~/resources/components/demo-miniature";
 import DemoTheme from "~/resources/components/demo-theme";
 import { SaasFooter } from "~/resources/views/demos/saas/footer";
 import { SaasHeader } from "~/resources/views/demos/saas/header";
@@ -29,6 +30,7 @@ import {
 	TestimonialSection,
 	WorkflowBand,
 } from "~/resources/views/demos/saas/sections";
+import KeelThumbnail from "~/resources/views/demos/saas/thumbnail";
 
 /** Keel's brand ramp: a sea green at hue 168, on the site's lightness steps. */
 const BRAND = [
@@ -111,6 +113,11 @@ export default {
 	artDirection: "Slate, sea green, hairlines and mono.",
 	description:
 		"Keel meters every event your product emits, prices it on any plan and sends the invoice on the first of the month.",
+	thumbnail: () => (
+		<DemoMiniature brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
+			<KeelThumbnail />
+		</DemoMiniature>
+	),
 	render: () => (
 		<DemoTheme brand={BRAND} neutral={NEUTRAL} tokens={TOKENS}>
 			<SaasHeader />
