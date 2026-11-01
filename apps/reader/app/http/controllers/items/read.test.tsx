@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { createTestRouter, fetchRoute, ORIGIN, VIEWER } from "~/app/test/controller";
 import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
@@ -57,6 +57,24 @@ describe("POST /items/:itemId/read", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
+
+	test.each([["x-optimistic-toggle"], ["x-reader-in-place"]])(
+		"answers a mark sent in place with %s by a status rather than a redirect",
+		async (header) => {
+			store.markRead.mockResolvedValue(true);
+
+			let response = await createRouter(VIEWER).fetch(
+				new Request(new URL(routes.items.read.href({ itemId: ITEM_ID }), ORIGIN), {
+					method: "POST",
+					headers: { "content-type": "application/x-www-form-urlencoded", [header]: "1" },
+					body: new URLSearchParams({ read: "true", returnTo: "/reading" }),
+				}),
+			);
+
+			expect(response.status).toBe(204);
+			expect(store.markRead).toHaveBeenCalledWith(ITEM_ID, true);
+		},
+	);
 
 	test("marks the post unread", async () => {
 		let feedPath = routes.feed.href({ feed: "01J0FEED00000000000000000" });

@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { OPTIMISTIC_TOGGLE_HEADER } from "@sdxc/ui/app";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { AppRouter } from "~/app/test/controller";
@@ -18,7 +19,6 @@ import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, fetchRoute, ORIGIN, VIEWER } from "~/app/test/controller";
 import { createUserStoreDouble } from "~/app/test/store";
-import { SAVE_IN_PLACE_HEADER } from "~/resources/components/save-toggle";
 import routes from "~/routes/web";
 
 /** The post every request below acts on. */
@@ -51,7 +51,7 @@ function postInPlace(router: AppRouter, saved: string) {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				[SAVE_IN_PLACE_HEADER]: "1",
+				[OPTIMISTIC_TOGGLE_HEADER]: "1",
 			},
 			body: new URLSearchParams({ saved }),
 		}),

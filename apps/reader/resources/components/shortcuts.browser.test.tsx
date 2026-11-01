@@ -194,8 +194,8 @@ function sheet(): { title: string; rows: [string, string][] }[] {
 
 /** Every module the runtime is asked to load while these pages hydrate. */
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
-	"/resources/components/read-toggle.tsx": () => import("~/resources/components/read-toggle"),
-	"/resources/components/save-toggle.tsx": () => import("~/resources/components/save-toggle"),
+	"/@sdxc/ui/app/optimistic-toggle": () => import("@sdxc/ui/app/optimistic-toggle"),
+	"/resources/components/post-rows.tsx": () => import("~/resources/components/post-rows"),
 	"/@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"/resources/components/shortcuts.tsx": () => import("~/resources/components/shortcuts"),
 };
@@ -400,7 +400,7 @@ describe("the controls a key presses", () => {
 		held.resolve(new HttpResponse(null, { status: 204 }));
 	});
 
-	test("a refused `m` puts the mark back and the row wears the failure label", async () => {
+	test("a refused `m` puts the mark back and the row's mark says it failed", async () => {
 		worker.use(http.post("*/items/a/read", () => new HttpResponse(null, { status: 500 })));
 
 		document.body.innerHTML = await page(["a"]);
@@ -409,12 +409,14 @@ describe("the controls a key presses", () => {
 		rows()[0]!.focus();
 		await press("m");
 
+		/** The mark's own live region says so, which is what a screen reader hears. */
 		await vi.waitFor(() => {
-			let mark = rows()[0]!.querySelector('form[action$="/read"] button')!;
-			expect(mark.getAttribute("aria-label")).toBe(COPY.markFailed);
+			let form = rows()[0]!.querySelector('form[action$="/read"]')!;
+			expect(form.querySelector('[role="status"]')?.textContent).toBe(COPY.markFailed);
+			expect(form.querySelector("button")?.getAttribute("aria-pressed")).toBe("false");
 		});
 
-		expect(announced).toContain(COPY.markFailed);
+		expect(rows()[0]!.hasAttribute("data-read")).toBe(false);
 	});
 
 	test("`s` submits the focused row's save form rather than its read one", async () => {
@@ -778,5 +780,42 @@ describe("what a binding is allowed to reach for", () => {
 		 * navigation. No binding is exposed to that, because none of them resolves one.
 		 */
 		expect(source).not.toMatch(/getNamedFrame|frames\s*\.\s*get|handle\s*\.\s*navigate/);
+	});
+});
+
+describe("what a row does beyond its marks", () => {
+	test("following an unread post's title marks it read through its own mark", async () => {
+		let posted = vi.fn();
+		worker.use(
+			http.post("*/items/a/read", async ({ request }) => {
+				posted((await request.formData()).get("read"));
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		document.body.innerHTML = await page(["a"]);
+		await hydrate();
+
+		/** The test stays on this page rather than opening the publisher. */
+		document.addEventListener("click", (event) => event.preventDefault(), { once: true });
+		rows()[0]!.querySelector<HTMLAnchorElement>("a[data-post-title]")!.click();
+
+		await vi.waitFor(() => expect(rows()[0]!.hasAttribute("data-read")).toBe(true));
+		await vi.waitFor(() => expect(posted).toHaveBeenCalledWith("true"));
+		expect(rows()[0]!.querySelector("a[data-post-title]")!.hasAttribute("ping")).toBe(false);
+	});
+
+	test("a save refused for want of room says the shelf is full", async () => {
+		worker.use(http.post("*/items/a/save", () => new HttpResponse(null, { status: 409 })));
+
+		document.body.innerHTML = await page(["a"]);
+		await hydrate();
+
+		rows()[0]!.querySelector<HTMLButtonElement>('form[action$="/save"] button')!.click();
+
+		await vi.waitFor(() => {
+			let status = rows()[0]!.querySelector('form[action$="/save"] [role="status"]');
+			expect(status?.textContent).toBe(COPY.saveFull);
+		});
 	});
 });

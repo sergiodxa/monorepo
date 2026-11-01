@@ -17,7 +17,7 @@ import { chrome } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
-import { SAVE_IN_PLACE_HEADER, SHELF_FULL_STATUS } from "~/resources/components/save-toggle";
+import { movedInPlace, SHELF_FULL_STATUS } from "~/resources/components/post-marks";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
@@ -87,7 +87,7 @@ export default createAction(routes.items.save, {
 		 * the whole answer. A full shelf is told apart from a post that is not there, since
 		 * the row says a different thing for each.
 		 */
-		if (ctx.request.headers.has(SAVE_IN_PLACE_HEADER)) {
+		if (movedInPlace(ctx.request)) {
 			if (result.ok) return new Response(null, { status: MOVED_STATUS });
 
 			return new Response(null, { status: refusedStatus(result.reason) });

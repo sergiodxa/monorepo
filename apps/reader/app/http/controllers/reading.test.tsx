@@ -40,6 +40,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
 	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
+	"@sdxc/ui/app/optimistic-toggle": () => import("@sdxc/ui/app/optimistic-toggle"),
 };
 
 let store = createUserStoreDouble();
@@ -104,6 +105,11 @@ function tabsOf(body: string): string {
 	return start === -1 ? "" : body.slice(start, body.indexOf("</nav>", start));
 }
 
+/** The opening tag of a post's read mark, whose `data-pressed` says the post is read. */
+function readMark(list: string, id: string): string {
+	return new RegExp(`<form[^>]*action="/items/${id}/read"[^>]*>`).exec(list)?.[0] ?? "";
+}
+
 describe("what a flag takes off the queue", () => {
 	afterEach(() => restoreFlags());
 
@@ -147,10 +153,10 @@ describe("what a flag takes off the queue", () => {
 
 		let body = await get(routes.reading.index.href()).then((r) => r.text());
 
-		expect(body).not.toContain('"exportName":"SaveToggle"');
+		expect(body).not.toContain('action="/items/item-1/save"');
 
-		// The mark that moves a post through the queue is a different decision, and stays.
-		expect(body).toContain('"exportName":"ReadToggle"');
+		/** The mark that moves a post through the queue is a different decision, and stays. */
+		expect(body).toContain('action="/items/item-1/read"');
 	});
 
 	/** The sidebar stops naming a list nothing can put a post into. */
@@ -258,8 +264,8 @@ describe("GET /reading", () => {
 		 * they narrow the page to is what a row's mark says about the post beside it.
 		 */
 		let list = body.slice(body.indexOf("<ol"), body.indexOf("</ol>"));
-		expect(list.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
-		expect(list.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
+		expect(readMark(list, "item-1")).not.toContain("data-pressed");
+		expect(readMark(list, "item-2")).toContain("data-pressed");
 		expect(body).not.toContain("lucide-undo");
 	});
 
@@ -585,17 +591,17 @@ describe("paging into a frame", () => {
 		);
 
 		/**
-		 * The page defers its next page, carries both of a row's marks, and wears the chrome's
-		 * own keys, its sidebar's collapse switch and the ⌘K palette drawn with the sidebar's
-		 * feeds, so it mounts all six.
+		 * The page defers its next page, carries a row's marks and the island joining them to
+		 * the rows, and wears the chrome's own keys, its sidebar's collapse switch and the ⌘K
+		 * palette drawn with the sidebar's feeds, so it mounts all six.
 		 */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
 				"@sdxc/lazy-frame/ui",
 				"@sdxc/ui/app/app-shell-toggle",
 				"@sdxc/ui/app/command-palette",
-				"/assets/resources/components/read-toggle.js",
-				"/assets/resources/components/save-toggle.js",
+				"@sdxc/ui/app/optimistic-toggle",
+				"/assets/resources/components/post-rows.js",
 				"/assets/resources/components/shortcuts.js",
 			]),
 		);

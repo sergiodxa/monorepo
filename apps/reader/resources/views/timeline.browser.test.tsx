@@ -111,4 +111,19 @@ describe("Timeline row", () => {
 
 		expect(words.getBoundingClientRect().height).toBeLessThan(lineHeight * 1.5);
 	});
+
+	test("keeps the read and save marks whole however narrow the row", async () => {
+		await page.viewport(375, 812);
+		mountRow("343px");
+
+		let glyphs = Array.from(
+			mounted!.container.querySelectorAll<SVGElement>(
+				'[data-slot="optimistic-toggle"] [data-toggle-content]:not([hidden]) svg',
+			),
+		).filter((glyph) => glyph.checkVisibility());
+
+		expect(glyphs).toHaveLength(2);
+		for (let glyph of glyphs)
+			expect(glyph.getBoundingClientRect().width).toBeGreaterThanOrEqual(16);
+	});
 });

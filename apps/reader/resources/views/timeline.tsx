@@ -9,7 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { FlagIcon } from "@sdxc/icons";
+import {
+	BookmarkCheckIcon,
+	BookmarkIcon,
+	CircleCheckIcon,
+	CircleIcon,
+	FlagIcon,
+} from "@sdxc/icons";
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, colorMix, fg } from "@sdxc/u/color";
@@ -43,12 +49,13 @@ import {
 	weight,
 } from "@sdxc/u/typography";
 import { Text } from "@sdxc/ui";
+import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
 import { css } from "remix/component";
 
 import type { TagChips } from "~/resources/views/tag-chips";
 
-import ReadToggle from "~/resources/components/read-toggle";
-import SaveToggle from "~/resources/components/save-toggle";
+import { SHELF_FULL_STATUS } from "~/resources/components/post-marks";
+import PostRows from "~/resources/components/post-rows";
 import { POST_ROW_ATTRIBUTE } from "~/resources/components/shortcuts";
 import { BAND_FIELD_HEIGHT, listBleed, listRowGutter } from "~/resources/layouts/app-page";
 import OutboundMark from "~/resources/views/outbound-mark";
@@ -97,6 +104,15 @@ const TIME_COLUMN = "6rem";
  * script, and what stands there for the moment before the frame holding it mounts.
  */
 const LINK_ROOM = "0.75rem";
+
+/** Edge of a row's read and save marks. */
+const MARK_ICON_SIZE = 16;
+
+/**
+ * The box a mark's glyph sits in, sized and kept from shrinking. It is written as a style,
+ * since what stands in the kit's toggle reaches the browser as props, where a mix cannot.
+ */
+const MARK_BOX = "display: inline-flex; flex-shrink: 0; inline-size: 1rem; block-size: 1rem;";
 
 /**
  * Marks the row's own words and the link its title is, so the row can colour each of them
@@ -388,6 +404,8 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 		return (
 			<div>
+				<PostRows />
+
 				{/**
 				 * The way back up, held by a frame of its own so the page above arrives under the
 				 * reader as they scroll to it rather than waiting to be asked for.
@@ -455,14 +473,33 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 							]}
 						>
 							<article mix={[flex(), items("center"), gap(2)]}>
-								<ReadToggle
-									action={routes.items.read.href({ itemId: entry.id })}
-									isRead={entry.isRead}
-									returnTo={returnTo}
-									markRead={copy.markRead}
-									markUnread={copy.markUnread}
-									failed={copy.markFailed}
-								/>
+								<span mix={[shrink(0), flex()]}>
+									<OptimisticToggle
+										action={routes.items.read.href({ itemId: entry.id })}
+										name="read"
+										pressed={entry.isRead}
+										fields={{ returnTo }}
+										labels={{
+											label: copy.markRead,
+											pressed: copy.markUnread,
+											failed: copy.markFailed,
+										}}
+										/**
+										 * Coloured inline, since what stands in the island reaches the browser as
+										 * props: an unread post's ring carries the brand, a read one settles.
+										 */
+										pressedContent={
+											<span style={`${MARK_BOX} color: var(--ui-neutral-fg-muted);`}>
+												<CircleCheckIcon size={MARK_ICON_SIZE} />
+											</span>
+										}
+										unpressedContent={
+											<span style={`${MARK_BOX} color: var(--ui-brand-fg);`}>
+												<CircleIcon size={MARK_ICON_SIZE} />
+											</span>
+										}
+									/>
+								</span>
 
 								{/**
 								 * The title takes the line and the two quiet columns follow it, until the line is
@@ -604,15 +641,30 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								)}
 
 								{saving && (
-									<SaveToggle
-										action={routes.items.save.href({ itemId: entry.id })}
-										isSaved={entry.isSaved}
-										returnTo={returnTo}
-										save={copy.save}
-										unsave={copy.unsave}
-										failed={copy.saveFailed}
-										full={copy.saveFull}
-									/>
+									<span mix={[shrink(0), flex()]}>
+										<OptimisticToggle
+											action={routes.items.save.href({ itemId: entry.id })}
+											name="saved"
+											pressed={entry.isSaved}
+											fields={{ returnTo }}
+											labels={{
+												label: copy.save,
+												pressed: copy.unsave,
+												failed: copy.saveFailed,
+												refused: { [SHELF_FULL_STATUS]: copy.saveFull },
+											}}
+											pressedContent={
+												<span style={`${MARK_BOX} color: var(--ui-brand-fg);`}>
+													<BookmarkCheckIcon size={MARK_ICON_SIZE} />
+												</span>
+											}
+											unpressedContent={
+												<span style={`${MARK_BOX} color: var(--ui-neutral-fg-muted);`}>
+													<BookmarkIcon size={MARK_ICON_SIZE} />
+												</span>
+											}
+										/>
+									</span>
 								)}
 							</article>
 						</li>

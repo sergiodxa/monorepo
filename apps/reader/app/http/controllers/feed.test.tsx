@@ -125,6 +125,11 @@ beforeEach(() => {
 	feedStore.mockClear();
 });
 
+/** The opening tag of a post's read mark, whose `data-pressed` says the post is read. */
+function readMark(list: string, id: string): string {
+	return new RegExp(`<form[^>]*action="/items/${id}/read"[^>]*>`).exec(list)?.[0] ?? "";
+}
+
 describe("GET /reading/:feed", () => {
 	test("sends an anonymous visitor home", async () => {
 		let response = await get(routes.feed.href({ feed: FEED_ID }), null);
@@ -227,8 +232,8 @@ describe("GET /reading/:feed", () => {
 		 * too, which is the same thing said about every post at once.
 		 */
 		let list = body.slice(body.indexOf("<ol"), body.indexOf("</ol>"));
-		expect(list.match(/class="lucide lucide-circle"/g)).toHaveLength(1);
-		expect(list.match(/class="lucide lucide-circle-check"/g)).toHaveLength(1);
+		expect(readMark(list, "item-1")).not.toContain("data-pressed");
+		expect(readMark(list, "item-2")).toContain("data-pressed");
 	});
 
 	test("walks the feed with hrefs carrying the cursor it was given", async () => {

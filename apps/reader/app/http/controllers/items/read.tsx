@@ -17,7 +17,7 @@ import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
-import { READ_IN_PLACE_HEADER } from "~/resources/components/read-toggle";
+import { movedInPlace } from "~/resources/components/post-marks";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
@@ -75,7 +75,7 @@ export default createAction(routes.items.read, {
 		 * whole answer. Sending the page back would be sending the first page of a queue the
 		 * reader has scrolled several pages into, which is the thing this path exists to avoid.
 		 */
-		if (ctx.request.headers.has(READ_IN_PLACE_HEADER)) {
+		if (movedInPlace(ctx.request)) {
 			return new Response(null, { status: marked ? MOVED_STATUS : NOT_FOUND_STATUS });
 		}
 

@@ -10,6 +10,7 @@
 import type { I18n } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
+import { BookmarkCheckIcon, BookmarkIcon } from "@sdxc/icons";
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
 import { borderEdge, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
@@ -19,6 +20,7 @@ import { hover } from "@sdxc/u/state";
 import { font, leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app";
+import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -32,7 +34,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
 import { peekArticle, readArticle } from "~/app/services/article";
-import SaveToggle from "~/resources/components/save-toggle";
+import { SHELF_FULL_STATUS } from "~/resources/components/post-marks";
 import AppLayout from "~/resources/layouts/app";
 import Article from "~/resources/views/article";
 import OutboundMark from "~/resources/views/outbound-mark";
@@ -344,15 +346,30 @@ export default createAction(routes.post, {
 						 * what keeping holds said beside the mark, and go to the publisher's page.
 						 */}
 						<div mix={[flex(), flexWrap("wrap"), items("center"), gap(3)]}>
-							<SaveToggle
+							{/** The mark with its name beside it, since a post's page has the room to say it. */}
+							<OptimisticToggle
 								action={routes.items.save.href({ itemId: item.id })}
-								isSaved={item.savedAt !== null}
-								returnTo={ctx.url.pathname}
-								save={ctx.intl.t("timeline.save")}
-								unsave={ctx.intl.t("timeline.unsave")}
-								failed={ctx.intl.t("timeline.saveFailed")}
-								full={ctx.intl.t("timeline.saveFull")}
-								showLabel
+								name="saved"
+								pressed={item.savedAt !== null}
+								fields={{ returnTo: ctx.url.pathname }}
+								labels={{
+									label: ctx.intl.t("timeline.save"),
+									pressed: ctx.intl.t("timeline.unsave"),
+									failed: ctx.intl.t("timeline.saveFailed"),
+									refused: { [SHELF_FULL_STATUS]: ctx.intl.t("timeline.saveFull") },
+								}}
+								pressedContent={
+									<span style="display: inline-flex; align-items: center; gap: 0.375rem;">
+										<BookmarkCheckIcon size={16} />
+										{ctx.intl.t("timeline.unsave")}
+									</span>
+								}
+								unpressedContent={
+									<span style="display: inline-flex; align-items: center; gap: 0.375rem;">
+										<BookmarkIcon size={16} />
+										{ctx.intl.t("timeline.save")}
+									</span>
+								}
 							/>
 
 							{item.url && (
