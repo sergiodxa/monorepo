@@ -69,7 +69,7 @@ export namespace AutoRefresh {
 		options?: Option[];
 		/** Where choosing `value` leads; defaults to the URL with the parameter set (removed for the default). */
 		hrefFor?: (value: number) => string;
-		/** The named frame to reload; unset reloads the page through its top frame. */
+		/** The named frame to reload; unset reloads the page through its top frame. A name not on the page reloads nothing. */
 		frame?: string;
 		/** When the list on screen was fetched. Defaults to the time of rendering. */
 		refreshedAt?: Date;
@@ -196,10 +196,11 @@ export function AutoRefresh(handle: Handle<AutoRefresh.Props>) {
 export const AutoRefreshStatus: EntryComponent<AutoRefresh.StatusProps> = clientEntry(
 	"@sdxc/ui/app/auto-refresh#AutoRefreshStatus",
 	function AutoRefreshStatus(handle: Handle<AutoRefresh.StatusProps>) {
-		/** Reloads the named frame, or the page when none is named or found. */
+		/** Reloads the named frame, or the page when none is named; a named frame not on the page is left alone. */
 		let reload = async () => {
-			let target = handle.props.frame ? handle.frames.get(handle.props.frame) : undefined;
-			await (target ?? handle.frames.top).reload();
+			let name = handle.props.frame;
+			if (name === undefined) await handle.frames.top.reload();
+			else await handle.frames.get(name)?.reload();
 		};
 
 		return () => {
