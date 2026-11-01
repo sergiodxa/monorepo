@@ -13,6 +13,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { ArticleSchema } from "~/app/http/validators/cms/article";
 import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import { TAGS } from "~/app/initializers/cache";
@@ -49,6 +50,7 @@ export default createController(routes.cms.articles, {
 				title: article.meta.title,
 				slug: article.meta.slug,
 				preview: !isPublishedAt(article.published_at),
+				publishedAt: article.published_at,
 				teaser: article.meta.teaser ?? undefined,
 				excerpt: article.meta.excerpt ?? undefined,
 			}));
@@ -102,6 +104,7 @@ export default createController(routes.cms.articles, {
 				changedAt: new Date().toISOString(),
 			});
 
+			flashToast("Article created");
 			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -131,6 +134,7 @@ export default createController(routes.cms.articles, {
 			}
 
 			if (article) ctx.cache.purgeLater(TAGS.post("articles", article.meta.slug));
+			if (destroyed) flashToast("Article deleted");
 
 			return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 		},
@@ -228,6 +232,7 @@ export default createController(routes.cms.articles, {
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);
 			ctx.cache.purgeLater(...[...slugs].map((slug) => TAGS.post("articles", slug)));
+			flashToast("Article saved");
 
 			return redirect(routes.cms.articles.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},

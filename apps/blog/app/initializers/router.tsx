@@ -43,6 +43,7 @@ import activityPub from "~/app/http/middleware/activitypub";
 import activityPubRateLimit from "~/app/http/middleware/activitypub-rate-limit";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import cmsShell from "~/app/http/middleware/cms-shell";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
 import importMapHash from "~/app/http/middleware/import-map-hash";
@@ -143,7 +144,7 @@ let requireCMSAuth: Middleware = (ctx, next) => {
  * so the group's guard is one decision: a new CMS route that forgets it is visible at the
  * map call, and it answers before the controller it protects is ever loaded.
  */
-const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin];
+const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin, cmsShell];
 
 /** The same, for the routes that write, which invalidate the shared listing afterwards. */
 const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];

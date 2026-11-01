@@ -243,11 +243,9 @@ export async function seedDevContent(
 		);
 		let httpStatus = { ok: 200, gone: 404, moved: 301 }[bookmark.status];
 		let finalUrl = bookmark.status === "moved" ? `${bookmark.url}-v2` : bookmark.url;
-		await models.bookmarks.claim(created.id, bookmarkAddress(bookmark.url), {
-			status: bookmark.status,
-			httpStatus,
-			finalUrl,
-		});
+		let reading = { status: bookmark.status, httpStatus, finalUrl };
+		await models.bookmarks.claim(created.id, bookmarkAddress(bookmark.url), reading);
+		await models.bookmarks.record(created.id, reading);
 	}
 
 	unwrap(

@@ -30,6 +30,8 @@ export namespace ArticleViewModel {
 		title: string;
 		slug: string;
 		preview: boolean;
+		/** When it went or goes live; `null` for an article published on save. */
+		publishedAt: string | null;
 		teaser?: string;
 		excerpt?: string;
 	}
@@ -121,6 +123,8 @@ export class ArticleViewModel {
 			publicHref: routes.post.href({ postType: "articles", postSlug: article.slug }),
 			shareHref: this.shareHref(article),
 			preview: article.preview,
+			slug: article.slug,
+			publishedAt: article.publishedAt,
 			href: routes.cms.articles.edit.href({ id: article.id }),
 			deleteAction: routes.cms.articles.destroy.href({ id: article.id }),
 		}));

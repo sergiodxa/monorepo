@@ -1,23 +1,32 @@
 /**
- * View for the CMS dashboard: the bookmark quick add, then a grid of stat cards summarizing
- * counts of articles, likes, tutorials, and glossary terms, each linking to its management
- * section, inside the CMSLayout shell.
+ * View for the CMS dashboard: how much of each kind is on the site, the queues that need the
+ * author (Webmentions to moderate, bookmarks to review), the bookmark quick add, and the edge
+ * cache control, whose outcome comes back as a toast.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { bg, border, fg } from "@sdxc/u/color";
+import { ChevronRightIcon } from "@sdxc/icons";
+import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
+import { raw } from "@sdxc/u/general";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { divide } from "@sdxc/u/overflow";
 import { m, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, Card, Heading, Link, Modal } from "@sdxc/ui";
+import { tabularNums, text, weight } from "@sdxc/u/typography";
+import { Button, Confirm, LinkButton } from "@sdxc/ui";
+import { Empty } from "@sdxc/ui/app/empty";
+import { PageHeader } from "@sdxc/ui/app/page-header";
+import { StatCard } from "@sdxc/ui/app/stat-card";
+import { HeadingScope } from "@sdxc/ui/heading-scope";
 
+import type { CMSToast } from "~/app/http/toast";
+
+import { readCMSShell } from "~/app/http/middleware/cms-shell";
 import { CMSLayout } from "~/resources/layouts/cms";
 import { QuickBookmarkForm } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";
@@ -48,155 +57,206 @@ export namespace CMSDashboardView {
 	}
 }
 
-namespace StatCard {
-	export interface Props {
-		label: string;
-		value: number;
-		href: string;
-	}
+/** The confirm dialog the cache button opens. */
+const PURGE_DIALOG_ID = "purge-cache-dialog";
+
+/** What the toast says about each purge outcome; a failure never reads as a success. */
+const PURGE_TOASTS: Record<CMSDashboardView.PurgeResult, CMSToast> = {
+	ok: { color: "success", message: "Cache cleared. Pages rebuild on their next request." },
+	failed: {
+		color: "danger",
+		message: "The cache did not clear. Check the logs before relying on it.",
+	},
+};
+
+/** Props accepted by {@link Panel}. */
+interface PanelProps {
+	title: string;
+	description?: string;
+	children: RemixNode;
 }
 
-/**
- * Builds one stat card so every dashboard metric shares a single markup and
- * styling shape.
- *
- * @param handle Runtime handle carrying the card's caption, total, and link target.
- * @returns A renderer producing the card's markup.
- */
-function StatCard(handle: Handle<StatCard.Props>) {
+/** A titled card on the dashboard. */
+function Panel(handle: Handle<PanelProps>) {
 	return () => {
-		let { label, value, href } = handle.props;
-
+		let { title, description, children } = handle.props;
 		return (
-			<article
+			<section
 				mix={[
-					grid(),
-					gap(1),
-					p(3),
+					vstack({ gap: 3, align: "stretch" }),
+					p(4),
 					rounded("lg"),
-					border({ width: 1, color: "neutral" }),
-					bg("neutral.tint"),
+					border({ color: "neutral", width: 1 }),
+					raw({ backgroundColor: "var(--ui-bg)" }),
 				]}
 			>
-				<p mix={[m(0), text("sm"), fg("neutral")]}>{label}</p>
-				<p mix={[m(0), text("3xl"), weight("bold"), fg("neutral.emphasis")]}>{value}</p>
-				<Link href={href} color="brand" mix={[text("sm")]}>
-					View all
-				</Link>
-			</article>
+				<header mix={[vstack({ gap: 1, align: "stretch" })]}>
+					<h2 mix={[m(0), text("base"), weight("semibold"), fg("neutral.emphasis")]}>{title}</h2>
+					{description ? <p mix={[m(0), text("sm"), fg("neutral.muted")]}>{description}</p> : null}
+				</header>
+				{children}
+			</section>
+		);
+	};
+}
+
+/** Props accepted by {@link QueueRow}. */
+interface QueueRowProps {
+	href: string;
+	label: string;
+	count: number;
+}
+
+/** One queue waiting on the author: what it is, how many, and the list that resolves it. */
+function QueueRow(handle: Handle<QueueRowProps>) {
+	return () => {
+		let { href, label, count } = handle.props;
+		return (
+			<li>
+				<a
+					href={href}
+					mix={[
+						hstack({ gap: 3, align: "center" }),
+						raw({
+							padding: "0.625rem 0",
+							color: "inherit",
+							textDecoration: "none",
+							"&:hover": { color: "var(--ui-brand-fg)" },
+						}),
+					]}
+				>
+					<span mix={[raw({ flex: "1 1 auto" }), text("sm")]}>{label}</span>
+					<span mix={[tabularNums(), weight("semibold")]}>{count}</span>
+					<ChevronRightIcon size={16} aria-hidden="true" />
+				</a>
+			</li>
 		);
 	};
 }
 
 /**
- * Builds the CMS dashboard renderer with stat summary cards. The section
- * heading stays visually hidden, carrying the outline assistive technology
- * reads.
+ * The dashboard: one look says how much is published and whether anything waits on the
+ * author; the quick add and the cache control sit below as the two tools used from here.
  */
 export function CMSDashboardView() {
 	return ({ model, assets }: { model: CMSDashboardView.Props; assets: DocumentAssets }) => {
 		let { stats, purgeResult } = model;
-		let purgeDialogId = "purge-cache-dialog";
+		let shell = readCMSShell();
+		let queues = [
+			{
+				href: `${routes.cms.webmentions.index.href()}?status=pending`,
+				label: "Webmentions to moderate",
+				count: shell?.pendingWebmentions ?? 0,
+			},
+			{
+				href: `${routes.cms.bookmarks.index.href()}?status=review`,
+				label: "Bookmarks to review",
+				count: shell?.openBookmarkFlags ?? 0,
+			},
+		].filter((queue) => queue.count > 0);
 
 		return (
-			<CMSLayout assets={assets} title="Dashboard" activePath={routes.cms.dashboard.href()}>
-				<main mix={[grid(), gap(4)]}>
-					<Card mix={[p(4), grid(), gap(3)]}>
-						<Heading level={2}>Bookmark a page</Heading>
-						<QuickBookmarkForm />
-					</Card>
-
-					<Heading level={2} mix={[visuallyHidden()]}>
-						Post Stats
-					</Heading>
-					<div
-						mix={[
-							grid(),
-							gap(3),
-							gridTemplate({ columns: repeat("auto-fit", "minmax(10rem, 1fr)") }),
-						]}
-					>
-						<StatCard
-							label="Total Articles"
-							value={stats.articles}
-							href={routes.cms.articles.index.href()}
-						/>
-						<StatCard
-							label="Total Likes"
-							value={stats.likes}
-							href={routes.cms.bookmarks.index.href()}
-						/>
-						<StatCard
-							label="Total Tutorials"
-							value={stats.tutorials}
-							href={routes.cms.tutorials.index.href()}
-						/>
-						<StatCard
-							label="Total Glossary Terms"
-							value={stats.glossary}
-							href={routes.cms.glossary.index.href()}
-						/>
-					</div>
-
-					<Card mix={[p(4), grid(), gap(3)]}>
-						<Heading level={2}>Edge cache</Heading>
-
-						{purgeResult ? (
-							<p
-								role="status"
-								mix={[fg(purgeResult === "ok" ? "success" : "danger"), weight("medium")]}
+			<CMSLayout
+				assets={assets}
+				title="Dashboard"
+				activePath={routes.cms.dashboard.href()}
+				toast={purgeResult ? PURGE_TOASTS[purgeResult] : undefined}
+			>
+				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+					<PageHeader
+						title="Dashboard"
+						description="What's on the site and what's waiting on you."
+						primaryAction={
+							<LinkButton href={routes.cms.articles.new.href()} color="brand" size="sm">
+								New article
+							</LinkButton>
+						}
+					/>
+					<StatCard.Group variant="cards" aria-label="Posts on the site">
+						<StatCard href={routes.cms.articles.index.href()}>
+							<StatCard.Label>Articles</StatCard.Label>
+							<StatCard.Value>{stats.articles}</StatCard.Value>
+						</StatCard>
+						<StatCard href={routes.cms.tutorials.index.href()}>
+							<StatCard.Label>Tutorials</StatCard.Label>
+							<StatCard.Value>{stats.tutorials}</StatCard.Value>
+						</StatCard>
+						<StatCard href={routes.cms.bookmarks.index.href()}>
+							<StatCard.Label>Bookmarks</StatCard.Label>
+							<StatCard.Value>{stats.likes}</StatCard.Value>
+						</StatCard>
+						<StatCard href={routes.cms.glossary.index.href()}>
+							<StatCard.Label>Glossary terms</StatCard.Label>
+							<StatCard.Value>{stats.glossary}</StatCard.Value>
+						</StatCard>
+					</StatCard.Group>
+					<HeadingScope level={2}>
+						<div
+							mix={[
+								raw({
+									display: "grid",
+									gap: "1.5rem",
+									gridTemplateColumns: "minmax(0, 1fr)",
+									alignItems: "start",
+									"@container ui-app-content (min-width: 56rem)": {
+										gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)",
+									},
+								}),
+							]}
+						>
+							<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+								<Panel title="Needs attention">
+									{queues.length === 0 ? (
+										<Empty kind="cleared" size="compact">
+											<Empty.Title>All caught up</Empty.Title>
+											<Empty.Description>
+												No Webmentions to moderate and no bookmarks to review.
+											</Empty.Description>
+										</Empty>
+									) : (
+										<ul mix={[m(0), p(0), raw({ listStyle: "none" }), divide("block", "neutral")]}>
+											{queues.map((queue) => (
+												<QueueRow href={queue.href} label={queue.label} count={queue.count} />
+											))}
+										</ul>
+									)}
+								</Panel>
+								<Panel
+									title="Bookmark a page"
+									description="Paste a URL; the title and description are read from the page."
+								>
+									<QuickBookmarkForm />
+								</Panel>
+							</div>
+							<Panel
+								title="Edge cache"
+								description="Every write clears the pages it changed, and a deploy starts on an empty cache. Clear it by hand to rebuild every page without shipping a new version."
 							>
-								{purgeResult === "ok"
-									? "Cache cleared. Pages rebuild on their next request."
-									: "The cache did not clear. Check the logs before relying on it."}
-							</p>
-						) : null}
-
-						<p mix={[fg("neutral")]}>
-							Every write clears the pages it changed, and a deploy starts on an empty cache. Clear
-							it by hand to rebuild every page without shipping a new version.
-						</p>
-
-						<div>
-							<Button
-								type="button"
-								commandfor={purgeDialogId}
-								command="show-modal"
-								color="danger"
-								variant="outline"
-							>
-								Clear the cache
-							</Button>
-						</div>
-
-						<Modal id={purgeDialogId}>
-							<form
-								method={routes.cms.purgeCache.method}
-								action={routes.cms.purgeCache.href()}
-								mix={[grid(), gap(4)]}
-							>
-								<Modal.Description>
-									Clear every cached page? Each one rebuilds on its next request, so the site works
-									harder until the cache refills.
-								</Modal.Description>
-								<Modal.Footer>
-									<Button type="submit" color="danger">
-										Confirm clear
-									</Button>
+								<div>
 									<Button
 										type="button"
-										commandfor={purgeDialogId}
-										command="close"
-										color="neutral"
+										commandfor={PURGE_DIALOG_ID}
+										command="show-modal"
+										color="danger"
 										variant="outline"
+										size="sm"
 									>
-										Cancel
+										Clear the cache
 									</Button>
-								</Modal.Footer>
-							</form>
-						</Modal>
-					</Card>
-				</main>
+								</div>
+								<Confirm
+									id={PURGE_DIALOG_ID}
+									title="Clear every cached page?"
+									description="Each page rebuilds on its next request, so the site works harder until the cache refills."
+									confirmLabel="Confirm clear"
+									cancelLabel="Cancel"
+									color="danger"
+									form={{ action: routes.cms.purgeCache.href(), method: "post" }}
+								/>
+							</Panel>
+						</div>
+					</HeadingScope>
+				</div>
 			</CMSLayout>
 		);
 	};

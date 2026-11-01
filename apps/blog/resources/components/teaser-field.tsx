@@ -28,6 +28,8 @@ type TeaserFieldProps = {
 	teaser: string;
 	/** Why the last save was refused; empty after a save that went through. */
 	error: string;
+	/** The form the teaser submits with, when the field sits outside it. */
+	form?: string;
 };
 
 /**
@@ -80,6 +82,7 @@ export const TeaserField = clientEntry(
 					<Input
 						id={id}
 						name="teaser"
+						form={handle.props.form}
 						defaultValue={handle.props.teaser}
 						aria-describedby={describedBy}
 						aria-invalid={over || error ? "true" : undefined}
