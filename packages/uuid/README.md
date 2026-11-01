@@ -87,6 +87,8 @@ try {
 bunx @sdxc/uuid --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg uuid …` runs the same command line, using the version your project installs.
+
 `validate` reads the UUID from its argument, or stdin when it is `-` or absent, prints its version and, for v7, its creation time, and exits 1 when the value is invalid. `--json` prints the result as data.
 
 ```sh
