@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12",
 	"license": "MIT",
+	"bin": {
+		"sdxc-http-signatures": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -13,6 +16,7 @@
 	},
 	"dependencies": {
 		"@sdxc/cache": "workspace:*",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/digest-fields": "workspace:*",
 		"@sdxc/duration": "workspace:*",
@@ -20,6 +24,7 @@
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
-		"@sdxc/well-known": "workspace:*"
+		"@sdxc/well-known": "workspace:*",
+		"remix": "3.1.0"
 	}
 }

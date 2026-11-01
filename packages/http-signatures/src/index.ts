@@ -8,6 +8,7 @@
  */
 
 export type { HttpSignatureErrorCode } from "./errors.js";
+export type { ImportKeyOptions } from "./key.js";
 export type {
 	AcceptSignature,
 	AcceptSignatureParameters,
@@ -35,5 +36,6 @@ export {
 	stringifySignature,
 	stringifySignatureInput,
 } from "./fields.js";
+export { importSignatureKey } from "./key.js";
 export { sign } from "./sign.js";
 export { verify } from "./verify.js";

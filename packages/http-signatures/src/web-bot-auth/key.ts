@@ -16,7 +16,7 @@ import { failure, isFailure, success } from "@sdxc/result";
 import type { Algorithm } from "../types.js";
 
 import { HttpSignatureError } from "../errors.js";
-import { isAlgorithm } from "../lib/algorithms.js";
+import { IMPORT_PARAMS, isAlgorithm } from "../lib/algorithms.js";
 
 /** A signing key ready for `signWebBotAuth` and `signDirectoryResponse`. */
 export interface WebBotAuthKey {
@@ -57,17 +57,6 @@ export function algorithmOfJwk(jwk: DirectoryKey, declared?: string): Algorithm 
 	}
 	return "rsa-pss-sha512";
 }
-
-/** The Web Crypto import parameters for each algorithm. */
-const IMPORT_PARAMS: Record<
-	Algorithm,
-	AlgorithmIdentifier | RsaHashedImportParams | EcKeyImportParams
-> = {
-	"rsa-v1_5-sha256": { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-	"rsa-pss-sha512": { name: "RSA-PSS", hash: "SHA-512" },
-	"ecdsa-p256-sha256": { name: "ECDSA", namedCurve: "P-256" },
-	ed25519: { name: "Ed25519" },
-};
 
 /**
  * Imports a JWK through Web Crypto for one algorithm. JOSE-only members (`alg`, `use`,

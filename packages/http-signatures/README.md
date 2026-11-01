@@ -118,6 +118,10 @@ RFC 9421 signatures carry `created` and `keyid`, and the verifier's key decides 
 
 The draft-cavage `Signature` value (or `Authorization` after `Signature `) as a `CavageSignature`. Without `headers`, `verify` covers `(created)` when the signature has `created` and `date` otherwise.
 
+### `importSignatureKey(key, { usage, algorithm? }): Promise<Result<CryptoKey, HttpSignatureError>>`
+
+Imports PEM (`PRIVATE KEY` to sign, `PUBLIC KEY` to verify) or a JWK, as text or an object. The key's type picks the algorithm; an RSA key without a JWK `alg` imports for `rsa-v1_5-sha256` unless `algorithm` says otherwise.
+
 ### `HttpSignatureError`
 
 The failure every function answers with; `code` names the check:
@@ -341,6 +345,26 @@ let both = unwrap(
 
 let byProxy = unwrap(await verify(both, { key: lookupKey, maxAge: "1 minute", label: "proxy" }));
 byProxy.components; // ["@method", "@target-uri", '@query-param;name="q"', "date", 'signature;key="sig1"']
+```
+
+## Command line
+
+`sdxc-http-signatures` signs and verifies requests from a terminal, to debug a signature against a verifier. Keys are PEM or JWK, read from `--key-file` (or `-` for stdin) or `--key-env`, never from the command line. `--help` lists every flag.
+
+```sh
+bunx @sdxc/http-signatures --help
+```
+
+`sign` prints the headers signing wrote; `--curl` prints a curl command that sends the signed request, `--json` a report, and `--scheme draft-cavage` signs under draft-cavage-12.
+
+```sh
+bunx @sdxc/http-signatures sign POST https://example.com/inbox -H content-type:application/json --body-file note.json --key-file private.pem --key-id https://example.com/actor#main-key
+```
+
+`verify` reads a raw HTTP/1.1 request from a file or stdin and checks it against a key file or the key set at `--jwks`, picking the key whose `kid` is the `keyid`. It exits 1 naming the check that failed and what the signature covers; `--now` checks freshness at another time.
+
+```sh
+bunx @sdxc/http-signatures verify request.http --jwks https://bot.example.com/.well-known/http-message-signatures-directory
 ```
 
 ## Versioning

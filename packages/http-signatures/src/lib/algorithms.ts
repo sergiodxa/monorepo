@@ -23,6 +23,17 @@ const SIGN_PARAMS: Record<Algorithm, AlgorithmIdentifier | RsaPssParams | EcdsaP
 	ed25519: { name: "Ed25519" },
 };
 
+/** The Web Crypto import parameters for each algorithm. */
+export const IMPORT_PARAMS: Record<
+	Algorithm,
+	AlgorithmIdentifier | RsaHashedImportParams | EcKeyImportParams
+> = {
+	"rsa-v1_5-sha256": { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+	"rsa-pss-sha512": { name: "RSA-PSS", hash: "SHA-512" },
+	"ecdsa-p256-sha256": { name: "ECDSA", namedCurve: "P-256" },
+	ed25519: { name: "Ed25519" },
+};
+
 /** The RFC 9421 algorithm names, for narrowing a declared `alg`. */
 const ALGORITHMS = Object.keys(SIGN_PARAMS) as Algorithm[];
 
