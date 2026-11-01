@@ -3,20 +3,23 @@
  * call: an {@link AlertDialog} panel prefilled with a heading, an optional
  * supporting passage, and a cancel/confirm control pair, so a single
  * consequential decision needs no compound assembly of its own. The
- * confirming control defaults to the semantic danger tone, keeping an
- * irreversible action behind an explicit confirmation step in that tone.
+ * confirming control defaults to the semantic danger tone, and a
+ * type-to-confirm variant holds a big irreversible action until its name is typed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/component";
+import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { flex, flexCol, gap } from "@sdxc/u/layout";
+import { flex, flexCol, gap, vstack } from "@sdxc/u/layout";
+import { clientEntry, ref } from "remix/component";
 
 import type { Button } from "./button.js";
 
 import { AlertDialog } from "./alert-dialog.js";
+import { Input } from "./input.js";
+import { Label } from "./label.js";
 
 /** Semantic color role {@link Confirm} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Button.Color = "danger";
@@ -30,6 +33,12 @@ const DEFAULT_METHOD: NonNullable<Confirm.FormProps["method"]> = "post";
  * without this the header and footer would lose their spacing.
  */
 const PANEL_GAP = 6;
+
+/** Attribute marking the confirming control, which a type-to-confirm field enables on a match. */
+const ACTION_ATTRIBUTE = "data-confirm-action";
+
+/** Characters a `pattern` (compiled with the `v` flag) reads as syntax, escaped to match literally. */
+const PATTERN_SYNTAX = /[\\^$.*+?()[\]{}|/]/g;
 
 /**
  * Prop types for {@link Confirm}.
@@ -75,6 +84,20 @@ export namespace Confirm {
 	}
 
 	/**
+	 * The phrase a person types before a big irreversible action unlocks, such as
+	 * the team's name. Reserve it for deleting something large; on routine
+	 * confirms it reads as melodrama.
+	 */
+	export interface TypeToConfirm {
+		/** The exact text that unlocks the confirming control, compared case-sensitively. */
+		value: string;
+		/** The field's label, such as `Type "acme" to confirm`. */
+		label: RemixNode;
+		/** Name the typed text submits under in submit mode, so the server can check it again. */
+		name?: string;
+	}
+
+	/**
 	 * Props accepted by {@link Confirm}. `mix` styles the underlying
 	 * {@link AlertDialog} host directly; style the composed header, title,
 	 * description, footer, and controls individually through `parts` instead.
@@ -105,6 +128,11 @@ export namespace Confirm {
 		 * submits a real form instead.
 		 */
 		form?: FormProps;
+		/**
+		 * Holds the confirming control disabled until this phrase is typed. Without
+		 * script the field's `pattern` blocks the submission instead.
+		 */
+		typeToConfirm?: TypeToConfirm;
 		/** Per-part styling for this wrapper's internally composed elements. */
 		parts?: PartsProps;
 	}
@@ -112,8 +140,8 @@ export namespace Confirm {
 
 /**
  * Composes {@link AlertDialog} into a confirmation prompt, wiring title and
- * description ids to `aria-labelledby`/`aria-describedby`. Omit
- * {@link Confirm.Props.form} to close on confirm, or pass it to submit a real `<form>` instead.
+ * description ids to `aria-labelledby`/`aria-describedby`. Focus opens on Cancel, or
+ * on the phrase field with `typeToConfirm`; pass `form` to submit a real `<form>`.
  *
  * @param handle Runtime handle carrying the panel's props and this instance's stable identifier.
  * @returns The render function producing the confirmation prompt's markup.
@@ -142,6 +170,16 @@ export namespace Confirm {
  * 	cancelLabel={t("actions.cancel")}
  * 	form={{ action: revokeUrl, fields: <input type="hidden" name="csrf" value={token} /> }}
  * />
+ * @example
+ * <Confirm
+ * 	id="delete-team"
+ * 	title="Delete team?"
+ * 	description="Acme, its 12 monitors and their history are deleted."
+ * 	confirmLabel="Delete team"
+ * 	cancelLabel="Cancel"
+ * 	typeToConfirm={{ value: "acme", label: 'Type "acme" to confirm', name: "confirmation" }}
+ * 	form={{ action: "/teams/acme/delete" }}
+ * />
  */
 export function Confirm(handle: Handle<Confirm.Props>) {
 	return () => {
@@ -153,6 +191,7 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 			cancelLabel,
 			color,
 			form,
+			typeToConfirm,
 			"aria-labelledby": ariaLabelledByProp,
 			"aria-describedby": ariaDescribedByProp,
 			parts,
@@ -174,11 +213,25 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 						</AlertDialog.Description>
 					) : null}
 				</AlertDialog.Header>
+				{typeToConfirm ? (
+					<ConfirmPhrase
+						id={`${handle.id}-phrase`}
+						value={typeToConfirm.value}
+						label={typeToConfirm.label}
+						name={typeToConfirm.name}
+					/>
+				) : null}
 				<AlertDialog.Footer mix={parts?.footer}>
-					<AlertDialog.Cancel commandfor={id} mix={parts?.cancel}>
+					{/* oxlint-disable-next-line jsx-a11y/no-autofocus -- Focus inside an opened modal, where a destructive confirm starts on the safe choice. */}
+					<AlertDialog.Cancel
+						commandfor={id}
+						autofocus={typeToConfirm ? undefined : true}
+						mix={parts?.cancel}
+					>
 						{cancelLabel}
 					</AlertDialog.Cancel>
 					<AlertDialog.Action
+						data-confirm-action=""
 						type={form ? "submit" : undefined}
 						commandfor={form ? undefined : id}
 						color={resolvedColor}
@@ -214,3 +267,82 @@ export function Confirm(handle: Handle<Confirm.Props>) {
 		);
 	};
 }
+
+/**
+ * Props {@link ConfirmPhrase} serializes into the page for hydration, which is why they are
+ * a `type`: `SerializableProps` rejects an interface.
+ */
+export type ConfirmPhraseProps = {
+	/** The input's `id`, which its label points at. */
+	id: string;
+	/** The exact text that unlocks the confirming control. */
+	value: string;
+	label: RemixNode;
+	name?: string;
+};
+
+/**
+ * Turns a phrase into a `pattern` that matches only that phrase.
+ *
+ * @param value The phrase to match literally.
+ * @returns The phrase with every pattern syntax character escaped.
+ */
+function escapePattern(value: string): string {
+	return value.replace(PATTERN_SYNTAX, "\\$&");
+}
+
+/**
+ * Client island: the field a type-to-confirm prompt holds. It disables the dialog's
+ * confirming control until the typed text matches and clears itself when the dialog
+ * closes, so every opening starts locked; without script, `pattern` blocks the submit.
+ *
+ * @example
+ * <ConfirmPhrase id="delete-team-phrase" value="acme" label='Type "acme" to confirm' />
+ */
+export const ConfirmPhrase: EntryComponent<ConfirmPhraseProps> = clientEntry(
+	"@sdxc/ui/confirm#ConfirmPhrase",
+	function ConfirmPhrase(handle) {
+		let lock = ref((node, signal) => {
+			let input = node as HTMLInputElement;
+			let dialog = input.closest("dialog");
+			let action = dialog?.querySelector<HTMLButtonElement>(`[${ACTION_ATTRIBUTE}]`);
+
+			/** Enables the confirming control exactly while the field holds the phrase. */
+			function sync() {
+				if (action) action.disabled = input.value !== handle.props.value;
+			}
+
+			sync();
+			input.addEventListener("input", sync, { signal });
+			dialog?.addEventListener(
+				"close",
+				() => {
+					input.value = "";
+					sync();
+				},
+				{ signal },
+			);
+		});
+
+		return () => {
+			let { id, label, name, value } = handle.props;
+
+			return (
+				<div data-slot="confirm-phrase" mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+					<Label htmlFor={id}>{label}</Label>
+					{/* oxlint-disable-next-line jsx-a11y/no-autofocus -- Focus inside an opened modal, landing on the one field the decision needs. */}
+					<Input
+						id={id}
+						name={name}
+						required
+						autofocus
+						autocomplete="off"
+						spellcheck={false}
+						pattern={escapePattern(value)}
+						mix={[lock]}
+					/>
+				</div>
+			);
+		};
+	},
+);
