@@ -41,6 +41,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/ui/app/selection-bar": () => import("@sdxc/ui/app/selection-bar"),
 	"@sdxc/ui/app/settings-section": () => import("@sdxc/ui/app/settings-section"),
 	"@sdxc/ui/app/split-view": () => import("@sdxc/ui/app/split-view"),
+	"@sdxc/ui/app/status-strip": () => import("@sdxc/ui/app/status-strip"),
 	"@sdxc/ui/app/table": () => import("@sdxc/ui/app/table"),
 	"@sdxc/ui/app/toasts": () => import("@sdxc/ui/app/toasts"),
 	"@sdxc/ui/confirm": () => import("@sdxc/ui/confirm"),
