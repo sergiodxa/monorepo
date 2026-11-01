@@ -11,12 +11,12 @@ import { createHash, createHmac } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import type { Database } from "remix/data-table";
-
+import { createD1Database } from "@sdxc/cloudflare-mocks";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import * as JSONC from "@sdxc/jsonc";
 import { unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { createSqliteDatabase } from "remix/data-table/sqlite";
+import { Database } from "remix/data-table";
 
 /** The Durable Object namespace Miniflare stores every local D1 database under. */
 const NAMESPACE = "miniflare-D1DatabaseObject";
@@ -78,10 +78,13 @@ export const LOCAL_DATABASE_FILE = join(
 );
 
 /**
- * Opens the local database, creating the file where `bun dev` will find it when none exists yet.
- * Timestamps are written as epoch milliseconds, as the Worker's connection writes them.
+ * Opens the local database through the Worker's own D1 adapter, creating the file where `bun dev`
+ * will find it when none exists yet, so a command writes rows exactly as the Worker does:
+ * timestamps as epoch milliseconds and `c.json()` columns as JSON text.
  */
 export function openLocalDatabase(filename = LOCAL_DATABASE_FILE): Database {
 	if (filename !== ":memory:") mkdirSync(dirname(filename), { recursive: true });
-	return createSqliteDatabase({ filename }, { now: () => Date.now() });
+	return new Database(createD1DatabaseAdapter(createD1Database({ filename })), {
+		now: () => Date.now(),
+	});
 }
