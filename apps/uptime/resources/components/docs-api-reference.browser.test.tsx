@@ -7,12 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle, RemixNode } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { createTranslator } from "@sdxc/i18n";
+import { Typeset } from "@sdxc/ui";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
+
+import type { HandFieldRow } from "~/app/services/docs-api";
 
 import { apiReferenceComponents } from "~/resources/components/docs-api-reference";
 import en from "~/resources/locales/en";
@@ -104,5 +108,67 @@ describe("API endpoint layout", () => {
 
 		expect(code.top).toBeGreaterThanOrEqual(SCROLL_MARGIN - 1);
 		expect(code.top).toBeLessThan(SCROLL_MARGIN + 2);
+	});
+
+	test("lines a field card's labels and values up from row to row", async () => {
+		await page.viewport(414, 896);
+		let { t } = translate("en");
+		let Fields = apiReferenceComponents({ t, operations: new Map() }).fields as unknown as (
+			handle: Handle<{ rows: HandFieldRow[] }>,
+		) => () => RemixNode;
+		mounted = render(
+			<div style={{ inlineSize: "380px" }}>
+				<Typeset preset="docs">
+					<Fields
+						rows={[
+							{
+								name: "perPage",
+								type: "integer",
+								required: false,
+								description: "Results per page",
+							},
+						]}
+					/>
+				</Typeset>
+			</div>,
+		);
+
+		let type = mounted.$('td[data-cell="type"]');
+		let required = mounted.$('td[data-cell="required"]');
+		if (!type || !required) throw new Error("No stacked cells");
+
+		expect(type.getBoundingClientRect().width).toBeCloseTo(
+			required.getBoundingClientRect().width,
+			0,
+		);
+		expect(getComputedStyle(type).gridTemplateColumns).toBe(
+			getComputedStyle(required).gridTemplateColumns,
+		);
+	});
+
+	test("keeps a response its own height under a long request in the pinned column", async () => {
+		await page.viewport(1440, 600);
+		let { t } = translate("en");
+		let parts = apiReferenceComponents({ t, operations: new Map() });
+		let Endpoint = parts.endpoint!;
+		let Main = parts["endpoint-main"]!;
+		let Code = parts["endpoint-code"]!;
+		mounted = render(
+			<div style={{ inlineSize: "1100px", "--ui-docs-scroll-margin": "80px" }}>
+				<Endpoint>
+					<Main>
+						<div style={{ blockSize: "2000px" }} />
+					</Main>
+					<Code>
+						<pre style={{ blockSize: "400px" }}>request</pre>
+						<pre id="response" style={{ blockSize: "300px" }}>
+							response
+						</pre>
+					</Code>
+				</Endpoint>
+			</div>,
+		);
+
+		expect(rectOf(mounted, "#response").height).toBeGreaterThanOrEqual(299);
 	});
 });

@@ -24,6 +24,13 @@ import { CodeBlock, CodeTabs, CopyButton, Disclosure, PropsTable } from "@sdxc/u
 import type { FieldRow, OperationReference } from "~/app/http/openapi/reference";
 import type { HandFieldRow } from "~/app/services/docs-api";
 
+/**
+ * Lifts the type cell's wide-table width cap, so in a card every cell spans the card and
+ * the labels and values line up from row to row. Marked important to outrank the table's
+ * own layer.
+ */
+const STACKED_CELLS = when("& td[data-label]", raw({ maxInlineSize: "none !important" }));
+
 /** The container name an endpoint lays its columns out against. */
 const ENDPOINT_CONTAINER = "api-endpoint";
 
@@ -184,7 +191,11 @@ export function apiReferenceComponents(
 		);
 	}
 
-	/** The code column, held in view under the sticky header while the prose beside it scrolls. */
+	/**
+	 * The code column, held in view under the sticky header while the prose beside it scrolls.
+	 * Its blocks keep their own height and the column scrolls, so a response never shrinks
+	 * to a sliver beside a long request.
+	 */
 	function EndpointCode(handle: Handle<{ children?: RemixNode }>) {
 		return () => (
 			<div
@@ -201,6 +212,7 @@ export function apiReferenceComponents(
 							overscrollBehavior: "contain",
 						}),
 					]),
+					when("& > *", raw({ flexShrink: 0 })),
 					when("& pre", raw({ maxBlockSize: "28rem" })),
 				]}
 			>
@@ -344,6 +356,8 @@ export function apiReferenceComponents(
 							<Disclosure.Trigger>{t("docs.api.requestFields")}</Disclosure.Trigger>
 							<Disclosure.Panel>
 								<PropsTable
+									data-not-typeset=""
+									mix={STACKED_CELLS}
 									rows={tableRows(reference.request)}
 									labels={propsLabels}
 									aria-label={t("docs.api.requestFields")}
@@ -359,6 +373,8 @@ export function apiReferenceComponents(
 								</Disclosure.Trigger>
 								<Disclosure.Panel>
 									<PropsTable
+										data-not-typeset=""
+										mix={STACKED_CELLS}
 										rows={tableRows(response.fields)}
 										labels={propsLabels}
 										aria-label={t("docs.api.responseFields", { status: response.status })}
@@ -412,6 +428,8 @@ export function apiReferenceComponents(
 	function Fields(handle: Handle<{ rows: HandFieldRow[]; children?: RemixNode }>) {
 		return () => (
 			<PropsTable
+				data-not-typeset=""
+				mix={STACKED_CELLS}
 				rows={handle.props.rows.map((row) => ({
 					name: row.name,
 					type: row.type,
