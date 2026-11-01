@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Extract the article from a web page: bounded fetch, scoring and sanitizing",
 	"license": "MIT",
+	"bin": {
+		"sdxc-distill": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
@@ -11,9 +14,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/robots": "workspace:*"
+		"@sdxc/robots": "workspace:*",
+		"remix": "3.1.0"
 	}
 }

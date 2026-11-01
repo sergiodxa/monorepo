@@ -75,6 +75,23 @@ let summary = summaryFrom(html, "https://example.com/watch?v=1");
 
 A landing page or a video page has no article but still has a headline and a summary.
 
+## Command line
+
+```sh
+bunx @sdxc/distill extract https://example.com/post
+```
+
+`extract` prints the article from a URL, a saved page or stdin as sanitized HTML, readable text
+(`--format text`, headed by the title and byline) or every field (`--json`). It exits 1 when the
+page has no article or the site refused or ran out of time.
+
+```sh
+bunx @sdxc/distill extract page.html --url https://example.com/post --format text
+```
+
+`--url` is the address a saved page was served from, which its relative links resolve against.
+`bunx @sdxc/distill --help` lists every flag.
+
 ## API
 
 ### `distill(url: string, options: Distill.Options): Promise<Result<Distill.Retrieved, DistillError>>`
