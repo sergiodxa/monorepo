@@ -39,6 +39,7 @@ const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.tsx"]);
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"@sdxc/ui/app/app-shell-toggle": () => import("@sdxc/ui/app/app-shell-toggle"),
+	"@sdxc/ui/app/command-palette": () => import("@sdxc/ui/app/command-palette"),
 };
 
 let store = createUserStoreDouble();
@@ -585,12 +586,14 @@ describe("paging into a frame", () => {
 
 		/**
 		 * The page defers its next page, carries both of a row's marks, and wears the chrome's
-		 * own keys and its sidebar's collapse switch, so it mounts all five.
+		 * own keys, its sidebar's collapse switch and the ⌘K palette drawn with the sidebar's
+		 * feeds, so it mounts all six.
 		 */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
 				"@sdxc/lazy-frame/ui",
 				"@sdxc/ui/app/app-shell-toggle",
+				"@sdxc/ui/app/command-palette",
 				"/assets/resources/components/read-toggle.js",
 				"/assets/resources/components/save-toggle.js",
 				"/assets/resources/components/shortcuts.js",

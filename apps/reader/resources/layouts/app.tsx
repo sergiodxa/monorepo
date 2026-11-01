@@ -28,6 +28,7 @@ import { when } from "@sdxc/u/state";
 import { textDecoration, weight } from "@sdxc/u/typography";
 import { Avatar, Logo, Menu, SearchField } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
+import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 import { Frame } from "remix/component";
 
@@ -65,6 +66,9 @@ export const SIDEBAR_SEARCH_FIELD_ID = "app-search";
  * so one search has one name.
  */
 export const SEARCH_PARAM = "q";
+
+/** The `id` the ⌘K palette answers to, which the top bar's trigger names. */
+export const FEED_PALETTE_ID = "feed-palette";
 
 /** The `id` the viewer's own menu answers to, which its trigger names in `commandfor`. */
 const USER_MENU_ID = "user-menu";
@@ -125,6 +129,8 @@ export namespace AppLayout {
 		collapse: string;
 		settings: string;
 		help: string;
+		/** The words on the button that opens the ⌘K palette. */
+		paletteTrigger: string;
 		/** Names the trigger the viewer's own menu opens from, and the menu it opens. */
 		account: string;
 		logout: string;
@@ -450,6 +456,54 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 	};
 }
 
+export namespace FeedPalette {
+	/** One place the palette jumps to. */
+	export interface Place {
+		id: string;
+		title: string;
+		href: string;
+		icon?: RemixNode;
+	}
+
+	export interface Props {
+		labels: CommandPalette.Labels;
+		/** The app's own places, offered first: the queue, saved posts and the settings. */
+		places: { label: string; items: Place[] };
+		folders: { label: string; items: Place[] };
+		feeds: { label: string; items: Place[] };
+	}
+}
+
+/**
+ * The ⌘K palette that jumps to any feed, folder or place by name. It is drawn with the
+ * sidebar's feeds, from the same rows, so a reader following hundreds of feeds reaches one
+ * by typing a few letters of its name rather than by scrolling the rail.
+ */
+export function FeedPalette(handle: Handle<FeedPalette.Props>) {
+	return () => {
+		let { feeds, folders, labels, places } = handle.props;
+		let groups = [places, folders, feeds].filter((group) => group.items.length > 0);
+
+		return (
+			<CommandPalette id={FEED_PALETTE_ID} labels={labels} remember="reader:palette">
+				{groups.map((group) => (
+					<CommandPalette.Group key={group.label} heading={group.label}>
+						{group.items.map((place) => (
+							<CommandPalette.Item
+								key={place.id}
+								id={place.id}
+								title={place.title}
+								href={place.href}
+								icon={place.icon}
+							/>
+						))}
+					</CommandPalette.Group>
+				))}
+			</CommandPalette>
+		);
+	};
+}
+
 /**
  * The app's name at the head of the sidebar, in the serif the product is set in, which a
  * rail keeps as the mark alone.
@@ -658,6 +712,20 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								</SearchField>
 							</form>
 							<span mix={[raw({ marginInlineStart: "auto" })]} />
+							{/**
+							 * The way into the palette for a pointer, advertising the key that opens it from
+							 * anywhere. A phone has the sidebar sheet for the same trip, so it stays wide only.
+							 */}
+							<CommandPalette.Trigger
+								for={FEED_PALETTE_ID}
+								mix={[
+									hidden(),
+									media("(min-width: 48rem)", raw({ display: "inline-flex" })),
+									raw({ inlineSize: "auto" }),
+								]}
+							>
+								{nav.paletteTrigger}
+							</CommandPalette.Trigger>
 							<ShortcutsIsland
 								copy={shortcuts}
 								searchFieldId={SIDEBAR_SEARCH_FIELD_ID}

@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { BookmarkIcon, FolderIcon, InboxIcon, RssIcon, SettingsIcon } from "@sdxc/icons";
 import { currentLog } from "@sdxc/logger";
 import { createAction } from "remix/router";
 
@@ -23,7 +24,8 @@ import { queueUrl } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
 import frameFallback from "~/app/http/middleware/frame-fallback";
 import requireUser from "~/app/http/middleware/require-user";
-import { SidebarFeeds } from "~/resources/layouts/app";
+import { features } from "~/app/initializers/flags";
+import { FeedPalette, SidebarFeeds } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** GET /sidebar/feeds — the feeds under the sidebar's own heading. */
@@ -104,42 +106,112 @@ export default createAction(routes.sidebar.feeds, {
 			};
 		};
 
+		/** Every feed the rail draws, in the order it draws them, for the palette to search. */
+		/** Saved posts are a place only while keeping them is switched on, as in the rail. */
+		let saving = await ctx.flags.get(features.savedPosts);
+
+		let allFeeds = [...pinned, ...folders.flatMap((folder) => folder.feeds), ...unfiled, ...quiet];
+
+		let palette = (
+			<FeedPalette
+				labels={{
+					title: ctx.intl.t("nav.palette.title"),
+					open: ctx.intl.t("nav.palette.open"),
+					placeholder: ctx.intl.t("nav.palette.placeholder"),
+					recent: ctx.intl.t("nav.palette.recent"),
+					noResults: ctx.intl.t("nav.palette.noResults"),
+					noResultsHint: ctx.intl.t("nav.palette.noResultsHint"),
+					results: ctx.intl.t("nav.palette.results"),
+					back: ctx.intl.t("nav.palette.back"),
+					close: ctx.intl.t("nav.palette.close"),
+				}}
+				places={{
+					label: ctx.intl.t("nav.palette.places"),
+					items: [
+						{
+							id: "place-reading",
+							title: ctx.intl.t("nav.reading"),
+							href: routes.reading.index.href(),
+							icon: <InboxIcon size={16} />,
+						},
+						...(saving
+							? [
+									{
+										id: "place-saved",
+										title: ctx.intl.t("nav.saved"),
+										href: routes.saved.href(),
+										icon: <BookmarkIcon size={16} />,
+									},
+								]
+							: []),
+						{
+							id: "place-settings",
+							title: ctx.intl.t("nav.settings"),
+							href: routes.settings.href(),
+							icon: <SettingsIcon size={16} />,
+						},
+					],
+				}}
+				folders={{
+					label: ctx.intl.t("nav.folders"),
+					items: folders.map((folder) => ({
+						id: `folder-${folder.id}`,
+						title: folder.title,
+						href: routes.folder.href({ folder: folder.id }),
+						icon: <FolderIcon size={16} />,
+					})),
+				}}
+				feeds={{
+					label: ctx.intl.t("nav.feeds"),
+					items: allFeeds.map((feed) => ({
+						id: `feed-${feed.id}`,
+						title: feed.title,
+						href: routes.feed.href({ feed: feed.id }),
+						icon: <RssIcon size={16} />,
+					})),
+				}}
+			/>
+		);
+
 		return ctx.render(
-			<SidebarFeeds
-				searchesLabel={ctx.intl.t("searches.label")}
-				/**
-				 * Each one drawn as the queue's own address under the narrowing it holds, so
-				 * opening a saved search is the same controller, the same statement and the same
-				 * cursor grammar as typing the words it keeps.
-				 */
-				searches={searches.map((search) => ({
-					id: search.id,
-					label: search.name,
-					href: queueUrl({
-						query: search.query,
-						readState: search.readState,
-						feedId: search.feedId,
-					}),
-				}))}
-				pinned={toBand(ctx.intl.t("nav.pinned"), pinned)}
-				quiet={toBand(ctx.intl.t("nav.quiet"), quiet)}
-				currentPath={currentPath}
-				label={ctx.intl.t("nav.feeds")}
-				listLabel={ctx.intl.t("nav.subscriptions")}
-				foldersLabel={ctx.intl.t("nav.folders")}
-				folders={folders.map((folder) => ({
-					id: folder.id,
-					title: folder.title,
-					href: routes.folder.href({ folder: folder.id }),
-					feeds: folder.feeds.map(toRow),
-					unreadCount: folder.unreadCount,
-					unreadLabel:
-						folder.unreadCount > 0
-							? ctx.intl.t("feeds.unread", { count: folder.unreadCount })
-							: null,
-				}))}
-				feeds={unfiled.map(toRow)}
-			/>,
+			<>
+				{palette}
+				<SidebarFeeds
+					searchesLabel={ctx.intl.t("searches.label")}
+					/**
+					 * Each one drawn as the queue's own address under the narrowing it holds, so
+					 * opening a saved search is the same controller, the same statement and the same
+					 * cursor grammar as typing the words it keeps.
+					 */
+					searches={searches.map((search) => ({
+						id: search.id,
+						label: search.name,
+						href: queueUrl({
+							query: search.query,
+							readState: search.readState,
+							feedId: search.feedId,
+						}),
+					}))}
+					pinned={toBand(ctx.intl.t("nav.pinned"), pinned)}
+					quiet={toBand(ctx.intl.t("nav.quiet"), quiet)}
+					currentPath={currentPath}
+					label={ctx.intl.t("nav.feeds")}
+					listLabel={ctx.intl.t("nav.subscriptions")}
+					foldersLabel={ctx.intl.t("nav.folders")}
+					folders={folders.map((folder) => ({
+						id: folder.id,
+						title: folder.title,
+						href: routes.folder.href({ folder: folder.id }),
+						feeds: folder.feeds.map(toRow),
+						unreadCount: folder.unreadCount,
+						unreadLabel:
+							folder.unreadCount > 0
+								? ctx.intl.t("feeds.unread", { count: folder.unreadCount })
+								: null,
+					}))}
+					feeds={unfiled.map(toRow)}
+				/>
+			</>,
 		);
 	},
 });

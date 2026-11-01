@@ -82,6 +82,8 @@ export namespace Shortcuts {
 		nextFeed: string;
 		previousFeed: string;
 		search: string;
+		/** The ⌘K palette, which jumps to any feed or folder by name. */
+		goTo: string;
 		help: string;
 	};
 
@@ -357,6 +359,7 @@ export const Shortcuts = clientEntry(
 				["J", copy.keys.nextFeed],
 				["K", copy.keys.previousFeed],
 				["/", copy.keys.search],
+				["⌘ K", copy.keys.goTo],
 				["?", copy.keys.help],
 			];
 

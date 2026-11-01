@@ -559,6 +559,7 @@ describe("the way a reader finds out the keys exist", () => {
 				nextFeed: "Next feed",
 				previousFeed: "Previous feed",
 				search: "Search your posts",
+				goTo: "Go to a feed or folder",
 				help: "Show these shortcuts",
 			},
 		};

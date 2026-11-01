@@ -149,6 +149,20 @@ export default {
 		collapse: "Contraer la barra lateral",
 		help: "Ayuda",
 		folders: "Carpetas",
+		/** The ⌘K palette that jumps to any feed, folder or place in the app. */
+		palette: {
+			title: "Ir a",
+			open: "Ir a un feed o una carpeta",
+			trigger: "Ir a…",
+			placeholder: "Busca un feed, una carpeta o una página…",
+			recent: "Recientes",
+			noResults: "Nada coincide",
+			noResultsHint: "Busca entre tus entradas desde el cuadro de arriba.",
+			results: "\\{count\\} resultados",
+			back: "Atrás",
+			close: "Cerrar",
+			places: "Lugares",
+		},
 	},
 
 	/** The box the sidebar searches every followed feed's posts from. */
@@ -172,6 +186,7 @@ export default {
 			nextFeed: "Fuente siguiente",
 			previousFeed: "Fuente anterior",
 			search: "Busca en tus entradas",
+			goTo: "Ir a un feed o una carpeta",
 			help: "Mostrar estos atajos",
 		},
 	},
@@ -643,6 +658,7 @@ export default {
 		notEntitled:
 			"Los filtros forman parte de un plan de pago. Nada de lo que sigues o has leído cambia.",
 		empty: "Todavía no tienes filtros.",
+		yours: "Tus filtros",
 		/** Una regla, leída como la frase que es. */
 		sentence: "Cuando el {$field} de una entrada contiene «{$value}», {$action}.",
 		scope: {
@@ -800,6 +816,30 @@ export default {
 		neverRefreshed: "Aún sin revisar",
 
 		/**
+		 * The settings area's section nav: short names for each section of this page, and the
+		 * Filters page beside it, grouped by what a reader came to change.
+		 */
+		nav: {
+			label: "Preferencias",
+			back: "Preferencias",
+			account: "Cuenta",
+			reading: "Lectura",
+			data: "Tus datos",
+			plan: "Plan",
+			appearance: "Apariencia",
+			notifications: "Notificaciones",
+			checking: "Revisión",
+			filters: "Filtros",
+			agents: "Agentes",
+			transfer: "Importar y exportar",
+		},
+
+		/** Row labels of the transfer section, whose own copy lives with the feeds. */
+		data: {
+			export: "Exportar",
+		},
+
+		/**
 		 * What the reader may change about how their pages look, which is everything this app
 		 * offers on the subject: a scheme and a reading face.
 		 */
@@ -851,6 +891,7 @@ export default {
 			includes:
 				"De pago además lee los artículos en el sitio, ejecuta tus filtros, crea carpetas y etiquetas, y responde a un agente por el Model Context Protocol.",
 			usage: "Sigues {$feeds} feeds y tienes {$saved} entradas guardadas.",
+			usageLabel: "Uso",
 			upgrade: "Cambiar a {$plan}",
 			manage: "Gestionar la facturación",
 			/**
@@ -897,6 +938,7 @@ export default {
 		},
 
 		mint: {
+			legend: "Token nuevo",
 			name: "¿Para qué es?",
 			placeholder: "Asistente del portátil",
 			scope: "Qué puede hacer",

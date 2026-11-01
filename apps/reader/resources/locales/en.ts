@@ -59,6 +59,20 @@ export default {
 		collapse: "Collapse sidebar",
 		help: "Help",
 		folders: "Folders",
+		/** The ⌘K palette that jumps to any feed, folder or place in the app. */
+		palette: {
+			title: "Go to",
+			open: "Go to a feed or folder",
+			trigger: "Go to…",
+			placeholder: "Find a feed, folder or page…",
+			recent: "Recent",
+			noResults: "Nothing matches",
+			noResultsHint: "Search your posts from the box at the top instead.",
+			results: "\\{count\\} results",
+			back: "Back",
+			close: "Close",
+			places: "Places",
+		},
 	},
 
 	/** The box the sidebar searches every followed feed's posts from. */
@@ -82,6 +96,7 @@ export default {
 			nextFeed: "Next feed",
 			previousFeed: "Previous feed",
 			search: "Search your posts",
+			goTo: "Go to a feed or folder",
 			help: "Show these shortcuts",
 		},
 	},
@@ -551,6 +566,7 @@ export default {
 		/** Said to a reader whose plan runs no filters, which deletes none they have. */
 		notEntitled: "Filters are part of a paid plan. Nothing you follow or have read changes.",
 		empty: "You have no filters yet.",
+		yours: "Your filters",
 		/** One rule, read back as the sentence it is. */
 		sentence: "When the {$field} of a post contains “{$value}”, {$action} it.",
 		scope: {
@@ -706,6 +722,30 @@ export default {
 		neverRefreshed: "Not checked yet",
 
 		/**
+		 * The settings area's section nav: short names for each section of this page, and the
+		 * Filters page beside it, grouped by what a reader came to change.
+		 */
+		nav: {
+			label: "Settings",
+			back: "Settings",
+			account: "Account",
+			reading: "Reading",
+			data: "Your data",
+			plan: "Plan",
+			appearance: "Appearance",
+			notifications: "Notifications",
+			checking: "Checking",
+			filters: "Filters",
+			agents: "Agents",
+			transfer: "Import and export",
+		},
+
+		/** Row labels of the transfer section, whose own copy lives with the feeds. */
+		data: {
+			export: "Export",
+		},
+
+		/**
 		 * What the reader may change about how their pages look, which is everything this app
 		 * offers on the subject: a scheme and a reading face.
 		 */
@@ -762,6 +802,7 @@ export default {
 			includes:
 				"Paid also reads articles in place, runs your filters, makes folders and labels, and answers an agent through the Model Context Protocol.",
 			usage: "You follow {$feeds} feeds and have saved {$saved} posts.",
+			usageLabel: "Usage",
 			upgrade: "Move to {$plan}",
 			manage: "Manage billing",
 			/**
@@ -896,6 +937,7 @@ export default {
 		},
 
 		mint: {
+			legend: "New token",
 			name: "What is this for?",
 			placeholder: "Laptop assistant",
 			scope: "What it may do",
