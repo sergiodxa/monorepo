@@ -8,7 +8,7 @@
 
 import type { Handle } from "remix/component";
 
-import { FeatureBand } from "@sdxc/ui/patterns";
+import { FeatureBand } from "@sdxc/ui/landing";
 
 import type { BookCopy } from "~/resources/content/books";
 

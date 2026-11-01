@@ -18,9 +18,9 @@ import { at, media } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, text, tracking, weight } from "@sdxc/u/typography";
-import { Link, LinkButton, MarketingHeader, MarketingSection, Typeset } from "@sdxc/ui";
-import { ClosingCta } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { Link, LinkButton, Typeset } from "@sdxc/ui";
+import { ClosingCta, LandingHeader, LandingSection } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 export namespace ChapterView {
 	export interface Props {
@@ -120,9 +120,9 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 
 		return (
 			<main>
-				<MarketingSection id="chapter" level={1} spacing="compact">
+				<LandingSection id="chapter" level={1} spacing="compact">
 					<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-						<MarketingHeader
+						<LandingHeader
 							eyebrow={`Free chapter · ${bookTitle}`}
 							description={
 								<>
@@ -130,17 +130,17 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 									{download && <>The EPUB works on Kindle, Kobo, Apple Books or any reading app.</>}
 								</>
 							}
-							mix={[raw({ "--ui-marketing-header-end": "0" })]}
+							mix={[raw({ "--ui-landing-header-end": "0" })]}
 						>
 							{title}
-						</MarketingHeader>
+						</LandingHeader>
 						{download && (
 							<div mix={[vstack({ gap: 2, align: "start" })]}>
 								<LinkButton
 									href={download}
 									download={filename}
 									variant="surface"
-									mix={[marketingCtaChrome()]}
+									mix={[landingCtaChrome()]}
 								>
 									<DownloadIcon aria-hidden="true" />
 									Download the EPUB
@@ -149,9 +149,9 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 							</div>
 						)}
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
-				<MarketingSection ruled spacing="compact" aria-label={title}>
+				<LandingSection ruled spacing="compact" aria-label={title}>
 					<div mix={[raw({ containerType: "inline-size", containerName: CONTAINER })]}>
 						<div
 							mix={[
@@ -174,7 +174,7 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 								mix={[
 									combine([
 										raw({
-											borderBlock: "1px solid var(--ui-marketing-hairline)",
+											borderBlock: "1px solid var(--ui-landing-hairline)",
 											paddingBlock: "1rem",
 										}),
 										at("lg", CONTAINER, raw({ display: "none" })),
@@ -205,7 +205,7 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 												flexDirection: "column",
 												gap: "1rem",
 												paddingBlockStart: "1rem",
-												borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+												borderBlockStart: "1px solid var(--ui-landing-hairline)",
 											}),
 										),
 									]),
@@ -237,7 +237,7 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 							</Typeset>
 						</div>
 					</div>
-				</MarketingSection>
+				</LandingSection>
 
 				<ClosingCta
 					tone="tinted"
@@ -246,7 +246,7 @@ export default function ChapterView(handle: Handle<ChapterView.Props>) {
 					description="Every chapter, the example app and the community, for one payment."
 					actions={
 						<>
-							<LinkButton href={pricing} color="brand" mix={[marketingCtaChrome()]}>
+							<LinkButton href={pricing} color="brand" mix={[landingCtaChrome()]}>
 								See the packages
 							</LinkButton>
 							{download && (

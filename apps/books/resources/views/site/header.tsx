@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { SiteHeader } from "@sdxc/ui/patterns";
+import { SiteHeader } from "@sdxc/ui/landing";
 
 import Wordmark from "~/resources/views/site/wordmark";
 

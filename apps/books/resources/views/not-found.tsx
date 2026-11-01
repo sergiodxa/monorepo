@@ -10,8 +10,8 @@ import type { Handle } from "remix/component";
 
 import { weight } from "@sdxc/u/typography";
 import { CtaGroup, Link, LinkButton } from "@sdxc/ui";
-import { FeatureBand } from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { FeatureBand } from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { BookCopy } from "~/resources/content/books";
 
@@ -49,7 +49,7 @@ export default function NotFoundView(handle: Handle<NotFoundView.Props>) {
 					media={<Cover />}
 				>
 					<CtaGroup>
-						<LinkButton href={landing} color="brand" mix={[marketingCtaChrome()]}>
+						<LinkButton href={landing} color="brand" mix={[landingCtaChrome()]}>
 							See the book
 						</LinkButton>
 						<Link href={home} color="neutral" mix={[weight("medium")]}>

@@ -14,8 +14,8 @@ import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { font, text, tracking } from "@sdxc/u/typography";
-import { CheckList, CheckRow, FeatureBand } from "@sdxc/ui/patterns";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { CheckList, CheckRow, FeatureBand } from "@sdxc/ui/landing";
+import { landingSurface } from "@sdxc/ui/styles";
 
 import type { BookCopy } from "~/resources/content/books";
 
@@ -42,7 +42,7 @@ function PackageSheet(handle: Handle<{ pkg: BookCopy.Package }>) {
 				role="img"
 				aria-label={`What the ${pkg.name} includes`}
 				mix={[
-					marketingSurface(),
+					landingSurface(),
 					p(8),
 					vstack({ gap: 5, align: "stretch" }),
 					raw({ maxInlineSize: "28rem", marginInline: "auto", inlineSize: "100%" }),

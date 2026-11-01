@@ -16,7 +16,7 @@ import { at } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { pretty, text } from "@sdxc/u/typography";
 import { Button, TextField } from "@sdxc/ui";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 export namespace EmailForm {
 	export interface Props {
@@ -79,7 +79,7 @@ export default function EmailForm(handle: Handle<EmailForm.Props>) {
 					<Button
 						type="submit"
 						color="brand"
-						mix={[marketingCtaChrome(), at("sm", raw({ marginBlockStart: "1.375rem" }))]}
+						mix={[landingCtaChrome(), at("sm", raw({ marginBlockStart: "1.375rem" }))]}
 					>
 						{submitLabel}
 					</Button>

@@ -14,7 +14,7 @@ import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
 import { font, leading, text, tracking } from "@sdxc/u/typography";
-import { marketingSurface } from "@sdxc/ui/styles";
+import { landingSurface } from "@sdxc/ui/styles";
 
 import type { BookCopy } from "~/resources/content/books";
 
@@ -33,7 +33,7 @@ export default function SamplePage(handle: Handle<{ page: BookCopy.SamplePage }>
 			<article
 				aria-label={`The first page of “${page.title}”`}
 				mix={[
-					marketingSurface(),
+					landingSurface(),
 					p(8),
 					vstack({ gap: 6, align: "stretch" }),
 					raw({ maxInlineSize: "30rem", marginInline: "auto", inlineSize: "100%" }),

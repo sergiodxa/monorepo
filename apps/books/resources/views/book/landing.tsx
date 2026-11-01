@@ -17,7 +17,7 @@ import { at } from "@sdxc/u/responsive";
 import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Accordion, Badge, Link, LinkButton, MarketingHeader, MarketingSection } from "@sdxc/ui";
+import { Accordion, Badge, Link, LinkButton } from "@sdxc/ui";
 import {
 	AuthorBand,
 	CheckRow,
@@ -26,11 +26,13 @@ import {
 	Curriculum,
 	FaqBand,
 	FeatureBand,
+	LandingHeader,
 	LandingHero,
+	LandingSection,
 	PricingBand,
 	SequenceDiagram,
-} from "@sdxc/ui/patterns";
-import { marketingCtaChrome } from "@sdxc/ui/styles";
+} from "@sdxc/ui/landing";
+import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import type { Book } from "~/config/books";
 import type { Product } from "~/config/products";
@@ -99,7 +101,7 @@ function Price(handle: Handle<{ price: PriceView }>) {
 function Actions(handle: Handle<{ from: string; sample: boolean }>) {
 	return () => (
 		<>
-			<LinkButton href="#pricing" color="brand" mix={[marketingCtaChrome()]}>
+			<LinkButton href="#pricing" color="brand" mix={[landingCtaChrome()]}>
 				Buy the book — from {handle.props.from}
 			</LinkButton>
 			{handle.props.sample && (
@@ -122,7 +124,7 @@ function QuoteLine(handle: Handle<{ quote: BookCopy.Quote }>) {
 					hstack({ gap: 4, align: "start" }),
 					raw({
 						paddingBlockStart: "1.25rem",
-						borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+						borderBlockStart: "1px solid var(--ui-landing-hairline)",
 						maxInlineSize: "34rem",
 					}),
 				]}
@@ -202,7 +204,7 @@ function Contents(handle: Handle<{ copy: BookCopy }>) {
 		let { contents } = handle.props.copy;
 
 		return (
-			<MarketingSection id="contents" ruled>
+			<LandingSection id="contents" ruled>
 				<div mix={[raw({ containerType: "inline-size", containerName: CONTENTS_CONTAINER })]}>
 					<div
 						mix={[
@@ -221,12 +223,12 @@ function Contents(handle: Handle<{ copy: BookCopy }>) {
 							]),
 						]}
 					>
-						<MarketingHeader
+						<LandingHeader
 							eyebrow="Contents"
 							description={contents.description}
 							mix={[
 								combine([
-									raw({ "--ui-marketing-header-end": "0" }),
+									raw({ "--ui-landing-header-end": "0" }),
 									at(
 										"lg",
 										CONTENTS_CONTAINER,
@@ -236,7 +238,7 @@ function Contents(handle: Handle<{ copy: BookCopy }>) {
 							]}
 						>
 							{contents.title}
-						</MarketingHeader>
+						</LandingHeader>
 						<Curriculum layout="stack">
 							{contents.parts.map((part) => (
 								<Curriculum.Part
@@ -257,7 +259,7 @@ function Contents(handle: Handle<{ copy: BookCopy }>) {
 						</Curriculum>
 					</div>
 				</div>
-			</MarketingSection>
+			</LandingSection>
 		);
 	};
 }
@@ -382,13 +384,13 @@ function Author(handle: Handle<{ copy: BookCopy }>) {
 							p(0),
 							raw({
 								listStyle: "none",
-								borderBlockStart: "1px solid var(--ui-marketing-hairline)",
+								borderBlockStart: "1px solid var(--ui-landing-hairline)",
 							}),
 							when(
 								"& > li",
 								raw({
 									paddingBlock: "0.75rem",
-									borderBlockEnd: "1px solid var(--ui-marketing-hairline)",
+									borderBlockEnd: "1px solid var(--ui-landing-hairline)",
 								}),
 							),
 							fg("neutral"),
@@ -463,7 +465,7 @@ function Pricing(handle: Handle<BookLanding.Props>) {
 										href={href}
 										color={featured ? "brand" : "neutral"}
 										variant={featured ? undefined : "surface"}
-										mix={[marketingCtaChrome()]}
+										mix={[landingCtaChrome()]}
 									>
 										{pkg.action}
 									</LinkButton>

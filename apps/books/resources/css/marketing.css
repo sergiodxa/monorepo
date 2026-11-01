@@ -17,64 +17,64 @@
 		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
 		monospace;
 	--ui-font-display: var(--ui-font-serif);
-	--ui-marketing-display-weight: 400;
-	--ui-marketing-display-tracking: -0.02em;
-	--ui-marketing-display-max: 4.5rem;
-	--ui-marketing-chapter-tracking: -0.015em;
-	--ui-marketing-chapter-leading: 1.08;
-	--ui-marketing-lead-size: 1.1875rem;
+	--ui-landing-display-weight: 400;
+	--ui-landing-display-tracking: -0.02em;
+	--ui-landing-display-max: 4.5rem;
+	--ui-landing-chapter-tracking: -0.015em;
+	--ui-landing-chapter-leading: 1.08;
+	--ui-landing-lead-size: 1.1875rem;
 
-	--ui-marketing-cta-radius: 0;
-	--ui-marketing-cta-weight: 500;
+	--ui-landing-cta-radius: 0;
+	--ui-landing-cta-weight: 500;
 	--ui-button-radius: 0;
 	--ui-radius-xs: 0;
 	--ui-radius-sm: 0;
 	--ui-radius-md: 0;
 	--ui-radius-lg: 0;
 	--ui-radius-xl: 0;
-	--ui-marketing-radius-surface: 0;
-	--ui-marketing-radius-frame: 0;
-	--ui-marketing-card-radius-outer: 0;
-	--ui-marketing-band-radius: 0;
-	--ui-marketing-plan-radius: 0;
-	--ui-marketing-plan-lift: 0 0 #0000;
+	--ui-landing-radius-surface: 0;
+	--ui-landing-radius-frame: 0;
+	--ui-landing-card-radius-outer: 0;
+	--ui-landing-band-radius: 0;
+	--ui-landing-plan-radius: 0;
+	--ui-landing-plan-lift: 0 0 #0000;
 
-	--ui-marketing-eyebrow-font: var(--ui-font-serif);
-	--ui-marketing-eyebrow-weight: 500;
-	--ui-marketing-eyebrow-transform: uppercase;
-	--ui-marketing-eyebrow-tracking: 0.16em;
-	--ui-marketing-eyebrow-color: var(--ui-brand-fg);
+	--ui-landing-eyebrow-font: var(--ui-font-serif);
+	--ui-landing-eyebrow-weight: 500;
+	--ui-landing-eyebrow-transform: uppercase;
+	--ui-landing-eyebrow-tracking: 0.16em;
+	--ui-landing-eyebrow-color: var(--ui-brand-fg);
 
 	/* Bands are flat paper: a grey tint with no brand glow, one step off the page in dark. */
-	--ui-marketing-band-glow: none;
-	--ui-marketing-band-tint: var(--ui-color-neutral-100);
-	--ui-marketing-band-tint-dark: var(--ui-color-neutral-900);
+	--ui-landing-band-glow: none;
+	--ui-landing-band-tint: var(--ui-color-neutral-100);
+	--ui-landing-band-tint-dark: var(--ui-color-neutral-900);
 
 	/* Rules are ink at 16%, strong enough to read as print; surfaces stay the paper colour. */
-	--ui-marketing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 16%, transparent);
+	--ui-landing-hairline: color-mix(in oklch, var(--ui-neutral-fg-emphasis) 16%, transparent);
 	--ui-surface-raised: var(--ui-bg);
-	--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
-	--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-surface: 0 0 0 1px var(--ui-landing-hairline);
+	--ui-shadow-stage: 0 0 0 1px var(--ui-landing-hairline);
 	--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
 	--ui-shadow-float: none;
-	--ui-image-outline: var(--ui-marketing-hairline);
+	--ui-image-outline: var(--ui-landing-hairline);
 }
 
 /* Dark mode keeps the printed look: paper-white rules at 16% on React Router's ink. */
 .dark {
-	--ui-marketing-hairline: color-mix(in oklch, white 16%, transparent);
+	--ui-landing-hairline: color-mix(in oklch, white 16%, transparent);
 	--ui-surface-raised: var(--ui-bg);
-	--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
-	--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+	--ui-shadow-surface: 0 0 0 1px var(--ui-landing-hairline);
+	--ui-shadow-stage: 0 0 0 1px var(--ui-landing-hairline);
 	--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
 }
 
 @media (prefers-color-scheme: dark) {
 	.system {
-		--ui-marketing-hairline: color-mix(in oklch, white 16%, transparent);
+		--ui-landing-hairline: color-mix(in oklch, white 16%, transparent);
 		--ui-surface-raised: var(--ui-bg);
-		--ui-shadow-surface: 0 0 0 1px var(--ui-marketing-hairline);
-		--ui-shadow-stage: 0 0 0 1px var(--ui-marketing-hairline);
+		--ui-shadow-surface: 0 0 0 1px var(--ui-landing-hairline);
+		--ui-shadow-stage: 0 0 0 1px var(--ui-landing-hairline);
 		--ui-shadow-control: inset 0 0 0 1px var(--ui-neutral-border-strong);
 	}
 }

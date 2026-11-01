@@ -10,7 +10,7 @@ import type { Handle } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
 import { m } from "@sdxc/u/size";
-import { SiteFooter } from "@sdxc/ui/patterns";
+import { SiteFooter } from "@sdxc/ui/landing";
 
 import Wordmark from "~/resources/views/site/wordmark";
 
