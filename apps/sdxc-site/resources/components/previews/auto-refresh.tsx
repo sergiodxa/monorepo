@@ -21,7 +21,7 @@ const CODE = `<AutoRefresh
 		{ value: 60, label: "1m" },
 		{ value: 300, label: "5m" },
 	]}
-	labels={{ trigger: "Auto-refresh", updated: "Updated" }}
+	labels={{ trigger: "Auto-refresh", updated: "Updated {time}" }}
 />`;
 
 /** What the preview registry reads: the source to show, and the markup to draw. */
@@ -42,7 +42,7 @@ export default {
 			]}
 			locale="en-US"
 			timeZone="UTC"
-			labels={{ trigger: "Auto-refresh", updated: "Updated" }}
+			labels={{ trigger: "Auto-refresh", updated: "Updated {time}" }}
 		/>
 	),
 };
