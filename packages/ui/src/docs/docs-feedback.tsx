@@ -64,6 +64,16 @@ export namespace DocsFeedback {
 		labels: Labels;
 		/** @default "idle" */
 		state?: State;
+		/**
+		 * The named frame the vote reloads (`data-rmx-target`), so a page that renders this
+		 * block inside `<Frame name>` swaps in the thank-you without reloading the page.
+		 */
+		frame?: string;
+		/**
+		 * `"manual"` keeps the reader where they are when the vote's response renders, instead
+		 * of the scroll reset a navigation does by default (`data-rmx-reset-scroll`).
+		 */
+		resetScroll?: "manual" | "after-transition";
 	}
 }
 
@@ -76,10 +86,12 @@ export namespace DocsFeedback {
  * @returns The render function producing the block's markup.
  * @example
  * <DocsFeedback action="/docs/feedback" page="/docs/alerts" state={sent ? "sent" : "idle"} labels={labels} />
+ * @example
+ * <DocsFeedback frame="feedback" resetScroll="manual" action="/docs/feedback" page="/docs/alerts" labels={labels} />
  */
 export function DocsFeedback(handle: Handle<DocsFeedback.Props>) {
 	return () => {
-		let { action, page, labels, state, mix, ...rest } = handle.props;
+		let { action, page, labels, state, frame, resetScroll, mix, ...rest } = handle.props;
 		let isSent = state === "sent";
 		let questionId = `${handle.id}-question`;
 
@@ -101,6 +113,8 @@ export function DocsFeedback(handle: Handle<DocsFeedback.Props>) {
 					<form
 						method="post"
 						action={action}
+						data-rmx-target={frame}
+						data-rmx-reset-scroll={resetScroll}
 						data-slot="docs-feedback-form"
 						mix={[vstack({ gap: 3, align: "stretch" })]}
 					>

@@ -165,4 +165,26 @@ describe("DocsFeedback", () => {
 		await userEvent.click(choice(host, "yes"));
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
 	});
+
+	test("aims the vote at a named frame and keeps the scroll when asked", () => {
+		let host = mount(
+			<DocsFeedback
+				action="/docs/feedback"
+				page="/docs/alerts"
+				labels={LABELS}
+				frame="feedback"
+				resetScroll="manual"
+			/>,
+		);
+		let form = host.querySelector("form")!;
+		expect(form.getAttribute("data-rmx-target")).toBe("feedback");
+		expect(form.getAttribute("data-rmx-reset-scroll")).toBe("manual");
+	});
+
+	test("leaves the form a plain navigation without them", () => {
+		let host = mount(<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />);
+		let form = host.querySelector("form")!;
+		expect(form.hasAttribute("data-rmx-target")).toBe(false);
+		expect(form.hasAttribute("data-rmx-reset-scroll")).toBe(false);
+	});
 });
