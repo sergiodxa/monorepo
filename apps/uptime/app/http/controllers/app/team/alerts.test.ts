@@ -236,6 +236,6 @@ describe("alerts", () => {
 		expect(body).toContain("Homepage Alert");
 		expect(body).toContain("Homepage");
 		expect(body).toContain("No");
-		expect(body).toContain("15m");
+		expect(body).toContain("15 min");
 	});
 });

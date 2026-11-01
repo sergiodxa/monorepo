@@ -1,26 +1,32 @@
 /**
  * Tests the alert create/update/delete actions: successful create/update/delete
- * mutate `alerts` and redirect to the list; validation failure redirects without
- * mutating anything; the per-team alert cap and each action's team-scoped
+ * mutate `alerts` and redirect to the list; a refused create or update renders its form
+ * again with the posted values, mutating nothing; the per-team alert cap and each action's team-scoped
  * not-found guard are covered directly.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RemixNode } from "remix/component";
 
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
-import { createRouter, type Middleware } from "remix/router";
+import { renderWith } from "remix/middleware/render";
+import { createRouter, type Middleware, type RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { useMailServerDns } from "~/app/test/mail-servers";
 import { alerts, dnsMonitors, memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -40,15 +46,32 @@ let { intl } = createTranslator({
 })();
 
 /**
- * Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`,
- * plus the translator in place of the language middleware.
+ * Installs `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer directly, standing
+ * in for `requireUser`/`requireTeam`, plus the translator in place of the language middleware,
+ * so a refused submission can render its form page again.
  */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
-		(ctx as unknown as { team: SelectTeam }).team = team;
-		(ctx as unknown as { membership: SelectMembership }).membership = membership;
+		ctx.team = team;
+		ctx.membership = membership;
+		ctx.teams = [team];
 		ctx.intl = intl;
+		ctx.set(Auth, {
+			ok: true,
+			identity: { id: membership.subject_id, name: "Ada", email: "ada@acme.com", avatar: "" },
+			method: "test",
+		});
 		return next();
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -71,7 +94,11 @@ async function postAlertAction(
 	 * routes without losing type-checking elsewhere.
 	 */
 	(router.map as (target: unknown, handler: unknown) => void)(route, {
-		middleware: [teamContextMiddleware(team, membership)],
+		middleware: [
+			teamContextMiddleware(team, membership),
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 		handler: action,
 	});
 
@@ -230,9 +257,10 @@ describe("POST /actions/:team/create-alert", () => {
 			},
 		);
 
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.alerts.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="https://hooks.slack.example/services/T000/B000/XXXX"');
+		expect(body).toContain("Enter a Slack incoming webhook URL, on hooks.slack.com.");
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
@@ -251,10 +279,10 @@ describe("POST /actions/:team/create-alert", () => {
 			emailAlertBody({ email_to: "ops@nomail.example" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.alerts.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="ops@nomail.example"');
+		expect(body).toContain("nomail.example does not accept email.");
 		expect(await db.findOne(alerts, { where: { team_id: team.id } })).toBeNull();
 	});
 
@@ -276,7 +304,11 @@ describe("POST /actions/:team/create-alert", () => {
 		expect(dns.asked).toEqual([]);
 	});
 
-	test("rejects a blank name and redirects to the new-alert form without creating a row", async () => {
+	/**
+	 * A refused save renders the form again with everything typed, so fixing one field never
+	 * means typing the rest twice.
+	 */
+	test("renders the new-alert form again with the posted values and the name's issue", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -287,13 +319,16 @@ describe("POST /actions/:team/create-alert", () => {
 			team,
 			membership,
 			db,
-			emailAlertBody({ name: "" }),
+			emailAlertBody({ name: "", email_subject_prefix: "[ops]", cooldown_minutes: "15" }),
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.alerts.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="ops@example.com"');
+		expect(body).toContain('value="[ops]"');
+		expect(body).toContain('value="15"');
+		expect(body).toContain("Give the alert a name of up to 255 characters.");
+		expect(body).toContain(`action="${routes.actions.alert.create.href({ team: team.slug })}"`);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
@@ -311,7 +346,10 @@ describe("POST /actions/:team/create-alert", () => {
 			emailAlertBody({ email_to: "not-an-email" }),
 		);
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="not-an-email"');
+		expect(body).toContain("Enter the email address to send alerts to.");
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
@@ -397,9 +435,9 @@ describe("POST /actions/:team/create-alert", () => {
 				emailAlertBody({ scope }),
 			);
 
-			expect(response.status).toBe(303);
-			expect(response.headers.get("Location")).toBe(
-				routes.app.team.alerts.new.href({ team: team.slug }),
+			expect(response.status).toBe(400);
+			expect(await response.text()).toContain(
+				"Pick a scope from the list. The monitor this one named is gone.",
 			);
 		}
 
@@ -546,7 +584,7 @@ describe("POST /actions/:team/update-alert", () => {
 		expect(unchanged?.name).toBe("Someone else's alert");
 	});
 
-	test("rejects a blank name and redirects without mutating the alert", async () => {
+	test("renders the edit form again with the posted values, without mutating the alert", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
@@ -570,10 +608,14 @@ describe("POST /actions/:team/update-alert", () => {
 			team,
 			membership,
 			db,
-			emailAlertBody({ alert_id: alert.id, name: "" }),
+			emailAlertBody({ alert_id: alert.id, name: "", email_to: "new@example.com" }),
 		);
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="new@example.com"');
+		expect(body).toContain(`value="${alert.id}"`);
+		expect(body).toContain("Give the alert a name of up to 255 characters.");
 		let unchanged = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(unchanged?.name).toBe("Original");
 	});

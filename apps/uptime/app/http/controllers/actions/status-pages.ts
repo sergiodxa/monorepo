@@ -1,7 +1,7 @@
 /**
- * Form actions for status-page create/update/delete. Each follows the validate →
- * mutate → flash → redirect pattern; create/update also curate the five attached
- * monitor-type id lists after saving the page's own fields.
+ * Form actions for status-page create/update/delete. A refused create or update renders its
+ * form again with every posted value and an issue beside each field to fix, answered as 400;
+ * create/update also curate the five attached monitor-type id lists after saving the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +14,9 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+
+import { translateIssues } from "~/app/http/validators/form-submission";
 import {
 	CreateStatusPageSchema,
 	StatusPageIdSchema,
@@ -21,19 +24,50 @@ import {
 } from "~/app/http/validators/status-page";
 import routes from "~/routes/web";
 
+/** The fields the form can flag; an issue elsewhere reads as the form's own. */
+const ISSUE_FIELDS = new Set(["name", "slug", "title"]);
+
+/** The submission as the form page renders it again, each schema issue in the page's own words. */
+function pageSubmission(
+	t: (key: string) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	return {
+		values,
+		issues: translateIssues(issues, (field) =>
+			field !== undefined && ISSUE_FIELDS.has(field)
+				? { field, message: t(`page.statusPages.form.issues.${field}`) }
+				: { field: undefined, message: t("page.statusPages.form.issues.generic") },
+		),
+	};
+}
+
+/** The issue a slug another page already uses renders under the slug field. */
+function slugTaken(t: (key: string) => string, values: FormData): FormSubmission {
+	return {
+		values,
+		issues: [{ message: t("page.statusPages.form.issues.slugTaken"), path: ["slug"] }],
+	};
+}
+
 /** POST /actions/:team/create-status-page */
 export const createStatusPage = createAction(routes.actions.statusPage.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateStatusPageSchema);
 	let session = ctx.get(Session);
 
+	/** Renders the new-page form again, loading the page only on this path. */
+	let sendBack = async (submission: FormSubmission) => {
+		let { renderNewStatusPagePage } =
+			await import("~/app/http/controllers/app/team/status-page-new");
+		return renderNewStatusPagePage(submission);
+	};
+
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: "Please check the status page details and try again.",
-		});
-		return redirect(routes.app.team.statusPages.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
-		});
+		return sendBack(pageSubmission(ctx.intl.t, ctx.formData, result.error.issues));
 	}
 
 	let {
@@ -48,13 +82,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 	} = result.data;
 
 	if (await ctx.models.statusPages.isSlugTaken(values.slug)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: `Slug "${values.slug}" is already taken.`,
-		});
-		return redirect(routes.app.team.statusPages.new.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
-		});
+		return sendBack(slugTaken(ctx.intl.t, ctx.formData));
 	}
 
 	let page = unwrap(
@@ -75,7 +103,10 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		ctx.models.statusPages.setCronJobs(page.id, cron_job_ids),
 	]);
 
-	session?.flash("toast", { intent: "success", message: `Status page "${page.name}" created.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("page.statusPages.toasts.created", { name: page.name }),
+	});
 	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
@@ -86,16 +117,24 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 	let result = await validate(ctx.formData, UpdateStatusPageSchema);
 	let session = ctx.get(Session);
 
+	let statusPageId = isFailure(result)
+		? ctx.formData.get("status_page_id")
+		: result.data.status_page_id;
+	let existing =
+		typeof statusPageId === "string"
+			? await ctx.models.statusPages.inTeam(ctx.team.id).where({ id: statusPageId }).first()
+			: null;
+	if (!existing) return notFound("Not Found");
+
+	/** Renders this page's edit form again, loading the page only on this path. */
+	let sendBack = async (submission: FormSubmission) => {
+		let { renderEditStatusPagePage } =
+			await import("~/app/http/controllers/app/team/status-page-edit");
+		return renderEditStatusPagePage(existing, submission);
+	};
+
 	if (isFailure(result)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: "Please check the status page details and try again.",
-		});
-		return redirect(
-			ctx.request.headers.get("Referer") ??
-				routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
-			{ status: redirect.Status.SeeOther },
-		);
+		return sendBack(pageSubmission(ctx.intl.t, ctx.formData, result.error.issues));
 	}
 
 	let {
@@ -110,21 +149,8 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		...values
 	} = result.data;
 
-	let existing = await ctx.models.statusPages
-		.inTeam(ctx.team.id)
-		.where({ id: status_page_id })
-		.first();
-	if (!existing) return notFound("Not Found");
-
 	if (await ctx.models.statusPages.isSlugTaken(values.slug, status_page_id)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: `Slug "${values.slug}" is already taken.`,
-		});
-		return redirect(
-			routes.app.team.statusPages.edit.href({ team: ctx.team.slug, statusPageId: status_page_id }),
-			{ status: redirect.Status.SeeOther },
-		);
+		return sendBack(slugTaken(ctx.intl.t, ctx.formData));
 	}
 
 	unwrap(
@@ -143,7 +169,10 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		ctx.models.statusPages.setCronJobs(status_page_id, cron_job_ids),
 	]);
 
-	session?.flash("toast", { intent: "success", message: "Status page updated." });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("page.statusPages.toasts.updated", { name: values.name }),
+	});
 	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
@@ -170,7 +199,7 @@ export const deleteStatusPage = createAction(routes.actions.statusPage.delete, a
 
 	session?.flash("toast", {
 		intent: "success",
-		message: `Status page "${existing.name}" deleted.`,
+		message: ctx.intl.t("page.statusPages.toasts.deleted", { name: existing.name }),
 	});
 	return redirect(routes.app.team.statusPages.index.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,

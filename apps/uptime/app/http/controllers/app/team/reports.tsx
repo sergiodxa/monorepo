@@ -94,6 +94,13 @@ export default createAction(routes.app.team.reports.index, {
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
 					heading={t("header.title")}
+					description={t("header.description")}
+					breadcrumbs={[
+						{
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
+							href: routes.app.team.dashboard.index.href({ team }),
+						},
+					]}
 				>
 					<FormPage>
 						<form
@@ -101,8 +108,6 @@ export default createAction(routes.app.team.reports.index, {
 							action={routes.app.team.reports.download.href({ team, report: "uptime-summary" })}
 							mix={[vstack({ gap: 12 })]}
 						>
-							<p mix={[fg("neutral.muted")]}>{t("header.description")}</p>
-
 							{problem && (
 								<Alert color="danger" live="polite">
 									<Alert.Content>

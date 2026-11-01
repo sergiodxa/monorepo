@@ -1,7 +1,7 @@
 /**
- * New status page controller. Requires `requireUser` + `requireTeam`. The fields
- * group into three bordered cards — branding, visibility, and services — in one
- * `<form>`, so each reads as its own settings group while still submitting as a
+ * New status page controller. Requires `requireUser` + `requireTeam`. The fields group into
+ * branding, visibility and services in one form, and the create action renders this same
+ * page with the posted values, ticked services included, when it refuses a submission.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,17 +15,26 @@ import {
 	Checkbox,
 	CheckboxGroup,
 	Description,
+	Form,
 	Label,
 	Switch,
 	TextArea,
 	TextField,
 } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
+import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
+
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import {
+	submittedChecked,
+	submittedList,
+	submittedText,
+} from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import Field from "~/resources/components/field";
@@ -47,75 +56,80 @@ const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
 const MONITORS_GROUP_ID = "status-page-monitors-group";
 const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 
-/** GET /app/:team/status-pages/new — the new status-page form. */
-export default createAction(routes.app.team.statusPages.new, {
-	middleware: [requireUser, requireTeam],
-	handler: async (ctx) => {
-		let viewer = getViewer();
-		if (!viewer) throw new Error("requireUser must run before this handler");
+/**
+ * Renders the new status-page form for the current request: empty on a first visit, or every
+ * posted value and its issue when the create action sends a submission back, as 400.
+ *
+ * @param submission - The submission the create action refused, if any.
+ */
+export async function renderNewStatusPagePage(submission?: FormSubmission): Promise<Response> {
+	let ctx = getContext();
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs] = await Promise.all([
-			ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-			ctx.models.dnsMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-			ctx.models.tcpMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-			ctx.models.flowMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-			ctx.models.cronJobMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-		]);
+	let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs] = await Promise.all([
+		ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+		ctx.models.dnsMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+		ctx.models.tcpMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+		ctx.models.flowMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+		ctx.models.cronJobMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+	]);
 
-		let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
+	let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
 
-		/**
-		 * HTTP, DNS, TCP and flow monitors share one list, but each checkbox keeps the `name` of
-		 * the table its monitor belongs to so the create action can still tell them apart. A flow
-		 * contributes only its id and name here, keeping its spec source off a form that lists it.
-		 */
-		let selectableMonitors = [
-			...monitors.map((monitor) => ({ id: monitor.id, name: monitor.name, field: "monitor_ids" })),
-			...dnsMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				field: "dns_monitor_ids",
-			})),
-			...tcpMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				field: "tcp_monitor_ids",
-			})),
-			...flowMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				field: "flow_monitor_ids",
-			})),
-		];
+	/**
+	 * HTTP, DNS, TCP and flow monitors share one list, but each checkbox keeps the `name` of
+	 * the table its monitor belongs to so the create action can still tell them apart. A flow
+	 * contributes only its id and name here, keeping its spec source off a form that lists it.
+	 */
+	let selectableMonitors = [
+		...monitors.map((monitor) => ({ id: monitor.id, name: monitor.name, field: "monitor_ids" })),
+		...dnsMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			field: "dns_monitor_ids",
+		})),
+		...tcpMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			field: "tcp_monitor_ids",
+		})),
+		...flowMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			field: "flow_monitor_ids",
+		})),
+	];
 
-		let hasSomethingToList = selectableMonitors.length > 0 || cronJobs.length > 0;
+	let hasSomethingToList = selectableMonitors.length > 0 || cronJobs.length > 0;
 
-		return ctx.render(
-			<DocumentLayout
-				assets={ctx.assets}
-				title={`${ctx.team.name} · ${ctx.intl.t("page.createStatusPage.header.title")}`}
+	return ctx.render(
+		<DocumentLayout
+			assets={ctx.assets}
+			title={`${ctx.team.name} · ${ctx.intl.t("page.createStatusPage.header.title")}`}
+		>
+			<AppShell
+				team={ctx.team}
+				currentPath={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+				intl={ctx.intl}
+				heading={ctx.intl.t("page.createStatusPage.header.title")}
+				breadcrumbs={[
+					{
+						label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
+						href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
+					},
+				]}
 			>
-				<AppShell
-					team={ctx.team}
-					currentPath={ctx.url.pathname}
-					teams={ctx.teams}
-					viewer={viewer}
-					isAdmin={ctx.membership.role === "admin"}
-					intl={ctx.intl}
-					heading={ctx.intl.t("page.createStatusPage.header.title")}
-					breadcrumbs={[
-						{
-							label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
-							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
-						},
-					]}
-				>
-					<FormPage>
-						<form
-							method="post"
-							action={routes.actions.statusPage.create.href({ team: ctx.team.slug })}
-							mix={[vstack({ gap: 12 })]}
-						>
+				<FormPage>
+					<Form
+						method="post"
+						action={routes.actions.statusPage.create.href({ team: ctx.team.slug })}
+						issues={submission?.issues}
+					>
+						<div mix={[vstack({ gap: 12 })]}>
 							<SettingsSection
 								id="branding"
 								title={ctx.intl.t("page.createStatusPage.form.sections.branding.title")}
@@ -130,6 +144,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("name.placeholder")}
 											description={t("name.description")}
+											defaultValue={submittedText(submission, "name", "")}
 										/>
 
 										<TextField
@@ -139,6 +154,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("slug.placeholder")}
 											description={t("slug.description")}
+											defaultValue={submittedText(submission, "slug", "")}
 										/>
 
 										<TextField
@@ -148,6 +164,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											required
 											placeholder={t("title.placeholder")}
 											description={t("title.description")}
+											defaultValue={submittedText(submission, "title", "")}
 										/>
 
 										<Field
@@ -157,7 +174,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											<TextArea
 												name="description"
 												placeholder={t("description.placeholder")}
-												defaultValue=""
+												defaultValue={submittedText(submission, "description", "")}
 											/>
 										</Field>
 
@@ -167,7 +184,7 @@ export default createAction(routes.app.team.statusPages.new, {
 											name="logo_url"
 											placeholder={t("logoUrl.placeholder")}
 											description={t("logoUrl.description")}
-											defaultValue=""
+											defaultValue={submittedText(submission, "logo_url", "")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -188,14 +205,22 @@ export default createAction(routes.app.team.statusPages.new, {
 										 */}
 										<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 											<div mix={[fieldStackLayout()]}>
-												<Switch name="is_public" value="true" defaultChecked>
+												<Switch
+													name="is_public"
+													value="true"
+													defaultChecked={submittedChecked(submission, "is_public", true)}
+												>
 													{t("isPublic.label")}
 												</Switch>
 												<Description>{t("isPublic.description")}</Description>
 											</div>
 
 											<div mix={[fieldStackLayout()]}>
-												<Switch name="show_overall_status" value="true" defaultChecked>
+												<Switch
+													name="show_overall_status"
+													value="true"
+													defaultChecked={submittedChecked(submission, "show_overall_status", true)}
+												>
 													{t("showOverallStatus.label")}
 												</Switch>
 												<Description>{t("showOverallStatus.description")}</Description>
@@ -243,6 +268,9 @@ export default createAction(routes.app.team.statusPages.new, {
 															key={`${monitor.field}-${monitor.id}`}
 															name={monitor.field}
 															value={monitor.id}
+															defaultChecked={submittedList(submission, monitor.field, []).includes(
+																monitor.id,
+															)}
 														>
 															{monitor.name}
 														</Checkbox>
@@ -269,7 +297,16 @@ export default createAction(routes.app.team.statusPages.new, {
 
 												<CheckboxGroup id={CRON_JOBS_GROUP_ID} aria-labelledby={CRON_JOBS_LABEL_ID}>
 													{cronJobs.map((cronJob) => (
-														<Checkbox key={cronJob.id} name="cron_job_ids" value={cronJob.id}>
+														<Checkbox
+															key={cronJob.id}
+															name="cron_job_ids"
+															value={cronJob.id}
+															defaultChecked={submittedList(
+																submission,
+																"cron_job_ids",
+																[],
+															).includes(cronJob.id)}
+														>
 															{cronJob.name}
 														</Checkbox>
 													))}
@@ -289,10 +326,17 @@ export default createAction(routes.app.team.statusPages.new, {
 									</SettingsSection.Footer>
 								</SettingsSection.Card>
 							</SettingsSection>
-						</form>
-					</FormPage>
-				</AppShell>
-			</DocumentLayout>,
-		);
-	},
+						</div>
+					</Form>
+				</FormPage>
+			</AppShell>
+		</DocumentLayout>,
+		{ status: submission ? 400 : 200 },
+	);
+}
+
+/** GET /app/:team/status-pages/new — the new status-page form. */
+export default createAction(routes.app.team.statusPages.new, {
+	middleware: [requireUser, requireTeam],
+	handler: () => renderNewStatusPagePage(),
 });

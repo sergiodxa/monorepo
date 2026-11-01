@@ -1,7 +1,7 @@
 /**
- * Edit status page controller. All settings, including monitor attachments, post
- * through one `<form>` to `update-status-page`; only the delete flow uses its own
- * `<form>`.
+ * Edit status page controller. All settings, including monitor attachments, post through one
+ * form to `update-status-page`, which renders this same page with the posted values when it
+ * refuses a submission; only the delete flow uses its own form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +19,7 @@ import {
 	Checkbox,
 	CheckboxGroup,
 	Description,
+	Form,
 	Label,
 	LinkButton,
 	Switch,
@@ -27,11 +28,20 @@ import {
 } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
+import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
+
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { SelectStatusPage } from "~/database/schema";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import {
+	submittedChecked,
+	submittedList,
+	submittedText,
+} from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
@@ -55,88 +65,105 @@ const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
 const MONITORS_GROUP_ID = "status-page-monitors-group";
 const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
 
-/** GET /app/:team/status-pages/:statusPageId/edit — a status page's edit form. */
-export default createAction(routes.app.team.statusPages.edit, {
-	middleware: [requireUser, requireTeam],
-	handler: async (ctx) => {
-		let viewer = getViewer();
-		if (!viewer) throw new Error("requireUser must run before this handler");
+/**
+ * Renders `page`'s edit form for the current request: its saved settings on a first visit, or
+ * every posted value and its issue when the update action sends a submission back, as 400.
+ *
+ * @param page - The team's status page being edited.
+ * @param submission - The submission the update action refused, if any.
+ */
+export async function renderEditStatusPagePage(
+	page: SelectStatusPage,
+	submission?: FormSubmission,
+): Promise<Response> {
+	let ctx = getContext();
+	let viewer = getViewer();
+	if (!viewer) throw new Error("requireUser must run before this handler");
+	let statusPageId = page.id;
 
-		let { statusPageId } = s.parse(s.object({ statusPageId: s.string() }), ctx.params);
-		let page = await ctx.models.statusPages.inTeam(ctx.team.id).find(statusPageId);
-		if (!page) return notFound("Not Found");
+	let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs, attachedIds] = await Promise.all(
+		[
+			ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			ctx.models.dnsMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			ctx.models.tcpMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			ctx.models.flowMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			ctx.models.cronJobMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+			ctx.models.statusPages.getAttachedIds(statusPageId),
+		],
+	);
 
-		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs, attachedIds] =
-			await Promise.all([
-				ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-				ctx.models.dnsMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-				ctx.models.tcpMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-				ctx.models.flowMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-				ctx.models.cronJobMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-				ctx.models.statusPages.getAttachedIds(statusPageId),
-			]);
+	/**
+	 * HTTP, DNS, TCP, and flow monitors render as one flat checkbox list; each keeps the
+	 * `name` of its source table so the update action can tell them apart.
+	 */
+	let selectableMonitors = [
+		...monitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			fieldName: "monitor_ids",
+			checked: submittedList(submission, "monitor_ids", attachedIds.monitorIds).includes(
+				monitor.id,
+			),
+		})),
+		...dnsMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			fieldName: "dns_monitor_ids",
+			checked: submittedList(submission, "dns_monitor_ids", attachedIds.dnsMonitorIds).includes(
+				monitor.id,
+			),
+		})),
+		...tcpMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			fieldName: "tcp_monitor_ids",
+			checked: submittedList(submission, "tcp_monitor_ids", attachedIds.tcpMonitorIds).includes(
+				monitor.id,
+			),
+		})),
+		...flowMonitors.map((monitor) => ({
+			id: monitor.id,
+			name: monitor.name,
+			fieldName: "flow_monitor_ids",
+			checked: submittedList(submission, "flow_monitor_ids", attachedIds.flowMonitorIds).includes(
+				monitor.id,
+			),
+		})),
+	];
 
-		/**
-		 * HTTP, DNS, TCP, and flow monitors render as one flat checkbox list; each keeps the
-		 * `name` of its source table so the update action can tell them apart.
-		 */
-		let selectableMonitors = [
-			...monitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				fieldName: "monitor_ids",
-				checked: attachedIds.monitorIds.includes(monitor.id),
-			})),
-			...dnsMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				fieldName: "dns_monitor_ids",
-				checked: attachedIds.dnsMonitorIds.includes(monitor.id),
-			})),
-			...tcpMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				fieldName: "tcp_monitor_ids",
-				checked: attachedIds.tcpMonitorIds.includes(monitor.id),
-			})),
-			...flowMonitors.map((monitor) => ({
-				id: monitor.id,
-				name: monitor.name,
-				fieldName: "flow_monitor_ids",
-				checked: attachedIds.flowMonitorIds.includes(monitor.id),
-			})),
-		];
+	let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
+	let indexHref = routes.app.team.statusPages.index.href({ team: ctx.team.slug });
+	let heading = ctx.intl.t("page.editStatusPage.header.named", { name: page.name });
 
-		let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
-		let indexHref = routes.app.team.statusPages.index.href({ team: ctx.team.slug });
-
-		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${page.name}`}>
-				<AppShell
-					team={ctx.team}
-					currentPath={ctx.url.pathname}
-					teams={ctx.teams}
-					viewer={viewer}
-					isAdmin={ctx.membership.role === "admin"}
-					intl={ctx.intl}
-					heading={ctx.intl.t("page.editStatusPage.header.title")}
-					breadcrumbs={[
-						{
-							label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
-							href: indexHref,
-						},
-						{ label: page.name },
-					]}
-				>
-					<FormPage>
-						<div mix={[vstack({ gap: 12 })]}>
-							<form
-								method="post"
-								action={routes.actions.statusPage.update.href({ team: ctx.team.slug })}
-								mix={[vstack({ gap: 12 })]}
-							>
-								<input type="hidden" name="status_page_id" value={page.id} />
-
+	return ctx.render(
+		<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${heading}`}>
+			<AppShell
+				team={ctx.team}
+				currentPath={routes.app.team.statusPages.edit.href({
+					team: ctx.team.slug,
+					statusPageId: page.id,
+				})}
+				teams={ctx.teams}
+				viewer={viewer}
+				isAdmin={ctx.membership.role === "admin"}
+				intl={ctx.intl}
+				heading={heading}
+				breadcrumbs={[
+					{
+						label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
+						href: indexHref,
+					},
+				]}
+			>
+				<FormPage>
+					<div mix={[vstack({ gap: 12 })]}>
+						<Form
+							method="post"
+							action={routes.actions.statusPage.update.href({ team: ctx.team.slug })}
+							issues={submission?.issues}
+						>
+							<input type="hidden" name="status_page_id" value={page.id} />
+							<div mix={[vstack({ gap: 12 })]}>
 								<SettingsSection
 									id="branding"
 									title={ctx.intl.t("page.editStatusPage.form.sections.branding.title")}
@@ -151,7 +178,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 												required
 												placeholder={t("name.placeholder")}
 												description={t("name.description")}
-												defaultValue={page.name}
+												defaultValue={submittedText(submission, "name", page.name)}
 											/>
 
 											<TextField
@@ -161,7 +188,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 												required
 												placeholder={t("slug.placeholder")}
 												description={t("slug.description")}
-												defaultValue={page.slug}
+												defaultValue={submittedText(submission, "slug", page.slug)}
 											/>
 
 											<TextField
@@ -171,7 +198,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 												required
 												placeholder={t("title.placeholder")}
 												description={t("title.description")}
-												defaultValue={page.title}
+												defaultValue={submittedText(submission, "title", page.title)}
 											/>
 
 											<div mix={[fieldStackLayout()]}>
@@ -180,7 +207,11 @@ export default createAction(routes.app.team.statusPages.edit, {
 													id="status-page-description"
 													name="description"
 													placeholder={t("description.placeholder")}
-													defaultValue={page.description ?? ""}
+													defaultValue={submittedText(
+														submission,
+														"description",
+														page.description ?? "",
+													)}
 												/>
 												<Description>{t("description.description")}</Description>
 											</div>
@@ -191,7 +222,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 												name="logo_url"
 												placeholder={t("logoUrl.placeholder")}
 												description={t("logoUrl.description")}
-												defaultValue={page.logo_url ?? ""}
+												defaultValue={submittedText(submission, "logo_url", page.logo_url ?? "")}
 											/>
 										</SettingsSection.Body>
 									</SettingsSection.Card>
@@ -212,7 +243,15 @@ export default createAction(routes.app.team.statusPages.edit, {
 											 */}
 											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
 												<div mix={[fieldStackLayout()]}>
-													<Switch name="is_public" value="true" defaultChecked={page.is_public}>
+													<Switch
+														name="is_public"
+														value="true"
+														defaultChecked={submittedChecked(
+															submission,
+															"is_public",
+															page.is_public,
+														)}
+													>
 														{t("isPublic.label")}
 													</Switch>
 													<Description>{t("isPublic.description")}</Description>
@@ -222,7 +261,11 @@ export default createAction(routes.app.team.statusPages.edit, {
 													<Switch
 														name="show_overall_status"
 														value="true"
-														defaultChecked={page.show_overall_status}
+														defaultChecked={submittedChecked(
+															submission,
+															"show_overall_status",
+															page.show_overall_status,
+														)}
 													>
 														{t("showOverallStatus.label")}
 													</Switch>
@@ -304,7 +347,11 @@ export default createAction(routes.app.team.statusPages.edit, {
 																key={cronJob.id}
 																name="cron_job_ids"
 																value={cronJob.id}
-																defaultChecked={attachedIds.cronJobIds.includes(cronJob.id)}
+																defaultChecked={submittedList(
+																	submission,
+																	"cron_job_ids",
+																	attachedIds.cronJobIds,
+																).includes(cronJob.id)}
 															>
 																{cronJob.name}
 															</Checkbox>
@@ -328,73 +375,86 @@ export default createAction(routes.app.team.statusPages.edit, {
 										</SettingsSection.Footer>
 									</SettingsSection.Card>
 								</SettingsSection>
+							</div>
+						</Form>
+
+						<SettingsSection
+							id="danger"
+							tone="danger"
+							title={ctx.intl.t("page.editStatusPage.dangerZone.title")}
+							description={ctx.intl.t("page.editStatusPage.dangerZone.description")}
+						>
+							<SettingsSection.Card tone="danger">
+								<SettingsSection.Body>
+									<p mix={[m(0), fontSize("sm"), fg("danger")]}>
+										{ctx.intl.t("page.editStatusPage.dangerZone.warning")}
+									</p>
+								</SettingsSection.Body>
+								<SettingsSection.Footer tone="danger">
+									<Button
+										type="button"
+										color="danger"
+										commandfor={DELETE_DIALOG_ID}
+										command="show-modal"
+									>
+										{ctx.intl.t("page.statusPages.table.actions.delete")}
+									</Button>
+								</SettingsSection.Footer>
+							</SettingsSection.Card>
+						</SettingsSection>
+
+						<AlertDialog
+							id={DELETE_DIALOG_ID}
+							aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+							aria-describedby={`${DELETE_DIALOG_ID}-description`}
+						>
+							<AlertDialog.Header>
+								<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+									{ctx.intl.t("page.statusPages.table.confirmation.delete", {
+										name: page.name,
+									})}
+								</AlertDialog.Title>
+								<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+									{ctx.intl.t("page.editStatusPage.dangerZone.deleteDescription")}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
+							{/**
+							 * The confirming control stays a plain `Button` so `type="submit"` drives it
+							 * natively: `AlertDialog.Action` always sets `command="close"`, and per the
+							 * Invoker Commands spec that command takes over a button's native activation.
+							 */}
+							<form
+								method="post"
+								action={routes.actions.statusPage.delete.href({ team: ctx.team.slug })}
+							>
+								<input type="hidden" name="_method" value="DELETE" />
+								<input type="hidden" name="status_page_id" value={page.id} />
+								<AlertDialog.Footer>
+									<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
+										{ctx.intl.t("page.editMonitor.form.cancel")}
+									</AlertDialog.Cancel>
+									<Button type="submit" color="danger">
+										{ctx.intl.t("page.statusPages.table.actions.delete")}
+									</Button>
+								</AlertDialog.Footer>
 							</form>
+						</AlertDialog>
+					</div>
+				</FormPage>
+			</AppShell>
+		</DocumentLayout>,
+		{ status: submission ? 400 : 200 },
+	);
+}
 
-							<SettingsSection
-								id="danger"
-								tone="danger"
-								title={ctx.intl.t("page.editStatusPage.dangerZone.title")}
-								description={ctx.intl.t("page.editStatusPage.dangerZone.description")}
-							>
-								<SettingsSection.Card tone="danger">
-									<SettingsSection.Body>
-										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.intl.t("page.editStatusPage.dangerZone.warning")}
-										</p>
-									</SettingsSection.Body>
-									<SettingsSection.Footer tone="danger">
-										<Button
-											type="button"
-											color="danger"
-											commandfor={DELETE_DIALOG_ID}
-											command="show-modal"
-										>
-											{ctx.intl.t("page.statusPages.table.actions.delete")}
-										</Button>
-									</SettingsSection.Footer>
-								</SettingsSection.Card>
-							</SettingsSection>
+/** GET /app/:team/status-pages/:statusPageId/edit — a status page's edit form. */
+export default createAction(routes.app.team.statusPages.edit, {
+	middleware: [requireUser, requireTeam],
+	handler: async (ctx) => {
+		let { statusPageId } = s.parse(s.object({ statusPageId: s.string() }), ctx.params);
+		let page = await ctx.models.statusPages.inTeam(ctx.team.id).find(statusPageId);
+		if (!page) return notFound("Not Found");
 
-							<AlertDialog
-								id={DELETE_DIALOG_ID}
-								aria-labelledby={`${DELETE_DIALOG_ID}-title`}
-								aria-describedby={`${DELETE_DIALOG_ID}-description`}
-							>
-								<AlertDialog.Header>
-									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.intl.t("page.statusPages.table.confirmation.delete", {
-											name: page.name,
-										})}
-									</AlertDialog.Title>
-									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.intl.t("page.editStatusPage.dangerZone.deleteDescription")}
-									</AlertDialog.Description>
-								</AlertDialog.Header>
-								{/**
-								 * The confirming control stays a plain `Button` so `type="submit"` drives it
-								 * natively: `AlertDialog.Action` always sets `command="close"`, and per the
-								 * Invoker Commands spec that command takes over a button's native activation.
-								 */}
-								<form
-									method="post"
-									action={routes.actions.statusPage.delete.href({ team: ctx.team.slug })}
-								>
-									<input type="hidden" name="_method" value="DELETE" />
-									<input type="hidden" name="status_page_id" value={page.id} />
-									<AlertDialog.Footer>
-										<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-											{ctx.intl.t("page.editMonitor.form.cancel")}
-										</AlertDialog.Cancel>
-										<Button type="submit" color="danger">
-											{ctx.intl.t("page.statusPages.table.actions.delete")}
-										</Button>
-									</AlertDialog.Footer>
-								</form>
-							</AlertDialog>
-						</div>
-					</FormPage>
-				</AppShell>
-			</DocumentLayout>,
-		);
+		return renderEditStatusPagePage(page);
 	},
 });

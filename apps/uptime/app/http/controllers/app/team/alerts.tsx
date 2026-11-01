@@ -1,5 +1,7 @@
 /**
- * Alerts list controller. Requires `requireUser` + `requireTeam`.
+ * Alerts list controller. Requires `requireUser` + `requireTeam`. Each row opens the alert's
+ * edit form, says where it delivers and how often it may repeat, and marks a channel whose
+ * destination stopped existing, so a broken alert is found before the next outage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -7,13 +9,13 @@
 
 import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
-import { hstack, vstack } from "@sdxc/u/layout";
+import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { hover } from "@sdxc/u/state";
-import { fontSize, textDecoration } from "@sdxc/u/typography";
+import { fontSize } from "@sdxc/u/typography";
 import { Badge, LinkButton } from "@sdxc/ui";
 import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
+import { Session } from "remix/session";
 
 import type { SelectAlert } from "~/database/schema";
 
@@ -28,6 +30,12 @@ import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
+/** The flash the create, update and delete actions leave for the list they redirect to. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
+
 /** GET /app/:team/alerts — the team's alerts list. */
 export default createAction(routes.app.team.alerts.index, {
 	middleware: [requireUser, requireTeam],
@@ -37,6 +45,8 @@ export default createAction(routes.app.team.alerts.index, {
 
 		let alerts = await ctx.models.alerts.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
 		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
+		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
+		let team = { team: ctx.team.slug };
 
 		/**
 		 * Maps monitor ids to names for the scoped rows in the table. A scope's id is
@@ -62,6 +72,12 @@ export default createAction(routes.app.team.alerts.index, {
 			);
 		}
 
+		/** A zero cooldown still repeats at the dispatch floor, so it reads as the fastest allowed. */
+		function cooldownLabel(minutes: number): string {
+			if (minutes === 0) return ctx.intl.t("page.alerts.table.cooldown.none");
+			return ctx.intl.t("page.alerts.table.cooldown.minutes", { count: minutes });
+		}
+
 		return ctx.render(
 			<DocumentLayout
 				assets={ctx.assets}
@@ -74,126 +90,118 @@ export default createAction(routes.app.team.alerts.index, {
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
+					toast={toast}
 					heading={ctx.intl.t("page.alerts.header.title")}
 					breadcrumbs={[
 						{
 							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
-							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+							href: routes.app.team.dashboard.index.href(team),
 						},
 					]}
+					description={
+						atLimit
+							? ctx.intl.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })
+							: undefined
+					}
 					actions={
-						<div mix={[hstack({ align: "center", gap: 3 })]}>
-							<LinkButton href={routes.app.team.alerts.history.href({ team: ctx.team.slug })}>
-								<HistoryIcon size={16} strokeWidth={1.5} />
-								{ctx.intl.t("page.alerts.header.action.history")}
+						<LinkButton
+							href={routes.app.team.alerts.history.href(team)}
+							variant="outline"
+							color="neutral"
+						>
+							<HistoryIcon size={16} strokeWidth={1.5} />
+							{ctx.intl.t("page.alerts.header.action.history")}
+						</LinkButton>
+					}
+					primaryAction={
+						atLimit ? undefined : (
+							<LinkButton href={routes.app.team.alerts.new.href(team)}>
+								<BellPlusIcon size={16} strokeWidth={1.5} />
+								{ctx.intl.t("page.alerts.header.action.create")}
 							</LinkButton>
-							{!atLimit && (
-								<LinkButton href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}>
-									<BellPlusIcon size={16} strokeWidth={1.5} />
-									{ctx.intl.t("page.alerts.header.action.create")}
-								</LinkButton>
-							)}
-						</div>
+						)
 					}
 				>
-					<div>
-						{atLimit && (
-							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-								{ctx.intl.t("page.alerts.limitReached", { limit: MAX_ALERTS_PER_TEAM })}
-							</p>
-						)}
+					{alerts.length === 0 ? (
+						<Empty kind="first-run" icon={<BellIcon size={24} strokeWidth={1.5} />}>
+							<Empty.Title>{ctx.intl.t("page.alerts.empty.title")}</Empty.Title>
+							<Empty.Description>{ctx.intl.t("page.alerts.empty.description")}</Empty.Description>
+							<Empty.Action>
+								<LinkButton href={routes.app.team.alerts.new.href(team)}>
+									<PlusIcon size={16} strokeWidth={1.5} />
+									{ctx.intl.t("page.alerts.empty.cta")}
+								</LinkButton>
+							</Empty.Action>
+						</Empty>
+					) : (
+						<Table.Container>
+							<Table aria-label={ctx.intl.t("page.alerts.table.label")}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>{ctx.intl.t("page.alerts.table.columns.name")}</Table.Column>
+										<Table.Column>{ctx.intl.t("page.alerts.table.columns.scope")}</Table.Column>
+										<Table.Column>{ctx.intl.t("page.alerts.table.columns.strategy")}</Table.Column>
+										<Table.Column>
+											{ctx.intl.t("page.alerts.table.columns.notifyOnRecovery")}
+										</Table.Column>
+										<Table.Column numeric>
+											{ctx.intl.t("page.alerts.table.columns.cooldown")}
+										</Table.Column>
+										<Table.ActionsColumn label={ctx.intl.t("page.alerts.table.columns.actions")} />
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{alerts.map((alert) => {
+										let editHref = routes.app.team.alerts.edit.href({
+											...team,
+											alertId: alert.id,
+										});
 
-						{alerts.length === 0 ? (
-							<Empty>
-								<Empty.Icon>
-									<BellIcon size={24} strokeWidth={1.5} />
-								</Empty.Icon>
-								<Empty.Title>{ctx.intl.t("page.alerts.empty.title")}</Empty.Title>
-								<Empty.Description>{ctx.intl.t("page.alerts.empty.description")}</Empty.Description>
-								<Empty.Action>
-									<LinkButton href={routes.app.team.alerts.new.href({ team: ctx.team.slug })}>
-										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.intl.t("page.alerts.empty.cta")}
-									</LinkButton>
-								</Empty.Action>
-							</Empty>
-						) : (
-							<Table.Container>
-								<Table aria-label={ctx.intl.t("page.alerts.table.label")}>
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>{ctx.intl.t("page.alerts.table.columns.name")}</Table.Column>
-											<Table.Column>{ctx.intl.t("page.alerts.table.columns.scope")}</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.alerts.table.columns.strategy")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.alerts.table.columns.notifyOnRecovery")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.alerts.table.columns.cooldown")}
-											</Table.Column>
-											<Table.Column></Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{alerts.map((alert) => (
+										return (
 											<Table.Row key={alert.id}>
 												<Table.Cell>
-													{alert.name}
-													{/**
-													 * A destination that answered it no longer exists stops receiving
-													 * deliveries, so the row says why until the channel is saved again.
-													 */}
-													{alert.broken_at !== null && (
-														<div mix={[vstack({ gap: 1, align: "start" })]}>
-															<Badge {...badgeVariant("down")}>
-																{ctx.intl.t("page.alerts.table.broken.label")}
-															</Badge>
-															<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
-																{ctx.intl.t("page.alerts.table.broken.description", {
-																	reason: alert.broken_reason ?? "",
-																})}
-															</p>
-														</div>
-													)}
+													<div mix={[vstack({ gap: 1, align: "start" })]}>
+														<Table.RowLink href={editHref}>{alert.name}</Table.RowLink>
+														{/**
+														 * A destination that answered it no longer exists stops receiving
+														 * deliveries, so the row says why until the channel is saved again.
+														 */}
+														{alert.broken_at !== null && (
+															<>
+																<Badge {...badgeVariant("down")}>
+																	{ctx.intl.t("page.alerts.table.broken.label")}
+																</Badge>
+																<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+																	{ctx.intl.t("page.alerts.table.broken.description", {
+																		reason: alert.broken_reason ?? "",
+																	})}
+																</p>
+															</>
+														)}
+													</div>
 												</Table.Cell>
 												<Table.Cell>{scopeLabel(alert)}</Table.Cell>
 												<Table.Cell>
 													{ctx.intl.t(`page.alerts.table.types.${alert.config.strategy}`)}
 												</Table.Cell>
-												<Table.Cell>
+												<Table.StatusCell color={alert.notify_on_recovery ? "success" : "neutral"}>
 													{alert.notify_on_recovery
 														? ctx.intl.t("page.alerts.table.notifyOnRecovery.enabled")
 														: ctx.intl.t("page.alerts.table.notifyOnRecovery.disabled")}
-												</Table.Cell>
-												<Table.Cell>
-													{alert.cooldown_minutes === 0
-														? ctx.intl.t("page.alerts.table.cooldown.none")
-														: `${alert.cooldown_minutes}m`}
-												</Table.Cell>
-												<Table.Cell>
-													<a
-														href={routes.app.team.alerts.edit.href({
-															team: ctx.team.slug,
-															alertId: alert.id,
-														})}
-														mix={[
-															fg("brand"),
-															textDecoration("none"),
-															hover(textDecoration("underline")),
-														]}
-													>
+												</Table.StatusCell>
+												<Table.Cell numeric>{cooldownLabel(alert.cooldown_minutes)}</Table.Cell>
+												<Table.Actions>
+													<LinkButton href={editHref} size="sm" variant="ghost" color="neutral">
 														{ctx.intl.t("page.alerts.table.actions.edit")}
-													</a>
-												</Table.Cell>
+													</LinkButton>
+												</Table.Actions>
 											</Table.Row>
-										))}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
-					</div>
+										);
+									})}
+								</Table.Body>
+							</Table>
+						</Table.Container>
+					)}
 				</AppShell>
 			</DocumentLayout>,
 		);

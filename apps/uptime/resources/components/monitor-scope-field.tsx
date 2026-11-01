@@ -12,9 +12,11 @@ import type { getContext } from "remix/middleware/async-context";
 
 import { Select } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { MonitorScope } from "~/app/services/monitor-scope";
 import type { ScopeMonitorGroup } from "~/app/services/scope-monitors";
 
+import { fieldIssue, submittedText } from "~/app/http/validators/form-submission";
 import { encodeMonitorScope } from "~/app/services/monitor-scope";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
@@ -29,6 +31,8 @@ namespace MonitorScopeField {
 		description: string;
 		/** The request's translator, used to read the shared `components.monitorScope.*` copy. */
 		intl: ReturnType<typeof getContext>["intl"];
+		/** A submission the action refused: the posted scope stays picked, with its issue beneath. */
+		submission?: FormSubmission;
 	}
 }
 
@@ -39,10 +43,11 @@ namespace MonitorScopeField {
  */
 export default function MonitorScopeField(handle: Handle<MonitorScopeField.Props>) {
 	return () => {
-		let { groups, selected, description, intl } = handle.props;
+		let { groups, selected, description, intl, submission } = handle.props;
 
 		let t = withPrefix(intl.t, "components.monitorScope");
-		let selectedValue = encodeMonitorScope(selected);
+		let selectedValue = submittedText(submission, "scope", encodeMonitorScope(selected));
+		let issue = fieldIssue(submission, "scope");
 
 		let offered = new Set<string>([""]);
 		for (let group of groups) {
@@ -60,8 +65,17 @@ export default function MonitorScopeField(handle: Handle<MonitorScopeField.Props
 		let danglingValue = offered.has(selectedValue) ? null : selectedValue;
 
 		return (
-			<Field label={t("label")} description={description}>
-				<Select name="scope">
+			<Field
+				label={t("label")}
+				description={description}
+				error={issue}
+				errorId="monitor-scope-error"
+			>
+				<Select
+					name="scope"
+					aria-invalid={issue ? "true" : undefined}
+					aria-describedby={issue ? "monitor-scope-error" : undefined}
+				>
 					{danglingValue !== null && (
 						<Select.Option value={danglingValue} selected>
 							{t("unknownMonitor")}

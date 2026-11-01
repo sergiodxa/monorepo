@@ -1,28 +1,35 @@
 /**
  * Tests for the status-page create/update/delete actions: a successful create/update
  * saves the page and curates its five attached monitor-type id lists, a taken slug is
- * rejected without mutating, an invalid submission redirects back, and update/delete
+ * rejected without mutating, an invalid submission renders its form again with the posted
+ * values, and update/delete
  * 404 when the page doesn't belong to the acting team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { database } from "@sdxc/database-middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	flowMonitors,
 	memberships,
@@ -87,12 +94,31 @@ async function createFixture() {
 	return { db, team, membership, monitor, flowMonitor };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`. */
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer in
+ * place of `requireUser`/`requireTeam`, so a refused submission can render its form again.
+ */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, {
+			ok: true,
+			identity: { id: membership.subject_id, name: "Ada", email: "ada@acme.com", avatar: "" },
+			method: "test",
+		});
 		return next();
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -109,7 +135,15 @@ async function send(
 	let router = createRouter({
 		middleware: [asyncContext(), database(db), models(), formData() as Middleware],
 	});
-	router.map(route, { middleware: [seedTeam(team, membership)], handler });
+	router.map(route, {
+		middleware: [
+			seedTeam(team, membership),
+			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
+		handler,
+	});
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
 		method,
@@ -212,16 +246,16 @@ describe("createStatusPage", () => {
 			],
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="New page"');
+		expect(body).toContain("Another status page already uses this slug.");
 
 		let matching = await db.findMany(statusPages, { where: { team_id: team.id, slug: "taken" } });
 		expect(matching).toHaveLength(1);
 	});
 
-	test("redirects back to the form without creating a page when the slug is invalid", async () => {
+	test("renders the form again with the posted values when the slug is invalid", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(
@@ -233,15 +267,17 @@ describe("createStatusPage", () => {
 			"POST",
 			[
 				["name", "New page"],
-				["slug", "Not A Slug!"],
+				["slug", "Not A Slug"],
 				["title", "New"],
+				["description", "Our services"],
 			],
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Not A Slug"');
+		expect(body).toContain("Our services");
+		expect(body).toContain("Use up to 63 lowercase letters, numbers and hyphens");
 
 		let matching = await db.findMany(statusPages, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
@@ -415,10 +451,10 @@ describe("updateStatusPage", () => {
 			],
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.statusPages.edit.href({ team: team.slug, statusPageId: page.id }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="page-b"');
+		expect(body).toContain("Another status page already uses this slug.");
 
 		let unchanged = await db.findOne(statusPages, { where: { id: page.id } });
 		expect(unchanged?.slug).toBe("page-a");

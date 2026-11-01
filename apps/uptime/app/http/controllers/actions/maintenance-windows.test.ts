@@ -1,28 +1,35 @@
 /**
  * Tests for the maintenance-window create/update/delete/end-early actions: successful
  * submissions mutate `maintenance_windows` and redirect to the list, a failing
- * `ends_at > starts_at` refinement redirects back without mutating, and update/delete/
+ * `ends_at > starts_at` refinement renders the form again with the posted values without
+ * mutating, and update/delete/
  * end-early each 404 when the window doesn't belong to the acting team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { database } from "@sdxc/database-middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -56,12 +63,31 @@ async function createFixture() {
 	return { db, team, membership };
 }
 
-/** Middleware that seeds `ctx.team`/`ctx.membership` in place of `requireTeam`/`requireRole`. */
+/**
+ * Middleware that seeds `ctx.team`/`ctx.membership`/`ctx.teams` and the signed-in viewer in
+ * place of `requireUser`/`requireTeam`, so a refused submission can render its form again.
+ */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
+		ctx.set(Auth, {
+			ok: true,
+			identity: { id: membership.subject_id, name: "Ada", email: "ada@acme.com", avatar: "" },
+			method: "test",
+		});
 		return next();
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -78,7 +104,15 @@ async function send(
 	let router = createRouter({
 		middleware: [asyncContext(), database(db), models(), formData() as Middleware],
 	});
-	router.map(route, { middleware: [seedTeam(team, membership)], handler });
+	router.map(route, {
+		middleware: [
+			seedTeam(team, membership),
+			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
+		handler,
+	});
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
 		method,
@@ -182,21 +216,21 @@ describe("createMaintenanceWindow", () => {
 			createMaintenanceWindow as RequestHandler<any>,
 			"POST",
 			{
-				name: "Someone else's monitor",
+				name: "Not our monitor",
 				scope: "monitor:dns:not-ours",
 				starts_at: "2026-08-01T00:00",
 				ends_at: "2026-08-01T02:00",
 			},
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Not our monitor"');
+		expect(body).toContain("Pick a scope from the list. The monitor this one named is gone.");
 		expect(await db.findMany(maintenanceWindows, { where: { team_id: team.id } })).toHaveLength(0);
 	});
 
-	test("redirects back to the form without creating a window when ends_at is before starts_at", async () => {
+	test("renders the form again with the posted times when ends_at is before starts_at", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(
@@ -209,10 +243,12 @@ describe("createMaintenanceWindow", () => {
 			{ name: "Bad window", starts_at: "2026-08-01T02:00", ends_at: "2026-08-01T00:00" },
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Bad window"');
+		expect(body).toContain('value="2026-08-01T02:00"');
+		expect(body).toContain('value="2026-08-01T00:00"');
+		expect(body).toContain("End the window after it starts.");
 
 		let matching = await db.findMany(maintenanceWindows, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
@@ -285,7 +321,7 @@ describe("updateMaintenanceWindow", () => {
 		expect(response.status).toBe(404);
 	});
 
-	test("redirects back without mutating when ends_at is before starts_at", async () => {
+	test("renders the edit form again without mutating when ends_at is before starts_at", async () => {
 		let { db, team, membership } = await createFixture();
 		let window = await db.create(
 			maintenanceWindows,
@@ -320,10 +356,10 @@ describe("updateMaintenanceWindow", () => {
 			},
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.maintenanceWindows.index.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Renamed"');
+		expect(body).toContain("End the window after it starts.");
 
 		let unchanged = await db.findOne(maintenanceWindows, { where: { id: window.id } });
 		expect(unchanged?.name).toBe("Original");

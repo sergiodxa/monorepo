@@ -1,25 +1,26 @@
 /**
- * Maintenance windows list controller. Requires `requireUser` + `requireTeam`.
+ * Maintenance windows list controller. Requires `requireUser` + `requireTeam`. Windows group
+ * into active, upcoming and past, each a table whose times render in the viewer's own zone,
+ * and an active window can be ended from its row without opening it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatDateTime } from "@sdxc/dates";
 import { PlusIcon, WrenchIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { hover } from "@sdxc/u/state";
-import { textDecoration } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { fontSize, weight } from "@sdxc/u/typography";
+import { Badge, Button, LinkButton } from "@sdxc/ui";
 import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
+import { Session } from "remix/session";
 
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { MAINTENANCE_TIME_ZONE } from "~/app/http/validators/maintenance-window";
 import { isActiveAt } from "~/app/models/maintenance-windows";
 import { storedMonitorScope } from "~/app/services/monitor-scope";
 import { listScopeMonitors } from "~/app/services/scope-monitors";
@@ -27,6 +28,12 @@ import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/** The flash the create, update, end and delete actions leave for the list they redirect to. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
 
 /** GET /app/:team/maintenance — the team's maintenance windows list. */
 export default createAction(routes.app.team.maintenanceWindows.index, {
@@ -39,6 +46,10 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 			.inTeam(ctx.team.id)
 			.orderBy("created_at", "desc")
 			.all();
+		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
+		let team = { team: ctx.team.slug };
+		let newHref = routes.app.team.maintenanceWindows.new.href(team);
+
 		/**
 		 * A scope's monitor id is unique across every type, so one map keyed by id
 		 * resolves every row's name, matching what {@link storedMonitorScope}
@@ -90,123 +101,141 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
+					toast={toast}
 					heading={ctx.intl.t("page.maintenance.header.title")}
 					breadcrumbs={[
 						{
 							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
-							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+							href: routes.app.team.dashboard.index.href(team),
 						},
 					]}
-					actions={
-						<LinkButton href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}>
+					primaryAction={
+						<LinkButton href={newHref}>
 							<PlusIcon size={16} strokeWidth={1.5} />
 							{ctx.intl.t("page.maintenance.header.action.create")}
 						</LinkButton>
 					}
 				>
-					<div>
-						{windows.length === 0 ? (
-							<Empty>
-								<Empty.Icon>
-									<WrenchIcon size={24} strokeWidth={1.5} />
-								</Empty.Icon>
-								<Empty.Title>{ctx.intl.t("page.maintenance.empty.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.intl.t("page.maintenance.empty.description")}
-								</Empty.Description>
-								<Empty.Action>
-									<LinkButton
-										href={routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug })}
-									>
-										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.intl.t("page.maintenance.empty.cta")}
-									</LinkButton>
-								</Empty.Action>
-							</Empty>
-						) : (
-							<>
-								{sections.map((section) => {
-									if (section.windows.length === 0) return null;
+					{windows.length === 0 ? (
+						<Empty kind="first-run" icon={<WrenchIcon size={24} strokeWidth={1.5} />}>
+							<Empty.Title>{ctx.intl.t("page.maintenance.empty.title")}</Empty.Title>
+							<Empty.Description>
+								{ctx.intl.t("page.maintenance.empty.description")}
+							</Empty.Description>
+							<Empty.Action>
+								<LinkButton href={newHref}>
+									<PlusIcon size={16} strokeWidth={1.5} />
+									{ctx.intl.t("page.maintenance.empty.cta")}
+								</LinkButton>
+							</Empty.Action>
+						</Empty>
+					) : (
+						<div mix={[vstack({ gap: 8 })]}>
+							{sections.map((section) => {
+								if (section.windows.length === 0) return null;
 
-									let headingId = `maintenance-${section.key}-heading`;
+								let headingId = `maintenance-${section.key}-heading`;
 
-									return (
-										<div key={section.key}>
-											<h2 id={headingId}>{section.title}</h2>
-											<Table.Container>
-												<Table aria-labelledby={headingId}>
-													<Table.Header>
-														<Table.Row>
-															<Table.Column>
-																{ctx.intl.t("page.maintenance.table.columns.name")}
-															</Table.Column>
-															<Table.Column>
-																{ctx.intl.t("page.maintenance.table.columns.scope")}
-															</Table.Column>
-															<Table.Column>
-																{ctx.intl.t("page.maintenance.table.columns.starts")}
-															</Table.Column>
-															<Table.Column>
-																{ctx.intl.t("page.maintenance.table.columns.ends")}
-															</Table.Column>
-															<Table.Column />
-														</Table.Row>
-													</Table.Header>
-													<Table.Body>
-														{section.windows.map((window) => (
+								return (
+									<section key={section.key} mix={[vstack({ gap: 3 })]}>
+										<h2 id={headingId} mix={[m(0), fontSize("base"), weight("semibold")]}>
+											{section.title}
+										</h2>
+										<Table.Container>
+											<Table aria-labelledby={headingId}>
+												<Table.Header>
+													<Table.Row>
+														<Table.Column>
+															{ctx.intl.t("page.maintenance.table.columns.name")}
+														</Table.Column>
+														<Table.Column>
+															{ctx.intl.t("page.maintenance.table.columns.scope")}
+														</Table.Column>
+														<Table.Column>
+															{ctx.intl.t("page.maintenance.table.columns.starts")}
+														</Table.Column>
+														<Table.Column>
+															{ctx.intl.t("page.maintenance.table.columns.ends")}
+														</Table.Column>
+														<Table.ActionsColumn
+															label={ctx.intl.t("page.maintenance.table.columns.actions")}
+														/>
+													</Table.Row>
+												</Table.Header>
+												<Table.Body>
+													{section.windows.map((window) => {
+														let editHref = routes.app.team.maintenanceWindows.edit.href({
+															...team,
+															windowId: window.id,
+														});
+
+														return (
 															<Table.Row key={window.id}>
 																<Table.Cell>
-																	{window.name}
-																	{window.is_recurring && (
-																		<Badge {...badgeVariant("neutral")}>
-																			{ctx.intl.t("page.maintenance.table.recurring")}
-																		</Badge>
-																	)}
-																	{window.ended_early_at !== null && (
-																		<Badge {...badgeVariant("neutral")}>
-																			{ctx.intl.t("page.maintenance.table.endedEarly")}
-																		</Badge>
-																	)}
+																	<div mix={[hstack({ gap: 2, align: "center" })]}>
+																		<Table.RowLink href={editHref}>{window.name}</Table.RowLink>
+																		{window.is_recurring && (
+																			<Badge {...badgeVariant("neutral")}>
+																				{ctx.intl.t("page.maintenance.table.recurring")}
+																			</Badge>
+																		)}
+																		{window.ended_early_at !== null && (
+																			<Badge {...badgeVariant("neutral")}>
+																				{ctx.intl.t("page.maintenance.table.endedEarly")}
+																			</Badge>
+																		)}
+																	</div>
 																</Table.Cell>
 																<Table.Cell>{scopeLabel(window)}</Table.Cell>
-																<Table.Cell>
-																	{formatDateTime(new Date(window.starts_at), {
-																		locale: ctx.locale,
-																		timeZone: MAINTENANCE_TIME_ZONE,
-																	})}
-																</Table.Cell>
-																<Table.Cell>
-																	{formatDateTime(new Date(window.ends_at), {
-																		locale: ctx.locale,
-																		timeZone: MAINTENANCE_TIME_ZONE,
-																	})}
-																</Table.Cell>
-																<Table.Cell>
-																	<a
-																		href={routes.app.team.maintenanceWindows.edit.href({
-																			team: ctx.team.slug,
-																			windowId: window.id,
-																		})}
-																		mix={[
-																			fg("brand"),
-																			textDecoration("none"),
-																			hover(textDecoration("underline")),
-																		]}
+																<Table.DateCell
+																	date={window.starts_at}
+																	now={now}
+																	locale={ctx.locale}
+																	local
+																/>
+																<Table.DateCell
+																	date={window.ended_early_at ?? window.ends_at}
+																	now={now}
+																	locale={ctx.locale}
+																	local
+																/>
+																<Table.Actions>
+																	<LinkButton
+																		href={editHref}
+																		size="sm"
+																		variant="ghost"
+																		color="neutral"
 																	>
 																		{ctx.intl.t("page.maintenance.table.edit")}
-																	</a>
-																</Table.Cell>
+																	</LinkButton>
+																	{section.key === "active" && window.ended_early_at === null && (
+																		<form
+																			method="post"
+																			action={routes.actions.maintenanceWindow.end.href(team)}
+																		>
+																			<input type="hidden" name="window_id" value={window.id} />
+																			<Button
+																				type="submit"
+																				size="sm"
+																				variant="ghost"
+																				color="neutral"
+																			>
+																				{ctx.intl.t("page.maintenance.table.actions.end")}
+																			</Button>
+																		</form>
+																	)}
+																</Table.Actions>
 															</Table.Row>
-														))}
-													</Table.Body>
-												</Table>
-											</Table.Container>
-										</div>
-									);
-								})}
-							</>
-						)}
-					</div>
+														);
+													})}
+												</Table.Body>
+											</Table>
+										</Table.Container>
+									</section>
+								);
+							})}
+						</div>
+					)}
 				</AppShell>
 			</DocumentLayout>,
 		);

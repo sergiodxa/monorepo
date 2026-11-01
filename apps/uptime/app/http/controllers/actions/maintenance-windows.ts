@@ -1,6 +1,7 @@
 /**
- * Form actions for maintenance-window create/update/delete/end-early. Each follows
- * the validate → mutate → flash → redirect pattern.
+ * Form actions for maintenance-window create/update/delete/end-early. A refused create or
+ * update renders its form again with every posted value and an issue beside each field to
+ * fix, answered as 400; every success flashes a toast and redirects to the list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,9 +14,11 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { UptimeModels } from "~/app/models";
 import type { MonitorScope } from "~/app/services/monitor-scope";
 
+import { translateIssues } from "~/app/http/validators/form-submission";
 import {
 	CreateMaintenanceWindowSchema,
 	MaintenanceWindowIdSchema,
@@ -40,6 +43,46 @@ async function resolveSubmittedScope(
 	return (await isResolvableScope(models, teamId, scope)) ? scope : null;
 }
 
+/** The `page.maintenanceWindows.form.issues` key per field the form can flag. */
+const ISSUE_KEYS: Record<string, string> = {
+	name: "name",
+	scope: "scope",
+	starts_at: "startsAt",
+	ends_at: "endsAt",
+};
+
+/**
+ * The submission as the form page renders it again, each schema issue in the page's own
+ * words. The one rule naming no field compares the two clocks, so it lands on the end time.
+ */
+function windowSubmission(
+	t: (key: string) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	return {
+		values,
+		issues: translateIssues(issues, (field) => {
+			if (field === undefined) {
+				return {
+					field: "ends_at",
+					message: t("page.maintenanceWindows.form.issues.endsBeforeStart"),
+				};
+			}
+			let key = ISSUE_KEYS[field];
+			return key === undefined
+				? { field: undefined, message: t("page.maintenanceWindows.form.issues.generic") }
+				: { field, message: t(`page.maintenanceWindows.form.issues.${key}`) };
+		}),
+	};
+}
+
+/** The issue a scope naming no monitor the team owns renders under the scope picker. */
+const SCOPE_ISSUE = [{ message: "scope", path: ["scope"] }];
+
 /** POST /actions/:team/create-maintenance-window */
 export const createMaintenanceWindow = createAction(
 	routes.actions.maintenanceWindow.create,
@@ -47,28 +90,21 @@ export const createMaintenanceWindow = createAction(
 		let result = await validate(ctx.formData, CreateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
 
+		/** Renders the new-window form again, loading the page only on this path. */
+		let sendBack = async (submission: FormSubmission) => {
+			let { renderNewMaintenanceWindowPage } =
+				await import("~/app/http/controllers/app/team/maintenance-window-new");
+			return renderNewMaintenanceWindowPage(submission);
+		};
+
 		if (isFailure(result)) {
-			session?.flash("toast", {
-				intent: "error",
-				message: "Please check the maintenance window details and try again.",
-			});
-			return redirect(routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug }), {
-				status: redirect.Status.SeeOther,
-			});
+			return sendBack(windowSubmission(ctx.intl.t, ctx.formData, result.error.issues));
 		}
 
 		let { scope: submittedScope, ...values } = result.data;
 
 		let scope = await resolveSubmittedScope(ctx.models, ctx.team.id, submittedScope);
-		if (!scope) {
-			session?.flash("toast", {
-				intent: "error",
-				message: "Please check the maintenance window details and try again.",
-			});
-			return redirect(routes.app.team.maintenanceWindows.new.href({ team: ctx.team.slug }), {
-				status: redirect.Status.SeeOther,
-			});
-		}
+		if (!scope) return sendBack(windowSubmission(ctx.intl.t, ctx.formData, SCOPE_ISSUE));
 
 		let window = unwrap(
 			await ctx.models.maintenanceWindows.create({
@@ -81,7 +117,7 @@ export const createMaintenanceWindow = createAction(
 
 		session?.flash("toast", {
 			intent: "success",
-			message: `Maintenance window "${window.name}" created.`,
+			message: ctx.intl.t("page.maintenance.toasts.created", { name: window.name }),
 		});
 		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -96,34 +132,28 @@ export const updateMaintenanceWindow = createAction(
 		let result = await validate(ctx.formData, UpdateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
 
+		let windowId = isFailure(result) ? ctx.formData.get("window_id") : result.data.window_id;
+		let existing =
+			typeof windowId === "string"
+				? await ctx.models.maintenanceWindows.inTeam(ctx.team.id).find(windowId)
+				: null;
+		if (!existing) return notFound("Not Found");
+
+		/** Renders this window's edit form again, loading the page only on this path. */
+		let sendBack = async (submission: FormSubmission) => {
+			let { renderEditMaintenanceWindowPage } =
+				await import("~/app/http/controllers/app/team/maintenance-window-edit");
+			return renderEditMaintenanceWindowPage(existing, submission);
+		};
+
 		if (isFailure(result)) {
-			session?.flash("toast", {
-				intent: "error",
-				message: "Please check the maintenance window details and try again.",
-			});
-			return redirect(
-				ctx.request.headers.get("Referer") ??
-					routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
-				{ status: redirect.Status.SeeOther },
-			);
+			return sendBack(windowSubmission(ctx.intl.t, ctx.formData, result.error.issues));
 		}
 
 		let { window_id, scope: submittedScope, ...values } = result.data;
-		let existing = await ctx.models.maintenanceWindows.inTeam(ctx.team.id).find(window_id);
-		if (!existing) return notFound("Not Found");
 
 		let scope = await resolveSubmittedScope(ctx.models, ctx.team.id, submittedScope);
-		if (!scope) {
-			session?.flash("toast", {
-				intent: "error",
-				message: "Please check the maintenance window details and try again.",
-			});
-			return redirect(
-				ctx.request.headers.get("Referer") ??
-					routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }),
-				{ status: redirect.Status.SeeOther },
-			);
-		}
+		if (!scope) return sendBack(windowSubmission(ctx.intl.t, ctx.formData, SCOPE_ISSUE));
 
 		unwrap(
 			await ctx.models.maintenanceWindows.update(window_id, {
@@ -133,7 +163,10 @@ export const updateMaintenanceWindow = createAction(
 			}),
 		);
 
-		session?.flash("toast", { intent: "success", message: "Maintenance window updated." });
+		session?.flash("toast", {
+			intent: "success",
+			message: ctx.intl.t("page.maintenance.toasts.updated", { name: values.name }),
+		});
 		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});
@@ -162,7 +195,7 @@ export const deleteMaintenanceWindow = createAction(
 
 		session?.flash("toast", {
 			intent: "success",
-			message: `Maintenance window "${existing.name}" deleted.`,
+			message: ctx.intl.t("page.maintenance.toasts.deleted", { name: existing.name }),
 		});
 		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -190,7 +223,10 @@ export const endMaintenanceWindow = createAction(
 
 		unwrap(await ctx.models.maintenanceWindows.endEarly(result.data.window_id));
 
-		session?.flash("toast", { intent: "success", message: `Ended "${existing.name}" early.` });
+		session?.flash("toast", {
+			intent: "success",
+			message: ctx.intl.t("page.maintenance.toasts.ended", { name: existing.name }),
+		});
 		return redirect(routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
 		});

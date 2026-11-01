@@ -1,25 +1,33 @@
 /**
- * Status pages list controller. Requires `requireUser` + `requireTeam`.
+ * Status pages list controller. Requires `requireUser` + `requireTeam`. Each row opens the
+ * page's settings, links its public address, and says how many services it reports on and
+ * who can see it, so a page left private or empty stands out before it is shared.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FileTextIcon, PlusIcon } from "@sdxc/icons";
+import { ExternalLinkIcon, FileTextIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
-import { textDecoration } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+import { font, textDecoration } from "@sdxc/u/typography";
+import { LinkButton } from "@sdxc/ui";
 import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
+import { Session } from "remix/session";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
+
+/** The flash the create, update and delete actions leave for the list they redirect to. */
+interface Toast {
+	intent: "success" | "error";
+	message: string;
+}
 
 /** GET /app/:team/status-pages — the team's status pages list. */
 export default createAction(routes.app.team.statusPages.index, {
@@ -45,9 +53,15 @@ export default createAction(routes.app.team.statusPages.index, {
 			}),
 		);
 		let countsByPageId = new Map(pages.map((page, index) => [page.id, attachedCounts[index] ?? 0]));
+		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
+		let team = { team: ctx.team.slug };
+		let newHref = routes.app.team.statusPages.new.href(team);
 
 		return ctx.render(
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Status pages`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.statusPages.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}
@@ -55,68 +69,73 @@ export default createAction(routes.app.team.statusPages.index, {
 					viewer={viewer}
 					isAdmin={ctx.membership.role === "admin"}
 					intl={ctx.intl}
+					toast={toast}
 					heading={ctx.intl.t("page.statusPages.header.title")}
 					breadcrumbs={[
 						{
 							label: ctx.intl.t("app.layout.sidebar.navigation.items.dashboard"),
-							href: routes.app.team.dashboard.index.href({ team: ctx.team.slug }),
+							href: routes.app.team.dashboard.index.href(team),
 						},
 					]}
-					actions={
-						<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>
+					primaryAction={
+						<LinkButton href={newHref}>
 							<PlusIcon size={16} strokeWidth={1.5} />
 							{ctx.intl.t("page.statusPages.header.action.create")}
 						</LinkButton>
 					}
 				>
-					<div>
-						{pages.length === 0 ? (
-							<Empty>
-								<Empty.Icon>
-									<FileTextIcon size={24} strokeWidth={1.5} />
-								</Empty.Icon>
-								<Empty.Title>{ctx.intl.t("page.statusPages.empty.title")}</Empty.Title>
-								<Empty.Description>
-									{ctx.intl.t("page.statusPages.empty.description")}
-								</Empty.Description>
-								<Empty.Action>
-									<LinkButton href={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}>
-										<PlusIcon size={20} strokeWidth={1.5} />
-										{ctx.intl.t("page.statusPages.empty.cta")}
-									</LinkButton>
-								</Empty.Action>
-							</Empty>
-						) : (
-							<Table.Container>
-								<Table aria-label={ctx.intl.t("page.statusPages.table.label")}>
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>
-												{ctx.intl.t("page.statusPages.table.columns.name")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.statusPages.table.columns.slug")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.statusPages.table.columns.services")}
-											</Table.Column>
-											<Table.Column>
-												{ctx.intl.t("page.statusPages.table.columns.visibility")}
-											</Table.Column>
-											<Table.Column></Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{pages.map((page) => (
+					{pages.length === 0 ? (
+						<Empty kind="first-run" icon={<FileTextIcon size={24} strokeWidth={1.5} />}>
+							<Empty.Title>{ctx.intl.t("page.statusPages.empty.title")}</Empty.Title>
+							<Empty.Description>
+								{ctx.intl.t("page.statusPages.empty.description")}
+							</Empty.Description>
+							<Empty.Action>
+								<LinkButton href={newHref}>
+									<PlusIcon size={16} strokeWidth={1.5} />
+									{ctx.intl.t("page.statusPages.empty.cta")}
+								</LinkButton>
+							</Empty.Action>
+						</Empty>
+					) : (
+						<Table.Container>
+							<Table aria-label={ctx.intl.t("page.statusPages.table.label")}>
+								<Table.Header>
+									<Table.Row>
+										<Table.Column>{ctx.intl.t("page.statusPages.table.columns.name")}</Table.Column>
+										<Table.Column>{ctx.intl.t("page.statusPages.table.columns.slug")}</Table.Column>
+										<Table.Column numeric>
+											{ctx.intl.t("page.statusPages.table.columns.services")}
+										</Table.Column>
+										<Table.Column>
+											{ctx.intl.t("page.statusPages.table.columns.visibility")}
+										</Table.Column>
+										<Table.ActionsColumn
+											label={ctx.intl.t("page.statusPages.table.columns.actions")}
+										/>
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{pages.map((page) => {
+										let editHref = routes.app.team.statusPages.edit.href({
+											...team,
+											statusPageId: page.id,
+										});
+										let publicHref = routes.statusPage.href({ slug: page.slug });
+
+										return (
 											<Table.Row key={page.id}>
-												<Table.Cell>{page.name}</Table.Cell>
+												<Table.Cell>
+													<Table.RowLink href={editHref}>{page.name}</Table.RowLink>
+												</Table.Cell>
 												<Table.Cell>
 													<a
-														href={routes.statusPage.href({ slug: page.slug })}
+														href={publicHref}
 														target="_blank"
 														rel="noreferrer"
 														mix={[
-															fg("brand"),
+															font("mono"),
+															fg("neutral.muted"),
 															textDecoration("none"),
 															hover(textDecoration("underline")),
 														]}
@@ -124,36 +143,38 @@ export default createAction(routes.app.team.statusPages.index, {
 														/status/{page.slug}
 													</a>
 												</Table.Cell>
-												<Table.Cell>{countsByPageId.get(page.id) ?? 0}</Table.Cell>
-												<Table.Cell>
-													<Badge {...badgeVariant(page.is_public ? "up" : "neutral")}>
-														{page.is_public
-															? ctx.intl.t("page.statusPages.table.visibility.public")
-															: ctx.intl.t("page.statusPages.table.visibility.private")}
-													</Badge>
-												</Table.Cell>
-												<Table.Cell>
-													<a
-														href={routes.app.team.statusPages.edit.href({
-															team: ctx.team.slug,
-															statusPageId: page.id,
-														})}
-														mix={[
-															fg("brand"),
-															textDecoration("none"),
-															hover(textDecoration("underline")),
-														]}
+												<Table.NumberCell
+													value={countsByPageId.get(page.id) ?? 0}
+													locale={ctx.locale}
+												/>
+												<Table.StatusCell color={page.is_public ? "success" : "neutral"}>
+													{page.is_public
+														? ctx.intl.t("page.statusPages.table.visibility.public")
+														: ctx.intl.t("page.statusPages.table.visibility.private")}
+												</Table.StatusCell>
+												<Table.Actions>
+													<LinkButton
+														href={publicHref}
+														target="_blank"
+														rel="noreferrer"
+														size="sm"
+														variant="ghost"
+														color="neutral"
 													>
+														<ExternalLinkIcon size={14} strokeWidth={1.5} />
+														{ctx.intl.t("page.statusPages.table.actions.view")}
+													</LinkButton>
+													<LinkButton href={editHref} size="sm" variant="ghost" color="neutral">
 														{ctx.intl.t("page.statusPages.table.actions.edit")}
-													</a>
-												</Table.Cell>
+													</LinkButton>
+												</Table.Actions>
 											</Table.Row>
-										))}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
-					</div>
+										);
+									})}
+								</Table.Body>
+							</Table>
+						</Table.Container>
+					)}
 				</AppShell>
 			</DocumentLayout>,
 		);

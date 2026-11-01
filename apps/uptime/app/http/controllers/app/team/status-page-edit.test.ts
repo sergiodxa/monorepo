@@ -227,7 +227,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("Edit Status Page");
+		expect(body).toContain(`Edit ${page.name}`);
 		expect(body).toContain(page.name);
 	});
 

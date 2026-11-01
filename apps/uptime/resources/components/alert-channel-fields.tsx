@@ -18,9 +18,11 @@ import { has, when } from "@sdxc/u/state";
 import { fontSize } from "@sdxc/u/typography";
 import { Select, TextField } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { AlertConfig } from "~/database/schema";
 
 import { MAX_ROUTING_KEY_LENGTH, WEBHOOK_SIGNATURE_SCHEMES } from "~/app/http/validators/alert";
+import { fieldIssue, submittedText } from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { standardWebhooksSecret } from "~/app/services/uptime-webhook";
 import Field from "~/resources/components/field";
@@ -32,6 +34,11 @@ namespace AlertChannelFields {
 	export interface Props {
 		/** The alert's saved channel config when editing; omitted when creating. */
 		config?: AlertConfig | null;
+		/**
+		 * A submission the action refused: every field shows what was posted, channels the
+		 * person did not pick included, so switching back finds their typing intact.
+		 */
+		submission?: FormSubmission;
 		/** The request's translator, used to read the shared `page.alerts.form.fields.*` copy. */
 		intl: ReturnType<typeof getContext>["intl"];
 	}
@@ -40,7 +47,7 @@ namespace AlertChannelFields {
 /** Renders the channel picker plus every channel's settings, revealing only the selected one. */
 export default function AlertChannelFields(handle: Handle<AlertChannelFields.Props>) {
 	return () => {
-		let { config, intl } = handle.props;
+		let { config, intl, submission } = handle.props;
 
 		/**
 		 * Reads the shared `page.alerts.form.fields` namespace so the create
@@ -55,7 +62,13 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 		 * A webhook saved before schemes existed signs `legacy`, so its edit form keeps
 		 * that; a new alert, or one switching to webhook, starts on Standard Webhooks.
 		 */
-		let savedScheme = savedWebhook ? (savedWebhook.signature ?? "legacy") : "standard-webhooks";
+		let savedScheme = submittedText(
+			submission,
+			"webhook_signature",
+			savedWebhook ? (savedWebhook.signature ?? "legacy") : "standard-webhooks",
+		);
+		let strategy = submittedText(submission, "strategy", config?.strategy ?? "email");
+		let strategyIssue = fieldIssue(submission, "strategy");
 
 		/**
 		 * The saved channel's own `<option>` is marked `selected`, which is
@@ -79,14 +92,14 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 					),
 				]}
 			>
-				<Field label={t("channel.label")}>
-					<Select name="strategy">
+				<Field label={t("channel.label")} error={strategyIssue} errorId="alert-strategy-error">
+					<Select
+						name="strategy"
+						aria-invalid={strategyIssue ? "true" : undefined}
+						aria-describedby={strategyIssue ? "alert-strategy-error" : undefined}
+					>
 						{CHANNELS.map((channel) => (
-							<Select.Option
-								key={channel}
-								value={channel}
-								selected={channel === (config?.strategy ?? "email")}
-							>
+							<Select.Option key={channel} value={channel} selected={channel === strategy}>
 								{t(`channel.options.${channel}`)}
 							</Select.Option>
 						))}
@@ -100,12 +113,20 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							label={t("config.email.to.label")}
 							type="email"
 							name="email_to"
-							defaultValue={config?.strategy === "email" ? config.config.to : ""}
+							defaultValue={submittedText(
+								submission,
+								"email_to",
+								config?.strategy === "email" ? config.config.to : "",
+							)}
 						/>
 						<TextField
 							label={t("config.email.subjectPrefix.label")}
 							name="email_subject_prefix"
-							defaultValue={config?.strategy === "email" ? config.config.subjectPrefix : ""}
+							defaultValue={submittedText(
+								submission,
+								"email_subject_prefix",
+								config?.strategy === "email" ? config.config.subjectPrefix : "",
+							)}
 						/>
 					</div>
 				</fieldset>
@@ -117,12 +138,20 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							label={t("config.webhook.url.label")}
 							type="url"
 							name="webhook_url"
-							defaultValue={config?.strategy === "webhook" ? config.config.url : ""}
+							defaultValue={submittedText(
+								submission,
+								"webhook_url",
+								config?.strategy === "webhook" ? config.config.url : "",
+							)}
 						/>
 						<TextField
 							label={t("config.webhook.secret.label")}
 							name="webhook_secret"
-							defaultValue={config?.strategy === "webhook" ? config.config.secret : ""}
+							defaultValue={submittedText(
+								submission,
+								"webhook_secret",
+								config?.strategy === "webhook" ? config.config.secret : "",
+							)}
 						/>
 						<Field label={t("config.webhook.signature.label")}>
 							<Select name="webhook_signature">
@@ -160,7 +189,11 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							label={t("config.slack.webhookUrl.label")}
 							type="url"
 							name="slack_webhook_url"
-							defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
+							defaultValue={submittedText(
+								submission,
+								"slack_webhook_url",
+								config?.strategy === "slack" ? config.config.webhookUrl : "",
+							)}
 						/>
 					</div>
 				</fieldset>
@@ -172,7 +205,11 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							label={t("config.discord.webhookUrl.label")}
 							type="url"
 							name="discord_webhook_url"
-							defaultValue={config?.strategy === "discord" ? config.config.webhookUrl : ""}
+							defaultValue={submittedText(
+								submission,
+								"discord_webhook_url",
+								config?.strategy === "discord" ? config.config.webhookUrl : "",
+							)}
 						/>
 					</div>
 				</fieldset>
@@ -187,7 +224,11 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							description={t("config.pagerduty.routingKey.description")}
 							autoComplete="off"
 							maxLength={MAX_ROUTING_KEY_LENGTH}
-							defaultValue={config?.strategy === "pagerduty" ? config.config.routingKey : ""}
+							defaultValue={submittedText(
+								submission,
+								"pagerduty_routing_key",
+								config?.strategy === "pagerduty" ? config.config.routingKey : "",
+							)}
 						/>
 					</div>
 				</fieldset>
