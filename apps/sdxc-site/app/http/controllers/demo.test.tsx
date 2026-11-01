@@ -17,6 +17,7 @@ const FIXTURE: DemoLanding = {
 	kind: "Fixture landing",
 	tagline: "A stand-in demo.",
 	artDirection: "Plain and quiet.",
+	thumbnail: () => <div id="fixture-thumbnail" />,
 	render: () => <main id="fixture-demo">Fixture landing</main>,
 };
 
