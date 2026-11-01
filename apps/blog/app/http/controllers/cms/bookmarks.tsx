@@ -15,6 +15,7 @@ import { createController } from "remix/router";
 import type { SelectBookmark } from "~/database/schema";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/http/validators/cms/bookmark";
 import jobs from "~/app/jobs";
 import { flagOf, isOpen, statusOf } from "~/app/models/bookmarks";
@@ -60,11 +61,11 @@ function checkOf(record: SelectBookmark, id: string): CMSBookmarksActionView.Che
 /** The form page shown in place of an edit whose bookmark no longer exists. */
 function notFoundModel(id: string | undefined): CMSBookmarksActionView.Props {
 	return {
-		title: "Bookmark Not Found",
+		title: "Bookmark not found",
 		description: `Bookmark ${id ?? ""} was not found.`,
 		mode: "new",
 		action: routes.cms.bookmarks.index.href(),
-		submitLabel: "Create Bookmark",
+		submitLabel: "Create bookmark",
 		values: EMPTY_VALUES,
 	};
 }
@@ -83,25 +84,29 @@ export default createController(routes.cms.bookmarks, {
 	actions: {
 		/**
 		 * Renders the bookmarks list, titled by each bookmark's label so one saved without a
-		 * title still reads as its address, and marking every bookmark whose open flag awaits
-		 * review.
+		 * title still reads as its address, with the latest read of each page and the open flag
+		 * that puts it in the review queue.
 		 * @param ctx Controller context that provides DB bindings.
 		 * @returns HTML view model for the CMS bookmarks listing page.
 		 */
 		index: async (ctx) => {
-			let [bookmarks, open] = await Promise.all([
+			let [bookmarks, records] = await Promise.all([
 				ctx.models.likes.findAll(),
-				ctx.models.bookmarks.findOpen(),
+				ctx.models.bookmarks.findAll(),
 			]);
-			let items = bookmarks.map((bookmark) => {
-				let record = open.get(bookmark.id);
-				let flag = record ? flagOf(record) : null;
+			let items = bookmarks.map((bookmark): CMSBookmarksIndexView.Item => {
+				let record = records.get(bookmark.id);
+				let flag = record && isOpen(record) ? flagOf(record) : null;
 				return {
 					id: bookmark.id,
 					title: bookmarkLabel(bookmark.meta),
 					url: bookmark.meta.url,
 					href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
 					deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
+					savedAt: bookmark.created_at,
+					status: record ? statusOf(record) : null,
+					httpStatus: record?.http_status ?? null,
+					finalUrl: record?.final_url ?? null,
 					...(flag ? { flag } : {}),
 				};
 			});
@@ -139,6 +144,7 @@ export default createController(routes.cms.bookmarks, {
 				await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: saved.data.id });
 			}
 
+			flashToast("Bookmark created");
 			return redirect(routes.cms.bookmarks.edit.href({ id: saved.data.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -154,7 +160,7 @@ export default createController(routes.cms.bookmarks, {
 			if (!id)
 				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 
-			await ctx.models.likes.destroy(id);
+			if (await ctx.models.likes.destroy(id)) flashToast("Bookmark deleted");
 			return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 		},
 
@@ -175,11 +181,11 @@ export default createController(routes.cms.bookmarks, {
 			let prefill = isFailure(query) ? { url: "", duplicate: "" } : query.data;
 
 			let model = {
-				title: `Edit Bookmark ${bookmarkLabel(bookmark.meta)}`,
-				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
+				title: bookmarkLabel(bookmark.meta),
+				description: `Saved on ${SAVED_ON.format(new Date(bookmark.created_at))}.`,
 				mode: "edit",
 				action: routes.cms.bookmarks.update.href({ id: bookmark.id }),
-				submitLabel: "Save Bookmark",
+				submitLabel: "Save bookmark",
 				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
 				values: {
 					title: bookmark.meta.title,
@@ -216,12 +222,11 @@ export default createController(routes.cms.bookmarks, {
 			}
 
 			let model = {
-				title: "New Bookmark",
-				description:
-					"Paste a URL; a title or description left empty is read from the page when you save.",
+				title: "New bookmark",
+				description: "Paste a URL to keep the page it points to.",
 				mode: "new",
 				action: routes.cms.bookmarks.index.href(),
-				submitLabel: "Create Bookmark",
+				submitLabel: "Create bookmark",
 				values: { ...EMPTY_VALUES, url },
 			} satisfies CMSBookmarksActionView.Props;
 
@@ -254,11 +259,11 @@ export default createController(routes.cms.bookmarks, {
 			if (updated.outcome === "duplicate") {
 				let holder = await ctx.models.likes.find(updated.id);
 				let model = {
-					title: "Edit Bookmark",
+					title: result.data.title || result.data.url,
 					description: "Another bookmark already holds this URL.",
 					mode: "edit",
 					action: routes.cms.bookmarks.update.href({ id }),
-					submitLabel: "Save Bookmark",
+					submitLabel: "Save bookmark",
 					deleteAction: routes.cms.bookmarks.destroy.href({ id }),
 					values: result.data,
 					conflict: {
@@ -275,6 +280,7 @@ export default createController(routes.cms.bookmarks, {
 				await ctx.jobs.enqueue(jobs.bookmarks.archive, { postId: id });
 			}
 
+			flashToast("Bookmark saved");
 			return redirect(routes.cms.bookmarks.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
 	},

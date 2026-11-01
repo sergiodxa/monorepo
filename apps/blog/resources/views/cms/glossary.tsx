@@ -1,7 +1,7 @@
 /**
- * Views for managing glossary terms in the CMS. `CMSGlossaryIndexView` renders a
- * table of terms with their in-page slug anchors and edit plus modal-confirmed
- * delete actions, and `CMSGlossaryActionView` renders the create/edit form.
+ * Views for managing glossary terms in the CMS. `CMSGlossaryIndexView` lists every term with
+ * its anchor on the public glossary and the start of its definition, and
+ * `CMSGlossaryActionView` is the plain form page that creates or edits one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,13 +9,31 @@
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 
+import { ExternalLinkIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
-import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { Button, Card, Form, Heading, Input, Label, LinkButton, Modal, TextArea } from "@sdxc/ui";
-import { Table } from "@sdxc/ui/app";
+import { raw } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { font, text, truncate, weight } from "@sdxc/u/typography";
+import { Input, LinkButton, TextArea } from "@sdxc/ui";
+import { FilterBar } from "@sdxc/ui/app/filter-bar";
+import { PageHeader } from "@sdxc/ui/app/page-header";
+import { SelectionBar } from "@sdxc/ui/app/selection-bar";
+import { SettingsSection } from "@sdxc/ui/app/settings-section";
+import { Table } from "@sdxc/ui/app/table";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import {
+	DeleteAction,
+	FILTER_LABELS,
+	ListEmpty,
+	ListKeys,
+	matchesSearch,
+	PAGINATION_LABELS,
+	pageOf,
+	readListQuery,
+	SORT_OPTIONS,
+	sortRows,
+} from "~/resources/views/cms/list";
 import routes from "~/routes/web";
 
 /**
@@ -29,7 +47,13 @@ export namespace CMSGlossaryIndexView {
 		id: string;
 		term: string;
 		slug: string;
+		/** The Markdown definition, which the row shows the start of. */
+		definition: string;
+		/** When the term was added, as an ISO string. */
+		createdAt: string;
 		href: string;
+		/** The term's anchor on the public glossary page. */
+		publicHref: string;
 		deleteAction: string;
 	}
 
@@ -65,164 +89,261 @@ export namespace CMSGlossaryActionView {
 		action: string;
 		submitLabel: string;
 		deleteAction?: string;
+		/** The term's anchor on the public glossary page, once it is saved. */
+		publicHref?: string;
 		values: FormValues;
 	}
 }
 
+/** The filter bar's id, whose search field `/` focuses. */
+const FILTER_ID = "glossary-filters";
+
+/** Hides a secondary column when the content pane is narrow. */
+function secondary() {
+	return raw({ "@container ui-app-content (max-width: 40rem)": { display: "none" } });
+}
+
 /**
- * Renders the CMS glossary index with table actions.
+ * Lists every term, newest first; the search reads the term, slug and definition, and lives in
+ * the address with the sort, so a filtered list is a link.
  */
 export function CMSGlossaryIndexView() {
 	return ({ model, assets }: { model: CMSGlossaryIndexView.Props; assets: DocumentAssets }) => {
-		let { items } = model;
+		let query = readListQuery();
+		let searched = model.items.filter((item) =>
+			matchesSearch(query.q, item.term, item.slug, item.definition),
+		);
+		let sorted = sortRows(searched, query.sort, {
+			title: (item) => item.term,
+			date: (item) => item.createdAt,
+		});
+		let page = pageOf(sorted, query);
+		let newTerm = (
+			<LinkButton href={routes.cms.glossary.new.href()} color="brand" size="sm">
+				New term
+			</LinkButton>
+		);
 
 		return (
 			<CMSLayout assets={assets} title="Glossary" activePath={routes.cms.glossary.index.href()}>
-				<main mix={[grid(), gap(4)]}>
-					<Card mix={[p(4)]}>
-						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
-							<Heading level={2}>Glossary</Heading>
-							<LinkButton href={routes.cms.glossary.new.href()} color="brand" size="sm">
-								New Glossary
-							</LinkButton>
-						</div>
-					</Card>
-					<Card mix={[p(4)]}>
-						{items.length === 0 ? (
-							<p mix={[m(0), fg("neutral")]}>No glossary terms found in the database yet.</p>
-						) : (
-							<Table.Container>
-								<Table aria-label="Glossary">
-									<Table.Header>
-										<Table.Row>
-											<Table.Column>Term</Table.Column>
-											<Table.Column>Slug</Table.Column>
-											<Table.Column align="end">Actions</Table.Column>
-										</Table.Row>
-									</Table.Header>
-									<Table.Body>
-										{items.map((item, index) => {
-											let dialogId = `delete-glossary-${String(index)}`;
-											return (
+				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<PageHeader
+						title="Glossary"
+						description="Terms the posts use, each with an anchor on the public glossary."
+						primaryAction={newTerm}
+					/>
+					<FilterBar
+						id={FILTER_ID}
+						url={query.url}
+						search={{ label: "Search terms", placeholder: "Search by term or definition…" }}
+						sort={SORT_OPTIONS}
+						locale="en-US"
+						labels={FILTER_LABELS}
+					/>
+					{page.rows.length === 0 ? (
+						<ListEmpty
+							query={query}
+							noun="terms"
+							firstRun={model.items.length === 0}
+							action={newTerm}
+						/>
+					) : (
+						<>
+							<div id="glossary-table">
+								<Table.Container>
+									<ListKeys filterBar={FILTER_ID} />
+									<Table aria-label="Glossary" density="comfortable">
+										<Table.Header>
+											<Table.Row>
+												<Table.Column>Term</Table.Column>
+												<Table.Column mix={[secondary()]}>Definition</Table.Column>
+												<Table.ActionsColumn label="Actions" />
+											</Table.Row>
+										</Table.Header>
+										<Table.Body>
+											{page.rows.map((item) => (
 												<Table.Row key={item.id}>
-													<Table.Cell>{item.term}</Table.Cell>
-													<Table.Cell mix={[fg("neutral")]}>
-														<code>{`/glossary#${item.slug}`}</code>
-													</Table.Cell>
-													<Table.Cell>
-														<div mix={[hstack({ gap: 1, align: "center", justify: "end" })]}>
-															<LinkButton
+													<Table.Cell mix={[raw({ maxInlineSize: "min(20rem, 40cqi)" })]}>
+														<span
+															mix={[
+																vstack({ gap: 0.5, align: "stretch" }),
+																raw({ minInlineSize: "0" }),
+															]}
+														>
+															<Table.RowLink
 																href={item.href}
-																color="brand"
-																variant="outline"
-																size="sm"
+																mix={[weight("semibold"), truncate()]}
 															>
-																Edit
-															</LinkButton>
-															<Button
-																type="button"
-																commandfor={dialogId}
-																command="show-modal"
-																color="danger"
-																variant="outline"
-																size="sm"
+																{item.term}
+															</Table.RowLink>
+															<span
+																mix={[text("xs"), font("mono"), fg("neutral.muted"), truncate()]}
 															>
-																Delete
-															</Button>
-														</div>
-
-														<Modal id={dialogId}>
-															<Form method="post" action={item.deleteAction}>
-																<input type="hidden" name="_method" value="DELETE" />
-																<Modal.Description>
-																	Delete glossary term <strong>{item.term}</strong>? This action
-																	cannot be undone.
-																</Modal.Description>
-																<Modal.Footer>
-																	<Button type="submit" color="danger">
-																		Confirm delete
-																	</Button>
-																	<Button
-																		type="button"
-																		commandfor={dialogId}
-																		command="close"
-																		color="neutral"
-																		variant="outline"
-																	>
-																		Cancel
-																	</Button>
-																</Modal.Footer>
-															</Form>
-														</Modal>
+																#{item.slug}
+															</span>
+														</span>
 													</Table.Cell>
+													<Table.Cell
+														mix={[
+															secondary(),
+															fg("neutral.muted"),
+															truncate(),
+															raw({ maxInlineSize: "28rem" }),
+														]}
+													>
+														{item.definition}
+													</Table.Cell>
+													<Table.Actions>
+														<LinkButton href={item.href} variant="ghost" color="neutral" size="sm">
+															Edit
+														</LinkButton>
+														<LinkButton
+															href={item.publicHref}
+															variant="ghost"
+															color="neutral"
+															size="sm"
+														>
+															View
+														</LinkButton>
+														<DeleteAction
+															id={`term-${item.id}`}
+															name={item.term}
+															noun="term"
+															action={item.deleteAction}
+														/>
+													</Table.Actions>
 												</Table.Row>
-											);
-										})}
-									</Table.Body>
-								</Table>
-							</Table.Container>
-						)}
-					</Card>
-				</main>
+											))}
+										</Table.Body>
+									</Table>
+								</Table.Container>
+							</div>
+							<SelectionBar
+								target="glossary-table"
+								pagination={page.pagination}
+								locale="en-US"
+								labels={PAGINATION_LABELS}
+							/>
+						</>
+					)}
+				</div>
 			</CMSLayout>
 		);
 	};
 }
 
 /**
- * Renders the CMS glossary form for creating or editing a term.
+ * The page that creates or edits a term: a header with View and Delete, then one card of
+ * fields. The slug is fixed once saved, so the term's anchor keeps working; Delete's confirm
+ * sits in the header, outside the card's form, since forms cannot nest.
  */
 export function CMSGlossaryActionView() {
 	return ({ model, assets }: { model: CMSGlossaryActionView.Props; assets: DocumentAssets }) => {
-		let { action, description, mode, submitLabel, title, values } = model;
+		let { action, deleteAction, description, mode, publicHref, submitLabel, title, values } = model;
+		let editing = mode === "edit";
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.glossary.index.href()}>
-				<main>
-					<Card mix={[p(4), grid(), gap(3)]}>
-						<Heading level={2}>{title}</Heading>
-						<p mix={[m(0), fg("neutral")]}>{description}</p>
-
-						<Form method="post" action={action}>
-							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
-
-							<Label mix={[grid(), gap(1)]}>
-								Term
-								<Input name="term" aria-label="Term" value={values.term} required />
-							</Label>
-
-							<Label mix={[grid(), gap(1)]}>
-								Title
-								<Input name="title" aria-label="Title" value={values.title} />
-							</Label>
-
-							<Label mix={[grid(), gap(1)]}>
-								Slug
-								<Input
-									name="slug"
-									aria-label="Slug"
-									value={values.slug}
-									required
-									readOnly={mode === "edit"}
-								/>
-							</Label>
-
-							<Label mix={[grid(), gap(1)]}>
-								Definition
-								<TextArea name="definition" rows={8} required defaultValue={values.definition} />
-							</Label>
-
-							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
-								<Button type="submit" color="brand">
-									{submitLabel}
-								</Button>
-								<LinkButton href={routes.cms.glossary.index.href()} color="brand" variant="outline">
-									Back to list
-								</LinkButton>
-							</div>
-						</Form>
-					</Card>
-				</main>
+				<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<PageHeader
+						crumbs={[
+							{ label: "Glossary", href: routes.cms.glossary.index.href() },
+							{ label: title },
+						]}
+						crumbsLabel="Breadcrumb"
+						title={title}
+						description={description}
+						actions={
+							<>
+								{publicHref && editing ? (
+									<LinkButton
+										href={publicHref}
+										target="_blank"
+										rel="noopener"
+										variant="outline"
+										color="neutral"
+										size="sm"
+									>
+										<ExternalLinkIcon size={16} aria-hidden="true" />
+										View
+									</LinkButton>
+								) : null}
+								{deleteAction && editing ? (
+									<DeleteAction
+										id="term"
+										name={values.term}
+										noun="term"
+										action={deleteAction}
+										prominent
+									/>
+								) : null}
+							</>
+						}
+					/>
+					<SettingsSection
+						title="Term"
+						description="The term as posts use it, and the definition the glossary shows."
+						form={{
+							action,
+							fields: editing ? <input type="hidden" name="_method" value="PUT" /> : undefined,
+						}}
+						labels={{ save: submitLabel }}
+					>
+						<SettingsSection.Row label="Term" htmlFor="glossary-term">
+							<Input
+								id="glossary-term"
+								name="term"
+								defaultValue={values.term}
+								autoComplete="off"
+								required
+							/>
+						</SettingsSection.Row>
+						<SettingsSection.Row
+							label="Title"
+							description="A longer name, such as what an acronym stands for."
+							htmlFor="glossary-title"
+						>
+							<Input
+								id="glossary-title"
+								name="title"
+								defaultValue={values.title}
+								autoComplete="off"
+							/>
+						</SettingsSection.Row>
+						<SettingsSection.Row
+							label="Slug"
+							description={
+								editing
+									? "Fixed once saved, so links to the term keep working."
+									: "The term's anchor on the glossary page."
+							}
+							htmlFor="glossary-slug"
+						>
+							<Input
+								id="glossary-slug"
+								name="slug"
+								defaultValue={values.slug}
+								autoComplete="off"
+								required
+								readOnly={editing}
+							/>
+						</SettingsSection.Row>
+						<SettingsSection.Row
+							layout="stacked"
+							label="Definition"
+							description="Markdown."
+							htmlFor="glossary-definition"
+						>
+							<TextArea
+								id="glossary-definition"
+								name="definition"
+								rows={8}
+								required
+								defaultValue={values.definition}
+							/>
+						</SettingsSection.Row>
+					</SettingsSection>
+				</div>
 			</CMSLayout>
 		);
 	};

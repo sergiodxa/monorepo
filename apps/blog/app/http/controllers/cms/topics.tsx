@@ -13,6 +13,7 @@ import { slugify } from "@sdxc/strings";
 import { validate, ValidationError } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import { flashToast } from "~/app/http/toast";
 import { NewTopicQuerySchema, TopicSchema } from "~/app/http/validators/cms/topic";
 import { topicPath } from "~/app/http/view-models/topic";
 import { isBuiltInTopic } from "~/app/models/topics";
@@ -25,7 +26,7 @@ function newForm(
 	error: string | null = null,
 ): CMSTopicFormView.Props {
 	return {
-		title: "New Topic",
+		title: "New topic",
 		action: routes.cms.topics.create.href(),
 		mode: "new",
 		builtIn: false,
@@ -54,6 +55,7 @@ export default createController(routes.cms.topics, {
 				path: topicPath(topic),
 				query: topic.query,
 				builtIn: isBuiltInTopic(topic.slug),
+				createdAt: topic.created_at,
 				href: routes.cms.topics.edit.href({ id: topic.id }),
 				deleteAction: routes.cms.topics.destroy.href({ id: topic.id }),
 			}));
@@ -80,6 +82,7 @@ export default createController(routes.cms.topics, {
 			if (isFailure(saved)) {
 				return ctx.render(CMSTopicFormView, newForm(values, reason(saved.error)), { status: 422 });
 			}
+			flashToast("Topic created");
 			return redirect(routes.cms.topics.edit.href({ id: saved.data.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -104,6 +107,9 @@ export default createController(routes.cms.topics, {
 				mode: "edit",
 				builtIn: isBuiltInTopic(topic.slug),
 				path: topicPath(topic),
+				...(isBuiltInTopic(topic.slug)
+					? {}
+					: { deleteAction: routes.cms.topics.destroy.href({ id: topic.id }) }),
 				values: {
 					title: topic.title,
 					slug: topic.slug,
@@ -147,6 +153,7 @@ export default createController(routes.cms.topics, {
 					{ status: 422 },
 				);
 			}
+			flashToast("Topic saved");
 			return redirect(routes.cms.topics.edit.href({ id: topic.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -154,7 +161,8 @@ export default createController(routes.cms.topics, {
 
 		/** Deletes an author's topic; the model refuses a kind's, which stays listed. */
 		async destroy(ctx) {
-			await ctx.models.topics.delete(ctx.params.id);
+			let deleted = await ctx.models.topics.delete(ctx.params.id);
+			if (!isFailure(deleted)) flashToast("Topic deleted");
 			return redirect(routes.cms.topics.index.href(), { status: redirect.Status.SeeOther });
 		},
 	},

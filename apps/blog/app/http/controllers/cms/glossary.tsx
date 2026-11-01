@@ -14,6 +14,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { flashToast } from "~/app/http/toast";
 import { GlossarySchema } from "~/app/http/validators/cms/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/cms/glossary";
 import routes from "~/routes/web";
@@ -30,7 +31,8 @@ export default createController(routes.cms.glossary, {
 
 	actions: {
 		/**
-		 * Every stored term is listed, each row carrying its own edit and delete endpoint.
+		 * Every stored term is listed with its definition and public anchor, each row carrying its
+		 * own edit and delete endpoint.
 		 *
 		 * @param ctx Request context carrying the database.
 		 * @returns CMS glossary index view response.
@@ -41,7 +43,10 @@ export default createController(routes.cms.glossary, {
 				id: item.id,
 				term: item.meta.term,
 				slug: item.meta.slug,
+				definition: item.meta.definition,
+				createdAt: item.created_at,
 				href: routes.cms.glossary.edit.href({ id: item.id }),
+				publicHref: `${routes.glossary.href()}#${item.meta.slug}`,
 				deleteAction: routes.cms.glossary.destroy.href({ id: item.id }),
 			}));
 
@@ -77,6 +82,7 @@ export default createController(routes.cms.glossary, {
 
 			let created = saved.data;
 
+			flashToast("Term created");
 			return redirect(routes.cms.glossary.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
 			});
@@ -91,7 +97,7 @@ export default createController(routes.cms.glossary, {
 			if (!id)
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 
-			await ctx.models.glossary.tombstone(id);
+			if (await ctx.models.glossary.tombstone(id)) flashToast("Term deleted");
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
@@ -107,11 +113,11 @@ export default createController(routes.cms.glossary, {
 
 			if (!glossary) {
 				let viewProps = {
-					title: "Glossary Term Not Found",
-					description: `Glossary term ${id} was not found.`,
+					title: "Term not found",
+					description: `Term ${id} was not found. Create it again below.`,
 					mode: "new",
 					action: routes.cms.glossary.index.href(),
-					submitLabel: "Create Glossary Term",
+					submitLabel: "Create term",
 					values: { term: "", title: "", slug: "", definition: "" },
 				} satisfies CMSGlossaryActionView.Props;
 
@@ -119,12 +125,13 @@ export default createController(routes.cms.glossary, {
 			}
 
 			let viewProps = {
-				title: `Edit Glossary ${glossary.meta.term}`,
-				description: `Editing glossary term at ${routes.glossary.href()}#${glossary.meta.slug}.`,
+				title: glossary.meta.term,
+				description: `Listed at ${routes.glossary.href()}#${glossary.meta.slug}.`,
 				mode: "edit",
 				action: routes.cms.glossary.update.href({ id: glossary.id }),
-				submitLabel: "Save Glossary Term",
+				submitLabel: "Save term",
 				deleteAction: routes.cms.glossary.destroy.href({ id: glossary.id }),
+				publicHref: `${routes.glossary.href()}#${glossary.meta.slug}`,
 				values: {
 					term: glossary.meta.term ?? "",
 					title: glossary.meta.title ?? "",
@@ -146,11 +153,11 @@ export default createController(routes.cms.glossary, {
 		new: async (ctx) => {
 			let total = (await ctx.models.glossary.findAll()).length;
 			let viewProps = {
-				title: "New Glossary",
-				description: `New Glossary form loaded. Current glossary count: ${total}.`,
+				title: "New term",
+				description: `The glossary holds ${String(total)} terms.`,
 				mode: "new",
 				action: routes.cms.glossary.index.href(),
-				submitLabel: "Create Glossary Term",
+				submitLabel: "Create term",
 				values: { term: "", title: "", slug: "", definition: "" },
 			} satisfies CMSGlossaryActionView.Props;
 
@@ -184,17 +191,18 @@ export default createController(routes.cms.glossary, {
 
 			if (isFailure(updated)) {
 				let viewProps = {
-					title: "Glossary Term Not Found",
-					description: `Glossary term ${id} was not found.`,
+					title: "Term not found",
+					description: `Term ${id} was not found. Create it again below.`,
 					mode: "new",
 					action: routes.cms.glossary.index.href(),
-					submitLabel: "Create Glossary Term",
+					submitLabel: "Create term",
 					values: { term: "", title: "", slug: "", definition: "" },
 				} satisfies CMSGlossaryActionView.Props;
 
 				return ctx.render(CMSGlossaryActionView, viewProps, { status: 404 });
 			}
 
+			flashToast("Term saved");
 			return redirect(routes.cms.glossary.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},
 	},
