@@ -144,13 +144,15 @@ export default defineSeed(registry, {
 			for (let minute = 0; minute < 60; minute += 1) {
 				let at = now - minute * MINUTE_MS;
 				let down = spec.status === "down" && minute < 12;
-				await models.monitorResults.create({
-					id: generateUUID(),
-					monitor_id: monitor.id,
-					completed_at: at,
-					response_status: down ? 503 : 200,
-					response_time_ms: down ? null : (spec.ms || 220) + stable(minute, 0, 120),
-				});
+				unwrap(
+					await models.monitorResults.create({
+						id: generateUUID(),
+						monitor_id: monitor.id,
+						completed_at: at,
+						response_status: down ? 503 : 200,
+						response_time_ms: down ? null : (spec.ms || 220) + stable(minute, 0, 120),
+					}),
+				);
 			}
 		}
 	},
@@ -187,29 +189,34 @@ export default defineSeed(registry, {
 			},
 		] as const;
 		for (let record of records) {
-			await models.dnsMonitorRecords.create({
-				dns_monitor_id: monitor.id,
-				...record,
-				source: "resolver",
-				first_seen_at: now - 80 * DAY_MS,
-				last_seen_at: now - 20 * MINUTE_MS,
-				last_checked_at: now - 20 * MINUTE_MS,
-			});
+			unwrap(
+				await models.dnsMonitorRecords.create({
+					id: generateUUID(),
+					dns_monitor_id: monitor.id,
+					...record,
+					source: "resolver",
+					first_seen_at: now - 80 * DAY_MS,
+					last_seen_at: now - 20 * MINUTE_MS,
+					last_checked_at: now - 20 * MINUTE_MS,
+				}),
+			);
 		}
 		for (let hour = 0; hour < 24; hour += 1) {
-			await models.dnsMonitorResults.create({
-				id: generateUUID(),
-				dns_monitor_id: monitor.id,
-				status: hour === 0 ? "changed" : "ok",
-				records_checked: records.length,
-				records_changed: hour === 0 ? 1 : 0,
-				records_missing: 0,
-				records_new: 0,
-				queries_failed: 0,
-				error_message: null,
-				response_time_ms: 24 + stable(hour, 0, 30),
-				checked_at: now - hour * HOUR_MS - 20 * MINUTE_MS,
-			});
+			unwrap(
+				await models.dnsMonitorResults.create({
+					id: generateUUID(),
+					dns_monitor_id: monitor.id,
+					status: hour === 0 ? "changed" : "ok",
+					records_checked: records.length,
+					records_changed: hour === 0 ? 1 : 0,
+					records_missing: 0,
+					records_new: 0,
+					queries_failed: 0,
+					error_message: null,
+					response_time_ms: 24 + stable(hour, 0, 30),
+					checked_at: now - hour * HOUR_MS - 20 * MINUTE_MS,
+				}),
+			);
 		}
 		await writeDailyStats(models, { id: monitor.id, type: "dns", checksPerDay: 24 }, [0], 31);
 	},
@@ -232,13 +239,15 @@ export default defineSeed(registry, {
 			}),
 		);
 		for (let minute = 0; minute < 60; minute += 1) {
-			await models.tcpMonitorResults.create({
-				id: generateUUID(),
-				tcp_monitor_id: monitor.id,
-				status: "up",
-				response_time_ms: 14 + stable(minute, 0, 10),
-				checked_at: now - minute * MINUTE_MS,
-			});
+			unwrap(
+				await models.tcpMonitorResults.create({
+					id: generateUUID(),
+					tcp_monitor_id: monitor.id,
+					status: "up",
+					response_time_ms: 14 + stable(minute, 0, 10),
+					checked_at: now - minute * MINUTE_MS,
+				}),
+			);
 		}
 		await writeDailyStats(models, { id: monitor.id, type: "tcp", checksPerDay: 1440 }, [6], 17);
 	},
@@ -277,13 +286,15 @@ export default defineSeed(registry, {
 				}),
 			);
 			for (let ping = 0; ping < 20; ping += 1) {
-				await models.cronJobPings.create({
-					id: generateUUID(),
-					cron_job_monitor_id: monitor.id,
-					was_on_time: ping !== 3,
-					source_ip: "203.0.113.24",
-					user_agent: "curl/8.7.1",
-				});
+				unwrap(
+					await models.cronJobPings.create({
+						id: generateUUID(),
+						cron_job_monitor_id: monitor.id,
+						was_on_time: ping !== 3,
+						source_ip: "203.0.113.24",
+						user_agent: "curl/8.7.1",
+					}),
+				);
 			}
 			let perDay = Math.round(DAY_MS / job.every);
 			await writeDailyStats(
@@ -312,20 +323,22 @@ export default defineSeed(registry, {
 		);
 		for (let run = 0; run < 12; run += 1) {
 			let failed = run === 4;
-			await models.flowMonitorResults.create({
-				id: generateUUID(),
-				flow_monitor_id: monitor.id,
-				status: failed ? "down" : "up",
-				tests_total: 1,
-				tests_passed: failed ? 0 : 1,
-				tests_failed: failed ? 1 : 0,
-				requests_made: 3,
-				failed_test: failed ? "signs in" : null,
-				failed_at_line: failed ? 3 : null,
-				failure_detail: failed ? "Expected status 200, got 502" : null,
-				duration_ms: 1400 + stable(run, 0, 600),
-				checked_at: now - run * 15 * MINUTE_MS - 6 * MINUTE_MS,
-			});
+			unwrap(
+				await models.flowMonitorResults.create({
+					id: generateUUID(),
+					flow_monitor_id: monitor.id,
+					status: failed ? "down" : "up",
+					tests_total: 1,
+					tests_passed: failed ? 0 : 1,
+					tests_failed: failed ? 1 : 0,
+					requests_made: 3,
+					failed_test: failed ? "signs in" : null,
+					failed_at_line: failed ? 3 : null,
+					failure_detail: failed ? "Expected status 200, got 502" : null,
+					duration_ms: 1400 + stable(run, 0, 600),
+					checked_at: now - run * 15 * MINUTE_MS - 6 * MINUTE_MS,
+				}),
+			);
 		}
 		await writeDailyStats(
 			models,
@@ -358,22 +371,24 @@ export default defineSeed(registry, {
 		] as const;
 		for (let event of events) {
 			if (!event.monitor) continue;
-			await models.alertEvents.create({
-				alert_id: alert.id,
-				monitor_id: event.monitor.id,
-				event_type: event.type,
-				status: "sent",
-				sent_at: now - event.ago,
-				monitor_type: "http",
-				monitor_name: event.monitor.name,
-				snapshot: {
-					type: "http",
-					responseStatus: event.type === "down" ? 503 : 200,
-					responseTimeMs: event.type === "degraded" ? 6200 : 210,
-					expectedStatus: 200,
-					url: event.monitor.url,
-				},
-			});
+			unwrap(
+				await models.alertEvents.create({
+					alert_id: alert.id,
+					monitor_id: event.monitor.id,
+					event_type: event.type,
+					status: "sent",
+					sent_at: now - event.ago,
+					monitor_type: "http",
+					monitor_name: event.monitor.name,
+					snapshot: {
+						type: "http",
+						responseStatus: event.type === "down" ? 503 : 200,
+						responseTimeMs: event.type === "degraded" ? 6200 : 210,
+						expectedStatus: 200,
+						url: event.monitor.url,
+					},
+				}),
+			);
 		}
 	},
 
@@ -381,23 +396,27 @@ export default defineSeed(registry, {
 	async maintenance({ models }) {
 		let team = await devTeam(models);
 		let start = Date.now() + DAY_MS;
-		await models.maintenanceWindows.create({
-			team_id: team.id,
-			name: "Database upgrade",
-			starts_at: start,
-			ends_at: start + 2 * HOUR_MS,
-		});
+		unwrap(
+			await models.maintenanceWindows.create({
+				team_id: team.id,
+				name: "Database upgrade",
+				starts_at: start,
+				ends_at: start + 2 * HOUR_MS,
+			}),
+		);
 	},
 
 	/** A public status page. */
 	async statusPage({ models }) {
 		let team = await devTeam(models);
-		await models.statusPages.create({
-			team_id: team.id,
-			name: "Acme status",
-			slug: "acme",
-			title: "Acme status",
-			description: "Live status for Acme's site, API and checkout.",
-		});
+		unwrap(
+			await models.statusPages.create({
+				team_id: team.id,
+				name: "Acme status",
+				slug: "acme",
+				title: "Acme status",
+				description: "Live status for Acme's site, API and checkout.",
+			}),
+		);
 	},
 });

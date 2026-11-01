@@ -48,6 +48,10 @@ describe("db seed", () => {
 			3, 1, 1, 2, 1,
 		]);
 
+		let [dnsMonitor] = dns;
+		if (!dnsMonitor) return;
+		expect(await models.dnsMonitorRecords.forMonitor(dnsMonitor.id).all()).toHaveLength(5);
+
 		let [first] = http;
 		if (!first) return;
 		expect(await models.monitorDailyStats.listRecentDays(first.id, "http")).toHaveLength(90);
