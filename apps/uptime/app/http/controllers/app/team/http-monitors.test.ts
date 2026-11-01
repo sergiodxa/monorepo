@@ -26,6 +26,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
+import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
@@ -97,10 +98,16 @@ async function send(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
+	search = "",
+	session = new Session(),
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.monitors.index, {
 		middleware: [
+			(ctx, next) => {
+				ctx.set(Session, session, { property: "session" });
+				return next();
+			},
 			seedTeam(team, membership),
 			teamAccess,
 			i18n,
@@ -111,7 +118,10 @@ async function send(
 	});
 
 	let request = new Request(
-		new URL(routes.app.team.monitors.index.href({ team: team.slug }), "https://uptime.test"),
+		new URL(
+			`${routes.app.team.monitors.index.href({ team: team.slug })}${search}`,
+			"https://uptime.test",
+		),
 	);
 
 	return router.fetch(request);
@@ -142,6 +152,19 @@ describe("httpMonitors", () => {
 		expect(body).toContain("HTTP Monitors");
 		expect(body).toContain("No HTTP monitors yet");
 		expect(body).toContain("Create an HTTP monitor to start tracking your endpoints.");
+	});
+
+	/** The page passes no toast of its own, so this pins the shell reading the flash itself. */
+	test("shows the flash an action left in the session as a toast", async () => {
+		let { db, team, membership } = await createFixture();
+		let session = new Session(undefined, [
+			{},
+			{ toast: { intent: "success", message: "Monitor deleted" } },
+		]);
+
+		let body = await (await send(db, team, membership, "", session)).text();
+
+		expect(body).toContain("Monitor deleted");
 	});
 
 	test("lists a team's monitors with their name and URL", async () => {
@@ -213,5 +236,58 @@ describe("httpMonitors", () => {
 
 		expect(asMember).not.toContain(deleteAction);
 		expect(asAdmin).toContain(deleteAction);
+	});
+
+	test("narrows the rows to a search over name and URL, and to the status facet", async () => {
+		let { db, team, membership } = await createFixture();
+		let models = bindModels(db);
+		for (let [name, url, status] of [
+			["Homepage", "https://example.com", "up"],
+			["Checkout", "https://shop.example.org/cart", "down"],
+			["Docs", "https://docs.example.net", "up"],
+		] as const) {
+			unwrap(
+				await models.monitors.create({
+					id: generateUUID(),
+					team_id: team.id,
+					author_id: membership.subject_id,
+					enabled_at: Date.now(),
+					name,
+					url,
+					last_status: status,
+					last_checked_at: Date.now(),
+				}),
+			);
+		}
+
+		let bySearch = await (await send(db, team, membership, "?q=SHOP")).text();
+		expect(bySearch).toContain("Checkout");
+		expect(bySearch).not.toContain(">Homepage<");
+		expect(bySearch).not.toContain(">Docs<");
+
+		let byStatus = await (await send(db, team, membership, "?status=up")).text();
+		expect(byStatus).toContain(">Homepage<");
+		expect(byStatus).toContain(">Docs<");
+		expect(byStatus).not.toContain(">Checkout<");
+	});
+
+	test("says no monitor matches, with a way to clear the filters, when none does", async () => {
+		let { db, team, membership } = await createFixture();
+		unwrap(
+			await bindModels(db).monitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			}),
+		);
+
+		let body = await (await send(db, team, membership, "?q=nothing-like-it")).text();
+		expect(body).toContain("No monitors match");
+		expect(body).toContain("nothing-like-it");
+		expect(body).toContain(`href="${routes.app.team.monitors.index.href({ team: team.slug })}"`);
+		expect(body).not.toContain("No HTTP monitors yet");
 	});
 });

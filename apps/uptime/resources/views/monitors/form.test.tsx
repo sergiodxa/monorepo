@@ -114,4 +114,51 @@ describe("MonitorFormFields", () => {
 	test("names no value through an attribute a <select> does not have", async () => {
 		expect(/<select[^>]*defaultvalue=/i.test(await render(monitor()))).toBe(false);
 	});
+
+	test("draws a failed submission's values over the saved ones", async () => {
+		let saved = monitor();
+		let values = { name: "Typed", url: "not-a-url", expected_status: "404", location_hint: "apac" };
+		let basics = await renderToString(
+			<MonitorFormFields
+				monitor={saved}
+				intl={intl}
+				page="editMonitor"
+				group="basics"
+				values={values}
+			/>,
+		);
+		let checks = await renderToString(
+			<MonitorFormFields
+				monitor={saved}
+				intl={intl}
+				page="editMonitor"
+				group="checks"
+				values={values}
+			/>,
+		);
+
+		expect(basics).toContain('value="Typed"');
+		expect(basics).toContain('value="not-a-url"');
+		expect(basics).not.toContain('value="Acme"');
+		expect(selectedValues(checks, "expected_status")).toEqual(["404"]);
+		expect(selectedValues(checks, "location_hint")).toEqual(["apac"]);
+	});
+
+	test("marks each field a failed submission named, with its message, and only those", async () => {
+		let basics = await renderToString(
+			<MonitorFormFields
+				intl={intl}
+				page="createMonitor"
+				group="basics"
+				values={{ name: "Homepage", url: "nope" }}
+				errors={{ url: "Enter a full URL." }}
+			/>,
+		);
+
+		expect(basics).toContain("Enter a full URL.");
+		expect(basics.match(/<input[^>]*aria-invalid="true"/g)).toHaveLength(1);
+		expect(basics).toMatch(
+			/<input[^>]*name="url"[^>]*aria-invalid="true"|<input[^>]*aria-invalid="true"[^>]*name="url"/,
+		);
+	});
 });

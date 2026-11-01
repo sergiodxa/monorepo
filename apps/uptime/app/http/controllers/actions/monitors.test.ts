@@ -12,8 +12,9 @@
  */
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
@@ -24,9 +25,11 @@ import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -34,8 +37,10 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import i18n from "~/app/http/middleware/i18n";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -108,8 +113,19 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return teamAccess(ctx, next);
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -135,7 +151,15 @@ async function send(
 			formData() as Middleware,
 		],
 	});
-	router.map(route, { middleware: [seedTeam(team, membership)], handler });
+	router.map(route, {
+		middleware: [
+			seedTeam(team, membership),
+			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
+		handler,
+	});
 
 	let request = new Request(new URL(route.href({ team: team.slug }), "https://uptime.test"), {
 		method,
@@ -179,7 +203,7 @@ describe("createMonitor", () => {
 		expect(queue.sent[0]!.body.body.monitorId).toBe(created!.id);
 	});
 
-	test("redirects back to the form without creating a monitor when the url is invalid", async () => {
+	test("redraws the form with what was typed and the url's issue, creating nothing", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(
@@ -189,13 +213,17 @@ describe("createMonitor", () => {
 			routes.actions.monitor.http.create,
 			createMonitor as RequestHandler<any>,
 			"POST",
-			{ name: "Homepage", url: "not-a-url" },
+			{ name: "Homepage", url: "not-a-url", expected_status: "301", location_hint: "weur" },
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitors.new.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Homepage"');
+		expect(body).toContain('value="not-a-url"');
+		expect(body).toContain("Enter a full URL, starting with http:// or https://.");
+		expect(body).not.toContain("Enter a name, up to 255 characters.");
+		expect(body).toMatch(/<option[^>]*value="301"[^>]*selected/);
+		expect(body).toMatch(/<option[^>]*value="weur"[^>]*selected/);
 
 		let matching = await db.findMany(monitors, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
@@ -235,6 +263,55 @@ describe("updateMonitor", () => {
 		let updated = await db.findOne(monitors, { where: { id: monitor.id } });
 		expect(updated?.name).toBe("Renamed");
 		expect(updated?.url).toBe("https://new.example.com");
+	});
+
+	test("redraws the edit page with what was typed and the field's issue, saving nothing", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Original",
+				url: "https://old.example.com",
+			}),
+		);
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.update,
+			updateMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id, name: "Renamed", url: "not-a-url" },
+		);
+
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('value="Renamed"');
+		expect(body).toContain('value="not-a-url"');
+		expect(body).toContain("Enter a full URL, starting with http:// or https://.");
+
+		let unchanged = await db.findOne(monitors, { where: { id: monitor.id } });
+		expect(unchanged?.name).toBe("Original");
+	});
+
+	test("responds 404 to a failed submission for a monitor that isn't the team's", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.http.update,
+			updateMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: generateUUID(), name: "", url: "not-a-url" },
+		);
+
+		expect(response.status).toBe(404);
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {

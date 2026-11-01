@@ -1,7 +1,7 @@
 /**
  * Shared HTTP monitor form fields for the new-monitor and edit-monitor views,
  * split into a `"basics"` group (name, URL) and a `"checks"` group (interval,
- * expected status, region) that post to one `<form>`.
+ * expected status, region) that post to one `<form>`, and redrawn with a failed submission.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +23,9 @@ const LOCATION_HINTS = ["wnam", "enam", "sam", "weur", "eeur", "apac", "oc", "af
 
 /**
  * Compact, representative animal emoji for each {@link LOCATION_HINTS} region hint,
- * spliced into its translated label — kept local to this module since no shared
- * copy of this mapping exists elsewhere in this app yet.
+ * spliced into its translated label wherever a region is named.
  */
-const LOCATION_HINT_EMOJI: Record<(typeof LOCATION_HINTS)[number], string> = {
+export const LOCATION_HINT_EMOJI: Record<(typeof LOCATION_HINTS)[number], string> = {
 	wnam: "🦬",
 	enam: "🦅",
 	sam: "🦙",
@@ -65,6 +64,20 @@ const EXPECTED_STATUS_CODES = [
 	{ value: 503, label: "503 Service Unavailable" },
 ] as const;
 
+/** The fields this form posts, which a failed submission can name. */
+export type MonitorFormField =
+	| "name"
+	| "url"
+	| "expected_status"
+	| "interval_seconds"
+	| "location_hint";
+
+/** What a failed submission typed into each field, exactly as it was posted. */
+export type MonitorFormValues = Partial<Record<MonitorFormField, string>>;
+
+/** The translated message each field that failed validation shows under itself. */
+export type MonitorFormErrors = Partial<Record<MonitorFormField, string>>;
+
 namespace MonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
@@ -85,6 +98,12 @@ namespace MonitorFormFields {
 		 * edit's own value is never something a query string should be able to replace.
 		 */
 		defaultUrl?: string;
+		/**
+		 * A failed submission's values, which take precedence over `monitor` and `defaultUrl`
+		 * so the visitor's typing comes back as they left it.
+		 */
+		values?: MonitorFormValues;
+		errors?: MonitorFormErrors;
 	}
 }
 
@@ -95,11 +114,14 @@ namespace MonitorFormFields {
  */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
-		let { monitor, intl, page, group, defaultUrl } = handle.props;
+		let { monitor, intl, page, group, defaultUrl, values = {}, errors = {} } = handle.props;
 		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 
-		let expectedStatus = monitor?.expected_status ?? 200;
-		let locationHint = monitor?.location_hint;
+		let expectedStatus = values.expected_status
+			? Number(values.expected_status)
+			: (monitor?.expected_status ?? 200);
+		let locationHint = values.location_hint || monitor?.location_hint;
+		let interval = Number(values.interval_seconds);
 
 		if (group === "basics") {
 			return (
@@ -110,8 +132,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						type="text"
 						name="name"
 						required
-						defaultValue={monitor?.name}
+						defaultValue={values.name ?? monitor?.name}
 						placeholder={t("name.placeholder")}
+						errorMessage={errors.name}
 					/>
 
 					<TextField
@@ -120,8 +143,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						type="url"
 						name="url"
 						required
-						defaultValue={monitor?.url ?? defaultUrl}
+						defaultValue={values.url ?? monitor?.url ?? defaultUrl}
 						placeholder={t("url.placeholder")}
+						errorMessage={errors.url}
 					/>
 				</>
 			);
@@ -137,12 +161,25 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					step={60}
 					scale={60}
 					unit="m"
-					defaultValue={monitor?.interval_seconds ?? 600}
+					defaultValue={
+						Number.isFinite(interval) && interval > 0
+							? interval
+							: (monitor?.interval_seconds ?? 600)
+					}
 					rangeLabels={["1m", "60m"]}
 				/>
 
-				<Field label={t("status.label")} description={t("status.description")}>
-					<Select name="expected_status">
+				<Field
+					label={t("status.label")}
+					description={t("status.description")}
+					error={errors.expected_status}
+					errorId="monitor-expected-status-error"
+				>
+					<Select
+						name="expected_status"
+						aria-invalid={errors.expected_status ? "true" : undefined}
+						aria-describedby={errors.expected_status ? "monitor-expected-status-error" : undefined}
+					>
 						{EXPECTED_STATUS_CODES.map((status) => (
 							<Select.Option
 								key={status.value}
@@ -155,8 +192,18 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 					</Select>
 				</Field>
 
-				<Field label={t("region.label")} description={t("region.description")}>
-					<Select name="location_hint" required>
+				<Field
+					label={t("region.label")}
+					description={t("region.description")}
+					error={errors.location_hint}
+					errorId="monitor-location-hint-error"
+				>
+					<Select
+						name="location_hint"
+						required
+						aria-invalid={errors.location_hint ? "true" : undefined}
+						aria-describedby={errors.location_hint ? "monitor-location-hint-error" : undefined}
+					>
 						{!locationHint && (
 							<Select.Option value="" disabled selected={!locationHint}>
 								{t("region.placeholder")}

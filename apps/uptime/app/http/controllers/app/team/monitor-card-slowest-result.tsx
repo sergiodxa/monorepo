@@ -9,14 +9,13 @@
 
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
+import { StatCard } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getSlowestResultForMonitor } from "~/app/services/analytics";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId/cards/slowest-result — the monitor's slowest-result stat card, fragment-only. */
@@ -32,15 +31,15 @@ export default createAction(routes.app.team.monitors.cards.slowestResult, {
 		let slowestResultMs = isFailure(result) ? null : result.data;
 
 		return ctx.render(
-			<StatCard
-				label={ctx.intl.t("page.monitor.stats.slowestResult.label")}
-				value={
-					<>
-						{slowestResultMs === null ? "N/A" : `${Math.round(slowestResultMs)}ms`}
-						<Subtitle>{ctx.intl.t("page.monitor.stats.slowestResult.description")}</Subtitle>
-					</>
-				}
-			/>,
+			<StatCard>
+				<StatCard.Label>{ctx.intl.t("page.monitor.stats.slowestResult.label")}</StatCard.Label>
+				<StatCard.Value>
+					{slowestResultMs === null ? "N/A" : `${Math.round(slowestResultMs)}ms`}
+				</StatCard.Value>
+				<StatCard.Footer>
+					{ctx.intl.t("page.monitor.stats.slowestResult.description")}
+				</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });

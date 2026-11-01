@@ -8,13 +8,12 @@
  */
 
 import { notFound } from "@sdxc/http/response/html";
+import { StatCard } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId/cards/uptime — the monitor's uptime-percentage stat card, fragment-only. */
@@ -32,15 +31,11 @@ export default createAction(routes.app.team.monitors.cards.uptime, {
 		let uptimePercent = totalChecks > 0 ? Math.round((successfulChecks / totalChecks) * 100) : null;
 
 		return ctx.render(
-			<StatCard
-				label={ctx.intl.t("page.monitor.stats.uptime.label")}
-				value={
-					<>
-						{uptimePercent === null ? "—" : `${uptimePercent}%`}
-						<Subtitle>{ctx.intl.t("page.monitor.stats.uptime.description")}</Subtitle>
-					</>
-				}
-			/>,
+			<StatCard>
+				<StatCard.Label>{ctx.intl.t("page.monitor.stats.uptime.label")}</StatCard.Label>
+				<StatCard.Value>{uptimePercent === null ? "—" : `${uptimePercent}%`}</StatCard.Value>
+				<StatCard.Footer>{ctx.intl.t("page.monitor.stats.uptime.description")}</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });

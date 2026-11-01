@@ -26,6 +26,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
@@ -100,6 +101,7 @@ async function send(
 	router.map(routes.app.team.monitors.show, {
 		middleware: [
 			seedTeam(team, membership),
+			teamAccess,
 			i18n,
 			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -160,8 +162,7 @@ describe("monitorShow", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toMatch(/<span title="[^"]+">3 hours ago<\/span>/);
-		expect(body).not.toMatch(/\d{1,2}\/\d{1,2}\/\d{4}, \d/);
+		expect(body).toMatch(/<time[^>]*title="[^"]+"[^>]*>3h ago<\/time>/);
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

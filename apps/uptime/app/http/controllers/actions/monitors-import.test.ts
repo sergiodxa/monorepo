@@ -10,16 +10,19 @@
  */
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware } from "remix/router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
@@ -33,6 +36,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import i18n from "~/app/http/middleware/i18n";
 import { MAX_IMPORT_LINES } from "~/app/http/validators/monitor-import";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -93,8 +97,19 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.teams = [team];
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
+	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
 	};
 }
 
@@ -126,6 +141,8 @@ async function submit(
 			session(sessionCookie, sessionStorage),
 			seedTeam(team, membership),
 			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
 			formData() as Middleware,
 		],
 	});
@@ -273,18 +290,21 @@ describe("importMonitors", () => {
 		expect(flashed.toast?.intent).toBe("error");
 	});
 
-	test("sends an empty submission back to the form without creating anything", async () => {
+	test("redraws the form with the field's issue for an empty submission, creating nothing", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let { response, flashed } = await submit(db, team, membership, { urls: "" });
+		let { response, flashed } = await submit(db, team, membership, {
+			urls: "",
+			interval_seconds: "1800",
+		});
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.monitorsImport.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(400);
+		let body = await response.text();
+		expect(body).toContain('id="import-urls-error"');
+		expect(body).toContain('value="1800"');
 		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(0);
 		expect(flashed.report).toBeNull();
-		expect(flashed.toast?.intent).toBe("error");
+		expect(flashed.toast).toBeNull();
 	});
 
 	test("queues no on-demand check, leaving the first one to the scheduler", async () => {

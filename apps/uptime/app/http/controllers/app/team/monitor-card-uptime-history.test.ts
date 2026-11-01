@@ -122,7 +122,7 @@ async function send(
 }
 
 describe("monitor-card-uptime-history", () => {
-	test("renders the uptime bar from the monitor's recent daily stats", async () => {
+	test("renders the status strip from the monitor's recent daily stats", async () => {
 		let { db, team, membership, monitor } = await createFixture();
 		let today = new Date().toISOString().slice(0, 10);
 		unwrap(
@@ -143,7 +143,8 @@ describe("monitor-card-uptime-history", () => {
 		expect(response.status).toBe(200);
 
 		let body = await response.text();
-		expect(body).toContain(`${today}: up (10/10)`);
+		expect(body).toContain("100% · 10 of 10 checks");
+		expect(body).toContain("100% uptime");
 	});
 
 	test("404s for a monitor that doesn't belong to the team", async () => {

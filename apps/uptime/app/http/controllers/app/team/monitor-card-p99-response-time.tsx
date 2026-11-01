@@ -9,14 +9,13 @@
 
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
+import { StatCard } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /** GET /app/:team/monitors/:monitorId/cards/p99-response-time — the monitor's p99 stat card, fragment-only. */
@@ -37,19 +36,19 @@ export default createAction(routes.app.team.monitors.cards.p99ResponseTime, {
 		let p99ResponseTimeMs = isFailure(result) ? null : result.data;
 
 		return ctx.render(
-			<StatCard
-				label={ctx.intl.t("page.monitor.stats.p99ResponseTime.label")}
-				value={
-					<>
-						{p99ResponseTimeMs === null
-							? "—"
-							: ctx.intl.t("page.monitor.stats.p99ResponseTime.value", {
-									value: Math.round(p99ResponseTimeMs),
-								})}
-						<Subtitle>{ctx.intl.t("page.monitor.stats.p99ResponseTime.description")}</Subtitle>
-					</>
-				}
-			/>,
+			<StatCard>
+				<StatCard.Label>{ctx.intl.t("page.monitor.stats.p99ResponseTime.label")}</StatCard.Label>
+				<StatCard.Value>
+					{p99ResponseTimeMs === null
+						? "—"
+						: ctx.intl.t("page.monitor.stats.p99ResponseTime.value", {
+								value: Math.round(p99ResponseTimeMs),
+							})}
+				</StatCard.Value>
+				<StatCard.Footer>
+					{ctx.intl.t("page.monitor.stats.p99ResponseTime.description")}
+				</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });

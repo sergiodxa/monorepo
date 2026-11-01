@@ -9,6 +9,7 @@
 
 import { notFound } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
+import { StatCard } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -16,8 +17,6 @@ import type { UptimeModels } from "~/app/models";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import StatCard from "~/resources/components/stat-card";
-import Subtitle from "~/resources/components/subtitle";
 import routes from "~/routes/web";
 
 /**
@@ -77,21 +76,19 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 		let usage = await getMonitorPingUsage(ctx.models, monitor.id);
 
 		return ctx.render(
-			<StatCard
-				label={ctx.intl.t("page.monitor.stats.monitors.label")}
-				value={
-					<>
-						{usage.consumed === null ? "—" : usage.consumed.toLocaleString()}
-						<Subtitle>
-							{usage.estimated === null
-								? ctx.intl.t("page.monitor.stats.monitors.estimateUnavailable")
-								: ctx.intl.t("page.monitor.stats.monitors.description", {
-										estimated: usage.estimated.toLocaleString(),
-									})}
-						</Subtitle>
-					</>
-				}
-			/>,
+			<StatCard>
+				<StatCard.Label>{ctx.intl.t("page.monitor.stats.monitors.label")}</StatCard.Label>
+				<StatCard.Value>
+					{usage.consumed === null ? "—" : usage.consumed.toLocaleString(ctx.locale)}
+				</StatCard.Value>
+				<StatCard.Footer>
+					{usage.estimated === null
+						? ctx.intl.t("page.monitor.stats.monitors.estimateUnavailable")
+						: ctx.intl.t("page.monitor.stats.monitors.description", {
+								estimated: usage.estimated.toLocaleString(ctx.locale),
+							})}
+				</StatCard.Footer>
+			</StatCard>,
 		);
 	},
 });
