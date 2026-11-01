@@ -41,3 +41,4 @@ export * from "./track-host-node.js";
 export * from "./validate.js";
 export * from "./view-transition.js";
 export * from "./while-live.js";
+export * from "./confirm-phrase.js";

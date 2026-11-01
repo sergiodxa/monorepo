@@ -18,6 +18,7 @@ import { SelectionModel } from "../app/behaviors/selection-model.js";
 import { dragReorder } from "../app/mixins/drag-reorder.js";
 import { dropZone } from "../app/mixins/drop-zone.js";
 import { gridListKeys } from "../app/mixins/grid-list-keys.js";
+import { rangePickerKeys } from "../app/mixins/range-picker-keys.js";
 import { resizeHandle } from "../app/mixins/resize-handle.js";
 import { treeKeys } from "../app/mixins/tree-keys.js";
 import { CalendarModel } from "../behaviors/calendar-model.js";
@@ -56,6 +57,7 @@ const CASES: [name: string, node: () => RemixNode][] = [
 	["commandKeys", () => <div mix={[commandKeys(new FilterModel())]} />],
 	["messageFollow", () => <div mix={[messageFollow(new ScrollFollowModel())]} />],
 	["resizeHandle", () => <div mix={[resizeHandle("horizontal", new ResizeSession())]} />],
+	["rangePickerKeys", () => <form mix={[rangePickerKeys()]} />],
 	["viewTransition", () => <div mix={[viewTransition()]} />],
 	["frameSubmit", () => <form mix={[frameSubmit()]} />],
 	["frameRefresh", () => <div mix={[frameRefresh({ every: 1000, on: "app:saved" })]} />],

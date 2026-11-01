@@ -14,7 +14,7 @@ import { createMixin } from "remix/component";
 import { RefreshSchedule } from "../behaviors/refresh-schedule.js";
 
 /** Types for {@link autoRefresh}. */
-export namespace AutoRefresh {
+export namespace AutoRefreshTimer {
 	/** Configuration for {@link autoRefresh}, read when the host is inserted. */
 	export interface Options {
 		/** Milliseconds between reloads; 0 or less leaves the host as rendered. */
@@ -33,9 +33,9 @@ export namespace AutoRefresh {
  *
  * @example <time dateTime={iso} mix={[autoRefresh({ every: 30_000, reload: () => handle.frames.top.reload() })]}>{text}</time>
  */
-export const autoRefresh: MixinFactory<HTMLTimeElement, [options: AutoRefresh.Options]> =
-	createMixin<HTMLTimeElement, [options: AutoRefresh.Options]>((handle) => {
-		let options: AutoRefresh.Options | undefined;
+export const autoRefresh: MixinFactory<HTMLTimeElement, [options: AutoRefreshTimer.Options]> =
+	createMixin<HTMLTimeElement, [options: AutoRefreshTimer.Options]>((handle) => {
+		let options: AutoRefreshTimer.Options | undefined;
 		let controller: AbortController | undefined;
 
 		handle.addEventListener("insert", (event) => {
@@ -61,7 +61,11 @@ export const autoRefresh: MixinFactory<HTMLTimeElement, [options: AutoRefresh.Op
  * @param options The interval, the reload and the locale.
  * @param signal Ends the schedule and its listeners.
  */
-function follow(host: HTMLTimeElement, options: AutoRefresh.Options, signal: AbortSignal): void {
+function follow(
+	host: HTMLTimeElement,
+	options: AutoRefreshTimer.Options,
+	signal: AbortSignal,
+): void {
 	let doc = host.ownerDocument;
 	let initial = new Date(host.dateTime);
 	let schedule = new RefreshSchedule({
