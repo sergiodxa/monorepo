@@ -866,7 +866,11 @@
     "packages/cron": {
       "name": "@sdxc/cron",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-cron": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/iife": "workspace:*",
@@ -880,9 +884,14 @@
     "packages/crypto": {
       "name": "@sdxc/crypto",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-crypto": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/csv": {
@@ -980,7 +989,11 @@
     "packages/diagram": {
       "name": "@sdxc/diagram",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-diagram": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -1004,17 +1017,26 @@
     "packages/distill": {
       "name": "@sdxc/distill",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-distill": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/html": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/robots": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/doh": {
       "name": "@sdxc/doh",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-doh": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/zone-file": "workspace:*",
       },
@@ -1035,7 +1057,11 @@
     "packages/email-address": {
       "name": "@sdxc/email-address",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-email-address": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/doh": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
@@ -1043,13 +1069,18 @@
     "packages/email-auth": {
       "name": "@sdxc/email-auth",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-email-auth": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/doh": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/ip": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
+        "remix": "3.1.0",
       },
       "devDependencies": {
         "@sdxc/zone-file": "workspace:*",
@@ -1161,7 +1192,11 @@
     "packages/font": {
       "name": "@sdxc/font",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-font": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
     },
@@ -1231,10 +1266,20 @@
     "packages/html": {
       "name": "@sdxc/html",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-html": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/result": "workspace:*",
         "linkedom": "^0.18.14",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
       },
     },
     "packages/http": {
@@ -1258,8 +1303,12 @@
     "packages/http-signatures": {
       "name": "@sdxc/http-signatures",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-http-signatures": "./src/cli.ts",
+      },
       "dependencies": {
         "@sdxc/cache": "workspace:*",
+        "@sdxc/cli": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/digest-fields": "workspace:*",
         "@sdxc/duration": "workspace:*",
@@ -1268,6 +1317,7 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/well-known": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/i18n": {
@@ -1292,9 +1342,14 @@
     "packages/icalendar": {
       "name": "@sdxc/icalendar",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-icalendar": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/icons": {
@@ -1340,7 +1395,11 @@
     "packages/ip": {
       "name": "@sdxc/ip",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-ip": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
     },
@@ -1398,7 +1457,11 @@
     "packages/jscalendar": {
       "name": "@sdxc/jscalendar",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jscalendar": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/icalendar": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
@@ -1414,7 +1477,11 @@
     "packages/jscontact": {
       "name": "@sdxc/jscontact",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jscontact": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
@@ -1428,8 +1495,13 @@
     "packages/jsdoc": {
       "name": "@sdxc/jsdoc",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jsdoc": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
       "peerDependencies": {
         "typescript": "^7.0.2",
@@ -1438,9 +1510,14 @@
     "packages/json-canonical": {
       "name": "@sdxc/json-canonical",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-json-canonical": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/json-feed": {
@@ -1453,7 +1530,11 @@
     "packages/json-patch": {
       "name": "@sdxc/json-patch",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-json-patch": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
@@ -1499,18 +1580,28 @@
     "packages/jsonpath": {
       "name": "@sdxc/jsonpath",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jsonpath": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/jwt": {
       "name": "@sdxc/jwt",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-jwt": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "jose": "^6.2.13",
+        "remix": "3.1.0",
       },
     },
     "packages/kit": {
@@ -1528,6 +1619,7 @@
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jsonc": "workspace:*",
         "@sdxc/jsonl": "workspace:*",
+        "@sdxc/messageformat": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/semver": "workspace:*",
         "oxc-parser": "^0.154.0",
@@ -1685,13 +1777,15 @@
     "packages/merge-patch": {
       "name": "@sdxc/merge-patch",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-merge-patch": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
-      },
-      "devDependencies": {
         "remix": "3.1.0",
       },
     },
@@ -1802,7 +1896,11 @@
     "packages/openapi": {
       "name": "@sdxc/openapi",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-openapi": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/iife": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
@@ -1822,9 +1920,14 @@
     "packages/openpgp": {
       "name": "@sdxc/openpgp",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-openpgp": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/opml": {
@@ -1938,21 +2041,20 @@
     "packages/qr": {
       "name": "@sdxc/qr",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-qr": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/iife": "workspace:*",
+        "@sdxc/png": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
       "devDependencies": {
         "@sdxc/random": "workspace:*",
         "jsqr": "1.4.0",
-        "remix": "3.1.0",
       },
-      "peerDependencies": {
-        "remix": "3.1.0",
-      },
-      "optionalPeers": [
-        "remix",
-      ],
     },
     "packages/random": {
       "name": "@sdxc/random",
@@ -1997,8 +2099,12 @@
     "packages/rdap": {
       "name": "@sdxc/rdap",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-rdap": "./src/cli.ts",
+      },
       "dependencies": {
         "@sdxc/cache": "workspace:*",
+        "@sdxc/cli": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/jscontact": "workspace:*",
@@ -2029,7 +2135,11 @@
     "packages/robots": {
       "name": "@sdxc/robots",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-robots": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
       },
@@ -2117,7 +2227,11 @@
     "packages/security-headers": {
       "name": "@sdxc/security-headers",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-security-headers": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
@@ -2132,8 +2246,13 @@
     "packages/semver": {
       "name": "@sdxc/semver",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-semver": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/seo": {
@@ -2170,7 +2289,11 @@
     "packages/sitemap": {
       "name": "@sdxc/sitemap",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-sitemap": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
       },
@@ -2269,8 +2392,13 @@
     "packages/typeid": {
       "name": "@sdxc/typeid",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-typeid": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+        "remix": "3.1.0",
       },
     },
     "packages/types": {
@@ -2318,6 +2446,12 @@
     "packages/user-agent": {
       "name": "@sdxc/user-agent",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-user-agent": "./src/cli.ts",
+      },
+      "dependencies": {
+        "@sdxc/cli": "workspace:*",
+      },
       "devDependencies": {
         "remix": "3.1.0",
       },
@@ -2328,6 +2462,14 @@
     "packages/uuid": {
       "name": "@sdxc/uuid",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-uuid": "./src/cli.ts",
+      },
+      "dependencies": {
+        "@sdxc/cli": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
+      },
       "devDependencies": {
         "@types/node": "^26.6.5",
       },
@@ -2347,7 +2489,11 @@
     "packages/web-push": {
       "name": "@sdxc/web-push",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-web-push": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/jwt": "workspace:*",
@@ -2382,7 +2528,11 @@
     "packages/webmention": {
       "name": "@sdxc/webmention",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-webmention": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/html": "workspace:*",
         "@sdxc/link-header": "workspace:*",
         "@sdxc/microformats": "workspace:*",
@@ -2403,8 +2553,12 @@
     "packages/well-known": {
       "name": "@sdxc/well-known",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-well-known": "./src/cli.ts",
+      },
       "dependencies": {
         "@remix-run/data-schema": "^1.0.0",
+        "@sdxc/cli": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/link-header": "workspace:*",
         "@sdxc/openpgp": "workspace:*",
@@ -2483,8 +2637,13 @@
     "packages/zone-file": {
       "name": "@sdxc/zone-file",
       "version": "0.0.1",
+      "bin": {
+        "sdxc-zone-file": "./src/cli.ts",
+      },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
       },
       "devDependencies": {
         "@sdxc/random": "workspace:*",
