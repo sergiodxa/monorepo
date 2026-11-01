@@ -131,6 +131,8 @@ bunx @sdxc/openapi check https://api.example.com/api/v1/openapi.json --json
 bunx @sdxc/openapi check - < openapi.yaml
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg openapi …` runs the same command line, using the version your project installs.
+
 `bunx @sdxc/openapi --help` lists every flag.
 
 ## API
