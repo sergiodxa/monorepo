@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 5
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
     - "How to use nonces or hashes for the scripts you render"
@@ -286,6 +286,22 @@ test("accepts a legacy violation report", async () => {
 
 The request URL is `https:`, because `Strict-Transport-Security` is written only on a response to
 a secure request.
+
+## Run it from the terminal
+
+After a deploy, grade the headers a page really sends and check the `security.txt` beside them:
+
+```bash
+npx @sdxc/security-headers audit https://example.com
+npx @sdxc/security-headers csp parse < policy.txt
+npx @sdxc/well-known security-txt check https://example.com
+```
+
+`audit` exits `1` when any header is missing or weak, and `security-txt check` exits `1` on a
+missing field or an `Expires` in the past, so both work as a CI step. `csp parse` reads a policy
+copied from a response into its directives. [Use a package from the
+terminal](/docs/operations-and-testing/package-command-lines) covers what every package command
+line shares.
 
 ## Where to go next
 

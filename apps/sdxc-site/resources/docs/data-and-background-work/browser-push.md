@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 14
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"
     - "How to send an encrypted notification from a Worker, directly or through messaging"
@@ -304,6 +304,20 @@ test("an unsubscribed browser answers gone", async () => {
 	expect(isFailure(sent) && sent.error.code).toBe("gone");
 });
 ```
+
+## Run it from the terminal
+
+Generate the sender's keys, and send one test notification to a browser you subscribed, straight
+from a terminal:
+
+```bash
+npx @sdxc/web-push vapid keygen --json > vapid.json
+npx @sdxc/web-push send subscription.json --subject mailto:ops@example.com --keys-file vapid.json
+```
+
+`subscription.json` is one stored subscription row's JSON. Without `--keys-file`, `send` reads the
+keys from `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in the environment; keep `vapid.json` out of
+the repository. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command line shares.
 
 ## Where to go next
 

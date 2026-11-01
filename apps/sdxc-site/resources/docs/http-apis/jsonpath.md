@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 9
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to select values from a fetched JSON document with `@sdxc/jsonpath`"
     - "How to accept a client's JSONPath query and answer an invalid one with its offset"
@@ -238,6 +238,23 @@ test("replaces every email at any depth and leaves the input untouched", () => {
 	expect(document.owner.email).toBe("ada@example.com");
 });
 ```
+
+## Run it from the terminal
+
+Try an expression against a real response before it goes into code, or before you hand it to a
+client as an example query:
+
+```bash
+curl -s https://api.github.com/repos/remix-run/remix/releases > releases.json
+npx @sdxc/jsonpath query '$[?@.draft == false].tag_name' releases.json
+npx @sdxc/jsonpath query '$..assets[*].name' releases.json --paths
+npx @sdxc/jsonpath query '$[0].tag_name' releases.json --first
+```
+
+`--paths` prints the normalized path of each match, the location a redaction turns into a patch
+operation. An invalid expression exits `2` and points at the offset where it fails, and
+`--fail-empty` exits `1` when the query selects nothing. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command
+line shares.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 7
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to pick the Web Crypto primitive by what happens to the value next"
     - "How to build reset links from hashed tokens and store passwords with scrypt"
@@ -278,6 +278,24 @@ test("opens what it sealed", async () => {
 	expect(unwrap(await openSecret(sealed))).toBe("refresh-token");
 });
 ```
+
+## Run it from the terminal
+
+`@sdxc/crypto` mints secrets for your Worker and checks the values this guide stores, from a
+terminal. Paste the token it prints when `cf workers secrets update` asks for the value:
+
+```bash
+npx @sdxc/crypto token
+bunx cf workers secrets update LINK_SECRET
+npx @sdxc/crypto scrypt hash < password.txt
+npx @sdxc/crypto scrypt verify '$scrypt$ln=15,r=8,p=3$…$…' < password.txt
+npx @sdxc/crypto hmac payload.json --key-env LINK_SECRET
+```
+
+Passwords arrive on stdin and HMAC keys from `--key-file` or `--key-env`, so neither lands in
+shell history. `scrypt verify`, and `hmac` with `--verify <hex>`, exit `1` on a mismatch. [Use a
+package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every
+package command line shares.
 
 ## Where to go next
 

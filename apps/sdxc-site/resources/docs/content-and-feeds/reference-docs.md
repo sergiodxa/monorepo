@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 6
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to read the JSDoc in your TypeScript source at build time with `@sdxc/jsdoc`"
     - "How to write the records as JSON and serve a page per public symbol"
@@ -289,6 +289,21 @@ test("every public symbol has a description", () => {
 ```
 
 A failure names each symbol with the file and line to fix.
+
+## Run it from the terminal
+
+Extract the JSON straight from the terminal to see the records a build step reads, or to feed
+a reference site that lives in another project:
+
+```bash
+npx @sdxc/jsdoc extract src --output docs.json
+npx @sdxc/jsdoc extract src/index.ts --include-internal
+npx @sdxc/jsdoc extract src --keep-going --output docs.json
+```
+
+A file that does not parse exits `1` and writes nothing; `--keep-going` writes the rest and
+exits `0`. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers the conventions every package command line
+shares.
 
 ## Where to go next
 

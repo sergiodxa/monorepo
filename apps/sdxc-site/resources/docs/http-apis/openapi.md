@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 2
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to swap your schema import so `@sdxc/openapi` can read the same schemas"
     - "How to declare operations and build and serve an OpenAPI 3.1 document"
@@ -255,6 +255,19 @@ test("a refused create answers as documented", async () => {
 	expect(response.status).toBe(422);
 });
 ```
+
+## Run it from the terminal
+
+Check the document the deployed Worker serves, or a copy you exported, before you hand it to a
+client generator:
+
+```bash
+npx @sdxc/openapi check https://books.example.com/api/openapi.json
+npx @sdxc/openapi check openapi.yaml --json
+```
+
+`check` prints each finding at its JSON Pointer and exits `1` on any, so it works as a CI step
+as it is. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command line shares.
 
 ## Where to go next
 

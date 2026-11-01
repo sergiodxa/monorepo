@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 16
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to look up a domain's expiry, status and registrar over RDAP with `@sdxc/rdap`"
     - "How to decide what a lookup result means"
@@ -323,6 +323,21 @@ test("an outage keeps a date inside the warning window expiring", () => {
 The registry's two hours win over the backoff's first hour. To exercise the client itself, mock
 the registry and IANA's bootstrap URL with MSW, as
 [Test Workers apps](/docs/operations-and-testing/testing) does for any outbound request.
+
+## Run it from the terminal
+
+Look a domain up by hand when an alert fires, or fail a CI job when one of your own domains is
+close to lapsing:
+
+```bash
+npx @sdxc/rdap lookup example.com
+npx @sdxc/rdap lookup example.com --related --json
+npx @sdxc/rdap expires example.com --within '30 days'
+```
+
+`--related` also asks the registrar's server, for the fields a thin registry leaves out.
+`expires` exits `1` when the domain expires inside the window or its registry publishes no
+expiry. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command line shares.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 4
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to declare jobs once and write handlers with `@sdxc/jobs`"
     - "How to enqueue from a request and run on Cloudflare Queues and cron triggers"
@@ -326,6 +326,20 @@ A form action calls `planSchedule` with the fields it validated. On a failure it
 Every occurrence query takes the time zone explicitly, so a report at 09:00 stays at 09:00 local
 across a daylight saving change. A frequent cron job calls
 `schedule.isDue(lastRun, { now, timeZone })` to find the user schedules that are due.
+
+## Run it from the terminal
+
+Check an expression before it goes into `job({ cron })`, or replay a user's schedule in their
+time zone when they ask why a report ran when it did:
+
+```bash
+npx @sdxc/cron describe "0 9 * * MON-FRI"
+npx @sdxc/cron next "0 9 * * MON-FRI" --tz America/New_York -n 3
+npx @sdxc/cron validate "0 25 * * *"
+```
+
+`validate` exits `1` and points at the field and position at fault, as the form does. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines)
+covers what every package command line shares.
 
 ## Where to go next
 

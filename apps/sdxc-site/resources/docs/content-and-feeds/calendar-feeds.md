@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 4
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"
     - "How to describe a weekly series in a time zone and offer a single event as a download"
@@ -306,6 +306,21 @@ test("skips the Thursday before Easter", () => {
 	expect(next?.start).toBe(Date.UTC(2026, 3, 9, 17));
 });
 ```
+
+## Run it from the terminal
+
+Validate your published feed, list a window of its sessions, or try out a rule before it goes
+into the series:
+
+```bash
+curl -s https://example.com/events.ics | npx @sdxc/icalendar validate
+npx @sdxc/icalendar expand meetup.ics --from 2026-03-01 --until 2026-05-01 --tz Europe/Madrid
+npx @sdxc/icalendar rrule "FREQ=WEEKLY;BYDAY=TH" --start 2026-01-08T19:00 --tz Europe/Madrid -n 5
+```
+
+`validate` exits `1` on a problem, which makes it a CI step against a deployed feed, and `--tz`
+reads and prints times in the zone your readers live in. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines)
+covers the conventions every package command line shares.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 11
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "Why `JSON.stringify` is the wrong input for a hash or a signature"
     - "How to hash and deduplicate JSON with `@sdxc/json-canonical`"
@@ -160,6 +160,21 @@ test("a reordered receipt verifies and an edited one does not", async () => {
 	expect(await verifyReceipt(SECRET, { ...signed, receipt: edited })).toBe(false);
 });
 ```
+
+## Run it from the terminal
+
+Recompute a stored hash, or see the exact bytes a signature covers, from a document someone sent
+you:
+
+```bash
+npx @sdxc/json-canonical canonicalize payload.json
+npx @sdxc/json-canonical hash payload.json
+npx @sdxc/json-canonical hash payload.json --alg sha-512 --base64url
+```
+
+`hash` prints the SHA-256 of the canonical bytes in lowercase hex, the digest `contentHash`
+stores. `canonicalize` exits `1` naming the JSON Pointer of a value JCS refuses, and `2` when the
+input is not JSON. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command line shares.
 
 ## Where to go next
 

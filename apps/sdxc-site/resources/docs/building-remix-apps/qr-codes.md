@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 9
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to encode a link at the error correction level its surface needs with `@sdxc/qr`"
     - "How to render a QR code inline with `remix/component` and keep it inside its layout"
@@ -218,6 +218,21 @@ test("refuses a badge link longer than version 6 holds", () => {
 	expect(isFailure(encoded) && encoded.error.code).toBe("too-long");
 });
 ```
+
+## Run it from the terminal
+
+Print a code for a poster or a test run straight from the terminal, at the same error correction
+levels the services pick:
+
+```bash
+npx @sdxc/qr encode "https://example.com/check-in/abc123" --level Q > check-in.svg
+npx @sdxc/qr encode --level H --png --output badge.png "https://example.com/b/ada"
+echo "https://example.com/b/ada" | npx @sdxc/qr encode --max-version 6 --output badge.svg
+```
+
+`--png` writes a PNG file and needs `--output`; `--max-version` fails a link longer than the
+badge holds, as `badgeCode` does. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers the conventions every
+package command line shares.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 3
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to mark posts up with microformats using `@sdxc/microformats`"
     - "How to receive, verify and send Webmentions from background jobs"
@@ -483,6 +483,22 @@ test("reads a form post with in-reply-to as a reply", async () => {
 	});
 });
 ```
+
+## Run it from the terminal
+
+Before relying on the job, check by hand that a site you reply to takes Webmentions, send one,
+and confirm your reply links where the receiver expects:
+
+```bash
+npx @sdxc/webmention discover https://other.com/posts/1
+npx @sdxc/webmention verify https://example.com/posts/agreed https://other.com/posts/1
+npx @sdxc/webmention send https://example.com/posts/agreed https://other.com/posts/1 --json
+```
+
+`discover` exits 1 when the target advertises no endpoint, `send` when it has none or the
+endpoint refuses, and `verify` when the source lacks a link to the target. See
+[Use a package from the terminal](/docs/operations-and-testing/package-command-lines) for the
+conventions every package command line shares.
 
 ## Where to go next
 

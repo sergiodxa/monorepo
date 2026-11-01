@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 37
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to build a JSContact Card with `@sdxc/jscontact` and serve it as a vCard download"
     - "How to import uploaded vCard and jCard contacts as JSContact Cards"
@@ -210,6 +210,21 @@ test("reads the downloaded vCard back as the same Card", () => {
 	expect(vcard && fromVCard(vcard)).toEqual(card);
 });
 ```
+
+## Run it from the terminal
+
+Convert a vCard someone sent you to see the Card the import route stores, and validate a Card
+before you ship it as a fixture:
+
+```bash
+npx @sdxc/jscontact convert ada.vcf --to jscontact > ada.json
+npx @sdxc/jscontact convert ada.json --to vcard
+npx @sdxc/jscontact validate ada.json --json
+```
+
+`convert` detects the input format, and `--from` names it for an ambiguous file; `validate`
+exits `1` and lists every problem when a Card is invalid. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines)
+covers the conventions every package command line shares.
 
 ## Where to go next
 

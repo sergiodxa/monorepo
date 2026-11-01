@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 31
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"
     - "How to find the diagrams in markdown and draw them in a route"
@@ -161,6 +161,21 @@ test("points at the statement that does not parse", () => {
 	expect(checkDiagrams("flow.md", post)).toMatch(/^flow\.md:6: /);
 });
 ```
+
+## Run it from the terminal
+
+Draft a diagram at the terminal before it goes into a post, and check every diagram file in CI
+with the same parser the route uses:
+
+```bash
+npx @sdxc/diagram render flow.mmd --output flow.svg
+npx @sdxc/diagram check flow.mmd
+npx @sdxc/diagram check flow.mmd --json
+```
+
+`check` exits `1` when a diagram uses syntax outside the supported subset, and `--json` adds
+the line and column to fix. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers the conventions every
+package command line shares.
 
 ## Where to go next
 

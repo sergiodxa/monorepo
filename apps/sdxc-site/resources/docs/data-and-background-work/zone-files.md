@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 15
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
     - "How to compare the records with live DNS"
@@ -268,6 +268,21 @@ test("keeps each tracked record once and reports the rest by line", () => {
 A test for `missingFromDns` answers its DNS over HTTPS
 requests with MSW, as [Test Workers apps](/docs/operations-and-testing/testing) shows for
 outbound HTTP.
+
+## Run it from the terminal
+
+Check a zone file a customer sent before it reaches the import form, normalize it, and compare a
+record with live DNS:
+
+```bash
+npx @sdxc/zone-file validate example.com.zone --origin example.com
+npx @sdxc/zone-file format example.com.zone --origin example.com --relative
+npx @sdxc/doh lookup www.example.com --type CNAME
+```
+
+`validate` lists every entry it could not use with its line and exits `1` when there is any;
+`doh lookup` exits `1` on NXDOMAIN or an empty answer. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command
+line shares.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -34,6 +34,7 @@ pass  layout           app/ holds only the layout's folders and nothing imports 
 warn  routes           Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
 pass  models           app/models/index.ts registers every model in app/models/
 pass  emails           3 declared emails mapped, tested and previewable
+warn  translations     Found 1 key missing from a translation: resources/locales/es.ts lacks nav.pricing. Fix: Translate each missing key, and remove or rename each key en does not have
 pass  jsdoc            Every comment is JSDoc within three description lines
 pass  complexity       Every function stays at cyclomatic complexity 4 or below
 pass  module-size      Every module stays within 200 code lines
@@ -92,6 +93,7 @@ They run in this order:
 | `routes`          | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                               |
 | `models`          | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                            |
 | `emails`          | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write            |
+| `translations`    | fail: a message in `resources/locales/` does not parse as MessageFormat 2; warn: a key the default language has and another lacks, or one only another language has                | the message or key to write                        |
 | `jsdoc`           | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
 | `complexity`      | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
 | `module-size`     | warn: a module's code lines exceed `doctor.moduleSize.maxLines` (default 200)                                                                                                      | split the module, or raise the limit               |

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 5
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to fetch a saved link under bounds in a job and pull out its article with `@sdxc/distill`"
     - "How to keep a plain-text excerpt of the page"
@@ -259,6 +259,24 @@ test("stores a sanitized article and a short excerpt", () => {
 	expect(excerpt).toMatch(/^Edge reads Workers run close to the reader.*…$/);
 });
 ```
+
+## Run it from the terminal
+
+When a saved link comes out empty, run the same extraction and markup reads by hand to see
+what the job saw:
+
+```bash
+npx @sdxc/distill extract https://blog.com/edge-reads --format text
+npx @sdxc/distill extract page.html --url https://blog.com/edge-reads --json
+npx @sdxc/html outline https://blog.com/edge-reads
+npx @sdxc/html query https://blog.com/edge-reads --role heading --json
+```
+
+`extract` exits 1 when the page has no article or the site refused or ran out of time, which
+is the case the job records as a failure. `--url` resolves a saved file's relative links
+against the address it was served from. See
+[Use a package from the terminal](/docs/operations-and-testing/package-command-lines) for the
+conventions every package command line shares.
 
 ## Where to go next
 

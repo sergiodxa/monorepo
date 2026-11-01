@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 20
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to check a customer's DMARC policy, SPF lookups and DKIM key before you send from their domain"
     - "How to serve an MTA-STS policy and its TLS-RPT record for your own domain"
@@ -364,6 +364,20 @@ test("a reporting-only policy is flagged", async () => {
 ```
 
 `Status: 3` is NXDOMAIN, which every check reads as nothing published.
+
+## Run it from the terminal
+
+Run the same check by hand while a customer fixes their records, or in CI before your own domain
+starts sending:
+
+```bash
+npx @sdxc/email-auth check example.com --selector mailer
+npx @sdxc/email-auth check example.com --selector mailer --skip bimi --json
+```
+
+Repeat `--selector` for each DKIM key the domain signs with. The command exits `1` when a checked
+policy is missing, invalid or unreadable, and `0` when it finds warnings alone. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what
+every package command line shares.
 
 ## Where to go next
 

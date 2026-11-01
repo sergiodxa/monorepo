@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 15
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to make an OpenPGP signing key GnuPG can verify against"
     - "How to serve a cleartext-signed `security.txt` and sign files with detached signatures"
@@ -271,6 +271,25 @@ test("security.txt verifies against the published key", async () => {
 	expect(verified.text).toBe(stringify(SECURITY_TXT));
 });
 ```
+
+## Run it from the terminal
+
+`@sdxc/openpgp` makes the key, signs a release and checks a vendor's file from a terminal too,
+for the times you sign by hand:
+
+```bash
+npx @sdxc/openpgp keygen --key-version 4 --user-id 'Security <security@example.com>' \
+  --public-out public.asc > signing.key
+npx @sdxc/openpgp inspect public.asc
+npx @sdxc/openpgp sign release.tar.gz --detach --key-file signing.key > release.tar.gz.asc
+npx @sdxc/openpgp verify blocklist.json --signature blocklist.json.asc --key-file vendor.asc
+```
+
+`--key-version 4` writes the key GnuPG 2.2 reads. `verify` exits `1` when the signature is bad
+or made by another key, and a protected key's passphrase comes from `--passphrase-file` or
+`--passphrase-env`. [Use a package from the
+terminal](/docs/operations-and-testing/package-command-lines) covers what every package command
+line shares.
 
 ## Where to go next
 

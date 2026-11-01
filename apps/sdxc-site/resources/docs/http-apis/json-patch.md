@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 8
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to apply an `application/json-patch+json` body to a resource, all or nothing"
     - "How to answer a malformed, unresolvable or failed-test patch with 400, 422 or 409"
@@ -254,6 +254,20 @@ test("removing a member the book lacks answers 422", () => {
 	expect(jsonPatchProblem(next.error).status).toBe(422);
 });
 ```
+
+## Run it from the terminal
+
+Build the patch a client would send for an edit, and try it on a copy of the book, from two JSON
+files:
+
+```bash
+npx @sdxc/json-patch diff book.json edited.json > patch.json
+npx @sdxc/json-patch validate patch.json
+npx @sdxc/json-patch apply patch.json book.json
+```
+
+`apply` exits `1` when an operation's path does not resolve or a `test` fails, the same cases the
+endpoint answers with `422` and `409`. [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every package command line shares.
 
 ## Where to go next
 

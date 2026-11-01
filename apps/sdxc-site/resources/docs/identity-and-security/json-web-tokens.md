@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 6
-lastUpdated: 2026-10-25
+lastUpdated: 2026-10-31
 outcomes:
     - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"
     - "How to publish a JWKS and verify tokens by issuer and audience"
@@ -334,6 +334,26 @@ test("a token minted for another service is refused", async () => {
 	expect(response.status).toBe(401);
 });
 ```
+
+## Run it from the terminal
+
+When a token turns up in a bug report, or you want a key pair before the R2 bucket exists,
+`@sdxc/jwt` does the same work from a terminal:
+
+```bash
+npx @sdxc/jwt decode < token.txt
+npx @sdxc/jwt verify < token.txt \
+  --jwks https://app.example.com/.well-known/jwks.json \
+  --iss https://app.example.com --aud https://reports.example.com
+npx @sdxc/jwt keygen > key.json
+echo '{"sub":"user-123","exp":"15m"}' | npx @sdxc/jwt sign --key-file key.json
+```
+
+`decode` prints the header and claims as they are, unverified; `verify` checks the signature,
+expiry, issuer and audience and exits `1` when any of them fails. `sign` and `jwks` read the key
+pair from a file with `--key-file` or from an environment variable with `--key-env`. [Use a
+package from the terminal](/docs/operations-and-testing/package-command-lines) covers what every
+package command line shares.
 
 ## Where to go next
 
