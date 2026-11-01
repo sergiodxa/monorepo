@@ -2,7 +2,8 @@
  * Live preview for `SettingsSection`: an uptime app's monitor defaults, typed inputs that
  * save explicitly from the section's own footer, beside its notifications, switches that
  * save the moment they flip, and its members, a table that saves nothing with "Invite member"
- * beside the title. One section never mixes the two ways of saving.
+ * beside the title, and its billing, action rows whose button opens the portal at the row's
+ * end or sits under a longer warning. One section never mixes the two ways of saving.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +11,7 @@
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
-import { Button, Input, Select, Switch } from "@sdxc/ui";
+import { Button, Input, LinkButton, Select, Switch } from "@sdxc/ui";
 import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { Table } from "@sdxc/ui/app/table";
 
@@ -89,6 +90,24 @@ const CODE = `<SettingsSection
 			</Table.Body>
 		</Table>
 	</Table.Container>
+</SettingsSection>
+
+<SettingsSection title="Billing" description="Your plan and how you pay for it." save="none">
+	<SettingsSection.Row
+		layout="action"
+		label="Subscription & payments"
+		description="Change your plan, update the card on file and download invoices."
+	>
+		<LinkButton href="/billing/portal" size="sm" variant="outline">Open billing portal</LinkButton>
+	</SettingsSection.Row>
+	<SettingsSection.Row
+		layout="action"
+		actionPlacement="below"
+		label="Cancel subscription"
+		description="Your monitors keep running until the end of the billing period, then stop. Invoices stay available in the billing portal."
+	>
+		<Button size="sm" variant="outline" color="danger">Cancel subscription</Button>
+	</SettingsSection.Row>
 </SettingsSection>`;
 
 /** What the preview registry reads: the source to show, and the markup to draw. */
@@ -195,6 +214,28 @@ export default {
 						</Table.Body>
 					</Table>
 				</Table.Container>
+			</SettingsSection>
+
+			<SettingsSection title="Billing" description="Your plan and how you pay for it." save="none">
+				<SettingsSection.Row
+					layout="action"
+					label="Subscription & payments"
+					description="Change your plan, update the card on file and download invoices."
+				>
+					<LinkButton href="/examples/settings/billing" size="sm" variant="outline">
+						Open billing portal
+					</LinkButton>
+				</SettingsSection.Row>
+				<SettingsSection.Row
+					layout="action"
+					actionPlacement="below"
+					label="Cancel subscription"
+					description="Your monitors keep running until the end of the billing period, then stop. Invoices stay available in the billing portal."
+				>
+					<Button type="button" size="sm" variant="outline" color="danger">
+						Cancel subscription
+					</Button>
+				</SettingsSection.Row>
 			</SettingsSection>
 		</div>
 	),
