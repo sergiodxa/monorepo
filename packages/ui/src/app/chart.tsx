@@ -1220,10 +1220,17 @@ function bandLabelTone() {
  *
  * @param id The tint filter's id, unique on the page.
  * @param label The text the tag shows.
- * @param x Where the band starts in the chart's coordinate space.
+ * @param x The band edge the tag is tied to, in the chart's coordinate space.
  * @param width The chart's coordinate width, which the tag's size is counter-scaled against.
+ * @param anchor `"end"` sets the tag's end at `x`, extending back toward the band's start.
  */
-function renderBandLabel(id: string, label: string, x: number, width: number): RemixNode {
+function renderBandLabel(
+	id: string,
+	label: string,
+	x: number,
+	width: number,
+	anchor: "start" | "end",
+): RemixNode {
 	return (
 		<>
 			<defs>
@@ -1240,8 +1247,9 @@ function renderBandLabel(id: string, label: string, x: number, width: number): R
 				aria-hidden="true"
 				x={x}
 				y={0}
-				dx="0.25em"
+				dx={anchor === "end" ? "-0.25em" : "0.25em"}
 				dy="1.4em"
+				text-anchor={anchor}
 				filter={`url(#${id})`}
 				mix={[
 					fill("var(--chart-band-label-fg, CanvasText)"),
@@ -1253,6 +1261,25 @@ function renderBandLabel(id: string, label: string, x: number, width: number): R
 			</text>
 		</>
 	);
+}
+
+/**
+ * Ties a band's label tag to the band edge with the most plot beside it: the start for a band
+ * starting in the plot's first half, else the band's end, so a band near the end of the axis
+ * keeps its tag inside the plot at any rendered width up to a tag half the plot wide.
+ *
+ * @param start The band's start in the chart's coordinate space.
+ * @param end The band's end in the chart's coordinate space.
+ */
+function renderBandLabelAt(
+	id: string,
+	label: string,
+	start: number,
+	end: number,
+	width: number,
+): RemixNode {
+	if (start <= width / 2) return renderBandLabel(id, label, Math.max(start, 0), width, "start");
+	return renderBandLabel(id, label, Math.min(end, width), width, "end");
 }
 
 /**
@@ -1283,8 +1310,8 @@ function renderBandEdge(edge: "start" | "end", x: number, height: number): Remix
 
 /**
  * Marks a stretch of the x axis (an incident, a deploy, or hatched, a gap with no data): a light
- * shade, a dashed rule at each edge inside the axis, `label` tagged at its top start. A range running
- * to the end of `xDomain` reads as ongoing, with no end rule. Render it before the series it marks.
+ * shade, dashed edge rules, `label` tagged at its top start, or top end once it starts past the
+ * plot's middle. A range running to the end of `xDomain` has no end rule. Render it before the series.
  *
  * @param handle Runtime handle carrying the host `<g>`'s props.
  * @returns The render function producing the band's markup.
@@ -1326,9 +1353,7 @@ Chart.Band = function ChartBand(handle: Handle<Chart.BandProps>) {
 				/>
 				{start > 0 ? renderBandEdge("start", start, context.height) : null}
 				{end < context.width ? renderBandEdge("end", end, context.height) : null}
-				{label
-					? renderBandLabel(`${handle.id}-label`, label, Math.max(start, 0), context.width)
-					: null}
+				{label ? renderBandLabelAt(`${handle.id}-label`, label, start, end, context.width) : null}
 			</g>
 		);
 	};

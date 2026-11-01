@@ -312,6 +312,41 @@ describe("Chart.Band", () => {
 		expect(wide.width).toBeCloseTo(narrow.width, 0);
 	});
 
+	for (let viewport of [375, 1440]) {
+		test(`keeps a late band's label tag inside the plot at ${viewport}px`, async () => {
+			await page.viewport(viewport, 800);
+			let host = mount(
+				<Chart width={600} height={200} xDomain={[0, 10]} yDomain={[0, 400]} aria-label="Latency">
+					<Chart.Band from={9} to={10} label="INC-482 · investigating" />
+				</Chart>,
+				viewport,
+			);
+			let plot = host.querySelector("svg")!.getBoundingClientRect();
+			let tag = label(host)!.getBoundingClientRect();
+
+			expect(tag.width).toBeGreaterThan(0);
+			expect(tag.left).toBeGreaterThanOrEqual(plot.left - 0.5);
+			expect(tag.right).toBeLessThanOrEqual(plot.right + 0.5);
+		});
+
+		test(`starts an early band's label tag at the band's start at ${viewport}px`, async () => {
+			await page.viewport(viewport, 800);
+			let host = mount(
+				<Chart width={600} height={200} xDomain={[0, 10]} yDomain={[0, 400]} aria-label="Latency">
+					<Chart.Band from={1} to={2} label="INC-482 · investigating" />
+				</Chart>,
+				viewport,
+			);
+			let plot = host.querySelector("svg")!.getBoundingClientRect();
+			let start = host.querySelector('[data-edge="start"]')!.getBoundingClientRect();
+			let tag = label(host)!.getBoundingClientRect();
+
+			expect(tag.left).toBeGreaterThanOrEqual(start.left - 0.5);
+			expect(tag.left - start.left).toBeLessThan(8);
+			expect(tag.right).toBeLessThanOrEqual(plot.right + 0.5);
+		});
+	}
+
 	test("draws the series over the band", () => {
 		let host = mount(
 			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
