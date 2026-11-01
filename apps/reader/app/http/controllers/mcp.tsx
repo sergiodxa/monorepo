@@ -6,18 +6,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
-import { m, maxIs, p, pbs } from "@sdxc/u/size";
-import { overflowWrap, text, weight } from "@sdxc/u/typography";
-import { Description, LinkButton, Text } from "@sdxc/ui";
+import { m, pbs } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Description, LinkButton } from "@sdxc/ui";
 import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import { createAction } from "remix/router";
 
 import { chrome } from "~/app/http/controllers/chrome";
+import { agentEndpoint, NEW_TOKEN_ANCHOR } from "~/app/http/controllers/tokens/section";
+import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { settingsNav } from "~/resources/components/settings-area";
+import { userStore } from "~/app/models/user-store";
+import { SettingsCode, SettingsPhoneNav, settingsNav } from "~/resources/components/settings-area";
 import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
@@ -28,7 +31,11 @@ const STEPS = ["mint", "configure", "ask"] as const;
 export default createAction(routes.mcp.index, {
 	middleware: [requireUser],
 	async handler(ctx) {
-		let endpoint = new URL(routes.mcp.index.href(), ctx.url).toString();
+		let viewer = getViewer();
+		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		let entitlement = await userStore(viewer.id).entitlement();
+		let nav = settingsNav(ctx.intl, "agents", { filters: entitlement.can.rules.apply });
 
 		return ctx.render(
 			<AppLayout
@@ -38,31 +45,25 @@ export default createAction(routes.mcp.index, {
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
-				<SettingsLayout
-					{...settingsNav(ctx.intl, "agents")}
-					page="section"
-					backHref={routes.settings.href()}
-				>
-					<section mix={[vstack({ gap: 3 })]}>
+				<SettingsLayout sections={nav.sections} labels={nav.labels} page="section">
+					<SettingsPhoneNav
+						sections={nav.sections}
+						label={nav.labels.nav}
+						jump={ctx.intl.t("settings.nav.jump")}
+					/>
+
+					<section mix={[vstack({ gap: 3, align: "stretch" })]}>
 						<Description>{ctx.intl.t("agent.page.description")}</Description>
 
-						<Text
+						<SettingsCode>{agentEndpoint(ctx)}</SettingsCode>
+
+						<ol
 							mix={[
 								m(0),
-								p(3),
-								rounded("md"),
-								bg("neutral.tint"),
-								fg("neutral.emphasis"),
-								text("sm"),
-								weight("medium"),
-								maxIs("100%"),
-								overflowWrap("anywhere"),
+								vstack({ gap: 2 }),
+								raw({ listStyleType: "decimal", paddingInlineStart: "1.25rem" }),
 							]}
 						>
-							<code>{endpoint}</code>
-						</Text>
-
-						<ol mix={[m(0), vstack({ gap: 2 })]}>
 							{STEPS.map((step) => (
 								<li key={step} mix={[text("sm"), fg("neutral")]}>
 									{ctx.intl.t(`agent.page.steps.${step}`)}
@@ -77,7 +78,7 @@ export default createAction(routes.mcp.index, {
 					 */}
 					<section
 						mix={[
-							vstack({ gap: 3 }),
+							vstack({ gap: 3, align: "stretch" }),
 							pbs(6),
 							borderEdge("block-start", { color: "neutral.border", width: 1 }),
 						]}
@@ -90,7 +91,11 @@ export default createAction(routes.mcp.index, {
 						<Description>{ctx.intl.t("agent.page.clients.description")}</Description>
 
 						<div>
-							<LinkButton href={routes.settings.href()} color="neutral" variant="outline">
+							<LinkButton
+								href={`${routes.settings.href()}#${NEW_TOKEN_ANCHOR}`}
+								color="neutral"
+								variant="outline"
+							>
 								{ctx.intl.t("agent.page.clients.tokens")}
 							</LinkButton>
 						</div>

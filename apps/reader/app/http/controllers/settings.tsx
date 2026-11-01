@@ -53,7 +53,13 @@ import { POLL_FLOOR_MS } from "~/database/feed-schema";
 import { READING_FACES, THEMES } from "~/database/schema";
 import { formatInterval } from "~/resources/components/marketing/scenes";
 import { PushRegistration } from "~/resources/components/push-registration";
-import { SETTINGS_ANCHORS, SettingsNote, settingsNav } from "~/resources/components/settings-area";
+import {
+	anchoredSections,
+	SETTINGS_ANCHORS,
+	SettingsNote,
+	SettingsPhoneNav,
+	settingsNav,
+} from "~/resources/components/settings-area";
 import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
@@ -83,9 +89,9 @@ interface Note {
  * @param name - The parameter holding the count.
  */
 function importedCount(params: URLSearchParams, name: string): number {
-	let raw = params.get(name);
-	if (raw === null || !/^\d+$/.test(raw)) return 0;
-	return Number.parseInt(raw, 10);
+	let value = params.get(name);
+	if (value === null || !/^\d+$/.test(value)) return 0;
+	return Number.parseInt(value, 10);
 }
 
 /**
@@ -253,7 +259,16 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 				</SettingsNote>
 			)}
 
+			{/**
+			 * One button sits at the row's end the way every other row's does; several wrap
+			 * under the label, where a phone has the width for them.
+			 */}
 			<SettingsSection.Row
+				layout={
+					upgradesFrom(entitlement.tier).length + (entitlement.tier === "free" ? 0 : 1) > 1
+						? "split"
+						: "inline-switch"
+				}
 				label={ctx.intl.t("settings.plan.usageLabel")}
 				description={ctx.intl.t("settings.plan.usage", {
 					feeds: entitlement.feeds,
@@ -267,7 +282,7 @@ function planSection(ctx: AppContext, entitlement: UserStore.Entitlement) {
 							method="post"
 							action={routes.billing.checkout.href({ plan: offered })}
 						>
-							<Button type="submit" size="sm">
+							<Button type="submit" color="brand" size="sm">
 								{ctx.intl.t("settings.plan.upgrade", {
 									plan: ctx.intl.t(`settings.plan.names.${offered}`),
 								})}
@@ -672,7 +687,7 @@ function transferSection(ctx: AppContext) {
 						]}
 					/>
 
-					<Button type="submit" size="sm">
+					<Button type="submit" color="brand" size="sm">
 						{ctx.intl.t("feeds.transfer.import.submit")}
 					</Button>
 				</form>
@@ -689,6 +704,7 @@ function transferSection(ctx: AppContext) {
  * @param entitlement - What their plan allows, and where they stand against it.
  * @param notifications - How they are reached, when they are left alone, and on what.
  * @param tokens - Every token they minted for an agent, newest first.
+ * @param filters - How many filters they hold.
  */
 async function settingsPage(
 	ctx: AppContext,
@@ -696,7 +712,11 @@ async function settingsPage(
 	entitlement: UserStore.Entitlement,
 	notifications: UserStore.Notifications,
 	tokens: UserStore.AgentToken[],
+	filters: number,
 ) {
+	let filtersOn = entitlement.can.rules.apply;
+	let nav = settingsNav(ctx.intl, null, { filters: filtersOn });
+
 	/**
 	 * The row wins. This page and the sign-in callback are the two places both are read, so
 	 * this is where a cookie that has drifted — cleared, or written before a choice made on
@@ -736,10 +756,21 @@ async function settingsPage(
 			{...await chrome(ctx)}
 		>
 			{/**
-			 * Every section is on this one page, so the nav's links are anchors into it and a
-			 * phone, which hides the nav on a section page, scrolls through them all instead.
+			 * Every section is on this one page, so the nav's links are anchors into it. A phone,
+			 * which hides the side nav on a section page, reaches them through the folded nav.
 			 */}
-			<SettingsLayout {...settingsNav(ctx.intl, null)} page="section">
+			<SettingsLayout
+				sections={nav.sections}
+				labels={nav.labels}
+				page="section"
+				mix={[anchoredSections()]}
+			>
+				<SettingsPhoneNav
+					sections={nav.sections}
+					label={nav.labels.nav}
+					jump={ctx.intl.t("settings.nav.jump")}
+				/>
+
 				{planSection(ctx, entitlement)}
 
 				{appearanceSection(ctx, current)}
@@ -773,26 +804,36 @@ async function settingsPage(
 				{/**
 				 * Where a reader goes to decide what happens to a post as it arrives. It sits in
 				 * this area because it is configured once and read back later, which is what every
-				 * other section here is.
+				 * other section here is. With filters switched off `/rules` only sends a reader on
+				 * to the queue, so the section is left out with the page it points at.
 				 */}
-				<SettingsSection
-					id={SETTINGS_ANCHORS.filters}
-					title={ctx.intl.t("rules.heading")}
-					description={ctx.intl.t("rules.description")}
-					save="instant"
-					labels={{ save: ctx.intl.t("settings.appearance.save") }}
-				>
-					<div mix={[p(4)]}>
-						<LinkButton
-							href={routes.rules.index.href()}
-							color="neutral"
-							variant="outline"
-							size="sm"
+				{filtersOn && (
+					<SettingsSection
+						id={SETTINGS_ANCHORS.filters}
+						title={ctx.intl.t("rules.heading")}
+						description={ctx.intl.t("rules.description")}
+						save="instant"
+						labels={{ save: ctx.intl.t("settings.appearance.save") }}
+					>
+						<SettingsSection.Row
+							layout="inline-switch"
+							label={
+								filters === 0
+									? ctx.intl.t("rules.empty")
+									: ctx.intl.t("settings.filters.count", { count: filters })
+							}
 						>
-							{ctx.intl.t("rules.title")}
-						</LinkButton>
-					</div>
-				</SettingsSection>
+							<LinkButton
+								href={routes.rules.index.href()}
+								color="neutral"
+								variant="outline"
+								size="sm"
+							>
+								{ctx.intl.t("settings.filters.manage")}
+							</LinkButton>
+						</SettingsSection.Row>
+					</SettingsSection>
+				)}
 
 				{tokensSection(ctx, tokens, entitlement.can.agent.connect)}
 
@@ -814,13 +855,14 @@ export default createAction(routes.settings, {
 
 		let store = userStore(viewer.id);
 
-		let [settings, entitlement, notifications, tokens] = await Promise.all([
+		let [settings, entitlement, notifications, tokens, rules] = await Promise.all([
 			store.getSettings(),
 			store.entitlement(),
 			store.notifications(),
 			store.listAgentTokens(),
+			store.listRules(),
 		]);
 
-		return await settingsPage(ctx, settings, entitlement, notifications, tokens);
+		return await settingsPage(ctx, settings, entitlement, notifications, tokens, rules.length);
 	},
 });

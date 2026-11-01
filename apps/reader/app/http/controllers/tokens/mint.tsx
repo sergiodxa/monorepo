@@ -7,24 +7,28 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { fg } from "@sdxc/u/color";
 import { flex, gap, items, vstack } from "@sdxc/u/layout";
-import { m, maxIs, p } from "@sdxc/u/size";
-import { overflowWrap, text, weight } from "@sdxc/u/typography";
-import { Alert, Description, LinkButton, Text } from "@sdxc/ui";
+import { m } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Alert, Description, LinkButton } from "@sdxc/ui";
 import { SettingsLayout } from "@sdxc/ui/app/settings-layout";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
 import { chrome } from "~/app/http/controllers/chrome";
-import { NAME_FIELD, SCOPE_FIELD, TOKEN_PARAM } from "~/app/http/controllers/tokens/section";
+import {
+	agentEndpoint,
+	NAME_FIELD,
+	SCOPE_FIELD,
+	TOKEN_PARAM,
+} from "~/app/http/controllers/tokens/section";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { mintAgentToken } from "~/app/mcp/token";
 import { userStore } from "~/app/models/user-store";
-import { settingsNav } from "~/resources/components/settings-area";
+import { SettingsCode, SettingsPhoneNav, settingsNav } from "~/resources/components/settings-area";
 import AppLayout from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
@@ -49,7 +53,8 @@ export default createAction(routes.tokens.create, {
 		 */
 		let minted = await mintAgentToken(viewer.id);
 
-		let written = await userStore(viewer.id).createAgentToken({
+		let store = userStore(viewer.id);
+		let written = await store.createAgentToken({
 			id: minted.tokenId,
 			name: submitted[NAME_FIELD] ?? "",
 			scope: submitted[SCOPE_FIELD] ?? "read",
@@ -68,6 +73,9 @@ export default createAction(routes.tokens.create, {
 			action: "minted",
 		});
 
+		let entitlement = await store.entitlement();
+		let nav = settingsNav(ctx.intl, "agents", { filters: entitlement.can.rules.apply });
+
 		return ctx.render(
 			<AppLayout
 				assets={ctx.assets}
@@ -76,12 +84,14 @@ export default createAction(routes.tokens.create, {
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
-				<SettingsLayout
-					{...settingsNav(ctx.intl, "agents")}
-					page="section"
-					backHref={routes.settings.href()}
-				>
-					<section mix={[vstack({ gap: 3 })]}>
+				<SettingsLayout sections={nav.sections} labels={nav.labels} page="section">
+					<SettingsPhoneNav
+						sections={nav.sections}
+						label={nav.labels.nav}
+						jump={ctx.intl.t("settings.nav.jump")}
+					/>
+
+					<section mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<Description>{ctx.intl.t("agent.minted.description")}</Description>
 
 						<Alert color="warning">
@@ -91,25 +101,23 @@ export default createAction(routes.tokens.create, {
 						</Alert>
 
 						{/**
-						 * The value itself, selectable as one run of text. There is no copy button,
+						 * The value itself, selected whole by one click. There is no copy button,
 						 * because a button that copies needs script and the value has to be reachable
-						 * without it.
+						 * without it. The address sits under it, since a client needs both.
 						 */}
-						<Text
-							mix={[
-								m(0),
-								p(3),
-								rounded("md"),
-								bg("neutral.tint"),
-								fg("neutral.emphasis"),
-								text("sm"),
-								weight("medium"),
-								maxIs("100%"),
-								overflowWrap("anywhere"),
-							]}
-						>
-							<code>{minted.token}</code>
-						</Text>
+						<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+							<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+								{ctx.intl.t("agent.minted.token")}
+							</h2>
+							<SettingsCode>{minted.token}</SettingsCode>
+						</div>
+
+						<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+							<h2 mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+								{ctx.intl.t("agent.address")}
+							</h2>
+							<SettingsCode>{agentEndpoint(ctx)}</SettingsCode>
+						</div>
 
 						<div mix={[flex(), gap(2), items("center")]}>
 							<LinkButton href={routes.settings.href()} color="neutral" variant="outline">

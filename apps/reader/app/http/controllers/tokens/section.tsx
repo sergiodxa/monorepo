@@ -7,9 +7,10 @@
  */
 
 import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Alert, Button, Input, Select, Text } from "@sdxc/ui";
+import { Alert, Button, Input, LinkButton, Select, Text } from "@sdxc/ui";
 import { SettingsSection } from "@sdxc/ui/app/settings-section";
 
 import type { AppContext } from "~/app/initializers/router";
@@ -17,7 +18,7 @@ import type { UserStore } from "~/app/models/user-store";
 
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { AGENT_SCOPES } from "~/database/schema";
-import { SETTINGS_ANCHORS, SettingsNote } from "~/resources/components/settings-area";
+import { SETTINGS_ANCHORS, SettingsCode, SettingsNote } from "~/resources/components/settings-area";
 import routes from "~/routes/web";
 
 /** The query parameter the settings page reads the outcome of a token action out of. */
@@ -37,6 +38,19 @@ const NAME_ID = "settings-token-name";
 
 /** Ties the scope picker to its own label, beside the name. */
 const SCOPE_ID = "settings-token-scope";
+
+/** The anchor of the form that mints a token, which the agent page's button jumps to. */
+export const NEW_TOKEN_ANCHOR = "new-token";
+
+/**
+ * The address an agent is pointed at, absolute because a client configured with a path
+ * alone has no host to send it to.
+ *
+ * @param ctx - The request being answered, whose origin the address is on.
+ */
+export function agentEndpoint(ctx: AppContext): string {
+	return new URL(routes.mcp.index.href(), ctx.url).toString();
+}
 
 /**
  * The copy and tone for the outcome a token action redirected with, or `null` for an
@@ -123,7 +137,7 @@ export default function tokensSection(
 			<SettingsSection
 				id={SETTINGS_ANCHORS.agents}
 				title={ctx.intl.t("agent.legend")}
-				description={`${ctx.intl.t("agent.description")} ${ctx.intl.t("agent.endpoint", { url: routes.mcp.index.href() })}`}
+				description={ctx.intl.t("agent.description")}
 				save="instant"
 				labels={{ save: ctx.intl.t("agent.mint.submit") }}
 			>
@@ -137,6 +151,22 @@ export default function tokensSection(
 					<SettingsNote color="warning">
 						<Alert.Description>{ctx.intl.t("agent.locked")}</Alert.Description>
 					</SettingsNote>
+				)}
+
+				{entitled && (
+					<SettingsSection.Row layout="stacked" label={ctx.intl.t("agent.address")}>
+						<div mix={[vstack({ gap: 2, align: "start" })]}>
+							<SettingsCode>{agentEndpoint(ctx)}</SettingsCode>
+							<LinkButton
+								href={routes.mcp.index.href()}
+								color="neutral"
+								variant="outline"
+								size="sm"
+							>
+								{ctx.intl.t("agent.connect")}
+							</LinkButton>
+						</div>
+					</SettingsSection.Row>
 				)}
 
 				{tokens.length === 0 ? (
@@ -177,7 +207,7 @@ export default function tokensSection(
 
 			{entitled && (
 				<SettingsSection
-					id="new-token"
+					id={NEW_TOKEN_ANCHOR}
 					title={ctx.intl.t("agent.mint.legend")}
 					save="explicit"
 					form={{ action: routes.tokens.create.href() }}

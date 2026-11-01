@@ -83,6 +83,16 @@ describe("GET /rules", () => {
 		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
+	/** A phone hides the side nav here, so the folded one is how it reaches the other sections. */
+	test("folds the settings nav for a phone, naming Filters as the section shown", async () => {
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.rules.index.href())).text();
+		let phoneNav = html.match(/<nav[^>]*data-slot="settings-phone-nav"[\s\S]*?<\/nav>/)?.[0] ?? "";
+
+		expect(phoneNav).toContain(`href="${routes.rules.index.href()}"`);
+		expect(phoneNav).toContain(`href="${routes.settings.href()}#plan"`);
+		expect(phoneNav).toMatch(/aria-current="page"[^>]*>(<[^>]+>)*Filters/);
+	});
+
 	test("tells a reader whose plan runs no rules that filters are a paid feature", async () => {
 		let html = await (await fetchRoute(createRouter(VIEWER), routes.rules.index.href())).text();
 

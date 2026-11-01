@@ -28,7 +28,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
 import { RULE_ACTIONS, RULE_FIELDS, RULE_VALUE_LENGTH } from "~/database/schema";
-import { SettingsNote, settingsNav } from "~/resources/components/settings-area";
+import { SettingsNote, SettingsPhoneNav, settingsNav } from "~/resources/components/settings-area";
 import AppLayout from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";
@@ -221,6 +221,8 @@ async function rulesView(
 	preview: UserStore.RulePreview | null,
 ) {
 	let outcome = notice(ctx);
+	/** The page answers only while filters are on, so its own link is always in the nav. */
+	let nav = settingsNav(ctx.intl, "filters", { filters: true });
 
 	/** The rows the preview caught, drawn as the same list every reading surface draws. */
 	let previewed =
@@ -240,11 +242,13 @@ async function rulesView(
 			locale={ctx.locale}
 			{...await chrome(ctx)}
 		>
-			<SettingsLayout
-				{...settingsNav(ctx.intl, "filters")}
-				page="section"
-				backHref={routes.settings.href()}
-			>
+			<SettingsLayout sections={nav.sections} labels={nav.labels} page="section">
+				<SettingsPhoneNav
+					sections={nav.sections}
+					label={nav.labels.nav}
+					jump={ctx.intl.t("settings.nav.jump")}
+				/>
+
 				<section mix={[vstack({ gap: 3, align: "stretch" })]}>
 					<Description>{ctx.intl.t("rules.description")}</Description>
 					<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("rules.summaryCaveat")}</Text>
@@ -412,6 +416,7 @@ async function rulesView(
 							 */}
 							<Button
 								type="submit"
+								color="brand"
 								size="sm"
 								formMethod="post"
 								formAction={routes.rules.action.href()}

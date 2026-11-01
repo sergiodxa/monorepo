@@ -17,7 +17,7 @@ import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
-import { createUserStoreDouble, DEFAULT_SETTINGS } from "~/app/test/store";
+import { createUserStoreDouble, DEFAULT_SETTINGS, FREE_ENTITLEMENT } from "~/app/test/store";
 import routes from "~/routes/web";
 
 let store: UserStoreDouble = createUserStoreDouble();
@@ -262,5 +262,51 @@ describe("what an import returns here with", () => {
 		expect(body).not.toContain("That file lists no feeds.");
 		expect(body).not.toContain("That file could not be read as OPML.");
 		expect(body).not.toContain("Choose an OPML file to import.");
+	});
+});
+
+describe("the section nav", () => {
+	/** Every `/rules` link on the page, which is where both the nav and the section point. */
+	function rulesLinks(body: string): string[] {
+		return body.match(new RegExp(`<a[^>]*href="${routes.rules.index.href()}"[^>]*>`, "g")) ?? [];
+	}
+
+	test("links Filters from both navs and counts the reader's filters", async () => {
+		store.listRules.mockResolvedValue([
+			{ id: "r1", feedId: null, field: "title", value: "Sponsored", action: "drop" },
+			{ id: "r2", feedId: null, field: "author", value: "Guest", action: "flag" },
+		]);
+
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+
+		/** The side nav, the phone nav and the section's own button. */
+		expect(rulesLinks(body)).toHaveLength(3);
+		expect(body).toContain(`id="filters"`);
+		expect(body).toContain("You have 2 filters.");
+		expect(body).toContain('data-slot="settings-phone-nav"');
+	});
+
+	test("leaves Filters out of the nav and the page while filters are switched off", async () => {
+		store.entitlement.mockResolvedValue({
+			...FREE_ENTITLEMENT,
+			can: { ...FREE_ENTITLEMENT.can, rules: { write: false, apply: false } },
+		});
+
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+
+		expect(rulesLinks(body)).toHaveLength(0);
+		expect(body).not.toContain(`id="filters"`);
+		expect(body).not.toContain("Manage filters");
+	});
+
+	test("gives a client the whole address of the agent endpoint", async () => {
+		store.entitlement.mockResolvedValue({
+			...FREE_ENTITLEMENT,
+			can: { ...FREE_ENTITLEMENT.can, agent: { ...FREE_ENTITLEMENT.can.agent, connect: true } },
+		});
+
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+
+		expect(body).toMatch(new RegExp(`https?://[^<"]+${routes.mcp.index.href()}</code>`));
 	});
 });
