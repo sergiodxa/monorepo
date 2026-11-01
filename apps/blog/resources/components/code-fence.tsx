@@ -10,7 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { mbe } from "@sdxc/u/size";
-import { CodeBlock } from "@sdxc/ui";
+import { CodeBlock } from "@sdxc/ui/docs";
 
 /** The copy button's strings; the blog's pages are English. */
 const CODE_LABELS: CodeBlock.Labels = { copy: "Copy code", copied: "Copied" };
