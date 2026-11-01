@@ -139,7 +139,7 @@ describe("GET /reading/:feed/:item", () => {
 		expect(read).not.toHaveBeenCalled();
 	});
 
-	test("renders the post from the reader's own row, and the article under it", async () => {
+	test("renders the post from the reader's own row, and the article in place of its excerpt", async () => {
 		store.openPost.mockResolvedValue(opened());
 		peek.mockResolvedValue(extracted());
 
@@ -148,7 +148,8 @@ describe("GET /reading/:feed/:item", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("Markdown and the web");
-		expect(readsAs(body)).toContain(SUMMARY);
+		/** The article opens with the lines the excerpt would repeat, so the excerpt gives way. */
+		expect(readsAs(body)).not.toContain(SUMMARY);
 		expect(body).toContain('href="https://daringfireball.net/post"');
 		expect(readsAs(body)).toContain("The whole of the article");
 	});

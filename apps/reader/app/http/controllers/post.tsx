@@ -8,13 +8,15 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
-import { fg } from "@sdxc/u/color";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
-import { maxIs, mbs } from "@sdxc/u/size";
-import { font, text, weight } from "@sdxc/u/typography";
+import { is, maxIs, mi, pbe, pbs } from "@sdxc/u/size";
+import { hover } from "@sdxc/u/state";
+import { font, leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app";
 import * as s from "remix/data-schema";
@@ -33,10 +35,17 @@ import { peekArticle, readArticle } from "~/app/services/article";
 import SaveToggle from "~/resources/components/save-toggle";
 import AppLayout from "~/resources/layouts/app";
 import Article from "~/resources/views/article";
+import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
 /** The path this route matches, which carries the feed and the post being read. */
 const Params = s.object({ feed: s.string(), item: s.string() });
+
+/**
+ * Width of the post's reading column: about seventy characters of the reading face at the
+ * article's size, the measure a long text is comfortable to follow at.
+ */
+const READING_COLUMN = "40rem";
 
 /** What {@link FRAME_PARAM} carries for the piece holding the article alone. */
 const FRAME_ARTICLE = "article";
@@ -72,17 +81,30 @@ function articleSrc(feedId: string, itemId: string): string {
  * states and both answer `200`: a site that refused is news about the site, and the post's
  * own excerpt and link are already on the page above this.
  */
-function ArticleBody(handle: Handle<{ article: Extracted | null; copy: string; byline: string }>) {
+function ArticleBody(
+	handle: Handle<{
+		article: Extracted | null;
+		copy: string;
+		/** The article's own byline, or `null` where the post's header already names its author. */
+		byline: string | null;
+		excerpt?: RemixNode;
+	}>,
+) {
 	return () => {
-		let { article, byline, copy } = handle.props;
+		let { article, byline, copy, excerpt = null } = handle.props;
 
 		if (article === null || article.html === null) {
-			return <Text mix={[fg("neutral.muted")]}>{copy}</Text>;
+			return (
+				<div mix={[vstack(), gap(4)]}>
+					{excerpt}
+					<Text mix={[text("sm"), fg("neutral.muted")]}>{copy}</Text>
+				</div>
+			);
 		}
 
 		return (
 			<div mix={[vstack(), gap(2)]}>
-				{article.byline && <Text mix={[text("sm"), fg("neutral.muted")]}>{byline}</Text>}
+				{article.byline && byline && <Text mix={[text("sm"), fg("neutral.muted")]}>{byline}</Text>}
 
 				<Article html={article.html} />
 			</div>
@@ -201,6 +223,16 @@ export default createAction(routes.post, {
 		let mayExtract = item.url !== null && extract;
 
 		/**
+		 * The excerpt stands in for the article wherever no article is coming, and while one
+		 * is on its way; once the article is here it would only repeat its first lines.
+		 */
+		let excerpt = item.summary ? (
+			<Text mix={[font("reading"), text("lg"), leading("relaxed"), fg("neutral")]}>
+				{item.summary}
+			</Text>
+		) : null;
+
+		/**
 		 * A frame asked for the article alone, so it is answered with the article alone:
 		 * everything else is already in the document this is written into.
 		 */
@@ -213,12 +245,17 @@ export default createAction(routes.post, {
 			return ctx.render(
 				<ArticleBody
 					article={article}
+					excerpt={excerpt}
 					copy={
 						article === null
 							? ctx.intl.t("post.article.empty")
 							: outcomeCopy(ctx.intl, article.outcome)
 					}
-					byline={ctx.intl.t("post.article.byline", { byline: article?.byline ?? "" })}
+					byline={
+						item.author
+							? null
+							: ctx.intl.t("post.article.byline", { byline: article?.byline ?? "" })
+					}
 				/>,
 			);
 		}
@@ -237,56 +274,76 @@ export default createAction(routes.post, {
 				assets={ctx.assets}
 				documentTitle={item.title}
 				heading={item.title}
+				header={false}
 				locale={ctx.locale}
 				{...await chrome(ctx)}
 			>
-				<HeadingScope level={2}>
-					<div mix={[vstack(), gap(4)]}>
-						<div mix={[flex(), flexWrap("wrap"), items("center"), gap(3), text("sm")]}>
+				{/**
+				 * One column at a measure made for reading, centred in the pane, holding the
+				 * post's own heading, what it is and where it came from, and the article.
+				 */}
+				<article
+					mix={[vstack(), gap(6), is("full"), maxIs(READING_COLUMN), mi("auto"), pbs(4), pbe(16)]}
+				>
+					<header mix={[vstack(), gap(4)]}>
+						<div
+							mix={[
+								flex(),
+								flexWrap("wrap"),
+								items("center"),
+								gap(2),
+								text("sm"),
+								fg("neutral.muted"),
+							]}
+						>
 							{feed && (
-								<a href={routes.feed.href({ feed: feed.id })}>
-									{ctx.intl.t("post.source", { feed: feedTitle })}
+								<a
+									href={routes.feed.href({ feed: feed.id })}
+									mix={[
+										fg("neutral.emphasis"),
+										weight("medium"),
+										textDecoration("none"),
+										hover(textDecoration("underline")),
+									]}
+								>
+									{feedTitle}
 								</a>
 							)}
 
-							{item.author && (
-								<Text mix={[fg("neutral.muted")]}>
-									{ctx.intl.t("timeline.byAuthor", { author: item.author })}
-								</Text>
-							)}
+							{feed && <span aria-hidden="true">·</span>}
 
-							<time dateTime={new Date(item.publishedAt).toISOString()} mix={[fg("neutral.muted")]}>
+							<time dateTime={new Date(item.publishedAt).toISOString()}>
 								{exactDate(item.publishedAt, ctx.locale)}
 							</time>
 
-							{item.url && (
-								<a href={item.url} target="_blank" rel="noopener noreferrer">
-									{ctx.intl.t("post.original")}
-								</a>
+							{item.author && (
+								<>
+									<span aria-hidden="true">·</span>
+									<span>{ctx.intl.t("timeline.byAuthor", { author: item.author })}</span>
+								</>
 							)}
 						</div>
 
-						{item.summary && <Text mix={[font("reading"), weight("medium")]}>{item.summary}</Text>}
+						<h1
+							mix={[
+								font("reading"),
+								weight("semibold"),
+								fg("neutral.emphasis"),
+								raw({
+									fontSize: "clamp(1.75rem, 1.4rem + 1.5vw, 2.375rem)",
+									lineHeight: "1.2",
+									textWrap: "balance",
+								}),
+							]}
+						>
+							{item.title}
+						</h1>
 
 						{/**
-						 * The episode, where the post came with one. It is on this page and on no row
-						 * of a list: a row is one line and a player is not.
+						 * What a reader does with the post, in one row under its title: keep it, with
+						 * what keeping holds said beside the mark, and go to the publisher's page.
 						 */}
-						{opened.enclosure && (
-							<MediaPlayer
-								enclosure={opened.enclosure}
-								label={ctx.intl.t("post.media.label")}
-								unsupported={ctx.intl.t("post.media.unsupported")}
-								download={ctx.intl.t("post.media.download")}
-							/>
-						)}
-
-						{/**
-						 * What a save actually keeps, said beside the control rather than left for a
-						 * reader to find out in two years: the title, the excerpt and the link, and
-						 * nothing of the article, which lives only as long as the link does.
-						 */}
-						<div mix={[flex(), flexWrap("wrap"), items("center"), gap(2)]}>
+						<div mix={[flex(), flexWrap("wrap"), items("center"), gap(3)]}>
 							<SaveToggle
 								action={routes.items.save.href({ itemId: item.id })}
 								isSaved={item.savedAt !== null}
@@ -296,34 +353,85 @@ export default createAction(routes.post, {
 								failed={ctx.intl.t("timeline.saveFailed")}
 								full={ctx.intl.t("timeline.saveFull")}
 							/>
-							<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("post.saveKeeps")}</Text>
+
+							{item.url && (
+								<LinkButton
+									href={item.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									variant="outline"
+									color="neutral"
+									size="sm"
+								>
+									{ctx.intl.t("post.original")}
+									<OutboundMark />
+								</LinkButton>
+							)}
 						</div>
 
-						<section mix={[vstack(), gap(2), mbs(2)]}>
-							<h2 mix={[text("lg"), weight("medium")]}>{ctx.intl.t("post.article.heading")}</h2>
+						<Text mix={[text("xs"), fg("neutral.muted")]}>{ctx.intl.t("post.saveKeeps")}</Text>
+					</header>
 
+					{/**
+					 * The episode, where the post came with one. It is on this page and on no row
+					 * of a list: a row is one line and a player is not.
+					 */}
+					{opened.enclosure && (
+						<MediaPlayer
+							enclosure={opened.enclosure}
+							label={ctx.intl.t("post.media.label")}
+							unsupported={ctx.intl.t("post.media.unsupported")}
+							download={ctx.intl.t("post.media.download")}
+						/>
+					)}
+
+					<HeadingScope level={2}>
+						<section
+							aria-label={ctx.intl.t("post.article.heading")}
+							mix={[
+								vstack(),
+								gap(4),
+								pbs(6),
+								borderEdge("block-start", { color: "neutral.border", width: 1 }),
+							]}
+						>
 							{!mayExtract && (
-								<Text mix={[fg("neutral.muted")]}>
-									{fullText ? ctx.intl.t("post.article.empty") : ctx.intl.t("post.article.upgrade")}
-								</Text>
+								<>
+									{excerpt}
+									<Text mix={[text("sm"), fg("neutral.muted")]}>
+										{fullText
+											? ctx.intl.t("post.article.empty")
+											: ctx.intl.t("post.article.upgrade")}
+									</Text>
+								</>
 							)}
 
 							{mayExtract && held !== null && (
 								<ArticleBody
 									article={held}
+									excerpt={excerpt}
 									copy={outcomeCopy(ctx.intl, held.outcome)}
-									byline={ctx.intl.t("post.article.byline", { byline: held.byline ?? "" })}
+									byline={
+										item.author
+											? null
+											: ctx.intl.t("post.article.byline", { byline: held.byline ?? "" })
+									}
 								/>
 							)}
 
 							{mayExtract && held === null && (
 								<LazyFrame src={articleSrc(feedId, item.id)} rootMargin={ARTICLE_REACH}>
-									<Text mix={[fg("neutral.muted")]}>{ctx.intl.t("post.article.pending")}</Text>
+									<div mix={[vstack(), gap(4)]}>
+										{excerpt}
+										<Text mix={[text("sm"), fg("neutral.muted")]}>
+											{ctx.intl.t("post.article.pending")}
+										</Text>
+									</div>
 								</LazyFrame>
 							)}
 						</section>
-					</div>
-				</HeadingScope>
+					</HeadingScope>
+				</article>
 			</AppLayout>,
 		);
 	},

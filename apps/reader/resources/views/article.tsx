@@ -12,16 +12,12 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { parseDocument } from "@sdxc/html/document";
 import { isFailure } from "@sdxc/result";
-import { maxIs } from "@sdxc/u/size";
-import { font, leading } from "@sdxc/u/typography";
-import { createElement } from "remix/component";
+import { font } from "@sdxc/u/typography";
+import { createElement, css } from "remix/component";
 
 /** What a tree calls an element, and what it calls a run of text. */
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
-
-/** Width the article's column stops growing at, which is a comfortable measure to read. */
-const ARTICLE_COLUMN = "42rem";
 
 /**
  * Attributes the renderer spells differently from the markup. Everything else reaches a
@@ -71,7 +67,96 @@ export default function Article(handle: Handle<{ html: string }>) {
 		if (isFailure(document)) return null;
 
 		return (
-			<div mix={[font("reading"), leading("relaxed"), maxIs(ARTICLE_COLUMN)]}>
+			<div
+				data-slot="article-body"
+				mix={[
+					font("reading"),
+					/**
+					 * Set for long reading: a size a little above the interface's, open leading,
+					 * paragraphs parted by a line's worth of space, and every block a publisher
+					 * may send (figures, code, quotes, tables) held inside the column.
+					 */
+					css({
+						fontSize: "1.0625rem",
+						lineHeight: "1.7",
+						color: "var(--ui-neutral-fg-emphasis)",
+						overflowWrap: "break-word",
+						"& > :first-child": { marginBlockStart: "0" },
+						"& p, & ul, & ol, & blockquote, & pre, & figure, & table, & dl": {
+							marginBlock: "0 1.25em",
+						},
+						"& h1, & h2, & h3, & h4, & h5, & h6": {
+							marginBlock: "1.75em 0.5em",
+							lineHeight: "1.3",
+							fontWeight: "600",
+							textWrap: "balance",
+						},
+						"& h1, & h2": { fontSize: "1.375em" },
+						"& h3": { fontSize: "1.1875em" },
+						"& h4, & h5, & h6": { fontSize: "1em" },
+						"& a": {
+							color: "var(--ui-brand-fg)",
+							textDecorationLine: "underline",
+							textDecorationThickness: "1px",
+							textUnderlineOffset: "0.2em",
+						},
+						"& :is(h1, h2, h3, h4, h5, h6) a": { color: "inherit", textDecorationLine: "none" },
+						"& ul, & ol": { paddingInlineStart: "1.5em" },
+						"& li + li": { marginBlockStart: "0.375em" },
+						"& img, & video, & iframe": {
+							display: "block",
+							maxInlineSize: "100%",
+							blockSize: "auto",
+							marginInline: "auto",
+							borderRadius: "0.5rem",
+						},
+						"& figcaption": {
+							marginBlockStart: "0.5em",
+							fontSize: "0.875em",
+							color: "var(--ui-neutral-fg-muted)",
+							textAlign: "center",
+						},
+						"& blockquote": {
+							marginInline: "0",
+							paddingInlineStart: "1em",
+							borderInlineStart: "3px solid var(--ui-neutral-border)",
+							color: "var(--ui-neutral-fg)",
+						},
+						"& code, & pre": {
+							fontFamily: "var(--ui-font-mono, ui-monospace, monospace)",
+							fontSize: "0.875em",
+						},
+						"& :not(pre) > code": {
+							paddingInline: "0.3em",
+							borderRadius: "0.25rem",
+							backgroundColor: "var(--ui-neutral-bg-tint)",
+						},
+						"& pre": {
+							overflowX: "auto",
+							padding: "1em",
+							lineHeight: "1.5",
+							borderRadius: "0.5rem",
+							backgroundColor: "var(--ui-neutral-bg-tint)",
+						},
+						"& table": {
+							display: "block",
+							overflowX: "auto",
+							borderCollapse: "collapse",
+							fontSize: "0.9375em",
+						},
+						"& th, & td": {
+							padding: "0.375em 0.75em",
+							borderBlockEnd: "1px solid var(--ui-neutral-border)",
+							textAlign: "start",
+						},
+						"& hr": {
+							marginBlock: "2em",
+							border: "0",
+							borderBlockStart: "1px solid var(--ui-neutral-border)",
+						},
+					}),
+				]}
+			>
 				{children(document.data.body)}
 			</div>
 		);
