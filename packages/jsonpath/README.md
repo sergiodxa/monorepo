@@ -56,6 +56,21 @@ unwrap(JSONPath.parse("$.groups[?value(@..id) == 7]"));
 In `match` and `search` patterns, `.` matches anything but a line break, and `^` and `$` anchor as
 the compliance suite expects. A pattern that is not an I-Regexp makes the function false.
 
+## Command line
+
+```sh
+bunx @sdxc/jsonpath query '$.store.book[?@.price < 10].title' store.json
+```
+
+`query` prints the matched values as a JSON array, reading the document from a file or from
+stdin. `--paths` prints normalized paths instead, `--first` prints the first match alone, and
+`--fail-empty` exits 1 when nothing matches. An invalid expression exits 2 and points at the
+offset where it fails. `bunx @sdxc/jsonpath --help` lists every flag.
+
+```sh
+cat package.json | bunx @sdxc/jsonpath query '$.name' --first
+```
+
 ## API
 
 ### `JSONPath.parse(source: string): Result<JSONPath, JsonPathSyntaxError>`
