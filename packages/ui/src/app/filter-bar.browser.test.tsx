@@ -14,13 +14,19 @@ import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
+import { AutoRefresh } from "./auto-refresh.js";
 import { FilterBar } from "./filter-bar.js";
 import { rowNavigation } from "./mixins/row-navigation.js";
+import { ViewOptions } from "./view-options.js";
+
+import "@sdxc/u/theme.css";
+import "../theme.css";
 
 const LABELS: FilterBar.Labels = {
 	toolbar: "Filter monitors",
 	tabs: "Monitor states",
 	filters: "Filters",
+	options: "View",
 	apply: "Apply",
 	is: "is",
 	isAnyOf: "is any of",
@@ -63,6 +69,31 @@ const SORT: FilterBar.Sort = {
 	],
 };
 
+const VIEW_LABELS: ViewOptions.Labels = {
+	trigger: "Display",
+	layout: "Layout",
+	grouping: "Grouping",
+	ordering: "Ordering",
+	density: "Density",
+	properties: "Properties",
+	apply: "Apply",
+	setDefault: "Set as default",
+};
+
+const REFRESH: AutoRefresh.Props = {
+	id: "monitors-refresh",
+	defaultValue: 30,
+	options: [
+		{ value: 0, label: "Off" },
+		{ value: 30, label: "30s" },
+		{ value: 60, label: "1m" },
+	],
+	refreshedAt: new Date("2026-11-01T12:46:00Z"),
+	locale: "en-US",
+	timeZone: "UTC",
+	labels: { trigger: "Auto-refresh", updated: "Updated {time}" },
+};
+
 /** Every bar mounted by the running test, unmounted after it so no listener outlives it. */
 let mounted: RenderResult[] = [];
 
@@ -89,6 +120,46 @@ function mount(url: string, width = 1024, props: Partial<FilterBar.Props> = {}):
 	return host;
 }
 
+/**
+ * Mounts a bar with every slot filled the way a busy live list fills it: three count tabs, one
+ * of them empty, search, two facets, sort, density and auto-refresh in the View menu, and the
+ * last-updated time as status.
+ */
+function mountFull(url: string, width: number): HTMLElement {
+	return mount(url, width, {
+		tabs: [
+			{ label: "All", count: 3, href: "/monitors", current: true },
+			{ label: "Failing", count: 3, href: "/monitors?show=failing" },
+			{ label: "Paused", count: 0, href: "/monitors?show=paused" },
+		],
+		facets: FACETS.slice(0, 2),
+		options: (
+			<>
+				<ViewOptions
+					id="monitors-view"
+					url={url}
+					inline
+					density={{
+						defaultValue: "compact",
+						options: [
+							{ value: "compact", label: "Compact" },
+							{ value: "comfortable", label: "Comfortable" },
+						],
+					}}
+					labels={VIEW_LABELS}
+				/>
+				<AutoRefresh {...REFRESH} url={url} show="choices" />
+			</>
+		),
+		status: <AutoRefresh {...REFRESH} url={url} show="status" />,
+	});
+}
+
+/** Whether `element` is drawn, which a closed popover's contents are not. */
+function drawn(element: Element | null): boolean {
+	return element !== null && element.getBoundingClientRect().width > 0;
+}
+
 /** Collects what the bar's form would send, cancelling the navigation. */
 function captureSubmits(host: HTMLElement): URLSearchParams[] {
 	let sent: URLSearchParams[] = [];
@@ -106,6 +177,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+	document.documentElement.removeAttribute("style");
 	for (let result of mounted) result.cleanup();
 	mounted = [];
 	document.body.replaceChildren();
@@ -374,17 +446,122 @@ describe("FilterBar", () => {
 		);
 	});
 
-	test("sorts through links that keep every filter and mark the current order", () => {
+	test("sorts through links in the View menu that keep every filter and mark the current order", () => {
 		let host = mount("/monitors?status=down&sort=-checked&page=3");
-		let items = [...document.querySelectorAll<HTMLAnchorElement>("#monitors-sort a")];
+		let menu = document.getElementById("monitors-options")!;
+		let items = [...menu.querySelectorAll<HTMLAnchorElement>("#monitors-sort a")];
 
 		expect(items.map((item) => item.getAttribute("href"))).toEqual([
 			"/monitors?status=down",
 			"/monitors?status=down&sort=-checked",
 		]);
-		expect(items.map((item) => item.getAttribute("aria-checked"))).toEqual(["false", "true"]);
-		expect(host.querySelector('[data-slot="filter-bar-sort"]')?.getAttribute("aria-label")).toBe(
-			"Sort by: Last checked",
+		expect(items.map((item) => item.getAttribute("aria-current"))).toEqual([null, "true"]);
+		expect(document.getElementById("monitors-sort")?.getAttribute("aria-label")).toBe("Sort by");
+		let trigger = host.querySelector('[data-slot="filter-bar-options"]')!;
+		expect(trigger.getAttribute("commandfor")).toBe("monitors-options");
+		expect(trigger.getAttribute("aria-label")).toBe("View");
+	});
+});
+
+describe("FilterBar layout", () => {
+	test("keeps every slot on one row at 1280, with sort, display and auto-refresh in the View menu", async () => {
+		let host = mountFull("/monitors", 1248);
+		let row = host.querySelector<HTMLElement>('[data-slot="filter-bar-row"]')!;
+		let menu = document.getElementById("monitors-options")!;
+
+		expect(row.getBoundingClientRect().height).toBeLessThanOrEqual(36);
+		expect(menu.contains(menu.querySelector('[data-slot="view-options"]'))).toBe(true);
+		expect(menu.querySelector('[data-slot="auto-refresh"]')).not.toBeNull();
+		expect(menu.querySelector("#monitors-sort")).not.toBeNull();
+		let topLevel = [
+			...row.querySelectorAll(
+				'[data-slot="filter-bar-sort"], [data-slot="view-options-trigger"], [data-slot="auto-refresh-trigger"]',
+			),
+		].filter(drawn);
+		expect(topLevel).toHaveLength(0);
+		let trigger = row.querySelector('[data-slot="filter-bar-options"]');
+		expect(drawn(trigger)).toBe(true);
+		expect(drawn(row.querySelector('[data-slot="filter-bar-status"]'))).toBe(true);
+
+		await userEvent.click(trigger!);
+		expect(menu.matches(":popover-open")).toBe(true);
+		expect(drawn(menu.querySelector('[data-slot="auto-refresh-choices"]'))).toBe(true);
+	});
+
+	test("orders the row tabs, search, facets, then status and the View menu at the end", () => {
+		let host = mountFull("/monitors", 1248);
+		let left = (selector: string) => host.querySelector(selector)!.getBoundingClientRect().left;
+
+		expect(left('[data-slot="filter-bar-tabs"]')).toBeLessThan(left('input[type="search"]'));
+		expect(left('input[type="search"]')).toBeLessThan(left('[data-slot="filter-bar-facet"]'));
+		expect(left('[data-slot="filter-bar-facet"]')).toBeLessThan(
+			left('[data-slot="filter-bar-status"]'),
 		);
+		expect(left('[data-slot="filter-bar-status"]')).toBeLessThan(
+			left('[data-slot="filter-bar-options"]'),
+		);
+		expect(
+			host.querySelector('[data-slot="filter-bar-options"]')!.getBoundingClientRect().right,
+		).toBeCloseTo(1248, 0);
+	});
+
+	test("draws the status quieter than the controls", () => {
+		let host = mountFull("/monitors", 1248);
+		let status = host.querySelector<HTMLElement>('[data-slot="filter-bar-status"]')!;
+		let tab = host.querySelector<HTMLElement>('[data-slot="filter-bar-tabs"] a')!;
+
+		expect(parseFloat(getComputedStyle(status).fontSize)).toBeLessThan(
+			parseFloat(getComputedStyle(tab).fontSize),
+		);
+	});
+
+	test("caps the search width so it leaves the row to the other controls", () => {
+		let host = mountFull("/monitors", 1248);
+		let width = host.querySelector('[data-slot="search-field"]')!.getBoundingClientRect().width;
+
+		expect(width).toBeLessThanOrEqual(320);
+		expect(width).toBeGreaterThanOrEqual(160);
+	});
+
+	test("fits two rows at 768 and drops the status first", async () => {
+		await page.viewport(768, 800);
+		let host = mountFull("/monitors", 736);
+		let row = host.querySelector<HTMLElement>('[data-slot="filter-bar-row"]')!;
+
+		expect(row.getBoundingClientRect().height).toBeLessThanOrEqual(76);
+		expect(drawn(row.querySelector('[data-slot="filter-bar-status"]'))).toBe(false);
+		expect(drawn(row.querySelector('[data-slot="filter-bar-options"]'))).toBe(true);
+		for (let facet of row.querySelectorAll('[data-slot="filter-bar-facet"]')) {
+			expect(drawn(facet)).toBe(true);
+		}
+	});
+
+	test("never scrolls the page sideways at 375 with every slot filled", async () => {
+		await page.viewport(375, 800);
+		let host = mountFull("/monitors?status=down&q=checkout", 343);
+
+		expect(host.scrollWidth).toBeLessThanOrEqual(343);
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+		expect(drawn(host.querySelector('[data-slot="filter-bar-options"]'))).toBe(true);
+	});
+
+	test("draws a tab with nothing in it quieter, and keeps it", () => {
+		for (let [step, lightness] of [
+			50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950,
+		].entries()) {
+			document.documentElement.style.setProperty(
+				`--ui-color-neutral-${lightness}`,
+				`oklch(${0.98 - step * 0.08} 0 0)`,
+			);
+		}
+		let host = mountFull("/monitors", 1248);
+		let [, failing, paused] = [
+			...host.querySelectorAll<HTMLElement>('[data-slot="filter-bar-tabs"] [data-slot="count"]'),
+		];
+
+		expect(paused!.textContent).toBe("0");
+		expect(getComputedStyle(paused!).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(failing!).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+		expect(getComputedStyle(paused!).color).not.toBe(getComputedStyle(failing!).color);
 	});
 });

@@ -1,6 +1,6 @@
 /**
- * The toolbar above a list: count tabs on the left, facet filters with per-value counts in
- * the middle, search, sort and view controls on the right, and the applied filters as chips
+ * The toolbar above a list: count tabs, search and facet filters at the start, a quiet status
+ * and one View menu (sort, display, auto-refresh) at the end, and applied filters as chips
  * below. Every control writes a URL search parameter through one GET form, so it works unscripted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -9,12 +9,19 @@
 
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { ArrowUpDownIcon, ChevronDownIcon, ListFilterIcon, XIcon } from "@sdxc/icons";
+import {
+	CheckIcon,
+	ChevronDownIcon,
+	ListFilterIcon,
+	SlidersHorizontalIcon,
+	XIcon,
+} from "@sdxc/icons";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import {
 	basis,
+	block,
 	container,
 	flex,
 	flexWrap,
@@ -31,7 +38,7 @@ import {
 } from "@sdxc/u/layout";
 import { divide, overflowY } from "@sdxc/u/overflow";
 import { at } from "@sdxc/u/responsive";
-import { bs, is, m, maxBs, maxIs, minIs, mis, p, pb, pi, pis } from "@sdxc/u/size";
+import { bs, is, m, maxBs, maxIs, minIs, mis, p, pb, pbe, pi, pis } from "@sdxc/u/size";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { nowrap, tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
@@ -39,7 +46,6 @@ import { clientEntry } from "remix/component";
 import { Button } from "../components/button.js";
 import { Checkbox } from "../components/checkbox.js";
 import { Keyboard } from "../components/keyboard.js";
-import { Menu } from "../components/menu.js";
 import { Popover } from "../components/popover.js";
 import { SearchField } from "../components/search-field.js";
 import { floatingSurface, surfaceInset } from "../styles/floating-surface.js";
@@ -69,12 +75,18 @@ const CONTAINER = "filter-bar";
 /** Container width from which a collapsing bar shows each facet inline rather than behind "Filters". */
 const COLLAPSE_WIDTH = "32rem";
 
+/** Container width from which the status shows; a narrower bar gives its space to the controls. */
+const STATUS_WIDTH = "56rem";
+
+/** Container width from which the View trigger shows its text beside the icon. */
+const OPTIONS_LABEL_WIDTH = "28rem";
+
 /** Prop types for {@link FilterBar} and {@link FilterBarClear}. */
 export namespace FilterBar {
 	/** A count tab: a saved slice of the list, such as "Open 26", linked rather than filtered. */
 	export interface Tab {
 		label: string;
-		/** Records in the slice; omitted hides the count rather than showing 0. */
+		/** Records in the slice; omitted hides the count, and 0 draws it muted. */
 		count?: number;
 		/** Where the tab leads, carrying whatever other parameters the slice keeps. */
 		href: string;
@@ -123,11 +135,11 @@ export namespace FilterBar {
 		label: string;
 	}
 
-	/** The sort menu: one link per order, so a choice is a navigation that keeps every filter. */
+	/** The sort orders, listed first in the View menu as one link each, so a choice keeps every filter. */
 	export interface Sort {
 		/** Search parameter it writes. @default "sort" */
 		name?: string;
-		/** The menu's accessible name, such as "Sort by". */
+		/** The group's heading and accessible name, such as "Sort by". */
 		label: string;
 		options: SortOption[];
 		/** The order the list uses while the URL names none. */
@@ -142,6 +154,8 @@ export namespace FilterBar {
 		tabs: string;
 		/** The collapsed trigger's text, such as "Filters". */
 		filters: string;
+		/** The View menu's trigger text and accessible name, such as "View" or "Display". */
+		options: string;
 		/** The submit button in each facet's popover, such as "Apply". */
 		apply: string;
 		/** A chip's operator for one value, such as "is". */
@@ -168,12 +182,24 @@ export namespace FilterBar {
 		url?: URL | string;
 		/** Where the form submits. Defaults to the current path. */
 		action?: string;
+		/** Count tabs at the start of the row. */
 		tabs?: Tab[];
-		facets?: Facet[];
+		/** The search field, after the tabs, between 14rem and 20rem wide. */
 		search?: Search;
+		/** Facet buttons after the search. */
+		facets?: Facet[];
+		/** Sort orders, the first group in the View menu. */
 		sort?: Sort;
-		/** Controls at the trailing end, after sort: a `ViewOptions`, an `AutoRefresh`. */
-		view?: RemixNode;
+		/**
+		 * The rest of the View menu, after sort: an inline `ViewOptions` and an `AutoRefresh`
+		 * with `show="choices"`, each its own group.
+		 */
+		options?: RemixNode;
+		/**
+		 * Quiet text before the View menu, such as an `AutoRefresh` with `show="status"`: small,
+		 * muted, and hidden while the bar is narrower than 56rem.
+		 */
+		status?: RemixNode;
 		/** Moves the facets behind one "Filters (n)" popover while the bar is narrower than 32rem. */
 		collapse?: boolean;
 		/** Locale for the counts. Defaults to the runtime's. */
@@ -191,9 +217,9 @@ export namespace FilterBar {
 }
 
 /**
- * Renders the three-zone toolbar. Facet checkboxes, the search field and the hidden carried
- * parameters all belong to one GET form, so Apply or Enter submits the whole view and the URL
- * holds one parameter per filter; tabs, sort orders and chip removal are plain links.
+ * Renders the toolbar. Facet checkboxes, the search field and the hidden carried parameters
+ * all belong to one GET form, so Apply or Enter submits the whole view and the URL holds one
+ * parameter per filter; tabs, sort orders and chip removal are plain links.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the toolbar's markup.
@@ -202,9 +228,11 @@ export namespace FilterBar {
  * 	id="monitors"
  * 	url={request.url}
  * 	tabs={[{ label: "Active", count: 26, href: "?state=active", current: true }]}
- * 	facets={[{ name: "status", label: "Status", options: [{ value: "down", label: "Down", count: 2 }] }]}
  * 	search={{ label: "Search monitors", placeholder: "Search…" }}
+ * 	facets={[{ name: "status", label: "Status", options: [{ value: "down", label: "Down", count: 2 }] }]}
  * 	sort={{ label: "Sort by", defaultValue: "name", options: [{ value: "name", label: "Name" }] }}
+ * 	options={<ViewOptions id="monitors-view" url={request.url} inline density={density} labels={viewLabels} />}
+ * 	status={<AutoRefresh {...refresh} show="status" />}
  * 	labels={labels}
  * />
  */
@@ -218,7 +246,8 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 			facets = [],
 			search,
 			sort,
-			view,
+			options,
+			status,
 			collapse,
 			locale,
 			labels,
@@ -257,9 +286,25 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 					role="toolbar"
 					aria-label={labels.toolbar}
 					data-slot="filter-bar-row"
-					mix={[flex(), flexWrap(), items("center"), raw({ gap: "0.5rem 1rem" })]}
+					mix={[flex(), flexWrap(), items("center"), raw({ gap: "0.5rem 0.75rem" }), minIs(0)]}
 				>
 					{tabs?.length ? <FilterTabs tabs={tabs} label={labels.tabs} numbers={numbers} /> : null}
+					{search ? (
+						<SearchField
+							aria-label={search.label}
+							mix={[grow(), basis("14rem"), minIs("10rem"), maxIs("20rem")]}
+						>
+							<SearchField.Input
+								id={search.id ?? `${id}-search`}
+								name={searchName}
+								form={formId}
+								defaultValue={query}
+								placeholder={search.placeholder}
+								autocomplete="off"
+								mix={[bs(8)]}
+							/>
+						</SearchField>
+					) : null}
 					{facets.length ? (
 						<div
 							data-slot="filter-bar-facets"
@@ -303,35 +348,39 @@ export function FilterBar(handle: Handle<FilterBar.Props>) {
 							))}
 						</div>
 					) : null}
-					<div
-						data-slot="filter-bar-end"
-						mix={[
-							flex(),
-							items("center"),
-							justify("end"),
-							gap(1),
-							grow(),
-							basis("14rem"),
-							minIs(0),
-							mis("auto"),
-						]}
-					>
-						{search ? (
-							<SearchField aria-label={search.label} mix={[grow(), basis("10rem"), minIs(0)]}>
-								<SearchField.Input
-									id={search.id ?? `${id}-search`}
-									name={searchName}
-									form={formId}
-									defaultValue={query}
-									placeholder={search.placeholder}
-									autocomplete="off"
-									mix={[bs(8)]}
-								/>
-							</SearchField>
-						) : null}
-						{sort ? <SortMenu id={`${id}-sort`} url={url} sort={sort} /> : null}
-						{view}
-					</div>
+					{sort || options || status ? (
+						<div
+							data-slot="filter-bar-end"
+							mix={[flex(), items("center"), gap(3), mis("auto"), minIs(0), shrink(0)]}
+						>
+							{status ? (
+								<div
+									data-slot="filter-bar-status"
+									mix={[
+										hidden(),
+										at(STATUS_WIDTH, CONTAINER, block()),
+										minIs(0),
+										text("xs"),
+										fg("neutral.muted"),
+										truncate(),
+									]}
+								>
+									{status}
+								</div>
+							) : null}
+							{sort || options ? (
+								<OptionsMenu
+									id={`${id}-options`}
+									sortId={`${id}-sort`}
+									url={url}
+									sort={sort}
+									label={labels.options}
+								>
+									{options}
+								</OptionsMenu>
+							) : null}
+						</div>
+					) : null}
 				</div>
 				{appliedCount > 0 ? (
 					<div
@@ -415,8 +464,8 @@ interface FilterTabsProps {
 
 /**
  * Renders the count tabs as links, the current one marked for assistive technology and drawn
- * in the emphasis ink, each count tabular so the row holds still as numbers change. Tabs that
- * outgrow the bar wrap onto more lines, each tab kept whole.
+ * in the emphasis ink, each count tabular so the row holds still as numbers change. An empty
+ * slice keeps its tab with a muted, unfilled count. Tabs that outgrow the bar wrap, each whole.
  *
  * @param handle Runtime handle carrying the tabs.
  * @returns The render function producing the navigation.
@@ -454,13 +503,16 @@ function FilterTabs(handle: Handle<FilterTabsProps>) {
 						{tab.count === undefined ? null : (
 							<span
 								data-slot="count"
+								data-empty={tab.count === 0 ? "" : undefined}
 								mix={[
 									pi(1.5),
 									rounded("full"),
 									bg("neutral.tint"),
+									fg("neutral"),
 									text("xs"),
 									weight(500),
 									tabularNums(),
+									when("&[data-empty]", [bg("transparent"), fg("neutral.muted"), weight(400)]),
 								]}
 							>
 								{numbers.format(tab.count)}
@@ -628,26 +680,28 @@ function FacetPopover(handle: Handle<FacetPopoverProps>) {
 	};
 }
 
-/** Props for {@link SortMenu}. */
-interface SortMenuProps {
+/** Props for {@link OptionsMenu}. */
+interface OptionsMenuProps {
 	id: string;
+	sortId: string;
 	url: URL | string;
-	sort: FilterBar.Sort;
+	sort?: FilterBar.Sort;
+	label: string;
+	/** The groups after sort, from the bar's `options`. */
+	children?: RemixNode;
 }
 
 /**
- * Renders the sort trigger and its menu, one link per order with the current one checked,
- * so choosing an order keeps every filter and works as a plain navigation.
+ * Renders the View trigger and its popover: the sort orders first, then each node of the bar's
+ * `options` as its own group under a divider, so every control that changes how the list is
+ * shown, rather than what it holds, sits behind one button.
  *
- * @param handle Runtime handle carrying the sort options.
- * @returns The render function producing the trigger and menu.
+ * @param handle Runtime handle carrying the sort and the other groups.
+ * @returns The render function producing the trigger and popover.
  */
-function SortMenu(handle: Handle<SortMenuProps>) {
+function OptionsMenu(handle: Handle<OptionsMenuProps>) {
 	return () => {
-		let { id, url, sort } = handle.props;
-		let name = sort.name ?? DEFAULT_SORT_PARAM;
-		let current = paramValues(url, name)[0] ?? sort.defaultValue;
-		let currentLabel = sort.options.find((option) => option.value === current)?.label ?? current;
+		let { id, sortId, url, sort, label, children } = handle.props;
 		return (
 			<>
 				<Button
@@ -655,32 +709,94 @@ function SortMenu(handle: Handle<SortMenuProps>) {
 					size="sm"
 					commandfor={id}
 					command="toggle-popover"
-					aria-label={`${sort.label}: ${currentLabel}`}
-					data-slot="filter-bar-sort"
+					aria-label={label}
+					data-slot="filter-bar-options"
 					mix={[shrink(0), fg("neutral"), weight(400), when("& > svg", fg("neutral.muted"))]}
 				>
-					<ArrowUpDownIcon size={16} />
-					<span data-slot="label" mix={[hidden(), at("28rem", CONTAINER, inline())]}>
-						{currentLabel}
+					<SlidersHorizontalIcon size={16} aria-hidden="true" />
+					<span data-slot="label" mix={[hidden(), at(OPTIONS_LABEL_WIDTH, CONTAINER, inline())]}>
+						{label}
 					</span>
 				</Button>
-				<Menu id={id} placement="bottom-end" aria-label={sort.label}>
-					{sort.options.map((option) => (
-						<Menu.Item
-							href={setParamHref(
-								url,
-								name,
-								option.value === sort.defaultValue ? null : option.value,
-							)}
-							role="menuitemradio"
-							aria-checked={option.value === current ? "true" : "false"}
-							mix={[when('&[aria-checked="true"]', weight(600))]}
-						>
-							{option.label}
-						</Menu.Item>
-					))}
-				</Menu>
+				<Popover
+					id={id}
+					placement="bottom-end"
+					role="dialog"
+					aria-label={label}
+					data-slot="filter-bar-options-menu"
+					mix={[
+						p(3),
+						is("20rem"),
+						maxIs("calc(100vw - 2rem)"),
+						vstack({ gap: 3 }),
+						divide("block", "neutral.border"),
+						when("& > *:not(:last-child)", pbe(3)),
+					]}
+				>
+					{sort ? <SortGroup id={sortId} url={url} sort={sort} /> : null}
+					{children}
+				</Popover>
 			</>
+		);
+	};
+}
+
+/** Props for {@link SortGroup}. */
+interface SortGroupProps {
+	id: string;
+	url: URL | string;
+	sort: FilterBar.Sort;
+}
+
+/**
+ * Renders the sort orders as links with the current one checked, so choosing an order keeps
+ * every filter and works as a plain navigation; the default order drops the parameter.
+ *
+ * @param handle Runtime handle carrying the sort options.
+ * @returns The render function producing the group.
+ */
+function SortGroup(handle: Handle<SortGroupProps>) {
+	return () => {
+		let { id, url, sort } = handle.props;
+		let name = sort.name ?? DEFAULT_SORT_PARAM;
+		let current = paramValues(url, name)[0] ?? sort.defaultValue;
+		return (
+			<div
+				id={id}
+				role="group"
+				aria-label={sort.label}
+				data-slot="filter-bar-sort"
+				mix={[vstack({ gap: 0.5, align: "stretch" }), minIs(0)]}
+			>
+				<span aria-hidden="true" mix={[pi(2), pb(1), text("xs"), weight(600), fg("neutral.muted")]}>
+					{sort.label}
+				</span>
+				{sort.options.map((option) => (
+					<a
+						href={setParamHref(url, name, option.value === sort.defaultValue ? null : option.value)}
+						aria-current={option.value === current ? "true" : undefined}
+						mix={[
+							interactiveTransition(),
+							flex(),
+							items("center"),
+							justify("between"),
+							gap(2),
+							bs(8),
+							pi(2),
+							rounded("md"),
+							fg("neutral"),
+							textDecoration("none"),
+							hover([fg("neutral.emphasis"), bg("neutral.bg-tint-hover")]),
+							focusVisible(outline({ color: "brand.ring", offset: -2 })),
+							when('&[aria-current="true"]', [fg("neutral.emphasis"), weight(600)]),
+							when("& > svg", [fg("brand"), shrink(0)]),
+						]}
+					>
+						<span mix={[truncate()]}>{option.label}</span>
+						{option.value === current ? <CheckIcon size={16} aria-hidden="true" /> : null}
+					</a>
+				))}
+			</div>
 		);
 	};
 }
