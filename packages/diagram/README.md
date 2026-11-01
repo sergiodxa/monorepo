@@ -80,6 +80,8 @@ import { toRemix } from "@sdxc/markdown/remix";
 bunx @sdxc/diagram --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg diagram …` runs the same command line, using the version your project installs.
+
 Draw a diagram as SVG, from a file or stdin, to stdout or a file. Source outside the supported
 syntax exits 2 with `file:line:column reason`.
 
