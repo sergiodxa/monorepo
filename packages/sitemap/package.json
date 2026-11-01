@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read and write the sitemap protocol: collect URLs, or fetch a published sitemap",
 	"license": "MIT",
+	"bin": {
+		"sdxc-sitemap": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,6 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/xml": "workspace:*"
 	},

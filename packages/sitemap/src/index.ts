@@ -14,6 +14,7 @@ import { XML } from "@sdxc/xml";
 
 import { createEntryElement } from "./lib/create-entry-element.js";
 import { parseDocument } from "./lib/parse-document.js";
+import { validateDocument } from "./lib/validate-document.js";
 
 /** The namespace both sitemap documents declare on their root element. */
 const NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
@@ -61,6 +62,35 @@ export namespace Sitemap {
 		frequency?: Frequency;
 		/** Priority value between 0.0 and 1.0, default is 0.5 */
 		priority?: number;
+	}
+
+	/**
+	 * Names which protocol limit a problem breaks: the whole `document`, its byte `size`, its
+	 * row `count`, one of a row's fields, or a URL on another `host`.
+	 */
+	export type Rule =
+		| "document"
+		| "size"
+		| "count"
+		| "loc"
+		| "lastmod"
+		| "changefreq"
+		| "priority"
+		| "host";
+
+	/**
+	 * One way a document breaks the protocol; `row` is the 1-based position of the row it is
+	 * about, absent for a problem with the document as a whole.
+	 */
+	export interface Problem {
+		rule: Rule;
+		message: string;
+		row?: number;
+	}
+
+	/** Where a validated sitemap is served, which every URL in it must share the host of. */
+	export interface ValidateOptions {
+		location?: globalThis.URL;
 	}
 }
 
@@ -125,6 +155,19 @@ export class Sitemap {
 	}
 
 	/**
+	 * Checks a sitemap's source against the protocol: at most 50 MiB and 50,000 rows, each
+	 * `<loc>` an absolute http(s) URL of up to 2,048 characters on one host, and each optional
+	 * field in its format. Reading forgives every one of these; this reports them all.
+	 *
+	 * @param source - The sitemap's text, uncompressed
+	 * @param options - Where it is served, when known, so URLs must share that host
+	 * @returns Every problem in document order, empty when the sitemap conforms
+	 */
+	static validate(source: string, options: Sitemap.ValidateOptions = {}): Sitemap.Problem[] {
+		return validateDocument(source, options.location);
+	}
+
+	/**
 	 * Tells which document this instance carries, which is `urlset` for one built by
 	 * appending and whatever was parsed for one that came from a document.
 	 */
@@ -155,6 +198,39 @@ export class Sitemap {
 	 */
 	append(loc: globalThis.URL, options: Sitemap.AppendOptions = {}) {
 		this.#entries.add({ loc, ...options });
+	}
+
+	/**
+	 * Follows an index to the pages it lists: every child sitemap is fetched in order, nested
+	 * indexes included and each URL once, and their entries collected into one `urlset`. A
+	 * `urlset` answers a copy of itself. The first child that cannot be read fails the whole walk.
+	 *
+	 * @param init - Request options passed to `fetch` for every child
+	 * @returns A `urlset` of every page, or the child that failed, named in the message
+	 */
+	async expand(init?: RequestInit): Promise<Result<Sitemap, SitemapFetchError>> {
+		let pages = new Sitemap();
+		let visited = new Set<string>();
+		let pending: Sitemap[] = [this];
+
+		for (let sitemap of pending) {
+			if (sitemap.kind === "urlset") {
+				for (let entry of sitemap.entries) pages.#entries.add(entry);
+				continue;
+			}
+			for (let child of sitemap.entries) {
+				if (visited.has(child.loc.href)) continue;
+				visited.add(child.loc.href);
+				let fetched = await Sitemap.fetch(child.loc, init);
+				if (isFailure(fetched)) {
+					let message = `${child.loc.href}: ${fetched.error.message}`;
+					return failure(new SitemapFetchError(message));
+				}
+				pending.push(fetched.data);
+			}
+		}
+
+		return success(pages);
 	}
 
 	/**

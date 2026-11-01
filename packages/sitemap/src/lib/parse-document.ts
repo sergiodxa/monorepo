@@ -19,7 +19,7 @@ import { SitemapParseError } from "../index.js";
  * The `<changefreq>` values the protocol defines, in the order it lists them, which
  * is also the runtime spelling of `Sitemap.Frequency`.
  */
-const FREQUENCIES: readonly Sitemap.Frequency[] = [
+export const FREQUENCIES: readonly Sitemap.Frequency[] = [
 	"always",
 	"hourly",
 	"daily",
@@ -71,7 +71,7 @@ export function parseDocument(xml: XML): Result<SitemapDocument, SitemapParseErr
  * Maps a root element name to the document type it identifies, reporting `undefined`
  * for every other root so the caller names what arrived.
  */
-function kindOf(name: string): Sitemap.Kind | undefined {
+export function kindOf(name: string): Sitemap.Kind | undefined {
 	if (name === "urlset") return "urlset";
 	if (name === "sitemapindex") return "index";
 	return undefined;
@@ -103,7 +103,7 @@ function toEntry(element: XML.Element): Sitemap.Entry | undefined {
  * Reads the text of a row's own child, taking the first when a document repeats one,
  * and reporting `undefined` for an element that holds only whitespace.
  */
-function textOf(element: XML.Element, name: string): string | undefined {
+export function textOf(element: XML.Element, name: string): string | undefined {
 	let child = childElements(element).find((candidate) => localName(candidate.name) === name);
 	if (!child) return undefined;
 
@@ -118,7 +118,7 @@ function textOf(element: XML.Element, name: string): string | undefined {
 /**
  * Lists the element children of one element, dropping the text between them.
  */
-function childElements(element: XML.Element): XML.Element[] {
+export function childElements(element: XML.Element): XML.Element[] {
 	let elements: XML.Element[] = [];
 	for (let child of element.children ?? []) {
 		if (typeof child !== "string") elements.push(child);
@@ -131,7 +131,7 @@ function childElements(element: XML.Element): XML.Element[] {
  * names: the XML layer resolves no namespaces, so the prefix a document binds the
  * sitemap namespace to carries no meaning on its own.
  */
-function localName(name: string): string {
+export function localName(name: string): string {
 	let separator = name.indexOf(":");
 	if (separator === -1) return name;
 	return name.slice(separator + 1);
@@ -141,7 +141,7 @@ function localName(name: string): string {
  * Reads a `<loc>` as the absolute URL the protocol requires, reporting `undefined`
  * for a relative or malformed one so the caller drops the row.
  */
-function toURL(value?: string): globalThis.URL | undefined {
+export function toURL(value?: string): globalThis.URL | undefined {
 	if (!value) return undefined;
 	try {
 		return new URL(value);

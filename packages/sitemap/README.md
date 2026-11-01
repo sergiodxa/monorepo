@@ -100,6 +100,30 @@ Reading follows these rules:
 - Extension children (`image:`, `video:`, `news:`, `xhtml:link`) are left out of the entry;
   read them from the `XML` document when you need them.
 
+## Command line
+
+```sh
+bunx @sdxc/sitemap --help
+```
+
+`list` prints every page URL in a sitemap, fetching each child of a sitemap index; `--json`
+prints `[{ loc, lastmod }]`.
+
+```sh
+bunx @sdxc/sitemap list https://example.com/sitemap.xml
+bunx @sdxc/sitemap list sitemap.xml --json
+```
+
+`validate` checks a sitemap against the protocol and exits 1 with each problem: over 50 MiB or
+50,000 rows, a `<loc>` that is not an absolute URL, URLs on more than one host, or a malformed
+`<lastmod>`, `<changefreq>` or `<priority>`.
+
+```sh
+bunx @sdxc/sitemap validate https://example.com/sitemap.xml --json
+```
+
+Either command reads a URL, a file, or stdin when the argument is `-` or absent.
+
 ## API
 
 ### `new Sitemap()`
@@ -138,6 +162,18 @@ Reads a parsed `XML` document as a sitemap, following the rules under
 Retrieves and parses one sitemap, taking what `fetch` takes. Any `ok` response is parsed
 whatever its `Content-Type`; a network error or an error status is a `SitemapFetchError`.
 
+### `sitemap.expand(init?: RequestInit): Promise<Result<Sitemap, SitemapFetchError>>`
+
+Follows an index to its pages: fetches every child sitemap in order, nested indexes included,
+and answers one `urlset` of their entries. The first child that fails fails the walk, named in
+the error message.
+
+### `Sitemap.validate(source: string, options?: { location?: URL }): Sitemap.Problem[]`
+
+Every way `source` breaks the protocol, empty when it conforms: its size, row count, each
+row's fields, and URLs on a host other than the first one's, or `location`'s when given. Each
+`Sitemap.Problem` has a `rule`, a `message` and, for a row, its 1-based `row`.
+
 ### `fromRoutes(routes, origin, decisions): Sitemap`
 
 From `@sdxc/sitemap/remix`. Lists the table's pages in declared order, each URL built by its
@@ -172,6 +208,15 @@ namespace Sitemap {
 		updatedAt?: Date;
 		frequency?: Frequency;
 		priority?: number;
+	}
+
+	type Rule =
+		"document" | "size" | "count" | "loc" | "lastmod" | "changefreq" | "priority" | "host";
+
+	interface Problem {
+		rule: Rule;
+		message: string;
+		row?: number;
 	}
 }
 ```

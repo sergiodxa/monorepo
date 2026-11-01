@@ -394,4 +394,142 @@ describe("Sitemap", () => {
 			expect(isFailure(result)).toBe(true);
 		});
 	});
+
+	describe("validate", () => {
+		test("reports nothing for a conforming sitemap", () => {
+			let source = urlset(
+				"<url><loc>https://example.com/</loc><lastmod>2026-09-11</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>",
+			);
+
+			expect(Sitemap.validate(source)).toEqual([]);
+		});
+
+		test("reports every field the protocol refuses, by row", () => {
+			let source = urlset(
+				[
+					"<url><loc>/relative</loc></url>",
+					"<url><lastmod>2026-09-11</lastmod></url>",
+					"<url><loc>https://example.com/a</loc><lastmod>Sep 11 2026</lastmod><changefreq>sometimes</changefreq><priority>1.5</priority></url>",
+					`<url><loc>https://example.com/${"a".repeat(2048)}</loc></url>`,
+				].join(""),
+			);
+
+			expect(Sitemap.validate(source).map(({ rule, row }) => ({ rule, row }))).toEqual([
+				{ rule: "loc", row: 1 },
+				{ rule: "loc", row: 2 },
+				{ rule: "lastmod", row: 3 },
+				{ rule: "changefreq", row: 3 },
+				{ rule: "priority", row: 3 },
+				{ rule: "loc", row: 4 },
+			]);
+		});
+
+		test("reports a URL on another host than the first", () => {
+			let source = urlset(
+				"<url><loc>https://example.com/</loc></url><url><loc>https://other.com/</loc></url>",
+			);
+
+			expect(Sitemap.validate(source)).toEqual([
+				{
+					rule: "host",
+					row: 2,
+					message:
+						"Row 2: https://other.com/ is on other.com, but the first URL is on example.com.",
+				},
+			]);
+		});
+
+		test("checks every host against the sitemap's location when given", () => {
+			let source = urlset("<url><loc>https://www.example.com/</loc></url>");
+
+			let problems = Sitemap.validate(source, { location: new URL(SITEMAP_URL) });
+
+			expect(problems.map((problem) => problem.rule)).toEqual(["host"]);
+		});
+
+		test("reports more than 50,000 rows", () => {
+			let source = urlset("<url><loc>https://example.com/</loc></url>".repeat(50_001));
+
+			expect(Sitemap.validate(source).map((problem) => problem.rule)).toEqual(["count"]);
+		});
+
+		test("reports a document over 50 MiB", () => {
+			let source = urlset(`<url><loc>https://example.com/</loc></url>${" ".repeat(52_428_800)}`);
+
+			expect(Sitemap.validate(source).map((problem) => problem.rule)).toEqual(["size"]);
+		});
+
+		test("reports source that is not a sitemap as one document problem", () => {
+			expect(Sitemap.validate("<html/>")).toEqual([
+				{
+					rule: "document",
+					message: "Expected a <urlset> or <sitemapindex> root, received <html>.",
+				},
+			]);
+			expect(Sitemap.validate("not xml").map((problem) => problem.rule)).toEqual(["document"]);
+		});
+
+		test("leaves an index row's changefreq and priority unchecked", () => {
+			let source =
+				'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><sitemap><loc>https://example.com/a.xml</loc><priority>9</priority></sitemap></sitemapindex>';
+
+			expect(Sitemap.validate(source)).toEqual([]);
+		});
+	});
+
+	describe("expand", () => {
+		/** An index of `children`, each a sitemap under example.com. */
+		function index(children: string[]) {
+			let rows = children.map(
+				(child) => `<sitemap><loc>https://example.com/${child}</loc></sitemap>`,
+			);
+			return `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${rows.join("")}</sitemapindex>`;
+		}
+
+		test("collects the pages of every child sitemap, nested indexes included", async () => {
+			server.use(
+				http.get("https://example.com/a.xml", () =>
+					HttpResponse.xml(urlset("<url><loc>https://example.com/1</loc></url>")),
+				),
+				http.get("https://example.com/nested.xml", () =>
+					HttpResponse.xml(index(["b.xml", "a.xml"])),
+				),
+				http.get("https://example.com/b.xml", () =>
+					HttpResponse.xml(urlset("<url><loc>https://example.com/2</loc></url>")),
+				),
+			);
+
+			let pages = unwrap(await unwrap(parse(index(["a.xml", "nested.xml"]))).expand());
+
+			expect(pages.kind).toBe("urlset");
+			expect([...pages.entries].map((entry) => entry.loc.href)).toEqual([
+				"https://example.com/1",
+				"https://example.com/2",
+			]);
+		});
+
+		test("answers a urlset's own entries", async () => {
+			let sitemap = unwrap(parse(urlset("<url><loc>https://example.com/</loc></url>")));
+
+			let pages = unwrap(await sitemap.expand());
+
+			expect(pages).not.toBe(sitemap);
+			expect(pages.size).toBe(1);
+		});
+
+		test("fails naming the child that could not be read", async () => {
+			server.use(
+				http.get("https://example.com/gone.xml", () => new HttpResponse(null, { status: 404 })),
+			);
+
+			let result = await unwrap(parse(index(["gone.xml"]))).expand();
+
+			expect(isFailure(result)).toBe(true);
+			if (!isFailure(result)) return;
+			expect(result.error).toBeInstanceOf(SitemapFetchError);
+			expect(result.error.message).toBe(
+				"https://example.com/gone.xml: Failed to fetch the sitemap: 404",
+			);
+		});
+	});
 });
