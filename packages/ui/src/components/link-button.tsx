@@ -232,7 +232,13 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 								]),
 							]),
 
+							/**
+							 * Each variant's resting fill sits in the same block as its hover and active
+							 * fills, so the state rules win on specificity and keep winning whatever order
+							 * a page first uses the classes in.
+							 */
 							data("variant", "outline", [
+								bg("transparent"),
 								data("color", "brand", [
 									border("brand"),
 									fg("brand"),
@@ -264,9 +270,10 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 									active(bg("danger.bg-tint-hover")),
 								]),
 							]),
-							data("variant", "outline", bg("transparent")),
 
 							data("variant", "ghost", [
+								bg("transparent"),
+								border("transparent"),
 								data("color", "brand", [
 									fg("brand"),
 									hover(bg("brand.tint")),
@@ -293,7 +300,6 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 									active(bg("danger.bg-tint-hover")),
 								]),
 							]),
-							data("variant", "ghost", [bg("transparent"), border("transparent")]),
 
 							data("variant", "surface", surfaceControl()),
 
