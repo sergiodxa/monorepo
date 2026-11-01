@@ -75,6 +75,8 @@ if (isFailure(encoded)) {
 bunx @sdxc/qr encode "https://example.com" > code.svg
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg qr …` runs the same command line, using the version your project installs.
+
 `encode` writes an SVG to stdout, or to `--output`. With no text, or `-`, it reads stdin and drops one trailing newline. `--png` writes a PNG to `--output` instead. `--level`, `--min-version`, `--max-version`, `--mask`, `--no-boost-level` and `--margin` are the encoder's options, and `--scale` sets pixels per module.
 
 ```sh
