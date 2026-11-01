@@ -2167,7 +2167,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic: "Oops! Something went wrong. Please check the list and try again.",
 				none: "Nothing in that list could be imported. Check the reasons below and try again.",
 			},
 
@@ -2360,7 +2359,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "Oops! Something went wrong.",
 				limitExceeded: "You have reached the limit of {$limit} DNS monitors in this team.",
 			},
 
@@ -2371,7 +2369,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "Oops! Something went wrong.",
 				notFound: "This DNS monitor does not exist.",
 				forbidden: "You are not allowed to update this DNS monitor.",
 			},
@@ -2693,8 +2690,6 @@ export default {
 
 			error: {
 				card: {
-					label: "Error",
-					value: "-",
 					description: "Failed to load data",
 				},
 				table: {
@@ -2712,9 +2707,6 @@ export default {
 					name: "Name",
 					latencyChart: "Latency Trend",
 					status: "Status",
-					lastIncident: "Last Incident",
-					responseTime: "Avg. Latency",
-					actions: "Actions",
 				},
 
 				status: {

@@ -2126,7 +2126,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic: "Oups ! Une erreur s'est produite. Vérifiez la liste et réessayez.",
 				none: "Rien dans cette liste n'a pu être importé. Consultez les raisons ci-dessous et réessayez.",
 			},
 
@@ -2322,7 +2321,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "Oups ! Une erreur s'est produite.",
 				limitExceeded: "Vous avez atteint la limite de {$limit} moniteurs DNS dans cette équipe.",
 			},
 
@@ -2333,7 +2331,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "Oups ! Une erreur s'est produite.",
 				notFound: "Ce moniteur DNS n'existe pas.",
 				forbidden: "Vous n'êtes pas autorisé à mettre à jour ce moniteur DNS.",
 			},
@@ -2659,8 +2656,6 @@ export default {
 
 			error: {
 				card: {
-					label: "Erreur",
-					value: "-",
 					description: "Échec du chargement des données",
 				},
 				table: {
@@ -2679,9 +2674,6 @@ export default {
 					name: "Nom",
 					latencyChart: "Tendance de latence",
 					status: "Statut",
-					lastIncident: "Dernier incident",
-					responseTime: "Latence moy.",
-					actions: "Actions",
 				},
 
 				status: {

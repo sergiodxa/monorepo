@@ -2109,7 +2109,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic: "¡Ups! Algo salió mal. Revise la lista e inténtelo de nuevo.",
 				none: "No se pudo importar nada de esa lista. Revise los motivos de abajo e inténtelo de nuevo.",
 			},
 
@@ -2304,7 +2303,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "¡Ups! Algo salió mal.",
 				limitExceeded: "Ha alcanzado el límite de {$limit} monitores DNS en este equipo.",
 			},
 
@@ -2315,7 +2313,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "¡Ups! Algo salió mal.",
 				notFound: "Este monitor DNS no existe.",
 				forbidden: "No tiene permiso para actualizar este monitor DNS.",
 			},
@@ -2634,8 +2631,6 @@ export default {
 
 			error: {
 				card: {
-					label: "Error",
-					value: "-",
 					description: "Error al cargar los datos",
 				},
 				table: {
@@ -2654,9 +2649,6 @@ export default {
 					name: "Nombre",
 					latencyChart: "Tendencia de latencia",
 					status: "Estado",
-					lastIncident: "Último incidente",
-					responseTime: "Latencia prom.",
-					actions: "Acciones",
 				},
 
 				status: {

@@ -2117,8 +2117,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic:
-					"Hoppla! Etwas ist schiefgelaufen. Bitte prüfen Sie die Liste und versuchen Sie es erneut.",
 				none: "Aus dieser Liste konnte nichts importiert werden. Prüfen Sie die Gründe unten und versuchen Sie es erneut.",
 			},
 
@@ -2314,7 +2312,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				limitExceeded: "Sie haben das Limit von {$limit} DNS-Monitoren in diesem Team erreicht.",
 			},
 
@@ -2325,7 +2322,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				notFound: "Dieser DNS-Monitor existiert nicht.",
 				forbidden: "Sie sind nicht berechtigt, diesen DNS-Monitor zu aktualisieren.",
 			},
@@ -2658,8 +2654,6 @@ export default {
 
 			error: {
 				card: {
-					label: "Fehler",
-					value: "-",
 					description: "Daten konnten nicht geladen werden",
 				},
 				table: {
@@ -2678,9 +2672,6 @@ export default {
 					name: "Name",
 					latencyChart: "Latenztrend",
 					status: "Status",
-					lastIncident: "Letzter Vorfall",
-					responseTime: "Durchschn. Latenz",
-					actions: "Aktionen",
 				},
 
 				status: {

@@ -2077,7 +2077,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic: "エラーが発生しました。リストを確認して、もう一度お試しください。",
 				none: "そのリストからは何もインポートできませんでした。下記の理由を確認して、もう一度お試しください。",
 			},
 
@@ -2272,7 +2271,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "エラーが発生しました。",
 				limitExceeded: "このチームのDNSモニター上限（{$limit}個）に達しました。",
 			},
 
@@ -2283,7 +2281,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "エラーが発生しました。",
 				notFound: "このDNSモニターは存在しません。",
 				forbidden: "このDNSモニターを更新する権限がありません。",
 			},
@@ -2605,8 +2602,6 @@ export default {
 
 			error: {
 				card: {
-					label: "エラー",
-					value: "-",
 					description: "データの読み込みに失敗しました",
 				},
 				table: {
@@ -2624,9 +2619,6 @@ export default {
 					name: "名前",
 					latencyChart: "レイテンシトレンド",
 					status: "ステータス",
-					lastIncident: "最終インシデント",
-					responseTime: "平均レイテンシ",
-					actions: "アクション",
 				},
 
 				status: {

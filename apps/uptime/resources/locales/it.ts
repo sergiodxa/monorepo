@@ -2117,7 +2117,6 @@ export default {
 		 */
 		importMonitors: {
 			errors: {
-				generic: "Ops! Qualcosa è andato storto. Controlli la lista e riprovi.",
 				none: "Nessuna voce di quella lista è stata importata. Controlli i motivi qui sotto e riprovi.",
 			},
 
@@ -2312,7 +2311,6 @@ export default {
 
 		createDnsMonitor: {
 			errors: {
-				generic: "Ops! Qualcosa è andato storto.",
 				limitExceeded: "Ha raggiunto il limite di {$limit} monitor DNS in questo team.",
 			},
 
@@ -2323,7 +2321,6 @@ export default {
 
 		updateDnsMonitor: {
 			errors: {
-				generic: "Ops! Qualcosa è andato storto.",
 				notFound: "Questo monitor DNS non esiste.",
 				forbidden: "Non Le è consentito aggiornare questo monitor DNS.",
 			},
@@ -2646,8 +2643,6 @@ export default {
 
 			error: {
 				card: {
-					label: "Errore",
-					value: "-",
 					description: "Impossibile caricare i dati",
 				},
 				table: {
@@ -2666,9 +2661,6 @@ export default {
 					name: "Nome",
 					latencyChart: "Trend Latenza",
 					status: "Stato",
-					lastIncident: "Ultimo Incidente",
-					responseTime: "Latenza Media",
-					actions: "Azioni",
 				},
 
 				status: {
