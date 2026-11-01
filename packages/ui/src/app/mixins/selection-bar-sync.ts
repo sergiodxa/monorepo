@@ -13,6 +13,8 @@ import { createMixin } from "remix/component";
 
 import { isListKey } from "../utils/key-target.js";
 
+import { keepSelection } from "./table-selection.js";
+
 /** The rows a selection counts: checked item boxes, never the select-all box. */
 const CHECKED_ITEM_SELECTOR = "[data-selection-item]:checked";
 
@@ -79,8 +81,12 @@ function connect(live: HTMLElement, options: SelectionBarSync.Options, signal: A
 	let summary = bar.querySelector<HTMLElement>('[data-slot="selection-count"]');
 	let previous = 0;
 	let pending = false;
+	let repaint = new MutationObserver(() => schedule());
 
-	/** Reads the count off the target and moves the bar to match, announcing a change. */
+	/**
+	 * Reads the count off the target and moves the bar to match, announcing a change. It runs
+	 * again whenever a re-render from server HTML puts the bar's own state back.
+	 */
 	let sync = () => {
 		pending = false;
 		let count = target.querySelectorAll(CHECKED_ITEM_SELECTOR).length;
@@ -93,6 +99,7 @@ function connect(live: HTMLElement, options: SelectionBarSync.Options, signal: A
 			live.textContent = selecting ? format(options.selected, numbers, count) : options.cleared;
 		}
 		previous = count;
+		repaint.takeRecords();
 	};
 
 	/** Coalesces the burst of `change` events a select-all or range pick dispatches into one sync. */
@@ -120,6 +127,9 @@ function connect(live: HTMLElement, options: SelectionBarSync.Options, signal: A
 		sync();
 	};
 
+	keepSelection(target, signal, schedule);
+	repaint.observe(bar, { attributeFilter: ["data-state"] });
+	signal.addEventListener("abort", () => repaint.disconnect());
 	target.addEventListener("change", schedule, { signal });
 	target.addEventListener("reset", () => setTimeout(sync), { signal });
 	bar.querySelector('[data-slot="selection-clear"]')?.addEventListener("click", clear, { signal });

@@ -8,13 +8,17 @@
  */
 
 import type {} from "@vitest/browser-playwright";
+import type { AppRuntime, Handle } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
+import { Frame, run } from "remix/component";
+import { renderToStream, renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
-import { SelectionBar } from "./selection-bar.js";
+import { SelectionBar, SelectionBarController } from "./selection-bar.js";
+import { Table, TableSelection } from "./table.js";
 
 const LABELS: SelectionBar.Labels = {
 	toolbar: "Monitor list",
@@ -246,5 +250,171 @@ describe("SelectionBar", () => {
 		expect(box.left).toBeGreaterThanOrEqual(0);
 		expect(box.right).toBeLessThanOrEqual(320);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+	});
+});
+
+/** The rows the server renders on its next answer, read when the frame resolves. */
+let served: string[] = [];
+
+/** The runtime hydrating the frame of the re-render tests. */
+let app: AppRuntime | undefined;
+
+/** A server-rendered page of posts: a table with selection, its bulk form and the bar. */
+function Posts(handle: Handle<{ rows: string[] }>) {
+	return () => (
+		<div>
+			<form id="posts-bulk" method="post" action="/posts/bulk" />
+			<div id="posts">
+				<Table aria-label="Posts">
+					<Table.Header>
+						<Table.Row>
+							<Table.SelectAll label="Select all posts" />
+							<Table.Column>Title</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{handle.props.rows.map((id) => (
+							<Table.Row>
+								<Table.Select name="post" value={id} form="posts-bulk" label={`Select ${id}`} />
+								<Table.Cell>{id}</Table.Cell>
+							</Table.Row>
+						))}
+					</Table.Body>
+				</Table>
+			</div>
+			<SelectionBar
+				target="posts"
+				form="posts-bulk"
+				actions={ACTIONS}
+				locale="en-US"
+				labels={LABELS}
+			/>
+		</div>
+	);
+}
+
+/** Server-renders the posts in a named frame and hydrates it, as a page load would. */
+async function serve(rows: string[]): Promise<HTMLElement> {
+	served = rows;
+	let host = document.createElement("div");
+	host.innerHTML = await new Response(
+		renderToStream(<Frame name="posts" src="/posts" />, {
+			resolveFrame: () => renderToString(<Posts rows={served} />),
+		}),
+	).text();
+	document.body.appendChild(host);
+	app = run({
+		loadModule: (_url, name) =>
+			({ TableSelection, SelectionBarController })[name as "TableSelection"],
+		resolveFrame: () => renderToString(<Posts rows={served} />),
+	});
+	await app.ready();
+	return host;
+}
+
+/** Re-renders the frame from the server's `rows`, patching the live page in place. */
+async function rerender(rows: string[]): Promise<void> {
+	served = rows;
+	await app?.frames.get("posts")?.reload();
+	await settle();
+}
+
+/** Which rows are checked, by the record each one holds. */
+function checked(host: HTMLElement): string[] {
+	return [...host.querySelectorAll<HTMLInputElement>("[data-selection-item]:checked")].map(
+		(item) => item.value,
+	);
+}
+
+describe("SelectionBar after a server re-render", () => {
+	afterEach(() => {
+		app?.dispose();
+		app = undefined;
+	});
+
+	test("clears the rows a bulk action submitted once the page re-renders", async () => {
+		let host = await serve(["api", "web", "db"]);
+		row(host, "api").click();
+		row(host, "web").click();
+		await settle();
+		let form = host.querySelector<HTMLFormElement>("#posts-bulk")!;
+		form.addEventListener("submit", (event) => event.preventDefault());
+		form.requestSubmit(host.querySelector<HTMLButtonElement>('button[value="pause"]'));
+
+		await rerender(["api", "web", "db"]);
+
+		expect(checked(host)).toEqual([]);
+		expect(host.querySelector('tr[aria-selected="true"]')).toBeNull();
+		expect(parts(host).bar.dataset.state).toBe("idle");
+		expect(host.querySelector<HTMLInputElement>("[data-selection-all]")!.indeterminate).toBe(false);
+	});
+
+	test("keeps the checked records across a refresh that moves them to other rows", async () => {
+		let host = await serve(["api", "web", "db"]);
+		row(host, "web").click();
+		await settle();
+
+		await rerender(["new", "api", "web", "db"]);
+
+		expect(checked(host)).toEqual(["web"]);
+		expect(row(host, "web").closest("tr")?.getAttribute("aria-selected")).toBe("true");
+		expect(row(host, "api").closest("tr")?.hasAttribute("aria-selected")).toBe(false);
+		expect(parts(host).bar.dataset.state).toBe("selecting");
+		expect(parts(host).count.textContent).toBe("1 selected");
+		expect(parts(host).selection.inert).toBe(false);
+	});
+
+	test("stays on the selection through a refresh that changes nothing", async () => {
+		let host = await serve(["api", "web", "db"]);
+		row(host, "api").click();
+		await settle();
+
+		await rerender(["api", "web", "db"]);
+
+		expect(checked(host)).toEqual(["api"]);
+		expect(row(host, "api").closest("tr")?.getAttribute("aria-selected")).toBe("true");
+		expect(parts(host).bar.dataset.state).toBe("selecting");
+		expect(parts(host).count.textContent).toBe("1 selected");
+		expect(parts(host).pagination.inert).toBe(true);
+	});
+
+	test("keeps a bar over plain checkboxes in step with a refresh", async () => {
+		mounted = render(
+			<div>
+				<form id="monitors">
+					{["api", "web"].map((id) => (
+						<input type="checkbox" data-selection-item name="id" value={id} />
+					))}
+				</form>
+				<SelectionBar target="monitors" locale="en-US" labels={LABELS} />
+			</div>,
+		);
+		let host = mounted.container;
+		row(host, "web").click();
+		await settle();
+
+		let form = host.querySelector("form")!;
+		form.replaceChildren(
+			...["new", "api", "web"].map((id) =>
+				Object.assign(document.createElement("input"), { type: "checkbox", name: "id", value: id }),
+			),
+		);
+		for (let item of form.children) item.setAttribute("data-selection-item", "");
+		parts(host).bar.dataset.state = "idle";
+		await settle();
+
+		expect(checked(host)).toEqual(["web"]);
+		expect(parts(host).bar.dataset.state).toBe("selecting");
+	});
+
+	test("drops a checked record the re-render no longer lists", async () => {
+		let host = await serve(["api", "web", "db"]);
+		row(host, "db").click();
+		await settle();
+
+		await rerender(["api", "web", "queue"]);
+
+		expect(checked(host)).toEqual([]);
+		expect(parts(host).bar.dataset.state).toBe("idle");
 	});
 });
