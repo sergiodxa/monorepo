@@ -211,3 +211,64 @@ export function occurrences(
 	}
 	return success([...found.values()].sort((a, b) => a.start - b.start).slice(0, limit));
 }
+
+/** One occurrence of a calendar's event, with the event it comes from. */
+export interface CalendarOccurrence extends Occurrence {
+	event: ICalendar.Event;
+}
+
+/**
+ * The instant a `RECURRENCE-ID` names, keyed with its `UID`, so a master's instance and the
+ * override that replaces it compare equal.
+ *
+ * @param event - An override, with its `recurrenceId`
+ * @param context - Where its zone resolves
+ * @returns The key, or why its zone does not resolve
+ */
+function overrideKey(
+	event: ICalendar.Event & { recurrenceId: ICalendar.DateValue },
+	context: Parameters<typeof resolverFor>[1],
+): Result<string, RecurrenceRuleError> {
+	let resolve = resolverFor(event.recurrenceId, context);
+	if (!resolve) return failure(unresolved(event.recurrenceId));
+	return success(`${event.uid}\n${resolve(wallMs(wallOf(event.recurrenceId)))}`);
+}
+
+/**
+ * The occurrences of every event in a calendar overlapping a window, earliest first. An event
+ * with a `RECURRENCE-ID` replaces the one instance of its `UID`'s series that the ID names, so
+ * a moved or edited instance appears once, as the override.
+ *
+ * @param calendar - The calendar, whose `VTIMEZONE`s resolve its `TZID`s
+ * @param options - The window, the limit across all events and the zone for floating times
+ * @returns The occurrences with their events, or why one event cannot be expanded
+ */
+export function calendarOccurrences(
+	calendar: ICalendar.Calendar,
+	options: Omit<OccurrenceOptions, "calendar">,
+): Result<CalendarOccurrence[], RecurrenceRuleError> {
+	let limit = options.limit ?? DEFAULT_LIMIT;
+	let context = { calendar, timeZone: options.timeZone ?? "UTC" };
+	let overridden = new Set<string>();
+	for (let event of calendar.events) {
+		if (!event.recurrenceId) continue;
+		let key = overrideKey({ ...event, recurrenceId: event.recurrenceId }, context);
+		if (isFailure(key)) return key;
+		overridden.add(key.data);
+	}
+
+	let found: CalendarOccurrence[] = [];
+	for (let event of calendar.events) {
+		let expanded = occurrences(event, {
+			...options,
+			calendar,
+			limit: event.recurrenceId ? limit : limit + overridden.size,
+		});
+		if (isFailure(expanded)) return expanded;
+		for (let occurrence of expanded.data) {
+			if (!event.recurrenceId && overridden.has(`${event.uid}\n${occurrence.start}`)) continue;
+			found.push({ ...occurrence, event });
+		}
+	}
+	return success(found.sort((a, b) => a.start - b.start).slice(0, limit));
+}

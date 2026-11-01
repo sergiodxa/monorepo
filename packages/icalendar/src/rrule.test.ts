@@ -10,7 +10,13 @@ import { zonedParts } from "@sdxc/dates/zone";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { occurrences, parseRecurrence, RecurrenceRuleError, stringifyRecurrence } from "./rrule.js";
+import {
+	calendarOccurrences,
+	occurrences,
+	parseRecurrence,
+	RecurrenceRuleError,
+	stringifyRecurrence,
+} from "./rrule.js";
 
 import type { ICalendar } from "./index.js";
 
@@ -911,5 +917,85 @@ describe("occurrences", () => {
 		expect(isSuccess(result) && result.data).toEqual([
 			{ start: Date.UTC(2026, 0, 1), end: Date.UTC(2026, 0, 1) },
 		]);
+	});
+});
+
+describe("calendarOccurrences", () => {
+	/**
+	 * A calendar of the given events, each a list of content lines between its BEGIN and END.
+	 *
+	 * @param events - The events' content lines
+	 */
+	function readCalendar(events: string[][]): ICalendar.Calendar {
+		let text = [
+			"BEGIN:VCALENDAR",
+			"VERSION:2.0",
+			"PRODID:-//test//EN",
+			...events.flatMap((lines) => [
+				"BEGIN:VEVENT",
+				"DTSTAMP:20260101T000000Z",
+				...lines,
+				"END:VEVENT",
+			]),
+			"END:VCALENDAR",
+		].join("\r\n");
+		return unwrap(parse(text)).calendar;
+	}
+
+	test("merges every event's occurrences, earliest first", () => {
+		let calendar = readCalendar([
+			["UID:a", "DTSTART:20260105T100000Z", "RRULE:FREQ=DAILY;COUNT=2"],
+			["UID:b", "DTSTART:20260105T120000Z"],
+		]);
+		let found = unwrap(calendarOccurrences(calendar, { from: 0, to: Date.UTC(2027, 0, 1) }));
+		expect(found.map(({ start, event }) => [start, event.uid])).toEqual([
+			[Date.UTC(2026, 0, 5, 10), "a"],
+			[Date.UTC(2026, 0, 5, 12), "b"],
+			[Date.UTC(2026, 0, 6, 10), "a"],
+		]);
+	});
+
+	test("replaces the instance a RECURRENCE-ID names with its override", () => {
+		let calendar = readCalendar([
+			[
+				"UID:standup",
+				"DTSTART;TZID=Europe/Madrid:20260105T093000",
+				"DURATION:PT15M",
+				"RRULE:FREQ=DAILY;COUNT=3",
+			],
+			[
+				"UID:standup",
+				"RECURRENCE-ID;TZID=Europe/Madrid:20260106T093000",
+				"DTSTART;TZID=Europe/Madrid:20260106T110000",
+				"DURATION:PT15M",
+				"SUMMARY:Moved",
+			],
+		]);
+		let found = unwrap(calendarOccurrences(calendar, { from: 0, to: Date.UTC(2027, 0, 1) }));
+		expect(found.map(({ start, event }) => [start, event.summary])).toEqual([
+			[Date.UTC(2026, 0, 5, 8, 30), undefined],
+			[Date.UTC(2026, 0, 6, 10), "Moved"],
+			[Date.UTC(2026, 0, 7, 8, 30), undefined],
+		]);
+	});
+
+	test("caps the merged list at the limit", () => {
+		let calendar = readCalendar([
+			["UID:a", "DTSTART:20260105T100000Z", "RRULE:FREQ=DAILY"],
+			["UID:b", "DTSTART:20260105T110000Z", "RRULE:FREQ=DAILY"],
+		]);
+		let found = unwrap(
+			calendarOccurrences(calendar, { from: 0, to: Date.UTC(2027, 0, 1), limit: 3 }),
+		);
+		expect(found.map(({ event }) => event.uid)).toEqual(["a", "b", "a"]);
+	});
+
+	test("fails on an override whose RECURRENCE-ID zone nothing resolves", () => {
+		let calendar = readCalendar([
+			["UID:a", "DTSTART:20260105T100000Z", "RRULE:FREQ=DAILY"],
+			["UID:a", "RECURRENCE-ID;TZID=Nowhere/Special:20260106T100000", "DTSTART:20260106T120000Z"],
+		]);
+		let result = calendarOccurrences(calendar, { from: 0, to: Date.UTC(2027, 0, 1) });
+		expect(isFailure(result) && result.error).toBeInstanceOf(RecurrenceRuleError);
 	});
 });

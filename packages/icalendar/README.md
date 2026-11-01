@@ -126,6 +126,21 @@ let text = stringify({
 });
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/icalendar --help
+```
+
+```sh
+sdxc-icalendar validate team.ics
+sdxc-icalendar expand team.ics --from 2026-11-01 --until 2026-12-01 --time-zone Europe/Madrid
+sdxc-icalendar rrule "FREQ=WEEKLY;BYDAY=MO,WE" --start 2026-11-02T09:30 -n 5
+```
+
+`validate` exits 1 listing each problem; every command reads stdin without a file and prints
+`--json` reports. Exit codes: 0 done, 1 problems found, 2 usage or unreadable input.
+
 ## API
 
 ### `@sdxc/icalendar`
@@ -196,6 +211,11 @@ fails for a `TZID` nothing resolves or a rule with out-of-range parts.
 - `options.limit`: the most occurrences returned, `1_000` by default
 - `options.calendar`: resolves `TZID`s through its `VTIMEZONE`s before `Intl`
 - `options.timeZone`: the IANA zone floating times and `DATE`s are read in, `"UTC"` by default
+
+#### `calendarOccurrences(calendar: ICalendar.Calendar, options: Omit<OccurrenceOptions, "calendar">): Result<CalendarOccurrence[], RecurrenceRuleError>`
+
+Every event's occurrences overlapping `[from, to)`, earliest first, each with its `event`. An event
+with a `RECURRENCE-ID` replaces the one instance of its series that the ID names.
 
 #### `RecurrenceRuleError`
 
