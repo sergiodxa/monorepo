@@ -1,7 +1,8 @@
 /**
  * Draws the chart's annotations in a real browser: a comparison series dashed and muted, a
  * threshold line at its value with its label, an annotation band across its range, and a
- * period with no data hatched at full height instead of drawn as zero.
+ * period with no data hatched at full height instead of drawn as zero, and a line or area
+ * broken at a gap in its data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,5 +139,62 @@ describe("Chart annotations", () => {
 			/>,
 		);
 		expect(host.querySelector("pattern")).toBeNull();
+	});
+});
+
+/** Twelve hours of latency with no checks at 4:00 and 5:00. */
+const GAPPED = CURRENT.map((point) =>
+	point.x === 4 || point.x === 5 ? { ...point, y: null, label: `${point.x}:00 no data` } : point,
+);
+
+/** The `M` commands in a path's `d`, one per drawn segment. */
+function moves(path: SVGPathElement): string[] {
+	return path.getAttribute("d")?.match(/M [^ ]+/g) ?? [];
+}
+
+describe("Chart series with no data", () => {
+	test("breaks a line at a null point instead of dropping it to zero", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Line points={GAPPED} markerCount={12} />
+			</Chart>,
+		);
+		let path = host.querySelector("path")!;
+		let d = path.getAttribute("d")!;
+
+		expect(moves(path)).toEqual(["M 0,110", "M 240,95"]);
+		expect(d).not.toContain(",200");
+		expect(d).not.toContain("160,");
+		expect(d).not.toContain("200,");
+	});
+
+	test("renders no focusable marker for a null point", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Line points={GAPPED} markerCount={12} />
+			</Chart>,
+		);
+		let titles = [...host.querySelectorAll("circle > title")].map((title) => title.textContent);
+
+		expect(titles).toContain("3:00 240 ms");
+		expect(titles).toContain("6:00 210 ms");
+		expect(titles).not.toContain("4:00 no data");
+		expect(titles).not.toContain("5:00 no data");
+		for (let circle of host.querySelectorAll("circle")) {
+			expect(circle.getAttribute("cy")).not.toBe("200");
+		}
+	});
+
+	test("closes each run of an area down to its baseline on its own", () => {
+		let host = mount(
+			<Chart width={480} height={200} xDomain={[0, 12]} yDomain={[0, 400]} aria-label="Latency">
+				<Chart.Area points={GAPPED} />
+			</Chart>,
+		);
+		let path = host.querySelector("path")!;
+
+		expect(moves(path)).toEqual(["M 0,110", "M 240,95"]);
+		expect(path.getAttribute("d")!.match(/Z/g)).toHaveLength(2);
+		expect(path.getAttribute("d")).not.toContain("160,");
 	});
 });

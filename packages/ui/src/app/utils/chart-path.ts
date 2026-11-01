@@ -1,6 +1,6 @@
 /**
  * Pure SVG path-string builders for chart geometry: {@link linePath} for a
- * connected polyline through a series of points, {@link areaPath} for the
+ * polyline through a series of points, broken at gaps, {@link areaPath} for the
  * same line closed down to a baseline, and {@link arcPath} for a pie or
  * donut wedge. Every builder takes coordinates already scaled to pixels —
  * mapping a data value onto a pixel position is a separate concern the
@@ -19,44 +19,73 @@ import { roundChannel } from "../../utils/round-precision.js";
 export type { Point };
 
 /**
- * Builds the `d` attribute for a connected polyline through `points`: a
- * single move-to for the first point, followed by one line-to per remaining
- * point, in the order given. Backs a line chart's plotted series.
+ * Splits `points` into the runs of consecutive positions between `null`
+ * entries, so a series with missing samples draws as separate pieces and
+ * never bridges or drops through a gap.
+ */
+function runs(points: readonly (Point | null)[]): Point[][] {
+	let result: Point[][] = [];
+	let current: Point[] = [];
+
+	for (let point of points) {
+		if (point !== null) {
+			current.push(point);
+			continue;
+		}
+		if (current.length > 0) result.push(current);
+		current = [];
+	}
+	if (current.length > 0) result.push(current);
+
+	return result;
+}
+
+/** Draws one run as a move-to on its first point and a line-to through each remaining one. */
+function polyline(run: readonly Point[]): string {
+	return run.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x},${point.y}`).join(" ");
+}
+
+/**
+ * Builds the `d` attribute for a polyline through `points`, in the order
+ * given. A `null` entry is a sample with no data: the line stops at the point
+ * before it and starts again with a fresh move-to at the point after it.
  *
- * @param points Already-scaled pixel positions to connect, in draw order.
- * @returns An SVG path `d` string, or an empty string when `points` is empty.
+ * @param points Already-scaled pixel positions to connect, in draw order; `null` breaks the line.
+ * @returns An SVG path `d` string, or an empty string when no point is present.
  * @example
  * linePath([{ x: 0, y: 10 }, { x: 20, y: 0 }]);
  * // "M 0,10 L 20,0"
+ * @example
+ * linePath([{ x: 0, y: 10 }, null, { x: 40, y: 5 }, { x: 60, y: 0 }]);
+ * // "M 0,10 M 40,5 L 60,0"
  */
-export function linePath(points: readonly Point[]): string {
-	if (points.length === 0) return "";
-
-	return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x},${point.y}`).join(" ");
+export function linePath(points: readonly (Point | null)[]): string {
+	return runs(points).map(polyline).join(" ");
 }
 
 /**
  * Builds the `d` attribute for the line {@link linePath} draws, closed into
  * a filled region down to `baselineY`, for an area chart's filled series.
+ * Each run between `null` entries closes on its own, leaving the gap unfilled.
  *
- * @param points Already-scaled pixel positions along the top edge of the area, in draw order.
+ * @param points Already-scaled pixel positions along the top edge of the area, in draw order; `null` breaks the area.
  * @param baselineY Pixel `y` position the area closes down (or up) to — typically the zero line or the chart's floor.
- * @returns An SVG path `d` string, or an empty string when `points` is empty.
+ * @returns An SVG path `d` string, or an empty string when no point is present.
  * @example
  * areaPath([{ x: 0, y: 10 }, { x: 20, y: 0 }], 30);
  * // "M 0,10 L 20,0 L 20,30 L 0,30 Z"
  */
-export function areaPath(points: readonly Point[], baselineY: number): string {
-	let first = points[0];
+export function areaPath(points: readonly (Point | null)[], baselineY: number): string {
+	return runs(points)
+		.map((run) => {
+			let first = run[0];
+			let last = run.at(-1);
 
-	if (first === undefined) return "";
+			if (first === undefined || last === undefined) return "";
 
-	let last = points[points.length - 1] ?? first;
-	let top = points
-		.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x},${point.y}`)
+			return `${polyline(run)} L ${last.x},${baselineY} L ${first.x},${baselineY} Z`;
+		})
 		.join(" ");
-
-	return `${top} L ${last.x},${baselineY} L ${first.x},${baselineY} Z`;
 }
 
 /**

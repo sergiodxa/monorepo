@@ -341,8 +341,12 @@ export namespace Chart {
 	export interface LinePoint {
 		/** Horizontal data value, mapped across the ancestor {@link Chart}'s `xDomain`. */
 		x: number;
-		/** Vertical data value, mapped across the ancestor {@link Chart}'s `yDomain`. */
-		y: number;
+		/**
+		 * Vertical data value, mapped across the ancestor {@link Chart}'s `yDomain`. `null` records
+		 * a sample with no data: the line breaks around it and it gets no marker, while every other
+		 * point keeps its `x` position, so series sharing an `xDomain` stay aligned.
+		 */
+		y: number | null;
 		/**
 		 * Accessible name and hover tooltip text for this point, read by the
 		 * native `<title>` nested in its marker when the point falls among the
@@ -359,8 +363,8 @@ export namespace Chart {
 	export interface LineProps extends Omit<TagProps<"g">, "children" | "points"> {
 		/**
 		 * The series' data points, in draw order along `x`. The plotted path
-		 * connects every point given here; the accessible markers render on
-		 * only a representative spread of them, chosen through `markerCount`.
+		 * connects every point with data, breaking at each `null` one; the accessible
+		 * markers render on a representative spread of them, chosen through `markerCount`.
 		 */
 		points: readonly LinePoint[];
 		/** Categorical color. Defaults to {@link DEFAULT_LINE_COLOR}. */
@@ -398,8 +402,11 @@ export namespace Chart {
 	export interface AreaPoint {
 		/** Horizontal data value, mapped across the ancestor {@link Chart}'s `xDomain`. */
 		x: number;
-		/** Vertical data value, mapped across the ancestor {@link Chart}'s `yDomain`. */
-		y: number;
+		/**
+		 * Vertical data value, mapped across the ancestor {@link Chart}'s `yDomain`. `null` records
+		 * a sample with no data: the filled region breaks around it and it gets no marker.
+		 */
+		y: number | null;
 		/**
 		 * Accessible name and hover tooltip text for this point, read by the
 		 * native `<title>` nested in its marker when the point falls among the
@@ -710,19 +717,31 @@ export function Chart(handle: Handle<Chart.Props, Chart.Context>) {
 Chart.Legend = ChartLegend;
 
 /**
+ * Maps a series' data points onto pixels, keeping a `null` slot for every point with no data
+ * so the path builders break the series there and the markers skip it.
+ */
+function scalePoints(
+	points: readonly { x: number; y: number | null }[],
+	x: (value: number) => number,
+	y: (value: number) => number,
+): (Point | null)[] {
+	return points.map((point) => (point.y === null ? null : { x: x(point.x), y: y(point.y) }));
+}
+
+/**
  * Renders one series' representative point markers: a small focusable
  * `<circle>` at each of `markerIndices`' scaled positions, nested with a
  * `<title>` carrying that point's own `label`.
  *
  * @param points The series' original data points, read for each marker's label.
- * @param scaledPoints Each point's already-scaled pixel position, in the same order as `points`.
+ * @param scaledPoints Each point's already-scaled pixel position, in the same order as `points`; `null` for a point with no data, which gets no marker.
  * @param markerIndices Which of `points`' indices to render a marker for.
  * @param markerMix Additional mixin(s) layered after each marker's own built-in styling.
  * @returns The rendered `<circle>` markers.
  */
 function renderChartMarkers(
 	points: readonly { label: string }[],
-	scaledPoints: readonly Point[],
+	scaledPoints: readonly (Point | null)[],
 	markerIndices: readonly number[],
 	markerMix: TagProps<"circle">["mix"],
 ): RemixNode {
@@ -730,7 +749,7 @@ function renderChartMarkers(
 		let point = points[index];
 		let position = scaledPoints[index];
 
-		if (point === undefined || position === undefined) return null;
+		if (point === undefined || position === undefined || position === null) return null;
 
 		return (
 			<circle
@@ -781,7 +800,7 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 
 		let x = linearScale(context.xDomain, [0, context.width]);
 		let y = linearScale(context.yDomain, [context.height, 0]);
-		let scaledPoints: Point[] = points.map((point) => ({ x: x(point.x), y: y(point.y) }));
+		let scaledPoints = scalePoints(points, x, y);
 		let d = linePath(scaledPoints);
 
 		let markerIndices = computeMarkerIndices(points, context.xDomain, resolvedMarkerCount);
@@ -998,7 +1017,7 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 
 		let x = linearScale(context.xDomain, [0, context.width]);
 		let y = linearScale(context.yDomain, [context.height, 0]);
-		let scaledPoints: Point[] = points.map((point) => ({ x: x(point.x), y: y(point.y) }));
+		let scaledPoints = scalePoints(points, x, y);
 		let d = areaPath(scaledPoints, y(resolvedBaseline));
 
 		let markerIndices = computeMarkerIndices(points, context.xDomain, resolvedMarkerCount);

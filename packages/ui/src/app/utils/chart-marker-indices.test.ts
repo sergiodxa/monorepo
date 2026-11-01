@@ -33,4 +33,19 @@ describe(computeMarkerIndices.name, () => {
 
 		expect(computeMarkerIndices(points, [5, 5], 3)).toEqual([0]);
 	});
+
+	test("snaps past a point with no data onto its nearest neighbour with data", () => {
+		let points = [
+			{ x: 0, y: 1 },
+			{ x: 1, y: null },
+			{ x: 2, y: null },
+			{ x: 3, y: 4 },
+		];
+
+		expect(computeMarkerIndices(points, [0, 3], 4)).toEqual([0, 3]);
+	});
+
+	test("returns no markers when no point has data", () => {
+		expect(computeMarkerIndices([{ x: 0, y: null }], [0, 1], 3)).toEqual([]);
+	});
 });

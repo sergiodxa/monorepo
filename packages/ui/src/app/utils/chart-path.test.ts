@@ -37,11 +37,27 @@ describe(linePath.name, () => {
 
 		expect(linePath(points)).toBe("M -10.5,2.25 L 3.1,-4");
 	});
+
+	test("starts a new segment after each null instead of bridging the gap", () => {
+		let points = [{ x: 0, y: 10 }, null, null, { x: 30, y: 5 }, { x: 40, y: 0 }, null];
+
+		expect(linePath(points)).toBe("M 0,10 M 30,5 L 40,0");
+	});
+
+	test("returns an empty string when every point is null", () => {
+		expect(linePath([null, null])).toBe("");
+	});
 });
 
 describe(areaPath.name, () => {
 	test("returns an empty string for no points", () => {
 		expect(areaPath([], 30)).toBe("");
+	});
+
+	test("closes each run between nulls down to the baseline on its own", () => {
+		let points = [{ x: 0, y: 10 }, { x: 10, y: 0 }, null, { x: 30, y: 5 }];
+
+		expect(areaPath(points, 30)).toBe("M 0,10 L 10,0 L 10,30 L 0,30 Z M 30,5 L 30,30 L 30,30 Z");
 	});
 
 	test("closes a single point down to the baseline", () => {
