@@ -170,8 +170,10 @@ describe("DocsLayout", () => {
 		mountComponentPage();
 
 		window.scrollTo(0, 2000);
+		let header = mounted!.$('[data-slot="docs-header"]') as HTMLElement;
 
-		await expect.poll(() => strip().getBoundingClientRect().top).toBe(64);
+		await expect.poll(() => strip().getBoundingClientRect().top).toBe(65);
+		expect(header.getBoundingClientRect().bottom).toBe(65);
 	});
 
 	test.each([375, 1280])(

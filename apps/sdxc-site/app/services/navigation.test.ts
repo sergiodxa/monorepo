@@ -135,7 +135,7 @@ describe("Docs group", () => {
 		expect(docs).toEqual(
 			expect.arrayContaining(["DocsLayout", "DocsNav", "TableOfContents", "CodeBlock", "Callout"]),
 		);
-		expect(docs).toHaveLength(23);
+		expect(docs).toHaveLength(24);
 		expect(titles("Marketing")).not.toContain("DocsLayout");
 		expect(titles("Components")).not.toContain("Callout");
 	});

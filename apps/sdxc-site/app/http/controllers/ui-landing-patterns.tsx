@@ -170,6 +170,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 			title={`${LANDING_PATTERNS_TITLE} — @sdxc/ui`}
 			description={LANDING_PATTERNS_SUMMARY}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

@@ -147,7 +147,8 @@ describe("the author's credit under a documentation page", () => {
 	test("links the author, their X account and the sponsors page", async () => {
 		for (let path of ["/docs", "/api", "/api/result"]) {
 			let body = await (await fetchApp(path)).text();
-			let note = body.slice(body.indexOf("Written by"), body.indexOf("</main>"));
+			let start = body.indexOf("Written by");
+			let note = body.slice(start, body.indexOf("</footer>", start));
 
 			expect(note, path).toContain('href="https://sergiodxa.com"');
 			expect(note, path).toContain('href="https://x.com/sergiodxa"');

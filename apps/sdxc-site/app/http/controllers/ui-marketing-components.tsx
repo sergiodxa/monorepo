@@ -89,6 +89,7 @@ export default async function marketingComponentsPage(ctx: AppContext, tree: Nav
 			title={`${MARKETING_COMPONENTS_TITLE} — @sdxc/ui`}
 			description={MARKETING_COMPONENTS_SUMMARY}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

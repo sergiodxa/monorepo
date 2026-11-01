@@ -88,6 +88,7 @@ async function renderContactPage(view: ContactView, init?: ResponseInit) {
 			title="Contact — sdxc"
 			description="Ask the author a question the guides did not answer."
 			robots="noindex"
+			siteFooter={false}
 		>
 			<DocsLayout tree={tree} activePath={routes.docs.contact.index.href()}>
 				<DocsPageHeader

@@ -123,6 +123,7 @@ export default createAction(routes.docs.index, async (ctx) => {
 			title="Documentation — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout tree={tree} activePath={routes.docs.index.href()}>
 				<DocsHub

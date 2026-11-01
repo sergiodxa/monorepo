@@ -1,7 +1,7 @@
 /**
  * The shell every documentation page composes into: the site header kept on screen, the
- * tree on the left opened at the page being read, the page in the middle closed by where
- * to go next and its author's credit, and — where a page has one — its own headings.
+ * tree pinned on the left opened at the page being read, the page closed by where to go next,
+ * its own headings where it has them, and a footer with the author's credit beside the tree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,7 +16,7 @@ import { media } from "@sdxc/u/responsive";
 import { m } from "@sdxc/u/size";
 import { before, hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import { Callout, DocsNav, DocsPager } from "@sdxc/ui";
+import { Callout, DocsFooter, DocsNav, DocsPager } from "@sdxc/ui";
 import { DocsLayout as Shell } from "@sdxc/ui/patterns";
 import { findNeighbours } from "@sdxc/ui/utils";
 
@@ -25,14 +25,31 @@ import type { NavTree } from "~/app/services/navigation-tree";
 
 import { pickSidebarAd } from "~/app/services/ads";
 import { flattenNav, toDocsTree } from "~/app/services/navigation-tree";
+import { AUTHOR_NAME } from "~/config/constants";
 import AuthorNote from "~/resources/components/author-note";
 import DocsFeedbackBlock from "~/resources/components/docs-feedback-block";
 import SidebarAd from "~/resources/components/sidebar-ad";
 import SiteHeader from "~/resources/components/site-header";
 import routes from "~/routes/web";
 
-/** The site header's height, which the sticky columns and jumped-to headings sit below. */
-const HEADER_HEIGHT = "4rem";
+/** Where the collection is read and its issues are filed. */
+const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
+
+/** The year the footer's copyright line names. */
+const COPYRIGHT_YEAR = 2026;
+
+/** The site's standing pages, linked from every docs page's footer. */
+const FOOTER_LINKS: DocsFooter.Link[] = [
+	{ label: "Philosophy", href: routes.philosophy.href() },
+	{ label: "Maintenance", href: routes.maintenance.href() },
+	{ label: "Security", href: routes.security.href() },
+	{ label: "Changelog", href: routes.docs.changelog.href() },
+	{ label: "Sponsor", href: routes.sponsors.href() },
+	{ label: "GitHub", href: REPOSITORY_HREF },
+];
+
+/** The site header: its 4rem bar and 1px rule, which the sticky columns sit below. */
+const HEADER_HEIGHT = "calc(4rem + 1px)";
 
 /**
  * A tree with more pages than this folds its groups to the ones holding the current page,
@@ -120,15 +137,20 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				drawerLabel={tree.label}
 				closeLabel="Close menu"
 				railFooter={<SidebarAd ad={ad} />}
+				footer={
+					<DocsFooter
+						legal={`© ${COPYRIGHT_YEAR} ${AUTHOR_NAME}. MIT licensed.`}
+						links={FOOTER_LINKS}
+						linksLabel="Site"
+					>
+						{feedback ? <DocsFeedbackBlock path={activePath} sent={feedback.sent} /> : null}
+						<AuthorNote />
+					</DocsFooter>
+				}
 			>
 				<div mix={[relative(), raw({ isolation: "isolate" }), gridBackdrop(), smoothJumps()]}>
 					{feedback?.sent ? <FeedbackSent path={activePath} /> : null}
 					{children}
-					{feedback ? (
-						<div mix={[raw({ marginBlockStart: "4rem" })]}>
-							<DocsFeedbackBlock path={activePath} sent={feedback.sent} />
-						</div>
-					) : null}
 					<DocsPager
 						previous={previous}
 						next={next}
@@ -136,7 +158,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						labels={{ nav: "Pagination", previous: "Previous", next: "Next" }}
 						mix={[raw({ marginBlockStart: "4rem" })]}
 					/>
-					<AuthorNote />
 				</div>
 			</Shell>
 		);

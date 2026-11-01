@@ -1,6 +1,6 @@
 /**
  * The one muted line closing every documentation page: who wrote it, where to follow
- * them, and where to fund the work. It sits under the pager, after the reader is done
+ * them, and where to fund the work. It sits in the docs footer, after the reader is done
  * with the page, so the ask reaches the people the page just helped.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -20,7 +20,7 @@ import routes from "~/routes/web";
 /** Renders the credit line. */
 export default function AuthorNote(_handle: Handle) {
 	return () => (
-		<p mix={[m("2.5rem", 0, 0, 0), text("sm"), fg("neutral.muted")]}>
+		<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
 			Written by{" "}
 			<a href={AUTHOR_URL} mix={[fg("neutral"), when("&:hover", fg("brand"))]}>
 				{AUTHOR_NAME}

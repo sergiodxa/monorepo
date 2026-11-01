@@ -56,6 +56,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 			title={`${TITLE} — sdxc`}
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

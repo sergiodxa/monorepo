@@ -58,6 +58,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 			title={`${THEMING_TITLE} — @sdxc/ui`}
 			description={THEMING_SUMMARY}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

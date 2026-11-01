@@ -60,6 +60,7 @@ export default async function docsNotFound(ctx: AppContext, tree: NavTree) {
 			title="Not found — sdxc"
 			description="No documentation page answers to that address."
 			robots="noindex"
+			siteFooter={false}
 		>
 			<DocsLayout tree={tree} activePath="">
 				<DocsNotFound

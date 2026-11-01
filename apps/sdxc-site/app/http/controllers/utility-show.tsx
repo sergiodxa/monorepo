@@ -83,6 +83,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 			title={`${reference.property} — @sdxc/u`}
 			description={reference.summary}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

@@ -89,6 +89,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 			title={`${reference.name} — ${module}`}
 			description={reference.summary}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}

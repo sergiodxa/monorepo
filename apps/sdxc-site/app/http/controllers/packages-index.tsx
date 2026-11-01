@@ -37,6 +37,7 @@ export default createAction(routes.api.index, async (ctx) => {
 			title="API — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			siteFooter={false}
 		>
 			<DocsLayout tree={tree} activePath={routes.api.index.href()}>
 				<DocsPageHeader title="Every package" description={DESCRIPTION} />

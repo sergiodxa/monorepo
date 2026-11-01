@@ -78,6 +78,7 @@ const DOCS_COMPONENTS = new Set([
 	"code-tabs-sync",
 	"copy-button",
 	"docs-feedback",
+	"docs-footer",
 	"docs-hub",
 	"docs-layout",
 	"docs-nav",

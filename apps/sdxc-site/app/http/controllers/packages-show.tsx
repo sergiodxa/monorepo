@@ -92,6 +92,7 @@ export default createAction(routes.api.show, async (ctx) => {
 			description={entry.description}
 			canonical={ctx.url.href}
 			og={{ type: "article" }}
+			siteFooter={false}
 		>
 			<DocsLayout
 				tree={tree}
