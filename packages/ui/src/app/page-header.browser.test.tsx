@@ -1,6 +1,6 @@
 /**
- * Tests for {@link PageHeader} in a real browser: actions on the title's row with the primary
- * one last, the description kept under the title at any width, the trail or parent link
+ * Tests for {@link PageHeader} in a real browser: secondary, primary, then overflow actions on
+ * the title's row, the description kept under the title at any width, the trail or parent link
  * by width, tabs marking the current view, the sticky variant compacting, and wrapping at 320px.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -82,15 +82,15 @@ describe("PageHeader", () => {
 		expect(header.getBoundingClientRect().width).toBeCloseTo(640, 0);
 	});
 
-	test("draws the overflow, then secondary actions, then the primary action last", () => {
+	test("draws the secondary actions, then the primary action, then the overflow last", () => {
 		mountHeader("60rem");
 		let buttons = [...document.querySelectorAll('[data-slot="page-header-actions"] button')];
-		expect(buttons.map((button) => button.textContent)).toEqual(["More", "Pause", "Edit monitor"]);
-		let [more, pause, edit] = buttons.map((button) => button.getBoundingClientRect());
-		expect(more!.right).toBeLessThanOrEqual(pause!.left);
+		expect(buttons.map((button) => button.textContent)).toEqual(["Pause", "Edit monitor", "More"]);
+		let [pause, edit, more] = buttons.map((button) => button.getBoundingClientRect());
 		expect(pause!.right).toBeLessThanOrEqual(edit!.left);
+		expect(edit!.right).toBeLessThanOrEqual(more!.left);
 		let header = document.querySelector('[data-slot="page-header"]')!.getBoundingClientRect();
-		expect(Math.round(header.right - edit!.right)).toBe(0);
+		expect(Math.round(header.right - more!.right)).toBe(0);
 	});
 
 	test("keeps the actions at the end of the title's row, the description under both", async () => {

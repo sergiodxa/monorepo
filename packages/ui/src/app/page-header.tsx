@@ -1,7 +1,7 @@
 /**
  * The top of an app screen in one order: where it sits (a breadcrumb, or a parent link on a
- * narrow pane), the `<h1>` with its status and one-line description, the actions with the
- * primary one last, and an optional row of tabs. The sticky variant compacts once stuck.
+ * narrow pane), the `<h1>` with its status and one-line description, the actions (secondary,
+ * primary, then overflow), and an optional row of tabs. The sticky variant compacts once stuck.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,11 +72,11 @@ export namespace PageHeader {
 		description?: RemixNode;
 		/** A badge after the title, such as the record's status. */
 		status?: RemixNode;
-		/** The one primary action, drawn last. */
+		/** The one primary action, drawn after the secondary actions. */
 		primaryAction?: RemixNode;
-		/** Secondary actions, drawn before the primary one. */
+		/** Secondary actions, drawn first. */
 		actions?: RemixNode;
-		/** An overflow menu's trigger and menu, drawn before the secondary actions. */
+		/** An overflow menu's trigger and menu, drawn last, so a destructive item in it comes last. */
 		overflow?: RemixNode;
 		tabs?: Tab[];
 		/** The tabs landmark's name, such as "Monitor views". */
@@ -362,11 +362,6 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 									}),
 								]}
 							>
-								{overflow ? (
-									<span data-slot="page-header-overflow" mix={[raw({ display: "contents" })]}>
-										{overflow}
-									</span>
-								) : null}
 								{actions ? (
 									<span data-slot="page-header-secondary" mix={[raw({ display: "contents" })]}>
 										{actions}
@@ -375,6 +370,11 @@ export function PageHeader(handle: Handle<PageHeader.Props>) {
 								{primaryAction ? (
 									<span data-slot="page-header-primary" mix={[raw({ display: "contents" })]}>
 										{primaryAction}
+									</span>
+								) : null}
+								{overflow ? (
+									<span data-slot="page-header-overflow" mix={[raw({ display: "contents" })]}>
+										{overflow}
 									</span>
 								) : null}
 							</div>
