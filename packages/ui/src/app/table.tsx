@@ -336,6 +336,8 @@ export namespace Table {
 		pulse?: boolean;
 		/** The state's name; omit it and the cell renders `—`. */
 		children?: RemixNode;
+		/** Detail after the name, muted past a middle dot on the same line, such as a date or a code. */
+		detail?: RemixNode;
 	}
 
 	/** A number over a bar sized to its share of `max`, for comparing rows without a chart. */
@@ -1253,15 +1255,18 @@ Table.DateCell = function TableDateCell(handle: Handle<Table.DateCellProps>) {
 };
 
 /**
- * Renders a state as a `StatusDot` and its label.
+ * Renders a state as a `StatusDot` and its label, with any `detail` muted after a middle dot,
+ * the whole label on one line.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell.
  * @example <Table.StatusCell color="success">{t("monitor.up")}</Table.StatusCell>
+ * @example <Table.StatusCell color="warning" detail={<RelativeTime date={post.publishAt} />}>{t("posts.scheduled")}</Table.StatusCell>
  */
 Table.StatusCell = function TableStatusCell(handle: Handle<Table.StatusCellProps>) {
 	return () => {
-		let { color, pulse, children, ...rest } = handle.props;
+		let { color, pulse, children, detail, ...rest } = handle.props;
+		let detailed = detail !== null && detail !== undefined && detail !== false;
 		let empty = children === null || children === undefined || children === false;
 
 		return (
@@ -1271,6 +1276,12 @@ Table.StatusCell = function TableStatusCell(handle: Handle<Table.StatusCellProps
 				) : (
 					<StatusDot color={color} pulse={pulse}>
 						{children}
+						{detailed ? (
+							<span data-slot="status-detail" mix={[fg("neutral.muted"), tabularNums()]}>
+								{" · "}
+								{detail}
+							</span>
+						) : null}
 					</StatusDot>
 				)}
 			</Table.Cell>

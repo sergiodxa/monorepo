@@ -837,7 +837,7 @@ describe("Table hover-revealed row actions", () => {
 	});
 });
 
-describe("Table dates", () => {
+describe("Table dates and statuses", () => {
 	test("keeps a comfortable date cell on one line when long titles squeeze it", async () => {
 		await page.viewport(1024, 768);
 		let host = mount(posts({ date: true, noActions: true }), 1024);
@@ -846,5 +846,29 @@ describe("Table dates", () => {
 			expect(time.textContent).toBe("Dec 1, 2026");
 			expect(lineBoxes(time)).toBe(1);
 		}
+	});
+
+	test("shows a status's detail muted after its word, on one line", () => {
+		let host = mount(
+			<Table aria-label="Posts" density="comfortable">
+				<Table.Body>
+					<Table.Row>
+						<Table.Cell>{POSTS[0]!.title.repeat(4)}</Table.Cell>
+						<Table.StatusCell color="warning" detail="Dec 4">
+							Scheduled
+						</Table.StatusCell>
+					</Table.Row>
+				</Table.Body>
+			</Table>,
+			600,
+		);
+		host.style.setProperty("--ui-neutral-fg-muted", "rgb(110, 110, 110)");
+		let label = host.querySelector<HTMLElement>('[data-slot="status-dot-label"]')!;
+		let detail = host.querySelector<HTMLElement>('[data-slot="status-detail"]')!;
+
+		expect(label.textContent).toBe("Scheduled · Dec 4");
+		expect(detail.textContent).toBe(" · Dec 4");
+		expect(getComputedStyle(detail).color).not.toBe(getComputedStyle(label).color);
+		expect(lineBoxes(label)).toBe(1);
 	});
 });
