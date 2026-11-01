@@ -1,7 +1,7 @@
 /**
  * Table cells every CMS list shares, kept free of server-only imports so a browser test can
- * mount them. A date cell holds one line however narrow its column gets, so a squeezed table
- * scrolls inside its box instead of stacking "Dec / 1, / 2026" into a tall row.
+ * mount them. Each holds one line however narrow its column gets: a date never stacks into a
+ * tall row, and a long path ends in an ellipsis inside its own cell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,8 +9,9 @@
 
 import type { Handle } from "remix/component";
 
+import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { whiteSpace } from "@sdxc/u/typography";
+import { font, text, truncate, whiteSpace } from "@sdxc/u/typography";
 import { Table } from "@sdxc/ui/app/table";
 
 /** Props accepted by {@link DateCell}. */
@@ -39,6 +40,39 @@ export function DateCell(handle: Handle<DateCellProps>) {
 						: undefined,
 				]}
 			/>
+		);
+	};
+}
+
+/** Props accepted by {@link PathCell}. */
+interface PathCellProps {
+	/** The path or address, shown in full on hover. */
+	path: string;
+	/** The widest the column grows, as a CSS length. */
+	maxInlineSize: string;
+	/** Draws the path muted, for the secondary path in a row. */
+	muted?: boolean;
+}
+
+/** A path in monospace, cut with an ellipsis at the cell's edge so it never runs into the next. */
+export function PathCell(handle: Handle<PathCellProps>) {
+	return () => {
+		let { path, maxInlineSize, muted } = handle.props;
+		return (
+			<Table.Cell mix={[raw({ maxInlineSize })]}>
+				<span
+					title={path}
+					mix={[
+						raw({ display: "block" }),
+						font("mono"),
+						text("sm"),
+						muted ? fg("neutral.muted") : undefined,
+						truncate(),
+					]}
+				>
+					{path}
+				</span>
+			</Table.Cell>
 		);
 	};
 }

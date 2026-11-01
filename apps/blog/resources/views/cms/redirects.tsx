@@ -12,7 +12,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hstack, vstack } from "@sdxc/u/layout";
-import { font, text, truncate } from "@sdxc/u/typography";
+import { text } from "@sdxc/u/typography";
 import { Badge, Input, LinkButton, Select } from "@sdxc/ui";
 import { FilterBar } from "@sdxc/ui/app/filter-bar";
 import { PageHeader } from "@sdxc/ui/app/page-header";
@@ -21,6 +21,7 @@ import { SettingsSection } from "@sdxc/ui/app/settings-section";
 import { Table } from "@sdxc/ui/app/table";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import { PathCell } from "~/resources/views/cms/cells";
 import {
 	DeleteAction,
 	FILTER_LABELS,
@@ -150,19 +151,8 @@ export function CMSRedirectsIndexView() {
 										<Table.Body>
 											{page.rows.map((item) => (
 												<Table.Row key={item.from}>
-													<Table.Cell mix={[raw({ maxInlineSize: "min(24rem, 35cqi)" })]}>
-														<span mix={[font("mono"), text("sm"), truncate()]} title={item.from}>
-															{item.from}
-														</span>
-													</Table.Cell>
-													<Table.Cell mix={[raw({ maxInlineSize: "min(28rem, 35cqi)" })]}>
-														<span
-															mix={[font("mono"), text("sm"), fg("neutral.muted"), truncate()]}
-															title={item.to}
-														>
-															{item.to}
-														</span>
-													</Table.Cell>
+													<PathCell path={item.from} maxInlineSize="min(24rem, 35cqi)" />
+													<PathCell path={item.to} maxInlineSize="min(28rem, 35cqi)" muted />
 													<Table.Cell>
 														<span mix={[hstack({ gap: 2, align: "center" })]}>
 															<Badge color="neutral" variant="secondary">

@@ -1,6 +1,6 @@
 /**
- * Tests the CMS date cell in a real browser: squeezed by a long title in a narrow table, its
- * date stays on one line, so a list's rows keep one height instead of growing per date.
+ * Tests the CMS table cells in a real browser: squeezed into a narrow table, a date stays on
+ * one line and a long path ends inside its own cell instead of running over the next one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,7 @@ import { Table } from "@sdxc/ui/app/table";
 import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { DateCell } from "~/resources/views/cms/cells";
+import { DateCell, PathCell } from "~/resources/views/cms/cells";
 
 /** The table the current test mounted, unmounted after it. */
 let mounted: RenderResult | undefined;
@@ -51,5 +51,40 @@ describe("DateCell", () => {
 		if (!time) throw new Error("The cell rendered no time");
 
 		expect(time.getClientRects()).toHaveLength(1);
+	});
+});
+
+describe("PathCell", () => {
+	test("cuts a long path at its cell's edge", () => {
+		let host = document.createElement("div");
+		host.style.inlineSize = "360px";
+		document.body.appendChild(host);
+		mounted = render(
+			<Table.Container>
+				<Table aria-label="Redirects" density="comfortable">
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>From</Table.Column>
+							<Table.Column>To</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						<Table.Row>
+							<PathCell path="/blog/an-old-path-that-is-long" maxInlineSize="35cqi" />
+							<PathCell path="/articles/the-new-path-it-moved-to" maxInlineSize="35cqi" muted />
+						</Table.Row>
+					</Table.Body>
+				</Table>
+			</Table.Container>,
+			{ container: host },
+		);
+
+		let [from] = mounted.$$("td");
+		let path = from?.querySelector("span");
+		if (!from || !path) throw new Error("The cell rendered no path");
+
+		expect(path.getBoundingClientRect().right).toBeLessThanOrEqual(
+			from.getBoundingClientRect().right,
+		);
 	});
 });
