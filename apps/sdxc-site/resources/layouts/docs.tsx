@@ -62,11 +62,8 @@ const HEADER_HEIGHT = "calc(4rem + 1px)";
  */
 const FOLD_THRESHOLD = 40;
 
-/**
- * Pulls the sidebar's contact line from the footer's 0.625rem gutter onto the page links'
- * 0.5rem one, so its text starts where theirs does.
- */
-const CONTACT_ALIGN = "-0.125rem";
+/** Indents the sidebar's contact line by the page links' padding, so its text starts where theirs does. */
+const CONTACT_ALIGN = "0.5rem";
 
 namespace DocsLayout {
 	export interface Props {
