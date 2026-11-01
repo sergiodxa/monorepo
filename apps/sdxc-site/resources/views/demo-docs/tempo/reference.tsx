@@ -1,561 +1,760 @@
 /**
- * Tempo's reference pages: arithmetic, comparison, formatting and ranges, each a run of
- * small function sections with a signature, parameters, return value and an example whose
- * result is written beside the call.
+ * Tempo's reference pages, one per group of utilities: spacing, colour, layout, typography
+ * and effects. Every utility is drawn doing what it does, beside the call that drew it and a
+ * table of its calls with the CSS each one emits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { raw } from "@sdxc/u/general";
+
 import { demoDocsHref } from "~/resources/views/demo-docs";
-import { DATE_PARAM, referencePage } from "~/resources/views/demo-docs/tempo/function-docs";
+import { utilityPage } from "~/resources/views/demo-docs/tempo/utility-docs";
+import {
+	Chip,
+	Dot,
+	Gap,
+	Layout,
+	LightSurface,
+	Padding,
+	PALETTES,
+	RADII,
+	Ramp,
+	Ruler,
+	SHADOWS,
+	space,
+	SPACING_STEPS,
+	Swatch,
+	swatch,
+	Tile,
+	TYPE_SCALE,
+	TypeSample,
+} from "~/resources/views/demo-docs/tempo/visuals";
 
 /** The addresses of Tempo's pages. */
 const href = demoDocsHref("tempo");
 
-/** The `amount` parameter the add functions take. */
-const AMOUNT_PARAM = {
-	name: "amount",
-	type: "number",
-	required: true,
-	description: "How many units to add; negative values move backwards.",
-};
-
-/** The two-date parameters the comparison functions take. */
-const PAIR_PARAMS = [
-	{ ...DATE_PARAM, name: "a", description: "The moment being tested." },
-	{ ...DATE_PARAM, name: "b", description: "The moment it is compared against." },
-];
-
-/** The unit names every function taking a `unit` accepts. */
-const UNIT_TYPE = '"second" | "minute" | "hour" | "day" | "week" | "month" | "year"';
-
-/** Adding, subtracting and measuring time, calendar-aware. */
-export const ARITHMETIC = referencePage({
-	title: "Arithmetic",
+/** Spacing: the scale, then padding, margin and gap drawn as hatched space. */
+export const SPACING = utilityPage({
+	title: "Spacing",
 	description:
-		"Move a date forwards or backwards by calendar units, measure the distance between two dates, and keep a date inside a range.",
-	updated: "2026-10-26",
+		"Padding, margin and gap on one quarter-rem scale, so every space in an interface lines up with every other.",
+	updated: "2026-10-29",
 	intro: (
 		<>
-			Every function here returns a new <code>Date</code> and leaves its input untouched. Units are
-			calendar units: adding a day across a daylight saving change keeps the wall-clock time.
+			Every spacing utility takes a step on the same scale. One step is a quarter of a rem, so{" "}
+			<code>4</code> is 1rem at the reader’s font size and spacing grows with their text.
 		</>
 	),
-	functions: [
+	sections: [
 		{
-			name: "addDays",
-			signature: "addDays(date, amount)",
-			returns: "Date",
-			summary: "Moves a date by whole calendar days, keeping its time of day.",
-			params: [DATE_PARAM, AMOUNT_PARAM],
-			returnsText: "A new date the given number of days away.",
-			example:
-				'import { addDays } from "@tempo/core";\n\naddDays("2026-03-28T09:00", 2);\n// 2026-03-30T09:00, across the DST change',
+			id: "the-scale",
+			title: "The spacing scale",
+			content: <Ruler steps={SPACING_STEPS} />,
 		},
+	],
+	utilities: [
 		{
-			name: "addMonths",
-			signature: "addMonths(date, amount)",
-			returns: "Date",
-			summary: "Moves a date by calendar months, clamping to the target month’s last day.",
-			params: [DATE_PARAM, AMOUNT_PARAM],
-			returnsText:
-				"A new date in the target month; the 31st becomes the 30th, or the 28th in February.",
-			example:
-				'import { addMonths } from "@tempo/core";\n\naddMonths("2026-01-31", 1);\n// 2026-02-28',
-		},
-		{
-			name: "addBusinessDays",
-			signature: "addBusinessDays(date, amount, options?)",
-			returns: "Date",
-			summary: "Moves a date by working days, skipping weekends and the holidays you list.",
-			params: [
-				DATE_PARAM,
-				AMOUNT_PARAM,
-				{ name: "options", type: "BusinessDayOptions", description: "Which days count as work." },
-			],
-			returnsText: "A new date that falls on a working day.",
-			options: {
-				title: "BusinessDayOptions",
-				rows: [
-					{
-						name: "weekend",
-						type: "number[]",
-						default: "[0, 6]",
-						description: "The weekdays to skip, Sunday as 0.",
-					},
-					{
-						name: "holidays",
-						type: "Array<Date | string>",
-						default: "[]",
-						description: "Dates to skip besides the weekend.",
-					},
-				],
+			name: "pad",
+			signature: "pad(step, inline?)",
+			summary: (
+				<>
+					Sets the space inside an element’s border. Pass a second step to pad the inline sides
+					differently from the block sides.
+				</>
+			),
+			example: {
+				code: "<div class={pad(2)}>…</div>\n<div class={pad(4)}>…</div>\n<div class={pad(8)}>…</div>\n<div class={pad(0, 6)}>…</div>",
+				preview: (
+					<>
+						<Padding step={2} label="pad(2)" />
+						<Padding step={4} label="pad(4)" />
+						<Padding step={8} label="pad(8)" />
+						<Padding step={6} label="pad(0, 6)" inline />
+					</>
+				),
 			},
-			example:
-				'import { addBusinessDays } from "@tempo/core";\n\naddBusinessDays("2026-12-24", 1, { holidays: ["2026-12-25"] });\n// 2026-12-28, a Monday',
+			calls: [
+				{ call: "pad(0)", css: "padding: 0" },
+				{ call: "pad(2)", css: "padding: 0.5rem" },
+				{ call: "pad(4)", css: "padding: 1rem" },
+				{ call: "pad(8)", css: "padding: 2rem" },
+				{ call: "pad(2, 4)", css: "padding: 0.5rem 1rem" },
+			],
 		},
 		{
-			name: "subtract",
-			signature: "subtract(date, duration)",
-			returns: "Date",
-			summary: "Moves a date backwards by a duration holding any mix of units.",
-			params: [
-				DATE_PARAM,
-				{
-					name: "duration",
-					type: "Duration",
-					required: true,
-					description: "The units to subtract, largest first.",
-					children: [
-						{ name: "years", type: "number", default: "0" },
-						{ name: "months", type: "number", default: "0" },
-						{ name: "days", type: "number", default: "0" },
-						{ name: "hours", type: "number", default: "0" },
-						{ name: "minutes", type: "number", default: "0" },
-					],
-				},
-			],
-			returnsText: "A new date, with the largest units applied first.",
-			example:
-				'import { subtract } from "@tempo/core";\n\nsubtract("2026-10-31T12:00", { months: 1, hours: 3 });\n// 2026-09-30T09:00',
-		},
-		{
-			name: "difference",
-			signature: "difference(a, b, unit)",
-			returns: "number",
-			summary: "Counts the whole units between two dates.",
-			params: [
-				...PAIR_PARAMS,
-				{ name: "unit", type: UNIT_TYPE, required: true, description: "What to count." },
-			],
-			returnsText: (
+			name: "margin",
+			signature: 'margin(step | "auto", inline?)',
+			summary: (
 				<>
-					A whole number, negative when <code>a</code> is before <code>b</code>; partial units round
-					toward zero.
+					Sets the space outside an element’s border. <code>"auto"</code> on the inline sides
+					centres a block with a width of its own.
 				</>
 			),
-			example:
-				'import { difference } from "@tempo/core";\n\ndifference("2026-12-25", "2026-10-31", "day");\n// 55',
+			example: {
+				code: '<div class={margin(0)}>…</div>\n<div class={margin(6)}>…</div>\n<div class={margin(0, "auto")}>…</div>',
+				column: true,
+				preview: (
+					<>
+						{[
+							{ label: "margin(0)", style: { margin: "0" } },
+							{ label: "margin(6)", style: { margin: space(6) } },
+							{
+								label: 'margin(0, "auto")',
+								style: { margin: "0 auto", inlineSize: "10rem", maxInlineSize: "100%" },
+							},
+						].map((row) => (
+							<div
+								key={row.label}
+								mix={[
+									raw({
+										borderRadius: "var(--ui-radius-md, 0.25rem)",
+										backgroundImage:
+											"repeating-linear-gradient(-45deg, var(--ui-brand-border) 0 1px, transparent 1px 7px)",
+										boxShadow: "inset 0 0 0 1px var(--ui-brand-border)",
+										display: "flow-root",
+									}),
+								]}
+							>
+								<div mix={[raw(row.style)]}>
+									<Tile label={row.label} wide />
+								</div>
+							</div>
+						))}
+					</>
+				),
+			},
+			calls: [
+				{ call: "margin(0)", css: "margin: 0" },
+				{ call: "margin(6)", css: "margin: 1.5rem" },
+				{ call: 'margin(0, "auto")', css: "margin: 0 auto" },
+				{ call: "margin(4, 0)", css: "margin: 1rem 0" },
+			],
 		},
 		{
-			name: "clamp",
-			signature: "clamp(date, range)",
-			returns: "Date",
-			summary: "Keeps a date inside a range, moving it to the nearest end when it falls outside.",
-			params: [
-				DATE_PARAM,
-				{
-					name: "range",
-					type: "Range",
-					required: true,
-					description: "The earliest and latest dates allowed.",
-					children: [
-						{ name: "start", type: "Date | string", required: true },
-						{ name: "end", type: "Date | string", required: true },
-					],
-				},
-			],
-			returnsText: (
+			name: "gap",
+			signature: "gap(step, column?)",
+			summary: (
 				<>
-					The date itself when inside the range, else <code>start</code> or <code>end</code>.
+					Sets the space between the children of a flex or grid container. A second step sets the
+					column gap apart from the row gap.
 				</>
 			),
-			example:
-				'import { clamp } from "@tempo/core";\n\nclamp("2027-02-01", { start: "2026-01-01", end: "2026-12-31" });\n// 2026-12-31',
+			example: {
+				code: "<div class={tx(row(), gap(1))}>…</div>\n<div class={tx(row(), gap(4))}>…</div>\n<div class={tx(grid(2), gap(2, 6))}>…</div>",
+				preview: (
+					<>
+						<Gap step={1} label="gap(1)" />
+						<Gap step={4} label="gap(4)" />
+						<Gap step={2} label="gap(2, 6)" grid />
+					</>
+				),
+			},
+			calls: [
+				{ call: "gap(1)", css: "gap: 0.25rem" },
+				{ call: "gap(4)", css: "gap: 1rem" },
+				{ call: "gap(2, 6)", css: "row-gap: 0.5rem; column-gap: 1.5rem" },
+			],
 		},
 	],
 	next: [
 		{
-			title: "Comparison",
-			href: href("reference/comparison"),
-			description: "Check the order of the dates you just computed.",
+			title: "Layout",
+			href: href("utilities/layout"),
+			description: "Stacks, rows and grids, which gap spaces.",
 		},
 		{
-			title: "Time zones",
-			href: href("overview/time-zones"),
-			description: "Why adding a day isn’t always adding 24 hours.",
+			title: "Scales and tokens",
+			href: href("start/scales"),
+			description: "Change what one step is worth for the whole interface.",
 		},
 	],
 });
 
-/** Ordering and equality, at any precision. */
-export const COMPARISON = referencePage({
-	title: "Comparison",
+/** Colour: the palettes as ramps, then background, text and border colour. */
+export const COLOR = utilityPage({
+	title: "Colour",
 	description:
-		"Order two dates, test whether they share a day or month, check a date against a range, and pick the earliest or latest of many.",
-	updated: "2026-10-22",
-	intro: (
-		<>
-			Comparisons read their inputs as instants. Pass a <code>unit</code> to compare at a coarser
-			precision, such as “the same day” rather than “the same millisecond”.
-		</>
-	),
-	functions: [
-		{
-			name: "isBefore",
-			signature: "isBefore(a, b, unit?)",
-			returns: "boolean",
-			summary: "Whether the first date comes before the second.",
-			params: [
-				...PAIR_PARAMS,
-				{
-					name: "unit",
-					type: UNIT_TYPE,
-					default: '"millisecond"',
-					description: "The precision to compare at.",
-				},
-			],
-			returnsText: (
-				<>
-					<code>true</code> when <code>a</code> is strictly earlier than <code>b</code> at that
-					precision.
-				</>
-			),
-			example:
-				'import { isBefore } from "@tempo/core";\n\nisBefore("2026-10-31T23:00", "2026-10-31T01:00", "day");\n// false, the same day',
-		},
-		{
-			name: "isAfter",
-			signature: "isAfter(a, b, unit?)",
-			returns: "boolean",
-			summary: "Whether the first date comes after the second.",
-			params: [
-				...PAIR_PARAMS,
-				{ name: "unit", type: UNIT_TYPE, default: '"millisecond"', description: "The precision." },
-			],
-			returnsText: (
-				<>
-					<code>true</code> when <code>a</code> is strictly later than <code>b</code> at that
-					precision.
-				</>
-			),
-			example:
-				'import { isAfter } from "@tempo/core";\n\nisAfter("2026-11-01", "2026-10-31");\n// true',
-		},
-		{
-			name: "isSame",
-			signature: "isSame(a, b, unit)",
-			returns: "boolean",
-			summary: "Whether two dates fall in the same unit, such as the same week.",
-			params: [
-				...PAIR_PARAMS,
-				{ name: "unit", type: UNIT_TYPE, required: true, description: "The unit both must share." },
-			],
-			returnsText: (
-				<>
-					<code>true</code> when both dates fall in the same calendar unit.
-				</>
-			),
-			example:
-				'import { isSame } from "@tempo/core";\n\nisSame("2026-10-26", "2026-11-01", "week");\n// true, weeks start on Monday',
-		},
-		{
-			name: "isWithin",
-			signature: "isWithin(date, range)",
-			returns: "boolean",
-			summary: "Whether a date falls inside a range, both ends included.",
-			params: [
-				DATE_PARAM,
-				{
-					name: "range",
-					type: "Range",
-					required: true,
-					description: "The range to test against.",
-					children: [
-						{ name: "start", type: "Date | string", required: true },
-						{ name: "end", type: "Date | string", required: true },
-					],
-				},
-			],
-			returnsText: (
-				<>
-					<code>true</code> when <code>{"start <= date <= end"}</code>.
-				</>
-			),
-			example:
-				'import { isWithin } from "@tempo/core";\n\nisWithin("2026-12-31", { start: "2026-12-01", end: "2026-12-31" });\n// true',
-		},
-		{
-			name: "max",
-			signature: "max(...dates)",
-			returns: "Date",
-			summary: "The latest of any number of dates.",
-			params: [
-				{
-					name: "dates",
-					type: "Array<Date | number | string>",
-					required: true,
-					description: "At least one date.",
-				},
-			],
-			returnsText: (
-				<>
-					The latest date, as a <code>Date</code>.
-				</>
-			),
-			example:
-				'import { max } from "@tempo/core";\n\nmax("2026-01-05", "2026-03-01", "2025-12-31");\n// 2026-03-01',
-		},
-		{
-			name: "min",
-			signature: "min(...dates)",
-			returns: "Date",
-			summary: "The earliest of any number of dates.",
-			params: [
-				{
-					name: "dates",
-					type: "Array<Date | number | string>",
-					required: true,
-					description: "At least one date.",
-				},
-			],
-			returnsText: (
-				<>
-					The earliest date, as a <code>Date</code>.
-				</>
-			),
-			example:
-				'import { min } from "@tempo/core";\n\nmin("2026-01-05", "2026-03-01", "2025-12-31");\n// 2025-12-31',
-		},
-	],
-	next: [
-		{
-			title: "Ranges",
-			href: href("reference/ranges"),
-			description: "Walk every day between two dates instead of testing one.",
-		},
-		{
-			title: "Formatting",
-			href: href("reference/formatting"),
-			description: "Show the dates you compared to a reader.",
-		},
-	],
-});
-
-/** Turning dates into text for a reader and back again. */
-export const FORMATTING = referencePage({
-	title: "Formatting",
-	description:
-		"Write a date for a reader in their locale, say how long ago something happened, spell out a duration, and read a date back from text.",
+		"Seven palettes of eleven shades, and the utilities that paint backgrounds, text and borders with them.",
 	updated: "2026-10-30",
 	intro: (
 		<>
-			Formatting runs on <code>Intl</code>, so it costs no locale data in your bundle. Every
-			function takes a <code>locale</code>; leave it out to use the runtime’s.
+			Colour utilities take a palette and a shade, written <code>"tide.500"</code>. Every shade sits
+			at the same lightness in each palette, so a pairing that reads well in one reads well in all
+			seven.
 		</>
 	),
-	functions: [
+	sections: [
 		{
-			name: "format",
-			signature: "format(date, pattern, options?)",
-			returns: "string",
-			summary: "Writes a date with a named pattern, in the reader’s locale and time zone.",
-			params: [
-				DATE_PARAM,
-				{
-					name: "pattern",
-					type: '"date" | "time" | "datetime" | "month" | "weekday"',
-					required: true,
-					description: "Which parts to write.",
-				},
-				{ name: "options", type: "FormatOptions", description: "Locale, zone and length." },
-			],
-			returnsText: "The formatted string.",
-			options: {
-				title: "FormatOptions",
-				rows: [
-					{
-						name: "locale",
-						type: "string",
-						description: (
-							<>
-								A BCP 47 tag, such as <code>es-AR</code>.
-							</>
-						),
-					},
-					{
-						name: "timeZone",
-						type: "string",
-						description: (
-							<>
-								An IANA zone, such as <code>Europe/Madrid</code>.
-							</>
-						),
-					},
-					{
-						name: "length",
-						type: '"short" | "medium" | "long"',
-						default: '"medium"',
-						description: "How much to spell out.",
-					},
-				],
+			id: "palettes",
+			title: "The palettes",
+			content: (
+				<div
+					data-not-typeset=""
+					mix={[
+						raw({
+							display: "grid",
+							gridTemplateColumns: "minmax(0, 1fr)",
+							gap: "1.25rem",
+							marginBlockStart: "1rem",
+						}),
+					]}
+				>
+					{PALETTES.map((palette) => (
+						<Ramp key={palette.name} palette={palette} />
+					))}
+				</div>
+			),
+		},
+	],
+	utilities: [
+		{
+			name: "bg",
+			signature: "bg(color)",
+			summary: <>Paints an element’s background with a shade, or any CSS colour passed as is.</>,
+			example: {
+				code: '<div class={bg("tide.100")}>…</div>\n<div class={bg("tide.500")}>…</div>\n<div class={bg("tide.900")}>…</div>',
+				preview: (
+					<>
+						<Chip background={swatch("tide", 100)} color={swatch("tide", 900)}>
+							tide.100
+						</Chip>
+						<Chip background={swatch("tide", 500)} color="white">
+							tide.500
+						</Chip>
+						<Chip background={swatch("tide", 900)} color={swatch("tide", 100)}>
+							tide.900
+						</Chip>
+					</>
+				),
 			},
-			example:
-				'import { format } from "@tempo/core";\n\nformat("2026-10-31T18:30Z", "datetime", { locale: "es-AR", timeZone: "America/Buenos_Aires" });\n// "31 oct 2026, 15:30"',
+			calls: ([100, 500, 900] as const).map((shade) => ({
+				call: `bg("tide.${shade}")`,
+				css: `background-color: var(--tempo-tide-${shade})`,
+				sample: <Dot color={swatch("tide", shade)} />,
+			})),
 		},
 		{
-			name: "formatRelative",
-			signature: "formatRelative(date, base?, options?)",
-			returns: "string",
-			summary: "Says how far a date is from now, the way a person would.",
-			params: [
-				DATE_PARAM,
-				{
-					...DATE_PARAM,
-					name: "base",
-					required: false,
-					default: "now",
-					description: "The moment to measure from.",
-				},
-				{ name: "options", type: "{ locale?: string }", description: "The locale to write in." },
-			],
-			returnsText: "A phrase such as “in 3 days” or “yesterday”, using the largest whole unit.",
-			example:
-				'import { formatRelative } from "@tempo/core";\n\nformatRelative("2026-10-30", "2026-10-31");\n// "yesterday"',
-		},
-		{
-			name: "formatDuration",
-			signature: "formatDuration(duration, options?)",
-			returns: "string",
-			summary: "Spells out a duration, leaving out the units that are zero.",
-			params: [
-				{
-					name: "duration",
-					type: "Duration",
-					required: true,
-					description: "The units to write.",
-					children: [
-						{ name: "hours", type: "number", default: "0" },
-						{ name: "minutes", type: "number", default: "0" },
-						{ name: "seconds", type: "number", default: "0" },
-					],
-				},
-				{ name: "options", type: '{ locale?: string; style?: "long" | "narrow" }' },
-			],
-			returnsText: "The duration as a list of units.",
-			example:
-				'import { formatDuration } from "@tempo/core";\n\nformatDuration({ hours: 1, minutes: 5 }, { style: "narrow" });\n// "1h 5m"',
-		},
-		{
-			name: "parse",
-			signature: "parse(text, options?)",
-			returns: "Date | null",
-			summary: "Reads a date from text a person typed, in their locale’s order.",
-			params: [
-				{ name: "text", type: "string", required: true, description: "What the reader typed." },
-				{ name: "options", type: "{ locale?: string; timeZone?: string }" },
-			],
-			returnsText: (
+			name: "fg",
+			signature: "fg(color)",
+			summary: (
 				<>
-					The date, or <code>null</code> when the text doesn’t name a real day.
+					Sets the text colour. Pair a shade of 700 or darker with a 50–200 background and the text
+					clears 4.5:1 contrast in every palette.
 				</>
 			),
-			example:
-				'import { parse } from "@tempo/core";\n\nparse("31/10/2026", { locale: "en-GB" });\n// 2026-10-31\nparse("31/02/2026", { locale: "en-GB" });\n// null',
+			example: {
+				code: '<p class={tx(bg("clay.50"), fg("clay.800"))}>…</p>\n<p class={tx(bg("moss.100"), fg("moss.800"))}>…</p>\n<p class={tx(bg("ink.900"), fg("ink.100"))}>…</p>',
+				preview: (
+					<>
+						<Chip background={swatch("clay", 50)} color={swatch("clay", 800)}>
+							Overdue
+						</Chip>
+						<Chip background={swatch("moss", 100)} color={swatch("moss", 800)}>
+							Paid
+						</Chip>
+						<Chip background={swatch("ink", 900)} color={swatch("ink", 100)}>
+							Draft
+						</Chip>
+					</>
+				),
+			},
+			calls: [
+				{
+					call: 'fg("clay.800")',
+					css: "color: var(--tempo-clay-800)",
+					sample: <Dot color={swatch("clay", 800)} />,
+				},
+				{
+					call: 'fg("moss.800")',
+					css: "color: var(--tempo-moss-800)",
+					sample: <Dot color={swatch("moss", 800)} />,
+				},
+				{
+					call: 'fg("currentColor")',
+					css: "color: currentColor",
+				},
+			],
+		},
+		{
+			name: "borderColor",
+			signature: "borderColor(color)",
+			summary: (
+				<>
+					Sets the colour of every side of an element’s border, leaving its width and style to{" "}
+					<code>border()</code>.
+				</>
+			),
+			example: {
+				code: '<div class={tx(border(2), borderColor("tide.300"))}>…</div>\n<div class={tx(border(2), borderColor("plum.500"))}>…</div>',
+				preview: (
+					<>
+						<Chip background="transparent" color={swatch("tide", 700)} border={swatch("tide", 300)}>
+							tide.300
+						</Chip>
+						<Chip background="transparent" color={swatch("plum", 600)} border={swatch("plum", 500)}>
+							plum.500
+						</Chip>
+					</>
+				),
+			},
+			calls: [
+				{
+					call: 'borderColor("tide.300")',
+					css: "border-color: var(--tempo-tide-300)",
+					sample: <Dot color={swatch("tide", 300)} />,
+				},
+				{
+					call: 'borderColor("plum.500")',
+					css: "border-color: var(--tempo-plum-500)",
+					sample: <Dot color={swatch("plum", 500)} />,
+				},
+			],
 		},
 	],
 	next: [
 		{
-			title: "Time zones",
-			href: href("overview/time-zones"),
-			description: "Which zone a formatted date is written in, and why.",
+			title: "Typography",
+			href: href("utilities/typography"),
+			description: "Set the size and weight of the text you just coloured.",
 		},
 		{
-			title: "Arithmetic",
-			href: href("reference/arithmetic"),
-			description: "Compute the dates before you format them.",
+			title: "Scales and tokens",
+			href: href("start/scales"),
+			description: "Swap a palette for your brand’s own colours.",
 		},
 	],
 });
 
-/** Sequences of days and weeks, and overlap between ranges. */
-export const RANGES = referencePage({
-	title: "Ranges",
+/** Layout: stack, row, grid and center, each drawn with the properties it sets. */
+export const LAYOUT = utilityPage({
+	title: "Layout",
 	description:
-		"List every day or week between two dates, and test whether two ranges overlap, for calendars and booking forms.",
-	updated: "2026-10-19",
+		"Stack things, line them up in a row, put them on a grid or centre them, each in one call.",
+	updated: "2026-10-26",
 	intro: (
 		<>
-			A range is a <code>{"{ start, end }"}</code> pair with both ends included. The list functions
-			are generators, so a range of years costs nothing until you read it.
+			Layout utilities set <code>display</code> and the alignment that goes with it. Space between
+			children comes from <a href={`${href("utilities/spacing")}#gap`}>gap</a>, so every layout
+			spaces its children the same way.
 		</>
 	),
-	functions: [
+	utilities: [
 		{
-			name: "eachDay",
-			signature: "eachDay(range)",
-			returns: "Iterable<Date>",
-			summary: "Yields every calendar day in a range, at midnight local time.",
-			params: [
+			name: "stack",
+			signature: 'stack(align?: "start" | "center" | "end" | "stretch")',
+			summary: <>Lays children out top to bottom, stretched to the container’s width by default.</>,
+			example: {
+				code: '<div class={tx(stack(), gap(2))}>…</div>\n<div class={tx(stack("start"), gap(2))}>…</div>',
+				preview: (
+					<>
+						<Layout
+							items={["A", "B", "C"]}
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								gap: space(2),
+								maxInlineSize: "12rem",
+							}}
+						/>
+						<Layout
+							items={["A", "B", "C"]}
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "flex-start",
+								gap: space(2),
+								maxInlineSize: "12rem",
+							}}
+						/>
+					</>
+				),
+			},
+			calls: [
+				{ call: "stack()", css: "display: flex; flex-direction: column" },
 				{
-					name: "range",
-					type: "Range",
-					required: true,
-					description: "The days to walk.",
-					children: [
-						{ name: "start", type: "Date | string", required: true },
-						{ name: "end", type: "Date | string", required: true },
-					],
+					call: 'stack("start")',
+					css: "display: flex; flex-direction: column; align-items: start",
 				},
 			],
-			returnsText: (
-				<>
-					An iterable of dates; empty when <code>end</code> is before <code>start</code>.
-				</>
-			),
-			example:
-				'import { eachDay } from "@tempo/core";\n\n[...eachDay({ start: "2026-10-30", end: "2026-11-01" })];\n// [Oct 30, Oct 31, Nov 1]',
 		},
 		{
-			name: "eachWeek",
-			signature: "eachWeek(range, options?)",
-			returns: "Iterable<Date>",
-			summary: "Yields the first day of every week a range touches.",
-			params: [
-				{ name: "range", type: "Range", required: true, description: "The weeks to walk." },
+			name: "row",
+			signature: 'row(justify?: "start" | "center" | "between" | "end")',
+			summary: (
+				<>
+					Lays children out side by side, centred on the cross axis and wrapping when they run out
+					of room.
+				</>
+			),
+			example: {
+				code: '<div class={tx(row(), gap(2))}>…</div>\n<div class={tx(row("between"), gap(2))}>…</div>',
+				column: true,
+				preview: (
+					<>
+						<Layout
+							items={["A", "B", "C"]}
+							style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: space(2) }}
+						/>
+						<Layout
+							items={["A", "B", "C"]}
+							style={{
+								display: "flex",
+								flexWrap: "wrap",
+								alignItems: "center",
+								justifyContent: "space-between",
+								gap: space(2),
+							}}
+						/>
+					</>
+				),
+			},
+			calls: [
+				{ call: "row()", css: "display: flex; flex-wrap: wrap; align-items: center" },
+				{ call: 'row("between")', css: "… justify-content: space-between" },
+			],
+		},
+		{
+			name: "grid",
+			signature: "grid(columns: number | string)",
+			summary: (
+				<>
+					Lays children on equal columns. Pass a minimum width instead of a count and the grid fits
+					as many columns as the container holds.
+				</>
+			),
+			example: {
+				code: '<ul class={tx(grid(3), gap(2))}>…</ul>\n<ul class={tx(grid("6rem"), gap(2))}>…</ul>',
+				column: true,
+				preview: (
+					<>
+						<Layout
+							items={["1", "2", "3", "4", "5", "6"]}
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+								gap: space(2),
+							}}
+						/>
+						<Layout
+							items={["1", "2", "3", "4", "5"]}
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fill, minmax(6rem, 1fr))",
+								gap: space(2),
+							}}
+						/>
+					</>
+				),
+			},
+			calls: [
+				{ call: "grid(3)", css: "display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))" },
 				{
-					name: "options",
-					type: "{ weekStartsOn?: number }",
-					description: "The first weekday, Monday as 1 by default.",
+					call: 'grid("6rem")',
+					css: "display: grid; grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr))",
 				},
 			],
-			returnsText: (
-				<>
-					An iterable of week starts, the first on or before <code>start</code>.
-				</>
-			),
-			example:
-				'import { eachWeek } from "@tempo/core";\n\n[...eachWeek({ start: "2026-10-01", end: "2026-10-14" })];\n// [Sep 28, Oct 5, Oct 12]',
 		},
 		{
-			name: "overlaps",
-			signature: "overlaps(a, b)",
-			returns: "boolean",
-			summary: "Whether two ranges share at least one moment.",
-			params: [
-				{ name: "a", type: "Range", required: true, description: "The first range." },
-				{ name: "b", type: "Range", required: true, description: "The second range." },
-			],
-			returnsText: (
-				<>
-					<code>true</code> when the ranges share a moment; touching ends count as overlap.
-				</>
-			),
-			example:
-				'import { overlaps } from "@tempo/core";\n\noverlaps(\n\t{ start: "2026-11-02", end: "2026-11-06" },\n\t{ start: "2026-11-06", end: "2026-11-09" },\n);\n// true, both include Nov 6',
+			name: "center",
+			signature: "center()",
+			summary: <>Centres one child on both axes, whatever its size.</>,
+			example: {
+				code: "<div class={center()}>…</div>",
+				preview: (
+					<Layout
+						items={["A"]}
+						style={{ display: "grid", placeItems: "center", minBlockSize: "8rem" }}
+					/>
+				),
+			},
+			calls: [{ call: "center()", css: "display: grid; place-items: center" }],
 		},
 	],
 	next: [
 		{
-			title: "Comparison",
-			href: href("reference/comparison"),
-			description: "Test one date against a range with isWithin.",
+			title: "Spacing",
+			href: href("utilities/spacing"),
+			description: "Space a layout’s children with gap.",
 		},
 		{
-			title: "Installation",
-			href: href("overview/installation"),
-			description: "Import only the range helpers to keep your bundle small.",
+			title: "Effects",
+			href: href("utilities/effects"),
+			description: "Round and lift the boxes a layout places.",
+		},
+	],
+});
+
+/** Typography: the type scale, then size, weight, line height and tracking. */
+export const TYPOGRAPHY = utilityPage({
+	title: "Typography",
+	description:
+		"An eight-step type scale with a line height paired to each size, plus weight and letter spacing.",
+	updated: "2026-10-24",
+	intro: (
+		<>
+			Each step of the type scale sets a size and the line height that reads best with it, so
+			changing a heading’s size never leaves it cramped.
+		</>
+	),
+	sections: [
+		{
+			id: "the-type-scale",
+			title: "The type scale",
+			content: (
+				<div
+					data-not-typeset=""
+					mix={[raw({ display: "grid", gap: "0.75rem", marginBlockStart: "1rem" })]}
+				>
+					{TYPE_SCALE.map((entry) => (
+						<TypeSample
+							key={entry.step}
+							label={`${entry.step} · ${entry.size}`}
+							style={{ fontSize: entry.size, lineHeight: entry.leading }}
+						>
+							Keep the rhythm
+						</TypeSample>
+					))}
+				</div>
+			),
+		},
+	],
+	utilities: [
+		{
+			name: "text",
+			signature: "text(step)",
+			summary: <>Sets the font size and its paired line height from one step of the scale.</>,
+			example: {
+				code: '<p class={text("sm")}>…</p>\n<p class={text("lg")}>…</p>\n<h2 class={text("3xl")}>…</h2>',
+				column: true,
+				preview: (
+					<>
+						{["sm", "lg", "3xl"].map((step) => {
+							let entry = TYPE_SCALE.find((item) => item.step === step)!;
+							return (
+								<TypeSample
+									key={step}
+									label={`text("${step}")`}
+									style={{ fontSize: entry.size, lineHeight: entry.leading }}
+								>
+									The quick brown fox
+								</TypeSample>
+							);
+						})}
+					</>
+				),
+			},
+			calls: TYPE_SCALE.filter((entry) => ["xs", "base", "xl", "4xl"].includes(entry.step)).map(
+				(entry) => ({
+					call: `text("${entry.step}")`,
+					css: `font-size: ${entry.size}; line-height: ${entry.leading}`,
+				}),
+			),
+		},
+		{
+			name: "weight",
+			signature: 'weight("regular" | "medium" | "semibold" | "bold")',
+			summary: <>Sets the font weight by name, so a heading and a label agree on what “bold” is.</>,
+			example: {
+				code: '<span class={weight("regular")}>…</span>\n<span class={weight("semibold")}>…</span>\n<span class={weight("bold")}>…</span>',
+				column: true,
+				preview: (
+					<>
+						{[
+							["regular", "400"],
+							["medium", "500"],
+							["semibold", "600"],
+							["bold", "700"],
+						].map(([name, value]) => (
+							<TypeSample
+								key={name}
+								label={`weight("${name}")`}
+								style={{ fontSize: "1.25rem", fontWeight: value! }}
+							>
+								Tessellate
+							</TypeSample>
+						))}
+					</>
+				),
+			},
+			calls: [
+				{ call: 'weight("regular")', css: "font-weight: 400" },
+				{ call: 'weight("medium")', css: "font-weight: 500" },
+				{ call: 'weight("semibold")', css: "font-weight: 600" },
+				{ call: 'weight("bold")', css: "font-weight: 700" },
+			],
+		},
+		{
+			name: "tracking",
+			signature: 'tracking("tight" | "normal" | "wide")',
+			summary: (
+				<>
+					Sets the letter spacing. Tighten large headings and widen small uppercase labels; leave
+					body text alone.
+				</>
+			),
+			example: {
+				code: '<h2 class={tx(text("3xl"), tracking("tight"))}>…</h2>\n<span class={tx(text("xs"), tracking("wide"))}>…</span>',
+				column: true,
+				preview: (
+					<>
+						<TypeSample
+							label='tracking("tight")'
+							style={{ fontSize: "1.875rem", fontWeight: "700", letterSpacing: "-0.025em" }}
+						>
+							Mosaic
+						</TypeSample>
+						<TypeSample
+							label='tracking("wide")'
+							style={{
+								fontSize: "0.75rem",
+								fontWeight: "600",
+								letterSpacing: "0.1em",
+								textTransform: "uppercase",
+							}}
+						>
+							New release
+						</TypeSample>
+					</>
+				),
+			},
+			calls: [
+				{ call: 'tracking("tight")', css: "letter-spacing: -0.025em" },
+				{ call: 'tracking("normal")', css: "letter-spacing: 0" },
+				{ call: 'tracking("wide")', css: "letter-spacing: 0.1em" },
+			],
+		},
+	],
+	next: [
+		{
+			title: "Colour",
+			href: href("utilities/colour"),
+			description: "Colour the text with fg.",
+		},
+		{
+			title: "Scales and tokens",
+			href: href("start/scales"),
+			description: "Point the scale at your own fonts.",
+		},
+	],
+});
+
+/** Effects: corner radius, shadow and opacity, each drawn as a row of tiles. */
+export const EFFECTS = utilityPage({
+	title: "Effects",
+	description: "Round corners, cast shadows and fade elements, each from a short named scale.",
+	updated: "2026-10-22",
+	intro: (
+		<>
+			Effects take a named step rather than a number, because a radius or a shadow is picked by eye.
+			Every step is drawn below so you can pick it the same way.
+		</>
+	),
+	utilities: [
+		{
+			name: "rounded",
+			signature: 'rounded(step: "none" | "sm" | "md" | "lg" | "xl" | "full")',
+			summary: (
+				<>
+					Rounds every corner of an element. <code>"full"</code> makes a pill or a circle.
+				</>
+			),
+			example: {
+				code: RADII.map((radius) => `<div class={rounded("${radius.step}")} />`).join("\n"),
+				preview: (
+					<>
+						{RADII.map((radius) => (
+							<Swatch
+								key={radius.step}
+								label={radius.step}
+								style={{
+									borderRadius: radius.value,
+									backgroundColor: "var(--ui-brand-bg-tint)",
+									boxShadow: "inset 0 0 0 2px var(--ui-brand-border)",
+								}}
+							/>
+						))}
+					</>
+				),
+			},
+			calls: RADII.map((radius) => ({
+				call: `rounded("${radius.step}")`,
+				css: `border-radius: ${radius.value}`,
+			})),
+		},
+		{
+			name: "shadow",
+			signature: 'shadow(step: "xs" | "sm" | "md" | "lg" | "xl")',
+			summary: (
+				<>
+					Lifts an element off the page. Each step casts a larger, softer shadow, so a menu over a
+					card reads as higher than the card.
+				</>
+			),
+			example: {
+				code: SHADOWS.map((entry) => `<div class={shadow("${entry.step}")} />`).join("\n"),
+				preview: (
+					<LightSurface>
+						{SHADOWS.map((entry) => (
+							<Swatch
+								key={entry.step}
+								label={entry.step}
+								labelColor={swatch("stone", 600)}
+								style={{
+									borderRadius: "var(--ui-radius-lg, 0.5rem)",
+									backgroundColor: "oklch(0.995 0 0)",
+									boxShadow: `inset 0 0 0 1px ${swatch("stone", 200)}, ${entry.value}`,
+								}}
+							/>
+						))}
+					</LightSurface>
+				),
+			},
+			calls: SHADOWS.map((entry) => ({
+				call: `shadow("${entry.step}")`,
+				css: `box-shadow: ${entry.value}`,
+			})),
+		},
+		{
+			name: "opacity",
+			signature: "opacity(percent: number)",
+			summary: <>Fades an element and everything inside it, in steps of five percent.</>,
+			example: {
+				code: [100, 75, 50, 25].map((value) => `<div class={opacity(${value})} />`).join("\n"),
+				preview: (
+					<>
+						{[100, 75, 50, 25].map((value) => (
+							<Swatch
+								key={value}
+								label={`${value}`}
+								style={{
+									borderRadius: "var(--ui-radius-lg, 0.5rem)",
+									backgroundColor: "var(--ui-brand-bg-solid)",
+									boxShadow: "none",
+									opacity: `${value / 100}`,
+								}}
+							/>
+						))}
+					</>
+				),
+			},
+			calls: [100, 75, 50, 25].map((value) => ({
+				call: `opacity(${value})`,
+				css: `opacity: ${value / 100}`,
+			})),
+		},
+	],
+	next: [
+		{
+			title: "Layout",
+			href: href("utilities/layout"),
+			description: "Arrange the cards you just rounded and lifted.",
+		},
+		{
+			title: "Dark mode",
+			href: `${href("start/scales")}#dark-mode`,
+			description: "How shadows and colours follow the reader’s theme.",
 		},
 	],
 });

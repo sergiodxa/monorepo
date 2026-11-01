@@ -1,7 +1,7 @@
 /**
- * The utilities docs demo: Tempo, an invented date-and-time helpers library, documented as
- * an overview and a function reference whose long pages lean on the heading rail. Set in a
- * technical register: cool neutrals, a teal-green accent, mono headings and square corners.
+ * The utilities docs demo: Tempo, an invented library of CSS utilities, documented as two
+ * getting-started pages and a reference whose every utility is drawn doing what it does. Set
+ * in a technical register: cool neutrals, a teal-green accent, mono headings and square corners.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,13 +10,14 @@
 import type { DemoDocsSite } from "~/resources/views/demo-docs";
 
 import { demoDocsHref } from "~/resources/views/demo-docs";
-import { INSTALLATION, TIME_ZONES } from "~/resources/views/demo-docs/tempo/overview";
 import {
-	ARITHMETIC,
-	COMPARISON,
-	FORMATTING,
-	RANGES,
+	COLOR,
+	EFFECTS,
+	LAYOUT,
+	SPACING,
+	TYPOGRAPHY,
 } from "~/resources/views/demo-docs/tempo/reference";
+import { INSTALLATION, SCALES } from "~/resources/views/demo-docs/tempo/start";
 
 /** The addresses of Tempo's pages. */
 const href = demoDocsHref("tempo");
@@ -64,13 +65,14 @@ const TOKENS = {
 	"--ui-radius-lg": "0.25rem",
 } as const;
 
-/** The Tempo mark: a clock face reduced to a prompt and a cursor. */
+/** The Tempo mark: a two-by-two grid of tiles in two shades, a scale in miniature. */
 function mark() {
 	return (
 		<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-			<rect x="2" y="2" width="20" height="20" rx="3" fill="var(--ui-color-brand-600)" />
-			<path d="M7 8l4 4-4 4" fill="none" stroke="white" stroke-width="2" stroke-linecap="square" />
-			<path d="M13 16h4" stroke="white" stroke-width="2" />
+			<rect x="2" y="2" width="9" height="9" rx="1.5" fill="var(--ui-color-brand-600)" />
+			<rect x="13" y="2" width="9" height="9" rx="1.5" fill="var(--ui-color-brand-300)" />
+			<rect x="2" y="13" width="9" height="9" rx="1.5" fill="var(--ui-color-brand-300)" />
+			<rect x="13" y="13" width="9" height="9" rx="1.5" fill="var(--ui-color-brand-600)" />
 		</svg>
 	);
 }
@@ -79,84 +81,86 @@ export default {
 	name: "Tempo",
 	kind: "Utilities docs",
 	description:
-		"Reference for Tempo, an invented library of date and time helpers: signatures, parameters, returns and an example for every function.",
+		"Reference for Tempo, an invented library of CSS utilities: every spacing, colour, layout, type and effect utility drawn beside its call and the CSS it emits.",
 	mark,
 	theme: { brand: BRAND, neutral: NEUTRAL, tokens: TOKENS },
 	tree: {
 		label: "Tempo docs",
 		sections: [
 			{
-				title: "Overview",
+				title: "Get started",
 				items: [
-					{ title: "Installation", href: href("overview/installation") },
-					{ title: "Time zones", href: href("overview/time-zones") },
+					{ title: "Installation", href: href("start/installation") },
+					{ title: "Scales and tokens", href: href("start/scales") },
 				],
 			},
 			{
-				title: "Reference",
+				title: "Utilities",
 				items: [
-					{ title: "Arithmetic", href: href("reference/arithmetic") },
-					{ title: "Comparison", href: href("reference/comparison") },
-					{ title: "Formatting", href: href("reference/formatting"), badge: "Intl" },
-					{ title: "Ranges", href: href("reference/ranges") },
+					{ title: "Spacing", href: href("utilities/spacing") },
+					{ title: "Colour", href: href("utilities/colour") },
+					{ title: "Layout", href: href("utilities/layout") },
+					{ title: "Typography", href: href("utilities/typography") },
+					{ title: "Effects", href: href("utilities/effects") },
 				],
 			},
 		],
 	},
 	hub: {
-		eyebrow: "@tempo/core",
-		title: "Dates without the surprises",
-		lead: "Small, pure functions over the built-in Date: calendar-aware arithmetic, comparisons at any precision, and formatting through Intl. Every function is documented with its signature and an example.",
+		eyebrow: "@tempo/css",
+		title: "Style in step",
+		lead: "Small functions that each set one CSS declaration from a shared scale. Every utility is drawn on its page, beside the call and the CSS it emits.",
 		start: [
 			{
-				eyebrow: "Overview",
+				eyebrow: "Get started",
 				title: "Installation",
-				description: "Install the package and pick an import path.",
-				href: href("overview/installation"),
+				description: "Install the package, load the tokens and build a first card.",
+				href: href("start/installation"),
 				cta: "Install Tempo",
 			},
 			{
-				eyebrow: "Reference",
-				title: "Arithmetic",
-				description: "addDays, addMonths, addBusinessDays, subtract, difference and clamp.",
-				href: href("reference/arithmetic"),
-				cta: "Browse functions",
+				eyebrow: "Utilities",
+				title: "Spacing",
+				description: "pad, margin and gap on one quarter-rem scale.",
+				href: href("utilities/spacing"),
+				cta: "Browse utilities",
 			},
 			{
 				eyebrow: "Concept",
-				title: "Time zones",
-				description: "Instants, wall-clock time, and which zone each function uses.",
-				href: href("overview/time-zones"),
+				title: "Scales and tokens",
+				description: "Change a scale or bring your own palette.",
+				href: href("start/scales"),
 				cta: "Read the concept",
 			},
 		],
 		topics: [
-			{ title: "addBusinessDays", href: `${href("reference/arithmetic")}#addBusinessDays` },
-			{ title: "isSame", href: `${href("reference/comparison")}#isSame` },
-			{ title: "formatRelative", href: `${href("reference/formatting")}#formatRelative` },
-			{ title: "overlaps", href: `${href("reference/ranges")}#overlaps` },
+			{ title: "The palettes", href: `${href("utilities/colour")}#palettes` },
+			{ title: "grid", href: `${href("utilities/layout")}#grid` },
+			{ title: "The type scale", href: `${href("utilities/typography")}#the-type-scale` },
+			{ title: "shadow", href: `${href("utilities/effects")}#shadow` },
 		],
 		sections: [
 			{
-				title: "Overview",
-				href: href("overview/installation"),
-				description: "Install, import, and how time zones work.",
+				title: "Get started",
+				href: href("start/installation"),
+				description: "Install, load the tokens, and make the scales yours.",
 				count: 2,
 			},
 			{
-				title: "Reference",
-				href: href("reference/arithmetic"),
-				description: "Every function, grouped by what it does.",
-				countLabel: "19 functions",
+				title: "Utilities",
+				href: href("utilities/spacing"),
+				description: "Every utility, drawn and grouped by what it styles.",
+				countLabel: "16 utilities",
 			},
 		],
 	},
 	pages: {
-		"overview/installation": INSTALLATION,
-		"overview/time-zones": TIME_ZONES,
-		"reference/arithmetic": ARITHMETIC,
-		"reference/comparison": COMPARISON,
-		"reference/formatting": FORMATTING,
-		"reference/ranges": RANGES,
+		"start/installation": INSTALLATION,
+		"start/scales": SCALES,
+		"utilities/spacing": SPACING,
+		"utilities/colour": COLOR,
+		"utilities/layout": LAYOUT,
+		"utilities/typography": TYPOGRAPHY,
+		"utilities/effects": EFFECTS,
 	},
 } satisfies DemoDocsSite;
