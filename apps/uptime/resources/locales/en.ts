@@ -1329,6 +1329,51 @@ export default {
 		},
 
 		layout: {
+			filters: {
+				filters: "Filters",
+				apply: "Apply",
+				is: "is",
+				isAnyOf: "is any of",
+				clear: "Clear filters",
+				remove: "Remove {$field}: {$values}",
+			},
+			palette: {
+				title: "Command menu",
+				open: "Open command menu",
+				placeholder: "Search pages or run a command…",
+				recent: "Recent",
+				noResults: "No results for",
+				noResultsHint: "Try a page name, such as “alerts”, or a command, such as “create monitor”.",
+				results: "\\{count\\} results",
+				back: "Back",
+				close: "Close",
+				trigger: "Search or jump to…",
+				groups: { navigate: "Go to", create: "Create", team: "Team" },
+				switchTeam: "Switch Team…",
+				switchTeamPlaceholder: "Search your teams…",
+				alertHistory: "Alert History",
+				create: {
+					http: "Create HTTP Monitor",
+					dns: "Create DNS Monitor",
+					tcp: "Create TCP Monitor",
+					flow: "Create Flow Monitor",
+					cron: "Create Cron Job",
+					alert: "Create Alert",
+					statusPage: "Create Status Page",
+					maintenance: "Schedule Maintenance",
+				},
+			},
+			help: {
+				title: "Keyboard shortcuts",
+				description: "Every key this page answers.",
+				close: "Close",
+				or: "or",
+				open: "Show keyboard shortcuts",
+				general: "General",
+				other: "Other",
+				trigger: "Keyboard shortcuts",
+			},
+			attention: "{$count} need attention",
 			keys: {
 				group: "List",
 				next: "Next row",
@@ -2022,6 +2067,8 @@ export default {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to add domains to this team.",
 				alreadyExists: "{$hostname} was added on {$verifiedAt}.",
+				invalidHostname: "Enter a valid domain.",
+				alreadyVerified: "{$hostname} is already verified for this team.",
 			},
 
 			success: {
@@ -2038,6 +2085,7 @@ export default {
 			},
 
 			success: "{$name}'s role was changed to {$role} in {$team}.",
+			updated: "Role updated.",
 		},
 
 		createAlert: {
@@ -2058,6 +2106,7 @@ export default {
 				generic: "Oops! Something went wrong.",
 				notAllowed: "You are not allowed to invite members to this team.",
 				alreadyAccepted: "There's already a member of {$team} with this email.",
+				invalidEmail: "Enter a valid email address.",
 			},
 
 			success: "{$email} was invited to join {$team}.",
@@ -2186,6 +2235,7 @@ export default {
 				generic: "Oops! Something went wrong while deleting the team.",
 				forbidden: "Only the team owner can delete the team.",
 				confirmationRequired: "Please type DELETE to confirm.",
+				nameMismatch: "Type the team's name to confirm.",
 			},
 
 			success: "{$team} has been deleted.",
@@ -2260,6 +2310,7 @@ export default {
 		createTeam: {
 			errors: {
 				generic: "Oops! Something went wrong while creating the team.",
+				name: "Enter a team name of 255 characters or fewer.",
 			},
 
 			success: {
@@ -2709,6 +2760,7 @@ export default {
 		editMonitor: {
 			header: {
 				title: "Edit Monitor",
+				named: "Edit {$name}",
 			},
 
 			alert: {
@@ -3615,12 +3667,6 @@ export default {
 			filters: {
 				toolbar: "Filter monitors",
 				tabs: "Monitor views",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				status: "Status",
 				search: {
 					label: "Search monitors",
@@ -3714,12 +3760,6 @@ export default {
 		dnsMonitors: {
 			filters: {
 				toolbar: "Filter DNS monitors",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				search: "Search DNS monitors",
 				searchPlaceholder: "Search by name or domain",
 				status: "Status",
@@ -4581,12 +4621,6 @@ export default {
 
 			filters: {
 				toolbar: "Filter alert history",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				event: "Event",
 				status: "Delivery",
 			},
@@ -5647,12 +5681,6 @@ export default {
 			filters: {
 				toolbar: "Filter flow monitors",
 				tabs: "Flow monitor views",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				status: "Status",
 				search: {
 					label: "Search flow monitors",
@@ -5835,12 +5863,6 @@ export default {
 		tcpMonitors: {
 			filters: {
 				toolbar: "Filter TCP monitors",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				search: "Search TCP monitors",
 				searchPlaceholder: "Search by name or host",
 				status: "Status",
@@ -6314,12 +6336,6 @@ export default {
 			filters: {
 				toolbar: "Filter cron jobs",
 				tabs: "Cron job views",
-				filters: "Filters",
-				apply: "Apply",
-				is: "is",
-				isAnyOf: "is any of",
-				clear: "Clear filters",
-				remove: "Remove {$field}: {$values}",
 				status: "Status",
 				search: {
 					label: "Search cron jobs",

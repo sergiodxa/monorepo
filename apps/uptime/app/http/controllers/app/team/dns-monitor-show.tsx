@@ -35,6 +35,7 @@ import type { SelectDnsMonitor, SelectDnsMonitorRecord } from "~/database/schema
 import type { BadgeTone } from "~/resources/components/badge";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -93,7 +94,7 @@ function recordStateTone(record: SelectDnsMonitorRecord): BadgeTone {
  * overflow menu and appears only for a member allowed to delete monitors.
  */
 export default createAction(routes.app.team.dnsMonitors.show, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

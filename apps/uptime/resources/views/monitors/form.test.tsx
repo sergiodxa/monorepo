@@ -12,6 +12,7 @@ import { createTranslator } from "@sdxc/i18n";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { SelectMonitor } from "~/database/schema";
 
 import en from "~/resources/locales/en";
@@ -23,6 +24,16 @@ let { intl } = createTranslator({
 	supportedLanguages: ["en"],
 	fallbackLanguage: "en",
 })();
+
+/** A refused submission posting `fields`, with `issues` already translated. */
+function submissionOf(
+	fields: Record<string, string>,
+	issues: FormSubmission["issues"],
+): FormSubmission {
+	let values = new FormData();
+	for (let [name, value] of Object.entries(fields)) values.set(name, value);
+	return { values, issues };
+}
 
 /** A saved monitor whose region and expected status are both away from the form's create-time defaults. */
 function monitor(overrides: Partial<SelectMonitor> = {}): SelectMonitor {
@@ -117,14 +128,17 @@ describe("MonitorFormFields", () => {
 
 	test("draws a failed submission's values over the saved ones", async () => {
 		let saved = monitor();
-		let values = { name: "Typed", url: "not-a-url", expected_status: "404", location_hint: "apac" };
+		let submission = submissionOf(
+			{ name: "Typed", url: "not-a-url", expected_status: "404", location_hint: "apac" },
+			[],
+		);
 		let basics = await renderToString(
 			<MonitorFormFields
 				monitor={saved}
 				intl={intl}
 				page="editMonitor"
 				group="basics"
-				values={values}
+				submission={submission}
 			/>,
 		);
 		let checks = await renderToString(
@@ -133,7 +147,7 @@ describe("MonitorFormFields", () => {
 				intl={intl}
 				page="editMonitor"
 				group="checks"
-				values={values}
+				submission={submission}
 			/>,
 		);
 
@@ -150,8 +164,9 @@ describe("MonitorFormFields", () => {
 				intl={intl}
 				page="createMonitor"
 				group="basics"
-				values={{ name: "Homepage", url: "nope" }}
-				errors={{ url: "Enter a full URL." }}
+				submission={submissionOf({ name: "Homepage", url: "nope" }, [
+					{ message: "Enter a full URL.", path: ["url"] },
+				])}
 			/>,
 		);
 

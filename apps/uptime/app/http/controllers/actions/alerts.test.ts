@@ -257,7 +257,7 @@ describe("POST /actions/:team/create-alert", () => {
 			},
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="https://hooks.slack.example/services/T000/B000/XXXX"');
 		expect(body).toContain("Enter a Slack incoming webhook URL, on hooks.slack.com.");
@@ -279,7 +279,7 @@ describe("POST /actions/:team/create-alert", () => {
 			emailAlertBody({ email_to: "ops@nomail.example" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="ops@nomail.example"');
 		expect(body).toContain("nomail.example does not accept email.");
@@ -322,7 +322,7 @@ describe("POST /actions/:team/create-alert", () => {
 			emailAlertBody({ name: "", email_subject_prefix: "[ops]", cooldown_minutes: "15" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="ops@example.com"');
 		expect(body).toContain('value="[ops]"');
@@ -346,7 +346,7 @@ describe("POST /actions/:team/create-alert", () => {
 			emailAlertBody({ email_to: "not-an-email" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="not-an-email"');
 		expect(body).toContain("Enter the email address to send alerts to.");
@@ -435,7 +435,7 @@ describe("POST /actions/:team/create-alert", () => {
 				emailAlertBody({ scope }),
 			);
 
-			expect(response.status).toBe(400);
+			expect(response.status).toBe(422);
 			expect(await response.text()).toContain(
 				"Pick a scope from the list. The monitor this one named is gone.",
 			);
@@ -611,7 +611,7 @@ describe("POST /actions/:team/update-alert", () => {
 			emailAlertBody({ alert_id: alert.id, name: "", email_to: "new@example.com" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="new@example.com"');
 		expect(body).toContain(`value="${alert.id}"`);

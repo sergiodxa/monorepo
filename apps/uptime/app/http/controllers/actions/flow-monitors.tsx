@@ -20,10 +20,9 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { FlowMonitorFormValues } from "~/resources/views/flow-monitors/form";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { SelectFlowMonitor } from "~/database/schema";
 
-import { renderEditFlowMonitorPage } from "~/app/http/controllers/app/team/flow-monitor-edit";
-import { renderNewFlowMonitorPage } from "~/app/http/controllers/app/team/flow-monitor-new";
 import {
 	CreateFlowMonitorSchema,
 	FlowMonitorIdSchema,
@@ -33,7 +32,8 @@ import abilities from "~/app/policies/abilities";
 import { writePingResult } from "~/app/services/analytics";
 import { planFlowBilling, settleFlowBilling } from "~/app/services/flow-billing";
 import { inspectFlowSource, runFlowCheck } from "~/app/services/flow-check";
-import { DEFAULT_FLOW_INTERVAL_SECONDS } from "~/config/pricing";
+import EditFlowMonitorPage from "~/resources/views/flow-monitors/edit-page";
+import NewFlowMonitorPage from "~/resources/views/flow-monitors/new-page";
 import routes from "~/routes/web";
 
 /** The `page.flowMonitors.form.errors.*` message for each field the schema checks. */
@@ -42,24 +42,6 @@ const FIELD_ERRORS: Record<string, string> = {
 	source: "source",
 	interval_seconds: "interval",
 };
-
-/**
- * What was submitted, in the shape the form reads, so a refused submit renders every field as
- * typed. An unchecked switch submits nothing, which reads as off.
- */
-function submittedValues(formData: FormData): FlowMonitorFormValues {
-	let text = (name: string) => {
-		let value = formData.get(name);
-		return typeof value === "string" ? value : "";
-	};
-
-	return {
-		name: text("name"),
-		source: text("source"),
-		interval_seconds: Number(text("interval_seconds")) || DEFAULT_FLOW_INTERVAL_SECONDS,
-		is_enabled: text("is_enabled") === "true",
-	};
-}
 
 /**
  * The schema's issues as one translated message per field, in the order they were found,
@@ -80,23 +62,30 @@ function formIssues(issues: ValidationError["issues"], t: Translate): Form.Issue
 	}));
 }
 
-/** POST /actions/:team/create-flow-monitor; a refused submit answers 400 with the form as typed. */
+/** POST /actions/:team/create-flow-monitor; a refused submit answers 422 with the form as typed. */
 export const createFlowMonitor = createAction(routes.actions.monitor.flow.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateFlowMonitorSchema);
 	let session = ctx.get(Session);
 
+	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
+
+	/** Draws the new-monitor page again holding the refused submission, answered as 422. */
+	let sendBack = (submission: FormSubmission) =>
+		ctx.render(<NewFlowMonitorPage verifiedDomains={verifiedDomains} submission={submission} />, {
+			status: 422,
+		});
+
 	if (isFailure(result)) {
-		return renderNewFlowMonitorPage({
-			values: submittedValues(ctx.formData),
+		return sendBack({
+			values: ctx.formData,
 			issues: formIssues(result.error.issues, ctx.intl.t),
 		});
 	}
 
-	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(result.data.source, verifiedDomains);
 	if (!inspection.ok) {
-		return renderNewFlowMonitorPage({
-			values: submittedValues(ctx.formData),
+		return sendBack({
+			values: ctx.formData,
 			issues: [{ message: inspection.message, path: ["source"] }],
 		});
 	}
@@ -122,12 +111,30 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 });
 
 /**
- * POST /actions/:team/update-flow-monitor; a refused submit answers 400 with the form as typed,
+ * POST /actions/:team/update-flow-monitor; a refused submit answers 422 with the form as typed,
  * or redirects back when the monitor it names is not the team's.
  */
 export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateFlowMonitorSchema);
 	let session = ctx.get(Session);
+
+	/**
+	 * Draws `monitor`'s edit page again holding the refused submission, answered as 422, with
+	 * the danger zone shown to a member allowed to delete flow monitors.
+	 */
+	let sendBack = async (monitor: SelectFlowMonitor, submission: FormSubmission) => {
+		await ctx.access.load(abilities.flowMonitors.delete);
+		let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
+		return ctx.render(
+			<EditFlowMonitorPage
+				monitor={monitor}
+				canDelete={ctx.access.can(abilities.flowMonitors.delete)}
+				verifiedDomains={verifiedDomains}
+				submission={submission}
+			/>,
+			{ status: 422 },
+		);
+	};
 
 	if (isFailure(result)) {
 		let monitorId = ctx.formData.get("monitor_id");
@@ -136,8 +143,8 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 				? await ctx.models.flowMonitors.inTeam(ctx.team.id).find(monitorId)
 				: null;
 		if (monitor) {
-			return renderEditFlowMonitorPage(monitor, {
-				values: submittedValues(ctx.formData),
+			return sendBack(monitor, {
+				values: ctx.formData,
 				issues: formIssues(result.error.issues, ctx.intl.t),
 			});
 		}
@@ -165,8 +172,8 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(values.source, verifiedDomains);
 	if (!inspection.ok) {
-		return renderEditFlowMonitorPage(existing, {
-			values: submittedValues(ctx.formData),
+		return sendBack(existing, {
+			values: ctx.formData,
 			issues: [{ message: inspection.message, path: ["source"] }],
 		});
 	}

@@ -223,7 +223,7 @@ describe("createMaintenanceWindow", () => {
 			},
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Not our monitor"');
 		expect(body).toContain("Pick a scope from the list. The monitor this one named is gone.");
@@ -243,7 +243,7 @@ describe("createMaintenanceWindow", () => {
 			{ name: "Bad window", starts_at: "2026-08-01T02:00", ends_at: "2026-08-01T00:00" },
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Bad window"');
 		expect(body).toContain('value="2026-08-01T02:00"');
@@ -356,7 +356,7 @@ describe("updateMaintenanceWindow", () => {
 			},
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Renamed"');
 		expect(body).toContain("End the window after it starts.");

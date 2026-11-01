@@ -1284,6 +1284,52 @@ export default {
 		},
 
 		layout: {
+			filters: {
+				filters: "Filter",
+				apply: "Anwenden",
+				is: "ist",
+				isAnyOf: "ist einer von",
+				clear: "Filter zurücksetzen",
+				remove: "{$field}: {$values} entfernen",
+			},
+			palette: {
+				title: "Befehlsmenü",
+				open: "Befehlsmenü öffnen",
+				placeholder: "Seiten suchen oder Befehl ausführen…",
+				recent: "Zuletzt verwendet",
+				noResults: "Keine Ergebnisse für",
+				noResultsHint:
+					"Versuche einen Seitennamen wie „Warnungen“ oder einen Befehl wie „Monitor erstellen“.",
+				results: "\\{count\\} Ergebnisse",
+				back: "Zurück",
+				close: "Schließen",
+				trigger: "Suchen oder springen zu…",
+				groups: { navigate: "Gehe zu", create: "Erstellen", team: "Team" },
+				switchTeam: "Team wechseln…",
+				switchTeamPlaceholder: "Deine Teams durchsuchen…",
+				alertHistory: "Warnungsverlauf",
+				create: {
+					http: "HTTP-Monitor erstellen",
+					dns: "DNS-Monitor erstellen",
+					tcp: "TCP-Monitor erstellen",
+					flow: "Flow-Monitor erstellen",
+					cron: "Cron-Job erstellen",
+					alert: "Warnung erstellen",
+					statusPage: "Statusseite erstellen",
+					maintenance: "Wartung planen",
+				},
+			},
+			help: {
+				title: "Tastenkürzel",
+				description: "Alle Tasten, auf die diese Seite reagiert.",
+				close: "Schließen",
+				or: "oder",
+				open: "Tastenkürzel anzeigen",
+				general: "Allgemein",
+				other: "Sonstige",
+				trigger: "Tastenkürzel",
+			},
+			attention: "{$count} brauchen Aufmerksamkeit",
 			keys: {
 				group: "Liste",
 				next: "Nächste Zeile",
@@ -1968,6 +2014,8 @@ export default {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				notAllowed: "Sie sind nicht berechtigt, Domains zu diesem Team hinzuzufügen.",
 				alreadyExists: "{$hostname} wurde am {$verifiedAt} hinzugefügt.",
+				invalidHostname: "Geben Sie eine gültige Domain ein.",
+				alreadyVerified: "{$hostname} ist für dieses Team bereits verifiziert.",
 			},
 
 			success: {
@@ -1984,6 +2032,7 @@ export default {
 			},
 
 			success: "Die Rolle von {$name} wurde in {$team} zu {$role} geändert.",
+			updated: "Rolle aktualisiert.",
 		},
 
 		createAlert: {
@@ -2005,6 +2054,7 @@ export default {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
 				notAllowed: "Sie sind nicht berechtigt, Mitglieder zu diesem Team einzuladen.",
 				alreadyAccepted: "Es gibt bereits ein Mitglied von {$team} mit dieser E-Mail.",
+				invalidEmail: "Geben Sie eine gültige E-Mail-Adresse ein.",
 			},
 
 			success: "{$email} wurde eingeladen, {$team} beizutreten.",
@@ -2135,6 +2185,7 @@ export default {
 				generic: "Hoppla! Beim Löschen des Teams ist etwas schiefgelaufen.",
 				forbidden: "Nur der Team-Eigentümer kann das Team löschen.",
 				confirmationRequired: "Bitte geben Sie DELETE zur Bestätigung ein.",
+				nameMismatch: "Geben Sie zur Bestätigung den Namen des Teams ein.",
 			},
 
 			success: "{$team} wurde gelöscht.",
@@ -2211,6 +2262,7 @@ export default {
 		createTeam: {
 			errors: {
 				generic: "Hoppla! Beim Erstellen des Teams ist etwas schiefgelaufen.",
+				name: "Geben Sie einen Teamnamen mit höchstens 255 Zeichen ein.",
 			},
 
 			success: {
@@ -2668,6 +2720,7 @@ export default {
 		editMonitor: {
 			header: {
 				title: "Monitor bearbeiten",
+				named: "{$name} bearbeiten",
 			},
 
 			alert: {
@@ -3584,12 +3637,6 @@ export default {
 			filters: {
 				toolbar: "Monitore filtern",
 				tabs: "Monitoransichten",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist eines von",
-				clear: "Filter entfernen",
-				remove: "{$field}: {$values} entfernen",
 				status: "Status",
 				search: {
 					label: "Monitore durchsuchen",
@@ -3684,12 +3731,6 @@ export default {
 		dnsMonitors: {
 			filters: {
 				toolbar: "DNS-Monitore filtern",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist einer von",
-				clear: "Filter zurücksetzen",
-				remove: "{$field}: {$values} entfernen",
 				search: "DNS-Monitore durchsuchen",
 				searchPlaceholder: "Nach Name oder Domain suchen",
 				status: "Status",
@@ -4565,12 +4606,6 @@ export default {
 
 			filters: {
 				toolbar: "Benachrichtigungsverlauf filtern",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist eines von",
-				clear: "Filter entfernen",
-				remove: "{$field} entfernen: {$values}",
 				event: "Ereignis",
 				status: "Zustellung",
 			},
@@ -5637,12 +5672,6 @@ export default {
 			filters: {
 				toolbar: "Flow-Monitore filtern",
 				tabs: "Ansichten der Flow-Monitore",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist eines von",
-				clear: "Filter entfernen",
-				remove: "{$field} entfernen: {$values}",
 				status: "Status",
 				search: {
 					label: "Flow-Monitore durchsuchen",
@@ -5829,12 +5858,6 @@ export default {
 		tcpMonitors: {
 			filters: {
 				toolbar: "TCP-Monitore filtern",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist einer von",
-				clear: "Filter zurücksetzen",
-				remove: "{$field}: {$values} entfernen",
 				search: "TCP-Monitore durchsuchen",
 				searchPlaceholder: "Nach Name oder Host suchen",
 				status: "Status",
@@ -6325,12 +6348,6 @@ export default {
 			filters: {
 				toolbar: "Cron Jobs filtern",
 				tabs: "Ansichten der Cron Jobs",
-				filters: "Filter",
-				apply: "Anwenden",
-				is: "ist",
-				isAnyOf: "ist eines von",
-				clear: "Filter entfernen",
-				remove: "{$field} entfernen: {$values}",
 				status: "Status",
 				search: {
 					label: "Cron Jobs durchsuchen",

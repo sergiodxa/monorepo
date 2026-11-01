@@ -1,6 +1,6 @@
 /**
  * Form actions for alert create/update/delete. A refused create or update renders its form
- * again with every posted value and an issue beside each field to fix, answered as 400; a
+ * again with every posted value and an issue beside each field to fix, answered as 422; a
  * success flashes a toast and redirects to the alerts list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,6 +11,7 @@ import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
+import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
@@ -30,7 +31,7 @@ import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
 import { parseMonitorScope } from "~/app/services/monitor-scope";
-import { isResolvableScope } from "~/app/services/scope-monitors";
+import { isResolvableScope, listScopeMonitors } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 
 /** Builds the strategy-specific `AlertConfig` JSON column from the flat form values. */
@@ -140,10 +141,19 @@ function alertSubmission(
 	};
 }
 
-/** Renders the new-alert form again with `submission`, loading the page only on this path. */
+/**
+ * Renders the new-alert form again with `submission`, answered as 422, loading the page only
+ * on this path.
+ */
 async function sendBackToNew(submission: FormSubmission): Promise<Response> {
-	let { renderNewAlertPage } = await import("~/app/http/controllers/app/team/alert-new");
-	return renderNewAlertPage(submission);
+	let ctx = getContext();
+	let [{ default: NewAlertPage }, scopeGroups] = await Promise.all([
+		import("~/resources/views/alerts/new-page"),
+		listScopeMonitors(ctx.models, ctx.team.id),
+	]);
+	return ctx.render(<NewAlertPage scopeGroups={scopeGroups} submission={submission} />, {
+		status: 422,
+	});
 }
 
 /** POST /actions/:team/create-alert */
@@ -224,10 +234,19 @@ export const updateAlert = createAction(routes.actions.alert.update, async (ctx)
 		typeof alertId === "string" ? await ctx.models.alerts.inTeam(ctx.team.id).find(alertId) : null;
 	if (!existing) return notFound("Not Found");
 
-	/** Renders this alert's edit form again with `submission`, loading the page only on this path. */
+	/**
+	 * Renders this alert's edit form again with `submission`, answered as 422, loading the page
+	 * only on this path.
+	 */
 	let sendBack = async (submission: FormSubmission) => {
-		let { renderEditAlertPage } = await import("~/app/http/controllers/app/team/alert-edit");
-		return renderEditAlertPage(existing, submission);
+		let [{ default: EditAlertPage }, scopeGroups] = await Promise.all([
+			import("~/resources/views/alerts/edit-page"),
+			listScopeMonitors(ctx.models, ctx.team.id),
+		]);
+		return ctx.render(
+			<EditAlertPage alert={existing} scopeGroups={scopeGroups} submission={submission} />,
+			{ status: 422 },
+		);
 	};
 
 	if (isFailure(result)) {

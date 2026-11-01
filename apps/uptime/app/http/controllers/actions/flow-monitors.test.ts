@@ -253,7 +253,7 @@ describe("createFlowMonitor", () => {
 			},
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain("Somebody else");
 		expect(body).toContain("victim.invalid.test");
@@ -290,7 +290,7 @@ describe("createFlowMonitor", () => {
 			{ name: "Too often", source: flowWith(1), interval_seconds: "60" },
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Too often"');
 		expect(body).toContain("walks the flow");
@@ -353,7 +353,7 @@ describe("updateFlowMonitor", () => {
 			},
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		expect(await response.text()).toContain("https://victim.invalid.test/x");
 		let unchanged = await db.findOne(flowMonitors, { where: { id: monitor.id } });
 		expect(unchanged?.source).toBe(flowWith(1));

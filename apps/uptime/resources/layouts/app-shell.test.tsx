@@ -15,6 +15,8 @@ import { createI18n } from "@sdxc/i18n";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
+import type { AppShellData } from "~/app/http/middleware/app-shell-data";
+
 import de from "~/resources/locales/de";
 import en from "~/resources/locales/en";
 
@@ -23,7 +25,7 @@ import AppShell from "./app-shell";
 const RESOURCES: Record<string, Messages> = { en, de };
 
 /** Queues a toast so the flash region appears in the markup when rendering the shell in `locale`. */
-function render(locale: "en" | "de") {
+function render(locale: "en" | "de", data: AppShellData | null = null) {
 	return renderToString(
 		<AppShell
 			team={{ id: "team-1", slug: "acme", name: "Acme", logo: null }}
@@ -31,6 +33,7 @@ function render(locale: "en" | "de") {
 			viewer={{ name: "Ada", email: "ada@acme.test", avatar: "" }}
 			isAdmin
 			collapsed={false}
+			data={data}
 			intl={createI18n({ locale, fallbackLanguage: "en", resources: RESOURCES })}
 			heading="Dashboard"
 			breadcrumbs={[{ label: "Monitors" }]}
@@ -70,5 +73,43 @@ describe("AppShell", () => {
 		expect(html).toContain(`aria-label="${de.app.layout.breadcrumbs.label}"`);
 		expect(html).toContain(`aria-label="${de.app.layout.sidebar.userMenu.label}"`);
 		expect(html).toContain(de.app.layout.sidebar.account.signOut);
+	});
+
+	test("counts each kind's failing monitors beside its nav row, named for a screen reader", async () => {
+		let html = await render("en", {
+			attention: { http: 2, dns: 0, tcp: 0, flow: 0, cron: 1 },
+			billingProblem: false,
+			isOwner: true,
+		});
+
+		expect(html).toContain(">2 need attention<");
+		expect(html).toContain(">1 need attention<");
+		expect(html).not.toContain("0 need attention");
+	});
+
+	test("shows the billing banner with the payment link to the owner only", async () => {
+		let asOwner = await render("en", {
+			attention: { http: 0, dns: 0, tcp: 0, flow: 0, cron: 0 },
+			billingProblem: true,
+			isOwner: true,
+		});
+		let asMember = await render("en", {
+			attention: { http: 0, dns: 0, tcp: 0, flow: 0, cron: 0 },
+			billingProblem: true,
+			isOwner: false,
+		});
+
+		expect(asOwner).toContain(en.page.billing.banner.cta);
+		expect(asMember).toContain(en.page.billing.banner.member);
+		expect(asMember).not.toContain(en.page.billing.banner.cta);
+	});
+
+	test("offers every destination in the command palette with its g-key", async () => {
+		let html = await render("en");
+
+		expect(html).toContain(`aria-label="${en.app.layout.palette.title}"`);
+		expect(html).toContain(en.app.layout.palette.create.http);
+		expect(html).toContain('data-palette-shortcut="g h"');
+		expect(html).toContain(`aria-label="${en.app.layout.help.trigger}"`);
 	});
 });

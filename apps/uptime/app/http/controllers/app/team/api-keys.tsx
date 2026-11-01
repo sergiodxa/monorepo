@@ -20,13 +20,12 @@ import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import abilities from "~/app/policies/abilities";
-import { hasBillingProblem } from "~/app/services/billing-problem";
-import BillingBanner from "~/resources/components/billing-banner";
 import CopyButton from "~/resources/components/copy-button";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -50,15 +49,18 @@ interface Toast {
  * only while the team is under its key limit.
  */
 export default createAction(routes.app.team.apiKeys.index, {
-	middleware: [requireUser, requireTeam, teamAccess, requireAbility(abilities.apiKeys.read)],
+	middleware: [
+		requireUser,
+		requireTeam,
+		appShellData(),
+		teamAccess,
+		requireAbility(abilities.apiKeys.read),
+	],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let [apiKeys, billingProblem] = await Promise.all([
-			ctx.models.apiKeys.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
-			hasBillingProblem(ctx.models, ctx.team.owner_id),
-		]);
+		let apiKeys = await ctx.models.apiKeys.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
 		let session = ctx.get(Session);
 		let newApiKey = session?.get("newApiKey") as NewApiKey | undefined;
 		let toast = session?.get("toast") as Toast | undefined;
@@ -79,15 +81,6 @@ export default createAction(routes.app.team.apiKeys.index, {
 					intl={ctx.intl}
 					heading={t("page.apiKeys.header.title")}
 					toast={toast}
-					banner={
-						billingProblem ? (
-							<BillingBanner
-								intl={ctx.intl}
-								teamSlug={ctx.team.slug}
-								isOwner={viewer.id === ctx.team.owner_id}
-							/>
-						) : undefined
-					}
 					primaryAction={
 						canCreate && apiKeys.length > 0 ? (
 							<LinkButton href={newKeyHref}>

@@ -11,14 +11,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestHandler } from "remix/router";
+import type { RemixNode } from "remix/component";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
 import { database } from "@sdxc/database-middleware";
+import { createTranslator } from "@sdxc/i18n";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { describe, expect, test, vi } from "vitest";
@@ -28,8 +32,10 @@ import type { SelectTeam } from "~/database/schema";
 
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { bindModels } from "~/app/test/models";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 let accountActions = await import("./account");
@@ -50,12 +56,34 @@ function createFakeSession() {
 	return { destroy: vi.fn(() => {}), flash: vi.fn(() => {}) };
 }
 
-/** Installs `ctx.get(Auth)` directly, standing in for the real session-backed `auth()` middleware. */
+/** The translator the app's language middleware would provide, for the actions' copy. */
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
+	};
+}
+
+/**
+ * Installs `ctx.get(Auth)` directly, standing in for the real session-backed `auth()`
+ * middleware, plus the translator the language middleware would provide.
+ */
 function viewerMiddleware(
 	viewer: Viewer,
 	session?: ReturnType<typeof createFakeSession>,
 ): Middleware {
 	return (ctx, next) => {
+		ctx.locale = "en";
+		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		if (session) ctx.set(Session, session as unknown as SessionType);
 		return next();
@@ -86,7 +114,14 @@ async function postAccountAction(
 	} = {},
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(db), models(), formData()],
+		middleware: [
+			asyncContext(),
+			database(db),
+			models(),
+			formData(),
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	(router.map as LooseRouterMap)(route, {
 		middleware: [viewerMiddleware(viewer, options.session)],
@@ -189,8 +224,33 @@ describe("POST /actions/create-team", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("Enter a team name.");
+		expect(await response.text()).toContain(en.actions.createTeam.errors.name);
 		expect(await db.count(teams, { where: { owner_id: viewer.id } })).toBe(0);
+	});
+
+	test("draws the account page again with the create-team dialog open on a refused name", async () => {
+		let { db } = createTestDatabase();
+		let viewer = createViewer();
+		let shellTeam = await createTeamRow(db, { owner_id: viewer.id });
+		await createMembershipRow(db, shellTeam.id, viewer.id, "admin");
+		let name = "a".repeat(256);
+
+		let response = await postAccountAction(
+			createTeam,
+			routes.accountActions.createTeam,
+			viewer,
+			db,
+			{ name, team: shellTeam.slug },
+		);
+
+		expect(response.status).toBe(422);
+		let dialog = /<dialog[^>]*id="create-team"[^>]*>[\s\S]*?<\/dialog>/.exec(
+			await response.text(),
+		)?.[0];
+		expect(dialog).toMatch(/<dialog[^>]*\sopen/);
+		expect(dialog).toMatch(new RegExp(`<input[^>]*name="name"[^>]*value="${name}"`));
+		expect(dialog).toContain(en.actions.createTeam.errors.name);
+		expect(await db.count(teams, { where: { owner_id: viewer.id } })).toBe(1);
 	});
 });
 

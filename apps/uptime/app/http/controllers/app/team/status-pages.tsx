@@ -16,6 +16,7 @@ import { Empty, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -31,7 +32,7 @@ interface Toast {
 
 /** GET /app/:team/status-pages — the team's status pages list. */
 export default createAction(routes.app.team.statusPages.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

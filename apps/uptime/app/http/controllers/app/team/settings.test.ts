@@ -33,6 +33,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { admin } from "~/app/http/middleware/admin";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
@@ -121,7 +122,7 @@ async function renderSettings(db: Database, team: SelectTeam, membership: Select
 		],
 	});
 	router.map(routes.app.team.settings, {
-		middleware: [seedTeam(team, membership)],
+		middleware: [seedTeam(team, membership), appShellData()],
 		handler: (settingsModule.default as { handler: RequestHandler<any> }).handler,
 	});
 

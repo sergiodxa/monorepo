@@ -7,25 +7,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
-import type { ValidationError } from "@sdxc/validate";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { MonitorsImportForm } from "~/app/http/controllers/app/team/monitors-import";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
 
-import { renderMonitorsImportPage } from "~/app/http/controllers/app/team/monitors-import";
 import { getViewer } from "~/app/http/middleware/auth";
+import { translateIssues } from "~/app/http/validators/form-submission";
 import {
 	ImportMonitorsSchema,
 	MAX_IMPORT_LINES,
 	parseMonitorImportList,
 } from "~/app/http/validators/monitor-import";
+import MonitorsImportPage from "~/resources/views/monitors/import-page";
 import routes from "~/routes/web";
 
 /**
@@ -36,37 +34,26 @@ import routes from "~/routes/web";
  */
 export const MONITOR_IMPORT_REPORT = "monitorImport";
 
-/** The status a redrawn form answers with: the request was understood, its values were not. */
-const INVALID_FORM_STATUS = 400;
-
-/** The fields the import form posts. */
-const IMPORT_FIELDS = ["urls", "interval_seconds"] as const;
-
-/** What a submission typed into each field, as posted, so a redraw shows it unchanged. */
-function submittedValues(form: FormData): NonNullable<MonitorsImportForm["values"]> {
-	let values: NonNullable<MonitorsImportForm["values"]> = {};
-	for (let field of IMPORT_FIELDS) {
-		let value = form.get(field);
-		if (typeof value === "string") values[field] = value;
-	}
-	return values;
-}
-
-/** The translated message for each field a validation failure names. */
-function fieldErrors(
-	error: ValidationError,
-	t: Translate,
-): NonNullable<MonitorsImportForm["errors"]> {
-	let errors: NonNullable<MonitorsImportForm["errors"]> = {};
-	for (let issue of error.issues) {
-		let segment = issue.path?.[0];
-		let key = typeof segment === "object" && segment !== null ? segment.key : segment;
-		if (key === "urls") {
-			errors.urls = t("page.monitorForm.errors.importUrls", { limit: MAX_IMPORT_LINES });
-		}
-		if (key === "interval_seconds") errors.interval_seconds = t("page.monitorForm.errors.interval");
-	}
-	return errors;
+/**
+ * A refused submission as the import page draws it again: the body as posted and one
+ * translated message per field the schema named.
+ */
+function importSubmission(
+	t: (key: string, values?: Record<string, unknown>) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	return {
+		values,
+		issues: translateIssues(issues, (field) =>
+			field === "urls"
+				? { field, message: t("page.monitorForm.errors.importUrls", { limit: MAX_IMPORT_LINES }) }
+				: { field, message: t("page.monitorForm.errors.interval") },
+		),
+	};
 }
 
 /**
@@ -83,12 +70,11 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 
 	let result = await validate(ctx.formData, ImportMonitorsSchema);
 	if (isFailure(result)) {
-		return renderMonitorsImportPage(
-			{
-				values: submittedValues(ctx.formData),
-				errors: fieldErrors(result.error, ctx.intl.t),
-			},
-			{ status: INVALID_FORM_STATUS },
+		return ctx.render(
+			<MonitorsImportPage
+				submission={importSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
+			/>,
+			{ status: 422 },
 		);
 	}
 

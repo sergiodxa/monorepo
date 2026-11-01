@@ -13,7 +13,7 @@ import { vstack } from "@sdxc/u/layout";
 import { Alert, Button } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 
-import type { TcpMonitorSubmission } from "~/resources/views/tcp-monitors/form";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import FormPage from "~/resources/components/form-page";
@@ -26,7 +26,7 @@ import routes from "~/routes/web";
 export namespace NewTcpMonitorPage {
 	export interface Props {
 		/** The submission the create action refused; omitted on a first visit. */
-		submission?: TcpMonitorSubmission;
+		submission?: FormSubmission;
 	}
 }
 
@@ -39,7 +39,10 @@ export default function NewTcpMonitorPage(handle: Handle<NewTcpMonitorPage.Props
 		let { submission } = handle.props;
 
 		return (
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New TCP monitor`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createTcpMonitor.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={routes.app.team.tcpMonitors.new.href({ team: ctx.team.slug })}

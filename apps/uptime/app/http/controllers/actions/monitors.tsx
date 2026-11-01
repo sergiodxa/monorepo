@@ -8,9 +8,7 @@
  */
 
 import type { RegisteredAccess } from "@sdxc/authz";
-import type { Translate } from "@sdxc/i18n";
 import type { JobEnqueuer } from "@sdxc/jobs";
-import type { ValidationError } from "@sdxc/validate";
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
@@ -23,19 +21,16 @@ import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type {
-	MonitorFormErrors,
-	MonitorFormField,
-	MonitorFormValues,
-} from "~/resources/views/monitors/form";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 
-import { renderEditMonitorPage } from "~/app/http/controllers/app/team/monitor-edit";
-import { renderNewMonitorPage } from "~/app/http/controllers/app/team/monitor-new";
 import { getViewer } from "~/app/http/middleware/auth";
+import { issueField, translateIssues } from "~/app/http/validators/form-submission";
 import { CreateMonitorSchema, UpdateMonitorSchema } from "~/app/http/validators/monitor";
 import jobs from "~/app/jobs";
 import abilities from "~/app/policies/abilities";
 import { trackSecondMonitorCreated } from "~/app/services/funnel-events";
+import EditMonitorPage from "~/resources/views/monitors/edit-page";
+import NewMonitorPage from "~/resources/views/monitors/new-page";
 import routes from "~/routes/web";
 
 /**
@@ -46,48 +41,40 @@ const ACTIVATION_MONITOR_COUNT = 2;
 
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
-/** The fields the create and update forms post, in the order their issues are read. */
-const MONITOR_FORM_FIELDS: readonly MonitorFormField[] = [
-	"name",
-	"url",
-	"expected_status",
-	"interval_seconds",
-	"location_hint",
-];
-
-/** The status a redrawn form answers with: the request was understood, its values were not. */
-const INVALID_FORM_STATUS = 400;
-
-/** What a submission typed into each monitor field, as posted, so a redraw shows it unchanged. */
-function submittedValues(form: FormData): MonitorFormValues {
-	let values: MonitorFormValues = {};
-	for (let field of MONITOR_FORM_FIELDS) {
-		let value = form.get(field);
-		if (typeof value === "string") values[field] = value;
-	}
-	return values;
-}
+/** The `page.monitorForm.errors` key per field the create and update forms can flag. */
+const ISSUE_KEYS: Record<string, string> = {
+	name: "name",
+	url: "url",
+	expected_status: "expectedStatus",
+	interval_seconds: "interval",
+	location_hint: "region",
+};
 
 /**
- * The translated message for each monitor field a validation failure names; issues on any
- * other field (the hidden `monitor_id`) name no visible field and are left out.
+ * A refused submission as the form page draws it again: the body as posted and one
+ * translated message per field the schema named. An issue on any other field (the hidden
+ * `monitor_id`) names no visible field and is left out.
  */
-function fieldErrors(error: ValidationError, t: Translate): MonitorFormErrors {
-	let messages: Record<MonitorFormField, string> = {
-		name: t("page.monitorForm.errors.name"),
-		url: t("page.monitorForm.errors.url"),
-		expected_status: t("page.monitorForm.errors.expectedStatus"),
-		interval_seconds: t("page.monitorForm.errors.interval"),
-		location_hint: t("page.monitorForm.errors.region"),
+function monitorSubmission(
+	t: (key: string) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	let visible = issues.filter((issue) => {
+		let field = issueField(issue);
+		return field !== undefined && field in ISSUE_KEYS;
+	});
+
+	return {
+		values,
+		issues: translateIssues(visible, (field) => ({
+			field,
+			message: t(`page.monitorForm.errors.${ISSUE_KEYS[field ?? ""]}`),
+		})),
 	};
-	let errors: MonitorFormErrors = {};
-	for (let issue of error.issues) {
-		let segment = issue.path?.[0];
-		let key = typeof segment === "object" && segment !== null ? segment.key : segment;
-		let field = MONITOR_FORM_FIELDS.find((name) => name === key);
-		if (field) errors[field] = messages[field];
-	}
-	return errors;
 }
 
 /**
@@ -124,9 +111,11 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
 	if (isFailure(result)) {
-		return renderNewMonitorPage(
-			{ values: submittedValues(ctx.formData), errors: fieldErrors(result.error, ctx.intl.t) },
-			{ status: INVALID_FORM_STATUS },
+		return ctx.render(
+			<NewMonitorPage
+				submission={monitorSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
+			/>,
+			{ status: 422 },
 		);
 	}
 
@@ -177,10 +166,16 @@ export const updateMonitor = createAction(routes.actions.monitor.http.update, as
 				: null;
 		if (!monitor) return notFound("Not Found");
 
-		return renderEditMonitorPage(
-			monitor,
-			{ values: submittedValues(ctx.formData), errors: fieldErrors(result.error, ctx.intl.t) },
-			{ status: INVALID_FORM_STATUS },
+		await ctx.access.load(abilities.monitors.delete);
+		let contentChecks = await ctx.models.contentChecks.ofMonitor(monitor.id).all();
+		return ctx.render(
+			<EditMonitorPage
+				monitor={monitor}
+				canDelete={ctx.access.can(abilities.monitors.delete)}
+				contentChecks={contentChecks}
+				submission={monitorSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
+			/>,
+			{ status: 422 },
 		);
 	}
 

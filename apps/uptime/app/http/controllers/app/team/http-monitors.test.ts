@@ -289,5 +289,7 @@ describe("httpMonitors", () => {
 		expect(body).toContain("nothing-like-it");
 		expect(body).toContain(`href="${routes.app.team.monitors.index.href({ team: team.slug })}"`);
 		expect(body).not.toContain("No HTTP monitors yet");
+		expect(body).toContain(">Clear filters<");
+		expect(body).not.toContain("filters.clear");
 	});
 });

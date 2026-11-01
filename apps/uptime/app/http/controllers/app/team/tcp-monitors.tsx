@@ -18,12 +18,14 @@ import { createAction } from "remix/router";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
 
@@ -75,7 +77,7 @@ function filterMonitors(
  * filtered page.
  */
 export default createAction(routes.app.team.tcpMonitors.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -157,13 +159,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 								labels={{
 									toolbar: ctx.intl.t("page.tcpMonitors.filters.toolbar"),
 									tabs: ctx.intl.t("page.tcpMonitors.filters.toolbar"),
-									filters: ctx.intl.t("page.tcpMonitors.filters.filters"),
-									apply: ctx.intl.t("page.tcpMonitors.filters.apply"),
-									is: ctx.intl.t("page.tcpMonitors.filters.is"),
-									isAnyOf: ctx.intl.t("page.tcpMonitors.filters.isAnyOf"),
-									clear: ctx.intl.t("page.tcpMonitors.filters.clear"),
-									remove: (field, values) =>
-										ctx.intl.t("page.tcpMonitors.filters.remove", { field, values }),
+									...sharedFilterLabels(ctx.intl.t),
 								}}
 							/>
 
@@ -175,7 +171,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 									</Empty.Description>
 									<Empty.Action>
 										<LinkButton variant="outline" href={clearFiltersHref(ctx.url, FILTER_PARAMS)}>
-											{ctx.intl.t("page.tcpMonitors.filters.clear")}
+											{ctx.intl.t("app.layout.filters.clear")}
 										</LinkButton>
 									</Empty.Action>
 								</Empty>

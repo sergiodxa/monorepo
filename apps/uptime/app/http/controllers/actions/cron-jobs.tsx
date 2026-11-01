@@ -20,18 +20,19 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { CronJobFormValues } from "~/resources/views/cron-jobs/form";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { SelectCronJobMonitor } from "~/database/schema";
 
-import { renderEditCronJobPage } from "~/app/http/controllers/app/team/cron-job-edit";
-import { renderNewCronJobPage } from "~/app/http/controllers/app/team/cron-job-new";
 import {
 	CreateCronJobSchema,
 	CronJobIdSchema,
 	UpdateCronJobSchema,
 } from "~/app/http/validators/cron-job";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
+import abilities from "~/app/policies/abilities";
 import { invalidCronMessage } from "~/app/services/cron-text";
-import { DEFAULT_TIMEZONE } from "~/config/timezones";
+import EditCronJobPage from "~/resources/views/cron-jobs/edit-page";
+import NewCronJobPage from "~/resources/views/cron-jobs/new-page";
 import routes from "~/routes/web";
 
 /**
@@ -48,27 +49,6 @@ const FIELD_ERRORS: Record<string, string> = {
 
 /** Fields whose issue shows beside the field; every other issue shows above the form. */
 const INLINE_FIELDS = new Set(["name", "description", "cron_expression", "timezone"]);
-
-/**
- * What was submitted, in the shape the form reads, so a rejected submit renders every field
- * as typed. An unchecked switch submits nothing, which reads as off.
- */
-function submittedValues(formData: FormData): CronJobFormValues {
-	let text = (name: string) => {
-		let value = formData.get(name);
-		return typeof value === "string" ? value : "";
-	};
-
-	return {
-		name: text("name"),
-		description: text("description"),
-		cron_expression: text("cron_expression"),
-		grace_period_seconds: Number(text("grace_period_seconds")) || 300,
-		timezone: text("timezone") || DEFAULT_TIMEZONE,
-		alert_on_late: text("alert_on_late") === "true",
-		is_enabled: text("is_enabled") === "true",
-	};
-}
 
 /**
  * The schema's issues as one translated message per field, in the order they were found.
@@ -96,33 +76,35 @@ function formIssues(
 
 /**
  * POST /actions/:team/create-cron-job. Normalizes `cron_expression` before storing, so one
- * schedule always has a single spelling; a rejected submit answers 400 with the form as typed.
+ * schedule always has a single spelling; a rejected submit answers 422 with the form as typed.
  */
 export const createCronJob = createAction(routes.actions.cronJob.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateCronJobSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return renderNewCronJobPage({
-			values: submittedValues(ctx.formData),
+		let submission: FormSubmission = {
+			values: ctx.formData,
 			issues: formIssues(
 				result.error.issues,
 				ctx.intl.t,
 				ctx.intl.t("actions.createCronJob.errors.generic"),
 			),
-		});
+		};
+		return ctx.render(<NewCronJobPage submission={submission} />, { status: 422 });
 	}
 
 	let { description, is_enabled, ...values } = result.data;
 
 	let schedule = Schedule.parse(values.cron_expression);
 	if (isFailure(schedule)) {
-		return renderNewCronJobPage({
-			values: submittedValues(ctx.formData),
+		let submission: FormSubmission = {
+			values: ctx.formData,
 			issues: [
 				{ message: invalidCronMessage(schedule.error, ctx.intl.t), path: ["cron_expression"] },
 			],
-		});
+		};
+		return ctx.render(<NewCronJobPage submission={submission} />, { status: 422 });
 	}
 
 	let monitor = unwrap(
@@ -147,12 +129,28 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 
 /**
  * POST /actions/:team/update-cron-job. Compares the normalized cron expression so a re-saved
- * schedule under another spelling registers as unchanged; a rejected submit answers 400 with
+ * schedule under another spelling registers as unchanged; a rejected submit answers 422 with
  * the form as typed, or redirects back when the monitor it names is not the team's.
  */
 export const updateCronJob = createAction(routes.actions.cronJob.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateCronJobSchema);
 	let session = ctx.get(Session);
+
+	/**
+	 * Draws `monitor`'s edit page again holding the refused submission, answered as 422, with
+	 * the danger zone shown to a member allowed to delete cron jobs.
+	 */
+	let renderRefusedEdit = async (monitor: SelectCronJobMonitor, submission: FormSubmission) => {
+		await ctx.access.load(abilities.cronJobs.delete);
+		return ctx.render(
+			<EditCronJobPage
+				monitor={monitor}
+				canDelete={ctx.access.can(abilities.cronJobs.delete)}
+				submission={submission}
+			/>,
+			{ status: 422 },
+		);
+	};
 
 	if (isFailure(result)) {
 		let monitorId = ctx.formData.get("monitor_id");
@@ -161,8 +159,8 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 				? await ctx.models.cronJobMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first()
 				: null;
 		if (monitor) {
-			return renderEditCronJobPage(monitor, {
-				values: submittedValues(ctx.formData),
+			return renderRefusedEdit(monitor, {
+				values: ctx.formData,
 				issues: formIssues(
 					result.error.issues,
 					ctx.intl.t,
@@ -192,8 +190,8 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 
 	let schedule = Schedule.parse(values.cron_expression);
 	if (isFailure(schedule)) {
-		return renderEditCronJobPage(existing, {
-			values: submittedValues(ctx.formData),
+		return renderRefusedEdit(existing, {
+			values: ctx.formData,
 			issues: [
 				{ message: invalidCronMessage(schedule.error, ctx.intl.t), path: ["cron_expression"] },
 			],

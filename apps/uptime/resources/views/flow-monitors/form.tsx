@@ -1,13 +1,12 @@
 /**
- * Shared flow monitor form fields, used by the new-monitor and edit-monitor pages and by the
- * actions that re-render them after a failed submit. Every field reads its value from
- * `values`, so a rejected submission comes back as typed with each field's issue beside it.
+ * Shared flow monitor form fields, used by the new-monitor and edit-monitor pages. Every field
+ * reads a refused submission first and the saved `values` second, so a rejected submission
+ * comes back as typed with each field's issue beside it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Form } from "@sdxc/ui";
 import type { Handle } from "remix/component";
 import type { getContext } from "remix/middleware/async-context";
 
@@ -16,22 +15,19 @@ import { m } from "@sdxc/u/size";
 import { font, fontSize } from "@sdxc/u/typography";
 import { Select, Switch, TextArea, TextField } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+
+import { fieldIssue, submittedChecked, submittedText } from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/config/pricing";
 import Field from "~/resources/components/field";
 
-/** What the form shows in each field: a stored monitor's values, or what was just submitted. */
+/** What the form shows in each field before anything is posted: a stored monitor's values or a new one's. */
 export interface FlowMonitorFormValues {
 	name: string;
 	source: string;
 	interval_seconds: number;
 	is_enabled: boolean;
-}
-
-/** A rejected submit: what was typed, and the translated issues the form shows beside it. */
-export interface FlowMonitorFormState {
-	values: FlowMonitorFormValues;
-	issues: readonly Form.Issue[];
 }
 
 /** The values a new monitor starts from: empty, at the default interval, enabled. */
@@ -45,8 +41,8 @@ export const NEW_FLOW_MONITOR_VALUES: FlowMonitorFormValues = {
 namespace FlowMonitorFormFields {
 	export interface Props {
 		values: FlowMonitorFormValues;
-		/** Issues from a rejected submit, for the fields whose control reads no form context. */
-		issues?: readonly Form.Issue[];
+		/** The submission the action refused, which wins over `values`. */
+		submission?: FormSubmission;
 		/** Shows the enabled toggle, which only editing offers since a new monitor starts enabled. */
 		showEnabled?: boolean;
 		/** The team's verified hostnames — what a spec written here may reach. */
@@ -61,9 +57,12 @@ namespace FlowMonitorFormFields {
 /** Renders the name/source/interval fields (plus an enabled toggle when editing). */
 export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFields.Props>) {
 	return () => {
-		let { values, issues = [], showEnabled, verifiedDomains, intl, page } = handle.props;
+		let { values, submission, showEnabled, verifiedDomains, intl, page } = handle.props;
 		let t = withPrefix(intl.t, `page.${page}.form.fields`);
-		let issueFor = (name: string) => issues.find((issue) => issue.path?.[0] === name)?.message;
+		let issueFor = (name: string) => fieldIssue(submission, name);
+		let intervalSeconds = Number(
+			submittedText(submission, "interval_seconds", String(values.interval_seconds)),
+		);
 
 		return (
 			<>
@@ -71,7 +70,7 @@ export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFiel
 					type="text"
 					name="name"
 					required
-					defaultValue={values.name}
+					defaultValue={submittedText(submission, "name", values.name)}
 					label={t("name.label")}
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
@@ -87,7 +86,7 @@ export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFiel
 						required
 						rows={16}
 						spellcheck={false}
-						defaultValue={values.source}
+						defaultValue={submittedText(submission, "source", values.source)}
 						placeholder={t("source.placeholder")}
 						mix={[font("mono"), fontSize("sm")]}
 					/>
@@ -109,7 +108,7 @@ export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFiel
 							<Select.Option
 								key={seconds}
 								value={String(seconds)}
-								selected={seconds === values.interval_seconds}
+								selected={seconds === intervalSeconds}
 							>
 								{t(`interval.options.${seconds}`)}
 							</Select.Option>
@@ -118,7 +117,11 @@ export default function FlowMonitorFormFields(handle: Handle<FlowMonitorFormFiel
 				</Field>
 
 				{showEnabled && (
-					<Switch name="is_enabled" value="true" defaultChecked={values.is_enabled}>
+					<Switch
+						name="is_enabled"
+						value="true"
+						defaultChecked={submittedChecked(submission, "is_enabled", values.is_enabled)}
+					>
 						{t("isEnabled.label")}
 					</Switch>
 				)}

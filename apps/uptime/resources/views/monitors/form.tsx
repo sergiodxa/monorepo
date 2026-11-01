@@ -12,8 +12,10 @@ import type { getContext } from "remix/middleware/async-context";
 
 import { Select, TextField } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { SelectMonitor } from "~/database/schema";
 
+import { fieldIssue, submittedText } from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
 import { RangeSlider } from "~/resources/components/range-slider";
@@ -64,20 +66,6 @@ const EXPECTED_STATUS_CODES = [
 	{ value: 503, label: "503 Service Unavailable" },
 ] as const;
 
-/** The fields this form posts, which a failed submission can name. */
-export type MonitorFormField =
-	| "name"
-	| "url"
-	| "expected_status"
-	| "interval_seconds"
-	| "location_hint";
-
-/** What a failed submission typed into each field, exactly as it was posted. */
-export type MonitorFormValues = Partial<Record<MonitorFormField, string>>;
-
-/** The translated message each field that failed validation shows under itself. */
-export type MonitorFormErrors = Partial<Record<MonitorFormField, string>>;
-
 namespace MonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
@@ -99,11 +87,10 @@ namespace MonitorFormFields {
 		 */
 		defaultUrl?: string;
 		/**
-		 * A failed submission's values, which take precedence over `monitor` and `defaultUrl`
-		 * so the visitor's typing comes back as they left it.
+		 * A failed submission, whose values take precedence over `monitor` and `defaultUrl`
+		 * so the visitor's typing comes back as they left it, each field with its issue.
 		 */
-		values?: MonitorFormValues;
-		errors?: MonitorFormErrors;
+		submission?: FormSubmission;
 	}
 }
 
@@ -114,14 +101,15 @@ namespace MonitorFormFields {
  */
 export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props>) {
 	return () => {
-		let { monitor, intl, page, group, defaultUrl, values = {}, errors = {} } = handle.props;
+		let { monitor, intl, page, group, defaultUrl, submission } = handle.props;
 		let t = withPrefix(intl.t, `page.${page}.form.fields`);
 
-		let expectedStatus = values.expected_status
-			? Number(values.expected_status)
-			: (monitor?.expected_status ?? 200);
-		let locationHint = values.location_hint || monitor?.location_hint;
-		let interval = Number(values.interval_seconds);
+		/** The message under `field` when the submission named it. */
+		let issue = (field: string) => fieldIssue(submission, field);
+		let postedStatus = submittedText(submission, "expected_status", "");
+		let expectedStatus = postedStatus ? Number(postedStatus) : (monitor?.expected_status ?? 200);
+		let locationHint = submittedText(submission, "location_hint", "") || monitor?.location_hint;
+		let interval = Number(submittedText(submission, "interval_seconds", ""));
 
 		if (group === "basics") {
 			return (
@@ -132,9 +120,9 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						type="text"
 						name="name"
 						required
-						defaultValue={values.name ?? monitor?.name}
+						defaultValue={submittedText(submission, "name", monitor?.name ?? "")}
 						placeholder={t("name.placeholder")}
-						errorMessage={errors.name}
+						errorMessage={issue("name")}
 					/>
 
 					<TextField
@@ -143,9 +131,11 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 						type="url"
 						name="url"
 						required
-						defaultValue={values.url ?? monitor?.url ?? defaultUrl}
+						defaultValue={
+							submittedText(submission, "url", monitor?.url ?? defaultUrl ?? "") || undefined
+						}
 						placeholder={t("url.placeholder")}
-						errorMessage={errors.url}
+						errorMessage={issue("url")}
 					/>
 				</>
 			);
@@ -172,13 +162,15 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 				<Field
 					label={t("status.label")}
 					description={t("status.description")}
-					error={errors.expected_status}
+					error={issue("expected_status")}
 					errorId="monitor-expected-status-error"
 				>
 					<Select
 						name="expected_status"
-						aria-invalid={errors.expected_status ? "true" : undefined}
-						aria-describedby={errors.expected_status ? "monitor-expected-status-error" : undefined}
+						aria-invalid={issue("expected_status") ? "true" : undefined}
+						aria-describedby={
+							issue("expected_status") ? "monitor-expected-status-error" : undefined
+						}
 					>
 						{EXPECTED_STATUS_CODES.map((status) => (
 							<Select.Option
@@ -195,14 +187,14 @@ export default function MonitorFormFields(handle: Handle<MonitorFormFields.Props
 				<Field
 					label={t("region.label")}
 					description={t("region.description")}
-					error={errors.location_hint}
+					error={issue("location_hint")}
 					errorId="monitor-location-hint-error"
 				>
 					<Select
 						name="location_hint"
 						required
-						aria-invalid={errors.location_hint ? "true" : undefined}
-						aria-describedby={errors.location_hint ? "monitor-location-hint-error" : undefined}
+						aria-invalid={issue("location_hint") ? "true" : undefined}
+						aria-describedby={issue("location_hint") ? "monitor-location-hint-error" : undefined}
 					>
 						{!locationHint && (
 							<Select.Option value="" disabled selected={!locationHint}>

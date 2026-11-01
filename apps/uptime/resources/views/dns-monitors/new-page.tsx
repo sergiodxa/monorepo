@@ -13,9 +13,10 @@ import { vstack } from "@sdxc/u/layout";
 import { Alert, Button, Description, Select, Switch, TextArea, TextField } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
 
-import type { DnsMonitorSubmission } from "~/resources/views/dns-monitors/form";
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { fieldIssue, submittedChecked, submittedText } from "~/app/http/validators/form-submission";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { MAX_ZONE_FILE_BYTES } from "~/app/services/zone-file";
@@ -52,7 +53,7 @@ const MAX_ZONE_FILE_LABEL = `${MAX_ZONE_FILE_BYTES / 1024} KiB`;
 export namespace NewDnsMonitorPage {
 	export interface Props {
 		/** The submission the create action refused; omitted on a first visit. */
-		submission?: DnsMonitorSubmission;
+		submission?: FormSubmission;
 	}
 }
 
@@ -68,13 +69,16 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 		if (!viewer) throw new Error("requireUser must run before this page renders");
 
 		let { submission } = handle.props;
-		let values = submission?.values ?? {};
-		let issues = submission?.issues ?? {};
-		let intervalSeconds = Number(values.interval_seconds ?? DEFAULT_INTERVAL_SECONDS);
+		let intervalSeconds = Number(
+			submittedText(submission, "interval_seconds", String(DEFAULT_INTERVAL_SECONDS)),
+		);
 		let t = withPrefix(ctx.intl.t, "page.createDnsMonitor.form.fields");
 
 		return (
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New DNS monitor`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createDnsMonitor.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={routes.app.team.dnsMonitors.new.href({ team: ctx.team.slug })}
@@ -118,9 +122,9 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 											description={t("name.description")}
 											name="name"
 											required
-											defaultValue={values.name}
+											defaultValue={submittedText(submission, "name", "")}
 											placeholder={t("name.placeholder")}
-											errorMessage={issues.name}
+											errorMessage={fieldIssue(submission, "name")}
 										/>
 
 										<TextField
@@ -128,9 +132,9 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 											description={t("domain.description")}
 											name="domain"
 											required
-											defaultValue={values.domain}
+											defaultValue={submittedText(submission, "domain", "")}
 											placeholder={t("domain.placeholder")}
-											errorMessage={issues.domain}
+											errorMessage={fieldIssue(submission, "domain")}
 										/>
 									</SettingsSection.Body>
 								</SettingsSection.Card>
@@ -146,14 +150,14 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 										<Field
 											label={t("zoneFile.label")}
 											description={t("zoneFile.description")}
-											error={issues.zone_file}
+											error={fieldIssue(submission, "zone_file")}
 										>
 											<TextArea
 												name="zone_file"
 												rows={10}
 												spellcheck={false}
 												placeholder={t("zoneFile.placeholder")}
-												defaultValue={values.zone_file}
+												defaultValue={submittedText(submission, "zone_file", "")}
 											/>
 										</Field>
 
@@ -185,7 +189,7 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 										<Field
 											label={t("interval.label")}
 											description={t("interval.description")}
-											error={issues.interval_seconds}
+											error={fieldIssue(submission, "interval_seconds")}
 										>
 											<Select name="interval_seconds">
 												{INTERVAL_OPTIONS.map((option) => (
@@ -203,7 +207,7 @@ export default function NewDnsMonitorPage(handle: Handle<NewDnsMonitorPage.Props
 										<Switch
 											name="is_enabled"
 											value="true"
-											defaultChecked={values.is_enabled ?? true}
+											defaultChecked={submittedChecked(submission, "is_enabled", true)}
 										>
 											{t("isEnabled.label")}
 										</Switch>

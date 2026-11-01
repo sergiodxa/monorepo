@@ -1,7 +1,7 @@
 /**
- * Shared cron-job monitor form, used by the new-monitor and edit-monitor pages and by the
- * actions that re-render them after a failed submit. Every field reads its value from
- * `values`, so a rejected submission comes back with what was typed and each field's issue.
+ * Shared cron-job monitor form, used by the new-monitor and edit-monitor pages. Every field
+ * reads a refused submission first and the saved `values` second, so a rejected submission
+ * comes back with what was typed and each field's issue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +14,9 @@ import { isSupportedTimeZone, timeZonesByRegion } from "@sdxc/dates";
 import { vstack } from "@sdxc/u/layout";
 import { Form, Select, Switch, TextField } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+
+import { submittedChecked, submittedText } from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { DEFAULT_TIMEZONE } from "~/config/timezones";
 import Field from "~/resources/components/field";
@@ -23,7 +26,7 @@ import StepperField from "~/resources/components/stepper-field";
 /** Stable id linking the grace-period field's label to its number input. */
 const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
 
-/** What the form shows in each field: a stored monitor's values, or what was just submitted. */
+/** What the form shows in each field before anything is posted: a stored monitor's values or a new one's. */
 export interface CronJobFormValues {
 	name: string;
 	description: string;
@@ -32,12 +35,6 @@ export interface CronJobFormValues {
 	timezone: string;
 	alert_on_late: boolean;
 	is_enabled: boolean;
-}
-
-/** A rejected submit: what was typed, and the translated issues the form shows beside it. */
-export interface CronJobFormState {
-	values: CronJobFormValues;
-	issues: readonly Form.Issue[];
 }
 
 /** The values a new monitor starts from: UTC, five minutes of grace, enabled. */
@@ -56,8 +53,8 @@ namespace CronJobForm {
 		/** Where the form posts: the create or the update action. */
 		action: string;
 		values: CronJobFormValues;
-		/** Translated issues from a rejected submit; a field's issue names it in `path`. */
-		issues?: readonly Form.Issue[];
+		/** The submission the action refused, which wins over `values`; a field's issue names it in `path`. */
+		submission?: FormSubmission;
 		/** Which page renders the form, selecting the `page.<page>.form.*` copy. */
 		page: "createCronJob" | "editCronJob";
 		intl: ReturnType<typeof getContext>["intl"];
@@ -75,9 +72,15 @@ namespace CronJobForm {
  */
 export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 	return () => {
-		let { action, values, issues = [], page, intl, hidden, footer } = handle.props;
+		let { action, values, submission, page, intl, hidden, footer } = handle.props;
 		let t = withPrefix(intl.t, `page.${page}.form`);
+		let issues = submission?.issues ?? [];
 		let timezoneIssue = issues.find((issue) => issue.path?.[0] === "timezone");
+		let timezone = submittedText(submission, "timezone", values.timezone) || DEFAULT_TIMEZONE;
+		let gracePeriodSeconds =
+			Number(
+				submittedText(submission, "grace_period_seconds", String(values.grace_period_seconds)),
+			) || values.grace_period_seconds;
 
 		return (
 			<Form method="post" action={action} issues={issues} mix={[vstack({ gap: 12 })]}>
@@ -95,7 +98,7 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 								type="text"
 								name="name"
 								required
-								defaultValue={values.name}
+								defaultValue={submittedText(submission, "name", values.name)}
 								placeholder={t("fields.name.placeholder")}
 								description={t("fields.name.description")}
 							/>
@@ -104,7 +107,7 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 								label={t("fields.description.label")}
 								type="text"
 								name="description"
-								defaultValue={values.description}
+								defaultValue={submittedText(submission, "description", values.description)}
 								placeholder={t("fields.description.placeholder")}
 								description={t("fields.description.description")}
 							/>
@@ -124,7 +127,7 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 								type="text"
 								name="cron_expression"
 								required
-								defaultValue={values.cron_expression}
+								defaultValue={submittedText(submission, "cron_expression", values.cron_expression)}
 								placeholder={t("fields.cronExpression.placeholder")}
 								description={t("fields.cronExpression.description")}
 							/>
@@ -137,7 +140,7 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 								incrementLabel={t("fields.gracePeriod.increment")}
 								min={60}
 								max={86_400}
-								defaultValue={values.grace_period_seconds}
+								defaultValue={gracePeriodSeconds}
 							/>
 
 							<Field
@@ -146,21 +149,18 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 								error={timezoneIssue?.message}
 							>
 								<Select name="timezone" required>
-									{!isSupportedTimeZone(values.timezone) && (
-										<Select.Option value={values.timezone} selected>
-											{values.timezone}
+									{!isSupportedTimeZone(timezone) && (
+										<Select.Option value={timezone} selected>
+											{timezone}
 										</Select.Option>
 									)}
-									<Select.Option
-										value={DEFAULT_TIMEZONE}
-										selected={values.timezone === DEFAULT_TIMEZONE}
-									>
+									<Select.Option value={DEFAULT_TIMEZONE} selected={timezone === DEFAULT_TIMEZONE}>
 										{DEFAULT_TIMEZONE}
 									</Select.Option>
 									{timeZonesByRegion().map((group) => (
 										<Select.Group key={group.region} label={group.region}>
 											{group.zones.map((zone) => (
-												<Select.Option key={zone} value={zone} selected={zone === values.timezone}>
+												<Select.Option key={zone} value={zone} selected={zone === timezone}>
 													{zone}
 												</Select.Option>
 											))}
@@ -180,11 +180,23 @@ export default function CronJobForm(handle: Handle<CronJobForm.Props>) {
 					<SettingsSection.Card>
 						<SettingsSection.Body>
 							<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
-								<Switch name="alert_on_late" value="true" defaultChecked={values.alert_on_late}>
+								<Switch
+									name="alert_on_late"
+									value="true"
+									defaultChecked={submittedChecked(
+										submission,
+										"alert_on_late",
+										values.alert_on_late,
+									)}
+								>
 									{t("fields.alertOnLate.label")}
 								</Switch>
 
-								<Switch name="is_enabled" value="true" defaultChecked={values.is_enabled}>
+								<Switch
+									name="is_enabled"
+									value="true"
+									defaultChecked={submittedChecked(submission, "is_enabled", values.is_enabled)}
+								>
 									{t("fields.enabled.label")}
 								</Switch>
 							</div>

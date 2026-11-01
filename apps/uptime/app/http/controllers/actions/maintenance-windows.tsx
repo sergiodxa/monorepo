@@ -1,7 +1,7 @@
 /**
  * Form actions for maintenance-window create/update/delete/end-early. A refused create or
  * update renders its form again with every posted value and an issue beside each field to
- * fix, answered as 400; every success flashes a toast and redirects to the list.
+ * fix, answered as 422; every success flashes a toast and redirects to the list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,7 +25,7 @@ import {
 	UpdateMaintenanceWindowSchema,
 } from "~/app/http/validators/maintenance-window";
 import { parseMonitorScope } from "~/app/services/monitor-scope";
-import { isResolvableScope } from "~/app/services/scope-monitors";
+import { isResolvableScope, listScopeMonitors } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 
 /**
@@ -90,11 +90,16 @@ export const createMaintenanceWindow = createAction(
 		let result = await validate(ctx.formData, CreateMaintenanceWindowSchema);
 		let session = ctx.get(Session);
 
-		/** Renders the new-window form again, loading the page only on this path. */
+		/** Renders the new-window form again, answered as 422, loading the page only on this path. */
 		let sendBack = async (submission: FormSubmission) => {
-			let { renderNewMaintenanceWindowPage } =
-				await import("~/app/http/controllers/app/team/maintenance-window-new");
-			return renderNewMaintenanceWindowPage(submission);
+			let [{ default: NewMaintenanceWindowPage }, scopeGroups] = await Promise.all([
+				import("~/resources/views/maintenance-windows/new-page"),
+				listScopeMonitors(ctx.models, ctx.team.id),
+			]);
+			return ctx.render(
+				<NewMaintenanceWindowPage scopeGroups={scopeGroups} submission={submission} />,
+				{ status: 422 },
+			);
 		};
 
 		if (isFailure(result)) {
@@ -139,11 +144,20 @@ export const updateMaintenanceWindow = createAction(
 				: null;
 		if (!existing) return notFound("Not Found");
 
-		/** Renders this window's edit form again, loading the page only on this path. */
+		/** Renders this window's edit form again, answered as 422, loading the page only on this path. */
 		let sendBack = async (submission: FormSubmission) => {
-			let { renderEditMaintenanceWindowPage } =
-				await import("~/app/http/controllers/app/team/maintenance-window-edit");
-			return renderEditMaintenanceWindowPage(existing, submission);
+			let [{ default: EditMaintenanceWindowPage }, scopeGroups] = await Promise.all([
+				import("~/resources/views/maintenance-windows/edit-page"),
+				listScopeMonitors(ctx.models, ctx.team.id),
+			]);
+			return ctx.render(
+				<EditMaintenanceWindowPage
+					window={existing}
+					scopeGroups={scopeGroups}
+					submission={submission}
+				/>,
+				{ status: 422 },
+			);
 		};
 
 		if (isFailure(result)) {

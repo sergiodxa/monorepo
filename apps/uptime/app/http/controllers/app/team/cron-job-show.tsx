@@ -36,6 +36,7 @@ import type { SelectMonitorDailyStats } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -105,7 +106,7 @@ function uptimePercentage(successful: number, total: number): string {
  * instant reads relative to now, with the job's own zone and UTC in its title.
  */
 export default createAction(routes.app.team.cronJobs.show, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

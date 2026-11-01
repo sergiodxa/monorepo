@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ValidationError } from "@sdxc/validate";
-
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
@@ -18,10 +16,10 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { DnsCheckStatus } from "~/app/services/dns/check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
-import type { DnsMonitorField, DnsMonitorSubmission } from "~/resources/views/dns-monitors/form";
 
 import {
 	CreateDnsMonitorSchema,
@@ -31,6 +29,7 @@ import {
 	ToggleDnsMonitorRecordSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
+import { translateIssues } from "~/app/http/validators/form-submission";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import abilities from "~/app/policies/abilities";
 import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts/dispatch";
@@ -98,8 +97,8 @@ function readZoneFile(
 	return { records: parsed.data.records, names };
 }
 
-/** Every field a DNS monitor form posts, with the issue copy each shows when refused. */
-const FORM_FIELD_ISSUES: Record<DnsMonitorField, string> = {
+/** Every field a DNS monitor form can flag, with the issue copy each shows when refused. */
+const FORM_FIELD_ISSUES: Record<string, string> = {
 	name: "page.dnsMonitors.form.issues.name",
 	domain: "page.dnsMonitors.form.issues.domain",
 	interval_seconds: "page.dnsMonitors.form.issues.interval",
@@ -108,33 +107,27 @@ const FORM_FIELD_ISSUES: Record<DnsMonitorField, string> = {
 };
 
 /**
- * What a refused form carried, read back for the form to draw again: each field as typed, the
- * switch as it was left, and a translated message on each field the schema named.
+ * What a refused form carried, handed back for the form to draw again: the body as posted and
+ * a translated message on each field the schema named. An issue on no known field reads as the
+ * form-wide summary the page already shows.
  */
-function submissionOf(
-	formData: FormData,
-	error: ValidationError | null,
-	translate: (key: string) => string,
-): DnsMonitorSubmission {
-	let named = new Set(
-		(error?.issues ?? []).map((issue) => {
-			let [segment] = issue.path ?? [];
-			return String(typeof segment === "object" ? segment.key : segment);
+function dnsSubmission(
+	t: (key: string) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	return {
+		values,
+		issues: translateIssues(issues, (field) => {
+			let key = field === undefined ? undefined : FORM_FIELD_ISSUES[field];
+			return key === undefined
+				? { field: undefined, message: t("page.dnsMonitors.form.issues.summary") }
+				: { field, message: t(key) };
 		}),
-	);
-	let fields = Object.keys(FORM_FIELD_ISSUES) as DnsMonitorField[];
-	let submission: DnsMonitorSubmission = {
-		values: { is_enabled: formData.has("is_enabled") },
-		issues: {},
 	};
-
-	for (let field of fields) {
-		let value = formData.get(field);
-		if (typeof value === "string") submission.values[field] = value;
-		if (named.has(field)) submission.issues[field] = translate(FORM_FIELD_ISSUES[field]);
-	}
-
-	return submission;
 }
 
 /** POST /actions/:team/create-dns-monitor */
@@ -145,7 +138,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	if (isFailure(result)) {
 		return ctx.render(
 			<NewDnsMonitorPage
-				submission={submissionOf(ctx.formData, result.error, (key) => ctx.intl.t(key))}
+				submission={dnsSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
 			/>,
 			{ status: 422 },
 		);
@@ -164,8 +157,15 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	/** Read before the row is written, so a refused paste leaves no half-configured monitor. */
 	let zone = readZoneFile(zone_file, values.domain);
 	if ("refusal" in zone) {
-		let submission = submissionOf(ctx.formData, null, (key) => ctx.intl.t(key));
-		submission.issues.zone_file = ctx.intl.t(zone.refusal.messageKey, zone.refusal.values);
+		let submission: FormSubmission = {
+			values: ctx.formData,
+			issues: [
+				{
+					message: ctx.intl.t(zone.refusal.messageKey, zone.refusal.values),
+					path: ["zone_file"],
+				},
+			],
+		};
 		return ctx.render(<NewDnsMonitorPage submission={submission} />, { status: 422 });
 	}
 
@@ -221,7 +221,7 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 			<EditDnsMonitorPage
 				monitor={monitor}
 				canDelete={ctx.access.can(abilities.dnsMonitors.delete)}
-				submission={submissionOf(ctx.formData, result.error, (key) => ctx.intl.t(key))}
+				submission={dnsSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
 			/>,
 			{ status: 422 },
 		);
@@ -485,16 +485,17 @@ export const importDnsMonitorZoneFile = createAction(
 		let result = await validate(ctx.formData, ImportDnsMonitorZoneFileSchema);
 		let session = ctx.get(Session);
 
-		let pasted = ctx.formData.get("zone_file");
-
 		/** Draws the edit page again holding the refused paste and why it was refused. */
-		let renderRefusedImport = async (monitor: SelectDnsMonitor, value: string, issue: string) => {
+		let renderRefusedImport = async (monitor: SelectDnsMonitor, issue: string) => {
 			await ctx.access.load(abilities.dnsMonitors.delete);
 			return ctx.render(
 				<EditDnsMonitorPage
 					monitor={monitor}
 					canDelete={ctx.access.can(abilities.dnsMonitors.delete)}
-					zoneFile={{ value, issue }}
+					zoneFileSubmission={{
+						values: ctx.formData,
+						issues: [{ message: issue, path: ["zone_file"] }],
+					}}
 				/>,
 				{ status: 422 },
 			);
@@ -510,7 +511,6 @@ export const importDnsMonitorZoneFile = createAction(
 
 			return await renderRefusedImport(
 				monitor,
-				typeof pasted === "string" ? pasted : "",
 				ctx.intl.t("actions.importDnsMonitorZoneFile.errors.generic"),
 			);
 		}
@@ -522,7 +522,6 @@ export const importDnsMonitorZoneFile = createAction(
 		if ("refusal" in zone) {
 			return await renderRefusedImport(
 				monitor,
-				result.data.zone_file,
 				ctx.intl.t(zone.refusal.messageKey, zone.refusal.values),
 			);
 		}

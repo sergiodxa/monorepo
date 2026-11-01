@@ -19,16 +19,24 @@ import {
 	FileSpreadsheetIcon,
 	FileTextIcon,
 	GlobeIcon,
+	HistoryIcon,
+	KeyboardIcon,
 	KeyIcon,
 	MonitorCogIcon,
 	NetworkIcon,
+	PlusIcon,
 	SettingsIcon,
+	UserIcon,
+	UsersIcon,
 	WorkflowIcon,
 	WrenchIcon,
 } from "@sdxc/icons";
+import { grow, hstack, justify } from "@sdxc/u/layout";
 import { truncate } from "@sdxc/u/typography";
-import { Menu } from "@sdxc/ui";
+import { Button, Menu } from "@sdxc/ui";
 import { AppShell as Shell, readAppShellCookie } from "@sdxc/ui/app/app-shell";
+import { CommandPalette } from "@sdxc/ui/app/command-palette";
+import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 import { PageHeader } from "@sdxc/ui/app/page-header";
 import { Toasts } from "@sdxc/ui/app/toasts";
 import { menuKeys } from "@sdxc/ui/mixins";
@@ -37,9 +45,12 @@ import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { Session } from "remix/session";
 
+import type { AppShellData } from "~/app/http/middleware/app-shell-data";
+
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { teamLogoUrl } from "~/app/services/team-logo";
 import Avatar from "~/resources/components/avatar";
+import BillingBanner from "~/resources/components/billing-banner";
 import Logo from "~/resources/components/logo";
 import routes from "~/routes/web";
 
@@ -72,6 +83,11 @@ namespace AppShell {
 		tabsLabel?: string;
 		/** A notice above the screen that needs resolving, such as a billing problem. */
 		banner?: RemixNode;
+		/**
+		 * The attention counts and billing state; read from `ctx.shell` when unset, and `null`
+		 * draws the shell without them.
+		 */
+		data?: AppShellData | null;
 		/** Draws the sidebar as the icon rail; read from its cookie on the request when unset. */
 		collapsed?: boolean;
 		/**
@@ -98,12 +114,22 @@ function sessionFlash(): AppShell.Props["toast"] {
 	return parsed.success ? parsed.value : undefined;
 }
 
+/** The command palette's dialog id, which the top bar's trigger names. */
+const PALETTE_ID = "app-palette";
+
+/** The keyboard help sheet's dialog id, which the top bar's button names. */
+const HELP_ID = "app-keys";
+
 /** One sidebar destination. */
 interface NavItem {
 	href: string;
 	label: string;
 	icon: RemixNode;
 	target?: "_blank";
+	/** The `g`+letter sequence the command palette binds to this destination. */
+	shortcut?: string;
+	/** Monitors of this kind that need attention, drawn as a danger count. */
+	count?: number;
 }
 
 /**
@@ -136,6 +162,8 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		let t = withPrefix(intl.t, "app.layout");
 		let collapsed =
 			handle.props.collapsed ?? readAppShellCookie(getContext().request.headers.get("Cookie"));
+		let shellData = handle.props.data === undefined ? getContext().shell : handle.props.data;
+		let attention = shellData?.attention;
 		let dashboardHref = routes.app.team.dashboard.index.href({ team: team.slug });
 		let teamParams = { team: team.slug };
 
@@ -149,26 +177,36 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		let monitorItems: NavItem[] = [
 			{
 				href: routes.app.team.monitors.index.href(teamParams),
+				shortcut: "g h",
+				count: attention?.http,
 				label: t("sidebar.navigation.items.httpMonitors"),
 				icon: <MonitorCogIcon />,
 			},
 			{
 				href: routes.app.team.dnsMonitors.index.href(teamParams),
+				shortcut: "g n",
+				count: attention?.dns,
 				label: t("sidebar.navigation.items.dnsMonitors"),
 				icon: <GlobeIcon />,
 			},
 			{
 				href: routes.app.team.tcpMonitors.index.href(teamParams),
+				shortcut: "g t",
+				count: attention?.tcp,
 				label: t("sidebar.navigation.items.tcpMonitors"),
 				icon: <NetworkIcon />,
 			},
 			{
 				href: routes.app.team.flowMonitors.index.href(teamParams),
+				shortcut: "g f",
+				count: attention?.flow,
 				label: t("sidebar.navigation.items.flowMonitors"),
 				icon: <WorkflowIcon />,
 			},
 			{
 				href: routes.app.team.cronJobs.index.href(teamParams),
+				shortcut: "g c",
+				count: attention?.cron,
 				label: t("sidebar.navigation.items.cronJobs"),
 				icon: <ClockIcon />,
 			},
@@ -177,21 +215,25 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 		let respondItems: NavItem[] = [
 			{
 				href: routes.app.team.alerts.index.href(teamParams),
+				shortcut: "g a",
 				label: t("sidebar.navigation.items.alerts"),
 				icon: <BellIcon />,
 			},
 			{
 				href: routes.app.team.maintenanceWindows.index.href(teamParams),
+				shortcut: "g w",
 				label: t("sidebar.navigation.items.maintenance"),
 				icon: <WrenchIcon />,
 			},
 			{
 				href: routes.app.team.statusPages.index.href(teamParams),
+				shortcut: "g s",
 				label: t("sidebar.navigation.items.statusPages"),
 				icon: <FileTextIcon />,
 			},
 			{
 				href: routes.app.team.reports.index.href(teamParams),
+				shortcut: "g r",
 				label: t("sidebar.navigation.items.reports"),
 				icon: <FileSpreadsheetIcon />,
 			},
@@ -201,6 +243,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 			? [
 					{
 						href: routes.app.team.apiKeys.index.href(teamParams),
+						shortcut: "g k",
 						label: t("sidebar.navigation.items.apiKeys"),
 						icon: <KeyIcon />,
 					},
@@ -228,6 +271,9 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 					label={item.label}
 					icon={item.icon}
 					current={isCurrent(item.href)}
+					count={item.count}
+					countTone="danger"
+					countLabel={item.count ? t("attention", { count: item.count }) : undefined}
 					target={item.target}
 					rel={item.target ? "noreferrer" : undefined}
 				/>
@@ -255,7 +301,27 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 					collapse: t("shell.collapse"),
 				}}
 				collapsed={collapsed}
-				banner={banner}
+				banner={
+					banner ??
+					(shellData?.billingProblem ? (
+						<BillingBanner intl={intl} teamSlug={team.slug} isOwner={shellData.isOwner} />
+					) : undefined)
+				}
+				topbar={
+					<div mix={[hstack({ gap: 2 }), grow(), justify("end")]}>
+						<CommandPalette.Trigger for={PALETTE_ID}>{t("palette.trigger")}</CommandPalette.Trigger>
+						<Button
+							variant="ghost"
+							color="neutral"
+							size="sm"
+							commandfor={HELP_ID}
+							command="show-modal"
+							aria-label={t("help.trigger")}
+						>
+							<KeyboardIcon size={16} aria-hidden="true" />
+						</Button>
+					</div>
+				}
 				workspace={
 					teams.length <= 1 ? (
 						<Shell.Identity avatar={teamLogo} name={team.name} chevron={false} disabled />
@@ -344,6 +410,116 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				<Toasts
 					labels={{ region: t("toasts.region"), dismiss: t("toasts.dismiss") }}
 					initial={flash}
+				/>
+				<CommandPalette
+					id={PALETTE_ID}
+					remember="uptime:palette"
+					labels={{
+						title: t("palette.title"),
+						open: t("palette.open"),
+						placeholder: t("palette.placeholder"),
+						recent: t("palette.recent"),
+						noResults: t("palette.noResults"),
+						noResultsHint: t("palette.noResultsHint"),
+						results: t("palette.results"),
+						back: t("palette.back"),
+						close: t("palette.close"),
+					}}
+				>
+					<CommandPalette.Group heading={t("palette.groups.navigate")}>
+						{[
+							{
+								href: dashboardHref,
+								label: t("sidebar.navigation.items.dashboard"),
+								icon: <ActivityIcon />,
+								shortcut: "g d",
+							},
+							...monitorItems,
+							{
+								href: routes.app.team.alerts.history.href(teamParams),
+								label: t("palette.alertHistory"),
+								icon: <HistoryIcon />,
+								shortcut: "g i",
+							},
+							...respondItems,
+							...teamItems.filter((item) => item.target === undefined),
+							{
+								href: routes.app.team.account.href(teamParams),
+								label: t("sidebar.account.title"),
+								icon: <UserIcon />,
+							},
+						].map((item) => (
+							<CommandPalette.Item
+								key={item.href}
+								id={`go:${item.href}`}
+								title={item.label}
+								href={item.href}
+								icon={item.icon}
+								shortcut={item.shortcut}
+							/>
+						))}
+					</CommandPalette.Group>
+					<CommandPalette.Group heading={t("palette.groups.create")}>
+						{[
+							[routes.app.team.monitors.new.href(teamParams), t("palette.create.http")],
+							[routes.app.team.dnsMonitors.new.href(teamParams), t("palette.create.dns")],
+							[routes.app.team.tcpMonitors.new.href(teamParams), t("palette.create.tcp")],
+							[routes.app.team.flowMonitors.new.href(teamParams), t("palette.create.flow")],
+							[routes.app.team.cronJobs.new.href(teamParams), t("palette.create.cron")],
+							[routes.app.team.alerts.new.href(teamParams), t("palette.create.alert")],
+							[routes.app.team.statusPages.new.href(teamParams), t("palette.create.statusPage")],
+							[
+								routes.app.team.maintenanceWindows.new.href(teamParams),
+								t("palette.create.maintenance"),
+							],
+						].map(([href, title]) => (
+							<CommandPalette.Item
+								key={href}
+								id={`create:${href}`}
+								title={title!}
+								href={href}
+								icon={<PlusIcon />}
+							/>
+						))}
+					</CommandPalette.Group>
+					{teams.length > 1 ? (
+						<>
+							<CommandPalette.Group heading={t("palette.groups.team")}>
+								<CommandPalette.Item
+									id="switch-team"
+									title={t("palette.switchTeam")}
+									page="teams"
+									icon={<UsersIcon />}
+								/>
+							</CommandPalette.Group>
+							<CommandPalette.Page
+								id="teams"
+								title={t("palette.switchTeam")}
+								placeholder={t("palette.switchTeamPlaceholder")}
+							>
+								{teams.map((other) => (
+									<CommandPalette.Item
+										key={other.id}
+										id={`team:${other.slug}`}
+										title={other.name}
+										href={routes.app.team.dashboard.index.href({ team: other.slug })}
+									/>
+								))}
+							</CommandPalette.Page>
+						</>
+					) : null}
+				</CommandPalette>
+				<KeyboardHelp
+					id={HELP_ID}
+					labels={{
+						title: t("help.title"),
+						description: t("help.description"),
+						close: t("help.close"),
+						or: t("help.or"),
+						open: t("help.open"),
+						general: t("help.general"),
+						other: t("help.other"),
+					}}
 				/>
 			</Shell>
 		);

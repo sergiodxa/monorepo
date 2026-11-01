@@ -14,8 +14,8 @@ import { Alert, Button, LinkButton } from "@sdxc/ui";
 import { DangerZone } from "@sdxc/ui/app";
 import { getContext } from "remix/middleware/async-context";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { SelectTcpMonitor } from "~/database/schema";
-import type { TcpMonitorSubmission } from "~/resources/views/tcp-monitors/form";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import FormPage from "~/resources/components/form-page";
@@ -31,7 +31,7 @@ export namespace EditTcpMonitorPage {
 		/** Whether the viewer may delete monitors, which decides whether the danger zone renders. */
 		canDelete: boolean;
 		/** The submission the update action refused; omitted on a first visit. */
-		submission?: TcpMonitorSubmission;
+		submission?: FormSubmission;
 	}
 }
 
@@ -46,7 +46,12 @@ export default function EditTcpMonitorPage(handle: Handle<EditTcpMonitorPage.Pro
 		let showHref = routes.app.team.tcpMonitors.show.href(monitorParams);
 
 		return (
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.editMonitor.header.named", {
+					name: monitor.name,
+				})}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={routes.app.team.tcpMonitors.edit.href(monitorParams)}

@@ -1,0 +1,326 @@
+/**
+ * The new status page page, drawn by the form's GET route and again by the create action when
+ * it refuses a submission, so a rejected form comes back holding everything that was typed,
+ * ticked services included, with an issue beside each field to fix.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Handle } from "remix/component";
+
+import { IntlProvider } from "@sdxc/i18n/ui";
+import { vstack } from "@sdxc/u/layout";
+import { fontSize, weight } from "@sdxc/u/typography";
+import {
+	Button,
+	Checkbox,
+	CheckboxGroup,
+	Description,
+	Form,
+	Label,
+	Switch,
+	TextArea,
+	TextField,
+} from "@sdxc/ui";
+import { fieldStackLayout } from "@sdxc/ui/styles";
+import { getContext } from "remix/middleware/async-context";
+
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+import type { ScopeMonitorGroup } from "~/app/services/scope-monitors";
+
+import { getViewer } from "~/app/http/middleware/auth";
+import {
+	submittedChecked,
+	submittedList,
+	submittedText,
+} from "~/app/http/validators/form-submission";
+import { withPrefix } from "~/app/services/prefixed-translate";
+import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
+import Field from "~/resources/components/field";
+import FormPage from "~/resources/components/form-page";
+import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
+import AppShell from "~/resources/layouts/app-shell";
+import DocumentLayout from "~/resources/layouts/document";
+import { statusPageServices } from "~/resources/views/status-pages/services";
+import routes from "~/routes/web";
+
+/**
+ * The page renders once per request, so the checkbox groups label themselves
+ * through fixed ids: each id stays unique since only one instance of the page
+ * ever exists at a time.
+ */
+const MONITORS_LABEL_ID = "status-page-monitors-label";
+const CRON_JOBS_LABEL_ID = "status-page-cron-jobs-label";
+
+/** `id` of each checkbox list, so its own select-all control can find the boxes it drives. */
+const MONITORS_GROUP_ID = "status-page-monitors-group";
+const CRON_JOBS_GROUP_ID = "status-page-cron-jobs-group";
+
+export namespace NewStatusPagePage {
+	export interface Props {
+		/** The team's monitors and cron jobs grouped by kind, offered as the page's services. */
+		scopeGroups: ScopeMonitorGroup[];
+		/** The submission the create action refused; omitted on a first visit. */
+		submission?: FormSubmission;
+	}
+}
+
+/** Renders the whole document for the current request's team and signed-in viewer. */
+export default function NewStatusPagePage(handle: Handle<NewStatusPagePage.Props>) {
+	return () => {
+		let ctx = getContext();
+		let viewer = getViewer();
+		if (!viewer) throw new Error("requireUser must run before this page renders");
+		let { scopeGroups, submission } = handle.props;
+
+		let t = withPrefix(ctx.intl.t, "page.statusPages.form.fields");
+
+		let { monitors: selectableMonitors, cronJobs } = statusPageServices(scopeGroups);
+
+		let hasSomethingToList = selectableMonitors.length > 0 || cronJobs.length > 0;
+
+		return (
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createStatusPage.header.title")}`}
+			>
+				<AppShell
+					team={ctx.team}
+					currentPath={routes.app.team.statusPages.new.href({ team: ctx.team.slug })}
+					teams={ctx.teams}
+					viewer={viewer}
+					isAdmin={ctx.membership.role === "admin"}
+					intl={ctx.intl}
+					heading={ctx.intl.t("page.createStatusPage.header.title")}
+					breadcrumbs={[
+						{
+							label: ctx.intl.t("app.layout.sidebar.navigation.items.statusPages"),
+							href: routes.app.team.statusPages.index.href({ team: ctx.team.slug }),
+						},
+					]}
+				>
+					<FormPage>
+						<Form
+							method="post"
+							action={routes.actions.statusPage.create.href({ team: ctx.team.slug })}
+							issues={submission?.issues}
+						>
+							<div mix={[vstack({ gap: 12 })]}>
+								<SettingsSection
+									id="branding"
+									title={ctx.intl.t("page.createStatusPage.form.sections.branding.title")}
+									description={ctx.intl.t(
+										"page.createStatusPage.form.sections.branding.description",
+									)}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											<TextField
+												label={t("name.label")}
+												type="text"
+												name="name"
+												required
+												placeholder={t("name.placeholder")}
+												description={t("name.description")}
+												defaultValue={submittedText(submission, "name", "")}
+											/>
+
+											<TextField
+												label={t("slug.label")}
+												type="text"
+												name="slug"
+												required
+												placeholder={t("slug.placeholder")}
+												description={t("slug.description")}
+												defaultValue={submittedText(submission, "slug", "")}
+											/>
+
+											<TextField
+												label={t("title.label")}
+												type="text"
+												name="title"
+												required
+												placeholder={t("title.placeholder")}
+												description={t("title.description")}
+												defaultValue={submittedText(submission, "title", "")}
+											/>
+
+											<Field
+												label={t("description.label")}
+												description={t("description.description")}
+											>
+												<TextArea
+													name="description"
+													placeholder={t("description.placeholder")}
+													defaultValue={submittedText(submission, "description", "")}
+												/>
+											</Field>
+
+											<TextField
+												label={t("logoUrl.label")}
+												type="url"
+												name="logo_url"
+												placeholder={t("logoUrl.placeholder")}
+												description={t("logoUrl.description")}
+												defaultValue={submittedText(submission, "logo_url", "")}
+											/>
+										</SettingsSection.Body>
+									</SettingsSection.Card>
+								</SettingsSection>
+
+								<SettingsSection
+									id="visibility"
+									title={ctx.intl.t("page.createStatusPage.form.sections.visibility.title")}
+									description={ctx.intl.t(
+										"page.createStatusPage.form.sections.visibility.description",
+									)}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											{/**
+											 * Both toggles answer "who sees this page," so they share the tighter
+											 * within-group rhythm as a single group.
+											 */}
+											<div mix={[vstack({ gap: SETTINGS_SWITCH_GAP })]}>
+												<div mix={[fieldStackLayout()]}>
+													<Switch
+														name="is_public"
+														value="true"
+														defaultChecked={submittedChecked(submission, "is_public", true)}
+													>
+														{t("isPublic.label")}
+													</Switch>
+													<Description>{t("isPublic.description")}</Description>
+												</div>
+
+												<div mix={[fieldStackLayout()]}>
+													<Switch
+														name="show_overall_status"
+														value="true"
+														defaultChecked={submittedChecked(
+															submission,
+															"show_overall_status",
+															true,
+														)}
+													>
+														{t("showOverallStatus.label")}
+													</Switch>
+													<Description>{t("showOverallStatus.description")}</Description>
+												</div>
+											</div>
+										</SettingsSection.Body>
+									</SettingsSection.Card>
+								</SettingsSection>
+
+								<SettingsSection
+									id="services"
+									title={ctx.intl.t("page.createStatusPage.form.sections.services.title")}
+									description={ctx.intl.t(
+										"page.createStatusPage.form.sections.services.description",
+									)}
+								>
+									<SettingsSection.Card>
+										<SettingsSection.Body>
+											{selectableMonitors.length > 0 && (
+												<div mix={[vstack({ gap: "8px" })]}>
+													{/**
+													 * The group's caption stands as a heading above the list, with its
+													 * description directly beneath, matching every other field on this page.
+													 */}
+													<div mix={[fieldStackLayout()]}>
+														<Label
+															id={MONITORS_LABEL_ID}
+															mix={[fontSize("base"), weight("semibold")]}
+														>
+															{t("monitors.label")}
+														</Label>
+														<Description>{t("monitors.description")}</Description>
+													</div>
+
+													{/**
+													 * The island resolves copy through `intl(handle)`, which has no
+													 * module-scoped `setIntl()` default on the server, so it needs an
+													 * `IntlProvider` ancestor to resolve against.
+													 */}
+													<IntlProvider intl={ctx.intl}>
+														<CheckboxGroupSelectAll groupId={MONITORS_GROUP_ID} />
+													</IntlProvider>
+
+													<CheckboxGroup id={MONITORS_GROUP_ID} aria-labelledby={MONITORS_LABEL_ID}>
+														{selectableMonitors.map((monitor) => (
+															<Checkbox
+																key={`${monitor.field}-${monitor.id}`}
+																name={monitor.field}
+																value={monitor.id}
+																defaultChecked={submittedList(
+																	submission,
+																	monitor.field,
+																	[],
+																).includes(monitor.id)}
+															>
+																{monitor.name}
+															</Checkbox>
+														))}
+													</CheckboxGroup>
+												</div>
+											)}
+
+											{cronJobs.length > 0 && (
+												<div mix={[vstack({ gap: "8px" })]}>
+													<div mix={[fieldStackLayout()]}>
+														<Label
+															id={CRON_JOBS_LABEL_ID}
+															mix={[fontSize("base"), weight("semibold")]}
+														>
+															{t("cronJobs.label")}
+														</Label>
+														<Description>{t("cronJobs.description")}</Description>
+													</div>
+
+													<IntlProvider intl={ctx.intl}>
+														<CheckboxGroupSelectAll groupId={CRON_JOBS_GROUP_ID} />
+													</IntlProvider>
+
+													<CheckboxGroup
+														id={CRON_JOBS_GROUP_ID}
+														aria-labelledby={CRON_JOBS_LABEL_ID}
+													>
+														{cronJobs.map((cronJob) => (
+															<Checkbox
+																key={cronJob.id}
+																name="cron_job_ids"
+																value={cronJob.id}
+																defaultChecked={submittedList(
+																	submission,
+																	"cron_job_ids",
+																	[],
+																).includes(cronJob.id)}
+															>
+																{cronJob.name}
+															</Checkbox>
+														))}
+													</CheckboxGroup>
+												</div>
+											)}
+
+											{/** A team with nothing to list still gets the card, so the submit control keeps its place. */}
+											{!hasSomethingToList && (
+												<Description>
+													{ctx.intl.t("page.createStatusPage.form.sections.services.empty")}
+												</Description>
+											)}
+										</SettingsSection.Body>
+										<SettingsSection.Footer>
+											<Button type="submit">{ctx.intl.t("page.statusPages.form.cta")}</Button>
+										</SettingsSection.Footer>
+									</SettingsSection.Card>
+								</SettingsSection>
+							</div>
+						</Form>
+					</FormPage>
+				</AppShell>
+			</DocumentLayout>
+		);
+	};
+}

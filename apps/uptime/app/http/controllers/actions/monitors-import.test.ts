@@ -298,7 +298,7 @@ describe("importMonitors", () => {
 			interval_seconds: "1800",
 		});
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('id="import-urls-error"');
 		expect(body).toContain('value="1800"');

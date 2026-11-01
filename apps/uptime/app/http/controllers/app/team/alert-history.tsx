@@ -20,12 +20,14 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
 
@@ -74,7 +76,7 @@ function statusFacet(status: string): string {
 
 /** GET /app/:team/alert-history — the team's alert delivery history. */
 export default createAction(routes.app.team.alerts.history, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -167,13 +169,7 @@ export default createAction(routes.app.team.alerts.history, {
 								labels={{
 									toolbar: t("page.alertHistory.filters.toolbar"),
 									tabs: t("page.alertHistory.filters.toolbar"),
-									filters: t("page.alertHistory.filters.filters"),
-									apply: t("page.alertHistory.filters.apply"),
-									is: t("page.alertHistory.filters.is"),
-									isAnyOf: t("page.alertHistory.filters.isAnyOf"),
-									clear: t("page.alertHistory.filters.clear"),
-									remove: (field, values) =>
-										t("page.alertHistory.filters.remove", { field, values }),
+									...sharedFilterLabels(ctx.intl.t),
 								}}
 							/>
 
@@ -189,7 +185,7 @@ export default createAction(routes.app.team.alerts.history, {
 											variant="outline"
 											color="neutral"
 										>
-											{t("page.alertHistory.filters.clear")}
+											{ctx.intl.t("app.layout.filters.clear")}
 										</LinkButton>
 									</Empty.Action>
 								</Empty>

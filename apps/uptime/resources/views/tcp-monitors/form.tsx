@@ -12,28 +12,19 @@ import type { getContext } from "remix/middleware/async-context";
 
 import { FieldError, Switch, TextField } from "@sdxc/ui";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { SelectTcpMonitor } from "~/database/schema";
 
+import { fieldIssue, submittedChecked, submittedText } from "~/app/http/validators/form-submission";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import StepperField from "~/resources/components/stepper-field";
-
-/** A field the form posts, named as the action reads it. */
-export type TcpMonitorField = "name" | "host" | "port" | "interval_seconds" | "timeout_ms";
-
-/** What a rejected submission carried, to render back into the form. */
-export interface TcpMonitorSubmission {
-	/** Every field as the visitor typed it. */
-	values: Partial<Record<TcpMonitorField, string>> & { is_enabled?: boolean };
-	/** The fields the action refused, each drawn with its message. */
-	invalid: TcpMonitorField[];
-}
 
 export namespace TcpMonitorFormFields {
 	export interface Props {
 		/** Existing monitor values when editing; omitted when creating. */
 		monitor?: SelectTcpMonitor;
 		/** The rejected submission to show again, which wins over `monitor`. */
-		submission?: TcpMonitorSubmission;
+		submission?: FormSubmission;
 		/** The request's translator, used to read this page's `form.fields.*` copy. */
 		intl: ReturnType<typeof getContext>["intl"];
 		/** Which page is rendering these fields, selecting the `page.<page>.form.fields.*` keys to read. */
@@ -41,21 +32,12 @@ export namespace TcpMonitorFormFields {
 	}
 }
 
-/** The issue copy each field shows when the action refuses it. */
-const ISSUE_KEYS: Record<TcpMonitorField, string> = {
-	name: "name",
-	host: "host",
-	port: "port",
-	interval_seconds: "interval",
-	timeout_ms: "timeout",
-};
-
 /**
  * The number a stepper starts on: the submitted text when it reads as a number, else the
  * fallback, since a stepper needs a number to step from even after a nonsense submission.
  */
-function stepperValue(submitted: string | undefined, fallback: number): number {
-	if (submitted === undefined || submitted.trim() === "") return fallback;
+function stepperValue(submitted: string, fallback: number): number {
+	if (submitted.trim() === "") return fallback;
 	let parsed = Number(submitted);
 	return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -68,13 +50,9 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 	return () => {
 		let { monitor, submission, intl, page } = handle.props;
 		let t = withPrefix(intl.t, `page.${page}.form.fields`);
-		let values = submission?.values ?? {};
 
 		/** The message for `field` when the action refused it. */
-		let issue = (field: TcpMonitorField) =>
-			submission?.invalid.includes(field)
-				? intl.t(`page.tcpMonitors.form.issues.${ISSUE_KEYS[field]}`)
-				: undefined;
+		let issue = (field: string) => fieldIssue(submission, field);
 
 		return (
 			<>
@@ -82,7 +60,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					type="text"
 					name="name"
 					required
-					defaultValue={values.name ?? monitor?.name}
+					defaultValue={submittedText(submission, "name", monitor?.name ?? "")}
 					label={t("name.label")}
 					placeholder={t("name.placeholder")}
 					description={t("name.description")}
@@ -93,7 +71,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					type="text"
 					name="host"
 					required
-					defaultValue={values.host ?? monitor?.host}
+					defaultValue={submittedText(submission, "host", monitor?.host ?? "")}
 					label={t("host.label")}
 					placeholder={t("host.placeholder")}
 					description={t("host.description")}
@@ -111,7 +89,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						incrementLabel={t("port.increment")}
 						min={1}
 						max={65_535}
-						defaultValue={stepperValue(values.port, monitor?.port ?? 80)}
+						defaultValue={stepperValue(submittedText(submission, "port", ""), monitor?.port ?? 80)}
 					/>
 					{issue("port") && <FieldError>{issue("port")}</FieldError>}
 				</div>
@@ -126,7 +104,10 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						incrementLabel={t("interval.increment")}
 						min={60}
 						max={86_400}
-						defaultValue={stepperValue(values.interval_seconds, monitor?.interval_seconds ?? 300)}
+						defaultValue={stepperValue(
+							submittedText(submission, "interval_seconds", ""),
+							monitor?.interval_seconds ?? 300,
+						)}
 					/>
 					{issue("interval_seconds") && <FieldError>{issue("interval_seconds")}</FieldError>}
 				</div>
@@ -141,7 +122,10 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 						incrementLabel={t("timeout.increment")}
 						min={100}
 						max={60_000}
-						defaultValue={stepperValue(values.timeout_ms, monitor?.timeout_ms ?? 5000)}
+						defaultValue={stepperValue(
+							submittedText(submission, "timeout_ms", ""),
+							monitor?.timeout_ms ?? 5000,
+						)}
 					/>
 					{issue("timeout_ms") && <FieldError>{issue("timeout_ms")}</FieldError>}
 				</div>
@@ -150,7 +134,7 @@ export default function TcpMonitorFormFields(handle: Handle<TcpMonitorFormFields
 					<Switch
 						name="is_enabled"
 						value="true"
-						defaultChecked={values.is_enabled ?? monitor.is_enabled}
+						defaultChecked={submittedChecked(submission, "is_enabled", monitor.is_enabled)}
 					>
 						{t("isEnabled.label")}
 					</Switch>

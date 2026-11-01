@@ -14,6 +14,7 @@ import { fontSize } from "@sdxc/u/typography";
 import { Alert, Button, DateField, LinkButton, RadioGroup, Select } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -39,7 +40,7 @@ import routes from "~/routes/web";
  * month in the spreadsheet format.
  */
 export default createAction(routes.app.team.reports.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Form } from "@sdxc/ui";
+
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -14,40 +16,39 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import { renderNewApiKeyForm } from "~/app/http/controllers/app/team/api-key-new";
 import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/api-key";
+import { issueField, translateIssues } from "~/app/http/validators/form-submission";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
+import NewApiKeyPage from "~/resources/views/api-keys/new-api-key-page";
 import routes from "~/routes/web";
+
+/** The `page.apiKeys.fieldErrors` key per field the form can flag. */
+const ISSUE_KEYS: Record<string, string> = { name: "name", scopes: "scopes" };
 
 /**
  * POST /actions/:team/create-api-key. A rejected submission renders the new key form again with
- * a 400, keeping the typed name, the date and every checked scope beside the field's error.
+ * a 422, keeping the typed name, the date and every checked scope beside the field's error.
  */
 export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateApiKeySchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		let rejected = new Set(result.error.issues.map((issue) => issue.path?.at(0)));
-		let name = ctx.formData.get("name");
-		let expiresAt = ctx.formData.get("expires_at");
-		let scopes = ctx.formData
-			.getAll("scopes")
-			.filter((scope): scope is string => typeof scope === "string");
-		return renderNewApiKeyForm(
-			{
-				values: {
-					name: typeof name === "string" ? name : "",
-					expires_at: typeof expiresAt === "string" ? expiresAt : "",
-					scopes,
-				},
-				issues: {
-					name: rejected.has("name"),
-					scopes: rejected.has("scopes") || scopes.length === 0,
-				},
-			},
-			{ status: 400 },
+		/** A key with no scope can do nothing, so an empty choice reads as a refused scope list. */
+		let noScopes = ctx.formData.getAll("scopes").length === 0;
+		let reported = noScopes
+			? [...result.error.issues, { message: "scopes", path: ["scopes"] }]
+			: result.error.issues;
+		let issues: Form.Issue[] = translateIssues(
+			reported.filter((issue) => (issueField(issue) ?? "") in ISSUE_KEYS),
+			(field) => ({
+				field,
+				message: ctx.intl.t(`page.apiKeys.fieldErrors.${ISSUE_KEYS[field ?? ""]}`),
+			}),
 		);
+		return ctx.render(<NewApiKeyPage submission={{ values: ctx.formData, issues }} />, {
+			status: 422,
+		});
 	}
 
 	let count = await ctx.models.apiKeys.inTeam(ctx.team.id).count();

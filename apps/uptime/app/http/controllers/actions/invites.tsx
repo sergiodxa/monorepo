@@ -14,26 +14,42 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+
 import emails from "~/app/emails";
+import { Admin } from "~/app/http/middleware/admin";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
+import { createManagementClient } from "~/app/initializers/management-client";
 import { recordCost } from "~/app/services/cost";
 import { checkEmailAddress } from "~/app/services/email-address";
+import { loadTeamSettings } from "~/app/services/team-settings";
+import TeamSettingsPage from "~/resources/views/settings/settings-page";
 import routes from "~/routes/web";
 
 /**
- * POST /actions/:team/create-invite. The cost is recorded before the send so a rejected send is
- * still billed. The invite carries no admin locale, so the notification is written in the app's
- * fallback language, treating the requester's own locale as the last resort.
+ * POST /actions/:team/create-invite. A refused address answers 422 with the invite dialog open
+ * on what was typed. The cost is recorded before the send so a rejected send is still billed;
+ * the invite carries no admin locale, so it is written in the app's fallback language.
  */
 export const createInvite = createAction(routes.teamAdminActions.invite.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateInviteSchema);
 	let session = ctx.get(Session);
 
-	if (isFailure(result)) {
-		session?.flash("toast", { intent: "error", message: "Enter a valid email address." });
-		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
+	/** Draws the settings page again with the invite dialog open on the refused address. */
+	let sendBack = async (message: string) => {
+		if (!ctx.has(Admin)) ctx.set(Admin, createManagementClient(), { property: "admin" });
+		let settings = await loadTeamSettings(ctx.models, ctx.admin, ctx.team);
+		let submission: FormSubmission = {
+			values: ctx.formData,
+			issues: [{ message, path: ["email"] }],
+		};
+		return ctx.render(<TeamSettingsPage settings={settings} inviteSubmission={submission} />, {
+			status: 422,
 		});
+	};
+
+	if (isFailure(result)) {
+		return sendBack(ctx.intl.t("actions.createInvite.errors.invalidEmail"));
 	}
 
 	let { email } = result.data;
@@ -41,20 +57,16 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 	/** The invite is only as good as the email carrying it, so a domain with no mail host is refused. */
 	let deliverable = await checkEmailAddress(email);
 	if (isFailure(deliverable)) {
-		session?.flash("toast", {
-			intent: "error",
-			message: ctx.intl.t("actions.emailAddress.noMailServer", {
-				domain: deliverable.error.domain,
-			}),
-		});
-		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
-			status: redirect.Status.SeeOther,
-		});
+		return sendBack(
+			ctx.intl.t("actions.emailAddress.noMailServer", { domain: deliverable.error.domain }),
+		);
 	}
 
 	let existing = await ctx.models.invites.inTeam(ctx.team.id).where({ email }).first();
 	if (existing && existing.accepted_at !== null) {
-		return badRequest(`${email} already accepted an invite to this team.`);
+		return sendBack(
+			ctx.intl.t("actions.createInvite.errors.alreadyAccepted", { team: ctx.team.name }),
+		);
 	}
 
 	let invite =
@@ -79,7 +91,10 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 		ctx.log.warn("invites.email_queue_failed", { error: queued.error.message });
 	}
 
-	session?.flash("toast", { intent: "success", message: `Invite sent to ${email}.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.createInvite.success", { email, team: ctx.team.name }),
+	});
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});
@@ -101,11 +116,19 @@ export const revokeInvite = createAction(routes.teamAdminActions.invite.revoke, 
 		.where({ id: result.data.invite_id })
 		.first();
 	if (!invite) return notFound("Not Found");
-	if (invite.accepted_at !== null) return badRequest("This invite was already accepted.");
+	if (invite.accepted_at !== null) {
+		return badRequest(ctx.intl.t("actions.revokeInvite.errors.alreadyAccepted"));
+	}
 
 	unwrap(await ctx.models.invites.delete(invite.id));
 
-	session?.flash("toast", { intent: "success", message: `Invite to ${invite.email} revoked.` });
+	session?.flash("toast", {
+		intent: "success",
+		message: ctx.intl.t("actions.revokeInvite.success", {
+			email: invite.email,
+			team: ctx.team.name,
+		}),
+	});
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 		status: redirect.Status.SeeOther,
 	});

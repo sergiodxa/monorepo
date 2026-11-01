@@ -190,7 +190,7 @@ describe("POST /actions/:team/create-api-key", () => {
 		);
 		let body = await response.text();
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		expect(body).toContain(en.page.apiKeys.fieldErrors.name);
 		expect(body).not.toContain(en.page.apiKeys.fieldErrors.scopes);
 		expect(body.match(/<input[^>]*value="monitors:read"[^>]*>/)?.[0]).toMatch(/\schecked\b/);
@@ -215,7 +215,7 @@ describe("POST /actions/:team/create-api-key", () => {
 		);
 		let body = await response.text();
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		expect(body.match(/<input[^>]*name="name"[^>]*>/)?.[0]).toContain(`value="No scopes"`);
 		expect(body).toContain(en.page.apiKeys.fieldErrors.scopes);
 		expect(body).toContain(`aria-describedby="api-key-scopes-error"`);

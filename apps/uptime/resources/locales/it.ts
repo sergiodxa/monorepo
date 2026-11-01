@@ -1284,6 +1284,52 @@ export default {
 		},
 
 		layout: {
+			filters: {
+				filters: "Filtri",
+				apply: "Applica",
+				is: "è",
+				isAnyOf: "è uno tra",
+				clear: "Cancella filtri",
+				remove: "Rimuovi {$field}: {$values}",
+			},
+			palette: {
+				title: "Menu comandi",
+				open: "Apri il menu comandi",
+				placeholder: "Cerca pagine o esegui un comando…",
+				recent: "Recenti",
+				noResults: "Nessun risultato per",
+				noResultsHint:
+					"Prova il nome di una pagina, come “avvisi”, o un comando, come “crea monitor”.",
+				results: "\\{count\\} risultati",
+				back: "Indietro",
+				close: "Chiudi",
+				trigger: "Cerca o vai a…",
+				groups: { navigate: "Vai a", create: "Crea", team: "Team" },
+				switchTeam: "Cambia team…",
+				switchTeamPlaceholder: "Cerca i tuoi team…",
+				alertHistory: "Cronologia avvisi",
+				create: {
+					http: "Crea monitor HTTP",
+					dns: "Crea monitor DNS",
+					tcp: "Crea monitor TCP",
+					flow: "Crea monitor di flusso",
+					cron: "Crea cron job",
+					alert: "Crea avviso",
+					statusPage: "Crea pagina di stato",
+					maintenance: "Pianifica manutenzione",
+				},
+			},
+			help: {
+				title: "Scorciatoie da tastiera",
+				description: "Tutti i tasti a cui risponde questa pagina.",
+				close: "Chiudi",
+				or: "o",
+				open: "Mostra scorciatoie da tastiera",
+				general: "Generale",
+				other: "Altro",
+				trigger: "Scorciatoie da tastiera",
+			},
+			attention: "{$count} richiedono attenzione",
 			keys: {
 				group: "Elenco",
 				next: "Riga successiva",
@@ -1969,6 +2015,8 @@ export default {
 				generic: "Ops! Qualcosa è andato storto.",
 				notAllowed: "Non Le è consentito aggiungere domini a questo team.",
 				alreadyExists: "{$hostname} è stato aggiunto il {$verifiedAt}.",
+				invalidHostname: "Inserisca un dominio valido.",
+				alreadyVerified: "{$hostname} è già verificato per questo team.",
 			},
 
 			success: {
@@ -1985,6 +2033,7 @@ export default {
 			},
 
 			success: "Il ruolo di {$name} è stato cambiato in {$role} in {$team}.",
+			updated: "Ruolo aggiornato.",
 		},
 
 		createAlert: {
@@ -2005,6 +2054,7 @@ export default {
 				generic: "Ops! Qualcosa è andato storto.",
 				notAllowed: "Non Le è consentito invitare membri in questo team.",
 				alreadyAccepted: "C'è già un membro di {$team} con questa email.",
+				invalidEmail: "Inserisca un indirizzo email valido.",
 			},
 
 			success: "{$email} è stato invitato a unirsi a {$team}.",
@@ -2133,6 +2183,7 @@ export default {
 				generic: "Ops! Qualcosa è andato storto durante l'eliminazione del team.",
 				forbidden: "Solo il proprietario del team può eliminare il team.",
 				confirmationRequired: "Per favore digiti DELETE per confermare.",
+				nameMismatch: "Digiti il nome del team per confermare.",
 			},
 
 			success: "{$team} è stato eliminato.",
@@ -2209,6 +2260,7 @@ export default {
 		createTeam: {
 			errors: {
 				generic: "Ops! Qualcosa è andato storto durante la creazione del team.",
+				name: "Inserisca un nome del team di massimo 255 caratteri.",
 			},
 
 			success: {
@@ -2658,6 +2710,7 @@ export default {
 		editMonitor: {
 			header: {
 				title: "Modifica Monitor",
+				named: "Modifica {$name}",
 			},
 
 			alert: {
@@ -3569,12 +3622,6 @@ export default {
 			filters: {
 				toolbar: "Filtra i monitor",
 				tabs: "Viste dei monitor",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno tra",
-				clear: "Rimuovi filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				status: "Stato",
 				search: {
 					label: "Cerca monitor",
@@ -3668,12 +3715,6 @@ export default {
 		dnsMonitors: {
 			filters: {
 				toolbar: "Filtra i monitor DNS",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno tra",
-				clear: "Cancella filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				search: "Cerca monitor DNS",
 				searchPlaceholder: "Cerca per nome o dominio",
 				status: "Stato",
@@ -4543,12 +4584,6 @@ export default {
 
 			filters: {
 				toolbar: "Filtra la cronologia degli avvisi",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno tra",
-				clear: "Rimuovi i filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				event: "Evento",
 				status: "Invio",
 			},
@@ -5610,12 +5645,6 @@ export default {
 			filters: {
 				toolbar: "Filtra i monitor di flusso",
 				tabs: "Viste dei monitor di flusso",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno di",
-				clear: "Rimuovi i filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				status: "Stato",
 				search: {
 					label: "Cerca monitor di flusso",
@@ -5800,12 +5829,6 @@ export default {
 		tcpMonitors: {
 			filters: {
 				toolbar: "Filtra i monitor TCP",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno tra",
-				clear: "Cancella filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				search: "Cerca monitor TCP",
 				searchPlaceholder: "Cerca per nome o host",
 				status: "Stato",
@@ -6284,12 +6307,6 @@ export default {
 			filters: {
 				toolbar: "Filtra i cron job",
 				tabs: "Viste dei cron job",
-				filters: "Filtri",
-				apply: "Applica",
-				is: "è",
-				isAnyOf: "è uno di",
-				clear: "Rimuovi i filtri",
-				remove: "Rimuovi {$field}: {$values}",
 				status: "Stato",
 				search: {
 					label: "Cerca cron job",

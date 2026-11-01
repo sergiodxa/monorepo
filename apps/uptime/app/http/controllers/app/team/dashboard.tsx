@@ -20,6 +20,7 @@ import { Session } from "remix/session";
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
 import { panelSrc, refreshInterval } from "~/app/http/controllers/app/team/dashboard-panel";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -47,7 +48,7 @@ interface Toast {
  * the panel's frame, so an interval chosen there survives a reload and a tab switch.
  */
 export default createAction(routes.app.team.dashboard.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async () => {
 		let ctx = getContext();
 		let viewer = getViewer();

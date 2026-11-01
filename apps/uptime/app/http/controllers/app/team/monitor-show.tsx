@@ -39,6 +39,7 @@ import type { SelectMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -81,7 +82,7 @@ const OVERFLOW_MENU_ID = "monitor-overflow";
  * Delete sits last in the overflow menu, and only for a member allowed to delete.
  */
 export default createAction(routes.app.team.monitors.show, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

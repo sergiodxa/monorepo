@@ -19,6 +19,7 @@ import { Session } from "remix/session";
 
 import type { SelectAlert } from "~/database/schema";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -38,7 +39,7 @@ interface Toast {
 
 /** GET /app/:team/alerts — the team's alerts list. */
 export default createAction(routes.app.team.alerts.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

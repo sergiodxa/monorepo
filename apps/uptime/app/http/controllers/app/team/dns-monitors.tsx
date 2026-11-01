@@ -21,6 +21,7 @@ import { createAction } from "remix/router";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -29,6 +30,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import RegistrationBadge from "~/resources/components/registration-badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
 
@@ -120,7 +122,7 @@ async function countRecords(
  * already loaded, so the facet counts always describe the whole team.
  */
 export default createAction(routes.app.team.dnsMonitors.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -208,13 +210,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 								labels={{
 									toolbar: ctx.intl.t("page.dnsMonitors.filters.toolbar"),
 									tabs: ctx.intl.t("page.dnsMonitors.filters.toolbar"),
-									filters: ctx.intl.t("page.dnsMonitors.filters.filters"),
-									apply: ctx.intl.t("page.dnsMonitors.filters.apply"),
-									is: ctx.intl.t("page.dnsMonitors.filters.is"),
-									isAnyOf: ctx.intl.t("page.dnsMonitors.filters.isAnyOf"),
-									clear: ctx.intl.t("page.dnsMonitors.filters.clear"),
-									remove: (field, values) =>
-										ctx.intl.t("page.dnsMonitors.filters.remove", { field, values }),
+									...sharedFilterLabels(ctx.intl.t),
 								}}
 							/>
 
@@ -226,7 +222,7 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 									</Empty.Description>
 									<Empty.Action>
 										<LinkButton variant="outline" href={clearFiltersHref(ctx.url, FILTER_PARAMS)}>
-											{ctx.intl.t("page.dnsMonitors.filters.clear")}
+											{ctx.intl.t("app.layout.filters.clear")}
 										</LinkButton>
 									</Empty.Action>
 								</Empty>

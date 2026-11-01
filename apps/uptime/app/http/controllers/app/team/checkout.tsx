@@ -16,6 +16,7 @@ import { createAction } from "remix/router";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -37,7 +38,7 @@ type BillingNoticeKind = "permission" | "error";
  * keeps the mistake recoverable.
  */
 export default createAction(routes.app.team.checkout, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

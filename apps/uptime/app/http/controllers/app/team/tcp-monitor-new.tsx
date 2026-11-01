@@ -8,6 +8,7 @@
 
 import { createAction } from "remix/router";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import NewTcpMonitorPage from "~/resources/views/tcp-monitors/new-page";
@@ -15,6 +16,6 @@ import routes from "~/routes/web";
 
 /** GET /app/:team/tcp/new — the new TCP monitor form, empty on a first visit. */
 export default createAction(routes.app.team.tcpMonitors.new, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: (ctx) => ctx.render(<NewTcpMonitorPage />),
 });

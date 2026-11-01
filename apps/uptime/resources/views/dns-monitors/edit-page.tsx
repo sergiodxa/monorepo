@@ -22,10 +22,11 @@ import {
 import { DangerZone } from "@sdxc/ui/app";
 import { getContext } from "remix/middleware/async-context";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { SelectDnsMonitor } from "~/database/schema";
-import type { DnsMonitorSubmission } from "~/resources/views/dns-monitors/form";
 
 import { getViewer } from "~/app/http/middleware/auth";
+import { fieldIssue, submittedText } from "~/app/http/validators/form-submission";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -42,21 +43,14 @@ const DATE_SLOT = "\u{E000}";
 const REGISTRATION_WARNING_DAYS_INPUT_ID = "dns-monitor-registration-warning-days";
 
 export namespace EditDnsMonitorPage {
-	/** A zone file the import action refused, kept so the paste is never lost. */
-	export interface ZoneFileSubmission {
-		value: string;
-		/** The translated reason the import was refused. */
-		issue: string;
-	}
-
 	export interface Props {
 		monitor: SelectDnsMonitor;
 		/** Whether the viewer may delete monitors, which decides whether the danger zone renders. */
 		canDelete: boolean;
 		/** The settings submission the update action refused; omitted on a first visit. */
-		submission?: DnsMonitorSubmission;
-		/** The paste the zone-file import action refused; omitted on a first visit. */
-		zoneFile?: ZoneFileSubmission;
+		submission?: FormSubmission;
+		/** The zone-file paste the import action refused, kept so the paste is never lost. */
+		zoneFileSubmission?: FormSubmission;
 	}
 }
 
@@ -64,8 +58,8 @@ export namespace EditDnsMonitorPage {
  * The warning window a stepper starts on: the submitted text when it reads as a number, else
  * the saved window, since a stepper needs a number to step from.
  */
-function warningDays(submitted: string | undefined, saved: number): number {
-	if (submitted === undefined || submitted.trim() === "") return saved;
+function warningDays(submitted: string, saved: number): number {
+	if (submitted.trim() === "") return saved;
 	let parsed = Number(submitted);
 	return Number.isFinite(parsed) ? parsed : saved;
 }
@@ -81,10 +75,10 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this page renders");
 
-		let { monitor, canDelete, submission, zoneFile } = handle.props;
+		let { monitor, canDelete, submission, zoneFileSubmission } = handle.props;
 		let monitorParams = { team: ctx.team.slug, monitorId: monitor.id };
 		let showHref = routes.app.team.dnsMonitors.show.href(monitorParams);
-		let warningDaysIssue = submission?.issues.registration_warning_days;
+		let warningDaysIssue = fieldIssue(submission, "registration_warning_days");
 		/**
 		 * The sentence around the import date, split where the date goes so the date renders as
 		 * a live relative time while each language keeps its own word order.
@@ -94,7 +88,12 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 			.split(DATE_SLOT);
 
 		return (
-			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${monitor.name}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.editMonitor.header.named", {
+					name: monitor.name,
+				})}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={routes.app.team.dnsMonitors.edit.href(monitorParams)}
@@ -113,7 +112,7 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 				>
 					<FormPage>
 						<div mix={[vstack({ gap: 12 })]}>
-							{(submission || zoneFile) && (
+							{(submission || zoneFileSubmission) && (
 								<Alert id="dns-monitor-form-issues" color="danger">
 									<Alert.Content>
 										<Alert.Description>
@@ -161,7 +160,7 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 													min={1}
 													max={365}
 													defaultValue={warningDays(
-														submission?.values.registration_warning_days,
+														submittedText(submission, "registration_warning_days", ""),
 														monitor.registration_warning_days,
 													)}
 												/>
@@ -196,7 +195,7 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 												description={ctx.intl.t(
 													"page.editDnsMonitor.form.fields.zoneFile.description",
 												)}
-												error={zoneFile?.issue}
+												error={fieldIssue(zoneFileSubmission, "zone_file")}
 											>
 												<TextArea
 													name="zone_file"
@@ -204,7 +203,7 @@ export default function EditDnsMonitorPage(handle: Handle<EditDnsMonitorPage.Pro
 													placeholder={ctx.intl.t(
 														"page.editDnsMonitor.form.fields.zoneFile.placeholder",
 													)}
-													defaultValue={zoneFile?.value}
+													defaultValue={submittedText(zoneFileSubmission, "zone_file", "")}
 												/>
 											</Field>
 

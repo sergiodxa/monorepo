@@ -204,7 +204,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 			cronJobBody({ name: "", cron_expression: "15 3 * * *", grace_period_seconds: "900" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain("Enter a name of up to 255 characters.");
 		expect(body).toContain('value="15 3 * * *"');
@@ -226,7 +226,7 @@ describe("POST /actions/:team/create-cron-job", () => {
 			cronJobBody({ cron_expression: "not a cron expression" }),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Nightly backup"');
 		expect(body).toContain('value="not a cron expression"');
@@ -351,7 +351,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 			}),
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Should not stick"');
 		expect(body).toContain('value="not a cron expression"');
@@ -392,7 +392,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 			{ Referer: "https://uptime.test/back" },
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain("Enter a name of up to 255 characters.");
 		expect(body).toContain('value="*/5 * * * *"');

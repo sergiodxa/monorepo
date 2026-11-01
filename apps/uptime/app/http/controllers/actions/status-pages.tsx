@@ -1,6 +1,6 @@
 /**
  * Form actions for status-page create/update/delete. A refused create or update renders its
- * form again with every posted value and an issue beside each field to fix, answered as 400;
+ * form again with every posted value and an issue beside each field to fix, answered as 422;
  * create/update also curate the five attached monitor-type id lists after saving the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -22,6 +22,7 @@ import {
 	StatusPageIdSchema,
 	UpdateStatusPageSchema,
 } from "~/app/http/validators/status-page";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 
 /** The fields the form can flag; an issue elsewhere reads as the form's own. */
@@ -59,11 +60,15 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 	let result = await validate(ctx.formData, CreateStatusPageSchema);
 	let session = ctx.get(Session);
 
-	/** Renders the new-page form again, loading the page only on this path. */
+	/** Renders the new-page form again, answered as 422, loading the page only on this path. */
 	let sendBack = async (submission: FormSubmission) => {
-		let { renderNewStatusPagePage } =
-			await import("~/app/http/controllers/app/team/status-page-new");
-		return renderNewStatusPagePage(submission);
+		let [{ default: NewStatusPagePage }, scopeGroups] = await Promise.all([
+			import("~/resources/views/status-pages/new-page"),
+			listScopeMonitors(ctx.models, ctx.team.id),
+		]);
+		return ctx.render(<NewStatusPagePage scopeGroups={scopeGroups} submission={submission} />, {
+			status: 422,
+		});
 	};
 
 	if (isFailure(result)) {
@@ -126,11 +131,22 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 			: null;
 	if (!existing) return notFound("Not Found");
 
-	/** Renders this page's edit form again, loading the page only on this path. */
+	/** Renders this page's edit form again, answered as 422, loading the page only on this path. */
 	let sendBack = async (submission: FormSubmission) => {
-		let { renderEditStatusPagePage } =
-			await import("~/app/http/controllers/app/team/status-page-edit");
-		return renderEditStatusPagePage(existing, submission);
+		let [{ default: EditStatusPagePage }, scopeGroups, attachedIds] = await Promise.all([
+			import("~/resources/views/status-pages/edit-page"),
+			listScopeMonitors(ctx.models, ctx.team.id),
+			ctx.models.statusPages.getAttachedIds(existing.id),
+		]);
+		return ctx.render(
+			<EditStatusPagePage
+				page={existing}
+				scopeGroups={scopeGroups}
+				attachedIds={attachedIds}
+				submission={submission}
+			/>,
+			{ status: 422 },
+		);
 	};
 
 	if (isFailure(result)) {

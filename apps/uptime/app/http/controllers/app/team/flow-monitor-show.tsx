@@ -20,6 +20,7 @@ import { createAction } from "remix/router";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -48,7 +49,7 @@ const DELETE_DIALOG_ID = "delete-flow-monitor";
  * requests in the Workers isolate; the run-derived stats stream in through their own frame.
  */
 export default createAction(routes.app.team.flowMonitors.show, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

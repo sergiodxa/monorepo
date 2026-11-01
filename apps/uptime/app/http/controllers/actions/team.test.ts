@@ -170,6 +170,8 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
+		ctx.locale = "en";
+		ctx.intl = intl;
 		return teamAccess(ctx, next);
 	};
 }
@@ -262,7 +264,7 @@ describe("updateTeam", () => {
 		});
 		let body = await response.text();
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let nameInput = body.match(/<input[^>]*name="name"[^>]*>/)?.[0];
 		expect(nameInput).toContain(`aria-invalid="true"`);
 		expect(nameInput).toContain(`aria-describedby="team-name-error"`);
@@ -284,7 +286,7 @@ describe("updateTeam", () => {
 		});
 		let body = await response.text();
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let logoInput = body.match(/<input[^>]*name="logo"[^>]*>/)?.[0];
 		expect(logoInput).toContain(`value="acme-logo"`);
 		expect(logoInput).toContain(`aria-invalid="true"`);
@@ -431,7 +433,7 @@ describe("removeMember", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("owner can't be removed");
+		expect(await response.text()).toContain(en.actions.removeMember.errors.cannotRemoveOwner);
 
 		expect(await db.findOne(memberships, { where: { id: ownerMembership.id } })).not.toBeNull();
 	});
@@ -497,7 +499,7 @@ describe("changeRole", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("owner's role can't be changed");
+		expect(await response.text()).toContain(en.actions.changeRole.errors.cannotChangeOwner);
 
 		let unchanged = await db.findOne(memberships, { where: { id: ownerMembership.id } });
 		expect(unchanged?.role).toBe("admin");

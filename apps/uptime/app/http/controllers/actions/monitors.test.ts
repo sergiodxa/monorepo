@@ -216,7 +216,7 @@ describe("createMonitor", () => {
 			{ name: "Homepage", url: "not-a-url", expected_status: "301", location_hint: "weur" },
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Homepage"');
 		expect(body).toContain('value="not-a-url"');
@@ -288,7 +288,7 @@ describe("updateMonitor", () => {
 			{ monitor_id: monitor.id, name: "Renamed", url: "not-a-url" },
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Renamed"');
 		expect(body).toContain('value="not-a-url"');

@@ -246,7 +246,7 @@ describe("createStatusPage", () => {
 			],
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="New page"');
 		expect(body).toContain("Another status page already uses this slug.");
@@ -273,7 +273,7 @@ describe("createStatusPage", () => {
 			],
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="Not A Slug"');
 		expect(body).toContain("Our services");
@@ -451,7 +451,7 @@ describe("updateStatusPage", () => {
 			],
 		);
 
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(422);
 		let body = await response.text();
 		expect(body).toContain('value="page-b"');
 		expect(body).toContain("Another status page already uses this slug.");

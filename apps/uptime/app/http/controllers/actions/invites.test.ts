@@ -7,29 +7,38 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ManagementClient } from "@sdxc/auth/management-client";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { isComposedEmail, Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { unwrap } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
+import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
+import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import emails from "~/app/emails";
 import { MAIL_FROM } from "~/app/emails/sender";
+import { admin } from "~/app/http/middleware/admin";
 import models from "~/app/http/middleware/models";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { useMailServerDns } from "~/app/test/mail-servers";
 import { invites, memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -72,16 +81,45 @@ let { intl } = createTranslator({
 
 /**
  * Middleware that seeds `ctx.team`/`ctx.membership` in place of
- * `requireTeam`/`requireRole`, plus the translator the page's own copy is written with.
+ * `requireTeam`/`requireRole`, plus the translator and the signed-in viewer the settings page
+ * a refused invite draws again is written with.
  */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
+		let viewer: Viewer = {
+			id: membership.subject_id,
+			name: "Test Viewer",
+			email: "viewer@example.com",
+			avatar: "",
+		};
 		ctx.team = team;
+		ctx.teams = [team];
 		ctx.membership = membership;
 		ctx.locale = "en";
 		ctx.intl = intl;
+		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
 		return next();
 	};
+}
+
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
+function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
+		let headers = new Headers(init?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
+		return new Response(stream, { ...init, headers });
+	};
+}
+
+/** A management client that knows no subject, so the settings page lists members by raw id. */
+let fakeAdmin = {
+	fetchSubjectById: async (subjectId: string) => failure(new SubjectNotFoundError(subjectId)),
+} as unknown as ManagementClient;
+
+/** The invite dialog's markup as a refused submission draws it, open on load. */
+function inviteDialog(body: string): string | undefined {
+	return /<dialog[^>]*id="invite-member"[^>]*>[\s\S]*?<\/dialog>/.exec(body)?.[0];
 }
 
 /** Sends a form request through a minimal router mapping a single action route. */
@@ -100,7 +138,10 @@ async function send(
 			asyncContext(),
 			database(db),
 			models(),
+			admin(() => fakeAdmin),
 			formData() as Middleware,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
 			mail({
 				transport,
 				from: MAIL_FROM,
@@ -228,8 +269,10 @@ describe("createInvite", () => {
 			{ email: "member@example.com" },
 		);
 
-		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("already accepted an invite");
+		expect(response.status).toBe(422);
+		expect(inviteDialog(await response.text())).toContain(
+			intl.t("actions.createInvite.errors.alreadyAccepted", { team: team.name }),
+		);
 
 		let matching = await db.findMany(invites, {
 			where: { team_id: team.id, email: "member@example.com" },
@@ -238,7 +281,7 @@ describe("createInvite", () => {
 		expect(transport.messages).toHaveLength(0);
 	});
 
-	test("redirects back without creating an invite when the email is invalid", async () => {
+	test("draws the settings page again with the invite dialog open when the email is invalid", async () => {
 		let { db, team, membership } = await createFixture();
 		let transport = new MemoryTransport();
 
@@ -253,10 +296,11 @@ describe("createInvite", () => {
 			{ email: "not-an-email" },
 		);
 
-		expect(response.status).toBe(303);
-		expect(response.headers.get("Location")).toBe(
-			routes.app.team.settings.href({ team: team.slug }),
-		);
+		expect(response.status).toBe(422);
+		let dialog = inviteDialog(await response.text());
+		expect(dialog).toMatch(/<dialog[^>]*\sopen/);
+		expect(dialog).toMatch(/<input[^>]*name="email"[^>]*value="not-an-email"/);
+		expect(dialog).toContain(en.actions.createInvite.errors.invalidEmail);
 
 		let matching = await db.findMany(invites, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
@@ -279,7 +323,10 @@ describe("createInvite", () => {
 			{ email: "friend@nomail.example" },
 		);
 
-		expect(response.status).toBe(303);
+		expect(response.status).toBe(422);
+		expect(inviteDialog(await response.text())).toMatch(
+			/<input[^>]*name="email"[^>]*value="friend@nomail.example"/,
+		);
 		expect(dns.asked).toContain("nomail.example");
 		expect(await db.findMany(invites, { where: { team_id: team.id } })).toHaveLength(0);
 		expect(transport.messages).toHaveLength(0);
@@ -427,7 +474,7 @@ describe("revokeInvite", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await response.text()).toContain("already accepted");
+		expect(await response.text()).toContain(en.actions.revokeInvite.errors.alreadyAccepted);
 
 		let found = await db.findOne(invites, { where: { id: invite.id } });
 		expect(found).not.toBeNull();

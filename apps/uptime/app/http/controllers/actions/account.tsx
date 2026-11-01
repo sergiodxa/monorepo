@@ -14,6 +14,8 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
+
 import { getViewer } from "~/app/http/middleware/auth";
 import { RequestAccountDeletionSchema } from "~/app/http/validators/account";
 import { UpdateEmailsSchema } from "~/app/http/validators/email-preferences";
@@ -23,17 +25,43 @@ import { language as languageCookie } from "~/app/initializers/cookies";
 import abilities from "~/app/policies/abilities";
 import policy, { rolesOf } from "~/app/policies/policy";
 import { accountExportFilename, buildAccountExport } from "~/app/services/account-export";
+import { loadAccountOverview } from "~/app/services/account-overview";
 import { optionalEmails } from "~/database/schema";
+import AccountPage from "~/resources/views/account/account-page";
 import routes from "~/routes/web";
 
-/** POST /actions/create-team */
+/**
+ * POST /actions/create-team. A refused name draws the account page again, answered as 422,
+ * inside the shell of the team the form names, with the create-team dialog open on what was
+ * typed; a form naming no team the viewer belongs to answers a plain 400.
+ */
 export const createTeam = createAction(routes.accountActions.createTeam, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
 	let result = await validate(ctx.formData, CreateTeamSchema);
 	if (isFailure(result)) {
-		return badRequest("Enter a team name.");
+		let message = ctx.intl.t("actions.createTeam.errors.name");
+		let shellTeam = ctx.formData.get("team");
+		let [team, teams] = await Promise.all([
+			typeof shellTeam === "string" ? ctx.models.teams.findByIdOrSlug(shellTeam) : null,
+			ctx.models.teams.listForSubject(viewer.id),
+		]);
+		let membership = team ? await ctx.models.memberships.findFor(team.id, viewer.id) : null;
+		if (!team || !membership) return badRequest(message);
+
+		ctx.team = team;
+		ctx.membership = membership;
+		ctx.teams = teams;
+
+		let overview = await loadAccountOverview(ctx.models, viewer.id);
+		let submission: FormSubmission = {
+			values: ctx.formData,
+			issues: [{ message, path: ["name"] }],
+		};
+		return ctx.render(<AccountPage overview={overview} createTeamSubmission={submission} />, {
+			status: 422,
+		});
 	}
 
 	let team = unwrap(await ctx.models.teams.createAdditional(viewer.id, result.data.name));

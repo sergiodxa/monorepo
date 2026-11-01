@@ -18,6 +18,7 @@ import { Session } from "remix/session";
 
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -37,7 +38,7 @@ interface Toast {
 
 /** GET /app/:team/maintenance — the team's maintenance windows list. */
 export default createAction(routes.app.team.maintenanceWindows.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

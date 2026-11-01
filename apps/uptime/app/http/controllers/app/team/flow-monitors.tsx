@@ -14,6 +14,7 @@ import { Empty, FilterBar, Table } from "@sdxc/ui/app";
 import { createAction } from "remix/router";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -23,6 +24,7 @@ import { badgeVariant } from "~/resources/components/badge";
 import RowMenu from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
 
@@ -50,7 +52,7 @@ const STATUS_COLOR: Record<RunStatus, NonNullable<Table.StatusCellProps["color"]
  * a filtered list is a link someone can send.
  */
 export default createAction(routes.app.team.flowMonitors.index, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -136,12 +138,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 								labels={{
 									toolbar: t("filters.toolbar"),
 									tabs: t("filters.tabs"),
-									filters: t("filters.filters"),
-									apply: t("filters.apply"),
-									is: t("filters.is"),
-									isAnyOf: t("filters.isAnyOf"),
-									clear: t("filters.clear"),
-									remove: (field, values) => t("filters.remove", { field, values }),
+									...sharedFilterLabels(ctx.intl.t),
 								}}
 							/>
 
@@ -151,7 +148,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 									<Empty.Description>{t("noResults.description")}</Empty.Description>
 									<Empty.Action>
 										<LinkButton href={listHref} variant="outline">
-											{t("filters.clear")}
+											{ctx.intl.t("app.layout.filters.clear")}
 										</LinkButton>
 									</Empty.Action>
 								</Empty>

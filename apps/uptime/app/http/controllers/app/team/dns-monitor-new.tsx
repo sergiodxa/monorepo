@@ -8,6 +8,7 @@
 
 import { createAction } from "remix/router";
 
+import appShellData from "~/app/http/middleware/app-shell-data";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import NewDnsMonitorPage from "~/resources/views/dns-monitors/new-page";
@@ -15,6 +16,6 @@ import routes from "~/routes/web";
 
 /** GET /app/:team/dns/new — the new DNS monitor form, empty on a first visit. */
 export default createAction(routes.app.team.dnsMonitors.new, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, appShellData()],
 	handler: (ctx) => ctx.render(<NewDnsMonitorPage />),
 });

@@ -1252,6 +1252,52 @@ export default {
 		},
 
 		layout: {
+			filters: {
+				filters: "フィルター",
+				apply: "適用",
+				is: "が次の値",
+				isAnyOf: "が次のいずれか",
+				clear: "フィルターをクリア",
+				remove: "{$field}: {$values} を解除",
+			},
+			palette: {
+				title: "コマンドメニュー",
+				open: "コマンドメニューを開く",
+				placeholder: "ページを検索、またはコマンドを実行…",
+				recent: "最近",
+				noResults: "次の結果はありません:",
+				noResultsHint:
+					"「アラート」のようなページ名や「モニターを作成」のようなコマンドを試してください。",
+				results: "\\{count\\} 件の結果",
+				back: "戻る",
+				close: "閉じる",
+				trigger: "検索または移動…",
+				groups: { navigate: "移動", create: "作成", team: "チーム" },
+				switchTeam: "チームを切り替え…",
+				switchTeamPlaceholder: "チームを検索…",
+				alertHistory: "アラート履歴",
+				create: {
+					http: "HTTP モニターを作成",
+					dns: "DNS モニターを作成",
+					tcp: "TCP モニターを作成",
+					flow: "フローモニターを作成",
+					cron: "Cron ジョブを作成",
+					alert: "アラートを作成",
+					statusPage: "ステータスページを作成",
+					maintenance: "メンテナンスを予定",
+				},
+			},
+			help: {
+				title: "キーボードショートカット",
+				description: "このページで使えるすべてのキー。",
+				close: "閉じる",
+				or: "または",
+				open: "キーボードショートカットを表示",
+				general: "一般",
+				other: "その他",
+				trigger: "キーボードショートカット",
+			},
+			attention: "{$count} 件に対応が必要",
 			keys: {
 				group: "リスト",
 				next: "次の行",
@@ -1930,6 +1976,8 @@ export default {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームにドメインを追加する権限がありません。",
 				alreadyExists: "{$hostname}は{$verifiedAt}に追加されました。",
+				invalidHostname: "有効なドメインを入力してください。",
+				alreadyVerified: "{$hostname}はこのチームで既に確認済みです。",
 			},
 
 			success: {
@@ -1946,6 +1994,7 @@ export default {
 			},
 
 			success: "{$name}の役割が{$team}で{$role}に変更されました。",
+			updated: "役割を更新しました。",
 		},
 
 		createAlert: {
@@ -1966,6 +2015,7 @@ export default {
 				generic: "エラーが発生しました。",
 				notAllowed: "このチームにメンバーを招待する権限がありません。",
 				alreadyAccepted: "このメールアドレスは既に{$team}のメンバーです。",
+				invalidEmail: "有効なメールアドレスを入力してください。",
 			},
 
 			success: "{$email}が{$team}に招待されました。",
@@ -2094,6 +2144,7 @@ export default {
 				generic: "チームの削除中にエラーが発生しました。",
 				forbidden: "チームを削除できるのはチームオーナーのみです。",
 				confirmationRequired: "確認のためDELETEと入力してください。",
+				nameMismatch: "確認のためチーム名を入力してください。",
 			},
 
 			success: "{$team}が削除されました。",
@@ -2170,6 +2221,7 @@ export default {
 		createTeam: {
 			errors: {
 				generic: "チームの作成中にエラーが発生しました。",
+				name: "255文字以内でチーム名を入力してください。",
 			},
 
 			success: {
@@ -2614,6 +2666,7 @@ export default {
 		editMonitor: {
 			header: {
 				title: "モニターを編集",
+				named: "{$name}を編集",
 			},
 
 			alert: {
@@ -3516,12 +3569,6 @@ export default {
 			filters: {
 				toolbar: "モニターを絞り込む",
 				tabs: "モニターの表示",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次と一致",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}: {$values} を外す",
 				status: "ステータス",
 				search: {
 					label: "モニターを検索",
@@ -3616,12 +3663,6 @@ export default {
 		dnsMonitors: {
 			filters: {
 				toolbar: "DNSモニターを絞り込む",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次の値",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}: {$values} を解除",
 				search: "DNSモニターを検索",
 				searchPlaceholder: "名前またはドメインで検索",
 				status: "ステータス",
@@ -4488,12 +4529,6 @@ export default {
 
 			filters: {
 				toolbar: "アラート履歴を絞り込む",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次と一致",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}の条件を削除: {$values}",
 				event: "イベント",
 				status: "送信",
 			},
@@ -5540,12 +5575,6 @@ export default {
 			filters: {
 				toolbar: "フローモニターを絞り込む",
 				tabs: "フローモニターの表示",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次と一致",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}を解除: {$values}",
 				status: "ステータス",
 				search: {
 					label: "フローモニターを検索",
@@ -5730,12 +5759,6 @@ export default {
 		tcpMonitors: {
 			filters: {
 				toolbar: "TCPモニターを絞り込む",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次の値",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}: {$values} を解除",
 				search: "TCPモニターを検索",
 				searchPlaceholder: "名前またはホストで検索",
 				status: "ステータス",
@@ -6210,12 +6233,6 @@ export default {
 			filters: {
 				toolbar: "Cronジョブを絞り込む",
 				tabs: "Cronジョブの表示",
-				filters: "フィルター",
-				apply: "適用",
-				is: "が次と一致",
-				isAnyOf: "が次のいずれか",
-				clear: "フィルターをクリア",
-				remove: "{$field}を解除: {$values}",
 				status: "ステータス",
 				search: {
 					label: "Cronジョブを検索",

@@ -22,6 +22,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -49,7 +50,7 @@ const DELETE_DIALOG_ID = "delete-tcp-monitor";
  * offered an action that would answer 403.
  */
 export default createAction(routes.app.team.tcpMonitors.show, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

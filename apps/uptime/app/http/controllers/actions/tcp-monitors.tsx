@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ValidationError } from "@sdxc/validate";
-
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -17,9 +15,10 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import type { FormSubmission } from "~/app/http/validators/form-submission";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
-import type { TcpMonitorField, TcpMonitorSubmission } from "~/resources/views/tcp-monitors/form";
 
+import { translateIssues } from "~/app/http/validators/form-submission";
 import {
 	CreateTcpMonitorSchema,
 	TcpMonitorIdSchema,
@@ -34,35 +33,37 @@ import EditTcpMonitorPage from "~/resources/views/tcp-monitors/edit-page";
 import NewTcpMonitorPage from "~/resources/views/tcp-monitors/new-page";
 import routes from "~/routes/web";
 
-/** Every field the TCP monitor form posts, in the order it draws them. */
-const FORM_FIELDS: readonly TcpMonitorField[] = [
-	"name",
-	"host",
-	"port",
-	"interval_seconds",
-	"timeout_ms",
-];
+/** The `page.tcpMonitors.form.issues` key per field the form can flag. */
+const ISSUE_KEYS: Record<string, string> = {
+	name: "name",
+	host: "host",
+	port: "port",
+	interval_seconds: "interval",
+	timeout_ms: "timeout",
+};
 
 /**
- * What a refused form carried, read back for the form to draw again: each field as typed, the
- * switch as it was left, and the fields the schema named in its issues.
+ * What a refused form carried, handed back for the form to draw again: the body as posted and
+ * a translated message on each field the schema named. An issue on no known field reads as the
+ * form-wide summary the page already shows.
  */
-function submissionOf(formData: FormData, error: ValidationError): TcpMonitorSubmission {
-	let named = new Set(
-		error.issues.map((issue) => {
-			let [segment] = issue.path ?? [];
-			return String(typeof segment === "object" ? segment.key : segment);
+function tcpSubmission(
+	t: (key: string) => string,
+	values: FormData,
+	issues: ReadonlyArray<{
+		message: string;
+		path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+	}>,
+): FormSubmission {
+	return {
+		values,
+		issues: translateIssues(issues, (field) => {
+			let key = field === undefined ? undefined : ISSUE_KEYS[field];
+			return key === undefined
+				? { field: undefined, message: t("page.tcpMonitors.form.issues.summary") }
+				: { field, message: t(`page.tcpMonitors.form.issues.${key}`) };
 		}),
-	);
-	let values: TcpMonitorSubmission["values"] = {
-		is_enabled: formData.has("is_enabled"),
 	};
-	for (let field of FORM_FIELDS) {
-		let value = formData.get(field);
-		if (typeof value === "string") values[field] = value;
-	}
-
-	return { values, invalid: FORM_FIELDS.filter((field) => named.has(field)) };
 }
 
 /** POST /actions/:team/create-tcp-monitor */
@@ -71,9 +72,14 @@ export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, 
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
-		return ctx.render(<NewTcpMonitorPage submission={submissionOf(ctx.formData, result.error)} />, {
-			status: 422,
-		});
+		return ctx.render(
+			<NewTcpMonitorPage
+				submission={tcpSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
+			/>,
+			{
+				status: 422,
+			},
+		);
 	}
 
 	let monitor = unwrap(
@@ -105,7 +111,7 @@ export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, 
 			<EditTcpMonitorPage
 				monitor={monitor}
 				canDelete={ctx.access.can(abilities.tcpMonitors.delete)}
-				submission={submissionOf(ctx.formData, result.error)}
+				submission={tcpSubmission(ctx.intl.t, ctx.formData, result.error.issues)}
 			/>,
 			{ status: 422 },
 		);

@@ -12,6 +12,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import abilities from "~/app/policies/abilities";
@@ -23,7 +24,7 @@ import routes from "~/routes/web";
  * only for a member allowed to delete monitors.
  */
 export default createAction(routes.app.team.dnsMonitors.edit, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		await ctx.access.load(abilities.dnsMonitors.delete);
 		let canDelete = ctx.access.can(abilities.dnsMonitors.delete);

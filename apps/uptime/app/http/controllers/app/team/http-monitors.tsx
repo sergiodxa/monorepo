@@ -18,6 +18,7 @@ import { createAction } from "remix/router";
 import type { SelectMonitor } from "~/database/schema";
 
 import { teamAccess } from "~/app/http/middleware/access";
+import appShellData from "~/app/http/middleware/app-shell-data";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -25,6 +26,7 @@ import abilities from "~/app/policies/abilities";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
+import { sharedFilterLabels } from "~/resources/views/shared/filter-labels";
 import ListKeys from "~/resources/views/shared/list-keys";
 import routes from "~/routes/web";
 
@@ -81,7 +83,7 @@ function filterMonitors(
  * is when someone with a list of URLs decides how to enter them.
  */
 export default createAction(routes.app.team.monitors.index, {
-	middleware: [requireUser, requireTeam, teamAccess],
+	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
@@ -170,13 +172,7 @@ export default createAction(routes.app.team.monitors.index, {
 								labels={{
 									toolbar: t("page.httpMonitorsList.filters.toolbar"),
 									tabs: t("page.httpMonitorsList.filters.tabs"),
-									filters: t("page.httpMonitorsList.filters.filters"),
-									apply: t("page.httpMonitorsList.filters.apply"),
-									is: t("page.httpMonitorsList.filters.is"),
-									isAnyOf: t("page.httpMonitorsList.filters.isAnyOf"),
-									clear: t("page.httpMonitorsList.filters.clear"),
-									remove: (field, values) =>
-										t("page.httpMonitorsList.filters.remove", { field, values }),
+									...sharedFilterLabels(ctx.intl.t),
 								}}
 							/>
 
@@ -198,7 +194,7 @@ export default createAction(routes.app.team.monitors.index, {
 											variant="outline"
 											color="neutral"
 										>
-											{t("page.httpMonitorsList.filters.clear")}
+											{ctx.intl.t("app.layout.filters.clear")}
 										</LinkButton>
 									</Empty.Action>
 								</Empty>
