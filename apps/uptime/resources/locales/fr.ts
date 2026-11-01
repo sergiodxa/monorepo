@@ -1338,6 +1338,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "Affichage",
 				filters: "Filtres",
 				apply: "Appliquer",
 				is: "est",

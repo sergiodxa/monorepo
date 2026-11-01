@@ -1321,6 +1321,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "Vista",
 				filters: "Filtros",
 				apply: "Aplicar",
 				is: "es",

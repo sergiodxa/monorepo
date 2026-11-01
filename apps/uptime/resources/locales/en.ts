@@ -1371,6 +1371,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "View",
 				filters: "Filters",
 				apply: "Apply",
 				is: "is",

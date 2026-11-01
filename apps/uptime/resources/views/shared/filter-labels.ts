@@ -1,5 +1,5 @@
 /**
- * The filter bar copy every signed-in list shares (the Filters button, Apply, the "is" and
+ * The filter bar copy every signed-in list shares (the View and Filters buttons, Apply, the "is" and
  * "is any of" joins, Clear filters and each chip's remove label), translated once, so a list
  * names only what is its own: the toolbar, its views, its search and its facets.
  *
@@ -21,6 +21,7 @@ export type SharedFilterLabels = Omit<FilterBar.Labels, "toolbar" | "tabs" | "cl
  */
 export function sharedFilterLabels(t: Translate): SharedFilterLabels {
 	return {
+		options: t("app.layout.filters.options"),
 		filters: t("app.layout.filters.filters"),
 		apply: t("app.layout.filters.apply"),
 		is: t("app.layout.filters.is"),

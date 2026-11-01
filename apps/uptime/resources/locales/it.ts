@@ -1328,6 +1328,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "Vista",
 				filters: "Filtri",
 				apply: "Applica",
 				is: "è",

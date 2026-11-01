@@ -1295,6 +1295,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "表示",
 				filters: "フィルター",
 				apply: "適用",
 				is: "が次の値",

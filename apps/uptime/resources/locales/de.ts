@@ -1328,6 +1328,7 @@ export default {
 
 		layout: {
 			filters: {
+				options: "Ansicht",
 				filters: "Filter",
 				apply: "Anwenden",
 				is: "ist",
