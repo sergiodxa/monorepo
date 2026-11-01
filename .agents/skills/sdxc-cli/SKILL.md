@@ -105,6 +105,7 @@ belongs in `packages/kit/src/doctor/` instead.
 ```sh
 sdxc run db migrate            # the app's own command line (app/commands)
 sdxc run db console
+sdxc pkg uuid v7               # a package's command line; the workspace's source in this repo
 sdxc deploy --dry-run          # only when the user asked to deploy; print the plan first
 sdxc deploy --skip migrate     # apps without a database
 ```

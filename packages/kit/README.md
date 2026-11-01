@@ -398,6 +398,10 @@ Print every route with its controller and the middleware that runs for it
 | `--except-path <path>`    | Leave out routes under a path, as /api or /mcp; repeat it or list them         |
 | `--sort <field>`          | Order routes by name, pattern, method, controller instead of declaration order |
 
+#### `sdxc pkg [name...]`
+
+Run an @sdxc package's command line through bunx or npx; with no name, list them
+
 #### `sdxc run [command...]`
 
 Run the project's own command line (run.entry, default bootstrap/cli.ts)

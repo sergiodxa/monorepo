@@ -607,6 +607,16 @@ export const SDXC_COMMANDS = commands({
 			"routes --except-path /api,/mcp --sort pattern",
 		],
 	}),
+	pkg: command({
+		description: "Run an @sdxc package's command line through bunx or npx; with no name, list them",
+		arguments: {
+			args: argument.rest({
+				valueName: "name",
+				description: "The package's name, then its command and arguments, passed through as typed",
+			}),
+		},
+		examples: ["pkg", "pkg uuid v7", "pkg jwt decode < token.txt", "pkg email-auth --help"],
+	}),
 	run: command({
 		description: "Run the project's own command line (run.entry, default bootstrap/cli.ts)",
 		arguments: {

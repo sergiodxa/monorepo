@@ -202,6 +202,10 @@ export function createSDXC(
 		lazy(() => import("./commands/scaffold.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.pkg,
+		lazy(() => import("./commands/pkg.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.run,
 		lazy(() => import("./commands/run.js")),
 	);

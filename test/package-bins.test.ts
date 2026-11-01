@@ -12,9 +12,14 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import {
+	PACKAGE_COMMAND_LINES,
+	PACKAGES_WITHOUT_COMMAND_LINES,
+} from "../packages/kit/src/pkg/catalog.js";
+
 import type { PackageBinFacts } from "./package-bins.js";
 
-import { packageBinProblems } from "./package-bins.js";
+import { PUBLISHED_BINS, packageBinProblems } from "./package-bins.js";
 
 /** Repo root, resolved from this file so the scan targets the same tree from any cwd. */
 const ROOT = join(import.meta.dirname, "..");
@@ -98,5 +103,21 @@ describe("package command lines follow one convention", () => {
 
 	test("every package bin in the repo conforms", () => {
 		expect(repoFacts().flatMap(packageBinProblems)).toEqual([]);
+	});
+
+	test("sdxc pkg knows every published package, and which have a command line", () => {
+		let packagesDir = join(ROOT, "packages");
+		let withCommandLine: string[] = [];
+		let without: string[] = [];
+		for (let entry of readdirSync(packagesDir, { withFileTypes: true })) {
+			let path = join(packagesDir, entry.name, "package.json");
+			if (!entry.isDirectory() || !existsSync(path)) continue;
+			let manifest = JSON.parse(readFileSync(path, "utf8")) as { private?: boolean; bin?: unknown };
+			if (manifest.private === true || PUBLISHED_BINS[entry.name]) continue;
+			(manifest.bin === undefined ? without : withCommandLine).push(entry.name);
+		}
+
+		expect(Object.keys(PACKAGE_COMMAND_LINES).sort()).toEqual(withCommandLine.sort());
+		expect([...PACKAGES_WITHOUT_COMMAND_LINES].sort()).toEqual(without.sort());
 	});
 });

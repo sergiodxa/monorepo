@@ -1,0 +1,32 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas for the `@sdxc` packages, including a command line for a package that has none
+        yet. `sdxc pkg <name>` links here with the package filled into the title. Upvote an
+        idea that already exists instead of opening a second one.
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      description: The package this is about, if it is about one.
+      placeholder: "@sdxc/yaml"
+  - type: textarea
+    id: use
+    attributes:
+      label: What would you use it for?
+      description: The task you want to get done, and where you'd run it (a terminal, a script, CI).
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: An example of what you'd type
+      description: The command, or the code, you'd like to write.
+      placeholder: sdxc pkg yaml to-json config.yaml
+      render: shell
+  - type: textarea
+    id: output
+    attributes:
+      label: What should it print or return?
+      description: The output you'd expect, and when it should fail.

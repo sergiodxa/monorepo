@@ -57,6 +57,7 @@ describe("help", () => {
 				"  models        Print each model's table and whether the migrations create it, from app/models",
 				"  notes         List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
 				"  routes        Print every route with its controller and the middleware that runs for it",
+				"  pkg           Run an @sdxc package's command line through bunx or npx; with no name, list them",
 				"  run           Run the project's own command line (run.entry, default bootstrap/cli.ts)",
 				"  scaffold      Write a resource's model, migration, pages, tests and more, declared and mapped",
 				"  schedule      List the scheduled jobs, their next runs and the Worker triggers that fire them",
