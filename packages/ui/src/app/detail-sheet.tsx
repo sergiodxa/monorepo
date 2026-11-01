@@ -15,6 +15,8 @@ import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded, shadow, transition } from "@sdxc/u/effects";
 import { cursor, pointerEvents, raw, mergeMix } from "@sdxc/u/general";
 import {
+	absolute,
+	container,
 	fixed,
 	flex,
 	gap,
@@ -32,8 +34,19 @@ import { focusVisible, hover, when } from "@sdxc/u/state";
 import { leading, tabularNums, text, truncate, weight } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
 
+import type { DetailSheetKeyScope } from "./mixins/detail-sheet-keys.js";
+
 import { copyPermalink } from "./mixins/copy-permalink.js";
 import { DETAIL_SHEET_LINK_ATTRIBUTE, detailSheetKeys } from "./mixins/detail-sheet-keys.js";
+
+/** Container the sheet's viewport layer names, so the panel answers the viewport's width. */
+const SHEET_CONTAINER = "ui-detail-sheet" as const;
+
+/** Below this width the panel becomes a bottom sheet. */
+const NARROW_QUERY = `@container ${SHEET_CONTAINER} (width < 40rem)` as const;
+
+/** Where the sheet's keys answer when `keys` is left unset. */
+const DEFAULT_KEY_SCOPE: DetailSheetKeyScope = "page";
 
 /**
  * Prop types for {@link DetailSheet} and {@link DetailSheetControls}.
@@ -84,6 +97,13 @@ export namespace DetailSheet {
 		actions?: RemixNode;
 		/** Pinned under the body: the record's own actions. */
 		footer?: RemixNode;
+		/**
+		 * Where Esc, k/j and ↑/↓ answer: `"page"` document-wide with focus moved into the
+		 * sheet on open, `"sheet"` only while focus is inside it.
+		 *
+		 * @default "page"
+		 */
+		keys?: DetailSheetKeyScope;
 		/** Floats the sheet off the viewport edges as a rounded card. */
 		inset?: boolean;
 		labels: Labels;
@@ -106,6 +126,8 @@ export type DetailSheetControlsProps = {
 	previousHref?: string | null;
 	nextHref?: string | null;
 	labels: DetailSheet.Labels;
+	/** Where Esc, k/j and ↑/↓ answer. */
+	keys?: DetailSheetKeyScope;
 };
 
 /**
@@ -177,13 +199,18 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 	"@sdxc/ui/app/detail-sheet#DetailSheetControls",
 	function DetailSheetControls(handle) {
 		return () => {
-			let { closeHref, permalink, index, total, previousHref, nextHref, labels } = handle.props;
+			let { closeHref, permalink, index, total, previousHref, nextHref, labels, keys } =
+				handle.props;
 			let positioned = index !== undefined && total !== undefined;
 
 			return (
 				<div
 					data-slot="detail-sheet-controls"
-					mix={[hstack({ gap: 0.5, align: "center" }), shrink(0), detailSheetKeys()]}
+					mix={[
+						hstack({ gap: 0.5, align: "center" }),
+						shrink(0),
+						detailSheetKeys(keys ?? DEFAULT_KEY_SCOPE),
+					]}
 				>
 					{positioned ? (
 						<>
@@ -246,10 +273,9 @@ export const DetailSheetControls: EntryComponent<DetailSheetControlsProps> = cli
 );
 
 /**
- * Renders the sheet as an `<aside>` named by its heading, fixed to the inline end of the
- * viewport at `--ui-app-detail-sheet-width` and full height, or a bottom sheet up to 85%
- * of the screen below 40rem. It is a landmark, never a modal: the page behind keeps focus,
- * pointer and scroll. Delete and other destructive actions confirm in the app's own flow.
+ * Renders an `<aside>` named by its heading over the viewport, passing the pointer through
+ * to the page, with the panel docked to its inline end at `--ui-app-detail-sheet-width`, or
+ * a bottom sheet below 40rem. Never a modal; destructive actions confirm in the app's flow.
  *
  * @param handle Runtime handle carrying the `<aside>`'s props.
  * @returns The render function producing the sheet's markup.
@@ -279,6 +305,7 @@ export function DetailSheet(handle: Handle<DetailSheet.Props>) {
 			actions,
 			footer,
 			inset,
+			keys,
 			labels,
 			children,
 			mix,
@@ -299,103 +326,119 @@ export function DetailSheet(handle: Handle<DetailSheet.Props>) {
 					[
 						fixed(),
 						z(30),
+						raw({
+							insetBlockStart: "var(--ui-app-detail-sheet-top, 0px)",
+							insetBlockEnd: 0,
+							insetInline: 0,
+						}),
+						container(SHEET_CONTAINER),
+						pointerEvents("none"),
+						outline("none"),
+					],
+					mix,
+				)}
+			>
+				<div
+					data-slot="detail-sheet-panel"
+					mix={[
+						absolute(),
 						flex(),
 						raw({ flexDirection: "column" }),
+						pointerEvents("auto"),
 						bg(),
 						fg(),
 						text("sm"),
 						shadow("xl"),
 						overflow("hidden"),
-						outline("none"),
 						/**
-						 * Every edge and size lives in one rule with its phone override, so the bottom
+						 * Every edge and size lives in one rule with its narrow override, so the bottom
 						 * sheet always wins below 40rem whatever order the stylesheet layers land in.
 						 */
 						raw({
-							insetBlockStart: `calc(var(--ui-app-detail-sheet-top, 0px) + ${edge})`,
+							insetBlockStart: edge,
 							insetBlockEnd: edge,
 							insetInlineEnd: edge,
 							insetInlineStart: "auto",
-							inlineSize: `min(var(--ui-app-detail-sheet-width, clamp(28rem, 36vw, 36rem)), calc(100vw - 2 * ${edge}))`,
+							inlineSize: `min(var(--ui-app-detail-sheet-width, clamp(28rem, 36cqi, 36rem)), calc(100cqi - 2 * ${edge}))`,
 							borderInlineStart: "1px solid var(--ui-neutral-border)",
 							borderRadius: inset ? "var(--ui-app-inset-radius, 0.75rem)" : "0",
-							"@media (max-width: 40rem)": {
+							[NARROW_QUERY]: {
 								insetBlockStart: "auto",
 								insetInline: "0",
 								insetBlockEnd: "0",
 								inlineSize: "100%",
-								maxBlockSize: "85dvh",
+								maxBlockSize: "85%",
 								borderInlineStart: "0",
 								borderBlockStart: "1px solid var(--ui-neutral-border)",
 								borderRadius:
 									"var(--ui-app-inset-radius, 0.75rem) var(--ui-app-inset-radius, 0.75rem) 0 0",
 							},
 						}),
-					],
-					mix,
-				)}
-			>
-				<header
-					data-slot="detail-sheet-header"
-					mix={[
-						flex(),
-						items("start"),
-						justify("between"),
-						gap(3),
-						pi(4),
-						pb(3),
-						borderEdge("bottom", { width: 1, color: "neutral" }),
-						shrink(0),
 					]}
 				>
-					<div mix={[vstack({ gap: 0.5 }), minIs(0), raw({ paddingBlockStart: "0.25rem" })]}>
-						<h2
-							id={titleId}
-							mix={[m(0), text("base"), weight("semibold"), leading("1.5rem"), truncate()]}
-						>
-							{title}
-						</h2>
-						{description ? (
-							<p mix={[m(0), text("sm"), fg("neutral.muted")]}>{description}</p>
-						) : null}
-					</div>
-					<div mix={[hstack({ gap: 1, align: "center" }), shrink(0), minBs("2rem")]}>
-						{actions}
-						<DetailSheetControls
-							sheetId={id}
-							closeHref={closeHref}
-							permalink={permalink}
-							index={position?.index}
-							total={position?.total}
-							previousHref={position?.previousHref ?? null}
-							nextHref={position?.nextHref ?? null}
-							labels={labels}
-						/>
-					</div>
-				</header>
-				<div
-					data-slot="detail-sheet-body"
-					mix={[raw({ flex: "1 1 auto" }), minBs(0), overflow("auto"), p(4), vstack({ gap: 5 })]}
-				>
-					{children}
-				</div>
-				{footer ? (
-					<footer
-						data-slot="detail-sheet-footer"
+					<header
+						data-slot="detail-sheet-header"
 						mix={[
 							flex(),
-							items("center"),
-							justify("end"),
-							gap(2),
+							items("start"),
+							justify("between"),
+							gap(3),
 							pi(4),
 							pb(3),
+							borderEdge("bottom", { width: 1, color: "neutral" }),
 							shrink(0),
-							borderEdge("top", { width: 1, color: "neutral" }),
 						]}
 					>
-						{footer}
-					</footer>
-				) : null}
+						<div mix={[vstack({ gap: 0.5 }), minIs(0), raw({ paddingBlockStart: "0.25rem" })]}>
+							<h2
+								id={titleId}
+								mix={[m(0), text("base"), weight("semibold"), leading("1.5rem"), truncate()]}
+							>
+								{title}
+							</h2>
+							{description ? (
+								<p mix={[m(0), text("sm"), fg("neutral.muted")]}>{description}</p>
+							) : null}
+						</div>
+						<div mix={[hstack({ gap: 1, align: "center" }), shrink(0), minBs("2rem")]}>
+							{actions}
+							<DetailSheetControls
+								sheetId={id}
+								closeHref={closeHref}
+								permalink={permalink}
+								index={position?.index}
+								total={position?.total}
+								previousHref={position?.previousHref ?? null}
+								nextHref={position?.nextHref ?? null}
+								labels={labels}
+								keys={keys}
+							/>
+						</div>
+					</header>
+					<div
+						data-slot="detail-sheet-body"
+						mix={[raw({ flex: "1 1 auto" }), minBs(0), overflow("auto"), p(4), vstack({ gap: 5 })]}
+					>
+						{children}
+					</div>
+					{footer ? (
+						<footer
+							data-slot="detail-sheet-footer"
+							mix={[
+								flex(),
+								items("center"),
+								justify("end"),
+								gap(2),
+								pi(4),
+								pb(3),
+								shrink(0),
+								borderEdge("top", { width: 1, color: "neutral" }),
+							]}
+						>
+							{footer}
+						</footer>
+					) : null}
+				</div>
 			</aside>
 		);
 	};

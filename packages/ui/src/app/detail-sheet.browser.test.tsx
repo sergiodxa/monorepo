@@ -102,7 +102,7 @@ describe("DetailSheet", () => {
 	});
 
 	test("docks to the inline end between 28rem and 36rem wide", () => {
-		let sheet = mount("?pane=42").querySelector('[data-slot="detail-sheet"]')!;
+		let sheet = mount("?pane=42").querySelector('[data-slot="detail-sheet-panel"]')!;
 		let box = sheet.getBoundingClientRect();
 
 		expect(box.right).toBe(window.innerWidth);
@@ -201,7 +201,7 @@ describe("DetailSheet", () => {
 
 	test("becomes a bottom sheet on a phone without overflowing the page", async () => {
 		await page.viewport(375, 812);
-		let sheet = mount("?pane=42").querySelector('[data-slot="detail-sheet"]')!;
+		let sheet = mount("?pane=42").querySelector('[data-slot="detail-sheet-panel"]')!;
 		let box = sheet.getBoundingClientRect();
 
 		expect(box.left).toBe(0);
@@ -209,5 +209,32 @@ describe("DetailSheet", () => {
 		expect(box.bottom).toBe(812);
 		expect(box.top).toBeGreaterThan(0);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+	});
+
+	test("answers its keys only from inside itself when scoped to the sheet", async () => {
+		let host = document.createElement("div");
+		document.body.appendChild(host);
+		mounted.push(
+			render(
+				<DetailSheet
+					id="scoped"
+					title="Scoped"
+					closeHref="#list"
+					keys="sheet"
+					position={{ index: 1, total: 2, nextHref: "#m-2" }}
+					labels={LABELS}
+				/>,
+				{ container: host },
+			),
+		);
+		let sheet = host.querySelector<HTMLElement>('[data-slot="detail-sheet"]')!;
+
+		expect(document.activeElement).not.toBe(sheet);
+		await userEvent.keyboard("j");
+		expect(location.hash).toBe("");
+
+		sheet.focus();
+		await userEvent.keyboard("j");
+		expect(location.hash).toBe("#m-2");
 	});
 });
