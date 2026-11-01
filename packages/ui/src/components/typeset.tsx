@@ -3,7 +3,8 @@
  * supplying every size, weight, spacing, and color decision through three
  * custom properties: `--ui-typeset-size`, `--ui-typeset-leading`, and
  * `--ui-typeset-flow`. `data-preset` swaps all three for a different rhythm
- * context; `data-not-typeset` opts a subtree out of the whole layer.
+ * context; `data-not-typeset` opts a subtree out of the whole layer. Flow spacing reaches
+ * through a `HeadingScope` wrapper and leaves a component's `data-slot` list items to it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -208,7 +209,13 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 							}),
 						),
 						when(
-							prose("& :where(blockquote, li) > * + *"),
+							prose("& > * + div[data-heading-level] > :first-child"),
+							raw({
+								marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
+							}),
+						),
+						when(
+							prose("& :where(blockquote, li:not([data-slot])) > * + *"),
 							raw({
 								marginBlockStart: "var(--ui-typeset-flow, 1.25em)",
 							}),

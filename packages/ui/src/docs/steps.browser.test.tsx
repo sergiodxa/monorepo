@@ -13,6 +13,7 @@ import { render } from "remix/component/test";
 import { describe, expect, test } from "vitest";
 
 import { HeadingScope } from "../components/heading-scope.js";
+import { Typeset } from "../components/typeset.js";
 
 import { Steps } from "./steps.js";
 
@@ -129,5 +130,33 @@ describe("Steps", () => {
 				list.getBoundingClientRect().right,
 			);
 		}
+	});
+
+	test("takes the prose flow above it inside Typeset, as a paragraph does", () => {
+		let root = mount(
+			<Typeset preset="docs">
+				<p id="first">Add the domain, then create one DNS record.</p>
+				<p id="second">Driftwood serves the site once it resolves.</p>
+				{procedure()}
+			</Typeset>,
+		);
+		let first = root.querySelector("#first")!.getBoundingClientRect();
+		let second = root.querySelector("#second")!.getBoundingClientRect();
+		let list = root.querySelector("ol")!.getBoundingClientRect();
+
+		expect(list.top - second.bottom).toBeGreaterThan(0);
+		expect(list.top - second.bottom).toBeCloseTo(second.top - first.bottom, 0);
+	});
+
+	test("keeps the same title-to-content gap inside Typeset as outside it", () => {
+		let gap = (root: HTMLElement) => {
+			let title = root.querySelector('[data-slot="steps-title"]')!.getBoundingClientRect();
+			let content = root.querySelector('[data-slot="steps-content"]')!.getBoundingClientRect();
+			return content.top - title.bottom;
+		};
+		let bare = gap(mount(procedure()));
+		let typeset = gap(mount(<Typeset preset="docs">{procedure()}</Typeset>));
+
+		expect(typeset).toBeCloseTo(bare, 0);
 	});
 });
