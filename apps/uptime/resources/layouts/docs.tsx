@@ -40,10 +40,22 @@ const DOCS_MEASURE = "88rem";
 const WIDE_MEASURE = "104rem";
 
 /**
+ * The article column's widest extent on every page, which code, tables and the hub's card
+ * grids fill while running text keeps its reading measure.
+ */
+const ARTICLE_MEASURE = "64rem";
+
+/**
  * Room between a page's header and what follows it, so the updated date and the page
  * actions read as the header's last line instead of the body's first.
  */
 const PAGE_HEADER_GAP = "2.5rem";
+
+/**
+ * Room under a prose table before the next block, the same a paragraph leaves under it,
+ * so the text after a table never touches its last row.
+ */
+const TABLE_GAP = "1rem";
 
 /** Room between the article's last block and the page end, a step more than its own gaps. */
 const PAGE_END_GAP = "3rem";
@@ -86,18 +98,15 @@ namespace DocsLayout {
 		/** The section the page is filed under, which the pager leaves off a same-section card. */
 		section?: string;
 		/**
-		 * The article's widest line; the hub, which lays cards out rather than prose, widens it.
-		 * @default "48rem"
-		 */
-		measure?: string;
-		/**
 		 * What closes the page after the article (feedback, next steps, a route to support),
-		 * spaced from the article and from each other by one gap.
+		 * spaced from the article, from each other and from the pager under them by one gap.
 		 */
 		pageEnd?: RemixNode;
 		/**
 		 * Widens the shell for a page whose blocks sit side by side (the API reference's
-		 * prose beside its code), while running text keeps its reading measure.
+		 * prose beside its code). Every page hands the shell the same settings and a wide
+		 * page widens it with an important override, so the shell's styles keep their
+		 * cascade order when a client-side navigation swaps one page for another.
 		 */
 		wide?: boolean;
 		children: RemixNode;
@@ -145,7 +154,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			previous = null,
 			next = null,
 			section,
-			measure = "48rem",
 			pageEnd,
 			wide = false,
 			children,
@@ -175,7 +183,20 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 		);
 
 		return (
-			<div mix={[raw({ "--ui-marketing-measure": wide ? WIDE_MEASURE : DOCS_MEASURE })]}>
+			<div
+				mix={[
+					raw({ "--ui-marketing-measure": wide ? WIDE_MEASURE : DOCS_MEASURE }),
+					wide
+						? [
+								when(
+									'& [data-slot="docs-shell"]',
+									raw({ maxInlineSize: `${WIDE_MEASURE} !important` }),
+								),
+								when('& [data-slot="docs-article"]', raw({ maxInlineSize: "none !important" })),
+							]
+						: [],
+				]}
+			>
 				<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
 					<DocsShell
 						sidebar={sidebar}
@@ -185,8 +206,8 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						drawerLabel={labels.nav}
 						closeLabel={labels.close}
 						stickyTop={HEADER_HEIGHT}
-						maxWidth={wide ? WIDE_MEASURE : DOCS_MEASURE}
-						measure={wide ? "none" : measure}
+						maxWidth={DOCS_MEASURE}
+						measure={ARTICLE_MEASURE}
 						main={false}
 					>
 						<div
@@ -195,6 +216,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								pbs("2rem"),
 								pbe("5rem"),
 								when('& [data-slot="docs-page-header"]', mbe(PAGE_HEADER_GAP)),
+								when('& [data-slot="typeset"] > table', mbe(TABLE_GAP)),
 								when(
 									'& [data-slot="ui-label"]',
 									raw({
@@ -206,15 +228,18 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							]}
 						>
 							{children}
-							{pageEnd ? (
-								<div
-									data-slot="docs-page-end"
-									mix={[vstack({ gap: 10, align: "stretch" }), mbs(PAGE_END_GAP)]}
-								>
-									{pageEnd}
-								</div>
-							) : null}
-							<DocsPager previous={previous} next={next} section={section} labels={labels.pager} />
+							<div
+								data-slot="docs-page-end"
+								mix={[vstack({ gap: 10, align: "stretch" }), mbs(PAGE_END_GAP)]}
+							>
+								{pageEnd}
+								<DocsPager
+									previous={previous}
+									next={next}
+									section={section}
+									labels={labels.pager}
+								/>
+							</div>
 						</div>
 					</DocsShell>
 				</MarketingLayout>

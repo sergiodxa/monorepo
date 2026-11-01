@@ -26,12 +26,6 @@ import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
-/**
- * The hub's widest line: past a reading measure, so its card grids fill the column the
- * prose pages share with the heading rail.
- */
-const HUB_MEASURE = "64rem";
-
 /** The first tasks a new team takes, in the order they take them. */
 const START_PATHS = [
 	"/docs/quickstart",
@@ -104,7 +98,6 @@ export default createAction(routes.docs.index, async (ctx) => {
 				sections={sections}
 				activePath={routes.docs.index.href()}
 				labels={buildDocsLabels(t)}
-				measure={HUB_MEASURE}
 			>
 				<DocsHub
 					eyebrow={t("docs.hub.eyebrow")}
