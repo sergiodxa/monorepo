@@ -355,6 +355,8 @@ byProxy.components; // ["@method", "@target-uri", '@query-param;name="q"', "date
 bunx @sdxc/http-signatures --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg http-signatures …` runs the same command line, using the version your project installs.
+
 `sign` prints the headers signing wrote; `--curl` prints a curl command that sends the signed request, `--json` a report, and `--scheme draft-cavage` signs under draft-cavage-12.
 
 ```sh
