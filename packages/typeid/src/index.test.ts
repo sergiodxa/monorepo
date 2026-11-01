@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID as generateUUIDv4 } from "@sdxc/uuid/v4";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { describe, expect, test } from "vitest";
 
@@ -105,6 +106,17 @@ describe(TypeID.name, () => {
 		} catch (error) {
 			expect(error).toBeInstanceOf(TypeIdError);
 		}
+	});
+	test("reads the creation time from a UUIDv7 suffix", () => {
+		let value = TypeID.fromString("user_01h455vb4pex5vsknk084sn02q");
+
+		expect(value.toDate()?.toISOString()).toBe("2023-06-30T03:34:18.518Z");
+	});
+
+	test("answers null for the time of a suffix that is not UUIDv7", () => {
+		let value = TypeID.fromUUID("user", generateUUIDv4());
+
+		expect(value.toDate()).toBeNull();
 	});
 });
 

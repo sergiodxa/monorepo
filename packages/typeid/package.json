@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Type-safe TypeID values: a UUID and the prefix that names what it identifies",
 	"license": "MIT",
+	"bin": {
+		"sdxc-typeid": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,6 +15,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@sdxc/uuid": "workspace:*"
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
+		"remix": "3.1.0"
 	}
 }

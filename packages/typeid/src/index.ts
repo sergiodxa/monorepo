@@ -102,6 +102,21 @@ export class TypeID<const prefix extends string> {
 	}
 
 	/**
+	 * The creation time a UUIDv7 suffix carries in its first 48 bits, to the millisecond.
+	 * Other UUID versions hold no Unix timestamp, so they answer `null`.
+	 * @returns Date the id was generated, or `null` when the UUID is not version 7.
+	 * @throws {InvalidBase32StringError} If the suffix cannot be decoded to a valid 128-bit value.
+	 * @example
+	 * TypeID.fromString("user_01h455vb4pex5vsknk084sn02q").toDate()?.toISOString();
+	 * // "2023-06-30T03:34:18.518Z"
+	 */
+	toDate(): Date | null {
+		let uuid = this.toUUID();
+		if (uuid[14] !== "7") return null;
+		return new Date(Number.parseInt(uuid.slice(0, 8) + uuid.slice(9, 13), 16));
+	}
+
+	/**
 	 * Serializes this TypeID into its canonical string representation.
 	 * @returns String representation of this TypeID, such as "user_01h455vb4pex5vsknk084sn02q".
 	 * @throws {InvalidBase32CharacterError} If the suffix contains invalid Base32 characters while decoding.

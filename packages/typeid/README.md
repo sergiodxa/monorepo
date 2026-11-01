@@ -75,6 +75,19 @@ try {
 }
 ```
 
+## Command line
+
+`sdxc-typeid` generates, reads and encodes TypeIDs. `--help` on any command lists every flag.
+
+```sh
+bunx @sdxc/typeid new user              # user_01h455vb4pex5vsknk084sn02q, backed by a UUIDv7
+bunx @sdxc/typeid new session -n 5      # five ids, one per line, in the order they sort
+bunx @sdxc/typeid parse user_01h455vb4pex5vsknk084sn02q --json
+bunx @sdxc/typeid encode user 01890a5d-ac96-774b-bcce-b302099a8057
+```
+
+`parse` prints the prefix, suffix, UUID and, for a UUIDv7, the creation time; it exits 1 with the reason when the TypeID is invalid. A prefix or UUID that breaks the rules exits 2.
+
 ## API
 
 ### `TypeID.fromUUID(prefix: prefix, uuid: UUID): TypeID<prefix>`
@@ -110,6 +123,10 @@ The prefix, typed as the literal it was created with, and the 26-character Base3
 ### `typeId.toUUID(): UUID`
 
 Decodes the suffix back to the canonical UUID string.
+
+### `typeId.toDate(): Date | null`
+
+The creation time a UUIDv7 suffix carries, to the millisecond; `null` for any other UUID version.
 
 ### `typeId.toString(): string`
 
