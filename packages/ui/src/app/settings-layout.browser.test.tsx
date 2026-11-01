@@ -28,13 +28,25 @@ const NAV: ReadonlyArray<SettingsLayout.Group> = [
 	{ label: "Account", items: [{ href: "/settings/profile", label: "Profile" }] },
 ];
 
-/** Mounts the layout on `page` in a host `width` pixels wide and returns the host. */
-function mount(width: number, page: "index" | "section" = "section"): HTMLElement {
+/**
+ * Mounts the layout on `page` in a host `width` pixels wide and returns the host; `sections`
+ * set to `null` mounts it without a nav, the way a swapped app-shell panel uses it.
+ */
+function mount(
+	width: number,
+	page: "index" | "section" = "section",
+	sections: ReadonlyArray<SettingsLayout.Group> | null = NAV,
+): HTMLElement {
 	let host = document.createElement("div");
 	host.style.width = `${width}px`;
 	document.body.appendChild(host);
 	render(
-		<SettingsLayout sections={NAV} page={page} backHref="/settings" labels={LABELS}>
+		<SettingsLayout
+			sections={sections ?? undefined}
+			page={page}
+			backHref="/settings"
+			labels={LABELS}
+		>
 			<h1>Monitor defaults</h1>
 		</SettingsLayout>,
 		{ container: host },
@@ -114,5 +126,31 @@ describe("SettingsLayout", () => {
 		let host = mount(320);
 
 		expect(host.scrollWidth).toBeLessThanOrEqual(320);
+	});
+
+	test("without sections, draws one content column and no nav when wide", () => {
+		let host = mount(1024, "section", null);
+		let { content, back } = parts(host);
+		let grid = host.querySelector('[data-slot="settings-layout"] > div')!;
+
+		expect(host.querySelectorAll("nav")).toHaveLength(0);
+		expect(getComputedStyle(grid).gridTemplateColumns.split(" ")).toHaveLength(1);
+		expect(content!.getBoundingClientRect().left).toBe(host.getBoundingClientRect().left);
+		expect(content!.getBoundingClientRect().width).toBeLessThanOrEqual(42 * 16 + 1);
+		expect(shown(back)).toBe(false);
+	});
+
+	test("without sections, shows a narrow section page's content and back link", () => {
+		let { nav, content, back } = parts(mount(375, "section", null));
+
+		expect(nav).toBeNull();
+		expect(shown(content)).toBe(true);
+		expect(shown(back)).toBe(true);
+	});
+
+	test("without sections, shows the index page's content when narrow", () => {
+		let { content } = parts(mount(375, "index", null));
+
+		expect(shown(content)).toBe(true);
 	});
 });

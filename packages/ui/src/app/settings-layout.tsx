@@ -1,7 +1,7 @@
 /**
- * The frame of a settings area: a section nav on the start side and a content column
- * held to a reading measure. On a narrow container the nav is the parent page, so the
- * index route shows only the nav and a section route shows only its content and a back link.
+ * The frame of a settings area: a section nav on the start side and a content column held to
+ * a reading measure, or the column alone where the app shell's swapped panel lists the sections.
+ * On a narrow container the nav is the parent page and a section route shows content and a back link.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,16 +50,19 @@ export namespace SettingsLayout {
 
 	/** Every string the layout shows or announces. */
 	export interface Labels {
-		/** Name of the nav landmark, such as "Settings". */
-		nav: string;
+		/** Name of the nav landmark, such as "Settings"; required with `sections`. */
+		nav?: string;
 		/** Text of the back link a narrow section page shows, such as "Settings". */
 		back: string;
 	}
 
 	/** Props accepted by {@link SettingsLayout}. */
 	export interface Props extends TagProps<"div"> {
-		/** The nav's groups of sections. */
-		sections: ReadonlyArray<Group>;
+		/**
+		 * The nav's groups of sections. Omit them where the app shell's swapped panel already
+		 * lists the sections: the layout is then the content column alone at every width.
+		 */
+		sections?: ReadonlyArray<Group>;
 		/**
 		 * Which route renders the layout. `"index"` is the settings root, which a narrow
 		 * container shows as the nav alone; `"section"` shows a section's content.
@@ -76,7 +79,7 @@ export namespace SettingsLayout {
 /**
  * Renders the nav and the content column. Both are in the markup on every route and the
  * container decides which one a narrow screen shows, so the layout needs no script and
- * follows a resized pane.
+ * follows a resized pane. Without `sections` the content shows on every route.
  *
  * @param handle Runtime handle carrying the layout's props.
  * @returns The render function producing the layout's markup.
@@ -88,18 +91,24 @@ export namespace SettingsLayout {
  * >
  * 	<SettingsSection title="Monitor defaults" save="explicit" labels={{ save: "Save" }}>…</SettingsSection>
  * </SettingsLayout>
+ * @example
+ * <SettingsLayout backHref="/settings" labels={{ back: "Settings" }}>…</SettingsLayout>
  */
 export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 	return () => {
 		let { sections, page: pageProp, backHref, labels, children, mix, ...rest } = handle.props;
 		let page = pageProp ?? DEFAULT_PAGE;
+		let hasNav = sections !== undefined;
 		let isIndex = page === "index";
+		/** The narrow index page is the nav itself, so its content waits for a section route. */
+		let hideNarrowContent = isIndex && hasNav;
 
 		return (
 			<div
 				{...rest}
 				data-slot="settings-layout"
 				data-page={page}
+				data-nav={hasNav ? undefined : "none"}
 				mix={mergeMix([is("100%"), container(LAYOUT_CONTAINER)], mix)}
 			>
 				<div
@@ -109,40 +118,43 @@ export function SettingsLayout(handle: Handle<SettingsLayout.Props>) {
 							gridTemplateColumns: "minmax(0, 1fr)",
 							gap: "1.5rem",
 							[WIDE]: {
-								gridTemplateColumns:
-									"var(--ui-settings-nav-width, 13rem) minmax(0, var(--ui-settings-measure, 42rem))",
+								gridTemplateColumns: hasNav
+									? "var(--ui-settings-nav-width, 13rem) minmax(0, var(--ui-settings-measure, 42rem))"
+									: "minmax(0, var(--ui-settings-measure, 42rem))",
 								gap: "2.5rem",
 							},
 						}),
 					]}
 				>
-					<nav
-						aria-label={labels.nav}
-						data-slot="settings-nav"
-						mix={[
-							vstack({ gap: 5, align: "stretch" }),
-							minIs(0),
-							raw({
-								[NARROW]: { display: isIndex ? "flex" : "none" },
-								[WIDE]: {
-									position: "sticky",
-									insetBlockStart: "calc(var(--ui-app-sticky-top, 0px) + 1rem)",
-									alignSelf: "start",
-								},
-							}),
-						]}
-					>
-						{sections.map((group) => (
-							<SettingsNavGroup group={group} />
-						))}
-					</nav>
+					{sections ? (
+						<nav
+							aria-label={labels.nav}
+							data-slot="settings-nav"
+							mix={[
+								vstack({ gap: 5, align: "stretch" }),
+								minIs(0),
+								raw({
+									[NARROW]: { display: isIndex ? "flex" : "none" },
+									[WIDE]: {
+										position: "sticky",
+										insetBlockStart: "calc(var(--ui-app-sticky-top, 0px) + 1rem)",
+										alignSelf: "start",
+									},
+								}),
+							]}
+						>
+							{sections.map((group) => (
+								<SettingsNavGroup group={group} />
+							))}
+						</nav>
+					) : null}
 
 					<div
 						data-slot="settings-content"
 						mix={[
 							vstack({ gap: 8, align: "stretch" }),
 							minIs(0),
-							raw({ [NARROW]: { display: isIndex ? "none" : "flex" } }),
+							raw({ [NARROW]: { display: hideNarrowContent ? "none" : "flex" } }),
 						]}
 					>
 						{!isIndex && backHref ? (
