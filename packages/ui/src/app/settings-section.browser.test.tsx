@@ -16,6 +16,7 @@ import { userEvent } from "vitest/browser";
 
 import { Button } from "../components/button.js";
 import { Input } from "../components/input.js";
+import { LinkButton } from "../components/link-button.js";
 import { Switch } from "../components/switch.js";
 
 import { SaveBar } from "./save-bar.js";
@@ -100,6 +101,41 @@ describe("SettingsSection", () => {
 		let { control } = rowParts(host);
 
 		expect(Math.abs(label.top - control.top)).toBeLessThan(1);
+	});
+
+	test("puts an action row's button at the row's end, centred on the label's first line", () => {
+		let host = mount(billingSection(), 1280);
+		let row = host.querySelector<HTMLElement>('[data-slot="settings-row"]')!;
+		let { text, control } = rowParts(host);
+		let button = host.querySelector("a")!.getBoundingClientRect();
+		let label = row.querySelector('[data-slot="settings-row-text"] > div')!;
+		let firstLine = label.getClientRects()[0]!;
+		let rowBox = row.getBoundingClientRect();
+		let contentEnd = rowBox.right - parseFloat(getComputedStyle(row).paddingInlineEnd);
+
+		expect(Math.abs(button.right - contentEnd)).toBeLessThan(1);
+		expect(Math.abs(control.right - contentEnd)).toBeLessThan(1);
+		expect(Math.abs(centre(button) - centre(firstLine))).toBeLessThan(1);
+		expect(text.width).toBeGreaterThan(rowBox.width / 2);
+	});
+
+	test("puts an action row's button under its text when placed below", () => {
+		let host = mount(billingSection("below"), 1280);
+		let { text } = rowParts(host);
+		let button = host.querySelector("a")!.getBoundingClientRect();
+
+		expect(button.top).toBeGreaterThanOrEqual(text.bottom);
+		expect(Math.abs(button.left - text.left)).toBeLessThan(1);
+	});
+
+	test("stacks an action row's button under its text, at the start, in a narrow card", () => {
+		let host = mount(billingSection(), 375);
+		let { text } = rowParts(host);
+		let button = host.querySelector("a")!.getBoundingClientRect();
+
+		expect(button.top).toBeGreaterThanOrEqual(text.bottom);
+		expect(Math.abs(button.left - text.left)).toBeLessThan(1);
+		expect(host.querySelector("section")!.scrollWidth).toBeLessThanOrEqual(375);
 	});
 
 	test("keeps an inline switch at the end of its row in a narrow card", () => {
@@ -297,6 +333,24 @@ describe("SettingsSection", () => {
 		});
 	}
 });
+
+/** A billing section whose one row opens the billing portal, placed as `actionPlacement` says. */
+function billingSection(actionPlacement?: SettingsSection.ActionPlacement) {
+	return (
+		<SettingsSection title="Billing" save="none">
+			<SettingsSection.Row
+				layout="action"
+				actionPlacement={actionPlacement}
+				label="Subscription & Payments"
+				description="Change your plan, update the card on file, and download invoices. Billing is handled by our payment provider, which opens in a new tab. Changes apply from the next billing cycle."
+			>
+				<LinkButton href="/billing/portal" size="sm" variant="outline">
+					Open Billing Portal
+				</LinkButton>
+			</SettingsSection.Row>
+		</SettingsSection>
+	);
+}
 
 /** The vertical centre of `box`. */
 function centre(box: DOMRect): number {

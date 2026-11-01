@@ -44,6 +44,9 @@ const DEFAULT_HEADING: NonNullable<SettingsSection.Props["heading"]> = "above";
 /** How a row lays out when `layout` is omitted. */
 const DEFAULT_ROW_LAYOUT: SettingsSection.RowLayout = "split";
 
+/** Where an action row's control sits when `actionPlacement` is omitted. */
+const DEFAULT_ACTION_PLACEMENT: SettingsSection.ActionPlacement = "end";
+
 /**
  * Prop types for {@link SettingsSection} and {@link SettingsSection.Row}.
  */
@@ -57,7 +60,13 @@ export namespace SettingsSection {
 	export type Save = "explicit" | "instant" | "none";
 
 	/** Where a row's label sits against its control. */
-	export type RowLayout = "split" | "stacked" | "inline-switch";
+	export type RowLayout = "split" | "stacked" | "inline-switch" | "action";
+
+	/**
+	 * Where an action row's control sits: `"end"` beside the label's first line, for a
+	 * description of a line or two; `"below"` under the text, for a longer one or a list.
+	 */
+	export type ActionPlacement = "end" | "below";
 
 	/** The form the card submits. */
 	export interface FormProps {
@@ -131,11 +140,19 @@ export namespace SettingsSection {
 		/**
 		 * `"split"` puts the label at the start and the control at the end, stacking under
 		 * 32rem; `"stacked"` puts the control under the label; `"inline-switch"` keeps a
-		 * small control at the end at every width.
+		 * small control at the end at every width; `"action"` gives the text the row's width
+		 * and puts a button that acts at once, such as "Open billing portal", where
+		 * `actionPlacement` says, stacking under the text below 32rem.
 		 *
 		 * @default "split"
 		 */
 		layout?: RowLayout;
+		/**
+		 * Where an `"action"` row's control sits on a wide card.
+		 *
+		 * @default "end"
+		 */
+		actionPlacement?: ActionPlacement;
 	}
 }
 
@@ -338,6 +355,10 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
  * <SettingsSection.Row label="Alert email" description="Where down alerts go." htmlFor="alert-email">
  * 	<Input id="alert-email" name="alertEmail" type="email" />
  * </SettingsSection.Row>
+ * @example
+ * <SettingsSection.Row layout="action" label="Subscription" description="Plan, card and invoices.">
+ * 	<LinkButton href="/billing/portal" size="sm" variant="outline">Open billing portal</LinkButton>
+ * </SettingsSection.Row>
  */
 SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection.RowProps>) {
 	return () => {
@@ -348,11 +369,14 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 			labelId,
 			descriptionId,
 			layout: layoutProp,
+			actionPlacement: actionPlacementProp,
 			children,
 			mix,
 			...rest
 		} = handle.props;
 		let layout = layoutProp ?? DEFAULT_ROW_LAYOUT;
+		let actionPlacement = actionPlacementProp ?? DEFAULT_ACTION_PLACEMENT;
+		let isEndAction = layout === "action" && actionPlacement === "end";
 		let labelMix = [text("sm"), weight("medium"), fg("neutral.emphasis")];
 
 		return (
@@ -360,6 +384,7 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 				{...rest}
 				data-slot="settings-row"
 				data-layout={layout}
+				data-action-placement={layout === "action" ? actionPlacement : undefined}
 				mix={mergeMix(
 					[
 						p(4),
@@ -367,12 +392,20 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 							display: "grid",
 							gap: "0.5rem 1.5rem",
 							alignItems: rowAlign(layout, Boolean(description)),
+							justifyItems: layout === "action" ? "start" : "stretch",
 							gridTemplateColumns:
 								layout === "inline-switch" ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
 							...(layout === "split"
 								? {
 										[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
 											gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+										},
+									}
+								: {}),
+							...(isEndAction
+								? {
+										[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
+											gridTemplateColumns: "minmax(0, 1fr) auto",
 										},
 									}
 								: {}),
@@ -397,7 +430,10 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 						</p>
 					) : null}
 				</div>
-				<div data-slot="settings-row-control" mix={[minIs(0)]}>
+				<div
+					data-slot="settings-row-control"
+					mix={[minIs(0), isEndAction ? onLabelLine() : undefined]}
+				>
 					{children}
 				</div>
 			</div>
@@ -414,6 +450,23 @@ function rowAlign(layout: SettingsSection.RowLayout, hasDescription: boolean): "
 	if (layout === "inline-switch") return "center";
 	if (layout === "split" && !hasDescription) return "center";
 	return "start";
+}
+
+/**
+ * Centres an end-placed action on the label's first line: on a wide card the control's box
+ * is one label line tall and the button overflows it evenly into the row's padding.
+ */
+function onLabelLine() {
+	return [
+		text("sm"),
+		raw({
+			[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
+				display: "flex",
+				alignItems: "center",
+				blockSize: "1lh",
+			},
+		}),
+	];
 }
 
 /**
