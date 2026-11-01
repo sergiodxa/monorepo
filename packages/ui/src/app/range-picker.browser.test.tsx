@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { rangePickerKeys } from "./mixins/range-picker-keys.js";
+import { PageHeader } from "./page-header.js";
 import { RangePicker } from "./range-picker.js";
 
 import "../reset.css";
@@ -63,6 +64,30 @@ function mount(width: number, enhanced = false): HTMLElement {
 			labels={LABELS}
 			mix={enhanced ? rangePickerKeys() : undefined}
 		/>,
+		{ container: host },
+	);
+	return host;
+}
+
+/** Mounts a picker as one item of a flex `row` beside a button, inside a host `width` pixels wide. */
+function mountInRow(width: number, row: "page-header" | "flex"): HTMLElement {
+	let host = document.createElement("div");
+	host.style.width = `${width}px`;
+	document.body.appendChild(host);
+	let picker = <RangePicker value="7d" presets={PRESETS} labels={LABELS} />;
+	render(
+		row === "page-header" ? (
+			<PageHeader
+				title="Overview"
+				actions={picker}
+				primaryAction={<button type="button">Export</button>}
+			/>
+		) : (
+			<div style="display: flex; align-items: center; gap: 8px">
+				<button type="button">Export</button>
+				{picker}
+			</div>
+		),
 		{ container: host },
 	);
 	return host;
@@ -161,4 +186,30 @@ describe("RangePicker", () => {
 		popover.querySelector("form")!.requestSubmit();
 		expect(submitted).toEqual(["monitor=api&range=custom&from=2026-10-01&to=2026-10-07"]);
 	});
+
+	for (let row of ["page-header", "flex"] as const) {
+		test(`sizes to its segments as an auto-width item of a ${row} row`, () => {
+			let host = mountInRow(1024, row);
+			let picker = host.querySelector<HTMLElement>('[data-slot="range-picker"]')!;
+			let group = host.querySelector<HTMLElement>('[role="group"]')!;
+			let box = picker.getBoundingClientRect();
+			let segments = group.getBoundingClientRect();
+
+			expect(box.width).toBeGreaterThan(0);
+			expect(shown(group)).toBe(true);
+			expect(shown(host.querySelector("select"))).toBe(false);
+			expect(segments.left).toBeGreaterThanOrEqual(box.left - 0.5);
+			expect(segments.right).toBeLessThanOrEqual(box.right + 0.5);
+			expect(box.width).toBeLessThan(1024);
+		});
+
+		test(`becomes a select as an item of a narrow ${row} row, with nothing overflowing`, () => {
+			let host = mountInRow(280, row);
+			let select = host.querySelector("select")!;
+
+			expect(shown(select)).toBe(true);
+			expect(select.getBoundingClientRect().width).toBeGreaterThan(0);
+			expect(host.scrollWidth).toBeLessThanOrEqual(280);
+		});
+	}
 });

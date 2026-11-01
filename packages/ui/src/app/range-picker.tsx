@@ -14,7 +14,7 @@ import { bg, border } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { container, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
-import { bs, is, minIs, mis, p, pi } from "@sdxc/u/size";
+import { bs, is, maxIs, minIs, mis, p, pi } from "@sdxc/u/size";
 import { focusVisible } from "@sdxc/u/state";
 import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
 
@@ -23,8 +23,11 @@ import { DateRangePicker } from "../components/date-range-picker.js";
 import { Keyboard } from "../components/keyboard.js";
 import { Popover } from "../components/popover.js";
 
-/** Container the picker measures; below 24rem of its own width it becomes a select. */
+/** Container the picker measures; below {@link WIDE_WIDTH} of its own width it becomes a select. */
 const PICKER_CONTAINER = "ui-range-picker";
+
+/** The picker's width in a row with room to spare, and the narrowest that still shows segments. */
+const WIDE_WIDTH = "24rem";
 
 /** Query parameter the picker writes when `name` is omitted. */
 const DEFAULT_NAME = "range";
@@ -189,8 +192,18 @@ export function RangePicker(handle: Handle<RangePicker.Props>) {
 				{...rest}
 				mix={mergeMix(
 					[
-						raw({ display: "flex", justifyContent: "flex-end" }),
-						is("full"),
+						/**
+						 * As a size container the picker has no content width of its own, so it
+						 * claims the wide layout's breakpoint as its intrinsic width: an auto-width
+						 * flex item gets room for the segments and shrinks into the select.
+						 */
+						raw({
+							display: "flex",
+							justifyContent: "flex-end",
+							flex: "0 1 auto",
+							containIntrinsicInlineSize: WIDE_WIDTH,
+						}),
+						maxIs("100%"),
 						minIs(0),
 						container(PICKER_CONTAINER),
 					],
@@ -208,7 +221,7 @@ export function RangePicker(handle: Handle<RangePicker.Props>) {
 						 */
 						raw({
 							display: "none",
-							[`@container ${PICKER_CONTAINER} (min-width: 24rem)`]: { display: "flex" },
+							[`@container ${PICKER_CONTAINER} (min-width: ${WIDE_WIDTH})`]: { display: "flex" },
 						}),
 					]}
 				>
@@ -283,7 +296,7 @@ export function RangePicker(handle: Handle<RangePicker.Props>) {
 						is("full"),
 						minIs(0),
 						raw({
-							[`@container ${PICKER_CONTAINER} (min-width: 24rem)`]: { display: "none" },
+							[`@container ${PICKER_CONTAINER} (min-width: ${WIDE_WIDTH})`]: { display: "none" },
 						}),
 					]}
 				>
