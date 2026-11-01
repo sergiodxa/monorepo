@@ -130,14 +130,15 @@ describe("DocsNav", () => {
 		for (let element of document.querySelectorAll<HTMLElement>("[data-docs-nav] [hidden]")) {
 			if (!element.closest("[data-docs-nav-empty]")) element.removeAttribute("hidden");
 		}
-		for (let group of document.querySelectorAll("[data-docs-nav] details")) group.open = false;
+		for (let group of document.querySelectorAll<HTMLDetailsElement>("[data-docs-nav] details"))
+			group.open = false;
 		await expect.poll(visibleTitles).toEqual(["Webhooks"]);
 	});
 
 	test("lets a reader fold a group while the filter is on", async () => {
 		mountNav({ filter: FILTER, collapseGroups: true, activePath: "/docs/guide-1" });
 		type("webhook");
-		let group = [...document.querySelectorAll("[data-docs-nav] details")].find(
+		let group = [...document.querySelectorAll<HTMLDetailsElement>("[data-docs-nav] details")].find(
 			(details) => details.open,
 		)!;
 		group.open = false;
