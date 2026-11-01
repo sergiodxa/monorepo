@@ -58,6 +58,8 @@ if (isFailure(result)) {
 bunx @sdxc/semver --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg semver …` runs the same command line, using the version your project installs.
+
 `valid` prints a version without its `v` or build metadata and exits 1 when it is not one; `compare` prints `-1`, `0` or `1`; `sort` reads its arguments, or one version per line on stdin, and prints them oldest first. `--json` prints a machine-readable result, and input that is not a version exits 2.
 
 ```sh
