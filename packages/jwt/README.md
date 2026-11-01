@@ -506,6 +506,24 @@ test("a signed token verifies against the published set", async () => {
 });
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/jwt --help
+```
+
+```sh
+sdxc-jwt keygen --alg ES256 > key.json                    # a key pair as JSON (--format pem for PEM)
+sdxc-jwt jwks --key-file key.json > jwks.json             # its public key set
+echo '{"sub":"user-123","exp":"15m"}' | sdxc-jwt sign --key-env JWT_KEY
+sdxc-jwt decode "$TOKEN"                                  # header and claims, unverified
+sdxc-jwt verify "$TOKEN" --jwks https://auth.example.com/.well-known/jwks.json --iss https://auth.example.com
+```
+
+Tokens and claims come from an argument, a path or stdin, and keys from `--key-file` or `--key-env`.
+`decode` and `verify` take `--json`. `verify` exits 1 on an invalid token and 2 when its input or
+keys cannot be read.
+
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.

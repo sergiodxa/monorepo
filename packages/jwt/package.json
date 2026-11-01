@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "JWT payload classes and the keys that sign them",
 	"license": "MIT",
+	"bin": {
+		"sdxc-jwt": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -13,9 +16,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
-		"jose": "^6.2.13"
+		"jose": "^6.2.13",
+		"remix": "3.1.0"
 	}
 }
