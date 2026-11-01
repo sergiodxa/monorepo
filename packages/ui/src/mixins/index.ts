@@ -42,3 +42,4 @@ export * from "./validate.js";
 export * from "./view-transition.js";
 export * from "./while-live.js";
 export * from "./confirm-phrase.js";
+export * from "./viewer-time.js";

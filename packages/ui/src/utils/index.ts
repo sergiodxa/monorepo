@@ -33,3 +33,4 @@ export * from "./round-precision.js";
 export * from "./semantic-color.js";
 export * from "./warn-if-no-accessible-name.js";
 export * from "./write-cookie.js";
+export * from "./relative-time.js";
