@@ -20,8 +20,11 @@ import { clientEntry } from "remix/component";
 
 import { Button } from "../components/button.js";
 
+import type { ActionPlacement as ActionPlacementType } from "./styles/action-row.js";
+
 import { submitOnChange } from "./mixins/submit-on-change.js";
 import { SaveShortcut } from "./save-bar.js";
+import { actionRowGrid, onTitleLine } from "./styles/action-row.js";
 
 /** Container the card measures, so a row stacks in a narrow pane as well as on a phone. */
 const CARD_CONTAINER = "ui-settings-card";
@@ -44,6 +47,9 @@ const DEFAULT_HEADING: NonNullable<SettingsSection.Props["heading"]> = "above";
 /** How a row lays out when `layout` is omitted. */
 const DEFAULT_ROW_LAYOUT: SettingsSection.RowLayout = "split";
 
+/** Gap between a row's text and its control, stacked or side by side. */
+const ROW_GAP = "0.5rem 1.5rem";
+
 /** Where an action row's control sits when `actionPlacement` is omitted. */
 const DEFAULT_ACTION_PLACEMENT: SettingsSection.ActionPlacement = "end";
 
@@ -62,11 +68,8 @@ export namespace SettingsSection {
 	/** Where a row's label sits against its control. */
 	export type RowLayout = "split" | "stacked" | "inline-switch" | "action";
 
-	/**
-	 * Where an action row's control sits: `"end"` beside the label's first line, for a
-	 * description of a line or two; `"below"` under the text, for a longer one or a list.
-	 */
-	export type ActionPlacement = "end" | "below";
+	/** Where an action row's control sits: at the end on its label's first line, or below its text. */
+	export type ActionPlacement = ActionPlacementType;
 
 	/** The form the card submits. */
 	export interface FormProps {
@@ -388,28 +391,22 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 				mix={mergeMix(
 					[
 						p(4),
-						raw({
-							display: "grid",
-							gap: "0.5rem 1.5rem",
-							alignItems: rowAlign(layout, Boolean(description)),
-							justifyItems: layout === "action" ? "start" : "stretch",
-							gridTemplateColumns:
-								layout === "inline-switch" ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
-							...(layout === "split"
-								? {
-										[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
-											gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-										},
-									}
-								: {}),
-							...(isEndAction
-								? {
-										[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
-											gridTemplateColumns: "minmax(0, 1fr) auto",
-										},
-									}
-								: {}),
-						}),
+						layout === "action"
+							? actionRowGrid(CARD_CONTAINER, actionPlacement, ROW_GAP)
+							: raw({
+									display: "grid",
+									gap: ROW_GAP,
+									alignItems: rowAlign(layout, Boolean(description)),
+									gridTemplateColumns:
+										layout === "inline-switch" ? "minmax(0, 1fr) auto" : "minmax(0, 1fr)",
+									...(layout === "split"
+										? {
+												[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
+													gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+												},
+											}
+										: {}),
+								}),
 					],
 					mix,
 				)}
@@ -432,7 +429,7 @@ SettingsSection.Row = function SettingsSectionRow(handle: Handle<SettingsSection
 				</div>
 				<div
 					data-slot="settings-row-control"
-					mix={[minIs(0), isEndAction ? onLabelLine() : undefined]}
+					mix={[minIs(0), isEndAction ? onTitleLine(CARD_CONTAINER) : undefined]}
 				>
 					{children}
 				</div>
@@ -450,23 +447,6 @@ function rowAlign(layout: SettingsSection.RowLayout, hasDescription: boolean): "
 	if (layout === "inline-switch") return "center";
 	if (layout === "split" && !hasDescription) return "center";
 	return "start";
-}
-
-/**
- * Centres an end-placed action on the label's first line: on a wide card the control's box
- * is one label line tall and the button overflows it evenly into the row's padding.
- */
-function onLabelLine() {
-	return [
-		text("sm"),
-		raw({
-			[`@container ${CARD_CONTAINER} (min-width: ${SPLIT_MIN})`]: {
-				display: "flex",
-				alignItems: "center",
-				blockSize: "1lh",
-			},
-		}),
-	];
 }
 
 /**

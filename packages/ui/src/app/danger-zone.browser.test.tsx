@@ -1,6 +1,7 @@
 /**
  * Opens a danger zone in a real browser: each action lists its consequences, its button
- * opens the named confirm, and the button moves under the text in a narrow card.
+ * opens the named confirm, and the button sits under the text unless placed at the end on a
+ * wide card.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,8 +15,8 @@ import { userEvent } from "vitest/browser";
 
 import { DangerZone } from "./danger-zone.js";
 
-/** Mounts a danger zone with one delete action in a host `width` pixels wide. */
-function mount(width = 720): HTMLElement {
+/** Mounts a danger zone with one delete action, placed as `actionPlacement` says, in a host `width` pixels wide. */
+function mount(width = 720, actionPlacement?: DangerZone.ActionPlacement): HTMLElement {
 	let host = document.createElement("div");
 	host.style.width = `${width}px`;
 	document.body.appendChild(host);
@@ -23,6 +24,7 @@ function mount(width = 720): HTMLElement {
 		<DangerZone title="Danger zone">
 			<DangerZone.Action
 				id="delete-team"
+				actionPlacement={actionPlacement}
 				title="Delete team"
 				description="Permanently delete Acme Ops and everything in it."
 				consequences={["14 monitors stop checking", "3 status pages go offline"]}
@@ -75,17 +77,32 @@ describe("DangerZone", () => {
 		expect(action.disabled).toBe(false);
 	});
 
-	test("puts the button beside the text when wide and under it when narrow", () => {
-		let wide = mount(720);
-		let wideButton = wide.querySelector("[commandfor]")!.getBoundingClientRect();
-		let wideTitle = wide
-			.querySelector('[data-slot="danger-zone-action"] p')!
-			.getBoundingClientRect();
-		expect(wideButton.left).toBeGreaterThan(wideTitle.right);
+	test("puts the button under the consequences, at the text's start, by default", () => {
+		let host = mount(720);
+		let button = host.querySelector("[commandfor]")!.getBoundingClientRect();
+		let text = host.querySelector('[data-slot="danger-zone-text"]')!.getBoundingClientRect();
 
-		let narrow = mount(320);
-		let narrowButton = narrow.querySelector("[commandfor]")!.getBoundingClientRect();
-		let list = narrow.querySelector("ul")!.getBoundingClientRect();
-		expect(narrowButton.top).toBeGreaterThanOrEqual(list.bottom);
+		expect(button.top).toBeGreaterThanOrEqual(text.bottom);
+		expect(Math.abs(button.left - text.left)).toBeLessThan(1);
+	});
+
+	test("puts an end-placed button at the row's end, centred on the title's line", () => {
+		let host = mount(720, "end");
+		let button = host.querySelector("[commandfor]")!.getBoundingClientRect();
+		let title = host.querySelector('[data-slot="danger-zone-action"] p')!.getClientRects()[0]!;
+
+		expect(button.left).toBeGreaterThan(title.right);
+		expect(Math.abs(button.top + button.height / 2 - (title.top + title.height / 2))).toBeLessThan(
+			1,
+		);
+	});
+
+	test("stacks an end-placed button under the text in a narrow card", () => {
+		let host = mount(320, "end");
+		let button = host.querySelector("[commandfor]")!.getBoundingClientRect();
+		let list = host.querySelector("ul")!.getBoundingClientRect();
+
+		expect(button.top).toBeGreaterThanOrEqual(list.bottom);
+		expect(host.querySelector("section")!.scrollWidth).toBeLessThanOrEqual(320);
 	});
 });

@@ -11,7 +11,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { listStyle, mergeMix, raw } from "@sdxc/u/general";
+import { listStyle, mergeMix } from "@sdxc/u/general";
 import { container, vstack } from "@sdxc/u/layout";
 import { divide, overflow } from "@sdxc/u/overflow";
 import { m, minIs, p, pis } from "@sdxc/u/size";
@@ -20,8 +20,15 @@ import { balance, pretty, text, weight } from "@sdxc/u/typography";
 import { Button } from "../components/button.js";
 import { Confirm } from "../components/confirm.js";
 
+import type { ActionPlacement as ActionPlacementType } from "./styles/action-row.js";
+
+import { actionRowGrid, onTitleLine } from "./styles/action-row.js";
+
 /** Container an action row measures, stacking its button under the text when narrow. */
 const ROW_CONTAINER = "ui-danger-zone";
+
+/** Where an action's button sits when `actionPlacement` is omitted. */
+const DEFAULT_ACTION_PLACEMENT: DangerZone.ActionPlacement = "below";
 
 /**
  * Prop types for {@link DangerZone} and {@link DangerZone.Action}.
@@ -34,6 +41,9 @@ export namespace DangerZone {
 		description?: RemixNode;
 	}
 
+	/** Where an action's button sits: at the row's end on its title's line, or below its text. */
+	export type ActionPlacement = ActionPlacementType;
+
 	/** Props accepted by {@link DangerZone.Action}. */
 	export interface ActionProps extends Omit<TagProps<"div">, "title"> {
 		/** The confirm dialog's `id`, which the row's button opens. */
@@ -43,6 +53,14 @@ export namespace DangerZone {
 		description?: RemixNode;
 		/** What is lost, one item each: "14 monitors stop checking", "Invoices stay in Billing". */
 		consequences?: ReadonlyArray<RemixNode>;
+		/**
+		 * Where the button sits on a wide card: under the text, for a row that lists its
+		 * consequences, or at the row's end on the title's line, for a short one. A narrow
+		 * card always puts it under the text.
+		 *
+		 * @default "below"
+		 */
+		actionPlacement?: ActionPlacement;
 		/** The row's button text; name the action, such as "Delete team". */
 		buttonLabel: RemixNode;
 		/**
@@ -108,37 +126,39 @@ export function DangerZone(handle: Handle<DangerZone.Props>) {
 }
 
 /**
- * Renders one irreversible action: its title, description and consequence list at the
- * start, and a danger button at the end that opens its {@link Confirm}. The button moves
- * under the text in a narrow card.
+ * Renders one irreversible action: its title, description and consequence list, then a
+ * danger button that opens its {@link Confirm}, under the text or at the row's end as
+ * `actionPlacement` says.
  *
  * @param handle Runtime handle carrying the action's props.
  * @returns The render function producing the row's markup.
  * @example
- * <DangerZone.Action id="transfer" title="Transfer ownership" buttonLabel="Transfer…" confirm={…} />
+ * <DangerZone.Action id="transfer" title="Transfer ownership" buttonLabel="Transfer…" actionPlacement="end" confirm={…} />
  */
 DangerZone.Action = function DangerZoneAction(handle: Handle<DangerZone.ActionProps>) {
 	return () => {
-		let { id, title, description, consequences, buttonLabel, confirm, mix, ...rest } = handle.props;
+		let {
+			id,
+			title,
+			description,
+			consequences,
+			actionPlacement: actionPlacementProp,
+			buttonLabel,
+			confirm,
+			mix,
+			...rest
+		} = handle.props;
+		let actionPlacement = actionPlacementProp ?? DEFAULT_ACTION_PLACEMENT;
 
 		return (
-			<div {...rest} data-slot="danger-zone-action" mix={mergeMix([container(ROW_CONTAINER)], mix)}>
-				<div
-					mix={[
-						p(4),
-						raw({
-							display: "grid",
-							gap: "0.75rem 1.5rem",
-							alignItems: "start",
-							gridTemplateColumns: "minmax(0, 1fr)",
-							[`@container ${ROW_CONTAINER} (min-width: 32rem)`]: {
-								gridTemplateColumns: "minmax(0, 1fr) auto",
-								alignItems: "center",
-							},
-						}),
-					]}
-				>
-					<div mix={[vstack({ gap: 1, align: "stretch" }), minIs(0)]}>
+			<div
+				{...rest}
+				data-slot="danger-zone-action"
+				data-action-placement={actionPlacement}
+				mix={mergeMix([container(ROW_CONTAINER)], mix)}
+			>
+				<div mix={[p(4), actionRowGrid(ROW_CONTAINER, actionPlacement, "0.75rem 1.5rem")]}>
+					<div data-slot="danger-zone-text" mix={[vstack({ gap: 1, align: "stretch" }), minIs(0)]}>
 						<p mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>{title}</p>
 						{description ? (
 							<p mix={[m(0), text("sm"), fg("neutral.muted"), pretty()]}>{description}</p>
@@ -161,16 +181,14 @@ DangerZone.Action = function DangerZoneAction(handle: Handle<DangerZone.ActionPr
 							</ul>
 						) : null}
 					</div>
-					<Button
-						commandfor={id}
-						command="show-modal"
-						color="danger"
-						variant="outline"
-						size="sm"
-						mix={[raw({ justifySelf: "start" })]}
+					<div
+						data-slot="danger-zone-control"
+						mix={[minIs(0), actionPlacement === "end" ? onTitleLine(ROW_CONTAINER) : undefined]}
 					>
-						{buttonLabel}
-					</Button>
+						<Button commandfor={id} command="show-modal" color="danger" variant="outline" size="sm">
+							{buttonLabel}
+						</Button>
+					</div>
 				</div>
 				<Confirm {...confirm} id={id} />
 			</div>
