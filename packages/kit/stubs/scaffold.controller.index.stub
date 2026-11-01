@@ -8,7 +8,7 @@
 
 import { Link } from "@sdxc/ui/link";
 import { LinkButton } from "@sdxc/ui/link-button";
-import { Table } from "@sdxc/ui/table";
+import { Table } from "@sdxc/ui/app/table";
 import { createAction } from "remix/router";
 
 import page from "~/app/http/middleware/page";
