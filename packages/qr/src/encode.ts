@@ -11,6 +11,7 @@ import type { Result } from "@sdxc/result";
 import { failure, success } from "@sdxc/result";
 
 import type { Matrix } from "./matrix.js";
+import type { ImageOptions, QrImage } from "./raster.js";
 import type { Segment } from "./segment.js";
 import type { SvgPath, SvgPathOptions } from "./svg-path.js";
 
@@ -21,6 +22,7 @@ import {
 	penaltyScore,
 	placeCodewords,
 } from "./matrix.js";
+import { raster } from "./raster.js";
 import { reedSolomonDivisor, reedSolomonRemainder } from "./reed-solomon.js";
 import { appendBits, bytesSegments, textSegments, totalBits, writeSegments } from "./segment.js";
 import { svgPath } from "./svg-path.js";
@@ -231,6 +233,18 @@ export class QR {
 	 */
 	toSVGPath(options: SvgPathOptions = {}): SvgPath {
 		return svgPath(this, options);
+	}
+
+	/**
+	 * Pixels for this symbol: black modules on a white quiet zone, `scale` pixels a module, as
+	 * straight RGBA in the `ImageData` layout a PNG or canvas encoder takes.
+	 *
+	 * @param options - The quiet zone width and the pixels per module
+	 * @returns The image, `(size + 2 * margin) * scale` pixels a side
+	 * @example let image = qr.toImage({ scale: 10 }); await encode(image) // @sdxc/png
+	 */
+	toImage(options: ImageOptions = {}): QrImage {
+		return raster(this, options);
 	}
 }
 

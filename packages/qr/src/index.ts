@@ -10,4 +10,5 @@ export type { QrLevel, QrOptions } from "./encode.js";
 
 export { QR, QrError, QrOptionsError, QrTooLongError } from "./encode.js";
 
+export type { ImageOptions, QrImage } from "./raster.js";
 export type { SvgPath, SvgPathOptions } from "./svg-path.js";

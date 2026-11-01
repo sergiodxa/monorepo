@@ -8,7 +8,7 @@ QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/com
 npm add @sdxc/qr
 ```
 
-The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/ui` renders through `remix/component`; install [`remix`](https://www.npmjs.com/package/remix) to use it.
+The main entry point imports only [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/ui` renders through `remix/component` from [`remix`](https://www.npmjs.com/package/remix), which installs alongside for the command line.
 
 ## Usage
 
@@ -46,6 +46,14 @@ let { d, viewBox } = encoded.data.toSVGPath({ margin: 2 });
 // <svg viewBox={viewBox}><rect width="100%" height="100%" fill="#fff" /><path d={d} /></svg>
 ```
 
+### Draw pixels
+
+```typescript
+import { encode } from "@sdxc/png";
+
+let png = await encode(encoded.data.toImage({ scale: 10 })); // black on white, 10 px a module
+```
+
 ### Handle a failure
 
 ```typescript
@@ -60,6 +68,20 @@ if (isFailure(encoded)) {
 	else encoded.error.message; // which option was out of range
 }
 ```
+
+## Command line
+
+```sh
+bunx @sdxc/qr encode "https://example.com" > code.svg
+```
+
+`encode` writes an SVG to stdout, or to `--output`. With no text, or `-`, it reads stdin and drops one trailing newline. `--png` writes a PNG to `--output` instead. `--level`, `--min-version`, `--max-version`, `--mask`, `--no-boost-level` and `--margin` are the encoder's options, and `--scale` sets pixels per module.
+
+```sh
+bunx @sdxc/qr encode --level H --margin 6 --png -o label.png PKG-000123
+```
+
+It exits 0 when the image is written, 1 when the text does not fit `--max-version` or the file cannot be written, and 2 on an invalid flag. `bunx @sdxc/qr encode --help` lists every flag.
 
 ## API
 
@@ -84,6 +106,10 @@ Whether a module is dark. Coordinates outside the symbol answer `false`, so a re
 #### `qr.toSVGPath(options?: SvgPathOptions): SvgPath`
 
 Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, whose width `margin` sets in modules (default `4`, the standard's).
+
+#### `qr.toImage(options?: ImageOptions): QrImage`
+
+Pixels as 8-bit straight RGBA in the `ImageData` layout, ready for `@sdxc/png` or a canvas: black modules on a white quiet zone, `scale` pixels a module (default `8`), with a `margin` in modules (default `4`).
 
 ### `QrCode` from `@sdxc/qr/ui`
 
@@ -114,6 +140,8 @@ Code `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion
 - `QrOptions`: the options of `QR.encode`.
 - `SvgPathOptions`: `{ margin?: number }`.
 - `SvgPath`: `{ d: string; viewBox: string; size: number }`.
+- `ImageOptions`: `{ margin?: number; scale?: number }`.
+- `QrImage`: `{ width: number; height: number; data: Uint8ClampedArray }`.
 - `QrError.Code`: `"too-long" | "invalid-options"`.
 - `QrError.Bits`: `{ needed: number; available: number }`.
 
