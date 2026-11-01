@@ -366,6 +366,11 @@ export namespace Chart {
 		/** Categorical color. Defaults to {@link DEFAULT_LINE_COLOR}. */
 		color?: Color;
 		/**
+		 * Draws the series as the comparison period, dashed and muted behind the current one,
+		 * in `--ui-chart-comparison-color` with `--ui-chart-comparison-dash`; `color` is unused.
+		 */
+		comparison?: boolean;
+		/**
 		 * Approximate number of accessible, hoverable markers placed along
 		 * `points`. Each marker snaps to the point closest to one of this many
 		 * evenly spread "nice" values across the ancestor {@link Chart}'s `xDomain`.
@@ -542,12 +547,41 @@ export namespace Chart {
 		export interface ValueProps extends TagProps<"span"> {}
 	}
 
+	/** Semantic role a {@link Chart.Threshold} or {@link Chart.Band} is drawn in. */
+	export type Tone = "brand" | "neutral" | "success" | "warning" | "danger";
+
+	/** Props accepted by {@link Chart.Threshold}. */
+	export interface ThresholdProps extends Omit<TagProps<"g">, "children"> {
+		/** The value the line marks, mapped across the ancestor {@link Chart}'s `yDomain`. */
+		y: number;
+		/** Text set at the line's end ("SLO 300 ms"), also its accessible name. */
+		label?: string;
+		/** @default "danger" */
+		tone?: Tone;
+	}
+
+	/** Props accepted by {@link Chart.Band}. */
+	export interface BandProps extends Omit<TagProps<"g">, "children"> {
+		/** Where the range starts, mapped across the ancestor {@link Chart}'s `xDomain`. */
+		from: number;
+		/** Where the range ends, on the same scale as `from`. */
+		to: number;
+		/** Text set at the band's top start ("Incident #42", "Deploy"), also its accessible name. */
+		label?: string;
+		/** @default "danger" */
+		tone?: Tone;
+	}
+
 	/**
 	 * A single series' plotted value at one {@link Chart.BarRow}'s category.
 	 */
 	export interface BarValue {
-		/** Numeric magnitude this bar represents, mapped across {@link Chart.BarProps.domain}. */
-		value: number;
+		/**
+		 * Numeric magnitude this bar represents, mapped across {@link Chart.BarProps.domain}.
+		 * `null` records a period with no data, drawn as a full-height hatched bar so it never
+		 * reads as zero.
+		 */
+		value: number | null;
 		/**
 		 * Accessible name and hover tooltip text for this bar, read by the
 		 * native `<title>` nested inside it — typically a formatted description of
@@ -740,7 +774,7 @@ function renderChartMarkers(
  */
 Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 	return () => {
-		let { points, color, markerCount, parts, mix, ...rest } = handle.props;
+		let { points, color, comparison, markerCount, parts, mix, ...rest } = handle.props;
 		let context = handle.context.get(Chart);
 		let resolvedColor = color ?? DEFAULT_LINE_COLOR;
 		let resolvedMarkerCount = markerCount ?? DEFAULT_MARKER_COUNT;
@@ -753,7 +787,22 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 		let markerIndices = computeMarkerIndices(points, context.xDomain, resolvedMarkerCount);
 
 		return (
-			<g data-color={String(resolvedColor)} {...rest} mix={mergeMix(chartPalette("color"), mix)}>
+			<g
+				data-color={comparison ? undefined : String(resolvedColor)}
+				data-comparison={comparison ? "" : undefined}
+				{...rest}
+				mix={mergeMix(
+					[
+						chartPalette("color"),
+						comparison
+							? raw({
+									color: "var(--ui-chart-comparison-color, var(--ui-neutral-fg-muted, GrayText))",
+								})
+							: undefined,
+					],
+					mix,
+				)}
+			>
 				<path
 					d={d}
 					mix={[
@@ -763,6 +812,12 @@ Chart.Line = function ChartLine(handle: Handle<Chart.LineProps>) {
 						strokeWidth("var(--ui-chart-line-width, 2px)"),
 						strokeLinejoin("round"),
 						strokeLinecap("round"),
+						comparison
+							? raw({
+									strokeDasharray: "var(--ui-chart-comparison-dash, 4 4)",
+									vectorEffect: "non-scaling-stroke",
+								})
+							: undefined,
 						parts?.path,
 					]}
 				/>
@@ -970,6 +1025,125 @@ Chart.Area = function ChartArea(handle: Handle<Chart.AreaProps>) {
 };
 
 /**
+ * Stroke and fill colour for each {@link Chart.Tone}, read through `currentColor` by a
+ * threshold's line and label and a band's fill and label, which let the pointer through to
+ * the series beneath.
+ */
+function toneColor() {
+	return raw<SVGGElement>({
+		pointerEvents: "none",
+		color: "var(--ui-danger-fg)",
+		'&[data-tone="brand"]': { color: "var(--ui-brand-fg)" },
+		'&[data-tone="neutral"]': { color: "var(--ui-neutral-fg-muted)" },
+		'&[data-tone="success"]': { color: "var(--ui-success-fg)" },
+		'&[data-tone="warning"]': { color: "var(--ui-warning-fg)" },
+	});
+}
+
+/**
+ * Marks a value the series should stay under or over: a dashed line across the plot at `y`,
+ * with `label` set at its end. Render it inside {@link Chart}, after the series it judges.
+ *
+ * @param handle Runtime handle carrying the host `<g>`'s props.
+ * @returns The render function producing the threshold's markup.
+ * @example
+ * <Chart.Threshold y={300} label={t("chart.slo", { ms: 300 })} tone="warning" />
+ */
+Chart.Threshold = function ChartThreshold(handle: Handle<Chart.ThresholdProps>) {
+	return () => {
+		let { y: value, label, tone, mix, ...rest } = handle.props;
+		let context = handle.context.get(Chart);
+		let y = linearScale(context.yDomain, [context.height, 0])(value);
+
+		return (
+			<g
+				data-slot="chart-threshold"
+				data-tone={tone ?? "danger"}
+				role={label ? "img" : undefined}
+				aria-label={label}
+				aria-hidden={label ? undefined : "true"}
+				{...rest}
+				mix={mergeMix(toneColor(), mix)}
+			>
+				<line
+					x1={0}
+					x2={context.width}
+					y1={y}
+					y2={y}
+					mix={[
+						stroke("currentColor"),
+						strokeWidth("var(--ui-chart-threshold-width, 1px)"),
+						vectorEffect("non-scaling-stroke"),
+						raw({ strokeDasharray: "var(--ui-chart-threshold-dash, 6 4)" }),
+					]}
+				/>
+				{label ? (
+					<text
+						aria-hidden="true"
+						x={context.width - 4}
+						y={y - 4}
+						text-anchor="end"
+						mix={[fill("currentColor"), raw({ fontSize: "var(--ui-chart-annotation-size, 11px)" })]}
+					>
+						{label}
+					</text>
+				) : null}
+			</g>
+		);
+	};
+};
+
+/**
+ * Shades a stretch of the x axis, such as an incident or a deploy, across the full plot
+ * height with `label` at its top start. Render it inside {@link Chart} before the series, so
+ * the lines draw over it.
+ *
+ * @param handle Runtime handle carrying the host `<g>`'s props.
+ * @returns The render function producing the band's markup.
+ * @example
+ * <Chart.Band from={incident.start} to={incident.end} label={t("chart.incident", { id: 42 })} />
+ */
+Chart.Band = function ChartBand(handle: Handle<Chart.BandProps>) {
+	return () => {
+		let { from, to, label, tone, mix, ...rest } = handle.props;
+		let context = handle.context.get(Chart);
+		let x = linearScale(context.xDomain, [0, context.width]);
+		let start = Math.min(x(from), x(to));
+		let end = Math.max(x(from), x(to));
+
+		return (
+			<g
+				data-slot="chart-band"
+				data-tone={tone ?? "danger"}
+				role={label ? "img" : undefined}
+				aria-label={label}
+				aria-hidden={label ? undefined : "true"}
+				{...rest}
+				mix={mergeMix(toneColor(), mix)}
+			>
+				<rect
+					x={start}
+					y={0}
+					width={Math.max(end - start, 1)}
+					height={context.height}
+					mix={[fill("currentColor"), fillOpacity("var(--ui-chart-band-opacity, 0.1)")]}
+				/>
+				{label ? (
+					<text
+						aria-hidden="true"
+						x={start + 4}
+						y={12}
+						mix={[fill("currentColor"), raw({ fontSize: "var(--ui-chart-annotation-size, 11px)" })]}
+					>
+						{label}
+					</text>
+				) : null}
+			</g>
+		);
+	};
+};
+
+/**
  * Renders a pie or donut chart: an independent `<svg>` root, since a
  * circular layout shares no domain with a Cartesian {@link Chart}. A paired
  * {@link Chart.Legend} must render as this root's later sibling.
@@ -1136,6 +1310,8 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 		let y = linearScale(domain, [height, 0]);
 		let baselineY = y(0);
 		let gridlineValues = ticks(domain, resolvedTickCount);
+		let hatchId = `${handle.id}-no-data`;
+		let hasEmpty = data.some((row) => series.some((key) => row.values[key]?.value === null));
 
 		return (
 			<svg
@@ -1147,6 +1323,25 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 					mix,
 				)}
 			>
+				{hasEmpty ? (
+					<defs>
+						<pattern
+							id={hatchId}
+							width={6}
+							height={6}
+							patternUnits="userSpaceOnUse"
+							patternTransform="rotate(45)"
+						>
+							<line
+								x1={0}
+								y1={0}
+								x2={0}
+								y2={6}
+								mix={[stroke("var(--ui-neutral-border, GrayText)"), strokeWidth("2")]}
+							/>
+						</pattern>
+					</defs>
+				) : null}
 				<g mix={[attrs({ "aria-hidden": DEFAULT_PATH_ARIA_HIDDEN })]}>
 					{gridlineValues.map((value) => (
 						<line
@@ -1173,6 +1368,32 @@ Chart.Bar = function ChartBar(handle: Handle<Chart.BarProps>) {
 						if (entry === undefined) return null;
 
 						let barX = categoryX + (inner.position(key) ?? 0);
+						if (entry.value === null) {
+							return (
+								<rect
+									key={`${row.category}:${key}`}
+									x={barX}
+									y={0}
+									width={inner.bandwidth}
+									height={height}
+									fill={`url(#${hatchId})`}
+									data-empty=""
+									data-series-index={String(index)}
+									tabIndex={0}
+									role="img"
+									mix={[
+										stroke("var(--ui-neutral-border, GrayText)"),
+										strokeWidth("1"),
+										vectorEffect("non-scaling-stroke"),
+										focusVisible(outline({ color: "brand.ring", offset: 2 })),
+										cursor("default"),
+										parts?.bar,
+									]}
+								>
+									<title>{entry.label}</title>
+								</rect>
+							);
+						}
 						let barValueY = y(entry.value);
 						let rectY = Math.min(baselineY, barValueY);
 						let rectHeight = Math.abs(barValueY - baselineY);
