@@ -509,8 +509,8 @@ describe("Table pinned first column", () => {
 
 		expect(getComputedStyle(pinned, "::after").opacity).toBe("0");
 
-		container.scrollLeft = 120;
-		await expect.poll(() => container.scrollLeft).toBe(120);
+		container.scrollLeft = 100;
+		await expect.poll(() => container.scrollLeft).toBe(100);
 
 		expect(pinned.getBoundingClientRect().left).toBeCloseTo(start, 0);
 		await expect.poll(() => getComputedStyle(pinned, "::after").opacity).toBe("1");
@@ -767,6 +767,73 @@ describe("Table row actions", () => {
 		mount(posts(), 375);
 
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+	});
+});
+
+/** Four row actions, enough to crowd the visible columns if their cell reserved their width. */
+const MANY_ACTIONS = ["Edit", "Quick edit", "View", "Duplicate"];
+
+/** Widest a resting actions column may be: one small ⋯ button. */
+const MENU_BUTTON_WIDTH = 32;
+
+/** Rendered inline-size of the first body row's cell in column `index`. */
+function columnWidth(host: HTMLElement, index: number): number {
+	return host.querySelector("tbody tr")!.children[index]!.getBoundingClientRect().width;
+}
+
+describe("Table hover-revealed row actions", () => {
+	test("reserve no width at rest, so the title column takes it", async () => {
+		await page.viewport(1024, 768);
+		let bare = mount(posts({ noActions: true }), 1024);
+		let titleWithoutActions = columnWidth(bare, 1);
+		bare.remove();
+
+		let host = mount(posts({ actions: MANY_ACTIONS }), 1024);
+
+		expect(matchMedia("(hover: hover)").matches).toBe(true);
+		expect(columnWidth(host, 4)).toBeLessThanOrEqual(MENU_BUTTON_WIDTH);
+		expect(columnWidth(host, 1)).toBeGreaterThanOrEqual(titleWithoutActions - MENU_BUTTON_WIDTH);
+	});
+
+	test("show on hover over the row's end, on one line and inside the row", async () => {
+		await page.viewport(1024, 768);
+		let host = mount(posts({ actions: MANY_ACTIONS }), 1024);
+		let row = host.querySelector<HTMLElement>("tbody tr")!;
+		let cell = row.querySelector<HTMLElement>('[data-slot="row-actions"]')!;
+		let inline = cell.querySelector<HTMLElement>('[data-slot="row-actions-inline"]')!;
+
+		await userEvent.hover(row.querySelector('[data-slot="row-link"]')!);
+		await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
+
+		let actions = [...inline.querySelectorAll<HTMLElement>("a")];
+		expect(actions.map((action) => action.textContent)).toEqual(MANY_ACTIONS);
+		for (let action of actions) expect(lineBoxes(action)).toBe(1);
+		let rowBox = row.getBoundingClientRect();
+		let box = inline.getBoundingClientRect();
+		expect(box.left).toBeGreaterThanOrEqual(rowBox.left - 1);
+		expect(box.right).toBeLessThanOrEqual(rowBox.right + 1);
+		expect(box.top).toBeGreaterThanOrEqual(rowBox.top - 1);
+		expect(box.bottom).toBeLessThanOrEqual(rowBox.bottom + 1);
+		expect(
+			new Set(actions.map((action) => Math.round(action.getBoundingClientRect().top))).size,
+		).toBe(1);
+		expect(getComputedStyle(inline).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+	});
+
+	test("stay inline and take their width where the pointer cannot hover", async () => {
+		await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+		await page.viewport(1024, 768);
+		let host = mount(posts({ actions: MANY_ACTIONS }), 1024);
+
+		expect(matchMedia("(hover: none)").matches).toBe(true);
+		expectOneLineActions(host, MANY_ACTIONS);
+		for (let cell of host.querySelectorAll<HTMLElement>('tbody [data-slot="row-actions"]')) {
+			let actions = [...cell.querySelectorAll<HTMLElement>("a")];
+			expect(cell.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+				actions.at(-1)!.getBoundingClientRect().right - actions[0]!.getBoundingClientRect().left,
+			);
+			expect(getComputedStyle(cell).opacity).toBe("1");
+		}
 	});
 });
 

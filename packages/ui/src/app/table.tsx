@@ -93,6 +93,10 @@ const ROW_BLOCK_SIZE = "var(--ui-table-row-block-size, 2.5rem)";
 /** Surface behind sticky headers and pinned cells, which must be opaque to cover what scrolls under them. */
 const TABLE_BG = "var(--ui-table-bg, var(--ui-bg, Canvas))";
 
+/** The row's tint as an image, layered over {@link TABLE_BG} by a surface that covers the row. */
+const ROW_TINT_IMAGE =
+	"linear-gradient(var(--ui-table-row-tint, transparent), var(--ui-table-row-tint, transparent))";
+
 /** Edge shadow a pinned first column casts once the table scrolls sideways. */
 const PIN_SHADOW_KEYFRAMES = "ui-table-pin-shadow";
 
@@ -440,8 +444,7 @@ export function Table(handle: Handle<Table.Props>) {
 								insetInlineStart: 0,
 								zIndex: 1,
 								backgroundColor: TABLE_BG,
-								backgroundImage:
-									"linear-gradient(var(--ui-table-row-tint, transparent), var(--ui-table-row-tint, transparent))",
+								backgroundImage: ROW_TINT_IMAGE,
 							},
 							"&[data-pin-first] > * > tr > :first-child::after": {
 								content: '""',
@@ -709,6 +712,9 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 								"--ui-table-row-tint": "var(--ui-brand-bg-tint)",
 							},
 							'&:has([data-slot="row-link"])': { position: "relative" },
+							"@media (hover: hover)": {
+								'&:has(> [data-slot="row-actions"])': { position: "relative" },
+							},
 							[`&:has([data-slot="row-link"]) ${ROW_CONTROLS}:not([data-slot="row-link"])`]: {
 								position: "relative",
 								zIndex: 1,
@@ -893,11 +899,10 @@ function TableActionsMenu(handle: Handle<{ children?: RemixNode }, { menu: true 
 }
 
 /**
- * Renders a row's actions, end-aligned on one line in a cell as wide as they are, so the
- * flexible columns give way first. With `overflowLabel`, a `ui-table` container 40rem wide or
- * narrower shows a ⋯ button opening a native popover menu of the same actions instead. Where the
- * pointer can hover they stay hidden until the row is hovered, focused within, selected or has a
- * menu open; on touch they always show.
+ * Renders a row's actions on one line. Where the pointer can hover they reserve no width: hidden
+ * until the row is hovered, focused within, selected or has a menu open, they then show over the
+ * row's end on its tint. On touch they show in a cell as wide as they are. With `overflowLabel`,
+ * a `ui-table` container 40rem wide or narrower shows a ⋯ button opening a menu of them instead.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell.
@@ -929,6 +934,7 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 							whiteSpace: "nowrap",
 							transition: "opacity 150ms ease-out",
 							"@media (hover: hover)": {
+								paddingInline: 0,
 								opacity: 0,
 								':is(tr:hover, tr:focus-within, tr[aria-selected="true"], tr:has(:popover-open)) > &':
 									{ opacity: 1 },
@@ -946,6 +952,17 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 						items("center"),
 						justify("end"),
 						gap("0.25rem"),
+						raw({
+							"@media (hover: hover)": {
+								position: "absolute",
+								insetBlock: 0,
+								insetInlineEnd: 0,
+								zIndex: 1,
+								paddingInline: "0.5rem",
+								backgroundColor: TABLE_BG,
+								backgroundImage: ROW_TINT_IMAGE,
+							},
+						}),
 						overflowLabel ? raw({ [ACTIONS_OVERFLOW_QUERY]: { display: "none" } }) : undefined,
 					]}
 				>
@@ -957,7 +974,11 @@ Table.Actions = function TableActions(handle: Handle<Table.ActionsProps>) {
 							data-slot="row-actions-overflow"
 							mix={[
 								justify("end"),
-								raw({ display: "none", [ACTIONS_OVERFLOW_QUERY]: { display: "flex" } }),
+								raw({
+									display: "none",
+									[ACTIONS_OVERFLOW_QUERY]: { display: "flex" },
+									"@media (hover: hover)": { paddingInline: "0.5rem" },
+								}),
 							]}
 						>
 							<Button
