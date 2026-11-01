@@ -19,6 +19,7 @@ import {
 	flex,
 	gap,
 	grow,
+	hidden,
 	inline,
 	inlineFlex,
 	items,
@@ -26,7 +27,7 @@ import {
 	shrink,
 	vstack,
 } from "@sdxc/u/layout";
-import { media, motionSafe } from "@sdxc/u/responsive";
+import { at, motionSafe } from "@sdxc/u/responsive";
 import { is, maxIs, mbs, mie, minIs, mis, p, pb } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
@@ -49,7 +50,7 @@ import type { TagChips } from "~/resources/views/tag-chips";
 import ReadToggle from "~/resources/components/read-toggle";
 import SaveToggle from "~/resources/components/save-toggle";
 import { POST_ROW_ATTRIBUTE } from "~/resources/components/shortcuts";
-import { BAND_FIELD_HEIGHT, listBleed, listRowGutter } from "~/resources/layouts/app";
+import { BAND_FIELD_HEIGHT, listBleed, listRowGutter } from "~/resources/layouts/app-page";
 import OutboundMark from "~/resources/views/outbound-mark";
 import TagStrip from "~/resources/views/tag-chips";
 import routes from "~/routes/web";
@@ -62,11 +63,20 @@ import routes from "~/routes/web";
 const ROW_HOVER = colorMix("oklab", { color: color("neutral.border"), weight: 25 }, "transparent");
 
 /**
- * Where a row has the width for its title, source and time on one line. Below it the row
- * keeps the title to itself and drops the two quiet columns underneath, which is the only
- * way a phone shows a title rather than the first three words of one.
+ * Width of the pane at which a row has the room for its title, source and time on one line.
+ * It is measured on the shell's content pane rather than the screen, since the sidebar takes
+ * its share of the screen first. Below it the title takes up to two lines of its own and the
+ * quiet columns drop underneath, so a narrow pane shows a title rather than its first words.
  */
-const WIDE_ROW = "(min-width: 34rem)";
+const WIDE_ROW = "44rem";
+
+/** The container the shell names its content pane by, which {@link WIDE_ROW} is measured on. */
+const CONTENT_PANE = "ui-app-content";
+
+/** Applies `input` once the row's pane is wide enough for one line. */
+function wideRow(input: Parameters<typeof at>[2]) {
+	return at(WIDE_ROW, CONTENT_PANE, input);
+}
 
 /**
  * Width of the column naming where a post came from. Fixed, so the column reads as a
@@ -307,17 +317,13 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
 				ping={ping ?? undefined}
 				{...{ [ROW_TITLE]: "" }}
 				mix={[
-					inlineFlex(),
-					items("center"),
-					maxIs("100%"),
-					verticalAlign("bottom"),
 					textDecoration("none"),
-					/** Already brand, so pointing at it has only the underline left to add. */
 					hover(textDecoration({ line: "underline", thickness: 1, offset: 3 })),
+					wideRow([inlineFlex(), items("center"), maxIs("100%"), verticalAlign("bottom")]),
 				]}
 			>
-				<span mix={[minIs(0), truncate()]}>{title}</span>
-				<OutboundMark mix={[shrink(0), mis(1)]} />
+				<span mix={[wideRow([minIs(0), truncate()])]}>{title}</span>
+				<OutboundMark mix={[shrink(0), mis(1), verticalAlign("middle")]} />
 			</a>
 		);
 	};
@@ -463,7 +469,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								 * too narrow to hold all three and they drop underneath.
 								 */}
 								<div mix={[grow(), minIs(0)]}>
-									<div mix={[media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
+									<div mix={[wideRow([flex(), items("baseline"), gap(3)])]}>
 										{/**
 										 * What the row's own words take when they are not a link: a post whose feed gave
 										 * it no address, and the note a screen reader hears. A linked title wears the
@@ -479,7 +485,14 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												 * belongs to the page itself unless something nearer claims it.
 												 */
 												relative(),
-												truncate(),
+												/** Two lines of title on a narrow pane, one clipped line beside the columns on a wide one. */
+												raw({
+													display: "-webkit-box",
+													WebkitBoxOrient: "vertical",
+													WebkitLineClamp: "2",
+													overflow: "hidden",
+												}),
+												wideRow([raw({ display: "block" }), truncate()]),
 												/**
 												 * The reader's own face, which reaches a post's title and its words and
 												 * stops there: the rail, the controls and the times around them stay in
@@ -510,7 +523,9 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 											 * than as a second title, and clipped with it.
 											 */}
 											{entry.summary && (
-												<span mix={[mis(2), fg("neutral.muted")]}>{entry.summary}</span>
+												<span mix={[hidden(), mis(2), fg("neutral.muted"), wideRow(inline())]}>
+													{entry.summary}
+												</span>
 											)}
 
 											{entry.isRead && <Text mix={[visuallyHidden()]}>{copy.read}</Text>}
@@ -526,7 +541,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												text("xs"),
 												fg("neutral.muted"),
 												mbs(1),
-												media(WIDE_ROW, mbs(0)),
+												wideRow(mbs(0)),
 											]}
 										>
 											{/**
@@ -548,9 +563,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 											)}
 
 											{hasSource && (
-												<span
-													mix={[truncate(), media(WIDE_ROW, [is(SOURCE_COLUMN), textAlign("end")])]}
-												>
+												<span mix={[truncate(), wideRow([is(SOURCE_COLUMN), textAlign("end")])]}>
 													{entry.source}
 												</span>
 											)}
@@ -558,7 +571,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 											<time
 												dateTime={entry.dateTime}
 												title={entry.timeLabel}
-												mix={[nowrap(), media(WIDE_ROW, [minIs(TIME_COLUMN), textAlign("end")])]}
+												mix={[nowrap(), wideRow([minIs(TIME_COLUMN), textAlign("end")])]}
 											>
 												{entry.time}
 											</time>

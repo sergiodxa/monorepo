@@ -90,10 +90,10 @@ describe("Timeline", () => {
 	 * The narrow arrangement is the same row measured differently. A second arrangement would
 	 * be a branch every later change to a row is made in twice.
 	 */
-	test("collapses at the narrow measure rather than branching into a second row", async () => {
+	test("collapses at the content pane's narrow measure rather than branching into a second row", async () => {
 		let html = await render([entry("a")]);
 
-		expect(html).toContain("min-width: 34rem");
+		expect(html).toContain("@container ui-app-content (min-width: 44rem)");
 		expect(html.match(/<li\b/g) ?? []).toHaveLength(1);
 	});
 

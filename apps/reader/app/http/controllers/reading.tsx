@@ -26,7 +26,8 @@ import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { boxSizing, flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
 import { bs, is, maxIs, minIs, p } from "@sdxc/u/size";
-import { text, textDecoration, truncate } from "@sdxc/u/typography";
+import { hover } from "@sdxc/u/state";
+import { font, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Alert, Button, Confirm, HeadingScope, LinkButton } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app";
 import { waitUntil } from "cloudflare:workers";
@@ -882,27 +883,37 @@ export async function renderReadingQueue(
 									grow(),
 									minIs(PINNED_CARD_FLOOR),
 									maxIs(PINNED_CARD_CAP),
-									p(3),
-									rounded("lg"),
+									p(4),
+									rounded("xl"),
 									border({ color: "neutral.border", width: 1 }),
+									bg("neutral.tint"),
 								]}
 							>
-								<h2 mix={[text("sm")]}>
+								<h2 mix={[text("xs"), weight("medium")]}>
 									<a
 										href={routes.feed.href({ feed: entry.feed.id })}
-										mix={[fg("neutral.emphasis"), textDecoration("none")]}
+										mix={[
+											fg("neutral.muted"),
+											textDecoration("none"),
+											hover(fg("neutral.emphasis")),
+										]}
 									>
 										{entry.feed.title}
 									</a>
 								</h2>
 
 								{entry.items.length > 0 ? (
-									<ul mix={[vstack({ gap: 1 }), p(0), text("xs")]}>
+									<ul mix={[vstack({ gap: 1.5 }), p(0), text("sm")]}>
 										{entry.items.map((item) => (
 											<li key={item.id} mix={[truncate()]}>
 												<a
 													href={item.url ?? routes.feed.href({ feed: entry.feed.id })}
-													mix={[fg("brand"), textDecoration("none")]}
+													mix={[
+														fg("neutral.emphasis"),
+														font("reading"),
+														textDecoration("none"),
+														hover(textDecoration("underline")),
+													]}
 												>
 													{item.title}
 												</a>

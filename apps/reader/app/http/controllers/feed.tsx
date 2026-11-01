@@ -25,7 +25,7 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { boxSizing, flex, flexWrap, gap, items, justify, vstack } from "@sdxc/u/layout";
+import { boxSizing, flex, gap, items, justify, vstack } from "@sdxc/u/layout";
 import { bs, maxIs, minIs, p, pb } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Alert, Badge, Button, Confirm, HeadingScope, LinkButton, Menu, Text } from "@sdxc/ui";
@@ -474,6 +474,22 @@ export default createAction(routes.feed, {
 				documentTitle={feed.title}
 				heading={feed.title}
 				/**
+				 * When the feed was last looked at, under its name: a feed that is fine says only
+				 * this, so the badge beside the name appearing means something is wrong.
+				 */
+				description={
+					<span title={lastFetchedAt === null ? undefined : exactDate(lastFetchedAt, ctx.locale)}>
+						{checkedLabel}
+					</span>
+				}
+				status={
+					failureLabel ? (
+						<Badge color="danger" variant="secondary">
+							{failureLabel}
+						</Badge>
+					) : undefined
+				}
+				/**
 				 * On the feed's own line, so acting on the whole feed costs a click rather than a
 				 * scroll past every post it ever published.
 				 */
@@ -792,43 +808,22 @@ export default createAction(routes.feed, {
 					 * is, when it was last looked at, and what the last looks recorded. A feed that is
 					 * fine says only the first two, so a badge on this line means something is wrong.
 					 */}
-					<div mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
-						{feed.description && <Text>{feed.description}</Text>}
+					{(feed.description || (isBusy && postsPerDay !== null)) && (
+						<div mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
+							{feed.description && <Text mix={[fg("neutral")]}>{feed.description}</Text>}
 
-						<div
-							mix={[
-								flex(),
-								items("center"),
-								flexWrap("wrap"),
-								gap(2),
-								text("xs"),
-								fg("neutral.muted"),
-							]}
-						>
-							{failureLabel && (
-								<Badge color="danger" variant="secondary">
-									{failureLabel}
-								</Badge>
+							{/**
+							 * The measurement, put to the reader as a question and left there. It reads beside
+							 * what the feed is rather than beside the control that answers it, because it is
+							 * news about the feed: how much it publishes, and that nothing currently leaves.
+							 */}
+							{isBusy && postsPerDay !== null && (
+								<Text mix={[text("xs"), fg("neutral.muted")]}>
+									{ctx.intl.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
+								</Text>
 							)}
-
-							<span
-								title={lastFetchedAt === null ? undefined : exactDate(lastFetchedAt, ctx.locale)}
-							>
-								{checkedLabel}
-							</span>
 						</div>
-
-						{/**
-						 * The measurement, put to the reader as a question and left there. It reads beside
-						 * what the feed is rather than beside the control that answers it, because it is
-						 * news about the feed: how much it publishes, and that nothing currently leaves.
-						 */}
-						{isBusy && postsPerDay !== null && (
-							<Text mix={[text("xs"), fg("neutral.muted")]}>
-								{ctx.intl.t("feeds.velocity.suggestion", { count: Math.round(postsPerDay) })}
-							</Text>
-						)}
-					</div>
+					)}
 
 					{note && (
 						<Alert color={note.color} mix={pageNote()}>

@@ -24,9 +24,8 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { raw } from "@sdxc/u/general";
 import { hidden, inline } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { textDecoration } from "@sdxc/u/typography";
+import { textDecoration, weight } from "@sdxc/u/typography";
 import { Avatar, Logo, Menu, SearchField } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { PageHeader } from "@sdxc/ui/app/page-header";
@@ -40,11 +39,13 @@ import DocumentLayout from "~/resources/layouts/document";
 import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
-/**
- * Width of the measure prose and fields are read at. The page itself fills the pane the
- * sidebar leaves it, since a list of rows is scanned down rather than read across.
- */
-export const PAGE_COLUMN = "48rem";
+export {
+	BAND_FIELD_HEIGHT,
+	listBleed,
+	listRowGutter,
+	PAGE_COLUMN,
+	pageNote,
+} from "~/resources/layouts/app-page";
 
 /**
  * The `id` the shell is drawn under. The sidebar takes `${id}-sidebar`, which is the
@@ -65,9 +66,6 @@ export const SIDEBAR_SEARCH_FIELD_ID = "app-search";
  */
 export const SEARCH_PARAM = "q";
 
-/** Height of a field standing among a page header's actions, matching its small buttons. */
-export const BAND_FIELD_HEIGHT = "2rem";
-
 /** The `id` the viewer's own menu answers to, which its trigger names in `commandfor`. */
 const USER_MENU_ID = "user-menu";
 
@@ -76,30 +74,6 @@ const ICON_SIZE = 16;
 
 /** Where an action has the width to say in words what its mark says. */
 const WIDE_HEADER = "(min-width: 45rem)";
-
-/**
- * Runs a list out to the edges of the page's pane, taking back the gutter the shell keeps
- * around everything else, so a row's hover and rule reach both edges.
- */
-export function listBleed() {
-	return raw({ marginInline: "calc(-1 * var(--ui-app-gutter, 1rem))" });
-}
-
-/**
- * The inline padding a row of a bled list carries, which is the shell's own gutter now spent
- * inside the row, so the row's text stays on the page header's vertical line.
- */
-export function listRowGutter() {
-	return raw({ paddingInline: "var(--ui-app-gutter, 1rem)" });
-}
-
-/**
- * The size a note on the page is drawn at: padded in proportion to the line or two of news
- * it carries, so a sentence about a sweep sits among rows of posts as a remark.
- */
-export function pageNote() {
-	return [when('&[data-slot="alert"]', [p(2, 3), raw({ gap: "0.5rem", borderRadius: "0.5rem" })])];
-}
 
 /**
  * The letters something with no picture is drawn with: the first of its first word and the
@@ -177,6 +151,8 @@ export namespace AppLayout {
 		description?: RemixNode;
 		/** The page this one sits under, linked above the heading. */
 		parent?: PageHeader.Parent;
+		/** A badge after the heading, such as a feed whose last checks failed. */
+		status?: RemixNode;
 		/** Views of the page, each one a URL, drawn as tabs under the heading. */
 		tabs?: PageHeader.Tab[];
 		/** Names the tabs for anyone listening. */
@@ -335,8 +311,8 @@ function fullStrengthIcon() {
 }
 
 /**
- * One followed feed as a row of the rail, wherever it is drawn. Bold while posts wait, with
- * their count beside the name, which is the unread grammar every row of the rail speaks.
+ * One followed feed as a row of the rail, wherever it is drawn, with the count of posts waiting
+ * beside its name. The count alone carries the news, so a rail of busy feeds stays quiet.
  */
 function SidebarFeedRow(
 	handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boolean; nested?: boolean }>,
@@ -351,7 +327,6 @@ function SidebarFeedRow(
 				icon={feedIcon(feed)}
 				count={feed.unreadCount}
 				countLabel={feed.unreadLabel ?? undefined}
-				unread={feed.unreadCount > 0}
 				current={isCurrent}
 				mix={[fullStrengthIcon(), nested ? raw({ paddingInlineStart: "1.75rem" }) : null]}
 			/>
@@ -447,8 +422,8 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 								icon={<FolderIcon size={ICON_SIZE} />}
 								count={folder.unreadCount}
 								countLabel={folder.unreadLabel ?? undefined}
-								unread={folder.unreadCount > 0}
 								current={isCurrent(folder.href)}
+								mix={[weight("medium")]}
 							/>,
 							...folder.feeds.map((feed) => row(feed, true)),
 						])}
@@ -540,6 +515,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 			primaryAction,
 			searchQuery,
 			shortcuts,
+			status,
 			sidebarFeedsSrc,
 			tabs,
 			tabsLabel,
@@ -696,6 +672,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								title={title}
 								parent={parent}
 								description={description}
+								status={status}
 								tabs={tabs}
 								tabsLabel={tabsLabel}
 								actions={actions}
