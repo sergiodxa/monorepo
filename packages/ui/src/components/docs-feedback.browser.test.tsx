@@ -33,6 +33,11 @@ function mount(node: JSX.Element, width = 720): HTMLElement {
 	return host;
 }
 
+/** The visible question the votes answer. */
+function question(host: HTMLElement): HTMLElement {
+	return host.querySelector<HTMLElement>('[data-slot="docs-feedback-question"]')!;
+}
+
 /** The note panel the vote reveals. */
 function note(host: HTMLElement): HTMLElement {
 	return host.querySelector<HTMLElement>('[data-slot="docs-feedback-note"]')!;
@@ -109,9 +114,33 @@ describe("DocsFeedback", () => {
 
 	test("keeps the question at body size", () => {
 		let host = mount(<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />);
-		let legend = host.querySelector("legend")!;
 
-		expect(Number.parseFloat(getComputedStyle(legend).fontSize)).toBeLessThanOrEqual(16);
+		expect(Number.parseFloat(getComputedStyle(question(host)).fontSize)).toBeLessThanOrEqual(16);
+	});
+
+	test("names the vote group with the question", () => {
+		let host = mount(<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />);
+		let group = host.querySelector('[role="radiogroup"]')!;
+		let label = document.getElementById(group.getAttribute("aria-labelledby")!);
+
+		expect(label?.textContent).toBe("Was this page helpful?");
+	});
+
+	test("centres the question on the votes' line as an item of the same flex row", () => {
+		let host = mount(<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />);
+		let row = question(host).parentElement!;
+		let text = question(host).getBoundingClientRect();
+		let vote = choice(host, "yes").getBoundingClientRect();
+
+		/**
+		 * A floated `legend` in a flex `fieldset` lays out as a flex item in Chromium only;
+		 * WebKit draws it above the row, so the row must be an ordinary element.
+		 */
+		expect(row.tagName).not.toBe("FIELDSET");
+		expect(getComputedStyle(row).display).toBe("flex");
+		expect(Math.abs(text.top + text.height / 2 - (vote.top + vote.height / 2))).toBeLessThanOrEqual(
+			1,
+		);
 	});
 
 	test("leaves room between the question and the votes once they wrap", () => {
@@ -119,11 +148,11 @@ describe("DocsFeedback", () => {
 			<DocsFeedback action="/docs/feedback" page="/docs/alerts" labels={LABELS} />,
 			200,
 		);
-		let question = host.querySelector("legend")!.getBoundingClientRect();
+		let asked = question(host).getBoundingClientRect();
 		let vote = choice(host, "yes").getBoundingClientRect();
 
-		expect(vote.top).toBeGreaterThan(question.bottom);
-		expect(vote.top - question.bottom).toBeGreaterThanOrEqual(16);
+		expect(vote.top).toBeGreaterThan(asked.bottom);
+		expect(vote.top - asked.bottom).toBeGreaterThanOrEqual(16);
 	});
 
 	test("fits a 320px viewport with the note open", async () => {

@@ -16,7 +16,7 @@ import { opacity, rounded, transition } from "@sdxc/u/effects";
 import { cursor, mergeMix, raw } from "@sdxc/u/general";
 import { flex, gap, hstack, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { motionSafe, startingStyle } from "@sdxc/u/responsive";
-import { is, m, maxIs, minIs, p, pb, pi } from "@sdxc/u/size";
+import { is, m, maxIs, minIs, pb, pi } from "@sdxc/u/size";
 import { has, hover } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
@@ -81,6 +81,7 @@ export function DocsFeedback(handle: Handle<DocsFeedback.Props>) {
 	return () => {
 		let { action, page, labels, state, mix, ...rest } = handle.props;
 		let isSent = state === "sent";
+		let questionId = `${handle.id}-question`;
 
 		return (
 			<div
@@ -104,28 +105,24 @@ export function DocsFeedback(handle: Handle<DocsFeedback.Props>) {
 						mix={[vstack({ gap: 3, align: "stretch" })]}
 					>
 						<input type="hidden" name={DOCS_FEEDBACK_PAGE_FIELD} value={page} />
-						<fieldset
-							mix={[
-								flex(),
-								items("center"),
-								gap(4, 3),
-								raw({ flexWrap: "wrap" }),
-								m(0),
-								p(0),
-								border({ width: 0 }),
-								minIs(0),
-							]}
+						<div
+							role="radiogroup"
+							aria-labelledby={questionId}
+							data-slot="docs-feedback-vote"
+							mix={[flex(), items("center"), gap(4, 3), raw({ flexWrap: "wrap" }), minIs(0)]}
 						>
-							<legend
-								mix={[raw({ float: "inline-start" }), weight("medium"), fg("neutral.emphasis")]}
+							<span
+								id={questionId}
+								data-slot="docs-feedback-question"
+								mix={[weight("medium"), fg("neutral.emphasis")]}
 							>
 								{labels.question}
-							</legend>
+							</span>
 							<span mix={[hstack({ gap: 2, align: "center" })]}>
 								<DocsFeedbackChoice value="yes" label={labels.yes} />
 								<DocsFeedbackChoice value="no" label={labels.no} />
 							</span>
-						</fieldset>
+						</div>
 						<div
 							data-slot="docs-feedback-note"
 							mix={[
