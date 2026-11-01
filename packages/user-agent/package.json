@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Read a User-Agent string into its browser, engine, operating system and device",
 	"license": "MIT",
+	"bin": {
+		"sdxc-user-agent": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -11,6 +14,9 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/cli": "workspace:*"
 	},
 	"devDependencies": {
 		"remix": "3.1.0"

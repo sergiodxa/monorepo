@@ -64,6 +64,21 @@ isTouch(ctx); // a request context
 isTouch(parse(header)); // a user agent already parsed
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/user-agent parse "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+# Safari 17.4	WebKit 605.1.15	iOS 17.4	mobile Apple iPhone
+```
+
+`parse` prints the browser, engine, operating system and device as tab-separated columns, with
+`-` for a part the string does not reveal. With no argument it reads one string per line of
+stdin, so a log's User-Agent column pipes through it; `--json` prints one object per string.
+
+```sh
+cut -f5 access.log | bunx @sdxc/user-agent parse --json
+```
+
 ## API
 
 ### `parse(userAgent: string): UserAgent`
