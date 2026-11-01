@@ -24,12 +24,13 @@ import {
 	insBe,
 	items,
 	justify,
+	relative,
 	shrink,
 	sticky,
 	zstack,
 } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mi, mis, pb, pi, pie, pis } from "@sdxc/u/size";
+import { bs, is, maxIs, mi, mis, pb, pi, pie } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { scale } from "@sdxc/u/transform";
@@ -122,8 +123,9 @@ export namespace SelectionBar {
 }
 
 /**
- * Renders the bar sticky at the bottom of its scroll container, with both layers stacked in
- * one grid cell so the morph cross-fades in place. The layers' text and links work without
+ * Renders the bar as the list's footer row, summary at the start and page links at the end, and
+ * once rows are selected as a floating bar of actions stuck to the bottom of the scroll container.
+ * Both layers share one grid cell so the morph cross-fades in place. The layers' text and links work without
  * script; the selection layer appears once the `@sdxc/ui/app/selection-bar` island loads.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
@@ -169,19 +171,17 @@ export function SelectionBar(handle: Handle<SelectionBar.Props>) {
 				data-paginated={pagination ? "" : undefined}
 				mix={mergeMix(
 					[
-						sticky(),
-						insBe(OFFSET),
-						z(10),
+						relative(),
 						zstack(),
-						is("fit-content"),
-						maxIs("100%"),
-						mi("auto"),
-						floatingSurface(),
-						rounded("xl"),
-						pi(1.5),
+						is("100%"),
 						pb(1),
 						text("sm"),
 						morphTransition("opacity"),
+						/**
+						 * Idle, the bar is the list's quiet footer row; it sticks to the bottom of the
+						 * scroll container only while rows are selected, when its actions float.
+						 */
+						when('&[data-state="selecting"]', [sticky(), insBe(OFFSET), z(10)]),
 						when('&[data-state="idle"]:not([data-paginated])', [opacity(0), pointerEvents()]),
 					],
 					mix,
@@ -191,8 +191,8 @@ export function SelectionBar(handle: Handle<SelectionBar.Props>) {
 					data-slot="selection-bar-pagination"
 					mix={[
 						...layer,
+						justify("between"),
 						gap(2),
-						pis(2),
 						when('[data-state="selecting"] > &', [opacity(0), scale(0.98), hiddenLayer()]),
 					]}
 				>
@@ -220,6 +220,13 @@ export function SelectionBar(handle: Handle<SelectionBar.Props>) {
 					inert
 					mix={[
 						...layer,
+						is("fit-content"),
+						maxIs("100%"),
+						mi("auto"),
+						floatingSurface(),
+						rounded("xl"),
+						pi(1.5),
+						pb(1),
 						when('[data-state="idle"] > &', [opacity(0), scale(0.98), hiddenLayer()]),
 					]}
 				>

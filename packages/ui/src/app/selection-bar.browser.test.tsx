@@ -122,6 +122,37 @@ describe("SelectionBar", () => {
 		).toBe("true");
 	});
 
+	test("sits as a quiet footer row while idle: full width, count at the start, arrows at the end", async () => {
+		let host = mount(720);
+		await settle();
+		let { bar } = parts(host);
+		let style = getComputedStyle(bar);
+		let box = bar.getBoundingClientRect();
+		let summary = bar.querySelector('[data-slot="selection-bar-summary"]')!.getBoundingClientRect();
+		let next = bar.querySelector('[data-slot="selection-bar-next"]')!.getBoundingClientRect();
+
+		expect(style.boxShadow).toBe("none");
+		expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+		expect(style.borderTopWidth === "0px" || style.borderTopColor === "rgba(0, 0, 0, 0)").toBe(
+			true,
+		);
+		expect(style.position).not.toBe("sticky");
+		expect(box.width).toBeCloseTo(720, 0);
+		expect(summary.left - box.left).toBeLessThan(8);
+		expect(box.right - next.right).toBeLessThan(8);
+	});
+
+	test("floats as a surface only once rows are selected", async () => {
+		let host = mount(720);
+		let { selection } = parts(host);
+
+		await userEvent.click(row(host, "api"));
+		await settle();
+
+		expect(getComputedStyle(selection).boxShadow).not.toBe("none");
+		expect(selection.getBoundingClientRect().width).toBeLessThan(720);
+	});
+
 	test("morphs into the selection count and actions once a row is checked", async () => {
 		let host = mount();
 		let { bar, pagination, selection, count, status } = parts(host);
