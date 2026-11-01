@@ -35,7 +35,7 @@ missing here belongs in the package, not in one app.
 | --- | --- | --- |
 | The frame: sidebar column / icon rail / phone sheet, top bar, inset content card, ⌘B | `AppShell` (+ `.Group`, `.Item`, `.Back`, `.Identity`) | `@sdxc/ui/app` |
 | Title, breadcrumb or parent link, status, ordered actions, tabs with counts, compact sticky | `PageHeader` | `@sdxc/ui/app` |
-| Count tabs, facets with counts, applied chips, search, sort, view slot — all in the URL | `FilterBar` (+ `removeFilterHref`, `clearFiltersHref`, `setParamHref`) | `@sdxc/ui/app` |
+| Count tabs, search, facets with counts, applied chips, a View menu (sort + `options`), a `status` slot — all in the URL | `FilterBar` (+ `removeFilterHref`, `clearFiltersHref`, `setParamHref`) | `@sdxc/ui/app` |
 | Display options: layout, grouping, ordering, density, visible properties | `ViewOptions` | `@sdxc/ui/app` |
 | "Auto-refresh: 30s ▾" for a live list | `AutoRefresh` | `@sdxc/ui/app` |
 | Data table: sticky header, density, selection, row actions, whole-row link, pinned column | `Table` (+ `.Select`, `.SelectAll`, `.RowLink`, `.Actions`, `.ActionsColumn`) | `@sdxc/ui/app` |

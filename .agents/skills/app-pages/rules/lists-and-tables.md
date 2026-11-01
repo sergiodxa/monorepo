@@ -18,13 +18,22 @@ query you can read, at a density you choose, with selection that costs nothing u
 - Applied filters show as chips `[Status][is][Down][✕]`; ✕ is a link to the URL without that param.
 - "Clear filters [Esc]" appears only once something is applied.
 
-## The three-zone toolbar
+## The toolbar
 
-| Start | Middle | End |
-| --- | --- | --- |
-| Count tabs: "Open 26 · Closed 2,828" | Facet buttons with no chrome until hovered (dashed when empty), then chips | Search, sort, display options, auto-refresh |
+| Start | End |
+| --- | --- |
+| Count tabs ("Open 26 · Closed 2,828"), search (14–20rem, never the whole row), facet buttons with no chrome until hovered (dashed when empty) | Quiet status ("Updated 12:46"), then one **View** button |
 
-At 375 the toolbar wraps to two lines; it never hides filters.
+Applied filters sit as chips on their own row below. A tab whose count is 0 stays, with its count muted,
+so the reader sees the slice exists and is empty. At 375 the toolbar wraps to two lines; it never hides
+filters.
+
+**Row or View menu?** A control earns a place in the row when it changes _which records_ the list shows
+and the reader reaches for it many times a session: tabs, search, facets. A control that changes _how
+the same records are shown_ — sort, layout, grouping, density, visible properties, auto-refresh — goes
+in the one View menu at the end (`FilterBar`'s `sort` and `options`), because it is set once and then
+left alone. Status text ("Updated …") is neither: it goes in the `status` slot, small and muted, and is
+the first thing dropped when the bar runs out of room.
 
 ## Density and rows
 
