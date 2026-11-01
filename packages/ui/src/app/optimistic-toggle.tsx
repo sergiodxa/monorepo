@@ -1,7 +1,8 @@
 /**
  * Client island: an on/off control (read, saved, starred) that is a real POST form. With
  * script it flips the moment it is pressed and posts in the background; a refused post
- * puts it back and says "Failed" in place. Without script it is a plain form submission.
+ * puts it back and says why in place, in copy picked by the response status. Without
+ * script it is a plain form submission.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,6 +38,8 @@ export type OptimisticToggleProps = {
 		label: string;
 		/** Shown beside the control when the server refused the change. */
 		failed: string;
+		/** Shown instead of `failed` for a refusal with one of these HTTP statuses, such as 507. */
+		refused?: Record<number, string>;
 	};
 	/** What the button shows while on, such as a filled star; the label text when omitted. */
 	pressedContent?: RemixNode;
@@ -68,7 +71,7 @@ export const OptimisticToggle: EntryComponent<OptimisticToggleProps> = clientEnt
 					data-slot="optimistic-toggle"
 					data-pressed={pressed ? "" : undefined}
 					mix={[
-						optimisticToggleSync({ failed: labels.failed }),
+						optimisticToggleSync({ failed: labels.failed, refused: labels.refused }),
 						inlineFlex(),
 						items("center"),
 						gap(1.5),

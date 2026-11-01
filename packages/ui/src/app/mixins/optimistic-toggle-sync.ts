@@ -29,6 +29,8 @@ export namespace OptimisticToggleSync {
 	export interface Options {
 		/** What the form's live region says once the server refuses a change, such as "Failed". */
 		failed: string;
+		/** What it says instead for a refusal with one of these statuses, such as a full shelf's 507. */
+		refused?: Record<number, string>;
 	}
 
 	/** Where a press stands, as {@link OptimisticToggleEvent} reports it. */
@@ -37,6 +39,8 @@ export namespace OptimisticToggleSync {
 		failed?: boolean;
 		/** The server answered, with success or a refusal. */
 		settled?: boolean;
+		/** The answer's HTTP status; `null` before the answer and for a network error. */
+		status?: number | null;
 	}
 }
 
@@ -50,23 +54,27 @@ export class OptimisticToggleEvent extends Event {
 	readonly failed: boolean;
 	/** Whether the server has answered the press: false for the optimistic flip, true after. */
 	readonly settled: boolean;
+	/** The answer's HTTP status, for picking copy; `null` before the answer and for a network error. */
+	readonly status: number | null;
 
 	/**
 	 * @param pressed Whether the toggle is now on.
-	 * @param outcome How the press stands: refused by the server, and answered at all.
+	 * @param outcome How the press stands: answered at all, refused, and with which status.
 	 */
 	constructor(pressed: boolean, outcome: OptimisticToggleSync.Outcome = {}) {
 		super(OPTIMISTIC_TOGGLE_EVENT, { bubbles: true });
 		this.pressed = pressed;
 		this.failed = outcome.failed ?? false;
 		this.settled = outcome.settled ?? false;
+		this.status = outcome.status ?? null;
 	}
 }
 
 /**
  * Applied to the toggle's `<form>`: on submit it flips `data-pressed`, the button's
  * `aria-pressed` and tone, and the hidden next-state field, then posts the form as it stood.
- * A refused post flips it back, sets `data-failed` and writes `failed` into the live region.
+ * A refused post flips it back, sets `data-failed` and writes the `refused` copy for its status,
+ * or `failed`, into the live region.
  * The newest press wins over a slow answer to an older one, and only its answer is reported.
  *
  * @example <form method="post" action={url} mix={[optimisticToggleSync({ failed: "Failed" })]}>…</form>
@@ -121,7 +129,7 @@ function connect(
 			button.setAttribute("aria-pressed", pressed ? "true" : "false");
 			button.dataset.color = toneOf(pressed, failed);
 		}
-		if (status) status.textContent = failed ? (read()?.failed ?? "") : "";
+		if (status) status.textContent = failed ? refusal(read(), outcome.status ?? null) : "";
 		form.dispatchEvent(new OptimisticToggleEvent(pressed, outcome));
 	};
 
@@ -135,22 +143,36 @@ function connect(
 
 			show(!previous, {});
 
-			let ok = await fetch(form.action, {
+			let answer = await fetch(form.action, {
 				method: "POST",
 				credentials: "same-origin",
 				headers: { [OPTIMISTIC_TOGGLE_HEADER]: "1" },
 				body,
 			}).then(
-				(response) => response.ok,
-				() => false,
+				(response) => ({ ok: response.ok, status: response.status }),
+				() => ({ ok: false, status: null }),
 			);
 
 			if (token !== latest || signal.aborted) return;
-			if (ok) show(!previous, { settled: true });
-			else show(previous, { failed: true, settled: true });
+			if (answer.ok) show(!previous, { settled: true, status: answer.status });
+			else show(previous, { failed: true, settled: true, status: answer.status });
 		},
 		{ signal },
 	);
+}
+
+/**
+ * Picks the live region's copy for a refusal: the `refused` entry for its status when one is
+ * listed, `failed` for any other status and for a network error.
+ *
+ * @param options The toggle's latest options.
+ * @param status The refusal's HTTP status, or `null` when the request never got an answer.
+ * @returns The text the live region shows.
+ */
+function refusal(options: OptimisticToggleSync.Options | undefined, status: number | null): string {
+	if (!options) return "";
+	if (status !== null && options.refused?.[status] !== undefined) return options.refused[status];
+	return options.failed;
 }
 
 /**

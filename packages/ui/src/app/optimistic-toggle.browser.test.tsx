@@ -14,6 +14,8 @@ import { setupWorker } from "msw/browser";
 import { render } from "remix/component/test";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { OptimisticToggleProps } from "./optimistic-toggle.js";
+
 import { OptimisticToggle } from "./optimistic-toggle.js";
 
 const WORKER = setupWorker();
@@ -25,14 +27,17 @@ let cleanups: Array<() => void> = [];
 let received: Array<Record<string, string>> = [];
 
 /** Mounts a star toggle for one post and returns its form. */
-async function mount(pressed = false): Promise<HTMLFormElement> {
+async function mount(
+	pressed = false,
+	labels: OptimisticToggleProps["labels"] = { label: "Star", failed: "Failed" },
+): Promise<HTMLFormElement> {
 	let mounted = render(
 		<OptimisticToggle
 			action="/posts/42/star"
 			name="starred"
 			pressed={pressed}
 			fields={{ csrf: "t0ken", returnTo: "/inbox" }}
-			labels={{ label: "Star", failed: "Failed" }}
+			labels={labels}
 		/>,
 	);
 	cleanups.push(mounted.cleanup);
@@ -155,6 +160,76 @@ describe("OptimisticToggle", () => {
 		await new Promise((resolve) => setTimeout(resolve, 400));
 
 		expect(settled).toEqual([false]);
+	});
+
+	test("says the refusal copy listed for the response status", async () => {
+		answer(507);
+		let form = await mount(false, {
+			label: "Save",
+			failed: "Could not be saved",
+			refused: { 507: "Your saved posts are full" },
+		});
+		let statuses: Array<number | null> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) => statuses.push(event.status));
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(form.querySelector('[role="status"]')?.textContent).toBe("Your saved posts are full");
+		expect(button(form).getAttribute("aria-pressed")).toBe("false");
+		expect(statuses).toEqual([null, 507]);
+	});
+
+	test("falls back to the failed copy for a status the refusals leave out", async () => {
+		answer(409);
+		let form = await mount(false, {
+			label: "Save",
+			failed: "Could not be saved",
+			refused: { 507: "Your saved posts are full" },
+		});
+		let statuses: Array<number | null> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) => statuses.push(event.status));
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(form.querySelector('[role="status"]')?.textContent).toBe("Could not be saved");
+		expect(statuses).toEqual([null, 409]);
+	});
+
+	test("reports a network error with no status", async () => {
+		WORKER.use(http.post("/posts/42/star", () => HttpResponse.error()));
+		let form = await mount(true, {
+			label: "Save",
+			failed: "Could not be saved",
+			refused: { 507: "Your saved posts are full" },
+		});
+		let events: Array<{ failed: boolean; settled: boolean; status: number | null }> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) =>
+			events.push({ failed: event.failed, settled: event.settled, status: event.status }),
+		);
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(form.querySelector('[role="status"]')?.textContent).toBe("Could not be saved");
+		expect(button(form).getAttribute("aria-pressed")).toBe("true");
+		expect(events).toEqual([
+			{ failed: false, settled: false, status: null },
+			{ failed: true, settled: true, status: null },
+		]);
+	});
+
+	test("reports the status of a confirmed change", async () => {
+		answer(204);
+		let form = await mount(false);
+		let statuses: Array<number | null> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) => statuses.push(event.status));
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(statuses).toEqual([null, 204]);
 	});
 
 	test("clears the failure on the next press", async () => {
