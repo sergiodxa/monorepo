@@ -22,7 +22,7 @@ const OPERATOR_CHARS = new Set(["+", "#", ".", "/", ";", "?", "&"]);
 const RESERVED_OPERATORS = new Set(["=", ",", "!", "@", "|"]);
 
 /** ASCII characters literal text may hold: section 2.1, plus the `'` sub-delimiter RFC errata restore. */
-const LITERAL_ASCII = /[!#$&-;=?-[\]_a-z~]/;
+const LITERAL_ASCII = /[!#$&-/0-9:;=?@A-Z[\]_a-z~]/;
 
 /** One `varchar`: a letter, digit, underscore, or percent-encoded octet. */
 const VARCHAR = /[A-Za-z0-9_]|%[0-9A-Fa-f]{2}/y;
