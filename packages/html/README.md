@@ -96,6 +96,8 @@ form.data.queryAll({ role: "checkbox" }).length; // 3
 bunx @sdxc/html query https://example.com/pricing --role button --name "Sign in"
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg html …` runs the same command line, using the version your project installs.
+
 `query` lists the elements with a role, narrowed by `--name` to one accessible name, and exits 1
 when nothing matches, naming what the page carries under that role, so it works as a smoke check
 in CI. The page comes from a URL, a file, or stdin; `--json` prints the matches with their text,
