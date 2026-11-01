@@ -30,22 +30,36 @@ export namespace OptimisticToggleSync {
 		/** What the form's live region says once the server refuses a change, such as "Failed". */
 		failed: string;
 	}
+
+	/** Where a press stands, as {@link OptimisticToggleEvent} reports it. */
+	export interface Outcome {
+		/** The server refused the change. */
+		failed?: boolean;
+		/** The server answered, with success or a refusal. */
+		settled?: boolean;
+	}
 }
 
-/** Dispatched, bubbling, from a toggle's form whenever its state changes, so a row can restyle with it. */
+/**
+ * Dispatched, bubbling, from a toggle's form at the press and again once the server answers,
+ * so a row can restyle at once and reload server-derived counts only when `settled` is true.
+ */
 export class OptimisticToggleEvent extends Event {
 	readonly pressed: boolean;
 	/** Whether the server refused the last change, which put the toggle back. */
 	readonly failed: boolean;
+	/** Whether the server has answered the press: false for the optimistic flip, true after. */
+	readonly settled: boolean;
 
 	/**
 	 * @param pressed Whether the toggle is now on.
-	 * @param failed Whether the server refused the last change.
+	 * @param outcome How the press stands: refused by the server, and answered at all.
 	 */
-	constructor(pressed: boolean, failed: boolean) {
+	constructor(pressed: boolean, outcome: OptimisticToggleSync.Outcome = {}) {
 		super(OPTIMISTIC_TOGGLE_EVENT, { bubbles: true });
 		this.pressed = pressed;
-		this.failed = failed;
+		this.failed = outcome.failed ?? false;
+		this.settled = outcome.settled ?? false;
 	}
 }
 
@@ -53,7 +67,7 @@ export class OptimisticToggleEvent extends Event {
  * Applied to the toggle's `<form>`: on submit it flips `data-pressed`, the button's
  * `aria-pressed` and tone, and the hidden next-state field, then posts the form as it stood.
  * A refused post flips it back, sets `data-failed` and writes `failed` into the live region.
- * The newest press wins over a slow answer to an older one.
+ * The newest press wins over a slow answer to an older one, and only its answer is reported.
  *
  * @example <form method="post" action={url} mix={[optimisticToggleSync({ failed: "Failed" })]}>…</form>
  */
@@ -97,8 +111,9 @@ function connect(
 	let status = form.querySelector<HTMLElement>('[role="status"]');
 	let latest = 0;
 
-	/** Draws `pressed` and `failed` onto the form and tells the page. */
-	let show = (pressed: boolean, failed: boolean) => {
+	/** Draws `pressed` and the outcome onto the form and tells the page. */
+	let show = (pressed: boolean, outcome: OptimisticToggleSync.Outcome) => {
+		let failed = outcome.failed ?? false;
 		form.toggleAttribute("data-pressed", pressed);
 		form.toggleAttribute("data-failed", failed);
 		if (next) next.value = pressed ? "false" : "true";
@@ -107,7 +122,7 @@ function connect(
 			button.dataset.color = toneOf(pressed, failed);
 		}
 		if (status) status.textContent = failed ? (read()?.failed ?? "") : "";
-		form.dispatchEvent(new OptimisticToggleEvent(pressed, failed));
+		form.dispatchEvent(new OptimisticToggleEvent(pressed, outcome));
 	};
 
 	form.addEventListener(
@@ -118,7 +133,7 @@ function connect(
 			let previous = form.hasAttribute("data-pressed");
 			let token = ++latest;
 
-			show(!previous, false);
+			show(!previous, {});
 
 			let ok = await fetch(form.action, {
 				method: "POST",
@@ -130,7 +145,9 @@ function connect(
 				() => false,
 			);
 
-			if (!ok && token === latest && !signal.aborted) show(previous, true);
+			if (token !== latest || signal.aborted) return;
+			if (ok) show(!previous, { settled: true });
+			else show(previous, { failed: true, settled: true });
 		},
 		{ signal },
 	);

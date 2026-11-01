@@ -103,9 +103,11 @@ describe("OptimisticToggle", () => {
 		answer(500);
 		let form = await mount(true);
 		let events: Array<{ pressed: boolean; failed: boolean }> = [];
-		form.addEventListener("ui:optimistic-toggle", (event) =>
-			events.push({ pressed: event.pressed, failed: event.failed }),
-		);
+		let settled: boolean[] = [];
+		form.addEventListener("ui:optimistic-toggle", (event) => {
+			events.push({ pressed: event.pressed, failed: event.failed });
+			settled.push(event.settled);
+		});
 
 		button(form).click();
 		await new Promise((resolve) => setTimeout(resolve, 200));
@@ -117,6 +119,42 @@ describe("OptimisticToggle", () => {
 			{ pressed: false, failed: false },
 			{ pressed: true, failed: true },
 		]);
+		expect(settled).toEqual([false, true]);
+	});
+
+	test("tells the page once the server confirms the change", async () => {
+		answer(204, 100);
+		let form = await mount(false);
+		let events: Array<{ pressed: boolean; failed: boolean; settled: boolean }> = [];
+		form.addEventListener("ui:optimistic-toggle", (event) =>
+			events.push({ pressed: event.pressed, failed: event.failed, settled: event.settled }),
+		);
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		expect(events).toEqual([{ pressed: true, failed: false, settled: false }]);
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		expect(events).toEqual([
+			{ pressed: true, failed: false, settled: false },
+			{ pressed: true, failed: false, settled: true },
+		]);
+	});
+
+	test("confirms only the newest press when presses overlap", async () => {
+		answer(204, 150);
+		let form = await mount(false);
+		let settled: boolean[] = [];
+		form.addEventListener("ui:optimistic-toggle", (event) => {
+			if (event.settled) settled.push(event.pressed);
+		});
+
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		button(form).click();
+		await new Promise((resolve) => setTimeout(resolve, 400));
+
+		expect(settled).toEqual([false]);
 	});
 
 	test("clears the failure on the next press", async () => {
