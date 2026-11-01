@@ -76,6 +76,8 @@ schedule.isDue(lastRun, { now: new Date(), timeZone: "UTC", grace: "5 minutes" }
 bunx @sdxc/cron --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg cron …` runs the same command line, using the version your project installs.
+
 Quote the expression so the shell leaves `*` alone; pass `-` or nothing to read it from stdin.
 Every command takes `--json`.
 
