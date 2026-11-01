@@ -46,5 +46,6 @@ segment, the hub's start-here links, and the sidebar still present so the reader
 
 1. Breadcrumb, title, description, then one muted actions row.
 2. Offer the page as Markdown and in an AI chat; publish `llms.txt`.
-3. Close every page with feedback, the date and the edit link, quietly.
+3. Close every page with feedback, the date and the edit link, quietly, in a compact `DocsFooter`
+   beside the sidebar; the full marketing footer stays on landing pages.
 4. Make the 404 a search.

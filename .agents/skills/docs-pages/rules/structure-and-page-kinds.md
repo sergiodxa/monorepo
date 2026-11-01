@@ -39,6 +39,8 @@ needs a story, it links to the guide.
   sidebar's scroll position when moving between pages.
 - **Titles are short and parallel**: "Installation", "Configuration", "Deploying", not a mix of nouns,
   questions and sentences.
+- **Pin it full height**: from under the header to the viewport's foot, scrolling on its own. The
+  page's footer sits beside it, under the article and rail, never under the sidebar.
 - **Pin help at the foot** on product docs: "Contact support", "Status", "Community" (Linear, Notion).
 - **Big sites split the tree with tabs** above it (Bun: Runtime / Package manager / Bundler; Stripe:
   Payments / Revenue / …) or a product switcher (Fumadocs, Cloudflare). A small site doesn't need them.

@@ -21,7 +21,8 @@ package once two sites need it, not in one app.
 
 | Need | Use | Import |
 | --- | --- | --- |
-| The page shell: docked sidebar, article measure, heading rail, phone drawer and sticky bar | `DocsLayout` | `@sdxc/ui/patterns` |
+| The page shell: sidebar pinned header-to-viewport-foot, article measure, heading rail, footer slot, phone drawer and sticky bar | `DocsLayout` | `@sdxc/ui/patterns` |
+| Compact page footer over the article and rail: byline, feedback, edit link, one row of legal and site links | `DocsFooter` (into `DocsLayout footer`) | `@sdxc/ui` |
 | Sidebar: sections, folding groups, badges, current page scrolled into view, title filter, support footer | `DocsNav` (data: `DocsTree`) | `@sdxc/ui`, `@sdxc/ui/utils` |
 | "On this page" rail or phone bar with a sliding marker that reaches the last section | `TableOfContents` | `@sdxc/ui` |
 | Breadcrumb, h1, lead, plan notice, updated date, actions | `DocsPageHeader` | `@sdxc/ui` |
@@ -50,6 +51,9 @@ Islands the browser entry must map in `PACKAGE_MODULES`: `@sdxc/ui/table-of-cont
 
 - `DocsLayout` sets `--ui-docs-scroll-margin` for the chrome it keeps sticky; pass `stickyTop` for a
   site header drawn around it, and `main={false}` when the app's layout already draws `<main>`.
+- `DocsLayout` pins the docked sidebar from under `stickyTop` to the viewport's foot, and draws
+  `footer` across the article and rail columns only. A docs page therefore drops the marketing
+  site footer (`siteFooter={false}` or the app's equivalent); the sidebar never ends above a footer.
 - `DocsLayout` caps running text (paragraphs, lists, headings, quotes, callouts, the page header) at
   `proseMeasure` (66ch) and lets code, images, tables, charts and disclosures fill `measure` (64rem);
   don't cap a page's prose yourself.
