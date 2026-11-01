@@ -51,7 +51,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { LANDING_PATTERNS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
-import DemoLandingLinks from "~/resources/components/demo-landing-links";
+import DemoLinks from "~/resources/components/demo-links";
 import { IncidentCard, StatusBoard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
@@ -59,7 +59,7 @@ import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
-import { listDemoLandings } from "~/resources/views/demos";
+import { demoLandingLinks } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The 45 days the bento's availability chart draws, oldest first. */
@@ -198,7 +198,7 @@ export default async function landingPatternsPage(ctx: AppContext, tree: NavTree
 							title="Demo landings"
 							lead="The patterns assembled into three complete landings, each with its own product, palette and type, to see how far the same bands stretch. They open in a new tab."
 						>
-							<DemoLandingLinks demos={await listDemoLandings()} />
+							<DemoLinks links={await demoLandingLinks()} />
 						</ReferenceSection>
 
 						<ReferenceSection

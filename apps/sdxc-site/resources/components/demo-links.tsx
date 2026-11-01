@@ -1,7 +1,7 @@
 /**
- * The cards a landing docs page lists the demo landings with: each demo's own title and
- * description, opening the whole page in a new tab, so a reader can see the components
- * assembled into a real product page and come back to the reference.
+ * The cards a catalogue page lists the demos with: each demo's own title and description,
+ * opening the whole site in a new tab, so a reader can see the components assembled into a
+ * real product's landing or docs and come back to the reference.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,18 +17,23 @@ import { m, p } from "@sdxc/u/size";
 import { focusVisible, hover } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
-import type { DemoSummary } from "~/resources/views/demos";
+namespace DemoLinks {
+	/** One demo as its card shows it. */
+	export interface Link {
+		href: string;
+		title: string;
+		description: string;
+		/** Small line above the title naming what kind of demo it is ("API reference"). */
+		eyebrow?: string;
+	}
 
-import routes from "~/routes/web";
-
-namespace DemoLandingLinks {
 	export interface Props {
-		demos: DemoSummary[];
+		links: Link[];
 	}
 }
 
-/** Renders one card per demo landing, in the order the demo list gives them. */
-export default function DemoLandingLinks(handle: Handle<DemoLandingLinks.Props>) {
+/** Renders one card per demo, in the order the list gives them, each with its address. */
+export default function DemoLinks(handle: Handle<DemoLinks.Props>) {
 	return () => (
 		<ul
 			mix={[
@@ -40,10 +45,10 @@ export default function DemoLandingLinks(handle: Handle<DemoLandingLinks.Props>)
 				gridTemplate({ columns: "repeat(auto-fill, minmax(min(100%, 14rem), 1fr))" }),
 			]}
 		>
-			{handle.props.demos.map((demo) => (
-				<li key={demo.slug}>
+			{handle.props.links.map((demo) => (
+				<li key={demo.href}>
 					<a
-						href={routes.demo.href({ slug: demo.slug })}
+						href={demo.href}
 						target="_blank"
 						rel="noreferrer"
 						mix={[
@@ -65,6 +70,9 @@ export default function DemoLandingLinks(handle: Handle<DemoLandingLinks.Props>)
 							),
 						]}
 					>
+						{demo.eyebrow ? (
+							<span mix={[text("xs"), weight("medium"), fg("brand")]}>{demo.eyebrow}</span>
+						) : null}
 						<span
 							mix={[
 								hstack({ gap: 2, align: "center" }),
@@ -74,12 +82,12 @@ export default function DemoLandingLinks(handle: Handle<DemoLandingLinks.Props>)
 								fg("neutral.emphasis"),
 							]}
 						>
-							{demo.title.split(" — ")[0]}
+							{demo.title}
 							<ArrowUpRightIcon size={16} aria-hidden="true" />
 						</span>
 						<span mix={[text("sm"), fg("neutral")]}>{demo.description}</span>
-						<span mix={[text("xs"), fg("neutral.muted")]}>
-							{routes.demo.href({ slug: demo.slug })}
+						<span mix={[text("xs"), fg("neutral.muted"), raw({ overflowWrap: "anywhere" })]}>
+							{demo.href}
 						</span>
 					</a>
 				</li>

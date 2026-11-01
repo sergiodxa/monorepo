@@ -37,7 +37,7 @@ import {
 } from "~/app/services/catalogue-markdown";
 import { LANDING_COMPONENTS_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
-import DemoLandingLinks from "~/resources/components/demo-landing-links";
+import DemoLinks from "~/resources/components/demo-links";
 import { IncidentCard, Wordmark, WORDMARKS } from "~/resources/components/demo-media";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
@@ -45,7 +45,7 @@ import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
-import { listDemoLandings } from "~/resources/views/demos";
+import { demoLandingLinks } from "~/resources/views/demos";
 import routes from "~/routes/web";
 
 /** The eyebrow looks the header demo walks through: variant, eyebrow copy and title. */
@@ -130,7 +130,7 @@ export default async function landingComponentsPage(ctx: AppContext, tree: NavTr
 							title="Demo landings"
 							lead="Whole landing pages built only from these components and the landing patterns, each with its own product, palette and type. They open in a new tab."
 						>
-							<DemoLandingLinks demos={await listDemoLandings()} />
+							<DemoLinks links={await demoLandingLinks()} />
 						</ReferenceSection>
 
 						<ReferenceSection

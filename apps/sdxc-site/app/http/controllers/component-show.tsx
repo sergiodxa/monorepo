@@ -38,6 +38,7 @@ import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
 import CompositionTree from "~/resources/components/composition-tree";
+import DemoLinks from "~/resources/components/demo-links";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
@@ -48,6 +49,7 @@ import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
+import { demoDocsLinks } from "~/resources/views/demo-docs";
 import routes from "~/routes/web";
 
 /** The install line every component page carries: `@sdxc/ui` brings the components, `remix` renders them. */
@@ -97,7 +99,10 @@ export default createAction(routes.api.component, async (ctx) => {
 	let examples = liveExamples.length > 0 ? [] : reference.examples.slice(preview === null ? 0 : 1);
 	let hasExamples = liveExamples.length > 0 || examples.length > 0;
 
+	let demos = reference.module === "docs" ? await demoDocsLinks() : [];
+
 	let anchors: Anchor[] = [
+		demos.length > 0 ? { id: "demos", text: "Demo docs sites", level: 2 } : null,
 		{ id: "installation", text: "Installation", level: 2 },
 		{ id: "usage", text: "Usage", level: 2 },
 		reference.parts.length > 0 ? { id: "composition", text: "Composition", level: 2 } : null,
@@ -142,6 +147,16 @@ export default createAction(routes.api.component, async (ctx) => {
 					</header>
 
 					{preview ? <Frame src={routes.frames.preview.href({ component })} /> : null}
+
+					{demos.length > 0 ? (
+						<ReferenceSection
+							id="demos"
+							title="Demo docs sites"
+							lead="Whole docs sites built only from the docs kit and the general components, each documenting an invented product with its own palette and type. They open in a new tab."
+						>
+							<DemoLinks links={demos} />
+						</ReferenceSection>
+					) : null}
 
 					<ReferenceSection
 						id="installation"

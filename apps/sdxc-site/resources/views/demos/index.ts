@@ -9,6 +9,8 @@
 
 import type { RemixNode } from "remix/component";
 
+import routes from "~/routes/web";
+
 /** What a demo's `index.tsx` default-exports: its head metadata and the whole page. */
 export interface DemoLanding {
 	/** The document title, naming the invented product. */
@@ -69,4 +71,20 @@ export async function listDemoLandings(): Promise<DemoSummary[]> {
 		}),
 	);
 	return demos.filter((demo): demo is DemoSummary => demo !== null);
+}
+
+/**
+ * Every demo as a card linking to it: the product's name from the title before its dash,
+ * the description it declares, and its address.
+ *
+ * @returns One card per demo, in slug order.
+ */
+export async function demoLandingLinks(): Promise<
+	Array<{ href: string; title: string; description: string }>
+> {
+	return (await listDemoLandings()).map((demo) => ({
+		href: routes.demo.href({ slug: demo.slug }),
+		title: demo.title.split(" — ")[0] ?? demo.title,
+		description: demo.description,
+	}));
 }
