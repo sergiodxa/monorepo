@@ -75,6 +75,16 @@ let verdict = await mayIssue({ domain: "*.example.com", issuer: "letsencrypt.org
 if (!verdict.allowed) verdict.reason; // "not-authorized", "forbidden", "lookup-failed", …
 ```
 
+## Command line
+
+```sh
+bunx @sdxc/doh lookup example.com --type MX
+```
+
+`lookup` prints a dig-style answer section, or the typed answer with `--json`, and exits 1 on
+NXDOMAIN, an empty answer or a resolver error. `--resolver` takes `cloudflare`, `google` or a DoH
+URL, and `--wire` speaks RFC 8484. `bunx @sdxc/doh --help` lists every flag.
+
 ## API
 
 ### `resolve(name, type, options?): Promise<Result<DoH.Answer<Type>, DoHError>>`

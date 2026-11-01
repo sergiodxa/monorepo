@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "Typed DNS over HTTPS lookups",
 	"license": "MIT",
+	"bin": {
+		"sdxc-doh": "./src/cli.ts"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -12,6 +15,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/zone-file": "workspace:*"
 	},
