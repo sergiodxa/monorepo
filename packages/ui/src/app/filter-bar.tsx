@@ -413,7 +413,8 @@ interface FilterTabsProps {
 
 /**
  * Renders the count tabs as links, the current one marked for assistive technology and drawn
- * in the emphasis ink, each count tabular so the row holds still as numbers change.
+ * in the emphasis ink, each count tabular so the row holds still as numbers change. Tabs that
+ * outgrow the bar wrap onto more lines, each tab kept whole.
  *
  * @param handle Runtime handle carrying the tabs.
  * @returns The render function producing the navigation.
@@ -422,7 +423,11 @@ function FilterTabs(handle: Handle<FilterTabsProps>) {
 	return () => {
 		let { tabs, label, numbers } = handle.props;
 		return (
-			<nav aria-label={label} data-slot="filter-bar-tabs" mix={[hstack({ gap: 1 }), shrink(0)]}>
+			<nav
+				aria-label={label}
+				data-slot="filter-bar-tabs"
+				mix={[hstack({ gap: 1 }), flexWrap(), minIs(0), maxIs("100%")]}
+			>
 				{tabs.map((tab) => (
 					<a
 						href={tab.href}

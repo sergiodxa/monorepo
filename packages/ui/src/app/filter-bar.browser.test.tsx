@@ -289,6 +289,25 @@ describe("FilterBar", () => {
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 	});
 
+	for (let width of [320, 375]) {
+		test(`wraps five count tabs inside the page at ${width}`, async () => {
+			await page.viewport(width, 800);
+			let tabs: FilterBar.Tab[] = ["All", "Published", "Drafts", "Scheduled", "Archived"].map(
+				(label, index) => ({ label, count: 120 * (index + 1), href: `/posts?status=${label}` }),
+			);
+			let host = mount("/posts", width - 32, { tabs, collapse: true });
+			let nav = host.querySelector<HTMLElement>('[data-slot="filter-bar-tabs"]')!;
+
+			expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+			expect(nav.scrollWidth).toBeLessThanOrEqual(nav.clientWidth);
+			for (let tab of nav.querySelectorAll("a")) {
+				expect(tab.getBoundingClientRect().right).toBeLessThanOrEqual(
+					host.getBoundingClientRect().right + 0.5,
+				);
+			}
+		});
+	}
+
 	test("keeps the bar on one line at 1280", () => {
 		let host = mount("/monitors", 1200);
 		let row = host.querySelector<HTMLElement>('[data-slot="filter-bar-row"]')!;
