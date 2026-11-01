@@ -139,7 +139,18 @@ export const QuickPingForm = clientEntry(
 						{description}
 					</p>
 
-					<Label mix={[flex(), grow(1), minIs(0), media("(min-width: 768px)", maxIs("360px"))]}>
+					<Label
+						mix={[
+							flex(),
+							grow(1),
+							minIs(0),
+							/**
+							 * The header's actions row shrinks to its content, so the field holds its own
+							 * width there: a URL needs about 16rem to read.
+							 */
+							media("(min-width: 768px)", [minIs("16rem"), maxIs("360px")]),
+						]}
+					>
 						<span mix={[visuallyHidden()]}>{label}</span>
 						<Input
 							type="url"

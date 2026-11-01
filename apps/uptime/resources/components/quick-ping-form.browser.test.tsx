@@ -11,6 +11,7 @@ import type { AppRuntime, ResolveFrameOptions } from "remix/component";
 import { Frame, run } from "remix/component";
 import { renderToStream, renderToString } from "remix/component/server";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { page } from "vitest/browser";
 
 import { QuickPingForm } from "./quick-ping-form";
 
@@ -31,6 +32,7 @@ afterEach(() => {
 	app?.dispose();
 	app = undefined;
 	document.body.innerHTML = "";
+	document.body.style.display = "";
 	requested = [];
 });
 
@@ -66,6 +68,15 @@ async function mount(): Promise<HTMLFormElement> {
 }
 
 describe("QuickPingForm", () => {
+	test("keeps the URL field wide enough to read inside a header that shrinks to its content", async () => {
+		await page.viewport(1440, 900);
+		let form = await mount();
+		document.body.style.display = "inline-flex";
+
+		let input = form.querySelector<HTMLInputElement>("input[name=url]")!;
+		expect(input.getBoundingClientRect().width).toBeGreaterThanOrEqual(240);
+	});
+
 	test("posts the check through the bar's frame in one request", async () => {
 		let form = await mount();
 		(form.querySelector("input[name=url]") as HTMLInputElement).value = "https://example.com";
