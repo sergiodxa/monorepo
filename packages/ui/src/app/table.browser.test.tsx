@@ -125,6 +125,23 @@ describe("Table layout", () => {
 		expect(covering?.closest("th")).not.toBeNull();
 	});
 
+	test("keeps the header at the top of its container inside an app shell's sticky offset", () => {
+		let host = mount(
+			<div style={{ "--ui-app-sticky-top": "56px" } as Record<string, string>}>{monitors()}</div>,
+		);
+		let container = host.querySelector<HTMLElement>('[data-slot="container"]')!;
+		let header = host.querySelector<HTMLElement>("th")!;
+		let firstRow = host.querySelector<HTMLElement>("tbody tr")!;
+
+		expect(header.getBoundingClientRect().top).toBeCloseTo(
+			container.getBoundingClientRect().top,
+			0,
+		);
+		expect(header.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			firstRow.getBoundingClientRect().top + 1,
+		);
+	});
+
 	for (let [density, height] of [
 		[undefined, 40],
 		["compact", 40],

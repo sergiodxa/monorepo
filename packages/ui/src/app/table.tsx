@@ -441,8 +441,9 @@ export function Table(handle: Handle<Table.Props>) {
 
 /**
  * Renders the scrolling wrapper around {@link Table}: the table scrolls sideways inside it
- * instead of widening the page, and the header sticks to its top edge once it scrolls. Give it
- * a `max-block-size` to scroll rows inside it; the `ui-table` container is declared here.
+ * instead of widening the page, and the header sticks to its own top edge, whatever sticky offset
+ * the page around it sets. Give it a `max-block-size` to scroll rows inside it; the `ui-table`
+ * container is declared here.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the wrapper's markup.
@@ -459,7 +460,16 @@ Table.Container = function TableContainer(handle: Handle<Table.ContainerProps>) 
 			<div
 				{...rest}
 				data-slot="container"
-				mix={mergeMix([relative(), is("100%"), overflow("auto"), container(CONTAINER_NAME)], mix)}
+				mix={mergeMix(
+					[
+						relative(),
+						is("100%"),
+						overflow("auto"),
+						container(CONTAINER_NAME),
+						raw({ "--ui-app-sticky-top": "0px" }),
+					],
+					mix,
+				)}
 			/>
 		);
 	};
