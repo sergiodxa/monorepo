@@ -106,6 +106,8 @@ Reading follows these rules:
 bunx @sdxc/sitemap --help
 ```
 
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg sitemap …` runs the same command line, using the version your project installs.
+
 `list` prints every page URL in a sitemap, fetching each child of a sitemap index; `--json`
 prints `[{ loc, lastmod }]`.
 
