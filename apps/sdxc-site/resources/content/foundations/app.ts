@@ -14,30 +14,57 @@ const APP: Foundations = {
 	slug: "app-foundations",
 	title: "App foundations",
 	summary:
-		"What @sdxc/ui/app is for, the naming, keyboard and motion rules its parts share, and every variable it reads.",
+		"What @sdxc/ui/app solves, the rules its parts share for URLs, saving, feedback and keys, and every variable it reads.",
 	importPath: "@sdxc/ui/app",
 	source: "ui/src/app/index.ts",
 	intro: [
-		"The parts of a signed-in product: charts, tables, lists, trees, split panes, toolbars, menubars, context menus, toasts and file drops.",
-		"Each renders working server HTML; mixins add keyboard, drag and resize where the page hydrates.",
+		"The screens of a signed-in product: an app shell, page headers, lists with filters and bulk actions, data tables, dashboards, detail sheets and split views, settings, editors, toasts and a keyboard layer.",
+		"It solves the parts every app re-builds by hand, and the judgment behind them: a sidebar that remembers its width, a filtered list that is a link, selection that turns pagination into a bulk bar, saving that is quiet until it fails, and states typed by cause.",
+		"Each part renders working server HTML. Small islands add what the platform cannot do: ⌘B, j/k, ⌘K, the bulk bar's count, save timings and toasts.",
 	],
 	reachFor: [
-		"A dashboard, an admin panel or any screen behind a sign-in.",
-		"Data a reader scans, sorts, selects or reorders: tables, lists and trees.",
-		"Workspace chrome: split panes, toolbars, menubars, context menus and notifications.",
+		"A dashboard, an admin panel, a CMS, an inbox or any screen behind a sign-in.",
+		"A list people filter, sort, select and act on: FilterBar, Table, SelectionBar.",
+		"A record opened beside its list (DetailSheet, SplitView) or on its own page (PageHeader, PropertyList, Timeline).",
+		"Settings and editors: SettingsLayout, SettingsSection, SaveBar, SaveStatus, DangerZone, EditorLayout.",
+		"Metrics with context: StatCard, Sparkline, StatusStrip, RangePicker, Chart.",
 	],
 	ideas: [
 		{
+			title: "State in the URL",
+			body: "Filters, sort, view, range and the open record are search params written by GET forms and links, so a view is a link and Back undoes it.",
+		},
+		{
+			title: "Preferences the server renders",
+			body: "The sidebar's collapse and a split view's widths live in cookies (`readAppShellCookie`, `readSplitViewLayout`), so the first paint is right.",
+		},
+		{
+			title: "One selection contract",
+			body: "Any list that renders `data-selection-item` checkboxes works with `SelectionBar`; `Table.Select` and `Table.SelectAll` render them for you.",
+		},
+		{
+			title: "Saving is a model",
+			body: "`SettingsSection` saves `explicit` or `instant`, never both; `SaveStatus` holds Saving… for 1s; `OptimisticToggle` flips at once and admits failure.",
+		},
+		{
+			title: "Feedback by place",
+			body: "Inline first, `Banner` for state that needs resolving, `Toasts` last: one region for server flashes and client toasts, three visible, Undo held 8s.",
+		},
+		{
+			title: "Typed states",
+			body: "`Empty` has `kind` first-run, no-results, cleared, permission and error; `Skeleton` presets keep the real row and card heights; `aria-busy` dims a refetching table.",
+		},
+		{
+			title: "One keyboard layer",
+			body: "`shortcutRegistry()` ranks modal > sheet > page; `data-shortcut` registers keys from HTML; `KeyboardHelp` lists them; `CommandPalette` opens on ⌘K.",
+		},
+		{
+			title: "No copy in the kit",
+			body: "Every string a part shows or announces is a `labels` prop, so an app translates them all.",
+		},
+		{
 			title: "Names required",
 			body: "`Table`, `Tree`, `GridList`, `Menubar` and the rest warn in development without `aria-label`.",
-		},
-		{
-			title: "Overridable roles",
-			body: "Roles are set through `attrs()`, so a page's own `role` wins.",
-		},
-		{
-			title: "Server HTML first",
-			body: "`treeKeys`, `gridListKeys` and `menubarKeys` add WAI-ARIA keyboard patterns in the browser only.",
 		},
 		{
 			title: "Series by slot",
@@ -49,7 +76,7 @@ const APP: Foundations = {
 		},
 		{
 			title: "Motion",
-			body: "Tree, bar and tooltip transitions stop under `prefers-reduced-motion`.",
+			body: "The rail peek, toast stack, save status and every transition stop under `prefers-reduced-motion`.",
 		},
 	],
 	roles:
@@ -93,7 +120,222 @@ const APP: Foundations = {
 			],
 		},
 		{
-			title: "Lists, trees, panes and toasts",
+			title: "Shell and page header",
+			lead: "Read by `AppShell`, `PageHeader` and every part that sticks under the shell's top bar.",
+			variables: [
+				{
+					name: "--ui-app-sidebar-width",
+					default: "16rem",
+					controls: "The expanded sidebar column.",
+				},
+				{ name: "--ui-app-rail-width", default: "3.25rem", controls: "The collapsed icon rail." },
+				{
+					name: "--ui-app-sheet-width",
+					default: "18rem, at most 85vw",
+					controls: "The sidebar as a phone sheet.",
+				},
+				{
+					name: "--ui-app-inset-gap",
+					default: "0.5rem",
+					controls: "Space between the frame's edge and the content card.",
+				},
+				{
+					name: "--ui-app-inset-radius",
+					default: "0.75rem",
+					controls: "Corners of the content card.",
+				},
+				{ name: "--ui-app-nav-row-size", default: "2rem", controls: "Height of a nav row." },
+				{ name: "--ui-app-header-height", default: "3.5rem", controls: "The shell's top bar." },
+				{
+					name: "--ui-app-content-padding",
+					default: "1rem; 1.5rem from 48rem",
+					controls: "Padding of the shell's main region.",
+				},
+				{
+					name: "--ui-app-sticky-top",
+					default: "0px; the shell sets it to its header height",
+					controls: "Where sticky page headers, table headers and the settings nav stick.",
+				},
+				{
+					name: "--ui-app-gutter",
+					default: "set by the shell's main region",
+					controls: "Its padding, so a sticky PageHeader can bleed to the card's edges.",
+				},
+			],
+		},
+		{
+			title: "Lists and tables",
+			variables: [
+				{
+					name: "--ui-table-row-block-size",
+					default: "2.5rem compact, 3.5rem comfortable",
+					controls: "Row height, set by Table density.",
+				},
+				{ name: "--ui-table-header-block-size", default: "2.5rem", controls: "Header row height." },
+				{
+					name: "--ui-table-bg",
+					default: "var(--ui-bg, Canvas)",
+					controls: "Surface behind the sticky header and pinned cells.",
+				},
+				{
+					name: "--ui-table-id-max-inline-size",
+					default: "14ch",
+					controls: "Width of a middle-truncated id cell.",
+				},
+				{
+					name: "--ui-table-bar-min-inline-size",
+					default: "6rem",
+					controls: "Smallest width of an in-cell data bar.",
+				},
+				{
+					name: "--ui-selection-bar-offset",
+					default: "1rem",
+					controls: "Gap between the floating SelectionBar and the bottom of its scroll box.",
+				},
+				{ name: "--ui-status-dot-size", default: "0.5rem", controls: "Diameter of a StatusDot." },
+			],
+		},
+		{
+			title: "Metrics",
+			variables: [
+				{
+					name: "--ui-stat-value-size",
+					default: "1.875rem; 1.5rem ruled",
+					controls: "A StatCard's value.",
+				},
+				{ name: "--ui-stat-card-padding", default: "1.25rem", controls: "A StatCard's padding." },
+				{
+					name: "--ui-stat-delta-block-size",
+					default: "1.375rem",
+					controls: "Height of the delta pill.",
+				},
+				{
+					name: "--ui-stat-chart-block-size",
+					default: "2.5rem",
+					controls: "Height of a StatCard's chart slot.",
+				},
+				{
+					name: "--ui-sparkline-block-size",
+					default: "1.5rem",
+					controls: "Height of a Sparkline.",
+				},
+				{ name: "--ui-sparkline-line-width", default: "1.5px", controls: "Its stroke." },
+				{
+					name: "--ui-sparkline-dot-size, --ui-sparkline-area-opacity",
+					default: "0.375rem, 0.16",
+					controls: "Its last-point dot and area fill.",
+				},
+				{
+					name: "--ui-status-strip-block-size",
+					default: "2rem",
+					controls: "Height of a StatusStrip bar.",
+				},
+				{
+					name: "--ui-status-strip-gap",
+					default: "2px; 1px under a 30rem container",
+					controls: "Gap between its bars.",
+				},
+				{
+					name: "--ui-chart-comparison-color, --ui-chart-comparison-dash",
+					default: "neutral muted ink, 4 4",
+					controls: "A comparison series.",
+				},
+				{
+					name: "--ui-chart-threshold-width, --ui-chart-threshold-dash",
+					default: "1px, 6 4",
+					controls: "A Chart.Threshold line.",
+				},
+				{ name: "--ui-chart-band-opacity", default: "0.1", controls: "Fill of a Chart.Band." },
+			],
+		},
+		{
+			title: "Detail, split views, settings and editors",
+			variables: [
+				{
+					name: "--ui-app-detail-sheet-width",
+					default: "clamp(28rem, 36cqi, 36rem)",
+					controls: "Width of a DetailSheet.",
+				},
+				{
+					name: "--ui-app-detail-sheet-top",
+					default: "0px",
+					controls: "Offset of a DetailSheet below an app header.",
+				},
+				{
+					name: "--ui-app-list-width",
+					default: "20rem",
+					controls: "Default width of a SplitView's list pane.",
+				},
+				{
+					name: "--ui-property-list-label-width",
+					default: "9rem",
+					controls: "A PropertyList's label column.",
+				},
+				{
+					name: "--ui-timeline-icon-box",
+					default: "1.5rem",
+					controls: "The icon box a Timeline's rail runs through.",
+				},
+				{
+					name: "--ui-settings-nav-width",
+					default: "13rem",
+					controls: "The SettingsLayout nav column.",
+				},
+				{
+					name: "--ui-settings-measure",
+					default: "42rem",
+					controls: "The settings content column.",
+				},
+				{
+					name: "--ui-editor-measure",
+					default: "42.5rem",
+					controls: "An EditorLayout's writing column.",
+				},
+				{
+					name: "--ui-editor-sidebar-width",
+					default: "18rem",
+					controls: "An EditorLayout's properties sidebar.",
+				},
+			],
+		},
+		{
+			title: "Feedback and keyboard",
+			variables: [
+				{
+					name: "--ui-toast-peek",
+					default: "0.625rem",
+					controls: "How far each folded toast peeks out of the stack.",
+				},
+				{
+					name: "--ui-empty-icon-size",
+					default: "3rem; 2rem compact",
+					controls: "An Empty state's icon well.",
+				},
+				{
+					name: "--ui-skeleton-list-row-block-size",
+					default: "3.5rem",
+					controls: "A Skeleton.List row.",
+				},
+				{ name: "--ui-skeleton-shimmer-duration", default: "1.6s", controls: "One shimmer sweep." },
+				{
+					name: "--ui-app-palette-width",
+					default: "40rem, at most the viewport less 1rem",
+					controls: "The CommandPalette.",
+				},
+				{
+					name: "--ui-app-palette-top",
+					default: "15vh",
+					controls: "Gap above the CommandPalette.",
+				},
+				{
+					name: "--ui-app-keyboard-help-width",
+					default: "40rem",
+					controls: "The KeyboardHelp sheet.",
+				},
+			],
+		},
+		{
+			title: "Trees, panes and toasts",
 			variables: [
 				{
 					name: "--ui-tree-indent",
