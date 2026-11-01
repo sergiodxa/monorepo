@@ -1,7 +1,7 @@
 /**
  * One group of settings: a title and description beside or above a bordered card of
- * 1px-ruled rows. A section saves one way only: `"explicit"` for typed inputs, with its
- * own Save at the bottom start, or `"instant"` for switches, which save as they change.
+ * 1px-ruled rows. A section saves one way only: `"explicit"` for typed inputs, with its own
+ * primary Save at the bottom start, or `"instant"` for switches, which save as they change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -179,7 +179,7 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 					bg("neutral.bg-tint"),
 				]}
 			>
-				<Button type="submit" size="sm">
+				<Button type="submit" color="brand" variant="solid" size="sm">
 					{labels.save}
 				</Button>
 				{footer}
@@ -198,7 +198,7 @@ export function SettingsSection(handle: Handle<SettingsSection.Props>) {
 							borderEdge("block-start", { color: "neutral", width: 1, style: "solid" }),
 						]}
 					>
-						<Button type="submit" size="sm">
+						<Button type="submit" color="brand" variant="solid" size="sm">
 							{labels.save}
 						</Button>
 					</div>

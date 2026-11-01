@@ -107,6 +107,14 @@ describe("SettingsSection", () => {
 		expect(button.closest("form")?.getAttribute("method")).toBe("post");
 	});
 
+	test("draws an explicit section's Save as the brand's solid primary button", () => {
+		let host = mount(monitorDefaults("explicit"));
+		let button = host.querySelector<HTMLElement>('[data-slot="settings-footer"] button')!;
+
+		expect(button.dataset.color).toBe("brand");
+		expect(button.dataset.variant).toBe("solid");
+	});
+
 	test("renders no footer for an instant section, keeping Save for a browser without script", () => {
 		let host = mount(monitorDefaults("instant"));
 
