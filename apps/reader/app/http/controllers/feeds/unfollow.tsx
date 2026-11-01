@@ -18,6 +18,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
+import { FOLLOW_AGAIN_PARAM, UNFOLLOWED_PARAM } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/app/models/user-store";
@@ -35,13 +36,22 @@ export default createAction(routes.feeds.unfollow, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { feedId } = s.parse(Params, ctx.params);
-		let unfollowed = await userStore(viewer.id).unfollowFeed(feedId);
+		let store = userStore(viewer.id);
+
+		/** Read before it goes, since the toast names the feed and follows it again by address. */
+		let feed = await store.getFeed(feedId);
+		let unfollowed = await store.unfollowFeed(feedId);
 
 		/** The rail no longer lists this feed. */
 		await forgetRailFeeds(viewer.id);
 
 		if (unfollowed) {
-			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
+			let params = feed
+				? `?${new URLSearchParams({ [UNFOLLOWED_PARAM]: feed.title, [FOLLOW_AGAIN_PARAM]: feed.feedUrl })}`
+				: "";
+			return redirect(`${routes.reading.index.href()}${params}`, {
+				status: redirect.Status.SeeOther,
+			});
 		}
 
 		let title = ctx.intl.t("feeds.show.notFound.title");

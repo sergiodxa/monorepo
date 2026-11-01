@@ -71,6 +71,18 @@ describe("DELETE /feeds/:feedId", () => {
 		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 
+	test("names the feed and its address for the queue's Follow again toast", async () => {
+		store.unfollowFeed.mockResolvedValue(true);
+		store.getFeed.mockResolvedValue({ title: "Julia Evans", feedUrl: "https://jvns.ca/atom.xml" });
+
+		let response = await postUnfollow(VIEWER);
+		let location = new URL(response.headers.get("location") ?? "", "https://reader.test");
+
+		expect(location.pathname).toBe(routes.reading.index.href());
+		expect(location.searchParams.get("unfollowed")).toBe("Julia Evans");
+		expect(location.searchParams.get("followAgain")).toBe("https://jvns.ca/atom.xml");
+	});
+
 	test("answers a feed this reader does not follow with the not-found page", async () => {
 		store.unfollowFeed.mockResolvedValue(false);
 

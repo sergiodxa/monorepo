@@ -149,6 +149,9 @@ export default {
 		collapse: "Contraer la barra lateral",
 		help: "Ayuda",
 		folders: "Carpetas",
+		/** The region toasts appear in, and each toast's close button. */
+		toasts: "Avisos",
+		dismiss: "Cerrar",
 		/** The ⌘K palette that jumps to any feed, folder or place in the app. */
 		palette: {
 			title: "Ir a",
@@ -176,9 +179,20 @@ export default {
 		open: "Atajos de teclado",
 		description: "Presioná una tecla mientras leés. Mientras escribís en un campo, no hacen nada.",
 		close: "Cerrar",
+		/** Une dos teclas que hacen lo mismo. */
+		or: "o",
+		/** Lo que se dice cuando la tecla de siguiente no leída no encuentra nada más abajo. */
+		noUnread: "No hay entradas sin leer más abajo",
+		groups: {
+			reading: "Lectura",
+			feeds: "Fuentes",
+			general: "General",
+			other: "Más",
+		},
 		keys: {
 			nextPost: "Entrada siguiente",
 			previousPost: "Entrada anterior",
+			nextUnread: "Siguiente entrada sin leer",
 			openPost: "Abrir la entrada",
 			markRead: "Marcar como leída o no leída",
 			savePost: "Guardar la entrada, o dejar de guardarla",
@@ -186,7 +200,6 @@ export default {
 			nextFeed: "Fuente siguiente",
 			previousFeed: "Fuente anterior",
 			search: "Busca en tus entradas",
-			goTo: "Ir a un feed o una carpeta",
 			help: "Mostrar estos atajos",
 		},
 	},
@@ -561,6 +574,10 @@ export default {
 			cancel: "Cancelar",
 			confirm:
 				"¿Dejar de seguir {$title}? Sus entradas, y lo que hayas leído de ellas, se van con él.",
+			/** The toast after unfollowing, past tense and short. */
+			done: "Dejaste de seguir {$title}",
+			/** Follows the feed again from the toast; its posts return as unread. */
+			followAgain: "Volver a seguir",
 		},
 
 		/** What the last refresh of a feed recorded, shown beside a feed that is struggling. */
@@ -832,6 +849,15 @@ export default {
 			filters: "Filtros",
 			agents: "Agentes",
 			transfer: "Importar y exportar",
+			/** Lo que dice el menú del teléfono cerrado en la página de preferencias, donde ninguna sección es la actual. */
+			jump: "Ir a una sección",
+		},
+
+		/** La sección de filtros de la página de preferencias, que los cuenta y enlaza a ellos. */
+		filters: {
+			count:
+				".input {$count :number}\n.match $count\none {{Tienes {$count} filtro.}}\n* {{Tienes {$count} filtros.}}",
+			manage: "Gestionar filtros",
 		},
 
 		/** Row labels of the transfer section, whose own copy lives with the feeds. */
@@ -929,6 +955,9 @@ export default {
 		description:
 			"Apunta un asistente a tus fuentes y léelas sin abrir esta aplicación. Puede listar lo que sigues, leer tu cola, buscarla y, si se lo permites, marcar entradas como leídas, guardarlas y seguir o dejar de seguir una fuente.",
 		endpoint: "La dirección que le darás a un cliente es {$url}.",
+		/** La fila y la etiqueta que contienen esa dirección, dondequiera que se imprima para copiarla. */
+		address: "Dirección para tu cliente",
+		connect: "Cómo conectar",
 		locked:
 			"Los agentes vienen con el plan De pago. Nada de lo que tienes cambia hasta que mejores el plan.",
 
@@ -952,6 +981,8 @@ export default {
 			heading: "Tu nuevo token",
 			description: "Pégalo en la configuración de tu cliente como token de portador.",
 			once: "Esta es la única vez que se muestra. Emite otro si lo pierdes.",
+			/** La etiqueta sobre el token, junto a la dirección con la que se usa. */
+			token: "Token",
 			back: "Volver a ajustes",
 		},
 

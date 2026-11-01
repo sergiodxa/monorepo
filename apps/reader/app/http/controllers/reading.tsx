@@ -9,6 +9,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Client } from "@sdxc/flags";
 import type { I18n } from "@sdxc/i18n";
+import type { Toast } from "@sdxc/ui/app/toast";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 
@@ -30,6 +31,7 @@ import { hover } from "@sdxc/u/state";
 import { font, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Alert, Button, Confirm, HeadingScope, LinkButton } from "@sdxc/ui";
 import { Empty } from "@sdxc/ui/app";
+import { TOAST_UNDO_DURATION } from "@sdxc/ui/app/toast";
 import { waitUntil } from "cloudflare:workers";
 import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
@@ -43,8 +45,10 @@ import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
 import { placePage } from "~/app/http/controllers/list-paging";
 import {
+	FOLLOW_AGAIN_PARAM,
 	QueueFields,
 	queueUrl,
+	UNFOLLOWED_PARAM,
 	queueViewOf,
 	readQueueView,
 	SHOW_PARAM,
@@ -609,6 +613,7 @@ export async function renderReadingQueue(
 			assets={ctx.assets}
 			documentTitle={heading}
 			heading={heading}
+			toasts={unfollowToast(ctx.intl, ctx.url.searchParams)}
 			/** The read states, each one the queue's own address, with the words carried across. */
 			tabs={READ_STATES.map((state) => ({
 				href: queueUrl({ ...view, readState: state }),
@@ -955,6 +960,32 @@ export async function renderReadingQueue(
 		</AppLayout>,
 		init,
 	);
+}
+
+/**
+ * The toast an unfollow redirects here to show: the feed's name in the past tense, and a
+ * Follow again that posts its address back to the follow form. Following again brings the
+ * subscription back, with its posts returning as unread.
+ */
+function unfollowToast(intl: I18n, params: URLSearchParams): Toast.Flash[] {
+	let title = params.get(UNFOLLOWED_PARAM);
+	let address = params.get(FOLLOW_AGAIN_PARAM);
+	if (!title) return [];
+
+	return [
+		{
+			id: `unfollowed-${title}`,
+			color: "neutral",
+			title: intl.t("feeds.unfollow.done", { title }),
+			duration: TOAST_UNDO_DURATION,
+			action: address
+				? {
+						label: intl.t("feeds.unfollow.followAgain"),
+						form: { action: routes.reading.action.href(), fields: { url: address } },
+					}
+				: undefined,
+		},
+	];
 }
 
 /**

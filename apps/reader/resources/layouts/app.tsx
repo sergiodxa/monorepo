@@ -8,6 +8,7 @@
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
+import type { Toast } from "@sdxc/ui/app/toast";
 import type { Handle, RemixNode } from "remix/component";
 
 import {
@@ -30,6 +31,7 @@ import { Avatar, Logo, Menu, SearchField } from "@sdxc/ui";
 import { AppShell } from "@sdxc/ui/app/app-shell";
 import { CommandPalette } from "@sdxc/ui/app/command-palette";
 import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Toasts } from "@sdxc/ui/app/toasts";
 import { Frame } from "remix/component";
 
 import type { Shortcuts } from "~/resources/components/shortcuts";
@@ -129,6 +131,10 @@ export namespace AppLayout {
 		collapse: string;
 		settings: string;
 		help: string;
+		/** Names the region toasts appear in. */
+		toasts: string;
+		/** Names each toast's close button. */
+		dismiss: string;
 		/** The words on the button that opens the ⌘K palette. */
 		paletteTrigger: string;
 		/** Names the trigger the viewer's own menu opens from, and the menu it opens. */
@@ -192,6 +198,11 @@ export namespace AppLayout {
 		 * @default true
 		 */
 		header?: boolean;
+		/**
+		 * What a redirect came back to report, such as a feed just unfollowed. The region is
+		 * drawn only while there is something in it.
+		 */
+		toasts?: Toast.Flash[];
 		/**
 		 * Where the sidebar's feeds are fetched from. The band is drawn by the server on its
 		 * own, into a frame, so its counts can be redrawn without the page around it.
@@ -557,6 +568,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 			assets,
 			children,
 			collapsed,
+			toasts = [],
 			currentPath,
 			description,
 			documentTitle,
@@ -749,6 +761,10 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						)}
 						{children}
 					</div>
+
+					{toasts.length > 0 && (
+						<Toasts labels={{ region: nav.toasts, dismiss: nav.dismiss }} initial={toasts} />
+					)}
 				</AppShell>
 			</DocumentLayout>
 		);

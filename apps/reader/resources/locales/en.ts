@@ -59,6 +59,9 @@ export default {
 		collapse: "Collapse sidebar",
 		help: "Help",
 		folders: "Folders",
+		/** The region toasts appear in, and each toast's close button. */
+		toasts: "Notifications",
+		dismiss: "Dismiss",
 		/** The ⌘K palette that jumps to any feed, folder or place in the app. */
 		palette: {
 			title: "Go to",
@@ -86,9 +89,20 @@ export default {
 		open: "Keyboard shortcuts",
 		description: "Press a key while reading. Typing in a field leaves every key alone.",
 		close: "Close",
+		/** Joins two keys that do the same thing. */
+		or: "or",
+		/** Said when the next-unread key finds nothing further down the list. */
+		noUnread: "No unread posts below",
+		groups: {
+			reading: "Reading",
+			feeds: "Feeds",
+			general: "General",
+			other: "More",
+		},
 		keys: {
 			nextPost: "Next post",
 			previousPost: "Previous post",
+			nextUnread: "Next unread post",
 			openPost: "Open the post",
 			markRead: "Mark as read or unread",
 			savePost: "Save the post, or stop saving it",
@@ -96,7 +110,6 @@ export default {
 			nextFeed: "Next feed",
 			previousFeed: "Previous feed",
 			search: "Search your posts",
-			goTo: "Go to a feed or folder",
 			help: "Show these shortcuts",
 		},
 	},
@@ -471,6 +484,10 @@ export default {
 			/** Backs out of the prompt, leaving the feed followed. */
 			cancel: "Cancel",
 			confirm: "Stop following {$title}? Its posts, and what you have read of them, go with it.",
+			/** The toast after unfollowing, past tense and short. */
+			done: "Unfollowed {$title}",
+			/** Follows the feed again from the toast; its posts return as unread. */
+			followAgain: "Follow again",
 		},
 
 		/** What the last refresh of a feed recorded, shown beside a feed that is struggling. */
@@ -738,6 +755,15 @@ export default {
 			filters: "Filters",
 			agents: "Agents",
 			transfer: "Import and export",
+			/** What the phone nav says while closed on the settings page, where no one section is current. */
+			jump: "Jump to a section",
+		},
+
+		/** The Filters section of the settings page, which counts the filters and links to them. */
+		filters: {
+			count:
+				".input {$count :number}\n.match $count\none {{You have {$count} filter.}}\n* {{You have {$count} filters.}}",
+			manage: "Manage filters",
 		},
 
 		/** Row labels of the transfer section, whose own copy lives with the feeds. */
@@ -929,6 +955,9 @@ export default {
 		description:
 			"Point an assistant at your feeds and read them without opening this app. It can list what you follow, read your queue, search it, and — if you let it — mark posts read, keep them, and follow or unfollow a feed.",
 		endpoint: "The address to give a client is {$url}.",
+		/** The row and the label that hold that address, wherever it is printed for copying. */
+		address: "Address for your client",
+		connect: "How to connect",
 		locked: "Agents come with the Paid plan. Nothing you have is affected until you upgrade.",
 
 		scopes: {
@@ -951,6 +980,8 @@ export default {
 			heading: "Your new token",
 			description: "Paste this into your client's configuration as a bearer token.",
 			once: "This is the only time it is shown. Mint another if you lose it.",
+			/** The label over the token itself, beside the address it is used with. */
+			token: "Token",
 			back: "Back to settings",
 		},
 

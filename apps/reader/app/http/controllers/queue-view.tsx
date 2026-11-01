@@ -36,6 +36,15 @@ export const SHOW_PARAM = "show";
 export const FEED_PARAM = "feed";
 
 /**
+ * The parameters the queue is sent to after an unfollow: the feed's name, which the toast
+ * says, and its address, which the toast's Follow again posts back to the follow form.
+ */
+/** The name of the feed just unfollowed. */
+export const UNFOLLOWED_PARAM = "unfollowed";
+/** The address the feed is followed again at. */
+export const FOLLOW_AGAIN_PARAM = "followAgain";
+
+/**
  * What the queue holds when the URL asks for nothing in particular. Showing every post is
  * what this surface does unasked, so that view is the plain address with no parameter on
  * it at all.

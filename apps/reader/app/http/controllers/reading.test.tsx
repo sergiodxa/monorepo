@@ -928,6 +928,28 @@ describe("searching the queue", () => {
 		expect(body).not.toContain("Save this search");
 	});
 
+	test("says which feed was unfollowed in a toast that can follow it again", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (
+			await get(
+				`${routes.reading.index.href()}?unfollowed=Julia+Evans&followAgain=${encodeURIComponent("https://jvns.ca/atom.xml")}`,
+			)
+		).text();
+
+		expect(readsAs(body)).toContain("Unfollowed Julia Evans");
+		expect(readsAs(body)).toContain("Follow again");
+		expect(body).toContain('value="https://jvns.ca/atom.xml"');
+	});
+
+	test("draws no toast region when nothing was unfollowed", async () => {
+		queued({ next: null, prev: null });
+
+		let body = await (await get(routes.reading.index.href())).text();
+
+		expect(body).not.toContain('"exportName":"Toasts"');
+	});
+
 	test("puts the words back in the box, so refining a search edits them", async () => {
 		queued({ next: null, prev: null });
 
