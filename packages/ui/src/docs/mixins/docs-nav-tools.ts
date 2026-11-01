@@ -18,8 +18,8 @@ import { revealInScroller } from "../utils/reveal-in-scroller.js";
  * `aria-current="page"`. When the host holds an `<input>`, typing hides every `li` whose
  * title misses the query, hides sections left empty, opens `<details>` groups holding a
  * match, and shows `[data-docs-nav-empty]` when nothing matches; clearing the field restores
- * every group's own open state. The host is `hidden` until this runs, so a page without
- * script never shows an inert field.
+ * every group's own open state. A page reload that resets the tree keeps the query applied.
+ * The host is `hidden` until this runs, so a page without script never shows an inert field.
  *
  * @example
  * <div data-docs-nav><div hidden mix={[docsNavTools()]}><input type="search" /></div><nav>…</nav></div>
@@ -58,9 +58,35 @@ function enhance(host: HTMLElement, signal: AbortSignal) {
 	let input = host.querySelector("input");
 	if (!input) return;
 	host.hidden = false;
-	let groups = [...nav.querySelectorAll("details")];
-	let ownState = new Map(groups.map((group) => [group, group.open]));
-	input.addEventListener("input", () => filterDocsNav(nav, input.value, ownState), { signal });
+	let ownState = new Map<HTMLDetailsElement, boolean>();
+	let snapshot = () => {
+		ownState = new Map([...nav.querySelectorAll("details")].map((group) => [group, group.open]));
+	};
+	snapshot();
+
+	let observer = new MutationObserver((records) => {
+		if (!input.value || !records.some(isReset)) return;
+		snapshot();
+		filterDocsNav(nav, input.value, ownState);
+		observer.takeRecords();
+	});
+	let apply = () => {
+		filterDocsNav(nav, input.value, ownState);
+		observer.takeRecords();
+	};
+	observer.observe(nav, { subtree: true, childList: true, attributeFilter: ["hidden"] });
+	signal.addEventListener("abort", () => observer.disconnect());
+	input.addEventListener("input", apply, { signal });
+	if (input.value) apply();
+}
+
+/**
+ * Whether `record` is a page reload putting the server's markup back: pages added or
+ * replaced, or a page the filter hid shown again. The filter's own writes only hide.
+ */
+function isReset(record: MutationRecord): boolean {
+	if (record.type === "childList") return true;
+	return record.target instanceof HTMLElement && !record.target.hidden;
 }
 
 /**
