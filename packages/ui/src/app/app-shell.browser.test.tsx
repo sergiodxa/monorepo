@@ -14,6 +14,8 @@ import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
+import { Menu } from "../components/menu.js";
+
 import { APP_SHELL_COOKIE, AppShell, readAppShellCookie } from "./app-shell.js";
 
 let mounted: RenderResult | undefined;
@@ -48,12 +50,19 @@ function mountShell(props: Partial<AppShell.Props> = {}) {
 		<AppShell
 			labels={LABELS}
 			workspace={
-				<AppShell.Identity
-					avatar={<Glyph />}
-					name="Acme Ops"
-					detail="Pro plan"
-					aria-label="Acme Ops"
-				/>
+				<>
+					<AppShell.Identity
+						avatar={<Glyph />}
+						name="Acme Ops"
+						detail="Pro plan"
+						commandfor="workspaces"
+						command="toggle-popover"
+					/>
+					<Menu id="workspaces" aria-label="Workspace">
+						<Menu.Item>Switch workspace</Menu.Item>
+						<Menu.Item>Workspace settings</Menu.Item>
+					</Menu>
+				</>
 			}
 			nav={
 				<>
@@ -102,6 +111,13 @@ function toggle(): HTMLInputElement {
 /** The menu button that opens the sheet. */
 function menuButton(): HTMLButtonElement {
 	return document.querySelector<HTMLButtonElement>('[data-slot="app-shell-menu"] button')!;
+}
+
+/** The identity row in the sidebar's header or foot. */
+function identity(where: "header" | "footer"): HTMLElement {
+	return sidebar().querySelector<HTMLElement>(
+		`[data-slot="app-shell-sidebar-${where}"] [data-slot="app-shell-identity"]`,
+	)!;
 }
 
 /** A nav link by its label. */
@@ -307,6 +323,46 @@ describe("AppShell", () => {
 		expect(card.getBoundingClientRect().left).toBe(before);
 		let label = link("Monitors").querySelector<HTMLElement>("[data-app-shell-label]")!;
 		expect(getComputedStyle(label).opacity).toBe("1");
+	});
+
+	test("an identity without a menu is plain content: no button, chevron or focus stop", async () => {
+		mountShell();
+		let row = identity("footer");
+		expect(row.tagName).toBe("DIV");
+		expect(row.querySelector("button")).toBeNull();
+		expect(row.hasAttribute("aria-haspopup")).toBe(false);
+		expect(row.querySelectorAll("svg")).toHaveLength(1);
+		expect(row.tabIndex).toBe(-1);
+		expect(getComputedStyle(row).cursor).toBe("default");
+	});
+
+	test("an identity with a menu is a menu button that opens it, and Esc closes it", async () => {
+		mountShell();
+		let row = identity("header");
+		let menu = document.getElementById("workspaces")!;
+		expect(row.tagName).toBe("BUTTON");
+		expect(row.getAttribute("aria-haspopup")).toBe("menu");
+		expect(row.querySelectorAll("svg")).toHaveLength(2);
+		expect(menu.getAttribute("role")).toBe("menu");
+		expect(getComputedStyle(row).cursor).toBe("pointer");
+
+		await userEvent.click(row);
+		expect(menu.matches(":popover-open")).toBe(true);
+		expect(menu.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+			row.getBoundingClientRect().bottom,
+		);
+
+		await userEvent.keyboard("{Escape}");
+		expect(menu.matches(":popover-open")).toBe(false);
+	});
+
+	test("the identity's menu opens from the collapsed rail", async () => {
+		await reduceMotion();
+		mountShell({ collapsed: true });
+		let menu = document.getElementById("workspaces")!;
+		await userEvent.click(identity("header"));
+		expect(menu.matches(":popover-open")).toBe(true);
+		expect(menu.textContent).toContain("Switch workspace");
 	});
 
 	test("insets the content card on the tinted frame", async () => {

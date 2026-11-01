@@ -179,7 +179,7 @@ export namespace AppShell {
 		name: string;
 		/** A second line, such as a plan or an email. */
 		detail?: string;
-		/** Draws the up-down chevron of a switcher. @default true */
+		/** Draws the up-down chevron on a row that opens a menu. @default true */
 		chevron?: boolean;
 	}
 }
@@ -802,48 +802,23 @@ AppShell.Back = function AppShellBack(handle: Handle<AppShell.BackProps>) {
 };
 
 /**
- * Renders a switcher or account row: a 24px avatar, a name and an optional detail line, and an
- * up-down chevron. It is a `<button>`, so a `Menu` opens from it through `commandfor`; in the
- * rail only the avatar shows and the name stays its accessible name.
+ * Renders a switcher or account row: a 24px avatar, a name and an optional detail line. With
+ * `commandfor` or `popovertarget` it is a menu button with an up-down chevron that opens that
+ * `Menu` from the column and the rail alike; without either it is static, unfocusable content.
  *
- * @param handle Runtime handle carrying the button's props.
+ * @param handle Runtime handle carrying the row's props.
  * @returns The render function producing the row's markup.
  * @example
- * <AppShell.Identity avatar={<Avatar … />} name="Acme Ops" detail="Pro plan" commandfor="workspaces" command="toggle-popover" />
+ * <AppShell.Identity avatar={<Logo />} name="Acme Ops" detail="Pro plan" commandfor="workspaces" command="toggle-popover" />
+ * <Menu id="workspaces" aria-label="Workspace"><Menu.Item href="/workspaces">Switch workspace</Menu.Item></Menu>
+ * @example
+ * <AppShell.Identity avatar={<Avatar />} name="Ada Lovelace" detail="ada@acme.dev" />
  */
 AppShell.Identity = function AppShellIdentity(handle: Handle<AppShell.IdentityProps>) {
 	return () => {
 		let { avatar, name, detail, chevron = true, mix, ...rest } = handle.props;
-		return (
-			<button
-				type="button"
-				{...rest}
-				data-slot="app-shell-identity"
-				mix={mergeMix(
-					[
-						raw({
-							display: "flex",
-							alignItems: "center",
-							gap: "0.5rem",
-							inlineSize: "100%",
-							minBlockSize: "2.5rem",
-							padding: "0.375rem",
-							border: "0",
-							borderRadius: "0.5rem",
-							background: "transparent",
-							color: "inherit",
-							font: "inherit",
-							textAlign: "start",
-							cursor: "pointer",
-							boxSizing: "border-box",
-							overflow: "hidden",
-						}),
-						hover(bg("neutral.bg-tint-hover")),
-						focusVisible(outline({ color: "brand.ring", offset: -2 })),
-					],
-					mix,
-				)}
-			>
+		let content = (
+			<>
 				<span
 					aria-hidden="true"
 					mix={[
@@ -876,6 +851,50 @@ AppShell.Identity = function AppShellIdentity(handle: Handle<AppShell.IdentityPr
 						</span>
 					) : null}
 				</span>
+			</>
+		);
+
+		if (rest.commandfor === undefined && rest.popovertarget === undefined) {
+			let {
+				command: _command,
+				popovertargetaction: _action,
+				disabled: _disabled,
+				type: _type,
+				value: _value,
+				form: _form,
+				...shared
+			} = rest;
+			/** What a row shares with a `<div>`: its global attributes, data-* and event props. */
+			let divProps = shared as Omit<TagProps<"div">, "children">;
+			let divMix = mix as TagProps<"div">["mix"];
+			return (
+				<div
+					{...divProps}
+					data-slot="app-shell-identity"
+					mix={mergeMix([identityRow(), raw({ cursor: "default" })], divMix)}
+				>
+					{content}
+				</div>
+			);
+		}
+
+		return (
+			<button
+				type="button"
+				aria-haspopup="menu"
+				{...rest}
+				data-slot="app-shell-identity"
+				mix={mergeMix(
+					[
+						identityRow(),
+						raw({ cursor: "pointer" }),
+						hover(bg("neutral.bg-tint-hover")),
+						focusVisible(outline({ color: "brand.ring", offset: -2 })),
+					],
+					mix,
+				)}
+			>
+				{content}
 				{chevron ? (
 					<span
 						data-app-shell-label
@@ -889,6 +908,28 @@ AppShell.Identity = function AppShellIdentity(handle: Handle<AppShell.IdentityPr
 		);
 	};
 };
+
+/** An identity row's box, shared by its static and menu-button forms. */
+function identityRow() {
+	return [
+		raw({
+			display: "flex",
+			alignItems: "center",
+			gap: "0.5rem",
+			inlineSize: "100%",
+			minBlockSize: "2.5rem",
+			padding: "0.375rem",
+			border: "0",
+			borderRadius: "0.5rem",
+			background: "transparent",
+			color: "inherit",
+			font: "inherit",
+			textAlign: "start",
+			boxSizing: "border-box",
+			overflow: "hidden",
+		}),
+	];
+}
 
 /**
  * A nav row's box: 32px, 14px text, quiet until hovered, and marked when current or active by a
