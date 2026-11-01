@@ -51,6 +51,7 @@ export * from "./dialog.js";
 export * from "./docs-nav.js";
 export * from "./docs-nav-tools.js";
 export * from "./docs-feedback.js";
+export * from "./docs-footer.js";
 export * from "./docs-page-header.js";
 export * from "./docs-pager.js";
 export * from "./disclosure.js";

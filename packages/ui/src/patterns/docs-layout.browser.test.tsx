@@ -187,3 +187,109 @@ describe("DocsLayout", () => {
 		expect(document.querySelector("main")).toBeNull();
 	});
 });
+
+/** Mounts the shell with an edge-to-edge body, a footer and an article `height` pixels tall. */
+function mountWithFooter(height: number, props: Partial<DocsLayout.Props> = {}) {
+	document.body.style.margin = "0";
+	mountLayout({
+		footer: (
+			<footer data-testid="footer" style="block-size: 160px">
+				Written by someone
+			</footer>
+		),
+		children: (
+			<>
+				<h1>Install the CLI</h1>
+				{TOC.map((item) => (
+					<section key={item.id}>
+						<h2 id={item.id}>{item.text}</h2>
+						<p style={`block-size: ${height / TOC.length}px`}>Body</p>
+					</section>
+				))}
+			</>
+		),
+		...props,
+	});
+}
+
+/** The rendered box of `selector`'s element. */
+function rect(selector: string): DOMRect {
+	return document.querySelector(selector)!.getBoundingClientRect();
+}
+
+/** Scrolls the document to `top` and lets sticky positioning settle. */
+async function scrollTo(top: number) {
+	window.scrollTo(0, top);
+	await new Promise(requestAnimationFrame);
+}
+
+describe("DocsLayout with a footer", () => {
+	afterEach(() => {
+		document.body.style.margin = "";
+	});
+
+	for (let width of [1024, 1280, 1440, 1920]) {
+		test(`pins the sidebar from the header to the viewport's foot at ${width}px`, async () => {
+			await page.viewport(width, 800);
+			mountWithFooter(4000);
+			let end = document.documentElement.scrollHeight - window.innerHeight;
+
+			for (let top of [0, end / 2, end]) {
+				await scrollTo(top);
+				let sidebar = rect('[data-slot="docs-sidebar"]');
+				expect(sidebar.top).toBeCloseTo(64, 0);
+				expect(sidebar.bottom).toBeCloseTo(window.innerHeight, 0);
+			}
+		});
+	}
+
+	test("keeps the sidebar full height on a page shorter than the viewport", async () => {
+		await page.viewport(1440, 900);
+		mountWithFooter(200);
+		let sidebar = rect('[data-slot="docs-sidebar"]');
+		expect(sidebar.top).toBeCloseTo(64, 0);
+		expect(sidebar.bottom).toBeCloseTo(window.innerHeight, 0);
+	});
+
+	test("confines the footer to the article and rail columns, never under the sidebar", async () => {
+		await page.viewport(1440, 900);
+		mountWithFooter(4000);
+		await scrollTo(document.documentElement.scrollHeight);
+		let sidebar = rect('[data-slot="docs-sidebar"]');
+		let article = rect('[data-slot="docs-article"]');
+		let rail = rect('[data-slot="docs-rail"]');
+		let footer = rect('[data-testid="footer"]');
+
+		expect(footer.left).toBeGreaterThan(sidebar.right);
+		expect(footer.left).toBeCloseTo(article.left, 0);
+		expect(footer.right).toBeCloseTo(rail.right, 0);
+		expect(footer.top).toBeGreaterThanOrEqual(rail.bottom);
+		expect(sidebar.bottom).toBeCloseTo(window.innerHeight, 0);
+	});
+
+	test("spans the article column when docked without a rail", async () => {
+		await page.viewport(1100, 800);
+		mountWithFooter(2000);
+		let sidebar = rect('[data-slot="docs-sidebar"]');
+		let article = rect('[data-slot="docs-article"]');
+		let footer = rect('[data-testid="footer"]');
+
+		expect(footer.left).toBeGreaterThan(sidebar.right);
+		expect(footer.left).toBeCloseTo(article.left, 0);
+		expect(footer.top).toBeGreaterThanOrEqual(article.bottom);
+	});
+
+	for (let width of [375, 768]) {
+		test(`closes the page under the article without sideways scroll at ${width}px`, async () => {
+			await page.viewport(width, 800);
+			mountWithFooter(2000);
+			let article = rect('[data-slot="docs-article"]');
+			let footer = rect('[data-testid="footer"]');
+			let root = document.documentElement;
+
+			expect(shown('[data-slot="docs-sidebar"]')).toBe(false);
+			expect(footer.top).toBeGreaterThanOrEqual(article.bottom);
+			expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+		});
+	}
+});

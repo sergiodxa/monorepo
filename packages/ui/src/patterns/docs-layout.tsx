@@ -1,7 +1,7 @@
 /**
- * The shell a docs page composes into: the sidebar docked on the left, the article in a
- * reading measure, and the page's own headings in a rail on the right. Narrower screens
- * fold the sidebar into a drawer and the headings into a sticky bar under the site header.
+ * The shell a docs page composes into: the sidebar pinned on the left from the header to the
+ * viewport's foot, the article and its footer beside it, and the page's own headings in a
+ * rail. Narrower screens fold the sidebar into a drawer and the headings into a sticky bar.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { raw } from "@sdxc/u/general";
 import { hidden, hstack, inlineFlex, insBs, shrink, sticky, vstack } from "@sdxc/u/layout";
 import { overflowY } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
-import { maxBs, mis, minIs, pb, pbe, pbs } from "@sdxc/u/size";
+import { bs, maxBs, mis, minIs, pb, pbe, pbs } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { overflowWrap, text, weight } from "@sdxc/u/typography";
@@ -70,6 +70,11 @@ export namespace DocsLayout {
 		closeLabel: string;
 		/** Drawn under the headings in the rail, such as feedback or an edit link. */
 		railFooter?: RemixNode;
+		/**
+		 * Closes the page across the article and rail columns, never under the sidebar, so
+		 * the docked sidebar runs to the viewport's foot; usually a `DocsFooter`.
+		 */
+		footer?: RemixNode;
 		/** A site header drawn above the shell, kept on screen as the page scrolls. */
 		header?: RemixNode;
 		/**
@@ -128,6 +133,7 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 			drawerLabel,
 			closeLabel,
 			railFooter,
+			footer,
 			header,
 			stickyTop = "0px",
 			dock = "lg",
@@ -191,10 +197,15 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						mix={[
 							hidden(),
 							media(docked, [
-								raw({ display: "block" }),
+								raw({
+									display: "block",
+									gridRow: "1 / span 2",
+									alignSelf: "start",
+									boxSizing: "border-box",
+								}),
 								sticky(),
 								insBs("var(--docs-sticky-top)"),
-								maxBs("calc(100dvh - var(--docs-sticky-top))"),
+								bs("calc(100dvh - var(--docs-sticky-top))"),
 								overflowY("auto"),
 								raw({
 									overscrollBehavior: "contain",
@@ -210,7 +221,7 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						{sidebar}
 					</div>
 
-					<div data-slot="docs-content" mix={[minIs(0)]}>
+					<div data-slot="docs-content" mix={[minIs(0), media(docked, raw({ gridRow: "1" }))]}>
 						<div
 							data-slot="docs-bar"
 							mix={[
@@ -264,11 +275,11 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</div>
 
 						{main ? (
-							<main data-slot="docs-article" mix={articleMixins(measure, proseMeasure)}>
+							<main data-slot="docs-article" mix={articleMixins(measure, proseMeasure, footer)}>
 								{children}
 							</main>
 						) : (
-							<div data-slot="docs-article" mix={articleMixins(measure, proseMeasure)}>
+							<div data-slot="docs-article" mix={articleMixins(measure, proseMeasure, footer)}>
 								{children}
 							</div>
 						)}
@@ -280,6 +291,7 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							mix={[
 								hidden(),
 								media(RAIL_QUERY, [
+									raw({ gridRow: "1" }),
 									vstack({ gap: 6 }),
 									sticky(),
 									insBs("var(--docs-sticky-top)"),
@@ -292,6 +304,15 @@ export function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						>
 							<TableOfContents items={toc} label={tocLabel} minItems={tocMinItems} />
 							{railFooter}
+						</div>
+					) : null}
+
+					{footer ? (
+						<div
+							data-slot="docs-footer-area"
+							mix={[minIs(0), media(docked, raw({ gridColumn: "2 / -1", gridRow: "2" }))]}
+						>
+							{footer}
 						</div>
 					) : null}
 				</div>
@@ -338,13 +359,13 @@ const PROSE_SELECTOR = [
  * charts fill the column, long words broken, wide code or tables scrolled inside their own
  * box, and headings that stop clear of the sticky chrome.
  */
-function articleMixins(measure: string, proseMeasure: string) {
+function articleMixins(measure: string, proseMeasure: string, footer: RemixNode) {
 	return [
 		raw({ maxInlineSize: measure, "--ui-docs-prose-measure": proseMeasure }),
 		when(PROSE_SELECTOR, raw({ maxInlineSize: "var(--ui-docs-prose-measure)" })),
 		overflowWrap("break-word"),
 		pbs("2rem"),
-		pbe("5rem"),
+		pbe(footer ? "3rem" : "5rem"),
 		media("(min-width: 48rem)", pbs("2.5rem")),
 		when(
 			"& :is(h2, h3, h4, h5, h6)[id]",
