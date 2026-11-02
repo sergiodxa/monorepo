@@ -82,6 +82,13 @@ Strong: How it works / From a verified domain to a named failure
 Never invent logos, customers, quotes or metrics for a real product. Figures come from code or config. No
 proof means no proof section.
 
+### Above the fold is the document; below it, skip the layout (MEDIUM) — @rules/below-the-fold.md
+
+The hero and everything above the fold render as they are. Heavy sections below it take
+`content-visibility: auto` with `contain-intrinsic-size: auto <height>`, so the browser skips their
+layout and paint until they near the viewport, with no script and no shift. Remix has no lazy
+frames, and a landing never streams sections in late.
+
 ### Restraint and finish (HIGH) — @rules/restraint-and-finish.md
 
 One flourish of each kind, motion only where it explains, colour that means something. Then tabular

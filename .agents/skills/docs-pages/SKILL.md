@@ -77,6 +77,15 @@ notices, and a human one click away.
 Marker, dialog, sheet, tab, copy, feedback: 150–300ms, ease-out, off under reduced motion. Then the
 finish: `kbd` hints, focus rings, the sidebar opened at the current page.
 
+### Reading never waits, and never needs a script (HIGH)
+
+The article, sidebar, rail and code stay in the document. Only interactive pieces become frames:
+a feedback form that posts back into its own frame, a live example or playground. Without scripts
+a non-blocking frame shows only its fallback, so a piece a reader needs is a blocking frame (no
+`fallback`), streamed whole from a route that keeps its response a stream. Prefetch the sidebar
+and pager links on intent, which only pays off when the next navigation can reuse the prefetched
+page. See the app-pages skill's frames rule for placeholders, caching and prefetch.
+
 ### Quiet, living furniture (MEDIUM) — @rules/page-furniture.md
 
 Breadcrumb, a muted actions row (Copy page, Open in Claude), Markdown twins and `llms.txt`, feedback,

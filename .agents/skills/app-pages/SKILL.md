@@ -77,6 +77,12 @@ action shows its key.
 Sheet for the sidebar, the index page as the parent, toolbars that wrap, tables that scroll inside their
 box with the first column kept, controls sized for a thumb.
 
+### The list never waits on the chart (HIGH) — @rules/frames.md
+
+The document holds the shell, the header and the screen's primary content; charts, feeds and side
+panels stream in as frames over `Skeleton` placeholders of their final size, each cached on its own
+and reading its state from its own `src`.
+
 ### Words are part of the interface (MEDIUM) — @rules/app-copy.md
 
 Verb + Noun labels, "…" only when a dialog follows, destructive last, the toast verb matches the button
