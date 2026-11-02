@@ -100,3 +100,7 @@ sdxc deploy
 `sdxc deploy` builds, then runs `sdxc run db migrate --remote` and `sdxc run deploy`, and asks
 before it changes production. To migrate or deploy differently, edit `app/commands/db/migrate.ts`
 or `app/commands/deploy.ts`.
+
+The build names every file under `/assets/` after its content, and `public/_headers` serves them
+with `Cache-Control: public, max-age=31536000, immutable`, so a browser keeps each one for a year.
+Put a file you add to `public/` anywhere outside `public/assets/`, where it is revalidated.
