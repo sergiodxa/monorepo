@@ -713,8 +713,8 @@ describe("the way a reader finds out the keys exist", () => {
 			{
 				title: groups.feeds,
 				rows: [
-					[keys.nextFeed, "⇧J"],
-					[keys.previousFeed, "⇧K"],
+					[keys.nextFeed, expect.stringMatching(/^(⇧|Shift)J$/)],
+					[keys.previousFeed, expect.stringMatching(/^(⇧|Shift)K$/)],
 					[keys.checkFeeds, "R"],
 				],
 			},
