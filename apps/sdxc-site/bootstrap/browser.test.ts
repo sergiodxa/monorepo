@@ -39,10 +39,15 @@ test("every island is identified by its own module URL", () => {
 
 /** Answers every page with the cache mode and frame header its request was sent under. */
 const SERVER = setupServer(
-	http.get("https://sdxc.dev/*", ({ request }) =>
-		HttpResponse.json({ cache: request.cache, frame: request.headers.get("x-remix-frame") }),
-	),
+	http.get("https://sdxc.dev/*", ({ request }) => {
+		REQUESTS.push(new URL(request.url).pathname);
+		return HttpResponse.json({ cache: request.cache, frame: request.headers.get("x-remix-frame") });
+	}),
+	http.post("https://sdxc.dev/*", () => new HttpResponse(null, { status: 204 })),
 );
+
+/** Every page path the server answered, in order, so a test counts what reached the network. */
+const REQUESTS: string[] = [];
 
 /** What the browser entry handed the runtime, captured once it boots. */
 let options: RunInit | undefined;
@@ -77,4 +82,41 @@ test("a navigation revalidates the stored page instead of reusing it", async () 
 
 test("a frame request says it is one, so the Worker keeps the edge from rewriting it", async () => {
 	expect((await sentAs("https://sdxc.dev/frames/search?q=dialog")).frame).toBe("true");
+});
+
+test("a prefetched page answers the next navigation to it once, without another request", async () => {
+	REQUESTS.length = 0;
+	options?.prefetch?.("https://sdxc.dev/demo/apps/pulse/services");
+	await vi.waitFor(() => expect(REQUESTS).toEqual(["/demo/apps/pulse/services"]));
+
+	let first = await options?.resolveFrame?.("https://sdxc.dev/demo/apps/pulse/services#top");
+	expect(first).toBeInstanceOf(Response);
+	expect(REQUESTS).toHaveLength(1);
+
+	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/pulse/services");
+	expect(REQUESTS).toHaveLength(2);
+});
+
+test("a prefetched page older than its lifetime is fetched again", async () => {
+	REQUESTS.length = 0;
+	vi.useFakeTimers({ toFake: ["Date"] });
+	options?.prefetch?.("https://sdxc.dev/demo/apps/relay");
+	vi.setSystemTime(Date.now() + 31_000);
+	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/relay");
+	vi.useRealTimers();
+
+	expect(REQUESTS).toEqual(["/demo/apps/relay", "/demo/apps/relay"]);
+});
+
+test("a submission empties the prefetched pages, so none outlives what it changed", async () => {
+	REQUESTS.length = 0;
+	options?.prefetch?.("https://sdxc.dev/demo/apps/inkwell/posts");
+	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/inkwell/posts/new", {
+		method: "POST",
+		formData: new FormData(),
+		encType: "application/x-www-form-urlencoded",
+	});
+	await options?.resolveFrame?.("https://sdxc.dev/demo/apps/inkwell/posts");
+
+	expect(REQUESTS.filter((path) => path === "/demo/apps/inkwell/posts")).toHaveLength(2);
 });

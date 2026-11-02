@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RunInit } from "remix/component";
+
 import { run } from "remix/component";
 
 /**
@@ -55,6 +57,74 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 };
 
 /**
+ * How long a page fetched ahead of a click stays usable. Navigations otherwise revalidate
+ * every page, so a short window keeps a prefetched copy from outliving the content it shows.
+ */
+const PREFETCH_LIFETIME_MS = 30_000;
+
+/** Pages fetched ahead of a navigation, keyed by address and frame target, each used once. */
+const PREFETCHED = new Map<string, { response: Promise<Response>; at: number }>();
+
+/** The key a prefetched page is stored under: its address without the fragment, and its target. */
+function prefetchKey(src: string, target?: string): string {
+	let url = new URL(src, globalThis.document?.baseURI);
+	url.hash = "";
+	return JSON.stringify([url.href, target ?? null]);
+}
+
+/**
+ * Takes the page fetched ahead for a `GET` navigation, if one is still fresh. Any submission
+ * empties the store, since it may change what every stored page shows.
+ */
+function takePrefetched(src: string, options?: FrameOptions): Promise<Response> | undefined {
+	if ((options?.method ?? "GET").toUpperCase() !== "GET") {
+		PREFETCHED.clear();
+		return undefined;
+	}
+	let key = prefetchKey(src, options?.target);
+	let entry = PREFETCHED.get(key);
+	PREFETCHED.delete(key);
+	if (entry === undefined || Date.now() - entry.at > PREFETCH_LIFETIME_MS) return undefined;
+	return entry.response;
+}
+
+/** The options the runtime passes when it resolves a frame. */
+type FrameOptions = Parameters<NonNullable<RunInit["resolveFrame"]>>[1];
+
+/**
+ * Sends a submission under the form's declared encoding, coercing a file entry to its
+ * filename for a urlencoded body, and returns the response as-is so the frame can
+ * read its redirect target.
+ */
+async function fetchFrame(
+	src: string,
+	options: FrameOptions,
+	priority: RequestPriority = "auto",
+): Promise<Response> {
+	let { target, signal, method, formData, encType } = options ?? {};
+
+	let headers = new Headers({ accept: "text/html", "x-remix-frame": "true" });
+	if (target) headers.set("x-remix-target", target);
+
+	let body =
+		formData && encType === "application/x-www-form-urlencoded"
+			? new URLSearchParams(
+					Array.from(formData, ([key, value]) => [key, value instanceof File ? value.name : value]),
+				)
+			: formData;
+
+	return await fetch(src, {
+		credentials: "same-origin",
+		cache: "no-cache",
+		headers,
+		signal,
+		method,
+		body,
+		priority,
+	});
+}
+
+/**
  * Boots the client runtime and resolves lazily loaded UI modules.
  */
 run({
@@ -76,33 +146,25 @@ run({
 	},
 
 	/**
-	 * Sends a submission under the form's declared encoding, coercing a file entry to its
-	 * filename for a urlencoded body, and returns the response as-is so the frame can
-	 * read its redirect target.
+	 * Fetches a page a link marked `data-rmx-prefetch` is likely to open and keeps it briefly,
+	 * so the navigation that follows renders without waiting on the network.
 	 */
+	prefetch(src, options) {
+		let response = fetchFrame(src, { target: options?.target }, "low");
+		response.catch(() => PREFETCHED.delete(prefetchKey(src, options?.target)));
+		PREFETCHED.set(prefetchKey(src, options?.target), { response, at: Date.now() });
+	},
+
+	/** Resolves a frame from a fresh prefetched page when there is one, and fetches it otherwise. */
 	async resolveFrame(src, options) {
-		let { target, signal, method, formData, encType } = options ?? {};
-
-		let headers = new Headers({ accept: "text/html", "x-remix-frame": "true" });
-		if (target) headers.set("x-remix-target", target);
-
-		let body =
-			formData && encType === "application/x-www-form-urlencoded"
-				? new URLSearchParams(
-						Array.from(formData, ([key, value]) => [
-							key,
-							value instanceof File ? value.name : value,
-						]),
-					)
-				: formData;
-
-		return await fetch(src, {
-			credentials: "same-origin",
-			cache: "no-cache",
-			headers,
-			signal,
-			method,
-			body,
-		});
+		let prefetched = takePrefetched(src, options);
+		if (prefetched !== undefined) {
+			try {
+				return await prefetched;
+			} catch {
+				return await fetchFrame(src, options);
+			}
+		}
+		return await fetchFrame(src, options);
 	},
 });
