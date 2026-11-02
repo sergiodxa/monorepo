@@ -33,6 +33,9 @@ const DEFAULT_SKELETON_DELTA = true;
 /** Whether a skeleton's delta reserves a comparison when `comparison` is omitted. */
 const DEFAULT_SKELETON_COMPARISON = true;
 
+/** Widths of the bars a skeleton draws per footer line when `footerLines` is set. */
+const FOOTER_LINE_WIDTHS = ["90%", "60%"];
+
 /** Whether a skeleton reserves a footer when `footer` is omitted. */
 const DEFAULT_SKELETON_FOOTER = true;
 
@@ -109,6 +112,11 @@ export namespace StatCard {
 		 * @default true
 		 */
 		footer?: boolean;
+		/**
+		 * Reserves exactly this many footer lines at every width, for footers whose real sentences
+		 * wrap even in a wide card. Unset, the footer wraps where a 40-character sentence does.
+		 */
+		footerLines?: 1 | 2;
 	}
 }
 
@@ -500,10 +508,12 @@ StatCard.Footer = function StatCardFooter(handle: Handle<TagProps<"div">>) {
  * <StatCard.Skeleton chart />
  * @example
  * <StatCard.Skeleton comparison={false} footer={false} />
+ * @example
+ * <StatCard.Skeleton footerLines={2} />
  */
 StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonProps>) {
 	return () => {
-		let { delta, comparison, chart, footer, mix, ...rest } = handle.props;
+		let { delta, comparison, chart, footer, footerLines, mix, ...rest } = handle.props;
 
 		return (
 			<StatCard aria-hidden="true" data-skeleton="" {...rest} mix={mix}>
@@ -541,7 +551,17 @@ StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonPr
 				) : null}
 				{(footer ?? DEFAULT_SKELETON_FOOTER) ? (
 					<StatCard.Footer>
-						<StatCardBar width="6em" /> <StatCardBar width="4em" /> <StatCardBar width="5em" />
+						{footerLines ? (
+							FOOTER_LINE_WIDTHS.slice(0, footerLines).map((width) => (
+								<span mix={[block()]}>
+									<StatCardBar width={width} />
+								</span>
+							))
+						) : (
+							<>
+								<StatCardBar width="6em" /> <StatCardBar width="4em" /> <StatCardBar width="5em" />
+							</>
+						)}
 					</StatCard.Footer>
 				) : null}
 			</StatCard>

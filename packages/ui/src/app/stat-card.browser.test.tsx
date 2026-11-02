@@ -206,6 +206,48 @@ describe("StatCard", () => {
 		}
 	}
 
+	for (let [width, footer] of [
+		[343, "checkout-api is down since 05:41."],
+		[1100, "checkout-api has been down since 05:41 and is still failing."],
+	] as const) {
+		test(`reserves two footer lines with footerLines={2} in a ${width}px four-column group`, () => {
+			let host = mount(
+				<div>
+					<StatCard.Group variant="tabs" columns={4} aria-label="Overview">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard key={index} href={`#${index}`}>
+								<StatCard.Label>Uptime</StatCard.Label>
+								<StatCard.Value>99.98%</StatCard.Value>
+								<StatCard.Delta trend="down" comparison="vs previous 24 hours">
+									-0.11 pts
+								</StatCard.Delta>
+								<StatCard.Footer>{footer}</StatCard.Footer>
+							</StatCard>
+						))}
+					</StatCard.Group>
+					<StatCard.Group variant="tabs" columns={4} aria-hidden="true">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard.Skeleton key={index} footerLines={2} />
+						))}
+					</StatCard.Group>
+				</div>,
+				width,
+			);
+			let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+			let footers = cards
+				.slice(0, 4)
+				.map((card) => card.querySelector<HTMLElement>('[data-slot="stat-card-footer"]')!);
+			for (let element of footers) {
+				let lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+				expect(Math.round(element.getBoundingClientRect().height / lineHeight)).toBe(2);
+			}
+			let heights = cards.map((card) => card.getBoundingClientRect().height);
+			for (let index of [0, 1, 2, 3]) {
+				expect(Math.abs(heights[index + 4]! - heights[index]!)).toBeLessThanOrEqual(1);
+			}
+		});
+	}
+
 	for (let [width, count] of [
 		[272, 1],
 		[320, 2],
