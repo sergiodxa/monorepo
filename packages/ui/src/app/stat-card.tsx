@@ -19,20 +19,25 @@ import { bs, is, minIs, pi } from "@sdxc/u/size";
 import { data } from "@sdxc/u/state";
 import { nowrap, tabularNums, text, verticalAlign, weight } from "@sdxc/u/typography";
 
-/** Container a group measures, so its columns follow the pane it sits in. */
-const GROUP_CONTAINER = "ui-stat-group";
-
-/**
- * A group from 18rem up to 28rem wide: two columns of compact cards, so a phone shows four
- * stats in two rows. Narrower than 18rem, a group keeps one column of full-size cards.
- */
-const COMPACT = `@container ${GROUP_CONTAINER} (min-width: 18rem) and (max-width: 27.9375rem)`;
+import { STAT_COMPACT, STAT_GROUP_CONTAINER, statDeltaPlacement } from "./styles/stat-delta.js";
 
 /** Column count a group lays out at full width when `columns` is omitted. */
 const DEFAULT_COLUMNS = 4;
 
 /** Layout a group uses when `variant` is omitted. */
 const DEFAULT_VARIANT: StatCard.Variant = "cards";
+
+/** Whether a skeleton reserves a delta when `delta` is omitted. */
+const DEFAULT_SKELETON_DELTA = true;
+
+/** Whether a skeleton's delta reserves a comparison when `comparison` is omitted. */
+const DEFAULT_SKELETON_COMPARISON = true;
+
+/** Whether a skeleton reserves a footer when `footer` is omitted. */
+const DEFAULT_SKELETON_FOOTER = true;
+
+/** Width of a comparison's placeholder: about "vs previous 24 hours" in the comparison's text. */
+const COMPARISON_BAR = "10em";
 
 /** Decorative arrow drawn in the delta pill for each trend. */
 const TREND_ICONS = { up: TrendingUpIcon, down: TrendingDownIcon, flat: MinusIcon };
@@ -89,10 +94,17 @@ export namespace StatCard {
 		 * @default true
 		 */
 		delta?: boolean;
+		/**
+		 * Reserves the comparison set after the delta pill, which wraps under the pill in a
+		 * narrow card just as the real comparison does.
+		 *
+		 * @default true
+		 */
+		comparison?: boolean;
 		/** Reserves the trend slot. */
 		chart?: boolean;
 		/**
-		 * Reserves one footer line.
+		 * Reserves a sentence-long footer, which wraps to a second line in a narrow card.
 		 *
 		 * @default true
 		 */
@@ -110,32 +122,6 @@ export namespace StatCard {
 function deltaTone(trend: StatCard.Trend, invert: boolean): "success" | "danger" | "neutral" {
 	if (trend === "flat") return "neutral";
 	return (trend === "up") !== invert ? "success" : "danger";
-}
-
-/**
- * Places the delta at the end of the label's line in a card, and on its own line under the
- * value in ruled columns, tabs and compact cards, where it wraps before it overflows.
- *
- * @returns The placement mixin shared by the delta and its skeleton.
- */
-function deltaPlacement() {
-	return raw({
-		order: 1,
-		justifySelf: "end",
-		'[data-stat-group="ruled"] > * > &, [data-stat-group="tabs"] > * > &': {
-			order: 3,
-			gridColumn: "1 / -1",
-			justifySelf: "start",
-		},
-		[COMPACT]: {
-			"[data-stat-split] > * > &": {
-				order: 3,
-				gridColumn: "1 / -1",
-				justifySelf: "start",
-				flexWrap: "wrap",
-			},
-		},
-	});
 }
 
 /**
@@ -200,7 +186,7 @@ export function StatCard(handle: Handle<StatCard.Props>) {
 				},
 				"&:focus-visible": { outline: "2px solid var(--ui-brand-ring, Highlight)" },
 				"@media (prefers-reduced-motion: reduce)": { transition: "none" },
-				[COMPACT]: {
+				[STAT_COMPACT]: {
 					'[data-stat-split]:not([data-stat-group="ruled"]) > &': {
 						padding: "var(--ui-stat-card-padding, 0.875rem)",
 					},
@@ -261,7 +247,7 @@ StatCard.Group = function StatCardGroup(handle: Handle<StatCard.GroupProps>) {
 						block(),
 						is("full"),
 						minIs(0),
-						container(GROUP_CONTAINER),
+						container(STAT_GROUP_CONTAINER),
 						tabs
 							? raw({
 									border: `1px solid ${BORDER}`,
@@ -289,10 +275,10 @@ StatCard.Group = function StatCardGroup(handle: Handle<StatCard.GroupProps>) {
 							rowGap: resolvedVariant === "ruled" ? "1.5rem" : undefined,
 							marginInlineEnd: tabs ? "-1px" : undefined,
 							marginBlockEnd: tabs ? "-1px" : undefined,
-							[`@container ${GROUP_CONTAINER} (min-width: 18rem)`]: {
+							[`@container ${STAT_GROUP_CONTAINER} (min-width: 18rem)`]: {
 								gridTemplateColumns: `repeat(${middle}, minmax(0, 1fr))`,
 							},
-							[`@container ${GROUP_CONTAINER} (min-width: 52rem)`]: {
+							[`@container ${STAT_GROUP_CONTAINER} (min-width: 52rem)`]: {
 								gridTemplateColumns: `repeat(${wide}, minmax(0, 1fr))`,
 							},
 						}),
@@ -365,7 +351,7 @@ StatCard.Value = function StatCardValue(handle: Handle<TagProps<"div">>) {
 							'[data-stat-group="ruled"] > * > &': {
 								fontSize: "var(--ui-stat-value-size, 1.5rem)",
 							},
-							[COMPACT]: {
+							[STAT_COMPACT]: {
 								"[data-stat-split] > * > &": { fontSize: "var(--ui-stat-value-size, 1.375rem)" },
 							},
 						}),
@@ -399,7 +385,7 @@ StatCard.Delta = function StatCardDelta(handle: Handle<StatCard.DeltaProps>) {
 				data-trend={trend}
 				data-tone={tone}
 				{...rest}
-				mix={mergeMix([hstack({ gap: 1.5, align: "center" }), nowrap(), deltaPlacement()], mix)}
+				mix={mergeMix([hstack({ gap: 1.5, align: "center" }), nowrap(), statDeltaPlacement()], mix)}
 			>
 				<span
 					data-slot="stat-card-delta-pill"
@@ -504,18 +490,20 @@ StatCard.Footer = function StatCardFooter(handle: Handle<TagProps<"div">>) {
 };
 
 /**
- * Stands in for a stat while it loads: the same parts on the same lines, each holding a
- * placeholder bar, so the card keeps its height when the real one streams in. Set `delta`,
- * `chart` and `footer` to match the card it replaces.
+ * Stands in for a stat while it loads: the same parts placed by the same container queries,
+ * with bars that wrap where a comparison and a 40-character footer sentence wrap, so the card
+ * keeps its height when the real one streams in.
  *
  * @param handle Runtime handle carrying the skeleton's props.
  * @returns The render function producing the placeholder's markup.
  * @example
  * <StatCard.Skeleton chart />
+ * @example
+ * <StatCard.Skeleton comparison={false} footer={false} />
  */
 StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonProps>) {
 	return () => {
-		let { delta, chart, footer, mix, ...rest } = handle.props;
+		let { delta, comparison, chart, footer, mix, ...rest } = handle.props;
 
 		return (
 			<StatCard aria-hidden="true" data-skeleton="" {...rest} mix={mix}>
@@ -525,27 +513,35 @@ StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonPr
 				<StatCard.Value>
 					<StatCardBar width="5ch" />
 				</StatCard.Value>
-				{(delta ?? true) ? (
+				{(delta ?? DEFAULT_SKELETON_DELTA) ? (
 					<span
 						data-slot="stat-card-delta"
-						mix={[
-							deltaPlacement(),
-							block(),
-							is("3.5rem"),
-							bs("var(--ui-stat-delta-block-size, 1.375rem)"),
-							rounded("full"),
-							raw({ backgroundColor: BORDER }),
-						]}
-					/>
+						mix={[hstack({ gap: 1.5, align: "center" }), nowrap(), statDeltaPlacement()]}
+					>
+						<span
+							mix={[
+								block(),
+								is("3.5rem"),
+								bs("var(--ui-stat-delta-block-size, 1.375rem)"),
+								rounded("full"),
+								raw({ backgroundColor: BORDER }),
+							]}
+						/>
+						{(comparison ?? DEFAULT_SKELETON_COMPARISON) ? (
+							<span data-slot="stat-card-comparison" mix={[text("xs")]}>
+								<StatCardBar width={COMPARISON_BAR} />
+							</span>
+						) : null}
+					</span>
 				) : null}
 				{chart ? (
 					<StatCard.Chart>
 						<StatCardBar width="100%" block />
 					</StatCard.Chart>
 				) : null}
-				{(footer ?? true) ? (
+				{(footer ?? DEFAULT_SKELETON_FOOTER) ? (
 					<StatCard.Footer>
-						<StatCardBar width="70%" />
+						<StatCardBar width="6em" /> <StatCardBar width="4em" /> <StatCardBar width="5em" />
 					</StatCard.Footer>
 				) : null}
 			</StatCard>

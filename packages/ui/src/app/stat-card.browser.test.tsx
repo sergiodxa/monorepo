@@ -41,6 +41,14 @@ function Latency() {
 	);
 }
 
+/** Sentences explaining a dashboard's four stats, at the lengths a real overview writes. */
+const FOOTERS = [
+	"checkout-api has been down since 05:41.",
+	"payments-webhooks is 4× its usual p95.",
+	"41% of checkout requests fail.",
+	"One SEV1, one SEV2 and one SEV3.",
+];
+
 /** Four cards for a group, the first linking as the current tab when `tabs` is set. */
 function Four(handle: { props: { variant?: StatCard.Variant } }) {
 	return () => {
@@ -155,6 +163,47 @@ describe("StatCard", () => {
 				0,
 			);
 		});
+	}
+
+	for (let variant of ["cards", "tabs"] as const) {
+		for (let width of [375, 768, 1440]) {
+			for (let delta of [true, false]) {
+				test(`keeps ${variant} skeletons as tall as cards ${delta ? "with" : "without"} a delta in a ${width}px group`, () => {
+					let host = mount(
+						<div>
+							<StatCard.Group variant={variant} aria-label="Overview">
+								{FOOTERS.map((footer) => (
+									<StatCard key={footer}>
+										<StatCard.Label>Uptime</StatCard.Label>
+										<StatCard.Value>99.98%</StatCard.Value>
+										{delta ? (
+											<StatCard.Delta trend="up" comparison="vs previous 24 hours">
+												+0.02%
+											</StatCard.Delta>
+										) : null}
+										<StatCard.Footer>{footer}</StatCard.Footer>
+									</StatCard>
+								))}
+							</StatCard.Group>
+							<StatCard.Group variant={variant} aria-hidden="true">
+								{FOOTERS.map((footer) => (
+									<StatCard.Skeleton key={footer} delta={delta} />
+								))}
+							</StatCard.Group>
+						</div>,
+						width,
+					);
+					let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+					let heights = cards.map((card) => card.getBoundingClientRect().height);
+
+					for (let index of FOOTERS.keys()) {
+						expect(
+							Math.abs(heights[index + FOOTERS.length]! - heights[index]!),
+						).toBeLessThanOrEqual(1);
+					}
+				});
+			}
+		}
 	}
 
 	for (let [width, count] of [
