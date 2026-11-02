@@ -85,6 +85,12 @@ export interface DemoApp {
 	cookies: readonly string[];
 	/** The toasts a redirect may name, keyed by what {@link DemoAppRedirect.toast} carries. */
 	toasts: Record<string, Omit<Toast.Flash, "id">>;
+	/**
+	 * Renders one secondary part of a screen, the content of a {@link DemoAppFrame}: `part` is
+	 * its path (`overview/stats`), and the request's address carries the screen state it needs
+	 * as its query. `null` answers the frame route's `404`.
+	 */
+	frame?: (part: string, request: DemoAppRequest) => RemixNode | null | Promise<RemixNode | null>;
 	/** Renders a screen, or the app's own 404 screen with `status: 404` for a path it lacks. */
 	render: (request: DemoAppRequest) => DemoAppScreen | Promise<DemoAppScreen>;
 	/**
@@ -181,6 +187,22 @@ export function demoAppHref(slug: string): (page?: string) => string {
 				? routes.demoApps.show.href({ app: slug })
 				: routes.demoApps.show.href({ app: slug, page: path });
 		return query === undefined ? href : `${href}?${query}`;
+	};
+}
+
+/**
+ * Builds the addresses of one demo app's frames, so a screen names each part by its path
+ * and passes the screen state the part needs as its query.
+ *
+ * @param slug The demo's folder name.
+ * @returns A function from a part path, with its query string when it keeps one, to its address.
+ * @example demoAppFrameHref("pulse")("overview/stats?range=7d") // "/demo/frames/apps/pulse/overview/stats?range=7d"
+ */
+export function demoAppFrameHref(slug: string): (part: string) => string {
+	return (part) => {
+		let [path = "", query] = part.split("?", 2);
+		let href = routes.demoFrames.app.href({ app: slug, part: path });
+		return query === undefined || query === "" ? href : `${href}?${query}`;
 	};
 }
 

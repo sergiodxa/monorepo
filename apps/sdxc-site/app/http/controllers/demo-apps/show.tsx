@@ -10,7 +10,7 @@
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { withBundleCache, withEdgeCache } from "~/app/http/caching";
+import { cookieVariant, withStreamCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { DEMO_APP_TOAST_PARAM, findDemoApp, readToastParam } from "~/resources/views/demo-apps";
 import DemoAppDocument from "~/resources/views/demo-apps/document";
@@ -47,21 +47,5 @@ export default createAction(routes.demoApps.show, async (ctx) => {
 	if (toast !== null) return await renderPage();
 
 	let variant = `${ctx.url.search}|${cookieVariant(cookie, app.cookies)}`;
-	return await withEdgeCache(ctx.request, variant, async (request) =>
-		withBundleCache(request, await renderPage(), variant),
-	);
+	return await withStreamCache(ctx.request, variant, renderPage);
 });
-
-/**
- * The values of the cookies an app renders from, in the app's order, so two visitors whose
- * layouts match share a cached copy and two whose layouts differ never do.
- */
-function cookieVariant(header: string | null, names: readonly string[]): string {
-	let pairs = new Map(
-		(header ?? "").split(";").map((pair) => {
-			let [name = "", ...value] = pair.trim().split("=");
-			return [name, value.join("=")] as const;
-		}),
-	);
-	return names.map((name) => `${name}=${pairs.get(name) ?? ""}`).join("&");
-}

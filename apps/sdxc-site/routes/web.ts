@@ -182,4 +182,14 @@ export default route({
 		/** Where a screen's forms post; it keeps nothing and answers by sending the visitor back. */
 		action: post("/demo/apps/:app/*page"),
 	},
+	/**
+	 * One secondary part of a demo screen as an HTML fragment, which the screen streams in
+	 * after its shell: a chart, a feed, a side panel, or a docs page's interactive piece.
+	 */
+	demoFrames: {
+		/** A part of a demo app's screen, named by its path under the app. */
+		app: get("/demo/frames/apps/:app/*part"),
+		/** An interactive piece of a docs demo page, such as its feedback form or a live example. */
+		docs: get("/demo/frames/docs/:site/*part"),
+	},
 });

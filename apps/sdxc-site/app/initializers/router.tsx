@@ -304,6 +304,14 @@ export function createWebRouter() {
 		routes.demoApps.action,
 		lazy(() => import("~/app/http/controllers/demo-apps/action")),
 	);
+	router.map(
+		routes.demoFrames.app,
+		lazy(() => import("~/app/http/controllers/demo-apps/frame")),
+	);
+	router.map(
+		routes.demoFrames.docs,
+		lazy(() => import("~/app/http/controllers/demo-docs/frame")),
+	);
 
 	return router;
 }
