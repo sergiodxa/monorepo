@@ -100,7 +100,7 @@ indicate requirement levels.
   router's `documentShellAssets` middleware (`app/http/middleware/assets.ts`) publishes once
   per request from `assetResolver` in `app/initializers/assets.ts`, reading the asset manifest
   `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written
-  `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A
+  `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. `public/_headers` serves everything under `/assets/` with `Cache-Control: public, max-age=31536000, immutable`, so a browser keeps each hashed file for a year; a hand-placed file in `public/` stays outside `/assets/`, where it is revalidated. A
   stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in
   cascade order. Every page passes the assets explicitly, `<DocumentLayout assets={ctx.assets}>`
   or `<AppLayout assets={ctx.assets}>`; a helper without `ctx` takes them as an argument. The
