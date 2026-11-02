@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import {
 	AlarmClockIcon,
@@ -44,6 +44,7 @@ import {
 	TextArea,
 } from "@sdxc/ui";
 import { OptimisticToggle } from "@sdxc/ui/app/optimistic-toggle";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 
 import type { Conversation, Message } from "~/resources/views/demo-apps/relay/data";
 import type { InboxView } from "~/resources/views/demo-apps/relay/views";
@@ -56,6 +57,7 @@ import {
 	findContact,
 	findTeammate,
 } from "~/resources/views/demo-apps/relay/data";
+import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { TOGGLE_LABELS } from "~/resources/views/demo-apps/relay/labels";
 import { actionHref, conversationPage, href } from "~/resources/views/demo-apps/relay/views";
 
@@ -155,7 +157,7 @@ function roleLine(note: boolean, fromCustomer: boolean): string {
  * The toolbar above the reading pane: Reply, Assign, Snooze and Archive, the overflow menu,
  * then the star and read toggles, each with the key that runs it.
  */
-function ConversationToolbar(handle: Handle<ConversationPane.Props>) {
+export function ConversationToolbar(handle: Handle<ConversationPane.Props>) {
 	return () => {
 		let { view, conversation } = handle.props;
 		let page = conversationPage(view, conversation.id);
@@ -323,26 +325,42 @@ function ConversationToolbar(handle: Handle<ConversationPane.Props>) {
 	};
 }
 
-/** The subject and who the conversation is with: company, plan, tags and owner. */
-function ConversationHeader(handle: Handle<{ conversation: Conversation }>) {
+/**
+ * The subject and who the conversation is with: company, plan, tags and owner. As a ghost
+ * it draws the same lines as bars, with no heading or link, for the pane's placeholder.
+ */
+export function ConversationHeader(
+	handle: Handle<{ conversation: Conversation; ghost?: boolean }>,
+) {
 	return () => {
-		let { conversation } = handle.props;
+		let { conversation, ghost = false } = handle.props;
 		let contact = findContact(conversation.contactId);
 		let company = contact ? findCompany(contact.companyId) : undefined;
 		let assignee = conversation.assigneeId ? findTeammate(conversation.assigneeId) : undefined;
+		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let badge = (node: RemixNode) => (ghost ? <Ghost box>{node}</Ghost> : node);
+		let subjectMix = [
+			m(0),
+			text("xl"),
+			weight("semibold"),
+			leading("tight"),
+			fg("neutral.emphasis"),
+		];
 
 		return (
 			<header mix={[vstack({ gap: 2, align: "stretch" })]}>
-				<h2
-					id="relay-conversation-subject"
-					mix={[m(0), text("xl"), weight("semibold"), leading("tight"), fg("neutral.emphasis")]}
-				>
-					{conversation.subject}
-				</h2>
+				{ghost ? (
+					<div mix={subjectMix}>{shown(conversation.subject)}</div>
+				) : (
+					<h2 id="relay-conversation-subject" mix={subjectMix}>
+						{conversation.subject}
+					</h2>
+				)}
 				<div
 					mix={[hstack({ gap: 2, align: "center" }), flexWrap(), text("sm"), fg("neutral.muted")]}
 				>
-					{contact ? (
+					{contact && ghost ? <span mix={[weight("medium")]}>{shown(contact.name)}</span> : null}
+					{contact && !ghost ? (
 						<a
 							href={href(`contacts/${contact.id}`)}
 							mix={[weight("medium"), fg("brand"), raw({ textDecoration: "none" })]}
@@ -350,22 +368,33 @@ function ConversationHeader(handle: Handle<{ conversation: Conversation }>) {
 							{contact.name}
 						</a>
 					) : null}
-					{company ? <span>{company.name}</span> : null}
-					{company ? (
-						<Badge variant="secondary" color={company.plan === "Enterprise" ? "brand" : "neutral"}>
-							{company.plan}
-						</Badge>
-					) : null}
-					{conversation.tags.map((tag) => (
-						<Badge variant="outline" color="neutral">
-							{tag}
-						</Badge>
-					))}
-					<span>{assignee ? `Assigned to ${assignee.name}` : "Unassigned"}</span>
+					{company ? <span>{shown(company.name)}</span> : null}
+					{company
+						? badge(
+								<Badge
+									variant="secondary"
+									color={company.plan === "Enterprise" ? "brand" : "neutral"}
+								>
+									{company.plan}
+								</Badge>,
+							)
+						: null}
+					{conversation.tags.map((tag) =>
+						badge(
+							<Badge variant="outline" color="neutral">
+								{tag}
+							</Badge>,
+						),
+					)}
+					<span>{shown(assignee ? `Assigned to ${assignee.name}` : "Unassigned")}</span>
 					{conversation.status === "snoozed" && conversation.snoozedUntil ? (
 						<span>
-							· Snoozed until{" "}
-							<RelativeTime date={conversation.snoozedUntil} now={NOW} locale="en" />
+							{shown(
+								<>
+									· Snoozed until{" "}
+									<RelativeTime date={conversation.snoozedUntil} now={NOW} locale="en" />
+								</>,
+							)}
 						</span>
 					) : null}
 				</div>
@@ -419,7 +448,21 @@ function ReplyComposer(handle: Handle<ConversationPane.Props>) {
 	};
 }
 
-/** Renders the open conversation: toolbar, header, messages and the composer. */
+/** The reading column under the toolbar, centred at a comfortable measure. */
+function columnMix() {
+	return [
+		vstack({ gap: 5, align: "stretch" }),
+		pi(6),
+		pb(5),
+		raw({ inlineSize: "100%", boxSizing: "border-box", marginInline: "auto" }),
+		maxIs("48rem"),
+	];
+}
+
+/**
+ * Renders the open conversation: toolbar, header, messages and the composer. It is the
+ * inbox's `conversation/<id>` frame, so the list answers before the messages are read.
+ */
 export function ConversationPane(handle: Handle<ConversationPane.Props>) {
 	return () => {
 		let { view, conversation } = handle.props;
@@ -430,18 +473,11 @@ export function ConversationPane(handle: Handle<ConversationPane.Props>) {
 				mix={[vstack({ gap: 0, align: "stretch" })]}
 			>
 				<ConversationToolbar view={view} conversation={conversation} />
-				<div
-					mix={[
-						vstack({ gap: 5, align: "stretch" }),
-						pi(6),
-						pb(5),
-						raw({ inlineSize: "100%", boxSizing: "border-box", marginInline: "auto" }),
-						maxIs("48rem"),
-					]}
-				>
+				<div mix={columnMix()}>
 					<ConversationHeader conversation={conversation} />
 					<ol
 						aria-label="Messages"
+						data-slot="relay-messages"
 						mix={[vstack({ gap: 3, align: "stretch" }), m(0), p(0), listStyle()]}
 					>
 						{conversation.messages.map((message) => (
@@ -451,6 +487,123 @@ export function ConversationPane(handle: Handle<ConversationPane.Props>) {
 					<ReplyComposer view={view} conversation={conversation} />
 				</div>
 			</article>
+		);
+	};
+}
+
+/**
+ * One `Skeleton` bar in a box of its own, so the box sets its width (a CSS length or
+ * percentage) and the bar its height.
+ */
+function Bar(handle: Handle<{ width: string; height: string; round?: boolean }>) {
+	return () => {
+		let { width, height, round = false } = handle.props;
+		return (
+			<div mix={[raw({ flex: "0 0 auto", inlineSize: width, maxInlineSize: "100%" })]}>
+				<Skeleton
+					style={`--ui-skeleton-block-size:${height}${round ? ";border-radius:999px" : ""}`}
+				/>
+			</div>
+		);
+	};
+}
+
+/**
+ * One toolbar button's placeholder: an icon square on a phone, a labelled pill beside it.
+ * A `keyed` button shows its key's chip once labelled, which stands it a little taller.
+ */
+function ToolButtonPlaceholder(handle: Handle<{ labelled?: boolean; keyed?: boolean }>) {
+	return () => {
+		let { labelled = false, keyed = false } = handle.props;
+		return (
+			<div
+				mix={[
+					raw({ flex: "0 0 auto", inlineSize: "2rem", "--ui-skeleton-block-size": "2rem" }),
+					labelled
+						? atQuery(
+								"ui-split-view (width >= 40rem)",
+								raw({
+									inlineSize: keyed ? "7rem" : "5.5rem",
+									"--ui-skeleton-block-size": keyed ? "2.125rem" : "2rem",
+								}),
+							)
+						: [],
+				]}
+			>
+				<Skeleton />
+			</div>
+		);
+	};
+}
+
+/** The toolbar's placeholder: its row of buttons at their size, with the toggles at the end. */
+export function ToolbarPlaceholder() {
+	return () => (
+		<div
+			mix={[
+				hstack({ gap: 1, align: "center" }),
+				pi(3),
+				pb(2),
+				bg(),
+				borderEdge("bottom", { width: 1, color: "neutral" }),
+			]}
+		>
+			<ToolButtonPlaceholder labelled />
+			<ToolButtonPlaceholder labelled />
+			<ToolButtonPlaceholder labelled />
+			<ToolButtonPlaceholder labelled keyed />
+			<ToolButtonPlaceholder />
+			<span mix={[grow()]} />
+			<ToolButtonPlaceholder />
+			<ToolButtonPlaceholder />
+		</div>
+	);
+}
+
+/** One message's placeholder: the author row over two lines of text, in the card's frame. */
+function MessagePlaceholder() {
+	return () => (
+		<li
+			mix={[
+				vstack({ gap: 2, align: "stretch" }),
+				p(4),
+				rounded("lg"),
+				border({ color: "neutral.border", width: 1 }),
+			]}
+		>
+			<div mix={[hstack({ gap: 2.5, align: "center" })]}>
+				<Bar width="2rem" height="2rem" round />
+				<Bar width="8rem" height="0.75rem" />
+			</div>
+			<Bar width="100%" height="0.75rem" />
+			<Bar width="70%" height="0.75rem" />
+		</li>
+	);
+}
+
+/**
+ * The open conversation's placeholder: the toolbar's row, the header's own lines as bars,
+ * and one card per message, so the pane holds its layout while the conversation loads and
+ * the first message lands where its card stood.
+ */
+export function ConversationPlaceholder(handle: Handle<{ conversation: Conversation }>) {
+	return () => {
+		let { conversation } = handle.props;
+		return (
+			<div aria-hidden="true" mix={[vstack({ gap: 0, align: "stretch" })]}>
+				<ToolbarPlaceholder />
+				<div mix={columnMix()}>
+					<ConversationHeader conversation={conversation} ghost />
+					<ol
+						data-slot="relay-messages"
+						mix={[vstack({ gap: 3, align: "stretch" }), m(0), p(0), listStyle()]}
+					>
+						{conversation.messages.map(() => (
+							<MessagePlaceholder />
+						))}
+					</ol>
+				</div>
+			</div>
 		);
 	};
 }

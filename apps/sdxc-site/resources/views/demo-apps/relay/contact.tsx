@@ -22,6 +22,7 @@ import { PageHeader } from "@sdxc/ui/app/page-header";
 
 import type { Contact, Conversation } from "~/resources/views/demo-apps/relay/data";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { ContactActivity, ContactProperties } from "~/resources/views/demo-apps/relay/contacts";
 import {
 	NOW,
@@ -30,6 +31,7 @@ import {
 	planOf,
 	updatedAt,
 } from "~/resources/views/demo-apps/relay/data";
+import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { href } from "~/resources/views/demo-apps/relay/views";
 
@@ -66,13 +68,80 @@ function Block(handle: Handle<{ title: string; children: RemixNode }>) {
 	);
 }
 
+/**
+ * The contact's conversations, newest first, each linking to the mailbox that holds it: the
+ * page's `contacts/<id>/conversations` frame. As a ghost it is the frame's placeholder, the
+ * same one-line rows drawn as bars.
+ */
+export function ContactConversations(handle: Handle<{ contact: Contact; ghost?: boolean }>) {
+	return () => {
+		let { contact, ghost = false } = handle.props;
+		let conversations = conversationsOf(contact.id);
+		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let rowMix = [
+			hstack({ gap: 3, align: "center" }),
+			pi(4),
+			pb(3),
+			fg("neutral.emphasis"),
+			raw({ textDecoration: "none" }),
+		];
+
+		return (
+			<ul
+				aria-hidden={ghost ? "true" : undefined}
+				mix={[
+					m(0),
+					p(0),
+					listStyle(),
+					rounded("lg"),
+					border({ color: "neutral.border", width: 1 }),
+					raw({ overflow: "hidden" }),
+				]}
+			>
+				{conversations.map((conversation, index) => {
+					let status = statusOf(conversation);
+					let badge = (
+						<Badge variant="secondary" color={status.color}>
+							{status.label}
+						</Badge>
+					);
+					let row = (
+						<>
+							<span mix={[truncate(), text("sm"), weight("medium"), raw({ flex: "1 1 auto" })]}>
+								{shown(conversation.subject)}
+							</span>
+							{ghost ? <Ghost box>{badge}</Ghost> : badge}
+							<span mix={[text("xs"), fg("neutral.muted")]}>
+								{shown(<RelativeTime date={updatedAt(conversation)} now={NOW} locale="en" />)}
+							</span>
+						</>
+					);
+					return (
+						<li mix={[index === 0 ? [] : borderEdge("top", { width: 1, color: "neutral" })]}>
+							{ghost ? (
+								<div mix={rowMix}>{row}</div>
+							) : (
+								<a
+									href={href(`${mailboxOf(conversation)}/${conversation.id}`)}
+									mix={[...rowMix, hover(bg("neutral.bg-tint-hover"))]}
+								>
+									{row}
+								</a>
+							)}
+						</li>
+					);
+				})}
+			</ul>
+		);
+	};
+}
+
 /** Renders the contact's page. */
 export function ContactScreen(handle: Handle<ContactScreen.Props>) {
 	return () => {
 		let { contact, collapsed } = handle.props;
 		let company = findCompany(contact.companyId);
 		let plan = planOf(contact);
-		let conversations = conversationsOf(contact.id);
 
 		return (
 			<RelayShell current="contacts" collapsed={collapsed} crumb="Contacts">
@@ -110,57 +179,18 @@ export function ContactScreen(handle: Handle<ContactScreen.Props>) {
 					>
 						<div mix={[vstack({ gap: 8, align: "stretch" })]}>
 							<Block title="Conversations">
-								<ul
-									mix={[
-										m(0),
-										p(0),
-										listStyle(),
-										rounded("lg"),
-										border({ color: "neutral.border", width: 1 }),
-										raw({ overflow: "hidden" }),
-									]}
-								>
-									{conversations.map((conversation, index) => {
-										let status = statusOf(conversation);
-										return (
-											<li
-												mix={[index === 0 ? [] : borderEdge("top", { width: 1, color: "neutral" })]}
-											>
-												<a
-													href={href(`${mailboxOf(conversation)}/${conversation.id}`)}
-													mix={[
-														hstack({ gap: 3, align: "center" }),
-														pi(4),
-														pb(3),
-														fg("neutral.emphasis"),
-														raw({ textDecoration: "none" }),
-														hover(bg("neutral.bg-tint-hover")),
-													]}
-												>
-													<span
-														mix={[
-															truncate(),
-															text("sm"),
-															weight("medium"),
-															raw({ flex: "1 1 auto" }),
-														]}
-													>
-														{conversation.subject}
-													</span>
-													<Badge variant="secondary" color={status.color}>
-														{status.label}
-													</Badge>
-													<span mix={[text("xs"), fg("neutral.muted")]}>
-														<RelativeTime date={updatedAt(conversation)} now={NOW} locale="en" />
-													</span>
-												</a>
-											</li>
-										);
-									})}
-								</ul>
+								<DemoAppFrame
+									app="relay"
+									part={`contacts/${contact.id}/conversations`}
+									fallback={<ContactConversations contact={contact} ghost />}
+								/>
 							</Block>
 							<Block title="Activity">
-								<ContactActivity contact={contact} />
+								<DemoAppFrame
+									app="relay"
+									part={`contacts/${contact.id}/activity`}
+									fallback={<ContactActivity contact={contact} ghost />}
+								/>
 							</Block>
 						</div>
 						<aside aria-label="Details" mix={[vstack({ gap: 3, align: "stretch" })]}>

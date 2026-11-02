@@ -11,10 +11,14 @@ import { describe, expect, test } from "vitest";
 
 import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
-import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
+import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
+import relay from "~/resources/views/demo-apps/relay";
 
 /** Relay's addresses. */
 const href = demoAppHref("relay");
+
+/** Relay's frame addresses. */
+const frame = demoAppFrameHref("relay");
 
 /** Where Relay's forms post. */
 const action = demoAppActionHref("relay");
@@ -173,5 +177,51 @@ describe("Relay screens", () => {
 		let body = await html("contacts?contact=priya-nair");
 		expect(body).toContain("Platform Engineer at Arcadia Freight");
 		expect(body).toMatch(/3\s*\/\s*12/);
+	});
+});
+
+describe("Relay frames", () => {
+	test("every frame a screen streams answers with its part", async () => {
+		let sources = new Set<string>();
+		for (let screen of relay.screens) {
+			let body = await html(screen);
+			for (let match of body.matchAll(/\/demo\/frames\/apps\/relay\/[^"'<\s]+/g)) {
+				sources.add(match[0].replaceAll("&amp;", "&"));
+			}
+		}
+
+		expect(sources).toContain(frame("conversation/2041?view=enterprise"));
+		expect(sources).toContain(frame("contacts/priya-nair/sheet"));
+		expect(sources).toContain(frame("contacts/maya-chen/activity"));
+		expect(sources).toContain(frame("contacts/maya-chen/conversations"));
+		expect(sources).toContain(frame("reports/stats"));
+		expect(sources).toContain(frame("reports/chart"));
+		expect(sources).toContain(frame("reports/chart?state=error"));
+		for (let source of sources) {
+			expect([source, (await fetchApp(source)).status]).toEqual([source, 200]);
+		}
+	});
+
+	test("the open conversation's frame answers with its messages and its triage forms", async () => {
+		let body = await (await fetchApp(frame("conversation/2041?view=enterprise"))).text();
+		expect(body).toContain("Is the data processing agreement countersigned?");
+		expect(body).toContain(`action="${action("enterprise/2041")}"`);
+		expect(body).not.toContain("<h1");
+	});
+
+	test("the list stays in the document while the conversation streams in its frame", async () => {
+		let body = await html("enterprise/2041");
+		expect(body).toMatch(
+			/href="[^"]*enterprise\/2041" data-split-view-item="" aria-current="page"/,
+		);
+		expect(body).toContain(frame("conversation/2041?view=enterprise"));
+	});
+
+	test("a part, record or view Relay lacks answers 404", async () => {
+		expect((await fetchApp(frame("conversation/9999"))).status).toBe(404);
+		expect((await fetchApp(frame("conversation/2041?view=nowhere"))).status).toBe(404);
+		expect((await fetchApp(frame("contacts/nobody/sheet"))).status).toBe(404);
+		expect((await fetchApp(frame("contacts/maya-chen/nothing"))).status).toBe(404);
+		expect((await fetchApp(frame("reports/nothing"))).status).toBe(404);
 	});
 });

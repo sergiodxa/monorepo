@@ -21,10 +21,12 @@ import { PageHeader } from "@sdxc/ui/app/page-header";
 import { StatCard } from "@sdxc/ui/app/stat-card";
 import { Table } from "@sdxc/ui/app/table";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import {
 	DAILY_CONVERSATIONS,
 	PREVIOUS_DAILY_CONVERSATIONS,
 } from "~/resources/views/demo-apps/relay/data";
+import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
 import { conversationsIn, findView, href } from "~/resources/views/demo-apps/relay/views";
 
@@ -72,13 +74,22 @@ function points(values: readonly number[], period: string) {
 	return values.map((y, x) => ({ x, y, label: `${period}, ${DAYS[x]}: ${y} conversations` }));
 }
 
+/** The chart's drawing box; the page scales it to the column, keeping this ratio. */
+const CHART_SIZE = { width: 960, height: 240 } as const;
+
+/** What the chart's caption says, which its placeholder draws as bars too. */
+const CHART_CAPTION = [
+	"Weekdays run busier.",
+	" Solid: the last 14 days. Dashed: the 14 days before.",
+] as const;
+
 /** The daily volume chart with the previous period dashed behind it. */
 function VolumeChart() {
 	return () => (
 		<figure mix={[vstack({ gap: 2, align: "stretch" }), m(0)]}>
 			<Chart
-				width={960}
-				height={240}
+				width={CHART_SIZE.width}
+				height={CHART_SIZE.height}
 				xDomain={[0, DAYS.length - 1]}
 				yDomain={[0, 50]}
 				aria-label="New conversations per day, the last 14 days against the 14 before"
@@ -96,8 +107,8 @@ function VolumeChart() {
 				<span>{DAYS.at(-1)}</span>
 			</div>
 			<figcaption mix={[text("sm"), fg("neutral.muted")]}>
-				<span mix={[weight("medium"), fg("neutral.emphasis")]}>Weekdays run busier.</span> Solid:
-				the last 14 days. Dashed: the 14 days before.
+				<span mix={[weight("medium"), fg("neutral.emphasis")]}>{CHART_CAPTION[0]}</span>
+				{CHART_CAPTION[1]}
 			</figcaption>
 		</figure>
 	);
@@ -123,51 +134,146 @@ function ChartError() {
 	);
 }
 
+/** One headline figure: what it counts, its value, and its change against the period before. */
+interface Figure {
+	label: string;
+	value: string;
+	change: string;
+	trend: "up" | "down" | "flat";
+	/** Tones a fall as good, for a time to respond. */
+	invert?: boolean;
+	comparison: string;
+	/** Where the card leads, for a figure with a list behind it. */
+	href?: string;
+}
+
+/** The period's four headline figures, against the two weeks before. */
+function figures(): Figure[] {
+	let total = DAILY_CONVERSATIONS.reduce((sum, value) => sum + value, 0);
+	let previous = PREVIOUS_DAILY_CONVERSATIONS.reduce((sum, value) => sum + value, 0);
+	let change = Math.round(((total - previous) / previous) * 100);
+	let inbox = findView("inbox");
+	let open = inbox ? conversationsIn(inbox).length : 0;
+	return [
+		{
+			label: "New conversations",
+			value: String(total),
+			change: `${change >= 0 ? "+" : ""}${change}%`,
+			trend: change >= 0 ? "up" : "down",
+			comparison: "vs previous 14 days",
+		},
+		{
+			label: "Median first response",
+			value: "38 min",
+			change: "−12%",
+			trend: "down",
+			invert: true,
+			comparison: "vs previous 14 days",
+		},
+		{
+			label: "Resolved within a day",
+			value: "91%",
+			change: "+3 pts",
+			trend: "up",
+			comparison: "vs previous 14 days",
+		},
+		{
+			label: "Open now",
+			value: String(open),
+			change: "±0",
+			trend: "flat",
+			comparison: "same as yesterday",
+			href: href(),
+		},
+	];
+}
+
+/**
+ * The period's four headline figures, each against the two weeks before: the
+ * `reports/stats` frame. As a ghost it is the frame's placeholder, every line drawn as a bar
+ * that wraps where its text does, so a phone's two narrow columns keep their height.
+ */
+export function ReportStats(handle: Handle<{ ghost?: boolean }>) {
+	return () => {
+		let ghost = handle.props.ghost ?? false;
+		let shown = (node: string) => (ghost ? <Ghost>{node}</Ghost> : node);
+
+		return (
+			<StatCard.Group
+				variant="ruled"
+				columns={4}
+				aria-label={ghost ? undefined : "The last 14 days"}
+				aria-hidden={ghost ? "true" : undefined}
+			>
+				{figures().map((figure) => (
+					<StatCard href={ghost ? undefined : figure.href}>
+						<StatCard.Label>{shown(figure.label)}</StatCard.Label>
+						<StatCard.Value>{shown(figure.value)}</StatCard.Value>
+						<StatCard.Delta
+							trend={ghost ? "flat" : figure.trend}
+							invert={figure.invert}
+							comparison={shown(figure.comparison)}
+						>
+							{shown(figure.change)}
+						</StatCard.Delta>
+					</StatCard>
+				))}
+			</StatCard.Group>
+		);
+	};
+}
+
+namespace ReportChart {
+	export interface Props {
+		/** Answers the chart's failure in its region, as the demo's error link asks. */
+		failed: boolean;
+	}
+}
+
+/** The volume chart, or why it failed to load: the `reports/chart` frame. */
+export function ReportChart(handle: Handle<ReportChart.Props>) {
+	return () => (handle.props.failed ? <ChartError /> : <VolumeChart />);
+}
+
+/**
+ * The chart's placeholder: the plot at its aspect ratio, the day row, and the caption's
+ * own lines as bars, so the table below stays put when the chart lands.
+ */
+export function ChartPlaceholder() {
+	return () => (
+		<div aria-hidden="true" mix={[vstack({ gap: 2, align: "stretch" })]}>
+			<div
+				mix={[
+					raw({
+						inlineSize: "100%",
+						aspectRatio: `${CHART_SIZE.width} / ${CHART_SIZE.height}`,
+						borderRadius: "var(--ui-radius-md)",
+						background: "var(--ui-neutral-bg-tint)",
+					}),
+				]}
+			/>
+			<div mix={[text("xs"), raw({ visibility: "hidden" })]}>&nbsp;</div>
+			<div mix={[text("sm")]}>
+				<Ghost>
+					<span mix={[weight("medium")]}>{CHART_CAPTION[0]}</span>
+					{CHART_CAPTION[1]}
+				</Ghost>
+			</div>
+		</div>
+	);
+}
+
 /** Renders the reports screen. */
 export function ReportsScreen(handle: Handle<ReportsScreen.Props>) {
 	return () => {
 		let { collapsed, failed } = handle.props;
-		let total = DAILY_CONVERSATIONS.reduce((sum, value) => sum + value, 0);
-		let previous = PREVIOUS_DAILY_CONVERSATIONS.reduce((sum, value) => sum + value, 0);
-		let change = Math.round(((total - previous) / previous) * 100);
 		let busiest = Math.max(...BY_VIEW.map((row) => row.conversations));
-		let inbox = findView("inbox");
-		let open = inbox ? conversationsIn(inbox).length : 0;
 
 		return (
 			<RelayShell current="reports" collapsed={collapsed} crumb="Reports">
 				<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 					<PageHeader title="Reports" description="The last 14 days, against the 14 before." />
-					<StatCard.Group variant="ruled" columns={4} aria-label="The last 14 days">
-						<StatCard>
-							<StatCard.Label>New conversations</StatCard.Label>
-							<StatCard.Value>{total}</StatCard.Value>
-							<StatCard.Delta trend={change >= 0 ? "up" : "down"} comparison="vs previous 14 days">
-								{`${change >= 0 ? "+" : ""}${change}%`}
-							</StatCard.Delta>
-						</StatCard>
-						<StatCard>
-							<StatCard.Label>Median first response</StatCard.Label>
-							<StatCard.Value>38 min</StatCard.Value>
-							<StatCard.Delta trend="down" invert comparison="vs previous 14 days">
-								−12%
-							</StatCard.Delta>
-						</StatCard>
-						<StatCard>
-							<StatCard.Label>Resolved within a day</StatCard.Label>
-							<StatCard.Value>91%</StatCard.Value>
-							<StatCard.Delta trend="up" comparison="vs previous 14 days">
-								+3 pts
-							</StatCard.Delta>
-						</StatCard>
-						<StatCard href={href()}>
-							<StatCard.Label>Open now</StatCard.Label>
-							<StatCard.Value>{open}</StatCard.Value>
-							<StatCard.Delta trend="flat" comparison="same as yesterday">
-								±0
-							</StatCard.Delta>
-						</StatCard>
-					</StatCard.Group>
+					<DemoAppFrame app="relay" part="reports/stats" fallback={<ReportStats ghost />} />
 					<section aria-labelledby="relay-volume" mix={[vstack({ gap: 3, align: "stretch" })]}>
 						<h2
 							id="relay-volume"
@@ -175,7 +281,11 @@ export function ReportsScreen(handle: Handle<ReportsScreen.Props>) {
 						>
 							Conversations per day
 						</h2>
-						{failed ? <ChartError /> : <VolumeChart />}
+						<DemoAppFrame
+							app="relay"
+							part={failed ? "reports/chart?state=error" : "reports/chart"}
+							fallback={<ChartPlaceholder />}
+						/>
 					</section>
 					<section aria-labelledby="relay-by-view" mix={[vstack({ gap: 3, align: "stretch" })]}>
 						<h2

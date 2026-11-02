@@ -27,7 +27,8 @@ import { SPLIT_VIEW_ITEM_ATTRIBUTE, SplitView } from "@sdxc/ui/app/split-view";
 import type { Conversation } from "~/resources/views/demo-apps/relay/data";
 import type { InboxView } from "~/resources/views/demo-apps/relay/views";
 
-import { ConversationPane } from "~/resources/views/demo-apps/relay/conversation";
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
+import { ConversationPlaceholder } from "~/resources/views/demo-apps/relay/conversation";
 import { NOW, findContact, updatedAt } from "~/resources/views/demo-apps/relay/data";
 import { SPLIT_LABELS } from "~/resources/views/demo-apps/relay/labels";
 import { RelayShell } from "~/resources/views/demo-apps/relay/shell";
@@ -222,6 +223,14 @@ function ConversationList(
 	};
 }
 
+/**
+ * The open conversation's frame: the part names the conversation and carries the view it is
+ * read in, which its triage forms return to, so each conversation caches once per view.
+ */
+export function conversationPart(view: InboxView, conversation: Conversation): string {
+	return `conversation/${conversation.id}?view=${view.slug}`;
+}
+
 /** The detail pane while nothing is open: a quiet line and the key that opens the first row. */
 function NoSelection(handle: Handle<{ view: InboxView }>) {
 	return () => {
@@ -270,7 +279,15 @@ export function InboxScreen(handle: Handle<InboxScreen.Props>) {
 					<SplitView
 						id="relay-inbox"
 						list={<ConversationList view={view} selected={selected} archived={archived} />}
-						detail={selected ? <ConversationPane view={view} conversation={selected} /> : null}
+						detail={
+							selected ? (
+								<DemoAppFrame
+									app="relay"
+									part={conversationPart(view, selected)}
+									fallback={<ConversationPlaceholder conversation={selected} />}
+								/>
+							) : null
+						}
 						empty={<NoSelection view={view} />}
 						active={selected ? "detail" : "list"}
 						backHref={href(viewPage(view))}

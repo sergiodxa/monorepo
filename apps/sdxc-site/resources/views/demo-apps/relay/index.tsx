@@ -8,6 +8,7 @@
  */
 
 import type { Toast } from "@sdxc/ui/app";
+import type { RemixNode } from "remix/component";
 
 import { CompassIcon } from "@sdxc/icons";
 import { LinkButton } from "@sdxc/ui";
@@ -27,9 +28,13 @@ import type {
 import type { ContactsState } from "~/resources/views/demo-apps/relay/contacts";
 import type { InboxView } from "~/resources/views/demo-apps/relay/views";
 
-import { ContactScreen } from "~/resources/views/demo-apps/relay/contact";
-import { ContactsScreen } from "~/resources/views/demo-apps/relay/contacts";
-import { SNOOZE_OPTIONS } from "~/resources/views/demo-apps/relay/conversation";
+import { ContactConversations, ContactScreen } from "~/resources/views/demo-apps/relay/contact";
+import {
+	ContactActivity,
+	ContactSheetBody,
+	ContactsScreen,
+} from "~/resources/views/demo-apps/relay/contacts";
+import { ConversationPane, SNOOZE_OPTIONS } from "~/resources/views/demo-apps/relay/conversation";
 import {
 	CONVERSATIONS,
 	TEAMMATES,
@@ -37,7 +42,7 @@ import {
 	findConversation,
 } from "~/resources/views/demo-apps/relay/data";
 import { InboxScreen, SPLIT_COOKIE } from "~/resources/views/demo-apps/relay/inbox";
-import { ReportsScreen } from "~/resources/views/demo-apps/relay/reports";
+import { ReportChart, ReportStats, ReportsScreen } from "~/resources/views/demo-apps/relay/reports";
 import { SETTINGS_PAGES, SettingsScreen } from "~/resources/views/demo-apps/relay/settings";
 import { RelayShell, SHELL_COOKIE } from "~/resources/views/demo-apps/relay/shell";
 import { RelayThumbnail } from "~/resources/views/demo-apps/relay/thumbnail";
@@ -293,6 +298,41 @@ function route(request: DemoAppRequest): DemoAppScreen | null {
 }
 
 /**
+ * Answers one of Relay's frames: the open conversation, a contact's sheet body, activity or
+ * conversations, and the reports' figures and chart. Each reads its state from its own
+ * path and query, and an unknown part, record or view answers `null`.
+ */
+function framePart(part: string, url: URL): RemixNode | null {
+	let [first = "", second, third, ...rest] = part.split("/");
+	if (rest.length > 0) return null;
+
+	if (first === "conversation" && second !== undefined && third === undefined) {
+		let view = findView(url.searchParams.get("view") ?? "inbox");
+		let conversation = findConversation(second);
+		return view && conversation ? (
+			<ConversationPane view={view} conversation={conversation} />
+		) : null;
+	}
+
+	if (first === "contacts" && second !== undefined) {
+		let contact = findContact(second);
+		if (contact === undefined) return null;
+		if (third === "sheet") return <ContactSheetBody contact={contact} />;
+		if (third === "activity") return <ContactActivity contact={contact} />;
+		if (third === "conversations") return <ContactConversations contact={contact} />;
+		return null;
+	}
+
+	if (first === "reports" && third === undefined) {
+		if (second === "stats") return <ReportStats />;
+		if (second === "chart")
+			return <ReportChart failed={url.searchParams.get("state") === "error"} />;
+	}
+
+	return null;
+}
+
+/**
  * Picks the conversation to open after one leaves a view, the way Mail moves to the next
  * message: the one below it, else the one above, else the empty view.
  */
@@ -359,6 +399,7 @@ export default {
 	screens: SCREENS,
 	cookies: [SHELL_COOKIE, SPLIT_COOKIE],
 	toasts: TOASTS,
+	frame: (part, request) => framePart(part, request.url),
 	render(request) {
 		return route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));
 	},

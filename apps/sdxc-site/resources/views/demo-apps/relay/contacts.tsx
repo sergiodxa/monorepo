@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import {
 	ArchiveIcon,
@@ -33,6 +33,7 @@ import { ViewOptions } from "@sdxc/ui/app/view-options";
 
 import type { Contact, Plan } from "~/resources/views/demo-apps/relay/data";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import {
 	COMPANIES,
 	CONTACTS,
@@ -43,6 +44,7 @@ import {
 	findTeammate,
 	planOf,
 } from "~/resources/views/demo-apps/relay/data";
+import { Ghost } from "~/resources/views/demo-apps/relay/ghost";
 import {
 	FILTER_LABELS,
 	SHEET_LABELS,
@@ -166,34 +168,45 @@ function withContact(url: URL, contactId: string | null): string {
 	return query === "" ? "contacts" : `contacts?${query}`;
 }
 
-/** A contact's facts as label and value rows, every empty value named. */
-export function ContactProperties(handle: Handle<{ contact: Contact }>) {
+/**
+ * A contact's facts as label and value rows, every empty value named. As a ghost each value
+ * is a bar the width of its text, for a placeholder.
+ */
+export function ContactProperties(handle: Handle<{ contact: Contact; ghost?: boolean }>) {
 	return () => {
-		let { contact } = handle.props;
+		let { contact, ghost = false } = handle.props;
 		let company = findCompany(contact.companyId);
 		let plan = planOf(contact);
+		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
+		let badge = (
+			<Badge variant="secondary" color={plan === "Enterprise" ? "brand" : "neutral"}>
+				{plan}
+			</Badge>
+		);
 
 		return (
 			<PropertyList>
-				<PropertyList.Item label="Email">{contact.email}</PropertyList.Item>
-				<PropertyList.Item label="Company">{company?.name}</PropertyList.Item>
+				<PropertyList.Item label="Email">{shown(contact.email)}</PropertyList.Item>
+				<PropertyList.Item label="Company">{shown(company?.name)}</PropertyList.Item>
 				<PropertyList.Item label="Plan">
-					<Badge variant="secondary" color={plan === "Enterprise" ? "brand" : "neutral"}>
-						{plan}
-					</Badge>
+					{ghost ? <Ghost box>{badge}</Ghost> : badge}
 				</PropertyList.Item>
-				<PropertyList.Item label="Role">{contact.title}</PropertyList.Item>
-				<PropertyList.Item label="Location">{contact.location}</PropertyList.Item>
-				<PropertyList.Item label="Last seen" empty="Never signed in">
-					{contact.lastSeen ? <RelativeTime date={contact.lastSeen} now={NOW} locale="en" /> : null}
+				<PropertyList.Item label="Role">{shown(contact.title)}</PropertyList.Item>
+				<PropertyList.Item label="Location">{shown(contact.location)}</PropertyList.Item>
+				<PropertyList.Item label="Last seen" empty={shown("Never signed in")}>
+					{contact.lastSeen
+						? shown(<RelativeTime date={contact.lastSeen} now={NOW} locale="en" />)
+						: null}
 				</PropertyList.Item>
 				<PropertyList.Item label="Lifetime value">
-					{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-						contact.lifetimeValue,
+					{shown(
+						new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+							contact.lifetimeValue,
+						),
 					)}
 				</PropertyList.Item>
 				<PropertyList.Item label="Customer since">
-					<RelativeTime date={contact.since} now={NOW} locale="en" />
+					{shown(<RelativeTime date={contact.since} now={NOW} locale="en" />)}
 				</PropertyList.Item>
 			</PropertyList>
 		);
@@ -265,42 +278,74 @@ function activityOf(contact: Contact): ActivityEvent[] {
 	return [...events].sort((a, b) => b.at.localeCompare(a.at));
 }
 
-/** A contact's history as a quiet timeline; past the first four, the rest fold away. */
-export function ContactActivity(handle: Handle<{ contact: Contact }>) {
+/** The glyph each kind of event draws on the rail. */
+function activityIcon(kind: ActivityEvent["kind"]): RemixNode {
+	switch (kind) {
+		case "opened":
+			return <MessageSquareIcon />;
+		case "replied":
+			return <ReplyIcon />;
+		case "archived":
+			return <ArchiveIcon />;
+		case "joined":
+			return <BadgeCheckIcon />;
+	}
+}
+
+/**
+ * A contact's history as a quiet timeline; past the first four, the rest fold away. As a
+ * ghost each line is drawn as bars that wrap where its text does, on an empty rail.
+ */
+export function ContactActivity(handle: Handle<{ contact: Contact; ghost?: boolean }>) {
 	return () => {
-		let { contact } = handle.props;
+		let { contact, ghost = false } = handle.props;
 		let events = activityOf(contact);
-		let icon = (kind: ActivityEvent["kind"]) => {
-			switch (kind) {
-				case "opened":
-					return <MessageSquareIcon />;
-				case "replied":
-					return <ReplyIcon />;
-				case "archived":
-					return <ArchiveIcon />;
-				case "joined":
-					return <BadgeCheckIcon />;
-			}
-		};
+		let shown = (node: RemixNode) => (ghost ? <Ghost>{node}</Ghost> : node);
 		let event = (item: ActivityEvent) => (
 			<Timeline.Event
-				icon={icon(item.kind)}
-				tone={item.tone}
-				actor={item.actor}
-				time={<RelativeTime date={item.at} now={NOW} locale="en" />}
+				icon={ghost ? <span /> : activityIcon(item.kind)}
+				tone={ghost ? "neutral" : item.tone}
+				actor={shown(item.actor)}
+				time={shown(<RelativeTime date={item.at} now={NOW} locale="en" />)}
 			>
-				{item.text}
+				{shown(item.text)}
 			</Timeline.Event>
 		);
 		let rest = events.slice(4);
 
 		return (
-			<Timeline aria-label={`${contact.name}'s activity`}>
+			<Timeline aria-label={ghost ? undefined : `${contact.name}'s activity`}>
 				{events.slice(0, 4).map(event)}
 				{rest.length > 0 ? (
-					<Timeline.More summary={`${rest.length} earlier events`}>{rest.map(event)}</Timeline.More>
+					<Timeline.More summary={shown(`${rest.length} earlier events`)}>
+						{ghost ? null : rest.map(event)}
+					</Timeline.More>
 				) : null}
 			</Timeline>
+		);
+	};
+}
+
+/**
+ * The contact peek's body, the sheet's `contacts/<id>/sheet` frame: their facts, then
+ * their history. As a ghost it is the frame's placeholder, the same rows drawn as bars.
+ */
+export function ContactSheetBody(handle: Handle<{ contact: Contact; ghost?: boolean }>) {
+	return () => {
+		let { contact, ghost = false } = handle.props;
+		let headingMix = [m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")];
+		return (
+			<div aria-hidden={ghost ? "true" : undefined} mix={[vstack({ gap: 5, align: "stretch" })]}>
+				<ContactProperties contact={contact} ghost={ghost} />
+				{ghost ? (
+					<div mix={headingMix}>
+						<Ghost>Activity</Ghost>
+					</div>
+				) : (
+					<h3 mix={headingMix}>Activity</h3>
+				)}
+				<ContactActivity contact={contact} ghost={ghost} />
+			</div>
 		);
 	};
 }
@@ -398,9 +443,11 @@ function ContactSheet(handle: Handle<{ contact: Contact; list: Contact[]; url: U
 				}
 				labels={SHEET_LABELS}
 			>
-				<ContactProperties contact={contact} />
-				<h3 mix={[m(0), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>Activity</h3>
-				<ContactActivity contact={contact} />
+				<DemoAppFrame
+					app="relay"
+					part={`contacts/${contact.id}/sheet`}
+					fallback={<ContactSheetBody contact={contact} ghost />}
+				/>
 			</DetailSheet>
 		);
 	};
