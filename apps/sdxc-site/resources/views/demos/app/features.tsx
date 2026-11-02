@@ -46,6 +46,7 @@ import {
 	ListsScreen,
 	MealsScreen,
 } from "~/resources/views/demos/app/screens";
+import { renderNearView } from "~/resources/views/demos/near-view";
 
 /** The devices the privacy band shows on one household key, with their last sync. */
 const DEVICES = [
@@ -65,6 +66,7 @@ export function Tour() {
 	return () => (
 		<FeatureBand
 			id="features"
+			mix={[renderNearView(890, 1135)]}
 			layout="stage"
 			eyebrow="How it works"
 			title="Four screens, one household"
@@ -189,7 +191,7 @@ const DETAILS = [
  */
 export function Details() {
 	return () => (
-		<LandingSection id="small-things">
+		<LandingSection id="small-things" mix={[renderNearView(940, 2300)]}>
 			<LandingHeader
 				eyebrow="The small things"
 				description="The features families asked for once they had used Rooftree for a month."
@@ -246,6 +248,7 @@ export function Privacy() {
 	return () => (
 		<FeatureBand
 			id="privacy"
+			mix={[renderNearView(380, 780)]}
 			layout="split"
 			tone="inverse"
 			inset
@@ -370,7 +373,7 @@ const PLATFORMS = [
  */
 export function Platforms() {
 	return () => (
-		<LandingSection id="platforms" align="center">
+		<LandingSection id="platforms" align="center" mix={[renderNearView(595, 990)]}>
 			<LandingHeader
 				align="center"
 				eyebrow="Everywhere you are"

@@ -15,6 +15,7 @@ import { CheckRow, ClosingCta, FaqBand, PricingBand, TestimonialBand } from "@sd
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import { StoreBadges } from "~/resources/views/demos/app/store-badges";
+import { renderNearView } from "~/resources/views/demos/near-view";
 
 /** What households say: the first leads large, the rest fill the carousel in order. */
 const STORIES = [
@@ -157,6 +158,7 @@ export function Stories() {
 	return () => (
 		<TestimonialBand
 			id="stories"
+			mix={[renderNearView(670)]}
 			tone="tinted"
 			layout="carousel"
 			carouselLabel="More household stories"
@@ -206,6 +208,7 @@ export function Pricing() {
 	return () => (
 		<PricingBand
 			id="pricing"
+			mix={[renderNearView(730, 1160)]}
 			tone="tinted"
 			columns={2}
 			eyebrow="Pricing"

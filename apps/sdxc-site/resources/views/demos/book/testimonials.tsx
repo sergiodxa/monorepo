@@ -10,6 +10,8 @@ import type { RemixNode } from "remix/component";
 
 import { TestimonialBand } from "@sdxc/ui/landing";
 
+import { renderNearView } from "~/resources/views/demos/near-view";
+
 /** One review: the quote, its reader and their job. */
 interface Review {
 	quote: RemixNode;
@@ -83,6 +85,7 @@ export default function BookTestimonials() {
 	return () => (
 		<TestimonialBand
 			id="reviews"
+			mix={[renderNearView(960, 1805)]}
 			columns={3}
 			eyebrow="Reader reviews"
 			title="Readers who now notice everything"

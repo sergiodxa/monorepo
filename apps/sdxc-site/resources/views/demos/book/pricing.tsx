@@ -11,6 +11,7 @@ import { Badge, Link } from "@sdxc/ui";
 import { CheckRow, PricingBand } from "@sdxc/ui/landing";
 
 import CheckoutButton from "~/resources/views/demos/book/checkout-button";
+import { renderNearView } from "~/resources/views/demos/near-view";
 
 /**
  * Renders the two packages in one row from the `md` container, the complete edition set in
@@ -22,6 +23,7 @@ export default function BookPricing() {
 	return () => (
 		<PricingBand
 			id="pricing"
+			mix={[renderNearView(735, 1225)]}
 			eyebrow="Pricing"
 			title="Pick how you want to learn"
 			columns={2}

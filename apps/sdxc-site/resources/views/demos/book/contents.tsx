@@ -15,6 +15,8 @@ import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Curriculum, LandingHeader, LandingSection } from "@sdxc/ui/landing";
 
+import { renderNearView } from "~/resources/views/demos/near-view";
+
 /** One chapter: its title, a line on what it covers, its pages and its video lessons. */
 interface Chapter {
 	title: string;
@@ -158,7 +160,7 @@ export default function BookContents() {
 		let page = FRONT_MATTER;
 
 		return (
-			<LandingSection id="contents" ruled>
+			<LandingSection id="contents" ruled mix={[renderNearView(960, 1220)]}>
 				<div mix={[container(CONTAINER_NAME)]}>
 					<div
 						mix={[

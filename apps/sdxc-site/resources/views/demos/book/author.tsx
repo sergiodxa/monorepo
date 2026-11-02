@@ -14,6 +14,7 @@ import { when } from "@sdxc/u/state";
 import { AuthorBand } from "@sdxc/ui/landing";
 
 import { SERIF } from "~/resources/views/demos/book/type";
+import { renderNearView } from "~/resources/views/demos/near-view";
 
 /** The credentials, in the order the bio earns them. */
 const CREDENTIALS = [
@@ -102,6 +103,7 @@ export default function BookAuthor() {
 	return () => (
 		<AuthorBand
 			id="author"
+			mix={[renderNearView(630, 1140)]}
 			ruled
 			portrait={<Portrait />}
 			eyebrow="About the author"

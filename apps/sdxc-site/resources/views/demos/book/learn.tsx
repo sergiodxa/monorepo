@@ -18,6 +18,8 @@ import {
 } from "@sdxc/icons";
 import { Feature, FeatureBand } from "@sdxc/ui/landing";
 
+import { renderNearView } from "~/resources/views/demos/near-view";
+
 /** One skill: its icon, its title and the sentence that sells it. */
 interface Skill {
 	icon: RemixNode;
@@ -99,6 +101,7 @@ export default function BookLearn() {
 	return () => (
 		<FeatureBand
 			id="learn"
+			mix={[renderNearView(570, 1300)]}
 			layout="grid"
 			columns={3}
 			gridVariant="list"

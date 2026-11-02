@@ -19,6 +19,7 @@ import { FeatureBand } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
 import BookSamplePage from "~/resources/views/demos/book/sample-page";
+import { renderNearView } from "~/resources/views/demos/near-view";
 
 /**
  * Renders the offer beside the page from the `lg` container up. The field and button share
@@ -30,6 +31,7 @@ export default function BookSample() {
 	return () => (
 		<FeatureBand
 			id="sample"
+			mix={[renderNearView(450, 895)]}
 			layout="split"
 			eyebrow="Free chapter"
 			title="Read chapter 2 before you buy"

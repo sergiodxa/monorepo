@@ -46,6 +46,7 @@ import {
 } from "@sdxc/ui/landing";
 import { landingCtaChrome } from "@sdxc/ui/styles";
 
+import { renderNearView } from "~/resources/views/demos/near-view";
 import {
 	CurrencyScene,
 	PortalScene,
@@ -285,7 +286,7 @@ export function CustomersStrip() {
  */
 export function MeteringChapter() {
 	return () => (
-		<Rails id="product" ruled marks="corners">
+		<Rails id="product" ruled marks="corners" mix={[renderNearView(645, 900)]}>
 			<HeadingScope level={2}>
 				<Split>
 					<Split.Copy>
@@ -354,6 +355,7 @@ export function WorkflowBand() {
 	return () => (
 		<FeatureBand
 			id="workflow"
+			mix={[renderNearView(560, 855)]}
 			layout="stage"
 			tone="inverse"
 			inset
@@ -413,7 +415,7 @@ export function WorkflowBand() {
  */
 export function PlatformChapter() {
 	return () => (
-		<Rails id="platform" ruled marks="corners">
+		<Rails id="platform" ruled marks="corners" mix={[renderNearView(1145)]}>
 			<HeadingScope level={2}>
 				<LandingHeader
 					layout="split"
@@ -492,7 +494,7 @@ export function PlatformChapter() {
  */
 export function SecurityChapter() {
 	return () => (
-		<Rails id="security" ruled marks="corners">
+		<Rails id="security" ruled marks="corners" mix={[renderNearView(800, 1300)]}>
 			<HeadingScope level={2}>
 				<LandingHeader
 					eyebrow="04 / Security"
@@ -619,6 +621,7 @@ export function TestimonialSection() {
 	return () => (
 		<TestimonialBand
 			id="customers"
+			mix={[renderNearView(990, 1545)]}
 			tone="tinted"
 			columns={2}
 			eyebrow="05 / Customers"
@@ -663,6 +666,7 @@ export function PricingSection() {
 	return () => (
 		<PricingBand
 			id="pricing"
+			mix={[renderNearView(745, 1685)]}
 			eyebrow="06 / Pricing"
 			title="Pay as your revenue grows"
 			description={
