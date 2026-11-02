@@ -129,6 +129,22 @@ describe("GET /demo/apps/:app", () => {
 		},
 	);
 
+	test.each(apps)(
+		"$slug drops a one-time toast from every prefetched link on the page it greets",
+		async ({ slug, app }) => {
+			let key = Object.keys(app.toasts)[0]!;
+			for (let screen of app.screens) {
+				let separator = screen.includes("?") ? "&" : "?";
+				let path = `${demoAppHref(slug)(screen)}${separator}${DEMO_APP_TOAST_PARAM}=${key}.1a2b3c4d`;
+				let body = await (await fetchApp(path)).text();
+				let carrying = [...body.matchAll(/<a\b[^>]*data-rmx-prefetch="[^"]+"[^>]*>/g)]
+					.map(([tag]) => tag)
+					.filter((tag) => tag.includes("toast="));
+				expect(carrying, path).toEqual([]);
+			}
+		},
+	);
+
 	test("an unknown app answers the site's 404", async () => {
 		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
 	});

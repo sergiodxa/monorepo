@@ -453,14 +453,21 @@ function ContactSheet(handle: Handle<{ contact: Contact; list: Contact[]; url: U
 	};
 }
 
-/** The list's toolbar: search, plan and company facets with counts, sort and display. */
+/**
+ * The list's toolbar: search, plan and company facets with counts, sort and display. It
+ * builds its links from the address without the one-time toast, so no filter or sort link
+ * shows a toast again.
+ */
 function ContactsToolbar(handle: Handle<{ url: URL; query: ContactQuery }>) {
 	return () => {
-		let { url, query } = handle.props;
+		let { query } = handle.props;
+		let url = new URL(handle.props.url);
+		url.searchParams.delete("toast");
 		let searched = CONTACTS.filter((contact) => matchesSearch(contact, query.q));
 
 		return (
 			<FilterBar
+				prefetch="intent"
 				id="relay-contacts-filter"
 				url={url}
 				collapse

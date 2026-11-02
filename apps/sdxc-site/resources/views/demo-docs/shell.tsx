@@ -355,6 +355,7 @@ export function DemoDocsArticle(handle: Handle<DemoDocsArticle.Props>) {
 				) : null}
 
 				<DocsPager
+					prefetch="intent"
 					previous={previous}
 					next={next}
 					section={section}

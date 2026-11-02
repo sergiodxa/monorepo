@@ -250,6 +250,7 @@ export default function Services(handle: Handle<Services.Props>) {
 				<PageHeader title={COPY.services.title} description={COPY.services.description} />
 				<HeadingScope level={2}>
 					<FilterBar
+						prefetch="intent"
 						id="pulse-services"
 						url={url}
 						locale={LOCALE}

@@ -67,6 +67,7 @@ export default function Incidents(handle: Handle<Incidents.Props>) {
 				<PageHeader title={COPY.incidents.title} description={COPY.incidents.description} />
 				<HeadingScope level={2}>
 					<FilterBar
+						prefetch="intent"
 						id="pulse-incidents"
 						url={url}
 						locale={LOCALE}

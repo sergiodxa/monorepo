@@ -129,6 +129,7 @@ export function PostsScreen(handle: Handle<PostsScreenProps>) {
 					}
 				/>
 				<FilterBar
+					prefetch="intent"
 					id="posts-filters"
 					url={listUrl}
 					tabs={[
