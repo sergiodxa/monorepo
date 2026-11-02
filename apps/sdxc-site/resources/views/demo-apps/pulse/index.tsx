@@ -9,6 +9,7 @@
 
 import { SearchIcon } from "@sdxc/icons";
 import { LinkButton } from "@sdxc/ui";
+import { APP_SHELL_COOKIE } from "@sdxc/ui/app/app-shell";
 import { Empty } from "@sdxc/ui/app/empty";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
@@ -325,6 +326,7 @@ export default {
 		"settings/notifications",
 		"settings/billing",
 	],
+	cookies: [APP_SHELL_COOKIE],
 	toasts: {
 		"services-paused": { color: "neutral", title: "Services paused" },
 		"services-resumed": { color: "success", title: "Services resumed" },

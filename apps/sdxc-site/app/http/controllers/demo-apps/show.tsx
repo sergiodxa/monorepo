@@ -10,6 +10,7 @@
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { withBundleCache, withEdgeCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { DEMO_APP_TOAST_PARAM, findDemoApp, readToastParam } from "~/resources/views/demo-apps";
 import DemoAppDocument from "~/resources/views/demo-apps/document";
@@ -22,7 +23,8 @@ const PARAMS = s.object({ app: s.string(), page: s.optional(s.string()) });
  * Renders the screen the path names, or the app's own 404 screen. An unknown app answers the
  * site's 404. A `toast` parameter naming one of the app's toasts shows it once, and a reload
  * of the same address shows nothing new; any other value is ignored, so the address can never
- * put words on the page. The app reads the parameter as its bare key.
+ * put words on the page. The app reads the parameter as its bare key. Every other screen is
+ * cached per address and per value of the cookies the app reads; a toast's page never is.
  */
 export default createAction(routes.demoApps.show, async (ctx) => {
 	let { app: slug, page = "" } = s.parse(PARAMS, ctx.params);
@@ -34,10 +36,32 @@ export default createAction(routes.demoApps.show, async (ctx) => {
 	let url = new URL(ctx.url);
 	if (toast !== null) url.searchParams.set(DEMO_APP_TOAST_PARAM, toast.key);
 
-	let screen = await app.render({ page, url, cookie: ctx.request.headers.get("Cookie") });
+	let cookie = ctx.request.headers.get("Cookie");
+	let renderPage = async () => {
+		let screen = await app.render({ page, url, cookie });
+		return ctx.render(
+			<DemoAppDocument assets={ctx.assets} app={app} screen={screen} toast={toast} />,
+			{ status: screen.status ?? 200 },
+		);
+	};
+	if (toast !== null) return await renderPage();
 
-	return ctx.render(
-		<DemoAppDocument assets={ctx.assets} app={app} screen={screen} toast={toast} />,
-		{ status: screen.status ?? 200 },
+	let variant = `${ctx.url.search}|${cookieVariant(cookie, app.cookies)}`;
+	return await withEdgeCache(ctx.request, variant, async (request) =>
+		withBundleCache(request, await renderPage(), variant),
 	);
 });
+
+/**
+ * The values of the cookies an app renders from, in the app's order, so two visitors whose
+ * layouts match share a cached copy and two whose layouts differ never do.
+ */
+function cookieVariant(header: string | null, names: readonly string[]): string {
+	let pairs = new Map(
+		(header ?? "").split(";").map((pair) => {
+			let [name = "", ...value] = pair.trim().split("=");
+			return [name, value.join("=")] as const;
+		}),
+	);
+	return names.map((name) => `${name}=${pairs.get(name) ?? ""}`).join("&");
+}

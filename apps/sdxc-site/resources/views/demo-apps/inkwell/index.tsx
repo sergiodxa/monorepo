@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { readAppShellCookie } from "@sdxc/ui/app/app-shell";
+import { APP_SHELL_COOKIE, readAppShellCookie } from "@sdxc/ui/app/app-shell";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 
@@ -293,6 +293,7 @@ export default {
 		"settings/publishing",
 		"settings/team",
 	],
+	cookies: [APP_SHELL_COOKIE],
 	toasts: TOASTS,
 	render(request) {
 		let screen = route(request, new Date());

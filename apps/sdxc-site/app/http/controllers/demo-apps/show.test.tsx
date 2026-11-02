@@ -88,6 +88,29 @@ describe("GET /demo/apps/:app", () => {
 		},
 	);
 
+	test("caches each query state and layout cookie apart, and never a toast's page", async () => {
+		let tag = async (path: string, cookie = "") =>
+			(await fetchApp(path, { headers: cookie === "" ? {} : { Cookie: cookie } })).headers.get(
+				"ETag",
+			);
+		let plain = await tag("/demo/apps/pulse/services");
+		let filtered = await tag("/demo/apps/pulse/services?status=down");
+		let collapsed = await tag("/demo/apps/pulse/services", "ui-app-shell-collapsed=1");
+		let unrelated = await tag("/demo/apps/pulse/services", "theme=dark");
+		let toast = await fetchApp("/demo/apps/pulse/services?toast=service-paused.1a2b3c4d");
+
+		expect(plain).toBeTruthy();
+		expect(new Set([plain, filtered, collapsed]).size).toBe(3);
+		expect(unrelated).toBe(plain);
+		expect(toast.headers.get("ETag")).toBeNull();
+		expect(toast.headers.get("Cache-Control")).toBeNull();
+
+		let revalidated = await fetchApp("/demo/apps/pulse/services", {
+			headers: { "If-None-Match": plain! },
+		});
+		expect(revalidated.status).toBe(304);
+	});
+
 	test("an unknown app answers the site's 404", async () => {
 		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
 	});

@@ -357,6 +357,7 @@ export default {
 	theme: { brand: BRAND, neutral: NEUTRAL, tokens: TOKENS },
 	thumbnail: () => <RelayThumbnail />,
 	screens: SCREENS,
+	cookies: [SHELL_COOKIE, SPLIT_COOKIE],
 	toasts: TOASTS,
 	render(request) {
 		return route(request) ?? notFound(readAppShellCookie(request.cookie, SHELL_COOKIE));

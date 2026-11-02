@@ -45,6 +45,13 @@
 			"port": 3007
 		},
 		{
+			"name": "sdxc-site-preview",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["x", "vp", "preview", "--port", "4317", "--strictPort"],
+			"cwd": "apps/sdxc-site",
+			"port": 4317
+		},
+		{
 			"name": "demo",
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "--cwd", "apps/demo", "dev"],

@@ -78,6 +78,11 @@ export interface DemoApp {
 	 * a test can walk them all; `""` is the home screen.
 	 */
 	screens: string[];
+	/**
+	 * The cookies a screen reads, such as the sidebar's collapse state, so a cached copy is
+	 * kept per combination of their values and never serves one visitor's layout to another.
+	 */
+	cookies: readonly string[];
 	/** The toasts a redirect may name, keyed by what {@link DemoAppRedirect.toast} carries. */
 	toasts: Record<string, Omit<Toast.Flash, "id">>;
 	/** Renders a screen, or the app's own 404 screen with `status: 404` for a path it lacks. */

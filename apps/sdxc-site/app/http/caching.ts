@@ -9,6 +9,7 @@
 
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { isSuccess } from "@sdxc/result";
+import { waitUntil } from "cloudflare:workers";
 
 import { rememberedTabsVariant } from "~/app/services/remembered-tabs";
 
@@ -83,4 +84,51 @@ export async function withBundleCache(
 	}
 
 	return await conditional(request, new Response(body, { status: response.status, headers }));
+}
+
+/** The request headers that make a render answer `304`, dropped from the render a cache stores. */
+const VALIDATOR_HEADERS = ["If-None-Match", "If-Modified-Since"];
+
+/**
+ * Answers a `GET` from the colo's Workers cache, rendering and storing it on a miss, so a
+ * repeated address skips the render. Entries are keyed by the address, the build and
+ * `variant`, and only a response a shared cache may keep is stored; outside the Workers
+ * runtime, in development, or for any other method, every request renders.
+ *
+ * @param request - The incoming request, whose validators are answered from either path.
+ * @param variant - What the page was rendered from beyond its address, such as the cookies it read.
+ * @param render - Renders the page for a request carrying no validators, so a miss always stores a whole page.
+ * @returns The stored or freshly rendered page, or a `304` when the reader's copy is current.
+ */
+export async function withEdgeCache(
+	request: Request,
+	variant: string,
+	render: (request: Request) => Promise<Response>,
+): Promise<Response> {
+	let cache = edgeCache();
+	let build = buildId();
+	if (request.method !== "GET" || cache === null || build === null) return await render(request);
+
+	let key = new URL(request.url);
+	key.searchParams.set("__edge", `${build}:${variant}`);
+	let hit = await cache.match(key.href);
+	if (hit) return await conditional(request, hit);
+
+	let headers = new Headers(request.headers);
+	for (let name of VALIDATOR_HEADERS) headers.delete(name);
+	let response = await render(new Request(request, { headers }));
+	let control = response.headers.get("Cache-Control") ?? "";
+	if (response.status === 200 && control.includes("public") && control.includes("s-maxage")) {
+		waitUntil(cache.put(key.href, response.clone()));
+	}
+	return await conditional(request, response);
+}
+
+/**
+ * The colo's Workers cache, absent outside the Workers runtime. Cast, since the DOM's
+ * `CacheStorage` type shadows the Workers declaration that has `default`.
+ */
+function edgeCache(): Cache | null {
+	if (typeof caches === "undefined") return null;
+	return (caches as unknown as { default?: Cache }).default ?? null;
 }
