@@ -47,8 +47,13 @@ export namespace DocsPager {
 		next: string;
 	}
 
+	/** When the pager's links prefetch their page, as `LinkButton` does. */
+	export type Prefetch = "intent" | "viewport";
+
 	/** Props accepted by {@link DocsPager}. */
 	export interface Props extends Omit<TagProps<"nav">, "children"> {
+		/** Prefetches each neighbour's page; unset prefetches none. */
+		prefetch?: Prefetch;
 		previous?: Entry | null;
 		next?: Entry | null;
 		/** Section of the page being read; a destination in another section names its own. */
@@ -64,11 +69,11 @@ export namespace DocsPager {
  * @param handle Runtime handle carrying the pager's props.
  * @returns The render function producing the pager's markup.
  * @example
- * <DocsPager {...findNeighbours(tree, path)} section="Guides" labels={{ nav: "Pagination", previous: "Previous", next: "Next" }} />
+ * <DocsPager {...findNeighbours(tree, path)} section="Guides" prefetch="intent" labels={{ nav: "Pagination", previous: "Previous", next: "Next" }} />
  */
 export function DocsPager(handle: Handle<DocsPager.Props>) {
 	return () => {
-		let { previous, next, section, labels, mix, ...rest } = handle.props;
+		let { previous, next, section, labels, prefetch, mix, ...rest } = handle.props;
 		if (!previous && !next) return null;
 		let paired = Boolean(previous && next);
 
@@ -98,13 +103,20 @@ export function DocsPager(handle: Handle<DocsPager.Props>) {
 					{previous ? (
 						<DocsPagerCard
 							entry={previous}
+							prefetch={prefetch}
 							label={labels.previous}
 							direction="previous"
 							section={section}
 						/>
 					) : null}
 					{next ? (
-						<DocsPagerCard entry={next} label={labels.next} direction="next" section={section} />
+						<DocsPagerCard
+							entry={next}
+							label={labels.next}
+							direction="next"
+							section={section}
+							prefetch={prefetch}
+						/>
 					) : null}
 				</div>
 			</nav>
@@ -118,6 +130,7 @@ namespace DocsPagerCard {
 		label: string;
 		direction: "previous" | "next";
 		section?: string;
+		prefetch?: DocsPager.Prefetch;
 	}
 }
 
@@ -128,7 +141,7 @@ namespace DocsPagerCard {
  */
 function DocsPagerCard(handle: Handle<DocsPagerCard.Props>) {
 	return () => {
-		let { direction, entry, label, section } = handle.props;
+		let { direction, entry, label, section, prefetch } = handle.props;
 		let isNext = direction === "next";
 		let Arrow = isNext ? ArrowRightIcon : ArrowLeftIcon;
 		let showSection = entry.section !== undefined && entry.section !== section;
@@ -144,6 +157,7 @@ function DocsPagerCard(handle: Handle<DocsPagerCard.Props>) {
 		return (
 			<a
 				href={entry.href}
+				data-rmx-prefetch={prefetch}
 				rel={isNext ? "next" : "prev"}
 				data-slot="docs-pager-card"
 				data-direction={direction}

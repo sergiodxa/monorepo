@@ -49,6 +49,17 @@ afterEach(async () => {
 });
 
 describe("DocsPager", () => {
+	test("prefetches both neighbours only when asked", () => {
+		let plain = mount(<DocsPager previous={PREVIOUS} next={NEXT} labels={LABELS} />);
+		expect(cards(plain).every((card) => !card.hasAttribute("data-rmx-prefetch"))).toBe(true);
+		plain.remove();
+
+		let eager = mount(
+			<DocsPager previous={PREVIOUS} next={NEXT} prefetch="viewport" labels={LABELS} />,
+		);
+		expect(cards(eager).map((card) => card.dataset.rmxPrefetch)).toEqual(["viewport", "viewport"]);
+	});
+
 	test("makes the whole card the link, corners included", () => {
 		let host = mount(<DocsPager previous={PREVIOUS} next={NEXT} section="Start" labels={LABELS} />);
 
