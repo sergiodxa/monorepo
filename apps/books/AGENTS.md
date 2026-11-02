@@ -136,7 +136,7 @@ document's stylesheets and client entry once per request through the resolver in
 publishes them as `ctx.assets`. Every page passes them to its layout explicitly:
 `<DocumentLayout assets={ctx.assets} …>`; a helper without `ctx` takes them as an argument. A build
 hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a
-file the next build renames. A stylesheet joins by a side-effect `import "….css"` in
+file the next build renames. `public/_headers` serves everything under `/assets/` with `Cache-Control: public, max-age=31536000, immutable`, so a browser keeps each hashed file for a year; a hand-placed file in `public/` stays outside `/assets/`, where it is revalidated. A stylesheet joins by a side-effect `import "….css"` in
 `resources/layouts/document.tsx`, in cascade order. A test rendering pages through its own router
 installs `assets(...)` too; tests read the fixed manifest in `app/test/assets-manifest.ts`,
 aliased in the root Vitest config.
