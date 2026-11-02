@@ -10,13 +10,10 @@
 
 import type { EntryComponent, Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { bg, border, fg, outline } from "@sdxc/u/color";
-import { opacity, rounded, shadow } from "@sdxc/u/effects";
-import { cursor, mergeMix, pointerEvents, raw } from "@sdxc/u/general";
-import { absolute, basis, container, flex, grow, hstack, relative, vstack } from "@sdxc/u/layout";
-import { bs, minIs, p, pb, pi } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
-import { focusVisible, hover } from "@sdxc/u/state";
+import { bg, fg } from "@sdxc/u/color";
+import { mergeMix, raw } from "@sdxc/u/general";
+import { container, flex, grow, hstack, relative, vstack } from "@sdxc/u/layout";
+import { bs, minIs } from "@sdxc/u/size";
 import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
 import { clientEntry } from "remix/component";
 
@@ -55,7 +52,6 @@ export namespace StatusStrip {
 		caption?: TagProps<"div">["mix"];
 		bars?: TagProps<"div">["mix"];
 		bar?: TagProps<"button">["mix"];
-		tooltip?: TagProps<"span">["mix"];
 	}
 
 	/** Props accepted by {@link StatusStrip}. */
@@ -74,23 +70,34 @@ export namespace StatusStrip {
 }
 
 /**
- * Picks where a bar's tooltip anchors from its position in the strip.
+ * Pins the tooltips of the bars near either end to that end instead of centring them, so a
+ * tooltip near the edge stays inside the strip's box. The rule depends only on the bar count, so
+ * every strip of the same length shares it.
  *
- * @param index The bar's position, oldest first.
  * @param count How many bars the strip draws.
- * @returns `start` near the oldest end, `end` near the newest, `center` between.
+ * @returns The rules aligning the oldest and newest bars' tooltips to their ends.
  */
-function tooltipAlign(index: number, count: number): "start" | "center" | "end" {
-	let share = count <= 1 ? 0.5 : index / (count - 1);
-	if (share < EDGE_SHARE) return "start";
-	if (share > 1 - EDGE_SHARE) return "end";
-	return "center";
+function edgeRules(count: number): Parameters<typeof raw>[0] {
+	let edge = count <= 1 ? 0 : Math.ceil(EDGE_SHARE * (count - 1));
+	if (edge === 0) return {};
+	let rules: Parameters<typeof raw>[0] = {};
+	rules[`& > button:nth-child(-n + ${edge})::after`] = {
+		insetInlineStart: "0",
+		insetInlineEnd: "auto",
+		translate: "none",
+	};
+	rules[`& > button:nth-last-child(-n + ${edge})::after`] = {
+		insetInlineStart: "auto",
+		insetInlineEnd: "0",
+		translate: "none",
+	};
+	return rules;
 }
 
 /**
  * Renders one bar per period as a button named by its label and value, inside a toolbar named by
  * `label`, then the caption. The newest bar is the strip's one Tab stop, and {@link StatusStripKeys}
- * moves it with the arrows; a bar's tooltip shows on hover and keyboard focus with no script.
+ * moves it with the arrows; a bar's tooltip shows its name on hover and keyboard focus with no script.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the strip's markup.
@@ -126,105 +133,89 @@ export function StatusStrip(handle: Handle<StatusStrip.Props>) {
 						flex(),
 						bs("var(--ui-status-strip-block-size, 2rem)"),
 						/**
-						 * Both gaps live in one rule, so the wide gap always wins at its width whatever
-						 * order the stylesheet layers land in.
+						 * Every bar and its tooltip is painted from this one rule, so a bar's markup is only
+						 * its status, Tab order and name. Both gaps, every status and the tooltip's shown
+						 * state share it, so each always wins whatever order the stylesheet layers land in.
 						 */
 						raw({
 							gap: "1px",
 							[`@container ${STRIP_CONTAINER} (min-width: 30rem)`]: {
 								gap: "var(--ui-status-strip-gap, 2px)",
 							},
+							"& > button": {
+								position: "relative",
+								flexGrow: "1",
+								flexBasis: "0%",
+								minInlineSize: "0",
+								padding: "0",
+								border: "none",
+								cursor: "default",
+								borderRadius: "var(--ui-status-strip-radius, 1px)",
+								backgroundColor: "var(--ui-neutral-border)",
+							},
+							'& > [data-status="up"]': { backgroundColor: "var(--ui-success-bg-solid)" },
+							'& > [data-status="degraded"]': { backgroundColor: "var(--ui-warning-bg-solid)" },
+							'& > [data-status="down"]': { backgroundColor: "var(--ui-danger-bg-solid)" },
+							'& > [data-status="no-data"]': {
+								backgroundColor: "transparent",
+								backgroundImage:
+									"repeating-linear-gradient(-45deg, var(--ui-neutral-border, color-mix(in oklab, CanvasText 16%, transparent)) 0 1.5px, transparent 1.5px 4px)",
+								boxShadow:
+									"inset 0 0 0 1px var(--ui-neutral-border, color-mix(in oklab, CanvasText 16%, transparent))",
+							},
+							"& > button:hover": { opacity: "0.8" },
+							"& > button:focus-visible": {
+								outline: "2px solid var(--ui-brand-ring)",
+								outlineOffset: "1px",
+								zIndex: "1",
+							},
+							/**
+							 * The tooltip is the bar's own generated box reading its accessible name, so it
+							 * needs no markup and no script. Hidden, it takes no box at all, so the bars at the
+							 * edges never widen a page, and shown it wraps inside the strip's width.
+							 */
+							"& > button::after": {
+								content: "attr(aria-label)",
+								position: "absolute",
+								zIndex: "10",
+								display: "none",
+								boxSizing: "border-box",
+								inlineSize: "max-content",
+								maxInlineSize: "100cqi",
+								insetBlockEnd: "calc(100% + var(--ui-status-strip-tooltip-gap, 0.375rem))",
+								insetInlineStart: "50%",
+								translate: "-50% 0",
+								paddingInline: "calc(var(--ui-spacing, 0.25rem) * 2)",
+								paddingBlock: "var(--ui-spacing, 0.25rem)",
+								borderRadius: "var(--ui-radius-md, 0.375rem)",
+								color: "var(--ui-neutral-fg-on-solid)",
+								backgroundColor: "var(--ui-neutral-bg-solid)",
+								boxShadow:
+									"var(--ui-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))",
+								fontSize: "var(--ui-text-xs, 0.75rem)",
+								lineHeight: "var(--ui-leading-xs, calc(1 / 0.75))",
+								fontWeight: "500",
+								fontVariantNumeric: "tabular-nums",
+								textAlign: "start",
+								whiteSpace: "normal",
+								pointerEvents: "none",
+							},
+							"& > button:is(:hover, :focus-visible)::after": { display: "block" },
 						}),
+						raw(edgeRules(periods.length)),
 						parts?.bars,
 					]}
 				>
-					{periods.map((period, index) => {
-						let name = period.value ? `${period.label}, ${period.value}` : period.label;
-
-						return (
-							<button
-								key={index}
-								type="button"
-								tabIndex={index === periods.length - 1 ? 0 : -1}
-								aria-label={name}
-								data-slot="status-strip-bar"
-								data-status={period.status}
-								data-align={tooltipAlign(index, periods.length)}
-								mix={[
-									relative(),
-									grow(),
-									basis("0%"),
-									p(0),
-									border("none"),
-									cursor("default"),
-									minIs(0),
-									rounded("var(--ui-status-strip-radius, 1px)"),
-									/**
-									 * Every status shares one rule, so a status always paints over the default
-									 * whatever order the stylesheet layers land in.
-									 */
-									raw({
-										backgroundColor: "var(--ui-neutral-border)",
-										'&[data-status="up"]': { backgroundColor: "var(--ui-success-bg-solid)" },
-										'&[data-status="degraded"]': { backgroundColor: "var(--ui-warning-bg-solid)" },
-										'&[data-status="down"]': { backgroundColor: "var(--ui-danger-bg-solid)" },
-										'&[data-status="no-data"]': {
-											backgroundColor: "transparent",
-											backgroundImage:
-												"repeating-linear-gradient(-45deg, var(--ui-neutral-border, color-mix(in oklab, CanvasText 16%, transparent)) 0 1.5px, transparent 1.5px 4px)",
-											boxShadow:
-												"inset 0 0 0 1px var(--ui-neutral-border, color-mix(in oklab, CanvasText 16%, transparent))",
-										},
-									}),
-									hover(opacity(80)),
-									focusVisible([outline({ color: "brand.ring", offset: 1 }), z(1)]),
-									parts?.bar,
-								]}
-							>
-								<span
-									aria-hidden="true"
-									data-slot="status-strip-tooltip"
-									mix={[
-										absolute(),
-										pi(2),
-										pb(1),
-										rounded("md"),
-										fg("neutral.onSolid"),
-										bg("neutral.solid"),
-										shadow("md"),
-										z(10),
-										text("xs"),
-										tabularNums(),
-										pointerEvents(),
-										/**
-										 * Display and alignment read the bar's state from one rule, so the shown state
-										 * always beats the hidden one whatever order the layers land in. A hidden
-										 * tooltip takes no box at all, so the bars at the edges never widen a page, and
-										 * a shown one wraps inside the strip's width.
-										 */
-										raw({
-											display: "none",
-											alignItems: "center",
-											columnGap: "0.375rem",
-											flexWrap: "wrap",
-											inlineSize: "max-content",
-											maxInlineSize: "100cqi",
-											boxSizing: "border-box",
-											insetBlockEnd: "calc(100% + var(--ui-status-strip-tooltip-gap, 0.375rem))",
-											'[data-align="start"] > &': { insetInlineStart: "0" },
-											'[data-align="end"] > &': { insetInlineEnd: "0" },
-											'[data-align="center"] > &': { insetInlineStart: "50%", translate: "-50% 0" },
-											":is(:hover, :focus-visible) > &": { display: "flex" },
-										}),
-										parts?.tooltip,
-									]}
-								>
-									<span mix={[opacity(75)]}>{period.label}</span>
-									{period.value ? <span mix={[weight("semibold")]}>{period.value}</span> : null}
-								</span>
-							</button>
-						);
-					})}
+					{periods.map((period, index) => (
+						<button
+							key={index}
+							type="button"
+							tabIndex={index === periods.length - 1 ? 0 : -1}
+							aria-label={period.value ? `${period.label}, ${period.value}` : period.label}
+							data-status={period.status}
+							mix={parts?.bar}
+						/>
+					))}
 				</div>
 				<StatusStripKeys />
 				{hasCaption ? (

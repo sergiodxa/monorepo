@@ -17,7 +17,7 @@ import { focusItem, setRovingTabindex } from "../../utils/keyboard-nav.js";
 const STRIP_SELECTOR = '[data-slot="status-strip"]';
 
 /** One bar of the strip, oldest first in document order. */
-const BAR_SELECTOR = '[data-slot="status-strip-bar"]';
+const BAR_SELECTOR = '[data-slot="status-strip-bars"] > button';
 
 /**
  * Picks the bar a key moves focus to, or `undefined` for a key the strip leaves alone. Arrows

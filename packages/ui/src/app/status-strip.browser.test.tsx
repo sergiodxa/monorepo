@@ -39,7 +39,27 @@ function mount(node: JSX.Element, width: number): HTMLElement {
 
 /** The strip's bars, oldest first. */
 function bars(host: HTMLElement): HTMLButtonElement[] {
-	return [...host.querySelectorAll<HTMLButtonElement>('[data-slot="status-strip-bar"]')];
+	return [...host.querySelectorAll<HTMLButtonElement>('[data-slot="status-strip-bars"] > button')];
+}
+
+/** A bar's tooltip: the generated box after it, which reads the bar's accessible name. */
+function tip(bar: HTMLElement): CSSStyleDeclaration {
+	return getComputedStyle(bar, "::after");
+}
+
+/**
+ * Where a bar's tooltip lands, measured from the bar's offset box plus the tooltip's resolved
+ * insets, since a generated box has no client rect of its own.
+ */
+function tipRect(bar: HTMLElement): { left: number; right: number; bottom: number; width: number } {
+	let box = bar.getBoundingClientRect();
+	let style = tip(bar);
+	let width = Number.parseFloat(style.width);
+	let left = box.left + Number.parseFloat(style.left);
+	let translate = style.translate === "none" ? 0 : Number.parseFloat(style.translate);
+	if (style.translate.endsWith("%")) translate = (translate / 100) * width;
+	left += translate;
+	return { left, right: left + width, bottom: box.bottom - Number.parseFloat(style.bottom), width };
 }
 
 beforeEach(async () => {
@@ -85,9 +105,8 @@ describe("StatusStrip", () => {
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 
 		bars(host)[60]!.focus();
-		let tooltip = bars(host)[60]!.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
-		expect(getComputedStyle(tooltip).display).toBe("flex");
-		expect(tooltip.getBoundingClientRect().width).toBeLessThanOrEqual(288);
+		expect(tip(bars(host)[60]!).display).toBe("block");
+		expect(tipRect(bars(host)[60]!).width).toBeLessThanOrEqual(288);
 	});
 
 	test("hatches a period with no data and tints the others by status", () => {
@@ -177,24 +196,32 @@ describe("StatusStrip", () => {
 		let host = mount(<StatusStrip label="Uptime" periods={DAYS} />, 320);
 		let first = bars(host)[0]!;
 		let last = bars(host).at(-1)!;
-		let tooltip = first.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
-		let lastTip = last.querySelector<HTMLElement>('[data-slot="status-strip-tooltip"]')!;
 		let strip = host.querySelector('[data-slot="status-strip"]')!.getBoundingClientRect();
 
-		expect(getComputedStyle(lastTip).display).toBe("none");
+		expect(tip(last).display).toBe("none");
 		await userEvent.keyboard("{Tab}");
 		expect(document.activeElement).toBe(last);
-		await expect.poll(() => getComputedStyle(lastTip).display).toBe("flex");
-		expect(lastTip.getBoundingClientRect().right).toBeLessThanOrEqual(strip.right + 0.5);
-		expect(lastTip.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-			last.getBoundingClientRect().top,
-		);
+		await expect.poll(() => tip(last).display).toBe("block");
+		expect(tipRect(last).right).toBeLessThanOrEqual(strip.right + 0.5);
+		expect(tipRect(last).bottom).toBeLessThanOrEqual(last.getBoundingClientRect().top);
 
 		await userEvent.keyboard("{Home}");
 		expect(document.activeElement).toBe(first);
-		await expect.poll(() => getComputedStyle(tooltip).display).toBe("flex");
-		expect(getComputedStyle(lastTip).display).toBe("none");
-		expect(tooltip.textContent).toBe("Day 1No data");
-		expect(tooltip.getBoundingClientRect().left).toBeGreaterThanOrEqual(strip.left - 0.5);
+		await expect.poll(() => tip(first).display).toBe("block");
+		expect(tip(last).display).toBe("none");
+		expect(tip(first).content).toBe('"Day 1, No data"');
+		expect(tipRect(first).left).toBeGreaterThanOrEqual(strip.left - 0.5);
+	});
+
+	test("shows the hovered bar's tooltip in the middle of the strip, centred on the bar", async () => {
+		let host = mount(<StatusStrip label="Uptime" periods={DAYS} />, 640);
+		let middle = bars(host)[45]!;
+
+		await userEvent.hover(middle);
+		await expect.poll(() => tip(middle).display).toBe("block");
+		expect(tip(bars(host)[44]!).display).toBe("none");
+		let box = middle.getBoundingClientRect();
+		let centre = (tipRect(middle).left + tipRect(middle).right) / 2;
+		expect(Math.abs(centre - (box.left + box.right) / 2)).toBeLessThanOrEqual(1);
 	});
 });
