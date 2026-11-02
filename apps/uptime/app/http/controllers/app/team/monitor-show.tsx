@@ -168,22 +168,22 @@ export default createAction(routes.app.team.monitors.show, {
 							<Frame
 								name="monitor-card-usage"
 								src={routes.app.team.monitors.cards.usage.href(params)}
-								fallback={<StatCard.Skeleton footer />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 							<Frame
 								name="monitor-card-slowest-result"
 								src={routes.app.team.monitors.cards.slowestResult.href(params)}
-								fallback={<StatCard.Skeleton footer />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 							<Frame
 								name="monitor-card-p99-response-time"
 								src={routes.app.team.monitors.cards.p99ResponseTime.href(params)}
-								fallback={<StatCard.Skeleton footer />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 							<Frame
 								name="monitor-card-uptime"
 								src={routes.app.team.monitors.cards.uptime.href(params)}
-								fallback={<StatCard.Skeleton footer />}
+								fallback={<StatCard.Skeleton delta={false} />}
 							/>
 						</StatCard.Group>
 

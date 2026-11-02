@@ -172,7 +172,7 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								})}
 								fallback={
 									<StatCard.Group aria-busy="true" columns={1}>
-										<StatCard.Skeleton />
+										<StatCard.Skeleton delta={false} />
 									</StatCard.Group>
 								}
 							/>
@@ -185,9 +185,9 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								})}
 								fallback={
 									<StatCard.Group aria-busy="true">
-										<StatCard.Skeleton />
-										<StatCard.Skeleton />
-										<StatCard.Skeleton />
+										<StatCard.Skeleton delta={false} />
+										<StatCard.Skeleton delta={false} />
+										<StatCard.Skeleton delta={false} />
 									</StatCard.Group>
 								}
 							/>
