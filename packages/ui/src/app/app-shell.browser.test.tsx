@@ -294,6 +294,24 @@ describe("AppShell", () => {
 		expect(toggle().checked).toBe(false);
 	});
 
+	test("closes the sheet in one slide at its full width, never shrinking to its content first", async () => {
+		await page.viewport(900, 800);
+		mountShell({ sheetBelow: "64rem", collapsed: true });
+		menuButton().click();
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		let open = Math.round(sidebar().getBoundingClientRect().width);
+		sidebar().hidePopover();
+		let widths = new Set<number>();
+		for (let index = 0; index < 8; index++) {
+			await new Promise((resolve) => setTimeout(resolve, 25));
+			let width = Math.round(sidebar().getBoundingClientRect().width);
+			if (width > 0) widths.add(width);
+		}
+
+		expect(open).toBe(288);
+		expect([...widths]).toEqual([288]);
+	});
+
 	test("with sheetBelow 64rem, 1023px is a sheet and 1024px docks the sidebar", async () => {
 		await reduceMotion();
 		await page.viewport(1023, 800);

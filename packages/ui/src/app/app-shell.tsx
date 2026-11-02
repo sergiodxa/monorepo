@@ -291,30 +291,29 @@ export function AppShell(handle: Handle<AppShell.Props>) {
 						mix={[
 							raw({ flexDirection: "column", boxSizing: "border-box", color: "inherit" }),
 							media(sheet, [
+								/**
+								 * The sheet keeps its box while it slides out: only `display` and `translate`
+								 * follow the open state, so closing is one slide at full width.
+								 */
 								raw({
+									position: "fixed",
+									insetBlock: "0",
+									insetInlineStart: "0",
+									insetInlineEnd: "auto",
+									margin: "0",
+									padding: "0 0 env(safe-area-inset-bottom, 0px)",
+									inlineSize: "min(var(--ui-app-sheet-width, 18rem), 85vw)",
+									blockSize: "100dvh",
+									maxBlockSize: "100dvh",
+									border: "0",
+									borderInlineEnd: "1px solid var(--ui-neutral-border)",
+									boxShadow: "var(--ui-shadow-surface)",
+									overflow: "hidden",
 									translate: "-100%",
 									transition: `translate 250ms cubic-bezier(0.2, 0, 0, 1), display 250ms allow-discrete, overlay 250ms allow-discrete`,
 								}),
-								when("&:popover-open", [
-									raw({
-										display: "flex",
-										position: "fixed",
-										insetBlock: "0",
-										insetInlineStart: "0",
-										insetInlineEnd: "auto",
-										margin: "0",
-										padding: "0 0 env(safe-area-inset-bottom, 0px)",
-										inlineSize: "min(var(--ui-app-sheet-width, 18rem), 85vw)",
-										blockSize: "100dvh",
-										maxBlockSize: "100dvh",
-										border: "0",
-										borderInlineEnd: "1px solid var(--ui-neutral-border)",
-										boxShadow: "var(--ui-shadow-surface)",
-										overflow: "hidden",
-										translate: "0",
-									}),
-									bg("neutral.tint"),
-								]),
+								bg("neutral.tint"),
+								when("&:popover-open", raw({ display: "flex", translate: "0" })),
 								when("@starting-style", when("&:popover-open", raw({ translate: "-100%" }))),
 								when(
 									"&::backdrop",
