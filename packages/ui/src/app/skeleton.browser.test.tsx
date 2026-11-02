@@ -124,6 +124,35 @@ describe("Skeleton.Stat", () => {
 		});
 	}
 
+	for (let [variant, width] of [
+		["tabs", 1100],
+		["ruled", 1100],
+		["cards", 375],
+	] as const) {
+		test(`places the delta where a real one sits in ${variant} at ${width}px`, () => {
+			let host = mount(
+				<div>
+					<StatCard.Group variant={variant} aria-label="Overview">
+						<StatCard data-testid="real">
+							<StatCard.Label>p95 latency</StatCard.Label>
+							<StatCard.Value>182 ms</StatCard.Value>
+							<StatCard.Delta trend="up">+12 ms</StatCard.Delta>
+						</StatCard>
+					</StatCard.Group>
+					<StatCard.Group variant={variant} aria-label="Loading">
+						<Skeleton.Stat delta />
+					</StatCard.Group>
+				</div>,
+				width,
+			);
+
+			expect(heightOf(host, '[data-skeleton="stat"]')).toBeCloseTo(
+				heightOf(host, '[data-testid="real"]'),
+				0,
+			);
+		});
+	}
+
 	test("becomes one named status when labelled, hidden otherwise", () => {
 		let host = mount(
 			<>

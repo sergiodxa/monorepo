@@ -19,6 +19,7 @@ import { bs, is } from "@sdxc/u/size";
 import { attrs } from "remix/component";
 
 import { StatCard } from "./stat-card.js";
+import { statDeltaPlacement } from "./styles/stat-delta.js";
 import { Table } from "./table.js";
 
 /**
@@ -68,7 +69,7 @@ export namespace Skeleton {
 
 	/** Props accepted by {@link Skeleton.Stat}. */
 	export interface StatProps extends Omit<TagProps<"div">, "children">, Labelled {
-		/** Draws the delta pill beside the label, as a card with a delta has. */
+		/** Draws the delta pill where a card with a delta sets it. */
 		delta?: boolean;
 		/** Draws the chart band under the value, as a card with a sparkline has. */
 		chart?: boolean;
@@ -263,8 +264,8 @@ Skeleton.Table = function SkeletonTable(handle: Handle<Skeleton.TableProps>) {
 
 /**
  * A placeholder stat card drawn inside the real `StatCard` frame, with bars on
- * the label and value lines, so it is exactly as tall as the card it precedes;
- * `delta` and `chart` add the parts the real card has.
+ * the label and value lines and the delta placed as a real one is in every group
+ * layout, so it is as tall as the card it precedes; `delta` and `chart` add parts.
  *
  * @param handle Runtime handle carrying the card's props.
  * @returns The render function producing the card's markup.
@@ -281,7 +282,7 @@ Skeleton.Stat = function SkeletonStat(handle: Handle<Skeleton.StatProps>) {
 					<SkeletonBar width="6rem" height="0.75rem" />
 				</StatCard.Label>
 				{delta ? (
-					<span mix={[raw({ order: 1, display: "inline-flex", alignItems: "center" })]}>
+					<span mix={[raw({ display: "inline-flex", alignItems: "center" }), statDeltaPlacement()]}>
 						<SkeletonBar width="3.5rem" height="var(--ui-stat-delta-block-size, 1.375rem)" round />
 					</span>
 				) : null}
