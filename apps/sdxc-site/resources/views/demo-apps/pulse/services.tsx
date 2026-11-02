@@ -26,6 +26,8 @@ import { ViewOptions } from "@sdxc/ui/app/view-options";
 
 import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
+
 import type { RegionId, Service, ServiceStatus } from "./data";
 import type { ServiceRow, SortLink } from "./services-table";
 
@@ -52,7 +54,7 @@ import {
 } from "./labels";
 import { pick } from "./overview";
 import { PERCENT, StateLinks } from "./parts";
-import { ServiceProperties, ServiceTimeline } from "./service-parts";
+import { PeekPlaceholder } from "./service-parts";
 import { ServicesTable } from "./services-table";
 
 /**
@@ -475,8 +477,11 @@ export default function Services(handle: Handle<Services.Props>) {
 							labels={SHEET_LABELS}
 							keys="sheet"
 						>
-							<ServiceProperties service={peeked} />
-							<ServiceTimeline service={peeked} limit={3} />
+							<DemoAppFrame
+								app="pulse"
+								part={`services/${peeked.id}/peek`}
+								fallback={<PeekPlaceholder service={peeked} />}
+							/>
 						</DetailSheet>
 					)}
 				</HeadingScope>

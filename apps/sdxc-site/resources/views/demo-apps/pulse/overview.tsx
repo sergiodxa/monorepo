@@ -25,6 +25,8 @@ import { Table } from "@sdxc/ui/app/table";
 
 import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
+
 import type { MetricId, MetricSeries, RangeId } from "./metrics";
 
 import { href, LOCALE, NOW, SERVICES } from "./data";
@@ -37,7 +39,7 @@ import {
 	sparklineDomain,
 	SUMMARIES,
 } from "./metrics";
-import { COUNT, MILLISECONDS, Panel, PERCENT, StateLinks } from "./parts";
+import { COUNT, ghostText, MILLISECONDS, Panel, PERCENT, StateLinks } from "./parts";
 
 /** The chart's drawing box; the SVG scales to its column from this ratio. */
 const CHART_SIZE = { width: 960, height: 260 } as const;
@@ -170,6 +172,155 @@ function MetricChart(handle: Handle<MetricChart.Props>) {
 	};
 }
 
+/** The chart's placeholder: the plot's box and the axis row under it, at their final size. */
+export function ChartPlaceholder() {
+	return () => (
+		<div aria-hidden="true" mix={[vstack({ gap: 2, align: "stretch" })]}>
+			<div
+				mix={[
+					is("100%"),
+					raw({
+						aspectRatio: `${CHART_SIZE.width} / ${CHART_SIZE.height}`,
+						borderRadius: "var(--ui-radius-md)",
+						background: "var(--ui-neutral-bg-tint)",
+					}),
+				]}
+			/>
+			<span mix={[text("xs"), font("mono"), raw({ visibility: "hidden" })]}>&nbsp;</span>
+		</div>
+	);
+}
+
+namespace ChartBody {
+	export interface Props {
+		request: DemoAppRequest;
+	}
+}
+
+/**
+ * The overview chart's frame: the selected metric over the selected range, with its axis
+ * ends, read from the frame's own query so it caches per metric and range.
+ */
+export function ChartBody(handle: Handle<ChartBody.Props>) {
+	return () => {
+		let { url } = handle.props.request;
+		let metric = pick(url, "metric", METRIC_IDS, "uptime");
+		let range = pick(url, "range", RANGE_IDS, DEFAULT_RANGE);
+		let rangeName = COPY.range.presets[range].long;
+		return (
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<MetricChart metric={metric} range={range} series={metricSeries(metric, range)} />
+				<div
+					mix={[
+						hstack({ gap: 3, justify: "between" }),
+						text("xs"),
+						font("mono"),
+						fg("neutral.muted"),
+					]}
+				>
+					<span>{COPY.overview.chartStart(rangeName)}</span>
+					<span>{COPY.overview.chartEnd}</span>
+				</div>
+			</div>
+		);
+	};
+}
+
+/** Builds the overview's address for a metric and range, leaving out each default. */
+function overviewHref(metric: MetricId, range: RangeId): string {
+	let params = new URLSearchParams();
+	if (metric !== "uptime") params.set("metric", metric);
+	if (range !== DEFAULT_RANGE) params.set("range", range);
+	let search = params.toString();
+	return href(search === "" ? "" : `?${search}`);
+}
+
+namespace StatsBody {
+	export interface Props {
+		request: DemoAppRequest;
+	}
+}
+
+/**
+ * The overview's four stat tabs, each a link that switches the chart to its metric: the
+ * content of the `overview/stats` frame, read from its own query so it caches per state.
+ */
+export function StatsBody(handle: Handle<StatsBody.Props>) {
+	return () => {
+		let { url } = handle.props.request;
+		let metric = pick(url, "metric", METRIC_IDS, "uptime");
+		let range = pick(url, "range", RANGE_IDS, DEFAULT_RANGE);
+		let rangeName = COPY.range.presets[range].long;
+		return (
+			<StatCard.Group variant="tabs" columns={4} aria-label={COPY.overview.tabs}>
+				{METRIC_IDS.map((id) => {
+					let summary = SUMMARIES[id];
+					return (
+						<StatCard key={id} href={overviewHref(id, range)} current={id === metric}>
+							<StatCard.Label>{COPY.overview.metrics[id]}</StatCard.Label>
+							<StatCard.Value mix={[font("mono")]}>{formatValue(id, summary.value)}</StatCard.Value>
+							<StatCard.Delta
+								trend={summary.trend}
+								invert={summary.invert}
+								comparison={COPY.overview.comparison(rangeName)}
+							>
+								{formatChange(id, summary.change)}
+							</StatCard.Delta>
+							<StatCard.Footer>{FOOTERS[id]}</StatCard.Footer>
+						</StatCard>
+					);
+				})}
+			</StatCard.Group>
+		);
+	};
+}
+
+namespace StatsPlaceholder {
+	export interface Props {
+		/** The range the cards compare against, whose name the delta line spells out. */
+		range: RangeId;
+		/** Names the loading stats for assistive tech; without it the placeholder is hidden. */
+		label?: string;
+	}
+}
+
+/**
+ * The stat tabs' placeholder: every part of each card drawn in {@link ghostText} from the copy
+ * it will hold, so a delta or footer that wraps on a narrow card reserves the lines it takes.
+ */
+export function StatsPlaceholder(handle: Handle<StatsPlaceholder.Props>) {
+	return () => {
+		let { label, range } = handle.props;
+		let comparison = COPY.overview.comparison(COPY.range.presets[range].long);
+		return (
+			<StatCard.Group
+				variant="tabs"
+				columns={4}
+				aria-label={label}
+				aria-hidden={label === undefined ? "true" : undefined}
+				data-skeleton=""
+			>
+				{METRIC_IDS.map((id) => (
+					<StatCard key={id}>
+						<StatCard.Label>
+							<span mix={[ghostText()]}>{COPY.overview.metrics[id]}</span>
+						</StatCard.Label>
+						<StatCard.Value mix={[font("mono")]}>
+							<span mix={[ghostText()]}>00.00%</span>
+						</StatCard.Value>
+						<StatCard.Delta trend="flat" comparison={<span mix={[ghostText()]}>{comparison}</span>}>
+							<span mix={[ghostText()]}>{formatChange(id, SUMMARIES[id].change)}</span>
+						</StatCard.Delta>
+						<StatCard.Footer>
+							<span mix={[ghostText()]}>{FOOTERS[id]}</span>
+						</StatCard.Footer>
+					</StatCard>
+				))}
+			</StatCard.Group>
+		);
+	};
+}
+
 namespace Overview {
 	export interface Props {
 		request: DemoAppRequest;
@@ -183,7 +334,6 @@ export default function Overview(handle: Handle<Overview.Props>) {
 		let metric = pick(url, "metric", METRIC_IDS, "uptime");
 		let range = pick(url, "range", RANGE_IDS, DEFAULT_RANGE);
 		let state = pick<OverviewState>(url, "state", ["live", "loading", "error"], "live");
-		let series = metricSeries(metric, range);
 		let rangeName = COPY.range.presets[range].long;
 		let attention = SERVICES.filter(
 			(service) => service.status === "down" || service.status === "degraded",
@@ -218,33 +368,13 @@ export default function Overview(handle: Handle<Overview.Props>) {
 				/>
 				<HeadingScope level={2}>
 					{state === "loading" ? (
-						<StatCard.Group variant="tabs" columns={4} aria-label={COPY.overview.loadingStats}>
-							{METRIC_IDS.map((id) => (
-								<StatCard.Skeleton key={id} delta footer />
-							))}
-						</StatCard.Group>
+						<StatsPlaceholder range={range} label={COPY.overview.loadingStats} />
 					) : (
-						<StatCard.Group variant="tabs" columns={4} aria-label={COPY.overview.tabs}>
-							{METRIC_IDS.map((id) => {
-								let summary = SUMMARIES[id];
-								return (
-									<StatCard key={id} href={query({ metric: id })} current={id === metric}>
-										<StatCard.Label>{COPY.overview.metrics[id]}</StatCard.Label>
-										<StatCard.Value mix={[font("mono")]}>
-											{formatValue(id, summary.value)}
-										</StatCard.Value>
-										<StatCard.Delta
-											trend={summary.trend}
-											invert={summary.invert}
-											comparison={COPY.overview.comparison(rangeName)}
-										>
-											{formatChange(id, summary.change)}
-										</StatCard.Delta>
-										<StatCard.Footer>{FOOTERS[id]}</StatCard.Footer>
-									</StatCard>
-								);
-							})}
-						</StatCard.Group>
+						<DemoAppFrame
+							app="pulse"
+							part={`overview/stats?metric=${metric}&range=${range}`}
+							fallback={<StatsPlaceholder range={range} />}
+						/>
 					)}
 
 					<Panel
@@ -266,20 +396,11 @@ export default function Overview(handle: Handle<Overview.Props>) {
 								]}
 							/>
 						) : (
-							<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-								<MetricChart metric={metric} range={range} series={series} />
-								<div
-									mix={[
-										hstack({ gap: 3, justify: "between" }),
-										text("xs"),
-										font("mono"),
-										fg("neutral.muted"),
-									]}
-								>
-									<span>{COPY.overview.chartStart(rangeName)}</span>
-									<span>{COPY.overview.chartEnd}</span>
-								</div>
-							</div>
+							<DemoAppFrame
+								app="pulse"
+								part={`overview/chart?metric=${metric}&range=${range}`}
+								fallback={<ChartPlaceholder />}
+							/>
 						)}
 					</Panel>
 

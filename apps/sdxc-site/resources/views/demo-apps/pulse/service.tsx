@@ -10,10 +10,11 @@
 import type { Handle } from "remix/component";
 
 import { PauseIcon, PlayIcon, RefreshCwIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
-import { minIs } from "@sdxc/u/size";
+import { bs, is, minIs } from "@sdxc/u/size";
 import { font, nowrap, text } from "@sdxc/u/typography";
 import { Button, HeadingScope, Input, Select, StatusDot } from "@sdxc/ui";
 import { Chart } from "@sdxc/ui/app/chart";
@@ -26,13 +27,19 @@ import { Table } from "@sdxc/ui/app/table";
 
 import type { DemoAppRequest } from "~/resources/views/demo-apps";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
+
 import type { Service } from "./data";
 
 import { actionHref, href, INCIDENTS, LOCALE, NOW, REGIONS, uptimeDays, uptimeRatio } from "./data";
 import { COPY, INCIDENT_STATUS, STATUS } from "./labels";
 import { pick } from "./overview";
 import { Panel, PERCENT } from "./parts";
-import { ServiceProperties, ServiceTimeline } from "./service-parts";
+import {
+	ActivityBox,
+	ServicePropertiesPlaceholder,
+	ServiceTimelinePlaceholder,
+} from "./service-parts";
 
 /** The tabs a service's page splits into. */
 type ServiceTab = "overview" | "checks" | "incidents" | "settings";
@@ -85,18 +92,103 @@ namespace ServicePage {
 	}
 }
 
-/** The service's overview tab: chart and strip beside its facts, then its history. */
-function OverviewTab(handle: Handle<{ service: Service }>) {
+/** The service chart's drawing box; the SVG scales to its column from this ratio. */
+const SERVICE_CHART_SIZE = { width: 720, height: 220 } as const;
+
+/**
+ * The service's p95 latency over the last 16 hours, yesterday's same hours dashed behind it
+ * and the target drawn as a threshold: the content of the `services/<id>/chart` frame.
+ */
+export function ServiceChart(handle: Handle<{ service: Service }>) {
 	return () => {
 		let { service } = handle.props;
-		let uptime = uptimeRatio(service);
 		let last = service.latency.length - 1;
 		let calm = service.latency.find((value) => value !== null) ?? 100;
 		let yesterday = service.latency.map((_, index) =>
 			Math.round(calm * (0.94 + Math.sin(index * 1.3) * 0.05)),
 		);
 		let ceiling = Math.max(TARGET_MS * 1.5, ...service.latency.map((value) => value ?? 0)) * 1.1;
+		return (
+			<Chart
+				width={SERVICE_CHART_SIZE.width}
+				height={SERVICE_CHART_SIZE.height}
+				xDomain={[0, last]}
+				yDomain={[0, ceiling]}
+				aria-label={COPY.service.chart(service.name)}
+			>
+				<Chart.Line
+					points={yesterday.map((y, x) => ({
+						x,
+						y,
+						label: `Yesterday, ${16 - x} hours ago: ${y} ms`,
+					}))}
+					comparison
+				/>
+				<Chart.Line
+					points={service.latency.map((y, x) => ({
+						x,
+						y,
+						label: y === null ? COPY.overview.noData : `${16 - x} hours ago: ${y} ms`,
+					}))}
+				/>
+				<Chart.Threshold y={TARGET_MS} label={COPY.service.threshold} tone="warning" />
+			</Chart>
+		);
+	};
+}
 
+/** The service chart's placeholder: the plot's box at its final size. */
+export function ServiceChartPlaceholder() {
+	return () => (
+		<div
+			aria-hidden="true"
+			mix={[
+				is("100%"),
+				raw({ aspectRatio: `${SERVICE_CHART_SIZE.width} / ${SERVICE_CHART_SIZE.height}` }),
+				rounded("md"),
+				bg("neutral.tint"),
+			]}
+		/>
+	);
+}
+
+/** The service's last 90 days as a strip: the content of the `services/<id>/uptime` frame. */
+export function ServiceUptime(handle: Handle<{ service: Service }>) {
+	return () => {
+		let { service } = handle.props;
+		let uptime = uptimeRatio(service);
+		return (
+			<StatusStrip
+				label={COPY.services.stripLabel(service.name)}
+				summary={COPY.services.stripSummary(uptime === null ? "—" : PERCENT.format(uptime))}
+				start={COPY.services.start}
+				end={COPY.services.end}
+				periods={uptimeDays(service, COPY.services.dayLabel)}
+			/>
+		);
+	};
+}
+
+/** The strip's placeholder: the bars' row and the caption line under it, at their final size. */
+export function ServiceUptimePlaceholder() {
+	return () => (
+		<div aria-hidden="true" mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+			<div
+				mix={[bs("var(--ui-status-strip-block-size, 2rem)"), rounded("sm"), bg("neutral.tint")]}
+			/>
+			<span mix={[text("xs"), raw({ visibility: "hidden" })]}>&nbsp;</span>
+		</div>
+	);
+}
+
+/**
+ * The service's overview tab: chart and strip beside its facts, then its history. Every panel
+ * keeps its heading in the page and streams its body in as its own frame.
+ */
+function OverviewTab(handle: Handle<{ service: Service }>) {
+	return () => {
+		let { service } = handle.props;
+		let part = (name: string) => `services/${service.id}/${name}`;
 		return (
 			<div
 				mix={[
@@ -115,46 +207,31 @@ function OverviewTab(handle: Handle<{ service: Service }>) {
 						title={COPY.service.chartTitle}
 						description={COPY.service.chartHint}
 					>
-						<Chart
-							width={720}
-							height={220}
-							xDomain={[0, last]}
-							yDomain={[0, ceiling]}
-							aria-label={COPY.service.chart(service.name)}
-						>
-							<Chart.Line
-								points={yesterday.map((y, x) => ({
-									x,
-									y,
-									label: `Yesterday, ${16 - x} hours ago: ${y} ms`,
-								}))}
-								comparison
-							/>
-							<Chart.Line
-								points={service.latency.map((y, x) => ({
-									x,
-									y,
-									label: y === null ? COPY.overview.noData : `${16 - x} hours ago: ${y} ms`,
-								}))}
-							/>
-							<Chart.Threshold y={TARGET_MS} label={COPY.service.threshold} tone="warning" />
-						</Chart>
+						<DemoAppFrame app="pulse" part={part("chart")} fallback={<ServiceChartPlaceholder />} />
 					</Panel>
 					<Panel id="pulse-service-uptime" title={COPY.service.uptime}>
-						<StatusStrip
-							label={COPY.services.stripLabel(service.name)}
-							summary={COPY.services.stripSummary(uptime === null ? "—" : PERCENT.format(uptime))}
-							start={COPY.services.start}
-							end={COPY.services.end}
-							periods={uptimeDays(service, COPY.services.dayLabel)}
+						<DemoAppFrame
+							app="pulse"
+							part={part("uptime")}
+							fallback={<ServiceUptimePlaceholder />}
 						/>
 					</Panel>
 					<Panel id="pulse-service-activity" title={COPY.service.activity}>
-						<ServiceTimeline service={service} />
+						<ActivityBox service={service}>
+							<DemoAppFrame
+								app="pulse"
+								part={part("activity")}
+								fallback={<ServiceTimelinePlaceholder service={service} limit={4} />}
+							/>
+						</ActivityBox>
 					</Panel>
 				</div>
 				<Panel id="pulse-service-details" title={COPY.service.properties}>
-					<ServiceProperties service={service} />
+					<DemoAppFrame
+						app="pulse"
+						part={part("details")}
+						fallback={<ServicePropertiesPlaceholder />}
+					/>
 				</Panel>
 			</div>
 		);

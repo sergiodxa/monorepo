@@ -7,18 +7,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { CircleAlertIcon, CircleCheckIcon, RocketIcon, RotateCcwIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
-import { font } from "@sdxc/u/typography";
+import { vstack } from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { bs, minIs } from "@sdxc/u/size";
+import { font, truncate } from "@sdxc/u/typography";
 import { PropertyList, RelativeTime, StatusDot, Timeline } from "@sdxc/ui";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 
 import type { Service } from "./data";
 
 import { DEPLOYS, INCIDENTS, LOCALE, NOW, REGIONS, uptimeRatio } from "./data";
 import { COPY, STATUS } from "./labels";
-import { MILLISECONDS, PERCENT } from "./parts";
+import { ghostText, MILLISECONDS, PERCENT } from "./parts";
 
 /** How the check interval reads ("30 seconds", "1 hour"). */
 function intervalLabel(seconds: number): string {
@@ -26,49 +30,107 @@ function intervalLabel(seconds: number): string {
 	return known[seconds] ?? `${seconds}s`;
 }
 
+/** One fact of a service: its label, and its value or `undefined` when it isn't known. */
+interface PropertyRow {
+	label: string;
+	value: (service: Service) => RemixNode | undefined;
+}
+
+/**
+ * Every fact a service shows, in order. Each value holds one line, the endpoint truncating,
+ * so the list is as tall as its placeholder whatever the service.
+ */
+const PROPERTY_ROWS: readonly PropertyRow[] = [
+	{
+		label: COPY.services.columns.status,
+		value: (service) => (
+			<StatusDot color={STATUS[service.status].color}>{STATUS[service.status].label}</StatusDot>
+		),
+	},
+	{
+		label: COPY.service.endpoint,
+		value: (service) => (
+			<span title={service.endpoint} mix={[font("mono"), minIs(0), truncate()]}>
+				{service.endpoint}
+			</span>
+		),
+	},
+	{ label: COPY.service.kind, value: (service) => service.kind },
+	{ label: COPY.service.region, value: (service) => REGIONS[service.region] },
+	{ label: COPY.service.owner, value: (service) => service.owner },
+	{
+		label: COPY.service.version,
+		value: (service) => <span mix={[font("mono")]}>{service.version}</span>,
+	},
+	{
+		label: COPY.services.columns.latency,
+		value: (service) =>
+			service.latencyMs === null ? undefined : (
+				<span mix={[font("mono")]}>{MILLISECONDS.format(service.latencyMs)}</span>
+			),
+	},
+	{
+		label: COPY.service.errorRate,
+		value: (service) =>
+			service.errorRate === null ? undefined : (
+				<span mix={[font("mono")]}>
+					{service.errorRate === 0 ? COPY.service.noErrors : PERCENT.format(service.errorRate)}
+				</span>
+			),
+	},
+	{
+		label: COPY.service.uptime,
+		value: (service) => {
+			let uptime = uptimeRatio(service);
+			return uptime === null ? undefined : (
+				<span mix={[font("mono")]}>{PERCENT.format(uptime)}</span>
+			);
+		},
+	},
+	{ label: COPY.service.interval, value: (service) => intervalLabel(service.interval) },
+	{
+		label: COPY.service.lastChecked,
+		value: (service) => <RelativeTime date={service.checkedAt} now={NOW} locale={LOCALE} />,
+	},
+];
+
 /** The service's facts, each a label and a value, with a named empty for what isn't known. */
 export function ServiceProperties(handle: Handle<{ service: Service }>) {
 	return () => {
 		let { service } = handle.props;
-		let uptime = uptimeRatio(service);
 		return (
 			<PropertyList>
-				<PropertyList.Item label={COPY.services.columns.status}>
-					<StatusDot color={STATUS[service.status].color}>{STATUS[service.status].label}</StatusDot>
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.endpoint}>
-					<span mix={[font("mono"), raw({ overflowWrap: "anywhere" })]}>{service.endpoint}</span>
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.kind}>{service.kind}</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.region}>{REGIONS[service.region]}</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.owner}>{service.owner}</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.version}>
-					<span mix={[font("mono")]}>{service.version}</span>
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.services.columns.latency} empty="—">
-					{service.latencyMs === null ? undefined : (
-						<span mix={[font("mono")]}>{MILLISECONDS.format(service.latencyMs)}</span>
-					)}
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.errorRate} empty="—">
-					{service.errorRate === null ? undefined : (
-						<span mix={[font("mono")]}>
-							{service.errorRate === 0 ? COPY.service.noErrors : PERCENT.format(service.errorRate)}
-						</span>
-					)}
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.uptime} empty="—">
-					{uptime === null ? undefined : <span mix={[font("mono")]}>{PERCENT.format(uptime)}</span>}
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.interval}>
-					{intervalLabel(service.interval)}
-				</PropertyList.Item>
-				<PropertyList.Item label={COPY.service.lastChecked}>
-					<RelativeTime date={service.checkedAt} now={NOW} locale={LOCALE} />
-				</PropertyList.Item>
+				{PROPERTY_ROWS.map((row) => (
+					<PropertyList.Item key={row.label} label={row.label} empty="—">
+						{row.value(service)}
+					</PropertyList.Item>
+				))}
 			</PropertyList>
 		);
 	};
+}
+
+/** The text the endpoint's placeholder bar is drawn from, about as long as a real endpoint. */
+const PLACEHOLDER_ENDPOINT = "https://northwind.example";
+
+/** The text every other value's placeholder bar is drawn from. */
+const PLACEHOLDER_VALUE = "Placeholder";
+
+/** The facts' placeholder: every label, with a bar where each value lands. */
+export function ServicePropertiesPlaceholder() {
+	return () => (
+		<div aria-hidden="true">
+			<PropertyList>
+				{PROPERTY_ROWS.map((row, index) => (
+					<PropertyList.Item key={row.label} label={row.label}>
+						<span mix={[ghostText()]}>
+							{index === 1 ? PLACEHOLDER_ENDPOINT : PLACEHOLDER_VALUE}
+						</span>
+					</PropertyList.Item>
+				))}
+			</PropertyList>
+		</div>
+	);
 }
 
 /** One entry of a service's history, deploys and incidents read as one stream. */
@@ -172,6 +234,89 @@ export function ServiceTimeline(handle: Handle<ServiceTimeline.Props>) {
 					<Timeline.More summary={COPY.service.more(rest.length)}>{rest.map(event)}</Timeline.More>
 				)}
 			</Timeline>
+		);
+	};
+}
+
+namespace ActivityBox {
+	export interface Props {
+		/** The service whose history the box holds, which sets how tall it stands. */
+		service: Service;
+		children: RemixNode;
+	}
+}
+
+/**
+ * The box a service's history scrolls in: one line tall for a quiet service, else a fixed
+ * height whatever the events and however their lines wrap, so the history landing moves
+ * nothing below it.
+ */
+export function ActivityBox(handle: Handle<ActivityBox.Props>) {
+	return () => {
+		let { service, children } = handle.props;
+		let size = serviceActivity(service.id).length === 0 ? "1.5rem" : "11rem";
+		return (
+			<div
+				role="region"
+				aria-label={COPY.service.activity}
+				mix={[bs(size), overflowY("auto"), minIs(0), raw({ overscrollBehavior: "contain" })]}
+			>
+				{children}
+			</div>
+		);
+	};
+}
+
+namespace ServiceTimelinePlaceholder {
+	export interface Props {
+		service: Service;
+		/** The timeline's own limit, so the placeholder draws as many rows as it shows. */
+		limit: number;
+	}
+}
+
+/** The history's placeholder: a row per event the timeline shows, inside its {@link ActivityBox}. */
+export function ServiceTimelinePlaceholder(handle: Handle<ServiceTimelinePlaceholder.Props>) {
+	return () => {
+		let { service, limit } = handle.props;
+		let rows = Math.min(serviceActivity(service.id).length, limit);
+		return (
+			<div aria-hidden="true">
+				{rows === 0 ? null : <Skeleton.List rows={rows} avatar lines={1} />}
+			</div>
+		);
+	};
+}
+
+/** How many events the peek sheet's history shows before folding the rest. */
+const PEEK_LIMIT = 3;
+
+/** The peek sheet's body: the service's facts, then its latest history. */
+export function PeekBody(handle: Handle<{ service: Service }>) {
+	return () => {
+		let { service } = handle.props;
+		return (
+			<div mix={[vstack({ gap: 5, align: "stretch" }), minIs(0)]}>
+				<ServiceProperties service={service} />
+				<ActivityBox service={service}>
+					<ServiceTimeline service={service} limit={PEEK_LIMIT} />
+				</ActivityBox>
+			</div>
+		);
+	};
+}
+
+/** The peek sheet body's placeholder, at the body's final size. */
+export function PeekPlaceholder(handle: Handle<{ service: Service }>) {
+	return () => {
+		let { service } = handle.props;
+		return (
+			<div mix={[vstack({ gap: 5, align: "stretch" }), minIs(0)]}>
+				<ServicePropertiesPlaceholder />
+				<ActivityBox service={service}>
+					<ServiceTimelinePlaceholder service={service} limit={PEEK_LIMIT} />
+				</ActivityBox>
+			</div>
 		);
 	};
 }

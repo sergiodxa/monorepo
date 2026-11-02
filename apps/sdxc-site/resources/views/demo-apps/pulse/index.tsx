@@ -21,6 +21,7 @@ import type { PulseSettingsSection } from "./shell";
 
 import { actionHref, findService, href, SERVICES } from "./data";
 import { Deployments, StatusPages } from "./deployments";
+import { pulseFrame } from "./frames";
 import Incidents from "./incidents";
 import { COPY } from "./labels";
 import Overview from "./overview";
@@ -371,6 +372,7 @@ export default {
 			description: "A demo keeps nothing, so the list stays empty.",
 		},
 	},
+	frame: (part, request) => pulseFrame(part, request),
 	render: (request) => route(request),
 	submit(page, form) {
 		let [first, second, third, extra] = page.split("/");

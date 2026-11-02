@@ -34,6 +34,21 @@ export const MILLISECONDS = new Intl.NumberFormat(LOCALE, {
 /** Writes a plain count ("3"). */
 export const COUNT = new Intl.NumberFormat(LOCALE);
 
+/**
+ * Draws text as a placeholder: the glyphs vanish and each line becomes a tinted bar, so a
+ * placeholder holding the same copy wraps onto exactly the lines the content will.
+ */
+export function ghostText() {
+	return raw({
+		color: "transparent",
+		backgroundColor: "var(--ui-neutral-bg-tint)",
+		borderRadius: "var(--ui-radius-sm)",
+		boxDecorationBreak: "clone",
+		WebkitBoxDecorationBreak: "clone",
+		"& svg": { visibility: "hidden" },
+	});
+}
+
 namespace Panel {
 	export interface Props {
 		/** The panel's `h2`, which also names the region. */

@@ -11,7 +11,8 @@ import { describe, expect, test } from "vitest";
 
 import { withoutToastNonce } from "~/app/test/demo-apps";
 import { fetchApp } from "~/app/test/router";
-import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
+import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
+import pulse from "~/resources/views/demo-apps/pulse";
 
 /** Pulse's screen addresses. */
 const href = demoAppHref("pulse");
@@ -70,6 +71,37 @@ describe("Pulse services list", () => {
 	test("the loading and failed previews replace only the table", async () => {
 		expect(await page("services?state=error")).toContain("Couldn't load services");
 		expect(await page("services?state=loading")).toContain("Loading services");
+	});
+});
+
+describe("Pulse frames", () => {
+	test("every frame a screen streams answers with its part", async () => {
+		let sources = new Set<string>();
+		for (let screen of pulse.screens) {
+			let body = await page(screen);
+			for (let match of body.matchAll(/\/demo\/frames\/apps\/pulse\/[^"'<\s]+/g)) {
+				sources.add(match[0].replaceAll("&amp;", "&"));
+			}
+		}
+
+		expect(sources).toContain(demoAppFrameHref("pulse")("overview/stats?metric=uptime&range=24h"));
+		expect(sources).toContain(demoAppFrameHref("pulse")("services/checkout-api/peek"));
+		for (let source of sources) {
+			expect([source, (await fetchApp(source)).status]).toEqual([source, 200]);
+		}
+	});
+
+	test("a part or service Pulse lacks answers 404", async () => {
+		let frame = demoAppFrameHref("pulse");
+		expect((await fetchApp(frame("services/no-such-service/chart"))).status).toBe(404);
+		expect((await fetchApp(frame("services/checkout-api/nothing"))).status).toBe(404);
+		expect((await fetchApp(frame("overview/nothing"))).status).toBe(404);
+	});
+
+	test("the loading preview draws the stats in place without a frame", async () => {
+		let body = await page("?state=loading");
+		expect(body).toContain("Loading metrics");
+		expect(body).not.toContain(demoAppFrameHref("pulse")("overview/stats"));
 	});
 });
 
