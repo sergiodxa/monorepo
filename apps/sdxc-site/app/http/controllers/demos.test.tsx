@@ -5,14 +5,28 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import * as caching from "~/app/http/caching";
 import { fetchApp } from "~/app/test/router";
 import { demoAppHref, listDemoApps, listDemoAppSlugs } from "~/resources/views/demo-apps";
 import { demoDocsHref, listDemoDocsSites, listDemoDocsSlugs } from "~/resources/views/demo-docs";
+import * as landings from "~/resources/views/demos";
 import { listDemoLandings } from "~/resources/views/demos";
 
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 describe("GET /demo", () => {
+	test("reuses the gallery before loading the demo registries", async () => {
+		vi.spyOn(caching, "withStreamCache").mockResolvedValue(new Response("cached gallery"));
+		let list = vi.spyOn(landings, "listDemoLandings");
+		let response = await fetchApp("/demo");
+
+		expect(await response.text()).toBe("cached gallery");
+		expect(list).not.toHaveBeenCalled();
+	});
 	test("lists every demo landing with its kind, tagline and art direction, each link answering", async () => {
 		let response = await fetchApp("/demo");
 		let body = await response.text();

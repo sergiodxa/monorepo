@@ -6,9 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { DemoLanding } from "~/resources/views/demos";
+
+import * as caching from "~/app/http/caching";
 
 /** The one demo the registry answers with in these tests. */
 const FIXTURE: DemoLanding = {
@@ -32,6 +34,11 @@ vi.doMock("~/resources/views/demos", () => ({
 
 let { fetchApp } = await import("~/app/test/router");
 
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.unstubAllEnvs();
+});
+
 describe("GET /demo/:slug", () => {
 	test("renders the demo alone and tells search engines to leave it out", async () => {
 		let response = await fetchApp("/demo/fixture");
@@ -43,6 +50,28 @@ describe("GET /demo/:slug", () => {
 		expect(body).toMatch(/<meta name="robots" content="noindex, nofollow"/);
 		expect(body).not.toContain("<footer");
 		expect(body).not.toContain("<header");
+	});
+
+	test("reuses a stored landing before rendering its demo", async () => {
+		vi.spyOn(caching, "withStreamCache").mockResolvedValue(new Response("cached landing"));
+		let render = vi.spyOn(FIXTURE, "render");
+		let response = await fetchApp("/demo/fixture");
+
+		expect(await response.text()).toBe("cached landing");
+		expect(render).not.toHaveBeenCalled();
+	});
+
+	test("gives a landing the shared cache policy and revalidates its build", async () => {
+		vi.stubEnv("PROD", true);
+		let response = await fetchApp("/demo/fixture");
+		let tag = response.headers.get("ETag");
+
+		expect(response.headers.get("Cache-Control")).toContain("public");
+		expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
+		expect(tag).toBeTruthy();
+		expect((await fetchApp("/demo/fixture", { headers: { "If-None-Match": tag! } })).status).toBe(
+			304,
+		);
 	});
 
 	test("answers the site's 404 for a slug no demo answers to", async () => {

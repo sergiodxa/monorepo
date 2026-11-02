@@ -21,7 +21,7 @@ import { createAction } from "remix/router";
 
 import type { DemoSummary } from "~/resources/views/demos";
 
-import { withBundleCache } from "~/app/http/caching";
+import { withStreamCache } from "~/app/http/caching";
 import DemoMiniature from "~/resources/components/demo-miniature";
 import Hero from "~/resources/components/hero";
 import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
@@ -47,100 +47,103 @@ const DEMO_ROBOTS = "noindex, nofollow";
  */
 const FLAGSHIP_LANDINGS = ["saas", "book"];
 
+/** Reuses the gallery before loading its registries and rendering the demo miniatures. */
 export default createAction(routes.demos, async (ctx) => {
-	let [landings, docsSites, apps] = await Promise.all([
-		listDemoLandings().then((demos) => [...demos].sort(byFlagship)),
-		Promise.all(listDemoDocsSlugs().map(findDemoDocsSite)),
-		Promise.all(listDemoAppSlugs().map(async (slug) => ({ slug, app: await findDemoApp(slug) }))),
-	]);
+	return await withStreamCache(ctx.request, "", async () => {
+		let [landings, docsSites, apps] = await Promise.all([
+			listDemoLandings().then((demos) => [...demos].sort(byFlagship)),
+			Promise.all(listDemoDocsSlugs().map(findDemoDocsSite)),
+			Promise.all(listDemoAppSlugs().map(async (slug) => ({ slug, app: await findDemoApp(slug) }))),
+		]);
 
-	let response = ctx.render(
-		<DocumentLayout
-			assets={ctx.assets}
-			title="Demos — sdxc"
-			description="Every sample landing, docs site and app built from @sdxc/ui, each for an invented product with its own art direction."
-			canonical={ctx.url.href}
-			robots={DEMO_ROBOTS}
-		>
-			<SiteHeader activePath={routes.demos.href()} />
+		let response = ctx.render(
+			<DocumentLayout
+				assets={ctx.assets}
+				title="Demos — sdxc"
+				description="Every sample landing, docs site and app built from @sdxc/ui, each for an invented product with its own art direction."
+				canonical={ctx.url.href}
+				robots={DEMO_ROBOTS}
+			>
+				<SiteHeader activePath={routes.demos.href()} />
 
-			<main mix={[vstack({ align: "center" }), is("100%")]}>
-				<Hero>
-					<div mix={[vstack({ gap: 6, align: "start" }), maxIs("40rem")]}>
-						<ProseHeading level={1}>Demos</ProseHeading>
-						<ProseParagraph>
-							{landings.length} landing pages, {docsSites.length} documentation sites and{" "}
-							{apps.length} apps for invented products, each built from the same @sdxc/ui components
-							with its own look set through theme tokens. Visit one, then read{" "}
-							<ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to copy what you need.
-						</ProseParagraph>
-					</div>
-				</Hero>
+				<main mix={[vstack({ align: "center" }), is("100%")]}>
+					<Hero>
+						<div mix={[vstack({ gap: 6, align: "start" }), maxIs("40rem")]}>
+							<ProseHeading level={1}>Demos</ProseHeading>
+							<ProseParagraph>
+								{landings.length} landing pages, {docsSites.length} documentation sites and{" "}
+								{apps.length} apps for invented products, each built from the same @sdxc/ui
+								components with its own look set through theme tokens. Visit one, then read{" "}
+								<ProseLink href={DEMOS_SOURCE_HREF}>its source</ProseLink> to copy what you need.
+							</ProseParagraph>
+						</div>
+					</Hero>
 
-				<SectionBlock id="landings" title="Landing pages" tone="tinted">
-					<Feature.Grid columns={3}>
-						{landings.map((demo) => (
-							<DemoCard
-								key={demo.slug}
-								thumbnail={demo.thumbnail()}
-								href={routes.demo.href({ slug: demo.slug })}
-								name={demo.title.split(" — ")[0] ?? demo.title}
-								kind={demo.kind}
-								tagline={demo.tagline}
-								artDirection={demo.artDirection}
-							/>
-						))}
-					</Feature.Grid>
-				</SectionBlock>
-
-				<SectionBlock id="docs" title="Docs sites">
-					<Feature.Grid columns={2}>
-						{docsSites.map((site, index) =>
-							site === null ? null : (
+					<SectionBlock id="landings" title="Landing pages" tone="tinted">
+						<Feature.Grid columns={3}>
+							{landings.map((demo) => (
 								<DemoCard
-									key={site.name}
-									href={demoDocsHref(listDemoDocsSlugs()[index] ?? "")()}
-									name={site.name}
-									kind={site.kind}
-									tagline={site.tagline}
-									artDirection={site.artDirection}
-									thumbnail={<DocsThumbnail site={site} />}
+									key={demo.slug}
+									thumbnail={demo.thumbnail()}
+									href={routes.demo.href({ slug: demo.slug })}
+									name={demo.title.split(" — ")[0] ?? demo.title}
+									kind={demo.kind}
+									tagline={demo.tagline}
+									artDirection={demo.artDirection}
 								/>
-							),
-						)}
-					</Feature.Grid>
-				</SectionBlock>
+							))}
+						</Feature.Grid>
+					</SectionBlock>
 
-				<SectionBlock id="apps" title="Apps" tone="tinted">
-					<Feature.Grid columns={3}>
-						{apps.map(({ app, slug }) =>
-							app === null ? null : (
-								<DemoCard
-									key={slug}
-									href={demoAppHref(slug)()}
-									name={app.name}
-									kind={app.kind}
-									tagline={app.tagline}
-									artDirection={app.artDirection}
-									thumbnail={
-										<DemoMiniature
-											brand={app.theme.brand}
-											neutral={app.theme.neutral}
-											tokens={app.theme.tokens}
-										>
-											{app.thumbnail()}
-										</DemoMiniature>
-									}
-								/>
-							),
-						)}
-					</Feature.Grid>
-				</SectionBlock>
-			</main>
-		</DocumentLayout>,
-	);
+					<SectionBlock id="docs" title="Docs sites">
+						<Feature.Grid columns={2}>
+							{docsSites.map((site, index) =>
+								site === null ? null : (
+									<DemoCard
+										key={site.name}
+										href={demoDocsHref(listDemoDocsSlugs()[index] ?? "")()}
+										name={site.name}
+										kind={site.kind}
+										tagline={site.tagline}
+										artDirection={site.artDirection}
+										thumbnail={<DocsThumbnail site={site} />}
+									/>
+								),
+							)}
+						</Feature.Grid>
+					</SectionBlock>
 
-	return await withBundleCache(ctx.request, response);
+					<SectionBlock id="apps" title="Apps" tone="tinted">
+						<Feature.Grid columns={3}>
+							{apps.map(({ app, slug }) =>
+								app === null ? null : (
+									<DemoCard
+										key={slug}
+										href={demoAppHref(slug)()}
+										name={app.name}
+										kind={app.kind}
+										tagline={app.tagline}
+										artDirection={app.artDirection}
+										thumbnail={
+											<DemoMiniature
+												brand={app.theme.brand}
+												neutral={app.theme.neutral}
+												tokens={app.theme.tokens}
+											>
+												{app.thumbnail()}
+											</DemoMiniature>
+										}
+									/>
+								),
+							)}
+						</Feature.Grid>
+					</SectionBlock>
+				</main>
+			</DocumentLayout>,
+		);
+
+		return response;
+	});
 });
 
 namespace DemoCard {

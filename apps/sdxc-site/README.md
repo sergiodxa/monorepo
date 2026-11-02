@@ -91,6 +91,16 @@ Observability is enabled, with traces head-sampled at 10%.
 - **Documentation pages are cached.** Every input to one is a file in the bundle, so a
   page carries a long `Cache-Control` and a weak `ETag` over the bytes rendered, and a
   client whose copy is current gets a `304`.
+- **Demo HTML is reused at the edge.** The gallery, landings, docs sites and app screens
+  use the existing build-keyed Workers Cache: a hit skips rendering the demo, while a miss
+  keeps the renderer's stream and frame fallbacks.
+  Docs query strings keep search and feedback states distinct; remembered package-manager
+  choices remain private to the reader. Missing pages keep their `404` responses, and the
+  dev server renders afresh on every request.
+- **Fingerprinted assets stay in the browser.** `public/_headers` gives Vite's hashed
+  `/assets/*` files `Cache-Control: public, max-age=31536000, immutable`. A new build
+  changes the URLs, so repeat visits reuse the files without conditional network requests;
+  HTML and stable public URLs keep their own cache policies.
 
 ## Routes
 
