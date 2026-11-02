@@ -1,7 +1,7 @@
 /**
- * Guards the static asset cache policy Cloudflare reads from the public directory.
- * Only Vite's fingerprinted asset namespace receives immutable caching, so HTML and
- * stable public URLs keep their own freshness policies.
+ * Guards the immutable cache policy for Vite's fingerprinted assets.
+ * Other header rules remain independent, so adding one leaves this regression
+ * focused on the policy repeat visits rely on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,12 +11,11 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "vitest";
 
-test("only fingerprinted assets are cached immutably for a year", async () => {
+test("fingerprinted assets are cached immutably for a year", async () => {
 	let source = await readFile(new URL("../public/_headers", import.meta.url), "utf8");
-	let lines = source
-		.trim()
-		.split(/\r?\n/)
-		.map((line) => line.trim());
+	let assetRule = /^\/assets\/\*[ \t]*\r?\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)/m.exec(source)?.[1];
 
-	expect(lines).toEqual(["/assets/*", "Cache-Control: public, max-age=31536000, immutable"]);
+	expect(assetRule).toMatch(
+		/^[ \t]+Cache-Control:[ \t]*public, max-age=31536000, immutable[ \t]*\r?$/m,
+	);
 });
