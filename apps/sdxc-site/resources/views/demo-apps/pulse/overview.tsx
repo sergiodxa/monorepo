@@ -39,7 +39,7 @@ import {
 	sparklineDomain,
 	SUMMARIES,
 } from "./metrics";
-import { COUNT, ghostText, MILLISECONDS, Panel, PERCENT, StateLinks } from "./parts";
+import { COUNT, MILLISECONDS, Panel, PERCENT, StateLinks } from "./parts";
 
 /** The chart's drawing box; the SVG scales to its column from this ratio. */
 const CHART_SIZE = { width: 960, height: 260 } as const;
@@ -79,7 +79,7 @@ function formatChange(metric: MetricId, change: number): string {
 
 /** The sentence under each stat, which says what moved the number. */
 const FOOTERS: Record<MetricId, string> = {
-	uptime: "checkout-api has been down since 05:41.",
+	uptime: "checkout-api went down at 05:41.",
 	latency: "payments-webhooks is 4× its usual p95.",
 	errors: "41% of checkout requests fail.",
 	incidents: "One SEV1, one SEV2 and one SEV3.",
@@ -277,21 +277,18 @@ export function StatsBody(handle: Handle<StatsBody.Props>) {
 
 namespace StatsPlaceholder {
 	export interface Props {
-		/** The range the cards compare against, whose name the delta line spells out. */
-		range: RangeId;
 		/** Names the loading stats for assistive tech; without it the placeholder is hidden. */
 		label?: string;
 	}
 }
 
 /**
- * The stat tabs' placeholder: every part of each card drawn in {@link ghostText} from the copy
- * it will hold, so a delta or footer that wraps on a narrow card reserves the lines it takes.
+ * The stat tabs' placeholder: one card skeleton per metric, each holding two footer lines
+ * since every Pulse footer sentence wraps even in the four-column row.
  */
 export function StatsPlaceholder(handle: Handle<StatsPlaceholder.Props>) {
 	return () => {
-		let { label, range } = handle.props;
-		let comparison = COPY.overview.comparison(COPY.range.presets[range].long);
+		let { label } = handle.props;
 		return (
 			<StatCard.Group
 				variant="tabs"
@@ -301,20 +298,7 @@ export function StatsPlaceholder(handle: Handle<StatsPlaceholder.Props>) {
 				data-skeleton=""
 			>
 				{METRIC_IDS.map((id) => (
-					<StatCard key={id}>
-						<StatCard.Label>
-							<span mix={[ghostText()]}>{COPY.overview.metrics[id]}</span>
-						</StatCard.Label>
-						<StatCard.Value mix={[font("mono")]}>
-							<span mix={[ghostText()]}>00.00%</span>
-						</StatCard.Value>
-						<StatCard.Delta trend="flat" comparison={<span mix={[ghostText()]}>{comparison}</span>}>
-							<span mix={[ghostText()]}>{formatChange(id, SUMMARIES[id].change)}</span>
-						</StatCard.Delta>
-						<StatCard.Footer>
-							<span mix={[ghostText()]}>{FOOTERS[id]}</span>
-						</StatCard.Footer>
-					</StatCard>
+					<StatCard.Skeleton key={id} footerLines={2} />
 				))}
 			</StatCard.Group>
 		);
@@ -368,12 +352,12 @@ export default function Overview(handle: Handle<Overview.Props>) {
 				/>
 				<HeadingScope level={2}>
 					{state === "loading" ? (
-						<StatsPlaceholder range={range} label={COPY.overview.loadingStats} />
+						<StatsPlaceholder label={COPY.overview.loadingStats} />
 					) : (
 						<DemoAppFrame
 							app="pulse"
 							part={`overview/stats?metric=${metric}&range=${range}`}
-							fallback={<StatsPlaceholder range={range} />}
+							fallback={<StatsPlaceholder />}
 						/>
 					)}
 

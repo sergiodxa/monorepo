@@ -81,7 +81,7 @@ describe("Pulse frames keep their placeholder's size", () => {
 	describe.each(RANGE_IDS)("the overview stat tabs over %s", (range) => {
 		test.each(WIDTHS)("at %ipx", (width) => {
 			expectSameSize(
-				<StatsPlaceholder range={range} />,
+				<StatsPlaceholder />,
 				<StatsBody request={request(`overview/stats?metric=errors&range=${range}`)} />,
 				width,
 			);
