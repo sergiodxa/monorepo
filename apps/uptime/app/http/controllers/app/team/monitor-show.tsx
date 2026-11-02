@@ -81,6 +81,13 @@ const OVERFLOW_MENU_ID = "monitor-overflow";
  * supplies the request-scoped `intl` its client-only module default lacks during SSR.
  * Delete sits last in the overflow menu, and only for a member allowed to delete.
  */
+
+/**
+ * A month of checks at the default one-minute interval, standing in for the usage card's real
+ * estimate while it loads, so the placeholder's footer wraps like a typical loaded one.
+ */
+const SKELETON_ESTIMATE = 43_200;
+
 export default createAction(routes.app.team.monitors.show, {
 	middleware: [requireUser, requireTeam, appShellData(), teamAccess],
 	handler: async (ctx) => {
@@ -172,6 +179,9 @@ export default createAction(routes.app.team.monitors.show, {
 									<StatCard.Skeleton
 										label={ctx.intl.t("page.monitor.stats.monitors.label")}
 										delta={false}
+										footer={ctx.intl.t("page.monitor.stats.monitors.description", {
+											estimated: SKELETON_ESTIMATE.toLocaleString(ctx.locale),
+										})}
 									/>
 								}
 							/>
@@ -182,6 +192,7 @@ export default createAction(routes.app.team.monitors.show, {
 									<StatCard.Skeleton
 										label={ctx.intl.t("page.monitor.stats.slowestResult.label")}
 										delta={false}
+										footer={ctx.intl.t("page.monitor.stats.slowestResult.description")}
 									/>
 								}
 							/>
@@ -192,7 +203,7 @@ export default createAction(routes.app.team.monitors.show, {
 									<StatCard.Skeleton
 										label={ctx.intl.t("page.monitor.stats.p99ResponseTime.label")}
 										delta={false}
-										footerLines={1}
+										footer={ctx.intl.t("page.monitor.stats.p99ResponseTime.description")}
 									/>
 								}
 							/>
@@ -203,7 +214,7 @@ export default createAction(routes.app.team.monitors.show, {
 									<StatCard.Skeleton
 										label={ctx.intl.t("page.monitor.stats.uptime.label")}
 										delta={false}
-										footerLines={1}
+										footer={ctx.intl.t("page.monitor.stats.uptime.description")}
 									/>
 								}
 							/>
