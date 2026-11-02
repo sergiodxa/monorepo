@@ -28,6 +28,7 @@ import { HeadingScope } from "@sdxc/ui/heading-scope";
 import type { Post } from "~/resources/views/demo-apps/inkwell/data";
 import type { PostsQuery } from "~/resources/views/demo-apps/inkwell/posts-query";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import {
 	AUTHORS,
 	findAuthor,
@@ -35,6 +36,7 @@ import {
 	postDate,
 	TAGS,
 } from "~/resources/views/demo-apps/inkwell/data";
+import { FieldShape } from "~/resources/views/demo-apps/inkwell/placeholders";
 import {
 	applyPostsQuery,
 	LIST_PARAMS,
@@ -42,7 +44,7 @@ import {
 	STATUS_COLOR,
 	STATUS_LABEL,
 } from "~/resources/views/demo-apps/inkwell/posts-query";
-import { action, Byline, href, SerifTitle } from "~/resources/views/demo-apps/inkwell/shell";
+import { action, Byline, href, SerifTitle, SLUG } from "~/resources/views/demo-apps/inkwell/shell";
 
 /** The filter bar's strings. */
 const FILTER_LABELS: FilterBar.Labels = {
@@ -66,6 +68,9 @@ const SHEET_LABELS: DetailSheet.Labels = {
 	next: "Next post",
 	position: "Post",
 };
+
+/** The line under the quick-edit fields, saying where the rest of a post changes. */
+const QUICK_EDIT_NOTE = "Tags, the excerpt and the body change in the editor.";
 
 /** The selection bar's strings. */
 const SELECTION_LABELS = {
@@ -415,12 +420,12 @@ interface QuickEditSheetProps {
 /**
  * Edits a post's title, slug, status and author without leaving the list. The sheet steps
  * through the filtered rows, and its form carries the list's query back, so saving lands on
- * the same view.
+ * the same view. The form streams in as a frame; a failed save answers with it in the page,
+ * holding what was typed.
  */
 function QuickEditSheet(handle: Handle<QuickEditSheetProps>) {
 	return () => {
 		let { post, rows, listUrl, titleIssue, edited } = handle.props;
-		let shown = edited ?? post;
 		let index = rows.findIndex((row) => row.id === post.id);
 		let at = (offset: number) => {
 			let neighbour = rows[index + offset];
@@ -463,52 +468,103 @@ function QuickEditSheet(handle: Handle<QuickEditSheetProps>) {
 					</div>
 				}
 			>
-				<form
-					id="quick-edit-form"
-					method="post"
-					action={action(`posts/${post.id}/quick`)}
-					mix={[vstack({ gap: 4, align: "stretch" })]}
-				>
-					<input type="hidden" name="back" value={listUrl.search} />
-					<TextField
-						label="Title"
-						name="title"
-						defaultValue={shown.title}
-						errorMessage={titleIssue ? "Give the post a title, then update it again." : undefined}
-						required
+				{titleIssue || edited !== undefined ? (
+					<QuickEditForm
+						post={post}
+						back={listUrl.search}
+						titleIssue={titleIssue}
+						edited={edited}
 					/>
-					<TextField
-						label="Slug"
-						name="slug"
-						defaultValue={shown.slug}
-						description={`lanternreview.example/${post.slug}`}
-						pattern="[a-z0-9\-]+"
+				) : (
+					<DemoAppFrame
+						app={SLUG}
+						part={`posts/${post.id}/quick${listUrl.search}`}
+						fallback={<QuickEditPlaceholder />}
 					/>
-					<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
-						<Label htmlFor="quick-edit-status">Status</Label>
-						<Select id="quick-edit-status" name="status">
-							{(["draft", "published", "scheduled"] as const).map((status) => (
-								<Select.Option value={status} selected={status === shown.status}>
-									{STATUS_LABEL[status]}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-					<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
-						<Label htmlFor="quick-edit-author">Author</Label>
-						<Select id="quick-edit-author" name="author">
-							{AUTHORS.map((author) => (
-								<Select.Option value={author.id} selected={author.id === shown.authorId}>
-									{author.name}
-								</Select.Option>
-							))}
-						</Select>
-					</div>
-					<p mix={[m(0), text("xs"), fg("neutral.muted")]}>
-						Tags, the excerpt and the body change in the editor.
-					</p>
-				</form>
+				)}
 			</DetailSheet>
 		);
 	};
+}
+
+/** Props accepted by {@link QuickEditForm}. */
+interface QuickEditFormProps {
+	post: Post;
+	/** The list's query string, which the save lands back on. */
+	back: string;
+	titleIssue: boolean;
+	edited?: QuickEditValues;
+}
+
+/**
+ * The quick-edit fields. It posts as a whole page, so the list behind the sheet and its toast
+ * come back with the save; the sheet's footer submits it by its id.
+ */
+export function QuickEditForm(handle: Handle<QuickEditFormProps>) {
+	return () => {
+		let { post, back, titleIssue, edited } = handle.props;
+		let shown = edited ?? post;
+		return (
+			<form
+				id="quick-edit-form"
+				method="post"
+				action={action(`posts/${post.id}/quick`)}
+				mix={[vstack({ gap: 4, align: "stretch" })]}
+			>
+				<input type="hidden" name="back" value={back} />
+				<TextField
+					label="Title"
+					name="title"
+					defaultValue={shown.title}
+					errorMessage={titleIssue ? "Give the post a title, then update it again." : undefined}
+					required
+				/>
+				<TextField
+					label="Slug"
+					name="slug"
+					defaultValue={shown.slug}
+					description={`lanternreview.example/${post.slug}`}
+					parts={{ description: [truncate()] }}
+					pattern="[a-z0-9\-]+"
+				/>
+				<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+					<Label htmlFor="quick-edit-status">Status</Label>
+					<Select id="quick-edit-status" name="status">
+						{(["draft", "published", "scheduled"] as const).map((status) => (
+							<Select.Option value={status} selected={status === shown.status}>
+								{STATUS_LABEL[status]}
+							</Select.Option>
+						))}
+					</Select>
+				</div>
+				<div mix={[vstack({ gap: 1.5, align: "stretch" })]}>
+					<Label htmlFor="quick-edit-author">Author</Label>
+					<Select id="quick-edit-author" name="author">
+						{AUTHORS.map((author) => (
+							<Select.Option value={author.id} selected={author.id === shown.authorId}>
+								{author.name}
+							</Select.Option>
+						))}
+					</Select>
+				</div>
+				<p mix={[m(0), text("xs"), fg("neutral.muted")]}>{QUICK_EDIT_NOTE}</p>
+			</form>
+		);
+	};
+}
+
+/**
+ * The quick-edit form while it loads: each field's label over a box at its control's height,
+ * the slug's address line and the closing note, spaced like the form.
+ */
+export function QuickEditPlaceholder() {
+	return () => (
+		<div aria-hidden="true" mix={[vstack({ gap: 4, align: "stretch" })]}>
+			<FieldShape label="Title" gap="0.5rem" />
+			<FieldShape label="Slug" gap="0.5rem" description />
+			<FieldShape label="Status" gap="0.375rem" />
+			<FieldShape label="Author" gap="0.375rem" />
+			<p mix={[m(0), text("xs"), fg("neutral.muted")]}>{QUICK_EDIT_NOTE}</p>
+		</div>
+	);
 }

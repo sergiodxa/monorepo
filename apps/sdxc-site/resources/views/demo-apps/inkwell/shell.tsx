@@ -28,7 +28,7 @@ import { KeyboardHelp } from "@sdxc/ui/app/keyboard-help";
 
 import type { Author } from "~/resources/views/demo-apps/inkwell/data";
 
-import { demoAppActionHref, demoAppHref } from "~/resources/views/demo-apps";
+import { demoAppActionHref, demoAppFrameHref, demoAppHref } from "~/resources/views/demo-apps";
 import { UserMenu, WorkspaceMenu } from "~/resources/views/demo-apps/account-menus";
 import { AUTHORS, POSTS, PUBLICATION } from "~/resources/views/demo-apps/inkwell/data";
 
@@ -40,6 +40,9 @@ export const href = demoAppHref(SLUG);
 
 /** The address a form on one of Inkwell's screens posts to. */
 export const action = demoAppActionHref(SLUG);
+
+/** The address of one of Inkwell's frames, by its part path and the screen state it reads. */
+export const frameHref = demoAppFrameHref(SLUG);
 
 /** The keyboard help sheet's id, which the user menu's shortcuts item opens. */
 const HELP_ID = "inkwell-keys";

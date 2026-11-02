@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+
 import { APP_SHELL_COOKIE, readAppShellCookie } from "@sdxc/ui/app/app-shell";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
@@ -18,11 +20,18 @@ import type { NavKey, ShellScreen } from "~/resources/views/demo-apps/inkwell/sh
 
 import { DEMO_APP_TOAST_PARAM } from "~/resources/views/demo-apps";
 import { MEDIA, POSTS, PUBLICATION } from "~/resources/views/demo-apps/inkwell/data";
-import { EditorScreen } from "~/resources/views/demo-apps/inkwell/editor";
-import { HomeScreen } from "~/resources/views/demo-apps/inkwell/home";
-import { MediaScreen } from "~/resources/views/demo-apps/inkwell/media";
+import { EditorScreen, PostHistory } from "~/resources/views/demo-apps/inkwell/editor";
+import {
+	ActivityFeed,
+	DraftList,
+	HomeScreen,
+	HomeStats,
+	ReaderComments,
+	ScheduledList,
+} from "~/resources/views/demo-apps/inkwell/home";
+import { AttachmentDetails, MediaScreen } from "~/resources/views/demo-apps/inkwell/media";
 import { NotFoundScreen, PagesScreen } from "~/resources/views/demo-apps/inkwell/pages";
-import { PostsScreen } from "~/resources/views/demo-apps/inkwell/posts";
+import { PostsScreen, QuickEditForm } from "~/resources/views/demo-apps/inkwell/posts";
 import { readPostsQuery } from "~/resources/views/demo-apps/inkwell/posts-query";
 import { PreviewScreen } from "~/resources/views/demo-apps/inkwell/preview";
 import { SETTINGS_TITLES, SettingsScreen } from "~/resources/views/demo-apps/inkwell/settings";
@@ -159,7 +168,7 @@ function route(request: DemoAppRequest, now: Date): ShellScreen | DemoAppScreen 
 	let [section, id, rest] = parts;
 
 	if (parts.length === 0) {
-		return { title: "Home", current: "home", place: "Home", body: <HomeScreen now={now} /> };
+		return { title: "Home", current: "home", place: "Home", body: <HomeScreen /> };
 	}
 
 	if (section === "posts" && parts.length === 1) {
@@ -252,6 +261,48 @@ function route(request: DemoAppRequest, now: Date): ShellScreen | DemoAppScreen 
 	};
 }
 
+/** The overview's frames, each a part with no state of its own beyond the moment it renders. */
+const HOME_PARTS: Record<string, (now: Date) => RemixNode> = {
+	"home/stats": (now) => <HomeStats now={now} />,
+	"home/drafts": (now) => <DraftList now={now} />,
+	"home/scheduled": (now) => <ScheduledList now={now} />,
+	"home/activity": (now) => <ActivityFeed now={now} />,
+	"home/comments": () => <ReaderComments />,
+};
+
+/**
+ * Renders one of Inkwell's frames. A post's history and quick-edit form and a file's sheet
+ * name their record in the path; the quick-edit form reads the list it saves back to from its
+ * query, and the file's sheet the library's layout.
+ *
+ * @param part The frame's path under the app.
+ * @param request The frame's address, carrying its query.
+ * @param now The render's reference moment.
+ * @returns The part, or `null` for a path or record Inkwell has none of.
+ */
+function frame(part: string, request: DemoAppRequest, now: Date): RemixNode | null {
+	let home = HOME_PARTS[part];
+	if (home !== undefined) return home(now);
+
+	let [section, id, name, ...extra] = part.split("/");
+	if (extra.length > 0) return null;
+	if (section === "posts") {
+		let post = POSTS.find((candidate) => candidate.id === id);
+		if (post === undefined) return null;
+		if (name === "history") return <PostHistory post={post} now={now} />;
+		if (name === "quick") {
+			return <QuickEditForm post={post} back={request.url.search} titleIssue={false} />;
+		}
+	}
+	if (section === "media" && name === "attachment") {
+		let item = MEDIA.find((entry) => entry.id === id);
+		if (item === undefined) return null;
+		let list = request.url.searchParams.get("view") === "list";
+		return <AttachmentDetails item={item} view={list ? "list" : "grid"} now={now} />;
+	}
+	return null;
+}
+
 /** Inkwell, as the demo apps route registers it. */
 export default {
 	name: "Inkwell",
@@ -295,6 +346,7 @@ export default {
 	],
 	cookies: [APP_SHELL_COOKIE],
 	toasts: TOASTS,
+	frame: (part, request) => frame(part, request, new Date()),
 	render(request) {
 		let screen = route(request, new Date());
 		return "current" in screen ? framed(screen, request.cookie) : screen;

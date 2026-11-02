@@ -20,6 +20,7 @@ import { Badge, Button, FieldError, LinkButton } from "@sdxc/ui";
 import { EditorLayout } from "@sdxc/ui/app/editor-layout";
 import { SaveBar } from "@sdxc/ui/app/save-bar";
 import { SaveStatus } from "@sdxc/ui/app/save-status";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 import { PropertyList } from "@sdxc/ui/property-list";
 import { RelativeTime } from "@sdxc/ui/relative-time";
 import { StatusDot } from "@sdxc/ui/status-dot";
@@ -27,6 +28,7 @@ import { Timeline } from "@sdxc/ui/timeline";
 
 import type { Post, PostStatus } from "~/resources/views/demo-apps/inkwell/data";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import {
 	AUTHORS,
 	findAuthor,
@@ -35,11 +37,18 @@ import {
 	TAGS,
 	wordCount,
 } from "~/resources/views/demo-apps/inkwell/data";
+import { FrameRegion } from "~/resources/views/demo-apps/inkwell/placeholders";
 import { STATUS_COLOR, STATUS_LABEL } from "~/resources/views/demo-apps/inkwell/posts-query";
-import { action, Byline, href, Initials } from "~/resources/views/demo-apps/inkwell/shell";
+import { action, Byline, href, Initials, SLUG } from "~/resources/views/demo-apps/inkwell/shell";
 
 /** The id the writing form takes, which the bar's buttons and the popovers' fields submit with. */
 const FORM_ID = "post-form";
+
+/**
+ * The minimum heights the history's region holds: a live post's two events and the fold, in
+ * the sidebar's narrow column and at a wider sheet.
+ */
+export const HISTORY_REGION = { narrow: "9.5rem", wide: "8rem" } as const;
 
 /** What each status means to a reader, shown under its option in the status popover. */
 const STATUS_HELP: Record<PostStatus, string> = {
@@ -533,7 +542,13 @@ function PostSidebar(handle: Handle<PostSidebarProps>) {
 					>
 						History
 					</h2>
-					<PostHistory post={post} now={now} />
+					<FrameRegion {...HISTORY_REGION}>
+						<DemoAppFrame
+							app={SLUG}
+							part={`posts/${post.id}/history`}
+							fallback={<HistoryPlaceholder />}
+						/>
+					</FrameRegion>
 				</section>
 			</div>
 		);
@@ -546,8 +561,11 @@ interface PostHistoryProps {
 	now: Date;
 }
 
-/** The post's revisions, newest first, with the older ones folded away. */
-function PostHistory(handle: Handle<PostHistoryProps>) {
+/**
+ * The post's revisions, newest first, with the older ones folded away. It streams into the
+ * sidebar as its own frame, read from the stored post, so the properties above answer first.
+ */
+export function PostHistory(handle: Handle<PostHistoryProps>) {
 	return () => {
 		let { post, now } = handle.props;
 		let author = findAuthor(post.authorId);
@@ -598,6 +616,18 @@ function PostHistory(handle: Handle<PostHistoryProps>) {
 			</Timeline>
 		);
 	};
+}
+
+/** The history's placeholder: a line for each event a live post shows and one for the fold. */
+export function HistoryPlaceholder() {
+	return () => (
+		<Skeleton.List
+			rows={3}
+			avatar
+			lines={1}
+			mix={[raw({ "--ui-skeleton-list-row-block-size": "2.5rem" })]}
+		/>
+	);
 }
 
 /** Props accepted by {@link NewDocumentSidebar}. */

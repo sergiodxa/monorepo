@@ -22,13 +22,16 @@ import { DetailSheet } from "@sdxc/ui/app/detail-sheet";
 import { DropZone } from "@sdxc/ui/app/drop-zone";
 import { GridList } from "@sdxc/ui/app/grid-list";
 import { PageHeader } from "@sdxc/ui/app/page-header";
+import { Skeleton } from "@sdxc/ui/app/skeleton";
 import { PropertyList } from "@sdxc/ui/property-list";
 import { RelativeTime } from "@sdxc/ui/relative-time";
 
 import type { MediaItem, Swatch } from "~/resources/views/demo-apps/inkwell/data";
 
+import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { findAuthor, MEDIA, minutesBefore, POSTS } from "~/resources/views/demo-apps/inkwell/data";
-import { action, Byline, href, SerifTitle } from "~/resources/views/demo-apps/inkwell/shell";
+import { FieldShape, TextBar } from "~/resources/views/demo-apps/inkwell/placeholders";
+import { action, Byline, href, SerifTitle, SLUG } from "~/resources/views/demo-apps/inkwell/shell";
 
 /** The attachment sheet's strings. */
 const SHEET_LABELS: DetailSheet.Labels = {
@@ -39,6 +42,12 @@ const SHEET_LABELS: DetailSheet.Labels = {
 	next: "Next file",
 	position: "File",
 };
+
+/** The alt text field's description. */
+const ALT_HELP = "What a reader who can't see the image needs to know.";
+
+/** The line closing the attachment sheet, saying how far a change reaches. */
+const ATTACHMENT_NOTE = "Changes apply wherever the file appears.";
 
 /** Kilobytes in a megabyte, for the file sizes the library prints. */
 const KB_PER_MB = 1000;
@@ -214,7 +223,7 @@ export function MediaScreen(handle: Handle<MediaScreenProps>) {
 						</GridList.Item>
 					))}
 				</GridList>
-				{item === null ? null : <AttachmentSheet item={item} listUrl={listUrl} now={now} />}
+				{item === null ? null : <AttachmentSheet item={item} listUrl={listUrl} />}
 			</div>
 		);
 	};
@@ -288,20 +297,22 @@ function MediaTile(handle: Handle<MediaTileProps>) {
 interface AttachmentSheetProps {
 	item: MediaItem;
 	listUrl: URL;
-	now: Date;
 }
 
-/** One file's facts, the post it appears in, and the alt text and caption readers get. */
+/**
+ * One file's sheet. Its header and footer answer with the library; the file's picture, facts
+ * and fields stream in as a frame read from the file's id and the library's layout.
+ */
 function AttachmentSheet(handle: Handle<AttachmentSheetProps>) {
 	return () => {
-		let { item, listUrl, now } = handle.props;
+		let { item, listUrl } = handle.props;
 		let index = MEDIA.findIndex((entry) => entry.id === item.id);
 		let at = (offset: number) => {
 			let neighbour = MEDIA[index + offset];
 			return neighbour === undefined ? null : setParamHref(listUrl, "item", neighbour.id);
 		};
 		let closeHref = setParamHref(listUrl, "item", null);
-		let post = POSTS.find((candidate) => candidate.id === item.postId);
+		let list = listUrl.searchParams.get("view") === "list";
 
 		return (
 			<DetailSheet
@@ -322,57 +333,97 @@ function AttachmentSheet(handle: Handle<AttachmentSheetProps>) {
 					</div>
 				}
 			>
-				<div mix={[vstack({ gap: 5, align: "stretch" })]}>
-					<div mix={[rounded("lg"), raw({ overflow: "hidden", aspectRatio: "4 / 3" })]}>
-						<SwatchArt swatch={item.swatch} id={`sheet-${item.id}`} />
-					</div>
-					<PropertyList>
-						<PropertyList.Item label="Dimensions">
-							<span mix={[tabularNums()]}>{`${item.width} × ${item.height} px`}</span>
-						</PropertyList.Item>
-						<PropertyList.Item label="Size">{fileSize(item.bytes)}</PropertyList.Item>
-						<PropertyList.Item label="Uploaded by">
-							<Byline author={findAuthor(item.authorId)} />
-						</PropertyList.Item>
-						<PropertyList.Item label="Uploaded">
-							<RelativeTime
-								date={minutesBefore(now, item.uploadedMinutesAgo)}
-								now={now}
-								locale="en-US"
-								local
-							/>
-						</PropertyList.Item>
-						<PropertyList.Item label="Used in" empty="Not used yet">
-							{post === undefined ? null : (
-								<Link href={href(`posts/${post.id}`)}>{post.title}</Link>
-							)}
-						</PropertyList.Item>
-					</PropertyList>
-					<form
-						id="attachment-form"
-						method="post"
-						action={action(`media/${item.id}`)}
-						mix={[vstack({ gap: 4, align: "stretch" })]}
-					>
-						<input type="hidden" name="back" value={listUrl.searchParams.get("view") ?? ""} />
-						<TextField
-							label="Alt text"
-							name="alt"
-							defaultValue={item.alt}
-							description="What a reader who can't see the image needs to know."
-						/>
-						<TextField
-							label="Caption"
-							name="caption"
-							defaultValue={item.caption}
-							placeholder="No caption"
-						/>
-					</form>
-					<p mix={[m(0), text("xs"), fg("neutral.muted")]}>
-						Changes apply wherever the file appears.
-					</p>
-				</div>
+				<DemoAppFrame
+					app={SLUG}
+					part={`media/${item.id}/attachment${list ? "?view=list" : ""}`}
+					fallback={<AttachmentPlaceholder />}
+				/>
 			</DetailSheet>
 		);
 	};
+}
+
+/** Props accepted by {@link AttachmentDetails}. */
+interface AttachmentDetailsProps {
+	item: MediaItem;
+	/** The library's layout, which a save lands back on. */
+	view: "grid" | "list";
+	now: Date;
+}
+
+/** One file's picture, its facts and the post it appears in, and the alt text and caption readers get. */
+export function AttachmentDetails(handle: Handle<AttachmentDetailsProps>) {
+	return () => {
+		let { item, view, now } = handle.props;
+		let post = POSTS.find((candidate) => candidate.id === item.postId);
+		return (
+			<div mix={[vstack({ gap: 5, align: "stretch" })]}>
+				<div mix={[rounded("lg"), raw({ overflow: "hidden", aspectRatio: "4 / 3" })]}>
+					<SwatchArt swatch={item.swatch} id={`sheet-${item.id}`} />
+				</div>
+				<PropertyList>
+					<PropertyList.Item label="Dimensions">
+						<span mix={[tabularNums()]}>{`${item.width} × ${item.height} px`}</span>
+					</PropertyList.Item>
+					<PropertyList.Item label="Size">{fileSize(item.bytes)}</PropertyList.Item>
+					<PropertyList.Item label="Uploaded by">
+						<Byline author={findAuthor(item.authorId)} />
+					</PropertyList.Item>
+					<PropertyList.Item label="Uploaded">
+						<RelativeTime
+							date={minutesBefore(now, item.uploadedMinutesAgo)}
+							now={now}
+							locale="en-US"
+							local
+						/>
+					</PropertyList.Item>
+					<PropertyList.Item label="Used in" empty="Not used yet">
+						{post === undefined ? null : <Link href={href(`posts/${post.id}`)}>{post.title}</Link>}
+					</PropertyList.Item>
+				</PropertyList>
+				<form
+					id="attachment-form"
+					method="post"
+					action={action(`media/${item.id}`)}
+					mix={[vstack({ gap: 4, align: "stretch" })]}
+				>
+					<input type="hidden" name="back" value={view === "list" ? "list" : ""} />
+					<TextField label="Alt text" name="alt" defaultValue={item.alt} description={ALT_HELP} />
+					<TextField
+						label="Caption"
+						name="caption"
+						defaultValue={item.caption}
+						placeholder="No caption"
+					/>
+				</form>
+				<p mix={[m(0), text("xs"), fg("neutral.muted")]}>{ATTACHMENT_NOTE}</p>
+			</div>
+		);
+	};
+}
+
+/**
+ * The attachment sheet's body while it loads: the picture's box, the facts' labels with a bar
+ * for each value, and the fields' labels over boxes at their controls' height.
+ */
+export function AttachmentPlaceholder() {
+	return () => (
+		<div aria-hidden="true" mix={[vstack({ gap: 5, align: "stretch" })]}>
+			<Skeleton mix={[rounded("lg"), raw({ blockSize: "auto", aspectRatio: "4 / 3" })]} />
+			<PropertyList>
+				{["Dimensions", "Size", "Uploaded by", "Uploaded", "Used in"].map((label, index) => (
+					<PropertyList.Item label={label}>
+						<span>
+							<TextBar width={index % 2 === 0 ? "7rem" : "5rem"} />
+						</span>
+					</PropertyList.Item>
+				))}
+			</PropertyList>
+			<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+				<FieldShape label="Alt text" gap="0.5rem" description={ALT_HELP} />
+				<FieldShape label="Caption" gap="0.5rem" />
+			</div>
+			<p mix={[m(0), text("xs"), fg("neutral.muted")]}>{ATTACHMENT_NOTE}</p>
+		</div>
+	);
 }
