@@ -117,6 +117,11 @@ export namespace StatCard {
 		 * wrap even in a wide card. Unset, the footer wraps where a 40-character sentence does.
 		 */
 		footerLines?: 1 | 2;
+		/**
+		 * The real card's label, drawn as invisible text on a placeholder bar, so the skeleton's
+		 * label wraps to the same lines as the card's at every width.
+		 */
+		label?: string;
 	}
 }
 
@@ -510,15 +515,34 @@ StatCard.Footer = function StatCardFooter(handle: Handle<TagProps<"div">>) {
  * <StatCard.Skeleton comparison={false} footer={false} />
  * @example
  * <StatCard.Skeleton footerLines={2} />
+ * @example
+ * <StatCard.Skeleton label="Monthly Pings Usage" delta={false} />
  */
 StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonProps>) {
 	return () => {
-		let { delta, comparison, chart, footer, footerLines, mix, ...rest } = handle.props;
+		let { delta, comparison, chart, footer, footerLines, label, mix, ...rest } = handle.props;
 
 		return (
 			<StatCard aria-hidden="true" data-skeleton="" {...rest} mix={mix}>
 				<StatCard.Label>
-					<StatCardBar width="40%" />
+					{label ? (
+						<span
+							data-slot="stat-card-skeleton-label"
+							mix={[
+								rounded("md"),
+								raw({
+									color: "transparent",
+									backgroundColor: BORDER,
+									boxDecorationBreak: "clone",
+									WebkitBoxDecorationBreak: "clone",
+								}),
+							]}
+						>
+							{label}
+						</span>
+					) : (
+						<StatCardBar width="40%" />
+					)}
 				</StatCard.Label>
 				<StatCard.Value>
 					<StatCardBar width="5ch" />

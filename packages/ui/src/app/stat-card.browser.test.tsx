@@ -206,6 +206,44 @@ describe("StatCard", () => {
 		}
 	}
 
+	for (let width of [375, 1440]) {
+		test(`wraps a skeleton given the label exactly like the card in a ${width}px group`, () => {
+			let label = "Monthly Pings Usage";
+			let host = mount(
+				<div>
+					<StatCard.Group aria-label="Monitor">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard key={index}>
+								<StatCard.Label>{label}</StatCard.Label>
+								<StatCard.Value>290</StatCard.Value>
+								<StatCard.Footer>Out of 176,429 estimated</StatCard.Footer>
+							</StatCard>
+						))}
+					</StatCard.Group>
+					<StatCard.Group aria-hidden="true">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard.Skeleton key={index} label={label} delta={false} />
+						))}
+					</StatCard.Group>
+				</div>,
+				width,
+			);
+			let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+			let heights = cards.map((card) => card.getBoundingClientRect().height);
+			for (let index of [0, 1, 2, 3]) {
+				expect(Math.abs(heights[index + 4]! - heights[index]!)).toBeLessThanOrEqual(1);
+			}
+			let real = cards[0]!.querySelector<HTMLElement>('[data-slot="stat-card-label"]')!;
+			let lines = Math.round(
+				real.getBoundingClientRect().height / parseFloat(getComputedStyle(real).lineHeight),
+			);
+			expect(lines).toBe(width === 375 ? 2 : 1);
+			let text = host.querySelector<HTMLElement>('[data-slot="stat-card-skeleton-label"]')!;
+			expect(getComputedStyle(text).color).toBe("rgba(0, 0, 0, 0)");
+			expect(text.closest('[aria-hidden="true"]')).not.toBeNull();
+		});
+	}
+
 	for (let [width, footer] of [
 		[343, "checkout-api is down since 05:41."],
 		[1100, "checkout-api has been down since 05:41 and is still failing."],
