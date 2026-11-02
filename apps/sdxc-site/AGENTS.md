@@ -131,7 +131,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   `app/initializers/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes,
   and publishes them as `ctx.assets`; every page renders `<DocumentLayout assets={ctx.assets}>`.
   A build hashes every file, so a hand-written `/assets/...` URL names a file the next build
-  renames. A stylesheet joins by a side-effect
+  renames. `public/_headers` serves everything under `/assets/` with `Cache-Control: public, max-age=31536000, immutable`, so a browser keeps each hashed file for a year; a hand-placed file in `public/` stays outside `/assets/`, where it is revalidated. A stylesheet joins by a side-effect
   `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
 - **Keep only islands in the browser entry.** An app island is identified by
   `clientEntry(import.meta.url, …)`, which the build rewrites into an id the renderer maps to
