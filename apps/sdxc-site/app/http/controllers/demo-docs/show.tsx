@@ -13,8 +13,10 @@ import { readCodeTabsCookie, searchQueryFromPath } from "@sdxc/ui/docs";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { withStreamCache } from "~/app/http/caching";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { searchDemoDocs } from "~/app/services/demo-docs-search";
+import { rememberedTabsVariant } from "~/app/services/remembered-tabs";
 import DocumentLayout from "~/resources/layouts/document";
 import { demoDocsHref, findDemoDocsSite } from "~/resources/views/demo-docs";
 import {
@@ -44,19 +46,24 @@ export default createAction(routes.demoDocs.show, async (ctx) => {
 
 	let href = demoDocsHref(slug);
 	let cookie = ctx.request.headers.get("Cookie");
-	let render = (options: { title: string; body: RemixNode; status?: number }) =>
-		ctx.render(
-			<DocumentLayout
-				assets={ctx.assets}
-				title={`${options.title} — ${site.name} Docs`}
-				description={site.description}
-				robots={DEMO_ROBOTS}
-				siteFooter={false}
-			>
-				{options.body}
-			</DocumentLayout>,
-			{ status: options.status ?? 200 },
-		);
+	let variant = `${ctx.url.search}|${rememberedTabsVariant(cookie)}`;
+	let render = async (options: { title: string; body: RemixNode; status?: number }) => {
+		let renderPage = async () =>
+			ctx.render(
+				<DocumentLayout
+					assets={ctx.assets}
+					title={`${options.title} — ${site.name} Docs`}
+					description={site.description}
+					robots={DEMO_ROBOTS}
+					siteFooter={false}
+				>
+					{options.body}
+				</DocumentLayout>,
+				{ status: options.status ?? 200 },
+			);
+		if (options.status !== undefined && options.status !== 200) return await renderPage();
+		return await withStreamCache(ctx.request, variant, renderPage);
+	};
 
 	if (path === undefined) {
 		return render({
