@@ -294,6 +294,28 @@ describe("AppShell", () => {
 		expect(toggle().checked).toBe(false);
 	});
 
+	test("keeps the phone drawer full height at the left edge for its whole exit", async () => {
+		await page.viewport(375, 812);
+		mountShell();
+		menuButton().click();
+		await new Promise((resolve) => setTimeout(resolve, 400));
+		sidebar().hidePopover();
+		let samples: { top: number; height: number; left: number; right: number }[] = [];
+		for (let index = 0; index < 20; index++) {
+			await new Promise((resolve) => requestAnimationFrame(resolve));
+			if (!sidebar().checkVisibility()) break;
+			let { top, height, left, right } = sidebar().getBoundingClientRect();
+			samples.push({ top, height, left, right });
+		}
+
+		expect(samples.length).toBeGreaterThan(0);
+		for (let sample of samples) {
+			expect(sample.top).toBe(0);
+			expect(Math.round(sample.height)).toBe(812);
+			expect(sample.left === 0 || sample.right <= 0 || sample.left < 0).toBe(true);
+		}
+	});
+
 	test("closes the sheet in one slide at its full width, never shrinking to its content first", async () => {
 		await page.viewport(900, 800);
 		mountShell({ sheetBelow: "64rem", collapsed: true });
