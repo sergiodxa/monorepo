@@ -383,7 +383,7 @@ function ContactRow(
 		return (
 			<Table.Row aria-selected={open ? "true" : undefined}>
 				<Table.Cell>
-					<Table.RowLink href={href(withContact(url, contact.id))}>
+					<Table.RowLink data-rmx-prefetch="intent" href={href(withContact(url, contact.id))}>
 						<span mix={[weight("medium")]}>{contact.name}</span>
 					</Table.RowLink>
 				</Table.Cell>

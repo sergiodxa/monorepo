@@ -300,6 +300,7 @@ function PostsTable(handle: Handle<PostsTableProps>) {
 												>
 													<span mix={[hstack({ gap: 2, align: "center" })]}>
 														<Table.RowLink
+															data-rmx-prefetch="intent"
 															href={href(`posts/${post.id}`)}
 															mix={[weight("semibold"), truncate()]}
 														>

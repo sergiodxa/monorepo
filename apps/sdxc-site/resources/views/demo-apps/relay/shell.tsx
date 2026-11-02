@@ -155,6 +155,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 			let count = viewCount(view);
 			return (
 				<AppShell.Item
+					data-rmx-prefetch="intent"
 					href={href(viewPage(view))}
 					icon={viewIcon(view.icon)}
 					label={view.label}
@@ -180,6 +181,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 				</AppShell.Group>
 				<AppShell.Group title="Customers">
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("contacts")}
 						icon={<UsersIcon />}
 						label="Contacts"
@@ -189,6 +191,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 						data-shortcut-group="Navigation"
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("reports")}
 						icon={<ChartLineIcon />}
 						label="Reports"
@@ -198,6 +201,7 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 						data-shortcut-group="Navigation"
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("settings")}
 						icon={<SettingsIcon />}
 						label="Settings"
@@ -209,16 +213,19 @@ function RelayNav(handle: Handle<{ current: ShellSection }>) {
 				</AppShell.Group>
 				<AppShell.Group title="Demo states">
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("contacts?state=loading")}
 						icon={<FlaskConicalIcon />}
 						label="Contacts loading"
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("contacts?state=first-run")}
 						icon={<FlaskConicalIcon />}
 						label="No contacts yet"
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("reports?state=error")}
 						icon={<FlaskConicalIcon />}
 						label="Report failed"

@@ -143,7 +143,11 @@ export const ServicesTable = clientEntry(
 								>
 									<Table.Select name="service" value={row.id} form={form} label={row.selectLabel} />
 									<Table.Cell>
-										<Table.RowLink href={row.href} mix={[font("mono"), nowrap()]}>
+										<Table.RowLink
+											data-rmx-prefetch="intent"
+											href={row.href}
+											mix={[font("mono"), nowrap()]}
+										>
 											{row.name}
 										</Table.RowLink>
 									</Table.Cell>

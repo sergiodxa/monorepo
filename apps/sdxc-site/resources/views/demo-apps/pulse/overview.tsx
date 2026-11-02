@@ -411,6 +411,7 @@ export default function Overview(handle: Handle<Overview.Props>) {
 						actions={
 							<LinkButton
 								href={href("services?status=down&status=degraded")}
+								prefetch="viewport"
 								size="sm"
 								variant="ghost"
 							>
@@ -459,7 +460,11 @@ export default function Overview(handle: Handle<Overview.Props>) {
 										{attention.map((service) => (
 											<Table.Row key={service.id}>
 												<Table.Cell>
-													<Table.RowLink href={href(`services/${service.id}`)} mix={[font("mono")]}>
+													<Table.RowLink
+														data-rmx-prefetch="intent"
+														href={href(`services/${service.id}`)}
+														mix={[font("mono")]}
+													>
 														{service.name}
 													</Table.RowLink>
 												</Table.Cell>

@@ -307,7 +307,7 @@ export function ReportsScreen(handle: Handle<ReportsScreen.Props>) {
 									{BY_VIEW.map((row) => (
 										<Table.Row>
 											<Table.Cell>
-												<Table.RowLink href={href(row.slug)}>
+												<Table.RowLink data-rmx-prefetch="intent" href={href(row.slug)}>
 													{findView(row.slug)?.label}
 												</Table.RowLink>
 											</Table.Cell>

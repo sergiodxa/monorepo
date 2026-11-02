@@ -111,6 +111,24 @@ describe("GET /demo/apps/:app", () => {
 		expect(revalidated.status).toBe(304);
 	});
 
+	test.each(apps)(
+		"$slug prefetches only safe in-app pages, and its nav and rows on intent",
+		async ({ slug, app }) => {
+			let root = demoAppHref(slug)();
+			let prefetched = 0;
+			for (let screen of app.screens) {
+				let body = await (await fetchApp(demoAppHref(slug)(screen))).text();
+				for (let [tag] of body.matchAll(/<a\b[^>]*data-rmx-prefetch="[^"]+"[^>]*>/g)) {
+					let href = /href="([^"]+)"/.exec(tag)?.[1] ?? "";
+					expect(href, tag).toMatch(new RegExp(`^${root}(/|\\?|$)`));
+					expect(href, tag).not.toContain("toast=");
+					prefetched++;
+				}
+			}
+			expect(prefetched).toBeGreaterThan(app.screens.length);
+		},
+	);
+
 	test("an unknown app answers the site's 404", async () => {
 		expect((await fetchApp("/demo/apps/no-such-app")).status).toBe(404);
 	});

@@ -43,7 +43,11 @@ export function Deployments() {
 							<Table.Row key={deploy.id}>
 								<Table.IdCell value={deploy.id} tail={6} />
 								<Table.Cell>
-									<Table.RowLink href={href(`services/${deploy.service}`)} mix={[font("mono")]}>
+									<Table.RowLink
+										data-rmx-prefetch="intent"
+										href={href(`services/${deploy.service}`)}
+										mix={[font("mono")]}
+									>
 										{deploy.service}
 									</Table.RowLink>
 								</Table.Cell>

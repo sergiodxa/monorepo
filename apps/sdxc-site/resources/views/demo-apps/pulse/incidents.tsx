@@ -104,7 +104,10 @@ export default function Incidents(handle: Handle<Incidents.Props>) {
 										<Table.Row key={incident.id}>
 											<Table.Cell mix={[font("mono")]}>{incident.id}</Table.Cell>
 											<Table.Cell>
-												<Table.RowLink href={href(`services/${incident.service}?tab=incidents`)}>
+												<Table.RowLink
+													data-rmx-prefetch="intent"
+													href={href(`services/${incident.service}?tab=incidents`)}
+												>
 													{incident.title}
 												</Table.RowLink>
 											</Table.Cell>

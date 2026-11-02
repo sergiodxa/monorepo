@@ -234,24 +234,28 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 					<>
 						<AppShell.Group>
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href()}
 								icon={<HouseIcon />}
 								label="Home"
 								current={current === "home"}
 							/>
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("posts")}
 								icon={<FileTextIcon />}
 								label="Posts"
 								current={current === "posts"}
 							/>
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("pages")}
 								icon={<FilesIcon />}
 								label="Pages"
 								current={current === "pages"}
 							/>
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("media")}
 								icon={<ImageIcon />}
 								label="Media"
@@ -260,6 +264,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 						</AppShell.Group>
 						<AppShell.Group title="Views">
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("posts?status=draft")}
 								icon={<PenLineIcon />}
 								label="Drafts"
@@ -269,6 +274,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 								current={current === "drafts"}
 							/>
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("posts?status=scheduled")}
 								icon={<CalendarClockIcon />}
 								label="Scheduled"
@@ -280,6 +286,7 @@ export function InkwellShell(handle: Handle<InkwellShellProps>) {
 						</AppShell.Group>
 						<AppShell.Group title="Publication">
 							<AppShell.Item
+								data-rmx-prefetch="intent"
 								href={href("settings")}
 								icon={<SettingsIcon />}
 								label="Settings"

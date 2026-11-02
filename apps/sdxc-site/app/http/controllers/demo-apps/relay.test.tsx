@@ -211,9 +211,9 @@ describe("Relay frames", () => {
 
 	test("the list stays in the document while the conversation streams in its frame", async () => {
 		let body = await html("enterprise/2041");
-		expect(body).toMatch(
-			/href="[^"]*enterprise\/2041" data-split-view-item="" aria-current="page"/,
-		);
+		let row = /<a\b[^>]*href="[^"]*enterprise\/2041"[^>]*>/.exec(body)?.[0] ?? "";
+		expect(row).toContain('data-split-view-item=""');
+		expect(row).toContain('aria-current="page"');
 		expect(body).toContain(frame("conversation/2041?view=enterprise"));
 	});
 

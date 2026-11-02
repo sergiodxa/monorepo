@@ -117,12 +117,14 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 			<>
 				<AppShell.Group>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href()}
 						icon={<LayoutDashboardIcon />}
 						label={COPY.nav.overview}
 						current={section === "overview"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("services")}
 						icon={<ServerIcon />}
 						label={COPY.nav.services}
@@ -132,12 +134,14 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						current={section === "services"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("deployments")}
 						icon={<RocketIcon />}
 						label={COPY.nav.deployments}
 						current={section === "deployments"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("incidents")}
 						icon={<SirenIcon />}
 						label={COPY.nav.incidents}
@@ -147,6 +151,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 						current={section === "incidents"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("status-pages")}
 						icon={<GlobeIcon />}
 						label={COPY.nav.statusPages}
@@ -155,6 +160,7 @@ function MainNav(handle: Handle<{ section: PulseSection | null }>) {
 				</AppShell.Group>
 				<AppShell.Group title={COPY.nav.workspace}>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("settings")}
 						icon={<SettingsIcon />}
 						label={COPY.nav.settings}
@@ -174,18 +180,21 @@ function SettingsNav(handle: Handle<{ section: PulseSettingsSection }>) {
 				<AppShell.Back href={href()} label={COPY.nav.settings} />
 				<AppShell.Group title={COPY.nav.workspace}>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("settings")}
 						icon={<SettingsIcon />}
 						label={COPY.nav.general}
 						current={section === "general"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("settings/notifications")}
 						icon={<BellIcon />}
 						label={COPY.nav.notifications}
 						current={section === "notifications"}
 					/>
 					<AppShell.Item
+						data-rmx-prefetch="intent"
 						href={href("settings/billing")}
 						icon={<CreditCardIcon />}
 						label={COPY.nav.billing}

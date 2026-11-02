@@ -83,6 +83,7 @@ function ConversationRow(
 				<a
 					href={href(conversationPage(view, conversation.id))}
 					{...{ [SPLIT_VIEW_ITEM_ATTRIBUTE]: "" }}
+					data-rmx-prefetch="intent"
 					aria-current={selected ? "page" : undefined}
 					mix={[
 						raw({
