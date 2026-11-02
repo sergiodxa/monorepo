@@ -107,13 +107,15 @@ export namespace StatCard {
 		/** Reserves the trend slot. */
 		chart?: boolean;
 		/**
-		 * Reserves a sentence-long footer, which wraps to a second line in a narrow card.
+		 * Reserves a sentence-long footer, which wraps to a second line in a narrow card. Given the
+		 * real footer text, draws it invisibly so it wraps to the card's lines at every width; text
+		 * wins over `footerLines`.
 		 *
 		 * @default true
 		 */
-		footer?: boolean;
+		footer?: boolean | string;
 		/**
-		 * Reserves exactly this many footer lines at every width, for footers whose real sentences
+		 * Reserves exactly this many footer lines at every width (ignored when `footer` is text), for footers whose real sentences
 		 * wrap even in a wide card. Unset, the footer wraps where a 40-character sentence does.
 		 */
 		footerLines?: 1 | 2;
@@ -516,7 +518,7 @@ StatCard.Footer = function StatCardFooter(handle: Handle<TagProps<"div">>) {
  * @example
  * <StatCard.Skeleton footerLines={2} />
  * @example
- * <StatCard.Skeleton label="Monthly Pings Usage" delta={false} />
+ * <StatCard.Skeleton label="Monthly Pings Usage" footer="Out of 43,200 estimated" delta={false} />
  */
 StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonProps>) {
 	return () => {
@@ -526,20 +528,7 @@ StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonPr
 			<StatCard aria-hidden="true" data-skeleton="" {...rest} mix={mix}>
 				<StatCard.Label>
 					{label ? (
-						<span
-							data-slot="stat-card-skeleton-label"
-							mix={[
-								rounded("md"),
-								raw({
-									color: "transparent",
-									backgroundColor: BORDER,
-									boxDecorationBreak: "clone",
-									WebkitBoxDecorationBreak: "clone",
-								}),
-							]}
-						>
-							{label}
-						</span>
+						<StatCardGhostText slot="stat-card-skeleton-label">{label}</StatCardGhostText>
 					) : (
 						<StatCardBar width="40%" />
 					)}
@@ -575,23 +564,75 @@ StatCard.Skeleton = function StatCardSkeleton(handle: Handle<StatCard.SkeletonPr
 				) : null}
 				{(footer ?? DEFAULT_SKELETON_FOOTER) ? (
 					<StatCard.Footer>
-						{footerLines ? (
-							FOOTER_LINE_WIDTHS.slice(0, footerLines).map((width) => (
-								<span mix={[block()]}>
-									<StatCardBar width={width} />
-								</span>
-							))
-						) : (
-							<>
-								<StatCardBar width="6em" /> <StatCardBar width="4em" /> <StatCardBar width="5em" />
-							</>
-						)}
+						<StatCardSkeletonFooter footer={footer} lines={footerLines} />
 					</StatCard.Footer>
 				) : null}
 			</StatCard>
 		);
 	};
 };
+
+namespace StatCardSkeletonFooter {
+	export interface Props {
+		footer?: boolean | string;
+		lines?: 1 | 2;
+	}
+}
+
+/**
+ * A skeleton's footer lines: the real text when given, else a fixed number of lines, else bars
+ * that wrap where a 40-character sentence does.
+ */
+function StatCardSkeletonFooter(handle: Handle<StatCardSkeletonFooter.Props>) {
+	return () => {
+		let { footer, lines } = handle.props;
+		if (typeof footer === "string") {
+			return <StatCardGhostText slot="stat-card-skeleton-footer">{footer}</StatCardGhostText>;
+		}
+		if (lines) {
+			return FOOTER_LINE_WIDTHS.slice(0, lines).map((width) => (
+				<span mix={[block()]}>
+					<StatCardBar width={width} />
+				</span>
+			));
+		}
+		return (
+			<>
+				<StatCardBar width="6em" /> <StatCardBar width="4em" /> <StatCardBar width="5em" />
+			</>
+		);
+	};
+}
+
+namespace StatCardGhostText {
+	export interface Props {
+		slot: string;
+		children: string;
+	}
+}
+
+/**
+ * Real copy drawn as invisible text on a placeholder bar, one bar per wrapped line, so a
+ * skeleton's part wraps to exactly the lines the card's text takes at every width.
+ */
+function StatCardGhostText(handle: Handle<StatCardGhostText.Props>) {
+	return () => (
+		<span
+			data-slot={handle.props.slot}
+			mix={[
+				rounded("md"),
+				raw({
+					color: "transparent",
+					backgroundColor: BORDER,
+					boxDecorationBreak: "clone",
+					WebkitBoxDecorationBreak: "clone",
+				}),
+			]}
+		>
+			{handle.props.children}
+		</span>
+	);
+}
 
 namespace StatCardBar {
 	export interface Props {

@@ -207,6 +207,45 @@ describe("StatCard", () => {
 	}
 
 	for (let width of [375, 1440]) {
+		test(`wraps a skeleton given the footer exactly like the card in a ${width}px group`, () => {
+			let footer = "Out of 43,200 estimated";
+			let host = mount(
+				<div>
+					<StatCard.Group aria-label="Monitor">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard key={index}>
+								<StatCard.Label>Pings</StatCard.Label>
+								<StatCard.Value>290</StatCard.Value>
+								<StatCard.Footer>{footer}</StatCard.Footer>
+							</StatCard>
+						))}
+					</StatCard.Group>
+					<StatCard.Group aria-hidden="true">
+						{[0, 1, 2, 3].map((index) => (
+							<StatCard.Skeleton
+								key={index}
+								label="Pings"
+								footer={footer}
+								footerLines={1}
+								delta={false}
+							/>
+						))}
+					</StatCard.Group>
+				</div>,
+				width,
+			);
+			let cards = [...host.querySelectorAll<HTMLElement>('[data-slot="stat-card"]')];
+			let real = cards[0]!.querySelector<HTMLElement>('[data-slot="stat-card-footer"]')!;
+			let lines = Math.round(
+				real.getBoundingClientRect().height / parseFloat(getComputedStyle(real).lineHeight),
+			);
+			expect(lines).toBe(width === 375 ? 2 : 1);
+			let heights = cards.map((card) => card.getBoundingClientRect().height);
+			for (let index of [0, 1, 2, 3]) {
+				expect(Math.abs(heights[index + 4]! - heights[index]!)).toBeLessThanOrEqual(1);
+			}
+		});
+
 		test(`wraps a skeleton given the label exactly like the card in a ${width}px group`, () => {
 			let label = "Monthly Pings Usage";
 			let host = mount(
