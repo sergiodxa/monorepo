@@ -184,6 +184,24 @@ afterEach(() => {
 });
 
 describe("FilterBar", () => {
+	test("prefetches its tab, sort, chip and clear links only when asked", () => {
+		let url = "/monitors?state=active&status=down";
+		let links = (host: HTMLElement) => [
+			...host.querySelectorAll<HTMLAnchorElement>(
+				'[data-slot="filter-bar-tabs"] a, [data-slot="filter-bar-sort"] a, [data-slot="remove"], [data-slot="filter-bar-clear"]',
+			),
+		];
+
+		let plain = mount(url);
+		expect(links(plain).length).toBeGreaterThan(3);
+		expect(links(plain).every((link) => !link.hasAttribute("data-rmx-prefetch"))).toBe(true);
+		plain.remove();
+
+		let eager = mount(url, 1024, { prefetch: "intent" });
+		expect(links(eager).length).toBeGreaterThan(3);
+		expect(links(eager).every((link) => link.dataset.rmxPrefetch === "intent")).toBe(true);
+	});
+
 	test("fills a flex row it sits in, though it measures its own width", () => {
 		let host = mount("/monitors");
 		host.style.display = "flex";
