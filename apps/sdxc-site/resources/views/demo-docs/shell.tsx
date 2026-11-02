@@ -20,7 +20,6 @@ import { focusVisible, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { SearchField, Typeset } from "@sdxc/ui";
 import {
-	DocsFeedback,
 	DocsFooter,
 	DocsLayout,
 	DocsNav,
@@ -36,6 +35,7 @@ import type { DemoDocsPage, DemoDocsSite } from "~/resources/views/demo-docs";
 
 import DemoTheme from "~/resources/components/demo-theme";
 import { demoDocsHref } from "~/resources/views/demo-docs";
+import { DemoDocsFeedbackFrame } from "~/resources/views/demo-docs/feedback";
 import routes from "~/routes/web";
 
 /** The header bar: 3.5rem and its 1px rule, which the sticky docs chrome sits below. */
@@ -43,12 +43,6 @@ const HEADER_HEIGHT = "calc(3.5rem + 1px)";
 
 /** The page segment the site's search answers at. */
 export const SEARCH_PAGE = "search";
-
-/** The query parameter a page carries after a vote, which swaps the form for its thanks. */
-export const FEEDBACK_SENT_PARAM = "feedback";
-
-/** The id of the feedback block, which a vote's redirect lands on. */
-export const FEEDBACK_ID = "feedback";
 
 /** Where the demo credits the kit it is built with. */
 const KIT_HREF = routes.api.component.href({ component: "docs-layout" });
@@ -63,8 +57,11 @@ namespace DemoDocsShell {
 		query?: string;
 		/** The page's headings; the hub, search and 404 pass none and draw no rail. */
 		toc?: DemoDocsPage["toc"];
-		/** Closes the page with "Was this page helpful?"; `sent` swaps it for the thanks. */
-		feedback?: { sent: boolean };
+		/**
+		 * Closes the page with "Was this page helpful?" about the page at `path` under the
+		 * site; `sent` swaps it for the thanks.
+		 */
+		feedback?: { path: string; sent: boolean };
 		children: RemixNode;
 	}
 }
@@ -115,21 +112,7 @@ export function DemoDocsShell(handle: Handle<DemoDocsShell.Props>) {
 								linksLabel={`${site.name} links`}
 							>
 								{feedback ? (
-									<DocsFeedback
-										id={FEEDBACK_ID}
-										action={routes.demoDocs.feedback.href({ site: slug })}
-										page={activePath}
-										state={feedback.sent ? "sent" : "idle"}
-										resetScroll="manual"
-										labels={{
-											question: "Was this page helpful?",
-											yes: "Yes",
-											no: "No",
-											note: "What could make it better? (optional)",
-											send: "Send",
-											thanks: "Thanks for telling us. We read every note.",
-										}}
-									/>
+									<DemoDocsFeedbackFrame slug={slug} path={feedback.path} sent={feedback.sent} />
 								) : null}
 							</DocsFooter>
 						}

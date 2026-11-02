@@ -17,13 +17,13 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import { searchDemoDocs } from "~/app/services/demo-docs-search";
 import DocumentLayout from "~/resources/layouts/document";
 import { demoDocsHref, findDemoDocsSite } from "~/resources/views/demo-docs";
-import { DemoDocsHome, DemoDocsMissing, DemoDocsSearch } from "~/resources/views/demo-docs/pages";
 import {
-	DemoDocsArticle,
-	DemoDocsShell,
+	demoDocsThanksHref,
 	FEEDBACK_SENT_PARAM,
-	SEARCH_PAGE,
-} from "~/resources/views/demo-docs/shell";
+	findFeedbackPage,
+} from "~/resources/views/demo-docs/feedback";
+import { DemoDocsHome, DemoDocsMissing, DemoDocsSearch } from "~/resources/views/demo-docs/pages";
+import { DemoDocsArticle, DemoDocsShell, SEARCH_PAGE } from "~/resources/views/demo-docs/shell";
 import routes from "~/routes/web";
 
 /** The directive every demo carries, which keeps it out of results and its links unfollowed. */
@@ -33,9 +33,9 @@ const DEMO_ROBOTS = "noindex, nofollow";
 const PARAMS = s.object({ site: s.string(), page: s.optional(s.string()) });
 
 /**
- * Renders the hub, a page, the search page or the site's own 404. An unknown site answers
- * the site's 404; an unknown page inside a known site answers `404` in the site's own shell,
- * with its search pre-filled from the address.
+ * Renders the hub, a page, the search page or the site's own 404. The vote action's address,
+ * which an enhanced vote leaves in the location bar, returns a reload to the page voted on.
+ * An unknown page inside a known site answers `404` in its shell, search pre-filled.
  */
 export default createAction(routes.demoDocs.show, async (ctx) => {
 	let { page: path, site: slug } = s.parse(PARAMS, ctx.params);
@@ -86,6 +86,12 @@ export default createAction(routes.demoDocs.show, async (ctx) => {
 		});
 	}
 
+	if (ctx.url.pathname === routes.demoDocs.feedback.href({ site: slug })) {
+		let voted = await findFeedbackPage(slug, ctx.url.searchParams.get("page") ?? "");
+		let location = voted === null ? href() : demoDocsThanksHref(slug, voted);
+		return new Response(null, { status: 303, headers: { Location: location } });
+	}
+
 	let page = Object.hasOwn(site.pages, path) ? site.pages[path] : undefined;
 	if (page === undefined) {
 		return render({
@@ -112,7 +118,7 @@ export default createAction(routes.demoDocs.show, async (ctx) => {
 				slug={slug}
 				activePath={href(path)}
 				toc={page.toc}
-				feedback={{ sent: ctx.url.searchParams.has(FEEDBACK_SENT_PARAM) }}
+				feedback={{ path, sent: ctx.url.searchParams.has(FEEDBACK_SENT_PARAM) }}
 			>
 				<DemoDocsArticle site={site} slug={slug} path={path} page={page}>
 					{page.render({ tab: (syncKey) => readCodeTabsCookie(cookie, syncKey) })}
