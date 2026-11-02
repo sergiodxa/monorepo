@@ -1,5 +1,5 @@
 /**
- * The services table as an island: typed cells, a sparkline and a 90-day strip per row, hover
+ * The services table as an island: typed cells, a sparkline and a 30-day strip per row, hover
  * actions and selection, walked from the keyboard with j/k, x and Enter, and Space opening the
  * focused row's peek sheet. Every string and address arrives precomputed from the server.
  *

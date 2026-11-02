@@ -144,7 +144,7 @@ export const COPY = {
 			status: "Status",
 			latency: "p95",
 			trend: "Last 16 hours",
-			uptime: "90 days",
+			uptime: "30 days",
 			checked: "Last checked",
 			actions: "Actions",
 		},
@@ -153,7 +153,7 @@ export const COPY = {
 		edit: "Edit",
 		delete: "Delete",
 		trendLabel: (name: string, state: string) => `${name} p95 latency, ${state.toLowerCase()}`,
-		stripLabel: (name: string) => `${name} uptime, last 90 days`,
+		stripLabel: (name: string, days = 90) => `${name} uptime, last ${days} days`,
 		stripSummary: (value: string) => `${value} uptime`,
 		dayLabel: (daysAgo: number) => {
 			if (daysAgo === 0) return "Today";

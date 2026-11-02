@@ -523,19 +523,21 @@ export function findService(id: string): Service | undefined {
 }
 
 /**
- * A service's last 90 days, oldest first: hatched before it was first checked, paused since
- * a paused service stopped, and red or amber on the days it failed or ran slow.
+ * A service's last days, oldest first: hatched before it was first checked, paused since a
+ * paused service stopped, and red or amber on the days it failed or ran slow.
  *
  * @param service The service to draw.
  * @param dayLabel Formats a day's tooltip from how many days ago it was.
- * @returns Ninety periods for a `StatusStrip`.
+ * @param count How many days to draw: 90 on a service's own page, fewer in the list.
+ * @returns One period per day for a `StatusStrip`.
  */
 export function uptimeDays(
 	service: Service,
 	dayLabel: (daysAgo: number) => string,
+	count = 90,
 ): StatusStrip.Period[] {
 	let days: StatusStrip.Period[] = [];
-	for (let daysAgo = 89; daysAgo >= 0; daysAgo--) {
+	for (let daysAgo = count - 1; daysAgo >= 0; daysAgo--) {
 		let status: StatusStrip.Status = "up";
 		if (daysAgo >= service.age) status = "no-data";
 		else if (service.status === "paused" && daysAgo <= 4) status = "paused";
@@ -547,15 +549,18 @@ export function uptimeDays(
 }
 
 /**
- * The share of a service's checked days that stayed up, over the strip's 90 days.
+ * The share of a service's checked days that stayed up, over the same days its strip draws.
  *
  * @param service The service to measure.
+ * @param count How many days back to measure, matching the strip beside the figure.
  * @returns A ratio from 0 to 1, or `null` when nothing was checked.
  */
-export function uptimeRatio(service: Service): number | null {
-	let checked = Math.min(service.age, 90);
+export function uptimeRatio(service: Service, count = 90): number | null {
+	let checked = Math.min(service.age, count);
 	if (checked === 0) return null;
-	let lost = service.outages.length * 0.02 + service.slowDays.length * 0.002;
+	let outages = service.outages.filter((daysAgo) => daysAgo < count).length;
+	let slow = service.slowDays.filter((daysAgo) => daysAgo < count).length;
+	let lost = outages * 0.02 + slow * 0.002;
 	return Math.max(0, 1 - lost / checked);
 }
 

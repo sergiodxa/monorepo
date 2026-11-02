@@ -55,6 +55,12 @@ import { PERCENT, StateLinks } from "./parts";
 import { ServiceProperties, ServiceTimeline } from "./service-parts";
 import { ServicesTable } from "./services-table";
 
+/**
+ * Days of history each list row draws. Twelve rows of ninety bars weighed most of the page,
+ * so the list shows the last month and a service's own page shows all ninety days.
+ */
+const LIST_DAYS = 30;
+
 /** The tabs over the list, each a saved slice of it. */
 type Show = "all" | "failing" | "paused";
 
@@ -167,7 +173,7 @@ function listPage(url: URL): string {
 
 /** Writes one service as the island draws it. */
 function toRow(service: Service, url: URL, peeked: boolean): ServiceRow {
-	let uptime = uptimeRatio(service);
+	let uptime = uptimeRatio(service, LIST_DAYS);
 	let trend = TREND[service.trend];
 	return {
 		id: service.id,
@@ -188,8 +194,8 @@ function toRow(service: Service, url: URL, peeked: boolean): ServiceRow {
 			tone: trend.tone,
 			aria: COPY.services.trendLabel(service.name, trend.label),
 		},
-		periods: uptimeDays(service, COPY.services.dayLabel),
-		stripLabel: COPY.services.stripLabel(service.name),
+		periods: uptimeDays(service, COPY.services.dayLabel, LIST_DAYS),
+		stripLabel: COPY.services.stripLabel(service.name, LIST_DAYS),
 		stripSummary: COPY.services.stripSummary(uptime === null ? "—" : PERCENT.format(uptime)),
 		checkedAt: service.checkedAt,
 		selectLabel: COPY.services.select(service.name),
