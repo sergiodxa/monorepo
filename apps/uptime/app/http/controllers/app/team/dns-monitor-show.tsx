@@ -224,8 +224,16 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								src={routes.app.team.dnsMonitors.cards.results.href(monitorParams)}
 								fallback={
 									<StatCard.Group columns={2} aria-busy="true">
-										<StatCard.Skeleton delta={false} footer={false} />
-										<StatCard.Skeleton delta={false} footer={false} />
+										<StatCard.Skeleton
+											label={ctx.intl.t("page.dnsMonitorDetail.stats.successRate.label")}
+											delta={false}
+											footer={false}
+										/>
+										<StatCard.Skeleton
+											label={ctx.intl.t("page.dnsMonitorDetail.stats.totalChecks.label")}
+											delta={false}
+											footer={false}
+										/>
 									</StatCard.Group>
 								}
 							/>

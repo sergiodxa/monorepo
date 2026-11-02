@@ -185,9 +185,21 @@ export default createAction(routes.app.team.tcpMonitors.show, {
 								})}
 								fallback={
 									<StatCard.Group aria-busy="true">
-										<StatCard.Skeleton delta={false} footer={false} />
-										<StatCard.Skeleton delta={false} footer={false} />
-										<StatCard.Skeleton delta={false} footer={false} />
+										<StatCard.Skeleton
+											label={ctx.intl.t("page.tcpMonitorDetail.stats.uptime.label")}
+											delta={false}
+											footer={false}
+										/>
+										<StatCard.Skeleton
+											label={ctx.intl.t("page.tcpMonitorDetail.stats.avgResponseTime.label")}
+											delta={false}
+											footer={false}
+										/>
+										<StatCard.Skeleton
+											label={ctx.intl.t("page.tcpMonitorDetail.stats.totalChecks.label")}
+											delta={false}
+											footer={false}
+										/>
 									</StatCard.Group>
 								}
 							/>
