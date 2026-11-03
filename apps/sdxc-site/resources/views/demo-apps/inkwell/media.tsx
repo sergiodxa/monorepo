@@ -31,7 +31,14 @@ import type { MediaItem, Swatch } from "~/resources/views/demo-apps/inkwell/data
 import DemoAppFrame from "~/resources/views/demo-apps/frame";
 import { findAuthor, MEDIA, minutesBefore, POSTS } from "~/resources/views/demo-apps/inkwell/data";
 import { FieldShape, TextBar } from "~/resources/views/demo-apps/inkwell/placeholders";
-import { action, Byline, href, SerifTitle, SLUG } from "~/resources/views/demo-apps/inkwell/shell";
+import {
+	action,
+	Byline,
+	href,
+	Initials,
+	SerifTitle,
+	SLUG,
+} from "~/resources/views/demo-apps/inkwell/shell";
 
 /** The attachment sheet's strings. */
 const SHEET_LABELS: DetailSheet.Labels = {
@@ -404,7 +411,8 @@ export function AttachmentDetails(handle: Handle<AttachmentDetailsProps>) {
 
 /**
  * The attachment sheet's body while it loads: the picture's box, the facts' labels with a bar
- * for each value, and the fields' labels over boxes at their controls' height.
+ * for each value (the uploader's behind a blank initials chip, so the row takes the byline's
+ * baseline in any font), and the fields' labels over boxes at their controls' height.
  */
 export function AttachmentPlaceholder() {
 	return () => (
@@ -413,9 +421,18 @@ export function AttachmentPlaceholder() {
 			<PropertyList>
 				{["Dimensions", "Size", "Uploaded by", "Uploaded", "Used in"].map((label, index) => (
 					<PropertyList.Item label={label}>
-						<span>
-							<TextBar width={index % 2 === 0 ? "7rem" : "5rem"} />
-						</span>
+						{label === "Uploaded by" ? (
+							<span mix={[hstack({ gap: 2, align: "center" })]}>
+								<Initials author={{ initials: "\u00a0", name: "" }} />
+								<span>
+									<TextBar width="7rem" />
+								</span>
+							</span>
+						) : (
+							<span>
+								<TextBar width={index % 2 === 0 ? "7rem" : "5rem"} />
+							</span>
+						)}
 					</PropertyList.Item>
 				))}
 			</PropertyList>

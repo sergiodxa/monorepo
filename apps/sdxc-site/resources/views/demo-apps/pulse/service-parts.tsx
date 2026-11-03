@@ -34,6 +34,8 @@ function intervalLabel(seconds: number): string {
 interface PropertyRow {
 	label: string;
 	value: (service: Service) => RemixNode | undefined;
+	/** The value is set in the monospace face, so its placeholder bar is too and the row's line box matches. */
+	mono?: true;
 }
 
 /**
@@ -49,6 +51,7 @@ const PROPERTY_ROWS: readonly PropertyRow[] = [
 	},
 	{
 		label: COPY.service.endpoint,
+		mono: true,
 		value: (service) => (
 			<span title={service.endpoint} mix={[font("mono"), minIs(0), truncate()]}>
 				{service.endpoint}
@@ -60,10 +63,12 @@ const PROPERTY_ROWS: readonly PropertyRow[] = [
 	{ label: COPY.service.owner, value: (service) => service.owner },
 	{
 		label: COPY.service.version,
+		mono: true,
 		value: (service) => <span mix={[font("mono")]}>{service.version}</span>,
 	},
 	{
 		label: COPY.services.columns.latency,
+		mono: true,
 		value: (service) =>
 			service.latencyMs === null ? undefined : (
 				<span mix={[font("mono")]}>{MILLISECONDS.format(service.latencyMs)}</span>
@@ -71,6 +76,7 @@ const PROPERTY_ROWS: readonly PropertyRow[] = [
 	},
 	{
 		label: COPY.service.errorRate,
+		mono: true,
 		value: (service) =>
 			service.errorRate === null ? undefined : (
 				<span mix={[font("mono")]}>
@@ -80,6 +86,7 @@ const PROPERTY_ROWS: readonly PropertyRow[] = [
 	},
 	{
 		label: COPY.service.uptime,
+		mono: true,
 		value: (service) => {
 			let uptime = uptimeRatio(service);
 			return uptime === null ? undefined : (
@@ -123,7 +130,7 @@ export function ServicePropertiesPlaceholder() {
 			<PropertyList>
 				{PROPERTY_ROWS.map((row, index) => (
 					<PropertyList.Item key={row.label} label={row.label}>
-						<span mix={[ghostText()]}>
+						<span mix={row.mono ? [ghostText(), font("mono")] : [ghostText()]}>
 							{index === 1 ? PLACEHOLDER_ENDPOINT : PLACEHOLDER_VALUE}
 						</span>
 					</PropertyList.Item>
