@@ -100,9 +100,10 @@ describe("steps", () => {
 
 	test("a step that runs past its timeout fails", async () => {
 		let { report } = await run(async (ci) => {
-			await ci.step("Slow", "sleep 5", { timeout: 100 });
+			await ci.step("Slow", "sleep 5; true", { timeout: 100 });
 		});
 		expect(report.steps[0]).toMatchObject({ status: "failed" });
+		expect(report.steps[0]?.duration).toBeLessThan(4000);
 		expect(report.steps[0]?.output).toContain("Timed out after 100ms");
 	});
 });
@@ -180,7 +181,7 @@ describe("parallel", () => {
 		let { report } = await run(async (ci) => {
 			let outcome = await ci.parallel(
 				"Checks",
-				[() => ci.step("Slow", "sleep 5"), () => ci.step("Fast fail", "exit 1")],
+				[() => ci.step("Slow", "sleep 5; true"), () => ci.step("Fast fail", "exit 1")],
 				{ failFast: true },
 			);
 			expect(outcome.status).toBe("failing");

@@ -11,7 +11,7 @@ import { spawn } from "node:child_process";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 /** A command that exited 0. */
 export interface CommandOutput {
@@ -48,6 +48,23 @@ export interface SpawnOptions {
 }
 
 /**
+ * Whether each command gets a process group of its own. A shell runs a compound command line
+ * as children of itself, so stopping a step has to stop the whole group, or a child left
+ * running keeps the output open and the step waits for it.
+ */
+const GROUPS = process.platform !== "win32";
+
+/** Sends SIGTERM to the process group led by `pid`, or calls `fallback` without one. */
+function stopGroup(pid: number | undefined, fallback: () => void): void {
+	if (!GROUPS || pid === undefined) {
+		fallback();
+		return;
+	}
+	let stopped = wrap(() => process.kill(-pid, "SIGTERM"));
+	if (isFailure(stopped)) fallback();
+}
+
+/**
  * Runs `command` to completion and never rejects: a missing program, a non-zero exit and an
  * abort all resolve to a `CommandError` carrying whatever the command printed.
  *
@@ -67,6 +84,7 @@ export function runCommand(
 			env: { ...process.env, ...options.env },
 			shell: typeof command === "string",
 			stdio: ["ignore", "pipe", "pipe"],
+			detached: GROUPS,
 		});
 		/** Appends a chunk to the combined log and hands it to the caller as it arrives. */
 		let record = (chunk: Buffer): void => {
@@ -79,9 +97,9 @@ export function runCommand(
 			record(chunk);
 		});
 		child.stderr.on("data", record);
-		/** Stops the command when the step is aborted. */
+		/** Stops the command and everything it started when the step is aborted. */
 		let abort = (): void => {
-			child.kill("SIGTERM");
+			stopGroup(child.pid, () => child.kill("SIGTERM"));
 		};
 		if (options.signal?.aborted) abort();
 		options.signal?.addEventListener("abort", abort, { once: true });
