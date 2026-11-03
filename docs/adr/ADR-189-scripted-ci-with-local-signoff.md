@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-11-03
+**Implemented** - 2026-11-03
 
 ## Background
 
@@ -487,10 +487,10 @@ in any repository; the kit keeps only the script's location, scoping and templat
 - [x] Phase 1: `@sdxc/ci` runner
 - [x] Phase 2: Signoff
 - [x] Phase 3: Workspaces and caching
-- [ ] Phase 4: Kit and this repository
+- [x] Phase 4: Kit and this repository
   - [x] `sdxc ci`, `list`, `signoff`, `verify`, the frozen install, scoping and `ci.script`
   - [x] Default script and workflow in the `sdxc create` template, left out inside a workspace
-  - [ ] The `sdxc doctor` `ci` check
+  - [x] The `sdxc doctor` `ci` check
   - [x] This repository's `.config/sdxc/ci.ts` and `ci.yml` around the gate
 
 ## Notes

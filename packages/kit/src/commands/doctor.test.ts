@@ -160,6 +160,7 @@ describe("sdxc doctor", () => {
 				"pass  remix            remix 3.0.0 is the peer release 2026.10.1 declares",
 				"pass  env              .env.example lists every secret cloudflare.config.ts declares",
 				"pass  typegen          .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  ci               No CI script at .config/sdxc/ci.ts",
 				"skip  migrations       The project has no migrations",
 				"skip  layout           No app/ folder in the project",
 				"skip  routes           No routes/ folder in the project",
@@ -203,6 +204,7 @@ describe("sdxc doctor", () => {
 				"fail  remix            remix 3.0.0 differs from the 3.1.0 release 2026.10.14 declares: remix 3.0.0 -> 3.1.0. Fix: sdxc upgrade 2026.10.14",
 				"fail  env              .env.example leaves out a secret cloudflare.config.ts declares: API_KEY is declared with bindings.secret(). Fix: printf '\\nAPI_KEY=\\n' >> .env.example",
 				"pass  typegen          .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  ci               No CI script at .config/sdxc/ci.ts",
 				"skip  migrations       The project has no migrations",
 				"skip  layout           No app/ folder in the project",
 				"skip  routes           No routes/ folder in the project",
@@ -269,6 +271,7 @@ describe("sdxc doctor", () => {
 			["remix", "pass"],
 			["env", "warn"],
 			["typegen", "pass"],
+			["ci", "skip"],
 			["migrations", "skip"],
 			["layout", "skip"],
 			["routes", "skip"],
@@ -322,6 +325,7 @@ describe("sdxc doctor", () => {
 			["remix", "skip"],
 			["env", "fail"],
 			["typegen", "pass"],
+			["ci", "skip"],
 			["migrations", "skip"],
 			["layout", "skip"],
 			["routes", "skip"],
@@ -405,6 +409,7 @@ describe("sdxc doctor with project checks", () => {
 			[
 				"pass  env              .env.example lists every secret cloudflare.config.ts declares",
 				"pass  typegen          .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  ci               No CI script at .config/sdxc/ci.ts",
 				"skip  migrations       The project has no migrations",
 				"skip  layout           No app/ folder in the project",
 				"skip  routes           No routes/ folder in the project",
@@ -494,7 +499,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,translations,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,local-const,constant-names,stack-imports,process-env,fetch-param,logger,test-ratio,crap,mutation,ui",
+			"pins,installed,remix,env,typegen,ci,migrations,layout,routes,models,emails,translations,jsdoc,complexity,module-size,dependencies,fan-out,orphans,feature-scatter,duplication,result-throws,local-const,constant-names,stack-imports,process-env,fetch-param,logger,test-ratio,crap,mutation,ui",
 		]);
 
 		expect(result.code).toBe(1);
@@ -554,7 +559,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, translations, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, local-const, constant-names, stack-imports, process-env, fetch-param, logger, test-ratio, crap, mutation, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, ci, migrations, layout, routes, models, emails, translations, jsdoc, complexity, module-size, dependencies, fan-out, orphans, feature-scatter, duplication, result-throws, local-const, constant-names, stack-imports, process-env, fetch-param, logger, test-ratio, crap, mutation, ui, readme",
 		);
 	});
 });

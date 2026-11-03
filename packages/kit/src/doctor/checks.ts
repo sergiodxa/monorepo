@@ -9,6 +9,7 @@
 
 import type { Check, CheckReport } from "./check.js";
 
+import { ciCheck } from "./ci.js";
 import { complexityCheck } from "./complexity.js";
 import { constantNamesCheck } from "./constant-names.js";
 import { crapCheck } from "./crap.js";
@@ -51,6 +52,7 @@ export const CHECKS: readonly Check[] = [
 	remixCheck,
 	envCheck,
 	typegenCheck,
+	ciCheck,
 	migrationsCheck,
 	layoutCheck,
 	routesCheck,
