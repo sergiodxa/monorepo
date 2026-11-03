@@ -1,7 +1,7 @@
 /**
- * `typegen`: writes the Worker's `env` types from `wrangler.jsonc` and `.dev.vars` into
- * `worker-configuration.d.ts` through `wrangler types`. Run it after adding or changing a binding
- * or a secret, so `env` and every handler type check against what the Worker receives.
+ * `typegen`: writes the Worker's `env` types from `wrangler.jsonc` and `.env.example` into
+ * `worker-configuration.d.ts` through `wrangler types`. Secrets are typed from `.env.example`,
+ * so every machine and CI generate the same types whatever a local `.dev.vars` holds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,8 @@ import { PROJECT_ROOT } from "~/app/initializers/local-database";
 
 /** Safe to run twice: the generated file is rewritten whole. */
 export default createCommand(commandset.typegen, async (ctx) => {
-	let generated = await ctx.exec(["bunx", "wrangler", "types"], { cwd: PROJECT_ROOT });
+	let generated = await ctx.exec(["bunx", "wrangler", "types", "--env-file", ".env.example"], {
+		cwd: PROJECT_ROOT,
+	});
 	return isFailure(generated) ? generated : success();
 });

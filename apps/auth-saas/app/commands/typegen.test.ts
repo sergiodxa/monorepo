@@ -11,10 +11,14 @@ import { describe, expect, test } from "vitest";
 import { cli } from "~/app/initializers/cli";
 
 describe("typegen", () => {
-	test("generates the Worker's types with wrangler", async () => {
-		let run = await invoke(cli, ["typegen"], { exec: { "bunx wrangler types": { code: 0 } } });
+	test("generates the Worker's types with wrangler, typing secrets from .env.example", async () => {
+		let run = await invoke(cli, ["typegen"], {
+			exec: { "bunx wrangler types --env-file .env.example": { code: 0 } },
+		});
 
 		expect(run.code).toBe(0);
-		expect(run.exec.map((call) => call.command)).toEqual([["bunx", "wrangler", "types"]]);
+		expect(run.exec.map((call) => call.command)).toEqual([
+			["bunx", "wrangler", "types", "--env-file", ".env.example"],
+		]);
 	});
 });
