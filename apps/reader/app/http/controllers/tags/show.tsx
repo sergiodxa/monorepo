@@ -7,7 +7,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { PencilIcon, Trash2Icon } from "@sdxc/icons";
+import { PencilIcon, TrashIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -323,7 +323,7 @@ export default createAction(routes.tag, {
 							aria-label={ctx.intl.t("tags.delete.submit")}
 							title={ctx.intl.t("tags.delete.submit")}
 						>
-							<Trash2Icon size={ACTION_ICON_SIZE} />
+							<TrashIcon size={ACTION_ICON_SIZE} />
 							<ActionLabel>{ctx.intl.t("tags.delete.submit")}</ActionLabel>
 						</Button>
 					</>

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FolderPlusIcon, PencilIcon, Trash2Icon } from "@sdxc/icons";
+import { FolderPlusIcon, PencilIcon, TrashIcon } from "@sdxc/icons";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -361,7 +361,7 @@ export default createAction(routes.folder, {
 							aria-label={ctx.intl.t("folders.delete.submit")}
 							title={ctx.intl.t("folders.delete.submit")}
 						>
-							<Trash2Icon size={ACTION_ICON_SIZE} />
+							<TrashIcon size={ACTION_ICON_SIZE} />
 							<ActionLabel>{ctx.intl.t("folders.delete.submit")}</ActionLabel>
 						</Button>
 					</>
