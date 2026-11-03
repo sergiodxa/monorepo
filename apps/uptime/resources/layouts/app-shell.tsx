@@ -19,7 +19,7 @@ import {
 	FileSpreadsheetIcon,
 	FileTextIcon,
 	GlobeIcon,
-	HistoryIcon,
+	RotateCcwClockIcon,
 	KeyboardIcon,
 	KeyIcon,
 	MonitorCogIcon,
@@ -438,7 +438,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 							{
 								href: routes.app.team.alerts.history.href(teamParams),
 								label: t("palette.alertHistory"),
-								icon: <HistoryIcon />,
+								icon: <RotateCcwClockIcon />,
 								shortcut: "g i",
 							},
 							...respondItems,

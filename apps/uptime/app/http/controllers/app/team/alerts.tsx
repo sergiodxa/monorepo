@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@sdxc/icons";
+import { BellIcon, BellPlusIcon, RotateCcwClockIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -110,7 +110,7 @@ export default createAction(routes.app.team.alerts.index, {
 							variant="outline"
 							color="neutral"
 						>
-							<HistoryIcon size={16} strokeWidth={1.5} />
+							<RotateCcwClockIcon size={16} strokeWidth={1.5} />
 							{ctx.intl.t("page.alerts.header.action.history")}
 						</LinkButton>
 					}

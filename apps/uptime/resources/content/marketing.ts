@@ -1409,7 +1409,7 @@ export const audiences: Record<string, MarketingContent.Page> = {
 			{
 				title: "Full audit trail",
 				description: "Alert history and domain verification records for every action.",
-				icon: "history",
+				icon: "rotate-ccw-clock",
 				href: featureHref("alerts"),
 			},
 		],

@@ -9,7 +9,7 @@
 
 import type { Translate } from "@sdxc/i18n";
 
-import { BellIcon, HistoryIcon } from "@sdxc/icons";
+import { BellIcon, RotateCcwClockIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -129,7 +129,7 @@ export default createAction(routes.app.team.alerts.history, {
 					]}
 				>
 					{events.length === 0 ? (
-						<Empty kind="first-run" icon={<HistoryIcon size={24} strokeWidth={1.5} />}>
+						<Empty kind="first-run" icon={<RotateCcwClockIcon size={24} strokeWidth={1.5} />}>
 							<Empty.Title>{t("page.alertHistory.empty.title")}</Empty.Title>
 							<Empty.Description>{t("page.alertHistory.empty.description")}</Empty.Description>
 							<Empty.Action>
