@@ -2672,6 +2672,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@vitest/browser@4.1.11": "patches/@vitest%2Fbrowser@4.1.11.patch",
+  },
   "overrides": {
     "miniflare": "5.20260926.0-alpha",
   },

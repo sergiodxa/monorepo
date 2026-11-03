@@ -1,0 +1,14 @@
+diff --git a/dist/client/__vitest_browser__/tester-BJtsJFpD.js b/dist/client/__vitest_browser__/tester-BJtsJFpD.js
+index 0594ada9d0e554d9ed42e08dfb51b9744cb01370..03f759732c3c5cdd8b23834ac84e107db240e515 100644
+--- a/dist/client/__vitest_browser__/tester-BJtsJFpD.js
++++ b/dist/client/__vitest_browser__/tester-BJtsJFpD.js
+@@ -2098,6 +2098,9 @@ channel.addEventListener("message", async (e) => {
+   if (!("iframeId" in data) || data.iframeId !== getBrowserState().iframeId) {
+     return;
+   }
++  if (data.event === "ready" || data.event.startsWith("response:")) {
++    return;
++  }
+   switch (data.event) {
+     case "execute": {
+       const { method, files, context } = data;
