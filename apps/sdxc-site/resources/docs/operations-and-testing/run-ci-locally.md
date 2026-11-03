@@ -32,8 +32,16 @@ While you work, narrow the run to the steps you care about:
 sdxc ci --only Test
 ```
 
-A run with `--only`, `--skip` or `--scope` never signs off, so a narrowed run can't mark a
-commit green.
+After a red run, check your fix against just the steps that failed:
+
+```bash
+sdxc ci --rerun-failed
+```
+
+Each run keeps every step's full log, and prints the folder as its last line.
+
+A run with `--only`, `--skip`, `--scope` or `--rerun-failed` never signs off, so a narrowed run
+can't mark a commit green.
 
 ## Write steps
 
@@ -68,6 +76,8 @@ export default defineCI(async (ci) => {
   when nothing after the step can succeed without it.
 - `cache: true` skips a step whose inputs haven't changed since it last passed. The step's
   output from that earlier pass is kept.
+- `retry: 1` runs a failed step once more; a pass on the retry is listed as flaky in the
+  summary. `weight: 4` lets a heavy step hold four of the run's concurrency slots.
 - `ci.runner` is `"remote"` on GitHub Actions and `"local"` on your machine. Use it for steps
   that belong in only one place, such as copying `.env.example` to `.dev.vars` on CI.
 
