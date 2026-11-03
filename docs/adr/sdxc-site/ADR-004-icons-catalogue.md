@@ -282,6 +282,8 @@ script.
   A click with a modifier, or a middle click, still opens the icon's page.
 - The grid always renders every tile and `?q=` marks the rest `hidden`, so the live filter can
   widen a query the server narrowed. The page weighs the same for every query.
-- The filter and the customizer are one `GET` form, so both work without script; the colour
-  picker needs script, since a colour input always submits a value and the default colour is
-  the text around the icon.
+- The filter and the customizer are one `GET` form, so both work without script. The colour
+  is `@sdxc/ui/color`'s `ColorPicker`: a hex text field, empty for the text colour around the
+  icons, with its picking surface opening from the swatch beside it.
+- The dialog closes on a backdrop press through `dialogDismiss()`, since `closedby` is
+  missing from some engines.

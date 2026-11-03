@@ -116,6 +116,19 @@ describe("IconControls", () => {
 		expect(location.search).toBe("?size=40");
 	});
 
+	test("colours every tile from a hex typed in the colour field, and clears it when emptied", async () => {
+		let host = mount();
+		let field = page.getByRole("textbox", { name: "Color" });
+		let grid = host.querySelector<HTMLElement>("#icon-grid")!;
+
+		await userEvent.fill(field, "#ff3366");
+		await expect.poll(() => grid.style.getPropertyValue("--icon-color")).toBe("#ff3366");
+		expect(location.search).toBe("?color=%23ff3366");
+
+		await userEvent.clear(field);
+		await expect.poll(() => grid.style.getPropertyValue("--icon-color")).toBe("");
+	});
+
 	test("says so when nothing matches", async () => {
 		let host = mount();
 		await userEvent.type(page.getByRole("searchbox"), "zzzz");
@@ -135,6 +148,17 @@ describe("IconDialog", () => {
 		await expect.poll(() => requested).toEqual(["/frames/icons/heart?size=32"]);
 		expect(dialog.textContent).toContain("heart");
 		expect(location.pathname).toBe("/api/icons");
+	});
+
+	test("closes on a press outside its panel", async () => {
+		let host = mount();
+		await userEvent.click(page.getByTitle("zap", { exact: true }));
+		let dialog = host.querySelector<HTMLDialogElement>("#icon-detail")!;
+		await expect.poll(() => dialog.open).toBe(true);
+
+		await userEvent.click(page.getByRole("dialog"), { position: { x: -10, y: -10 }, force: true });
+
+		await expect.poll(() => dialog.open).toBe(false);
 	});
 
 	test("leaves a click with a modifier to the browser", async () => {

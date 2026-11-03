@@ -1,7 +1,7 @@
 /**
  * Client island: the gallery's filter and customizer, one `GET` form that narrows the grid
- * by `q` and sets the icons' size and stroke. Once script runs, every change applies as it
- * happens: tiles toggle `hidden`, the grid's custom properties change and the address follows.
+ * by `q` and sets the icons' size, stroke and colour. Once script runs, every change applies
+ * as it happens: tiles toggle `hidden`, the grid's custom properties change and the address follows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,9 +13,11 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, grid, hstack, vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, Checkbox, LinkButton, SearchField, Slider } from "@sdxc/ui";
+import { bs, is, m } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
+import { Button, Checkbox, Input, Label, LinkButton, SearchField, Slider } from "@sdxc/ui";
+import { ColorArea, colorAreaDrag, ColorPicker, ColorWheel, colorWheelDrag } from "@sdxc/ui/color";
+import { formatHex, hsvToRgb, parseColor, rgbToHsv } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 
 import type { IconStyle } from "~/app/services/icon-style";
@@ -49,13 +51,22 @@ type IconControlsProps = {
 	version: string;
 };
 
-/** What the colour picker shows before the reader picks one, since it cannot show `currentColor`. */
-const PICKER_PLACEHOLDER = "#808080";
+/** Where the picking surface opens before a colour is chosen: a mid blue, easy to steer from. */
+const OPENING_HSV = { h: 210, s: 80, v: 70 };
+
+/** The colour field's id, which its label names. */
+const COLOR_FIELD_ID = "icon-color";
+
+/** The picking surface's id, which the swatch trigger toggles. */
+const COLOR_PANEL_ID = "icon-color-panel";
+
+/** A colour the field and the validator both accept: six hex digits. */
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /**
  * Renders the form and the count above the grid. Without script it submits like any form,
- * so the server renders the narrowed, restyled grid; the colour picker needs script, since a
- * colour input always submits a value and the default is the surrounding text colour.
+ * so the server renders the narrowed, restyled grid. The colour is a hex text field, left
+ * empty for the text colour around the icons, with a picking surface beside it once script runs.
  */
 export const IconControls = clientEntry(
 	import.meta.url,
@@ -68,6 +79,7 @@ export const IconControls = clientEntry(
 			absoluteStrokeWidth: handle.props.absoluteStrokeWidth,
 			color: handle.props.color,
 		};
+		let hsv = toHsv(style.color);
 
 		/** Hides the tiles `query` leaves out, returning how many stay. */
 		function narrow(grid: HTMLElement): number {
@@ -100,6 +112,18 @@ export const IconControls = clientEntry(
 			history.replaceState(history.state, "", url);
 		}
 
+		/** Restyles the grid for a colour picked on the surface, and shows it in the field. */
+		function pick(next: { h?: number; s?: number; v?: number }): void {
+			hsv = { ...hsv, ...next };
+			style = { ...style, color: formatHex({ ...hsvToRgb(hsv), a: 1 }) };
+			let field = document.getElementById(COLOR_FIELD_ID);
+			if (field instanceof HTMLInputElement) field.value = style.color ?? "";
+			let grid = document.getElementById(handle.props.gridId);
+			if (grid) restyle(grid);
+			remember();
+			void handle.update();
+		}
+
 		/** Reads the form after any change and applies what moved. */
 		function change(event: Event): void {
 			let form = event.currentTarget as HTMLFormElement;
@@ -115,7 +139,12 @@ export const IconControls = clientEntry(
 				color: style.color,
 			};
 			let target = event.target;
-			if (target instanceof HTMLInputElement && target.type === "color") style.color = target.value;
+			if (target instanceof HTMLInputElement && target.name === ICON_STYLE_PARAMS.color) {
+				let typed = target.value.trim();
+				if (typed === "") style.color = null;
+				else if (HEX_COLOR.test(typed)) style.color = typed.toLowerCase();
+				hsv = toHsv(style.color);
+			}
 
 			if (nextQuery !== query) {
 				query = nextQuery;
@@ -132,11 +161,12 @@ export const IconControls = clientEntry(
 			let form = (event.currentTarget as HTMLElement).closest("form");
 			if (form === null) return;
 			style = { ...DEFAULT_ICON_STYLE };
+			hsv = toHsv(null);
 			for (let input of form.querySelectorAll<HTMLInputElement>("input")) {
 				if (input.name === ICON_STYLE_PARAMS.size) input.value = String(style.size);
 				if (input.name === ICON_STYLE_PARAMS.strokeWidth) input.value = String(style.strokeWidth);
 				if (input.type === "checkbox") input.checked = false;
-				if (input.type === "color") input.value = PICKER_PLACEHOLDER;
+				if (input.name === ICON_STYLE_PARAMS.color) input.value = "";
 			}
 			let grid = document.getElementById(handle.props.gridId);
 			if (grid) restyle(grid);
@@ -183,17 +213,17 @@ export const IconControls = clientEntry(
 						>
 							<legend mix={[visuallyHidden()]}>Customize the icons</legend>
 							<Slider min={size.min} max={size.max} value={style.size}>
-								<Label>
+								<ControlLabel>
 									Size <Slider.Output>{`${style.size}px`}</Slider.Output>
-								</Label>
+								</ControlLabel>
 								<Slider.Track>
 									<Slider.Thumb name={ICON_STYLE_PARAMS.size} step={size.step} aria-label="Size" />
 								</Slider.Track>
 							</Slider>
 							<Slider min={stroke.min} max={stroke.max} value={style.strokeWidth}>
-								<Label>
+								<ControlLabel>
 									Stroke width <Slider.Output>{`${style.strokeWidth}`}</Slider.Output>
-								</Label>
+								</ControlLabel>
 								<Slider.Track>
 									<Slider.Thumb
 										name={ICON_STYLE_PARAMS.strokeWidth}
@@ -212,10 +242,60 @@ export const IconControls = clientEntry(
 							>
 								Absolute stroke width
 							</Checkbox>
-							<label mix={[hstack({ gap: 2, align: "center" }), text("sm"), fg("neutral")]}>
-								<input type="color" defaultValue={style.color ?? PICKER_PLACEHOLDER} />
-								Color
-							</label>
+							<ColorPicker
+								mix={[raw({ flexDirection: "row", alignItems: "center", gap: "0.5rem" })]}
+							>
+								<Label htmlFor={COLOR_FIELD_ID}>Color</Label>
+								<ColorPicker.Group>
+									<Input
+										id={COLOR_FIELD_ID}
+										type="text"
+										name={ICON_STYLE_PARAMS.color}
+										defaultValue={style.color ?? ""}
+										placeholder="currentColor"
+										autoComplete="off"
+										spellcheck={false}
+										mix={[font("mono"), is("9rem")]}
+									/>
+									<ColorPicker.Trigger
+										commandfor={COLOR_PANEL_ID}
+										command="toggle-popover"
+										aria-label="Open the color picker"
+										value={style.color ?? "currentColor"}
+									/>
+								</ColorPicker.Group>
+								<ColorPicker.Dialog id={COLOR_PANEL_ID} mix={[is("16rem")]}>
+									<ColorArea
+										aria-label="Saturation and brightness"
+										hue={hsv.h}
+										saturation={hsv.s}
+										value={hsv.v}
+										style={{ "--ui-color-area-size": "12rem" }}
+										mix={[
+											colorAreaDrag(),
+											on<HTMLDivElement, "ui:color-area-change">("ui:color-area-change", (event) =>
+												pick({ s: event.x, v: event.y }),
+											),
+										]}
+									>
+										<ColorArea.SaturationThumb data-color-area-axis="x" aria-label="Saturation" />
+										<ColorArea.ValueThumb data-color-area-axis="y" aria-label="Brightness" />
+									</ColorArea>
+									<ColorWheel
+										aria-label="Hue"
+										value={hsv.h}
+										mix={[
+											is("6rem"),
+											bs("6rem"),
+											colorWheelDrag(),
+											on<HTMLDivElement, "ui:color-wheel-change">(
+												"ui:color-wheel-change",
+												(event) => pick({ h: event.hue }),
+											),
+										]}
+									/>
+								</ColorPicker.Dialog>
+							</ColorPicker>
 							<LinkButton
 								href={action}
 								variant="ghost"
@@ -248,6 +328,12 @@ export const IconControls = clientEntry(
 	},
 );
 
+/** The surface's starting position for `color`, or the opening blue when none is set. */
+function toHsv(color: string | null): { h: number; s: number; v: number } {
+	let rgb = color === null ? null : parseColor(color);
+	return rgb === null ? { ...OPENING_HSV } : rgbToHsv(rgb);
+}
+
 /** The text a form field holds, or `null` when the form has no such text field. */
 function textField(data: FormData, name: string): string | null {
 	let value = data.get(name);
@@ -255,7 +341,7 @@ function textField(data: FormData, name: string): string | null {
 }
 
 /** A control's caption, with the slider's readout beside it. */
-function Label(handle: Handle<{ children: RemixNode }>) {
+function ControlLabel(handle: Handle<{ children: RemixNode }>) {
 	return () => (
 		<span
 			mix={[

@@ -15,6 +15,7 @@ import { vstack } from "@sdxc/u/layout";
 import { is, maxBs, maxIs, minBs, p } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
 import { Dialog, Spinner } from "@sdxc/ui";
+import { dialogDismiss } from "@sdxc/ui/mixins";
 import { clientEntry, Frame, ref } from "remix/component";
 
 import { ICON_STYLE_PARAMS } from "~/app/services/icon-style";
@@ -55,6 +56,7 @@ function withSearch(path: string, search: string): string {
 /**
  * Renders the dialog and opens it for a tile's plain click. A click with a modifier, or a
  * middle click, still opens the icon's page the way the link says, in a new tab or window.
+ * A press on the backdrop closes it in every engine, including those without `closedby`.
  */
 export const IconDialog = clientEntry(
 	import.meta.url,
@@ -104,12 +106,20 @@ export const IconDialog = clientEntry(
 						raw({ overflowY: "auto" }),
 					]}
 				>
+					<span hidden mix={[dialogDismiss()]} />
 					<Dialog.Header>
 						<Dialog.Title id={titleId} mix={[font("mono")]}>
 							{shown?.name ?? "Icon"}
 						</Dialog.Title>
 					</Dialog.Header>
-					<div mix={[vstack({ gap: 4, align: "stretch" }), minBs("12rem"), p(0, 0, 2, 0)]}>
+					<div
+						mix={[
+							vstack({ gap: 4, align: "stretch" }),
+							minBs("12rem"),
+							raw({ flexShrink: 0 }),
+							p(0, 0, 2, 0),
+						]}
+					>
 						{shown ? (
 							<Frame
 								key={shown.src}
