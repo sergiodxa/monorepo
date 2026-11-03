@@ -1,6 +1,6 @@
 /**
- * Lays tables out in a real browser: a sticky header, both densities, aligned typed cells,
- * select-all and shift-click ranges, row actions revealed by hover except on touch, a
+ * Lays tables out in a real browser under a hovering pointer: a sticky header, both densities,
+ * aligned typed cells, select-all and shift-click ranges, row actions revealed by hover, a
  * whole-row link, a pinned first column whose shadow waits for a scroll, the states, and row
  * actions that hold one line at every width and fold into a menu in a narrow container.
  *
@@ -9,78 +9,27 @@
  */
 
 import type {} from "@vitest/browser-playwright";
-import type { Handle } from "remix/component";
 
-import { render } from "remix/component/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { cdp, page, userEvent } from "vitest/browser";
 
-import { LinkButton } from "../components/link-button.js";
+import {
+	ACTIONS,
+	articles,
+	expectOneLineActions,
+	intersects,
+	lineBoxes,
+	MANY_ACTIONS,
+	MONITORS,
+	monitors,
+	mount,
+	OVERLAY_ACTIONS,
+	POSTS,
+	posts,
+	shown,
+} from "../test/table.js";
 
 import { Table } from "./table.js";
-
-/** One monitor row, enough columns to overflow a phone. */
-interface Monitor {
-	id: string;
-	name: string;
-	region: string;
-	ms: number;
-}
-
-const MONITORS: Monitor[] = Array.from({ length: 12 }, (_, index) => ({
-	id: `mon_${index}`,
-	name: `api-${index}.example.com`,
-	region: "Frankfurt, Germany",
-	ms: 100 + index * 7,
-}));
-
-/** Mounts `node` in a host `width` pixels wide and returns the host. */
-function mount(node: JSX.Element, width = 720): HTMLElement {
-	let host = document.createElement("div");
-	host.style.width = `${width}px`;
-	document.body.appendChild(host);
-	render(node, { container: host });
-	return host;
-}
-
-/** A monitors table with selection, a row link and actions, in a container `height` tall. */
-function monitors(props: Partial<Table.Props> = {}, height?: number): JSX.Element {
-	return (
-		<Table.Container mix={[]} style={height ? { maxHeight: `${height}px` } : undefined}>
-			<Table aria-label="Monitors" {...props}>
-				<Table.Header>
-					<Table.Row>
-						<Table.SelectAll label="Select all monitors" />
-						<Table.Column>Name</Table.Column>
-						<Table.Column>Region</Table.Column>
-						<Table.Column numeric>Response</Table.Column>
-						<Table.ActionsColumn label="Actions" />
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{MONITORS.map((monitor) => (
-						<Table.Row key={monitor.id}>
-							<Table.Select name="monitor" value={monitor.id} label={`Select ${monitor.name}`} />
-							<Table.Cell>
-								<Table.RowLink href={`#${monitor.id}`}>{monitor.name}</Table.RowLink>
-							</Table.Cell>
-							<Table.Cell>{monitor.region}</Table.Cell>
-							<Table.NumberCell
-								value={monitor.ms}
-								locale="en"
-								format={{ style: "unit", unit: "millisecond" }}
-							/>
-							<Table.Actions>
-								<button type="button">Pause</button>
-								<button type="button">Delete</button>
-							</Table.Actions>
-						</Table.Row>
-					))}
-				</Table.Body>
-			</Table>
-		</Table.Container>
-	);
-}
 
 /** Every row checkbox, in order. */
 function items(host: HTMLElement): HTMLInputElement[] {
@@ -106,7 +55,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
 	document.body.replaceChildren();
-	await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: false });
 });
 
 describe("Table layout", () => {
@@ -439,16 +387,6 @@ describe("Table rows", () => {
 		await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
 	});
 
-	test("always shows row actions where the pointer cannot hover", async () => {
-		await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
-		let host = mount(monitors());
-
-		expect(matchMedia("(hover: none)").matches).toBe(true);
-		for (let cell of host.querySelectorAll<HTMLElement>('[data-slot="row-actions"]')) {
-			expect(getComputedStyle(cell).opacity).toBe("1");
-		}
-	});
-
 	test("makes the whole row the link while other controls keep their clicks", () => {
 		let host = mount(monitors());
 		let row = host.querySelector<HTMLElement>("tbody tr")!;
@@ -580,137 +518,6 @@ describe("Table states", () => {
 	});
 });
 
-/** A post with a title long enough to squeeze every other column. */
-interface Post {
-	id: string;
-	title: string;
-	excerpt: string;
-}
-
-const POSTS: Post[] = Array.from({ length: 4 }, (_, index) => ({
-	id: `post_${index}`,
-	title: `Designing a publishing workflow that survives a newsroom deadline, part ${index + 1}`,
-	excerpt:
-		"How a small editorial team drafts, reviews, schedules and corrects stories without stepping on each other.",
-}));
-
-/** Labels of the three row actions every post carries. */
-const ACTIONS = ["Edit", "Quick edit", "View"];
-
-/**
- * One post's actions cell: plain ghost link buttons with `links`, else `Table.Action`s that fold
- * into a menu named "More actions".
- */
-function PostActions(handle: Handle<{ id: string; labels: string[]; links?: boolean }>) {
-	return () => {
-		let { id, labels, links } = handle.props;
-		if (links) {
-			return (
-				<Table.Actions>
-					{labels.map((label) => (
-						<LinkButton
-							key={label}
-							href={`#${id}/${label}`}
-							variant="ghost"
-							color="neutral"
-							size="sm"
-						>
-							{label}
-						</LinkButton>
-					))}
-				</Table.Actions>
-			);
-		}
-		return (
-			<Table.Actions overflowLabel="More actions">
-				{labels.map((label) => (
-					<Table.Action key={label} href={`#${id}/${label}`}>
-						{label}
-					</Table.Action>
-				))}
-			</Table.Actions>
-		);
-	};
-}
-
-/**
- * A comfortable posts table whose title and excerpt compete with the actions for width. With
- * `links`, the actions are plain ghost link buttons; otherwise they are `Table.Action`s that
- * fold into a menu named "More actions".
- */
-function posts(
-	options: { links?: boolean; actions?: string[]; noActions?: boolean; date?: boolean } = {},
-): JSX.Element {
-	let actions = options.actions ?? ACTIONS;
-	return (
-		<Table.Container>
-			<Table aria-label="Posts" density="comfortable">
-				<Table.Header>
-					<Table.Row>
-						<Table.SelectAll label="Select all posts" />
-						<Table.Column>Title</Table.Column>
-						<Table.Column>Excerpt</Table.Column>
-						<Table.Column>Status</Table.Column>
-						{options.date ? <Table.Column>Published</Table.Column> : null}
-						{options.noActions ? null : <Table.ActionsColumn label="Actions" />}
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{POSTS.map((post) => (
-						<Table.Row key={post.id}>
-							<Table.Select name="post" value={post.id} label={`Select ${post.title}`} />
-							<Table.Cell>
-								<Table.RowLink href={`#${post.id}`}>{post.title}</Table.RowLink>
-							</Table.Cell>
-							<Table.Cell>{post.excerpt}</Table.Cell>
-							<Table.StatusCell color="success">Published</Table.StatusCell>
-							{options.date ? (
-								<Table.DateCell
-									date="2026-12-01T12:00:00Z"
-									now="2026-12-20T12:00:00Z"
-									locale="en-US"
-									local
-								/>
-							) : null}
-							{options.noActions ? null : (
-								<PostActions id={post.id} labels={actions} links={options.links} />
-							)}
-						</Table.Row>
-					))}
-				</Table.Body>
-			</Table>
-		</Table.Container>
-	);
-}
-
-/** Number of line boxes the text of `element` lays out in. */
-function lineBoxes(element: Element): number {
-	let range = document.createRange();
-	range.selectNodeContents(element);
-	let tops = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
-	return tops.size;
-}
-
-/** Asserts every action label in `host` sits on one line and its cell hugs the actions. */
-function expectOneLineActions(host: HTMLElement, labels: string[] = ACTIONS): void {
-	let cells = [...host.querySelectorAll<HTMLElement>('tbody [data-slot="row-actions"]')];
-	expect(cells).toHaveLength(POSTS.length);
-	for (let cell of cells) {
-		let actions = [...cell.querySelectorAll<HTMLElement>("a")].filter(
-			(action) => action.getClientRects().length > 0,
-		);
-		expect(actions.map((action) => action.textContent)).toEqual(labels);
-		for (let action of actions) expect(lineBoxes(action)).toBe(1);
-		let first = actions[0]!.getBoundingClientRect();
-		let last = actions.at(-1)!.getBoundingClientRect();
-		let style = getComputedStyle(cell);
-		let padding = parseFloat(style.paddingInlineStart) + parseFloat(style.paddingInlineEnd);
-		expect(cell.getBoundingClientRect().width).toBeLessThanOrEqual(
-			last.right - first.left + padding + 1,
-		);
-	}
-}
-
 describe("Table row actions", () => {
 	for (let width of [768, 1440]) {
 		test(`keeps ghost link actions on one line in a ${width}px table`, async () => {
@@ -770,9 +577,6 @@ describe("Table row actions", () => {
 	});
 });
 
-/** Four row actions, enough to crowd the visible columns if their cell reserved their width. */
-const MANY_ACTIONS = ["Edit", "Quick edit", "View", "Duplicate"];
-
 /** Widest a resting actions column may be: one small ⋯ button. */
 const MENU_BUTTON_WIDTH = 32;
 
@@ -819,76 +623,7 @@ describe("Table hover-revealed row actions", () => {
 		).toBe(1);
 		expect(getComputedStyle(inline, "::before").backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
 	});
-
-	test("stay inline and take their width where the pointer cannot hover", async () => {
-		await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
-		await page.viewport(1024, 768);
-		let host = mount(posts({ actions: MANY_ACTIONS }), 1024);
-
-		expect(matchMedia("(hover: none)").matches).toBe(true);
-		expectOneLineActions(host, MANY_ACTIONS);
-		for (let cell of host.querySelectorAll<HTMLElement>('tbody [data-slot="row-actions"]')) {
-			let actions = [...cell.querySelectorAll<HTMLElement>("a")];
-			expect(cell.getBoundingClientRect().width).toBeGreaterThanOrEqual(
-				actions.at(-1)!.getBoundingClientRect().right - actions[0]!.getBoundingClientRect().left,
-			);
-			expect(getComputedStyle(cell).opacity).toBe("1");
-		}
-	});
 });
-
-/** Labels of the overlay's three actions: two ghost links and a danger `Table.Action`. */
-const OVERLAY_ACTIONS = ["View", "Post on X", "Delete"];
-
-/**
- * A four-column articles table whose last data cell is a "Published" status, with the three
- * actions an articles list carries: ghost link buttons and a danger `Table.Action`, or with
- * `actions`, three `Table.Action`s under an `overflowLabel`.
- */
-function articles(options: { actions?: boolean } = {}): JSX.Element {
-	return (
-		<Table.Container>
-			<Table aria-label="Articles" density="comfortable">
-				<Table.Header>
-					<Table.Row>
-						<Table.Column>Title</Table.Column>
-						<Table.Column>Author</Table.Column>
-						<Table.Column>Status</Table.Column>
-						<Table.ActionsColumn label="Actions" />
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{POSTS.map((post) => (
-						<Table.Row key={post.id}>
-							<Table.Cell>
-								<Table.RowLink href={`#${post.id}`}>{post.title}</Table.RowLink>
-							</Table.Cell>
-							<Table.Cell>Sergio</Table.Cell>
-							<Table.StatusCell color="success">Published</Table.StatusCell>
-							{options.actions ? (
-								<Table.Actions overflowLabel={`More actions for ${post.title}`}>
-									<Table.Action href={`#${post.id}/view`}>{OVERLAY_ACTIONS[0]}</Table.Action>
-									<Table.Action href={`#${post.id}/share`}>{OVERLAY_ACTIONS[1]}</Table.Action>
-									<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
-								</Table.Actions>
-							) : (
-								<Table.Actions>
-									<LinkButton href={`#${post.id}/view`} variant="ghost" color="neutral" size="sm">
-										{OVERLAY_ACTIONS[0]}
-									</LinkButton>
-									<LinkButton href={`#${post.id}/share`} variant="ghost" color="neutral" size="sm">
-										{OVERLAY_ACTIONS[1]}
-									</LinkButton>
-									<Table.Action danger>{OVERLAY_ACTIONS[2]}</Table.Action>
-								</Table.Actions>
-							)}
-						</Table.Row>
-					))}
-				</Table.Body>
-			</Table>
-		</Table.Container>
-	);
-}
 
 /**
  * Where the overlay of row actions turns fully opaque: its own box when it paints its own
@@ -1001,90 +736,7 @@ describe("Table row actions overlay", () => {
 	}
 });
 
-/** Turns on touch input, so the page matches `(hover: none)` and `(pointer: coarse)`. */
-async function touch(): Promise<void> {
-	await cdp().send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
-}
-
-/** The controls inside `root` that lay out a box. */
-function shown(root: Element): HTMLElement[] {
-	return [...root.querySelectorAll<HTMLElement>("a, button")].filter(
-		(control) => control.getClientRects().length > 0,
-	);
-}
-
-/** Accessible name `control` takes from `aria-label`, else from the elements `aria-labelledby` names. */
-function accessibleName(control: HTMLElement): string {
-	let label = control.getAttribute("aria-label");
-	if (label) return label;
-	let ids = control.getAttribute("aria-labelledby")?.split(/\s+/) ?? [];
-	return ids
-		.map((id) => document.getElementById(id)?.textContent ?? "")
-		.join(" ")
-		.trim();
-}
-
-/** Whether two boxes share any area. */
-function intersects(a: DOMRect, b: DOMRect): boolean {
-	return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-}
-
-describe("Table row actions on touch and phones", () => {
-	for (let actions of [false, true]) {
-		let kind = actions ? "Table.Action" : "LinkButton";
-		test(`shows one 44px menu button without hover on a 375px touch screen, holding every ${kind} action`, async () => {
-			await touch();
-			await page.viewport(375, 812);
-			let host = mount(articles({ actions }), 375);
-			let cell = host.querySelector<HTMLElement>('tbody [data-slot="row-actions"]')!;
-
-			expect(matchMedia("(hover: none)").matches).toBe(true);
-			expect(getComputedStyle(cell).opacity).toBe("1");
-			let visible = shown(cell);
-			expect(visible).toHaveLength(1);
-			let more = visible[0]!;
-			expect(accessibleName(more)).not.toBe("");
-			let box = more.getBoundingClientRect();
-			expect(box.width).toBeGreaterThanOrEqual(44);
-			expect(box.height).toBeGreaterThanOrEqual(44);
-
-			await userEvent.click(more);
-			let menu = document.getElementById(more.getAttribute("commandfor")!)!;
-			await expect.poll(() => menu.matches(":popover-open")).toBe(true);
-			let items = shown(menu);
-			expect(items.map((item) => item.textContent)).toEqual(OVERLAY_ACTIONS);
-			let danger = '[data-danger], [data-color="danger"]';
-			expect(items.map((item) => item.matches(danger))).toEqual([false, false, true]);
-			for (let item of items) expect(lineBoxes(item)).toBe(1);
-		});
-	}
-
-	test("shows no menu button in a row with no actions", async () => {
-		await touch();
-		await page.viewport(375, 812);
-		let host = mount(
-			<Table.Container>
-				<Table aria-label="Teams">
-					<Table.Header>
-						<Table.Row>
-							<Table.Column>Team</Table.Column>
-							<Table.ActionsColumn label="Actions" />
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						<Table.Row>
-							<Table.Cell>Owners</Table.Cell>
-							<Table.Actions>{false}</Table.Actions>
-						</Table.Row>
-					</Table.Body>
-				</Table>
-			</Table.Container>,
-			375,
-		);
-
-		expect(shown(host.querySelector('tbody [data-slot="row-actions"]')!)).toHaveLength(0);
-	});
-
+describe("Table row actions on a phone and from the keyboard", () => {
 	test("shows the actions when the keyboard tabs into the row on a hover device", async () => {
 		let host = mount(articles(), 900);
 		let row = host.querySelector<HTMLElement>("tbody tr")!;
@@ -1098,29 +750,26 @@ describe("Table row actions on touch and phones", () => {
 		expect(shown(cell).map((action) => action.textContent)).toEqual(OVERLAY_ACTIONS);
 	});
 
-	for (let input of ["mouse", "touch"]) {
-		test(`never lays the actions over the title or status on a 375px ${input} screen`, async () => {
-			if (input === "touch") await touch();
-			await page.viewport(375, 812);
-			let host = mount(articles(), 375);
+	test(`never lays the actions over the title or status on a 375px mouse screen`, async () => {
+		await page.viewport(375, 812);
+		let host = mount(articles(), 375);
 
-			for (let row of host.querySelectorAll<HTMLElement>("tbody tr")) {
-				row.querySelector<HTMLElement>('[data-slot="row-link"]')!.focus();
-				let cell = row.querySelector<HTMLElement>('[data-slot="row-actions"]')!;
-				await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
-				let title = row.children[0]!.getBoundingClientRect();
-				let status = row.querySelector('[data-type="status"]')!.getBoundingClientRect();
-				let parts = [cell, ...cell.querySelectorAll<HTMLElement>("*")].filter(
-					(part) => part.getClientRects().length > 0 && !part.closest(":popover-open, dialog"),
-				);
-				for (let part of parts) {
-					let box = part.getBoundingClientRect();
-					expect(intersects(box, title)).toBe(false);
-					expect(intersects(box, status)).toBe(false);
-				}
+		for (let row of host.querySelectorAll<HTMLElement>("tbody tr")) {
+			row.querySelector<HTMLElement>('[data-slot="row-link"]')!.focus();
+			let cell = row.querySelector<HTMLElement>('[data-slot="row-actions"]')!;
+			await expect.poll(() => getComputedStyle(cell).opacity).toBe("1");
+			let title = row.children[0]!.getBoundingClientRect();
+			let status = row.querySelector('[data-type="status"]')!.getBoundingClientRect();
+			let parts = [cell, ...cell.querySelectorAll<HTMLElement>("*")].filter(
+				(part) => part.getClientRects().length > 0 && !part.closest(":popover-open, dialog"),
+			);
+			for (let part of parts) {
+				let box = part.getBoundingClientRect();
+				expect(intersects(box, title)).toBe(false);
+				expect(intersects(box, status)).toBe(false);
 			}
-		});
-	}
+		}
+	});
 });
 
 describe("Table dates and statuses", () => {

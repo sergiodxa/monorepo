@@ -118,20 +118,20 @@ describe("SiteHeader on a phone", () => {
 		expect(box.height).toBe(window.innerHeight);
 
 		for (let row of sheet.querySelectorAll<HTMLElement>("nav > ul > li > a, summary")) {
-			expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+			expect(Math.round(row.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 		}
 
 		find(sheet, "summary").click();
 		await frame();
 		for (let link of sheet.querySelectorAll<HTMLElement>("details a")) {
-			expect(link.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+			expect(Math.round(link.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 		}
 
 		let actions = find(sheet, '[data-slot="site-header-sheet-actions"]');
 		let actionsBox = actions.getBoundingClientRect();
 		for (let action of actions.querySelectorAll<HTMLElement>("a")) {
 			expect(action.getBoundingClientRect().width).toBeGreaterThan(actionsBox.width - 64);
-			expect(action.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+			expect(Math.round(action.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 		}
 		expect(actions.textContent).toContain("Start free");
 

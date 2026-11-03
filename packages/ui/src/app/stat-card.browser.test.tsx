@@ -208,7 +208,7 @@ describe("StatCard", () => {
 
 	for (let width of [375, 1440]) {
 		test(`wraps a skeleton given the footer exactly like the card in a ${width}px group`, () => {
-			let footer = "Out of 43,200 estimated";
+			let footer = "Out of 43,200 estimated checks";
 			let host = mount(
 				<div>
 					<StatCard.Group aria-label="Monitor">
@@ -247,7 +247,7 @@ describe("StatCard", () => {
 		});
 
 		test(`wraps a skeleton given the label exactly like the card in a ${width}px group`, () => {
-			let label = "Monthly Pings Usage";
+			let label = "Monthly Pings Usage Total";
 			let host = mount(
 				<div>
 					<StatCard.Group aria-label="Monitor">
