@@ -160,7 +160,7 @@ async function asOneChunk(response: Response): Promise<Response> {
  * The colo's Workers cache, absent outside the Workers runtime. Cast, since the DOM's
  * `CacheStorage` type shadows the Workers declaration that has `default`.
  */
-function edgeCache(): Cache | null {
+export function edgeCache(): Cache | null {
 	if (typeof caches === "undefined") return null;
 	return (caches as unknown as { default?: Cache }).default ?? null;
 }

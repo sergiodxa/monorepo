@@ -137,6 +137,18 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/ui-export-show")),
 	);
 	router.map(
+		routes.api.icons,
+		lazy(() => import("~/app/http/controllers/icons-gallery")),
+	);
+	router.map(
+		routes.api.iconSprite,
+		lazy(() => import("~/app/http/controllers/icon-sprite")),
+	);
+	router.map(
+		routes.api.icon,
+		lazy(() => import("~/app/http/controllers/icon-show")),
+	);
+	router.map(
 		routes.api.show,
 		lazy(() => import("~/app/http/controllers/packages-show")),
 	);
@@ -199,6 +211,10 @@ export function createWebRouter() {
 		),
 	);
 	router.map(
+		routes.markdown.icon,
+		lazy(() => import("~/app/http/controllers/markdown-twin").then((it) => it.iconMarkdownTwin)),
+	);
+	router.map(
 		routes.frames.preview,
 		lazy(() => import("~/app/http/controllers/frame-preview")),
 	);
@@ -213,6 +229,10 @@ export function createWebRouter() {
 	router.map(
 		routes.frames.guide,
 		lazy(() => import("~/app/http/controllers/frame-preview").then((it) => it.frameGuideDemo)),
+	);
+	router.map(
+		routes.frames.icon,
+		lazy(() => import("~/app/http/controllers/icon-show").then((it) => it.iconFrame)),
 	);
 	router.map(
 		routes.examples.visit,

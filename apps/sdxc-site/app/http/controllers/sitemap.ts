@@ -14,6 +14,7 @@ import { createAction } from "remix/router";
 import { withBundleCache } from "~/app/http/caching";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
+import { listIcons } from "~/app/services/icons";
 import { listPackageGroups } from "~/app/services/packages";
 import { SITE_URL } from "~/config/constants";
 import routes from "~/routes/web";
@@ -67,12 +68,17 @@ export default createAction(routes.sitemap, async (ctx) => {
 			uiExport: catalogue.flatMap((page) =>
 				page.kind === "export" ? [{ params: page.params, ...reference }] : [],
 			),
+			icons: { priority: PRIORITY.package, frequency: "weekly" },
+			iconSprite: false,
+			icon: listIcons().map((icon) => ({ params: { icon: icon.name }, ...reference })),
 			show: listPackageGroups().flatMap((group) =>
-				group.packages.map((entry) => ({
-					params: { name: entry.directory },
-					priority: PRIORITY.package,
-					frequency: "weekly" as const,
-				})),
+				group.packages
+					.filter((entry) => entry.directory !== "icons")
+					.map((entry) => ({
+						params: { name: entry.directory },
+						priority: PRIORITY.package,
+						frequency: "weekly" as const,
+					})),
 			),
 		},
 		moved: false,

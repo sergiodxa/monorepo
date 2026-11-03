@@ -12,12 +12,15 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { iconMarkdown } from "~/app/services/catalogue-markdown";
 import {
 	readComponentMarkdown,
 	readUiExportMarkdown,
 	readUtilityMarkdown,
 } from "~/app/services/catalogue-pages";
 import { readGuide } from "~/app/services/docs";
+import { renderIconSvg } from "~/app/services/icon-svg";
+import { findIcon } from "~/app/services/icons";
 import { findPackage, readPackageReadme } from "~/app/services/packages";
 import routes from "~/routes/web";
 
@@ -75,5 +78,16 @@ export const uiExportMarkdownTwin = createAction(routes.markdown.uiExport, async
 	let source = await readUiExportMarkdown(subpath, slug);
 	if (source === null) return missing();
 
+	return await withBundleCache(ctx.request, markdown(source));
+});
+
+/** Serves one `@sdxc/icons` icon as markdown, written from the same entry its page draws. */
+export const iconMarkdownTwin = createAction(routes.markdown.icon, async (ctx) => {
+	let { icon: name } = s.parse(s.object({ icon: s.string() }), ctx.params);
+
+	let icon = findIcon(name);
+	if (icon === null) return missing();
+
+	let source = iconMarkdown(icon, await renderIconSvg(icon.name));
 	return await withBundleCache(ctx.request, markdown(source));
 });

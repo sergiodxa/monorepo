@@ -56,6 +56,15 @@ export default route({
 		component: get("/api/ui/:component"),
 		/** A mixin, behavior class, animation or style recipe, under the subpath it imports from. */
 		uiExport: get("/api/ui/:subpath/:slug"),
+		/** Every `@sdxc/icons` icon in one grid, narrowed by `?q=` against names and tags. */
+		icons: get("/api/icons"),
+		/**
+		 * Every icon as a `<symbol>`, which the grid's tiles reference. It is asked for as
+		 * `?v=<Lucide version>`, so each release of the icons is a URL of its own.
+		 */
+		iconSprite: get("/api/icons/sprite.svg"),
+		/** One icon: drawn large, with both ways to render it and its SVG. */
+		icon: get("/api/icons/:icon"),
 		show: get("/api/:name"),
 	},
 
@@ -84,6 +93,7 @@ export default route({
 		utility: get("/api/u/:utility.md"),
 		component: get("/api/ui/:component.md"),
 		uiExport: get("/api/ui/:subpath/:slug.md"),
+		icon: get("/api/icons/:icon.md"),
 	},
 
 	/**
@@ -99,6 +109,8 @@ export default route({
 		utility: get("/frames/u/:utility/:example"),
 		/** One live demo a guide frames beside the snippet that produces it. */
 		guide: get("/frames/guides/:guide/:demo"),
+		/** One icon's detail, the same one its page draws, for the grid's dialog to load. */
+		icon: get("/frames/icons/:icon"),
 	},
 
 	/**

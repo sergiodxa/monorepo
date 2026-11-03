@@ -7,7 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { LUCIDE_VERSION } from "@sdxc/icons";
+
 import type { ComponentReference, PropRow, PropsTable } from "~/app/services/components";
+import type { IconEntry } from "~/app/services/icons";
 import type { ThemeDeclaration, ThemeReference } from "~/app/services/theming";
 import type { UiExportReference, UiSymbol } from "~/app/services/ui-exports";
 import type { UtilityReference } from "~/app/services/utilities";
@@ -15,6 +18,7 @@ import type { UtilityExampleSource } from "~/app/services/utility-examples";
 import type { Foundations } from "~/resources/content/foundations";
 
 import { importPath } from "~/app/services/components";
+import { LUCIDE_LINKS, lucideIconHref } from "~/app/services/icons";
 import { uiExportImportPath } from "~/app/services/ui-exports";
 import {
 	atWidth,
@@ -392,4 +396,44 @@ function oneLine(value: string): string {
 /** The blocks of a page, a blank line between each and one at the end of the file. */
 function join(blocks: string[]): string {
 	return `${blocks.filter((block) => block.trim() !== "").join("\n\n")}\n`;
+}
+
+/**
+ * The icon's page as markdown, for a reader or an agent that wants the code without the
+ * page: the credit to Lucide first, then both ways to render it and its SVG.
+ *
+ * @param icon The icon to describe.
+ * @param svg Its SVG source, as `renderIconSvg` lays it out.
+ */
+export function iconMarkdown(icon: IconEntry, svg: string): string {
+	let fence = "```";
+	return [
+		`# ${icon.name}`,
+		"",
+		`The [${icon.name}](${lucideIconHref(icon.name)}) icon is drawn by the [Lucide](${LUCIDE_LINKS.home}) contributors and published under the [ISC license](${LUCIDE_LINKS.license}). \`@sdxc/icons\` renders it as \`${icon.component}\`, from Lucide ${LUCIDE_VERSION}. If Lucide serves your app, [sponsor it](${LUCIDE_LINKS.sponsor}).`,
+		...(icon.tags.length > 0 ? ["", `Tags: ${icon.tags.join(", ")}.`] : []),
+		"",
+		"## By component",
+		"",
+		`${fence}tsx`,
+		`import { ${icon.component} } from "@sdxc/icons";`,
+		"",
+		`<${icon.component} aria-hidden="true" />`,
+		fence,
+		"",
+		"## By name",
+		"",
+		`${fence}tsx`,
+		`import { Icon } from "@sdxc/icons";`,
+		"",
+		`<Icon name="${icon.name}" aria-hidden="true" />`,
+		fence,
+		"",
+		"## SVG",
+		"",
+		`${fence}html`,
+		svg,
+		fence,
+		"",
+	].join("\n");
 }

@@ -266,5 +266,14 @@ script.
 ## Current Progress
 
 - [x] Phase 1: Package data
-- [ ] Phase 2: Gallery and icon pages
+- [x] Phase 2: Gallery and icon pages
 - [ ] Phase 3: Enhancements
+
+## Notes
+
+- The gallery replaces the README's HTML page at `/api/icons`; the README stays at
+  `/api/icons.md` and on npm, and the gallery's Usage section links to it for props.
+- Icon pages stay out of `listCataloguePages`, so search, `/llms.txt` and the MCP resources
+  list the package once rather than 1,903 icon pages; the sitemap lists every icon page.
+- A frame route returns its render as streamed, so `/frames/icons/:icon` skips
+  `withBundleCache`.
