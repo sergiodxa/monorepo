@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { UtilityMixin } from "@sdxc/u";
 import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { raw } from "@sdxc/u/general";
@@ -66,7 +68,7 @@ export function actionRowGrid<Node extends Element = Element>(
  * @example
  * <div mix={[onTitleLine("ui-settings-card")]}><Button>Open billing portal</Button></div>
  */
-export function onTitleLine(containerName: string) {
+export function onTitleLine(containerName: string): UtilityMixin[] {
 	let styles: CSSStyles = {};
 	styles[`@container ${containerName} (min-width: ${ACTION_ROW_MIN})`] = {
 		display: "flex",
