@@ -13,7 +13,7 @@ import {
 	ExternalLinkIcon,
 	PencilIcon,
 	ShareIcon,
-	Trash2Icon,
+	TrashIcon,
 	UserPlusIcon,
 } from "@sdxc/icons";
 import { grow } from "@sdxc/u/layout";
@@ -64,7 +64,7 @@ const CODE = `<Button commandfor="issue-menu" command="toggle-popover" variant="
 	<Menu.Separator />
 
 	<Menu.Item danger>
-		<Trash2Icon />
+		<TrashIcon />
 		<span mix={[grow()]}>Delete issue</span>
 		<Keyboard>⌫</Keyboard>
 	</Menu.Item>
@@ -121,7 +121,7 @@ export const MenuPreview = clientEntry(import.meta.url, function MenuPreview() {
 				<Menu.Separator />
 
 				<Menu.Item danger>
-					<Trash2Icon />
+					<TrashIcon />
 					<span mix={[grow()]}>Delete issue</span>
 					<Keyboard>⌫</Keyboard>
 				</Menu.Item>

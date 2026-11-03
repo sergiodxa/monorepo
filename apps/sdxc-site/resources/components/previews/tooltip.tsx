@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ArchiveIcon, StarIcon, Trash2Icon } from "@sdxc/icons";
+import { ArchiveIcon, StarIcon, TrashIcon } from "@sdxc/icons";
 import { iife } from "@sdxc/iife";
 import { anchorName, hstack, positionAnchor } from "@sdxc/u/layout";
 import { Button, Tooltip } from "@sdxc/ui";
@@ -63,7 +63,7 @@ export const TooltipPreview = clientEntry(import.meta.url, function TooltipPrevi
 				let Glyph = iife(() => {
 					if (action.id === "star") return StarIcon;
 					if (action.id === "archive") return ArchiveIcon;
-					return Trash2Icon;
+					return TrashIcon;
 				});
 
 				return (

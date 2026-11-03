@@ -13,7 +13,7 @@ import {
 	FileTextIcon,
 	ImageIcon,
 	RefreshCwIcon,
-	Trash2Icon,
+	TrashIcon,
 } from "@sdxc/icons";
 import { is, maxIs } from "@sdxc/u/size";
 import { Dialog } from "@sdxc/ui";
@@ -76,7 +76,7 @@ const CODE = `<>
 					<RefreshCwIcon />
 				</Attachment.Action>
 				<Attachment.Action aria-label="Remove contract-final.docx" color="danger" variant="ghost">
-					<Trash2Icon />
+					<TrashIcon />
 				</Attachment.Action>
 			</Attachment.Actions>
 		</Attachment>
@@ -163,7 +163,7 @@ export const AttachmentPreview = clientEntry(import.meta.url, function Attachmen
 							color="danger"
 							variant="ghost"
 						>
-							<Trash2Icon />
+							<TrashIcon />
 						</Attachment.Action>
 					</Attachment.Actions>
 				</Attachment>

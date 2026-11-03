@@ -13,7 +13,7 @@ import {
 	DownloadIcon,
 	FileTextIcon,
 	PencilIcon,
-	Trash2Icon,
+	TrashIcon,
 } from "@sdxc/icons";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -81,7 +81,7 @@ const CODE = `<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs
 		<ContextMenu.Separator />
 
 		<ContextMenu.Item danger mix={[hstack({ gap: 2, align: "center" })]}>
-			<Trash2Icon size={16} aria-hidden="true" />
+			<TrashIcon size={16} aria-hidden="true" />
 			<span mix={[weight("medium")]}>Move to trash</span>
 			<ContextMenu.Shortcut>⌫</ContextMenu.Shortcut>
 		</ContextMenu.Item>
@@ -163,7 +163,7 @@ export const ContextMenuPreview = clientEntry(import.meta.url, function ContextM
 				<ContextMenu.Separator />
 
 				<ContextMenu.Item danger mix={[hstack({ gap: 2, align: "center" })]}>
-					<Trash2Icon size={16} aria-hidden="true" />
+					<TrashIcon size={16} aria-hidden="true" />
 					<span mix={[weight("medium")]}>Move to trash</span>
 					<ContextMenu.Shortcut>⌫</ContextMenu.Shortcut>
 				</ContextMenu.Item>

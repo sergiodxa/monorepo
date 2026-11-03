@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { Trash2Icon } from "@sdxc/icons";
+import { TrashIcon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
@@ -85,7 +85,7 @@ const SHEET_CODE = `<Button commandfor="preview-cart" command="show-modal">
 							aria-label={\`Remove \${line.name}\`}
 							mix={[on<HTMLButtonElement, "click">("click", () => remove(line.id))]}
 						>
-							<Trash2Icon />
+							<TrashIcon />
 						</Button>
 					</div>
 					<Separator />
@@ -181,7 +181,7 @@ export const SheetPreview = clientEntry(import.meta.url, function SheetPreview(h
 											aria-label={`Remove ${line.name}`}
 											mix={[on<HTMLButtonElement, "click">("click", () => remove(line.id))]}
 										>
-											<Trash2Icon />
+											<TrashIcon />
 										</Button>
 									</div>
 									<Separator />

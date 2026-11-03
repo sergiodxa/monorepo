@@ -19,7 +19,7 @@ import {
 	CompassIcon,
 	GitBranchIcon,
 	GlobeIcon,
-	HistoryIcon,
+	RotateCcwClockIcon,
 	LockIcon,
 	MailIcon,
 	MessageCircleIcon,
@@ -53,7 +53,7 @@ const ICONS: Record<FeatureIconName, typeof GlobeIcon> = {
 	calendar: CalendarIcon,
 	"calendar-off": CalendarOffIcon,
 	"git-branch": GitBranchIcon,
-	history: HistoryIcon,
+	history: RotateCcwClockIcon,
 };
 
 namespace Feature {

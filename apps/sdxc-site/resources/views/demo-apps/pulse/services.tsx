@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { PauseIcon, PlayIcon, Trash2Icon } from "@sdxc/icons";
+import { PauseIcon, PlayIcon, TrashIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { minIs } from "@sdxc/u/size";
 import { HeadingScope, LinkButton, StatusDot } from "@sdxc/ui";
@@ -435,7 +435,7 @@ export default function Services(handle: Handle<Services.Props>) {
 							{
 								label: COPY.services.delete,
 								key: "d",
-								icon: <Trash2Icon size={16} />,
+								icon: <TrashIcon size={16} />,
 								name: "intent",
 								value: "delete",
 								danger: true,

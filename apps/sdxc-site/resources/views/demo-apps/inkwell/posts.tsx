@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { EyeIcon, EyeOffIcon, SendIcon, Trash2Icon } from "@sdxc/icons";
+import { EyeIcon, EyeOffIcon, SendIcon, TrashIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { hidden, hstack, vstack } from "@sdxc/u/layout";
@@ -383,7 +383,7 @@ function PostsTable(handle: Handle<PostsTableProps>) {
 						{
 							label: "Delete",
 							key: "d",
-							icon: <Trash2Icon size={16} />,
+							icon: <TrashIcon size={16} />,
 							name: "intent",
 							value: "delete",
 							danger: true,

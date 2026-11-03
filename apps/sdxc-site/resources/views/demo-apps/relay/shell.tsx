@@ -13,7 +13,7 @@ import {
 	AlarmClockIcon,
 	ArchiveIcon,
 	BugIcon,
-	Building2Icon,
+	BuildingComplexIcon,
 	ChartLineIcon,
 	CreditCardIcon,
 	FlaskConicalIcon,
@@ -102,7 +102,7 @@ function viewIcon(icon: ViewIcon): RemixNode {
 		case "bug":
 			return <BugIcon />;
 		case "enterprise":
-			return <Building2Icon />;
+			return <BuildingComplexIcon />;
 	}
 }
 

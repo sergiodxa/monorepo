@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { CheckIcon, CopyIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
+import { CheckIcon, CopyIcon, PlusIcon, TrashIcon } from "@sdxc/icons";
 import { bg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
@@ -45,7 +45,7 @@ let copyState: keyof typeof COPY_LABELS = "idle";
 			Preview
 		</Button>
 		<Button type="button" variant="ghost" color="danger">
-			<Trash2Icon size={16} aria-hidden="true" />
+			<TrashIcon size={16} aria-hidden="true" />
 			Delete project
 		</Button>
 		<Button type="button" isPending>
@@ -118,7 +118,7 @@ export const ButtonPreview = clientEntry(import.meta.url, function ButtonPreview
 					Preview
 				</Button>
 				<Button type="button" variant="ghost" color="danger">
-					<Trash2Icon size={16} aria-hidden="true" />
+					<TrashIcon size={16} aria-hidden="true" />
 					Delete project
 				</Button>
 				<Button type="button" isPending>

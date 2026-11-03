@@ -10,7 +10,7 @@
 import type { RowNavigation, StatusStrip as StatusStripTypes } from "@sdxc/ui/app";
 import type { Handle } from "remix/component";
 
-import { PauseIcon, PencilIcon, PlayIcon, Trash2Icon } from "@sdxc/icons";
+import { PauseIcon, PencilIcon, PlayIcon, TrashIcon } from "@sdxc/icons";
 import { raw } from "@sdxc/u/general";
 import { minIs } from "@sdxc/u/size";
 import { font, nowrap } from "@sdxc/u/typography";
@@ -191,7 +191,7 @@ export const ServicesTable = clientEntry(
 										<form method="post" action={row.deleteAction}>
 											<input type="hidden" name="next" value={row.next} />
 											<Button type="submit" size="sm" variant="ghost" color="danger">
-												<Trash2Icon size={14} />
+												<TrashIcon size={14} />
 												{labels.delete}
 											</Button>
 										</form>

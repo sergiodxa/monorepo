@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { ArchiveIcon, MailIcon, Trash2Icon } from "@sdxc/icons";
+import { ArchiveIcon, MailIcon, TrashIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { basis, grow, hstack, shrink, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
@@ -69,7 +69,7 @@ let followSelection = ref((_node, signal) => {
 			Archive
 		</Button>
 		<Button variant="outline" color="danger" size="sm" disabled={model.isEmpty}>
-			<Trash2Icon />
+			<TrashIcon />
 			Delete
 		</Button>
 		<Badge color="neutral">{model.size} selected</Badge>
@@ -110,7 +110,7 @@ export const GridListPreview = clientEntry(
 						Archive
 					</Button>
 					<Button variant="outline" color="danger" size="sm" disabled={model.isEmpty}>
-						<Trash2Icon />
+						<TrashIcon />
 						Delete
 					</Button>
 					<Badge color="neutral">{String(model.size)} selected</Badge>

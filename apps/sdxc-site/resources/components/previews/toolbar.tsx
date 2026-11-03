@@ -15,7 +15,7 @@ import {
 	Link2Icon,
 	ListIcon,
 	ListOrderedIcon,
-	Trash2Icon,
+	TrashIcon,
 	UnderlineIcon,
 } from "@sdxc/icons";
 import { Button, Menu, Select, Separator, ToggleButton } from "@sdxc/ui";
@@ -73,7 +73,7 @@ const TOOLBAR_CODE = `<Toolbar aria-label="Formatting">
 		</Menu.Item>
 		<Menu.Separator />
 		<Menu.Item danger>
-			<Trash2Icon aria-hidden="true" />
+			<TrashIcon aria-hidden="true" />
 			Clear formatting
 		</Menu.Item>
 	</Menu>
@@ -167,7 +167,7 @@ export const ToolbarPreview = clientEntry(import.meta.url, function ToolbarPrevi
 				</Menu.Item>
 				<Menu.Separator />
 				<Menu.Item danger>
-					<Trash2Icon aria-hidden="true" />
+					<TrashIcon aria-hidden="true" />
 					Clear formatting
 				</Menu.Item>
 			</Menu>

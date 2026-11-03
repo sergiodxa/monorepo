@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ArchiveIcon, PauseIcon, Trash2Icon } from "@sdxc/icons";
+import { ArchiveIcon, PauseIcon, TrashIcon } from "@sdxc/icons";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, gap, items, vstack } from "@sdxc/u/layout";
@@ -50,7 +50,7 @@ const CODE = `<form id="monitors" method="post" action="/monitors/bulk">
 	actions={[
 		{ label: "Pause", key: "p", icon: <PauseIcon />, name: "intent", value: "pause" },
 		{ label: "Archive", key: "a", icon: <ArchiveIcon />, name: "intent", value: "archive" },
-		{ label: "Delete", key: "x", icon: <Trash2Icon />, name: "intent", value: "delete", danger: true },
+		{ label: "Delete", key: "x", icon: <TrashIcon />, name: "intent", value: "delete", danger: true },
 	]}
 	labels={{
 		toolbar: "Monitors", clear: "Clear selection", selected: "{count} selected",
@@ -105,7 +105,7 @@ export default {
 					{
 						label: "Delete",
 						key: "x",
-						icon: <Trash2Icon size={16} />,
+						icon: <TrashIcon size={16} />,
 						name: "intent",
 						value: "delete",
 						danger: true,

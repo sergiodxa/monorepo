@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import {
 	ArchiveIcon,
 	BadgeCheckIcon,
-	Building2Icon,
+	BuildingComplexIcon,
 	CreditCardIcon,
 	MessageSquareIcon,
 	ReplyIcon,
@@ -487,7 +487,7 @@ function ContactsToolbar(handle: Handle<{ url: URL; query: ContactQuery }>) {
 					{
 						name: "company",
 						label: "Company",
-						icon: <Building2Icon size={14} />,
+						icon: <BuildingComplexIcon size={14} />,
 						options: COMPANIES.map((company) => ({
 							value: company.id,
 							label: company.name,
