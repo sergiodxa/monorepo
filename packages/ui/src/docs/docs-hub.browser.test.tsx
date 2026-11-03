@@ -13,6 +13,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { HeadingScope } from "../components/heading-scope.js";
 
 import { DocsHub } from "./docs-hub.js";
+import { DocsLayout } from "./docs-layout.js";
 
 import "../reset.css";
 import "../theme.css";
@@ -194,6 +195,25 @@ describe("DocsHub", () => {
 		expect(nav.getAttribute("aria-label")).toBe("Popular topics");
 		for (let chip of all(host, '[data-slot="docs-hub-topic"]')) {
 			expect(chip.getBoundingClientRect().height).toBeGreaterThanOrEqual(36);
+		}
+	});
+
+	test("spans the article's width with every list inside a docs layout, past the prose measure", () => {
+		let host = mount(
+			1440,
+			<DocsLayout
+				sidebar={<nav aria-label="Documentation" />}
+				tocLabel="On this page"
+				menuLabel="Menu"
+				drawerLabel="Documentation"
+				closeLabel="Close menu"
+			>
+				{HUB}
+			</DocsLayout>,
+		);
+		for (let slot of ["topic", "start", "section", "popular"]) {
+			let list = host.querySelector<HTMLElement>(`[data-slot="docs-hub-${slot}-list"]`)!;
+			expect(getComputedStyle(list).maxInlineSize).toBe("none");
 		}
 	});
 });

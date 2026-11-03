@@ -239,6 +239,7 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 					{topics && topics.length > 0 ? (
 						<nav data-slot="docs-hub-topics" aria-label={labels.topics}>
 							<ul
+								data-slot="docs-hub-topic-list"
 								data-not-typeset=""
 								mix={[hstack({ gap: 2 }), flexWrap("wrap"), m(0), p(0), listStyle("none")]}
 							>
@@ -277,7 +278,11 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 				{start.length > 0 ? (
 					<section data-slot="docs-hub-start" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<BlockTag mix={blockHeading}>{labels.start}</BlockTag>
-						<ul data-not-typeset="" mix={[fillGrid("20rem"), m(0), p(0), listStyle("none")]}>
+						<ul
+							data-slot="docs-hub-start-list"
+							data-not-typeset=""
+							mix={[fillGrid("20rem"), m(0), p(0), listStyle("none")]}
+						>
 							{start.map((item) => (
 								<li key={item.href} mix={[grid()]}>
 									<a
@@ -331,7 +336,11 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 				{sections.length > 0 ? (
 					<section data-slot="docs-hub-sections" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<BlockTag mix={blockHeading}>{labels.sections}</BlockTag>
-						<ul data-not-typeset="" mix={[fillGrid("15rem"), m(0), p(0), listStyle("none")]}>
+						<ul
+							data-slot="docs-hub-section-list"
+							data-not-typeset=""
+							mix={[fillGrid("15rem"), m(0), p(0), listStyle("none")]}
+						>
 							{sections.map((section) => {
 								let countText =
 									section.countLabel ??
@@ -384,6 +393,7 @@ export function DocsHub(handle: Handle<DocsHub.Props>) {
 					<section data-slot="docs-hub-popular" mix={[vstack({ gap: 4, align: "stretch" })]}>
 						{labels.popular ? <BlockTag mix={blockHeading}>{labels.popular}</BlockTag> : null}
 						<ul
+							data-slot="docs-hub-popular-list"
 							data-not-typeset=""
 							mix={[fillGrid("15rem", "fill"), m(0), p(0), listStyle("none")]}
 						>
