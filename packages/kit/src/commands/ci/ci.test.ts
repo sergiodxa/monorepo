@@ -1,14 +1,14 @@
 /**
  * Tests for `sdxc ci`: finding the script from the project or a workspace below it, the
  * frozen-lockfile install a local run starts with, scoping a run to the workspace it starts in,
- * and the root-owned CI files a project created inside a monorepo leaves out.
+ * cleaning the stored runs, and the root-owned CI files a monorepo project leaves out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -141,6 +141,21 @@ describe("sdxc ci", () => {
 		let run = await invoke(createSDXC(), ["ci", "--no-install"], { cwd: root, env: ENV });
 		expect(run.code).toBe(2);
 		expect(run.stderr).toContain("No CI script");
+	});
+
+	test("clean empties the cache and run history from any workspace, keeping signoffs", async () => {
+		let root = await monorepo();
+		let store = join(root, ".git", "sdxc-ci");
+		await mkdir(join(store, "cache"), { recursive: true });
+		await writeFile(join(store, "cache", "key.json"), "{}");
+		await writeFile(join(store, "abc123.json"), "{}");
+		let run = await invoke(createSDXC(), ["ci", "clean", "--json"], {
+			cwd: join(root, "packages/ui"),
+			env: ENV,
+		});
+		expect(run.code).toBe(0);
+		expect(JSON.parse(run.stdout)).toMatchObject({ files: 1, bytes: 2 });
+		expect(await readdir(store)).toEqual(["abc123.json"]);
 	});
 });
 

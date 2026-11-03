@@ -32,6 +32,18 @@ export default createCommand(SDXC_COMMANDS.ci, {
 		}
 		let workspace = located.data.workspace;
 		let scope = ctx.flags.scope.length > 0 || workspace === null ? ctx.flags.scope : [workspace];
-		return runAction(ctx, located.data.script, { ...ctx.flags, runner, scope }, located.data.root);
+		return runAction(
+			{
+				cwd: ctx.cwd,
+				env: ctx.env,
+				stdout: ctx.stdout,
+				style: ctx.style,
+				signal: ctx.signal,
+				interactive: process.stdout.isTTY === true,
+			},
+			located.data.script,
+			{ ...ctx.flags, runner, scope },
+			located.data.root,
+		);
 	},
 });

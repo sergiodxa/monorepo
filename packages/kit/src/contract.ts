@@ -7,7 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LIST_FLAGS, RUN_FLAGS, SIGNOFF_FLAGS, VERIFY_FLAGS } from "@sdxc/ci/command-line";
+import {
+	CLEAN_FLAGS,
+	LIST_FLAGS,
+	RUN_FLAGS,
+	SIGNOFF_FLAGS,
+	VERIFY_FLAGS,
+} from "@sdxc/ci/command-line";
 import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
@@ -136,6 +142,12 @@ export const SDXC_COMMANDS = commands({
 			},
 			flags: VERIFY_FLAGS,
 			examples: ['ci verify "$GITHUB_SHA" --wait 60s'],
+		}),
+		clean: command({
+			description:
+				"Remove the step cache and run history kept in the git directory; signoff records stay",
+			flags: CLEAN_FLAGS,
+			examples: ["ci clean", "ci clean --json"],
 		}),
 	}),
 	create: command({

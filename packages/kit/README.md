@@ -94,6 +94,7 @@ Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on 
 | `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
 | `-v, --verbose`       | Print every step's log, not only a failed one's                                         |
 | `--json`              | Print the report as JSON                                                                |
+| `--rerun-failed`      | Run only the steps the last recorded run failed                                         |
 | `--no-install`        | Skip the frozen-lockfile install a local run starts with                                |
 
 #### `sdxc ci list`
@@ -130,6 +131,14 @@ Exit 0 when a contributor signed the commit off, 1 when nobody did, 2 when GitHu
 | `--remote <name>`     | Git remote to push to and read the GitHub repository from; the upstream's by default    |
 | `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
 | `--json`              | Print the report as JSON                                                                |
+
+#### `sdxc ci clean`
+
+Remove the step cache and run history kept in the git directory; signoff records stay
+
+| Flag     | Does                     |
+| -------- | ------------------------ |
+| `--json` | Print the report as JSON |
 
 #### `sdxc create [directory]`
 
