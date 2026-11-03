@@ -1,6 +1,6 @@
 /**
  * The `@sdxc/icons` gallery end to end: which controller each address reaches, the credit
- * to Lucide every visitor sees, the filter, the versioned sprite's cache policy, and the
+ * to Lucide every visitor sees, the filter, the symbols the tiles draw from, and the
  * icon page, frame and markdown twin drawn from the same entry.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -8,7 +8,6 @@
  */
 
 import { parseDocument } from "@sdxc/html/document";
-import { LUCIDE_VERSION } from "@sdxc/icons";
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
@@ -36,9 +35,12 @@ describe("GET /api/icons", () => {
 		expect(body).toContain('href="/api/icons/heart"');
 	});
 
-	test("points every tile into the sprite of the version it ships", async () => {
+	test("draws every tile from symbols the page carries, needing no file of its own", async () => {
 		let body = await (await fetchApp("/api/icons")).text();
-		expect(body).toContain(`/api/icons/sprite.svg?v=${LUCIDE_VERSION}#heart`);
+
+		expect(body).toContain('<symbol id="lucide-heart" viewBox="0 0 24 24">');
+		expect(body).toContain('<use href="#lucide-heart"');
+		expect(body.match(/<symbol id="lucide-heart"/g)).toHaveLength(1);
 	});
 
 	test("hides the icons ?q= leaves out, keeping every tile for the live filter", async () => {
@@ -70,28 +72,6 @@ describe("GET /api/icons", () => {
 	test("tells the reader when nothing matches and links back to every icon", async () => {
 		let body = await (await fetchApp("/api/icons?q=zzzz")).text();
 		expect(body).toContain("No icon matches");
-	});
-});
-
-describe("GET /api/icons/sprite.svg", () => {
-	test("is immutable under the version the build ships", async () => {
-		let response = await fetchApp(`/api/icons/sprite.svg?v=${LUCIDE_VERSION}`);
-		let body = await response.text();
-
-		expect(response.status).toBe(200);
-		expect(response.headers.get("content-type")).toContain("image/svg+xml");
-		expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
-		expect(body.startsWith('<svg xmlns="http://www.w3.org/2000/svg">')).toBe(true);
-		expect(body).toContain('<symbol id="heart" viewBox="0 0 24 24">');
-	});
-
-	test("answers any other version on a short policy, so an old address never pins new icons", async () => {
-		let stale = await fetchApp("/api/icons/sprite.svg?v=0.0.1");
-		let bare = await fetchApp("/api/icons/sprite.svg");
-
-		expect(stale.headers.get("cache-control")).toBe("public, max-age=3600");
-		expect(bare.headers.get("cache-control")).toBe("public, max-age=3600");
-		expect(await stale.text()).toContain('<symbol id="heart"');
 	});
 });
 
@@ -151,6 +131,5 @@ describe("GET /sitemap.xml", () => {
 
 		expect(body.match(/\/api\/icons<\/loc>/g)).toHaveLength(1);
 		expect(body).toContain("/api/icons/heart</loc>");
-		expect(body).not.toContain("sprite.svg");
 	});
 });

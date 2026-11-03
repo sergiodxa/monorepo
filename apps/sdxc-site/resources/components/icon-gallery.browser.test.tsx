@@ -49,13 +49,7 @@ function mount(): HTMLElement {
 				total={ICONS.length}
 				version="1.61.0"
 			/>
-			<IconGrid
-				id="icon-grid"
-				icons={ICONS}
-				sprite="/api/icons/sprite.svg?v=1.61.0"
-				query=""
-				style={DEFAULT_ICON_STYLE}
-			/>
+			<IconGrid id="icon-grid" icons={ICONS} query="" style={DEFAULT_ICON_STYLE} />
 			<IconDialog id="icon-detail" gridId="icon-grid" frameAttribute={ICON_FRAME_ATTRIBUTE} />
 		</div>,
 		{

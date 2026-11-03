@@ -1,7 +1,7 @@
 /**
- * The gallery's tiles: one link per icon to its page, the icon drawn from the sprite
- * through `<use>`, so the grid is plain markup and each drawing reaches the browser once,
- * in the cached sprite, however many tiles the page holds.
+ * The gallery's tiles: one link per icon to its page, the icon drawn through `<use>` from the
+ * symbols the page renders once, so each drawing reaches the browser once however many tiles
+ * the page holds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +28,7 @@ import {
 	iconStyleParams,
 	iconStyleVars,
 } from "~/app/services/icon-style";
+import { iconSymbolHref } from "~/resources/components/icon-sprite";
 import routes from "~/routes/web";
 
 namespace IconGrid {
@@ -36,8 +37,6 @@ namespace IconGrid {
 		id: string;
 		/** Every icon the package ships; the ones `query` leaves out render `hidden`. */
 		icons: IconEntry[];
-		/** The sprite's versioned address, which every tile's `<use>` points into. */
-		sprite: string;
 		query: string;
 		/** The customization the tiles draw and their links carry to each icon's page. */
 		style: IconStyle;
@@ -50,11 +49,11 @@ export const ICON_FRAME_ATTRIBUTE = "data-icon-frame";
 /**
  * Renders every tile, hiding the ones the query leaves out, so typing a new query on the page
  * only toggles `hidden`. A tile's `<svg>` reads its size, stroke and colour from the grid's
- * custom properties, and the sprite's symbols inherit that stroke.
+ * custom properties, and the page's symbols inherit that stroke.
  */
 export default function IconGrid(handle: Handle<IconGrid.Props>) {
 	return () => {
-		let { icons, id, query, sprite, style } = handle.props;
+		let { icons, id, query, style } = handle.props;
 		let words = queryWords(query);
 		let search = iconStyleParams(style).toString();
 
@@ -116,7 +115,7 @@ export default function IconGrid(handle: Handle<IconGrid.Props>) {
 									strokeLinejoin="round"
 									aria-hidden="true"
 								>
-									<use href={`${sprite}#${icon.name}`} />
+									<use href={iconSymbolHref(icon.name)} />
 								</svg>
 								<span
 									mix={[

@@ -63,65 +63,40 @@ frames: {
 	/** The body of one icon's page, loaded into the gallery's detail dialog. */
 	icon: get("/frames/icons/:icon"),
 },
-/** Every icon as a `<symbol>`, requested as `?v=<Lucide version>` and cached immutably. */
-iconSprite: get("/api/icons/sprite.svg"),
 ```
 
 `icons` and `icon` sit before `show`, so `/api/icons` stops falling through to the README.
-`/api/icons.md` keeps serving the README, which stays the package's prose reference. The
-sprite route is declared before `icon` so `sprite.svg` never matches `:icon`.
+`/api/icons.md` keeps serving the README, which stays the package's prose reference.
 
-### The gallery is server HTML over one sprite
+### The gallery is server HTML over symbols in the page
 
-Each tile is a link wrapping a sprite reference:
+The gallery renders every icon once as a `<symbol>` in one hidden `<svg>`, and each tile is a
+link wrapping a `<use>` that names its symbol:
 
 ```tsx
-<a
-	href={routes.api.icon.href({ icon: "heart" })}
-	data-rmx-target="icon"
-	data-rmx-src={routes.frames.icon.href({ icon: "heart" })}
-	data-search="heart like love"
->
+<a href={routes.api.icon.href({ icon: "heart" })} data-search="heart like love">
 	<svg aria-hidden="true">
-		<use href={`${routes.iconSprite.href()}?v=${LUCIDE_VERSION}#heart`} />
+		<use href="#lucide-heart" />
 	</svg>
 	<span>heart</span>
 </a>
 ```
 
-A tile costs about 100 bytes, so the full grid stays around 170 KB before compression, and
-the sprite downloads once and is cached. The sprite is built on the server from `registry.ts`
-through the same node tuples the components render, so the gallery and the package can never
-draw an icon differently. No icon component reaches the browser.
+Each symbol holds the icon as its component renders it, so the gallery and the package can
+never draw an icon differently, and no icon component reaches the browser. Symbol ids carry a
+`lucide-` prefix, so an icon called `search` or `menu` never collides with an id the page
+already uses. The page needs no request beyond its own HTML, and the HTML is cached like every
+docs page: an hour at the edge, revalidated by its ETag.
 
 Tiles form one alphabetical grid, each icon once.
 
-### The sprite is cached once per version
+### The Lucide version the package exports
 
-Every reference to the sprite carries `?v=`, and the version changes whenever the icons do,
-so a new set of icons is a new URL and nothing has to be purged.
-
-The version is the Lucide release the registry was generated from. `generate-icons.ts` reads
-it from `lucide-static`'s `package.json` and writes it into the package as
-`export const LUCIDE_VERSION = "1.61.0"`, which the site imports. The icon data in the
-registry changes only when `generate` runs against a new `lucide-static`, so this version
-changes exactly when the sprite's content does. The package's own `package.json` version is
-the `0.0.1` placeholder in the repository, and its dated release version exists only in the
-published manifest, so neither can key the sprite.
-
-The sprite controller answers in one of two ways:
-
-| Request                       | `Cache-Control`                       |
-| ----------------------------- | ------------------------------------- |
-| `?v=` equals `LUCIDE_VERSION` | `public, max-age=31536000, immutable` |
-| `?v=` missing or any other    | `public, max-age=3600`                |
-
-Only the exact version is immutable. A page cached from before an upgrade still asks for its
-old version and receives the current sprite, but on the short policy, so an old URL can never
-be pinned to new content. The controller stores every immutable response in the edge cache
-(`caches.default`), keyed by the full URL, so the CDN draws the sprite once per version per
-location. Browsers keep it for a year without revalidating. The sprite is built from the
-registry on the first request for each version, never at module scope.
+`generate-icons.ts` reads the Lucide release from `lucide-static`'s `package.json` and writes it
+into the package as `export const LUCIDE_VERSION = "1.61.0"`. The gallery names it in its count,
+and it can key a cache of anything drawn from the icons. The package's own `package.json`
+version is the `0.0.1` placeholder in the repository, and its dated release version exists only
+in the published manifest, so neither can name the icons' release.
 
 ### Customizer
 
@@ -175,10 +150,10 @@ a regenerate never ships.
 ### Positive
 
 - **Finding an icon stays on the site** - search by name or tag, copy the JSX.
-- **No icon JavaScript in the browser** - the grid is HTML plus one cached sprite; the only
+- **No icon JavaScript in the browser** - the grid is HTML and symbols in the same page; the only
   client code is the filter, customizer and dialog mixins.
-- **The sprite invalidates itself** - a Lucide upgrade changes `?v=`, so the CDN and browsers
-  fetch the new sprite once and keep it until the next upgrade.
+- **One request in every engine** - the symbols arrive with the page, so a cold load never
+  waits on a second file.
 - **Every view has an address** - filters and customizer values are in the query string, and
   every icon has its own page and markdown twin.
 - **Lucide is credited where readers look** - at the top of the gallery and on every icon.
@@ -218,8 +193,8 @@ document. One dialog with a named frame serves every icon.
 
 Rendering each icon's paths into its tile.
 
-**Rejected because**: it puts every path in the document on every visit; the sprite holds
-each path once and is cached across visits.
+**Rejected because**: it repeats every path in the document for each tile that draws it; the
+page's symbols hold each path once.
 
 ### 4. Categories fetched from Lucide's repository
 
@@ -236,6 +211,16 @@ A client component rendering tiles from a JSON list.
 **Rejected because**: it ships the registry to the browser and leaves the page empty without
 script.
 
+### 6. A versioned external sprite
+
+Every symbol in `/api/icons/sprite.svg?v=<Lucide version>`, cached immutably by browsers and
+the edge, with tiles drawing `<use href="/api/icons/sprite.svg?v=1.61.0#heart">`.
+
+**Rejected because**: on sdxc.dev a cold load downloaded the whole sprite once per tile, since
+an engine may fetch an external `<use>` file once per element while the first fetch is in
+flight. A `<link rel="preload">` cannot warm it: Chromium matches no `as` value to a `<use>`
+load, and fetched the sprite twice with every combination of `as` and `crossorigin` tried.
+
 ## Implementation Plan
 
 ### Phase 1: Package data
@@ -246,7 +231,7 @@ script.
 
 ### Phase 2: Gallery and icon pages
 
-1. Add the routes, the sprite controller and the shared icon detail component
+1. Add the routes and the shared icon detail component
 2. Render the gallery with the credit band and the `GET` filter
 3. Add the markdown twin and sitemap entries for icon pages
 

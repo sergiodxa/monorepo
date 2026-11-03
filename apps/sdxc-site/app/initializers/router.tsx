@@ -141,10 +141,6 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/icons-gallery")),
 	);
 	router.map(
-		routes.api.iconSprite,
-		lazy(() => import("~/app/http/controllers/icon-sprite")),
-	);
-	router.map(
 		routes.api.icon,
 		lazy(() => import("~/app/http/controllers/icon-show")),
 	);

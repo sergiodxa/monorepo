@@ -58,11 +58,6 @@ export default route({
 		uiExport: get("/api/ui/:subpath/:slug"),
 		/** Every `@sdxc/icons` icon in one grid, narrowed by `?q=` against names and tags. */
 		icons: get("/api/icons"),
-		/**
-		 * Every icon as a `<symbol>`, which the grid's tiles reference. It is asked for as
-		 * `?v=<Lucide version>`, so each release of the icons is a URL of its own.
-		 */
-		iconSprite: get("/api/icons/sprite.svg"),
 		/** One icon: drawn large, with both ways to render it and its SVG. */
 		icon: get("/api/icons/:icon"),
 		show: get("/api/:name"),

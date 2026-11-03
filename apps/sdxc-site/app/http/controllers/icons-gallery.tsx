@@ -22,7 +22,7 @@ import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { readIconStyle } from "~/app/http/validators/icon-style";
 import { adsDayTag } from "~/app/services/ads";
-import { filterIcons, listIcons, LUCIDE_LINKS, spriteHref } from "~/app/services/icons";
+import { filterIcons, listIcons, LUCIDE_LINKS } from "~/app/services/icons";
 import { buildPackageNav } from "~/app/services/navigation";
 import { findPackage, listPackageGroups } from "~/app/services/packages";
 import {
@@ -36,6 +36,7 @@ import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels"
 import IconControls from "~/resources/components/icon-controls";
 import IconDialog from "~/resources/components/icon-dialog";
 import IconGrid, { ICON_FRAME_ATTRIBUTE } from "~/resources/components/icon-grid";
+import IconSprite from "~/resources/components/icon-sprite";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import DocsLayout from "~/resources/layouts/docs";
@@ -194,13 +195,8 @@ export default createAction(routes.api.icons, async (ctx) => {
 								total={all.length}
 								version={LUCIDE_VERSION}
 							/>
-							<IconGrid
-								id={GRID_ID}
-								icons={all}
-								sprite={spriteHref()}
-								query={query}
-								style={style}
-							/>
+							<IconSprite />
+							<IconGrid id={GRID_ID} icons={all} query={query} style={style} />
 							<IconDialog id={DIALOG_ID} gridId={GRID_ID} frameAttribute={ICON_FRAME_ATTRIBUTE} />
 						</div>
 					</ReferenceSection>

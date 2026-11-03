@@ -69,7 +69,6 @@ export default createAction(routes.sitemap, async (ctx) => {
 				page.kind === "export" ? [{ params: page.params, ...reference }] : [],
 			),
 			icons: { priority: PRIORITY.package, frequency: "weekly" },
-			iconSprite: false,
 			icon: listIcons().map((icon) => ({ params: { icon: icon.name }, ...reference })),
 			show: listPackageGroups().flatMap((group) =>
 				group.packages

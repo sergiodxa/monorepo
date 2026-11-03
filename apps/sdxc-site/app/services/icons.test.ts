@@ -1,16 +1,15 @@
 /**
  * The icon catalogue the gallery reads: which icons a query keeps, how a name resolves,
- * and the versioned sprite address every tile draws from.
+ * and the markdown an icon's page is written as.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LUCIDE_VERSION } from "@sdxc/icons";
 import { describe, expect, test } from "vitest";
 
 import { iconMarkdown } from "~/app/services/catalogue-markdown";
-import { filterIcons, findIcon, listIcons, spriteHref } from "~/app/services/icons";
+import { filterIcons, findIcon, listIcons } from "~/app/services/icons";
 
 describe("filterIcons", () => {
 	let icons = listIcons();
@@ -45,12 +44,6 @@ describe("findIcon", () => {
 	test("answers null for a name the package has no icon for, inherited keys included", () => {
 		expect(findIcon("trash-2")).toBeNull();
 		expect(findIcon("constructor")).toBeNull();
-	});
-});
-
-describe("spriteHref", () => {
-	test("carries the Lucide version, so each release of the icons is its own address", () => {
-		expect(spriteHref()).toBe(`/api/icons/sprite.svg?v=${LUCIDE_VERSION}`);
 	});
 });
 

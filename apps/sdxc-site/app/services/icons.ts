@@ -9,11 +9,10 @@
 
 import type { IconName } from "@sdxc/icons";
 
-import { iconExportNames, LUCIDE_VERSION } from "@sdxc/icons";
+import { iconExportNames } from "@sdxc/icons";
 import { iconTags } from "@sdxc/icons/tags";
 
 import { iconSearchText, matchesWords, queryWords } from "~/app/services/icon-search";
-import routes from "~/routes/web";
 
 /** Where each icon is published by the people who draw it. */
 const LUCIDE_ICONS_URL = "https://lucide.dev/icons/";
@@ -54,14 +53,6 @@ export function findIcon(name: string): IconEntry | null {
 export function filterIcons(icons: IconEntry[], query: string): IconEntry[] {
 	let words = queryWords(query);
 	return icons.filter((icon) => matchesWords(iconSearchText(icon.name, icon.tags), words));
-}
-
-/**
- * The sprite's address for the icons this build ships. The version changes whenever the
- * drawings do, which is what lets the sprite be cached forever under each address.
- */
-export function spriteHref(): string {
-	return `${routes.api.iconSprite.href()}?v=${encodeURIComponent(LUCIDE_VERSION)}`;
 }
 
 /** The icon's own page on lucide.dev, where every credit for it points. */
