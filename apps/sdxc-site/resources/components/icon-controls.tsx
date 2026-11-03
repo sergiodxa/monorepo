@@ -112,9 +112,16 @@ export const IconControls = clientEntry(
 			history.replaceState(history.state, "", url);
 		}
 
-		/** Restyles the grid for a colour picked on the surface, and shows it in the field. */
+		/**
+		 * Restyles the grid for a colour picked on the surface, and shows it in the field. A
+		 * channel left `undefined` keeps its value, so a wheel's hue change keeps the area's point.
+		 */
 		function pick(next: { h?: number; s?: number; v?: number }): void {
-			hsv = { ...hsv, ...next };
+			hsv = {
+				h: next.h ?? hsv.h,
+				s: next.s ?? hsv.s,
+				v: next.v ?? hsv.v,
+			};
 			style = { ...style, color: formatHex({ ...hsvToRgb(hsv), a: 1 }) };
 			let field = document.getElementById(COLOR_FIELD_ID);
 			if (field instanceof HTMLInputElement) field.value = style.color ?? "";
@@ -122,6 +129,17 @@ export const IconControls = clientEntry(
 			if (grid) restyle(grid);
 			remember();
 			void handle.update();
+		}
+
+		/**
+		 * Moves the picking surface's own inputs to `hsv`. They hold their value themselves, so a
+		 * colour typed in the field or a reset reaches the wheel and the area's thumbs only here.
+		 */
+		function syncSurface(): void {
+			let inputs = surfaceInputs();
+			if (inputs.hue) inputs.hue.valueAsNumber = hsv.h;
+			if (inputs.saturation) inputs.saturation.valueAsNumber = hsv.s;
+			if (inputs.brightness) inputs.brightness.valueAsNumber = hsv.v;
 		}
 
 		/** Reads the form after any change and applies what moved. */
@@ -139,11 +157,21 @@ export const IconControls = clientEntry(
 				color: style.color,
 			};
 			let target = event.target;
+			if (target instanceof Node && document.getElementById(COLOR_PANEL_ID)?.contains(target)) {
+				let inputs = surfaceInputs();
+				pick({
+					h: inputs.hue?.valueAsNumber,
+					s: inputs.saturation?.valueAsNumber,
+					v: inputs.brightness?.valueAsNumber,
+				});
+				return;
+			}
 			if (target instanceof HTMLInputElement && target.name === ICON_STYLE_PARAMS.color) {
 				let typed = target.value.trim();
 				if (typed === "") style.color = null;
 				else if (HEX_COLOR.test(typed)) style.color = typed.toLowerCase();
 				hsv = toHsv(style.color);
+				syncSurface();
 			}
 
 			if (nextQuery !== query) {
@@ -162,6 +190,7 @@ export const IconControls = clientEntry(
 			if (form === null) return;
 			style = { ...DEFAULT_ICON_STYLE };
 			hsv = toHsv(null);
+			syncSurface();
 			for (let input of form.querySelectorAll<HTMLInputElement>("input")) {
 				if (input.name === ICON_STYLE_PARAMS.size) input.value = String(style.size);
 				if (input.name === ICON_STYLE_PARAMS.strokeWidth) input.value = String(style.strokeWidth);
@@ -327,6 +356,25 @@ export const IconControls = clientEntry(
 		};
 	},
 );
+
+/**
+ * The picking surface's native inputs: the wheel's hue and the area's two axes. The keyboard
+ * moves them on their own, so the form reads them back whenever one changes.
+ */
+function surfaceInputs(): {
+	hue: HTMLInputElement | null;
+	saturation: HTMLInputElement | null;
+	brightness: HTMLInputElement | null;
+} {
+	let panel = document.getElementById(COLOR_PANEL_ID);
+	return {
+		hue:
+			panel?.querySelector<HTMLInputElement>('[data-slot="color-wheel"] input[type="range"]') ??
+			null,
+		saturation: panel?.querySelector<HTMLInputElement>('[data-color-area-axis="x"]') ?? null,
+		brightness: panel?.querySelector<HTMLInputElement>('[data-color-area-axis="y"]') ?? null,
+	};
+}
 
 /** The surface's starting position for `color`, or the opening blue when none is set. */
 function toHsv(color: string | null): { h: number; s: number; v: number } {

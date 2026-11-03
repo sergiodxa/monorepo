@@ -129,6 +129,35 @@ describe("IconControls", () => {
 		await expect.poll(() => grid.style.getPropertyValue("--icon-color")).toBe("");
 	});
 
+	test("follows the hue wheel's keyboard into the area, the field and the grid", async () => {
+		let host = mount();
+		let hue = host.querySelector<HTMLInputElement>(
+			'[data-slot="color-wheel"] input[type="range"]',
+		)!;
+		let area = host.querySelector<HTMLElement>('[style*="--ui-color-area-hue"]')!;
+		await userEvent.click(page.getByRole("button", { name: "Open the color picker" }));
+		hue.focus();
+
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+
+		await expect.poll(() => area.style.getPropertyValue("--ui-color-area-hue")).toBe("212");
+		let field = host.querySelector<HTMLInputElement>("#icon-color")!;
+		expect(field.value).toMatch(/^#[0-9a-f]{6}$/);
+		expect(
+			host.querySelector<HTMLElement>("#icon-grid")!.style.getPropertyValue("--icon-color"),
+		).toBe(field.value);
+	});
+
+	test("moves the wheel to a hex typed in the field", async () => {
+		let host = mount();
+		await userEvent.fill(page.getByRole("textbox", { name: "Color" }), "#00ff00");
+
+		let hue = host.querySelector<HTMLInputElement>(
+			'[data-slot="color-wheel"] input[type="range"]',
+		)!;
+		await expect.poll(() => hue.valueAsNumber).toBe(120);
+	});
+
 	test("says so when nothing matches", async () => {
 		let host = mount();
 		await userEvent.type(page.getByRole("searchbox"), "zzzz");
