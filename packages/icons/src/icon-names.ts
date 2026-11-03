@@ -1915,3 +1915,9 @@ export const iconExportNames = {
 
 /** Every valid `name` accepted by `<Icon />`, matching Lucide's icon catalog (https://lucide.dev/icons/). */
 export type IconName = keyof typeof iconExportNames;
+
+/**
+ * The Lucide release every icon here was generated from. It changes exactly when the icons'
+ * drawings do, so it can key a cache of anything built from them.
+ */
+export const LUCIDE_VERSION = "1.61.0";

@@ -853,6 +853,7 @@ export default defineConfig({
 					"**/resources/content/**",
 					"packages/icons/src/registry.ts",
 					"packages/icons/src/icon-names.ts",
+					"packages/icons/src/icon-tags.ts",
 					"packages/icons/src/index.ts",
 					"packages/email-address/src/disposable-domains.ts",
 					"packages/sample/src/data/**",

@@ -163,10 +163,12 @@ page and dialog links its icon on lucide.dev. `@sdxc/icons` is described as a
 
 ### Tags come from `lucide-static` at generate time
 
-`scripts/generate-icons.ts` copies `lucide-static`'s `tags.json` into `src/icon-tags.ts`
-beside `icon-names.ts`, and writes `LUCIDE_VERSION` beside them, so generation stays offline
-and pinned to the installed version. Both are data exports the site reads on the server; they
-change none of the components.
+`scripts/generate-icons.ts` copies `lucide-static`'s `tags.json` into `src/icon-tags.ts`,
+exported from its own entry point as `@sdxc/icons/tags` so an app importing components never
+loads the tag data. It writes `LUCIDE_VERSION` into `icon-names.ts`, exported from
+`@sdxc/icons`. Generation stays offline and pinned to the installed version, and a test fails
+when `LUCIDE_VERSION` differs from the installed `lucide-static`, so a dependency bump without
+a regenerate never ships.
 
 ## Consequences
 
@@ -187,9 +189,8 @@ change none of the components.
   source ships in a package the repo already installs.
 - **A large page** - the gallery is one long document. Compression keeps it small on the
   wire, but layout covers every tile.
-- **The package grows a data export** - tags ship in `@sdxc/icons` even for apps that only
-  import components; `sideEffects: false` keeps them out of app bundles that never import
-  them.
+- **The package grows a data entry point** - `@sdxc/icons/tags` adds about 280 KB of source
+  to the published package, loaded only by code that imports it.
 
 ### Neutral
 
@@ -239,8 +240,9 @@ script.
 
 ### Phase 1: Package data
 
-1. Extend `generate-icons.ts` to write `icon-tags.ts` and `LUCIDE_VERSION`
-2. Export both from `@sdxc/icons` and mention them in the README in one line each
+1. Upgrade the registry to the installed Lucide 1.61.0, renaming the removed icons in apps
+2. Extend `generate-icons.ts` to write `icon-tags.ts` and `LUCIDE_VERSION`
+3. Export `LUCIDE_VERSION` from `@sdxc/icons` and `iconTags` from `@sdxc/icons/tags`
 
 ### Phase 2: Gallery and icon pages
 
@@ -263,6 +265,6 @@ script.
 
 ## Current Progress
 
-- [ ] Phase 1: Package data
+- [x] Phase 1: Package data
 - [ ] Phase 2: Gallery and icon pages
 - [ ] Phase 3: Enhancements

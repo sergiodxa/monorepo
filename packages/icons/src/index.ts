@@ -16,7 +16,7 @@ export type { IconNode, LucideProps } from "./create-lucide-icon.js";
 export { Icon } from "./icon.js";
 export type { IconProps } from "./icon.js";
 
-export { iconExportNames } from "./icon-names.js";
+export { iconExportNames, LUCIDE_VERSION } from "./icon-names.js";
 export type { IconName } from "./icon-names.js";
 
 /** Renders the "a-arrow-down" icon from https://lucide.dev/icons/a-arrow-down. */

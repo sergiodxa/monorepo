@@ -122,6 +122,16 @@ the whole catalog's data, so prefer the specific `<XyzIcon>` import wherever the
 An object keyed by every icon's kebab-case name (`"circle-alert"`); `Object.keys(iconExportNames)`
 lists the full catalog.
 
+### `LUCIDE_VERSION`
+
+The Lucide release the icons were generated from (`"1.61.0"`), for keying a cache of anything
+drawn from them.
+
+### `iconTags`
+
+From `@sdxc/icons/tags`: Lucide's search words for every icon, keyed by name
+(`iconTags.heart` includes `"love"`).
+
 ### `createLucideIcon(iconName: string, iconNode: IconNode)`
 
 Builds an icon component from a kebab-case name and SVG node data, with the same props, defaults
