@@ -226,4 +226,57 @@ describe("renderNotes", () => {
 		expect(notes).toBe("## @sdxc/jwt\n- Add keys\n\tAdds keys.\n");
 		expect(notes).not.toContain("Co-Authored-By");
 	});
+
+	test("shortens the largest section to linked titles until the notes fit", () => {
+		let input = {
+			version: "2026.9.3",
+			previousTag: null,
+			members: [
+				{ name: "@sdxc/jwt", reason: "changed" as const },
+				{ name: "@sdxc/xml", reason: "changed" as const },
+			],
+			commitsByPackage: new Map([
+				[
+					"@sdxc/jwt",
+					[commit({ sha: "b".repeat(40), title: "add keys", body: "Long note. ".repeat(20) })],
+				],
+				["@sdxc/xml", [commit({ title: "add the writer", body: "Short note." })]],
+			]),
+			packages: PACKAGES,
+			repoUrl: REPO_URL,
+		};
+		let full = renderNotes(input);
+		let notes = renderNotes({ ...input, maxLength: full.length - 1 });
+
+		expect(notes).toBe(
+			[
+				"## @sdxc/jwt",
+				"Shortened to fit the release page; each change links to its full note.",
+				`- Add keys ([bbbbbbb](${REPO_URL}/commit/${"b".repeat(40)}))`,
+				"",
+				"## @sdxc/xml",
+				"- Add the writer",
+				"\tShort note.",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("renders every section shortened when even that exceeds the limit", () => {
+		let notes = renderNotes({
+			version: "2026.9.3",
+			previousTag: null,
+			members: [
+				{ name: "@sdxc/jwt", reason: "changed" },
+				{ name: "@sdxc/spec", reason: "dependency" },
+			],
+			commitsByPackage: new Map([["@sdxc/jwt", [commit({ title: "add keys", body: "Note." })]]]),
+			packages: PACKAGES,
+			repoUrl: REPO_URL,
+			maxLength: 1,
+		});
+
+		expect(notes).toContain("- Add keys ([0000000]");
+		expect(notes).toContain("## @sdxc/spec\nRepublished because `@sdxc/jwt` changed.");
+	});
 });
