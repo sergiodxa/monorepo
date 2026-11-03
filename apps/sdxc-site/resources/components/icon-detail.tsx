@@ -14,7 +14,7 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle, raw } from "@sdxc/u/general";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
-import { aspect, is, m, maxIs, p } from "@sdxc/u/size";
+import { aspect, is, m, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { CodeBlock } from "@sdxc/ui/docs";
 
@@ -48,8 +48,8 @@ function unitGrid() {
 }
 
 /**
- * Renders the preview, the tags, both ways to render the icon and its SVG. The preview draws
- * the icon scaled to fill the grid with the stroke it has at the chosen size.
+ * Renders the preview with the tags beside it, then both ways to render the icon and its SVG.
+ * The tags wrap under the preview where the column is too narrow for both.
  */
 export default function IconDetail(handle: Handle<IconDetail.Props>) {
 	return () => {
@@ -59,49 +59,61 @@ export default function IconDetail(handle: Handle<IconDetail.Props>) {
 		return (
 			<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 				<div
-					data-slot="icon-detail-preview"
-					mix={[
-						is("100%"),
-						maxIs("18rem"),
-						aspect("square"),
-						rounded("lg"),
-						bg("neutral.tint"),
-						fg("neutral.emphasis"),
-						border({ color: "neutral.border", width: 1, style: "solid" }),
-						unitGrid(),
-					]}
+					data-slot="icon-detail-summary"
+					mix={[hstack({ gap: 6, align: "start" }), flexWrap("wrap")]}
 				>
-					<Icon
-						name={icon.name}
-						size="100%"
-						strokeWidth={drawnStrokeWidth(style)}
-						color={style.color ?? undefined}
-					/>
-				</div>
-
-				{icon.tags.length > 0 ? (
-					<ul
-						aria-label="Tags"
-						data-slot="icon-detail-tags"
-						mix={[hstack({ gap: 2 }), flexWrap("wrap"), m(0), p(0), listStyle("none")]}
+					<div
+						data-slot="icon-detail-preview"
+						mix={[
+							raw({ flex: "0 0 auto" }),
+							is("min(100%, 18rem)"),
+							aspect("square"),
+							rounded("lg"),
+							bg("neutral.tint"),
+							fg("neutral.emphasis"),
+							border({ color: "neutral.border", width: 1, style: "solid" }),
+							unitGrid(),
+						]}
 					>
-						{icon.tags.map((tag) => (
-							<li
-								key={tag}
-								mix={[
-									p(1, 2),
-									rounded("md"),
-									bg("neutral.tint"),
-									border({ color: "neutral.border", width: 1, style: "solid" }),
-									text("sm"),
-									fg("neutral"),
-								]}
-							>
-								{tag}
-							</li>
-						))}
-					</ul>
-				) : null}
+						<Icon
+							name={icon.name}
+							size="100%"
+							strokeWidth={drawnStrokeWidth(style)}
+							color={style.color ?? undefined}
+						/>
+					</div>
+
+					{icon.tags.length > 0 ? (
+						<ul
+							aria-label="Tags"
+							data-slot="icon-detail-tags"
+							mix={[
+								hstack({ gap: 2 }),
+								flexWrap("wrap"),
+								raw({ flex: "1 1 12rem", minInlineSize: 0, alignContent: "flex-start" }),
+								m(0),
+								p(0),
+								listStyle("none"),
+							]}
+						>
+							{icon.tags.map((tag) => (
+								<li
+									key={tag}
+									mix={[
+										p(1, 2),
+										rounded("md"),
+										bg("neutral.tint"),
+										border({ color: "neutral.border", width: 1, style: "solid" }),
+										text("sm"),
+										fg("neutral"),
+									]}
+								>
+									{tag}
+								</li>
+							))}
+						</ul>
+					) : null}
+				</div>
 
 				<CodeBlock
 					title="By component"
