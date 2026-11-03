@@ -30,6 +30,7 @@ import {
 	readBuiltinTemplate,
 	writeTree,
 } from "../create/templates.js";
+import { dropRootOwned, insideWorkspace } from "../create/workspace.js";
 import { packageRoot } from "../middleware.js";
 import { packageManager, scriptCommand } from "../package-manager.js";
 
@@ -56,6 +57,7 @@ export default createCommand(SDXC_COMMANDS.create, {
 		if (isFailure(target)) return target;
 		let fetched = await fetchTemplate(ctx, source.data, target.data.name, target.data.directory);
 		if (isFailure(fetched)) return fetched;
+		if (await insideWorkspace(target.data.directory)) dropRootOwned(fetched.data.tree);
 		let written = await writeTree(target.data.directory, fetched.data.tree);
 		if (isFailure(written)) return written;
 		let shown = relative(ctx.cwd, target.data.directory);

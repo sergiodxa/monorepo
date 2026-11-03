@@ -56,6 +56,7 @@ const DEFAULTS = {
 		mutation: { report: "reports/mutation/mutation.json", maxSurvived: 0 },
 	},
 	run: { entry: "bootstrap/cli.ts" },
+	ci: { script: ".config/sdxc/ci.ts" },
 	lock: ".config/sdxc.lock.jsonl",
 };
 

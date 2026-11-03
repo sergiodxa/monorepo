@@ -9,6 +9,7 @@
 
 /** Every package with a command line, by name, with what its command line does. */
 export const PACKAGE_COMMAND_LINES: Readonly<Record<string, string>> = {
+	ci: "run a CI script locally or on a CI host, and sign green commits off on GitHub",
 	cron: "upcoming runs, descriptions and validation for cron schedules",
 	crypto: "tokens, digests, MACs, one-time codes and password hashes",
 	diagram: "Mermaid sequence, class, state and flowchart diagrams to SVG",

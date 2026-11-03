@@ -54,6 +54,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
 		"@pitlane/vite-plugin-remix": "0.8.0",
+		"@sdxc/ci": "0.0.1",
 		"@sdxc/cloudflare-mocks": "0.0.1",
 		"@sdxc/kit": "0.0.1",
 		"@sdxc/spec": "0.0.1",

@@ -97,6 +97,9 @@ const DOCTOR_DEFAULTS = {
 	mutation: DOCTOR_MUTATION_DEFAULTS,
 };
 
+/** The `ci` group as a project with no `ci` key gets it. */
+const CI_DEFAULTS = { script: ".config/sdxc/ci.ts" };
+
 /** The `run` group as a project with no `run` key gets it. */
 const RUN_DEFAULTS = { entry: "bootstrap/cli.ts" };
 
@@ -283,6 +286,17 @@ export const CONFIG_SCHEMA = s.object(
 			),
 			RUN_DEFAULTS,
 		),
+		ci: s.defaulted(
+			s.object(
+				{
+					script: s.defaulted(s.string(), CI_DEFAULTS.script).meta({
+						description: "CI script `sdxc ci` runs, relative to the project root",
+					}),
+				},
+				{ unknownKeys: "error" },
+			),
+			CI_DEFAULTS,
+		),
 		format: s.optional(s.array(s.string()).pipe(checks.minItems(1))).meta({
 			description: "Command run on every file the CLI writes or edits, paths appended",
 			examples: [["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"]],
@@ -390,6 +404,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 		["doctor.crap.coverage", config.doctor.crap.coverage],
 		["doctor.mutation.report", config.doctor.mutation.report],
 		["run.entry", config.run.entry],
+		["ci.script", config.ci.script],
 		["lock", config.lock],
 	];
 	for (let [chain, folder] of Object.entries(config.make.migrations)) {

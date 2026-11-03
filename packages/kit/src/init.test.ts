@@ -100,6 +100,10 @@ const EXPECTED = `{
 		// Module \`sdxc run\` starts, relative to the project root; apps keep the default
 		"entry": "bootstrap/cli.ts",
 	},
+	"ci": {
+		// CI script \`sdxc ci\` runs, relative to the project root
+		"script": ".config/sdxc/ci.ts",
+	},
 	// Command run on every file the CLI writes or edits, paths appended
 	// "format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
 	// Where the CLI keeps its state; commit it with the project

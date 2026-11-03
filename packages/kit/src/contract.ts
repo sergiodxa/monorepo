@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { LIST_FLAGS, RUN_FLAGS, SIGNOFF_FLAGS, VERIFY_FLAGS } from "@sdxc/ci/command-line";
 import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
@@ -99,6 +100,44 @@ const FORCE_FLAG = flag.boolean("force", {
 
 /** Every command `sdxc` takes. */
 export const SDXC_COMMANDS = commands({
+	ci: commands({
+		description:
+			"Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on GitHub",
+		flags: {
+			...RUN_FLAGS,
+			install: flag.boolean("install", {
+				default: true,
+				description: "Skip the frozen-lockfile install a local run starts with",
+			}),
+		},
+		list: command({
+			description:
+				"Print the steps and matrix entries a fully passing run takes, without running any",
+			flags: LIST_FLAGS,
+			examples: ["ci list", "ci list --runner remote --matrix Workspaces --json"],
+		}),
+		signoff: command({
+			description: "Post the signoff an earlier green run recorded for a commit already on GitHub",
+			arguments: {
+				sha: argument(s.string(), {
+					optional: true,
+					valueName: "sha",
+					description: "The commit; HEAD when left out",
+				}),
+			},
+			flags: SIGNOFF_FLAGS,
+			examples: ["ci signoff", "ci signoff 1d9090458"],
+		}),
+		verify: command({
+			description:
+				"Exit 0 when a contributor signed the commit off, 1 when nobody did, 2 when GitHub cannot be reached",
+			arguments: {
+				sha: argument(s.string(), { valueName: "sha", description: "The commit to check" }),
+			},
+			flags: VERIFY_FLAGS,
+			examples: ['ci verify "$GITHUB_SHA" --wait 60s'],
+		}),
+	}),
 	create: command({
 		description: "Write a new project from a built-in template or a GitHub repository",
 		arguments: {

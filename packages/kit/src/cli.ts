@@ -58,6 +58,22 @@ export function createSDXC(
 		lazy(() => import("./commands/create.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.ci,
+		lazy(() => import("./commands/ci/run.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ci.list,
+		lazy(() => import("./commands/ci/list.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ci.signoff,
+		lazy(() => import("./commands/ci/signoff.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ci.verify,
+		lazy(() => import("./commands/ci/verify.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.deploy,
 		lazy(() => import("./commands/deploy.js")),
 	);

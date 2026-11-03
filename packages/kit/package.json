@@ -17,6 +17,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/ci": "workspace:*",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
 		"@sdxc/cron": "workspace:*",

@@ -1,0 +1,46 @@
+# Runs the same script `sdxc ci` runs locally (.config/sdxc/ci.ts). The gate job skips the
+# whole run for a commit a contributor already signed off with a green local `sdxc ci`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  statuses: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Signoff
+    runs-on: ubuntu-latest
+    outputs:
+      signed: ${{ steps.verify.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - id: verify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if bunx sdxc ci verify "$SHA" --wait 60s; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  ci:
+    name: CI
+    needs: gate
+    if: needs.gate.outputs.signed != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx sdxc ci --runner remote

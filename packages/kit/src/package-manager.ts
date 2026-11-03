@@ -16,6 +16,8 @@ import { isFailure, isSuccess, wrap } from "@sdxc/result";
 export interface PackageManager {
 	name: "bun" | "npm" | "pnpm" | "yarn";
 	install: string[];
+	/** Installs exactly what the lock file pins, failing when it is out of date with a manifest. */
+	frozenInstall: string[];
 	/** The command prefix that downloads a package and runs its binary, the package spec appended. */
 	dlx: string[];
 	/** The command prefix that runs a `package.json` script. */
@@ -34,17 +36,31 @@ export interface PackageManagerSources {
 
 /** The package managers by name, with the commands each one spells. */
 const PACKAGE_MANAGERS: Readonly<Record<PackageManager["name"], PackageManager>> = {
-	bun: { name: "bun", install: ["bun", "install"], dlx: ["bunx"], run: ["bun", "run"] },
-	npm: { name: "npm", install: ["npm", "install"], dlx: ["npx", "--yes"], run: ["npm", "run"] },
+	bun: {
+		name: "bun",
+		install: ["bun", "install"],
+		frozenInstall: ["bun", "install", "--frozen-lockfile"],
+		dlx: ["bunx"],
+		run: ["bun", "run"],
+	},
+	npm: {
+		name: "npm",
+		install: ["npm", "install"],
+		frozenInstall: ["npm", "ci"],
+		dlx: ["npx", "--yes"],
+		run: ["npm", "run"],
+	},
 	pnpm: {
 		name: "pnpm",
 		install: ["pnpm", "install"],
+		frozenInstall: ["pnpm", "install", "--frozen-lockfile"],
 		dlx: ["pnpm", "dlx"],
 		run: ["pnpm", "run"],
 	},
 	yarn: {
 		name: "yarn",
 		install: ["yarn", "install"],
+		frozenInstall: ["yarn", "install", "--immutable"],
 		dlx: ["yarn", "dlx"],
 		run: ["yarn", "run"],
 	},

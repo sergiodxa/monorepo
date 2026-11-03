@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-11-02
+**Accepted** - 2026-11-03
 
 ## Background
 
@@ -138,7 +138,7 @@ inside a function belong to its log; one step is one row of the summary.
 | `cache`   | off     | `true`, or `{ inputs, env, outputs }`; see Caching                          |
 | `cwd`     | root    | Directory the command runs in                                               |
 | `env`     | none    | Extra environment variables for the command                                 |
-| `timeout` | none    | Duration after which `step.signal` fires and the step fails                 |
+| `timeout` | none    | Milliseconds after which `step.signal` fires and the step fails             |
 
 `ci.step` resolves to the step's outcome: `{ status: "passed" | "failed" | "skipped", cached,
 duration, output }`. A halted run never throws: every later call resolves to `skipped`, so the
@@ -483,10 +483,14 @@ in any repository; the kit keeps only the script's location, scoping and templat
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/ci` runner
-- [ ] Phase 2: Signoff
-- [ ] Phase 3: Workspaces and caching
+- [x] Phase 1: `@sdxc/ci` runner
+- [x] Phase 2: Signoff
+- [x] Phase 3: Workspaces and caching
 - [ ] Phase 4: Kit and this repository
+  - [x] `sdxc ci`, `list`, `signoff`, `verify`, the frozen install, scoping and `ci.script`
+  - [x] Default script and workflow in the `sdxc create` template, left out inside a workspace
+  - [ ] The `sdxc doctor` `ci` check
+  - [ ] This repository's `.config/sdxc/ci.ts` and `ci.yml` around the gate
 
 ## Notes
 

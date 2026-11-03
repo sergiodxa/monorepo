@@ -45,6 +45,7 @@ describe("help", () => {
 				"Usage: sdxc <command> [options]",
 				"",
 				"Commands:",
+				"  ci            Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on GitHub",
 				"  create        Write a new project from a built-in template or a GitHub repository",
 				"  deploy        Build, then run the app's db migrate --remote and deploy commands",
 				"  destroy       Remove a file sdxc make wrote, its test, its pairing .spec, its mapping and its declaration",

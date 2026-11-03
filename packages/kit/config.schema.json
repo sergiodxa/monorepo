@@ -276,6 +276,20 @@
 				"entry": "bootstrap/cli.ts"
 			}
 		},
+		"ci": {
+			"type": "object",
+			"properties": {
+				"script": {
+					"type": "string",
+					"default": ".config/sdxc/ci.ts",
+					"description": "CI script `sdxc ci` runs, relative to the project root"
+				}
+			},
+			"additionalProperties": false,
+			"default": {
+				"script": ".config/sdxc/ci.ts"
+			}
+		},
 		"format": {
 			"type": "array",
 			"items": {

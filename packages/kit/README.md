@@ -76,6 +76,61 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 
 Commands run from the project root, the nearest directory with a `package.json`. `sdxc <command> --help` prints a command's arguments and flags, and `--help --json` prints them as data for an agent. Every command that runs tasks also takes `--no-progress`.
 
+#### `sdxc ci`
+
+Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on GitHub
+
+| Flag                  | Does                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /          |
+| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                          |
+| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents                  |
+| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable      |
+| `--push`              | After a green run, push the tested commit to its upstream branch, then sign off         |
+| `--no-signoff`        | Make ci.signoff a plain success that posts nothing                                      |
+| `--no-cache`          | Run every step, ignoring passes stored for unchanged inputs                             |
+| `--concurrency <n>`   | Most steps running at once; the machine's available parallelism by default              |
+| `--remote <name>`     | Git remote to push to and read the GitHub repository from; the upstream's by default    |
+| `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
+| `-v, --verbose`       | Print every step's log, not only a failed one's                                         |
+| `--json`              | Print the report as JSON                                                                |
+| `--no-install`        | Skip the frozen-lockfile install a local run starts with                                |
+
+#### `sdxc ci list`
+
+Print the steps and matrix entries a fully passing run takes, without running any
+
+| Flag                  | Does                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /     |
+| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                     |
+| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents             |
+| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable |
+| `--matrix <name>`     | Print only the entry keys of this matrix                                           |
+| `--json`              | Print the report as JSON                                                           |
+
+#### `sdxc ci signoff [sha]`
+
+Post the signoff an earlier green run recorded for a commit already on GitHub
+
+| Flag                 | Does                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `--remote <name>`    | Git remote to push to and read the GitHub repository from; the upstream's by default    |
+| `--token-env <NAME>` | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
+| `--json`             | Print the report as JSON                                                                |
+
+#### `sdxc ci verify <sha>`
+
+Exit 0 when a contributor signed the commit off, 1 when nobody did, 2 when GitHub cannot be reached
+
+| Flag                  | Does                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `--wait <duration>`   | Poll until a signoff appears or this long passes: 30s, 2m, 500ms                        |
+| `--repo <owner/name>` | The GitHub repository; read from the git remote when left out                           |
+| `--remote <name>`     | Git remote to push to and read the GitHub repository from; the upstream's by default    |
+| `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
+| `--json`              | Print the report as JSON                                                                |
+
 #### `sdxc create [directory]`
 
 Write a new project from a built-in template or a GitHub repository
