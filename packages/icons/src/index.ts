@@ -79,9 +79,6 @@ export const AlarmClockPlusIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "alarm-smoke" icon from https://lucide.dev/icons/alarm-smoke. */
 export const AlarmSmokeIcon = /*#__PURE__*/ createLucideIcon("alarm-smoke", registry.alarmSmoke);
 
-/** Renders the "album" icon from https://lucide.dev/icons/album. */
-export const AlbumIcon = /*#__PURE__*/ createLucideIcon("album", registry.album);
-
 /** Renders the "align-center-horizontal" icon from https://lucide.dev/icons/align-center-horizontal. */
 export const AlignCenterHorizontalIcon = /*#__PURE__*/ createLucideIcon(
 	"align-center-horizontal",
@@ -229,11 +226,8 @@ export const AmphoraIcon = /*#__PURE__*/ createLucideIcon("amphora", registry.am
 /** Renders the "anchor" icon from https://lucide.dev/icons/anchor. */
 export const AnchorIcon = /*#__PURE__*/ createLucideIcon("anchor", registry.anchor);
 
-/** Renders the "angry" icon from https://lucide.dev/icons/angry. */
-export const AngryIcon = /*#__PURE__*/ createLucideIcon("angry", registry.angry);
-
-/** Renders the "annoyed" icon from https://lucide.dev/icons/annoyed. */
-export const AnnoyedIcon = /*#__PURE__*/ createLucideIcon("annoyed", registry.annoyed);
+/** Renders the "angle" icon from https://lucide.dev/icons/angle. */
+export const AngleIcon = /*#__PURE__*/ createLucideIcon("angle", registry.angle);
 
 /** Renders the "antenna" icon from https://lucide.dev/icons/antenna. */
 export const AntennaIcon = /*#__PURE__*/ createLucideIcon("antenna", registry.antenna);
@@ -270,6 +264,12 @@ export const ArchiveXIcon = /*#__PURE__*/ createLucideIcon("archive-x", registry
 
 /** Renders the "armchair" icon from https://lucide.dev/icons/armchair. */
 export const ArmchairIcon = /*#__PURE__*/ createLucideIcon("armchair", registry.armchair);
+
+/** Renders the "armenian-dram" icon from https://lucide.dev/icons/armenian-dram. */
+export const ArmenianDramIcon = /*#__PURE__*/ createLucideIcon(
+	"armenian-dram",
+	registry.armenianDram,
+);
 
 /** Renders the "arrow-big-down" icon from https://lucide.dev/icons/arrow-big-down. */
 export const ArrowBigDownIcon = /*#__PURE__*/ createLucideIcon(
@@ -517,11 +517,26 @@ export const AtomIcon = /*#__PURE__*/ createLucideIcon("atom", registry.atom);
 /** Renders the "audio-lines" icon from https://lucide.dev/icons/audio-lines. */
 export const AudioLinesIcon = /*#__PURE__*/ createLucideIcon("audio-lines", registry.audioLines);
 
+/** Renders the "audio-lines-off" icon from https://lucide.dev/icons/audio-lines-off. */
+export const AudioLinesOffIcon = /*#__PURE__*/ createLucideIcon(
+	"audio-lines-off",
+	registry.audioLinesOff,
+);
+
+/** Renders the "audio-lines-x" icon from https://lucide.dev/icons/audio-lines-x. */
+export const AudioLinesXIcon = /*#__PURE__*/ createLucideIcon(
+	"audio-lines-x",
+	registry.audioLinesX,
+);
+
 /** Renders the "audio-waveform" icon from https://lucide.dev/icons/audio-waveform. */
 export const AudioWaveformIcon = /*#__PURE__*/ createLucideIcon(
 	"audio-waveform",
 	registry.audioWaveform,
 );
+
+/** Renders the "avocado" icon from https://lucide.dev/icons/avocado. */
+export const AvocadoIcon = /*#__PURE__*/ createLucideIcon("avocado", registry.avocado);
 
 /** Renders the "award" icon from https://lucide.dev/icons/award. */
 export const AwardIcon = /*#__PURE__*/ createLucideIcon("award", registry.award);
@@ -537,6 +552,9 @@ export const BabyIcon = /*#__PURE__*/ createLucideIcon("baby", registry.baby);
 
 /** Renders the "backpack" icon from https://lucide.dev/icons/backpack. */
 export const BackpackIcon = /*#__PURE__*/ createLucideIcon("backpack", registry.backpack);
+
+/** Renders the "bacon" icon from https://lucide.dev/icons/bacon. */
+export const BaconIcon = /*#__PURE__*/ createLucideIcon("bacon", registry.bacon);
 
 /** Renders the "badge" icon from https://lucide.dev/icons/badge. */
 export const BadgeIcon = /*#__PURE__*/ createLucideIcon("badge", registry.badge);
@@ -637,6 +655,12 @@ export const BananaIcon = /*#__PURE__*/ createLucideIcon("banana", registry.bana
 /** Renders the "bandage" icon from https://lucide.dev/icons/bandage. */
 export const BandageIcon = /*#__PURE__*/ createLucideIcon("bandage", registry.bandage);
 
+/** Renders the "bangladeshi-taka" icon from https://lucide.dev/icons/bangladeshi-taka. */
+export const BangladeshiTakaIcon = /*#__PURE__*/ createLucideIcon(
+	"bangladeshi-taka",
+	registry.bangladeshiTaka,
+);
+
 /** Renders the "banknote" icon from https://lucide.dev/icons/banknote. */
 export const BanknoteIcon = /*#__PURE__*/ createLucideIcon("banknote", registry.banknote);
 
@@ -732,6 +756,12 @@ export const BeerIcon = /*#__PURE__*/ createLucideIcon("beer", registry.beer);
 
 /** Renders the "beer-off" icon from https://lucide.dev/icons/beer-off. */
 export const BeerOffIcon = /*#__PURE__*/ createLucideIcon("beer-off", registry.beerOff);
+
+/** Renders the "belarusian-ruble" icon from https://lucide.dev/icons/belarusian-ruble. */
+export const BelarusianRubleIcon = /*#__PURE__*/ createLucideIcon(
+	"belarusian-ruble",
+	registry.belarusianRuble,
+);
 
 /** Renders the "bell" icon from https://lucide.dev/icons/bell. */
 export const BellIcon = /*#__PURE__*/ createLucideIcon("bell", registry.bell);
@@ -874,6 +904,12 @@ export const BookAlertIcon = /*#__PURE__*/ createLucideIcon("book-alert", regist
 /** Renders the "book-audio" icon from https://lucide.dev/icons/book-audio. */
 export const BookAudioIcon = /*#__PURE__*/ createLucideIcon("book-audio", registry.bookAudio);
 
+/** Renders the "book-bookmark" icon from https://lucide.dev/icons/book-bookmark. */
+export const BookBookmarkIcon = /*#__PURE__*/ createLucideIcon(
+	"book-bookmark",
+	registry.bookBookmark,
+);
+
 /** Renders the "book-check" icon from https://lucide.dev/icons/book-check. */
 export const BookCheckIcon = /*#__PURE__*/ createLucideIcon("book-check", registry.bookCheck);
 
@@ -903,9 +939,6 @@ export const BookKeyIcon = /*#__PURE__*/ createLucideIcon("book-key", registry.b
 
 /** Renders the "book-lock" icon from https://lucide.dev/icons/book-lock. */
 export const BookLockIcon = /*#__PURE__*/ createLucideIcon("book-lock", registry.bookLock);
-
-/** Renders the "book-marked" icon from https://lucide.dev/icons/book-marked. */
-export const BookMarkedIcon = /*#__PURE__*/ createLucideIcon("book-marked", registry.bookMarked);
 
 /** Renders the "book-minus" icon from https://lucide.dev/icons/book-minus. */
 export const BookMinusIcon = /*#__PURE__*/ createLucideIcon("book-minus", registry.bookMinus);
@@ -1021,6 +1054,9 @@ export const BrainCircuitIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "brain-cog" icon from https://lucide.dev/icons/brain-cog. */
 export const BrainCogIcon = /*#__PURE__*/ createLucideIcon("brain-cog", registry.brainCog);
 
+/** Renders the "brain-off" icon from https://lucide.dev/icons/brain-off. */
+export const BrainOffIcon = /*#__PURE__*/ createLucideIcon("brain-off", registry.brainOff);
+
 /** Renders the "brick-wall" icon from https://lucide.dev/icons/brick-wall. */
 export const BrickWallIcon = /*#__PURE__*/ createLucideIcon("brick-wall", registry.brickWall);
 
@@ -1035,6 +1071,9 @@ export const BrickWallShieldIcon = /*#__PURE__*/ createLucideIcon(
 	"brick-wall-shield",
 	registry.brickWallShield,
 );
+
+/** Renders the "bridge" icon from https://lucide.dev/icons/bridge. */
+export const BridgeIcon = /*#__PURE__*/ createLucideIcon("bridge", registry.bridge);
 
 /** Renders the "briefcase" icon from https://lucide.dev/icons/briefcase. */
 export const BriefcaseIcon = /*#__PURE__*/ createLucideIcon("briefcase", registry.briefcase);
@@ -1057,6 +1096,12 @@ export const BriefcaseMedicalIcon = /*#__PURE__*/ createLucideIcon(
 	registry.briefcaseMedical,
 );
 
+/** Renders the "briefcase-plus" icon from https://lucide.dev/icons/briefcase-plus. */
+export const BriefcasePlusIcon = /*#__PURE__*/ createLucideIcon(
+	"briefcase-plus",
+	registry.briefcasePlus,
+);
+
 /** Renders the "bring-to-front" icon from https://lucide.dev/icons/bring-to-front. */
 export const BringToFrontIcon = /*#__PURE__*/ createLucideIcon(
 	"bring-to-front",
@@ -1065,6 +1110,15 @@ export const BringToFrontIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "broccoli" icon from https://lucide.dev/icons/broccoli. */
 export const BroccoliIcon = /*#__PURE__*/ createLucideIcon("broccoli", registry.broccoli);
+
+/** Renders the "broom" icon from https://lucide.dev/icons/broom. */
+export const BroomIcon = /*#__PURE__*/ createLucideIcon("broom", registry.broom);
+
+/** Renders the "broom-sparkles" icon from https://lucide.dev/icons/broom-sparkles. */
+export const BroomSparklesIcon = /*#__PURE__*/ createLucideIcon(
+	"broom-sparkles",
+	registry.broomSparkles,
+);
 
 /** Renders the "brush" icon from https://lucide.dev/icons/brush. */
 export const BrushIcon = /*#__PURE__*/ createLucideIcon("brush", registry.brush);
@@ -1090,8 +1144,17 @@ export const BugPlayIcon = /*#__PURE__*/ createLucideIcon("bug-play", registry.b
 /** Renders the "building" icon from https://lucide.dev/icons/building. */
 export const BuildingIcon = /*#__PURE__*/ createLucideIcon("building", registry.building);
 
-/** Renders the "building-2" icon from https://lucide.dev/icons/building-2. */
-export const Building2Icon = /*#__PURE__*/ createLucideIcon("building-2", registry.building2);
+/** Renders the "building-complex" icon from https://lucide.dev/icons/building-complex. */
+export const BuildingComplexIcon = /*#__PURE__*/ createLucideIcon(
+	"building-complex",
+	registry.buildingComplex,
+);
+
+/** Renders the "building-complex-plus" icon from https://lucide.dev/icons/building-complex-plus. */
+export const BuildingComplexPlusIcon = /*#__PURE__*/ createLucideIcon(
+	"building-complex-plus",
+	registry.buildingComplexPlus,
+);
 
 /** Renders the "bus" icon from https://lucide.dev/icons/bus. */
 export const BusIcon = /*#__PURE__*/ createLucideIcon("bus", registry.bus);
@@ -1142,6 +1205,18 @@ export const CalendarCheckIcon = /*#__PURE__*/ createLucideIcon(
 export const CalendarCheck2Icon = /*#__PURE__*/ createLucideIcon(
 	"calendar-check-2",
 	registry.calendarCheck2,
+);
+
+/** Renders the "calendar-chevrons-left" icon from https://lucide.dev/icons/calendar-chevrons-left. */
+export const CalendarChevronsLeftIcon = /*#__PURE__*/ createLucideIcon(
+	"calendar-chevrons-left",
+	registry.calendarChevronsLeft,
+);
+
+/** Renders the "calendar-chevrons-right" icon from https://lucide.dev/icons/calendar-chevrons-right. */
+export const CalendarChevronsRightIcon = /*#__PURE__*/ createLucideIcon(
+	"calendar-chevrons-right",
+	registry.calendarChevronsRight,
 );
 
 /** Renders the "calendar-clock" icon from https://lucide.dev/icons/calendar-clock. */
@@ -1231,6 +1306,12 @@ export const CameraIcon = /*#__PURE__*/ createLucideIcon("camera", registry.came
 /** Renders the "camera-off" icon from https://lucide.dev/icons/camera-off. */
 export const CameraOffIcon = /*#__PURE__*/ createLucideIcon("camera-off", registry.cameraOff);
 
+/** Renders the "can" icon from https://lucide.dev/icons/can. */
+export const CanIcon = /*#__PURE__*/ createLucideIcon("can", registry.can);
+
+/** Renders the "can-soda" icon from https://lucide.dev/icons/can-soda. */
+export const CanSodaIcon = /*#__PURE__*/ createLucideIcon("can-soda", registry.canSoda);
+
 /** Renders the "candy" icon from https://lucide.dev/icons/candy. */
 export const CandyIcon = /*#__PURE__*/ createLucideIcon("candy", registry.candy);
 
@@ -1255,6 +1336,9 @@ export const CaptionsOffIcon = /*#__PURE__*/ createLucideIcon("captions-off", re
 /** Renders the "car" icon from https://lucide.dev/icons/car. */
 export const CarIcon = /*#__PURE__*/ createLucideIcon("car", registry.car);
 
+/** Renders the "car-battery" icon from https://lucide.dev/icons/car-battery. */
+export const CarBatteryIcon = /*#__PURE__*/ createLucideIcon("car-battery", registry.carBattery);
+
 /** Renders the "car-front" icon from https://lucide.dev/icons/car-front. */
 export const CarFrontIcon = /*#__PURE__*/ createLucideIcon("car-front", registry.carFront);
 
@@ -1272,6 +1356,12 @@ export const CardSimIcon = /*#__PURE__*/ createLucideIcon("card-sim", registry.c
 
 /** Renders the "carrot" icon from https://lucide.dev/icons/carrot. */
 export const CarrotIcon = /*#__PURE__*/ createLucideIcon("carrot", registry.carrot);
+
+/** Renders the "carton" icon from https://lucide.dev/icons/carton. */
+export const CartonIcon = /*#__PURE__*/ createLucideIcon("carton", registry.carton);
+
+/** Renders the "carton-off" icon from https://lucide.dev/icons/carton-off. */
+export const CartonOffIcon = /*#__PURE__*/ createLucideIcon("carton-off", registry.cartonOff);
 
 /** Renders the "case-lower" icon from https://lucide.dev/icons/case-lower. */
 export const CaseLowerIcon = /*#__PURE__*/ createLucideIcon("case-lower", registry.caseLower);
@@ -1305,6 +1395,9 @@ export const CctvIcon = /*#__PURE__*/ createLucideIcon("cctv", registry.cctv);
 
 /** Renders the "cctv-off" icon from https://lucide.dev/icons/cctv-off. */
 export const CctvOffIcon = /*#__PURE__*/ createLucideIcon("cctv-off", registry.cctvOff);
+
+/** Renders the "certificate" icon from https://lucide.dev/icons/certificate. */
+export const CertificateIcon = /*#__PURE__*/ createLucideIcon("certificate", registry.certificate);
 
 /** Renders the "chart-area" icon from https://lucide.dev/icons/chart-area. */
 export const ChartAreaIcon = /*#__PURE__*/ createLucideIcon("chart-area", registry.chartArea);
@@ -1630,10 +1723,40 @@ export const CircleChevronUpIcon = /*#__PURE__*/ createLucideIcon(
 	registry.circleChevronUp,
 );
 
+/** Renders the "circle-chevrons-down" icon from https://lucide.dev/icons/circle-chevrons-down. */
+export const CircleChevronsDownIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-chevrons-down",
+	registry.circleChevronsDown,
+);
+
+/** Renders the "circle-chevrons-left" icon from https://lucide.dev/icons/circle-chevrons-left. */
+export const CircleChevronsLeftIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-chevrons-left",
+	registry.circleChevronsLeft,
+);
+
+/** Renders the "circle-chevrons-right" icon from https://lucide.dev/icons/circle-chevrons-right. */
+export const CircleChevronsRightIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-chevrons-right",
+	registry.circleChevronsRight,
+);
+
+/** Renders the "circle-chevrons-up" icon from https://lucide.dev/icons/circle-chevrons-up. */
+export const CircleChevronsUpIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-chevrons-up",
+	registry.circleChevronsUp,
+);
+
 /** Renders the "circle-dashed" icon from https://lucide.dev/icons/circle-dashed. */
 export const CircleDashedIcon = /*#__PURE__*/ createLucideIcon(
 	"circle-dashed",
 	registry.circleDashed,
+);
+
+/** Renders the "circle-dashed-check" icon from https://lucide.dev/icons/circle-dashed-check. */
+export const CircleDashedCheckIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-dashed-check",
+	registry.circleDashedCheck,
 );
 
 /** Renders the "circle-divide" icon from https://lucide.dev/icons/circle-divide. */
@@ -1666,16 +1789,19 @@ export const CircleEllipsisIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "circle-equal" icon from https://lucide.dev/icons/circle-equal. */
 export const CircleEqualIcon = /*#__PURE__*/ createLucideIcon("circle-equal", registry.circleEqual);
 
-/** Renders the "circle-euro-sign" icon from https://lucide.dev/icons/circle-euro-sign. */
-export const CircleEuroSignIcon = /*#__PURE__*/ createLucideIcon(
-	"circle-euro-sign",
-	registry.circleEuroSign,
-);
+/** Renders the "circle-euro" icon from https://lucide.dev/icons/circle-euro. */
+export const CircleEuroIcon = /*#__PURE__*/ createLucideIcon("circle-euro", registry.circleEuro);
 
 /** Renders the "circle-fading-arrow-up" icon from https://lucide.dev/icons/circle-fading-arrow-up. */
 export const CircleFadingArrowUpIcon = /*#__PURE__*/ createLucideIcon(
 	"circle-fading-arrow-up",
 	registry.circleFadingArrowUp,
+);
+
+/** Renders the "circle-fading-play" icon from https://lucide.dev/icons/circle-fading-play. */
+export const CircleFadingPlayIcon = /*#__PURE__*/ createLucideIcon(
+	"circle-fading-play",
+	registry.circleFadingPlay,
 );
 
 /** Renders the "circle-fading-plus" icon from https://lucide.dev/icons/circle-fading-plus. */
@@ -1782,6 +1908,15 @@ export const ClapperboardIcon = /*#__PURE__*/ createLucideIcon(
 	"clapperboard",
 	registry.clapperboard,
 );
+
+/** Renders the "clef-alto" icon from https://lucide.dev/icons/clef-alto. */
+export const ClefAltoIcon = /*#__PURE__*/ createLucideIcon("clef-alto", registry.clefAlto);
+
+/** Renders the "clef-bass" icon from https://lucide.dev/icons/clef-bass. */
+export const ClefBassIcon = /*#__PURE__*/ createLucideIcon("clef-bass", registry.clefBass);
+
+/** Renders the "clef-treble" icon from https://lucide.dev/icons/clef-treble. */
+export const ClefTrebleIcon = /*#__PURE__*/ createLucideIcon("clef-treble", registry.clefTreble);
 
 /** Renders the "clipboard" icon from https://lucide.dev/icons/clipboard. */
 export const ClipboardIcon = /*#__PURE__*/ createLucideIcon("clipboard", registry.clipboard);
@@ -2173,6 +2308,9 @@ export const CornerUpRightIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "cpu" icon from https://lucide.dev/icons/cpu. */
 export const CpuIcon = /*#__PURE__*/ createLucideIcon("cpu", registry.cpu);
 
+/** Renders the "cpu-ai" icon from https://lucide.dev/icons/cpu-ai. */
+export const CpuAiIcon = /*#__PURE__*/ createLucideIcon("cpu-ai", registry.cpuAi);
+
 /** Renders the "creative-commons" icon from https://lucide.dev/icons/creative-commons. */
 export const CreativeCommonsIcon = /*#__PURE__*/ createLucideIcon(
 	"creative-commons",
@@ -2181,6 +2319,36 @@ export const CreativeCommonsIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "credit-card" icon from https://lucide.dev/icons/credit-card. */
 export const CreditCardIcon = /*#__PURE__*/ createLucideIcon("credit-card", registry.creditCard);
+
+/** Renders the "credit-card-check" icon from https://lucide.dev/icons/credit-card-check. */
+export const CreditCardCheckIcon = /*#__PURE__*/ createLucideIcon(
+	"credit-card-check",
+	registry.creditCardCheck,
+);
+
+/** Renders the "credit-card-minus" icon from https://lucide.dev/icons/credit-card-minus. */
+export const CreditCardMinusIcon = /*#__PURE__*/ createLucideIcon(
+	"credit-card-minus",
+	registry.creditCardMinus,
+);
+
+/** Renders the "credit-card-plus" icon from https://lucide.dev/icons/credit-card-plus. */
+export const CreditCardPlusIcon = /*#__PURE__*/ createLucideIcon(
+	"credit-card-plus",
+	registry.creditCardPlus,
+);
+
+/** Renders the "credit-card-reader" icon from https://lucide.dev/icons/credit-card-reader. */
+export const CreditCardReaderIcon = /*#__PURE__*/ createLucideIcon(
+	"credit-card-reader",
+	registry.creditCardReader,
+);
+
+/** Renders the "credit-card-x" icon from https://lucide.dev/icons/credit-card-x. */
+export const CreditCardXIcon = /*#__PURE__*/ createLucideIcon(
+	"credit-card-x",
+	registry.creditCardX,
+);
 
 /** Renders the "croissant" icon from https://lucide.dev/icons/croissant. */
 export const CroissantIcon = /*#__PURE__*/ createLucideIcon("croissant", registry.croissant);
@@ -2202,6 +2370,9 @@ export const CuboidIcon = /*#__PURE__*/ createLucideIcon("cuboid", registry.cubo
 
 /** Renders the "cup-soda" icon from https://lucide.dev/icons/cup-soda. */
 export const CupSodaIcon = /*#__PURE__*/ createLucideIcon("cup-soda", registry.cupSoda);
+
+/** Renders the "cupcake" icon from https://lucide.dev/icons/cupcake. */
+export const CupcakeIcon = /*#__PURE__*/ createLucideIcon("cupcake", registry.cupcake);
 
 /** Renders the "currency" icon from https://lucide.dev/icons/currency. */
 export const CurrencyIcon = /*#__PURE__*/ createLucideIcon("currency", registry.currency);
@@ -2356,11 +2527,20 @@ export const DogIcon = /*#__PURE__*/ createLucideIcon("dog", registry.dog);
 /** Renders the "dollar-sign" icon from https://lucide.dev/icons/dollar-sign. */
 export const DollarSignIcon = /*#__PURE__*/ createLucideIcon("dollar-sign", registry.dollarSign);
 
+/** Renders the "dome" icon from https://lucide.dev/icons/dome. */
+export const DomeIcon = /*#__PURE__*/ createLucideIcon("dome", registry.dome);
+
 /** Renders the "donut" icon from https://lucide.dev/icons/donut. */
 export const DonutIcon = /*#__PURE__*/ createLucideIcon("donut", registry.donut);
 
 /** Renders the "door-closed" icon from https://lucide.dev/icons/door-closed. */
 export const DoorClosedIcon = /*#__PURE__*/ createLucideIcon("door-closed", registry.doorClosed);
+
+/** Renders the "door-closed-cog" icon from https://lucide.dev/icons/door-closed-cog. */
+export const DoorClosedCogIcon = /*#__PURE__*/ createLucideIcon(
+	"door-closed-cog",
+	registry.doorClosedCog,
+);
 
 /** Renders the "door-closed-locked" icon from https://lucide.dev/icons/door-closed-locked. */
 export const DoorClosedLockedIcon = /*#__PURE__*/ createLucideIcon(
@@ -2368,8 +2548,20 @@ export const DoorClosedLockedIcon = /*#__PURE__*/ createLucideIcon(
 	registry.doorClosedLocked,
 );
 
+/** Renders the "door-closed-package" icon from https://lucide.dev/icons/door-closed-package. */
+export const DoorClosedPackageIcon = /*#__PURE__*/ createLucideIcon(
+	"door-closed-package",
+	registry.doorClosedPackage,
+);
+
 /** Renders the "door-open" icon from https://lucide.dev/icons/door-open. */
 export const DoorOpenIcon = /*#__PURE__*/ createLucideIcon("door-open", registry.doorOpen);
+
+/** Renders the "door-stairwell" icon from https://lucide.dev/icons/door-stairwell. */
+export const DoorStairwellIcon = /*#__PURE__*/ createLucideIcon(
+	"door-stairwell",
+	registry.doorStairwell,
+);
 
 /** Renders the "dot" icon from https://lucide.dev/icons/dot. */
 export const DotIcon = /*#__PURE__*/ createLucideIcon("dot", registry.dot);
@@ -2434,6 +2626,15 @@ export const EggFriedIcon = /*#__PURE__*/ createLucideIcon("egg-fried", registry
 /** Renders the "egg-off" icon from https://lucide.dev/icons/egg-off. */
 export const EggOffIcon = /*#__PURE__*/ createLucideIcon("egg-off", registry.eggOff);
 
+/** Renders the "eighth-note" icon from https://lucide.dev/icons/eighth-note. */
+export const EighthNoteIcon = /*#__PURE__*/ createLucideIcon("eighth-note", registry.eighthNote);
+
+/** Renders the "eighth-notes" icon from https://lucide.dev/icons/eighth-notes. */
+export const EighthNotesIcon = /*#__PURE__*/ createLucideIcon("eighth-notes", registry.eighthNotes);
+
+/** Renders the "eject" icon from https://lucide.dev/icons/eject. */
+export const EjectIcon = /*#__PURE__*/ createLucideIcon("eject", registry.eject);
+
 /** Renders the "ellipse" icon from https://lucide.dev/icons/ellipse. */
 export const EllipseIcon = /*#__PURE__*/ createLucideIcon("ellipse", registry.ellipse);
 
@@ -2446,6 +2647,9 @@ export const EllipsisVerticalIcon = /*#__PURE__*/ createLucideIcon(
 	registry.ellipsisVertical,
 );
 
+/** Renders the "engine" icon from https://lucide.dev/icons/engine. */
+export const EngineIcon = /*#__PURE__*/ createLucideIcon("engine", registry.engine);
+
 /** Renders the "equal" icon from https://lucide.dev/icons/equal. */
 export const EqualIcon = /*#__PURE__*/ createLucideIcon("equal", registry.equal);
 
@@ -2453,6 +2657,12 @@ export const EqualIcon = /*#__PURE__*/ createLucideIcon("equal", registry.equal)
 export const EqualApproximatelyIcon = /*#__PURE__*/ createLucideIcon(
 	"equal-approximately",
 	registry.equalApproximately,
+);
+
+/** Renders the "equal-approximately-not" icon from https://lucide.dev/icons/equal-approximately-not. */
+export const EqualApproximatelyNotIcon = /*#__PURE__*/ createLucideIcon(
+	"equal-approximately-not",
+	registry.equalApproximatelyNot,
 );
 
 /** Renders the "equal-not" icon from https://lucide.dev/icons/equal-not. */
@@ -2494,6 +2704,42 @@ export const EyeDashedIcon = /*#__PURE__*/ createLucideIcon("eye-dashed", regist
 /** Renders the "eye-off" icon from https://lucide.dev/icons/eye-off. */
 export const EyeOffIcon = /*#__PURE__*/ createLucideIcon("eye-off", registry.eyeOff);
 
+/** Renders the "face-angry" icon from https://lucide.dev/icons/face-angry. */
+export const FaceAngryIcon = /*#__PURE__*/ createLucideIcon("face-angry", registry.faceAngry);
+
+/** Renders the "face-expressionless" icon from https://lucide.dev/icons/face-expressionless. */
+export const FaceExpressionlessIcon = /*#__PURE__*/ createLucideIcon(
+	"face-expressionless",
+	registry.faceExpressionless,
+);
+
+/** Renders the "face-grinning" icon from https://lucide.dev/icons/face-grinning. */
+export const FaceGrinningIcon = /*#__PURE__*/ createLucideIcon(
+	"face-grinning",
+	registry.faceGrinning,
+);
+
+/** Renders the "face-neutral" icon from https://lucide.dev/icons/face-neutral. */
+export const FaceNeutralIcon = /*#__PURE__*/ createLucideIcon("face-neutral", registry.faceNeutral);
+
+/** Renders the "face-slightly-frowning" icon from https://lucide.dev/icons/face-slightly-frowning. */
+export const FaceSlightlyFrowningIcon = /*#__PURE__*/ createLucideIcon(
+	"face-slightly-frowning",
+	registry.faceSlightlyFrowning,
+);
+
+/** Renders the "face-slightly-smiling" icon from https://lucide.dev/icons/face-slightly-smiling. */
+export const FaceSlightlySmilingIcon = /*#__PURE__*/ createLucideIcon(
+	"face-slightly-smiling",
+	registry.faceSlightlySmiling,
+);
+
+/** Renders the "face-slightly-smiling-plus" icon from https://lucide.dev/icons/face-slightly-smiling-plus. */
+export const FaceSlightlySmilingPlusIcon = /*#__PURE__*/ createLucideIcon(
+	"face-slightly-smiling-plus",
+	registry.faceSlightlySmilingPlus,
+);
+
 /** Renders the "factory" icon from https://lucide.dev/icons/factory. */
 export const FactoryIcon = /*#__PURE__*/ createLucideIcon("factory", registry.factory);
 
@@ -2502,6 +2748,9 @@ export const FanIcon = /*#__PURE__*/ createLucideIcon("fan", registry.fan);
 
 /** Renders the "fast-forward" icon from https://lucide.dev/icons/fast-forward. */
 export const FastForwardIcon = /*#__PURE__*/ createLucideIcon("fast-forward", registry.fastForward);
+
+/** Renders the "faucet" icon from https://lucide.dev/icons/faucet. */
+export const FaucetIcon = /*#__PURE__*/ createLucideIcon("faucet", registry.faucet);
 
 /** Renders the "feather" icon from https://lucide.dev/icons/feather. */
 export const FeatherIcon = /*#__PURE__*/ createLucideIcon("feather", registry.feather);
@@ -2818,18 +3067,6 @@ export const FlaskConicalOffIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "flask-round" icon from https://lucide.dev/icons/flask-round. */
 export const FlaskRoundIcon = /*#__PURE__*/ createLucideIcon("flask-round", registry.flaskRound);
 
-/** Renders the "flip-horizontal-2" icon from https://lucide.dev/icons/flip-horizontal-2. */
-export const FlipHorizontal2Icon = /*#__PURE__*/ createLucideIcon(
-	"flip-horizontal-2",
-	registry.flipHorizontal2,
-);
-
-/** Renders the "flip-vertical-2" icon from https://lucide.dev/icons/flip-vertical-2. */
-export const FlipVertical2Icon = /*#__PURE__*/ createLucideIcon(
-	"flip-vertical-2",
-	registry.flipVertical2,
-);
-
 /** Renders the "flower" icon from https://lucide.dev/icons/flower. */
 export const FlowerIcon = /*#__PURE__*/ createLucideIcon("flower", registry.flower);
 
@@ -2968,6 +3205,12 @@ export const FolderTreeIcon = /*#__PURE__*/ createLucideIcon("folder-tree", regi
 /** Renders the "folder-up" icon from https://lucide.dev/icons/folder-up. */
 export const FolderUpIcon = /*#__PURE__*/ createLucideIcon("folder-up", registry.folderUp);
 
+/** Renders the "folder-user" icon from https://lucide.dev/icons/folder-user. */
+export const FolderUserIcon = /*#__PURE__*/ createLucideIcon("folder-user", registry.folderUser);
+
+/** Renders the "folder-users" icon from https://lucide.dev/icons/folder-users. */
+export const FolderUsersIcon = /*#__PURE__*/ createLucideIcon("folder-users", registry.folderUsers);
+
 /** Renders the "folder-x" icon from https://lucide.dev/icons/folder-x. */
 export const FolderXIcon = /*#__PURE__*/ createLucideIcon("folder-x", registry.folderX);
 
@@ -2989,9 +3232,6 @@ export const ForwardIcon = /*#__PURE__*/ createLucideIcon("forward", registry.fo
 /** Renders the "frame" icon from https://lucide.dev/icons/frame. */
 export const FrameIcon = /*#__PURE__*/ createLucideIcon("frame", registry.frame);
 
-/** Renders the "frown" icon from https://lucide.dev/icons/frown. */
-export const FrownIcon = /*#__PURE__*/ createLucideIcon("frown", registry.frown);
-
 /** Renders the "fuel" icon from https://lucide.dev/icons/fuel. */
 export const FuelIcon = /*#__PURE__*/ createLucideIcon("fuel", registry.fuel);
 
@@ -3006,6 +3246,9 @@ export const FunnelPlusIcon = /*#__PURE__*/ createLucideIcon("funnel-plus", regi
 
 /** Renders the "funnel-x" icon from https://lucide.dev/icons/funnel-x. */
 export const FunnelXIcon = /*#__PURE__*/ createLucideIcon("funnel-x", registry.funnelX);
+
+/** Renders the "galaxy" icon from https://lucide.dev/icons/galaxy. */
+export const GalaxyIcon = /*#__PURE__*/ createLucideIcon("galaxy", registry.galaxy);
 
 /** Renders the "gallery-horizontal" icon from https://lucide.dev/icons/gallery-horizontal. */
 export const GalleryHorizontalIcon = /*#__PURE__*/ createLucideIcon(
@@ -3049,6 +3292,15 @@ export const GamepadDirectionalIcon = /*#__PURE__*/ createLucideIcon(
 	registry.gamepadDirectional,
 );
 
+/** Renders the "gap-horizontal" icon from https://lucide.dev/icons/gap-horizontal. */
+export const GapHorizontalIcon = /*#__PURE__*/ createLucideIcon(
+	"gap-horizontal",
+	registry.gapHorizontal,
+);
+
+/** Renders the "gap-vertical" icon from https://lucide.dev/icons/gap-vertical. */
+export const GapVerticalIcon = /*#__PURE__*/ createLucideIcon("gap-vertical", registry.gapVertical);
+
 /** Renders the "gauge" icon from https://lucide.dev/icons/gauge. */
 export const GaugeIcon = /*#__PURE__*/ createLucideIcon("gauge", registry.gauge);
 
@@ -3063,6 +3315,12 @@ export const GeorgianLariIcon = /*#__PURE__*/ createLucideIcon(
 	"georgian-lari",
 	registry.georgianLari,
 );
+
+/** Renders the "germ" icon from https://lucide.dev/icons/germ. */
+export const GermIcon = /*#__PURE__*/ createLucideIcon("germ", registry.germ);
+
+/** Renders the "germ-off" icon from https://lucide.dev/icons/germ-off. */
+export const GermOffIcon = /*#__PURE__*/ createLucideIcon("germ-off", registry.germOff);
 
 /** Renders the "ghost" icon from https://lucide.dev/icons/ghost. */
 export const GhostIcon = /*#__PURE__*/ createLucideIcon("ghost", registry.ghost);
@@ -3169,6 +3427,9 @@ export const GlobeIcon = /*#__PURE__*/ createLucideIcon("globe", registry.globe)
 /** Renders the "globe-check" icon from https://lucide.dev/icons/globe-check. */
 export const GlobeCheckIcon = /*#__PURE__*/ createLucideIcon("globe-check", registry.globeCheck);
 
+/** Renders the "globe-code" icon from https://lucide.dev/icons/globe-code. */
+export const GlobeCodeIcon = /*#__PURE__*/ createLucideIcon("globe-code", registry.globeCode);
+
 /** Renders the "globe-lock" icon from https://lucide.dev/icons/globe-lock. */
 export const GlobeLockIcon = /*#__PURE__*/ createLucideIcon("globe-lock", registry.globeLock);
 
@@ -3192,6 +3453,12 @@ export const GraduationCapIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "grape" icon from https://lucide.dev/icons/grape. */
 export const GrapeIcon = /*#__PURE__*/ createLucideIcon("grape", registry.grape);
+
+/** Renders the "graph-hub" icon from https://lucide.dev/icons/graph-hub. */
+export const GraphHubIcon = /*#__PURE__*/ createLucideIcon("graph-hub", registry.graphHub);
+
+/** Renders the "graph-star" icon from https://lucide.dev/icons/graph-star. */
+export const GraphStarIcon = /*#__PURE__*/ createLucideIcon("graph-star", registry.graphStar);
 
 /** Renders the "grid-2x2" icon from https://lucide.dev/icons/grid-2x2. */
 export const Grid2x2Icon = /*#__PURE__*/ createLucideIcon("grid-2x2", registry.grid2x2);
@@ -3232,11 +3499,23 @@ export const GripVerticalIcon = /*#__PURE__*/ createLucideIcon(
 	registry.gripVertical,
 );
 
+/** Renders the "groceries" icon from https://lucide.dev/icons/groceries. */
+export const GroceriesIcon = /*#__PURE__*/ createLucideIcon("groceries", registry.groceries);
+
 /** Renders the "group" icon from https://lucide.dev/icons/group. */
 export const GroupIcon = /*#__PURE__*/ createLucideIcon("group", registry.group);
 
 /** Renders the "guitar" icon from https://lucide.dev/icons/guitar. */
 export const GuitarIcon = /*#__PURE__*/ createLucideIcon("guitar", registry.guitar);
+
+/** Renders the "guitar-electric" icon from https://lucide.dev/icons/guitar-electric. */
+export const GuitarElectricIcon = /*#__PURE__*/ createLucideIcon(
+	"guitar-electric",
+	registry.guitarElectric,
+);
+
+/** Renders the "half-note" icon from https://lucide.dev/icons/half-note. */
+export const HalfNoteIcon = /*#__PURE__*/ createLucideIcon("half-note", registry.halfNote);
 
 /** Renders the "ham" icon from https://lucide.dev/icons/ham. */
 export const HamIcon = /*#__PURE__*/ createLucideIcon("ham", registry.ham);
@@ -3273,6 +3552,12 @@ export const HandPlatterIcon = /*#__PURE__*/ createLucideIcon("hand-platter", re
 
 /** Renders the "handbag" icon from https://lucide.dev/icons/handbag. */
 export const HandbagIcon = /*#__PURE__*/ createLucideIcon("handbag", registry.handbag);
+
+/** Renders the "handle-bottom-right" icon from https://lucide.dev/icons/handle-bottom-right. */
+export const HandleBottomRightIcon = /*#__PURE__*/ createLucideIcon(
+	"handle-bottom-right",
+	registry.handleBottomRight,
+);
 
 /** Renders the "handshake" icon from https://lucide.dev/icons/handshake. */
 export const HandshakeIcon = /*#__PURE__*/ createLucideIcon("handshake", registry.handshake);
@@ -3382,8 +3667,8 @@ export const HexagonIcon = /*#__PURE__*/ createLucideIcon("hexagon", registry.he
 /** Renders the "highlighter" icon from https://lucide.dev/icons/highlighter. */
 export const HighlighterIcon = /*#__PURE__*/ createLucideIcon("highlighter", registry.highlighter);
 
-/** Renders the "history" icon from https://lucide.dev/icons/history. */
-export const HistoryIcon = /*#__PURE__*/ createLucideIcon("history", registry.history);
+/** Renders the "hiking-stick" icon from https://lucide.dev/icons/hiking-stick. */
+export const HikingStickIcon = /*#__PURE__*/ createLucideIcon("hiking-stick", registry.hikingStick);
 
 /** Renders the "hop" icon from https://lucide.dev/icons/hop. */
 export const HopIcon = /*#__PURE__*/ createLucideIcon("hop", registry.hop);
@@ -3400,8 +3685,17 @@ export const HotelIcon = /*#__PURE__*/ createLucideIcon("hotel", registry.hotel)
 /** Renders the "hourglass" icon from https://lucide.dev/icons/hourglass. */
 export const HourglassIcon = /*#__PURE__*/ createLucideIcon("hourglass", registry.hourglass);
 
+/** Renders the "hourglass-cog" icon from https://lucide.dev/icons/hourglass-cog. */
+export const HourglassCogIcon = /*#__PURE__*/ createLucideIcon(
+	"hourglass-cog",
+	registry.hourglassCog,
+);
+
 /** Renders the "house" icon from https://lucide.dev/icons/house. */
 export const HouseIcon = /*#__PURE__*/ createLucideIcon("house", registry.house);
+
+/** Renders the "house-cog" icon from https://lucide.dev/icons/house-cog. */
+export const HouseCogIcon = /*#__PURE__*/ createLucideIcon("house-cog", registry.houseCog);
 
 /** Renders the "house-heart" icon from https://lucide.dev/icons/house-heart. */
 export const HouseHeartIcon = /*#__PURE__*/ createLucideIcon("house-heart", registry.houseHeart);
@@ -3414,6 +3708,9 @@ export const HousePlusIcon = /*#__PURE__*/ createLucideIcon("house-plus", regist
 
 /** Renders the "house-wifi" icon from https://lucide.dev/icons/house-wifi. */
 export const HouseWifiIcon = /*#__PURE__*/ createLucideIcon("house-wifi", registry.houseWifi);
+
+/** Renders the "houses" icon from https://lucide.dev/icons/houses. */
+export const HousesIcon = /*#__PURE__*/ createLucideIcon("houses", registry.houses);
 
 /** Renders the "ice-cream-bowl" icon from https://lucide.dev/icons/ice-cream-bowl. */
 export const IceCreamBowlIcon = /*#__PURE__*/ createLucideIcon(
@@ -3499,6 +3796,9 @@ export const IterationCcwIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "iteration-cw" icon from https://lucide.dev/icons/iteration-cw. */
 export const IterationCwIcon = /*#__PURE__*/ createLucideIcon("iteration-cw", registry.iterationCw);
 
+/** Renders the "iv-bag" icon from https://lucide.dev/icons/iv-bag. */
+export const IvBagIcon = /*#__PURE__*/ createLucideIcon("iv-bag", registry.ivBag);
+
 /** Renders the "japanese-yen" icon from https://lucide.dev/icons/japanese-yen. */
 export const JapaneseYenIcon = /*#__PURE__*/ createLucideIcon("japanese-yen", registry.japaneseYen);
 
@@ -3510,6 +3810,9 @@ export const KanbanIcon = /*#__PURE__*/ createLucideIcon("kanban", registry.kanb
 
 /** Renders the "kayak" icon from https://lucide.dev/icons/kayak. */
 export const KayakIcon = /*#__PURE__*/ createLucideIcon("kayak", registry.kayak);
+
+/** Renders the "kazakh-tenge" icon from https://lucide.dev/icons/kazakh-tenge. */
+export const KazakhTengeIcon = /*#__PURE__*/ createLucideIcon("kazakh-tenge", registry.kazakhTenge);
 
 /** Renders the "key" icon from https://lucide.dev/icons/key. */
 export const KeyIcon = /*#__PURE__*/ createLucideIcon("key", registry.key);
@@ -3531,6 +3834,9 @@ export const KeyboardMusicIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "keyboard-off" icon from https://lucide.dev/icons/keyboard-off. */
 export const KeyboardOffIcon = /*#__PURE__*/ createLucideIcon("keyboard-off", registry.keyboardOff);
+
+/** Renders the "lambda" icon from https://lucide.dev/icons/lambda. */
+export const LambdaIcon = /*#__PURE__*/ createLucideIcon("lambda", registry.lambda);
 
 /** Renders the "lamp" icon from https://lucide.dev/icons/lamp. */
 export const LampIcon = /*#__PURE__*/ createLucideIcon("lamp", registry.lamp);
@@ -3583,8 +3889,17 @@ export const LassoIcon = /*#__PURE__*/ createLucideIcon("lasso", registry.lasso)
 /** Renders the "lasso-select" icon from https://lucide.dev/icons/lasso-select. */
 export const LassoSelectIcon = /*#__PURE__*/ createLucideIcon("lasso-select", registry.lassoSelect);
 
-/** Renders the "laugh" icon from https://lucide.dev/icons/laugh. */
-export const LaughIcon = /*#__PURE__*/ createLucideIcon("laugh", registry.laugh);
+/** Renders the "layer-arrow-down" icon from https://lucide.dev/icons/layer-arrow-down. */
+export const LayerArrowDownIcon = /*#__PURE__*/ createLucideIcon(
+	"layer-arrow-down",
+	registry.layerArrowDown,
+);
+
+/** Renders the "layer-arrow-up" icon from https://lucide.dev/icons/layer-arrow-up. */
+export const LayerArrowUpIcon = /*#__PURE__*/ createLucideIcon(
+	"layer-arrow-up",
+	registry.layerArrowUp,
+);
 
 /** Renders the "layers" icon from https://lucide.dev/icons/layers. */
 export const LayersIcon = /*#__PURE__*/ createLucideIcon("layers", registry.layers);
@@ -3592,11 +3907,35 @@ export const LayersIcon = /*#__PURE__*/ createLucideIcon("layers", registry.laye
 /** Renders the "layers-2" icon from https://lucide.dev/icons/layers-2. */
 export const Layers2Icon = /*#__PURE__*/ createLucideIcon("layers-2", registry.layers2);
 
+/** Renders the "layers-arrow-down" icon from https://lucide.dev/icons/layers-arrow-down. */
+export const LayersArrowDownIcon = /*#__PURE__*/ createLucideIcon(
+	"layers-arrow-down",
+	registry.layersArrowDown,
+);
+
+/** Renders the "layers-arrow-up" icon from https://lucide.dev/icons/layers-arrow-up. */
+export const LayersArrowUpIcon = /*#__PURE__*/ createLucideIcon(
+	"layers-arrow-up",
+	registry.layersArrowUp,
+);
+
 /** Renders the "layers-minus" icon from https://lucide.dev/icons/layers-minus. */
 export const LayersMinusIcon = /*#__PURE__*/ createLucideIcon("layers-minus", registry.layersMinus);
 
 /** Renders the "layers-plus" icon from https://lucide.dev/icons/layers-plus. */
 export const LayersPlusIcon = /*#__PURE__*/ createLucideIcon("layers-plus", registry.layersPlus);
+
+/** Renders the "layout-arrow-down" icon from https://lucide.dev/icons/layout-arrow-down. */
+export const LayoutArrowDownIcon = /*#__PURE__*/ createLucideIcon(
+	"layout-arrow-down",
+	registry.layoutArrowDown,
+);
+
+/** Renders the "layout-arrow-right" icon from https://lucide.dev/icons/layout-arrow-right. */
+export const LayoutArrowRightIcon = /*#__PURE__*/ createLucideIcon(
+	"layout-arrow-right",
+	registry.layoutArrowRight,
+);
 
 /** Renders the "layout-dashboard" icon from https://lucide.dev/icons/layout-dashboard. */
 export const LayoutDashboardIcon = /*#__PURE__*/ createLucideIcon(
@@ -3604,8 +3943,20 @@ export const LayoutDashboardIcon = /*#__PURE__*/ createLucideIcon(
 	registry.layoutDashboard,
 );
 
+/** Renders the "layout-freeform" icon from https://lucide.dev/icons/layout-freeform. */
+export const LayoutFreeformIcon = /*#__PURE__*/ createLucideIcon(
+	"layout-freeform",
+	registry.layoutFreeform,
+);
+
 /** Renders the "layout-grid" icon from https://lucide.dev/icons/layout-grid. */
 export const LayoutGridIcon = /*#__PURE__*/ createLucideIcon("layout-grid", registry.layoutGrid);
+
+/** Renders the "layout-grid-circles" icon from https://lucide.dev/icons/layout-grid-circles. */
+export const LayoutGridCirclesIcon = /*#__PURE__*/ createLucideIcon(
+	"layout-grid-circles",
+	registry.layoutGridCircles,
+);
 
 /** Renders the "layout-list" icon from https://lucide.dev/icons/layout-list. */
 export const LayoutListIcon = /*#__PURE__*/ createLucideIcon("layout-list", registry.layoutList);
@@ -3637,11 +3988,23 @@ export const LeafyGreenIcon = /*#__PURE__*/ createLucideIcon("leafy-green", regi
 /** Renders the "lectern" icon from https://lucide.dev/icons/lectern. */
 export const LecternIcon = /*#__PURE__*/ createLucideIcon("lectern", registry.lectern);
 
+/** Renders the "lens" icon from https://lucide.dev/icons/lens. */
+export const LensIcon = /*#__PURE__*/ createLucideIcon("lens", registry.lens);
+
 /** Renders the "lens-concave" icon from https://lucide.dev/icons/lens-concave. */
 export const LensConcaveIcon = /*#__PURE__*/ createLucideIcon("lens-concave", registry.lensConcave);
 
 /** Renders the "lens-convex" icon from https://lucide.dev/icons/lens-convex. */
 export const LensConvexIcon = /*#__PURE__*/ createLucideIcon("lens-convex", registry.lensConvex);
+
+/** Renders the "letter-spacing" icon from https://lucide.dev/icons/letter-spacing. */
+export const LetterSpacingIcon = /*#__PURE__*/ createLucideIcon(
+	"letter-spacing",
+	registry.letterSpacing,
+);
+
+/** Renders the "letters" icon from https://lucide.dev/icons/letters. */
+export const LettersIcon = /*#__PURE__*/ createLucideIcon("letters", registry.letters);
 
 /** Renders the "library" icon from https://lucide.dev/icons/library. */
 export const LibraryIcon = /*#__PURE__*/ createLucideIcon("library", registry.library);
@@ -3664,11 +4027,35 @@ export const LightbulbOffIcon = /*#__PURE__*/ createLucideIcon(
 	registry.lightbulbOff,
 );
 
+/** Renders the "lighthouse" icon from https://lucide.dev/icons/lighthouse. */
+export const LighthouseIcon = /*#__PURE__*/ createLucideIcon("lighthouse", registry.lighthouse);
+
+/** Renders the "line-dot-bottom-vertical" icon from https://lucide.dev/icons/line-dot-bottom-vertical. */
+export const LineDotBottomVerticalIcon = /*#__PURE__*/ createLucideIcon(
+	"line-dot-bottom-vertical",
+	registry.lineDotBottomVertical,
+);
+
+/** Renders the "line-dot-left-horizontal" icon from https://lucide.dev/icons/line-dot-left-horizontal. */
+export const LineDotLeftHorizontalIcon = /*#__PURE__*/ createLucideIcon(
+	"line-dot-left-horizontal",
+	registry.lineDotLeftHorizontal,
+);
+
 /** Renders the "line-dot-right-horizontal" icon from https://lucide.dev/icons/line-dot-right-horizontal. */
 export const LineDotRightHorizontalIcon = /*#__PURE__*/ createLucideIcon(
 	"line-dot-right-horizontal",
 	registry.lineDotRightHorizontal,
 );
+
+/** Renders the "line-dot-top-vertical" icon from https://lucide.dev/icons/line-dot-top-vertical. */
+export const LineDotTopVerticalIcon = /*#__PURE__*/ createLucideIcon(
+	"line-dot-top-vertical",
+	registry.lineDotTopVertical,
+);
+
+/** Renders the "line-height" icon from https://lucide.dev/icons/line-height. */
+export const LineHeightIcon = /*#__PURE__*/ createLucideIcon("line-height", registry.lineHeight);
 
 /** Renders the "line-squiggle" icon from https://lucide.dev/icons/line-squiggle. */
 export const LineSquiggleIcon = /*#__PURE__*/ createLucideIcon(
@@ -3708,6 +4095,9 @@ export const ListChevronsUpDownIcon = /*#__PURE__*/ createLucideIcon(
 	"list-chevrons-up-down",
 	registry.listChevronsUpDown,
 );
+
+/** Renders the "list-clock" icon from https://lucide.dev/icons/list-clock. */
+export const ListClockIcon = /*#__PURE__*/ createLucideIcon("list-clock", registry.listClock);
 
 /** Renders the "list-collapse" icon from https://lucide.dev/icons/list-collapse. */
 export const ListCollapseIcon = /*#__PURE__*/ createLucideIcon(
@@ -3841,14 +4231,26 @@ export const MagnetIcon = /*#__PURE__*/ createLucideIcon("magnet", registry.magn
 /** Renders the "mail" icon from https://lucide.dev/icons/mail. */
 export const MailIcon = /*#__PURE__*/ createLucideIcon("mail", registry.mail);
 
+/** Renders the "mail-badge" icon from https://lucide.dev/icons/mail-badge. */
+export const MailBadgeIcon = /*#__PURE__*/ createLucideIcon("mail-badge", registry.mailBadge);
+
 /** Renders the "mail-check" icon from https://lucide.dev/icons/mail-check. */
 export const MailCheckIcon = /*#__PURE__*/ createLucideIcon("mail-check", registry.mailCheck);
+
+/** Renders the "mail-clock" icon from https://lucide.dev/icons/mail-clock. */
+export const MailClockIcon = /*#__PURE__*/ createLucideIcon("mail-clock", registry.mailClock);
+
+/** Renders the "mail-dot" icon from https://lucide.dev/icons/mail-dot. */
+export const MailDotIcon = /*#__PURE__*/ createLucideIcon("mail-dot", registry.mailDot);
 
 /** Renders the "mail-minus" icon from https://lucide.dev/icons/mail-minus. */
 export const MailMinusIcon = /*#__PURE__*/ createLucideIcon("mail-minus", registry.mailMinus);
 
 /** Renders the "mail-open" icon from https://lucide.dev/icons/mail-open. */
 export const MailOpenIcon = /*#__PURE__*/ createLucideIcon("mail-open", registry.mailOpen);
+
+/** Renders the "mail-pen" icon from https://lucide.dev/icons/mail-pen. */
+export const MailPenIcon = /*#__PURE__*/ createLucideIcon("mail-pen", registry.mailPen);
 
 /** Renders the "mail-plus" icon from https://lucide.dev/icons/mail-plus. */
 export const MailPlusIcon = /*#__PURE__*/ createLucideIcon("mail-plus", registry.mailPlus);
@@ -3976,9 +4378,6 @@ export const MegaphoneOffIcon = /*#__PURE__*/ createLucideIcon(
 	registry.megaphoneOff,
 );
 
-/** Renders the "meh" icon from https://lucide.dev/icons/meh. */
-export const MehIcon = /*#__PURE__*/ createLucideIcon("meh", registry.meh);
-
 /** Renders the "memory-stick" icon from https://lucide.dev/icons/memory-stick. */
 export const MemoryStickIcon = /*#__PURE__*/ createLucideIcon("memory-stick", registry.memoryStick);
 
@@ -4010,6 +4409,12 @@ export const MessageCircleCodeIcon = /*#__PURE__*/ createLucideIcon(
 export const MessageCircleDashedIcon = /*#__PURE__*/ createLucideIcon(
 	"message-circle-dashed",
 	registry.messageCircleDashed,
+);
+
+/** Renders the "message-circle-dashed-check" icon from https://lucide.dev/icons/message-circle-dashed-check. */
+export const MessageCircleDashedCheckIcon = /*#__PURE__*/ createLucideIcon(
+	"message-circle-dashed-check",
+	registry.messageCircleDashedCheck,
 );
 
 /** Renders the "message-circle-heart" icon from https://lucide.dev/icons/message-circle-heart. */
@@ -4046,6 +4451,12 @@ export const MessageCircleQuestionMarkIcon = /*#__PURE__*/ createLucideIcon(
 export const MessageCircleReplyIcon = /*#__PURE__*/ createLucideIcon(
 	"message-circle-reply",
 	registry.messageCircleReply,
+);
+
+/** Renders the "message-circle-text" icon from https://lucide.dev/icons/message-circle-text. */
+export const MessageCircleTextIcon = /*#__PURE__*/ createLucideIcon(
+	"message-circle-text",
+	registry.messageCircleText,
 );
 
 /** Renders the "message-circle-warning" icon from https://lucide.dev/icons/message-circle-warning. */
@@ -4162,6 +4573,12 @@ export const MessageSquareXIcon = /*#__PURE__*/ createLucideIcon(
 	registry.messageSquareX,
 );
 
+/** Renders the "messages-circle" icon from https://lucide.dev/icons/messages-circle. */
+export const MessagesCircleIcon = /*#__PURE__*/ createLucideIcon(
+	"messages-circle",
+	registry.messagesCircle,
+);
+
 /** Renders the "messages-square" icon from https://lucide.dev/icons/messages-square. */
 export const MessagesSquareIcon = /*#__PURE__*/ createLucideIcon(
 	"messages-square",
@@ -4174,8 +4591,17 @@ export const MetronomeIcon = /*#__PURE__*/ createLucideIcon("metronome", registr
 /** Renders the "mic" icon from https://lucide.dev/icons/mic. */
 export const MicIcon = /*#__PURE__*/ createLucideIcon("mic", registry.mic);
 
+/** Renders the "mic-audio-lines" icon from https://lucide.dev/icons/mic-audio-lines. */
+export const MicAudioLinesIcon = /*#__PURE__*/ createLucideIcon(
+	"mic-audio-lines",
+	registry.micAudioLines,
+);
+
 /** Renders the "mic-off" icon from https://lucide.dev/icons/mic-off. */
 export const MicOffIcon = /*#__PURE__*/ createLucideIcon("mic-off", registry.micOff);
+
+/** Renders the "mic-signal" icon from https://lucide.dev/icons/mic-signal. */
+export const MicSignalIcon = /*#__PURE__*/ createLucideIcon("mic-signal", registry.micSignal);
 
 /** Renders the "mic-vocal" icon from https://lucide.dev/icons/mic-vocal. */
 export const MicVocalIcon = /*#__PURE__*/ createLucideIcon("mic-vocal", registry.micVocal);
@@ -4188,6 +4614,9 @@ export const MicroscopeIcon = /*#__PURE__*/ createLucideIcon("microscope", regis
 
 /** Renders the "microwave" icon from https://lucide.dev/icons/microwave. */
 export const MicrowaveIcon = /*#__PURE__*/ createLucideIcon("microwave", registry.microwave);
+
+/** Renders the "midi-port" icon from https://lucide.dev/icons/midi-port. */
+export const MidiPortIcon = /*#__PURE__*/ createLucideIcon("midi-port", registry.midiPort);
 
 /** Renders the "milestone" icon from https://lucide.dev/icons/milestone. */
 export const MilestoneIcon = /*#__PURE__*/ createLucideIcon("milestone", registry.milestone);
@@ -4249,6 +4678,9 @@ export const MonitorPauseIcon = /*#__PURE__*/ createLucideIcon(
 	registry.monitorPause,
 );
 
+/** Renders the "monitor-pc" icon from https://lucide.dev/icons/monitor-pc. */
+export const MonitorPcIcon = /*#__PURE__*/ createLucideIcon("monitor-pc", registry.monitorPc);
+
 /** Renders the "monitor-play" icon from https://lucide.dev/icons/monitor-play. */
 export const MonitorPlayIcon = /*#__PURE__*/ createLucideIcon("monitor-play", registry.monitorPlay);
 
@@ -4278,6 +4710,15 @@ export const MoonIcon = /*#__PURE__*/ createLucideIcon("moon", registry.moon);
 
 /** Renders the "moon-star" icon from https://lucide.dev/icons/moon-star. */
 export const MoonStarIcon = /*#__PURE__*/ createLucideIcon("moon-star", registry.moonStar);
+
+/** Renders the "mop" icon from https://lucide.dev/icons/mop. */
+export const MopIcon = /*#__PURE__*/ createLucideIcon("mop", registry.mop);
+
+/** Renders the "mop-sparkles" icon from https://lucide.dev/icons/mop-sparkles. */
+export const MopSparklesIcon = /*#__PURE__*/ createLucideIcon("mop-sparkles", registry.mopSparkles);
+
+/** Renders the "mosque" icon from https://lucide.dev/icons/mosque. */
+export const MosqueIcon = /*#__PURE__*/ createLucideIcon("mosque", registry.mosque);
 
 /** Renders the "motorbike" icon from https://lucide.dev/icons/motorbike. */
 export const MotorbikeIcon = /*#__PURE__*/ createLucideIcon("motorbike", registry.motorbike);
@@ -4332,6 +4773,12 @@ export const MousePointerClickIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "mouse-right" icon from https://lucide.dev/icons/mouse-right. */
 export const MouseRightIcon = /*#__PURE__*/ createLucideIcon("mouse-right", registry.mouseRight);
+
+/** Renders the "mouth" icon from https://lucide.dev/icons/mouth. */
+export const MouthIcon = /*#__PURE__*/ createLucideIcon("mouth", registry.mouth);
+
+/** Renders the "mouth-off" icon from https://lucide.dev/icons/mouth-off. */
+export const MouthOffIcon = /*#__PURE__*/ createLucideIcon("mouth-off", registry.mouthOff);
 
 /** Renders the "move" icon from https://lucide.dev/icons/move. */
 export const MoveIcon = /*#__PURE__*/ createLucideIcon("move", registry.move);
@@ -4396,18 +4843,6 @@ export const MoveVerticalIcon = /*#__PURE__*/ createLucideIcon(
 	registry.moveVertical,
 );
 
-/** Renders the "music" icon from https://lucide.dev/icons/music. */
-export const MusicIcon = /*#__PURE__*/ createLucideIcon("music", registry.music);
-
-/** Renders the "music-2" icon from https://lucide.dev/icons/music-2. */
-export const Music2Icon = /*#__PURE__*/ createLucideIcon("music-2", registry.music2);
-
-/** Renders the "music-3" icon from https://lucide.dev/icons/music-3. */
-export const Music3Icon = /*#__PURE__*/ createLucideIcon("music-3", registry.music3);
-
-/** Renders the "music-4" icon from https://lucide.dev/icons/music-4. */
-export const Music4Icon = /*#__PURE__*/ createLucideIcon("music-4", registry.music4);
-
 /** Renders the "navigation" icon from https://lucide.dev/icons/navigation. */
 export const NavigationIcon = /*#__PURE__*/ createLucideIcon("navigation", registry.navigation);
 
@@ -4426,6 +4861,9 @@ export const NavigationOffIcon = /*#__PURE__*/ createLucideIcon(
 	registry.navigationOff,
 );
 
+/** Renders the "nepali-rupee" icon from https://lucide.dev/icons/nepali-rupee. */
+export const NepaliRupeeIcon = /*#__PURE__*/ createLucideIcon("nepali-rupee", registry.nepaliRupee);
+
 /** Renders the "network" icon from https://lucide.dev/icons/network. */
 export const NetworkIcon = /*#__PURE__*/ createLucideIcon("network", registry.network);
 
@@ -4440,6 +4878,9 @@ export const NonBinaryIcon = /*#__PURE__*/ createLucideIcon("non-binary", regist
 
 /** Renders the "notebook" icon from https://lucide.dev/icons/notebook. */
 export const NotebookIcon = /*#__PURE__*/ createLucideIcon("notebook", registry.notebook);
+
+/** Renders the "notebook-dot" icon from https://lucide.dev/icons/notebook-dot. */
+export const NotebookDotIcon = /*#__PURE__*/ createLucideIcon("notebook-dot", registry.notebookDot);
 
 /** Renders the "notebook-pen" icon from https://lucide.dev/icons/notebook-pen. */
 export const NotebookPenIcon = /*#__PURE__*/ createLucideIcon("notebook-pen", registry.notebookPen);
@@ -4687,6 +5128,9 @@ export const ParasolIcon = /*#__PURE__*/ createLucideIcon("parasol", registry.pa
 /** Renders the "parentheses" icon from https://lucide.dev/icons/parentheses. */
 export const ParenthesesIcon = /*#__PURE__*/ createLucideIcon("parentheses", registry.parentheses);
 
+/** Renders the "park" icon from https://lucide.dev/icons/park. */
+export const ParkIcon = /*#__PURE__*/ createLucideIcon("park", registry.park);
+
 /** Renders the "parking-meter" icon from https://lucide.dev/icons/parking-meter. */
 export const ParkingMeterIcon = /*#__PURE__*/ createLucideIcon(
 	"parking-meter",
@@ -4741,6 +5185,12 @@ export const PentagonIcon = /*#__PURE__*/ createLucideIcon("pentagon", registry.
 /** Renders the "percent" icon from https://lucide.dev/icons/percent. */
 export const PercentIcon = /*#__PURE__*/ createLucideIcon("percent", registry.percent);
 
+/** Renders the "perfume-bottle" icon from https://lucide.dev/icons/perfume-bottle. */
+export const PerfumeBottleIcon = /*#__PURE__*/ createLucideIcon(
+	"perfume-bottle",
+	registry.perfumeBottle,
+);
+
 /** Renders the "person-standing" icon from https://lucide.dev/icons/person-standing. */
 export const PersonStandingIcon = /*#__PURE__*/ createLucideIcon(
 	"person-standing",
@@ -4773,6 +5223,9 @@ export const PhoneIncomingIcon = /*#__PURE__*/ createLucideIcon(
 	"phone-incoming",
 	registry.phoneIncoming,
 );
+
+/** Renders the "phone-log" icon from https://lucide.dev/icons/phone-log. */
+export const PhoneLogIcon = /*#__PURE__*/ createLucideIcon("phone-log", registry.phoneLog);
 
 /** Renders the "phone-missed" icon from https://lucide.dev/icons/phone-missed. */
 export const PhoneMissedIcon = /*#__PURE__*/ createLucideIcon("phone-missed", registry.phoneMissed);
@@ -4855,11 +5308,29 @@ export const PlaneTakeoffIcon = /*#__PURE__*/ createLucideIcon(
 	registry.planeTakeoff,
 );
 
+/** Renders the "plant-pot" icon from https://lucide.dev/icons/plant-pot. */
+export const PlantPotIcon = /*#__PURE__*/ createLucideIcon("plant-pot", registry.plantPot);
+
 /** Renders the "play" icon from https://lucide.dev/icons/play. */
 export const PlayIcon = /*#__PURE__*/ createLucideIcon("play", registry.play);
 
 /** Renders the "play-off" icon from https://lucide.dev/icons/play-off. */
 export const PlayOffIcon = /*#__PURE__*/ createLucideIcon("play-off", registry.playOff);
+
+/** Renders the "playing-card" icon from https://lucide.dev/icons/playing-card. */
+export const PlayingCardIcon = /*#__PURE__*/ createLucideIcon("playing-card", registry.playingCard);
+
+/** Renders the "playing-cards" icon from https://lucide.dev/icons/playing-cards. */
+export const PlayingCardsIcon = /*#__PURE__*/ createLucideIcon(
+	"playing-cards",
+	registry.playingCards,
+);
+
+/** Renders the "playing-cards-fan" icon from https://lucide.dev/icons/playing-cards-fan. */
+export const PlayingCardsFanIcon = /*#__PURE__*/ createLucideIcon(
+	"playing-cards-fan",
+	registry.playingCardsFan,
+);
 
 /** Renders the "plug" icon from https://lucide.dev/icons/plug. */
 export const PlugIcon = /*#__PURE__*/ createLucideIcon("plug", registry.plug);
@@ -4875,9 +5346,6 @@ export const PlusIcon = /*#__PURE__*/ createLucideIcon("plus", registry.plus);
 
 /** Renders the "pocket-knife" icon from https://lucide.dev/icons/pocket-knife. */
 export const PocketKnifeIcon = /*#__PURE__*/ createLucideIcon("pocket-knife", registry.pocketKnife);
-
-/** Renders the "podcast" icon from https://lucide.dev/icons/podcast. */
-export const PodcastIcon = /*#__PURE__*/ createLucideIcon("podcast", registry.podcast);
 
 /** Renders the "podium" icon from https://lucide.dev/icons/podium. */
 export const PodiumIcon = /*#__PURE__*/ createLucideIcon("podium", registry.podium);
@@ -4914,6 +5382,9 @@ export const PresentationIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "printer" icon from https://lucide.dev/icons/printer. */
 export const PrinterIcon = /*#__PURE__*/ createLucideIcon("printer", registry.printer);
+
+/** Renders the "printer-3d" icon from https://lucide.dev/icons/printer-3d. */
+export const Printer3dIcon = /*#__PURE__*/ createLucideIcon("printer-3d", registry.printer3d);
 
 /** Renders the "printer-check" icon from https://lucide.dev/icons/printer-check. */
 export const PrinterCheckIcon = /*#__PURE__*/ createLucideIcon(
@@ -5137,6 +5608,12 @@ export const RibbonIcon = /*#__PURE__*/ createLucideIcon("ribbon", registry.ribb
 /** Renders the "road" icon from https://lucide.dev/icons/road. */
 export const RoadIcon = /*#__PURE__*/ createLucideIcon("road", registry.road);
 
+/** Renders the "robot-arm" icon from https://lucide.dev/icons/robot-arm. */
+export const RobotArmIcon = /*#__PURE__*/ createLucideIcon("robot-arm", registry.robotArm);
+
+/** Renders the "robot-vacuum" icon from https://lucide.dev/icons/robot-vacuum. */
+export const RobotVacuumIcon = /*#__PURE__*/ createLucideIcon("robot-vacuum", registry.robotVacuum);
+
 /** Renders the "rocket" icon from https://lucide.dev/icons/rocket. */
 export const RocketIcon = /*#__PURE__*/ createLucideIcon("rocket", registry.rocket);
 
@@ -5161,6 +5638,12 @@ export const Rotate3dIcon = /*#__PURE__*/ createLucideIcon("rotate-3d", registry
 /** Renders the "rotate-ccw" icon from https://lucide.dev/icons/rotate-ccw. */
 export const RotateCcwIcon = /*#__PURE__*/ createLucideIcon("rotate-ccw", registry.rotateCcw);
 
+/** Renders the "rotate-ccw-clock" icon from https://lucide.dev/icons/rotate-ccw-clock. */
+export const RotateCcwClockIcon = /*#__PURE__*/ createLucideIcon(
+	"rotate-ccw-clock",
+	registry.rotateCcwClock,
+);
+
 /** Renders the "rotate-ccw-key" icon from https://lucide.dev/icons/rotate-ccw-key. */
 export const RotateCcwKeyIcon = /*#__PURE__*/ createLucideIcon(
 	"rotate-ccw-key",
@@ -5175,6 +5658,18 @@ export const RotateCcwSquareIcon = /*#__PURE__*/ createLucideIcon(
 
 /** Renders the "rotate-cw" icon from https://lucide.dev/icons/rotate-cw. */
 export const RotateCwIcon = /*#__PURE__*/ createLucideIcon("rotate-cw", registry.rotateCw);
+
+/** Renders the "rotate-cw-clock" icon from https://lucide.dev/icons/rotate-cw-clock. */
+export const RotateCwClockIcon = /*#__PURE__*/ createLucideIcon(
+	"rotate-cw-clock",
+	registry.rotateCwClock,
+);
+
+/** Renders the "rotate-cw-fading-clock" icon from https://lucide.dev/icons/rotate-cw-fading-clock. */
+export const RotateCwFadingClockIcon = /*#__PURE__*/ createLucideIcon(
+	"rotate-cw-fading-clock",
+	registry.rotateCwFadingClock,
+);
 
 /** Renders the "rotate-cw-square" icon from https://lucide.dev/icons/rotate-cw-square. */
 export const RotateCwSquareIcon = /*#__PURE__*/ createLucideIcon(
@@ -5202,6 +5697,9 @@ export const Rows4Icon = /*#__PURE__*/ createLucideIcon("rows-4", registry.rows4
 
 /** Renders the "rss" icon from https://lucide.dev/icons/rss. */
 export const RssIcon = /*#__PURE__*/ createLucideIcon("rss", registry.rss);
+
+/** Renders the "rugby-ball" icon from https://lucide.dev/icons/rugby-ball. */
+export const RugbyBallIcon = /*#__PURE__*/ createLucideIcon("rugby-ball", registry.rugbyBall);
 
 /** Renders the "ruler" icon from https://lucide.dev/icons/ruler. */
 export const RulerIcon = /*#__PURE__*/ createLucideIcon("ruler", registry.ruler);
@@ -5272,6 +5770,9 @@ export const ScanIcon = /*#__PURE__*/ createLucideIcon("scan", registry.scan);
 /** Renders the "scan-barcode" icon from https://lucide.dev/icons/scan-barcode. */
 export const ScanBarcodeIcon = /*#__PURE__*/ createLucideIcon("scan-barcode", registry.scanBarcode);
 
+/** Renders the "scan-box" icon from https://lucide.dev/icons/scan-box. */
+export const ScanBoxIcon = /*#__PURE__*/ createLucideIcon("scan-box", registry.scanBox);
+
 /** Renders the "scan-eye" icon from https://lucide.dev/icons/scan-eye. */
 export const ScanEyeIcon = /*#__PURE__*/ createLucideIcon("scan-eye", registry.scanEye);
 
@@ -5289,6 +5790,9 @@ export const ScanQrCodeIcon = /*#__PURE__*/ createLucideIcon("scan-qr-code", reg
 
 /** Renders the "scan-search" icon from https://lucide.dev/icons/scan-search. */
 export const ScanSearchIcon = /*#__PURE__*/ createLucideIcon("scan-search", registry.scanSearch);
+
+/** Renders the "scan-square" icon from https://lucide.dev/icons/scan-square. */
+export const ScanSquareIcon = /*#__PURE__*/ createLucideIcon("scan-square", registry.scanSquare);
 
 /** Renders the "scan-text" icon from https://lucide.dev/icons/scan-text. */
 export const ScanTextIcon = /*#__PURE__*/ createLucideIcon("scan-text", registry.scanText);
@@ -5308,6 +5812,12 @@ export const ScissorsLineDashedIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "scooter" icon from https://lucide.dev/icons/scooter. */
 export const ScooterIcon = /*#__PURE__*/ createLucideIcon("scooter", registry.scooter);
 
+/** Renders the "scratch-blocks" icon from https://lucide.dev/icons/scratch-blocks. */
+export const ScratchBlocksIcon = /*#__PURE__*/ createLucideIcon(
+	"scratch-blocks",
+	registry.scratchBlocks,
+);
+
 /** Renders the "screen-share" icon from https://lucide.dev/icons/screen-share. */
 export const ScreenShareIcon = /*#__PURE__*/ createLucideIcon("screen-share", registry.screenShare);
 
@@ -5316,6 +5826,9 @@ export const ScreenShareOffIcon = /*#__PURE__*/ createLucideIcon(
 	"screen-share-off",
 	registry.screenShareOff,
 );
+
+/** Renders the "screw" icon from https://lucide.dev/icons/screw. */
+export const ScrewIcon = /*#__PURE__*/ createLucideIcon("screw", registry.screw);
 
 /** Renders the "scroll" icon from https://lucide.dev/icons/scroll. */
 export const ScrollIcon = /*#__PURE__*/ createLucideIcon("scroll", registry.scroll);
@@ -5377,8 +5890,14 @@ export const ServerCogIcon = /*#__PURE__*/ createLucideIcon("server-cog", regist
 /** Renders the "server-crash" icon from https://lucide.dev/icons/server-crash. */
 export const ServerCrashIcon = /*#__PURE__*/ createLucideIcon("server-crash", registry.serverCrash);
 
+/** Renders the "server-nas" icon from https://lucide.dev/icons/server-nas. */
+export const ServerNasIcon = /*#__PURE__*/ createLucideIcon("server-nas", registry.serverNas);
+
 /** Renders the "server-off" icon from https://lucide.dev/icons/server-off. */
 export const ServerOffIcon = /*#__PURE__*/ createLucideIcon("server-off", registry.serverOff);
+
+/** Renders the "server-plus" icon from https://lucide.dev/icons/server-plus. */
+export const ServerPlusIcon = /*#__PURE__*/ createLucideIcon("server-plus", registry.serverPlus);
 
 /** Renders the "settings" icon from https://lucide.dev/icons/settings. */
 export const SettingsIcon = /*#__PURE__*/ createLucideIcon("settings", registry.settings);
@@ -5437,6 +5956,18 @@ export const ShieldEllipsisIcon = /*#__PURE__*/ createLucideIcon(
 /** Renders the "shield-half" icon from https://lucide.dev/icons/shield-half. */
 export const ShieldHalfIcon = /*#__PURE__*/ createLucideIcon("shield-half", registry.shieldHalf);
 
+/** Renders the "shield-house" icon from https://lucide.dev/icons/shield-house. */
+export const ShieldHouseIcon = /*#__PURE__*/ createLucideIcon("shield-house", registry.shieldHouse);
+
+/** Renders the "shield-keyhole" icon from https://lucide.dev/icons/shield-keyhole. */
+export const ShieldKeyholeIcon = /*#__PURE__*/ createLucideIcon(
+	"shield-keyhole",
+	registry.shieldKeyhole,
+);
+
+/** Renders the "shield-lock" icon from https://lucide.dev/icons/shield-lock. */
+export const ShieldLockIcon = /*#__PURE__*/ createLucideIcon("shield-lock", registry.shieldLock);
+
 /** Renders the "shield-minus" icon from https://lucide.dev/icons/shield-minus. */
 export const ShieldMinusIcon = /*#__PURE__*/ createLucideIcon("shield-minus", registry.shieldMinus);
 
@@ -5461,6 +5992,9 @@ export const ShieldXIcon = /*#__PURE__*/ createLucideIcon("shield-x", registry.s
 /** Renders the "ship" icon from https://lucide.dev/icons/ship. */
 export const ShipIcon = /*#__PURE__*/ createLucideIcon("ship", registry.ship);
 
+/** Renders the "ship-cargo" icon from https://lucide.dev/icons/ship-cargo. */
+export const ShipCargoIcon = /*#__PURE__*/ createLucideIcon("ship-cargo", registry.shipCargo);
+
 /** Renders the "ship-wheel" icon from https://lucide.dev/icons/ship-wheel. */
 export const ShipWheelIcon = /*#__PURE__*/ createLucideIcon("ship-wheel", registry.shipWheel);
 
@@ -5482,6 +6016,18 @@ export const ShoppingCartIcon = /*#__PURE__*/ createLucideIcon(
 	registry.shoppingCart,
 );
 
+/** Renders the "shopping-cart-minus" icon from https://lucide.dev/icons/shopping-cart-minus. */
+export const ShoppingCartMinusIcon = /*#__PURE__*/ createLucideIcon(
+	"shopping-cart-minus",
+	registry.shoppingCartMinus,
+);
+
+/** Renders the "shopping-cart-plus" icon from https://lucide.dev/icons/shopping-cart-plus. */
+export const ShoppingCartPlusIcon = /*#__PURE__*/ createLucideIcon(
+	"shopping-cart-plus",
+	registry.shoppingCartPlus,
+);
+
 /** Renders the "shovel" icon from https://lucide.dev/icons/shovel. */
 export const ShovelIcon = /*#__PURE__*/ createLucideIcon("shovel", registry.shovel);
 
@@ -5493,6 +6039,9 @@ export const ShredderIcon = /*#__PURE__*/ createLucideIcon("shredder", registry.
 
 /** Renders the "shrimp" icon from https://lucide.dev/icons/shrimp. */
 export const ShrimpIcon = /*#__PURE__*/ createLucideIcon("shrimp", registry.shrimp);
+
+/** Renders the "shrimp-off" icon from https://lucide.dev/icons/shrimp-off. */
+export const ShrimpOffIcon = /*#__PURE__*/ createLucideIcon("shrimp-off", registry.shrimpOff);
 
 /** Renders the "shrink" icon from https://lucide.dev/icons/shrink. */
 export const ShrinkIcon = /*#__PURE__*/ createLucideIcon("shrink", registry.shrink);
@@ -5536,6 +6085,12 @@ export const SignpostBigIcon = /*#__PURE__*/ createLucideIcon("signpost-big", re
 /** Renders the "siren" icon from https://lucide.dev/icons/siren. */
 export const SirenIcon = /*#__PURE__*/ createLucideIcon("siren", registry.siren);
 
+/** Renders the "sixteenth-notes" icon from https://lucide.dev/icons/sixteenth-notes. */
+export const SixteenthNotesIcon = /*#__PURE__*/ createLucideIcon(
+	"sixteenth-notes",
+	registry.sixteenthNotes,
+);
+
 /** Renders the "skip-back" icon from https://lucide.dev/icons/skip-back. */
 export const SkipBackIcon = /*#__PURE__*/ createLucideIcon("skip-back", registry.skipBack);
 
@@ -5578,11 +6133,11 @@ export const SmartphoneNfcIcon = /*#__PURE__*/ createLucideIcon(
 	registry.smartphoneNfc,
 );
 
-/** Renders the "smile" icon from https://lucide.dev/icons/smile. */
-export const SmileIcon = /*#__PURE__*/ createLucideIcon("smile", registry.smile);
-
-/** Renders the "smile-plus" icon from https://lucide.dev/icons/smile-plus. */
-export const SmilePlusIcon = /*#__PURE__*/ createLucideIcon("smile-plus", registry.smilePlus);
+/** Renders the "smartphone-user-round" icon from https://lucide.dev/icons/smartphone-user-round. */
+export const SmartphoneUserRoundIcon = /*#__PURE__*/ createLucideIcon(
+	"smartphone-user-round",
+	registry.smartphoneUserRound,
+);
 
 /** Renders the "snail" icon from https://lucide.dev/icons/snail. */
 export const SnailIcon = /*#__PURE__*/ createLucideIcon("snail", registry.snail);
@@ -5758,6 +6313,12 @@ export const SquareAsteriskIcon = /*#__PURE__*/ createLucideIcon(
 	registry.squareAsterisk,
 );
 
+/** Renders the "square-bookmark" icon from https://lucide.dev/icons/square-bookmark. */
+export const SquareBookmarkIcon = /*#__PURE__*/ createLucideIcon(
+	"square-bookmark",
+	registry.squareBookmark,
+);
+
 /** Renders the "square-bottom-dashed-scissors" icon from https://lucide.dev/icons/square-bottom-dashed-scissors. */
 export const SquareBottomDashedScissorsIcon = /*#__PURE__*/ createLucideIcon(
 	"square-bottom-dashed-scissors",
@@ -5848,6 +6409,12 @@ export const SquareDashedMousePointerIcon = /*#__PURE__*/ createLucideIcon(
 	registry.squareDashedMousePointer,
 );
 
+/** Renders the "square-dashed-plus" icon from https://lucide.dev/icons/square-dashed-plus. */
+export const SquareDashedPlusIcon = /*#__PURE__*/ createLucideIcon(
+	"square-dashed-plus",
+	registry.squareDashedPlus,
+);
+
 /** Renders the "square-dashed-text" icon from https://lucide.dev/icons/square-dashed-text. */
 export const SquareDashedTextIcon = /*#__PURE__*/ createLucideIcon(
 	"square-dashed-text",
@@ -5858,6 +6425,24 @@ export const SquareDashedTextIcon = /*#__PURE__*/ createLucideIcon(
 export const SquareDashedTopSolidIcon = /*#__PURE__*/ createLucideIcon(
 	"square-dashed-top-solid",
 	registry.squareDashedTopSolid,
+);
+
+/** Renders the "square-dashed-x" icon from https://lucide.dev/icons/square-dashed-x. */
+export const SquareDashedXIcon = /*#__PURE__*/ createLucideIcon(
+	"square-dashed-x",
+	registry.squareDashedX,
+);
+
+/** Renders the "square-dashed-x-corner" icon from https://lucide.dev/icons/square-dashed-x-corner. */
+export const SquareDashedXCornerIcon = /*#__PURE__*/ createLucideIcon(
+	"square-dashed-x-corner",
+	registry.squareDashedXCorner,
+);
+
+/** Renders the "square-dimensions" icon from https://lucide.dev/icons/square-dimensions. */
+export const SquareDimensionsIcon = /*#__PURE__*/ createLucideIcon(
+	"square-dimensions",
+	registry.squareDimensions,
 );
 
 /** Renders the "square-divide" icon from https://lucide.dev/icons/square-divide. */
@@ -5871,6 +6456,12 @@ export const SquareDotIcon = /*#__PURE__*/ createLucideIcon("square-dot", regist
 
 /** Renders the "square-equal" icon from https://lucide.dev/icons/square-equal. */
 export const SquareEqualIcon = /*#__PURE__*/ createLucideIcon("square-equal", registry.squareEqual);
+
+/** Renders the "square-exclamation-point" icon from https://lucide.dev/icons/square-exclamation-point. */
+export const SquareExclamationPointIcon = /*#__PURE__*/ createLucideIcon(
+	"square-exclamation-point",
+	registry.squareExclamationPoint,
+);
 
 /** Renders the "square-function" icon from https://lucide.dev/icons/square-function. */
 export const SquareFunctionIcon = /*#__PURE__*/ createLucideIcon(
@@ -5904,6 +6495,9 @@ export const SquareMousePointerIcon = /*#__PURE__*/ createLucideIcon(
 	"square-mouse-pointer",
 	registry.squareMousePointer,
 );
+
+/** Renders the "square-off" icon from https://lucide.dev/icons/square-off. */
+export const SquareOffIcon = /*#__PURE__*/ createLucideIcon("square-off", registry.squareOff);
 
 /** Renders the "square-parking" icon from https://lucide.dev/icons/square-parking. */
 export const SquareParkingIcon = /*#__PURE__*/ createLucideIcon(
@@ -5971,6 +6565,12 @@ export const SquareSigmaIcon = /*#__PURE__*/ createLucideIcon("square-sigma", re
 /** Renders the "square-slash" icon from https://lucide.dev/icons/square-slash. */
 export const SquareSlashIcon = /*#__PURE__*/ createLucideIcon("square-slash", registry.squareSlash);
 
+/** Renders the "square-sparkles" icon from https://lucide.dev/icons/square-sparkles. */
+export const SquareSparklesIcon = /*#__PURE__*/ createLucideIcon(
+	"square-sparkles",
+	registry.squareSparkles,
+);
+
 /** Renders the "square-split-horizontal" icon from https://lucide.dev/icons/square-split-horizontal. */
 export const SquareSplitHorizontalIcon = /*#__PURE__*/ createLucideIcon(
 	"square-split-horizontal",
@@ -6003,6 +6603,9 @@ export const SquareTerminalIcon = /*#__PURE__*/ createLucideIcon(
 	"square-terminal",
 	registry.squareTerminal,
 );
+
+/** Renders the "square-text" icon from https://lucide.dev/icons/square-text. */
+export const SquareTextIcon = /*#__PURE__*/ createLucideIcon("square-text", registry.squareText);
 
 /** Renders the "square-user" icon from https://lucide.dev/icons/square-user. */
 export const SquareUserIcon = /*#__PURE__*/ createLucideIcon("square-user", registry.squareUser);
@@ -6328,6 +6931,24 @@ export const TextAlignJustifyIcon = /*#__PURE__*/ createLucideIcon(
 	registry.textAlignJustify,
 );
 
+/** Renders the "text-align-justify-center" icon from https://lucide.dev/icons/text-align-justify-center. */
+export const TextAlignJustifyCenterIcon = /*#__PURE__*/ createLucideIcon(
+	"text-align-justify-center",
+	registry.textAlignJustifyCenter,
+);
+
+/** Renders the "text-align-justify-end" icon from https://lucide.dev/icons/text-align-justify-end. */
+export const TextAlignJustifyEndIcon = /*#__PURE__*/ createLucideIcon(
+	"text-align-justify-end",
+	registry.textAlignJustifyEnd,
+);
+
+/** Renders the "text-align-justify-start" icon from https://lucide.dev/icons/text-align-justify-start. */
+export const TextAlignJustifyStartIcon = /*#__PURE__*/ createLucideIcon(
+	"text-align-justify-start",
+	registry.textAlignJustifyStart,
+);
+
 /** Renders the "text-align-start" icon from https://lucide.dev/icons/text-align-start. */
 export const TextAlignStartIcon = /*#__PURE__*/ createLucideIcon(
 	"text-align-start",
@@ -6378,6 +6999,9 @@ export const ThumbsDownIcon = /*#__PURE__*/ createLucideIcon("thumbs-down", regi
 
 /** Renders the "thumbs-up" icon from https://lucide.dev/icons/thumbs-up. */
 export const ThumbsUpIcon = /*#__PURE__*/ createLucideIcon("thumbs-up", registry.thumbsUp);
+
+/** Renders the "tic-tac-toe" icon from https://lucide.dev/icons/tic-tac-toe. */
+export const TicTacToeIcon = /*#__PURE__*/ createLucideIcon("tic-tac-toe", registry.ticTacToe);
 
 /** Renders the "ticket" icon from https://lucide.dev/icons/ticket. */
 export const TicketIcon = /*#__PURE__*/ createLucideIcon("ticket", registry.ticket);
@@ -6433,11 +7057,23 @@ export const ToggleRightIcon = /*#__PURE__*/ createLucideIcon("toggle-right", re
 /** Renders the "toilet" icon from https://lucide.dev/icons/toilet. */
 export const ToiletIcon = /*#__PURE__*/ createLucideIcon("toilet", registry.toilet);
 
+/** Renders the "tombstone" icon from https://lucide.dev/icons/tombstone. */
+export const TombstoneIcon = /*#__PURE__*/ createLucideIcon("tombstone", registry.tombstone);
+
 /** Renders the "tool-case" icon from https://lucide.dev/icons/tool-case. */
 export const ToolCaseIcon = /*#__PURE__*/ createLucideIcon("tool-case", registry.toolCase);
 
 /** Renders the "toolbox" icon from https://lucide.dev/icons/toolbox. */
 export const ToolboxIcon = /*#__PURE__*/ createLucideIcon("toolbox", registry.toolbox);
+
+/** Renders the "toothbrush" icon from https://lucide.dev/icons/toothbrush. */
+export const ToothbrushIcon = /*#__PURE__*/ createLucideIcon("toothbrush", registry.toothbrush);
+
+/** Renders the "toothbrush-sparkles" icon from https://lucide.dev/icons/toothbrush-sparkles. */
+export const ToothbrushSparklesIcon = /*#__PURE__*/ createLucideIcon(
+	"toothbrush-sparkles",
+	registry.toothbrushSparkles,
+);
 
 /** Renders the "tornado" icon from https://lucide.dev/icons/tornado. */
 export const TornadoIcon = /*#__PURE__*/ createLucideIcon("tornado", registry.tornado);
@@ -6469,6 +7105,9 @@ export const TractorIcon = /*#__PURE__*/ createLucideIcon("tractor", registry.tr
 /** Renders the "traffic-cone" icon from https://lucide.dev/icons/traffic-cone. */
 export const TrafficConeIcon = /*#__PURE__*/ createLucideIcon("traffic-cone", registry.trafficCone);
 
+/** Renders the "trailer" icon from https://lucide.dev/icons/trailer. */
+export const TrailerIcon = /*#__PURE__*/ createLucideIcon("trailer", registry.trailer);
+
 /** Renders the "train-front" icon from https://lucide.dev/icons/train-front. */
 export const TrainFrontIcon = /*#__PURE__*/ createLucideIcon("train-front", registry.trainFront);
 
@@ -6490,8 +7129,8 @@ export const TransgenderIcon = /*#__PURE__*/ createLucideIcon("transgender", reg
 /** Renders the "trash" icon from https://lucide.dev/icons/trash. */
 export const TrashIcon = /*#__PURE__*/ createLucideIcon("trash", registry.trash);
 
-/** Renders the "trash-2" icon from https://lucide.dev/icons/trash-2. */
-export const Trash2Icon = /*#__PURE__*/ createLucideIcon("trash-2", registry.trash2);
+/** Renders the "trash-off" icon from https://lucide.dev/icons/trash-off. */
+export const TrashOffIcon = /*#__PURE__*/ createLucideIcon("trash-off", registry.trashOff);
 
 /** Renders the "tree-deciduous" icon from https://lucide.dev/icons/tree-deciduous. */
 export const TreeDeciduousIcon = /*#__PURE__*/ createLucideIcon(
@@ -6544,6 +7183,18 @@ export const TriangleRightIcon = /*#__PURE__*/ createLucideIcon(
 	registry.triangleRight,
 );
 
+/** Renders the "triangles-centerline-dashed-horizontal" icon from https://lucide.dev/icons/triangles-centerline-dashed-horizontal. */
+export const TrianglesCenterlineDashedHorizontalIcon = /*#__PURE__*/ createLucideIcon(
+	"triangles-centerline-dashed-horizontal",
+	registry.trianglesCenterlineDashedHorizontal,
+);
+
+/** Renders the "triangles-centerline-dashed-vertical" icon from https://lucide.dev/icons/triangles-centerline-dashed-vertical. */
+export const TrianglesCenterlineDashedVerticalIcon = /*#__PURE__*/ createLucideIcon(
+	"triangles-centerline-dashed-vertical",
+	registry.trianglesCenterlineDashedVertical,
+);
+
 /** Renders the "trophy" icon from https://lucide.dev/icons/trophy. */
 export const TrophyIcon = /*#__PURE__*/ createLucideIcon("trophy", registry.trophy);
 
@@ -6555,6 +7206,9 @@ export const TruckElectricIcon = /*#__PURE__*/ createLucideIcon(
 	"truck-electric",
 	registry.truckElectric,
 );
+
+/** Renders the "tube-lotion" icon from https://lucide.dev/icons/tube-lotion. */
+export const TubeLotionIcon = /*#__PURE__*/ createLucideIcon("tube-lotion", registry.tubeLotion);
 
 /** Renders the "turkish-lira" icon from https://lucide.dev/icons/turkish-lira. */
 export const TurkishLiraIcon = /*#__PURE__*/ createLucideIcon("turkish-lira", registry.turkishLira);
@@ -6634,6 +7288,9 @@ export const UploadIcon = /*#__PURE__*/ createLucideIcon("upload", registry.uplo
 /** Renders the "usb" icon from https://lucide.dev/icons/usb. */
 export const UsbIcon = /*#__PURE__*/ createLucideIcon("usb", registry.usb);
 
+/** Renders the "usb-c-port" icon from https://lucide.dev/icons/usb-c-port. */
+export const UsbCPortIcon = /*#__PURE__*/ createLucideIcon("usb-c-port", registry.usbCPort);
+
 /** Renders the "user" icon from https://lucide.dev/icons/user. */
 export const UserIcon = /*#__PURE__*/ createLucideIcon("user", registry.user);
 
@@ -6642,6 +7299,9 @@ export const UserCheckIcon = /*#__PURE__*/ createLucideIcon("user-check", regist
 
 /** Renders the "user-cog" icon from https://lucide.dev/icons/user-cog. */
 export const UserCogIcon = /*#__PURE__*/ createLucideIcon("user-cog", registry.userCog);
+
+/** Renders the "user-group" icon from https://lucide.dev/icons/user-group. */
+export const UserGroupIcon = /*#__PURE__*/ createLucideIcon("user-group", registry.userGroup);
 
 /** Renders the "user-key" icon from https://lucide.dev/icons/user-key. */
 export const UserKeyIcon = /*#__PURE__*/ createLucideIcon("user-key", registry.userKey);
@@ -6679,6 +7339,12 @@ export const UserRoundCogIcon = /*#__PURE__*/ createLucideIcon(
 	registry.userRoundCog,
 );
 
+/** Renders the "user-round-group" icon from https://lucide.dev/icons/user-round-group. */
+export const UserRoundGroupIcon = /*#__PURE__*/ createLucideIcon(
+	"user-round-group",
+	registry.userRoundGroup,
+);
+
 /** Renders the "user-round-key" icon from https://lucide.dev/icons/user-round-key. */
 export const UserRoundKeyIcon = /*#__PURE__*/ createLucideIcon(
 	"user-round-key",
@@ -6709,11 +7375,20 @@ export const UserRoundSearchIcon = /*#__PURE__*/ createLucideIcon(
 	registry.userRoundSearch,
 );
 
+/** Renders the "user-round-star" icon from https://lucide.dev/icons/user-round-star. */
+export const UserRoundStarIcon = /*#__PURE__*/ createLucideIcon(
+	"user-round-star",
+	registry.userRoundStar,
+);
+
 /** Renders the "user-round-x" icon from https://lucide.dev/icons/user-round-x. */
 export const UserRoundXIcon = /*#__PURE__*/ createLucideIcon("user-round-x", registry.userRoundX);
 
 /** Renders the "user-search" icon from https://lucide.dev/icons/user-search. */
 export const UserSearchIcon = /*#__PURE__*/ createLucideIcon("user-search", registry.userSearch);
+
+/** Renders the "user-shield" icon from https://lucide.dev/icons/user-shield. */
+export const UserShieldIcon = /*#__PURE__*/ createLucideIcon("user-shield", registry.userShield);
 
 /** Renders the "user-star" icon from https://lucide.dev/icons/user-star. */
 export const UserStarIcon = /*#__PURE__*/ createLucideIcon("user-star", registry.userStar);
@@ -6724,8 +7399,20 @@ export const UserXIcon = /*#__PURE__*/ createLucideIcon("user-x", registry.userX
 /** Renders the "users" icon from https://lucide.dev/icons/users. */
 export const UsersIcon = /*#__PURE__*/ createLucideIcon("users", registry.users);
 
+/** Renders the "users-collaboration" icon from https://lucide.dev/icons/users-collaboration. */
+export const UsersCollaborationIcon = /*#__PURE__*/ createLucideIcon(
+	"users-collaboration",
+	registry.usersCollaboration,
+);
+
 /** Renders the "users-round" icon from https://lucide.dev/icons/users-round. */
 export const UsersRoundIcon = /*#__PURE__*/ createLucideIcon("users-round", registry.usersRound);
+
+/** Renders the "users-round-collaboration" icon from https://lucide.dev/icons/users-round-collaboration. */
+export const UsersRoundCollaborationIcon = /*#__PURE__*/ createLucideIcon(
+	"users-round-collaboration",
+	registry.usersRoundCollaboration,
+);
 
 /** Renders the "utensils" icon from https://lucide.dev/icons/utensils. */
 export const UtensilsIcon = /*#__PURE__*/ createLucideIcon("utensils", registry.utensils);
@@ -6747,6 +7434,12 @@ export const VariableIcon = /*#__PURE__*/ createLucideIcon("variable", registry.
 
 /** Renders the "vault" icon from https://lucide.dev/icons/vault. */
 export const VaultIcon = /*#__PURE__*/ createLucideIcon("vault", registry.vault);
+
+/** Renders the "vector-polygon" icon from https://lucide.dev/icons/vector-polygon. */
+export const VectorPolygonIcon = /*#__PURE__*/ createLucideIcon(
+	"vector-polygon",
+	registry.vectorPolygon,
+);
 
 /** Renders the "vector-square" icon from https://lucide.dev/icons/vector-square. */
 export const VectorSquareIcon = /*#__PURE__*/ createLucideIcon(
@@ -6789,6 +7482,12 @@ export const VideotapeIcon = /*#__PURE__*/ createLucideIcon("videotape", registr
 
 /** Renders the "view" icon from https://lucide.dev/icons/view. */
 export const ViewIcon = /*#__PURE__*/ createLucideIcon("view", registry.view);
+
+/** Renders the "virus" icon from https://lucide.dev/icons/virus. */
+export const VirusIcon = /*#__PURE__*/ createLucideIcon("virus", registry.virus);
+
+/** Renders the "virus-off" icon from https://lucide.dev/icons/virus-off. */
+export const VirusOffIcon = /*#__PURE__*/ createLucideIcon("virus-off", registry.virusOff);
 
 /** Renders the "voicemail" icon from https://lucide.dev/icons/voicemail. */
 export const VoicemailIcon = /*#__PURE__*/ createLucideIcon("voicemail", registry.voicemail);
@@ -6904,6 +7603,9 @@ export const WheatIcon = /*#__PURE__*/ createLucideIcon("wheat", registry.wheat)
 /** Renders the "wheat-off" icon from https://lucide.dev/icons/wheat-off. */
 export const WheatOffIcon = /*#__PURE__*/ createLucideIcon("wheat-off", registry.wheatOff);
 
+/** Renders the "whistle" icon from https://lucide.dev/icons/whistle. */
+export const WhistleIcon = /*#__PURE__*/ createLucideIcon("whistle", registry.whistle);
+
 /** Renders the "whole-word" icon from https://lucide.dev/icons/whole-word. */
 export const WholeWordIcon = /*#__PURE__*/ createLucideIcon("whole-word", registry.wholeWord);
 
@@ -6915,6 +7617,9 @@ export const WifiCogIcon = /*#__PURE__*/ createLucideIcon("wifi-cog", registry.w
 
 /** Renders the "wifi-high" icon from https://lucide.dev/icons/wifi-high. */
 export const WifiHighIcon = /*#__PURE__*/ createLucideIcon("wifi-high", registry.wifiHigh);
+
+/** Renders the "wifi-lock" icon from https://lucide.dev/icons/wifi-lock. */
+export const WifiLockIcon = /*#__PURE__*/ createLucideIcon("wifi-lock", registry.wifiLock);
 
 /** Renders the "wifi-low" icon from https://lucide.dev/icons/wifi-low. */
 export const WifiLowIcon = /*#__PURE__*/ createLucideIcon("wifi-low", registry.wifiLow);
@@ -6938,6 +7643,12 @@ export const WindIcon = /*#__PURE__*/ createLucideIcon("wind", registry.wind);
 export const WindArrowDownIcon = /*#__PURE__*/ createLucideIcon(
 	"wind-arrow-down",
 	registry.windArrowDown,
+);
+
+/** Renders the "wind-arrow-up" icon from https://lucide.dev/icons/wind-arrow-up. */
+export const WindArrowUpIcon = /*#__PURE__*/ createLucideIcon(
+	"wind-arrow-up",
+	registry.windArrowUp,
 );
 
 /** Renders the "wine" icon from https://lucide.dev/icons/wine. */
