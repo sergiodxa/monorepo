@@ -138,6 +138,13 @@ export interface CI {
 	): Promise<GroupOutcome>;
 	/** The project's workspaces, from the `workspaces` field of its `package.json`. */
 	workspaces(): Promise<Workspace[]>;
+	/**
+	 * The tracked files matching a glob, relative to `root`, in path order, so a script finds
+	 * files to act on without reading the disk itself.
+	 *
+	 * @example await ci.files("**\/.env.example")
+	 */
+	files(glob: string): Promise<string[]>;
 	/** Prints a green closing message; a run that is not `passing` makes it a script error. */
 	success(title: string, detail?: string): void;
 	/** Prints a red closing message and fails the run, even when every step passed. */
@@ -151,6 +158,10 @@ export interface CI {
 	readonly runner: Runner;
 	/** The workspace paths a scoped run covers; `null` on a full run. */
 	readonly scope: readonly string[] | null;
+	/** The project root, where every step runs unless given a `cwd`, as an absolute path. */
+	readonly root: string;
+	/** The cores this machine can run on at once, to size a group's `concurrency`. */
+	readonly cores: number;
 }
 
 /** A CI script: the default export of the file a run loads. */

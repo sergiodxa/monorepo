@@ -40,6 +40,12 @@ export interface Workspace {
 	dependencies: string[];
 	/** Names of the workspaces that depend on this one, directly or through others. */
 	dependents: string[];
+	/**
+	 * What the workspace's checks read, as cache input globs: its own files, every workspace it
+	 * depends on directly or through others, and the files at the project root (lockfile,
+	 * shared configuration). A matrix entry over it caches on these by default.
+	 */
+	inputs: string[];
 	/** The workspace's tracked files, relative to the project root. */
 	files(): Promise<string[]>;
 	/** Whether a tracked file matches `glob`, read relative to the workspace. */
@@ -161,11 +167,13 @@ function buildWorkspaces(
 		);
 	}
 	let owned = partitionFiles([...manifests.keys()], files);
+	let pathOf = new Map([...nameOf].map(([path, name]) => [name, path]));
 	let workspaces: Workspace[] = [];
 	for (let [path, manifest] of manifests) {
 		let name = nameOf.get(path) ?? path;
 		let own = owned.get(path) ?? [];
 		let relative = own.map((file) => file.slice(path.length + 1));
+		let reached = reachableFrom(name, direct).map((dependency) => pathOf.get(dependency));
 		let workspace: Workspace = {
 			name,
 			path,
@@ -173,6 +181,9 @@ function buildWorkspaces(
 			manifest,
 			dependencies: direct.get(name) ?? [],
 			dependents: dependentsOf(name, direct),
+			inputs: [path, ...reached.filter((found) => found !== undefined)]
+				.map((found) => `${found}/**`)
+				.concat("*"),
 			files: async () => own,
 			has: (glob) => {
 				let matcher = fileGlob(glob);
@@ -213,16 +224,24 @@ function dependentsOf(name: string, direct: ReadonlyMap<string, readonly string[
 	return [...found].sort();
 }
 
-/** Every workspace `name` depends on, directly or through others. */
-export function transitiveDependencies(name: string, workspaces: readonly Workspace[]): string[] {
-	let byName = new Map(workspaces.map((workspace) => [workspace.name, workspace]));
+/** Every workspace `name` depends on, directly or through others, in name order. */
+function reachableFrom(name: string, direct: ReadonlyMap<string, readonly string[]>): string[] {
 	let found = new Set<string>();
-	let queue = [...(byName.get(name)?.dependencies ?? [])];
+	let queue = [...(direct.get(name) ?? [])];
 	while (queue.length > 0) {
 		let current = queue.shift();
 		if (current === undefined || found.has(current)) continue;
 		found.add(current);
-		queue.push(...(byName.get(current)?.dependencies ?? []));
+		queue.push(...(direct.get(current) ?? []));
 	}
+	found.delete(name);
 	return [...found].sort();
+}
+
+/** Every workspace `name` depends on, directly or through others. */
+export function transitiveDependencies(name: string, workspaces: readonly Workspace[]): string[] {
+	return reachableFrom(
+		name,
+		new Map(workspaces.map((workspace) => [workspace.name, workspace.dependencies])),
+	);
 }

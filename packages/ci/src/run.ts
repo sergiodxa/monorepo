@@ -34,7 +34,7 @@ import type {
 import type { Workspace } from "./workspaces.js";
 
 import { cacheDirectory, cacheKey, hashOutputs, readCache, writeCache } from "./cache.js";
-import { headCommit, isClean, repositoryRoot, sharedGitDirectory } from "./git.js";
+import { headCommit, isClean, matchingFiles, repositoryRoot, sharedGitDirectory } from "./git.js";
 import { namePattern } from "./glob.js";
 import { runCommand } from "./process.js";
 import { Semaphore } from "./semaphore.js";
@@ -274,12 +274,13 @@ class Run {
 	/** The `ci` object the script receives. */
 	api(): CI {
 		let status = (): RunStatus => this.status;
-		let { runner, scope } = this.options;
+		let { runner, scope, root } = this.options;
 		return {
 			step: (name, step, options) => this.step(name, step, options ?? {}),
 			parallel: (name, functions, options) => this.parallel(name, functions, options ?? {}),
 			matrix: (name, items, fn, options) => this.matrix(name, items, fn, options ?? {}),
 			workspaces: () => this.loadWorkspaces(),
+			files: (glob) => this.files(glob),
 			success: (title, detail) => this.close("success", title, detail),
 			failure: (title, detail) => this.close("failure", title, detail),
 			signoff: (title, detail) => this.signoff(title, detail),
@@ -288,6 +289,8 @@ class Run {
 			},
 			runner,
 			scope,
+			root,
+			cores: availableParallelism(),
 		};
 	}
 
@@ -297,6 +300,12 @@ class Run {
 			isSuccess(loaded) ? loaded.data : [],
 		);
 		return this.workspaces;
+	}
+
+	/** The tracked files matching `glob`, relative to the project root, in path order. */
+	async files(glob: string): Promise<string[]> {
+		let found = await matchingFiles(this.options.root, glob);
+		return isSuccess(found) ? found.data : [];
 	}
 
 	/** Whether the filters let a step with these addresses run. */
@@ -514,14 +523,7 @@ class Run {
 	 */
 	async defaultInputs(scope: Scope): Promise<string[]> {
 		let item = scope.entry?.item;
-		if (!isWorkspace(item)) return ["**"];
-		let workspaces = await this.loadWorkspaces();
-		let byName = new Map(workspaces.map((workspace) => [workspace.name, workspace]));
-		let paths = [
-			item.path,
-			...transitiveDependencies(item.name, workspaces).map((name) => byName.get(name)?.path),
-		];
-		return [...paths.filter((path) => path !== undefined).map((path) => `${path}/**`), "*"];
+		return isWorkspace(item) ? item.inputs : ["**"];
 	}
 
 	/**

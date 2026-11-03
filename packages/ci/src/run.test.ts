@@ -287,6 +287,12 @@ describe("workspaces and scope", () => {
 					["@acme/tokens", "packages/tokens", [], ["@acme/ui", "blog"]],
 					["@acme/ui", "packages/ui", ["@acme/tokens"], ["blog"]],
 				]);
+				expect(workspaces[0]?.inputs).toEqual([
+					"apps/blog/**",
+					"packages/tokens/**",
+					"packages/ui/**",
+					"*",
+				]);
 				expect(workspaces.filter((ws) => ws.has("**/*.test.ts")).map((ws) => ws.name)).toEqual([
 					"blog",
 				]);
@@ -312,6 +318,31 @@ describe("workspaces and scope", () => {
 		expect(seen).toEqual(["packages/ui"]);
 		expect(report.entries.map((entry) => entry.key)).toEqual(["blog", "@acme/ui"]);
 		expect(report.partial).toBe(true);
+	});
+});
+
+describe("project", () => {
+	test("ci.root, ci.cores and ci.files describe the project without the script reading the disk", async () => {
+		let seen: unknown[] = [];
+		let { root } = await run(
+			async (ci) => {
+				seen.push(
+					ci.root,
+					ci.cores > 0,
+					await ci.files("apps/*/.env.example"),
+					await ci.files("nothing/**"),
+				);
+			},
+			{
+				files: {
+					"package.json": "{}",
+					"apps/b/.env.example": "",
+					"apps/a/.env.example": "",
+					"apps/a/.dev.vars": "",
+				},
+			},
+		);
+		expect(seen).toEqual([root, true, ["apps/a/.env.example", "apps/b/.env.example"], []]);
 	});
 });
 

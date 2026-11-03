@@ -79,7 +79,15 @@ Run functions, or one call per item, concurrently as a named group. Options: `fa
 ### `ci.workspaces()`
 
 The workspaces of the root `package.json`, each with `name`, `path`, `absolute`, `manifest`,
-`dependencies`, `dependents`, `files()` and `has(glob)`.
+`dependencies`, `dependents`, `files()`, `has(glob)` and `inputs`: the cache input globs for its
+own files, every workspace it depends on and the root files, which a step extends with
+`cache: { inputs: [...ws.inputs, "fixtures/**"] }`.
+
+### `ci.files(glob)`, `ci.root`, `ci.cores`
+
+`files` lists the tracked files matching a glob, relative to the project root, so a script finds
+what to act on without reading the disk. `root` is the project root every step runs in, and
+`cores` the machine's available parallelism, for sizing `concurrency`.
 
 ### `ci.status`, `ci.runner`, `ci.scope`
 
@@ -318,13 +326,20 @@ import { defineCI } from "@sdxc/ci";
 
 export default defineCI(async (ci) => {
 	if (ci.runner === "remote") {
-		await ci.step("Example secrets", ["cp", ".env.example", ".env"], { halt: true });
+		for (let example of await ci.files("apps/*/.env.example")) {
+			await ci.step(`Secrets for ${example}`, [
+				"cp",
+				example,
+				example.replace(/example$/, "local"),
+			]);
+		}
 	}
 	await ci.step("Test", "npm test");
 });
 ```
 
-On the CI host `ci.runner` is `"remote"`, so the copy never overwrites a laptop's real `.env`.
+On the CI host `ci.runner` is `"remote"`, so the copies never overwrite a laptop's real
+`.env.local` files.
 `--runner remote` reproduces a CI run locally.
 
 ### Pattern: Cache a step that writes files

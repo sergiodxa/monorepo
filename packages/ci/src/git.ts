@@ -71,6 +71,16 @@ export async function trackedFiles(root: string): Promise<Result<string[], Comma
 	return success(entries(listed.data));
 }
 
+/** The tracked files under `root` matching a glob, relative to it, in path order. */
+export async function matchingFiles(
+	root: string,
+	glob: string,
+): Promise<Result<string[], CommandError>> {
+	let listed = await git(root, ["ls-files", "-z", "--", pathspec(glob)]);
+	if (isFailure(listed)) return listed;
+	return success(entries(listed.data).sort());
+}
+
 /** The pathspec git reads `pattern` as: a glob anchored at the root. */
 function pathspec(pattern: string): string {
 	return `:(glob)${pattern}`;
