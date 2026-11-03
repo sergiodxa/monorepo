@@ -830,6 +830,7 @@
       "dependencies": {
         "@sdxc/cli": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.1.0",
       },
     },

@@ -68,13 +68,17 @@ Types a script; the default export of the file `run` loads. A plain function wor
 Runs a shell command line, an argv without a shell, or a function, and resolves to
 `{ status, cached, duration, output }`. A function step gets `step.run(command)`,
 `step.log(...)` and `step.signal`; its outcome is the `Result` it returns, or a failure when a
-command inside it failed. Options: `halt`, `cache`, `cwd`, `env`, `timeout` (milliseconds).
+command inside it failed. Options: `halt`, `cache`, `cwd`, `env`, `timeout` (milliseconds),
+`retry` (run a failed step again, up to that many times; a pass on a retry is reported as flaky)
+and `weight` (concurrency slots the step holds, default 1).
 
 ### `ci.parallel(name, functions, options?)` and `ci.matrix(name, items, fn, options?)`
 
 Run functions, or one call per item, concurrently as a named group. Options: `failFast`
 (default `false`) and `concurrency` (default `os.availableParallelism()`); a matrix also takes
-`key` to name its entries. Only steps take a concurrency slot, so nesting never deadlocks.
+`key` to name its entries. Only steps take concurrency slots, so nesting never deadlocks. A
+matrix starts the entries that took longest in the previous run first, so the slowest one never
+starts last.
 
 ### `ci.workspaces()`
 
@@ -111,11 +115,19 @@ the workspace, the workspaces it depends on and the files at the root.
 ## Command line
 
 ```sh
-npx @sdxc/ci run <script> [--only <pattern>] [--skip <pattern>] [--scope <workspace>] [--push] [--json]
+npx @sdxc/ci run <script> [--only <pattern>] [--skip <pattern>] [--scope <workspace>] [--rerun-failed] [--push] [--json]
 npx @sdxc/ci list <script> [--matrix <name>] [--json]
 npx @sdxc/ci signoff [<sha>]
 npx @sdxc/ci verify <sha> [--wait 60s] [--repo owner/name]
+npx @sdxc/ci clean [--json]
 ```
+
+Every run keeps its report and one log file per step under `.git/sdxc-ci/runs/`, and prints
+the folder as its last line (`logs` in `--json`); the newest 20 runs are kept. On a terminal a
+status line names the steps still running and how long each has taken. On GitHub Actions each
+step's log folds into a group, a failed step is annotated, and the summary is written to the
+job's summary page. Cached passes unused for 30 days are dropped; `clean` removes the cache and
+the run history, keeping the records `signoff` reads.
 
 `--only` and `--skip` match step names, group names and entry addresses, with `*` spanning
 `/`. `verify` exits 0 when someone with write access signed the commit off, 1 when nobody did,
@@ -133,6 +145,17 @@ npx @sdxc/ci run ci.ts --push
 When every step passes, `--push` pushes exactly the tested commit to its upstream branch, then
 posts the `sdxc/ci` status. A rejected push, because someone pushed first, exits 1: pull, then
 run it again on the new commit.
+
+### Pattern: Re-run only what failed
+
+```sh
+npx @sdxc/ci run ci.ts
+npx @sdxc/ci run ci.ts --rerun-failed
+```
+
+`--rerun-failed` runs only the steps the last run failed, by label, so a fix to one workspace
+is checked in seconds. Like `--only`, it never signs off; run the whole script once it passes.
+Each failed step's full log is in the run folder the last line prints.
 
 ### Pattern: Skip the hosted run for a signed-off commit
 
@@ -286,6 +309,36 @@ export default defineCI(async (ci) => {
 
 Steps are commands, so a Go service, a Python worker and a Rust crate run beside each other the
 same way a JavaScript workspace does. Only the script itself is TypeScript, run by Node.
+
+### Pattern: Give heavy steps room
+
+```typescript
+import { defineCI } from "@sdxc/ci";
+
+export default defineCI(async (ci) => {
+	let workspaces = await ci.workspaces();
+	await ci.matrix("Tests", workspaces, (ws) =>
+		ci.step(`Test ${ws.name}`, "npm test", {
+			cwd: ws.path,
+			weight: ws.has("**/*.browser.test.ts") ? 4 : 1,
+		}),
+	);
+});
+```
+
+A step with `weight: 4` holds four of the run's slots while it runs, so a browser suite that
+spreads over many cores shares the machine with fewer steps, while small packages still run many
+at a time. A weight above the limit takes every slot and runs alone.
+
+### Pattern: Retry a step that fails under load
+
+```typescript
+await ci.step("End-to-end", "npm run e2e", { retry: 1 });
+```
+
+A step that fails and then passes on its retry passes, and the summary lists it as flaky with
+its attempt count, so the flake stays visible until it is fixed. A step stopped by its timeout
+is never retried.
 
 ### Pattern: Time-box a step
 

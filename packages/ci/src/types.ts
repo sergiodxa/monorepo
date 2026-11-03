@@ -82,6 +82,18 @@ export interface StepOptions extends CommandOptions {
 	cache?: boolean | CacheOptions;
 	/** Milliseconds after which the step's signal fires and the step fails. */
 	timeout?: number;
+	/**
+	 * Runs a failed step again, up to this many more times; a step that passes on a later
+	 * attempt passes, marked flaky in the report. A step stopped by its signal is never retried.
+	 * @default 0
+	 */
+	retry?: number;
+	/**
+	 * Concurrency slots the step holds while it runs, so a heavy step (a test suite that spreads
+	 * over every core) leaves room for fewer steps beside it.
+	 * @default 1
+	 */
+	weight?: number;
 }
 
 /** What a step resolved to. */
@@ -92,6 +104,10 @@ export interface StepOutcome {
 	/** Milliseconds the step took, or took when it was cached. */
 	duration: number;
 	output: string;
+	/** How many times the step ran: 1, or more when `retry` ran it again. */
+	attempts: number;
+	/** Whether it failed at first and passed on a retry. */
+	flaky: boolean;
 }
 
 /** How a group of concurrent functions runs. */

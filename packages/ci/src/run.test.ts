@@ -108,6 +108,95 @@ describe("steps", () => {
 	});
 });
 
+describe("retries, weights and order", () => {
+	test("a step that passes on a retry passes, marked flaky, with every attempt's log", async () => {
+		let calls = 0;
+		let { report } = await run(async (ci) => {
+			await ci.step(
+				"Flaky",
+				(step) => {
+					calls += 1;
+					step.log(`try ${calls}`);
+					return calls < 2 ? failure(new Error("timing")) : success(undefined);
+				},
+				{ retry: 2 },
+			);
+			await ci.step("Broken", "exit 1", { retry: 1 });
+		});
+		expect(report.steps[0]).toMatchObject({ status: "passed", attempts: 2, flaky: true });
+		expect(report.steps[0]?.output).toBe("try 1\ntiming\n--- attempt 2 ---\ntry 2\n");
+		expect(report.steps[1]).toMatchObject({ status: "failed", attempts: 2, flaky: false });
+	});
+
+	test("a timed-out step is not retried", async () => {
+		let { report } = await run(async (ci) => {
+			await ci.step("Slow", "sleep 5; true", { timeout: 100, retry: 3 });
+		});
+		expect(report.steps[0]).toMatchObject({ status: "failed", attempts: 1 });
+	});
+
+	test("a heavy step holds its weight in slots, so lighter ones wait for it", async () => {
+		let running = 0;
+		let peak = 0;
+		/** A step recording how many steps overlap it. */
+		let tracked: StepRun = async () => {
+			running += 1;
+			peak = Math.max(peak, running);
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			running -= 1;
+		};
+		await run(
+			async (ci) => {
+				await ci.parallel("Group", [
+					() => ci.step("Heavy", tracked, { weight: 4 }),
+					() => ci.step("Light 1", tracked),
+					() => ci.step("Light 2", tracked),
+				]);
+			},
+			{ concurrency: 4 },
+		);
+		expect(peak).toBe(2);
+	});
+
+	test("matrix entries start slowest first, from the durations of an earlier run", async () => {
+		let order: string[] = [];
+		let root = await createRepo({ "package.json": "{}" });
+		await runScript(
+			async (ci) => {
+				await ci.matrix("Apps", ["a", "b", "c", "d"], (app) =>
+					ci.step("Test", () => {
+						order.push(app);
+					}),
+				);
+			},
+			{
+				root,
+				env: ENV,
+				concurrency: 1,
+				durations: new Map([
+					["Apps/a", 10],
+					["Apps/b", 500],
+					["Apps/c", 50],
+				]),
+			},
+		);
+		expect(order).toEqual(["d", "b", "c", "a"]);
+	});
+
+	test("labels re-run only the steps they name, and mark the run partial", async () => {
+		let root = await createRepo({ "package.json": "{}" });
+		let report = await runScript(
+			async (ci) => {
+				await ci.step("Lint", "true");
+				await ci.matrix("Apps", ["a", "b"], () => ci.step("Test", "true"));
+			},
+			{ root, env: ENV, labels: ["Apps/b › Test"] },
+		);
+		expect(statuses(report)).toEqual({ "Apps/b › Test": "passed" });
+		expect(report.partial).toBe(true);
+	});
+});
+
 describe("function steps", () => {
 	test("a returned failure fails the step with its message", async () => {
 		let { report } = await run(async (ci) => {

@@ -14,5 +14,17 @@ import { CI_COMMANDS } from "./cli-contract.js";
 export default createCommand(
 	CI_COMMANDS.run,
 	/** Runs the script from the repository root; the exit code is the run's. */
-	(ctx) => runAction(ctx, ctx.arguments.script, ctx.flags),
+	(ctx) =>
+		runAction(
+			{
+				cwd: ctx.cwd,
+				env: ctx.env,
+				stdout: ctx.stdout,
+				style: ctx.style,
+				signal: ctx.signal,
+				interactive: process.stdout.isTTY === true,
+			},
+			ctx.arguments.script,
+			ctx.flags,
+		),
 );

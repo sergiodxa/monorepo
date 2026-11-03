@@ -1,7 +1,7 @@
 /**
  * The `sdxc-ci` command line as a contract: `run` a script, `list` what it would run, post an
- * earlier green run's `signoff`, and `verify` a commit's signoff. The flag sets are exported so a
- * tool wrapping this command line declares exactly the same flags.
+ * earlier green run's `signoff`, `verify` a commit's signoff, and `clean` the stored runs. The
+ * flag sets are exported so a tool wrapping this command line declares exactly the same flags.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,6 +87,9 @@ export const RUN_FLAGS = {
 		description: "Print every step's log, not only a failed one's",
 	}),
 	json: JSON_FLAG,
+	rerunFailed: flag.boolean("rerun-failed", {
+		description: "Run only the steps the last recorded run failed",
+	}),
 };
 
 /** Every flag `list` takes. */
@@ -116,6 +119,9 @@ export const VERIFY_FLAGS = {
 	tokenEnv: TOKEN_ENV_FLAG,
 	json: JSON_FLAG,
 };
+
+/** Every flag `clean` takes. */
+export const CLEAN_FLAGS = { json: JSON_FLAG };
 
 /** The commit a command acts on. */
 const SHA = argument(s.string(), {
@@ -171,5 +177,11 @@ export const CI_COMMANDS = commands({
 		},
 		flags: VERIFY_FLAGS,
 		examples: ['verify "$GITHUB_SHA" --wait 60s', "verify 1d9090458 --repo acme/app --json"],
+	}),
+	clean: command({
+		description:
+			"Remove the step cache and run history kept in the git directory; signoff records stay",
+		flags: CLEAN_FLAGS,
+		examples: ["clean", "clean --json"],
 	}),
 });

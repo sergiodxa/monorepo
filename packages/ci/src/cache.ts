@@ -1,14 +1,15 @@
 /**
  * Step caching: a pass is stored under a key built from what the step runs, the contents of its
  * inputs, the environment it names and the platform it ran on, so a later run whose inputs are
- * unchanged reuses the pass instead of running the step again. Only passes are ever stored.
+ * unchanged reuses the pass instead of running the step again. Only passes are ever stored, and
+ * a pass nobody reused for a month is pruned.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { arch, platform } from "node:os";
 import { join } from "node:path";
 
@@ -17,6 +18,9 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import { inputFiles } from "./git.js";
+
+/** How long a pass is kept without a run reusing it: 30 days. */
+export const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
 /** What a key is built from. */
 export interface CacheKeyInput {
@@ -112,7 +116,8 @@ export function cacheDirectory(gitDirectory: string): string {
 
 /**
  * The pass stored under `key`, when its declared outputs still hold what the step left;
- * `null` when there is none or an output changed.
+ * `null` when there is none or an output changed. A hit refreshes the entry's modification
+ * time, so `pruneCache` measures age from the last run that reused it.
  */
 export async function readCache(
 	root: string,
@@ -125,7 +130,10 @@ export async function readCache(
 	if (isFailure(entry)) return null;
 	let now = await hashOutputs(root, Object.keys(entry.data.outputs));
 	let unchanged = Object.entries(entry.data.outputs).every(([path, hash]) => now[path] === hash);
-	return unchanged ? entry.data : null;
+	if (!unchanged) return null;
+	let touched = new Date();
+	await wrap(() => utimes(join(directory, `${key}.json`), touched, touched));
+	return entry.data;
 }
 
 /** Stores a pass under `key`. */
@@ -139,4 +147,30 @@ export async function writeCache(
 	let written = await wrap(() => writeFile(join(directory, `${key}.json`), JSON.stringify(entry)));
 	if (isFailure(written)) return failure(written.error);
 	return success(undefined);
+}
+
+/**
+ * Removes every pass last written or reused more than `maxAge` milliseconds before `now`, so the
+ * cache holds what recent runs need instead of every input state ever seen. A missing directory
+ * prunes nothing; an entry that cannot be read or removed is left for the next prune.
+ *
+ * @returns How many entries were removed
+ */
+export async function pruneCache(
+	directory: string,
+	maxAge: number = CACHE_MAX_AGE,
+	now: number = Date.now(),
+): Promise<number> {
+	let listed = await wrap(() => readdir(directory));
+	if (isFailure(listed)) return 0;
+	let removed = 0;
+	for (let name of listed.data) {
+		if (!name.endsWith(".json")) continue;
+		let path = join(directory, name);
+		let info = await wrap(() => stat(path));
+		if (isFailure(info) || now - info.data.mtimeMs <= maxAge) continue;
+		let gone = await wrap(() => rm(path, { force: true }));
+		if (!isFailure(gone)) removed += 1;
+	}
+	return removed;
 }

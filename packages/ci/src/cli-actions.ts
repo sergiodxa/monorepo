@@ -14,13 +14,23 @@ import { exit, success } from "@sdxc/cli";
 import { isFailure } from "@sdxc/result";
 
 import type { Palette } from "./report.js";
+import type { Reporter } from "./run.js";
 import type { Runner } from "./types.js";
 
 import { headCommit, repositoryRoot, sharedGitDirectory } from "./git.js";
 import { parseRepositoryName, resolveToken, verifySignoff } from "./github.js";
 import { loadScript } from "./load.js";
-import { formatSummary, jsonReport, PLAIN, textReporter } from "./report.js";
+import {
+	actionsReporter,
+	appendStepSummary,
+	formatSummary,
+	jsonReport,
+	PLAIN,
+	progressReporter,
+	textReporter,
+} from "./report.js";
 import { detectRunner, runScript } from "./run.js";
+import { entryDurations, failedLabels, lastRun, recordRun } from "./runs.js";
 import { postRecord, readRecord, repositoryOf } from "./signoff.js";
 
 /** Exit code for a usage error or input that cannot be read. */
@@ -39,6 +49,8 @@ export interface ActionIO {
 	stdout: (text: string) => void;
 	style?: Style;
 	signal?: AbortSignal;
+	/** Whether stdout is a terminal a person watches, which gets a live line of running steps. */
+	interactive?: boolean;
 }
 
 /** The filters `run` and `list` share. */
@@ -59,6 +71,7 @@ export interface RunInput extends FilterInput {
 	tokenEnv?: string;
 	verbose?: boolean;
 	json?: boolean;
+	rerunFailed?: boolean;
 }
 
 /** The report colors for a stream's style, or none when it takes no ANSI sequences. */
@@ -73,6 +86,23 @@ function paletteOf(style: Style | undefined): Palette {
 	};
 }
 
+/** Whether the run happens inside a GitHub Actions job, which reads workflow commands. */
+function onGitHubActions(env: ActionIO["env"]): boolean {
+	return env.GITHUB_ACTIONS === "true";
+}
+
+/**
+ * How a run prints its steps: nothing with `--json`, groups and annotations on GitHub Actions,
+ * a live status line on an interactive terminal, and one plain line per step anywhere else.
+ */
+function reporterFor(io: ActionIO, input: RunInput, palette: Palette): Reporter | undefined {
+	let verbose = input.verbose ?? false;
+	if (input.json === true) return undefined;
+	if (onGitHubActions(io.env)) return actionsReporter(io.stdout);
+	if (io.interactive === true) return progressReporter(io.stdout, palette, verbose);
+	return textReporter(io.stdout, palette, verbose);
+}
+
 /** A non-empty list, or `null` for a list nobody passed. */
 function listOrNull(values: readonly string[] | undefined): readonly string[] | null {
 	return values === undefined || values.length === 0 ? null : values;
@@ -82,6 +112,47 @@ function listOrNull(values: readonly string[] | undefined): readonly string[] | 
 async function projectRoot(cwd: string): Promise<string> {
 	let root = await repositoryRoot(cwd);
 	return isFailure(root) ? cwd : root.data;
+}
+
+/** What a run takes from the runs recorded before it. */
+interface RunHistory {
+	/** Where runs are recorded, or `null` outside a git repository, where nothing is recorded. */
+	gitDirectory: string | null;
+	durations: ReadonlyMap<string, number>;
+	/** The labels `--rerun-failed` runs, or `null` for a run of every step. */
+	labels: readonly string[] | null;
+	/** How the command ends before running anything, or `null` when the run goes ahead. */
+	stop: Result<undefined, ExitError> | null;
+}
+
+/**
+ * Reads the last recorded run: its entry durations always, so the slowest entries start first,
+ * and with `rerunFailed` its failed labels. A re-run with no recorded run exits 2, and one whose
+ * last run failed nothing exits 0 without running.
+ */
+async function runHistory(io: ActionIO, root: string, rerunFailed: boolean): Promise<RunHistory> {
+	let gitDirectory = await sharedGitDirectory(root);
+	let directory = isFailure(gitDirectory) ? null : gitDirectory.data;
+	let last = directory === null ? null : await lastRun(directory);
+	let history: RunHistory = {
+		gitDirectory: directory,
+		durations: last === null ? new Map() : entryDurations(last),
+		labels: null,
+		stop: null,
+	};
+	if (!rerunFailed) return history;
+	if (last === null) {
+		return {
+			...history,
+			stop: exit(UNREADABLE, "Nothing to re-run: no earlier run is recorded in this repository"),
+		};
+	}
+	let labels = failedLabels(last);
+	if (labels.length === 0) {
+		io.stdout("Nothing to re-run: the last run had no failed steps\n");
+		return { ...history, stop: success() };
+	}
+	return { ...history, labels };
 }
 
 /**
@@ -98,9 +169,14 @@ export async function runAction(
 ): Promise<Result<undefined, ExitError>> {
 	let loaded = await loadScript(script, io.cwd);
 	if (isFailure(loaded)) return exit(UNREADABLE, loaded.error.message);
+	let directory = root ?? (await projectRoot(io.cwd));
+	let history = await runHistory(io, directory, input.rerunFailed ?? false);
+	if (history.stop !== null) return history.stop;
 	let palette = paletteOf(io.style);
 	let report = await runScript(loaded.data, {
-		root: root ?? (await projectRoot(io.cwd)),
+		root: directory,
+		labels: history.labels,
+		durations: history.durations,
 		runner: input.runner ?? detectRunner(io.env),
 		only: input.only ?? [],
 		skip: input.skip ?? [],
@@ -113,15 +189,27 @@ export async function runAction(
 		tokenEnv: input.tokenEnv ?? "GITHUB_TOKEN",
 		env: io.env,
 		signal: io.signal,
-		reporter:
-			input.json === true ? undefined : textReporter(io.stdout, palette, input.verbose ?? false),
+		reporter: reporterFor(io, input, palette),
 	});
 	let filtered = (input.only?.length ?? 0) > 0 || (input.skip?.length ?? 0) > 0;
 	if (filtered && report.steps.every((step) => step.filtered)) {
 		return exit(UNREADABLE, "No step matched --only and --skip; `list` prints every step's name");
 	}
-	if (input.json === true) io.stdout(`${JSON.stringify(jsonReport(report), null, 2)}\n`);
-	else io.stdout(formatSummary(report, palette));
+	let logs = history.gitDirectory === null ? null : await recordRun(history.gitDirectory, report);
+	let logsDirectory = logs === null || isFailure(logs) ? null : logs.data;
+	if (input.json === true) {
+		let json = Object.assign({}, jsonReport(report), { logs: logsDirectory });
+		io.stdout(`${JSON.stringify(json, null, 2)}\n`);
+	} else {
+		io.stdout(formatSummary(report, palette));
+		if (logsDirectory !== null) io.stdout(`Logs: ${logsDirectory}\n`);
+	}
+	let summaryPath = io.env.GITHUB_STEP_SUMMARY;
+	if (onGitHubActions(io.env) && summaryPath !== undefined && summaryPath !== "") {
+		let appended = await appendStepSummary(summaryPath, report);
+		if (isFailure(appended))
+			io.stdout(`::warning::Could not write the job summary: ${appended.error.message}\n`);
+	}
 	if (input.push === true && report.closing?.kind !== "signoff") {
 		return exit(
 			PROBLEMS,

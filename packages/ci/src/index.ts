@@ -33,9 +33,11 @@ export type {
 	RunOptions,
 	RunReport,
 	ScriptErrorRecord,
+	StartedStep,
 	StepRecord,
 } from "./run.js";
 export type { RunRecord, SignoffReport } from "./signoff.js";
+export type { RecordedRun } from "./runs.js";
 export type { Repository, Signoff, Verification } from "./github.js";
 export type { Palette, Paint } from "./report.js";
 
@@ -44,4 +46,14 @@ export { GitHubError, STATUS_CONTEXT } from "./github.js";
 export { defineCI, loadScript } from "./load.js";
 export { detectRunner, runScript } from "./run.js";
 export { loadWorkspaces } from "./workspaces.js";
-export { formatSummary, jsonReport, PLAIN, textReporter } from "./report.js";
+export {
+	actionsReporter,
+	appendStepSummary,
+	formatStepSummary,
+	formatSummary,
+	jsonReport,
+	PLAIN,
+	progressReporter,
+	textReporter,
+} from "./report.js";
+export { lastRun, recordRun } from "./runs.js";

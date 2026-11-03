@@ -33,7 +33,14 @@ import type {
 } from "./types.js";
 import type { Workspace } from "./workspaces.js";
 
-import { cacheDirectory, cacheKey, hashOutputs, readCache, writeCache } from "./cache.js";
+import {
+	cacheDirectory,
+	cacheKey,
+	hashOutputs,
+	pruneCache,
+	readCache,
+	writeCache,
+} from "./cache.js";
 import { headCommit, isClean, matchingFiles, repositoryRoot, sharedGitDirectory } from "./git.js";
 import { namePattern } from "./glob.js";
 import { runCommand } from "./process.js";
@@ -71,12 +78,30 @@ export interface RunOptions {
 	signal?: AbortSignal;
 	/** Receives each finished step and the run's end, to print as it goes. */
 	reporter?: Reporter;
+	/** Step labels a re-run covers; every other step is left out, as with `--only`. */
+	labels?: readonly string[] | null;
+	/**
+	 * Milliseconds each matrix entry took last time, by address, so the slowest entries start
+	 * first and the run ends sooner. Entries without a duration start before every known one.
+	 */
+	durations?: ReadonlyMap<string, number>;
 }
 
 /** Where a run reports as it goes. */
 export interface Reporter {
+	/** A step took its slots and started running; cached and skipped steps never start. */
+	started?(step: StartedStep): void;
 	step(record: StepRecord): void;
 	error(record: ScriptErrorRecord): void;
+	/** The run ended; the reporter releases anything it holds, such as a status line. */
+	finished?(report: RunReport): void;
+}
+
+/** A step that has started running. */
+export interface StartedStep {
+	label: string;
+	/** `Date.now()` when it started. */
+	startedAt: number;
 }
 
 /** A finished step, with where it sits in the run. */
@@ -211,7 +236,10 @@ export function detectRunner(env: Readonly<Record<string, string | undefined>>):
 
 /** One run of a script. */
 class Run {
-	readonly options: Required<Omit<RunOptions, "reporter" | "signal" | "remote" | "scope">> & {
+	readonly options: Required<
+		Omit<RunOptions, "reporter" | "signal" | "remote" | "scope" | "labels">
+	> & {
+		labels: readonly string[] | null;
 		reporter: Reporter | null;
 		signal: AbortSignal | null;
 		remote: string | null;
@@ -253,6 +281,8 @@ class Run {
 			dryRun: options.dryRun ?? false,
 			signal: options.signal ?? null,
 			reporter: options.reporter ?? null,
+			labels: options.labels ?? null,
+			durations: options.durations ?? new Map(),
 		};
 		this.global = new Semaphore(this.options.concurrency);
 		this.onlyPatterns = this.options.only.map(namePattern);
@@ -262,7 +292,10 @@ class Run {
 	/** Whether filters left steps out; a partial run never signs off. */
 	get partial(): boolean {
 		return (
-			this.onlyPatterns.length > 0 || this.skipPatterns.length > 0 || this.options.scope !== null
+			this.onlyPatterns.length > 0 ||
+			this.skipPatterns.length > 0 ||
+			this.options.scope !== null ||
+			this.options.labels !== null
 		);
 	}
 
@@ -308,8 +341,9 @@ class Run {
 		return isSuccess(found) ? found.data : [];
 	}
 
-	/** Whether the filters let a step with these addresses run. */
-	selected(addresses: readonly string[]): boolean {
+	/** Whether the filters, and a re-run's labels, let a step with these addresses run. */
+	selected(addresses: readonly string[], label: string): boolean {
+		if (this.options.labels !== null && !this.options.labels.includes(label)) return false;
 		let matches = (patterns: readonly RegExp[]): boolean =>
 			patterns.some((pattern) => addresses.some((address) => pattern.test(address)));
 		if (this.onlyPatterns.length > 0 && !matches(this.onlyPatterns)) return false;
@@ -345,8 +379,10 @@ class Run {
 			cached: false,
 			duration: 0,
 			output: "",
+			attempts: 1,
+			flaky: false,
 		};
-		if (!this.selected(addresses)) {
+		if (!this.selected(addresses, base.label)) {
 			return this.finish({ ...base, status: "skipped", filtered: true }, scope);
 		}
 		let stopped =
@@ -360,9 +396,11 @@ class Run {
 
 		let releases: Array<() => void> = [];
 		for (let group of scope.groups) {
-			if (group.semaphore !== null) releases.push(await group.semaphore.acquire());
+			if (group.semaphore !== null) {
+				releases.push(await group.semaphore.acquire(options.weight ?? 1));
+			}
 		}
-		releases.push(await this.global.acquire());
+		releases.push(await this.global.acquire(options.weight ?? 1));
 		let record = await this.execute(base, run, options, scope).finally(() => {
 			for (let release of releases.reverse()) release();
 		});
@@ -410,22 +448,15 @@ class Run {
 			}
 		}
 		let started = Date.now();
-		let signals = scope.groups.map((group) => group.controller.signal);
-		if (this.options.signal !== null) signals.push(this.options.signal);
-		if (options.timeout !== undefined) signals.push(AbortSignal.timeout(options.timeout));
-		let signal = AbortSignal.any(signals);
-		let { status, output } = await this.perform(run, options, signal);
-		let timedOut =
-			options.timeout !== undefined &&
-			signal.aborted &&
-			signal.reason instanceof DOMException &&
-			signal.reason.name === "TimeoutError";
-		let finalOutput = timedOut ? `${output}Timed out after ${options.timeout}ms\n` : output;
+		this.options.reporter?.started?.({ label: base.label, startedAt: started });
+		let { status, output, attempts } = await this.attempt(run, options, scope);
 		let record: StepRecord = {
 			...base,
 			status,
 			duration: Date.now() - started,
-			output: finalOutput,
+			output,
+			attempts,
+			flaky: status === "passed" && attempts > 1,
 			filtered: false,
 		};
 		if (status === "passed" && key !== null && this.gitDirectory !== null) {
@@ -437,6 +468,39 @@ class Run {
 			});
 		}
 		return record;
+	}
+
+	/**
+	 * Runs a step, and again up to `retry` more times while it fails, joining every attempt's
+	 * log. An attempt stopped by its signal (timeout, fail-fast, Ctrl-C) ends the retries.
+	 */
+	async attempt(
+		run: StepRun,
+		options: StepOptions,
+		scope: Scope,
+	): Promise<{ status: StepStatus; output: string; attempts: number }> {
+		let retries = Math.max(0, Math.floor(options.retry ?? 0));
+		let output = "";
+		let attempts = 0;
+		let status: StepStatus = "failed";
+		while (attempts <= retries) {
+			attempts += 1;
+			let signals = scope.groups.map((group) => group.controller.signal);
+			if (this.options.signal !== null) signals.push(this.options.signal);
+			if (options.timeout !== undefined) signals.push(AbortSignal.timeout(options.timeout));
+			let signal = AbortSignal.any(signals);
+			let performed = await this.perform(run, options, signal);
+			let timedOut =
+				signal.aborted &&
+				signal.reason instanceof DOMException &&
+				signal.reason.name === "TimeoutError";
+			let heading = attempts > 1 ? `--- attempt ${attempts} ---\n` : "";
+			let note = timedOut ? `Timed out after ${options.timeout}ms\n` : "";
+			output += `${heading}${performed.output}${note}`;
+			status = performed.status;
+			if (status === "passed" || signal.aborted) break;
+		}
+		return { status, output, attempts };
 	}
 
 	/** Runs a command or function step and gathers its log. */
@@ -612,10 +676,23 @@ class Run {
 				entry,
 			});
 		}
-		let threw = await this.inGroup(calls);
+		let threw = await this.inGroup(this.slowestFirst(calls));
 		for (let entry of entries)
 			entry.record.status = statusOf(entry.steps, entry.halted, entry.errored);
 		return { status: statusOf(group.steps, false, threw) };
+	}
+
+	/**
+	 * Entries ordered by how long they took last time, slowest first, so the longest ones never
+	 * start last; entries with no recorded duration go first, and ties keep the script's order.
+	 */
+	slowestFirst(calls: readonly GroupCall[]): GroupCall[] {
+		let durationOf = (call: GroupCall): number =>
+			this.options.durations.get(call.where) ?? Number.POSITIVE_INFINITY;
+		return calls
+			.map((call, index) => ({ call, index }))
+			.sort((a, b) => durationOf(b.call) - durationOf(a.call) || a.index - b.index)
+			.map(({ call }) => call);
 	}
 
 	/**
@@ -784,6 +861,11 @@ export async function runScript(script: CIScript, options: RunOptions): Promise<
 		run.scriptError(null, error);
 	}
 	await run.end();
+	if (run.gitDirectory !== null && options.dryRun !== true) {
+		await pruneCache(cacheDirectory(run.gitDirectory));
+	}
 	let treeProblem = options.dryRun === true ? null : await run.signoffProblem();
-	return run.report(treeProblem);
+	let report = run.report(treeProblem);
+	run.options.reporter?.finished?.(report);
+	return report;
 }

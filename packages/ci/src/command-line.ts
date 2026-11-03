@@ -16,5 +16,8 @@ export type {
 	VerifyInput,
 } from "./cli-actions.js";
 
+export type { CleanInput, CleanReport } from "./clean.js";
+
 export { listAction, runAction, signoffAction, verifyAction } from "./cli-actions.js";
-export { LIST_FLAGS, RUN_FLAGS, SIGNOFF_FLAGS, VERIFY_FLAGS } from "./cli-contract.js";
+export { CLEAN_FLAGS, LIST_FLAGS, RUN_FLAGS, SIGNOFF_FLAGS, VERIFY_FLAGS } from "./cli-contract.js";
+export { cleanAction } from "./clean.js";

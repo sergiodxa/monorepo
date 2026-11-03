@@ -31,6 +31,10 @@ cli.map(
 	CI_COMMANDS.verify,
 	lazy(() => import("./cli-verify.js")),
 );
+cli.map(
+	CI_COMMANDS.clean,
+	lazy(() => import("./cli-clean.js")),
+);
 
 if (import.meta.main) {
 	process.exit(await cli.run(process.argv.slice(2)));
