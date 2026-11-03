@@ -40,7 +40,11 @@ export default createAction(routes.api.index, async (ctx) => {
 			canonical={ctx.url.href}
 			siteFooter={false}
 		>
-			<DocsLayout tree={tree} activePath={routes.api.index.href()}>
+			<DocsLayout
+				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
+				activePath={routes.api.index.href()}
+			>
 				<DocsPageHeader title="Every package" description={DESCRIPTION} />
 
 				<div mix={[m("2rem", 0, 0, 0)]}>

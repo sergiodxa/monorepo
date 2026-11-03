@@ -81,6 +81,8 @@ namespace DocsLayout {
 		 * the page a vote redirected back to. Index pages leave it out.
 		 */
 		feedback?: { sent: boolean };
+		/** The `?filter=` the page was asked with, which a reader without script submits from the tree's field. */
+		filterQuery?: string | null;
 	}
 }
 
@@ -91,7 +93,7 @@ namespace DocsLayout {
  */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
-		let { activePath, anchors = [], children, feedback, tree } = handle.props;
+		let { activePath, anchors = [], children, feedback, filterQuery, tree } = handle.props;
 		let docsTree = toDocsTree(tree);
 		let { next, previous } = findNeighbours(docsTree, activePath, { boundary: "section" });
 		let section = previous?.section ?? next?.section;
@@ -111,6 +113,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							label: "Filter pages",
 							placeholder: "Filter pages",
 							noResults: "No page title matches. Try search instead.",
+							query: filterQuery ?? undefined,
 						}}
 						footer={
 							<p

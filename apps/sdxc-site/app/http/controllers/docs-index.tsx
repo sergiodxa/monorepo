@@ -125,7 +125,11 @@ export default createAction(routes.docs.index, async (ctx) => {
 			canonical={ctx.url.href}
 			siteFooter={false}
 		>
-			<DocsLayout tree={tree} activePath={routes.docs.index.href()}>
+			<DocsLayout
+				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
+				activePath={routes.docs.index.href()}
+			>
 				<DocsHub
 					eyebrow="Guides"
 					title="Documentation"

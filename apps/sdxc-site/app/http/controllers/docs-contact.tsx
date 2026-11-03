@@ -91,7 +91,11 @@ async function renderContactPage(view: ContactView, init?: ResponseInit) {
 			robots="noindex"
 			siteFooter={false}
 		>
-			<DocsLayout tree={tree} activePath={routes.docs.contact.index.href()}>
+			<DocsLayout
+				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
+				activePath={routes.docs.contact.index.href()}
+			>
 				<DocsPageHeader
 					crumbs={[
 						{ label: "Documentation", href: routes.docs.index.href() },

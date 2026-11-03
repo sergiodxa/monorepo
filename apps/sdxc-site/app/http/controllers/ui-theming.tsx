@@ -62,6 +62,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 		>
 			<DocsLayout
 				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
 				activePath={activePath}
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}

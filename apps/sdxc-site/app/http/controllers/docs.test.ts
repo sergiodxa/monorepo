@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseDocument } from "@sdxc/html/document";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { hasSectionDescription, listGuides, readGuide } from "~/app/services/docs";
@@ -309,6 +311,34 @@ describe("sidebars", () => {
 			);
 			expect(rail).toContain(`href="${routes.docs.contact.index.href()}"`);
 		}
+	});
+
+	test("draws the title filter in the first paint, as a form that works without script", async () => {
+		let page = unwrap(parseDocument(await (await fetchApp("/docs")).text()));
+		let input = page.querySelector('[data-docs-nav] form[method="get"] input[name="filter"]');
+
+		expect(input).not.toBeNull();
+		expect(input?.closest("[hidden]")).toBeNull();
+	});
+
+	test("draws the tree filtered by the server for a `?filter=` a reader submitted", async () => {
+		let page = unwrap(parseDocument(await (await fetchApp("/docs?filter=changelog")).text()));
+		let nav = page.querySelector("[data-docs-nav]");
+		let shown = Array.from(nav?.querySelectorAll("nav a") ?? [])
+			.filter((link) => link.closest("[hidden]") === null)
+			.map((link) => link.getAttribute("href"));
+
+		expect(nav?.querySelector('input[name="filter"]')?.getAttribute("value")).toBe("changelog");
+		expect(shown).toEqual(["/docs/releases/changelog"]);
+		expect(nav?.querySelector("[data-docs-nav-empty]")?.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("says nothing matches a server-side filter no title holds", async () => {
+		let page = unwrap(parseDocument(await (await fetchApp("/docs?filter=zzzz")).text()));
+
+		expect(
+			page.querySelector("[data-docs-nav] [data-docs-nav-empty]")?.hasAttribute("hidden"),
+		).toBe(false);
 	});
 
 	test("draws only guides beside a guide", async () => {

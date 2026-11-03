@@ -87,6 +87,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
 				activePath={activePath}
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}

@@ -52,6 +52,7 @@ export default createAction(routes.api.icon, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
+				filterQuery={ctx.url.searchParams.get("filter")}
 				activePath={routes.api.icons.href()}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>

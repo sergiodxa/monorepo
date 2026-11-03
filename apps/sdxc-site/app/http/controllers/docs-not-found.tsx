@@ -62,7 +62,7 @@ export default async function docsNotFound(ctx: AppContext, tree: NavTree) {
 			robots="noindex"
 			siteFooter={false}
 		>
-			<DocsLayout tree={tree} activePath="">
+			<DocsLayout tree={tree} filterQuery={ctx.url.searchParams.get("filter")} activePath="">
 				<DocsNotFound
 					path={path}
 					labels={LABELS}
