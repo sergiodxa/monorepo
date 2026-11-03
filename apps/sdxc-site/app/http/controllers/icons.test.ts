@@ -7,10 +7,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseDocument } from "@sdxc/html/document";
 import { LUCIDE_VERSION } from "@sdxc/icons";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
+
+/** The gallery at `path`, parsed. */
+async function gallery(path: string) {
+	return unwrap(parseDocument(await (await fetchApp(path)).text()));
+}
+
+/** The grid item holding the tile for `name`. */
+function tile(page: Awaited<ReturnType<typeof gallery>>, name: string) {
+	return page.querySelector(`a[data-icon-name="${name}"]`)?.parentElement ?? null;
+}
 
 describe("GET /api/icons", () => {
 	test("draws the gallery in place of the README, crediting Lucide", async () => {
@@ -29,10 +41,30 @@ describe("GET /api/icons", () => {
 		expect(body).toContain(`/api/icons/sprite.svg?v=${LUCIDE_VERSION}#heart`);
 	});
 
-	test("keeps only the icons matching ?q=", async () => {
-		let body = await (await fetchApp("/api/icons?q=heart+crack")).text();
-		expect(body).toContain('href="/api/icons/heart-crack"');
-		expect(body).not.toContain('href="/api/icons/zap"');
+	test("hides the icons ?q= leaves out, keeping every tile for the live filter", async () => {
+		let page = await gallery("/api/icons?q=heart+crack");
+
+		expect(tile(page, "heart-crack")?.hasAttribute("hidden")).toBe(false);
+		expect(tile(page, "zap")?.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("draws the customization an address names, and carries it to each icon's page", async () => {
+		let page = await gallery("/api/icons?size=32&stroke=1.5&color=%23FF0000");
+		let grid = page.querySelector("#icon-grid");
+
+		expect(grid?.getAttribute("style")).toContain("--icon-size: 32px");
+		expect(grid?.getAttribute("style")).toContain("--icon-color: #ff0000");
+		expect(page.querySelector('a[data-icon-name="heart"]')?.getAttribute("href")).toBe(
+			"/api/icons/heart?size=32&stroke=1.5&color=%23ff0000",
+		);
+	});
+
+	test("falls back to the default for a value out of range, keeping the rest", async () => {
+		let page = await gallery("/api/icons?size=900&stroke=1.5");
+		let style = page.querySelector("#icon-grid")?.getAttribute("style") ?? "";
+
+		expect(style).toContain("--icon-size: 24px");
+		expect(style).toContain("--icon-stroke-width: 1.5");
 	});
 
 	test("tells the reader when nothing matches and links back to every icon", async () => {
@@ -64,6 +96,15 @@ describe("GET /api/icons/sprite.svg", () => {
 });
 
 describe("GET /api/icons/:icon", () => {
+	test("passes the customization in the address to both snippets", async () => {
+		let page = await gallery("/api/icons/heart?size=32&absolute=1");
+		let code = Array.from(page.querySelectorAll("pre code"), (node) => node.textContent);
+
+		expect(code).toContain(
+			'import { HeartIcon } from "@sdxc/icons";\n\n<HeartIcon size={32} absoluteStrokeWidth aria-hidden="true" />',
+		);
+	});
+
 	test("shows both ways to render the icon and links it on lucide.dev", async () => {
 		let response = await fetchApp("/api/icons/heart");
 		let body = await response.text();

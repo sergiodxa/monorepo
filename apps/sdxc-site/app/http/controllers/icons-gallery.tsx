@@ -10,10 +10,9 @@
 import { LUCIDE_VERSION } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
+import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
-import { Button, SearchField } from "@sdxc/ui";
 import { Callout, CodeBlock, DocsPageHeader, InstallCommand } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
@@ -21,6 +20,7 @@ import type { Anchor } from "~/app/services/article";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { readIconStyle } from "~/app/http/validators/icon-style";
 import { adsDayTag } from "~/app/services/ads";
 import { filterIcons, listIcons, LUCIDE_LINKS, spriteHref } from "~/app/services/icons";
 import { buildPackageNav } from "~/app/services/navigation";
@@ -33,7 +33,9 @@ import {
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
-import IconGrid from "~/resources/components/icon-grid";
+import IconControls from "~/resources/components/icon-controls";
+import IconDialog from "~/resources/components/icon-dialog";
+import IconGrid, { ICON_FRAME_ATTRIBUTE } from "~/resources/components/icon-grid";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import DocsLayout from "~/resources/layouts/docs";
@@ -52,6 +54,12 @@ const USAGE = `import { HeartIcon, Icon } from "@sdxc/icons";
 <HeartIcon aria-hidden="true" />
 <Icon name="heart" aria-hidden="true" />`;
 
+/** The grid the controls narrow and the dialog opens from. */
+const GRID_ID = "icon-grid";
+
+/** The one dialog every tile opens. */
+const DIALOG_ID = "icon-detail";
+
 /** Every heading the page holds, for the "On this page" rail. */
 const ANCHORS: Anchor[] = [
 	{ id: "usage", text: "Usage", level: 2 },
@@ -59,8 +67,9 @@ const ANCHORS: Anchor[] = [
 ];
 
 /**
- * Renders the gallery. `?q=` keeps only the icons whose name or tags hold every word of it,
- * and it is part of the page's validator, so a narrowed grid never answers for another.
+ * Renders the gallery. `?q=` hides the icons whose name and tags miss a word of it, and the
+ * customization parameters restyle every tile; the query string is part of the page's
+ * validator, so one narrowed or restyled grid never answers for another.
  */
 export default createAction(routes.api.icons, async (ctx) => {
 	let tree = await buildPackageNav(PACKAGE);
@@ -68,8 +77,9 @@ export default createAction(routes.api.icons, async (ctx) => {
 	if (entry === null) return notFound(ctx, tree);
 
 	let query = ctx.url.searchParams.get("q")?.trim() ?? "";
+	let style = readIconStyle(ctx.url.searchParams);
 	let all = listIcons();
-	let icons = filterIcons(all, query);
+	let matching = filterIcons(all, query).length;
 	let manager = rememberedTab(ctx.request.headers.get("Cookie"), PACKAGE_MANAGER_KEY);
 	let group = listPackageGroups().find((candidate) =>
 		candidate.packages.some((member) => member.directory === PACKAGE),
@@ -120,8 +130,13 @@ export default createAction(routes.api.icons, async (ctx) => {
 							aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
 						/>
 
-						<Callout kind="note" label="Credit" title="These icons are Lucide’s">
-							<p mix={[m(0)]}>
+						<Callout
+							kind="note"
+							label="Credit"
+							title="These icons are Lucide’s"
+							mix={[raw({ maxInlineSize: "none" })]}
+						>
+							<p mix={[m(0), raw({ maxInlineSize: "none" })]}>
 								Every icon here is drawn by the{" "}
 								<a href={LUCIDE_LINKS.home} mix={[fg("brand")]}>
 									Lucide
@@ -164,39 +179,29 @@ export default createAction(routes.api.icons, async (ctx) => {
 					<ReferenceSection
 						id="icons"
 						title="Icons"
-						lead={countLabel(icons.length, all.length, query)}
+						lead="Filter by name or tag, set the size and stroke, then open an icon for its code."
 					>
 						<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-							<SearchField aria-label="Filter icons">
-								<form
-									method="get"
-									action={routes.api.icons.href()}
-									mix={[hstack({ gap: 2, align: "center" })]}
-								>
-									<div mix={[raw({ flex: "1 1 auto", minInlineSize: "0" })]}>
-										<SearchField.Input
-											name="q"
-											aria-label="Filter icons by name or tag"
-											placeholder="Filter by name or tag"
-											defaultValue={query}
-										/>
-									</div>
-									<Button type="submit" variant="outline" color="neutral">
-										Filter
-									</Button>
-								</form>
-							</SearchField>
-
-							{icons.length > 0 ? (
-								<IconGrid icons={icons} sprite={spriteHref()} />
-							) : (
-								<p mix={[m(0), text("base"), fg("neutral")]}>
-									No icon matches “{query}”.{" "}
-									<a href={routes.api.icons.href()} mix={[fg("brand")]}>
-										Show every icon
-									</a>
-								</p>
-							)}
+							<IconControls
+								action={routes.api.icons.href()}
+								gridId={GRID_ID}
+								query={query}
+								size={style.size}
+								strokeWidth={style.strokeWidth}
+								absoluteStrokeWidth={style.absoluteStrokeWidth}
+								color={style.color}
+								matching={matching}
+								total={all.length}
+								version={LUCIDE_VERSION}
+							/>
+							<IconGrid
+								id={GRID_ID}
+								icons={all}
+								sprite={spriteHref()}
+								query={query}
+								style={style}
+							/>
+							<IconDialog id={DIALOG_ID} gridId={GRID_ID} frameAttribute={ICON_FRAME_ATTRIBUTE} />
 						</div>
 					</ReferenceSection>
 				</article>
@@ -204,12 +209,5 @@ export default createAction(routes.api.icons, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, `${adsDayTag()}:${query}`);
+	return await withBundleCache(ctx.request, response, `${adsDayTag()}:${ctx.url.search}`);
 });
-
-/** The line under the grid's heading: how many icons it holds, and of how many. */
-function countLabel(shown: number, total: number, query: string): string {
-	let format = new Intl.NumberFormat("en-US");
-	if (query === "") return `${format.format(total)} icons from Lucide ${LUCIDE_VERSION}.`;
-	return `${format.format(shown)} of ${format.format(total)} icons match “${query}”.`;
-}

@@ -267,7 +267,7 @@ script.
 
 - [x] Phase 1: Package data
 - [x] Phase 2: Gallery and icon pages
-- [ ] Phase 3: Enhancements
+- [x] Phase 3: Enhancements
 
 ## Notes
 
@@ -277,3 +277,11 @@ script.
   list the package once rather than 1,903 icon pages; the sitemap lists every icon page.
 - A frame route returns its render as streamed, so `/frames/icons/:icon` skips
   `withBundleCache`.
+- The dialog is an island that mounts `<Frame>` for the clicked tile, so the address stays on
+  the gallery while it is open; a named-frame link would move the address to the icon's page.
+  A click with a modifier, or a middle click, still opens the icon's page.
+- The grid always renders every tile and `?q=` marks the rest `hidden`, so the live filter can
+  widen a query the server narrowed. The page weighs the same for every query.
+- The filter and the customizer are one `GET` form, so both work without script; the colour
+  picker needs script, since a colour input always submits a value and the default colour is
+  the text around the icon.

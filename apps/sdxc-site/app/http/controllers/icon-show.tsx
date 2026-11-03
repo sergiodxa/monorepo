@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { readIconStyle } from "~/app/http/validators/icon-style";
 import { adsDayTag } from "~/app/services/ads";
 import { renderIconSvg } from "~/app/services/icon-svg";
 import { findIcon } from "~/app/services/icons";
@@ -37,6 +38,7 @@ export default createAction(routes.api.icon, async (ctx) => {
 
 	let icon = findIcon(name);
 	if (icon === null) return notFound(ctx, tree);
+	let style = readIconStyle(ctx.url.searchParams);
 
 	let markdownHref = routes.markdown.icon.href({ icon: icon.name });
 	let response = ctx.render(
@@ -71,13 +73,13 @@ export default createAction(routes.api.icon, async (ctx) => {
 							/>
 						}
 					/>
-					<IconDetail icon={icon} svg={await renderIconSvg(icon.name)} />
+					<IconDetail icon={icon} style={style} svg={await renderIconSvg(icon.name, style)} />
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, adsDayTag());
+	return await withBundleCache(ctx.request, response, `${adsDayTag()}:${ctx.url.search}`);
 });
 
 /**
@@ -88,11 +90,14 @@ export default createAction(routes.api.icon, async (ctx) => {
 export const iconFrame = createAction(routes.frames.icon, async (ctx) => {
 	let { icon: name } = s.parse(s.object({ icon: s.string() }), ctx.params);
 	let icon = findIcon(name);
+	let style = readIconStyle(ctx.url.searchParams);
 
 	if (ctx.request.headers.get("X-Remix-Frame") !== "true") {
 		return redirect(icon ? routes.api.icon.href({ icon: icon.name }) : routes.api.icons.href());
 	}
 	if (icon === null) return ctx.render(<p>No icon is called “{name}”.</p>, { status: 404 });
 
-	return ctx.render(<IconDetail icon={icon} svg={await renderIconSvg(icon.name)} />);
+	return ctx.render(
+		<IconDetail icon={icon} style={style} svg={await renderIconSvg(icon.name, style)} />,
+	);
 });

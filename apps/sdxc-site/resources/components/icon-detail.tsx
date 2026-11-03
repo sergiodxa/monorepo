@@ -18,8 +18,10 @@ import { aspect, is, m, maxIs, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { CodeBlock } from "@sdxc/ui/docs";
 
+import type { IconStyle } from "~/app/services/icon-style";
 import type { IconEntry } from "~/app/services/icons";
 
+import { drawnStrokeWidth, iconStyleProps } from "~/app/services/icon-style";
 import { lucideIconHref } from "~/app/services/icons";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
 
@@ -28,6 +30,8 @@ namespace IconDetail {
 		icon: IconEntry;
 		/** The icon's SVG source, as `renderIconSvg` lays it out. */
 		svg: string;
+		/** The customization the preview draws and the snippets pass as props. */
+		style: IconStyle;
 	}
 }
 
@@ -43,10 +47,15 @@ function unitGrid() {
 	});
 }
 
-/** Renders the preview, the tags, both ways to render the icon and its SVG. */
+/**
+ * Renders the preview, the tags, both ways to render the icon and its SVG. The preview draws
+ * the icon scaled to fill the grid with the stroke it has at the chosen size.
+ */
 export default function IconDetail(handle: Handle<IconDetail.Props>) {
 	return () => {
-		let { icon, svg } = handle.props;
+		let { icon, svg, style } = handle.props;
+		let props = iconStyleProps(style);
+		let attributes = props === "" ? 'aria-hidden="true"' : `${props} aria-hidden="true"`;
 		return (
 			<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 				<div
@@ -62,7 +71,12 @@ export default function IconDetail(handle: Handle<IconDetail.Props>) {
 						unitGrid(),
 					]}
 				>
-					<Icon name={icon.name} size="100%" />
+					<Icon
+						name={icon.name}
+						size="100%"
+						strokeWidth={drawnStrokeWidth(style)}
+						color={style.color ?? undefined}
+					/>
 				</div>
 
 				{icon.tags.length > 0 ? (
@@ -74,7 +88,14 @@ export default function IconDetail(handle: Handle<IconDetail.Props>) {
 						{icon.tags.map((tag) => (
 							<li
 								key={tag}
-								mix={[p(1, 2), rounded("md"), bg("neutral.tint"), text("sm"), fg("neutral")]}
+								mix={[
+									p(1, 2),
+									rounded("md"),
+									bg("neutral.tint"),
+									border({ color: "neutral.border", width: 1, style: "solid" }),
+									text("sm"),
+									fg("neutral"),
+								]}
 							>
 								{tag}
 							</li>
@@ -86,13 +107,13 @@ export default function IconDetail(handle: Handle<IconDetail.Props>) {
 					title="By component"
 					language="tsx"
 					labels={CODE_LABELS}
-					code={`import { ${icon.component} } from "@sdxc/icons";\n\n<${icon.component} aria-hidden="true" />`}
+					code={`import { ${icon.component} } from "@sdxc/icons";\n\n<${icon.component} ${attributes} />`}
 				/>
 				<CodeBlock
 					title="By name"
 					language="tsx"
 					labels={CODE_LABELS}
-					code={`import { Icon } from "@sdxc/icons";\n\n<Icon name="${icon.name}" aria-hidden="true" />`}
+					code={`import { Icon } from "@sdxc/icons";\n\n<Icon name="${icon.name}" ${attributes} />`}
 				/>
 				<CodeBlock title="SVG" language="html" labels={CODE_LABELS} code={svg} />
 

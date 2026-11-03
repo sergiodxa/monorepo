@@ -12,6 +12,7 @@ import type { IconName } from "@sdxc/icons";
 import { iconExportNames, LUCIDE_VERSION } from "@sdxc/icons";
 import { iconTags } from "@sdxc/icons/tags";
 
+import { iconSearchText, matchesWords, queryWords } from "~/app/services/icon-search";
 import routes from "~/routes/web";
 
 /** Where each icon is published by the people who draw it. */
@@ -47,16 +48,12 @@ export function findIcon(name: string): IconEntry | null {
 }
 
 /**
- * The icons matching a reader's query. Every word must appear in the icon's name or in one
- * of its tags, so `arrow up` narrows rather than widens; a blank query matches every icon.
+ * The icons matching a reader's query: every word must appear in the icon's name or tags.
+ * The controls island narrows a rendered grid by the same rule.
  */
 export function filterIcons(icons: IconEntry[], query: string): IconEntry[] {
-	let words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
-	if (words.length === 0) return icons;
-	return icons.filter((icon) => {
-		let haystack = [icon.name, icon.name.replaceAll("-", " "), ...icon.tags];
-		return words.every((word) => haystack.some((field) => field.includes(word)));
-	});
+	let words = queryWords(query);
+	return icons.filter((icon) => matchesWords(iconSearchText(icon.name, icon.tags), words));
 }
 
 /**
