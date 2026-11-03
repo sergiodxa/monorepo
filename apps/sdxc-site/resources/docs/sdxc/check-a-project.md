@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-10-31
+lastUpdated: 2026-11-03
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -29,6 +29,7 @@ fail  installed        node_modules differs from package.json: @sdxc/cli 2026.9.
 pass  remix            remix 3.1.0 is the peer release 2026.10.17 declares
 pass  env              .env.example lists every secret cloudflare.config.ts declares
 warn  typegen          The Worker's env types were never generated; .cloudflare/types/index.d.ts is missing. Fix: sdxc run typegen
+pass  ci               .config/sdxc/ci.ts loads, and each of its 6 steps has its own name
 skip  migrations       The project has no migrations
 pass  layout           app/ holds only the layout's folders and nothing imports bootstrap/
 warn  routes           Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
@@ -88,6 +89,7 @@ They run in this order:
 | `remix`           | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                           |
 | `env`             | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration                |
 | `typegen`         | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                                 |
+| `ci`              | fail: the CI script `ci.script` names (`.config/sdxc/ci.ts`) does not load, throws while its steps are listed, or gives two steps the same name                                    | the default export, or a step name of its own      |
 | `migrations`      | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry             |
 | `layout`          | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                                   |
 | `routes`          | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                               |
