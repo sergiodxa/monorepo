@@ -9,7 +9,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { Trash2Icon } from "@sdxc/icons";
+import { TrashIcon } from "@sdxc/icons";
 import { Button, Confirm, LinkButton } from "@sdxc/ui";
 import { clearFiltersHref, setParamHref } from "@sdxc/ui/app";
 import { Empty } from "@sdxc/ui/app/empty";
@@ -324,7 +324,7 @@ export function DeleteAction(handle: Handle<DeleteActionProps>) {
 					color="danger"
 					size="sm"
 				>
-					{prominent ? <Trash2Icon size={16} aria-hidden="true" /> : null}
+					{prominent ? <TrashIcon size={16} aria-hidden="true" /> : null}
 					Delete
 				</Button>
 				<Confirm
