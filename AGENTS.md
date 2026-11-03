@@ -63,7 +63,13 @@ test never stubs `CSSStyleSheet.prototype.insertRule` or a missing API to get a 
 render. Mount a component with `render()` from `remix/component/test` and assert on the live
 DOM — computed styles and layout included — rather than parsing `renderToString` output; render
 on the server only when the test is about server output or hydrating it with `run()`. Run
-`bunx playwright install chromium` once before the first local run. Browser tests
+`bunx playwright install chromium` once before the first local run. Every browser page sets text
+in Arial (Liberation Sans on Linux, which shares its glyph widths) through `test/browser-font.ts`,
+so a wrap or a height measures the same on a Mac and on CI. A test that needs a touch screen goes
+in a `*.touch.browser.test.ts(x)` file, which the workspace's `<name>-touch` project runs in a page
+that matches `(hover: none)` and `(pointer: coarse)` throughout; never toggle
+`Emulation.setTouchEmulationEnabled`, since Chromium on Linux leaves the page at `hover: none` for
+every later test once it has been on (ADR-188). Browser tests
 import nothing that only runs on a server (`node:*`, `AsyncLocalStorage`, a whole app router);
 a test that renders server HTML and only reads the markup stays on the threads pool and parses
 it with `@sdxc/html/document`.
@@ -257,6 +263,7 @@ edge case. If the answer is nothing, write nothing.
 - MUST back database tests with an in-memory adapter from `@sdxc/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
 - MUST mock outbound HTTP with MSW in tests — `setupServer` from `msw/node`, or `setupWorker` from `msw/browser` in a `*.browser.test.ts(x)` file; never stub `globalThis.fetch` or inject a fake
 - MUST run a test that needs a DOM in Vitest Browser Mode as a `*.browser.test.ts(x)` file; never use a simulated DOM (`@vitest-environment happy-dom` or `jsdom`)
+- MUST put a test that needs a touch screen in a `*.touch.browser.test.ts(x)` file and never toggle CDP touch emulation; a placeholder test MUST hold its content's size under the pinned test fonts, by giving the placeholder the content's typography (monospace bars for monospace values, the same chip beside a name) rather than tuning lengths to one font
 - MUST NOT hand-write a fake for a Cloudflare binding (`as unknown as KVNamespace` and the like). Name the file `*.workers.test.ts` and use the real binding from `cloudflare:test`; a fake diverges silently, and every one this repo had stubbed `list()` to an empty result
 - MUST let the `cloudflareWorkersStub()` plugin supply `env`/bindings — it is on every project whose workspace uses Cloudflare bindings, so a test importing `cloudflare:workers` needs no mock of its own; reach for `vi.doMock` + `await import(...)` only to replace a module before the subject loads
 - MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`

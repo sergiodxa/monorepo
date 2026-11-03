@@ -37,7 +37,9 @@ const CSSOM_ENTRY = createRequire(
  * nested CSS, cascade layers and platform APIs behave as they do for a visitor. Such a file is
  * named `*.browser.test.ts(x)`; this builds the project that collects them for one workspace,
  * sharing the workspace's plugins and aliases with its threads project. Outbound HTTP is mocked
- * with `setupWorker` from `msw/browser`.
+ * with `setupWorker` from `msw/browser`. A `*.touch.browser.test.ts(x)` file runs in its own page
+ * that matches `(hover: none)` and `(pointer: coarse)` from its first test to its last, since
+ * Chromium on Linux keeps a page at `hover: none` once touch emulation has been switched on.
  *
  * @param name The workspace's threads project name; the browser project appends `-browser`.
  * @param base The workspace's root, plugins and resolve options.
@@ -73,9 +75,18 @@ function browserProject(
 				enabled: true,
 				headless: true,
 				provider: playwright(),
-				instances: [{ browser: "chromium" }],
+				instances: [
+					{ browser: "chromium", exclude: [...defaultExclude, "**/*.touch.browser.test.ts?(x)"] },
+					{
+						browser: "chromium",
+						name: `${name}-touch`,
+						include: include.map((glob) => glob.replace(".browser.", ".touch.browser.")),
+						provider: playwright({ contextOptions: { hasTouch: true } }),
+					},
+				],
 				screenshotFailures: false,
 			},
+			setupFiles: [`${import.meta.dirname}/test/browser-font.ts`],
 			testTimeout: 20_000,
 		},
 	};
