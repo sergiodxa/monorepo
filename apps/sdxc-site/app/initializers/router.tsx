@@ -25,7 +25,6 @@ import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import defaultHandler from "~/app/http/controllers/default-handler";
 import canonicalHost from "~/app/http/middleware/canonical-host";
 import frameTransforms from "~/app/http/middleware/frame-transforms";
 import importMapHash from "~/app/http/middleware/import-map-hash";
@@ -82,7 +81,11 @@ export function createWebRouter() {
 			importMapHash(),
 			render({ assets: assetResolver }),
 		],
-		defaultHandler,
+		/** Loaded on the first unmatched request, so a worker starts without the document. */
+		async defaultHandler(context) {
+			let { default: notFound } = await import("~/app/http/controllers/default-handler");
+			return notFound(context);
+		},
 	});
 
 	router.map(

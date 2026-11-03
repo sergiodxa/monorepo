@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { contentVariables } from "~/app/services/article";
+import { contentVariables } from "~/app/services/content-variables";
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/constants";
 
 export namespace SocialCard {

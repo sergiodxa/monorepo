@@ -22,7 +22,9 @@ const COUNTS: Record<string, string> = {
 let cards: typeof SocialCardModule;
 
 beforeAll(async () => {
-	vi.doMock("~/app/services/article", () => ({ contentVariables: () => ({ ...COUNTS }) }));
+	vi.doMock("~/app/services/content-variables", () => ({
+		contentVariables: () => ({ ...COUNTS }),
+	}));
 	cards = await import("~/app/services/social-card");
 });
 

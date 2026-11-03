@@ -1,7 +1,7 @@
 /**
- * Tests that the router gives every request a trace: the request's wide event carries
- * `trace_id` and `span_id`, and a caller's `traceparent` is continued, so the record
- * joins the trace the caller started.
+ * Tests that the router gives every request a trace — the request's wide event carries
+ * `trace_id` and `span_id`, and a caller's `traceparent` is continued — and that a URL no
+ * route matches answers with the site's own not-found document.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,5 +49,14 @@ describe("request tracing", () => {
 			trace_flags: "01",
 		});
 		expect(records[0]?.span_id).not.toBe(PARENT_ID);
+	});
+});
+
+describe("unmatched requests", () => {
+	test("answer with the site's not-found document", async () => {
+		let response = await fetchApp("/no/such/page");
+
+		expect(response.status).toBe(404);
+		expect(await response.text()).toContain("The requested page does not exist.");
 	});
 });

@@ -11,10 +11,6 @@
 import { siteCache } from "~/app/initializers/cache";
 import { logger } from "~/app/initializers/logger";
 import { createWebRouter } from "~/app/initializers/router";
-import { refreshAdoption } from "~/app/services/adoption";
-import { refreshGitHubStats } from "~/app/services/github-stats";
-import { refreshNpmStats } from "~/app/services/npm-stats";
-import { refreshSponsors } from "~/app/services/sponsors";
 
 /**
  * The trigger in `cloudflare.config.ts` that reads npm, deps.dev and GitHub's repository
@@ -33,6 +29,10 @@ const NPM_STATS_BUDGET = 10 * 60 * 1000;
  */
 async function refreshDaily(token: string | undefined) {
 	let cache = siteCache();
+	let [{ refreshAdoption }, { refreshGitHubStats }] = await Promise.all([
+		import("~/app/services/adoption"),
+		import("~/app/services/github-stats"),
+	]);
 	let reads = [
 		["adoption.refresh", () => refreshAdoption(cache, token)],
 		["github-stats.refresh", () => refreshGitHubStats(cache, token)],
@@ -58,11 +58,13 @@ export default {
 
 	/**
 	 * Reads the sponsors from GitHub, or npm's download history, into the cache the pages
-	 * render from, so a page never waits on either and survives an outage there.
+	 * render from, so a page never waits on either and survives an outage there. Each
+	 * refresh is imported when its trigger fires, so a request's isolate starts without them.
 	 */
 	async scheduled(event: ScheduledController, env: Cloudflare.Env) {
 		if (event.cron === NPM_STATS_SCHEDULE) {
 			await refreshDaily(env.GITHUB_TOKEN);
+			let { refreshNpmStats } = await import("~/app/services/npm-stats");
 			let log = logger.open("cron", { trigger: "npm-stats.refresh" });
 			await log
 				.run(async () => {
@@ -80,6 +82,7 @@ export default {
 		await log
 			.run(async () => {
 				if (!token) return void log.set({ skipped: "missing_token" });
+				let { refreshSponsors } = await import("~/app/services/sponsors");
 				let roster = await refreshSponsors(siteCache(), token);
 				log.set({ current: roster.current.length, past: roster.past.length });
 			})

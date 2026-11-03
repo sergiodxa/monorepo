@@ -15,8 +15,8 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/initializers/cache";
-import { contentVariables } from "~/app/services/article";
 import { readContent } from "~/app/services/content";
+import { contentVariables } from "~/app/services/content-variables";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
