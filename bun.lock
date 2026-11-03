@@ -6,6 +6,7 @@
       "name": "monorepo",
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
+        "@sdxc/ci": "workspace:*",
         "@sdxc/cli": "workspace:*",
         "@sdxc/codemod": "workspace:*",
         "@sdxc/iife": "workspace:*",

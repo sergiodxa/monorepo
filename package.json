@@ -9,6 +9,7 @@
 	"scripts": {
 		"check": "vp run check:all",
 		"check:fix": "vp check --fix",
+		"ci": "bun packages/kit/src/bin.ts ci",
 		"cli": "bun ./cli/index.ts",
 		"doctor": "bun ./cli/index.ts doctor",
 		"format": "vp fmt --check",
@@ -32,6 +33,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
+		"@sdxc/ci": "workspace:*",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
 		"@sdxc/iife": "workspace:*",

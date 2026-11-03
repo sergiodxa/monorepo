@@ -29,6 +29,13 @@ vp test run <path>              # Scope Vitest to a path while iterating. A rela
                                  # `uuid`…); `"$PWD/packages/u/"` runs exactly that workspace
 vp test watch                   # Watch mode
 vp lint <path>                  # Scope a static check to one workspace while iterating
+bun run ci                      # Run the whole CI script (.config/sdxc/ci.ts) as GitHub Actions
+                                 # does: install, typegen, doctor, check, commit bodies, then every
+                                 # workspace's tests as one matrix entry each, unchanged ones cached.
+                                 # Same as `sdxc ci`; run inside a workspace, it covers that one and
+                                 # its dependents. A green run on a clean tree signs the commit off,
+                                 # so GitHub Actions skips its own run for it
+bun run ci --push               # The same, then push exactly the tested commit and sign it off
 bun run doctor                  # Run `sdxc doctor` from this checkout's kit in every app; CI
                                  # runs it after typegen and fails when any app fails. Extra
                                  # flags reach every run (`bun run doctor --only migrations`)

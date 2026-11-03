@@ -370,7 +370,8 @@ dependencies stay in YAML, because caching is an Actions feature. `codeql.yml`, 
 ### Negative
 
 - **Trust moves to the contributor's machine** - a signoff from a machine with a stale toolchain or
-  a different OS is accepted. The `.env.example` parity gap needs its own step to stay closed.
+  a different OS is accepted. Apps whose typegen runs `wrangler types` type secrets from
+  `.env.example` (`--env-file`), so a local `.dev.vars` never changes the types a run checks.
 - **Push races cost a re-run** - when another session pushes first, the rebased commit needs a new
   run; the cache keeps that short but not free.
 - **Cache inputs can be incomplete** - a step whose real inputs exceed its declared ones can hit a
@@ -417,8 +418,8 @@ dependencies stay in YAML, because caching is an Actions feature. `codeql.yml`, 
 1. `sdxc ci`, the local frozen install and `--no-install`, scoping from the current folder, the
    `ci.script` key, the doctor check.
 2. Default script and workflow in the `sdxc create` template.
-3. This repository's `.config/sdxc/ci.ts`, a parity step for `.dev.vars` keys missing from
-   `.env.example`, and `ci.yml` rewritten around the gate.
+3. This repository's `.config/sdxc/ci.ts`, typegen typing secrets from `.env.example` in every
+   app, and `ci.yml` rewritten around the gate.
 
 ## Alternatives Considered
 
@@ -490,7 +491,7 @@ in any repository; the kit keeps only the script's location, scoping and templat
   - [x] `sdxc ci`, `list`, `signoff`, `verify`, the frozen install, scoping and `ci.script`
   - [x] Default script and workflow in the `sdxc create` template, left out inside a workspace
   - [ ] The `sdxc doctor` `ci` check
-  - [ ] This repository's `.config/sdxc/ci.ts` and `ci.yml` around the gate
+  - [x] This repository's `.config/sdxc/ci.ts` and `ci.yml` around the gate
 
 ## Notes
 

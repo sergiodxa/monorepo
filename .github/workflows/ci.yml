@@ -1,7 +1,12 @@
 name: CI
 
+# Every job runs the script `sdxc ci` runs locally, .config/sdxc/ci.ts, so the steps live in one
+# place: this file only provisions machines and expands the test matrix. A commit a contributor
+# already signed off with a green local `sdxc ci` skips every job after the gate.
+
 permissions:
   contents: read
+  statuses: read
 
 env:
   BUN_VERSION: 1.4.2
@@ -28,10 +33,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: Check
+  # `sdxc ci --push` posts the sdxc/ci status seconds after the push lands, so the gate waits a
+  # minute for it. Only a status from someone with write access counts; anything else runs in full.
+  gate:
+    name: Signoff
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      signed: ${{ steps.verify.outputs.signed }}
 
     steps:
       - &checkout
@@ -66,37 +75,30 @@ jobs:
         with:
           mode: firewall-free
 
+      # `sdxc ci` installs on its own only on a laptop; on CI this firewalled install is the one.
       - &install-dependencies
         name: Install dependencies
         run: sfw bun install --frozen-lockfile
 
-      # Typegen reads each app's secrets from `.dev.vars` to type them, and the Workers test
-      # pool loads them from there as the Worker's environment.
-      - &example-secrets
-        name: Use example secrets
+      - name: Verify signoff
+        id: verify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          for file in apps/*/.env.example; do
-            cp "$file" "${file%/.env.example}/.dev.vars"
-          done
+          if bun packages/kit/src/bin.ts ci verify "$SHA" --repo "$GITHUB_REPOSITORY" --wait 60s; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Generate framework types
-        run: bun --filter '*' cli typegen
-
-      # Runs after typegen, which the doctor's typegen check compares the Worker types against.
-      - name: Run sdxc doctor
-        run: bun run doctor
-
-      - name: Run Check
-        run: bun run check
-
-  # A local commit-msg hook is skipped by `--no-verify` and by clones that never ran
-  # `bun install`, so every commit a push or pull request adds is checked again here for the
-  # release-note body ADR-140 requires. A pull request is checked from its head, not from the
-  # merge commit GitHub checks out, and a new branch with no `before` falls back to `main`.
-  commits:
-    name: Commit bodies
+  # Every step of the script but the tests: typegen, the doctor, `bun check` and the release-note
+  # bodies of every commit the push or pull request adds. A pull request is checked from its
+  # head, and a new branch with no `before` falls back to `main`.
+  check:
+    name: Check
+    needs: gate
+    if: needs.gate.outputs.signed != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -109,7 +111,7 @@ jobs:
       - *setup-socket-firewall
       - *install-dependencies
 
-      - name: Check commit bodies
+      - name: Run CI without tests
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -117,41 +119,38 @@ jobs:
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             BASE=origin/main
           fi
-          SDXC_COMMIT_RANGE="$BASE..$HEAD" bun packages/kit/src/bin.ts doctor --only commits
+          SDXC_COMMIT_RANGE="$BASE..$HEAD" bun packages/kit/src/bin.ts ci --runner remote --skip Tests
 
-  workspaces:
-    name: List test workspaces
+  # The script's Tests matrix holds one entry per workspace with a test file, plus `root` for the
+  # repo-level suites, so a new workspace gets its own job without editing this file.
+  entries:
+    name: List test entries
+    needs: gate
+    if: needs.gate.outputs.signed != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      workspaces: ${{ steps.list.outputs.workspaces }}
+      entries: ${{ steps.list.outputs.entries }}
 
     steps:
       - *checkout
+      - *setup-bun
+      - *setup-socket-firewall
+      - *install-dependencies
 
-      # Every app and package holding a test file becomes one Test job, and the repo-level
-      # `test/` and `scripts/` suites become the `root` job, so a new workspace is picked up
-      # without editing this file.
-      - name: List workspaces with tests
+      - name: List the Tests matrix
         id: list
-        run: |
-          workspaces=$(
-            git ls-files -- '*.test.ts' '*.test.tsx' \
-              | awk -F/ '$1 == "apps" || $1 == "packages" { print $1 "/" $2; next } { print "root" }' \
-              | sort -u \
-              | jq --raw-input --null-input --compact-output '[inputs]'
-          )
-          echo "workspaces=$workspaces" >> "$GITHUB_OUTPUT"
+        run: echo "entries=$(bun packages/kit/src/bin.ts ci list --runner remote --matrix Tests --json)" >> "$GITHUB_OUTPUT"
 
   test:
-    name: Test (${{ matrix.workspace }})
-    needs: workspaces
+    name: Test (${{ matrix.entry }})
+    needs: entries
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        workspace: ${{ fromJSON(needs.workspaces.outputs.workspaces) }}
+        entry: ${{ fromJSON(needs.entries.outputs.entries) }}
 
     steps:
       - *checkout
@@ -159,7 +158,6 @@ jobs:
       - *setup-node
       - *setup-socket-firewall
       - *install-dependencies
-      - *example-secrets
 
       # A `*.browser.test.ts(x)` file runs in headless Chromium through Vitest Browser Mode, so
       # only a workspace holding one installs the browser. Browser Mode runs headless, which
@@ -168,7 +166,7 @@ jobs:
       - name: Detect browser tests
         id: browser
         env:
-          WORKSPACE: ${{ matrix.workspace }}
+          WORKSPACE: ${{ matrix.entry }}
         run: |
           if [ "$WORKSPACE" != root ] && [ -n "$(git ls-files -- "$WORKSPACE/*.browser.test.ts" "$WORKSPACE/*.browser.test.tsx")" ]; then
             echo "needed=true" >> "$GITHUB_OUTPUT"
@@ -191,16 +189,9 @@ jobs:
         if: steps.browser.outputs.needed == 'true'
         run: bunx playwright install-deps chromium
 
-      # Vitest matches a relative filter as a substring of each project's own paths, so
-      # `packages/u` would also run `ui`, `uuid` and `user-agent`. An absolute path ending in
-      # a slash matches as a prefix instead: exactly this workspace, across every project that
-      # collects from it (an app's threads project and its Workers project alike).
+      # The Workers pool loads each app's secrets from `.dev.vars`, which the script's
+      # Example secrets step writes from `.env.example` before this entry's tests run.
       - name: Run tests
         env:
-          WORKSPACE: ${{ matrix.workspace }}
-        run: |
-          if [ "$WORKSPACE" = root ]; then
-            bun run test --project root
-          else
-            bun run test "$PWD/$WORKSPACE/"
-          fi
+          ENTRY: ${{ matrix.entry }}
+        run: bun packages/kit/src/bin.ts ci --runner remote --only "Example secrets" --only "Tests/$ENTRY"
