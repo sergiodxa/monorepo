@@ -1,0 +1,22 @@
+{
+	"name": "@sdxc/ci",
+	"version": "0.0.1",
+	"description": "CI as a TypeScript script that runs the same on a laptop and a CI host, and signs a green commit off on GitHub",
+	"license": "MIT",
+	"bin": {
+		"sdxc-ci": "./src/cli.ts"
+	},
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./command-line": "./src/command-line.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/cli": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.1.0"
+	}
+}

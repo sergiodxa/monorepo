@@ -325,23 +325,24 @@ references live at [sdxc.dev](https://sdxc.dev).
 
 ### Foundations
 
-| Package                                                   | Description                                                                                       |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [@sdxc/cli](packages/cli)                                 | Build command-line tools with generated help, prompts bound to flags, tasks and a test harness    |
-| [@sdxc/data-model](packages/data-model)                   | Models over remix/data-table tables with scopes, async callbacks and typed meta fields            |
-| [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command  |
-| [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                              |
-| [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                       |
-| [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                       |
-| [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state |
-| [@sdxc/result](packages/result)                           | Result type for error handling                                                                    |
-| [@sdxc/sample](packages/sample)                           | Seeded generation of believable people, places, prose, numbers and identifiers                    |
-| [@sdxc/spec](packages/spec)                               | Executable specification runner for `.spec` files                                                 |
-| [@sdxc/strings](packages/strings)                         | Inflection, Chicago title case, slugs and grapheme-safe text                                      |
-| [@sdxc/typeid](packages/typeid)                           | TypeID values: a UUID and the prefix naming it                                                    |
-| [@sdxc/types](packages/types)                             | Shared TypeScript types                                                                           |
-| [@sdxc/uuid](packages/uuid)                               | Branded UUID type with validation and generation                                                  |
-| [@sdxc/validate](packages/validate)                       | Standard Schema validation utilities                                                              |
+| Package                                                   | Description                                                                                                    |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [@sdxc/cli](packages/cli)                                 | Build command-line tools with generated help, prompts bound to flags, tasks and a test harness                 |
+| [@sdxc/data-model](packages/data-model)                   | Models over remix/data-table tables with scopes, async callbacks and typed meta fields                         |
+| [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command               |
+| [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                                           |
+| [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                                    |
+| [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                                    |
+| [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state              |
+| [@sdxc/ci](packages/ci)                                   | CI as a TypeScript script that runs the same on a laptop and a CI host, and signs a green commit off on GitHub |
+| [@sdxc/result](packages/result)                           | Result type for error handling                                                                                 |
+| [@sdxc/sample](packages/sample)                           | Seeded generation of believable people, places, prose, numbers and identifiers                                 |
+| [@sdxc/spec](packages/spec)                               | Executable specification runner for `.spec` files                                                              |
+| [@sdxc/strings](packages/strings)                         | Inflection, Chicago title case, slugs and grapheme-safe text                                                   |
+| [@sdxc/typeid](packages/typeid)                           | TypeID values: a UUID and the prefix naming it                                                                 |
+| [@sdxc/types](packages/types)                             | Shared TypeScript types                                                                                        |
+| [@sdxc/uuid](packages/uuid)                               | Branded UUID type with validation and generation                                                               |
+| [@sdxc/validate](packages/validate)                       | Standard Schema validation utilities                                                                           |
 
 ## How It's Built
 
