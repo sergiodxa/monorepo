@@ -1,0 +1,22 @@
+diff --git a/dist/build-BbA-Zq1m.mjs b/dist/build-BbA-Zq1m.mjs
+index 44d24b4a92f1731062c698cec0238813015c8b84..13269363bff049964a138e60f523c18da583b86f 100644
+--- a/dist/build-BbA-Zq1m.mjs
++++ b/dist/build-BbA-Zq1m.mjs
+@@ -75,6 +75,8 @@ function validateEnvironment(name, environment) {
+ /**
+ * Every source module's metadata: the union over each chunk it belongs to,
+ * with a browser entry's own chunk first so its preloads lead with its URL.
++* Only the client graph lists preloads: the resolver reads a server graph for
++* stylesheets alone, and its preload closures dominate the manifest's size.
+ */
+ function indexModules(name, environment, entryChunks, publicUrl) {
+ 	let memberships = /* @__PURE__ */ new Map();
+@@ -100,7 +102,7 @@ function indexModules(name, environment, entryChunks, publicUrl) {
+ 			for (let href of closure.stylesheets) stylesheets.add(href);
+ 		}
+ 		modules[key] = {
+-			preloads: [...preloads],
++			preloads: environment.role === "client" ? [...preloads] : [],
+ 			stylesheets: [...stylesheets]
+ 		};
+ 	}

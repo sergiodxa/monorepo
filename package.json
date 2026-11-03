@@ -73,6 +73,7 @@
 		]
 	},
 	"patchedDependencies": {
-		"@vitest/browser@4.1.11": "patches/@vitest%2Fbrowser@4.1.11.patch"
+		"@vitest/browser@4.1.11": "patches/@vitest%2Fbrowser@4.1.11.patch",
+		"@pitlane/assets@0.1.0": "patches/@pitlane%2Fassets@0.1.0.patch"
 	}
 }
