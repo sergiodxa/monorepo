@@ -106,7 +106,7 @@ describe("DocsNav", () => {
 		expect(document.querySelector<HTMLDetailsElement>("[data-docs-nav] details")!.open).toBe(true);
 	});
 
-	test("draws no field without a filter and shows it once loaded with one", () => {
+	test("draws no field without a filter and shows it with one", () => {
 		mountNav();
 		expect(document.querySelector("[data-docs-nav] input")).toBeNull();
 		mounted?.cleanup();
@@ -114,6 +114,37 @@ describe("DocsNav", () => {
 		expect(
 			document.querySelector<HTMLInputElement>("[data-docs-nav] input")!.checkVisibility(),
 		).toBe(true);
+	});
+
+	test("filters as the reader types, keeping Enter from reloading the page", () => {
+		mountNav({ filter: FILTER });
+		let form = document.querySelector<HTMLFormElement>("[data-docs-nav] form")!;
+		let submit = new SubmitEvent("submit", { bubbles: true, cancelable: true });
+		form.dispatchEvent(submit);
+		expect(submit.defaultPrevented).toBe(true);
+	});
+
+	test("renders the query a page was asked with already filtered", () => {
+		mountNav({
+			filter: { ...FILTER, query: "webhook" },
+			collapseGroups: true,
+			activePath: "/docs/guide-1",
+		});
+		expect(document.querySelector<HTMLInputElement>("[data-docs-nav] input")!.value).toBe(
+			"webhook",
+		);
+		expect(visibleTitles()).toEqual(["Webhooks"]);
+	});
+
+	test("folds a group the query opened once the reader clears it", () => {
+		mountNav({
+			filter: { ...FILTER, query: "webhook" },
+			collapseGroups: true,
+			activePath: "/docs/guide-1",
+		});
+		type("");
+		expect(visibleTitles()).toHaveLength(41);
+		expect(document.querySelector<HTMLDetailsElement>("[data-docs-nav] details")!.open).toBe(false);
 	});
 
 	test("filters by title, keeping a match's group open and hiding empty sections", () => {

@@ -11,6 +11,7 @@ import type { ElementProps, MixinFactory } from "remix/component";
 
 import { createMixin } from "remix/component";
 
+import { filterWords, titleMatches } from "../utils/docs-filter.js";
 import { revealInScroller } from "../utils/reveal-in-scroller.js";
 
 /**
@@ -18,11 +19,11 @@ import { revealInScroller } from "../utils/reveal-in-scroller.js";
  * `aria-current="page"`. When the host holds an `<input>`, typing hides every `li` whose
  * title misses the query, hides sections left empty, opens `<details>` groups holding a
  * match, and shows `[data-docs-nav-empty]` when nothing matches; clearing the field restores
- * every group's own open state. A page reload that resets the tree keeps the query applied.
- * The host is `hidden` until this runs, so a page without script never shows an inert field.
+ * every group's own open state. A page reload that resets the tree keeps the query applied,
+ * and the field's form stays on the page, which without script submits to the server instead.
  *
  * @example
- * <div data-docs-nav><div hidden mix={[docsNavTools()]}><input type="search" /></div><nav>…</nav></div>
+ * <div data-docs-nav><form mix={[docsNavTools()]}><input type="search" /></form><nav>…</nav></div>
  */
 export const docsNavTools: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
 	HTMLElement,
@@ -57,10 +58,12 @@ function enhance(host: HTMLElement, signal: AbortSignal) {
 
 	let input = host.querySelector("input");
 	if (!input) return;
-	host.hidden = false;
+	host.addEventListener("submit", (event) => event.preventDefault(), { signal });
 	let ownState = new Map<HTMLDetailsElement, boolean>();
 	let snapshot = () => {
-		ownState = new Map([...nav.querySelectorAll("details")].map((group) => [group, group.open]));
+		ownState = new Map(
+			[...nav.querySelectorAll("details")].map((group) => [group, ownOpen(group)]),
+		);
 	};
 	snapshot();
 
@@ -78,6 +81,11 @@ function enhance(host: HTMLElement, signal: AbortSignal) {
 	signal.addEventListener("abort", () => observer.disconnect());
 	input.addEventListener("input", apply, { signal });
 	if (input.value) apply();
+}
+
+/** Whether `group` is open on its own, discounting a server render that opened it for a match. */
+function ownOpen(group: HTMLDetailsElement): boolean {
+	return group.open && !group.hasAttribute("data-docs-nav-opened");
 }
 
 /**
@@ -99,7 +107,7 @@ export function filterDocsNav(
 	query: string,
 	ownState: Map<HTMLDetailsElement, boolean>,
 ) {
-	let words = normalize(query).split(/\s+/).filter(Boolean);
+	let words = filterWords(query);
 	let empty = nav.querySelector<HTMLElement>("[data-docs-nav-empty]");
 	let anyMatch = false;
 
@@ -118,8 +126,10 @@ export function filterDocsNav(
 
 /** Shows or hides `item` and its nested pages for `words`; reports whether it stays shown. */
 function applyFilter(item: HTMLLIElement, words: string[]): boolean {
-	let title = item.querySelector(":scope > a, :scope > details > summary");
-	let own = words.every((word) => normalize(title?.textContent ?? "").includes(word));
+	let title = item.querySelector(
+		":scope > a [data-docs-nav-title], :scope > details > summary [data-docs-nav-title]",
+	);
+	let own = titleMatches(title?.textContent ?? "", words);
 	let children = item.querySelectorAll<HTMLLIElement>(
 		":scope > details > ul > li, :scope > ul > li",
 	);
@@ -129,12 +139,4 @@ function applyFilter(item: HTMLLIElement, words: string[]): boolean {
 	if (group && childShown && words.length > 0) group.open = true;
 	item.hidden = !(own || childShown);
 	return !item.hidden;
-}
-
-/** Lower-cases `value` and strips diacritics, so "Configuracion" finds "Configuración". */
-function normalize(value: string): string {
-	return value
-		.normalize("NFD")
-		.replaceAll(/\p{Diacritic}/gu, "")
-		.toLowerCase();
 }

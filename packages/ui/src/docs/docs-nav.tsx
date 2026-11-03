@@ -1,7 +1,7 @@
 /**
  * A docs sidebar drawn from a {@link DocsTree}: sections under plain labels, pages and
  * titled groups of pages, the current page marked and scrolled into view, an optional
- * title filter, and a footer for support links. The same tree feeds the pager.
+ * title filter that works with or without script, and a footer for support links.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,9 +22,11 @@ import { text, weight } from "@sdxc/u/typography";
 
 import { Sidebar } from "../components/sidebar.js";
 
+import type { DocsTreeMatches } from "./utils/docs-filter.js";
 import type { DocsTree } from "./utils/docs-tree.js";
 
 import { DocsNavTools } from "./docs-nav-tools.js";
+import { matchDocsTree } from "./utils/docs-filter.js";
 
 /** Prop types for {@link DocsNav}. */
 export namespace DocsNav {
@@ -34,10 +36,17 @@ export namespace DocsNav {
 		/** The path being read, which marks one link `aria-current="page"`. */
 		activePath: string;
 		/**
-		 * A field that filters pages by title, with the line shown when nothing matches.
-		 * It appears once the page's script loads.
+		 * A field that filters pages by title, with the line shown when nothing matches. Without
+		 * script it submits `name` (default `"filter"`) to the page; pass that parameter back as
+		 * `query` and the tree renders filtered.
 		 */
-		filter?: { label: string; placeholder: string; noResults: string };
+		filter?: {
+			label: string;
+			placeholder: string;
+			noResults: string;
+			name?: string;
+			query?: string;
+		};
 		/**
 		 * Drawn under the tree, such as "Contact support" or a status link, flush with the
 		 * nav's edge; give its links the rows' inline padding (or render them as
@@ -78,7 +87,9 @@ export function DocsNav(handle: Handle<DocsNav.Props>) {
 			collapseGroups = false,
 			prefetch = "intent",
 		} = handle.props;
-		let context: ItemContext = { activePath, collapseGroups, prefetch };
+		let query = filter?.query ?? "";
+		let matches = filter ? matchDocsTree(tree, query) : null;
+		let context: ItemContext = { activePath, collapseGroups, prefetch, matches };
 
 		return (
 			<div
@@ -90,11 +101,25 @@ export function DocsNav(handle: Handle<DocsNav.Props>) {
 				]}
 			>
 				<DocsNavTools
-					filter={filter ? { label: filter.label, placeholder: filter.placeholder } : undefined}
+					filter={
+						filter
+							? {
+									label: filter.label,
+									placeholder: filter.placeholder,
+									name: filter.name ?? "filter",
+									query,
+								}
+							: undefined
+					}
 				/>
 				<Sidebar.Nav aria-label={tree.label} mix={[raw({ gap: "1.25rem" })]}>
 					{tree.sections.map((section) => (
-						<div key={section.title} data-docs-nav-section="" mix={[vstack({ gap: 1 })]}>
+						<div
+							key={section.title}
+							data-docs-nav-section=""
+							hidden={matches ? !section.items.some((item) => matches.shown.has(item)) : undefined}
+							mix={[vstack({ gap: 1 })]}
+						>
 							<p mix={[m(0), p(1, 2.5), text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
 								{section.title}
 							</p>
@@ -108,7 +133,7 @@ export function DocsNav(handle: Handle<DocsNav.Props>) {
 					{filter ? (
 						<p
 							data-docs-nav-empty=""
-							hidden
+							hidden={!matches || matches.shown.size > 0}
 							mix={[m(0), p(2, 2.5), text("sm"), fg("neutral.muted")]}
 						>
 							{filter.noResults}
@@ -126,6 +151,8 @@ interface ItemContext {
 	activePath: string;
 	collapseGroups: boolean;
 	prefetch: Sidebar.Prefetch;
+	/** What the server-side filter query keeps; `null` draws every page. */
+	matches: DocsTreeMatches | null;
 }
 
 namespace NavItem {
@@ -146,7 +173,8 @@ function holds(item: DocsTree.Item, path: string): boolean {
 function NavItem(handle: Handle<NavItem.Props>) {
 	return () => {
 		let { item, context, depth } = handle.props;
-		let { activePath, collapseGroups, prefetch } = context;
+		let { activePath, collapseGroups, prefetch, matches } = context;
+		let filteredOut = matches ? !matches.shown.has(item) : undefined;
 		let Row = depth === 0 ? Sidebar.MenuItem : Sidebar.MenuSubItem;
 		let badge = item.badge ? <Sidebar.MenuBadge>{item.badge}</Sidebar.MenuBadge> : null;
 
@@ -154,21 +182,22 @@ function NavItem(handle: Handle<NavItem.Props>) {
 			if (item.href === undefined) return null;
 			let Link = depth === 0 ? Sidebar.MenuLink : Sidebar.MenuSubLink;
 			return (
-				<Row>
+				<Row hidden={filteredOut}>
 					<Link href={item.href} prefetch={prefetch} active={item.href === activePath}>
-						<span>{item.title}</span>
+						<span data-docs-nav-title="">{item.title}</span>
 						{badge}
 					</Link>
 				</Row>
 			);
 		}
 
-		let open = !collapseGroups || holds(item, activePath);
+		let own = !collapseGroups || holds(item, activePath);
+		let opened = !own && (matches?.opened.has(item) ?? false);
 		let current = item.href !== undefined && item.href === activePath;
 
 		return (
-			<Row>
-				<details open={open}>
+			<Row hidden={filteredOut}>
+				<details open={own || opened} data-docs-nav-opened={opened ? "" : undefined}>
 					<summary
 						mix={[
 							hstack({ gap: 2, align: "center" }),
@@ -192,10 +221,10 @@ function NavItem(handle: Handle<NavItem.Props>) {
 									when('&[aria-current="page"]', [fg("neutral.emphasis"), weight("medium")]),
 								]}
 							>
-								{item.title}
+								<span data-docs-nav-title="">{item.title}</span>
 							</a>
 						) : (
-							<span>{item.title}</span>
+							<span data-docs-nav-title="">{item.title}</span>
 						)}
 						{badge}
 						<ChevronRightIcon
