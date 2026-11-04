@@ -95,7 +95,6 @@ export function createTestRouter(viewer: Viewer | null): AppRouter {
 			 */
 			csp({
 				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
-				filter: () => true,
 			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
 			/**

@@ -69,7 +69,6 @@ async function serve(): Promise<Response> {
 			presentation,
 			csp({
 				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
-				filter: () => true,
 			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
 			...documentRendering(),

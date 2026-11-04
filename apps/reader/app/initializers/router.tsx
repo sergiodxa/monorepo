@@ -141,7 +141,6 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			csp({
 				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
-				filter: () => true,
 			}),
 			securityHeaders(SECURITY_POLICY),
 			/**
