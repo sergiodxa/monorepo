@@ -8,14 +8,13 @@
  */
 
 import type { ScriptEntry } from "@pitlane/assets";
-import type { SecurityHeaders } from "@sdxc/security-headers";
 import type { Middleware } from "remix/router";
 
 import { Base64, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
+import { patchCsp } from "@sdxc/security-headers/csp-patch";
 
-/** The CSP headers whose `script-src` the hash joins. */
-const POLICY_HEADERS = ["contentSecurityPolicy", "contentSecurityPolicyReportOnly"] as const;
+import { CONTENT_SECURITY_POLICY } from "~/config/security-policy";
 
 /**
  * The import map's text exactly as `remix/component` writes it into the `<script>`, where a `<`
@@ -28,9 +27,9 @@ export function serializeImportMap(importMap: ScriptEntry["importMap"]): string 
 }
 
 /**
- * Appends the import map's `sha256-…` source to `script-src` in each CSP the response carries,
- * once `assets()` and `securityHeaders()` have published their state. A policy without a
- * `script-src` keeps its `default-src` fallback as written.
+ * Appends the import map's `sha256-…` source to the Report-Only `script-src` Remix already
+ * wrote, once `assets()` has published the import map. A policy without a `script-src` keeps
+ * its `default-src` fallback as written.
  */
 export default function importMapHash(): Middleware {
 	return async (ctx, next) => {
@@ -38,13 +37,11 @@ export default function importMapHash(): Middleware {
 		if (isFailure(digest)) return next();
 
 		let source = `sha256-${Base64.encode(digest.data)}` as const;
-		let policy = ctx.securityHeaders.policy;
-		let patch: SecurityHeaders.Override = {};
-		for (let header of POLICY_HEADERS) {
-			let scriptSrc = policy[header]?.scriptSrc;
-			if (scriptSrc) patch[header] = { scriptSrc: [...scriptSrc, source] };
-		}
-		ctx.securityHeaders.override(patch);
+		patchCsp(ctx, {
+			reportOnlyPolicy: {
+				scriptSrc: [...(CONTENT_SECURITY_POLICY.scriptSrc ?? []), source],
+			},
+		});
 
 		return next();
 	};

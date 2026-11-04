@@ -7,31 +7,36 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
+
+/**
+ * The Report-Only Content-Security-Policy Remix's `csp()` sends. Keywords stay unquoted;
+ * `remixCsp` quotes them for the middleware.
+ */
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: ["self"],
+	styleSrc: ["self", "unsafe-inline"],
+	imgSrc: ["self", "data:"],
+	fontSrc: ["self"],
+	connectSrc: ["self"],
+	frameSrc: ["https://www.youtube-nocookie.com"],
+	frameAncestors: ["none"],
+	formAction: ["self", "https://auth.sergiodxa.com"],
+	baseUri: ["none"],
+	objectSrc: ["none"],
+	reportTo: "csp",
+};
 
 /**
  * Enforced: MIME sniffing off, a one-year HSTS for the apex only (subdomains are separate
  * apps), no cross-window access, and the powerful features denied.
  */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicyReportOnly: {
-		defaultSrc: ["self"],
-		scriptSrc: ["self"],
-		styleSrc: ["self", "unsafe-inline"],
-		imgSrc: ["self", "data:"],
-		fontSrc: ["self"],
-		connectSrc: ["self"],
-		frameSrc: ["https://www.youtube-nocookie.com"],
-		frameAncestors: ["none"],
-		formAction: ["self", "https://auth.sergiodxa.com"],
-		baseUri: ["none"],
-		objectSrc: ["none"],
-		reportTo: "csp",
-	},
-	reportingEndpoints: { csp: "/reports/csp" },
 	strictTransportSecurity: { maxAge: 31536000 },
 	referrerPolicy: "strict-origin-when-cross-origin",
 	crossOriginOpenerPolicy: "same-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: {
 		camera: [],
 		microphone: [],
