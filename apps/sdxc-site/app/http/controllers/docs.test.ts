@@ -275,6 +275,7 @@ describe("GET /api/:name", () => {
 		expect(body).not.toContain('id="ui-explore-components"');
 		expect(body).toContain('data-slot="ui-component-miniature"');
 		expect(body).toContain('data-face-kind="button"');
+		expect(body).toContain('data-slot="ui-component-grid"');
 		expect(body).toContain('href="/api/ui/theming"');
 		expect(body).not.toContain('href="/api/ui/theming">Theming</code>');
 		expect(body).toContain("A compact pill");
