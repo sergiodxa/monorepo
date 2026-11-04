@@ -40,7 +40,7 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "8";
+export const COMPONENT_FACE_VERSION = "9";
 
 /** Material role a miniature piece paints with. */
 type Tone = "surface" | "chrome" | "label" | "ink" | "muted" | "hairline" | "accent";
@@ -441,10 +441,10 @@ const OVERRIDES: Record<string, Shape[]> = {
 	]),
 	"docs-layout": docsScene(),
 	"code-block": docsScene([
-		{ kind: "rect", x: 64, y: 48, w: 72, h: 32, r: 6, tone: "ink" },
-		{ kind: "line", x1: 72, y1: 58, x2: 112, y2: 58, tone: "muted", weight: 1.3 },
-		{ kind: "line", x1: 72, y1: 66, x2: 124, y2: 66, tone: "accent", weight: 1.3 },
-		{ kind: "line", x1: 72, y1: 74, x2: 100, y2: 74, tone: "muted", weight: 1.3 },
+		{ kind: "rect", x: 68, y: 48, w: 64, h: 32, r: 6, tone: "ink" },
+		{ kind: "line", x1: 76, y1: 58, x2: 118, y2: 58, tone: "muted", weight: 1.3 },
+		{ kind: "line", x1: 76, y1: 66, x2: 124, y2: 66, tone: "accent", weight: 1.3 },
+		{ kind: "line", x1: 76, y1: 74, x2: 108, y2: 74, tone: "muted", weight: 1.3 },
 	]),
 	"landing-hero": landingHeroScene(),
 	"site-header": windowScene([
@@ -730,20 +730,20 @@ function appDefault(slug: string): Shape[] {
 function docsDefault(slug: string): Shape[] {
 	if (/(code|install|copy)/.test(slug)) {
 		return docsScene([
-			{ kind: "rect", x: 64, y: 44, w: 72, h: 36, r: 6, tone: "ink" },
-			{ kind: "line", x1: 72, y1: 56, x2: 118, y2: 56, tone: "muted", weight: 1.3 },
-			{ kind: "line", x1: 72, y1: 64, x2: 124, y2: 64, tone: "accent", weight: 1.3 },
-			{ kind: "line", x1: 72, y1: 72, x2: 104, y2: 72, tone: "muted", weight: 1.3 },
+			{ kind: "rect", x: 68, y: 44, w: 64, h: 36, r: 6, tone: "ink" },
+			{ kind: "line", x1: 76, y1: 56, x2: 122, y2: 56, tone: "muted", weight: 1.3 },
+			{ kind: "line", x1: 76, y1: 64, x2: 124, y2: 64, tone: "accent", weight: 1.3 },
+			{ kind: "line", x1: 76, y1: 72, x2: 108, y2: 72, tone: "muted", weight: 1.3 },
 		]);
 	}
 	if (/(nav|toc|tree|pager|footer|hub|layout)/.test(slug)) {
 		return docsScene();
 	}
 	return docsScene([
-		txt(shortLabel(slug), 64, 40, 8, "ink", { font: "semibold", maxWidth: 68 }),
-		{ kind: "line", x1: 64, y1: 50, x2: 132, y2: 50, tone: "label", weight: 1.3 },
-		{ kind: "line", x1: 64, y1: 60, x2: 124, y2: 60, tone: "label", weight: 1.3 },
-		{ kind: "line", x1: 64, y1: 70, x2: 110, y2: 70, tone: "label", weight: 1.3 },
+		txt(shortLabel(slug), 68, 40, 8, "ink", { font: "semibold", maxWidth: 60 }),
+		{ kind: "line", x1: 68, y1: 50, x2: 132, y2: 50, tone: "label", weight: 1.3 },
+		{ kind: "line", x1: 68, y1: 60, x2: 124, y2: 60, tone: "label", weight: 1.3 },
+		{ kind: "line", x1: 68, y1: 70, x2: 110, y2: 70, tone: "label", weight: 1.3 },
 	]);
 }
 
@@ -882,27 +882,28 @@ function deviceScene(body: Shape[]): Shape[] {
 
 /**
  * Docs miniature shell: mark + nav rail beside a page column, matching the gallery cards
- * on `/demo`.
+ * on `/demo`. The rail mark and its label stack, so the word never runs into the divider.
  */
 function docsScene(page: Shape[] = []): Shape[] {
+	let rail = 58;
+	let pageX = 68;
 	let base: Shape[] = [
 		{ kind: "rect", x: 16, y: 10, w: 128, h: 80, r: 8, tone: "surface", ring: true },
-		{ kind: "line", x1: 56, y1: 10, x2: 56, y2: 90, tone: "hairline", weight: 1 },
-		{ kind: "rect", x: 24, y: 20, w: 10, h: 10, r: 3, tone: "accent" },
-		txt("Docs", 38, 28, 7, "ink", { font: "semibold" }),
-		{ kind: "line", x1: 24, y1: 40, x2: 48, y2: 40, tone: "muted", weight: 1.2 },
-		{ kind: "rect", x: 22, y: 48, w: 28, h: 10, r: 4, tone: "label" },
-		{ kind: "line", x1: 24, y1: 66, x2: 46, y2: 66, tone: "label", weight: 1.5 },
-		{ kind: "line", x1: 24, y1: 76, x2: 42, y2: 76, tone: "label", weight: 1.5 },
+		{ kind: "line", x1: rail, y1: 10, x2: rail, y2: 90, tone: "hairline", weight: 1 },
+		{ kind: "rect", x: 26, y: 18, w: 12, h: 12, r: 3, tone: "accent" },
+		txt("Docs", 26, 40, 6, "ink", { font: "semibold", maxWidth: 24 }),
+		{ kind: "rect", x: 24, y: 50, w: 24, h: 10, r: 4, tone: "label" },
+		{ kind: "line", x1: 26, y1: 68, x2: 44, y2: 68, tone: "label", weight: 1.5 },
+		{ kind: "line", x1: 26, y1: 78, x2: 40, y2: 78, tone: "label", weight: 1.5 },
 	];
 	if (page.length === 0) {
 		return [
 			...base,
-			txt("Get started", 64, 28, 8, "ink", { font: "semibold" }),
-			{ kind: "line", x1: 64, y1: 40, x2: 132, y2: 40, tone: "label", weight: 1.3 },
-			{ kind: "line", x1: 64, y1: 50, x2: 126, y2: 50, tone: "label", weight: 1.3 },
-			{ kind: "line", x1: 64, y1: 60, x2: 118, y2: 60, tone: "label", weight: 1.3 },
-			{ kind: "rect", x: 64, y: 68, w: 68, h: 14, r: 4, tone: "ink" },
+			txt("Get started", pageX, 28, 8, "ink", { font: "semibold" }),
+			{ kind: "line", x1: pageX, y1: 40, x2: 132, y2: 40, tone: "label", weight: 1.3 },
+			{ kind: "line", x1: pageX, y1: 50, x2: 126, y2: 50, tone: "label", weight: 1.3 },
+			{ kind: "line", x1: pageX, y1: 60, x2: 118, y2: 60, tone: "label", weight: 1.3 },
+			{ kind: "rect", x: pageX, y: 68, w: 60, h: 14, r: 4, tone: "ink" },
 		];
 	}
 	return [...base, ...page];
