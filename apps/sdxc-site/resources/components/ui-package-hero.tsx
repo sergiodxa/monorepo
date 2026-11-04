@@ -1,6 +1,6 @@
 /**
- * The opening of `/api/ui`: brand, install, and a strip of component faces — the package
- * shown as itself, not as a fact sheet or a decorative collage card.
+ * The opening of `/api/ui`: brand and install — the package shown as itself, with the
+ * component catalogue below rather than a featured strip that repeats the same faces.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,13 +8,10 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, hstack, repeat, vstack } from "@sdxc/u/layout";
-import { clip, overflow } from "@sdxc/u/overflow";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { bs, m, maxIs, minBs, p } from "@sdxc/u/size";
+import { m, maxIs } from "@sdxc/u/size";
 import { font, leading, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { LinkButton } from "@sdxc/ui";
 import { InstallCommand } from "@sdxc/ui/docs";
@@ -22,19 +19,7 @@ import { InstallCommand } from "@sdxc/ui/docs";
 import { PACKAGE_MANAGER_KEY, REMEMBERED_TABS } from "~/app/services/remembered-tabs";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
-import UiComponentMiniature from "~/resources/components/ui-faces";
 import routes from "~/routes/web";
-
-/**
- * Signature components whose faces open the landing. Each one already has a miniature
- * scene, so the strip matches the gallery tiles below.
- */
-const FEATURED = [
-	{ slug: "button", title: "Button" },
-	{ slug: "badge", title: "Badge" },
-	{ slug: "dialog", title: "Dialog" },
-	{ slug: "command", title: "Command" },
-] as const;
 
 namespace UiPackageHero {
 	export interface Props {
@@ -53,7 +38,7 @@ namespace UiPackageHero {
 	}
 }
 
-/** Renders the landing pitch, install strip and featured component faces. */
+/** Renders the landing pitch and install strip. */
 export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 	return () => {
 		let {
@@ -67,73 +52,8 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 		} = handle.props;
 
 		return (
-			<header mix={[vstack({ gap: 10, align: "stretch" })]}>
-				<div mix={[vstack({ gap: 6, align: "stretch" }), maxIs("40rem")]}>
-					<div mix={[vstack({ gap: 4, align: "start" })]}>
-						<p
-							mix={[
-								m(0),
-								font("mono"),
-								text("xs"),
-								textTransform("uppercase"),
-								tracking("widest"),
-								fg("brand"),
-							]}
-						>
-							[ Interface ]
-						</p>
-
-						<h1
-							mix={[
-								m(0),
-								font("mono"),
-								text("4xl"),
-								weight("medium"),
-								tracking("tight"),
-								leading(1.05),
-								fg("neutral.emphasis"),
-								media("(min-width: 48rem)", text("5xl")),
-							]}
-						>
-							{name}
-						</h1>
-
-						<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{description}</p>
-					</div>
-
-					<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-						<LinkButton
-							href={routes.api.component.href({ component: "theming" })}
-							size="lg"
-							color="brand"
-							variant="solid"
-						>
-							Theming
-						</LinkButton>
-					</div>
-
-					<InstallCommand
-						packages={installPackages}
-						persist="cookie"
-						selected={manager}
-						title={TERMINAL_TITLE}
-						labels={CODE_LABELS}
-						aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
-					/>
-
-					<p mix={[m(0), text("sm"), leading("relaxed"), fg("neutral")]}>
-						Built on native <code mix={[font("mono"), text("sm")]}>&lt;dialog&gt;</code>, the
-						Popover API and Invoker Commands — pages render before any script loads.
-					</p>
-
-					<PageActions
-						markdownHref={markdownHref}
-						markdownUrl={markdownUrl}
-						sourceUrl={sourceUrl}
-					/>
-				</div>
-
-				<section mix={[vstack({ gap: 3, align: "stretch" })]} aria-label="Featured components">
+			<header mix={[vstack({ gap: 6, align: "stretch" }), maxIs("40rem")]}>
+				<div mix={[vstack({ gap: 4, align: "start" })]}>
 					<p
 						mix={[
 							m(0),
@@ -141,54 +61,56 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 							text("xs"),
 							textTransform("uppercase"),
 							tracking("widest"),
-							fg("neutral"),
+							fg("brand"),
 						]}
 					>
-						Gallery
+						[ Interface ]
 					</p>
 
-					<div
+					<h1
 						mix={[
-							grid(),
-							gap(3),
-							gridTemplate({ columns: "1fr" }),
-							media("(min-width: 40rem)", gridTemplate({ columns: repeat(2, "1fr") })),
-							media("(min-width: 64rem)", gridTemplate({ columns: repeat(4, "1fr") })),
+							m(0),
+							font("mono"),
+							text("4xl"),
+							weight("medium"),
+							tracking("tight"),
+							leading(1.05),
+							fg("neutral.emphasis"),
+							media("(min-width: 48rem)", text("5xl")),
 						]}
 					>
-						{FEATURED.map((feature) => (
-							<a
-								key={feature.slug}
-								href={routes.api.component.href({ component: feature.slug })}
-								mix={[
-									vstack({ gap: 2, align: "stretch" }),
-									rounded("xl"),
-									border({ color: "neutral.border", width: 1, style: "solid" }),
-									bg(),
-									overflow("hidden"),
-									raw({ textDecoration: "none", color: "inherit" }),
-								]}
-							>
-								<div
-									mix={[
-										clip(),
-										minBs("9rem"),
-										bs("9rem"),
-										bg("neutral.tint"),
-										raw({
-											boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
-										}),
-									]}
-								>
-									<UiComponentMiniature slug={feature.slug} />
-								</div>
-								<span mix={[p(0, 3, 3, 3), font("mono"), text("sm"), weight("semibold")]}>
-									{feature.title}
-								</span>
-							</a>
-						))}
-					</div>
-				</section>
+						{name}
+					</h1>
+
+					<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{description}</p>
+				</div>
+
+				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+					<LinkButton
+						href={routes.api.component.href({ component: "theming" })}
+						size="lg"
+						color="brand"
+						variant="solid"
+					>
+						Theming
+					</LinkButton>
+				</div>
+
+				<InstallCommand
+					packages={installPackages}
+					persist="cookie"
+					selected={manager}
+					title={TERMINAL_TITLE}
+					labels={CODE_LABELS}
+					aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
+				/>
+
+				<p mix={[m(0), text("sm"), leading("relaxed"), fg("neutral")]}>
+					Built on native <code mix={[font("mono"), text("sm")]}>&lt;dialog&gt;</code>, the Popover
+					API and Invoker Commands — pages render before any script loads.
+				</p>
+
+				<PageActions markdownHref={markdownHref} markdownUrl={markdownUrl} sourceUrl={sourceUrl} />
 			</header>
 		);
 	};
