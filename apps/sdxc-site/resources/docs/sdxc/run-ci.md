@@ -57,14 +57,26 @@ when the `CI` environment variable is set to anything but `0` or `false`, or wit
   `Matrix/key`: `--only "Workspaces/@acme/ui"`.
 - `--scope <workspace>` keeps the matrix entries for a workspace, by path or name, and its
   dependents.
+- `--since <ref>` keeps the matrix entries for workspaces changed since that ref (the range
+  `<ref>...HEAD` plus uncommitted changes) and their dependents, and sets `ci.scope` the same
+  way `--scope` does. A changed file outside every workspace (the root lockfile, root config,
+  the CI script) covers every entry, and the run names that file.
 - `--rerun-failed` runs only the steps the last recorded run failed.
 - `--runner local|remote` runs as on your machine or as on a CI host.
+- `--worktree` runs the script in a temporary detached worktree of HEAD, so a dirty checkout
+  can still sign off; the worktree gets its own frozen install, and the shared step cache and
+  run logs stay in the main clone.
+- `--watch` re-runs when tracked files change; unchanged cached steps replay, a run in progress
+  aborts for a newer change, and the command never signs off or pushes. Combining it with
+  `--push` is a usage error.
 - `--push` pushes the tested commit to its upstream branch after a green run, then signs off,
   and exits 1 when either fails.
 - `--no-signoff` turns the script's `ci.signoff` into a plain success that posts nothing.
 - `--no-cache` runs every step, including those whose inputs match an earlier pass.
 - `--concurrency <n>` caps how many steps run at once; the machine's available parallelism by
   default.
+- `--memory <size>` caps the RAM budget step `memory` reservations draw from (`2GB`, `512MB`);
+  three quarters of total RAM by default.
 - `--remote <name>` is the git remote to push to and read the GitHub repository from; the
   upstream's by default, else `origin`.
 - `--token-env <NAME>` names the variable holding the GitHub token, `GITHUB_TOKEN` by default.
@@ -75,12 +87,14 @@ when the `CI` environment variable is set to anything but `0` or `false`, or wit
 ```bash
 sdxc ci --only Test
 sdxc ci --skip "Workspaces/*" --no-cache
-sdxc ci --push
+sdxc ci --since origin/main
+sdxc ci --worktree --push
+sdxc ci --watch
 ```
 
-A run narrowed by `--only`, `--skip`, `--scope` or `--rerun-failed` never signs off, so a
-commit turns green only from a run of every step. A usage error, such as a filter that matches
-nothing, exits 2.
+A run narrowed by `--only`, `--skip`, `--scope`, `--since` or `--rerun-failed` never signs off,
+so a commit turns green only from a run of every step. A usage error, such as a filter that
+matches nothing, exits 2.
 
 ## Sign off
 

@@ -23,8 +23,10 @@ sdxc ci
 ```
 
 It prints one line per step, with a failed step's output under it, and exits 1 when a step
-failed. While you work, narrow it with `--only`, or run just what failed with
-`--rerun-failed`; [Run CI](/docs/sdxc/run-ci) covers every flag and where the logs go.
+failed. While you work, narrow it with `--since origin/main` or `--only`, re-run on save with
+`--watch`, or run just what failed with `--rerun-failed`. When other sessions leave the tree
+dirty, `sdxc ci --worktree --push` signs off from a clean worktree of HEAD.
+[Run CI](/docs/sdxc/run-ci) covers every flag and where the logs go.
 
 ## Write steps
 
@@ -61,6 +63,10 @@ export default defineCI(async (ci) => {
   output from that earlier pass is kept.
 - `retry: 1` runs a failed step once more; a pass on the retry is listed as flaky in the
   summary. `weight: 4` lets a heavy step hold four of the run's concurrency slots.
+  `memory: "2GB"` reserves that much of the run's memory budget so a browser suite leaves room
+  for fewer peers; a reservation above the budget runs alone.
+- `ci.scope` lists the workspaces a `--scope` or `--since` run covers, so the script can narrow
+  typegen and doctor to those apps while a full run stays unchanged.
 - `ci.runner` is `"remote"` on GitHub Actions and `"local"` on your machine. Use it for steps
   that belong in only one place, such as copying `.env.example` to `.dev.vars` on CI.
 
