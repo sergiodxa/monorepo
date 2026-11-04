@@ -40,7 +40,7 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "9";
+export const COMPONENT_FACE_VERSION = "10";
 
 /** Material role a miniature piece paints with. */
 type Tone = "surface" | "chrome" | "label" | "ink" | "muted" | "hairline" | "accent";
@@ -371,6 +371,22 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "rect", x: 58, y: 44, w: 44, h: 16, r: 8, tone: "label" },
 		txt("Beta", 80, 55, 8, "ink", { align: "center", font: "semibold" }),
 	]),
+	alert: windowScene([
+		{ kind: "rect", x: 32, y: 36, w: 96, h: 36, r: 10, tone: "surface", ring: true },
+		{ kind: "circle", cx: 46, cy: 54, r: 6, tone: "accent" },
+		txt("Billing paused", 58, 50, 7, "ink", { font: "semibold", maxWidth: 62 }),
+		{ kind: "line", x1: 58, y1: 60, x2: 112, y2: 60, tone: "label", weight: 1.3 },
+	]),
+	banner: windowScene([
+		{ kind: "rect", x: 28, y: 38, w: 104, h: 28, r: 8, tone: "accent" },
+		txt("New pricing is live", 44, 55, 7, "surface", { font: "semibold", maxWidth: 80 }),
+	]),
+	form: windowScene([
+		txt("Email", 40, 36, 6, "muted"),
+		{ kind: "rect", x: 40, y: 40, w: 80, h: 14, r: 6, tone: "surface", ring: true },
+		txt("Name", 40, 66, 6, "muted"),
+		{ kind: "rect", x: 40, y: 70, w: 80, h: 14, r: 6, tone: "surface", ring: true },
+	]),
 	dialog: windowScene([
 		{ kind: "rect", x: 40, y: 30, w: 80, h: 52, r: 10, tone: "surface", ring: true },
 		txt("Confirm", 52, 44, 8, "ink", { font: "semibold" }),
@@ -662,14 +678,34 @@ function componentDefault(slug: string): Shape[] {
 			{ kind: "line", x1: 50, y1: 66, x2: 96, y2: 66, tone: "label", weight: 1.3 },
 		]);
 	}
-	if (
-		/(calendar|carousel|aspect|image|youtube|scroll|separator|sentinel|shared|overlay|highlight|relative|property|form|banner|alert$|cta)/.test(
-			slug,
-		)
-	) {
+	if (/(calendar|date-picker|range-calendar)/.test(slug)) {
 		return windowScene([
 			{ kind: "rect", x: 36, y: 30, w: 88, h: 52, r: 10, tone: "surface", ring: true },
 			...calendarGrid(44, 38, 6),
+		]);
+	}
+	if (/(carousel|aspect|image|youtube)/.test(slug)) {
+		return windowScene([
+			{ kind: "rect", x: 36, y: 30, w: 88, h: 52, r: 10, tone: "surface", ring: true },
+			{ kind: "rect", x: 48, y: 40, w: 64, h: 32, r: 6, tone: "label" },
+			{ kind: "circle", cx: 68, cy: 72, r: 2.5, tone: "accent" },
+			{ kind: "circle", cx: 80, cy: 72, r: 2.5, tone: "label" },
+			{ kind: "circle", cx: 92, cy: 72, r: 2.5, tone: "label" },
+		]);
+	}
+	if (/(alert|banner|callout)/.test(slug)) {
+		return windowScene([
+			{ kind: "rect", x: 32, y: 36, w: 96, h: 36, r: 10, tone: "surface", ring: true },
+			{ kind: "circle", cx: 46, cy: 54, r: 6, tone: "accent" },
+			txt(shortLabel(slug), 58, 50, 7, "ink", { font: "semibold", maxWidth: 62 }),
+			{ kind: "line", x1: 58, y1: 60, x2: 112, y2: 60, tone: "label", weight: 1.3 },
+		]);
+	}
+	if (/(cta|form)/.test(slug)) {
+		return windowScene([
+			txt(shortLabel(slug), 40, 42, 7, "ink", { font: "semibold", maxWidth: 70 }),
+			{ kind: "rect", x: 40, y: 52, w: 36, h: 16, r: 8, tone: "accent" },
+			{ kind: "rect", x: 82, y: 52, w: 36, h: 16, r: 8, tone: "surface", ring: true },
 		]);
 	}
 	return windowScene([
