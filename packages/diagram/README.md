@@ -4,9 +4,10 @@ Mermaid sequence, class, state and flowchart diagrams to SVG, with a markdown wa
 a component.
 
 Diagrams are written in [Mermaid](https://mermaid.js.org)'s text syntax and drawn as SVG on the
-server: no client script, no stylesheet and no web font. Lines and text draw in `currentColor`
-and fills fall back to the `Canvas` system color, so a diagram takes the color of the text
-around it and follows the page into dark mode.
+server: no client script, no stylesheet and no web font. Soft strokes, rounded cards for groups,
+and optional `accent` / `muted` roles keep the drawing readable; lines and text take
+`currentColor` and fills fall back to the `Canvas` system color, so a diagram follows the page
+into dark mode.
 
 ## Installation
 
@@ -172,11 +173,21 @@ props.
 
 ### Theming
 
-Lines and text draw in `currentColor`. Two custom properties set the fills:
+Lines and text draw in `currentColor`. Custom properties set the rest of the paint:
 
 - `--diagram-fill`: node bodies, and the boxes behind line labels. Defaults to `Canvas`.
-- `--diagram-tint`: notes, groups and block labels. Defaults to `currentColor` mixed 8% into
+- `--diagram-tint`: notes, groups and block labels. Defaults to `currentColor` mixed 6% into
   `Canvas`.
+- `--diagram-stroke`: outlines and connectors. Defaults to `currentColor` mixed 48% into
+  `Canvas`.
+- `--diagram-accent` / `--diagram-accent-fill`: outline and fill for `accent`-marked shapes.
+- `--diagram-muted-stroke` / `--diagram-muted-fill`: outline and fill for `muted`-marked shapes.
+- `--diagram-caption`: group headers and other secondary labels.
+
+A flowchart node or subgraph marked `:::accent` or `:::muted`, or named in
+`class id accent` / `class id muted`, picks up those paints. Other Mermaid class names are
+still accepted and ignored. A `title` statement draws as a bold label above the chart as well
+as the accessible name.
 
 Labels are set in `ui-sans-serif, system-ui` and measured with room to spare, so every box
 holds its text in whichever system font the reader has.
@@ -209,8 +220,9 @@ frontmatter block with a `title`. Labels break onto a new line at `<br>`. Anythi
 - Chains `A --> B --> C`, groups `A & B --> C`, and `;` between statements
 - `subgraph id [Title]` … `end`, nested, with its own `direction`; a node named inside a
   subgraph belongs to it, and a link may name the subgraph as an end
-- `classDef`, `class`, `style`, `linkStyle`, `click` and `:::class` are accepted, and the
-  diagram draws in the page's colors
+- `:::accent` / `:::muted` on a node or `subgraph id:::accent [Title]`, and
+  `class id accent` / `class id muted`, tint that shape; other `classDef`, `class`, `style`,
+  `linkStyle`, `click` and `:::class` names are accepted and ignored
 
 #### `classDiagram` and `classDiagram-v2`
 
@@ -322,7 +334,10 @@ in light and dark mode alike.
 .prose svg {
 	color: var(--text-muted);
 	--diagram-fill: var(--surface);
-	--diagram-tint: color-mix(in srgb, var(--accent) 12%, var(--surface));
+	--diagram-tint: color-mix(in srgb, var(--accent) 8%, var(--surface));
+	--diagram-stroke: color-mix(in srgb, var(--ink) 40%, var(--surface));
+	--diagram-accent: var(--accent);
+	--diagram-accent-fill: color-mix(in srgb, var(--accent) 14%, var(--surface));
 }
 ```
 

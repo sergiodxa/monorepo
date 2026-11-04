@@ -11,9 +11,9 @@ import type { Head } from "./geometry.js";
 import type { DiagramSource, Statement } from "./source.js";
 import type { SvgElement, SvgNode } from "./tree.js";
 
-import { connector, label, rect, svgRoot, translate } from "./draw.js";
+import { connector, label, rect, svgRoot, titleBand, translate } from "./draw.js";
 import { DiagramError } from "./errors.js";
-import { BACKGROUND, STROKE, TINT } from "./style.js";
+import { BACKGROUND, NODE_RADIUS, STROKE, TINT } from "./style.js";
 import { LINE_HEIGHT, blockSize, splitLines, textWidth } from "./text.js";
 import { element, num } from "./tree.js";
 
@@ -103,7 +103,7 @@ const MESSAGE = new RegExp(
 const SECTION_KEYWORDS: Record<string, string> = { alt: "else", par: "and", critical: "option" };
 
 /** Space around the whole drawing. */
-const MARGIN = 12;
+const MARGIN = 16;
 
 /** Narrowest participant box. */
 const MIN_BOX_WIDTH = 90;
@@ -473,9 +473,17 @@ function draw(
 	}
 
 	let width = right - left + 2 * MARGIN;
-	let height = bottom + headerHeight + MARGIN;
+	let band = titleBand(diagram.title, width);
+	let height = bottom + headerHeight + MARGIN + band.height;
 	return svgRoot(width, height, diagram.title ?? "Sequence diagram", diagram.description, [
-		translate(MARGIN - left, 0, [...background, ...lifelines, ...bars, ...frames, ...foreground]),
+		...band.nodes,
+		translate(MARGIN - left, band.height, [
+			...background,
+			...lifelines,
+			...bars,
+			...frames,
+			...foreground,
+		]),
 	]);
 }
 
@@ -557,7 +565,10 @@ function head(
 ): SvgElement {
 	if (!participant.actor) {
 		return element("g", {}, [
-			rect(center - width / 2, top, width, height, { style: BACKGROUND, radius: 3 }),
+			rect(center - width / 2, top, width, height, {
+				style: BACKGROUND,
+				radius: NODE_RADIUS,
+			}),
 			label(participant.lines, center, top + height / 2),
 		]);
 	}
