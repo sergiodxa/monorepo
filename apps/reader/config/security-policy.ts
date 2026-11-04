@@ -11,7 +11,8 @@ import type { SecurityHeaders } from "@sdxc/security-headers";
 
 /**
  * The header set every response carries unless it set a header itself. It names no
- * publisher's host anywhere, so every third-party request a page could make is refused.
+ * publisher's host anywhere, so every third-party request a page could make is refused; the
+ * only other hosts are the ones a form's redirect hands the reader to.
  */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicy: {
@@ -40,7 +41,12 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 		mediaSrc: ["none"],
 		frameSrc: ["none"],
 		frameAncestors: ["none"],
-		formAction: ["self"],
+		/**
+		 * The browser holds every redirect a form submission follows to this list, so it names
+		 * where those redirects lead: the identity provider for signing in and out, and the
+		 * payment platform's checkout and billing portal.
+		 */
+		formAction: ["self", "https://auth.sergiodxa.com", "https://polar.sh", "https://buy.polar.sh"],
 		baseUri: ["none"],
 		objectSrc: ["none"],
 	},

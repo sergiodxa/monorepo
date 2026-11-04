@@ -36,7 +36,7 @@ describe("the security policy", () => {
 				"media-src 'none'",
 				"frame-src 'none'",
 				"frame-ancestors 'none'",
-				"form-action 'self'",
+				"form-action 'self' https://auth.sergiodxa.com https://polar.sh https://buy.polar.sh",
 				"base-uri 'none'",
 				"object-src 'none'",
 			].join("; "),
@@ -46,10 +46,29 @@ describe("the security policy", () => {
 	test("names no publisher's host in any directive", async () => {
 		let response = await decorated(() => new Response("<p>hi</p>"));
 		let policy = response.headers.get("content-security-policy") ?? "";
+		let fetching = policy.split("; ").filter((directive) => !directive.startsWith("form-action "));
 
-		expect(policy).not.toContain("https:");
+		expect(fetching.join("; ")).not.toContain("https:");
 		expect(policy).not.toContain("report-uri");
 		expect(policy).not.toContain("'unsafe-eval'");
+	});
+
+	/**
+	 * Sign-in and checkout are forms whose response redirects off-site, and a browser blocks
+	 * that redirect unless `form-action` names where it leads.
+	 */
+	test("lets a form's redirect reach the identity provider and the payment platform", async () => {
+		let response = await decorated(() => new Response("<p>hi</p>"));
+		let policy = response.headers.get("content-security-policy") ?? "";
+		let formAction = policy.split("; ").find((directive) => directive.startsWith("form-action "));
+
+		expect(formAction?.split(" ")).toEqual(
+			expect.arrayContaining([
+				"https://auth.sergiodxa.com",
+				"https://polar.sh",
+				"https://buy.polar.sh",
+			]),
+		);
 	});
 
 	test("carries the rest of the header set on every response", async () => {
