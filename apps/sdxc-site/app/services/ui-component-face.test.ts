@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseFont } from "@sdxc/font";
+import { decode } from "@sdxc/png";
 import { describe, expect, test } from "vitest";
 
 import { listComponents } from "~/app/services/components";
@@ -69,5 +70,24 @@ describe("renderComponentFace", () => {
 
 	test("keeps the face on the published pixel size", () => {
 		expect(COMPONENT_FACE_SIZE).toEqual({ width: 320, height: 200 });
+	});
+
+	test("keeps the docs-layout mark label clear of the rail", async () => {
+		let bytes = await renderComponentFace("docs-layout", fonts());
+		let image = await decode(bytes);
+		if (image.status === "failure") throw image.error;
+		let img = image.data;
+		let lum = (x: number, y: number) => {
+			let offset = (y * img.width + x) * 4;
+			return (img.data[offset]! + img.data[offset + 1]! + img.data[offset + 2]!) / 3;
+		};
+		let rail = 58 * 2;
+		let rightmost = 0;
+		for (let y = 70; y < 90; y++) {
+			for (let x = 40; x < rail; x++) {
+				if (lum(x, y) < 80) rightmost = Math.max(rightmost, x);
+			}
+		}
+		expect(rail - rightmost).toBeGreaterThanOrEqual(16);
 	});
 });
