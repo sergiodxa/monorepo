@@ -17,11 +17,13 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { previews } from "@sdxc/mail/previews";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
@@ -42,7 +44,7 @@ import { logger, logRenderFailure } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import requireAgent, { agentAccess } from "~/app/mcp/agent";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/web";
 
@@ -134,9 +136,13 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			cop({ insecureBypassPatterns: [WEBSUB_CALLBACK, AGENT_ENDPOINT] }),
 			/**
-			 * Ahead of the renderer, so what it decorates is the response the renderer
-			 * produced and every surface this app adds later is covered without being asked.
+			 * Ahead of the renderer: Remix owns Content-Security-Policy and the request nonce;
+			 * this package owns HSTS, Referrer-Policy and the rest.
 			 */
+			csp({
+				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 			/**
 			 * Inside the security headers, so `/.well-known/security.txt` and the Web Bot Auth key
@@ -147,8 +153,8 @@ export function createWebRouter(options: WebRouterOptions) {
 				"http-message-signatures-directory": signaturesDirectory,
 			}),
 			/**
-			 * After the security headers, whose nonce it publishes on `ctx.assets` for the
-			 * document's inline import map, and before the renderer, so every page reads one lookup.
+			 * After Remix CSP, whose nonce it publishes on `ctx.assets` for the document's inline
+			 * import map, and before the renderer, so every page reads one lookup.
 			 */
 			documentShellAssets,
 			render({ assets: assetResolver, onError: logRenderFailure }),

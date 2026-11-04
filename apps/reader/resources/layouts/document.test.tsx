@@ -16,7 +16,9 @@
 import type { Middleware } from "remix/router";
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -28,7 +30,7 @@ import { writePresentation } from "~/app/initializers/cookies";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { ORIGIN } from "~/app/test/controller";
 import { documentRendering } from "~/app/test/rendering";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 
 /**
  * A page rendered through the middleware that decides how it is painted, carrying whatever
@@ -65,6 +67,10 @@ async function serve(): Promise<Response> {
 			asyncContext(),
 			i18n,
 			presentation,
+			csp({
+				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				filter: () => true,
+			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
 			...documentRendering(),
 		],
