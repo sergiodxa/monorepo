@@ -9,8 +9,9 @@
 import { accepts } from "@sdxc/http/negotiate";
 import { createAction } from "remix/router";
 
+import { LANDING_SCHEMA, seo } from "~/app/initializers/seo";
 import { OPERATIONS } from "~/config/catalog";
-import { SITE_BRAND, SITE_DESCRIPTION, SITE_ORIGIN, SITE_TAGLINE } from "~/config/site";
+import { SITE_BRAND, SITE_DESCRIPTION, SITE_ORIGIN, SITE_TAGLINE, SITE_TITLE } from "~/config/site";
 import DocumentLayout from "~/resources/layouts/document";
 import HomeView from "~/resources/views/home";
 import routes from "~/routes/web";
@@ -30,9 +31,11 @@ export default createAction(routes.home, (ctx) => {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
-			title={`${SITE_BRAND} — pay-per-call package APIs`}
+			title={SITE_TITLE}
 			description={SITE_DESCRIPTION}
-			canonical={new URL("/", ctx.url).href}
+			canonical={seo.canonical(ctx.url)}
+			robots={seo.robotsTag()}
+			schema={LANDING_SCHEMA}
 		>
 			<HomeView operations={OPERATIONS} />
 		</DocumentLayout>,

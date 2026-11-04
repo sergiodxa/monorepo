@@ -16,6 +16,7 @@ capability; HTML docs and npm packages stay free.
 - MUST use `MemoryFacilitator` in tests via `@sdxc/x402/testing`
 - MUST keep `/`, `/v1` and `/health` free
 - MUST keep the HTML landing at `/` as the human-facing pitch (MCP setup, x402, catalog); agents may take `Accept: text/markdown`
+- MUST publish that landing's head through `app/initializers/seo.ts` (`Seo.Meta`, `seo.canonical()`, `seo.robotsTag()`, `LANDING_SCHEMA`) and mark the visible page with `@sdxc/microformats/ui`, so the tags and the `h-entry` / `h-card` / `h-cite` markup repeat facts the page shows
 
 ## Reference
 
