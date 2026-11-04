@@ -16,8 +16,11 @@ import type { NavEntry } from "~/app/services/navigation-tree";
 
 import UiComponentCard from "~/resources/components/ui-component-card";
 
-/** Narrowest a component tile may get before the grid drops a column. */
-const CARD_MIN = "14rem";
+/**
+ * Narrowest a component tile may get before the grid drops a column. Kept under the docs
+ * main column (sidebar + TOC eat the rest) so a desktop pass still lands three tiles wide.
+ */
+const CARD_MIN = "11rem";
 
 namespace UiComponentGrid {
 	export interface Props {
@@ -40,7 +43,9 @@ export default function UiComponentGrid(handle: Handle<UiComponentGrid.Props>) {
 				p(0),
 				listStyle("none"),
 				gap(4),
-				gridTemplate({ columns: repeat("auto-fill", `minmax(${CARD_MIN}, 1fr)`) }),
+				gridTemplate({
+					columns: repeat("auto-fill", `minmax(min(100%, ${CARD_MIN}), 1fr)`),
+				}),
 				raw({ alignItems: "stretch" }),
 			]}
 		>
