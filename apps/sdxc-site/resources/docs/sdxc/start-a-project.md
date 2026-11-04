@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 1
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "How `sdxc create` writes a project from the built-in template or a GitHub repository"
     - "What a new project holds and which commands to run first"
@@ -70,6 +70,8 @@ The `app` template is laid out by kind of code, the layout
 [`sdxc make`](/docs/sdxc/generate-files) writes into:
 
 ```text
+.config/          sdxc.jsonc, and sdxc/ci.ts: the CI script `sdxc ci` runs
+.github/          workflows/ci.yml, which runs the same script on GitHub Actions
 bootstrap/        worker.ts, browser.ts, cli.ts, console.ts: the entry points
 app/http/         controllers, middleware, validators
 app/initializers/ the router, database, dispatcher, mail registry, MCP handler and command line

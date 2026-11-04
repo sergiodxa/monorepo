@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 9
-lastUpdated: 2026-10-19
+lastUpdated: 2026-11-04
 outcomes:
     - "Why `sdxc deploy` builds, migrates and deploys in that order"
     - "What production runs after each step that can fail"
@@ -126,9 +126,9 @@ or without a `deploy` that takes `--dry-run` (add one, or pass `--skip deploy`).
 sdxc deploy --yes
 ```
 
-Put the secrets `cf` needs in the CI environment, and run
-[`sdxc doctor`](/docs/sdxc/check-a-project) in an earlier step: it fails on a secret
-`cloudflare.config.ts` declares that CI cannot see.
+Deploy a commit once CI passed, with the secrets `cf` needs in the CI environment.
+[Deploy your app](/docs/getting-started/first-deploy#in-ci) has a workflow that deploys `main`
+each time CI succeeds.
 
 ## Where to go next
 

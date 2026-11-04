@@ -5,11 +5,11 @@ section:
     title: Getting started
     order: 1
 order: 4
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "Which Cloudflare resources a new app needs before its first deploy, and where each id goes"
     - "How a secret moves from `cloudflare.config.ts` to `.env.example`, `.dev.vars` and production"
-    - "How to deploy with `sdxc deploy` from your machine and from CI"
+    - "How to deploy with `sdxc deploy` from your machine, and from CI after it passes"
 ---
 
 A project from `sdxc create` runs locally with nothing set up: `bun dev` simulates its database,
@@ -139,41 +139,46 @@ build. The first deploy answers on a `workers.dev` address; a custom domain is a
 
 ## In CI
 
-A deploy from CI runs the same commands, with an API token in place of your login and `--yes`
-in place of the question. [Create an API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
+The project's CI workflow, `.github/workflows/ci.yml`, runs [its CI script](/docs/sdxc/run-ci)
+on every push, and passes at once for a commit you signed off with `sdxc ci`. Deploy from a
+second workflow that starts when CI succeeds on `main`.
+
+[Create an API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
 that can deploy Workers and edit D1 databases and queues, and store it as the repository secret
-`CLOUDFLARE_API_TOKEN`.
+`CLOUDFLARE_API_TOKEN`. The deploy runs the same command as on your machine, with the token in
+place of your login and `--yes` in place of the question:
 
 ```yaml {% title=".github/workflows/deploy.yml" %}
 name: Deploy
 
 on:
-    push:
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
         branches: [main]
 
 jobs:
     deploy:
+        if: github.event.workflow_run.conclusion == 'success'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
             - uses: oven-sh/setup-bun@v2
             - run: bun install --frozen-lockfile
-            - run: cp .env.example .dev.vars
-            - run: bunx sdxc run typegen
-            - run: bun check
-            - run: bun run test
-            - run: bunx sdxc doctor
             - run: bunx sdxc deploy --yes
               env:
                   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 ```
 
-`bunx sdxc` runs the release the project pins in its `devDependencies`, and `sdxc doctor` stops
-the run before production changes when a secret or migration is out of step.
+`bunx sdxc` runs the release the project pins in its `devDependencies`. The deploy checks out
+the exact commit CI ran on, and `sdxc doctor` in the CI script stops a commit whose secrets or
+migrations are out of step before it gets there.
 
 ## Where to go next
 
 - [Deploy](/docs/sdxc/deploy) — the plan, the flags, and what each failing step leaves behind.
-- [Check a project](/docs/sdxc/check-a-project) — every check `sdxc doctor` runs in that
-  workflow.
+- [Run CI](/docs/sdxc/run-ci) — the CI script and the workflow the deploy waits on.
+- [Check a project](/docs/sdxc/check-a-project) — every check `sdxc doctor` runs in CI.
 - [Configure the sdxc command](/docs/sdxc/configuration) — every key in `.config/sdxc.jsonc`.

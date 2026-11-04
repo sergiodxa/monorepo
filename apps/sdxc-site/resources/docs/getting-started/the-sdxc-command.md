@@ -1,11 +1,11 @@
 ---
 title: The sdxc command
-description: The command line that starts a project, generates files where the layout puts them, copies UI components, upgrades, checks and deploys, and where each of those is covered.
+description: The command line that starts, grows, checks and ships a project, and the guide that covers each command.
 section:
     title: Getting started
     order: 1
 order: 2
-lastUpdated: 2026-11-01
+lastUpdated: 2026-11-04
 outcomes:
     - "How to install the `sdxc` command"
     - "Which command does what, and which guide covers it"
@@ -52,6 +52,7 @@ and never waits on one.
 | `sdxc run`          | run your app's own command line: migrations, the SQL console, yours     | [Run your app's commands](/docs/sdxc/run-app-commands)                                |
 | `sdxc pkg`          | run any package's command line: decode a token, check a domain          | [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) |
 | `sdxc doctor`       | find release drift, missing secrets and wiring mistakes                 | [Check a project](/docs/sdxc/check-a-project)                                         |
+| `sdxc ci`           | run the project's CI script, then sign the commit off on GitHub         | [Run CI](/docs/sdxc/run-ci)                                                           |
 | `sdxc ui`           | copy an `@sdxc/ui` component into the project to edit it                | [Copy UI components](/docs/sdxc/copy-ui-components)                                   |
 | `sdxc upgrade`      | move to a newer release and print a prompt for your agent               | [Upgrade](/docs/sdxc/upgrade)                                                         |
 | `sdxc deploy`       | build, migrate production and deploy, in that order                     | [Deploy](/docs/sdxc/deploy)                                                           |

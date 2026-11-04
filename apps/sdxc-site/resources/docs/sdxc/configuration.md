@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 10
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "Where `sdxc` reads its configuration from, and how a mistake in it is reported"
     - "What every key changes, and its default"
@@ -70,6 +70,7 @@ type, or a path outside the project stops the command with one line per problem:
 		"mutation": { "report": "reports/mutation/mutation.json", "maxSurvived": 0 },
 	},
 	"run": { "entry": "bootstrap/cli.ts" },
+	"ci": { "script": ".config/sdxc/ci.ts" },
 	"format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
 	"lock": ".config/sdxc.lock.jsonl",
 }
@@ -153,6 +154,14 @@ The module [`sdxc run`](/docs/sdxc/run-app-commands) starts, with the words you 
 on. An app from `sdxc create` keeps the default; a project whose command line starts elsewhere
 names that module here.
 
+## ci
+
+| Key         | Default                |
+| ----------- | ---------------------- |
+| `ci.script` | `".config/sdxc/ci.ts"` |
+
+The CI script [`sdxc ci`](/docs/sdxc/run-ci) runs.
+
 ## lock
 
 | Key    | Default                     |
@@ -170,8 +179,9 @@ edited copy from an untouched one.
 
 ## What to commit
 
-Commit everything under `.config/`: the configuration, the lock file, your stubs and your
-checks. Each one changes what a command does, so a teammate and CI need the same copy you have.
+Commit everything under `.config/`: the configuration, the lock file, your stubs, your checks
+and your CI script. Each one changes what a command does, so a teammate and CI need the same
+copy you have.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-11-03
+lastUpdated: 2026-11-04
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -221,8 +221,9 @@ sdxc upgrade
 sdxc doctor
 ```
 
-In CI, run it before [`sdxc deploy`](/docs/sdxc/deploy) so a missing secret or a migration a new
-database cannot replay stops the pipeline before production.
+In CI, `doctor` is a step of the project's [CI script](/docs/sdxc/run-ci), so a missing secret
+or a migration a new database cannot replay fails CI before [`sdxc deploy`](/docs/sdxc/deploy)
+reaches production.
 
 ## Where to go next
 

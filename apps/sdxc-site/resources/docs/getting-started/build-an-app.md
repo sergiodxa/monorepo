@@ -1,15 +1,15 @@
 ---
 title: Build an app
-description: Build a small link board from an empty folder to a deployed Worker, creating the project, scaffolding a resource, changing its validator and policy, adding a scheduled job, testing it and deploying it.
+description: Build a small link board from an empty folder to a deployed Worker, from scaffolding a resource and changing its rules to testing and shipping it.
 section:
     title: Getting started
     order: 1
 order: 3
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "How `sdxc create`, `sdxc scaffold` and `sdxc run db migrate` take you from an empty folder to working pages"
     - "Where a validator, a policy, a model method and a job go, and how to change each one"
-    - "How to run the tests `sdxc` wrote for you and ship the app with `sdxc deploy`"
+    - "How to run the tests and CI, then ship the app with `sdxc deploy`"
 ---
 
 In this guide you build **links**, a public link board: anyone can add a bookmark with an
@@ -291,6 +291,18 @@ sdxc doctor
 `bun check` formats, lints and type checks. `sdxc doctor` checks the project itself, such as
 every `@sdxc` package on one release and the migrations replaying on an empty database;
 [Check a project](/docs/sdxc/check-a-project) lists each check and its fix.
+
+## Run CI before you push
+
+`sdxc ci` runs the doctor, the checks, the build and the tests as GitHub Actions does. With
+`--push`, a green run pushes the commit and signs it off, so GitHub Actions skips it:
+
+```bash
+sdxc ci --push
+```
+
+[Run CI on your machine](/docs/operations-and-testing/run-ci-locally) shows how to change what
+the script runs.
 
 ## Deploy
 

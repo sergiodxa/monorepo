@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 12
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "What the words ability, grant and policy mean in sdxc"
     - "What the template terms initializer, kind, stub and seed refer to"
@@ -41,6 +41,12 @@ Two things share the word. A **middleware chain** is the list of middleware a ro
 controller runs, in order: the router's global chain, and the `page` and `api` chains a
 controller declares. A **migration chain** is a folder of numbered migrations that one database
 applies in order, named in `make.migrations`. [Make a migration](/docs/sdxc/make-migration#chains)
+
+## CI script
+
+`.config/sdxc/ci.ts`, or the file `ci.script` names in `.config/sdxc.jsonc`: the steps a project's
+CI runs, declared with `defineCI`. `sdxc ci` runs it on your machine and the GitHub workflow runs
+the same file. [Run CI](/docs/sdxc/run-ci)
 
 ## Contract
 
@@ -141,6 +147,12 @@ versioned by its date, such as `2026.10.17`. A project's release is the newest d
 `database/seed.ts`: the rows a new local database starts with, as named steps declared with
 `defineSeed`, which `sdxc run db seed` runs in order.
 [Run your app's commands](/docs/sdxc/run-app-commands#seed-and-reset-the-local-database)
+
+## Signoff
+
+The `sdxc/ci` commit status a green run of the whole [CI script](#ci-script) posts on GitHub, from
+a clean tree whose HEAD stayed put. The GitHub workflow skips its own run for a commit someone
+with write access signed off. [Run CI](/docs/sdxc/run-ci)
 
 ## Stub
 

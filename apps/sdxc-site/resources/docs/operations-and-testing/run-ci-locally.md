@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 2.6
-lastUpdated: 2026-11-03
+lastUpdated: 2026-11-04
 outcomes:
     - "How to write a CI script with steps, parallel groups and a matrix over workspaces"
     - "How `sdxc ci --push` tests, pushes and signs a commit off in one go"
@@ -22,26 +22,9 @@ on GitHub, and the workflow skips its own run.
 sdxc ci
 ```
 
-`sdxc ci` installs dependencies with a frozen lockfile, then runs each step and prints one line
-per step as it finishes. A failed step shows its output under it. The run exits 0 when every
-step passed and 1 otherwise.
-
-While you work, narrow the run to the steps you care about:
-
-```bash
-sdxc ci --only Test
-```
-
-After a red run, check your fix against just the steps that failed:
-
-```bash
-sdxc ci --rerun-failed
-```
-
-Each run keeps every step's full log, and prints the folder as its last line.
-
-A run with `--only`, `--skip`, `--scope` or `--rerun-failed` never signs off, so a narrowed run
-can't mark a commit green.
+It prints one line per step, with a failed step's output under it, and exits 1 when a step
+failed. While you work, narrow it with `--only`, or run just what failed with
+`--rerun-failed`; [Run CI](/docs/sdxc/run-ci) covers every flag and where the logs go.
 
 ## Write steps
 
@@ -105,17 +88,9 @@ workspace that depends on it.
 sdxc ci --push
 ```
 
-When every step passes, `--push` pushes exactly the tested commit to its upstream branch, then
-posts an `sdxc/ci` commit status on GitHub. It signs off only when the run:
-
-- ran every step,
-- started and ended with no uncommitted or untracked files,
-- tested the same commit from start to end.
-
-If someone pushed first, the push is rejected; pull, then run `sdxc ci --push` again.
-
-The token comes from `GITHUB_TOKEN`, or from `gh auth token` when you're signed in with the
-GitHub CLI.
+When every step passes on a clean tree, it pushes exactly the tested commit and posts an
+`sdxc/ci` commit status on GitHub. A narrowed run never signs off;
+[Run CI](/docs/sdxc/run-ci#sign-off) lists every condition.
 
 ## Skip the hosted run
 

@@ -1,14 +1,14 @@
 ---
 title: Errors and FAQ
-description: What the messages sdxc, sdxc doctor and a new app's tests print mean, why each happens and how to fix it, and answers to the questions a first app raises.
+description: What the messages sdxc and a new app's tests print mean, why each happens and how to fix it, and answers to the questions a first app raises.
 section:
     title: The sdxc command
     order: 2
 order: 11
-lastUpdated: 2026-10-25
+lastUpdated: 2026-11-04
 outcomes:
     - "What each `sdxc doctor` failure means and the command that fixes it"
-    - "What to do when `sdxc make`, `sdxc run` or `sdxc deploy` stops"
+    - "What to do when an `sdxc` command stops"
     - "Why a page answers 403, a cron job never runs, or local data seems to vanish"
 ---
 
@@ -136,6 +136,39 @@ check that the `DB` binding in `cloudflare.config.ts` holds your database's id.
 
 Every command validates the configuration before it runs. Correct the key the line names;
 [Configuration](/docs/sdxc/configuration) lists every one.
+
+## sdxc ci
+
+A passing run that leaves the commit unsigned prints why after "Not signed off:".
+[Run CI](/docs/sdxc/run-ci) covers the command.
+
+### "No CI script at or above …"
+
+`sdxc ci` reads `.config/sdxc/ci.ts`, or the file `ci.script` names. Write the script there, as
+[Run CI on your machine](/docs/operations-and-testing/run-ci-locally) shows.
+
+### "Not signed off: the run started with uncommitted or untracked files"
+
+A signoff vouches for exactly what the commit holds. Commit or remove the files and run again,
+and leave the tree and HEAD alone until the run ends.
+
+### "Not signed off: --only, --skip or --scope left steps out"
+
+A signoff needs every step, so a narrowed run or `--rerun-failed` skips it. Run `sdxc ci` once
+more with no filters; unchanged steps replay from the cache.
+
+### "Not signed off: the commit is not on GitHub yet; …"
+
+The green run is recorded. Push the commit, then post the signoff with `sdxc ci signoff`. Next
+time, `sdxc ci --push` does both.
+
+### "No GitHub token: set GITHUB_TOKEN, or sign in with `gh auth login`"
+
+Sign in with the GitHub CLI, or export a token that can write commit statuses.
+
+### "Not signed off: the push was rejected: …"
+
+Someone pushed first. Pull, then run `sdxc ci --push` again.
 
 ## A new app's tests
 
