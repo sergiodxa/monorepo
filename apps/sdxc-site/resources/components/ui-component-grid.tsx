@@ -17,8 +17,8 @@ import type { NavEntry } from "~/app/services/navigation-tree";
 import UiComponentCard from "~/resources/components/ui-component-card";
 
 /**
- * Narrowest a component tile may get before the grid drops a column. Kept under the docs
- * main column (sidebar + TOC eat the rest) so a desktop pass still lands three tiles wide.
+ * Narrowest a component tile may get before the grid drops a column. Sized so the article
+ * measure (not the prose measure) fills with several tiles across on a desktop pass.
  */
 const CARD_MIN = "11rem";
 
@@ -33,10 +33,15 @@ function slugOf(href: string): string {
 	return href.split("/").at(-1) ?? "";
 }
 
-/** Renders the explorer tiles for one run of components. */
+/**
+ * Renders the explorer tiles for one run of components. The list carries a `data-slot` so
+ * DocsLayout leaves it at the article measure — a bare `ul` would stop at the prose measure
+ * and leave the column empty beside the cards.
+ */
 export default function UiComponentGrid(handle: Handle<UiComponentGrid.Props>) {
 	return () => (
 		<ul
+			data-slot="ui-component-grid"
 			mix={[
 				grid(),
 				m(0),
@@ -46,7 +51,7 @@ export default function UiComponentGrid(handle: Handle<UiComponentGrid.Props>) {
 				gridTemplate({
 					columns: repeat("auto-fill", `minmax(min(100%, ${CARD_MIN}), 1fr)`),
 				}),
-				raw({ alignItems: "stretch" }),
+				raw({ alignItems: "stretch", maxInlineSize: "none" }),
 			]}
 		>
 			{handle.props.entries.map((entry) => (
