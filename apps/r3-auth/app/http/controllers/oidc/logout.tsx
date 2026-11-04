@@ -10,6 +10,7 @@
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
+import { patchCsp } from "@sdxc/security-headers/csp-patch";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
@@ -46,7 +47,7 @@ function admitFrontchannelFrames(ctx: AppContext, urls: OIDC.FrontchannelLogoutU
 		let url = URL.parse(entry.url);
 		if (url) origins.add(url.origin);
 	}
-	ctx.securityHeaders.override({ contentSecurityPolicyReportOnly: { frameSrc: [...origins] } });
+	patchCsp(ctx, { reportOnlyPolicy: { frameSrc: [...origins] } });
 }
 
 /**
