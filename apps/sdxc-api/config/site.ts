@@ -21,6 +21,21 @@ export const SITE_DESCRIPTION =
 /** `<title>` and Open Graph title for the public landing. */
 export const SITE_TITLE = `${SITE_BRAND} — pay-per-call package APIs`;
 
+/** Open Graph card width, the size a large summary card is laid out at. */
+export const OG_IMAGE_WIDTH = 1200;
+
+/** Open Graph card height, the size a large summary card is laid out at. */
+export const OG_IMAGE_HEIGHT = 630;
+
+/**
+ * Bump when the card drawing changes. Shared caches key on this query, so a
+ * new revision is a new URL and the previous PNG expires on its own.
+ */
+export const OG_IMAGE_REVISION = "1";
+
+/** Path the landing advertises for its social card. */
+export const OG_IMAGE_PATH = `/og.png?v=${OG_IMAGE_REVISION}`;
+
 /** Who publishes the API, named in the landing's byline and structured data. */
 export const AUTHOR_NAME = "Sergio Xalambrí";
 
@@ -30,13 +45,13 @@ export const AUTHOR_URL = "https://sergiodxa.com";
 /** Avatar URL the landing's `h-card` publishes; the page does not request the image. */
 export const AUTHOR_PHOTO = "https://github.com/sergiodxa.png";
 
-/** X handle for `twitter:site` and `twitter:creator`. */
+/** Personal X handle (`@sergiodxa`) for `twitter:site` and `twitter:creator`. */
 export const AUTHOR_X_HANDLE = "@sergiodxa";
 
 /** GitHub profile claimed with `rel="me"`. */
 export const AUTHOR_GITHUB = "https://github.com/sergiodxa";
 
-/** X profile claimed with `rel="me"`. */
+/** Personal X profile (`x.com/sergiodxa`) claimed with `rel="me"`. */
 export const AUTHOR_X_URL = "https://x.com/sergiodxa";
 
 /** Docs site claimed with `rel="me"`, where the packages stay free to read. */

@@ -22,18 +22,25 @@ locally with the in-memory facilitator, set a non-http stub such as
 
 ## Routes
 
-| Route     | Method | Payment              | Purpose                                                               |
-| --------- | ------ | -------------------- | --------------------------------------------------------------------- |
-| `/`       | GET    | Free                 | HTML landing (MCP, x402, catalog); `Accept: text/markdown` for agents |
-| `/v1`     | GET    | Free                 | JSON catalog of operations                                            |
-| `/v1/*id` | POST   | x402                 | Run one catalog operation (dots allowed in id)                        |
-| `/mcp`    | POST   | x402 on `tools/call` | Model Context Protocol                                                |
-| `/health` | GET    | Free                 | Health report                                                         |
+| Route     | Method | Payment              | Purpose                                                                  |
+| --------- | ------ | -------------------- | ------------------------------------------------------------------------ |
+| `/`       | GET    | Free                 | HTML landing (MCP, x402, catalog); `Accept: text/markdown` for agents    |
+| `/og.png` | GET    | Free                 | 1200×630 Open Graph card for the landing (`?v=` is the drawing revision) |
+| `/v1`     | GET    | Free                 | JSON catalog of operations                                               |
+| `/v1/*id` | POST   | x402                 | Run one catalog operation (dots allowed in id)                           |
+| `/mcp`    | POST   | x402 on `tools/call` | Model Context Protocol                                                   |
+| `/health` | GET    | Free                 | Health report                                                            |
 
 The HTML landing publishes a canonical URL on `https://api.sdxc.dev`, Open Graph and
-Twitter cards, `index, follow`, and schema.org JSON-LD for the publisher, the site,
-the page and the API. The same markup is an `h-entry` with the publisher's `h-card`
-and one `h-cite` per operation. `Accept: text/markdown` stays a plain Markdown body.
+Twitter cards (`summary_large_image`, `twitter:site` and `twitter:creator` `@sergiodxa`),
+`index, follow`, and schema.org JSON-LD for the publisher, the site, the page and the
+API. `og:image`, the organization `logo` and the page's `primaryImageOfPage` point at
+`https://api.sdxc.dev/og.png?v=1`. The first request for a revision in a colo draws
+that PNG and stores it in the Workers Cache (`caches.default`); later requests reuse
+it. `Cache-Control: public, max-age=86400, s-maxage=2592000` lets browsers and the CDN
+keep the copy. Bump `v` when the drawing changes. The same markup is an `h-entry`
+with the publisher's `h-card` and one `h-cite` per operation. `rel="me"` includes
+`https://x.com/sergiodxa`. `Accept: text/markdown` stays a plain Markdown body.
 
 ## Connect MCP
 

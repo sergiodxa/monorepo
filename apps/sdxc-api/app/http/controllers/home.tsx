@@ -11,7 +11,14 @@ import { createAction } from "remix/router";
 
 import { LANDING_SCHEMA, seo } from "~/app/initializers/seo";
 import { OPERATIONS } from "~/config/catalog";
-import { SITE_BRAND, SITE_DESCRIPTION, SITE_ORIGIN, SITE_TAGLINE, SITE_TITLE } from "~/config/site";
+import {
+	OG_IMAGE_PATH,
+	SITE_BRAND,
+	SITE_DESCRIPTION,
+	SITE_ORIGIN,
+	SITE_TAGLINE,
+	SITE_TITLE,
+} from "~/config/site";
 import DocumentLayout from "~/resources/layouts/document";
 import HomeView from "~/resources/views/home";
 import routes from "~/routes/web";
@@ -65,7 +72,9 @@ function landingMarkdown(): string {
 		"`PAYMENT-REQUIRED` header. Retry with `PAYMENT-SIGNATURE`; a settled call returns the",
 		"result and `PAYMENT-RESPONSE`.",
 		"",
-		"`GET /`, `GET /v1`, `GET /health` and MCP discovery stay free.",
+		"`GET /`, `GET /og.png`, `GET /v1`, `GET /health` and MCP discovery stay free.",
+		"",
+		`Social card: \`${SITE_ORIGIN}${OG_IMAGE_PATH}\`.`,
 		"",
 		"## Connect MCP",
 		"",

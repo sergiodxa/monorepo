@@ -10,6 +10,8 @@ import { get, post, route } from "remix/routes";
 export default route({
 	/** Human-readable landing page and machine catalog. */
 	home: get("/"),
+	/** Drawn Open Graph card for the landing. */
+	og: get("/og.png"),
 	/** JSON catalog of every priced operation. */
 	catalog: get("/v1"),
 	/** Health report. */

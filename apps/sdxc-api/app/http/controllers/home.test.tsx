@@ -22,6 +22,10 @@ import {
 	AUTHOR_PROFILES,
 	AUTHOR_URL,
 	AUTHOR_X_HANDLE,
+	AUTHOR_X_URL,
+	OG_IMAGE_HEIGHT,
+	OG_IMAGE_PATH,
+	OG_IMAGE_WIDTH,
 	SITE_BRAND,
 	SITE_DESCRIPTION,
 	SITE_ORIGIN,
@@ -98,6 +102,7 @@ describe("GET /", () => {
 		expect(body).toContain(`${SITE_ORIGIN}/mcp`);
 		expect(body).toContain("x402");
 		expect(body).toContain("semver.satisfies");
+		expect(body).toContain(`${SITE_ORIGIN}${OG_IMAGE_PATH}`);
 		expect(body).not.toContain("application/ld+json");
 	});
 
@@ -112,8 +117,17 @@ describe("GET /", () => {
 		expect(html).toContain(`property="og:url" content="${SITE_ORIGIN}/"`);
 		expect(html).toContain(`property="og:site_name" content="${SITE_BRAND}"`);
 		expect(html).toContain('property="og:locale" content="en_US"');
-		expect(html).toContain('name="twitter:card" content="summary"');
-		expect(html).toContain(`name="twitter:site" content="${AUTHOR_X_HANDLE}"`);
+		expect(AUTHOR_X_HANDLE).toBe("@sergiodxa");
+		expect(AUTHOR_X_URL).toBe("https://x.com/sergiodxa");
+		expect(html).toContain('name="twitter:card" content="summary_large_image"');
+		expect(html).toContain('name="twitter:site" content="@sergiodxa"');
+		expect(html).toContain('name="twitter:creator" content="@sergiodxa"');
+		expect(html).toContain('rel="me" href="https://x.com/sergiodxa"');
+		expect(html).toContain(`property="og:image" content="${SITE_ORIGIN}${OG_IMAGE_PATH}"`);
+		expect(html).toContain(`property="og:image:alt" content="${SITE_TITLE}"`);
+		expect(html).toContain(`property="og:image:width" content="${OG_IMAGE_WIDTH}"`);
+		expect(html).toContain(`property="og:image:height" content="${OG_IMAGE_HEIGHT}"`);
+		expect(html).toContain(`name="twitter:image" content="${SITE_ORIGIN}${OG_IMAGE_PATH}"`);
 		expect(html).toContain(`<title>${SITE_TITLE}</title>`);
 		expect(html).toContain(`name="description" content="${SITE_DESCRIPTION}"`);
 
@@ -135,7 +149,12 @@ describe("GET /", () => {
 		expect(nodes[0]).toMatchObject({
 			"@type": "Organization",
 			name: AUTHOR_NAME,
+			logo: `${SITE_ORIGIN}${OG_IMAGE_PATH}`,
 			sameAs: [...AUTHOR_PROFILES],
+		});
+		expect(nodes[2]).toMatchObject({
+			"@type": "WebPage",
+			primaryImageOfPage: { "@type": "ImageObject", url: `${SITE_ORIGIN}${OG_IMAGE_PATH}` },
 		});
 		expect(nodes[3]).toMatchObject({
 			"@type": "SoftwareApplication",
