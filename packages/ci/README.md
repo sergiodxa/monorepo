@@ -70,7 +70,8 @@ Runs a shell command line, an argv without a shell, or a function, and resolves 
 `step.log(...)` and `step.signal`; its outcome is the `Result` it returns, or a failure when a
 command inside it failed. Options: `halt`, `cache`, `cwd`, `env`, `timeout` (milliseconds),
 `retry` (run a failed step again, up to that many times; a pass on a retry is reported as flaky)
-and `weight` (concurrency slots the step holds, default 1).
+`weight` (concurrency slots the step holds, default 1) and `memory` (a size such as
+`2GB` reserved from the run's memory budget while the step runs).
 
 ### `ci.parallel(name, functions, options?)` and `ci.matrix(name, items, fn, options?)`
 
@@ -87,17 +88,19 @@ The workspaces of the root `package.json`, each with `name`, `path`, `absolute`,
 own files, every workspace it depends on and the root files, which a step extends with
 `cache: { inputs: [...ws.inputs, "fixtures/**"] }`.
 
-### `ci.files(glob)`, `ci.root`, `ci.cores`
+### `ci.files(glob)`, `ci.root`, `ci.cores`, `ci.memory`
 
 `files` lists the tracked files matching a glob, relative to the project root, so a script finds
-what to act on without reading the disk. `root` is the project root every step runs in, and
-`cores` the machine's available parallelism, for sizing `concurrency`.
+what to act on without reading the disk. `root` is the project root every step runs in,
+`cores` the machine's available parallelism, for sizing `concurrency`, and `memory` the
+machine's total and free bytes at the start of the run, for sizing a step's `memory`
+reservation.
 
 ### `ci.status`, `ci.runner`, `ci.scope`
 
 `status` is `pending`, `passing`, `failing` or `halted` and never returns to `passing`.
 `runner` is `remote` when the `CI` variable is set, else `local`. `scope` lists the workspaces
-`--scope` names, or is `null`.
+`--scope` or `--since` names, or is `null`.
 
 ### `ci.success`, `ci.failure`, `ci.signoff`
 
@@ -115,8 +118,8 @@ the workspace, the workspaces it depends on and the files at the root.
 ## Command line
 
 ```sh
-npx @sdxc/ci run <script> [--only <pattern>] [--skip <pattern>] [--scope <workspace>] [--rerun-failed] [--push] [--json]
-npx @sdxc/ci list <script> [--matrix <name>] [--json]
+npx @sdxc/ci run <script> [--only <pattern>] [--skip <pattern>] [--scope <workspace>] [--since <ref>] [--worktree] [--watch] [--rerun-failed] [--push] [--memory <size>] [--json]
+npx @sdxc/ci list <script> [--matrix <name>] [--since <ref>] [--json]
 npx @sdxc/ci signoff [<sha>]
 npx @sdxc/ci verify <sha> [--wait 60s] [--repo owner/name]
 npx @sdxc/ci clean [--json]
@@ -130,9 +133,14 @@ job's summary page. Cached passes unused for 30 days are dropped; `clean` remove
 the run history, keeping the records `signoff` reads.
 
 `--only` and `--skip` match step names, group names and entry addresses, with `*` spanning
-`/`. `verify` exits 0 when someone with write access signed the commit off, 1 when nobody did,
-and 2 when GitHub cannot be reached. The token comes from `GITHUB_TOKEN` (or `--token-env`),
-then `gh auth token`.
+`/`. `--since <ref>` keeps the workspaces changed since that ref and their dependents.
+`--worktree` runs in a temporary detached worktree of HEAD with its own frozen install, so a
+dirty checkout can still sign off while the shared cache and run logs stay in the main clone.
+`--watch` re-runs when tracked files change; steps without `cache` re-run every cycle, cached
+steps replay when their inputs are unchanged, and `--push` with `--watch` is a usage error.
+`--memory <size>` caps the budget step `memory` reservations draw from. `verify` exits 0 when
+someone with write access signed the commit off, 1 when nobody did, and 2 when GitHub cannot be
+reached. The token comes from `GITHUB_TOKEN` (or `--token-env`), then `gh auth token`.
 
 ## Patterns
 
@@ -321,6 +329,7 @@ export default defineCI(async (ci) => {
 		ci.step(`Test ${ws.name}`, "npm test", {
 			cwd: ws.path,
 			weight: ws.has("**/*.browser.test.ts") ? 4 : 1,
+			memory: ws.has("**/*.browser.test.ts") ? "2GB" : undefined,
 		}),
 	);
 });
@@ -328,7 +337,48 @@ export default defineCI(async (ci) => {
 
 A step with `weight: 4` holds four of the run's slots while it runs, so a browser suite that
 spreads over many cores shares the machine with fewer steps, while small packages still run many
-at a time. A weight above the limit takes every slot and runs alone.
+at a time. A weight above the limit takes every slot and runs alone. `memory: "2GB"` reserves
+that much of the run's memory budget the same way; a step waits until both fit.
+
+### Pattern: Narrow typegen and doctor with `ci.scope`
+
+```typescript
+import { defineCI } from "@sdxc/ci";
+import { isFailure } from "@sdxc/result";
+
+export default defineCI(async (ci) => {
+	let all = await ci.workspaces();
+	let scoped = ci.scope === null ? all : all.filter((ws) => ci.scope?.includes(ws.path) === true);
+	let apps = scoped.filter((ws) => ws.path.startsWith("apps/"));
+	if (ci.scope === null) {
+		await ci.step("Typegen", "bun --filter '*' cli typegen", { halt: true });
+		await ci.step("Doctor", "bun run doctor");
+		await ci.step("Check", "bun run check");
+	} else {
+		await ci.step(
+			"Typegen",
+			async (step) => {
+				for (let app of apps) {
+					let ran = await step.run(["bun", "--filter", `./${app.path}`, "cli", "typegen"]);
+					if (isFailure(ran)) return ran;
+				}
+			},
+			{ halt: true },
+		);
+		await ci.step("Doctor", async (step) => {
+			for (let app of apps) {
+				let ran = await step.run(["bunx", "sdxc", "doctor"], { cwd: app.path });
+				if (isFailure(ran)) return ran;
+			}
+		});
+		await ci.step("Check", ["vp", "check", ...scoped.map((ws) => ws.path)]);
+	}
+});
+```
+
+A full run stays the repo-wide commands. A `--scope` or `--since` run reads `ci.scope` and
+keeps typegen and doctor on the scoped apps; `vp check <paths>` scopes format, lint and types
+to those paths.
 
 ### Pattern: Retry a step that fails under load
 

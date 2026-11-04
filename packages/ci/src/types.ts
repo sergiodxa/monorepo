@@ -94,6 +94,12 @@ export interface StepOptions extends CommandOptions {
 	 * @default 1
 	 */
 	weight?: number;
+	/**
+	 * Bytes of RAM the step reserves from the run's memory budget while it runs, as a size
+	 * (`2GB`, `512MB`) or a byte count. A step waits until both its slots and its reservation
+	 * fit; a reservation above the budget takes the whole budget and runs alone.
+	 */
+	memory?: string | number;
 }
 
 /** What a step resolved to. */
@@ -178,6 +184,11 @@ export interface CI {
 	readonly root: string;
 	/** The cores this machine can run on at once, to size a group's `concurrency`. */
 	readonly cores: number;
+	/**
+	 * Total and free bytes of RAM on this machine at the start of the run, for sizing a step's
+	 * `memory` reservation.
+	 */
+	readonly memory: { total: number; free: number };
 }
 
 /** A CI script: the default export of the file a run loads. */

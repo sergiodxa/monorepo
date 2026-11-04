@@ -40,6 +40,11 @@ const FILTER_FLAGS = {
 			description: "Keep matrix entries for this workspace path or name and its dependents",
 		})
 		.multiple(),
+	since: flag.string("since", {
+		valueName: "ref",
+		description:
+			"Keep matrix entries for workspaces changed since this ref (and their dependents); a change outside every workspace covers every entry",
+	}),
 	runner: RUNNER_FLAG,
 };
 
@@ -79,6 +84,19 @@ export const RUN_FLAGS = {
 		valueName: "n",
 		schema: s.number().refine((n) => Number.isInteger(n) && n > 0, "expects a positive integer"),
 		description: "Most steps running at once; the machine's available parallelism by default",
+	}),
+	memory: flag.string("memory", {
+		valueName: "size",
+		description:
+			"RAM budget for step memory reservations (2GB, 512MB); three quarters of total RAM by default",
+	}),
+	worktree: flag.boolean("worktree", {
+		description:
+			"Run in a temporary detached worktree of HEAD so a dirty checkout can still sign off",
+	}),
+	watch: flag.boolean("watch", {
+		description:
+			"Re-run when tracked files change; unchanged cached steps replay; never signs off or pushes",
 	}),
 	remote: REMOTE_FLAG,
 	tokenEnv: TOKEN_ENV_FLAG,

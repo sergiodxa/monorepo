@@ -13,7 +13,7 @@ import { resolve } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
 import type { CommandError, CommandOutput } from "./process.js";
 import type { RunRecord, RunStart, SignoffReport } from "./signoff.js";
@@ -43,6 +43,13 @@ import {
 } from "./cache.js";
 import { headCommit, isClean, matchingFiles, repositoryRoot, sharedGitDirectory } from "./git.js";
 import { namePattern } from "./glob.js";
+import {
+	defaultMemoryBudget,
+	machineMemory,
+	MemoryPool,
+	parseMemorySize,
+	type MachineMemory,
+} from "./memory.js";
 import { runCommand } from "./process.js";
 import { Semaphore } from "./semaphore.js";
 import { checkTree, postRecord, recordOf, writeRecord } from "./signoff.js";
@@ -63,6 +70,11 @@ export interface RunOptions {
 	cache?: boolean;
 	/** @default os.availableParallelism() */
 	concurrency?: number;
+	/**
+	 * Bytes of RAM the run budgets for step reservations; steps wait until both their slots and
+	 * their `memory` fit. @default three quarters of `os.totalmem()`
+	 */
+	memoryBudget?: number;
 	/** `false` makes `ci.signoff` behave as `ci.success`. @default true */
 	signoff?: boolean;
 	/** Push the tested commit before signing it off. @default false */
@@ -247,6 +259,8 @@ class Run {
 	};
 	readonly storage = new AsyncLocalStorage<Scope>();
 	readonly global: Semaphore;
+	readonly memory: MemoryPool;
+	readonly machine: MachineMemory;
 	readonly steps: StepRecord[] = [];
 	readonly entries: EntryRecord[] = [];
 	readonly errors: ScriptErrorRecord[] = [];
@@ -265,6 +279,7 @@ class Run {
 	/** Fills every option the caller left out with the command line's default. */
 	constructor(options: RunOptions) {
 		let env = options.env ?? process.env;
+		this.machine = machineMemory();
 		this.options = {
 			root: options.root,
 			runner: options.runner ?? detectRunner(env),
@@ -273,6 +288,7 @@ class Run {
 			scope: options.scope ?? null,
 			cache: options.cache ?? true,
 			concurrency: options.concurrency ?? availableParallelism(),
+			memoryBudget: options.memoryBudget ?? defaultMemoryBudget(this.machine.total),
 			signoff: options.signoff ?? true,
 			push: options.push ?? false,
 			remote: options.remote ?? null,
@@ -285,6 +301,7 @@ class Run {
 			durations: options.durations ?? new Map(),
 		};
 		this.global = new Semaphore(this.options.concurrency);
+		this.memory = new MemoryPool(this.options.memoryBudget);
 		this.onlyPatterns = this.options.only.map(namePattern);
 		this.skipPatterns = this.options.skip.map(namePattern);
 	}
@@ -308,6 +325,7 @@ class Run {
 	api(): CI {
 		let status = (): RunStatus => this.status;
 		let { runner, scope, root } = this.options;
+		let memory = this.machine;
 		return {
 			step: (name, step, options) => this.step(name, step, options ?? {}),
 			parallel: (name, functions, options) => this.parallel(name, functions, options ?? {}),
@@ -324,6 +342,7 @@ class Run {
 			scope,
 			root,
 			cores: availableParallelism(),
+			memory,
 		};
 	}
 
@@ -394,6 +413,18 @@ class Run {
 		if (this.options.dryRun)
 			return this.finish({ ...base, status: "passed", filtered: false }, scope);
 
+		let bytes = this.memoryBytes(options);
+		if (isFailure(bytes)) {
+			return this.finish(
+				{
+					...base,
+					status: "failed",
+					filtered: false,
+					output: `Invalid memory reservation: ${bytes.error.message}\n`,
+				},
+				scope,
+			);
+		}
 		let releases: Array<() => void> = [];
 		for (let group of scope.groups) {
 			if (group.semaphore !== null) {
@@ -401,12 +432,24 @@ class Run {
 			}
 		}
 		releases.push(await this.global.acquire(options.weight ?? 1));
+		releases.push(await this.memory.acquire(bytes.data));
 		let record = await this.execute(base, run, options, scope).finally(() => {
 			for (let release of releases.reverse()) release();
 		});
 		this.finish(record, scope);
 		if (record.status === "failed") this.afterFailure(options, scope);
 		return record;
+	}
+
+	/** Bytes a step reserves from the memory budget, or a failure when the size cannot be parsed. */
+	memoryBytes(options: StepOptions): Result<number, Error> {
+		if (options.memory === undefined) return success(0);
+		if (typeof options.memory === "number") {
+			return Number.isFinite(options.memory) && options.memory >= 0
+				? success(Math.floor(options.memory))
+				: failure(new Error(`expects a non-negative number of bytes, not ${options.memory}`));
+		}
+		return parseMemorySize(options.memory);
 	}
 
 	/** Applies a failed step's halt and the fail-fast of every group around it. */
@@ -783,7 +826,7 @@ class Run {
 	/** Why this run cannot be signed off, or `null` when every guard holds. */
 	async signoffProblem(): Promise<string | null> {
 		if (this.start === null) return "the project is not a git repository";
-		if (this.partial) return "--only, --skip or --scope left steps out";
+		if (this.partial) return "--only, --skip, --scope or --since left steps out";
 		let tree = await checkTree(this.start);
 		return isFailure(tree) ? tree.error.message : null;
 	}

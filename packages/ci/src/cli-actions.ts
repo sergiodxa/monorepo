@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { relative, resolve } from "node:path";
+
 import type { ExitError, Style } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
@@ -14,12 +16,13 @@ import { exit, success } from "@sdxc/cli";
 import { isFailure } from "@sdxc/result";
 
 import type { Palette } from "./report.js";
-import type { Reporter } from "./run.js";
-import type { Runner } from "./types.js";
+import type { Reporter, RunReport } from "./run.js";
+import type { CIScript, Runner } from "./types.js";
 
-import { headCommit, repositoryRoot, sharedGitDirectory } from "./git.js";
+import { headCommit, isClean, repositoryRoot, sharedGitDirectory } from "./git.js";
 import { parseRepositoryName, resolveToken, verifySignoff } from "./github.js";
 import { loadScript } from "./load.js";
+import { defaultMemoryBudget, parseMemorySize } from "./memory.js";
 import {
 	actionsReporter,
 	appendStepSummary,
@@ -32,6 +35,9 @@ import {
 import { detectRunner, runScript } from "./run.js";
 import { entryDurations, failedLabels, lastRun, recordRun } from "./runs.js";
 import { postRecord, readRecord, repositoryOf } from "./signoff.js";
+import { scopeSince } from "./since.js";
+import { formatWatchCycle, watchProject } from "./watch.js";
+import { prepareWorktree } from "./worktree.js";
 
 /** Exit code for a usage error or input that cannot be read. */
 const UNREADABLE = 2;
@@ -58,6 +64,7 @@ export interface FilterInput {
 	only?: readonly string[];
 	skip?: readonly string[];
 	scope?: readonly string[];
+	since?: string;
 	runner?: Runner;
 }
 
@@ -67,6 +74,9 @@ export interface RunInput extends FilterInput {
 	signoff?: boolean;
 	cache?: boolean;
 	concurrency?: number;
+	memory?: string;
+	worktree?: boolean;
+	watch?: boolean;
 	remote?: string;
 	tokenEnv?: string;
 	verbose?: boolean;
@@ -156,41 +166,48 @@ async function runHistory(io: ActionIO, root: string, rerunFailed: boolean): Pro
 }
 
 /**
- * Runs the script at `script`, printing each step as it finishes and the summary after, or the
- * whole report as JSON. Exits 2 when the script cannot load or a filter matched nothing.
- *
- * @param root - Where the script's commands run; the repository root when left out
+ * Resolves `--scope` and `--since` into the workspace list a run covers. `--since` alone sets
+ * the scope from the diff; combined with `--scope` the intersection of both applies. A since
+ * fallback (a change outside every workspace) clears the scope so every entry runs, and prints
+ * the rule.
  */
-export async function runAction(
+async function resolveScope(
 	io: ActionIO,
-	script: string,
+	root: string,
+	input: FilterInput,
+): Promise<Result<readonly string[] | null, ExitError>> {
+	let scoped = listOrNull(input.scope);
+	if (input.since === undefined) return success(scoped);
+	let since = await scopeSince(root, input.since);
+	if (isFailure(since)) return exit(UNREADABLE, since.error.message);
+	if (since.data.fallback !== null) {
+		io.stdout(
+			`--since ${input.since}: ${since.data.fallback} sits outside every workspace; running every entry\n`,
+		);
+		return success(null);
+	}
+	if (since.data.scope === null) return success(scoped);
+	if (scoped === null) return success(since.data.scope);
+	let allowed = new Set(scoped);
+	return success(since.data.scope.filter((path) => allowed.has(path)));
+}
+
+/** Bytes for `--memory`, or the default share of total RAM when the flag is left out. */
+function memoryBudgetOf(input: RunInput): Result<number, ExitError> {
+	if (input.memory === undefined) return success(defaultMemoryBudget());
+	let parsed = parseMemorySize(input.memory);
+	if (isFailure(parsed)) return exit(UNREADABLE, `--memory ${parsed.error.message}`);
+	return success(parsed.data);
+}
+
+/** Prints one finished run, records it, and answers how the command should exit. */
+async function finishRun(
+	io: ActionIO,
 	input: RunInput,
-	root?: string,
+	report: RunReport,
+	history: RunHistory,
+	palette: Palette,
 ): Promise<Result<undefined, ExitError>> {
-	let loaded = await loadScript(script, io.cwd);
-	if (isFailure(loaded)) return exit(UNREADABLE, loaded.error.message);
-	let directory = root ?? (await projectRoot(io.cwd));
-	let history = await runHistory(io, directory, input.rerunFailed ?? false);
-	if (history.stop !== null) return history.stop;
-	let palette = paletteOf(io.style);
-	let report = await runScript(loaded.data, {
-		root: directory,
-		labels: history.labels,
-		durations: history.durations,
-		runner: input.runner ?? detectRunner(io.env),
-		only: input.only ?? [],
-		skip: input.skip ?? [],
-		scope: listOrNull(input.scope),
-		cache: input.cache ?? true,
-		concurrency: input.concurrency,
-		signoff: input.signoff ?? true,
-		push: input.push ?? false,
-		remote: input.remote ?? null,
-		tokenEnv: input.tokenEnv ?? "GITHUB_TOKEN",
-		env: io.env,
-		signal: io.signal,
-		reporter: reporterFor(io, input, palette),
-	});
 	let filtered = (input.only?.length ?? 0) > 0 || (input.skip?.length ?? 0) > 0;
 	if (filtered && report.steps.every((step) => step.filtered)) {
 		return exit(UNREADABLE, "No step matched --only and --skip; `list` prints every step's name");
@@ -219,6 +236,208 @@ export async function runAction(
 	return report.exitCode === 0 ? success() : exit(report.exitCode);
 }
 
+/**
+ * Runs the script at `script`, printing each step as it finishes and the summary after, or the
+ * whole report as JSON. Exits 2 when the script cannot load or a filter matched nothing.
+ *
+ * @param root - Where the script's commands run; the repository root when left out
+ */
+export async function runAction(
+	io: ActionIO,
+	script: string,
+	input: RunInput,
+	root?: string,
+): Promise<Result<undefined, ExitError>> {
+	if (input.watch === true && input.push === true) {
+		return exit(UNREADABLE, "--watch cannot be combined with --push");
+	}
+	let directory = root ?? (await projectRoot(io.cwd));
+	let budget = memoryBudgetOf(input);
+	if (isFailure(budget)) return budget;
+	let scope = await resolveScope(io, directory, input);
+	if (isFailure(scope)) return scope;
+	let worktree = null;
+	let runRoot = directory;
+	if (input.worktree === true) {
+		let prepared = await prepareWorktree(directory);
+		if (isFailure(prepared)) return exit(PROBLEMS, prepared.error.message);
+		worktree = prepared.data;
+		runRoot = worktree.root;
+		io.stdout(`Running in worktree ${runRoot}\n`);
+	} else if (input.push === true) {
+		let clean = await isClean(directory);
+		if (!isFailure(clean) && !clean.data) {
+			io.stdout(
+				"Hint: the tree is dirty; `sdxc ci --worktree --push` signs off from a clean worktree of HEAD\n",
+			);
+		}
+	}
+	let scriptPath = scriptIn(directory, runRoot, script, io.cwd);
+	let loaded = await loadScript(scriptPath, runRoot);
+	if (isFailure(loaded)) {
+		if (worktree !== null) await worktree.cleanup();
+		return exit(UNREADABLE, loaded.error.message);
+	}
+	let cleanup = worktree?.cleanup;
+	let abortWatch = new AbortController();
+	let onAbort = (): void => {
+		abortWatch.abort();
+	};
+	io.signal?.addEventListener("abort", onAbort, { once: true });
+	try {
+		if (input.watch === true) {
+			return await watchRuns(io, loaded.data, input, {
+				directory,
+				runRoot,
+				scope: scope.data,
+				budget: budget.data,
+				signal: abortWatch.signal,
+			});
+		}
+		let history = await runHistory(io, directory, input.rerunFailed ?? false);
+		if (history.stop !== null) return history.stop;
+		let palette = paletteOf(io.style);
+		let report = await runScript(loaded.data, {
+			root: runRoot,
+			labels: history.labels,
+			durations: history.durations,
+			runner: input.runner ?? detectRunner(io.env),
+			only: input.only ?? [],
+			skip: input.skip ?? [],
+			scope: scope.data,
+			cache: input.cache ?? true,
+			concurrency: input.concurrency,
+			memoryBudget: budget.data,
+			signoff: input.signoff ?? true,
+			push: input.push ?? false,
+			remote: input.remote ?? null,
+			tokenEnv: input.tokenEnv ?? "GITHUB_TOKEN",
+			env: io.env,
+			signal: io.signal,
+			reporter: reporterFor(io, input, palette),
+		});
+		return await finishRun(io, input, report, history, palette);
+	} finally {
+		io.signal?.removeEventListener("abort", onAbort);
+		if (cleanup !== undefined) await cleanup();
+	}
+}
+
+/**
+ * The script path to load: when the run is in a worktree, the same relative path inside that
+ * worktree, so the script matches HEAD rather than uncommitted edits in the main checkout.
+ */
+function scriptIn(mainRoot: string, runRoot: string, script: string, cwd: string): string {
+	if (mainRoot === runRoot) return script;
+	let absolute = resolve(cwd, script);
+	let relativePath = relative(mainRoot, absolute);
+	if (relativePath.startsWith("..") || relativePath === "") return script;
+	return resolve(runRoot, relativePath);
+}
+
+/** Options shared by every cycle of a `--watch` run. */
+interface WatchRunsOptions {
+	directory: string;
+	runRoot: string;
+	scope: readonly string[] | null;
+	budget: number;
+	signal: AbortSignal;
+}
+
+/**
+ * Runs the script once, then again whenever tracked files change. Each cycle aborts when a newer
+ * change arrives. Never signs off or pushes; steps without `cache` re-run every cycle.
+ */
+async function watchRuns(
+	io: ActionIO,
+	script: CIScript,
+	input: RunInput,
+	options: WatchRunsOptions,
+): Promise<Result<undefined, ExitError>> {
+	let history = await runHistory(io, options.directory, false);
+	let palette = paletteOf(io.style);
+	let cycle = 0;
+	let state: { controller: AbortController | null; running: Promise<void> | null } = {
+		controller: null,
+		running: null,
+	};
+	let pending = false;
+
+	let startCycle = async (): Promise<void> => {
+		if (options.signal.aborted) return;
+		cycle += 1;
+		let number = cycle;
+		state.controller?.abort();
+		let controller = new AbortController();
+		state.controller = controller;
+		let onParent = (): void => {
+			controller.abort();
+		};
+		options.signal.addEventListener("abort", onParent, { once: true });
+		let started = Date.now();
+		let report = await runScript(script, {
+			root: options.runRoot,
+			durations: history.durations,
+			runner: input.runner ?? detectRunner(io.env),
+			only: input.only ?? [],
+			skip: input.skip ?? [],
+			scope: options.scope,
+			cache: input.cache ?? true,
+			concurrency: input.concurrency,
+			memoryBudget: options.budget,
+			signoff: false,
+			push: false,
+			remote: input.remote ?? null,
+			tokenEnv: input.tokenEnv ?? "GITHUB_TOKEN",
+			env: io.env,
+			signal: controller.signal,
+			reporter: reporterFor(io, { ...input, json: false }, palette),
+		});
+		options.signal.removeEventListener("abort", onParent);
+		if (history.gitDirectory !== null) await recordRun(history.gitDirectory, report);
+		let aborted = controller.signal.aborted && !options.signal.aborted;
+		io.stdout(
+			`${formatWatchCycle({
+				cycle: number,
+				duration: Date.now() - started,
+				ran: report.steps.filter(
+					(step) => !step.filtered && !step.cached && step.status !== "skipped",
+				).length,
+				cached: report.steps.filter((step) => step.cached).length,
+				failed: report.steps.filter((step) => step.status === "failed").length,
+				aborted,
+			})}\n`,
+		);
+		if (!aborted && input.json !== true) io.stdout(formatSummary(report, palette));
+	};
+
+	let kick = (): void => {
+		pending = true;
+		if (state.running !== null) {
+			state.controller?.abort();
+			return;
+		}
+		state.running = (async () => {
+			while (pending && !options.signal.aborted) {
+				pending = false;
+				await startCycle();
+			}
+			state.running = null;
+			if (pending && !options.signal.aborted) kick();
+		})();
+	};
+
+	kick();
+	await watchProject(options.directory, {
+		onChange: kick,
+		signal: options.signal,
+	});
+	let last = state.running;
+	state.controller?.abort();
+	if (last !== null) await last;
+	return success();
+}
+
 /** What `list` reads. */
 export interface ListInput extends FilterInput {
 	matrix?: string;
@@ -237,12 +456,15 @@ export async function listAction(
 ): Promise<Result<undefined, ExitError>> {
 	let loaded = await loadScript(script, io.cwd);
 	if (isFailure(loaded)) return exit(UNREADABLE, loaded.error.message);
+	let directory = root ?? (await projectRoot(io.cwd));
+	let scope = await resolveScope(io, directory, input);
+	if (isFailure(scope)) return scope;
 	let report = await runScript(loaded.data, {
-		root: root ?? (await projectRoot(io.cwd)),
+		root: directory,
 		runner: input.runner ?? detectRunner(io.env),
 		only: input.only ?? [],
 		skip: input.skip ?? [],
-		scope: listOrNull(input.scope),
+		scope: scope.data,
 		env: io.env,
 		dryRun: true,
 	});

@@ -492,6 +492,12 @@ in any repository; the kit keeps only the script's location, scoping and templat
   - [x] Default script and workflow in the `sdxc create` template, left out inside a workspace
   - [x] The `sdxc doctor` `ci` check
   - [x] This repository's `.config/sdxc/ci.ts` and `ci.yml` around the gate
+- [x] Phase 5: Local-run features for a shared checkout
+  - [x] `--worktree`: detached worktree of HEAD with a frozen install inside it
+  - [x] `--since <ref>`: scope from the diff, same widening as `--scope`
+  - [x] Scoped typegen/doctor/check via `ci.scope` in this repository's script
+  - [x] Memory reservations (`memory` step option, `--memory` budget, `ci.memory`)
+  - [x] `--watch`: debounce, abort in-flight runs, cache replay; never signs off or pushes
 
 ## Notes
 

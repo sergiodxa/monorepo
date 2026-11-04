@@ -8,6 +8,7 @@
  */
 
 import { defineCI } from "@sdxc/ci";
+import { isFailure } from "@sdxc/result";
 
 /** The suites outside any workspace (`test/`, `scripts/`, `cli/`, the repo checks), as an entry. */
 const ROOT_SUITE = { name: "root", path: "root", inputs: ["**"] };
@@ -29,6 +30,12 @@ const TYPEGEN_INPUTS = [
 	"package.json",
 	"bun.lock",
 ];
+
+/**
+ * Bytes reserved for a Vitest browser suite (Chromium plus the suite process). Declared rather
+ * than sampled, so concurrency stays predictable under the run's memory budget.
+ */
+const BROWSER_TEST_MEMORY = "2GB";
 
 /**
  * The git-ignored files `typegen` writes, per app: `wrangler types` writes beside a
@@ -56,6 +63,9 @@ const DOCTOR_CACHE = { env: ["SDXC_COMMIT_RANGE", "SDXC_COMMIT_MSG_FILE"] };
  */
 const LOCAL_COMMIT_RANGE = "origin/main..HEAD";
 
+/** The kit binary this checkout runs doctor through, so a scoped app doctor needs no global `sdxc`. */
+const KIT_BIN = "packages/kit/src/bin.ts";
+
 export default defineCI(async (ci) => {
 	if (ci.runner === "remote") {
 		let examples = await ci.files("apps/*/.env.example");
@@ -70,31 +80,84 @@ export default defineCI(async (ci) => {
 		);
 	}
 
-	await ci.step("Typegen", "bun --filter '*' cli typegen", {
-		halt: true,
-		cache: { inputs: TYPEGEN_INPUTS, outputs: await typegenOutputs((glob) => ci.files(glob)) },
-	});
+	let all = await ci.workspaces();
+	let scoped = ci.scope === null ? all : all.filter((ws) => ci.scope?.includes(ws.path) === true);
+	let scopedApps = scoped.filter((ws) => ws.path.startsWith("apps/"));
+
+	if (ci.scope === null) {
+		await ci.step("Typegen", "bun --filter '*' cli typegen", {
+			halt: true,
+			cache: { inputs: TYPEGEN_INPUTS, outputs: await typegenOutputs((glob) => ci.files(glob)) },
+		});
+	} else if (scopedApps.length > 0) {
+		await ci.step(
+			"Typegen",
+			async (step) => {
+				for (let app of scopedApps) {
+					let ran = await step.run(["bun", "--filter", `./${app.path}`, "cli", "typegen"]);
+					if (isFailure(ran)) return ran;
+				}
+			},
+			{
+				halt: true,
+				cache: {
+					inputs: TYPEGEN_INPUTS,
+					outputs: await typegenOutputs((glob) => ci.files(glob)),
+				},
+			},
+		);
+	}
 
 	await ci.parallel("Static checks", [
-		() => ci.step("Doctor", "bun run doctor", { cache: DOCTOR_CACHE }),
-		() => ci.step("Check", "bun run check", { cache: true }),
+		() => {
+			if (ci.scope === null) {
+				return ci.step("Doctor", "bun run doctor", { cache: DOCTOR_CACHE });
+			}
+			return ci.step(
+				"Doctor",
+				async (step) => {
+					for (let app of scopedApps) {
+						let ran = await step.run(["bun", KIT_BIN, "doctor"], { cwd: app.path });
+						if (isFailure(ran)) return ran;
+					}
+				},
+				{ cache: DOCTOR_CACHE },
+			);
+		},
+		() => {
+			/**
+			 * `vp check <paths>` formats, lints and type-checks only those paths, which is safe for a
+			 * scoped run; a full run keeps `bun check` so the whole tree stays one step.
+			 */
+			if (ci.scope === null) {
+				return ci.step("Check", "bun run check", { cache: true });
+			}
+			let paths = [...new Set(scoped.map((ws) => ws.path))];
+			return ci.step("Check", ["vp", "check", ...paths], { cache: true });
+		},
 		() =>
 			ci.step("Commits", "bun packages/kit/src/bin.ts doctor --only commits", {
 				env: ci.runner === "local" ? { SDXC_COMMIT_RANGE: LOCAL_COMMIT_RANGE } : {},
 			}),
 	]);
 
-	let tested = (await ci.workspaces()).filter((ws) => ws.has("**/*.test.{ts,tsx}"));
+	let tested = all.filter((ws) => ws.has("**/*.test.{ts,tsx}"));
 	await ci.matrix(
 		"Tests",
 		[ROOT_SUITE, ...tested],
 		async (suite) => {
 			let target = suite === ROOT_SUITE ? "--project root" : `"${ci.root}/${suite.path}/"`;
+			let browser =
+				suite !== ROOT_SUITE &&
+				"has" in suite &&
+				typeof suite.has === "function" &&
+				(suite.has("**/*.browser.test.ts") || suite.has("**/*.browser.test.tsx"));
 			await ci.step(`Tests for ${suite.path}`, `bun run test ${target}`, {
 				cache: { inputs: [...suite.inputs, "test/**"] },
+				memory: browser ? BROWSER_TEST_MEMORY : undefined,
 			});
 		},
-		{ key: (suite) => suite.path, concurrency: Math.max(1, Math.floor(ci.cores / 3)) },
+		{ key: (suite) => suite.path },
 	);
 
 	if (ci.status === "passing") await ci.signoff("All systems go. Ready to push.");

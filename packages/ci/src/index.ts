@@ -46,6 +46,8 @@ export { GitHubError, STATUS_CONTEXT } from "./github.js";
 export { defineCI, loadScript } from "./load.js";
 export { detectRunner, runScript } from "./run.js";
 export { loadWorkspaces } from "./workspaces.js";
+export { machineMemory, parseMemorySize } from "./memory.js";
+export { scopeSince } from "./since.js";
 export {
 	actionsReporter,
 	appendStepSummary,

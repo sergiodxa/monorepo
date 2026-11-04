@@ -132,7 +132,9 @@ describe("sdxc-ci run", () => {
 		let disabled = await invoke(cli, ["run", "ci.ts", "--no-signoff"], { cwd, env: ENV });
 		await writeFile(join(cwd, "scratch.txt"), "uncommitted");
 		let dirty = await invoke(cli, ["run", "ci.ts"], { cwd, env: ENV });
-		expect(partial.stdout).toContain("Not signed off: --only, --skip or --scope left steps out");
+		expect(partial.stdout).toContain(
+			"Not signed off: --only, --skip, --scope or --since left steps out",
+		);
 		expect(remote.stdout).toContain("Not signed off: remote runs never sign off");
 		expect(disabled.stdout).toContain("Not signed off: --no-signoff");
 		expect(dirty.stdout).toContain(
@@ -289,5 +291,54 @@ describe("sdxc-ci verify", () => {
 		});
 		let repo = await invoke(cli, ["verify", "abc", "--repo", "acme"], { env: ENV });
 		expect([wait.code, repo.code]).toEqual([2, 2]);
+	});
+});
+
+describe("sdxc-ci --worktree, --since and --watch", () => {
+	test("--worktree signs off from a clean worktree while the main checkout is dirty", async () => {
+		let cwd = await repoWith(GREEN_SCRIPT);
+		await writeFile(join(cwd, "scratch.txt"), "other session");
+		let posted = acceptStatuses();
+		let run = await invoke(cli, ["run", "ci.ts", "--worktree"], { cwd, env: ENV });
+		let head = gitIn(cwd, "rev-parse", "HEAD");
+		expect(run.code).toBe(0);
+		expect(run.stdout).toContain("Running in worktree");
+		expect(run.stdout).toContain(`Signed off ${head.slice(0, 10)} as sdxc/ci.`);
+		expect(posted).toHaveLength(1);
+		expect(gitIn(cwd, "status", "--porcelain")).toContain("scratch.txt");
+	});
+
+	test("--since scopes list to the workspaces the range changed", async () => {
+		let cwd = await createRepo({
+			"package.json": JSON.stringify({ workspaces: ["packages/*"] }),
+			"packages/a/package.json": JSON.stringify({ name: "a" }),
+			"packages/b/package.json": JSON.stringify({ name: "b" }),
+			"ci.ts": `export default async (ci) => {
+	await ci.matrix("Workspaces", await ci.workspaces(), (ws) => ci.step("Test", "true"));
+};
+`,
+		});
+		gitIn(cwd, "checkout", "-b", "topic");
+		await writeFile(
+			join(cwd, "packages/a/package.json"),
+			JSON.stringify({ name: "a", version: "2" }),
+		);
+		gitIn(cwd, "add", "-A");
+		gitIn(cwd, "commit", "--quiet", "--no-verify", "-m", "Change a");
+		let listed = await invoke(cli, ["list", "ci.ts", "--since", "main", "--json"], {
+			cwd,
+			env: ENV,
+		});
+		expect(listed.code).toBe(0);
+		expect(JSON.parse(listed.stdout)).toEqual([
+			{ name: "Test", label: "Workspaces/a › Test", entry: "Workspaces/a" },
+		]);
+	});
+
+	test("--watch rejects --push", async () => {
+		let cwd = await repoWith(GREEN_SCRIPT);
+		let run = await invoke(cli, ["run", "ci.ts", "--watch", "--push"], { cwd, env: ENV });
+		expect(run.code).toBe(2);
+		expect(run.stderr).toContain("--watch cannot be combined with --push");
 	});
 });

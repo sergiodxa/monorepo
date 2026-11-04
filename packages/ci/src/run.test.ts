@@ -158,6 +158,30 @@ describe("retries, weights and order", () => {
 		expect(peak).toBe(2);
 	});
 
+	test("a step's memory reservation waits for bytes the way weight waits for slots", async () => {
+		let running = 0;
+		let peak = 0;
+		let tracked: StepRun = async () => {
+			running += 1;
+			peak = Math.max(peak, running);
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			running -= 1;
+		};
+		let root = await createRepo({ "package.json": "{}" });
+		await runScript(
+			async (ci) => {
+				expect(ci.memory.total).toBeGreaterThan(0);
+				await ci.parallel("Group", [
+					() => ci.step("Heavy", tracked, { memory: "8" }),
+					() => ci.step("Light 1", tracked, { memory: "8" }),
+					() => ci.step("Light 2", tracked, { memory: "1" }),
+				]);
+			},
+			{ root, env: ENV, concurrency: 4, memoryBudget: 10 },
+		);
+		expect(peak).toBe(2);
+	});
+
 	test("matrix entries start slowest first, from the durations of an earlier run", async () => {
 		let order: string[] = [];
 		let root = await createRepo({ "package.json": "{}" });
@@ -412,13 +436,14 @@ describe("workspaces and scope", () => {
 });
 
 describe("project", () => {
-	test("ci.root, ci.cores and ci.files describe the project without the script reading the disk", async () => {
+	test("ci.root, ci.cores, ci.memory and ci.files describe the project without the script reading the disk", async () => {
 		let seen: unknown[] = [];
 		let { root } = await run(
 			async (ci) => {
 				seen.push(
 					ci.root,
 					ci.cores > 0,
+					ci.memory.total > 0,
 					await ci.files("apps/*/.env.example"),
 					await ci.files("nothing/**"),
 				);
@@ -432,7 +457,7 @@ describe("project", () => {
 				},
 			},
 		);
-		expect(seen).toEqual([root, true, ["apps/a/.env.example", "apps/b/.env.example"], []]);
+		expect(seen).toEqual([root, true, true, ["apps/a/.env.example", "apps/b/.env.example"], []]);
 	});
 });
 
