@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { mf } from "@sdxc/microformats/ui";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -24,11 +25,13 @@ import type { NavTree } from "~/app/services/navigation";
 import type { Foundations } from "~/resources/content/foundations";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE, THEMING_SLUG } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -66,12 +69,29 @@ export default async function foundationsPage(
 		})),
 	];
 
+	let canonical = seo.canonical(ctx.url);
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${foundations.title} — @sdxc/ui`}
 			description={foundations.summary}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: foundations.title,
+					description: foundations.summary,
+					url: canonical,
+					cardTitle: `${foundations.title} — @sdxc/ui`,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/ui", url: routes.api.show.href({ name: "ui" }) },
+					],
+					{ name: foundations.title, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -81,7 +101,7 @@ export default async function foundationsPage(
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -89,8 +109,8 @@ export default async function foundationsPage(
 								{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 								{ label: foundations.title },
 							]}
-							title={foundations.title}
-							description={foundations.summary}
+							title={<EntryTitle href={activePath}>{foundations.title}</EntryTitle>}
+							description={<EntrySummary>{foundations.summary}</EntrySummary>}
 							actions={
 								<PageActions
 									markdownHref={markdownHref}
@@ -101,120 +121,122 @@ export default async function foundationsPage(
 						/>
 					</header>
 
-					<Typeset preset="docs">
-						{foundations.intro.map((paragraph) => (
-							<p key={paragraph}>{paragraph}</p>
-						))}
-						{DEMOED_MODULES.has(foundations.module) ? (
-							<p>
-								See the components assembled into whole sites in the{" "}
-								<a href={routes.demos.href()}>demo gallery</a>.
-							</p>
-						) : null}
-					</Typeset>
-
-					<CodeBlock
-						labels={CODE_LABELS}
-						code={`import "@sdxc/ui/theme.css";\nimport { … } from "${foundations.importPath}";`}
-						language="typescript"
-					/>
-
-					<ReferenceSection id="when" title="When to reach for it">
+					<div mix={[mf("e-content")]}>
 						<Typeset preset="docs">
-							<ul>
-								{foundations.reachFor.map((line) => (
-									<li key={line}>
-										<InlineCode text={line} />
+							{foundations.intro.map((paragraph) => (
+								<p key={paragraph}>{paragraph}</p>
+							))}
+							{DEMOED_MODULES.has(foundations.module) ? (
+								<p>
+									See the components assembled into whole sites in the{" "}
+									<a href={routes.demos.href()}>demo gallery</a>.
+								</p>
+							) : null}
+						</Typeset>
+
+						<CodeBlock
+							labels={CODE_LABELS}
+							code={`import "@sdxc/ui/theme.css";\nimport { … } from "${foundations.importPath}";`}
+							language="typescript"
+						/>
+
+						<ReferenceSection id="when" title="When to reach for it">
+							<Typeset preset="docs">
+								<ul>
+									{foundations.reachFor.map((line) => (
+										<li key={line}>
+											<InlineCode text={line} />
+										</li>
+									))}
+								</ul>
+							</Typeset>
+						</ReferenceSection>
+
+						<ReferenceSection id="ideas" title="Shared ideas">
+							<ul
+								mix={[
+									m(0),
+									p(0),
+									raw({ listStyle: "none" }),
+									grid(),
+									gap(4),
+									gridTemplate({ columns: "repeat(auto-fill, minmax(min(100%, 16rem), 1fr))" }),
+								]}
+							>
+								{foundations.ideas.map((idea) => (
+									<li
+										key={idea.title}
+										mix={[
+											vstack({ gap: 1, align: "stretch" }),
+											p(4),
+											rounded("lg"),
+											border({ color: "neutral.border", width: 1, style: "solid" }),
+										]}
+									>
+										<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
+											{idea.title}
+										</span>
+										<span mix={[text("sm"), leading("relaxed"), fg("neutral")]}>
+											<InlineCode text={idea.body} />
+										</span>
 									</li>
 								))}
 							</ul>
-						</Typeset>
-					</ReferenceSection>
+						</ReferenceSection>
 
-					<ReferenceSection id="ideas" title="Shared ideas">
-						<ul
-							mix={[
-								m(0),
-								p(0),
-								raw({ listStyle: "none" }),
-								grid(),
-								gap(4),
-								gridTemplate({ columns: "repeat(auto-fill, minmax(min(100%, 16rem), 1fr))" }),
-							]}
+						<ReferenceSection
+							id="variables"
+							title="CSS variables"
+							lead="Every custom property the namespace reads or declares, with its default and what it controls."
 						>
-							{foundations.ideas.map((idea) => (
-								<li
-									key={idea.title}
-									mix={[
-										vstack({ gap: 1, align: "stretch" }),
-										p(4),
-										rounded("lg"),
-										border({ color: "neutral.border", width: 1, style: "solid" }),
-									]}
-								>
-									<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>
-										{idea.title}
-									</span>
-									<span mix={[text("sm"), leading("relaxed"), fg("neutral")]}>
-										<InlineCode text={idea.body} />
-									</span>
-								</li>
+							<p mix={[m(0), text("sm"), fg("neutral")]}>
+								<InlineCode text={foundations.roles} /> The roles are documented on{" "}
+								<a href={routes.api.component.href({ component: THEMING_SLUG })}>Theming</a>.
+							</p>
+							{foundations.variables.map((group) => (
+								<section key={group.title} mix={[vstack({ gap: 3, align: "stretch" })]}>
+									<h3
+										id={variablesAnchor(group.title)}
+										mix={[m(0), text("lg"), fg("neutral.emphasis")]}
+									>
+										{group.title}
+									</h3>
+									{group.lead ? (
+										<p mix={[m(0), text("sm"), fg("neutral")]}>
+											<InlineCode text={group.lead} />
+										</p>
+									) : null}
+									<ReferenceTable
+										label={`${foundations.title}: ${group.title}`}
+										columns={["Variable", "Default", "What it controls"]}
+										rows={group.variables.map((variable) => [
+											<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
+												{variable.name.split(", ").map((name, index) => (
+													<>
+														{index > 0 ? ", " : null}
+														<span mix={[nowrap()]}>{name}</span>
+													</>
+												))}
+											</code>,
+											<code
+												mix={[
+													font("mono"),
+													text("sm"),
+													fg("neutral"),
+													raw({ overflowWrap: "break-word", wordBreak: "normal" }),
+												]}
+											>
+												{variable.default}
+											</code>,
+											<span mix={[text("sm"), fg("neutral")]}>
+												<InlineCode text={variable.controls} />
+											</span>,
+										])}
+									/>
+								</section>
 							))}
-						</ul>
-					</ReferenceSection>
-
-					<ReferenceSection
-						id="variables"
-						title="CSS variables"
-						lead="Every custom property the namespace reads or declares, with its default and what it controls."
-					>
-						<p mix={[m(0), text("sm"), fg("neutral")]}>
-							<InlineCode text={foundations.roles} /> The roles are documented on{" "}
-							<a href={routes.api.component.href({ component: THEMING_SLUG })}>Theming</a>.
-						</p>
-						{foundations.variables.map((group) => (
-							<section key={group.title} mix={[vstack({ gap: 3, align: "stretch" })]}>
-								<h3
-									id={variablesAnchor(group.title)}
-									mix={[m(0), text("lg"), fg("neutral.emphasis")]}
-								>
-									{group.title}
-								</h3>
-								{group.lead ? (
-									<p mix={[m(0), text("sm"), fg("neutral")]}>
-										<InlineCode text={group.lead} />
-									</p>
-								) : null}
-								<ReferenceTable
-									label={`${foundations.title}: ${group.title}`}
-									columns={["Variable", "Default", "What it controls"]}
-									rows={group.variables.map((variable) => [
-										<code mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>
-											{variable.name.split(", ").map((name, index) => (
-												<>
-													{index > 0 ? ", " : null}
-													<span mix={[nowrap()]}>{name}</span>
-												</>
-											))}
-										</code>,
-										<code
-											mix={[
-												font("mono"),
-												text("sm"),
-												fg("neutral"),
-												raw({ overflowWrap: "break-word", wordBreak: "normal" }),
-											]}
-										>
-											{variable.default}
-										</code>,
-										<span mix={[text("sm"), fg("neutral")]}>
-											<InlineCode text={variable.controls} />
-										</span>,
-									])}
-								/>
-							</section>
-						))}
-					</ReferenceSection>
+						</ReferenceSection>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

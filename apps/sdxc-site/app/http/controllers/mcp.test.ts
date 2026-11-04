@@ -37,11 +37,12 @@ describe("GET /mcp", () => {
 
 	test("connects every client through mcp-bridge from @sdxc/mcp", async () => {
 		let body = await (await fetchApp("/mcp")).text();
+		let copied = body.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, "");
 
 		expect(body).toContain("@sdxc/mcp@latest");
 		expect(body).toContain("mcp-bridge");
-		expect(body).not.toContain("--transport http");
-		expect(body).not.toMatch(
+		expect(copied).not.toContain("--transport http");
+		expect(copied).not.toMatch(
 			/&quot;url&quot;:\s*&quot;https:\/\/sdxc\.dev\/mcp&quot;|"url":\s*"https:\/\/sdxc\.dev\/mcp"/,
 		);
 	});

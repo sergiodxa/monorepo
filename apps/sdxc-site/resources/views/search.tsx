@@ -34,6 +34,7 @@ import { FieldError, Heading } from "@sdxc/ui";
 
 import type { SearchResults } from "~/app/services/search-results";
 
+import { NOINDEX, pageSchema, seo } from "~/app/initializers/seo";
 import Band from "~/resources/components/band";
 import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
 import { ResultsPager } from "~/resources/components/results-pager";
@@ -179,22 +180,37 @@ function SyntaxHelp() {
 	);
 }
 
+/** The sentence search results and the blank page's structured data both use. */
+const SEARCH_DESCRIPTION = "Search every guide and package reference on sdxc.";
+
 /**
- * Renders the search page. A query page carries `noindex` through its controller: result
- * pages are a view of the pages the sitemap already lists, one per query anybody types.
+ * Renders the search page. A blank box is a page of its own; a query is a view of pages
+ * the sitemap already lists, so it asks crawlers to skip that address.
  */
 export function SearchView(
 	handle: Handle<{ model: SearchResults.Model; assets: DocumentAssets; canonical: string }>,
 ) {
 	return () => {
 		let { assets, canonical, model } = handle.props;
+		let indexable = model.state === "blank";
 
 		return (
 			<DocumentLayout
 				assets={assets}
 				title={model.state === "blank" ? "Search — sdxc" : `Search: ${model.query} — sdxc`}
-				description="Search every guide and package reference on sdxc."
+				description={SEARCH_DESCRIPTION}
 				canonical={canonical}
+				robots={indexable ? undefined : NOINDEX}
+				schema={
+					indexable
+						? pageSchema({
+								name: "Search",
+								description: SEARCH_DESCRIPTION,
+								url: seo.canonical(canonical),
+								cardTitle: "Search — sdxc",
+							})
+						: undefined
+				}
 			>
 				<SiteHeader activePath={routes.search.href()} searchQuery={model.query} />
 

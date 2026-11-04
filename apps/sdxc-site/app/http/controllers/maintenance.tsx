@@ -14,6 +14,7 @@ import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { readPolicy } from "~/app/services/policy";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
@@ -37,6 +38,12 @@ export default createAction(routes.maintenance, async (ctx) => {
 			title={`${frontmatter.title} — sdxc`}
 			description={frontmatter.description}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: frontmatter.title,
+				description: frontmatter.description,
+				url: seo.canonical(ctx.url),
+				cardTitle: `${frontmatter.title} — sdxc`,
+			})}
 		>
 			<SiteHeader activePath={routes.maintenance.href()} />
 

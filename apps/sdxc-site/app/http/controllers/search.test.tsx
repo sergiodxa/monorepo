@@ -25,7 +25,7 @@ describe("GET /search", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+		expect(response.headers.get("X-Robots-Tag")).toBe("noindex, follow");
 		expect(body).toContain('aria-label="Search results"');
 		expect(body.indexOf('href="/api/result"')).toBeGreaterThan(-1);
 	});

@@ -1,14 +1,15 @@
 /**
  * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
- * page title and description, the stylesheets imported below in cascade order (reset,
- * palette, the tokens reading it, code highlighting), the client runtime entry, and the
- * analytics beacon.
+ * page title, description and structured data, the author's `rel="me"` profiles, the
+ * stylesheets imported below in cascade order (reset, palette, the tokens reading it,
+ * code highlighting), the client runtime entry, and the analytics beacon.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
+import type { SchemaOrg } from "@sdxc/seo";
 import type { Handle, RemixNode } from "remix/component";
 
 import { Seo } from "@sdxc/seo";
@@ -22,7 +23,7 @@ import { ImportMap } from "remix/component/server";
 
 import { seo } from "~/app/initializers/seo";
 import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
-import { SITE_DESCRIPTION, SITE_URL } from "~/config/constants";
+import { AUTHOR_PROFILES, AUTHOR_URL, SITE_DESCRIPTION, SITE_URL } from "~/config/constants";
 import { RememberedTabsScope } from "~/resources/components/markdown-blocks";
 import SiteFooter from "~/resources/components/site-footer";
 
@@ -58,8 +59,13 @@ namespace DocumentLayout {
 		 * opens on the reader's choice from. A page carrying no such strip leaves it out.
 		 */
 		cookie?: string | null;
-		/** The `robots` meta directive, for a page search engines should leave out of results. */
+		/** The `robots` meta directive, from `seo.robotsTag()`, for a page left out of results. */
 		robots?: string;
+		/**
+		 * Structured data for the page. A page whose subject is the site, a guide, a package
+		 * or another public document passes the nodes `@sdxc/seo` built for it.
+		 */
+		schema?: SchemaOrg.Node | SchemaOrg.Node[];
 		/** Whether the site footer closes the page; a page carrying its own footer turns it off. */
 		siteFooter?: boolean;
 	}
@@ -72,8 +78,18 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, canonical, children, cookie, description, og, robots, siteFooter, title } =
-			handle.props;
+		let {
+			assets,
+			canonical,
+			children,
+			cookie,
+			description,
+			og,
+			robots,
+			schema,
+			siteFooter,
+			title,
+		} = handle.props;
 		let { script, stylesheets } = assets;
 		let canonicalUrl = seo.canonical(canonical ?? SITE_URL);
 		let card = canonical
@@ -111,14 +127,19 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}
 
-					<Seo.Meta
+					<Seo
 						title={title}
 						description={description}
 						canonical={canonicalUrl}
 						site={seo.site}
-						og={{ ...card, ...og }}
+						og={{ locale: "en_US", ...card, ...og }}
 						robots={robots}
+						schema={schema}
 					/>
+					<link rel="author" href={AUTHOR_URL} data-rmx-key="author" />
+					{AUTHOR_PROFILES.map((href) => (
+						<link key={href} rel="me" href={href} data-rmx-key={`me:${href}`} />
+					))}
 					<ImportMap value={script.importMap} />
 					{script.preloads.map((href) => (
 						<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />

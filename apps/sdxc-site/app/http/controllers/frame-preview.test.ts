@@ -134,7 +134,7 @@ describe("GET /frames/guides/:guide/:demo", () => {
 			expect(response.status).toBe(200);
 			expect(body).toContain("<html");
 			expect(body).toContain("data-frame-root");
-			expect(body).toContain('content="noindex"');
+			expect(body).toContain('content="noindex, follow"');
 			expect(body).not.toContain('data-slot="viewport-demo"');
 			expect(body).not.toContain("data-not-typeset");
 			expect(body).not.toContain("<footer");

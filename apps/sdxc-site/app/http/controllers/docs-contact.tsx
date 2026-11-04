@@ -24,6 +24,7 @@ import { createController } from "remix/router";
 
 import emails from "~/app/emails";
 import { DocsContactSchema, sameSitePath } from "~/app/http/validators/docs-contact";
+import { NOINDEX } from "~/app/initializers/seo";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl, CONTACT_INBOX } from "~/config/constants";
 import DocsLayout from "~/resources/layouts/docs";
@@ -88,7 +89,7 @@ async function renderContactPage(view: ContactView, init?: ResponseInit) {
 			assets={ctx.assets}
 			title="Contact — sdxc"
 			description="Ask the author a question the guides did not answer."
-			robots="noindex"
+			robots={NOINDEX}
 			siteFooter={false}
 		>
 			<DocsLayout

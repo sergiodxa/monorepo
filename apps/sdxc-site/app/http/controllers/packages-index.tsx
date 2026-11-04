@@ -8,6 +8,7 @@
  */
 
 import { SearchIcon } from "@sdxc/icons";
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -17,6 +18,7 @@ import { DocsPageHeader } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
 import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
@@ -38,6 +40,12 @@ export default createAction(routes.api.index, async (ctx) => {
 			title="API — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "Every package",
+				description: DESCRIPTION,
+				url: seo.canonical(ctx.url),
+				cardTitle: "API — sdxc",
+			})}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -45,51 +53,57 @@ export default createAction(routes.api.index, async (ctx) => {
 				filterQuery={ctx.url.searchParams.get("filter")}
 				activePath={routes.api.index.href()}
 			>
-				<DocsPageHeader title="Every package" description={DESCRIPTION} />
+				<article mix={[mf("h-feed")]}>
+					<DocsPageHeader
+						title={<span mix={[mf("p-name")]}>Every package</span>}
+						description={<span mix={[mf("p-summary")]}>{DESCRIPTION}</span>}
+					/>
 
-				<div mix={[m("2rem", 0, 0, 0)]}>
-					<Button
-						type="button"
-						color="neutral"
-						variant="outline"
-						commandfor={SEARCH_DIALOG_ID}
-						command="show-modal"
-					>
-						<SearchIcon size={16} aria-hidden="true" />
-						Search the packages
-						<Keyboard mix={[fg("inherit")]}>⌘K</Keyboard>
-					</Button>
-				</div>
+					<div mix={[m("2rem", 0, 0, 0)]}>
+						<Button
+							type="button"
+							color="neutral"
+							variant="outline"
+							commandfor={SEARCH_DIALOG_ID}
+							command="show-modal"
+						>
+							<SearchIcon size={16} aria-hidden="true" />
+							Search the packages
+							<Keyboard mix={[fg("inherit")]}>⌘K</Keyboard>
+						</Button>
+					</div>
 
-				<div mix={[vstack({ gap: 10, align: "stretch" }), m("3rem", 0, 0, 0)]}>
-					{groups.map((group) => (
-						<section key={group.title} mix={[vstack({ gap: 4, align: "stretch" })]}>
-							<h2
-								mix={[
-									m(0),
-									font("mono"),
-									text("xs"),
-									textTransform("uppercase"),
-									tracking("widest"),
-									fg("neutral"),
-								]}
-							>
-								{group.title}
-							</h2>
+					<div mix={[vstack({ gap: 10, align: "stretch" }), m("3rem", 0, 0, 0)]}>
+						{groups.map((group) => (
+							<section key={group.title} mix={[vstack({ gap: 4, align: "stretch" })]}>
+								<h2
+									mix={[
+										m(0),
+										font("mono"),
+										text("xs"),
+										textTransform("uppercase"),
+										tracking("widest"),
+										fg("neutral"),
+									]}
+								>
+									{group.title}
+								</h2>
 
-							<RuledGrid min="16rem">
-								{group.packages.map((entry) => (
-									<RuledCell
-										key={entry.name}
-										href={routes.api.show.href({ name: entry.directory })}
-										name={entry.name}
-										description={entry.description}
-									/>
-								))}
-							</RuledGrid>
-						</section>
-					))}
-				</div>
+								<RuledGrid min="16rem">
+									{group.packages.map((entry) => (
+										<RuledCell
+											key={entry.name}
+											href={routes.api.show.href({ name: entry.directory })}
+											name={entry.name}
+											description={entry.description}
+											entry
+										/>
+									))}
+								</RuledGrid>
+							</section>
+						))}
+					</div>
+				</article>
 			</DocsLayout>
 		</DocumentLayout>,
 	);

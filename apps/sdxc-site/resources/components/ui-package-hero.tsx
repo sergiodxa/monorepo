@@ -18,6 +18,7 @@ import { InstallCommand } from "@sdxc/ui/docs";
 
 import { PACKAGE_MANAGER_KEY, REMEMBERED_TABS } from "~/app/services/remembered-tabs";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import routes from "~/routes/web";
 
@@ -79,10 +80,12 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 							media("(min-width: 48rem)", text("5xl")),
 						]}
 					>
-						{name}
+						<EntryTitle href={routes.api.show.href({ name: "ui" })}>{name}</EntryTitle>
 					</h1>
 
-					<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{description}</p>
+					<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>
+						<EntrySummary>{description}</EntrySummary>
+					</p>
 				</div>
 
 				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>

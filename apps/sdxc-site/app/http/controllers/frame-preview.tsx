@@ -17,6 +17,7 @@ import { createAction } from "remix/router";
 import type { AppContext } from "~/app/initializers/router";
 import type { ComponentPreview as Preview } from "~/resources/components/ui-previews.server";
 
+import { NOINDEX } from "~/app/initializers/seo";
 import { listUtilityExamples } from "~/app/services/utility-examples";
 import ComponentPreview from "~/resources/components/component-preview";
 import { findGuideDemo } from "~/resources/components/guide-demo-registry.server";
@@ -178,7 +179,7 @@ function renderStandalone(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Live demo — sdxc"
-			robots="noindex"
+			robots={NOINDEX}
 			siteFooter={false}
 		>
 			<main

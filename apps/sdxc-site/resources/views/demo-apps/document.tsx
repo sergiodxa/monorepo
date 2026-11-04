@@ -15,11 +15,9 @@ import { Toasts } from "@sdxc/ui/app/toasts";
 
 import type { DemoApp, DemoAppScreen } from "~/resources/views/demo-apps";
 
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import DemoTheme from "~/resources/components/demo-theme";
 import DocumentLayout from "~/resources/layouts/document";
-
-/** The directive every demo carries, which keeps it out of results and its links unfollowed. */
-const DEMO_ROBOTS = "noindex, nofollow";
 
 /** The toast region's strings, shared by every demo app. */
 const TOAST_LABELS = { region: "Notifications", dismiss: "Dismiss" };
@@ -51,7 +49,7 @@ export default function DemoAppDocument(handle: Handle<DemoAppDocument.Props>) {
 				assets={assets}
 				title={`${screen.title} — ${app.name}`}
 				description={app.description}
-				robots={DEMO_ROBOTS}
+				robots={NOINDEX_NOFOLLOW}
 				siteFooter={false}
 			>
 				<DemoTheme brand={app.theme.brand} neutral={app.theme.neutral} tokens={app.theme.tokens}>

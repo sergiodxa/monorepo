@@ -15,6 +15,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/initializers/cache";
+import { pageSchema, seo } from "~/app/initializers/seo";
 import { readContent } from "~/app/services/content";
 import { contentVariables } from "~/app/services/content-variables";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
@@ -39,13 +40,20 @@ export default createAction(routes.philosophy, async (ctx) => {
 	}
 
 	let roster = await readStoredSponsors(siteCache());
+	let description = describe(contentVariables().packageCount ?? "");
 
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Philosophy — sdxc"
-			description={describe(contentVariables().packageCount ?? "")}
+			description={description}
 			canonical={ctx.url.href}
+			schema={pageSchema({
+				name: "Philosophy",
+				description,
+				url: seo.canonical(ctx.url),
+				cardTitle: "Philosophy — sdxc",
+			})}
 		>
 			<SiteHeader activePath={routes.philosophy.href()} />
 

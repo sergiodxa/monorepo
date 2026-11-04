@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -20,6 +21,7 @@ import type { Anchor } from "~/app/services/article";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { buildUtilitiesNav } from "~/app/services/navigation";
@@ -36,6 +38,7 @@ import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import PageActions from "~/resources/components/page-actions";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -76,6 +79,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
 	let activePath = routes.api.utility.href({ utility });
+	let canonical = seo.canonical(ctx.url);
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -83,6 +87,21 @@ export default createAction(routes.api.utility, async (ctx) => {
 			title={`${reference.property} — @sdxc/u`}
 			description={reference.summary}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: reference.property,
+					description: reference.summary,
+					url: canonical,
+					cardTitle: `${reference.property} — @sdxc/u`,
+				}),
+				trailSchema(
+					[
+						{ name: "API", url: routes.api.index.href() },
+						{ name: "@sdxc/u", url: routes.api.show.href({ name: "u" }) },
+					],
+					{ name: reference.property, url: canonical },
+				),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -92,7 +111,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -100,8 +119,12 @@ export default createAction(routes.api.utility, async (ctx) => {
 								{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
 								{ label: reference.property },
 							]}
-							title={reference.property}
-							description={<ReferenceProse>{reference.summary}</ReferenceProse>}
+							title={<EntryTitle href={activePath}>{reference.property}</EntryTitle>}
+							description={
+								<EntrySummary>
+									<ReferenceProse>{reference.summary}</ReferenceProse>
+								</EntrySummary>
+							}
 							actions={
 								<PageActions
 									markdownHref={markdownHref}
@@ -124,119 +147,121 @@ export default createAction(routes.api.utility, async (ctx) => {
 						/>
 					</header>
 
-					{table.length > 0 ? (
-						<ReferenceSection
-							id="quick-reference"
-							title="Quick reference"
-							lead="Every documented call, beside the CSS it emits."
-						>
-							<ReferenceTable
-								label={`${reference.name} quick reference`}
-								columns={["Call", "CSS"]}
-								rows={table.map((example) => [
-									<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), nowrap()]}>
-										{example.call}
-									</code>,
-									<code mix={[font("mono"), text("sm"), fg("neutral")]}>{example.output}</code>,
-								])}
-							/>
-						</ReferenceSection>
-					) : null}
+					<div mix={[mf("e-content")]}>
+						{table.length > 0 ? (
+							<ReferenceSection
+								id="quick-reference"
+								title="Quick reference"
+								lead="Every documented call, beside the CSS it emits."
+							>
+								<ReferenceTable
+									label={`${reference.name} quick reference`}
+									columns={["Call", "CSS"]}
+									rows={table.map((example) => [
+										<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), nowrap()]}>
+											{example.call}
+										</code>,
+										<code mix={[font("mono"), text("sm"), fg("neutral")]}>{example.output}</code>,
+									])}
+								/>
+							</ReferenceSection>
+						) : null}
 
-					{live.length > 0 || snippets.length > 0 ? (
-						<ReferenceSection id="examples" title="Examples">
-							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
-								{live.map((example) => (
-									<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
-										<h3
-											id={`example-${example.slug}`}
-											mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
-										>
-											{example.title}
-										</h3>
-										<p mix={[m(0), text("base"), fg("neutral")]}>
-											<ReferenceProse>{example.description}</ReferenceProse>
-										</p>
-										<Frame src={routes.frames.utility.href({ utility, example: example.slug })} />
-									</section>
-								))}
-								{snippets.map((example) => (
-									<CodeBlock
-										labels={CODE_LABELS}
-										key={example.call}
-										code={example.call}
-										language="typescript"
-									/>
-								))}
-							</div>
-						</ReferenceSection>
-					) : null}
+						{live.length > 0 || snippets.length > 0 ? (
+							<ReferenceSection id="examples" title="Examples">
+								<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+									{live.map((example) => (
+										<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
+											<h3
+												id={`example-${example.slug}`}
+												mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
+											>
+												{example.title}
+											</h3>
+											<p mix={[m(0), text("base"), fg("neutral")]}>
+												<ReferenceProse>{example.description}</ReferenceProse>
+											</p>
+											<Frame src={routes.frames.utility.href({ utility, example: example.slug })} />
+										</section>
+									))}
+									{snippets.map((example) => (
+										<CodeBlock
+											labels={CODE_LABELS}
+											key={example.call}
+											code={example.call}
+											language="typescript"
+										/>
+									))}
+								</div>
+							</ReferenceSection>
+						) : null}
 
-					{custom === null ? null : (
-						<ReferenceSection
-							id="custom-value"
-							title="Using a custom value"
-							lead="Every scale argument also takes a raw CSS value, which passes through untouched."
-						>
-							<CodeBlock labels={CODE_LABELS} code={custom} language="typescript" />
-						</ReferenceSection>
-					)}
+						{custom === null ? null : (
+							<ReferenceSection
+								id="custom-value"
+								title="Using a custom value"
+								lead="Every scale argument also takes a raw CSS value, which passes through untouched."
+							>
+								<CodeBlock labels={CODE_LABELS} code={custom} language="typescript" />
+							</ReferenceSection>
+						)}
 
-					{reference.family === STATE_FAMILY ? null : (
-						<ReferenceSection
-							id="states"
-							title="Applying on a state"
-							lead="Wrap the call in a state utility to scope it to one selector."
-						>
-							<CodeBlock labels={CODE_LABELS} code={onState(reference)} language="typescript" />
-						</ReferenceSection>
-					)}
+						{reference.family === STATE_FAMILY ? null : (
+							<ReferenceSection
+								id="states"
+								title="Applying on a state"
+								lead="Wrap the call in a state utility to scope it to one selector."
+							>
+								<CodeBlock labels={CODE_LABELS} code={onState(reference)} language="typescript" />
+							</ReferenceSection>
+						)}
 
-					{reference.family === RESPONSIVE_FAMILY ? null : (
-						<ReferenceSection
-							id="responsive"
-							title="Responsive design"
-							lead="Wrap the call in a container query to scope it to one width."
-						>
-							<CodeBlock labels={CODE_LABELS} code={atWidth(reference)} language="typescript" />
-						</ReferenceSection>
-					)}
+						{reference.family === RESPONSIVE_FAMILY ? null : (
+							<ReferenceSection
+								id="responsive"
+								title="Responsive design"
+								lead="Wrap the call in a container query to scope it to one width."
+							>
+								<CodeBlock labels={CODE_LABELS} code={atWidth(reference)} language="typescript" />
+							</ReferenceSection>
+						)}
 
-					{scales.length > 0 ? (
-						<ReferenceSection id="theme" title="Customizing your theme">
-							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
-								{scales.map((scale) => (
-									<section key={scale.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
-										<h3
-											id={scale.id}
-											mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
-										>
-											{scale.title}
-										</h3>
-										<p mix={[m(0), text("base"), fg("neutral")]}>
-											<ReferenceProse>{scale.lead}</ReferenceProse>
-										</p>
-										<CodeBlock labels={CODE_LABELS} code={scale.css} language="css" />
-										{scale.declaration === null ? null : (
-											<CodeBlock
-												labels={CODE_LABELS}
-												code={scale.declaration}
-												language="typescript"
-											/>
-										)}
-										<p mix={[m(0), text("base"), fg("neutral")]}>
-											<ReferenceProse>{scale.usageLead}</ReferenceProse>
-										</p>
-										<CodeBlock labels={CODE_LABELS} code={scale.usage} language="typescript" />
-									</section>
-								))}
-							</div>
-						</ReferenceSection>
-					) : null}
+						{scales.length > 0 ? (
+							<ReferenceSection id="theme" title="Customizing your theme">
+								<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+									{scales.map((scale) => (
+										<section key={scale.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
+											<h3
+												id={scale.id}
+												mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
+											>
+												{scale.title}
+											</h3>
+											<p mix={[m(0), text("base"), fg("neutral")]}>
+												<ReferenceProse>{scale.lead}</ReferenceProse>
+											</p>
+											<CodeBlock labels={CODE_LABELS} code={scale.css} language="css" />
+											{scale.declaration === null ? null : (
+												<CodeBlock
+													labels={CODE_LABELS}
+													code={scale.declaration}
+													language="typescript"
+												/>
+											)}
+											<p mix={[m(0), text("base"), fg("neutral")]}>
+												<ReferenceProse>{scale.usageLead}</ReferenceProse>
+											</p>
+											<CodeBlock labels={CODE_LABELS} code={scale.usage} language="typescript" />
+										</section>
+									))}
+								</div>
+							</ReferenceSection>
+						) : null}
 
-					<ReferenceSection id="signature" title="Signature">
-						<CodeBlock labels={CODE_LABELS} code={reference.signature} language="typescript" />
-					</ReferenceSection>
+						<ReferenceSection id="signature" title="Signature">
+							<CodeBlock labels={CODE_LABELS} code={reference.signature} language="typescript" />
+						</ReferenceSection>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

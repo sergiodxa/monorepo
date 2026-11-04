@@ -8,6 +8,7 @@
 
 import { formatDate } from "@sdxc/dates";
 import { toRemix } from "@sdxc/markdown/remix";
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
@@ -19,6 +20,7 @@ import { createAction } from "remix/router";
 import type { Anchor } from "~/app/services/article";
 
 import { siteCache } from "~/app/initializers/cache";
+import { pageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
@@ -50,6 +52,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 	}));
 
 	let activePath = routes.docs.changelog.href();
+	let canonical = seo.canonical(ctx.url);
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -57,6 +60,18 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 			title={`${TITLE} — sdxc`}
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
+			schema={[
+				pageSchema({
+					name: TITLE,
+					description: DESCRIPTION,
+					url: canonical,
+					cardTitle: `${TITLE} — sdxc`,
+				}),
+				trailSchema([{ name: "Documentation", url: routes.docs.index.href() }], {
+					name: TITLE,
+					url: canonical,
+				}),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -66,7 +81,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 				anchors={anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article>
+				<article mix={[mf("h-feed")]}>
 					<header mix={[vstack({ gap: 3 })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -74,7 +89,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 								{ label: "Releases" },
 								{ label: TITLE },
 							]}
-							title={TITLE}
+							title={<span mix={[mf("p-name")]}>{TITLE}</span>}
 							description={DESCRIPTION}
 						/>
 					</header>
@@ -95,42 +110,58 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 						<div mix={[vstack({ gap: 10 }), m("2.5rem", 0, 0, 0)]}>
 							{releases.map((release, index) => {
 								let notes = parseNotes(release.notes);
+								let publishedAt = new Date(release.publishedAt);
 
 								return (
-									<section key={release.version} mix={[vstack({ gap: 4 })]}>
+									<section key={release.version} mix={[mf("h-entry"), vstack({ gap: 4 })]}>
 										{index > 0 ? <Separator /> : null}
 
 										<div mix={[vstack({ gap: 1 })]}>
 											<h2
 												id={release.version}
-												mix={[m(0), font("mono"), text("2xl"), weight("bold"), tracking("tight")]}
+												mix={[
+													mf("p-name"),
+													m(0),
+													font("mono"),
+													text("2xl"),
+													weight("bold"),
+													tracking("tight"),
+												]}
 											>
 												{release.version}
 											</h2>
 
 											<div mix={[hstack({ gap: 3, align: "center" }), text("sm")]}>
-												<time dateTime={release.publishedAt} mix={[fg("neutral.muted")]}>
-													{formatDate(new Date(release.publishedAt), {
-														locale: "en-US",
-														timeZone: TIME_ZONE,
-														dateStyle: "long",
-													})}
-												</time>
-												<a href={release.href} mix={[fg("brand")]} rel="noreferrer">
+												<span mix={[fg("neutral.muted")]}>
+													<MicroTime property="dt-published" value={publishedAt}>
+														{formatDate(publishedAt, {
+															locale: "en-US",
+															timeZone: TIME_ZONE,
+															dateStyle: "long",
+														})}
+													</MicroTime>
+												</span>
+												<a
+													href={release.href}
+													mix={[mf("u-url", "u-uid"), fg("brand")]}
+													rel="noreferrer"
+												>
 													On GitHub
 												</a>
 											</div>
 										</div>
 
-										{notes ? (
-											<Typeset preset="docs">
-												{toRemix(notes, { components: DOCS_COMPONENTS })}
-											</Typeset>
-										) : (
-											<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
-												This release went out with no notes.
-											</p>
-										)}
+										<div mix={[mf("e-content")]}>
+											{notes ? (
+												<Typeset preset="docs">
+													{toRemix(notes, { components: DOCS_COMPONENTS })}
+												</Typeset>
+											) : (
+												<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+													This release went out with no notes.
+												</p>
+											)}
+										</div>
 									</section>
 								);
 							})}

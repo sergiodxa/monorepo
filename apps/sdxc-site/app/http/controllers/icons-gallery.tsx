@@ -8,6 +8,7 @@
  */
 
 import { LUCIDE_VERSION } from "@sdxc/icons";
+import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
@@ -21,6 +22,7 @@ import type { Anchor } from "~/app/services/article";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { readIconStyle } from "~/app/http/validators/icon-style";
+import { packageSchema, seo, trailSchema } from "~/app/initializers/seo";
 import { adsDayTag } from "~/app/services/ads";
 import { filterIcons, listIcons, LUCIDE_LINKS } from "~/app/services/icons";
 import { buildPackageNav } from "~/app/services/navigation";
@@ -33,6 +35,7 @@ import {
 import { absoluteUrl } from "~/config/constants";
 import { isFeedbackSent } from "~/resources/components/docs-feedback-block";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
+import { EntrySummary, EntryTitle } from "~/resources/components/entry";
 import IconControls from "~/resources/components/icon-controls";
 import IconDialog from "~/resources/components/icon-dialog";
 import IconGrid, { ICON_FRAME_ATTRIBUTE } from "~/resources/components/icon-grid";
@@ -86,14 +89,28 @@ export default createAction(routes.api.icons, async (ctx) => {
 		candidate.packages.some((member) => member.directory === PACKAGE),
 	)?.title;
 	let markdownHref = routes.markdown.package.href({ name: PACKAGE });
+	let activePath = routes.api.icons.href();
+	let canonical = seo.canonical(activePath);
 
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${entry.name} — sdxc`}
 			description={entry.description}
-			canonical={absoluteUrl(routes.api.icons.href())}
+			canonical={absoluteUrl(activePath)}
 			og={{ type: "article" }}
+			schema={[
+				packageSchema({
+					name: entry.name,
+					description: entry.description,
+					url: canonical,
+					license: entry.license,
+				}),
+				trailSchema([{ name: "API", url: routes.api.index.href() }], {
+					name: entry.name,
+					url: canonical,
+				}),
+			]}
 			siteFooter={false}
 		>
 			<DocsLayout
@@ -102,7 +119,7 @@ export default createAction(routes.api.icons, async (ctx) => {
 				anchors={ANCHORS}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
-				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
+				<article mix={[mf("h-entry"), vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
 						<DocsPageHeader
 							crumbs={[
@@ -110,9 +127,9 @@ export default createAction(routes.api.icons, async (ctx) => {
 								...(group ? [{ label: group }] : []),
 								{ label: entry.name },
 							]}
-							title={entry.name}
+							title={<EntryTitle href={activePath}>{entry.name}</EntryTitle>}
 							mono
-							description={entry.description}
+							description={<EntrySummary>{entry.description}</EntrySummary>}
 							actions={
 								<PageActions
 									markdownHref={markdownHref}
@@ -160,46 +177,48 @@ export default createAction(routes.api.icons, async (ctx) => {
 						</Callout>
 					</header>
 
-					<ReferenceSection
-						id="usage"
-						title="Usage"
-						lead="Import the icon you know by its component, or render one chosen at runtime by name."
-					>
-						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
-							<CodeBlock language="tsx" labels={CODE_LABELS} code={USAGE} />
-							<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
-								Props, defaults and accessible names are in the{" "}
-								<a href={markdownHref} mix={[fg("brand")]}>
-									package reference
-								</a>
-								.
-							</p>
-						</div>
-					</ReferenceSection>
+					<div mix={[mf("e-content")]}>
+						<ReferenceSection
+							id="usage"
+							title="Usage"
+							lead="Import the icon you know by its component, or render one chosen at runtime by name."
+						>
+							<div mix={[vstack({ gap: 3, align: "stretch" })]}>
+								<CodeBlock language="tsx" labels={CODE_LABELS} code={USAGE} />
+								<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+									Props, defaults and accessible names are in the{" "}
+									<a href={markdownHref} mix={[fg("brand")]}>
+										package reference
+									</a>
+									.
+								</p>
+							</div>
+						</ReferenceSection>
 
-					<ReferenceSection
-						id="icons"
-						title="Icons"
-						lead="Filter by name or tag, set the size and stroke, then open an icon for its code."
-					>
-						<div mix={[vstack({ gap: 6, align: "stretch" })]}>
-							<IconControls
-								action={routes.api.icons.href()}
-								gridId={GRID_ID}
-								query={query}
-								size={style.size}
-								strokeWidth={style.strokeWidth}
-								absoluteStrokeWidth={style.absoluteStrokeWidth}
-								color={style.color}
-								matching={matching}
-								total={all.length}
-								version={LUCIDE_VERSION}
-							/>
-							<IconSprite />
-							<IconGrid id={GRID_ID} icons={all} query={query} style={style} />
-							<IconDialog id={DIALOG_ID} gridId={GRID_ID} frameAttribute={ICON_FRAME_ATTRIBUTE} />
-						</div>
-					</ReferenceSection>
+						<ReferenceSection
+							id="icons"
+							title="Icons"
+							lead="Filter by name or tag, set the size and stroke, then open an icon for its code."
+						>
+							<div mix={[vstack({ gap: 6, align: "stretch" })]}>
+								<IconControls
+									action={routes.api.icons.href()}
+									gridId={GRID_ID}
+									query={query}
+									size={style.size}
+									strokeWidth={style.strokeWidth}
+									absoluteStrokeWidth={style.absoluteStrokeWidth}
+									color={style.color}
+									matching={matching}
+									total={all.length}
+									version={LUCIDE_VERSION}
+								/>
+								<IconSprite />
+								<IconGrid id={GRID_ID} icons={all} query={query} style={style} />
+								<IconDialog id={DIALOG_ID} gridId={GRID_ID} frameAttribute={ICON_FRAME_ATTRIBUTE} />
+							</div>
+						</ReferenceSection>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

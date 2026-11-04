@@ -22,6 +22,7 @@ import { createAction } from "remix/router";
 import type { DemoSummary } from "~/resources/views/demos";
 
 import { withStreamCache } from "~/app/http/caching";
+import { NOINDEX_NOFOLLOW } from "~/app/initializers/seo";
 import DemoMiniature from "~/resources/components/demo-miniature";
 import Hero from "~/resources/components/hero";
 import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
@@ -37,9 +38,6 @@ import routes from "~/routes/web";
 /** Where the demos' source lives, for a reader who wants to copy one. */
 const DEMOS_SOURCE_HREF =
 	"https://github.com/sergiodxa/monorepo/tree/main/apps/sdxc-site/resources/views";
-
-/** The directive the gallery shares with every demo it lists. */
-const DEMO_ROBOTS = "noindex, nofollow";
 
 /**
  * The flagship landings, in the order the gallery leads with them.
@@ -62,7 +60,7 @@ export default createAction(routes.demos, async (ctx) => {
 				title="Demos — sdxc"
 				description="Every sample landing, docs site and app built from @sdxc/ui, each for an invented product with its own art direction."
 				canonical={ctx.url.href}
-				robots={DEMO_ROBOTS}
+				robots={NOINDEX_NOFOLLOW}
 			>
 				<SiteHeader activePath={routes.demos.href()} />
 

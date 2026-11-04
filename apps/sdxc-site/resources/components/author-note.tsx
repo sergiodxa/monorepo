@@ -14,19 +14,20 @@ import { m } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_HANDLE, AUTHOR_X_URL } from "~/config/constants";
+import { AUTHOR_X_HANDLE, AUTHOR_X_URL } from "~/config/constants";
+import OwnerCard from "~/resources/components/owner-card";
 import routes from "~/routes/web";
 
-/** Renders the credit line. */
+/** Renders the credit line, with the author's name as the page's h-card. */
 export default function AuthorNote(_handle: Handle) {
 	return () => (
 		<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
-			Written by{" "}
-			<a href={AUTHOR_URL} mix={[fg("neutral"), when("&:hover", fg("brand"))]}>
-				{AUTHOR_NAME}
-			</a>
-			. Follow{" "}
-			<a href={AUTHOR_X_URL} rel="noreferrer" mix={[fg("neutral"), when("&:hover", fg("brand"))]}>
+			Written by <OwnerCard />. Follow{" "}
+			<a
+				href={AUTHOR_X_URL}
+				rel="me noreferrer"
+				mix={[fg("neutral"), when("&:hover", fg("brand"))]}
+			>
 				{AUTHOR_X_HANDLE}
 			</a>{" "}
 			for new packages, or{" "}
