@@ -334,6 +334,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                                    |
 | [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                                    |
 | [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state              |
+| [@sdxc/bench](packages/bench)                             | Bundle-weight and HTTP latency budgets for packages and running apps                                           |
 | [@sdxc/ci](packages/ci)                                   | CI as a TypeScript script that runs the same on a laptop and a CI host, and signs a green commit off on GitHub |
 | [@sdxc/result](packages/result)                           | Result type for error handling                                                                                 |
 | [@sdxc/sample](packages/sample)                           | Seeded generation of believable people, places, prose, numbers and identifiers                                 |

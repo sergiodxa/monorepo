@@ -6,6 +6,7 @@
       "name": "monorepo",
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
+        "@sdxc/bench": "workspace:*",
         "@sdxc/ci": "workspace:*",
         "@sdxc/cli": "workspace:*",
         "@sdxc/codemod": "workspace:*",
@@ -731,6 +732,22 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/random": "workspace:*",
+      },
+    },
+    "packages/bench": {
+      "name": "@sdxc/bench",
+      "version": "0.0.1",
+      "bin": {
+        "sdxc-bench": "./src/cli.ts",
+      },
+      "dependencies": {
+        "@sdxc/cli": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.1.0",
+      },
+      "devDependencies": {
+        "@types/node": "^26.6.5",
       },
     },
     "packages/billing": {
@@ -3293,6 +3310,8 @@
     "@sdxc/authz": ["@sdxc/authz@workspace:packages/authz"],
 
     "@sdxc/backoff": ["@sdxc/backoff@workspace:packages/backoff"],
+
+    "@sdxc/bench": ["@sdxc/bench@workspace:packages/bench"],
 
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
 
