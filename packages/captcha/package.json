@@ -27,9 +27,9 @@
 	},
 	"devDependencies": {
 		"@sdxc/crypto": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"peerDependencies": {
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }

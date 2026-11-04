@@ -17,6 +17,6 @@
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }
