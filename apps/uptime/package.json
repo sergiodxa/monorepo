@@ -59,6 +59,7 @@
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/merge-patch": "workspace:*",
 		"@sdxc/messaging": "workspace:*",
+		"@sdxc/microformats": "workspace:*",
 		"@sdxc/openapi": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/pagination": "workspace:*",

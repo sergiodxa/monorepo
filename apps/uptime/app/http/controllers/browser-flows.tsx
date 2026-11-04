@@ -38,7 +38,7 @@ import {
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO } from "~/app/initializers/seo";
 import {
 	DEFAULT_FLOW_INTERVAL_SECONDS,
 	FLOW_INTERVALS_SECONDS,
@@ -99,18 +99,17 @@ export default createAction(routes.browserFlows, async (ctx) => {
 			seo={{
 				description: page.metaDescription,
 				canonical: SEO.canonical(ctx.url),
-				schema: [
-					getSoftwareApplicationSchema({
-						name: "Browser Flow Monitoring",
-						description: page.metaDescription,
-						featureList: [
-							"Real Browser Run sessions",
-							"Accessibility role and name addressing",
-							"Per-run metering separate from pings",
-						],
-					}),
-					SEO.schema.faq([...page.faqs]),
-				],
+				schema: productPageSchema({
+					name: "Browser Flow Monitoring",
+					description: page.metaDescription,
+					url: ctx.url,
+					featureList: [
+						"Real Browser Run sessions",
+						"Accessibility role and name addressing",
+						"Per-run metering separate from pings",
+					],
+					faqs: page.faqs,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

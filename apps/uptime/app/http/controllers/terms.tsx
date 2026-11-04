@@ -7,17 +7,25 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { m, maxIs, pbe, pbs, pi } from "@sdxc/u/size";
-import { fontSize } from "@sdxc/u/typography";
+import { fontSize, textDecoration } from "@sdxc/u/typography";
 import { Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { SEO } from "~/app/initializers/seo";
+import { legalArticleSchema, SEO } from "~/app/initializers/seo";
+import SiteOwnerCard from "~/resources/components/site-owner-card";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
+
+/** The revision the page's "last updated" line states, kept date-only in the article node. */
+const TERMS_UPDATED = "2026-02-11";
+
+/** The same revision as an instant, so the visible time carries a timezone. */
+const TERMS_UPDATED_AT = new Date(`${TERMS_UPDATED}T00:00:00.000Z`);
 
 /**
  * GET /terms — the Terms of Service page. Its Open Graph type is `article`,
@@ -37,98 +45,118 @@ export default createAction(routes.legal.terms, async (ctx) => {
 				description: ctx.intl.t("legal.terms.meta.description"),
 				canonical: SEO.canonical(ctx.url),
 				og: { type: "article" },
+				schema: legalArticleSchema({
+					title: ctx.intl.t("legal.terms.title"),
+					description: ctx.intl.t("legal.terms.meta.description"),
+					url: ctx.url,
+					updated: TERMS_UPDATED,
+					inLanguage: ctx.locale,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
-				<article mix={[maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}>
-					<Typeset preset="reading">
-						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-							{ctx.intl.t("legal.terms.lastUpdated")}
-						</p>
-
-						<h1>{ctx.intl.t("legal.terms.title")}</h1>
-
-						<h2>{ctx.intl.t("legal.terms.sections.introduction.title")}</h2>
-						<p>{ctx.intl.t("legal.terms.sections.introduction.body")}</p>
-
-						<h2>{ctx.intl.t("legal.terms.sections.serviceDescription.title")}</h2>
-						<p>{ctx.intl.t("legal.terms.sections.serviceDescription.body")}</p>
-
-						<h2>{ctx.intl.t("legal.terms.sections.accountTerms.title")}</h2>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.accountTerms.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.accountTerms.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.accountTerms.third")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.accountTerms.fourth")}</li>
-						</ul>
-
-						<h2>{ctx.intl.t("legal.terms.sections.acceptableUse.title")}</h2>
-						<p>{ctx.intl.t("legal.terms.sections.acceptableUse.intro")}</p>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.third")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fourth")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fifth")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.sixth")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.acceptableUse.seventh")}</li>
-						</ul>
-
-						<h2>{ctx.intl.t("legal.terms.sections.paymentTerms.title")}</h2>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.third")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.paymentTerms.fourth")}</li>
-						</ul>
-
-						<h2>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
-						<ul>
-							<li>
-								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
-								<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
-									{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+				<article
+					mix={[mf("h-entry"), maxIs("720px"), m(0, "auto"), pbs("48px"), pi("24px"), pbe("80px")]}
+				>
+					<div mix={[mf("e-content")]}>
+						<Typeset preset="reading">
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+								<a
+									href={routes.legal.terms.href()}
+									mix={[mf("u-url", "u-uid"), fg("neutral.muted"), textDecoration("none")]}
+								>
+									<MicroTime property="dt-updated" value={TERMS_UPDATED_AT}>
+										{ctx.intl.t("legal.terms.lastUpdated")}
+									</MicroTime>
 								</a>
-								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
-							</li>
-							<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.third")}</li>
-						</ul>
+								{" · "}
+								<SiteOwnerCard property="p-author" />
+							</p>
 
-						<h2>{ctx.intl.t("legal.terms.sections.serviceAvailability.title")}</h2>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.third")}</li>
-						</ul>
+							<h1 mix={[mf("p-name")]}>{ctx.intl.t("legal.terms.title")}</h1>
 
-						<h2>{ctx.intl.t("legal.terms.sections.limitationOfLiability.title")}</h2>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.third")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
-						</ul>
+							<h2>{ctx.intl.t("legal.terms.sections.introduction.title")}</h2>
+							<p>{ctx.intl.t("legal.terms.sections.introduction.body")}</p>
 
-						<h2>{ctx.intl.t("legal.terms.sections.termination.title")}</h2>
-						<ul>
-							<li>{ctx.intl.t("legal.terms.sections.termination.first")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.termination.second")}</li>
-							<li>{ctx.intl.t("legal.terms.sections.termination.third")}</li>
-						</ul>
+							<h2>{ctx.intl.t("legal.terms.sections.serviceDescription.title")}</h2>
+							<p>{ctx.intl.t("legal.terms.sections.serviceDescription.body")}</p>
 
-						<h2>{ctx.intl.t("legal.terms.sections.changesToTerms.title")}</h2>
-						<p>{ctx.intl.t("legal.terms.sections.changesToTerms.body")}</p>
+							<h2>{ctx.intl.t("legal.terms.sections.accountTerms.title")}</h2>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.accountTerms.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.accountTerms.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.accountTerms.third")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.accountTerms.fourth")}</li>
+							</ul>
 
-						<h2>{ctx.intl.t("legal.terms.sections.contact.title")}</h2>
-						<p>
-							{ctx.intl.t("legal.terms.sections.contact.prefix")}
-							<a href={`mailto:${ctx.intl.t("legal.terms.sections.contact.email")}`}>
-								{ctx.intl.t("legal.terms.sections.contact.email")}
-							</a>
-							.
-						</p>
-					</Typeset>
+							<h2>{ctx.intl.t("legal.terms.sections.acceptableUse.title")}</h2>
+							<p>{ctx.intl.t("legal.terms.sections.acceptableUse.intro")}</p>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.third")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fourth")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.fifth")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.sixth")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.acceptableUse.seventh")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.paymentTerms.title")}</h2>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.paymentTerms.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.paymentTerms.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.paymentTerms.third")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.paymentTerms.fourth")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.title")}</h2>
+							<ul>
+								<li>
+									{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
+									<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
+										{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
+									</a>
+									{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
+								</li>
+								<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.dataAndPrivacy.third")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.serviceAvailability.title")}</h2>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.serviceAvailability.third")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.limitationOfLiability.title")}</h2>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.third")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.limitationOfLiability.fourth")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.termination.title")}</h2>
+							<ul>
+								<li>{ctx.intl.t("legal.terms.sections.termination.first")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.termination.second")}</li>
+								<li>{ctx.intl.t("legal.terms.sections.termination.third")}</li>
+							</ul>
+
+							<h2>{ctx.intl.t("legal.terms.sections.changesToTerms.title")}</h2>
+							<p>{ctx.intl.t("legal.terms.sections.changesToTerms.body")}</p>
+
+							<h2>{ctx.intl.t("legal.terms.sections.contact.title")}</h2>
+							<p>
+								{ctx.intl.t("legal.terms.sections.contact.prefix")}
+								<a href={`mailto:${ctx.intl.t("legal.terms.sections.contact.email")}`}>
+									{ctx.intl.t("legal.terms.sections.contact.email")}
+								</a>
+								.
+							</p>
+						</Typeset>
+					</div>
 				</article>
 			</MarketingLayout>
 		</DocumentLayout>,

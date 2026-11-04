@@ -16,6 +16,9 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { findItem, parse } from "@sdxc/microformats";
+import { representativeCard } from "@sdxc/microformats/vocabulary";
+import { unwrap } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -42,6 +45,7 @@ import {
 	formatUsd,
 	INCLUDED_PINGS,
 } from "~/config/pricing";
+import { SITE_OWNER, SITE_OWNER_PROFILES } from "~/config/site";
 import routes from "~/routes/web";
 
 /**
@@ -216,6 +220,27 @@ describe("GET /", () => {
 			].join(""),
 		);
 		expect(body).toContain(`"@type":"WebSite","name":"Uptime","url":"${SEO.baseUrl}"`);
+		expect(body).toContain(
+			`"potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"${SEO.baseUrl}/docs/search?q={search_term_string}"}`,
+		);
+		expect(body).toContain(`"@type":"Organization","name":"Uptime"`);
+		expect(body).toContain(`"@type":"FAQPage"`);
+		expect(body).toContain(`"@type":"SoftwareApplication","name":"Uptime"`);
+		expect(body).toContain(`"url":"${SEO.baseUrl}/try"`);
+	});
+
+	test("names the operator with an h-card and rel=me profiles", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+		let document = unwrap(parse(body, response.url));
+		let card = representativeCard(document, response.url);
+
+		expect(card?.name).toBe(SITE_OWNER.name);
+		expect(card?.url).toBe(SITE_OWNER.url);
+		expect(findItem(document, "h-card")).not.toBeNull();
+		for (let href of SITE_OWNER_PROFILES) {
+			expect(body).toContain(`<link rel="me" href="${href}"`);
+		}
 	});
 
 	test("leads with the dashboard mockup drawn inline, with no screenshot to preload", async () => {

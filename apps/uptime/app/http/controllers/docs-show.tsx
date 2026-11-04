@@ -16,13 +16,14 @@ import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
 import { headings } from "@sdxc/markdown/plugin/headings";
 import { toRemix } from "@sdxc/markdown/remix";
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { text, textDecoration, weight } from "@sdxc/u/typography";
 import { Alert, Typeset } from "@sdxc/ui";
 import {
 	DocsFeedback,
@@ -39,13 +40,14 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { expandReference, operationReferences } from "~/app/http/openapi/reference";
-import { SEO } from "~/app/initializers/seo";
+import { docPageSchema, SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
 import { findDoc, getDocLoader, listDocs, MARKDOWN_OPTIONS, toDocsTree } from "~/app/services/docs";
 import { endpointSections } from "~/app/services/docs-api";
 import { apiReferenceComponents } from "~/resources/components/docs-api-reference";
 import { docsMarkdownComponents } from "~/resources/components/docs-markdown";
 import DocsSearchForm from "~/resources/components/docs-search-form";
+import SiteOwnerCard from "~/resources/components/site-owner-card";
 import DocsLayout, { buildDocsLabels, supportHref } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import { buildMarketingChrome } from "~/resources/layouts/marketing";
@@ -205,6 +207,10 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let { previous, next } = findNeighbours(tree, activePath, { boundary: "section" });
 	let upNext = (frontmatter.next ?? []).flatMap((path) => findDoc(sections, path) ?? []);
 	let feedbackSent = ctx.url.searchParams.get("feedback") === "sent";
+	let updatedAt = frontmatter.lastUpdated
+		? new Date(`${frontmatter.lastUpdated}T00:00:00.000Z`)
+		: null;
+	let description = frontmatter.description || t("docs.meta.description");
 
 	return ctx.render(
 		<DocumentLayout
@@ -212,9 +218,25 @@ export default createAction(routes.docs.show, async (ctx) => {
 			title={`${frontmatter.title} | ${t("docs.meta.title")}`}
 			locale={ctx.locale}
 			seo={{
-				description: frontmatter.description || t("docs.meta.description"),
+				description,
 				canonical: SEO.canonical(ctx.url),
 				og: { type: "article" },
+				schema: frontmatter.lastUpdated
+					? docPageSchema({
+							title: frontmatter.title,
+							description,
+							url: ctx.url,
+							rootLabel: t("docs.shell.root"),
+							section,
+							updated: frontmatter.lastUpdated,
+							keywords: frontmatter.keywords,
+						})
+					: SEO.schema.webPage({
+							name: frontmatter.title,
+							description,
+							url: ctx.url.href,
+							inLanguage: "en",
+						}),
 			}}
 		>
 			<DocsLayout
@@ -284,7 +306,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 					</>
 				}
 			>
-				<article>
+				<article mix={[mf("h-entry")]}>
+					<data mix={[mf("p-name")]} value={frontmatter.title} />
 					<DocsPageHeader
 						crumbsLabel={t("app.layout.breadcrumbs.label")}
 						crumbs={[
@@ -295,22 +318,43 @@ export default createAction(routes.docs.show, async (ctx) => {
 						title={frontmatter.title}
 						description={frontmatter.description}
 						notice={frontmatter.notice ? <PlanNotice>{frontmatter.notice}</PlanNotice> : undefined}
-						updated={
-							frontmatter.lastUpdated
-								? { label: t("docs.shell.updated"), date: frontmatter.lastUpdated }
-								: undefined
-						}
 						actions={
-							<PageActions
-								markdownHref={`${activePath}${MARKDOWN_SUFFIX}`}
-								labels={{
-									copy: t("docs.actions.copy"),
-									copied: t("docs.actions.copied"),
-									failed: t("docs.actions.failed"),
-									more: t("docs.actions.more"),
-								}}
-								links={pageLinks(t, `${ctx.url.origin}${activePath}`)}
-							/>
+							<>
+								<span>
+									{updatedAt ? (
+										<>
+											{t("docs.shell.updated")}{" "}
+											<a
+												href={activePath}
+												mix={[mf("u-url", "u-uid"), fg("neutral.muted"), textDecoration("none")]}
+											>
+												<MicroTime property="dt-updated" value={updatedAt}>
+													{frontmatter.lastUpdated}
+												</MicroTime>
+											</a>
+											{" · "}
+										</>
+									) : (
+										<a
+											href={activePath}
+											mix={[mf("u-url", "u-uid"), fg("neutral.muted"), textDecoration("none")]}
+										>
+											{frontmatter.title}
+										</a>
+									)}
+									<SiteOwnerCard property="p-author" />
+								</span>
+								<PageActions
+									markdownHref={`${activePath}${MARKDOWN_SUFFIX}`}
+									labels={{
+										copy: t("docs.actions.copy"),
+										copied: t("docs.actions.copied"),
+										failed: t("docs.actions.failed"),
+										more: t("docs.actions.more"),
+									}}
+									links={pageLinks(t, `${ctx.url.origin}${activePath}`)}
+								/>
+							</>
 						}
 					/>
 
@@ -322,34 +366,36 @@ export default createAction(routes.docs.show, async (ctx) => {
 						</Alert>
 					) : null}
 
-					<Typeset preset="docs">
-						{toRemix(body, {
-							components: {
-								...docsMarkdownComponents({
-									copy: t("docs.code.copy"),
-									copied: t("docs.code.copied"),
-									alerts: {
-										note: t("docs.alerts.note"),
-										tip: t("docs.alerts.tip"),
-										important: t("docs.alerts.important"),
-										warning: t("docs.alerts.warning"),
-										caution: t("docs.alerts.caution"),
-									},
-									t,
-								}),
-								...(reference
-									? apiReferenceComponents({
-											t,
-											operations: operationReferences(),
-											language: readCodeTabsCookie(
-												ctx.request.headers.get("Cookie"),
-												"api-language",
-											),
-										})
-									: {}),
-							},
-						})}
-					</Typeset>
+					<div mix={[mf("e-content")]}>
+						<Typeset preset="docs">
+							{toRemix(body, {
+								components: {
+									...docsMarkdownComponents({
+										copy: t("docs.code.copy"),
+										copied: t("docs.code.copied"),
+										alerts: {
+											note: t("docs.alerts.note"),
+											tip: t("docs.alerts.tip"),
+											important: t("docs.alerts.important"),
+											warning: t("docs.alerts.warning"),
+											caution: t("docs.alerts.caution"),
+										},
+										t,
+									}),
+									...(reference
+										? apiReferenceComponents({
+												t,
+												operations: operationReferences(),
+												language: readCodeTabsCookie(
+													ctx.request.headers.get("Cookie"),
+													"api-language",
+												),
+											})
+										: {}),
+								},
+							})}
+						</Typeset>
+					</div>
 				</article>
 			</DocsLayout>
 		</DocumentLayout>,

@@ -11,7 +11,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO } from "~/app/initializers/seo";
 import ProductMockup, { AUDIENCE_MOCKUPS } from "~/resources/components/marketing/product-mockups";
 import { audiences } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
@@ -48,7 +48,13 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 			seo={{
 				description: content.metaDescription,
 				canonical: SEO.canonical(ctx.url),
-				schema: content.faqs.length > 0 ? SEO.schema.faq(content.faqs) : undefined,
+				schema: productPageSchema({
+					name: content.metaTitle.split("|")[0]?.trim() || content.metaTitle,
+					description: content.metaDescription,
+					url: ctx.url,
+					featureList: content.features.map((feature) => feature.title),
+					faqs: content.faqs,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

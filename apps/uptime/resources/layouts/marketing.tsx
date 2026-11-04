@@ -39,6 +39,7 @@ import { landingContainer } from "@sdxc/ui/styles";
 
 import { BRAND_MARK_PATHS } from "~/config/brand";
 import AuthCta from "~/resources/components/marketing/auth-cta";
+import SiteOwnerCard from "~/resources/components/site-owner-card";
 import routes from "~/routes/web";
 
 /**
@@ -373,6 +374,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 						columns={footerColumns}
 						legal={
 							<>
+								<SiteOwnerCard />
 								<p>{copyrightLine}</p>
 								{legalLinks.map((link) => (
 									<a key={link.href} href={link.href} data-rmx-prefetch="intent">

@@ -579,6 +579,12 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 			seo={{
 				description: t("page.trial.meta.description", { days }),
 				canonical: SEO.canonical(new URL(routes.trial.check.index.href(), ctx.url)),
+				schema: SEO.schema.webPage({
+					name: t("page.trial.heading", { days }),
+					description: t("page.trial.meta.description", { days }),
+					url: new URL(routes.trial.check.index.href(), ctx.url).href,
+					inLanguage: ctx.locale,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={getViewer() !== null} {...chrome}>

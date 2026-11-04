@@ -24,7 +24,7 @@ import {
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO } from "~/app/initializers/seo";
 import { CopyButton } from "~/resources/components/copy-button";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
@@ -73,6 +73,12 @@ export default createAction(routes.mcp.index, async (ctx) => {
 			seo={{
 				description: t("mcp.meta.description"),
 				canonical: SEO.canonical(ctx.url),
+				schema: productPageSchema({
+					name: `${t("mcp.hero.title")} ${t("mcp.hero.highlight")}`,
+					description: t("mcp.meta.description"),
+					url: ctx.url,
+					featureList: [t("mcp.tools.api"), t("mcp.tools.scopes"), t("mcp.tools.remote")],
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

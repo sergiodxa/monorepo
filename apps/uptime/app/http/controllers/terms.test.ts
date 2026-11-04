@@ -83,7 +83,7 @@ describe("GET /terms", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<title>Terms of Service | Uptime</title>");
-		expect(body).toContain("<h1>Terms of Service</h1>");
+		expect(body).toMatch(/<h1[^>]*>Terms of Service<\/h1>/);
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
 	});
 
@@ -99,6 +99,10 @@ describe("GET /terms", () => {
 			'<meta name="description" content="Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí." />',
 		);
 		expect(body).toContain('<meta property="og:type" content="article" />');
+		expect(body).toContain('"@type":"Article"');
+		expect(body).toContain('"headline":"Terms of Service"');
+		expect(body).toContain('"datePublished":"2026-02-11"');
+		expect(body).toContain("h-entry");
 	});
 
 	test("renders the Terms of Service page for a signed-in viewer", async () => {
@@ -113,7 +117,7 @@ describe("GET /terms", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("<h1>Terms of Service</h1>");
+		expect(body).toMatch(/<h1[^>]*>Terms of Service<\/h1>/);
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 });
