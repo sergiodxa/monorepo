@@ -20,7 +20,6 @@ describe("cspPatch", () => {
 						defaultSrc: ["'self'"],
 						frameSrc: ["'none'"],
 					},
-					filter: () => true,
 				}),
 			],
 		});
@@ -42,7 +41,6 @@ describe("cspPatch", () => {
 				cspPatch(),
 				csp({
 					policy: { defaultSrc: ["'none'"] },
-					filter: () => true,
 				}),
 			],
 		});
