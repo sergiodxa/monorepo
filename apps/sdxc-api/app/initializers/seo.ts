@@ -16,6 +16,7 @@ import {
 	AUTHOR_NAME,
 	AUTHOR_PROFILES,
 	AUTHOR_X_HANDLE,
+	OG_IMAGE_PATH,
 	SITE_BRAND,
 	SITE_DESCRIPTION,
 	SITE_ORIGIN,
@@ -24,8 +25,8 @@ import {
 
 /**
  * Resolves canonical URLs onto {@link SITE_ORIGIN} and binds the schema.org builders
- * to the landing's name and description. The Twitter card is `summary`, the layout
- * that fits a title and description.
+ * to the landing's name and description. `twitter:site` and `twitter:creator` name
+ * the personal X account, and the card is `summary_large_image` for the drawn PNG.
  *
  * @example seo.canonical(ctx.url) // "https://api.sdxc.dev/"
  */
@@ -33,7 +34,7 @@ export const seo = createSeo({
 	baseUrl: SITE_ORIGIN,
 	siteName: SITE_BRAND,
 	defaultDescription: SITE_DESCRIPTION,
-	twitter: { site: AUTHOR_X_HANDLE, creator: AUTHOR_X_HANDLE, card: "summary" },
+	twitter: { site: AUTHOR_X_HANDLE, creator: AUTHOR_X_HANDLE, card: "summary_large_image" },
 });
 
 /**
@@ -45,6 +46,7 @@ export const LANDING_SCHEMA: SchemaOrg.Node[] = [
 	seo.schema.organization({
 		name: AUTHOR_NAME,
 		url: "/",
+		logo: OG_IMAGE_PATH,
 		sameAs: [...AUTHOR_PROFILES],
 	}),
 	seo.schema.website({ url: "/" }),
@@ -53,6 +55,7 @@ export const LANDING_SCHEMA: SchemaOrg.Node[] = [
 		description: SITE_DESCRIPTION,
 		url: "/",
 		inLanguage: "en",
+		image: OG_IMAGE_PATH,
 	}),
 	seo.schema.softwareApplication({
 		name: SITE_BRAND,

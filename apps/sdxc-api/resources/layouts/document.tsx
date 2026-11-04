@@ -17,7 +17,13 @@ import { font, leading } from "@sdxc/u/typography";
 import { unsafeHTML } from "remix/component";
 
 import { seo } from "~/app/initializers/seo";
-import { AUTHOR_PROFILES, AUTHOR_URL } from "~/config/site";
+import {
+	AUTHOR_PROFILES,
+	AUTHOR_URL,
+	OG_IMAGE_HEIGHT,
+	OG_IMAGE_PATH,
+	OG_IMAGE_WIDTH,
+} from "~/config/site";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -78,7 +84,14 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						description={description}
 						canonical={canonical}
 						site={seo.site}
-						og={{ type: "website", locale: "en_US" }}
+						og={{
+							type: "website",
+							locale: "en_US",
+							image: seo.absolute(OG_IMAGE_PATH),
+							imageAlt: title,
+							imageWidth: OG_IMAGE_WIDTH,
+							imageHeight: OG_IMAGE_HEIGHT,
+						}}
 						robots={robots}
 					/>
 					{schema ? (

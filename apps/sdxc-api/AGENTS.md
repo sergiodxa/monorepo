@@ -14,7 +14,8 @@ capability; HTML docs and npm packages stay free.
 - MUST NOT add D1, KV or other durable state without an ADR — this Worker is compute-only
 - MUST map routes through `lazy()` from `@sdxc/lazy-route`
 - MUST use `MemoryFacilitator` in tests via `@sdxc/x402/testing`
-- MUST keep `/`, `/v1` and `/health` free
+- MUST keep `/`, `/og.png`, `/v1` and `/health` free
+- MUST keep the landing's X identity on the personal account: `twitter:site` and `twitter:creator` are `@sergiodxa`, and `rel="me"` links `https://x.com/sergiodxa`
 - MUST keep the HTML landing at `/` as the human-facing pitch (MCP setup, x402, catalog); agents may take `Accept: text/markdown`
 - MUST publish that landing's head through `app/initializers/seo.ts` (`Seo.Meta`, `seo.canonical()`, `seo.robotsTag()`, `LANDING_SCHEMA`) and mark the visible page with `@sdxc/microformats/ui`, so the tags and the `h-entry` / `h-card` / `h-cite` markup repeat facts the page shows
 

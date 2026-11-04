@@ -40,8 +40,8 @@ declare module "remix/router" {
 }
 
 /**
- * Builds the HTTP router. Free routes (`/`, `/v1`, `/health`) need no payment;
- * `/v1/*id` and priced MCP tool calls collect through x402.
+ * Builds the HTTP router. Free routes (`/`, `/og.png`, `/v1`, `/health`) need no
+ * payment; `/v1/*id` and priced MCP tool calls collect through x402.
  */
 export function createWebRouter() {
 	let router = createRouter({
@@ -65,6 +65,10 @@ export function createWebRouter() {
 	router.map(
 		routes.home,
 		lazy(() => import("~/app/http/controllers/home")),
+	);
+	router.map(
+		routes.og,
+		lazy(() => import("~/app/http/controllers/og")),
 	);
 	router.map(
 		routes.catalog,
