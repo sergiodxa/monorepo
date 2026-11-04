@@ -40,7 +40,7 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "10";
+export const COMPONENT_FACE_VERSION = "11";
 
 /** Material role a miniature piece paints with. */
 type Tone = "surface" | "chrome" | "label" | "ink" | "muted" | "hairline" | "accent";
@@ -490,7 +490,104 @@ const OVERRIDES: Record<string, Shape[]> = {
 		{ kind: "rect", x: 36, y: 50, w: 88, h: 14, r: 6, tone: "label" },
 		{ kind: "rect", x: 36, y: 68, w: 88, h: 14, r: 6, tone: "label" },
 	]),
-	calendar: windowScene(calendarGrid()),
+	"app-shell": windowScene([
+		{
+			kind: "line",
+			x1: 48,
+			y1: WIN.y + WIN.chrome,
+			x2: 48,
+			y2: WIN.y + WIN.h,
+			tone: "hairline",
+			weight: 1,
+		},
+		{ kind: "rect", x: 24, y: WIN.y + WIN.chrome + 8, w: 16, h: 6, r: 3, tone: "accent" },
+		{
+			kind: "line",
+			x1: 24,
+			y1: WIN.y + WIN.chrome + 22,
+			x2: 40,
+			y2: WIN.y + WIN.chrome + 22,
+			tone: "label",
+			weight: 2.5,
+		},
+		{
+			kind: "line",
+			x1: 24,
+			y1: WIN.y + WIN.chrome + 34,
+			x2: 38,
+			y2: WIN.y + WIN.chrome + 34,
+			tone: "label",
+			weight: 2.5,
+		},
+		{
+			kind: "line",
+			x1: 24,
+			y1: WIN.y + WIN.chrome + 46,
+			x2: 36,
+			y2: WIN.y + WIN.chrome + 46,
+			tone: "label",
+			weight: 2.5,
+		},
+		{ kind: "rect", x: 56, y: 32, w: 80, h: 48, r: 8, tone: "surface", ring: true },
+		txt("Overview", 64, 48, 7, "ink", { font: "semibold" }),
+		{ kind: "line", x1: 64, y1: 58, x2: 120, y2: 58, tone: "label", weight: 1.3 },
+		{ kind: "line", x1: 64, y1: 68, x2: 108, y2: 68, tone: "label", weight: 1.3 },
+	]),
+	"app-shell-toggle": windowScene([
+		{ kind: "rect", x: 24, y: WIN.y + WIN.chrome + 6, w: 14, h: 10, r: 3, tone: "accent" },
+		{
+			kind: "line",
+			x1: 27,
+			y1: WIN.y + WIN.chrome + 9,
+			x2: 35,
+			y2: WIN.y + WIN.chrome + 9,
+			tone: "surface",
+			weight: 1.4,
+		},
+		{
+			kind: "line",
+			x1: 27,
+			y1: WIN.y + WIN.chrome + 12,
+			x2: 35,
+			y2: WIN.y + WIN.chrome + 12,
+			tone: "surface",
+			weight: 1.4,
+		},
+		{
+			kind: "line",
+			x1: 42,
+			y1: WIN.y + WIN.chrome,
+			x2: 42,
+			y2: WIN.y + WIN.h,
+			tone: "hairline",
+			weight: 1,
+		},
+		{ kind: "rect", x: 26, y: WIN.y + WIN.chrome + 24, w: 10, h: 10, r: 3, tone: "label" },
+		{ kind: "rect", x: 26, y: WIN.y + WIN.chrome + 38, w: 10, h: 10, r: 3, tone: "label" },
+		{ kind: "rect", x: 26, y: WIN.y + WIN.chrome + 52, w: 10, h: 10, r: 3, tone: "label" },
+		{ kind: "rect", x: 50, y: 32, w: 86, h: 48, r: 8, tone: "surface", ring: true },
+		txt("Collapsed", 58, 52, 7, "muted", { font: "semibold" }),
+		{ kind: "line", x1: 58, y1: 62, x2: 120, y2: 62, tone: "label", weight: 1.3 },
+	]),
+	calendar: windowScene([
+		txt("March", 40, 34, 7, "ink", { font: "semibold" }),
+		{ kind: "stroke", d: "M112 30 L116 34 L112 38", weight: 1.4, tone: "muted" },
+		...calendarGrid(44, 42, 7, [10]),
+	]),
+	"range-calendar": windowScene([
+		txt("Mar 12–18", 40, 34, 7, "ink", { font: "semibold" }),
+		...calendarGrid(44, 42, 7, [9, 10, 11, 12, 13]),
+	]),
+	bento: windowScene([
+		{ kind: "rect", x: 28, y: 28, w: 58, h: 52, r: 8, tone: "surface", ring: true },
+		{ kind: "rect", x: 36, y: 36, w: 42, h: 16, r: 4, tone: "label" },
+		txt("Monitors", 36, 64, 6, "ink", { font: "semibold" }),
+		{ kind: "rect", x: 92, y: 28, w: 40, h: 24, r: 8, tone: "surface", ring: true },
+		{ kind: "rect", x: 100, y: 34, w: 24, h: 6, r: 2, tone: "accent" },
+		{ kind: "rect", x: 92, y: 56, w: 40, h: 24, r: 8, tone: "surface", ring: true },
+		{ kind: "line", x1: 100, y1: 66, x2: 122, y2: 66, tone: "label", weight: 1.4 },
+		{ kind: "line", x1: 100, y1: 72, x2: 116, y2: 72, tone: "label", weight: 1.3 },
+	]),
 	input: windowScene([
 		txt("Email", 40, 40, 6, "muted"),
 		{ kind: "rect", x: 40, y: 46, w: 80, h: 18, r: 8, tone: "surface", ring: true },
@@ -746,12 +843,19 @@ function appDefault(slug: string): Shape[] {
 			txt(shortLabel(slug), 96, 68, 7, "muted", { align: "center", maxWidth: 70 }),
 		]);
 	}
-	if (/(settings|view|split|editor|shell|resizable|page-header)/.test(slug)) {
+	if (/(settings|view|split|editor|resizable|page-header)/.test(slug)) {
 		return appShell([
 			{ kind: "rect", x: 54, y: 30, w: 84, h: 50, r: 8, tone: "surface", ring: true },
 			txt(shortLabel(slug), 62, 46, 7, "ink", { font: "semibold", maxWidth: 68 }),
 			{ kind: "line", x1: 62, y1: 56, x2: 124, y2: 56, tone: "label", weight: 1.3 },
 			{ kind: "line", x1: 62, y1: 66, x2: 112, y2: 66, tone: "label", weight: 1.3 },
+		]);
+	}
+	if (/shell/.test(slug)) {
+		return appShell([
+			{ kind: "rect", x: 54, y: 30, w: 84, h: 50, r: 8, tone: "surface", ring: true },
+			txt(shortLabel(slug), 62, 48, 7, "ink", { font: "semibold", maxWidth: 68 }),
+			{ kind: "line", x1: 62, y1: 58, x2: 120, y2: 58, tone: "label", weight: 1.3 },
 		]);
 	}
 	return appShell([
@@ -785,8 +889,16 @@ function docsDefault(slug: string): Shape[] {
 
 /** Default landing miniature: staged marketing strip inside a product frame. */
 function landingDefault(slug: string): Shape[] {
+	if (slug === "bento") {
+		return windowScene([
+			{ kind: "rect", x: 28, y: 28, w: 58, h: 52, r: 8, tone: "surface", ring: true },
+			{ kind: "rect", x: 36, y: 36, w: 42, h: 16, r: 4, tone: "label" },
+			{ kind: "rect", x: 92, y: 28, w: 40, h: 24, r: 8, tone: "surface", ring: true },
+			{ kind: "rect", x: 92, y: 56, w: 40, h: 24, r: 8, tone: "surface", ring: true },
+		]);
+	}
 	if (
-		/(hero|header|footer|frame|stage|split|bento|feature|pricing|sponsor|proof|stat|marquee|logo)/.test(
+		/(hero|header|footer|frame|stage|split|feature|pricing|sponsor|proof|stat|marquee|logo)/.test(
 			slug,
 		)
 	) {
@@ -973,20 +1085,24 @@ function landingHeroScene(label = "Ship UI"): Shape[] {
 	]);
 }
 
-/** A calendar day grid with one accented cell. */
-function calendarGrid(originX = 48, originY = 34, cell = 8): Shape[] {
+/**
+ * A calendar day grid. `selected` lists day indices (row-major, 0–20) painted accent so a
+ * single day and a range read differently.
+ */
+function calendarGrid(originX = 48, originY = 34, cell = 8, selected: number[] = [10]): Shape[] {
+	let selectedSet = new Set(selected);
 	let shapes: Shape[] = [];
 	for (let row = 0; row < 3; row++) {
 		for (let col = 0; col < 7; col++) {
+			let index = row * 7 + col;
 			let cx = originX + col * (cell + 2) + cell / 2;
 			let cy = originY + row * (cell + 2) + cell / 2;
-			let selected = row === 1 && col === 3;
 			shapes.push({
 				kind: "circle",
 				cx,
 				cy,
 				r: cell / 2 - 0.5,
-				tone: selected ? "accent" : "label",
+				tone: selectedSet.has(index) ? "accent" : "label",
 			});
 		}
 	}
