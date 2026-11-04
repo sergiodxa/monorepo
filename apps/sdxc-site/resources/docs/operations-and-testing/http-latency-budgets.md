@@ -28,7 +28,8 @@ deploy, or whatever your project uses) and point the sampler at that origin.
 
 `sampleHttp` issues `requests` with at most `concurrency` in flight, times each with
 `performance.now()`, and returns min, mean, p50, p95, p99 and max over the successful
-samples:
+samples. The report also splits the run: `ok` is how many completed, `failures` is how
+many errored or timed out (`requests - ok`).
 
 ```typescript {% title="app/http/health.latency.test.ts" %}
 import { sampleHttp } from "@sdxc/bench";
@@ -44,16 +45,16 @@ test("GET /health stays within the latency budget", async () => {
 		timeoutMs: 5_000,
 	});
 
-	expect(report.ok).toBe(report.requests);
+	expect(report.failures).toBe(0);
 	expect(report.p95).toBeLessThan(200);
 	expect(report.p99).toBeLessThan(500);
 });
 ```
 
-Compare the report's percentiles with Vitest's built-in matchers. Prefer ceilings with room
-for runner noise; these are gates against a hanging or suddenly slow endpoint, not
-microbenchmarks. Skip or gate the file when `BENCH_BASE_URL` is unset if the suite must stay
-green without a server.
+`expect(report.failures).toBe(0)` requires every sample to succeed before the percentile
+ceilings matter. Prefer ceilings with room for runner noise; these are gates against a
+hanging or suddenly slow endpoint, not microbenchmarks. Skip or gate the file when
+`BENCH_BASE_URL` is unset if the suite must stay green without a server.
 
 ## Gate from the terminal
 
