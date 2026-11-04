@@ -30,7 +30,6 @@ async function renderSecuredDocument() {
 			csp({
 				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
 				reportingEndpoints: { csp: "/reports/csp" },
-				filter: () => true,
 			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
 			testAssets((ctx) => getCspNonce(ctx)),
