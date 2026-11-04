@@ -20,14 +20,14 @@ import { LinkButton } from "@sdxc/ui";
 import { InstallCommand } from "@sdxc/ui/docs";
 
 import { PACKAGE_MANAGER_KEY, REMEMBERED_TABS } from "~/app/services/remembered-tabs";
-import { componentFaceHref } from "~/app/services/ui-component-face";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";
+import UiComponentMiniature from "~/resources/components/ui-faces";
 import routes from "~/routes/web";
 
 /**
- * Signature components whose faces open the landing. Each one already has a silhouette
- * in the face catalogue, so the strip matches the gallery tiles below.
+ * Signature components whose faces open the landing. Each one already has a miniature
+ * scene, so the strip matches the gallery tiles below.
  */
 const FEATURED = [
 	{ slug: "button", title: "Button" },
@@ -169,18 +169,18 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 									raw({ textDecoration: "none", color: "inherit" }),
 								]}
 							>
-								<div mix={[clip(), minBs("9rem"), bs("9rem"), bg("neutral.tint")]}>
-									<img
-										src={componentFaceHref(feature.slug)}
-										alt=""
-										width={320}
-										height={200}
-										decoding="async"
-										mix={[
-											bs("100%"),
-											raw({ objectFit: "cover", display: "block", inlineSize: "100%" }),
-										]}
-									/>
+								<div
+									mix={[
+										clip(),
+										minBs("9rem"),
+										bs("9rem"),
+										bg("neutral.tint"),
+										raw({
+											boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
+										}),
+									]}
+								>
+									<UiComponentMiniature slug={feature.slug} />
 								</div>
 								<span mix={[p(0, 3, 3, 3), font("mono"), text("sm"), weight("semibold")]}>
 									{feature.title}
