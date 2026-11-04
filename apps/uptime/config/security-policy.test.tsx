@@ -9,7 +9,9 @@
 
 import type { Middleware } from "remix/router";
 
-import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -19,14 +21,19 @@ import { CHUNK_SPECIFIER, CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/
 import { testAssets } from "~/app/test/document-assets";
 import DocumentLayout from "~/resources/layouts/document";
 
-import { SECURITY_POLICY } from "./security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "./security-policy";
 
-/** Renders a document through the app's security headers, assets and renderer, as production does. */
+/** Renders a document through the app's CSP, security headers, assets and renderer. */
 async function renderSecuredDocument() {
 	let router = createRouter({
 		middleware: [
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+				filter: () => true,
+			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
-			testAssets((ctx) => ctx.get(SecurityHeadersKey)?.nonce),
+			testAssets((ctx) => getCspNonce(ctx)),
 			render({ assets: assetResolver }),
 		],
 	});
