@@ -7,11 +7,12 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
-import type { SecurityHeadersContext } from "@sdxc/security-headers/middleware";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
+import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
+import { getCspNonce } from "remix/middleware/csp";
 
 import type { ResponseMode } from "~/app/http/middleware/session";
 
@@ -25,11 +26,10 @@ import FormPostView from "~/resources/views/form-post";
 const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 
 /** The slice of request context this module reads. */
-export interface AuthorizationResponseContext {
+export type AuthorizationResponseContext = RequestContext & {
 	render: Renderer<RemixNode>;
 	intl: I18n;
-	securityHeaders: SecurityHeadersContext;
-}
+};
 
 /**
  * Sends the authorization response parameters back to a relying party, always with `iss`
@@ -60,7 +60,7 @@ export async function authorizationResponse(
 				title={ctx.intl.t("authorize.formPost.title")}
 				submitLabel={ctx.intl.t("authorize.formPost.submit")}
 				noscriptMessage={ctx.intl.t("authorize.formPost.noscript")}
-				nonce={ctx.securityHeaders.nonce}
+				nonce={getCspNonce(ctx) ?? ""}
 			/>,
 			{ headers: NO_STORE_HEADERS },
 		);
