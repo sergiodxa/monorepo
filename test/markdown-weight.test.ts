@@ -31,7 +31,7 @@ describe("@sdxc/markdown stays inside its size budget", () => {
 		expect(
 			weight.gzipped,
 			`minified ${weight.minified} bytes, ${weight.gzipped} gzipped`,
-		).toBeLessThanOrEqual(ROOT_BUDGET);
+		).toBeLessThan(ROOT_BUDGET);
 	});
 
 	test(`the plain-text entry is under ${PLAIN_BUDGET} bytes gzipped`, async () => {
@@ -40,7 +40,7 @@ describe("@sdxc/markdown stays inside its size budget", () => {
 		expect(
 			weight.gzipped,
 			`minified ${weight.minified} bytes, ${weight.gzipped} gzipped`,
-		).toBeLessThanOrEqual(PLAIN_BUDGET);
+		).toBeLessThan(PLAIN_BUDGET);
 	});
 
 	test(`the static HTML entry is under ${HTML_BUDGET} bytes gzipped`, async () => {
@@ -49,6 +49,6 @@ describe("@sdxc/markdown stays inside its size budget", () => {
 		expect(
 			weight.gzipped,
 			`minified ${weight.minified} bytes, ${weight.gzipped} gzipped`,
-		).toBeLessThanOrEqual(HTML_BUDGET);
+		).toBeLessThan(HTML_BUDGET);
 	});
 });
