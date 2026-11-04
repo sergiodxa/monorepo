@@ -9,7 +9,7 @@ lastUpdated: 2026-11-04
 outcomes:
     - "How to weigh a package entry with `@sdxc/bench` and read minified and gzipped bytes"
     - "How to assert a gzipped budget in Vitest so CI catches growth"
-    - "How to check the same budget from the terminal with `bunx @sdxc/bench weigh`"
+    - "How to check the same budget from the terminal with `sdxc pkg bench weigh`"
 ---
 
 A package that replaced a heavier dependency on the strength of its size needs that number
@@ -61,18 +61,18 @@ static HTML renderer) get their own tests and their own ceilings.
 Before you commit a number, print what an entry weighs:
 
 ```bash
-bunx @sdxc/bench weigh ./src/index.ts
+sdxc pkg bench weigh ./src/index.ts
 ```
 
 Pass `--max-gzipped` to exit `1` when the ceiling is missed, and `--json` for a scriptable
 report:
 
 ```bash
-bunx @sdxc/bench weigh ./src/index.ts --max-gzipped 25600 --json
+sdxc pkg bench weigh ./src/index.ts --max-gzipped 25600 --json
 ```
 
-With [`@sdxc/kit`](/api/kit) installed, `sdxc pkg bench weigh …` runs the same command line
-against the version your project pins.
+[Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers
+what every package command line shares.
 
 ## Where this fits
 
