@@ -14,10 +14,10 @@ const JSON_OUTPUT = flag.boolean("json", { description: "Print the result as JSO
 
 /** Every command `sdxc-bench` takes. */
 export const BENCH_COMMANDS = commands({
-	description: "sdxc-bench — bundle weight and HTTP latency budgets",
+	description: "@sdxc/bench — bundle weight and HTTP latency budgets",
 	weigh: command({
 		description:
-			"Bundle an entry with bun build --minify (browser) and check its gzipped size against a budget.",
+			"Bundle an entry for the browser (minified, dependencies inlined) and check its gzipped size against a budget.",
 		arguments: {
 			entry: argument(s.string(), { description: "Path to the entry module to weigh" }),
 		},

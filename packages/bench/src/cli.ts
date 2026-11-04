@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * The `sdxc-bench` command-line program: weigh an entry or sample HTTP latency
- * against a running URL. Exit codes: 0 done, 1 budget or request failure, 2 usage.
+ * The `@sdxc/bench` command-line program (`sdxc-bench`): weigh an entry or sample
+ * HTTP latency against a running URL. Exit codes: 0 done, 1 budget or request
+ * failure, 2 usage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

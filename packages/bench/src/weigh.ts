@@ -1,22 +1,19 @@
 /**
- * Bundles an entry the way an app would and weighs the minified and gzipped
- * output, so a package can hold a size budget in CI rather than remembering one.
+ * Bundles an entry the way a browser app would and weighs the minified and
+ * gzipped output, so a package can hold a size budget in CI rather than
+ * remembering one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
 
 import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
+import * as esbuild from "esbuild";
 
 import { WeightError } from "./weight-error.js";
-
-/** Bundling runs in a Bun child process, since the test runner itself is Node. */
-const run = promisify(execFile);
 
 /** What one built entry point weighs, in bytes. */
 export interface Weight {
@@ -26,7 +23,7 @@ export interface Weight {
 
 /** A gzipped (and optional minified) ceiling for {@link assertWeight}. */
 export interface WeightBudget {
-	/** Maximum gzipped UTF-8 bytes after `bun build --minify`. */
+	/** Maximum gzipped UTF-8 bytes after a minified browser bundle. */
 	maxGzipped: number;
 	/** Optional minified ceiling; gzipped remains the first-class budget. */
 	maxMinified?: number;
@@ -34,11 +31,11 @@ export interface WeightBudget {
 
 /**
  * Bundles and minifies `entry` and weighs the result. The build targets the
- * browser, the harshest reader: nothing stays external, so the number covers
- * every dependency the entry actually pulls in.
+ * browser with every dependency inlined, so the number covers what a consumer
+ * actually pulls in.
  *
  * @param entry - Path to the entry module.
- * @param root - Directory the build runs from; defaults to the process cwd.
+ * @param root - Directory module resolution starts from; defaults to the process cwd.
  * @returns The output's minified and gzipped size, or a {@link WeightError}.
  */
 export async function weigh(
@@ -46,23 +43,33 @@ export async function weigh(
 	root: string = process.cwd(),
 ): Promise<Result<Weight, WeightError>> {
 	try {
-		let built = await run("bun", ["build", entry, "--minify", "--target=browser", "--format=esm"], {
-			cwd: root,
-			maxBuffer: 32 * 1024 * 1024,
+		let built = await esbuild.build({
+			absWorkingDir: root,
+			entryPoints: [entry],
+			bundle: true,
+			minify: true,
+			write: false,
+			format: "esm",
+			platform: "browser",
+			logLevel: "silent",
 		});
-		let code = built.stdout;
+		let file = built.outputFiles[0];
+		if (file === undefined) {
+			return failure(WeightError.build(entry, "esbuild produced no output"));
+		}
+		let code = file.text;
 		return success({
 			minified: Buffer.byteLength(code, "utf8"),
 			gzipped: gzipSync(code).byteLength,
 		});
 	} catch (cause) {
-		let detail = buildDetail(cause);
-		return failure(WeightError.build(entry, detail));
+		return failure(WeightError.build(entry, buildDetail(cause)));
 	}
 }
 
 /**
- * Holds `weight` to a gzipped (and optional minified) budget.
+ * Holds `weight` to a gzipped (and optional minified) budget for callers that
+ * answer a `Result` (the CLI's `--max-gzipped` path).
  *
  * @param weight - Measured weight from {@link weigh}.
  * @param budget - Ceilings in bytes.
@@ -89,12 +96,19 @@ export function assertWeight(
 	return success(weight);
 }
 
-/** stderr from an `execFile` failure, falling back to the error message. */
+/** Message from an esbuild failure, falling back to a generic string. */
 function buildDetail(cause: unknown): string {
-	if (cause !== null && typeof cause === "object" && "stderr" in cause) {
-		let stderr = (cause as { stderr: unknown }).stderr;
-		if (typeof stderr === "string" && stderr.trim() !== "") return stderr.trim();
-		if (Buffer.isBuffer(stderr) && stderr.byteLength > 0) return stderr.toString("utf8").trim();
+	if (cause !== null && typeof cause === "object" && "errors" in cause) {
+		let errors = (cause as { errors: unknown }).errors;
+		if (Array.isArray(errors) && errors.length > 0) {
+			return errors
+				.map((error) =>
+					typeof error === "object" && error !== null && "text" in error
+						? String((error as { text: unknown }).text)
+						: String(error),
+				)
+				.join("\n");
+		}
 	}
 	if (cause instanceof Error) return cause.message;
 	return String(cause);
