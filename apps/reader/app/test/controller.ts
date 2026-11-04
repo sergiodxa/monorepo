@@ -12,8 +12,10 @@ import type { Middleware } from "remix/router";
 import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
@@ -25,7 +27,7 @@ import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
 import { flags } from "~/app/initializers/flags";
 import { documentRendering } from "~/app/test/rendering";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /**
@@ -91,6 +93,10 @@ export function createTestRouter(viewer: Viewer | null): AppRouter {
 			 * Every page is served under the app's own policy here too, so a test that renders a
 			 * document is also a test of what that document is allowed to load.
 			 */
+			csp({
+				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				filter: () => true,
+			}) as Middleware,
 			securityHeaders(SECURITY_POLICY) as Middleware,
 			/**
 			 * The app's own renderer, so each frame on a page is resolved through the router the

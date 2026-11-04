@@ -8,14 +8,24 @@
  */
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
+import { csp } from "remix/middleware/csp";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 
-/** Answers `response` through a router carrying only the policy middleware. */
+/** Answers `response` through a router carrying the CSP and non-CSP policy middleware. */
 async function decorated(response: () => Response): Promise<Response> {
-	let router = createRouter({ middleware: [securityHeaders(SECURITY_POLICY)] });
+	let router = createRouter({
+		middleware: [
+			csp({
+				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				filter: () => true,
+			}),
+			securityHeaders(SECURITY_POLICY),
+		],
+	});
 	router.get("/", response);
 	return router.fetch("https://reader.test/");
 }
@@ -23,7 +33,9 @@ async function decorated(response: () => Response): Promise<Response> {
 describe("the security policy", () => {
 	test("writes the Content-Security-Policy the app decided on", async () => {
 		let response = await decorated(() => new Response("<p>hi</p>"));
+		let policy = response.headers.get("content-security-policy") ?? "";
 
+<<<<<<< HEAD
 		expect(response.headers.get("content-security-policy")).toBe(
 			[
 				"default-src 'none'",
@@ -40,6 +52,10 @@ describe("the security policy", () => {
 				"base-uri 'none'",
 				"object-src 'none'",
 			].join("; "),
+=======
+		expect(policy).toMatch(
+			/^default-src 'none'; script-src 'self' 'nonce-[A-Za-z0-9+/=]+'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'; object-src 'none'$/,
+>>>>>>> 1a21e4dbb (fix(reader): Use Remix csp() for CSP and nonces)
 		);
 	});
 
@@ -81,6 +97,7 @@ describe("the security policy", () => {
 		);
 		expect(response.headers.get("cross-origin-opener-policy")).toBe("same-origin");
 		expect(response.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+		expect(response.headers.get("x-frame-options")).toBe("DENY");
 		expect(response.headers.get("permissions-policy")).toBe(
 			"camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
 		);
@@ -93,12 +110,14 @@ describe("the security policy", () => {
 		expect(await response.text()).toBe("<p>hi</p>");
 	});
 
-	test("leaves a response that declared its own policy alone", async () => {
+	test("preserves a response's own CSP as a separate policy Remix appends beside", async () => {
 		let response = await decorated(
 			() => new Response("<p>hi</p>", { headers: { "content-security-policy": "sandbox" } }),
 		);
 
-		expect(response.headers.get("content-security-policy")).toBe("sandbox");
+		/** Remix appends; `Headers#get` joins multiple values with ", ". */
+		expect(response.headers.get("content-security-policy")).toContain("sandbox");
+		expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
 		expect(response.headers.get("referrer-policy")).toBe("no-referrer");
 	});
 

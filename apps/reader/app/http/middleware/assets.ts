@@ -8,23 +8,20 @@
  */
 
 import { assets } from "@sdxc/assets-middleware";
-import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
+import { getCspNonce } from "remix/middleware/csp";
 
 import { isFrameRequest } from "~/app/http/frames";
 import { assetResolver } from "~/app/initializers/assets";
 
 /**
- * Resolves the document's assets. It goes after `securityHeaders()`, whose nonce it reads; a
- * fragment renders no shell, so a frame request carries none, and a chain without the security
- * headers, as in a test router, carries none either.
+ * Resolves the document's assets. It goes after Remix's `csp()`, whose nonce it reads; a
+ * fragment renders no shell, so a frame request carries none, and a chain without CSP, as in a
+ * test router that skips it, carries none either.
  */
 export const documentShellAssets = assets(assetResolver, {
 	stylesheets: "resources/layouts/document.tsx",
 	script: "bootstrap/browser.ts",
-	nonce: (ctx) =>
-		isFrameRequest(ctx.request) || !ctx.has(SecurityHeadersKey)
-			? undefined
-			: ctx.get(SecurityHeadersKey)?.nonce,
+	nonce: (ctx) => (isFrameRequest(ctx.request) ? undefined : getCspNonce(ctx)),
 });
 
 export default documentShellAssets;
