@@ -33,6 +33,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
+		"@pitlane/assets": "0.1.0",
 		"@sdxc/bench": "workspace:*",
 		"@sdxc/ci": "workspace:*",
 		"@sdxc/cli": "workspace:*",
