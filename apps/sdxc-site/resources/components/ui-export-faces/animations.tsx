@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
 import { raw } from "@sdxc/u/general";
-import { vstack } from "@sdxc/u/layout";
+import { hstack, vstack } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is, m, maxIs, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
@@ -132,53 +132,59 @@ function EasingsFace(_handle: Handle<EasingsFace.Props>) {
 				{curves.map((curve) => (
 					<div
 						key={curve.name}
-						mix={[
-							raw({
-								position: "relative",
-								blockSize: "0.9rem",
-								borderRadius: "9999px",
-								backgroundColor: "color-mix(in oklch, CanvasText 7%, transparent)",
-							}),
-						]}
+						mix={[hstack({ gap: 2, align: "center" }), raw({ minBlockSize: "0.85rem" })]}
 					>
 						<span
 							mix={[
 								font("mono"),
-								text("xs"),
 								raw({
-									position: "absolute",
-									insetBlockStart: "-0.95rem",
-									insetInlineStart: "0",
-									opacity: "0.55",
+									inlineSize: "4.6rem",
+									flexShrink: "0",
+									opacity: "0.7",
 									fontSize: "0.55rem",
+									lineHeight: "1",
+									color: "var(--ui-neutral-emphasis, CanvasText)",
 								}),
 							]}
 						>
 							{curve.name}
 						</span>
-						<span
+						<div
 							mix={[
-								keyframes("ui-export-easing-travel", {
-									from: { insetInlineStart: "0.15rem" },
-									to: { insetInlineStart: "calc(100% - 0.85rem)" },
-								}),
 								raw({
-									position: "absolute",
-									insetBlockStart: "50%",
-									insetInlineStart: "0.15rem",
-									translate: "0 -50%",
-									inlineSize: "0.7rem",
-									blockSize: "0.7rem",
+									position: "relative",
+									flex: "1",
+									minInlineSize: "0",
+									blockSize: "0.45rem",
 									borderRadius: "9999px",
-									backgroundColor: "var(--ui-brand-fg, CanvasText)",
-									animationName: "ui-export-easing-travel",
-									animationDuration: "1.6s",
-									animationTimingFunction: curve.easing,
-									animationIterationCount: "infinite",
-									animationDirection: "alternate",
+									backgroundColor: "color-mix(in oklch, CanvasText 8%, transparent)",
 								}),
 							]}
-						/>
+						>
+							<span
+								mix={[
+									keyframes("ui-export-easing-travel", {
+										from: { insetInlineStart: "0.05rem" },
+										to: { insetInlineStart: "calc(100% - 0.5rem)" },
+									}),
+									raw({
+										position: "absolute",
+										insetBlockStart: "50%",
+										insetInlineStart: "0.05rem",
+										translate: "0 -50%",
+										inlineSize: "0.45rem",
+										blockSize: "0.45rem",
+										borderRadius: "9999px",
+										backgroundColor: "var(--ui-brand-fg, CanvasText)",
+										animationName: "ui-export-easing-travel",
+										animationDuration: "1.6s",
+										animationTimingFunction: curve.easing,
+										animationIterationCount: "infinite",
+										animationDirection: "alternate",
+									}),
+								]}
+							/>
+						</div>
 					</div>
 				))}
 			</div>
