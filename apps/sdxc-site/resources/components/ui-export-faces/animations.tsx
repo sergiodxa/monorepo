@@ -23,7 +23,6 @@ import {
 	scrollShadow,
 	shimmer,
 	spin,
-	textShimmer,
 	viewReveal,
 } from "@sdxc/ui/animations";
 import { entrance } from "@sdxc/ui/landing";
@@ -42,67 +41,76 @@ const DEMO_SURFACE = raw({
 	color: "var(--ui-brand-fg, CanvasText)",
 });
 
+/**
+ * Catalogue durations are the real token ratios (150 : 200 : 300) stretched so
+ * the eye can tell them apart — every bar fills the same track.
+ */
+const DURATION_STEPS = [
+	{ name: "fast", ms: "150ms", play: "0.75s" },
+	{ name: "normal", ms: "200ms", play: "1s" },
+	{ name: "slow", ms: "300ms", play: "1.5s" },
+] as const;
+
 namespace DurationsFace {
 	export interface Props {}
 }
 
-/** Three duration bars whose fill widths mirror `durations.fast|normal|slow`. */
+/** Three full-width bars that fill at fast / normal / slow speeds. */
 function DurationsFace(_handle: Handle<DurationsFace.Props>) {
-	return () => {
-		let steps = [
-			{ name: "fast", width: "35%", duration: "150ms" },
-			{ name: "normal", width: "55%", duration: "200ms" },
-			{ name: "slow", width: "80%", duration: "300ms" },
-		] as const;
-
-		return (
-			<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("11rem")]}>
-				{steps.map((step) => (
-					<div key={step.name} mix={[vstack({ gap: 1, align: "stretch" })]}>
-						<span
-							mix={[
-								font("mono"),
-								text("xs"),
-								raw({ color: "var(--ui-neutral-fg)", opacity: "0.6" }),
-							]}
-						>
-							{step.name}
-						</span>
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("11rem")]}>
+			{DURATION_STEPS.map((step) => (
+				<div key={step.name} mix={[vstack({ gap: 1, align: "stretch" })]}>
+					<span
+						mix={[
+							font("mono"),
+							text("xs"),
+							raw({
+								color: "var(--ui-neutral-fg)",
+								opacity: "0.7",
+								display: "flex",
+								justifyContent: "space-between",
+								gap: "0.5rem",
+							}),
+						]}
+					>
+						<span>{step.name}</span>
+						<span>{step.ms}</span>
+					</span>
+					<div
+						mix={[
+							bs("0.45rem"),
+							raw({
+								borderRadius: "9999px",
+								backgroundColor: "color-mix(in oklch, CanvasText 8%, transparent)",
+								overflow: "hidden",
+							}),
+						]}
+					>
 						<div
 							mix={[
-								bs("0.45rem"),
+								bs("100%"),
+								keyframes("ui-export-duration-fill", {
+									"0%": { inlineSize: "0%" },
+									"100%": { inlineSize: "100%" },
+								}),
 								raw({
-									borderRadius: "9999px",
-									backgroundColor: "color-mix(in oklch, CanvasText 8%, transparent)",
-									overflow: "hidden",
+									inlineSize: "0%",
+									borderRadius: "inherit",
+									backgroundColor: "var(--ui-brand-fg, CanvasText)",
+									animationName: "ui-export-duration-fill",
+									animationDuration: step.play,
+									animationTimingFunction: "linear",
+									animationIterationCount: "infinite",
+									animationDirection: "alternate",
 								}),
 							]}
-						>
-							<div
-								mix={[
-									bs("100%"),
-									keyframes("ui-export-duration-fill", {
-										from: { inlineSize: "0%" },
-										to: { inlineSize: "100%" },
-									}),
-									raw({
-										inlineSize: step.width,
-										borderRadius: "inherit",
-										backgroundColor: "var(--ui-brand-fg, CanvasText)",
-										animationName: "ui-export-duration-fill",
-										animationDuration: step.duration,
-										animationTimingFunction: "linear",
-										animationIterationCount: "infinite",
-										animationDirection: "alternate",
-									}),
-								]}
-							/>
-						</div>
+						/>
 					</div>
-				))}
-			</div>
-		);
-	};
+				</div>
+			))}
+		</div>
+	);
 }
 
 namespace EasingsFace {
@@ -133,6 +141,21 @@ function EasingsFace(_handle: Handle<EasingsFace.Props>) {
 							}),
 						]}
 					>
+						<span
+							mix={[
+								font("mono"),
+								text("xs"),
+								raw({
+									position: "absolute",
+									insetBlockStart: "-0.95rem",
+									insetInlineStart: "0",
+									opacity: "0.55",
+									fontSize: "0.55rem",
+								}),
+							]}
+						>
+							{curve.name}
+						</span>
 						<span
 							mix={[
 								keyframes("ui-export-easing-travel", {
@@ -287,6 +310,46 @@ function ScrollLines(handle: Handle<ScrollLines.Props>) {
 	};
 }
 
+namespace TextShimmerFace {
+	export interface Props {}
+}
+
+/**
+ * Catalogue stand-in for `textShimmer`: the real mixin paints glyphs with a
+ * translucent rest tone that reads as vanished on this stage, so the tile
+ * keeps opaque type and sweeps a highlight across it instead.
+ */
+function TextShimmerFace(_handle: Handle<TextShimmerFace.Props>) {
+	return () => (
+		<span
+			mix={[
+				font("mono"),
+				text("sm"),
+				weight("semibold"),
+				keyframes("ui-export-text-shimmer", {
+					"0%": { backgroundPosition: "100% 0" },
+					"100%": { backgroundPosition: "-100% 0" },
+				}),
+				raw({
+					color: "transparent",
+					backgroundImage:
+						"linear-gradient(90deg, color-mix(in oklch, var(--ui-brand-fg, CanvasText) 55%, transparent) 0%, color-mix(in oklch, var(--ui-brand-fg, CanvasText) 55%, transparent) 35%, var(--ui-brand-fg, CanvasText) 50%, color-mix(in oklch, var(--ui-brand-fg, CanvasText) 55%, transparent) 65%, color-mix(in oklch, var(--ui-brand-fg, CanvasText) 55%, transparent) 100%)",
+					backgroundSize: "200% 100%",
+					backgroundClip: "text",
+					WebkitBackgroundClip: "text",
+					animationName: "ui-export-text-shimmer",
+					animationDuration: "2s",
+					animationTimingFunction: "linear",
+					animationIterationCount: "infinite",
+					whiteSpace: "nowrap",
+				}),
+			]}
+		>
+			Generating…
+		</span>
+	);
+}
+
 /** Renders the live miniature for one animation export. */
 export default function AnimationFace(handle: Handle<AnimationFace.Props>) {
 	return () => {
@@ -375,18 +438,7 @@ export default function AnimationFace(handle: Handle<AnimationFace.Props>) {
 				);
 				break;
 			case "textShimmer":
-				body = (
-					<span
-						mix={[
-							font("mono"),
-							text("sm"),
-							weight("semibold"),
-							textShimmer({ color: "var(--ui-brand-fg, CanvasText)" }),
-						]}
-					>
-						Generating…
-					</span>
-				);
+				body = <TextShimmerFace />;
 				break;
 			case "entrance":
 				body = (
