@@ -90,7 +90,7 @@ Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on 
 | `--push`              | After a green run, push the tested commit to its upstream branch, then sign off                                                       |
 | `--no-signoff`        | Make ci.signoff a plain success that posts nothing                                                                                    |
 | `--no-cache`          | Run every step, ignoring passes stored for unchanged inputs                                                                           |
-| `--concurrency <n>`   | Most steps running at once; the machine's available parallelism by default                                                            |
+| `--concurrency <n>`   | Concurrency slots running steps share, each holding its weight (1 by default); the machine's available parallelism by default         |
 | `--memory <size>`     | RAM budget for step memory reservations (2GB, 512MB); three quarters of total RAM by default                                          |
 | `--worktree`          | Run in a temporary detached worktree of HEAD so a dirty checkout can still sign off                                                   |
 | `--watch`             | Re-run when tracked files change; unchanged cached steps replay; never signs off or pushes                                            |
