@@ -8,8 +8,6 @@
 
 import type { Handle } from "remix/component";
 
-<<<<<<< HEAD
-import { LayoutGridIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -20,17 +18,6 @@ import { bs, m, maxIs, minBs, p } from "@sdxc/u/size";
 import { font, leading, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { LinkButton } from "@sdxc/ui";
 import { InstallCommand } from "@sdxc/ui/docs";
-=======
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { raw } from "sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, hstack, repeat, vstack } from "sdxc/u/layout";
-import { clip, overflow } from "sdxc/u/overflow";
-import { media } from "sdxc/u/responsive";
-import { bs, m, maxIs, minBs, p } from "sdxc/u/size";
-import { font, leading, text, textTransform, tracking, weight } from "sdxc/u/typography";
-import { LinkButton } from "sdxc/ui";
->>>>>>> 221eca1c3 (fix(sdxc-site): Remove the Browse components CTA from /api/ui)
 
 import {
 	PACKAGE_MANAGER_KEY,
@@ -58,15 +45,10 @@ namespace UiPackageHero {
 		name: string;
 		/** One-line pitch for the package, drawn under the title. */
 		description: string;
-<<<<<<< HEAD
-		/** How many components the gallery lists. */
-		componentCount: number;
 		/** Specifiers the install strip offers, peers included. */
 		packages: string[];
 		/** The package manager the cookie last remembered. */
 		manager: string | undefined;
-=======
->>>>>>> 221eca1c3 (fix(sdxc-site): Remove the Browse components CTA from /api/ui)
 		/** Where the Open menu and its markdown twin point. */
 		markdownHref: string;
 		markdownUrl: string;
@@ -77,9 +59,7 @@ namespace UiPackageHero {
 /** Renders the landing pitch, install strip and featured component faces. */
 export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 	return () => {
-<<<<<<< HEAD
 		let {
-			componentCount,
 			description,
 			manager,
 			markdownHref,
@@ -88,9 +68,6 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 			packages: installPackages,
 			sourceUrl,
 		} = handle.props;
-=======
-		let { description, markdownHref, markdownUrl, name, sourceUrl } = handle.props;
->>>>>>> 221eca1c3 (fix(sdxc-site): Remove the Browse components CTA from /api/ui)
 
 		return (
 			<header mix={[vstack({ gap: 10, align: "stretch" })]}>
