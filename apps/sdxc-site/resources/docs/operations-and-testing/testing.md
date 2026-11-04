@@ -268,6 +268,10 @@ writes one.
 
 - [Test your app](/docs/operations-and-testing/test-your-app) — the tests `sdxc make` writes
   and the helpers in `app/test/`.
+- [Hold a package to a size budget](/docs/operations-and-testing/bundle-size-budgets) —
+  gzipped entry weight with `@sdxc/bench`.
+- [Sample HTTP latency against a running app](/docs/operations-and-testing/http-latency-budgets)
+  — p95 / p99 gates against a URL that is already up.
 - [Write executable specs](/docs/operations-and-testing/executable-specs) — check the running
   app from the outside, the way a client meets it.
 - [Wire the router](/docs/building-remix-apps/wire-the-router) — the middleware that publishes

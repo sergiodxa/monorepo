@@ -82,6 +82,7 @@ The step fails when a policy is missing, and the JSON report is there to read.
 
 | Package                                           | Command                     | What it does                                                            |
 | ------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| [`@sdxc/bench`](/api/bench)                       | `sdxc pkg bench`            | Weigh a package entry, or sample HTTP latency against a running URL     |
 | [`@sdxc/ci`](/api/ci)                             | `sdxc pkg ci`               | Run a CI script, sign a green commit off on GitHub, verify a signoff    |
 | [`@sdxc/cron`](/api/cron)                         | `sdxc pkg cron`             | Next occurrences of a schedule, a plain-English description, validation |
 | [`@sdxc/crypto`](/api/crypto)                     | `sdxc pkg crypto`           | Random tokens, hashes, HMACs, TOTP codes, scrypt password hashes        |

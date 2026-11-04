@@ -122,14 +122,16 @@ describes, and every package missing here is listed on the [API reference](/api)
 
 ## Operate and test
 
-| I need to…                                         | Packages                                                                                                                | Guide                                                                     |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| log one wide event per request and trace into jobs | [`@sdxc/logger`](/api/logger), [`@sdxc/trace-context`](/api/trace-context), [`@sdxc/server-timing`](/api/server-timing) | [Logs, traces and timings](/docs/operations-and-testing/observability)    |
-| answer `GET /health` for monitors                  | [`@sdxc/health`](/api/health)                                                                                           | [Dependency health checks](/docs/operations-and-testing/health-checks)    |
-| build a command line                               | [`@sdxc/cli`](/api/cli)                                                                                                 | [Build a command line](/docs/operations-and-testing/build-a-command-line) |
-| test against Cloudflare bindings in memory         | [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks)                                                                       | [Test Workers apps](/docs/operations-and-testing/testing)                 |
-| generate believable, repeatable test data          | [`@sdxc/sample`](/api/sample), [`@sdxc/random`](/api/random)                                                            | [Generate believable test data](/docs/operations-and-testing/test-data)   |
-| start, generate and upgrade a whole app            | [`@sdxc/kit`](/api/kit)                                                                                                 | [The sdxc command](/docs/getting-started/the-sdxc-command)                |
+| I need to…                                         | Packages                                                                                                                | Guide                                                                                          |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| log one wide event per request and trace into jobs | [`@sdxc/logger`](/api/logger), [`@sdxc/trace-context`](/api/trace-context), [`@sdxc/server-timing`](/api/server-timing) | [Logs, traces and timings](/docs/operations-and-testing/observability)                         |
+| answer `GET /health` for monitors                  | [`@sdxc/health`](/api/health)                                                                                           | [Dependency health checks](/docs/operations-and-testing/health-checks)                         |
+| hold a package entry to a gzipped size budget      | [`@sdxc/bench`](/api/bench)                                                                                             | [Hold a package to a size budget](/docs/operations-and-testing/bundle-size-budgets)            |
+| sample HTTP latency against a running app          | [`@sdxc/bench`](/api/bench)                                                                                             | [Sample HTTP latency against a running app](/docs/operations-and-testing/http-latency-budgets) |
+| build a command line                               | [`@sdxc/cli`](/api/cli)                                                                                                 | [Build a command line](/docs/operations-and-testing/build-a-command-line)                      |
+| test against Cloudflare bindings in memory         | [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks)                                                                       | [Test Workers apps](/docs/operations-and-testing/testing)                                      |
+| generate believable, repeatable test data          | [`@sdxc/sample`](/api/sample), [`@sdxc/random`](/api/random)                                                            | [Generate believable test data](/docs/operations-and-testing/test-data)                        |
+| start, generate and upgrade a whole app            | [`@sdxc/kit`](/api/kit)                                                                                                 | [The sdxc command](/docs/getting-started/the-sdxc-command)                                     |
 
 ## Where to go next
 
