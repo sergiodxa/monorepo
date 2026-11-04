@@ -74,12 +74,6 @@ sdxc pkg bench weigh ./src/index.ts --max-gzipped 25600 --json
 [Use a package from the terminal](/docs/operations-and-testing/package-command-lines) covers
 what every package command line shares.
 
-## Where this fits
-
-Size budgets belong on **packages** and their entry points. They are separate from
-`sdxc doctor`'s `module-size` check, which counts source lines in an app. Doctor leaves
-bundle weight alone on purpose.
-
 ## Where to go next
 
 - [Sample HTTP latency against a running app](/docs/operations-and-testing/http-latency-budgets)
