@@ -60,7 +60,7 @@ as `app/models/reports.ts` and `app/models/team-digests.ts`.
 
 Indexable pages pass metadata through `DocumentLayout`'s `seo` prop, built with the
 `SEO` instance in `app/initializers/seo.ts` (`@sdxc/seo`): canonical URL, Open Graph
-and Twitter card, and schema.org JSON-LD. The home page describes the organization,
+and a Twitter card that names `@sergiodxa` as site and creator, and schema.org JSON-LD. The home page describes the organization,
 the site (its search box lands on `/docs/search?q=`), the usage-based offer and the
 FAQ the page shows. Product pages describe that page's features. Docs and the legal
 pages are articles; a customer's status page is a `WebPage` and does not claim the

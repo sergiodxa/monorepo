@@ -45,7 +45,7 @@ import {
 	formatUsd,
 	INCLUDED_PINGS,
 } from "~/config/pricing";
-import { SITE_OWNER, SITE_OWNER_PROFILES } from "~/config/site";
+import { SITE_OWNER, SITE_OWNER_PROFILES, SITE_OWNER_X_HANDLE } from "~/config/site";
 import routes from "~/routes/web";
 
 /**
@@ -214,6 +214,8 @@ describe("GET /", () => {
 				'<meta property="og:image:width" content="1200" />',
 				'<meta property="og:image:height" content="630" />',
 				'<meta name="twitter:card" content="summary_large_image" />',
+				`<meta name="twitter:site" content="${SITE_OWNER_X_HANDLE}" />`,
+				`<meta name="twitter:creator" content="${SITE_OWNER_X_HANDLE}" />`,
 				'<meta name="twitter:title" content="Uptime by Sergio Xalambrí" />',
 				`<meta name="twitter:description" content="${description}" />`,
 				`<meta name="twitter:image" content="${card}" />`,

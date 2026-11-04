@@ -19,8 +19,14 @@ export const SITE_OWNER = {
 } as const;
 
 /**
- * Profiles that resolve to {@link SITE_OWNER}, the personal site first. There is no
- * product X account, so these stay the person's and are not used as `twitter:site`.
+ * The X handle Twitter cards name as the site and the author. The same profile is the
+ * `rel="me"` link {@link SITE_OWNER_PROFILES} already lists.
+ */
+export const SITE_OWNER_X_HANDLE = "@sergiodxa";
+
+/**
+ * Profiles that resolve to {@link SITE_OWNER}, the personal site first. The X entry is
+ * the profile {@link SITE_OWNER_X_HANDLE} names.
  */
 export const SITE_OWNER_PROFILES = [
 	SITE_OWNER.url,
