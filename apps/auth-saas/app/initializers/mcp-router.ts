@@ -10,16 +10,21 @@
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp } from "remix/middleware/csp";
 import { createRouter } from "remix/router";
 
 import notFound from "~/app/http/controllers/not-found";
 import { mcpAuth } from "~/app/http/middleware/mcp-auth";
 import { mcpWellKnown } from "~/app/http/middleware/mcp-well-known";
 import { logger } from "~/app/initializers/logger";
-import { MANAGEMENT_SECURITY_POLICY } from "~/config/security-policy";
+import {
+	MANAGEMENT_CONTENT_SECURITY_POLICY,
+	MANAGEMENT_SECURITY_POLICY,
+} from "~/config/security-policy";
 import routes from "~/routes/mcp";
 
 /**
@@ -36,6 +41,10 @@ export const mcpRouter = createRouter({
 		getClientIP(),
 		trace(),
 		asyncContext(),
+		csp({
+			policy: ({ nonce }) => remixCsp(MANAGEMENT_CONTENT_SECURITY_POLICY, nonce),
+			filter: () => true,
+		}),
 		securityHeaders(MANAGEMENT_SECURITY_POLICY),
 		mcpWellKnown(`https://${env.PLATFORM_DOMAIN}`),
 	],

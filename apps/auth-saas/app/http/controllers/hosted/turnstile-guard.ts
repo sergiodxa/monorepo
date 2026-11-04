@@ -11,7 +11,7 @@ import type { CaptchaOutcome } from "@sdxc/captcha/middleware";
 import type { RequestContext } from "remix/router";
 
 import { isFailure } from "@sdxc/result";
-import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
+import { getCspNonce } from "remix/middleware/csp";
 
 import type { AttackSignalEnv } from "~/app/services/attack-signals";
 
@@ -83,11 +83,11 @@ export function passesConditionalTurnstileChallenge(
 
 /**
  * The response's CSP nonce for the widget's loader script, which the policy allows by nonce;
- * absent on a router without `securityHeaders()`, where no policy restricts scripts.
+ * absent on a router without Remix's `csp()`, where no policy restricts scripts.
  *
  * @param ctx - The request context.
- * @returns The nonce, or `undefined` when no security headers are installed.
+ * @returns The nonce, or `undefined` when no CSP middleware is installed.
  */
 export function turnstileNonce(ctx: RequestContext): string | undefined {
-	return ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined;
+	return getCspNonce(ctx);
 }

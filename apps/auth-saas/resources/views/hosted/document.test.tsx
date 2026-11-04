@@ -9,19 +9,27 @@
 import type { RemixNode } from "remix/component";
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
+import { csp } from "remix/middleware/csp";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
-import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
+import { TENANT_CONTENT_SECURITY_POLICY, TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import { HostedDocument } from "~/resources/views/hosted/document";
 import { PasskeySignInButton } from "~/resources/views/hosted/passkey-button";
 
 /** Renders a hosted page under the tenant policy, answering its HTML and the CSP's nonce. */
 async function renderPage(content: RemixNode = <p>Hosted screen</p>) {
 	let router = createRouter({
-		middleware: [securityHeaders(TENANT_SECURITY_POLICY), ...hostedDocumentMiddleware()],
+		middleware: [
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
+			}),
+			securityHeaders(TENANT_SECURITY_POLICY),
+			...hostedDocumentMiddleware(),
+		],
 	});
 
 	router.get("/", (ctx) =>
