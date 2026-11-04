@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -50,10 +50,12 @@ async function frozenInstallCommand(root: string): Promise<string[]> {
 /**
  * Creates a detached worktree of HEAD under a temp directory, installs dependencies there with
  * a frozen lockfile so workspace packages resolve inside the worktree, and returns a cleanup
- * that removes the worktree even when the install failed.
+ * that removes the worktree even when the install failed. Its root is the canonical path (macOS
+ * puts the temp directory under `/var`, a symlink to `/private/var`), so a script's path filters
+ * match the paths tools resolve inside it.
  */
 export async function prepareWorktree(root: string): Promise<Result<PreparedWorktree, Error>> {
-	let directory = await mkdtemp(join(tmpdir(), "sdxc-ci-wt-"));
+	let directory = await realpath(await mkdtemp(join(tmpdir(), "sdxc-ci-wt-")));
 	let added = await git(root, ["worktree", "add", "--detach", directory, "HEAD"]);
 	if (isFailure(added)) {
 		await rm(directory, { recursive: true, force: true });
