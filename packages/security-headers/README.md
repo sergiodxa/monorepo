@@ -1,13 +1,12 @@
 # @sdxc/security-headers
 
-Typed CSP, Permissions-Policy and security response headers, with middleware.
+Typed Permissions-Policy and security response headers, with CSP helpers for Remix.
 
-Write a document's `Content-Security-Policy`, `Strict-Transport-Security`, `Referrer-Policy`,
-`Permissions-Policy`, cross-origin isolation headers and `X-Content-Type-Options` as one typed
-object, review it in one place, and let the middleware send it with a per-response CSP nonce.
-Serialization fails toward the stricter policy: a CSP source that would break out of its
-directive is dropped, an emptied source list becomes `'none'`, and a Permissions-Policy origin
-the header cannot carry denies its feature.
+Write a document's `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`,
+cross-origin isolation headers and `X-Content-Type-Options` as one typed object, and let the
+middleware send them on every response. Content-Security-Policy and its per-request nonce come
+from Remix's [`csp()`](https://www.npmjs.com/package/remix) middleware; this package still
+parses and stringifies CSP for audits, the CLI, and `remixCsp()` factories.
 
 ## Installation
 
@@ -15,40 +14,51 @@ the header cannot carry denies its feature.
 npm add @sdxc/security-headers
 ```
 
-The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router, and parsers
-return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values.
+The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router (3.2+ for
+`csp()`), and parsers return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result)
+values.
 
 ## Usage
 
-### Install the middleware
+### Install Remix CSP and this middleware
 
 ```typescript
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
 
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { createRouter } from "remix/router";
 
+let contentSecurityPolicy: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: ["self", "nonce"],
+	styleSrc: ["self", "unsafe-inline"],
+	frameAncestors: ["none"],
+};
+
 let policy: SecurityHeaders.Policy = {
-	contentSecurityPolicy: {
-		defaultSrc: ["self"],
-		scriptSrc: ["self", "nonce"],
-		styleSrc: ["self", "unsafe-inline"],
-		frameAncestors: ["none"],
-	},
 	strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: true },
 	referrerPolicy: "strict-origin-when-cross-origin",
 	crossOriginOpenerPolicy: "same-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: { camera: [], microphone: [], geolocation: [] },
 };
 
-let router = createRouter({ middleware: [securityHeaders(policy)] });
+let router = createRouter({
+	middleware: [
+		csp({
+			policy: ({ nonce }) => remixCsp(contentSecurityPolicy, nonce),
+		}),
+		securityHeaders(policy),
+	],
+});
 ```
 
-Keywords are written unquoted and quoted on output. An `https:` response that read the nonce is
-sent with:
+`remixCsp` quotes keywords and substitutes the request nonce. An `https:` HTML response is sent
+with Remix's CSP plus:
 
 ```text
-content-security-policy: default-src 'self'; script-src 'self' 'nonce-3q2+7w…=='; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'
 x-frame-options: DENY
 strict-transport-security: max-age=63072000; includeSubDomains; preload
 referrer-policy: strict-origin-when-cross-origin
@@ -61,62 +71,57 @@ A header the response already set is kept as it is.
 
 ### Hand the nonce to the document
 
-With `@sdxc/assets-middleware`, `assets()` reads the nonce through its `nonce` option, and the
-document's import map gets it from `ctx.assets.nonce`:
+With `@sdxc/assets-middleware`, `assets()` reads the nonce through its `nonce` option from
+Remix's `getCspNonce`:
 
 ```typescript
+import { getCspNonce } from "remix/middleware/csp";
+
 createRouter({
 	middleware: [
+		csp({ policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce) }),
 		securityHeaders(SECURITY_POLICY),
 		assets(assetResolver, {
 			stylesheets: "resources/layouts/document.tsx",
 			script: "bootstrap/browser.ts",
-			nonce: (ctx) => ctx.securityHeaders.nonce,
+			nonce: (ctx) => getCspNonce(ctx),
 		}),
 		render({ assets: assetResolver }),
 	],
 });
 ```
 
-### Read the nonce in a handler
+### Patch CSP after Remix serialized it
 
-```tsx
-import { createAction } from "remix/router";
+Remix builds the CSP header before handlers run. For a route that must change directives after
+that (an import-map hash, a front-channel logout `frame-src`), install `cspPatch()` before
+`csp()` and call `patchCsp`:
 
-import { routes } from "./routes.ts";
+```typescript
+import { cspPatch, patchCsp } from "@sdxc/security-headers/csp-patch";
 
-export default createAction(routes.checkout, {
-	handler(ctx) {
-		let nonce = ctx.securityHeaders.nonce;
-		return ctx.render(
-			<html lang="en">
-				<body>
-					<form method="post" action="/callback" />
-					<script nonce={nonce}>{"document.forms[0].submit()"}</script>
-				</body>
-			</html>,
-		);
-	},
+createRouter({
+	middleware: [
+		cspPatch(),
+		csp({ reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce) }),
+		securityHeaders(SECURITY_POLICY),
+	],
 });
-```
 
-The nonce is generated on first read, and a response that never reads it has every `"nonce"`
-source removed. Read it while the response is built, in the handler or a component that renders
-synchronously: the headers are written when the chain resolves, so a read after an `await` in a
-streamed body leaves them without the nonce.
+// in a handler:
+patchCsp(ctx, { reportOnlyPolicy: { frameSrc: ["https://rp.example"] } });
+```
 
 ### Write headers without the middleware
 
 ```typescript
 import { apply } from "@sdxc/security-headers";
-import { generateNonce } from "@sdxc/security-headers/csp";
 
-let nonce = generateNonce();
 let headers = new Headers({ "content-type": "text/html" });
-apply(headers, policy, { url: new URL(request.url), nonce });
+apply(headers, policy, { url: new URL(request.url) });
 ```
 
-### Parse a header back
+### Parse a CSP header back
 
 ```typescript
 import { unwrap } from "@sdxc/result";
@@ -132,21 +137,11 @@ csp?.directives.frameSrc; // ["https://challenges.example.com"]
 bunx @sdxc/security-headers --help
 ```
 
-With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg security-headers …` runs the same command line, using the version your project installs.
-
-Fetch a page and grade Content-Security-Policy, Strict-Transport-Security,
-X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy and
-Cross-Origin-Opener-Policy as `ok`, `missing` or `weak`, with the reason for each weakness. A
-missing or weak header exits 1; `--json` prints `{ url, status, passed, findings }`.
+With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed, `sdxc pkg security-headers …`
+runs the same command line, using the version your project installs.
 
 ```sh
 bunx @sdxc/security-headers audit https://example.com --json
-```
-
-Read a Content-Security-Policy value, from the argument or stdin, into its directives; a value
-outside the CSP grammar exits 2 with its position.
-
-```sh
 bunx @sdxc/security-headers csp parse "default-src 'self'; script-src 'self' 'nonce-abc'" --json
 ```
 
@@ -154,125 +149,86 @@ bunx @sdxc/security-headers csp parse "default-src 'self'; script-src 'self' 'no
 
 ### `@sdxc/security-headers`
 
-#### `entries(policy: SecurityHeaders.Policy, options: SecurityHeaders.ApplyOptions): Array<[name, value]>`
+#### `entries(policy, options): Array<[name, value]>`
 
 Every header the policy produces, with lowercase names in a stable order. HSTS is written only
-when `options.url` is `https:`, `options.nonce` fills every `"nonce"` source in both CSP headers,
-and `nosniff` is written unless `noSniff` is `false`. `X-Frame-Options` comes from the enforced
-policy's `frameAncestors`: `DENY` for `["none"]` or `[]`, `SAMEORIGIN` for `["self"]`.
+when `options.url` is `https:`, and `nosniff` unless `noSniff` is `false`.
 
-#### `apply(headers: Headers, policy: SecurityHeaders.Policy, options: SecurityHeaders.ApplyOptions): void`
+#### `apply(headers, policy, options): void`
 
-Sets each entry the `Headers` does not already carry. When it already carries a
-`Content-Security-Policy`, no `X-Frame-Options` is derived.
+Sets each entry the `Headers` does not already carry.
 
-#### `override(policy: SecurityHeaders.Policy, patch: SecurityHeaders.Override): SecurityHeaders.Policy`
+#### `override(policy, patch): SecurityHeaders.Policy`
 
-A patched copy: a field set to `null` is removed, a CSP patch is merged directive by directive
-through `merge`, and any other value replaces the base's.
+A patched copy: a field set to `null` is removed, any other value replaces the base's.
 
-#### `stringifyStrictTransportSecurity(value: SecurityHeaders.StrictTransportSecurity): string`
+#### `stringifyStrictTransportSecurity(value): string`
 
 Writes `max-age` in whole seconds, then `includeSubDomains`, then `preload` only when `maxAge`
-is at least a year and `includeSubDomains` is set, as the preload lists require.
+is at least a year and `includeSubDomains` is set.
 
 ### `@sdxc/security-headers/csp`
 
-#### `stringify(directives: CSP.Directives, options?: CSP.StringifyOptions): string`
+#### `stringify(directives, options?): string`
 
-Writes one policy in the object's directive order. Keywords, `nonce-…` and `sha256-…` sources
-are quoted; hosts and schemes are written as-is. `"nonce"` becomes `'nonce-<options.nonce>'`, or
-is dropped without one.
+Writes one policy. Keywords and hashes are quoted; `"nonce"` becomes `'nonce-<options.nonce>'`.
 
-```typescript
-stringify({ scriptSrc: ["self", "nonce"], objectSrc: [] }, { nonce: "cmFuZG9t" });
-// "script-src 'self' 'nonce-cmFuZG9t'; object-src 'none'"
-```
+#### `parse(value): Result<CSP.Parsed[], CSPParseError>`
 
-#### `parse(value: string): Result<CSP.Parsed[], CSPParseError>`
+One `CSP.Parsed` per comma-joined policy.
 
-One `CSP.Parsed` per comma-joined policy, with names and keywords lowercased and unquoted. A
-repeated directive keeps its first value; the repeat and any directive outside the model land
-verbatim in `unknown`.
+#### `merge(base, override): CSP.Directives`
 
-#### `merge(base: CSP.Directives, override: CSP.Override): CSP.Directives`
-
-Replaces each directive the override names, removes those set to `null`, and keeps the base's
-order.
+Replaces each directive the override names, removes those set to `null`.
 
 #### `generateNonce(): string`
 
-16 random bytes as padded base64.
+16 random bytes as padded base64. Prefer Remix's `csp()` nonce for documents.
 
-#### `CSPParseError`
+### `@sdxc/security-headers/remix`
 
-The failure of `parse` for a character outside printable ASCII or an invalid directive name;
-`position` is the offset where parsing stopped.
+#### `remixCsp(directives, nonce): RemixCspDirectives`
+
+Quotes keywords and substitutes `"nonce"` for a Remix `csp()` policy factory return value.
+
+### `@sdxc/security-headers/csp-patch`
+
+#### `cspPatch(): Middleware`
+
+Rewrites Remix CSP headers using every `patchCsp` call. Install before `csp()`.
+
+#### `patchCsp(ctx, patch): void`
+
+Queues a merge into `Content-Security-Policy` and/or `Content-Security-Policy-Report-Only`, or
+`null` to remove that header.
 
 ### `@sdxc/security-headers/permissions-policy`
 
-#### `stringify(policy: PermissionsPolicy.Policy): Result<string, StructuredFieldStringifyError>`
+#### `stringify` / `parse`
 
-Writes `[]` as `()`, `"*"` as `*`, `self` and `src` as tokens and origins as strings. Feature
-names keep their header spelling (`browsing-topics`).
-
-```typescript
-stringify({ camera: [], fullscreen: "*", geolocation: ["self", "https://maps.example.com"] });
-// success('camera=(), fullscreen=*, geolocation=(self "https://maps.example.com")')
-```
-
-#### `parse(value: string): Result<PermissionsPolicy.Policy, StructuredFieldParseError>`
-
-Reads a header back, dropping parameters and members that are neither tokens nor strings.
+Permissions-Policy as an RFC 9651 dictionary.
 
 ### `@sdxc/security-headers/reports`
 
-#### `parseReports(request: Request): Promise<Result<CSPReport.Violation[], CSPReportParseError>>`
+#### `parseReports(request): Promise<Result<CSPReport.Violation[], CSPReportParseError>>`
 
-Reads a report POST sent as `application/reports+json` (other report types skipped),
-`application/csp-report`, or either one labelled `application/json`. Empty strings in a report
-become `null`.
-
-#### `CSPReportParseError`
-
-The failure for an unsupported media type, a body that is not JSON, or a legacy report naming no
-directive.
+Reads a CSP report POST (`application/reports+json`, `application/csp-report`, or JSON).
 
 ### `@sdxc/security-headers/audit`
 
-#### `audit(headers: Headers, url: URL): Audit.Finding[]`
+#### `audit(headers, url): Audit.Finding[]`
 
-One `{ header, status, value, notes }` per security header, `status` being `ok`, `missing` or
-`weak`. CSP is weak when every enforced policy leaves scripts unrestricted, allows
-`'unsafe-inline'` without a nonce or hash, `'unsafe-eval'`, any-host script sources, or plugins;
-HSTS when `max-age` is under 180 days or `url` is `http:`. `frame-ancestors` stands in for
-X-Frame-Options.
-
-```typescript
-let findings = audit(response.headers, new URL(response.url));
-findings.filter((finding) => finding.status !== "ok");
-```
+Grades CSP, HSTS, nosniff, framing, Referrer-Policy, Permissions-Policy and COOP on a response.
 
 ### `@sdxc/security-headers/middleware`
 
-#### `securityHeaders(policy: SecurityHeaders.Policy): Middleware`
+#### `securityHeaders(policy): Middleware`
 
-Publishes `ctx.securityHeaders` and applies its policy to the response the chain returns, through
-`apply`. A `101 Switching Protocols` response passes through untouched.
+Publishes `ctx.securityHeaders` and applies the non-CSP policy to the response.
 
-#### `securityHeadersOverride(patch: SecurityHeaders.Override): Middleware`
+#### `securityHeadersOverride(patch): Middleware`
 
-Route middleware that patches the policy for the routes it guards; it passes through when
-`securityHeaders` is not installed.
-
-#### `SecurityHeadersContext`
-
-The `ctx.securityHeaders` value: `nonce` (generated on first read), `policy` (what the response
-will be sent with) and `override(patch)` (patches this response's policy).
-
-#### `SecurityHeadersKey`
-
-The context key, for code that reads the state with `ctx.get`.
+Route middleware that patches the non-CSP policy for the routes it guards.
 
 ### Types
 
@@ -280,8 +236,6 @@ The context key, for code that reads the state with `ctx.get`.
 
 | Field                                 | Header                                     |
 | ------------------------------------- | ------------------------------------------ |
-| `contentSecurityPolicy`               | `Content-Security-Policy`                  |
-| `contentSecurityPolicyReportOnly`     | `Content-Security-Policy-Report-Only`      |
 | `strictTransportSecurity`             | `Strict-Transport-Security`                |
 | `referrerPolicy` (value or fallbacks) | `Referrer-Policy`                          |
 | `permissionsPolicy`                   | `Permissions-Policy`                       |
@@ -289,155 +243,14 @@ The context key, for code that reads the state with `ctx.get`.
 | `crossOriginEmbedderPolicy`           | `Cross-Origin-Embedder-Policy`             |
 | `crossOriginEmbedderPolicyReportOnly` | `Cross-Origin-Embedder-Policy-Report-Only` |
 | `crossOriginResourcePolicy`           | `Cross-Origin-Resource-Policy`             |
+| `xFrameOptions`                       | `X-Frame-Options`                          |
 | `noSniff` (default `true`)            | `X-Content-Type-Options`                   |
-| `reportingEndpoints` (name to URL)    | `Reporting-Endpoints`                      |
-
-#### `SecurityHeaders.*`
-
-`Override` is `Policy` with every field nullable and the CSP fields taking a `CSP.Override`.
-`ApplyOptions` is `{ url, nonce? }`, `StrictTransportSecurity` is
-`{ maxAge, includeSubDomains?, preload? }` and `ReferrerPolicy` the policy tokens. The `CSP` and
-`PermissionsPolicy` namespaces are re-exported from the main entry point too.
-
-#### `CSP.*`
-
-`Directives` holds source lists for the fetch directives (`defaultSrc`, `scriptSrc`,
-`scriptSrcElem`, `scriptSrcAttr`, `styleSrc`, `styleSrcElem`, `styleSrcAttr`, `imgSrc`, `fontSrc`,
-`connectSrc`, `mediaSrc`, `objectSrc`, `frameSrc`, `childSrc`, `workerSrc`, `manifestSrc`) and
-for `baseUri`, `formAction` and `frameAncestors`; `sandbox` takes `true` or tokens, `reportTo` an
-endpoint name, `reportUri` URLs, `upgradeInsecureRequests` `true`, `requireTrustedTypesFor`
-`["script"]` and `trustedTypes` policy names. `Keyword`, `Source`, `SourceList`, `SandboxToken`,
-`StringifyOptions`, `Override` and `Parsed` (`{ directives, unknown }`) type the rest.
-
-#### `PermissionsPolicy.*`
-
-`Policy` maps a feature name to an `Allowlist`: `[]`, `"*"`, or a list of `self`, `src` and
-origins.
-
-#### `CSPReport.Violation`
-
-`documentURL`, `blockedURL`, `effectiveDirective`, `disposition`, `sample`, `sourceFile` and
-`lineNumber`, read alike from both report formats.
-
-## Pattern: The Managed Import Map
-
-`remix/component` copies the nonce of the `<ImportMap>` script onto every import map its client
-runtime appends later, so a document with client entries renders it with the nonce; without
-it, a nonce-based `script-src` blocks the client-entry import map.
-
-```tsx
-import { ImportMap } from "remix/component/server";
-
-<head>
-	<ImportMap value={importMap} nonce={ctx.securityHeaders.nonce} />
-</head>;
-```
-
-## Pattern: A Route That Must Be Framed
-
-Loosen one route with `securityHeadersOverride`, or one response with
-`ctx.securityHeaders.override`. The derived `X-Frame-Options` disappears with the `'none'` it
-came from.
-
-```typescript
-import { securityHeadersOverride } from "@sdxc/security-headers/middleware";
-import { createAction } from "remix/router";
-
-import { routes } from "./routes.ts";
-
-export default createAction(routes.embed, {
-	middleware: [securityHeadersOverride({ contentSecurityPolicy: { frameAncestors: ["*"] } })],
-	handler(ctx) {
-		if (ctx.url.searchParams.has("download")) {
-			ctx.securityHeaders.override({ contentSecurityPolicy: null });
-		}
-		return new Response("<p>Embedded</p>", { headers: { "content-type": "text/html" } });
-	},
-});
-```
-
-## Pattern: Report-Only Rollout And A Report Route
-
-Ship new directives as Report-Only, collect violations, and move them to
-`contentSecurityPolicy` once the reports are quiet.
-
-```typescript
-import type { SecurityHeaders } from "@sdxc/security-headers";
-
-import { isFailure } from "@sdxc/result";
-import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { parseReports } from "@sdxc/security-headers/reports";
-import { createRouter } from "remix/router";
-
-import { recordViolation, routes } from "./routes.ts";
-
-let policy: SecurityHeaders.Policy = {
-	contentSecurityPolicyReportOnly: {
-		defaultSrc: ["self"],
-		reportTo: "csp",
-		reportUri: ["/reports/csp"],
-	},
-	reportingEndpoints: { csp: "/reports/csp" },
-};
-
-let router = createRouter({ middleware: [securityHeaders(policy)] });
-
-router.post(routes.reports.csp, async (ctx) => {
-	let reports = await parseReports(ctx.request);
-	if (isFailure(reports)) return new Response(null, { status: 400 });
-	for (let violation of reports.data) await recordViolation(violation);
-	return new Response(null, { status: 204 });
-});
-```
-
-`reportTo` reaches browsers with the Reporting API and `reportUri` the rest; `parseReports`
-reads both formats.
-
-## Pattern: A Variant Policy For Cached Pages
-
-A cached HTML response replays its nonce to every visitor. Derive a policy without `"nonce"`
-that allows fixed inline scripts by hash, and send it from the router behind the shared cache.
-
-```typescript
-import { override } from "@sdxc/security-headers";
-import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { createRouter } from "remix/router";
-
-import { policy } from "./policy.ts";
-
-let cachedPolicy = override(policy, {
-	contentSecurityPolicy: {
-		scriptSrc: ["self", "sha256-B2yPHKaXnvFWtRChIbabYmUBFZdVfKKXHbWtWidDVF8="],
-	},
-});
-
-let cachedRouter = createRouter({ middleware: [securityHeaders(cachedPolicy)] });
-```
-
-## Pattern: Asserting A Policy In A Test
-
-```typescript
-import { unwrap } from "@sdxc/result";
-import { parse } from "@sdxc/security-headers/csp";
-import { parse as parsePermissions } from "@sdxc/security-headers/permissions-policy";
-import { expect, test } from "vitest";
-
-import { router } from "./router.ts";
-
-test("allows the challenge frame", async () => {
-	let response = await router.fetch("https://example.com/");
-	let [csp] = unwrap(parse(response.headers.get("content-security-policy") ?? ""));
-	expect(csp?.directives.frameSrc).toEqual(["https://challenges.example.com"]);
-	let permissions = unwrap(parsePermissions(response.headers.get("permissions-policy") ?? ""));
-	expect(permissions.camera).toEqual([]);
-});
-```
 
 ## Pattern: Choosing Sources That Hold Up
 
-- Keep `styleSrc: ["self", "unsafe-inline"]` and leave `"nonce"` out of `styleSrc`:
-  `remix/component` emits one `<style>` per `css()` mixin without a nonce, and a nonce in
-  `style-src` makes browsers ignore `'unsafe-inline'`.
+- With Remix `csp()`, a nonce-based `style-src` is viable because `render()` stamps the nonce onto
+  `css()` styles. With only this package's helpers and no Remix CSP, keep
+  `styleSrc: ["self", "unsafe-inline"]`.
 - `'strict-dynamic'` makes browsers ignore `'self'` and host sources, so every `<script src>`
   needs the nonce too; adopt it deliberately.
 

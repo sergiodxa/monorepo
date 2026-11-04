@@ -48,13 +48,17 @@ No package under `packages/` sets any of these headers.
 
 ### What Remix provides
 
-No Remix package sets CSP, HSTS, `Referrer-Policy`, `Permissions-Policy`, COOP, COEP or
-`X-Frame-Options`. The security middleware Remix ships protects incoming requests:
-`cop-middleware` rejects unsafe cross-origin browser requests by `Sec-Fetch-Site` and
-`Origin`, `csrf-middleware` checks synchronizer tokens, and `cors-middleware` answers
-preflights and writes `Access-Control-*`. None of them writes response policy headers, so
-this package is complementary: the reader already runs `cop()` and its security headers side
-by side.
+As of the decision date, no Remix package set CSP, HSTS, `Referrer-Policy`,
+`Permissions-Policy`, COOP, COEP or `X-Frame-Options`. The security middleware Remix shipped
+protected incoming requests: `cop-middleware` rejects unsafe cross-origin browser requests by
+`Sec-Fetch-Site` and `Origin`, `csrf-middleware` checks synchronizer tokens, and
+`cors-middleware` answers preflights and writes `Access-Control-*`. None of them wrote response
+policy headers, so this package was complementary: the reader already ran `cop()` and its
+security headers side by side.
+
+Remix 3.2.0 later added `csp()` for Content-Security-Policy and Reporting-Endpoints with deep
+nonce integration into `remix/component`. The other response policy headers remain this
+package's job; see [ADR-191](./ADR-191-remix-csp-middleware-and-security-headers.md).
 
 `remix/headers` (`@remix-run/headers` 0.21.1) exposes `contentSecurityPolicy`,
 `contentSecurityPolicyReportOnly`, `crossOriginEmbedderPolicy` (and `ReportOnly`),
