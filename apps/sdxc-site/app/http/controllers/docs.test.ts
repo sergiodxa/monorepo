@@ -276,6 +276,10 @@ describe("GET /api/:name", () => {
 		expect(body).toContain('data-slot="ui-component-miniature"');
 		expect(body).toContain('data-face-kind="button"');
 		expect(body).toContain('data-slot="ui-component-grid"');
+		expect(body).toContain('data-slot="ui-export-grid"');
+		expect(body).toContain('data-slot="ui-export-miniature"');
+		expect(body).toContain('id="animations"');
+		expect(body).toContain('id="mixins"');
 		expect(body).toContain('href="/api/ui/theming"');
 		expect(body).not.toContain('href="/api/ui/theming">Theming</code>');
 		expect(body).toContain("A compact pill");
