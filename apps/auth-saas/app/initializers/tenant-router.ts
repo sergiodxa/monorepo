@@ -67,7 +67,6 @@ export const tenantRouter = createRouter({
 		csp({
 			reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
 			reportingEndpoints: { csp: "/reports/csp" },
-			filter: () => true,
 		}),
 		securityHeaders(TENANT_SECURITY_POLICY),
 		/**

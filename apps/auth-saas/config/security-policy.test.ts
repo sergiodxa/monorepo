@@ -48,11 +48,9 @@ async function headersFor(
 				? csp({
 						reportOnlyPolicy: remixPolicy,
 						reportingEndpoints: { csp: "/reports/csp" },
-						filter: () => true,
 					})
 				: csp({
 						policy: remixPolicy,
-						filter: () => true,
 					})) as Middleware,
 			securityHeaders(policy),
 		],
