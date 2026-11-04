@@ -1,5 +1,7 @@
 /**
  * `db fresh`, run on a temporary local database holding rows and a table no migration makes.
+ * A test's first run of a command imports that command, which a busy machine stretches past
+ * Vitest's default timeout, so each test here has 30 seconds.
  */
 
 import { invoke } from "@sdxc/cli/test";
@@ -25,7 +27,7 @@ function snapshot() {
 	return { posts, stray: stray.length > 0 };
 }
 
-describe("db fresh", () => {
+describe("db fresh", { timeout: 30_000 }, () => {
 	test("drops every table and applies the chain again", async () => {
 		await invoke(cli, ["db", "migrate"]);
 		let database = openDatabase(project.databaseFile);
