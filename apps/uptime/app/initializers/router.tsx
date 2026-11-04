@@ -26,12 +26,14 @@ import { currentLog } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
 import { previews } from "@sdxc/mail/previews";
-import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { x402 } from "@sdxc/x402/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
@@ -66,7 +68,7 @@ import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import { sellerConfig } from "~/app/initializers/x402";
 import abilities from "~/app/policies/abilities";
 import { apiCatalogEntry } from "~/config/api-catalog";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import {
 	alertRoutes,
@@ -275,19 +277,23 @@ export function createWebRouter(options: WebRouterOptions) {
 				],
 			}),
 			/**
-			 * Right before the assets and the renderer, so the headers land on the response it
-			 * produced and the nonce exists before `assets()` reads it into `ctx.assets`.
+			 * Right before the assets and the renderer: Remix owns CSP and the nonce;
+			 * this package owns HSTS, Referrer-Policy and the rest.
 			 */
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 			/**
 			 * Publishes `ctx.assets`, the stylesheets and client entry every page's document links,
-			 * resolved once per request. After the security headers, whose nonce it carries.
+			 * resolved once per request. After Remix CSP, whose nonce it carries.
 			 */
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
-				nonce: (ctx) =>
-					ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
+				nonce: (ctx) => getCspNonce(ctx),
 			}),
 			/**
 			 * Frames resolve back through this router, so a fragment shares the request's cookies
