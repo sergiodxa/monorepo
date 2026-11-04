@@ -69,10 +69,10 @@ sdxc pkg bench http http://127.0.0.1:8787/health \
 	--p99 500ms
 ```
 
-Duration flags (`--timeout`, `--p50`, `--p95`, `--p99`, `--mean`) accept a duration string
-(`200ms`, `5s`) or a bare millisecond number (`200`). The process exits `1` when a budget is
-missed or every request errors, and `2` when a flag is not a duration. `--json` prints the
-full report for scripts. [Use a package from the
+Duration flags (`--timeout`, `--p50`, `--p95`, `--p99`, `--mean`) accept a
+[duration string](/api/duration) (`200ms`, `5s`) or a bare millisecond number (`200`). The
+process exits `1` when a budget is missed or every request errors, and `2` when a flag is
+not a duration. `--json` prints the full report for scripts. [Use a package from the
 terminal](/docs/operations-and-testing/package-command-lines) covers what every package
 command line shares.
 
