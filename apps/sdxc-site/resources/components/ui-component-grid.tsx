@@ -17,10 +17,10 @@ import type { NavEntry } from "~/app/services/navigation-tree";
 import UiComponentCard from "~/resources/components/ui-component-card";
 
 /**
- * Narrowest a component tile may get before the grid drops a column. Sized so the article
- * measure (not the prose measure) fills with several tiles across on a desktop pass.
+ * Narrowest a component tile may get before the grid drops a column. Sized for about three
+ * roomy tiles across the article measure — denser floors pack five and squeeze the faces.
  */
-const CARD_MIN = "11rem";
+const CARD_MIN = "16rem";
 
 namespace UiComponentGrid {
 	export interface Props {
