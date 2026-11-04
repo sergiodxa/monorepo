@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Runner } from "@sdxc/ci";
+
 import { defineCI } from "@sdxc/ci";
 import { isFailure } from "@sdxc/result";
 
@@ -36,6 +38,32 @@ const TYPEGEN_INPUTS = [
  * than sampled, so concurrency stays predictable under the run's memory budget.
  */
 const BROWSER_TEST_MEMORY = "2GB";
+
+/**
+ * Vitest workers a local test entry runs with, and the concurrency slots it holds, so the
+ * entries running at once add up to about one worker per core. A CI host runs one entry per
+ * machine, and Vitest there keeps its own default of a worker per core.
+ */
+export const LOCAL_TEST_WORKERS = 2;
+
+/** How one workspace's test entry runs on `runner`: its command and the slots it holds. */
+export interface TestStep {
+	command: string;
+	weight: number;
+}
+
+/**
+ * The test step for `target` (`--project root` or a quoted workspace path). Locally every
+ * entry shares one machine, so each caps its workers and holds that many slots of the run's
+ * concurrency, which `--concurrency` sets and defaults to the core count.
+ */
+export function testStep(target: string, runner: Runner): TestStep {
+	if (runner === "remote") return { command: `bun run test ${target}`, weight: 1 };
+	return {
+		command: `bun run test ${target} --maxWorkers=${LOCAL_TEST_WORKERS}`,
+		weight: LOCAL_TEST_WORKERS,
+	};
+}
 
 /**
  * The git-ignored files `typegen` writes, per app: `wrangler types` writes beside a
@@ -152,9 +180,11 @@ export default defineCI(async (ci) => {
 				"has" in suite &&
 				typeof suite.has === "function" &&
 				(suite.has("**/*.browser.test.ts") || suite.has("**/*.browser.test.tsx"));
-			await ci.step(`Tests for ${suite.path}`, `bun run test ${target}`, {
+			let { command, weight } = testStep(target, ci.runner);
+			await ci.step(`Tests for ${suite.path}`, command, {
 				cache: { inputs: [...suite.inputs, "test/**"] },
 				memory: browser ? BROWSER_TEST_MEMORY : undefined,
+				weight,
 			});
 		},
 		{ key: (suite) => suite.path },

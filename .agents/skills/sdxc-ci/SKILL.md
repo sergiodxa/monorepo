@@ -57,7 +57,8 @@ repository root. Other sessions share this checkout; use a clean worktree of HEA
 sdxc ci --worktree --push
 ```
 
-`--worktree` creates a temporary detached worktree, installs with a frozen lockfile there
+`--worktree` creates a temporary detached worktree at its canonical path (on macOS
+`/private/var/…`, the path Vitest resolves), installs with a frozen lockfile there
 (workspace package links must point at the worktree — a symlink of the main `node_modules`
 would test the dirty checkout), runs the script, signs off, and removes the worktree even on
 failure or Ctrl-C. The shared step cache and run logs stay in the main clone. `--push` pushes
@@ -80,9 +81,14 @@ The token comes from `GITHUB_TOKEN`, or `gh auth token`.
 
 - Exit 1 is a failed step; exit 2 is a usage error, such as a filter that matches nothing or
   `--watch` combined with `--push`.
-- A browser test that times out only under a full run's load is load, not your change: rerun
-  that entry alone with `--only "Tests/<workspace>"` before you change code for it. Browser
-  suites reserve `2GB` of the run's memory budget so they share the machine with fewer peers.
+- Locally each test entry runs Vitest with `--maxWorkers=2` and holds two of the run's
+  concurrency slots (`LOCAL_TEST_WORKERS` in the script), so `--concurrency` — the core count by
+  default — keeps about one test worker per core. On a CI host each entry has its own machine
+  and keeps Vitest's default.
+- A test that times out only under a full run's load is load, not your change: rerun that entry
+  alone with `--only "Tests/<workspace>"` before you change code for it. A run on a busy machine
+  (another session's run, a build) takes `--concurrency` lower. Browser suites reserve `2GB` of
+  the run's memory budget so they share the machine with fewer peers.
 - When a cached pass looks wrong, `--no-cache` runs every step fresh.
 
 `sdxc ci verify <sha>` answers whether a commit is signed off (exit 0 yes, 1 no), and

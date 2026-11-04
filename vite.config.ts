@@ -359,7 +359,7 @@ export default defineConfig({
 						"test/**/*.test.ts?(x)",
 						"scripts/**/*.test.ts",
 						"cli/**/*.test.ts",
-						".config/sdxc/checks/*.test.ts",
+						".config/sdxc/**/*.test.ts",
 					],
 					pool: "threads",
 					testTimeout: 20_000,
