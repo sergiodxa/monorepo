@@ -36,21 +36,26 @@ it for diagnosis.
 ### Sample HTTP latency
 
 ```typescript
-import { assertHttpBudgets, sampleHttp } from "@sdxc/bench";
-import { unwrap } from "@sdxc/result";
+import { sampleHttp } from "@sdxc/bench";
+import { expect, test } from "vitest";
 
-let report = await sampleHttp({
-	url: "http://127.0.0.1:8787/",
-	requests: 50,
-	concurrency: 5,
-	timeoutMs: 5_000,
+test("the health endpoint answers within budget", async () => {
+	let report = await sampleHttp({
+		url: "http://127.0.0.1:8787/health",
+		requests: 20,
+		concurrency: 5,
+		timeoutMs: 5_000,
+	});
+
+	expect(report.ok).toBe(report.requests);
+	expect(report.p95).toBeLessThan(200);
+	expect(report.p99).toBeLessThan(500);
 });
-
-unwrap(assertHttpBudgets(report, { p95: 200, p99: 500 }));
 ```
 
-Time budgets accept [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration):
-a string such as `"200ms"` or a bare millisecond number.
+Time budgets on the command line accept
+[`DurationInput`](https://www.npmjs.com/package/@sdxc/duration): a string such as
+`"200ms"` or a bare millisecond number.
 
 ## Command line
 
@@ -94,40 +99,13 @@ successful samples.
 ### `assertHttpBudgets(report, budgets): Result<HttpReport, HttpBudgetError>`
 
 Answers a failure when a declared `p50` / `p95` / `p99` / `mean` ceiling
-(milliseconds) is exceeded.
+(milliseconds) is exceeded. Used by the CLI; in tests, compare the report's
+percentiles with expectations.
 
 ### `budgetMs(input)` / `parseBudgetFlag(text)`
 
 Normalize a [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration) or a
 CLI flag (`"200"` / `"200ms"`) to milliseconds.
-
-## Patterns
-
-### Hold a package entry in CI
-
-```typescript
-import { join } from "node:path";
-import { weigh } from "@sdxc/bench";
-import { unwrap } from "@sdxc/result";
-import { expect, test } from "vitest";
-
-const ROOT = join(import.meta.dirname, "..");
-const BUDGET = 25 * 1024;
-
-test(`format entry stays under ${BUDGET} bytes gzipped`, async () => {
-	let weight = unwrap(await weigh(join(ROOT, "src/index.ts"), ROOT));
-	expect(weight.gzipped, `minified ${weight.minified}, gzipped ${weight.gzipped}`).toBeLessThan(
-		BUDGET,
-	);
-});
-```
-
-### Gate a local app before release
-
-```sh
-bun run dev &
-bunx @sdxc/bench http http://127.0.0.1:8787/health --requests 50 --p95 200ms --p99 500ms
-```
 
 ## Versioning
 
