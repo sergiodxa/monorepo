@@ -28,6 +28,9 @@ const BACKTICK_STRINGS = 700;
 /** Reference definitions the document defines and then uses, one line each. */
 const REFERENCES = 5_000;
 
+/** Lines of one paragraph, each a node the inline phase locates in the source. */
+const PARAGRAPH_LINES = 60_000;
+
 /** Characters in the one-token cases: a link label, an autolink, a word. */
 const RUN_LENGTH = 50_000;
 
@@ -102,6 +105,7 @@ const CASES: Case[] = [
 	{ name: "nested block quotes", source: `${"> ".repeat(REPEATS)}a` },
 	{ name: "deeply nested lists", source: nestedLists() },
 	{ name: "many reference definitions and uses", source: manyReferences() },
+	{ name: "one paragraph of many lines", source: "a\n".repeat(PARAGRAPH_LINES) },
 	{ name: "a long link label", source: `[${"a".repeat(RUN_LENGTH)}](/u)` },
 	{ name: "a long autolink", source: `<http://example.com/${"a".repeat(RUN_LENGTH)}>` },
 ];

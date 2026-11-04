@@ -171,6 +171,20 @@ class BlockParser {
 	#indented = false;
 	#blank = false;
 	#partialTab = false;
+
+	/**
+	 * The last whitespace run measured on the current line: where the scan began,
+	 * the first index past the run, and whether a tab sits inside it. Each nested
+	 * container reads the same run again from a little further along, so a deep
+	 * stack costs one scan per line.
+	 */
+	#run: { line: Line | null; from: number; to: number; tabbed: boolean } = {
+		line: null,
+		from: 0,
+		to: 0,
+		tabbed: false,
+	};
+
 	#error: MarkdownParseError | null = null;
 	/** Openers of `content: "none"` tags, so a closer for one names the line it opened on. */
 	#voidOpeners = new Map<string, Markdown.Position>();
@@ -1101,15 +1115,20 @@ class BlockParser {
 	 * Takes every definition off the front of a paragraph and into the document's
 	 * map. The first definition of a label wins, so a later duplicate is dropped
 	 * rather than replacing the one a reader above it already resolved against.
+	 * The paragraph is joined once and read with a cursor, so a run of definitions
+	 * costs time in proportion to its length.
 	 *
 	 * @param node - The paragraph to read
 	 */
 	#stripDefinitions(node: OpenNode): void {
-		while (node.chunks.length > 0) {
-			let text = new SourceText(node.chunks).value;
-			if (text.charAt(0) !== "[") break;
+		let text = new SourceText(node.chunks).value;
+		let cursor = 0;
+		let taken = 0;
 
-			let definition = readDefinition(text, 0);
+		while (taken < node.chunks.length) {
+			if (text.charAt(cursor) !== "[") break;
+
+			let definition = readDefinition(text, cursor);
 			if (!definition) break;
 
 			let key = normalizeLabel(definition.label);
@@ -1120,13 +1139,14 @@ class BlockParser {
 				});
 			}
 
-			let consumed =
+			taken =
 				definition.end >= text.length
 					? node.chunks.length
-					: countLines(text.slice(0, definition.end));
-
-			node.chunks = node.chunks.slice(consumed);
+					: taken + countLines(text.slice(cursor, definition.end));
+			cursor = definition.end;
 		}
+
+		if (taken > 0) node.chunks = node.chunks.slice(taken);
 	}
 
 	/**
@@ -1251,24 +1271,38 @@ class BlockParser {
 		return this.#line.text.slice(index).trim() === "";
 	}
 
-	/** Walks past spaces and tabs, expanding tabs to four-column stops as it measures. */
+	/**
+	 * Walks past spaces and tabs, expanding tabs to four-column stops as it measures.
+	 * A run already measured from an earlier offset on this line, with no tab in it,
+	 * is reused: from any point inside it, the column grows by one per space.
+	 */
 	#findNextNonspace(): void {
 		let text = this.#line.text;
 		let index = this.#offset;
 		let column = this.#column;
-		let char = text.charAt(index);
+		let run = this.#run;
 
-		while (char === " " || char === "\t") {
-			if (char === " ") {
+		if (run.line === this.#line && !run.tabbed && index >= run.from && index <= run.to) {
+			column += run.to - index;
+			index = run.to;
+		} else {
+			let from = index;
+			let tabbed = false;
+
+			while (text.charAt(index) === " " || text.charAt(index) === "\t") {
+				if (text.charAt(index) === " ") {
+					column += 1;
+				} else {
+					tabbed = true;
+					column += CODE_INDENT - (column % CODE_INDENT);
+				}
 				index += 1;
-				column += 1;
-			} else {
-				index += 1;
-				column += CODE_INDENT - (column % CODE_INDENT);
 			}
-			char = text.charAt(index);
+
+			this.#run = { line: this.#line, from, to: index, tabbed };
 		}
 
+		let char = text.charAt(index);
 		this.#blank = char === "";
 		this.#nextNonspace = index;
 		this.#nextNonspaceColumn = column;

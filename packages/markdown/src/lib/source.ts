@@ -54,7 +54,8 @@ export class SourceText {
 	/**
 	 * Locates an index of {@link SourceText.value} in the original file. An index
 	 * past the end clamps to the last chunk, so a node ending at the boundary
-	 * still reports a point inside the document.
+	 * still reports a point inside the document. Chunk starts ascend, so the lookup
+	 * is a binary search and a leaf of many lines resolves each point in log time.
 	 *
 	 * @param index - Index into {@link SourceText.value}
 	 * @returns The point in the source that index was written at
@@ -62,11 +63,12 @@ export class SourceText {
 	point(index: number): Markdown.Point {
 		let target = Math.max(0, Math.min(index, this.value.length));
 		let at = 0;
+		let high = this.#starts.length - 1;
 
-		for (let i = 1; i < this.#starts.length; i++) {
-			let start = this.#starts[i];
-			if (start === undefined || start > target) break;
-			at = i;
+		while (at < high) {
+			let middle = (at + high + 1) >> 1;
+			if ((this.#starts[middle] ?? 0) <= target) at = middle;
+			else high = middle - 1;
 		}
 
 		let chunk = this.#chunks[at];
