@@ -9,13 +9,15 @@
 The monorepo already invents the same two measurements in place: entry-point weight
 (`test/markdown-weight.ts` for `@sdxc/markdown`) and ad-hoc HTTP timing against a running
 app. Dozens of package tests also hand-roll `performance.now()` ceilings for pathological
-inputs. Without a shared package, each new budget copies a Bun build or a curl loop, and
-doctor’s `module-size` check (source lines) is easy to confuse with bundle bytes.
+inputs. Without a shared package, each new budget copies a minified browser bundle or a
+curl loop, and doctor’s `module-size` check (source lines) is easy to confuse with
+bundle bytes.
 
 ## Context
 
-- Bundle weight is a **package** concern (gzipped entry after `bun build --minify`), not an
-  app doctor check. ADR-058 already ratchets markdown on size in CI.
+- Bundle weight is a **package** concern (gzipped entry after a minified browser bundle),
+  not an app doctor check. ADR-058 already ratchets markdown on size in CI.
+- Weighing uses **esbuild** in-process so the package stays independent of Bun’s CLI.
 - Vitest 4.1 ships suite-level `bench()` via `vp test bench`; Vitest 5 adds
   `bench.compare` and `toBeFasterThan` inside normal tests. Custom timing matchers would
   duplicate that path and fight the pin.
