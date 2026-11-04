@@ -15,11 +15,13 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
@@ -37,7 +39,10 @@ import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { sessionCookie } from "~/app/initializers/session-cookie";
 import { apiCatalogEntry } from "~/config/api-catalog";
-import { MANAGEMENT_SECURITY_POLICY } from "~/config/security-policy";
+import {
+	MANAGEMENT_CONTENT_SECURITY_POLICY,
+	MANAGEMENT_SECURITY_POLICY,
+} from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/management";
 
@@ -73,6 +78,10 @@ export const managementRouter = createRouter({
 		getClientIP(),
 		trace(),
 		asyncContext(),
+		csp({
+			policy: ({ nonce }) => remixCsp(MANAGEMENT_CONTENT_SECURITY_POLICY, nonce),
+			filter: () => true,
+		}),
 		securityHeaders(MANAGEMENT_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry, "api-catalog": apiCatalogEntry }),
 		database(openDatabase()),

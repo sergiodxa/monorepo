@@ -17,7 +17,9 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { Database } from "remix/data-table";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
@@ -67,7 +69,7 @@ import { mail as registry } from "~/app/initializers/mail";
 import Tenant from "~/app/models/tenant/object";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { deliverQueued } from "~/app/test/mail";
-import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
+import { TENANT_CONTENT_SECURITY_POLICY, TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
 
 export const TENANT_ID = "tenant_1";
@@ -83,6 +85,11 @@ export const TEST_MAIL_FROM = { email: "no-reply@example.com", name: "Test Sende
  */
 function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCaptcha) {
 	let middleware: Middleware[] = [
+		csp({
+			reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
+			reportingEndpoints: { csp: "/reports/csp" },
+			filter: () => true,
+		}) as Middleware,
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
 		...hostedDocumentMiddleware(),

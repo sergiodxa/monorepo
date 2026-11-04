@@ -15,10 +15,12 @@ import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
 import { previews } from "@sdxc/mail/previews";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
@@ -35,7 +37,10 @@ import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
 import { apiCatalogEntry } from "~/config/api-catalog";
-import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
+import {
+	PLATFORM_CONTENT_SECURITY_POLICY,
+	PLATFORM_SECURITY_POLICY,
+} from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/web";
 
@@ -59,6 +64,11 @@ export const webRouter = createRouter({
 			locales: [FALLBACK_LANGUAGE],
 			enabled: import.meta.env.DEV,
 			stylesheets: () => assetResolver.getStylesheets("resources/views/hosted/document.tsx"),
+		}),
+		csp({
+			reportOnlyPolicy: ({ nonce }) => remixCsp(PLATFORM_CONTENT_SECURITY_POLICY, nonce),
+			reportingEndpoints: { csp: "/reports/csp" },
+			filter: () => true,
 		}),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry, "api-catalog": apiCatalogEntry }),
