@@ -88,7 +88,6 @@ function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCa
 		csp({
 			reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
 			reportingEndpoints: { csp: "/reports/csp" },
-			filter: () => true,
 		}) as Middleware,
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
