@@ -1,7 +1,7 @@
 /**
  * Tests for the policy set: which headers a policy produces, HSTS preload eligibility and its
- * `https:`-only rule, `X-Frame-Options` derived from `frame-ancestors`, a response's own headers
- * winning in `apply`, and `override` patching a policy.
+ * `https:`-only rule, a response's own headers winning in `apply`, and `override` patching a
+ * policy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,32 +15,23 @@ import { apply, entries, override, stringifyStrictTransportSecurity } from "./in
 const HTTPS = { url: new URL("https://example.com/") };
 
 describe("entries", () => {
-	test("writes the reader-style policy byte for byte", () => {
+	test("writes the reader-style non-CSP policy", () => {
 		let policy: SecurityHeaders.Policy = {
-			contentSecurityPolicy: {
-				defaultSrc: ["none"],
-				scriptSrc: ["self"],
-				styleSrc: ["self", "unsafe-inline"],
-				frameAncestors: ["none"],
-			},
 			referrerPolicy: "no-referrer",
 			strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: true },
 			crossOriginOpenerPolicy: "same-origin",
 			crossOriginResourcePolicy: "same-origin",
 			permissionsPolicy: { camera: [], "browsing-topics": [] },
+			xFrameOptions: "DENY",
 		};
 
 		expect(entries(policy, HTTPS)).toEqual([
-			[
-				"content-security-policy",
-				"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'",
-			],
-			["x-frame-options", "DENY"],
 			["strict-transport-security", "max-age=63072000; includeSubDomains; preload"],
 			["referrer-policy", "no-referrer"],
 			["permissions-policy", "camera=(), browsing-topics=()"],
 			["cross-origin-opener-policy", "same-origin"],
 			["cross-origin-resource-policy", "same-origin"],
+			["x-frame-options", "DENY"],
 			["x-content-type-options", "nosniff"],
 		]);
 	});
@@ -59,49 +50,10 @@ describe("entries", () => {
 		expect(headers).toEqual([]);
 	});
 
-	test("derives X-Frame-Options from frame-ancestors", () => {
-		let frameOptions = (frameAncestors: string[]) =>
-			entries({ contentSecurityPolicy: { frameAncestors }, noSniff: false }, HTTPS).find(
-				([name]) => name === "x-frame-options",
-			)?.[1];
-
-		expect(frameOptions(["none"])).toBe("DENY");
-		expect(frameOptions([])).toBe("DENY");
-		expect(frameOptions(["self"])).toBe("SAMEORIGIN");
-		expect(frameOptions(["self", "https://partner.example"])).toBeUndefined();
-		expect(frameOptions(["*"])).toBeUndefined();
-	});
-
-	test("derives nothing from a report-only frame-ancestors", () => {
-		let headers = entries(
-			{ contentSecurityPolicyReportOnly: { frameAncestors: ["none"] }, noSniff: false },
-			HTTPS,
-		);
-
-		expect(headers).toEqual([["content-security-policy-report-only", "frame-ancestors 'none'"]]);
-	});
-
-	test("substitutes the nonce into both CSP headers", () => {
-		let headers = entries(
-			{
-				contentSecurityPolicy: { scriptSrc: ["nonce"] },
-				contentSecurityPolicyReportOnly: { scriptSrc: ["nonce", "strict-dynamic"] },
-				noSniff: false,
-			},
-			{ ...HTTPS, nonce: "abc" },
-		);
-
-		expect(headers).toEqual([
-			["content-security-policy", "script-src 'nonce-abc'"],
-			["content-security-policy-report-only", "script-src 'nonce-abc' 'strict-dynamic'"],
-		]);
-	});
-
-	test("writes a referrer fallback list and the reporting endpoints", () => {
+	test("writes a referrer fallback list and cross-origin embedder policies", () => {
 		let headers = entries(
 			{
 				referrerPolicy: ["no-referrer", "strict-origin-when-cross-origin"],
-				reportingEndpoints: { csp: "/reports/csp", default: "https://reports.example.com/" },
 				crossOriginEmbedderPolicy: "require-corp",
 				crossOriginEmbedderPolicyReportOnly: "credentialless",
 				noSniff: false,
@@ -113,7 +65,6 @@ describe("entries", () => {
 			["referrer-policy", "no-referrer, strict-origin-when-cross-origin"],
 			["cross-origin-embedder-policy", "require-corp"],
 			["cross-origin-embedder-policy-report-only", "credentialless"],
-			["reporting-endpoints", 'csp="/reports/csp", default="https://reports.example.com/"'],
 		]);
 	});
 
@@ -172,52 +123,28 @@ describe("apply", () => {
 		expect(headers.get("cross-origin-opener-policy")).toBe("same-origin");
 		expect(headers.get("x-content-type-options")).toBe("nosniff");
 	});
-
-	test("leaves X-Frame-Options out when the response wrote its own CSP", () => {
-		let headers = new Headers({ "content-security-policy": "frame-ancestors *" });
-		apply(headers, { contentSecurityPolicy: { frameAncestors: ["none"] } }, HTTPS);
-
-		expect(headers.get("content-security-policy")).toBe("frame-ancestors *");
-		expect(headers.has("x-frame-options")).toBe(false);
-	});
 });
 
 describe("override", () => {
 	let base: SecurityHeaders.Policy = {
-		contentSecurityPolicy: { defaultSrc: ["self"], frameAncestors: ["none"] },
 		referrerPolicy: "strict-origin",
 		crossOriginOpenerPolicy: "same-origin",
+		xFrameOptions: "DENY",
 	};
-
-	test("merges a CSP patch directive by directive", () => {
-		let patched = override(base, { contentSecurityPolicy: { frameAncestors: ["*"] } });
-
-		expect(patched.contentSecurityPolicy).toEqual({ defaultSrc: ["self"], frameAncestors: ["*"] });
-	});
 
 	test("replaces a scalar header and removes one set to null", () => {
 		let patched = override(base, { referrerPolicy: "no-referrer", crossOriginOpenerPolicy: null });
 
 		expect(patched).toEqual({
-			contentSecurityPolicy: base.contentSecurityPolicy,
 			referrerPolicy: "no-referrer",
+			xFrameOptions: "DENY",
 		});
-	});
-
-	test("removes a whole CSP set to null and starts one the base lacks", () => {
-		let patched = override(base, {
-			contentSecurityPolicy: null,
-			contentSecurityPolicyReportOnly: { scriptSrc: ["self"], sandbox: null },
-		});
-
-		expect(patched.contentSecurityPolicy).toBeUndefined();
-		expect(patched.contentSecurityPolicyReportOnly).toEqual({ scriptSrc: ["self"] });
 	});
 
 	test("leaves the base policy untouched", () => {
-		override(base, { referrerPolicy: null, contentSecurityPolicy: { defaultSrc: null } });
+		override(base, { referrerPolicy: null, xFrameOptions: "SAMEORIGIN" });
 
 		expect(base.referrerPolicy).toBe("strict-origin");
-		expect(base.contentSecurityPolicy).toEqual({ defaultSrc: ["self"], frameAncestors: ["none"] });
+		expect(base.xFrameOptions).toBe("DENY");
 	});
 });

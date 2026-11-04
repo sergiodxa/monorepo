@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/security-headers",
 	"version": "0.0.1",
-	"description": "Typed CSP, Permissions-Policy and security response headers, with middleware",
+	"description": "Permissions-Policy and security response headers, with CSP helpers for Remix",
 	"license": "MIT",
 	"bin": {
 		"sdxc-security-headers": "./src/cli.ts"
@@ -10,8 +10,10 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./csp": "./src/csp.ts",
+		"./csp-patch": "./src/csp-patch.ts",
 		"./permissions-policy": "./src/permissions-policy.ts",
 		"./reports": "./src/reports.ts",
+		"./remix": "./src/remix.ts",
 		"./audit": "./src/audit.ts",
 		"./middleware": "./src/middleware.ts"
 	},
@@ -25,9 +27,9 @@
 		"@sdxc/structured-fields": "workspace:*"
 	},
 	"devDependencies": {
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"peerDependencies": {
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }
