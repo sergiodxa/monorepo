@@ -19,10 +19,7 @@ import { font, leading, text, textTransform, tracking, weight } from "@sdxc/u/ty
 import { LinkButton } from "@sdxc/ui";
 import { InstallCommand } from "@sdxc/ui/docs";
 
-import {
-	PACKAGE_MANAGER_KEY,
-	REMEMBERED_TABS,
-} from "~/app/services/remembered-tabs";
+import { PACKAGE_MANAGER_KEY, REMEMBERED_TABS } from "~/app/services/remembered-tabs";
 import { componentFaceHref } from "~/app/services/ui-component-face";
 import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels";
 import PageActions from "~/resources/components/page-actions";

@@ -6,6 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parseFont } from "@sdxc/font";
 import { describe, expect, test } from "vitest";
 
 import { listComponents } from "~/app/services/components";
@@ -14,6 +18,20 @@ import {
 	hasComponentFace,
 	renderComponentFace,
 } from "~/app/services/ui-component-face";
+
+/** The bundled faces, read from disk as the Worker receives them as data modules. */
+function fonts() {
+	let load = (name: string) => {
+		let result = parseFont(readFileSync(join(import.meta.dirname, "../../resources/fonts", name)));
+		if (result.status === "failure") throw result.error;
+		return result.data;
+	};
+	return {
+		regular: load("inter-regular.ttf.bin"),
+		semibold: load("inter-semibold.ttf.bin"),
+		mono: load("jetbrains-mono-regular.ttf.bin"),
+	};
+}
 
 /** Whether the buffer opens with the PNG signature. */
 function isPng(bytes: Uint8Array): boolean {
@@ -33,10 +51,11 @@ describe("renderComponentFace", () => {
 	test("draws a PNG for every published component", async () => {
 		let components = await listComponents();
 		expect(components.length).toBeGreaterThan(50);
+		let faceFonts = fonts();
 
 		for (let entry of components) {
 			expect(hasComponentFace(entry.slug)).toBe(true);
-			let bytes = await renderComponentFace(entry.slug);
+			let bytes = await renderComponentFace(entry.slug, faceFonts);
 			expect(isPng(bytes)).toBe(true);
 			expect(bytes.byteLength).toBeGreaterThan(200);
 		}
@@ -44,7 +63,7 @@ describe("renderComponentFace", () => {
 
 	test("falls back to a surface card for an unknown slug", async () => {
 		expect(hasComponentFace("not-a-component")).toBe(false);
-		let bytes = await renderComponentFace("not-a-component");
+		let bytes = await renderComponentFace("not-a-component", fonts());
 		expect(isPng(bytes)).toBe(true);
 	});
 
