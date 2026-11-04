@@ -33,6 +33,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
+		"@sdxc/bench": "workspace:*",
 		"@sdxc/ci": "workspace:*",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
