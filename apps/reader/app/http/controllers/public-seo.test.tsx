@@ -67,6 +67,8 @@ describe("public page metadata", () => {
 		expect(html).not.toContain("utm_source");
 		expect(html).toContain('property="og:site_name" content="Reader"');
 		expect(html).toContain('name="twitter:card" content="summary"');
+		expect(html).toContain('name="twitter:site" content="@sergiodxa"');
+		expect(html).toContain('name="twitter:creator" content="@sergiodxa"');
 		expect(html).toContain('property="og:locale" content="en_US"');
 		expect(html).not.toContain("noindex");
 		expect(html).not.toContain('property="og:image"');

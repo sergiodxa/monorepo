@@ -122,9 +122,9 @@ to exist before the first deploy.
   search it, list and read feeds, and — with a token scoped to write — mark, keep, follow
   and unfollow. Authenticated by a token you mint in Settings, on the paid plan
 - Interface in English and Spanish, resolved per request
-- Public pages publish a canonical URL, Open Graph and Twitter cards, schema.org JSON-LD
-  and microformats naming the publisher and each help article. Signed-in pages, the 404
-  and the sign-in and sign-out pages ask not to be indexed
+- Public pages publish a canonical URL, Open Graph and Twitter cards (site and creator
+  `@sergiodxa`), schema.org JSON-LD and microformats naming the publisher and each help
+  article. Signed-in pages, the 404 and the sign-in and sign-out pages ask not to be indexed
 
 ## Integrations
 

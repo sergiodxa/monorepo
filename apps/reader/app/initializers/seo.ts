@@ -11,11 +11,18 @@ import type { SchemaOrg } from "@sdxc/seo";
 
 import { createSeo } from "@sdxc/seo";
 
-import { OG_LOCALES, PUBLISHER, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/site";
+import {
+	OG_LOCALES,
+	PUBLISHER,
+	SITE_DESCRIPTION,
+	SITE_NAME,
+	SITE_URL,
+	TWITTER_HANDLE,
+} from "~/config/site";
 
 /**
- * The site's one SEO instance. There is no site Twitter account, and no social
- * card image, so the card stays a summary and pages omit `og:image`.
+ * The site's one SEO instance. Twitter cards name {@link TWITTER_HANDLE} and use
+ * the summary layout, and pages omit `og:image`.
  *
  * @example SEO.canonical(ctx.url) // "https://reader.sergiodxa.com/features/search"
  */
@@ -23,7 +30,7 @@ export const SEO = createSeo({
 	baseUrl: SITE_URL,
 	siteName: SITE_NAME,
 	defaultDescription: SITE_DESCRIPTION,
-	twitter: { card: "summary" },
+	twitter: { card: "summary", site: TWITTER_HANDLE, creator: TWITTER_HANDLE },
 });
 
 /** What a public product page contributes to its `SoftwareApplication` node. */
