@@ -150,6 +150,7 @@ When code could live in multiple places:
 - Derive `AppContext` from the root middleware stack so `get(Database)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the middleware stack
 - Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`, read props from `handle.props`, keep state in setup-scope variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
+- Reusable markup is always a `Handle` component used as JSX (`<Name />`). Never extract a plain `function foo(): RemixNode` factory and call it as `{foo()}` — `RemixNode` is only for `children` props and local render values (ADR-190)
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or opaque runtime objects
 

@@ -20,6 +20,8 @@ A component has two phases:
 
 The component shape is `function Component(handle: Handle<Props>) { return () => ... }`. Props are available as `handle.props` in setup scope and are updated before every render.
 
+Reusable markup is always that shape and is used as JSX (`<Component />`). Do not extract a plain `function helper(): RemixNode` factory and call it as `{helper()}` — `RemixNode` is only for `children` props and local render values.
+
 ```tsx
 import { on, type Handle } from "remix/ui";
 
