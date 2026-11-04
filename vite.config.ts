@@ -560,9 +560,10 @@ export default defineConfig({
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
-					 * 5s default applies unless set here.
+					 * 5s default applies unless set here. A file's first request imports the router
+					 * and every controller it reaches, 2–3s alone and past 20s under a full run.
 					 */
-					testTimeout: 20_000,
+					testTimeout: 60_000,
 				},
 			},
 			{
@@ -585,10 +586,11 @@ export default defineConfig({
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
-					 * 5s default applies unless set here. The slowest files spend ~4s applying
-					 * every migration to a fresh database before their first assertion runs.
+					 * 5s default applies unless set here. The password tests hash and verify with
+					 * scrypt at production cost, about 100ms each and dozens per test, which a full
+					 * run's contention stretches past 20s.
 					 */
-					testTimeout: 20_000,
+					testTimeout: 60_000,
 				},
 			},
 			AUTH_SAAS_WORKERS_PROJECT,
