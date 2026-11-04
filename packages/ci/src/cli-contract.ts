@@ -83,7 +83,8 @@ export const RUN_FLAGS = {
 	concurrency: flag.number("concurrency", {
 		valueName: "n",
 		schema: s.number().refine((n) => Number.isInteger(n) && n > 0, "expects a positive integer"),
-		description: "Most steps running at once; the machine's available parallelism by default",
+		description:
+			"Concurrency slots running steps share, each holding its weight (1 by default); the machine's available parallelism by default",
 	}),
 	memory: flag.string("memory", {
 		valueName: "size",
