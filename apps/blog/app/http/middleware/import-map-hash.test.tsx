@@ -10,13 +10,16 @@
 import { assets } from "@sdxc/assets-middleware";
 import { Base64, sha256 } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { cspPatch } from "@sdxc/security-headers/csp-patch";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { ImportMap, renderToString } from "remix/component/server";
+import { csp } from "remix/middleware/csp";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import importMapHash from "~/app/http/middleware/import-map-hash";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 
 /** An import map whose address holds a `<`, which the renderer escapes before writing it. */
 const IMPORT_MAP = { imports: { "/assets/a<b.js": "/assets/a<b-123.js" } };
@@ -25,6 +28,10 @@ const IMPORT_MAP = { imports: { "/assets/a<b.js": "/assets/a<b-123.js" } };
 function createTestRouter() {
 	let router = createRouter({
 		middleware: [
+			cspPatch(),
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(
 				{

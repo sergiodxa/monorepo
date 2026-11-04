@@ -24,7 +24,9 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { previews } from "@sdxc/mail/previews";
 import { noWWW } from "@sdxc/no-www-middleware";
+import { cspPatch } from "@sdxc/security-headers/csp-patch";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
@@ -33,6 +35,7 @@ import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
@@ -66,7 +69,7 @@ import { mail } from "~/app/initializers/mail";
 import { jobQueue } from "~/app/initializers/queue";
 import registry from "~/app/models";
 import { PROFILE } from "~/config/profile";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
@@ -248,6 +251,12 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			htmlOnly(redirects),
 			htmlOnly(auth),
 			htmlOnly(access),
+			cspPatch(),
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
