@@ -47,13 +47,14 @@ test("the health endpoint answers within budget", async () => {
 		timeoutMs: 5_000,
 	});
 
-	expect(report.ok).toBe(report.requests);
+	expect(report.failures).toBe(0);
 	expect(report.p95).toBeLessThan(200);
 	expect(report.p99).toBeLessThan(500);
 });
 ```
 
-Time budgets on the command line accept
+`failures` counts requests that errored or timed out; `ok` is the rest of
+`requests`. Time budgets on the command line accept
 [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration): a string such as
 `"200ms"` or a bare millisecond number.
 
@@ -88,8 +89,8 @@ optional `budget.maxMinified` is set and missed. Used by the CLI's
 ### `sampleHttp(options): Promise<HttpReport>`
 
 Issues `requests` with at most `concurrency` in flight, timing each with
-`performance.now()`, and returns min / mean / p50 / p95 / p99 / max over the
-successful samples.
+`performance.now()`. The report's `ok` / `failures` split those attempts, and
+min / mean / p50 / p95 / p99 / max cover the successful samples only.
 
 ### `assertHttpBudgets(report, budgets): Result<HttpReport, HttpBudgetError>`
 
