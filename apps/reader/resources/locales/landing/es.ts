@@ -68,7 +68,8 @@ export default {
 	footer: {
 		label: "Sitio",
 		tagline: "Un lector de RSS y Atom con una sola cola, lo más reciente primero.",
-		copyright: "© {$year} Sergio Xalambrí",
+		copyright: "© {$year}",
+		publisher: "Sergio Xalambrí",
 	},
 
 	hero: {

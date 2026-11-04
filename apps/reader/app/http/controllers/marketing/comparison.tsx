@@ -32,6 +32,7 @@ import type { ComparisonSlug } from "~/config/marketing";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { SEO, productSchema } from "~/app/initializers/seo";
 import { TIER_LIMITS } from "~/app/services/entitlement";
 import { COMPARISON_SLUGS, isSlug } from "~/config/marketing";
 import { FaqColumn } from "~/resources/components/marketing/bands";
@@ -97,12 +98,28 @@ export default createAction(routes.marketing.comparison, (ctx) => {
 		answer: t(page(`faq.${item}.a`)),
 	}));
 
+	let path = routes.marketing.comparison.href({ slug });
+
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={t(page("meta.title"))}
 			description={t(page("meta.description"))}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(path),
+				schema: [
+					productSchema({
+						name: t(page("meta.title")),
+						description: t(page("meta.description")),
+						url: path,
+						featureList: (["one", "two", "three"] as const).map((item) =>
+							t(page(`reasons.${item}.title`)),
+						),
+					}),
+					SEO.schema.faq(faqs.map(({ question, answer }) => ({ question, answer }))),
+				],
+			}}
 		>
 			<MarketingLayout t={t} isSignedIn={isSignedIn}>
 				<LandingHero

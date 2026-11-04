@@ -25,6 +25,7 @@ import { createAction } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { SEO, productSchema } from "~/app/initializers/seo";
 import { FEATURE_KEYS, FEATURE_SLUGS, isSlug } from "~/config/marketing";
 import { FaqColumn } from "~/resources/components/marketing/bands";
 import {
@@ -66,12 +67,26 @@ export default createAction(routes.marketing.feature, (ctx) => {
 		answer: t(page(`faq.${item}.a`)),
 	}));
 
+	let path = routes.marketing.feature.href({ slug });
+
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={t(page("meta.title"))}
 			description={t(page("meta.description"))}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(path),
+				schema: [
+					productSchema({
+						name: t(page("meta.title")),
+						description: t(page("meta.description")),
+						url: path,
+						featureList: TRIPLE.map((item) => t(page(`facts.${item}.title`))),
+					}),
+					SEO.schema.faq(faqs.map(({ question, answer }) => ({ question, answer }))),
+				],
+			}}
 		>
 			<MarketingLayout t={t} isSignedIn={isSignedIn}>
 				<LandingHero

@@ -68,7 +68,8 @@ export default {
 	footer: {
 		label: "Site",
 		tagline: "An RSS and Atom reader with one queue, newest first.",
-		copyright: "© {$year} Sergio Xalambrí",
+		copyright: "© {$year}",
+		publisher: "Sergio Xalambrí",
 	},
 
 	hero: {

@@ -11,7 +11,11 @@ import type { I18n, Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
 import { Trans } from "@sdxc/i18n/ui";
+import { mf } from "@sdxc/microformats/ui";
+import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
+import { m } from "@sdxc/u/size";
+import { text, textDecoration } from "@sdxc/u/typography";
 import {
 	Callout,
 	DocsFeedback,
@@ -27,6 +31,8 @@ import type { DocPage } from "~/resources/docs/registry";
 
 import { SUPPORT_FROM_PARAM } from "~/app/http/controllers/support";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { SEO } from "~/app/initializers/seo";
+import { PUBLISHER } from "~/config/site";
 import { landingTranslate } from "~/resources/components/marketing/figures";
 import { docsFigures } from "~/resources/docs/figures";
 import {
@@ -38,7 +44,7 @@ import {
 	pageTitle,
 	sectionTitle,
 } from "~/resources/docs/registry";
-import DocsLayout from "~/resources/layouts/docs";
+import DocsLayout, { docsProse } from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -89,6 +95,22 @@ export default createAction(routes.docs.show, async (ctx) => {
 			title={`${title} · ${t("docs.title")}`}
 			description={description}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(path),
+				og: { type: "article" },
+				schema: [
+					SEO.schema.webPage({
+						name: title,
+						description,
+						url: path,
+						inLanguage: ctx.locale,
+					}),
+					SEO.schema.breadcrumbs([
+						{ name: t("docs.eyebrow"), url: routes.docs.index.href() },
+						{ name: title, url: path },
+					]),
+				],
+			}}
 		>
 			<DocsLayout
 				t={t}
@@ -113,22 +135,45 @@ export default createAction(routes.docs.show, async (ctx) => {
 					/>
 				}
 			>
-				<DocsPageHeader
-					crumbsLabel={t("docs.nav.crumbs")}
-					crumbs={[
-						{ label: t("docs.eyebrow"), href: routes.docs.index.href() },
-						{ label: sectionTitle(t, page.section) },
-						{ label: title },
-					]}
-					title={title}
-					description={description}
-					notice={page.plan ? <PlanRequirement intl={ctx.intl} plan={page.plan} /> : undefined}
-					mix={[raw({ marginBlockEnd: "0.75rem" })]}
-				/>
-
-				<Body t={t} figures={docsFigures(ctx.locale)} locale={ctx.locale} />
-
-				<PageEnd t={t} intl={ctx.intl} page={page} />
+				<article mix={[mf("h-entry"), docsProse()]} lang={ctx.locale}>
+					<DocsPageHeader
+						crumbsLabel={t("docs.nav.crumbs")}
+						crumbs={[
+							{ label: t("docs.eyebrow"), href: routes.docs.index.href() },
+							{ label: sectionTitle(t, page.section) },
+							{ label: title },
+						]}
+						title={
+							<a
+								href={path}
+								mix={[
+									mf("p-name", "u-url", "u-uid"),
+									fg("neutral.emphasis"),
+									textDecoration("none"),
+								]}
+							>
+								{title}
+							</a>
+						}
+						description={<span mix={[mf("p-summary")]}>{description}</span>}
+						notice={page.plan ? <PlanRequirement intl={ctx.intl} plan={page.plan} /> : undefined}
+						mix={[raw({ marginBlockEnd: "0.75rem" })]}
+					/>
+					<p mix={[mf("p-author", "h-card"), m(0), text("sm"), fg("neutral.muted")]}>
+						<a
+							href={PUBLISHER.url}
+							rel="author"
+							mix={[mf("p-name", "u-url", "u-uid"), fg("neutral.muted")]}
+						>
+							{t("landing.footer.publisher")}
+						</a>
+						<data mix={[mf("u-photo")]} value={PUBLISHER.photo} />
+					</p>
+					<div mix={[mf("e-content"), docsProse()]}>
+						<Body t={t} figures={docsFigures(ctx.locale)} locale={ctx.locale} />
+					</div>
+					<PageEnd t={t} intl={ctx.intl} page={page} />
+				</article>
 			</DocsLayout>
 		</DocumentLayout>,
 	);

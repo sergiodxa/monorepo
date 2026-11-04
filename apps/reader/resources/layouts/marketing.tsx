@@ -34,6 +34,7 @@ import { landingContainer } from "@sdxc/ui/styles";
 import type { FeatureSlug, UseCaseSlug } from "~/config/marketing";
 
 import { COMPARISON_SLUGS, FEATURE_KEYS, FEATURE_SLUGS, USE_CASE_SLUGS } from "~/config/marketing";
+import SiteCredit from "~/resources/components/site-credit";
 import routes from "~/routes/web";
 
 /**
@@ -240,7 +241,9 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							{ title: t("landing.nav.help"), links: helpLinks(t) },
 						]}
 						legal={
-							<p>{t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}</p>
+							<p>
+								<SiteCredit t={t} />
+							</p>
 						}
 					/>
 				) : null}

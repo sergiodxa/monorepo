@@ -1,7 +1,8 @@
 /**
  * Root HTML document layout: the html/head/body shell with charset and viewport meta, the
- * title and description, and the stylesheets, import map and client entry the asset manifest
- * names. Every server-rendered page composes into it, so a page decides only its content.
+ * page's title and search metadata, and the stylesheets, import map and client entry the
+ * asset manifest names. Every server-rendered page composes into it, so a page decides
+ * only its content and, when it is public, the metadata a crawler should read.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +11,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
+import { Seo } from "@sdxc/seo";
 import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { m, minBs } from "@sdxc/u/size";
@@ -18,6 +20,9 @@ import { ImportMap } from "remix/component/server";
 import { getContext } from "remix/middleware/async-context";
 
 import type { Theme } from "~/database/schema";
+
+import { SEO, openGraphLocale } from "~/app/initializers/seo";
+import { PUBLISHER } from "~/config/site";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -45,10 +50,17 @@ namespace DocumentLayout {
 		children: RemixNode;
 		/** The document title. */
 		title: string;
-		/** Meta description for this page. */
+		/** Meta description for this page. Falls back to the site description on an indexed page. */
 		description?: string;
 		/** The request's detected language (`ctx.locale`), set as `<html lang>`. */
 		locale?: string;
+		/**
+		 * Canonical URL, social tags and structured data for a page a crawler may index.
+		 * Omit it and the page asks not to be indexed: signed-in screens, the 404, and the
+		 * sign-in and sign-out pages all take that path, and none of them advertise a
+		 * canonical URL, so a token in an address is not repeated as one.
+		 */
+		seo?: Omit<Seo.Props, "title" | "site">;
 	}
 }
 
@@ -59,7 +71,8 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, children, description, locale = "en", title } = handle.props;
+		let { assets, children, description, locale = "en", seo, title } = handle.props;
+		let indexable = seo !== undefined && !seo.robots?.includes("noindex");
 
 		/**
 		 * Read off the request rather than taken as a prop, since every page in the app
@@ -89,10 +102,32 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					 * of the post a reader is on never reaches somebody else's logs.
 					 */}
 					<meta name="referrer" content="strict-origin-when-cross-origin" data-key="referrer" />
-					<title data-key="title">{title}</title>
-					{description ? (
-						<meta name="description" content={description} data-key="description" />
-					) : null}
+					{seo ? (
+						<Seo
+							title={title}
+							description={seo.description ?? description}
+							canonical={seo.canonical}
+							site={SEO.site}
+							og={{ locale: openGraphLocale(locale), ...seo.og }}
+							robots={seo.robots}
+							schema={seo.schema}
+						/>
+					) : (
+						<>
+							<title data-key="title">{title}</title>
+							{description ? (
+								<meta name="description" content={description} data-key="description" />
+							) : null}
+							<meta
+								name="robots"
+								content={SEO.robotsTag({ index: false, follow: true })}
+								data-key="robots"
+							/>
+						</>
+					)}
+					{indexable
+						? PUBLISHER.sameAs.map((href) => <link key={href} rel="me" href={href} />)
+						: null}
 					{/**
 					 * A manifest earns its place here because a browser needs one before it will
 					 * keep a push subscription: it names the scope the service worker registers
