@@ -9,8 +9,11 @@
 
 import { Base64, sha256 } from "@sdxc/crypto";
 import { isSuccess } from "@sdxc/result";
+import { patchCsp } from "@sdxc/security-headers/csp-patch";
+import { getCspNonce } from "remix/middleware/csp";
 import { createAction } from "remix/router";
 
+import { CONTENT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /**
@@ -118,15 +121,18 @@ const CHECK_SESSION_HTML = `<!DOCTYPE html>
  */
 export default createAction(routes.oidc.checkSession, async (ctx) => {
 	let digest = await sha256(CHECK_SESSION_SCRIPT);
-	let scriptSrc = ctx.securityHeaders.policy.contentSecurityPolicyReportOnly?.scriptSrc ?? [];
-	ctx.securityHeaders.override({
-		contentSecurityPolicyReportOnly: {
+	let nonce = getCspNonce(ctx) ?? "";
+	let scriptSrc = (CONTENT_SECURITY_POLICY.scriptSrc ?? []).map((source) =>
+		source === "nonce" ? (`nonce-${nonce}` as const) : source,
+	);
+	if (isSuccess(digest)) scriptSrc = [...scriptSrc, `sha256-${Base64.encode(digest.data)}`];
+	patchCsp(ctx, {
+		reportOnlyPolicy: {
 			frameAncestors: null,
-			scriptSrc: isSuccess(digest)
-				? [...scriptSrc, `sha256-${Base64.encode(digest.data)}`]
-				: scriptSrc,
+			scriptSrc,
 		},
 	});
+	ctx.securityHeaders.override({ xFrameOptions: null });
 
 	return new Response(CHECK_SESSION_HTML, {
 		headers: {
