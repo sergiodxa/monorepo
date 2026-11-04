@@ -80,35 +80,40 @@ Commands run from the project root, the nearest directory with a `package.json`.
 
 Run the project's CI script (.config/sdxc/ci.ts), and sign green commits off on GitHub
 
-| Flag                  | Does                                                                                    |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /          |
-| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                          |
-| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents                  |
-| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable      |
-| `--push`              | After a green run, push the tested commit to its upstream branch, then sign off         |
-| `--no-signoff`        | Make ci.signoff a plain success that posts nothing                                      |
-| `--no-cache`          | Run every step, ignoring passes stored for unchanged inputs                             |
-| `--concurrency <n>`   | Most steps running at once; the machine's available parallelism by default              |
-| `--remote <name>`     | Git remote to push to and read the GitHub repository from; the upstream's by default    |
-| `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset |
-| `-v, --verbose`       | Print every step's log, not only a failed one's                                         |
-| `--json`              | Print the report as JSON                                                                |
-| `--rerun-failed`      | Run only the steps the last recorded run failed                                         |
-| `--no-install`        | Skip the frozen-lockfile install a local run starts with                                |
+| Flag                  | Does                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /                                                        |
+| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                                                                        |
+| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents                                                                |
+| `--since <ref>`       | Keep matrix entries for workspaces changed since this ref (and their dependents); a change outside every workspace covers every entry |
+| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable                                                    |
+| `--push`              | After a green run, push the tested commit to its upstream branch, then sign off                                                       |
+| `--no-signoff`        | Make ci.signoff a plain success that posts nothing                                                                                    |
+| `--no-cache`          | Run every step, ignoring passes stored for unchanged inputs                                                                           |
+| `--concurrency <n>`   | Most steps running at once; the machine's available parallelism by default                                                            |
+| `--memory <size>`     | RAM budget for step memory reservations (2GB, 512MB); three quarters of total RAM by default                                          |
+| `--worktree`          | Run in a temporary detached worktree of HEAD so a dirty checkout can still sign off                                                   |
+| `--watch`             | Re-run when tracked files change; unchanged cached steps replay; never signs off or pushes                                            |
+| `--remote <name>`     | Git remote to push to and read the GitHub repository from; the upstream's by default                                                  |
+| `--token-env <NAME>`  | Environment variable holding the GitHub token; `gh auth token` answers when it is unset                                               |
+| `-v, --verbose`       | Print every step's log, not only a failed one's                                                                                       |
+| `--json`              | Print the report as JSON                                                                                                              |
+| `--rerun-failed`      | Run only the steps the last recorded run failed                                                                                       |
+| `--no-install`        | Skip the frozen-lockfile install a local run starts with                                                                              |
 
 #### `sdxc ci list`
 
 Print the steps and matrix entries a fully passing run takes, without running any
 
-| Flag                  | Does                                                                               |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /     |
-| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                     |
-| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents             |
-| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable |
-| `--matrix <name>`     | Print only the entry keys of this matrix                                           |
-| `--json`              | Print the report as JSON                                                           |
+| Flag                  | Does                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `--only <pattern>`    | Run only steps, groups or entries (Workspaces/@acme/ui) matching it; * spans /                                                        |
+| `--skip <pattern>`    | Leave out steps, groups or entries matching it                                                                                        |
+| `--scope <workspace>` | Keep matrix entries for this workspace path or name and its dependents                                                                |
+| `--since <ref>`       | Keep matrix entries for workspaces changed since this ref (and their dependents); a change outside every workspace covers every entry |
+| `--runner <runner>`   | local or remote: run as on a laptop or on a CI host; detected from the CI variable                                                    |
+| `--matrix <name>`     | Print only the entry keys of this matrix                                                                                              |
+| `--json`              | Print the report as JSON                                                                                                              |
 
 #### `sdxc ci signoff [sha]`
 

@@ -127,6 +127,35 @@ describe("sdxc ci", () => {
 		expect([...remote.exec, ...skipped.exec]).toEqual([]);
 	});
 
+	test("--worktree skips the main checkout install; the worktree installs itself", async () => {
+		let root = await monorepo({ ".config/sdxc/ci.ts": SCRIPT });
+		execFileSync("git", ["add", "-A"], { cwd: root });
+		execFileSync(
+			"git",
+			[
+				"-c",
+				"user.email=ci@example.com",
+				"-c",
+				"user.name=CI",
+				"commit",
+				"--quiet",
+				"--no-verify",
+				"-m",
+				"Initial",
+			],
+			{
+				cwd: root,
+			},
+		);
+		let run = await invoke(createSDXC(), ["ci", "--worktree", "--no-signoff"], {
+			cwd: root,
+			env: ENV,
+		});
+		expect(run.code).toBe(0);
+		expect(run.exec).toEqual([]);
+		expect(run.stdout).toContain("Running in worktree");
+	});
+
 	test("a run started in a package covers it and its dependents only", async () => {
 		let root = await monorepo({ ".config/sdxc/ci.ts": SCRIPT });
 		let run = await invoke(createSDXC(), ["ci", "list", "--matrix", "Workspaces", "--json"], {

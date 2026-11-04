@@ -26,7 +26,11 @@ export default createCommand(SDXC_COMMANDS.ci, {
 		let located = await locateCI(ctx.cwd);
 		if (isFailure(located)) return exit(2, located.error.message);
 		let runner = ctx.flags.runner ?? detectRunner(ctx.env);
-		if (runner === "local" && ctx.flags.install) {
+		/**
+		 * `--worktree` installs inside the temporary worktree itself; installing the main
+		 * checkout first would leave the worktree without its own correct workspace links.
+		 */
+		if (runner === "local" && ctx.flags.install && !ctx.flags.worktree) {
 			let installed = await frozenInstall(ctx, located.data.root);
 			if (isFailure(installed)) return installed;
 		}
