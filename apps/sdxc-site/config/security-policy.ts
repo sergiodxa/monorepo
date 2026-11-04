@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
 
 /** Where the Cloudflare Web Analytics beacon script loads from. */
 const WEB_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";
@@ -19,26 +19,29 @@ const WEB_ANALYTICS_BEACON_ORIGIN = "https://cloudflareinsights.com";
 const GITHUB_AVATARS_ORIGIN = "https://avatars.githubusercontent.com";
 
 /**
- * The policy for every sdxc.dev response. Styles are inline because `remix/component` writes
- * them that way, and images are the site's own, inline demo pictures, or sponsor avatars.
+ * The Report-Only Content-Security-Policy Remix's `csp()` sends. Styles are inline because
+ * `remix/component` writes them that way, and images are the site's own, inline demo pictures,
+ * or sponsor avatars.
  */
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: ["self", WEB_ANALYTICS_SCRIPT_ORIGIN],
+	styleSrc: ["self", "unsafe-inline"],
+	imgSrc: ["self", "data:", GITHUB_AVATARS_ORIGIN],
+	fontSrc: ["self"],
+	connectSrc: ["self", WEB_ANALYTICS_BEACON_ORIGIN],
+	frameAncestors: ["none"],
+	formAction: ["self"],
+	objectSrc: ["none"],
+	baseUri: ["self"],
+	reportTo: "csp",
+};
+
+/** The non-CSP headers every sdxc.dev response carries. */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicyReportOnly: {
-		defaultSrc: ["self"],
-		scriptSrc: ["self", WEB_ANALYTICS_SCRIPT_ORIGIN],
-		styleSrc: ["self", "unsafe-inline"],
-		imgSrc: ["self", "data:", GITHUB_AVATARS_ORIGIN],
-		fontSrc: ["self"],
-		connectSrc: ["self", WEB_ANALYTICS_BEACON_ORIGIN],
-		frameAncestors: ["none"],
-		formAction: ["self"],
-		objectSrc: ["none"],
-		baseUri: ["self"],
-		reportTo: "csp",
-	},
-	reportingEndpoints: { csp: "/reports/csp" },
 	strictTransportSecurity: { maxAge: 31536000 },
 	referrerPolicy: "strict-origin-when-cross-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: {
 		camera: [],
 		microphone: [],

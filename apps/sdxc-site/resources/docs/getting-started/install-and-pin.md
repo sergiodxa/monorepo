@@ -40,7 +40,7 @@ not changed since `2026.10.13`:
 	"dependencies": {
 		"@sdxc/markdown": "2026.10.24",
 		"@sdxc/result": "2026.10.13",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }
 ```

@@ -1,22 +1,24 @@
 ---
 title: Security headers and CSP
-description: One typed policy for CSP, HSTS and Permissions-Policy, nonces for the scripts you render, violation reports, and a security.txt.
+description: Remix CSP for nonces, plus typed HSTS and Permissions-Policy, violation reports, and a security.txt.
 section:
     title: Identity & security
     order: 6
 order: 5
-lastUpdated: 2026-11-01
+lastUpdated: 2026-11-04
 outcomes:
-    - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
+    - "How to write CSP with Remix's `csp()` and the rest as one typed policy"
     - "How to use nonces or hashes for the scripts you render"
     - "How to collect violation reports and publish a `security.txt`"
 ---
 
 A browser enforces what your response headers tell it: where scripts may load from, whether the
 page may be framed, which device APIs it may ask for, whether the site is HTTPS-only. This guide
-writes all of it as one typed policy, reviewed in one file, and applies it to every response of
-a Remix v3 app. [`@sdxc/security-headers`](/api/security-headers) models the headers and ships
-the middleware, [`@sdxc/crypto`](/api/crypto) hashes a fixed inline script, and
+splits that work the way Remix 3.2 does: [`csp()`](https://www.npmjs.com/package/remix) owns
+Content-Security-Policy and the per-request nonce, and
+[`@sdxc/security-headers`](/api/security-headers) owns HSTS, Referrer-Policy, Permissions-Policy
+and the rest as one typed object.
+[`@sdxc/crypto`](/api/crypto) hashes a fixed inline script, and
 [`@sdxc/well-known`](/api/well-known) publishes the `security.txt` that tells a researcher where
 to report what the headers missed.
 
@@ -25,38 +27,41 @@ npm add @sdxc/assets-middleware @sdxc/crypto @sdxc/result @sdxc/security-headers
 	@sdxc/well-known remix
 ```
 
-## Write the policy once
+## Write the policies once
 
-The CSP model writes keywords unquoted and quotes them on output, so a missing quote cannot
-happen. `"nonce"` is a placeholder the middleware replaces with a fresh nonce per response.
+Keep the CSP directives next to the other headers, but as two exports: Remix's `csp()` takes the
+directives, and `securityHeaders()` takes everything else. The CSP model writes keywords
+unquoted and quotes them on output, so a missing quote cannot happen. `"nonce"` is a placeholder
+`remixCsp` replaces with the request nonce Remix generated.
 
 ```typescript {% title="config/security-policy.ts" %}
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
 
 export const BOOT_SCRIPT = `document.documentElement.classList.add("js");`;
 
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: [
+		"self",
+		"nonce",
+		"sha256-WZRJfWvsnNCPcxzZwvyhovnZGqhZaC+8gPGPRbx6wTk=",
+		"https://challenges.cloudflare.com",
+	],
+	styleSrc: ["self", "unsafe-inline"],
+	imgSrc: ["self", "data:"],
+	frameSrc: ["https://challenges.cloudflare.com"],
+	formAction: ["self", "https://auth.example.com"],
+	frameAncestors: ["none"],
+	objectSrc: ["none"],
+	baseUri: ["none"],
+	reportTo: "csp",
+};
+
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicyReportOnly: {
-		defaultSrc: ["self"],
-		scriptSrc: [
-			"self",
-			"nonce",
-			"sha256-WZRJfWvsnNCPcxzZwvyhovnZGqhZaC+8gPGPRbx6wTk=",
-			"https://challenges.cloudflare.com",
-		],
-		styleSrc: ["self", "unsafe-inline"],
-		imgSrc: ["self", "data:"],
-		frameSrc: ["https://challenges.cloudflare.com"],
-		formAction: ["self", "https://auth.example.com"],
-		frameAncestors: ["none"],
-		objectSrc: ["none"],
-		baseUri: ["none"],
-		reportTo: "csp",
-	},
-	reportingEndpoints: { csp: "/reports/csp" },
 	strictTransportSecurity: { maxAge: 31536000, includeSubDomains: true },
 	referrerPolicy: "strict-origin-when-cross-origin",
 	crossOriginOpenerPolicy: "same-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: { camera: [], microphone: [], geolocation: [], payment: [] },
 };
 ```
@@ -64,44 +69,53 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 `formAction` names your identity provider, because the login in
 [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) redirects a form
 there. The Turnstile origin in `scriptSrc` and `frameSrc` is for the challenge from
-[Protect forms](/docs/identity-and-security/protect-forms). Once the policy is enforced,
-`frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`.
+[Protect forms](/docs/identity-and-security/protect-forms). Set `xFrameOptions: "DENY"` beside
+`frameAncestors: ["none"]` when you want both the CSP and the legacy header.
 
 > [!WARNING]
 > Keep `"nonce"` out of `styleSrc`. `remix/component` writes one `<style>` per `css()` mixin
 > without a nonce, and a nonce in `style-src` makes browsers ignore `'unsafe-inline'` and block
 > every one of them.
 
-The CSP starts as `contentSecurityPolicyReportOnly`: the browser reports what it would have
-blocked without blocking it.
+Start with Remix's `reportOnlyPolicy`: the browser reports what it would have blocked without
+blocking it. Rename the option to `policy` when the reports show the policy can be enforced.
 
 > [!WARNING]
-> A report-only policy protects nothing. Scripts it would block still run, framing is still
-> allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecurityPolicy`.
+> A report-only policy protects nothing. Scripts it would block still run and framing is still
+> allowed until you switch to `policy`.
 
-## Install it before the renderer
+## Install both middlewares before the renderer
 
-`securityHeaders(policy)` writes the headers onto whatever response the chain returns. Place it
-right before `assets()` and the renderer, so its nonce exists before the document asks for it.
+`csp()` serializes the Content-Security-Policy (and `Reporting-Endpoints`) and publishes the
+nonce. `securityHeaders(policy)` writes the other headers onto whatever response the chain
+returns. Place them right before `assets()` and the renderer, so the nonce exists before the
+document asks for it.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { assets } from "@sdxc/assets-middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { assetResolver } from "~/app/initializers/assets";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 
 export function createWebRouter() {
 	let router = createRouter({
 		middleware: [
 			// …the middleware your app already runs
+			csp({
+				reportOnlyPolicy: ({ nonce }) =>
+					remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
-				nonce: (ctx) => ctx.securityHeaders.nonce,
+				nonce: (ctx) => getCspNonce(ctx),
 			}),
 			render({ assets: assetResolver }),
 		],
@@ -117,9 +131,9 @@ stylesheets, entry script and nonce each page passes to its document as `ctx.ass
 
 ## Put nonces on the scripts you render
 
-The nonce is generated on first read, and a response that never reads it advertises none. The
-document puts `ctx.assets.nonce` on its import map, which `remix/component` copies onto every
-import map it appends later, so client entries load under a nonce-based `script-src`:
+Remix generates the nonce once per request. The document puts `ctx.assets.nonce` on its import
+map, which `remix/component` copies onto every import map it appends later, so client entries
+load under a nonce-based `script-src`:
 
 ```tsx {% title="resources/layouts/document.tsx" %}
 import type { DocumentAssets } from "@sdxc/assets-middleware";
@@ -151,11 +165,11 @@ export function Document(handle: Handle<DocumentProps>) {
 ```
 
 The boot script needs no nonce, because its hash is in the policy. Any other inline script a
-handler renders takes `ctx.securityHeaders.nonce` the same way.
+handler renders takes `getCspNonce(ctx)` the same way.
 
 > [!NOTE]
 > Read the nonce while the chain is still running, in the handler or in the document
-> `ctx.render` builds: the headers are written when the chain resolves, ahead of a streamed body.
+> `ctx.render` builds: Remix serializes the CSP when the chain resolves, ahead of a streamed body.
 
 ## Hash a fixed inline script instead
 
@@ -172,11 +186,11 @@ import { Base64, sha256 } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { SECURITY_POLICY, BOOT_SCRIPT } from "./security-policy";
+import { CONTENT_SECURITY_POLICY, BOOT_SCRIPT } from "./security-policy";
 
 test("the policy allows the boot script exactly as written", async () => {
 	let digest = Base64.encode(unwrap(await sha256(BOOT_SCRIPT)));
-	let scriptSrc = SECURITY_POLICY.contentSecurityPolicyReportOnly?.scriptSrc;
+	let scriptSrc = CONTENT_SECURITY_POLICY.scriptSrc;
 	expect(scriptSrc).toContain(`sha256-${digest}`);
 });
 ```
@@ -185,8 +199,8 @@ Hashing in a test keeps the work out of the Worker's global scope and off every 
 
 ## Collect reports before enforcing
 
-`reportTo: "csp"` names the endpoint `reportingEndpoints` points at. `parseReports` reads both
-report formats browsers send into one violation shape.
+`reportTo: "csp"` names the endpoint Remix's `reportingEndpoints` points at. `parseReports`
+reads both report formats browsers send into one violation shape.
 
 ```typescript {% title="app/http/controllers/csp-reports.ts" %}
 import { isFailure } from "@sdxc/result";
@@ -212,9 +226,9 @@ export default createAction(routes.cspReports, async (ctx) => {
 ```
 
 Declare the route as `cspReports: post("/reports/csp")`. The slice caps how much one crafted
-batch can write to your logs. When the only violations left are browser extensions, rename
-`contentSecurityPolicyReportOnly` to `contentSecurityPolicy` and the policy is enforced. A route
-that has to differ, such as an embeddable widget, patches its own response with
+batch can write to your logs. When the only violations left are browser extensions, switch
+`reportOnlyPolicy` to `policy` and the CSP is enforced. A route that has to differ, such as an
+embeddable widget, patches CSP with `cspPatch()` / `patchCsp()` and other headers with
 `securityHeadersOverride` instead of weakening the policy for every page.
 
 ## Publish security.txt
@@ -309,5 +323,5 @@ line shares.
   challenge whose origin this policy allows.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — querying the
   `csp.violation` events.
-- [`@sdxc/security-headers`](/api/security-headers) — every directive, `override`, and reading a
-  policy back with `parse`.
+- [`@sdxc/security-headers`](/api/security-headers) — every non-CSP header, `override`, and
+  reading a CSP back with `parse`.
