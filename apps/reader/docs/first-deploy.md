@@ -7,16 +7,20 @@ Run every command from `apps/reader`.
 
 ## 1. Create the Cloudflare resources
 
-`wrangler.jsonc` names these resources. Two of their ids are placeholders, and wrangler
-refuses to deploy against an id the account does not own.
+`wrangler.jsonc` names these resources, and its KV and D1 ids are the ones on the `sergiodxa`
+account. On another account, create each one and replace its id, since wrangler refuses to
+deploy against an id the account does not own.
 
 | Resource                | Command                                                                                                           | Then                                                                         |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | KV namespace `KV`       | `bunx wrangler kv namespace create reader`                                                                        | Paste the id into both `id` and `preview_id`                                 |
 | D1 `reader-catalog`     | `bunx wrangler d1 create reader-catalog`                                                                          | Paste the id into `database_id`                                              |
 | Unsubscribe signing key | `bunx wrangler secrets-store secret create <store_id> --name READER_UNSUBSCRIBE_SECRET --scopes workers --remote` | Keep the `store_id` in `secrets_store_secrets` if it is this account's store |
-| Rate limiter            | None                                                                                                              | Confirm `namespace_id` `2001` is unused by another Worker on the account     |
+| Rate limiters           | None                                                                                                              | Nothing; a `namespace_id` is local to this Worker                            |
 | Queue `reader-jobs`     | `bunx wrangler queues create reader-jobs`                                                                         | Nothing; the binding names it                                                |
+
+Answer no when a create command offers to add the resource to the configuration: it appends a
+second entry under a binding named after the resource, and reformats the file.
 
 The two Durable Object classes, `UserDO` and `FeedDO` in `app/models/`, are created by the
 deploy itself from the `migrations` block. Each object migrates its own SQLite the first time it boots, so the
@@ -43,11 +47,13 @@ The account also needs:
 
   The id and the secret it reveals once are `CLIENT_ID` and `CLIENT_SECRET`.
 
-- **Billing.** In Polar, create the paid and premium products, and add a webhook endpoint at
-  `https://reader.sergiodxa.com/webhooks/billing` delivering `checkout.completed`,
-  `subscription.activated`, `subscription.updated`, `subscription.canceled`,
-  `subscription.revoked`, `order.paid` and `order.refunded`. Note the endpoint's signing secret
-  and both product ids.
+- **Billing.** In Polar's production organization, create the paid and premium recurring
+  products, with no benefits: the app grants the tier from the subscription. Add a Raw webhook
+  endpoint at `https://reader.sergiodxa.com/webhooks/billing` delivering `checkout.updated`,
+  `subscription.created`, `subscription.updated`, `subscription.active`,
+  `subscription.canceled`, `subscription.uncanceled`, `subscription.revoked`, `order.paid` and
+  `order.refunded`. Note the endpoint's signing secret and both product ids, and create an
+  organization access token in the dashboard under Settings → Access Tokens.
 
 ## 3. Generate the Web Push key pair
 
@@ -106,6 +112,10 @@ bun -e 'let { privateKey } = await crypto.subtle.generateKey({ name: "Ed25519" }
 ```
 
 Left unset, requests go out unsigned and the directory answers 404.
+
+Two optional secrets sign `/.well-known/security.txt`: `SECURITY_TXT_SIGNING_KEY`, an armored
+OpenPGP private key without a passphrase, and `SECURITY_TXT_ENCRYPTION_URL`, the https URL of
+its public key. Without them the file is served unsigned, with no `Encryption` field.
 
 `PUBLIC_URL` is a plain variable already set in `wrangler.jsonc`.
 

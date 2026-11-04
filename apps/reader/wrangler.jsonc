@@ -112,16 +112,11 @@
 	// assigns feed identity, and it is the only place the list of feeds exists, because
 	// a Durable Object namespace is reachable one name at a time and enumerable by
 	// nothing. Nothing that renders a page reads it.
-	//
-	// `database_id` is a placeholder. Create the real database with
-	// `bunx wrangler d1 create reader-catalog` and paste its id here before the first
-	// deploy, then apply `./database/catalog-migrations` with `sdxc run db migrate --remote`.
-	// `docs/first-deploy.md` lists everything else a first deploy needs.
 	"d1_databases": [
 		{
 			"binding": "PLATFORM_DB",
 			"database_name": "reader-catalog",
-			"database_id": "REPLACE_ME",
+			"database_id": "40605868-9603-4a2b-be65-400bd6de46b0",
 			"migrations_dir": "./database/catalog-migrations",
 		},
 	],
@@ -132,15 +127,11 @@
 	// so losing the namespace signs everybody out, makes every feed look current until its
 	// next poll republishes, and costs an article one more fetch — rather than losing
 	// anything owned.
-	//
-	// `id` and `preview_id` are placeholders. Create the real namespace with
-	// `bunx wrangler kv namespace create` and paste its id into both fields before the
-	// first deploy — wrangler refuses to deploy against an id the account does not own.
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-			"id": "REPLACE_ME",
-			"preview_id": "REPLACE_ME",
+			"id": "dfe523f88bc64bc294d98c75573a00ef",
+			"preview_id": "dfe523f88bc64bc294d98c75573a00ef",
 		},
 	],
 }
