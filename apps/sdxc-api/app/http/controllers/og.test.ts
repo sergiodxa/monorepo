@@ -36,7 +36,7 @@ vi.doMock("~/app/initializers/og-fonts", () => ({
 const { createWebRouter } = await import("~/app/initializers/router");
 
 /** A stand-in for `caches.default`, keyed by the request URL the route stores under. */
-const store = new Map<string, Response>();
+const STORE = new Map<string, Response>();
 
 /** How many times the stand-in was written. A hit must leave this unchanged. */
 let puts = 0;
@@ -46,19 +46,19 @@ function installCache(): void {
 	let cache = {
 		async match(request: RequestInfo): Promise<Response | undefined> {
 			let url = request instanceof Request ? request.url : String(request);
-			return store.get(url)?.clone();
+			return STORE.get(url)?.clone();
 		},
 		async put(request: RequestInfo, response: Response): Promise<void> {
 			puts += 1;
 			let url = request instanceof Request ? request.url : String(request);
-			store.set(url, response.clone());
+			STORE.set(url, response.clone());
 		},
 	};
 	(globalThis as unknown as { caches?: { default: typeof cache } }).caches = { default: cache };
 }
 
 afterEach(() => {
-	store.clear();
+	STORE.clear();
 	puts = 0;
 	Reflect.deleteProperty(globalThis, "caches");
 });
@@ -103,9 +103,9 @@ describe("GET /og.png", () => {
 			expect(puts).toBe(1);
 		});
 
-		let key = store.keys().next().value;
+		let key = STORE.keys().next().value;
 		expect(key).toBe(`${url}`);
-		store.set(
+		STORE.set(
 			key ?? url,
 			new Response("stored-card", { headers: { "content-type": "image/png" } }),
 		);
