@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-11-02
+**Implemented** - 2026-11-04
 
 ## Background
 
@@ -11,7 +11,7 @@ reader to [lucide.dev/icons](https://lucide.dev/icons/) to find an icon. Finding
 leaving the site, searching Lucide's catalogue, and translating the kebab-case name into the
 export (`circle-alert` → `CircleAlertIcon`) by hand.
 
-The package wraps about 1,760 Lucide icons. That is the same situation `@sdxc/u` and
+The package wraps 1,903 Lucide icons. That is the same situation `@sdxc/u` and
 `@sdxc/ui` were in, and the route table already answers it: a README that indexes hundreds of
 entries is a site, so a catalogue package answers on its own tree.
 
@@ -103,30 +103,32 @@ in the published manifest, so neither can name the icons' release.
 Size, color, stroke width and absolute stroke width are CSS custom properties on the grid.
 `<use>` inherits `color`, `stroke` and `stroke-width` into the symbol, so one small mixin
 writing those properties restyles every tile at once. The detail view's JSX snippet reflects
-the current values (`<HeartIcon size={32} strokeWidth={1.5} aria-hidden />`), and the values
+the current values (`<HeartIcon size={32} strokeWidth={1.5} aria-hidden="true" />`), and the values
 live in the query string so a customized gallery has its own address.
 
 ### Filter
 
-A plain `GET` form submits `?q=`, matched against names and tags, and the server renders only the matching
-tiles, so filtering works without script and a result set can be linked. Once script runs, a
-mixin hides non-matching tiles on input by testing `data-search` (the name plus its tags), and
-keeps the query string in step with `history.replaceState`.
+The filter and the customizer are one `GET` form, so a narrowed or restyled grid has its own
+address and works without script. The server renders every tile and marks the ones `?q=`
+leaves out `hidden`, matching every word against the icon's name and tags. Once script runs,
+an island toggles `hidden` as the reader types, by the same rule the server applies, and keeps
+the query string in step with `history.replaceState`.
 
-### One detail dialog, one named frame
+### One detail dialog
 
-The gallery renders a single `<dialog>` holding `<Frame name="icon">`. Every tile is a
-named-frame link: `data-rmx-target="icon"` loads `data-rmx-src` into that frame while `href`
-stays the browser's destination. A delegated click handler on the grid calls `showModal()`.
-Without script, a tile is a plain link to `/api/icons/:icon`.
+The gallery renders a single `<dialog>`. A plain click on a tile opens it and mounts a
+`<Frame>` for `/frames/icons/:icon`, carrying the customization in the address; a click with a
+modifier, a middle click, or a browser without script follows the tile to `/api/icons/:icon`.
+Resting the mouse or focus on a tile, or pressing it, fetches its detail ahead, so the dialog
+opens with its content. A press on the backdrop closes it.
 
 The dialog and the icon page share one component, so they show the same content:
 
-- the icon at a large size on a pixel grid, the name and its tags;
+- the icon at a large size on Lucide's 24-unit grid, with its tags beside it;
 - both ways to render it, each with a copy button:
-  `<HeartIcon aria-hidden />` and `<Icon name="heart" aria-hidden />`;
+  `<HeartIcon aria-hidden="true" />` and `<Icon name="heart" aria-hidden="true" />`;
 - the import line, `import { HeartIcon } from "@sdxc/icons";`;
-- a copy-SVG button and a link to the icon's page on lucide.dev.
+- its SVG source and a link to the icon's page on lucide.dev.
 
 ### Attribution
 
@@ -178,7 +180,7 @@ a regenerate never ships.
 
 Each tile as its own `LazyFrame`, loading as it nears the viewport.
 
-**Rejected because**: about 1,760 requests for content smaller than the request headers. Splitting
+**Rejected because**: about 1,900 requests for content smaller than the request headers. Splitting
 the grid into a few alphabetical `LazyFrame` sections stays available if the single document
 proves slow to lay out.
 
@@ -186,8 +188,8 @@ proves slow to lay out.
 
 Each tile with its own `<dialog>` and `LazyFrame loadOn="open"`.
 
-**Rejected because**: `LazyFrame` loads one fixed `src`, so this needs 1,760 dialogs in the
-document. One dialog with a named frame serves every icon.
+**Rejected because**: `LazyFrame` loads one fixed `src`, so this needs about 1,900 dialogs in the
+document. One dialog that mounts a frame for the clicked tile serves every icon.
 
 ### 3. Inline SVG per tile
 
@@ -239,7 +241,7 @@ load, and fetched the sprite twice with every combination of `as` and `crossorig
 
 1. Filter mixin over `data-search`
 2. Customizer mixin over CSS custom properties
-3. Detail dialog with the named frame and copy buttons
+3. Detail dialog with a frame per opened icon, and copy buttons
 
 ## References
 

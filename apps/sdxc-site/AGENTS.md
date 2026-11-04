@@ -96,7 +96,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   fails while a published utility has no example.
 - **Every page keeps its markdown twin.** `/docs/<slug>.md` and `/api/<name>.md`
   serve the source file; a catalogue page's twin (`/api/u/<utility>.md`,
-  `/api/ui/<component>.md`, `/api/ui/<subpath>/<slug>.md`) is written by
+  `/api/ui/<component>.md`, `/api/ui/<subpath>/<slug>.md`, `/api/icons/<name>.md`) is written by
   `app/services/catalogue-markdown.ts` from the same record its HTML page draws. The
   `Open` menu, `/llms.txt`, the search index and the MCP resources all address a page by
   that URL. A page whose twin stopped answering breaks all four at once.
@@ -122,6 +122,10 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   frame's body, so a frame controller returns `ctx.render(…)` as is; `withBundleCache`
   rebuilds the body from a string, which workerd then reads in 4 KB pieces, and the page
   would show the rest as text.
+- **The icon gallery carries its own symbols.** `/api/icons` renders every icon once as a
+  `<symbol>` inside the page, and each tile draws `<use href="#lucide-<name>">`. An external
+  sprite file is fetched once per `<use>` while the first fetch is in flight, and no
+  `<link rel="preload">` matches a `<use>` load, so a sprite file costs one download per tile.
 - **Build a URL a machine will read from `SITE_URL`.** A sitemap, a feed, an `llms.txt`
   entry and an MCP resource URI are identities rather than links, so they name one origin
   regardless of which host answered.
