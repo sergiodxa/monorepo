@@ -33,6 +33,7 @@ import {
 	SUPPORT_TOPICS,
 	SupportSchema,
 } from "~/app/http/validators/support";
+import { SEO } from "~/app/initializers/seo";
 import { landingTranslate } from "~/resources/components/marketing/figures";
 import { findDocPage, pageTitle } from "~/resources/docs/registry";
 import DocsLayout from "~/resources/layouts/docs";
@@ -95,6 +96,21 @@ async function renderPage(ctx: AppContext, model: SupportPage.Model, init?: Resp
 			title={`${t("support.title")} · ${t("docs.title")}`}
 			description={t("support.description")}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(routes.support.index.href()),
+				schema: [
+					SEO.schema.webPage({
+						name: t("support.title"),
+						description: t("support.description"),
+						url: routes.support.index.href(),
+						inLanguage: ctx.locale,
+					}),
+					SEO.schema.breadcrumbs([
+						{ name: t("docs.eyebrow"), url: routes.docs.index.href() },
+						{ name: t("support.title"), url: routes.support.index.href() },
+					]),
+				],
+			}}
 		>
 			<DocsLayout t={t} isSignedIn={isAuthenticated()} activePath={routes.support.index.href()}>
 				<DocsPageHeader

@@ -28,6 +28,7 @@ import {
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { SEO, productSchema, publisherSchema } from "~/app/initializers/seo";
 import { devLoginEnabled } from "~/app/services/dev-login";
 import { TIER_LIMITS } from "~/app/services/entitlement";
 import { HISTORY_ENTRY_LIMIT } from "~/app/services/history";
@@ -105,6 +106,27 @@ export default createAction(routes.home, (ctx) => {
 			title={t("landing.meta.title")}
 			description={t("landing.meta.description")}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(ctx.url),
+				schema: [
+					publisherSchema(),
+					SEO.schema.website({ description: t("landing.meta.description") }),
+					productSchema({
+						name: t("app.name"),
+						description: t("landing.meta.description"),
+						url: routes.home.href(),
+						featureList: CARD_FEATURES.map((slug) =>
+							t(`landing.features.cards.${FEATURE_KEYS[slug]}.title`),
+						),
+						offer: {
+							price: "0",
+							priceCurrency: "USD",
+							description: t("settings.plan.names.free"),
+						},
+					}),
+					SEO.schema.faq(faqs.map(({ question, answer }) => ({ question, answer }))),
+				],
+			}}
 		>
 			<MarketingLayout t={t} isSignedIn={false} devLogin={devLoginEnabled(ctx.url)}>
 				<LandingHero

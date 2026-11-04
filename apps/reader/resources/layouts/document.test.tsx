@@ -154,6 +154,15 @@ describe("DocumentLayout", () => {
 		expect(html).toContain(`name="referrer"`);
 		expect(html).toContain("strict-origin-when-cross-origin");
 	});
+
+	/** A page that passes no search metadata is one a crawler should leave out of the index. */
+	test("asks crawlers not to index a page that opts out of search", async () => {
+		let html = await render();
+
+		expect(html).toContain('name="robots" content="noindex, follow"');
+		expect(html).not.toContain("application/ld+json");
+		expect(html).not.toContain('rel="canonical"');
+	});
 });
 
 /**

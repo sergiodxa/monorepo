@@ -11,6 +11,7 @@ import { DocsHub } from "@sdxc/ui/docs";
 import { createAction } from "remix/router";
 
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { SEO } from "~/app/initializers/seo";
 import { landingTranslate } from "~/resources/components/marketing/figures";
 import {
 	DOC_PAGES,
@@ -67,6 +68,15 @@ export default createAction(routes.docs.index, (ctx) => {
 			title={t("docs.title")}
 			description={t("docs.hub.lead")}
 			locale={ctx.locale}
+			seo={{
+				canonical: SEO.canonical(path),
+				schema: SEO.schema.webPage({
+					name: t("docs.hub.title"),
+					description: t("docs.hub.lead"),
+					url: path,
+					inLanguage: ctx.locale,
+				}),
+			}}
 		>
 			<DocsLayout t={t} isSignedIn={isAuthenticated()} activePath={path}>
 				<DocsHub

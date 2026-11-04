@@ -16,6 +16,7 @@ import { raw } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";
 import { DocsFooter, DocsLayout as Shell, DocsNav } from "@sdxc/ui/docs";
 
+import SiteCredit from "~/resources/components/site-credit";
 import { docHref, docsTree } from "~/resources/docs/registry";
 import MarketingLayout from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -67,7 +68,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					closeLabel={t("docs.nav.close")}
 					footer={
 						<DocsFooter
-							legal={t("landing.footer.copyright", { year: String(new Date().getFullYear()) })}
+							legal={<SiteCredit t={t} />}
 							links={[
 								{ label: t("app.name"), href: routes.home.href() },
 								{ label: t("docs.title"), href: routes.docs.index.href() },
@@ -124,9 +125,10 @@ function NavFooter(handle: Handle<{ t: Translate }>) {
 /**
  * Long-reading type for a help page's body: 16px at a relaxed line height, one gap between
  * every block that no component's own margin can cancel, headings clearly larger with room
- * above, and tables that scroll inside their own box. List rules reach only the page's prose.
+ * above, and tables that scroll inside their own box. List and table rules reach the prose's
+ * own children, so a help article applies the same mix to its entry body.
  */
-function docsProse() {
+export function docsProse() {
 	return [
 		raw({
 			display: "grid",

@@ -72,6 +72,8 @@ describe("GET /support", () => {
 		expect(html).not.toContain(SUPPORT_INBOX);
 		expect(html).toContain('name="page" value="feed-not-updating"');
 		expect(html).toContain("A feed stopped updating");
+		expect(html).toContain('rel="canonical" href="https://reader.sergiodxa.com/support"');
+		expect(html).not.toContain('canonical" href="https://reader.sergiodxa.com/support?');
 	});
 
 	test("forgets a page that is not a help page", async () => {
