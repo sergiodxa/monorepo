@@ -14,9 +14,11 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { x402 } from "@sdxc/x402/middleware";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
@@ -26,7 +28,7 @@ import { requireOperationPayment } from "~/app/http/middleware/require-operation
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import { sellerConfig } from "~/app/initializers/x402";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /** The context a controller sees once the router's middleware has run. */
@@ -52,11 +54,15 @@ export function createWebRouter() {
 			trace(),
 			getClientIP(),
 			x402(sellerConfig()),
+			csp({
+				policy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
-				nonce: (ctx) => ctx.securityHeaders.nonce,
+				nonce: (ctx) => getCspNonce(ctx),
 			}),
 			render({ assets: assetResolver }),
 		],
