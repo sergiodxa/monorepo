@@ -26,7 +26,7 @@ export namespace InstallCommand {
 
 	/** Props accepted by {@link InstallCommand}. */
 	export interface Props extends Omit<TagProps<"form">, "children" | "aria-label" | "title"> {
-		/** Package specifiers to install, such as `["@sdxc/ui", "remix@3.1.0"]`. */
+		/** Package specifiers to install, such as `["@sdxc/ui", "remix@3.2.0"]`. */
 		packages: readonly string[];
 		/** Installs them as development dependencies. */
 		dev?: boolean;

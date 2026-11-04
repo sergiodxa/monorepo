@@ -19,7 +19,7 @@
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"devDependencies": {
 		"@sdxc/random": "workspace:*",

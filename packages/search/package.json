@@ -21,9 +21,9 @@
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"peerDependencies": {
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }

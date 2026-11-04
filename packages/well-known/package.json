@@ -39,11 +39,11 @@
 	"devDependencies": {
 		"@sdxc/http": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"peerDependencies": {
 		"@sdxc/http": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/http": {

@@ -70,7 +70,7 @@
 		"@sdxc/validate": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "1.63.1",

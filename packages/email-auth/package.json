@@ -21,7 +21,7 @@
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/xml": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"devDependencies": {
 		"@sdxc/zone-file": "workspace:*"
