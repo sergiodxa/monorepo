@@ -69,9 +69,10 @@ sdxc pkg bench weigh ./src/index.ts --max-gzipped 25600
 sdxc pkg bench http https://example.com/ --requests 20 --p95 200ms --json
 ```
 
-`--timeout`, `--p50`, `--p95`, `--p99` and `--mean` accept a duration string
-(`200ms`, `5s`) or a bare millisecond number (`200`). Exit `1` when a budget
-fails or every request errors; exit `2` for usage or an invalid duration.
+`--timeout`, `--p50`, `--p95`, `--p99` and `--mean` accept a
+[duration string](https://www.npmjs.com/package/@sdxc/duration) (`200ms`, `5s`)
+or a bare millisecond number (`200`). Exit `1` when a budget fails or every
+request errors; exit `2` for usage or an invalid duration.
 
 ## API
 
