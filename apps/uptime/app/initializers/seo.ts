@@ -11,14 +11,14 @@ import type { SchemaOrg } from "@sdxc/seo";
 
 import { createSeo } from "@sdxc/seo";
 
-import { SITE_OWNER, SITE_OWNER_PROFILES } from "~/config/site";
+import { SITE_OWNER, SITE_OWNER_PROFILES, SITE_OWNER_X_HANDLE } from "~/config/site";
 import routes from "~/routes/web";
 
 /**
  * The site's one configured SEO instance: resolves canonical URLs onto the product's
  * origin regardless of which host served the request, and binds the schema.org builders
- * to the same identity. No `twitter.site` or `creator` handle, since the product has no
- * account of its own; the person's profiles are `rel="me"` links instead.
+ * to the same identity. Twitter cards name {@link SITE_OWNER_X_HANDLE} as both the site
+ * and the creator, the profile the head also links with `rel="me"`.
  *
  * @example SEO.canonical(ctx.url) // "https://uptime.sergiodxa.com/features/monitors"
  */
@@ -27,7 +27,7 @@ export const SEO = createSeo({
 	siteName: "Uptime",
 	defaultDescription:
 		"Usage-based uptime monitoring service. Monitor websites, APIs, DNS, SSL certificates, and cron jobs from multiple global regions.",
-	twitter: { card: "summary_large_image" },
+	twitter: { card: "summary_large_image", site: SITE_OWNER_X_HANDLE, creator: SITE_OWNER_X_HANDLE },
 });
 
 /** What a page contributes to its `SoftwareApplication` node — everything else is a product fact. */
