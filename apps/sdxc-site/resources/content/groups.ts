@@ -198,5 +198,5 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"random",
 		],
 	},
-	{ title: "Testing", packages: ["spec", "ci", "sample", "cloudflare-mocks"] },
+	{ title: "Testing", packages: ["spec", "ci", "bench", "sample", "cloudflare-mocks"] },
 ];
