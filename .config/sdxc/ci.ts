@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { access } from "node:fs/promises";
+import { join } from "node:path";
+
 import type { Runner } from "@sdxc/ci";
 
 import { defineCI } from "@sdxc/ci";
@@ -91,22 +94,50 @@ const DOCTOR_CACHE = { env: ["SDXC_COMMIT_RANGE", "SDXC_COMMIT_MSG_FILE"] };
  */
 const LOCAL_COMMIT_RANGE = "origin/main..HEAD";
 
+/** An app's committed example variables and the git-ignored `.dev.vars` its tests read. */
+export interface DevVars {
+	example: string;
+	devVars: string;
+}
+
+/**
+ * The apps among `examples` without a `.dev.vars`, which the run fills from `.env.example`: a
+ * CI host and a fresh `--worktree` checkout have none, and a developer's own file stays as it is.
+ */
+export async function missingDevVars(
+	root: string,
+	examples: readonly string[],
+): Promise<DevVars[]> {
+	let pairs = examples.map((example) => ({
+		example,
+		devVars: example.replace(/\.env\.example$/, ".dev.vars"),
+	}));
+	let present = await Promise.all(
+		pairs.map(({ devVars }) =>
+			access(join(root, devVars)).then(
+				() => true,
+				() => false,
+			),
+		),
+	);
+	return pairs.filter((_, index) => !present[index]);
+}
+
 /** The kit binary this checkout runs doctor through, so a scoped app doctor needs no global `sdxc`. */
 const KIT_BIN = "packages/kit/src/bin.ts";
 
 export default defineCI(async (ci) => {
-	if (ci.runner === "remote") {
-		let examples = await ci.files("apps/*/.env.example");
-		await ci.step(
-			"Example secrets",
-			async (step) => {
-				for (let example of examples) {
-					await step.run(["cp", example, example.replace(/\.env\.example$/, ".dev.vars")]);
-				}
-			},
-			{ halt: true },
-		);
-	}
+	let missing = await missingDevVars(ci.root, await ci.files("apps/*/.env.example"));
+	await ci.step(
+		"Example secrets",
+		async (step) => {
+			for (let { example, devVars } of missing) {
+				let copied = await step.run(["cp", example, devVars]);
+				if (isFailure(copied)) return copied;
+			}
+		},
+		{ halt: true },
+	);
 
 	let all = await ci.workspaces();
 	let scoped = ci.scope === null ? all : all.filter((ws) => ci.scope?.includes(ws.path) === true);
