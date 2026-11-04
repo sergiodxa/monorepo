@@ -1,7 +1,7 @@
 /**
- * The typed models of the response policy headers: the Content Security Policy directives,
- * the Permissions-Policy allowlists, and the policy set the middleware applies. Kept apart from
- * the entry points so each subpath exports the namespace next to the functions that use it.
+ * The typed models of the response policy headers: Permissions-Policy allowlists, and the
+ * non-CSP policy set the middleware applies. CSP lives in `./csp` for parse/stringify and in
+ * Remix's `csp()` middleware for request nonces and response headers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -109,7 +109,8 @@ export namespace PermissionsPolicy {
 }
 
 /**
- * The response policy header set an app configures once and the middleware applies.
+ * The non-CSP response policy header set an app configures once and the middleware applies.
+ * Content-Security-Policy and Reporting-Endpoints come from Remix's `csp()` middleware.
  */
 export namespace SecurityHeaders {
 	/** RFC 6797 Strict-Transport-Security. */
@@ -132,11 +133,8 @@ export namespace SecurityHeaders {
 		| "strict-origin-when-cross-origin"
 		| "unsafe-url";
 
-	/** Every header the package writes, each left out when its field is absent. */
+	/** Every non-CSP header the package writes, each left out when its field is absent. */
 	export interface Policy {
-		contentSecurityPolicy?: CSP.Directives;
-		/** Sent alongside or instead, to observe a stricter policy before enforcing it. */
-		contentSecurityPolicyReportOnly?: CSP.Directives;
 		/** Written only on `https:` requests, since browsers ignore it over plain HTTP. */
 		strictTransportSecurity?: StrictTransportSecurity;
 		/** Several values are a fallback list, the last one the browser understands wins. */
@@ -151,25 +149,22 @@ export namespace SecurityHeaders {
 		/** Sent alongside or instead, to observe cross-origin isolation before enforcing it. */
 		crossOriginEmbedderPolicyReportOnly?: "require-corp" | "credentialless" | "unsafe-none";
 		crossOriginResourcePolicy?: "same-origin" | "same-site" | "cross-origin";
+		/**
+		 * Legacy framing control for browsers that ignore `frame-ancestors`. Prefer CSP
+		 * `frameAncestors` via Remix `csp()` for modern clients.
+		 */
+		xFrameOptions?: "DENY" | "SAMEORIGIN";
 		/** @default true */
 		noSniff?: boolean;
-		/** Endpoint names to URLs, written as `Reporting-Endpoints`; `reportTo` refers to a name. */
-		reportingEndpoints?: Record<string, string>;
 	}
 
 	/** A policy patch: a header set to `null` is not sent for that response. */
 	export type Override = {
-		[Name in keyof Policy]?: Name extends
-			| "contentSecurityPolicy"
-			| "contentSecurityPolicyReportOnly"
-			? CSP.Override | null
-			: Policy[Name] | null;
+		[Name in keyof Policy]?: Policy[Name] | null;
 	};
 
 	/** The per-response facts the headers depend on. */
 	export interface ApplyOptions {
-		/** Substituted for every `"nonce"` source; without it those sources are dropped. */
-		nonce?: string;
 		/** HSTS is written only for `https:`. */
 		url: URL;
 	}

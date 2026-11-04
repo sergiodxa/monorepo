@@ -1,7 +1,8 @@
 /**
- * Router middleware that applies a security header policy to every response, publishing
- * `ctx.securityHeaders` so a handler reads the response's nonce and patches the policy, and a
+ * Router middleware that applies a non-CSP security header policy to every response, publishing
+ * `ctx.securityHeaders` so a handler patches HSTS, Referrer-Policy and the rest, and a
  * route-level middleware that declares a route's exceptions where the route is defined.
+ * Content-Security-Policy and its nonce come from Remix's `csp()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,8 +13,6 @@ import { createContextKey } from "remix/router";
 
 import type { SecurityHeaders } from "./lib/types.js";
 
-import { generateNonce } from "./csp.js";
-
 import { apply, override as overridePolicy } from "./index.js";
 
 /**
@@ -22,23 +21,17 @@ import { apply, override as overridePolicy } from "./index.js";
  */
 declare module "remix/router" {
 	interface RequestContext {
-		/** This response's nonce and policy, published by `securityHeaders(policy)`. */
+		/** This response's non-CSP policy, published by `securityHeaders(policy)`. */
 		securityHeaders: SecurityHeadersContext;
 	}
 }
 
 /** What a handler reads and changes about the headers its response will be sent with. */
 export interface SecurityHeadersContext {
-	/**
-	 * This response's nonce, generated on first read; a response that never reads it has every
-	 * `"nonce"` source removed. Read it while the response is built, in the handler or a component
-	 * rendering synchronously: a read after the headers are written leaves them without the nonce.
-	 */
-	readonly nonce: string;
 	/** The policy this response will be sent with, including every patch applied so far. */
 	readonly policy: SecurityHeaders.Policy;
 	/**
-	 * Patches this response's policy; a CSP patch merges directive by directive.
+	 * Patches this response's policy.
 	 *
 	 * @param patch - Headers to change (a value) or leave unsent (`null`)
 	 */
@@ -61,12 +54,12 @@ const SWITCHING_PROTOCOLS = 101;
 
 /**
  * Publishes `ctx.securityHeaders` and applies the resulting policy to the response the
- * chain returns, keeping any header the response set itself. Place it immediately before the
- * renderer, so the response it decorates is the one the renderer produced.
+ * chain returns, keeping any header the response set itself. Place it next to Remix's `csp()`,
+ * which owns Content-Security-Policy and the request nonce.
  *
- * @param policy - The app's policy, shared by every request and never mutated
+ * @param policy - The app's non-CSP policy, shared by every request and never mutated
  * @returns The middleware
- * @example createRouter({ middleware: [securityHeaders(SECURITY_POLICY), renderWith(render)] })
+ * @example createRouter({ middleware: [csp({ policy: CSP }), securityHeaders(SECURITY_POLICY), render()] })
  */
 export function securityHeaders(policy: SecurityHeaders.Policy): Middleware<{
 	key: typeof SecurityHeadersKey;
@@ -75,12 +68,7 @@ export function securityHeaders(policy: SecurityHeaders.Policy): Middleware<{
 }> {
 	return async (ctx, next) => {
 		let current = policy;
-		let nonce: string | undefined;
 		let state: SecurityHeadersContext = {
-			get nonce() {
-				nonce ??= generateNonce();
-				return nonce;
-			},
 			get policy() {
 				return current;
 			},
@@ -94,7 +82,7 @@ export function securityHeaders(policy: SecurityHeaders.Policy): Middleware<{
 		if (response.status === SWITCHING_PROTOCOLS) return response;
 
 		let headers = new Headers(response.headers);
-		apply(headers, current, nonce === undefined ? { url: ctx.url } : { url: ctx.url, nonce });
+		apply(headers, current, { url: ctx.url });
 		return new Response(response.body, {
 			status: response.status,
 			statusText: response.statusText,
@@ -105,12 +93,12 @@ export function securityHeaders(policy: SecurityHeaders.Policy): Middleware<{
 
 /**
  * Controller or action middleware applying `patch` for the routes it guards, so a route states
- * its own exception (`frameAncestors: ["*"]` for an embeddable page) next to its handler. It
- * passes through untouched when `securityHeaders` is not installed.
+ * its own exception next to its handler. It passes through untouched when `securityHeaders` is
+ * not installed.
  *
  * @param patch - Headers to change (a value) or leave unsent (`null`) on these routes
  * @returns The middleware
- * @example createAction(route, { middleware: [securityHeadersOverride({ contentSecurityPolicy: { frameAncestors: ["*"] } })], handler })
+ * @example createAction(route, { middleware: [securityHeadersOverride({ referrerPolicy: "no-referrer" })], handler })
  */
 export function securityHeadersOverride(patch: SecurityHeaders.Override): Middleware {
 	return (ctx, next) => {
