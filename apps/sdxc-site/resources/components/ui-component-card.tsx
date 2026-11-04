@@ -64,9 +64,11 @@ export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 							minBs(PREVIEW_HEIGHT),
 							bs(PREVIEW_HEIGHT),
 							overflow("hidden"),
-							bg("neutral.tint"),
-							border({ color: "neutral.border", width: 0, style: "solid" }),
-							raw({ borderBlockEndWidth: "1px" }),
+							raw({
+								backgroundColor: "var(--ui-bg)",
+								boxShadow: "inset 0 0 0 1px var(--ui-landing-hairline)",
+								borderBlockEnd: "1px solid var(--ui-neutral-border)",
+							}),
 						]}
 					>
 						<img
