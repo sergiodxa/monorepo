@@ -5,31 +5,34 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
 
 /** Bunny Fonts stylesheet and font files for Outfit / IBM Plex Mono. */
 const FONTS_ORIGIN = "https://fonts.bunny.net";
 
 /**
- * The policy for every response. Styles are inline because `remix/component`
- * writes them that way; fonts load from Bunny. The landing's JSON-LD script is
- * inline and carries the response nonce. JSON and MCP routes embed no script,
- * so a response that never reads the nonce drops that source.
+ * The Content-Security-Policy Remix's `csp()` sends for every response. Styles are inline
+ * because `remix/component` writes them that way; fonts load from Bunny. The landing's
+ * JSON-LD script is inline and carries the response nonce. JSON and MCP routes embed no
+ * script, so a response that never reads the nonce drops that source.
  */
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: ["self", "nonce"],
+	styleSrc: ["self", "unsafe-inline", FONTS_ORIGIN],
+	fontSrc: ["self", FONTS_ORIGIN],
+	imgSrc: ["self", "data:"],
+	connectSrc: ["self"],
+	frameAncestors: ["none"],
+	objectSrc: ["none"],
+	baseUri: ["self"],
+};
+
+/** The non-CSP headers every apis response carries. */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicy: {
-		defaultSrc: ["self"],
-		scriptSrc: ["self", "nonce"],
-		styleSrc: ["self", "unsafe-inline", FONTS_ORIGIN],
-		fontSrc: ["self", FONTS_ORIGIN],
-		imgSrc: ["self", "data:"],
-		connectSrc: ["self"],
-		frameAncestors: ["none"],
-		objectSrc: ["none"],
-		baseUri: ["self"],
-	},
 	strictTransportSecurity: { maxAge: 31536000 },
 	referrerPolicy: "strict-origin-when-cross-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: {
 		camera: [],
 		microphone: [],
