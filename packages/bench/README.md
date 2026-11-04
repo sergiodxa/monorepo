@@ -59,18 +59,13 @@ Time budgets on the command line accept
 
 ## Command line
 
-`@sdxc/bench` ships a command line for the same checks:
-
-```sh
-bunx @sdxc/bench --help
-```
-
 With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed,
-`sdxc pkg bench …` runs that command line.
+`sdxc pkg bench` runs the same checks from a terminal:
 
 ```sh
-bunx @sdxc/bench weigh ./src/index.ts --max-gzipped 25600
-bunx @sdxc/bench http https://example.com/ --requests 20 --p95 200ms --json
+sdxc pkg bench --help
+sdxc pkg bench weigh ./src/index.ts --max-gzipped 25600
+sdxc pkg bench http https://example.com/ --requests 20 --p95 200ms --json
 ```
 
 `--timeout`, `--p50`, `--p95`, `--p99` and `--mean` accept a duration string
