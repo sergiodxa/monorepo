@@ -297,40 +297,44 @@ namespace ConcentricRadiusFace {
 /** Outer radius = inner radius + padding — concentric corners. */
 function ConcentricRadiusFace(_handle: Handle<ConcentricRadiusFace.Props>) {
 	return () => (
-		<div
-			mix={[
-				raw({
-					position: "relative",
-					inlineSize: "6.5rem",
-					blockSize: "4.2rem",
-					borderRadius: "1.1rem",
-					backgroundColor: "color-mix(in oklch, Canvas 92%, CanvasText)",
-					boxShadow: `0 0 0 1px ${INK_STRONG}`,
-					padding: "0.55rem",
-				}),
-			]}
-		>
+		<div mix={[vstack({ gap: 2, align: "center" })]}>
 			<div
 				mix={[
 					raw({
-						blockSize: "100%",
-						borderRadius: "0.55rem",
-						backgroundColor: BRAND,
-						boxShadow: `inset 0 0 0 1px ${INK_STRONG}`,
+						inlineSize: "6.75rem",
+						blockSize: "2.85rem",
+						borderRadius: "1.1rem",
+						backgroundColor: "color-mix(in oklch, Canvas 92%, CanvasText)",
+						boxShadow: `0 0 0 1px ${INK_STRONG}`,
+						padding: "0.55rem",
 					}),
 				]}
-			/>
+			>
+				<div
+					mix={[
+						raw({
+							blockSize: "100%",
+							borderRadius: "0.55rem",
+							backgroundColor: BRAND,
+							boxShadow: `inset 0 0 0 1px ${INK_STRONG}`,
+						}),
+					]}
+				/>
+			</div>
 			<span
 				mix={[
 					font("mono"),
 					raw({
-						position: "absolute",
-						insetBlockEnd: "0.15rem",
-						insetInlineStart: "50%",
-						translate: "-50% 0",
-						fontSize: "0.5rem",
-						opacity: "0.55",
+						fontSize: "0.6rem",
+						lineHeight: "1",
+						letterSpacing: "0.02em",
+						color: "var(--ui-neutral-fg, CanvasText)",
+						opacity: "0.85",
 						whiteSpace: "nowrap",
+						backgroundColor: "color-mix(in oklch, Canvas 92%, transparent)",
+						paddingInline: "0.35rem",
+						paddingBlock: "0.15rem",
+						borderRadius: "0.25rem",
 					}),
 				]}
 			>
