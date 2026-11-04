@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP, SecurityHeaders } from "@sdxc/security-headers";
 
 /** Where the Cloudflare Web Analytics beacon script loads from. */
 const WEB_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";
@@ -22,26 +22,28 @@ const PARITY_DEALS_SCRIPT_ORIGIN = "https://cdn.paritydeals.com";
 const PARITY_DEALS_API_ORIGIN = "https://api.paritydeals.com";
 
 /**
- * The policy for every books response. Styles are inline because `remix/component` writes them
- * that way and the parity banner injects its own `<style>`; images take any HTTPS origin because
- * the banner's markup comes from its API. The nonce reaches the import map of a hydrating page.
+ * The Report-Only Content-Security-Policy Remix's `csp()` sends. Styles are inline because
+ * `remix/component` writes them that way and the parity banner injects its own `<style>`; images
+ * take any HTTPS origin because the banner's markup comes from its API.
  */
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	scriptSrc: ["self", "nonce", WEB_ANALYTICS_SCRIPT_ORIGIN, PARITY_DEALS_SCRIPT_ORIGIN],
+	styleSrc: ["self", "unsafe-inline"],
+	imgSrc: ["self", "data:", "https:"],
+	fontSrc: ["self"],
+	connectSrc: ["self", WEB_ANALYTICS_BEACON_ORIGIN, PARITY_DEALS_API_ORIGIN],
+	frameAncestors: ["none"],
+	objectSrc: ["none"],
+	baseUri: ["self"],
+	reportTo: "csp",
+};
+
+/** The non-CSP policy for every books response. */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicyReportOnly: {
-		defaultSrc: ["self"],
-		scriptSrc: ["self", "nonce", WEB_ANALYTICS_SCRIPT_ORIGIN, PARITY_DEALS_SCRIPT_ORIGIN],
-		styleSrc: ["self", "unsafe-inline"],
-		imgSrc: ["self", "data:", "https:"],
-		fontSrc: ["self"],
-		connectSrc: ["self", WEB_ANALYTICS_BEACON_ORIGIN, PARITY_DEALS_API_ORIGIN],
-		frameAncestors: ["none"],
-		objectSrc: ["none"],
-		baseUri: ["self"],
-		reportTo: "csp",
-	},
-	reportingEndpoints: { csp: "/reports/csp" },
 	strictTransportSecurity: { maxAge: 31536000 },
 	referrerPolicy: "strict-origin-when-cross-origin",
+	xFrameOptions: "DENY",
 	permissionsPolicy: {
 		camera: [],
 		microphone: [],

@@ -19,10 +19,12 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import newsletter from "@sdxc/newsletter/middleware";
-import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
@@ -33,7 +35,7 @@ import { polar } from "~/app/initializers/billing";
 import { attributionCookie } from "~/app/initializers/cookies";
 import { logger } from "~/app/initializers/logger";
 import { buttondown } from "~/app/initializers/newsletter";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /** The context a controller sees once the router's middleware has run. */
@@ -84,9 +86,14 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 			newsletter({ provider: list }),
 
 			/**
-			 * Right before the assets and the renderer, so the headers land on the response it
-			 * produced and the nonce exists before `assets()` reads it into `ctx.assets`.
+			 * Right before the assets and the renderer: Remix owns CSP and the nonce;
+			 * this package owns HSTS, Referrer-Policy and the rest.
 			 */
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 
 			/**
@@ -97,8 +104,7 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
-				nonce: (ctx) =>
-					ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
+				nonce: (ctx) => getCspNonce(ctx),
 			}),
 			render({ assets: assetResolver }),
 		],
