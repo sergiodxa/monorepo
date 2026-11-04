@@ -20,6 +20,12 @@ export const SITE_NAME = "Reader";
 export const SITE_DESCRIPTION =
 	"Follow any site that publishes RSS or Atom. Reader checks each feed as often as it publishes and puts every new post in one queue, newest first, with nothing promoted into it.";
 
+/** The personal X account public pages name as the site and as their author. */
+export const TWITTER_HANDLE = "@sergiodxa";
+
+/** The profile `rel="me"` and Organization `sameAs` publish for {@link TWITTER_HANDLE}. */
+export const TWITTER_PROFILE = "https://x.com/sergiodxa";
+
 /**
  * Who the site belongs to. `sameAs` is the set `rel="me"` also publishes, which is
  * how the home page's h-card is recognized as this person's.
@@ -31,7 +37,7 @@ export const PUBLISHER = {
 	sameAs: [
 		"https://sergiodxa.com",
 		"https://github.com/sergiodxa",
-		"https://x.com/sergiodxa",
+		TWITTER_PROFILE,
 		"https://www.youtube.com/sergiodxa",
 	],
 } as const;
