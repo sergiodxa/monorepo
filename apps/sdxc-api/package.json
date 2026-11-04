@@ -38,7 +38,7 @@
 		"@sdxc/validate": "workspace:*",
 		"@sdxc/x402": "workspace:*",
 		"@sdxc/zone-file": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",

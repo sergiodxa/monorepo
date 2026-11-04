@@ -19,6 +19,6 @@
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/robots": "workspace:*",
-		"remix": "3.1.0"
+		"remix": "3.2.0"
 	}
 }
