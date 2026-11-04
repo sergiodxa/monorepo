@@ -10,6 +10,7 @@
 import type { RemixElement } from "remix/component";
 
 import { isSuccess } from "@sdxc/result";
+import { createElement } from "remix/component";
 import { describe, expect, test } from "vitest";
 
 import { MemoryTransport } from "./memory.js";
@@ -34,9 +35,12 @@ class WelcomeEmail implements Email {
 		return "Welcome";
 	}
 
-	/** Body tree; the element is built directly because the copy is a single string. */
+	/**
+	 * Body tree via `createElement`: Remix 3.2 brands elements with a Symbol, so a plain
+	 * `{ $rmx: true }` object is data rather than a renderable element.
+	 */
 	body(): RemixElement {
-		return { type: "p", props: { children: "Welcome aboard" }, $rmx: true };
+		return createElement("p", undefined, "Welcome aboard");
 	}
 }
 
