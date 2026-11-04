@@ -255,7 +255,6 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			csp({
 				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
 				reportingEndpoints: { csp: "/reports/csp" },
-				filter: () => true,
 			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
