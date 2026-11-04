@@ -1,13 +1,12 @@
 /**
- * Visual faces for every `@sdxc/ui/styles` export: wireframe layouts, type
- * samples, surface chrome and palette strips so a style recipe reads as a
- * picture on the package landing instead of a bare name.
+ * Visual faces for every `@sdxc/ui/styles` export: each recipe gets its own
+ * wireframe so neighbouring tiles in the catalogue do not share a silhouette.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
 import { raw } from "@sdxc/u/general";
@@ -23,69 +22,98 @@ namespace StyleFace {
 	}
 }
 
-/** Ink used for wireframe strokes inside the stage. */
 const INK = "color-mix(in oklch, CanvasText 18%, transparent)";
 const INK_STRONG = "color-mix(in oklch, CanvasText 32%, transparent)";
 const BRAND = "color-mix(in oklch, var(--ui-brand-fg, CanvasText) 45%, transparent)";
 
-namespace WireBox {
-	export interface Props {
-		width?: string;
-		height?: string;
-		radius?: string;
-		fill?: string;
-		border?: string;
-	}
-}
-
-/** A ruled box that stands in for a layout region. */
-function WireBox(handle: Handle<WireBox.Props>) {
-	return () => {
-		let { width, height, radius, fill, border } = handle.props;
-
-		return (
-			<div
-				mix={[
-					raw({
-						inlineSize: width ?? "100%",
-						blockSize: height ?? "1rem",
-						borderRadius: radius ?? "0.35rem",
-						backgroundColor: fill ?? INK,
-						border,
-						flexShrink: "0",
-					}),
-				]}
-			/>
-		);
-	};
-}
-
-namespace CardGridFace {
+namespace BalancedColumnsFace {
 	export interface Props {}
 }
 
-/** Three-column card mosaic for the card-grid family. */
-function CardGridFace(_handle: Handle<CardGridFace.Props>) {
+/** Two uneven columns — the orphan-balance recipe. */
+function BalancedColumnsFace(_handle: Handle<BalancedColumnsFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					display: "grid",
+					gridTemplateColumns: "1fr 1fr",
+					gap: "0.4rem",
+					inlineSize: "100%",
+					maxInlineSize: "9.5rem",
+				}),
+			]}
+		>
+			<div mix={[vstack({ gap: 1, align: "stretch" })]}>
+				<div
+					mix={[
+						raw({
+							blockSize: "2.4rem",
+							borderRadius: "0.4rem",
+							backgroundColor: BRAND,
+						}),
+					]}
+				/>
+				<div
+					mix={[
+						raw({
+							blockSize: "1rem",
+							borderRadius: "0.4rem",
+							backgroundColor: INK,
+						}),
+					]}
+				/>
+			</div>
+			<div mix={[vstack({ gap: 1, align: "stretch" })]}>
+				<div
+					mix={[
+						raw({
+							blockSize: "1rem",
+							borderRadius: "0.4rem",
+							backgroundColor: INK,
+						}),
+					]}
+				/>
+				<div
+					mix={[
+						raw({
+							blockSize: "2.4rem",
+							borderRadius: "0.4rem",
+							backgroundColor: INK_STRONG,
+						}),
+					]}
+				/>
+			</div>
+		</div>
+	);
+}
+
+namespace BalancedGridFace {
+	export interface Props {}
+}
+
+/** Three-column mosaic with a spanning orphan cell. */
+function BalancedGridFace(_handle: Handle<BalancedGridFace.Props>) {
 	return () => (
 		<div
 			mix={[
 				raw({
 					display: "grid",
 					gridTemplateColumns: "1fr 1fr 1fr",
-					gap: "0.35rem",
+					gap: "0.3rem",
 					inlineSize: "100%",
-					maxInlineSize: "11rem",
+					maxInlineSize: "10rem",
 				}),
 			]}
 		>
-			{[0, 1, 2, 3, 4].map((index) => (
+			{[0, 1, 2, 3].map((index) => (
 				<div
 					key={index}
 					mix={[
 						raw({
-							blockSize: index === 4 ? "2.4rem" : "2.1rem",
-							gridColumn: index === 4 ? "span 2" : undefined,
-							borderRadius: index === 0 ? "0.85rem 0.35rem 0.35rem 0.35rem" : "0.35rem",
+							blockSize: "1.7rem",
+							gridColumn: index === 3 ? "span 2" : undefined,
+							borderRadius: "0.35rem",
 							backgroundColor: index === 0 ? BRAND : INK,
 							border: `1px solid ${INK_STRONG}`,
 						}),
@@ -96,69 +124,322 @@ function CardGridFace(_handle: Handle<CardGridFace.Props>) {
 	);
 }
 
-namespace ColumnsFace {
+namespace ByChildCountFace {
 	export interface Props {}
 }
 
-/** Two balanced columns of uneven rows. */
-function ColumnsFace(_handle: Handle<ColumnsFace.Props>) {
+/** Quantity cue: N children → N tracks. */
+function ByChildCountFace(_handle: Handle<ByChildCountFace.Props>) {
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "center" })]}>
+			<span mix={[font("mono"), text("xs"), raw({ opacity: "0.55" })]}>3 children</span>
+			<div mix={[hstack({ gap: 1, align: "stretch" })]}>
+				{[0, 1, 2].map((index) => (
+					<div
+						key={index}
+						mix={[
+							raw({
+								inlineSize: "1.8rem",
+								blockSize: "2.2rem",
+								borderRadius: "0.35rem",
+								backgroundColor: index === 1 ? BRAND : INK,
+								border: `1px solid ${INK_STRONG}`,
+							}),
+						]}
+					/>
+				))}
+			</div>
+			<span mix={[font("mono"), text("xs"), raw({ opacity: "0.55" })]}>→ 3 columns</span>
+		</div>
+	);
+}
+
+namespace CardGridFace {
+	export interface Props {}
+}
+
+/** Raised card mosaic with concentric outer corner. */
+function CardGridFace(_handle: Handle<CardGridFace.Props>) {
 	return () => (
 		<div
 			mix={[
 				raw({
 					display: "grid",
 					gridTemplateColumns: "1fr 1fr",
-					gap: "0.4rem",
+					gap: "0.35rem",
 					inlineSize: "100%",
-					maxInlineSize: "10rem",
+					maxInlineSize: "9rem",
 				}),
 			]}
 		>
-			<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-				<WireBox height="2.2rem" fill={BRAND} />
-				<WireBox height="1.2rem" />
-			</div>
-			<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-				<WireBox height="1.2rem" />
-				<WireBox height="2.2rem" />
+			{[0, 1, 2, 3].map((index) => {
+				let radius = "0.3rem";
+				if (index === 0) radius = "0.85rem 0.3rem 0.3rem 0.3rem";
+				else if (index === 1) radius = "0.3rem 0.85rem 0.3rem 0.3rem";
+
+				return (
+					<div
+						key={index}
+						mix={[
+							raw({
+								blockSize: "1.85rem",
+								borderRadius: radius,
+								backgroundColor:
+									index === 0 ? BRAND : "color-mix(in oklch, Canvas 94%, CanvasText)",
+								boxShadow: `0 0 0 1px ${INK_STRONG}`,
+							}),
+						]}
+					/>
+				);
+			})}
+		</div>
+	);
+}
+
+namespace CardMediaFace {
+	export interface Props {}
+}
+
+/** Card with a media band on top. */
+function CardMediaFace(_handle: Handle<CardMediaFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				vstack({ gap: 0, align: "stretch" }),
+				is("100%"),
+				maxIs("8rem"),
+				raw({
+					borderRadius: "0.65rem",
+					overflow: "hidden",
+					boxShadow: `0 0 0 1px ${INK_STRONG}`,
+					backgroundColor: "color-mix(in oklch, Canvas 94%, CanvasText)",
+				}),
+			]}
+		>
+			<div mix={[raw({ blockSize: "2.1rem", backgroundColor: BRAND })]} />
+			<div mix={[vstack({ gap: 1, align: "stretch" }), raw({ padding: "0.45rem" })]}>
+				<div
+					mix={[
+						raw({
+							blockSize: "0.4rem",
+							inlineSize: "55%",
+							borderRadius: "9999px",
+							backgroundColor: INK_STRONG,
+						}),
+					]}
+				/>
+				<div
+					mix={[
+						raw({
+							blockSize: "0.35rem",
+							inlineSize: "80%",
+							borderRadius: "9999px",
+							backgroundColor: INK,
+						}),
+					]}
+				/>
 			</div>
 		</div>
 	);
 }
 
-namespace SurfaceFace {
+namespace CardPaddingFace {
 	export interface Props {}
 }
 
-/** Raised panel with a hairline and inset body. */
-function SurfaceFace(_handle: Handle<SurfaceFace.Props>) {
+/** Card outline with padding guides. */
+function CardPaddingFace(_handle: Handle<CardPaddingFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					position: "relative",
+					inlineSize: "7.5rem",
+					blockSize: "4.2rem",
+					borderRadius: "0.65rem",
+					border: `1px dashed ${INK_STRONG}`,
+					padding: "0.65rem",
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						blockSize: "100%",
+						borderRadius: "0.4rem",
+						backgroundColor: BRAND,
+						border: `1px solid ${INK_STRONG}`,
+					}),
+				]}
+			/>
+			<span
+				mix={[
+					font("mono"),
+					raw({
+						position: "absolute",
+						insetBlockStart: "0.1rem",
+						insetInlineEnd: "0.25rem",
+						fontSize: "0.5rem",
+						opacity: "0.55",
+					}),
+				]}
+			>
+				pad
+			</span>
+		</div>
+	);
+}
+
+namespace ConcentricRadiusFace {
+	export interface Props {}
+}
+
+/** Outer radius = inner radius + padding — concentric corners. */
+function ConcentricRadiusFace(_handle: Handle<ConcentricRadiusFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					position: "relative",
+					inlineSize: "6.5rem",
+					blockSize: "4.2rem",
+					borderRadius: "1.1rem",
+					backgroundColor: "color-mix(in oklch, Canvas 92%, CanvasText)",
+					boxShadow: `0 0 0 1px ${INK_STRONG}`,
+					padding: "0.55rem",
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						blockSize: "100%",
+						borderRadius: "0.55rem",
+						backgroundColor: BRAND,
+						boxShadow: `inset 0 0 0 1px ${INK_STRONG}`,
+					}),
+				]}
+			/>
+			<span
+				mix={[
+					font("mono"),
+					raw({
+						position: "absolute",
+						insetBlockEnd: "0.15rem",
+						insetInlineStart: "50%",
+						translate: "-50% 0",
+						fontSize: "0.5rem",
+						opacity: "0.55",
+						whiteSpace: "nowrap",
+					}),
+				]}
+			>
+				rₒ = rᵢ + pad
+			</span>
+		</div>
+	);
+}
+
+namespace FloatingSurfaceFace {
+	export interface Props {}
+}
+
+/** Raised panel with a drop shadow. */
+function FloatingSurfaceFace(_handle: Handle<FloatingSurfaceFace.Props>) {
 	return () => (
 		<div
 			mix={[
 				vstack({ gap: 2, align: "stretch" }),
 				is("100%"),
-				maxIs("10rem"),
+				maxIs("9rem"),
 				raw({
 					padding: "0.55rem",
 					borderRadius: "0.75rem",
-					backgroundColor: "color-mix(in oklch, Canvas 94%, CanvasText)",
-					boxShadow: `0 0 0 1px ${INK}, 0 8px 18px -12px rgb(0 0 0 / 0.35)`,
+					backgroundColor: "color-mix(in oklch, Canvas 96%, CanvasText)",
+					boxShadow: `0 0 0 1px ${INK}, 0 10px 22px -12px rgb(0 0 0 / 0.4)`,
 				}),
 			]}
 		>
-			<WireBox height="0.45rem" width="40%" fill={INK_STRONG} />
-			<WireBox height="2.4rem" fill={INK} radius="0.45rem" />
+			<div
+				mix={[
+					raw({
+						blockSize: "0.4rem",
+						inlineSize: "40%",
+						borderRadius: "9999px",
+						backgroundColor: INK_STRONG,
+					}),
+				]}
+			/>
+			<div
+				mix={[
+					raw({
+						blockSize: "2rem",
+						borderRadius: "0.4rem",
+						backgroundColor: INK,
+					}),
+				]}
+			/>
+		</div>
+	);
+}
+
+namespace PanelChromeFace {
+	export interface Props {}
+}
+
+/** Window chrome with traffic lights. */
+function PanelChromeFace(_handle: Handle<PanelChromeFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				vstack({ gap: 0, align: "stretch" }),
+				is("100%"),
+				maxIs("9rem"),
+				raw({
+					borderRadius: "0.55rem",
+					overflow: "hidden",
+					boxShadow: `0 0 0 1px ${INK_STRONG}`,
+					backgroundColor: "color-mix(in oklch, Canvas 94%, CanvasText)",
+				}),
+			]}
+		>
+			<div
+				mix={[
+					hstack({ gap: 1, align: "center" }),
+					raw({
+						paddingInline: "0.45rem",
+						blockSize: "1.1rem",
+						borderBlockEnd: `1px solid ${INK}`,
+						backgroundColor: "color-mix(in oklch, CanvasText 4%, transparent)",
+					}),
+				]}
+			>
+				{[0, 1, 2].map((dot) => (
+					<span
+						key={dot}
+						mix={[
+							raw({
+								inlineSize: "0.35rem",
+								blockSize: "0.35rem",
+								borderRadius: "9999px",
+								backgroundColor: INK_STRONG,
+							}),
+						]}
+					/>
+				))}
+			</div>
+			<div mix={[raw({ blockSize: "2.4rem", backgroundColor: INK })]} />
 		</div>
 	);
 }
 
 namespace TypeFace {
 	export interface Props {
-		kind: "display" | "eyebrow" | "lead" | "caption";
+		kind: "display" | "eyebrow" | "lead" | "emphasis" | "caption";
 	}
 }
 
-/** Display / lead type sample. */
+/** Type sample for display / eyebrow / lead / caption. */
 function TypeFace(handle: Handle<TypeFace.Props>) {
 	return () => {
 		let { kind } = handle.props;
@@ -203,6 +484,26 @@ function TypeFace(handle: Handle<TypeFace.Props>) {
 			);
 		}
 
+		if (kind === "emphasis") {
+			return (
+				<p
+					mix={[
+						text("sm"),
+						weight("semibold"),
+						raw({
+							margin: "0",
+							maxInlineSize: "10rem",
+							lineHeight: "1.35",
+							color: "var(--ui-neutral-emphasis, CanvasText)",
+							textWrap: "pretty",
+						}),
+					]}
+				>
+					Emphasised line in the band.
+				</p>
+			);
+		}
+
 		if (kind === "caption") {
 			return <span mix={[font("mono"), text("xs"), raw({ opacity: "0.55" })]}>output · 24ms</span>;
 		}
@@ -229,7 +530,7 @@ namespace PaletteFace {
 	export interface Props {}
 }
 
-/** Palette swatches for chart / semantic color. */
+/** Chart / semantic color bars. */
 function PaletteFace(_handle: Handle<PaletteFace.Props>) {
 	return () => {
 		let tones = [
@@ -264,7 +565,7 @@ namespace SegmentedFace {
 	export interface Props {}
 }
 
-/** Segmented control track with one selected item. */
+/** Segmented control track. */
 function SegmentedFace(_handle: Handle<SegmentedFace.Props>) {
 	return () => (
 		<div
@@ -393,39 +694,46 @@ function RangeFace(_handle: Handle<RangeFace.Props>) {
 }
 
 namespace SlowSpinFace {
-	export interface Props {}
+	export interface Props {
+		/** Landing mark spins slower than interactive transitions. */
+		pace?: "slow" | "interactive";
+	}
 }
 
-/** Slowly spinning mark for landingSlowSpin. */
-function SlowSpinFace(_handle: Handle<SlowSpinFace.Props>) {
-	return () => (
-		<div
-			mix={[
-				is("2.5rem"),
-				bs("2.5rem"),
-				keyframes("ui-export-slow-spin", {
-					from: { transform: "rotate(0deg)" },
-					to: { transform: "rotate(360deg)" },
-				}),
-				raw({
-					borderRadius: "9999px",
-					border: `2px solid ${INK}`,
-					borderBlockStartColor: "var(--ui-brand-fg, CanvasText)",
-					animationName: "ui-export-slow-spin",
-					animationDuration: "8s",
-					animationTimingFunction: "linear",
-					animationIterationCount: "infinite",
-				}),
-			]}
-		/>
-	);
+/** Spinning ring — slow for landing, quicker for interactive. */
+function SlowSpinFace(handle: Handle<SlowSpinFace.Props>) {
+	return () => {
+		let pace = handle.props.pace ?? "slow";
+
+		return (
+			<div
+				mix={[
+					is("2.5rem"),
+					bs("2.5rem"),
+					keyframes("ui-export-slow-spin", {
+						from: { transform: "rotate(0deg)" },
+						to: { transform: "rotate(360deg)" },
+					}),
+					raw({
+						borderRadius: "9999px",
+						border: `2px solid ${INK}`,
+						borderBlockStartColor: "var(--ui-brand-fg, CanvasText)",
+						animationName: "ui-export-slow-spin",
+						animationDuration: pace === "slow" ? "8s" : "1.6s",
+						animationTimingFunction: "linear",
+						animationIterationCount: "infinite",
+					}),
+				]}
+			/>
+		);
+	};
 }
 
 namespace ToastStackFace {
 	export interface Props {}
 }
 
-/** Toast stack of overlapping chips. */
+/** Stacked toast chips. */
 function ToastStackFace(_handle: Handle<ToastStackFace.Props>) {
 	return () => (
 		<div mix={[raw({ position: "relative", inlineSize: "8rem", blockSize: "3.5rem" })]}>
@@ -454,18 +762,30 @@ namespace FieldStackFace {
 	export interface Props {}
 }
 
-/** Field stack of label + control rows. */
+/** Label + control rows. */
 function FieldStackFace(_handle: Handle<FieldStackFace.Props>) {
 	return () => (
 		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("10rem")]}>
 			{[0, 1].map((index) => (
 				<div key={index} mix={[vstack({ gap: 1, align: "stretch" })]}>
-					<WireBox height="0.35rem" width="30%" fill={INK_STRONG} />
-					<WireBox
-						height="1.35rem"
-						fill="transparent"
-						border={`1px solid ${INK_STRONG}`}
-						radius="0.45rem"
+					<div
+						mix={[
+							raw({
+								blockSize: "0.35rem",
+								inlineSize: "30%",
+								borderRadius: "9999px",
+								backgroundColor: INK_STRONG,
+							}),
+						]}
+					/>
+					<div
+						mix={[
+							raw({
+								blockSize: "1.35rem",
+								borderRadius: "0.45rem",
+								border: `1px solid ${INK_STRONG}`,
+							}),
+						]}
 					/>
 				</div>
 			))}
@@ -477,7 +797,7 @@ namespace GradientFace {
 	export interface Props {}
 }
 
-/** Gradient strip that flips direction for RTL-aware demos. */
+/** RTL-aware gradient strip. */
 function GradientFace(_handle: Handle<GradientFace.Props>) {
 	return () => (
 		<div
@@ -495,13 +815,473 @@ function GradientFace(_handle: Handle<GradientFace.Props>) {
 	);
 }
 
+namespace IconTileFace {
+	export interface Props {}
+}
+
+/** Quiet icon tile. */
+function IconTileFace(_handle: Handle<IconTileFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "2.75rem",
+					blockSize: "2.75rem",
+					borderRadius: "0.75rem",
+					display: "grid",
+					placeItems: "center",
+					backgroundColor: INK,
+					border: `1px solid ${INK_STRONG}`,
+				}),
+			]}
+		>
+			<span
+				mix={[
+					raw({
+						inlineSize: "1rem",
+						blockSize: "1rem",
+						borderRadius: "0.25rem",
+						backgroundColor: BRAND,
+					}),
+				]}
+			/>
+		</div>
+	);
+}
+
+namespace LandingBandFace {
+	export interface Props {
+		tone?: boolean;
+	}
+}
+
+/** Landing band / container strip. */
+function LandingBandFace(handle: Handle<LandingBandFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "100%",
+					maxInlineSize: "10rem",
+					blockSize: "3.5rem",
+					borderRadius: "0.45rem",
+					padding: "0.55rem",
+					backgroundColor: handle.props.tone
+						? "color-mix(in oklch, var(--ui-brand-fg) 10%, Canvas)"
+						: INK,
+					border: `1px solid ${INK_STRONG}`,
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						blockSize: "0.45rem",
+						inlineSize: "45%",
+						borderRadius: "9999px",
+						backgroundColor: INK_STRONG,
+						marginBlockEnd: "0.4rem",
+					}),
+				]}
+			/>
+			<div
+				mix={[
+					raw({
+						blockSize: "0.35rem",
+						inlineSize: "70%",
+						borderRadius: "9999px",
+						backgroundColor: "color-mix(in oklch, CanvasText 12%, transparent)",
+					}),
+				]}
+			/>
+		</div>
+	);
+}
+
+namespace HairlineFace {
+	export interface Props {}
+}
+
+/** Thin hairline rule. */
+function HairlineFace(_handle: Handle<HairlineFace.Props>) {
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("9rem")]}>
+			<div mix={[raw({ blockSize: "0.55rem", borderRadius: "9999px", backgroundColor: INK })]} />
+			<div mix={[raw({ blockSize: "1px", backgroundColor: INK_STRONG })]} />
+			<div mix={[raw({ blockSize: "0.55rem", borderRadius: "9999px", backgroundColor: INK })]} />
+		</div>
+	);
+}
+
+namespace SurfaceInsetFace {
+	export interface Props {}
+}
+
+/** Inset well inside a surface. */
+function SurfaceInsetFace(_handle: Handle<SurfaceInsetFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "8rem",
+					blockSize: "3.6rem",
+					borderRadius: "0.65rem",
+					padding: "0.45rem",
+					backgroundColor: "color-mix(in oklch, Canvas 94%, CanvasText)",
+					boxShadow: `0 0 0 1px ${INK}`,
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						blockSize: "100%",
+						borderRadius: "0.4rem",
+						backgroundColor: "color-mix(in oklch, CanvasText 6%, transparent)",
+						boxShadow: `inset 0 1px 2px rgb(0 0 0 / 0.08)`,
+					}),
+				]}
+			/>
+		</div>
+	);
+}
+
+namespace LandingContainerFace {
+	export interface Props {}
+}
+
+/** Max-width landing measure with side gutters. */
+function LandingContainerFace(_handle: Handle<LandingContainerFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				hstack({ gap: 1, align: "stretch" }),
+				is("100%"),
+				maxIs("10rem"),
+				raw({ blockSize: "3.2rem" }),
+			]}
+		>
+			<div mix={[raw({ inlineSize: "0.7rem", backgroundColor: INK, borderRadius: "0.2rem" })]} />
+			<div
+				mix={[
+					raw({
+						flex: "1",
+						borderRadius: "0.35rem",
+						border: `1px dashed ${INK_STRONG}`,
+						backgroundColor: "color-mix(in oklch, Canvas 96%, CanvasText)",
+					}),
+				]}
+			/>
+			<div mix={[raw({ inlineSize: "0.7rem", backgroundColor: INK, borderRadius: "0.2rem" })]} />
+		</div>
+	);
+}
+
+namespace LandingSectionSpaceFace {
+	export interface Props {}
+}
+
+/** Vertical section rhythm marks. */
+function LandingSectionSpaceFace(_handle: Handle<LandingSectionSpaceFace.Props>) {
+	return () => (
+		<div mix={[vstack({ gap: 0, align: "stretch" }), is("100%"), maxIs("6rem")]}>
+			<div mix={[raw({ blockSize: "1.1rem", borderRadius: "0.3rem", backgroundColor: INK })]} />
+			<span
+				mix={[
+					font("mono"),
+					raw({
+						fontSize: "0.5rem",
+						opacity: "0.55",
+						textAlign: "center",
+						paddingBlock: "0.35rem",
+					}),
+				]}
+			>
+				↕ space
+			</span>
+			<div mix={[raw({ blockSize: "1.1rem", borderRadius: "0.3rem", backgroundColor: BRAND })]} />
+		</div>
+	);
+}
+
+namespace LandingCtaChromeFace {
+	export interface Props {}
+}
+
+/** Primary + ghost CTA pair. */
+function LandingCtaChromeFace(_handle: Handle<LandingCtaChromeFace.Props>) {
+	return () => (
+		<div mix={[hstack({ gap: 2, align: "center" })]}>
+			<span
+				mix={[
+					raw({
+						paddingInline: "0.85rem",
+						paddingBlock: "0.4rem",
+						borderRadius: "9999px",
+						backgroundColor: BRAND,
+						color: "Canvas",
+						fontSize: "0.65rem",
+						fontWeight: "600",
+					}),
+				]}
+			>
+				Start
+			</span>
+			<span
+				mix={[
+					raw({
+						paddingInline: "0.75rem",
+						paddingBlock: "0.4rem",
+						borderRadius: "9999px",
+						border: `1px solid ${INK_STRONG}`,
+						fontSize: "0.65rem",
+						opacity: "0.7",
+					}),
+				]}
+			>
+				Docs
+			</span>
+		</div>
+	);
+}
+
+namespace LogoCloudMarkFace {
+	export interface Props {}
+}
+
+/** Three quiet logo marks in a row. */
+function LogoCloudMarkFace(_handle: Handle<LogoCloudMarkFace.Props>) {
+	return () => (
+		<div mix={[hstack({ gap: 2, align: "center" })]}>
+			{[0, 1, 2].map((index) => (
+				<span
+					key={index}
+					mix={[
+						raw({
+							inlineSize: index === 1 ? "1.6rem" : "1.25rem",
+							blockSize: index === 1 ? "1.6rem" : "1.25rem",
+							borderRadius: index === 1 ? "0.35rem" : "9999px",
+							backgroundColor: index === 1 ? BRAND : INK,
+							border: `1px solid ${INK_STRONG}`,
+							opacity: index === 1 ? "1" : "0.55",
+						}),
+					]}
+				/>
+			))}
+		</div>
+	);
+}
+
+namespace ThemeScopeFace {
+	export interface Props {}
+}
+
+/** Nested theme scopes — outer light, inner tinted. */
+function ThemeScopeFace(_handle: Handle<ThemeScopeFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "7.5rem",
+					blockSize: "3.6rem",
+					borderRadius: "0.55rem",
+					padding: "0.4rem",
+					backgroundColor: "color-mix(in oklch, Canvas 96%, CanvasText)",
+					border: `1px solid ${INK_STRONG}`,
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						blockSize: "100%",
+						borderRadius: "0.4rem",
+						padding: "0.35rem",
+						backgroundColor: "color-mix(in oklch, var(--ui-brand-fg) 14%, Canvas)",
+						border: `1px solid ${INK}`,
+					}),
+				]}
+			>
+				<span mix={[font("mono"), raw({ fontSize: "0.5rem", opacity: "0.65" })]}>theme</span>
+			</div>
+		</div>
+	);
+}
+
+namespace GraphicHostFace {
+	export interface Props {}
+}
+
+/** Host frame for a decorative graphic. */
+function GraphicHostFace(_handle: Handle<GraphicHostFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "7rem",
+					blockSize: "3.8rem",
+					borderRadius: "0.65rem",
+					display: "grid",
+					placeItems: "center",
+					backgroundColor: INK,
+					border: `1px dashed ${INK_STRONG}`,
+				}),
+			]}
+		>
+			<span
+				mix={[
+					raw({
+						inlineSize: "2.2rem",
+						blockSize: "2.2rem",
+						borderRadius: "0.45rem",
+						backgroundColor: BRAND,
+						transform: "rotate(12deg)",
+					}),
+				]}
+			/>
+		</div>
+	);
+}
+
+namespace SurfacePaddingFace {
+	export interface Props {}
+}
+
+/** Surface with equal inset guides on every edge. */
+function SurfacePaddingFace(_handle: Handle<SurfacePaddingFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					position: "relative",
+					inlineSize: "7rem",
+					blockSize: "3.8rem",
+					borderRadius: "0.55rem",
+					border: `1px solid ${INK_STRONG}`,
+					backgroundColor: "color-mix(in oklch, Canvas 96%, CanvasText)",
+				}),
+			]}
+		>
+			<div
+				mix={[
+					raw({
+						position: "absolute",
+						inset: "0.55rem",
+						borderRadius: "0.35rem",
+						backgroundColor: BRAND,
+					}),
+				]}
+			/>
+			{(
+				[
+					{
+						mark: "↑",
+						place: {
+							insetBlockStart: "0.05rem",
+							insetInlineStart: "50%",
+							translate: "-50% 0",
+						},
+					},
+					{
+						mark: "→",
+						place: { insetInlineEnd: "0.1rem", insetBlockStart: "50%", translate: "0 -50%" },
+					},
+					{
+						mark: "↓",
+						place: { insetBlockEnd: "0.05rem", insetInlineStart: "50%", translate: "-50% 0" },
+					},
+					{
+						mark: "←",
+						place: {
+							insetInlineStart: "0.1rem",
+							insetBlockStart: "50%",
+							translate: "0 -50%",
+						},
+					},
+				] as const
+			).map((edge) => (
+				<span
+					key={edge.mark}
+					mix={[
+						font("mono"),
+						raw({
+							position: "absolute",
+							fontSize: "0.45rem",
+							opacity: "0.55",
+							...edge.place,
+						}),
+					]}
+				>
+					{edge.mark}
+				</span>
+			))}
+		</div>
+	);
+}
+
+namespace SemanticPaletteFace {
+	export interface Props {}
+}
+
+/** Success / warning / danger / info chips. */
+function SemanticPaletteFace(_handle: Handle<SemanticPaletteFace.Props>) {
+	return () => {
+		let tones = [
+			"oklch(0.7 0.15 145)",
+			"oklch(0.75 0.14 80)",
+			"oklch(0.65 0.18 25)",
+			"oklch(0.68 0.14 250)",
+		];
+
+		return (
+			<div mix={[hstack({ gap: 1, align: "center" })]}>
+				{tones.map((tone) => (
+					<span
+						key={tone}
+						mix={[
+							raw({
+								inlineSize: "1.35rem",
+								blockSize: "1.35rem",
+								borderRadius: "9999px",
+								backgroundColor: tone,
+							}),
+						]}
+					/>
+				))}
+			</div>
+		);
+	};
+}
+
+namespace SegmentedTrackFace {
+	export interface Props {}
+}
+
+/** Empty segmented track shell. */
+function SegmentedTrackFace(_handle: Handle<SegmentedTrackFace.Props>) {
+	return () => (
+		<div
+			mix={[
+				raw({
+					inlineSize: "9rem",
+					blockSize: "1.7rem",
+					borderRadius: "9999px",
+					padding: "0.2rem",
+					backgroundColor: INK,
+					border: `1px solid ${INK_STRONG}`,
+				}),
+			]}
+		/>
+	);
+}
+
 namespace StyleFallback {
 	export interface Props {
 		name: string;
 	}
 }
 
-/** Named fallback when no dedicated wireframe exists yet. */
+/** Named fallback. */
 function StyleFallback(handle: Handle<StyleFallback.Props>) {
 	return () => (
 		<span mix={[font("mono"), text("xs"), raw({ opacity: "0.5" })]}>{handle.props.name}</span>
@@ -512,23 +1292,56 @@ function StyleFallback(handle: Handle<StyleFallback.Props>) {
 export default function StyleFace(handle: Handle<StyleFace.Props>) {
 	return () => {
 		let { name } = handle.props;
-		let body;
+		let body: RemixNode;
 
 		switch (name) {
 			case "balancedColumns":
+				body = <BalancedColumnsFace />;
+				break;
 			case "balancedGrid":
+				body = <BalancedGridFace />;
+				break;
 			case "byChildCount":
-				body = <ColumnsFace />;
+				body = <ByChildCountFace />;
 				break;
 			case "cardGrid":
-			case "cardMedia":
-			case "cardPadding":
-			case "iconTile":
 				body = <CardGridFace />;
 				break;
+			case "cardMedia":
+				body = <CardMediaFace />;
+				break;
+			case "cardPadding":
+				body = <CardPaddingFace />;
+				break;
+			case "iconTile":
+				body = <IconTileFace />;
+				break;
+			case "concentricRadius":
+				body = <ConcentricRadiusFace />;
+				break;
+			case "floatingSurface":
+				body = <FloatingSurfaceFace />;
+				break;
+			case "panelChrome":
+				body = <PanelChromeFace />;
+				break;
+			case "surfaceInset":
+				body = <SurfaceInsetFace />;
+				break;
+			case "surfaceControl":
+				body = <HitAreaFace />;
+				break;
+			case "surfacePadding":
+				body = <SurfacePaddingFace />;
+				break;
+			case "landingSurface":
+				body = <LandingBandFace />;
+				break;
 			case "chartPalette":
-			case "semanticColorPanel":
 				body = <PaletteFace />;
+				break;
+			case "semanticColorPanel":
+				body = <SemanticPaletteFace />;
 				break;
 			case "displayHeading":
 				body = <TypeFace kind="display" />;
@@ -537,33 +1350,20 @@ export default function StyleFace(handle: Handle<StyleFace.Props>) {
 				body = <TypeFace kind="eyebrow" />;
 				break;
 			case "landingLead":
-			case "landingEmphasis":
 				body = <TypeFace kind="lead" />;
+				break;
+			case "landingEmphasis":
+				body = <TypeFace kind="emphasis" />;
 				break;
 			case "outputCaptionText":
 				body = <TypeFace kind="caption" />;
 				break;
-			case "floatingSurface":
-			case "landingSurface":
-			case "panelChrome":
-			case "surfaceControl":
-			case "surfaceInset":
-			case "surfacePadding":
-			case "concentricRadius":
-			case "landingHairline":
-			case "landingBandTone":
-			case "landingContainer":
-			case "landingSectionSpace":
-			case "landingCtaChrome":
-			case "logoCloudMark":
-			case "themeScope":
-			case "graphicHostStyle":
-				body = <SurfaceFace />;
-				break;
 			case "segmentedItem":
-			case "segmentedTrack":
 			case "legendToggle":
 				body = <SegmentedFace />;
+				break;
+			case "segmentedTrack":
+				body = <SegmentedTrackFace />;
 				break;
 			case "hitArea":
 				body = <HitAreaFace />;
@@ -572,8 +1372,10 @@ export default function StyleFace(handle: Handle<StyleFace.Props>) {
 				body = <RangeFace />;
 				break;
 			case "landingSlowSpin":
+				body = <SlowSpinFace pace="slow" />;
+				break;
 			case "interactiveTransition":
-				body = <SlowSpinFace />;
+				body = <SlowSpinFace pace="interactive" />;
 				break;
 			case "toastStackStyle":
 				body = <ToastStackFace />;
@@ -583,6 +1385,30 @@ export default function StyleFace(handle: Handle<StyleFace.Props>) {
 				break;
 			case "rtlAwareGradientDirection":
 				body = <GradientFace />;
+				break;
+			case "landingHairline":
+				body = <HairlineFace />;
+				break;
+			case "landingBandTone":
+				body = <LandingBandFace tone />;
+				break;
+			case "landingContainer":
+				body = <LandingContainerFace />;
+				break;
+			case "landingSectionSpace":
+				body = <LandingSectionSpaceFace />;
+				break;
+			case "landingCtaChrome":
+				body = <LandingCtaChromeFace />;
+				break;
+			case "logoCloudMark":
+				body = <LogoCloudMarkFace />;
+				break;
+			case "themeScope":
+				body = <ThemeScopeFace />;
+				break;
+			case "graphicHostStyle":
+				body = <GraphicHostFace />;
 				break;
 			default:
 				body = <StyleFallback name={name} />;
