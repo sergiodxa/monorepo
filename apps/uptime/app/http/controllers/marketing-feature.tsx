@@ -34,7 +34,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO } from "~/app/initializers/seo";
 import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import { IntegrationsScene, SslScene } from "~/resources/components/marketing/capability-scenes";
@@ -208,14 +208,13 @@ export default createAction(routes.marketing.feature, async (ctx) => {
 			seo={{
 				description: content.metaDescription,
 				canonical: SEO.canonical(ctx.url),
-				schema: [
-					getSoftwareApplicationSchema({
-						name: schemaName,
-						description: content.metaDescription,
-						featureList: content.features.map((feature) => feature.title),
-					}),
-					...(content.faqs.length > 0 ? [SEO.schema.faq(content.faqs)] : []),
-				],
+				schema: productPageSchema({
+					name: schemaName,
+					description: content.metaDescription,
+					url: ctx.url,
+					featureList: content.features.map((feature) => feature.title),
+					faqs: content.faqs,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

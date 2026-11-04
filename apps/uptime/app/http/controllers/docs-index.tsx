@@ -90,7 +90,16 @@ export default createAction(routes.docs.index, async (ctx) => {
 			assets={ctx.assets}
 			title={t("docs.meta.title")}
 			locale={ctx.locale}
-			seo={{ description: t("docs.meta.description"), canonical: SEO.canonical(ctx.url) }}
+			seo={{
+				description: t("docs.meta.description"),
+				canonical: SEO.canonical(ctx.url),
+				schema: SEO.schema.webPage({
+					name: t("docs.hub.title"),
+					description: t("docs.meta.description"),
+					url: ctx.url.href,
+					inLanguage: ctx.locale,
+				}),
+			}}
 		>
 			<DocsLayout
 				isSignedIn={getViewer() !== null}

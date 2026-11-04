@@ -294,6 +294,10 @@ describe("GET /status/:slug", () => {
 		expect(body).toContain('<meta property="og:image:width" content="1200"');
 		expect(body).toContain("Operational");
 		expect(body).toContain("All Systems Operational");
+		expect(body).toContain('"@type":"WebPage"');
+		expect(body).toContain("h-entry");
+		expect(body).toContain("dt-updated");
+		expect(body).not.toContain('rel="me"');
 	});
 
 	/**

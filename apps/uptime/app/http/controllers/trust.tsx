@@ -77,6 +77,12 @@ export default createAction(routes.trust, async (ctx) => {
 			seo={{
 				description: t("trust.meta.description"),
 				canonical: SEO.canonical(ctx.url),
+				schema: SEO.schema.webPage({
+					name: t("trust.heading"),
+					description: t("trust.meta.description"),
+					url: ctx.url.href,
+					inLanguage: ctx.locale,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

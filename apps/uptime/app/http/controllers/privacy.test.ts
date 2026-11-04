@@ -83,7 +83,7 @@ describe("GET /privacy", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain("<title>Privacy Policy | Uptime</title>");
-		expect(body).toContain("<h1>Privacy Policy</h1>");
+		expect(body).toMatch(/<h1[^>]*>Privacy Policy<\/h1>/);
 		expect(body).toContain(`action="${routes.auth.action.href()}"`);
 	});
 
@@ -126,7 +126,7 @@ describe("GET /privacy", () => {
 
 		expect(response.status).toBe(200);
 		let body = await response.text();
-		expect(body).toContain("<h1>Privacy Policy</h1>");
+		expect(body).toMatch(/<h1[^>]*>Privacy Policy<\/h1>/);
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
 });

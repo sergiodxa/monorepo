@@ -18,6 +18,7 @@ import { ImportMap } from "remix/component/server";
 
 import { SEO } from "~/app/initializers/seo";
 import { marketingCardVersion, SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
+import { SITE_OWNER_PROFILES } from "~/config/site";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -83,6 +84,13 @@ namespace DocumentLayout {
 		 * stay consistent site-wide. Omit it in the app shell — nothing there talks to a crawler.
 		 */
 		seo?: Omit<Seo.Props, "title" | "site">;
+		/**
+		 * Whether the head claims the operator's profiles with `rel="me"`. On for a public
+		 * product page, off for a customer's status page, which is theirs rather than the
+		 * operator's.
+		 * @default true
+		 */
+		profiles?: boolean;
 	}
 }
 
@@ -93,7 +101,15 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, title, locale = "en", preload = [], seo, children } = handle.props;
+		let {
+			assets,
+			title,
+			locale = "en",
+			preload = [],
+			seo,
+			profiles = true,
+			children,
+		} = handle.props;
 		let { script, stylesheets, nonce } = assets;
 
 		return (
@@ -103,7 +119,12 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<ImportMap value={script.importMap} nonce={nonce} />
 					{seo ? (
-						<Seo title={title} site={SEO.site} {...seo} og={withSocialCard(seo, title)} />
+						<>
+							<Seo title={title} site={SEO.site} {...seo} og={withSocialCard(seo, title)} />
+							{profiles
+								? SITE_OWNER_PROFILES.map((href) => <link key={href} rel="me" href={href} />)
+								: null}
+						</>
 					) : (
 						title && <title>{title}</title>
 					)}

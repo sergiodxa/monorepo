@@ -23,6 +23,7 @@ import { DocsFooter, DocsLayout as DocsShell, DocsNav, DocsPager } from "@sdxc/u
 import type { DocSection } from "~/app/services/docs";
 
 import { toDocsTree } from "~/app/services/docs";
+import SiteOwnerCard from "~/resources/components/site-owner-card";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
 
@@ -219,7 +220,12 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						main={false}
 						footer={
 							<DocsFooter
-								legal={chrome.copyrightLine}
+								legal={
+									<>
+										<SiteOwnerCard /> {" · "}
+										{chrome.copyrightLine}
+									</>
+								}
 								links={chrome.legalLinks}
 								linksLabel={labels.legal}
 							>

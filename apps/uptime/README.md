@@ -56,6 +56,20 @@ request and per job as `ctx.models`. Services that read data take those bound mo
 caller, and the two queries that join several tables into one report shape live beside them
 as `app/models/reports.ts` and `app/models/team-digests.ts`.
 
+## Public pages
+
+Indexable pages pass metadata through `DocumentLayout`'s `seo` prop, built with the
+`SEO` instance in `app/initializers/seo.ts` (`@sdxc/seo`): canonical URL, Open Graph
+and Twitter card, and schema.org JSON-LD. The home page describes the organization,
+the site (its search box lands on `/docs/search?q=`), the usage-based offer and the
+FAQ the page shows. Product pages describe that page's features. Docs and the legal
+pages are articles; a customer's status page is a `WebPage` and does not claim the
+operator's profiles.
+
+The same pages carry microformats2 from `@sdxc/microformats`: `rel="me"` in the head,
+the operator's `h-card` in the marketing and docs footers, and an `h-entry` on each
+doc, legal page and status page.
+
 ## Layout
 
 The app follows the repo's one-home-per-kind layout: `bootstrap/` holds only the Worker,

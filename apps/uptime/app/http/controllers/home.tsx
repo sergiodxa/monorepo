@@ -63,7 +63,7 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import { LOCATION_HINTS, MIN_INTERVAL_SECONDS } from "~/app/http/validators/monitor";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
-import { SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO, siteOrganization, siteWebsite } from "~/app/initializers/seo";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { isDevLoginEnabled } from "~/app/services/dev-login";
 import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
@@ -394,7 +394,17 @@ export default createAction(routes.home, async (ctx) => {
 			seo={{
 				description: t("landing.meta.description"),
 				canonical: SEO.canonical(ctx.url),
-				schema: SEO.schema.website(),
+				schema: [
+					siteOrganization(),
+					siteWebsite(),
+					...productPageSchema({
+						name: "Uptime",
+						description: t("landing.meta.description"),
+						url: ctx.url,
+						featureList: FEATURE_LINKS.map((feature) => feature.title),
+						faqs: FAQS,
+					}),
+				],
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} devLogin={devLogin} {...chrome}>

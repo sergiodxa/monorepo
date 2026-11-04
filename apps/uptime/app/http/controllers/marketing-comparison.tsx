@@ -36,7 +36,7 @@ import { createAction } from "remix/router";
 import type { MarketingContent } from "~/resources/content/marketing";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
+import { productPageSchema, SEO } from "~/app/initializers/seo";
 import { monthlyCostForUsage } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import ClosingBand from "~/resources/components/marketing/closing-band";
@@ -179,14 +179,13 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 			seo={{
 				description: content.metaDescription,
 				canonical: SEO.canonical(ctx.url),
-				schema: [
-					getSoftwareApplicationSchema({
-						name: t("landing.comparison.tableProductHeader"),
-						description: content.metaDescription,
-						featureList: features.map((feature) => feature.title),
-					}),
-					SEO.schema.faq(faqs),
-				],
+				schema: productPageSchema({
+					name: t("landing.comparison.tableProductHeader"),
+					description: content.metaDescription,
+					url: ctx.url,
+					featureList: features.map((feature) => feature.title),
+					faqs,
+				}),
 			}}
 		>
 			<MarketingLayout isSignedIn={isSignedIn} {...chrome}>

@@ -20,6 +20,7 @@ import {
 	ClockIcon,
 	TriangleAlertIcon,
 } from "@sdxc/icons";
+import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -190,6 +191,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 			assets={ctx.assets}
 			title={page.title}
 			locale={ctx.locale}
+			profiles={false}
 			seo={{
 				description: page.description ?? page.title,
 				canonical: SEO.canonical(ctx.url),
@@ -197,214 +199,240 @@ export default createAction(routes.statusPage, async (ctx) => {
 					image: socialCardUrl(`/status/${slug}`, socialCardHash(card)),
 					imageAlt: `${page.title}: ${card.since}`,
 				},
+				schema: SEO.schema.webPage({
+					name: page.title,
+					description: page.description ?? page.title,
+					url: ctx.url.href,
+					inLanguage: ctx.locale,
+					dateModified: renderedAt,
+				}),
 			}}
 		>
-			<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
-				<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
-					{page.logo_url && (
-						<img src={page.logo_url} alt={page.name} width={64} height={64} mix={[mbe("12px")]} />
-					)}
-					<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>{page.title}</h1>
-					{page.description && (
-						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{page.description}</p>
-					)}
-				</div>
-
-				{page.show_overall_status && (
-					<div
-						mix={[
-							hstack({ align: "center", justify: "center", gap: "10px" }),
-							p("14px", "18px"),
-							rounded("8px"),
-							border({ color: "transparent", width: 1 }),
-							weight(600),
-							mbe("24px"),
-							BANNER_MIX[overallStatus],
-						]}
-					>
-						<BannerIcon size={22} />
-						<span>{bannerLabel[overallStatus]}</span>
-					</div>
-				)}
-
-				<section mix={[vstack({ gap: "8px" }), mbe("24px")]}>
-					<h2 mix={[m(0), fontSize("1.125rem"), weight(600)]}>
-						{ctx.intl.t("statusPage.maintenance.title")}
-					</h2>
-					{maintenance.length === 0 ? (
-						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-							{ctx.intl.t("statusPage.maintenance.none")}
-						</p>
-					) : (
-						maintenance.map((entry) => (
-							<div
-								key={entry.window.id}
+			<main mix={[mf("h-entry"), maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>
+				<div mix={[mf("e-content")]}>
+					<div mix={[vstack({ align: "center", gap: "4px" }), textAlign("center"), mbe("32px")]}>
+						{page.logo_url && (
+							<img src={page.logo_url} alt={page.name} width={64} height={64} mix={[mbe("12px")]} />
+						)}
+						<h1 mix={[m(0, 0, "4px", 0), fontSize("1.875rem"), weight(700)]}>
+							<a
+								href={routes.statusPage.href({ slug })}
 								mix={[
-									vstack({ gap: "4px" }),
-									p("12px", "16px"),
-									rounded("8px"),
-									border({ color: "neutral.border", width: 1 }),
+									mf("p-name", "u-url", "u-uid"),
+									textDecoration("none"),
+									fg("neutral.emphasis"),
 								]}
 							>
-								<div mix={[hstack({ align: "center", gap: "8px" })]}>
-									<CalendarIcon size={16} />
-									<strong>{entry.window.name}</strong>
-									{entry.next.start <= now && (
-										<Badge {...badgeVariant("degraded")}>
-											{ctx.intl.t("statusPage.maintenance.inProgress")}
-										</Badge>
-									)}
-								</div>
-								<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-									{ctx.intl.t("statusPage.maintenance.when", {
-										range: formatRange(new Date(entry.next.start), new Date(entry.next.end), {
-											locale: ctx.locale,
-											timeZone: "UTC",
-											timeStyle: "short",
-										}),
-									})}
-								</p>
-								{entry.affected.length > 0 && (
-									<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("statusPage.maintenance.affects", {
-											services: entry.affected.join(", "),
-										})}
-									</p>
-								)}
-								<a
-									href={routes.statusPageMaintenanceEvent.href({ slug, windowId: entry.window.id })}
-									download="maintenance.ics"
+								{page.title}
+							</a>
+						</h1>
+						{page.description && (
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>{page.description}</p>
+						)}
+					</div>
+
+					{page.show_overall_status && (
+						<div
+							mix={[
+								hstack({ align: "center", justify: "center", gap: "10px" }),
+								p("14px", "18px"),
+								rounded("8px"),
+								border({ color: "transparent", width: 1 }),
+								weight(600),
+								mbe("24px"),
+								BANNER_MIX[overallStatus],
+							]}
+						>
+							<BannerIcon size={22} />
+							<span>{bannerLabel[overallStatus]}</span>
+						</div>
+					)}
+
+					<section mix={[vstack({ gap: "8px" }), mbe("24px")]}>
+						<h2 mix={[m(0), fontSize("1.125rem"), weight(600)]}>
+							{ctx.intl.t("statusPage.maintenance.title")}
+						</h2>
+						{maintenance.length === 0 ? (
+							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+								{ctx.intl.t("statusPage.maintenance.none")}
+							</p>
+						) : (
+							maintenance.map((entry) => (
+								<div
+									key={entry.window.id}
 									mix={[
-										fontSize("0.8125rem"),
-										fg("brand"),
-										textDecoration("none"),
-										hover(textDecoration("underline")),
+										vstack({ gap: "4px" }),
+										p("12px", "16px"),
+										rounded("8px"),
+										border({ color: "neutral.border", width: 1 }),
 									]}
 								>
-									{ctx.intl.t("statusPage.maintenance.addToCalendar")}
-								</a>
-							</div>
-						))
-					)}
-					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-						{ctx.intl.t("statusPage.maintenance.subscribe")}{" "}
-						<a href={webcalUrl} mix={[fg("brand")]}>
-							{ctx.intl.t("statusPage.maintenance.subscribeCalendar")}
-						</a>{" "}
-						·{" "}
-						<a href={googleUrl} target="_blank" rel="noopener noreferrer" mix={[fg("brand")]}>
-							{ctx.intl.t("statusPage.maintenance.subscribeGoogle")}
-						</a>{" "}
-						·{" "}
-						<a href={feedUrl.toString()} mix={[fg("brand")]}>
-							{ctx.intl.t("statusPage.maintenance.feedUrl")}
-						</a>
-					</p>
-				</section>
-
-				{isEmpty ? (
-					<Empty>
-						<Empty.Description>{ctx.intl.t("statusPage.empty.description")}</Empty.Description>
-					</Empty>
-				) : (
-					<>
-						{barServices.map((service) => (
-							<div
-								key={`${service.kind}-${service.id}`}
-								mix={[
-									vstack({ gap: "8px" }),
-									p("16px"),
-									rounded("8px"),
-									border({ color: "neutral.border", width: 1 }),
-									raw({ background: "#ffffff" }),
-									mbe("12px"),
-									dark(bg("neutral.tint")),
-								]}
-							>
-								<div mix={[hstack({ align: "center", gap: "12px" })]}>
-									<CardStatusIcon status={service.status} />
-									<strong>{service.name}</strong>
-									<Badge {...badgeVariant(BADGE_TONE[service.status])}>
-										{statusLabel[service.status]}
-									</Badge>
-								</div>
-								{service.kind === "dns" && (
+									<div mix={[hstack({ align: "center", gap: "8px" })]}>
+										<CalendarIcon size={16} />
+										<strong>{entry.window.name}</strong>
+										{entry.next.start <= now && (
+											<Badge {...badgeVariant("degraded")}>
+												{ctx.intl.t("statusPage.maintenance.inProgress")}
+											</Badge>
+										)}
+									</div>
 									<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-										{ctx.intl.t("statusPage.dns.coverage")}
+										{ctx.intl.t("statusPage.maintenance.when", {
+											range: formatRange(new Date(entry.next.start), new Date(entry.next.end), {
+												locale: ctx.locale,
+												timeZone: "UTC",
+												timeStyle: "short",
+											}),
+										})}
 									</p>
-								)}
-								<UptimeBar
-									days={service.days}
-									labels={uptimeBarLabels}
-									formatUptime={formatUptime}
-								/>
-							</div>
-						))}
-
-						{cronServices.length > 0 && (
-							<>
-								{barServices.length > 0 && <h2>{ctx.intl.t("statusPage.cronJobs.title")}</h2>}
-								{cronServices.map((service) => (
-									<div
-										key={service.id}
+									{entry.affected.length > 0 && (
+										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.intl.t("statusPage.maintenance.affects", {
+												services: entry.affected.join(", "),
+											})}
+										</p>
+									)}
+									<a
+										href={routes.statusPageMaintenanceEvent.href({
+											slug,
+											windowId: entry.window.id,
+										})}
+										download="maintenance.ics"
 										mix={[
-											vstack({ gap: "8px" }),
-											p("16px"),
-											rounded("8px"),
-											border({ color: "neutral.border", width: 1 }),
-											raw({ background: "#ffffff" }),
-											mbe("12px"),
-											dark(bg("neutral.tint")),
+											fontSize("0.8125rem"),
+											fg("brand"),
+											textDecoration("none"),
+											hover(textDecoration("underline")),
 										]}
 									>
-										<div mix={[hstack({ align: "center", gap: "12px" })]}>
-											<CardStatusIcon status={service.status} />
-											<strong>{service.name}</strong>
-											<Badge {...badgeVariant(BADGE_TONE[service.status])}>
-												{statusLabel[service.status]}
-											</Badge>
-										</div>
-										<p
+										{ctx.intl.t("statusPage.maintenance.addToCalendar")}
+									</a>
+								</div>
+							))
+						)}
+						<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+							{ctx.intl.t("statusPage.maintenance.subscribe")}{" "}
+							<a href={webcalUrl} mix={[fg("brand")]}>
+								{ctx.intl.t("statusPage.maintenance.subscribeCalendar")}
+							</a>{" "}
+							·{" "}
+							<a href={googleUrl} target="_blank" rel="noopener noreferrer" mix={[fg("brand")]}>
+								{ctx.intl.t("statusPage.maintenance.subscribeGoogle")}
+							</a>{" "}
+							·{" "}
+							<a href={feedUrl.toString()} mix={[fg("brand")]}>
+								{ctx.intl.t("statusPage.maintenance.feedUrl")}
+							</a>
+						</p>
+					</section>
+
+					{isEmpty ? (
+						<Empty>
+							<Empty.Description>{ctx.intl.t("statusPage.empty.description")}</Empty.Description>
+						</Empty>
+					) : (
+						<>
+							{barServices.map((service) => (
+								<div
+									key={`${service.kind}-${service.id}`}
+									mix={[
+										vstack({ gap: "8px" }),
+										p("16px"),
+										rounded("8px"),
+										border({ color: "neutral.border", width: 1 }),
+										raw({ background: "#ffffff" }),
+										mbe("12px"),
+										dark(bg("neutral.tint")),
+									]}
+								>
+									<div mix={[hstack({ align: "center", gap: "12px" })]}>
+										<CardStatusIcon status={service.status} />
+										<strong>{service.name}</strong>
+										<Badge {...badgeVariant(BADGE_TONE[service.status])}>
+											{statusLabel[service.status]}
+										</Badge>
+									</div>
+									{service.kind === "dns" && (
+										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+											{ctx.intl.t("statusPage.dns.coverage")}
+										</p>
+									)}
+									<UptimeBar
+										days={service.days}
+										labels={uptimeBarLabels}
+										formatUptime={formatUptime}
+									/>
+								</div>
+							))}
+
+							{cronServices.length > 0 && (
+								<>
+									{barServices.length > 0 && <h2>{ctx.intl.t("statusPage.cronJobs.title")}</h2>}
+									{cronServices.map((service) => (
+										<div
+											key={service.id}
 											mix={[
-												hstack({ align: "center", gap: "4px" }),
-												fontSize("0.8125rem"),
-												fg("neutral.muted"),
+												vstack({ gap: "8px" }),
+												p("16px"),
+												rounded("8px"),
+												border({ color: "neutral.border", width: 1 }),
+												raw({ background: "#ffffff" }),
+												mbe("12px"),
+												dark(bg("neutral.tint")),
 											]}
 										>
-											<ClockIcon size={12} />
-											<span>
-												{ctx.intl.t("statusPage.cronJobs.schedule")}:{" "}
-												<code>{service.cronExpression}</code>
-											</span>
-										</p>
-										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-											{ctx.intl.t("statusPage.cronJobs.lastPing")}:{" "}
-											{service.lastPingAt
-												? formatDateTime(new Date(service.lastPingAt), {
-														locale: ctx.locale,
-														timeZone: "UTC",
-													})
-												: ctx.intl.t("statusPage.cronJobs.never")}
-										</p>
-									</div>
-								))}
-							</>
-						)}
-					</>
-				)}
+											<div mix={[hstack({ align: "center", gap: "12px" })]}>
+												<CardStatusIcon status={service.status} />
+												<strong>{service.name}</strong>
+												<Badge {...badgeVariant(BADGE_TONE[service.status])}>
+													{statusLabel[service.status]}
+												</Badge>
+											</div>
+											<p
+												mix={[
+													hstack({ align: "center", gap: "4px" }),
+													fontSize("0.8125rem"),
+													fg("neutral.muted"),
+												]}
+											>
+												<ClockIcon size={12} />
+												<span>
+													{ctx.intl.t("statusPage.cronJobs.schedule")}:{" "}
+													<code>{service.cronExpression}</code>
+												</span>
+											</p>
+											<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+												{ctx.intl.t("statusPage.cronJobs.lastPing")}:{" "}
+												{service.lastPingAt
+													? formatDateTime(new Date(service.lastPingAt), {
+															locale: ctx.locale,
+															timeZone: "UTC",
+														})
+													: ctx.intl.t("statusPage.cronJobs.never")}
+											</p>
+										</div>
+									))}
+								</>
+							)}
+						</>
+					)}
 
-				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-					{ctx.intl.t("statusPage.footer.lastUpdated", {
-						date: formatDateTime(renderedAt, { locale: ctx.locale, timeZone: "UTC" }),
-					})}{" "}
-					·{" "}
-					<a
-						href={routes.home.href()}
-						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
-					>
-						{ctx.intl.t("statusPage.footer.poweredBy")}
-					</a>
-				</p>
+					<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
+						<span hidden>
+							<MicroTime property="dt-updated" value={renderedAt} />
+						</span>
+						{ctx.intl.t("statusPage.footer.lastUpdated", {
+							date: formatDateTime(renderedAt, { locale: ctx.locale, timeZone: "UTC" }),
+						})}{" "}
+						·{" "}
+						<a
+							href={routes.home.href()}
+							mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}
+						>
+							{ctx.intl.t("statusPage.footer.poweredBy")}
+						</a>
+					</p>
+				</div>
 			</main>
 		</DocumentLayout>,
 	);

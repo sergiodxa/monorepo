@@ -12,6 +12,9 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { findItem, parse } from "@sdxc/microformats";
+import { readEntry } from "@sdxc/microformats/vocabulary";
+import { unwrap } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -25,6 +28,7 @@ import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
+import { SITE_OWNER } from "~/config/site";
 import routes from "~/routes/web";
 
 import docsShow from "./docs-show";
@@ -71,7 +75,8 @@ describe("GET /docs/*slug", () => {
 		let body = await response.text();
 		expect(body).toContain("<title>HTTP Monitors | Documentation - Uptime</title>");
 		expect(body).toMatch(/<h1[^>]*>HTTP Monitors<\/h1>/);
-		expect(body).toMatch(/Last updated[\s\S]*?<time[^>]*datetime="\d{4}-\d{2}-\d{2}"/i);
+		expect(body).toMatch(/Last updated[\s\S]*?datetime="2026-10-31T00:00:00.000Z"/);
+		expect(body).toContain("dt-updated");
 	});
 
 	test("emits the canonical URL and the doc's own frontmatter description in <head>", async () => {
@@ -81,6 +86,27 @@ describe("GET /docs/*slug", () => {
 			`<link rel="canonical" href="${SEO.baseUrl}${routes.docs.show.href({ slug: "concepts/http-monitors" })}" />`,
 		);
 		expect(body).toMatch(/<meta name="description" content="[^"]+" \/>/);
+		expect(body).toContain('"@type":"Article"');
+		expect(body).toContain('"headline":"HTTP Monitors"');
+		expect(body).toContain('"dateModified":"2026-10-31"');
+		expect(body).toContain('"@type":"BreadcrumbList"');
+	});
+
+	test("is an h-entry with the visible title, permalink, update and author", async () => {
+		let response = await getDocsShow("concepts/http-monitors");
+		let body = await response.text();
+		let pageUrl = `${SEO.baseUrl}${routes.docs.show.href({ slug: "concepts/http-monitors" })}`;
+		let document = unwrap(parse(body, pageUrl));
+		let item = findItem(document, "h-entry");
+		if (!item) throw new Error("Expected an h-entry");
+		let entry = unwrap(readEntry(item));
+
+		expect(entry.name).toBe("HTTP Monitors");
+		expect(entry.url).toBe(pageUrl);
+		expect(entry.updated?.value.startsWith("2026-10-31")).toBe(true);
+		expect(entry.author?.name).toBe(SITE_OWNER.name);
+		expect(entry.author?.url).toBe(SITE_OWNER.url);
+		expect(entry.content?.value).toContain("When an HTTP monitor runs");
 	});
 
 	test("marks the current page's sidebar link and builds a Docs > section > page breadcrumb", async () => {
