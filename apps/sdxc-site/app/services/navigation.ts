@@ -185,7 +185,6 @@ function componentNavEntry(entry: CatalogueEntry): NavEntry {
 	return { title: entry.name, href: routes.api.component.href({ component: entry.slug }) };
 }
 
-
 /**
  * Every component as one list for the explorer gallery. Each entry carries the opening
  * clause of its summary; the sidebar keeps the grouped Foundations tree instead.
