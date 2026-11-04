@@ -1,7 +1,7 @@
 /**
- * One tile in the `@sdxc/ui` component explorer: a schematic face of the pattern above its
- * name and a short line of what it is, so a reader scans faces the way they would scan a
- * gallery rather than a dense sheet of links.
+ * One tile in the `@sdxc/ui` component explorer: an HTML miniature of the pattern above its
+ * name and a short line of what it is, so a reader scans faces the way they would scan the
+ * `/demo` gallery rather than a dense sheet of links.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +18,7 @@ import { bs, m, minBs, minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font, leading, lineClamp, overflowWrap, text, weight } from "@sdxc/u/typography";
 
-import { componentFaceHref } from "~/app/services/ui-component-face";
+import UiComponentMiniature from "~/resources/components/ui-faces";
 
 /** Fixed block size of the preview plane, so every tile shares one rhythm. */
 const PREVIEW_HEIGHT = "9.5rem";
@@ -32,7 +32,7 @@ namespace UiComponentCard {
 	}
 }
 
-/** Renders one linked explorer tile with a schematic PNG face of the pattern. */
+/** Renders one linked explorer tile with an HTML miniature of the pattern. */
 export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 	return () => {
 		let { description, href, name, slug } = handle.props;
@@ -58,7 +58,6 @@ export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 					]}
 				>
 					<div
-						aria-hidden="true"
 						mix={[
 							relative(),
 							minBs(PREVIEW_HEIGHT),
@@ -71,15 +70,7 @@ export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 							}),
 						]}
 					>
-						<img
-							src={componentFaceHref(slug)}
-							alt=""
-							width={320}
-							height={200}
-							loading="lazy"
-							decoding="async"
-							mix={[bs("100%"), minIs(0), raw({ objectFit: "cover", display: "block" })]}
-						/>
+						<UiComponentMiniature slug={slug} />
 					</div>
 
 					<div mix={[vstack({ gap: 1, align: "stretch" }), p(4), minIs(0), bg()]}>
