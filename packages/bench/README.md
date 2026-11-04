@@ -2,9 +2,8 @@
 
 Bundle-weight and HTTP latency budgets for packages and running apps.
 
-Hold a package entry to a **gzipped** size after `bun build --minify`, and sample
-latency against a URL that is already running. Code microbenchmarks use Vitest’s
-own `bench` APIs — this package does not add custom timing matchers.
+Hold a package entry to a **gzipped** size after a minified browser bundle, and
+sample latency against a URL that is already running.
 
 ## Installation
 
@@ -20,19 +19,19 @@ npm add @sdxc/bench
 ### Weigh an entry point
 
 ```typescript
-import { assertWeight, weigh } from "@sdxc/bench";
-import { isFailure, unwrap } from "@sdxc/result";
+import { weigh } from "@sdxc/bench";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
 
-let weight = unwrap(await weigh(new URL("./index.ts", import.meta.url).pathname));
-// { minified: 74506, gzipped: 24537 }
-
-let check = assertWeight(weight, { maxGzipped: 25 * 1024 });
-if (isFailure(check)) throw check.error;
+test("the format entry stays small", async () => {
+	let weight = unwrap(await weigh(new URL("./index.ts", import.meta.url).pathname));
+	expect(weight.gzipped).toBeLessThan(25 * 1024);
+});
 ```
 
-The build targets the browser with nothing externalized, so the number covers
-every dependency the entry pulls in. Gzipped size is the budget that fails CI;
-minified is reported for diagnosis and may be capped with `maxMinified`.
+The build targets the browser with every dependency inlined, so the number covers
+what a consumer pulls in. Gzipped size is the budget; minified is reported beside
+it for diagnosis.
 
 ### Sample HTTP latency
 
@@ -50,62 +49,19 @@ let report = await sampleHttp({
 unwrap(assertHttpBudgets(report, { p95: 200, p99: 500 }));
 ```
 
-Time budgets elsewhere accept [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration):
+Time budgets accept [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration):
 a string such as `"200ms"` or a bare millisecond number.
-
-### Code performance with Vitest
-
-Use Vitest’s built-in `bench` — not custom matchers from this package.
-
-On Vitest 4 (this monorepo’s pin), register suite benchmarks in a `*.bench.ts`
-file and run them with `vitest bench` / `vp test bench`:
-
-```typescript
-import { Markdown } from "@sdxc/markdown";
-import { bench, describe } from "vitest";
-
-const SAMPLE = "# Title\n\nA short paragraph with **emphasis**.\n";
-
-describe("Markdown.parse", () => {
-	bench("parse a short article", () => {
-		Markdown.parse(SAMPLE);
-	});
-});
-```
-
-On Vitest 5+, compare implementations inside a normal test with the `bench`
-fixture and `toBeFasterThan`:
-
-```typescript
-import { expect, test } from "vitest";
-
-test("Markdown.parse stays ahead of a naive walk", async ({ bench }) => {
-	let result = await bench.compare(
-		bench("Markdown.parse", () => {
-			Markdown.parse(SAMPLE);
-		}),
-		bench("naive", () => {
-			naive(SAMPLE);
-		}),
-	);
-	expect(result.get("Markdown.parse")).toBeFasterThan(result.get("naive"), { delta: 0.1 });
-});
-```
-
-Pathological “must stay linear” ceilings keep a plain `performance.now()` delta
-and `expect(elapsed).toBeLessThan(ms)` — those guards need a wide gap to failure,
-not a statistical comparison.
 
 ## Command line
 
-`sdxc-bench` runs the same checks from a terminal or a script:
+`@sdxc/bench` ships a command line for the same checks:
 
 ```sh
 bunx @sdxc/bench --help
 ```
 
 With [`@sdxc/kit`](https://www.npmjs.com/package/@sdxc/kit) installed,
-`sdxc pkg bench …` runs the same command line.
+`sdxc pkg bench …` runs that command line.
 
 ```sh
 bunx @sdxc/bench weigh ./src/index.ts --max-gzipped 25600
@@ -120,13 +76,14 @@ fails or every request errors; exit `2` for usage or an invalid duration.
 
 ### `weigh(entry: string, root?: string): Promise<Result<Weight, WeightError>>`
 
-Bundles `entry` with `bun build --minify --target=browser --format=esm` from
-`root` (default `process.cwd()`) and returns `{ minified, gzipped }` in bytes.
+Bundles `entry` for the browser (minified, dependencies inlined) from `root`
+(default `process.cwd()`) and returns `{ minified, gzipped }` in bytes.
 
 ### `assertWeight(weight, budget, entry?): Result<Weight, WeightError>`
 
-Fails when `weight.gzipped` exceeds `budget.maxGzipped`, or when optional
-`budget.maxMinified` is set and missed.
+Answers a `Result` when `weight.gzipped` exceeds `budget.maxGzipped`, or when
+optional `budget.maxMinified` is set and missed. Used by the CLI's
+`--max-gzipped` flag; in tests, compare `weight.gzipped` with an expectation.
 
 ### `sampleHttp(options): Promise<HttpReport>`
 
@@ -136,8 +93,8 @@ successful samples.
 
 ### `assertHttpBudgets(report, budgets): Result<HttpReport, HttpBudgetError>`
 
-Fails when a declared `p50` / `p95` / `p99` / `mean` ceiling (milliseconds) is
-missed.
+Answers a failure when a declared `p50` / `p95` / `p99` / `mean` ceiling
+(milliseconds) is exceeded.
 
 ### `budgetMs(input)` / `parseBudgetFlag(text)`
 
@@ -159,10 +116,9 @@ const BUDGET = 25 * 1024;
 
 test(`format entry stays under ${BUDGET} bytes gzipped`, async () => {
 	let weight = unwrap(await weigh(join(ROOT, "src/index.ts"), ROOT));
-	expect(
-		weight.gzipped,
-		`minified ${weight.minified}, gzipped ${weight.gzipped}`,
-	).toBeLessThanOrEqual(BUDGET);
+	expect(weight.gzipped, `minified ${weight.minified}, gzipped ${weight.gzipped}`).toBeLessThan(
+		BUDGET,
+	);
 });
 ```
 
