@@ -60,7 +60,7 @@ green without a server.
 With the app up, the same sample is one command:
 
 ```bash
-bunx @sdxc/bench http http://127.0.0.1:8787/health \
+sdxc pkg bench http http://127.0.0.1:8787/health \
 	--requests 50 \
 	--concurrency 5 \
 	--timeout 5s \
@@ -71,9 +71,9 @@ bunx @sdxc/bench http http://127.0.0.1:8787/health \
 Duration flags (`--timeout`, `--p50`, `--p95`, `--p99`, `--mean`) accept a duration string
 (`200ms`, `5s`) or a bare millisecond number (`200`). The process exits `1` when a budget is
 missed or every request errors, and `2` when a flag is not a duration. `--json` prints the
-full report for scripts.
-
-With [`@sdxc/kit`](/api/kit) installed, `sdxc pkg bench http …` runs the same command line.
+full report for scripts. [Use a package from the
+terminal](/docs/operations-and-testing/package-command-lines) covers what every package
+command line shares.
 
 ## What this is for
 
