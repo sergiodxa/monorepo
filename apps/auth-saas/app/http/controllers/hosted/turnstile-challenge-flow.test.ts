@@ -13,6 +13,8 @@ import type { Middleware } from "remix/router";
 
 import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -25,7 +27,7 @@ import { TurnstileChallengeContext } from "~/app/http/middleware/turnstile-chall
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
-import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
+import { TENANT_CONTENT_SECURITY_POLICY, TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
 
 import { resetShow, resetSubmit } from "./reset";
@@ -54,6 +56,11 @@ async function buildChallengeRouter(challenged: boolean) {
 	let challenge = fixedChallenge(challenged);
 
 	let middleware: Middleware[] = [
+		csp({
+			reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
+			reportingEndpoints: { csp: "/reports/csp" },
+			filter: () => true,
+		}) as Middleware,
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
 		...hostedDocumentMiddleware(),

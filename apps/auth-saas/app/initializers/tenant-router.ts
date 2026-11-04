@@ -12,12 +12,14 @@ import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
-import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { redirect } from "@sdxc/well-known/change-password";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
+import { csp, getCspNonce } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
@@ -44,7 +46,7 @@ import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
 import { userinfoMetadataEntry } from "~/app/initializers/userinfo-resource";
-import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
+import { TENANT_CONTENT_SECURITY_POLICY, TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/tenant";
 
@@ -62,6 +64,11 @@ export const tenantRouter = createRouter({
 		getClientIP(),
 		trace(),
 		asyncContext(),
+		csp({
+			reportOnlyPolicy: ({ nonce }) => remixCsp(TENANT_CONTENT_SECURITY_POLICY, nonce),
+			reportingEndpoints: { csp: "/reports/csp" },
+			filter: () => true,
+		}),
 		securityHeaders(TENANT_SECURITY_POLICY),
 		/**
 		 * The hosted reset flow is the one page where a person sets a new password on a
@@ -75,13 +82,12 @@ export const tenantRouter = createRouter({
 		tenant((tenantId) => env.TENANT.getByName(tenantId)),
 		/**
 		 * Every hosted page links the hosted document's stylesheets and the island entry under
-		 * the nonce `securityHeaders()` above publishes, so the policy allows the inline import map.
+		 * the nonce Remix's `csp()` above publishes, so the policy allows the inline import map.
 		 */
 		assets(assetResolver, {
 			stylesheets: "resources/views/hosted/document.tsx",
 			script: "bootstrap/browser.ts",
-			nonce: (ctx) =>
-				ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
+			nonce: (ctx) => getCspNonce(ctx),
 		}),
 		render({ assets: assetResolver }),
 		formData(),
