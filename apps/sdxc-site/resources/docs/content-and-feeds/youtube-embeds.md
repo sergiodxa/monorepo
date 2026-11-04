@@ -124,13 +124,11 @@ markdown too.
 > origin it does not list, and the player shows as an empty box. Add the player's host.
 
 ```typescript {% title="config/security-policy.ts" %}
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { CSP } from "@sdxc/security-headers";
 
-export const SECURITY_POLICY: SecurityHeaders.Policy = {
-	contentSecurityPolicy: {
-		defaultSrc: ["self"],
-		frameSrc: ["https://www.youtube-nocookie.com"],
-	},
+export const CONTENT_SECURITY_POLICY: CSP.Directives = {
+	defaultSrc: ["self"],
+	frameSrc: ["https://www.youtube-nocookie.com"],
 };
 ```
 

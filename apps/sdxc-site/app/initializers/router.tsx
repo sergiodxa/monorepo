@@ -16,11 +16,14 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
+import { cspPatch } from "@sdxc/security-headers/csp-patch";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { remixCsp } from "@sdxc/security-headers/remix";
 import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
+import { csp } from "remix/middleware/csp";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
@@ -35,7 +38,7 @@ import { logger } from "~/app/initializers/logger";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { transport } from "~/app/initializers/mail-transport";
 import { MAIL_FROM } from "~/config/constants";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { CONTENT_SECURITY_POLICY, SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /** The context a controller sees once the router's middleware has run. */
@@ -70,9 +73,16 @@ export function createWebRouter() {
 			/** The CSP report endpoint takes the browser's own report POSTs and reads no cookie. */
 			cop({ insecureBypassPatterns: [routes.cspReports.href()] }),
 			/**
-			 * Right before the assets and the renderer, so the headers land on the response it
-			 * produced, and the import map's hash joins the policy once both have published.
+			 * Right before the assets and the renderer: Remix owns CSP; this package owns the
+			 * rest. `cspPatch` wraps so the import map's hash can join `script-src` after the
+			 * fact.
 			 */
+			cspPatch(),
+			csp({
+				reportOnlyPolicy: ({ nonce }) => remixCsp(CONTENT_SECURITY_POLICY, nonce),
+				reportingEndpoints: { csp: "/reports/csp" },
+				filter: () => true,
+			}),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
